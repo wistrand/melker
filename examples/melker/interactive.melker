@@ -1,0 +1,86 @@
+<container style="width: 60; height: 20; border: thin; padding: 2; display: flex; flex-direction: column;">
+  <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+    🎮 Interactive Melker Demo
+  </text>
+
+  <text style="margin-bottom: 1;" id="status">
+    Status: Ready for input
+  </text>
+
+  <container style="display: flex; flex-direction: row; margin-bottom: 1;">
+    <text style="margin-right: 2;">Name:</text>
+    <input
+      id="nameInput"
+      style="width: 20; border: thin;"
+      placeholder="Enter your name"
+      onInput="
+        const statusEl = context.getElementById('status');
+        if (statusEl) {
+          statusEl.props.text = 'Status: Hello, ' + event.value + '!';
+          context.render();
+        }
+      "
+      onKeyPress="
+        if (event.key === 'Enter') {
+          const nameEl = context.getElementById('nameInput');
+          const outputEl = context.getElementById('output');
+          const name = nameEl ? nameEl.props.value || 'World' : 'World';
+          if (outputEl) {
+            outputEl.props.text = '🎉 Hello, ' + name + '! Welcome to Melker!';
+            context.render();
+          }
+        }
+      "
+    />
+  </container>
+
+  <container style="display: flex; flex-direction: row; margin-bottom: 2;">
+    <button
+      id="greetBtn"
+      title="Say Hello"
+      style="margin-right: 2; background-color: blue; color: white;"
+      onClick="
+        const nameEl = context.getElementById('nameInput');
+        const outputEl = context.getElementById('output');
+        const name = nameEl ? nameEl.props.value || 'World' : 'World';
+        if (outputEl) {
+          outputEl.props.text = '🎉 Hello, ' + name + '! Welcome to Melker!';
+          context.render();
+        }
+      "
+    />
+
+    <button
+      id="clearBtn"
+      title="Clear"
+      style="margin-right: 2; background-color: red; color: white;"
+      onClick="
+        const nameEl = context.getElementById('nameInput');
+        const outputEl = context.getElementById('output');
+        const statusEl = context.getElementById('status');
+        if (nameEl) nameEl.props.value = '';
+        if (outputEl) outputEl.props.text = '';
+        if (statusEl) statusEl.props.text = 'Status: Cleared!';
+        context.render();
+      "
+    />
+
+    <button
+      id="exitBtn"
+      title="Exit"
+      style="background-color: gray; color: white;"
+      onClick="context.exit();"
+    />
+  </container>
+
+  <text id="output" style="color: green; font-weight: bold; margin-bottom: 1; text-wrap: wrap; padding: 1">
+  </text>
+
+  <text style="color: yellow; margin-bottom: 1;">
+    Try typing your name and press Enter or click "Say Hello"!
+  </text>
+
+  <text style="color: gray;">
+    Press Tab to navigate • Click buttons or press Ctrl+C to exit
+  </text>
+</container>

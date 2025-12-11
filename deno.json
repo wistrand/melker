@@ -1,0 +1,42 @@
+{
+  "name": "@melker/core",
+  "version": "0.1.0",
+  "description": "A Deno library for creating rich Terminal UI interfaces with flexbox-based layouts",
+  "exports": "./src/melker.ts",
+  "imports": {
+    "html5parser": "npm:html5parser",
+    "mdast-util-from-markdown": "npm:mdast-util-from-markdown@^2.0.0",
+    "mdast-util-gfm": "npm:mdast-util-gfm@^3.0.0",
+    "micromark-extension-gfm": "npm:micromark-extension-gfm@^3.0.0",
+    "@deno/emit": "jsr:@deno/emit@^0.44.0",
+    "dotenv": "npm:dotenv@^16.3.0"
+  },
+  "tasks": {
+    "test": "deno test --allow-read --allow-env --allow-write",
+    "test:watch": "deno test --allow-read --allow-env --allow-write --watch",
+    "test:coverage": "deno test --allow-read --allow-env --allow-write --coverage=coverage/",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "check": "deno check src/**/*.ts"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitOverride": true
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": true,
+    "proseWrap": "preserve"
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}

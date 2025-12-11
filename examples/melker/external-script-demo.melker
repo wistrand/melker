@@ -1,0 +1,104 @@
+<melker>
+  <script type="typescript" src="utils.ts"></script>
+
+  <container style="width: 55; height: 18; border: thin; padding: 2; display: flex; flex-direction: column;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      🔗 External Script Demo
+    </text>
+
+    <text style="margin-bottom: 1;" id="status">
+      Status: Ready - External TypeScript module loaded!
+    </text>
+
+    <container style="display: flex; flex-direction: row; margin-bottom: 1;">
+      <text style="margin-right: 2;">Name:</text>
+      <input
+        id="nameInput"
+        style="width: 25; border: thin;"
+        placeholder="Enter your name"
+        onInput="
+          const statusEl = context.getElementById('status');
+          const validation = context.validateInput(event.value, {
+            minLength: 2,
+            maxLength: 20,
+            required: true
+          });
+
+          if (validation) {
+            statusEl.props.text = 'Status: ' + validation;
+            statusEl.props.style = { ...statusEl.props.style, color: 'red' };
+          } else {
+            statusEl.props.text = context.createStatusMessage('Valid name entered');
+            statusEl.props.style = { ...statusEl.props.style, color: 'green' };
+          }
+          context.render();
+        "
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; margin-bottom: 1; gap: 1;">
+      <button
+        title="Smart Greeting"
+        style="background-color: green; color: white;"
+        onClick="
+          const nameEl = context.getElementById('nameInput');
+          const outputEl = context.getElementById('output');
+          const name = nameEl ? nameEl.props.value || 'World' : 'World';
+
+          const validation = context.validateInput(name, { minLength: 2, required: true });
+          if (validation) {
+            outputEl.props.text = '❌ ' + validation;
+            outputEl.props.style = { ...outputEl.props.style, color: 'red' };
+          } else {
+            outputEl.props.text = context.formatGreeting(name);
+            outputEl.props.style = { ...outputEl.props.style, color: 'green' };
+          }
+          context.render();
+        "
+      />
+
+      <button
+        title="Random Color"
+        style="background-color: blue; color: white;"
+        onClick="
+          const outputEl = context.getElementById('output');
+          const randomColor = context.getRandomColor();
+          outputEl.props.text = '🎨 Random color: ' + randomColor;
+          outputEl.props.style = { ...outputEl.props.style, color: randomColor };
+          context.render();
+        "
+      />
+
+      <button
+        title="Show Time"
+        style="background-color: purple; color: white;"
+        onClick="
+          const outputEl = context.getElementById('output');
+          const timeOfDay = context.getTimeOfDay();
+          const emoji = context.getTimeEmoji(timeOfDay);
+          outputEl.props.text = emoji + ' Current time: ' + context.getCurrentTimestamp();
+          outputEl.props.style = { ...outputEl.props.style, color: 'blue' };
+          context.render();
+        "
+      />
+
+      <button
+        title="Exit"
+        style="background-color: gray; color: white;"
+        onClick="context.exit();"
+      />
+    </container>
+
+    <text id="output" style="color: green; font-weight: bold; margin-bottom: 1; text-wrap: wrap; padding: 1">
+      Click buttons to see external TypeScript functions in action!
+    </text>
+
+    <text style="color: yellow; margin-bottom: 1; text-align: center;">
+      This demo uses functions from utils.ts external module
+    </text>
+
+    <text style="color: gray; text-align: center;">
+      Available functions: formatGreeting, validateInput, getRandomColor, getCurrentTimestamp
+    </text>
+  </container>
+</melker>

@@ -1,0 +1,109 @@
+<melker>
+  <title>Melker Markdown Viewer - ${argv[1]}</title>
+
+    <style>
+        #header {
+            display: flex;
+            flex-direction: row;
+            padding-right: 1;
+            border: thin;
+        }
+        #root {
+          display: flex;
+          flex-direction: column;
+          width: fill;
+          height: fill;
+          border: none;
+        }
+    </style>
+
+    <container id="root">
+        <container id="header">
+            <button class="big" title="Back" onClick="goBack()"/>
+            <button title="Fwd" onClick="goForward()"/>
+            <text style="font-weight: bold; flex: 1; padding-left: 1;">
+                ${argv[1]:-README.md}
+            </text>
+            <button title="Exit" onClick="context.exit();" />
+        </container>
+
+        <container id="content-area" scrollable="true" style="flex: 1 1 0; padding: 1;">
+            <markdown id="markdown-content"  src="${argv[1]:-README.md}"  onLink="handleLink(event)" style="text-wrap: wrap;"/>
+        </container>
+    </container>
+
+
+    <script type="typescript">
+    // Navigation history
+    const backStack: string[] = [];
+    const forwardStack: string[] = [];
+
+    function updateTitle(src: string) {
+      context.setTitle('Melker - ' + src);
+    }
+
+
+    // Navigate to a new page (called from link clicks)
+    export function handleLink(event: { url: string }) {
+      const url = event.url;
+      if (url.endsWith('.md')) {
+        const markdown = context.getElementById('markdown-content');
+        if (markdown) {
+          const currentSrc = markdown.props.src || '';
+          // Push current page to back stack
+          if (currentSrc) {
+            backStack.push(currentSrc);
+            // Clear forward stack on new navigation
+            forwardStack.length = 0;
+          }
+          const currentDir = currentSrc.substring(0, currentSrc.lastIndexOf('/') + 1);
+          const newSrc = url.startsWith('/') ? url : currentDir + url;
+          markdown.props.src = newSrc;
+          context.setTitle('Melker - ' + newSrc);
+          context.render();
+        }
+      }
+    }
+
+    // Go back in history
+    export function goBack() {
+      if (backStack.length === 0) return;
+      const markdown = context.getElementById('markdown-content');
+      if (markdown) {
+        const currentSrc = markdown.props.src || '';
+        // Push current to forward stack
+        if (currentSrc) {
+          forwardStack.push(currentSrc);
+        }
+        // Pop from back stack
+        const prevSrc = backStack.pop();
+        if (prevSrc) {
+          markdown.props.src = prevSrc;
+          updateTitle(prevSrc);
+          context.render();
+        }
+      }
+    }
+
+    // Go forward in history
+    export function goForward() {
+      if (forwardStack.length === 0) return;
+      const markdown = context.getElementById('markdown-content');
+      if (markdown) {
+        const currentSrc = markdown.props.src || '';
+        // Push current to back stack
+        if (currentSrc) {
+          backStack.push(currentSrc);
+        }
+        // Pop from forward stack
+        const nextSrc = forwardStack.pop();
+        if (nextSrc) {
+          markdown.props.src = nextSrc;
+          updateTitle(nextSrc);
+          context.render();
+        }
+      }
+    }
+  </script>
+
+</melker>

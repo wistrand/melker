@@ -1,0 +1,146 @@
+<melker>
+  <script type="typescript">
+    // Simple text-based analog clock using Unicode characters
+    const createClockDisplay = (): string[] => {
+      const now = new Date();
+      const hours = now.getHours() % 12;
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+
+      // Create a 7x7 grid for the clock face
+      const grid: string[][] = Array(7).fill(null).map(() => Array(7).fill(' '));
+
+      // Clock positions (12, 3, 6, 9 o'clock positions)
+      const positions = [
+        [0, 3], // 12
+        [1, 5], // 1
+        [2, 6], // 2
+        [3, 6], // 3
+        [4, 5], // 4
+        [5, 4], // 5
+        [6, 3], // 6
+        [5, 2], // 7
+        [4, 1], // 8
+        [3, 0], // 9
+        [2, 0], // 10
+        [1, 1], // 11
+      ];
+
+      // Draw clock face numbers
+      for (let i = 0; i < 12; i++) {
+        const [row, col] = positions[i];
+        grid[row][col] = (i === 0 ? 12 : i).toString().padStart(2, ' ').charAt(1);
+      }
+
+      // Calculate hand positions
+      const center = [3, 3];
+
+      // Hour hand (shorter)
+      const hourPos = Math.floor((hours + minutes / 60) * 12) % 12;
+      const hourHandPos = positions[hourPos];
+      const hourRow = center[0] + Math.round((hourHandPos[0] - center[0]) * 0.6);
+      const hourCol = center[1] + Math.round((hourHandPos[1] - center[1]) * 0.6);
+      if (hourRow >= 0 && hourRow < 7 && hourCol >= 0 && hourCol < 7) {
+        grid[hourRow][hourCol] = 'H';
+      }
+
+      // Minute hand (longer)
+      const minutePos = Math.floor(minutes / 5);
+      const minuteHandPos = positions[minutePos];
+      const minuteRow = center[0] + Math.round((minuteHandPos[0] - center[0]) * 0.8);
+      const minuteCol = center[1] + Math.round((minuteHandPos[1] - center[1]) * 0.8);
+      if (minuteRow >= 0 && minuteRow < 7 && minuteCol >= 0 && minuteCol < 7) {
+        grid[minuteRow][minuteCol] = 'M';
+      }
+
+      // Center
+      grid[3][3] = '•';
+
+      // Convert grid to strings
+      return grid.map(row => row.join(' '));
+    };
+
+    const updateClock = (context: any): void => {
+      const clockLines = createClockDisplay();
+      const now = new Date();
+
+      // Update each line of the clock
+      for (let i = 0; i < clockLines.length; i++) {
+        const lineElement = context.getElementById(`clockLine${i}`);
+        if (lineElement) {
+          lineElement.props.text = clockLines[i];
+        }
+      }
+
+      // Update digital time
+      const timeElement = context.getElementById('digitalTime');
+      if (timeElement) {
+        timeElement.props.text = now.toLocaleTimeString();
+      }
+
+      context.render();
+    };
+
+    const startClock = (context: any): void => {
+      // Initial update
+      updateClock(context);
+
+      // Update every second
+      setInterval(() => {
+        updateClock(context);
+      }, 1000);
+    };
+
+    exports = { startClock, updateClock };
+  </script>
+
+  <container style="width: 40; height: 20; border: thin; padding: 2; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      🕐 Text Analog Clock
+    </text>
+
+    <container style="border: thin; padding: 1; font-family: monospace; background-color: black; color: green;">
+      <text id="clockLine0" style="text-align: center;">       </text>
+      <text id="clockLine1" style="text-align: center;">       </text>
+      <text id="clockLine2" style="text-align: center;">       </text>
+      <text id="clockLine3" style="text-align: center;">   •   </text>
+      <text id="clockLine4" style="text-align: center;">       </text>
+      <text id="clockLine5" style="text-align: center;">       </text>
+      <text id="clockLine6" style="text-align: center;">       </text>
+    </container>
+
+    <text id="digitalTime" style="font-weight: bold; margin-top: 1; color: blue; text-align: center;">
+      --:--:--
+    </text>
+
+    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 1;">
+      <button
+        title="Start Clock"
+        style="background-color: green; color: white;"
+        onClick="
+          const startBtn: any = event.target;
+          startBtn.props.title = 'Running...';
+          startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'orange' };
+          context.startClock(context);
+          context.render();
+        "
+      />
+
+      <button
+        title="Update Now"
+        style="background-color: blue; color: white;"
+        onClick="context.updateClock(context);"
+      />
+
+      <button
+        title="Exit"
+        style="background-color: gray; color: white;"
+        onClick="context.exit();"
+      />
+    </container>
+
+    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
+      H=Hour hand, M=Minute hand, Numbers=12,3,6,9 positions
+    </text>
+  </container>
+</melker>

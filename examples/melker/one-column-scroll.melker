@@ -1,0 +1,11 @@
+<container style="display: flex; flex-direction: row; height: 15; width: 40; border: thin">
+  <container scrollable={true} style="flex: 1; flex-direction: column; height: 12;">
+    <text style="textWrap: wrap;">Column 1 - Wrapped Text Item 1: This is a very long text that should wrap to multiple lines when it exceeds the column width</text>
+    <text style="textWrap: wrap;">Column 1 - Wrapped Text Item 2: Another long piece of text that demonstrates text wrapping behavior in the first column</text>
+    <text style="textWrap: wrap;">Column 1 - Item 3 with missing text</text>
+    <text style="textWrap: wrap;">Column 1 - Item 4 with more incomplete text</text>
+    <text style="textWrap: wrap;">Column 1 - Item 5</text>
+    <text style="textWrap: wrap;">Column 1 - Item 6</text>
+    <text style="textWrap: wrap;">Column 1 - Item 7</text>
+  </container>
+</container>

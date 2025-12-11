@@ -1,0 +1,93 @@
+<melker>
+  <script type="typescript">
+    // Draw a centered circle and square on the canvas using aspect-corrected methods
+    const drawShapes = (canvas: any): void => {
+      // Clear canvas
+      canvas.clear();
+
+      // Get canvas dimensions in pixels
+      const { width, height } = canvas.getBufferSize();
+      const centerX = Math.floor(width / 2);
+      const centerY = Math.floor(height / 2);
+
+      // Calculate radius based on smaller visual dimension
+      // Use visual size for proper aspect ratio calculation
+      const visualSize = canvas.getVisualSize();
+      const maxRadius = Math.min(visualSize.width, visualSize.height) / 2 - 4;
+      const circleRadius = Math.floor(maxRadius * 0.7);
+
+      // Draw centered circle using aspect-corrected method (will appear round)
+      canvas.drawCircleCorrected(centerX, centerY, circleRadius);
+
+      // Draw centered square using aspect-corrected method (will appear square)
+      const squareSize = Math.floor(circleRadius * 1.4);
+      const squareX = centerX - Math.floor(squareSize / canvas.getPixelAspectRatio() / 2);
+      const squareY = centerY - Math.floor(squareSize / 2);
+      canvas.drawSquareCorrected(squareX, squareY, squareSize);
+
+      // Draw center point
+      canvas.fillRect(centerX - 1, centerY - 1, 3, 3);
+
+      // Draw crosshairs to show center
+      const crossSize = 8;
+      canvas.drawLine(centerX - crossSize, centerY, centerX + crossSize, centerY);
+      canvas.drawLine(centerX, centerY - crossSize, centerX, centerY + crossSize);
+    };
+
+    // Register resize handler
+    context.engine.onResize((event: any) => {
+      const canvas = context.getElementById('testCanvas');
+      if (!canvas) return;
+
+      // Calculate new canvas size based on terminal size
+      const { newSize } = event;
+      const canvasWidth = Math.max(20, newSize.width - 4);
+      const canvasHeight = Math.max(10, newSize.height - 6);
+
+      // Resize the canvas
+      canvas.setSize(canvasWidth, canvasHeight);
+
+      // Redraw shapes
+      drawShapes(canvas);
+    });
+
+    // Initial draw on mount
+    context.engine.onMount(() => {
+      const canvas = context.getElementById('testCanvas');
+      if (canvas) {
+        // Calculate initial canvas size based on current terminal size
+        const terminalSize = context.engine.getTerminalSize();
+        const canvasWidth = Math.max(20, terminalSize.width - 4);
+        const canvasHeight = Math.max(10, terminalSize.height - 6);
+
+        // Resize the canvas to fit
+        canvas.setSize(canvasWidth, canvasHeight);
+
+        // Initial draw
+        drawShapes(canvas);
+
+        // Force render
+        canvas.markDirty();
+        context.engine.render();
+      }
+    });
+  </script>
+
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1;">
+      Canvas Test - Aspect-Corrected Circle and Square
+    </text>
+
+    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center;">
+      <canvas
+        id="testCanvas"
+        width="60"
+        height="20"
+      />
+    </container>
+
+    <text style="color: gray; margin-top: 1;">
+      Circle and square should appear visually correct - Resize to redraw
+    </text>
+  </container>
+</melker>

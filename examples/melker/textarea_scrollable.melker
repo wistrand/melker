@@ -1,0 +1,86 @@
+<melker>
+<container style="width: 50; height: 18; border: thin; padding: 1; display: flex; flex-direction: column;">
+  <text style="font-weight: bold; margin-bottom: 1;">Textarea in Scrollable Container</text>
+
+  <container
+    id="scroll-container"
+    scrollable="true"
+    scrollY="0"
+    style="flex: 1; border: thin; overflow: scroll;"
+  >
+    <textarea
+      id="editor"
+      placeholder="Type here - content expands, container scrolls"
+      cols="44"
+      style="background-color: transparent;"
+      onChange="
+        const stats = context.getElementById('stats');
+        const textarea = context.getElementById('editor');
+        const container = context.getElementById('scroll-container');
+        if (stats && textarea) {
+          const val = textarea.getValue();
+          const lines = val.split('\\n').length;
+          stats.props.text = 'Lines: ' + lines + ' | Scroll with mouse wheel';
+          // Scroll to keep cursor visible when typing
+          if (container && textarea.getCursorDisplayRow) {
+            const cursorRow = textarea.getCursorDisplayRow();
+            const viewHeight = 7;
+            if (cursorRow >= container.props.scrollY + viewHeight - 1) {
+              container.props.scrollY = Math.max(0, cursorRow - viewHeight + 2);
+            } else if (cursorRow < container.props.scrollY) {
+              container.props.scrollY = cursorRow;
+            }
+          }
+          context.render();
+        }
+      "
+    />
+  </container>
+
+  <text id="stats" style="color: gray; margin-top: 1;">Lines: 1 | Scroll with mouse wheel</text>
+
+  <container style="display: flex; flex-direction: row; gap: 2; margin-top: 1;">
+    <button
+      title="Add Lines"
+      style="width: 12; height: 3; border: thin;"
+      onClick="
+        const textarea = context.getElementById('editor');
+        const container = context.getElementById('scroll-container');
+        if (textarea) {
+          const current = textarea.getValue();
+          const lineNum = current.split('\\n').length + 1;
+          textarea.setValue(current + (current ? '\\n' : '') + 'Line ' + lineNum);
+          // Scroll to keep cursor visible (visible height is ~7 lines)
+          if (container && textarea.getCursorDisplayRow) {
+            const cursorRow = textarea.getCursorDisplayRow();
+            const viewHeight = 7;
+            // Scroll when cursor reaches or exceeds visible area
+            if (cursorRow >= container.props.scrollY + viewHeight - 1) {
+              container.props.scrollY = Math.max(0, cursorRow - viewHeight + 2);
+            }
+          }
+          context.render();
+        }
+      "
+    />
+    <button
+      title="Clear"
+      style="width: 10; height: 3; border: thin;"
+      onClick="
+        const textarea = context.getElementById('editor');
+        const container = context.getElementById('scroll-container');
+        if (textarea) {
+          textarea.setValue('');
+          if (container) container.props.scrollY = 0;
+          context.render();
+        }
+      "
+    />
+    <button
+      title="Quit"
+      style="width: 10; height: 3; border: thin;"
+      onClick="context.quit()"
+    />
+  </container>
+</container>
+</melker>

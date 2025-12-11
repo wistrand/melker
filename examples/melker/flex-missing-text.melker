@@ -1,0 +1,7 @@
+<container style="width: fill; height: fill;">
+  <container style="display: flex; flex-direction: row; border: thin; background-color: yellow">
+    <text style="background-color: red; flex: 1; padding: 0;">Left</text>
+    <text id="missing-text" style="background-color: cyan; flex: ; padding: 1;">Center</text>
+    <text style="background-color: yellow; flex: 1; padding: 0;">Right</text>
+  </container>
+</container>

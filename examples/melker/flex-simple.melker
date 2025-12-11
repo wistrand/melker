@@ -1,0 +1,29 @@
+<melker>
+<container style="width: fill; height: fill; padding: 2; background-color: black;">
+  <text style="color: cyan; font-weight: bold;">
+    Simple Flexbox Test - Column Default
+  </text>
+
+  <!-- Test 1: Default column layout -->
+  <container style="display: flex; height: 10; border: thin; padding: 1;">
+    <text style="background-color: red; color: white;">Item 1 - Column</text>
+    <text style="background-color: cyan; color: white;">Item 2 - Column</text>
+    <text style="background-color: yellow; color: black;">Item 3 - Column</text>
+  </container>
+
+  <text style="color: cyan; font-weight: bold; padding-top: 1;">
+    Row Layout Test
+  </text>
+
+  <!-- Test 2: Row layout -->
+  <container style="display: flex; flex-direction: row; border: thin;">
+    <text style="background-color: red; flex: 1; padding: 0;">Left</text>
+    <text id="missing-text" style="background-color: cyan; flex: 1; padding: 1;">Center</text>
+    <text style="background-color: yellow; flex: 1; padding: 0;">Right</text>
+  </container>
+
+  <text style="color: gray; padding-top: 2;">
+    Press ctrl+C to exit
+  </text>
+</container>
+</melker>

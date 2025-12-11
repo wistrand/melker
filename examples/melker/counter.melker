@@ -1,0 +1,73 @@
+<melker>
+
+    <style>
+        #decrementBtn {
+            background-color: red;
+        }
+    </style>
+
+    <script type="typescript">
+        const apa = 2;
+        function foo() {
+          console.error("hello");
+        }
+        foo();
+    </script>
+
+    <container style="width: 40; height: 30; border: thin; padding: 2; display: flex; flex-direction: column;">
+  <text style="font-weight: bold; margin-bottom: 2; text-align: center">
+    Counter App
+  </text>
+
+  <container style="display: flex; flex-direction: row; margin-bottom: 2; ">
+    <button
+      id="decrementBtn"
+      title="-"
+      style="flex: 1; border: thin; vertical-align: center; text-align: center;"
+      onClick="
+        const counterEl = context.getElementById('counter');
+        if (counterEl) {
+          const currentValue = parseInt(counterEl.props.text) || 0;
+          counterEl.props.text = String(currentValue - 1);
+          context.render();
+        }
+      "
+    />
+
+    <text id="counter" style="width: 8; text-align: center; font-weight: bold; font-size: large;">
+      0
+    </text>
+
+    <button
+      id="incrementBtn"
+      title="+"
+      style="flex: 1; border: thin; vertical-align: center; text-align: center;"
+      onClick="
+        const counterEl = context.getElementById('counter');
+        if (counterEl) {
+          const currentValue = parseInt(counterEl.props.text) || 0;
+          counterEl.props.text = String(currentValue + 1);
+          context.render();
+        }
+      "
+    />
+  </container>
+
+  <button
+    id="resetBtn"
+    title="Reset to 0"
+    style="border: thin; height: 3;"
+    onClick="
+      const counterEl = context.getElementById('counter');
+      if (counterEl) {
+        counterEl.props.text = '0';
+        context.render();
+      }
+    "
+  />
+
+  <text style="color: gray; text-align: center;">
+    Click buttons to count!
+  </text>
+</container>
+</melker>

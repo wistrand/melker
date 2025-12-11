@@ -1,0 +1,115 @@
+<melker>
+  <script type="typescript">
+    // Draw overlay graphics on top of the image
+    const drawOverlay = (canvas: any): void => {
+      // Draw a red border rectangle around the image area
+      canvas.setColor('#FF0000');  // Red
+      const w = canvas.getBufferWidth();
+      const h = canvas.getBufferHeight();
+      canvas.drawRect(2, 2, w - 4, h - 4);
+
+      // Draw diagonal lines in green
+      canvas.setColor('#00FF00');  // Green
+      canvas.drawLine(10, 10, w - 10, h - 10);
+      canvas.drawLine(w - 10, 10, 10, h - 10);
+
+      // Draw a cyan circle in the center
+      canvas.setColor('#00FFFF');  // Cyan
+      const centerX = Math.floor(w / 2);
+      const centerY = Math.floor(h / 2);
+      const radius = Math.min(w, h) / 4;
+      canvas.drawCircle(centerX, centerY, radius);
+    };
+
+    // Load and display an image on the canvas
+    const loadAndDisplayImage = async (canvas: any, imagePath: string): Promise<void> => {
+      try {
+        await canvas.loadImage(imagePath);
+        // Draw overlay on top of the image
+        drawOverlay(canvas);
+        canvas.markDirty();
+        context.engine.render();
+      } catch (err) {
+        // Show error in status text
+        const status = context.getElementById('statusText');
+        if (status) {
+          status.props.text = 'Error: ' + (err instanceof Error ? err.message : String(err));
+        }
+      }
+    };
+
+    // Register resize handler to re-render image
+    context.engine.onResize((event: any) => {
+      const canvas = context.getElementById('imageCanvas');
+      if (!canvas) return;
+
+      // Calculate new canvas size based on terminal size
+      const { newSize } = event;
+      const canvasWidth = Math.max(20, newSize.width - 4);
+      const canvasHeight = Math.max(10, newSize.height - 8);
+
+      // Resize the canvas
+      canvas.setSize(canvasWidth, canvasHeight);
+
+      // Re-render the image at new size
+      canvas.refreshImage();
+      // Redraw overlay on resized canvas
+      drawOverlay(canvas);
+      canvas.markDirty();
+      context.engine.render();
+    });
+
+    // Initial load on mount
+    context.engine.onMount(async () => {
+      const canvas = context.getElementById('imageCanvas');
+      const status = context.getElementById('statusText');
+
+      if (canvas) {
+        // Calculate initial canvas size based on current terminal size
+        const terminalSize = context.engine.getTerminalSize();
+        const canvasWidth = Math.max(20, terminalSize.width - 4);
+        const canvasHeight = Math.max(10, terminalSize.height - 8);
+
+        // Resize the canvas to fit
+        canvas.setSize(canvasWidth, canvasHeight);
+
+        // Get the image path from props or use default
+        const imagePath = canvas.props.src || 'examples/melker/test_image.png';
+
+        if (status) {
+          status.props.text = 'Loading: ' + imagePath;
+          context.engine.render();
+        }
+
+        // Load the image
+        await loadAndDisplayImage(canvas, imagePath);
+
+        if (status && canvas.hasImage()) {
+          const imgSize = canvas.getImageSize();
+          status.props.text = 'Image ' + imgSize.width + 'x' + imgSize.height + ' with overlay - Resize to rescale';
+        }
+
+        context.engine.render();
+      }
+    });
+  </script>
+
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1;">
+      Canvas Image Test - Image Background with Drawing Overlay
+    </text>
+
+    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center;">
+      <canvas
+        id="imageCanvas"
+        width="60"
+        height="20"
+        src="examples/melker/test_image.png"
+      />
+    </container>
+
+    <text id="statusText" style="color: gray; margin-top: 1;">
+      Loading image...
+    </text>
+  </container>
+</melker>

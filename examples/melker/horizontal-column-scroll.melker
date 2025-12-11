@@ -1,0 +1,24 @@
+<container style="display: flex; flex-direction: row; height: 15; width: 40; border: thin">
+  <container scrollable={true} style="flex: 1; border-right: thin; flex-direction: column; height: 12;">
+    <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 1: This very long text will be clipped instead of wrapped</text>
+    <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 2: Another long text that gets clipped at column boundary</text>
+    <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 3: Yet another long entry showing clipping behavior</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 4</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 5</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 6</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 7</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 8</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 9</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 10</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 11</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 12</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 13</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 14</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 15</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 16</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 17</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 18</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 19</text>
+    <text style="textWrap: nowrap;">Column 2 - Item 20</text>
+  </container>
+</container>

@@ -1,0 +1,60 @@
+<melker>
+<container style="width: 60; height: 20; border: thin; padding: 1; display: flex; flex-direction: column;">
+  <text style="font-weight: bold; margin-bottom: 1;">Textarea Demo</text>
+
+  <textarea
+    id="editor"
+    placeholder="Type here... (Enter for newlines, Ctrl+A/E/K/Y for emacs keys)"
+    rows="8"
+    cols="56"
+    style="border: thin; margin-bottom: 1;"
+    onChange="
+      const stats = context.getElementById('stats');
+      const textarea = context.getElementById('editor');
+      if (stats && textarea) {
+        const val = textarea.getValue();
+        const lines = val.split('\\n').length;
+        const chars = val.length;
+        stats.props.text = 'Lines: ' + lines + ' | Chars: ' + chars;
+        context.render();
+      }
+    "
+  />
+
+  <text id="stats" style="color: gray;">Lines: 1 | Chars: 0</text>
+
+  <container style="display: flex; flex-direction: row; gap: 2; margin-top: 1;">
+    <button
+      title="Clear"
+      style="width: 10; height: 3; border: thin;"
+      onClick="
+        const textarea = context.getElementById('editor');
+        const stats = context.getElementById('stats');
+        if (textarea) {
+          textarea.setValue('');
+          if (stats) stats.props.text = 'Lines: 1 | Chars: 0';
+          context.render();
+        }
+      "
+    />
+    <button
+      title="Sample"
+      style="width: 10; height: 3; border: thin;"
+      onClick="
+        const textarea = context.getElementById('editor');
+        const stats = context.getElementById('stats');
+        if (textarea) {
+          textarea.setValue('Hello World!\\nThis is a multiline\\ntextarea component.\\n\\nUse arrow keys to navigate.');
+          if (stats) stats.props.text = 'Lines: 5 | Chars: 77';
+          context.render();
+        }
+      "
+    />
+    <button
+      title="Quit"
+      style="width: 10; height: 3; border: thin;"
+      onClick="context.quit()"
+    />
+  </container>
+</container>
+</melker>

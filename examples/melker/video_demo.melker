@@ -1,0 +1,178 @@
+<melker>
+  <title>Melker Video Player - ${argv[1]:-wallace.mkv}</title>
+  <script type="typescript">
+    // Video demo - demonstrates the self-contained video element
+    // The video component now handles:
+    // - Auto-capturing requestRender from render context
+    // - Auto-sizing based on layout bounds
+    // - Auto-resizing on terminal resize
+    // - Autoplay (when enabled, which is the default)
+
+    function togglePlayback() {
+      const video = context.getElementById('player');
+      const status = context.getElementById('status');
+      const playBtn = context.getElementById('play-btn');
+
+      if (!video || !status) return;
+
+      if (video.isPlaying()) {
+        video.pause();
+        status.props.text = 'Status: Paused';
+        if (playBtn) playBtn.props.title = 'Play';
+      } else if (video.isPaused()) {
+        video.resume();
+        status.props.text = 'Status: Playing';
+        if (playBtn) playBtn.props.title = 'Pause';
+      }
+      context.render();
+    }
+
+    function quit() {
+      const video = context.getElementById('player');
+      if (video) video.stop();
+      context.exit();
+    }
+
+    function seekBackward() {
+      const video = context.getElementById('player');
+      if (!video) return;
+      const currentTime = video.getCurrentTime();
+      const newTime = Math.max(0, currentTime - 10);
+      video.play(newTime);
+    }
+
+    function seekForward() {
+      const video = context.getElementById('player');
+      if (!video) return;
+      const currentTime = video.getCurrentTime();
+      video.play(currentTime + 10);
+    }
+
+    function seekBackwardMin() {
+      const video = context.getElementById('player');
+      if (!video) return;
+      const currentTime = video.getCurrentTime();
+      const newTime = Math.max(0, currentTime - 60);
+      video.play(newTime);
+    }
+
+    function seekForwardMin() {
+      const video = context.getElementById('player');
+      if (!video) return;
+      const currentTime = video.getCurrentTime();
+      video.play(currentTime + 60);
+    }
+
+    function formatTime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateTime() {
+      const video = context.getElementById('player');
+      const timeDisplay = context.getElementById('time-display');
+      if (!video || !timeDisplay) return;
+      const currentTime = video.getCurrentTime();
+      timeDisplay.props.text = formatTime(currentTime);
+    }
+
+    exports = { togglePlayback, quit, seekBackward, seekForward, seekBackwardMin, seekForwardMin, updateTime };
+  </script>
+
+  <container
+    id="main"
+    style="width: fill; height: fill; display: flex; flex-direction: column;"
+  >
+    <!-- Video element - just specify src, everything else is automatic! -->
+    <video
+      id="player"
+      src="${argv[1]:-media/seal.mkv}"
+      style="flex: 1 1 0;"
+      loop="true"
+      fps="24"
+      dither="${argv[2]:-false}"
+      colorDepth="${argv[3]:-8}"
+      startTime="${argv[4]:-0}"
+      subtitle="${argv[5]:-.srt}"
+      audio="${MELKER_AUDIO:-true}"
+      onPlay="
+        const status = context.getElementById('status');
+        const playBtn = context.getElementById('play-btn');
+        if (status) status.props.text = 'Status: Playing';
+        if (playBtn) playBtn.props.title = 'Pause';
+        context.render();
+      "
+      onPause="
+        const status = context.getElementById('status');
+        const playBtn = context.getElementById('play-btn');
+        if (status) status.props.text = 'Status: Paused';
+        if (playBtn) playBtn.props.title = 'Play';
+        context.render();
+      "
+      onEnd="
+        const status = context.getElementById('status');
+        const playBtn = context.getElementById('play-btn');
+        if (status) status.props.text = 'Status: Ended';
+        if (playBtn) playBtn.props.title = 'Play';
+        context.render();
+      "
+      onError="
+        const status = context.getElementById('status');
+        if (status) {
+          status.props.text = 'Status: Error - ' + event.message;
+          context.render();
+        }
+      "
+      onFrame="context.updateTime();"
+    />
+
+    <text id="time-display" style="height: 1; color: yellow; text-align: center;">
+      0:00
+    </text>
+
+    <text id="status" style="height: 1; color: cyan; text-align: center;">
+      Status: Loading...
+    </text>
+
+    <container style="height: 3; display: flex; flex-direction: row; padding: 0; justify-content: center;">
+      <button
+        id="back-min-btn"
+        title="-1m"
+        style="width: 8; height: 3;"
+        onClick="context.seekBackwardMin();"
+      />
+      <button
+        id="back-btn"
+        title="-10s"
+        style="width: 8; height: 3;"
+        onClick="context.seekBackward();"
+      />
+      <button
+        id="play-btn"
+        title="Pause"
+        style="width: 10; height: 3;"
+        onClick="context.togglePlayback();"
+      />
+      <button
+        id="fwd-btn"
+        title="+10s"
+        style="width: 8; height: 3;"
+        onClick="context.seekForward();"
+      />
+      <button
+        id="fwd-min-btn"
+        title="+1m"
+        style="width: 8; height: 3;"
+        onClick="context.seekForwardMin();"
+      />
+      <button
+        id="quit-btn"
+        title="Quit"
+        style="width: 10; height: 3;"
+        onClick="context.quit();"
+      />
+    </container>
+  </container>
+</melker>

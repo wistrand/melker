@@ -1,0 +1,583 @@
+<melker>
+  <script type="typescript">
+    /**
+     * Enterprise Analog Clock Application
+     * Version: 1.0.0
+     * Features: Multi-timezone support, themes, settings, statistics, error handling
+     */
+
+    // Application state and configuration
+    interface ClockConfig {
+      timezone: string;
+      theme: 'light' | 'dark' | 'blue' | 'green';
+      showSeconds: boolean;
+      showDigital: boolean;
+      show24Hour: boolean;
+      autoResize: boolean;
+      refreshRate: number;
+      showStatistics: boolean;
+    }
+
+    interface ClockStatistics {
+      uptime: number;
+      frameCount: number;
+      lastUpdateTime: number;
+      avgFrameTime: number;
+      errorCount: number;
+      memoryUsage?: string;
+    }
+
+    // Global state
+    let clockConfig: ClockConfig = {
+      timezone: 'UTC',
+      theme: 'dark',
+      showSeconds: true,
+      showDigital: true,
+      show24Hour: false,
+      autoResize: true,
+      refreshRate: 1000,
+      showStatistics: false
+    };
+
+    let clockStats: ClockStatistics = {
+      uptime: 0,
+      frameCount: 0,
+      lastUpdateTime: Date.now(),
+      avgFrameTime: 0,
+      errorCount: 0
+    };
+
+    let clockInterval: number | null = null;
+    let startTime = Date.now();
+    let canvas: any = null;
+    let isRunning = false;
+
+    // Theme configurations
+    const themes = {
+      light: { bg: 'white', fg: 'black', accent: 'blue', border: 'gray' },
+      dark: { bg: 'black', fg: 'white', accent: 'cyan', border: 'gray' },
+      blue: { bg: 'navy', fg: 'white', accent: 'lightblue', border: 'blue' },
+      green: { bg: 'darkgreen', fg: 'white', accent: 'lightgreen', border: 'green' }
+    };
+
+    // Timezone data (subset for demo)
+    const timezones = [
+      { label: 'UTC', value: 'UTC', offset: 0 },
+      { label: 'New York (EST)', value: 'America/New_York', offset: -5 },
+      { label: 'Los Angeles (PST)', value: 'America/Los_Angeles', offset: -8 },
+      { label: 'London (GMT)', value: 'Europe/London', offset: 0 },
+      { label: 'Tokyo (JST)', value: 'Asia/Tokyo', offset: 9 },
+      { label: 'Sydney (AEST)', value: 'Australia/Sydney', offset: 10 }
+    ];
+
+    // Error handling and logging
+    function logError(error: string, context?: string): void {
+      clockStats.errorCount++;
+      console.error(`[Clock Error] ${context ? `[${context}] ` : ''}${error}`);
+    }
+
+    function safeExecute<T>(operation: () => T, fallback: T, context?: string): T {
+      try {
+        return operation();
+      } catch (error) {
+        logError(error instanceof Error ? error.message : String(error), context);
+        return fallback;
+      }
+    }
+
+    // Time utilities with timezone support
+    function getCurrentTime(): Date {
+      return safeExecute(() => {
+        const now = new Date();
+        if (clockConfig.timezone === 'UTC') return now;
+
+        // Simple timezone offset calculation (for demo purposes)
+        const tz = timezones.find(t => t.value === clockConfig.timezone);
+        if (tz) {
+          const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+          return new Date(utc + (tz.offset * 3600000));
+        }
+        return now;
+      }, new Date(), 'getCurrentTime');
+    }
+
+    function formatDigitalTime(date: Date): string {
+      return safeExecute(() => {
+        let hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+
+        if (clockConfig.show24Hour) {
+          return `${hours.toString().padStart(2, '0')}:${minutes}${clockConfig.showSeconds ? ':' + seconds : ''}`;
+        } else {
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          if (hours === 0) hours = 12;
+          return `${hours}:${minutes}${clockConfig.showSeconds ? ':' + seconds : ''} ${ampm}`;
+        }
+      }, '00:00:00', 'formatDigitalTime');
+    }
+
+    // Enhanced clock drawing with themes and error handling
+    function drawAnalogClock(): void {
+      if (!canvas) return;
+
+      safeExecute(() => {
+        const now = getCurrentTime();
+        const theme = themes[clockConfig.theme];
+
+        // Clear canvas
+        canvas.clear();
+
+        // Get canvas dimensions
+        const { width, height } = canvas.getBufferSize();
+        const centerX = Math.floor(width / 2);
+        const centerY = Math.floor(height / 2);
+        const radius = Math.min(centerX, centerY) - 6;
+
+        if (radius < 10) return; // Too small to draw
+
+        // Draw outer circle with theme colors
+        canvas.drawCircle(centerX, centerY, radius);
+
+        // Draw hour markers
+        for (let i = 0; i < 12; i++) {
+          const angle = (i * Math.PI) / 6;
+          const isMainHour = i % 3 === 0;
+          const innerRadius = radius - (isMainHour ? 8 : 4);
+          const outerRadius = radius - 2;
+
+          const x1 = centerX + Math.floor(innerRadius * Math.cos(angle - Math.PI / 2));
+          const y1 = centerY + Math.floor(innerRadius * Math.sin(angle - Math.PI / 2));
+          const x2 = centerX + Math.floor(outerRadius * Math.cos(angle - Math.PI / 2));
+          const y2 = centerY + Math.floor(outerRadius * Math.sin(angle - Math.PI / 2));
+
+          canvas.drawLine(x1, y1, x2, y2);
+        }
+
+        // Calculate hand angles
+        const hours = now.getHours() % 12;
+        const minutes = now.getMinutes();
+        const seconds = now.getSeconds();
+
+        const hourAngle = (hours + minutes / 60) * (Math.PI / 6);
+        const minuteAngle = minutes * (Math.PI / 30);
+        const secondAngle = seconds * (Math.PI / 30);
+
+        // Draw hour hand (thick)
+        const hourLength = Math.floor(radius * 0.5);
+        const hourX = centerX + Math.floor(hourLength * Math.cos(hourAngle - Math.PI / 2));
+        const hourY = centerY + Math.floor(hourLength * Math.sin(hourAngle - Math.PI / 2));
+        canvas.drawLine(centerX, centerY, hourX, hourY);
+        // Make hour hand thicker
+        canvas.drawLine(centerX + 1, centerY, hourX + 1, hourY);
+        canvas.drawLine(centerX, centerY + 1, hourX, hourY + 1);
+
+        // Draw minute hand (medium)
+        const minuteLength = Math.floor(radius * 0.7);
+        const minuteX = centerX + Math.floor(minuteLength * Math.cos(minuteAngle - Math.PI / 2));
+        const minuteY = centerY + Math.floor(minuteLength * Math.sin(minuteAngle - Math.PI / 2));
+        canvas.drawLine(centerX, centerY, minuteX, minuteY);
+
+        // Draw second hand (thin, conditional)
+        if (clockConfig.showSeconds) {
+          const secondLength = Math.floor(radius * 0.8);
+          for (let i = 1; i <= 8; i++) {
+            const t = i / 8;
+            const x = centerX + Math.floor(secondLength * t * Math.cos(secondAngle - Math.PI / 2));
+            const y = centerY + Math.floor(secondLength * t * Math.sin(secondAngle - Math.PI / 2));
+            canvas.setPixel(x, y, true);
+          }
+        }
+
+        // Draw center hub
+        canvas.fillRect(centerX - 1, centerY - 1, 3, 3);
+
+        // Update statistics
+        clockStats.frameCount++;
+        const currentTime = Date.now();
+        const frameTime = currentTime - clockStats.lastUpdateTime;
+        clockStats.avgFrameTime = (clockStats.avgFrameTime + frameTime) / 2;
+        clockStats.lastUpdateTime = currentTime;
+        clockStats.uptime = Math.floor((currentTime - startTime) / 1000);
+
+      }, undefined, 'drawAnalogClock');
+    }
+
+    // UI update functions
+    function updateDigitalDisplay(): void {
+      const digitalElement = context.getElementById('digitalTime');
+      if (digitalElement && clockConfig.showDigital) {
+        const time = formatDigitalTime(getCurrentTime());
+        digitalElement.props.text = time;
+      }
+    }
+
+    function updateTimezoneDisplay(): void {
+      const tzElement = context.getElementById('timezoneDisplay');
+      if (tzElement) {
+        const tz = timezones.find(t => t.value === clockConfig.timezone);
+        const label = tz ? tz.label : clockConfig.timezone;
+        tzElement.props.text = `Zone: ${label}`;
+      }
+    }
+
+    function updateStatistics(): void {
+      if (!clockConfig.showStatistics) return;
+
+      const statsElement = context.getElementById('statistics');
+      if (statsElement) {
+        const stats = [
+          `Uptime: ${Math.floor(clockStats.uptime / 60)}m ${clockStats.uptime % 60}s`,
+          `Frames: ${clockStats.frameCount}`,
+          `Avg Frame: ${clockStats.avgFrameTime.toFixed(1)}ms`,
+          `Errors: ${clockStats.errorCount}`,
+          `Rate: ${clockConfig.refreshRate}ms`
+        ].join(' | ');
+
+        statsElement.props.text = stats;
+      }
+    }
+
+    // Clock control functions
+    function startClock(): void {
+      if (isRunning) return;
+
+      isRunning = true;
+      startTime = Date.now();
+      clockStats = { ...clockStats, frameCount: 0, errorCount: 0 };
+
+      clockInterval = setInterval(() => {
+        try {
+          drawAnalogClock();
+          updateDigitalDisplay();
+          updateTimezoneDisplay();
+          updateStatistics();
+          context.engine.render();
+        } catch (error) {
+          logError(error instanceof Error ? error.message : String(error), 'clockInterval');
+        }
+      }, clockConfig.refreshRate);
+
+      // Update start button
+      const startBtn = context.getElementById('startBtn');
+      if (startBtn) {
+        startBtn.props.title = '⏹️ Stop';
+        startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'red' };
+      }
+    }
+
+    function stopClock(): void {
+      if (!isRunning) return;
+
+      isRunning = false;
+      if (clockInterval) {
+        clearInterval(clockInterval);
+        clockInterval = null;
+      }
+
+      // Update start button
+      const startBtn = context.getElementById('startBtn');
+      if (startBtn) {
+        startBtn.props.title = '▶️ Start';
+        startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'green' };
+      }
+    }
+
+    export function toggleClock(): void {
+      if (isRunning) {
+        stopClock();
+      } else {
+        startClock();
+      }
+      context.engine.render();
+    }
+
+    // Settings functions
+    export function cycleTimezone(): void {
+      const currentIndex = timezones.findIndex(t => t.value === clockConfig.timezone);
+      const nextIndex = (currentIndex + 1) % timezones.length;
+      clockConfig.timezone = timezones[nextIndex].value;
+      updateTimezoneDisplay();
+      context.engine.render();
+    }
+
+    export function cycleTheme(): void {
+      const themes_list = Object.keys(themes) as Array<keyof typeof themes>;
+      const currentIndex = themes_list.findIndex(t => t === clockConfig.theme);
+      const nextIndex = (currentIndex + 1) % themes_list.length;
+      clockConfig.theme = themes_list[nextIndex];
+
+      // Update canvas style
+      const canvasElement = context.getElementById('clockCanvas');
+      if (canvasElement) {
+        const theme = themes[clockConfig.theme];
+        canvasElement.props.style = {
+          ...canvasElement.props.style,
+          backgroundColor: theme.bg,
+          borderColor: theme.border
+        };
+      }
+      // Redraw clock immediately if running to prevent blank canvas after style change
+      if (isRunning) drawAnalogClock();
+      context.engine.render();
+    }
+
+    export function toggleSeconds(): void {
+      clockConfig.showSeconds = !clockConfig.showSeconds;
+      const btn = context.getElementById('secondsBtn');
+      if (btn) {
+        btn.props.title = clockConfig.showSeconds ? '🕐 Hide Seconds' : '🕐 Show Seconds';
+        btn.props.style = {
+          ...btn.props.style,
+          backgroundColor: clockConfig.showSeconds ? 'blue' : 'gray'
+        };
+      }
+      context.engine.render();
+    }
+
+    export function toggleDigital(): void {
+      clockConfig.showDigital = !clockConfig.showDigital;
+      const digitalElement = context.getElementById('digitalTime');
+      const btn = context.getElementById('digitalBtn');
+
+      if (digitalElement) {
+        digitalElement.props.style = {
+          ...digitalElement.props.style,
+          display: clockConfig.showDigital ? 'block' : 'none'
+        };
+      }
+
+      if (btn) {
+        btn.props.title = clockConfig.showDigital ? '📱 Hide Digital' : '📱 Show Digital';
+        btn.props.style = {
+          ...btn.props.style,
+          backgroundColor: clockConfig.showDigital ? 'purple' : 'gray'
+        };
+      }
+      context.engine.render();
+    }
+
+    export function toggle24Hour(): void {
+      clockConfig.show24Hour = !clockConfig.show24Hour;
+      const btn = context.getElementById('formatBtn');
+      if (btn) {
+        btn.props.title = clockConfig.show24Hour ? '🕛 12 Hour' : '🕛 24 Hour';
+        btn.props.style = {
+          ...btn.props.style,
+          backgroundColor: clockConfig.show24Hour ? 'orange' : 'gray'
+        };
+      }
+      updateDigitalDisplay();
+      context.engine.render();
+    }
+
+    export function toggleStatistics(): void {
+      clockConfig.showStatistics = !clockConfig.showStatistics;
+      const statsElement = context.getElementById('statistics');
+      const btn = context.getElementById('statsBtn');
+
+      if (statsElement) {
+        statsElement.props.style = {
+          ...statsElement.props.style,
+          display: clockConfig.showStatistics ? 'block' : 'none'
+        };
+      }
+
+      if (btn) {
+        btn.props.title = clockConfig.showStatistics ? '📊 Hide Stats' : '📊 Show Stats';
+        btn.props.style = {
+          ...btn.props.style,
+          backgroundColor: clockConfig.showStatistics ? 'teal' : 'gray'
+        };
+      }
+      context.engine.render();
+    }
+
+    export function adjustRefreshRate(): void {
+      const rates = [100, 250, 500, 1000, 2000];
+      const currentIndex = rates.findIndex(r => r === clockConfig.refreshRate);
+      const nextIndex = (currentIndex + 1) % rates.length;
+      clockConfig.refreshRate = rates[nextIndex];
+
+      // Restart clock with new rate if running
+      if (isRunning) {
+        stopClock();
+        startClock();
+      }
+
+      const btn = context.getElementById('rateBtn');
+      if (btn) {
+        btn.props.title = `⚡ Rate: ${clockConfig.refreshRate}ms`;
+      }
+      context.engine.render();
+    }
+
+    // Auto-resize handler
+    context.engine.onResize((event: any) => {
+      if (!clockConfig.autoResize) return;
+
+      const canvas = context.getElementById('clockCanvas');
+      if (!canvas) return;
+
+      const { newSize } = event;
+      const canvasWidth = Math.max(30, newSize.width - 8);
+      const canvasHeight = Math.max(15, newSize.height - 12);
+
+      canvas.setSize(canvasWidth, canvasHeight);
+      if (isRunning) {
+        drawAnalogClock();
+        context.engine.render();
+      }
+    });
+
+    // Initialize application on mount
+    context.engine.onMount(() => {
+      try {
+        canvas = context.getElementById('clockCanvas');
+        if (canvas) {
+          // Set initial canvas size
+          const terminalSize = context.engine.getTerminalSize();
+          const canvasWidth = Math.max(30, terminalSize.width - 8);
+          const canvasHeight = Math.max(15, terminalSize.height - 12);
+          canvas.setSize(canvasWidth, canvasHeight);
+
+          // Apply initial theme
+          const theme = themes[clockConfig.theme];
+          canvas.props.style = {
+            ...canvas.props.style,
+            backgroundColor: theme.bg,
+            borderColor: theme.border
+          };
+
+          // Initial UI updates
+          updateTimezoneDisplay();
+          updateDigitalDisplay();
+
+          // Initial clock draw after theme application
+          drawAnalogClock();
+
+          context.engine.render();
+
+      // Auto-start
+          startClock();
+        }
+      } catch (error) {
+        logError(error instanceof Error ? error.message : String(error), 'onMount');
+      }
+    });
+
+    // Cleanup on exit
+    function cleanup(): void {
+      stopClock();
+      console.log('Enterprise Analog Clock stopped gracefully');
+    }
+
+    // Export cleanup for potential external use
+    (globalThis as any).cleanupClock = cleanup;
+
+  </script>
+
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; background-color: black; color: white;">
+
+    <!-- Header -->
+    <container style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: thin; border-color: gray;">
+      <text style="font-weight: bold; color: cyan; text-align: left;">⚡ Enterprise Analog Clock v1.0.0</text>
+      <text id="timezoneDisplay" style="color: yellow; text-align: right;">Zone: UTC</text>
+    </container>
+
+    <!-- Main clock area -->
+    <container style="width: fill; display: flex; align-items: center; justify-content: center; border: thin; border-color: gray;">
+      <canvas
+        id="clockCanvas"
+        width="48"
+        height="12"
+        style="background-color: black;"
+      />
+    </container>
+
+    <!-- Digital time display -->
+    <text id="digitalTime" style="font-weight: bold; font-size: large; text-align: center; color: white;">
+      00:00:00
+    </text>
+
+    <!-- Control panel -->
+    <container style="display: flex; flex-direction: row; justify-content: center; gap: 1;">
+      <button
+        id="startBtn"
+        title="▶️ Start"
+        style="background-color: green; color: white; padding: 1;"
+        onClick="toggleClock();"
+      />
+
+      <button
+        title="🌍 Timezone"
+        style="background-color: blue; color: white; padding: 1;"
+        onClick="cycleTimezone();"
+      />
+
+      <button
+        title="🎨 Theme"
+        style="background-color: purple; color: white; padding: 1;"
+        onClick="cycleTheme();"
+      />
+
+      <button
+        id="secondsBtn"
+        title="🕐 Hide Seconds"
+        style="background-color: blue; color: white; padding: 1;"
+        onClick="toggleSeconds();"
+      />
+    </container>
+
+    <!-- Settings panel -->
+    <container style="display: flex; flex-direction: row; justify-content: center; gap: 1;">
+      <button
+        id="digitalBtn"
+        title="📱 Hide Digital"
+        style="background-color: purple; color: white; padding: 1;"
+        onClick="toggleDigital();"
+      />
+
+      <button
+        id="formatBtn"
+        title="🕛 24 Hour"
+        style="background-color: gray; color: white; padding: 1;"
+        onClick="toggle24Hour();"
+      />
+
+      <button
+        id="rateBtn"
+        title="⚡ Rate: 1000ms"
+        style="background-color: orange; color: white; padding: 1;"
+        onClick="adjustRefreshRate();"
+      />
+
+      <button
+        id="statsBtn"
+        title="📊 Show Stats"
+        style="background-color: gray; color: white; padding: 1;"
+        onClick="toggleStatistics();"
+      />
+
+      <button
+        title="❌ Exit"
+        style="background-color: red; color: white; padding: 1;"
+        onClick="context.exit();"
+      />
+    </container>
+
+    <!-- Statistics display (hidden by default) -->
+    <text id="statistics" style="color: cyan; text-align: center; font-size: small; display: none;">
+      Statistics will appear here
+    </text>
+
+    <!-- Footer -->
+    <container style="border-top: thin; border-color: gray;">
+      <text style="color: gray; text-align: center; font-size: small;">
+        🚀 Enterprise-grade terminal clock with timezone support, themes, and real-time statistics
+      </text>
+    </container>
+
+  </container>
+</melker>

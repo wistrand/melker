@@ -1,0 +1,33 @@
+<container style="width: 45; height: 15; border: thin; padding: 2; display: flex; flex-direction: column;">
+  <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+    Input Demo
+  </text>
+
+  <container style="display: flex; flex-direction: row; margin-bottom: 1;">
+    <text style="margin-right: 2;">Message:</text>
+    <input
+      id="messageInput"
+      style="width: 20; border: thin;"
+      placeholder="Type and press Enter"
+      onKeyPress="
+        if (event.key === 'Enter') {
+          const input = context.getElementById('messageInput');
+          const output = context.getElementById('messageOutput');
+          if (input && output) {
+            output.props.text = 'You said: ' + input.props.value;
+            input.props.value = '';
+            context.render();
+          }
+        }
+      "
+    />
+  </container>
+
+  <text id="messageOutput" style="color: green; margin-bottom: 1;">
+    Type something and press Enter!
+  </text>
+
+  <text style="color: gray; text-align: center;">
+    Press Enter - Tab - Ctrl+C to exit
+  </text>
+</container>

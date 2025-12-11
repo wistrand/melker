@@ -1,0 +1,177 @@
+<container style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column; flex-wrap: wrap;">
+  <!-- Title Section -->
+  <text style="color: cyan; font-weight: bold; padding: 1; text-align: center;">
+    Flexbox Layout Demonstration
+  </text>
+
+  <!-- Section 1: Default Column Direction (NEW DEFAULT) -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">1. Default Flex (Column Direction - NEW DEFAULT)</text>
+    <container style="display: flex; height: 8; border: thin; border-color: cyan; padding: 1; gap: 1;">
+      <button title="Item 1" style="background-color: red; color: white;" />
+      <button title="Item 2" style="background-color: yellow; color: black;" />
+      <button title="Item 3" style="background-color: green; color: black;" />
+    </container>
+  </container>
+
+  <!-- Section 2: Row Direction (Explicit) -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">2. Row Direction (Horizontal)</text>
+    <container style="display: flex; flex-direction: row; height: 3; border: thin; border-color: cyan; padding: 1; gap: 1; height: 8">
+      <button title="Left" style="background-color: red; flex: 1;" />
+      <button title="Center" style="background-color: yellow; flex: 2;" />
+      <button title="Right" style="background-color: green; flex: 1;" />
+    </container>
+  </container>
+
+  <!-- Section 3: Flex Grow Demonstration -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">3. Flex Grow (1:2:1 ratio)</text>
+    <container style="display: flex; flex-direction: row; height: 3; border: thin; border-color: cyan; padding: 1; gap: 1;">
+      <text style="background-color: red; padding: 1; flex: 1;">Flex: 1</text>
+      <text style="background-color: cyan; padding: 1; flex: 2;">Flex: 2 (Grows More)</text>
+      <text style="background-color: yellow; padding: 1; flex: 1;">Flex: 1</text>
+    </container>
+  </container>
+
+  <!-- Section 4: Justify Content -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">4. Justify Content Examples</text>
+
+    <!-- Space Between -->
+    <text style="color: gray; padding-left: 2;">space-between:</text>
+    <container style="display: flex; flex-direction: row; justify-content: space-between; height: 3; border: thin; border-color: gray; padding: 1;">
+      <button title="A" style="background-color: red; width: 8;" />
+      <button title="B" style="background-color: yellow; width: 8;" />
+      <button title="C" style="background-color: green; width: 8;" />
+    </container>
+
+    <!-- Center -->
+    <text style="color: gray; padding-left: 2; margin-top: 1;">center:</text>
+    <container style="display: flex; flex-direction: row; justify-content: center; height: 3; border: thin; border-color: gray; padding: 1; gap: 1;">
+      <button title="A" style="background-color: red; width: 8;" />
+      <button title="B" style="background-color: yellow; width: 8;" />
+      <button title="C" style="background-color: green; width: 8;" />
+    </container>
+
+    <!-- Space Around -->
+    <text style="color: gray; padding-left: 2; margin-top: 1;">space-around:</text>
+    <container style="display: flex; flex-direction: row; justify-content: space-around; height: 3; border: thin; border-color: gray; padding: 1;">
+      <button title="A" style="background-color: red; width: 8;" />
+      <button title="B" style="background-color: yellow; width: 8;" />
+      <button title="C" style="background-color: green; width: 8;" />
+    </container>
+  </container>
+
+  <!-- Section 5: Align Items -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">5. Align Items (Cross-Axis Alignment)</text>
+    <container style="display: flex; flex-direction: row; align-items: center; height: 8; border: thin; border-color: cyan; padding: 1; gap: 1;">
+      <container style="background-color: red; height: 3; width: 15; padding: 1;">
+        <text style="color: white;">Short</text>
+      </container>
+      <container style="background-color: yellow; height: 6; width: 15; padding: 1;">
+        <text style="color: black;">Tall</text>
+      </container>
+      <container style="background-color: green; height: 4; width: 15; padding: 1;">
+        <text style="color: black;">Medium</text>
+      </container>
+    </container>
+  </container>
+
+  <!-- Section 6: Flex Wrap -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">6. Flex Wrap (Multiple Lines)</text>
+    <container style="display: flex; flex-direction: row; flex-wrap: wrap; height: 8; border: thin; border-color: cyan; padding: 1; gap: 1;">
+      <button title="Item 1" style="background-color: red; width: 20; height: 3;" />
+      <button title="Item 2" style="background-color: yellow; width: 20; height: 3;" />
+      <button title="Item 3" style="background-color: green; width: 20; height: 3;" />
+      <button title="Item 4" style="background-color: blue; width: 20; height: 3;" />
+      <button title="Item 5" style="background-color: magenta; width: 20; height: 3;" />
+      <button title="Item 6" style="background-color: cyan; width: 20; height: 3;" />
+    </container>
+  </container>
+
+  <!-- Section 7: Nested Flex -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">7. Nested Flex Containers</text>
+    <container style="display: flex; flex-direction: row; height: 10; border: thin; border-color: cyan; padding: 1; gap: 1;">
+      <!-- Left Column -->
+      <container style="display: flex; flex-direction: column; flex: 1; border: thin; border-color: gray; padding: 1; gap: 1;">
+        <text style="background-color: red; color: white; padding: 1;">Column</text>
+        <text style="background-color: red; color: white; padding: 1;">Layout</text>
+        <text style="background-color: red; color: white; padding: 1;">Items</text>
+      </container>
+
+      <!-- Right Side with Row Layout -->
+      <container style="display: flex; flex-direction: row; flex: 2; border: thin; border-color: gray; padding: 1; gap: 1;">
+        <text style="background-color: yellow; flex: 1; padding: 1;">Row 1</text>
+        <text style="background-color: green; flex: 1; padding: 1;">Row 2</text>
+        <text style="background-color: cyan; flex: 1; padding: 1;">Row 3</text>
+      </container>
+    </container>
+  </container>
+
+  <!-- Section 8: Column with Flex Grow -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">8. Column Layout with Flex Grow</text>
+    <container style="display: flex; flex-direction: column; height: 12; border: thin; border-color: cyan; padding: 1; gap: 1;">
+      <text style="background-color: red; color: white; padding: 1;">Fixed Height Header</text>
+      <container style="background-color: brightBlack; flex: 1; padding: 1;">
+        <text style="color: white;">Content Area (flex: 1)</text>
+        <text style="color: gray;">This section grows to fill available space</text>
+      </container>
+      <text style="background-color: cyan; color: black; padding: 1;">Fixed Height Footer</text>
+    </container>
+  </container>
+
+  <!-- Section 9: Gap Property -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">9. Gap Property (Spacing Between Items)</text>
+    <container style="display: flex; flex-direction: row; height: 3; border: thin; border-color: cyan; padding: 1; gap: 3;">
+      <button title="Gap: 3" style="background-color: red; flex: 1;" />
+      <button title="Gap: 3" style="background-color: yellow; flex: 1;" />
+      <button title="Gap: 3" style="background-color: green; flex: 1;" />
+    </container>
+  </container>
+
+  <!-- Interactive Section -->
+  <container style="margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">10. Interactive Flex Layout</text>
+    <container style="display: flex; flex-direction: row; height: 5; border: thin; border-color: cyan; padding: 1; gap: 1;">
+      <button
+        id="flex-button-1"
+        title="Click to grow!"
+        style="background-color: red; flex: 1;"
+        onClick="
+          const btn = context.getElementById('flex-button-1');
+          const currentFlex = btn.props.style.flex || 1;
+          btn.props.style = { ...btn.props.style, flex: currentFlex === 1 ? 3 : 1 };
+          btn.props.title = currentFlex === 1 ? 'Click to shrink!' : 'Click to grow!';
+          context.render();
+        "
+      />
+      <button
+        title="Static"
+        style="background-color: yellow; flex: 1;"
+      />
+      <button
+        id="flex-button-3"
+        title="Click to grow!"
+        style="background-color: green; flex: 1;"
+        onClick="
+          const btn = context.getElementById('flex-button-3');
+          const currentFlex = btn.props.style.flex || 1;
+          btn.props.style = { ...btn.props.style, flex: currentFlex === 1 ? 3 : 1 };
+          btn.props.title = currentFlex === 1 ? 'Click to shrink!' : 'Click to grow!';
+          context.render();
+        "
+      />
+    </container>
+  </container>
+
+  <!-- Footer -->
+  <text style="color: gray; text-align: center; padding-top: 1;">
+    Press Q to exit | Use Tab to navigate | Click buttons to interact
+  </text>
+</container>

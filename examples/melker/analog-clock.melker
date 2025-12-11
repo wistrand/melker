@@ -1,0 +1,152 @@
+<melker>
+  <script type="typescript">
+    // Analog clock rendering functions using Melker's pixel canvas
+    const drawClock = (canvas: any): void => {
+      const now = new Date();
+
+      // Clear canvas
+      canvas.clear();
+
+      // Get canvas dimensions in pixels
+      const { width, height } = canvas.getBufferSize();
+      const centerX = Math.floor(width / 2);
+      const centerY = Math.floor(height / 2);
+      const radius = Math.min(centerX, centerY) - 4;
+
+      // Draw outer circle
+      canvas.drawCircle(centerX, centerY, radius);
+
+      // Draw hour markers (12, 3, 6, 9)
+      for (let i = 0; i < 12; i += 3) {
+        const angle = (i * Math.PI) / 6;
+        const x1 = centerX + Math.floor((radius - 6) * Math.cos(angle - Math.PI / 2));
+        const y1 = centerY + Math.floor((radius - 6) * Math.sin(angle - Math.PI / 2));
+        const x2 = centerX + Math.floor((radius - 2) * Math.cos(angle - Math.PI / 2));
+        const y2 = centerY + Math.floor((radius - 2) * Math.sin(angle - Math.PI / 2));
+
+        canvas.drawLine(x1, y1, x2, y2);
+      }
+
+      // Calculate hand angles
+      const hours = now.getHours() % 12;
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+
+      const hourAngle = (hours + minutes / 60) * (Math.PI / 6);
+      const minuteAngle = minutes * (Math.PI / 30);
+      const secondAngle = seconds * (Math.PI / 30);
+
+      // Draw hour hand (shortest, thickest)
+      const hourLength = Math.floor(radius * 0.4);
+      const hourX = centerX + Math.floor(hourLength * Math.cos(hourAngle - Math.PI / 2));
+      const hourY = centerY + Math.floor(hourLength * Math.sin(hourAngle - Math.PI / 2));
+      canvas.drawLine(centerX, centerY, hourX, hourY);
+
+      // Draw minute hand (medium length)
+      const minuteLength = Math.floor(radius * 0.6);
+      const minuteX = centerX + Math.floor(minuteLength * Math.cos(minuteAngle - Math.PI / 2));
+      const minuteY = centerY + Math.floor(minuteLength * Math.sin(minuteAngle - Math.PI / 2));
+      canvas.drawLine(centerX, centerY, minuteX, minuteY);
+
+      // Draw second hand (longest, thinnest - simulate with dots)
+      const secondLength = Math.floor(radius * 0.8);
+      const secondX = centerX + Math.floor(secondLength * Math.cos(secondAngle - Math.PI / 2));
+      const secondY = centerY + Math.floor(secondLength * Math.sin(secondAngle - Math.PI / 2));
+
+      // Draw second hand as a series of dots
+      const steps = Math.max(secondLength / 3, 1);
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const x = centerX + Math.floor(secondLength * t * Math.cos(secondAngle - Math.PI / 2));
+        const y = centerY + Math.floor(secondLength * t * Math.sin(secondAngle - Math.PI / 2));
+        canvas.setPixel(x, y, true);
+      }
+
+      // Draw center dot
+      canvas.fillRect(centerX - 1, centerY - 1, 3, 3);
+    };
+
+    // Register resize handler directly at script load time
+    context.engine.onResize((event: any) => {
+      const canvas = context.getElementById('clockCanvas');
+      if (!canvas) return;
+
+      // Calculate new canvas size based on terminal size
+      const { newSize } = event;
+      const canvasWidth = Math.max(20, newSize.width - 6); // Leave margin for borders and padding
+      const canvasHeight = Math.max(10, newSize.height - 8); // Leave space for header, footer, and buttons
+
+      // Resize the canvas
+      canvas.setSize(canvasWidth, canvasHeight);
+
+      // Redraw the clock on the new canvas size
+      drawClock(canvas);
+
+    });
+
+    // Auto-start the clock when engine is fully mounted
+    context.engine.onMount(() => {
+      const canvas = context.getElementById('clockCanvas');
+      if (canvas) {
+        // Calculate initial canvas size based on current terminal size
+        const terminalSize = context.engine.getTerminalSize();
+        const canvasWidth = Math.max(20, terminalSize.width - 6); // Leave margin for borders and padding
+        const canvasHeight = Math.max(10, terminalSize.height - 8); // Leave space for header, footer, and buttons
+
+        // Resize the canvas to fit properly
+        canvas.setSize(canvasWidth, canvasHeight);
+
+        // Initial draw
+        drawClock(canvas);
+
+        // Force canvas to mark as dirty and render
+        canvas.markDirty();
+        context.engine.render();
+
+        // Update every second
+        setInterval(() => {
+          drawClock(canvas);
+          context.engine.render();
+        }, 1000);
+      }
+    });
+
+  </script>
+
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      🕐 Analog Clock
+    </text>
+
+    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center;">
+      <canvas
+        id="clockCanvas"
+        width="60"
+        height="20"
+        style="border: thin; background-color: white;"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
+      <button
+        title="✅ Clock Running"
+        style="background-color: blue; color: white; padding: 1;"
+        onClick="
+          // Clock is already running, this is just a status indicator
+          // event.target.props.title = '🕐 Auto-started on load';
+          context.engine.render();
+        "
+      />
+
+      <button
+        title="Exit"
+        style="background-color: gray; color: white; padding: 1;"
+        onClick="context.exit();"
+      />
+    </container>
+
+    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
+      Analog clock auto-starts on load • Resizes with terminal • Press Ctrl+C to exit
+    </text>
+  </container>
+</melker>

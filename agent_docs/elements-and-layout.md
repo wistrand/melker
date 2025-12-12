@@ -8,10 +8,13 @@ How Melker's element system and layout engine work.
 
 ```
 Element (abstract base class)
-├── type: string        - Component type name
-├── props: Record       - Component properties
+├── type: string         - Component type name
+├── props: Record        - Component properties
 ├── children?: Element[] - Child elements
-└── id: string          - Unique identifier (auto-generated if not provided)
+├── id: string           - Unique identifier (auto-generated if not provided)
+├── _bounds: Bounds|null - Layout bounds (set during render)
+├── getBounds()          - Get element's layout bounds after render
+└── setBounds(bounds)    - Set element's layout bounds (called by renderer)
 ```
 
 ### Element Creation (`src/element.ts`)

@@ -1,0 +1,162 @@
+<melker title="Canvas Dithering Demo">
+  <container style="padding: 1">
+    <text style="bold: true">Canvas Dithering Demo</text>
+    <text>Comparing dithering algorithms and bit depths on gradients</text>
+
+    <!-- Rainbow section -->
+    <text style="bold: true; margin-top: 1">Rainbow Gradient</text>
+    <container style="display: flex; flex-direction: row; gap: 2">
+      <container style="flex: 1; height: 3">
+        <text>None</text>
+        <canvas id="rainbow-none" width="10" height="2" />
+      </container>
+      <container style="flex: 1; height: 3">
+        <text>Sierra-1</text>
+        <canvas id="rainbow-sierra-1" width="10" height="2" dither="sierra-stable" ditherBits="1" />
+      </container>
+      <container style="flex: 1; height: 3">
+        <text>Sierra-2</text>
+        <canvas id="rainbow-sierra-2" width="10" height="2" dither="sierra-stable" ditherBits="2" />
+      </container>
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 2">
+      <container style="flex: 1; height: 3">
+        <text>Floyd-1</text>
+        <canvas id="rainbow-floyd-1" width="10" height="2" dither="floyd-steinberg" ditherBits="1" />
+      </container>
+      <container style="flex: 1; height: 3">
+        <text>Floyd-2</text>
+        <canvas id="rainbow-floyd-2" width="10" height="2" dither="floyd-steinberg" ditherBits="2" />
+      </container>
+      <container style="flex: 1; height: 3">
+        <text>Ordered</text>
+        <canvas id="rainbow-ordered-2" width="10" height="2" dither="ordered" ditherBits="2" />
+      </container>
+    </container>
+
+    <!-- B&W section -->
+    <text style="bold: true; margin-top: 1">B&W Gradient</text>
+    <container style="display: flex; flex-direction: row; gap: 2">
+      <container style="flex: 1; height: 3">
+        <text>None</text>
+        <canvas id="bw-none" width="10" height="2" />
+      </container>
+      <container style="flex: 1; height: 3">
+        <text>Sierra-1</text>
+        <canvas id="bw-sierra-1" width="10" height="2" dither="sierra-stable" ditherBits="1" />
+      </container>
+      <container style="flex: 1; height: 3">
+        <text>Sierra-2</text>
+        <canvas id="bw-sierra-2" width="10" height="2" dither="sierra-stable" ditherBits="2" />
+      </container>
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 2">
+      <container style="flex: 1; height: 3">
+        <text>Floyd-1</text>
+        <canvas id="bw-floyd-1" width="10" height="2" dither="floyd-steinberg" ditherBits="1" />
+      </container>
+      <container style="flex: 1; height: 3">
+        <text>Floyd-2</text>
+        <canvas id="bw-floyd-2" width="10" height="2" dither="floyd-steinberg" ditherBits="2" />
+      </container>
+      <container style="flex: 1; height: 3">
+        <text>Ordered</text>
+        <canvas id="bw-ordered-2" width="10" height="2" dither="ordered" ditherBits="2" />
+      </container>
+    </container>
+
+    <container style="margin-top: 1">
+      <button id="btn-quit" title="Quit" onClick="context.quit()" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    // Helper to convert HSL to RGB
+    function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+      let r: number, g: number, b: number;
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const hue2rgb = (p: number, q: number, t: number) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    // Draw rainbow gradient on a canvas
+    function drawRainbow(canvas: any) {
+      const pixelWidth = canvas.getBufferWidth();
+      const pixelHeight = canvas.getBufferHeight();
+
+      for (let x = 0; x < pixelWidth; x++) {
+        const hue = x / pixelWidth;
+        const [r, g, b] = hslToRgb(hue, 1.0, 0.5);
+        const color = 'rgb(' + r + ',' + g + ',' + b + ')';
+
+        for (let y = 0; y < pixelHeight; y++) {
+          canvas.setPixelColor(x, y, color, true);
+        }
+      }
+    }
+
+    // Draw B&W gradient on a canvas
+    function drawBWGradient(canvas: any) {
+      const pixelWidth = canvas.getBufferWidth();
+      const pixelHeight = canvas.getBufferHeight();
+
+      for (let x = 0; x < pixelWidth; x++) {
+        const gray = Math.round((x / pixelWidth) * 255);
+        const color = 'rgb(' + gray + ',' + gray + ',' + gray + ')';
+
+        for (let y = 0; y < pixelHeight; y++) {
+          canvas.setPixelColor(x, y, color, true);
+        }
+      }
+    }
+
+    // Canvas IDs
+    const rainbowCanvases = [
+      'rainbow-none', 'rainbow-sierra-1', 'rainbow-sierra-2',
+      'rainbow-floyd-1', 'rainbow-floyd-2', 'rainbow-ordered-2'
+    ];
+
+    const bwCanvases = [
+      'bw-none', 'bw-sierra-1', 'bw-sierra-2',
+      'bw-floyd-1', 'bw-floyd-2', 'bw-ordered-2'
+    ];
+
+    // Draw gradients after mount (when elements are ready)
+    context.engine.onMount(() => {
+      for (const id of rainbowCanvases) {
+        const canvas = context.getElementById(id);
+        if (canvas) {
+          drawRainbow(canvas);
+          canvas.markDirty();
+        }
+      }
+
+      for (const id of bwCanvases) {
+        const canvas = context.getElementById(id);
+        if (canvas) {
+          drawBWGradient(canvas);
+          canvas.markDirty();
+        }
+      }
+
+      context.engine.render();
+    });
+  </script>
+</melker>

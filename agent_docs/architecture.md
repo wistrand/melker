@@ -22,7 +22,7 @@
 | Menu | `src/components/menu.ts` | Dropdown menu |
 | Menu Item | `src/components/menu-item.ts` | Menu entry |
 | Menu Separator | `src/components/menu-separator.ts` | Visual separator in menus |
-| Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars |
+| Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars, onPaint, dither modes |
 | Video | `src/components/video.ts` | Video playback (extends Canvas) |
 | Markdown | `src/components/markdown.ts` | Markdown text rendering |
 | Checkbox | `src/components/checkbox.ts` | Toggle checkbox |
@@ -71,7 +71,7 @@
 |------|---------|
 | `src/video/mod.ts` | Video module exports |
 | `src/video/ffmpeg.ts` | FFmpeg integration |
-| `src/video/dither.ts` | Dithering algorithms |
+| `src/video/dither.ts` | Dithering algorithms (auto, sierra-stable, floyd-steinberg, ordered) |
 | `src/video/subtitle.ts` | Subtitle handling |
 | `src/video/waveform.ts` | Audio waveform visualization |
 

@@ -1067,10 +1067,25 @@ export class VideoElement extends CanvasElement {
     }
 
     // Apply dithering if enabled
-    const dither = this.props.dither;
+    let dither = this.props.dither;
+
+    // Handle 'auto' mode based on current theme
+    if (dither === 'auto') {
+      const theme = getThemeManager().getCurrentTheme();
+      if (theme.type === 'fullcolor') {
+        // Fullcolor theme: no dithering needed
+        dither = false;
+      } else {
+        // bw, gray, or color themes: use sierra-stable with 1 bit
+        dither = 'sierra-stable';
+      }
+    }
+
     if (dither && dither !== 'none') {
       // Use explicit colorDepth if set, otherwise derive from theme
-      const bits = this.props.colorDepth ?? colorSupportToBits(getThemeManager().getColorSupport());
+      // For auto mode (now resolved to sierra-stable), default to 1 bit for bw/color themes
+      const isAutoResolved = this.props.dither === 'auto';
+      const bits = this.props.colorDepth ?? (isAutoResolved ? 1 : colorSupportToBits(getThemeManager().getColorSupport()));
 
       // Determine dither mode: true defaults to 'floyd-steinberg-stable', string specifies mode
       const mode: DitherMode = typeof dither === 'boolean' ? 'floyd-steinberg-stable' : dither;
@@ -1370,7 +1385,7 @@ export const videoSchema: ComponentSchema = {
     autoplay: { type: 'boolean', description: 'Start playing automatically' },
     loop: { type: 'boolean', description: 'Loop playback' },
     fps: { type: 'number', description: 'Playback frames per second' },
-    dither: { type: ['string', 'boolean'], description: 'Dithering algorithm' },
+    dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'ordered'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
     colorDepth: { type: 'number', description: 'Color bit depth' },
     muted: { type: 'boolean', description: 'Mute audio' },
     audio: { type: 'boolean', description: 'Enable audio playback' },

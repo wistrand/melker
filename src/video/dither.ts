@@ -8,7 +8,7 @@
 export type ColorSupport = 'none' | '16' | '256' | 'truecolor';
 
 // Dither algorithm type
-export type DitherMode = 'floyd-steinberg' | 'floyd-steinberg-stable' | 'sierra' | 'sierra-stable' | 'ordered' | 'none';
+export type DitherMode = 'floyd-steinberg' | 'floyd-steinberg-stable' | 'sierra' | 'sierra-stable' | 'ordered' | 'none' | 'auto';
 
 // ============================================
 // Constants
@@ -191,9 +191,18 @@ export function applyFloydSteinbergDither(
       const qr = qOut[0], qg = qOut[1], qb = qOut[2];
 
       // Calculate error
-      const errR = r - qr;
-      const errG = g - qg;
-      const errB = b - qb;
+      let errR: number, errG: number, errB: number;
+      if (bits === 1) {
+        // For 1-bit, propagate grayscale error to all channels
+        // This ensures error accumulates properly for saturated colors
+        const gray = rgbToGray(r, g, b);
+        const grayError = gray - qr; // qr is either 0 or 255
+        errR = errG = errB = grayError;
+      } else {
+        errR = r - qr;
+        errG = g - qg;
+        errB = b - qb;
+      }
 
       // Write quantized color back
       frameData[idx] = qr;
@@ -365,20 +374,28 @@ export function applyFloydSteinbergStableDither(
 
       // Quantize
       let qr: number, qg: number, qb: number;
+      let errR: number, errG: number, errB: number;
+
       if (bits === 1) {
+        // For 1-bit, work in grayscale space for error diffusion
+        // This ensures error accumulates properly for saturated colors
         const gray = rgbToGray(r, g, b);
         const bw = gray >= 128 ? 255 : 0;
         qr = qg = qb = bw;
+
+        // Calculate grayscale error and propagate equally to all channels
+        const grayError = gray - bw;
+        errR = errG = errB = grayError;
       } else {
         qr = quantizeChannel(r, levels);
         qg = quantizeChannel(g, levels);
         qb = quantizeChannel(b, levels);
-      }
 
-      // Calculate error
-      const errR = r - qr;
-      const errG = g - qg;
-      const errB = b - qb;
+        // Calculate error per channel
+        errR = r - qr;
+        errG = g - qg;
+        errB = b - qb;
+      }
 
       // Write quantized color back
       frameData[idx] = qr;
@@ -488,20 +505,26 @@ export function applySierraDither(
 
       // Quantize
       let qr: number, qg: number, qb: number;
+      let errR: number, errG: number, errB: number;
+
       if (bits === 1) {
+        // For 1-bit, work in grayscale space for error diffusion
         const gray = rgbToGray(r, g, b);
         const bw = gray >= 128 ? 255 : 0;
         qr = qg = qb = bw;
+
+        // Calculate grayscale error and propagate equally to all channels
+        const grayError = gray - bw;
+        errR = errG = errB = grayError;
       } else {
         qr = quantizeChannel(r, levels);
         qg = quantizeChannel(g, levels);
         qb = quantizeChannel(b, levels);
-      }
 
-      // Calculate error
-      const errR = r - qr;
-      const errG = g - qg;
-      const errB = b - qb;
+        errR = r - qr;
+        errG = g - qg;
+        errB = b - qb;
+      }
 
       // Write quantized color back
       frameData[idx] = qr;
@@ -620,20 +643,26 @@ export function applySierraStableDither(
 
       // Quantize
       let qr: number, qg: number, qb: number;
+      let errR: number, errG: number, errB: number;
+
       if (bits === 1) {
+        // For 1-bit, work in grayscale space for error diffusion
         const gray = rgbToGray(r, g, b);
         const bw = gray >= 128 ? 255 : 0;
         qr = qg = qb = bw;
+
+        // Calculate grayscale error and propagate equally to all channels
+        const grayError = gray - bw;
+        errR = errG = errB = grayError;
       } else {
         qr = quantizeChannel(r, levels);
         qg = quantizeChannel(g, levels);
         qb = quantizeChannel(b, levels);
-      }
 
-      // Calculate error
-      const errR = r - qr;
-      const errG = g - qg;
-      const errB = b - qb;
+        errR = r - qr;
+        errG = g - qg;
+        errB = b - qb;
+      }
 
       // Write quantized color back
       frameData[idx] = qr;

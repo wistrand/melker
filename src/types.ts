@@ -134,12 +134,27 @@ export abstract class Element {
   props: Record<string, any>;
   children?: Element[];
   id: string;
+  protected _bounds: Bounds | null = null;
 
   constructor(type: string, props: Record<string, any> = {}, children?: Element[]) {
     this.type = type;
     this.props = props;
     this.children = children;
     this.id = props.id || '';
+  }
+
+  /**
+   * Get the element's layout bounds (set during render)
+   */
+  getBounds(): Bounds | null {
+    return this._bounds;
+  }
+
+  /**
+   * Set the element's layout bounds (called by layout/render system)
+   */
+  setBounds(bounds: Bounds): void {
+    this._bounds = bounds;
   }
 }
 

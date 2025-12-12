@@ -1012,6 +1012,9 @@ export class RenderingEngine {
     }
 
 
+    // Store bounds on element for getBounds() access
+    element.setBounds(bounds);
+
     // Check if element implements Renderable interface
     if (isRenderable(element)) {
       const componentContext: ComponentRenderContext = {

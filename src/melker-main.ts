@@ -1,4 +1,4 @@
-import { config as dotenvConfig } from 'dotenv';
+import { config as dotenvConfig } from 'npm:dotenv@^16.3.0';
 
 /**
  * Check if a path is a URL (http:// or https://)
@@ -875,7 +875,7 @@ async function executeScripts(scripts: Array<{ type: string; content: string; sr
         if (script.type === 'typescript' || script.type === 'text/typescript' || script.src?.endsWith(".ts")) {
           try {
             // Import bundle and transpile functions dynamically
-            const { bundle, transpile } = await import('@deno/emit');
+            const { bundle, transpile } = await import('jsr:@deno/emit@^0.44.0');
 
             // Create a proper TypeScript file structure for transpilation
             const url = script.src ?
@@ -1076,7 +1076,7 @@ async function transpileStringHandler(code: string, elementType: string, handler
   }
 
   try {
-    const { transpile } = await import('@deno/emit');
+    const { transpile } = await import('jsr:@deno/emit@^0.44.0');
     const result = await transpile(url, {
       load(specifier: string) {
         if (specifier === url) {

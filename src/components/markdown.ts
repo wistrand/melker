@@ -5,9 +5,9 @@
 
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
-import { fromMarkdown } from 'mdast-util-from-markdown';
-import { gfm } from 'micromark-extension-gfm';
-import { gfmFromMarkdown } from 'mdast-util-gfm';
+import { fromMarkdown } from 'npm:mdast-util-from-markdown@^2.0.0';
+import { gfm } from 'npm:micromark-extension-gfm@^3.0.0';
+import { gfmFromMarkdown } from 'npm:mdast-util-gfm@^3.0.0';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { CanvasElement } from './canvas.ts';
 import { getLogger } from '../logging.ts';

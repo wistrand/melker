@@ -46,16 +46,16 @@ function exitWithPermissionError(logFile: string): never {
   console.error('\n\x1b[33mOptions:\x1b[0m');
   console.error('');
   console.error('  \x1b[1m1. Disable logging\x1b[0m (set MELKER_LOG_FILE to empty string):');
-  console.error('     MELKER_LOG_FILE= deno run --allow-read --allow-env src/melker.ts <file>');
+  console.error('     MELKER_LOG_FILE= deno run --allow-read --allow-env melker.ts <file>');
   console.error('');
   console.error('  \x1b[1m2. Write logs to a different location\x1b[0m (set MELKER_LOG_FILE):');
-  console.error('     MELKER_LOG_FILE=/tmp/melker.log deno run --allow-read --allow-env --allow-write=/tmp src/melker.ts <file>');
+  console.error('     MELKER_LOG_FILE=/tmp/melker.log deno run --allow-read --allow-env --allow-write=/tmp melker.ts <file>');
   console.error('');
   console.error('  \x1b[1m3. Grant write permission\x1b[0m to the default log directory:');
-  console.error(`     deno run --allow-read --allow-env --allow-write=${logDir} src/melker.ts <file>`);
+  console.error(`     deno run --allow-read --allow-env --allow-write=${logDir} melker.ts <file>`);
   console.error('');
   console.error('  \x1b[1m4. Grant all permissions\x1b[0m:');
-  console.error('     deno run --allow-all src/melker.ts <file>');
+  console.error('     deno run --allow-all melker.ts <file>');
   console.error('');
   Deno.exit(1);
 }

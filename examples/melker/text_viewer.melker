@@ -1,0 +1,33 @@
+<melker>
+  <title>Melker Text Viewer - ${argv[1]}</title>
+
+    <style>
+        #header {
+            display: flex;
+            flex-direction: row;
+            padding-right: 1;
+            border: thin;
+        }
+        #root {
+          display: flex;
+          flex-direction: column;
+          width: fill;
+          height: fill;
+          border: none;
+        }
+    </style>
+
+    <container id="root">
+        <container id="header">
+            <text style="font-weight: bold; flex: 1; padding-left: 1;">
+                ${argv[1]:-README.md}
+            </text>
+            <button title="Exit" onClick="context.exit();" />
+        </container>
+
+        <container id="content-area" scrollable="true" style="flex: 1 1 0; padding: 1;">
+            <text id="test-content"  src="${argv[1]:-README.md}"  style="text-wrap: wrap;"/>
+        </container>
+    </container>
+
+</melker>

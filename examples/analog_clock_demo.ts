@@ -1,6 +1,6 @@
 #!/usr/bin/env deno run --allow-env
 
-import { createApp, melker, getTerminalSize } from '../src/melker.ts';
+import { createApp, melker, getTerminalSize } from '../melker.ts';
 import { CanvasElement } from '../src/components/canvas.ts';
 
 // Analog clock rendering functions using Melker's pixel canvas

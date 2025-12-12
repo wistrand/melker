@@ -13,7 +13,7 @@ import {
   BoxSpacing,
   Size,
   Bounds,
-} from '../src/melker.ts';
+} from '../melker.ts';
 
 Deno.test('SizingModel creation with default border-box', () => {
   const model = new SizingModel();

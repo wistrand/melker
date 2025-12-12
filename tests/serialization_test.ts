@@ -8,7 +8,7 @@ import {
   serializeElement,
   deserializeElement,
   validateSerializedElement,
-} from '../src/melker.ts';
+} from '../melker.ts';
 import { ContainerElement } from '../src/components/container.ts';
 import { TextElement } from '../src/components/text.ts';
 import { ButtonElement } from '../src/components/button.ts';

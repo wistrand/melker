@@ -1,45 +1,45 @@
 // Main Melker library entry point
 
 // Export all types
-export * from './types.ts';
+export * from './src/types.ts';
 
 // Export element functions
-export * from './element.ts';
+export * from './src/element.ts';
 
 // Export serialization functions
-export * from './serialization.ts';
+export * from './src/serialization.ts';
 
 // Export document management
-export * from './document.ts';
+export * from './src/document.ts';
 
 // Export buffer system and character width utilities
-export * from './buffer.ts';
-export * from './renderer.ts';
-export * from './char-width.ts';
+export * from './src/buffer.ts';
+export * from './src/renderer.ts';
+export * from './src/char-width.ts';
 
 // Export resize handling system
-export * from './resize.ts';
+export * from './src/resize.ts';
 
 // Export high-level engine
-export * from './engine.ts';
+export * from './src/engine.ts';
 
 // Export debug server
-export * from './debug-server.ts';
+export * from './src/debug-server.ts';
 
 // Export headless mode
-export * from './headless.ts';
+export * from './src/headless.ts';
 
 // Export theme system
-export * from './theme.ts';
+export * from './src/theme.ts';
 
 // Export stylesheet system
-export * from './stylesheet.ts';
+export * from './src/stylesheet.ts';
 
 // Export OAuth2 PKCE authentication
-export * from './oauth.ts';
+export * from './src/oauth.ts';
 
 // Export logging system
-export * from './logging.ts';
+export * from './src/logging.ts';
 
 // Export lint system
 export {
@@ -54,8 +54,8 @@ export {
   getRegisteredComponents,
   BASE_PROPS_SCHEMA,
   BASE_STYLES_SCHEMA,
-} from './lint.ts';
-export type { LintWarning, ComponentSchema, PropSchema, PropType } from './lint.ts';
+} from './src/lint.ts';
+export type { LintWarning, ComponentSchema, PropSchema, PropType } from './src/lint.ts';
 
 // Export event system
 export {
@@ -84,40 +84,40 @@ export {
   type ChangeEvent,
   type EventHandler,
   type EventRegistration,
-} from './events.ts';
-export * from './focus.ts';
-export * from './input.ts';
+} from './src/events.ts';
+export * from './src/focus.ts';
+export * from './src/input.ts';
 
 // Export rendering engine
-export * from './rendering.ts';
+export * from './src/rendering.ts';
 
 // Export sizing model
-export * from './sizing.ts';
+export * from './src/sizing.ts';
 
 // Export layout engine (with specific exports to avoid conflicts)
 export {
   LayoutEngine,
   globalLayoutEngine,
-} from './layout.ts';
+} from './src/layout.ts';
 export type {
   LayoutNode as AdvancedLayoutNode,
   AdvancedLayoutProps,
   LayoutContext,
-} from './layout.ts';
+} from './src/layout.ts';
 
 // Export components
-export * from './components/mod.ts';
+export * from './src/components/mod.ts';
 
 // Re-export commonly used functions for convenience
 export {
   createElement,
   registerComponent,
-} from './element.ts';
+} from './src/element.ts';
 
 // Template literal system
 export {
   melker,
-} from './template.ts';
+} from './src/template.ts';
 
 // Re-export commonly used component classes for convenience
 export {
@@ -130,12 +130,12 @@ export {
   VideoElement,
   ListElement,
   LiElement,
-} from './components/mod.ts';
+} from './src/components/mod.ts';
 
 export {
   elementToJson,
   elementFromJson,
-} from './serialization.ts';
+} from './src/serialization.ts';
 
 /**
  * Get the current terminal size
@@ -159,24 +159,24 @@ export function getTerminalSize(): { width: number; height: number } {
 }
 
 // Register built-in components
-import { InputElement } from './components/input.ts';
-import { TextareaElement } from './components/textarea.ts';
-import { ButtonElement } from './components/button.ts';
-import { RadioElement } from './components/radio.ts';
-import { CheckboxElement } from './components/checkbox.ts';
-import { TextElement } from './components/text.ts';
-import { ContainerElement } from './components/container.ts';
-import { DialogElement } from './components/dialog.ts';
-import { MarkdownElement } from './components/markdown.ts';
-import { CanvasElement } from './components/canvas.ts';
-import { VideoElement } from './components/video.ts';
-import { ListElement } from './components/list.ts';
-import { LiElement } from './components/li.ts';
-import { MenuItemElement } from './components/menu-item.ts';
-import { MenuSeparatorElement } from './components/menu-separator.ts';
-import { MenuElement } from './components/menu.ts';
-import { MenuBarElement } from './components/menu-bar.ts';
-import { registerComponent } from './element.ts';
+import { InputElement } from './src/components/input.ts';
+import { TextareaElement } from './src/components/textarea.ts';
+import { ButtonElement } from './src/components/button.ts';
+import { RadioElement } from './src/components/radio.ts';
+import { CheckboxElement } from './src/components/checkbox.ts';
+import { TextElement } from './src/components/text.ts';
+import { ContainerElement } from './src/components/container.ts';
+import { DialogElement } from './src/components/dialog.ts';
+import { MarkdownElement } from './src/components/markdown.ts';
+import { CanvasElement } from './src/components/canvas.ts';
+import { VideoElement } from './src/components/video.ts';
+import { ListElement } from './src/components/list.ts';
+import { LiElement } from './src/components/li.ts';
+import { MenuItemElement } from './src/components/menu-item.ts';
+import { MenuSeparatorElement } from './src/components/menu-separator.ts';
+import { MenuElement } from './src/components/menu.ts';
+import { MenuBarElement } from './src/components/menu-bar.ts';
+import { registerComponent } from './src/element.ts';
 
 // Auto-register core components when library is imported
 registerComponent({
@@ -391,7 +391,7 @@ registerComponent({
 // Run main if this is the entry point
 if (import.meta.main) {
   // Import main function from melker-main.ts
-  import('./melker-main.ts').then(({ main }) => {
+  import('./src/melker-main.ts').then(({ main }) => {
     return main();
   }).catch((error) => {
     console.error(`💥 Fatal error: ${error instanceof Error ? error.message : String(error)}`);

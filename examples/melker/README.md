@@ -6,19 +6,19 @@ This directory contains `.melker` template files demonstrating the declarative H
 
 ```bash
 # Run a .melker file
-deno run --allow-all src/melker.ts examples/melker/counter.melker
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # Run from URL
-deno run --allow-all src/melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all src/melker.ts --lint examples/melker/counter.melker
+deno run --allow-all melker.ts --lint examples/melker/counter.melker
 
 # Display element tree
-deno run --allow-all src/melker.ts examples/melker/counter.melker --print-tree
+deno run --allow-all melker.ts examples/melker/counter.melker --print-tree
 
 # Display JSON serialization
-deno run --allow-all src/melker.ts examples/melker/counter.melker --print-json
+deno run --allow-all melker.ts examples/melker/counter.melker --print-json
 ```
 
 ## Core Examples

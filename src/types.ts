@@ -70,6 +70,7 @@ export interface Style extends Record<string, any> {
   flexGrow?: number;
   flexShrink?: number;
   flexBasis?: number | 'auto';
+  gap?: number;  // Space between flex items (both row and column gap)
   textAlign?: 'center' | 'left' | 'right';
   verticalAlign?: 'center' | 'top' | 'bottom';
 
@@ -104,6 +105,7 @@ export interface LayoutProps {
   alignItems?: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
   flexGrow?: number;
   flexShrink?: number;
+  gap?: number;  // Space between flex items
 
 }
 

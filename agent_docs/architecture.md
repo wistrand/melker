@@ -61,7 +61,7 @@
 | `src/logging.ts` | File-based logging system |
 | `src/debug-server.ts` | WebSocket debug server |
 | `src/headless.ts` | Headless mode for testing |
-| `src/melker.ts` | Main entry point, exports |
+| `melker.ts` | Main entry point, exports |
 | `src/melker-main.ts` | .melker file runner (supports URLs) |
 | `src/lint.ts` | Lint mode validation, schemas |
 | `src/lsp.ts` | Language Server Protocol for .melker files |

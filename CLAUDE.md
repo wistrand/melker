@@ -36,6 +36,7 @@ deno task check        # Type check
 ## Project Structure
 
 ```
+melker.ts             - Main entry point, exports
 src/
   engine.ts           - Main engine, lifecycle, events
   layout.ts           - Flexbox layout calculations
@@ -63,7 +64,6 @@ src/
   headless.ts         - Headless mode for testing
   stats-overlay.ts    - Performance stats overlay
   char-width.ts       - Character width utilities
-  melker.ts           - Main entry point, exports
   melker-main.ts      - .melker file runner (supports file paths and URLs)
   lint.ts             - Lint mode validation, schemas
   lsp.ts              - Language Server Protocol for .melker files
@@ -132,16 +132,16 @@ tests/                - Test files
 
 ```bash
 # From local file
-deno run --allow-all src/melker.ts examples/melker/counter.melker
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # From URL
-deno run --allow-all src/melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all src/melker.ts --lint examples/melker/counter.melker
+deno run --allow-all melker.ts --lint examples/melker/counter.melker
 
 # Start LSP server (for editor integration)
-deno run --allow-all src/melker.ts --lsp
+deno run --allow-all melker.ts --lsp
 ```
 
 See `agent_docs/melker-file-format.md` for syntax details.

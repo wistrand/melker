@@ -444,8 +444,8 @@ Deno.test('parseMelkerFile parses counter.melker with inline handlers', async ()
   const result = parseMelkerFile(content);
 
   assertEquals(result.element.type, 'container');
-  // counter.melker doesn't have script tags, but has inline onClick handlers
-  assertEquals(result.scripts.length, 0);
+  // counter.melker has a script tag and inline onClick handlers
+  assertEquals(result.scripts.length, 1);
 });
 
 Deno.test('parseMelkerFile parses script-demo.melker with scripts', async () => {

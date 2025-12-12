@@ -58,10 +58,10 @@ See `examples/melker/README.md` for declarative `.melker` template examples.
 
 ```bash
 # Run a .melker file
-deno run --allow-all src/melker.ts examples/melker/counter.melker
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # Run from URL
-deno run --allow-all src/melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 ```
 
 ## Key Patterns Demonstrated

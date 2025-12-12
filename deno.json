@@ -2,7 +2,7 @@
   "name": "@melker/core",
   "version": "0.1.0",
   "description": "A Deno library for creating rich Terminal UI interfaces with flexbox-based layouts",
-  "exports": "./src/melker.ts",
+  "exports": "./melker.ts",
   "imports": {
     "html5parser": "npm:html5parser",
     "mdast-util-from-markdown": "npm:mdast-util-from-markdown@^2.0.0",

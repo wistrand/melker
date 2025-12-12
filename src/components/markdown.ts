@@ -14,6 +14,10 @@ import { getLogger } from '../logging.ts';
 import { parseMelkerFile } from '../template.ts';
 import { getStringWidth } from '../char-width.ts';
 
+// ============================================================================
+// Text Utilities - display width calculation and text wrapping
+// ============================================================================
+
 /**
  * Pad a string to a target display width, accounting for wide characters
  */
@@ -23,7 +27,105 @@ function padEndDisplayWidth(str: string, targetWidth: number, padChar: string = 
   return str + padChar.repeat(targetWidth - currentWidth);
 }
 
+/**
+ * Wrap text into lines that fit within a given width
+ * Attempts to break at word boundaries (spaces)
+ */
+function wrapTextToLines(text: string, width: number): string[] {
+  if (text.length <= width) {
+    return [text];
+  }
+
+  const lines: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= width) {
+      lines.push(remaining);
+      break;
+    }
+
+    // Find a good break point (space)
+    let breakPoint = width;
+    const lastSpace = remaining.substring(0, width + 1).lastIndexOf(' ');
+    if (lastSpace > 0 && lastSpace < width) {
+      breakPoint = lastSpace;
+    }
+
+    lines.push(remaining.substring(0, breakPoint).trimEnd());
+    remaining = remaining.substring(breakPoint).trimStart();
+  }
+
+  return lines.length > 0 ? lines : [''];
+}
+
+// ============================================================================
+
 const logger = getLogger('Markdown');
+
+// Position info from mdast (source location tracking)
+interface Position {
+  start: { line: number; column: number; offset?: number };
+  end: { line: number; column: number; offset?: number };
+}
+
+// Unified spacing configuration for markdown elements
+interface SpacingRule {
+  before: number;  // Lines before element
+  after: number;   // Lines after element
+}
+
+type NodeType = 'paragraph' | 'heading' | 'list' | 'listItem' | 'code' | 'blockquote' | 'table' | 'image' | 'html';
+
+// Default spacing rules for each node type
+const DEFAULT_SPACING: Record<NodeType, SpacingRule> = {
+  paragraph: { before: 0, after: 1 },
+  heading: { before: 0, after: 1 },
+  list: { before: 0, after: 1 },      // Only for top-level lists
+  listItem: { before: 0, after: 0 },
+  code: { before: 0, after: 1 },
+  blockquote: { before: 1, after: 1 },
+  table: { before: 1, after: 1 },
+  image: { before: 0, after: 1 },
+  html: { before: 0, after: 0 },
+};
+
+// Get spacing for a node type
+function getSpacing(nodeType: NodeType): SpacingRule {
+  return DEFAULT_SPACING[nodeType] || { before: 0, after: 0 };
+}
+
+// Style configuration for markdown elements
+export interface MarkdownStyleConfig {
+  // Heading styles by level (1-6)
+  heading?: {
+    [level: number]: { bold?: boolean; underline?: boolean; italic?: boolean; dim?: boolean };
+  };
+  // Code block style overrides
+  codeBlock?: { background?: string; foreground?: string };
+  // Inline code style overrides
+  inlineCode?: { background?: string; foreground?: string };
+  // Blockquote style overrides
+  blockquote?: { foreground?: string; italic?: boolean };
+  // Link style overrides
+  link?: { foreground?: string; underline?: boolean };
+}
+
+// Default style configuration
+const DEFAULT_STYLES: Required<MarkdownStyleConfig> = {
+  heading: {
+    1: { bold: true, underline: true },
+    2: { bold: true },
+    3: { underline: true },
+    4: {},
+    5: {},
+    6: {}
+  },
+  codeBlock: {}, // Uses theme colors
+  inlineCode: {}, // Uses theme colors
+  blockquote: { italic: true },
+  link: { underline: true }
+};
 
 // Define the AST node types we need (subset of mdast types)
 interface ASTNode {
@@ -31,6 +133,7 @@ interface ASTNode {
   children?: ASTNode[];
   value?: string;
   depth?: number;
+  position?: Position; // Source position info from parser
 }
 
 interface Root extends ASTNode {
@@ -156,6 +259,8 @@ export interface MarkdownProps extends BaseProps {
   listIndent?: number;                // List item indentation (default: 2)
   codeTheme?: 'light' | 'dark' | 'auto';  // Code block theme (default: 'auto')
   onLink?: (event: LinkEvent) => void;  // Callback when a link is clicked
+  debug?: boolean;                    // Enable debug overlay (shows line numbers)
+  styles?: MarkdownStyleConfig;       // Custom styles for markdown elements
 }
 
 interface MarkdownRenderContext {
@@ -178,8 +283,8 @@ interface MarkdownRenderContext {
   debugOverlay?: Map<number, { inputLine: number; renderedLine: number }>; // y -> line info
 }
 
-// Debug mode check - enabled via MELKER_MARKDOWN_DEBUG env var
-function isMarkdownDebugEnabled(): boolean {
+// Debug mode check - enabled via prop or MELKER_MARKDOWN_DEBUG env var (fallback)
+function isMarkdownDebugEnabledFromEnv(): boolean {
   try {
     return Deno.env.get('MELKER_MARKDOWN_DEBUG') === 'true' || Deno.env.get('MELKER_MARKDOWN_DEBUG') === '1';
   } catch {
@@ -192,7 +297,7 @@ export class MarkdownElement extends Element implements Renderable {
   declare props: MarkdownProps;
 
   private _parsedAst: Root | null = null;
-  private _needsReparse: boolean = true;
+  private _lastParsedText: string | null = null; // Track text that was parsed for cache invalidation
   private _srcContent: string | null = null;
   private _lastSrc: string | null = null;
   private _hasLoadedContent: boolean = false;
@@ -307,7 +412,7 @@ export class MarkdownElement extends Element implements Renderable {
           if (content !== null) {
             // Clear cached AST to force re-parsing of new content
             this._parsedAst = null;
-            this._needsReparse = true;
+            this._lastParsedText = null;
             this._loadError = null; // Clear any previous error
             this._heightStabilized = false; // Reset for new content
             this._lastRenderedHeight = 0;
@@ -338,18 +443,12 @@ export class MarkdownElement extends Element implements Renderable {
       if (this._loadError) {
         // Display error message in markdown format (bold red)
         text = `**Error:** ${this._loadError}`;
-        // Force reparse when showing error message
-        this._needsReparse = true;
-        this._parsedAst = null;
       } else if (this._srcContent) {
         text = this._srcContent;
       } else if (text) {
         // Keep existing text while loading
       } else {
         text = `*Loading content from: ${src}...*`;
-        // Force reparse when showing loading message
-        this._needsReparse = true;
-        this._parsedAst = null;
       }
     }
 
@@ -369,12 +468,10 @@ export class MarkdownElement extends Element implements Renderable {
 
 
 
-    this._needsReparse = true;
-
-    // Parse markdown if needed
-    if (this._needsReparse) {
+    // Parse markdown if text changed (cache invalidation)
+    if (text !== this._lastParsedText) {
       this._parseMarkdown(text, this.props.enableGfm);
-      this._needsReparse = false;
+      this._lastParsedText = text;
     }
 
     if (!this._parsedAst) {
@@ -383,8 +480,8 @@ export class MarkdownElement extends Element implements Renderable {
       return;
     }
 
-    // Check if debug mode is enabled
-    const debugEnabled = isMarkdownDebugEnabled();
+    // Check if debug mode is enabled (prop takes precedence over env var)
+    const debugEnabled = this.props.debug ?? isMarkdownDebugEnabledFromEnv();
     const debugOverlay = debugEnabled ? new Map<number, { inputLine: number; renderedLine: number }>() : undefined;
 
     // Create render context
@@ -509,7 +606,7 @@ export class MarkdownElement extends Element implements Renderable {
    */
   private _renderNode(node: ASTNode, ctx: MarkdownRenderContext): number {
     // Track source line from AST position info
-    const nodePosition = (node as any).position;
+    const nodePosition = node.position;
     const startY = ctx.currentY;
 
     // Update input line tracking from AST position
@@ -546,7 +643,14 @@ export class MarkdownElement extends Element implements Renderable {
         height = this._renderList(node as List, ctx);
         break;
       case 'listItem':
-        height = this._renderListItem(node as ListItem, ctx);
+        // ListItems are rendered through _renderList with proper context
+        // This case handles orphan listItems (shouldn't happen in valid markdown)
+        if (ctx.listDepth && ctx.listType && (ctx as { listMarkerWidth?: number }).listMarkerWidth) {
+          height = this._renderListItem(node as ListItem, ctx as MarkdownRenderContext & { listDepth: number; listType: 'ordered' | 'unordered'; listMarkerWidth: number });
+        } else {
+          // Fallback: render children directly
+          height = this._renderChildren((node as ListItem).children, ctx);
+        }
         break;
       case 'code':
         height = this._renderCodeBlock(node as Code, ctx);
@@ -618,7 +722,8 @@ export class MarkdownElement extends Element implements Renderable {
 
     // Add spacing after paragraph only if not inside a list item
     const isInsideListItem = ctx.listDepth && ctx.listDepth > 0;
-    return isInsideListItem ? height : height + 1;
+    const spacing = getSpacing('paragraph');
+    return isInsideListItem ? height : height + spacing.after;
   }
 
   /**
@@ -628,6 +733,7 @@ export class MarkdownElement extends Element implements Renderable {
     // Create heading style based on level
     const headingStyle = this._getHeadingStyle(node.depth, ctx.baseStyle);
     const headingContext = { ...ctx, style: headingStyle };
+    const spacing = getSpacing('heading');
 
     // For H1, render text then pad with underlined spaces to full width
     if (node.depth === 1) {
@@ -636,13 +742,13 @@ export class MarkdownElement extends Element implements Renderable {
       const fullWidth = ctx.bounds.width;
       const paddedText = textContent.padEnd(fullWidth);
       ctx.buffer.currentBuffer.setText(ctx.currentX, ctx.currentY, paddedText, headingStyle);
-      return 2; // heading + spacing
+      return 1 + spacing.after; // heading + spacing
     }
 
     const height = this._renderInlineElements(node.children, headingContext);
 
     // Add spacing after heading
-    return height + 1;
+    return height + spacing.after;
   }
 
   /**
@@ -678,11 +784,7 @@ export class MarkdownElement extends Element implements Renderable {
    * Render inline code
    */
   private _renderInlineCode(node: InlineCode, ctx: MarkdownRenderContext): number {
-    const codeStyle = {
-      ...ctx.style,
-      background: getThemeColor('surface'),
-      foreground: getThemeColor('info')
-    };
+    const codeStyle = this._getInlineCodeStyle(ctx.style);
     return this._renderTextContent(node.value, { ...ctx, style: codeStyle });
   }
 
@@ -840,21 +942,13 @@ export class MarkdownElement extends Element implements Renderable {
         break;
 
       case 'inlineCode':
-        const codeStyle = {
-          ...style,
-          background: getThemeColor('surface'),
-          foreground: getThemeColor('info')
-        };
+        const codeStyle = this._getInlineCodeStyle(style);
         spans.push({ text: (node as InlineCode).value, style: codeStyle, linkUrl, linkTitle });
         break;
 
       case 'link':
         const linkNode = node as Link;
-        const linkStyle = {
-          ...style,
-          underline: true,
-          foreground: getThemeColor('primary')
-        };
+        const linkStyle = this._getLinkStyle(style);
         for (const child of linkNode.children) {
           this._collectSpans(child, linkStyle, spans, linkNode.url, linkNode.title);
         }
@@ -897,27 +991,19 @@ export class MarkdownElement extends Element implements Renderable {
         return emphasisWidth;
 
       case 'inlineCode':
-        const codeStyle = {
-          ...ctx.style,
-          background: getThemeColor('surface'),
-          foreground: getThemeColor('info')
-        };
+        const inlineCodeStyle = this._getInlineCodeStyle(ctx.style);
         const codeText = (node as InlineCode).value;
-        ctx.buffer.currentBuffer.setText(x, y, codeText, codeStyle);
+        ctx.buffer.currentBuffer.setText(x, y, codeText, inlineCodeStyle);
         return codeText.length;
 
       case 'link':
         const linkNode = node as Link;
         // Style for links: underline and use primary color
-        const linkStyle = {
-          ...ctx.style,
-          underline: true,
-          foreground: getThemeColor('primary')
-        };
+        const inlineLinkStyle = this._getLinkStyle(ctx.style);
         // Get link text from children
         let linkWidth = 0;
         for (const child of linkNode.children) {
-          linkWidth += this._renderInlineElement(child, x + linkWidth, y, { ...ctx, style: linkStyle });
+          linkWidth += this._renderInlineElement(child, x + linkWidth, y, { ...ctx, style: inlineLinkStyle });
         }
         // Register this link region for click detection
         this._linkRegions.push({
@@ -1051,16 +1137,11 @@ export class MarkdownElement extends Element implements Renderable {
    * Get heading style based on level
    */
   private _getHeadingStyle(depth: number, baseStyle: Partial<Cell>): Partial<Cell> {
-    const headingStyles = {
-      1: { bold: true, underline: true },
-      2: { bold: true },
-      3: { underline: true },
-      4: {},
-      5: {},
-      6: {}
-    };
+    // Use custom styles from props, fall back to defaults
+    const customHeadingStyles = this.props.styles?.heading || {};
+    const defaultHeadingStyles = DEFAULT_STYLES.heading;
 
-    const levelStyle = headingStyles[depth as keyof typeof headingStyles] || {};
+    const levelStyle = customHeadingStyles[depth] || defaultHeadingStyles[depth] || {};
     return { ...baseStyle, ...levelStyle };
   }
 
@@ -1096,11 +1177,12 @@ export class MarkdownElement extends Element implements Renderable {
     }
 
     // Create list context with indentation
+    const listType: 'ordered' | 'unordered' = node.ordered ? 'ordered' : 'unordered';
     const listContext = {
       ...ctx,
       currentX: ctx.bounds.x,
       listDepth: depth,
-      listType: node.ordered ? 'ordered' : 'unordered',
+      listType,
       listStart: node.start || 1,
       listMarkerWidth: maxMarkerWidth
     };
@@ -1122,7 +1204,8 @@ export class MarkdownElement extends Element implements Renderable {
 
     // Add spacing after list (only for top-level lists, not nested)
     if ((ctx.listDepth || 0) === 0) {
-      totalHeight += 1;
+      const spacing = getSpacing('list');
+      totalHeight += spacing.after;
     }
 
     return totalHeight;
@@ -1131,7 +1214,7 @@ export class MarkdownElement extends Element implements Renderable {
   /**
    * Render list item with appropriate bullet/number
    */
-  private _renderListItem(node: ListItem, ctx: any): number {
+  private _renderListItem(node: ListItem, ctx: MarkdownRenderContext & { listDepth: number; listType: 'ordered' | 'unordered'; listMarkerWidth: number; itemNumber?: number; itemIndex?: number }): number {
     // Add base indent of 2 for top-level lists only
     const indent = ctx.listDepth === 1 ? 2 : 0;
 
@@ -1326,7 +1409,8 @@ export class MarkdownElement extends Element implements Renderable {
     }
 
     // Add spacing after code block
-    totalHeight += 1;
+    const spacing = getSpacing('code');
+    totalHeight += spacing.after;
 
     return totalHeight;
   }
@@ -1447,13 +1531,14 @@ export class MarkdownElement extends Element implements Renderable {
    */
   private _renderBlockquote(node: Blockquote, ctx: MarkdownRenderContext): number {
     let totalHeight = 0;
+    const spacing = getSpacing('blockquote');
 
     // Use local y tracking - don't modify ctx.currentY (caller does that)
     let localY = ctx.currentY;
 
     // Add spacing before blockquote
-    totalHeight += 1;
-    localY += 1;
+    totalHeight += spacing.before;
+    localY += spacing.before;
 
     // Create blockquote style
     const quoteStyle = this._getBlockquoteStyle(ctx.baseStyle);
@@ -1496,7 +1581,7 @@ export class MarkdownElement extends Element implements Renderable {
     }
 
     // Add spacing after blockquote
-    totalHeight += 1;
+    totalHeight += spacing.after;
 
     return totalHeight;
   }
@@ -1511,6 +1596,7 @@ export class MarkdownElement extends Element implements Renderable {
 
     let totalHeight = 0;
     const alignments = node.align || [];
+    const spacing = getSpacing('table');
 
     // First pass: calculate column widths
     const columnWidths = this._calculateTableColumnWidths(node, ctx);
@@ -1524,8 +1610,8 @@ export class MarkdownElement extends Element implements Renderable {
     let localY = ctx.currentY;
 
     // Add spacing before table
-    totalHeight += 1;
-    localY += 1;
+    totalHeight += spacing.before;
+    localY += spacing.before;
 
     // Box-drawing characters for table borders
     const borderChars = {
@@ -1582,7 +1668,7 @@ export class MarkdownElement extends Element implements Renderable {
     localY += 1;
 
     // Add spacing after table
-    totalHeight += 1;
+    totalHeight += spacing.after;
 
     return totalHeight;
   }
@@ -1612,37 +1698,6 @@ export class MarkdownElement extends Element implements Renderable {
 
     // Ensure minimum column width of 3
     return columnWidths.map(w => Math.max(w, 3));
-  }
-
-  /**
-   * Wrap text into lines that fit within a given width
-   */
-  private _wrapTextToLines(text: string, width: number): string[] {
-    if (text.length <= width) {
-      return [text];
-    }
-
-    const lines: string[] = [];
-    let remaining = text;
-
-    while (remaining.length > 0) {
-      if (remaining.length <= width) {
-        lines.push(remaining);
-        break;
-      }
-
-      // Find a good break point (space)
-      let breakPoint = width;
-      const lastSpace = remaining.substring(0, width + 1).lastIndexOf(' ');
-      if (lastSpace > 0 && lastSpace < width) {
-        breakPoint = lastSpace;
-      }
-
-      lines.push(remaining.substring(0, breakPoint).trimEnd());
-      remaining = remaining.substring(breakPoint).trimStart();
-    }
-
-    return lines.length > 0 ? lines : [''];
   }
 
   /**
@@ -1690,7 +1745,7 @@ export class MarkdownElement extends Element implements Renderable {
       const cell = row.children[colIndex];
       const width = columnWidths[colIndex];
       const cellText = cell ? this._extractTextContent(cell) : '';
-      const lines = this._wrapTextToLines(cellText, width);
+      const lines = wrapTextToLines(cellText, width);
       wrappedCells.push(lines);
       maxLines = Math.max(maxLines, lines.length);
     }
@@ -1981,13 +2036,41 @@ export class MarkdownElement extends Element implements Renderable {
   }
 
   /**
+   * Get inline code style
+   */
+  private _getInlineCodeStyle(baseStyle: Partial<Cell>): Partial<Cell> {
+    const customStyle = this.props.styles?.inlineCode || {};
+    return {
+      ...baseStyle,
+      background: customStyle.background || getThemeColor('surface'),
+      foreground: customStyle.foreground || getThemeColor('info')
+    };
+  }
+
+  /**
+   * Get link style
+   */
+  private _getLinkStyle(baseStyle: Partial<Cell>): Partial<Cell> {
+    const customStyle = this.props.styles?.link || {};
+    const defaultStyle = DEFAULT_STYLES.link;
+    return {
+      ...baseStyle,
+      underline: customStyle.underline ?? defaultStyle.underline,
+      foreground: customStyle.foreground || getThemeColor('primary')
+    };
+  }
+
+  /**
    * Get blockquote style
    */
   private _getBlockquoteStyle(baseStyle: Partial<Cell>): Partial<Cell> {
+    const customStyle = this.props.styles?.blockquote || {};
+    const defaultStyle = DEFAULT_STYLES.blockquote;
+
     return {
       ...baseStyle,
-      foreground: getThemeColor('textMuted'),
-      italic: true
+      foreground: customStyle.foreground || getThemeColor('textMuted'),
+      italic: customStyle.italic ?? defaultStyle.italic
     };
   }
 
@@ -2072,7 +2155,7 @@ export class MarkdownElement extends Element implements Renderable {
   /**
    * Estimate lines for a node - recursive for nested structures
    */
-  private _estimateNodeLines(node: any, availableWidth: number): number {
+  private _estimateNodeLines(node: ASTNode, availableWidth: number): number {
     switch (node.type) {
       case 'heading':
         return 2; // Title + blank line
@@ -2117,14 +2200,14 @@ export class MarkdownElement extends Element implements Renderable {
     }
   }
 
-  private _extractTextContent(node: any): string {
+  private _extractTextContent(node: ASTNode): string {
     // Handle nodes with direct value (text, inlineCode)
     if (node.type === 'text' || node.type === 'inlineCode') {
       return node.value || '';
     }
     // Recursively process children
     if (node.children) {
-      return node.children.map((child: any) => this._extractTextContent(child)).join('');
+      return node.children.map((child: ASTNode) => this._extractTextContent(child)).join('');
     }
     return '';
   }
@@ -2219,6 +2302,8 @@ export const markdownSchema: ComponentSchema = {
     listIndent: { type: 'number', description: 'List indentation spaces' },
     codeTheme: { type: 'string', enum: ['light', 'dark', 'auto'], description: 'Code block color theme' },
     onLink: { type: 'function', description: 'Link click handler' },
+    debug: { type: 'boolean', description: 'Enable debug overlay showing line numbers' },
+    styles: { type: 'object', description: 'Custom styles for heading, code, blockquote, link elements' },
   },
 };
 

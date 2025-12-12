@@ -4,8 +4,8 @@ The `.melker` file format is an HTML-like declarative syntax for building Melker
 
 **Run with:**
 ```bash
-deno run --allow-all src/melker.ts <file>.melker
-deno run --allow-all src/melker.ts http://server/path/file.melker  # URL support
+deno run --allow-all melker.ts <file>.melker
+deno run --allow-all melker.ts http://server/path/file.melker  # URL support
 ```
 
 ## Structure
@@ -99,20 +99,20 @@ See `examples/melker/` for complete examples:
 
 ```bash
 # Basic
-deno run --allow-all src/melker.ts examples/melker/counter.melker
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # From URL
-deno run --allow-all src/melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all src/melker.ts --lint examples/melker/counter.melker
+deno run --allow-all melker.ts --lint examples/melker/counter.melker
 
 # With logging
-MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --allow-all src/melker.ts app.melker
+MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --allow-all melker.ts app.melker
 
 # With theme
-MELKER_THEME=fullcolor-dark deno run --allow-all src/melker.ts app.melker
+MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts app.melker
 
 # Start LSP server (for editor integration)
-deno run --allow-all src/melker.ts --lsp
+deno run --allow-all melker.ts --lsp
 ```

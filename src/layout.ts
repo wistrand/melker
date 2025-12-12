@@ -32,7 +32,7 @@ export interface AdvancedLayoutProps extends LayoutProps {
   flexShrink?: number;
   flexBasis?: number | 'auto';
   alignSelf?: 'auto' | 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
-
+  gap?: number;  // Space between flex items
 
   // Alignment
   verticalAlign?: 'top' | 'middle' | 'bottom' | 'baseline';
@@ -376,7 +376,7 @@ export class LayoutEngine {
     const isReverse = flexProps.flexDirection === 'row-reverse' || flexProps.flexDirection === 'column-reverse';
     const isWrap = flexProps.flexWrap !== 'nowrap';
     const isWrapReverse = flexProps.flexWrap === 'wrap-reverse';
-    const gap = (parentNode.element.props as any)?.gap || 0;  // Support gap property
+    const gap = flexProps.gap || 0;  // Gap between flex items (from style)
 
     // Calculate available space early (needed for stretch calculations)
     const mainAxisSize = isRow ? context.availableSpace.width : context.availableSpace.height;
@@ -1234,6 +1234,7 @@ export class LayoutEngine {
     if (style.alignContent !== undefined) result.alignContent = style.alignContent;
     if (style.flexWrap !== undefined) result.flexWrap = style.flexWrap;
     if (style.alignSelf !== undefined) result.alignSelf = style.alignSelf;
+    if (style.gap !== undefined) result.gap = style.gap;
     if (style.position !== undefined) result.position = style.position;
     if (style.top !== undefined) result.top = style.top;
     if (style.right !== undefined) result.right = style.right;

@@ -6,7 +6,7 @@ import {
   melker,
   getThemeColor,
   type KeyPressEvent,
-} from '../src/melker.ts';
+} from '../melker.ts';
 
 let counter = 0;
 let message = 'Initial message';

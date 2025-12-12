@@ -140,7 +140,7 @@ Warnings collected during parse, displayed via logging system after completion:
 |------|--------|
 | `src/template.ts` | Add validation call in `convertToElement` |
 | `src/melker-main.ts` | Add `--lint` CLI flag |
-| `src/melker.ts` | Export lint functions |
+| `melker.ts` | Export lint functions |
 
 ## Implementation Order
 
@@ -149,7 +149,7 @@ Warnings collected during parse, displayed via logging system after completion:
 3. Add schemas for each component (container, text, button, input, etc.)
 4. Integrate validation into `src/template.ts`
 5. Add `--lint` CLI flag in `src/melker-main.ts`
-6. Export lint functions from `src/melker.ts`
+6. Export lint functions from `melker.ts`
 7. Test with various .melker examples
 
 ## Future Considerations

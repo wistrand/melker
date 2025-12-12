@@ -250,7 +250,7 @@ export async function runMelkerFile(filepath: string, options: { printTree?: boo
         console.log('\nEVENT HANDLER PROCESSING');
         console.log('-'.repeat(40));
         try {
-          await processStringHandlers(ui, debugContext, debugLogger, filepath, true);
+          await processStringHandlers(ui, debugContext, debugLogger, filepath, true, parseResult.sourceContent);
         } catch (error) {
           debugFailures.push(`Event handler processing: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -403,7 +403,7 @@ export async function runMelkerFile(filepath: string, options: { printTree?: boo
     const ui = parseResult.element;
 
     // Step 3.5: Process string event handlers and convert them to functions
-    await processStringHandlers(ui, context, logger, filepath, options.debug);
+    await processStringHandlers(ui, context, logger, filepath, options.debug, parseResult.sourceContent);
 
     // Step 4: Set the parsed UI to the engine using the proper updateUI method
     engine.updateUI(ui);
@@ -718,12 +718,12 @@ export async function main(): Promise<void> {
 
   if (args.length === 0) {
     printUsage();
-    return;
+    Deno.exit(0);
   }
 
   if (args.includes('--help') || args.includes('-h')) {
     printUsage();
-    return;
+    Deno.exit(0);
   }
 
   // Handle --schema option (doesn't require a file)
@@ -1130,9 +1130,16 @@ async function transpileStringHandler(code: string, elementType: string, handler
 /**
  * Process string event handlers in the UI tree and convert them to functions
  */
-async function processStringHandlers(element: any, context: any, logger: any, filepath: string, debug?: boolean): Promise<void> {
+async function processStringHandlers(element: any, context: any, logger: any, filepath: string, debug?: boolean, sourceContent?: string): Promise<void> {
+  // Import helpers for source location reporting and error display
+  const { offsetToLineCol } = await import('./template.ts');
+  const { showScriptError } = await import('./error-overlay.ts');
+
   // Process current element's props
   if (element.props) {
+    // Get source location info if available
+    const sourceLocation = element.props.__sourceLocation;
+
     for (const [propName, propValue] of Object.entries(element.props)) {
       if (propName.startsWith('on') &&
           typeof propValue === 'object' &&
@@ -1143,8 +1150,15 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
         const elementType = element.type || 'unknown';
         const elementId = element.props?.id;
 
+        // Get source location for this specific handler attribute
+        const handlerLocation = sourceLocation?.attributeLocations?.[propName];
+
         if (debug) {
           console.log(`\nProcessing ${propName} handler${elementId ? ` on #${elementId}` : ''}`);
+          if (handlerLocation && sourceContent) {
+            const loc = offsetToLineCol(sourceContent, handlerLocation.start);
+            console.log(`   Source location: line ${loc.line}, column ${loc.column}`);
+          }
         }
 
         // Always transpile string handlers as TypeScript
@@ -1156,6 +1170,11 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
         if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(finalCode)) {
           finalCode = `return ${finalCode}(event)`;
         }
+
+        // Capture source location info for error reporting (closure captures these)
+        const capturedSourceContent = sourceContent;
+        const capturedHandlerLocation = handlerLocation;
+        const capturedShowScriptError = showScriptError;
 
         // Create a function that executes the transpiled code with access to context
         element.props[propName] = function(event: any) {
@@ -1173,7 +1192,16 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
             );
             return handlerFunction(event, context, ...scriptFunctionValues);
           } catch (error) {
-            const errorMessage = `Error in string event handler (${propName}): ${error}`;
+            // Build source location string if available
+            let sourceLocationStr = '';
+            if (capturedHandlerLocation && capturedSourceContent) {
+              const loc = offsetToLineCol(capturedSourceContent, capturedHandlerLocation.start);
+              sourceLocationStr = `${filepath}:${loc.line}:${loc.column}`;
+            }
+
+            const errorMessage = sourceLocationStr
+              ? `Error at ${sourceLocationStr} in ${propName} handler: ${error}`
+              : `Error in string event handler (${propName}): ${error}`;
 
             // Log comprehensive error information with stack trace and context
             logger?.error(
@@ -1181,6 +1209,7 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
               error instanceof Error ? error : new Error(String(error)),
               {
                 filepath: filepath,
+                sourceLocation: sourceLocationStr || undefined,
                 elementType: element.type,
                 elementId: element.props?.id || 'unknown',
                 propertyName: propName,
@@ -1192,10 +1221,16 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
               'TemplateProcessor'
             );
 
-            // Also log to console for immediate feedback during development
-            console.error(errorMessage);
-            if (error instanceof Error && error.stack) {
-              console.error('Stack trace:', error.stack);
+            // Show error in UI overlay instead of console (preserves UI)
+            try {
+              const shortMessage = error instanceof Error ? error.message : String(error);
+              capturedShowScriptError(shortMessage, sourceLocationStr || undefined);
+              // Trigger re-render to show the error overlay
+              if (context?.engine?.render) {
+                context.engine.render();
+              }
+            } catch {
+              // Fallback to console if overlay fails (shouldn't happen)
             }
           }
         };
@@ -1207,14 +1242,14 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
   // Recursively process children
   if (element.children && Array.isArray(element.children)) {
     for (const child of element.children) {
-      await processStringHandlers(child, context, logger, filepath, debug);
+      await processStringHandlers(child, context, logger, filepath, debug, sourceContent);
     }
   }
 
   // Also process items in props.items (used by menu components)
   if (element.props?.items && Array.isArray(element.props.items)) {
     for (const item of element.props.items) {
-      await processStringHandlers(item, context, logger, filepath, debug);
+      await processStringHandlers(item, context, logger, filepath, debug, sourceContent);
     }
   }
 }

@@ -55,6 +55,9 @@ import {
   getGlobalErrorOverlay,
 } from './error-boundary.ts';
 import {
+  getGlobalErrorOverlay as getGlobalScriptErrorOverlay,
+} from './error-overlay.ts';
+import {
   getLogger,
   type ComponentLogger,
 } from './logging.ts';
@@ -2101,6 +2104,15 @@ export class MelkerEngine {
       }
     }
 
+    // Render script error overlay if there are script errors
+    if (this._buffer) {
+      try {
+        getGlobalScriptErrorOverlay().render(this._buffer);
+      } catch {
+        // Silently ignore script error overlay errors
+      }
+    }
+
     // Use optimized differential rendering instead of full clear+redraw
     const applyStartTime = performance.now();
     this._renderOptimized();
@@ -2177,6 +2189,15 @@ export class MelkerEngine {
         getGlobalErrorOverlay().render(this._buffer);
       } catch {
         // Silently ignore error overlay errors
+      }
+    }
+
+    // Render script error overlay if there are script errors
+    if (this._buffer) {
+      try {
+        getGlobalScriptErrorOverlay().render(this._buffer);
+      } catch {
+        // Silently ignore script error overlay errors
       }
     }
 

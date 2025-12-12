@@ -6,14 +6,6 @@
         }
     </style>
 
-    <script type="typescript">
-        const apa = 2;
-        function foo() {
-          console.error("hello");
-        }
-        foo();
-    </script>
-
     <container style="width: 40; height: 30; border: thin; padding: 2; display: flex; flex-direction: column;">
   <text style="font-weight: bold; margin-bottom: 2; text-align: center">
     Counter App

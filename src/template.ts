@@ -37,6 +37,14 @@ interface MelkerParseResult {
   title?: string;
   stylesheet?: Stylesheet;
   oauthConfig?: OAuthParseConfig;
+  sourceContent?: string;  // Original source for error reporting
+}
+
+// Source location info from parser
+interface SourceLocation {
+  start: number;  // Character offset in source
+  end: number;
+  attributeLocations?: Record<string, { start: number; end: number }>;
 }
 
 interface ParsedNode {
@@ -45,6 +53,7 @@ interface ParsedNode {
   attributes?: Record<string, any>;
   children?: ParsedNode[];
   content?: string;
+  sourceLocation?: SourceLocation;  // Track source position
 }
 
 /**
@@ -227,7 +236,7 @@ export function parseMelkerFile(content: string): MelkerParseResult {
         clearWarnings();
       }
 
-      return { element, scripts, title, stylesheet, oauthConfig };
+      return { element, scripts, title, stylesheet, oauthConfig, sourceContent: content };
     } else {
       // No melker wrapper, treat as direct UI element (existing behavior)
       const context: TemplateContext = { expressions: [], expressionIndex: 0 };
@@ -240,7 +249,7 @@ export function parseMelkerFile(content: string): MelkerParseResult {
         clearWarnings();
       }
 
-      return { element, scripts: [] };
+      return { element, scripts: [], sourceContent: content };
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -408,17 +417,23 @@ function convertAstNode(node: any, context: TemplateContext): ParsedNode | Parse
       };
     }
 
-    // Parse attributes
+    // Parse attributes and track their source locations
     const attributes: Record<string, any> = {};
+    const attributeLocations: Record<string, { start: number; end: number }> = {};
 
     if (node.attributes) {
       for (const attr of node.attributes) {
+        const attrName = attr.name.value;
         // Handle boolean attributes without values (e.g., <text wrap>)
         if (!attr.value || attr.value.value === undefined) {
-          attributes[attr.name.value] = true;
+          attributes[attrName] = true;
+          // Track location of the attribute name for boolean attrs
+          attributeLocations[attrName] = { start: attr.start, end: attr.end };
         } else {
-          const value = parseAttributeValue(attr.value.value, context, attr.name.value);
-          attributes[attr.name.value] = value;
+          const value = parseAttributeValue(attr.value.value, context, attrName);
+          attributes[attrName] = value;
+          // Track location of the attribute value (more useful for handlers)
+          attributeLocations[attrName] = { start: attr.value.start, end: attr.value.end };
         }
       }
     }
@@ -444,7 +459,12 @@ function convertAstNode(node: any, context: TemplateContext): ParsedNode | Parse
       type: 'element',
       name: node.name,
       attributes,
-      children
+      children,
+      sourceLocation: {
+        start: node.start,
+        end: node.end,
+        attributeLocations
+      }
     };
   }
 
@@ -642,10 +662,16 @@ function convertToElement(node: ParsedNode, context: TemplateContext): Element {
       }
     }
 
+    // Build props with source location metadata
+    const props = { ...node.attributes };
+    if (node.sourceLocation) {
+      props.__sourceLocation = node.sourceLocation;
+    }
+
     // Handle self-closing tags or tags with special handling
-    if (node.name === 'text' && node.attributes?.text && children.length === 0) {
+    if (node.name === 'text' && props.text && children.length === 0) {
       // <text text="content" /> syntax
-      return createElement('text', { ...node.attributes, text: node.attributes.text });
+      return createElement('text', props);
     }
 
     if (node.name === 'text' && children.length > 0) {
@@ -656,15 +682,33 @@ function convertToElement(node: ParsedNode, context: TemplateContext): Element {
         .join('');
 
       return createElement('text', {
-        ...node.attributes,
+        ...props,
         text: textContent
       });
     }
 
     // For other elements, pass children normally
-    return createElement(node.name as any, node.attributes || {}, ...children);
+    return createElement(node.name as any, props, ...children);
   }
 
   throw new Error(`Cannot convert node to element: ${JSON.stringify(node)}`);
 }
+
+/**
+ * Convert a character offset in source to line and column numbers
+ * @param source The source content
+ * @param offset Character offset (0-based)
+ * @returns { line, column } where line is 1-based and column is 1-based
+ */
+export function offsetToLineCol(source: string, offset: number): { line: number; column: number } {
+  const before = source.slice(0, offset);
+  const lines = before.split('\n');
+  return {
+    line: lines.length,
+    column: (lines[lines.length - 1]?.length || 0) + 1
+  };
+}
+
+// Export SourceLocation type for use in error reporting
+export type { SourceLocation };
 

@@ -19,7 +19,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 
 ## Technology Stack
 
-- **Runtime**: Deno
+- **Runtime**: Deno (required, Node.js/Bun not supported)
 - **Package**: @melker/core
 - **Target**: ANSI-compatible terminals
 

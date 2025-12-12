@@ -2,7 +2,7 @@
 
 A modern **Deno** library for creating rich Terminal UI interfaces using HTML-like `.melker` files or TypeScript.
 
-**Requirements:** Deno >= 2.1.0
+**Requirements:** Deno >= 2.1.0 (Node.js and Bun are not supported)
 
 ## Quick Start with .melker Files
 
@@ -19,6 +19,16 @@ Create a file `hello.melker`:
 Run it:
 ```bash
 deno run --allow-all melker.ts hello.melker
+```
+
+Or run directly from GitHub without installing:
+```bash
+deno run --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts hello.melker
+
+# Or run the markdown viewer with any markdown file:
+deno run --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts \
+  https://raw.githubusercontent.com/wistrand/melker/main/examples/melker/markdown_viewer.melker \
+  README.md
 ```
 
 That's it! No build step, no compilation - just write HTML-like markup and run.

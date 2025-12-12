@@ -528,7 +528,9 @@ export async function runMelkerFile(filepath: string, options: { printTree?: boo
 }
 
 export function printUsage(): void {
-  console.log('📱 Melker CLI - Run Melker template files');
+  console.log('Melker CLI - Run Melker template files');
+  console.log('');
+  console.log('Requires: Deno >= 2.1.0 (Node.js and Bun are not supported)');
   console.log('');
   console.log('Usage:');
   console.log('  deno run --allow-read --allow-env melker.ts <file.melker> [options]');
@@ -546,20 +548,11 @@ export function printUsage(): void {
   console.log('  --help, -h     Show this help message');
   console.log('');
   console.log('Example .melker file content:');
-  console.log('  <container style={{');
-  console.log('    width: 40,');
-  console.log('    height: 10,');
-  console.log('    border: "thin",');
-  console.log('    borderColor: getThemeColor("primary")');
-  console.log('  }}>');
-  console.log('    <text style={{ color: getThemeColor("success") }}>');
+  console.log('  <container style="width: 40; height: 10; border: thin; padding: 1;">');
+  console.log('    <text style="color: green; font-weight: bold;">');
   console.log('      Hello from Melker!');
   console.log('    </text>');
   console.log('  </container>');
-  console.log('');
-  console.log('Style attributes support both formats:');
-  console.log('  CSS-style:   style="width: 40; border: thin; color: blue;"');
-  console.log('  Object-style: style={{ width: 40, border: "thin", color: "blue" }}');
   console.log('');
   console.log('Advanced .melker files with script context:');
   console.log('  <melker>');

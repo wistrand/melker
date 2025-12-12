@@ -58,7 +58,35 @@ deno run --allow-all melker.ts examples/melker/counter.melker --print-json
 | `enterprise-analog-clock.melker` | Feature-rich clock demo |
 | `text-analog-clock.melker` | Text-based clock |
 | `canvas_test.melker` | Canvas drawing basics |
+| `canvas_color_test.melker` | Canvas color drawing |
 | `video_demo.melker` | Video playback |
+
+### Canvas Features
+
+Canvas uses sextant characters (2x3 pixel blocks per terminal character).
+
+**Auto-sizing with onPaint:**
+```xml
+<canvas
+  id="myCanvas"
+  width="60" height="20"
+  style="width: fill; height: fill"
+  onPaint="context.drawContent(event.canvas)"
+/>
+```
+
+**Dithering modes:**
+- `dither="auto"` - Adapts to theme (sierra-stable for B&W, none for fullcolor)
+- `dither="sierra-stable"` - Best for B&W themes
+- `dither="none"` - True color rendering
+
+**Aspect-ratio corrected drawing:**
+```typescript
+// Use visual coordinates for round circles
+const visSize = canvas.getVisualSize();
+const [pxCenterX, pxCenterY] = canvas.visualToPixel(visSize.width/2, visSize.height/2);
+canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
+```
 
 ## Script Examples
 
@@ -108,6 +136,10 @@ In event handlers and scripts:
 - `context.exit()` - Exit the application
 - `context.engine` - Access engine instance
 - `context.logger` - Logging interface
+
+**Element methods:**
+- `element.getBounds()` - Get layout bounds `{ x, y, width, height }` after render
+- `element.props` - Access/modify element properties
 
 ### Special Tags
 

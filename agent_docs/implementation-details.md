@@ -55,3 +55,58 @@ Gray themes (`gray-std`, `gray-dark`) enforce grayscale conversion at render tim
 ## Dialog/Menu Hit Testing
 
 Overlays (dialogs, menus) require special hit testing since their children's bounds are stored separately from the main layout tree. See `_hitTestOpenDialogs()` and `_hitTestOpenMenus()` in `src/engine.ts`.
+
+## Element Bounds
+
+All elements have `getBounds()` / `setBounds()` methods for accessing layout bounds:
+- `setBounds()` is called by the renderer before `render()` (see `src/rendering.ts`)
+- `getBounds()` returns `{ x, y, width, height }` or `null` before first render
+- Useful for canvas components that need to resize to fill their container
+
+## Canvas Dithering
+
+Canvas supports automatic dithering based on theme type:
+
+**Dither mode `'auto'`:**
+- `fullcolor` theme: No dithering (true color rendering)
+- `bw`, `gray`, `color` themes: Uses `sierra-stable` with 1 bit (B&W)
+
+**Implementation** (see `src/components/canvas.ts` `_prepareDitheredBuffer()`):
+```typescript
+if (ditherMode === 'auto') {
+  const theme = getCurrentTheme();
+  if (theme.type === 'fullcolor') {
+    return null;  // No dithering
+  } else {
+    ditherMode = 'sierra-stable';  // Apply dithering
+  }
+}
+```
+
+## Canvas onPaint Handler
+
+Canvas fires `onPaint` before each render, allowing content updates:
+- Handler receives `{ canvas, bounds }` event object
+- Use `canvas.getBounds()` to get layout dimensions
+- Call `canvas.setSize(width, height)` to resize canvas buffer
+
+**Pattern for fill-style canvas:**
+```xml
+<canvas
+  id="myCanvas"
+  width="60" height="20"
+  style="width: fill; height: fill"
+  onPaint="context.drawMyContent(event.canvas)"
+/>
+```
+
+```typescript
+export const drawMyContent = (canvas: any): void => {
+  const bounds = canvas.getBounds();
+  if (!bounds) return;
+  if (canvas.props.width !== bounds.width || canvas.props.height !== bounds.height) {
+    canvas.setSize(bounds.width, bounds.height);
+  }
+  // Draw content...
+};
+```

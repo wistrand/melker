@@ -59,7 +59,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<radio>` | id, title, value, checked, name, onChange | Radio button |
 | `<list>` | style | List container |
 | `<li>` | style | List item |
-| `<canvas>` | width, height | Pixel graphics |
+| `<canvas>` | width, height, dither, ditherBits, onPaint | Pixel graphics (sextant chars) |
 | `<markdown>` | | Markdown text rendering |
 
 ## Styling
@@ -73,13 +73,53 @@ CSS-like properties in `style` attribute:
 
 ## Events & Context
 
-**Events:** onClick, onKeyPress (event.key), onInput (event.value), onFocus, onBlur
+**Events:** onClick, onKeyPress (event.key), onInput (event.value), onFocus, onBlur, onPaint (canvas)
 
 **Context API:**
 - `context.getElementById(id)` - Get element by ID
 - `context.render()` - Trigger re-render (required after prop changes)
 - `context.exit()` - Exit application
 - Exported script functions available as `context.functionName()`
+
+**Element Bounds:**
+All elements have `getBounds()` method that returns `{ x, y, width, height }` after layout:
+```typescript
+const canvas = context.getElementById('myCanvas');
+const bounds = canvas.getBounds();
+if (bounds) {
+  canvas.setSize(bounds.width, bounds.height);
+}
+```
+
+## Canvas Component
+
+Canvas uses Unicode sextant characters (2x3 pixel blocks per terminal character).
+
+**Props:**
+- `width`, `height` - Dimensions in terminal columns/rows
+- `dither` - Dithering mode: `'auto'` | `'sierra-stable'` | `'floyd-steinberg'` | `'ordered'` | `'none'`
+- `ditherBits` - Color depth (1-8, default: 1 for B&W)
+- `onPaint` - Called before render with `{ canvas, bounds }`
+- `src` - Load image from file path
+
+**Dither modes:**
+- `'auto'` - Uses sierra-stable for bw/color themes, no dither for fullcolor
+- `'none'` - No dithering (true color)
+
+**Aspect-ratio corrected drawing:**
+```typescript
+// Work in visual coordinates (equal units in both dimensions)
+const visSize = canvas.getVisualSize();
+const visCenterX = visSize.width / 2;
+const visCenterY = visSize.height / 2;
+
+// Convert to pixel for drawCircleCorrected
+const [pxCenterX, pxCenterY] = canvas.visualToPixel(visCenterX, visCenterY);
+canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
+
+// Lines use visual coordinates directly
+canvas.drawLineCorrected(x1, y1, x2, y2);
+```
 
 ## Examples
 

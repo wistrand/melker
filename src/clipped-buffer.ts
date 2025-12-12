@@ -1,6 +1,7 @@
 // Clipped Buffer Proxy - clips all buffer operations to a bounds rectangle
 import { TerminalBuffer, DualBuffer, Cell, RenderOptions, BufferDiff } from './buffer.ts';
 import { Bounds } from './types.ts';
+import { analyzeString } from './char-width.ts';
 
 export class ClippedBufferProxy {
   constructor(
@@ -29,25 +30,57 @@ export class ClippedBufferProxy {
   }
 
   setText(x: number, y: number, text: string, style: Partial<Cell>): void {
-    // Clip text to bounds
-    const startX = Math.max(x, this.clipBounds.x);
-    const endX = Math.min(x + text.length, this.clipBounds.x + this.clipBounds.width);
-    const startY = y;
-    const endY = y;
-
-    if (startY < this.clipBounds.y ||
-        startY >= this.clipBounds.y + this.clipBounds.height ||
-        startX >= endX) {
-      return; // Outside clip bounds, ignore
+    // Check Y bounds first
+    if (y < this.clipBounds.y || y >= this.clipBounds.y + this.clipBounds.height) {
+      return; // Outside clip bounds vertically
     }
 
-    // Calculate clipped text
-    const textStartOffset = startX - x;
-    const clippedLength = endX - startX;
-    const clippedText = text.substring(textStartOffset, textStartOffset + clippedLength);
+    // Analyze text to get proper visual widths (handles surrogate pairs correctly)
+    const chars = analyzeString(text);
+
+    // Calculate visual width of text
+    let visualWidth = 0;
+    for (const charInfo of chars) {
+      visualWidth += charInfo.width;
+    }
+
+    // Calculate X clipping using visual width
+    const startX = Math.max(x, this.clipBounds.x);
+    const endX = Math.min(x + visualWidth, this.clipBounds.x + this.clipBounds.width);
+
+    if (startX >= endX) {
+      return; // Outside clip bounds horizontally
+    }
+
+    // Build clipped text by iterating over characters with visual positions
+    let clippedText = '';
+    let visualX = x;
+    for (const charInfo of chars) {
+      const charEndX = visualX + charInfo.width;
+
+      // Skip characters entirely before clip region
+      if (charEndX <= startX) {
+        visualX = charEndX;
+        continue;
+      }
+
+      // Stop when we've passed the clip region
+      if (visualX >= endX) {
+        break;
+      }
+
+      // Include this character (it's at least partially in the clip region)
+      // For wide chars that would extend past endX, we skip them to avoid partial rendering
+      if (charInfo.width === 2 && visualX + 1 >= endX) {
+        break; // Wide char won't fit
+      }
+
+      clippedText += charInfo.char;
+      visualX = charEndX;
+    }
 
     if (clippedText.length > 0) {
-      this.buffer.setText(startX, startY, clippedText, style);
+      this.buffer.setText(startX, y, clippedText, style);
     }
   }
 

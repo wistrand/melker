@@ -3,7 +3,7 @@
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from './color-utils.ts';
-import { applySierraStableDither, type DitherMode } from '../video/dither.ts';
+import { applySierraStableDither, applyFloydSteinbergDither, applyOrderedDither, type DitherMode } from '../video/dither.ts';
 import { getCurrentTheme } from '../theme.ts';
 
 // Re-export color utilities for external use
@@ -96,6 +96,7 @@ export interface CanvasProps extends BaseProps {
   logo?: boolean;                    // Enable animated Melker logo
   logoColor?: string;                // Logo color (default: cyan)
   logoSpeed?: number;                // Animation speed in ms per frame (default: 30)
+  onPaint?: (event: { canvas: CanvasElement; bounds: Bounds }) => void;  // Called when canvas needs repainting
 }
 
 // Image data storage for loaded images
@@ -144,6 +145,12 @@ export class CanvasElement extends Element implements Renderable {
   private _rtIsDrawing: boolean[] = [false, false, false, false, false, false];
   // Reusable cell style object
   private _rtCellStyle: Partial<Cell> = {};
+
+  // Dithering cache - stores composited & dithered RGBA buffer
+  private _ditherCache: Uint8Array | null = null;
+  private _ditherCacheValid: boolean = false;
+  private _lastDitherMode: string | boolean | undefined = undefined;
+  private _lastDitherBits: number | undefined = undefined;
 
   constructor(props: CanvasProps, children: Element[] = []) {
     const scale = Math.max(1, Math.floor(props.scale || 1));
@@ -1353,6 +1360,119 @@ export class CanvasElement extends Element implements Renderable {
     this._colorBuffer.set(this._previousColorBuffer);
   }
 
+  /**
+   * Invalidate the dither cache, forcing re-computation on next render.
+   */
+  private _invalidateDitherCache(): void {
+    this._ditherCacheValid = false;
+  }
+
+  /**
+   * Prepare a dithered buffer by compositing drawing and image layers,
+   * then applying the specified dithering algorithm.
+   * Returns null if dithering is not enabled, allowing original behavior.
+   */
+  private _prepareDitheredBuffer(): Uint8Array | null {
+    let ditherMode = this.props.dither;
+
+    // Handle 'auto' mode based on current theme
+    if (ditherMode === 'auto') {
+      const theme = getCurrentTheme();
+      if (theme.type === 'fullcolor') {
+        // Fullcolor theme: no dithering needed
+        return null;
+      } else {
+        // bw, gray, or color themes: use sierra-stable with 1 bit
+        ditherMode = 'sierra-stable';
+        // Note: ditherBits will default to 1 below if not specified
+      }
+    }
+
+    // No dithering if not specified or explicitly disabled
+    // Note: !ditherMode handles false, undefined, and empty string
+    if (!ditherMode || ditherMode === 'none') {
+      return null;
+    }
+
+    // Invalidate cache if content changed (drawing methods set _isDirty)
+    if (this._isDirty) {
+      this._ditherCacheValid = false;
+    }
+
+    // Check if dither settings changed
+    if (this._lastDitherMode !== ditherMode || this._lastDitherBits !== this.props.ditherBits) {
+      this._ditherCacheValid = false;
+      this._lastDitherMode = ditherMode;
+      this._lastDitherBits = this.props.ditherBits;
+    }
+
+    // Return cached result if still valid
+    if (this._ditherCacheValid && this._ditherCache) {
+      return this._ditherCache;
+    }
+
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+    const bufferSize = bufW * bufH;
+
+    // Allocate or reuse cache buffer (RGBA format: 4 bytes per pixel)
+    if (!this._ditherCache || this._ditherCache.length !== bufferSize * 4) {
+      this._ditherCache = new Uint8Array(bufferSize * 4);
+    }
+
+    const cache = this._ditherCache;
+
+    // Composite drawing layer over image layer into RGBA buffer
+    for (let i = 0; i < bufferSize; i++) {
+      const drawingColor = this._colorBuffer[i];
+      const imageColor = this._imageColorBuffer[i];
+      const dstIdx = i * 4;
+
+      let color: number;
+      if (drawingColor !== TRANSPARENT) {
+        // Drawing layer takes priority
+        color = drawingColor;
+      } else if (imageColor !== TRANSPARENT) {
+        // Fall back to image layer
+        color = imageColor;
+      } else {
+        // Transparent - use background or fully transparent
+        const bgColor = this.props.backgroundColor;
+        if (bgColor) {
+          color = cssToRgba(bgColor);
+        } else {
+          // Fully transparent
+          cache[dstIdx] = 0;
+          cache[dstIdx + 1] = 0;
+          cache[dstIdx + 2] = 0;
+          cache[dstIdx + 3] = 0;
+          continue;
+        }
+      }
+
+      // Unpack RGBA from packed uint32
+      const rgba = unpackRGBA(color);
+      cache[dstIdx] = rgba.r;
+      cache[dstIdx + 1] = rgba.g;
+      cache[dstIdx + 2] = rgba.b;
+      cache[dstIdx + 3] = rgba.a;
+    }
+
+    // Apply dithering algorithm
+    const bits = this.props.ditherBits ?? 1; // Default to 1 bit (B&W)
+
+    if (ditherMode === 'sierra-stable' || ditherMode === true) {
+      applySierraStableDither(cache, bufW, bufH, bits);
+    } else if (ditherMode === 'floyd-steinberg') {
+      applyFloydSteinbergDither(cache, bufW, bufH, bits);
+    } else if (ditherMode === 'ordered') {
+      applyOrderedDither(cache, bufW, bufH, bits);
+    }
+    // 'none' case already handled above
+
+    this._ditherCacheValid = true;
+    return cache;
+  }
 
   /**
    * Downscale the backing buffer and convert to sextant characters with color
@@ -1366,6 +1486,15 @@ export class CanvasElement extends Element implements Renderable {
     const scale = this._scale;
     const halfScale = scale >> 1;
 
+    // Check for dithered rendering mode
+    const ditheredBuffer = this._prepareDitheredBuffer();
+    if (ditheredBuffer) {
+      // Use dithered rendering path
+      this._renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer);
+      return;
+    }
+
+    // Non-dithered rendering path (original behavior)
     // Use pre-allocated arrays
     const drawingPixels = this._rtDrawingPixels;
     const drawingColors = this._rtDrawingColors;
@@ -1612,6 +1741,114 @@ export class CanvasElement extends Element implements Renderable {
   }
 
   /**
+   * Render from dithered buffer to terminal.
+   * Uses the pre-composited and dithered RGBA buffer for output.
+   */
+  private _renderDitheredToTerminal(
+    bounds: Bounds,
+    style: Partial<Cell>,
+    buffer: DualBuffer,
+    ditheredBuffer: Uint8Array
+  ): void {
+    const terminalWidth = Math.min(this.props.width, bounds.width);
+    const terminalHeight = Math.min(this.props.height, bounds.height);
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+    const scale = this._scale;
+    const halfScale = scale >> 1;
+
+    // Use pre-allocated arrays
+    const sextantPixels = this._rtSextantPixels;
+    const sextantColors = this._rtCompositeColors;
+
+    // Pre-compute base style properties
+    const hasStyleFg = style.foreground !== undefined;
+    const hasStyleBg = style.background !== undefined;
+    const propsBg = this.props.backgroundColor;
+
+    for (let ty = 0; ty < terminalHeight; ty++) {
+      const baseBufferY = ty * 3 * scale;
+
+      for (let tx = 0; tx < terminalWidth; tx++) {
+        const baseBufferX = tx * 2 * scale;
+
+        // Sample 2x3 block from dithered buffer
+        // The positions match the non-dithered path sampling
+        const positions = [
+          // Row 0: (0,0), (1,0)
+          { x: baseBufferX + halfScale, y: baseBufferY + halfScale },
+          { x: baseBufferX + scale + halfScale, y: baseBufferY + halfScale },
+          // Row 1: (0,1), (1,1)
+          { x: baseBufferX + halfScale, y: baseBufferY + scale + halfScale },
+          { x: baseBufferX + scale + halfScale, y: baseBufferY + scale + halfScale },
+          // Row 2: (0,2), (1,2)
+          { x: baseBufferX + halfScale, y: baseBufferY + 2 * scale + halfScale },
+          { x: baseBufferX + scale + halfScale, y: baseBufferY + 2 * scale + halfScale },
+        ];
+
+        let hasAnyPixel = false;
+
+        for (let i = 0; i < 6; i++) {
+          const pos = positions[i];
+          if (pos.x >= 0 && pos.x < bufW && pos.y >= 0 && pos.y < bufH) {
+            const bufIndex = pos.y * bufW + pos.x;
+            const rgbaIdx = bufIndex * 4;
+            const r = ditheredBuffer[rgbaIdx];
+            const g = ditheredBuffer[rgbaIdx + 1];
+            const b = ditheredBuffer[rgbaIdx + 2];
+            const a = ditheredBuffer[rgbaIdx + 3];
+
+            // Consider pixel "on" if not fully transparent
+            // Note: black pixels are valid colors for dithering, don't treat as "off"
+            const isOn = a >= 128;
+            sextantPixels[i] = isOn;
+            sextantColors[i] = isOn ? packRGBA(r, g, b, a) : TRANSPARENT;
+            if (isOn) hasAnyPixel = true;
+          } else {
+            sextantPixels[i] = false;
+            sextantColors[i] = TRANSPARENT;
+          }
+        }
+
+        // Use quantization for color selection (same as image path)
+        this._quantizeBlockColorsInline(sextantColors, sextantPixels);
+        const fgColor = this._qFgColor !== 0 ? rgbaToCss(this._qFgColor) : undefined;
+        const bgColor = this._qBgColor !== 0 ? rgbaToCss(this._qBgColor) : undefined;
+
+        // Convert pixels to sextant character
+        const pattern = (sextantPixels[5] ? 0b000001 : 0) |
+                       (sextantPixels[4] ? 0b000010 : 0) |
+                       (sextantPixels[3] ? 0b000100 : 0) |
+                       (sextantPixels[2] ? 0b001000 : 0) |
+                       (sextantPixels[1] ? 0b010000 : 0) |
+                       (sextantPixels[0] ? 0b100000 : 0);
+        const char = PIXEL_TO_CHAR[pattern];
+
+        // Skip empty cells with no background
+        if (char === ' ' && bgColor === undefined && !propsBg) {
+          continue;
+        }
+
+        // Reuse cell style object to avoid allocation
+        const cellStyle = this._rtCellStyle;
+        cellStyle.foreground = fgColor ?? (hasStyleFg ? style.foreground : undefined);
+        cellStyle.background = bgColor ?? propsBg ?? (hasStyleBg ? style.background : undefined);
+        cellStyle.bold = style.bold;
+        cellStyle.dim = style.dim;
+        cellStyle.italic = style.italic;
+        cellStyle.underline = style.underline;
+
+        buffer.currentBuffer.setText(
+          bounds.x + tx,
+          bounds.y + ty,
+          char,
+          cellStyle
+        );
+      }
+    }
+  }
+
+  /**
    * Inline version of _quantizeBlockColors that writes to pre-allocated arrays.
    * Uses averaged colors per group for better quality on gradients.
    * Results are stored in _qFgColor, _qBgColor, and the passed sextantPixels array.
@@ -1762,6 +1999,12 @@ export class CanvasElement extends Element implements Renderable {
       this.startLogoAnimation(context.requestRender);
     }
 
+    // Call onPaint handler to allow user to update canvas content before rendering
+    if (this.props.onPaint) {
+      // Pass as event object for compatibility with string handlers in .melker files
+      this.props.onPaint({ canvas: this, bounds });
+    }
+
     // Always render to the buffer (buffer is rebuilt each frame)
     this._renderToTerminal(bounds, style, buffer);
     // Mark clean to track changes for next frame
@@ -1772,11 +2015,13 @@ export class CanvasElement extends Element implements Renderable {
 
   /**
    * Calculate intrinsic size for the canvas component
+   * Returns available space for 'fill' styles to expand to container
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
+    const style = this.props.style || {};
     return {
-      width: this.props.width,
-      height: this.props.height
+      width: style.width === 'fill' ? context.availableSpace.width : this.props.width,
+      height: style.height === 'fill' ? context.availableSpace.height : this.props.height
     };
   }
 
@@ -1840,6 +2085,9 @@ export class CanvasElement extends Element implements Renderable {
     this._previousColorBuffer = new Uint32Array(bufferSize);
     // Reallocate image background layer buffer
     this._imageColorBuffer = new Uint32Array(bufferSize);
+    // Reset dither cache (will be reallocated on next render if needed)
+    this._ditherCache = null;
+    this._ditherCacheValid = false;
 
     // Clear the new canvas and mark as dirty for re-render
     this.markDirty();
@@ -1878,11 +2126,12 @@ export const canvasSchema: ComponentSchema = {
     backgroundColor: { type: 'string', description: 'Background color' },
     charAspectRatio: { type: 'number', description: 'Character aspect ratio adjustment' },
     src: { type: 'string', description: 'Load image from file path' },
-    dither: { type: ['string', 'boolean'], description: 'Dithering algorithm (floyd-steinberg, ordered, etc.)' },
+    dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'ordered'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
     ditherBits: { type: 'number', description: 'Color depth for dithering' },
     logo: { type: 'boolean', description: 'Enable animated Melker logo' },
     logoColor: { type: 'string', description: 'Logo color (default: cyan)' },
     logoSpeed: { type: 'number', description: 'Animation speed in ms per frame (default: 30)' },
+    onPaint: { type: ['function', 'string'], description: 'Called when canvas needs repainting, receives event with {canvas, bounds}' },
   },
 };
 

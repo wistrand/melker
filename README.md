@@ -2,6 +2,8 @@
 
 A modern **Deno** library for creating rich Terminal UI interfaces using HTML-like `.melker` files or TypeScript.
 
+**Requirements:** Deno >= 2.1.0
+
 ## Quick Start with .melker Files
 
 Create a file `hello.melker`:

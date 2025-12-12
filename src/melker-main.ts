@@ -312,6 +312,7 @@ export async function runMelkerFile(filepath: string, options: { printTree?: boo
       scopes: parseResult.oauthConfig.scopes,
       audience: parseResult.oauthConfig.audience,
       autoLogin: parseResult.oauthConfig.autoLogin,
+      debugServer: parseResult.oauthConfig.debugServer,
       // Callback expressions (to be wired up by the script)
       onLoginExpr: parseResult.oauthConfig.onLogin,
       onLogoutExpr: parseResult.oauthConfig.onLogout,

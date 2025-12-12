@@ -166,6 +166,7 @@ export class OAuthClient {
           redirectUri: options.redirectUri || Deno.env.get('MELKER_OAUTH_REDIRECT_URI') || `http://localhost:${port}${path}`,
           scopes: options.scopes?.split(' ') || Deno.env.get('MELKER_OAUTH_SCOPES')?.split(' ') || defaultScopes,
           audience: options.audience || Deno.env.get('MELKER_OAUTH_AUDIENCE'),
+          debugServer: options.debugServer,
         };
         logger.debug('OAuth config from options', { clientId: this._config.clientId, redirectUri: this._config.redirectUri });
       } else {
@@ -521,8 +522,9 @@ export async function authenticateWithPKCE(
 
   const port = parsePort(config.redirectUri);
   const path = parsePath(config.redirectUri);
-  logger.debug('Starting callback server', { port, path });
-  const callbackServer = new OAuthCallbackServer({ port, path });
+  const keepAlive = config.debugServer ?? true;
+  logger.info('Starting callback server', { port, path, keepAlive });
+  const callbackServer = new OAuthCallbackServer({ port, path, keepAlive });
   await callbackServer.start();
 
   try {
@@ -572,8 +574,12 @@ export async function authenticateWithPKCE(
     logger.info('PKCE authentication flow completed successfully');
     return tokens;
   } finally {
-    logger.debug('Stopping callback server');
-    await callbackServer.stop();
+    if (callbackServer.keepAlive) {
+      logger.info('Callback server kept alive for debugging (debugServer: true)');
+    } else {
+      logger.debug('Stopping callback server');
+      await callbackServer.stop();
+    }
   }
 }
 

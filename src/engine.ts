@@ -11,7 +11,7 @@ declare global {
 
 import { Document } from './document.ts';
 import { DualBuffer } from './buffer.ts';
-import { RenderingEngine } from './rendering.ts';
+import { RenderingEngine, ScrollbarBounds } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
 import { Element, TextSelection, Bounds } from './types.ts';
@@ -165,6 +165,20 @@ export class MelkerEngine {
     renderMax: 0,
     startTime: 0,
   };
+
+  // Scrollbar drag state
+  private _scrollbarDrag: {
+    active: boolean;
+    elementId: string;
+    axis: 'vertical' | 'horizontal';
+    startMousePos: number;      // Initial mouse Y (vertical) or X (horizontal)
+    startScrollPos: number;     // Initial scrollY or scrollX
+    trackStart: number;         // Track start position (Y for vertical, X for horizontal)
+    trackLength: number;        // Scrollbar track length
+    thumbSize: number;          // Thumb size in pixels
+    contentLength: number;      // Total content height/width
+    viewportLength: number;     // Visible area height/width
+  } | null = null;
 
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
     // Check environment variables for terminal setup overrides
@@ -703,6 +717,13 @@ export class MelkerEngine {
     // Reset throttle timer for fresh drag
     this._lastSelectionRenderTime = 0;
 
+    // Check for scrollbar click before other interactions
+    const scrollbarHit = this._detectScrollbarClick(event.x, event.y);
+    if (scrollbarHit && event.button === 0) {
+      this._handleScrollbarClick(scrollbarHit, event.x, event.y);
+      return; // Don't process text selection when clicking scrollbar
+    }
+
     // Perform hit testing to find the element at the clicked coordinates
     const targetElement = this._hitTest(event.x, event.y);
     const isAltPressed = event.altKey;
@@ -997,9 +1018,220 @@ export class MelkerEngine {
   }
 
   /**
+   * Detect if a click is on a scrollbar track or thumb
+   * Returns scrollbar hit info or null if not on a scrollbar
+   */
+  private _detectScrollbarClick(x: number, y: number): {
+    elementId: string;
+    axis: 'vertical' | 'horizontal';
+    onThumb: boolean;
+    bounds: ScrollbarBounds;
+  } | null {
+    const allScrollbarBounds = this._renderer.getAllScrollbarBounds();
+
+    for (const [elementId, bounds] of allScrollbarBounds) {
+      // Check vertical scrollbar
+      if (bounds.vertical) {
+        const track = bounds.vertical.track;
+        if (x >= track.x && x < track.x + track.width &&
+            y >= track.y && y < track.y + track.height) {
+          const thumb = bounds.vertical.thumb;
+          const onThumb = y >= thumb.y && y < thumb.y + thumb.height;
+          return { elementId, axis: 'vertical', onThumb, bounds };
+        }
+      }
+
+      // Check horizontal scrollbar
+      if (bounds.horizontal) {
+        const track = bounds.horizontal.track;
+        if (x >= track.x && x < track.x + track.width &&
+            y >= track.y && y < track.y + track.height) {
+          const thumb = bounds.horizontal.thumb;
+          const onThumb = x >= thumb.x && x < thumb.x + thumb.width;
+          return { elementId, axis: 'horizontal', onThumb, bounds };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle scrollbar click - either start drag from thumb or click-to-position on track
+   */
+  private _handleScrollbarClick(
+    hit: { elementId: string; axis: 'vertical' | 'horizontal'; onThumb: boolean; bounds: ScrollbarBounds },
+    mouseX: number,
+    mouseY: number
+  ): void {
+    const element = this._document.getElementById(hit.elementId);
+    if (!element) return;
+
+    if (hit.axis === 'vertical' && hit.bounds.vertical) {
+      const { track, thumb, contentHeight, viewportHeight } = hit.bounds.vertical;
+      const maxScroll = Math.max(0, contentHeight - viewportHeight);
+      const thumbSize = thumb.height;
+
+      if (hit.onThumb) {
+        // Start drag from current position
+        this._scrollbarDrag = {
+          active: true,
+          elementId: hit.elementId,
+          axis: 'vertical',
+          startMousePos: mouseY,
+          startScrollPos: element.props.scrollY || 0,
+          trackStart: track.y,
+          trackLength: track.height,
+          thumbSize,
+          contentLength: contentHeight,
+          viewportLength: viewportHeight,
+        };
+      } else {
+        // Click-to-position: jump to clicked position and start drag
+        const trackLength = track.height;
+        const availableTrackSpace = Math.max(1, trackLength - thumbSize);
+        const clickPosInTrack = mouseY - track.y;
+
+        // Center the thumb on the click position
+        const targetThumbStart = Math.max(0, Math.min(availableTrackSpace, clickPosInTrack - thumbSize / 2));
+        const scrollProgress = availableTrackSpace > 0 ? targetThumbStart / availableTrackSpace : 0;
+        const newScrollY = Math.round(scrollProgress * maxScroll);
+
+        element.props.scrollY = newScrollY;
+
+        // Start drag from new position
+        this._scrollbarDrag = {
+          active: true,
+          elementId: hit.elementId,
+          axis: 'vertical',
+          startMousePos: mouseY,
+          startScrollPos: newScrollY,
+          trackStart: track.y,
+          trackLength: trackLength,
+          thumbSize,
+          contentLength: contentHeight,
+          viewportLength: viewportHeight,
+        };
+
+        if (this._options.autoRender) {
+          this.render();
+        }
+      }
+    } else if (hit.axis === 'horizontal' && hit.bounds.horizontal) {
+      const { track, thumb, contentWidth, viewportWidth } = hit.bounds.horizontal;
+      const maxScroll = Math.max(0, contentWidth - viewportWidth);
+      const thumbSize = thumb.width;
+
+      if (hit.onThumb) {
+        // Start drag from current position
+        this._scrollbarDrag = {
+          active: true,
+          elementId: hit.elementId,
+          axis: 'horizontal',
+          startMousePos: mouseX,
+          startScrollPos: element.props.scrollX || 0,
+          trackStart: track.x,
+          trackLength: track.width,
+          thumbSize,
+          contentLength: contentWidth,
+          viewportLength: viewportWidth,
+        };
+      } else {
+        // Click-to-position: jump to clicked position and start drag
+        const trackLength = track.width;
+        const availableTrackSpace = Math.max(1, trackLength - thumbSize);
+        const clickPosInTrack = mouseX - track.x;
+
+        // Center the thumb on the click position
+        const targetThumbStart = Math.max(0, Math.min(availableTrackSpace, clickPosInTrack - thumbSize / 2));
+        const scrollProgress = availableTrackSpace > 0 ? targetThumbStart / availableTrackSpace : 0;
+        const newScrollX = Math.round(scrollProgress * maxScroll);
+
+        element.props.scrollX = newScrollX;
+
+        // Start drag from new position
+        this._scrollbarDrag = {
+          active: true,
+          elementId: hit.elementId,
+          axis: 'horizontal',
+          startMousePos: mouseX,
+          startScrollPos: newScrollX,
+          trackStart: track.x,
+          trackLength: trackLength,
+          thumbSize,
+          contentLength: contentWidth,
+          viewportLength: viewportWidth,
+        };
+
+        if (this._options.autoRender) {
+          this.render();
+        }
+      }
+    }
+  }
+
+  /**
+   * Handle scrollbar drag during mouse move
+   */
+  private _handleScrollbarDrag(mouseX: number, mouseY: number): void {
+    if (!this._scrollbarDrag) return;
+
+    const element = this._document.getElementById(this._scrollbarDrag.elementId);
+    if (!element) {
+      this._scrollbarDrag = null;
+      return;
+    }
+
+    const {
+      axis,
+      startMousePos,
+      startScrollPos,
+      trackLength,
+      thumbSize,
+      contentLength,
+      viewportLength,
+    } = this._scrollbarDrag;
+
+    const maxScroll = Math.max(0, contentLength - viewportLength);
+    const availableTrackSpace = Math.max(1, trackLength - thumbSize);
+
+    // Calculate mouse delta
+    const mousePos = axis === 'vertical' ? mouseY : mouseX;
+    const mouseDelta = mousePos - startMousePos;
+
+    // Convert mouse delta to scroll delta
+    // scrollPerPixel = maxScroll / availableTrackSpace
+    const scrollDelta = availableTrackSpace > 0 ? (mouseDelta * maxScroll) / availableTrackSpace : 0;
+    const newScroll = Math.max(0, Math.min(maxScroll, Math.round(startScrollPos + scrollDelta)));
+
+    // Update scroll position
+    if (axis === 'vertical') {
+      if (element.props.scrollY !== newScroll) {
+        element.props.scrollY = newScroll;
+        if (this._options.autoRender) {
+          this.render();
+        }
+      }
+    } else {
+      if (element.props.scrollX !== newScroll) {
+        element.props.scrollX = newScroll;
+        if (this._options.autoRender) {
+          this.render();
+        }
+      }
+    }
+  }
+
+  /**
    * Handle mouse move events for text selection
    */
   private _handleMouseMove(event: any): void {
+    // Handle scrollbar drag first
+    if (this._scrollbarDrag?.active) {
+      this._handleScrollbarDrag(event.x, event.y);
+      return;
+    }
+
     // Track timing during selection drag
     const isTracking = this._isSelecting;
     if (isTracking) {
@@ -1166,6 +1398,12 @@ export class MelkerEngine {
    * Handle mouse up events for text selection and element interaction
    */
   private _handleMouseUp(event: any): void {
+    // End scrollbar drag if active
+    if (this._scrollbarDrag?.active) {
+      this._scrollbarDrag = null;
+      return; // Don't process other mouse up events
+    }
+
     // Perform hit testing to find the element at the release coordinates
     const targetElement = this._hitTest(event.x, event.y);
 

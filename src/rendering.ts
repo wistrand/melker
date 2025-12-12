@@ -54,6 +54,22 @@ export interface LayoutNode {
   };
 }
 
+// Scrollbar bounds for hit testing and drag handling
+export interface ScrollbarBounds {
+  vertical?: {
+    track: Bounds;
+    thumb: Bounds;
+    contentHeight: number;
+    viewportHeight: number;
+  };
+  horizontal?: {
+    track: Bounds;
+    thumb: Bounds;
+    contentWidth: number;
+    viewportWidth: number;
+  };
+}
+
 export class RenderingEngine {
   private _getDefaultStyle(): Style {
     return {
@@ -76,6 +92,8 @@ export class RenderingEngine {
   private _cachedLayoutTree?: LayoutNode;
   private _cachedElement?: Element;
   private _cachedViewport?: Bounds;
+  // Scrollbar bounds for drag handling
+  private _scrollbarBounds: Map<string, ScrollbarBounds> = new Map();
 
   constructor(options: {
     sizingModel?: SizingModel;
@@ -89,6 +107,9 @@ export class RenderingEngine {
 
   // Main render method that takes an element tree and renders to a buffer
   render(element: Element, buffer: DualBuffer, viewport: Bounds, focusedElementId?: string, textSelection?: TextSelection, hoveredElementId?: string, requestRender?: () => void): LayoutNode {
+    // Clear scrollbar bounds for fresh render
+    this._scrollbarBounds.clear();
+
     const context: RenderContext = {
       buffer,
       viewport,
@@ -744,26 +765,79 @@ export class RenderingEngine {
       element.props.scrollX = scrollX;
     }
 
+    // Initialize scrollbar bounds for this element
+    const elementId = element.id || '';
+    const scrollbarBoundsEntry: ScrollbarBounds = {};
+
     // Render vertical scrollbar in reserved space (not overlaying content)
     if (needsVerticalScrollbar) {
-      const scrollbarBounds = {
+      const trackBounds = {
         x: contentBounds.x + adjustedContentBounds.width + 1, // +1 for spacing between content and scrollbar
         y: contentBounds.y,
         width: 1,
         height: adjustedContentBounds.height
       };
-      this._renderVerticalScrollbar(scrollbarBounds, scrollY || 0, contentDimensions.height, style, buffer);
+
+      // Calculate thumb bounds for hit testing
+      const viewportRatio = adjustedContentBounds.height / contentDimensions.height;
+      const thumbSize = Math.max(1, Math.min(trackBounds.height, Math.floor(viewportRatio * trackBounds.height)));
+      const availableTrackSpace = Math.max(1, trackBounds.height - thumbSize);
+      const scrollProgress = maxScrollY > 0 ? ((scrollY || 0) / maxScrollY) : 0;
+      const thumbPosition = Math.min(availableTrackSpace, Math.floor(scrollProgress * availableTrackSpace));
+
+      const thumbBounds = {
+        x: trackBounds.x,
+        y: trackBounds.y + thumbPosition,
+        width: 1,
+        height: thumbSize
+      };
+
+      scrollbarBoundsEntry.vertical = {
+        track: trackBounds,
+        thumb: thumbBounds,
+        contentHeight: contentDimensions.height,
+        viewportHeight: adjustedContentBounds.height
+      };
+
+      this._renderVerticalScrollbar(trackBounds, scrollY || 0, contentDimensions.height, style, buffer);
     }
 
     // Render horizontal scrollbar in reserved space (not overlaying content)
     if (needsHorizontalScrollbar) {
-      const scrollbarBounds = {
+      const trackBounds = {
         x: contentBounds.x,
         y: contentBounds.y + adjustedContentBounds.height,
         width: adjustedContentBounds.width,
         height: 1
       };
-      this._renderHorizontalScrollbar(scrollbarBounds, scrollX || 0, contentDimensions.width, style, buffer);
+
+      // Calculate thumb bounds for hit testing
+      const viewportRatio = adjustedContentBounds.width / contentDimensions.width;
+      const thumbSize = Math.max(1, Math.min(trackBounds.width, Math.floor(viewportRatio * trackBounds.width)));
+      const availableTrackSpace = Math.max(1, trackBounds.width - thumbSize);
+      const scrollProgress = maxScrollX > 0 ? ((scrollX || 0) / maxScrollX) : 0;
+      const thumbPosition = Math.min(availableTrackSpace, Math.floor(scrollProgress * availableTrackSpace));
+
+      const thumbBounds = {
+        x: trackBounds.x + thumbPosition,
+        y: trackBounds.y,
+        width: thumbSize,
+        height: 1
+      };
+
+      scrollbarBoundsEntry.horizontal = {
+        track: trackBounds,
+        thumb: thumbBounds,
+        contentWidth: contentDimensions.width,
+        viewportWidth: adjustedContentBounds.width
+      };
+
+      this._renderHorizontalScrollbar(trackBounds, scrollX || 0, contentDimensions.width, style, buffer);
+    }
+
+    // Store scrollbar bounds if any scrollbars were rendered
+    if (elementId && (scrollbarBoundsEntry.vertical || scrollbarBoundsEntry.horizontal)) {
+      this._scrollbarBounds.set(elementId, scrollbarBoundsEntry);
     }
   }
 
@@ -1193,6 +1267,16 @@ export class RenderingEngine {
     }
 
     return layoutNode.bounds;
+  }
+
+  // Get scrollbar bounds for a container (for hit testing and drag handling)
+  getScrollbarBounds(containerId: string): ScrollbarBounds | undefined {
+    return this._scrollbarBounds.get(containerId);
+  }
+
+  // Get all scrollbar bounds (for iterating over all scrollable containers)
+  getAllScrollbarBounds(): Map<string, ScrollbarBounds> {
+    return this._scrollbarBounds;
   }
 
   // Calculate actual scroll dimensions for a scrollable container

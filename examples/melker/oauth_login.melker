@@ -13,10 +13,11 @@
     onLogin="context.onLoginCallback()"
     onLogout="context.onLogoutCallback()"
     onFail="context.onFailCallback(error)"
+    debugServer="{OAUTH_DEBUG_SERVER:-true}"
   />
 
   <container style="padding: 2; height: fill; display: flex; flex-direction: column;">
-    <text style="bold: true; flex: 0 0 auto;">OAuth2 PKCE Login Demo</text>
+    <text style="bold: true; flex: 0 0 auto;">OAuth2 PKCE Login</text>
     <text id="status" style="flex: 0 0 auto;">Initializing...</text>
     <text id="error" style="color: red; flex: 0 0 auto;"></text>
 

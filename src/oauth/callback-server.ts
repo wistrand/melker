@@ -1,7 +1,14 @@
 // OAuth callback server for handling authorization redirects
 
 import type { CallbackServerOptions, CallbackResult } from './types.ts';
-import { dirname, fromFileUrl, join } from 'jsr:@std/path';
+import { MELKER_LOGO_PNG } from './logo-data.ts';
+
+// No-cache headers for all responses
+const NO_CACHE_HEADERS = {
+  'cache-control': 'no-cache, no-store, must-revalidate',
+  'pragma': 'no-cache',
+  'expires': '0',
+};
 
 /**
  * HTTP server to receive OAuth authorization callback
@@ -19,7 +26,15 @@ export class OAuthCallbackServer {
       host: options.host ?? 'localhost',
       path: options.path ?? '/melker/auth',
       timeout: options.timeout ?? 300000,
+      keepAlive: options.keepAlive ?? false,
     };
+  }
+
+  /**
+   * Whether the server should be kept alive after callback
+   */
+  get keepAlive(): boolean {
+    return this._options.keepAlive;
   }
 
   /**
@@ -35,20 +50,13 @@ export class OAuthCallbackServer {
 
       // Serve the logo image
       if (url.pathname === '/melker/logo.png') {
-        try {
-          const srcDir = dirname(fromFileUrl(import.meta.url));
-          const logoPath = join(srcDir, '..', '..', 'media', 'melker-128.png');
-          const logoData = await Deno.readFile(logoPath);
-          return new Response(logoData, {
-            headers: { 'content-type': 'image/png' },
-          });
-        } catch {
-          return new Response('Logo not found', { status: 404 });
-        }
+        return new Response(MELKER_LOGO_PNG, {
+          headers: { ...NO_CACHE_HEADERS, 'content-type': 'image/png' },
+        });
       }
 
       if (url.pathname !== this._options.path) {
-        return new Response('Not Found', { status: 404 });
+        return new Response('Not Found', { status: 404, headers: NO_CACHE_HEADERS });
       }
 
       const code = url.searchParams.get('code');
@@ -62,7 +70,7 @@ export class OAuthCallbackServer {
           this._codeReject(new Error(`OAuth error: ${error} - ${errorDescription}`));
         }
         return new Response(errorHtml, {
-          headers: { 'content-type': 'text/html' },
+          headers: { ...NO_CACHE_HEADERS, 'content-type': 'text/html' },
         });
       }
 
@@ -72,7 +80,7 @@ export class OAuthCallbackServer {
           this._codeReject(new Error('Missing code or state parameter'));
         }
         return new Response(errorHtml, {
-          headers: { 'content-type': 'text/html' },
+          headers: { ...NO_CACHE_HEADERS, 'content-type': 'text/html' },
         });
       }
 
@@ -81,7 +89,7 @@ export class OAuthCallbackServer {
       }
 
       return new Response(this.getSuccessHtml(), {
-        headers: { 'content-type': 'text/html' },
+        headers: { ...NO_CACHE_HEADERS, 'content-type': 'text/html' },
       });
     };
 

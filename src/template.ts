@@ -20,6 +20,7 @@ interface OAuthParseConfig {
   scopes?: string;
   audience?: string;
   autoLogin?: boolean;
+  debugServer?: boolean;
   // Callback expressions (stored as strings to be evaluated in script context)
   onLogin?: string;
   onLogout?: string;
@@ -189,7 +190,8 @@ export function parseMelkerFile(content: string): MelkerParseResult {
             const getAttr = (name: string) => child.attributes?.find((attr: any) => attr.name.value === name)?.value?.value;
             const wellknown = getAttr('wellknown');
             if (wellknown) {
-              const autoLoginAttr = getAttr('auto-login');
+              const autoLoginAttr = getAttr('auto-login') || getAttr('autoLogin');
+              const debugServerAttr = getAttr('debug-server') || getAttr('debugServer');
               oauthConfig = {
                 wellknown,
                 clientId: getAttr('client-id'),
@@ -197,6 +199,7 @@ export function parseMelkerFile(content: string): MelkerParseResult {
                 scopes: getAttr('scopes') || getAttr('scope'),
                 audience: getAttr('audience'),
                 autoLogin: autoLoginAttr === 'true' || autoLoginAttr === '',
+                debugServer: debugServerAttr === 'true' || debugServerAttr === '',
                 onLogin: getAttr('onLogin'),
                 onLogout: getAttr('onLogout'),
                 onFail: getAttr('onFail'),

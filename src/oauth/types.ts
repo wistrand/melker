@@ -6,6 +6,7 @@ export interface OAuthConfig {
   redirectUri: string;
   scopes?: string[];
   audience?: string;
+  debugServer?: boolean;  // Keep callback server running for debugging
 }
 
 export interface OAuthTokens {
@@ -53,6 +54,7 @@ export interface InitOptions {
   scopes?: string;
   audience?: string;
   autoLogin?: boolean;
+  debugServer?: boolean;
   onLogin?: OAuthCallback;
   onLogout?: OAuthCallback;
   onFail?: OAuthErrorCallback;
@@ -68,6 +70,7 @@ export interface CallbackServerOptions {
   host?: string;
   path?: string;
   timeout?: number;
+  keepAlive?: boolean;  // Keep server running after callback for debugging
 }
 
 export interface CallbackResult {

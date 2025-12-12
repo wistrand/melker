@@ -99,6 +99,13 @@ export interface MelkerEngineOptions {
   enableMouse?: boolean;
   enableFocusEvents?: boolean;
   mouseReporting?: 'none' | 'basic' | 'drag' | 'all';
+  /**
+   * Map Meta key to Alt key for keyboard events.
+   * On macOS, some terminals send the Option key as Meta instead of Alt.
+   * Enable this to treat Meta as Alt for keyboard shortcuts.
+   * Default: true (enabled by default for macOS compatibility)
+   */
+  mapMetaToAlt?: boolean;
 
   // Debug server options
   enableDebugServer?: boolean;
@@ -192,6 +199,7 @@ export class MelkerEngine {
       enableMouse: true,
       enableFocusEvents: true,
       mouseReporting: 'all',
+      mapMetaToAlt: true, // Enabled by default for macOS Option key compatibility
       enableDebugServer: isDebugEnabled(),
       debugServerOptions: {},
       enableHeadlessMode: isHeadlessEnabled(),
@@ -297,6 +305,7 @@ export class MelkerEngine {
         enableFocusEvents: this._options.enableFocusEvents,
         enableRawMode: true, // Enable raw mode to capture input properly
         mouseReporting: this._options.mouseReporting,
+        mapMetaToAlt: this._options.mapMetaToAlt,
       }, this._eventManager);
     }
 

@@ -18,6 +18,12 @@ export interface TerminalInputOptions {
   enableFocusEvents?: boolean;
   enableRawMode?: boolean;
   mouseReporting?: 'none' | 'basic' | 'drag' | 'all';
+  /**
+   * Map Meta key to Alt key. On macOS, some terminals send the Option key
+   * as Meta instead of Alt. Enable this to treat Meta as Alt for keyboard shortcuts.
+   * Default: true (enabled by default for better macOS compatibility)
+   */
+  mapMetaToAlt?: boolean;
 }
 
 export interface RawKeyInput {
@@ -70,6 +76,7 @@ export class TerminalInputProcessor {
       enableFocusEvents: options.enableFocusEvents ?? false,
       enableRawMode: options.enableRawMode ?? true,
       mouseReporting: options.mouseReporting ?? 'basic',
+      mapMetaToAlt: options.mapMetaToAlt ?? true, // Enabled by default for macOS compatibility
     };
   }
 
@@ -128,13 +135,16 @@ export class TerminalInputProcessor {
     // Determine key code (similar to web KeyboardEvent.code)
     const code = this._getKeyCode(key, rawInput);
 
+    // Map Meta to Alt if enabled (for macOS Option key compatibility)
+    const altKey = rawInput.alt || (this._options.mapMetaToAlt && rawInput.meta) || false;
+
     return createKeyEvent(
       'keydown', // Terminal input is typically keydown
       key,
       code,
       {
         ctrlKey: rawInput.ctrl || false,
-        altKey: rawInput.alt || false,
+        altKey,
         shiftKey: rawInput.shift || false,
         metaKey: rawInput.meta || false,
       }
@@ -789,17 +799,20 @@ export class TerminalInputProcessor {
     isListening: boolean;
     rawModeEnabled: boolean;
     mouseReporting: string;
+    mapMetaToAlt: boolean;
     enabledFeatures: string[];
   } {
     const features: string[] = [];
     if (this._options.enableMouse) features.push('mouse');
     if (this._options.enableFocusEvents) features.push('focus');
     if (this._options.enableRawMode) features.push('rawMode');
+    if (this._options.mapMetaToAlt) features.push('mapMetaToAlt');
 
     return {
       isListening: this._isListening,
       rawModeEnabled: this._rawModeEnabled,
       mouseReporting: this._options.mouseReporting,
+      mapMetaToAlt: this._options.mapMetaToAlt,
       enabledFeatures: features,
     };
   }

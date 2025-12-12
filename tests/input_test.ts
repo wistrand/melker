@@ -354,9 +354,11 @@ Deno.test('Input Processing Tests', async (t) => {
     });
 
     const stats = processor.getStats();
-    assertEquals(stats.enabledFeatures.length, 2); // mouse and focus
+    assertEquals(stats.enabledFeatures.length, 3); // mouse, focus, and mapMetaToAlt (default)
     assertEquals(stats.enabledFeatures.includes('mouse'), true);
     assertEquals(stats.enabledFeatures.includes('focus'), true);
+    assertEquals(stats.enabledFeatures.includes('mapMetaToAlt'), true);
+    assertEquals(stats.mapMetaToAlt, true); // Enabled by default
     assertEquals(stats.mouseReporting, 'drag');
     assertEquals(stats.rawModeEnabled, false);
   });

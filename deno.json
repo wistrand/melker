@@ -1,6 +1,9 @@
 {
   "name": "@melker/core",
   "version": "0.1.0",
+  "engines": {
+    "deno": ">=2.1.0"
+  },
   "description": "A Deno library for creating rich Terminal UI interfaces with flexbox-based layouts",
   "exports": "./melker.ts",
   "imports": {

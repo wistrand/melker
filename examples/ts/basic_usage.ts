@@ -11,7 +11,7 @@ import {
   ComponentDefinition,
   type Element,
   type ClickEvent,
-} from '../src/melker.ts';
+} from '../../melker.ts';
 
 console.log('=== Melker Core API Demo ===');
 

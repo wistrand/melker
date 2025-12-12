@@ -7,7 +7,7 @@ import {
   getTerminalSize,
   getThemeColor,
   type Element
-} from '../src/melker.ts';
+} from '../melker.ts';
 import { CanvasElement } from '../src/components/canvas.ts';
 
 function printUsage() {

@@ -116,7 +116,7 @@ const user: User = { name: 'Alice', age: 30 };
 ### Bash
 
 ```bash
-deno run --allow-all src/melker.ts examples/melker/counter.melker
+deno run --allow-all melker.ts examples/melker/counter.melker
 ```
 
 ## Blockquotes

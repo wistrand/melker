@@ -16,7 +16,7 @@ Create a file `hello.melker`:
 
 Run it:
 ```bash
-deno run --allow-all src/melker.ts hello.melker
+deno run --allow-all melker.ts hello.melker
 ```
 
 That's it! No build step, no compilation - just write HTML-like markup and run.
@@ -110,7 +110,7 @@ That's it! No build step, no compilation - just write HTML-like markup and run.
 deno run --allow-net --allow-read serve.ts examples/melker --port 1990
 
 # Run from URL
-deno run --allow-all src/melker.ts http://localhost:1990/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/counter.melker
 ```
 
 ## Features
@@ -598,13 +598,13 @@ See `examples/` directory for complete demos:
 ### Running Examples
 ```bash
 # Run .melker file
-deno run --allow-all src/melker.ts examples/melker/counter.melker
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # Pass arguments to .melker file (available as ${argv[1]}, ${argv[2]}, etc.)
-deno run --allow-all src/melker.ts examples/melker/markdown_viewer.melker README.md
+deno run --allow-all melker.ts examples/melker/markdown_viewer.melker README.md
 
 # Run .melker from URL
-deno run --allow-all src/melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # Run TypeScript example
 deno run --allow-all examples/ts/minimal_example.ts

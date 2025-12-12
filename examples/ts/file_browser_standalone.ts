@@ -8,7 +8,7 @@ import {
   getThemeColor,
   type Element,
   type KeyPressEvent,
-} from '../src/melker.ts';
+} from '../../melker.ts';
 import { createAsyncFileBrowser, type FileInfo } from '../src/components/file-browser.ts';
 
 

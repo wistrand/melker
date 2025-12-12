@@ -7,7 +7,7 @@ import {
   getThemeColor,
   type ClickEvent,
   type KeyPressEvent,
-} from '../src/melker.ts';
+} from '../melker.ts';
 
 let engine: any;
 

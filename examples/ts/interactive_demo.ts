@@ -10,7 +10,7 @@ import {
   type ClickEvent,
   type KeyPressEvent,
   type ChangeEvent,
-} from '../src/melker.ts';
+} from '../../melker.ts';
 
 console.log('=== Interactive Demo ===');
 

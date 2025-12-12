@@ -213,10 +213,21 @@ export class RenderingEngine {
   }
 
   // Selection-only render - skips layout calculation, reuses cached layout
+  // Timing stats for selection rendering (updated each call, logged by engine)
+  public selectionRenderTiming = {
+    renderNodeTime: 0,
+    highlightTime: 0,
+    overlaysTime: 0,
+    modalsTime: 0,
+  };
+
   renderSelectionOnly(buffer: DualBuffer, textSelection: TextSelection, focusedElementId?: string, hoveredElementId?: string, requestRender?: () => void): boolean {
     if (!this._cachedLayoutTree || !this._cachedElement || !this._cachedViewport) {
       return false; // No cached layout, need full render
     }
+
+    // Reset timing for this render
+    this.selectionRenderTiming = { renderNodeTime: 0, highlightTime: 0, overlaysTime: 0, modalsTime: 0 };
 
     const context: RenderContext = {
       buffer,
@@ -235,14 +246,19 @@ export class RenderingEngine {
     (context as any).overlays = menuOverlays;
 
     // Render content using cached layout (no layout recalculation)
+    const renderNodeStart = performance.now();
     this._renderNode(this._cachedLayoutTree, context);
+    this.selectionRenderTiming.renderNodeTime = performance.now() - renderNodeStart;
 
     // Apply selection highlighting
     if (textSelection?.isActive) {
+      const highlightStart = performance.now();
       this._applySelectionHighlight(textSelection, buffer);
+      this.selectionRenderTiming.highlightTime = performance.now() - highlightStart;
     }
 
     // Render menu overlays
+    const overlaysStart = performance.now();
     for (const overlay of menuOverlays) {
       const componentContext: ComponentRenderContext = {
         focusedElementId: context.focusedElementId,
@@ -255,13 +271,16 @@ export class RenderingEngine {
         (overlay.element as any).render(overlay.bounds, overlay.style, buffer, componentContext);
       }
     }
+    this.selectionRenderTiming.overlaysTime = performance.now() - overlaysStart;
 
     // Render modals on top
+    const modalsStart = performance.now();
     for (const modal of modals) {
       if ((modal as any).props?.open) {
         this._renderModal(modal, context);
       }
     }
+    this.selectionRenderTiming.modalsTime = performance.now() - modalsStart;
 
     return true;
   }

@@ -7,7 +7,7 @@ import {
   melker,
   getThemeColor,
   type ClickEvent,
-} from '../src/melker.ts';
+} from '../../melker.ts';
 
 let useTemplate = true;
 let counter = 0;

@@ -54,13 +54,13 @@ function checkRequiredPermissions(filepath: string): void {
     console.error('\n\x1b[33mOptions:\x1b[0m');
     console.error('');
     console.error('  \x1b[1m1. Grant required permissions\x1b[0m:');
-    console.error(`     deno run ${permFlags} --allow-write src/melker.ts ${filepath}`);
+    console.error(`     deno run ${permFlags} --allow-write melker.ts ${filepath}`);
     console.error('');
     console.error('  \x1b[1m2. Grant all permissions\x1b[0m (recommended for development):');
-    console.error(`     deno run --allow-all src/melker.ts ${filepath}`);
+    console.error(`     deno run --allow-all melker.ts ${filepath}`);
     console.error('');
     console.error('  \x1b[1m3. Minimal permissions\x1b[0m (no logging):');
-    console.error(`     MELKER_LOG_FILE= deno run --allow-read --allow-env src/melker.ts ${filepath}`);
+    console.error(`     MELKER_LOG_FILE= deno run --allow-read --allow-env melker.ts ${filepath}`);
     console.error('');
 
     if (missingPermissions.includes('env')) {
@@ -154,11 +154,11 @@ export async function runMelkerFile(filepath: string, options: { printTree?: boo
     // Extract filename without extension for logger name
     const filename = filepath.split('/').pop()?.replace(/\.melker$/, '') || 'unknown';
     // Import melker.ts FIRST to ensure component registrations happen before parsing
-    await import('./melker.ts');
+    await import('../melker.ts');
     // Import remaining dependencies dynamically to ensure they're available
     const { melker: melkerTemplate, parseMelkerFile } = await import('./template.ts');
     const { getThemeColor: themeColor } = await import('./theme.ts');
-    const { getTerminalSize: terminalSize } = await import('./melker.ts');
+    const { getTerminalSize: terminalSize } = await import('../melker.ts');
     const { createElement: createEl } = await import('./element.ts');
     const { createApp: createMelkerApp } = await import('./engine.ts');
     const { getLogger, getGlobalLoggerOptions } = await import('./logging.ts');
@@ -530,7 +530,7 @@ export function printUsage(): void {
   console.log('📱 Melker CLI - Run Melker template files');
   console.log('');
   console.log('Usage:');
-  console.log('  deno run --allow-read --allow-env src/melker.ts <file.melker> [options]');
+  console.log('  deno run --allow-read --allow-env melker.ts <file.melker> [options]');
   console.log('');
   console.log('Arguments:');
   console.log('  <file.melker>  Path to a .melker template file');
@@ -603,7 +603,7 @@ export function printUsage(): void {
 // Generate markdown documentation from component schemas
 async function generateSchemaMarkdown(): Promise<string> {
   // Import melker.ts to ensure all components are registered
-  await import('./melker.ts');
+  await import('../melker.ts');
 
   const {
     getRegisteredComponents,

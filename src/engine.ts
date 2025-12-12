@@ -137,6 +137,7 @@ export class MelkerEngine {
   };
   private _isSelecting = false;
   private _selectionRenderTimer: number | null = null;
+  private _lastSelectionRenderTime = 0; // For throttle pattern
   private _lastClickTime = 0;
   private _lastClickPos = { x: -1, y: -1 };
   private _clickCount = 0;
@@ -145,6 +146,18 @@ export class MelkerEngine {
   private _mountHandlers: Array<() => void> = [];
   private _inputRenderTimer: number | null = null;
   private _inputRenderDelay = 50; // Debounce for rapid input (paste)
+
+  // Selection performance timing stats (aggregated during drag, logged on mouseup)
+  private _selectionTimingStats = {
+    moveCount: 0,
+    hitTestTotal: 0,
+    hitTestMax: 0,
+    selectionUpdateTotal: 0,
+    renderRequestCount: 0,
+    renderTotal: 0,
+    renderMax: 0,
+    startTime: 0,
+  };
 
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
     // Check environment variables for terminal setup overrides
@@ -658,6 +671,29 @@ export class MelkerEngine {
    * Handle mouse down events for text selection and element interaction
    */
   private _handleMouseDown(event: any): void {
+    // Reset selection timing stats for new potential drag
+    this._selectionTimingStats = {
+      moveCount: 0,
+      hitTestTotal: 0,
+      hitTestMax: 0,
+      selectionUpdateTotal: 0,
+      renderRequestCount: 0,
+      renderTotal: 0,
+      renderMax: 0,
+      startTime: performance.now(),
+    };
+    // Reset detailed render stats
+    this._renderDetailedStats = {
+      renderNodeTotal: 0,
+      highlightTotal: 0,
+      overlaysTotal: 0,
+      modalsTotal: 0,
+      terminalOutputTotal: 0,
+      bufferClearTotal: 0,
+    };
+    // Reset throttle timer for fresh drag
+    this._lastSelectionRenderTime = 0;
+
     // Perform hit testing to find the element at the clicked coordinates
     const targetElement = this._hitTest(event.x, event.y);
     const isAltPressed = event.altKey;
@@ -955,8 +991,21 @@ export class MelkerEngine {
    * Handle mouse move events for text selection
    */
   private _handleMouseMove(event: any): void {
+    // Track timing during selection drag
+    const isTracking = this._isSelecting;
+    if (isTracking) {
+      this._selectionTimingStats.moveCount++;
+    }
+
     // Perform hit testing to find the element under the mouse
+    const hitTestStart = performance.now();
     const hoveredElement = this._hitTest(event.x, event.y);
+    const hitTestTime = performance.now() - hitTestStart;
+    if (isTracking) {
+      this._selectionTimingStats.hitTestTotal += hitTestTime;
+      this._selectionTimingStats.hitTestMax = Math.max(this._selectionTimingStats.hitTestMax, hitTestTime);
+    }
+
     const hoveredElementId = hoveredElement?.id || null;
 
     // Check if the hovered element has changed
@@ -1005,6 +1054,7 @@ export class MelkerEngine {
     });
 
     if (this._isSelecting) {
+      const selectionUpdateStart = performance.now();
       if (this._textSelection.mode === 'global') {
         // Global mode: no clamping
         this._textSelection.end = { x: event.x, y: event.y };
@@ -1016,19 +1066,46 @@ export class MelkerEngine {
         );
       }
       this._textSelection.isActive = true;
+      this._selectionTimingStats.selectionUpdateTotal += performance.now() - selectionUpdateStart;
 
-      // Debounced selection-only render (skips layout calculation)
+      // Throttled selection-only render (skips layout calculation)
+      // Guarantees render every 16ms during continuous movement, unlike debounce
       if (this._options.autoRender) {
-        if (this._selectionRenderTimer !== null) {
-          clearTimeout(this._selectionRenderTimer);
-        }
-        this._selectionRenderTimer = setTimeout(() => {
-          this._selectionRenderTimer = null;
+        this._selectionTimingStats.renderRequestCount++;
+        const now = performance.now();
+        const timeSinceLastRender = now - this._lastSelectionRenderTime;
+
+        if (timeSinceLastRender >= 16) {
+          // Enough time has passed, render immediately
+          if (this._selectionRenderTimer !== null) {
+            clearTimeout(this._selectionRenderTimer);
+            this._selectionRenderTimer = null;
+          }
+          this._lastSelectionRenderTime = now;
           this._renderSelectionOnly();
-        }, 16) as unknown as number; // ~60fps
+        } else if (this._selectionRenderTimer === null) {
+          // Schedule trailing-edge render for when throttle window expires
+          const delay = 16 - timeSinceLastRender;
+          this._selectionRenderTimer = setTimeout(() => {
+            this._selectionRenderTimer = null;
+            this._lastSelectionRenderTime = performance.now();
+            this._renderSelectionOnly();
+          }, delay) as unknown as number;
+        }
+        // If timer already scheduled, let it fire (don't cancel like debounce)
       }
     }
   }
+
+  // Accumulated detailed render timing for logging
+  private _renderDetailedStats = {
+    renderNodeTotal: 0,
+    highlightTotal: 0,
+    overlaysTotal: 0,
+    modalsTotal: 0,
+    terminalOutputTotal: 0,
+    bufferClearTotal: 0,
+  };
 
   /**
    * Optimized render for selection updates only - skips layout calculation
@@ -1036,8 +1113,12 @@ export class MelkerEngine {
   private _renderSelectionOnly(): void {
     if (!this._buffer) return;
 
+    const renderStart = performance.now();
+
     // Clear the buffer for rendering
+    const clearStart = performance.now();
     this._buffer.currentBuffer.clear();
+    this._renderDetailedStats.bufferClearTotal += performance.now() - clearStart;
 
     // Try selection-only render (uses cached layout)
     const success = this._renderer.renderSelectionOnly(
@@ -1054,8 +1135,22 @@ export class MelkerEngine {
       return;
     }
 
+    // Accumulate detailed timing from renderer
+    const rt = this._renderer.selectionRenderTiming;
+    this._renderDetailedStats.renderNodeTotal += rt.renderNodeTime;
+    this._renderDetailedStats.highlightTotal += rt.highlightTime;
+    this._renderDetailedStats.overlaysTotal += rt.overlaysTime;
+    this._renderDetailedStats.modalsTotal += rt.modalsTime;
+
     // Apply to terminal
+    const terminalStart = performance.now();
     this._renderOptimized();
+    this._renderDetailedStats.terminalOutputTotal += performance.now() - terminalStart;
+
+    // Track render timing
+    const renderTime = performance.now() - renderStart;
+    this._selectionTimingStats.renderTotal += renderTime;
+    this._selectionTimingStats.renderMax = Math.max(this._selectionTimingStats.renderMax, renderTime);
   }
 
   /**
@@ -1090,6 +1185,41 @@ export class MelkerEngine {
       } else {
         // No selection made, clear it
         this._clearSelection();
+      }
+
+      // Log selection timing stats if there was actual selection drag
+      const stats = this._selectionTimingStats;
+      const detailed = this._renderDetailedStats;
+      if (stats.moveCount > 0) {
+        const totalTime = performance.now() - stats.startTime;
+        const renderCount = stats.renderTotal > 0 ? Math.round(stats.renderTotal / stats.renderMax) : 0;
+        this._logger?.info('Selection drag timing stats:', {
+          totalDragTime: `${totalTime.toFixed(1)}ms`,
+          mouseMoveEvents: stats.moveCount,
+          hitTest: {
+            total: `${stats.hitTestTotal.toFixed(2)}ms`,
+            avg: `${(stats.hitTestTotal / stats.moveCount).toFixed(2)}ms`,
+            max: `${stats.hitTestMax.toFixed(2)}ms`,
+          },
+          selectionUpdate: {
+            total: `${stats.selectionUpdateTotal.toFixed(2)}ms`,
+            avg: `${(stats.selectionUpdateTotal / stats.moveCount).toFixed(2)}ms`,
+          },
+          render: {
+            requestCount: stats.renderRequestCount,
+            actualRenders: renderCount,
+            totalTime: `${stats.renderTotal.toFixed(2)}ms`,
+            maxSingle: `${stats.renderMax.toFixed(2)}ms`,
+          },
+          renderBreakdown: {
+            bufferClear: `${detailed.bufferClearTotal.toFixed(2)}ms`,
+            renderNode: `${detailed.renderNodeTotal.toFixed(2)}ms`,
+            highlight: `${detailed.highlightTotal.toFixed(2)}ms`,
+            overlays: `${detailed.overlaysTotal.toFixed(2)}ms`,
+            modals: `${detailed.modalsTotal.toFixed(2)}ms`,
+            terminalOutput: `${detailed.terminalOutputTotal.toFixed(2)}ms`,
+          },
+        });
       }
 
       // Re-render immediately to finalize selection state

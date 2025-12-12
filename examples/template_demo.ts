@@ -8,7 +8,7 @@ import {
   type ClickEvent,
   type KeyPressEvent,
   type Style,
-} from '../src/melker.ts';
+} from '../melker.ts';
 
 // Demo state
 let counter = 0;

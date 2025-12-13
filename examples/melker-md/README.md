@@ -1,0 +1,253 @@
+# Melker Markdown Examples
+
+An **optional** way to write melker apps using ASCII box diagrams in markdown files.
+
+## When to Use Markdown vs .melker
+
+| Use Case | Format | Why |
+|----------|--------|-----|
+| Production apps | `.melker` | Precise, easy to edit and maintain |
+| Examples & tutorials | `.md` | Self-documenting, visual layout aids understanding |
+| Quick prototypes | `.md` | Sketch layouts visually before refining |
+| README demos | `.md` | Readers can see and run the code |
+
+The `.md` format is a **literate programming layer** that compiles to `.melker`. It's ideal when documentation and visual clarity matter more than editing convenience.
+
+## Running Examples
+
+```bash
+# Run directly from markdown
+deno run --allow-all melker.ts examples/melker-md/hello.md
+
+# Convert to .melker format (prints to stdout)
+deno run --allow-all melker.ts --convert examples/melker-md/counter.md
+
+# Convert and save to file
+deno run --allow-all melker.ts --convert examples/melker-md/counter.md > counter.melker
+```
+
+## Example Files
+
+- `hello.md` - Minimal hello world example
+- `counter.md` - Interactive counter with buttons and event handlers
+- `markdown_viewer.md` - Markdown file viewer with navigation history
+- `analog-clock.md` - Canvas-based analog clock with visual ASCII layout
+
+## Syntax Overview
+
+### Layout Blocks
+
+All layouts use `melker-block`. The first block is the root, subsequent blocks are components.
+
+````markdown
+```melker-block
++--App-----------------------+
+| style: border: thin        |
+| +--Header----------------+ |
+| +--Content---------------+ |
++----------------------------+
+```
+````
+
+### Box Name Syntax
+
+Box names support both ID and display name: `+--id Display Name--+`
+
+- First word = element ID (for CSS `#id` targeting and component references)
+- Rest = display name (used as document title for root block)
+
+````markdown
+```melker-block
++--root My Application Title--+
+| : c f                       |
+| +--header-----------------+ |
++-----------------------------+
+```
+````
+
+This generates:
+- `<title>My Application Title</title>`
+- `<container id="root" ...>`
+
+### Component Definitions and References
+
+Components are defined in subsequent `melker-block` blocks. Any box ID matching a component is automatically expanded:
+
+````markdown
+```melker-block
++--header--------------------+
+| +--Title-----------------+ |
+| | type: text             | |
+| | text: My App           | |
+| +------------------------+ |
++----------------------------+
+```
+````
+
+**Component references work at ANY nesting level:**
+
+````markdown
+```melker-block
++--root App------------------------------------------+
+| : c f                                              |
+| +--header----------------------------------------+ |
+| +--main------------------------------------------+ |
+| | : r                                            | |
+| | +--sidebar---------+ +--content--------------+ | |
+| +----------------------------------------------------+ |
++--------------------------------------------------------+
+```
+
+```melker-block
++--sidebar-----------------+
+| +--nav-----------------+ |
++--------------------------+
+```
+
+```melker-block
++--nav---------------------+
+| type: text               |
+| text: Navigation         |
++--------------------------+
+```
+````
+
+In this example:
+- `header`, `sidebar`, and `nav` are all expanded from their component definitions
+- `sidebar` contains `nav`, which is also expanded (nested references work)
+- Cycle detection prevents infinite loops (A -> B -> A)
+
+### Visual ASCII Art in Layouts
+
+You can include decorative ASCII art inside boxes to visually represent the UI. Only `+--id--+` patterns are parsed as boxes:
+
+````markdown
+```melker-block
++--root Analog Clock-------------------------------------------+
+| : c = f                                                      |
+|                      +--title--+                             |
+|                                                              |
+| +--canvas-container----------------------------------------+ |
+| |                         12                               | |
+| |                    .----'----.                           | |
+| |                   /    |    / \                          | |
+| |                9 |     +--'    | 3                       | |
+| |                   \          /                           | |
+| |                    `----.---'                            | |
+| |                         6                                | |
+| +----------------------------------------------------------+ |
+|                                                              |
+| +--button-row----------------------------------------------+ |
+| | +--status-btn---+                       +--exit-btn----+ | |
+| +----------------------------------------------------------+ |
++--------------------------------------------------------------+
+```
+````
+
+The clock illustration is decorative - only `title`, `canvas-container`, `button-row`, `status-btn`, and `exit-btn` are parsed as elements.
+
+### Compact Layout Hints
+
+Use `: ` lines for layout control:
+
+```
+| : r 1 =     |  -> row, gap 1, justify center
+| : c 2 < ^   |  -> column, gap 2, justify start, align start
+| : *2 f      |  -> flex 2, fill both dimensions
+```
+
+Hint codes:
+- `r`/`c` - row/column direction
+- `0`-`9` - gap value
+- `<`/`=`/`>`/`~` - justify start/center/end/space-between
+- `^`/`-`/`v`/`+` - align start/center/end/stretch
+- `*N` - flex value
+- `wN`/`hN` - width/height
+- `f` - fill both dimensions
+
+### Scripts
+
+Use standard `typescript` (or `ts`, `javascript`, `js`) code blocks with directive comments:
+
+````markdown
+```typescript
+// @melker script
+let count = 0;
+function update() { ... }
+exports = { update };
+```
+````
+
+### Styles
+
+Use standard `css` code blocks with directive comments:
+
+````markdown
+```css
+/* @melker style */
+#count { font-weight: bold; }
+```
+````
+
+### Event Handlers
+
+Connect handlers to specific elements using the `// @melker handler` directive:
+
+````markdown
+```typescript
+// @melker handler #dec.onClick
+count--;
+update();
+```
+````
+
+### Element Properties via JSON
+
+Use `@target` to apply properties to a specific element:
+
+````markdown
+```json
+{
+  "@target": "#dec",
+  "flex": 2,
+  "style": "border: thin"
+}
+```
+````
+
+### Named JSON Data
+
+Use `@name` to create named JSON data accessible from scripts:
+
+````markdown
+```json
+{
+  "@name": "config",
+  "maxCount": 100,
+  "minCount": 0
+}
+```
+````
+
+### Document Title
+
+The document title is automatically set from the root block's display name.
+Use `@title` to override:
+
+````markdown
+```json
+{ "@title": "My App - ${argv[1]}" }
+```
+````
+
+## Block Type Summary
+
+| Block Type | Language | Directive | Purpose |
+|------------|----------|-----------|---------|
+| Layout | `melker-block` | - | First = root, rest = components |
+| Script | `typescript` | `// @melker script` | Global application code |
+| Handler | `typescript` | `// @melker handler #id.event` | Element event handler |
+| Style | `css` | `/* @melker style */` | CSS styling |
+| Properties | `json` | `{ "@target": "#id", ... }` | Element properties |
+| Data | `json` | `{ "@name": "name", ... }` | Named JSON data |
+| Title | `json` | `{ "@title": "..." }` | Document title (override) |

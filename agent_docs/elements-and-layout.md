@@ -96,6 +96,64 @@ Default layout is flexbox with column direction.
 - `flexGrow`, `flexShrink`, `flexBasis`: Individual flex properties
 - `alignSelf`: Override parent's alignItems
 
+### Flex Layout Gotchas
+
+**1. `display: 'flex'` must be explicit**
+
+The default display is `'block'`, not `'flex'`. Setting `flexDirection` alone does NOT enable flex layout:
+
+```typescript
+// WRONG - flex properties won't work (block layout)
+{ flexDirection: 'column', width: 'fill', height: 'fill' }
+
+// CORRECT - flex layout enabled
+{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }
+```
+
+**2. `flexDirection: 'row'` must be explicit for horizontal layouts**
+
+The layout code checks `flexDirection === 'row'` explicitly. If `flexDirection` is undefined, it's treated as column layout:
+
+```typescript
+// In layout.ts:
+const isRow = flexProps.flexDirection === 'row' || flexProps.flexDirection === 'row-reverse';
+// undefined !== 'row', so isRow = false
+```
+
+For `justifyContent: 'flex-end'` to align items horizontally (right), you need explicit row direction:
+
+```typescript
+// WRONG - justifyContent works vertically (column is assumed)
+{ display: 'flex', justifyContent: 'flex-end' }
+
+// CORRECT - justifyContent works horizontally
+{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' }
+```
+
+**3. Container needs width for horizontal justification**
+
+For `justifyContent` to work, the container needs space to distribute. Add `width: 'fill'`:
+
+```typescript
+// Right-aligned button in a footer
+{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', width: 'fill' }
+```
+
+**4. Complete example: Footer with right-aligned button**
+
+```typescript
+const footer = createElement('container', {
+  style: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: 'fill',
+    height: 1,
+    flexShrink: 0  // Prevent shrinking in column parent
+  }
+}, closeButton);
+```
+
 ### Sizing (`src/sizing.ts`)
 
 Uses **border-box** model by default (like modern CSS):

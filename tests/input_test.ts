@@ -170,7 +170,7 @@ Deno.test('Input Processing Tests', async (t) => {
     const f1Events = processor.processRawInput(f1Data);
     assertEquals(f1Events.length, 1);
     assert(isKeyEvent(f1Events[0]));
-    assertEquals(f1Events[0].key, 'f1');
+    assertEquals(f1Events[0].key, 'F1');
 
     // Test modified key (Ctrl+Arrow)
     const ctrlArrowData = new TextEncoder().encode('\x1b[1;5A'); // Ctrl+Up

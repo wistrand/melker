@@ -596,11 +596,21 @@ export class TerminalInputProcessor {
       '\x7f': { name: 'backspace' },
     };
 
-    // Function keys
+    // Function keys - standard xterm/VT100 sequences
+    // Note: F-key sequences have gaps (16 and 22 are skipped)
+    const fKeySequences: Record<number, number> = {
+      1: 11, 2: 12, 3: 13, 4: 14, 5: 15,
+      6: 17, 7: 18, 8: 19, 9: 20, 10: 21,  // Skips 16
+      11: 23, 12: 24,  // Skips 22
+    };
     for (let i = 1; i <= 12; i++) {
-      escapeMap[`\x1b[${i + 10}~`] = { name: `f${i}` };
-      escapeMap[`\x1bO${String.fromCharCode(79 + i)}`] = { name: `f${i}` };
+      escapeMap[`\x1b[${fKeySequences[i]}~`] = { name: `f${i}` };
     }
+    // SS3 format for F1-F4 (some terminals send these)
+    escapeMap['\x1bOP'] = { name: 'f1' };
+    escapeMap['\x1bOQ'] = { name: 'f2' };
+    escapeMap['\x1bOR'] = { name: 'f3' };
+    escapeMap['\x1bOS'] = { name: 'f4' };
 
     const mapping = escapeMap[sequence];
     if (mapping) {
@@ -742,6 +752,10 @@ export class TerminalInputProcessor {
       'pageup': 'PageUp',
       'pagedown': 'PageDown',
       'insert': 'Insert',
+      // Function keys
+      'f1': 'F1', 'f2': 'F2', 'f3': 'F3', 'f4': 'F4',
+      'f5': 'F5', 'f6': 'F6', 'f7': 'F7', 'f8': 'F8',
+      'f9': 'F9', 'f10': 'F10', 'f11': 'F11', 'f12': 'F12',
     };
 
     return keyMap[name.toLowerCase()] || name;

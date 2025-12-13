@@ -36,6 +36,7 @@ deno run --allow-all melker.ts examples/melker/counter.melker --print-json
 |------|-------------|
 | `dialog_demo.melker` | Modal dialog examples |
 | `menu_example.melker` | Menu bar with dropdowns |
+| `tabs_demo.melker` | Tabbed interface component |
 | `textarea_demo.melker` | Multi-line text input |
 | `textarea_scrollable.melker` | Textarea in scrollable container |
 | `markdown_viewer.melker` | Markdown rendering |

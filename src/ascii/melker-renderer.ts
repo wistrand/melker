@@ -1,6 +1,6 @@
 // ASCII-to-Melker renderer - converts parsed ASCII boxes to melker XML
 
-import { Box, BoxStructure, LayoutHints, ParsedButton } from './types.ts';
+import { Box, BoxStructure, LayoutHints, ParsedButton, TabBarInfo } from './types.ts';
 import { parseButtonShortcuts, inferFlexDirection } from './parser.ts';
 
 export interface RenderOptions {
@@ -149,6 +149,11 @@ function renderBox(
     }
   }
 
+  // Check for tabs element (has tabBar info)
+  if (box.tabBar) {
+    return renderTabsBox(box, depth, indent, context, structure, visiting);
+  }
+
   // Determine element type
   const elementType = getElementType(box, context);
   const attributes = buildAttributes(box, context);
@@ -199,6 +204,126 @@ function renderBox(
     lines.push(`${prefix}</${elementType}>`);
   }
 
+  return lines;
+}
+
+/**
+ * Resolve a box that might be a component reference to its actual content
+ */
+function resolveComponentBox(box: Box, context: RenderContext): Box {
+  // If the box is a component reference, get the component's root box
+  if (context.components?.has(box.id)) {
+    const component = context.components.get(box.id)!;
+    if (component.rootBoxes.length > 0) {
+      return component.rootBoxes[0];
+    }
+  }
+  return box;
+}
+
+/**
+ * Render a tabs element with tab bar info
+ */
+function renderTabsBox(
+  box: Box,
+  depth: number,
+  indent: string,
+  context: RenderContext,
+  structure: BoxStructure,
+  visiting: Set<string>
+): string[] {
+  const lines: string[] = [];
+  const prefix = indent.repeat(depth);
+  const tabBar = box.tabBar!;
+
+  // Build tabs attributes
+  const tabsAttrs: string[] = [];
+
+  // ID
+  const id = box.properties?.id ?? box.id;
+  if (id) {
+    tabsAttrs.push(`id="${escapeXml(id)}"`);
+  }
+
+  // Find active tab index
+  const activeIndex = tabBar.tabs.findIndex(t => t.isActive);
+  if (activeIndex >= 0) {
+    tabsAttrs.push(`activeTab="${activeIndex}"`);
+  }
+
+  // Add style from box
+  const styleStr = buildStyleString(box);
+  if (styleStr) {
+    tabsAttrs.push(`style="${escapeXml(styleStr)}"`);
+  }
+
+  // Add handlers from context
+  if (context.handlers?.has(id)) {
+    const handlers = context.handlers.get(id)!;
+    for (const [event, code] of handlers) {
+      tabsAttrs.push(`${event}="${escapeXml(code)}"`);
+    }
+  }
+
+  const tabsAttrsStr = tabsAttrs.length > 0 ? ' ' + tabsAttrs.join(' ') : '';
+  lines.push(`${prefix}<tabs${tabsAttrsStr}>`);
+
+  // Sort children by position (top to bottom)
+  const children = [...(box.children ?? [])].sort((a, b) => {
+    return (a.bounds?.top ?? 0) - (b.bounds?.top ?? 0);
+  });
+
+  // Map children to tabs
+  for (let i = 0; i < tabBar.tabs.length; i++) {
+    const tabInfo = tabBar.tabs[i];
+    const childRef = children[i];
+
+    const tabPrefix = indent.repeat(depth + 1);
+    const tabAttrs = [`title="${escapeXml(tabInfo.title)}"`];
+
+    if (childRef) {
+      // Resolve component reference if needed
+      const child = resolveComponentBox(childRef, context);
+
+      // Get child's id if it has one
+      const childId = child.properties?.id ?? child.id;
+      if (childId && childId !== child.id) {
+        tabAttrs.push(`id="${escapeXml(childId)}"`);
+      }
+
+      // Get child's style
+      const childStyleStr = buildStyleString(child);
+      if (childStyleStr) {
+        tabAttrs.push(`style="${escapeXml(childStyleStr)}"`);
+      }
+
+      const tabAttrsStr = tabAttrs.length > 0 ? ' ' + tabAttrs.join(' ') : '';
+
+      // Check if child has its own children
+      const grandChildren = child.children ?? [];
+      if (grandChildren.length > 0) {
+        lines.push(`${tabPrefix}<tab${tabAttrsStr}>`);
+        for (const grandChild of grandChildren) {
+          lines.push(...renderBox(grandChild, depth + 2, indent, context, structure, visiting));
+        }
+        lines.push(`${tabPrefix}</tab>`);
+      } else if (child.properties?.text) {
+        // Tab with text content
+        lines.push(`${tabPrefix}<tab${tabAttrsStr}>`);
+        lines.push(`${indent.repeat(depth + 2)}<text>${escapeXml(child.properties.text)}</text>`);
+        lines.push(`${tabPrefix}</tab>`);
+      } else {
+        // Empty tab
+        lines.push(`${tabPrefix}<tab${tabAttrsStr} />`);
+      }
+    } else {
+      // No child for this tab - create empty tab
+      const tabAttrsStr = tabAttrs.length > 0 ? ' ' + tabAttrs.join(' ') : '';
+      lines.push(`${tabPrefix}<tab${tabAttrsStr} />`);
+    }
+  }
+
+  lines.push(`${prefix}</tabs>`);
   return lines;
 }
 

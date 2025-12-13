@@ -1,0 +1,24 @@
+<melker>
+  <container id="root" style="display: flex; flex-direction: column; padding: 1; border: thin;">
+    <text id="title" style="font-weight: bold; margin-bottom: 1;">Tabs Component Demo</text>
+
+    <tabs id="demo-tabs" activeTab="0">
+      <tab title="General">
+        <text>General Settings</text>
+        <text>Configure basic options here.</text>
+      </tab>
+
+      <tab title="Advanced">
+        <text>Advanced Settings</text>
+        <text>Expert configuration options.</text>
+      </tab>
+
+      <tab title="About">
+        <text>About This App</text>
+        <text>Tabs Demo v1.0</text>
+      </tab>
+    </tabs>
+
+    <text style="margin-top: 1; color: gray;">Use Tab to navigate, Enter to select.</text>
+  </container>
+</melker>

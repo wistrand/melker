@@ -182,6 +182,44 @@ Uses **border-box** model by default (like modern CSS):
 └─────────────────────────────┘
 ```
 
+## Tabs Component
+
+The `<tabs>` component provides a tabbed interface with clickable tab headers.
+
+### Usage
+
+```xml
+<tabs id="settings" activeTab="0">
+  <tab title="General">
+    <text>General settings content</text>
+  </tab>
+  <tab title="Advanced">
+    <text>Advanced settings content</text>
+  </tab>
+  <tab title="About">
+    <text>About content</text>
+  </tab>
+</tabs>
+```
+
+### Props
+
+**Tabs container:**
+- `id` - Element identifier
+- `activeTab` - Index of active tab (0-based)
+- `onTabChange` - Handler called when tab changes
+
+**Tab panel:**
+- `title` - Tab header text (required)
+- `disabled` - Disable tab selection
+
+### Behavior
+
+- Tab headers render as a button row: `│ General │ Advanced │ About │`
+- Active tab is bold, focused tab is underlined
+- Navigate with Tab/Shift+Tab, activate with Enter or click
+- Default tab style includes `border: thin; margin-top: 1`
+
 ## Rendering Pipeline
 
 1. **Layout calculation** → LayoutNode tree

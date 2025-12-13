@@ -1048,6 +1048,9 @@ export class RenderingEngine {
       // Fallback for elements that don't implement Renderable (like containers)
       switch (element.type) {
         case 'container':
+        case 'tabs':
+        case 'tab':
+          // These are treated like containers - just render their children
           this._renderContainer(element as ContainerElement, bounds, cellStyle, renderBuffer as any);
           break;
 

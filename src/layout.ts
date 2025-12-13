@@ -133,7 +133,7 @@ export class LayoutEngine {
     );
 
     const isScrollable = element.type === 'container' && element.props.scrollable;
-    const contentBounds = this._sizingModel.calculateContentBounds(bounds, computedStyle, isScrollable);
+    let contentBounds = this._sizingModel.calculateContentBounds(bounds, computedStyle, isScrollable);
 
     const node: LayoutNode = {
       element,

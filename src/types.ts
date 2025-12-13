@@ -213,6 +213,8 @@ import type { CheckboxProps } from './components/checkbox.ts';
 import type { DialogProps } from './components/dialog.ts';
 import type { MarkdownProps } from './components/markdown.ts';
 import type { CanvasProps } from './components/canvas.ts';
+import type { TabProps } from './components/tab.ts';
+import type { TabsProps } from './components/tabs.ts';
 
 // Type mapping for known element types to their specific props
 export interface ComponentPropsMap {
@@ -225,6 +227,8 @@ export interface ComponentPropsMap {
   'dialog': DialogProps;
   'markdown': MarkdownProps;
   'canvas': CanvasProps;
+  'tab': TabProps;
+  'tabs': TabsProps;
 }
 
 // Type mapping for known element types to their element classes
@@ -237,6 +241,8 @@ export type KnownElementTypeMap = {
   'checkbox': Element;
   'dialog': Element;
   'canvas': Element;
+  'tab': Element;
+  'tabs': Element;
 };
 
 // Helper type to get props for a component type

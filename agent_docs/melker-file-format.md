@@ -59,6 +59,8 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<radio>` | id, title, value, checked, name, onChange | Radio button |
 | `<list>` | style | List container |
 | `<li>` | style | List item |
+| `<tabs>` | id, activeTab, onTabChange | Tabbed container |
+| `<tab>` | title, disabled | Tab panel (child of tabs) |
 | `<canvas>` | width, height, dither, ditherBits, onPaint | Pixel graphics (sextant chars) |
 | `<markdown>` | | Markdown text rendering |
 
@@ -128,6 +130,7 @@ See `examples/melker/` for complete examples:
 - `counter.melker` - Basic counter with buttons
 - `dialog_demo.melker` - Dialog variants
 - `menu_example.melker` - Menu bar with dropdowns
+- `tabs_demo.melker` - Tabbed interface
 - `input-demo.melker` - Input fields
 - `textarea_demo.melker` - Multi-line text input
 - `flex-demo.melker` - Flexbox layout examples
@@ -246,6 +249,23 @@ Compact hints on lines starting with `: `:
 | `^` `-` `v` `+` | align: start / center / end / stretch |
 | `*N` | flex: N |
 | `f` | fill (width + height 100%) |
+
+### Tab Bar Syntax
+
+Use `│ Tab1 │ Tab2 │` lines to create tabs. Mark the active tab with `*`:
+
+````markdown
+```melker-block
++--settings Settings-----------------------+
+| │ General* │ Advanced │ About │          |
+| +--general-content---------------------+ |
+| +--advanced-content--------------------+ |
+| +--about-content-----------------------+ |
++------------------------------------------+
+```
+````
+
+Generates `<tabs>` with `<tab>` children. Child boxes map to tabs in order.
 
 ### Code Blocks
 

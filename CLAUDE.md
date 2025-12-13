@@ -85,6 +85,8 @@ src/
     li.ts             - List item
     checkbox.ts       - Toggle checkbox
     radio.ts          - Radio button
+    tabs.ts           - Tabbed container
+    tab.ts            - Tab panel (child of tabs)
     file-browser.ts   - File system navigation
     canvas.ts         - Pixel graphics (sextant chars)
     video.ts          - Video playback

@@ -12,6 +12,7 @@ export interface ViewSourceDependencies {
   focusManager: FocusManager | null;
   registerElementTree: (element: Element) => void;
   render: () => void;
+  forceRender: () => void;
   autoRender: boolean;
 }
 
@@ -154,9 +155,7 @@ export class ViewSourceManager {
 
     this._overlay = undefined;
 
-    // Re-render
-    if (this._deps.autoRender) {
-      this._deps.render();
-    }
+    // Force complete redraw since overlay covered the screen
+    this._deps.forceRender();
   }
 }

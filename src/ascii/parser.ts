@@ -9,6 +9,8 @@ import {
   ParseError,
   LayoutHints,
   ParsedButton,
+  TabBarInfo,
+  TabInfo,
 } from './types.ts';
 import { AsciiParseError, ERROR_MESSAGES } from './errors.ts';
 
@@ -159,7 +161,7 @@ function detectSimpleBox(
   }
 
   // Extract properties and hints from the box content (use original grid!)
-  const { properties, hints } = extractPropertiesAndHints(
+  const { properties, hints, tabBar } = extractPropertiesAndHints(
     originalGrid,
     topRow,
     leftCol,
@@ -179,6 +181,7 @@ function detectSimpleBox(
     properties,
     hints,
     contentLines,
+    tabBar,
     isTopLevel: false,
   };
 }
@@ -251,9 +254,10 @@ function extractPropertiesAndHints(
   leftCol: number,
   width: number,
   height: number
-): { properties?: Record<string, string>; hints?: LayoutHints } {
+): { properties?: Record<string, string>; hints?: LayoutHints; tabBar?: TabBarInfo } {
   const properties: Record<string, string> = {};
   let hints: LayoutHints | undefined;
+  let tabBar: TabBarInfo | undefined;
   let hasProperties = false;
   let currentKey: string | null = null;
   let currentValue = '';
@@ -278,6 +282,15 @@ function extractPropertiesAndHints(
       const parsedHints = parseCompactHints(contentLine.substring(2));
       hints = hints ? { ...hints, ...parsedHints } : parsedHints;
       continue;
+    }
+
+    // Check for tab bar line (│ Tab1* │ Tab2 │)
+    if (contentLine.startsWith('│')) {
+      const parsedTabBar = parseTabBar(contentLine);
+      if (parsedTabBar) {
+        tabBar = parsedTabBar;
+        continue;
+      }
     }
 
     // Look for key:value pattern
@@ -305,7 +318,53 @@ function extractPropertiesAndHints(
   return {
     properties: hasProperties ? properties : undefined,
     hints,
+    tabBar,
   };
+}
+
+/**
+ * Parse tab bar line like "│ Tab1* │ Tab2 │ Tab3 │"
+ * Returns tab info if the line matches the pattern, otherwise null
+ */
+export function parseTabBar(line: string): TabBarInfo | null {
+  // Match pattern: starts and ends with │, contains │-separated tabs
+  // Tab with * suffix is active
+  const trimmed = line.trim();
+
+  // Must start and end with │
+  if (!trimmed.startsWith('│') || !trimmed.endsWith('│')) {
+    return null;
+  }
+
+  // Split by │ and extract tab titles
+  const parts = trimmed.split('│').map(p => p.trim()).filter(p => p.length > 0);
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  const tabs: TabInfo[] = [];
+  for (const part of parts) {
+    const isActive = part.endsWith('*');
+    const title = isActive ? part.slice(0, -1).trim() : part;
+
+    if (title.length > 0) {
+      tabs.push({ title, isActive });
+    }
+  }
+
+  // Must have at least one tab
+  if (tabs.length === 0) {
+    return null;
+  }
+
+  // If no active tab marked, first one is active
+  const hasActive = tabs.some(t => t.isActive);
+  if (!hasActive && tabs.length > 0) {
+    tabs[0].isActive = true;
+  }
+
+  return { tabs };
 }
 
 /**
@@ -492,6 +551,7 @@ function buildBoxStructure(
       bounds: parsed.bounds,
       properties: parsed.properties,
       hints: parsed.hints,
+      tabBar: parsed.tabBar,
     };
     boxes.set(box.id, box);
   }
@@ -533,6 +593,7 @@ function buildBoxStructure(
           bounds: parsed.bounds,
           properties: parsed.properties,
           hints: parsed.hints,
+          tabBar: parsed.tabBar,
         };
         (parentBox.children = parentBox.children || []).push(refBox);
       } else {
@@ -544,6 +605,7 @@ function buildBoxStructure(
           bounds: parsed.bounds,
           properties: parsed.properties,
           hints: parsed.hints,
+          tabBar: parsed.tabBar,
         };
         (parentBox.children = parentBox.children || []).push(nestedBox);
 

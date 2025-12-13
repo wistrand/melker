@@ -50,7 +50,8 @@ export class ButtonElement extends Element implements Renderable, Focusable {
 
 
     // Check if button has a custom border style or is plain variant
-    const hasBorder = this.props.style?.border;
+    const style$ = this.props.style;
+    const hasBorder = style$?.border || style$?.borderLeft || style$?.borderRight || style$?.borderTop || style$?.borderBottom;
     const isPlain = this.props.variant === 'plain';
 
     let buttonStyle = { ...style };
@@ -73,8 +74,12 @@ export class ButtonElement extends Element implements Renderable, Focusable {
         buttonStyle.underline = true;
       }
 
-      // Calculate content bounds to avoid overlap with borders
-      const borderWidth = hasBorder ? 1 : 0;
+      // Calculate individual border widths
+      const borderLeftWidth = (style$?.border || style$?.borderLeft) ? 1 : 0;
+      const borderRightWidth = (style$?.border || style$?.borderRight) ? 1 : 0;
+      const borderTopWidth = (style$?.border || style$?.borderTop) ? 1 : 0;
+      const borderBottomWidth = (style$?.border || style$?.borderBottom) ? 1 : 0;
+
       const paddingValue = this.props.style?.padding || 0;
       const paddingLeft = typeof paddingValue === 'number' ? paddingValue : (paddingValue.left || 0);
       const paddingTop = typeof paddingValue === 'number' ? paddingValue : (paddingValue.top || 0);
@@ -83,10 +88,10 @@ export class ButtonElement extends Element implements Renderable, Focusable {
 
       // Content must not overlap with borders - calculate inner content area
       const contentBounds: Bounds = {
-        x: bounds.x + borderWidth + paddingLeft,
-        y: bounds.y + borderWidth + paddingTop,
-        width: Math.max(0, bounds.width - (2 * borderWidth) - paddingLeft - paddingRight),
-        height: Math.max(0, bounds.height - (2 * borderWidth) - paddingTop - paddingBottom)
+        x: bounds.x + borderLeftWidth + paddingLeft,
+        y: bounds.y + borderTopWidth + paddingTop,
+        width: Math.max(0, bounds.width - borderLeftWidth - borderRightWidth - paddingLeft - paddingRight),
+        height: Math.max(0, bounds.height - borderTopWidth - borderBottomWidth - paddingTop - paddingBottom)
       };
 
 
@@ -181,8 +186,8 @@ export class ButtonElement extends Element implements Renderable, Focusable {
 
       if (isFocused) {
         if (isAlreadyBold) {
-          // Button is already bold, use visual indicator instead
-          focusedLabel = `>${truncatedLabel}<`;
+          // Button is already bold, add underline as focus indicator
+          labelStyle = { ...buttonStyle, underline: true };
         } else {
           // Button is not bold, make it bold when focused
           labelStyle = { ...buttonStyle, bold: true };
@@ -203,40 +208,37 @@ export class ButtonElement extends Element implements Renderable, Focusable {
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const { title, variant } = this.props;
+    const style$ = this.props.style;
+
+    // Check for any border (matches render logic)
+    const hasBorder = style$?.border || style$?.borderLeft || style$?.borderRight || style$?.borderTop || style$?.borderBottom;
+    const isPlain = variant === 'plain';
+
+    // Calculate border widths
+    const borderLeftWidth = (style$?.border || style$?.borderLeft) ? 1 : 0;
+    const borderRightWidth = (style$?.border || style$?.borderRight) ? 1 : 0;
+
     let width = 0;
 
     if (title) {
-      // Calculate button size based on title text
       const labelLength = title.length;
 
-      // Check if button has a border or is plain variant (matches render logic)
-      const hasBorder = this.props.style?.border;
-      const isPlain = variant === 'plain';
-
       if (hasBorder || isPlain) {
-        // If button has a border or is plain, render without brackets
-        // Content size is just the text width
-        width = labelLength;
+        // Content size is just the text width plus borders
+        width = labelLength + borderLeftWidth + borderRightWidth;
       } else {
         // Default button style adds "[ ]" around title
         width = labelLength + 4; // "[ " + label + " ]"
       }
     } else {
-      // Button with no title
-      const hasBorder = this.props.style?.border;
-      const isPlain = variant === 'plain';
-
       if (hasBorder || isPlain) {
-        width = 0; // No brackets, no content
+        width = borderLeftWidth + borderRightWidth;
       } else {
         width = 4; // Minimum for "[ ]"
       }
     }
 
-    const result = { width, height: 1 }; // Buttons are single line
-
-
-    return result;
+    return { width, height: 1 }; // Buttons are single line
   }
 
   /**

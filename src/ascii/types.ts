@@ -10,6 +10,8 @@ export interface Box {
   properties?: Record<string, string>;
   /** Compact layout hints parsed from `: r 2 =` syntax */
   hints?: LayoutHints;
+  /** Tab bar info parsed from `│ Tab1* │ Tab2 │` syntax */
+  tabBar?: TabBarInfo;
 }
 
 export interface BoxStructure {
@@ -35,6 +37,8 @@ export interface ParsedBox {
   hints?: LayoutHints;
   /** Raw content lines for button detection */
   contentLines?: string[];
+  /** Tab bar info parsed from `│ Tab1* │ Tab2 │` syntax */
+  tabBar?: TabBarInfo;
 }
 
 export interface LayoutHints {
@@ -64,4 +68,14 @@ export interface ParsedButton {
   title: string;
   onClick?: string;
   bounds: { left: number; right: number; line: number };
+}
+
+/** Tab bar info parsed from `│ Tab1* │ Tab2 │` syntax */
+export interface TabBarInfo {
+  tabs: TabInfo[];
+}
+
+export interface TabInfo {
+  title: string;
+  isActive: boolean;
 }

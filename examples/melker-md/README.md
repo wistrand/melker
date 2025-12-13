@@ -32,6 +32,7 @@ deno run --allow-all melker.ts --convert examples/melker-md/counter.md > counter
 - `counter.md` - Interactive counter with buttons and event handlers
 - `markdown_viewer.md` - Markdown file viewer with navigation history
 - `analog-clock.md` - Canvas-based analog clock with visual ASCII layout
+- `tabs_demo.md` - Tabbed interface with multiple panels
 
 ## Syntax Overview
 
@@ -164,6 +165,40 @@ Hint codes:
 - `*N` - flex value
 - `wN`/`hN` - width/height
 - `f` - fill both dimensions
+
+### Tab Bar Syntax
+
+Use `│ Tab1 │ Tab2 │` lines to create a tabbed interface. The asterisk (`*`) marks the active tab:
+
+````markdown
+```melker-block
++--settings Settings Dialog------------------+
+| │ General* │ Advanced │ About │            |
+| +--general-content-----------------------+ |
+| +--advanced-content----------------------+ |
+| +--about-content-------------------------+ |
++--------------------------------------------+
+```
+````
+
+This generates a `<tabs>` element with `<tab>` children:
+
+```xml
+<tabs id="settings" activeTab="0">
+  <tab title="General">...</tab>
+  <tab title="Advanced">...</tab>
+  <tab title="About">...</tab>
+</tabs>
+```
+
+**Features:**
+- `*` suffix marks the active tab (e.g., `General*`)
+- If no tab is marked active, the first tab is active by default
+- Child boxes are mapped to tabs in order (top to bottom)
+- Tab titles come from the tab bar line, not from child box IDs
+- Child boxes can be component references (defined in separate `melker-block` blocks)
+
+See `tabs_demo.md` for a complete example.
 
 ### Scripts
 

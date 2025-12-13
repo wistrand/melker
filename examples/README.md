@@ -42,6 +42,7 @@ deno run --allow-all examples/ts/minimal_example.ts
 | `template_demo.ts` | Template literal syntax usage |
 | `chat_demo.ts` | Interactive chat application |
 | `state_management_example.ts` | State management patterns |
+| `tabs_ts_demo.ts` | Tabbed interface component |
 | `analog_clock_demo.ts` | Canvas-based analog clock |
 | `canvas_graphics_demo.ts` | Canvas drawing primitives |
 | `list_demo.ts` | List component example |

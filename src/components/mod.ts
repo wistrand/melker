@@ -15,6 +15,10 @@ export * from './video.ts';
 export * from './list.ts';
 export * from './li.ts';
 
+// Tab components
+export * from './tab.ts';
+export * from './tabs.ts';
+
 // Menu components
 export * from './menu-item.ts';
 export * from './menu-separator.ts';

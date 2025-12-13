@@ -554,6 +554,11 @@ export class MelkerEngine {
             target: focusedElement,
             timestamp: Date.now(),
           });
+
+          // Re-render to show any state changes from the click handler
+          if (this._options.autoRender) {
+            this.render();
+          }
         }
         // Handle Enter key on focused menu items
         else if (focusedElement.type === 'menu-item' && event.key === 'Enter') {
@@ -563,6 +568,11 @@ export class MelkerEngine {
             target: focusedElement,
             timestamp: Date.now(),
           });
+
+          // Re-render to show any state changes from the click handler
+          if (this._options.autoRender) {
+            this.render();
+          }
         }
         // Handle Enter/Space key on focused radio buttons and checkboxes
         else if ((focusedElement.type === 'radio' || focusedElement.type === 'checkbox') &&
@@ -1779,7 +1789,7 @@ export class MelkerEngine {
   /**
    * Automatically detect and register focusable elements
    */
-  private _autoRegisterFocusableElements(): void {
+  private _autoRegisterFocusableElements(skipAutoRender = false): void {
     if (!this._document) return;
 
     const focusableElements = this._findFocusableElements(this._document.root);
@@ -1808,8 +1818,8 @@ export class MelkerEngine {
       if (firstFocusable?.id) {
         try {
           this.focusElement(firstFocusable.id);
-          // Auto-render to show initial focus state
-          if (this._options.autoRender) {
+          // Auto-render to show initial focus state (unless skipped)
+          if (this._options.autoRender && !skipAutoRender) {
             this.render();
           }
         } catch (error) {
@@ -2237,7 +2247,8 @@ export class MelkerEngine {
     }
 
     // Automatically detect and register focusable elements
-    this._autoRegisterFocusableElements();
+    // Pass false to skip the auto-render since we'll do a full screen redraw
+    this._autoRegisterFocusableElements(true);
 
     // Force complete redraw
     this._renderFullScreen();
@@ -2260,6 +2271,7 @@ export class MelkerEngine {
         focusManager: this._focusManager,
         registerElementTree: (element) => this._registerElementTree(element),
         render: () => this.render(),
+        forceRender: () => this.forceRender(),
         autoRender: this._options.autoRender,
       });
     }

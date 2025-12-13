@@ -149,7 +149,12 @@ function getBaseUrl(pathOrUrl: string): string {
 }
 
 // CLI functionality for running .melker template files
-export async function runMelkerFile(filepath: string, options: { printTree?: boolean, printJson?: boolean, debug?: boolean } = {}, templateArgs: string[] = []): Promise<void> {
+export async function runMelkerFile(
+  filepath: string,
+  options: { printTree?: boolean, printJson?: boolean, debug?: boolean } = {},
+  templateArgs: string[] = [],
+  viewSource?: { content: string; path: string; type: 'md' | 'melker' }
+): Promise<void> {
   try {
     // Extract filename without extension for logger name
     const filename = filepath.split('/').pop()?.replace(/\.melker$/, '') || 'unknown';
@@ -167,6 +172,7 @@ export async function runMelkerFile(filepath: string, options: { printTree?: boo
 
     // Read the .melker file content (from file or URL)
     let templateContent = await loadContent(filepath);
+    const originalContent = templateContent; // Preserve for View Source feature
 
     // Load .env files from the .melker file's directory (skip for URLs)
     if (!isUrl(filepath)) {
@@ -290,6 +296,13 @@ export async function runMelkerFile(filepath: string, options: { printTree?: boo
     // Step 2: Create engine with minimal placeholder UI
     const placeholderUI = createEl('container', { style: { width: 1, height: 1 } });
     const engine = await createMelkerApp(placeholderUI);
+
+    // Set source content for View Source feature (F12)
+    if (viewSource) {
+      engine.setSource(viewSource.content, viewSource.path, viewSource.type);
+    } else {
+      engine.setSource(originalContent, filepath, 'melker');
+    }
 
     // Step 2.5: Apply stylesheet to element tree if present
     // This merges stylesheet styles into element props.style at creation time
@@ -534,9 +547,11 @@ export function printUsage(): void {
   console.log('');
   console.log('Usage:');
   console.log('  deno run --allow-read --allow-env melker.ts <file.melker> [options]');
+  console.log('  deno run --allow-read --allow-env melker.ts <file.md> [options]');
   console.log('');
   console.log('Arguments:');
   console.log('  <file.melker>  Path to a .melker template file');
+  console.log('  <file.md>      Path to a markdown file with melker-block code blocks');
   console.log('');
   console.log('Options:');
   console.log('  --print-tree   Display the element tree structure and exit');
@@ -545,6 +560,7 @@ export function printUsage(): void {
   console.log('  --lint         Enable lint mode to check for unsupported props/styles');
   console.log('  --schema       Output component schema documentation as markdown and exit');
   console.log('  --lsp          Start Language Server Protocol server for editor integration');
+  console.log('  --convert      Convert markdown to .melker format (prints to stdout)');
   console.log('  --help, -h     Show this help message');
   console.log('');
   console.log('Example .melker file content:');
@@ -757,8 +773,71 @@ export async function main(): Promise<void> {
     Deno.exit(1);
   }
 
+  // Handle --convert option for markdown files
+  if (args.includes('--convert')) {
+    const mdIndex = args.findIndex(arg => arg.endsWith('.md'));
+    if (mdIndex < 0) {
+      console.error('Error: --convert requires a .md file');
+      Deno.exit(1);
+    }
+    const mdFile = args[mdIndex];
+
+    try {
+      // Import components to register their schemas
+      await import('./components/mod.ts');
+      const { getRegisteredComponents } = await import('./lint.ts');
+      const { markdownToMelker } = await import('./ascii/mod.ts');
+
+      const mdContent = await Deno.readTextFile(mdFile);
+      const elementTypes = new Set(getRegisteredComponents());
+      const melkerContent = markdownToMelker(mdContent, mdFile, { elementTypes });
+
+      console.log(melkerContent);
+      Deno.exit(0);
+    } catch (error) {
+      console.error(`Error converting markdown: ${error instanceof Error ? error.message : String(error)}`);
+      Deno.exit(1);
+    }
+  }
+
+  // Support .md files directly (convert and run)
+  if (filepath.endsWith('.md')) {
+    try {
+      // Import components to register their schemas
+      await import('./components/mod.ts');
+      const { getRegisteredComponents } = await import('./lint.ts');
+      const { markdownToMelker } = await import('./ascii/mod.ts');
+
+      const mdContent = await loadContent(filepath);
+      const elementTypes = new Set(getRegisteredComponents());
+      const melkerContent = markdownToMelker(mdContent, filepath, { elementTypes });
+
+      // Create a temporary .melker file or run directly
+      const tempFile = await Deno.makeTempFile({ suffix: '.melker' });
+      await Deno.writeTextFile(tempFile, melkerContent);
+
+      // Build templateArgs for the temp file
+      const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
+      const mdTemplateArgs = [absoluteFilepath, ...args.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
+
+      // Run the converted file, passing original .md content for View Source feature
+      await runMelkerFile(tempFile, options, mdTemplateArgs, {
+        content: mdContent,
+        path: absoluteFilepath,
+        type: 'md',
+      });
+
+      // Clean up temp file (may not reach here if app keeps running)
+      try { await Deno.remove(tempFile); } catch { /* ignore */ }
+      return;
+    } catch (error) {
+      console.error(`❌ Error running markdown: ${error instanceof Error ? error.message : String(error)}`);
+      Deno.exit(1);
+    }
+  }
+
   if (!filepath.endsWith('.melker')) {
-    console.error('❌ Error: File must have .melker extension');
+    console.error('❌ Error: File must have .melker or .md extension');
     console.error('Use --help for usage information');
     Deno.exit(1);
   }

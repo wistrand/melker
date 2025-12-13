@@ -62,6 +62,7 @@ src/
   logging.ts          - File-based logging system
   debug-server.ts     - WebSocket debug server
   headless.ts         - Headless mode for testing
+  view-source.ts      - F12 View Source overlay
   stats-overlay.ts    - Performance stats overlay
   char-width.ts       - Character width utilities
   melker-main.ts      - .melker file runner (supports file paths and URLs)
@@ -145,3 +146,13 @@ deno run --allow-all melker.ts --lsp
 ```
 
 See `agent_docs/melker-file-format.md` for syntax details.
+
+## Runtime Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `F12` | Toggle View Source overlay (shows original .melker/.md source) |
+| `Escape` | Close View Source overlay / Close menus |
+| `F10` | Activate menu bar |
+| `Ctrl+M` | Alternative menu bar activation |
+| `Tab` / `Shift+Tab` | Navigate focusable elements |

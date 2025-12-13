@@ -170,6 +170,37 @@ This keeps output in main buffer for scrollback review.
 - Use `MELKER_NO_ALTERNATE_SCREEN=1` to see raw ANSI output
 - Use debug server's `get-buffer` to inspect buffer state
 
+## View Source (F12)
+
+Press **F12** at runtime to view the source file in a modal dialog overlay.
+
+### Features
+
+- Shows the original `.melker` or `.md` source file
+- Markdown files are rendered with the markdown component
+- Scrollable content area with keyboard navigation
+- Close with button click, Escape key, or F12 toggle
+
+### Enabling View Source
+
+The engine's `setSource()` method must be called with the source content:
+
+```typescript
+const engine = await createApp(root);
+engine.setSource(sourceContent, '/path/to/file.melker', 'melker');
+// or for markdown files:
+engine.setSource(mdContent, '/path/to/file.md', 'md');
+```
+
+The `melker-main.ts` runner automatically enables this for `.melker` and `.md` files.
+
+### Implementation
+
+View Source is managed by `ViewSourceManager` (`src/view-source.ts`):
+- Creates a dialog overlay with scrollable content
+- Uses the `melker` template literal for clean element creation
+- Properly registers/unregisters elements from the document on open/close
+
 ## Key Files
 
 | File | Purpose |
@@ -177,3 +208,4 @@ This keeps output in main buffer for scrollback review.
 | `src/logging.ts` | Logger class, getLogger(), log levels |
 | `src/headless.ts` | HeadlessTerminal, HeadlessManager |
 | `src/debug-server.ts` | MelkerDebugServer, WebSocket API |
+| `src/view-source.ts` | ViewSourceManager, F12 overlay |

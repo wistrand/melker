@@ -25,6 +25,9 @@ import {
   FocusManager,
 } from './focus.ts';
 import {
+  ViewSourceManager,
+} from './view-source.ts';
+import {
   TerminalInputProcessor,
 } from './input.ts';
 import {
@@ -156,6 +159,9 @@ export class MelkerEngine {
   private _mountHandlers: Array<() => void> = [];
   private _inputRenderTimer: number | null = null;
   private _inputRenderDelay = 50; // Debounce for rapid input (paste)
+
+  // View Source feature
+  private _viewSourceManager?: ViewSourceManager;
 
   // Selection performance timing stats (aggregated during drag, logged on mouseup)
   private _selectionTimingStats = {
@@ -485,6 +491,18 @@ export class MelkerEngine {
       // Handle F10 key for menu bar activation (global)
       if (event.key === 'F10') {
         this._handleMenuBarActivation();
+        return;
+      }
+
+      // Handle F12 key for View Source (global)
+      if (event.key === 'F12') {
+        this._viewSourceManager?.toggle();
+        return;
+      }
+
+      // Handle Escape to close View Source overlay
+      if (event.key === 'Escape' && this._viewSourceManager?.isOpen()) {
+        this._viewSourceManager.close();
         return;
       }
 
@@ -1648,10 +1666,15 @@ export class MelkerEngine {
   }
 
   /**
-   * Find the closest scrollable parent container for an element
+   * Find the closest scrollable container for an element (including the element itself)
    */
   private _findScrollableParent(element: Element): Element | null {
-    // Start from the element and traverse up the parent chain
+    // First check if the element itself is a scrollable container
+    if (element.type === 'container' && element.props.scrollable) {
+      return element;
+    }
+
+    // Then traverse up the parent chain
     let current = this._findParent(element);
 
     while (current) {
@@ -1862,6 +1885,18 @@ export class MelkerEngine {
       // Auto-render to show activation state
       if (this._options.autoRender) {
         this.render();
+      }
+    }
+  }
+
+  /**
+   * Register an element and all its children with the document
+   */
+  private _registerElementTree(element: Element): void {
+    this._document.addElement(element);
+    if (element.children) {
+      for (const child of element.children) {
+        this._registerElementTree(child);
       }
     }
   }
@@ -2213,6 +2248,22 @@ export class MelkerEngine {
    */
   setTitle(title: string): void {
     this._terminalRenderer.setTitle(title);
+  }
+
+  /**
+   * Set source content for View Source feature (F12)
+   */
+  setSource(content: string, filePath: string, type: 'md' | 'melker'): void {
+    if (!this._viewSourceManager) {
+      this._viewSourceManager = new ViewSourceManager({
+        document: this._document,
+        focusManager: this._focusManager,
+        registerElementTree: (element) => this._registerElementTree(element),
+        render: () => this.render(),
+        autoRender: this._options.autoRender,
+      });
+    }
+    this._viewSourceManager.setSource(content, filePath, type);
   }
 
   /**
@@ -3068,8 +3119,14 @@ export class MelkerEngine {
       // Calculate dialog bounds (centered in viewport)
       const viewportWidth = this._currentSize.width;
       const viewportHeight = this._currentSize.height;
-      const dialogWidth = Math.min(Math.floor(viewportWidth * 0.8), 60);
-      const dialogHeight = Math.min(Math.floor(viewportHeight * 0.7), 20);
+      const widthProp = dialog.props.width;
+      const heightProp = dialog.props.height;
+      const dialogWidth = widthProp !== undefined
+        ? (widthProp <= 1 ? Math.floor(viewportWidth * widthProp) : Math.min(widthProp, viewportWidth - 4))
+        : Math.min(Math.floor(viewportWidth * 0.8), 60);
+      const dialogHeight = heightProp !== undefined
+        ? (heightProp <= 1 ? Math.floor(viewportHeight * heightProp) : Math.min(heightProp, viewportHeight - 4))
+        : Math.min(Math.floor(viewportHeight * 0.7), 20);
       const dialogX = Math.floor((viewportWidth - dialogWidth) / 2);
       const dialogY = Math.floor((viewportHeight - dialogHeight) / 2);
 
@@ -3118,30 +3175,28 @@ export class MelkerEngine {
       const childBounds = child.id ? this._renderer.getContainerBounds(child.id) : undefined;
 
       if (childBounds && this._pointInBounds(x, y, childBounds)) {
-        // If it's an interactive or text-selectable element, return it
-        if (this._isInteractiveElement(child) || this._isTextSelectableElement(child)) {
-          this._logger?.trace('Hit test found dialog child', {
-            elementId: child.id,
-            elementType: child.type,
-            x,
-            y,
-            bounds: childBounds
-          });
-          return child;
-        }
-
-        // If it's a container, recursively search its children
-        if (child.type === 'container' && child.children) {
+        // If it's a container, recursively search its children FIRST
+        if (child.type === 'container' && child.children && child.children.length > 0) {
           const nestedHit = this._hitTestDialogChildren(child, x, y, childBounds);
           if (nestedHit) {
             return nestedHit;
           }
         }
-      } else if (!childBounds && child.children) {
-        // No bounds stored, but might have children - check recursively
-        const nestedHit = this._hitTestDialogChildren(child, x, y, _contentBounds);
-        if (nestedHit) {
-          return nestedHit;
+
+        // If it's an interactive or text-selectable element, return it
+        if (this._isInteractiveElement(child) || this._isTextSelectableElement(child)) {
+          return child;
+        }
+      } else if (!childBounds) {
+        // No bounds stored - check recursively if has children, or return if interactive
+        if (child.children && child.children.length > 0) {
+          const nestedHit = this._hitTestDialogChildren(child, x, y, _contentBounds);
+          if (nestedHit) {
+            return nestedHit;
+          }
+        } else if (this._isInteractiveElement(child) && this._pointInBounds(x, y, _contentBounds)) {
+          // Interactive element without stored bounds - use parent content bounds
+          return child;
         }
       }
     }

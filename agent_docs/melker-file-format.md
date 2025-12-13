@@ -156,3 +156,125 @@ MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts app.melker
 # Start LSP server (for editor integration)
 deno run --allow-all melker.ts --lsp
 ```
+
+## Markdown Format (.md) - Optional
+
+Melker apps can **optionally** be written in markdown files using ASCII box diagrams. This is a **documentation-friendly layer** on top of `.melker` files, not a replacement.
+
+| Use Case | Recommended Format |
+|----------|-------------------|
+| Production apps | `.melker` - precise, easy to edit |
+| Examples & tutorials | `.md` - self-documenting, visual |
+| Quick prototypes | `.md` - sketch layouts visually |
+| Generated/tooling | `.melker` - machine-friendly |
+
+The markdown format compiles to `.melker` and provides:
+- Visual ASCII layout diagrams that match the rendered output
+- Documentation alongside code (literate programming style)
+- Editor syntax highlighting for TypeScript/CSS/JSON blocks
+
+### Running Markdown Files
+
+```bash
+# Run directly
+deno run --allow-all melker.ts examples/melker-md/counter.md
+
+# Convert to .melker format (prints to stdout)
+deno run --allow-all melker.ts --convert examples/melker-md/counter.md
+```
+
+### Layout Blocks
+
+Use `melker-block` code blocks. The **first block is the root**, subsequent blocks are **component definitions**.
+
+````markdown
+```melker-block
++--root My App Title--+
+| : c f               |
+| +--header---------+ |
+| +--content--------+ |
++---------------------+
+```
+````
+
+### Box Name Syntax
+
+`+--id Display Name--+` where:
+- **First word** = element ID (for CSS `#id` and component references)
+- **Rest** = display name (root's display name becomes document title)
+
+### Component References
+
+Any box ID that matches a component definition is automatically expanded. Works at any nesting level:
+
+````markdown
+```melker-block
++--root App---------------------------------+
+| : c f                                     |
+| +--header-------------------------------+ |
+| +--main---------------------------------+ |
+| | +--sidebar--+ +--content------------+ | |
+| +-------------------------------------------+ |
++-----------------------------------------------+
+```
+
+```melker-block
++--header------------------+
+| type: text               |
+| text: Header             |
++--------------------------+
+```
+
+```melker-block
++--sidebar-----------------+
+| +--nav-----------------+ |
++--------------------------+
+```
+````
+
+Cycle detection prevents infinite loops (A -> B -> A).
+
+### Layout Hints
+
+Compact hints on lines starting with `: `:
+
+| Hint | Meaning |
+|------|---------|
+| `r` / `c` | row / column direction |
+| `0`-`9` | gap value |
+| `<` `=` `>` `~` | justify: start / center / end / space-between |
+| `^` `-` `v` `+` | align: start / center / end / stretch |
+| `*N` | flex: N |
+| `f` | fill (width + height 100%) |
+
+### Code Blocks
+
+Use directive comments for editor compatibility:
+
+````markdown
+```typescript
+// @melker script
+let count = 0;
+exports = { inc: () => count++ };
+```
+
+```typescript
+// @melker handler #btn.onClick
+count++;
+context.render();
+```
+
+```css
+/* @melker style */
+#count { font-weight: bold; }
+```
+
+```json
+{
+  "@target": "#btn",
+  "style": "background-color: blue"
+}
+```
+````
+
+See `examples/melker-md/` for complete examples and `examples/melker-md/README.md` for full syntax reference.

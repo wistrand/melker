@@ -181,8 +181,15 @@ export class RenderingEngine {
         // Then render the children using the normal layout system
         if (modal.children && modal.children.length > 0) {
           // Calculate dialog content area (inside the dialog borders)
-          const dialogWidth = Math.min(Math.floor(viewport.width * 0.8), 60);
-          const dialogHeight = Math.min(Math.floor(viewport.height * 0.7), 20);
+          // Use props if provided, otherwise use defaults
+          const widthProp = modal.props.width;
+          const heightProp = modal.props.height;
+          const dialogWidth = widthProp !== undefined
+            ? (widthProp <= 1 ? Math.floor(viewport.width * widthProp) : Math.min(widthProp, viewport.width - 4))
+            : Math.min(Math.floor(viewport.width * 0.8), 60);
+          const dialogHeight = heightProp !== undefined
+            ? (heightProp <= 1 ? Math.floor(viewport.height * heightProp) : Math.min(heightProp, viewport.height - 4))
+            : Math.min(Math.floor(viewport.height * 0.7), 20);
           const dialogX = Math.floor((viewport.width - dialogWidth) / 2);
           const dialogY = Math.floor((viewport.height - dialogHeight) / 2);
 
@@ -1364,8 +1371,15 @@ export class RenderingEngine {
     // Render the children using the layout system
     if (modal.children && modal.children.length > 0) {
       // Calculate dialog content area (inside the dialog borders)
-      const dialogWidth = Math.min(Math.floor(viewport.width * 0.8), 60);
-      const dialogHeight = Math.min(Math.floor(viewport.height * 0.7), 20);
+      // Use props if provided, otherwise use defaults
+      const widthProp = modal.props.width;
+      const heightProp = modal.props.height;
+      const dialogWidth = widthProp !== undefined
+        ? (widthProp <= 1 ? Math.floor(viewport.width * widthProp) : Math.min(widthProp, viewport.width - 4))
+        : Math.min(Math.floor(viewport.width * 0.8), 60);
+      const dialogHeight = heightProp !== undefined
+        ? (heightProp <= 1 ? Math.floor(viewport.height * heightProp) : Math.min(heightProp, viewport.height - 4))
+        : Math.min(Math.floor(viewport.height * 0.7), 20);
       const dialogX = Math.floor((viewport.width - dialogWidth) / 2);
       const dialogY = Math.floor((viewport.height - dialogHeight) / 2);
 

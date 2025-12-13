@@ -9,6 +9,10 @@ export interface DialogProps extends BaseProps {
   modal?: boolean;
   backdrop?: boolean;
   open?: boolean;
+  /** Dialog width as percentage (0-1) or absolute characters */
+  width?: number;
+  /** Dialog height as percentage (0-1) or absolute characters */
+  height?: number;
 }
 
 export class DialogElement extends Element implements Renderable {
@@ -72,8 +76,15 @@ export class DialogElement extends Element implements Renderable {
     }
 
     // Calculate centered dialog position
-    const dialogWidth = Math.min(Math.floor(bounds.width * 0.8), 60);
-    const dialogHeight = Math.min(Math.floor(bounds.height * 0.7), 20);
+    // Use props if provided, otherwise use defaults
+    const widthProp = this.props.width;
+    const heightProp = this.props.height;
+    const dialogWidth = widthProp !== undefined
+      ? (widthProp <= 1 ? Math.floor(bounds.width * widthProp) : Math.min(widthProp, bounds.width - 4))
+      : Math.min(Math.floor(bounds.width * 0.8), 60);
+    const dialogHeight = heightProp !== undefined
+      ? (heightProp <= 1 ? Math.floor(bounds.height * heightProp) : Math.min(heightProp, bounds.height - 4))
+      : Math.min(Math.floor(bounds.height * 0.7), 20);
     const dialogX = Math.floor((bounds.width - dialogWidth) / 2);
     const dialogY = Math.floor((bounds.height - dialogHeight) / 2);
 

@@ -147,6 +147,10 @@ export function isValidElementType(type: string): boolean {
   return componentRegistry[type] !== undefined;
 }
 
+export function getRegisteredComponentTypes(): string[] {
+  return Object.keys(componentRegistry);
+}
+
 export function cloneElement(element: Element, newProps?: Record<string, any>): Element {
   return createElement(
     element.type,

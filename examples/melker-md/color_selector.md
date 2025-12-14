@@ -11,7 +11,7 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 ```melker-block
 +--root Color Selector-----------------------------------------+
 | : c 1                                                        |
-| +--header--+                                                 |
+| +--"Color Selector (click to pick)"------------------------+ |
 |                                                              |
 | +--main--------------------------------------------------+   |
 | | : r 2                                                  |   |
@@ -24,33 +24,15 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 
 ## Components
 
-### Header
-
-```melker-block
-+--header-------------------------------------+
-| type: text                                  |
-| text: Color Selector (click to pick)        |
-+---------------------------------------------+
-```
-
 ### Palette Container
 
 ```melker-block
 +--palette-container--------------------------+
 | : c 1                                       |
-| +--hue-sat-label--+                         |
+| +--"Hue / Saturation:"--+                   |
 | +--hue-sat-canvas-+                         |
-| +--lightness-label--+                       |
+| +--"Lightness:"--+                          |
 | +--lightness-canvas-+                       |
-+---------------------------------------------+
-```
-
-### Hue/Sat Label
-
-```melker-block
-+--hue-sat-label------------------------------+
-| type: text                                  |
-| text: Hue / Saturation:                     |
 +---------------------------------------------+
 ```
 
@@ -59,15 +41,6 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 ```melker-block
 +--hue-sat-canvas-----------------------------+
 | type: canvas                                |
-+---------------------------------------------+
-```
-
-### Lightness Label
-
-```melker-block
-+--lightness-label----------------------------+
-| type: text                                  |
-| text: Lightness:                            |
 +---------------------------------------------+
 ```
 
@@ -84,19 +57,10 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 ```melker-block
 +--info-panel---------------------------------+
 | : c 1                                       |
-| +--preview-label--+                         |
+| +--"Selected Color:"--+                     |
 | +--preview--------+                         |
 | +--color-values---+                         |
-| +--copy-btn-------+                         |
-+---------------------------------------------+
-```
-
-### Preview Label
-
-```melker-block
-+--preview-label------------------------------+
-| type: text                                  |
-| text: Selected Color:                       |
+| +--[Copy Hex]-----+                         |
 +---------------------------------------------+
 ```
 
@@ -123,36 +87,19 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 ```melker-block
 +--color-values-------------------------------+
 | : c                                         |
-| +--hex-label--+                             |
-| +--hex-value--+                             |
-| +--rgb-label--+                             |
-| +--rgb-value--+                             |
-| +--hsl-label--+                             |
-| +--hsl-value--+                             |
+| +--"Hex:"----+ +--hex-value--+              |
+| +--"RGB:"----+ +--rgb-value--+              |
+| +--"HSL:"----+ +--hsl-value--+              |
 +---------------------------------------------+
 ```
 
-### Value Labels and Text
-
-```melker-block
-+--hex-label--+
-| type: text  |
-| text: Hex:  |
-+-------------+
-```
+### Value Text Elements
 
 ```melker-block
 +--hex-value------+
 | type: text      |
 | text: #ff0000   |
 +-----------------+
-```
-
-```melker-block
-+--rgb-label--+
-| type: text  |
-| text: RGB:  |
-+-------------+
 ```
 
 ```melker-block
@@ -163,26 +110,10 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 ```
 
 ```melker-block
-+--hsl-label--+
-| type: text  |
-| text: HSL:  |
-+-------------+
-```
-
-```melker-block
 +--hsl-value----------------+
 | type: text                |
 | text: hsl(0, 100%, 50%)   |
 +---------------------------+
-```
-
-### Copy Button
-
-```melker-block
-+--copy-btn-----------------------------------+
-| type: button                                |
-| title: Copy Hex                             |
-+---------------------------------------------+
 ```
 
 ### Footer
@@ -202,19 +133,12 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 #root {
   padding: 1;
 }
-#header {
-  font-weight: bold;
-}
 #info-panel {
   width: 28;
 }
 #preview {
   height: 3;
   border: thin;
-}
-.label, #hue-sat-label, #lightness-label, #preview-label,
-#hex-label, #rgb-label, #hsl-label {
-  color: gray;
 }
 #footer {
   color: gray;
@@ -262,7 +186,7 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 ## Event Handlers
 
 ```typescript
-// @melker handler #copy-btn.onClick
+// @melker handler #copy-hex.onClick
 const hex = context.getElementById('hex-value');
 if (hex) {
   context.copyToClipboard(hex.props.text);

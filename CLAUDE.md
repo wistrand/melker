@@ -115,10 +115,11 @@ tests/                - Test files
 ## Critical Rules
 
 1. **Never use `console.log()`** - Use file logging (`logger.debug()`, etc.)
-2. **Button uses `title` prop** - Not `label`
-3. **Input type is `'input'`** - Not `'text-input'`
-4. **Call `context.render()`** - After modifying element props
-5. **Avoid emojis** - They break terminal layout
+2. **`alert()` shows a modal dialog** - Works like browser alert but as a TUI dialog (dismiss with OK button or Escape)
+3. **Button uses `title` prop** - Not `label`
+4. **Input type is `'input'`** - Not `'text-input'`
+5. **Call `context.render()`** - After modifying element props
+6. **Avoid emojis** - They break terminal layout
 
 ## Environment Variables
 
@@ -158,3 +159,4 @@ See `agent_docs/melker-file-format.md` for syntax details.
 | `F10` | Activate menu bar |
 | `Ctrl+M` | Alternative menu bar activation |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |
+- never execute git commands

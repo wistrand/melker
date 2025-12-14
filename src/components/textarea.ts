@@ -1,6 +1,6 @@
 // Textarea component implementation - multiline text input
 
-import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ChangeEvent, KeyPressEvent } from '../events.ts';
 import { createKeyPressEvent, createChangeEvent } from '../events.ts';
@@ -27,7 +27,7 @@ interface DisplayLine {
   absoluteStart: number;     // Start position in _value
 }
 
-export class TextareaElement extends Element implements Renderable, Focusable {
+export class TextareaElement extends Element implements Renderable, Focusable, Interactive, TextSelectable {
   declare type: 'textarea';
   declare props: TextareaProps;
   private _value: string;
@@ -804,6 +804,20 @@ export class TextareaElement extends Element implements Renderable, Focusable {
 
   canReceiveFocus(): boolean {
     return !this.props.disabled && !this.props.readOnly;
+  }
+
+  /**
+   * Check if this textarea is interactive
+   */
+  isInteractive(): boolean {
+    return !this.props.disabled && !this.props.readOnly;
+  }
+
+  /**
+   * Check if this textarea supports text selection
+   */
+  isTextSelectable(): boolean {
+    return true;
   }
 
   static validate(props: TextareaProps): boolean {

@@ -118,7 +118,7 @@ function detectSimpleBox(
   if (!extracted) {
     return null;
   }
-  const { id, displayName } = extracted;
+  const { id, displayName, inferredType, inferredProps } = extracted;
 
   // Check if this is a single-line box (next row doesn't have content border '|')
   const width = rightCol - leftCol + 1;
@@ -182,6 +182,8 @@ function detectSimpleBox(
     hints,
     contentLines,
     tabBar,
+    inferredType,
+    inferredProps,
     isTopLevel: false,
   };
 }
@@ -201,15 +203,96 @@ function replaceBoxWithSpaces(grid: string[][], box: ParsedBox): void {
 interface ExtractedIdentifier {
   id: string;
   displayName?: string;
+  /** Inferred element type from shorthand syntax */
+  inferredType?: string;
+  /** Inferred properties from shorthand syntax */
+  inferredProps?: Record<string, string>;
+}
+
+/**
+ * Parse shorthand type syntax in box names:
+ *   [Button Title]     → button with title
+ *   "Text content"     → text with content
+ *   {inputId}          → input with id
+ *   <type> content     → explicit type with content
+ */
+function parseShorthandType(content: string): ExtractedIdentifier | null {
+  // [Button Title] → button
+  const buttonMatch = content.match(/^\[(.+)\]$/);
+  if (buttonMatch) {
+    const title = buttonMatch[1].trim();
+    // Generate id from title (lowercase, spaces to hyphens)
+    const id = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    return {
+      id: id || 'button',
+      inferredType: 'button',
+      inferredProps: { title },
+    };
+  }
+
+  // "Text content" → text
+  const textMatch = content.match(/^"(.+)"$/);
+  if (textMatch) {
+    const text = textMatch[1];
+    const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').substring(0, 20);
+    return {
+      id: id || 'text',
+      inferredType: 'text',
+      inferredProps: { text },
+    };
+  }
+
+  // {inputId} → input
+  const inputMatch = content.match(/^\{(.+)\}$/);
+  if (inputMatch) {
+    const id = inputMatch[1].trim();
+    return {
+      id,
+      inferredType: 'input',
+      inferredProps: {},
+    };
+  }
+
+  // <type> content → explicit type (e.g., <checkbox> Remember me)
+  const explicitMatch = content.match(/^<([a-z-]+)>\s*(.*)$/);
+  if (explicitMatch) {
+    const type = explicitMatch[1];
+    const rest = explicitMatch[2].trim();
+    // For checkbox/radio, rest is title; for text, rest is content
+    const id = rest.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').substring(0, 20) || type;
+    const props: Record<string, string> = {};
+    if (type === 'checkbox' || type === 'radio' || type === 'button') {
+      if (rest) props.title = rest;
+    } else if (type === 'text' || type === 'markdown') {
+      if (rest) props.text = rest;
+    } else if (type === 'input' || type === 'textarea') {
+      if (rest) props.placeholder = rest;
+    }
+    return {
+      id,
+      inferredType: type,
+      inferredProps: props,
+    };
+  }
+
+  return null;
 }
 
 function extractIdentifier(line: string): ExtractedIdentifier | null {
   // Pattern: +--content--+ where content can be:
   //   - "id" (just identifier)
   //   - "id Display Name" (identifier + display name after whitespace)
+  //   - Shorthand: [Button], "text", {input}, <type> content
   const match = line.match(/\+--(.+?)--+\+/);
   if (match) {
     const content = match[1].trim();
+
+    // Try shorthand syntax first
+    const shorthand = parseShorthandType(content);
+    if (shorthand) {
+      return shorthand;
+    }
+
     // Must contain at least one letter to be valid
     if (content && /[a-zA-Z]/.test(content)) {
       // Split on first whitespace: "id Display Name" -> ["id", "Display Name"]
@@ -231,6 +314,13 @@ function extractIdentifier(line: string): ExtractedIdentifier | null {
   const fallbackMatch = line.match(/\+([^+]+)\+/);
   if (fallbackMatch) {
     const content = fallbackMatch[1].replace(/^-+|-+$/g, '').trim();
+
+    // Try shorthand syntax first
+    const shorthand = parseShorthandType(content);
+    if (shorthand) {
+      return shorthand;
+    }
+
     // Must contain at least one letter to be valid
     if (content && /[a-zA-Z]/.test(content)) {
       const spaceIndex = content.search(/\s/);
@@ -552,6 +642,8 @@ function buildBoxStructure(
       properties: parsed.properties,
       hints: parsed.hints,
       tabBar: parsed.tabBar,
+      inferredType: parsed.inferredType,
+      inferredProps: parsed.inferredProps,
     };
     boxes.set(box.id, box);
   }
@@ -594,6 +686,8 @@ function buildBoxStructure(
           properties: parsed.properties,
           hints: parsed.hints,
           tabBar: parsed.tabBar,
+          inferredType: parsed.inferredType,
+          inferredProps: parsed.inferredProps,
         };
         (parentBox.children = parentBox.children || []).push(refBox);
       } else {
@@ -606,6 +700,8 @@ function buildBoxStructure(
           properties: parsed.properties,
           hints: parsed.hints,
           tabBar: parsed.tabBar,
+          inferredType: parsed.inferredType,
+          inferredProps: parsed.inferredProps,
         };
         (parentBox.children = parentBox.children || []).push(nestedBox);
 

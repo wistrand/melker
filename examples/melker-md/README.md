@@ -30,9 +30,13 @@ deno run --allow-all melker.ts --convert examples/melker-md/counter.md > counter
 
 - `hello.md` - Minimal hello world example
 - `counter.md` - Interactive counter with buttons and event handlers
+- `form_demo.md` - Form with inputs, radio buttons, checkboxes, buttons
 - `markdown_viewer.md` - Markdown file viewer with navigation history
 - `analog-clock.md` - Canvas-based analog clock with visual ASCII layout
 - `tabs_demo.md` - Tabbed interface with multiple panels
+- `nested_tabs_demo.md` - Nested tabs with settings panels
+- `oauth_demo.md` - OAuth2 PKCE login with external script
+- `shorthand_demo.md` - Shorthand type syntax for buttons, text, inputs
 
 ## Syntax Overview
 
@@ -69,6 +73,39 @@ Box names support both ID and display name: `+--id Display Name--+`
 This generates:
 - `<title>My Application Title</title>`
 - `<container id="root" ...>`
+
+### Shorthand Type Syntax
+
+Use special delimiters in box names to define element types without `type:` property lines:
+
+| Syntax | Element | Example |
+|--------|---------|---------|
+| `+--[Title]--+` | button | `+--[Click Me]--+` → `<button title="Click Me" />` |
+| `+--"content"--+` | text | `+--"Hello!"--+` → `<text>Hello!</text>` |
+| `+--{id}--+` | input | `+--{username}--+` → `<input id="username" />` |
+| `+--<type> content--+` | explicit | `+--<checkbox> Remember--+` → `<checkbox title="Remember" />` |
+
+**Examples:**
+
+````markdown
+```melker-block
++--form--------------------------------------+
+| : c 1                                      |
+| +--"Enter your credentials:"-------------+ |
+| +--{username}----------------------------+ |
+| +--{password}----------------------------+ |
+| +--<checkbox> Remember me----------------+ |
+| +--[Login]--+ +--[Cancel]--+               |
++--------------------------------------------+
+```
+````
+
+The explicit `<type>` syntax supports any element type:
+- `<checkbox>`, `<radio>` → `title` prop
+- `<text>`, `<markdown>` → `text` prop (content)
+- `<input>`, `<textarea>` → `placeholder` prop
+
+IDs are auto-generated from content (lowercase, hyphens for spaces).
 
 ### Component Definitions and References
 
@@ -158,13 +195,19 @@ Use `: ` lines for layout control:
 ```
 
 Hint codes:
-- `r`/`c` - row/column direction
+- `r`/`c` - row/column direction (optional - auto-detected from child positions)
 - `0`-`9` - gap value
 - `<`/`=`/`>`/`~` - justify start/center/end/space-between
 - `^`/`-`/`v`/`+` - align start/center/end/stretch
 - `*N` - flex value
 - `wN`/`hN` - width/height
 - `f` - fill both dimensions
+
+**Auto-detection:** Flex direction is inferred from child box positions:
+- Children stacked vertically → column
+- Children side by side → row
+
+Use `r`/`c` hints only to override auto-detection.
 
 ### Tab Bar Syntax
 
@@ -275,6 +318,38 @@ Use `@title` to override:
 ```
 ````
 
+### External Scripts
+
+Use a `## Scripts` section with markdown links to reference external TypeScript files:
+
+````markdown
+## Scripts
+- [handlers](./handlers.ts)
+- [utils](./utils.ts)
+````
+
+Each link generates a `<script src="..." />` tag. Script paths are resolved relative to the markdown file.
+
+### OAuth Configuration
+
+Use a `json oauth` fenced block for OAuth2 PKCE configuration:
+
+````markdown
+```json oauth
+{
+  "wellknown": "${OAUTH_WELLKNOWN}",
+  "clientId": "${OAUTH_CLIENT_ID}",
+  "audience": "${OAUTH_AUDIENCE}",
+  "autoLogin": true,
+  "onLogin": "context.onLoginCallback()",
+  "onLogout": "context.onLogoutCallback()",
+  "onFail": "context.onFailCallback(error)"
+}
+```
+````
+
+Generates an `<oauth ... />` element. See `oauth_demo.md` for a complete example.
+
 ## Block Type Summary
 
 | Block Type | Language | Directive | Purpose |
@@ -286,3 +361,5 @@ Use `@title` to override:
 | Properties | `json` | `{ "@target": "#id", ... }` | Element properties |
 | Data | `json` | `{ "@name": "name", ... }` | Named JSON data |
 | Title | `json` | `{ "@title": "..." }` | Document title (override) |
+| OAuth | `json oauth` | - | OAuth2 PKCE configuration |
+| Ext Scripts | `## Scripts` | `- [name](path)` | External script files |

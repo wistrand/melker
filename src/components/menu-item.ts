@@ -1,6 +1,6 @@
 // MenuItem component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getThemeColor } from '../theme.ts';
 
@@ -15,7 +15,7 @@ export interface MenuItemProps extends BaseProps {
   onClick?: (event: ClickEvent) => void;
 }
 
-export class MenuItemElement extends Element implements Renderable, Focusable {
+export class MenuItemElement extends Element implements Renderable, Focusable, Interactive {
   declare type: 'menu-item';
   declare props: MenuItemProps;
 
@@ -211,6 +211,13 @@ export class MenuItemElement extends Element implements Renderable, Focusable {
    * Check if this menu item can receive focus
    */
   canReceiveFocus(): boolean {
+    return !this.props.disabled && !this.props.separator;
+  }
+
+  /**
+   * Check if this menu item is interactive
+   */
+  isInteractive(): boolean {
     return !this.props.disabled && !this.props.separator;
   }
 

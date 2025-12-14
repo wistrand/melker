@@ -153,7 +153,8 @@ export async function runMelkerFile(
   filepath: string,
   options: { printTree?: boolean, printJson?: boolean, debug?: boolean } = {},
   templateArgs: string[] = [],
-  viewSource?: { content: string; path: string; type: 'md' | 'melker' }
+  viewSource?: { content: string; path: string; type: 'md' | 'melker' },
+  preloadedContent?: string
 ): Promise<void> {
   try {
     // Extract filename without extension for logger name
@@ -170,8 +171,8 @@ export async function runMelkerFile(
     const { getCurrentTheme } = await import('./theme.ts');
     const oauth = await import('./oauth.ts');
 
-    // Read the .melker file content (from file or URL)
-    let templateContent = await loadContent(filepath);
+    // Use preloaded content if provided, otherwise read from file/URL
+    let templateContent = preloadedContent ?? await loadContent(filepath);
     const originalContent = templateContent; // Preserve for View Source feature
 
     // Load .env files from the .melker file's directory (skip for URLs)
@@ -338,6 +339,7 @@ export async function runMelkerFile(
       exit: () => engine.stop().then(() => Deno.exit(0)),
       quit: () => engine.stop().then(() => Deno.exit(0)),
       setTitle: (title: string) => engine.setTitle(title),
+      alert: (message: string) => engine.showAlert(String(message)),
       engine: engine,
       logger: logger,
       logging: logger,  // Alias for logger
@@ -812,23 +814,17 @@ export async function main(): Promise<void> {
       const elementTypes = new Set(getRegisteredComponents());
       const melkerContent = markdownToMelker(mdContent, filepath, { elementTypes });
 
-      // Create a temporary .melker file or run directly
-      const tempFile = await Deno.makeTempFile({ suffix: '.melker' });
-      await Deno.writeTextFile(tempFile, melkerContent);
-
-      // Build templateArgs for the temp file
+      // Build templateArgs
       const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
       const mdTemplateArgs = [absoluteFilepath, ...args.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
 
-      // Run the converted file, passing original .md content for View Source feature
-      await runMelkerFile(tempFile, options, mdTemplateArgs, {
+      // Run directly with converted content, passing original .md content for View Source feature
+      await runMelkerFile(absoluteFilepath, options, mdTemplateArgs, {
         content: mdContent,
         path: absoluteFilepath,
         type: 'md',
-      });
+      }, melkerContent);
 
-      // Clean up temp file (may not reach here if app keeps running)
-      try { await Deno.remove(tempFile); } catch { /* ignore */ }
       return;
     } catch (error) {
       console.error(`❌ Error running markdown: ${error instanceof Error ? error.message : String(error)}`);

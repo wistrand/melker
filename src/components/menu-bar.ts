@@ -1,6 +1,6 @@
 // MenuBar component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { KeyPressEvent, MouseEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
@@ -11,7 +11,7 @@ export interface MenuBarProps extends BaseProps {
   activated?: boolean;               // Whether menu bar is in "active" mode (Alt pressed)
 }
 
-export class MenuBarElement extends Element implements Renderable, Focusable {
+export class MenuBarElement extends Element implements Renderable, Focusable, Interactive {
   declare type: 'menu-bar';
   declare props: MenuBarProps;
   private _selectedMenuIndex: number = -1;
@@ -416,6 +416,13 @@ export class MenuBarElement extends Element implements Renderable, Focusable {
    * Check if this menu bar can receive focus
    */
   canReceiveFocus(): boolean {
+    return !this.props.disabled;
+  }
+
+  /**
+   * Check if this menu bar is interactive
+   */
+  isInteractive(): boolean {
     return !this.props.disabled;
   }
 

@@ -17,7 +17,9 @@ export class TabsElement extends Element {
   declare props: TabsProps;
 
   private _activeIndex: number = 0;
-  private _tabElements: TabElement[] = [];  // Original tab elements (stored separately)
+  private _tabElements: TabElement[] = [];  // Original tab elements
+  private _tabBar: Element | null = null;   // Tab bar container
+  private _tabButtons: Element[] = [];       // Tab buttons
 
   constructor(props: TabsProps, children: Element[] = []) {
     const defaultProps: TabsProps = {
@@ -49,8 +51,15 @@ export class TabsElement extends Element {
     // Set initial active index
     this._resolveActiveTab();
 
-    // Build the actual children structure (tab bar + active content)
-    this._buildChildren();
+    // Create tab bar with buttons
+    this._createTabBar();
+
+    // Build children array once: [tabBar, ...allTabs]
+    // All tabs are always in children, visibility controls display
+    this.children = [this._tabBar!, ...this._tabElements];
+
+    // Set initial visibility on all tabs
+    this._updateTabVisibility();
   }
 
   /**
@@ -68,13 +77,11 @@ export class TabsElement extends Element {
   }
 
   /**
-   * Build children: tab bar (flex row of buttons) + active tab content
+   * Create tab bar and buttons once
    */
-  private _buildChildren(): void {
-    // Create tab bar container with buttons
-    const tabBarButtons: Element[] = [];
-
+  private _createTabBar(): void {
     const lastIndex = this._tabElements.length - 1;
+
     for (let i = 0; i < this._tabElements.length; i++) {
       const tab = this._tabElements[i];
       const isActive = i === this._activeIndex;
@@ -93,31 +100,54 @@ export class TabsElement extends Element {
           ...(isLast ? { borderRight: 'thin' } : { paddingLeft: 1 }),
         },
       });
-      tabBarButtons.push(button);
+      this._tabButtons.push(button);
     }
 
-    const tabBar = createElement('container', {
+    this._tabBar = createElement('container', {
       id: `${this.id}-tab-bar`,
       style: {
         display: 'flex',
         flexDirection: 'row',
       },
-    }, ...tabBarButtons);
+    }, ...this._tabButtons);
+  }
 
-    // Get active tab element - use it directly so its styles are applied
-    const activeTab = this._tabElements[this._activeIndex];
+  /**
+   * Update visibility on all tabs based on active index.
+   * Active tab is visible, inactive tabs are hidden.
+   * Also updates button styles to reflect active state.
+   */
+  private _updateTabVisibility(): void {
+    const lastIndex = this._tabElements.length - 1;
 
-    if (activeTab) {
-      // Ensure the tab has flex properties to fill remaining space
-      activeTab.props.style = {
-        display: 'flex',
-        flexDirection: 'column',
-        flexGrow: 1,
-        ...activeTab.props.style,
-      };
-      this.children = [tabBar, activeTab];
-    } else {
-      this.children = [tabBar];
+    for (let i = 0; i < this._tabElements.length; i++) {
+      const tab = this._tabElements[i];
+      const isActive = i === this._activeIndex;
+
+      // Set visibility - this is the key: all tabs exist, only active is visible
+      tab.props.visible = isActive;
+
+      // Ensure tabs have flex properties when visible
+      if (isActive) {
+        tab.props.style = {
+          display: 'flex',
+          flexDirection: 'column',
+          flexGrow: 1,
+          ...tab.props.style,
+        };
+      }
+
+      // Update button style to show active state
+      const button = this._tabButtons[i];
+      if (button) {
+        const isLast = i === lastIndex;
+        button.props.style = {
+          ...button.props.style,
+          fontWeight: isActive ? 'bold' : 'normal',
+          borderLeft: 'thin',
+          ...(isLast ? { borderRight: 'thin' } : { paddingLeft: 1 }),
+        };
+      }
     }
   }
 
@@ -133,8 +163,8 @@ export class TabsElement extends Element {
         this.props.onTabChange(activeTab.id, index);
       }
 
-      // Rebuild children to show new active tab
-      this._buildChildren();
+      // Update visibility - no children array changes needed
+      this._updateTabVisibility();
     }
   }
 
@@ -174,7 +204,7 @@ export class TabsElement extends Element {
     }
     tabBarWidth += (this._tabElements.length - 1); // Gaps
 
-    // Content size - max of all tabs
+    // Content size - max of all tabs (for proper sizing regardless of which is active)
     let maxContentWidth = 0;
     let maxContentHeight = 0;
 

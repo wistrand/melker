@@ -1,14 +1,15 @@
 // Button component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
+import type { Document } from '../document.ts';
 
 export interface ButtonProps extends BaseProps {
   title: string;
   variant?: 'default' | 'primary' | 'secondary' | 'plain';
 }
 
-export class ButtonElement extends Element implements Renderable, Focusable {
+export class ButtonElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable {
   declare type: 'button';
   declare props: ButtonProps;
 
@@ -246,6 +247,34 @@ export class ButtonElement extends Element implements Renderable, Focusable {
    */
   canReceiveFocus(): boolean {
     return !this.props.disabled;
+  }
+
+  /**
+   * Handle click event on this button
+   */
+  handleClick(event: ClickEvent, _document: Document): boolean {
+    if (this.props.disabled) return false;
+
+    // Call onClick handler if provided
+    if (typeof this.props.onClick === 'function') {
+      this.props.onClick(event);
+    }
+
+    return true; // Button was clicked, needs re-render
+  }
+
+  /**
+   * Check if this button is interactive
+   */
+  isInteractive(): boolean {
+    return !this.props.disabled;
+  }
+
+  /**
+   * Check if this button supports text selection
+   */
+  isTextSelectable(): boolean {
+    return true;
   }
 
   static validate(props: ButtonProps): boolean {

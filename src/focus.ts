@@ -81,16 +81,34 @@ export class FocusManager {
       return null;
     }
 
+    // Get bounds - elements in inactive tabs may not have bounds
+    const bounds = this._getElementBounds(element);
+    if (!bounds) {
+      // No bounds means element is not currently visible/rendered
+      // Return null so it's excluded from tab order
+      return null;
+    }
+
     return {
       id: elementId,
       tabIndex: this._getElementTabIndex(element),
       disabled: this._isElementDisabled(element),
       visible: this._isElementVisible(element),
-      x: this._getElementX(element),
-      y: this._getElementY(element),
-      width: this._getElementWidth(element),
-      height: this._getElementHeight(element),
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
     };
+  }
+
+  /**
+   * Get element bounds, or null if not available (e.g., element in inactive tab)
+   */
+  private _getElementBounds(element: Element): { x: number; y: number; width: number; height: number } | null {
+    if (!this._boundsProvider || !element.id) {
+      return null;
+    }
+    return this._boundsProvider(element.id) || null;
   }
 
   /**

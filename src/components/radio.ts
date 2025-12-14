@@ -1,7 +1,8 @@
 // Radio button component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
+import type { Document } from '../document.ts';
 
 export interface RadioProps extends BaseProps {
   title: string;
@@ -10,7 +11,7 @@ export interface RadioProps extends BaseProps {
   name?: string; // Radio group name
 }
 
-export class RadioElement extends Element implements Renderable, Focusable {
+export class RadioElement extends Element implements Renderable, Focusable, Clickable, Interactive {
   declare type: 'radio';
   declare props: RadioProps;
 
@@ -102,6 +103,42 @@ export class RadioElement extends Element implements Renderable, Focusable {
    * Check if this radio button can receive focus
    */
   canReceiveFocus(): boolean {
+    return !this.props.disabled;
+  }
+
+  /**
+   * Handle click event on this radio button
+   */
+  handleClick(event: ClickEvent, document: Document): boolean {
+    if (this.props.disabled) return false;
+
+    const groupName = this.props.name;
+
+    // Uncheck all other radios in the same group
+    if (groupName) {
+      const allRadios = document.getElementsByType('radio');
+      for (const radio of allRadios) {
+        if (radio.props.name === groupName && radio !== this) {
+          radio.props.checked = false;
+        }
+      }
+    }
+
+    // Check this radio
+    this.props.checked = true;
+
+    // Call onClick handler if provided
+    if (typeof this.props.onClick === 'function') {
+      this.props.onClick(event);
+    }
+
+    return true; // Radio state changed, needs re-render
+  }
+
+  /**
+   * Check if this radio button is interactive
+   */
+  isInteractive(): boolean {
     return !this.props.disabled;
   }
 

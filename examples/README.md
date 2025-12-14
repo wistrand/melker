@@ -8,6 +8,7 @@ This directory contains focused examples demonstrating different aspects of the 
 examples/
 ├── ts/                    # TypeScript examples using createElement API
 ├── melker/               # .melker declarative template files
+├── melker-md/            # Markdown files with ASCII box layouts
 └── *.ts                  # TypeScript examples using melker template API
 ```
 
@@ -64,6 +65,20 @@ deno run --allow-all melker.ts examples/melker/counter.melker
 # Run from URL
 deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 ```
+
+## Markdown Examples (`melker-md/`)
+
+See `examples/melker-md/README.md` for markdown files with ASCII box layouts.
+
+```bash
+# Run a markdown file directly
+deno run --allow-all melker.ts examples/melker-md/counter.md
+
+# Convert to .melker format
+deno run --allow-all melker.ts --convert examples/melker-md/counter.md
+```
+
+Features external scripts (`## Scripts` section) and OAuth (`json oauth` blocks).
 
 ## Key Patterns Demonstrated
 

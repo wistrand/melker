@@ -3,7 +3,7 @@
 // Phase 2: Heading, paragraph, and basic inline formatting
 // Phase 3: Lists, code blocks, and blockquotes
 
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { fromMarkdown } from 'npm:mdast-util-from-markdown@^2.0.0';
 import { gfm } from 'npm:micromark-extension-gfm@^3.0.0';
@@ -292,7 +292,7 @@ function isMarkdownDebugEnabledFromEnv(): boolean {
   }
 }
 
-export class MarkdownElement extends Element implements Renderable {
+export class MarkdownElement extends Element implements Renderable, Interactive, TextSelectable {
   declare type: 'markdown';
   declare props: MarkdownProps;
 
@@ -2212,6 +2212,20 @@ export class MarkdownElement extends Element implements Renderable {
     return '';
   }
 
+
+  /**
+   * Check if this markdown is interactive
+   */
+  isInteractive(): boolean {
+    return !this.props.disabled;
+  }
+
+  /**
+   * Check if this markdown supports text selection
+   */
+  isTextSelectable(): boolean {
+    return true;
+  }
 
   /**
    * Validate markdown props

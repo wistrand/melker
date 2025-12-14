@@ -69,7 +69,12 @@
       if (preview) {
         preview.props.style.backgroundColor = hex;
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        preview.props.style.color = luminance > 0.5 ? 'black' : 'white';
+        const textColor = luminance > 0.5 ? 'black' : 'white';
+        const previewText = context.getElementById('preview-text');
+        if (previewText) {
+          previewText.props.text = hex;
+          previewText.props.style.color = textColor;
+        }
       }
       if (hexValue) hexValue.props.text = hex;
       if (rgbValue) rgbValue.props.text = `rgb(${r}, ${g}, ${b})`;
@@ -211,7 +216,7 @@
       <container id="info-panel">
         <text class="label">Selected Color:</text>
         <container id="preview" style="background-color: #ff0000;">
-          <text style="color: white;">#ff0000</text>
+          <text id="preview-text" style="color: white;">#ff0000</text>
         </container>
 
         <container id="color-values">
@@ -227,7 +232,10 @@
 
         <button title="Copy Hex" onClick="
           const hex = context.getElementById('hex-value');
-          if (hex) alert('Copied: ' + hex.props.text);
+          if (hex) {
+            context.copyToClipboard(hex.props.text);
+            alert('Copied: ' + hex.props.text);
+          }
         " />
       </container>
     </container>

@@ -984,8 +984,12 @@ export class MelkerEngine {
 
   /**
    * Set source content for View Source feature (F12)
+   * @param content - Original source content
+   * @param filePath - Path to the source file
+   * @param type - Type of source file ('md' or 'melker')
+   * @param convertedContent - For .md files: the converted .melker content
    */
-  setSource(content: string, filePath: string, type: 'md' | 'melker'): void {
+  setSource(content: string, filePath: string, type: 'md' | 'melker', convertedContent?: string): void {
     if (!this._viewSourceManager) {
       this._viewSourceManager = new ViewSourceManager({
         document: this._document,
@@ -996,7 +1000,7 @@ export class MelkerEngine {
         autoRender: this._options.autoRender,
       });
     }
-    this._viewSourceManager.setSource(content, filePath, type);
+    this._viewSourceManager.setSource(content, filePath, type, convertedContent);
   }
 
   /**

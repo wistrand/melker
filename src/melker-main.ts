@@ -159,7 +159,7 @@ export async function runMelkerFile(
   filepath: string,
   options: { printTree?: boolean, printJson?: boolean, debug?: boolean, noLoad?: boolean, watch?: boolean } = {},
   templateArgs: string[] = [],
-  viewSource?: { content: string; path: string; type: 'md' | 'melker' },
+  viewSource?: { content: string; path: string; type: 'md' | 'melker'; convertedContent?: string },
   preloadedContent?: string
 ): Promise<RunMelkerResult | void> {
   try {
@@ -327,7 +327,7 @@ export async function runMelkerFile(
 
     // Set source content for View Source feature (F12)
     if (viewSource) {
-      engine.setSource(viewSource.content, viewSource.path, viewSource.type);
+      engine.setSource(viewSource.content, viewSource.path, viewSource.type, viewSource.convertedContent);
     } else {
       engine.setSource(originalContent, filepath, 'melker');
     }
@@ -367,6 +367,35 @@ export async function runMelkerFile(
       quit: () => engine.stop().then(() => Deno.exit(0)),
       setTitle: (title: string) => engine.setTitle(title),
       alert: (message: string) => engine.showAlert(String(message)),
+      copyToClipboard: async (text: string) => {
+        // Platform-specific clipboard commands
+        const commands = [
+          { cmd: 'pbcopy', args: [] },  // macOS
+          { cmd: 'xclip', args: ['-selection', 'clipboard'] },  // Linux X11
+          { cmd: 'xsel', args: ['--clipboard', '--input'] },  // Linux X11
+          { cmd: 'wl-copy', args: [] },  // Linux Wayland
+          { cmd: 'clip.exe', args: [] },  // WSL2
+        ];
+        for (const { cmd, args } of commands) {
+          try {
+            const process = new Deno.Command(cmd, {
+              args,
+              stdin: 'piped',
+              stdout: 'null',
+              stderr: 'null',
+            });
+            const child = process.spawn();
+            const writer = child.stdin.getWriter();
+            await writer.write(new TextEncoder().encode(text));
+            await writer.close();
+            const status = await child.status;
+            if (status.success) return true;
+          } catch {
+            // Command not found, try next
+          }
+        }
+        return false;
+      },
       engine: engine,
       logger: logger,
       logging: logger,  // Alias for logger
@@ -599,7 +628,7 @@ export async function watchAndRun(
   filepath: string,
   options: { printTree?: boolean; printJson?: boolean; debug?: boolean; noLoad?: boolean; watch?: boolean },
   templateArgs: string[],
-  viewSource?: { content: string; path: string; type: 'md' | 'melker' },
+  viewSource?: { content: string; path: string; type: 'md' | 'melker'; convertedContent?: string },
   preloadedContent?: string
 ): Promise<void> {
   const { getLogger } = await import('./logging.ts');
@@ -645,7 +674,7 @@ export async function watchAndRun(
           filepath,
           { ...options, watch: false }, // Don't pass watch to avoid recursion
           templateArgs,
-          { content: mdContent, path: filepath, type: 'md' },
+          { content: mdContent, path: filepath, type: 'md', convertedContent: melkerContent },
           melkerContent
         );
       } else {
@@ -999,6 +1028,7 @@ export async function main(): Promise<void> {
           content: mdContent,
           path: absoluteFilepath,
           type: 'md',
+          convertedContent: melkerContent,
         }, melkerContent);
       } else {
         // Run directly with converted content, passing original .md content for View Source feature
@@ -1006,6 +1036,7 @@ export async function main(): Promise<void> {
           content: mdContent,
           path: absoluteFilepath,
           type: 'md',
+          convertedContent: melkerContent,
         }, melkerContent);
       }
 

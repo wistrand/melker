@@ -174,7 +174,7 @@ See `agent_docs/melker-file-format.md` for syntax details.
 
 | Key | Action |
 |-----|--------|
-| `F12` | Toggle View Source overlay (shows original .melker/.md source) |
+| `F12` | Toggle View Source overlay (for .md files: shows Markdown/Melker tabs) |
 | `Escape` | Close View Source overlay / Close menus |
 | `F10` | Activate menu bar |
 | `Ctrl+M` | Alternative menu bar activation |

@@ -137,6 +137,9 @@ In event handlers and scripts:
 - `context.getElementById(id)` - Find elements by ID
 - `context.render()` - Trigger re-render (auto-called after event handlers)
 - `context.exit()` - Exit the application
+- `context.copyToClipboard(text)` - Copy text to system clipboard
+- `context.alert(message)` - Show modal alert dialog
+- `context.setTitle(title)` - Set window/terminal title
 - `context.engine` - Access engine instance
 - `context.logger` - Logging interface
 

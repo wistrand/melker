@@ -5,9 +5,9 @@ import { Element, isInteractive, isTextSelectable } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { ComponentLogger } from './logging.ts';
+import { Point, Bounds, pointInBounds } from './geometry.ts';
 
-export type Point = { x: number; y: number };
-export type Bounds = { x: number; y: number; width: number; height: number };
+export type { Point, Bounds };
 
 export interface HitTestContext {
   document: Document;
@@ -71,14 +71,6 @@ export class HitTester {
   }
 
   /**
-   * Check if a point is within bounds
-   */
-  pointInBounds(x: number, y: number, bounds: Bounds): boolean {
-    return x >= bounds.x && x < bounds.x + bounds.width &&
-           y >= bounds.y && y < bounds.y + bounds.height;
-  }
-
-  /**
    * Check if an element is interactive (can receive mouse events)
    */
   isInteractiveElement(element: Element): boolean {
@@ -96,16 +88,6 @@ export class HitTester {
       return element.isTextSelectable();
     }
     return false;
-  }
-
-  /**
-   * Clamp a position to within the given bounds
-   */
-  clampToBounds(pos: Point, bounds: Bounds): Point {
-    return {
-      x: Math.max(bounds.x, Math.min(bounds.x + bounds.width - 1, pos.x)),
-      y: Math.max(bounds.y, Math.min(bounds.y + bounds.height - 1, pos.y)),
-    };
   }
 
   /**
@@ -143,7 +125,7 @@ export class HitTester {
       };
 
       // Check if click is within dialog bounds
-      if (this.pointInBounds(x, y, dialogBounds)) {
+      if (pointInBounds(x, y, dialogBounds)) {
         // Calculate content area bounds (inside borders and title)
         const titleHeight = dialog.props.title ? 3 : 1;
         const contentBounds = {
@@ -179,7 +161,7 @@ export class HitTester {
       // Try to get the rendered bounds for this child
       const childBounds = child.id ? this._renderer.getContainerBounds(child.id) : undefined;
 
-      if (childBounds && this.pointInBounds(x, y, childBounds)) {
+      if (childBounds && pointInBounds(x, y, childBounds)) {
         // If it's a container, recursively search its children FIRST
         if (child.type === 'container' && child.children && child.children.length > 0) {
           const nestedHit = this._hitTestDialogChildren(child, x, y, childBounds);
@@ -199,7 +181,7 @@ export class HitTester {
           if (nestedHit) {
             return nestedHit;
           }
-        } else if (this.isInteractiveElement(child) && this.pointInBounds(x, y, _contentBounds)) {
+        } else if (this.isInteractiveElement(child) && pointInBounds(x, y, _contentBounds)) {
           // Interactive element without stored bounds - use parent content bounds
           return child;
         }
@@ -261,7 +243,7 @@ export class HitTester {
       };
 
       // Check if click is within menu bounds
-      if (this.pointInBounds(x, y, menuBounds)) {
+      if (pointInBounds(x, y, menuBounds)) {
         // Calculate which menu item was clicked based on y position
         // Menu items start at y + 1 (inside border)
         const relativeY = y - menuBounds.y - 1; // -1 for top border
@@ -311,10 +293,10 @@ export class HitTester {
       hasBounds: !!bounds,
       bounds: bounds ? `${bounds.x},${bounds.y} ${bounds.width}x${bounds.height}` : 'none',
       point: `${x},${y}`,
-      inBounds: bounds ? this.pointInBounds(x, y, bounds) : false,
+      inBounds: bounds ? pointInBounds(x, y, bounds) : false,
     });
 
-    if (bounds && this.pointInBounds(x, y, bounds)) {
+    if (bounds && pointInBounds(x, y, bounds)) {
       // For scrollable containers, transform coordinates for children
       let childX = x;
       let childY = y;

@@ -122,7 +122,6 @@
           startBtn.props.title = 'Running...';
           startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'orange' };
           context.startClock(context);
-          context.render();
         "
       />
 

@@ -1245,6 +1245,7 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
         const capturedShowScriptError = showScriptError;
 
         // Create a function that executes the transpiled code with access to context
+        // Auto-renders after handler completes unless handler returns false
         element.props[propName] = function(event: any) {
           // Extract script function names and values from context for direct access (outside try block)
           const scriptFunctions = Object.keys(context).filter(key => typeof context[key] === 'function');
@@ -1258,7 +1259,23 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
               ...scriptFunctions,
               finalCode
             );
-            return handlerFunction(event, context, ...scriptFunctionValues);
+            const result = handlerFunction(event, context, ...scriptFunctionValues);
+
+            // Auto-render after handler completes (unless it returns false to opt-out)
+            // Handle both sync and async handlers
+            if (result instanceof Promise) {
+              return result.then((asyncResult: unknown) => {
+                if (asyncResult !== false && context?.render) {
+                  context.render();
+                }
+                return asyncResult;
+              });
+            } else {
+              if (result !== false && context?.render) {
+                context.render();
+              }
+              return result;
+            }
           } catch (error) {
             // Build source location string if available
             let sourceLocationStr = '';

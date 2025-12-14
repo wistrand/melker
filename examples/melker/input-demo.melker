@@ -16,7 +16,6 @@
           if (input && output) {
             output.props.text = 'You said: ' + input.props.value;
             input.props.value = '';
-            context.render();
           }
         }
       "

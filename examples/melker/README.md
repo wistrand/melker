@@ -118,7 +118,7 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
     function handleClick() {
       const el = context.getElementById('output');
       el.props.text = 'Clicked!';
-      context.render();
+      // Auto-renders after handler completes
     }
   </script>
 
@@ -133,10 +133,12 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
 
 In event handlers and scripts:
 - `context.getElementById(id)` - Find elements by ID
-- `context.render()` - Trigger re-render after state changes
+- `context.render()` - Trigger re-render (auto-called after event handlers)
 - `context.exit()` - Exit the application
 - `context.engine` - Access engine instance
 - `context.logger` - Logging interface
+
+**Auto-render:** Event handlers automatically trigger a re-render after completion. Return `false` to skip auto-render.
 
 **Element methods:**
 - `element.getBounds()` - Get layout bounds `{ x, y, width, height }` after render

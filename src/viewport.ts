@@ -1,5 +1,6 @@
 // Unified Viewport System for Layout and Clipping
 import { Bounds, Element, Size } from './types.ts';
+import { clipBounds } from './geometry.ts';
 
 export interface ScrollbarLayout {
   bounds: Bounds;
@@ -59,7 +60,7 @@ export class ViewportManager {
 
     // If we have a parent viewport, clip to it
     if (parentViewport) {
-      clipRect = this._clipBounds(clipRect, parentViewport.clipRect);
+      clipRect = clipBounds(clipRect, parentViewport.clipRect);
     }
 
     // Get current scroll offset from element props
@@ -148,23 +149,6 @@ export class ViewportManager {
       y: 0,
       width: (element.props.width as number) || 80,
       height: (element.props.height as number) || 24
-    };
-  }
-
-  /**
-   * Clip bounds to a rectangle
-   */
-  private _clipBounds(bounds: Bounds, clipRect: Bounds): Bounds {
-    const x1 = Math.max(bounds.x, clipRect.x);
-    const y1 = Math.max(bounds.y, clipRect.y);
-    const x2 = Math.min(bounds.x + bounds.width, clipRect.x + clipRect.width);
-    const y2 = Math.min(bounds.y + bounds.height, clipRect.y + clipRect.height);
-
-    return {
-      x: x1,
-      y: y1,
-      width: Math.max(0, x2 - x1),
-      height: Math.max(0, y2 - y1),
     };
   }
 

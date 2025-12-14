@@ -2,6 +2,7 @@
 // Integrates the element system with the dual-buffer rendering system
 
 import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable } from './types.ts';
+import { clipBounds } from './geometry.ts';
 import { DualBuffer, TerminalBuffer, Cell } from './buffer.ts';
 import { ClippedDualBuffer } from './clipped-buffer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
@@ -640,7 +641,7 @@ export class RenderingEngine {
     const { element, bounds, computedStyle } = node;
 
     // Apply simple bounds clipping for background and border rendering
-    const clippedBounds = this._clipBounds(bounds, context.clipRect || context.viewport);
+    const clippedBounds = clipBounds(bounds, context.clipRect || context.viewport);
     if (clippedBounds.width <= 0 || clippedBounds.height <= 0) return;
 
     // Render background
@@ -870,21 +871,6 @@ export class RenderingEngine {
     }
 
     return translatedNode;
-  }
-
-  // Clip bounds to a rectangle - needed for simple layout clipping
-  private _clipBounds(bounds: Bounds, clipRect: Bounds): Bounds {
-    const x1 = Math.max(bounds.x, clipRect.x);
-    const y1 = Math.max(bounds.y, clipRect.y);
-    const x2 = Math.min(bounds.x + bounds.width, clipRect.x + clipRect.width);
-    const y2 = Math.min(bounds.y + bounds.height, clipRect.y + clipRect.height);
-
-    return {
-      x: x1,
-      y: y1,
-      width: Math.max(0, x2 - x1),
-      height: Math.max(0, y2 - y1),
-    };
   }
 
   // Render background color

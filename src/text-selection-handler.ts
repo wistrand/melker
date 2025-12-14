@@ -647,4 +647,23 @@ export class TextSelectionHandler {
   addTerminalOutputTime(time: number): void {
     this._renderDetailedStats.terminalOutputTotal += time;
   }
+
+  /**
+   * Reset all selection state and cancel pending timers
+   * Called during engine cleanup/stop
+   */
+  cleanup(): void {
+    // Cancel any pending selection render timer
+    if (this._selectionRenderTimer !== null) {
+      clearTimeout(this._selectionRenderTimer);
+      this._selectionRenderTimer = null;
+    }
+
+    // Clear selection state
+    this._clearSelection();
+    this._hoveredElementId = null;
+    this._lastClickTime = 0;
+    this._lastClickPos = { x: -1, y: -1 };
+    this._clickCount = 0;
+  }
 }

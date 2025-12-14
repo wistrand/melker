@@ -87,6 +87,9 @@ import {
   ElementClickHandler,
 } from './element-click-handler.ts';
 import {
+  FocusNavigationHandler,
+} from './focus-navigation-handler.ts';
+import {
   PersistenceMapping,
   DEFAULT_PERSISTENCE_MAPPINGS,
 } from './state-persistence.ts';
@@ -158,6 +161,7 @@ export class MelkerEngine {
   private _scrollHandler!: ScrollHandler;
   private _textSelectionHandler!: TextSelectionHandler;
   private _elementClickHandler!: ElementClickHandler;
+  private _focusNavigationHandler!: FocusNavigationHandler;
   private _resizeHandler!: ResizeHandler;
   private _eventManager!: EventManager;
   private _focusManager!: FocusManager;
@@ -374,6 +378,17 @@ export class MelkerEngine {
       onFocusElement: (id) => this.focusElement(id),
     });
 
+    // Initialize focus navigation handler
+    this._focusNavigationHandler = new FocusNavigationHandler({
+      document: this._document,
+      focusManager: this._focusManager,
+      hitTester: this._hitTester,
+      autoRender: this._options.autoRender,
+      onRender: () => this.render(),
+      onRegisterFocusable: (id) => this.registerFocusableElement(id),
+      onFocusElement: (id) => this.focusElement(id),
+    });
+
     // Initialize text selection handler
     this._textSelectionHandler = new TextSelectionHandler(
       { autoRender: this._options.autoRender },
@@ -490,13 +505,13 @@ export class MelkerEngine {
 
       // Handle Tab key for focus navigation
       if (event.key === 'Tab') {
-        this._handleTabNavigation(event.shiftKey);
+        this._focusNavigationHandler.handleTabNavigation(event.shiftKey);
         return;
       }
 
       // Handle F10 key for menu bar activation (global)
       if (event.key === 'F10') {
-        this._handleMenuBarActivation();
+        this._focusNavigationHandler.handleMenuBarActivation();
         return;
       }
 
@@ -520,7 +535,7 @@ export class MelkerEngine {
 
       // Handle Ctrl+M as alternative menu bar activation
       if (event.ctrlKey && event.key === 'm') {
-        this._handleMenuBarActivation();
+        this._focusNavigationHandler.handleMenuBarActivation();
         return;
       }
 
@@ -667,182 +682,6 @@ export class MelkerEngine {
     return this._textSelectionHandler.getHoveredElementId();
   }
 
-  /**
-   * Automatically detect and register focusable elements
-   */
-  private _autoRegisterFocusableElements(skipAutoRender = false): void {
-    if (!this._document) return;
-
-    const focusableElements = this._findFocusableElements(this._document.root);
-
-    // Debug logging for focus registration
-    this._logger?.debug('Auto-registering focusable elements', {
-      totalElements: focusableElements.length,
-      elementTypes: focusableElements.map(el => ({ type: el.type, id: el.id || 'no-id' })),
-    });
-
-    // Register all elements first
-    for (const element of focusableElements) {
-      if (element.id) {
-        try {
-          this.registerFocusableElement(element.id);
-          this._logger?.debug(`Successfully registered focusable element: ${element.id}`);
-        } catch (error) {
-          this._logger?.warn(`Failed to register focusable element: ${element.id} - ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-    }
-
-    // Only auto-focus if NO element is focused and we have focusable elements
-    if (!this._document.focusedElement && focusableElements.length > 0) {
-      const firstFocusable = focusableElements[0];
-      if (firstFocusable?.id) {
-        try {
-          this.focusElement(firstFocusable.id);
-          // Auto-render to show initial focus state (unless skipped)
-          if (this._options.autoRender && !skipAutoRender) {
-            this.render();
-          }
-        } catch (error) {
-          // Focus failed, ignore
-        }
-      }
-    }
-  }
-
-  /**
-   * Find all focusable elements in the element tree
-   */
-  private _findFocusableElements(element: Element): Element[] {
-    const focusableElements: Element[] = [];
-
-    // Debug logging for element inspection
-    if (element.type === 'button') {
-      this._logger?.debug('Found button element during focus detection', {
-        type: element.type,
-        id: element.id || 'no-id',
-        hasCanReceiveFocus: !!(element as any).canReceiveFocus,
-        isInteractive: this._hitTester.isInteractiveElement(element),
-        disabled: element.props.disabled,
-      });
-    }
-
-    // Check if element can receive focus using the Focusable interface
-    if ((element as any).canReceiveFocus && typeof (element as any).canReceiveFocus === 'function') {
-      try {
-        if ((element as any).canReceiveFocus()) {
-          focusableElements.push(element);
-        }
-      } catch (error) {
-        // Fallback: element might not properly implement canReceiveFocus
-        console.error(`Error checking focus capability for element ${element.type}:`, error);
-      }
-    } else if (this._hitTester.isInteractiveElement(element) && element.id) {
-      // Fallback for interactive elements without canReceiveFocus method
-      // Only include if element has an ID and is not disabled
-      if (!element.props.disabled) {
-        this._logger?.debug('Adding interactive element to focusable list', {
-          type: element.type,
-          id: element.id,
-        });
-        focusableElements.push(element);
-      }
-    }
-
-    if (element.children) {
-      for (const child of element.children) {
-        focusableElements.push(...this._findFocusableElements(child));
-      }
-    }
-
-    return focusableElements;
-  }
-
-  /**
-   * Handle Alt key for menu bar activation
-   */
-  private _handleMenuBarActivation(): void {
-    if (!this._document) return;
-
-    // Find the first menu bar in the document
-    const menuBar = this._findMenuBarElement(this._document.root);
-    if (!menuBar) return;
-
-    // Toggle menu bar activation
-    if (menuBar.handleKeyInput && menuBar.handleKeyInput('F10')) {
-      // Focus the menu bar when activated
-      this._document.focus(menuBar.id);
-
-      // Auto-render to show activation state
-      if (this._options.autoRender) {
-        this.render();
-      }
-    }
-  }
-
-  /**
-   * Register an element and all its children with the document
-   */
-  private _registerElementTree(element: Element): void {
-    this._document.addElement(element);
-    if (element.children) {
-      for (const child of element.children) {
-        this._registerElementTree(child);
-      }
-    }
-  }
-
-  /**
-   * Find menu bar element in the document tree
-   */
-  private _findMenuBarElement(element: any): any {
-    if (element.type === 'menu-bar') {
-      return element;
-    }
-
-    if (element.children) {
-      for (const child of element.children) {
-        // Handle double-nested arrays (container children issue)
-        if (Array.isArray(child)) {
-          for (const arrayItem of child) {
-            const found = this._findMenuBarElement(arrayItem);
-            if (found) return found;
-          }
-        } else {
-          const found = this._findMenuBarElement(child);
-          if (found) return found;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Handle Tab key navigation between focusable elements
-   */
-  private _handleTabNavigation(reverse: boolean = false): void {
-    if (!this._focusManager) return;
-
-    // Use the focus manager's proper tab navigation
-    const success = reverse ? this._focusManager.focusPrevious() : this._focusManager.focusNext();
-
-    if (success) {
-      // Auto-render to show focus change
-      if (this._options.autoRender) {
-        this.render();
-      }
-    } else {
-      // If focus manager navigation failed, try to focus first element as fallback
-      this._focusManager.focusFirst();
-
-      if (this._options.autoRender) {
-        this.render();
-      }
-    }
-  }
-
-
   // Public API
 
   /**
@@ -916,7 +755,7 @@ export class MelkerEngine {
     // Log successful initialization
     this._logger?.info('MelkerEngine started successfully', {
       renderCount: this._renderCount,
-      focusableElements: this._findFocusableElements(this._document.root).length,
+      focusableElements: this._focusNavigationHandler.findFocusableElements(this._document.root).length,
     });
   }
 
@@ -984,7 +823,7 @@ export class MelkerEngine {
     }
 
     // Automatically detect and register focusable elements
-    this._autoRegisterFocusableElements();
+    this._focusNavigationHandler.autoRegisterFocusableElements();
 
     // Update stats first (without swapping buffers)
     if (this._buffer) {
@@ -1126,8 +965,8 @@ export class MelkerEngine {
     }
 
     // Automatically detect and register focusable elements
-    // Pass false to skip the auto-render since we'll do a full screen redraw
-    this._autoRegisterFocusableElements(true);
+    // Pass true to skip the auto-render since we'll do a full screen redraw
+    this._focusNavigationHandler.autoRegisterFocusableElements(true);
 
     // Force complete redraw
     this._renderFullScreen();
@@ -1151,7 +990,7 @@ export class MelkerEngine {
       this._viewSourceManager = new ViewSourceManager({
         document: this._document,
         focusManager: this._focusManager,
-        registerElementTree: (element) => this._registerElementTree(element),
+        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
         render: () => this.render(),
         forceRender: () => this.forceRender(),
         autoRender: this._options.autoRender,
@@ -1169,7 +1008,7 @@ export class MelkerEngine {
       this._alertDialogManager = new AlertDialogManager({
         document: this._document,
         focusManager: this._focusManager,
-        registerElementTree: (element) => this._registerElementTree(element),
+        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
         render: () => this.render(),
         forceRender: () => this.forceRender(),
         autoRender: this._options.autoRender,
@@ -1260,6 +1099,11 @@ export class MelkerEngine {
     if (this._inputRenderTimer !== null) {
       clearTimeout(this._inputRenderTimer);
       this._inputRenderTimer = null;
+    }
+
+    // Clean up text selection handler (clear timers and state)
+    if (this._textSelectionHandler) {
+      this._textSelectionHandler.cleanup();
     }
 
     // Stop all video elements (kills ffmpeg/ffplay processes)
@@ -1660,7 +1504,7 @@ export class MelkerEngine {
    * Force refresh of all focusable elements
    */
   forceRefreshFocusableElements(): void {
-    this._autoRegisterFocusableElements();
+    this._focusNavigationHandler.autoRegisterFocusableElements();
   }
 
   /**

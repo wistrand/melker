@@ -161,6 +161,9 @@ deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 # With lint validation
 deno run --allow-all melker.ts --lint examples/melker/counter.melker
 
+# Watch mode (auto-reload on file changes, local files only)
+deno run --allow-all melker.ts --watch examples/melker/counter.melker
+
 # Start LSP server (for editor integration)
 deno run --allow-all melker.ts --lsp
 ```

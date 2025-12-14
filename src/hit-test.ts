@@ -74,6 +74,10 @@ export class HitTester {
    * Check if an element is interactive (can receive mouse events)
    */
   isInteractiveElement(element: Element): boolean {
+    // Elements with onClick handlers are interactive
+    if (typeof element.props.onClick === 'function') {
+      return true;
+    }
     if (isInteractive(element)) {
       return element.isInteractive();
     }

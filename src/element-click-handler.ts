@@ -115,6 +115,22 @@ export class ElementClickHandler {
       }
     }
 
+    // Handle canvas clicks (color picker, drawing, etc.)
+    if (element.type === 'canvas') {
+      if (typeof element.props.onClick === 'function') {
+        const clickEvent: ClickEvent = {
+          type: 'click',
+          target: element,
+          position: { x: event.x, y: event.y },
+          timestamp: Date.now(),
+        };
+        element.props.onClick(clickEvent);
+        if (this._deps.autoRender) {
+          this._deps.onRender();
+        }
+      }
+    }
+
     // Handle menu-item clicks
     if (element.type === 'menu-item') {
       let handled = false;

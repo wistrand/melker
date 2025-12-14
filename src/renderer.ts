@@ -396,7 +396,7 @@ export class TerminalRenderer {
   private _getColorCode(color: string, isBackground: boolean): string {
     const offset = isBackground ? 10 : 0;
 
-    // Handle named colors
+    // Handle named colors - map to ANSI codes for 16/256 color modes
     const namedColors: Record<string, number> = {
       black: 30, red: 31, green: 32, yellow: 33,
       blue: 34, magenta: 35, cyan: 36, white: 37,
@@ -405,8 +405,39 @@ export class TerminalRenderer {
       brightblue: 94, brightmagenta: 95, brightcyan: 96, brightwhite: 97,
     };
 
-    const namedColor = namedColors[color.toLowerCase()];
+    // Named colors to RGB for truecolor mode (standard CSS/web colors)
+    const namedColorsRgb: Record<string, { r: number; g: number; b: number }> = {
+      black: { r: 0, g: 0, b: 0 },
+      red: { r: 255, g: 0, b: 0 },
+      green: { r: 0, g: 128, b: 0 },
+      yellow: { r: 255, g: 255, b: 0 },
+      blue: { r: 0, g: 0, b: 255 },
+      magenta: { r: 255, g: 0, b: 255 },
+      cyan: { r: 0, g: 255, b: 255 },
+      white: { r: 255, g: 255, b: 255 },
+      gray: { r: 128, g: 128, b: 128 },
+      grey: { r: 128, g: 128, b: 128 },
+      brightred: { r: 255, g: 85, b: 85 },
+      brightgreen: { r: 85, g: 255, b: 85 },
+      brightyellow: { r: 255, g: 255, b: 85 },
+      brightblue: { r: 85, g: 85, b: 255 },
+      brightmagenta: { r: 255, g: 85, b: 255 },
+      brightcyan: { r: 85, g: 255, b: 255 },
+      brightwhite: { r: 255, g: 255, b: 255 },
+    };
+
+    const colorLower = color.toLowerCase();
+    const namedColor = namedColors[colorLower];
     if (namedColor !== undefined) {
+      // In truecolor mode, use actual RGB values for named colors
+      if (this._options.colorSupport === 'truecolor') {
+        const rgb = namedColorsRgb[colorLower];
+        if (rgb) {
+          const code = isBackground ? 48 : 38;
+          return `\x1b[${code};2;${rgb.r};${rgb.g};${rgb.b}m`;
+        }
+      }
+      // For 16/256 color modes, use basic ANSI codes
       return `\x1b[${namedColor + offset}m`;
     }
 

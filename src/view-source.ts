@@ -20,6 +20,7 @@ export interface ViewSourceState {
   content: string;
   filePath: string;
   type: 'melker' | 'md';
+  convertedContent?: string;  // For .md files: the converted .melker content
 }
 
 export class ViewSourceManager {
@@ -34,8 +35,8 @@ export class ViewSourceManager {
   /**
    * Set the source content to display
    */
-  setSource(content: string, filePath: string, type: 'melker' | 'md'): void {
-    this._state = { content, filePath, type };
+  setSource(content: string, filePath: string, type: 'melker' | 'md', convertedContent?: string): void {
+    this._state = { content, filePath, type, convertedContent };
   }
 
   /**
@@ -78,44 +79,108 @@ export class ViewSourceManager {
       ? this._state.filePath.split('/').pop() || 'source'
       : 'source';
 
-    const contentType = this._state.type === 'md' ? 'markdown' : 'text';
-    const contentElement = createElement(contentType, {
-      id: 'view-source-content',
-      text: this._state.content,
-    });
     const onClose = () => this.close();
 
-    this._overlay = melker`
-      <dialog
-        id="view-source-dialog"
-        title="Source: ${filename}"
-        open=${true}
-        modal=${true}
-        backdrop=${true}
-        width=${0.9}
-        height=${0.85}
-      >
-        <container
-          id="view-source-main"
-          style="display: flex; flex-direction: column; width: fill; height: fill"
+    // For .md files with converted content, show tabs
+    if (this._state.type === 'md' && this._state.convertedContent) {
+      const markdownElement = createElement('markdown', {
+        id: 'view-source-markdown',
+        text: this._state.content,
+        src: this._state.filePath,
+      });
+
+      const melkerElement = createElement('text', {
+        id: 'view-source-melker',
+        text: this._state.convertedContent,
+      });
+
+      this._overlay = melker`
+        <dialog
+          id="view-source-dialog"
+          title="Source: ${filename}"
+          open=${true}
+          modal=${true}
+          backdrop=${true}
+          width=${0.9}
+          height=${0.85}
         >
           <container
-            id="view-source-scroll"
-            scrollable=${true}
-            focusable=${true}
-            style="flex: 1; padding: 1; overflow: scroll"
+            id="view-source-main"
+            style="display: flex; flex-direction: column; width: fill; height: fill"
           >
-            ${contentElement}
+            <tabs id="view-source-tabs" style="flex: 1; width: fill; height: fill">
+              <tab title="Markdown">
+                <container
+                  id="view-source-scroll-md"
+                  scrollable=${true}
+                  focusable=${true}
+                  style="flex: 1; padding: 1; overflow: scroll; width: fill; height: fill"
+                >
+                  ${markdownElement}
+                </container>
+              </tab>
+              <tab title="Melker">
+                <container
+                  id="view-source-scroll-melker"
+                  scrollable=${true}
+                  focusable=${true}
+                  style="flex: 1; padding: 1; overflow: scroll; width: fill; height: fill"
+                >
+                  ${melkerElement}
+                </container>
+              </tab>
+            </tabs>
+            <container
+              id="view-source-footer"
+              style="display: flex; flex-direction: row; justify-content: flex-end; width: fill"
+            >
+              <button id="view-source-close" title="Close" style="width: 10" onClick=${onClose} />
+            </container>
           </container>
+        </dialog>
+      `;
+    } else {
+      // For .melker files or .md without converted content, show single view
+      const contentType = this._state.type === 'md' ? 'markdown' : 'text';
+      const contentElement = createElement(contentType, {
+        id: 'view-source-content',
+        text: this._state.content,
+        // Pass file path as src for markdown to resolve relative image paths
+        ...(this._state.type === 'md' && this._state.filePath ? { src: this._state.filePath } : {}),
+      });
+
+      this._overlay = melker`
+        <dialog
+          id="view-source-dialog"
+          title="Source: ${filename}"
+          open=${true}
+          modal=${true}
+          backdrop=${true}
+          width=${0.9}
+          height=${0.85}
+        >
           <container
-            id="view-source-footer"
-            style="display: flex; flex-direction: row; justify-content: flex-end; width: fill"
+            id="view-source-main"
+            style="display: flex; flex-direction: column; width: fill; height: fill"
           >
-            <button id="view-source-close" title="Close" style="width: 10" onClick=${onClose} />
+            <container
+              id="view-source-scroll"
+              scrollable=${true}
+              focusable=${true}
+              style="flex: 1; padding: 1; overflow: scroll"
+            >
+              ${contentElement}
+            </container>
+            <container
+              id="view-source-footer"
+              style="display: flex; flex-direction: row; justify-content: flex-end; width: fill"
+            >
+              <button id="view-source-close" title="Close" style="width: 10" onClick=${onClose} />
+            </container>
           </container>
-        </container>
-      </dialog>
-    `;
+        </dialog>
+      `;
+    }
 
     // Add to document and register all elements
     const root = this._deps.document.root;
@@ -131,7 +196,10 @@ export class ViewSourceManager {
 
     // Focus the scroll container for arrow key navigation
     if (this._deps.focusManager) {
-      this._deps.focusManager.focus('view-source-scroll');
+      const focusTarget = this._state.type === 'md' && this._state.convertedContent
+        ? 'view-source-scroll-md'
+        : 'view-source-scroll';
+      this._deps.focusManager.focus(focusTarget);
     }
   }
 

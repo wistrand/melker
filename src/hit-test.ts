@@ -166,8 +166,8 @@ export class HitTester {
       const childBounds = child.id ? this._renderer.getContainerBounds(child.id) : undefined;
 
       if (childBounds && pointInBounds(x, y, childBounds)) {
-        // If it's a container, recursively search its children FIRST
-        if (child.type === 'container' && child.children && child.children.length > 0) {
+        // If it has children, recursively search them FIRST (not just containers - also tabs, etc.)
+        if (child.children && child.children.length > 0) {
           const nestedHit = this._hitTestDialogChildren(child, x, y, childBounds);
           if (nestedHit) {
             return nestedHit;

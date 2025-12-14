@@ -33,6 +33,7 @@ deno run --allow-all melker.ts --convert examples/melker-md/counter.md > counter
 - `form_demo.md` - Form with inputs, radio buttons, checkboxes, buttons
 - `markdown_viewer.md` - Markdown file viewer with navigation history
 - `analog-clock.md` - Canvas-based analog clock with visual ASCII layout
+- `color_selector.md` - HSL color picker with interactive canvas
 - `tabs_demo.md` - Tabbed interface with multiple panels
 - `nested_tabs_demo.md` - Nested tabs with settings panels
 - `oauth_demo.md` - OAuth2 PKCE login with external script

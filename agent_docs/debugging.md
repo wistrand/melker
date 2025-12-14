@@ -186,8 +186,9 @@ Press **F12** at runtime to view the source file in a modal dialog overlay.
 ### Features
 
 - Shows the original `.melker` or `.md` source file
-- Markdown files are rendered with the markdown component
+- **Markdown files show two tabs**: "Markdown" (original source) and "Melker" (converted output)
 - Scrollable content area with keyboard navigation
+- Tab buttons clickable with mouse or keyboard
 - Close with button click, Escape key, or F12 toggle
 
 ### Enabling View Source
@@ -197,8 +198,8 @@ The engine's `setSource()` method must be called with the source content:
 ```typescript
 const engine = await createApp(root);
 engine.setSource(sourceContent, '/path/to/file.melker', 'melker');
-// or for markdown files:
-engine.setSource(mdContent, '/path/to/file.md', 'md');
+// or for markdown files (with converted content for Melker tab):
+engine.setSource(mdContent, '/path/to/file.md', 'md', convertedMelkerContent);
 ```
 
 The `melker-main.ts` runner automatically enables this for `.melker` and `.md` files.
@@ -207,6 +208,7 @@ The `melker-main.ts` runner automatically enables this for `.melker` and `.md` f
 
 View Source is managed by `ViewSourceManager` (`src/view-source.ts`):
 - Creates a dialog overlay with scrollable content
+- For `.md` files: shows tabbed interface with original markdown and converted melker
 - Uses the `melker` template literal for clean element creation
 - Properly registers/unregisters elements from the document on open/close
 

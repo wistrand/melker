@@ -100,6 +100,9 @@ CSS-like properties in `style` attribute:
 - `context.getElementById(id)` - Get element by ID
 - `context.render()` - Trigger re-render (for intermediate updates in async handlers)
 - `context.exit()` - Exit application
+- `context.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)
+- `context.alert(message)` - Show modal alert dialog
+- `context.setTitle(title)` - Set window/terminal title
 - Exported script functions available as `context.functionName()`
 
 ## State Persistence

@@ -1,6 +1,6 @@
 // Input component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ChangeEvent, KeyPressEvent } from '../events.ts';
 import { createKeyPressEvent, createChangeEvent } from '../events.ts';
@@ -33,7 +33,7 @@ export interface InputProps extends BaseProps {
 // Shared kill buffer for emacs-style Ctrl+Y yank
 let _killBuffer: string = '';
 
-export class InputElement extends Element implements Renderable, Focusable {
+export class InputElement extends Element implements Renderable, Focusable, Interactive, TextSelectable {
   declare type: 'input';
   declare props: InputProps;
   private _internalValue: string;
@@ -492,6 +492,20 @@ export class InputElement extends Element implements Renderable, Focusable {
    */
   canReceiveFocus(): boolean {
     return !this.props.disabled && !this.props.readOnly;
+  }
+
+  /**
+   * Check if this input is interactive
+   */
+  isInteractive(): boolean {
+    return !this.props.disabled && !this.props.readOnly;
+  }
+
+  /**
+   * Check if this input supports text selection
+   */
+  isTextSelectable(): boolean {
+    return true;
   }
 
   static validate(props: InputProps): boolean {

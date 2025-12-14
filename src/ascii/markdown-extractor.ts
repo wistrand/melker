@@ -6,7 +6,7 @@ import { renderToMelker, RenderContext } from './melker-renderer.ts';
 import { ERROR_MESSAGES, formatParseError } from './errors.ts';
 
 export interface ExtractedBlock {
-  type: 'root' | 'component' | 'script' | 'handler' | 'style' | 'json' | 'json-props' | 'title';
+  type: 'root' | 'component' | 'script' | 'handler' | 'style' | 'json' | 'json-props' | 'title' | 'oauth' | 'external-scripts';
   name?: string;
   elementId?: string;
   event?: string;
@@ -14,6 +14,24 @@ export interface ExtractedBlock {
   line: number;
   /** Prose text preceding this block (for XML comments) */
   precedingProse?: string;
+}
+
+export interface ExternalScript {
+  name: string;
+  src: string;
+}
+
+export interface OAuthConfig {
+  provider?: string;
+  wellknown?: string;
+  clientId?: string;
+  audience?: string;
+  scopes?: string[];
+  autoLogin?: boolean;
+  onLogin?: string;
+  onLogout?: string;
+  onFail?: string;
+  [key: string]: unknown;
 }
 
 export interface MarkdownParseResult {
@@ -29,6 +47,8 @@ export interface MarkdownParseResult {
 
 interface CodeBlock {
   lang: string;
+  /** Additional modifier after lang (e.g., "oauth" in "json oauth") */
+  langModifier?: string;
   content: string;
   startLine: number;
   /** Prose text preceding this code block */
@@ -114,6 +134,12 @@ export function parseMarkdownMelker(
   context.components = components;
   context.elementTypes = options?.elementTypes;
 
+  // Extract external scripts from ## Scripts section
+  const externalScripts = extractScriptsSection(markdown);
+  if (externalScripts.length > 0) {
+    context.externalScripts = externalScripts;
+  }
+
   // Add prose comments for root and components
   if (rootBlock.precedingProse) {
     context.rootComment = rootBlock.precedingProse;
@@ -195,6 +221,10 @@ function parseAsciiBoxWithButtons(content: string, baseLineNumber: number): Pars
 /**
  * Transform button shortcuts [ Title ] into box syntax
  * This is a preprocessing step before parsing
+ *
+ * IMPORTANT: This does NOT transform brackets that are part of shorthand box syntax:
+ *   +--[Button Title]--+  -> This is a shorthand box, NOT a button shortcut
+ *   | [ Button Title ] |  -> This IS a button shortcut that gets transformed
  */
 function transformButtonShortcuts(content: string): string {
   const lines = content.split('\n');
@@ -203,8 +233,11 @@ function transformButtonShortcuts(content: string): string {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Check if line contains button shortcuts (but not inside a box definition line)
-    if (line.includes('[') && line.includes(']') && !line.match(/^\s*\+/)) {
+    // Check if line contains button shortcuts
+    // Skip if: line starts with + (box definition) OR contains +--[...]--+ (shorthand box syntax)
+    // The pattern uses -+ to match one or more dashes (boxes often have many trailing dashes)
+    const hasShorthandBox = /\+--\[.+?\]-+\+/.test(line);
+    if (line.includes('[') && line.includes(']') && !line.match(/^\s*\+/) && !hasShorthandBox) {
       // Parse buttons from this line
       const buttons = parseButtonShortcuts(line, i);
 
@@ -241,6 +274,7 @@ function extractCodeBlocks(markdown: string): CodeBlock[] {
 
   let inCodeBlock = false;
   let currentLang = '';
+  let currentLangModifier: string | undefined;
   let currentContent: string[] = [];
   let startLine = 0;
   let proseStartLine = 0; // Track where prose starts (after previous code block)
@@ -250,11 +284,12 @@ function extractCodeBlocks(markdown: string): CodeBlock[] {
     const line = lines[i];
 
     if (!inCodeBlock) {
-      // Check for code block start
-      const match = line.match(/^```(\S*)/);
+      // Check for code block start - support "```lang modifier" syntax
+      const match = line.match(/^```(\S+)(?:\s+(\S+))?/);
       if (match) {
         inCodeBlock = true;
         currentLang = match[1];
+        currentLangModifier = match[2];
         currentContent = [];
         codeBlockStartLine = i;
         startLine = i + 1; // 1-indexed line number
@@ -268,12 +303,14 @@ function extractCodeBlocks(markdown: string): CodeBlock[] {
 
         blocks.push({
           lang: currentLang,
+          langModifier: currentLangModifier,
           content: currentContent.join('\n'),
           startLine,
           precedingProse: prose || undefined,
         });
         inCodeBlock = false;
         currentLang = '';
+        currentLangModifier = undefined;
         currentContent = [];
         proseStartLine = i + 1; // Next prose starts after this code block
       } else {
@@ -287,7 +324,7 @@ function extractCodeBlocks(markdown: string): CodeBlock[] {
 
 /**
  * Extract meaningful prose from markdown lines.
- * Removes headings, empty lines, and trims the result.
+ * Removes headings, empty lines, markdown links (in list format), and trims the result.
  */
 function extractProse(lines: string[]): string {
   const proseLines: string[] = [];
@@ -298,6 +335,8 @@ function extractProse(lines: string[]): string {
     if (!trimmed) continue;
     if (trimmed.startsWith('#')) continue;
     if (trimmed.match(/^[-=*]{3,}$/)) continue;
+    // Skip markdown links in list format (from ## Scripts section)
+    if (trimmed.match(/^-?\s*\[.+\]\(.+\)$/)) continue;
 
     proseLines.push(trimmed);
   }
@@ -305,12 +344,53 @@ function extractProse(lines: string[]): string {
   return proseLines.join(' ').trim();
 }
 
+/**
+ * Extract external script links from ## Scripts section in markdown
+ * Format: ## Scripts followed by markdown links like - [name](url)
+ */
+function extractScriptsSection(markdown: string): ExternalScript[] {
+  const scripts: ExternalScript[] = [];
+  const lines = markdown.split('\n');
+
+  let inScriptsSection = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Check for ## Scripts heading (case insensitive)
+    if (trimmed.match(/^##\s+scripts?\s*$/i)) {
+      inScriptsSection = true;
+      continue;
+    }
+
+    // Stop at next heading or code block
+    if (inScriptsSection) {
+      if (trimmed.startsWith('#') || trimmed.startsWith('```')) {
+        inScriptsSection = false;
+        continue;
+      }
+
+      // Parse markdown links: - [name](url) or [name](url)
+      const linkMatch = trimmed.match(/^-?\s*\[([^\]]+)\]\(([^)]+)\)/);
+      if (linkMatch) {
+        scripts.push({
+          name: linkMatch[1].trim(),
+          src: linkMatch[2].trim(),
+        });
+      }
+    }
+  }
+
+  return scripts;
+}
+
 function categorizeBlocks(codeBlocks: CodeBlock[], errors: ParseError[]): ExtractedBlock[] {
   const blocks: ExtractedBlock[] = [];
   let foundRoot = false;
 
   for (const block of codeBlocks) {
-    const { lang, content, startLine } = block;
+    const { lang, langModifier, content, startLine } = block;
 
     // melker-block - First one is root, rest are components
     if (lang === 'melker-block') {
@@ -345,9 +425,9 @@ function categorizeBlocks(codeBlocks: CodeBlock[], errors: ParseError[]): Extrac
         blocks.push(extracted);
       }
     }
-    // json blocks - check for @target or @name properties
+    // json blocks - check for @target, @name, or oauth modifier
     else if (lang === 'json' || lang === 'jsonc') {
-      const extracted = extractJsonBlock(content, startLine, errors);
+      const extracted = extractJsonBlock(content, startLine, errors, langModifier);
       if (extracted) {
         blocks.push(extracted);
       }
@@ -433,12 +513,33 @@ function extractCssBlock(content: string, startLine: number): ExtractedBlock | n
  * Supports:
  *   { "@name": "configName", ... }  -> named JSON data
  *   { "@target": "#id", ... }       -> element properties
+ *   ```json oauth``` block          -> OAuth configuration
  */
 function extractJsonBlock(
   content: string,
   startLine: number,
-  errors: ParseError[]
+  errors: ParseError[],
+  langModifier?: string
 ): ExtractedBlock | null {
+  // Handle json oauth blocks
+  if (langModifier === 'oauth') {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      errors.push({
+        message: `Invalid JSON in oauth block: ${(e as Error).message}`,
+        line: startLine,
+      });
+      return null;
+    }
+    return {
+      type: 'oauth',
+      content: JSON.stringify(parsed),
+      line: startLine,
+    };
+  }
+
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(content);
@@ -559,6 +660,21 @@ function buildRenderContext(
       errors.push({
         message: `Invalid JSON for @target "#${block.elementId}": ${(e as Error).message}`,
         line: block.line,
+      });
+    }
+  }
+
+  // Process OAuth blocks
+  const oauthBlocks = blocks.filter((b) => b.type === 'oauth');
+  if (oauthBlocks.length > 0) {
+    // Use the last oauth block if multiple (allows override)
+    const lastOauthBlock = oauthBlocks[oauthBlocks.length - 1];
+    try {
+      context.oauthConfig = JSON.parse(lastOauthBlock.content) as OAuthConfig;
+    } catch (e) {
+      errors.push({
+        message: `Invalid OAuth config: ${(e as Error).message}`,
+        line: lastOauthBlock.line,
       });
     }
   }

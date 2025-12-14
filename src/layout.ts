@@ -304,6 +304,9 @@ export class LayoutEngine {
 
     // First pass: handle normal flow elements
     for (const child of children) {
+      // Skip invisible elements - they don't participate in layout
+      if (child.props?.visible === false) continue;
+
       const childLayoutProps = this._computeLayoutProps(child);
       const childText = (child.props as any)?.text;
 
@@ -343,6 +346,9 @@ export class LayoutEngine {
 
     // Second pass: handle absolute positioned elements
     for (const child of children) {
+      // Skip invisible elements
+      if (child.props?.visible === false) continue;
+
       const childLayoutProps = this._computeLayoutProps(child);
       const childText = (child.props as any)?.text;
 
@@ -383,13 +389,17 @@ export class LayoutEngine {
     const crossAxisSize = isRow ? context.availableSpace.height : context.availableSpace.width;
 
 
-    // Filter out absolutely positioned children
+    // Filter out absolutely positioned children and invisible children
     const flexChildren = children.filter(child => {
+      // Skip invisible elements - they don't participate in layout
+      if (child.props?.visible === false) return false;
       const childProps = this._computeLayoutProps(child);
       return childProps.position !== 'absolute' && childProps.position !== 'fixed';
     });
 
     const absoluteChildren = children.filter(child => {
+      // Skip invisible elements
+      if (child.props?.visible === false) return false;
       const childProps = this._computeLayoutProps(child);
       return childProps.position === 'absolute' || childProps.position === 'fixed';
     });
@@ -1351,11 +1361,13 @@ export class LayoutEngine {
       // For containers, calculate intrinsic size based on children
       const containerStyle = style;
       const isRowFlex = containerStyle.flexDirection === 'row' || containerStyle.flexDirection === 'row-reverse';
+      const gap = typeof containerStyle.gap === 'number' ? containerStyle.gap : 0;
 
       let totalWidth = 0;
       let totalHeight = 0;
       let maxWidth = 0;
       let maxHeight = 0;
+      let childCount = 0;
 
       for (const child of element.children) {
         const childStyle = this._computeStyle(child, containerStyle);
@@ -1389,14 +1401,18 @@ export class LayoutEngine {
         totalHeight += childHeight + marginV;
         maxWidth = Math.max(maxWidth, childWidth + marginH);
         maxHeight = Math.max(maxHeight, childHeight + marginV);
+        childCount++;
       }
 
-      // Row flex: width is sum, height is max
-      // Column flex: width is max, height is sum
+      // Add gaps between children
+      const totalGap = childCount > 1 ? gap * (childCount - 1) : 0;
+
+      // Row flex: width is sum + gaps, height is max
+      // Column flex: width is max, height is sum + gaps
       if (isRowFlex) {
-        contentSize = { width: totalWidth, height: maxHeight };
+        contentSize = { width: totalWidth + totalGap, height: maxHeight };
       } else {
-        contentSize = { width: maxWidth, height: totalHeight };
+        contentSize = { width: maxWidth, height: totalHeight + totalGap };
       }
     }
 

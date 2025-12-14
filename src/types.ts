@@ -201,6 +201,49 @@ export function isRenderable(element: Element): element is Element & Renderable 
          typeof element.intrinsicSize === 'function';
 }
 
+// Clickable interface for components that handle mouse clicks
+export interface Clickable {
+  /**
+   * Handle a click event on this element.
+   * @param event - The click event with coordinates and button info
+   * @param document - The document for accessing other elements (e.g., radio groups)
+   * @returns true if the click was handled and a re-render is needed
+   */
+  handleClick(event: ClickEvent, document: any): boolean;
+}
+
+// Type guard for Clickable interface
+export function isClickable(element: Element): element is Element & Clickable {
+  return 'handleClick' in element && typeof element.handleClick === 'function';
+}
+
+// Interactive interface for elements that can receive mouse events
+export interface Interactive {
+  /**
+   * Check if this element is interactive (can receive clicks, focus, etc.)
+   * Should return false if disabled.
+   */
+  isInteractive(): boolean;
+}
+
+// Type guard for Interactive interface
+export function isInteractive(element: Element): element is Element & Interactive {
+  return 'isInteractive' in element && typeof element.isInteractive === 'function';
+}
+
+// TextSelectable interface for elements that support text selection
+export interface TextSelectable {
+  /**
+   * Check if this element supports text selection.
+   */
+  isTextSelectable(): boolean;
+}
+
+// Type guard for TextSelectable interface
+export function isTextSelectable(element: Element): element is Element & TextSelectable {
+  return 'isTextSelectable' in element && typeof element.isTextSelectable === 'function';
+}
+
 // Element type exports will come from component files
 
 // Import component prop types for type safety

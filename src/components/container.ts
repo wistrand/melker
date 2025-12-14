@@ -1,6 +1,6 @@
 // Container component implementation
 
-import { Element, BaseProps, Renderable, IntrinsicSizeContext, Bounds, ComponentRenderContext } from '../types.ts';
+import { Element, BaseProps, Renderable, TextSelectable, IntrinsicSizeContext, Bounds, ComponentRenderContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 
 export interface ContainerProps extends BaseProps {
@@ -9,7 +9,7 @@ export interface ContainerProps extends BaseProps {
   scrollY?: number;
 }
 
-export class ContainerElement extends Element implements Renderable {
+export class ContainerElement extends Element implements Renderable, TextSelectable {
   declare type: 'container';
   declare props: ContainerProps;
 
@@ -56,12 +56,25 @@ export class ContainerElement extends Element implements Renderable {
 
     // For flex containers, calculate minimum space needed for children
     const containerProps = this.props as ContainerProps & { style?: any };
-    const isFlexRow = containerProps?.style?.display === 'flex' &&
-                     (containerProps?.style?.flexDirection === 'row' ||
-                      !containerProps?.style?.flexDirection); // default is row
+    const style = containerProps?.style;
+
+    // Determine flex direction - check both object and string styles
+    let isFlexRow = false;
+    if (typeof style === 'object' && style !== null) {
+      isFlexRow = style.display === 'flex' &&
+                  (style.flexDirection === 'row' || !style.flexDirection);
+    }
+    // Note: string styles are parsed by the layout system, default to column for containers
+
+    // Get gap value from style
+    let gap = 0;
+    if (typeof style === 'object' && style !== null && typeof style.gap === 'number') {
+      gap = style.gap;
+    }
 
     let totalWidth = 0;
     let totalHeight = 0;
+    let childCount = 0;
 
     if (isFlexRow) {
       // Row layout: sum widths, take max height
@@ -82,7 +95,12 @@ export class ContainerElement extends Element implements Renderable {
 
           totalWidth += childWidth;
           totalHeight = Math.max(totalHeight, childHeight);
+          childCount++;
         }
+      }
+      // Add gaps between children (row: horizontal gaps)
+      if (childCount > 1) {
+        totalWidth += gap * (childCount - 1);
       }
     } else {
       // Column layout or block: take max width, sum heights
@@ -103,11 +121,23 @@ export class ContainerElement extends Element implements Renderable {
 
           totalWidth = Math.max(totalWidth, childWidth);
           totalHeight += childHeight;
+          childCount++;
         }
+      }
+      // Add gaps between children (column: vertical gaps)
+      if (childCount > 1) {
+        totalHeight += gap * (childCount - 1);
       }
     }
 
     return { width: totalWidth, height: totalHeight };
+  }
+
+  /**
+   * Check if this container supports text selection
+   */
+  isTextSelectable(): boolean {
+    return true;
   }
 
   static validate(props: ContainerProps): boolean {

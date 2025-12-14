@@ -1,7 +1,8 @@
 // Checkbox component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
+import type { Document } from '../document.ts';
 
 export interface CheckboxProps extends BaseProps {
   title: string;
@@ -9,7 +10,7 @@ export interface CheckboxProps extends BaseProps {
   indeterminate?: boolean; // For tri-state checkboxes
 }
 
-export class CheckboxElement extends Element implements Renderable, Focusable {
+export class CheckboxElement extends Element implements Renderable, Focusable, Clickable, Interactive {
   declare type: 'checkbox';
   declare props: CheckboxProps;
 
@@ -138,6 +139,30 @@ export class CheckboxElement extends Element implements Renderable, Focusable {
    * Check if this checkbox can receive focus
    */
   canReceiveFocus(): boolean {
+    return !this.props.disabled;
+  }
+
+  /**
+   * Handle click event on this checkbox
+   */
+  handleClick(event: ClickEvent, _document: Document): boolean {
+    if (this.props.disabled) return false;
+
+    // Toggle the checked state
+    this.toggle();
+
+    // Call onClick handler if provided
+    if (typeof this.props.onClick === 'function') {
+      this.props.onClick(event);
+    }
+
+    return true; // Checkbox state changed, needs re-render
+  }
+
+  /**
+   * Check if this checkbox is interactive
+   */
+  isInteractive(): boolean {
     return !this.props.disabled;
   }
 

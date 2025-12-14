@@ -12,6 +12,10 @@ export interface Box {
   hints?: LayoutHints;
   /** Tab bar info parsed from `│ Tab1* │ Tab2 │` syntax */
   tabBar?: TabBarInfo;
+  /** Inferred element type from shorthand syntax: [button], "text", {input}, <type> */
+  inferredType?: string;
+  /** Inferred properties from shorthand syntax */
+  inferredProps?: Record<string, string>;
 }
 
 export interface BoxStructure {
@@ -39,6 +43,10 @@ export interface ParsedBox {
   contentLines?: string[];
   /** Tab bar info parsed from `│ Tab1* │ Tab2 │` syntax */
   tabBar?: TabBarInfo;
+  /** Inferred element type from shorthand syntax: [button], "text", {input}, <type> */
+  inferredType?: string;
+  /** Inferred properties from shorthand syntax */
+  inferredProps?: Record<string, string>;
 }
 
 export interface LayoutHints {

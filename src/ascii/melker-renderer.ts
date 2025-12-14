@@ -10,6 +10,24 @@ export interface RenderOptions {
   includeRoot?: boolean;
 }
 
+export interface ExternalScript {
+  name: string;
+  src: string;
+}
+
+export interface OAuthConfig {
+  provider?: string;
+  wellknown?: string;
+  clientId?: string;
+  audience?: string;
+  scopes?: string[];
+  autoLogin?: boolean;
+  onLogin?: string;
+  onLogout?: string;
+  onFail?: string;
+  [key: string]: unknown;
+}
+
 export interface RenderContext {
   /** Document title (from root block name) */
   title?: string;
@@ -31,6 +49,10 @@ export interface RenderContext {
   componentComments?: Map<string, string>;
   /** Comment for root element (from preceding prose) */
   rootComment?: string;
+  /** External script files from ## Scripts section */
+  externalScripts?: ExternalScript[];
+  /** OAuth configuration from json oauth block */
+  oauthConfig?: OAuthConfig;
 }
 
 // Fallback element types when context.elementTypes is not provided
@@ -58,6 +80,21 @@ export function renderToMelker(
     // Add title from root block name
     if (context.title) {
       lines.push(`${indent}<title>${escapeXml(context.title)}</title>`);
+      lines.push('');
+    }
+
+    // Add OAuth configuration
+    if (context.oauthConfig) {
+      const oauthAttrs = renderOAuthAttributes(context.oauthConfig);
+      lines.push(`${indent}<oauth ${oauthAttrs} />`);
+      lines.push('');
+    }
+
+    // Add external scripts
+    if (context.externalScripts && context.externalScripts.length > 0) {
+      for (const script of context.externalScripts) {
+        lines.push(`${indent}<script src="${escapeXml(script.src)}" />`);
+      }
       lines.push('');
     }
 
@@ -173,11 +210,12 @@ function renderBox(
 
   // Check if element is self-closing
   const hasChildren = children.length > 0 || buttons.length > 0;
-  const hasTextContent = elementType === 'text' && box.properties?.text;
+  const textProp = box.properties?.text ?? box.inferredProps?.text;
+  const hasTextContent = elementType === 'text' && textProp;
 
   if (hasTextContent && !hasChildren) {
     // Text element with content
-    const textContent = escapeXml(box.properties!.text!);
+    const textContent = escapeXml(textProp!);
     // Remove text from attributes since it's now content
     const attrsWithoutText = attributes.filter((a) => !a.startsWith('text='));
     const attrsStr = attrsWithoutText.length > 0 ? ' ' + attrsWithoutText.join(' ') : '';
@@ -369,6 +407,11 @@ function renderButton(
 }
 
 function getElementType(box: Box, context: RenderContext): string {
+  // Check inferred type from shorthand syntax first
+  if (box.inferredType) {
+    return box.inferredType;
+  }
+
   const typeProperty = box.properties?.type;
   if (typeProperty) {
     const validTypes = context.elementTypes ?? DEFAULT_ELEMENT_TYPES;
@@ -386,6 +429,13 @@ function buildAttributes(box: Box, context: RenderContext): string[] {
   const id = box.properties?.id ?? box.id;
   if (id) {
     attributes.push(`id="${escapeXml(id)}"`);
+  }
+
+  // Add inferred props from shorthand syntax (title, text, placeholder, etc.)
+  if (box.inferredProps) {
+    for (const [key, value] of Object.entries(box.inferredProps)) {
+      attributes.push(`${key}="${escapeXml(value)}"`);
+    }
   }
 
   // Check for JSON properties from context
@@ -536,13 +586,60 @@ function parseButtonsFromBox(box: Box): ParsedButton[] {
   return buttons;
 }
 
+/**
+ * Render OAuth config to XML attributes
+ * Maps JSON config keys to <oauth> element attributes
+ */
+function renderOAuthAttributes(config: OAuthConfig): string {
+  const attrs: string[] = [];
+
+  // Map common config keys to kebab-case attribute names
+  const keyMap: Record<string, string> = {
+    provider: 'provider',
+    wellknown: 'wellknown',
+    clientId: 'client-id',
+    audience: 'audience',
+    scopes: 'scopes',
+    autoLogin: 'auto-login',
+    onLogin: 'onLogin',
+    onLogout: 'onLogout',
+    onFail: 'onFail',
+  };
+
+  for (const [key, value] of Object.entries(config)) {
+    if (value === undefined || value === null) continue;
+
+    const attrName = keyMap[key] ?? key;
+
+    // Handle array values (like scopes)
+    if (Array.isArray(value)) {
+      attrs.push(`${attrName}="${escapeXml(value.join(','))}"`);
+    }
+    // Handle boolean values
+    else if (typeof value === 'boolean') {
+      attrs.push(`${attrName}="${value}"`);
+    }
+    // Handle string values
+    else if (typeof value === 'string') {
+      attrs.push(`${attrName}="${escapeXml(value)}"`);
+    }
+    // Handle other primitives
+    else {
+      attrs.push(`${attrName}="${escapeXml(String(value))}"`);
+    }
+  }
+
+  return attrs.join(' ');
+}
+
 function escapeXml(str: string): string {
+  // Only escape characters that are problematic in double-quoted XML attributes
+  // Single quotes don't need escaping when inside double quotes
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/"/g, '&quot;');
 }
 
 function escapeXmlComment(str: string): string {

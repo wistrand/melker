@@ -206,6 +206,24 @@ Use `melker-block` code blocks. The **first block is the root**, subsequent bloc
 - **First word** = element ID (for CSS `#id` and component references)
 - **Rest** = display name (root's display name becomes document title)
 
+### Shorthand Type Syntax
+
+Use special delimiters to define element types without `type:` property lines:
+
+| Syntax | Element | Example |
+|--------|---------|---------|
+| `+--[Title]--+` | button | `+--[Click Me]--+` → `<button title="Click Me" />` |
+| `+--"content"--+` | text | `+--"Hello!"--+` → `<text>Hello!</text>` |
+| `+--{id}--+` | input | `+--{username}--+` → `<input id="username" />` |
+| `+--<type> content--+` | explicit | `+--<checkbox> Remember--+` → `<checkbox title="Remember" />` |
+
+The explicit `<type>` syntax maps content to appropriate props:
+- `<checkbox>`, `<radio>`, `<button>` → `title` prop
+- `<text>`, `<markdown>` → `text` prop
+- `<input>`, `<textarea>` → `placeholder` prop
+
+IDs are auto-generated from content (lowercase, hyphens for spaces).
+
 ### Component References
 
 Any box ID that matches a component definition is automatically expanded. Works at any nesting level:
@@ -243,12 +261,14 @@ Compact hints on lines starting with `: `:
 
 | Hint | Meaning |
 |------|---------|
-| `r` / `c` | row / column direction |
+| `r` / `c` | row / column direction (optional - auto-detected) |
 | `0`-`9` | gap value |
 | `<` `=` `>` `~` | justify: start / center / end / space-between |
 | `^` `-` `v` `+` | align: start / center / end / stretch |
 | `*N` | flex: N |
 | `f` | fill (width + height 100%) |
+
+**Auto-detection:** Flex direction is inferred from child positions - children stacked vertically → column, side by side → row.
 
 ### Tab Bar Syntax
 
@@ -296,5 +316,37 @@ context.render();
 }
 ```
 ````
+
+### External Scripts
+
+Use a `## Scripts` section with markdown links to reference external TypeScript files:
+
+````markdown
+## Scripts
+- [handlers](./handlers.ts)
+- [utils](./utils.ts)
+````
+
+Generates `<script src="./handlers.ts" />` for each link.
+
+### OAuth Configuration
+
+Use a `json oauth` fenced block for OAuth2 PKCE configuration:
+
+````markdown
+```json oauth
+{
+  "wellknown": "${OAUTH_WELLKNOWN}",
+  "clientId": "${OAUTH_CLIENT_ID}",
+  "audience": "${OAUTH_AUDIENCE}",
+  "autoLogin": true,
+  "onLogin": "context.onLoginCallback()",
+  "onLogout": "context.onLogoutCallback()",
+  "onFail": "context.onFailCallback(error)"
+}
+```
+````
+
+See `examples/melker-md/oauth_demo.md` for a complete example.
 
 See `examples/melker-md/` for complete examples and `examples/melker-md/README.md` for full syntax reference.

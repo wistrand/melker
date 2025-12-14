@@ -1,6 +1,6 @@
 // Text component implementation
 
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 
 export interface TextProps extends BaseProps {
@@ -8,7 +8,7 @@ export interface TextProps extends BaseProps {
   src?: string;                      // URL to fetch text content from (relative to engine base URL)
 }
 
-export class TextElement extends Element implements Renderable {
+export class TextElement extends Element implements Renderable, TextSelectable {
   declare type: 'text';
   declare props: TextProps;
 
@@ -293,6 +293,13 @@ export class TextElement extends Element implements Renderable {
     }
 
     return { width, height };
+  }
+
+  /**
+   * Check if this text supports text selection
+   */
+  isTextSelectable(): boolean {
+    return true;
   }
 
   static validate(props: TextProps): boolean {

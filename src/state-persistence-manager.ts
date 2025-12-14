@@ -2,7 +2,7 @@
 // Extracted from engine.ts to reduce file size
 
 import { Document } from './document.ts';
-import { type ComponentLogger } from './logging.ts';
+import { getLogger, type ComponentLogger } from './logging.ts';
 import {
   PersistedState,
   PersistenceMapping,
@@ -12,6 +12,7 @@ import {
   saveToFile,
   loadFromFile,
   debounce,
+  getStateFilePath,
 } from './state-persistence.ts';
 import {
   setPersistenceContext,
@@ -23,7 +24,6 @@ export interface StatePersistenceManagerOptions {
 
 export interface StatePersistenceManagerDeps {
   document: Document;
-  logger?: ComponentLogger;
 }
 
 /**
@@ -32,6 +32,7 @@ export interface StatePersistenceManagerDeps {
 export class StatePersistenceManager {
   private _options: StatePersistenceManagerOptions;
   private _deps: StatePersistenceManagerDeps;
+  private _logger: ComponentLogger;
 
   // State persistence
   private _persistenceEnabled = false;
@@ -44,6 +45,7 @@ export class StatePersistenceManager {
   constructor(options: StatePersistenceManagerOptions, deps: StatePersistenceManagerDeps) {
     this._options = options;
     this._deps = deps;
+    this._logger = getLogger('StatePersistence');
   }
 
   /**
@@ -54,7 +56,7 @@ export class StatePersistenceManager {
    */
   async enablePersistence(appId: string, mappings?: PersistenceMapping[]): Promise<void> {
     if (this._persistenceEnabled) {
-      this._deps.logger?.warn('Persistence already enabled');
+      this._logger.warn('Persistence already enabled');
       return;
     }
 
@@ -66,10 +68,10 @@ export class StatePersistenceManager {
       this._loadedPersistedState = await loadFromFile(appId);
       if (this._loadedPersistedState) {
         this._lastPersistedHash = hashState(this._loadedPersistedState);
-        this._deps.logger?.info('Loaded persisted state', { appId, hash: this._lastPersistedHash });
+        this._logger.info('Loaded persisted state', { appId, hash: this._lastPersistedHash });
       }
     } catch (error) {
-      this._deps.logger?.warn('Failed to load persisted state', { appId, error });
+      this._logger.warn('Failed to load persisted state', { appId, error });
     }
 
     // Set up persistence context for createElement
@@ -86,7 +88,8 @@ export class StatePersistenceManager {
     );
 
     this._persistenceEnabled = true;
-    this._deps.logger?.info('State persistence enabled', { appId });
+    const stateFilePath = getStateFilePath(appId);
+    this._logger.info('State persistence enabled', { appId, stateFile: stateFilePath });
   }
 
   /**
@@ -119,7 +122,7 @@ export class StatePersistenceManager {
     try {
       await this._saveStateIfChanged();
     } catch (error) {
-      this._deps.logger?.warn('Failed to save state on exit', { error });
+      this._logger.warn('Failed to save state on exit', { error });
     }
   }
 
@@ -145,10 +148,10 @@ export class StatePersistenceManager {
       if (currentHash !== this._lastPersistedHash) {
         await saveToFile(this._persistenceAppId, currentState);
         this._lastPersistedHash = currentHash;
-        this._deps.logger?.debug('State persisted', { appId: this._persistenceAppId, hash: currentHash });
+        this._logger.debug('State persisted', { appId: this._persistenceAppId, hash: currentHash });
       }
     } catch (error) {
-      this._deps.logger?.warn('Failed to save state', { error });
+      this._logger.warn('Failed to save state', { error });
     }
   }
 }

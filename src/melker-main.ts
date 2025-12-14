@@ -148,14 +148,20 @@ function getBaseUrl(pathOrUrl: string): string {
   return `file://${absolutePath.split('/').slice(0, -1).join('/')}/`;
 }
 
+// Return type for runMelkerFile when not exiting immediately
+export interface RunMelkerResult {
+  engine: any;
+  cleanup: () => Promise<void>;
+}
+
 // CLI functionality for running .melker template files
 export async function runMelkerFile(
   filepath: string,
-  options: { printTree?: boolean, printJson?: boolean, debug?: boolean, noLoad?: boolean } = {},
+  options: { printTree?: boolean, printJson?: boolean, debug?: boolean, noLoad?: boolean, watch?: boolean } = {},
   templateArgs: string[] = [],
   viewSource?: { content: string; path: string; type: 'md' | 'melker' },
   preloadedContent?: string
-): Promise<void> {
+): Promise<RunMelkerResult | void> {
   try {
     // Extract filename without extension for logger name
     const filename = filepath.split('/').pop()?.replace(/\.melker$/, '') || 'unknown';
@@ -455,7 +461,7 @@ export async function runMelkerFile(
 
     // Set up graceful shutdown with protection against double Ctrl+C
     let cleanupInProgress = false;
-    const cleanup = async () => {
+    const cleanup = async (exitAfter: boolean = true) => {
       // Prevent second Ctrl+C from causing unclean exit
       if (cleanupInProgress) {
         return;  // Ignore - cleanup already in progress
@@ -469,25 +475,27 @@ export async function runMelkerFile(
         (engine as any)._isInitialized = false;
       }
 
-      // 2. Write "Stopping..." directly to screen (fully restore terminal first)
-      try {
-        // Disable raw mode first so output works normally
-        Deno.stdin.setRaw(false);
-      } catch {
-        // Ignore - may not be in raw mode
-      }
-      try {
-        const restore = [
-          '\x1b[?1049l',  // Exit alternate screen
-          '\x1b[?25h',    // Show cursor
-          '\x1b[0m',      // Reset attributes
-          '\r\n',         // New line
-          'Stopping...',
-          '\r\n',
-        ].join('');
-        Deno.stdout.writeSync(encoder.encode(restore));
-      } catch {
-        // Ignore write errors
+      // 2. Write "Stopping..." directly to screen (fully restore terminal first) - only if exiting
+      if (exitAfter) {
+        try {
+          // Disable raw mode first so output works normally
+          Deno.stdin.setRaw(false);
+        } catch {
+          // Ignore - may not be in raw mode
+        }
+        try {
+          const restore = [
+            '\x1b[?1049l',  // Exit alternate screen
+            '\x1b[?25h',    // Show cursor
+            '\x1b[0m',      // Reset attributes
+            '\r\n',         // New line
+            'Stopping...',
+            '\r\n',
+          ].join('');
+          Deno.stdout.writeSync(encoder.encode(restore));
+        } catch {
+          // Ignore write errors
+        }
       }
 
       // 3. Stop video/audio subprocesses
@@ -525,12 +533,31 @@ export async function runMelkerFile(
         }
       }
 
-      Deno.exit(0);
+      // 6. Remove signal listeners
+      try {
+        Deno.removeSignalListener('SIGINT', signalCleanup);
+        Deno.removeSignalListener('SIGTERM', signalCleanup);
+      } catch {
+        // Ignore - listeners may not exist
+      }
+
+      if (exitAfter) {
+        Deno.exit(0);
+      }
     };
 
+    // Wrapper for signal handlers that always exits
+    const signalCleanup = () => cleanup(true);
+
     // Handle Ctrl+C gracefully
-    Deno.addSignalListener('SIGINT', cleanup);
-    Deno.addSignalListener('SIGTERM', cleanup);
+    Deno.addSignalListener('SIGINT', signalCleanup);
+    Deno.addSignalListener('SIGTERM', signalCleanup);
+
+    // Return engine and cleanup function for watch mode
+    return {
+      engine,
+      cleanup: () => cleanup(false),
+    };
 
   } catch (error) {
     // First, try to clean up the terminal state completely
@@ -565,6 +592,113 @@ export async function runMelkerFile(
   }
 }
 
+/**
+ * Watch a file for changes and automatically reload the application
+ */
+export async function watchAndRun(
+  filepath: string,
+  options: { printTree?: boolean; printJson?: boolean; debug?: boolean; noLoad?: boolean; watch?: boolean },
+  templateArgs: string[],
+  viewSource?: { content: string; path: string; type: 'md' | 'melker' },
+  preloadedContent?: string
+): Promise<void> {
+  const { getLogger } = await import('./logging.ts');
+  const logger = getLogger('FileWatcher');
+
+  // For markdown files, we need to watch the original .md file
+  const watchPath = filepath;
+
+  let currentResult: RunMelkerResult | void = undefined;
+  let debounceTimer: number | null = null;
+  const DEBOUNCE_MS = 150;
+
+  // Function to start/restart the application
+  const startApp = async (isReload: boolean = false) => {
+    // Clean up previous instance if exists
+    if (currentResult) {
+      logger.info(`Stopping previous instance for reload: ${filepath}`);
+      try {
+        await currentResult.cleanup();
+      } catch (error) {
+        logger.warn(`Error during cleanup: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      currentResult = undefined;
+    }
+
+    if (isReload) {
+      logger.info(`Reloading application: ${filepath}`);
+    } else {
+      logger.info(`Starting application with file watch: ${filepath}`);
+    }
+
+    try {
+      // For .md files, we need to re-convert on each reload
+      if (filepath.endsWith('.md')) {
+        const { getRegisteredComponents } = await import('./lint.ts');
+        const { markdownToMelker } = await import('./ascii/mod.ts');
+
+        const mdContent = await loadContent(filepath);
+        const elementTypes = new Set(getRegisteredComponents());
+        const melkerContent = markdownToMelker(mdContent, filepath, { elementTypes });
+
+        currentResult = await runMelkerFile(
+          filepath,
+          { ...options, watch: false }, // Don't pass watch to avoid recursion
+          templateArgs,
+          { content: mdContent, path: filepath, type: 'md' },
+          melkerContent
+        );
+      } else {
+        // For .melker files, reload content fresh
+        const content = preloadedContent && !isReload ? preloadedContent : await loadContent(filepath);
+        currentResult = await runMelkerFile(
+          filepath,
+          { ...options, watch: false },
+          templateArgs,
+          viewSource,
+          content
+        );
+      }
+
+      if (isReload) {
+        logger.info('Reload successful');
+      }
+    } catch (error) {
+      logger.error('Error starting application: ' + (error instanceof Error ? error.message : String(error)));
+      // Keep watching - user can fix the file and save again
+    }
+  };
+
+  // Start the application initially
+  await startApp(false);
+
+  // Set up file watcher
+  logger.info(`Watching for file changes: ${watchPath}`);
+
+  try {
+    const watcher = Deno.watchFs(watchPath);
+
+    for await (const event of watcher) {
+      // Only react to modify events
+      if (event.kind === 'modify') {
+        // Debounce rapid changes (e.g., from editors that do multiple writes)
+        if (debounceTimer !== null) {
+          clearTimeout(debounceTimer);
+        }
+
+        debounceTimer = setTimeout(async () => {
+          debounceTimer = null;
+          logger.info(`File change detected: ${watchPath}`);
+          await startApp(true);
+        }, DEBOUNCE_MS) as unknown as number;
+      }
+    }
+  } catch (error) {
+    logger.error('File watcher error: ' + (error instanceof Error ? error.message : String(error)));
+    // If watcher fails, just keep the app running without watch
+  }
+}
+
 export function printUsage(): void {
   console.log('Melker CLI - Run Melker template files');
   console.log('');
@@ -587,6 +721,7 @@ export function printUsage(): void {
   console.log('  --lsp          Start Language Server Protocol server for editor integration');
   console.log('  --convert      Convert markdown to .melker format (prints to stdout)');
   console.log('  --no-load      Skip loading persisted state (requires MELKER_PERSIST=true)');
+  console.log('  --watch        Watch file for changes and auto-reload (local files only)');
   console.log('  --help, -h     Show this help message');
   console.log('');
   console.log('Example .melker file content:');
@@ -790,6 +925,7 @@ export async function main(): Promise<void> {
     debug: args.includes('--debug'),
     lint: args.includes('--lint'),
     noLoad: args.includes('--no-load'),
+    watch: args.includes('--watch'),
   };
 
   // Enable lint mode if requested
@@ -837,6 +973,12 @@ export async function main(): Promise<void> {
 
   // Support .md files directly (convert and run)
   if (filepath.endsWith('.md')) {
+    // Check if watch mode is requested but file is a URL
+    if (options.watch && isUrl(filepath)) {
+      console.error('❌ Error: --watch is not supported for URLs');
+      Deno.exit(1);
+    }
+
     try {
       // Import components to register their schemas
       await import('./components/mod.ts');
@@ -851,12 +993,21 @@ export async function main(): Promise<void> {
       const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
       const mdTemplateArgs = [absoluteFilepath, ...args.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
 
-      // Run directly with converted content, passing original .md content for View Source feature
-      await runMelkerFile(absoluteFilepath, options, mdTemplateArgs, {
-        content: mdContent,
-        path: absoluteFilepath,
-        type: 'md',
-      }, melkerContent);
+      // Use watchAndRun if --watch is specified
+      if (options.watch) {
+        await watchAndRun(absoluteFilepath, options, mdTemplateArgs, {
+          content: mdContent,
+          path: absoluteFilepath,
+          type: 'md',
+        }, melkerContent);
+      } else {
+        // Run directly with converted content, passing original .md content for View Source feature
+        await runMelkerFile(absoluteFilepath, options, mdTemplateArgs, {
+          content: mdContent,
+          path: absoluteFilepath,
+          type: 'md',
+        }, melkerContent);
+      }
 
       return;
     } catch (error) {
@@ -868,6 +1019,12 @@ export async function main(): Promise<void> {
   if (!filepath.endsWith('.melker')) {
     console.error('❌ Error: File must have .melker or .md extension');
     console.error('Use --help for usage information');
+    Deno.exit(1);
+  }
+
+  // Check if watch mode is requested but file is a URL
+  if (options.watch && isUrl(filepath)) {
+    console.error('❌ Error: --watch is not supported for URLs');
     Deno.exit(1);
   }
 
@@ -883,7 +1040,13 @@ export async function main(): Promise<void> {
     if (!isUrl(filepath)) {
       await Deno.stat(filepath);
     }
-    await runMelkerFile(filepath, options, templateArgs);
+
+    // Use watchAndRun if --watch is specified
+    if (options.watch) {
+      await watchAndRun(absoluteFilepath, options, templateArgs);
+    } else {
+      await runMelkerFile(filepath, options, templateArgs);
+    }
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       console.error(`❌ Error: File not found: ${filepath}`);

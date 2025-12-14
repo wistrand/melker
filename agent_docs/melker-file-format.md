@@ -183,6 +183,7 @@ See `examples/melker/` for complete examples:
 - `flex-demo.melker` - Flexbox layout examples
 - `canvas_test.melker` - Canvas graphics
 - `analog-clock.melker` - Canvas-based analog clock
+- `color_selector.melker` - HSL color picker with canvas
 - `markdown_viewer.melker` - Markdown rendering
 
 ## Running
@@ -196,6 +197,9 @@ deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
 deno run --allow-all melker.ts --lint examples/melker/counter.melker
+
+# Watch mode (auto-reload on file changes, local files only)
+deno run --allow-all melker.ts --watch examples/melker/counter.melker
 
 # With logging
 MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --allow-all melker.ts app.melker

@@ -1,0 +1,237 @@
+<melker>
+  <title>Color Selector</title>
+
+  <style>
+    #root {
+      padding: 1;
+      flex-direction: column;
+      gap: 1;
+    }
+    #header {
+      font-weight: bold;
+    }
+    #main {
+      flex-direction: row;
+      gap: 2;
+    }
+    #palette-container {
+      flex-direction: column;
+      gap: 1;
+    }
+    #info-panel {
+      flex-direction: column;
+      gap: 1;
+      width: 28;
+    }
+    #preview {
+      height: 3;
+      border: thin;
+      justify-content: center;
+      align-items: center;
+    }
+    #color-values {
+      flex-direction: column;
+    }
+    .label {
+      color: gray;
+    }
+  </style>
+
+  <script type="typescript">
+    let selectedHue = 0;
+    let selectedSat = 100;
+    let selectedLight = 50;
+
+    // Convert HSL to RGB
+    function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+      s /= 100;
+      l /= 100;
+      const k = (n: number) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+    }
+
+    // Convert RGB to hex string
+    function rgbToHex(r: number, g: number, b: number): string {
+      return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+    }
+
+    function updateColorDisplay() {
+      const [r, g, b] = hslToRgb(selectedHue, selectedSat, selectedLight);
+      const hex = rgbToHex(r, g, b);
+
+      const preview = context.getElementById('preview');
+      const hexValue = context.getElementById('hex-value');
+      const rgbValue = context.getElementById('rgb-value');
+      const hslValue = context.getElementById('hsl-value');
+
+      if (preview) {
+        preview.props.style.backgroundColor = hex;
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        preview.props.style.color = luminance > 0.5 ? 'black' : 'white';
+      }
+      if (hexValue) hexValue.props.text = hex;
+      if (rgbValue) rgbValue.props.text = `rgb(${r}, ${g}, ${b})`;
+      if (hslValue) hslValue.props.text = `hsl(${selectedHue}, ${selectedSat}%, ${selectedLight}%)`;
+    }
+
+    function paintHueSatPalette(event: any) {
+      const { canvas } = event;
+      if (!canvas) return;
+
+      const size = canvas.getBufferSize();
+      const width = size.width;
+      const height = size.height;
+
+      // Draw hue-saturation gradient at current lightness
+      for (let y = 0; y < height; y++) {
+        const sat = 100 - (y / height) * 100;
+        for (let x = 0; x < width; x++) {
+          const hue = (x / width) * 360;
+          const [r, g, b] = hslToRgb(hue, sat, selectedLight);
+          canvas.setPixelColor(x, y, rgbToHex(r, g, b), true);
+        }
+      }
+
+      // Draw crosshair at selected position
+      const crossX = Math.floor((selectedHue / 360) * width);
+      const crossY = Math.floor((1 - selectedSat / 100) * height);
+
+      const [bgR, bgG, bgB] = hslToRgb(selectedHue, selectedSat, selectedLight);
+      const lum = (0.299 * bgR + 0.587 * bgG + 0.114 * bgB) / 255;
+      const cc = lum > 0.5 ? '#000000' : '#ffffff';
+
+      // Horizontal line
+      for (let i = -4; i <= 4; i++) {
+        const px = crossX + i;
+        if (px >= 0 && px < width) canvas.setPixelColor(px, crossY, cc, true);
+      }
+      // Vertical line
+      for (let i = -4; i <= 4; i++) {
+        const py = crossY + i;
+        if (py >= 0 && py < height) canvas.setPixelColor(crossX, py, cc, true);
+      }
+    }
+
+    function paintLightnessPalette(event: any) {
+      const { canvas } = event;
+      if (!canvas) return;
+
+      const size = canvas.getBufferSize();
+      const width = size.width;
+      const height = size.height;
+
+      // Draw lightness gradient horizontally (dark left, light right)
+      for (let x = 0; x < width; x++) {
+        const light = (x / width) * 100;
+        const [r, g, b] = hslToRgb(selectedHue, selectedSat, light);
+        const color = rgbToHex(r, g, b);
+        for (let y = 0; y < height; y++) {
+          canvas.setPixelColor(x, y, color, true);
+        }
+      }
+
+      // Draw vertical marker at selected lightness
+      const markerX = Math.floor((selectedLight / 100) * width);
+      const cc = selectedLight > 50 ? '#000000' : '#ffffff';
+      for (let y = 0; y < height; y++) {
+        canvas.setPixelColor(markerX, y, cc, true);
+      }
+    }
+
+    function handlePaletteClick(event: any) {
+      const canvas = context.getElementById('hue-sat-canvas');
+      if (!canvas) return;
+
+      const bounds = canvas.getBounds();
+      if (!bounds) return;
+
+      const relX = event.position.x - bounds.x;
+      const relY = event.position.y - bounds.y;
+
+      selectedHue = Math.round((relX / bounds.width) * 360);
+      selectedSat = Math.round((1 - relY / bounds.height) * 100);
+
+      selectedHue = Math.max(0, Math.min(359, selectedHue));
+      selectedSat = Math.max(0, Math.min(100, selectedSat));
+
+      updateColorDisplay();
+    }
+
+    function handleLightnessClick(event: any) {
+      const canvas = context.getElementById('lightness-canvas');
+      if (!canvas) return;
+
+      const bounds = canvas.getBounds();
+      if (!bounds) return;
+
+      const relX = event.position.x - bounds.x;
+      selectedLight = Math.round((relX / bounds.width) * 100);
+      selectedLight = Math.max(0, Math.min(100, selectedLight));
+
+      updateColorDisplay();
+    }
+
+    exports = {
+      paintHueSatPalette,
+      paintLightnessPalette,
+      handlePaletteClick,
+      handleLightnessClick,
+      updateColorDisplay
+    };
+  </script>
+
+  <container id="root">
+    <text id="header">Color Selector (click to pick)</text>
+
+    <container id="main">
+      <container id="palette-container">
+        <text class="label">Hue / Saturation:</text>
+        <canvas
+          id="hue-sat-canvas"
+          width="72"
+          height="24"
+          dither="auto"
+          onPaint="paintHueSatPalette(event)"
+          onClick="handlePaletteClick(event)"
+        />
+
+        <text class="label">Lightness:</text>
+        <canvas
+          id="lightness-canvas"
+          width="72"
+          height="2"
+          dither="auto"
+          onPaint="paintLightnessPalette(event)"
+          onClick="handleLightnessClick(event)"
+        />
+      </container>
+
+      <container id="info-panel">
+        <text class="label">Selected Color:</text>
+        <container id="preview" style="background-color: #ff0000;">
+          <text style="color: white;">#ff0000</text>
+        </container>
+
+        <container id="color-values">
+          <text class="label">Hex:</text>
+          <text id="hex-value">#ff0000</text>
+
+          <text class="label">RGB:</text>
+          <text id="rgb-value">rgb(255, 0, 0)</text>
+
+          <text class="label">HSL:</text>
+          <text id="hsl-value">hsl(0, 100%, 50%)</text>
+        </container>
+
+        <button title="Copy Hex" onClick="
+          const hex = context.getElementById('hex-value');
+          if (hex) alert('Copied: ' + hex.props.text);
+        " />
+      </container>
+    </container>
+
+    <text style="color: gray;">Run with MELKER_THEME=fullcolor-dark for best result. Press Ctrl+C to exit.</text>
+  </container>
+</melker>

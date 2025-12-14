@@ -1,0 +1,206 @@
+// Focus navigation handling for Melker Engine
+// Extracted from engine.ts to reduce file size
+
+import { Document } from './document.ts';
+import { FocusManager } from './focus.ts';
+import { HitTester } from './hit-test.ts';
+import { Element } from './types.ts';
+import { getLogger, type ComponentLogger } from './logging.ts';
+
+export interface FocusNavigationHandlerDeps {
+  document: Document;
+  focusManager: FocusManager;
+  hitTester: HitTester;
+  autoRender: boolean;
+  onRender: () => void;
+  onRegisterFocusable: (elementId: string) => void;
+  onFocusElement: (elementId: string) => boolean;
+}
+
+/**
+ * Handles focus navigation and element tree traversal for the Melker engine
+ */
+export class FocusNavigationHandler {
+  private _deps: FocusNavigationHandlerDeps;
+  private _logger: ComponentLogger;
+
+  constructor(deps: FocusNavigationHandlerDeps) {
+    this._deps = deps;
+    this._logger = getLogger('FocusNavigation');
+  }
+
+  /**
+   * Automatically detect and register focusable elements
+   */
+  autoRegisterFocusableElements(skipAutoRender = false): void {
+    if (!this._deps.document) return;
+
+    const focusableElements = this.findFocusableElements(this._deps.document.root);
+
+    // Debug logging for focus registration
+    this._logger.debug('Auto-registering focusable elements', {
+      totalElements: focusableElements.length,
+      elementTypes: focusableElements.map(el => ({ type: el.type, id: el.id || 'no-id' })),
+    });
+
+    // Register all elements first
+    for (const element of focusableElements) {
+      if (element.id) {
+        try {
+          this._deps.onRegisterFocusable(element.id);
+          this._logger.debug(`Successfully registered focusable element: ${element.id}`);
+        } catch (error) {
+          this._logger.warn(`Failed to register focusable element: ${element.id} - ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    }
+
+    // Only auto-focus if NO element is focused and we have focusable elements
+    if (!this._deps.document.focusedElement && focusableElements.length > 0) {
+      const firstFocusable = focusableElements[0];
+      if (firstFocusable?.id) {
+        try {
+          this._deps.onFocusElement(firstFocusable.id);
+          // Auto-render to show initial focus state (unless skipped)
+          if (this._deps.autoRender && !skipAutoRender) {
+            this._deps.onRender();
+          }
+        } catch (_error) {
+          // Focus failed, ignore
+        }
+      }
+    }
+  }
+
+  /**
+   * Find all focusable elements in the element tree
+   */
+  findFocusableElements(element: Element): Element[] {
+    const focusableElements: Element[] = [];
+
+    // Debug logging for element inspection
+    if (element.type === 'button') {
+      this._logger.debug('Found button element during focus detection', {
+        type: element.type,
+        id: element.id || 'no-id',
+        hasCanReceiveFocus: !!(element as any).canReceiveFocus,
+        isInteractive: this._deps.hitTester.isInteractiveElement(element),
+        disabled: element.props.disabled,
+      });
+    }
+
+    // Check if element can receive focus using the Focusable interface
+    if ((element as any).canReceiveFocus && typeof (element as any).canReceiveFocus === 'function') {
+      try {
+        if ((element as any).canReceiveFocus()) {
+          focusableElements.push(element);
+        }
+      } catch (error) {
+        // Fallback: element might not properly implement canReceiveFocus
+        console.error(`Error checking focus capability for element ${element.type}:`, error);
+      }
+    } else if (this._deps.hitTester.isInteractiveElement(element) && element.id) {
+      // Fallback for interactive elements without canReceiveFocus method
+      // Only include if element has an ID and is not disabled
+      if (!element.props.disabled) {
+        this._logger.debug('Adding interactive element to focusable list', {
+          type: element.type,
+          id: element.id,
+        });
+        focusableElements.push(element);
+      }
+    }
+
+    if (element.children) {
+      for (const child of element.children) {
+        focusableElements.push(...this.findFocusableElements(child));
+      }
+    }
+
+    return focusableElements;
+  }
+
+  /**
+   * Handle Alt key for menu bar activation
+   */
+  handleMenuBarActivation(): void {
+    if (!this._deps.document) return;
+
+    // Find the first menu bar in the document
+    const menuBar = this.findMenuBarElement(this._deps.document.root);
+    if (!menuBar) return;
+
+    // Toggle menu bar activation
+    if ((menuBar as any).handleKeyInput && (menuBar as any).handleKeyInput('F10')) {
+      // Focus the menu bar when activated
+      this._deps.document.focus(menuBar.id);
+
+      // Auto-render to show activation state
+      if (this._deps.autoRender) {
+        this._deps.onRender();
+      }
+    }
+  }
+
+  /**
+   * Register an element and all its children with the document
+   */
+  registerElementTree(element: Element): void {
+    this._deps.document.addElement(element);
+    if (element.children) {
+      for (const child of element.children) {
+        this.registerElementTree(child);
+      }
+    }
+  }
+
+  /**
+   * Find menu bar element in the document tree
+   */
+  findMenuBarElement(element: Element): Element | null {
+    if (element.type === 'menu-bar') {
+      return element;
+    }
+
+    if (element.children) {
+      for (const child of element.children) {
+        // Handle double-nested arrays (container children issue)
+        if (Array.isArray(child)) {
+          for (const arrayItem of child) {
+            const found = this.findMenuBarElement(arrayItem);
+            if (found) return found;
+          }
+        } else {
+          const found = this.findMenuBarElement(child);
+          if (found) return found;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle Tab key navigation between focusable elements
+   */
+  handleTabNavigation(reverse: boolean = false): void {
+    if (!this._deps.focusManager) return;
+
+    // Use the focus manager's proper tab navigation
+    const success = reverse ? this._deps.focusManager.focusPrevious() : this._deps.focusManager.focusNext();
+
+    if (success) {
+      // Auto-render to show focus change
+      if (this._deps.autoRender) {
+        this._deps.onRender();
+      }
+    } else {
+      // If focus manager navigation failed, try to focus first element as fallback
+      this._deps.focusManager.focusFirst();
+
+      if (this._deps.autoRender) {
+        this._deps.onRender();
+      }
+    }
+  }
+}

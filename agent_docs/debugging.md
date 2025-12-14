@@ -138,14 +138,23 @@ MELKER_LOG_FILE=/tmp/app.log MELKER_LOG_LEVEL=DEBUG \
 tail -f /tmp/app.log
 ```
 
-### 3. Use Debug Server for Interaction
+### 3. Watch Mode for Development
+```bash
+# Auto-reload on file changes (local files only)
+MELKER_LOG_FILE=/tmp/app.log MELKER_LOG_LEVEL=DEBUG \
+  deno run --allow-all melker.ts --watch app.melker
+```
+
+Watch mode monitors the source file and automatically reloads the application when changes are detected. File change events are logged to the log file.
+
+### 4. Use Debug Server for Interaction
 ```bash
 # In another terminal
 MELKER_DEBUG_PORT=8080 MELKER_LOG_FILE=/tmp/app.log \
   deno run --allow-all melker.ts app.melker
 ```
 
-### 4. Disable Alternate Screen (See Raw Output)
+### 5. Disable Alternate Screen (See Raw Output)
 ```bash
 MELKER_NO_ALTERNATE_SCREEN=1 deno run --allow-all melker.ts app.melker
 ```

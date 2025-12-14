@@ -61,6 +61,7 @@ deno run --allow-all melker.ts examples/melker/counter.melker --print-json
 | `text-analog-clock.melker` | Text-based clock |
 | `canvas_test.melker` | Canvas drawing basics |
 | `canvas_color_test.melker` | Canvas color drawing |
+| `color_selector.melker` | HSL color picker with canvas click |
 | `video_demo.melker` | Video playback |
 
 ### Canvas Features

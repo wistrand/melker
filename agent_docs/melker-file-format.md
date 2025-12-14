@@ -77,9 +77,28 @@ CSS-like properties in `style` attribute:
 
 **Events:** onClick, onKeyPress (event.key), onInput (event.value), onFocus, onBlur, onPaint (canvas)
 
+**Auto-render:** Event handlers automatically trigger a re-render after completion. No need to call `context.render()` manually.
+
+```xml
+<!-- Auto-renders after handler completes -->
+<button onClick="counterEl.props.text = String(count + 1)" />
+
+<!-- Return false to skip auto-render -->
+<button onClick="console.log('no changes'); return false" />
+
+<!-- Async handlers also auto-render when the promise resolves -->
+<button onClick="
+  statusEl.props.text = 'Loading...';
+  context.render();  // explicit render for intermediate state
+  await fetchData();
+  statusEl.props.text = 'Done';
+  // auto-renders here
+" />
+```
+
 **Context API:**
 - `context.getElementById(id)` - Get element by ID
-- `context.render()` - Trigger re-render (required after prop changes)
+- `context.render()` - Trigger re-render (for intermediate updates in async handlers)
 - `context.exit()` - Exit application
 - Exported script functions available as `context.functionName()`
 

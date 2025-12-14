@@ -118,7 +118,7 @@ tests/                - Test files
 2. **`alert()` shows a modal dialog** - Works like browser alert but as a TUI dialog (dismiss with OK button or Escape)
 3. **Button uses `title` prop** - Not `label`
 4. **Input type is `'input'`** - Not `'text-input'`
-5. **Call `context.render()`** - After modifying element props
+5. **Auto-render in .melker handlers** - Event handlers auto-render after completion (return `false` to skip)
 6. **Avoid emojis** - They break terminal layout
 
 ## Environment Variables

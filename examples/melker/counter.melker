@@ -21,7 +21,6 @@
         if (counterEl) {
           const currentValue = parseInt(counterEl.props.text) || 0;
           counterEl.props.text = String(currentValue - 1);
-          context.render();
         }
       "
     />
@@ -39,7 +38,6 @@
         if (counterEl) {
           const currentValue = parseInt(counterEl.props.text) || 0;
           counterEl.props.text = String(currentValue + 1);
-          context.render();
         }
       "
     />
@@ -53,7 +51,6 @@
       const counterEl = context.getElementById('counter');
       if (counterEl) {
         counterEl.props.text = '0';
-        context.render();
       }
     "
   />

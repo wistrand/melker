@@ -17,7 +17,6 @@
         const statusEl = context.getElementById('status');
         if (statusEl) {
           statusEl.props.text = 'Status: Hello, ' + event.value + '!';
-          context.render();
         }
       "
       onKeyPress="
@@ -27,7 +26,6 @@
           const name = nameEl ? nameEl.props.value || 'World' : 'World';
           if (outputEl) {
             outputEl.props.text = '🎉 Hello, ' + name + '! Welcome to Melker!';
-            context.render();
           }
         }
       "
@@ -45,7 +43,6 @@
         const name = nameEl ? nameEl.props.value || 'World' : 'World';
         if (outputEl) {
           outputEl.props.text = '🎉 Hello, ' + name + '! Welcome to Melker!';
-          context.render();
         }
       "
     />
@@ -61,7 +58,6 @@
         if (nameEl) nameEl.props.value = '';
         if (outputEl) outputEl.props.text = '';
         if (statusEl) statusEl.props.text = 'Status: Cleared!';
-        context.render();
       "
     />
 

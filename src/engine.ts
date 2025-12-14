@@ -15,6 +15,7 @@ import { RenderingEngine, ScrollbarBounds } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
 import { Element, TextSelection, Bounds, isClickable, isInteractive, isTextSelectable, ClickEvent } from './types.ts';
+import { clampToBounds } from './geometry.ts';
 import {
   EventManager,
   type MelkerEvent,
@@ -75,6 +76,9 @@ import {
 import {
   HitTester,
 } from './hit-test.ts';
+import {
+  ScrollHandler,
+} from './scroll-handler.ts';
 
 export interface MelkerEngineOptions {
   // Terminal setup
@@ -126,6 +130,7 @@ export class MelkerEngine {
   private _terminalRenderer!: TerminalRenderer;
   private _ansiOutput!: AnsiOutputGenerator;
   private _hitTester!: HitTester;
+  private _scrollHandler!: ScrollHandler;
   private _resizeHandler!: ResizeHandler;
   private _eventManager!: EventManager;
   private _focusManager!: FocusManager;
@@ -174,20 +179,6 @@ export class MelkerEngine {
     renderMax: 0,
     startTime: 0,
   };
-
-  // Scrollbar drag state
-  private _scrollbarDrag: {
-    active: boolean;
-    elementId: string;
-    axis: 'vertical' | 'horizontal';
-    startMousePos: number;      // Initial mouse Y (vertical) or X (horizontal)
-    startScrollPos: number;     // Initial scrollY or scrollX
-    trackStart: number;         // Track start position (Y for vertical, X for horizontal)
-    trackLength: number;        // Scrollbar track length
-    thumbSize: number;          // Thumb size in pixels
-    contentLength: number;      // Total content height/width
-    viewportLength: number;     // Visible area height/width
-  } | null = null;
 
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
     // Check environment variables for terminal setup overrides
@@ -352,6 +343,13 @@ export class MelkerEngine {
       renderer: this._renderer,
       viewportSize: this._currentSize,
       logger: this._logger,
+    });
+    this._scrollHandler = new ScrollHandler({
+      document: this._document,
+      renderer: this._renderer,
+      autoRender: this._options.autoRender,
+      onRender: () => this.render(),
+      calculateScrollDimensions: (id) => this.calculateScrollDimensions(id),
     });
 
     // Set up resize handler if enabled
@@ -538,8 +536,8 @@ export class MelkerEngine {
 
       // Handle arrow keys for scrolling in scrollable containers
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key) && focusedElement) {
-        const scrollableParent = this._findScrollableParent(focusedElement);
-        if (scrollableParent && this._handleArrowKeyScroll(event.key, scrollableParent)) {
+        const scrollableParent = this._scrollHandler.findScrollableParent(focusedElement);
+        if (scrollableParent && this._scrollHandler.handleArrowKeyScroll(event.key, scrollableParent)) {
           return; // Arrow key was handled by scrolling
         }
       }
@@ -642,7 +640,7 @@ export class MelkerEngine {
 
     // Automatic scroll handling for scrollable containers
     this._eventManager.addGlobalEventListener('wheel', (event: any) => {
-      this._handleScrollEvent(event);
+      this._scrollHandler.handleScrollEvent(event);
     });
 
     // Text selection handling
@@ -657,63 +655,6 @@ export class MelkerEngine {
     this._eventManager.addGlobalEventListener('mouseup', (event: any) => {
       this._handleMouseUp(event);
     });
-  }
-
-  /**
-   * Handle wheel events for automatic scrolling of scrollable containers
-   */
-  private _handleScrollEvent(event: any): void {
-    // Find scrollable containers and handle wheel events for them
-    const allContainers = this._findScrollableContainers(this._document.root);
-
-    // Find the topmost scrollable container under the mouse cursor
-    const targetContainer = this._findScrollableContainerAtPosition(allContainers, event.x, event.y);
-
-    if (targetContainer && targetContainer.props.scrollable) {
-      const currentScrollY = targetContainer.props.scrollY || 0;
-      const currentScrollX = targetContainer.props.scrollX || 0;
-      const deltaY = event.deltaY || 0;
-      const deltaX = event.deltaX || 0;
-
-      // Calculate actual content dimensions
-      const contentDimensions = this.calculateScrollDimensions(targetContainer.id || '');
-
-      // Get actual rendered container bounds from rendering engine
-      const containerBounds = this._renderer.getContainerBounds(targetContainer.id || '');
-      const containerHeight = containerBounds?.height || 0;
-      const containerWidth = containerBounds?.width || 0;
-
-      if (contentDimensions && (containerHeight > 0 || containerWidth > 0)) {
-        let updated = false;
-
-        // Handle vertical scrolling
-        if (deltaY !== 0 && containerHeight > 0) {
-          const maxScrollY = Math.max(0, contentDimensions.height - containerHeight);
-          const newScrollY = Math.max(0, Math.min(maxScrollY, currentScrollY + deltaY));
-
-          if (newScrollY !== currentScrollY) {
-            targetContainer.props.scrollY = newScrollY;
-            updated = true;
-          }
-        }
-
-        // Handle horizontal scrolling
-        if (deltaX !== 0 && containerWidth > 0) {
-          const maxScrollX = Math.max(0, contentDimensions.width - containerWidth);
-          const newScrollX = Math.max(0, Math.min(maxScrollX, currentScrollX + deltaX));
-
-          if (newScrollX !== currentScrollX) {
-            targetContainer.props.scrollX = newScrollX;
-            updated = true;
-          }
-        }
-
-        // Auto-render if anything changed
-        if (updated && this._options.autoRender) {
-          this.render();
-        }
-      }
-    }
   }
 
   /**
@@ -744,9 +685,9 @@ export class MelkerEngine {
     this._lastSelectionRenderTime = 0;
 
     // Check for scrollbar click before other interactions
-    const scrollbarHit = this._detectScrollbarClick(event.x, event.y);
+    const scrollbarHit = this._scrollHandler.detectScrollbarClick(event.x, event.y);
     if (scrollbarHit && event.button === 0) {
-      this._handleScrollbarClick(scrollbarHit, event.x, event.y);
+      this._scrollHandler.handleScrollbarClick(scrollbarHit, event.x, event.y);
       return; // Don't process text selection when clicking scrollbar
     }
 
@@ -799,7 +740,7 @@ export class MelkerEngine {
       else if (targetElement && this._hitTester.isTextSelectableElement(targetElement)) {
         const bounds = this._getSelectionBounds(targetElement);
         if (bounds) {
-          const clampedPos = this._hitTester.clampToBounds({ x: event.x, y: event.y }, bounds);
+          const clampedPos = clampToBounds({ x: event.x, y: event.y }, bounds);
 
           if (this._clickCount === 2) {
             // Double-click: select word
@@ -1042,217 +983,12 @@ export class MelkerEngine {
   }
 
   /**
-   * Detect if a click is on a scrollbar track or thumb
-   * Returns scrollbar hit info or null if not on a scrollbar
-   */
-  private _detectScrollbarClick(x: number, y: number): {
-    elementId: string;
-    axis: 'vertical' | 'horizontal';
-    onThumb: boolean;
-    bounds: ScrollbarBounds;
-  } | null {
-    const allScrollbarBounds = this._renderer.getAllScrollbarBounds();
-
-    for (const [elementId, bounds] of allScrollbarBounds) {
-      // Check vertical scrollbar
-      if (bounds.vertical) {
-        const track = bounds.vertical.track;
-        if (x >= track.x && x < track.x + track.width &&
-            y >= track.y && y < track.y + track.height) {
-          const thumb = bounds.vertical.thumb;
-          const onThumb = y >= thumb.y && y < thumb.y + thumb.height;
-          return { elementId, axis: 'vertical', onThumb, bounds };
-        }
-      }
-
-      // Check horizontal scrollbar
-      if (bounds.horizontal) {
-        const track = bounds.horizontal.track;
-        if (x >= track.x && x < track.x + track.width &&
-            y >= track.y && y < track.y + track.height) {
-          const thumb = bounds.horizontal.thumb;
-          const onThumb = x >= thumb.x && x < thumb.x + thumb.width;
-          return { elementId, axis: 'horizontal', onThumb, bounds };
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Handle scrollbar click - either start drag from thumb or click-to-position on track
-   */
-  private _handleScrollbarClick(
-    hit: { elementId: string; axis: 'vertical' | 'horizontal'; onThumb: boolean; bounds: ScrollbarBounds },
-    mouseX: number,
-    mouseY: number
-  ): void {
-    const element = this._document.getElementById(hit.elementId);
-    if (!element) return;
-
-    if (hit.axis === 'vertical' && hit.bounds.vertical) {
-      const { track, thumb, contentHeight, viewportHeight } = hit.bounds.vertical;
-      const maxScroll = Math.max(0, contentHeight - viewportHeight);
-      const thumbSize = thumb.height;
-
-      if (hit.onThumb) {
-        // Start drag from current position
-        this._scrollbarDrag = {
-          active: true,
-          elementId: hit.elementId,
-          axis: 'vertical',
-          startMousePos: mouseY,
-          startScrollPos: element.props.scrollY || 0,
-          trackStart: track.y,
-          trackLength: track.height,
-          thumbSize,
-          contentLength: contentHeight,
-          viewportLength: viewportHeight,
-        };
-      } else {
-        // Click-to-position: jump to clicked position and start drag
-        const trackLength = track.height;
-        const availableTrackSpace = Math.max(1, trackLength - thumbSize);
-        const clickPosInTrack = mouseY - track.y;
-
-        // Center the thumb on the click position
-        const targetThumbStart = Math.max(0, Math.min(availableTrackSpace, clickPosInTrack - thumbSize / 2));
-        const scrollProgress = availableTrackSpace > 0 ? targetThumbStart / availableTrackSpace : 0;
-        const newScrollY = Math.round(scrollProgress * maxScroll);
-
-        element.props.scrollY = newScrollY;
-
-        // Start drag from new position
-        this._scrollbarDrag = {
-          active: true,
-          elementId: hit.elementId,
-          axis: 'vertical',
-          startMousePos: mouseY,
-          startScrollPos: newScrollY,
-          trackStart: track.y,
-          trackLength: trackLength,
-          thumbSize,
-          contentLength: contentHeight,
-          viewportLength: viewportHeight,
-        };
-
-        if (this._options.autoRender) {
-          this.render();
-        }
-      }
-    } else if (hit.axis === 'horizontal' && hit.bounds.horizontal) {
-      const { track, thumb, contentWidth, viewportWidth } = hit.bounds.horizontal;
-      const maxScroll = Math.max(0, contentWidth - viewportWidth);
-      const thumbSize = thumb.width;
-
-      if (hit.onThumb) {
-        // Start drag from current position
-        this._scrollbarDrag = {
-          active: true,
-          elementId: hit.elementId,
-          axis: 'horizontal',
-          startMousePos: mouseX,
-          startScrollPos: element.props.scrollX || 0,
-          trackStart: track.x,
-          trackLength: track.width,
-          thumbSize,
-          contentLength: contentWidth,
-          viewportLength: viewportWidth,
-        };
-      } else {
-        // Click-to-position: jump to clicked position and start drag
-        const trackLength = track.width;
-        const availableTrackSpace = Math.max(1, trackLength - thumbSize);
-        const clickPosInTrack = mouseX - track.x;
-
-        // Center the thumb on the click position
-        const targetThumbStart = Math.max(0, Math.min(availableTrackSpace, clickPosInTrack - thumbSize / 2));
-        const scrollProgress = availableTrackSpace > 0 ? targetThumbStart / availableTrackSpace : 0;
-        const newScrollX = Math.round(scrollProgress * maxScroll);
-
-        element.props.scrollX = newScrollX;
-
-        // Start drag from new position
-        this._scrollbarDrag = {
-          active: true,
-          elementId: hit.elementId,
-          axis: 'horizontal',
-          startMousePos: mouseX,
-          startScrollPos: newScrollX,
-          trackStart: track.x,
-          trackLength: trackLength,
-          thumbSize,
-          contentLength: contentWidth,
-          viewportLength: viewportWidth,
-        };
-
-        if (this._options.autoRender) {
-          this.render();
-        }
-      }
-    }
-  }
-
-  /**
-   * Handle scrollbar drag during mouse move
-   */
-  private _handleScrollbarDrag(mouseX: number, mouseY: number): void {
-    if (!this._scrollbarDrag) return;
-
-    const element = this._document.getElementById(this._scrollbarDrag.elementId);
-    if (!element) {
-      this._scrollbarDrag = null;
-      return;
-    }
-
-    const {
-      axis,
-      startMousePos,
-      startScrollPos,
-      trackLength,
-      thumbSize,
-      contentLength,
-      viewportLength,
-    } = this._scrollbarDrag;
-
-    const maxScroll = Math.max(0, contentLength - viewportLength);
-    const availableTrackSpace = Math.max(1, trackLength - thumbSize);
-
-    // Calculate mouse delta
-    const mousePos = axis === 'vertical' ? mouseY : mouseX;
-    const mouseDelta = mousePos - startMousePos;
-
-    // Convert mouse delta to scroll delta
-    // scrollPerPixel = maxScroll / availableTrackSpace
-    const scrollDelta = availableTrackSpace > 0 ? (mouseDelta * maxScroll) / availableTrackSpace : 0;
-    const newScroll = Math.max(0, Math.min(maxScroll, Math.round(startScrollPos + scrollDelta)));
-
-    // Update scroll position
-    if (axis === 'vertical') {
-      if (element.props.scrollY !== newScroll) {
-        element.props.scrollY = newScroll;
-        if (this._options.autoRender) {
-          this.render();
-        }
-      }
-    } else {
-      if (element.props.scrollX !== newScroll) {
-        element.props.scrollX = newScroll;
-        if (this._options.autoRender) {
-          this.render();
-        }
-      }
-    }
-  }
-
-  /**
    * Handle mouse move events for text selection
    */
   private _handleMouseMove(event: any): void {
     // Handle scrollbar drag first
-    if (this._scrollbarDrag?.active) {
-      this._handleScrollbarDrag(event.x, event.y);
+    if (this._scrollHandler.isScrollbarDragActive()) {
+      this._scrollHandler.handleScrollbarDrag(event.x, event.y);
       return;
     }
 
@@ -1325,7 +1061,7 @@ export class MelkerEngine {
         this._textSelection.end = { x: event.x, y: event.y };
       } else if (this._textSelection.componentBounds) {
         // Component mode: clamp to bounds
-        this._textSelection.end = this._hitTester.clampToBounds(
+        this._textSelection.end = clampToBounds(
           { x: event.x, y: event.y },
           this._textSelection.componentBounds
         );
@@ -1423,8 +1159,8 @@ export class MelkerEngine {
    */
   private _handleMouseUp(event: any): void {
     // End scrollbar drag if active
-    if (this._scrollbarDrag?.active) {
-      this._scrollbarDrag = null;
+    if (this._scrollHandler.isScrollbarDragActive()) {
+      this._scrollHandler.endScrollbarDrag();
       return; // Don't process other mouse up events
     }
 
@@ -1521,7 +1257,7 @@ export class MelkerEngine {
     if (!elementBounds) return undefined;
 
     // Find scrollable parent and constrain bounds
-    const scrollableParent = this._findScrollableParent(element);
+    const scrollableParent = this._scrollHandler.findScrollableParent(element);
     if (scrollableParent) {
       const parentBounds = this._renderer.getContainerBounds(scrollableParent.id || '');
       if (parentBounds) {
@@ -1621,162 +1357,6 @@ export class MelkerEngine {
    */
   getHoveredElementId(): string | null {
     return this._hoveredElementId;
-  }
-
-  /**
-   * Find the topmost scrollable container at the given position
-   */
-  private _findScrollableContainerAtPosition(containers: Element[], x: number, y: number): Element | null {
-    // Test containers from last to first (topmost rendered containers first)
-    for (let i = containers.length - 1; i >= 0; i--) {
-      const container = containers[i];
-      const bounds = this._renderer?.getContainerBounds(container.id || '');
-
-      if (bounds && this._isPointInBounds(x, y, bounds)) {
-        return container;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Check if a point is within bounds
-   */
-  private _isPointInBounds(x: number, y: number, bounds: { x: number; y: number; width: number; height: number }): boolean {
-    return x >= bounds.x &&
-           x < bounds.x + bounds.width &&
-           y >= bounds.y &&
-           y < bounds.y + bounds.height;
-  }
-
-  /**
-   * Find all scrollable containers in the element tree
-   */
-  private _findScrollableContainers(element: Element): Element[] {
-    const scrollableContainers: Element[] = [];
-
-    if (element.type === 'container' && element.props.scrollable) {
-      scrollableContainers.push(element);
-    }
-
-    if (element.children) {
-      for (const child of element.children) {
-        scrollableContainers.push(...this._findScrollableContainers(child));
-      }
-    }
-
-    return scrollableContainers;
-  }
-
-  /**
-   * Find the closest scrollable container for an element (including the element itself)
-   */
-  private _findScrollableParent(element: Element): Element | null {
-    // First check if the element itself is a scrollable container
-    if (element.type === 'container' && element.props.scrollable) {
-      return element;
-    }
-
-    // Then traverse up the parent chain
-    let current = this._findParent(element);
-
-    while (current) {
-      if (current.type === 'container' && current.props.scrollable) {
-        return current;
-      }
-      current = this._findParent(current);
-    }
-
-    return null;
-  }
-
-  /**
-   * Find the parent element of a given element in the document tree
-   */
-  private _findParent(element: Element): Element | null {
-    if (!this._document) return null;
-    return this._findParentInTree(this._document.root, element);
-  }
-
-  /**
-   * Recursively find parent element in the tree
-   */
-  private _findParentInTree(root: Element, target: Element): Element | null {
-    if (!root.children) return null;
-
-    for (const child of root.children) {
-      if (child === target) {
-        return root;
-      }
-
-      const found = this._findParentInTree(child, target);
-      if (found) return found;
-    }
-
-    return null;
-  }
-
-  /**
-   * Handle arrow key scrolling in a scrollable container
-   */
-  private _handleArrowKeyScroll(key: string, container: Element): boolean {
-    const currentScrollY = container.props.scrollY || 0;
-    const currentScrollX = container.props.scrollX || 0;
-    const scrollStep = 3; // Lines to scroll per arrow key press
-
-    let newScrollY = currentScrollY;
-    let newScrollX = currentScrollX;
-
-    switch (key) {
-      case 'ArrowUp':
-        newScrollY = Math.max(0, currentScrollY - scrollStep);
-        break;
-      case 'ArrowDown':
-        newScrollY = currentScrollY + scrollStep;
-        break;
-      case 'ArrowLeft':
-        newScrollX = Math.max(0, currentScrollX - scrollStep);
-        break;
-      case 'ArrowRight':
-        newScrollX = currentScrollX + scrollStep;
-        break;
-      default:
-        return false;
-    }
-
-    // Check if we can scroll in the requested direction
-    try {
-      const scrollDimensions = this._renderer?.calculateScrollDimensions(container);
-      const containerBounds = this._renderer?.getContainerBounds(container.id || '');
-
-      if (scrollDimensions && containerBounds) {
-        const maxScrollY = Math.max(0, scrollDimensions.height - containerBounds.height);
-        const maxScrollX = Math.max(0, scrollDimensions.width - containerBounds.width);
-
-        // Clamp scroll positions to valid range
-        newScrollY = Math.max(0, Math.min(maxScrollY, newScrollY));
-        newScrollX = Math.max(0, Math.min(maxScrollX, newScrollX));
-
-        // Only update if scroll position actually changed
-        if (newScrollY !== currentScrollY || newScrollX !== currentScrollX) {
-          container.props.scrollY = newScrollY;
-          container.props.scrollX = newScrollX;
-
-          // Auto-render if enabled
-          if (this._options.autoRender) {
-            this.render();
-          }
-
-          return true;
-        }
-      }
-    } catch (error) {
-      // Silently handle errors - scroll bounds calculation might fail
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.warn('Failed to calculate scroll bounds:', errorMessage);
-    }
-
-    return false;
   }
 
   /**

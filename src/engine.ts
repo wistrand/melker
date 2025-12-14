@@ -92,6 +92,14 @@ import {
 import {
   setPersistenceContext,
 } from './element.ts';
+import {
+  setupTerminal,
+  cleanupTerminal,
+  emergencyCleanupTerminal,
+  setupCleanupHandlers,
+  registerForEmergencyCleanup,
+  unregisterFromEmergencyCleanup,
+} from './terminal-lifecycle.ts';
 
 export interface MelkerEngineOptions {
   // Terminal setup
@@ -162,6 +170,7 @@ export class MelkerEngine {
   private _options: Required<MelkerEngineOptions>;
   private _currentSize: { width: number; height: number };
   private _isInitialized = false;
+  private _isRendering = false;  // Render lock to prevent re-render during render
   private _renderCount = 0;
   private _textSelection: TextSelection = {
     start: { x: 0, y: 0 },
@@ -442,68 +451,17 @@ export class MelkerEngine {
   }
 
   private _setupTerminal(): void {
-    // Skip terminal setup in headless mode - let virtual terminal handle it
-    if (isRunningHeadless()) {
-      return;
-    }
-
-    if (typeof Deno !== 'undefined') {
-      const codes: string[] = [];
-
-      if (this._options.alternateScreen) {
-        codes.push(ANSI.alternateScreen);
-      }
-
-      if (this._options.hideCursor) {
-        codes.push(ANSI.hideCursor);
-      }
-
-      if (codes.length > 0) {
-        Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
-      }
-    }
+    setupTerminal({
+      alternateScreen: this._options.alternateScreen,
+      hideCursor: this._options.hideCursor,
+    });
   }
 
-  private _cleanupTerminal(): void {
-    if (typeof Deno !== 'undefined') {
-      // In headless mode, do minimal terminal cleanup if connected to a real terminal
-      if (isRunningHeadless()) {
-        try {
-          // Check if stdout is a TTY (connected to a real terminal)
-          if (Deno.stdout.isTerminal()) {
-            // Basic cleanup: restore cursor and normal screen if needed
-            const codes: string[] = [];
-            if (this._options.alternateScreen) {
-              codes.push(ANSI.normalScreen);
-            }
-            if (this._options.hideCursor) {
-              codes.push(ANSI.showCursor);
-            }
-            if (codes.length > 0) {
-              Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
-            }
-          }
-        } catch {
-          // If isatty() fails, we're probably not in a real terminal, so skip cleanup
-        }
-        return;
-      }
-
-      // Full cleanup for non-headless mode
-      const codes: string[] = [];
-
-      if (this._options.alternateScreen) {
-        codes.push(ANSI.normalScreen);
-      }
-
-      if (this._options.hideCursor) {
-        codes.push(ANSI.showCursor);
-      }
-
-      if (codes.length > 0) {
-        Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
-      }
-    }
+  cleanupTerminal(): void {
+    cleanupTerminal({
+      alternateScreen: this._options.alternateScreen,
+      hideCursor: this._options.hideCursor,
+    });
   }
 
   private _setupEventHandlers(): void {
@@ -1661,6 +1619,14 @@ export class MelkerEngine {
    * Manually trigger a render
    */
   render(): void {
+    // Render lock: prevent re-render during render (e.g., onPaint callback)
+    if (this._isRendering) {
+      this._logger?.debug('Skipping render - already rendering (render lock active)');
+      return;
+    }
+    this._isRendering = true;
+
+    try {
     const renderStartTime = performance.now();
     this._renderCount++;
 
@@ -1758,12 +1724,23 @@ export class MelkerEngine {
     if (this._debouncedSaveState) {
       this._debouncedSaveState();
     }
+    } finally {
+      this._isRendering = false;
+    }
   }
 
   /**
    * Force a complete redraw of the terminal
    */
   forceRender(): void {
+    // Render lock: prevent re-render during render
+    if (this._isRendering) {
+      this._logger?.debug('Skipping forceRender - already rendering (render lock active)');
+      return;
+    }
+    this._isRendering = true;
+
+    try {
     this._renderCount++;
 
     // Clear buffer
@@ -1837,6 +1814,9 @@ export class MelkerEngine {
 
     // Force complete redraw
     this._renderFullScreen();
+    } finally {
+      this._isRendering = false;
+    }
   }
 
   /**
@@ -1949,7 +1929,7 @@ export class MelkerEngine {
 
     if (!this._isInitialized) {
       // Always try to cleanup terminal even if not officially initialized
-      this._cleanupTerminal();
+      this.cleanupTerminal();
       return;
     }
 
@@ -2023,20 +2003,11 @@ export class MelkerEngine {
 
     // Always cleanup terminal - this is the most critical part
     try {
-      this._cleanupTerminal();
+      this.cleanupTerminal();
     } catch (error) {
       console.error('Critical error during terminal cleanup:', error);
-      // Still try basic cleanup
-      if (typeof Deno !== 'undefined') {
-        try {
-          Deno.stdout.writeSync(new TextEncoder().encode('\x1b[?1049l\x1b[?25h'));
-        } catch {
-          // Last resort - at least try to show cursor
-          try {
-            Deno.stdout.writeSync(new TextEncoder().encode('\x1b[?25h'));
-          } catch {}
-        }
-      }
+      // Still try basic cleanup using emergency function
+      emergencyCleanupTerminal();
     }
 
     // Log final message and close logger
@@ -2062,9 +2033,7 @@ export class MelkerEngine {
     }
 
     // Remove from global tracking since cleanup is complete
-    if (typeof globalThis !== 'undefined' && (globalThis as any)._melkerInstances) {
-      (globalThis as any)._melkerInstances.delete(this);
-    }
+    unregisterFromEmergencyCleanup(this as any);
   }
 
   /**
@@ -2456,100 +2425,18 @@ export class MelkerEngine {
   }
 
   private _setupCleanupHandlers(): void {
-    const cleanup = async () => {
-      try {
-        await this.stop();
-      } catch (error) {
-        // Ensure terminal cleanup even if stop() fails
-        this._cleanupTerminal();
-        console.error('Error during cleanup:', error);
-      }
-      if (typeof Deno !== 'undefined') {
-        Deno.exit(0);
-      }
-    };
-
-    const syncCleanup = () => {
-      try {
-        // Synchronous terminal cleanup for immediate exit scenarios
-        this._cleanupTerminal();
-      } catch (error) {
-        console.error('Error during sync cleanup:', error);
-      }
-    };
-
-    if (typeof Deno !== 'undefined') {
-      // Handle standard signals
-      Deno.addSignalListener('SIGINT', cleanup);
-      Deno.addSignalListener('SIGTERM', cleanup);
-
-      // Handle additional termination signals
-      try {
-        Deno.addSignalListener('SIGHUP', cleanup);
-        Deno.addSignalListener('SIGQUIT', cleanup);
-      } catch {
-        // Some signals might not be available on all platforms
-      }
-
-      // Handle uncaught exceptions and unhandled rejections
-      globalThis.addEventListener('error', (event) => {
-        console.error('Uncaught error:', event.error);
-        syncCleanup();
-        Deno.exit(1);
-      });
-
-      globalThis.addEventListener('unhandledrejection', (event) => {
-        console.error('Unhandled promise rejection:', event.reason);
-        syncCleanup();
-        Deno.exit(1);
-      });
-
-      // Handle beforeunload/exit events if available
-      try {
-        globalThis.addEventListener('beforeunload', syncCleanup);
-      } catch {
-        // beforeunload might not be available in Deno
-      }
-    }
+    setupCleanupHandlers(
+      () => this.stop(),
+      () => this.cleanupTerminal()
+    );
   }
 
   /**
    * Set up emergency cleanup that runs even if the normal cleanup fails
    */
   private _setupEmergencyCleanup(): void {
-    // Track this instance globally for emergency cleanup
-    if (typeof globalThis !== 'undefined') {
-      if (!(globalThis as any)._melkerInstances) {
-        (globalThis as any)._melkerInstances = new Set();
-
-        // Set up one-time global cleanup handlers
-        if (typeof Deno !== 'undefined') {
-          // Emergency cleanup on process exit
-          const emergencyCleanup = () => {
-            for (const instance of (globalThis as any)._melkerInstances) {
-              try {
-                if (instance._cleanupTerminal) {
-                  instance._cleanupTerminal();
-                }
-              } catch {
-                // Silent fail for emergency cleanup
-              }
-            }
-          };
-
-          // Register emergency cleanup for various exit scenarios
-          try {
-            // Use Deno's exit handler if available
-            Deno.addSignalListener('SIGKILL', emergencyCleanup);
-          } catch {}
-
-          // Set up atexit-like behavior using globalThis
-          (globalThis as any)._melkerEmergencyCleanup = emergencyCleanup;
-        }
-      }
-
-      (globalThis as any)._melkerInstances.add(this);
-    }
+    // Cast to any to satisfy interface - _cleanupTerminal is private but callable
+    registerForEmergencyCleanup(this as any);
   }
 
   // Theme management

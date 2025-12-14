@@ -551,6 +551,7 @@ export class LayoutEngine {
         flexBasisValue = typeof childProps.flexBasis === 'number' ? childProps.flexBasis : 0;
       }
 
+
       // Auto-set flexGrow for "fill" elements if not explicitly set
       let flexGrow = childProps.flexGrow || 0;
       if (flexGrow === 0) {
@@ -1176,6 +1177,7 @@ export class LayoutEngine {
 
   private _computeLayoutProps(element: Element, parentProps?: AdvancedLayoutProps): AdvancedLayoutProps {
     // Filter out explicit size properties from parent - these should not be inherited
+    // Also filter out gap - it's specific to each flex container
     const inheritableParentProps = parentProps ? {
       ...parentProps,
       width: undefined,
@@ -1183,7 +1185,8 @@ export class LayoutEngine {
       left: undefined,
       right: undefined,
       top: undefined,
-      bottom: undefined
+      bottom: undefined,
+      gap: undefined,
     } : undefined;
 
     const result = {

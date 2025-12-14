@@ -38,6 +38,28 @@ export * from './src/stylesheet.ts';
 // Export OAuth2 PKCE authentication
 export * from './src/oauth.ts';
 
+// Export state persistence
+export {
+  DEFAULT_PERSISTENCE_MAPPINGS,
+  readState,
+  hashState,
+  getStateFilePath,
+  saveToFile,
+  loadFromFile,
+  hashFilePath,
+  debounce,
+} from './src/state-persistence.ts';
+export type {
+  PersistenceMapping,
+  PersistedState,
+  StateFile,
+} from './src/state-persistence.ts';
+export {
+  setPersistenceContext,
+  getPersistenceContext,
+} from './src/element.ts';
+export type { PersistenceContext } from './src/element.ts';
+
 // Export logging system
 export * from './src/logging.ts';
 

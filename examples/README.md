@@ -134,6 +134,22 @@ const app = await createApp(ui);
 - `enableEvents: true` - Enable keyboard/mouse events
 - `colorSupport: 'truecolor'` - Full color support
 
+### Input Elements
+```typescript
+// Regular text input
+createElement('input', {
+  id: 'username',
+  placeholder: 'Enter username'
+});
+
+// Password input (characters masked with *)
+createElement('input', {
+  id: 'password',
+  format: 'password',
+  placeholder: 'Enter password'
+});
+```
+
 ### Automatic Focus Management
 ```typescript
 // Focus is automatic! Elements with types 'input' and 'button'

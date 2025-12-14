@@ -56,21 +56,22 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
 
     // For flex containers, calculate minimum space needed for children
     const containerProps = this.props as ContainerProps & { style?: any };
-    const style = containerProps?.style;
+    const rawStyle = containerProps?.style || {};
 
-    // Determine flex direction - check both object and string styles
-    let isFlexRow = false;
-    if (typeof style === 'object' && style !== null) {
-      isFlexRow = style.display === 'flex' &&
-                  (style.flexDirection === 'row' || !style.flexDirection);
-    }
-    // Note: string styles are parsed by the layout system, default to column for containers
+    // Apply container type defaults (same as layout engine's _computeStyle)
+    // This ensures intrinsic size calculation matches layout behavior
+    const typeDefaults = ContainerElement.getDefaultStyle();
+    const style = {
+      ...typeDefaults,
+      ...rawStyle,  // User/stylesheet styles override defaults
+    };
+
+    // Determine flex direction
+    const isFlexRow = style.display === 'flex' &&
+                      (style.flexDirection === 'row' || style.flexDirection === 'row-reverse');
 
     // Get gap value from style
-    let gap = 0;
-    if (typeof style === 'object' && style !== null && typeof style.gap === 'number') {
-      gap = style.gap;
-    }
+    const gap = typeof style.gap === 'number' ? style.gap : 0;
 
     let totalWidth = 0;
     let totalHeight = 0;
@@ -130,7 +131,35 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
       }
     }
 
-    return { width: totalWidth, height: totalHeight };
+    // Add own padding and border to the returned size
+    // This ensures the layout engine allocates enough space for this container
+    let paddingH = 0;
+    let paddingV = 0;
+    let borderH = 0;
+    let borderV = 0;
+
+    // Parse padding (can be number or shorthand)
+    const padding = style.padding;
+    if (typeof padding === 'number') {
+      paddingH = padding * 2;  // left + right
+      paddingV = padding * 2;  // top + bottom
+    } else if (typeof style.paddingLeft === 'number' || typeof style.paddingRight === 'number' ||
+               typeof style.paddingTop === 'number' || typeof style.paddingBottom === 'number') {
+      paddingH = (style.paddingLeft || 0) + (style.paddingRight || 0);
+      paddingV = (style.paddingTop || 0) + (style.paddingBottom || 0);
+    }
+
+    // Parse border
+    const border = style.border;
+    if (border === 'thin' || border === 'thick' || border === 'double' || border === 'rounded') {
+      borderH = 2;  // left + right
+      borderV = 2;  // top + bottom
+    }
+
+    return {
+      width: totalWidth + paddingH + borderH,
+      height: totalHeight + paddingV + borderV,
+    };
   }
 
   /**

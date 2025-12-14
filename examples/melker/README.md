@@ -28,6 +28,7 @@ deno run --allow-all melker.ts examples/melker/counter.melker --print-json
 | `hello.melker` | Simple greeting with text and button |
 | `counter.melker` | Interactive counter with style tag |
 | `input-demo.melker` | Input field with Enter key handling |
+| `persistence_demo.melker` | State persistence with password input |
 | `interactive.melker` | Advanced event handling patterns |
 
 ## Component Demos

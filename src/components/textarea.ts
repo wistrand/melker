@@ -239,10 +239,21 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
    */
   private _displayPosToCursor(row: number, col: number, width: number): number {
     const displayLines = this._computeDisplayLines(width);
+
+    // Handle empty displayLines (shouldn't happen, but be defensive)
+    if (displayLines.length === 0) {
+      return 0;
+    }
+
     if (row < 0) row = 0;
     if (row >= displayLines.length) row = displayLines.length - 1;
 
     const line = displayLines[row];
+    // Defensive check in case line is somehow undefined
+    if (!line) {
+      return 0;
+    }
+
     const maxCol = line.text.length;
     if (col > maxCol) col = maxCol;
     if (col < 0) col = 0;
@@ -257,6 +268,16 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
     // Flush any pending batched chars before rendering
     if (this._pendingChars.length > 0) {
       this._flushPendingChars();
+    }
+
+    // Sync props.value to internal _value if changed externally (e.g., by state persistence)
+    if (this.props.value !== undefined && this.props.value !== this._value) {
+      this._value = this.props.value;
+      this._invalidateCache();
+      // Clamp cursor position to valid range
+      if (this._cursorPos > this._value.length) {
+        this._cursorPos = this._value.length;
+      }
     }
 
     const value = this._value;

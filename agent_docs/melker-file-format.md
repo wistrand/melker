@@ -46,7 +46,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 |-----------|-----------|-------|
 | `<container>` | style, scrollable | Flexbox layout container |
 | `<text>` | id, style | Inner content or `text` prop |
-| `<input>` | id, placeholder, value, onKeyPress, onInput | Single-line text input |
+| `<input>` | id, placeholder, value, format, onKeyPress, onInput | Single-line text input (format: 'text'\|'password') |
 | `<textarea>` | id, placeholder, value, rows, cols, wrap, maxLength | Multi-line text input |
 | `<button>` | id, title, onClick | Uses `title` not `label` |
 | `<dialog>` | id, title, open, modal, backdrop | Modal overlay |
@@ -101,6 +101,34 @@ CSS-like properties in `style` attribute:
 - `context.render()` - Trigger re-render (for intermediate updates in async handlers)
 - `context.exit()` - Exit application
 - Exported script functions available as `context.functionName()`
+
+## State Persistence
+
+Melker apps automatically persist UI state across restarts. The following element types and properties are saved:
+
+| Element | Property | Condition |
+|---------|----------|-----------|
+| `<input>` | value | Except password inputs |
+| `<textarea>` | value | Always |
+| `<checkbox>` | checked | Always |
+| `<radio>` | checked | Always |
+| `<tabs>` | activeTab | Always |
+| `<container>` | scrollY, scrollX | When `scrollable="true"` |
+
+**How it works:**
+- State is saved to `~/.melker/state/<app-id>.json` (app-id is a hash of the file path)
+- State is saved automatically after each render (debounced, 500ms delay)
+- State is saved immediately on exit
+- When the app starts, saved state is restored during element creation
+
+**Opt-out:** Add `persist="false"` to any element to exclude it from persistence:
+```xml
+<input id="tempField" persist="false" placeholder="Not saved" />
+```
+
+**Password inputs:** Use `format="password"` to mask characters with `*`. Password inputs are **automatically excluded** from persistence for security - no need to add `persist="false"`.
+
+**Element ID requirement:** Only elements with an `id` attribute are persisted. Anonymous elements are skipped.
 
 **Element Bounds:**
 All elements have `getBounds()` method that returns `{ x, y, width, height }` after layout:
@@ -235,9 +263,11 @@ Use special delimiters to define element types without `type:` property lines:
 | `+--"content"--+` | text | `+--"Hello!"--+` → `<text>Hello!</text>` |
 | `+--{id}--+` | input | `+--{username}--+` → `<input id="username" />` |
 | `+--<type> content--+` | explicit | `+--<checkbox> Remember--+` → `<checkbox title="Remember" />` |
+| `+--<type(param)> content--+` | with param | `+--<radio(plan)> Free--+` → `<radio title="Free" name="plan" />` |
 
 The explicit `<type>` syntax maps content to appropriate props:
 - `<checkbox>`, `<radio>`, `<button>` → `title` prop
+- `<radio(name)>` → `title` prop + `name` prop for radio group
 - `<text>`, `<markdown>` → `text` prop
 - `<input>`, `<textarea>` → `placeholder` prop
 

@@ -306,6 +306,8 @@ export class LayoutEngine {
     for (const child of children) {
       // Skip invisible elements - they don't participate in layout
       if (child.props?.visible === false) continue;
+      // Skip elements with display: none
+      if (this._isDisplayNone(child)) continue;
 
       const childLayoutProps = this._computeLayoutProps(child);
       const childText = (child.props as any)?.text;
@@ -348,6 +350,8 @@ export class LayoutEngine {
     for (const child of children) {
       // Skip invisible elements
       if (child.props?.visible === false) continue;
+      // Skip elements with display: none
+      if (this._isDisplayNone(child)) continue;
 
       const childLayoutProps = this._computeLayoutProps(child);
       const childText = (child.props as any)?.text;
@@ -393,6 +397,8 @@ export class LayoutEngine {
     const flexChildren = children.filter(child => {
       // Skip invisible elements - they don't participate in layout
       if (child.props?.visible === false) return false;
+      // Skip elements with display: none
+      if (this._isDisplayNone(child)) return false;
       const childProps = this._computeLayoutProps(child);
       return childProps.position !== 'absolute' && childProps.position !== 'fixed';
     });
@@ -400,6 +406,8 @@ export class LayoutEngine {
     const absoluteChildren = children.filter(child => {
       // Skip invisible elements
       if (child.props?.visible === false) return false;
+      // Skip elements with display: none
+      if (this._isDisplayNone(child)) return false;
       const childProps = this._computeLayoutProps(child);
       return childProps.position === 'absolute' || childProps.position === 'fixed';
     });
@@ -1430,10 +1438,21 @@ export class LayoutEngine {
     if (bounds.width <= 0 || bounds.height <= 0) return false;
     if (element.props?.visible === false) return false;
 
+    // Check for display: 'none'
+    if (this._isDisplayNone(element)) return false;
+
     // Dialogs are only visible when open (they render as overlays)
     if (element.type === 'dialog' && element.props?.open !== true) return false;
 
     return true;
+  }
+
+  /**
+   * Check if an element has display: 'none' set
+   */
+  private _isDisplayNone(element: Element): boolean {
+    const style = element.props?.style;
+    return style?.display === 'none';
   }
 
   private _applyFlexAlignment(

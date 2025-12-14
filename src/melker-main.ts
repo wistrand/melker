@@ -151,7 +151,7 @@ function getBaseUrl(pathOrUrl: string): string {
 // CLI functionality for running .melker template files
 export async function runMelkerFile(
   filepath: string,
-  options: { printTree?: boolean, printJson?: boolean, debug?: boolean } = {},
+  options: { printTree?: boolean, printJson?: boolean, debug?: boolean, noLoad?: boolean } = {},
   templateArgs: string[] = [],
   viewSource?: { content: string; path: string; type: 'md' | 'melker' },
   preloadedContent?: string
@@ -170,6 +170,7 @@ export async function runMelkerFile(
     const { getLogger, getGlobalLoggerOptions } = await import('./logging.ts');
     const { getCurrentTheme } = await import('./theme.ts');
     const oauth = await import('./oauth.ts');
+    const { hashFilePath } = await import('./state-persistence.ts');
 
     // Use preloaded content if provided, otherwise read from file/URL
     let templateContent = preloadedContent ?? await loadContent(filepath);
@@ -281,6 +282,21 @@ export async function runMelkerFile(
 
     // Clean approach: Create engine first, then parse UI with engine as context
 
+    // Step 0: Load persisted state BEFORE parsing (so createElement can use it)
+    // Only if MELKER_PERSIST=true and --no-load is not set
+    const { loadFromFile, DEFAULT_PERSISTENCE_MAPPINGS, isPersistenceEnabled, getStateFilePath } = await import('./state-persistence.ts');
+    const { setPersistenceContext } = await import('./element.ts');
+    const appId = await hashFilePath(filepath);
+    const persistEnabled = isPersistenceEnabled();
+    const loadedState = await loadFromFile(appId, options.noLoad);
+
+    // Set up persistence context for createElement to use during parsing
+    setPersistenceContext({
+      state: loadedState,
+      document: null,  // No document yet
+      mappings: DEFAULT_PERSISTENCE_MAPPINGS,
+    });
+
     // Step 1: Parse the melker file to extract UI and scripts
     const parseResult = parseMelkerFile(templateContent);
 
@@ -297,6 +313,11 @@ export async function runMelkerFile(
     // Step 2: Create engine with minimal placeholder UI
     const placeholderUI = createEl('container', { style: { width: 1, height: 1 } });
     const engine = await createMelkerApp(placeholderUI);
+
+    // Step 2.1: Enable state persistence only if MELKER_PERSIST=true
+    if (persistEnabled) {
+      await engine.enablePersistence(appId);
+    }
 
     // Set source content for View Source feature (F12)
     if (viewSource) {
@@ -343,6 +364,8 @@ export async function runMelkerFile(
       engine: engine,
       logger: logger,
       logging: logger,  // Alias for logger
+      persistenceEnabled: persistEnabled,  // Whether MELKER_PERSIST=true
+      stateFilePath: persistEnabled ? getStateFilePath(appId) : null,  // Path to the state file (null if persistence disabled)
       oauth: oauth,
       oauthConfig: oauthConfig,
       createElement: (type: string, props: Record<string, any> = {}, ...children: any[]) => {
@@ -563,6 +586,7 @@ export function printUsage(): void {
   console.log('  --schema       Output component schema documentation as markdown and exit');
   console.log('  --lsp          Start Language Server Protocol server for editor integration');
   console.log('  --convert      Convert markdown to .melker format (prints to stdout)');
+  console.log('  --no-load      Skip loading persisted state (requires MELKER_PERSIST=true)');
   console.log('  --help, -h     Show this help message');
   console.log('');
   console.log('Example .melker file content:');
@@ -598,6 +622,14 @@ export function printUsage(): void {
   console.log('  - context.setTitle(title)  Set terminal window title');
   console.log('  - context.exit()   Exit the application gracefully');
   console.log('  - context.engine   Access to the full engine instance');
+  console.log('');
+  console.log('Environment variables:');
+  console.log('  MELKER_THEME     Theme selection (bw-std, fullcolor-dark, etc.)');
+  console.log('  MELKER_PERSIST   Enable state persistence (true/1 to enable, default: false)');
+  console.log('                   State is saved to $XDG_STATE_HOME/melker/ (~/.local/state/melker/)');
+  console.log('  XDG_STATE_HOME   Override state directory (default: ~/.local/state)');
+  console.log('  XDG_CONFIG_HOME  Override config directory (default: ~/.config)');
+  console.log('  XDG_CACHE_HOME   Override cache directory (default: ~/.cache)');
   console.log('');
   console.log('Example files:');
   console.log('  examples/melker/hello.melker           - Simple greeting example');
@@ -756,7 +788,8 @@ export async function main(): Promise<void> {
     printTree: args.includes('--print-tree'),
     printJson: args.includes('--print-json'),
     debug: args.includes('--debug'),
-    lint: args.includes('--lint')
+    lint: args.includes('--lint'),
+    noLoad: args.includes('--no-load'),
   };
 
   // Enable lint mode if requested

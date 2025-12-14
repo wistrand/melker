@@ -1,0 +1,170 @@
+<melker>
+  <title>State Persistence Demo</title>
+
+  <script type="typescript">
+    // Check persistence status on mount and update UI accordingly
+    context.engine.onMount(() => {
+      const statusText = context.getElementById('statusText');
+      const warningBanner = context.getElementById('warningBanner');
+      const footerText = context.getElementById('footerText');
+
+      if (context.persistenceEnabled) {
+        statusText.props.text = 'State Persistence Demo - Your input is saved automatically!';
+        statusText.props.style = { ...statusText.props.style, color: 'green' };
+        warningBanner.props.style = { ...warningBanner.props.style, display: 'none' };
+        footerText.props.text = 'State saved to: ' + context.stateFilePath;
+      } else {
+        statusText.props.text = 'State Persistence Demo - PERSISTENCE DISABLED';
+        statusText.props.style = { ...statusText.props.style, color: 'red' };
+        warningBanner.props.style = { ...warningBanner.props.style, display: 'flex' };
+        footerText.props.text = 'Persistence disabled - run with MELKER_PERSIST=true';
+      }
+      context.render();
+    });
+  </script>
+
+  <style>
+    .form-row { display: flex; flex-direction: row; margin-bottom: 1; gap: 1; }
+    .label { width: 12; color: cyan; }
+    .section { border: thin; padding: 1; margin-bottom: 1;}
+    .section-title { font-weight: bold; color: yellow; margin-bottom: 1; }
+    .warning-banner { background-color: yellow; color: black; padding: 1; margin-bottom: 1; text-align: center; }
+  </style>
+
+  <container style="width: 100%; height: 100%; padding: 1; display: flex; flex-direction: column;">
+    <!-- Warning banner shown when persistence is disabled -->
+    <container id="warningBanner" class="warning-banner" style="display: none;">
+      <text style="font-weight: bold;">Persistence is disabled!</text>
+      <text>To enable: MELKER_PERSIST=true deno run --allow-all melker.ts persistence_demo.melker</text>
+    </container>
+
+    <text id="statusText" style="font-weight: bold; color: green; text-align: center; margin-bottom: 1;">
+      State Persistence Demo - Checking status...
+    </text>
+    <text style="color: gray; text-align: center; margin-bottom: 1;">
+      Fill out the form, exit (Ctrl+C), and restart to see your data restored.
+    </text>
+
+    <!-- Tabs demonstrate activeTab persistence -->
+    <tabs id="mainTabs" style="flex: 1; display: flex; flex-direction: column;">
+
+      <tab title="Form Inputs">
+        <container style="padding: 1; display: flex; flex-direction: column;">
+
+          <!-- Input fields -->
+          <container class="section">
+            <text class="section-title">Text Inputs (persisted)</text>
+
+            <container class="form-row">
+              <text class="label">Name:</text>
+              <input id="nameInput" placeholder="Enter your name" style="flex: 1;" />
+            </container>
+
+            <container class="form-row">
+              <text class="label">Email:</text>
+              <input id="emailInput" placeholder="Enter your email" style="flex: 1;" />
+            </container>
+
+            <container class="form-row">
+              <text class="label">Password:</text>
+              <input id="passwordInput" format="password" placeholder="Not saved (auto-excluded)" style="flex: 1;" />
+            </container>
+          </container>
+
+          <!-- Textarea -->
+          <container class="section">
+            <text class="section-title">Notes (persisted)</text>
+            <textarea id="notesArea" rows="4" placeholder="Write some notes here..." style="width: 100%;" />
+          </container>
+
+        </container>
+      </tab>
+
+      <tab title="Checkboxes">
+        <container style="padding: 1; display: flex; flex-direction: column;">
+
+          <container class="section">
+            <text class="section-title">Preferences (persisted)</text>
+
+            <checkbox id="darkMode" title="Enable dark mode" />
+            <checkbox id="notifications" title="Enable notifications" checked="true" />
+            <checkbox id="autoSave" title="Auto-save documents" />
+            <checkbox id="spellCheck" title="Enable spell check" checked="true" />
+          </container>
+
+          <container class="section">
+            <text class="section-title">Features (persisted)</text>
+
+            <checkbox id="feature1" title="Beta features" />
+            <checkbox id="feature2" title="Developer tools" />
+            <checkbox id="feature3" title="Analytics" checked="true" />
+          </container>
+
+        </container>
+      </tab>
+
+      <tab title="Radio Buttons">
+        <container style="padding: 1; display: flex; flex-direction: column;">
+
+          <container class="section">
+            <text class="section-title">Theme Selection (persisted)</text>
+
+            <radio id="themeLight" name="theme" title="Light theme" value="light" />
+            <radio id="themeDark" name="theme" title="Dark theme" value="dark" checked="true" />
+            <radio id="themeSystem" name="theme" title="System default" value="system" />
+          </container>
+
+          <container class="section">
+            <text class="section-title">Update Frequency (persisted)</text>
+
+            <radio id="updateDaily" name="updates" title="Daily" value="daily" />
+            <radio id="updateWeekly" name="updates" title="Weekly" value="weekly" checked="true" />
+            <radio id="updateMonthly" name="updates" title="Monthly" value="monthly" />
+            <radio id="updateNever" name="updates" title="Never" value="never" />
+          </container>
+
+        </container>
+      </tab>
+
+      <tab title="Scrollable">
+        <container style="padding: 1; display: flex; flex-direction: column; height: 100%;">
+
+          <text class="section-title">Scroll Position (persisted)</text>
+          <text style="color: gray; margin-bottom: 1;">Scroll down, exit, and restart - position is restored!</text>
+
+          <container id="scrollDemo" scrollable="true" style="flex: 1; border: thin; padding: 1;">
+            <text>Line 1 - Scroll position is automatically saved</text>
+            <text>Line 2 - Try scrolling down</text>
+            <text>Line 3 - Then exit with Ctrl+C</text>
+            <text>Line 4 - Restart the app</text>
+            <text>Line 5 - Your scroll position will be restored!</text>
+            <text>Line 6</text>
+            <text>Line 7</text>
+            <text>Line 8</text>
+            <text>Line 9</text>
+            <text>Line 10</text>
+            <text>Line 11</text>
+            <text>Line 12</text>
+            <text>Line 13</text>
+            <text>Line 14</text>
+            <text>Line 15</text>
+            <text>Line 16</text>
+            <text>Line 17</text>
+            <text>Line 18</text>
+            <text>Line 19</text>
+            <text style="color: green; font-weight: bold;">Line 20 - You made it to the bottom!</text>
+          </container>
+
+        </container>
+      </tab>
+
+    </tabs>
+
+    <!-- Footer -->
+    <container style="display: flex; flex-direction: row; justify-content: space-between; margin-top: 1; padding-top: 1; border-top: thin;">
+      <text id="footerText" style="color: gray;">Checking persistence status...</text>
+      <button title="Exit" onClick="context.exit();" style="background-color: red;" />
+    </container>
+
+  </container>
+</melker>

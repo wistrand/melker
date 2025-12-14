@@ -45,7 +45,36 @@ export class TabElement extends Element {
       }
     }
 
-    return { width: maxWidth, height: totalHeight };
+    // Add own border and padding to the returned size
+    // Tab has default border: 'thin'
+    const style = this.props?.style || {};
+    let paddingH = 0;
+    let paddingV = 0;
+    let borderH = 0;
+    let borderV = 0;
+
+    // Parse padding
+    const padding = style.padding;
+    if (typeof padding === 'number') {
+      paddingH = padding * 2;
+      paddingV = padding * 2;
+    } else if (typeof style.paddingLeft === 'number' || typeof style.paddingRight === 'number' ||
+               typeof style.paddingTop === 'number' || typeof style.paddingBottom === 'number') {
+      paddingH = (style.paddingLeft || 0) + (style.paddingRight || 0);
+      paddingV = (style.paddingTop || 0) + (style.paddingBottom || 0);
+    }
+
+    // Parse border (default is 'thin' for tab)
+    const border = style.border ?? 'thin';  // Use default if not specified
+    if (['thin', 'thick', 'double', 'rounded'].includes(border as string)) {
+      borderH = 2;
+      borderV = 2;
+    }
+
+    return {
+      width: maxWidth + paddingH + borderH,
+      height: totalHeight + paddingV + borderV,
+    };
   }
 
   /**

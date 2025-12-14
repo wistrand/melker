@@ -7,6 +7,92 @@ import {
   PropsForComponent,
   ComponentPropsMap,
 } from './types.ts';
+import { Document } from './document.ts';
+import { PersistedState, PersistenceMapping } from './state-persistence.ts';
+
+/**
+ * Persistence context for createElement to merge saved state
+ */
+export interface PersistenceContext {
+  state: PersistedState | null;      // Loaded from file
+  document: Document | null;          // Current live document
+  mappings: PersistenceMapping[];
+}
+
+let _persistenceContext: PersistenceContext = {
+  state: null,
+  document: null,
+  mappings: [],
+};
+
+/**
+ * Set the persistence context for createElement to use
+ */
+export function setPersistenceContext(ctx: Partial<PersistenceContext>): void {
+  _persistenceContext = { ..._persistenceContext, ...ctx };
+}
+
+/**
+ * Get the current persistence context
+ */
+export function getPersistenceContext(): PersistenceContext {
+  return _persistenceContext;
+}
+
+/**
+ * Merge persisted props into provided props
+ * Priority: 1. Current document value, 2. Persisted state, 3. Provided props
+ */
+function mergePersistedProps(
+  type: string,
+  props: Record<string, unknown>,
+  context: PersistenceContext
+): Record<string, unknown> {
+  // No persistence context or no ID = no merge
+  if (!props.id || props.persist === false) {
+    return props;
+  }
+
+  // No mappings = no merge
+  if (!context.mappings || context.mappings.length === 0) {
+    return props;
+  }
+
+  const id = props.id as string;
+  const merged = { ...props };
+
+  for (const mapping of context.mappings) {
+    if (mapping.type !== type) continue;
+
+    // Priority 1: Current document value (runtime changes)
+    if (context.document) {
+      const existingElement = context.document.getElementById(id);
+      if (existingElement && existingElement.type === type) {
+        // Check condition if present
+        if (!mapping.condition || mapping.condition(existingElement)) {
+          const currentValue = existingElement.props[mapping.prop];
+          if (currentValue !== undefined) {
+            merged[mapping.prop] = currentValue;
+            continue; // Skip lower priorities
+          }
+        }
+      }
+    }
+
+    // Priority 2: Persisted state (from file)
+    if (context.state) {
+      const savedValue = context.state[type]?.[id];
+      if (savedValue !== undefined) {
+        merged[mapping.prop] = savedValue;
+        continue;
+      }
+    }
+
+    // Priority 3: Provided props (already in merged)
+  }
+
+  return merged;
+}
 
 // Basic concrete Element implementation for built-in types
 class BasicElement extends Element {
@@ -104,12 +190,16 @@ export function createElement<TType extends keyof ComponentPropsMap | string>(
   if (componentDef) {
     // Create instance using the registered component class
     // Deep merge style property so default styles aren't completely overwritten
-    const mergedProps = { ...componentDef.defaultProps, ...props };
+    let mergedProps = { ...componentDef.defaultProps, ...props };
     if (componentDef.defaultProps?.style && (props as any)?.style) {
       mergedProps.style = { ...componentDef.defaultProps.style, ...(props as any).style };
     }
     // Parse class string into classList array
     normalizeClassProps(mergedProps);
+
+    // Merge persisted props (if element has ID and persistence is enabled)
+    mergedProps = mergePersistedProps(type, mergedProps, _persistenceContext) as typeof mergedProps;
+
     const componentInstance = new componentDef.componentClass(mergedProps, children);
 
     // Generate ID if not provided
@@ -123,10 +213,13 @@ export function createElement<TType extends keyof ComponentPropsMap | string>(
   }
 
   // Fallback: create basic element (for built-in types or unregistered components)
-  const mergedProps = { ...props };
+  let mergedProps: Record<string, any> = { ...props };
 
   // Parse class string into classList array
   normalizeClassProps(mergedProps);
+
+  // Merge persisted props (if element has ID and persistence is enabled)
+  mergedProps = mergePersistedProps(type, mergedProps, _persistenceContext);
 
   // Generate ID if not provided
   if (!mergedProps.id) {

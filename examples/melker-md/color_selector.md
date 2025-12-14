@@ -238,8 +238,8 @@ function updateColorDisplay() {
     }
   }
   if (hexValue) hexValue.props.text = hex;
-  if (rgbValue) rgbValue.props.text = `rgb(${r}, ${g}, ${b})`;
-  if (hslValue) hslValue.props.text = `hsl(${selectedHue}, ${selectedSat}%, ${selectedLight}%)`;
+  if (rgbValue) rgbValue.props.text = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+  if (hslValue) hslValue.props.text = 'hsl(' + selectedHue + ', ' + selectedSat + '%, ' + selectedLight + '%)';
 }
 
 function paintHueSatPalette(event: any) {

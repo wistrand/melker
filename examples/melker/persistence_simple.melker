@@ -1,0 +1,41 @@
+<melker>
+  <title>Simple Persistence Demo</title>
+
+  <container id="root" style="display: flex; flex-direction: column; gap: 1; width: 100%; height: 100%">
+    <text id="title" style="font-weight: bold; color: green;">
+      Simple Persistence Demo - Exit and restart to see data restored
+    </text>
+
+    <!-- Text Inputs -->
+    <container id="inputs-section" style="display: flex; flex-direction: column; gap: 1">
+      <text id="inputs-title" style="color: yellow;">Text Inputs (persisted)</text>
+      <text id="name-label">Name:</text>
+      <input id="nameInput" placeholder="Your name" />
+      <text id="email-label">Email:</text>
+      <input id="emailInput" placeholder="Your email" />
+      <text id="pw-label">Password (not saved):</text>
+      <input id="pwInput" persist="false" placeholder="(not saved)" />
+    </container>
+
+    <!-- Checkboxes -->
+    <container id="checkbox-section" style="display: flex; flex-direction: column; gap: 1">
+      <text id="checkbox-title" style="color: yellow;">Checkboxes (persisted)</text>
+      <checkbox id="opt1" title="Option 1 (unchecked by default)" />
+      <checkbox id="opt2" title="Option 2 (checked by default)" checked="true" />
+      <checkbox id="opt3" title="Option 3 (unchecked by default)" />
+    </container>
+
+    <!-- Radio Buttons -->
+    <container id="radio-section" style="display: flex; flex-direction: column; gap: 1">
+      <text id="radio-title" style="color: yellow;">Radio Buttons (persisted)</text>
+      <radio id="r1" name="choice" title="Choice A" />
+      <radio id="r2" name="choice" title="Choice B" checked="true" />
+      <radio id="r3" name="choice" title="Choice C" />
+    </container>
+
+    <!-- Buttons -->
+    <container id="buttons" style="display: flex; flex-direction: row; gap: 1">
+      <button id="exit-btn" title="Exit" onClick="context.exit();" />
+    </container>
+  </container>
+</melker>

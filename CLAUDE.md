@@ -69,6 +69,8 @@ src/
   lint.ts             - Lint mode validation, schemas
   lsp.ts              - Language Server Protocol for .melker files
   oauth.ts            - OAuth utilities
+  xdg.ts              - XDG Base Directory support
+  state-persistence.ts - State persistence for apps
   components/         - Component implementations
     mod.ts            - Component exports
     container.ts      - Flexbox container
@@ -131,6 +133,21 @@ tests/                - Test files
 | `MELKER_HEADLESS` | Headless mode for CI |
 | `MELKER_DEBUG_PORT` | Debug server port |
 | `MELKER_LINT` | Enable lint mode (`true` or `1`) |
+| `MELKER_PERSIST` | Enable state persistence (`true` or `1`, default: false) |
+| `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
+| `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
+| `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |
+
+## XDG Base Directory Spec
+
+Melker follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/latest/):
+
+| Directory | Default | Purpose |
+|-----------|---------|---------|
+| State | `~/.local/state/melker/` | Persisted app state |
+| Config | `~/.config/melker/` | User configuration |
+| Cache | `~/.cache/melker/` | Non-essential cached data |
+| Data | `~/.local/share/melker/` | User data files |
 
 ## Running .melker Files
 

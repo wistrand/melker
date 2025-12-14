@@ -215,6 +215,7 @@ interface ExtractedIdentifier {
  *   "Text content"     → text with content
  *   {inputId}          → input with id
  *   <type> content     → explicit type with content
+ *   <type(param)> content → explicit type with parameter (e.g., <radio(group)> Option)
  */
 function parseShorthandType(content: string): ExtractedIdentifier | null {
   // [Button Title] → button
@@ -253,16 +254,22 @@ function parseShorthandType(content: string): ExtractedIdentifier | null {
     };
   }
 
-  // <type> content → explicit type (e.g., <checkbox> Remember me)
-  const explicitMatch = content.match(/^<([a-z-]+)>\s*(.*)$/);
+  // <type> content or <type(param)> content → explicit type with optional parameter
+  // e.g., <checkbox> Remember me, <radio(subscription)> Free Plan
+  const explicitMatch = content.match(/^<([a-z-]+)(?:\(([^)]+)\))?>\s*(.*)$/);
   if (explicitMatch) {
     const type = explicitMatch[1];
-    const rest = explicitMatch[2].trim();
+    const param = explicitMatch[2]?.trim(); // Optional parameter (e.g., radio group name)
+    const rest = explicitMatch[3].trim();
     // For checkbox/radio, rest is title; for text, rest is content
     const id = rest.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').substring(0, 20) || type;
     const props: Record<string, string> = {};
     if (type === 'checkbox' || type === 'radio' || type === 'button') {
       if (rest) props.title = rest;
+      // For radio, param becomes the 'name' prop (radio group)
+      if (type === 'radio' && param) {
+        props.name = param;
+      }
     } else if (type === 'text' || type === 'markdown') {
       if (rest) props.text = rest;
     } else if (type === 'input' || type === 'textarea') {

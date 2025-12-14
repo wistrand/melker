@@ -12,6 +12,7 @@ export interface InputProps extends BaseProps {
   maxLength?: number;
   readOnly?: boolean;
   cursorPosition?: number;
+  format?: 'text' | 'password'; // Default: 'text'. If 'password', renders chars as '*'
   complete?: () => string[]; // Function that returns possible completions
   /**
    * Auto-completion function that returns possible completions for the current input value.
@@ -51,6 +52,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       disabled: false,
       tabIndex: 0,
       cursorPosition: 0,
+      format: 'text',
       ...props,
       style: {
         // Default styles would go here (none currently)
@@ -67,6 +69,15 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
    * Render the text input to the terminal buffer
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
+    // Sync props.value to internal _internalValue if changed externally (e.g., by state persistence)
+    if (this.props.value !== undefined && this.props.value !== this._internalValue) {
+      this._internalValue = this.props.value;
+      // Clamp cursor position to valid range
+      if (this._cursorPosition > this._internalValue.length) {
+        this._cursorPosition = this._internalValue.length;
+      }
+    }
+
     const value = this._internalValue;
     const cursorPos = this._cursorPosition;
     const { placeholder } = this.props;
@@ -90,7 +101,10 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     });
 
     // Render text content (value takes precedence over placeholder)
-    let textToRender = value || placeholder || '';
+    // For password format, mask the value with asterisks
+    const isPassword = this.props.format === 'password';
+    const maskedValue = isPassword && value ? '*'.repeat(value.length) : value;
+    let textToRender = maskedValue || placeholder || '';
     let textStyle = inputCellStyle;
 
     // Use gray color for placeholder text
@@ -162,7 +176,9 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
 
         if (hasCharAtCursor) {
           // Show the character with reverse video (swaps fg/bg)
-          buffer.currentBuffer.setText(cursorX, bounds.y, value[actualCursorPos], {
+          // For password format, show * instead of the actual character
+          const cursorChar = isPassword ? '*' : value[actualCursorPos];
+          buffer.currentBuffer.setText(cursorX, bounds.y, cursorChar, {
             foreground: inputCellStyle.foreground,
             background: inputCellStyle.background,
             reverse: true,
@@ -533,6 +549,7 @@ export const inputSchema: ComponentSchema = {
     maxLength: { type: 'number', description: 'Maximum character limit' },
     readOnly: { type: 'boolean', description: 'Prevent editing' },
     cursorPosition: { type: 'number', description: 'Cursor position in text' },
+    format: { type: 'string', enum: ['text', 'password'], description: 'Input format: text (default) or password (masked with *)' },
     complete: { type: 'function', description: 'Tab completion callback' },
   },
 };

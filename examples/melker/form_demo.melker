@@ -1,0 +1,34 @@
+<melker>
+  <title>Form Demo</title>
+
+  <!-- A simple demo showcasing buttons, inputs, radio buttons, and checkboxes. -->
+  <container id="root" style="display: flex; flex-direction: column; gap: 1; width: 100%; height: 100%">
+    <text id="user-registration">User Registration</text>
+    <container id="form" style="display: flex; flex-direction: column; gap: 1">
+      <text id="name">Name:</text>
+      <input id="name-input" />
+      <text id="email">Email:</text>
+      <input id="email-input" />
+      <text id="subscription">Subscription:</text>
+      <radio id="free-plan" title="Free Plan" />
+      <radio id="pro-plan" title="Pro Plan" />
+      <radio id="enterprise" title="Enterprise" />
+      <text id="options">Options:</text>
+      <checkbox id="receive-newsletter" title="Receive newsletter" />
+      <checkbox id="enable-two-factor-au" title="Enable two-factor auth" />
+    </container>
+    <container id="buttons" style="display: flex; flex-direction: row; gap: 1">
+      <button id="submit" title="Submit" onClick="const name = context.getElementById('name-input')?.getValue() ?? '';
+const email = context.getElementById('email-input')?.getValue() ?? '';
+if (!name || !email) {
+  alert('Please fill in all fields');
+  return;
+}
+alert('Submitted: ' + name + ' (' + email + ')');" />
+      <button id="clear" title="Clear" onClick="context.getElementById('name-input')?.setValue('');
+context.getElementById('email-input')?.setValue('');
+alert('Form cleared');" />
+      <button id="cancel" title="Cancel" onClick="context.exit();" />
+    </container>
+  </container>
+</melker>

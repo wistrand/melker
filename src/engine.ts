@@ -79,6 +79,19 @@ import {
 import {
   ScrollHandler,
 } from './scroll-handler.ts';
+import {
+  PersistedState,
+  PersistenceMapping,
+  DEFAULT_PERSISTENCE_MAPPINGS,
+  readState,
+  hashState,
+  saveToFile,
+  loadFromFile,
+  debounce,
+} from './state-persistence.ts';
+import {
+  setPersistenceContext,
+} from './element.ts';
 
 export interface MelkerEngineOptions {
   // Terminal setup
@@ -121,6 +134,12 @@ export interface MelkerEngineOptions {
 
   // Base URL for relative resource loading (defaults to current working directory)
   baseUrl?: string;
+
+  // State persistence options
+  persistState?: boolean;
+  appId?: string;  // Unique identifier for the app (for state file naming)
+  persistenceMappings?: PersistenceMapping[];  // Custom mappings (defaults to DEFAULT_PERSISTENCE_MAPPINGS)
+  persistenceDebounceMs?: number;  // Debounce delay for auto-save (default 500ms)
 }
 
 export class MelkerEngine {
@@ -167,6 +186,14 @@ export class MelkerEngine {
 
   // Alert dialog feature
   private _alertDialogManager?: AlertDialogManager;
+
+  // State persistence
+  private _persistenceEnabled = false;
+  private _persistenceAppId: string | null = null;
+  private _persistenceMappings: PersistenceMapping[] = DEFAULT_PERSISTENCE_MAPPINGS;
+  private _lastPersistedHash: string = '';
+  private _debouncedSaveState: (() => void) | null = null;
+  private _loadedPersistedState: PersistedState | null = null;
 
   // Selection performance timing stats (aggregated during drag, logged on mouseup)
   private _selectionTimingStats = {
@@ -218,6 +245,10 @@ export class MelkerEngine {
       debugServerOptions: {},
       enableHeadlessMode: isHeadlessEnabled(),
       baseUrl: defaultBaseUrl,
+      persistState: false,
+      appId: undefined as unknown as string,
+      persistenceMappings: DEFAULT_PERSISTENCE_MAPPINGS,
+      persistenceDebounceMs: 500,
       ...options,
     };
 
@@ -1722,6 +1753,11 @@ export class MelkerEngine {
     if (totalRenderTime > 50) {
       this._logger?.warn(`Slow render detected: ${totalRenderTime.toFixed(2)}ms for render #${this._renderCount}`);
     }
+
+    // Trigger debounced state persistence (if enabled)
+    if (this._debouncedSaveState) {
+      this._debouncedSaveState();
+    }
   }
 
   /**
@@ -1920,6 +1956,15 @@ export class MelkerEngine {
     // Set flag early to prevent double cleanup
     this._isInitialized = false;
 
+    // Save state immediately before cleanup (don't wait for debounce)
+    if (this._persistenceEnabled) {
+      try {
+        await this._saveStateIfChanged();
+      } catch (error) {
+        this._logger?.warn('Failed to save state on exit', { error });
+      }
+    }
+
     // Clear any pending input render timer
     if (this._inputRenderTimer !== null) {
       clearTimeout(this._inputRenderTimer);
@@ -2044,6 +2089,82 @@ export class MelkerEngine {
    */
   get terminalSize(): { width: number; height: number } {
     return { ...this._currentSize };
+  }
+
+  /**
+   * Enable state persistence for this app.
+   * Must be called before the first render for proper state restoration.
+   * @param appId Unique identifier for the app (used for state file naming)
+   * @param mappings Optional custom persistence mappings
+   */
+  async enablePersistence(appId: string, mappings?: PersistenceMapping[]): Promise<void> {
+    if (this._persistenceEnabled) {
+      this._logger?.warn('Persistence already enabled');
+      return;
+    }
+
+    this._persistenceAppId = appId;
+    this._persistenceMappings = mappings || this._options.persistenceMappings || DEFAULT_PERSISTENCE_MAPPINGS;
+
+    // Load persisted state from file
+    try {
+      this._loadedPersistedState = await loadFromFile(appId);
+      if (this._loadedPersistedState) {
+        this._lastPersistedHash = hashState(this._loadedPersistedState);
+        this._logger?.info('Loaded persisted state', { appId, hash: this._lastPersistedHash });
+      }
+    } catch (error) {
+      this._logger?.warn('Failed to load persisted state', { appId, error });
+    }
+
+    // Set up persistence context for createElement
+    setPersistenceContext({
+      state: this._loadedPersistedState,
+      document: this._document,
+      mappings: this._persistenceMappings,
+    });
+
+    // Create debounced save function
+    this._debouncedSaveState = debounce(
+      () => this._saveStateIfChanged(),
+      this._options.persistenceDebounceMs
+    );
+
+    this._persistenceEnabled = true;
+    this._logger?.info('State persistence enabled', { appId });
+  }
+
+  /**
+   * Save state immediately (bypasses debounce).
+   * Useful when you need to ensure state is saved before exit.
+   */
+  async saveState(): Promise<void> {
+    if (!this._persistenceEnabled || !this._persistenceAppId) {
+      return;
+    }
+    await this._saveStateIfChanged();
+  }
+
+  /**
+   * Internal method to save state if changed
+   */
+  private async _saveStateIfChanged(): Promise<void> {
+    if (!this._persistenceEnabled || !this._persistenceAppId) {
+      return;
+    }
+
+    try {
+      const currentState = readState(this._document, this._persistenceMappings);
+      const currentHash = hashState(currentState);
+
+      if (currentHash !== this._lastPersistedHash) {
+        await saveToFile(this._persistenceAppId, currentState);
+        this._lastPersistedHash = currentHash;
+        this._logger?.debug('State persisted', { appId: this._persistenceAppId, hash: currentHash });
+      }
+    } catch (error) {
+      this._logger?.warn('Failed to save state', { error });
+    }
   }
 
   /**

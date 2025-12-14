@@ -13,10 +13,10 @@ A simple demo showcasing buttons, inputs, radio buttons, and checkboxes.
 | | +--"Email:"----------------------------------+ | |
 | | +--{email-input}-----------------------------+ | |
 | | +--"Subscription:"---------------------------+ | |
-| | +--<radio> Free Plan-------------------------+ | |
-| | +--<radio> Pro Plan--------------------------+ | |
-| | +--<radio> Enterprise------------------------+ | |
-| | +--"Options:"---------------------------------+ | |
+| | +--<radio(subscription)> Free Plan-----------+ | |
+| | +--<radio(subscription)> Pro Plan------------+ | |
+| | +--<radio(subscription)> Enterprise----------+ | |
+| | +--"Options:"--------------------------------+ | |
 | | +--<checkbox> Receive newsletter-------------+ | |
 | | +--<checkbox> Enable two-factor auth---------+ | |
 | +------------------------------------------------+ |

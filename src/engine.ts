@@ -19,7 +19,6 @@ import {
   EventManager,
   type MelkerEvent,
   createKeyPressEvent,
-  createMouseEvent,
 } from './events.ts';
 import {
   FocusManager,
@@ -84,6 +83,9 @@ import {
 import {
   StatePersistenceManager,
 } from './state-persistence-manager.ts';
+import {
+  ElementClickHandler,
+} from './element-click-handler.ts';
 import {
   PersistenceMapping,
   DEFAULT_PERSISTENCE_MAPPINGS,
@@ -155,6 +157,7 @@ export class MelkerEngine {
   private _hitTester!: HitTester;
   private _scrollHandler!: ScrollHandler;
   private _textSelectionHandler!: TextSelectionHandler;
+  private _elementClickHandler!: ElementClickHandler;
   private _resizeHandler!: ResizeHandler;
   private _eventManager!: EventManager;
   private _focusManager!: FocusManager;
@@ -359,6 +362,18 @@ export class MelkerEngine {
       calculateScrollDimensions: (id) => this.calculateScrollDimensions(id),
     });
 
+    // Initialize element click handler
+    this._elementClickHandler = new ElementClickHandler({
+      document: this._document,
+      renderer: this._renderer,
+      hitTester: this._hitTester,
+      logger: this._logger,
+      autoRender: this._options.autoRender,
+      onRender: () => this.render(),
+      onRegisterFocusable: (id) => this.registerFocusableElement(id),
+      onFocusElement: (id) => this.focusElement(id),
+    });
+
     // Initialize text selection handler
     this._textSelectionHandler = new TextSelectionHandler(
       { autoRender: this._options.autoRender },
@@ -372,7 +387,7 @@ export class MelkerEngine {
         logger: this._logger,
         onRender: () => this.render(),
         onRenderOptimized: () => this._renderOptimized(),
-        onElementClick: (element, event) => this._handleElementClick(element, event),
+        onElementClick: (element, event) => this._elementClickHandler.handleElementClick(element, event),
       }
     );
 
@@ -395,7 +410,6 @@ export class MelkerEngine {
       { persistenceDebounceMs: this._options.persistenceDebounceMs },
       {
         document: this._document,
-        logger: this._logger,
       }
     );
   }
@@ -637,154 +651,6 @@ export class MelkerEngine {
     this._eventManager.addGlobalEventListener('mouseup', (event: any) => {
       this._textSelectionHandler.handleMouseUp(event);
     });
-  }
-
-  /**
-   * Handle element clicks (focus, button activation, etc.)
-   */
-  private _handleElementClick(element: Element, event: any): void {
-    this._logger?.debug(`_handleElementClick: element.type=${element.type}, id=${element.id}, at (${event.x}, ${event.y})`);
-
-    // Set focus on clickable elements
-    if (this._hitTester.isInteractiveElement(element) && element.id) {
-      // Always ensure element is registered before focusing
-      try {
-        this.registerFocusableElement(element.id);
-      } catch (error) {
-        // Element might already be registered, that's fine
-      }
-
-      // Now focus the element (should always work since we just registered it)
-      try {
-        this.focusElement(element.id);
-
-        // Auto-render to show focus changes (cursor, highlighting, etc.)
-        if (this._options.autoRender) {
-          this.render();
-        }
-      } catch (focusError) {
-        // Focus failed even after registration - this shouldn't happen
-      }
-    }
-
-    // Handle clicks on Clickable elements (button, checkbox, radio, etc.)
-    if (isClickable(element)) {
-      const clickEvent: ClickEvent = {
-        type: 'click',
-        target: element,
-        position: { x: event.x, y: event.y },
-        timestamp: Date.now(),
-      };
-
-      const handled = element.handleClick(clickEvent, this._document);
-
-      if (handled && this._options.autoRender) {
-        this.render();
-      }
-    }
-
-    // Handle menu-bar clicks
-    if (element.type === 'menu-bar') {
-      // Convert global coordinates to menu-bar relative coordinates
-      const bounds = this._renderer.getContainerBounds(element.id || '');
-      if (bounds && (element as any).handleClick) {
-        const relativeX = event.x - bounds.x;
-        const relativeY = event.y - bounds.y;
-        (element as any).handleClick(relativeX, relativeY);
-
-        // Auto-render to show menu changes
-        if (this._options.autoRender) {
-          this.render();
-        }
-      }
-    }
-
-    // Handle markdown element clicks (for link detection)
-    if (element.type === 'markdown') {
-      this._logger?.debug(`Engine: Markdown element clicked at (${event.x}, ${event.y}), hasHandleClick: ${!!(element as any).handleClick}`);
-      if ((element as any).handleClick) {
-        // Pass absolute coordinates - markdown tracks its own render bounds
-        const handled = (element as any).handleClick(event.x, event.y);
-        this._logger?.debug(`Engine: Markdown handleClick returned: ${handled}`);
-        if (handled && this._options.autoRender) {
-          this.render();
-        }
-      }
-    }
-
-    // Handle textarea clicks (position cursor)
-    if (element.type === 'textarea') {
-      const bounds = this._renderer.getContainerBounds(element.id || '');
-      if (bounds && (element as any).handleClick) {
-        const relativeX = event.x - bounds.x;
-        const relativeY = event.y - bounds.y;
-        const handled = (element as any).handleClick(relativeX, relativeY);
-        if (handled && this._options.autoRender) {
-          this.render();
-        }
-      }
-    }
-
-    // Handle menu-item clicks
-    if (element.type === 'menu-item') {
-      let handled = false;
-
-      if ((element as any).handleClick) {
-        // Use class method if available
-        (element as any).handleClick();
-        handled = true;
-      } else if (typeof element.props.onClick === 'function') {
-        // Call onClick handler directly for template-created menu items
-        const clickEvent = createMouseEvent(
-          'click',
-          event.x,
-          event.y,
-          event.button || 0,
-          1,
-          element.id
-        );
-        element.props.onClick(clickEvent);
-        handled = true;
-      }
-
-      if (handled) {
-        // Close the parent menu after clicking a menu item
-        this._closeOpenMenus();
-
-        // Auto-render to show any changes
-        if (this._options.autoRender) {
-          this.render();
-        }
-      }
-    }
-  }
-
-  /**
-   * Close all open menus
-   */
-  private _closeOpenMenus(): void {
-    const menuBars = this._document.getElementsByType('menu-bar');
-    for (const menuBar of menuBars) {
-      const getOpenMenu = (menuBar as any).getOpenMenu;
-      if (getOpenMenu && typeof getOpenMenu === 'function') {
-        const openMenu = getOpenMenu.call(menuBar);
-        if (openMenu && openMenu.props.visible) {
-          // Call deactivate if available
-          if ((menuBar as any)._deactivate) {
-            (menuBar as any)._deactivate();
-          } else {
-            // Manually close menu
-            openMenu.props.visible = false;
-            if ((menuBar as any)._openMenu) {
-              (menuBar as any)._openMenu = null;
-            }
-            if ((menuBar as any)._isActivated !== undefined) {
-              (menuBar as any)._isActivated = false;
-            }
-          }
-        }
-      }
-    }
   }
 
   /**

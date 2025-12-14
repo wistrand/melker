@@ -1276,6 +1276,10 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
         const capturedSourceContent = sourceContent;
         const capturedHandlerLocation = handlerLocation;
         const capturedShowScriptError = showScriptError;
+        const capturedPropName = propName;
+
+        // Render callbacks that are invoked during render - auto-render would cause infinite loop
+        const noAutoRenderCallbacks = ['onPaint'];
 
         // Create a function that executes the transpiled code with access to context
         // Auto-renders after handler completes unless handler returns false
@@ -1295,16 +1299,18 @@ async function processStringHandlers(element: any, context: any, logger: any, fi
             const result = handlerFunction(event, context, ...scriptFunctionValues);
 
             // Auto-render after handler completes (unless it returns false to opt-out)
+            // Skip auto-render for render callbacks like onPaint to avoid infinite loops
             // Handle both sync and async handlers
+            const shouldAutoRender = !noAutoRenderCallbacks.includes(capturedPropName);
             if (result instanceof Promise) {
               return result.then((asyncResult: unknown) => {
-                if (asyncResult !== false && context?.render) {
+                if (shouldAutoRender && asyncResult !== false && context?.render) {
                   context.render();
                 }
                 return asyncResult;
               });
             } else {
-              if (result !== false && context?.render) {
+              if (shouldAutoRender && result !== false && context?.render) {
                 context.render();
               }
               return result;

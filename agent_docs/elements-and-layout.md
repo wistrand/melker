@@ -220,6 +220,45 @@ The `<tabs>` component provides a tabbed interface with clickable tab headers.
 - Navigate with Tab/Shift+Tab, activate with Enter or click
 - Default tab style includes `border: thin; margin-top: 1`
 
+## Dialog Component
+
+The `<dialog>` component provides modal overlay dialogs.
+
+### Usage
+
+```xml
+<dialog id="settings" title="Settings" open=${true} modal=${true}>
+  <text>Dialog content</text>
+  <button title="Close" onClick="dialog.props.open = false" />
+</dialog>
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `title` | string | - | Title bar text |
+| `open` | boolean | false | Whether dialog is visible |
+| `modal` | boolean | true | Block interaction with background |
+| `backdrop` | boolean | true | Show semi-transparent backdrop |
+| `width` | number | 80% | Width (0-1 = percentage, >1 = chars) |
+| `height` | number | 70% | Height (0-1 = percentage, >1 = chars) |
+| `draggable` | boolean | false | Allow dragging by title bar |
+| `offsetX` | number | 0 | Horizontal offset from center |
+| `offsetY` | number | 0 | Vertical offset from center |
+
+### Draggable Dialogs
+
+When `draggable={true}`, users can click and drag the title bar to move the dialog:
+
+```xml
+<dialog id="movable" title="Drag me!" draggable=${true} open=${true}>
+  <text>This dialog can be moved around</text>
+</dialog>
+```
+
+The dialog position is stored in `offsetX` and `offsetY` props, which persist the drag offset from the centered position.
+
 ## Rendering Pipeline
 
 1. **Layout calculation** → LayoutNode tree
@@ -227,7 +266,8 @@ The `<tabs>` component provides a tabbed interface with clickable tab headers.
 3. **Render pass** → Write to dual buffer
 4. **Overlay pass** → Render menus on top
 5. **Modal pass** → Render dialogs last
-6. **Buffer diff** → Output ANSI sequences
+6. **Selection pass** → Apply text selection highlighting
+7. **Buffer diff** → Output ANSI sequences
 
 ## Style Inheritance
 

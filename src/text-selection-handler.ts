@@ -12,7 +12,10 @@ import {
 } from './events.ts';
 import { HitTester } from './hit-test.ts';
 import { ScrollHandler } from './scroll-handler.ts';
-import { type ComponentLogger } from './logging.ts';
+import { getLogger, type ComponentLogger } from './logging.ts';
+import { DialogElement } from './components/dialog.ts';
+
+const logger = getLogger('text-selection');
 
 export interface TextSelectionHandlerOptions {
   autoRender: boolean;
@@ -52,6 +55,9 @@ export class TextSelectionHandler {
   private _lastClickPos = { x: -1, y: -1 };
   private _clickCount = 0;
   private _hoveredElementId: string | null = null;
+
+  // Dialog drag state
+  private _draggingDialog: DialogElement | null = null;
 
   // Selection performance timing stats
   private _selectionTimingStats = {
@@ -114,6 +120,20 @@ export class TextSelectionHandler {
       return; // Don't process text selection when clicking scrollbar
     }
 
+    // Check for dialog title bar drag before other interactions
+    if (event.button === 0) {
+      const dialogs = this._deps.document.getElementsByType('dialog');
+      for (const dialog of dialogs) {
+        if (dialog instanceof DialogElement && dialog.props.open && dialog.props.draggable) {
+          if (dialog.isOnTitleBar(event.x, event.y)) {
+            dialog.startDrag(event.x, event.y);
+            this._draggingDialog = dialog;
+            return; // Don't process text selection when dragging dialog
+          }
+        }
+      }
+    }
+
     // Perform hit testing to find the element at the clicked coordinates
     const targetElement = this._deps.hitTester.hitTest(event.x, event.y);
     const isAltPressed = event.altKey;
@@ -162,8 +182,19 @@ export class TextSelectionHandler {
       // Normal click on text-selectable component: Component-constrained selection
       else if (targetElement && this._deps.hitTester.isTextSelectableElement(targetElement)) {
         const bounds = this._getSelectionBounds(targetElement);
+        logger.info('Text selection attempt', {
+          elementId: targetElement.id,
+          elementType: targetElement.type,
+          hasBounds: !!bounds,
+          bounds: bounds ? `${bounds.x},${bounds.y} ${bounds.width}x${bounds.height}` : 'none'
+        });
         if (bounds) {
           const clampedPos = clampToBounds({ x: event.x, y: event.y }, bounds);
+          logger.info('Selection bounds found, starting selection', {
+            clickCount: this._clickCount,
+            clampedPos: `${clampedPos.x},${clampedPos.y}`,
+            originalPos: `${event.x},${event.y}`
+          });
 
           if (this._clickCount === 2) {
             // Double-click: select word
@@ -209,11 +240,23 @@ export class TextSelectionHandler {
               componentBounds: bounds,
               mode: 'component',
             };
+            logger.info('Started drag selection', {
+              isSelecting: this._isSelecting,
+              start: `${clampedPos.x},${clampedPos.y}`,
+              componentId: targetElement.id
+            });
           }
         }
       }
       // Normal click on non-text-selectable, non-interactive element: Clear selection
       else if (!targetElement || !this._deps.hitTester.isInteractiveElement(targetElement)) {
+        logger.info('Clearing selection', {
+          hasTarget: !!targetElement,
+          targetId: targetElement?.id,
+          targetType: targetElement?.type,
+          isTextSelectable: targetElement ? this._deps.hitTester.isTextSelectableElement(targetElement) : false,
+          isInteractive: targetElement ? this._deps.hitTester.isInteractiveElement(targetElement) : false
+        });
         this._clearSelection();
       }
     }
@@ -223,6 +266,14 @@ export class TextSelectionHandler {
    * Handle mouse move events for text selection
    */
   handleMouseMove(event: any): void {
+    // Handle dialog drag first
+    if (this._draggingDialog) {
+      if (this._draggingDialog.updateDrag(event.x, event.y)) {
+        this._deps.onRender();
+      }
+      return;
+    }
+
     // Handle scrollbar drag first
     if (this._deps.scrollHandler.isScrollbarDragActive()) {
       this._deps.scrollHandler.handleScrollbarDrag(event.x, event.y);
@@ -292,6 +343,11 @@ export class TextSelectionHandler {
     });
 
     if (this._isSelecting) {
+      logger.debug('Mouse move during selection', {
+        isSelecting: this._isSelecting,
+        mode: this._textSelection.mode,
+        pos: `${event.x},${event.y}`
+      });
       const selectionUpdateStart = performance.now();
       if (this._textSelection.mode === 'global') {
         // Global mode: no clamping
@@ -339,6 +395,13 @@ export class TextSelectionHandler {
    * Handle mouse up events for text selection
    */
   handleMouseUp(event: any): void {
+    // End dialog drag if active
+    if (this._draggingDialog) {
+      this._draggingDialog.endDrag();
+      this._draggingDialog = null;
+      return; // Don't process other mouse up events
+    }
+
     // End scrollbar drag if active
     if (this._deps.scrollHandler.isScrollbarDragActive()) {
       this._deps.scrollHandler.endScrollbarDrag();
@@ -473,6 +536,7 @@ export class TextSelectionHandler {
    */
   private _getSelectionBounds(element: Element): Bounds | undefined {
     const elementBounds = this._deps.renderer.getContainerBounds(element.id || '');
+
     if (!elementBounds) return undefined;
 
     // Find scrollable parent and constrain bounds

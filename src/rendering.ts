@@ -145,11 +145,6 @@ export class RenderingEngine {
     // Render normal content first
     this._renderNode(layoutTree, context);
 
-    // Apply text selection highlighting on top of all content
-    if (context.textSelection?.isActive) {
-      this._applySelectionHighlight(context.textSelection, buffer);
-    }
-
     // Render menu overlays that were collected during normal rendering
     for (const overlay of menuOverlays) {
       const componentContext: ComponentRenderContext = {
@@ -191,8 +186,12 @@ export class RenderingEngine {
           const dialogHeight = heightProp !== undefined
             ? (heightProp <= 1 ? Math.floor(viewport.height * heightProp) : Math.min(heightProp, viewport.height - 4))
             : Math.min(Math.floor(viewport.height * 0.7), 20);
-          const dialogX = Math.floor((viewport.width - dialogWidth) / 2);
-          const dialogY = Math.floor((viewport.height - dialogHeight) / 2);
+
+          // Apply drag offset to centered position
+          const offsetX = modal.props.offsetX || 0;
+          const offsetY = modal.props.offsetY || 0;
+          const dialogX = Math.floor((viewport.width - dialogWidth) / 2) + offsetX;
+          const dialogY = Math.floor((viewport.height - dialogHeight) / 2) + offsetY;
 
           // Content area (inside borders and title)
           const titleHeight = modal.props.title ? 3 : 1; // Title + separator or just border
@@ -231,6 +230,11 @@ export class RenderingEngine {
           }
         }
       }
+    }
+
+    // Apply text selection highlighting AFTER modals so it's visible in dialogs
+    if (context.textSelection?.isActive) {
+      this._applySelectionHighlight(context.textSelection, buffer);
     }
 
     // Cache layout tree for selection-only updates
@@ -279,13 +283,6 @@ export class RenderingEngine {
     this._renderNode(this._cachedLayoutTree, context);
     this.selectionRenderTiming.renderNodeTime = performance.now() - renderNodeStart;
 
-    // Apply selection highlighting
-    if (textSelection?.isActive) {
-      const highlightStart = performance.now();
-      this._applySelectionHighlight(textSelection, buffer);
-      this.selectionRenderTiming.highlightTime = performance.now() - highlightStart;
-    }
-
     // Render menu overlays
     const overlaysStart = performance.now();
     for (const overlay of menuOverlays) {
@@ -310,6 +307,13 @@ export class RenderingEngine {
       }
     }
     this.selectionRenderTiming.modalsTime = performance.now() - modalsStart;
+
+    // Apply selection highlighting AFTER modals so it's visible in dialogs
+    if (textSelection?.isActive) {
+      const highlightStart = performance.now();
+      this._applySelectionHighlight(textSelection, buffer);
+      this.selectionRenderTiming.highlightTime = performance.now() - highlightStart;
+    }
 
     return true;
   }
@@ -639,6 +643,12 @@ export class RenderingEngine {
   // Internal render implementation
   private _renderNodeInternal(node: LayoutNode, context: RenderContext): void {
     const { element, bounds, computedStyle } = node;
+
+    // Skip dialog elements - they are rendered separately by _renderModal
+    // to ensure proper layering and avoid double rendering
+    if (element.type === 'dialog') {
+      return;
+    }
 
     // Apply simple bounds clipping for background and border rendering
     const clippedBounds = clipBounds(bounds, context.clipRect || context.viewport);
@@ -1369,8 +1379,12 @@ export class RenderingEngine {
       const dialogHeight = heightProp !== undefined
         ? (heightProp <= 1 ? Math.floor(viewport.height * heightProp) : Math.min(heightProp, viewport.height - 4))
         : Math.min(Math.floor(viewport.height * 0.7), 20);
-      const dialogX = Math.floor((viewport.width - dialogWidth) / 2);
-      const dialogY = Math.floor((viewport.height - dialogHeight) / 2);
+
+      // Apply drag offset to centered position
+      const offsetX = modal.props.offsetX || 0;
+      const offsetY = modal.props.offsetY || 0;
+      const dialogX = Math.floor((viewport.width - dialogWidth) / 2) + offsetX;
+      const dialogY = Math.floor((viewport.height - dialogHeight) / 2) + offsetY;
 
       // Content area (inside borders and title)
       const titleHeight = modal.props.title ? 3 : 1; // Title + separator or just border

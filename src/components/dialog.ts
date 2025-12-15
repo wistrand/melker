@@ -13,11 +13,27 @@ export interface DialogProps extends BaseProps {
   width?: number;
   /** Dialog height as percentage (0-1) or absolute characters */
   height?: number;
+  /** Enable dragging by title bar */
+  draggable?: boolean;
+  /** X offset from center (set by dragging) */
+  offsetX?: number;
+  /** Y offset from center (set by dragging) */
+  offsetY?: number;
 }
 
 export class DialogElement extends Element implements Renderable {
   declare type: 'dialog';
   declare props: DialogProps;
+
+  // Drag state
+  private _isDragging = false;
+  private _dragStartX = 0;
+  private _dragStartY = 0;
+  private _dragStartOffsetX = 0;
+  private _dragStartOffsetY = 0;
+  // Last calculated dialog bounds (for title bar hit testing)
+  private _lastDialogBounds: Bounds | null = null;
+  private _lastViewportBounds: Bounds | null = null;
 
   constructor(props: DialogProps = {}, children: Element[] = []) {
     const defaultProps: DialogProps = {
@@ -25,6 +41,9 @@ export class DialogElement extends Element implements Renderable {
       backdrop: true,
       open: false,
       disabled: false,
+      draggable: false,
+      offsetX: 0,
+      offsetY: 0,
       ...props,
       style: {
         // Default styles would go here (none currently)
@@ -33,6 +52,88 @@ export class DialogElement extends Element implements Renderable {
     };
 
     super('dialog', defaultProps, children);
+  }
+
+  /**
+   * Check if a point is on the title bar (for drag initiation)
+   */
+  isOnTitleBar(x: number, y: number): boolean {
+    if (!this.props.draggable || !this.props.title || !this._lastDialogBounds) {
+      return false;
+    }
+    const bounds = this._lastDialogBounds;
+    // Title bar is the first row inside the dialog (y = bounds.y + 1)
+    // and spans the full width inside the borders
+    return (
+      y === bounds.y + 1 &&
+      x > bounds.x &&
+      x < bounds.x + bounds.width - 1
+    );
+  }
+
+  /**
+   * Start dragging the dialog
+   */
+  startDrag(mouseX: number, mouseY: number): void {
+    if (!this.props.draggable) return;
+    this._isDragging = true;
+    this._dragStartX = mouseX;
+    this._dragStartY = mouseY;
+    this._dragStartOffsetX = this.props.offsetX || 0;
+    this._dragStartOffsetY = this.props.offsetY || 0;
+  }
+
+  /**
+   * Update drag position
+   */
+  updateDrag(mouseX: number, mouseY: number): boolean {
+    if (!this._isDragging || !this._lastViewportBounds) return false;
+
+    const deltaX = mouseX - this._dragStartX;
+    const deltaY = mouseY - this._dragStartY;
+
+    // Calculate new offset
+    let newOffsetX = this._dragStartOffsetX + deltaX;
+    let newOffsetY = this._dragStartOffsetY + deltaY;
+
+    // Constrain to viewport bounds (keep at least title bar visible)
+    if (this._lastDialogBounds && this._lastViewportBounds) {
+      const vp = this._lastViewportBounds;
+      const dialogWidth = this._lastDialogBounds.width;
+      const dialogHeight = this._lastDialogBounds.height;
+
+      // Calculate center position
+      const centerX = Math.floor((vp.width - dialogWidth) / 2);
+      const centerY = Math.floor((vp.height - dialogHeight) / 2);
+
+      // Constrain so dialog stays mostly visible
+      const minX = -centerX + 2;  // Leave 2 chars visible on left
+      const maxX = vp.width - centerX - dialogWidth + dialogWidth - 2;  // Leave 2 chars visible on right
+      const minY = -centerY;  // Can go to top
+      const maxY = vp.height - centerY - 3;  // Keep title bar visible
+
+      newOffsetX = Math.max(minX, Math.min(maxX, newOffsetX));
+      newOffsetY = Math.max(minY, Math.min(maxY, newOffsetY));
+    }
+
+    this.props.offsetX = newOffsetX;
+    this.props.offsetY = newOffsetY;
+
+    return true;
+  }
+
+  /**
+   * End dragging
+   */
+  endDrag(): void {
+    this._isDragging = false;
+  }
+
+  /**
+   * Check if currently dragging
+   */
+  isDragging(): boolean {
+    return this._isDragging;
   }
 
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
@@ -70,6 +171,9 @@ export class DialogElement extends Element implements Renderable {
       return;
     }
 
+    // Store viewport bounds for drag constraints
+    this._lastViewportBounds = bounds;
+
     // Render backdrop if enabled
     if (this.props.backdrop) {
       this._renderBackdrop(bounds, buffer);
@@ -85,8 +189,12 @@ export class DialogElement extends Element implements Renderable {
     const dialogHeight = heightProp !== undefined
       ? (heightProp <= 1 ? Math.floor(bounds.height * heightProp) : Math.min(heightProp, bounds.height - 4))
       : Math.min(Math.floor(bounds.height * 0.7), 20);
-    const dialogX = Math.floor((bounds.width - dialogWidth) / 2);
-    const dialogY = Math.floor((bounds.height - dialogHeight) / 2);
+
+    // Apply drag offset to centered position
+    const offsetX = this.props.offsetX || 0;
+    const offsetY = this.props.offsetY || 0;
+    const dialogX = Math.floor((bounds.width - dialogWidth) / 2) + offsetX;
+    const dialogY = Math.floor((bounds.height - dialogHeight) / 2) + offsetY;
 
     const dialogBounds: Bounds = {
       x: bounds.x + dialogX,
@@ -94,6 +202,9 @@ export class DialogElement extends Element implements Renderable {
       width: dialogWidth,
       height: dialogHeight
     };
+
+    // Store bounds for title bar hit testing
+    this._lastDialogBounds = dialogBounds;
 
     this._renderDialog(dialogBounds, style, buffer, context);
   }

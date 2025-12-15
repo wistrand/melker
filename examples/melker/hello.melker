@@ -17,6 +17,5 @@
 
   <button
     title="Click Me!"
-    style="background-color: blue; color: white;"
   />
 </container>

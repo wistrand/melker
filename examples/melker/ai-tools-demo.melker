@@ -1,0 +1,113 @@
+<melker>
+  <script>
+    // Tool to list files in a directory
+    context.registerAITool({
+      name: "list_files",
+      description: "List files in a directory. Returns file names and types.",
+      parameters: {
+        path: { type: "string", required: false, description: "Directory path (default: current directory)" }
+      },
+      handler: async function(args) {
+        var dirPath = args.path || Deno.cwd();
+        try {
+          var entries = [];
+          for await (var entry of Deno.readDir(dirPath)) {
+            var prefix = entry.isDirectory ? "[DIR] " : "[FILE] ";
+            entries.push(prefix + entry.name);
+          }
+          var listingEl = context.getElementById("file-listing");
+          if (listingEl) {
+            listingEl.props.text = entries.join("\n");
+          }
+          return {
+            success: true,
+            message: "Found " + entries.length + " items in " + dirPath
+          };
+        } catch (error) {
+          return { success: false, message: "Error listing " + dirPath + ": " + error.message };
+        }
+      }
+    });
+
+    // Tool to set the counter value
+    context.registerAITool({
+      name: "set_counter",
+      description: "Set the counter to a specific value",
+      parameters: {
+        value: { type: "number", required: true, description: "The new counter value" }
+      },
+      handler: function(args) {
+        var counterEl = context.getElementById("counter");
+        if (counterEl) {
+          var oldValue = parseInt(counterEl.props.text) || 0;
+          counterEl.props.text = String(Number(args.value) || 0);
+          return { success: true, message: "Counter changed from " + oldValue + " to " + args.value };
+        }
+        return { success: false, message: "Counter element not found" };
+      }
+    });
+
+    // Tool to add a message to the log
+    context.registerAITool({
+      name: "add_log",
+      description: "Add a message to the activity log",
+      parameters: {
+        message: { type: "string", required: true, description: "Message to add to the log" }
+      },
+      handler: function(args) {
+        var logEl = context.getElementById("activity-log");
+        if (logEl) {
+          var timestamp = new Date().toLocaleTimeString();
+          var entry = "[" + timestamp + "] " + args.message;
+          var current = logEl.props.text || "";
+          logEl.props.text = current ? current + "\n" + entry : entry;
+          return { success: true, message: "Added to log: " + args.message };
+        }
+        return { success: false, message: "Log element not found" };
+      }
+    });
+  </script>
+
+  <container style="display: flex; flex-direction: column; height: fill; padding: 1; gap: 1">
+    <text text="AI Tools Demo" style="bold: true; color: cyan" />
+    <text text="Press Alt+H to open the AI assistant and try:" style="color: gray" />
+    <text text="  - list files in the current directory" style="color: gray" />
+    <text text="  - set counter to 100" style="color: gray" />
+    <text text="  - add log message hello world" style="color: gray" />
+
+    <container style="display: flex; flex-direction: row; gap: 2; margin-top: 1">
+      <container style="display: flex; flex-direction: column; flex: 1; border: thin; padding: 1">
+        <text text="Counter" style="bold: true" />
+        <text id="counter" text="0" />
+        <container style="display: flex; flex-direction: row; gap: 1; margin-top: 1">
+          <button id="decrement" title="-" onClick="
+            var el = context.getElementById('counter');
+            if (el) el.props.text = String((parseInt(el.props.text) || 0) - 1);
+          " />
+          <button id="increment" title="+" onClick="
+            var el = context.getElementById('counter');
+            if (el) el.props.text = String((parseInt(el.props.text) || 0) + 1);
+          " />
+          <button id="reset" title="Reset" onClick="
+            var el = context.getElementById('counter');
+            if (el) el.props.text = '0';
+          " />
+        </container>
+      </container>
+
+      <container style="flex: 2; border: thin; padding: 1">
+        <text text="Activity Log" style="bold: true" />
+        <container scrollable="true" style="height: 6; overflow: scroll">
+          <text id="activity-log" text="(no activity yet)" style="color: gray" />
+        </container>
+      </container>
+    </container>
+
+    <container style="flex: 1; border: thin; padding: 1; margin-top: 1">
+      <text text="File Listing" style="bold: true" />
+      <container scrollable="true" style="flex: 1; overflow: scroll">
+        <text id="file-listing" text="(use AI to list files)" style="color: gray" />
+      </container>
+    </container>
+  </container>
+</melker>

@@ -4,16 +4,17 @@
 import { Element, isInteractive, isTextSelectable } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
-import { ComponentLogger } from './logging.ts';
+import { getLogger } from './logging.ts';
 import { Point, Bounds, pointInBounds } from './geometry.ts';
 
 export type { Point, Bounds };
+
+const logger = getLogger('hit-test');
 
 export interface HitTestContext {
   document: Document;
   renderer: RenderingEngine;
   viewportSize: { width: number; height: number };
-  logger?: ComponentLogger;
 }
 
 /**
@@ -24,13 +25,11 @@ export class HitTester {
   private _document: Document;
   private _renderer: RenderingEngine;
   private _viewportSize: { width: number; height: number };
-  private _logger?: ComponentLogger;
 
   constructor(context: HitTestContext) {
     this._document = context.document;
     this._renderer = context.renderer;
     this._viewportSize = context.viewportSize;
-    this._logger = context.logger;
   }
 
   /**
@@ -40,7 +39,6 @@ export class HitTester {
     if (context.document) this._document = context.document;
     if (context.renderer) this._renderer = context.renderer;
     if (context.viewportSize) this._viewportSize = context.viewportSize;
-    if (context.logger !== undefined) this._logger = context.logger;
   }
 
   /**
@@ -48,7 +46,7 @@ export class HitTester {
    */
   hitTest(x: number, y: number): Element | undefined {
     // Trace logging for hit test events
-    this._logger?.trace('Hit test triggered', {
+    logger.trace('Hit test triggered', {
       mouseX: x,
       mouseY: y,
     });
@@ -107,7 +105,7 @@ export class HitTester {
         continue;
       }
 
-      // Calculate dialog bounds (centered in viewport)
+      // Calculate dialog bounds (centered in viewport, with drag offset)
       const viewportWidth = this._viewportSize.width;
       const viewportHeight = this._viewportSize.height;
       const widthProp = dialog.props.width;
@@ -118,8 +116,12 @@ export class HitTester {
       const dialogHeight = heightProp !== undefined
         ? (heightProp <= 1 ? Math.floor(viewportHeight * heightProp) : Math.min(heightProp as number, viewportHeight - 4))
         : Math.min(Math.floor(viewportHeight * 0.7), 20);
-      const dialogX = Math.floor((viewportWidth - dialogWidth) / 2);
-      const dialogY = Math.floor((viewportHeight - dialogHeight) / 2);
+
+      // Apply drag offset to centered position
+      const offsetX = (dialog.props.offsetX as number) || 0;
+      const offsetY = (dialog.props.offsetY as number) || 0;
+      const dialogX = Math.floor((viewportWidth - dialogWidth) / 2) + offsetX;
+      const dialogY = Math.floor((viewportHeight - dialogHeight) / 2) + offsetY;
 
       const dialogBounds = {
         x: dialogX,
@@ -139,13 +141,22 @@ export class HitTester {
           height: dialogBounds.height - titleHeight - 1
         };
 
+        logger.info('Dialog hit test', {
+          dialogId: dialog.id,
+          clickPos: `${x},${y}`,
+          contentBounds: `${contentBounds.x},${contentBounds.y} ${contentBounds.width}x${contentBounds.height}`,
+          childCount: dialog.children?.length || 0
+        });
+
         // Search for interactive elements within dialog children
         const hit = this._hitTestDialogChildren(dialog, x, y, contentBounds);
         if (hit) {
+          logger.info('Dialog hit test result', { hitId: hit.id, hitType: hit.type });
           return hit;
         }
 
         // Click is in dialog but not on an interactive element
+        logger.info('Dialog hit test - no hit, returning dialog');
         return dialog;
       }
     }
@@ -165,6 +176,17 @@ export class HitTester {
       // Try to get the rendered bounds for this child
       const childBounds = child.id ? this._renderer.getContainerBounds(child.id) : undefined;
 
+      logger.debug('Dialog hit test child', {
+        childId: child.id,
+        childType: child.type,
+        hasBounds: !!childBounds,
+        childBounds: childBounds ? `${childBounds.x},${childBounds.y} ${childBounds.width}x${childBounds.height}` : 'none',
+        clickPos: `${x},${y}`,
+        inBounds: childBounds ? pointInBounds(x, y, childBounds) : false,
+        isTextSelectable: this.isTextSelectableElement(child),
+        hasChildren: !!(child.children && child.children.length > 0)
+      });
+
       if (childBounds && pointInBounds(x, y, childBounds)) {
         // If it has children, recursively search them FIRST (not just containers - also tabs, etc.)
         if (child.children && child.children.length > 0) {
@@ -176,17 +198,19 @@ export class HitTester {
 
         // If it's an interactive or text-selectable element, return it
         if (this.isInteractiveElement(child) || this.isTextSelectableElement(child)) {
+          logger.info('Dialog hit test found', { id: child.id, type: child.type });
           return child;
         }
       } else if (!childBounds) {
-        // No bounds stored - check recursively if has children, or return if interactive
+        // No bounds stored - check recursively if has children, or return if interactive/text-selectable
         if (child.children && child.children.length > 0) {
           const nestedHit = this._hitTestDialogChildren(child, x, y, _contentBounds);
           if (nestedHit) {
             return nestedHit;
           }
-        } else if (this.isInteractiveElement(child) && pointInBounds(x, y, _contentBounds)) {
-          // Interactive element without stored bounds - use parent content bounds
+        } else if ((this.isInteractiveElement(child) || this.isTextSelectableElement(child)) && pointInBounds(x, y, _contentBounds)) {
+          // Interactive or text-selectable element without stored bounds - use parent content bounds
+          logger.info('Dialog hit test found (no bounds)', { id: child.id, type: child.type });
           return child;
         }
       }
@@ -255,7 +279,7 @@ export class HitTester {
         if (relativeY >= 0 && relativeY < openMenu.children.length) {
           const clickedItem = openMenu.children[relativeY];
           if (clickedItem && (clickedItem.type === 'menu-item' || clickedItem.type === 'menu-separator')) {
-            this._logger?.trace('Hit test found menu item', {
+            logger.trace('Hit test found menu item', {
               menuItemId: clickedItem.id,
               relativeY,
               x,
@@ -291,7 +315,7 @@ export class HitTester {
     // Get element bounds from the renderer if available
     const bounds = this._renderer.getContainerBounds(element.id || '');
 
-    this._logger?.trace('Hit test element', {
+    logger.trace('Hit test element', {
       type: element.type,
       id: element.id,
       hasBounds: !!bounds,
@@ -314,7 +338,7 @@ export class HitTester {
         childY = y - elementScrollY;
 
         // Trace logging for all scrollable containers
-        this._logger?.trace('Hit test with scrollable container', {
+        logger.trace('Hit test with scrollable container', {
           elementId: element.id || 'unknown',
           elementScrollX,
           elementScrollY,

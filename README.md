@@ -21,6 +21,8 @@ Run it:
 deno run --allow-all melker.ts hello.melker
 ```
 
+<img src="docs/hello_screenshot.png" alt="Hello World Screenshot" />
+
 Or run directly from GitHub without installing:
 ```bash
 deno run --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts hello.melker

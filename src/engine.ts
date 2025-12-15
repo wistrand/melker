@@ -568,6 +568,13 @@ export class MelkerEngine {
         return;
       }
 
+      if (event.key === 'F10') {
+        this._logger?.info('F10 pressed - opening accessibility dialog');
+        this._ensureAccessibilityDialogManager();
+        this._accessibilityDialogManager!.toggle();
+        return;
+      }
+
       // Handle Ctrl+/ or Alt+/ or Ctrl+? or Alt+? for AI Accessibility dialog
       if ((event.ctrlKey || event.altKey) && (event.key === '/' || event.key === '?')) {
         this._logger?.info('Accessibility shortcut pressed', { key: event.key, ctrlKey: event.ctrlKey, altKey: event.altKey });

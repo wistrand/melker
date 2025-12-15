@@ -8,6 +8,7 @@ const logger = getLogger('ai:openrouter');
 export interface OpenRouterConfig {
   apiKey: string;
   model: string;
+  endpoint?: string;
   siteUrl?: string;
   siteName?: string;
 }
@@ -56,6 +57,7 @@ export interface StreamCallback {
 
 const DEFAULT_MODEL = 'openai/gpt-5.2-chat';
 // const DEFAULT_MODEL = 'mistralai/devstral-2512';
+const DEFAULT_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_SITE_URL = 'https://github.com/melker';
 const DEFAULT_SITE_NAME = 'Melker';
 
@@ -70,11 +72,13 @@ export function getOpenRouterConfig(): OpenRouterConfig | null {
   }
 
   const model = Deno.env.get('MELKER_AI_MODEL') || DEFAULT_MODEL;
-  logger.info('OpenRouter configured', { model });
+  const endpoint = Deno.env.get('MELKER_AI_ENDPOINT') || DEFAULT_ENDPOINT;
+  logger.info('OpenRouter configured', { model, endpoint });
 
   return {
     apiKey,
     model,
+    endpoint,
     siteUrl: Deno.env.get('MELKER_AI_SITE_URL') || DEFAULT_SITE_URL,
     siteName: Deno.env.get('MELKER_AI_SITE_NAME') || DEFAULT_SITE_NAME,
   };
@@ -119,7 +123,8 @@ export async function streamChat(
       requestBody: JSON.stringify(requestBody).substring(0, 2000)
     });
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const endpoint = config.endpoint || DEFAULT_ENDPOINT;
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${config.apiKey}`,

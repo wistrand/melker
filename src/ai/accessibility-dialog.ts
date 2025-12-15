@@ -7,7 +7,7 @@ import { melker } from '../template.ts';
 import { Element } from '../types.ts';
 import { FocusManager } from '../focus.ts';
 import { getLogger } from '../logging.ts';
-import { getOpenRouterConfig, streamChat, type ChatMessage, type OpenRouterConfig, type ToolCallRequest } from './openrouter.ts';
+import { getOpenRouterConfig, streamChat, type ChatMessage, type ToolCallRequest } from './openrouter.ts';
 import { buildContext, buildSystemPrompt, hashContext, type UIContext } from './context.ts';
 import { getGlobalCache } from './cache.ts';
 import { toolsToOpenRouterFormat, executeTool, type ToolContext, type ToolCall } from './tools.ts';
@@ -439,7 +439,7 @@ export class AccessibilityDialogManager {
 
           // Check if we need to compact the history
           if (this._messageHistory.length > MAX_MESSAGES_BEFORE_COMPACT) {
-            await this._compactHistory(config, context);
+            await this._compactHistory();
           }
         },
         onToolCall: async (toolCalls: ToolCallRequest[]) => {
@@ -566,7 +566,14 @@ export class AccessibilityDialogManager {
             roles: this._messageHistory.map(m => m.role)
           });
 
-          await streamChat(continueMessages, config, {
+          // Re-read config to allow dynamic changes
+          const continueConfig = getOpenRouterConfig();
+          if (!continueConfig) {
+            logger.error('Config became unavailable during continuation');
+            return;
+          }
+
+          await streamChat(continueMessages, continueConfig, {
             onToken: (token) => {
               this._currentResponse += token;
               responseElement.props.text = this._conversationHistory + this._currentResponse;
@@ -588,7 +595,7 @@ export class AccessibilityDialogManager {
               this._scrollToBottom();
 
               if (this._messageHistory.length > MAX_MESSAGES_BEFORE_COMPACT) {
-                await this._compactHistory(config, context);
+                await this._compactHistory();
               }
             },
             onError: (error) => {
@@ -638,13 +645,21 @@ export class AccessibilityDialogManager {
    * Compact conversation history when it grows too large
    * Uses the model to summarize older messages
    */
-  private async _compactHistory(config: OpenRouterConfig, context: UIContext): Promise<void> {
+  private async _compactHistory(): Promise<void> {
     if (this._isCompacting) return;
     this._isCompacting = true;
 
     logger.info('Compacting conversation history', {
       currentLength: this._messageHistory.length
     });
+
+    // Re-read config to allow dynamic changes
+    const config = getOpenRouterConfig();
+    if (!config) {
+      logger.error('Config unavailable for compaction');
+      this._isCompacting = false;
+      return;
+    }
 
     const statusElement = this._deps.document.getElementById('accessibility-status');
     if (statusElement) {

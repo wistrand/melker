@@ -124,14 +124,36 @@ export async function streamChat(
     });
 
     const endpoint = config.endpoint || DEFAULT_ENDPOINT;
+
+    // Build headers, starting with defaults
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${config.apiKey}`,
+      'HTTP-Referer': config.siteUrl || DEFAULT_SITE_URL,
+      'X-Title': config.siteName || DEFAULT_SITE_NAME,
+      'Content-Type': 'application/json',
+    };
+
+    // Parse and add custom headers from MELKER_AI_HEADERS env var
+    // Format: "header-name: header-value; another-header: value"
+    const customHeaders = Deno.env.get('MELKER_AI_HEADERS');
+    if (customHeaders) {
+      const pairs = customHeaders.split(';');
+      for (const pair of pairs) {
+        const colonIndex = pair.indexOf(':');
+        if (colonIndex > 0) {
+          const name = pair.substring(0, colonIndex).trim();
+          const value = pair.substring(colonIndex + 1).trim();
+          if (name && value) {
+            headers[name] = value;
+            logger.debug('Added custom header', { name, valueLength: value.length });
+          }
+        }
+      }
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
-        'HTTP-Referer': config.siteUrl || DEFAULT_SITE_URL,
-        'X-Title': config.siteName || DEFAULT_SITE_NAME,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(requestBody),
     });
 

@@ -60,8 +60,11 @@ Response streamed to dialog (debounced 50ms)
 | `OPENROUTER_API_KEY` | (required) | API key for OpenRouter |
 | `MELKER_AI_MODEL` | `openai/gpt-5.2-chat` | Model to use |
 | `MELKER_AI_ENDPOINT` | `https://openrouter.ai/api/v1/chat/completions` | API endpoint URL |
+| `MELKER_AI_HEADERS` | (none) | Custom headers (format: `name: value; name2: value2`) |
 | `MELKER_AI_SITE_URL` | `https://github.com/melker` | Site URL for rankings |
 | `MELKER_AI_SITE_NAME` | `Melker` | Site name for rankings |
+
+All environment variables are read fresh on each API call, allowing dynamic changes without restart.
 
 ## Tool System
 

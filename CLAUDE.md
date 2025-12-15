@@ -144,6 +144,7 @@ tests/                - Test files
 | `OPENROUTER_API_KEY` | API key for AI assistant (OpenRouter) |
 | `MELKER_AI_MODEL` | AI model (default: `openai/gpt-5.2-chat`) |
 | `MELKER_AI_ENDPOINT` | API endpoint (default: `https://openrouter.ai/api/v1/chat/completions`) |
+| `MELKER_AI_HEADERS` | Custom headers (`name: value; name2: value2`) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |

@@ -229,22 +229,5 @@ export async function hashFilePath(filepath: string): Promise<string> {
   return hashHex.substring(0, 12);
 }
 
-/**
- * Create a debounced function
- */
-export function debounce<T extends (...args: unknown[]) => void>(
-  fn: T,
-  delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: number | undefined;
-
-  return (...args: Parameters<T>) => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      fn(...args);
-      timeoutId = undefined;
-    }, delay);
-  };
-}
+// Re-export debounce from utils for backwards compatibility
+export { debounce } from './utils/timing.ts';

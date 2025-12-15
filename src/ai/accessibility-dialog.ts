@@ -11,6 +11,7 @@ import { getOpenRouterConfig, streamChat, type ChatMessage, type ToolCallRequest
 import { buildContext, buildSystemPrompt, hashContext, type UIContext } from './context.ts';
 import { getGlobalCache } from './cache.ts';
 import { toolsToOpenRouterFormat, executeTool, type ToolContext, type ToolCall } from './tools.ts';
+import { createDebouncedAction, type DebouncedAction } from '../utils/timing.ts';
 
 const logger = getLogger('ai:dialog');
 
@@ -51,46 +52,29 @@ export class AccessibilityDialogManager {
   private _conversationHistory = '';  // Accumulated Q+A history for display
   private _messageHistory: ChatMessage[] = [];  // Full conversation for API context
   private _isCompacting = false;
-  // Debounce state for streaming updates
-  private _renderDebounceTimer: number | null = null;
-  private _renderDebounceMs = 50;  // 50ms debounce for streaming tokens
-  private _pendingRender = false;
+  // Debounced action for streaming render updates (50ms batching)
+  private _debouncedRenderAction: DebouncedAction;
 
   constructor(deps: AccessibilityDialogDependencies) {
     this._deps = deps;
+    this._debouncedRenderAction = createDebouncedAction(() => {
+      this._deps.render();
+      this._scrollToBottom();
+    }, 50);
   }
 
   /**
    * Debounced render for streaming updates - batches rapid token updates
    */
   private _debouncedRender(): void {
-    this._pendingRender = true;
-    if (this._renderDebounceTimer !== null) {
-      return; // Timer already running, render will happen when it fires
-    }
-    this._renderDebounceTimer = setTimeout(() => {
-      this._renderDebounceTimer = null;
-      if (this._pendingRender) {
-        this._pendingRender = false;
-        this._deps.render();
-        this._scrollToBottom();
-      }
-    }, this._renderDebounceMs) as unknown as number;
+    this._debouncedRenderAction.call();
   }
 
   /**
    * Flush any pending debounced render immediately
    */
   private _flushRender(): void {
-    if (this._renderDebounceTimer !== null) {
-      clearTimeout(this._renderDebounceTimer);
-      this._renderDebounceTimer = null;
-    }
-    if (this._pendingRender) {
-      this._pendingRender = false;
-      this._deps.render();
-      this._scrollToBottom();
-    }
+    this._debouncedRenderAction.flush();
   }
 
   /**

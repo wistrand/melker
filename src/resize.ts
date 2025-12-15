@@ -3,6 +3,7 @@
 import { DualBuffer } from './buffer.ts';
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
+import { debounce } from './utils/timing.ts';
 
 export interface TerminalSize {
   width: number;
@@ -58,9 +59,10 @@ export class ResizeHandler {
   private _renderer?: RenderingEngine;
   private _options: Required<ResizeHandlerOptions>;
   private _isListening = false;
-  private _debounceTimer?: number;
   private _resizeController?: AbortController;
   private _pollTimer?: number;
+  // Debounced resize handler
+  private _debouncedDetectAndUpdateSize: () => void;
 
   constructor(
     initialSize: TerminalSize,
@@ -76,6 +78,15 @@ export class ResizeHandler {
       onAfterResize: () => {},
       ...options,
     };
+
+    // Create debounced resize detection function
+    this._debouncedDetectAndUpdateSize = debounce(async () => {
+      try {
+        await this._detectAndUpdateSize();
+      } catch (error) {
+        console.error('Error handling resize:', error);
+      }
+    }, this._options.debounceMs);
   }
 
   get currentSize(): TerminalSize {
@@ -161,11 +172,6 @@ export class ResizeHandler {
 
     this._isListening = false;
 
-    if (this._debounceTimer) {
-      clearTimeout(this._debounceTimer);
-      this._debounceTimer = undefined;
-    }
-
     if (this._pollTimer) {
       clearTimeout(this._pollTimer);
       this._pollTimer = undefined;
@@ -244,19 +250,8 @@ export class ResizeHandler {
   }
 
   private async _handleResize(): Promise<void> {
-    // Clear existing debounce timer
-    if (this._debounceTimer) {
-      clearTimeout(this._debounceTimer);
-    }
-
-    // Debounce resize handling
-    this._debounceTimer = setTimeout(async () => {
-      try {
-        await this._detectAndUpdateSize();
-      } catch (error) {
-        console.error('Error handling resize:', error);
-      }
-    }, this._options.debounceMs);
+    // Use debounced resize detection
+    this._debouncedDetectAndUpdateSize();
   }
 
   private async _performResize(newSize: TerminalSize): Promise<void> {

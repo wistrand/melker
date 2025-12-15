@@ -30,6 +30,9 @@ import {
   AlertDialogManager,
 } from './alert-dialog.ts';
 import {
+  AccessibilityDialogManager,
+} from './ai/accessibility-dialog.ts';
+import {
   TerminalInputProcessor,
 } from './input.ts';
 import {
@@ -186,6 +189,9 @@ export class MelkerEngine {
 
   // Alert dialog feature
   private _alertDialogManager?: AlertDialogManager;
+
+  // AI Accessibility dialog feature
+  private _accessibilityDialogManager?: AccessibilityDialogManager;
 
   // State persistence
   private _persistenceManager!: StatePersistenceManager;
@@ -356,7 +362,6 @@ export class MelkerEngine {
       document: this._document,
       renderer: this._renderer,
       viewportSize: this._currentSize,
-      logger: this._logger,
     });
     this._scrollHandler = new ScrollHandler({
       document: this._document,
@@ -493,6 +498,16 @@ export class MelkerEngine {
     this._eventManager.addGlobalEventListener('keydown', (event: any) => {
       const focusedElement = this._document!.focusedElement;
 
+      // Log all key events for debugging
+      this._logger?.debug('Key event received', {
+        key: event.key,
+        code: event.code,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        shiftKey: event.shiftKey,
+        metaKey: event.metaKey,
+      });
+
       // Handle Ctrl+C for graceful exit
       if (event.ctrlKey && event.key === 'c') {
         this.stop().then(() => {
@@ -533,9 +548,39 @@ export class MelkerEngine {
         return;
       }
 
+      // Handle Escape to close Accessibility dialog
+      if (event.key === 'Escape' && this._accessibilityDialogManager?.isOpen()) {
+        this._accessibilityDialogManager.close();
+        return;
+      }
+
       // Handle Ctrl+M as alternative menu bar activation
       if (event.ctrlKey && event.key === 'm') {
         this._focusNavigationHandler.handleMenuBarActivation();
+        return;
+      }
+
+      // Handle F11 for AI Accessibility dialog
+      if (event.key === 'F11') {
+        this._logger?.info('F11 pressed - opening accessibility dialog');
+        this._ensureAccessibilityDialogManager();
+        this._accessibilityDialogManager!.toggle();
+        return;
+      }
+
+      // Handle Ctrl+/ or Alt+/ or Ctrl+? or Alt+? for AI Accessibility dialog
+      if ((event.ctrlKey || event.altKey) && (event.key === '/' || event.key === '?')) {
+        this._logger?.info('Accessibility shortcut pressed', { key: event.key, ctrlKey: event.ctrlKey, altKey: event.altKey });
+        this._ensureAccessibilityDialogManager();
+        this._accessibilityDialogManager!.toggle();
+        return;
+      }
+
+      // Handle Ctrl+H or Alt+H for AI Accessibility dialog (Help)
+      if ((event.ctrlKey || event.altKey) && event.key === 'h') {
+        this._logger?.info('Ctrl/Alt+H pressed - opening accessibility dialog');
+        this._ensureAccessibilityDialogManager();
+        this._accessibilityDialogManager!.toggle();
         return;
       }
 
@@ -1022,6 +1067,24 @@ export class MelkerEngine {
   }
 
   /**
+   * Ensure the accessibility dialog manager is initialized
+   */
+  private _ensureAccessibilityDialogManager(): void {
+    if (!this._accessibilityDialogManager) {
+      this._accessibilityDialogManager = new AccessibilityDialogManager({
+        document: this._document,
+        focusManager: this._focusManager,
+        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
+        render: () => this.render(),
+        forceRender: () => this.forceRender(),
+        autoRender: this._options.autoRender,
+        exitProgram: async () => { await this.stop(); },
+        scrollToBottom: (containerId) => this.scrollToBottom(containerId),
+      });
+    }
+  }
+
+  /**
    * Optimized rendering that only updates changed parts of the terminal
    */
   private _renderOptimized(): void {
@@ -1280,10 +1343,10 @@ export class MelkerEngine {
     const containerHeight = this._renderer.getContainerBounds(containerId)?.height || 0;
 
     if (contentDimensions && containerHeight > 0) {
-      // Add a small buffer (2 lines) to ensure content stays visible
-      // This helps when content height calculation is slightly off
+      // Calculate max scroll to show bottom of content
+      // Buffer accounts for potential content height calculation inaccuracies
       const buffer = 2;
-      const maxScroll = Math.max(0, contentDimensions.height - containerHeight - buffer);
+      const maxScroll = Math.max(0, contentDimensions.height - containerHeight + buffer);
       container.props.scrollY = maxScroll;
 
       // Auto-render if enabled

@@ -177,6 +177,7 @@ export async function runMelkerFile(
     const { getCurrentTheme } = await import('./theme.ts');
     const oauth = await import('./oauth.ts');
     const { hashFilePath } = await import('./state-persistence.ts');
+    const { registerAITool, clearCustomTools } = await import('./ai/mod.ts');
 
     // Use preloaded content if provided, otherwise read from file/URL
     let templateContent = preloadedContent ?? await loadContent(filepath);
@@ -411,7 +412,9 @@ export async function runMelkerFile(
         // Resolve the specifier relative to the .melker file's directory
         const resolvedUrl = new URL(specifier, basePath).href;
         return await import(resolvedUrl);
-      }
+      },
+      // Register custom AI tools for the assistant
+      registerAITool: registerAITool,
     };
 
     // Step 4: Execute scripts with context so they can access engine
@@ -656,6 +659,9 @@ export async function watchAndRun(
 
     if (isReload) {
       logger.info(`Reloading application: ${filepath}`);
+      // Clear custom AI tools from previous instance
+      const { clearCustomTools } = await import('./ai/mod.ts');
+      clearCustomTools();
     } else {
       logger.info(`Starting application with file watch: ${filepath}`);
     }

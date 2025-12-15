@@ -49,7 +49,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<input>` | id, placeholder, value, format, onKeyPress, onInput | Single-line text input (format: 'text'\|'password') |
 | `<textarea>` | id, placeholder, value, rows, cols, wrap, maxLength | Multi-line text input |
 | `<button>` | id, title, onClick | Uses `title` not `label` |
-| `<dialog>` | id, title, open, modal, backdrop | Modal overlay |
+| `<dialog>` | id, title, open, modal, backdrop, draggable, width, height | Modal overlay (draggable via title bar) |
 | `<file-browser>` | id, path | File system navigation |
 | `<menu-bar>` | style | Horizontal menu container |
 | `<menu>` | title | Dropdown menu |

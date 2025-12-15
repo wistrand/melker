@@ -81,11 +81,15 @@ export class TextElement extends Element implements Renderable, TextSelectable {
     // Use loaded content if available, otherwise use provided text, otherwise show loading
     if (src && this._srcContent) {
       text = this._srcContent;
-    } else if (!text && src) {
+    } else if ((text === undefined || text === null || text === '') && src) {
       text = 'Loading content from: ' + src + '...';
     }
 
-    if (!text) return;
+    // Handle empty text (but not "0" or 0)
+    if (text === undefined || text === null || text === '') return;
+
+    // Convert to string if needed (handles numeric values like 0)
+    text = String(text);
 
     // Handle async content loading
     if (src) {
@@ -264,7 +268,11 @@ export class TextElement extends Element implements Renderable, TextSelectable {
       };
     }
 
-    if (!text) return { width: 0, height: 0 };
+    // Handle empty text (but not "0" or 0)
+    if (text === undefined || text === null || text === '') return { width: 0, height: 0 };
+
+    // Convert to string if needed (handles numeric values like 0)
+    text = String(text);
 
     // Split text by newlines to get accurate dimensions
     const lines = text.split('\n');
@@ -313,8 +321,8 @@ export class TextElement extends Element implements Renderable, TextSelectable {
     if (props.style?.textWrap !== undefined && !['nowrap', 'wrap'].includes(props.style.textWrap)) {
       return false;
     }
-    // Either text or src must be provided
-    if (!props.text && !props.src) {
+    // Either text or src must be provided (allow text=0)
+    if ((props.text === undefined || props.text === null || props.text === '') && !props.src) {
       return false;
     }
     return true;

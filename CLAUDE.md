@@ -102,6 +102,13 @@ src/
     waveform.ts       - Audio waveform
   chat/               - Chat utilities
     chat-fetch-util.ts - HTTP fetch helpers
+  ai/                 - AI accessibility system
+    mod.ts            - AI module exports
+    openrouter.ts     - OpenRouter API streaming client
+    context.ts        - UI context builder for AI
+    cache.ts          - Query response cache
+    tools.ts          - AI tool system (built-in + custom)
+    accessibility-dialog.ts - AI assistant dialog
 agent_docs/           - Documentation for AI agents
 examples/             - Example applications
   ts/                 - TypeScript examples (createElement API)
@@ -134,6 +141,8 @@ tests/                - Test files
 | `MELKER_DEBUG_PORT` | Debug server port |
 | `MELKER_LINT` | Enable lint mode (`true` or `1`) |
 | `MELKER_PERSIST` | Enable state persistence (`true` or `1`, default: false) |
+| `OPENROUTER_API_KEY` | API key for AI assistant (OpenRouter) |
+| `MELKER_AI_MODEL` | AI model (default: `mistralai/devstral-2512:free`) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |
@@ -174,8 +183,9 @@ See `agent_docs/melker-file-format.md` for syntax details.
 
 | Key | Action |
 |-----|--------|
+| `Alt+H` | Open AI accessibility assistant (draggable dialog) |
 | `F12` | Toggle View Source overlay (for .md files: shows Markdown/Melker tabs) |
-| `Escape` | Close View Source overlay / Close menus |
+| `Escape` | Close View Source overlay / Close menus / Close AI dialog |
 | `F10` | Activate menu bar |
 | `Ctrl+M` | Alternative menu bar activation |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |

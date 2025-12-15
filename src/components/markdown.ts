@@ -332,6 +332,18 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   }
 
   /**
+   * Get the markdown content (either from text prop or loaded from src)
+   */
+  getContent(): string | null {
+    // Prefer inline text prop
+    if (this.props.text) {
+      return this.props.text;
+    }
+    // Fall back to loaded src content
+    return this._srcContent;
+  }
+
+  /**
    * Fetch content from src URL if specified
    */
   private async _fetchSrcContent(): Promise<string | null> {

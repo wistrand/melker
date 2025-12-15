@@ -142,7 +142,8 @@ tests/                - Test files
 | `MELKER_LINT` | Enable lint mode (`true` or `1`) |
 | `MELKER_PERSIST` | Enable state persistence (`true` or `1`, default: false) |
 | `OPENROUTER_API_KEY` | API key for AI assistant (OpenRouter) |
-| `MELKER_AI_MODEL` | AI model (default: `mistralai/devstral-2512:free`) |
+| `MELKER_AI_MODEL` | AI model (default: `openai/gpt-5.2-chat`) |
+| `MELKER_AI_ENDPOINT` | API endpoint (default: `https://openrouter.ai/api/v1/chat/completions`) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |

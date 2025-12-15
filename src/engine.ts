@@ -560,36 +560,22 @@ export class MelkerEngine {
         return;
       }
 
-      // Handle F11 for AI Accessibility dialog
-      if (event.key === 'F11') {
-        this._logger?.info('F11 pressed - opening accessibility dialog');
-        this._ensureAccessibilityDialogManager();
-        this._accessibilityDialogManager!.toggle();
-        return;
-      }
-
-      if (event.key === 'F10') {
-        this._logger?.info('F10 pressed - opening accessibility dialog');
+      // Handle some function keys for AI Accessibility dialog
+      if (['f6', 'F6', 'f7', 'F7', 'f8', 'F8', 'f9', 'F9', 'f10', 'F10'].includes(event.key)) {
+        this._logger?.info(event.key + ' pressed - opening accessibility dialog');
         this._ensureAccessibilityDialogManager();
         this._accessibilityDialogManager!.toggle();
         return;
       }
 
       // Handle Ctrl+/ or Alt+/ or Ctrl+? or Alt+? for AI Accessibility dialog
-      if ((event.ctrlKey || event.altKey) && (event.key === '/' || event.key === '?')) {
+      if ((event.ctrlKey || event.altKey) && (['/', '?', 'h', 'H'].includes(event.key))) {
         this._logger?.info('Accessibility shortcut pressed', { key: event.key, ctrlKey: event.ctrlKey, altKey: event.altKey });
         this._ensureAccessibilityDialogManager();
         this._accessibilityDialogManager!.toggle();
         return;
       }
 
-      // Handle Ctrl+H or Alt+H for AI Accessibility dialog (Help)
-      if ((event.ctrlKey || event.altKey) && event.key === 'h') {
-        this._logger?.info('Ctrl/Alt+H pressed - opening accessibility dialog');
-        this._ensureAccessibilityDialogManager();
-        this._accessibilityDialogManager!.toggle();
-        return;
-      }
 
       // Handle Alt+N || Alt+C for copying selection to clipboard
       if (event.altKey && (event.key === 'n' || event.key === 'c')) {

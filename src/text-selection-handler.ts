@@ -14,6 +14,7 @@ import { HitTester } from './hit-test.ts';
 import { ScrollHandler } from './scroll-handler.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 import { DialogElement } from './components/dialog.ts';
+import { createThrottledAction, type ThrottledAction } from './utils/timing.ts';
 
 const logger = getLogger('text-selection');
 
@@ -49,8 +50,8 @@ export class TextSelectionHandler {
     mode: 'component',
   };
   private _isSelecting = false;
-  private _selectionRenderTimer: number | null = null;
-  private _lastSelectionRenderTime = 0;
+  // Throttled action for selection render updates (~60fps)
+  private _throttledSelectionRender!: ThrottledAction;
   private _lastClickTime = 0;
   private _lastClickPos = { x: -1, y: -1 };
   private _clickCount = 0;
@@ -84,6 +85,13 @@ export class TextSelectionHandler {
   constructor(options: TextSelectionHandlerOptions, deps: TextSelectionHandlerDeps) {
     this._options = options;
     this._deps = deps;
+
+    // Initialize throttled selection render (~60fps, leading + trailing edges)
+    this._throttledSelectionRender = createThrottledAction(
+      () => this._renderSelectionOnly(),
+      16,  // ~60fps
+      { leading: true, trailing: true }
+    );
   }
 
   /**
@@ -110,8 +118,8 @@ export class TextSelectionHandler {
       terminalOutputTotal: 0,
       bufferClearTotal: 0,
     };
-    // Reset throttle timer for fresh drag
-    this._lastSelectionRenderTime = 0;
+    // Reset throttle for fresh drag
+    this._throttledSelectionRender.reset();
 
     // Check for scrollbar click before other interactions
     const scrollbarHit = this._deps.scrollHandler.detectScrollbarClick(event.x, event.y);
@@ -363,30 +371,10 @@ export class TextSelectionHandler {
       this._selectionTimingStats.selectionUpdateTotal += performance.now() - selectionUpdateStart;
 
       // Throttled selection-only render (skips layout calculation)
-      // Guarantees render every 16ms during continuous movement, unlike debounce
+      // Guarantees render every 16ms during continuous movement (~60fps)
       if (this._options.autoRender) {
         this._selectionTimingStats.renderRequestCount++;
-        const now = performance.now();
-        const timeSinceLastRender = now - this._lastSelectionRenderTime;
-
-        if (timeSinceLastRender >= 16) {
-          // Enough time has passed, render immediately
-          if (this._selectionRenderTimer !== null) {
-            clearTimeout(this._selectionRenderTimer);
-            this._selectionRenderTimer = null;
-          }
-          this._lastSelectionRenderTime = now;
-          this._renderSelectionOnly();
-        } else if (this._selectionRenderTimer === null) {
-          // Schedule trailing-edge render for when throttle window expires
-          const delay = 16 - timeSinceLastRender;
-          this._selectionRenderTimer = setTimeout(() => {
-            this._selectionRenderTimer = null;
-            this._lastSelectionRenderTime = performance.now();
-            this._renderSelectionOnly();
-          }, delay) as unknown as number;
-        }
-        // If timer already scheduled, let it fire (don't cancel like debounce)
+        this._throttledSelectionRender.call();
       }
     }
   }
@@ -424,11 +412,8 @@ export class TextSelectionHandler {
     if (event.button === 0 && this._isSelecting) { // Left mouse button
       this._isSelecting = false;
 
-      // Cancel any pending debounced render
-      if (this._selectionRenderTimer !== null) {
-        clearTimeout(this._selectionRenderTimer);
-        this._selectionRenderTimer = null;
-      }
+      // Cancel any pending throttled render
+      this._throttledSelectionRender.cancel();
 
       // If we have a valid selection, keep it active and extract final text
       if (this._textSelection.isActive) {
@@ -717,11 +702,8 @@ export class TextSelectionHandler {
    * Called during engine cleanup/stop
    */
   cleanup(): void {
-    // Cancel any pending selection render timer
-    if (this._selectionRenderTimer !== null) {
-      clearTimeout(this._selectionRenderTimer);
-      this._selectionRenderTimer = null;
-    }
+    // Cancel any pending throttled selection render
+    this._throttledSelectionRender.cancel();
 
     // Clear selection state
     this._clearSelection();

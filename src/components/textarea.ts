@@ -5,6 +5,7 @@ import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ChangeEvent, KeyPressEvent } from '../events.ts';
 import { createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
+import { createDebouncedAction, type DebouncedAction } from '../utils/timing.ts';
 
 export interface TextareaProps extends BaseProps {
   value?: string;
@@ -38,11 +39,11 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
   private _cachedWidth: number = 0;
   private _lastRenderedHeight: number = 0;
   private _heightStabilized: boolean = false;
-  private _changeDebounceTimer: number | null = null;
-  private _changeDebounceMs: number = 50; // Batches rapid input like paste
+  // Debounced action for change notifications (50ms batching for paste)
+  private _debouncedChangeAction: DebouncedAction;
   private _pendingChars: string = ''; // Buffer for batching rapid character input
-  private _pendingCharsTimer: number | null = null;
-  private _pendingCharsDelayMs: number = 5; // Batch chars arriving within 5ms
+  // Debounced action for flushing pending chars (5ms batching)
+  private _debouncedFlushCharsAction: DebouncedAction;
 
   constructor(props: TextareaProps = {}, children: Element[] = []) {
     const defaultProps: TextareaProps = {
@@ -63,6 +64,18 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
     super('textarea', defaultProps, children);
     this._value = defaultProps.value || '';
     this._cursorPos = 0;
+
+    // Initialize debounced change notification (50ms batching for paste operations)
+    this._debouncedChangeAction = createDebouncedAction(() => {
+      if (typeof this.props.onChange === 'function') {
+        this.props.onChange(createChangeEvent(this._value, this.id));
+      }
+    }, 50);
+
+    // Initialize debounced char flush (5ms batching for rapid character input)
+    this._debouncedFlushCharsAction = createDebouncedAction(() => {
+      this._flushPendingCharsInternal();
+    }, 5);
   }
 
   /**
@@ -142,29 +155,17 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
    * Debounced change notification - batches rapid input (like paste)
    */
   private _notifyChange(): void {
-    if (this._changeDebounceTimer !== null) {
-      clearTimeout(this._changeDebounceTimer);
-    }
-    this._changeDebounceTimer = setTimeout(() => {
-      this._changeDebounceTimer = null;
-      if (typeof this.props.onChange === 'function') {
-        this.props.onChange(createChangeEvent(this._value, this.id));
-      }
-    }, this._changeDebounceMs) as unknown as number;
+    this._debouncedChangeAction.call();
   }
 
   /**
-   * Flush pending character buffer - inserts accumulated chars in one operation
+   * Internal flush implementation - called by debounced action
    */
-  private _flushPendingChars(): void {
+  private _flushPendingCharsInternal(): void {
     if (this._pendingChars.length === 0) return;
 
     const chars = this._pendingChars;
     this._pendingChars = '';
-    if (this._pendingCharsTimer !== null) {
-      clearTimeout(this._pendingCharsTimer);
-      this._pendingCharsTimer = null;
-    }
 
     // Check max length
     let toInsert = chars;
@@ -186,18 +187,19 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
   }
 
   /**
+   * Flush pending character buffer - inserts accumulated chars in one operation
+   */
+  private _flushPendingChars(): void {
+    // Cancel the debounced action and execute immediately
+    this._debouncedFlushCharsAction.flush();
+  }
+
+  /**
    * Queue a character for batched insertion (used during paste)
    */
   private _queueChar(char: string): boolean {
     this._pendingChars += char;
-
-    if (this._pendingCharsTimer !== null) {
-      clearTimeout(this._pendingCharsTimer);
-    }
-    this._pendingCharsTimer = setTimeout(() => {
-      this._flushPendingChars();
-    }, this._pendingCharsDelayMs) as unknown as number;
-
+    this._debouncedFlushCharsAction.call();
     return true;
   }
 
@@ -790,14 +792,8 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
    * Clean up timers - call this when destroying the element
    */
   cleanup(): void {
-    if (this._changeDebounceTimer !== null) {
-      clearTimeout(this._changeDebounceTimer);
-      this._changeDebounceTimer = null;
-    }
-    if (this._pendingCharsTimer !== null) {
-      clearTimeout(this._pendingCharsTimer);
-      this._pendingCharsTimer = null;
-    }
+    this._debouncedChangeAction.cancel();
+    this._debouncedFlushCharsAction.cancel();
   }
 
   /**

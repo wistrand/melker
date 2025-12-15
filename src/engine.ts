@@ -97,6 +97,10 @@ import {
   DEFAULT_PERSISTENCE_MAPPINGS,
 } from './state-persistence.ts';
 import {
+  createDebouncedAction,
+  type DebouncedAction,
+} from './utils/timing.ts';
+import {
   setupTerminal,
   cleanupTerminal,
   emergencyCleanupTerminal,
@@ -181,8 +185,8 @@ export class MelkerEngine {
   private _renderCount = 0;
   private _customResizeHandlers: Array<(event: { previousSize: { width: number; height: number }, newSize: { width: number; height: number }, timestamp: number }) => void> = [];
   private _mountHandlers: Array<() => void> = [];
-  private _inputRenderTimer: number | null = null;
-  private _inputRenderDelay = 50; // Debounce for rapid input (paste)
+  // Debounced action for rapid input rendering (e.g., paste operations)
+  private _debouncedInputRenderAction!: DebouncedAction;
 
   // View Source feature
   private _viewSourceManager?: ViewSourceManager;
@@ -279,6 +283,11 @@ export class MelkerEngine {
 
     // Initialize core components
     this._initializeComponents();
+
+    // Initialize debounced input render action (50ms delay for paste operations)
+    this._debouncedInputRenderAction = createDebouncedAction(() => {
+      this.render();
+    }, 50);
 
     // Initialize logger (async initialization will happen in start())
     this._initializeLogger();
@@ -802,13 +811,7 @@ export class MelkerEngine {
    * Batches multiple rapid input changes into a single render
    */
   private _debouncedInputRender(): void {
-    if (this._inputRenderTimer !== null) {
-      clearTimeout(this._inputRenderTimer);
-    }
-    this._inputRenderTimer = setTimeout(() => {
-      this._inputRenderTimer = null;
-      this.render();
-    }, this._inputRenderDelay) as unknown as number;
+    this._debouncedInputRenderAction.call();
   }
 
   /**
@@ -1155,11 +1158,8 @@ export class MelkerEngine {
     // Save state immediately before cleanup (don't wait for debounce)
     await this._persistenceManager.saveBeforeExit();
 
-    // Clear any pending input render timer
-    if (this._inputRenderTimer !== null) {
-      clearTimeout(this._inputRenderTimer);
-      this._inputRenderTimer = null;
-    }
+    // Cancel any pending debounced input render
+    this._debouncedInputRenderAction.cancel();
 
     // Clean up text selection handler (clear timers and state)
     if (this._textSelectionHandler) {

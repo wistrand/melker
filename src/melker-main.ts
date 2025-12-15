@@ -1,4 +1,5 @@
 import { config as dotenvConfig } from 'npm:dotenv@^16.3.0';
+import { debounce } from './utils/timing.ts';
 
 /**
  * Check if a path is a URL (http:// or https://)
@@ -641,8 +642,6 @@ export async function watchAndRun(
   const watchPath = filepath;
 
   let currentResult: RunMelkerResult | void = undefined;
-  let debounceTimer: number | null = null;
-  const DEBOUNCE_MS = 150;
 
   // Function to start/restart the application
   const startApp = async (isReload: boolean = false) => {
@@ -710,6 +709,12 @@ export async function watchAndRun(
   // Set up file watcher
   logger.info(`Watching for file changes: ${watchPath}`);
 
+  // Create debounced reload function (150ms delay for editors that do multiple writes)
+  const debouncedReload = debounce(async () => {
+    logger.info(`File change detected: ${watchPath}`);
+    await startApp(true);
+  }, 150);
+
   try {
     const watcher = Deno.watchFs(watchPath);
 
@@ -717,15 +722,7 @@ export async function watchAndRun(
       // Only react to modify events
       if (event.kind === 'modify') {
         // Debounce rapid changes (e.g., from editors that do multiple writes)
-        if (debounceTimer !== null) {
-          clearTimeout(debounceTimer);
-        }
-
-        debounceTimer = setTimeout(async () => {
-          debounceTimer = null;
-          logger.info(`File change detected: ${watchPath}`);
-          await startApp(true);
-        }, DEBOUNCE_MS) as unknown as number;
+        debouncedReload();
       }
     }
   } catch (error) {

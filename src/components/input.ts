@@ -349,23 +349,6 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
         changed = true;
         return true;
       }
-    } else if (key.length === 1 && !ctrlKey && !altKey) {
-      // Regular character input - but exclude control characters
-      const charCode = key.charCodeAt(0);
-      if (charCode >= 32 && charCode < 127) { // Printable ASCII only
-        if (!this.props.maxLength || value.length < this.props.maxLength) {
-          value = value.slice(0, cursor) + key + value.slice(cursor);
-          cursor = cursor + 1;
-          changed = true;
-
-          // Hide completions when typing
-          if (this._showingCompletions) {
-            this._showingCompletions = false;
-            this._completions = [];
-            this._selectedCompletionIndex = -1;
-          }
-        }
-      }
     } else if (key === 'Enter') {
       // Handle completion selection or normal Enter
       if (this._showingCompletions && this._selectedCompletionIndex >= 0) {
@@ -386,6 +369,24 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
           }));
         }
         return true; // Only return early if no completion was applied
+      }
+    } else if (key.length >= 1 && !ctrlKey && !altKey) {
+      // Regular character input - accept printable characters including Unicode
+      // Exclude control characters (0-31) but allow all other characters including extended Unicode
+      const charCode = key.charCodeAt(0);
+      if (charCode >= 32) { // Printable characters (ASCII and Unicode)
+        if (!this.props.maxLength || value.length < this.props.maxLength) {
+          value = value.slice(0, cursor) + key + value.slice(cursor);
+          cursor = cursor + key.length; // Handle multi-byte characters
+          changed = true;
+
+          // Hide completions when typing
+          if (this._showingCompletions) {
+            this._showingCompletions = false;
+            this._completions = [];
+            this._selectedCompletionIndex = -1;
+          }
+        }
       }
     }
 

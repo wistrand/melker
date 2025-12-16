@@ -1,6 +1,6 @@
 # AI Accessibility System
 
-Melker includes an AI-powered accessibility assistant that allows users to ask questions about the UI and interact with elements through natural language.
+Melker includes an AI-powered accessibility assistant that allows users to ask questions about the UI and interact with elements through natural language. It supports both text and voice input.
 
 ## Quick Start
 
@@ -9,7 +9,10 @@ Melker includes an AI-powered accessibility assistant that allows users to ask q
    export OPENROUTER_API_KEY=your_key_here
    ```
 
-2. Press `Alt+H` in any Melker app to open the AI assistant
+2. Open the AI assistant:
+   - Press `Alt+H` to open with text input
+   - Press `F7` to open and immediately start voice recording
+   - Click "AI Assistant" button in the F12 View Source dialog
 
 3. Ask questions like:
    - "What's on this screen?"
@@ -19,18 +22,20 @@ Melker includes an AI-powered accessibility assistant that allows users to ask q
 ## Architecture
 
 ```
-User presses Alt+H
+User presses Alt+H or F7
        │
        ▼
-┌─────────────────────────────────────┐
-│  Accessibility Dialog (draggable)   │
-│  ┌───────────────────────────────┐  │
-│  │ Markdown response area        │  │
-│  │ (auto-scrolls, text-select)   │  │
-│  ├───────────────────────────────┤  │
-│  │ [Input field]        [Send]   │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  Accessibility Dialog (draggable)            │
+│  ┌────────────────────────────────────────┐  │
+│  │ Markdown response area                 │  │
+│  │ (auto-scrolls, text-select)            │  │
+│  ├────────────────────────────────────────┤  │
+│  │ Status: [|||||] 3s  (during recording) │  │
+│  ├────────────────────────────────────────┤  │
+│  │ [Input field]  [Listen] [Send] [Close] │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘
        │
        ▼
 Context gathered (screen content, focus, element tree)
@@ -52,19 +57,67 @@ Response streamed to dialog (debounced 50ms)
 | `src/ai/cache.ts` | Query response cache (5min TTL, exact match) |
 | `src/ai/tools.ts` | Tool definitions and execution |
 | `src/ai/accessibility-dialog.ts` | Dialog UI and conversation management |
+| `src/ai/audio.ts` | Audio recording, transcription, and silence trimming |
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OPENROUTER_API_KEY` | (required) | API key for OpenRouter |
-| `MELKER_AI_MODEL` | `openai/gpt-5.2-chat` | Model to use |
+| `MELKER_AI_MODEL` | `openai/gpt-5.2-chat` | Model for chat/tools |
+| `MELKER_AUDIO_MODEL` | `openai/gpt-4o-audio-preview` | Model for audio transcription |
 | `MELKER_AI_ENDPOINT` | `https://openrouter.ai/api/v1/chat/completions` | API endpoint URL |
 | `MELKER_AI_HEADERS` | (none) | Custom headers (format: `name: value; name2: value2`) |
 | `MELKER_AI_SITE_URL` | `https://github.com/melker` | Site URL for rankings |
 | `MELKER_AI_SITE_NAME` | `Melker` | Site name for rankings |
 
 All environment variables are read fresh on each API call, allowing dynamic changes without restart.
+
+## Voice Input
+
+The AI assistant supports voice input through the Listen button or F7 key.
+
+### How it Works
+
+1. Press F7 or click "Listen" to start recording (5 seconds max)
+2. Speak your question
+3. Press F7 again or wait for timeout to stop recording
+4. Audio is processed:
+   - Silence trimmed from beginning and end (reduces API costs)
+   - Audio validated for meaningful content (skips empty/silent recordings)
+   - Sent to transcription model
+5. Transcribed text automatically submitted as a question
+
+### Audio Processing
+
+The `audio.ts` module handles:
+
+| Function | Purpose |
+|----------|---------|
+| `AudioRecorder` | Cross-platform audio capture using FFmpeg |
+| `transcribeAudio()` | Send audio to OpenRouter for transcription |
+| `trimSilence()` | Remove silent portions from start/end |
+| `hasAudioContent()` | Validate audio has meaningful volume |
+
+Audio analysis uses RMS (root mean square) in 100ms chunks:
+- Threshold: 0.01 RMS (roughly quiet speech)
+- Minimum active: 5% of chunks must exceed threshold
+- Padding: 200ms kept around trimmed audio
+
+### Platform Support
+
+Audio capture auto-detects the platform:
+- **Linux**: PulseAudio/PipeWire (preferred) or ALSA fallback
+- **macOS**: AVFoundation
+- **Windows**: DirectShow
+
+Requires `ffmpeg` to be installed and in PATH.
+
+### Visual Feedback
+
+During recording, the status row shows:
+- Volume level indicator: `[|||||]` (5 bars max)
+- Remaining time: `3s`
 
 ## Tool System
 
@@ -75,6 +128,7 @@ The AI can interact with the UI through tools:
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `send_event` | Send events to UI elements | `element_id`, `event_type` (click/change/focus/keypress), `value` |
+| `click_canvas` | Click at specific coordinates on a canvas | `element_id`, `x`, `y` (pixel buffer coordinates) |
 | `read_element` | Read full text content from elements | `element_id` |
 | `close_dialog` | Close the AI assistant dialog | (none) |
 | `exit_program` | Exit the application | (none) |

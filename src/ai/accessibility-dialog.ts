@@ -12,6 +12,7 @@ import { buildContext, buildSystemPrompt, hashContext, type UIContext } from './
 import { getGlobalCache } from './cache.ts';
 import { toolsToOpenRouterFormat, executeTool, type ToolContext, type ToolCall } from './tools.ts';
 import { createDebouncedAction, type DebouncedAction } from '../utils/timing.ts';
+import { AudioRecorder, transcribeAudio } from './audio.ts';
 
 const logger = getLogger('ai:dialog');
 
@@ -31,13 +32,18 @@ const DIALOG_ELEMENT_IDS = [
   'accessibility-dialog',
   'accessibility-main',
   'accessibility-input-row',
+  'accessibility-status-row',
   'accessibility-query-input',
   'accessibility-send-btn',
+  'accessibility-listen-btn',
   'accessibility-response-container',
   'accessibility-response',
   'accessibility-close-btn',
   'accessibility-status',
 ];
+
+// Default audio recording duration in seconds
+const DEFAULT_LISTEN_DURATION = 10;
 
 // Maximum number of messages before compaction (not counting system message)
 const MAX_MESSAGES_BEFORE_COMPACT = 10;
@@ -54,6 +60,9 @@ export class AccessibilityDialogManager {
   private _isCompacting = false;
   // Debounced action for streaming render updates (50ms batching)
   private _debouncedRenderAction: DebouncedAction;
+  // Audio recording
+  private _audioRecorder: AudioRecorder;
+  private _isListening = false;
 
   constructor(deps: AccessibilityDialogDependencies) {
     this._deps = deps;
@@ -61,6 +70,7 @@ export class AccessibilityDialogManager {
       this._deps.render();
       this._scrollToBottom();
     }, 50);
+    this._audioRecorder = new AudioRecorder();
   }
 
   /**
@@ -203,6 +213,7 @@ export class AccessibilityDialogManager {
   private _createDialog(): void {
     const onClose = () => this.close();
     const onSend = () => this._handleAsk();
+    const onListen = () => this._handleListen();
     const onInputKeyPress = (event: { key: string }) => {
       if (event.key === 'Enter' && !this._isProcessing) {
         this._handleAsk();
@@ -210,7 +221,7 @@ export class AccessibilityDialogManager {
     };
 
     // Initial help text
-    const initialText = this._conversationHistory || 'Type a question and click Send.\n\nExamples:\n- What is on this screen?\n- How do I navigate?\n- What can I do here?';
+    const initialText = this._conversationHistory || 'Type a question and click Send, or click Listen to use voice input.\n\nExamples:\n- What is on this screen?\n- How do I navigate?\n- What can I do here?';
 
     this._overlay = melker`
       <dialog
@@ -240,18 +251,24 @@ export class AccessibilityDialogManager {
             />
           </container>
           <container
+            id="accessibility-status-row"
+            style="display: flex; flex-direction: row; width: fill; padding-left: 1; padding-right: 1; height: 1"
+          >
+            <text id="accessibility-status" text=" " style="color: gray; width: fill" />
+          </container>
+          <container
             id="accessibility-input-row"
             style="display: flex; flex-direction: row; width: fill; gap: 1; padding: 1; padding-top: 0"
           >
-            <text id="accessibility-status" text="" style="color: gray; width: 10" />
             <input
               id="accessibility-query-input"
               placeholder="Ask a question..."
               style="flex: 1"
               onKeyPress=${onInputKeyPress}
             />
-            <button id="accessibility-send-btn" title="Send" onClick=${onSend} style="width: 8" />
-            <button id="accessibility-close-btn" title="Close" onClick=${onClose} style="width: 9" />
+            <button id="accessibility-listen-btn" title="Listen" onClick=${onListen} style="" />
+            <button id="accessibility-send-btn" title="Send" onClick=${onSend} style="" />
+            <button id="accessibility-close-btn" title="Close" onClick=${onClose} style="" />
           </container>
         </container>
       </dialog>
@@ -626,6 +643,141 @@ export class AccessibilityDialogManager {
   }
 
   /**
+   * Handle the Listen button click - toggle audio recording
+   */
+  private async _handleListen(): Promise<void> {
+    const listenBtn = this._deps.document.getElementById('accessibility-listen-btn');
+    const statusElement = this._deps.document.getElementById('accessibility-status');
+    const inputElement = this._deps.document.getElementById('accessibility-query-input');
+
+    // If already listening, stop recording
+    if (this._isListening) {
+      logger.info('Stopping audio recording');
+      this._isListening = false;
+      if (listenBtn) {
+        listenBtn.props.title = 'Listen';
+      }
+      if (statusElement) {
+        statusElement.props.text = 'Stopping...';
+      }
+      this._deps.render();
+      await this._audioRecorder.stopRecording();
+      return;
+    }
+
+    // Don't start listening if already processing a query
+    if (this._isProcessing) {
+      logger.debug('Cannot listen while processing');
+      return;
+    }
+
+    // Start recording
+    this._isListening = true;
+    if (listenBtn) {
+      listenBtn.props.title = 'Stop';
+    }
+    if (statusElement) {
+      statusElement.props.text = 'Listening...';
+    }
+    this._deps.render();
+
+    // Set up level callback to update status
+    this._audioRecorder.setLevelCallback((level, remainingSeconds) => {
+      if (statusElement && this._isListening) {
+        // Show visual level indicator
+        const bars = Math.min(5, Math.round(level * 50));
+        const levelIndicator = '|'.repeat(bars) + ' '.repeat(5 - bars);
+        statusElement.props.text = `[${levelIndicator}] ${remainingSeconds}s`;
+        this._deps.render();
+      }
+    });
+
+    try {
+      logger.info('Starting audio recording');
+      const wavData = await this._audioRecorder.startRecording(DEFAULT_LISTEN_DURATION);
+
+      // Recording finished (either by timeout or stop button)
+      this._isListening = false;
+      if (listenBtn) {
+        listenBtn.props.title = 'Listen';
+      }
+
+      if (!wavData) {
+        logger.info('No audio data captured');
+        if (statusElement) {
+          statusElement.props.text = 'No audio';
+        }
+        this._deps.render();
+        setTimeout(() => {
+          if (statusElement) {
+            statusElement.props.text = '';
+            this._deps.render();
+          }
+        }, 2000);
+        return;
+      }
+
+      // Transcribe the audio
+      if (statusElement) {
+        statusElement.props.text = 'Transcribing...';
+      }
+      this._deps.render();
+
+      const transcription = await transcribeAudio(wavData, (durationSeconds) => {
+        if (statusElement) {
+          statusElement.props.text = `Transcribing ${Math.max(1, Math.round(durationSeconds)).toFixed(0)}s...`;
+          this._deps.render();
+        }
+      });
+
+      if (!transcription) {
+        logger.info('No speech detected in audio');
+        if (statusElement) {
+          statusElement.props.text = 'No speech';
+        }
+        this._deps.render();
+        setTimeout(() => {
+          if (statusElement) {
+            statusElement.props.text = '';
+            this._deps.render();
+          }
+        }, 2000);
+        return;
+      }
+
+      logger.info('Transcription received', { text: transcription });
+
+      // Put the transcription in the input field and submit it
+      if (inputElement) {
+        inputElement.props.value = transcription;
+      }
+      if (statusElement) {
+        statusElement.props.text = '';
+      }
+      this._deps.render();
+
+      // Automatically send the transcribed text as a question
+      await this._handleAsk();
+    } catch (error) {
+      logger.error('Audio recording/transcription failed', error instanceof Error ? error : new Error(String(error)));
+      this._isListening = false;
+      if (listenBtn) {
+        listenBtn.props.title = 'Listen';
+      }
+      if (statusElement) {
+        statusElement.props.text = 'Error';
+      }
+      this._deps.render();
+      setTimeout(() => {
+        if (statusElement) {
+          statusElement.props.text = '';
+          this._deps.render();
+        }
+      }, 2000);
+    }
+  }
+
+  /**
    * Compact conversation history when it grows too large
    * Uses the model to summarize older messages
    */
@@ -713,6 +865,44 @@ export class AccessibilityDialogManager {
         this._deps.render();
       }
     }
+  }
+
+  /**
+   * Toggle listening state (for F7 key when dialog is open)
+   */
+  toggleListen(): void {
+    if (!this._overlay) {
+      logger.debug('Cannot toggle listen - dialog not open');
+      return;
+    }
+    this._handleListen();
+  }
+
+  /**
+   * Show dialog and immediately start listening (for F7 key when dialog is closed)
+   */
+  showAndListen(): void {
+    if (this._overlay) {
+      logger.debug('Dialog already open, just starting listen');
+      this._handleListen();
+      return;
+    }
+
+    logger.info('Opening accessibility dialog with voice input');
+
+    const config = getOpenRouterConfig();
+    if (!config) {
+      logger.warn('API key not configured - showing setup dialog');
+      this._showConfigError();
+      return;
+    }
+
+    this._createDialog();
+
+    // Start listening after a short delay to ensure dialog is rendered
+    setTimeout(() => {
+      this._handleListen();
+    }, 100);
   }
 
   /**

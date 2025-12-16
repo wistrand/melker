@@ -569,8 +569,21 @@ export class MelkerEngine {
         return;
       }
 
-      // Handle some function keys for AI Accessibility dialog
-      if (['f6', 'F6', 'f7', 'F7', 'f8', 'F8', 'f9', 'F9', 'f10', 'F10'].includes(event.key)) {
+      // Handle F7 specially for voice input
+      if (['f7', 'F7'].includes(event.key)) {
+        this._logger?.info('F7 pressed - voice input mode');
+        this._ensureAccessibilityDialogManager();
+        // If dialog is open, toggle listening. If closed, open and start listening.
+        if (this._accessibilityDialogManager!.isOpen()) {
+          this._accessibilityDialogManager!.toggleListen();
+        } else {
+          this._accessibilityDialogManager!.showAndListen();
+        }
+        return;
+      }
+
+      // Handle other function keys for AI Accessibility dialog
+      if (['f6', 'F6', 'f8', 'F8', 'f9', 'F9'].includes(event.key)) {
         this._logger?.info(event.key + ' pressed - opening accessibility dialog');
         this._ensureAccessibilityDialogManager();
         this._accessibilityDialogManager!.toggle();
@@ -1039,6 +1052,10 @@ export class MelkerEngine {
         render: () => this.render(),
         forceRender: () => this.forceRender(),
         autoRender: this._options.autoRender,
+        openAIAssistant: () => {
+          this._ensureAccessibilityDialogManager();
+          this._accessibilityDialogManager!.show();
+        },
       });
     }
     this._viewSourceManager.setSource(content, filePath, type, convertedContent);

@@ -75,6 +75,22 @@
 | `src/video/subtitle.ts` | Subtitle handling |
 | `src/video/waveform.ts` | Audio waveform visualization |
 
+**AI Accessibility (`src/ai/`):**
+| File | Purpose |
+|------|---------|
+| `src/ai/mod.ts` | AI module exports |
+| `src/ai/openrouter.ts` | OpenRouter API client with SSE streaming |
+| `src/ai/context.ts` | UI context builder, element tree serialization |
+| `src/ai/cache.ts` | Query response cache (5min TTL) |
+| `src/ai/tools.ts` | Tool definitions and execution (send_event, click_canvas, read_element, etc.) |
+| `src/ai/accessibility-dialog.ts` | Dialog UI and conversation management |
+| `src/ai/audio.ts` | Audio recording, transcription, and silence trimming |
+
+**Utilities (`src/utils/`):**
+| File | Purpose |
+|------|---------|
+| `src/utils/timing.ts` | Debounce and throttle utilities |
+
 ## Style Inheritance
 
 Only these properties inherit to children:

@@ -141,7 +141,7 @@ export class HitTester {
           height: dialogBounds.height - titleHeight - 1
         };
 
-        logger.info('Dialog hit test', {
+        logger.trace('Dialog hit test', {
           dialogId: dialog.id,
           clickPos: `${x},${y}`,
           contentBounds: `${contentBounds.x},${contentBounds.y} ${contentBounds.width}x${contentBounds.height}`,
@@ -151,12 +151,12 @@ export class HitTester {
         // Search for interactive elements within dialog children
         const hit = this._hitTestDialogChildren(dialog, x, y, contentBounds);
         if (hit) {
-          logger.info('Dialog hit test result', { hitId: hit.id, hitType: hit.type });
+          logger.debug('Dialog hit test result', { hitId: hit.id, hitType: hit.type });
           return hit;
         }
 
         // Click is in dialog but not on an interactive element
-        logger.info('Dialog hit test - no hit, returning dialog');
+        logger.debug('Dialog hit test - no hit, returning dialog');
         return dialog;
       }
     }
@@ -198,7 +198,7 @@ export class HitTester {
 
         // If it's an interactive or text-selectable element, return it
         if (this.isInteractiveElement(child) || this.isTextSelectableElement(child)) {
-          logger.info('Dialog hit test found', { id: child.id, type: child.type });
+          logger.debug('Dialog hit test found', { id: child.id, type: child.type });
           return child;
         }
       } else if (!childBounds) {
@@ -210,7 +210,7 @@ export class HitTester {
           }
         } else if ((this.isInteractiveElement(child) || this.isTextSelectableElement(child)) && pointInBounds(x, y, _contentBounds)) {
           // Interactive or text-selectable element without stored bounds - use parent content bounds
-          logger.info('Dialog hit test found (no bounds)', { id: child.id, type: child.type });
+          logger.debug('Dialog hit test found (no bounds)', { id: child.id, type: child.type });
           return child;
         }
       }

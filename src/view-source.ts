@@ -14,6 +14,7 @@ export interface ViewSourceDependencies {
   render: () => void;
   forceRender: () => void;
   autoRender: boolean;
+  openAIAssistant?: () => void;
 }
 
 export interface ViewSourceState {
@@ -80,6 +81,12 @@ export class ViewSourceManager {
       : 'source';
 
     const onClose = () => this.close();
+    const onAIAssistant = () => {
+      this.close();
+      if (this._deps.openAIAssistant) {
+        this._deps.openAIAssistant();
+      }
+    };
 
     // For .md files with converted content, show tabs
     if (this._state.type === 'md' && this._state.convertedContent) {
@@ -132,9 +139,10 @@ export class ViewSourceManager {
             </tabs>
             <container
               id="view-source-footer"
-              style="display: flex; flex-direction: row; justify-content: flex-end; width: fill"
+              style="display: flex; flex-direction: row; justify-content: flex-end; width: fill; gap: 1"
             >
-              <button id="view-source-close" title="Close" style="width: 10" onClick=${onClose} />
+              <button id="view-source-ai" title="AI Assistant" onClick=${onAIAssistant} />
+              <button id="view-source-close" title="Close" onClick=${onClose} />
             </container>
           </container>
         </dialog>
@@ -173,9 +181,10 @@ export class ViewSourceManager {
             </container>
             <container
               id="view-source-footer"
-              style="display: flex; flex-direction: row; justify-content: flex-end; width: fill"
+              style="display: flex; flex-direction: row; justify-content: flex-end; width: fill; gap: 1"
             >
-              <button id="view-source-close" title="Close" style="width: 10" onClick=${onClose} />
+              <button id="view-source-ai" title="AI Assistant" onClick=${onAIAssistant} />
+              <button id="view-source-close" title="Close" onClick=${onClose} />
             </container>
           </container>
         </dialog>

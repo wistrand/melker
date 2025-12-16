@@ -15,6 +15,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Debugging & logging | `agent_docs/debugging.md` |
 | .melker file format | `agent_docs/melker-file-format.md` |
 | Implementation details | `agent_docs/implementation-details.md` |
+| AI accessibility | `agent_docs/ai-accessibility.md` |
 | Examples | `examples/melker/*.melker` |
 
 ## Technology Stack
@@ -109,6 +110,9 @@ src/
     cache.ts          - Query response cache
     tools.ts          - AI tool system (built-in + custom)
     accessibility-dialog.ts - AI assistant dialog
+    audio.ts          - Audio recording and transcription
+  utils/              - Shared utilities
+    timing.ts         - Debounce and throttle functions
 agent_docs/           - Documentation for AI agents
 examples/             - Example applications
   ts/                 - TypeScript examples (createElement API)
@@ -142,7 +146,8 @@ tests/                - Test files
 | `MELKER_LINT` | Enable lint mode (`true` or `1`) |
 | `MELKER_PERSIST` | Enable state persistence (`true` or `1`, default: false) |
 | `OPENROUTER_API_KEY` | API key for AI assistant (OpenRouter) |
-| `MELKER_AI_MODEL` | AI model (default: `openai/gpt-5.2-chat`) |
+| `MELKER_AI_MODEL` | AI chat model (default: `openai/gpt-5.2-chat`) |
+| `MELKER_AUDIO_MODEL` | AI transcription model (default: `openai/gpt-4o-audio-preview`) |
 | `MELKER_AI_ENDPOINT` | API endpoint (default: `https://openrouter.ai/api/v1/chat/completions`) |
 | `MELKER_AI_HEADERS` | Custom headers (`name: value; name2: value2`) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
@@ -185,7 +190,8 @@ See `agent_docs/melker-file-format.md` for syntax details.
 
 | Key | Action |
 |-----|--------|
-| `Alt+H` | Open AI accessibility assistant (draggable dialog) |
+| `Alt+H` | Open AI accessibility assistant (text input) |
+| `F7` | Open AI assistant with voice input (or toggle recording if open) |
 | `F12` | Toggle View Source overlay (for .md files: shows Markdown/Melker tabs) |
 | `Escape` | Close View Source overlay / Close menus / Close AI dialog |
 | `F10` | Activate menu bar |

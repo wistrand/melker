@@ -152,6 +152,27 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: 'click_canvas',
+    description: 'Click at a specific position on a canvas element. The coordinates are in pixel buffer space (not terminal characters). Use this to interact with graphics, games, or clickable areas within a canvas.',
+    parameters: {
+      element_id: {
+        type: 'string',
+        description: 'The ID of the canvas element to click on',
+        required: true,
+      },
+      x: {
+        type: 'number',
+        description: 'The X coordinate in pixel buffer space (0 = left edge)',
+        required: true,
+      },
+      y: {
+        type: 'number',
+        description: 'The Y coordinate in pixel buffer space (0 = top edge)',
+        required: true,
+      },
+    },
+  },
+  {
     name: 'read_element',
     description: 'Read the full text content of a UI element. ALWAYS use this tool FIRST when the user asks to summarize, translate, explain, or work with content - the screen content in the system prompt may be truncated. Works with text, markdown, input, textarea, and other text-containing elements.',
     parameters: {
@@ -239,6 +260,9 @@ export async function executeTool(toolCall: ToolCall, context: ToolContext): Pro
     switch (toolCall.name) {
       case 'send_event':
         return executeSendEvent(toolCall.arguments, context);
+
+      case 'click_canvas':
+        return executeClickCanvas(toolCall.arguments, context);
 
       case 'read_element':
         return executeReadElement(toolCall.arguments, context);
@@ -471,4 +495,56 @@ function executeExitProgram(context: ToolContext): ToolResult {
     }
   }, 200);
   return { success: true, message: 'Exiting program...' };
+}
+
+// Execute click_canvas tool
+function executeClickCanvas(
+  args: Record<string, unknown>,
+  context: ToolContext
+): ToolResult {
+  const elementId = args.element_id as string;
+  const x = args.x as number;
+  const y = args.y as number;
+
+  if (!elementId) {
+    return { success: false, message: 'element_id is required' };
+  }
+
+  if (typeof x !== 'number' || typeof y !== 'number') {
+    return { success: false, message: 'x and y coordinates are required and must be numbers' };
+  }
+
+  const element = context.document.getElementById(elementId);
+  if (!element) {
+    return { success: false, message: `Element not found: ${elementId}` };
+  }
+
+  if (element.type !== 'canvas') {
+    return { success: false, message: `Element ${elementId} is not a canvas (type: ${element.type})` };
+  }
+
+  logger.debug('Clicking canvas', { elementId, x, y });
+
+  // Create a click event with position in pixel buffer space
+  const clickEvent = {
+    type: 'click' as const,
+    target: element,
+    timestamp: Date.now(),
+    position: { x: Math.floor(x), y: Math.floor(y) },
+  };
+
+  // Call onClick handler if it exists
+  if (typeof element.props.onClick === 'function') {
+    element.props.onClick(clickEvent);
+    context.render();
+    return {
+      success: true,
+      message: `Clicked canvas ${elementId} at position (${Math.floor(x)}, ${Math.floor(y)})`,
+    };
+  }
+
+  return {
+    success: false,
+    message: `Canvas ${elementId} has no onClick handler`,
+  };
 }

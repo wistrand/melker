@@ -46,3 +46,11 @@ export {
   type ToolContext,
   type CustomToolDefinition,
 } from './tools.ts';
+
+export {
+  AudioRecorder,
+  transcribeAudio,
+  hasAudioContent,
+  trimSilence,
+  getWavDuration,
+} from './audio.ts';

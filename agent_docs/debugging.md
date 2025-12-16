@@ -189,6 +189,7 @@ Press **F12** at runtime to view the source file in a modal dialog overlay.
 - **Markdown files show two tabs**: "Markdown" (original source) and "Melker" (converted output)
 - Scrollable content area with keyboard navigation
 - Tab buttons clickable with mouse or keyboard
+- **AI Assistant button**: Opens the AI accessibility dialog (closes View Source first)
 - Close with button click, Escape key, or F12 toggle
 
 ### Enabling View Source

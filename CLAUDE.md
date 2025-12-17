@@ -72,6 +72,13 @@ src/
   oauth.ts            - OAuth utilities
   xdg.ts              - XDG Base Directory support
   state-persistence.ts - State persistence for apps
+  bundler/            - Runtime bundler for .melker files
+    mod.ts            - Main bundler exports
+    types.ts          - Bundler type definitions
+    generator.ts      - TypeScript code generation
+    bundle.ts         - Deno.bundle() integration
+    errors.ts         - Error translation to source lines
+    cache.ts          - Bundle caching
   components/         - Component implementations
     mod.ts            - Component exports
     container.ts      - Flexbox container
@@ -145,6 +152,7 @@ tests/                - Test files
 | `MELKER_DEBUG_PORT` | Debug server port |
 | `MELKER_LINT` | Enable lint mode (`true` or `1`) |
 | `MELKER_PERSIST` | Enable state persistence (`true` or `1`, default: false) |
+| `MELKER_RETAIN_BUNDLE` | Keep temp bundle files for debugging (`true` or `1`) |
 | `OPENROUTER_API_KEY` | API key for AI assistant (OpenRouter) |
 | `MELKER_AI_MODEL` | AI chat model (default: `openai/gpt-5.2-chat`) |
 | `MELKER_AUDIO_MODEL` | AI transcription model (default: `openai/gpt-4o-audio-preview`) |
@@ -168,21 +176,29 @@ Melker follows the [XDG Base Directory Specification](https://specifications.fre
 ## Running .melker Files
 
 ```bash
-# From local file
-deno run --allow-all melker.ts examples/melker/counter.melker
+# From local file (requires --unstable-bundle for Deno.bundle() API)
+deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
 
 # From URL
-deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all melker.ts --lint examples/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts --lint examples/melker/counter.melker
 
 # Watch mode (auto-reload on file changes, local files only)
-deno run --allow-all melker.ts --watch examples/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts --watch examples/melker/counter.melker
+
+# Debug mode (shows bundler info, retains temp files)
+deno run --unstable-bundle --allow-all melker.ts --debug examples/melker/counter.melker
+
+# Enable bundle caching (disabled by default)
+deno run --unstable-bundle --allow-all melker.ts --cache examples/melker/counter.melker
 
 # Start LSP server (for editor integration)
 deno run --allow-all melker.ts --lsp
 ```
+
+**Note:** The `--unstable-bundle` flag is required for Deno's `Deno.bundle()` API which handles npm/jsr imports.
 
 See `agent_docs/melker-file-format.md` for syntax details.
 

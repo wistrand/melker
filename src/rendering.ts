@@ -629,6 +629,12 @@ export class RenderingEngine {
 
   // Render a layout node to the buffer
   private _renderNode(node: LayoutNode, context: RenderContext): void {
+    // Debug: log visibility
+    const gLogger = (globalThis as any).logger;
+    if (gLogger && (globalThis as any).melkerRenderCount <= 2 && node.element.type === 'text') {
+      gLogger.info(`[RENDER-NODE] text id="${node.element.id || 'none'}", visible=${node.visible}, bounds=${JSON.stringify(node.bounds)}`);
+    }
+
     if (!node.visible) return;
 
     try {
@@ -644,6 +650,12 @@ export class RenderingEngine {
   private _renderNodeInternal(node: LayoutNode, context: RenderContext): void {
     const { element, bounds, computedStyle } = node;
 
+    // Debug: Log ALL node renders
+    const gLogger = (globalThis as any).logger;
+    if (gLogger && (globalThis as any).melkerRenderCount <= 3) {
+      gLogger.info(`[NODE-RENDER] type="${element.type}", id="${element.id || 'none'}", bounds=${JSON.stringify(bounds)}`);
+    }
+
     // Skip dialog elements - they are rendered separately by _renderModal
     // to ensure proper layering and avoid double rendering
     if (element.type === 'dialog') {
@@ -652,6 +664,12 @@ export class RenderingEngine {
 
     // Apply simple bounds clipping for background and border rendering
     const clippedBounds = clipBounds(bounds, context.clipRect || context.viewport);
+
+    // Debug: Log clipping issues
+    if (element.type === 'text' && (clippedBounds.width <= 0 || clippedBounds.height <= 0)) {
+      renderLogger.info(`[CLIP-DEBUG] text element clipped out, id="${element.id || 'none'}", bounds=${JSON.stringify(bounds)}, clippedBounds=${JSON.stringify(clippedBounds)}, clipRect=${JSON.stringify(context.clipRect)}, viewport=${JSON.stringify(context.viewport)}`);
+    }
+
     if (clippedBounds.width <= 0 || clippedBounds.height <= 0) return;
 
     // Render background

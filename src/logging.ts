@@ -129,9 +129,9 @@ export class Logger {
       includeTimestamp: options.includeTimestamp ?? true,
       includeLevel: options.includeLevel ?? true,
       includeSource: options.includeSource ?? true,
-      bufferSize: options.bufferSize || 100,
-      flushInterval: options.flushInterval || 1000, // 1 second
-      asyncWrite: options.asyncWrite ?? true,
+      bufferSize: options.bufferSize ?? 1, // Default to 1 for immediate sync writes
+      flushInterval: options.flushInterval ?? 0, // Default to 0 (no periodic flushing)
+      asyncWrite: options.asyncWrite ?? false, // Default to sync writes
       consoleOutput: options.consoleOutput ?? false,
       consoleLevel: options.consoleLevel || 'WARN',
     };

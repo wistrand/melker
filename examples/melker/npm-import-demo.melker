@@ -1,0 +1,45 @@
+<melker>
+<script type="typescript" src="./npm-test.ts"/>
+
+<container style="display: flex; flex-direction: column; padding: 2; gap: 1">
+  <text
+    text="npm Import Demo (via esm.sh)"
+    style="bold: true; color: cyan"
+  />
+
+  <text text="This demo imports 'date-fns' from https://esm.sh" style="color: gray" />
+
+  <container style="display: flex; flex-direction: column; gap: 1; margin-top: 1; padding: 1; border: single">
+    <text text="Current Time:" style="bold: true" />
+    <text id="time" text="${state.formattedTime}" style="color: green" />
+
+    <text text="Formatted Date:" style="bold: true; margin-top: 1" />
+    <text id="date" text="${state.formattedDate}" style="color: yellow" />
+  </container>
+
+  <container style="display: flex; flex-direction: column; gap: 1; margin-top: 1; padding: 1; border: single">
+    <text text="Date Calculations:" style="bold: true" />
+
+    <container style="display: flex; flex-direction: row; gap: 1">
+      <text text="Birth date:" />
+      <text text="January 15, 1990" style="color: cyan" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 1">
+      <text text="Time since birth:" />
+      <text id="age" text="${state.age}" style="color: green" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 1">
+      <text text="Relative:" />
+      <text id="timeAgo" text="${state.timeAgo}" style="color: yellow" />
+    </container>
+  </container>
+
+  <container style="margin-top: 2; padding: 1; border: single; border-color: gray">
+    <text text="How to import npm packages:" style="bold: true; color: gray" />
+    <text text="Instead of:  import { x } from 'npm:package'" style="color: red" />
+    <text text="Use:         import { x } from 'https://esm.sh/package'" style="color: green" />
+  </container>
+</container>
+</melker>

@@ -684,10 +684,13 @@ export class AccessibilityDialogManager {
     // Set up level callback to update status
     this._audioRecorder.setLevelCallback((level, remainingSeconds) => {
       if (statusElement && this._isListening) {
-        // Show visual level indicator
+        // Show visual level indicator with device info
         const bars = Math.min(5, Math.round(level * 50));
         const levelIndicator = '|'.repeat(bars) + ' '.repeat(5 - bars);
-        statusElement.props.text = `[${levelIndicator}] ${remainingSeconds}s`;
+        const deviceDesc = this._audioRecorder.getDeviceDescription();
+        const deviceInfo = deviceDesc ? ` (${deviceDesc})` : '';
+        const paddedTime = String(remainingSeconds).padStart(2, ' ');
+        statusElement.props.text = `[${levelIndicator}] ${paddedTime}s${deviceInfo}`;
         this._deps.render();
       }
     });

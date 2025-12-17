@@ -712,3 +712,244 @@ export function offsetToLineCol(source: string, offset: number): { line: number;
 // Export SourceLocation type for use in error reporting
 export type { SourceLocation };
 
+// =============================================================================
+// Bundler Integration - Handler Extraction
+// =============================================================================
+
+import type {
+  ParsedScript as BundlerParsedScript,
+  ParsedHandler,
+  ParseResult as BundlerParseResult,
+  SourcePosition,
+  SourceRange,
+  ScriptType,
+} from './bundler/types.ts';
+
+/**
+ * Calculate a SourceRange from content and character offsets
+ */
+function calculateRange(content: string, startOffset: number, endOffset: number): SourceRange {
+  const startPos = offsetToSourcePosition(content, startOffset);
+  const endPos = offsetToSourcePosition(content, endOffset);
+  return { start: startPos, end: endPos };
+}
+
+/**
+ * Convert a character offset to a SourcePosition
+ */
+function offsetToSourcePosition(content: string, offset: number): SourcePosition {
+  const before = content.slice(0, offset);
+  const lines = before.split('\n');
+  return {
+    line: lines.length,
+    column: lines[lines.length - 1]?.length || 0,
+    offset,
+  };
+}
+
+/**
+ * Extract scripts from a parsed .melker file for the bundler.
+ *
+ * This extracts script blocks with their type (sync, init, ready),
+ * source location, and detects async usage. For scripts with src attribute,
+ * loads the external file content.
+ */
+export async function extractScriptsForBundler(
+  content: string,
+  scripts: Array<{ type: string; content: string; src?: string }>,
+  sourceUrl: string
+): Promise<BundlerParsedScript[]> {
+  const result: BundlerParsedScript[] = [];
+
+  // Find script tags in the content to get their positions
+  // Note: Use non-greedy [^>]*? to avoid matching past /> in self-closing tags
+  const scriptTagPattern = /<script\s+(?:[^>]*?\s+)?type=["'](?:typescript|text\/typescript|javascript|text\/javascript|module)["'][^>]*?(?:\s*\/>|>[\s\S]*?<\/script>)/gi;
+
+  let match;
+  let scriptIndex = 0;
+
+  while ((match = scriptTagPattern.exec(content)) !== null) {
+    if (scriptIndex >= scripts.length) break;
+
+    const scriptData = scripts[scriptIndex];
+    const tagContent = match[0];
+    const startOffset = match.index;
+    const endOffset = startOffset + tagContent.length;
+
+    // Determine script type from async attribute
+    let scriptType: ScriptType = 'sync';
+    const asyncMatch = tagContent.match(/async=["'](init|ready)["']/i);
+    if (asyncMatch) {
+      scriptType = asyncMatch[1].toLowerCase() as ScriptType;
+    }
+
+    // Get script code - load from external file if src is specified
+    let code = scriptData.content;
+    if (scriptData.src && !code.trim()) {
+      try {
+        const srcUrl = new URL(scriptData.src, sourceUrl).href;
+        if (srcUrl.startsWith('file://')) {
+          const { fromFileUrl } = await import('https://deno.land/std@0.224.0/path/mod.ts');
+          code = await Deno.readTextFile(fromFileUrl(srcUrl));
+        } else {
+          const response = await fetch(srcUrl);
+          if (response.ok) {
+            code = await response.text();
+          } else {
+            throw new Error(`Failed to fetch ${srcUrl}: ${response.status}`);
+          }
+        }
+      } catch (error) {
+        throw new Error(`Failed to load script from ${scriptData.src}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    // Detect if script contains await (auto-async detection)
+    const isAsync = scriptType !== 'sync' || /\bawait\b/.test(code);
+
+    result.push({
+      id: `script_${scriptIndex}`,
+      type: scriptType,
+      code,
+      externalSrc: scriptData.src,
+      isAsync,
+      sourceRange: calculateRange(content, startOffset, endOffset),
+    });
+
+    scriptIndex++;
+  }
+
+  return result;
+}
+
+/**
+ * Find the containing element tag for an attribute at a given offset.
+ */
+function findContainingElement(content: string, offset: number): { tag: string; id?: string; line: number } {
+  const before = content.slice(0, offset);
+
+  // Find the most recent opening tag
+  const tagMatch = before.match(/<(\w+)(?:\s[^>]*)?$/);
+  const tag = tagMatch?.[1] || 'unknown';
+
+  // Count lines
+  const line = (before.match(/\n/g) || []).length + 1;
+
+  // Try to find id attribute nearby
+  const nearbyContent = content.slice(Math.max(0, offset - 200), Math.min(content.length, offset + 200));
+  const idMatch = nearbyContent.match(/\bid=["']([^"']+)["']/);
+
+  return { tag, id: idMatch?.[1], line };
+}
+
+/**
+ * Extract event handlers from a .melker file for the bundler.
+ *
+ * This finds all event handler attributes (onClick, onInput, etc.)
+ * and extracts them with their source positions.
+ */
+export function extractHandlersForBundler(content: string): ParsedHandler[] {
+  const handlers: ParsedHandler[] = [];
+
+  // Match event handler attributes: onXxx="code" or onXxx='code'
+  // Need to handle both simple handlers and handlers with nested quotes
+  const handlerPattern = /\b(on[A-Z][a-zA-Z]*)\s*=\s*(["'])((?:(?!\2)[^\\]|\\.)*)\2/g;
+
+  let match;
+  let handlerIndex = 0;
+
+  while ((match = handlerPattern.exec(content)) !== null) {
+    const attributeName = match[1];
+    const quote = match[2];
+    const code = match[3];
+
+    // Skip empty handlers
+    if (!code.trim()) continue;
+
+    // Skip handlers that are already registry calls (from previous processing)
+    if (code.includes('__melker.')) continue;
+
+    const attrStartOffset = match.index;
+    const attrEndOffset = match.index + match[0].length;
+
+    // Calculate code position (inside quotes)
+    const codeStartOffset = match.index + attributeName.length + match[0].indexOf(quote) + 1;
+    const codeEndOffset = codeStartOffset + code.length;
+
+    // Detect async handlers
+    const isAsync = /\bawait\b/.test(code);
+
+    // Detect parameters
+    const params: Array<{ name: string; type: string }> = [];
+    if (/\bevent\b/.test(code)) {
+      params.push({ name: 'event', type: 'any' });
+    }
+
+    // Find containing element info
+    const element = findContainingElement(content, attrStartOffset);
+
+    handlers.push({
+      id: `__h${handlerIndex}`,
+      attributeName,
+      code,
+      isAsync,
+      params,
+      attributeRange: calculateRange(content, attrStartOffset, attrEndOffset),
+      codeRange: calculateRange(content, codeStartOffset, codeEndOffset),
+      element,
+    });
+
+    handlerIndex++;
+  }
+
+  return handlers;
+}
+
+/**
+ * Remove script tags from content to get the template portion.
+ */
+function removeScriptTags(content: string): string {
+  // Remove regular closing script tags first
+  // Use non-greedy matching to avoid consuming too much
+  return content
+    .replace(/<script\s+(?:[^>]*?\s+)?type=["'](?:typescript|text\/typescript|javascript|text\/javascript|module)["'][^>]*?>[\s\S]*?<\/script>/gi, '')
+    .replace(/<script\s+(?:[^>]*?\s+)?type=["'](?:typescript|text\/typescript|javascript|text\/javascript|module)["'][^>]*?\s*\/>/gi, '');
+}
+
+/**
+ * Parse a .melker file and return data suitable for the bundler.
+ *
+ * This is the main entry point for bundler integration. It returns:
+ * - scripts: Extracted script blocks with positions and types
+ * - handlers: Extracted event handlers with positions
+ * - template: The template content (without scripts)
+ * - sourceUrl: The source file URL
+ * - originalContent: The original file content
+ * - resolvedContent: Content after ${} substitution (same for now)
+ */
+export async function parseMelkerForBundler(
+  content: string,
+  sourceUrl: string
+): Promise<BundlerParseResult> {
+  // Parse the file to get scripts
+  const parseResult = parseMelkerFile(content);
+
+  // Extract scripts with position info (loads external scripts if needed)
+  const scripts = await extractScriptsForBundler(content, parseResult.scripts, sourceUrl);
+
+  // Extract handlers from the original content
+  const handlers = extractHandlersForBundler(content);
+
+  // Get template (content without script tags)
+  const template = removeScriptTags(content);
+
+  return {
+    sourceUrl,
+    originalContent: content,
+    resolvedContent: content, // ${} substitution happens in melker-main.ts
+    scripts,
+    handlers,
+    template,
+  };
+}
+

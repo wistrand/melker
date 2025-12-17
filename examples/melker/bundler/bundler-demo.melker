@@ -1,0 +1,55 @@
+<melker>
+  <!-- External script with npm: imports (requires --unstable-bundle) -->
+  <script type="typescript" src="./date-utils.ts"/>
+
+  <!-- Inline script demonstrating shared scope with external script -->
+  <script type="typescript">
+    // Counter state (demonstrates inline script)
+    let clickCount = 0;
+
+    function incrementCounter(): void {
+      clickCount++;
+      const counterEl = context.getElementById("counter");
+      if (counterEl) {
+        counterEl.props.text = "Clicks: " + String(clickCount);
+      }
+    }
+
+    function resetCounter(): void {
+      clickCount = 0;
+      const counterEl = context.getElementById("counter");
+      if (counterEl) {
+        counterEl.props.text = "Clicks: 0";
+      }
+    }
+  </script>
+
+  <!-- Ready script: runs after UI is rendered -->
+  <script type="typescript" async="ready">
+    // Initial update
+    updateDates();
+    context.render();
+
+    // Update every second
+    setInterval(() => {
+      updateDates();
+      context.render();
+    }, 1000);
+  </script>
+
+  <container style="flex-direction: column">
+    <text text="Bundler Demo - npm: imports" style="bold: true; color: cyan"/>
+    <text text="Requires: deno run --unstable-bundle" style="color: gray"/>
+
+    <text text="Date Information (via date-fns)" style="bold: true; color: yellow"/>
+    <text id="date" text="Loading..."/>
+    <text id="time" text="Loading..."/>
+    <text id="day" text="Loading..."/>
+
+    <text text="Click Counter" style="bold: true; color: yellow"/>
+    <text id="counter" text="Clicks: 0"/>
+    <button title="Click Me!" onClick="incrementCounter();"/>
+    <button title="Reset" onClick="resetCounter();"/>
+    <button title="Exit" onClick="context.exit()"/>
+  </container>
+</melker>

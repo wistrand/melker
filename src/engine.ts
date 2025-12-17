@@ -831,6 +831,9 @@ export class MelkerEngine {
    * Manually trigger a render
    */
   render(): void {
+    // Debug: always log render entry
+    this._logger?.trace('render() called');
+
     // Render lock: prevent re-render during render (e.g., onPaint callback)
     if (this._isRendering) {
       this._logger?.debug('Skipping render - already rendering (render lock active)');
@@ -841,6 +844,7 @@ export class MelkerEngine {
     try {
     const renderStartTime = performance.now();
     this._renderCount++;
+    (globalThis as any).melkerRenderCount = this._renderCount;
 
     // Always log initial renders for debugging
     if (this._renderCount <= 3) {
@@ -871,6 +875,28 @@ export class MelkerEngine {
       height: this._currentSize.height,
     };
     const renderToBufferStartTime = performance.now();
+
+    // Debug: log root element info
+    if (this._renderCount <= 5) {
+      const rootType = this._document.root?.type;
+      const rootChildCount = this._document.root?.children?.length || 0;
+      const dateEl = this._document.getElementById('date');
+      const dateElClass = dateEl ? dateEl.constructor?.name : 'N/A';
+      const hasRender = dateEl && typeof (dateEl as any).render === 'function';
+      const hasIntrinsicSize = dateEl && typeof (dateEl as any).intrinsicSize === 'function';
+
+      // Check if dateEl is actually in the root tree
+      let foundInTree = false;
+      const checkTree = (el: any) => {
+        if (!el) return;
+        if (el === dateEl) foundInTree = true;
+        if (el.children) el.children.forEach(checkTree);
+      };
+      checkTree(this._document.root);
+
+      this._logger?.info(`[RENDER-DEBUG] root.type=${rootType}, children=${rootChildCount}, dateEl=${dateEl ? 'found' : 'null'}, class=${dateElClass}, hasRender=${hasRender}, hasIntrinsicSize=${hasIntrinsicSize}, inTree=${foundInTree}, dateEl.props.text=${dateEl?.props?.text || 'N/A'}`);
+    }
+
     this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
     if (this._renderCount <= 3) {
       this._logger?.info(`Rendered to buffer in ${(performance.now() - renderToBufferStartTime).toFixed(2)}ms`);
@@ -936,6 +962,7 @@ export class MelkerEngine {
     this._persistenceManager.triggerDebouncedSave();
     } finally {
       this._isRendering = false;
+      this._logger?.debug('render() finished, _isRendering = false');
     }
   }
 
@@ -1274,6 +1301,15 @@ export class MelkerEngine {
   updateUI(newRootElement: Element): void {
     this._rootElement = newRootElement;
     this._document.root = newRootElement;
+
+    // Set root element dimensions from terminal size (same as constructor)
+    const style = this._rootElement.props.style || {};
+    if (!this._rootElement.props.width && !style.width) {
+      this._rootElement.props.width = this._currentSize.width;
+    }
+    if (!this._rootElement.props.height && !style.height) {
+      this._rootElement.props.height = this._currentSize.height;
+    }
 
     // Update focus manager document reference after UI update
     if (this._focusManager) {

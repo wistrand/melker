@@ -1,6 +1,156 @@
 import { config as dotenvConfig } from 'npm:dotenv@^16.3.0';
 import { debounce } from './utils/timing.ts';
 
+// Bundler imports for Deno.bundle() integration
+import {
+  processMelkerBundle,
+  executeBundle,
+  callReady,
+  ErrorTranslator,
+  type MelkerRegistry,
+  type AssembledMelker,
+} from './bundler/mod.ts';
+import { parseMelkerForBundler } from './template.ts';
+
+/**
+ * Wire up bundler registry handlers to UI elements.
+ *
+ * When using the bundler, handlers are compiled into a registry (__melker.__h0, etc.)
+ * This function walks the element tree and replaces string handler references
+ * with actual function calls to the registry.
+ *
+ * @param handlerCodeMap - Map from original handler code to handler ID (e.g., "incrementCounter()" → "__h0")
+ * @param errorTranslator - Optional ErrorTranslator for mapping bundled errors to original .melker lines
+ */
+async function wireBundlerHandlers(
+  element: any,
+  registry: MelkerRegistry,
+  context: any,
+  logger: any,
+  handlerCodeMap?: Map<string, string>,
+  errorTranslator?: ErrorTranslator
+): Promise<void> {
+  // Render callbacks that shouldn't auto-render
+  const noAutoRenderCallbacks = ['onPaint'];
+
+  // Process current element's props
+  if (element.props) {
+    for (const [propName, propValue] of Object.entries(element.props)) {
+      // Check for string handlers that reference the registry
+      if (
+        propName.startsWith('on') &&
+        typeof propValue === 'object' &&
+        propValue &&
+        (propValue as any).__isStringHandler
+      ) {
+        const handlerCode = (propValue as any).__handlerCode;
+
+        // Check if this handler references the registry (e.g., "__melker.__h0(event)")
+        const registryMatch = handlerCode.match(/__melker\.(__h\d+)\(([^)]*)\)/);
+
+        let handlerId: string | undefined;
+        let handlerFn: ((event?: unknown) => void | Promise<void>) | undefined;
+
+        if (registryMatch && registryMatch[1]) {
+          // Handler already references registry
+          const id = registryMatch[1];
+          handlerId = id;
+          handlerFn = (registry as any)[id];
+        } else if (handlerCodeMap) {
+          // Look up handler ID from original code
+          const id = handlerCodeMap.get(handlerCode);
+          if (id) {
+            handlerId = id;
+            handlerFn = (registry as any)[id];
+          }
+        }
+
+        if (handlerId && handlerFn) {
+          // Create a wrapper that auto-renders after the handler
+          const shouldAutoRender = !noAutoRenderCallbacks.includes(propName);
+          const capturedHandlerId = handlerId;
+          const capturedHandlerFn = handlerFn;
+
+          element.props[propName] = async (event: any) => {
+            try {
+              const result = capturedHandlerFn(event);
+              if (result instanceof Promise) {
+                await result;
+              }
+              if (shouldAutoRender && context?.render) {
+                context.render();
+              }
+            } catch (error) {
+              const err = error instanceof Error ? error : new Error(String(error));
+              // Look up handler's original location using ErrorTranslator
+              if (errorTranslator) {
+                const handlerMapping = errorTranslator.findBySourceId(capturedHandlerId);
+                if (handlerMapping) {
+                  logger?.error?.(
+                    `Error in handler ${capturedHandlerId} at ${errorTranslator.getSourceFile()}:${handlerMapping.originalLine}:`,
+                    err,
+                    {
+                      originalLine: handlerMapping.originalLine,
+                      sourceId: handlerMapping.sourceId,
+                      description: handlerMapping.description,
+                    }
+                  );
+                } else {
+                  logger?.error?.(`Error in handler ${capturedHandlerId}:`, err);
+                }
+              } else {
+                logger?.error?.(`Error in handler ${capturedHandlerId}:`, err);
+              }
+            }
+          };
+        } else {
+          // Handler not found in registry - process as normal string handler
+          // This handles cases where the template wasn't rewritten
+          const shouldAutoRender = !noAutoRenderCallbacks.includes(propName);
+
+          element.props[propName] = async (event: any) => {
+            try {
+              // Execute the handler code with access to registry and context
+              const fn = new Function(
+                'event',
+                'context',
+                '__melker',
+                handlerCode
+              );
+              const result = fn(event, context, registry);
+              if (result instanceof Promise) {
+                await result;
+              }
+              if (shouldAutoRender && context?.render) {
+                context.render();
+              }
+            } catch (error) {
+              logger?.error?.(
+                `Error in handler:`,
+                error instanceof Error ? error : new Error(String(error))
+              );
+            }
+          };
+        }
+      }
+    }
+  }
+
+  // Recursively process children
+  if (element.children && Array.isArray(element.children)) {
+    for (const child of element.children) {
+      await wireBundlerHandlers(child, registry, context, logger, handlerCodeMap, errorTranslator);
+    }
+  }
+
+  // Also process items in props.items (used by menu components)
+  if (element.props?.items && Array.isArray(element.props.items)) {
+    for (const item of element.props.items) {
+      await wireBundlerHandlers(item, registry, context, logger, handlerCodeMap, errorTranslator);
+    }
+  }
+}
+
 /**
  * Check if a path is a URL (http:// or https://)
  */
@@ -158,7 +308,7 @@ export interface RunMelkerResult {
 // CLI functionality for running .melker template files
 export async function runMelkerFile(
   filepath: string,
-  options: { printTree?: boolean, printJson?: boolean, debug?: boolean, noLoad?: boolean, watch?: boolean } = {},
+  options: { printTree?: boolean, printJson?: boolean, debug?: boolean, noLoad?: boolean, useCache?: boolean, watch?: boolean } = {},
   templateArgs: string[] = [],
   viewSource?: { content: string; path: string; type: 'md' | 'melker'; convertedContent?: string },
   preloadedContent?: string
@@ -253,22 +403,51 @@ export async function runMelkerFile(
           logger: debugLogger,
         };
 
-        try {
-          const scriptResult = await executeScripts(parseResult.scripts, basePath, true, debugContext);
-          if (scriptResult.failures.length > 0) {
-            debugFailures.push(...scriptResult.failures);
-          }
-        } catch (error) {
-          debugFailures.push(`Script execution: ${error instanceof Error ? error.message : String(error)}`);
-        }
+        // Auto-retain bundle files in debug mode
+        Deno.env.set('MELKER_RETAIN_BUNDLE', 'true');
 
-        // Debug: Process string handlers to show transpilation
-        console.log('\nEVENT HANDLER PROCESSING');
-        console.log('-'.repeat(40));
+        // Parse for bundler (extracts scripts and handlers with positions)
+        const sourceUrl = isUrl(filepath)
+          ? filepath
+          : `file://${filepath.startsWith('/') ? filepath : Deno.cwd() + '/' + filepath}`;
+
         try {
-          await processStringHandlers(ui, debugContext, debugLogger, filepath, true, parseResult.sourceContent);
+          const bundlerParseResult = await parseMelkerForBundler(templateContent, sourceUrl);
+          console.log(`  Scripts: ${bundlerParseResult.scripts.length}`);
+          console.log(`  Handlers: ${bundlerParseResult.handlers.length}`);
+
+          // Process through bundler pipeline with debug flag
+          const assembled = await processMelkerBundle(bundlerParseResult, {
+            debug: true,
+            useCache: false,
+          });
+
+          console.log('\nBUNDLE OUTPUT');
+          console.log('-'.repeat(40));
+          console.log(`  Template lines: ${assembled.template.split('\n').length}`);
+          console.log(`  Bundled code size: ${assembled.bundledCode.length} bytes`);
+          console.log(`  Source map: ${assembled.bundleSourceMap ? 'present' : 'none'}`);
+
+          // Execute the bundled code with debug context
+          try {
+            const registry = await executeBundle(assembled, debugContext);
+            console.log('\nREGISTRY');
+            console.log('-'.repeat(40));
+            console.log(`  __init: ${registry.__init ? 'present' : 'none'}`);
+            console.log(`  __ready: ${registry.__ready ? 'present' : 'none'}`);
+            const handlerKeys = Object.keys(registry).filter(k => k.startsWith('__h'));
+            console.log(`  Handlers: ${handlerKeys.join(', ') || 'none'}`);
+          } catch (error) {
+            debugFailures.push(`Bundle execution: ${error instanceof Error ? error.message : String(error)}`);
+          }
+
+          // Print debug file locations
+          console.log('\nDEBUG FILES (retained)');
+          console.log('-'.repeat(40));
+          console.log(`  Generated TS:  /tmp/melker-generated.ts`);
+          console.log(`  Bundled JS:    /tmp/melker-bundled.js`);
         } catch (error) {
-          debugFailures.push(`Event handler processing: ${error instanceof Error ? error.message : String(error)}`);
+          debugFailures.push(`Bundler: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         console.log('\n' + '='.repeat(80));
@@ -418,22 +597,29 @@ export async function runMelkerFile(
       registerAITool: registerAITool,
     };
 
-    // Step 4: Execute scripts with context so they can access engine
-    const scriptResult = await executeScripts(parseResult.scripts, basePath, options.debug, context);
+    // Use the single element tree from the initial parse
+    const ui = parseResult.element;
 
-    // Check for script execution errors
-    if (scriptResult.failures.length > 0) {
-      // Restore terminal before showing errors
-      await engine.stop();
-      console.error('\nScript execution failed:');
-      for (const failure of scriptResult.failures) {
-        console.error('  ' + failure);
-      }
-      Deno.exit(1);
+    // Parse for bundler (extracts scripts and handlers with positions)
+    const sourceUrl = isUrl(filepath)
+      ? filepath
+      : `file://${filepath.startsWith('/') ? filepath : Deno.cwd() + '/' + filepath}`;
+    const bundlerParseResult = await parseMelkerForBundler(templateContent, sourceUrl);
+
+    // Build handler code map: original code -> handler ID (e.g., "incrementCounter()" -> "__h0")
+    const handlerCodeMap = new Map<string, string>();
+    for (const handler of bundlerParseResult.handlers) {
+      handlerCodeMap.set(handler.code, handler.id);
     }
 
-    // Add script functions to context
-    Object.assign(context, scriptResult.context);
+    // Process through bundler pipeline
+    const assembled = await processMelkerBundle(bundlerParseResult, {
+      debug: options.debug,
+      useCache: options.useCache,
+    });
+
+    // Execute the bundled code
+    const melkerRegistry = await executeBundle(assembled, context);
 
     // Auto-initialize OAuth if <oauth> element is present
     // This happens after scripts run so callbacks can be registered first
@@ -476,11 +662,16 @@ export async function runMelkerFile(
       });
     }
 
-    // Step 4: Get the UI element from parsing result
-    const ui = parseResult.element;
-
-    // Step 3.5: Process string event handlers and convert them to functions
-    await processStringHandlers(ui, context, logger, filepath, options.debug, parseResult.sourceContent);
+    // Wire up bundler registry handlers to elements
+    // Pass handlerCodeMap so we can look up handler IDs from original code
+    // Create ErrorTranslator for mapping runtime errors back to original .melker lines
+    const errorTranslator = new ErrorTranslator(
+      assembled.bundleSourceMap,
+      assembled.lineMap,
+      assembled.originalContent,
+      assembled.sourceUrl
+    );
+    await wireBundlerHandlers(ui, melkerRegistry, context, logger, handlerCodeMap, errorTranslator);
 
     // Step 4: Set the parsed UI to the engine using the proper updateUI method
     engine.updateUI(ui);
@@ -491,6 +682,9 @@ export async function runMelkerFile(
 
     // Trigger mount handlers after UI is loaded and rendered
     (engine as any)._triggerMountHandlers();
+
+    // Call __ready lifecycle hook (after render)
+    await callReady(melkerRegistry);
 
     // Set up graceful shutdown with protection against double Ctrl+C
     let cleanupInProgress = false;
@@ -630,7 +824,7 @@ export async function runMelkerFile(
  */
 export async function watchAndRun(
   filepath: string,
-  options: { printTree?: boolean; printJson?: boolean; debug?: boolean; noLoad?: boolean; watch?: boolean },
+  options: { printTree?: boolean; printJson?: boolean; debug?: boolean; noLoad?: boolean; useCache?: boolean; watch?: boolean },
   templateArgs: string[],
   viewSource?: { content: string; path: string; type: 'md' | 'melker'; convertedContent?: string },
   preloadedContent?: string
@@ -753,6 +947,7 @@ export function printUsage(): void {
   console.log('  --lsp          Start Language Server Protocol server for editor integration');
   console.log('  --convert      Convert markdown to .melker format (prints to stdout)');
   console.log('  --no-load      Skip loading persisted state (requires MELKER_PERSIST=true)');
+  console.log('  --cache        Use bundle cache (default: disabled)');
   console.log('  --watch        Watch file for changes and auto-reload (local files only)');
   console.log('  --help, -h     Show this help message');
   console.log('');
@@ -957,6 +1152,7 @@ export async function main(): Promise<void> {
     debug: args.includes('--debug'),
     lint: args.includes('--lint'),
     noLoad: args.includes('--no-load'),
+    useCache: args.includes('--cache'),
     watch: args.includes('--watch'),
   };
 
@@ -1122,605 +1318,3 @@ function substituteEnvVars(content: string, args: string[]): string {
   return content;
 }
 
-/**
- * Execute scripts and return the context they provide
- */
-interface ExecuteScriptsResult {
-  context: Record<string, any>;
-  failures: string[];
-}
-
-async function executeScripts(scripts: Array<{ type: string; content: string; src?: string }>, basePath?: string, debug?: boolean, context?: any): Promise<ExecuteScriptsResult> {
-  const scriptContext: Record<string, any> = {};
-  const failures: string[] = [];
-
-  for (const script of scripts) {
-    let scriptContent = '';
-    try {
-      if (script.src?.endsWith(".js") || script.src?.endsWith(".ts") || script.type === 'typescript' || script.type === 'javascript' || script.type === 'text/javascript' || script.type === 'text/typescript' || script.type === 'module') {
-        scriptContent = script.content;
-
-        // If src attribute is provided, load the external file/URL
-        if (script.src) {
-          try {
-            // Resolve path relative to the .melker file's directory
-            const scriptUrl = basePath ? new URL(script.src, basePath).href : script.src;
-
-            // Load from file or URL
-            scriptContent = await loadContent(
-              scriptUrl.startsWith('file://') ? scriptUrl.replace('file://', '') : scriptUrl
-            );
-          } catch (error) {
-            console.error(`Error loading script file ${script.src}: ${error}`);
-            continue;
-          }
-        }
-
-        // Skip if no content (neither inline nor from file)
-        if (!scriptContent.trim()) {
-          continue;
-        }
-
-        if (debug) {
-          console.log(`\n${script.src ? `External script: "${script.src}"` : 'Inline script'} (${script.type})`);
-          console.log(`   Length: ${scriptContent.length} characters`);
-          if (scriptContent.length > 0) {
-            const preview = scriptContent.substring(0, 120).replace(/\n/g, '\\n').trim();
-            console.log(`   Preview: ${preview}${scriptContent.length > 120 ? '...' : ''}`);
-          }
-        }
-
-        // Transpile TypeScript to JavaScript if needed
-        if (script.type === 'typescript' || script.type === 'text/typescript' || script.src?.endsWith(".ts")) {
-          try {
-            // Import bundle and transpile functions dynamically
-            const { bundle, transpile } = await import('jsr:@deno/emit@^0.44.0');
-
-            // Create a proper TypeScript file structure for transpilation
-            const url = script.src ?
-              new URL(script.src, basePath || 'file://./').href :
-              'file:///inline.ts';
-
-            if (debug) {
-              console.log(`   Transpile URL: ${url}`);
-            }
-
-            // Check if script has imports - if so, use bundle instead of transpile
-            const hasImports = scriptContent.includes('import ') && (scriptContent.includes(' from ') || scriptContent.includes('import('));
-
-            // Custom loader for both bundle and transpile
-            const customLoad = async (specifier: string) => {
-              if (debug) {
-                console.log(`   Loading: ${specifier}`);
-              }
-
-              if (specifier === url) {
-                return {
-                  kind: 'module' as const,
-                  specifier: url,
-                  content: scriptContent
-                };
-              }
-
-              // Handle file:// imports
-              if (specifier.startsWith('file://')) {
-                try {
-                  const filePath = specifier.replace('file://', '');
-                  const content = await Deno.readTextFile(filePath);
-                  return {
-                    kind: 'module' as const,
-                    specifier,
-                    content
-                  };
-                } catch (e: any) {
-                  throw new Error(`Failed to load ${specifier}: ${e.message}`);
-                }
-              }
-
-              // Handle http:// and https:// imports (fetch from URL)
-              if (specifier.startsWith('https://') || specifier.startsWith('http://')) {
-                try {
-                  const content = await loadContent(specifier);
-                  return {
-                    kind: 'module' as const,
-                    specifier,
-                    content
-                  };
-                } catch (e: any) {
-                  throw new Error(`Failed to fetch ${specifier}: ${e.message}`);
-                }
-              }
-
-              // Handle jsr: imports - fetch from jsr.io
-              if (specifier.startsWith('jsr:')) {
-                try {
-                  // jsr: specifiers need to be resolved via the jsr.io registry
-                  // Format: jsr:@scope/package@version/path or jsr:@scope/package/path
-                  if (debug) {
-                    console.log(`   Resolving jsr: specifier: ${specifier}`);
-                  }
-                  // Use Deno's import to resolve and get the actual URL
-                  const metaUrl = `https://jsr.io/${specifier.replace('jsr:', '').replace('@', '').replace(/^([^/]+)\/([^@/]+)(?:@([^/]+))?/, '@$1/$2${3 ? "/$3" : ""}')}/meta.json`;
-                  // For now, we'll let these fail with a clear message
-                  throw new Error(`jsr: imports require network access. Try using the full https://jsr.io/... URL instead.`);
-                } catch (e: any) {
-                  throw new Error(`Failed to resolve jsr: specifier ${specifier}: ${e.message}`);
-                }
-              }
-
-              // Handle npm: imports - these are NOT supported by deno_emit bundler
-              if (specifier.startsWith('npm:')) {
-                throw new Error(
-                  `npm: imports cannot be bundled for .melker scripts.\n` +
-                  `  Import: ${specifier}\n` +
-                  `  \n` +
-                  `  Workarounds:\n` +
-                  `  1. Use an ESM CDN instead:\n` +
-                  `     import { Client } from "https://esm.sh/@modelcontextprotocol/sdk/client/index.js"\n` +
-                  `     import { xyz } from "https://cdn.skypack.dev/package-name"\n` +
-                  `  2. Use jsr: if the package is available on jsr.io\n` +
-                  `  3. Pre-bundle your dependencies into a single file`
-                );
-              }
-
-              // Handle node: built-in imports
-              if (specifier.startsWith('node:')) {
-                throw new Error(
-                  `node: built-in imports are not supported in .melker scripts.\n` +
-                  `  Import: ${specifier}\n` +
-                  `  Use Deno's standard library or web APIs instead.`
-                );
-              }
-
-              // Handle relative imports - resolve against the script's base URL
-              if (specifier.startsWith('./') || specifier.startsWith('../')) {
-                try {
-                  const resolvedUrl = new URL(specifier, url).href;
-                  if (debug) {
-                    console.log(`   Resolved relative import to: ${resolvedUrl}`);
-                  }
-                  if (resolvedUrl.startsWith('file://')) {
-                    const filePath = resolvedUrl.replace('file://', '');
-                    const content = await Deno.readTextFile(filePath);
-                    return {
-                      kind: 'module' as const,
-                      specifier: resolvedUrl,
-                      content
-                    };
-                  } else {
-                    const content = await loadContent(resolvedUrl);
-                    return {
-                      kind: 'module' as const,
-                      specifier: resolvedUrl,
-                      content
-                    };
-                  }
-                } catch (e: any) {
-                  throw new Error(`Failed to load relative import ${specifier}: ${e.message}`);
-                }
-              }
-
-              throw new Error(`Unsupported import specifier: ${specifier}\n  Supported: ./relative, ../relative, file://, https://, http://, jsr:`)
-            };
-
-            if (hasImports) {
-              // Use bundle to inline all imports
-              if (debug) {
-                console.log(`   Using bundle (script has imports)`);
-              }
-              const result = await bundle(url, {
-                load: customLoad,
-                compilerOptions: {
-                  inlineSourceMap: false,
-                  inlineSources: false
-                }
-              });
-              scriptContent = result.code;
-            } else {
-              // Use transpile for simple scripts without imports
-              const result = await transpile(url, { load: customLoad });
-              scriptContent = result.get(url.toString()) || '';
-            }
-
-            if (debug) {
-              if(scriptContent) {
-                console.log(`   TypeScript transpiled successfully`);
-                // Only show preview if it's a substantial script
-                if (scriptContent.length > 200) {
-                  const preview = scriptContent.substring(0, 100).replace(/\n/g, '\\n').trim();
-                  console.log(`   Preview: ${preview}...`);
-                }
-              } else {
-                console.log(`   ERROR: No transpiled content received`);
-              }
-            }
-
-            // Check for remaining import statements that weren't bundled
-            const remainingImports = scriptContent.match(/^import\s+.+from\s+['"][^'"]+['"]/gm) ||
-                                     scriptContent.match(/^import\s+['"][^'"]+['"]/gm);
-            if (remainingImports && remainingImports.length > 0) {
-              const importList = remainingImports.map(imp => `    ${imp}`).join('\n');
-              console.error(`\n  WARNING: The following imports were not resolved by the bundler:\n${importList}`);
-              console.error(`  This will cause "Cannot use import statement outside a module" error.`);
-              if (debug) {
-                console.log(`\n   Full bundled code:\n${scriptContent.substring(0, 2000)}${scriptContent.length > 2000 ? '...' : ''}`);
-              }
-            }
-
-            // Transform ES module exports to CommonJS-style for Function constructor
-            if (scriptContent && scriptContent.includes('export ')) {
-              // Find exports BEFORE transforming (need the original export keywords)
-              const exportMatches = [...scriptContent.matchAll(/export (?:const|function|let|var) ([a-zA-Z_][a-zA-Z0-9_]*)/g)];
-
-              // Convert ES module exports to CommonJS exports
-              scriptContent = scriptContent
-                .replace(/export const ([a-zA-Z_][a-zA-Z0-9_]*)/g, 'const $1')
-                .replace(/export function ([a-zA-Z_][a-zA-Z0-9_]*)/g, 'function $1')
-                .replace(/export let ([a-zA-Z_][a-zA-Z0-9_]*)/g, 'let $1')
-                .replace(/export var ([a-zA-Z_][a-zA-Z0-9_]*)/g, 'var $1');
-
-              // Add export collection at the end
-              if (exportMatches.length > 0) {
-                const exportNames = exportMatches.map(match => match[1]);
-                scriptContent += '\n\n// Export collection\nexports = { ' + exportNames.map(name => `${name}`).join(', ') + ' };';
-              }
-
-              if (debug) {
-                console.log(`   ES Module transformed to CommonJS`);
-              }
-            }
-          } catch (error) {
-            const errorStr = String(error);
-            let hint = '';
-
-            // Provide helpful hints for common transpilation errors
-            if (errorStr.includes('Could not resolve')) {
-              hint = '\n  Hint: Module resolution failed.\n' +
-                     '        - Check that the import path is correct\n' +
-                     '        - Use absolute URLs (https://) or relative paths (./)\n' +
-                     '        - Ensure the file exists at the specified location';
-            } else if (errorStr.includes('Expected')) {
-              hint = '\n  Hint: TypeScript syntax error.\n' +
-                     '        - Check for missing brackets, semicolons, or quotes\n' +
-                     '        - Verify TypeScript syntax is correct';
-            }
-
-            const location = script.src ? `"${script.src}"` : 'inline script';
-            const errorMsg = `Error transpiling TypeScript in ${location}:\n  ${error}${hint}`;
-            console.error(errorMsg);
-            failures.push(errorMsg);
-            continue;
-          }
-        }
-
-        // Create a function that executes the script content and returns any exports
-        // Handle both TypeScript transpiled code and regular JavaScript
-        const scriptFunction = new Function('context', `
-          // Initialize CommonJS-style exports
-          let exports = {};
-          let module = { exports: exports };
-
-          // Capture the global context before execution to detect new variables
-          const beforeVars = new Set(Object.keys(this));
-
-          // Execute the script content
-          ${scriptContent}
-
-          // First, try standard export patterns
-          if (typeof module !== 'undefined' && module.exports && Object.keys(module.exports).length > 0) {
-            return module.exports;
-          }
-          if (typeof exports !== 'undefined' && Object.keys(exports).length > 0) {
-            return exports;
-          }
-
-          // For TypeScript transpiled code, extract newly defined variables
-          const afterVars = Object.keys(this);
-          const exportedFunctions = {};
-
-          for (const varName of afterVars) {
-            if (!beforeVars.has(varName) && typeof this[varName] === 'function') {
-              exportedFunctions[varName] = this[varName];
-            }
-          }
-
-          return exportedFunctions;
-        `);
-
-        const result = scriptFunction(context);
-
-        if (debug) {
-          console.log(`   Script executed successfully`);
-          const functionNames = Object.keys(result || {}).filter(key => typeof result[key] === 'function');
-          const otherExports = Object.keys(result || {}).filter(key => typeof result[key] !== 'function');
-
-          if (functionNames.length > 0) {
-            console.log(`   Exported functions: ${functionNames.join(', ')}`);
-          }
-          if (otherExports.length > 0) {
-            console.log(`   Other exports: ${otherExports.join(', ')}`);
-          }
-          if (!result || Object.keys(result).length === 0) {
-            console.log(`   No exports found (internal functions only)`);
-          }
-        }
-
-        // Merge any returned values into the context
-        if (result && typeof result === 'object') {
-          Object.assign(scriptContext, result);
-        }
-      }
-    } catch (error) {
-      const errorStr = String(error);
-      let errorMsg = `Error executing script (${script.type}): ${error}`;
-      let hint = '';
-
-      // Provide helpful hints for common errors
-      if (errorStr.includes('Cannot use import statement outside a module')) {
-        // Try to find unresolved imports in the script content
-        const unresolvedImports = scriptContent.match(/^import\s+.*from\s+['"]([^'"]+)['"]/gm) ||
-                                  scriptContent.match(/^import\s+['"]([^'"]+)['"]/gm);
-
-        if (unresolvedImports && unresolvedImports.length > 0) {
-          const importList = unresolvedImports.slice(0, 5).map(imp => `      ${imp}`).join('\n');
-          const moreCount = unresolvedImports.length > 5 ? `\n      ... and ${unresolvedImports.length - 5} more` : '';
-          hint = '\n  Unresolved imports found in bundled code:\n' + importList + moreCount +
-                 '\n\n  Possible causes:\n' +
-                 '        - The import specifier is not supported (try https:// or jsr: instead)\n' +
-                 '        - The module could not be fetched (check network/path)\n' +
-                 '        - Circular dependencies that the bundler cannot resolve';
-        } else if (script.src) {
-          hint = '\n  Hint: The bundler failed to resolve an import in this script.\n' +
-                 '        - Run with --debug flag to see detailed bundling output\n' +
-                 '        - Check that all import paths are correct and accessible\n' +
-                 '        - Use full URLs for external dependencies (https://...)\n' +
-                 '        - Use relative paths for local files (./file.ts)';
-        } else {
-          hint = '\n  Hint: Import statements are not fully supported in inline .melker scripts.\n' +
-                 '        - Use melkerImport() for dynamic imports: const mod = await melkerImport("./module.ts")\n' +
-                 '        - Or move the code to an external .ts file and use <script src="...">';
-        }
-      } else if (errorStr.includes('is not defined')) {
-        const match = errorStr.match(/(\w+) is not defined/);
-        if (match) {
-          hint = `\n  Hint: "${match[1]}" is not available in the script context.\n` +
-                 '        - Check spelling and ensure it is defined before use\n' +
-                 '        - Use context.variableName to access context variables';
-        }
-      } else if (errorStr.includes('Unexpected token')) {
-        hint = '\n  Hint: Syntax error in script. Check for:\n' +
-               '        - Missing semicolons or brackets\n' +
-               '        - Unsupported TypeScript features (decorators, enums with initializers)\n' +
-               '        - Mixing ESM and CommonJS syntax';
-      }
-
-      // Include script location info
-      const location = script.src ? `in "${script.src}"` : '(inline script)';
-      errorMsg = `Error executing script ${location}:\n  ${error}${hint}`;
-
-      if (!debug) {
-        // In non-debug mode, still log errors but they'll be collected
-        console.error(errorMsg);
-      }
-      failures.push(errorMsg);
-    }
-  }
-
-  return { context: scriptContext, failures };
-}
-
-/**
- * Transpile TypeScript code to JavaScript for string handlers
- */
-async function transpileStringHandler(code: string, elementType: string, handlerName: string, elementId?: string, debug?: boolean): Promise<string> {
-  // Generate a meaningful URL for debugging
-  const elementIdentifier = elementId ? `#${elementId}` : '';
-  const url = `file:///${elementType}${elementIdentifier}.${handlerName}.ts`;
-
-  if (debug) {
-    console.log(`   Event Handler: ${elementType}${elementIdentifier}.${handlerName}`);
-    console.log(`   Handler length: ${code.length} characters`);
-    const preview = code.substring(0, 100).replace(/\n/g, '\\n').trim();
-    console.log(`   Code preview: ${preview}${code.length > 100 ? '...' : ''}`);
-  }
-
-  try {
-    const { transpile } = await import('jsr:@deno/emit@^0.44.0');
-    const result = await transpile(url, {
-      load(specifier: string) {
-        if (specifier === url) {
-          return Promise.resolve({
-            kind: 'module',
-            specifier: url,
-            content: code
-          });
-        }
-        return Promise.reject(new Error(`Unknown specifier: ${specifier}`));
-      }
-    });
-
-    let transpiledCode = result.get(url) || code;
-
-    if (debug) {
-      // Only show details if there's a meaningful change (>5% difference or substantial modification)
-      const sizeDiff = Math.abs(transpiledCode.length - code.length);
-      const isSignificantChange = sizeDiff > Math.max(5, code.length * 0.05) || transpiledCode.trim() !== code.trim();
-
-      if (isSignificantChange) {
-        console.log(`   Transpiled (${code.length} -> ${transpiledCode.length} chars)`);
-        if (transpiledCode.length > 50) {
-          const preview = transpiledCode.substring(0, 80).replace(/\n/g, '\\n').trim();
-          console.log(`   Result: ${preview}${transpiledCode.length > 80 ? '...' : ''}`);
-        }
-      }
-    }
-
-    // Transform ES module exports to regular JavaScript for Function constructor
-    // Remove any export statements since string handlers shouldn't export anything
-    transpiledCode = transpiledCode
-      .replace(/export\s+/g, '')
-      .replace(/import\s+.*?;/g, '');
-
-    if (debug) {
-      // Only show final code if it's different from the original
-      if (transpiledCode.trim() !== code.trim()) {
-        console.log(`   Final:  ${transpiledCode.trim().replaceAll(/\n/g, '\\n').substring(0, 110)}...`);
-      }
-    }
-
-    return transpiledCode;
-  } catch (error) {
-    console.error(`Error transpiling TypeScript in event handler: ${error}`);
-    return code;
-  }
-}
-
-/**
- * Process string event handlers in the UI tree and convert them to functions
- */
-async function processStringHandlers(element: any, context: any, logger: any, filepath: string, debug?: boolean, sourceContent?: string): Promise<void> {
-  // Import helpers for source location reporting and error display
-  const { offsetToLineCol } = await import('./template.ts');
-  const { showScriptError } = await import('./error-overlay.ts');
-
-  // Process current element's props
-  if (element.props) {
-    // Get source location info if available
-    const sourceLocation = element.props.__sourceLocation;
-
-    for (const [propName, propValue] of Object.entries(element.props)) {
-      if (propName.startsWith('on') &&
-          typeof propValue === 'object' &&
-          propValue &&
-          (propValue as any).__isStringHandler) {
-
-        const handlerCode = (propValue as any).__handlerCode;
-        const elementType = element.type || 'unknown';
-        const elementId = element.props?.id;
-
-        // Get source location for this specific handler attribute
-        const handlerLocation = sourceLocation?.attributeLocations?.[propName];
-
-        if (debug) {
-          console.log(`\nProcessing ${propName} handler${elementId ? ` on #${elementId}` : ''}`);
-          if (handlerLocation && sourceContent) {
-            const loc = offsetToLineCol(sourceContent, handlerLocation.start);
-            console.log(`   Source location: line ${loc.line}, column ${loc.column}`);
-          }
-        }
-
-        // Always transpile string handlers as TypeScript
-        const transpiledCode = await transpileStringHandler(handlerCode, elementType, propName, elementId, debug);
-
-        // If the transpiled code is just a function name, make it call that function with event
-        let finalCode = transpiledCode.trim();
-        // Check if it's a simple identifier (function name) without parentheses
-        if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(finalCode)) {
-          finalCode = `return ${finalCode}(event)`;
-        }
-
-        // Capture source location info for error reporting (closure captures these)
-        const capturedSourceContent = sourceContent;
-        const capturedHandlerLocation = handlerLocation;
-        const capturedShowScriptError = showScriptError;
-        const capturedPropName = propName;
-
-        // Render callbacks that are invoked during render - auto-render would cause infinite loop
-        const noAutoRenderCallbacks = ['onPaint'];
-
-        // Create a function that executes the transpiled code with access to context
-        // Auto-renders after handler completes unless handler returns false
-        element.props[propName] = function(event: any) {
-          // Extract script function names and values from context for direct access (outside try block)
-          const scriptFunctions = Object.keys(context).filter(key => typeof context[key] === 'function');
-          const scriptFunctionValues = scriptFunctions.map(name => context[name]);
-
-          try {
-            // Create a function with script functions as direct parameters
-            const handlerFunction = new Function(
-              'event',
-              'context',
-              ...scriptFunctions,
-              finalCode
-            );
-            const result = handlerFunction(event, context, ...scriptFunctionValues);
-
-            // Auto-render after handler completes (unless it returns false to opt-out)
-            // Skip auto-render for render callbacks like onPaint to avoid infinite loops
-            // Handle both sync and async handlers
-            const shouldAutoRender = !noAutoRenderCallbacks.includes(capturedPropName);
-            if (result instanceof Promise) {
-              return result.then((asyncResult: unknown) => {
-                if (shouldAutoRender && asyncResult !== false && context?.render) {
-                  context.render();
-                }
-                return asyncResult;
-              });
-            } else {
-              if (shouldAutoRender && result !== false && context?.render) {
-                context.render();
-              }
-              return result;
-            }
-          } catch (error) {
-            // Build source location string if available
-            let sourceLocationStr = '';
-            if (capturedHandlerLocation && capturedSourceContent) {
-              const loc = offsetToLineCol(capturedSourceContent, capturedHandlerLocation.start);
-              sourceLocationStr = `${filepath}:${loc.line}:${loc.column}`;
-            }
-
-            const errorMessage = sourceLocationStr
-              ? `Error at ${sourceLocationStr} in ${propName} handler: ${error}`
-              : `Error in string event handler (${propName}): ${error}`;
-
-            // Log comprehensive error information with stack trace and context
-            logger?.error(
-              'Script execution error in .melker template',
-              error instanceof Error ? error : new Error(String(error)),
-              {
-                filepath: filepath,
-                sourceLocation: sourceLocationStr || undefined,
-                elementType: element.type,
-                elementId: element.props?.id || 'unknown',
-                propertyName: propName,
-                handlerCode: handlerCode?.substring(0, 200) + (handlerCode?.length > 200 ? '...' : ''),
-                transpiledCode: transpiledCode?.substring(0, 200) + (transpiledCode?.length > 200 ? '...' : ''),
-                scriptFunctions: scriptFunctions.join(', '),
-                eventType: event?.type || 'unknown',
-              },
-              'TemplateProcessor'
-            );
-
-            // Show error in UI overlay instead of console (preserves UI)
-            try {
-              const shortMessage = error instanceof Error ? error.message : String(error);
-              capturedShowScriptError(shortMessage, sourceLocationStr || undefined);
-              // Trigger re-render to show the error overlay
-              if (context?.engine?.render) {
-                context.engine.render();
-              }
-            } catch {
-              // Fallback to console if overlay fails (shouldn't happen)
-            }
-          }
-        };
-
-      }
-    }
-  }
-
-  // Recursively process children
-  if (element.children && Array.isArray(element.children)) {
-    for (const child of element.children) {
-      await processStringHandlers(child, context, logger, filepath, debug, sourceContent);
-    }
-  }
-
-  // Also process items in props.items (used by menu components)
-  if (element.props?.items && Array.isArray(element.props.items)) {
-    for (const item of element.props.items) {
-      await processStringHandlers(item, context, logger, filepath, debug, sourceContent);
-    }
-  }
-}

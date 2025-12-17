@@ -15,6 +15,8 @@ const TRANSCRIPTION_PROMPT = 'Transcribe this audio exactly. Output only the spo
 const SILENCE_THRESHOLD = 0.01;
 // Duration of silence before auto-stop (milliseconds)
 const SILENCE_TIMEOUT_MS = 2000;
+// Default audio gain multiplier (1.0 = no change, 2.0 = double volume)
+const DEFAULT_AUDIO_GAIN = 2.0;
 
 interface AudioInput {
   format: string;
@@ -32,6 +34,7 @@ export class AudioRecorder {
   private _isRecording = false;
   private _stopRequested = false;
   private _onLevelUpdate?: (level: number, remainingSeconds: number) => void;
+  private _currentDeviceDescription: string | null = null;
 
   /**
    * Check if currently recording
@@ -45,6 +48,13 @@ export class AudioRecorder {
    */
   setLevelCallback(callback: (level: number, remainingSeconds: number) => void): void {
     this._onLevelUpdate = callback;
+  }
+
+  /**
+   * Get the current audio device description (available after recording starts)
+   */
+  getDeviceDescription(): string | null {
+    return this._currentDeviceDescription;
   }
 
   /**
@@ -68,10 +78,15 @@ export class AudioRecorder {
 
     try {
       const { args: inputArgs, description } = await this._getAudioInputArgs();
+      this._currentDeviceDescription = description;
       logger.info('Starting audio capture', { description, durationSeconds });
+
+      // Get gain from env or use default
+      const gain = parseFloat(Deno.env.get('MELKER_AUDIO_GAIN') || '') || DEFAULT_AUDIO_GAIN;
 
       const ffmpegArgs = [
         ...inputArgs,
+        '-af', `volume=${gain}`,  // Apply gain filter
         '-f', 's16le',
         '-ac', String(channels),
         '-ar', String(sampleRate),
@@ -504,6 +519,38 @@ export function getWavDuration(wavData: Uint8Array): number {
 }
 
 /**
+ * Play back WAV audio data using ffplay (for debugging)
+ * @param wavData WAV audio data as Uint8Array
+ */
+async function playbackAudio(wavData: Uint8Array): Promise<void> {
+  logger.info('Playing back recorded audio for debug...');
+
+  // Write to temp file
+  const tempFile = await Deno.makeTempFile({ suffix: '.wav' });
+  try {
+    await Deno.writeFile(tempFile, wavData);
+
+    // Play using ffplay (quiet mode, no display)
+    const command = new Deno.Command('ffplay', {
+      args: ['-nodisp', '-autoexit', '-loglevel', 'quiet', tempFile],
+      stdout: 'null',
+      stderr: 'null',
+    });
+
+    const process = command.spawn();
+    await process.status;
+    logger.info('Audio playback complete');
+  } finally {
+    // Clean up temp file
+    try {
+      await Deno.remove(tempFile);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+}
+
+/**
  * Transcribe audio data using OpenRouter
  * @param wavData WAV audio data as Uint8Array
  * @param onStatus Optional callback for status updates (receives trimmed duration in seconds)
@@ -531,6 +578,12 @@ export async function transcribeAudio(
   // Notify caller of the trimmed duration
   if (onStatus) {
     onStatus(trimmedDuration);
+  }
+
+  // Debug: play back the trimmed audio before sending
+  const audioDebug = Deno.env.get('MELKER_AUDIO_DEBUG') === 'true' || Deno.env.get('MELKER_AUDIO_DEBUG') === '1';
+  if (audioDebug) {
+    await playbackAudio(trimmedWav);
   }
 
   logger.info('Transcribing audio', {

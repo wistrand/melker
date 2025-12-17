@@ -61,6 +61,8 @@
       const [r, g, b] = hslToRgb(selectedHue, selectedSat, selectedLight);
       const hex = rgbToHex(r, g, b);
 
+      notadefinedfunction();
+
       const preview = context.getElementById('preview');
       const hexValue = context.getElementById('hex-value');
       const rgbValue = context.getElementById('rgb-value');

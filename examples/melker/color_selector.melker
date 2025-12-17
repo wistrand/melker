@@ -77,8 +77,8 @@
         }
       }
       if (hexValue) hexValue.props.text = hex;
-      if (rgbValue) rgbValue.props.text = `rgb(${r}, ${g}, ${b})`;
-      if (hslValue) hslValue.props.text = `hsl(${selectedHue}, ${selectedSat}%, ${selectedLight}%)`;
+      if (rgbValue) rgbValue.props.text = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+      if (hslValue) hslValue.props.text = 'hsl(' + selectedHue + ', ' + selectedSat + '%, ' + selectedLight + '%)';
     }
 
     function paintHueSatPalette(event: any) {
@@ -105,17 +105,20 @@
 
       const [bgR, bgG, bgB] = hslToRgb(selectedHue, selectedSat, selectedLight);
       const lum = (0.299 * bgR + 0.587 * bgG + 0.114 * bgB) / 255;
-      const cc = lum > 0.5 ? '#000000' : '#ffffff';
+      const cc = '#000000';
 
       // Horizontal line
       for (let i = -4; i <= 4; i++) {
         const px = crossX + i;
-        if (px >= 0 && px < width) canvas.setPixelColor(px, crossY, cc, true);
+        canvas.setPixelColor(px, crossY, cc, true);
+        canvas.setPixelColor(px, crossY+1, cc, true);
       }
       // Vertical line
       for (let i = -4; i <= 4; i++) {
         const py = crossY + i;
-        if (py >= 0 && py < height) canvas.setPixelColor(crossX, py, cc, true);
+        canvas.setPixelColor(crossX, py, cc, true);
+        canvas.setPixelColor(crossX+1, py, cc, true);
+        canvas.setPixelColor(crossX-1, py, cc, true);
       }
     }
 
@@ -187,11 +190,11 @@
     };
   </script>
 
-  <container id="root">
+  <container id="root" style="border: thin; display: flex; flex-direction: column">
     <text id="header">Color Selector (click to pick)</text>
 
     <container id="main">
-      <container id="palette-container">
+      <container id="palette-container" style="border: thin">
         <text class="label">Hue / Saturation:</text>
         <canvas
           id="hue-sat-canvas"
@@ -213,7 +216,7 @@
         />
       </container>
 
-      <container id="info-panel">
+      <container id="info-panel" style="border: thin">
         <text class="label">Selected Color:</text>
         <container id="preview" style="background-color: #ff0000;">
           <text id="preview-text" style="color: white;">#ff0000</text>

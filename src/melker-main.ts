@@ -1190,6 +1190,10 @@ async function executeScripts(scripts: Array<{ type: string; content: string; sr
 
             // Custom loader for both bundle and transpile
             const customLoad = async (specifier: string) => {
+              if (debug) {
+                console.log(`   Loading: ${specifier}`);
+              }
+
               if (specifier === url) {
                 return {
                   kind: 'module' as const,
@@ -1197,6 +1201,7 @@ async function executeScripts(scripts: Array<{ type: string; content: string; sr
                   content: scriptContent
                 };
               }
+
               // Handle file:// imports
               if (specifier.startsWith('file://')) {
                 try {
@@ -1211,6 +1216,7 @@ async function executeScripts(scripts: Array<{ type: string; content: string; sr
                   throw new Error(`Failed to load ${specifier}: ${e.message}`);
                 }
               }
+
               // Handle http:// and https:// imports (fetch from URL)
               if (specifier.startsWith('https://') || specifier.startsWith('http://')) {
                 try {
@@ -1224,7 +1230,77 @@ async function executeScripts(scripts: Array<{ type: string; content: string; sr
                   throw new Error(`Failed to fetch ${specifier}: ${e.message}`);
                 }
               }
-              throw new Error(`Unknown specifier: ${specifier}`);
+
+              // Handle jsr: imports - fetch from jsr.io
+              if (specifier.startsWith('jsr:')) {
+                try {
+                  // jsr: specifiers need to be resolved via the jsr.io registry
+                  // Format: jsr:@scope/package@version/path or jsr:@scope/package/path
+                  if (debug) {
+                    console.log(`   Resolving jsr: specifier: ${specifier}`);
+                  }
+                  // Use Deno's import to resolve and get the actual URL
+                  const metaUrl = `https://jsr.io/${specifier.replace('jsr:', '').replace('@', '').replace(/^([^/]+)\/([^@/]+)(?:@([^/]+))?/, '@$1/$2${3 ? "/$3" : ""}')}/meta.json`;
+                  // For now, we'll let these fail with a clear message
+                  throw new Error(`jsr: imports require network access. Try using the full https://jsr.io/... URL instead.`);
+                } catch (e: any) {
+                  throw new Error(`Failed to resolve jsr: specifier ${specifier}: ${e.message}`);
+                }
+              }
+
+              // Handle npm: imports - these are NOT supported by deno_emit bundler
+              if (specifier.startsWith('npm:')) {
+                throw new Error(
+                  `npm: imports cannot be bundled for .melker scripts.\n` +
+                  `  Import: ${specifier}\n` +
+                  `  \n` +
+                  `  Workarounds:\n` +
+                  `  1. Use an ESM CDN instead:\n` +
+                  `     import { Client } from "https://esm.sh/@modelcontextprotocol/sdk/client/index.js"\n` +
+                  `     import { xyz } from "https://cdn.skypack.dev/package-name"\n` +
+                  `  2. Use jsr: if the package is available on jsr.io\n` +
+                  `  3. Pre-bundle your dependencies into a single file`
+                );
+              }
+
+              // Handle node: built-in imports
+              if (specifier.startsWith('node:')) {
+                throw new Error(
+                  `node: built-in imports are not supported in .melker scripts.\n` +
+                  `  Import: ${specifier}\n` +
+                  `  Use Deno's standard library or web APIs instead.`
+                );
+              }
+
+              // Handle relative imports - resolve against the script's base URL
+              if (specifier.startsWith('./') || specifier.startsWith('../')) {
+                try {
+                  const resolvedUrl = new URL(specifier, url).href;
+                  if (debug) {
+                    console.log(`   Resolved relative import to: ${resolvedUrl}`);
+                  }
+                  if (resolvedUrl.startsWith('file://')) {
+                    const filePath = resolvedUrl.replace('file://', '');
+                    const content = await Deno.readTextFile(filePath);
+                    return {
+                      kind: 'module' as const,
+                      specifier: resolvedUrl,
+                      content
+                    };
+                  } else {
+                    const content = await loadContent(resolvedUrl);
+                    return {
+                      kind: 'module' as const,
+                      specifier: resolvedUrl,
+                      content
+                    };
+                  }
+                } catch (e: any) {
+                  throw new Error(`Failed to load relative import ${specifier}: ${e.message}`);
+                }
+              }
+
+              throw new Error(`Unsupported import specifier: ${specifier}\n  Supported: ./relative, ../relative, file://, https://, http://, jsr:`)
             };
 
             if (hasImports) {
@@ -1259,6 +1335,18 @@ async function executeScripts(scripts: Array<{ type: string; content: string; sr
               }
             }
 
+            // Check for remaining import statements that weren't bundled
+            const remainingImports = scriptContent.match(/^import\s+.+from\s+['"][^'"]+['"]/gm) ||
+                                     scriptContent.match(/^import\s+['"][^'"]+['"]/gm);
+            if (remainingImports && remainingImports.length > 0) {
+              const importList = remainingImports.map(imp => `    ${imp}`).join('\n');
+              console.error(`\n  WARNING: The following imports were not resolved by the bundler:\n${importList}`);
+              console.error(`  This will cause "Cannot use import statement outside a module" error.`);
+              if (debug) {
+                console.log(`\n   Full bundled code:\n${scriptContent.substring(0, 2000)}${scriptContent.length > 2000 ? '...' : ''}`);
+              }
+            }
+
             // Transform ES module exports to CommonJS-style for Function constructor
             if (scriptContent && scriptContent.includes('export ')) {
               // Find exports BEFORE transforming (need the original export keywords)
@@ -1282,7 +1370,23 @@ async function executeScripts(scripts: Array<{ type: string; content: string; sr
               }
             }
           } catch (error) {
-            const errorMsg = `Error transpiling TypeScript (${script.src || 'inline'}): ${error}`;
+            const errorStr = String(error);
+            let hint = '';
+
+            // Provide helpful hints for common transpilation errors
+            if (errorStr.includes('Could not resolve')) {
+              hint = '\n  Hint: Module resolution failed.\n' +
+                     '        - Check that the import path is correct\n' +
+                     '        - Use absolute URLs (https://) or relative paths (./)\n' +
+                     '        - Ensure the file exists at the specified location';
+            } else if (errorStr.includes('Expected')) {
+              hint = '\n  Hint: TypeScript syntax error.\n' +
+                     '        - Check for missing brackets, semicolons, or quotes\n' +
+                     '        - Verify TypeScript syntax is correct';
+            }
+
+            const location = script.src ? `"${script.src}"` : 'inline script';
+            const errorMsg = `Error transpiling TypeScript in ${location}:\n  ${error}${hint}`;
             console.error(errorMsg);
             failures.push(errorMsg);
             continue;
@@ -1347,7 +1451,53 @@ async function executeScripts(scripts: Array<{ type: string; content: string; sr
         }
       }
     } catch (error) {
-      const errorMsg = `Error executing script (${script.type}): ${error}`;
+      const errorStr = String(error);
+      let errorMsg = `Error executing script (${script.type}): ${error}`;
+      let hint = '';
+
+      // Provide helpful hints for common errors
+      if (errorStr.includes('Cannot use import statement outside a module')) {
+        // Try to find unresolved imports in the script content
+        const unresolvedImports = scriptContent.match(/^import\s+.*from\s+['"]([^'"]+)['"]/gm) ||
+                                  scriptContent.match(/^import\s+['"]([^'"]+)['"]/gm);
+
+        if (unresolvedImports && unresolvedImports.length > 0) {
+          const importList = unresolvedImports.slice(0, 5).map(imp => `      ${imp}`).join('\n');
+          const moreCount = unresolvedImports.length > 5 ? `\n      ... and ${unresolvedImports.length - 5} more` : '';
+          hint = '\n  Unresolved imports found in bundled code:\n' + importList + moreCount +
+                 '\n\n  Possible causes:\n' +
+                 '        - The import specifier is not supported (try https:// or jsr: instead)\n' +
+                 '        - The module could not be fetched (check network/path)\n' +
+                 '        - Circular dependencies that the bundler cannot resolve';
+        } else if (script.src) {
+          hint = '\n  Hint: The bundler failed to resolve an import in this script.\n' +
+                 '        - Run with --debug flag to see detailed bundling output\n' +
+                 '        - Check that all import paths are correct and accessible\n' +
+                 '        - Use full URLs for external dependencies (https://...)\n' +
+                 '        - Use relative paths for local files (./file.ts)';
+        } else {
+          hint = '\n  Hint: Import statements are not fully supported in inline .melker scripts.\n' +
+                 '        - Use melkerImport() for dynamic imports: const mod = await melkerImport("./module.ts")\n' +
+                 '        - Or move the code to an external .ts file and use <script src="...">';
+        }
+      } else if (errorStr.includes('is not defined')) {
+        const match = errorStr.match(/(\w+) is not defined/);
+        if (match) {
+          hint = `\n  Hint: "${match[1]}" is not available in the script context.\n` +
+                 '        - Check spelling and ensure it is defined before use\n' +
+                 '        - Use context.variableName to access context variables';
+        }
+      } else if (errorStr.includes('Unexpected token')) {
+        hint = '\n  Hint: Syntax error in script. Check for:\n' +
+               '        - Missing semicolons or brackets\n' +
+               '        - Unsupported TypeScript features (decorators, enums with initializers)\n' +
+               '        - Mixing ESM and CommonJS syntax';
+      }
+
+      // Include script location info
+      const location = script.src ? `in "${script.src}"` : '(inline script)';
+      errorMsg = `Error executing script ${location}:\n  ${error}${hint}`;
+
       if (!debug) {
         // In non-debug mode, still log errors but they'll be collected
         console.error(errorMsg);

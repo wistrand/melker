@@ -79,6 +79,12 @@ export class AudioRecorder {
     // Get gain from env or use default
     const gain = parseFloat(Deno.env.get('MELKER_AUDIO_GAIN') || '') || DEFAULT_AUDIO_GAIN;
 
+    const scriptPath = new URL('./macos-audio-record.swift', import.meta.url).pathname;
+    logger.info("-- startRecording --");
+    logger.info("import.meta.url: " + import.meta.url);
+    logger.info("scriptPath: " + scriptPath);
+    logger.info("os: " + Deno.build.os);
+
     try {
       // Use platform-specific recording
       const forceFFmpeg = Deno.env.get('MELKER_FFMPEG') === 'true' || Deno.env.get('MELKER_FFMPEG') === '1';

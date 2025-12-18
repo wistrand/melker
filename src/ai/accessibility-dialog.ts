@@ -768,7 +768,32 @@ export class AccessibilityDialogManager {
         listenBtn.props.title = 'Listen';
       }
       if (statusElement) {
-        statusElement.props.text = 'Error';
+        // Extract compact error message
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        let compactError = 'Audio error';
+
+        // Check for missing command (e.g., "Failed to spawn 'ffmpeg': entity not found")
+        const spawnMatch = errorMsg.match(/Failed to spawn '([^']+)'/);
+        if (spawnMatch) {
+          compactError = `${spawnMatch[1]} not found`;
+        } else if (errorMsg.includes('NotFound') || errorMsg.includes('ENOENT') || errorMsg.includes('No such file')) {
+          compactError = 'Command not found';
+        } else if (errorMsg.includes('permission') || errorMsg.includes('Permission')) {
+          compactError = 'Mic permission denied';
+        } else if (errorMsg.includes('pulse') || errorMsg.includes('ALSA')) {
+          compactError = 'No audio device';
+        } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
+          compactError = 'Recording timeout';
+        } else if (errorMsg.includes('audio engine') || errorMsg.includes('AudioEngine')) {
+          compactError = 'Audio engine failed';
+        } else if (errorMsg.includes('converter') || errorMsg.includes('Converter') || errorMsg.includes('Conversion')) {
+          compactError = 'Audio conversion failed';
+        } else if (errorMsg.includes('output buffer') || errorMsg.includes('channel data')) {
+          compactError = 'Audio buffer error';
+        } else if (errorMsg.includes('output format') || errorMsg.includes('input format')) {
+          compactError = 'Audio format error';
+        }
+        statusElement.props.text = compactError;
       }
       this._deps.render();
       setTimeout(() => {
@@ -776,7 +801,7 @@ export class AccessibilityDialogManager {
           statusElement.props.text = '';
           this._deps.render();
         }
-      }, 2000);
+      }, 3000);
     }
   }
 

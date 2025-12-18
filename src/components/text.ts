@@ -77,9 +77,6 @@ export class TextElement extends Element implements Renderable, TextSelectable {
     // Debug: log ALL text render calls (during first few renders)
     const logger = (globalThis as any).logger;
     const renderCount = (globalThis as any).melkerRenderCount || 0;
-    if (logger && renderCount <= 5) {
-      logger.info(`text.render called, id="${this.id || 'none'}", text="${String(text).substring(0, 30)}...", bounds=${JSON.stringify(bounds)}`);
-    }
 
     // Get textWrap from style (default to 'nowrap')
     const elementStyle = this.props.style || {};

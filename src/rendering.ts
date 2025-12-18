@@ -631,9 +631,6 @@ export class RenderingEngine {
   private _renderNode(node: LayoutNode, context: RenderContext): void {
     // Debug: log visibility
     const gLogger = (globalThis as any).logger;
-    if (gLogger && (globalThis as any).melkerRenderCount <= 2 && node.element.type === 'text') {
-      gLogger.info(`[RENDER-NODE] text id="${node.element.id || 'none'}", visible=${node.visible}, bounds=${JSON.stringify(node.bounds)}`);
-    }
 
     if (!node.visible) return;
 

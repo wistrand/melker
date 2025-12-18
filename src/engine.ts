@@ -894,7 +894,7 @@ export class MelkerEngine {
       };
       checkTree(this._document.root);
 
-      this._logger?.info(`[RENDER-DEBUG] root.type=${rootType}, children=${rootChildCount}, dateEl=${dateEl ? 'found' : 'null'}, class=${dateElClass}, hasRender=${hasRender}, hasIntrinsicSize=${hasIntrinsicSize}, inTree=${foundInTree}, dateEl.props.text=${dateEl?.props?.text || 'N/A'}`);
+      this._logger?.debug(`[RENDER-DEBUG] root.type=${rootType}, children=${rootChildCount}, dateEl=${dateEl ? 'found' : 'null'}, class=${dateElClass}, hasRender=${hasRender}, hasIntrinsicSize=${hasIntrinsicSize}, inTree=${foundInTree}, dateEl.props.text=${dateEl?.props?.text || 'N/A'}`);
     }
 
     this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());

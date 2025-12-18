@@ -35,6 +35,7 @@ export class AudioRecorder {
   private _stopRequested = false;
   private _onLevelUpdate?: (level: number, remainingSeconds: number) => void;
   private _currentDeviceDescription: string | null = null;
+  private _tempSwiftScript: string | null = null; // Temp file for remote Swift script
 
   /**
    * Check if currently recording
@@ -79,12 +80,6 @@ export class AudioRecorder {
     // Get gain from env or use default
     const gain = parseFloat(Deno.env.get('MELKER_AUDIO_GAIN') || '') || DEFAULT_AUDIO_GAIN;
 
-    const scriptPath = new URL('./macos-audio-record.swift', import.meta.url).pathname;
-    logger.info("-- startRecording --");
-    logger.info("import.meta.url: " + import.meta.url);
-    logger.info("scriptPath: " + scriptPath);
-    logger.info("os: " + Deno.build.os);
-
     try {
       // Use platform-specific recording
       const forceFFmpeg = Deno.env.get('MELKER_FFMPEG') === 'true' || Deno.env.get('MELKER_FFMPEG') === '1';
@@ -103,6 +98,60 @@ export class AudioRecorder {
   }
 
   /**
+   * Get the Swift script path, downloading to temp file if running from remote URL
+   */
+  private async _getSwiftScriptPath(): Promise<string> {
+    const scriptUrl = new URL('./macos-audio-record.swift', import.meta.url);
+
+    // Check if running from a remote URL
+    if (scriptUrl.protocol === 'http:' || scriptUrl.protocol === 'https:') {
+      // Reuse existing temp file if available
+      if (this._tempSwiftScript) {
+        try {
+          await Deno.stat(this._tempSwiftScript);
+          return this._tempSwiftScript;
+        } catch {
+          // Temp file was deleted, need to re-download
+          this._tempSwiftScript = null;
+        }
+      }
+
+      // Fetch the Swift script from remote URL
+      logger.info('Fetching Swift script from remote URL', { url: scriptUrl.href });
+      const response = await fetch(scriptUrl.href);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch Swift script: ${response.status} ${response.statusText}`);
+      }
+      const scriptContent = await response.text();
+
+      // Write to temp file
+      this._tempSwiftScript = await Deno.makeTempFile({ suffix: '.swift' });
+      await Deno.writeTextFile(this._tempSwiftScript, scriptContent);
+      logger.info('Swift script cached to temp file', { path: this._tempSwiftScript });
+
+      return this._tempSwiftScript;
+    }
+
+    // Local file - use pathname directly
+    return scriptUrl.pathname;
+  }
+
+  /**
+   * Clean up temporary Swift script file if it exists
+   */
+  private async _cleanupTempSwiftScript(): Promise<void> {
+    if (this._tempSwiftScript) {
+      try {
+        await Deno.remove(this._tempSwiftScript);
+        logger.debug('Cleaned up temp Swift script', { path: this._tempSwiftScript });
+      } catch {
+        // Ignore cleanup errors
+      }
+      this._tempSwiftScript = null;
+    }
+  }
+
+  /**
    * Record audio using the native Swift script on macOS
    */
   private async _recordMacOS(
@@ -112,8 +161,8 @@ export class AudioRecorder {
     channels: number,
     bitsPerSample: number
   ): Promise<Uint8Array | null> {
-    // Find the Swift script - it's in the src directory relative to this file
-    const scriptPath = new URL('./macos-audio-record.swift', import.meta.url).pathname;
+    // Get Swift script path (downloads to temp if remote)
+    const scriptPath = await this._getSwiftScriptPath();
 
     logger.info('Starting macOS audio capture', { scriptPath, gain, durationSeconds });
 

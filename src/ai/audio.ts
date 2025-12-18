@@ -76,101 +76,17 @@ export class AudioRecorder {
     const channels = 1;
     const bitsPerSample = 16;
 
+    // Get gain from env or use default
+    const gain = parseFloat(Deno.env.get('MELKER_AUDIO_GAIN') || '') || DEFAULT_AUDIO_GAIN;
+
     try {
-      const { args: inputArgs, description } = await this._getAudioInputArgs();
-      this._currentDeviceDescription = description;
-      logger.info('Starting audio capture', { description, durationSeconds });
-
-      // Get gain from env or use default
-      const gain = parseFloat(Deno.env.get('MELKER_AUDIO_GAIN') || '') || DEFAULT_AUDIO_GAIN;
-
-      const ffmpegArgs = [
-        ...inputArgs,
-        '-af', `volume=${gain}`,  // Apply gain filter
-        '-f', 's16le',
-        '-ac', String(channels),
-        '-ar', String(sampleRate),
-        '-',
-      ];
-
-      const command = new Deno.Command('ffmpeg', {
-        args: ffmpegArgs,
-        stdout: 'piped',
-        stderr: 'piped',
-      });
-
-      this._process = command.spawn();
-      this._reader = this._process.stdout.getReader();
-
-      // Consume stderr in background to prevent blocking
-      const stderrReader = this._process.stderr.getReader();
-      (async () => {
-        while (true) {
-          const { done } = await stderrReader.read();
-          if (done) break;
-        }
-      })();
-
-      const startTime = Date.now();
-      const durationMs = durationSeconds * 1000;
-      let lastSoundTime = Date.now();
-      let hasHadSound = false;
-
-      while (!this._stopRequested) {
-        const elapsed = Date.now() - startTime;
-        if (elapsed >= durationMs) {
-          logger.info('Recording duration reached');
-          break;
-        }
-
-        const { value, done } = await this._reader.read();
-        if (done) {
-          logger.warn('Audio stream ended unexpectedly');
-          break;
-        }
-
-        this._audioChunks.push(new Uint8Array(value));
-
-        // Calculate audio level (RMS)
-        const samples = new Int16Array(value.buffer);
-        let sum = 0;
-        for (const sample of samples) {
-          sum += (sample / 32768) ** 2;
-        }
-        const rms = Math.sqrt(sum / samples.length);
-
-        // Track silence duration for auto-stop
-        if (rms > SILENCE_THRESHOLD) {
-          lastSoundTime = Date.now();
-          hasHadSound = true;
-        } else if (hasHadSound) {
-          // Only auto-stop after we've had some sound (not at the very beginning)
-          const silenceDuration = Date.now() - lastSoundTime;
-          if (silenceDuration >= SILENCE_TIMEOUT_MS) {
-            logger.info('Auto-stopping due to silence', { silenceDuration });
-            break;
-          }
-        }
-
-        const remainingSeconds = Math.ceil((durationMs - elapsed) / 1000);
-        if (this._onLevelUpdate) {
-          this._onLevelUpdate(rms, remainingSeconds);
-        }
+      // Use platform-specific recording
+      const forceFFmpeg = Deno.env.get('MELKER_FFMPEG') === 'true' || Deno.env.get('MELKER_FFMPEG') === '1';
+      if (1 || Deno.build.os === 'darwin' && !forceFFmpeg) {
+        return await this._recordMacOS(durationSeconds, gain, sampleRate, channels, bitsPerSample);
+      } else {
+        return await this._recordFFmpeg(durationSeconds, gain, sampleRate, channels, bitsPerSample);
       }
-
-      // Stop the process
-      await this._cleanup();
-
-      if (this._audioChunks.length === 0) {
-        logger.warn('No audio data captured');
-        return null;
-      }
-
-      // Create WAV file
-      const wavData = this._createWav(this._audioChunks, sampleRate, channels, bitsPerSample);
-      logger.info('Audio capture complete', { bytes: wavData.length });
-
-      return wavData;
     } catch (error) {
       logger.error('Audio recording failed', error instanceof Error ? error : new Error(String(error)));
       await this._cleanup();
@@ -178,6 +94,188 @@ export class AudioRecorder {
     } finally {
       this._isRecording = false;
     }
+  }
+
+  /**
+   * Record audio using the native Swift script on macOS
+   */
+  private async _recordMacOS(
+    durationSeconds: number,
+    gain: number,
+    sampleRate: number,
+    channels: number,
+    bitsPerSample: number
+  ): Promise<Uint8Array | null> {
+    // Find the Swift script - it's in the src directory relative to this file
+    const scriptPath = new URL('./macos-audio-record.swift', import.meta.url).pathname;
+
+    logger.info('Starting macOS audio capture', { scriptPath, gain, durationSeconds });
+
+    const command = new Deno.Command('swift', {
+      args: [scriptPath, String(gain)],
+      stdout: 'piped',
+      stderr: 'piped',
+    });
+
+    this._process = command.spawn();
+    this._reader = this._process.stdout.getReader();
+    this._currentDeviceDescription = 'macOS';
+
+    // Capture stderr for error detection
+    const stderrReader = this._process.stderr.getReader();
+    let stderrText = '';
+    const stderrPromise = (async () => {
+      const decoder = new TextDecoder();
+      while (true) {
+        const { value, done } = await stderrReader.read();
+        if (done) break;
+        if (value) {
+          stderrText += decoder.decode(value, { stream: true });
+        }
+      }
+    })();
+
+    // Start reading audio, but check for early stderr errors
+    const result = await this._readAudioStream(durationSeconds, sampleRate, channels, bitsPerSample);
+
+    // Wait briefly for any final stderr output
+    await Promise.race([stderrPromise, new Promise(resolve => setTimeout(resolve, 100))]);
+
+    // Check for errors in stderr
+    if (stderrText) {
+      const lines = stderrText.trim().split('\n');
+      for (const line of lines) {
+        if (line.startsWith('Error:') || line.toLowerCase().includes('error')) {
+          logger.error('macOS audio error', new Error(line));
+          // If we got no audio data, throw the error
+          if (!result || result.length <= 44) {
+            throw new Error(line);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Record audio using ffmpeg (Linux/Windows)
+   */
+  private async _recordFFmpeg(
+    durationSeconds: number,
+    gain: number,
+    sampleRate: number,
+    channels: number,
+    bitsPerSample: number
+  ): Promise<Uint8Array | null> {
+    const { args: inputArgs, description } = await this._getAudioInputArgs();
+    this._currentDeviceDescription = description;
+    logger.info('Starting audio capture', { description, durationSeconds });
+
+    const ffmpegArgs = [
+      ...inputArgs,
+      '-af', `volume=${gain}`,  // Apply gain filter
+      '-f', 's16le',
+      '-ac', String(channels),
+      '-ar', String(sampleRate),
+      '-',
+    ];
+
+    const command = new Deno.Command('ffmpeg', {
+      args: ffmpegArgs,
+      stdout: 'piped',
+      stderr: 'piped',
+    });
+
+    this._process = command.spawn();
+    this._reader = this._process.stdout.getReader();
+
+    // Consume stderr in background to prevent blocking
+    const stderrReader = this._process.stderr.getReader();
+    (async () => {
+      while (true) {
+        const { done } = await stderrReader.read();
+        if (done) break;
+      }
+    })();
+
+    return await this._readAudioStream(durationSeconds, sampleRate, channels, bitsPerSample);
+  }
+
+  /**
+   * Read audio data from the stream and create WAV
+   */
+  private async _readAudioStream(
+    durationSeconds: number,
+    sampleRate: number,
+    channels: number,
+    bitsPerSample: number
+  ): Promise<Uint8Array | null> {
+    const startTime = Date.now();
+    const durationMs = durationSeconds * 1000;
+    let lastSoundTime = Date.now();
+    let hasHadSound = false;
+
+    while (!this._stopRequested) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= durationMs) {
+        logger.info('Recording duration reached');
+        break;
+      }
+
+      const { value, done } = await this._reader!.read();
+      if (done) {
+        logger.warn('Audio stream ended unexpectedly');
+        break;
+      }
+
+      this._audioChunks.push(new Uint8Array(value));
+
+      // Calculate audio level (RMS)
+      // Ensure we have an even number of bytes for Int16Array alignment
+      const byteLength = value.byteLength - (value.byteLength % 2);
+      if (byteLength < 2) {
+        continue; // Skip if not enough data for at least one sample
+      }
+      const samples = new Int16Array(value.buffer, value.byteOffset, byteLength / 2);
+      let sum = 0;
+      for (const sample of samples) {
+        sum += (sample / 32768) ** 2;
+      }
+      const rms = Math.sqrt(sum / samples.length);
+
+      // Track silence duration for auto-stop
+      if (rms > SILENCE_THRESHOLD) {
+        lastSoundTime = Date.now();
+        hasHadSound = true;
+      } else if (hasHadSound) {
+        // Only auto-stop after we've had some sound (not at the very beginning)
+        const silenceDuration = Date.now() - lastSoundTime;
+        if (silenceDuration >= SILENCE_TIMEOUT_MS) {
+          logger.info('Auto-stopping due to silence', { silenceDuration });
+          break;
+        }
+      }
+
+      const remainingSeconds = Math.ceil((durationMs - elapsed) / 1000);
+      if (this._onLevelUpdate) {
+        this._onLevelUpdate(rms, remainingSeconds);
+      }
+    }
+
+    // Stop the process
+    await this._cleanup();
+
+    if (this._audioChunks.length === 0) {
+      logger.warn('No audio data captured');
+      return null;
+    }
+
+    // Create WAV file
+    const wavData = this._createWav(this._audioChunks, sampleRate, channels, bitsPerSample);
+    logger.info('Audio capture complete', { bytes: wavData.length });
+
+    return wavData;
   }
 
   /**
@@ -207,6 +305,7 @@ export class AudioRecorder {
   private async _getAudioInputArgs(): Promise<{ args: string[]; description: string }> {
     switch (Deno.build.os) {
       case 'darwin':
+        // Used when MELKER_FFMPEG=true on macOS
         return {
           args: ['-f', 'avfoundation', '-i', ':0'],
           description: 'AVFoundation (macOS)',

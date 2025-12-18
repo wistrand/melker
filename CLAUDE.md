@@ -118,6 +118,7 @@ src/
     tools.ts          - AI tool system (built-in + custom)
     accessibility-dialog.ts - AI assistant dialog
     audio.ts          - Audio recording and transcription
+    macos-audio-record.swift - Native macOS audio capture
   utils/              - Shared utilities
     timing.ts         - Debounce and throttle functions
 agent_docs/           - Documentation for AI agents
@@ -158,6 +159,9 @@ tests/                - Test files
 | `MELKER_AUDIO_MODEL` | AI transcription model (default: `openai/gpt-4o-audio-preview`) |
 | `MELKER_AI_ENDPOINT` | API endpoint (default: `https://openrouter.ai/api/v1/chat/completions`) |
 | `MELKER_AI_HEADERS` | Custom headers (`name: value; name2: value2`) |
+| `MELKER_AUDIO_GAIN` | Audio recording gain multiplier (default: `2.0`) |
+| `MELKER_AUDIO_DEBUG` | Replay recorded audio before transcription (`true` or `1`) |
+| `MELKER_FFMPEG` | Force ffmpeg on macOS instead of native Swift (`true` or `1`) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |

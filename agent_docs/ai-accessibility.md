@@ -58,6 +58,7 @@ Response streamed to dialog (debounced 50ms)
 | `src/ai/tools.ts` | Tool definitions and execution |
 | `src/ai/accessibility-dialog.ts` | Dialog UI and conversation management |
 | `src/ai/audio.ts` | Audio recording, transcription, and silence trimming |
+| `src/ai/macos-audio-record.swift` | Native macOS audio capture using AVAudioEngine |
 
 ## Environment Variables
 
@@ -70,6 +71,9 @@ Response streamed to dialog (debounced 50ms)
 | `MELKER_AI_HEADERS` | (none) | Custom headers (format: `name: value; name2: value2`) |
 | `MELKER_AI_SITE_URL` | `https://github.com/melker` | Site URL for rankings |
 | `MELKER_AI_SITE_NAME` | `Melker` | Site name for rankings |
+| `MELKER_AUDIO_GAIN` | `2.0` | Audio recording gain multiplier |
+| `MELKER_AUDIO_DEBUG` | `false` | Replay recorded audio before transcription |
+| `MELKER_FFMPEG` | `false` | Force ffmpeg on macOS instead of native Swift |
 
 All environment variables are read fresh on each API call, allowing dynamic changes without restart.
 
@@ -94,10 +98,11 @@ The `audio.ts` module handles:
 
 | Function | Purpose |
 |----------|---------|
-| `AudioRecorder` | Cross-platform audio capture using FFmpeg |
+| `AudioRecorder` | Platform-specific audio capture (Swift on macOS, ffmpeg elsewhere) |
 | `transcribeAudio()` | Send audio to OpenRouter for transcription |
 | `trimSilence()` | Remove silent portions from start/end |
 | `hasAudioContent()` | Validate audio has meaningful volume |
+| `playbackAudio()` | Debug playback via ffplay (when `MELKER_AUDIO_DEBUG=true`) |
 
 Audio analysis uses RMS (root mean square) in 100ms chunks:
 - Threshold: 0.01 RMS (roughly quiet speech)
@@ -107,17 +112,24 @@ Audio analysis uses RMS (root mean square) in 100ms chunks:
 ### Platform Support
 
 Audio capture auto-detects the platform:
-- **Linux**: PulseAudio/PipeWire (preferred) or ALSA fallback
-- **macOS**: AVFoundation
-- **Windows**: DirectShow
+- **Linux**: ffmpeg with PulseAudio/PipeWire (preferred) or ALSA fallback
+- **macOS**: Native Swift script using AVAudioEngine (no ffmpeg required)
+- **Windows**: ffmpeg with DirectShow
 
-Requires `ffmpeg` to be installed and in PATH.
+Requirements:
+- **Linux/Windows**: `ffmpeg` installed and in PATH
+- **macOS**: Swift runtime (included with Xcode or Command Line Tools)
+
+Set `MELKER_FFMPEG=true` to force ffmpeg on macOS instead of native Swift.
 
 ### Visual Feedback
 
 During recording, the status row shows:
 - Volume level indicator: `[|||||]` (5 bars max)
-- Remaining time: `3s`
+- Remaining time (padded): ` 3s`
+- Device name on Linux: `(PulseAudio (device_name))`
+
+Example: `[|||  ]  8s (PulseAudio (alsa_input.usb-Blue_Microphones))`
 
 ## Tool System
 

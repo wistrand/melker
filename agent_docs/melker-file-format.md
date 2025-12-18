@@ -4,9 +4,11 @@ The `.melker` file format is an HTML-like declarative syntax for building Melker
 
 **Run with:**
 ```bash
-deno run --allow-all melker.ts <file>.melker
-deno run --allow-all melker.ts http://server/path/file.melker  # URL support
+deno run --unstable-bundle --allow-all melker.ts <file>.melker
+deno run --unstable-bundle --allow-all melker.ts http://server/path/file.melker  # URL support
 ```
+
+**Note:** The `--unstable-bundle` flag is required for Deno's `Deno.bundle()` API which handles npm/jsr imports.
 
 ## Structure
 
@@ -192,23 +194,29 @@ See `examples/melker/` for complete examples:
 ## Running
 
 ```bash
-# Basic
-deno run --allow-all melker.ts examples/melker/counter.melker
+# Basic (requires --unstable-bundle for Deno.bundle() API)
+deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
 
 # From URL
-deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all melker.ts --lint examples/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts --lint examples/melker/counter.melker
 
 # Watch mode (auto-reload on file changes, local files only)
-deno run --allow-all melker.ts --watch examples/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts --watch examples/melker/counter.melker
+
+# Debug mode (shows bundler info, retains temp files at /tmp/melker-*.{ts,js})
+deno run --unstable-bundle --allow-all melker.ts --debug examples/melker/counter.melker
+
+# Enable bundle caching (disabled by default)
+deno run --unstable-bundle --allow-all melker.ts --cache examples/melker/counter.melker
 
 # With logging
-MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --allow-all melker.ts app.melker
+MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --unstable-bundle --allow-all melker.ts app.melker
 
 # With theme
-MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts app.melker
+MELKER_THEME=fullcolor-dark deno run --unstable-bundle --allow-all melker.ts app.melker
 
 # Start LSP server (for editor integration)
 deno run --allow-all melker.ts --lsp
@@ -234,7 +242,7 @@ The markdown format compiles to `.melker` and provides:
 
 ```bash
 # Run directly
-deno run --allow-all melker.ts examples/melker-md/counter.md
+deno run --unstable-bundle --allow-all melker.ts examples/melker-md/counter.md
 
 # Convert to .melker format (prints to stdout)
 deno run --allow-all melker.ts --convert examples/melker-md/counter.md

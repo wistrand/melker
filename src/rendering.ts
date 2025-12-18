@@ -652,9 +652,6 @@ export class RenderingEngine {
 
     // Debug: Log ALL node renders
     const gLogger = (globalThis as any).logger;
-    if (gLogger && (globalThis as any).melkerRenderCount <= 3) {
-      gLogger.info(`[NODE-RENDER] type="${element.type}", id="${element.id || 'none'}", bounds=${JSON.stringify(bounds)}`);
-    }
 
     // Skip dialog elements - they are rendered separately by _renderModal
     // to ensure proper layering and avoid double rendering

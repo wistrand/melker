@@ -82,7 +82,7 @@ export class AudioRecorder {
     try {
       // Use platform-specific recording
       const forceFFmpeg = Deno.env.get('MELKER_FFMPEG') === 'true' || Deno.env.get('MELKER_FFMPEG') === '1';
-      if (1 || Deno.build.os === 'darwin' && !forceFFmpeg) {
+      if (Deno.build.os === 'darwin' && !forceFFmpeg) {
         return await this._recordMacOS(durationSeconds, gain, sampleRate, channels, bitsPerSample);
       } else {
         return await this._recordFFmpeg(durationSeconds, gain, sampleRate, channels, bitsPerSample);

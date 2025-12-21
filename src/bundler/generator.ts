@@ -18,6 +18,46 @@ import type {
 const logger = getLogger('Bundler:Generator');
 
 /**
+ * Reserved $melker member names that cannot be overwritten by script exports.
+ */
+const RESERVED_MELKER_MEMBERS = new Set([
+  // DOM-like methods
+  'getElementById',
+  'querySelector',
+  'querySelectorAll',
+  // Rendering
+  'render',
+  'forceRender',
+  // Lifecycle
+  'exit',
+  'quit',
+  // UI utilities
+  'setTitle',
+  'alert',
+  'copyToClipboard',
+  // Element creation
+  'createElement',
+  // Dynamic imports
+  'melkerImport',
+  // AI tools
+  'registerAITool',
+  // State persistence
+  'persistenceEnabled',
+  'stateFilePath',
+  // OAuth
+  'oauth',
+  'oauthConfig',
+  // Logging
+  'logger',
+  'getLogger',
+  // Source metadata
+  'url',
+  'dirname',
+  // Internal
+  'engine',
+]);
+
+/**
  * Generate TypeScript source from parsed .melker content.
  *
  * The generated code has sections:
@@ -74,6 +114,8 @@ export function generate(parsed: ParseResult): GeneratedSource {
     });
   }
 
+  const dirname = getDirname(parsed.sourceUrl);
+
   // =========================================================================
   // Section 1: Runtime Globals (from globalThis)
   // =========================================================================
@@ -82,7 +124,7 @@ export function generate(parsed: ParseResult): GeneratedSource {
   addLine('// ='.padEnd(70, '='));
   addLine('');
   addLine('// Get runtime context from globalThis (set by executeBundle before import)');
-  addLine('const context = (globalThis as any).context as {');
+  addLine('const $melker = (globalThis as any).$melker as {');
   addLine('  getElementById(id: string): any;');
   addLine('  querySelector(selector: string): any;');
   addLine('  querySelectorAll(selector: string): any[];');
@@ -95,6 +137,7 @@ export function generate(parsed: ParseResult): GeneratedSource {
   addLine('  copyToClipboard(text: string): Promise<boolean>;');
   addLine('  engine: any;');
   addLine('  logger: any;');
+  addLine('  getLogger(name: string): any;');
   addLine('  oauth: any;');
   addLine('  oauthConfig: any;');
   addLine('  createElement(type: string, props?: Record<string, any>, ...children: any[]): any;');
@@ -102,38 +145,14 @@ export function generate(parsed: ParseResult): GeneratedSource {
   addLine('  registerAITool(tool: any): void;');
   addLine('  persistenceEnabled: boolean;');
   addLine('  stateFilePath: string | null;');
-  addLine('};');
-  addLine('');
-  addLine('const argv = (globalThis as any).argv as string[];');
-  addLine('');
-  addLine('// Global shortcuts (also available via context.xxx)');
-  addLine('const engine = (globalThis as any).engine;');
-  addLine('const logger = (globalThis as any).logger;');
-  addLine('');
-
-  // =========================================================================
-  // Section 2: Source Metadata ($meta)
-  // =========================================================================
-  const dirname = getDirname(parsed.sourceUrl);
-  const filename = getFilename(parsed.sourceUrl);
-
-  addLine('// ='.padEnd(70, '='));
-  addLine('// SOURCE METADATA');
-  addLine('// ='.padEnd(70, '='));
-  addLine('');
-  addLine('const $meta = Object.freeze({');
   addLine(`  url: ${JSON.stringify(parsed.sourceUrl)},`);
   addLine(`  dirname: ${JSON.stringify(dirname)},`);
-  addLine(`  filename: ${JSON.stringify(filename)},`);
-  addLine('  resolve(specifier: string): string {');
-  addLine('    if (/^(npm:|jsr:|node:|https?:\\/\\/)/.test(specifier)) return specifier;');
-  addLine('    return new URL(specifier, this.url).href;');
-  addLine('  }');
-  addLine('});');
+  addLine('};');
+  addLine('const argv = (globalThis as any).argv as string[];');
   addLine('');
 
   // =========================================================================
-  // Section 3: User Scripts (sync)
+  // Section 2: User Scripts (sync)
   // =========================================================================
   const syncScripts = parsed.scripts.filter((s) => s.type === 'sync');
 
@@ -209,11 +228,23 @@ export function generate(parsed: ParseResult): GeneratedSource {
       }
     }
 
-    // Add exported identifiers to context so they're accessible via context.X
+    // Check for conflicts with reserved $melker members
+    const conflicts = exportedIdentifiers.filter((id) => RESERVED_MELKER_MEMBERS.has(id));
+    if (conflicts.length > 0) {
+      const conflictList = conflicts.map((c) => `'${c}'`).join(', ');
+      const reservedList = Array.from(RESERVED_MELKER_MEMBERS).sort().join(', ');
+      throw new Error(
+        `Script export name conflict: ${conflictList} would overwrite built-in $melker member(s).\n\n` +
+        `Reserved names: ${reservedList}\n\n` +
+        `Rename your exported function(s) to avoid conflicts.`
+      );
+    }
+
+    // Add exported identifiers to $melker so they're accessible via $melker.X
     if (exportedIdentifiers.length > 0) {
-      addLine('// Assign exports to context for handler access');
+      addLine('// Assign exports to $melker for handler access');
       for (const id of exportedIdentifiers) {
-        addLine(`(context as any).${id} = ${id};`);
+        addLine(`($melker as any).${id} = ${id};`);
       }
       addLine('');
     }
@@ -383,17 +414,6 @@ function getDirname(url: string): string {
     // Fallback for non-URL paths
     const lastSlash = url.lastIndexOf('/');
     return lastSlash >= 0 ? url.substring(0, lastSlash) : '.';
-  }
-}
-
-/**
- * Extract filename from URL
- */
-function getFilename(url: string): string {
-  try {
-    return new URL(url).pathname;
-  } catch {
-    return url;
   }
 }
 

@@ -13,10 +13,10 @@
     }
 
     function showExample() {
-      const titleEl = context.getElementById('exampleTitle');
-      const counterEl = context.getElementById('exampleCounter');
-      const descEl = context.getElementById('description');
-      const containerEl = context.getElementById('flexContainer');
+      const titleEl = $melker.getElementById('exampleTitle');
+      const counterEl = $melker.getElementById('exampleCounter');
+      const descEl = $melker.getElementById('description');
+      const containerEl = $melker.getElementById('flexContainer');
 
       // Example configurations
       const examples = [
@@ -69,7 +69,7 @@
         });
       }
 
-      context.render();
+      $melker.render();
     }
 
     exports = { nextExample, prevExample };
@@ -132,13 +132,13 @@
       <button
         title="Previous"
         style="width: 15; height: 3; background-color: blue;"
-        onClick="context.prevExample();"
+        onClick="$melker.prevExample();"
       />
 
       <button
         title="Next"
         style="width: 15; height: 3; background-color: blue;"
-        onClick="context.nextExample();"
+        onClick="$melker.nextExample();"
       />
     </container>
 

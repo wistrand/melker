@@ -211,7 +211,7 @@
 
     // UI update functions
     function updateDigitalDisplay(): void {
-      const digitalElement = context.getElementById('digitalTime');
+      const digitalElement = $melker.getElementById('digitalTime');
       if (digitalElement && clockConfig.showDigital) {
         const time = formatDigitalTime(getCurrentTime());
         digitalElement.props.text = time;
@@ -219,7 +219,7 @@
     }
 
     function updateTimezoneDisplay(): void {
-      const tzElement = context.getElementById('timezoneDisplay');
+      const tzElement = $melker.getElementById('timezoneDisplay');
       if (tzElement) {
         const tz = timezones.find(t => t.value === clockConfig.timezone);
         const label = tz ? tz.label : clockConfig.timezone;
@@ -230,7 +230,7 @@
     function updateStatistics(): void {
       if (!clockConfig.showStatistics) return;
 
-      const statsElement = context.getElementById('statistics');
+      const statsElement = $melker.getElementById('statistics');
       if (statsElement) {
         const stats = [
           `Uptime: ${Math.floor(clockStats.uptime / 60)}m ${clockStats.uptime % 60}s`,
@@ -258,14 +258,14 @@
           updateDigitalDisplay();
           updateTimezoneDisplay();
           updateStatistics();
-          context.engine.render();
+          $melker.engine.render();
         } catch (error) {
           logError(error instanceof Error ? error.message : String(error), 'clockInterval');
         }
       }, clockConfig.refreshRate);
 
       // Update start button
-      const startBtn = context.getElementById('startBtn');
+      const startBtn = $melker.getElementById('startBtn');
       if (startBtn) {
         startBtn.props.title = '⏹️ Stop';
         startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'red' };
@@ -282,7 +282,7 @@
       }
 
       // Update start button
-      const startBtn = context.getElementById('startBtn');
+      const startBtn = $melker.getElementById('startBtn');
       if (startBtn) {
         startBtn.props.title = '▶️ Start';
         startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'green' };
@@ -295,7 +295,7 @@
       } else {
         startClock();
       }
-      context.engine.render();
+      $melker.engine.render();
     }
 
     // Settings functions
@@ -304,7 +304,7 @@
       const nextIndex = (currentIndex + 1) % timezones.length;
       clockConfig.timezone = timezones[nextIndex].value;
       updateTimezoneDisplay();
-      context.engine.render();
+      $melker.engine.render();
     }
 
     export function cycleTheme(): void {
@@ -314,7 +314,7 @@
       clockConfig.theme = themes_list[nextIndex];
 
       // Update canvas style
-      const canvasElement = context.getElementById('clockCanvas');
+      const canvasElement = $melker.getElementById('clockCanvas');
       if (canvasElement) {
         const theme = themes[clockConfig.theme];
         canvasElement.props.style = {
@@ -325,12 +325,12 @@
       }
       // Redraw clock immediately if running to prevent blank canvas after style change
       if (isRunning) drawAnalogClock();
-      context.engine.render();
+      $melker.engine.render();
     }
 
     export function toggleSeconds(): void {
       clockConfig.showSeconds = !clockConfig.showSeconds;
-      const btn = context.getElementById('secondsBtn');
+      const btn = $melker.getElementById('secondsBtn');
       if (btn) {
         btn.props.title = clockConfig.showSeconds ? '🕐 Hide Seconds' : '🕐 Show Seconds';
         btn.props.style = {
@@ -338,13 +338,13 @@
           backgroundColor: clockConfig.showSeconds ? 'blue' : 'gray'
         };
       }
-      context.engine.render();
+      $melker.engine.render();
     }
 
     export function toggleDigital(): void {
       clockConfig.showDigital = !clockConfig.showDigital;
-      const digitalElement = context.getElementById('digitalTime');
-      const btn = context.getElementById('digitalBtn');
+      const digitalElement = $melker.getElementById('digitalTime');
+      const btn = $melker.getElementById('digitalBtn');
 
       if (digitalElement) {
         digitalElement.props.style = {
@@ -360,12 +360,12 @@
           backgroundColor: clockConfig.showDigital ? 'purple' : 'gray'
         };
       }
-      context.engine.render();
+      $melker.engine.render();
     }
 
     export function toggle24Hour(): void {
       clockConfig.show24Hour = !clockConfig.show24Hour;
-      const btn = context.getElementById('formatBtn');
+      const btn = $melker.getElementById('formatBtn');
       if (btn) {
         btn.props.title = clockConfig.show24Hour ? '🕛 12 Hour' : '🕛 24 Hour';
         btn.props.style = {
@@ -374,13 +374,13 @@
         };
       }
       updateDigitalDisplay();
-      context.engine.render();
+      $melker.engine.render();
     }
 
     export function toggleStatistics(): void {
       clockConfig.showStatistics = !clockConfig.showStatistics;
-      const statsElement = context.getElementById('statistics');
-      const btn = context.getElementById('statsBtn');
+      const statsElement = $melker.getElementById('statistics');
+      const btn = $melker.getElementById('statsBtn');
 
       if (statsElement) {
         statsElement.props.style = {
@@ -396,7 +396,7 @@
           backgroundColor: clockConfig.showStatistics ? 'teal' : 'gray'
         };
       }
-      context.engine.render();
+      $melker.engine.render();
     }
 
     export function adjustRefreshRate(): void {
@@ -411,26 +411,26 @@
         startClock();
       }
 
-      const btn = context.getElementById('rateBtn');
+      const btn = $melker.getElementById('rateBtn');
       if (btn) {
         btn.props.title = `⚡ Rate: ${clockConfig.refreshRate}ms`;
       }
-      context.engine.render();
+      $melker.engine.render();
     }
 
     // Auto-resize handler - canvas uses getBounds() so just trigger redraw
-    context.engine.onResize(() => {
+    $melker.engine.onResize(() => {
       if (!clockConfig.autoResize) return;
       if (isRunning) {
         drawAnalogClock();
-        context.engine.render();
+        $melker.engine.render();
       }
     });
 
     // Initialize application on mount
-    context.engine.onMount(() => {
+    $melker.engine.onMount(() => {
       try {
-        canvas = context.getElementById('clockCanvas');
+        canvas = $melker.getElementById('clockCanvas');
         if (canvas) {
           // Apply initial theme
           const theme = themes[clockConfig.theme];
@@ -447,7 +447,7 @@
           // Initial clock draw (uses getBounds() for sizing)
           drawAnalogClock();
 
-          context.engine.render();
+          $melker.engine.render();
 
           // Auto-start
           startClock();
@@ -483,7 +483,7 @@
         width="48"
         height="12"
         style="width: fill; height: fill; background-color: black;"
-        onPaint="context.drawAnalogClock(event.canvas)"
+        onPaint="$melker.drawAnalogClock(event.canvas)"
       />
     </container>
 
@@ -554,7 +554,7 @@
       <button
         title="❌ Exit"
         style="background-color: red; color: white; padding: 1;"
-        onClick="context.exit();"
+        onClick="$melker.exit();"
       />
     </container>
 

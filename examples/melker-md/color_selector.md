@@ -187,9 +187,9 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 
 ```typescript
 // @melker handler #copy-hex.onClick
-const hex = context.getElementById('hex-value');
+const hex = $melker.getElementById('hex-value');
 if (hex) {
-  context.copyToClipboard(hex.props.text);
+  $melker.copyToClipboard(hex.props.text);
   alert('Copied: ' + hex.props.text);
 }
 ```
@@ -222,16 +222,16 @@ function updateColorDisplay() {
   const [r, g, b] = hslToRgb(selectedHue, selectedSat, selectedLight);
   const hex = rgbToHex(r, g, b);
 
-  const preview = context.getElementById('preview');
-  const hexValue = context.getElementById('hex-value');
-  const rgbValue = context.getElementById('rgb-value');
-  const hslValue = context.getElementById('hsl-value');
+  const preview = $melker.getElementById('preview');
+  const hexValue = $melker.getElementById('hex-value');
+  const rgbValue = $melker.getElementById('rgb-value');
+  const hslValue = $melker.getElementById('hsl-value');
 
   if (preview) {
     preview.props.style.backgroundColor = hex;
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     const textColor = luminance > 0.5 ? 'black' : 'white';
-    const previewText = context.getElementById('preview-text');
+    const previewText = $melker.getElementById('preview-text');
     if (previewText) {
       previewText.props.text = hex;
       previewText.props.style.color = textColor;
@@ -307,7 +307,7 @@ function paintLightnessPalette(event: any) {
 }
 
 function handlePaletteClick(event: any) {
-  const canvas = context.getElementById('hue-sat-canvas');
+  const canvas = $melker.getElementById('hue-sat-canvas');
   if (!canvas) return;
 
   const bounds = canvas.getBounds();
@@ -326,7 +326,7 @@ function handlePaletteClick(event: any) {
 }
 
 function handleLightnessClick(event: any) {
-  const canvas = context.getElementById('lightness-canvas');
+  const canvas = $melker.getElementById('lightness-canvas');
   if (!canvas) return;
 
   const bounds = canvas.getBounds();

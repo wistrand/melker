@@ -1,7 +1,7 @@
 <melker>
   <script>
     // Tool to list files in a directory
-    context.registerAITool({
+    $melker.registerAITool({
       name: "list_files",
       description: "List files in a directory. Returns file names and types.",
       parameters: {
@@ -15,7 +15,7 @@
             var prefix = entry.isDirectory ? "[DIR] " : "[FILE] ";
             entries.push(prefix + entry.name);
           }
-          var listingEl = context.getElementById("file-listing");
+          var listingEl = $melker.getElementById("file-listing");
           if (listingEl) {
             listingEl.props.text = entries.join("\n");
           }
@@ -30,14 +30,14 @@
     });
 
     // Tool to set the counter value
-    context.registerAITool({
+    $melker.registerAITool({
       name: "set_counter",
       description: "Set the counter to a specific value",
       parameters: {
         value: { type: "number", required: true, description: "The new counter value" }
       },
       handler: function(args) {
-        var counterEl = context.getElementById("counter");
+        var counterEl = $melker.getElementById("counter");
         if (counterEl) {
           var oldValue = parseInt(counterEl.props.text) || 0;
           counterEl.props.text = String(Number(args.value) || 0);
@@ -48,14 +48,14 @@
     });
 
     // Tool to add a message to the log
-    context.registerAITool({
+    $melker.registerAITool({
       name: "add_log",
       description: "Add a message to the activity log",
       parameters: {
         message: { type: "string", required: true, description: "Message to add to the log" }
       },
       handler: function(args) {
-        var logEl = context.getElementById("activity-log");
+        var logEl = $melker.getElementById("activity-log");
         if (logEl) {
           var timestamp = new Date().toLocaleTimeString();
           var entry = "[" + timestamp + "] " + args.message;
@@ -81,15 +81,15 @@
         <text id="counter" text="0" />
         <container style="display: flex; flex-direction: row; gap: 1; margin-top: 1">
           <button id="decrement" title="-" onClick="
-            var el = context.getElementById('counter');
+            var el = $melker.getElementById('counter');
             if (el) el.props.text = String((parseInt(el.props.text) || 0) - 1);
           " />
           <button id="increment" title="+" onClick="
-            var el = context.getElementById('counter');
+            var el = $melker.getElementById('counter');
             if (el) el.props.text = String((parseInt(el.props.text) || 0) + 1);
           " />
           <button id="reset" title="Reset" onClick="
-            var el = context.getElementById('counter');
+            var el = $melker.getElementById('counter');
             if (el) el.props.text = '0';
           " />
         </container>

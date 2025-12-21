@@ -55,6 +55,7 @@ export {
   formatError,
   isBundleAvailable,
   getBundleUnavailableHint,
+  restoreTerminal,
 } from './errors.ts';
 
 // Re-export cache functions
@@ -81,6 +82,7 @@ import {
   getBundleUnavailableHint,
   ErrorTranslator,
   formatError,
+  restoreTerminal,
 } from './errors.ts';
 import { checkCache, saveToCache, restoreFromCache } from './cache.ts';
 
@@ -239,17 +241,8 @@ export async function executeBundle(
     // We inject the context and argv as globals before importing
 
     // Set up globals that the bundled code expects
-    (globalThis as any).context = context;
+    (globalThis as any).$melker = context;
     (globalThis as any).argv = Deno.args.slice(1);
-
-    // Also expose common context properties as globals for convenience
-    // (matches what the legacy system exposes)
-    if (context.engine) {
-      (globalThis as any).engine = context.engine;
-    }
-    if (context.logger) {
-      (globalThis as any).logger = context.logger;
-    }
 
     // Write bundled code to temp file
     await Deno.writeTextFile(bundleFile, assembled.bundledCode);
@@ -280,13 +273,30 @@ export async function executeBundle(
 
     return registry;
   } catch (error) {
-    // Translate error to original source
-    if (error instanceof Error) {
-      const translated = errorTranslator.translate(error);
-      console.error(formatError(translated));
-      Deno.exit(1);
+    // CRITICAL: Always restore terminal and show error - never fail silently
+    restoreTerminal();
+
+    // Ensure we have an Error object
+    const err = error instanceof Error ? error : new Error(String(error));
+
+    // Log to file for debugging
+    logger.error('Bundle execution failed', err, {
+      sourceUrl: assembled.sourceUrl,
+    });
+
+    // Translate error to original source if possible
+    const translated = errorTranslator.translate(err);
+
+    // Always print the formatted error
+    console.error(formatError(translated));
+
+    // Also print the raw stack trace for debugging
+    if (err.stack) {
+      console.error('\nRaw stack trace:');
+      console.error(err.stack);
     }
-    throw error;
+
+    Deno.exit(1);
   }
 }
 
@@ -308,8 +318,19 @@ export async function callReady(registry: MelkerRegistry): Promise<void> {
       await registry.__ready();
       logger.debug('__ready completed');
     } catch (error) {
-      logger.error('__ready failed', error instanceof Error ? error : new Error(String(error)));
-      throw error;
+      // CRITICAL: Restore terminal and show error - never fail silently
+      restoreTerminal();
+
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('__ready failed', err);
+
+      console.error('\n\x1b[31m__ready hook failed:\x1b[0m', err.message);
+      if (err.stack) {
+        console.error('\nStack trace:');
+        console.error(err.stack);
+      }
+
+      Deno.exit(1);
     }
   }
 }

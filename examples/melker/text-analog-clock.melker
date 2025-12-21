@@ -66,19 +66,19 @@
 
       // Update each line of the clock
       for (let i = 0; i < clockLines.length; i++) {
-        const lineElement = context.getElementById(`clockLine${i}`);
+        const lineElement = $melker.getElementById(`clockLine${i}`);
         if (lineElement) {
           lineElement.props.text = clockLines[i];
         }
       }
 
       // Update digital time
-      const timeElement = context.getElementById('digitalTime');
+      const timeElement = $melker.getElementById('digitalTime');
       if (timeElement) {
         timeElement.props.text = now.toLocaleTimeString();
       }
 
-      context.render();
+      $melker.render();
     };
 
     const startClock = (context: any): void => {
@@ -121,20 +121,20 @@
           const startBtn: any = event.target;
           startBtn.props.title = 'Running...';
           startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'orange' };
-          context.startClock(context);
+          $melker.startClock(context);
         "
       />
 
       <button
         title="Update Now"
         style="background-color: blue; color: white;"
-        onClick="context.updateClock(context);"
+        onClick="$melker.updateClock(context);"
       />
 
       <button
         title="Exit"
         style="background-color: gray; color: white;"
-        onClick="context.exit();"
+        onClick="$melker.exit();"
       />
     </container>
 

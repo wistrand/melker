@@ -2,7 +2,7 @@
 
 A modern **Deno** library for creating rich Terminal UI interfaces using HTML-like `.melker` files or TypeScript.
 
-**Requirements:** Deno >= 2.1.0 (Node.js and Bun are not supported)
+**Requirements:** Deno >= 2.4.0 (Node.js and Bun are not supported)
 
 ## Quick Start with .melker Files
 
@@ -12,23 +12,23 @@ Create a file `hello.melker`:
   <text style="font-weight: bold; color: cyan;">
     Hello, Terminal UI!
   </text>
-  <button title="Click Me" onClick="context.exit()" />
+  <button title="Click Me" onClick="$melker.exit()" />
 </container>
 ```
 
 Run it:
 ```bash
-deno run --allow-all melker.ts hello.melker
+deno run --unstable-bundle --allow-all melker.ts hello.melker
 ```
 
 <img src="docs/hello_screenshot.png" alt="Hello World Screenshot" />
 
 Or run directly from GitHub without installing:
 ```bash
-deno run --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts hello.melker
+deno run --unstable-bundle --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts hello.melker
 
 # Or run the markdown viewer with any markdown file:
-deno run --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts \
+deno run --unstable-bundle --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts \
   https://raw.githubusercontent.com/wistrand/melker/main/examples/melker/markdown_viewer.melker \
   README.md
 ```
@@ -105,9 +105,9 @@ That's it! No build step, no compilation - just write HTML-like markup and run.
 
     function increment() {
       count++;
-      const el = context.getElementById('counter');
+      const el = $melker.getElementById('counter');
       el.props.text = `Count: ${count}`;
-      context.render();
+      $melker.render();
     }
   </script>
 
@@ -124,7 +124,7 @@ That's it! No build step, no compilation - just write HTML-like markup and run.
 deno run --allow-net --allow-read serve.ts examples/melker --port 1990
 
 # Run from URL
-deno run --allow-all melker.ts http://localhost:1990/counter.melker
+deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/counter.melker
 ```
 
 ## Features
@@ -611,14 +611,14 @@ See `examples/` directory for complete demos:
 
 ### Running Examples
 ```bash
-# Run .melker file
-deno run --allow-all melker.ts examples/melker/counter.melker
+# Run .melker file (requires --unstable-bundle for npm/jsr imports)
+deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
 
 # Pass arguments to .melker file (available as ${argv[1]}, ${argv[2]}, etc.)
-deno run --allow-all melker.ts examples/melker/markdown_viewer.melker README.md
+deno run --unstable-bundle --allow-all melker.ts examples/melker/markdown_viewer.melker README.md
 
 # Run .melker from URL
-deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # Run TypeScript example
 deno run --allow-all examples/ts/minimal_example.ts

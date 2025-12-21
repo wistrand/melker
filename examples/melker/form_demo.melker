@@ -18,17 +18,17 @@
       <checkbox id="enable-two-factor-au" title="Enable two-factor auth" />
     </container>
     <container id="buttons" style="display: flex; flex-direction: row; gap: 1">
-      <button id="submit" title="Submit" onClick="const name = context.getElementById('name-input')?.getValue() ?? '';
-const email = context.getElementById('email-input')?.getValue() ?? '';
+      <button id="submit" title="Submit" onClick="const name = $melker.getElementById('name-input')?.getValue() ?? '';
+const email = $melker.getElementById('email-input')?.getValue() ?? '';
 if (!name || !email) {
   alert('Please fill in all fields');
   return;
 }
 alert('Submitted: ' + name + ' (' + email + ')');" />
-      <button id="clear" title="Clear" onClick="context.getElementById('name-input')?.setValue('');
-context.getElementById('email-input')?.setValue('');
+      <button id="clear" title="Clear" onClick="$melker.getElementById('name-input')?.setValue('');
+$melker.getElementById('email-input')?.setValue('');
 alert('Form cleared');" />
-      <button id="cancel" title="Cancel" onClick="context.exit();" />
+      <button id="cancel" title="Cancel" onClick="$melker.exit();" />
     </container>
   </container>
 </melker>

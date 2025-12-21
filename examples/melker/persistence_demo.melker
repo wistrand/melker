@@ -3,23 +3,23 @@
 
   <script type="typescript">
     // Check persistence status on mount and update UI accordingly
-    context.engine.onMount(() => {
-      const statusText = context.getElementById('statusText');
-      const warningBanner = context.getElementById('warningBanner');
-      const footerText = context.getElementById('footerText');
+    $melker.engine.onMount(() => {
+      const statusText = $melker.getElementById('statusText');
+      const warningBanner = $melker.getElementById('warningBanner');
+      const footerText = $melker.getElementById('footerText');
 
-      if (context.persistenceEnabled) {
+      if ($melker.persistenceEnabled) {
         statusText.props.text = 'State Persistence Demo - Your input is saved automatically!';
         statusText.props.style = { ...statusText.props.style, color: 'green' };
         warningBanner.props.style = { ...warningBanner.props.style, display: 'none' };
-        footerText.props.text = 'State saved to: ' + context.stateFilePath;
+        footerText.props.text = 'State saved to: ' + $melker.stateFilePath;
       } else {
         statusText.props.text = 'State Persistence Demo - PERSISTENCE DISABLED';
         statusText.props.style = { ...statusText.props.style, color: 'red' };
         warningBanner.props.style = { ...warningBanner.props.style, display: 'flex' };
         footerText.props.text = 'Persistence disabled - run with MELKER_PERSIST=true';
       }
-      context.render();
+      $melker.render();
     });
   </script>
 
@@ -163,7 +163,7 @@
     <!-- Footer -->
     <container style="display: flex; flex-direction: row; justify-content: space-between; margin-top: 1; padding-top: 1; border-top: thin;">
       <text id="footerText" style="color: gray;">Checking persistence status...</text>
-      <button title="Exit" onClick="context.exit();" style="background-color: red;" />
+      <button title="Exit" onClick="$melker.exit();" style="background-color: red;" />
     </container>
 
   </container>

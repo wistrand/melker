@@ -28,10 +28,10 @@
         // Draw overlay on top of the image
         drawOverlay(canvas);
         canvas.markDirty();
-        context.engine.render();
+        $melker.engine.render();
       } catch (err) {
         // Show error in status text
-        const status = context.getElementById('statusText');
+        const status = $melker.getElementById('statusText');
         if (status) {
           status.props.text = 'Error: ' + (err instanceof Error ? err.message : String(err));
         }
@@ -39,8 +39,8 @@
     };
 
     // Register resize handler to re-render image
-    context.engine.onResize((event: any) => {
-      const canvas = context.getElementById('imageCanvas');
+    $melker.engine.onResize((event: any) => {
+      const canvas = $melker.getElementById('imageCanvas');
       if (!canvas) return;
 
       // Calculate new canvas size based on terminal size
@@ -56,17 +56,17 @@
       // Redraw overlay on resized canvas
       drawOverlay(canvas);
       canvas.markDirty();
-      context.engine.render();
+      $melker.engine.render();
     });
 
     // Initial load on mount
-    context.engine.onMount(async () => {
-      const canvas = context.getElementById('imageCanvas');
-      const status = context.getElementById('statusText');
+    $melker.engine.onMount(async () => {
+      const canvas = $melker.getElementById('imageCanvas');
+      const status = $melker.getElementById('statusText');
 
       if (canvas) {
         // Calculate initial canvas size based on current terminal size
-        const terminalSize = context.engine.getTerminalSize();
+        const terminalSize = $melker.engine.getTerminalSize();
         const canvasWidth = Math.max(20, terminalSize.width - 4);
         const canvasHeight = Math.max(10, terminalSize.height - 8);
 
@@ -78,7 +78,7 @@
 
         if (status) {
           status.props.text = 'Loading: ' + imagePath;
-          context.engine.render();
+          $melker.engine.render();
         }
 
         // Load the image
@@ -89,7 +89,7 @@
           status.props.text = 'Image ' + imgSize.width + 'x' + imgSize.height + ' with overlay - Resize to rescale';
         }
 
-        context.engine.render();
+        $melker.engine.render();
       }
     });
   </script>

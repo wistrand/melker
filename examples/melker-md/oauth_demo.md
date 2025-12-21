@@ -10,9 +10,9 @@ OAuth configuration loaded from .env.local (see .env.local.example).
   "clientId": "${OAUTH_CLIENT_ID}",
   "audience": "${OAUTH_AUDIENCE}",
   "autoLogin": true,
-  "onLogin": "context.onLoginCallback()",
-  "onLogout": "context.onLogoutCallback()",
-  "onFail": "context.onFailCallback(error)",
+  "onLogin": "$melker.onLoginCallback()",
+  "onLogout": "$melker.onLogoutCallback()",
+  "onFail": "$melker.onFailCallback(error)",
   "debugServer": "${OAUTH_DEBUG_SERVER:-true}"
 }
 ```
@@ -96,7 +96,7 @@ Button row.
 +--btn-login-----------------------+
 | type: button                     |
 | title: Login                     |
-| onClick: context.onLogin()       |
+| onClick: onLogin()       |
 +----------------------------------+
 ```
 
@@ -104,7 +104,7 @@ Button row.
 +--btn-refresh-----------------------+
 | type: button                       |
 | title: Refresh                     |
-| onClick: context.onRefresh()       |
+| onClick: onRefresh()       |
 | disabled: true                     |
 +------------------------------------+
 ```
@@ -113,7 +113,7 @@ Button row.
 +--btn-logout------------------------+
 | type: button                       |
 | title: Logout                      |
-| onClick: context.onLogout()        |
+| onClick: onLogout()        |
 | disabled: true                     |
 +------------------------------------+
 ```
@@ -122,6 +122,6 @@ Button row.
 +--btn-quit--------------------------+
 | type: button                       |
 | title: Quit                        |
-| onClick: context.quit()            |
+| onClick: $melker.quit()            |
 +------------------------------------+
 ```

@@ -25,11 +25,11 @@
             <input id="debug-input" />
             <checkbox id="enable-logging" title="Enable logging" />
             <checkbox id="verbose-output" title="Verbose output" />
-            <button id="reset-to-defaults" title="Reset to Defaults" onClick="const username = context.getElementById('settings-username');
-const debugInput = context.getElementById('debug-input');
+            <button id="reset-to-defaults" title="Reset to Defaults" onClick="const username = $melker.getElementById('settings-username');
+const debugInput = $melker.getElementById('debug-input');
 if (username) username.setValue('');
 if (debugInput) debugInput.setValue('');
-context.render();" />
+$melker.render();" />
           </tab>
         </tabs>
       </tab>

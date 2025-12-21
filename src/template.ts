@@ -763,7 +763,8 @@ export async function extractScriptsForBundler(
 
   // Find script tags in the content to get their positions
   // Note: Use non-greedy [^>]*? to avoid matching past /> in self-closing tags
-  const scriptTagPattern = /<script\s+(?:[^>]*?\s+)?type=["'](?:typescript|text\/typescript|javascript|text\/javascript|module)["'][^>]*?(?:\s*\/>|>[\s\S]*?<\/script>)/gi;
+  // type attribute is optional - scripts with only src attribute should also be matched
+  const scriptTagPattern = /<script(?:\s+[^>]*?)?(?:\s*\/>|>[\s\S]*?<\/script>)/gi;
 
   let match;
   let scriptIndex = 0;

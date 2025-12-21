@@ -14,9 +14,9 @@
       cols="44"
       style="background-color: transparent;"
       onChange="
-        const stats = context.getElementById('stats');
-        const textarea = context.getElementById('editor');
-        const container = context.getElementById('scroll-container');
+        const stats = $melker.getElementById('stats');
+        const textarea = $melker.getElementById('editor');
+        const container = $melker.getElementById('scroll-container');
         if (stats && textarea) {
           const val = textarea.getValue();
           const lines = val.split('\\n').length;
@@ -31,7 +31,7 @@
               container.props.scrollY = cursorRow;
             }
           }
-          context.render();
+          $melker.render();
         }
       "
     />
@@ -44,8 +44,8 @@
       title="Add Lines"
       style="width: 12; height: 3; border: thin;"
       onClick="
-        const textarea = context.getElementById('editor');
-        const container = context.getElementById('scroll-container');
+        const textarea = $melker.getElementById('editor');
+        const container = $melker.getElementById('scroll-container');
         if (textarea) {
           const current = textarea.getValue();
           const lineNum = current.split('\\n').length + 1;
@@ -59,7 +59,7 @@
               container.props.scrollY = Math.max(0, cursorRow - viewHeight + 2);
             }
           }
-          context.render();
+          $melker.render();
         }
       "
     />
@@ -67,19 +67,19 @@
       title="Clear"
       style="width: 10; height: 3; border: thin;"
       onClick="
-        const textarea = context.getElementById('editor');
-        const container = context.getElementById('scroll-container');
+        const textarea = $melker.getElementById('editor');
+        const container = $melker.getElementById('scroll-container');
         if (textarea) {
           textarea.setValue('');
           if (container) container.props.scrollY = 0;
-          context.render();
+          $melker.render();
         }
       "
     />
     <button
       title="Quit"
       style="width: 10; height: 3; border: thin;"
-      onClick="context.quit()"
+      onClick="$melker.quit()"
     />
   </container>
 </container>

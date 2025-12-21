@@ -68,7 +68,7 @@
     </container>
 
     <container style="margin-top: 1">
-      <button id="btn-quit" title="Quit" onClick="context.quit()" />
+      <button id="btn-quit" title="Quit" onClick="$melker.quit()" />
     </container>
   </container>
 
@@ -139,9 +139,9 @@
     ];
 
     // Draw gradients after mount (when elements are ready)
-    context.engine.onMount(() => {
+    $melker.engine.onMount(() => {
       for (const id of rainbowCanvases) {
-        const canvas = context.getElementById(id);
+        const canvas = $melker.getElementById(id);
         if (canvas) {
           drawRainbow(canvas);
           canvas.markDirty();
@@ -149,14 +149,14 @@
       }
 
       for (const id of bwCanvases) {
-        const canvas = context.getElementById(id);
+        const canvas = $melker.getElementById(id);
         if (canvas) {
           drawBWGradient(canvas);
           canvas.markDirty();
         }
       }
 
-      context.engine.render();
+      $melker.engine.render();
     });
   </script>
 </melker>

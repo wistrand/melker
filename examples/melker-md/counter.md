@@ -61,10 +61,10 @@ A simple counter demonstrating the melker-block markdown syntax.
 let count = 0;
 
 function update() {
-  const el = context.getElementById('count');
+  const el = $melker.getElementById('count');
   if (el) {
     el.props.text = String(count);
-    context.render();
+    $melker.render();
   }
 }
 

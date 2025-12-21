@@ -7,9 +7,9 @@ import { format } from "npm:date-fns";
 function updateDates(): void {
   const now = new Date();
 
-  const dateEl = context.getElementById("date");
-  const timeEl = context.getElementById("time");
-  const dayEl = context.getElementById("day");
+  const dateEl = $melker.getElementById("date");
+  const timeEl = $melker.getElementById("time");
+  const dayEl = $melker.getElementById("day");
 
   if (dateEl) dateEl.props.text = format(now, "MMMM do, yyyy");
   if (timeEl) timeEl.props.text = format(now, "HH:mm:ss");

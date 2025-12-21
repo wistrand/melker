@@ -17,7 +17,7 @@
       title="-"
       style="flex: 1; border: thin; vertical-align: center; text-align: center;"
       onClick="
-        const counterEl = context.getElementById('counter');
+        const counterEl = $melker.getElementById('counter');
         if (counterEl) {
           const currentValue = parseInt(counterEl.props.text) || 0;
           counterEl.props.text = String(currentValue - 1);
@@ -34,7 +34,7 @@
       title="+"
       style="flex: 1; border: thin; vertical-align: center; text-align: center;"
       onClick="
-        const counterEl = context.getElementById('counter');
+        const counterEl = $melker.getElementById('counter');
         if (counterEl) {
           const currentValue = parseInt(counterEl.props.text) || 0;
           counterEl.props.text = String(currentValue + 1);
@@ -48,7 +48,7 @@
     title="Reset to 0"
     style="border: thin; height: 3;"
     onClick="
-      const counterEl = context.getElementById('counter');
+      const counterEl = $melker.getElementById('counter');
       if (counterEl) {
         counterEl.props.text = '0';
       }

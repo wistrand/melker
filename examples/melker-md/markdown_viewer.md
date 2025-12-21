@@ -147,7 +147,7 @@ goForward();
 
 ```typescript
 // @melker handler #exit.onClick
-context.exit();
+$melker.exit();
 ```
 
 ## Script
@@ -162,14 +162,14 @@ const backStack: string[] = [];
 const forwardStack: string[] = [];
 
 function updateTitle(src: string) {
-  context.setTitle('Melker - ' + src);
+  $melker.setTitle('Melker - ' + src);
 }
 
 // Navigate to a new page (called from link clicks)
 function handleLink(event: { url: string }) {
   const url = event.url;
   if (url.endsWith('.md')) {
-    const markdown = context.getElementById('markdown-content');
+    const markdown = $melker.getElementById('markdown-content');
     if (markdown) {
       const currentSrc = markdown.props.src || '';
       // Push current page to back stack
@@ -181,8 +181,8 @@ function handleLink(event: { url: string }) {
       const currentDir = currentSrc.substring(0, currentSrc.lastIndexOf('/') + 1);
       const newSrc = url.startsWith('/') ? url : currentDir + url;
       markdown.props.src = newSrc;
-      context.setTitle('Melker - ' + newSrc);
-      context.render();
+      $melker.setTitle('Melker - ' + newSrc);
+      $melker.render();
     }
   }
 }
@@ -190,7 +190,7 @@ function handleLink(event: { url: string }) {
 // Go back in history
 function goBack() {
   if (backStack.length === 0) return;
-  const markdown = context.getElementById('markdown-content');
+  const markdown = $melker.getElementById('markdown-content');
   if (markdown) {
     const currentSrc = markdown.props.src || '';
     // Push current to forward stack
@@ -202,7 +202,7 @@ function goBack() {
     if (prevSrc) {
       markdown.props.src = prevSrc;
       updateTitle(prevSrc);
-      context.render();
+      $melker.render();
     }
   }
 }
@@ -210,7 +210,7 @@ function goBack() {
 // Go forward in history
 function goForward() {
   if (forwardStack.length === 0) return;
-  const markdown = context.getElementById('markdown-content');
+  const markdown = $melker.getElementById('markdown-content');
   if (markdown) {
     const currentSrc = markdown.props.src || '';
     // Push current to back stack
@@ -222,7 +222,7 @@ function goForward() {
     if (nextSrc) {
       markdown.props.src = nextSrc;
       updateTitle(nextSrc);
-      context.render();
+      $melker.render();
     }
   }
 }

@@ -5,20 +5,20 @@ This directory contains `.melker` template files demonstrating the declarative H
 ## Running Examples
 
 ```bash
-# Run a .melker file
-deno run --allow-all melker.ts examples/melker/counter.melker
+# Run a .melker file (requires --unstable-bundle for npm/jsr imports)
+deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
 
 # Run from URL
-deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all melker.ts --lint examples/melker/counter.melker
+deno run --unstable-bundle --allow-all melker.ts --lint examples/melker/counter.melker
 
 # Display element tree
-deno run --allow-all melker.ts examples/melker/counter.melker --print-tree
+deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker --print-tree
 
 # Display JSON serialization
-deno run --allow-all melker.ts examples/melker/counter.melker --print-json
+deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker --print-json
 ```
 
 ## Core Examples
@@ -74,7 +74,7 @@ Canvas uses sextant characters (2x3 pixel blocks per terminal character).
   id="myCanvas"
   width="60" height="20"
   style="width: fill; height: fill"
-  onPaint="context.drawContent(event.canvas)"
+  onPaint="$melker.drawContent(event.canvas)"
 />
 ```
 
@@ -118,7 +118,7 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
 
   <script type="typescript">
     function handleClick() {
-      const el = context.getElementById('output');
+      const el = $melker.getElementById('output');
       el.props.text = 'Clicked!';
       // Auto-renders after handler completes
     }
@@ -134,14 +134,16 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
 ### Available Context
 
 In event handlers and scripts:
-- `context.getElementById(id)` - Find elements by ID
-- `context.render()` - Trigger re-render (auto-called after event handlers)
-- `context.exit()` - Exit the application
-- `context.copyToClipboard(text)` - Copy text to system clipboard
-- `context.alert(message)` - Show modal alert dialog
-- `context.setTitle(title)` - Set window/terminal title
-- `context.engine` - Access engine instance
-- `context.logger` - Logging interface
+- `$melker.url` - Source file URL (e.g. `file:///path/to/app.melker`)
+- `$melker.dirname` - Source directory path (e.g. `/path/to`)
+- `$melker.getElementById(id)` - Find elements by ID
+- `$melker.render()` - Trigger re-render (auto-called after event handlers)
+- `$melker.exit()` - Exit the application
+- `$melker.copyToClipboard(text)` - Copy text to system clipboard
+- `$melker.alert(message)` - Show modal alert dialog
+- `$melker.setTitle(title)` - Set window/terminal title
+- `$melker.engine` - Access engine instance
+- `$melker.logger` - Logging interface
 
 **Auto-render:** Event handlers automatically trigger a re-render after completion. Return `false` to skip auto-render.
 

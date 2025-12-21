@@ -38,7 +38,7 @@ export class FocusNavigationHandler {
     const focusableElements = this.findFocusableElements(this._deps.document.root);
 
     // Debug logging for focus registration
-    this._logger.debug('Auto-registering focusable elements', {
+    this._logger.trace('Auto-registering focusable elements', {
       totalElements: focusableElements.length,
       elementTypes: focusableElements.map(el => ({ type: el.type, id: el.id || 'no-id' })),
     });
@@ -48,7 +48,7 @@ export class FocusNavigationHandler {
       if (element.id) {
         try {
           this._deps.onRegisterFocusable(element.id);
-          this._logger.debug(`Successfully registered focusable element: ${element.id}`);
+          this._logger.trace(`Successfully registered focusable element: ${element.id}`);
         } catch (error) {
           this._logger.warn(`Failed to register focusable element: ${element.id} - ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -80,7 +80,7 @@ export class FocusNavigationHandler {
 
     // Debug logging for element inspection
     if (element.type === 'button') {
-      this._logger.debug('Found button element during focus detection', {
+      this._logger.trace('Found button element during focus detection', {
         type: element.type,
         id: element.id || 'no-id',
         hasCanReceiveFocus: !!(element as any).canReceiveFocus,
@@ -103,7 +103,7 @@ export class FocusNavigationHandler {
       // Fallback for interactive elements without canReceiveFocus method
       // Only include if element has an ID and is not disabled
       if (!element.props.disabled) {
-        this._logger.debug('Adding interactive element to focusable list', {
+        this._logger.trace('Adding interactive element to focusable list', {
           type: element.type,
           id: element.id,
         });

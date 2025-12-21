@@ -22,7 +22,7 @@
             <text style="font-weight: bold; flex: 1; padding-left: 1;">
                 ${argv[1]:-README.md}
             </text>
-            <button title="Exit" onClick="context.exit();" />
+            <button title="Exit" onClick="$melker.exit();" />
         </container>
 
         <container id="content-area" scrollable="true" style="flex: 1 1 0; padding: 1;">

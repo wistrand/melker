@@ -29,8 +29,8 @@ A simple demo showcasing buttons, inputs, radio buttons, and checkboxes.
 
 ```typescript
 // @melker handler #submit.onClick
-const name = context.getElementById('name-input')?.getValue() ?? '';
-const email = context.getElementById('email-input')?.getValue() ?? '';
+const name = $melker.getElementById('name-input')?.getValue() ?? '';
+const email = $melker.getElementById('email-input')?.getValue() ?? '';
 if (!name || !email) {
   alert('Please fill in all fields');
   return;
@@ -40,12 +40,12 @@ alert('Submitted: ' + name + ' (' + email + ')');
 
 ```typescript
 // @melker handler #clear.onClick
-context.getElementById('name-input')?.setValue('');
-context.getElementById('email-input')?.setValue('');
+$melker.getElementById('name-input')?.setValue('');
+$melker.getElementById('email-input')?.setValue('');
 alert('Form cleared');
 ```
 
 ```typescript
 // @melker handler #cancel.onClick
-context.exit();
+$melker.exit();
 ```

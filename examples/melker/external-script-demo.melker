@@ -17,8 +17,8 @@
         style="width: 25; border: thin;"
         placeholder="Enter your name"
         onInput="
-          const statusEl = context.getElementById('status');
-          const validation = context.validateInput(event.value, {
+          const statusEl = $melker.getElementById('status');
+          const validation = $melker.validateInput(event.value, {
             minLength: 2,
             maxLength: 20,
             required: true
@@ -28,10 +28,10 @@
             statusEl.props.text = 'Status: ' + validation;
             statusEl.props.style = { ...statusEl.props.style, color: 'red' };
           } else {
-            statusEl.props.text = context.createStatusMessage('Valid name entered');
+            statusEl.props.text = $melker.createStatusMessage('Valid name entered');
             statusEl.props.style = { ...statusEl.props.style, color: 'green' };
           }
-          context.render();
+          $melker.render();
         "
       />
     </container>
@@ -41,19 +41,19 @@
         title="Smart Greeting"
         style="background-color: green; color: white;"
         onClick="
-          const nameEl = context.getElementById('nameInput');
-          const outputEl = context.getElementById('output');
+          const nameEl = $melker.getElementById('nameInput');
+          const outputEl = $melker.getElementById('output');
           const name = nameEl ? nameEl.props.value || 'World' : 'World';
 
-          const validation = context.validateInput(name, { minLength: 2, required: true });
+          const validation = $melker.validateInput(name, { minLength: 2, required: true });
           if (validation) {
             outputEl.props.text = '❌ ' + validation;
             outputEl.props.style = { ...outputEl.props.style, color: 'red' };
           } else {
-            outputEl.props.text = context.formatGreeting(name);
+            outputEl.props.text = $melker.formatGreeting(name);
             outputEl.props.style = { ...outputEl.props.style, color: 'green' };
           }
-          context.render();
+          $melker.render();
         "
       />
 
@@ -61,11 +61,11 @@
         title="Random Color"
         style="background-color: blue; color: white;"
         onClick="
-          const outputEl = context.getElementById('output');
-          const randomColor = context.getRandomColor();
+          const outputEl = $melker.getElementById('output');
+          const randomColor = $melker.getRandomColor();
           outputEl.props.text = '🎨 Random color: ' + randomColor;
           outputEl.props.style = { ...outputEl.props.style, color: randomColor };
-          context.render();
+          $melker.render();
         "
       />
 
@@ -73,19 +73,19 @@
         title="Show Time"
         style="background-color: purple; color: white;"
         onClick="
-          const outputEl = context.getElementById('output');
-          const timeOfDay = context.getTimeOfDay();
-          const emoji = context.getTimeEmoji(timeOfDay);
-          outputEl.props.text = emoji + ' Current time: ' + context.getCurrentTimestamp();
+          const outputEl = $melker.getElementById('output');
+          const timeOfDay = $melker.getTimeOfDay();
+          const emoji = $melker.getTimeEmoji(timeOfDay);
+          outputEl.props.text = emoji + ' Current time: ' + $melker.getCurrentTimestamp();
           outputEl.props.style = { ...outputEl.props.style, color: 'blue' };
-          context.render();
+          $melker.render();
         "
       />
 
       <button
         title="Exit"
         style="background-color: gray; color: white;"
-        onClick="context.exit();"
+        onClick="$melker.exit();"
       />
     </container>
 

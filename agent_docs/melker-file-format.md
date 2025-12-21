@@ -79,7 +79,7 @@ CSS-like properties in `style` attribute:
 
 **Events:** onClick, onKeyPress (event.key), onInput (event.value), onFocus, onBlur, onPaint (canvas)
 
-**Auto-render:** Event handlers automatically trigger a re-render after completion. No need to call `context.render()` manually.
+**Auto-render:** Event handlers automatically trigger a re-render after completion. No need to call `$melker.render()` manually.
 
 ```xml
 <!-- Auto-renders after handler completes -->
@@ -91,7 +91,7 @@ CSS-like properties in `style` attribute:
 <!-- Async handlers also auto-render when the promise resolves -->
 <button onClick="
   statusEl.props.text = 'Loading...';
-  context.render();  // explicit render for intermediate state
+  $melker.render();  // explicit render for intermediate state
   await fetchData();
   statusEl.props.text = 'Done';
   // auto-renders here
@@ -99,13 +99,15 @@ CSS-like properties in `style` attribute:
 ```
 
 **Context API:**
-- `context.getElementById(id)` - Get element by ID
-- `context.render()` - Trigger re-render (for intermediate updates in async handlers)
-- `context.exit()` - Exit application
-- `context.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)
-- `context.alert(message)` - Show modal alert dialog
-- `context.setTitle(title)` - Set window/terminal title
-- Exported script functions available as `context.functionName()`
+- `$melker.url` - Source file URL (e.g. `file:///path/to/app.melker`)
+- `$melker.dirname` - Source directory path (e.g. `/path/to`)
+- `$melker.getElementById(id)` - Get element by ID
+- `$melker.render()` - Trigger re-render (for intermediate updates in async handlers)
+- `$melker.exit()` - Exit application
+- `$melker.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)
+- `$melker.alert(message)` - Show modal alert dialog
+- `$melker.setTitle(title)` - Set window/terminal title
+- Exported script functions available as `$melker.functionName()`
 
 ## State Persistence
 
@@ -138,7 +140,7 @@ Melker apps automatically persist UI state across restarts. The following elemen
 **Element Bounds:**
 All elements have `getBounds()` method that returns `{ x, y, width, height }` after layout:
 ```typescript
-const canvas = context.getElementById('myCanvas');
+const canvas = $melker.getElementById('myCanvas');
 const bounds = canvas.getBounds();
 if (bounds) {
   canvas.setSize(bounds.width, bounds.height);
@@ -365,7 +367,7 @@ exports = { inc: () => count++ };
 ```typescript
 // @melker handler #btn.onClick
 count++;
-context.render();
+$melker.render();
 ```
 
 ```css
@@ -404,9 +406,9 @@ Use a `json oauth` fenced block for OAuth2 PKCE configuration:
   "clientId": "${OAUTH_CLIENT_ID}",
   "audience": "${OAUTH_AUDIENCE}",
   "autoLogin": true,
-  "onLogin": "context.onLoginCallback()",
-  "onLogout": "context.onLogoutCallback()",
-  "onFail": "context.onFailCallback(error)"
+  "onLogin": "$melker.onLoginCallback()",
+  "onLogout": "$melker.onLogoutCallback()",
+  "onFail": "$melker.onFailCallback(error)"
 }
 ```
 ````

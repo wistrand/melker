@@ -106,9 +106,9 @@ Demonstrates nested tab containers using melker-block format.
 
 ```typescript
 // @melker handler #reset-to-defaults.onClick
-const username = context.getElementById('settings-username');
-const debugInput = context.getElementById('debug-input');
+const username = $melker.getElementById('settings-username');
+const debugInput = $melker.getElementById('debug-input');
 if (username) username.setValue('');
 if (debugInput) debugInput.setValue('');
-context.render();
+$melker.render();
 ```

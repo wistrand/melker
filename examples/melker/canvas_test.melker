@@ -35,8 +35,8 @@
     };
 
     // Register resize handler
-    context.engine.onResize((event: any) => {
-      const canvas = context.getElementById('testCanvas');
+    $melker.engine.onResize((event: any) => {
+      const canvas = $melker.getElementById('testCanvas');
       if (!canvas) return;
 
       // Calculate new canvas size based on terminal size
@@ -52,11 +52,11 @@
     });
 
     // Initial draw on mount
-    context.engine.onMount(() => {
-      const canvas = context.getElementById('testCanvas');
+    $melker.engine.onMount(() => {
+      const canvas = $melker.getElementById('testCanvas');
       if (canvas) {
         // Calculate initial canvas size based on current terminal size
-        const terminalSize = context.engine.getTerminalSize();
+        const terminalSize = $melker.engine.getTerminalSize();
         const canvasWidth = Math.max(20, terminalSize.width - 4);
         const canvasHeight = Math.max(10, terminalSize.height - 6);
 
@@ -68,7 +68,7 @@
 
         // Force render
         canvas.markDirty();
-        context.engine.render();
+        $melker.engine.render();
       }
     });
   </script>

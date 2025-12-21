@@ -9,7 +9,7 @@
 
     function incrementCounter(): void {
       clickCount++;
-      const counterEl = context.getElementById("counter");
+      const counterEl = $melker.getElementById("counter");
       if (counterEl) {
         counterEl.props.text = "Clicks: " + String(clickCount);
       }
@@ -17,7 +17,7 @@
 
     function resetCounter(): void {
       clickCount = 0;
-      const counterEl = context.getElementById("counter");
+      const counterEl = $melker.getElementById("counter");
       if (counterEl) {
         counterEl.props.text = "Clicks: 0";
       }
@@ -28,12 +28,12 @@
   <script type="typescript" async="ready">
     // Initial update
     updateDates();
-    context.render();
+    $melker.render();
 
     // Update every second
     setInterval(() => {
       updateDates();
-      context.render();
+      $melker.render();
     }, 1000);
   </script>
 
@@ -50,6 +50,6 @@
     <text id="counter" text="Clicks: 0"/>
     <button title="Click Me!" onClick="incrementCounter();"/>
     <button title="Reset" onClick="resetCounter();"/>
-    <button title="Exit" onClick="context.exit()"/>
+    <button title="Exit" onClick="$melker.exit()"/>
   </container>
 </melker>

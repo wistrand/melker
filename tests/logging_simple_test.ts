@@ -31,8 +31,6 @@ Deno.test('Basic Logging Functionality', async () => {
     logFile: `${testLogDir}/basic.log`,
     level: 'DEBUG',
     format: 'text',
-    bufferSize: 1, // Immediate writes
-    asyncWrite: false, // Use sync writes for tests
   });
 
   // Test basic logging
@@ -66,8 +64,6 @@ Deno.test('JSON Format Logging', async () => {
     logFile: `${testLogDir}/json.log`,
     level: 'DEBUG',
     format: 'json',
-    bufferSize: 1,
-    asyncWrite: false,
   });
 
   logger.info('JSON test', { userId: 123, action: 'test' });
@@ -100,8 +96,6 @@ Deno.test('Log Level Filtering', async () => {
     logFile: `${testLogDir}/level.log`,
     level: 'WARN', // Only WARN, ERROR, FATAL
     format: 'text',
-    bufferSize: 1,
-    asyncWrite: false,
   });
 
   logger.debug('Should not appear');

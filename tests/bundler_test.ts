@@ -84,7 +84,7 @@ Deno.test('generate: includes runtime globals', () => {
   const parsed = createParseResult();
   const result = generate(parsed);
 
-  assertStringIncludes(result.code, 'const context = (globalThis as any).context');
+  assertStringIncludes(result.code, 'const $melker = (globalThis as any).$melker');
   assertStringIncludes(result.code, 'const argv = (globalThis as any).argv');
 });
 
@@ -94,8 +94,9 @@ Deno.test('generate: includes source metadata', () => {
   });
   const result = generate(parsed);
 
-  assertStringIncludes(result.code, '$meta');
-  assertStringIncludes(result.code, 'file:///home/user/myapp.melker');
+  // Source metadata is now on $melker (url and dirname)
+  assertStringIncludes(result.code, 'url: "file:///home/user/myapp.melker"');
+  assertStringIncludes(result.code, 'dirname: "/home/user"');
 });
 
 Deno.test('generate: inlines sync script code', () => {
@@ -122,8 +123,8 @@ Deno.test('generate: exports assigned to context', () => {
   });
   const result = generate(parsed);
 
-  assertStringIncludes(result.code, '(context as any).myValue = myValue;');
-  assertStringIncludes(result.code, '(context as any).myFunc = myFunc;');
+  assertStringIncludes(result.code, '($melker as any).myValue = myValue;');
+  assertStringIncludes(result.code, '($melker as any).myFunc = myFunc;');
 });
 
 Deno.test('generate: creates __init function for init scripts', () => {

@@ -677,10 +677,6 @@ export class RenderingEngine {
     // Render content based on element type
     this._renderContent(element, node.bounds, computedStyle, context.buffer, context);
 
-    // Debug: Log bounds vs clippedBounds for buttons
-    if (element.type === 'button') {
-      renderLogger.debug(`[BUTTON-RENDER] bounds.height=${node.bounds.height}, clippedBounds.height=${clippedBounds.height}, clipRect=${JSON.stringify(context.clipRect)}`);
-    }
 
     // Render children with scroll translation and clipping
     const isScrollable = element.type === 'container' && element.props.scrollable;

@@ -3,6 +3,37 @@
 
 import { ANSI } from './ansi-output.ts';
 import { isRunningHeadless } from './headless.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('terminal-lifecycle');
+
+/**
+ * Emergency terminal restore - disables raw mode, mouse reporting, alternate screen.
+ * This is a standalone function that doesn't depend on engine state.
+ */
+function fullTerminalRestore(): void {
+  // First disable raw mode
+  try {
+    Deno.stdin.setRaw(false);
+  } catch {
+    // Ignore errors
+  }
+
+  // Then disable mouse reporting, exit alternate screen, show cursor
+  try {
+    // \x1b[?1000l - Disable basic mouse reporting
+    // \x1b[?1002l - Disable button event tracking
+    // \x1b[?1003l - Disable any-event tracking (all mouse movements)
+    // \x1b[?1006l - Disable SGR extended mouse mode
+    // \x1b[?1049l - Exit alternate screen
+    // \x1b[?25h   - Show cursor
+    // \x1b[0m     - Reset all text styles
+    const resetSequence = '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1049l\x1b[?25h\x1b[0m';
+    Deno.stdout.writeSync(new TextEncoder().encode(resetSequence));
+  } catch {
+    // Ignore errors
+  }
+}
 
 export interface TerminalLifecycleOptions {
   alternateScreen: boolean;
@@ -81,21 +112,12 @@ export function cleanupTerminal(options: TerminalLifecycleOptions): void {
 }
 
 /**
- * Emergency cleanup - minimal terminal restore for crash scenarios
+ * Emergency cleanup - comprehensive terminal restore for crash scenarios.
+ * Disables raw mode, mouse reporting, alternate screen, and shows cursor.
  */
 export function emergencyCleanupTerminal(): void {
-  if (typeof Deno !== 'undefined') {
-    try {
-      Deno.stdout.writeSync(new TextEncoder().encode('\x1b[?1049l\x1b[?25h'));
-    } catch {
-      // Last resort - at least try to show cursor
-      try {
-        Deno.stdout.writeSync(new TextEncoder().encode('\x1b[?25h'));
-      } catch {
-        // Nothing more we can do
-      }
-    }
-  }
+  // Use the comprehensive restore function
+  fullTerminalRestore();
 }
 
 /**
@@ -139,15 +161,39 @@ export function setupCleanupHandlers(
   }
 
   // Handle uncaught exceptions and unhandled rejections
+  // CRITICAL: Always restore terminal FIRST so error is visible
   globalThis.addEventListener('error', (event) => {
-    console.error('Uncaught error:', event.error);
-    syncCleanup();
+    // Log to file FIRST (before terminal cleanup might interfere)
+    const err = event.error instanceof Error ? event.error : new Error(String(event.error));
+    logger.fatal('Uncaught error', err);
+
+    // Full terminal restore (raw mode, mouse, alternate screen)
+    fullTerminalRestore();
+    syncCleanup();  // Also call engine cleanup
+
+    console.error('\n\x1b[31mUncaught error:\x1b[0m', event.error);
+    if (event.error instanceof Error && event.error.stack) {
+      console.error('\nStack trace:');
+      console.error(event.error.stack);
+    }
     Deno.exit(1);
   });
 
   globalThis.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled promise rejection:', event.reason);
-    syncCleanup();
+    // Log to file FIRST (before terminal cleanup might interfere)
+    const reason = event.reason;
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    logger.fatal('Unhandled promise rejection', err);
+
+    // Full terminal restore (raw mode, mouse, alternate screen)
+    fullTerminalRestore();
+    syncCleanup();  // Also call engine cleanup
+
+    console.error('\n\x1b[31mUnhandled promise rejection:\x1b[0m', reason);
+    if (reason instanceof Error && reason.stack) {
+      console.error('\nStack trace:');
+      console.error(reason.stack);
+    }
     Deno.exit(1);
   });
 

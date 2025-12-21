@@ -42,13 +42,13 @@
     }
 
     function updateDialogs() {
-      const d1 = context.getElementById('info-dialog');
-      const d2 = context.getElementById('confirm-dialog');
-      const d3 = context.getElementById('form-dialog');
+      const d1 = $melker.getElementById('info-dialog');
+      const d2 = $melker.getElementById('confirm-dialog');
+      const d3 = $melker.getElementById('form-dialog');
       if (d1) d1.props.open = dialog1Open;
       if (d2) d2.props.open = dialog2Open;
       if (d3) d3.props.open = dialog3Open;
-      context.render();
+      $melker.render();
     }
 
     exports = {
@@ -78,19 +78,19 @@
           id="btn-info"
           title="Info Dialog"
           style="width: 16; margin-right: 2; background-color: #3b82f6; color: white;"
-          onClick="context.openDialog1();"
+          onClick="$melker.openDialog1();"
         />
         <button
           id="btn-confirm"
           title="Confirm Dialog"
           style="width: 18; margin-right: 2; background-color: #10b981; color: white;"
-          onClick="context.openDialog2();"
+          onClick="$melker.openDialog2();"
         />
         <button
           id="btn-form"
           title="Form Dialog"
           style="width: 16; background-color: #8b5cf6; color: white;"
-          onClick="context.openDialog3();"
+          onClick="$melker.openDialog3();"
         />
       </container>
 
@@ -120,7 +120,7 @@
             id="info-ok"
             title="OK"
             style="width: 10; background-color: #3b82f6; color: white;"
-            onClick="context.closeDialog1();"
+            onClick="$melker.closeDialog1();"
           />
         </container>
       </container>
@@ -137,13 +137,13 @@
             id="confirm-cancel"
             title="Cancel"
             style="width: 10; margin-right: 2; background-color: #6b7280; color: white;"
-            onClick="context.closeDialog2();"
+            onClick="$melker.closeDialog2();"
           />
           <button
             id="confirm-ok"
             title="Confirm"
             style="width: 10; background-color: #10b981; color: white;"
-            onClick="context.closeDialog2();"
+            onClick="$melker.closeDialog2();"
           />
         </container>
       </container>
@@ -169,13 +169,13 @@
             id="form-cancel"
             title="Cancel"
             style="width: 10; margin-right: 2; background-color: #6b7280; color: white;"
-            onClick="context.closeDialog3();"
+            onClick="$melker.closeDialog3();"
           />
           <button
             id="form-submit"
             title="Submit"
             style="width: 10; background-color: #8b5cf6; color: white;"
-            onClick="context.closeDialog3();"
+            onClick="$melker.closeDialog3();"
           />
         </container>
       </container>

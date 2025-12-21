@@ -129,7 +129,7 @@ Non-style properties for the canvas element:
 
 ```typescript
 // @melker handler #exit-btn.onClick
-context.exit();
+$melker.exit();
 ```
 
 ## Script
@@ -211,13 +211,13 @@ function drawClock(canvas: any): void {
 }
 
 // Auto-start the clock when engine is fully mounted
-context.engine.onMount(() => {
-  const canvas = context.getElementById('clockCanvas');
+$melker.engine.onMount(() => {
+  const canvas = $melker.getElementById('clockCanvas');
   if (canvas) {
     // Update every second
     setInterval(() => {
       drawClock(canvas);
-      context.engine.render();
+      $melker.engine.render();
     }, 1000);
   }
 });

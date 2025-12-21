@@ -65,6 +65,17 @@
 | `src/melker-main.ts` | .melker file runner (supports URLs) |
 | `src/lint.ts` | Lint mode validation, schemas |
 | `src/lsp.ts` | Language Server Protocol for .melker files |
+| `src/terminal-lifecycle.ts` | Terminal setup, cleanup, signal handlers |
+
+**Bundler (`src/bundler/`):**
+| File | Purpose |
+|------|---------|
+| `src/bundler/mod.ts` | Bundler exports |
+| `src/bundler/types.ts` | Bundler type definitions |
+| `src/bundler/generator.ts` | TypeScript code generation from parsed .melker |
+| `src/bundler/bundle.ts` | Deno.bundle() integration |
+| `src/bundler/errors.ts` | Error translation to source lines |
+| `src/bundler/cache.ts` | Bundle caching |
 
 **Video Processing (`src/video/`):**
 | File | Purpose |

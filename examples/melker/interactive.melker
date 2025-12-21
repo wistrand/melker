@@ -14,15 +14,15 @@
       style="width: 20; border: thin;"
       placeholder="Enter your name"
       onInput="
-        const statusEl = context.getElementById('status');
+        const statusEl = $melker.getElementById('status');
         if (statusEl) {
           statusEl.props.text = 'Status: Hello, ' + event.value + '!';
         }
       "
       onKeyPress="
         if (event.key === 'Enter') {
-          const nameEl = context.getElementById('nameInput');
-          const outputEl = context.getElementById('output');
+          const nameEl = $melker.getElementById('nameInput');
+          const outputEl = $melker.getElementById('output');
           const name = nameEl ? nameEl.props.value || 'World' : 'World';
           if (outputEl) {
             outputEl.props.text = '🎉 Hello, ' + name + '! Welcome to Melker!';
@@ -38,8 +38,8 @@
       title="Say Hello"
       style="margin-right: 2; background-color: blue; color: white;"
       onClick="
-        const nameEl = context.getElementById('nameInput');
-        const outputEl = context.getElementById('output');
+        const nameEl = $melker.getElementById('nameInput');
+        const outputEl = $melker.getElementById('output');
         const name = nameEl ? nameEl.props.value || 'World' : 'World';
         if (outputEl) {
           outputEl.props.text = '🎉 Hello, ' + name + '! Welcome to Melker!';
@@ -52,9 +52,9 @@
       title="Clear"
       style="margin-right: 2; background-color: red; color: white;"
       onClick="
-        const nameEl = context.getElementById('nameInput');
-        const outputEl = context.getElementById('output');
-        const statusEl = context.getElementById('status');
+        const nameEl = $melker.getElementById('nameInput');
+        const outputEl = $melker.getElementById('output');
+        const statusEl = $melker.getElementById('status');
         if (nameEl) nameEl.props.value = '';
         if (outputEl) outputEl.props.text = '';
         if (statusEl) statusEl.props.text = 'Status: Cleared!';
@@ -65,7 +65,7 @@
       id="exitBtn"
       title="Exit"
       style="background-color: gray; color: white;"
-      onClick="context.exit();"
+      onClick="$melker.exit();"
     />
   </container>
 

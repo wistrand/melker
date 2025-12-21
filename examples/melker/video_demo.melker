@@ -9,9 +9,9 @@
     // - Autoplay (when enabled, which is the default)
 
     function togglePlayback() {
-      const video = context.getElementById('player');
-      const status = context.getElementById('status');
-      const playBtn = context.getElementById('play-btn');
+      const video = $melker.getElementById('player');
+      const status = $melker.getElementById('status');
+      const playBtn = $melker.getElementById('play-btn');
 
       if (!video || !status) return;
 
@@ -24,17 +24,17 @@
         status.props.text = 'Status: Playing';
         if (playBtn) playBtn.props.title = 'Pause';
       }
-      context.render();
+      $melker.render();
     }
 
     function quit() {
-      const video = context.getElementById('player');
+      const video = $melker.getElementById('player');
       if (video) video.stop();
-      context.exit();
+      $melker.exit();
     }
 
     function seekBackward() {
-      const video = context.getElementById('player');
+      const video = $melker.getElementById('player');
       if (!video) return;
       const currentTime = video.getCurrentTime();
       const newTime = Math.max(0, currentTime - 10);
@@ -42,14 +42,14 @@
     }
 
     function seekForward() {
-      const video = context.getElementById('player');
+      const video = $melker.getElementById('player');
       if (!video) return;
       const currentTime = video.getCurrentTime();
       video.play(currentTime + 10);
     }
 
     function seekBackwardMin() {
-      const video = context.getElementById('player');
+      const video = $melker.getElementById('player');
       if (!video) return;
       const currentTime = video.getCurrentTime();
       const newTime = Math.max(0, currentTime - 60);
@@ -57,7 +57,7 @@
     }
 
     function seekForwardMin() {
-      const video = context.getElementById('player');
+      const video = $melker.getElementById('player');
       if (!video) return;
       const currentTime = video.getCurrentTime();
       video.play(currentTime + 60);
@@ -71,8 +71,8 @@
     }
 
     function updateTime() {
-      const video = context.getElementById('player');
-      const timeDisplay = context.getElementById('time-display');
+      const video = $melker.getElementById('player');
+      const timeDisplay = $melker.getElementById('time-display');
       if (!video || !timeDisplay) return;
       const currentTime = video.getCurrentTime();
       timeDisplay.props.text = formatTime(currentTime);
@@ -98,34 +98,34 @@
       subtitle="${argv[5]:-.srt}"
       audio="${MELKER_AUDIO:-true}"
       onPlay="
-        const status = context.getElementById('status');
-        const playBtn = context.getElementById('play-btn');
+        const status = $melker.getElementById('status');
+        const playBtn = $melker.getElementById('play-btn');
         if (status) status.props.text = 'Status: Playing';
         if (playBtn) playBtn.props.title = 'Pause';
-        context.render();
+        $melker.render();
       "
       onPause="
-        const status = context.getElementById('status');
-        const playBtn = context.getElementById('play-btn');
+        const status = $melker.getElementById('status');
+        const playBtn = $melker.getElementById('play-btn');
         if (status) status.props.text = 'Status: Paused';
         if (playBtn) playBtn.props.title = 'Play';
-        context.render();
+        $melker.render();
       "
       onEnd="
-        const status = context.getElementById('status');
-        const playBtn = context.getElementById('play-btn');
+        const status = $melker.getElementById('status');
+        const playBtn = $melker.getElementById('play-btn');
         if (status) status.props.text = 'Status: Ended';
         if (playBtn) playBtn.props.title = 'Play';
-        context.render();
+        $melker.render();
       "
       onError="
-        const status = context.getElementById('status');
+        const status = $melker.getElementById('status');
         if (status) {
           status.props.text = 'Status: Error - ' + event.message;
-          context.render();
+          $melker.render();
         }
       "
-      onFrame="context.updateTime();"
+      onFrame="$melker.updateTime();"
     />
 
     <text id="time-display" style="height: 1; color: yellow; text-align: center;">
@@ -141,37 +141,37 @@
         id="back-min-btn"
         title="-1m"
         style="width: 8; height: 3;"
-        onClick="context.seekBackwardMin();"
+        onClick="$melker.seekBackwardMin();"
       />
       <button
         id="back-btn"
         title="-10s"
         style="width: 8; height: 3;"
-        onClick="context.seekBackward();"
+        onClick="$melker.seekBackward();"
       />
       <button
         id="play-btn"
         title="Pause"
         style="width: 10; height: 3;"
-        onClick="context.togglePlayback();"
+        onClick="$melker.togglePlayback();"
       />
       <button
         id="fwd-btn"
         title="+10s"
         style="width: 8; height: 3;"
-        onClick="context.seekForward();"
+        onClick="$melker.seekForward();"
       />
       <button
         id="fwd-min-btn"
         title="+1m"
         style="width: 8; height: 3;"
-        onClick="context.seekForwardMin();"
+        onClick="$melker.seekForwardMin();"
       />
       <button
         id="quit-btn"
         title="Quit"
         style="width: 10; height: 3;"
-        onClick="context.quit();"
+        onClick="$melker.quit();"
       />
     </container>
   </container>

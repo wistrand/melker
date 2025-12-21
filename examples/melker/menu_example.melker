@@ -5,35 +5,35 @@
     <menu title="File" position="bottom">
       <menu-item title="New" shortcut="Ctrl+N"
         onClick="
-          context.logger?.info('*** new ***');
-          const outputEl = context.getElementById('output');
+          $melker.logger?.info('*** new ***');
+          const outputEl = $melker.getElementById('output');
           if (outputEl) {
             outputEl.props.text = '📄 New file created!';
-            context.render();
+            $melker.render();
           }
         "
       />
       <menu-item title="Open" shortcut="Ctrl+O"
         onClick="
-          const outputEl = context.getElementById('output');
+          const outputEl = $melker.getElementById('output');
           if (outputEl) {
             outputEl.props.text = '📂 Open file dialog...';
-            context.render();
+            $melker.render();
           }
         "
       />
       <menu-item title="Save" shortcut="Ctrl+S"
         onClick="
-          const outputEl = context.getElementById('output');
+          const outputEl = $melker.getElementById('output');
           if (outputEl) {
             outputEl.props.text = '💾 File saved successfully!';
-            context.render();
+            $melker.render();
           }
         "
       />
       <menu-separator />
       <menu-item title="Exit" shortcut="Ctrl+Q"
-        onClick="context.exit();"
+        onClick="$melker.exit();"
       />
     </menu>
 
@@ -41,10 +41,10 @@
     <menu title="Edit" position="bottom">
       <menu-item title="Undo" shortcut="Ctrl+Z"
         onClick="
-          const outputEl = context.getElementById('output');
+          const outputEl = $melker.getElementById('output');
           if (outputEl) {
             outputEl.props.text = '↶ Undo action performed';
-            context.render();
+            $melker.render();
           }
         "
       />
@@ -62,10 +62,10 @@
     <menu title="View" position="bottom">
       <menu-item title="Fullscreen" shortcut="F11"
         onClick="
-          const outputEl = context.getElementById('output');
+          const outputEl = $melker.getElementById('output');
           if (outputEl) {
             outputEl.props.text = '🖥️ Fullscreen mode toggled';
-            context.render();
+            $melker.render();
           }
         "
       />
@@ -80,10 +80,10 @@
     <menu title="Help" position="bottom">
       <menu-item title="Documentation" shortcut="F1"
         onClick="
-          const outputEl = context.getElementById('output');
+          const outputEl = $melker.getElementById('output');
           if (outputEl) {
             outputEl.props.text = '📖 Opening documentation...';
-            context.render();
+            $melker.render();
           }
         "
       />
@@ -91,10 +91,10 @@
       <menu-separator />
       <menu-item title="About"
         onClick="
-          const outputEl = context.getElementById('output');
+          const outputEl = $melker.getElementById('output');
           if (outputEl) {
             outputEl.props.text = 'ℹ️ Melker Terminal UI Library v1.0';
-            context.render();
+            $melker.render();
           }
         "
       />

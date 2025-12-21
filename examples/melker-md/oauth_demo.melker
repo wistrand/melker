@@ -1,0 +1,24 @@
+<melker>
+  <title>OAuth2 PKCE Login</title>
+
+  <oauth wellknown="${OAUTH_WELLKNOWN}" client-id="${OAUTH_CLIENT_ID}" audience="${OAUTH_AUDIENCE}" auto-login="true" onLogin="onLoginCallback()" onLogout="onLogoutCallback()" onFail="onFailCallback(error)" debugServer="${OAUTH_DEBUG_SERVER:-true}" />
+
+  <script src="./oauth_handlers.ts" />
+
+  <container id="app" style="padding: 2;; display: flex; flex-direction: column; height: 100%" height="fill">
+    <text id="title" style="bold: true;; flex: 0">OAuth2 PKCE Login</text>
+    <text id="status" style="flex: 0 0 auto">Initializing...</text>
+    <text id="error" style="color: red;; flex: 0" />
+    <!-- Token info display area. -->
+    <container id="tokenArea" style="flex: 1 1 0; overflow: scroll;; display: flex; flex-direction: column" scrollable="true" margin-top="1; margin-bottom: 1;" border="thin">
+      <markdown id="token-info" text="*No token information available*" />
+    </container>
+    <!-- Button row. -->
+    <container id="buttons" style="border: thin; flex: 0 0 auto; display: flex; flex-direction: row; gap: 2">
+      <button id="btn-quit" title="Quit" onClick="$melker.quit()" />
+      <button id="btn-login" title="Login" />
+      <button id="btn-logout" title="Logout" disabled="true" />
+      <button id="btn-refresh" title="Refresh" disabled="true" />
+    </container>
+  </container>
+</melker>

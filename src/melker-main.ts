@@ -11,6 +11,7 @@ import {
   type AssembledMelker,
 } from './bundler/mod.ts';
 import { parseMelkerForBundler } from './template.ts';
+import { getGlobalErrorOverlay } from './error-overlay.ts';
 
 /**
  * Wire up bundler registry handlers to UI elements.
@@ -82,12 +83,15 @@ async function wireBundlerHandlers(
               }
             } catch (error) {
               const err = error instanceof Error ? error : new Error(String(error));
+              let location: string | undefined;
+
               // Look up handler's original location using ErrorTranslator
               if (errorTranslator) {
                 const handlerMapping = errorTranslator.findBySourceId(capturedHandlerId);
                 if (handlerMapping) {
+                  location = `${errorTranslator.getSourceFile()}:${handlerMapping.originalLine}`;
                   logger?.error?.(
-                    `Error in handler ${capturedHandlerId} at ${errorTranslator.getSourceFile()}:${handlerMapping.originalLine}:`,
+                    `Error in handler ${capturedHandlerId} at ${location}:`,
                     err,
                     {
                       originalLine: handlerMapping.originalLine,
@@ -100,6 +104,13 @@ async function wireBundlerHandlers(
                 }
               } else {
                 logger?.error?.(`Error in handler ${capturedHandlerId}:`, err);
+              }
+
+              // CRITICAL: Always show error visually - never fail silently
+              getGlobalErrorOverlay().showError(err.message, location);
+              // Trigger re-render to display the error overlay
+              if (context?.render) {
+                context.render();
               }
             }
           };
@@ -125,10 +136,15 @@ async function wireBundlerHandlers(
                 context.render();
               }
             } catch (error) {
-              logger?.error?.(
-                `Error in handler:`,
-                error instanceof Error ? error : new Error(String(error))
-              );
+              const err = error instanceof Error ? error : new Error(String(error));
+              logger?.error?.(`Error in handler:`, err);
+
+              // CRITICAL: Always show error visually - never fail silently
+              getGlobalErrorOverlay().showError(err.message);
+              // Trigger re-render to display the error overlay
+              if (context?.render) {
+                context.render();
+              }
             }
           };
         }
@@ -401,6 +417,7 @@ export async function runMelkerFile(
           getElementById: () => null,
           exit: () => { console.log('   Debug: exit() called'); },
           logger: debugLogger,
+          getLogger: getLogger,
         };
 
         // Auto-retain bundle files in debug mode
@@ -522,6 +539,20 @@ export async function runMelkerFile(
     // Get base path for resolving relative script src paths and imports
     const basePath = getBaseUrl(filepath);
 
+    // Compute source URL and dirname for $melker and $meta
+    const sourceUrl = isUrl(filepath)
+      ? filepath
+      : `file://${filepath.startsWith('/') ? filepath : Deno.cwd() + '/' + filepath}`;
+    const sourceDirname = (() => {
+      try {
+        const u = new URL(sourceUrl);
+        return u.pathname.substring(0, u.pathname.lastIndexOf('/'));
+      } catch {
+        const lastSlash = sourceUrl.lastIndexOf('/');
+        return lastSlash >= 0 ? sourceUrl.substring(0, lastSlash) : '.';
+      }
+    })();
+
     // Step 3: Create context with real engine first
     // Get logger for error reporting
     const logger = (() => { try { return getLogger(filename); } catch { return null; } })();
@@ -542,6 +573,9 @@ export async function runMelkerFile(
     } : undefined;
 
     const context = {
+      // Source metadata (also available via $meta)
+      url: sourceUrl,
+      dirname: sourceDirname,
       getElementById: (id: string) => engine?.document?.getElementById(id),
       render: () => engine.render(),
       exit: () => engine.stop().then(() => Deno.exit(0)),
@@ -595,15 +629,14 @@ export async function runMelkerFile(
       },
       // Register custom AI tools for the assistant
       registerAITool: registerAITool,
+      // Logger factory for custom loggers
+      getLogger: getLogger,
     };
 
     // Use the single element tree from the initial parse
     const ui = parseResult.element;
 
     // Parse for bundler (extracts scripts and handlers with positions)
-    const sourceUrl = isUrl(filepath)
-      ? filepath
-      : `file://${filepath.startsWith('/') ? filepath : Deno.cwd() + '/' + filepath}`;
     const bundlerParseResult = await parseMelkerForBundler(templateContent, sourceUrl);
 
     // Build handler code map: original code -> handler ID (e.g., "incrementCounter()" -> "__h0")
@@ -811,8 +844,15 @@ export async function runMelkerFile(
     console.error(`❌ Error running Melker file: ${error instanceof Error ? error.message : String(error)}`);
 
     if (error instanceof Error && error.stack) {
-      console.error('\nFull stack trace:');
-      console.error(error.stack);
+      // Extract just the stack frames (lines starting with "at ") to avoid duplicating the message
+      const stackFrames = error.stack
+        .split('\n')
+        .filter(line => line.trim().startsWith('at '))
+        .join('\n');
+      if (stackFrames) {
+        console.error('\nStack trace:');
+        console.error(stackFrames);
+      }
     }
 
     Deno.exit(1);

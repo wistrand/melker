@@ -14,13 +14,14 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Elements & layout | `agent_docs/elements-and-layout.md` |
 | Debugging & logging | `agent_docs/debugging.md` |
 | .melker file format | `agent_docs/melker-file-format.md` |
+| Script usage & context | `agent_docs/script_usage.md` |
 | Implementation details | `agent_docs/implementation-details.md` |
 | AI accessibility | `agent_docs/ai-accessibility.md` |
 | Examples | `examples/melker/*.melker` |
 
 ## Technology Stack
 
-- **Runtime**: Deno (required, Node.js/Bun not supported)
+- **Runtime**: Deno 2.4+ (required, Node.js/Bun not supported)
 - **Package**: @melker/core
 - **Target**: ANSI-compatible terminals
 
@@ -72,6 +73,7 @@ src/
   oauth.ts            - OAuth utilities
   xdg.ts              - XDG Base Directory support
   state-persistence.ts - State persistence for apps
+  terminal-lifecycle.ts - Terminal setup, cleanup, signal handlers
   bundler/            - Runtime bundler for .melker files
     mod.ts            - Main bundler exports
     types.ts          - Bundler type definitions

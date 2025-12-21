@@ -184,7 +184,7 @@ export class MelkerEngine {
   private _isRendering = false;  // Render lock to prevent re-render during render
   private _renderCount = 0;
   private _customResizeHandlers: Array<(event: { previousSize: { width: number; height: number }, newSize: { width: number; height: number }, timestamp: number }) => void> = [];
-  private _mountHandlers: Array<() => void> = [];
+  private _mountHandlers: Array<() => void | Promise<void>> = [];
   // Debounced action for rapid input rendering (e.g., paste operations)
   private _debouncedInputRenderAction!: DebouncedAction;
 
@@ -471,7 +471,10 @@ export class MelkerEngine {
       try {
         handler(resizeEvent);
       } catch (error) {
-        console.error('Error in custom resize handler:', error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this._logger?.error('Error in resize handler', err);
+        // Show error visually - never fail silently
+        getGlobalScriptErrorOverlay().showError(err.message, 'resize handler');
       }
     }
 
@@ -962,7 +965,7 @@ export class MelkerEngine {
     this._persistenceManager.triggerDebouncedSave();
     } finally {
       this._isRendering = false;
-      this._logger?.debug('render() finished, _isRendering = false');
+      this._logger?.trace('render() finished, _isRendering = false');
     }
   }
 
@@ -1490,8 +1493,9 @@ export class MelkerEngine {
 
   /**
    * Register a handler to be called when the engine is fully mounted and ready
+   * Handlers can be sync or async - async errors will be caught and reported
    */
-  onMount(handler: () => void): void {
+  onMount(handler: () => void | Promise<void>): void {
     this._mountHandlers.push(handler);
   }
 
@@ -1501,9 +1505,33 @@ export class MelkerEngine {
   _triggerMountHandlers(): void {
     for (const handler of this._mountHandlers) {
       try {
-        handler();
+        const result = handler() as unknown;
+        // Handle async handlers - catch any rejected promises
+        if (result && typeof (result as { catch?: unknown }).catch === 'function') {
+          (result as Promise<void>).catch((error) => {
+            const err = error instanceof Error ? error : new Error(String(error));
+            this._logger?.error('Error in async mount handler', err);
+            // CRITICAL: Restore terminal and show error - never fail silently
+            this.cleanupTerminal();
+            console.error('\n\x1b[31mError in mount handler:\x1b[0m', err.message);
+            if (err.stack) {
+              console.error('\nStack trace:');
+              console.error(err.stack);
+            }
+            Deno.exit(1);
+          });
+        }
       } catch (error) {
-        console.error('Error in mount handler:', error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        this._logger?.error('Error in mount handler', err);
+        // CRITICAL: Restore terminal and show error - never fail silently
+        this.cleanupTerminal();
+        console.error('\n\x1b[31mError in mount handler:\x1b[0m', err.message);
+        if (err.stack) {
+          console.error('\nStack trace:');
+          console.error(err.stack);
+        }
+        Deno.exit(1);
       }
     }
   }

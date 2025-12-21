@@ -25,7 +25,7 @@
             <text style="font-weight: bold; flex: 1; padding-left: 1;">
                 ${argv[1]:-README.md}
             </text>
-            <button title="Exit" onClick="context.exit();" />
+            <button title="Exit" onClick="$melker.exit();" />
         </container>
 
         <container id="content-area" scrollable="true" style="flex: 1 1 0; padding: 1;">
@@ -40,7 +40,7 @@
     const forwardStack: string[] = [];
 
     function updateTitle(src: string) {
-      context.setTitle('Melker - ' + src);
+      $melker.setTitle('Melker - ' + src);
     }
 
 
@@ -48,7 +48,7 @@
     export function handleLink(event: { url: string }) {
       const url = event.url;
       if (url.endsWith('.md')) {
-        const markdown = context.getElementById('markdown-content');
+        const markdown = $melker.getElementById('markdown-content');
         if (markdown) {
           const currentSrc = markdown.props.src || '';
           // Push current page to back stack
@@ -60,8 +60,8 @@
           const currentDir = currentSrc.substring(0, currentSrc.lastIndexOf('/') + 1);
           const newSrc = url.startsWith('/') ? url : currentDir + url;
           markdown.props.src = newSrc;
-          context.setTitle('Melker - ' + newSrc);
-          context.render();
+          $melker.setTitle('Melker - ' + newSrc);
+          $melker.render();
         }
       }
     }
@@ -69,7 +69,7 @@
     // Go back in history
     export function goBack() {
       if (backStack.length === 0) return;
-      const markdown = context.getElementById('markdown-content');
+      const markdown = $melker.getElementById('markdown-content');
       if (markdown) {
         const currentSrc = markdown.props.src || '';
         // Push current to forward stack
@@ -81,7 +81,7 @@
         if (prevSrc) {
           markdown.props.src = prevSrc;
           updateTitle(prevSrc);
-          context.render();
+          $melker.render();
         }
       }
     }
@@ -89,7 +89,7 @@
     // Go forward in history
     export function goForward() {
       if (forwardStack.length === 0) return;
-      const markdown = context.getElementById('markdown-content');
+      const markdown = $melker.getElementById('markdown-content');
       if (markdown) {
         const currentSrc = markdown.props.src || '';
         // Push current to back stack
@@ -101,7 +101,7 @@
         if (nextSrc) {
           markdown.props.src = nextSrc;
           updateTitle(nextSrc);
-          context.render();
+          $melker.render();
         }
       }
     }

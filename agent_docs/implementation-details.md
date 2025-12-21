@@ -19,7 +19,7 @@ Dropdown menus are rendered as overlays after normal content to prevent sibling 
 
 **Pipeline** (see `src/rendering.ts` ~line 109):
 1. Normal rendering - all elements in tree order
-2. Menu collection - dropdowns stored in `context.overlays`
+2. Menu collection - dropdowns stored in `$melker.overlays`
 3. Overlay pass - menus rendered on top
 4. Modal pass - dialogs render last
 
@@ -29,10 +29,21 @@ Dropdown menus are rendered as overlays after normal content to prevent sibling 
 
 The engine MUST:
 - Exit with full stack traces on fatal errors
-- Restore terminal before error output (disable mouse tracking, exit alternate screen, show cursor, reset attributes)
+- Restore terminal before error output
 - Never suppress errors
+- Log fatal errors to file with `logger.fatal()`
 
-See terminal restoration sequences in `src/engine.ts` cleanup methods.
+**Terminal restoration sequence** (see `src/terminal-lifecycle.ts`):
+1. Disable raw mode: `Deno.stdin.setRaw(false)`
+2. Disable mouse reporting: `\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l`
+3. Exit alternate screen: `\x1b[?1049l`
+4. Show cursor: `\x1b[?25h`
+5. Reset text styles: `\x1b[0m`
+
+This sequence is used by:
+- Global error/unhandledrejection handlers
+- Signal handlers (SIGINT, SIGTERM, etc.)
+- Bundler error translation (`src/bundler/errors.ts`)
 
 ## Environment Variables
 
@@ -96,7 +107,7 @@ Canvas fires `onPaint` before each render, allowing content updates:
   id="myCanvas"
   width="60" height="20"
   style="width: fill; height: fill"
-  onPaint="context.drawMyContent(event.canvas)"
+  onPaint="$melker.drawMyContent(event.canvas)"
 />
 ```
 

@@ -9,14 +9,14 @@
     cols="56"
     style="border: thin; margin-bottom: 1;"
     onChange="
-      const stats = context.getElementById('stats');
-      const textarea = context.getElementById('editor');
+      const stats = $melker.getElementById('stats');
+      const textarea = $melker.getElementById('editor');
       if (stats && textarea) {
         const val = textarea.getValue();
         const lines = val.split('\\n').length;
         const chars = val.length;
         stats.props.text = 'Lines: ' + lines + ' | Chars: ' + chars;
-        context.render();
+        $melker.render();
       }
     "
   />
@@ -28,12 +28,12 @@
       title="Clear"
       style="width: 10; height: 3; border: thin;"
       onClick="
-        const textarea = context.getElementById('editor');
-        const stats = context.getElementById('stats');
+        const textarea = $melker.getElementById('editor');
+        const stats = $melker.getElementById('stats');
         if (textarea) {
           textarea.setValue('');
           if (stats) stats.props.text = 'Lines: 1 | Chars: 0';
-          context.render();
+          $melker.render();
         }
       "
     />
@@ -41,19 +41,19 @@
       title="Sample"
       style="width: 10; height: 3; border: thin;"
       onClick="
-        const textarea = context.getElementById('editor');
-        const stats = context.getElementById('stats');
+        const textarea = $melker.getElementById('editor');
+        const stats = $melker.getElementById('stats');
         if (textarea) {
           textarea.setValue('Hello World!\\nThis is a multiline\\ntextarea component.\\n\\nUse arrow keys to navigate.');
           if (stats) stats.props.text = 'Lines: 5 | Chars: 77';
-          context.render();
+          $melker.render();
         }
       "
     />
     <button
       title="Quit"
       style="width: 10; height: 3; border: thin;"
-      onClick="context.quit()"
+      onClick="$melker.quit()"
     />
   </container>
 </container>

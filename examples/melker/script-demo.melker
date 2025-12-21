@@ -43,17 +43,17 @@
         style="width: 25; border: thin;"
         placeholder="Enter your name"
         onInput="
-          const statusEl = context.getElementById('status');
-          const validation = context.validateName(event.value);
+          const statusEl = $melker.getElementById('status');
+          const validation = $melker.validateName(event.value);
 
           if (validation) {
             statusEl.props.text = 'Status: ' + validation;
             statusEl.props.style = { ...statusEl.props.style, color: 'red' };
           } else {
-            statusEl.props.text = 'Status: Valid name - ' + context.getCurrentTime();
+            statusEl.props.text = 'Status: Valid name - ' + $melker.getCurrentTime();
             statusEl.props.style = { ...statusEl.props.style, color: 'green' };
           }
-          context.render();
+          $melker.render();
         "
       />
     </container>
@@ -63,19 +63,19 @@
         title="Greet with Script"
         style="margin-right: 2; background-color: green; color: white;"
         onClick="
-          const nameEl = context.getElementById('nameInput');
-          const outputEl = context.getElementById('output');
+          const nameEl = $melker.getElementById('nameInput');
+          const outputEl = $melker.getElementById('output');
           const name = nameEl ? nameEl.props.value || 'World' : 'World';
 
-          const validation = context.validateName(name);
+          const validation = $melker.validateName(name);
           if (validation) {
             outputEl.props.text = '❌ ' + validation;
             outputEl.props.style = { ...outputEl.props.style, color: 'red' };
           } else {
-            outputEl.props.text = context.formatMessage(name);
+            outputEl.props.text = $melker.formatMessage(name);
             outputEl.props.style = { ...outputEl.props.style, color: 'green' };
           }
-          context.render();
+          $melker.render();
         "
       />
 
@@ -83,17 +83,17 @@
         title="Show Time"
         style="margin-right: 2; background-color: blue; color: white;"
         onClick="
-          const outputEl = context.getElementById('output');
-          outputEl.props.text = '⏰ Current time: ' + context.getCurrentTime();
+          const outputEl = $melker.getElementById('output');
+          outputEl.props.text = '⏰ Current time: ' + $melker.getCurrentTime();
           outputEl.props.style = { ...outputEl.props.style, color: 'blue' };
-          context.render();
+          $melker.render();
         "
       />
 
       <button
         title="Exit"
         style="background-color: gray; color: white;"
-        onClick="context.exit();"
+        onClick="$melker.exit();"
       />
     </container>
 

@@ -1,34 +1,34 @@
-const oauth = context.oauth;
+const oauth = $melker.oauth;
 
 // UI update helpers
 function updateUI(loggedIn: boolean) {
-  const mdEl = context.getElementById('token-info');
+  const mdEl = $melker.getElementById('token-info');
   if (mdEl) mdEl.props.text = oauth.getTokensMarkdown();
 
-  const get = (id: string) => context.getElementById(id);
+  const get = (id: string) => $melker.getElementById(id);
   const loginBtn = get('btn-login');
   if (loginBtn) {
     loginBtn.props.disabled = loggedIn;
     get('btn-refresh').props.disabled = !oauth.hasRefreshToken();
     get('btn-logout').props.disabled = !loggedIn;
   }
-  context.render();
+  $melker.render();
 }
 
 function showStatus(msg: string) {
-  const el = context.getElementById('status');
-  const errEl = context.getElementById('error');
+  const el = $melker.getElementById('status');
+  const errEl = $melker.getElementById('error');
   if (el) el.props.text = msg;
   if (errEl) errEl.props.text = '';
-  context.render();
+  $melker.render();
 }
 
 function showError(msg: string) {
-  const el = context.getElementById('status');
-  const errEl = context.getElementById('error');
+  const el = $melker.getElementById('status');
+  const errEl = $melker.getElementById('error');
   if (el) el.props.text = 'Error';
   if (errEl) errEl.props.text = msg;
-  context.render();
+  $melker.render();
 }
 
 // Callbacks referenced by <oauth> element
@@ -74,4 +74,8 @@ async function onLogout() {
   }
 }
 
-exports = { onLogin, onRefresh, onLogout, onLoginCallback, onLogoutCallback, onFailCallback };
+function exit() {
+
+}
+
+exports = { exit, onLogin, onRefresh, onLogout, onLoginCallback, onLogoutCallback, onFailCallback };

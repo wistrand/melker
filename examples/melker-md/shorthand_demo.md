@@ -32,18 +32,18 @@ Demonstrates shorthand type syntax for declaring elements without `type:` proper
 
 ```typescript
 // @melker handler #submit.onClick
-const input = context.getElementById('username');
+const input = $melker.getElementById('username');
 const name = input?.getValue() ?? 'Guest';
 alert('Hello, ' + name + '!');
 ```
 
 ```typescript
 // @melker handler #cancel.onClick
-const input = context.getElementById('username');
+const input = $melker.getElementById('username');
 input?.setValue('');
 ```
 
 ```typescript
 // @melker handler #exit.onClick
-context.exit();
+$melker.exit();
 ```

@@ -144,11 +144,11 @@
         title="Click to grow!"
         style="background-color: red; flex: 1;"
         onClick="
-          const btn = context.getElementById('flex-button-1');
+          const btn = $melker.getElementById('flex-button-1');
           const currentFlex = btn.props.style.flex || 1;
           btn.props.style = { ...btn.props.style, flex: currentFlex === 1 ? 3 : 1 };
           btn.props.title = currentFlex === 1 ? 'Click to shrink!' : 'Click to grow!';
-          context.render();
+          $melker.render();
         "
       />
       <button
@@ -160,11 +160,11 @@
         title="Click to grow!"
         style="background-color: green; flex: 1;"
         onClick="
-          const btn = context.getElementById('flex-button-3');
+          const btn = $melker.getElementById('flex-button-3');
           const currentFlex = btn.props.style.flex || 1;
           btn.props.style = { ...btn.props.style, flex: currentFlex === 1 ? 3 : 1 };
           btn.props.title = currentFlex === 1 ? 'Click to shrink!' : 'Click to grow!';
-          context.render();
+          $melker.render();
         "
       />
     </container>

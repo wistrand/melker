@@ -10,9 +10,9 @@
     client-id="${OAUTH_CLIENT_ID}"
     audience="${OAUTH_AUDIENCE}"
     auto-login="true"
-    onLogin="context.onLoginCallback()"
-    onLogout="context.onLogoutCallback()"
-    onFail="context.onFailCallback(error)"
+    onLogin="$melker.onLoginCallback()"
+    onLogout="$melker.onLogoutCallback()"
+    onFail="$melker.onFailCallback(error)"
     debugServer="{OAUTH_DEBUG_SERVER:-true}"
   />
 
@@ -26,45 +26,45 @@
     </container>
 
     <container style="display: flex; flex-direction: row; gap: 2; flex: 0 0 auto; border: thin">
-      <button id="btn-login"   title="Login"   onClick="context.onLogin()" />
-      <button id="btn-refresh" title="Refresh" onClick="context.onRefresh()" disabled="true" />
-      <button id="btn-logout"  title="Logout"  onClick="context.onLogout()"  disabled="true" />
-      <button id="btn-quit"    title="Quit"    onClick="context.quit()" />
+      <button id="btn-login"   title="Login"   onClick="$melker.onLogin()" />
+      <button id="btn-refresh" title="Refresh" onClick="$melker.onRefresh()" disabled="true" />
+      <button id="btn-logout"  title="Logout"  onClick="$melker.onLogout()"  disabled="true" />
+      <button id="btn-quit"    title="Quit"    onClick="$melker.quit()" />
     </container>
   </container>
 
   <script type="typescript">
-    const oauth = context.oauth;
+    const oauth = $melker.oauth;
 
     // UI update helpers
     function updateUI(loggedIn: boolean) {
-      const mdEl = context.getElementById('token-info');
+      const mdEl = $melker.getElementById('token-info');
       if (mdEl) mdEl.props.text = oauth.getTokensMarkdown();
 
-      const get = (id: string) => context.getElementById(id);
+      const get = (id: string) => $melker.getElementById(id);
       const loginBtn = get('btn-login');
       if (loginBtn) {
         loginBtn.props.disabled = loggedIn;
         get('btn-refresh').props.disabled = !oauth.hasRefreshToken();
         get('btn-logout').props.disabled = !loggedIn;
       }
-      context.render();
+      $melker.render();
     }
 
     function showStatus(msg: string) {
-      const el = context.getElementById('status');
-      const errEl = context.getElementById('error');
+      const el = $melker.getElementById('status');
+      const errEl = $melker.getElementById('error');
       if (el) el.props.text = msg;
       if (errEl) errEl.props.text = '';
-      context.render();
+      $melker.render();
     }
 
     function showError(msg: string) {
-      const el = context.getElementById('status');
-      const errEl = context.getElementById('error');
+      const el = $melker.getElementById('status');
+      const errEl = $melker.getElementById('error');
       if (el) el.props.text = 'Error';
       if (errEl) errEl.props.text = msg;
-      context.render();
+      $melker.render();
     }
 
     // Callbacks referenced by <oauth> element

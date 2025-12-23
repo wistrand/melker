@@ -95,7 +95,7 @@
         width="60"
         height="20"
         style="width: fill; height: fill"
-        onPaint="$melker.drawClock(event.canvas)"
+        onPaint="$app.drawClock(event.canvas)"
       />
     </container>
 

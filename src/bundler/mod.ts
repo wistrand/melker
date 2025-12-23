@@ -242,6 +242,7 @@ export async function executeBundle(
 
     // Set up globals that the bundled code expects
     (globalThis as any).$melker = context;
+    (globalThis as any).$app = context.exports; // Alias for $melker.exports
     (globalThis as any).argv = Deno.args.slice(1);
 
     // Write bundled code to temp file

@@ -153,8 +153,8 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
   "width": 72,
   "height": 24,
   "dither": "auto",
-  "onPaint": "paintHueSatPalette(event)",
-  "onClick": "handlePaletteClick(event)"
+  "onPaint": "$app.paintHueSatPalette(event)",
+  "onClick": "$app.handlePaletteClick(event)"
 }
 ```
 
@@ -164,8 +164,8 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
   "width": 72,
   "height": 2,
   "dither": "auto",
-  "onPaint": "paintLightnessPalette(event)",
-  "onClick": "handleLightnessClick(event)"
+  "onPaint": "$app.paintLightnessPalette(event)",
+  "onClick": "$app.handleLightnessClick(event)"
 }
 ```
 
@@ -339,7 +339,7 @@ function handleLightnessClick(event: any) {
   updateColorDisplay();
 }
 
-exports = {
+export {
   paintHueSatPalette,
   paintLightnessPalette,
   handlePaletteClick,

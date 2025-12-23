@@ -1383,7 +1383,7 @@ export class CanvasElement extends Element implements Renderable {
         return null;
       } else {
         // bw, gray, or color themes: use sierra-stable with 1 bit
-        ditherMode = Deno.env.get("MELKER_AUTO_DITHER") || 'sierra-stable';
+        ditherMode = (Deno.env.get("MELKER_AUTO_DITHER") || 'sierra-stable') as DitherMode;
         // Note: ditherBits will default to 1 below if not specified
       }
     }

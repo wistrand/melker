@@ -114,10 +114,24 @@ export interface LineMapping {
   description: string;
 }
 
+/** A script module file to be written before bundling */
+export interface ScriptModule {
+  /** Relative filename within temp dir (e.g., "_inline_0.ts") */
+  filename: string;
+  /** TypeScript content for this module */
+  content: string;
+  /** Original line in .melker file for error mapping */
+  originalLine: number;
+  /** Source identifier for error messages */
+  sourceId: string;
+}
+
 /** Result of TypeScript code generation */
 export interface GeneratedSource {
-  /** Generated TypeScript code */
+  /** Generated TypeScript code (main entry point) */
   code: string;
+  /** Script module files to write alongside main entry */
+  scriptModules: ScriptModule[];
   /** Mapping from generated lines to original .melker lines */
   lineMap: Map<number, LineMapping>;
   /** Original .melker content for error display */

@@ -483,7 +483,7 @@
         width="48"
         height="12"
         style="width: fill; height: fill; background-color: black;"
-        onPaint="$melker.drawAnalogClock(event.canvas)"
+        onPaint="$app.drawAnalogClock(event.canvas)"
       />
     </container>
 
@@ -498,26 +498,26 @@
         id="startBtn"
         title="▶️ Start"
         style="background-color: green; color: white; padding: 1;"
-        onClick="toggleClock();"
+        onClick="$app.toggleClock();"
       />
 
       <button
         title="🌍 Timezone"
         style="background-color: blue; color: white; padding: 1;"
-        onClick="cycleTimezone();"
+        onClick="$app.cycleTimezone();"
       />
 
       <button
         title="🎨 Theme"
         style="background-color: purple; color: white; padding: 1;"
-        onClick="cycleTheme();"
+        onClick="$app.cycleTheme();"
       />
 
       <button
         id="secondsBtn"
         title="🕐 Hide Seconds"
         style="background-color: blue; color: white; padding: 1;"
-        onClick="toggleSeconds();"
+        onClick="$app.toggleSeconds();"
       />
     </container>
 
@@ -527,28 +527,28 @@
         id="digitalBtn"
         title="📱 Hide Digital"
         style="background-color: purple; color: white; padding: 1;"
-        onClick="toggleDigital();"
+        onClick="$app.toggleDigital();"
       />
 
       <button
         id="formatBtn"
         title="🕛 24 Hour"
         style="background-color: gray; color: white; padding: 1;"
-        onClick="toggle24Hour();"
+        onClick="$app.toggle24Hour();"
       />
 
       <button
         id="rateBtn"
         title="⚡ Rate: 1000ms"
         style="background-color: orange; color: white; padding: 1;"
-        onClick="adjustRefreshRate();"
+        onClick="$app.adjustRefreshRate();"
       />
 
       <button
         id="statsBtn"
         title="📊 Show Stats"
         style="background-color: gray; color: white; padding: 1;"
-        onClick="toggleStatistics();"
+        onClick="$app.toggleStatistics();"
       />
 
       <button

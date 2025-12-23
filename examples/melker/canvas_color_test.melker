@@ -67,7 +67,7 @@
         style="width: fill; height: fill"
         dither="${DITHER:-none}"
         ditherBits="1"
-        onPaint="$melker.drawColoredShapes(event.canvas)"
+        onPaint="$app.drawColoredShapes(event.canvas)"
       />
     </container>
 

@@ -12,6 +12,10 @@ $melker: {
   url: string;              // Source file URL (e.g. "file:///path/to/app.melker")
   dirname: string;          // Directory path (e.g. "/path/to")
 
+  // User exports namespace - all script exports go here
+  // Also available as $app alias
+  exports: Record<string, any>;
+
   // DOM-like methods
   getElementById(id: string): any;
   querySelector(selector: string): any;
@@ -61,13 +65,14 @@ $melker: {
 | Identifier | Description |
 |------------|-------------|
 | `$melker` | Runtime context object |
+| `$app` | Alias for `$melker.exports` (user-defined functions) |
 | `$melker.url` | Source file URL (e.g. `file:///path/to/app.melker`) |
 | `$melker.dirname` | Directory path (e.g. `/path/to`) |
 | `argv` | Command line arguments (`string[]`) |
 
 ## Exported Script Variables
 
-Any variables/functions exported from `<script>` blocks are added to `$melker`:
+Any variables/functions exported from `<script>` blocks are added to `$melker.exports` (also available as `$app`):
 
 ```html
 <script>
@@ -78,14 +83,25 @@ export function incrementCounter() {
 export const API_URL = 'https://api.example.com';
 </script>
 
-<!-- Access via context in handlers -->
-<button onClick="$melker.incrementCounter()" />
+<!-- Access via $app (alias for $melker.exports) -->
+<button onClick="$app.incrementCounter()" />
 ```
 
 Supported export patterns:
-- `export const/let/var/function/class name`
-- `export { name1, name2 }`
-- `exports = { name1, name2 }`
+- `export const/let/var/function/class name` (recommended)
+- `export { name1, name2 }` (recommended)
+- `exports = { name1, name2 }` (deprecated, inline scripts only)
+
+**External scripts** (with `src` attribute) are imported as ES modules. They must use standard ES module exports:
+```typescript
+// utils.ts - external script file
+declare const $melker: any;  // Declare runtime global
+
+export function myFunction() { ... }
+export const myVar = 'value';
+```
+
+The `exports = { ... }` convenience pattern does NOT work in external files - use `export function` or `export const` instead.
 
 ## Logging
 

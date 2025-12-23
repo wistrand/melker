@@ -24,7 +24,7 @@ updateTime();
 // Update every second
 setInterval(() => {
   updateTime();
-  engine.render();
+  $melker.render();
 }, 1000);
 
 export { state, updateTime };

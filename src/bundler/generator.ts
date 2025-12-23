@@ -1,9 +1,13 @@
 /**
  * TypeScript code generator for Melker bundler.
  *
- * This module generates a single TypeScript file from parsed .melker content,
- * combining all scripts and event handlers with proper declarations and a
- * registry for runtime access.
+ * This module generates a single TypeScript entry point from parsed .melker content,
+ * with all scripts (inline and external) imported as ES modules.
+ *
+ * Each inline script is written to a separate temp file and imported, which:
+ * - Enables ES imports in inline scripts
+ * - Eliminates regex-based export detection
+ * - Provides consistent behavior between inline and external scripts
  */
 
 import { getLogger } from '../logging.ts';
@@ -13,65 +17,70 @@ import type {
   ParseResult,
   GeneratedSource,
   LineMapping,
+  ScriptModule,
 } from './types.ts';
 
 const logger = getLogger('Bundler:Generator');
 
 /**
- * Reserved $melker member names that cannot be overwritten by script exports.
+ * Shared $melker interface definition - single source of truth.
+ * Used in both inline script modules and main generated code.
  */
-const RESERVED_MELKER_MEMBERS = new Set([
-  // DOM-like methods
-  'getElementById',
-  'querySelector',
-  'querySelectorAll',
-  // Rendering
-  'render',
-  'forceRender',
-  // Lifecycle
-  'exit',
-  'quit',
-  // UI utilities
-  'setTitle',
-  'alert',
-  'copyToClipboard',
-  // Element creation
-  'createElement',
-  // Dynamic imports
-  'melkerImport',
-  // AI tools
-  'registerAITool',
-  // State persistence
-  'persistenceEnabled',
-  'stateFilePath',
-  // OAuth
-  'oauth',
-  'oauthConfig',
-  // Logging
-  'logger',
-  'getLogger',
-  // Source metadata
-  'url',
-  'dirname',
-  // Internal
-  'engine',
-]);
+const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
+  querySelector(selector: string): any;
+  querySelectorAll(selector: string): any[];
+  render(): void;
+  forceRender(): void;
+  exit(): void;
+  quit(): void;
+  setTitle(title: string): void;
+  alert(message: string): void;
+  copyToClipboard(text: string): Promise<boolean>;
+  engine: any;
+  logger: any;
+  getLogger(name: string): any;
+  oauth: any;
+  oauthConfig: any;
+  createElement(type: string, props?: Record<string, any>, ...children: any[]): any;
+  melkerImport(specifier: string): Promise<any>;
+  registerAITool(tool: any): void;
+  persistenceEnabled: boolean;
+  stateFilePath: string | null;
+  url: string;
+  dirname: string;
+  exports: Record<string, any>;`;
+
+/**
+ * Header added to all inline script modules for $melker access.
+ */
+const SCRIPT_MODULE_HEADER = `// Runtime globals (injected via globalThis before import)
+declare const $melker: {
+${MELKER_INTERFACE_MEMBERS}
+};
+declare const argv: string[];
+declare function alert(message: string): void;
+
+// $app is a short alias for $melker.exports (set on globalThis before import)
+const $app = (globalThis as any).$app as Record<string, any>;
+
+`;
 
 /**
  * Generate TypeScript source from parsed .melker content.
  *
  * The generated code has sections:
- * 1. Runtime declarations (context, argv)
- * 2. Source metadata ($meta)
- * 3. User scripts (sync)
- * 4. Async init function
- * 5. Async ready function
+ * 1. Runtime declarations (context, argv, alert)
+ * 2. Script imports (all scripts as modules)
+ * 3. Export merging (Object.assign to $melker.exports)
+ * 4. Async init function (if any init scripts)
+ * 5. Async ready function (if any ready scripts)
  * 6. Event handlers
  * 7. Registry export
  */
 export function generate(parsed: ParseResult): GeneratedSource {
   const lines: string[] = [];
   const lineMap = new Map<number, LineMapping>();
+  const scriptModules: ScriptModule[] = [];
   let currentLine = 1;
 
   logger.debug('Starting TypeScript generation', {
@@ -125,133 +134,127 @@ export function generate(parsed: ParseResult): GeneratedSource {
   addLine('');
   addLine('// Get runtime context from globalThis (set by executeBundle before import)');
   addLine('const $melker = (globalThis as any).$melker as {');
-  addLine('  getElementById(id: string): any;');
-  addLine('  querySelector(selector: string): any;');
-  addLine('  querySelectorAll(selector: string): any[];');
-  addLine('  render(): void;');
-  addLine('  forceRender(): void;');
-  addLine('  exit(): void;');
-  addLine('  quit(): void;');
-  addLine('  setTitle(title: string): void;');
-  addLine('  alert(message: string): void;');
-  addLine('  copyToClipboard(text: string): Promise<boolean>;');
-  addLine('  engine: any;');
-  addLine('  logger: any;');
-  addLine('  getLogger(name: string): any;');
-  addLine('  oauth: any;');
-  addLine('  oauthConfig: any;');
-  addLine('  createElement(type: string, props?: Record<string, any>, ...children: any[]): any;');
-  addLine('  melkerImport(specifier: string): Promise<any>;');
-  addLine('  registerAITool(tool: any): void;');
-  addLine('  persistenceEnabled: boolean;');
-  addLine('  stateFilePath: string | null;');
-  addLine(`  url: ${JSON.stringify(parsed.sourceUrl)},`);
-  addLine(`  dirname: ${JSON.stringify(dirname)},`);
+  // Use shared interface definition
+  for (const line of MELKER_INTERFACE_MEMBERS.split('\n')) {
+    addLine(line);
+  }
   addLine('};');
   addLine('const argv = (globalThis as any).argv as string[];');
   addLine('');
+  addLine('// Global alert() alias - use $melker.alert() to avoid blocking Deno alert');
+  addLine('const alert = (message: string) => $melker.alert(message);');
+  addLine('');
+  addLine('// $app is a short alias for $melker.exports (set on globalThis before import)');
+  addLine('const $app = (globalThis as any).$app as Record<string, any>;');
+  addLine('');
 
   // =========================================================================
-  // Section 2: User Scripts (sync)
+  // Section 2: Script Imports
   // =========================================================================
   const syncScripts = parsed.scripts.filter((s) => s.type === 'sync');
 
-  // Collect all exported identifiers from scripts
-  const exportedIdentifiers: string[] = [];
+  // Create script modules for inline scripts
+  const inlineScripts = syncScripts.filter((s) => !s.externalSrc);
+  const externalScripts = syncScripts.filter((s) => s.externalSrc);
 
+  // Generate inline script modules
+  for (const [i, script] of inlineScripts.entries()) {
+    const filename = `_inline_${i}.ts`;
+    const originalLine = script.sourceRange.start.line;
+
+    // Create module content with header and script code
+    const content = SCRIPT_MODULE_HEADER + script.code;
+
+    scriptModules.push({
+      filename,
+      content,
+      originalLine,
+      sourceId: script.id,
+    });
+
+    logger.debug('Created inline script module', {
+      id: script.id,
+      filename,
+      originalLine,
+      codeLength: script.code.length,
+    });
+  }
+
+  // Generate imports section if there are any scripts
   if (syncScripts.length > 0) {
     addLine('// ='.padEnd(70, '='));
-    addLine('// USER SCRIPTS');
+    addLine('// SCRIPT IMPORTS (all scripts as ES modules)');
     addLine('// ='.padEnd(70, '='));
     addLine('');
 
-    for (const script of syncScripts) {
-      const originalLine = script.sourceRange.start.line;
-      const srcInfo = script.externalSrc ? ` (from ${script.externalSrc})` : '';
+    let scriptIndex = 0;
 
-      logger.debug('Adding sync script', {
+    // Import inline scripts (from temp files)
+    for (const [i, script] of inlineScripts.entries()) {
+      const originalLine = script.sourceRange.start.line;
+      const filename = `_inline_${i}.ts`;
+
+      addLine(`// Inline script from line ${originalLine}`, {
+        originalLine,
+        sourceId: script.id,
+        description: `inline script import at line ${originalLine}`,
+      });
+      addLine(`import * as _script_${scriptIndex} from './${filename}';`);
+      scriptIndex++;
+    }
+
+    // Import external scripts
+    for (const script of externalScripts) {
+      const originalLine = script.sourceRange.start.line;
+      const externalUrl = resolveExternalSrc(parsed.sourceUrl, script.externalSrc!);
+
+      logger.debug('Adding external script import', {
         id: script.id,
         originalLine,
         externalSrc: script.externalSrc,
-        codeLength: script.code.length,
+        resolvedUrl: externalUrl,
       });
 
-      addLine(`// From ${parsed.sourceUrl}:${originalLine}${srcInfo}`);
-
-      // Get the code, rewriting relative imports if this is an external script
-      let codeToAdd = script.code;
-      if (script.externalSrc) {
-        // Resolve the external script path to get its base URL for import resolution
-        const externalScriptUrl = resolveExternalSrc(parsed.sourceUrl, script.externalSrc);
-        codeToAdd = rewriteRelativeImports(script.code, externalScriptUrl);
-      }
-
-      // Add the code (with rewritten imports if external)
-      addLines(codeToAdd, {
+      addLine(`// External script from line ${originalLine}: ${script.externalSrc}`, {
         originalLine,
         sourceId: script.id,
-        description: `sync script at line ${originalLine}`,
+        description: `external script import at line ${originalLine}`,
       });
-      addLine('');
-
-      // Extract exported identifiers from this script
-      // Matches: export const/let/var/function/class name
-      // Also matches: export { name1, name2 }
-      const exportMatches = script.code.matchAll(
-        /export\s+(?:const|let|var|function|class)\s+(\w+)|export\s*\{([^}]+)\}/g
-      );
-      for (const match of exportMatches) {
-        if (match[1]) {
-          // Single export: export const foo = ...
-          exportedIdentifiers.push(match[1]);
-        } else if (match[2]) {
-          // Named exports: export { foo, bar }
-          const names = match[2].split(',').map((n) => n.trim().split(/\s+as\s+/)[0].trim());
-          exportedIdentifiers.push(...names.filter((n) => n));
-        }
-      }
-
-      // Also match: exports = { name1, name2, ... }
-      // This is a common pattern for exporting multiple functions at once
-      // Use 's' flag for dotAll to match across newlines
-      const exportsAssignMatch = script.code.match(/exports\s*=\s*\{([^}]+)\}/s);
-      if (exportsAssignMatch && exportsAssignMatch[1]) {
-        // Remove comments from the content before parsing
-        const cleanedContent = exportsAssignMatch[1]
-          .replace(/\/\/[^\n]*/g, '') // Remove single-line comments
-          .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
-        const names = cleanedContent
-          .split(',')
-          .map((n) => n.trim().split(/\s*:\s*/)[0].trim()) // Handle { foo: bar } -> foo
-          .filter((n) => n && /^\w+$/.test(n)); // Only valid identifiers
-        exportedIdentifiers.push(...names);
-      }
+      addLine(`import * as _script_${scriptIndex} from '${externalUrl}';`);
+      scriptIndex++;
     }
 
-    // Check for conflicts with reserved $melker members
-    const conflicts = exportedIdentifiers.filter((id) => RESERVED_MELKER_MEMBERS.has(id));
-    if (conflicts.length > 0) {
-      const conflictList = conflicts.map((c) => `'${c}'`).join(', ');
-      const reservedList = Array.from(RESERVED_MELKER_MEMBERS).sort().join(', ');
-      throw new Error(
-        `Script export name conflict: ${conflictList} would overwrite built-in $melker member(s).\n\n` +
-        `Reserved names: ${reservedList}\n\n` +
-        `Rename your exported function(s) to avoid conflicts.`
-      );
-    }
+    addLine('');
 
-    // Add exported identifiers to $melker so they're accessible via $melker.X
-    if (exportedIdentifiers.length > 0) {
-      addLine('// Assign exports to $melker for handler access');
-      for (const id of exportedIdentifiers) {
-        addLine(`($melker as any).${id} = ${id};`);
-      }
-      addLine('');
+    // Merge all script exports to $melker.exports with duplicate detection
+    addLine('// Merge all script exports to $melker.exports');
+    if (syncScripts.length > 1) {
+      addLine('// Note: Scripts are merged in document order. Later scripts can access earlier exports via $app.');
+      addLine(`$melker.logger?.debug?.('Merging exports from ${syncScripts.length} scripts in document order');`);
     }
+    addLine('// Helper to detect and warn about duplicate exports');
+    addLine('function __mergeExports(target: Record<string, any>, source: Record<string, any>, scriptName: string): void {');
+    addLine('  for (const key of Object.keys(source)) {');
+    addLine('    if (key in target) {');
+    addLine('      $melker.logger?.warn?.(`Export "${key}" from ${scriptName} overwrites existing export`);');
+    addLine('    }');
+    addLine('    target[key] = source[key];');
+    addLine('  }');
+    addLine('}');
+    addLine('');
+
+    // Generate merge calls with script identification
+    for (const [i, script] of syncScripts.entries()) {
+      const scriptName = script.externalSrc
+        ? `"${script.externalSrc}"`
+        : `"inline script ${i + 1}"`;
+      addLine(`__mergeExports($melker.exports, _script_${i}, ${scriptName});`);
+    }
+    addLine('');
   }
 
   // =========================================================================
-  // Section 4: Async Init
+  // Section 3: Async Init
   // =========================================================================
   const initScripts = parsed.scripts.filter((s) => s.type === 'init');
 
@@ -260,35 +263,46 @@ export function generate(parsed: ParseResult): GeneratedSource {
     addLine('// ASYNC INIT (before render)');
     addLine('// ='.padEnd(70, '='));
     addLine('');
-    addLine('async function __init(): Promise<void> {');
 
-    for (const script of initScripts) {
+    // Create modules for init scripts
+    for (const [i, script] of initScripts.entries()) {
+      const filename = `_init_${i}.ts`;
       const originalLine = script.sourceRange.start.line;
 
-      logger.debug('Adding init script', {
-        id: script.id,
+      // Init scripts are async, wrap in exported function
+      const content = SCRIPT_MODULE_HEADER + `
+export async function __initFn(): Promise<void> {
+${script.code.split('\n').map(l => '  ' + l).join('\n')}
+}
+`;
+
+      scriptModules.push({
+        filename,
+        content,
         originalLine,
-        codeLength: script.code.length,
+        sourceId: script.id,
       });
 
-      addLine(`  // From line ${originalLine}`);
-      const indented = script.code
-        .split('\n')
-        .map((l) => '  ' + l)
-        .join('\n');
-      addLines(indented, {
+      addLine(`// Init script from line ${originalLine}`, {
         originalLine,
         sourceId: script.id,
         description: `init script at line ${originalLine}`,
       });
+      addLine(`import { __initFn as __initFn_${i} } from './${filename}';`);
     }
+    addLine('');
 
+    // Generate combined __init function
+    addLine('async function __init(): Promise<void> {');
+    for (let i = 0; i < initScripts.length; i++) {
+      addLine(`  await __initFn_${i}();`);
+    }
     addLine('}');
     addLine('');
   }
 
   // =========================================================================
-  // Section 5: Async Ready
+  // Section 4: Async Ready
   // =========================================================================
   const readyScripts = parsed.scripts.filter((s) => s.type === 'ready');
 
@@ -297,35 +311,46 @@ export function generate(parsed: ParseResult): GeneratedSource {
     addLine('// ASYNC READY (after render)');
     addLine('// ='.padEnd(70, '='));
     addLine('');
-    addLine('async function __ready(): Promise<void> {');
 
-    for (const script of readyScripts) {
+    // Create modules for ready scripts
+    for (const [i, script] of readyScripts.entries()) {
+      const filename = `_ready_${i}.ts`;
       const originalLine = script.sourceRange.start.line;
 
-      logger.debug('Adding ready script', {
-        id: script.id,
+      // Ready scripts are async, wrap in exported function
+      const content = SCRIPT_MODULE_HEADER + `
+export async function __readyFn(): Promise<void> {
+${script.code.split('\n').map(l => '  ' + l).join('\n')}
+}
+`;
+
+      scriptModules.push({
+        filename,
+        content,
         originalLine,
-        codeLength: script.code.length,
+        sourceId: script.id,
       });
 
-      addLine(`  // From line ${originalLine}`);
-      const indented = script.code
-        .split('\n')
-        .map((l) => '  ' + l)
-        .join('\n');
-      addLines(indented, {
+      addLine(`// Ready script from line ${originalLine}`, {
         originalLine,
         sourceId: script.id,
         description: `ready script at line ${originalLine}`,
       });
+      addLine(`import { __readyFn as __readyFn_${i} } from './${filename}';`);
     }
+    addLine('');
 
+    // Generate combined __ready function
+    addLine('async function __ready(): Promise<void> {');
+    for (let i = 0; i < readyScripts.length; i++) {
+      addLine(`  await __readyFn_${i}();`);
+    }
     addLine('}');
     addLine('');
   }
 
   // =========================================================================
-  // Section 6: Event Handlers
+  // Section 5: Event Handlers
   // =========================================================================
   if (parsed.handlers.length > 0) {
     addLine('// ='.padEnd(70, '='));
@@ -359,8 +384,6 @@ export function generate(parsed: ParseResult): GeneratedSource {
 
       // Wrap handler code - if it's a simple expression, make it a statement
       const code = handler.code.trim();
-      // Check if the code is a simple function call that should auto-render
-      // We'll let the runtime handle auto-render via the registry wrapper
       addLine(`  ${code}`);
 
       addLine('}');
@@ -369,7 +392,7 @@ export function generate(parsed: ParseResult): GeneratedSource {
   }
 
   // =========================================================================
-  // Section 7: Registry
+  // Section 6: Registry
   // =========================================================================
   addLine('// ='.padEnd(70, '='));
   addLine('// REGISTRY');
@@ -393,10 +416,12 @@ export function generate(parsed: ParseResult): GeneratedSource {
     totalLines: currentLine - 1,
     mappedLines: lineMap.size,
     codeLength: generatedCode.length,
+    scriptModules: scriptModules.length,
   });
 
   return {
     code: generatedCode,
+    scriptModules,
     lineMap,
     originalContent: parsed.originalContent,
     sourceUrl: parsed.sourceUrl,
@@ -442,121 +467,59 @@ function resolveExternalSrc(sourceUrl: string, externalSrc: string): string {
 }
 
 /**
- * Rewrite relative imports in code to absolute URLs.
- *
- * This transforms imports like:
- *   import { foo } from './state.ts'
- *   import bar from '../lib/utils.ts'
- *   export { x } from './module.ts'
- *
- * To absolute URLs like:
- *   import { foo } from 'file:///path/to/state.ts'
- *
- * @param code - The source code to transform
- * @param baseUrl - The URL of the file containing this code (used to resolve relative paths)
- * @returns Code with relative imports rewritten to absolute URLs
- */
-function rewriteRelativeImports(code: string, baseUrl: string): string {
-  // Match import/export from statements with relative paths
-  // Captures:
-  // - Group 1: Everything before the path (import { x } from ')
-  // - Group 2: The relative path (./foo.ts or ../bar.ts)
-  // - Group 3: The closing quote and rest
-  const importPattern = /((?:import|export)\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)\s+from\s+|type\s+(?:\{[^}]*\}|\w+)\s+from\s+)?['"])(\.\.?\/[^'"]+)(['"])/g;
-
-  // Also match dynamic imports: import('./foo.ts')
-  const dynamicImportPattern = /(import\s*\(\s*['"])(\.\.?\/[^'"]+)(['"]\s*\))/g;
-
-  let result = code;
-
-  // Rewrite static imports/exports
-  result = result.replace(importPattern, (_match, prefix, relativePath, suffix) => {
-    const absoluteUrl = resolveRelativePath(baseUrl, relativePath);
-    logger.debug('Rewrote import', { from: relativePath, to: absoluteUrl });
-    return `${prefix}${absoluteUrl}${suffix}`;
-  });
-
-  // Rewrite dynamic imports
-  result = result.replace(dynamicImportPattern, (_match, prefix, relativePath, suffix) => {
-    const absoluteUrl = resolveRelativePath(baseUrl, relativePath);
-    logger.debug('Rewrote dynamic import', { from: relativePath, to: absoluteUrl });
-    return `${prefix}${absoluteUrl}${suffix}`;
-  });
-
-  return result;
-}
-
-/**
- * Resolve a relative path against a base URL.
- */
-function resolveRelativePath(baseUrl: string, relativePath: string): string {
-  try {
-    return new URL(relativePath, baseUrl).href;
-  } catch {
-    // Fallback: simple string concatenation
-    const baseDir = baseUrl.replace(/\/[^/]*$/, '');
-    return `${baseDir}/${relativePath}`;
-  }
-}
-
-/**
  * Rewrite handler attributes in template to use registry calls.
+ *
+ * Uses position-based string slicing instead of regex for reliability.
+ * Handles any content including special chars, quotes, and multiline code.
  *
  * Transforms: onClick="count++; updateDisplay()"
  * To:         onClick="__melker.__h0(event)"
  */
 export function rewriteHandlers(template: string, handlers: ParsedHandler[]): string {
-  let result = template;
+  if (handlers.length === 0) {
+    return template;
+  }
 
   logger.debug('Rewriting handlers in template', { handlerCount: handlers.length });
 
-  // Debug: save template before rewrite
-  Deno.writeTextFileSync('/tmp/melker-template-before.html', template);
+  let result = template;
 
-  // Process in reverse order to preserve offsets
+  // Process in reverse offset order so earlier positions don't shift
   const sorted = [...handlers].sort(
     (a, b) => b.attributeRange.start.offset - a.attributeRange.start.offset
   );
 
   for (const handler of sorted) {
+    const start = handler.attributeRange.start.offset;
+    const end = handler.attributeRange.end.offset;
+
     // Build the replacement attribute
     const callArgs = handler.params.map((p) => p.name).join(', ');
-    const call = `__melker.${handler.id}(${callArgs})`;
-    const newAttr = `${handler.attributeName}="${call}"`;
+    const newAttr = `${handler.attributeName}="__melker.${handler.id}(${callArgs})"`;
 
-    // Find and replace the original attribute
-    // We need to match the exact attribute with its value
-    const attrPattern = new RegExp(
-      `\\b${handler.attributeName}\\s*=\\s*["']${escapeRegex(handler.code)}["']`
-    );
-
-    const before = result;
-    result = result.replace(attrPattern, newAttr);
-
-    if (result === before) {
-      // Fallback: try matching by position if regex didn't work
-      logger.debug('Regex replacement failed, using position-based replacement', {
+    // Validate: check that the slice starts with the expected attribute name
+    const oldAttr = result.slice(start, end);
+    if (!oldAttr.startsWith(handler.attributeName)) {
+      logger.warn('Handler offset mismatch', {
         handler: handler.id,
-        attributeName: handler.attributeName,
+        expected: handler.attributeName,
+        found: oldAttr.slice(0, 20),
+        start,
+        end,
       });
-    } else {
-      logger.debug('Rewrote handler', {
-        handler: handler.id,
-        attributeName: handler.attributeName,
-        newCall: call,
-      });
+      continue;
     }
+
+    // Direct splice - no regex needed
+    result = result.slice(0, start) + newAttr + result.slice(end);
+
+    logger.debug('Rewrote handler', {
+      handler: handler.id,
+      attributeName: handler.attributeName,
+      oldLength: end - start,
+      newLength: newAttr.length,
+    });
   }
 
-  // Debug: save template after rewrite
-  Deno.writeTextFileSync('/tmp/melker-template-after.html', result);
-
   return result;
-}
-
-/**
- * Escape special regex characters in a string
- */
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

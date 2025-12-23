@@ -57,7 +57,7 @@
       return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
     }
 
-    function updateColorDisplay() {
+    export function updateColorDisplay() {
       const [r, g, b] = hslToRgb(selectedHue, selectedSat, selectedLight);
       const hex = rgbToHex(r, g, b);
 
@@ -83,7 +83,7 @@
       if (hslValue) hslValue.props.text = 'hsl(' + selectedHue + ', ' + selectedSat + '%, ' + selectedLight + '%)';
     }
 
-    function paintHueSatPalette(event: any) {
+    export function paintHueSatPalette(event: any) {
       const { canvas } = event;
       if (!canvas) return;
 
@@ -124,7 +124,7 @@
       }
     }
 
-    function paintLightnessPalette(event: any) {
+    export function paintLightnessPalette(event: any) {
       const { canvas } = event;
       if (!canvas) return;
 
@@ -150,7 +150,7 @@
       }
     }
 
-    function handlePaletteClick(event: any) {
+    export function handlePaletteClick(event: any) {
       const canvas = $melker.getElementById('hue-sat-canvas');
       if (!canvas) return;
 
@@ -169,7 +169,7 @@
       updateColorDisplay();
     }
 
-    function handleLightnessClick(event: any) {
+    export function handleLightnessClick(event: any) {
       const canvas = $melker.getElementById('lightness-canvas');
       if (!canvas) return;
 
@@ -183,13 +183,6 @@
       updateColorDisplay();
     }
 
-    exports = {
-      paintHueSatPalette,
-      paintLightnessPalette,
-      handlePaletteClick,
-      handleLightnessClick,
-      updateColorDisplay
-    };
   </script>
 
   <container id="root" style="border: thin; display: flex; flex-direction: column">
@@ -203,8 +196,8 @@
           width="72"
           height="24"
           dither="auto"
-          onPaint="paintHueSatPalette(event)"
-          onClick="handlePaletteClick(event)"
+          onPaint="$app.paintHueSatPalette(event)"
+          onClick="$app.handlePaletteClick(event)"
         />
 
         <text class="label">Lightness:</text>
@@ -213,8 +206,8 @@
           width="72"
           height="2"
           dither="auto"
-          onPaint="paintLightnessPalette(event)"
-          onClick="handleLightnessClick(event)"
+          onPaint="$app.paintLightnessPalette(event)"
+          onClick="$app.handleLightnessClick(event)"
         />
       </container>
 

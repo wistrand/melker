@@ -78,19 +78,19 @@ function dec() {
   update();
 }
 
-exports = { inc, dec, update };
+export { inc, dec, update };
 ```
 
 ## Event Handlers
 
 ```typescript
 // @melker handler #dec.onClick
-dec();
+$app.dec();
 ```
 
 ```typescript
 // @melker handler #inc.onClick
-inc();
+$app.inc();
 ```
 
 ## Notes

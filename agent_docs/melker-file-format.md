@@ -25,7 +25,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
   </style>
 
   <script type="typescript">
-    // TypeScript code - export functions via: exports = { fn1, fn2 }
+    // TypeScript code - export functions via: export { fn1, fn2 }
   </script>
 
   <container><!-- UI --></container>
@@ -101,13 +101,14 @@ CSS-like properties in `style` attribute:
 **Context API:**
 - `$melker.url` - Source file URL (e.g. `file:///path/to/app.melker`)
 - `$melker.dirname` - Source directory path (e.g. `/path/to`)
+- `$melker.exports` / `$app` - User exports namespace (script exports are added here)
 - `$melker.getElementById(id)` - Get element by ID
 - `$melker.render()` - Trigger re-render (for intermediate updates in async handlers)
 - `$melker.exit()` - Exit application
 - `$melker.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)
 - `$melker.alert(message)` - Show modal alert dialog
 - `$melker.setTitle(title)` - Set window/terminal title
-- Exported script functions available as `$melker.functionName()`
+- Exported script functions available as `$app.functionName()` (or `$melker.exports.functionName()`)
 
 ## State Persistence
 
@@ -361,7 +362,7 @@ Use directive comments for editor compatibility:
 ```typescript
 // @melker script
 let count = 0;
-exports = { inc: () => count++ };
+export const inc = () => count++;  // Accessible as $app.inc()
 ```
 
 ```typescript

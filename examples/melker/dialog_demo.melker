@@ -4,37 +4,37 @@
     let dialog2Open = false;
     let dialog3Open = false;
 
-    function openDialog1() {
+    export function openDialog1() {
       dialog1Open = true;
       updateDialogs();
     }
 
-    function openDialog2() {
+    export function openDialog2() {
       dialog2Open = true;
       updateDialogs();
     }
 
-    function openDialog3() {
+    export function openDialog3() {
       dialog3Open = true;
       updateDialogs();
     }
 
-    function closeDialog1() {
+    export function closeDialog1() {
       dialog1Open = false;
       updateDialogs();
     }
 
-    function closeDialog2() {
+    export function closeDialog2() {
       dialog2Open = false;
       updateDialogs();
     }
 
-    function closeDialog3() {
+    export function closeDialog3() {
       dialog3Open = false;
       updateDialogs();
     }
 
-    function closeAllDialogs() {
+    export function closeAllDialogs() {
       dialog1Open = false;
       dialog2Open = false;
       dialog3Open = false;
@@ -51,15 +51,6 @@
       $melker.render();
     }
 
-    exports = {
-      openDialog1,
-      openDialog2,
-      openDialog3,
-      closeDialog1,
-      closeDialog2,
-      closeDialog3,
-      closeAllDialogs
-    };
   </script>
 
   <container style="width: fill; height: fill; display: flex; flex-direction: column;">

@@ -20,8 +20,8 @@
 
     <container id="root">
         <container id="header">
-            <button class="big" title="Back" onClick="goBack()"/>
-            <button title="Fwd" onClick="goForward()"/>
+            <button class="big" title="Back" onClick="$app.goBack()"/>
+            <button title="Fwd" onClick="$app.goForward()"/>
             <text style="font-weight: bold; flex: 1; padding-left: 1;">
                 ${argv[1]:-README.md}
             </text>
@@ -29,7 +29,7 @@
         </container>
 
         <container id="content-area" scrollable="true" style="flex: 1 1 0; padding: 1;">
-            <markdown id="markdown-content"  src="${argv[1]:-README.md}"  onLink="handleLink(event)" style="text-wrap: wrap;"/>
+            <markdown id="markdown-content"  src="${argv[1]:-README.md}"  onLink="$app.handleLink(event)" style="text-wrap: wrap;"/>
         </container>
     </container>
 

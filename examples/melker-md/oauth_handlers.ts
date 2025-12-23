@@ -1,3 +1,6 @@
+// Declare $melker for external module (injected at runtime)
+declare const $melker: any;
+
 const oauth = $melker.oauth;
 
 // UI update helpers
@@ -32,23 +35,23 @@ function showError(msg: string) {
 }
 
 // Callbacks referenced by <oauth> element
-function onLoginCallback() {
+export function onLoginCallback() {
   showStatus('Logged in');
   updateUI(true);
 }
 
-function onLogoutCallback() {
+export function onLogoutCallback() {
   showStatus('Logged out');
   updateUI(false);
 }
 
-function onFailCallback(error: Error) {
+export function onFailCallback(error: Error) {
   showError(error.message);
   updateUI(false);
 }
 
 // Button handlers
-async function onLogin() {
+export async function onLogin() {
   showStatus('Opening browser...');
   try {
     await oauth.login();
@@ -57,7 +60,7 @@ async function onLogin() {
   }
 }
 
-async function onRefresh() {
+export async function onRefresh() {
   showStatus('Refreshing token...');
   try {
     await oauth.refresh();
@@ -66,7 +69,7 @@ async function onRefresh() {
   }
 }
 
-async function onLogout() {
+export async function onLogout() {
   try {
     await oauth.logoutSession();
   } catch (err) {
@@ -74,8 +77,5 @@ async function onLogout() {
   }
 }
 
-function exit() {
-
+export function exit() {
 }
-
-exports = { exit, onLogin, onRefresh, onLogout, onLoginCallback, onLogoutCallback, onFailCallback };

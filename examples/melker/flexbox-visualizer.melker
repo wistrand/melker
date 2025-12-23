@@ -2,12 +2,12 @@
   <script type="typescript">
     let currentExample = 0;
 
-    function nextExample() {
+    export function nextExample() {
       currentExample = (currentExample + 1) % 8;
       showExample();
     }
 
-    function prevExample() {
+    export function prevExample() {
       currentExample = (currentExample - 1 + 8) % 8;
       showExample();
     }
@@ -72,7 +72,6 @@
       $melker.render();
     }
 
-    exports = { nextExample, prevExample };
   </script>
 
   <container style="width: fill; height: fill; padding: 2; display: flex; flex-direction: column; background-color: black;">
@@ -132,13 +131,13 @@
       <button
         title="Previous"
         style="width: 15; height: 3; background-color: blue;"
-        onClick="$melker.prevExample();"
+        onClick="$app.prevExample();"
       />
 
       <button
         title="Next"
         style="width: 15; height: 3; background-color: blue;"
-        onClick="$melker.nextExample();"
+        onClick="$app.nextExample();"
       />
     </container>
 

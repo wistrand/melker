@@ -8,7 +8,7 @@
     // - Auto-resizing on terminal resize
     // - Autoplay (when enabled, which is the default)
 
-    function togglePlayback() {
+    export function togglePlayback() {
       const video = $melker.getElementById('player');
       const status = $melker.getElementById('status');
       const playBtn = $melker.getElementById('play-btn');
@@ -27,13 +27,13 @@
       $melker.render();
     }
 
-    function quit() {
+    export function quit() {
       const video = $melker.getElementById('player');
       if (video) video.stop();
       $melker.exit();
     }
 
-    function seekBackward() {
+    export function seekBackward() {
       const video = $melker.getElementById('player');
       if (!video) return;
       const currentTime = video.getCurrentTime();
@@ -41,14 +41,14 @@
       video.play(newTime);
     }
 
-    function seekForward() {
+    export function seekForward() {
       const video = $melker.getElementById('player');
       if (!video) return;
       const currentTime = video.getCurrentTime();
       video.play(currentTime + 10);
     }
 
-    function seekBackwardMin() {
+    export function seekBackwardMin() {
       const video = $melker.getElementById('player');
       if (!video) return;
       const currentTime = video.getCurrentTime();
@@ -56,7 +56,7 @@
       video.play(newTime);
     }
 
-    function seekForwardMin() {
+    export function seekForwardMin() {
       const video = $melker.getElementById('player');
       if (!video) return;
       const currentTime = video.getCurrentTime();
@@ -70,7 +70,7 @@
       return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
 
-    function updateTime() {
+    export function updateTime() {
       const video = $melker.getElementById('player');
       const timeDisplay = $melker.getElementById('time-display');
       if (!video || !timeDisplay) return;
@@ -78,7 +78,6 @@
       timeDisplay.props.text = formatTime(currentTime);
     }
 
-    exports = { togglePlayback, quit, seekBackward, seekForward, seekBackwardMin, seekForwardMin, updateTime };
   </script>
 
   <container
@@ -125,7 +124,7 @@
           $melker.render();
         }
       "
-      onFrame="$melker.updateTime();"
+      onFrame="$app.updateTime();"
     />
 
     <text id="time-display" style="height: 1; color: yellow; text-align: center;">
@@ -141,37 +140,37 @@
         id="back-min-btn"
         title="-1m"
         style="width: 8; height: 3;"
-        onClick="$melker.seekBackwardMin();"
+        onClick="$app.seekBackwardMin();"
       />
       <button
         id="back-btn"
         title="-10s"
         style="width: 8; height: 3;"
-        onClick="$melker.seekBackward();"
+        onClick="$app.seekBackward();"
       />
       <button
         id="play-btn"
         title="Pause"
         style="width: 10; height: 3;"
-        onClick="$melker.togglePlayback();"
+        onClick="$app.togglePlayback();"
       />
       <button
         id="fwd-btn"
         title="+10s"
         style="width: 8; height: 3;"
-        onClick="$melker.seekForward();"
+        onClick="$app.seekForward();"
       />
       <button
         id="fwd-min-btn"
         title="+1m"
         style="width: 8; height: 3;"
-        onClick="$melker.seekForwardMin();"
+        onClick="$app.seekForwardMin();"
       />
       <button
         id="quit-btn"
         title="Quit"
         style="width: 10; height: 3;"
-        onClick="$melker.quit();"
+        onClick="$app.quit();"
       />
     </container>
   </container>

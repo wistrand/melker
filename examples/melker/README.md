@@ -117,16 +117,23 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
   </style>
 
   <script type="typescript">
+    let count = 0;
+
     function handleClick() {
+      count++;
       const el = $melker.getElementById('output');
-      el.props.text = 'Clicked!';
+      el.props.text = `Clicked ${count} times!`;
       // Auto-renders after handler completes
     }
+
+    // Export functions to make them available in handlers
+    export { handleClick };  // Accessible as $app.handleClick()
   </script>
 
   <container style="width: 40; height: 10; border: thin;">
     <text id="output">Hello!</text>
-    <button title="Click" onClick="handleClick()" />
+    <!-- Call exported functions via $app (alias for $melker.exports) -->
+    <button title="Click" onClick="$app.handleClick()" />
   </container>
 </melker>
 ```
@@ -136,6 +143,7 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
 In event handlers and scripts:
 - `$melker.url` - Source file URL (e.g. `file:///path/to/app.melker`)
 - `$melker.dirname` - Source directory path (e.g. `/path/to`)
+- `$melker.exports` / `$app` - User exports namespace (script exports are added here)
 - `$melker.getElementById(id)` - Find elements by ID
 - `$melker.render()` - Trigger re-render (auto-called after event handlers)
 - `$melker.exit()` - Exit the application
@@ -144,6 +152,31 @@ In event handlers and scripts:
 - `$melker.setTitle(title)` - Set window/terminal title
 - `$melker.engine` - Access engine instance
 - `$melker.logger` - Logging interface
+
+### Script Exports
+
+Functions and variables defined in `<script>` blocks must be exported to be accessible from event handlers:
+
+```html
+<script type="typescript">
+  let state = { count: 0 };
+
+  function increment() {
+    state.count++;
+  }
+
+  // Export using any of these patterns:
+  export { state, increment };
+  // OR: export function increment() { ... }
+  // OR: export const increment = () => { ... }
+</script>
+
+<!-- Access via $app (alias for $melker.exports) -->
+<button onClick="$app.increment()" />
+<text text="${$app.state.count}" />
+```
+
+External scripts (`<script src="...">`) are imported as ES modules and their exports are automatically merged into `$melker.exports` (accessible via `$app` alias).
 
 **Auto-render:** Event handlers automatically trigger a re-render after completion. Return `false` to skip auto-render.
 

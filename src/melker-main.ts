@@ -418,6 +418,7 @@ export async function runMelkerFile(
           exit: () => { console.log('   Debug: exit() called'); },
           logger: debugLogger,
           getLogger: getLogger,
+          exports: {} as Record<string, any>,
         };
 
         // Auto-retain bundle files in debug mode
@@ -573,9 +574,11 @@ export async function runMelkerFile(
     } : undefined;
 
     const context = {
-      // Source metadata (also available via $meta)
+      // Source metadata
       url: sourceUrl,
       dirname: sourceDirname,
+      // User exports namespace - script exports are added here
+      exports: {} as Record<string, any>,
       getElementById: (id: string) => engine?.document?.getElementById(id),
       render: () => engine.render(),
       exit: () => engine.stop().then(() => Deno.exit(0)),

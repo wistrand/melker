@@ -10,9 +10,9 @@
     client-id="${OAUTH_CLIENT_ID}"
     audience="${OAUTH_AUDIENCE}"
     auto-login="true"
-    onLogin="$melker.onLoginCallback()"
-    onLogout="$melker.onLogoutCallback()"
-    onFail="$melker.onFailCallback(error)"
+    onLogin="$app.onLoginCallback()"
+    onLogout="$app.onLogoutCallback()"
+    onFail="$app.onFailCallback(error)"
     debugServer="{OAUTH_DEBUG_SERVER:-true}"
   />
 
@@ -26,10 +26,10 @@
     </container>
 
     <container style="display: flex; flex-direction: row; gap: 2; flex: 0 0 auto; border: thin">
-      <button id="btn-login"   title="Login"   onClick="$melker.onLogin()" />
-      <button id="btn-refresh" title="Refresh" onClick="$melker.onRefresh()" disabled="true" />
-      <button id="btn-logout"  title="Logout"  onClick="$melker.onLogout()"  disabled="true" />
-      <button id="btn-quit"    title="Quit"    onClick="$melker.quit()" />
+      <button id="btn-login"   title="Login"   onClick="$app.onLogin()" />
+      <button id="btn-refresh" title="Refresh" onClick="$app.onRefresh()" disabled="true" />
+      <button id="btn-logout"  title="Logout"  onClick="$app.onLogout()"  disabled="true" />
+      <button id="btn-quit"    title="Quit"    onClick="$melker.exit()" />
     </container>
   </container>
 
@@ -68,23 +68,23 @@
     }
 
     // Callbacks referenced by <oauth> element
-    function onLoginCallback() {
+    export function onLoginCallback() {
       showStatus('Logged in');
       updateUI(true);
     }
 
-    function onLogoutCallback() {
+    export function onLogoutCallback() {
       showStatus('Logged out');
       updateUI(false);
     }
 
-    function onFailCallback(error: Error) {
+    export function onFailCallback(error: Error) {
       showError(error.message);
       updateUI(false);
     }
 
     // Button handlers
-    async function onLogin() {
+    export async function onLogin() {
       showStatus('Opening browser...');
       try {
         await oauth.login();
@@ -93,7 +93,7 @@
       }
     }
 
-    async function onRefresh() {
+    export async function onRefresh() {
       showStatus('Refreshing token...');
       try {
         await oauth.refresh();
@@ -102,7 +102,7 @@
       }
     }
 
-    async function onLogout() {
+    export async function onLogout() {
       try {
         await oauth.logoutSession();
       } catch (err) {
@@ -110,6 +110,5 @@
       }
     }
 
-    exports = { onLogin, onRefresh, onLogout, onLoginCallback, onLogoutCallback, onFailCallback };
   </script>
 </melker>

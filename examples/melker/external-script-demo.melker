@@ -18,7 +18,7 @@
         placeholder="Enter your name"
         onInput="
           const statusEl = $melker.getElementById('status');
-          const validation = $melker.validateInput(event.value, {
+          const validation = $app.validateInput(event.value, {
             minLength: 2,
             maxLength: 20,
             required: true
@@ -28,7 +28,7 @@
             statusEl.props.text = 'Status: ' + validation;
             statusEl.props.style = { ...statusEl.props.style, color: 'red' };
           } else {
-            statusEl.props.text = $melker.createStatusMessage('Valid name entered');
+            statusEl.props.text = $app.createStatusMessage('Valid name entered');
             statusEl.props.style = { ...statusEl.props.style, color: 'green' };
           }
           $melker.render();
@@ -45,12 +45,12 @@
           const outputEl = $melker.getElementById('output');
           const name = nameEl ? nameEl.props.value || 'World' : 'World';
 
-          const validation = $melker.validateInput(name, { minLength: 2, required: true });
+          const validation = $app.validateInput(name, { minLength: 2, required: true });
           if (validation) {
-            outputEl.props.text = '❌ ' + validation;
+            outputEl.props.text = 'Error: ' + validation;
             outputEl.props.style = { ...outputEl.props.style, color: 'red' };
           } else {
-            outputEl.props.text = $melker.formatGreeting(name);
+            outputEl.props.text = $app.formatGreeting(name);
             outputEl.props.style = { ...outputEl.props.style, color: 'green' };
           }
           $melker.render();
@@ -62,8 +62,8 @@
         style="background-color: blue; color: white;"
         onClick="
           const outputEl = $melker.getElementById('output');
-          const randomColor = $melker.getRandomColor();
-          outputEl.props.text = '🎨 Random color: ' + randomColor;
+          const randomColor = $app.getRandomColor();
+          outputEl.props.text = 'Random color: ' + randomColor;
           outputEl.props.style = { ...outputEl.props.style, color: randomColor };
           $melker.render();
         "
@@ -74,9 +74,9 @@
         style="background-color: purple; color: white;"
         onClick="
           const outputEl = $melker.getElementById('output');
-          const timeOfDay = $melker.getTimeOfDay();
-          const emoji = $melker.getTimeEmoji(timeOfDay);
-          outputEl.props.text = emoji + ' Current time: ' + $melker.getCurrentTimestamp();
+          const timeOfDay = $app.getTimeOfDay();
+          const emoji = $app.getTimeEmoji(timeOfDay);
+          outputEl.props.text = emoji + ' Current time: ' + $app.getCurrentTimestamp();
           outputEl.props.style = { ...outputEl.props.style, color: 'blue' };
           $melker.render();
         "

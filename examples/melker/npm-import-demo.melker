@@ -11,10 +11,10 @@
 
   <container style="display: flex; flex-direction: column; gap: 1; margin-top: 1; padding: 1; border: single">
     <text text="Current Time:" style="bold: true" />
-    <text id="time" text="${state.formattedTime}" style="color: green" />
+    <text id="time" text="${$app.state.formattedTime}" style="color: green" />
 
     <text text="Formatted Date:" style="bold: true; margin-top: 1" />
-    <text id="date" text="${state.formattedDate}" style="color: yellow" />
+    <text id="date" text="${$app.state.formattedDate}" style="color: yellow" />
   </container>
 
   <container style="display: flex; flex-direction: column; gap: 1; margin-top: 1; padding: 1; border: single">
@@ -27,12 +27,12 @@
 
     <container style="display: flex; flex-direction: row; gap: 1">
       <text text="Time since birth:" />
-      <text id="age" text="${state.age}" style="color: green" />
+      <text id="age" text="${$app.state.age}" style="color: green" />
     </container>
 
     <container style="display: flex; flex-direction: row; gap: 1">
       <text text="Relative:" />
-      <text id="timeAgo" text="${state.timeAgo}" style="color: yellow" />
+      <text id="timeAgo" text="${$app.state.timeAgo}" style="color: yellow" />
     </container>
   </container>
 

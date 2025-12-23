@@ -68,7 +68,7 @@ function showToast(message, color = 'green') {
 }
 
 // Create a new draft
-function createDraft() {
+export function createDraft() {
   $melker.logger?.info('User creating new procrastination draft', {
     action: 'create_draft',
     timestamp: new Date().toISOString()
@@ -131,7 +131,7 @@ function createDraft() {
 }
 
 // Snooze a draft
-function snoozeDraft(draftId, minutes) {
+export function snoozeDraft(draftId, minutes) {
   const draft = drafts.find(d => d.id === draftId);
   if (!draft) {
     $melker.logger?.warn('Snooze failed - draft not found', {
@@ -180,7 +180,7 @@ function snoozeDraft(draftId, minutes) {
 }
 
 // Give up on a draft
-function giveUpDraft(draftId) {
+export function giveUpDraft(draftId) {
   const draftIndex = drafts.findIndex(d => d.id === draftId);
   if (draftIndex === -1) {
     $melker.logger?.warn('Give up failed - draft not found', {
@@ -444,12 +444,6 @@ $melker.engine.onMount(() => {
   }, 'ProcrastinateApp');
 });
 
-// Export functions to be available in context
-exports = {
-  createDraft,
-  snoozeDraft,
-  giveUpDraft
-};
   </script>
 
   <container style="border: thin; border-color: magenta; width: fill; height: fill; display: flex; flex-direction: column; background-color: blue; color: white;">
@@ -481,7 +475,7 @@ exports = {
 
         <button id="create-draft-btn" title="Create Draft"
                 style="background-color: magenta; color: white; border: thin; border-color: brightMagenta; padding: 1; margin-bottom: 1;"
-                onClick="$melker.createDraft()" />
+                onClick="$app.createDraft()" />
 
         <text text="Tip: Default deadline is 1hr from now" style="color: gray; font-size: small; margin-bottom: 1;" />
 

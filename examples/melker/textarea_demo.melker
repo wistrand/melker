@@ -53,7 +53,7 @@
     <button
       title="Quit"
       style="width: 10; height: 3; border: thin;"
-      onClick="$melker.quit()"
+      onClick="$melker.exit()"
     />
   </container>
 </container>

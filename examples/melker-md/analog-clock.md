@@ -121,7 +121,7 @@ Non-style properties for the canvas element:
   "@target": "#clockCanvas",
   "width": 60,
   "height": 20,
-  "onPaint": "drawClock(event.canvas)"
+  "onPaint": "$app.drawClock(event.canvas)"
 }
 ```
 
@@ -222,7 +222,7 @@ $melker.engine.onMount(() => {
   }
 });
 
-exports = { drawClock };
+export { drawClock };
 ```
 
 ## Syntax Reference

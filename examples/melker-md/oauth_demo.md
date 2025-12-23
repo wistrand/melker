@@ -10,9 +10,9 @@ OAuth configuration loaded from .env.local (see .env.local.example).
   "clientId": "${OAUTH_CLIENT_ID}",
   "audience": "${OAUTH_AUDIENCE}",
   "autoLogin": true,
-  "onLogin": "$melker.onLoginCallback()",
-  "onLogout": "$melker.onLogoutCallback()",
-  "onFail": "$melker.onFailCallback(error)",
+  "onLogin": "$app.onLoginCallback()",
+  "onLogout": "$app.onLogoutCallback()",
+  "onFail": "$app.onFailCallback(error)",
   "debugServer": "${OAUTH_DEBUG_SERVER:-true}"
 }
 ```
@@ -93,35 +93,35 @@ Button row.
 ```
 
 ```melker-block
-+--btn-login-----------------------+
-| type: button                     |
-| title: Login                     |
-| onClick: onLogin()       |
-+----------------------------------+
++--btn-login------------------------+
+| type: button                      |
+| title: Login                      |
+| onClick: $app.onLogin()|
++-----------------------------------+
 ```
 
 ```melker-block
-+--btn-refresh-----------------------+
-| type: button                       |
-| title: Refresh                     |
-| onClick: onRefresh()       |
-| disabled: true                     |
-+------------------------------------+
++--btn-refresh------------------------+
+| type: button                        |
+| title: Refresh                      |
+| onClick: $app.onRefresh()|
+| disabled: true                      |
++-------------------------------------+
 ```
 
 ```melker-block
-+--btn-logout------------------------+
-| type: button                       |
-| title: Logout                      |
-| onClick: onLogout()        |
-| disabled: true                     |
-+------------------------------------+
++--btn-logout-------------------------+
+| type: button                        |
+| title: Logout                       |
+| onClick: $app.onLogout() |
+| disabled: true                      |
++-------------------------------------+
 ```
 
 ```melker-block
 +--btn-quit--------------------------+
 | type: button                       |
 | title: Quit                        |
-| onClick: $melker.quit()            |
+| onClick: $melker.exit()            |
 +------------------------------------+
 ```

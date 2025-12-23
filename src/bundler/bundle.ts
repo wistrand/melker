@@ -68,13 +68,26 @@ export async function bundle(
   logger.debug('Created temp directory', { tempDir, sourceFile });
 
   try {
-    // Write generated TypeScript to temp file
+    // Write script module files first (inline scripts as separate modules)
+    for (const module of generated.scriptModules) {
+      const modulePath = `${tempDir}/${module.filename}`;
+      await Deno.writeTextFile(modulePath, module.content);
+      logger.debug('Wrote script module', {
+        path: modulePath,
+        filename: module.filename,
+        originalLine: module.originalLine,
+        bytes: module.content.length,
+      });
+    }
+
+    // Write generated TypeScript entry point
     await Deno.writeTextFile(sourceFile, generated.code);
     // Also save a debug copy for inspection
     await Deno.writeTextFile('/tmp/melker-generated.ts', generated.code);
     logger.debug('Wrote generated TypeScript to temp file', {
       path: sourceFile,
       bytes: generated.code.length,
+      scriptModules: generated.scriptModules.length,
     });
 
     // Call Deno.bundle()

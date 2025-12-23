@@ -1,15 +1,15 @@
 <melker>
   <script type="typescript">
     // Helper functions to be available in the context
-    const formatMessage = (name) => {
+    export const formatMessage = (name) => {
       return `🌟 Hello, ${name}! Welcome to Melker with scripts!`;
     };
 
-    const getCurrentTime = () => {
+    export const getCurrentTime = () => {
       return new Date().toLocaleTimeString();
     };
 
-    const validateName = (name) => {
+    export const validateName = (name) => {
       if (!name || name.trim().length === 0) {
         return 'Please enter a valid name';
       }
@@ -17,13 +17,6 @@
         return 'Name must be at least 2 characters long';
       }
       return null;
-    };
-
-    // Export functions to be available in context
-    exports = {
-      formatMessage,
-      getCurrentTime,
-      validateName
     };
   </script>
 
@@ -44,13 +37,13 @@
         placeholder="Enter your name"
         onInput="
           const statusEl = $melker.getElementById('status');
-          const validation = $melker.validateName(event.value);
+          const validation = $app.validateName(event.value);
 
           if (validation) {
             statusEl.props.text = 'Status: ' + validation;
             statusEl.props.style = { ...statusEl.props.style, color: 'red' };
           } else {
-            statusEl.props.text = 'Status: Valid name - ' + $melker.getCurrentTime();
+            statusEl.props.text = 'Status: Valid name - ' + $app.getCurrentTime();
             statusEl.props.style = { ...statusEl.props.style, color: 'green' };
           }
           $melker.render();
@@ -67,12 +60,12 @@
           const outputEl = $melker.getElementById('output');
           const name = nameEl ? nameEl.props.value || 'World' : 'World';
 
-          const validation = $melker.validateName(name);
+          const validation = $app.validateName(name);
           if (validation) {
             outputEl.props.text = '❌ ' + validation;
             outputEl.props.style = { ...outputEl.props.style, color: 'red' };
           } else {
-            outputEl.props.text = $melker.formatMessage(name);
+            outputEl.props.text = $app.formatMessage(name);
             outputEl.props.style = { ...outputEl.props.style, color: 'green' };
           }
           $melker.render();
@@ -84,7 +77,7 @@
         style="margin-right: 2; background-color: blue; color: white;"
         onClick="
           const outputEl = $melker.getElementById('output');
-          outputEl.props.text = '⏰ Current time: ' + $melker.getCurrentTime();
+          outputEl.props.text = '⏰ Current time: ' + $app.getCurrentTime();
           outputEl.props.style = { ...outputEl.props.style, color: 'blue' };
           $melker.render();
         "

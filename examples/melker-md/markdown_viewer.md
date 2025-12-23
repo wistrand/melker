@@ -125,7 +125,7 @@ Markdown element loads the file and handles link clicks:
 {
   "@target": "#markdown-content",
   "src": "${argv[1]:-README.md}",
-  "onLink": "handleLink(event)",
+  "onLink": "$app.handleLink(event)",
   "style": "text-wrap: wrap"
 }
 ```
@@ -137,12 +137,12 @@ These call functions defined in the script section.
 
 ```typescript
 // @melker handler #back.onClick
-goBack();
+$app.goBack();
 ```
 
 ```typescript
 // @melker handler #fwd.onClick
-goForward();
+$app.goForward();
 ```
 
 ```typescript
@@ -153,7 +153,7 @@ $melker.exit();
 ## Script
 
 Global application logic using `// @melker script` directive.
-Functions are exported via `exports = { ... }` to be accessible from handlers.
+Functions are exported via `export { ... }` to be accessible from handlers via `$app`.
 
 ```typescript
 // @melker script
@@ -227,7 +227,7 @@ function goForward() {
   }
 }
 
-exports = { handleLink, goBack, goForward };
+export { handleLink, goBack, goForward };
 ```
 
 ## Syntax Reference

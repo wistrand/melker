@@ -255,7 +255,7 @@ Use standard `typescript` (or `ts`, `javascript`, `js`) code blocks with directi
 // @melker script
 let count = 0;
 function update() { ... }
-exports = { update };
+export { update };  // Accessible as $app.update()
 ```
 ````
 
@@ -344,9 +344,9 @@ Use a `json oauth` fenced block for OAuth2 PKCE configuration:
   "clientId": "${OAUTH_CLIENT_ID}",
   "audience": "${OAUTH_AUDIENCE}",
   "autoLogin": true,
-  "onLogin": "$melker.onLoginCallback()",
-  "onLogout": "$melker.onLogoutCallback()",
-  "onFail": "$melker.onFailCallback(error)"
+  "onLogin": "$app.onLoginCallback()",
+  "onLogout": "$app.onLogoutCallback()",
+  "onFail": "$app.onFailCallback(error)"
 }
 ```
 ````

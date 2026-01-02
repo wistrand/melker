@@ -33,6 +33,9 @@ export type {
   BundleResult,
   AssembledMelker,
   MelkerRegistry,
+  ExecuteBundleResult,
+  OAuthAction,
+  OAuthEvent,
   CacheEntry,
   TranslatedFrame,
   TranslatedError,
@@ -73,6 +76,7 @@ import type {
   AssembledMelker,
   BundleOptions,
   MelkerRegistry,
+  ExecuteBundleResult,
 } from './types.ts';
 import { generate, rewriteHandlers } from './generator.ts';
 import { bundle, requiresBundling } from './bundle.ts';
@@ -167,6 +171,14 @@ export async function processMelkerBundle(
     bundleSourceMap: bundled.sourceMap,
     originalContent: parsed.originalContent,
     sourceUrl: parsed.sourceUrl,
+    bundleTempDir: bundled.tempDir,
+    metadata: {
+      generatedLines: generated.code.split('\n').length,
+      generatedPreview: generated.code.substring(0, 200).replace(/\n/g, '\\n'),
+      scriptsCount: parsed.scripts.length,
+      handlersCount: parsed.handlers.length,
+      generatedFile: bundled.generatedFile,
+    },
   };
 
   // Save to cache (only if explicitly enabled)
@@ -199,12 +211,12 @@ export async function processMelkerBundle(
  *
  * @param assembled - The assembled bundle
  * @param context - The Melker runtime context
- * @returns The __melker registry
+ * @returns The registry and bundle file path
  */
 export async function executeBundle(
   assembled: AssembledMelker,
   context: Record<string, unknown>
-): Promise<MelkerRegistry> {
+): Promise<ExecuteBundleResult> {
   logger.debug('Executing bundled code', {
     sourceUrl: assembled.sourceUrl,
     codeLength: assembled.bundledCode.length,
@@ -218,23 +230,13 @@ export async function executeBundle(
     assembled.sourceUrl
   );
 
-  // Check if we should retain bundle files for debugging (set MELKER_RETAIN_BUNDLE=true)
-  const retainBundle = Deno.env.get('MELKER_RETAIN_BUNDLE') === 'true' || Deno.env.get('MELKER_RETAIN_BUNDLE') === '1';
-
-  // Create temp directory for bundle
-  const tempDir = await Deno.makeTempDir({ prefix: 'melker-bundle-' });
+  // Use the bundle temp dir for the executable bundle.js
+  // If no bundleTempDir (e.g., from cache), create one
+  const tempDir = assembled.bundleTempDir ?? await Deno.makeTempDir({ prefix: 'melker-bundle-' });
   const bundleFile = `${tempDir}/bundle.js`;
 
-  // Register cleanup handler if not retaining
-  if (!retainBundle) {
-    globalThis.addEventListener('unload', () => {
-      try {
-        Deno.removeSync(tempDir, { recursive: true });
-      } catch {
-        // Ignore cleanup errors
-      }
-    });
-  }
+  // Single temp directory for cleanup
+  const tempDirs: string[] = [tempDir];
 
   try {
     // The bundled code is an ES module, so we need to execute it via import()
@@ -247,6 +249,7 @@ export async function executeBundle(
 
     // Write bundled code to temp file
     await Deno.writeTextFile(bundleFile, assembled.bundledCode);
+    const retainBundle = Deno.env.get('MELKER_RETAIN_BUNDLE') === 'true' || Deno.env.get('MELKER_RETAIN_BUNDLE') === '1';
     logger.info(`Bundled code written to: ${bundleFile}${retainBundle ? ' (MELKER_RETAIN_BUNDLE=true, will be retained)' : ''}`);
 
     // Import the bundled module
@@ -272,7 +275,7 @@ export async function executeBundle(
       logger.debug('__init completed');
     }
 
-    return registry;
+    return { registry, bundleFile, tempDirs };
   } catch (error) {
     // CRITICAL: Always restore terminal and show error - never fail silently
     restoreTerminal();

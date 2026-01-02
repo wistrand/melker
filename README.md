@@ -1,8 +1,10 @@
 # Melker
 
-A modern **Deno** library for creating rich Terminal UI interfaces using HTML-like `.melker` files or TypeScript.
+*Run text with meaning*
 
-**Requirements:** Deno >= 2.4.0 (Node.js and Bun are not supported)
+A modern **Deno** runtime and library for creating rich Terminal UI interfaces using HTML-like `.melker` files or TypeScript.
+
+**Requirements:** Deno >= 2.5.0 (Node.js and Bun are not supported)
 
 ## Quick Start with .melker Files
 
@@ -18,17 +20,17 @@ Create a file `hello.melker`:
 
 Run it:
 ```bash
-deno run --unstable-bundle --allow-all melker.ts hello.melker
+deno run --allow-all melker.ts hello.melker
 ```
 
 <img src="docs/hello_screenshot.png" alt="Hello World Screenshot" />
 
 Or run directly from GitHub without installing:
 ```bash
-deno run --unstable-bundle --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts hello.melker
+deno run --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts hello.melker
 
 # Or run the markdown viewer with any markdown file:
-deno run --unstable-bundle --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts \
+deno run --allow-all https://raw.githubusercontent.com/wistrand/melker/main/melker.ts \
   https://raw.githubusercontent.com/wistrand/melker/main/examples/melker/markdown_viewer.melker \
   README.md
 ```
@@ -118,13 +120,61 @@ That's it! No build step, no compilation - just write HTML-like markup and run.
 </melker>
 ```
 
+### Policy System
+
+.melker files can embed a `<policy>` tag to declare required Deno permissions:
+
+```html
+<melker>
+  <policy>
+  {
+    "name": "My App",
+    "description": "App description",
+    "permissions": {
+      "read": ["./data"],
+      "write": ["./output"],
+      "net": ["api.example.com"],
+      "env": ["API_KEY"]
+    }
+  }
+  </policy>
+  <!-- ... UI markup ... -->
+</melker>
+```
+
+**Shortcut permissions:**
+- `"all": true` - Equivalent to `--allow-all`
+- `"ai": true` - Adds AI/media tools: swift, ffmpeg, ffprobe, pactl, ffplay + openrouter.ai
+- `"clipboard": true` - Adds clipboard commands: pbcopy, xclip, xsel, wl-copy, clip.exe
+- `"keyring": true` - Adds credential storage: security, secret-tool, powershell
+- `"browser": true` - Adds browser opening: open, xdg-open, cmd
+
+**OAuth auto-permissions:** When an `<oauth>` tag is present, the policy automatically includes:
+- `localhost` in net permissions (callback server)
+- `browser: true` (authorization URL)
+- All hosts from the wellknown endpoint
+
+**Environment variables in policy:** Use `${VAR}` or `${VAR:-default}` syntax in policy JSON.
+
+**External policy file:**
+```html
+<policy src="./policy.json"></policy>
+```
+
+**View policy before running:**
+```bash
+deno run --allow-all melker.ts --show-policy app.melker
+```
+
+When no policy is embedded, an auto-policy with `all: true` is used. The policy is visible in the F12 View Source dialog's Policy tab.
+
 ### Load from URL
 ```bash
 # Serve files locally
 deno run --allow-net --allow-read serve.ts examples/melker --port 1990
 
 # Run from URL
-deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/counter.melker
 ```
 
 ## Features
@@ -363,6 +413,22 @@ The clipboard feature requires a platform-specific command-line tool:
 | WSL2 | `clip.exe` | Pre-installed |
 
 ## Advanced Styling
+
+### Border Styles
+
+Available border styles using Unicode Box Drawing characters:
+
+| Style | Description | Example |
+|-------|-------------|---------|
+| `none` | No border | |
+| `thin` | Single line (default) | `┌───┐` |
+| `thick` | Heavy/bold line | `┏━━━┓` |
+| `double` | Double line | `╔═══╗` |
+| `rounded` | Rounded corners | `╭───╮` |
+| `dashed` | Dashed line | `┌┄┄┄┐` |
+| `dashed-rounded` | Dashed with rounded corners | `╭┄┄┄╮` |
+| `ascii` | ASCII compatible | `+---+` |
+| `ascii-rounded` | ASCII with dot corners | `·---·` |
 
 ### Individual Border Control
 ```typescript
@@ -611,14 +677,14 @@ See `examples/` directory for complete demos:
 
 ### Running Examples
 ```bash
-# Run .melker file (requires --unstable-bundle for npm/jsr imports)
-deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
+# Run .melker file
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # Pass arguments to .melker file (available as ${argv[1]}, ${argv[2]}, etc.)
-deno run --unstable-bundle --allow-all melker.ts examples/melker/markdown_viewer.melker README.md
+deno run --allow-all melker.ts examples/melker/markdown_viewer.melker README.md
 
 # Run .melker from URL
-deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # Run TypeScript example
 deno run --allow-all examples/ts/minimal_example.ts

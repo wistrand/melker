@@ -9,6 +9,7 @@ export interface UIContext {
   focusedElement: string;
   elementTree: string;
   availableActions: string[];
+  selectedText?: string;
 }
 
 /**
@@ -338,6 +339,7 @@ export function hashContext(context: UIContext): string {
     context.screenContent,
     context.focusedElement,
     context.elementTree,
+    context.selectedText || '',
   ].join('|');
 
   // Simple hash function
@@ -354,8 +356,9 @@ export function hashContext(context: UIContext): string {
  * Build complete UI context for the AI
  * @param document The Melker document
  * @param excludeIds IDs of elements to exclude (e.g., the accessibility dialog)
+ * @param selectedText Currently selected text in the UI (if any)
  */
-export function buildContext(document: Document, excludeIds: string[] = []): UIContext {
+export function buildContext(document: Document, excludeIds: string[] = [], selectedText?: string): UIContext {
   const excludeSet = new Set(excludeIds);
 
   return {
@@ -363,6 +366,7 @@ export function buildContext(document: Document, excludeIds: string[] = []): UIC
     focusedElement: describeFocusedElement(document),
     elementTree: buildElementTree(document.root, excludeSet),
     availableActions: getAvailableActions(document),
+    selectedText: selectedText || undefined,
   };
 }
 
@@ -370,14 +374,24 @@ export function buildContext(document: Document, excludeIds: string[] = []): UIC
  * Build the system prompt for the AI
  */
 export function buildSystemPrompt(context: UIContext): string {
-  return `You are an accessibility assistant for a terminal user interface (TUI) application.
+  let prompt = `You are an accessibility assistant for a terminal user interface (TUI) application.
 The user may be visually impaired or need help understanding the current screen.
 Provide concise, helpful answers about the UI.
 
 Current screen content:
 ${context.screenContent}
 
-Currently focused: ${context.focusedElement}
+Currently focused: ${context.focusedElement}`;
+
+  // Include selected text if present
+  if (context.selectedText) {
+    prompt += `
+
+Currently selected text:
+"${context.selectedText}"`;
+  }
+
+  prompt += `
 
 UI structure:
 ${context.elementTree}
@@ -388,4 +402,6 @@ ${context.availableActions.map(a => '- ' + a).join('\n')}
 Answer the user's question about the UI concisely and helpfully.
 Focus on what they can do and how to navigate.
 Keep responses brief - typically 1-3 sentences.`;
+
+  return prompt;
 }

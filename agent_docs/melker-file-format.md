@@ -1,14 +1,16 @@
 # .melker File Format
 
+**Melker** - *Run text with meaning*
+
 The `.melker` file format is an HTML-like declarative syntax for building Melker terminal UIs.
 
 **Run with:**
 ```bash
-deno run --unstable-bundle --allow-all melker.ts <file>.melker
-deno run --unstable-bundle --allow-all melker.ts http://server/path/file.melker  # URL support
+deno run --allow-all melker.ts <file>.melker
+deno run --allow-all melker.ts http://server/path/file.melker  # URL support
 ```
 
-**Note:** The `--unstable-bundle` flag is required for Deno's `Deno.bundle()` API which handles npm/jsr imports.
+The launcher automatically adds `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
 
 ## Structure
 
@@ -41,6 +43,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<style>` | CSS-like stylesheet rules (selector { props }) |
 | `<script>` | TypeScript/JavaScript code block |
 | `<oauth>` | OAuth2 PKCE configuration |
+| `<policy>` | Permission policy declaration |
 
 ## Components
 
@@ -71,7 +74,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 CSS-like properties in `style` attribute:
 
 - **Layout:** width, height, display (flex/block), flex-direction, flex, padding, margin, overflow
-- **Borders:** border (thin/thick/double/none), border-top/right/bottom/left, border-color
+- **Borders:** border (none/thin/thick/double/rounded/dashed/dashed-rounded/ascii/ascii-rounded), border-top/right/bottom/left, border-color
 - **Colors:** color, background-color (names or hex like `#00d9ff`)
 - **Text:** font-weight (bold/normal), text-align, text-wrap
 
@@ -197,29 +200,35 @@ See `examples/melker/` for complete examples:
 ## Running
 
 ```bash
-# Basic (requires --unstable-bundle for Deno.bundle() API)
-deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
+# Simple launch (auto-detects and adds required flags)
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # From URL
-deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --unstable-bundle --allow-all melker.ts --lint examples/melker/counter.melker
+deno run --allow-all melker.ts --lint examples/melker/counter.melker
 
 # Watch mode (auto-reload on file changes, local files only)
-deno run --unstable-bundle --allow-all melker.ts --watch examples/melker/counter.melker
+deno run --allow-all melker.ts --watch examples/melker/counter.melker
 
 # Debug mode (shows bundler info, retains temp files at /tmp/melker-*.{ts,js})
-deno run --unstable-bundle --allow-all melker.ts --debug examples/melker/counter.melker
+deno run --allow-all melker.ts --debug examples/melker/counter.melker
 
 # Enable bundle caching (disabled by default)
-deno run --unstable-bundle --allow-all melker.ts --cache examples/melker/counter.melker
+deno run --allow-all melker.ts --cache examples/melker/counter.melker
+
+# Show app policy and exit
+deno run --allow-all melker.ts --show-policy examples/melker/counter.melker
+
+# Ignore policy, run with full permissions
+deno run --allow-all melker.ts --trust examples/melker/counter.melker
 
 # With logging
-MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --unstable-bundle --allow-all melker.ts app.melker
+MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --allow-all melker.ts app.melker
 
 # With theme
-MELKER_THEME=fullcolor-dark deno run --unstable-bundle --allow-all melker.ts app.melker
+MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts app.melker
 
 # Start LSP server (for editor integration)
 deno run --allow-all melker.ts --lsp
@@ -245,7 +254,7 @@ The markdown format compiles to `.melker` and provides:
 
 ```bash
 # Run directly
-deno run --unstable-bundle --allow-all melker.ts examples/melker-md/counter.md
+deno run --allow-all melker.ts examples/melker-md/counter.md
 
 # Convert to .melker format (prints to stdout)
 deno run --allow-all melker.ts --convert examples/melker-md/counter.md
@@ -407,13 +416,114 @@ Use a `json oauth` fenced block for OAuth2 PKCE configuration:
   "clientId": "${OAUTH_CLIENT_ID}",
   "audience": "${OAUTH_AUDIENCE}",
   "autoLogin": true,
-  "onLogin": "$melker.onLoginCallback()",
-  "onLogout": "$melker.onLogoutCallback()",
-  "onFail": "$melker.onFailCallback(error)"
+  "onLogin": "$app.onLoginCallback(event)",
+  "onLogout": "$app.onLogoutCallback(event)",
+  "onFail": "$app.onFailCallback(event)"
 }
 ```
 ````
 
+**OAuth Event Structure:** All OAuth callbacks receive a unified `OAuthEvent`:
+```typescript
+interface OAuthEvent {
+  type: 'oauth';
+  action: 'login' | 'logout' | 'fail';
+  error?: Error;  // Only present for 'fail' events
+}
+```
+
 See `examples/melker-md/oauth_demo.md` for a complete example.
+
+## Policy (Permission Sandboxing)
+
+Apps can declare required permissions. When a policy is found, the app runs in a subprocess with only those permissions.
+
+### Inline Policy
+
+```xml
+<melker>
+  <policy>
+  {
+    "name": "My App",
+    "description": "What the app does",
+    "permissions": {
+      "read": ["."],
+      "net": ["api.example.com"],
+      "run": ["ffmpeg"]
+    }
+  }
+  </policy>
+  <!-- UI content -->
+</melker>
+```
+
+### External Policy File
+
+```xml
+<policy src="app.policy.json"></policy>
+```
+
+### Permission Types
+
+| Permission | Example | Deno Flag |
+|------------|---------|-----------|
+| `read` | `["."]` or `["*"]` | `--allow-read` |
+| `write` | `["/data"]` or `["*"]` | `--allow-write` |
+| `net` | `["api.example.com"]` or `["*"]` | `--allow-net` |
+| `run` | `["ffmpeg", "ffprobe"]` or `["*"]` | `--allow-run` |
+| `env` | `["MY_VAR"]` or `["*"]` | `--allow-env` |
+| `ffi` | `["libfoo.so"]` or `["*"]` | `--allow-ffi` |
+
+### Permission Shortcuts
+
+| Shortcut | Description |
+|----------|-------------|
+| `ai` | AI/media: swift, ffmpeg, ffprobe, pactl, ffplay + openrouter.ai |
+| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe |
+| `keyring` | Credentials: security, secret-tool, powershell |
+| `browser` | Browser opening: open, xdg-open, cmd |
+
+```json
+{
+  "permissions": {
+    "read": ["."],
+    "ai": true,
+    "clipboard": true,
+    "keyring": true,
+    "browser": true
+  }
+}
+```
+
+### Environment Variables in Policy
+
+Use `${VAR}` or `${VAR:-default}` syntax in policy JSON:
+
+```json
+{
+  "permissions": {
+    "net": ["${API_HOST:-api.example.com}"]
+  }
+}
+```
+
+### OAuth Auto-Permissions
+
+When an `<oauth>` tag is present, the policy automatically includes:
+- `localhost` in net permissions (for callback server)
+- `browser: true` (for opening authorization URL)
+- All hosts discovered from the wellknown endpoint
+
+### CLI Options
+
+```bash
+# Show policy and exit
+deno run --allow-all melker.ts --show-policy app.melker
+
+# Ignore policy, run with full permissions
+deno run --allow-all melker.ts --trust app.melker
+```
+
+See `examples/melker/markdown_viewer.melker` and `examples/melker/video_demo.melker` for policy examples.
 
 See `examples/melker-md/` for complete examples and `examples/melker-md/README.md` for full syntax reference.

@@ -15,6 +15,8 @@ export interface DialogProps extends BaseProps {
   height?: number;
   /** Enable dragging by title bar */
   draggable?: boolean;
+  /** Enable resizing from bottom-right corner */
+  resizable?: boolean;
   /** X offset from center (set by dragging) */
   offsetX?: number;
   /** Y offset from center (set by dragging) */
@@ -31,6 +33,15 @@ export class DialogElement extends Element implements Renderable {
   private _dragStartY = 0;
   private _dragStartOffsetX = 0;
   private _dragStartOffsetY = 0;
+  // Resize state
+  private _isResizing = false;
+  private _resizeStartX = 0;
+  private _resizeStartY = 0;
+  private _resizeStartWidth = 0;
+  private _resizeStartHeight = 0;
+  // Fixed top-left position during resize (absolute screen coordinates)
+  private _resizeFixedTopLeftX = 0;
+  private _resizeFixedTopLeftY = 0;
   // Last calculated dialog bounds (for title bar hit testing)
   private _lastDialogBounds: Bounds | null = null;
   private _lastViewportBounds: Bounds | null = null;
@@ -42,6 +53,7 @@ export class DialogElement extends Element implements Renderable {
       open: false,
       disabled: false,
       draggable: false,
+      resizable: false,
       offsetX: 0,
       offsetY: 0,
       ...props,
@@ -134,6 +146,92 @@ export class DialogElement extends Element implements Renderable {
    */
   isDragging(): boolean {
     return this._isDragging;
+  }
+
+  /**
+   * Check if a point is on the resize corner (bottom-right)
+   */
+  isOnResizeCorner(x: number, y: number): boolean {
+    if (!this.props.resizable || !this._lastDialogBounds) {
+      return false;
+    }
+    const bounds = this._lastDialogBounds;
+    // Resize corner is the bottom-right corner (2x1 area)
+    return (
+      y === bounds.y + bounds.height - 1 &&
+      x >= bounds.x + bounds.width - 3 &&
+      x <= bounds.x + bounds.width - 1
+    );
+  }
+
+  /**
+   * Start resizing the dialog
+   */
+  startResize(mouseX: number, mouseY: number): void {
+    if (!this.props.resizable || !this._lastDialogBounds) return;
+    this._isResizing = true;
+    this._resizeStartX = mouseX;
+    this._resizeStartY = mouseY;
+    this._resizeStartWidth = this._lastDialogBounds.width;
+    this._resizeStartHeight = this._lastDialogBounds.height;
+    // Store the current top-left position to keep it fixed during resize
+    this._resizeFixedTopLeftX = this._lastDialogBounds.x;
+    this._resizeFixedTopLeftY = this._lastDialogBounds.y;
+  }
+
+  /**
+   * Update resize dimensions
+   */
+  updateResize(mouseX: number, mouseY: number): boolean {
+    if (!this._isResizing || !this._lastViewportBounds) return false;
+
+    const deltaX = mouseX - this._resizeStartX;
+    const deltaY = mouseY - this._resizeStartY;
+
+    // Calculate new dimensions
+    let newWidth = this._resizeStartWidth + deltaX;
+    let newHeight = this._resizeStartHeight + deltaY;
+
+    // Minimum size constraints
+    const minWidth = 20;
+    const minHeight = 8;
+
+    // Maximum size constraints (viewport bounds)
+    const vp = this._lastViewportBounds;
+    const maxWidth = vp.width - 4;
+    const maxHeight = vp.height - 4;
+
+    newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+    newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+
+    // Calculate offset to keep top-left corner at fixed position
+    // Dialog position formula: dialogX = vpX + floor((vpWidth - dialogWidth) / 2) + offsetX
+    // We want dialogX = fixedTopLeftX, so:
+    // offsetX = fixedTopLeftX - vpX - floor((vpWidth - newWidth) / 2)
+    const centerBasedX = Math.floor((vp.width - newWidth) / 2);
+    const centerBasedY = Math.floor((vp.height - newHeight) / 2);
+    this.props.offsetX = this._resizeFixedTopLeftX - vp.x - centerBasedX;
+    this.props.offsetY = this._resizeFixedTopLeftY - vp.y - centerBasedY;
+
+    // Update props with absolute values (not percentages)
+    this.props.width = newWidth;
+    this.props.height = newHeight;
+
+    return true;
+  }
+
+  /**
+   * End resizing
+   */
+  endResize(): void {
+    this._isResizing = false;
+  }
+
+  /**
+   * Check if currently resizing
+   */
+  isResizing(): boolean {
+    return this._isResizing;
   }
 
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
@@ -286,7 +384,13 @@ export class DialogElement extends Element implements Renderable {
     buffer.currentBuffer.setCell(bounds.x, bounds.y, { ...borderStyle, char: '┌' });
     buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y, { ...borderStyle, char: '┐' });
     buffer.currentBuffer.setCell(bounds.x, bounds.y + bounds.height - 1, { ...borderStyle, char: '└' });
-    buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { ...borderStyle, char: '┘' });
+
+    // Bottom-right corner: show resize indicator if resizable
+    if (this.props.resizable) {
+      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { ...borderStyle, char: '┛' });
+    } else {
+      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { ...borderStyle, char: '┘' });
+    }
 
     // Draw horizontal borders
     for (let x = bounds.x + 1; x < bounds.x + bounds.width - 1; x++) {
@@ -322,6 +426,8 @@ export const dialogSchema: ComponentSchema = {
     modal: { type: 'boolean', description: 'Block interaction with background' },
     backdrop: { type: 'boolean', description: 'Show dimmed background' },
     open: { type: 'boolean', description: 'Whether dialog is visible' },
+    draggable: { type: 'boolean', description: 'Enable dragging by title bar' },
+    resizable: { type: 'boolean', description: 'Enable resizing from bottom-right corner' },
   },
 };
 

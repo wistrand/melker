@@ -480,12 +480,19 @@ export function rewriteHandlers(template: string, handlers: ParsedHandler[]): st
     return template;
   }
 
-  logger.debug('Rewriting handlers in template', { handlerCount: handlers.length });
+  // Filter out OAuth handlers - they're not in the template (they're in <oauth> tag)
+  const templateHandlers = handlers.filter((h) => !h.id.startsWith('__oauth_'));
+
+  if (templateHandlers.length === 0) {
+    return template;
+  }
+
+  logger.debug('Rewriting handlers in template', { handlerCount: templateHandlers.length });
 
   let result = template;
 
   // Process in reverse offset order so earlier positions don't shift
-  const sorted = [...handlers].sort(
+  const sorted = [...templateHandlers].sort(
     (a, b) => b.attributeRange.start.offset - a.attributeRange.start.offset
   );
 

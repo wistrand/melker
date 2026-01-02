@@ -167,8 +167,18 @@ export async function bundle(
       code,
       sourceMap,
       warnings: [],
+      generatedFile: sourceFile,
+      tempDir,
     };
   } catch (error) {
+    // Clean up temp directory on error
+    try {
+      await Deno.remove(tempDir, { recursive: true });
+      logger.debug('Cleaned up temp directory after error', { tempDir });
+    } catch {
+      // Ignore cleanup errors
+    }
+
     // Parse the error for better display
     const parsed = parseBundleError(error, generated);
 
@@ -188,17 +198,6 @@ export async function bundle(
       }
     );
     throw new Error('unreachable');
-  } finally {
-    // Clean up temp directory
-    try {
-      await Deno.remove(tempDir, { recursive: true });
-      logger.debug('Cleaned up temp directory', { tempDir });
-    } catch (cleanupError) {
-      logger.warn('Failed to clean up temp directory', {
-        path: tempDir,
-        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-      });
-    }
   }
 }
 

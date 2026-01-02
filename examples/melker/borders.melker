@@ -1,0 +1,77 @@
+<melker>
+  <container style="display: flex; flex-direction: row; padding: 1; gap: 2">
+    <!-- Column 1: Basic styles -->
+    <container style="display: flex; flex-direction: column; gap: 1;">
+      <text style="font-weight: bold">Basic Borders</text>
+
+      <container style="border: thin; width: 22; height: 3; padding-left: 1">
+        <text>thin (default)</text>
+      </container>
+
+      <container style="border: thick; width: 22; height: 3; padding-left: 1">
+        <text>thick</text>
+      </container>
+
+      <container style="border: double; width: 22; height: 3; padding-left: 1">
+        <text>double</text>
+      </container>
+
+      <container style="border: rounded; width: 22; height: 3; padding-left: 1">
+        <text>rounded</text>
+      </container>
+
+      <container style="border: dashed; width: 22; height: 3; padding-left: 1">
+        <text>dashed</text>
+      </container>
+
+      <container style="border: dashed-rounded; width: 22; height: 3; padding-left: 1">
+        <text>dashed-rounded</text>
+      </container>
+
+      <container style="border: ascii; width: 22; height: 3; padding-left: 1">
+        <text>ascii</text>
+      </container>
+
+      <container style="border: ascii-rounded; width: 22; height: 3; padding-left: 1">
+        <text>ascii-rounded</text>
+      </container>
+    </container>
+
+    <!-- Column 2: With colors -->
+    <container style="display: flex; flex-direction: column; gap: 1; width: 24">
+      <text style="font-weight: bold">With Colors</text>
+
+      <container style="border: thin; border-color: cyan; width: 22; height: 3; padding-left: 1">
+        <text style="color: cyan">cyan thin</text>
+      </container>
+
+      <container style="border: thick; border-color: green; width: 22; height: 3; padding-left: 1">
+        <text style="color: green">green thick</text>
+      </container>
+
+      <container style="border: double; border-color: yellow; width: 22; height: 3; padding-left: 1">
+        <text style="color: yellow">yellow double</text>
+      </container>
+
+      <container style="border: rounded; border-color: magenta; width: 22; height: 3; padding-left: 1">
+        <text style="color: magenta">magenta rounded</text>
+      </container>
+
+      <container style="border: dashed; border-color: red; width: 22; height: 3; padding-left: 1">
+        <text style="color: red">red dashed</text>
+      </container>
+
+      <container style="border: dashed-rounded; border-color: white; width: 22; height: 3; padding-left: 1">
+        <text style="color: white">white dashed-rounded</text>
+      </container>
+
+      <container style="border: ascii; border-color: blue; width: 22; height: 3; padding-left: 1">
+        <text style="color: blue">blue ascii</text>
+      </container>
+
+      <container style="border: ascii-rounded; border-color: gray; width: 22; height: 3; padding-left: 1">
+        <text style="color: gray">gray ascii-rounded</text>
+      </container>
+    </container>
+  </container>
+</melker>

@@ -25,6 +25,7 @@ export interface AccessibilityDialogDependencies {
   autoRender: boolean;
   exitProgram?: () => void | Promise<void>;
   scrollToBottom?: (containerId: string) => void;
+  getSelectedText?: () => string | undefined;
 }
 
 // IDs used by the accessibility dialog (to exclude from context)
@@ -231,6 +232,7 @@ export class AccessibilityDialogManager {
         modal=${true}
         backdrop=${false}
         draggable=${true}
+        resizable=${true}
         width=${70}
         height=${20}
         style="position: fixed"
@@ -326,9 +328,12 @@ export class AccessibilityDialogManager {
     if (!config) return;
 
     // Build context excluding the dialog itself
+    // Include any currently selected text
+    const selectedText = this._deps.getSelectedText?.();
     const context = buildContext(
       this._deps.document,
-      AccessibilityDialogManager.getExcludeIds()
+      AccessibilityDialogManager.getExcludeIds(),
+      selectedText
     );
     const contextHash = hashContext(context);
 

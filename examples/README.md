@@ -1,5 +1,7 @@
 # Melker Examples
 
+*Run text with meaning*
+
 This directory contains focused examples demonstrating different aspects of the Melker terminal UI library.
 
 ## Directory Structure
@@ -59,11 +61,11 @@ deno run --allow-all examples/template_demo.ts
 See `examples/melker/README.md` for declarative `.melker` template examples.
 
 ```bash
-# Run a .melker file (requires --unstable-bundle for npm/jsr imports)
-deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
+# Run a .melker file
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # Run from URL
-deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 ```
 
 ## Markdown Examples (`melker-md/`)
@@ -72,10 +74,10 @@ See `examples/melker-md/README.md` for markdown files with ASCII box layouts.
 
 ```bash
 # Run a markdown file directly
-deno run --unstable-bundle --allow-all melker.ts examples/melker-md/counter.md
+deno run --allow-all melker.ts examples/melker-md/counter.md
 
 # Convert to .melker format
-deno run --unstable-bundle --allow-all melker.ts --convert examples/melker-md/counter.md
+deno run --allow-all melker.ts --convert examples/melker-md/counter.md
 ```
 
 Features external scripts (`## Scripts` section) and OAuth (`json oauth` blocks).

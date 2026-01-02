@@ -6,6 +6,7 @@ import { createElement } from './element.ts';
 import { melker } from './template.ts';
 import { Element } from './types.ts';
 import { FocusManager } from './focus.ts';
+import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy } from './policy/mod.ts';
 
 export interface ViewSourceDependencies {
   document: Document;
@@ -17,11 +18,42 @@ export interface ViewSourceDependencies {
   openAIAssistant?: () => void;
 }
 
+/** System information for the System tab */
+export interface SystemInfo {
+  // System info
+  file: string;
+  theme: string;
+  logFile: string;
+  logLevel: string;
+  denoVersion: string;
+  platform: string;
+  // Script processing
+  scriptsCount: number;
+  handlersCount: number;
+  // Generated TypeScript
+  generatedLines: number;
+  generatedPreview: string;
+  generatedFile: string;
+  // Bundle output
+  templateLines: number;
+  bundledCodeSize: number;
+  hasSourceMap: boolean;
+  bundleFile: string;
+  // Registry
+  hasInit: boolean;
+  hasReady: boolean;
+  registeredHandlers: string[];
+}
+
 export interface ViewSourceState {
   content: string;
   filePath: string;
   type: 'melker' | 'md';
   convertedContent?: string;  // For .md files: the converted .melker content
+  policy?: MelkerPolicy;      // Policy if present
+  appDir?: string;            // App directory for resolving policy paths
+  systemInfo?: SystemInfo;    // System info if available
+  helpContent?: string;       // Help text content (markdown)
 }
 
 export class ViewSourceManager {
@@ -36,8 +68,8 @@ export class ViewSourceManager {
   /**
    * Set the source content to display
    */
-  setSource(content: string, filePath: string, type: 'melker' | 'md', convertedContent?: string): void {
-    this._state = { content, filePath, type, convertedContent };
+  setSource(content: string, filePath: string, type: 'melker' | 'md', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, systemInfo?: SystemInfo, helpContent?: string): void {
+    this._state = { content, filePath, type, convertedContent, policy, appDir, systemInfo, helpContent };
   }
 
   /**
@@ -88,108 +120,148 @@ export class ViewSourceManager {
       }
     };
 
-    // For .md files with converted content, show tabs
-    if (this._state.type === 'md' && this._state.convertedContent) {
-      const markdownElement = createElement('markdown', {
-        id: 'view-source-markdown',
-        text: this._state.content,
-        src: this._state.filePath,
-      });
+    // Build tabs array in order: Help (if present), Melker, Policy (if present), Markdown (if .md file), System
+    const tabs: Element[] = [];
 
-      const melkerElement = createElement('text', {
-        id: 'view-source-melker',
-        text: this._state.convertedContent,
-      });
-
-      this._overlay = melker`
-        <dialog
-          id="view-source-dialog"
-          title="Source: ${filename}"
-          open=${true}
-          modal=${true}
-          backdrop=${true}
-          width=${0.9}
-          height=${0.85}
-        >
-          <container
-            id="view-source-main"
-            style="display: flex; flex-direction: column; width: fill; height: fill"
-          >
-            <tabs id="view-source-tabs" style="flex: 1; width: fill; height: fill">
-              <tab title="Markdown">
-                <container
-                  id="view-source-scroll-md"
-                  scrollable=${true}
-                  focusable=${true}
-                  style="flex: 1; padding: 1; overflow: scroll; width: fill; height: fill"
-                >
-                  ${markdownElement}
-                </container>
-              </tab>
-              <tab title="Melker">
-                <container
-                  id="view-source-scroll-melker"
-                  scrollable=${true}
-                  focusable=${true}
-                  style="flex: 1; padding: 1; overflow: scroll; width: fill; height: fill"
-                >
-                  ${melkerElement}
-                </container>
-              </tab>
-            </tabs>
-            <container
-              id="view-source-footer"
-              style="display: flex; flex-direction: row; justify-content: flex-end; width: fill; gap: 1"
-            >
-              <button id="view-source-ai" title="AI Assistant" onClick=${onAIAssistant} />
-              <button id="view-source-close" title="Close" onClick=${onClose} />
-            </container>
-          </container>
-        </dialog>
-      `;
-    } else {
-      // For .melker files or .md without converted content, show single view
-      const contentType = this._state.type === 'md' ? 'markdown' : 'text';
-      const contentElement = createElement(contentType, {
-        id: 'view-source-content',
-        text: this._state.content,
-        // Pass file path as src for markdown to resolve relative image paths
-        ...(this._state.type === 'md' && this._state.filePath ? { src: this._state.filePath } : {}),
-      });
-
-      this._overlay = melker`
-        <dialog
-          id="view-source-dialog"
-          title="Source: ${filename}"
-          open=${true}
-          modal=${true}
-          backdrop=${true}
-          width=${0.9}
-          height=${0.85}
-        >
-          <container
-            id="view-source-main"
-            style="display: flex; flex-direction: column; width: fill; height: fill"
-          >
-            <container
-              id="view-source-scroll"
-              scrollable=${true}
-              focusable=${true}
-              style="flex: 1; padding: 1; overflow: scroll"
-            >
-              ${contentElement}
-            </container>
-            <container
-              id="view-source-footer"
-              style="display: flex; flex-direction: row; justify-content: flex-end; width: fill; gap: 1"
-            >
-              <button id="view-source-ai" title="AI Assistant" onClick=${onAIAssistant} />
-              <button id="view-source-close" title="Close" onClick=${onClose} />
-            </container>
-          </container>
-        </dialog>
-      `;
+    // Tab 0: Help (if present)
+    if (this._state.helpContent) {
+      const helpTab = createElement('tab', { id: 'view-source-tab-help', title: 'Help' },
+        createElement('container', {
+          id: 'view-source-scroll-help',
+          scrollable: true,
+          focusable: true,
+          style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
+        },
+          createElement('markdown', {
+            id: 'view-source-help-content',
+            text: this._state.helpContent,
+            style: { textWrap: 'wrap' },
+          })
+        )
+      );
+      tabs.push(helpTab);
     }
+
+    // Tab 1: Melker source (or converted content for .md files)
+    const melkerContent = this._state.type === 'md' && this._state.convertedContent
+      ? this._state.convertedContent
+      : this._state.content;
+
+    const melkerTab = createElement('tab', { id: 'view-source-tab-melker', title: 'Source' },
+      createElement('container', {
+        id: 'view-source-scroll-melker',
+        scrollable: true,
+        focusable: true,
+        style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
+      },
+        createElement('text', {
+          id: 'view-source-melker-content',
+          text: melkerContent,
+        })
+      )
+    );
+    tabs.push(melkerTab);
+
+    // Tab 2: Policy (if present)
+    if (this._state.policy) {
+      // Format policy description
+      let policyText = formatPolicy(this._state.policy);
+
+      // Add Deno permission flags
+      const appDir = this._state.appDir || '.';
+      const denoFlags = policyToDenoFlags(this._state.policy, appDir);
+      if (denoFlags.length > 0) {
+        policyText += '\nDeno permission flags:\n';
+        policyText += formatDenoFlags(denoFlags);
+      }
+
+      const policyTab = createElement('tab', { id: 'view-source-tab-policy', title: 'Policy' },
+        createElement('container', {
+          id: 'view-source-scroll-policy',
+          scrollable: true,
+          focusable: true,
+          style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
+        },
+          createElement('text', {
+            id: 'view-source-policy-content',
+            text: policyText,
+            style: { textWrap: 'wrap' },
+          })
+        )
+      );
+      tabs.push(policyTab);
+    }
+
+    // Tab 3: Markdown (if .md file)
+    if (this._state.type === 'md') {
+      const markdownTab = createElement('tab', { id: 'view-source-tab-md', title: 'Markdown' },
+        createElement('container', {
+          id: 'view-source-scroll-md',
+          scrollable: true,
+          focusable: true,
+          style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
+        },
+          createElement('markdown', {
+            id: 'view-source-markdown-content',
+            text: this._state.content,
+            src: this._state.filePath,
+            style: { textWrap: 'wrap' },
+          })
+        )
+      );
+      tabs.push(markdownTab);
+    }
+
+    // Tab 4: System Info (if available)
+    if (this._state.systemInfo) {
+      const systemText = this._formatSystemInfo(this._state.systemInfo);
+      const systemTab = createElement('tab', { id: 'view-source-tab-system', title: 'System' },
+        createElement('container', {
+          id: 'view-source-scroll-system',
+          scrollable: true,
+          focusable: true,
+          style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
+        },
+          createElement('text', {
+            id: 'view-source-system-content',
+            text: systemText,
+            style: { textWrap: 'wrap' },
+          })
+        )
+      );
+      tabs.push(systemTab);
+    }
+
+    // Build the tabs component
+    const tabsElement = createElement('tabs', {
+      id: 'view-source-tabs',
+      style: { flex: 1, width: 'fill', height: 'fill' },
+    }, ...tabs);
+
+    // Build the dialog
+    this._overlay = createElement('dialog', {
+      id: 'view-source-dialog',
+      title: `Source: ${filename}`,
+      open: true,
+      modal: true,
+      backdrop: true,
+      width: 0.9,
+      height: 0.85,
+    },
+      createElement('container', {
+        id: 'view-source-main',
+        style: { display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' },
+      },
+        tabsElement,
+        createElement('container', {
+          id: 'view-source-footer',
+          style: { display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', width: 'fill', gap: 1 },
+        },
+          createElement('button', { id: 'view-source-ai', title: 'AI Assistant', onClick: onAIAssistant }),
+          createElement('button', { id: 'view-source-close', title: 'Close', onClick: onClose })
+        )
+      )
+    );
 
     // Add to document and register all elements
     const root = this._deps.document.root;
@@ -203,13 +275,58 @@ export class ViewSourceManager {
       this._deps.render();
     }
 
-    // Focus the scroll container for arrow key navigation
+    // Focus the first scroll container for arrow key navigation
     if (this._deps.focusManager) {
-      const focusTarget = this._state.type === 'md' && this._state.convertedContent
-        ? 'view-source-scroll-md'
-        : 'view-source-scroll';
-      this._deps.focusManager.focus(focusTarget);
+      const firstTabScrollId = this._state.helpContent ? 'view-source-scroll-help' : 'view-source-scroll-melker';
+      this._deps.focusManager.focus(firstTabScrollId);
     }
+  }
+
+  /**
+   * Format system info for display
+   */
+  private _formatSystemInfo(info: SystemInfo): string {
+    const lines: string[] = [];
+    const sep = '-'.repeat(40);
+
+    lines.push('SYSTEM INFO');
+    lines.push(sep);
+    lines.push(`  File:       ${info.file}`);
+    lines.push(`  Theme:      ${info.theme}`);
+    lines.push(`  Log file:   ${info.logFile}`);
+    lines.push(`  Log level:  ${info.logLevel}`);
+    lines.push(`  Deno:       ${info.denoVersion}`);
+    lines.push(`  Platform:   ${info.platform}`);
+    lines.push('');
+
+    lines.push('SCRIPT PROCESSING');
+    lines.push(sep);
+    lines.push(`  Scripts:    ${info.scriptsCount}`);
+    lines.push(`  Handlers:   ${info.handlersCount}`);
+    lines.push('');
+
+    lines.push('GENERATED TYPESCRIPT');
+    lines.push(sep);
+    lines.push(`  Lines:      ${info.generatedLines}`);
+    lines.push(`  File:       ${info.generatedFile}`);
+    lines.push(`  Preview:    ${info.generatedPreview}`);
+    lines.push('');
+
+    lines.push('BUNDLE OUTPUT');
+    lines.push(sep);
+    lines.push(`  Template lines:     ${info.templateLines}`);
+    lines.push(`  Bundled code size:  ${info.bundledCodeSize} bytes`);
+    lines.push(`  Source map:         ${info.hasSourceMap ? 'present' : 'none'}`);
+    lines.push(`  Bundle file:        ${info.bundleFile}`);
+    lines.push('');
+
+    lines.push('REGISTRY');
+    lines.push(sep);
+    lines.push(`  __init:     ${info.hasInit ? 'present' : 'none'}`);
+    lines.push(`  __ready:    ${info.hasReady ? 'present' : 'none'}`);
+    lines.push(`  Handlers:   ${info.registeredHandlers.length > 0 ? info.registeredHandlers.join(', ') : 'none'}`);
+
+    return lines.join('\n');
   }
 
   /**

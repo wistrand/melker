@@ -69,11 +69,11 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
   fontWeight: { type: 'string', enum: ['normal', 'bold'], description: 'Text weight' },
 
   // Border
-  border: { type: 'string', enum: ['none', 'thin', 'thick'], description: 'Border on all sides' },
-  borderTop: { type: 'string', enum: ['none', 'thin', 'thick'], description: 'Top border' },
-  borderBottom: { type: 'string', enum: ['none', 'thin', 'thick'], description: 'Bottom border' },
-  borderLeft: { type: 'string', enum: ['none', 'thin', 'thick'], description: 'Left border' },
-  borderRight: { type: 'string', enum: ['none', 'thin', 'thick'], description: 'Right border' },
+  border: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'], description: 'Border on all sides' },
+  borderTop: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'], description: 'Top border' },
+  borderBottom: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'], description: 'Bottom border' },
+  borderLeft: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'], description: 'Left border' },
+  borderRight: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'], description: 'Right border' },
 
   // Spacing
   padding: { type: ['number', 'object'], description: 'Inner spacing (all sides or {top,right,bottom,left})' },

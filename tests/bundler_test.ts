@@ -88,18 +88,18 @@ Deno.test('generate: includes runtime globals', () => {
   assertStringIncludes(result.code, 'const argv = (globalThis as any).argv');
 });
 
-Deno.test('generate: includes source metadata', () => {
+Deno.test('generate: url and dirname in $melker interface', () => {
   const parsed = createParseResult({
     sourceUrl: 'file:///home/user/myapp.melker',
   });
   const result = generate(parsed);
 
-  // Source metadata is now on $melker (url and dirname)
-  assertStringIncludes(result.code, 'url: "file:///home/user/myapp.melker"');
-  assertStringIncludes(result.code, 'dirname: "/home/user"');
+  // Source metadata types are declared in $melker interface (values set at runtime)
+  assertStringIncludes(result.code, 'url: string;');
+  assertStringIncludes(result.code, 'dirname: string;');
 });
 
-Deno.test('generate: inlines sync script code', () => {
+Deno.test('generate: creates script modules for inline scripts', () => {
   const parsed = createParseResult({
     scripts: [
       createScript({
@@ -109,11 +109,16 @@ Deno.test('generate: inlines sync script code', () => {
   });
   const result = generate(parsed);
 
-  assertStringIncludes(result.code, 'const count = 0;');
-  assertStringIncludes(result.code, 'function increment()');
+  // Inline scripts are now created as separate modules and imported
+  assertEquals(result.scriptModules.length, 1);
+  assertEquals(result.scriptModules[0].filename, '_inline_0.ts');
+  assertStringIncludes(result.scriptModules[0].content, 'const count = 0;');
+  assertStringIncludes(result.scriptModules[0].content, 'function increment()');
+  // Main code imports the module
+  assertStringIncludes(result.code, "import * as _script_0 from './_inline_0.ts'");
 });
 
-Deno.test('generate: exports assigned to context', () => {
+Deno.test('generate: exports merged via __mergeExports', () => {
   const parsed = createParseResult({
     scripts: [
       createScript({
@@ -123,8 +128,9 @@ Deno.test('generate: exports assigned to context', () => {
   });
   const result = generate(parsed);
 
-  assertStringIncludes(result.code, '($melker as any).myValue = myValue;');
-  assertStringIncludes(result.code, '($melker as any).myFunc = myFunc;');
+  // Exports are now merged using __mergeExports helper
+  assertStringIncludes(result.code, 'function __mergeExports(target: Record<string, any>, source: Record<string, any>, scriptName: string)');
+  assertStringIncludes(result.code, '__mergeExports($melker.exports, _script_0');
 });
 
 Deno.test('generate: creates __init function for init scripts', () => {
@@ -139,8 +145,14 @@ Deno.test('generate: creates __init function for init scripts', () => {
   });
   const result = generate(parsed);
 
+  // Init scripts are created as modules with __initFn exports
+  assertEquals(result.scriptModules.length, 1);
+  assertEquals(result.scriptModules[0].filename, '_init_0.ts');
+  assertStringIncludes(result.scriptModules[0].content, 'export async function __initFn()');
+  assertStringIncludes(result.scriptModules[0].content, 'await loadData()');
+  // Main code has __init function that calls the module
   assertStringIncludes(result.code, 'async function __init()');
-  assertStringIncludes(result.code, 'await loadData()');
+  assertStringIncludes(result.code, 'await __initFn_0()');
 });
 
 Deno.test('generate: creates __ready function for ready scripts', () => {
@@ -154,33 +166,40 @@ Deno.test('generate: creates __ready function for ready scripts', () => {
   });
   const result = generate(parsed);
 
+  // Ready scripts are created as modules with __readyFn exports
+  assertEquals(result.scriptModules.length, 1);
+  assertEquals(result.scriptModules[0].filename, '_ready_0.ts');
+  assertStringIncludes(result.scriptModules[0].content, 'export async function __readyFn()');
+  assertStringIncludes(result.scriptModules[0].content, 'focusInput()');
+  // Main code has __ready function that calls the module
   assertStringIncludes(result.code, 'async function __ready()');
-  assertStringIncludes(result.code, 'focusInput()');
+  assertStringIncludes(result.code, 'await __readyFn_0()');
 });
 
 // =============================================================================
-// Generator: external scripts with import rewriting
+// Generator: external scripts with import resolution
 // =============================================================================
 
-Deno.test('generate: rewrites relative imports in external scripts', () => {
+Deno.test('generate: imports external scripts with resolved URLs', () => {
   const parsed = createParseResult({
     sourceUrl: 'file:///home/user/app.melker',
     scripts: [
       createScript({
-        code: `import { foo } from './utils.ts';\nimport bar from '../lib/bar.ts';`,
+        code: `import { foo } from './utils.ts';`,
         externalSrc: 'src/main.ts',
       }),
     ],
   });
   const result = generate(parsed);
 
-  // Imports should be rewritten to absolute URLs
-  assertStringIncludes(result.code, "from 'file:///home/user/src/utils.ts'");
-  assertStringIncludes(result.code, "from 'file:///home/user/lib/bar.ts'");
+  // External script should be imported with resolved URL
+  // (relative imports within the script are resolved at bundle time by Deno)
+  assertStringIncludes(result.code, "from 'file:///home/user/src/main.ts'");
 });
 
-Deno.test('generate: preserves npm: imports unchanged', () => {
+Deno.test('generate: external scripts create import statements', () => {
   const parsed = createParseResult({
+    sourceUrl: 'file:///test/app.melker',
     scripts: [
       createScript({
         code: `import chalk from 'npm:chalk@5';`,
@@ -190,10 +209,11 @@ Deno.test('generate: preserves npm: imports unchanged', () => {
   });
   const result = generate(parsed);
 
-  assertStringIncludes(result.code, "from 'npm:chalk@5'");
+  // External script is imported as ES module (npm imports resolved at bundle time)
+  assertStringIncludes(result.code, "import * as _script_0 from 'file:///test/src/main.ts'");
 });
 
-Deno.test('generate: rewrites dynamic imports', () => {
+Deno.test('generate: external script URL resolution', () => {
   const parsed = createParseResult({
     sourceUrl: 'file:///app/main.melker',
     scripts: [
@@ -205,7 +225,8 @@ Deno.test('generate: rewrites dynamic imports', () => {
   });
   const result = generate(parsed);
 
-  assertStringIncludes(result.code, "import('file:///app/src/dynamic.ts')");
+  // External script imported with resolved path (dynamic imports handled at bundle time)
+  assertStringIncludes(result.code, "from 'file:///app/src/loader.ts'");
 });
 
 // =============================================================================

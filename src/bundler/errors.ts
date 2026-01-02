@@ -8,6 +8,7 @@
  */
 
 import { getLogger } from '../logging.ts';
+import { restoreTerminal } from '../terminal-lifecycle.ts';
 import type {
   ErrorContext,
   GeneratedSource,
@@ -17,36 +18,10 @@ import type {
   TranslatedFrame,
 } from './types.ts';
 
+// Re-export restoreTerminal for backwards compatibility
+export { restoreTerminal } from '../terminal-lifecycle.ts';
+
 const logger = getLogger('Bundler:Errors');
-
-/**
- * Restore terminal to normal state (disable raw mode, mouse reporting, exit alternate screen, show cursor).
- * Safe to call even if terminal wasn't in TUI mode.
- * Exported so it can be called from other modules before displaying errors.
- */
-export function restoreTerminal(): void {
-  // First disable raw mode (must be done before writing escape sequences)
-  try {
-    Deno.stdin.setRaw(false);
-  } catch {
-    // Ignore errors (e.g., if stdin isn't a TTY or not in raw mode)
-  }
-
-  // Then disable mouse reporting, exit alternate screen, show cursor, and reset styles
-  try {
-    // \x1b[?1000l - Disable basic mouse reporting
-    // \x1b[?1002l - Disable button event tracking
-    // \x1b[?1003l - Disable any-event tracking (all mouse movements)
-    // \x1b[?1006l - Disable SGR extended mouse mode
-    // \x1b[?1049l - Exit alternate screen
-    // \x1b[?25h   - Show cursor
-    // \x1b[0m     - Reset all text styles
-    const resetSequence = '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1049l\x1b[?25h\x1b[0m';
-    Deno.stdout.writeSync(new TextEncoder().encode(resetSequence));
-  } catch {
-    // Ignore errors (e.g., if stdout isn't a TTY)
-  }
-}
 
 /**
  * Display a fatal error and exit the process.

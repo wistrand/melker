@@ -263,7 +263,7 @@ export class LayoutEngine {
     }
 
     const totalTime = performance.now() - startTime;
-    if (totalTime > 10) { // Log slow layouts
+    if (totalTime > 20) { // Log slow layouts
       logger.warn(`Slow layout detected for ${element.type}: ${totalTime.toFixed(2)}ms`, {
         elementId: element.id,
         elementType: element.type,

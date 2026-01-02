@@ -233,9 +233,24 @@ export class TextElement extends Element implements Renderable, TextSelectable {
           breakPoint = remainingText.length;
         } else {
           // Only look for word boundaries if text doesn't fit
-          const spaceIndex = remainingText.substring(0, availableWidth + 1).lastIndexOf(' ');
+          // Look for space or comma as break points
+          const searchArea = remainingText.substring(0, availableWidth + 1);
+          const spaceIndex = searchArea.lastIndexOf(' ');
+          const commaIndex = searchArea.lastIndexOf(',');
+          // Use the later of space or comma (prefer breaking after comma)
+          // For comma, break after it (+1), for space, break at it
+          let bestBreak = -1;
           if (spaceIndex > 0 && spaceIndex < availableWidth) {
-            breakPoint = spaceIndex;
+            bestBreak = spaceIndex;
+          }
+          if (commaIndex > 0 && commaIndex + 1 <= availableWidth) {
+            // Break after the comma if it's a better position
+            if (commaIndex + 1 > bestBreak) {
+              bestBreak = commaIndex + 1;
+            }
+          }
+          if (bestBreak > 0) {
+            breakPoint = bestBreak;
           }
         }
 

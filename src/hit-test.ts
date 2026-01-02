@@ -173,6 +173,9 @@ export class HitTester {
     }
 
     for (const child of element.children) {
+      // Skip invisible elements - they don't participate in hit testing
+      if (child.props?.visible === false) continue;
+
       // Try to get the rendered bounds for this child
       const childBounds = child.id ? this._renderer.getContainerBounds(child.id) : undefined;
 

@@ -1,0 +1,422 @@
+// Policy loader - loads policy from embedded tag or external file
+
+import { dirname, resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
+import { config as dotenvConfig } from 'npm:dotenv@^16.3.0';
+import type { MelkerPolicy, PolicyLoadResult } from './types.ts';
+
+// WellKnown config fields that contain URLs
+interface WellKnownConfig {
+  issuer?: string;
+  authorization_endpoint?: string;
+  token_endpoint?: string;
+  userinfo_endpoint?: string;
+  jwks_uri?: string;
+}
+
+/**
+ * Load policy for a .melker app
+ *
+ * Supports:
+ * 1. Embedded <policy>{...json...}</policy> tag
+ * 2. External file via <policy src="path/to/policy.json"></policy>
+ *
+ * @param appPath Path to the .melker file
+ * @returns Policy load result with policy (or null) and source
+ */
+export async function loadPolicy(appPath: string): Promise<PolicyLoadResult> {
+  try {
+    const content = await Deno.readTextFile(appPath);
+    const appDir = dirname(appPath);
+    const policyTag = extractPolicyTag(content);
+    const hasOAuth = hasOAuthTag(content);
+
+    if (!policyTag) {
+      return { policy: null, source: 'none' };
+    }
+
+    // Load .env files before parsing policy (for env var substitution)
+    loadDotenvFiles(appPath);
+
+    // Check for src attribute - load from external file
+    if (policyTag.src) {
+      const policyPath = policyTag.src.startsWith('/')
+        ? policyTag.src
+        : resolve(appDir, policyTag.src);
+
+      try {
+        let json = await Deno.readTextFile(policyPath);
+        // Substitute env vars before parsing
+        json = substituteEnvVars(json);
+        try {
+          const policy = JSON.parse(json) as MelkerPolicy;
+          // Add OAuth permissions if needed
+          if (hasOAuth) {
+            addOAuthPermissions(policy);
+            await addWellknownHostsForOAuth(policy, content);
+          }
+          return { policy, source: 'file', path: policyPath };
+        } catch (parseError) {
+          const errorMsg = parseError instanceof SyntaxError ? parseError.message : String(parseError);
+          throw new Error(`Invalid JSON in policy file ${policyPath}: ${errorMsg}`);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith('Invalid JSON')) {
+          throw error;
+        }
+        throw new Error(`Failed to load policy file: ${policyPath}`);
+      }
+    }
+
+    // Inline JSON content
+    if (policyTag.content) {
+      try {
+        // Substitute env vars before parsing
+        const resolvedContent = substituteEnvVars(policyTag.content);
+        const policy = JSON.parse(resolvedContent) as MelkerPolicy;
+        // Add OAuth permissions if needed
+        if (hasOAuth) {
+          addOAuthPermissions(policy);
+          await addWellknownHostsForOAuth(policy, content);
+        }
+        return { policy, source: 'embedded' };
+      } catch (parseError) {
+        const errorMsg = parseError instanceof SyntaxError ? parseError.message : String(parseError);
+        throw new Error(`Invalid JSON in embedded <policy> tag: ${errorMsg}\n\nPolicy content:\n${policyTag.content}`);
+      }
+    }
+
+    return { policy: null, source: 'none' };
+  } catch (error) {
+    if (error instanceof Error && (
+      error.message.startsWith('Invalid JSON') ||
+      error.message.startsWith('Failed to load policy')
+    )) {
+      throw error;
+    }
+    // File read error
+    return { policy: null, source: 'none' };
+  }
+}
+
+/**
+ * Check if content has an <oauth> tag
+ */
+function hasOAuthTag(content: string): boolean {
+  return /<oauth[\s>]/i.test(content);
+}
+
+/**
+ * Add OAuth-required permissions: localhost for callback server, browser for authorization
+ */
+function addOAuthPermissions(policy: MelkerPolicy): void {
+  if (!policy.permissions) {
+    policy.permissions = {};
+  }
+
+  // Add localhost to net permissions for callback server
+  if (!policy.permissions.net) {
+    policy.permissions.net = [];
+  }
+  if (!policy.permissions.net.includes('*') && !policy.permissions.net.includes('localhost')) {
+    policy.permissions.net.push('localhost');
+  }
+
+  // Enable browser permission for opening authorization URL
+  policy.permissions.browser = true;
+}
+
+/**
+ * Extract wellknown URL from oauth tag attributes
+ */
+function extractOAuthWellknownUrl(content: string): string | null {
+  // Match <oauth ...> and extract wellknown attribute
+  const match = content.match(/<oauth\s+([^>]*)>/i);
+  if (!match) return null;
+
+  const attributes = match[1];
+  const wellknownMatch = attributes.match(/wellknown\s*=\s*["']([^"']+)["']/i);
+  return wellknownMatch ? wellknownMatch[1] : null;
+}
+
+/**
+ * Substitute environment variables in a string
+ * Supports: ${VAR} and ${VAR:-default}
+ */
+function substituteEnvVars(value: string): string {
+  return value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (_match, varName, defaultValue) => {
+    const envValue = Deno.env.get(varName);
+    if (envValue !== undefined) {
+      return envValue;
+    }
+    return defaultValue !== undefined ? defaultValue : '';
+  });
+}
+
+/**
+ * Extract host from a URL
+ */
+function extractHost(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    return parsed.host;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch wellknown config and extract all hosts from URL fields
+ */
+async function fetchWellknownHosts(wellknownUrl: string): Promise<string[]> {
+  const hosts: string[] = [];
+
+  // Add the wellknown URL's host itself
+  const wellknownHost = extractHost(wellknownUrl);
+  if (wellknownHost) {
+    hosts.push(wellknownHost);
+  }
+
+  try {
+    const response = await fetch(wellknownUrl);
+    if (!response.ok) {
+      return hosts; // Return just the wellknown host if fetch fails
+    }
+
+    const config = await response.json() as WellKnownConfig;
+
+    // Extract hosts from all URL fields
+    const urlFields: (keyof WellKnownConfig)[] = [
+      'issuer',
+      'authorization_endpoint',
+      'token_endpoint',
+      'userinfo_endpoint',
+      'jwks_uri',
+    ];
+
+    for (const field of urlFields) {
+      const value = config[field];
+      if (value) {
+        const host = extractHost(value);
+        if (host && !hosts.includes(host)) {
+          hosts.push(host);
+        }
+      }
+    }
+  } catch {
+    // Network error - return just the wellknown host
+  }
+
+  return hosts;
+}
+
+/**
+ * Load .env files from app directory (same as melker-main.ts)
+ */
+function loadDotenvFiles(appPath: string): void {
+  const appDir = dirname(appPath);
+  const cwd = Deno.cwd();
+
+  // Directories to load from, in order (later overrides earlier)
+  const dirs = [cwd];
+  if (appDir !== cwd) {
+    dirs.push(appDir);
+  }
+
+  // Files to try in each directory
+  const envFiles = ['.env', '.env.local'];
+
+  for (const dir of dirs) {
+    for (const envFile of envFiles) {
+      const envPath = `${dir}/${envFile}`;
+      try {
+        dotenvConfig({ path: envPath, override: false });
+      } catch {
+        // File doesn't exist or can't be read - that's fine
+      }
+    }
+  }
+}
+
+/**
+ * Add wellknown endpoint hosts to net permissions
+ */
+async function addWellknownHostsForOAuth(policy: MelkerPolicy, content: string): Promise<void> {
+  const wellknownUrl = extractOAuthWellknownUrl(content);
+  if (!wellknownUrl) return;
+
+  // Substitute environment variables (dotenv already loaded by loadPolicy)
+  const resolvedUrl = substituteEnvVars(wellknownUrl);
+  if (!resolvedUrl) return;
+
+  // Fetch and extract hosts
+  const hosts = await fetchWellknownHosts(resolvedUrl);
+
+  if (!policy.permissions) {
+    policy.permissions = {};
+  }
+  if (!policy.permissions.net) {
+    policy.permissions.net = [];
+  }
+
+  // Add hosts if not using wildcard
+  if (policy.permissions.net.includes('*')) return;
+
+  for (const host of hosts) {
+    if (!policy.permissions.net.includes(host)) {
+      policy.permissions.net.push(host);
+    }
+  }
+}
+
+interface PolicyTagResult {
+  src?: string;
+  content?: string;
+}
+
+/**
+ * Extract policy tag info (src attribute or inline content)
+ */
+function extractPolicyTag(content: string): PolicyTagResult | null {
+  // Match <policy ...>...</policy>
+  const match = content.match(/<policy([^>]*)>([\s\S]*?)<\/policy>/i);
+  if (!match) return null;
+
+  const attributes = match[1];
+  const innerContent = match[2].trim();
+
+  // Check for src attribute
+  const srcMatch = attributes.match(/src\s*=\s*["']([^"']+)["']/i);
+  if (srcMatch) {
+    return { src: srcMatch[1] };
+  }
+
+  // Return inline content if present
+  if (innerContent) {
+    return { content: innerContent };
+  }
+
+  return null;
+}
+
+/**
+ * Validate policy schema (basic validation)
+ */
+export function validatePolicy(policy: MelkerPolicy): string[] {
+  const errors: string[] = [];
+
+  if (policy.permissions) {
+    const p = policy.permissions;
+
+    // Check that all permission values are arrays of strings
+    const arrayFields: (keyof typeof p)[] = ['read', 'write', 'net', 'run', 'env', 'ffi'];
+
+    for (const field of arrayFields) {
+      const value = p[field];
+      if (value !== undefined) {
+        if (!Array.isArray(value)) {
+          errors.push(`permissions.${field} must be an array`);
+        } else if (!value.every(v => typeof v === 'string')) {
+          errors.push(`permissions.${field} must contain only strings`);
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Format policy for display
+ */
+export function formatPolicy(policy: MelkerPolicy): string {
+  const lines: string[] = [];
+
+  // Header
+  const title = policy.name || 'App Policy';
+  lines.push(title);
+  if (policy.description) {
+    lines.push(`  ${policy.description}`);
+  }
+  lines.push('');
+
+  // Permissions
+  const p = policy.permissions || {};
+
+  if (p.all) {
+    lines.push('All Permissions:');
+    lines.push('  enabled (--allow-all)');
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  if (p.read?.length) {
+    lines.push('Filesystem (read):');
+    for (const path of p.read) {
+      lines.push(`  ${path}`);
+    }
+    lines.push('');
+  }
+
+  if (p.write?.length) {
+    lines.push('Filesystem (write):');
+    for (const path of p.write) {
+      lines.push(`  ${path}`);
+    }
+    lines.push('');
+  }
+
+  if (p.net?.length) {
+    lines.push('Network:');
+    for (const host of p.net) {
+      lines.push(`  ${host}`);
+    }
+    lines.push('');
+  }
+
+  if (p.run?.length) {
+    lines.push('Subprocess:');
+    for (const cmd of p.run) {
+      lines.push(`  ${cmd}`);
+    }
+    lines.push('');
+  }
+
+  if (p.env?.length) {
+    lines.push('Environment:');
+    for (const varName of p.env) {
+      lines.push(`  ${varName}`);
+    }
+    lines.push('');
+  }
+
+  if (p.ai) {
+    lines.push('AI Assistant:');
+    lines.push('  enabled (adds: swift, ffmpeg, ffprobe, pactl, ffplay + openrouter.ai)');
+    lines.push('');
+  }
+
+  if (p.clipboard) {
+    lines.push('Clipboard:');
+    lines.push('  enabled (adds: pbcopy, xclip, xsel, wl-copy, clip.exe)');
+    lines.push('');
+  }
+
+  if (p.keyring) {
+    lines.push('Keyring:');
+    lines.push('  enabled (adds: security, secret-tool, powershell)');
+    lines.push('');
+  }
+
+  if (p.browser) {
+    lines.push('Browser:');
+    lines.push('  enabled (adds: open, xdg-open, cmd)');
+    lines.push('');
+  }
+
+  // No permissions declared
+  if (!p.read?.length && !p.write?.length && !p.net?.length && !p.run?.length && !p.env?.length && !p.ai && !p.clipboard && !p.keyring && !p.browser) {
+    lines.push('(no permissions declared)');
+  }
+
+  return lines.join('\n');
+}

@@ -158,7 +158,8 @@ export class OAuthClient {
       if (options?.wellknown) {
         const port = parseInt(Deno.env.get('MELKER_OAUTH_PORT') || '1900');
         const path = Deno.env.get('MELKER_OAUTH_PATH') || '/melker/auth';
-        const defaultScopes = ['openid', 'profile', 'offline_access'];
+        const client_name = Deno.env.get('OAUTH_CLIENT_NAME') || '';
+        const defaultScopes = ['openid'];
 
         this._config = {
           wellKnownUrl: options.wellknown,
@@ -168,16 +169,16 @@ export class OAuthClient {
           audience: options.audience || Deno.env.get('MELKER_OAUTH_AUDIENCE'),
           debugServer: options.debugServer,
         };
-        logger.debug('OAuth config from options', { clientId: this._config.clientId, redirectUri: this._config.redirectUri });
+        logger.info('OAuth config from options ', { client_name, clientId: this._config.clientId, redirectUri: this._config.redirectUri , scopes : this._config.scopes});
       } else {
         this._config = getOAuthConfigFromEnv();
         logger.debug('OAuth config from environment');
       }
-    } catch {
+    } catch (e) {
       this._config = null;
       this._initialized = false;
       const error = new Error('Missing: MELKER_OAUTH_WELLKNOWN_URL');
-      logger.error('OAuth init failed: missing wellknown URL');
+      logger.error('OAuth init failed: missing wellknown URL ' + e);
       this._onFail?.(error);
       throw error;
     }

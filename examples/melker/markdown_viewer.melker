@@ -1,4 +1,45 @@
 <melker>
+
+  <help>
+# Markdown Viewer
+
+A terminal-based markdown file viewer with navigation history.
+
+## Usage
+
+```
+melker markdown_viewer.melker [file.md]
+```
+
+If no file is specified, defaults to `README.md`.
+
+## Navigation
+
+- **Back**: Navigate to previously viewed document
+- **Fwd**: Navigate forward after going back
+- **Exit**: Close the viewer
+
+## Link Handling
+
+Click on markdown links (`.md` files) to navigate to them. The viewer maintains a history stack for back/forward navigation.
+
+## Tips
+
+- Links are resolved relative to the current document's directory
+- Press **F12** to view the source code
+  </help>
+
+  <policy>
+  {
+    "name": "Markdown Viewer",
+    "description": "A simple markdown file viewer with navigation",
+    "permissions": {
+      "read": ["*"],
+      "net" : ["*"]
+    }
+  }
+  </policy>
+
   <title>Melker Markdown Viewer - ${argv[1]}</title>
 
     <style>

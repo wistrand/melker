@@ -163,6 +163,10 @@ export interface BundleResult {
   sourceMap: SourceMapData | null;
   /** Any warnings from bundler */
   warnings: string[];
+  /** Path to the generated TypeScript file */
+  generatedFile: string;
+  /** Temp directory containing generated files (caller must clean up) */
+  tempDir: string;
 }
 
 // =============================================================================
@@ -183,6 +187,38 @@ export interface AssembledMelker {
   originalContent: string;
   /** Source file path/URL */
   sourceUrl: string;
+  /** Temp directory from Deno.bundle() step (caller must clean up on exit) */
+  bundleTempDir?: string;
+  /** Metadata for system info (optional) */
+  metadata?: {
+    /** Number of lines in generated TypeScript */
+    generatedLines: number;
+    /** Preview of generated TypeScript (first ~200 chars) */
+    generatedPreview: string;
+    /** Number of scripts */
+    scriptsCount: number;
+    /** Number of handlers */
+    handlersCount: number;
+    /** Path to the generated TypeScript file */
+    generatedFile: string;
+  };
+}
+
+// =============================================================================
+// OAuth Event
+// =============================================================================
+
+/** OAuth event type for unified handler signatures */
+export type OAuthAction = 'login' | 'logout' | 'fail';
+
+/** Event passed to OAuth handlers - unified signature for all callbacks */
+export interface OAuthEvent {
+  /** Event type identifier */
+  type: 'oauth';
+  /** The specific OAuth action */
+  action: OAuthAction;
+  /** Error object for 'fail' events */
+  error?: Error;
 }
 
 // =============================================================================
@@ -195,8 +231,18 @@ export interface MelkerRegistry {
   __init?: () => Promise<void>;
   /** Async ready function (called after render) */
   __ready?: () => Promise<void>;
-  /** Event handlers (__h0, __h1, etc.) */
-  [key: `__h${number}`]: (event?: unknown) => void | Promise<void>;
+  /** Event handlers (e.g., __button_myBtn_onClick_0) */
+  [key: string]: ((event?: unknown) => void | Promise<void>) | undefined;
+}
+
+/** Result of executeBundle */
+export interface ExecuteBundleResult {
+  /** The __melker registry */
+  registry: MelkerRegistry;
+  /** Path to the bundled JavaScript file */
+  bundleFile: string;
+  /** Temp directories to clean up on exit */
+  tempDirs: string[];
 }
 
 // =============================================================================

@@ -1,5 +1,7 @@
 # Melker Markdown Examples
 
+**Melker** - *Run text with meaning*
+
 An **optional** way to write melker apps using ASCII box diagrams in markdown files.
 
 ## When to Use Markdown vs .melker
@@ -16,14 +18,14 @@ The `.md` format is a **literate programming layer** that compiles to `.melker`.
 ## Running Examples
 
 ```bash
-# Run directly from markdown (requires --unstable-bundle for npm/jsr imports)
-deno run --unstable-bundle --allow-all melker.ts examples/melker-md/hello.md
+# Run directly from markdown
+deno run --allow-all melker.ts examples/melker-md/hello.md
 
 # Convert to .melker format (prints to stdout)
-deno run --unstable-bundle --allow-all melker.ts --convert examples/melker-md/counter.md
+deno run --allow-all melker.ts --convert examples/melker-md/counter.md
 
 # Convert and save to file
-deno run --unstable-bundle --allow-all melker.ts --convert examples/melker-md/counter.md > counter.melker
+deno run --allow-all melker.ts --convert examples/melker-md/counter.md > counter.melker
 ```
 
 ## Example Files
@@ -344,12 +346,21 @@ Use a `json oauth` fenced block for OAuth2 PKCE configuration:
   "clientId": "${OAUTH_CLIENT_ID}",
   "audience": "${OAUTH_AUDIENCE}",
   "autoLogin": true,
-  "onLogin": "$app.onLoginCallback()",
-  "onLogout": "$app.onLogoutCallback()",
-  "onFail": "$app.onFailCallback(error)"
+  "onLogin": "$app.onLoginCallback(event)",
+  "onLogout": "$app.onLogoutCallback(event)",
+  "onFail": "$app.onFailCallback(event)"
 }
 ```
 ````
+
+**OAuth Event Structure:** All OAuth callbacks receive a unified `OAuthEvent`:
+```typescript
+interface OAuthEvent {
+  type: 'oauth';
+  action: 'login' | 'logout' | 'fail';
+  error?: Error;  // Only present for 'fail' events
+}
+```
 
 Generates an `<oauth ... />` element. See `oauth_demo.md` for a complete example.
 

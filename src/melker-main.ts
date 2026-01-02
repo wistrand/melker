@@ -1,5 +1,7 @@
 import { config as dotenvConfig } from 'npm:dotenv@^16.3.0';
+import { dirname, resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
 import { debounce } from './utils/timing.ts';
+import { restoreTerminal } from './terminal-lifecycle.ts';
 
 // Bundler imports for Deno.bundle() integration
 import {
@@ -9,9 +11,23 @@ import {
   ErrorTranslator,
   type MelkerRegistry,
   type AssembledMelker,
+  type ExecuteBundleResult,
 } from './bundler/mod.ts';
 import { parseMelkerForBundler } from './template.ts';
 import { getGlobalErrorOverlay } from './error-overlay.ts';
+
+// Policy imports for permission enforcement
+import {
+  loadPolicy,
+  validatePolicy,
+  formatPolicy,
+  policyToDenoFlags,
+  formatDenoFlags,
+  type MelkerPolicy,
+} from './policy/mod.ts';
+
+// View source types
+import type { SystemInfo } from './view-source.ts';
 
 /**
  * Wire up bundler registry handlers to UI elements.
@@ -115,38 +131,10 @@ async function wireBundlerHandlers(
             }
           };
         } else {
-          // Handler not found in registry - process as normal string handler
-          // This handles cases where the template wasn't rewritten
-          const shouldAutoRender = !noAutoRenderCallbacks.includes(propName);
-
-          element.props[propName] = async (event: any) => {
-            try {
-              // Execute the handler code with access to registry and context
-              const fn = new Function(
-                'event',
-                'context',
-                '__melker',
-                handlerCode
-              );
-              const result = fn(event, context, registry);
-              if (result instanceof Promise) {
-                await result;
-              }
-              if (shouldAutoRender && context?.render) {
-                context.render();
-              }
-            } catch (error) {
-              const err = error instanceof Error ? error : new Error(String(error));
-              logger?.error?.(`Error in handler:`, err);
-
-              // CRITICAL: Always show error visually - never fail silently
-              getGlobalErrorOverlay().showError(err.message);
-              // Trigger re-render to display the error overlay
-              if (context?.render) {
-                context.render();
-              }
-            }
-          };
+          // Handler not found in registry - this indicates a bundler bug
+          const errorMsg = `Handler not found in registry for ${propName}. Code: ${handlerCode.slice(0, 50)}...`;
+          logger?.error?.(errorMsg);
+          getGlobalErrorOverlay().showError(errorMsg);
         }
       }
     }
@@ -321,6 +309,19 @@ export interface RunMelkerResult {
   cleanup: () => Promise<void>;
 }
 
+/**
+ * Create the default all-permissions policy used when no embedded policy is found
+ */
+function createAutoPolicy(): MelkerPolicy {
+  return {
+    name: 'Auto Policy',
+    description: 'Default policy with all permissions (no embedded policy found)',
+    permissions: {
+      all: true,
+    },
+  };
+}
+
 // CLI functionality for running .melker template files
 export async function runMelkerFile(
   filepath: string,
@@ -448,22 +449,22 @@ export async function runMelkerFile(
 
           // Execute the bundled code with debug context
           try {
-            const registry = await executeBundle(assembled, debugContext);
+            const { registry, bundleFile } = await executeBundle(assembled, debugContext);
             console.log('\nREGISTRY');
             console.log('-'.repeat(40));
             console.log(`  __init: ${registry.__init ? 'present' : 'none'}`);
             console.log(`  __ready: ${registry.__ready ? 'present' : 'none'}`);
             const handlerKeys = Object.keys(registry).filter(k => k.startsWith('__h'));
             console.log(`  Handlers: ${handlerKeys.join(', ') || 'none'}`);
+
+            // Print debug file locations
+            console.log('\nDEBUG FILES (retained)');
+            console.log('-'.repeat(40));
+            console.log(`  Generated TS:  /tmp/melker-generated.ts`);
+            console.log(`  Bundled JS:    ${bundleFile}`);
           } catch (error) {
             debugFailures.push(`Bundle execution: ${error instanceof Error ? error.message : String(error)}`);
           }
-
-          // Print debug file locations
-          console.log('\nDEBUG FILES (retained)');
-          console.log('-'.repeat(40));
-          console.log(`  Generated TS:  /tmp/melker-generated.ts`);
-          console.log(`  Bundled JS:    /tmp/melker-bundled.js`);
         } catch (error) {
           debugFailures.push(`Bundler: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -524,12 +525,21 @@ export async function runMelkerFile(
       await engine.enablePersistence(appId);
     }
 
-    // Set source content for View Source feature (F12)
-    if (viewSource) {
-      engine.setSource(viewSource.content, viewSource.path, viewSource.type, viewSource.convertedContent);
+    // Step 2.2: Load policy for View Source feature (even though we're in runner mode)
+    // This is needed to show the Policy tab in the F12 dialog
+    // Use auto-policy if no embedded policy found
+    let appPolicy: MelkerPolicy;
+    if (!isUrl(filepath)) {
+      const absolutePath = filepath.startsWith('/')
+        ? filepath
+        : resolve(Deno.cwd(), filepath);
+      const policyResult = await loadPolicy(absolutePath);
+      appPolicy = policyResult.policy ?? createAutoPolicy();
     } else {
-      engine.setSource(originalContent, filepath, 'melker');
+      appPolicy = createAutoPolicy();
     }
+
+    // Note: setSource is called later after bundling to include system info
 
     // Step 2.5: Apply stylesheet to element tree if present
     // This merges stylesheet styles into element props.style at creation time
@@ -559,6 +569,8 @@ export async function runMelkerFile(
     const logger = (() => { try { return getLogger(filename); } catch { return null; } })();
 
     // Prepare oauth config from parsed file (if present)
+    // Note: OAuth callbacks (onLogin, onLogout, onFail) are now bundled as handlers
+    // and wired up via melkerRegistry (__oauth_login, __oauth_logout, __oauth_fail)
     const oauthConfig = parseResult.oauthConfig ? {
       wellknown: parseResult.oauthConfig.wellknown,
       clientId: parseResult.oauthConfig.clientId,
@@ -567,11 +579,10 @@ export async function runMelkerFile(
       audience: parseResult.oauthConfig.audience,
       autoLogin: parseResult.oauthConfig.autoLogin,
       debugServer: parseResult.oauthConfig.debugServer,
-      // Callback expressions (to be wired up by the script)
-      onLoginExpr: parseResult.oauthConfig.onLogin,
-      onLogoutExpr: parseResult.oauthConfig.onLogout,
-      onFailExpr: parseResult.oauthConfig.onFail,
     } : undefined;
+
+    // Exit handler - gets replaced with full cleanup function later
+    let exitHandler: () => Promise<void> = () => engine.stop().then(() => { Deno.exit(0); });
 
     const context = {
       // Source metadata
@@ -581,8 +592,8 @@ export async function runMelkerFile(
       exports: {} as Record<string, any>,
       getElementById: (id: string) => engine?.document?.getElementById(id),
       render: () => engine.render(),
-      exit: () => engine.stop().then(() => Deno.exit(0)),
-      quit: () => engine.stop().then(() => Deno.exit(0)),
+      exit: () => exitHandler(),
+      quit: () => exitHandler(),
       setTitle: (title: string) => engine.setTitle(title),
       alert: (message: string) => engine.showAlert(String(message)),
       copyToClipboard: async (text: string) => {
@@ -608,8 +619,12 @@ export async function runMelkerFile(
             await writer.close();
             const status = await child.status;
             if (status.success) return true;
-          } catch {
-            // Command not found, try next
+          } catch (error) {
+            if (error instanceof Error && error.name === "NotFound") {
+              logger?.debug?.("Not found " + cmd);
+            } else {
+              logger?.info?.("failed to run " + cmd + " " + error);
+            }
           }
         }
         return false;
@@ -655,30 +670,104 @@ export async function runMelkerFile(
     });
 
     // Execute the bundled code
-    const melkerRegistry = await executeBundle(assembled, context);
+    const { registry: melkerRegistry, bundleFile, tempDirs } = await executeBundle(assembled, context);
+
+    // Build system info for View Source feature (F12)
+    const loggerOpts = getGlobalLoggerOptions();
+    const currentTheme = getCurrentTheme();
+    const handlerKeys = Object.keys(melkerRegistry).filter(k => k.startsWith('__h'));
+    const systemInfo: SystemInfo = {
+      // System info
+      file: filepath,
+      theme: `${currentTheme.type}-${currentTheme.mode} (${currentTheme.colorSupport})`,
+      logFile: loggerOpts.logFile,
+      logLevel: loggerOpts.level,
+      denoVersion: Deno.version.deno,
+      platform: `${Deno.build.os} ${Deno.build.arch}`,
+      // Script processing
+      scriptsCount: assembled.metadata?.scriptsCount ?? 0,
+      handlersCount: assembled.metadata?.handlersCount ?? 0,
+      // Generated TypeScript
+      generatedLines: assembled.metadata?.generatedLines ?? 0,
+      generatedPreview: assembled.metadata?.generatedPreview ?? '',
+      generatedFile: assembled.metadata?.generatedFile ?? '',
+      // Bundle output
+      templateLines: assembled.template.split('\n').length,
+      bundledCodeSize: assembled.bundledCode.length,
+      hasSourceMap: assembled.bundleSourceMap !== null,
+      bundleFile: bundleFile,
+      // Registry
+      hasInit: !!melkerRegistry.__init,
+      hasReady: !!melkerRegistry.__ready,
+      registeredHandlers: handlerKeys,
+    };
+
+    // Load help content if specified
+    let helpContent: string | undefined = parseResult.helpContent;
+    if (!helpContent && parseResult.helpSrc) {
+      // Load external help file relative to the melker file's directory
+      try {
+        const helpUrl = new URL(parseResult.helpSrc, sourceUrl);
+        if (helpUrl.protocol === 'file:') {
+          helpContent = await Deno.readTextFile(helpUrl.pathname);
+        } else {
+          const response = await fetch(helpUrl.href);
+          if (response.ok) {
+            helpContent = await response.text();
+          }
+        }
+      } catch (e) {
+        logger?.warn?.('Failed to load help file:', { src: parseResult.helpSrc, error: String(e) });
+      }
+    }
+
+    // Set source content for View Source feature (F12)
+    if (viewSource) {
+      engine.setSource(viewSource.content, viewSource.path, viewSource.type, viewSource.convertedContent, appPolicy, sourceDirname, systemInfo, helpContent);
+    } else {
+      engine.setSource(originalContent, filepath, 'melker', undefined, appPolicy, sourceDirname, systemInfo, helpContent);
+    }
 
     // Auto-initialize OAuth if <oauth> element is present
     // This happens after scripts run so callbacks can be registered first
     if (oauthConfig?.wellknown) {
-      // Create callback functions from string expressions
-      const createCallback = (expr: string | undefined) => {
-        if (!expr) return undefined;
+      // Create callback functions from bundled OAuth handlers
+      // OAuth handlers are bundled with IDs: __oauth_login, __oauth_logout, __oauth_fail
+      // They all receive a unified OAuthEvent: { type: 'oauth', action: string, error?: Error }
+      const createOAuthCallback = (handlerId: string, action: string) => {
+        const handler = melkerRegistry[handlerId as keyof typeof melkerRegistry] as
+          | ((event: { type: 'oauth'; action: string; error?: Error }) => void | Promise<void>)
+          | undefined;
+        if (!handler) return undefined;
         return () => {
           try {
-            const fn = new Function('context', expr);
-            fn(context);
+            const event = { type: 'oauth' as const, action };
+            const result = handler(event);
+            if (result instanceof Promise) {
+              result.catch((e: unknown) => {
+                logger?.error?.('OAuth callback error:', e instanceof Error ? e : new Error(String(e)));
+              });
+            }
           } catch (e: unknown) {
             logger?.error?.('OAuth callback error:', e instanceof Error ? e : new Error(String(e)));
           }
         };
       };
 
-      const createErrorCallback = (expr: string | undefined) => {
-        if (!expr) return undefined;
+      const createOAuthErrorCallback = (handlerId: string, action: string) => {
+        const handler = melkerRegistry[handlerId as keyof typeof melkerRegistry] as
+          | ((event: { type: 'oauth'; action: string; error?: Error }) => void | Promise<void>)
+          | undefined;
+        if (!handler) return undefined;
         return (error: Error) => {
           try {
-            const fn = new Function('context', 'error', expr);
-            fn(context, error);
+            const event = { type: 'oauth' as const, action, error };
+            const result = handler(event);
+            if (result instanceof Promise) {
+              result.catch((e: unknown) => {
+                logger?.error?.('OAuth error callback error:', e instanceof Error ? e : new Error(String(e)));
+              });
+            }
           } catch (e: unknown) {
             logger?.error?.('OAuth error callback error:', e instanceof Error ? e : new Error(String(e)));
           }
@@ -687,9 +776,9 @@ export async function runMelkerFile(
 
       const initOptions = {
         ...oauthConfig,
-        onLogin: createCallback(oauthConfig.onLoginExpr),
-        onLogout: createCallback(oauthConfig.onLogoutExpr),
-        onFail: createErrorCallback(oauthConfig.onFailExpr),
+        onLogin: createOAuthCallback('__oauth_login', 'login'),
+        onLogout: createOAuthCallback('__oauth_logout', 'logout'),
+        onFail: createOAuthErrorCallback('__oauth_fail', 'fail'),
       };
 
       // Don't await - let it run in background so UI renders immediately
@@ -738,27 +827,28 @@ export async function runMelkerFile(
         (engine as any)._isInitialized = false;
       }
 
-      // 2. Write "Stopping..." directly to screen (fully restore terminal first) - only if exiting
+      // 2. Clean up temp directories first (sync, before any awaits)
+      const retainBundle = Deno.env.get('MELKER_RETAIN_BUNDLE') === 'true' || Deno.env.get('MELKER_RETAIN_BUNDLE') === '1';
+      logger?.info?.('Cleanup: temp directories', { tempDirs, retainBundle });
+      if (!retainBundle && tempDirs && tempDirs.length > 0) {
+        for (const dir of tempDirs) {
+          try {
+            Deno.removeSync(dir, { recursive: true });
+            logger?.info?.('Cleaned up temp directory', { dir });
+          } catch (err) {
+            logger?.warn?.('Failed to clean up temp directory', {
+              dir,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+      } else if (retainBundle && tempDirs) {
+        logger?.info?.('Retaining temp directories (MELKER_RETAIN_BUNDLE=true)', { tempDirs });
+      }
+
+      // 3. Fully restore terminal (raw mode, mouse, alternate screen) - only if exiting
       if (exitAfter) {
-        try {
-          // Disable raw mode first so output works normally
-          Deno.stdin.setRaw(false);
-        } catch {
-          // Ignore - may not be in raw mode
-        }
-        try {
-          const restore = [
-            '\x1b[?1049l',  // Exit alternate screen
-            '\x1b[?25h',    // Show cursor
-            '\x1b[0m',      // Reset attributes
-            '\r\n',         // New line
-            'Stopping...',
-            '\r\n',
-          ].join('');
-          Deno.stdout.writeSync(encoder.encode(restore));
-        } catch {
-          // Ignore write errors
-        }
+        restoreTerminal();
       }
 
       // 3. Stop video/audio subprocesses
@@ -809,6 +899,12 @@ export async function runMelkerFile(
       }
     };
 
+    // Update exitHandler to use the full cleanup function
+    exitHandler = () => cleanup(true);
+
+    // Set the engine's exit handler for Ctrl+C (raw mode captures it as input)
+    engine.setOnExit(() => cleanup(true));
+
     // Wrapper for signal handlers that always exits
     const signalCleanup = () => cleanup(true);
 
@@ -823,24 +919,14 @@ export async function runMelkerFile(
     };
 
   } catch (error) {
-    // First, try to clean up the terminal state completely
+    // First, restore terminal state completely
+    restoreTerminal();
     try {
-      // Force complete terminal restoration
+      // Reset terminal title and add newline for clean output
       const encoder = new TextEncoder();
-      const restoreSequence = [
-        '\x1b]0;\x07',  // Reset terminal title
-        '\x1b[?1000l',  // Disable mouse tracking
-        '\x1b[?1002l',  // Disable button event tracking
-        '\x1b[?1003l',  // Disable any motion tracking
-        '\x1b[?1006l',  // Disable SGR mouse mode
-        '\x1b[?1049l',  // Exit alternate screen buffer
-        '\x1b[?25h',    // Show cursor
-        '\x1b[0m'       // Reset all attributes
-      ].join('');
-      await Deno.stdout.write(encoder.encode(restoreSequence));
-      await Deno.stdout.write(encoder.encode('\n')); // Add newline for clean output
+      await Deno.stdout.write(encoder.encode('\x1b]0;\x07\n'));
     } catch {
-      // Ignore cleanup errors
+      // Ignore write errors
     }
 
     // Now print the full error with stack trace
@@ -992,6 +1078,8 @@ export function printUsage(): void {
   console.log('  --no-load      Skip loading persisted state (requires MELKER_PERSIST=true)');
   console.log('  --cache        Use bundle cache (default: disabled)');
   console.log('  --watch        Watch file for changes and auto-reload (local files only)');
+  console.log('  --show-policy  Display the app policy and exit');
+  console.log('  --trust        Run with full permissions, ignoring any declared policy');
   console.log('  --help, -h     Show this help message');
   console.log('');
   console.log('Example .melker file content:');
@@ -1035,6 +1123,23 @@ export function printUsage(): void {
   console.log('  XDG_STATE_HOME   Override state directory (default: ~/.local/state)');
   console.log('  XDG_CONFIG_HOME  Override config directory (default: ~/.config)');
   console.log('  XDG_CACHE_HOME   Override cache directory (default: ~/.cache)');
+  console.log('');
+  console.log('Policy system (permission sandboxing):');
+  console.log('  Apps can declare required permissions via embedded <policy> tag or .policy.json file.');
+  console.log('  When a policy is found, the app runs in a subprocess with only those permissions.');
+  console.log('');
+  console.log('  Embedded policy example:');
+  console.log('    <policy>{"name":"My App","permissions":{"net":["api.example.com"]}}</policy>');
+  console.log('');
+  console.log('  External policy file (app-name.policy.json or melker.policy.json):');
+  console.log('    {"name":"My App","permissions":{"read":["/data"],"net":["api.example.com"]}}');
+  console.log('');
+  console.log('  Policy permissions map directly to Deno flags:');
+  console.log('    read: [...paths]  -> --allow-read=paths');
+  console.log('    write: [...paths] -> --allow-write=paths');
+  console.log('    net: [...hosts]   -> --allow-net=hosts');
+  console.log('    run: [...cmds]    -> --allow-run=cmds');
+  console.log('    env: [...vars]    -> --allow-env=vars');
   console.log('');
   console.log('Example files:');
   console.log('  examples/melker/hello.melker           - Simple greeting example');
@@ -1160,9 +1265,25 @@ async function generateSchemaMarkdown(): Promise<string> {
   return lines.join('\n');
 }
 
+// Check Deno version meets minimum requirement
+function checkDenoVersion(): void {
+  const version = Deno.version.deno;
+  const [major, minor] = version.split('.').map(Number);
+
+  // Require Deno 2.5+ for Deno.bundle() API
+  if (major < 2 || (major === 2 && minor < 5)) {
+    console.error(`Error: Melker requires Deno 2.5 or higher (found ${version})`);
+    console.error('Please upgrade Deno: https://docs.deno.com/runtime/getting_started/installation/');
+    Deno.exit(1);
+  }
+}
+
 // Main CLI entry point
 export async function main(): Promise<void> {
   const args = Deno.args;
+
+  // Check Deno version first
+  checkDenoVersion();
 
   if (args.length === 0) {
     printUsage();
@@ -1197,7 +1318,15 @@ export async function main(): Promise<void> {
     noLoad: args.includes('--no-load'),
     useCache: args.includes('--cache'),
     watch: args.includes('--watch'),
+    showPolicy: args.includes('--show-policy'),
+    trust: args.includes('--trust'),
   };
+
+  // Check if running in subprocess mode (policy already applied)
+  const isRunner = Deno.env.get('MELKER_RUNNER') === '1';
+
+  // Check if --unstable-bundle is available (required for Deno.bundle() API)
+  const hasBundleApi = typeof (Deno as any).bundle === 'function';
 
   // Enable lint mode if requested
   if (options.lint) {
@@ -1306,12 +1435,57 @@ export async function main(): Promise<void> {
   const templateArgs = [absoluteFilepath, ...args.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
 
   // Check required permissions before proceeding (prevents Deno permission prompts)
-  checkRequiredPermissions(filepath);
+  // Skip in runner mode - we have specific permissions from the policy
+  if (!isRunner) {
+    checkRequiredPermissions(filepath);
+  }
 
   try {
     // Check if file exists (skip for URLs)
     if (!isUrl(filepath)) {
       await Deno.stat(filepath);
+    }
+
+    // Handle --show-policy flag (works for local files in any mode)
+    if (options.showPolicy && !isUrl(filepath)) {
+      const policyResult = await loadPolicy(absoluteFilepath);
+      const policy = policyResult.policy ?? createAutoPolicy();
+      const source = policyResult.policy ? policyResult.source : 'auto';
+      console.log(`\nPolicy source: ${source}${policyResult.path ? ` (${policyResult.path})` : ''}\n`);
+      console.log(formatPolicy(policy));
+      console.log('\nDeno permission flags:');
+      const flags = policyToDenoFlags(policy, dirname(absoluteFilepath));
+      console.log(formatDenoFlags(flags));
+      Deno.exit(0);
+    }
+
+    // Policy enforcement (skip for URLs and if already in runner mode)
+    if (!isUrl(filepath) && !isRunner) {
+      const policyResult = await loadPolicy(absoluteFilepath);
+
+      // If policy found and not --trust, run in subprocess with restrictions
+      if (policyResult.policy && !options.trust) {
+        // Validate policy
+        const errors = validatePolicy(policyResult.policy);
+        if (errors.length > 0) {
+          console.error('❌ Policy validation errors:');
+          for (const err of errors) {
+            console.error(`  - ${err}`);
+          }
+          Deno.exit(1);
+        }
+
+        // Run in restricted subprocess
+        await runWithPolicy(absoluteFilepath, policyResult.policy, args);
+        return; // runWithPolicy calls Deno.exit
+      }
+    }
+
+    // If --unstable-bundle is not available, spawn subprocess with all permissions
+    // This allows running without explicitly specifying --unstable-bundle
+    if (!hasBundleApi && !isRunner) {
+      await runWithPolicy(absoluteFilepath, createAutoPolicy(), args);
+      return; // runWithPolicy calls Deno.exit
     }
 
     // Use watchAndRun if --watch is specified
@@ -1328,6 +1502,95 @@ export async function main(): Promise<void> {
     }
     Deno.exit(1);
   }
+}
+
+/**
+ * Run a .melker app in a subprocess with restricted Deno permissions.
+ *
+ * This is used when a policy is declared - the app runs in a subprocess
+ * with only the permissions specified in the policy.
+ *
+ * @param filepath Path to the .melker file
+ * @param policy The loaded policy
+ * @param originalArgs Original CLI arguments to pass through
+ */
+async function runWithPolicy(
+  filepath: string,
+  policy: MelkerPolicy,
+  originalArgs: string[]
+): Promise<void> {
+  // Get logger for policy runner
+  const { getLogger } = await import('./logging.ts');
+  const logger = (() => { try { return getLogger('policy'); } catch { return null; } })();
+
+  // Get directory containing the .melker file for resolving relative paths
+  const absolutePath = filepath.startsWith('/')
+    ? filepath
+    : resolve(Deno.cwd(), filepath);
+  const appDir = dirname(absolutePath);
+
+  // Convert policy to Deno permission flags
+  const denoFlags = policyToDenoFlags(policy, appDir);
+
+  // Required: --unstable-bundle for Deno.bundle() API
+  denoFlags.push('--unstable-bundle');
+
+  // Disable interactive permission prompts - fail fast instead of hanging
+  denoFlags.push('--no-prompt');
+
+  // Build the subprocess command
+  // We re-run ourselves with MELKER_RUNNER=1 to skip policy detection
+  const melkerEntry = new URL('../melker.ts', import.meta.url).pathname;
+
+  // Filter out policy-related flags that shouldn't be passed to subprocess
+  const filteredArgs = originalArgs.filter(arg =>
+    !arg.startsWith('--show-policy') &&
+    !arg.startsWith('--trust')
+  );
+
+  const cmd = [
+    Deno.execPath(),
+    'run',
+    ...denoFlags,
+    melkerEntry,
+    ...filteredArgs,
+  ];
+
+  // Log the subprocess launch
+  logger?.info?.(`Launching app with policy: ${policy.name || filepath}`);
+  logger?.info?.(`Subprocess command: ${cmd.join(' ')}`);
+  logger?.debug?.(`Permission flags: ${denoFlags.join(' ')}`);
+
+  // Spawn subprocess with restricted permissions
+  const process = new Deno.Command(cmd[0], {
+    args: cmd.slice(1),
+    stdin: 'inherit',
+    stdout: 'inherit',
+    stderr: 'inherit',
+    env: {
+      ...Deno.env.toObject(),
+      MELKER_RUNNER: '1', // Signal that policy has been checked
+    },
+  });
+
+  const child = process.spawn();
+
+  // Ignore signals in parent - let the child handle them and exit gracefully
+  // The child will receive SIGINT/SIGTERM since it inherits stdin (same process group)
+  const ignoreSignal = () => {
+    // Do nothing - just prevent parent from exiting before child
+  };
+  Deno.addSignalListener('SIGINT', ignoreSignal);
+  Deno.addSignalListener('SIGTERM', ignoreSignal);
+
+  const status = await child.status;
+
+  // Clean up signal listeners
+  Deno.removeSignalListener('SIGINT', ignoreSignal);
+  Deno.removeSignalListener('SIGTERM', ignoreSignal);
+
+  // Exit with the subprocess exit code
+  Deno.exit(status.code);
 }
 
 /**

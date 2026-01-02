@@ -51,6 +51,18 @@ const MAX_MESSAGES_BEFORE_COMPACT = 10;
 // Target number of messages after compaction
 const COMPACT_TARGET_MESSAGES = 4;
 
+// Default dialog dimensions
+const DEFAULT_DIALOG_WIDTH = 70;
+const DEFAULT_DIALOG_HEIGHT = 20;
+
+// Saved dialog position and size (persisted across open/close)
+interface DialogGeometry {
+  offsetX?: number;
+  offsetY?: number;
+  width: number;
+  height: number;
+}
+
 export class AccessibilityDialogManager {
   private _overlay?: Element;
   private _deps: AccessibilityDialogDependencies;
@@ -64,6 +76,11 @@ export class AccessibilityDialogManager {
   // Audio recording
   private _audioRecorder: AudioRecorder;
   private _isListening = false;
+  // Saved dialog geometry (position and size)
+  private _savedGeometry: DialogGeometry = {
+    width: DEFAULT_DIALOG_WIDTH,
+    height: DEFAULT_DIALOG_HEIGHT,
+  };
 
   constructor(deps: AccessibilityDialogDependencies) {
     this._deps = deps;
@@ -224,6 +241,9 @@ export class AccessibilityDialogManager {
     // Initial help text
     const initialText = this._conversationHistory || 'Type a question and click Send, or click Listen to use voice input.\n\nExamples:\n- What is on this screen?\n- How do I navigate?\n- What can I do here?';
 
+    // Use saved geometry if available
+    const { offsetX, offsetY, width, height } = this._savedGeometry;
+
     this._overlay = melker`
       <dialog
         id="accessibility-dialog"
@@ -233,8 +253,10 @@ export class AccessibilityDialogManager {
         backdrop=${false}
         draggable=${true}
         resizable=${true}
-        width=${70}
-        height=${20}
+        width=${width}
+        height=${height}
+        offsetX=${offsetX}
+        offsetY=${offsetY}
         style="position: fixed"
       >
         <container
@@ -945,6 +967,19 @@ export class AccessibilityDialogManager {
     if (!this._overlay) return;
 
     logger.info('Closing accessibility dialog');
+
+    // Save current geometry before closing
+    const dialogElement = this._deps.document.getElementById('accessibility-dialog');
+    if (dialogElement) {
+      const props = dialogElement.props;
+      this._savedGeometry = {
+        offsetX: props.offsetX as number | undefined,
+        offsetY: props.offsetY as number | undefined,
+        width: (props.width as number) || DEFAULT_DIALOG_WIDTH,
+        height: (props.height as number) || DEFAULT_DIALOG_HEIGHT,
+      };
+      logger.debug('Saved dialog geometry', { ...this._savedGeometry });
+    }
 
     // Remove from document root's children
     const root = this._deps.document.root;

@@ -17,5 +17,6 @@
 
   <button
     title="Click Me!"
+    onClick="alert('Hello from Melker!')"
   />
 </container>

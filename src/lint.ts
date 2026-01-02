@@ -64,6 +64,10 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
   color: { type: 'string', description: 'Text/foreground color' },
   backgroundColor: { type: 'string', description: 'Background color' },
   borderColor: { type: 'string', description: 'Border color' },
+  borderTopColor: { type: 'string', description: 'Top border color' },
+  borderBottomColor: { type: 'string', description: 'Bottom border color' },
+  borderLeftColor: { type: 'string', description: 'Left border color' },
+  borderRightColor: { type: 'string', description: 'Right border color' },
 
   // Font
   fontWeight: { type: 'string', enum: ['normal', 'bold'], description: 'Text weight' },

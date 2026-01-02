@@ -335,7 +335,7 @@ Deno.test('BASE_STYLES_SCHEMA enum values are valid for overflow', () => {
 
 Deno.test('BASE_STYLES_SCHEMA enum values are valid for border styles', () => {
   const borderProps = ['border', 'borderTop', 'borderBottom', 'borderLeft', 'borderRight'];
-  const expectedValues = ['none', 'thin', 'thick'];
+  const expectedValues = ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'];
 
   for (const prop of borderProps) {
     const schema = BASE_STYLES_SCHEMA[prop];

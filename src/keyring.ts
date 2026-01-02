@@ -1,36 +1,11 @@
 // keyring.ts - System keyring access for secure credential storage
 
+import { restoreTerminal } from './terminal-lifecycle.ts';
+
 export class KeyringError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'KeyringError';
-  }
-}
-
-/**
- * Restore console to normal state before exit
- */
-function restoreConsole(): void {
-  try {
-    // Disable raw mode if enabled
-    if (Deno.stdin.isTerminal()) {
-      Deno.stdin.setRaw(false);
-    }
-  } catch {
-    // Ignore - may not be in raw mode
-  }
-
-  // Show cursor, exit alternate screen, reset attributes
-  const restore = [
-    '\x1b[?25h',    // Show cursor
-    '\x1b[?1049l',  // Exit alternate screen
-    '\x1b[0m',      // Reset attributes
-  ].join('');
-
-  try {
-    Deno.stdout.writeSync(new TextEncoder().encode(restore));
-  } catch {
-    // Ignore write errors
   }
 }
 
@@ -66,7 +41,7 @@ export class Keyring {
         installHint = "PowerShell should be available by default on Windows.";
         break;
       default:
-        restoreConsole();
+        restoreTerminal();
         console.error(`\n[FATAL] Unsupported operating system: ${os}`);
         console.error("Melker requires a system keyring for secure credential storage.");
         console.error("Supported platforms: macOS, Linux, Windows\n");
@@ -83,10 +58,10 @@ export class Keyring {
       });
       await cmd.output();
       // If we get here, the command exists (even if it returned non-zero)
-    } catch {
-      restoreConsole();
+    } catch (e) {
+      restoreTerminal();
       console.error(`\n[FATAL] System keyring not available`);
-      console.error(`Required tool '${tool}' not found or not functional.`);
+      console.error(`Required tool '${tool}' not found or not functional. (${e})`);
       console.error(`\nMelker requires a system keyring for secure OAuth token storage.`);
       console.error(`\n${installHint}\n`);
       Deno.exit(1);

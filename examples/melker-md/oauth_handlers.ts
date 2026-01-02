@@ -35,18 +35,25 @@ function showError(msg: string) {
 }
 
 // Callbacks referenced by <oauth> element
-export function onLoginCallback() {
+// All callbacks receive unified OAuthEvent: { type: 'oauth', action: string, error?: Error }
+interface OAuthEvent {
+  type: 'oauth';
+  action: 'login' | 'logout' | 'fail';
+  error?: Error;
+}
+
+export function onLoginCallback(_event: OAuthEvent) {
   showStatus('Logged in');
   updateUI(true);
 }
 
-export function onLogoutCallback() {
+export function onLogoutCallback(_event: OAuthEvent) {
   showStatus('Logged out');
   updateUI(false);
 }
 
-export function onFailCallback(error: Error) {
-  showError(error.message);
+export function onFailCallback(event: OAuthEvent) {
+  showError(event.error?.message || 'Unknown error');
   updateUI(false);
 }
 

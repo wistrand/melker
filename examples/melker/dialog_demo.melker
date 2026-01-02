@@ -69,19 +69,19 @@
           id="btn-info"
           title="Info Dialog"
           style="width: 16; margin-right: 2; background-color: #3b82f6; color: white;"
-          onClick="$melker.openDialog1();"
+          onClick="$app.openDialog1();"
         />
         <button
           id="btn-confirm"
           title="Confirm Dialog"
           style="width: 18; margin-right: 2; background-color: #10b981; color: white;"
-          onClick="$melker.openDialog2();"
+          onClick="$app.openDialog2();"
         />
         <button
           id="btn-form"
           title="Form Dialog"
           style="width: 16; background-color: #8b5cf6; color: white;"
-          onClick="$melker.openDialog3();"
+          onClick="$app.openDialog3();"
         />
       </container>
 
@@ -111,7 +111,7 @@
             id="info-ok"
             title="OK"
             style="width: 10; background-color: #3b82f6; color: white;"
-            onClick="$melker.closeDialog1();"
+            onClick="$app.closeDialog1();"
           />
         </container>
       </container>
@@ -128,13 +128,13 @@
             id="confirm-cancel"
             title="Cancel"
             style="width: 10; margin-right: 2; background-color: #6b7280; color: white;"
-            onClick="$melker.closeDialog2();"
+            onClick="$app.closeDialog2();"
           />
           <button
             id="confirm-ok"
             title="Confirm"
             style="width: 10; background-color: #10b981; color: white;"
-            onClick="$melker.closeDialog2();"
+            onClick="$app.closeDialog2();"
           />
         </container>
       </container>
@@ -160,13 +160,13 @@
             id="form-cancel"
             title="Cancel"
             style="width: 10; margin-right: 2; background-color: #6b7280; color: white;"
-            onClick="$melker.closeDialog3();"
+            onClick="$app.closeDialog3();"
           />
           <button
             id="form-submit"
             title="Submit"
             style="width: 10; background-color: #8b5cf6; color: white;"
-            onClick="$melker.closeDialog3();"
+            onClick="$app.closeDialog3();"
           />
         </container>
       </container>

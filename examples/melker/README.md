@@ -1,24 +1,26 @@
 # Melker Template Examples
 
+*Run text with meaning*
+
 This directory contains `.melker` template files demonstrating the declarative HTML-like syntax.
 
 ## Running Examples
 
 ```bash
-# Run a .melker file (requires --unstable-bundle for npm/jsr imports)
-deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
+# Run a .melker file
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # Run from URL
-deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --unstable-bundle --allow-all melker.ts --lint examples/melker/counter.melker
+deno run --allow-all melker.ts --lint examples/melker/counter.melker
 
 # Display element tree
-deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker --print-tree
+deno run --allow-all melker.ts examples/melker/counter.melker --print-tree
 
 # Display JSON serialization
-deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker --print-json
+deno run --allow-all melker.ts examples/melker/counter.melker --print-json
 ```
 
 ## Core Examples

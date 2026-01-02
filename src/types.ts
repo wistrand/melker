@@ -32,15 +32,39 @@ export type TerminalColor =
   | 'brightBlue' | 'brightMagenta' | 'brightCyan' | 'brightWhite'
   | string; // Allow custom colors/hex values
 
+// Border styles using Unicode Box Drawing characters
+export type BorderStyle = 'none' | 'thin' | 'thick' | 'double' | 'rounded' | 'dashed' | 'dashed-rounded' | 'ascii' | 'ascii-rounded';
+
+// Border character definitions: h=horizontal, v=vertical, tl/tr/bl/br=corners
+export interface BorderChars {
+  h: string;   // horizontal line
+  v: string;   // vertical line
+  tl: string;  // top-left corner
+  tr: string;  // top-right corner
+  bl: string;  // bottom-left corner
+  br: string;  // bottom-right corner
+}
+
+export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {
+  thin:           { h: '─', v: '│', tl: '┌', tr: '┐', bl: '└', br: '┘' },
+  thick:          { h: '━', v: '┃', tl: '┏', tr: '┓', bl: '┗', br: '┛' },
+  double:         { h: '═', v: '║', tl: '╔', tr: '╗', bl: '╚', br: '╝' },
+  rounded:        { h: '─', v: '│', tl: '╭', tr: '╮', bl: '╰', br: '╯' },
+  dashed:         { h: '┄', v: '┆', tl: '┌', tr: '┐', bl: '└', br: '┘' },
+  'dashed-rounded': { h: '┄', v: '┆', tl: '╭', tr: '╮', bl: '╰', br: '╯' },
+  ascii:          { h: '-', v: '|', tl: '+', tr: '+', bl: '+', br: '+' },
+  'ascii-rounded': { h: '-', v: '|', tl: '·', tr: '·', bl: '·', br: '·' },
+};
+
 export interface Style extends Record<string, any> {
   color?: TerminalColor;
   backgroundColor?: TerminalColor;
   fontWeight?: 'normal' | 'bold';
-  border?: 'none' | 'thin' | 'thick';
-  borderTop?: 'none' | 'thin' | 'thick';
-  borderBottom?: 'none' | 'thin' | 'thick';
-  borderLeft?: 'none' | 'thin' | 'thick';
-  borderRight?: 'none' | 'thin' | 'thick';
+  border?: BorderStyle;
+  borderTop?: BorderStyle;
+  borderBottom?: BorderStyle;
+  borderLeft?: BorderStyle;
+  borderRight?: BorderStyle;
   borderColor?: TerminalColor;
   padding?: number | BoxSpacing;
   margin?: number | BoxSpacing;

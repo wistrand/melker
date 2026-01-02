@@ -5,18 +5,28 @@
   -->
 
   <!-- OAuth configuration loaded from .env.local (see .env.local.example) -->
+  <!-- OAuth callbacks receive unified event: { type: 'oauth', action: string, error?: Error } -->
   <oauth
-    wellknown="${OAUTH_WELLKNOWN}"
-    client-id="${OAUTH_CLIENT_ID}"
-    audience="${OAUTH_AUDIENCE}"
+    wellknown="${MELKER_OAUTH_WELLKNOWN}"
+    client-id="${MELKER_OAUTH_CLIENT_ID}"
+    audience="${MELKER_OAUTH_AUDIENCE}"
     auto-login="true"
-    onLogin="$app.onLoginCallback()"
-    onLogout="$app.onLogoutCallback()"
-    onFail="$app.onFailCallback(error)"
-    debugServer="{OAUTH_DEBUG_SERVER:-true}"
+    onLogin="$app.onLoginCallback(event)"
+    onLogout="$app.onLogoutCallback(event)"
+    onFail="$app.onFailCallback(event)"
+    debugServer="{MELKER_OAUTH_DEBUG_SERVER:-true}"
   />
 
-  <container style="padding: 2; height: fill; display: flex; flex-direction: column;">
+    <policy>
+      {
+        "permissions": {
+          "net": ["${MELKER_OAUTH_WELLKNOWN}"],
+          "keyring" : true
+        }
+      }
+    </policy>
+
+    <container style="padding: 2; height: fill; display: flex; flex-direction: column;">
     <text style="bold: true; flex: 0 0 auto;">OAuth2 PKCE Login</text>
     <text id="status" style="flex: 0 0 auto;">Initializing...</text>
     <text id="error" style="color: red; flex: 0 0 auto;"></text>
@@ -68,18 +78,25 @@
     }
 
     // Callbacks referenced by <oauth> element
-    export function onLoginCallback() {
+    // All callbacks receive unified OAuthEvent: { type: 'oauth', action: string, error?: Error }
+    interface OAuthEvent {
+      type: 'oauth';
+      action: 'login' | 'logout' | 'fail';
+      error?: Error;
+    }
+
+    export function onLoginCallback(_event: OAuthEvent) {
       showStatus('Logged in');
       updateUI(true);
     }
 
-    export function onLogoutCallback() {
+    export function onLogoutCallback(_event: OAuthEvent) {
       showStatus('Logged out');
       updateUI(false);
     }
 
-    export function onFailCallback(error: Error) {
-      showError(error.message);
+    export function onFailCallback(event: OAuthEvent) {
+      showError(event.error?.message || 'Unknown error');
       updateUI(false);
     }
 

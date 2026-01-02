@@ -29,7 +29,7 @@ function padEndDisplayWidth(str: string, targetWidth: number, padChar: string = 
 
 /**
  * Wrap text into lines that fit within a given width
- * Attempts to break at word boundaries (spaces)
+ * Attempts to break at word boundaries (spaces or commas)
  */
 function wrapTextToLines(text: string, width: number): string[] {
   if (text.length <= width) {
@@ -45,11 +45,25 @@ function wrapTextToLines(text: string, width: number): string[] {
       break;
     }
 
-    // Find a good break point (space)
+    // Find a good break point (space or comma)
     let breakPoint = width;
-    const lastSpace = remaining.substring(0, width + 1).lastIndexOf(' ');
+    const searchArea = remaining.substring(0, width + 1);
+    const lastSpace = searchArea.lastIndexOf(' ');
+    const lastComma = searchArea.lastIndexOf(',');
+
+    // Use the later of space or comma (prefer breaking after comma)
+    let bestBreak = -1;
     if (lastSpace > 0 && lastSpace < width) {
-      breakPoint = lastSpace;
+      bestBreak = lastSpace;
+    }
+    if (lastComma > 0 && lastComma + 1 <= width) {
+      // Break after the comma if it's a better position
+      if (lastComma + 1 > bestBreak) {
+        bestBreak = lastComma + 1;
+      }
+    }
+    if (bestBreak > 0) {
+      breakPoint = bestBreak;
     }
 
     lines.push(remaining.substring(0, breakPoint).trimEnd());
@@ -384,12 +398,13 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       this._hasLoadedContent = true;
       return this._srcContent;
     } catch (error) {
+      logger.warn("Failed to load " + src, { error: String(error) });
       // Set error message for UI display
       const errorName = (error as any)?.name || 'Error';
       if (errorName === 'NotFound') {
         this._loadError = `File not found: ${src}`;
       } else {
-        this._loadError = `Failed to load: ${src}`;
+        this._loadError = `Failed to load: ${src} ` + error;
       }
       this._srcContent = null;
       this._lastSrc = src; // Mark this src as attempted to prevent retry loops
@@ -1121,10 +1136,23 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
       // Find natural break point or use available width
       let breakPoint = availableWidth;
-      const spaceIndex = remainingText.substring(0, availableWidth + 1).lastIndexOf(' ');
+      const searchArea = remainingText.substring(0, availableWidth + 1);
+      const spaceIndex = searchArea.lastIndexOf(' ');
+      const commaIndex = searchArea.lastIndexOf(',');
 
+      // Use the later of space or comma (prefer breaking after comma)
+      let bestBreak = -1;
       if (spaceIndex > 0 && spaceIndex < availableWidth) {
-        breakPoint = spaceIndex;
+        bestBreak = spaceIndex;
+      }
+      if (commaIndex > 0 && commaIndex + 1 <= availableWidth) {
+        // Break after the comma if it's a better position
+        if (commaIndex + 1 > bestBreak) {
+          bestBreak = commaIndex + 1;
+        }
+      }
+      if (bestBreak > 0) {
+        breakPoint = bestBreak;
       }
 
       const line = remainingText.substring(0, breakPoint).trimEnd();

@@ -25,7 +25,9 @@ import {
 } from './focus.ts';
 import {
   ViewSourceManager,
+  type SystemInfo,
 } from './view-source.ts';
+import type { MelkerPolicy } from './policy/types.ts';
 import {
   AlertDialogManager,
 } from './alert-dialog.ts';
@@ -156,6 +158,9 @@ export interface MelkerEngineOptions {
   appId?: string;  // Unique identifier for the app (for state file naming)
   persistenceMappings?: PersistenceMapping[];  // Custom mappings (defaults to DEFAULT_PERSISTENCE_MAPPINGS)
   persistenceDebounceMs?: number;  // Debounce delay for auto-save (default 500ms)
+
+  // Exit handler callback (called on Ctrl+C instead of default exit)
+  onExit?: () => void | Promise<void>;
 }
 
 export class MelkerEngine {
@@ -242,6 +247,7 @@ export class MelkerEngine {
       appId: undefined as unknown as string,
       persistenceMappings: DEFAULT_PERSISTENCE_MAPPINGS,
       persistenceDebounceMs: 500,
+      onExit: () => {},
       ...options,
     };
 
@@ -522,11 +528,17 @@ export class MelkerEngine {
 
       // Handle Ctrl+C for graceful exit
       if (event.ctrlKey && event.key === 'c') {
-        this.stop().then(() => {
-          if (typeof Deno !== 'undefined') {
-            Deno.exit(0);
-          }
-        }).catch(console.error);
+        if (this._options.onExit) {
+          // Use custom exit handler
+          Promise.resolve(this._options.onExit()).catch(console.error);
+        } else {
+          // Default behavior
+          this.stop().then(() => {
+            if (typeof Deno !== 'undefined') {
+              Deno.exit(0);
+            }
+          }).catch(console.error);
+        }
         return;
       }
 
@@ -1067,13 +1079,24 @@ export class MelkerEngine {
   }
 
   /**
+   * Set the exit handler callback (called on Ctrl+C instead of default exit)
+   */
+  setOnExit(handler: () => void | Promise<void>): void {
+    this._options.onExit = handler;
+  }
+
+  /**
    * Set source content for View Source feature (F12)
    * @param content - Original source content
    * @param filePath - Path to the source file
    * @param type - Type of source file ('md' or 'melker')
    * @param convertedContent - For .md files: the converted .melker content
+   * @param policy - App policy if present
+   * @param appDir - App directory for resolving policy paths
+   * @param systemInfo - System info for debug tab
+   * @param helpContent - Help text content (markdown)
    */
-  setSource(content: string, filePath: string, type: 'md' | 'melker', convertedContent?: string): void {
+  setSource(content: string, filePath: string, type: 'md' | 'melker', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, systemInfo?: SystemInfo, helpContent?: string): void {
     if (!this._viewSourceManager) {
       this._viewSourceManager = new ViewSourceManager({
         document: this._document,
@@ -1088,7 +1111,7 @@ export class MelkerEngine {
         },
       });
     }
-    this._viewSourceManager.setSource(content, filePath, type, convertedContent);
+    this._viewSourceManager.setSource(content, filePath, type, convertedContent, policy, appDir, systemInfo, helpContent);
   }
 
   /**
@@ -1123,6 +1146,7 @@ export class MelkerEngine {
         autoRender: this._options.autoRender,
         exitProgram: async () => { await this.stop(); },
         scrollToBottom: (containerId) => this.scrollToBottom(containerId),
+        getSelectedText: () => this.getTextSelection().selectedText,
       });
     }
   }

@@ -8,10 +8,11 @@ import { getLogger } from './logging.ts';
 const logger = getLogger('terminal-lifecycle');
 
 /**
- * Emergency terminal restore - disables raw mode, mouse reporting, alternate screen.
+ * Full terminal restore - disables raw mode, mouse reporting, alternate screen.
  * This is a standalone function that doesn't depend on engine state.
+ * Use this for graceful exit, error handling, or emergency cleanup.
  */
-function fullTerminalRestore(): void {
+export function restoreTerminal(): void {
   // First disable raw mode
   try {
     Deno.stdin.setRaw(false);
@@ -116,8 +117,7 @@ export function cleanupTerminal(options: TerminalLifecycleOptions): void {
  * Disables raw mode, mouse reporting, alternate screen, and shows cursor.
  */
 export function emergencyCleanupTerminal(): void {
-  // Use the comprehensive restore function
-  fullTerminalRestore();
+  restoreTerminal();
 }
 
 /**
@@ -168,7 +168,7 @@ export function setupCleanupHandlers(
     logger.fatal('Uncaught error', err);
 
     // Full terminal restore (raw mode, mouse, alternate screen)
-    fullTerminalRestore();
+    restoreTerminal();
     syncCleanup();  // Also call engine cleanup
 
     console.error('\n\x1b[31mUncaught error:\x1b[0m', event.error);
@@ -186,7 +186,7 @@ export function setupCleanupHandlers(
     logger.fatal('Unhandled promise rejection', err);
 
     // Full terminal restore (raw mode, mouse, alternate screen)
-    fullTerminalRestore();
+    restoreTerminal();
     syncCleanup();  // Also call engine cleanup
 
     console.error('\n\x1b[31mUnhandled promise rejection:\x1b[0m', reason);

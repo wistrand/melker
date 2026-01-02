@@ -1,7 +1,7 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable } from './types.ts';
+import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle } from './types.ts';
 import { clipBounds } from './geometry.ts';
 import { DualBuffer, TerminalBuffer, Cell } from './buffer.ts';
 import { ClippedDualBuffer } from './clipped-buffer.ts';
@@ -661,7 +661,7 @@ export class RenderingEngine {
 
     // Debug: Log clipping issues
     if (element.type === 'text' && (clippedBounds.width <= 0 || clippedBounds.height <= 0)) {
-      renderLogger.info(`[CLIP-DEBUG] text element clipped out, id="${element.id || 'none'}", bounds=${JSON.stringify(bounds)}, clippedBounds=${JSON.stringify(clippedBounds)}, clipRect=${JSON.stringify(context.clipRect)}, viewport=${JSON.stringify(context.viewport)}`);
+      renderLogger.trace(`[CLIP-DEBUG] text element clipped out, id="${element.id || 'none'}", bounds=${JSON.stringify(bounds)}, clippedBounds=${JSON.stringify(clippedBounds)}, clipRect=${JSON.stringify(context.clipRect)}, viewport=${JSON.stringify(context.viewport)}`);
     }
 
     if (clippedBounds.width <= 0 || clippedBounds.height <= 0) return;
@@ -922,8 +922,8 @@ export class RenderingEngine {
     if (!borderTop && !borderBottom && !borderLeft && !borderRight) return;
 
     // Get border characters (use the first available border style for consistency)
-    const activeStyle = borderTop || borderBottom || borderLeft || borderRight || 'thin';
-    const chars = this._getBorderChars(activeStyle as 'thin' | 'thick' | 'double');
+    const activeStyle = (borderTop || borderBottom || borderLeft || borderRight || 'thin') as Exclude<BorderStyle, 'none'>;
+    const chars = BORDER_CHARS[activeStyle] || BORDER_CHARS.thin;
 
     // Draw individual border sides
     if (borderTop && borderTop !== 'none') {
@@ -968,18 +968,6 @@ export class RenderingEngine {
     }
   }
 
-  // Get border characters for different styles
-  private _getBorderChars(style: 'thin' | 'thick' | 'double') {
-    switch (style) {
-      case 'thick':
-        return { h: '━', v: '┃', tl: '┏', tr: '┓', bl: '┗', br: '┛' };
-      case 'double':
-        return { h: '═', v: '║', tl: '╔', tr: '╗', bl: '╚', br: '╝' };
-      case 'thin':
-      default:
-        return { h: '─', v: '│', tl: '┌', tr: '┐', bl: '└', br: '┘' };
-    }
-  }
 
   // Render element content
   private _renderContent(

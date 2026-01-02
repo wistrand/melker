@@ -38,6 +38,8 @@ interface MelkerParseResult {
   stylesheet?: Stylesheet;
   oauthConfig?: OAuthParseConfig;
   sourceContent?: string;  // Original source for error reporting
+  helpContent?: string;    // Help text content (markdown)
+  helpSrc?: string;        // External help file path
 }
 
 // Source location info from parser
@@ -62,9 +64,9 @@ interface ParsedNode {
  */
 function preprocessSelfClosingTags(content: string): string {
   // Convert self-closing special tags: <script .../> -> <script ...></script>
-  // Handles: script, style, title, oauth
+  // Handles: script, style, title, oauth, help
   return content.replace(
-    /<(script|style|title|oauth)(\s[^>]*)?\s*\/>/gi,
+    /<(script|style|title|oauth|help)(\s[^>]*)?\s*\/>/gi,
     '<$1$2></$1>'
   );
 }
@@ -161,12 +163,14 @@ export function parseMelkerFile(content: string): MelkerParseResult {
     // Check if we have a top-level melker tag
     const rootNode = ast[0];
     if (rootNode.type === 'Tag' && rootNode.name === 'melker') {
-      // Extract scripts, title, style, oauth config, and find the UI element
+      // Extract scripts, title, style, oauth config, help, and find the UI element
       const scripts: Array<{ type: string; content: string; src?: string }> = [];
       let uiElement: any = null;
       let title: string | undefined = undefined;
       let stylesheet: Stylesheet | undefined = undefined;
       let oauthConfig: OAuthParseConfig | undefined = undefined;
+      let helpContent: string | undefined = undefined;
+      let helpSrc: string | undefined = undefined;
 
       if (rootNode.body) {
         for (const child of rootNode.body) {
@@ -214,6 +218,17 @@ export function parseMelkerFile(content: string): MelkerParseResult {
                 onFail: getAttr('onFail'),
               };
             }
+          } else if (child.type === 'Tag' && child.name === 'policy') {
+            // Skip policy tag - handled separately by policy loader
+          } else if (child.type === 'Tag' && child.name === 'help') {
+            // Extract help content or src attribute
+            const src = child.attributes?.find((attr: any) => attr.name.value === 'src')?.value?.value;
+            if (src) {
+              helpSrc = src;
+            } else {
+              // Extract inline help content (markdown)
+              helpContent = child.body?.map((node: any) => node.type === 'Text' ? node.value : '').join('') || undefined;
+            }
           } else if (child.type === 'Tag' && !uiElement && !child.name.startsWith('!')) {
             // This should be the UI element (skip comments which start with !)
             uiElement = child;
@@ -236,7 +251,7 @@ export function parseMelkerFile(content: string): MelkerParseResult {
         clearWarnings();
       }
 
-      return { element, scripts, title, stylesheet, oauthConfig, sourceContent: content };
+      return { element, scripts, title, stylesheet, oauthConfig, sourceContent: content, helpContent, helpSrc };
     } else {
       // No melker wrapper, treat as direct UI element (existing behavior)
       const context: TemplateContext = { expressions: [], expressionIndex: 0 };
@@ -871,6 +886,10 @@ export function extractHandlersForBundler(content: string): ParsedHandler[] {
     if (code.includes('__melker.')) continue;
 
     const attrStartOffset = match.index;
+
+    // Skip OAuth handlers - they're extracted separately by extractOAuthHandlersForBundler
+    const element = findContainingElement(content, attrStartOffset);
+    if (element.tag === 'oauth') continue;
     const attrEndOffset = match.index + match[0].length;
 
     // Calculate code position (inside quotes)
@@ -886,11 +905,17 @@ export function extractHandlersForBundler(content: string): ParsedHandler[] {
       params.push({ name: 'event', type: 'any' });
     }
 
-    // Find containing element info
-    const element = findContainingElement(content, attrStartOffset);
+    // Generate descriptive handler ID: __tag_id_event_N or __tag_event_N
+    // (element already found above for OAuth check)
+    // Sanitize to valid JS identifier (replace hyphens/special chars with underscores)
+    const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9]/g, '_');
+    const tagPart = sanitize(element.tag);
+    const idPart = element.id ? `_${sanitize(element.id)}` : '';
+    const eventPart = sanitize(attributeName);
+    const handlerId = `__${tagPart}${idPart}_${eventPart}_${handlerIndex}`;
 
     handlers.push({
-      id: `__h${handlerIndex}`,
+      id: handlerId,
       attributeName,
       code,
       isAsync,
@@ -901,6 +926,70 @@ export function extractHandlersForBundler(content: string): ParsedHandler[] {
     });
 
     handlerIndex++;
+  }
+
+  return handlers;
+}
+
+/**
+ * Extract OAuth handlers from oauth config.
+ *
+ * OAuth callbacks (onLogin, onLogout, onFail) are treated as special handlers
+ * with IDs: __oauth_login, __oauth_logout, __oauth_fail
+ *
+ * All handlers receive a unified OAuthEvent: { type: 'oauth', action: string, error?: Error }
+ */
+function extractOAuthHandlersForBundler(
+  content: string,
+  oauthConfig?: OAuthParseConfig
+): ParsedHandler[] {
+  if (!oauthConfig) return [];
+
+  const handlers: ParsedHandler[] = [];
+
+  // Find the <oauth> tag position for source mapping
+  const oauthMatch = content.match(/<oauth\b/i);
+  const oauthOffset = oauthMatch?.index ?? 0;
+  const oauthLine = (content.slice(0, oauthOffset).match(/\n/g) || []).length + 1;
+
+  // Map of OAuth attribute names to handler IDs
+  const oauthCallbacks: Array<{ attr: 'onLogin' | 'onLogout' | 'onFail'; id: string; action: string }> = [
+    { attr: 'onLogin', id: '__oauth_login', action: 'login' },
+    { attr: 'onLogout', id: '__oauth_logout', action: 'logout' },
+    { attr: 'onFail', id: '__oauth_fail', action: 'fail' },
+  ];
+
+  for (const { attr, id, action } of oauthCallbacks) {
+    const code = oauthConfig[attr];
+    if (!code) continue;
+
+    // Find the attribute position within <oauth> tag
+    const attrPattern = new RegExp(`${attr}\\s*=\\s*(["'])`, 'i');
+    const attrMatch = content.slice(oauthOffset).match(attrPattern);
+    const attrOffset = attrMatch ? oauthOffset + attrMatch.index! : oauthOffset;
+
+    // Calculate source range for the attribute
+    const attrStartOffset = attrOffset;
+    const attrEndOffset = attrOffset + (attrMatch ? attrMatch[0].length + code.length + 1 : 0);
+    const codeStartOffset = attrOffset + (attrMatch ? attrMatch[0].length : 0);
+    const codeEndOffset = codeStartOffset + code.length;
+
+    // Detect async handlers
+    const isAsync = /\bawait\b/.test(code);
+
+    handlers.push({
+      id,
+      attributeName: attr,
+      code,
+      isAsync,
+      params: [{ name: 'event', type: 'any' }], // Unified OAuthEvent parameter
+      attributeRange: calculateRange(content, attrStartOffset, attrEndOffset),
+      codeRange: calculateRange(content, codeStartOffset, codeEndOffset),
+      element: {
+        tag: 'oauth',
+        line: oauthLine,
+      },
+    });
   }
 
   return handlers;
@@ -938,11 +1027,16 @@ export async function parseMelkerForBundler(
   // Extract scripts with position info (loads external scripts if needed)
   const scripts = await extractScriptsForBundler(content, parseResult.scripts, sourceUrl);
 
-  // Extract handlers from the original content
-  const handlers = extractHandlersForBundler(content);
-
-  // Get template (content without script tags)
+  // Get template (content without script tags) - must be done BEFORE handler extraction
+  // so handler offsets are relative to the template, not the original content
   const template = removeScriptTags(content);
+
+  // Extract handlers from the template (after script removal) so offsets are correct
+  const handlers = extractHandlersForBundler(template);
+
+  // Extract OAuth handlers from config (these are not in the template)
+  const oauthHandlers = extractOAuthHandlersForBundler(content, parseResult.oauthConfig);
+  handlers.push(...oauthHandlers);
 
   return {
     sourceUrl,

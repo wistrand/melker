@@ -4,6 +4,8 @@ Guidance for Claude Code when working with Melker.
 
 ## Project Overview
 
+**Melker** - *Run text with meaning*
+
 Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-inspired document model. It renders component trees to ANSI terminals using a dual-buffer system.
 
 ## Quick Reference
@@ -21,7 +23,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 
 ## Technology Stack
 
-- **Runtime**: Deno 2.4+ (required, Node.js/Bun not supported)
+- **Runtime**: Deno 2.5+ (required, Node.js/Bun not supported)
 - **Package**: @melker/core
 - **Target**: ANSI-compatible terminals
 
@@ -74,6 +76,11 @@ src/
   xdg.ts              - XDG Base Directory support
   state-persistence.ts - State persistence for apps
   terminal-lifecycle.ts - Terminal setup, cleanup, signal handlers
+  policy/             - Permission policy system
+    mod.ts            - Policy module exports
+    types.ts          - Policy type definitions
+    loader.ts         - Policy loading from <policy> tag or external file
+    flags.ts          - Convert policy to Deno permission flags
   bundler/            - Runtime bundler for .melker files
     mod.ts            - Main bundler exports
     types.ts          - Bundler type definitions
@@ -182,29 +189,113 @@ Melker follows the [XDG Base Directory Specification](https://specifications.fre
 ## Running .melker Files
 
 ```bash
-# From local file (requires --unstable-bundle for Deno.bundle() API)
-deno run --unstable-bundle --allow-all melker.ts examples/melker/counter.melker
+# Simple launch (auto-detects and adds required flags)
+deno run --allow-all melker.ts examples/melker/counter.melker
 
 # From URL
-deno run --unstable-bundle --allow-all melker.ts http://localhost:1990/melker/counter.melker
+deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --unstable-bundle --allow-all melker.ts --lint examples/melker/counter.melker
+deno run --allow-all melker.ts --lint examples/melker/counter.melker
 
 # Watch mode (auto-reload on file changes, local files only)
-deno run --unstable-bundle --allow-all melker.ts --watch examples/melker/counter.melker
+deno run --allow-all melker.ts --watch examples/melker/counter.melker
 
 # Debug mode (shows bundler info, retains temp files)
-deno run --unstable-bundle --allow-all melker.ts --debug examples/melker/counter.melker
+deno run --allow-all melker.ts --debug examples/melker/counter.melker
 
 # Enable bundle caching (disabled by default)
-deno run --unstable-bundle --allow-all melker.ts --cache examples/melker/counter.melker
+deno run --allow-all melker.ts --cache examples/melker/counter.melker
+
+# Show app policy and exit
+deno run --allow-all melker.ts --show-policy examples/melker/counter.melker
+
+# Run with full permissions, ignoring declared policy
+deno run --allow-all melker.ts --trust examples/melker/counter.melker
 
 # Start LSP server (for editor integration)
 deno run --allow-all melker.ts --lsp
 ```
 
-**Note:** The `--unstable-bundle` flag is required for Deno's `Deno.bundle()` API which handles npm/jsr imports.
+**Note:** The launcher automatically spawns a subprocess with `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
+
+## App Policies (Permission Sandboxing)
+
+Melker apps can declare required permissions via an embedded `<policy>` tag. When a policy is found, the app runs in a subprocess with only those permissions.
+
+### Declaring a Policy
+
+**Inline JSON:**
+```xml
+<melker>
+  <policy>
+  {
+    "name": "My App",
+    "description": "App description",
+    "permissions": {
+      "read": ["."],
+      "net": ["api.example.com"]
+    }
+  }
+  </policy>
+  <!-- UI content -->
+</melker>
+```
+
+**External file:**
+```xml
+<policy src="app.policy.json"></policy>
+```
+
+### Permission Types
+
+| Permission | Values | Deno Flag |
+|------------|--------|-----------|
+| `read` | paths or `["*"]` | `--allow-read` |
+| `write` | paths or `["*"]` | `--allow-write` |
+| `net` | hosts or `["*"]` | `--allow-net` |
+| `run` | commands or `["*"]` | `--allow-run` |
+| `env` | variables or `["*"]` | `--allow-env` |
+| `ffi` | libraries or `["*"]` | `--allow-ffi` |
+
+### Permission Shortcuts
+
+| Shortcut | Description |
+|----------|-------------|
+| `ai` | AI/media: swift, ffmpeg, ffprobe, pactl, ffplay + openrouter.ai |
+| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe |
+| `keyring` | Credentials: security, secret-tool, powershell |
+| `browser` | Browser opening: open, xdg-open, cmd |
+
+```json
+{
+  "permissions": {
+    "read": ["."],
+    "ai": true,
+    "clipboard": true,
+    "keyring": true,
+    "browser": true
+  }
+}
+```
+
+### Environment Variables in Policy
+
+Use `${VAR}` or `${VAR:-default}` syntax in policy JSON.
+
+### OAuth Auto-Permissions
+
+When an `<oauth>` tag is present, the policy automatically includes:
+- `localhost` in net permissions (callback server)
+- `browser: true` (authorization URL)
+- All hosts from the wellknown endpoint
+
+### Implicit Permissions
+
+These are always granted (no need to declare):
+- **read**: `/tmp`, app directory, XDG state dir, cwd
+- **write**: `/tmp`, XDG state dir, log file directory
+- **env**: All `MELKER_*` vars, `HOME`, XDG dirs, `TERM`, `COLORTERM`
 
 See `agent_docs/melker-file-format.md` for syntax details.
 

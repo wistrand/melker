@@ -1,17 +1,21 @@
 # Bundler Demo
 
-This example demonstrates the new Deno.bundle() integration for .melker files,
+**Melker** - *Run text with meaning*
+
+This example demonstrates the Deno.bundle() integration for .melker files,
 enabling full npm: and jsr: import support.
 
 ## Requirements
 
-- Deno 2.5+ with `--unstable-bundle` flag
+- Deno 2.5+
 
 ## Running
 
 ```bash
-deno run --unstable-bundle --allow-all melker.ts examples/melker/bundler/bundler-demo.melker
+deno run --allow-all melker.ts examples/melker/bundler/bundler-demo.melker
 ```
+
+The launcher automatically adds `--unstable-bundle` if needed.
 
 ## Features Demonstrated
 
@@ -62,5 +66,5 @@ Bundles are cached in `~/.cache/melker/bundles/` based on content hash.
 Use `--no-cache` to force re-bundling:
 
 ```bash
-deno run --unstable-bundle --allow-all melker.ts --no-cache examples/melker/bundler/bundler-demo.melker
+deno run --allow-all melker.ts --no-cache examples/melker/bundler/bundler-demo.melker
 ```

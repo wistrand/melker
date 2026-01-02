@@ -1,4 +1,39 @@
 <melker>
+
+  <policy>
+    {
+      "permissions": {
+        "ai": ["*"],
+        "clipboard": true
+      }
+    }
+  </policy>
+
+  <help>
+# Color Selector
+
+An interactive HSL color picker for the terminal.
+
+## Usage
+
+- **Hue/Saturation Canvas**: Click anywhere to select hue (horizontal) and saturation (vertical)
+- **Lightness Bar**: Click to adjust lightness from dark (left) to light (right)
+- **Copy Hex**: Click the button to copy the hex color code to clipboard
+
+## Color Values
+
+The selected color is displayed in three formats:
+- **Hex**: `#rrggbb` format
+- **RGB**: `rgb(r, g, b)` format
+- **HSL**: `hsl(h, s%, l%)` format
+
+## Tips
+
+- Run with `MELKER_THEME=fullcolor-dark` for best color accuracy
+- The crosshair shows your current selection on the palette
+- Press **F12** to view this help and source code
+  </help>
+
   <title>Color Selector</title>
 
   <style>
@@ -189,7 +224,7 @@
     <text id="header">Color Selector (click to pick)</text>
 
     <container id="main">
-      <container id="palette-container" style="border: thin">
+      <container id="palette-container" style="border: thick">
         <text class="label">Hue / Saturation:</text>
         <canvas
           id="hue-sat-canvas"
@@ -231,8 +266,12 @@
         <button title="Copy Hex" onClick="
           const hex = $melker.getElementById('hex-value');
           if (hex) {
-            $melker.copyToClipboard(hex.props.text);
-            alert('Copied: ' + hex.props.text);
+            const success = await $melker.copyToClipboard(hex.props.text);
+            if (success) {
+              alert('Copied: ' + hex.props.text);
+            } else {
+              alert('Failed to copy (no clipboard tool available)');
+            }
           }
         " />
       </container>

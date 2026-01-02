@@ -1,9 +1,9 @@
 // Dual-buffer system for efficient terminal rendering
 
-import { Bounds } from './types.ts';
+import { Bounds, BORDER_CHARS } from './types.ts';
 import { getCharWidth, getStringWidth, analyzeString, type CharInfo } from './char-width.ts';
 import { getThemeManager, colorToGray } from './theme.ts';
-import type { TerminalColor } from './types.ts';
+import type { TerminalColor, BorderStyle } from './types.ts';
 
 export interface Cell {
   char: string;
@@ -255,20 +255,9 @@ export class TerminalBuffer {
     width: number,
     height: number,
     style: Partial<Cell> = {},
-    borderStyle: 'thin' | 'thick' | 'double' = 'thin'
+    borderStyle: Exclude<BorderStyle, 'none'> = 'thin'
   ): void {
-    let chars: Record<string, string>;
-
-    switch (borderStyle) {
-      case 'thick':
-        chars = { h: '━', v: '┃', tl: '┏', tr: '┓', bl: '┗', br: '┛' };
-        break;
-      case 'double':
-        chars = { h: '═', v: '║', tl: '╔', tr: '╗', bl: '╚', br: '╝' };
-        break;
-      default: // thin
-        chars = { h: '─', v: '│', tl: '┌', tr: '┐', bl: '└', br: '┘' };
-    }
+    const chars = BORDER_CHARS[borderStyle] || BORDER_CHARS.thin;
 
     // Top and bottom borders
     for (let i = 1; i < width - 1; i++) {

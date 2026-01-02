@@ -59,6 +59,8 @@ export class TextSelectionHandler {
 
   // Dialog drag state
   private _draggingDialog: DialogElement | null = null;
+  // Dialog resize state
+  private _resizingDialog: DialogElement | null = null;
 
   // Selection performance timing stats
   private _selectionTimingStats = {
@@ -128,12 +130,19 @@ export class TextSelectionHandler {
       return; // Don't process text selection when clicking scrollbar
     }
 
-    // Check for dialog title bar drag before other interactions
+    // Check for dialog title bar drag or resize corner before other interactions
     if (event.button === 0) {
       const dialogs = this._deps.document.getElementsByType('dialog');
       for (const dialog of dialogs) {
-        if (dialog instanceof DialogElement && dialog.props.open && dialog.props.draggable) {
-          if (dialog.isOnTitleBar(event.x, event.y)) {
+        if (dialog instanceof DialogElement && dialog.props.open) {
+          // Check for resize corner first (takes priority over drag)
+          if (dialog.props.resizable && dialog.isOnResizeCorner(event.x, event.y)) {
+            dialog.startResize(event.x, event.y);
+            this._resizingDialog = dialog;
+            return; // Don't process other interactions when resizing dialog
+          }
+          // Check for title bar drag
+          if (dialog.props.draggable && dialog.isOnTitleBar(event.x, event.y)) {
             dialog.startDrag(event.x, event.y);
             this._draggingDialog = dialog;
             return; // Don't process text selection when dragging dialog
@@ -190,7 +199,7 @@ export class TextSelectionHandler {
       // Normal click on text-selectable component: Component-constrained selection
       else if (targetElement && this._deps.hitTester.isTextSelectableElement(targetElement)) {
         const bounds = this._getSelectionBounds(targetElement);
-        logger.info('Text selection attempt', {
+        logger.debug('Text selection attempt', {
           elementId: targetElement.id,
           elementType: targetElement.type,
           hasBounds: !!bounds,
@@ -198,7 +207,7 @@ export class TextSelectionHandler {
         });
         if (bounds) {
           const clampedPos = clampToBounds({ x: event.x, y: event.y }, bounds);
-          logger.info('Selection bounds found, starting selection', {
+          logger.debug('Selection bounds found, starting selection', {
             clickCount: this._clickCount,
             clampedPos: `${clampedPos.x},${clampedPos.y}`,
             originalPos: `${event.x},${event.y}`
@@ -248,7 +257,7 @@ export class TextSelectionHandler {
               componentBounds: bounds,
               mode: 'component',
             };
-            logger.info('Started drag selection', {
+            logger.debug('Started drag selection', {
               isSelecting: this._isSelecting,
               start: `${clampedPos.x},${clampedPos.y}`,
               componentId: targetElement.id
@@ -258,7 +267,7 @@ export class TextSelectionHandler {
       }
       // Normal click on non-text-selectable, non-interactive element: Clear selection
       else if (!targetElement || !this._deps.hitTester.isInteractiveElement(targetElement)) {
-        logger.info('Clearing selection', {
+        logger.debug('Clearing selection', {
           hasTarget: !!targetElement,
           targetId: targetElement?.id,
           targetType: targetElement?.type,
@@ -274,7 +283,15 @@ export class TextSelectionHandler {
    * Handle mouse move events for text selection
    */
   handleMouseMove(event: any): void {
-    // Handle dialog drag first
+    // Handle dialog resize first
+    if (this._resizingDialog) {
+      if (this._resizingDialog.updateResize(event.x, event.y)) {
+        this._deps.onRender();
+      }
+      return;
+    }
+
+    // Handle dialog drag
     if (this._draggingDialog) {
       if (this._draggingDialog.updateDrag(event.x, event.y)) {
         this._deps.onRender();
@@ -383,6 +400,13 @@ export class TextSelectionHandler {
    * Handle mouse up events for text selection
    */
   handleMouseUp(event: any): void {
+    // End dialog resize if active
+    if (this._resizingDialog) {
+      this._resizingDialog.endResize();
+      this._resizingDialog = null;
+      return; // Don't process other mouse up events
+    }
+
     // End dialog drag if active
     if (this._draggingDialog) {
       this._draggingDialog.endDrag();
@@ -429,7 +453,7 @@ export class TextSelectionHandler {
       if (stats.moveCount > 0) {
         const totalTime = performance.now() - stats.startTime;
         const renderCount = stats.renderTotal > 0 ? Math.round(stats.renderTotal / stats.renderMax) : 0;
-        this._deps.logger?.info('Selection drag timing stats:', {
+        this._deps.logger?.debug('Selection drag timing stats:', {
           totalDragTime: `${totalTime.toFixed(1)}ms`,
           mouseMoveEvents: stats.moveCount,
           hitTest: {
@@ -476,11 +500,24 @@ export class TextSelectionHandler {
     // (currentBuffer is cleared after swap)
     const termBuffer = buffer.previousBuffer;
 
+    const getChar = (cx: number): string => {
+      const cell = termBuffer.getCell(cx, y);
+      return cell?.char || '';
+    };
+
     // Check if character at position is a word character
     const isWordChar = (cx: number): boolean => {
-      const cell = termBuffer.getCell(cx, y);
-      if (!cell || !cell.char || cell.char === ' ') return false;
-      return /[\w\u00C0-\u024F]/.test(cell.char); // Letters, numbers, underscore, accented chars
+      const char = getChar(cx);
+      if (!char || char === ' ') return false;
+
+
+      // Allow : only after http or https
+      if (char === ':') {
+        const preceding = getChar(cx - 4) + getChar(cx - 3) + getChar(cx - 2) + getChar(cx - 1);
+        return preceding === 'http' || preceding === 'https';
+      }
+
+      return /[\w\u00C0-\u024F\/.:-]/.test(char); // Letters, numbers, underscore, accented chars
     };
 
     // If clicked on non-word char, just select that char

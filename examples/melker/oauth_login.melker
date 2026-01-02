@@ -21,13 +21,13 @@
       {
         "permissions": {
           "net": ["${MELKER_OAUTH_WELLKNOWN}"],
-          "keyring" : true
+          "keyring": true
         }
       }
     </policy>
 
     <container style="padding: 2; height: fill; display: flex; flex-direction: column;">
-    <text style="bold: true; flex: 0 0 auto;">OAuth2 PKCE Login</text>
+    <text style="font-weight: bold; flex: 0 0 auto;">OAuth2 PKCE Login</text>
     <text id="status" style="flex: 0 0 auto;">Initializing...</text>
     <text id="error" style="color: red; flex: 0 0 auto;"></text>
 
@@ -77,7 +77,7 @@
       $melker.render();
     }
 
-    // Callbacks referenced by <oauth> element
+    // Callbacks referenced by oauth element
     // All callbacks receive unified OAuthEvent: { type: 'oauth', action: string, error?: Error }
     interface OAuthEvent {
       type: 'oauth';

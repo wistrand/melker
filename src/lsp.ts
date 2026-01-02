@@ -151,7 +151,7 @@ function getPartialElementName(text: string, offset: number): string {
 // Preprocess content to convert self-closing special tags to explicit open/close
 function preprocessSelfClosingTags(content: string): string {
   return content.replace(
-    /<(script|style|title|oauth)(\s[^>]*)?\s*\/>/gi,
+    /<(script|style|title|oauth|policy)(\s[^>]*)?\s*\/>/gi,
     '<$1$2></$1>'
   );
 }
@@ -227,6 +227,194 @@ function parseStyleString(
   }
 
   return properties;
+}
+
+// Policy permission types
+const POLICY_PERMISSION_TYPES: Record<string, 'boolean' | 'string[]' | 'boolean | string[]'> = {
+  all: 'boolean',
+  read: 'string[]',
+  write: 'string[]',
+  net: 'string[]',
+  run: 'string[]',
+  env: 'string[]',
+  ffi: 'string[]',
+  ai: 'boolean | string[]',
+  clipboard: 'boolean',
+  keyring: 'boolean',
+  browser: 'boolean',
+};
+
+// Valid policy permission keys
+const VALID_POLICY_PERMISSIONS = new Set(Object.keys(POLICY_PERMISSION_TYPES));
+
+// Policy top-level key types
+const POLICY_KEY_TYPES: Record<string, string> = {
+  name: 'string',
+  version: 'string',
+  description: 'string',
+  permissions: 'object',
+};
+
+// Valid top-level policy keys
+const VALID_POLICY_KEYS = new Set(Object.keys(POLICY_KEY_TYPES));
+
+// Check if value matches expected type
+function checkPolicyType(value: unknown, expectedType: string): boolean {
+  if (expectedType === 'string') {
+    return typeof value === 'string';
+  }
+  if (expectedType === 'boolean') {
+    return typeof value === 'boolean';
+  }
+  if (expectedType === 'object') {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+  if (expectedType === 'string[]') {
+    return Array.isArray(value) && value.every(v => typeof v === 'string');
+  }
+  if (expectedType === 'boolean | string[]') {
+    return typeof value === 'boolean' ||
+      (Array.isArray(value) && value.every(v => typeof v === 'string'));
+  }
+  return true;
+}
+
+// Get actual type description for error message
+function describeType(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) {
+    if (value.length === 0) return 'empty array';
+    const types = [...new Set(value.map(v => typeof v))];
+    return `array of ${types.join('/')}`;
+  }
+  return typeof value;
+}
+
+// Validate policy tag content (JSON)
+function validatePolicyTagContent(
+  text: string,
+  node: AstNode,
+  diagnostics: Diagnostic[]
+): void {
+  // Get the text content from policy tag body
+  if (!node.body || node.body.length === 0) return;
+
+  // Find text nodes in body
+  let policyContent = '';
+  let contentStart = 0;
+
+  for (const child of node.body) {
+    if (child.type === 'Text' && child.value) {
+      if (!contentStart) contentStart = child.start;
+      policyContent += child.value;
+    }
+  }
+
+  const trimmed = policyContent.trim();
+  if (!trimmed) return;
+
+  // Try to parse as JSON
+  try {
+    const policy = JSON.parse(trimmed);
+
+    // Helper to find key position in JSON content
+    const findKeyPosition = (key: string): { start: number; end: number } | null => {
+      const keyPattern = new RegExp(`"${key}"\\s*:`);
+      const match = policyContent.match(keyPattern);
+      if (match && match.index !== undefined) {
+        const start = contentStart + match.index + 1; // +1 for opening quote
+        return { start, end: start + key.length };
+      }
+      return null;
+    };
+
+    // Validate top-level keys
+    if (typeof policy === 'object' && policy !== null) {
+      for (const key of Object.keys(policy)) {
+        const pos = findKeyPosition(key);
+
+        if (!VALID_POLICY_KEYS.has(key)) {
+          // Unknown key
+          if (pos) {
+            diagnostics.push({
+              range: createRange(text, pos.start, pos.end),
+              severity: DiagnosticSeverity.Warning,
+              message: `Unknown policy key "${key}". Valid keys: ${[...VALID_POLICY_KEYS].join(', ')}`,
+              source: 'melker',
+            });
+          }
+        } else {
+          // Check type
+          const expectedType = POLICY_KEY_TYPES[key];
+          const value = policy[key];
+          if (!checkPolicyType(value, expectedType)) {
+            if (pos) {
+              diagnostics.push({
+                range: createRange(text, pos.start, pos.end),
+                severity: DiagnosticSeverity.Warning,
+                message: `"${key}" should be ${expectedType}, got ${describeType(value)}`,
+                source: 'melker',
+              });
+            }
+          }
+        }
+      }
+
+      // Validate permissions object
+      if (policy.permissions && typeof policy.permissions === 'object') {
+        for (const key of Object.keys(policy.permissions)) {
+          const pos = findKeyPosition(key);
+
+          if (!VALID_POLICY_PERMISSIONS.has(key)) {
+            // Unknown permission
+            if (pos) {
+              diagnostics.push({
+                range: createRange(text, pos.start, pos.end),
+                severity: DiagnosticSeverity.Warning,
+                message: `Unknown permission "${key}". Valid permissions: ${[...VALID_POLICY_PERMISSIONS].join(', ')}`,
+                source: 'melker',
+              });
+            }
+          } else {
+            // Check type
+            const expectedType = POLICY_PERMISSION_TYPES[key];
+            const value = policy.permissions[key];
+            if (!checkPolicyType(value, expectedType)) {
+              if (pos) {
+                diagnostics.push({
+                  range: createRange(text, pos.start, pos.end),
+                  severity: DiagnosticSeverity.Warning,
+                  message: `"${key}" should be ${expectedType}, got ${describeType(value)}`,
+                  source: 'melker',
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // JSON parse error
+    const errorMsg = e instanceof Error ? e.message : String(e);
+
+    // Try to extract line/column from error message
+    const posMatch = errorMsg.match(/position (\d+)/i);
+    let errorStart = contentStart;
+    let errorEnd = contentStart + trimmed.length;
+
+    if (posMatch) {
+      const pos = parseInt(posMatch[1], 10);
+      errorStart = contentStart + pos;
+      errorEnd = errorStart + 1;
+    }
+
+    diagnostics.push({
+      range: createRange(text, errorStart, errorEnd),
+      severity: DiagnosticSeverity.Error,
+      message: `Invalid JSON in policy: ${errorMsg}`,
+      source: 'melker',
+    });
+  }
 }
 
 // Validate style tag content (CSS-like rules)
@@ -435,6 +623,9 @@ function validateDocument(text: string): Diagnostic[] {
         onLogout: true,
         onFail: true,
       },
+      'policy': {
+        src: true,
+      },
     };
 
     function validateNode(node: AstNode) {
@@ -465,9 +656,14 @@ function validateDocument(text: string): Diagnostic[] {
           validateStyleTagContent(text, node, diagnostics);
         }
 
-        // Do NOT recurse into script/style children - their content is code, not HTML
-        // This avoids false warnings for characters like < > in TypeScript/CSS
-        if (node.name === 'script' || node.name === 'style') {
+        // Validate policy tag content (JSON)
+        if (node.name === 'policy') {
+          validatePolicyTagContent(text, node, diagnostics);
+        }
+
+        // Do NOT recurse into script/style/policy children - their content is code/JSON, not HTML
+        // This avoids false warnings for characters like < > in TypeScript/CSS/JSON
+        if (node.name === 'script' || node.name === 'style' || node.name === 'policy') {
           return;
         }
 
@@ -686,6 +882,12 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
         'onLogin': 'Handler called after successful login',
         'onLogout': 'Handler called after logout',
         'onFail': 'Handler called on authentication failure',
+      },
+    },
+    'policy': {
+      description: 'Permission policy declaration for sandboxed execution',
+      attrs: {
+        'src': 'External policy JSON file path',
       },
     },
   };

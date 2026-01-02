@@ -903,12 +903,9 @@ export class RenderingEngine {
     buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, cell);
   }
 
-  // Render border (supports individual sides)
+  // Render border (supports individual sides and colors)
   private _renderBorder(bounds: Bounds, style: Style, buffer: DualBuffer): void {
-    const cellStyle: Partial<Cell> = {
-      foreground: style.borderColor || style.color,
-      background: style.backgroundColor,
-    };
+    const defaultColor = style.borderColor || style.color;
 
     // Check for individual border sides first, fallback to general border
     const borderTop = style.borderTop || (style.border && style.border !== 'none' ? style.border : undefined);
@@ -916,10 +913,20 @@ export class RenderingEngine {
     const borderLeft = style.borderLeft || (style.border && style.border !== 'none' ? style.border : undefined);
     const borderRight = style.borderRight || (style.border && style.border !== 'none' ? style.border : undefined);
 
-
-
     // If no borders defined, exit
     if (!borderTop && !borderBottom && !borderLeft && !borderRight) return;
+
+    // Get individual border colors (fall back to borderColor, then color)
+    const topColor = style.borderTopColor || defaultColor;
+    const bottomColor = style.borderBottomColor || defaultColor;
+    const leftColor = style.borderLeftColor || defaultColor;
+    const rightColor = style.borderRightColor || defaultColor;
+
+    // Create cell styles for each side
+    const topStyle: Partial<Cell> = { foreground: topColor, background: style.backgroundColor };
+    const bottomStyle: Partial<Cell> = { foreground: bottomColor, background: style.backgroundColor };
+    const leftStyle: Partial<Cell> = { foreground: leftColor, background: style.backgroundColor };
+    const rightStyle: Partial<Cell> = { foreground: rightColor, background: style.backgroundColor };
 
     // Get border characters (use the first available border style for consistency)
     const activeStyle = (borderTop || borderBottom || borderLeft || borderRight || 'thin') as Exclude<BorderStyle, 'none'>;
@@ -927,30 +934,30 @@ export class RenderingEngine {
 
     // Draw individual border sides
     if (borderTop && borderTop !== 'none') {
-      this._drawHorizontalLine(bounds.x, bounds.y, bounds.width, borderTop, cellStyle, buffer, chars);
+      this._drawHorizontalLine(bounds.x, bounds.y, bounds.width, borderTop, topStyle, buffer, chars);
     }
     if (borderBottom && borderBottom !== 'none') {
-      this._drawHorizontalLine(bounds.x, bounds.y + bounds.height - 1, bounds.width, borderBottom, cellStyle, buffer, chars);
+      this._drawHorizontalLine(bounds.x, bounds.y + bounds.height - 1, bounds.width, borderBottom, bottomStyle, buffer, chars);
     }
     if (borderLeft && borderLeft !== 'none') {
-      this._drawVerticalLine(bounds.x, bounds.y, bounds.height, borderLeft, cellStyle, buffer, chars);
+      this._drawVerticalLine(bounds.x, bounds.y, bounds.height, borderLeft, leftStyle, buffer, chars);
     }
     if (borderRight && borderRight !== 'none') {
-      this._drawVerticalLine(bounds.x + bounds.width - 1, bounds.y, bounds.height, borderRight, cellStyle, buffer, chars);
+      this._drawVerticalLine(bounds.x + bounds.width - 1, bounds.y, bounds.height, borderRight, rightStyle, buffer, chars);
     }
 
-    // Draw corners where borders meet
+    // Draw corners where borders meet (use top-left color priority for corners)
     if (borderTop && borderLeft) {
-      buffer.currentBuffer.setCell(bounds.x, bounds.y, { char: chars.tl, ...cellStyle });
+      buffer.currentBuffer.setCell(bounds.x, bounds.y, { char: chars.tl, ...topStyle });
     }
     if (borderTop && borderRight) {
-      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y, { char: chars.tr, ...cellStyle });
+      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y, { char: chars.tr, ...topStyle });
     }
     if (borderBottom && borderLeft) {
-      buffer.currentBuffer.setCell(bounds.x, bounds.y + bounds.height - 1, { char: chars.bl, ...cellStyle });
+      buffer.currentBuffer.setCell(bounds.x, bounds.y + bounds.height - 1, { char: chars.bl, ...bottomStyle });
     }
     if (borderBottom && borderRight) {
-      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { char: chars.br, ...cellStyle });
+      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { char: chars.br, ...bottomStyle });
     }
   }
 

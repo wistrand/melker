@@ -73,5 +73,79 @@
         <text style="color: gray">gray ascii-rounded</text>
       </container>
     </container>
+
+    <!-- Column 3: Individual sides -->
+    <container style="display: flex; flex-direction: column; gap: 1; width: 24">
+      <text style="font-weight: bold">Individual Sides</text>
+
+      <container style="border-top: thin; width: 22; height: 3; padding-left: 1">
+        <text>borderTop: thin</text>
+      </container>
+
+      <container style="border-bottom: thick; width: 22; height: 3; padding-left: 1">
+        <text>borderBottom: thick</text>
+      </container>
+
+      <container style="border-left: thin; width: 22; height: 3; padding-left: 1">
+        <text>borderLeft: thin</text>
+      </container>
+
+      <container style="border-right: thin; width: 22; height: 3; padding-left: 1">
+        <text>borderRight: thin</text>
+      </container>
+
+      <container style="border-top: double; border-bottom: double; width: 22; height: 3; padding-left: 1">
+        <text>top + bottom</text>
+      </container>
+
+      <container style="border-left: thick; border-right: thick; width: 22; height: 3; padding-left: 1">
+        <text>left + right</text>
+      </container>
+
+      <container style="border-top: rounded; border-left: thin; border-right: thin; width: 22; height: 3; padding-left: 1">
+        <text>top + sides</text>
+      </container>
+
+      <container style="border: thin; border-top: thick; border-color: cyan; width: 22; height: 3; padding-left: 1">
+        <text style="color: cyan">mixed styles</text>
+      </container>
+    </container>
+
+    <!-- Column 4: Side colors -->
+    <container style="display: flex; flex-direction: column; gap: 1; width: 24">
+      <text style="font-weight: bold">Side Colors</text>
+
+      <container style="border: thin; border-top-color: red; width: 22; height: 3; padding-left: 1">
+        <text>top: red</text>
+      </container>
+
+      <container style="border: thin; border-bottom-color: green; width: 22; height: 3; padding-left: 1">
+        <text>bottom: green</text>
+      </container>
+
+      <container style="border: thin; border-left-color: blue; width: 22; height: 3; padding-left: 1">
+        <text>left: blue</text>
+      </container>
+
+      <container style="border: thin; border-right-color: yellow; width: 22; height: 3; padding-left: 1">
+        <text>right: yellow</text>
+      </container>
+
+      <container style="border: thin; border-top-color: cyan; border-bottom-color: magenta; width: 22; height: 3; padding-left: 1">
+        <text>top/bottom colors</text>
+      </container>
+
+      <container style="border: thin; border-left-color: green; border-right-color: red; width: 22; height: 3; padding-left: 1">
+        <text>left/right colors</text>
+      </container>
+
+      <container style="border: thick; border-top-color: red; border-right-color: yellow; border-bottom-color: green; border-left-color: blue; width: 22; height: 3; padding-left: 1">
+        <text>all different</text>
+      </container>
+
+      <container style="border: double; border-top-color: white; border-bottom-color: gray; width: 22; height: 3; padding-left: 1">
+        <text>gradient effect</text>
+      </container>
+    </container>
   </container>
 </melker>

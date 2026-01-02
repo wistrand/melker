@@ -66,6 +66,10 @@ export interface Style extends Record<string, any> {
   borderLeft?: BorderStyle;
   borderRight?: BorderStyle;
   borderColor?: TerminalColor;
+  borderTopColor?: TerminalColor;
+  borderBottomColor?: TerminalColor;
+  borderLeftColor?: TerminalColor;
+  borderRightColor?: TerminalColor;
   padding?: number | BoxSpacing;
   margin?: number | BoxSpacing;
   marginBottom?: number;

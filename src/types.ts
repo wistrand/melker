@@ -197,6 +197,7 @@ export interface ComponentRenderContext {
   focusedElementId?: string;
   hoveredElementId?: string;
   requestRender?: () => void;  // Callback for components to request a re-render
+  scrollOffset?: { x: number; y: number };  // Scroll offset from parent scrollable container
   [key: string]: any;
 }
 

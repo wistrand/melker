@@ -466,6 +466,71 @@ export const THEMES: Record<string, Theme> = {
   },
 };
 
+// Terminal capability detection for auto theme selection
+
+/**
+ * Detect terminal color support level
+ */
+function detectColorSupport(): ThemeType {
+  const colorterm = Deno.env.get('COLORTERM') || '';
+  const term = Deno.env.get('TERM') || '';
+
+  // Truecolor support
+  if (colorterm === 'truecolor' || colorterm === '24bit') {
+    return 'fullcolor';
+  }
+
+  // 256 color support
+  if (term.includes('256color') || term.includes('256-color')) {
+    return 'color';
+  }
+
+  // Basic color support (xterm, linux, etc.)
+  if (term.includes('color') || term.includes('xterm') || term.includes('screen') || term.includes('tmux')) {
+    return 'gray';
+  }
+
+  // Fallback to black & white
+  return 'bw';
+}
+
+/**
+ * Detect if terminal is in dark mode
+ * Returns true for dark mode, false for light mode
+ */
+function detectDarkMode(): boolean {
+  // Try COLORFGBG first (format: "fg;bg" e.g., "15;0" = white on black)
+  const colorfgbg = Deno.env.get('COLORFGBG');
+  if (colorfgbg) {
+    const parts = colorfgbg.split(';');
+    if (parts.length >= 2) {
+      const bg = parseInt(parts[parts.length - 1], 10);
+      // Background colors 0-7 are dark, 8-15 are light
+      if (!isNaN(bg)) {
+        return bg < 8;
+      }
+    }
+  }
+
+  // Default to dark (most terminals use dark backgrounds)
+  return true;
+}
+
+/**
+ * Auto-detect the best theme based on terminal capabilities
+ * @param forceMode If 'dark' or 'std', force that mode; otherwise auto-detect
+ */
+function detectTheme(forceMode?: 'dark' | 'std'): string {
+  const colorSupport = detectColorSupport();
+  let mode: ThemeMode;
+  if (forceMode) {
+    mode = forceMode;
+  } else {
+    mode = detectDarkMode() ? 'dark' : 'std';
+  }
+  return `${colorSupport}-${mode}`;
+}
+
 // Theme manager class
 // Color to grayscale conversion helper
 export function colorToGray(color: TerminalColor, isDark: boolean): TerminalColor {
@@ -549,16 +614,32 @@ export class ThemeManager {
 
   constructor() {
     this._envTheme = this._parseThemeFromEnv();
-    this._currentTheme = this._getThemeByName(this._envTheme || 'bw-std');
+    // Default to auto-detection when no theme is specified
+    const themeName = this._envTheme || detectTheme();
+    this._currentTheme = this._getThemeByName(themeName);
   }
 
   private _parseThemeFromEnv(): string | null {
     // Check MELKER_THEME environment variable
     // Format: "type-mode" (e.g., "color-dark", "bw-std", "fullcolor-dark")
+    // Special values: "auto" (detect capabilities + light/dark), "auto-dark" (detect capabilities, force dark)
     const envTheme = Deno.env.get('MELKER_THEME');
     if (!envTheme) return null;
 
     const normalized = envTheme.toLowerCase().trim();
+
+    // Handle auto-detection themes
+    if (normalized === 'auto') {
+      return detectTheme();
+    }
+
+    if (normalized === 'auto-dark') {
+      return detectTheme('dark');
+    }
+
+    if (normalized === 'auto-std') {
+      return detectTheme('std');
+    }
 
     // Validate format and return normalized name
     if (THEMES[normalized]) {

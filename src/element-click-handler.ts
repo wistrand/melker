@@ -58,7 +58,8 @@ export class ElementClickHandler {
     }
 
     // Handle clicks on Clickable elements (button, checkbox, radio, etc.)
-    if (isClickable(element)) {
+    // Note: markdown has handleClick but with different signature (x, y) - handled separately below
+    if (isClickable(element) && element.type !== 'markdown') {
       const clickEvent: ClickEvent = {
         type: 'click',
         target: element,

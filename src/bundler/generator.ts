@@ -36,6 +36,7 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
   setTitle(title: string): void;
   alert(message: string): void;
   copyToClipboard(text: string): Promise<boolean>;
+  openBrowser(url: string): Promise<boolean>;
   engine: any;
   logger: any;
   getLogger(name: string): any;

@@ -34,6 +34,8 @@ export interface RenderContext {
   // New viewport-based properties
   viewportManager?: ViewportManager;
   elementViewport?: Viewport;
+  // Scroll offset from parent scrollable container (for click coordinate translation)
+  scrollOffset?: { x: number; y: number };
 }
 
 export interface LayoutNode {
@@ -711,6 +713,7 @@ export class RenderingEngine {
         clipRect: adjustedContentBounds, // Clip to adjusted bounds
         parentBounds: adjustedContentBounds,
         parentStyle: computedStyle,
+        scrollOffset: { x: scrollX, y: scrollY }, // Pass scroll offset to children
       };
 
       // Translate children positions by scroll offset for rendering only
@@ -1029,6 +1032,7 @@ export class RenderingEngine {
         focusedElementId: context.focusedElementId,
         hoveredElementId: context.hoveredElementId,
         requestRender: context.requestRender,
+        scrollOffset: context.scrollOffset, // Pass scroll offset for click translation
       };
       // Pass the overlays array from context if it exists
       if ((context as any).overlays) {

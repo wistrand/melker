@@ -511,9 +511,16 @@ createElement('container', {
 
 ## Themes
 
-Melker includes multiple built-in themes that can be selected via the `MELKER_THEME` environment variable:
+Melker includes multiple built-in themes that can be selected via the `MELKER_THEME` environment variable. By default, Melker auto-detects your terminal's capabilities and selects the best theme.
 
-### Available Themes
+### Auto-Detection (Default)
+- **auto**: Auto-detect color support and light/dark mode (default when `MELKER_THEME` not set)
+- **auto-dark**: Auto-detect color support, force dark mode
+- **auto-std**: Auto-detect color support, force standard (light) mode
+
+Detection uses `COLORTERM` and `TERM` environment variables to determine color support, and `COLORFGBG` to detect light/dark mode.
+
+### Manual Themes
 - **bw-std**: Black and white, standard (light) mode - maximum compatibility
 - **bw-dark**: Black and white, dark mode
 - **gray-std**: Grayscale, standard (light) mode
@@ -579,7 +586,7 @@ MELKER_DEBUG_PORT=8080 deno run --allow-net --allow-env examples/chat_demo.ts
 ```
 
 ### Environment Variables
-- `MELKER_THEME`: Set theme (`bw-std`, `gray-dark`, `color-std`, `fullcolor-dark`, etc.)
+- `MELKER_THEME`: Set theme (default: `auto`). Values: `auto`, `auto-dark`, `auto-std`, `bw-std`, `fullcolor-dark`, etc.
 - `MELKER_HEADLESS`: Enable headless mode for testing (`true`/`false`)
 - `MELKER_DEBUG_PORT`: Enable debug server on specified port
 - `MELKER_NO_ALTERNATE_SCREEN`: Disable alternate screen mode for debugging

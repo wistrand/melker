@@ -5,7 +5,7 @@
 - **Document Model**: HTML-inspired elements with React-like createElement pattern, JSON serializable
 - **Dual-Buffer Rendering**: Character buffer + style buffer for efficient ANSI output
 - **Flexbox Layout**: Single layout engine with flex-wrap, border-box sizing
-- **Theming**: Environment-driven via `MELKER_THEME` (bw, gray, color, fullcolor variants)
+- **Theming**: Environment-driven via `MELKER_THEME` (default: `auto`); auto-detects terminal capabilities or use manual themes (bw, gray, color, fullcolor variants)
 
 ## Components
 

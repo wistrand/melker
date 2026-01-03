@@ -239,7 +239,7 @@ text("Hello") | border | color(Color::Cyan)
 | Alert | Y | - | Y | - | - | - | - | - |
 | **Graphics** | | | | | | | | |
 | Canvas | Y | - | - | - | - | ~ | Y | Y |
-| Image | - | - | Y | - | Y | - | Y* | - |
+| Image | Y* | - | Y | - | Y | - | Y* | - |
 | Video | Y | - | Y | - | - | - | - | - |
 | Chart | - | - | - | - | - | - | Y | Y |
 | **Special** | | | | | | | | |
@@ -247,7 +247,7 @@ text("Hello") | border | color(Color::Cyan)
 | Calendar | - | - | - | - | - | - | Y | - |
 | Scrollbar | Y | - | - | - | - | - | Y | - |
 
-Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
+Y = Built-in, Y* = Via extension/crate (or canvas for Melker), ~ = Partial/limited, - = Not available
 
 **Melker gaps (high priority):** Tree, Select/Dropdown, Spinner
 
@@ -419,11 +419,11 @@ auto table = vbox({
 | Feature | Melker | Ink | Blessed | Bubble Tea | tview | Textual | Ratatui |
 |---------|:------:|:---:|:-------:|:----------:|:-----:|:-------:|:-------:|
 | Header styling | Y | Y | Y | Y | Y | Y | Y |
-| Row selection | - | - | Y | Y | Y | Y | Y |
+| Row selection | Y | - | Y | Y | Y | Y | Y |
 | Column widths | Auto | Auto | Manual | Manual | Manual | Auto | Manual |
 | Borders | Y | - | Y | Y | Y | Y | Y |
 | Scrolling | Y | - | Y | Y | Y | Y | Y |
-| Sorting | - | - | - | - | - | Y | - |
+| Sorting | Y | - | - | - | - | Y | - |
 | Cell editing | - | - | - | - | Y | - | - |
 | Clickable cells | Y | - | Y | - | Y | Y | - |
 | Markdown source | Y | - | - | - | - | - | - |

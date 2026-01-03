@@ -27,6 +27,8 @@ export interface SystemInfo {
   logLevel: string;
   denoVersion: string;
   platform: string;
+  // Remote file approval (for URLs only)
+  approvalFile?: string;
   // Script processing
   scriptsCount: number;
   handlersCount: number;
@@ -297,6 +299,9 @@ export class ViewSourceManager {
     lines.push(`  Log level:  ${info.logLevel}`);
     lines.push(`  Deno:       ${info.denoVersion}`);
     lines.push(`  Platform:   ${info.platform}`);
+    if (info.approvalFile) {
+      lines.push(`  Approval:   ${info.approvalFile}`);
+    }
     lines.push('');
 
     lines.push('SCRIPT PROCESSING');

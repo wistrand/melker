@@ -521,9 +521,34 @@ When an `<oauth>` tag is present, the policy automatically includes:
 # Show policy and exit
 deno run --allow-all melker.ts --show-policy app.melker
 
-# Ignore policy, run with full permissions
+# Ignore policy, run with full permissions (required for scripts/agents)
 deno run --allow-all melker.ts --trust app.melker
+
+# Clear all cached approvals
+deno run --allow-all melker.ts --clear-approvals
+
+# Revoke approval for specific path or URL
+deno run --allow-all melker.ts --revoke-approval /path/to/app.melker
+
+# Show cached approval
+deno run --allow-all melker.ts --show-approval /path/to/app.melker
 ```
+
+### App Approval System
+
+All .melker files require first-run approval (use `--trust` to bypass).
+
+**Local files:**
+- Policy tag is optional (uses auto-policy with all permissions if missing)
+- Approval is path-based (persists across file edits for dev experience)
+- Re-approval only needed if file is moved/renamed
+
+**Remote files (http:// or https://):**
+- Policy tag is mandatory (fails without it)
+- Approval is hash-based (content + policy + deno flags)
+- Re-approval required if app content, policy, or Deno flags change
+
+Approvals are cached in `~/.cache/melker/approvals/`.
 
 See `examples/melker/markdown_viewer.melker` and `examples/melker/video_demo.melker` for policy examples.
 

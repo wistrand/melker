@@ -219,6 +219,8 @@ deno run --allow-all melker.ts --lsp
 
 **Note:** The launcher automatically spawns a subprocess with `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
 
+**Important:** Programmatic runs by agents/scripts must use `--trust` to bypass the interactive approval prompt.
+
 ## App Policies (Permission Sandboxing)
 
 Melker apps can declare required permissions via an embedded `<policy>` tag. When a policy is found, the app runs in a subprocess with only those permissions.
@@ -289,6 +291,33 @@ When an `<oauth>` tag is present, the policy automatically includes:
 - `localhost` in net permissions (callback server)
 - `browser: true` (authorization URL)
 - All hosts from the wellknown endpoint
+
+### App Approval System
+
+All .melker files require first-run approval (use `--trust` to bypass).
+
+**Local files:**
+- Policy tag is optional (uses auto-policy with all permissions if missing)
+- Approval is path-based (persists across file edits for dev experience)
+- Re-approval only needed if file is moved/renamed
+
+**Remote files (http:// or https://):**
+- Policy tag is mandatory (fails without it)
+- Approval is hash-based (content + policy + deno flags)
+- Re-approval required if app content, policy, or Deno flags change
+
+**Approval management flags:**
+```bash
+# Clear all cached approvals
+deno run --allow-all melker.ts --clear-approvals
+
+# Revoke approval for specific path or URL
+deno run --allow-all melker.ts --revoke-approval /path/to/app.melker
+deno run --allow-all melker.ts --revoke-approval https://example.com/app.melker
+
+# Show cached approval
+deno run --allow-all melker.ts --show-approval /path/to/app.melker
+```
 
 ### Implicit Permissions
 

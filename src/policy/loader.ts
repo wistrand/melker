@@ -268,6 +268,65 @@ async function addWellknownHostsForOAuth(policy: MelkerPolicy, content: string):
   }
 }
 
+/**
+ * Load policy from content string (for remote files)
+ *
+ * Unlike loadPolicy(), this works with content already in memory.
+ * Does not support external policy files (src attribute) since
+ * relative paths can't be resolved for remote URLs.
+ *
+ * @param content The .melker file content
+ * @param sourceUrl Optional URL for error messages
+ * @returns Policy load result with policy (or null) and source
+ */
+export async function loadPolicyFromContent(
+  content: string,
+  sourceUrl?: string
+): Promise<PolicyLoadResult> {
+  const policyTag = extractPolicyTag(content);
+  const hasOAuth = hasOAuthTag(content);
+
+  if (!policyTag) {
+    return { policy: null, source: 'none' };
+  }
+
+  // External policy files not supported for remote content
+  if (policyTag.src) {
+    throw new Error(
+      `External policy files (src="${policyTag.src}") are not supported for remote .melker files. ` +
+      `Use inline <policy>{...}</policy> instead.`
+    );
+  }
+
+  // Inline JSON content
+  if (policyTag.content) {
+    try {
+      // Substitute env vars before parsing
+      const resolvedContent = substituteEnvVars(policyTag.content);
+      const policy = JSON.parse(resolvedContent) as MelkerPolicy;
+      // Add OAuth permissions if needed
+      if (hasOAuth) {
+        addOAuthPermissions(policy);
+        await addWellknownHostsForOAuth(policy, content);
+      }
+      return { policy, source: 'embedded' };
+    } catch (parseError) {
+      const errorMsg = parseError instanceof SyntaxError ? parseError.message : String(parseError);
+      const location = sourceUrl ? ` in ${sourceUrl}` : '';
+      throw new Error(`Invalid JSON in embedded <policy> tag${location}: ${errorMsg}\n\nPolicy content:\n${policyTag.content}`);
+    }
+  }
+
+  return { policy: null, source: 'none' };
+}
+
+/**
+ * Check if content has a <policy> tag (without parsing it)
+ */
+export function hasPolicyTag(content: string): boolean {
+  return /<policy[\s>]/i.test(content);
+}
+
 interface PolicyTagResult {
   src?: string;
   content?: string;

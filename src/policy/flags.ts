@@ -359,7 +359,8 @@ function buildEnvVars(policyVars: string[] | undefined): string[] {
     "MELKER_RUNNING_HEADLESS",
     "MELKER_AUDIO",
     "PATH",
-    "OAUTH_CLIENT_NAME"
+    "OAUTH_CLIENT_NAME",
+    "MELKER_REMOTE_URL"
   );
 
   // Implicit: OpenRouter API key for AI features

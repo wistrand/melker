@@ -21,12 +21,14 @@ Comprehensive comparison of terminal UI libraries across languages.
 | Feature | Melker | Ink | Blessed | Bubble Tea | tview | Textual | Ratatui | FTXUI |
 |---------|:------:|:---:|:-------:|:----------:|:-----:|:-------:|:-------:|:-----:|
 | No-build run | Y | - | Y | - | - | Y | - | - |
-| Web browser | Y | - | - | - | - | Y | Y | Y |
+| Run from URL | Y | - | - | - | - | - | - | - |
+| App approval system | Y | - | - | - | - | - | - | - |
 | Permission sandbox | Y | - | - | - | - | - | - | - |
 | AI accessibility | Y | - | - | - | - | - | - | - |
 | OAuth built-in | Y | - | - | - | - | - | - | - |
 | State persistence | Y | - | - | - | - | - | - | - |
 | LSP support | Y | - | - | - | - | - | - | - |
+| Web browser | Y | - | - | - | - | Y | Y | Y |
 | React ecosystem | - | Y | - | - | - | - | - | - |
 | Single binary | - | - | - | Y | Y | - | Y | Y |
 | Auto color degrade | Y | Y | Y | Y | Y | Y | Y | Y |
@@ -40,7 +42,7 @@ Comprehensive comparison of terminal UI libraries across languages.
 | Command palette | - | - | - | - | - | Y | - | - |
 | No_std/embedded | - | - | - | - | - | - | Y | - |
 | SSH/network serve | - | - | - | Y | - | Y | - | - |
-| Maintained (2025) | Y | Y | - | Y | Y | Y | Y | Y |
+| Maintained (2026) | Y | Y | - | Y | Y | Y | Y | Y |
 
 ## Abstraction Levels
 

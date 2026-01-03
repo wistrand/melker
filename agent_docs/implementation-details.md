@@ -49,7 +49,7 @@ This sequence is used by:
 
 | Variable | Purpose | Example |
 |----------|---------|---------|
-| `MELKER_THEME` | Visual theme (`{type}-{mode}`) | `fullcolor-dark`, `bw-std` |
+| `MELKER_THEME` | Visual theme (default: `auto`) | `auto`, `auto-dark`, `fullcolor-dark`, `bw-std` |
 | `MELKER_LOG_FILE` | Log file path | `/tmp/debug.log` |
 | `MELKER_LOG_LEVEL` | Log level | `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `MELKER_HEADLESS` | Headless mode for CI | `true` |

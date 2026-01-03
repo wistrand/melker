@@ -309,7 +309,7 @@ function buildEnvVars(policyVars: string[] | undefined): string[] {
   const vars: string[] = [];
 
   // Implicit: terminal detection
-  vars.push('TERM', 'COLORTERM');
+  vars.push('TERM', 'COLORTERM', 'COLORFGBG');
 
   // Implicit: XDG directories
   vars.push('HOME', 'XDG_STATE_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME');

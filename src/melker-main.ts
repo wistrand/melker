@@ -29,6 +29,9 @@ import {
 // View source types
 import type { SystemInfo } from './view-source.ts';
 
+// Browser utility
+import { openBrowser } from './oauth/browser.ts';
+
 /**
  * Wire up bundler registry handlers to UI elements.
  *
@@ -628,6 +631,15 @@ export async function runMelkerFile(
           }
         }
         return false;
+      },
+      openBrowser: async (url: string) => {
+        try {
+          await openBrowser(url);
+          return true;
+        } catch (error) {
+          logger?.warn?.(`Failed to open browser: ${error}`);
+          return false;
+        }
       },
       engine: engine,
       logger: logger,

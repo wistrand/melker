@@ -227,8 +227,9 @@ deno run --allow-all melker.ts --trust examples/melker/counter.melker
 # With logging
 MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --allow-all melker.ts app.melker
 
-# With theme
+# With theme (auto-detected by default, or specify manually)
 MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts app.melker
+MELKER_THEME=auto-dark deno run --allow-all melker.ts app.melker
 
 # Start LSP server (for editor integration)
 deno run --allow-all melker.ts --lsp

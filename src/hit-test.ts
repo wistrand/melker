@@ -336,9 +336,10 @@ export class HitTester {
         const elementScrollX = (element.props.scrollX as number) || 0;
         const elementScrollY = (element.props.scrollY as number) || 0;
 
-        // Transform coordinates for children by this container's scroll offset
-        childX = x - elementScrollX;
-        childY = y - elementScrollY;
+        // Transform screen coordinates to content coordinates by ADDING scroll offset
+        // (rendering subtracts scroll, so hit test must add to invert)
+        childX = x + elementScrollX;
+        childY = y + elementScrollY;
 
         // Trace logging for all scrollable containers
         logger.trace('Hit test with scrollable container', {

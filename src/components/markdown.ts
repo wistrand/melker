@@ -324,6 +324,8 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   private _linkRegions: LinkRegion[] = [];
   // Last render bounds for click coordinate mapping
   private _lastRenderBounds: Bounds | null = null;
+  // Last scroll offset for click coordinate translation
+  private _lastScrollOffset: { x: number; y: number } = { x: 0, y: 0 };
   // Actual rendered content height (set during render)
   private _lastRenderedHeight: number = 0;
   // Flag to prevent infinite re-render loops
@@ -422,6 +424,9 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     // Clear link regions from previous render and store bounds
     this._linkRegions = [];
     this._lastRenderBounds = bounds;
+
+    // Store scroll offset for click coordinate translation (from render context)
+    this._lastScrollOffset = context.scrollOffset || { x: 0, y: 0 };
 
     // If src is specified, handle async content loading
     if (src) {
@@ -969,8 +974,17 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         break;
 
       case 'inlineCode':
+        const codeValue = (node as InlineCode).value;
         const codeStyle = this._getInlineCodeStyle(style);
-        spans.push({ text: (node as InlineCode).value, style: codeStyle, linkUrl, linkTitle });
+        // Auto-link .md file references (e.g., `path/to/file.md`)
+        const mdLinkUrl = codeValue.endsWith('.md') ? codeValue : undefined;
+        if (mdLinkUrl) {
+          // Apply link style + code style for .md file links
+          const linkedCodeStyle = { ...codeStyle, underline: true };
+          spans.push({ text: codeValue, style: linkedCodeStyle, linkUrl: mdLinkUrl, linkTitle: codeValue });
+        } else {
+          spans.push({ text: codeValue, style: codeStyle, linkUrl, linkTitle });
+        }
         break;
 
       case 'link':
@@ -1766,7 +1780,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   }
 
   /**
-   * Render a table row with multi-line cell support
+   * Render a table row with multi-line cell support and inline formatting
    */
   private _renderTableRow(
     row: TableRow,
@@ -1777,23 +1791,32 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     verticalChar: string,
     borderStyle: Partial<Cell>
   ): number {
-    // First, wrap all cell content and determine row height
-    const wrappedCells: string[][] = [];
+    // First, collect styled spans for each cell and wrap them
+    const wrappedCells: Array<Array<Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}>>> = [];
     let maxLines = 1;
+
+    // Base style for cells
+    const baseCellStyle = isHeader
+      ? { ...ctx.style, bold: true, foreground: getThemeColor('primary') }
+      : { ...ctx.style };
 
     for (let colIndex = 0; colIndex < columnWidths.length; colIndex++) {
       const cell = row.children[colIndex];
       const width = columnWidths[colIndex];
-      const cellText = cell ? this._extractTextContent(cell) : '';
-      const lines = wrapTextToLines(cellText, width);
+
+      if (!cell) {
+        wrappedCells.push([[{ text: ' '.repeat(width), style: baseCellStyle }]]);
+        continue;
+      }
+
+      // Get styled spans from cell content
+      const spans = this._flattenInlineElements(cell.children, baseCellStyle);
+
+      // Wrap styled spans into lines
+      const lines = this._wrapStyledSpans(spans, width);
       wrappedCells.push(lines);
       maxLines = Math.max(maxLines, lines.length);
     }
-
-    // Create cell style
-    const cellStyle = isHeader
-      ? { ...ctx.style, bold: true, foreground: getThemeColor('primary') }
-      : { ...ctx.style };
 
     // Render each line of the row
     for (let lineIndex = 0; lineIndex < maxLines; lineIndex++) {
@@ -1810,18 +1833,65 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         const alignment = alignments[colIndex] || 'left';
         const cellLines = wrappedCells[colIndex];
 
-        // Get the line content (or empty if this cell has fewer lines)
-        const lineText = lineIndex < cellLines.length ? cellLines[lineIndex] : '';
+        // Get the line spans (or empty if this cell has fewer lines)
+        const lineSpans = lineIndex < cellLines.length ? cellLines[lineIndex] : [];
 
-        // Apply alignment
-        const alignedText = this._alignText(lineText, width, alignment);
+        // Calculate total text length for alignment
+        const totalLength = lineSpans.reduce((sum, span) => sum + span.text.length, 0);
+        const padding = width - totalLength;
+
+        // Calculate alignment padding
+        let leftPad = 0;
+        let rightPad = 0;
+        if (padding > 0) {
+          switch (alignment) {
+            case 'right':
+              leftPad = padding;
+              break;
+            case 'center':
+              leftPad = Math.floor(padding / 2);
+              rightPad = padding - leftPad;
+              break;
+            case 'left':
+            default:
+              rightPad = padding;
+              break;
+          }
+        }
 
         // Draw cell content with padding
-        ctx.buffer.currentBuffer.setText(x, y, ' ', ctx.style); // left padding
+        ctx.buffer.currentBuffer.setText(x, y, ' ', ctx.style); // left cell padding
         x += 1;
-        ctx.buffer.currentBuffer.setText(x, y, alignedText, cellStyle);
-        x += width;
-        ctx.buffer.currentBuffer.setText(x, y, ' ', ctx.style); // right padding
+
+        // Left alignment padding
+        if (leftPad > 0) {
+          ctx.buffer.currentBuffer.setText(x, y, ' '.repeat(leftPad), baseCellStyle);
+          x += leftPad;
+        }
+
+        // Render styled spans and register link regions
+        for (const span of lineSpans) {
+          ctx.buffer.currentBuffer.setText(x, y, span.text, span.style);
+          // Register link region if this span is a link
+          if (span.linkUrl) {
+            this._linkRegions.push({
+              x: x,
+              y: y,
+              width: span.text.length,
+              url: span.linkUrl,
+              title: span.linkTitle
+            });
+          }
+          x += span.text.length;
+        }
+
+        // Right alignment padding
+        if (rightPad > 0) {
+          ctx.buffer.currentBuffer.setText(x, y, ' '.repeat(rightPad), baseCellStyle);
+          x += rightPad;
+        }
+
+        ctx.buffer.currentBuffer.setText(x, y, ' ', ctx.style); // right cell padding
         x += 1;
 
         // Draw column separator
@@ -1831,6 +1901,71 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     }
 
     return maxLines; // Return actual row height
+  }
+
+  /**
+   * Wrap styled spans into lines that fit within a given width
+   */
+  private _wrapStyledSpans(
+    spans: Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}>,
+    width: number
+  ): Array<Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}>> {
+    const lines: Array<Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}>> = [];
+    let currentLine: Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}> = [];
+    let currentLineWidth = 0;
+
+    for (const span of spans) {
+      let remainingText = span.text;
+
+      while (remainingText.length > 0) {
+        const availableWidth = width - currentLineWidth;
+
+        if (remainingText.length <= availableWidth) {
+          // Whole text fits on current line - preserve link info
+          currentLine.push({ text: remainingText, style: span.style, linkUrl: span.linkUrl, linkTitle: span.linkTitle });
+          currentLineWidth += remainingText.length;
+          break;
+        }
+
+        // Need to wrap - find a good break point
+        let breakPoint = availableWidth;
+        if (availableWidth > 0) {
+          const searchArea = remainingText.substring(0, availableWidth + 1);
+          const lastSpace = searchArea.lastIndexOf(' ');
+          if (lastSpace > 0) {
+            breakPoint = lastSpace;
+          }
+        }
+
+        if (breakPoint > 0 && availableWidth > 0) {
+          // Add portion to current line - preserve link info
+          const chunk = remainingText.substring(0, breakPoint).trimEnd();
+          if (chunk.length > 0) {
+            currentLine.push({ text: chunk, style: span.style, linkUrl: span.linkUrl, linkTitle: span.linkTitle });
+          }
+          remainingText = remainingText.substring(breakPoint).trimStart();
+        }
+
+        // Start new line
+        if (currentLine.length > 0) {
+          lines.push(currentLine);
+        }
+        currentLine = [];
+        currentLineWidth = 0;
+      }
+    }
+
+    // Don't forget the last line
+    if (currentLine.length > 0) {
+      lines.push(currentLine);
+    }
+
+    // Ensure at least one line (even if empty)
+    if (lines.length === 0) {
+      lines.push([]);
+    }
+
+    return lines;
   }
 
   /**
@@ -2301,29 +2436,31 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    * Called by the engine when this element is clicked
    */
   handleClick(clickX?: number, clickY?: number): boolean {
-    logger.debug(`handleClick called: clickX=${clickX}, clickY=${clickY}, linkRegions=${this._linkRegions.length}, onLink type=${typeof this.props.onLink}`);
-
-    // Log all link regions for debugging
-    for (const region of this._linkRegions) {
-      logger.debug(`  Link region: x=${region.x}-${region.x + region.width}, y=${region.y}, url=${region.url}`);
-    }
+    logger.info(`handleClick called: clickX=${clickX}, clickY=${clickY}, linkRegions=${this._linkRegions.length}, onLink type=${typeof this.props.onLink}`);
 
     // If no coordinates provided or no bounds stored, can't detect links
     if (clickX === undefined || clickY === undefined || !this._lastRenderBounds) {
-      logger.debug(`handleClick: early return - clickX=${clickX}, clickY=${clickY}, lastRenderBounds=${this._lastRenderBounds}`);
+      logger.info(`handleClick: early return - clickX=${clickX}, clickY=${clickY}, lastRenderBounds=${!!this._lastRenderBounds}`);
       return false;
     }
 
-    logger.debug(`handleClick: checking for matches at (${clickX}, ${clickY})`);
+    // Link regions are stored at screen coordinates (rendered positions after scroll translation)
+    // So we compare directly with the click coordinates (also screen coordinates)
+    logger.info(`handleClick: checking screen coords (${clickX}, ${clickY})`);
 
-    // Check if click is within any link region
+    // Log all link regions for debugging
+    for (const region of this._linkRegions) {
+      logger.info(`  Link region: x=${region.x}-${region.x + region.width}, y=${region.y}, url=${region.url}`);
+    }
+
+    // Check if click is within any link region (using screen coordinates)
     for (const region of this._linkRegions) {
       const inX = clickX >= region.x && clickX < region.x + region.width;
       const inY = clickY === region.y;
-      logger.debug(`  Checking region x=${region.x}-${region.x + region.width}, y=${region.y}: inX=${inX}, inY=${inY}`);
+      logger.info(`  Checking region x=${region.x}-${region.x + region.width}, y=${region.y}: inX=${inX}, inY=${inY}`);
       if (inX && inY) {
         // Found a link - call the onLink handler if provided
-        logger.debug(`  MATCH FOUND! Calling onLink with url=${region.url}`);
+        logger.info(`  MATCH FOUND! Calling onLink with url=${region.url}`);
         if (typeof this.props.onLink === 'function') {
           try {
             this.props.onLink({
@@ -2334,11 +2471,13 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
             logger.error(`onLink handler threw error: ${e}`);
           }
           return true;
+        } else {
+          logger.info(`  No onLink handler defined`);
         }
       }
     }
 
-    logger.debug(`handleClick: no match found`);
+    logger.info(`handleClick: no match found`);
     return false;
   }
 }

@@ -21,7 +21,9 @@ If no file is specified, defaults to `README.md`.
 
 ## Link Handling
 
-Click on markdown links (`.md` files) to navigate to them. The viewer maintains a history stack for back/forward navigation.
+- Click on `.md` links to navigate within the viewer
+- Click on `http://` or `https://` links to open in your default browser
+- The viewer maintains a history stack for back/forward navigation
 
 ## Tips
 
@@ -35,7 +37,8 @@ Click on markdown links (`.md` files) to navigate to them. The viewer maintains 
     "description": "A simple markdown file viewer with navigation",
     "permissions": {
       "read": ["*"],
-      "net" : ["*"]
+      "net": ["*"],
+      "browser": true
     }
   }
   </policy>
@@ -55,7 +58,6 @@ Click on markdown links (`.md` files) to navigate to them. The viewer maintains 
           width: fill;
           height: fill;
           border: none;
-	  background-color: white;
         }
     </style>
 
@@ -88,6 +90,15 @@ Click on markdown links (`.md` files) to navigate to them. The viewer maintains 
     // Navigate to a new page (called from link clicks)
     export function handleLink(event: { url: string }) {
       const url = event.url;
+
+      $melker?.log?.info("open " + url);
+      // Open http/https URLs in browser
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        $melker.openBrowser(url);
+        return;
+      }
+
+      // Navigate to .md files within the viewer
       if (url.endsWith('.md')) {
         const markdown = $melker.getElementById('markdown-content');
         if (markdown) {

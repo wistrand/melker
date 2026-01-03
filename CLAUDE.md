@@ -155,7 +155,7 @@ tests/                - Test files
 
 | Variable | Purpose |
 |----------|---------|
-| `MELKER_THEME` | Theme: `bw-std`, `fullcolor-dark`, etc. |
+| `MELKER_THEME` | Theme (default: `auto`): `auto-dark`, `auto-std`, `bw-std`, `fullcolor-dark`, etc. |
 | `MELKER_LOG_FILE` | Log file path |
 | `MELKER_LOG_LEVEL` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `MELKER_HEADLESS` | Headless mode for CI |

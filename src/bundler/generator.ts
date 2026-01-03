@@ -35,6 +35,8 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
   quit(): void;
   setTitle(title: string): void;
   alert(message: string): void;
+  confirm(message: string): Promise<boolean>;
+  prompt(message: string, defaultValue?: string): Promise<string | null>;
   copyToClipboard(text: string): Promise<boolean>;
   openBrowser(url: string): Promise<boolean>;
   engine: any;
@@ -55,11 +57,15 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
  * Header added to all inline script modules for $melker access.
  */
 const SCRIPT_MODULE_HEADER = `// Runtime globals (injected via globalThis before import)
-declare const $melker: {
+const $melker = (globalThis as any).$melker as {
 ${MELKER_INTERFACE_MEMBERS}
 };
-declare const argv: string[];
-declare function alert(message: string): void;
+const argv = (globalThis as any).argv as string[];
+
+// Global alert/confirm/prompt aliases - use $melker versions to show TUI dialogs
+const alert = (message: string) => $melker.alert(message);
+const confirm = (message: string) => $melker.confirm(message);
+const prompt = (message: string, defaultValue?: string) => $melker.prompt(message, defaultValue);
 
 // $app is a short alias for $melker.exports (set on globalThis before import)
 const $app = (globalThis as any).$app as Record<string, any>;
@@ -142,8 +148,10 @@ export function generate(parsed: ParseResult): GeneratedSource {
   addLine('};');
   addLine('const argv = (globalThis as any).argv as string[];');
   addLine('');
-  addLine('// Global alert() alias - use $melker.alert() to avoid blocking Deno alert');
+  addLine('// Global alert/confirm/prompt aliases - use $melker versions to show TUI dialogs');
   addLine('const alert = (message: string) => $melker.alert(message);');
+  addLine('const confirm = (message: string) => $melker.confirm(message);');
+  addLine('const prompt = (message: string, defaultValue?: string) => $melker.prompt(message, defaultValue);');
   addLine('');
   addLine('// $app is a short alias for $melker.exports (set on globalThis before import)');
   addLine('const $app = (globalThis as any).$app as Record<string, any>;');

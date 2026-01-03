@@ -14,7 +14,7 @@ import { DualBuffer } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
-import { Element, TextSelection, isClickable, ClickEvent } from './types.ts';
+import { Element, TextSelection, isClickable, ClickEvent, isWheelable } from './types.ts';
 import {
   EventManager,
   type MelkerEvent,
@@ -31,6 +31,12 @@ import type { MelkerPolicy } from './policy/types.ts';
 import {
   AlertDialogManager,
 } from './alert-dialog.ts';
+import {
+  ConfirmDialogManager,
+} from './confirm-dialog.ts';
+import {
+  PromptDialogManager,
+} from './prompt-dialog.ts';
 import {
   AccessibilityDialogManager,
 } from './ai/accessibility-dialog.ts';
@@ -198,6 +204,12 @@ export class MelkerEngine {
 
   // Alert dialog feature
   private _alertDialogManager?: AlertDialogManager;
+
+  // Confirm dialog feature
+  private _confirmDialogManager?: ConfirmDialogManager;
+
+  // Prompt dialog feature
+  private _promptDialogManager?: PromptDialogManager;
 
   // AI Accessibility dialog feature
   private _accessibilityDialogManager?: AccessibilityDialogManager;
@@ -383,7 +395,7 @@ export class MelkerEngine {
       renderer: this._renderer,
       autoRender: this._options.autoRender,
       onRender: () => this.render(),
-      calculateScrollDimensions: (id) => this.calculateScrollDimensions(id),
+      calculateScrollDimensions: (containerOrId) => this.calculateScrollDimensions(containerOrId),
     });
 
     // Initialize element click handler
@@ -572,6 +584,18 @@ export class MelkerEngine {
         return;
       }
 
+      // Handle Escape to close Confirm dialog (cancels)
+      if (event.key === 'Escape' && this._confirmDialogManager?.isOpen()) {
+        this._confirmDialogManager.close(false);
+        return;
+      }
+
+      // Handle Escape to close Prompt dialog (cancels)
+      if (event.key === 'Escape' && this._promptDialogManager?.isOpen()) {
+        this._promptDialogManager.close(null);
+        return;
+      }
+
       // Handle Escape to close Accessibility dialog
       if (event.key === 'Escape' && this._accessibilityDialogManager?.isOpen()) {
         this._accessibilityDialogManager.close();
@@ -726,6 +750,25 @@ export class MelkerEngine {
 
     // Automatic scroll handling for scrollable containers
     this._eventManager.addGlobalEventListener('wheel', (event: any) => {
+      // Check for Wheelable elements first (e.g., table with scrollable tbody)
+      const target = this._hitTester.hitTest(event.x, event.y);
+      this._logger?.debug(`Engine wheel: target=${target?.type}/${target?.id}, isWheelable=${target ? isWheelable(target) : false}`);
+      if (target && isWheelable(target)) {
+        const canHandle = target.canHandleWheel(event.x, event.y);
+        this._logger?.debug(`Engine wheel: canHandleWheel=${canHandle}`);
+        if (canHandle) {
+          const handled = target.handleWheel(event.deltaX || 0, event.deltaY || 0);
+          this._logger?.debug(`Engine wheel: handleWheel returned ${handled}`);
+          if (handled) {
+            if (this._options.autoRender) {
+              this.render();
+            }
+            return; // Event was handled by the Wheelable element
+          }
+        }
+      }
+      // Fall through to default scroll handler
+      this._logger?.debug(`Engine wheel: falling through to scroll-handler`);
       this._scrollHandler.handleScrollEvent(event);
     });
 
@@ -848,6 +891,12 @@ export class MelkerEngine {
   render(): void {
     // Debug: always log render entry
     this._logger?.trace('render() called');
+
+    // Skip render if engine is stopped/stopping - prevents writes after terminal cleanup
+    if (!this._isInitialized) {
+      this._logger?.debug('Skipping render - engine not initialized');
+      return;
+    }
 
     // Render lock: prevent re-render during render (e.g., onPaint callback)
     if (this._isRendering) {
@@ -985,6 +1034,12 @@ export class MelkerEngine {
    * Force a complete redraw of the terminal
    */
   forceRender(): void {
+    // Skip render if engine is stopped/stopping - prevents writes after terminal cleanup
+    if (!this._isInitialized) {
+      this._logger?.debug('Skipping forceRender - engine not initialized');
+      return;
+    }
+
     // Render lock: prevent re-render during render
     if (this._isRendering) {
       this._logger?.debug('Skipping forceRender - already rendering (render lock active)');
@@ -1133,6 +1188,44 @@ export class MelkerEngine {
   }
 
   /**
+   * Show a confirm dialog with the given message
+   * This is the melker equivalent of window.confirm()
+   * Returns a Promise that resolves to true (OK) or false (Cancel)
+   */
+  showConfirm(message: string): Promise<boolean> {
+    if (!this._confirmDialogManager) {
+      this._confirmDialogManager = new ConfirmDialogManager({
+        document: this._document,
+        focusManager: this._focusManager,
+        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
+        render: () => this.render(),
+        forceRender: () => this.forceRender(),
+        autoRender: this._options.autoRender,
+      });
+    }
+    return this._confirmDialogManager.show(message);
+  }
+
+  /**
+   * Show a prompt dialog with the given message
+   * This is the melker equivalent of window.prompt()
+   * Returns a Promise that resolves to the input value or null if cancelled
+   */
+  showPrompt(message: string, defaultValue?: string): Promise<string | null> {
+    if (!this._promptDialogManager) {
+      this._promptDialogManager = new PromptDialogManager({
+        document: this._document,
+        focusManager: this._focusManager,
+        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
+        render: () => this.render(),
+        forceRender: () => this.forceRender(),
+        autoRender: this._options.autoRender,
+      });
+    }
+    return this._promptDialogManager.show(message, defaultValue);
+  }
+
+  /**
    * Ensure the accessibility dialog manager is initialized
    */
   private _ensureAccessibilityDialogManager(): void {
@@ -1167,6 +1260,11 @@ export class MelkerEngine {
 
       const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._currentSize.width);
       if (output.length > 0) {
+        // Guard against writes after terminal cleanup (race condition with stop())
+        if (!this._isInitialized) {
+          return;
+        }
+
         // Begin synchronized output to reduce flicker
         const finalOutput = this._options.synchronizedOutput
           ? ANSI.beginSync + output + ANSI.endSync
@@ -1194,6 +1292,11 @@ export class MelkerEngine {
 
       if (output.length > 0) {
         clearAndDrawOutput += output;
+      }
+
+      // Guard against writes after terminal cleanup (race condition with stop())
+      if (!this._isInitialized) {
+        return;
       }
 
       // Apply synchronized output wrapper if enabled
@@ -1343,6 +1446,11 @@ export class MelkerEngine {
       this._focusManager.setDocument(this._document);
     }
 
+    // Update renderer document reference (for tbody bounds lookup)
+    if (this._renderer) {
+      this._renderer.setDocument(this._document);
+    }
+
     if (this._options.autoRender) {
       this.render();
     }
@@ -1375,9 +1483,12 @@ export class MelkerEngine {
 
   /**
    * Calculate actual scroll dimensions for a scrollable container
+   * Accepts either an Element directly or a container ID string
    */
-  calculateScrollDimensions(containerId: string): { width: number; height: number } | null {
-    const container = this._document.getElementById(containerId);
+  calculateScrollDimensions(containerOrId: Element | string): { width: number; height: number } | null {
+    const container = typeof containerOrId === 'string'
+      ? this._document.getElementById(containerOrId)
+      : containerOrId;
     if (!container) {
       return null;
     }
@@ -1621,22 +1732,31 @@ export class MelkerEngine {
    */
   handleMouseEvent(event: { type: 'click' | 'mousedown' | 'mouseup' | 'mousemove' | 'mouseover' | 'mouseout'; position: { x: number; y: number }; button?: number }): void {
     if (this._eventManager) {
+      const mouseEvent = {
+        x: event.position.x,
+        y: event.position.y,
+        button: event.button || 0
+      };
+
       if (event.type === 'mousemove') {
         // Use the text selection handler which includes hover tracking
-        this._textSelectionHandler.handleMouseMove({
-          x: event.position.x,
-          y: event.position.y,
-          button: event.button || 0
-        });
+        this._textSelectionHandler.handleMouseMove(mouseEvent);
+      } else if (event.type === 'click' || event.type === 'mousedown') {
+        // Route click/mousedown through the text selection handler
+        // which performs hit testing and calls onElementClick
+        this._textSelectionHandler.handleMouseDown(mouseEvent);
+      } else if (event.type === 'mouseup') {
+        // Route mouseup through the text selection handler
+        this._textSelectionHandler.handleMouseUp(mouseEvent);
       } else {
-        // Perform hit testing to find the element at the clicked coordinates
+        // For other events, just dispatch to event manager
         const target = this._hitTester.hitTest(event.position.x, event.position.y);
 
         this._eventManager.dispatchEvent({
           type: event.type,
           x: event.position.x,
           y: event.position.y,
-          button: event.button || 0, // 0 = left button
+          button: event.button || 0,
           buttons: 1,
           target: target?.id,
           timestamp: Date.now(),

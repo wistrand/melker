@@ -702,6 +702,20 @@ function convertToElement(node: ParsedNode, context: TemplateContext): Element {
       });
     }
 
+    // Handle <td>content</td> and <th>content</th> - wrap plain text in text element
+    if ((node.name === 'td' || node.name === 'th') && children.length > 0) {
+      // Check if all children are plain text elements (from text nodes)
+      const hasOnlyTextChildren = children.every(child => child.type === 'text');
+      if (hasOnlyTextChildren) {
+        // Combine text content and wrap in a single text element
+        const textContent = children
+          .map(child => child.props.text)
+          .join('');
+        const textElement = createElement('text', { text: textContent });
+        return createElement(node.name as any, props, textElement);
+      }
+    }
+
     // For other elements, pass children normally
     return createElement(node.name as any, props, ...children);
   }

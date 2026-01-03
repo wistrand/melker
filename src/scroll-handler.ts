@@ -1,10 +1,13 @@
 // Scroll handling for scrollable containers
 // Handles scrollbar interaction, wheel events, and arrow key scrolling
 
-import { Element } from './types.ts';
+import { Element, isScrollableType } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine, ScrollbarBounds } from './rendering.ts';
 import { pointInBounds } from './geometry.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('ScrollHandler');
 
 export interface ScrollbarDragState {
   active: boolean;
@@ -31,7 +34,7 @@ export interface ScrollHandlerContext {
   renderer: RenderingEngine;
   autoRender: boolean;
   onRender: () => void;
-  calculateScrollDimensions: (containerId: string) => { width: number; height: number } | null;
+  calculateScrollDimensions: (containerOrId: Element | string) => { width: number; height: number } | null;
 }
 
 /**
@@ -43,7 +46,7 @@ export class ScrollHandler {
   private _renderer: RenderingEngine;
   private _autoRender: boolean;
   private _onRender: () => void;
-  private _calculateScrollDimensions: (containerId: string) => { width: number; height: number } | null;
+  private _calculateScrollDimensions: (containerOrId: Element | string) => { width: number; height: number } | null;
   private _scrollbarDrag: ScrollbarDragState | null = null;
 
   constructor(context: ScrollHandlerContext) {
@@ -292,19 +295,23 @@ export class ScrollHandler {
     // Find the topmost scrollable container under the mouse cursor
     const targetContainer = this._findScrollableContainerAtPosition(allContainers, event.x, event.y);
 
+    logger.debug(`ScrollHandler.handleScrollEvent: x=${event.x}, y=${event.y}, deltaY=${event.deltaY}, targetContainer=${targetContainer?.type}/${targetContainer?.id}`);
+
     if (targetContainer && targetContainer.props.scrollable) {
       const currentScrollY = (targetContainer.props.scrollY as number) || 0;
       const currentScrollX = (targetContainer.props.scrollX as number) || 0;
       const deltaY = event.deltaY || 0;
       const deltaX = event.deltaX || 0;
 
-      // Calculate actual content dimensions
-      const contentDimensions = this._calculateScrollDimensions(targetContainer.id || '');
+      // Calculate actual content dimensions - pass element directly (avoids ID lookup issues)
+      const contentDimensions = this._calculateScrollDimensions(targetContainer);
 
       // Get actual rendered container bounds from rendering engine
-      const containerBounds = this._renderer.getContainerBounds(targetContainer.id || '');
+      const containerBounds = this._renderer.getContainerBounds(targetContainer);
       const containerHeight = containerBounds?.height || 0;
       const containerWidth = containerBounds?.width || 0;
+
+      logger.debug(`ScrollHandler: contentDimensions=${JSON.stringify(contentDimensions)}, containerHeight=${containerHeight}, containerWidth=${containerWidth}`);
 
       if (contentDimensions && (containerHeight > 0 || containerWidth > 0)) {
         let updated = false;
@@ -313,6 +320,8 @@ export class ScrollHandler {
         if (deltaY !== 0 && containerHeight > 0) {
           const maxScrollY = Math.max(0, contentDimensions.height - containerHeight);
           const newScrollY = Math.max(0, Math.min(maxScrollY, currentScrollY + deltaY));
+
+          logger.debug(`ScrollHandler: currentScrollY=${currentScrollY}, maxScrollY=${maxScrollY}, newScrollY=${newScrollY}`);
 
           if (newScrollY !== currentScrollY) {
             targetContainer.props.scrollY = newScrollY;
@@ -371,7 +380,7 @@ export class ScrollHandler {
     // Check if we can scroll in the requested direction
     try {
       const scrollDimensions = this._renderer?.calculateScrollDimensions(container);
-      const containerBounds = this._renderer?.getContainerBounds(container.id || '');
+      const containerBounds = this._renderer?.getContainerBounds(container);
 
       if (scrollDimensions && containerBounds) {
         const maxScrollY = Math.max(0, scrollDimensions.height - containerBounds.height);
@@ -409,7 +418,7 @@ export class ScrollHandler {
   findScrollableContainers(element: Element): Element[] {
     const scrollableContainers: Element[] = [];
 
-    if (element.type === 'container' && element.props.scrollable) {
+    if (isScrollableType(element.type) && element.props.scrollable) {
       scrollableContainers.push(element);
     }
 
@@ -427,7 +436,7 @@ export class ScrollHandler {
    */
   findScrollableParent(element: Element): Element | null {
     // First check if the element itself is a scrollable container
-    if (element.type === 'container' && element.props.scrollable) {
+    if (isScrollableType(element.type) && element.props.scrollable) {
       return element;
     }
 
@@ -435,7 +444,7 @@ export class ScrollHandler {
     let current = this._findParent(element);
 
     while (current) {
-      if (current.type === 'container' && current.props.scrollable) {
+      if (isScrollableType(current.type) && current.props.scrollable) {
         return current;
       }
       current = this._findParent(current);
@@ -451,7 +460,7 @@ export class ScrollHandler {
     // Test containers from last to first (topmost rendered containers first)
     for (let i = containers.length - 1; i >= 0; i--) {
       const container = containers[i];
-      const bounds = this._renderer?.getContainerBounds(container.id || '');
+      const bounds = this._renderer?.getContainerBounds(container);
 
       if (bounds && pointInBounds(x, y, bounds)) {
         return container;

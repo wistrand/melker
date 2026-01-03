@@ -1,0 +1,119 @@
+<melker>
+
+  <help>
+# Table Demo
+
+Demonstrates the HTML-like table component with headers, body, and footer.
+
+## Features
+- Table with thead, tbody, tfoot
+- Column alignment
+- Border styles
+- Cell content with text
+  </help>
+
+  <title>Table Demo</title>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: fill;
+      height: fill;
+      padding: 1;
+    }
+    #header {
+      font-weight: bold;
+      margin-bottom: 1;
+    }
+  </style>
+
+  <script>
+    export function handleSelect(event: any) {
+      // Update selection text with selected employee info
+      const selectionText = $melker.getElementById('selectionText');
+      if (selectionText && event.selectedIds.length > 0) {
+        selectionText.props.text = `Selected: ${event.selectedIds.join(', ')}`;
+      }
+    }
+  </script>
+
+  <container id="root">
+    <text id="header">Table Component Demo</text>
+
+    <table border="rounded" cellPadding="1" resizable="true">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Role</th>
+          <th align="right">Salary</th>
+        </tr>
+      </thead>
+      <tbody id="employeeTableBody" scrollable="true" maxHeight="5" selectable="single" onSelect="$app.handleSelect(event)">
+        <tr data-id="1">
+          <td>1</td>
+          <td>Alice Johnson</td>
+          <td>Engineer</td>
+          <td align="right">$85,000</td>
+        </tr>
+        <tr data-id="2">
+          <td>2</td>
+          <td>Bob Smith</td>
+          <td>Designer</td>
+          <td align="right">$75,000</td>
+        </tr>
+        <tr data-id="3">
+          <td>3</td>
+          <td>Carol Williams</td>
+          <td>Manager</td>
+          <td align="right">$95,000</td>
+        </tr>
+        <tr data-id="4">
+          <td>4</td>
+          <td>David Brown</td>
+          <td>Developer</td>
+          <td align="right">$80,000</td>
+        </tr>
+        <tr data-id="5">
+          <td>5</td>
+          <td>Eva Martinez</td>
+          <td>Analyst</td>
+          <td align="right">$70,000</td>
+        </tr>
+        <tr data-id="6">
+          <td>6</td>
+          <td>Frank Lee</td>
+          <td>Architect</td>
+          <td align="right">$100,000</td>
+        </tr>
+        <tr data-id="7">
+          <td>7</td>
+          <td>Grace Chen</td>
+          <td>Product Manager</td>
+          <td align="right">$90,000</td>
+        </tr>
+        <tr data-id="8">
+          <td>8</td>
+          <td>Henry Wilson</td>
+          <td>QA Engineer</td>
+          <td align="right">$72,000</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td></td>
+          <td></td>
+          <td>Total:</td>
+          <td align="right">$667,000</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <text id="selectionText" text="Click a row to select" style="margin-top: 1;" />
+
+    <button title="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
+    <text text="Use ↑/↓ arrow keys to navigate, Escape to clear selection" style="margin-top: 1;" />
+  </container>
+
+</melker>

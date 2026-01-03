@@ -188,7 +188,7 @@ text("Hello") | border | color(Color::Cyan)
 | Stars | New | 34k | 12k | 38k | 13k | 33k | 17k | 9k |
 | Paradigm | Declarative | React | Imperative | Elm/MVU | Imperative | Async | Immediate | Functional |
 | Build step | None | Required | None | Required | Required | None | Required | Required |
-| Widgets | 22 | ~10 | 27+ | Via Bubbles | 15+ | 30+ | Via crates | 10+ |
+| Widgets | 24+ | ~10 | 27+ | Via Bubbles | 15+ | 30+ | Via crates | 10+ |
 | Maintained | Y | Y | Dormant | Y | Y | Y | Y | Y |
 | Used by | - | Gatsby, Yarn | - | GitHub, NVIDIA | gh CLI | Posting | gitui | - |
 
@@ -216,7 +216,7 @@ text("Hello") | border | color(Color::Cyan)
 | Slider | - | - | - | - | - | - | - | Y |
 | Masked input | - | - | - | - | - | Y | - | - |
 | **Data** | | | | | | | | |
-| Table | ~ | Y* | Y | Y | Y | Y | Y | - |
+| Table | Y | Y* | Y | Y | Y | Y | Y | - |
 | Tree | - | - | Y | - | Y | Y | - | - |
 | List | Y | Y | Y | Y | Y | Y | Y | Y |
 | **Feedback** | | | | | | | | |
@@ -231,7 +231,8 @@ text("Hello") | border | color(Color::Cyan)
 | Link | - | - | - | - | - | Y | - | - |
 | **Dialogs** | | | | | | | | |
 | Dialog/Modal | Y | - | Y | - | Y | - | - | - |
-| Prompt | - | Y | Y | - | - | - | - | - |
+| Prompt | Y | Y | Y | - | - | - | - | - |
+| Confirm | Y | - | Y | - | - | - | - | - |
 | Alert | Y | - | Y | - | - | - | - | - |
 | **Graphics** | | | | | | | | |
 | Canvas | Y | - | - | - | - | ~ | Y | Y |
@@ -245,7 +246,7 @@ text("Hello") | border | color(Color::Cyan)
 
 Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 
-**Melker gaps (high priority):** Table, Tree, ProgressBar, Select/Dropdown
+**Melker gaps (high priority):** Tree, ProgressBar, Select/Dropdown
 
 ## Architecture Patterns
 
@@ -312,7 +313,7 @@ c.DrawPointLine(x1, y1, x2, y2);
 
 | Library | Approach | Features |
 |---------|----------|----------|
-| **Melker** | Markdown tables | Auto-styled, clickable links, scrollable |
+| **Melker** | Native `<table>` + Markdown | Scrollable tbody, auto column widths, clickable |
 | **Ink** | ink-table package | React component, column config |
 | **Blessed** | listtable widget | Row selection, column widths |
 | **Bubble Tea** | bubbles/table | Styles, selection, pagination |
@@ -323,7 +324,20 @@ c.DrawPointLine(x1, y1, x2, y2);
 
 ### Table Examples
 
-**Melker** - Markdown syntax:
+**Melker** - Native table element (supports scrollable tbody):
+```xml
+<table style="width: fill; height: 10;">
+  <thead>
+    <tr><th>Name</th><th>Role</th></tr>
+  </thead>
+  <tbody scrollable="true">
+    <tr><td>Alice</td><td>Admin</td></tr>
+    <tr><td>Bob</td><td>User</td></tr>
+  </tbody>
+</table>
+```
+
+**Melker** - Markdown syntax (simpler, non-scrollable):
 ```xml
 <markdown text="
 | Name  | Role    |
@@ -410,6 +424,8 @@ auto table = vbox({
 | Cell editing | - | - | - | - | Y | - | - |
 | Clickable cells | Y | - | Y | - | Y | Y | - |
 | Markdown source | Y | - | - | - | - | - | - |
+| HTML-like syntax | Y | - | - | - | - | - | - |
+| Scrollable body | Y | - | - | - | - | Y | - |
 | Alignment | Y | Y | Y | Y | Y | Y | Y |
 
 ## Unique Strengths

@@ -25,6 +25,29 @@ Dropdown menus are rendered as overlays after normal content to prevent sibling 
 
 **Component registration** (`src/melker-main.ts`): The `melker.ts` module MUST be imported BEFORE `parseMelkerFile` to ensure component registrations happen first.
 
+## Engine Stop Sequence
+
+**CRITICAL**: Render guards prevent output after terminal cleanup.
+
+When `stop()` is called (see `src/engine.ts`):
+1. `_isInitialized` set to `false` FIRST
+2. Video elements stopped (`stopVideo()`)
+3. Input processor stopped
+4. Resize handler stopped
+5. Debug server stopped
+6. Headless mode stopped
+7. Terminal cleanup (`cleanupTerminal()`)
+
+**Render Guards** (see `src/engine.ts` ~lines 895, 1037, 1264, 1298):
+- `render()` and `forceRender()` check `_isInitialized` at entry
+- `_renderOptimized()` and `_renderFullScreen()` check before `writeSync()`
+- These guards prevent video frames from being written after alternate screen exit
+
+This fixes a race condition where:
+1. Video `onFrame` callback triggers `render()`
+2. `stop()` sets `_isInitialized = false` and exits alternate screen
+3. Pending render would write sextant characters to normal screen (garbage output)
+
 ## Error Handling
 
 The engine MUST:
@@ -121,3 +144,55 @@ export const drawMyContent = (canvas: any): void => {
   // Draw content...
 };
 ```
+
+## Confirm and Prompt Dialogs
+
+The engine provides `showConfirm()` and `showPrompt()` methods as terminal equivalents to browser dialogs.
+
+**Usage** (see `src/engine.ts`):
+```typescript
+// Confirm dialog - returns Promise<boolean>
+const confirmed = await engine.showConfirm('Delete this file?');
+
+// Prompt dialog - returns Promise<string | null>
+const name = await engine.showPrompt('Enter your name:', 'Default');
+```
+
+**Escape key** closes both dialogs (returns `false` for confirm, `null` for prompt).
+
+## Draggable and Wheelable Interfaces
+
+New element interfaces for advanced interaction (see `src/types.ts`):
+
+**Draggable** - For elements handling mouse drag:
+- `getDragZone(x, y)` - Returns drag zone ID or null
+- `handleDragStart(zone, x, y)` - Start drag
+- `handleDragMove(zone, x, y)` - Continue drag
+- `handleDragEnd(zone, x, y)` - End drag
+
+Used by: dialog title bars, scrollbar thumbs
+
+**Wheelable** - For elements handling wheel events:
+- `canHandleWheel(x, y)` - Check if position handles wheel
+- `handleWheel(deltaX, deltaY)` - Handle wheel, returns true if consumed
+
+Used by: table tbody (scrollable), custom scroll areas
+
+The engine checks `isWheelable(target)` before falling through to default scroll handling.
+
+## Table Hit Testing
+
+Table components require special hit testing (see `src/hit-test.ts`):
+
+**Problem:** Click on a `<td>` should trigger table row onClick, not return the td element.
+
+**Solution:** `_isTablePart()` checks if element is tbody/thead/tfoot/tr/td/th. If hit target is a table part, `_findContainingTable()` walks up to return the table instead.
+
+## Checkbox ASCII Characters
+
+Checkbox uses ASCII `[x]` instead of Unicode `[✓]` for consistent terminal width:
+- `[x]` - Checked
+- `[ ]` - Unchecked
+- `[-]` - Indeterminate
+
+The Unicode checkmark `✓` has inconsistent width across terminals, causing layout issues. ASCII characters have predictable 1-char width.

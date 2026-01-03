@@ -179,6 +179,13 @@ This keeps output in main buffer for scrollback review.
 - Use `MELKER_NO_ALTERNATE_SCREEN=1` to see raw ANSI output
 - Use debug server's `get-buffer` to inspect buffer state
 
+### Video Exit Issues (Garbage on Exit)
+If video frame data (sextant characters) appears on the terminal after exit:
+- This is a race condition: video frame renders after alternate screen exit
+- The engine has render guards that check `_isInitialized` before `writeSync()`
+- Guards are in `render()`, `forceRender()`, `_renderOptimized()`, `_renderFullScreen()`
+- See `src/engine.ts` and `agent_docs/implementation-details.md` for details
+
 ## View Source (F12)
 
 Press **F12** at runtime to view the source file in a modal dialog overlay.

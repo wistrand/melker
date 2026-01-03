@@ -1,0 +1,127 @@
+<melker>
+
+  <help>
+# Nested Tables Demo
+
+Demonstrates tables nested inside table cells.
+
+## Features
+- Outer table with department info
+- Nested tables showing team members
+- Different border styles for visual hierarchy
+  </help>
+
+  <title>Nested Tables</title>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: fill;
+      height: fill;
+      padding: 1;
+    }
+    #header {
+      font-weight: bold;
+      margin-bottom: 1;
+    }
+  </style>
+
+  <container id="root">
+    <text id="header">Nested Tables Demo - Organization Structure</text>
+
+    <table border="double" cellPadding="1">
+      <thead>
+        <tr>
+          <th>Department</th>
+          <th>Budget</th>
+          <th>Team Members</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Engineering</td>
+          <td align="right">$500,000</td>
+          <td>
+            <table border="thin" cellPadding="0">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Alice</td>
+                  <td>Lead</td>
+                </tr>
+                <tr>
+                  <td>Bob</td>
+                  <td>Senior</td>
+                </tr>
+                <tr>
+                  <td>Carol</td>
+                  <td>Junior</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td>Design</td>
+          <td align="right">$200,000</td>
+          <td>
+            <table border="rounded" cellPadding="0">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Diana</td>
+                  <td>Lead</td>
+                </tr>
+                <tr>
+                  <td>Eve</td>
+                  <td>Senior</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td>Marketing</td>
+          <td align="right">$150,000</td>
+          <td>
+            <table border="dashed" cellPadding="0">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Frank</td>
+                  <td>Manager</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td align="right">$850,000</td>
+          <td>6 members</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <button title="Exit" onClick="$melker.exit()" style="margin-top: 2;" />
+  </container>
+
+</melker>

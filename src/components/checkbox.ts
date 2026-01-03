@@ -3,6 +3,7 @@
 import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
+import { getStringWidth } from '../char-width.ts';
 
 export interface CheckboxProps extends BaseProps {
   title: string;
@@ -35,24 +36,24 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
     const { title, checked, indeterminate } = this.props;
-    if (!title) return;
 
     // Check if this checkbox is focused
     const isFocused = context.focusedElementId === this.id;
 
     let checkboxStyle = { ...style };
 
-    // Create checkbox indicator
+    // Create checkbox indicator (using ASCII characters for consistent terminal width)
     let indicator: string;
     if (indeterminate) {
       indicator = '[-]'; // Indeterminate state
     } else if (checked) {
-      indicator = '[✓]'; // Checked state
+      indicator = '[x]'; // Checked state
     } else {
       indicator = '[ ]'; // Unchecked state
     }
 
-    const displayText = `${indicator} ${title}`;
+    // Display text: just indicator if no title, or indicator + space + title
+    const displayText = title ? `${indicator} ${title}` : indicator;
 
     // Apply focus styling
     if (isFocused) {
@@ -123,13 +124,16 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const { title } = this.props;
-    let width = 0;
 
+    // All indicators have the same width: [x], [ ], [-]
+    const indicatorWidth = 3;
+
+    let width: number;
     if (title) {
-      // Calculate checkbox size: "[✓] " or "[ ] " + title
-      width = title.length + 4; // "[?] " + title
+      // indicator + space + title
+      width = indicatorWidth + 1 + getStringWidth(title);
     } else {
-      width = 4; // Minimum for "[?] "
+      width = indicatorWidth;
     }
 
     return { width, height: 1 }; // Checkboxes are single line

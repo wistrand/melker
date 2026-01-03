@@ -9,8 +9,11 @@ export interface ContainerProps extends BaseProps {
   scrollY?: number;
 }
 
+// Type for container and container-like elements (used by scrolling system)
+export type ContainerLikeType = 'container' | 'thead' | 'tbody' | 'tfoot';
+
 export class ContainerElement extends Element implements Renderable, TextSelectable {
-  declare type: 'container';
+  declare type: ContainerLikeType;
   declare props: ContainerProps;
 
   constructor(props: ContainerProps = {}, children: Element[] = []) {

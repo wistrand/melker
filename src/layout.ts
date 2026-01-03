@@ -1,7 +1,7 @@
 // Advanced Layout Engine with comprehensive layout algorithms
 // Supports block, flex, and absolute positioning
 
-import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, Renderable, isRenderable } from './types.ts';
+import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, Renderable, isRenderable, isScrollableType } from './types.ts';
 import { SizingModel, globalSizingModel, BoxModel } from './sizing.ts';
 import { getThemeColor } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
@@ -132,7 +132,7 @@ export class LayoutEngine {
       computedStyle
     );
 
-    const isScrollable = element.type === 'container' && element.props.scrollable;
+    const isScrollable = isScrollableType(element.type) && element.props.scrollable;
     let contentBounds = this._sizingModel.calculateContentBounds(bounds, computedStyle, isScrollable);
 
     const node: LayoutNode = {

@@ -1,5 +1,5 @@
 // Unified Viewport System for Layout and Clipping
-import { Bounds, Element, Size } from './types.ts';
+import { Bounds, Element, Size, isScrollableType } from './types.ts';
 import { clipBounds } from './geometry.ts';
 
 export interface ScrollbarLayout {
@@ -82,7 +82,7 @@ export class ViewportManager {
     };
 
     // Calculate scrollbars if this is scrollable
-    if (scrollable && element.type === 'container' && element.props.scrollable) {
+    if (scrollable && isScrollableType(element.type) && element.props.scrollable) {
       viewport.scrollbars = this._calculateScrollbars(bounds, actualContentSize, scrollOffset);
 
       // Adjust clip rect to account for scrollbars

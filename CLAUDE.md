@@ -109,6 +109,7 @@ src/
     file-browser.ts   - File system navigation
     canvas.ts         - Pixel graphics (sextant chars)
     video.ts          - Video playback
+    progress.ts       - Progress bar (extends Canvas)
     markdown.ts       - Markdown rendering
     color-utils.ts    - RGBA color utilities
   video/              - Video processing

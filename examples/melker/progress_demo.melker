@@ -1,0 +1,63 @@
+<melker>
+  <title>Progress Bar Demo</title>
+
+  <style>
+    .row {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+      align-items: center;
+    }
+    .label {
+      width: 18;
+    }
+  </style>
+
+  <container id="root" style="display: flex; flex-direction: column; gap: 1; padding: 1">
+    <text style="font-weight: bold">Progress Bar Demo</text>
+
+    <container class="row">
+      <text class="label">0%:</text>
+      <progress value="0" width="20" />
+    </container>
+
+    <container class="row">
+      <text class="label">50%:</text>
+      <progress value="50" width="20" />
+    </container>
+
+    <container class="row">
+      <text class="label">100%:</text>
+      <progress value="100" width="20" />
+    </container>
+
+    <container class="row">
+      <text class="label">With value:</text>
+      <progress value="67" width="20" showValue="true" />
+    </container>
+
+    <container class="row">
+      <text class="label">Custom colors:</text>
+      <progress value="60" width="20" fillColor="#2196F3" emptyColor="#1a1a2e" />
+    </container>
+
+    <container class="row">
+      <text class="label">Indeterminate:</text>
+      <progress indeterminate="true" width="20" fillColor="cyan" />
+    </container>
+
+    <container class="row">
+      <text class="label">Taller (h=2):</text>
+      <progress value="55" width="20" height="2" fillColor="#9c27b0" />
+    </container>
+
+    <container class="row">
+      <text class="label">Interactive:</text>
+      <progress id="p" value="0" width="15" showValue="true" />
+      <button title="+10" onClick="const p = $melker.getElementById('p'); p.setValue(Math.min(100, p.getValue() + 10));" />
+      <button title="-10" onClick="const p = $melker.getElementById('p'); p.setValue(Math.max(0, p.getValue() - 10));" />
+    </container>
+
+    <text style="color: gray">Ctrl+C to exit</text>
+  </container>
+</melker>

@@ -336,6 +336,50 @@ When `draggable={true}`, users can click and drag the title bar to move the dial
 
 The dialog position is stored in `offsetX` and `offsetY` props, which persist the drag offset from the centered position.
 
+## Progress Component
+
+The `<progress>` component displays a progress bar using canvas pixels for smooth sub-character fill.
+
+### Usage
+
+```xml
+<progress value="50" width="25" />
+<progress value="75" showValue="true" />
+<progress indeterminate="true" fillColor="cyan" />
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | number | 0 | Current progress value |
+| `max` | number | 100 | Maximum value |
+| `min` | number | 0 | Minimum value |
+| `width` | number | 20 | Bar width in terminal columns |
+| `height` | number | 1 | Bar height in terminal rows |
+| `showValue` | boolean | false | Display percentage text after bar |
+| `indeterminate` | boolean | false | Show animated loading state |
+| `fillColor` | string | theme | Color for filled portion |
+| `emptyColor` | string | theme | Color for empty portion |
+| `animationSpeed` | number | 50 | Indeterminate animation speed (ms) |
+
+### Behavior
+
+- Extends `CanvasElement` for pixel-level rendering (2x3 pixels per character)
+- Uses sextant characters for smooth sub-character fill resolution
+- Theme-aware defaults: B&W uses black/white, color uses green/#aaa
+- `flexShrink: 0` prevents layout compression below specified dimensions
+- Indeterminate mode shows animated sliding pulse
+
+### Methods
+
+```typescript
+const progress = document.getElementById('myProgress');
+progress.setValue(75);           // Set progress value
+progress.getValue();             // Get current value
+progress.setIndeterminate(true); // Enable/disable indeterminate mode
+```
+
 ## Rendering Pipeline
 
 1. **Layout calculation** → LayoutNode tree

@@ -222,7 +222,7 @@ text("Hello") | border | color(Color::Cyan)
 | Tree | - | - | Y | - | Y | Y | - | - |
 | List | Y | Y | Y | Y | Y | Y | Y | Y |
 | **Feedback** | | | | | | | | |
-| Progress bar | - | Y | Y | Y | - | Y | Y | Y |
+| Progress bar | Y | Y | Y | Y | - | Y | Y | Y |
 | Spinner | - | Y | Y | Y | - | Y | - | - |
 | Toast | - | - | - | - | - | Y | - | - |
 | Sparkline | - | - | - | - | - | Y | Y | - |
@@ -248,7 +248,7 @@ text("Hello") | border | color(Color::Cyan)
 
 Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 
-**Melker gaps (high priority):** Tree, ProgressBar, Select/Dropdown
+**Melker gaps (high priority):** Tree, Select/Dropdown, Spinner
 
 ## Architecture Patterns
 

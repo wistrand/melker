@@ -33,6 +33,7 @@
 | Table Section | `src/components/table-section.ts` | thead/tbody/tfoot sections |
 | Table Row | `src/components/table-row.ts` | tr element |
 | Table Cell | `src/components/table-cell.ts` | td/th elements |
+| Progress | `src/components/progress.ts` | Progress bar (extends Canvas) |
 
 **Utilities:**
 - `src/components/mod.ts` - Component exports

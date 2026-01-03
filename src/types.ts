@@ -344,6 +344,7 @@ import type { MarkdownProps } from './components/markdown.ts';
 import type { CanvasProps } from './components/canvas.ts';
 import type { TabProps } from './components/tab.ts';
 import type { TabsProps } from './components/tabs.ts';
+import type { ProgressProps } from './components/progress.ts';
 
 // Type mapping for known element types to their specific props
 export interface ComponentPropsMap {
@@ -358,6 +359,7 @@ export interface ComponentPropsMap {
   'canvas': CanvasProps;
   'tab': TabProps;
   'tabs': TabsProps;
+  'progress': ProgressProps;
 }
 
 // Type mapping for known element types to their element classes
@@ -372,6 +374,7 @@ export type KnownElementTypeMap = {
   'canvas': Element;
   'tab': Element;
   'tabs': Element;
+  'progress': Element;
 };
 
 // Helper type to get props for a component type

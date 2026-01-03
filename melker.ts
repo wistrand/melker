@@ -198,6 +198,7 @@ import { MenuItemElement } from './src/components/menu-item.ts';
 import { MenuSeparatorElement } from './src/components/menu-separator.ts';
 import { MenuElement } from './src/components/menu.ts';
 import { MenuBarElement } from './src/components/menu-bar.ts';
+import { ProgressElement } from './src/components/progress.ts';
 import { registerComponent } from './src/element.ts';
 
 // Auto-register core components when library is imported
@@ -330,6 +331,23 @@ registerComponent({
     disabled: false,
   },
   validate: (props) => VideoElement.validate(props as any),
+});
+
+registerComponent({
+  type: 'progress',
+  componentClass: ProgressElement,
+  defaultProps: {
+    width: 20,
+    height: 1,
+    value: 0,
+    max: 100,
+    min: 0,
+    indeterminate: false,
+    showValue: false,
+    animationSpeed: 50,
+    disabled: false,
+  },
+  validate: (props) => ProgressElement.validate(props as any),
 });
 
 registerComponent({

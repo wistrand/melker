@@ -183,6 +183,15 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[
   }
 
   // Network permissions ("*" means all)
+  // Implicit: localhost when debug server is enabled
+  const debugPort = Deno.env.get('MELKER_DEBUG_PORT');
+  if (debugPort) {
+    if (!p.net) p.net = [];
+    if (!p.net.includes('*') && !p.net.includes('localhost')) {
+      p.net.push('localhost');
+    }
+  }
+
   if (p.net && p.net.length > 0) {
     if (p.net.includes('*')) {
       flags.push('--allow-net');
@@ -331,6 +340,7 @@ function buildEnvVars(policyVars: string[] | undefined): string[] {
     'MELKER_DEBUG_PORT',
     'MELKER_DEBUG_HOST',
     'MELKER_DEBUG_ENABLED',
+    'MELKER_ALLOW_REMOTE_INPUT',
     'MELKER_HEADLESS',
     // AI
     'MELKER_AI_MODEL',

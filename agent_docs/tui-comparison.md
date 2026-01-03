@@ -42,6 +42,7 @@ Comprehensive comparison of terminal UI libraries across languages.
 | Command palette | - | - | - | - | - | Y | - | - |
 | No_std/embedded | - | - | - | - | - | - | Y | - |
 | SSH/network serve | - | - | - | Y | - | Y | - | - |
+| Debug/remote inspect | Y | Y | - | - | - | Y | - | - |
 | Maintained (2026) | Y | Y | - | Y | Y | Y | Y | Y |
 
 ## Abstraction Levels

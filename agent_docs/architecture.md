@@ -77,6 +77,15 @@
 | `src/scroll-handler.ts` | Scroll handling, scrollbar interaction |
 | `src/text-selection-handler.ts` | Text selection and drag handling |
 
+**Policy System (`src/policy/`):**
+| File | Purpose |
+|------|---------|
+| `src/policy/mod.ts` | Policy module exports |
+| `src/policy/types.ts` | Policy type definitions |
+| `src/policy/loader.ts` | Policy loading from `<policy>` tag or external file |
+| `src/policy/flags.ts` | Convert policy to Deno permission flags |
+| `src/policy/approval.ts` | Approval cache (path-based for local, hash-based for remote) |
+
 **Bundler (`src/bundler/`):**
 | File | Purpose |
 |------|---------|

@@ -23,10 +23,21 @@ import { getGlobalErrorOverlay } from './error-overlay.ts';
 // Policy imports for permission enforcement
 import {
   loadPolicy,
+  loadPolicyFromContent,
+  hasPolicyTag,
   validatePolicy,
   formatPolicy,
   policyToDenoFlags,
   formatDenoFlags,
+  checkApproval,
+  saveApproval,
+  showApprovalPrompt,
+  getApprovalFilePath,
+  clearAllApprovals,
+  revokeApproval,
+  getApproval,
+  checkLocalApproval,
+  saveLocalApproval,
   type MelkerPolicy,
 } from './policy/mod.ts';
 
@@ -694,14 +705,21 @@ export async function runMelkerFile(
     const loggerOpts = getGlobalLoggerOptions();
     const currentTheme = getCurrentTheme();
     const handlerKeys = Object.keys(melkerRegistry).filter(k => k.startsWith('__h'));
+    // Check if running a remote file (MELKER_REMOTE_URL is set by runRemoteWithPolicy)
+    const remoteUrl = Deno.env.get('MELKER_REMOTE_URL');
+    // Get approval file path (for both remote URLs and local files in runner mode)
+    const isRunnerMode = Deno.env.get('MELKER_RUNNER') === '1';
+    const approvalKey = remoteUrl || (isRunnerMode ? filepath : undefined);
+    const approvalFile = approvalKey ? await getApprovalFilePath(approvalKey) : undefined;
     const systemInfo: SystemInfo = {
       // System info
-      file: filepath,
+      file: remoteUrl || filepath,  // Show original URL if remote
       theme: `${currentTheme.type}-${currentTheme.mode} (${currentTheme.colorSupport})`,
       logFile: loggerOpts.logFile,
       logLevel: loggerOpts.level,
       denoVersion: Deno.version.deno,
       platform: `${Deno.build.os} ${Deno.build.arch}`,
+      approvalFile,
       // Script processing
       scriptsCount: assembled.metadata?.scriptsCount ?? 0,
       handlersCount: assembled.metadata?.handlersCount ?? 0,
@@ -1098,6 +1116,9 @@ export function printUsage(): void {
   console.log('  --watch        Watch file for changes and auto-reload (local files only)');
   console.log('  --show-policy  Display the app policy and exit');
   console.log('  --trust        Run with full permissions, ignoring any declared policy');
+  console.log('  --clear-approvals      Clear all cached remote app approvals');
+  console.log('  --revoke-approval <url>  Revoke cached approval for a specific URL');
+  console.log('  --show-approval <url>    Show cached approval for a specific URL');
   console.log('  --help, -h     Show this help message');
   console.log('');
   console.log('Example .melker file content:');
@@ -1142,15 +1163,26 @@ export function printUsage(): void {
   console.log('  XDG_CONFIG_HOME  Override config directory (default: ~/.config)');
   console.log('  XDG_CACHE_HOME   Override cache directory (default: ~/.cache)');
   console.log('');
+  console.log('App approval system:');
+  console.log('  All .melker files require first-run approval (use --trust to bypass).');
+  console.log('');
+  console.log('  Local files:');
+  console.log('    - Policy tag is optional (uses all permissions if missing)');
+  console.log('    - Approval is path-based (persists across file edits)');
+  console.log('    - Re-approval only needed if file is moved/renamed');
+  console.log('');
+  console.log('  Remote files (http:// or https://):');
+  console.log('    - MUST contain a <policy> tag');
+  console.log('    - Approval is hash-based (content + policy + deno flags)');
+  console.log('    - Re-approval required if app or policy changes');
+  console.log('');
+  console.log('  Approvals cached in ~/.cache/melker/approvals/');
+  console.log('');
   console.log('Policy system (permission sandboxing):');
-  console.log('  Apps can declare required permissions via embedded <policy> tag or .policy.json file.');
-  console.log('  When a policy is found, the app runs in a subprocess with only those permissions.');
+  console.log('  Apps can declare permissions via embedded <policy> tag or .policy.json file.');
   console.log('');
   console.log('  Embedded policy example:');
   console.log('    <policy>{"name":"My App","permissions":{"net":["api.example.com"]}}</policy>');
-  console.log('');
-  console.log('  External policy file (app-name.policy.json or melker.policy.json):');
-  console.log('    {"name":"My App","permissions":{"read":["/data"],"net":["api.example.com"]}}');
   console.log('');
   console.log('  Policy permissions map directly to Deno flags:');
   console.log('    read: [...paths]  -> --allow-read=paths');
@@ -1327,6 +1359,57 @@ export async function main(): Promise<void> {
     // Never returns - server runs until connection closes
   }
 
+  // Handle --clear-approvals (doesn't require a file)
+  if (args.includes('--clear-approvals')) {
+    const count = await clearAllApprovals();
+    console.log(`Cleared ${count} cached approval${count !== 1 ? 's' : ''}.`);
+    Deno.exit(0);
+  }
+
+  // Handle --revoke-approval <url> (doesn't require a file)
+  const revokeIndex = args.indexOf('--revoke-approval');
+  if (revokeIndex >= 0) {
+    const url = args[revokeIndex + 1];
+    if (!url || url.startsWith('--')) {
+      console.error('Error: --revoke-approval requires a URL argument');
+      console.error('Usage: --revoke-approval <url>');
+      Deno.exit(1);
+    }
+    const revoked = await revokeApproval(url);
+    if (revoked) {
+      console.log(`Revoked approval for: ${url}`);
+    } else {
+      console.log(`No approval found for: ${url}`);
+    }
+    Deno.exit(0);
+  }
+
+  // Handle --show-approval <url> (doesn't require a file)
+  const showApprovalIndex = args.indexOf('--show-approval');
+  if (showApprovalIndex >= 0) {
+    const url = args[showApprovalIndex + 1];
+    if (!url || url.startsWith('--')) {
+      console.error('Error: --show-approval requires a URL argument');
+      console.error('Usage: --show-approval <url>');
+      Deno.exit(1);
+    }
+    const record = await getApproval(url);
+    if (record) {
+      const approvalFile = await getApprovalFilePath(url);
+      console.log(`\nApproval record for: ${url}\n`);
+      console.log(`File: ${approvalFile}`);
+      console.log(`Approved: ${record.approvedAt}`);
+      console.log(`Hash: ${record.hash.substring(0, 16)}...`);
+      console.log('\nPolicy:');
+      console.log(formatPolicy(record.policy));
+      console.log('\nDeno flags:');
+      console.log(formatDenoFlags(record.denoFlags));
+    } else {
+      console.log(`No approval found for: ${url}`);
+    }
+    Deno.exit(0);
+  }
+
   // Parse options
   const options = {
     printTree: args.includes('--print-tree'),
@@ -1464,26 +1547,99 @@ export async function main(): Promise<void> {
       await Deno.stat(filepath);
     }
 
-    // Handle --show-policy flag (works for local files in any mode)
-    if (options.showPolicy && !isUrl(filepath)) {
-      const policyResult = await loadPolicy(absoluteFilepath);
-      const policy = policyResult.policy ?? createAutoPolicy();
-      const source = policyResult.policy ? policyResult.source : 'auto';
-      console.log(`\nPolicy source: ${source}${policyResult.path ? ` (${policyResult.path})` : ''}\n`);
-      console.log(formatPolicy(policy));
-      console.log('\nDeno permission flags:');
-      const flags = policyToDenoFlags(policy, dirname(absoluteFilepath));
-      console.log(formatDenoFlags(flags));
+    // Handle --show-policy flag (works for both local and remote files)
+    if (options.showPolicy) {
+      if (isUrl(filepath)) {
+        // Remote file - load content and extract policy
+        const content = await loadContent(filepath);
+        if (!hasPolicyTag(content)) {
+          console.log('\nNo policy found in remote file.');
+          console.log('Remote .melker files must contain a <policy> tag.');
+          Deno.exit(0);
+        }
+        const policyResult = await loadPolicyFromContent(content, filepath);
+        const policy = policyResult.policy ?? createAutoPolicy();
+        console.log(`\nPolicy source: ${policyResult.source}\n`);
+        console.log(formatPolicy(policy));
+        console.log('\nDeno permission flags:');
+        const flags = policyToDenoFlags(policy, Deno.cwd());
+        console.log(formatDenoFlags(flags));
+      } else {
+        // Local file
+        const policyResult = await loadPolicy(absoluteFilepath);
+        const policy = policyResult.policy ?? createAutoPolicy();
+        const source = policyResult.policy ? policyResult.source : 'auto';
+        console.log(`\nPolicy source: ${source}${policyResult.path ? ` (${policyResult.path})` : ''}\n`);
+        console.log(formatPolicy(policy));
+        console.log('\nDeno permission flags:');
+        const flags = policyToDenoFlags(policy, dirname(absoluteFilepath));
+        console.log(formatDenoFlags(flags));
+      }
       Deno.exit(0);
     }
 
-    // Policy enforcement (skip for URLs and if already in runner mode)
-    if (!isUrl(filepath) && !isRunner) {
-      const policyResult = await loadPolicy(absoluteFilepath);
+    // Remote file security checks (unless --trust or already in runner mode)
+    if (isUrl(filepath) && !options.trust && !isRunner) {
+      const content = await loadContent(filepath);
 
-      // If policy found and not --trust, run in subprocess with restrictions
-      if (policyResult.policy && !options.trust) {
-        // Validate policy
+      // Feature 1: Mandatory policy for remote files
+      if (!hasPolicyTag(content)) {
+        console.error('\x1b[31mError: Remote .melker files must contain a <policy> tag.\x1b[0m');
+        console.error('\nRemote files require explicit permission declarations for security.');
+        console.error('Use --trust to bypass this check (dangerous).');
+        Deno.exit(1);
+      }
+
+      // Load and validate policy from content
+      const policyResult = await loadPolicyFromContent(content, filepath);
+      if (!policyResult.policy) {
+        console.error('\x1b[31mError: Failed to parse policy from remote file.\x1b[0m');
+        Deno.exit(1);
+      }
+
+      const policy = policyResult.policy;
+      const errors = validatePolicy(policy);
+      if (errors.length > 0) {
+        console.error('❌ Policy validation errors:');
+        for (const err of errors) {
+          console.error(`  - ${err}`);
+        }
+        Deno.exit(1);
+      }
+
+      // Generate Deno permission flags from policy
+      const denoFlags = policyToDenoFlags(policy, Deno.cwd());
+
+      // Feature 2: First-run approval dialog
+      const isApproved = await checkApproval(filepath, content, policy, denoFlags);
+
+      if (!isApproved) {
+        // Show approval prompt (only shows resolved policy, not Deno flags)
+        const approved = showApprovalPrompt(filepath, policy);
+        if (!approved) {
+          console.log('\nPermission denied. Exiting.');
+          Deno.exit(0);
+        }
+        // Save approval for future runs
+        await saveApproval(filepath, content, policy, denoFlags);
+        // Print approval file location
+        const approvalFile = await getApprovalFilePath(filepath);
+        console.log(`Approval saved: ${approvalFile}\n`);
+      }
+
+      // Run remote file in subprocess with policy restrictions
+      await runRemoteWithPolicy(filepath, content, policy, args);
+      return; // runRemoteWithPolicy calls Deno.exit
+    }
+
+    // Local file approval and policy enforcement (skip if --trust or runner mode)
+    if (!isUrl(filepath) && !options.trust && !isRunner) {
+      const policyResult = await loadPolicy(absoluteFilepath);
+      const policy = policyResult.policy ?? createAutoPolicy();
+      const denoFlags = policyToDenoFlags(policy, dirname(absoluteFilepath));
+
+      // Validate policy if present
+      if (policyResult.policy) {
         const errors = validatePolicy(policyResult.policy);
         if (errors.length > 0) {
           console.error('❌ Policy validation errors:');
@@ -1492,11 +1648,28 @@ export async function main(): Promise<void> {
           }
           Deno.exit(1);
         }
-
-        // Run in restricted subprocess
-        await runWithPolicy(absoluteFilepath, policyResult.policy, args);
-        return; // runWithPolicy calls Deno.exit
       }
+
+      // Local file approval check (path-based, no content hash)
+      const isApproved = await checkLocalApproval(absoluteFilepath);
+
+      if (!isApproved) {
+        // Show approval prompt
+        const approved = showApprovalPrompt(absoluteFilepath, policy);
+        if (!approved) {
+          console.log('\nPermission denied. Exiting.');
+          Deno.exit(0);
+        }
+        // Save approval for future runs
+        await saveLocalApproval(absoluteFilepath, policy, denoFlags);
+        // Print approval file location
+        const approvalFile = await getApprovalFilePath(absoluteFilepath);
+        console.log(`Approval saved: ${approvalFile}\n`);
+      }
+
+      // Run in subprocess with policy restrictions
+      await runWithPolicy(absoluteFilepath, policy, args);
+      return; // runWithPolicy calls Deno.exit
     }
 
     // If --unstable-bundle is not available, spawn subprocess with all permissions
@@ -1609,6 +1782,121 @@ async function runWithPolicy(
 
   // Exit with the subprocess exit code
   Deno.exit(status.code);
+}
+
+/**
+ * Run a remote .melker app in a subprocess with restricted Deno permissions.
+ *
+ * Unlike runWithPolicy for local files, this writes the approved content
+ * to a temp file to avoid TOCTOU (time-of-check-time-of-use) issues where
+ * the remote content could change between approval and execution.
+ *
+ * @param url The original URL of the .melker file
+ * @param content The approved content (already fetched and approved)
+ * @param policy The loaded and validated policy
+ * @param originalArgs Original CLI arguments to pass through
+ */
+async function runRemoteWithPolicy(
+  url: string,
+  content: string,
+  policy: MelkerPolicy,
+  originalArgs: string[]
+): Promise<void> {
+  // Get logger for policy runner
+  const { getLogger } = await import('./logging.ts');
+  const logger = (() => { try { return getLogger('policy'); } catch { return null; } })();
+
+  // Write approved content to temp file to avoid TOCTOU issues
+  const tempDir = await Deno.makeTempDir({ prefix: 'melker-remote-' });
+  const tempFile = `${tempDir}/app.melker`;
+  await Deno.writeTextFile(tempFile, content);
+
+  try {
+    // Convert policy to Deno permission flags
+    // Use cwd as base directory since temp file has no meaningful directory context
+    const denoFlags = policyToDenoFlags(policy, Deno.cwd());
+
+    // Required: --unstable-bundle for Deno.bundle() API
+    denoFlags.push('--unstable-bundle');
+
+    // Disable interactive permission prompts - fail fast instead of hanging
+    denoFlags.push('--no-prompt');
+
+    // Build the subprocess command
+    const melkerEntry = new URL('../melker.ts', import.meta.url).pathname;
+
+    // Filter out policy-related flags and the original URL
+    // Replace the URL with our temp file path
+    const filteredArgs: string[] = [];
+    let skipNext = false;
+    for (const arg of originalArgs) {
+      if (skipNext) {
+        skipNext = false;
+        continue;
+      }
+      if (arg.startsWith('--show-policy') || arg.startsWith('--trust')) {
+        continue;
+      }
+      // Replace the URL with temp file path
+      if (arg === url || arg.startsWith('http://') || arg.startsWith('https://')) {
+        filteredArgs.push(tempFile);
+      } else {
+        filteredArgs.push(arg);
+      }
+    }
+
+    const cmd = [
+      Deno.execPath(),
+      'run',
+      ...denoFlags,
+      melkerEntry,
+      ...filteredArgs,
+    ];
+
+    // Log the subprocess launch
+    logger?.info?.(`Launching remote app with policy: ${policy.name || url}`);
+    logger?.info?.(`Original URL: ${url}`);
+    logger?.info?.(`Temp file: ${tempFile}`);
+    logger?.debug?.(`Permission flags: ${denoFlags.join(' ')}`);
+
+    // Spawn subprocess with restricted permissions
+    const process = new Deno.Command(cmd[0], {
+      args: cmd.slice(1),
+      stdin: 'inherit',
+      stdout: 'inherit',
+      stderr: 'inherit',
+      env: {
+        ...Deno.env.toObject(),
+        MELKER_RUNNER: '1', // Signal that policy has been checked
+        MELKER_REMOTE_URL: url, // Pass original URL for reference
+      },
+    });
+
+    const child = process.spawn();
+
+    // Ignore signals in parent - let the child handle them and exit gracefully
+    const ignoreSignal = () => {
+      // Do nothing - just prevent parent from exiting before child
+    };
+    Deno.addSignalListener('SIGINT', ignoreSignal);
+    Deno.addSignalListener('SIGTERM', ignoreSignal);
+
+    const status = await child.status;
+
+    // Clean up signal listeners
+    Deno.removeSignalListener('SIGINT', ignoreSignal);
+    Deno.removeSignalListener('SIGTERM', ignoreSignal);
+
+    // Exit with the subprocess exit code
+    Deno.exit(status.code);
+  } finally {
+    // Clean up temp directory
+    try {
+      await Deno.remove(tempDir, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
 }
 
 /**

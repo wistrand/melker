@@ -8,6 +8,27 @@ export type {
   PolicyArgs,
 } from './types.ts';
 
-export { loadPolicy, validatePolicy, formatPolicy } from './loader.ts';
+export {
+  loadPolicy,
+  loadPolicyFromContent,
+  hasPolicyTag,
+  validatePolicy,
+  formatPolicy,
+} from './loader.ts';
 
 export { policyToDenoFlags, formatDenoFlags } from './flags.ts';
+
+export type { ApprovalRecord } from './approval.ts';
+
+export {
+  calculateApprovalHash,
+  checkApproval,
+  saveApproval,
+  showApprovalPrompt,
+  getApprovalFilePath,
+  clearAllApprovals,
+  revokeApproval,
+  getApproval,
+  checkLocalApproval,
+  saveLocalApproval,
+} from './approval.ts';

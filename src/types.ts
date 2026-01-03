@@ -218,7 +218,7 @@ export function isFocusable(element: Element): element is Element & Focusable {
 
 // Rendering interface for components
 export interface Renderable {
-  render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void;
+  render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer | ClippedDualBuffer | ViewportDualBuffer, context: ComponentRenderContext): void;
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number };
 }
 
@@ -271,6 +271,63 @@ export interface TextSelectable {
 // Type guard for TextSelectable interface
 export function isTextSelectable(element: Element): element is Element & TextSelectable {
   return 'isTextSelectable' in element && typeof element.isTextSelectable === 'function';
+}
+
+// Draggable interface for elements that handle mouse drag (scrollbars, resizers, etc.)
+export interface Draggable {
+  /**
+   * Check if a drag can start at this position
+   * @returns drag zone identifier or null if not draggable at this position
+   */
+  getDragZone(x: number, y: number): string | null;
+
+  /**
+   * Handle drag start
+   * @param zone - The drag zone identifier from getDragZone
+   * @param x - Starting x coordinate
+   * @param y - Starting y coordinate
+   */
+  handleDragStart(zone: string, x: number, y: number): void;
+
+  /**
+   * Handle drag movement
+   * @param zone - The drag zone identifier
+   * @param x - Current x coordinate
+   * @param y - Current y coordinate
+   */
+  handleDragMove(zone: string, x: number, y: number): void;
+
+  /**
+   * Handle drag end
+   * @param zone - The drag zone identifier
+   * @param x - End x coordinate
+   * @param y - End y coordinate
+   */
+  handleDragEnd(zone: string, x: number, y: number): void;
+}
+
+// Type guard for Draggable interface
+export function isDraggable(element: Element): element is Element & Draggable {
+  return 'getDragZone' in element && typeof element.getDragZone === 'function';
+}
+
+// Wheelable interface for elements that handle mouse wheel events
+export interface Wheelable {
+  /**
+   * Check if wheel event at this position should be handled
+   */
+  canHandleWheel(x: number, y: number): boolean;
+
+  /**
+   * Handle wheel event
+   * @returns true if the event was handled
+   */
+  handleWheel(deltaX: number, deltaY: number): boolean;
+}
+
+// Type guard for Wheelable interface
+export function isWheelable(element: Element): element is Element & Wheelable {
+  return 'handleWheel' in element && typeof element.handleWheel === 'function';
 }
 
 // Element type exports will come from component files
@@ -357,4 +414,9 @@ export interface ComponentDefinition {
 
 export interface ComponentRegistry {
   [key: string]: ComponentDefinition;
+}
+
+// Helper to check if an element type supports scrolling
+export function isScrollableType(type: string): boolean {
+  return type === 'container' || type === 'tbody';
 }

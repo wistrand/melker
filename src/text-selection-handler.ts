@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { DualBuffer } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
-import { Element, TextSelection, Bounds, isClickable, ClickEvent } from './types.ts';
+import { Element, TextSelection, Bounds, isClickable, ClickEvent, isDraggable, Draggable } from './types.ts';
 import { clampToBounds } from './geometry.ts';
 import {
   EventManager,
@@ -61,6 +61,9 @@ export class TextSelectionHandler {
   private _draggingDialog: DialogElement | null = null;
   // Dialog resize state
   private _resizingDialog: DialogElement | null = null;
+  // Generic draggable element state
+  private _draggingElement: (Element & Draggable) | null = null;
+  private _dragZone: string | null = null;
 
   // Selection performance timing stats
   private _selectionTimingStats = {
@@ -185,6 +188,17 @@ export class TextSelectionHandler {
         this._deps.onElementClick(targetElement, event);
       }
 
+      // Check for draggable elements (scrollbars, resizers, etc.)
+      if (targetElement && !isAltPressed && isDraggable(targetElement)) {
+        const dragZone = targetElement.getDragZone(event.x, event.y);
+        if (dragZone) {
+          this._draggingElement = targetElement;
+          this._dragZone = dragZone;
+          targetElement.handleDragStart(dragZone, event.x, event.y);
+          return; // Don't start text selection when dragging
+        }
+      }
+
       // Alt+click: Global rectangular selection (includes chrome/borders)
       if (isAltPressed) {
         this._clickCount = 1; // Reset click count for alt+click
@@ -305,6 +319,13 @@ export class TextSelectionHandler {
       return;
     }
 
+    // Handle generic draggable element
+    if (this._draggingElement && this._dragZone) {
+      this._draggingElement.handleDragMove(this._dragZone, event.x, event.y);
+      this._deps.onRender();
+      return;
+    }
+
     // Track timing during selection drag
     const isTracking = this._isSelecting;
     if (isTracking) {
@@ -417,6 +438,15 @@ export class TextSelectionHandler {
     // End scrollbar drag if active
     if (this._deps.scrollHandler.isScrollbarDragActive()) {
       this._deps.scrollHandler.endScrollbarDrag();
+      return; // Don't process other mouse up events
+    }
+
+    // End generic draggable element drag if active
+    if (this._draggingElement && this._dragZone) {
+      this._draggingElement.handleDragEnd(this._dragZone, event.x, event.y);
+      this._draggingElement = null;
+      this._dragZone = null;
+      this._deps.onRender();
       return; // Don't process other mouse up events
     }
 

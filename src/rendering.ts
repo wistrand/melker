@@ -1,7 +1,7 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle } from './types.ts';
+import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType } from './types.ts';
 import { clipBounds } from './geometry.ts';
 import { DualBuffer, TerminalBuffer, Cell } from './buffer.ts';
 import { ClippedDualBuffer } from './clipped-buffer.ts';
@@ -97,6 +97,8 @@ export class RenderingEngine {
   private _cachedViewport?: Bounds;
   // Scrollbar bounds for drag handling
   private _scrollbarBounds: Map<string, ScrollbarBounds> = new Map();
+  // Document reference for element lookup
+  private _document?: { getElementById(id: string): Element | undefined };
 
   constructor(options: {
     sizingModel?: SizingModel;
@@ -106,6 +108,11 @@ export class RenderingEngine {
     this._sizingModel = options.sizingModel || globalSizingModel;
     this._layoutEngine = options.layoutEngine || globalLayoutEngine;
     this._viewportManager = options.viewportManager || globalViewportManager;
+  }
+
+  // Set document reference for element lookup (needed for tbody bounds)
+  setDocument(document: { getElementById(id: string): Element | undefined }): void {
+    this._document = document;
   }
 
   // Main render method that takes an element tree and renders to a buffer
@@ -679,9 +686,14 @@ export class RenderingEngine {
     // Render content based on element type
     this._renderContent(element, node.bounds, computedStyle, context.buffer, context);
 
+    // Skip children rendering for table elements - they handle their own child rendering
+    const tableTypes = ['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th'];
+    if (tableTypes.includes(element.type)) {
+      return;
+    }
 
     // Render children with scroll translation and clipping
-    const isScrollable = element.type === 'container' && element.props.scrollable;
+    const isScrollable = isScrollableType(element.type) && element.props.scrollable;
     const contentBounds = this._getContentBounds(clippedBounds, computedStyle, isScrollable);
 
     if (isScrollable) {
@@ -758,7 +770,7 @@ export class RenderingEngine {
 
   // Render scroll bars for a scrollable container (called after children are rendered)
   private _renderScrollbars(element: Element, contentBounds: Bounds, adjustedContentBounds: Bounds, style: Partial<Cell>, buffer: DualBuffer): void {
-    if (element.type !== 'container' || !element.props.scrollable) {
+    if (!isScrollableType(element.type) || !element.props.scrollable) {
       return;
     }
 
@@ -999,7 +1011,7 @@ export class RenderingEngine {
     let coordinateTransform: CoordinateTransform | undefined;
 
     // Phase 3: Use viewport system for enhanced clipping
-    if (context.clipRect && element.type === 'container' && element.props.scrollable) {
+    if (context.clipRect && isScrollableType(element.type) && element.props.scrollable) {
       // Only use viewport system for scrollable containers
       const viewportManager = context.viewportManager || globalViewportManager;
 
@@ -1033,6 +1045,10 @@ export class RenderingEngine {
         hoveredElementId: context.hoveredElementId,
         requestRender: context.requestRender,
         scrollOffset: context.scrollOffset, // Pass scroll offset for click translation
+        // Allow components to register their scrollbar bounds for scroll-handler integration
+        registerScrollbarBounds: (elementId: string, scrollbarBounds: ScrollbarBounds) => {
+          this._scrollbarBounds.set(elementId, scrollbarBounds);
+        },
       };
       // Pass the overlays array from context if it exists
       if ((context as any).overlays) {
@@ -1250,12 +1266,29 @@ export class RenderingEngine {
 
   // Get container bounds from current layout context
   // For scrollable containers, excludes scrollbar area
-  getContainerBounds(containerId: string): Bounds | undefined {
+  getContainerBounds(containerOrId: Element | string): Bounds | undefined {
+    // Resolve element if given an ID string
+    const containerId = typeof containerOrId === 'string' ? containerOrId : (containerOrId.id || '');
+    const element = typeof containerOrId === 'string' ? this._document?.getElementById(containerOrId) : containerOrId;
+
+    // For tbody elements, ALWAYS use actual bounds set by table component
+    // The table component calculates the correct viewport size for its scrollable tbody,
+    // which may differ from what the layout engine calculates
+    if (element?.type === 'tbody') {
+      const tbody = element as any;
+      if (typeof tbody.getActualBounds === 'function') {
+        const actualBounds = tbody.getActualBounds();
+        if (actualBounds) return actualBounds;
+      }
+    }
+
     const layoutNode = this._currentLayoutContext?.get(containerId);
-    if (!layoutNode) return undefined;
+    if (!layoutNode) {
+      return undefined;
+    }
 
     // For scrollable containers, return content bounds minus scrollbar space
-    if (layoutNode.element.type === 'container' && layoutNode.element.props.scrollable) {
+    if (isScrollableType(layoutNode.element.type) && layoutNode.element.props.scrollable) {
       const contentBounds = layoutNode.contentBounds;
 
       // If no content bounds, fall back to element bounds
@@ -1295,10 +1328,36 @@ export class RenderingEngine {
     return this._scrollbarBounds;
   }
 
+  /**
+   * Public method for components to render a vertical scrollbar
+   * Used by table and other components that handle their own scrolling
+   */
+  renderVerticalScrollbar(
+    bounds: Bounds,
+    scrollY: number,
+    contentHeight: number,
+    style: Partial<Cell>,
+    buffer: DualBuffer
+  ): void {
+    this._renderVerticalScrollbar(bounds, scrollY, contentHeight, style, buffer);
+  }
+
   // Calculate actual scroll dimensions for a scrollable container
   calculateScrollDimensions(container: Element): { width: number; height: number } {
-    if (container.type !== 'container' || !container.props.scrollable) {
+    if (!isScrollableType(container.type) || !container.props.scrollable) {
       return { width: 0, height: 0 };
+    }
+
+    // For tbody elements, use the actual content height set by the table component
+    // This is necessary because tbody row heights depend on column widths calculated by the table
+    if (container.type === 'tbody') {
+      const tbody = container as any;
+      if (typeof tbody.getActualContentHeight === 'function') {
+        const actualHeight = tbody.getActualContentHeight();
+        if (actualHeight > 0) {
+          return { width: 0, height: actualHeight };
+        }
+      }
     }
 
     // Get the container's layout node which now includes pre-calculated content dimensions

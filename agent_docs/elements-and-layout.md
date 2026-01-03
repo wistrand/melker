@@ -17,6 +17,19 @@ Element (abstract base class)
 └── setBounds(bounds)    - Set element's layout bounds (called by renderer)
 ```
 
+**Component Interfaces:**
+- `Renderable` - Has `render()` and `intrinsicSize()` methods
+- `Focusable` - Can receive keyboard focus
+- `Clickable` - Handles click events with `onClick()`
+- `Interactive` - Handles keyboard events with `handleKeyPress()`
+- `TextSelectable` - Supports text selection
+- `Draggable` - Handles mouse drag (scrollbars, resizers, dialogs)
+- `Wheelable` - Handles mouse wheel events (scrollable tbody)
+
+**Type Guards:**
+- `isRenderable(el)`, `isFocusable(el)`, `isClickable(el)`, etc.
+- `isScrollableType(type)` - Returns true for 'container' or 'tbody'
+
 ### Element Creation (`src/element.ts`)
 
 ```typescript
@@ -219,6 +232,70 @@ The `<tabs>` component provides a tabbed interface with clickable tab headers.
 - Active tab is bold, focused tab is underlined
 - Navigate with Tab/Shift+Tab, activate with Enter or click
 - Default tab style includes `border: thin; margin-top: 1`
+
+## Table Component
+
+The `<table>` component provides data tables with optional scrollable body.
+
+### Usage
+
+```xml
+<table id="users" style="width: fill; height: 20;">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody scrollable="true">
+    <tr>
+      <td>Alice</td>
+      <td>alice@example.com</td>
+      <td>Active</td>
+    </tr>
+    <tr>
+      <td>Bob</td>
+      <td>bob@example.com</td>
+      <td>Inactive</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+### Structure
+
+- `<table>` - Root container, handles column width calculation
+- `<thead>` - Fixed header section (not scrollable)
+- `<tbody>` - Data rows, supports `scrollable="true"` for scrolling
+- `<tfoot>` - Fixed footer section (not scrollable)
+- `<tr>` - Table row
+- `<td>` / `<th>` - Table cells (th renders bold)
+
+### Props
+
+**Table:**
+- `style.width` / `style.height` - Table dimensions
+- Standard container styling
+
+**tbody:**
+- `scrollable` - Enable vertical scrolling when content exceeds height
+
+### Behavior
+
+- Column widths are calculated from max content width across all sections
+- tbody scrolling uses the same scrollbar system as containers
+- Wheel events are handled by the tbody element (Wheelable interface)
+- Click events on cells bubble to the table element for hit testing
+
+### Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `src/components/table.ts` | Table container, column width calc |
+| `src/components/table-section.ts` | thead/tbody/tfoot sections |
+| `src/components/table-row.ts` | Row container |
+| `src/components/table-cell.ts` | td/th cells |
 
 ## Dialog Component
 

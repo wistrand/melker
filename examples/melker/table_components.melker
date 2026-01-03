@@ -1,0 +1,186 @@
+<melker>
+
+  <help>
+# Table with Components Demo
+
+Demonstrates table cells containing various UI components.
+
+## Features
+- Buttons in cells
+- Checkboxes for row selection
+- Input fields for editing
+- Text with styling
+- Progress indicators
+  </help>
+
+  <title>Table with Components</title>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: fill;
+      height: fill;
+      padding: 1;
+    }
+    #header {
+      font-weight: bold;
+      margin-bottom: 1;
+    }
+    .status-active {
+      color: green;
+    }
+    .status-inactive {
+      color: red;
+    }
+    .status-pending {
+      color: yellow;
+    }
+    .progress-bar {
+      color: cyan;
+    }
+  </style>
+
+  <script>
+    // Task completion states
+    const taskStates: Record<string, boolean> = {
+      'task1': true,
+      'task2': false,
+      'task3': true,
+      'task4': false,
+      'task5': false,
+    };
+
+    export function toggleTask(taskId: string) {
+      taskStates[taskId] = !taskStates[taskId];
+      const checkbox = $melker.getElementById(taskId);
+      if (checkbox) {
+        checkbox.props.checked = taskStates[taskId];
+      }
+      updateProgress();
+    }
+
+    export function updateProgress() {
+      const completed = Object.values(taskStates).filter(v => v).length;
+      const total = Object.keys(taskStates).length;
+      const statusText = $melker.getElementById('statusText');
+      if (statusText) {
+        statusText.props.text = `Tasks: ${completed}/${total} completed`;
+      }
+    }
+
+    export function editRow(rowId: string) {
+      alert(`Editing row: ${rowId}`);
+    }
+
+    export function deleteRow(rowId: string) {
+      alert(`Delete row: ${rowId}?`);
+    }
+
+    export function viewDetails(name: string) {
+      alert(`Details for: ${name}`);
+    }
+  </script>
+
+  <container id="root">
+    <text id="header">Table with Components Demo</text>
+
+    <!-- Task list with checkboxes -->
+    <text text="Task List:" style="margin-bottom: 1; font-weight: bold;" />
+    <table border="rounded" cellPadding="1">
+      <thead>
+        <tr>
+          <th>Done</th>
+          <th>Task</th>
+          <th>Priority</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><checkbox id="task1" checked="true" onChange="$app.toggleTask('task1')" /></td>
+          <td>Set up project structure</td>
+          <td><text text="High" class="status-active" /></td>
+          <td><button title="View" onClick="$app.viewDetails('Setup')" /></td>
+        </tr>
+        <tr>
+          <td><checkbox id="task2" onChange="$app.toggleTask('task2')" /></td>
+          <td>Implement core features</td>
+          <td><text text="High" class="status-active" /></td>
+          <td><button title="View" onClick="$app.viewDetails('Core')" /></td>
+        </tr>
+        <tr>
+          <td><checkbox id="task3" checked="true" onChange="$app.toggleTask('task3')" /></td>
+          <td>Write documentation</td>
+          <td><text text="Medium" class="status-pending" /></td>
+          <td><button title="View" onClick="$app.viewDetails('Docs')" /></td>
+        </tr>
+        <tr>
+          <td><checkbox id="task4" onChange="$app.toggleTask('task4')" /></td>
+          <td>Add unit tests</td>
+          <td><text text="Medium" class="status-pending" /></td>
+          <td><button title="View" onClick="$app.viewDetails('Tests')" /></td>
+        </tr>
+        <tr>
+          <td><checkbox id="task5" onChange="$app.toggleTask('task5')" /></td>
+          <td>Deploy to production</td>
+          <td><text text="Low" class="status-inactive" /></td>
+          <td><button title="View" onClick="$app.viewDetails('Deploy')" /></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <text id="statusText" text="Tasks: 2/5 completed" style="margin-top: 1;" />
+
+    <!-- User management table with action buttons -->
+    <text text="User Management:" style="margin-top: 2; margin-bottom: 1; font-weight: bold;" />
+    <table border="thin" cellPadding="1">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Status</th>
+          <th align="center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>alice</td>
+          <td><text text="Active" class="status-active" /></td>
+          <td>
+            <container style="display: flex; flex-direction: row; gap: 1;">
+              <button title="Edit" onClick="$app.editRow('alice')" />
+              <button title="Del" onClick="$app.deleteRow('alice')" />
+            </container>
+          </td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>bob</td>
+          <td><text text="Pending" class="status-pending" /></td>
+          <td>
+            <container style="display: flex; flex-direction: row; gap: 1;">
+              <button title="Edit" onClick="$app.editRow('bob')" />
+              <button title="Del" onClick="$app.deleteRow('bob')" />
+            </container>
+          </td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>carol</td>
+          <td><text text="Inactive" class="status-inactive" /></td>
+          <td>
+            <container style="display: flex; flex-direction: row; gap: 1;">
+              <button title="Edit" onClick="$app.editRow('carol')" />
+              <button title="Del" onClick="$app.deleteRow('carol')" />
+            </container>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button title="Exit" onClick="$melker.exit()" style="margin-top: 2;" />
+  </container>
+
+</melker>

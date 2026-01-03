@@ -23,12 +23,16 @@
 | Menu Item | `src/components/menu-item.ts` | Menu entry |
 | Menu Separator | `src/components/menu-separator.ts` | Visual separator in menus |
 | Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars, onPaint, dither modes |
-| Video | `src/components/video.ts` | Video playback (extends Canvas) |
+| Video | `src/components/video.ts` | Video playback (extends Canvas), stopped on engine exit |
 | Markdown | `src/components/markdown.ts` | Markdown text rendering |
 | Checkbox | `src/components/checkbox.ts` | Toggle checkbox |
 | Radio | `src/components/radio.ts` | Radio button |
 | List | `src/components/list.ts` | List container |
 | Li | `src/components/li.ts` | List item |
+| Table | `src/components/table.ts` | Data table container |
+| Table Section | `src/components/table-section.ts` | thead/tbody/tfoot sections |
+| Table Row | `src/components/table-row.ts` | tr element |
+| Table Cell | `src/components/table-cell.ts` | td/th elements |
 
 **Utilities:**
 - `src/components/mod.ts` - Component exports
@@ -38,7 +42,7 @@
 
 | File | Purpose |
 |------|---------|
-| `src/engine.ts` | Main application engine, lifecycle, event handling |
+| `src/engine.ts` | Main application engine, lifecycle, event handling, render guards |
 | `src/layout.ts` | Flexbox layout calculations |
 | `src/rendering.ts` | Render pipeline, overlay handling |
 | `src/buffer.ts` | Dual-buffer system |
@@ -66,6 +70,12 @@
 | `src/lint.ts` | Lint mode validation, schemas |
 | `src/lsp.ts` | Language Server Protocol for .melker files |
 | `src/terminal-lifecycle.ts` | Terminal setup, cleanup, signal handlers |
+| `src/alert-dialog.ts` | Alert dialog manager (window.alert equivalent) |
+| `src/confirm-dialog.ts` | Confirm dialog manager (window.confirm equivalent) |
+| `src/prompt-dialog.ts` | Prompt dialog manager (window.prompt equivalent) |
+| `src/hit-test.ts` | Hit testing for mouse events, table parts |
+| `src/scroll-handler.ts` | Scroll handling, scrollbar interaction |
+| `src/text-selection-handler.ts` | Text selection and drag handling |
 
 **Bundler (`src/bundler/`):**
 | File | Purpose |

@@ -1,0 +1,124 @@
+<melker>
+
+  <help>
+# Dialogs Demo
+
+Demonstrates the browser-like dialog functions: alert(), confirm(), and prompt().
+
+## Features
+- alert(message) - Shows a message with OK button
+- confirm(message) - Shows OK/Cancel, returns boolean
+- prompt(message, default?) - Shows input field, returns string or null
+  </help>
+
+  <title>Dialogs Demo</title>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: fill;
+      height: fill;
+      padding: 2;
+      gap: 1;
+    }
+    #header {
+      font-weight: bold;
+      margin-bottom: 1;
+    }
+    #result {
+      margin-top: 1;
+      padding: 1;
+      border: thin;
+      min-height: 3;
+    }
+    .button-row {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+    }
+  </style>
+
+  <script>
+    export function showAlert() {
+      alert('This is an alert message!\n\nPress OK or Escape to close.');
+      updateResult('Alert was shown and closed.');
+    }
+
+    export async function showConfirm() {
+      const result = await confirm('Do you want to proceed with this action?');
+      if (result) {
+        updateResult('Confirm: You clicked OK');
+      } else {
+        updateResult('Confirm: You clicked Cancel (or pressed Escape)');
+      }
+    }
+
+    export async function showPrompt() {
+      const name = await prompt('What is your name?', 'Anonymous');
+      if (name === null) {
+        updateResult('Prompt: You cancelled the input.');
+      } else if (name === '') {
+        updateResult('Prompt: You entered an empty string.');
+      } else {
+        updateResult('Prompt: Hello, ' + name + '!');
+      }
+    }
+
+    export async function showChainedDialogs() {
+      const proceed = await confirm('This will ask you a few questions. Continue?');
+      if (!proceed) {
+        updateResult('Chained: You cancelled at the first step.');
+        return;
+      }
+
+      const name = await prompt('Enter your name:');
+      if (name === null) {
+        updateResult('Chained: You cancelled at name input.');
+        return;
+      }
+
+      const age = await prompt('Enter your age:', '25');
+      if (age === null) {
+        updateResult('Chained: You cancelled at age input.');
+        return;
+      }
+
+      alert('Thank you, ' + name + '!\nYou are ' + age + ' years old.');
+      updateResult('Chained: Completed! Name: ' + name + ', Age: ' + age);
+    }
+
+    function updateResult(text: string) {
+      const resultEl = $melker.getElementById('resultText');
+      if (resultEl) {
+        resultEl.props.text = text;
+      }
+    }
+  </script>
+
+  <container id="root">
+    <text id="header">Dialog Functions Demo</text>
+
+    <text text="Click a button to see the corresponding dialog:" />
+
+    <container class="button-row">
+      <button title="alert()" onClick="$app.showAlert()" />
+      <button title="confirm()" onClick="$app.showConfirm()" />
+      <button title="prompt()" onClick="$app.showPrompt()" />
+    </container>
+
+    <container class="button-row">
+      <button title="Chained Dialogs" onClick="$app.showChainedDialogs()" />
+    </container>
+
+    <container id="result">
+      <text text="Result:" style="font-weight: bold;" />
+      <text id="resultText" text="(no dialog shown yet)" />
+    </container>
+
+    <text text="Press Escape to cancel confirm/prompt dialogs" style="margin-top: 1;" />
+
+    <button title="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
+  </container>
+
+</melker>

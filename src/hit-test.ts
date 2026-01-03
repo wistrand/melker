@@ -1,7 +1,7 @@
 // Hit testing for finding elements at screen coordinates
 // Handles dialogs, menus, and regular element tree traversal
 
-import { Element, isInteractive, isTextSelectable } from './types.ts';
+import { Element, isInteractive, isTextSelectable, isScrollableType } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { getLogger } from './logging.ts';
@@ -45,11 +45,8 @@ export class HitTester {
    * Hit testing to find the element at given coordinates
    */
   hitTest(x: number, y: number): Element | undefined {
-    // Trace logging for hit test events
-    logger.trace('Hit test triggered', {
-      mouseX: x,
-      mouseY: y,
-    });
+    // Debug logging for hit test events
+    logger.info(`Hit test at (${x}, ${y})`);
 
     // First check open dialogs (they are rendered as top-most overlays)
     const dialogHit = this._hitTestOpenDialogs(x, y);
@@ -65,7 +62,9 @@ export class HitTester {
 
     // We need to traverse the layout tree to find which element is at the given coordinates
     // Start with no scroll offset accumulation
-    return this._hitTestElement(this._document.root, x, y, 0, 0);
+    const result = this._hitTestElement(this._document.root, x, y, 0, 0);
+    logger.info(`Hit test result: ${result?.type}/${result?.id}`);
+    return result;
   }
 
   /**
@@ -73,7 +72,7 @@ export class HitTester {
    */
   isInteractiveElement(element: Element): boolean {
     // Elements with onClick handlers are interactive
-    if (typeof element.props.onClick === 'function') {
+    if (element.props && typeof element.props.onClick === 'function') {
       return true;
     }
     if (isInteractive(element)) {
@@ -304,35 +303,81 @@ export class HitTester {
   }
 
   /**
+   * Check if an element is a table internal part (not the table itself)
+   * These elements should not be returned from hit testing - clicks should go to the table
+   */
+  private _isTablePart(element: Element): boolean {
+    return element.type === 'tbody' || element.type === 'thead' || element.type === 'tfoot' ||
+           element.type === 'tr' || element.type === 'td' || element.type === 'th';
+  }
+
+  /**
+   * Find the containing table for a table part element
+   */
+  private _findContainingTable(element: Element): Element | undefined {
+    // Walk up the element tree to find the table
+    // Since we don't have parent pointers, we need to search from the root
+    return this._findTableContaining(this._document.root, element);
+  }
+
+  private _findTableContaining(current: Element, target: Element): Element | undefined {
+    if (current.type === 'table') {
+      // Check if this table contains the target
+      if (this._containsElement(current, target)) {
+        return current;
+      }
+    }
+    if (current.children) {
+      for (const child of current.children) {
+        const result = this._findTableContaining(child, target);
+        if (result) return result;
+      }
+    }
+    return undefined;
+  }
+
+  private _containsElement(parent: Element, target: Element): boolean {
+    if (parent === target) return true;
+    if (parent.children) {
+      for (const child of parent.children) {
+        if (this._containsElement(child, target)) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Recursively test an element and its children for hit testing
    * @param element - Element to test
    * @param x - Mouse x coordinate
    * @param y - Mouse y coordinate
    * @param scrollOffsetX - Accumulated scroll offset in X direction
    * @param scrollOffsetY - Accumulated scroll offset in Y direction
+   * @param containingTable - The containing table element if we're inside a table
    */
-  private _hitTestElement(element: Element, x: number, y: number, scrollOffsetX: number, scrollOffsetY: number): Element | undefined {
+  private _hitTestElement(element: Element, x: number, y: number, scrollOffsetX: number, scrollOffsetY: number, containingTable?: Element): Element | undefined {
     // Skip invisible elements - they don't participate in hit testing
     if (element.props?.visible === false) return undefined;
 
     // Get element bounds from the renderer if available
     const bounds = this._renderer.getContainerBounds(element.id || '');
 
-    logger.trace('Hit test element', {
-      type: element.type,
-      id: element.id,
-      hasBounds: !!bounds,
-      bounds: bounds ? `${bounds.x},${bounds.y} ${bounds.width}x${bounds.height}` : 'none',
-      point: `${x},${y}`,
-      inBounds: bounds ? pointInBounds(x, y, bounds) : false,
-    });
+    // Track if we're inside a table
+    const isTable = element.type === 'table';
+    const tableForChildren = isTable ? element : containingTable;
+
+    // Log for table elements specifically
+    if (isTable) {
+      const isInt = this.isInteractiveElement(element);
+      logger.info(`Hit test table: id=${element.id}, hasBounds=${!!bounds}, bounds=${bounds ? `(${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}` : 'none'}, inBounds=${bounds ? pointInBounds(x, y, bounds) : false}, isInteractive=${isInt}`);
+    }
 
     if (bounds && pointInBounds(x, y, bounds)) {
       // For scrollable containers, transform coordinates for children
       let childX = x;
       let childY = y;
 
-      if (element.type === 'container' && element.props.scrollable) {
+      if (isScrollableType(element.type) && element.props.scrollable) {
         const elementScrollX = (element.props.scrollX as number) || 0;
         const elementScrollY = (element.props.scrollY as number) || 0;
 
@@ -359,16 +404,23 @@ export class HitTester {
       if (element.children) {
         for (const child of element.children) {
           // Use transformed coordinates for children, but keep original accumulated offsets for tracking
-          const hitChild = this._hitTestElement(child, childX, childY, scrollOffsetX, scrollOffsetY);
+          const hitChild = this._hitTestElement(child, childX, childY, scrollOffsetX, scrollOffsetY, tableForChildren);
           if (hitChild) {
             return hitChild;
           }
         }
       }
 
-      // If no child hit, return this element if it's interactive or text-selectable
+      // If no child hit, check if this element should be returned
       if (this.isInteractiveElement(element) || this.isTextSelectableElement(element)) {
         return element;
+      }
+
+      // Special handling for table parts: if we're inside a table and hit a table part,
+      // return the containing table instead (if it's interactive)
+      if (this._isTablePart(element) && containingTable && this.isInteractiveElement(containingTable)) {
+        logger.debug(`Hit test: table part ${element.type}/${element.id} -> returning table ${containingTable.id}`);
+        return containingTable;
       }
     }
 

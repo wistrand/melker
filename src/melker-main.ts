@@ -3,6 +3,10 @@ import { dirname, resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
 import { debounce } from './utils/timing.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 
+// Import all components to register them before template parsing
+// This ensures createElement uses the correct component classes
+import './components/mod.ts';
+
 // Bundler imports for Deno.bundle() integration
 import {
   processMelkerBundle,
@@ -599,6 +603,8 @@ export async function runMelkerFile(
       quit: () => exitHandler(),
       setTitle: (title: string) => engine.setTitle(title),
       alert: (message: string) => engine.showAlert(String(message)),
+      confirm: (message: string) => engine.showConfirm(String(message)),
+      prompt: (message: string, defaultValue?: string) => engine.showPrompt(String(message), defaultValue),
       copyToClipboard: async (text: string) => {
         // Platform-specific clipboard commands
         const commands = [

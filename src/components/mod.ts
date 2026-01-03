@@ -24,3 +24,9 @@ export * from './menu-item.ts';
 export * from './menu-separator.ts';
 export * from './menu.ts';
 export * from './menu-bar.ts';
+
+// Table components
+export * from './table.ts';
+export * from './table-section.ts';
+export * from './table-row.ts';
+export * from './table-cell.ts';

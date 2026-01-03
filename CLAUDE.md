@@ -160,7 +160,8 @@ tests/                - Test files
 | `MELKER_LOG_FILE` | Log file path |
 | `MELKER_LOG_LEVEL` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `MELKER_HEADLESS` | Headless mode for CI |
-| `MELKER_DEBUG_PORT` | Debug server port |
+| `MELKER_DEBUG_PORT` | Debug server port (implies `net: localhost`) |
+| `MELKER_ALLOW_REMOTE_INPUT` | Allow browser mirror to send mouse/keyboard events (`true` or `1`) |
 | `MELKER_LINT` | Enable lint mode (`true` or `1`) |
 | `MELKER_PERSIST` | Enable state persistence (`true` or `1`, default: false) |
 | `MELKER_RETAIN_BUNDLE` | Keep temp bundle files for debugging (`true` or `1`) |

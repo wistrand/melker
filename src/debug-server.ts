@@ -66,6 +66,14 @@ export class MelkerDebugServer {
   private _options: Required<DebugServerOptions>;
   private _isRunning = false;
 
+  // Throttling for render notifications (30fps = 33ms)
+  private _lastRenderNotification = 0;
+  private _pendingRenderNotification = false;
+  private _renderThrottleMs = 33;
+
+  // Delta tracking for buffer updates
+  private _lastSentBuffer: BufferSnapshot | null = null;
+
   constructor(options: DebugServerOptions = {}) {
     this._options = {
       port: parseInt(Deno.env.get('MELKER_DEBUG_PORT') || '18080'),
@@ -192,13 +200,35 @@ export class MelkerDebugServer {
 
   /**
    * Notify subscribers that a render has occurred
-   * This triggers the new request-response pattern for buffer updates
+   * Throttled to max 30fps to prevent flooding
    */
   notifyRenderComplete(): void {
-    this._broadcastToSubscribers('render-notifications', {
-      timestamp: Date.now(),
-      message: 'render-complete'
-    });
+    const now = Date.now();
+    const elapsed = now - this._lastRenderNotification;
+
+    if (elapsed >= this._renderThrottleMs) {
+      // Enough time has passed, send immediately
+      this._lastRenderNotification = now;
+      this._pendingRenderNotification = false;
+      this._broadcastToSubscribers('render-notifications', {
+        timestamp: now,
+        message: 'render-complete'
+      });
+    } else if (!this._pendingRenderNotification) {
+      // Schedule a delayed notification
+      this._pendingRenderNotification = true;
+      setTimeout(() => {
+        if (this._pendingRenderNotification) {
+          this._lastRenderNotification = Date.now();
+          this._pendingRenderNotification = false;
+          this._broadcastToSubscribers('render-notifications', {
+            timestamp: Date.now(),
+            message: 'render-complete'
+          });
+        }
+      }, this._renderThrottleMs - elapsed);
+    }
+    // If pending notification exists, do nothing (coalesce into pending)
   }
 
   /**
@@ -372,8 +402,7 @@ export class MelkerDebugServer {
         timestamp: Date.now(),
       };
 
-      // Extract buffer content and styles with error handling
-      // Use the display buffer which contains the currently rendered content
+      // Extract buffer content and styles
       const displayBuffer = buffer.getDisplayBuffer();
       for (let y = 0; y < buffer.height; y++) {
         const contentRow: string[] = [];
@@ -390,8 +419,7 @@ export class MelkerDebugServer {
               width: cell?.width || 1,
               isWideCharContinuation: cell?.isWideCharContinuation || false,
             });
-          } catch (cellError) {
-            // If individual cell access fails, use defaults
+          } catch {
             contentRow.push(' ');
             styleRow.push({ fg: undefined, bg: undefined, bold: false, width: 1, isWideCharContinuation: false });
           }
@@ -401,21 +429,194 @@ export class MelkerDebugServer {
         snapshot.styles.push(styleRow);
       }
 
-      // Validate snapshot before sending
       if (snapshot.content.length === 0 || snapshot.styles.length === 0) {
         this._sendError(socket, 'Empty buffer snapshot generated');
         return;
       }
 
-      const message: DebugMessage = {
-        type: 'buffer-snapshot',
-        data: snapshot,
-      };
-      socket.send(JSON.stringify(message));
+      // Try to send delta if we have a previous buffer
+      const lastBuffer = this._lastSentBuffer;
+      if (lastBuffer &&
+          lastBuffer.width === snapshot.width &&
+          lastBuffer.height === snapshot.height) {
+        const delta = this._computeBufferDelta(lastBuffer, snapshot);
+
+        // Send delta if less than 30% of cells changed (otherwise full is more efficient)
+        const totalCells = snapshot.width * snapshot.height;
+        const changeThreshold = totalCells * 0.3;
+
+        if (delta.count > 0 && delta.count < changeThreshold) {
+          this._lastSentBuffer = snapshot;
+          socket.send(JSON.stringify({
+            type: 'buffer-delta',
+            data: delta,
+          }));
+          return;
+        }
+      }
+
+      // Send RLE-compressed snapshot (much smaller for scrolling)
+      this._lastSentBuffer = snapshot;
+      const compressed = this._compressBufferRLE(snapshot);
+      socket.send(JSON.stringify({
+        type: 'buffer-snapshot-rle',
+        data: compressed,
+      }));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this._sendError(socket, `Failed to get buffer snapshot: ${errorMessage}`);
     }
+  }
+
+  /**
+   * RLE-compress a buffer snapshot for efficient transmission
+   *
+   * Format: {
+   *   width, height, timestamp,
+   *   styles: [...],  // style palette (indexed)
+   *   rows: { "y": [[startX, runLength, char, styleIndex], ...], ... }
+   * }
+   *
+   * Consecutive cells with same char+style are merged into runs
+   */
+  private _compressBufferRLE(snapshot: BufferSnapshot): {
+    width: number;
+    height: number;
+    timestamp: number;
+    styles: Array<{ f?: string; b?: string; o?: boolean; w?: number; c?: boolean }>;
+    rows: Record<string, Array<[number, number, string, number]>>;
+  } {
+    const styleMap = new Map<string, number>();
+    const styles: Array<{ f?: string; b?: string; o?: boolean; w?: number; c?: boolean }> = [];
+    const rows: Record<string, Array<[number, number, string, number]>> = {};
+
+    for (let y = 0; y < snapshot.height; y++) {
+      const runs: Array<[number, number, string, number]> = [];
+      let runStartX = 0;
+      let runChar = '';
+      let runStyleKey = '';
+      let runStyleIndex = 0;
+      let runLength = 0;
+
+      for (let x = 0; x < snapshot.width; x++) {
+        const char = snapshot.content[y]?.[x] || ' ';
+        const cellStyle = snapshot.styles[y]?.[x];
+
+        // Build compact style object
+        const compactStyle: { f?: string; b?: string; o?: boolean; w?: number; c?: boolean } = {};
+        if (cellStyle?.fg) compactStyle.f = cellStyle.fg;
+        if (cellStyle?.bg) compactStyle.b = cellStyle.bg;
+        if (cellStyle?.bold) compactStyle.o = true;
+        if (cellStyle?.width && cellStyle.width !== 1) compactStyle.w = cellStyle.width;
+        if (cellStyle?.isWideCharContinuation) compactStyle.c = true;
+
+        const styleKey = JSON.stringify(compactStyle);
+
+        // Get or create style index
+        let styleIndex = styleMap.get(styleKey);
+        if (styleIndex === undefined) {
+          styleIndex = styles.length;
+          styles.push(compactStyle);
+          styleMap.set(styleKey, styleIndex);
+        }
+
+        // Check if this cell extends the current run
+        if (runLength > 0 && char === runChar && styleKey === runStyleKey) {
+          runLength++;
+        } else {
+          // Save previous run if exists
+          if (runLength > 0) {
+            runs.push([runStartX, runLength, runChar, runStyleIndex]);
+          }
+          // Start new run
+          runStartX = x;
+          runChar = char;
+          runStyleKey = styleKey;
+          runStyleIndex = styleIndex;
+          runLength = 1;
+        }
+      }
+
+      // Save final run
+      if (runLength > 0) {
+        runs.push([runStartX, runLength, runChar, runStyleIndex]);
+      }
+
+      rows[String(y)] = runs;
+    }
+
+    return {
+      width: snapshot.width,
+      height: snapshot.height,
+      timestamp: snapshot.timestamp,
+      styles,
+      rows,
+    };
+  }
+
+  /**
+   * Compact delta format:
+   * - styles: palette of unique style combinations (indexed)
+   * - rows: { rowNum: [[x, char, styleIndex], ...] }
+   *
+   * Style object uses short keys: f=fg, b=bg, o=bold, w=width, c=continuation
+   * Omits default values (w=1, o=false, c=false)
+   */
+  private _computeBufferDelta(
+    oldBuffer: BufferSnapshot,
+    newBuffer: BufferSnapshot
+  ): {
+    styles: Array<{ f?: string; b?: string; o?: boolean; w?: number; c?: boolean }>;
+    rows: Record<string, Array<[number, string, number]>>;
+    count: number;
+  } {
+    const styleMap = new Map<string, number>(); // style key -> index
+    const styles: Array<{ f?: string; b?: string; o?: boolean; w?: number; c?: boolean }> = [];
+    const rows: Record<string, Array<[number, string, number]>> = {};
+    let count = 0;
+
+    for (let y = 0; y < newBuffer.height; y++) {
+      for (let x = 0; x < newBuffer.width; x++) {
+        const oldChar = oldBuffer.content[y]?.[x];
+        const newChar = newBuffer.content[y]?.[x];
+        const oldStyle = oldBuffer.styles[y]?.[x];
+        const newStyle = newBuffer.styles[y]?.[x];
+
+        // Check if cell changed
+        if (oldChar !== newChar ||
+            oldStyle?.fg !== newStyle?.fg ||
+            oldStyle?.bg !== newStyle?.bg ||
+            oldStyle?.bold !== newStyle?.bold ||
+            oldStyle?.width !== newStyle?.width ||
+            oldStyle?.isWideCharContinuation !== newStyle?.isWideCharContinuation) {
+
+          // Build compact style object (omit defaults)
+          const compactStyle: { f?: string; b?: string; o?: boolean; w?: number; c?: boolean } = {};
+          if (newStyle?.fg) compactStyle.f = newStyle.fg;
+          if (newStyle?.bg) compactStyle.b = newStyle.bg;
+          if (newStyle?.bold) compactStyle.o = true;
+          if (newStyle?.width && newStyle.width !== 1) compactStyle.w = newStyle.width;
+          if (newStyle?.isWideCharContinuation) compactStyle.c = true;
+
+          // Get or create style index
+          const styleKey = JSON.stringify(compactStyle);
+          let styleIndex = styleMap.get(styleKey);
+          if (styleIndex === undefined) {
+            styleIndex = styles.length;
+            styles.push(compactStyle);
+            styleMap.set(styleKey, styleIndex);
+          }
+
+          // Add to row
+          const rowKey = String(y);
+          if (!rows[rowKey]) rows[rowKey] = [];
+          rows[rowKey].push([x, newChar || ' ', styleIndex]);
+          count++;
+        }
+      }
+    }
+
+    return { styles, rows, count };
   }
 
   private _sendEngineState(socket: WebSocket): void {
@@ -496,16 +697,22 @@ export class MelkerDebugServer {
 
   /**
    * Check if event injection is allowed
-   * Only allow event injection in headless mode to prevent event loops
+   * Allowed in headless mode or when MELKER_ALLOW_REMOTE_INPUT is set
    */
   private _isEventInjectionAllowed(): boolean {
     if (!this._options.enableEventInjection) {
       return false;
     }
 
-    // Only allow event injection in headless mode
-    // In non-headless mode, the actual terminal handles input
-    return this._engine?.isHeadless ?? false;
+    // Always allow in headless mode
+    if (this._engine?.isHeadless) {
+      return true;
+    }
+
+    // Allow in non-headless mode if explicitly enabled via env var
+    // This enables the browser mirror to send mouse/keyboard events
+    const allowRemoteInput = Deno.env.get('MELKER_ALLOW_REMOTE_INPUT');
+    return allowRemoteInput === 'true' || allowRemoteInput === '1';
   }
 
   private _injectEvent(eventData: any): void {
@@ -1370,7 +1577,7 @@ export class MelkerDebugServer {
     <div class="mirror-view">
       <div class="toolbar">
         <button onclick="refreshView()">⟳ Refresh</button>
-        <button onclick="toggleAutoRefresh()" id="autoRefreshBtn" style="background: #d32f2f;">Stop Auto-refresh</button>
+        <span style="color: #4ec9b0; font-size: 11px;">Push updates enabled</span>
         <input type="text" class="search-box" placeholder="Search elements..."
                onkeyup="searchElements(this.value)">
         <div class="coordinates" id="mouseCoords">x: -, y: -</div>
@@ -1429,8 +1636,6 @@ export class MelkerDebugServer {
 
   <script>
     let ws = null;
-    let autoRefresh = true; // Enable auto-refresh by default
-    let autoRefreshInterval = null;
     let currentBuffer = null;
     let documentTree = null;
     let selectedElement = null;
@@ -1442,6 +1647,7 @@ export class MelkerDebugServer {
     let logEntries = []; // Store log entries
     const maxLogEntries = 500; // Maximum log entries to keep
     const logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, FATAL: 4 };
+    let pendingBufferRequest = false; // Prevent duplicate buffer requests
 
     // WebSocket connection management
     function connect() {
@@ -1453,18 +1659,12 @@ export class MelkerDebugServer {
       ws.onopen = () => {
         connectionRetryCount = 0;
         updateConnectionStatus(true);
-        // WebSocket connected, subscribing to updates
 
-        // Subscribe to render notifications, engine state updates, terminal resize events, and log stream
-        if (subscribe(['render-notifications', 'engine-state', 'terminal-resize', 'log-stream'])) {
-          // Subscribed to render-notifications, engine-state, terminal-resize, and log-stream
-        }
+        // Subscribe to render notifications (push-based updates, no polling needed)
+        subscribe(['render-notifications', 'engine-state', 'terminal-resize', 'log-stream']);
 
-        // Get initial data
+        // Get initial data only once
         refreshView();
-
-        // Start auto-refresh
-        startAutoRefresh();
       };
 
       ws.onmessage = (event) => {
@@ -1501,13 +1701,25 @@ export class MelkerDebugServer {
 
       switch (message.type) {
         case 'buffer-snapshot':
+          pendingBufferRequest = false;
           if (message.data) {
-            // Buffer snapshot received
-          } else {
-            console.error('Buffer snapshot message has no data!');
+            currentBuffer = message.data;
+            renderTerminalView();
           }
-          currentBuffer = message.data;
-          renderTerminalView();
+          break;
+        case 'buffer-snapshot-rle':
+          pendingBufferRequest = false;
+          if (message.data) {
+            currentBuffer = decodeRLESnapshot(message.data);
+            renderTerminalView();
+          }
+          break;
+        case 'buffer-delta':
+          pendingBufferRequest = false;
+          if (message.data && currentBuffer) {
+            applyBufferDelta(message.data);
+            renderTerminalView();
+          }
           break;
         case 'document-tree':
           documentTree = message.data;
@@ -1520,9 +1732,11 @@ export class MelkerDebugServer {
           }
           break;
         case 'render-notifications-update':
-          // Render notification received, requesting fresh buffer
-          // Request fresh buffer data when render occurs
-          send({ type: 'get-buffer' });
+          // Request buffer only if not already pending (prevents duplicate requests)
+          if (!pendingBufferRequest) {
+            pendingBufferRequest = true;
+            send({ type: 'get-buffer' });
+          }
           break;
         case 'terminal-resize-update':
           // Terminal resize detected
@@ -1571,49 +1785,79 @@ export class MelkerDebugServer {
 
     function refreshView() {
       if (ws && ws.readyState === WebSocket.OPEN) {
+        pendingBufferRequest = true;
         send({ type: 'get-buffer' });
         send({ type: 'get-document-tree' });
         send({ type: 'get-engine-state' });
         return true;
-      } else {
-        // Cannot refresh: WebSocket not connected
-        return false;
       }
+      return false;
     }
 
-    function startAutoRefresh() {
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-      }
+    function applyBufferDelta(delta) {
+      // Apply compact delta: { styles: [...], rows: { y: [[x, char, styleIdx], ...] } }
+      if (!delta.styles || !delta.rows || !currentBuffer) return;
 
-      if (autoRefresh) {
-        autoRefreshInterval = setInterval(() => {
-          if (autoRefresh && ws && ws.readyState === WebSocket.OPEN) {
-            refreshView();
-          }
-        }, 200); // 200ms refresh rate
+      const styles = delta.styles;
+      for (const [rowStr, cells] of Object.entries(delta.rows)) {
+        const y = parseInt(rowStr, 10);
+        if (y >= currentBuffer.height) continue;
 
-        // Update button state
-        const btn = document.getElementById('autoRefreshBtn');
-        if (btn) {
-          btn.textContent = 'Stop Auto-refresh';
-          btn.style.background = '#d32f2f'; // Red color when active
+        for (const cell of cells) {
+          const [x, char, styleIdx] = cell;
+          if (x >= currentBuffer.width) continue;
+
+          const style = styles[styleIdx] || {};
+          currentBuffer.content[y][x] = char;
+          currentBuffer.styles[y][x] = {
+            fg: style.f,
+            bg: style.b,
+            bold: style.o || false,
+            width: style.w || 1,
+            isWideCharContinuation: style.c || false
+          };
         }
       }
     }
 
-    function stopAutoRefresh() {
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
+    function decodeRLESnapshot(compressed) {
+      // Decode RLE-compressed snapshot: { styles: [...], rows: { y: [[startX, length, char, styleIdx], ...] } }
+      const { width, height, timestamp, styles, rows } = compressed;
+
+      // Initialize empty buffer
+      const content = [];
+      const stylesArr = [];
+      for (let y = 0; y < height; y++) {
+        content.push(new Array(width).fill(' '));
+        stylesArr.push(new Array(width).fill(null).map(() => ({
+          fg: undefined, bg: undefined, bold: false, width: 1, isWideCharContinuation: false
+        })));
       }
 
-      // Update button state
-      const btn = document.getElementById('autoRefreshBtn');
-      if (btn) {
-        btn.textContent = 'Auto-refresh';
-        btn.style.background = '#0e639c'; // Default blue color
+      // Decode RLE runs
+      for (const [rowStr, runs] of Object.entries(rows)) {
+        const y = parseInt(rowStr, 10);
+        if (y >= height) continue;
+
+        for (const run of runs) {
+          const [startX, runLength, char, styleIdx] = run;
+          const style = styles[styleIdx] || {};
+
+          for (let i = 0; i < runLength && startX + i < width; i++) {
+            const x = startX + i;
+            content[y][x] = char;
+            stylesArr[y][x] = {
+              fg: style.f,
+              bg: style.b,
+              bold: style.o || false,
+              width: style.w || 1,
+              isWideCharContinuation: style.c || false
+            };
+          }
+        }
       }
+
+      return { width, height, content, styles: stylesArr, timestamp };
     }
 
     function updateConnectionStatus(connected) {
@@ -1626,16 +1870,6 @@ export class MelkerDebugServer {
       } else {
         indicator.classList.remove('connected');
         text.textContent = 'Disconnected';
-      }
-    }
-
-    function toggleAutoRefresh() {
-      autoRefresh = !autoRefresh;
-
-      if (autoRefresh) {
-        startAutoRefresh();
-      } else {
-        stopAutoRefresh();
       }
     }
 
@@ -1860,23 +2094,54 @@ export class MelkerDebugServer {
     }
 
     function updateMouseCoords(event) {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const charWidth = 8.4; // Approximate character width
-      const lineHeight = 16.8; // Approximate line height
+      // Try to get coordinates from hovered character element
+      let target = event.target;
+      while (target && !target.dataset?.x && target !== event.currentTarget) {
+        target = target.parentElement;
+      }
 
-      const x = Math.floor((event.clientX - rect.left - 10) / charWidth);
-      const y = Math.floor((event.clientY - rect.top - 10) / lineHeight);
+      let x, y;
+      if (target?.dataset?.x !== undefined && target?.dataset?.y !== undefined) {
+        x = parseInt(target.dataset.x, 10);
+        y = parseInt(target.dataset.y, 10);
+      } else {
+        // Fallback: calculate from pixel position
+        const rect = event.currentTarget.getBoundingClientRect();
+        const charWidth = 8.4;
+        const lineHeight = 16.8;
+        x = Math.floor((event.clientX - rect.left - 10) / charWidth);
+        y = Math.floor((event.clientY - rect.top - 10) / lineHeight);
+      }
 
       document.getElementById('mouseCoords').textContent = \`x: \${x}, y: \${y}\`;
     }
 
-    function handleTerminalClick(event) {
+    function getClickCoords(event) {
+      // Try to get coordinates from clicked character element
+      let target = event.target;
+      while (target && !target.dataset?.x && target !== event.currentTarget) {
+        target = target.parentElement;
+      }
+
+      if (target?.dataset?.x !== undefined && target?.dataset?.y !== undefined) {
+        return {
+          x: parseInt(target.dataset.x, 10),
+          y: parseInt(target.dataset.y, 10)
+        };
+      }
+
+      // Fallback: calculate from pixel position
       const rect = event.currentTarget.getBoundingClientRect();
       const charWidth = 8.4;
       const lineHeight = 16.8;
+      return {
+        x: Math.floor((event.clientX - rect.left - 10) / charWidth),
+        y: Math.floor((event.clientY - rect.top - 10) / lineHeight)
+      };
+    }
 
-      const x = Math.floor((event.clientX - rect.left - 10) / charWidth);
-      const y = Math.floor((event.clientY - rect.top - 10) / lineHeight);
+    function handleTerminalClick(event) {
+      const { x, y } = getClickCoords(event);
 
       // Focus the terminal for keyboard input
       event.currentTarget.focus();
@@ -1892,12 +2157,7 @@ export class MelkerDebugServer {
 
     function handleTerminalRightClick(event) {
       event.preventDefault();
-      const rect = event.currentTarget.getBoundingClientRect();
-      const charWidth = 8.4;
-      const lineHeight = 16.8;
-
-      const x = Math.floor((event.clientX - rect.left - 10) / charWidth);
-      const y = Math.floor((event.clientY - rect.top - 10) / lineHeight);
+      const { x, y } = getClickCoords(event);
 
       // Focus the terminal for keyboard input
       event.currentTarget.focus();

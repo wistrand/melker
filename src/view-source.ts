@@ -2,7 +2,6 @@
 // Shows source content in a modal dialog when F12 is pressed
 
 import { Document } from './document.ts';
-import { createElement } from './element.ts';
 import { melker } from './template.ts';
 import { Element } from './types.ts';
 import { FocusManager } from './focus.ts';
@@ -16,6 +15,7 @@ export interface ViewSourceDependencies {
   forceRender: () => void;
   autoRender: boolean;
   openAIAssistant?: () => void;
+  exit?: () => void;
 }
 
 /** System information for the System tab */
@@ -121,149 +121,111 @@ export class ViewSourceManager {
         this._deps.openAIAssistant();
       }
     };
+    const onExit = () => {
+      if (this._deps.exit) {
+        this._deps.exit();
+      }
+    };
 
-    // Build tabs array in order: Help (if present), Melker, Policy (if present), Markdown (if .md file), System
+    const scrollStyle = { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' };
+
+    // Build tabs array in order: Help (if present), Source, Policy (if present), Markdown (if .md file), System, Actions
     const tabs: Element[] = [];
 
     // Tab 0: Help (if present)
     if (this._state.helpContent) {
-      const helpTab = createElement('tab', { id: 'view-source-tab-help', title: 'Help' },
-        createElement('container', {
-          id: 'view-source-scroll-help',
-          scrollable: true,
-          focusable: true,
-          style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
-        },
-          createElement('markdown', {
-            id: 'view-source-help-content',
-            text: this._state.helpContent,
-            style: { textWrap: 'wrap' },
-          })
-        )
-      );
-      tabs.push(helpTab);
+      const helpContent = this._state.helpContent;
+      tabs.push(melker`
+        <tab id="view-source-tab-help" title="Help">
+          <container id="view-source-scroll-help" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <markdown id="view-source-help-content" text=${helpContent} style=${{ textWrap: 'wrap' }} />
+          </container>
+        </tab>
+      `);
     }
 
-    // Tab 1: Melker source (or converted content for .md files)
-    const melkerContent = this._state.type === 'md' && this._state.convertedContent
+    // Tab 1: Source (Melker source or converted content for .md files)
+    const sourceContent = this._state.type === 'md' && this._state.convertedContent
       ? this._state.convertedContent
       : this._state.content;
-
-    const melkerTab = createElement('tab', { id: 'view-source-tab-melker', title: 'Source' },
-      createElement('container', {
-        id: 'view-source-scroll-melker',
-        scrollable: true,
-        focusable: true,
-        style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
-      },
-        createElement('text', {
-          id: 'view-source-melker-content',
-          text: melkerContent,
-        })
-      )
-    );
-    tabs.push(melkerTab);
+    tabs.push(melker`
+      <tab id="view-source-tab-melker" title="Source">
+        <container id="view-source-scroll-melker" scrollable=${true} focusable=${true} style=${scrollStyle}>
+          <text id="view-source-melker-content" text=${sourceContent} />
+        </container>
+      </tab>
+    `);
 
     // Tab 2: Policy (if present)
     if (this._state.policy) {
-      // Format policy description
       let policyText = formatPolicy(this._state.policy);
-
-      // Add Deno permission flags
       const appDir = this._state.appDir || '.';
       const denoFlags = policyToDenoFlags(this._state.policy, appDir);
       if (denoFlags.length > 0) {
         policyText += '\nDeno permission flags:\n';
         policyText += formatDenoFlags(denoFlags);
       }
-
-      const policyTab = createElement('tab', { id: 'view-source-tab-policy', title: 'Policy' },
-        createElement('container', {
-          id: 'view-source-scroll-policy',
-          scrollable: true,
-          focusable: true,
-          style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
-        },
-          createElement('text', {
-            id: 'view-source-policy-content',
-            text: policyText,
-            style: { textWrap: 'wrap' },
-          })
-        )
-      );
-      tabs.push(policyTab);
+      tabs.push(melker`
+        <tab id="view-source-tab-policy" title="Policy">
+          <container id="view-source-scroll-policy" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <text id="view-source-policy-content" text=${policyText} style=${{ textWrap: 'wrap' }} />
+          </container>
+        </tab>
+      `);
     }
 
     // Tab 3: Markdown (if .md file)
     if (this._state.type === 'md') {
-      const markdownTab = createElement('tab', { id: 'view-source-tab-md', title: 'Markdown' },
-        createElement('container', {
-          id: 'view-source-scroll-md',
-          scrollable: true,
-          focusable: true,
-          style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
-        },
-          createElement('markdown', {
-            id: 'view-source-markdown-content',
-            text: this._state.content,
-            src: this._state.filePath,
-            style: { textWrap: 'wrap' },
-          })
-        )
-      );
-      tabs.push(markdownTab);
+      const mdContent = this._state.content;
+      const mdSrc = this._state.filePath;
+      tabs.push(melker`
+        <tab id="view-source-tab-md" title="Markdown">
+          <container id="view-source-scroll-md" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <markdown id="view-source-markdown-content" text=${mdContent} src=${mdSrc} style=${{ textWrap: 'wrap' }} />
+          </container>
+        </tab>
+      `);
     }
 
     // Tab 4: System Info (if available)
     if (this._state.systemInfo) {
       const systemText = this._formatSystemInfo(this._state.systemInfo);
-      const systemTab = createElement('tab', { id: 'view-source-tab-system', title: 'System' },
-        createElement('container', {
-          id: 'view-source-scroll-system',
-          scrollable: true,
-          focusable: true,
-          style: { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' },
-        },
-          createElement('text', {
-            id: 'view-source-system-content',
-            text: systemText,
-            style: { textWrap: 'wrap' },
-          })
-        )
-      );
-      tabs.push(systemTab);
+      tabs.push(melker`
+        <tab id="view-source-tab-system" title="System">
+          <container id="view-source-scroll-system" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <text id="view-source-system-content" text=${systemText} style=${{ textWrap: 'wrap' }} />
+          </container>
+        </tab>
+      `);
     }
 
-    // Build the tabs component
-    const tabsElement = createElement('tabs', {
-      id: 'view-source-tabs',
-      style: { flex: 1, width: 'fill', height: 'fill' },
-    }, ...tabs);
+    // Tab 5: Actions
+    tabs.push(melker`
+      <tab id="view-source-tab-actions" title="Actions">
+        <container id="view-source-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill' }}>
+          <button id="view-source-action-exit" title="Exit Application" onClick=${onExit} />
+        </container>
+      </tab>
+    `);
 
-    // Build the dialog
-    this._overlay = createElement('dialog', {
-      id: 'view-source-dialog',
-      title: `Source: ${filename}`,
-      open: true,
-      modal: true,
-      backdrop: true,
-      width: 0.9,
-      height: 0.85,
-    },
-      createElement('container', {
-        id: 'view-source-main',
-        style: { display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' },
-      },
-        tabsElement,
-        createElement('container', {
-          id: 'view-source-footer',
-          style: { display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', width: 'fill', gap: 1 },
-        },
-          createElement('button', { id: 'view-source-ai', title: 'AI Assistant', onClick: onAIAssistant }),
-          createElement('button', { id: 'view-source-close', title: 'Close', onClick: onClose })
-        )
-      )
-    );
+    // Build the dialog with tabs
+    const tabsStyle = { flex: 1, width: 'fill', height: 'fill' };
+    const mainStyle = { display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' };
+    const footerStyle = { display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', width: 'fill', gap: 1 };
+
+    this._overlay = melker`
+      <dialog id="view-source-dialog" title=${`Dev Tools - ${filename}`} open=${true} modal=${true} backdrop=${true} width=${0.9} height=${0.85}>
+        <container id="view-source-main" style=${mainStyle}>
+          <tabs id="view-source-tabs" style=${tabsStyle}>
+            ${tabs}
+          </tabs>
+          <container id="view-source-footer" style=${footerStyle}>
+            <button id="view-source-ai" title="AI Assistant" onClick=${onAIAssistant} />
+            <button id="view-source-close" title="Close" onClick=${onClose} />
+          </container>
+        </container>
+      </dialog>
+    `;
 
     // Add to document and register all elements
     const root = this._deps.document.root;

@@ -2,7 +2,6 @@
 // Shows a modal confirm dialog when confirm() is called in handlers
 
 import { Document } from './document.ts';
-import { createElement } from './element.ts';
 import { melker } from './template.ts';
 import { Element } from './types.ts';
 import { FocusManager } from './focus.ts';
@@ -55,19 +54,14 @@ export class ConfirmDialogManager {
       const onOk = () => this.close(true);
       const onCancel = () => this.close(false);
 
-      // Create text element for the message
-      const messageElement = createElement('text', {
-        id: 'confirm-message',
-        text: message,
-      });
-
       this._overlay = melker`
         <dialog
           id="confirm-dialog"
           title="Confirm"
           open=${true}
           modal=${true}
-          backdrop=${true}
+          backdrop=${false}
+          draggable=${true}
           width=${50}
           height=${7}
         >
@@ -79,7 +73,7 @@ export class ConfirmDialogManager {
               id="confirm-content"
               style="flex: 1; padding-left: 1; padding-top: 1; width: fill"
             >
-              ${messageElement}
+              <text id="confirm-message" text=${message} />
             </container>
             <container
               id="confirm-footer"

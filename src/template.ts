@@ -374,7 +374,24 @@ function convertAstNode(node: any, context: TemplateContext): ParsedNode | Parse
         }
 
         // Handle the expression
-        if (expr && typeof expr === 'object' && expr.type && expr.props) {
+        if (Array.isArray(expr)) {
+          // It's an array - add each element individually
+          for (const item of expr) {
+            if (item && typeof item === 'object' && item.type && item.props) {
+              nodes.push({
+                type: 'element',
+                name: '__INTERPOLATED_ELEMENT__',
+                attributes: { __elementRef: item },
+                children: []
+              });
+            } else if (item !== null && item !== undefined) {
+              nodes.push({
+                type: 'text',
+                content: String(item)
+              });
+            }
+          }
+        } else if (expr && typeof expr === 'object' && expr.type && expr.props) {
           // It's an Element object - add as interpolated element
           nodes.push({
             type: 'element',

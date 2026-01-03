@@ -2,7 +2,6 @@
 // Shows a modal alert dialog when alert() is called in handlers
 
 import { Document } from './document.ts';
-import { createElement } from './element.ts';
 import { melker } from './template.ts';
 import { Element } from './types.ts';
 import { FocusManager } from './focus.ts';
@@ -49,19 +48,14 @@ export class AlertDialogManager {
 
     const onClose = () => this.close();
 
-    // Create text element for the message
-    const messageElement = createElement('text', {
-      id: 'alert-message',
-      text: message,
-    });
-
     this._overlay = melker`
       <dialog
         id="alert-dialog"
         title="Alert"
         open=${true}
         modal=${true}
-        backdrop=${true}
+        backdrop=${false}
+        draggable=${true}
         width=${50}
         height=${7}
       >
@@ -73,7 +67,7 @@ export class AlertDialogManager {
             id="alert-content"
             style="flex: 1; padding-left: 1; padding-top: 1; width: fill"
           >
-            ${messageElement}
+            <text id="alert-message" text=${message} />
           </container>
           <container
             id="alert-footer"

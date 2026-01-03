@@ -4,7 +4,7 @@
 
 A TUI framework for apps you want to share safely.
 
-Melker apps are documents you can read before you run them. Share via URL, declare permissions in a policy, inspect with F12.
+Melker apps are documents you can read before you run them. Share via URL, declare permissions in a policy, inspect with Dev Tools.
 
 **[Read the Manifesto](MANIFESTO.md)** for the philosophy behind this approach.
 
@@ -18,7 +18,7 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 | Permission sandbox           |   Y    |          -           |
 | App approval system          |   Y    |          -           |
 | Inspect policy before run    |   Y    |          -           |
-| View source at runtime (F12) |   Y    |          -           |
+| Dev Tools (view source, policy) |   Y    |          -           |
 | Literate UI (Markdown)       |   Y    |          -           |
 | No build step                |   Y    |         Some         |
 
@@ -63,7 +63,7 @@ Before running, you can see:
 - The UI has one text element and one exit button
 - The handler calls `$melker.exit()`, nothing else
 
-Press **F12** at runtime to view source, policy, and system info.
+Press **F12** to open Dev Tools and view source, policy, and system info.
 
 ---
 
@@ -130,9 +130,9 @@ Documentation and UI in the same file:
 <button title="Click" onClick="count++" />
 ```
 
-### 5. Dev Tools (F12)
+### 5. Dev Tools
 
-At runtime, press F12 to:
+Press F12 to open Dev Tools:
 - View source
 - Inspect policy
 - See system info

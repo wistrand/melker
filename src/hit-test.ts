@@ -158,6 +158,12 @@ export class HitTester {
         logger.debug('Dialog hit test - no hit, returning dialog');
         return dialog;
       }
+
+      // Click is outside dialog bounds - if modal, block interaction with elements behind
+      if (dialog.props.modal) {
+        logger.debug('Modal dialog blocking click outside bounds', { dialogId: dialog.id });
+        return dialog;
+      }
     }
 
     return undefined;

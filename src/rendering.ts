@@ -14,7 +14,7 @@ import { ButtonElement } from './components/button.ts';
 import { DialogElement } from './components/dialog.ts';
 import { SizingModel, globalSizingModel, BoxModel } from './sizing.ts';
 import { LayoutEngine, LayoutNode as AdvancedLayoutNode, LayoutContext, globalLayoutEngine } from './layout.ts';
-import { getThemeColor } from './theme.ts';
+import { getThemeColor, getThemeManager } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { getLogger } from './logging.ts';
 import { getGlobalErrorHandler, renderErrorPlaceholder } from './error-boundary.ts';
@@ -168,6 +168,21 @@ export class RenderingEngine {
       }
     }
 
+    // Apply low-contrast effect if there's a modal without backdrop (fullcolor theme only)
+    const themeManager = getThemeManager();
+    const theme = themeManager.getCurrentTheme();
+    if (theme.type === 'fullcolor') {
+      const hasModalWithoutBackdrop = modals.some(modal =>
+        modal instanceof DialogElement &&
+        modal.props.open &&
+        modal.props.modal === true &&
+        modal.props.backdrop === false
+      );
+      if (hasModalWithoutBackdrop) {
+        buffer.currentBuffer.applyLowContrastEffect(theme.mode === 'dark');
+      }
+    }
+
     // Render modals on top with full viewport access
     for (const modal of modals) {
       if (modal instanceof DialogElement && modal.props.open) {
@@ -307,6 +322,21 @@ export class RenderingEngine {
       }
     }
     this.selectionRenderTiming.overlaysTime = performance.now() - overlaysStart;
+
+    // Apply low-contrast effect if there's a modal without backdrop (fullcolor theme only)
+    const themeManager = getThemeManager();
+    const theme = themeManager.getCurrentTheme();
+    if (theme.type === 'fullcolor') {
+      const hasModalWithoutBackdrop = modals.some(modal =>
+        modal instanceof DialogElement &&
+        (modal as any).props?.open &&
+        (modal as any).props?.modal === true &&
+        (modal as any).props?.backdrop === false
+      );
+      if (hasModalWithoutBackdrop) {
+        buffer.currentBuffer.applyLowContrastEffect(theme.mode === 'dark');
+      }
+    }
 
     // Render modals on top
     const modalsStart = performance.now();

@@ -608,6 +608,80 @@ export function colorToGray(color: TerminalColor, isDark: boolean): TerminalColo
   }
 }
 
+/**
+ * Convert a color to low-contrast monochrome for modal backdrop effect.
+ * This desaturates the color and reduces contrast, making it appear "inactive".
+ * Used when modal=true, backdrop=false to visually indicate blocked background.
+ */
+export function colorToLowContrast(color: TerminalColor, isDark: boolean): string {
+  // Parse hex color
+  if (typeof color === 'string' && color.startsWith('#')) {
+    const hex = color.substring(1);
+    let r: number, g: number, b: number;
+
+    if (hex.length === 3) {
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length === 6) {
+      r = parseInt(hex.substring(0, 2), 16);
+      g = parseInt(hex.substring(2, 4), 16);
+      b = parseInt(hex.substring(4, 6), 16);
+    } else {
+      return isDark ? '#404040' : '#c0c0c0';
+    }
+
+    // Convert to grayscale using luminance
+    const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+
+    // Reduce contrast by pulling toward middle gray
+    const middleGray = isDark ? 80 : 180;
+    const contrastFactor = 0.4; // How much to reduce contrast (0 = full gray, 1 = original)
+    const result = Math.round(middleGray + (gray - middleGray) * contrastFactor);
+
+    // Clamp to valid range
+    const clamped = Math.max(0, Math.min(255, result));
+    const hexResult = clamped.toString(16).padStart(2, '0');
+    return `#${hexResult}${hexResult}${hexResult}`;
+  }
+
+  // Handle rgb/rgba format
+  if (typeof color === 'string' && color.startsWith('rgb')) {
+    const match = color.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (match) {
+      const r = parseInt(match[1]);
+      const g = parseInt(match[2]);
+      const b = parseInt(match[3]);
+
+      const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+      const middleGray = isDark ? 80 : 180;
+      const contrastFactor = 0.4;
+      const result = Math.round(middleGray + (gray - middleGray) * contrastFactor);
+      const clamped = Math.max(0, Math.min(255, result));
+      const hexResult = clamped.toString(16).padStart(2, '0');
+      return `#${hexResult}${hexResult}${hexResult}`;
+    }
+  }
+
+  // Named colors - map to approximate gray
+  const colorBrightnessMap: Record<string, number> = {
+    'black': 0.0, 'red': 0.3, 'green': 0.4, 'yellow': 0.6,
+    'blue': 0.25, 'magenta': 0.35, 'cyan': 0.5, 'white': 1.0,
+    'brightBlack': 0.4, 'brightRed': 0.5, 'brightGreen': 0.6, 'brightYellow': 0.8,
+    'brightBlue': 0.45, 'brightMagenta': 0.55, 'brightCyan': 0.7, 'brightWhite': 1.0,
+    'gray': 0.5,
+  };
+
+  const brightness = colorBrightnessMap[color as string] ?? 0.5;
+  const gray = Math.round(brightness * 255);
+  const middleGray = isDark ? 80 : 180;
+  const contrastFactor = 0.4;
+  const result = Math.round(middleGray + (gray - middleGray) * contrastFactor);
+  const clamped = Math.max(0, Math.min(255, result));
+  const hexResult = clamped.toString(16).padStart(2, '0');
+  return `#${hexResult}${hexResult}${hexResult}`;
+}
+
 export class ThemeManager {
   private _currentTheme: Theme;
   private _envTheme: string | null = null;

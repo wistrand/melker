@@ -2,7 +2,6 @@
 // Shows a modal prompt dialog when prompt() is called in handlers
 
 import { Document } from './document.ts';
-import { createElement } from './element.ts';
 import { melker } from './template.ts';
 import { Element } from './types.ts';
 import { FocusManager } from './focus.ts';
@@ -20,7 +19,6 @@ export class PromptDialogManager {
   private _overlay?: Element;
   private _deps: PromptDialogDependencies;
   private _resolvePromise?: (result: string | null) => void;
-  private _inputElement?: Element;
 
   constructor(deps: PromptDialogDependencies) {
     this._deps = deps;
@@ -54,23 +52,11 @@ export class PromptDialogManager {
       this._resolvePromise = resolve;
 
       const onOk = () => {
-        const value = this._inputElement?.props.value as string || '';
+        const inputElement = this._deps.document.getElementById('prompt-input');
+        const value = inputElement?.props.value as string || '';
         this.close(value);
       };
       const onCancel = () => this.close(null);
-
-      // Create text element for the message
-      const messageElement = createElement('text', {
-        id: 'prompt-message',
-        text: message,
-      });
-
-      // Create input element
-      this._inputElement = createElement('input', {
-        id: 'prompt-input',
-        value: defaultValue,
-        style: { width: 'fill' },
-      });
 
       this._overlay = melker`
         <dialog
@@ -78,7 +64,8 @@ export class PromptDialogManager {
           title="Prompt"
           open=${true}
           modal=${true}
-          backdrop=${true}
+          backdrop=${false}
+          draggable=${true}
           width=${50}
           height=${9}
         >
@@ -90,8 +77,8 @@ export class PromptDialogManager {
               id="prompt-content"
               style="flex: 1; padding-left: 1; padding-top: 1; padding-right: 1; width: fill; display: flex; flex-direction: column; gap: 1"
             >
-              ${messageElement}
-              ${this._inputElement}
+              <text id="prompt-message" text=${message} />
+              <input id="prompt-input" value=${defaultValue} style=${{ width: 'fill' }} />
             </container>
             <container
               id="prompt-footer"
@@ -140,7 +127,6 @@ export class PromptDialogManager {
     this._deps.document.removeElement(this._overlay);
 
     this._overlay = undefined;
-    this._inputElement = undefined;
 
     // Force complete redraw since overlay covered the screen
     this._deps.forceRender();

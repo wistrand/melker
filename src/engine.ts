@@ -1164,6 +1164,13 @@ export class MelkerEngine {
           this._ensureAccessibilityDialogManager();
           this._accessibilityDialogManager!.show();
         },
+        exit: () => {
+          this.stop().then(() => {
+            if (typeof Deno !== 'undefined') {
+              Deno.exit(0);
+            }
+          }).catch(console.error);
+        },
       });
     }
     this._viewSourceManager.setSource(content, filePath, type, convertedContent, policy, appDir, systemInfo, helpContent);

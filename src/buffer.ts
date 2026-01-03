@@ -2,7 +2,7 @@
 
 import { Bounds, BORDER_CHARS } from './types.ts';
 import { getCharWidth, getStringWidth, analyzeString, type CharInfo } from './char-width.ts';
-import { getThemeManager, colorToGray } from './theme.ts';
+import { getThemeManager, colorToGray, colorToLowContrast } from './theme.ts';
 import type { TerminalColor, BorderStyle } from './types.ts';
 
 export interface Cell {
@@ -244,6 +244,21 @@ export class TerminalBuffer {
     for (let dy = 0; dy < height; dy++) {
       for (let dx = 0; dx < width; dx++) {
         this.setCell(x + dx, y + dy, cell);
+      }
+    }
+  }
+
+  // Apply low-contrast monochrome effect to all cells (for modal backdrop effect)
+  applyLowContrastEffect(isDark: boolean): void {
+    for (let y = 0; y < this._height; y++) {
+      for (let x = 0; x < this._width; x++) {
+        const cell = this._cells[y][x];
+        if (cell.foreground) {
+          cell.foreground = colorToLowContrast(cell.foreground as TerminalColor, isDark);
+        }
+        if (cell.background) {
+          cell.background = colorToLowContrast(cell.background as TerminalColor, isDark);
+        }
       }
     }
   }

@@ -58,7 +58,7 @@ Before running this, you know:
 - It has one button that calls `fetchData()`
 - Nothing else
 
-Press F12 at runtime to see the same information.
+Press F12 to open Dev Tools and see the same information.
 
 ---
 
@@ -69,7 +69,7 @@ Melker is a **terminal browser engine**.
 Like a web browser, it:
 - Runs documents (`.melker` files)
 - Enforces declared permissions
-- Provides dev tools (F12)
+- Provides Dev Tools (F12)
 - Supports remote loading (URLs)
 
 Unlike a web browser, it:

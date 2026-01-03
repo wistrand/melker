@@ -197,55 +197,55 @@ text("Hello") | border | color(Color::Cyan)
 
 ## Component Comparison
 
-| Component | Melker | Ink | Blessed | Bubble Tea | tview | Textual | Ratatui | FTXUI |
-|-----------|:------:|:---:|:-------:|:----------:|:-----:|:-------:|:-------:|:-----:|
-| **Layout** | | | | | | | | |
-| Container/Box | Y | Y | Y | - | Y | Y | Y | Y |
-| Flexbox | Y | Y | - | - | Y | - | - | Y |
-| Grid | - | - | - | - | Y | Y | - | Y |
-| Tabs | Y | - | - | - | Y | Y | Y | Y |
-| Collapsible | - | - | - | - | - | Y | - | Y |
-| Split panes | - | - | - | - | - | - | - | Y |
-| **Text** | | | | | | | | |
-| Text/Label | Y | Y | Y | - | Y | Y | Y | Y |
-| Markdown | Y | - | - | - | - | Y | - | - |
-| Big text | - | - | Y | - | - | Y | Y* | - |
-| **Input** | | | | | | | | |
-| Text input | Y | Y | Y | Y | Y | Y | - | Y |
-| Textarea | Y | - | Y | Y | Y | Y | Y* | - |
-| Checkbox | Y | - | Y | - | Y | Y | Y* | Y |
-| Radio | Y | - | Y | - | - | Y | - | Y |
-| Select/Dropdown | - | Y | - | - | Y | Y | - | Y |
-| Slider | - | - | - | - | - | - | - | Y |
-| Masked input | - | - | - | - | - | Y | - | - |
-| **Data** | | | | | | | | |
-| Table | Y | Y* | Y | Y | Y | Y | Y | - |
-| Tree | - | - | Y | - | Y | Y | - | - |
-| List | Y | Y | Y | Y | Y | Y | Y | Y |
-| **Feedback** | | | | | | | | |
-| Progress bar | Y | Y | Y | Y | - | Y | Y | Y |
-| Spinner | - | Y | Y | Y | - | Y | - | - |
-| Toast | - | - | - | - | - | Y | - | - |
-| Sparkline | - | - | - | - | - | Y | Y | - |
-| **Navigation** | | | | | | | | |
-| Button | Y | - | Y | - | Y | Y | - | Y |
-| Menu | Y | - | Y | - | - | - | - | Y |
-| Menu bar | Y | - | Y | - | - | - | - | - |
-| Link | - | - | - | - | - | Y | - | - |
-| **Dialogs** | | | | | | | | |
-| Dialog/Modal | Y | - | Y | - | Y | - | - | - |
-| Prompt | Y | Y | Y | - | - | - | - | - |
-| Confirm | Y | - | Y | - | - | - | - | - |
-| Alert | Y | - | Y | - | - | - | - | - |
-| **Graphics** | | | | | | | | |
-| Canvas | Y | - | - | - | - | ~ | Y | Y |
-| Image | Y* | - | Y | - | Y | - | Y* | - |
-| Video | Y | - | Y | - | - | - | - | - |
-| Chart | - | - | - | - | - | - | Y | Y |
-| **Special** | | | | | | | | |
-| File browser | Y | - | Y | Y | - | Y | - | - |
-| Calendar | - | - | - | - | - | - | Y | - |
-| Scrollbar | Y | - | - | - | - | - | Y | - |
+| Component      | Melker | Ink | Blessed  | Bubble Tea  | tview  | Textual | Ratatui | FTXUI  |
+|----------------|:------:|:---:|:--------:|:-----------:|:------:|:-------:|:-------:|:------:|
+| **Layout**     |        |     |          |             |        |         |         |        |
+| Container/Box  |   Y    |  Y  |    Y     |      -      |   Y    |    Y    |    Y    |   Y    |
+| Flexbox        |   Y    |  Y  |    -     |      -      |   Y    |    -    |    -    |   Y    |
+| Grid           |   -    |  -  |    -     |      -      |   Y    |    Y    |    -    |   Y    |
+| Tabs           |   Y    |  -  |    -     |      -      |   Y    |    Y    |    Y    |   Y    |
+| Collapsible    |   -    |  -  |    -     |      -      |   -    |    Y    |    -    |   Y    |
+| Split panes    |   -    |  -  |    -     |      -      |   -    |    -    |    -    |   Y    |
+| **Text**       |        |     |          |             |        |         |         |        |
+| Text/Label     |   Y    |  Y  |    Y     |      -      |   Y    |    Y    |    Y    |   Y    |
+| Markdown       |   Y    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
+| Big text       |   -    |  -  |    Y     |      -      |   -    |    Y    |   Y*    |   -    |
+| **Input**      |        |     |          |             |        |         |         |        |
+| Text input     |   Y    |  Y  |    Y     |      Y      |   Y    |    Y    |    -    |   Y    |
+| Textarea       |   Y    |  -  |    Y     |      Y      |   Y    |    Y    |   Y*    |   -    |
+| Checkbox       |   Y    |  -  |    Y     |      -      |   Y    |    Y    |   Y*    |   Y    |
+| Radio          |   Y    |  -  |    Y     |      -      |   -    |    Y    |    -    |   Y    |
+| Select/Dropdown |   -    |  Y  |    -     |      -      |   Y    |    Y    |    -    |   Y    |
+| Slider         |   -    |  -  |    -     |      -      |   -    |    -    |    -    |   Y    |
+| Masked input   |   -    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
+| **Data**       |        |     |          |             |        |         |         |        |
+| Table          |   Y    | Y*  |    Y     |      Y      |   Y    |    Y    |    Y    |   -    |
+| Tree           |   -    |  -  |    Y     |      -      |   Y    |    Y    |    -    |   -    |
+| List           |   Y    |  Y  |    Y     |      Y      |   Y    |    Y    |    Y    |   Y    |
+| **Feedback**   |        |     |          |             |        |         |         |        |
+| Progress bar   |   Y    |  Y  |    Y     |      Y      |   -    |    Y    |    Y    |   Y    |
+| Spinner        |   -    |  Y  |    Y     |      Y      |   -    |    Y    |    -    |   -    |
+| Toast          |   -    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
+| Sparkline      |   -    |  -  |    -     |      -      |   -    |    Y    |    Y    |   -    |
+| **Navigation** |        |     |          |             |        |         |         |        |
+| Button         |   Y    |  -  |    Y     |      -      |   Y    |    Y    |    -    |   Y    |
+| Menu           |   Y    |  -  |    Y     |      -      |   -    |    -    |    -    |   Y    |
+| Menu bar       |   Y    |  -  |    Y     |      -      |   -    |    -    |    -    |   -    |
+| Link           |   -    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
+| **Dialogs**    |        |     |          |             |        |         |         |        |
+| Dialog/Modal   |   Y    |  -  |    Y     |      -      |   Y    |    -    |    -    |   -    |
+| Prompt         |   Y    |  Y  |    Y     |      -      |   -    |    -    |    -    |   -    |
+| Confirm        |   Y    |  -  |    Y     |      -      |   -    |    -    |    -    |   -    |
+| Alert          |   Y    |  -  |    Y     |      -      |   -    |    -    |    -    |   -    |
+| **Graphics**   |        |     |          |             |        |         |         |        |
+| Canvas         |   Y    |  -  |    -     |      -      |   -    |    ~    |    Y    |   Y    |
+| Image          |   Y*   |  -  |    Y     |      -      |   Y    |    -    |   Y*    |   -    |
+| Video          |   Y    |  -  |    Y     |      -      |   -    |    -    |    -    |   -    |
+| Chart          |   -    |  -  |    -     |      -      |   -    |    -    |    Y    |   Y    |
+| **Special**    |        |     |          |             |        |         |         |        |
+| File browser   |   Y    |  -  |    Y     |      Y      |   -    |    Y    |    -    |   -    |
+| Calendar       |   -    |  -  |    -     |      -      |   -    |    -    |    Y    |   -    |
+| Scrollbar      |   Y    |  -  |    -     |      -      |   -    |    -    |    Y    |   -    |
 
 Y = Built-in, Y* = Via extension/crate (or canvas for Melker), ~ = Partial/limited, - = Not available
 

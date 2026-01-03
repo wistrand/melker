@@ -46,7 +46,7 @@ export class HitTester {
    */
   hitTest(x: number, y: number): Element | undefined {
     // Debug logging for hit test events
-    logger.info(`Hit test at (${x}, ${y})`);
+    logger.debug(`Hit test at (${x}, ${y})`);
 
     // First check open dialogs (they are rendered as top-most overlays)
     const dialogHit = this._hitTestOpenDialogs(x, y);
@@ -63,7 +63,7 @@ export class HitTester {
     // We need to traverse the layout tree to find which element is at the given coordinates
     // Start with no scroll offset accumulation
     const result = this._hitTestElement(this._document.root, x, y, 0, 0);
-    logger.info(`Hit test result: ${result?.type}/${result?.id}`);
+    logger.debug(`Hit test result: ${result?.type}/${result?.id}`);
     return result;
   }
 

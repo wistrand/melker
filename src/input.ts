@@ -105,13 +105,18 @@ export class TerminalInputProcessor {
   }
 
   /**
-   * Stop listening for terminal input
+   * Immediately stop the input loop (synchronous).
+   * Call this before async cleanup to prevent the loop from blocking on stdin.read().
+   */
+  stopListeningSync(): void {
+    this._isListening = false;
+  }
+
+  /**
+   * Stop listening for terminal input.
+   * Always performs cleanup even if already stopped.
    */
   async stopListening(): Promise<void> {
-    if (!this._isListening) {
-      return;
-    }
-
     this._isListening = false;
 
     // Disable mouse reporting

@@ -261,6 +261,26 @@ Y = Built-in, Y* = Via extension/crate (or canvas for Melker), ~ = Partial/limit
 | **Async/Reactive** | Textual |
 | **Immediate Mode** | Ratatui |
 
+## Artifact Model & Permissions
+
+| Library | Language | Paradigm | Artifact Model | Permissions |
+|---------|----------|----------|----------------|-------------|
+| **Melker** | TS/Deno | Declarative | Document + execution | Declared |
+| Ink | JS | React | Program | Inherited |
+| Bubble Tea | Go | Elm | Program | Inherited |
+| Textual | Python | Async widgets | Program | Inherited |
+| Ratatui | Rust | Immediate | Program | Inherited |
+
+**Artifact Model:**
+- **Document + execution**: UI defined as a document (`.melker` file) containing markup and behavior, executed by a runtime. Similar to HTML in a browser.
+- **Program**: Compiled/interpreted code that produces TUI output. The artifact IS the program.
+
+**Permissions:**
+- **Declared**: Permissions declared in the artifact via `<policy>` tag; runtime enforces sandbox. User approves on first run.
+- **Inherited**: Program inherits whatever permissions the user/OS grants at execution time. No built-in sandboxing.
+
+This distinction mirrors web vs native: Melker treats TUI apps like web pages (sandboxed documents), while traditional TUI libraries produce native programs with full inherited authority.
+
 ## Rendering Strategies
 
 | Strategy | Libraries | Description |

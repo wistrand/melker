@@ -81,11 +81,23 @@ Basically: what if terminals worked like browsers?
 
 ---
 
+## What You Can Build
+
+**Core components** — layout, text, inputs, tables, dialogs — cover most apps. No external dependencies. Works everywhere.
+
+**Advanced components** exist for specific needs:
+- **Canvas** — dashboards, visualizations
+- **Video** — media previews (needs FFmpeg)
+- **File browser** — filesystem navigation
+- **OAuth** — authentication flows
+
+Simple apps stay simple. Complex apps are possible.
+
+---
+
 ## What Melker Is NOT
 
 **Not a general scripting host.** Melker runs `.melker` artifacts, not arbitrary TypeScript. The document is the boundary.
-
-**Not a platform-of-everything.** Features serve inspectability and trust. Canvas exists for dashboards; video exists for previews. They're tools, not goals.
 
 **Not trying to replace the terminal.** Melker apps run *in* terminals. They're better terminal apps, not alternatives to terminals.
 

@@ -1995,8 +1995,8 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     const html = node.value || '';
     logger.debug('Rendering HTML node', { html });
 
-    // Check for img tag
-    const imgMatch = html.match(/<img\s+([^>]*)>/i);
+    // Check for img tag (supports both <img ...> and <img ... />)
+    const imgMatch = html.match(/<img\s+([^>]*?)\s*\/?>/i);
     if (imgMatch) {
       logger.debug('Found img tag', { attributes: imgMatch[1] });
       return this._renderImgTag(imgMatch[1], ctx);
@@ -2015,13 +2015,38 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   }
 
   /**
+   * Parse a dimension value with optional unit suffix.
+   * - Bare numbers or 'px' suffix: treated as CSS pixels, converted to chars (divide by 8)
+   * - 'ch' suffix: treated as characters, used as-is
+   * - '%' suffix: percentage of available width
+   */
+  private _parseDimension(value: string, availableWidth: number): number {
+    const match = value.match(/^(\d+(?:\.\d+)?)(px|ch|%)?$/i);
+    if (!match) return 0;
+
+    const num = parseFloat(match[1]);
+    const unit = (match[2] || 'px').toLowerCase();
+
+    switch (unit) {
+      case 'ch':
+        return Math.round(num);
+      case '%':
+        return Math.round((num / 100) * availableWidth);
+      case 'px':
+      default:
+        // Convert pixels to characters (approx 8px per char)
+        return Math.round(num / 8);
+    }
+  }
+
+  /**
    * Parse and render an <img> tag
    */
   private _renderImgTag(attributes: string, ctx: MarkdownRenderContext): number {
     // Parse attributes
     const srcMatch = attributes.match(/src\s*=\s*["']([^"']+)["']/i);
-    const widthMatch = attributes.match(/width\s*=\s*["']?(\d+)["']?/i);
-    const heightMatch = attributes.match(/height\s*=\s*["']?(\d+)["']?/i);
+    const widthMatch = attributes.match(/width\s*=\s*["']?(\d+(?:px|ch|%)?|\d+)["']?/i);
+    const heightMatch = attributes.match(/height\s*=\s*["']?(\d+(?:px|ch|%)?|\d+)["']?/i);
     const altMatch = attributes.match(/alt\s*=\s*["']([^"']*)["']/i);
 
     if (!srcMatch) {
@@ -2029,8 +2054,9 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     }
 
     const src = srcMatch[1];
-    const width = widthMatch ? parseInt(widthMatch[1], 10) : undefined;
-    const height = heightMatch ? parseInt(heightMatch[1], 10) : undefined;
+    const availableWidth = ctx.bounds.width;
+    const width = widthMatch ? this._parseDimension(widthMatch[1], availableWidth) : undefined;
+    const height = heightMatch ? this._parseDimension(heightMatch[1], availableWidth) : undefined;
     const alt = altMatch ? altMatch[1] : undefined;
 
     return this._renderImageElement(src, alt, width, height, ctx);
@@ -2450,14 +2476,14 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     // Log all link regions for debugging
     for (const region of this._linkRegions) {
-      logger.info(`  Link region: x=${region.x}-${region.x + region.width}, y=${region.y}, url=${region.url}`);
+      logger.debug(`  Link region: x=${region.x}-${region.x + region.width}, y=${region.y}, url=${region.url}`);
     }
 
     // Check if click is within any link region (using screen coordinates)
     for (const region of this._linkRegions) {
       const inX = clickX >= region.x && clickX < region.x + region.width;
       const inY = clickY === region.y;
-      logger.info(`  Checking region x=${region.x}-${region.x + region.width}, y=${region.y}: inX=${inX}, inY=${inY}`);
+      logger.debug(`  Checking region x=${region.x}-${region.x + region.width}, y=${region.y}: inX=${inX}, inY=${inY}`);
       if (inX && inY) {
         // Found a link - call the onLink handler if provided
         logger.info(`  MATCH FOUND! Calling onLink with url=${region.url}`);

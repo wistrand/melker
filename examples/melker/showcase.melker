@@ -1,0 +1,174 @@
+<melker>
+  <policy>
+  {
+    "name": "Showcase",
+    "permissions": {}
+  }
+  </policy>
+
+  <script>
+    let selectedTask: string | null = null;
+
+    export function onTaskSelect(event: any) {
+      selectedTask = event.selectedIds[0] || null;
+    }
+
+    export function addTask() {
+      alert('Add Task clicked');
+    }
+
+    export function markDone() {
+      if (selectedTask) {
+        alert('Mark Done: task ' + selectedTask);
+      } else {
+        alert('No task selected');
+      }
+    }
+
+    export function deleteTask() {
+      if (selectedTask) {
+        alert('Delete: task ' + selectedTask);
+      } else {
+        alert('No task selected');
+      }
+    }
+  </script>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: fill;
+      height: fill;
+    }
+    #header {
+      padding-top: 1;
+      background-color: #1e3a5f;
+      border-bottom: thin;
+    }
+    #header-title {
+      font-weight: bold;
+      color: white;
+      text-align: center;
+    }
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+    }
+    #sidebar {
+      width: 24;
+      border-right: thin;
+      padding: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    #sidebar-title {
+      font-weight: bold;
+      margin-bottom: 1;
+    }
+    #content {
+      flex: 1;
+      padding: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    #content-title {
+      font-weight: bold;
+      margin-bottom: 1;
+    }
+    #footer {
+      padding: 1;
+      border-top: thin;
+      color: gray;
+    }
+  </style>
+
+  <container id="root">
+    <!-- Header -->
+    <container id="header">
+      <text id="header-title">Task Manager</text>
+    </container>
+
+    <!-- Main area: sidebar + content -->
+    <container id="main">
+      <!-- Sidebar -->
+      <container id="sidebar">
+        <text id="sidebar-title">Projects</text>
+        <radio name="project" title="All Tasks" checked="true" />
+        <radio name="project" title="Work" />
+        <radio name="project" title="Personal" />
+        <text style="margin-top: 1; font-weight: bold;">Filters</text>
+        <checkbox title="Show completed" />
+        <checkbox title="Due this week" checked="true" />
+      </container>
+
+      <!-- Content -->
+      <container id="content">
+        <text id="content-title">Tasks</text>
+        <table border="thin" cellPadding="1">
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Due</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody selectable="single" scrollable="true" maxHeight="6" onSelect="$app.onTaskSelect(event)">
+            <tr data-id="1">
+              <td>Review PR #42</td>
+              <td>Today</td>
+              <td style="color: yellow;">In Progress</td>
+            </tr>
+            <tr data-id="2">
+              <td>Update docs</td>
+              <td>Tomorrow</td>
+              <td style="color: gray;">Pending</td>
+            </tr>
+            <tr data-id="3">
+              <td>Fix login bug</td>
+              <td>Friday</td>
+              <td style="color: green;">Done</td>
+            </tr>
+            <tr data-id="4">
+              <td>Deploy to staging</td>
+              <td>Friday</td>
+              <td style="color: yellow;">In Progress</td>
+            </tr>
+            <tr data-id="5">
+              <td>Write tests</td>
+              <td>Next week</td>
+              <td style="color: gray;">Pending</td>
+            </tr>
+            <tr data-id="6">
+              <td>Code review</td>
+              <td>Next week</td>
+              <td style="color: gray;">Pending</td>
+            </tr>
+            <tr data-id="7">
+              <td>Update dependencies</td>
+              <td>Next week</td>
+              <td style="color: green;">Done</td>
+            </tr>
+            <tr data-id="8">
+              <td>Refactor auth module</td>
+              <td>Next month</td>
+              <td style="color: gray;">Pending</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <container style="display: flex; flex-direction: row; margin-top: 1; gap: 1;">
+          <button title="Add Task" style="background-color: #3b82f6; color: white;" onClick="$app.addTask()" />
+          <button title="Mark Done" onClick="$app.markDone()" />
+          <button title="Delete" style="color: red;" onClick="$app.deleteTask()" />
+        </container>
+      </container>
+    </container>
+
+    <!-- Footer -->
+    <container id="footer">
+      <text>8 tasks | Press F12 for Dev Tools | Ctrl+C to exit</text>
+    </container>
+  </container>
+</melker>

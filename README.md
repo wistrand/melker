@@ -24,7 +24,7 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 
 *See [full comparison](agent_docs/tui-comparison.md) with Ink, Textual, Bubble Tea, Ratatui, and others.*
 
-### Not Just Trust — Real UI
+### Not Just Trust - Real UI
 
 Melker apps look and feel like apps:
 
@@ -33,6 +33,12 @@ Melker apps look and feel like apps:
 - Mouse and keyboard throughout
 - Tables with sorting and selection
 - Dialogs, menus, prompts
+
+#### Showcase
+
+A task manager in 170 lines: [View source](examples/melker/showcase.melker)
+
+<img src="docs/showcase.png" width="80%">
 
 ---
 
@@ -121,17 +127,17 @@ deno run --allow-all melker.ts https://example.com/app.melker
 
 ### 4. Three Abstraction Levels
 
-**Programmatic** — TypeScript API:
+**Programmatic** - TypeScript API:
 ```typescript
 const btn = createElement('button', { title: 'Click', onClick: () => count++ });
 ```
 
-**Declarative** — `.melker` files:
+**Declarative** - `.melker` files:
 ```html
 <button title="Click" onClick="count++" />
 ```
 
-**Literate** — `.melker.md` Markdown with embedded UI:
+**Literate** - `.melker.md` Markdown with embedded UI:
 ```markdown
 # My App
 
@@ -153,7 +159,7 @@ Press F12 to open Dev Tools:
 
 ### Components
 
-**Core** — no external dependencies:
+**Core** - no external dependencies:
 
 | Category    | Components                                  |
 |-------------|---------------------------------------------|
@@ -165,11 +171,11 @@ Press F12 to open Dev Tools:
 | Dialogs     | dialog, alert, confirm, prompt              |
 | Feedback    | progress                                    |
 
-**Advanced** — for specific needs:
+**Advanced** - for specific needs:
 
 | Component     | Purpose                  | Requires              |
 |---------------|--------------------------|-----------------------|
-| canvas        | Pixel graphics           | —                     |
+| canvas        | Pixel graphics           | -                     |
 | video         | Media playback           | FFmpeg                |
 | file-browser  | Filesystem navigation    | read permission       |
 | oauth         | Auth flows               | net permission        |

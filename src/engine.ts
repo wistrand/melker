@@ -112,6 +112,7 @@ import {
   setupTerminal,
   cleanupTerminal,
   emergencyCleanupTerminal,
+  restoreTerminal,
   setupCleanupHandlers,
   registerForEmergencyCleanup,
   unregisterFromEmergencyCleanup,
@@ -539,17 +540,24 @@ export class MelkerEngine {
       });
 
       // Handle Ctrl+C for graceful exit
-      if (event.ctrlKey && event.key === 'c') {
+      if (event.ctrlKey && event.key?.toLowerCase() === 'c') {
+        // CRITICAL: Restore terminal FIRST, synchronously, before anything else
+        // This ensures the terminal is restored even if something goes wrong later
+        restoreTerminal();
+
+        // Stop the input loop
+        if (this._inputProcessor) {
+          this._inputProcessor.stopListeningSync();
+        }
+
         if (this._options.onExit) {
           // Use custom exit handler
-          Promise.resolve(this._options.onExit()).catch(console.error);
+          Promise.resolve(this._options.onExit())
+            .finally(() => Deno.exit(0));
         } else {
-          // Default behavior
-          this.stop().then(() => {
-            if (typeof Deno !== 'undefined') {
-              Deno.exit(0);
-            }
-          }).catch(console.error);
+          // Default behavior - do graceful cleanup then exit
+          this.stop()
+            .finally(() => Deno.exit(0));
         }
         return;
       }

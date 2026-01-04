@@ -2,7 +2,7 @@
 
 **A terminal app can be inspected before it is trusted.**
 
-Terminal apps lack a standard way to declare and enforce permissions. You download a CLI tool, run it, and hope for the best. Shell scripts are technically readable, but there's no structured metadata telling you what a script needs — you have to read the whole thing and understand it. Compiled binaries are truly opaque. Neither declares permissions upfront or enforces them at runtime.
+Terminal apps lack a standard way to declare and enforce permissions. You download a CLI tool, run it, and hope for the best. Shell scripts are technically readable, but there's no structured metadata telling you what a script needs - you have to read the whole thing and understand it. Compiled binaries are truly opaque. Neither declares permissions upfront or enforces them at runtime.
 
 With Melker, a terminal app is a document you can read before you run it.
 
@@ -17,7 +17,7 @@ Consider how you use terminal tools today:
 3. You grant it whatever permissions it asks for
 4. You hope it does what it claims
 
-That's the wrong order. Trust should come after inspection. But terminal apps don't offer structured inspection — even readable scripts lack standardized permission declarations, and there's no runtime enforcement.
+That's the wrong order. Trust should come after inspection. But terminal apps don't offer structured inspection - even readable scripts lack standardized permission declarations, and there's no runtime enforcement.
 
 The web solved this decades ago. Browsers show you the URL, enforce permissions, and let you view source. Terminal apps have no equivalent: no permission manifest, no sandbox, no "view policy before run."
 
@@ -28,10 +28,10 @@ The web solved this decades ago. Browsers show you the URL, enforce permissions,
 Melker treats terminal apps as **documents**, not programs.
 
 A `.melker` file is:
-- **Readable** — HTML-like markup you can open in any editor
-- **Inspectable** — Policy tag declares what permissions it needs
-- **Verifiable** — Handlers are visible strings, not hidden closures
-- **Shareable** — Run directly from a URL, no installation required
+- **Readable** - HTML-like markup you can open in any editor
+- **Inspectable** - Policy tag declares what permissions it needs
+- **Verifiable** - Handlers are visible strings, not hidden closures
+- **Shareable** - Run directly from a URL, no installation required
 
 ```html
 <melker>
@@ -83,13 +83,13 @@ Basically: what if terminals worked like browsers?
 
 ## What You Can Build
 
-**Core components** — layout, text, inputs, tables, dialogs — cover most apps. No external dependencies. Works everywhere.
+**Core components** - layout, text, inputs, tables, dialogs - cover most apps. No external dependencies. Works everywhere.
 
 **Advanced components** exist for specific needs:
-- **Canvas** — dashboards, visualizations
-- **Video** — media previews (needs FFmpeg)
-- **File browser** — filesystem navigation
-- **OAuth** — authentication flows
+- **Canvas** - dashboards, visualizations
+- **Video** - media previews (needs FFmpeg)
+- **File browser** - filesystem navigation
+- **OAuth** - authentication flows
 
 Simple apps stay simple. Complex apps are possible.
 
@@ -107,13 +107,13 @@ Simple apps stay simple. Complex apps are possible.
 
 Most TUI frameworks offer one way to build UIs: programmatic APIs. Melker offers three:
 
-**1. Declarative (preferred)** — `.melker` HTML-like files
+**1. Declarative (preferred)** - `.melker` HTML-like files
 ```html
 <button title="Click" onClick="count++" />
 ```
 This is the primary way to build Melker apps. Declarative files enable the full trust model: visible structure, inspectable handlers, declared policy, and sandboxed execution.
 
-**2. Literate** — `.melker.md` Markdown with embedded UI
+**2. Literate** - `.melker.md` Markdown with embedded UI
 ```markdown
 # Counter
 
@@ -123,7 +123,7 @@ This button increments a counter:
 ```
 Documentation and UI in the same file. The help text is the app.
 
-**3. Programmatic** — TypeScript `createElement` API
+**3. Programmatic** - TypeScript `createElement` API
 ```typescript
 const btn = createElement('button', { title: 'Click', onClick: () => count++ });
 ```
@@ -151,5 +151,5 @@ Melker is for people who:
 - Want to distribute terminal apps without requiring installation
 - Believe tools should be inspectable before they're trusted
 
-If you just want to build a quick CLI for yourself, simpler frameworks exist. But if you're building something others will run, Melker gives them — and you — a way to verify what it does.
+If you just want to build a quick CLI for yourself, simpler frameworks exist. But if you're building something others will run, Melker gives them - and you - a way to verify what it does.
 

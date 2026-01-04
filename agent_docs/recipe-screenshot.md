@@ -10,50 +10,39 @@ How to capture a screenshot of a Melker app and add it to documentation.
 gnome-terminal --title="App Name" -- bash -c "MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts path/to/app.melker; exec bash"
 ```
 
-### 2. Wait for render
+### 2. Capture with flameshot
 
 ```bash
-sleep 2
+flameshot gui --path /path/to/output.png
 ```
 
-### 3. Capture the window
+Select the terminal window, then press Enter or click save.
 
-```bash
-gnome-screenshot -w -f /path/to/output.png
-```
-
-Options:
-- `-w` captures the focused window
-- `-f` specifies output file path
-
-### 4. Add to markdown
+### 3. Add to markdown
 
 ```markdown
-<img src="screenshot.png" alt="App Screenshot" />
+![App Screenshot](screenshot.png)
 ```
 
 ## Example
 
-For the color selector demo:
+For the showcase demo:
 
 ```bash
 # Launch
-gnome-terminal --title="Color Selector Demo" -- bash -c "MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/melker-md/color_selector.md; exec bash"
+gnome-terminal --title="Showcase" -- bash -c "MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/melker/showcase.melker; exec bash"
 
-# Wait
-sleep 2
-
-# Capture
-gnome-screenshot -w -f examples/melker-md/color_selector.png
+# Capture (select window, press Enter)
+flameshot gui --path docs/showcase.png
 ```
 
-Then add to the markdown file:
+Then add to README:
 ```markdown
-<img src="color_selector.png" alt="Color Selector Screenshot" />
+![Showcase](docs/showcase.png)
 ```
 
 ## Notes
 
-- Use `MELKER_THEME=fullcolor-dark` for best visual results in screenshots
+- Use `MELKER_THEME=fullcolor-dark` for best visual results
 - The `exec bash` keeps the terminal open after the app exits
-- Place the PNG next to the markdown file for relative path references
+- flameshot works on both X11 and Wayland

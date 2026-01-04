@@ -28,13 +28,16 @@ Here's an image reference using HTML img tag (default 30x15):
 
 <img src="../media/melker-128.png" alt="Maze Image">
 
-And with explicit dimensions (20x10):
+And with explicit dimensions (20 chars):
 
-<img src="../media/melker-128.png" alt="Small Maze" width="20" height="10">
+<img src="../media/melker-128.png" alt="Small Maze" width="20ch">
 
 Markdown-style image:
 
 ![Test Image](melker/test_image.png)
+
+
+<img src="../docs/showcase.png" width="80%">
 
 ## Tables
 

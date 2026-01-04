@@ -21,7 +21,7 @@ If no file is specified, defaults to `README.md`.
 
 ## Link Handling
 
-- Click on `.md` links to navigate within the viewer
+- Click on `.md` or `.melker` links to navigate within the viewer
 - Click on `http://` or `https://` links to open in your default browser
 - The viewer maintains a history stack for back/forward navigation
 
@@ -98,8 +98,8 @@ If no file is specified, defaults to `README.md`.
         return;
       }
 
-      // Navigate to .md files within the viewer
-      if (url.endsWith('.md')) {
+      // Navigate to .md or .melker files within the viewer
+      if (url.endsWith('.md') || url.endsWith('.melker')) {
         const markdown = $melker.getElementById('markdown-content');
         if (markdown) {
           const currentSrc = markdown.props.src || '';

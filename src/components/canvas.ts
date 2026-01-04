@@ -103,7 +103,8 @@ export interface CanvasProps extends BaseProps {
 interface LoadedImage {
   width: number;
   height: number;
-  data: Uint8ClampedArray;  // RGBA pixel data
+  data: Uint8ClampedArray;  // RGB or RGBA pixel data
+  bytesPerPixel: number;    // 3 for RGB, 4 for RGBA
 }
 
 export class CanvasElement extends Element implements Renderable {
@@ -627,11 +628,27 @@ export class CanvasElement extends Element implements Renderable {
 
       const pixelData = bitmapAny[bitmapDataSymbol] as Uint8Array;
 
+      // Detect bytes per pixel by comparing data length with expected sizes
+      const totalPixels = bitmap.width * bitmap.height;
+      const expectedRGBA = totalPixels * 4;
+      const expectedRGB = totalPixels * 3;
+      let bytesPerPixel: number;
+
+      if (pixelData.length === expectedRGBA) {
+        bytesPerPixel = 4; // RGBA
+      } else if (pixelData.length === expectedRGB) {
+        bytesPerPixel = 3; // RGB (no alpha)
+      } else {
+        // Fallback: guess based on which is closer
+        bytesPerPixel = Math.abs(pixelData.length - expectedRGBA) < Math.abs(pixelData.length - expectedRGB) ? 4 : 3;
+      }
+
       // Store the loaded image (convert to Uint8ClampedArray)
       this._loadedImage = {
         width: bitmap.width,
         height: bitmap.height,
-        data: new Uint8ClampedArray(pixelData)
+        data: new Uint8ClampedArray(pixelData),
+        bytesPerPixel,
       };
 
       // Clean up
@@ -683,6 +700,8 @@ export class CanvasElement extends Element implements Renderable {
     const scaledData = new Uint8Array(scaledW * scaledH * 4);
 
     // Sample and scale the image
+    const bpp = img.bytesPerPixel; // 3 for RGB, 4 for RGBA
+
     for (let y = 0; y < scaledH; y++) {
       for (let x = 0; x < scaledW; x++) {
         // Map buffer coordinates to image coordinates
@@ -693,14 +712,15 @@ export class CanvasElement extends Element implements Renderable {
         const srcX = Math.floor(imgX);
         const srcY = Math.floor(imgY);
 
-        // Get pixel color from image
-        const srcIdx = (srcY * img.width + srcX) * 4;
+        // Get pixel color from image (using correct bytes per pixel)
+        const srcIdx = (srcY * img.width + srcX) * bpp;
         const dstIdx = (y * scaledW + x) * 4;
 
-        scaledData[dstIdx] = img.data[srcIdx];
-        scaledData[dstIdx + 1] = img.data[srcIdx + 1];
-        scaledData[dstIdx + 2] = img.data[srcIdx + 2];
-        scaledData[dstIdx + 3] = img.data[srcIdx + 3];
+        scaledData[dstIdx] = img.data[srcIdx];         // R
+        scaledData[dstIdx + 1] = img.data[srcIdx + 1]; // G
+        scaledData[dstIdx + 2] = img.data[srcIdx + 2]; // B
+        // Alpha: use from data if RGBA, otherwise assume fully opaque
+        scaledData[dstIdx + 3] = bpp === 4 ? img.data[srcIdx + 3] : 255;
       }
     }
 

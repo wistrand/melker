@@ -37,6 +37,8 @@ deno task check        # Type check
 
 **Note**: Don't run `deno fmt` or `deno lint` automatically (user preference).
 
+- never execute git add, commit or push commands
+
 ## Project Structure
 
 ```
@@ -341,4 +343,3 @@ See `agent_docs/melker-file-format.md` for syntax details.
 | `F10` | Activate menu bar |
 | `Ctrl+M` | Alternative menu bar activation |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |
-- never execute git commands

@@ -24,6 +24,16 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 
 *See [full comparison](agent_docs/tui-comparison.md) with Ink, Textual, Bubble Tea, Ratatui, and others.*
 
+### Not Just Trust — Real UI
+
+Melker apps look and feel like apps:
+
+- Flexbox layout, not just text dumps
+- CSS-like styling, 16M colors, theme auto-detection
+- Mouse and keyboard throughout
+- Tables with sorting and selection
+- Dialogs, menus, prompts
+
 ---
 
 ## Quick Start
@@ -143,16 +153,26 @@ Press F12 to open Dev Tools:
 
 ### Components
 
+**Core** — no external dependencies:
+
 | Category    | Components                                  |
 |-------------|---------------------------------------------|
-| Layout      | container, tabs                             |
+| Layout      | container, flexbox, tabs                    |
 | Text        | text, markdown                              |
 | Input       | input, textarea, checkbox, radio            |
 | Navigation  | button, menu-bar, menu, menu-item           |
 | Data        | table (sorting, selection, scrolling), list |
 | Dialogs     | dialog, alert, confirm, prompt              |
-| Graphics    | canvas, video, progress                     |
-| File System | file-browser                                |
+| Feedback    | progress                                    |
+
+**Advanced** — for specific needs:
+
+| Component     | Purpose                  | Requires              |
+|---------------|--------------------------|-----------------------|
+| canvas        | Pixel graphics           | —                     |
+| video         | Media playback           | FFmpeg                |
+| file-browser  | Filesystem navigation    | read permission       |
+| oauth         | Auth flows               | net permission        |
 
 ### Layout
 

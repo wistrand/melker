@@ -523,27 +523,34 @@ export class LayoutEngine {
 
       // Calculate flex basis (base size on main axis)
       // flexBasis should be content size + padding + borders (element's full outer size)
+      //
+      // Use intrinsicSize for renderable elements (handles responsive sizing like percentage-based images)
+      // Each element's intrinsicSize() is responsible for returning the correct size:
+      // - Containers with explicit style.width/height return those values
+      // - Images with percentage dimensions calculate from available space
+      // - Canvas returns props.width/height
+      const useIntrinsicSize = isRenderable(child);
+
       let flexBasisValue: number;
       if (childProps.flexBasis === 'auto') {
-        // Use explicit width/height if available and numeric, otherwise use intrinsic size + padding + borders
         if (isRow) {
-          if (typeof childProps.width === 'number') {
+          if (!useIntrinsicSize && typeof childProps.width === 'number') {
             flexBasisValue = childProps.width;
           } else if (childProps.width === 'fill') {
             // For "fill" width in flex context, treat as flexible
             flexBasisValue = 0;
           } else {
-            // Add padding and borders to content size for flex basis
+            // Use intrinsic size + padding + borders
             flexBasisValue = intrinsicSize.width + paddingMain + borderMain;
           }
         } else {
-          if (typeof childProps.height === 'number') {
+          if (!useIntrinsicSize && typeof childProps.height === 'number') {
             flexBasisValue = childProps.height;
           } else if (childProps.height === 'fill') {
             // For "fill" height in flex context, treat as flexible
             flexBasisValue = 0;
           } else {
-            // Add padding and borders to content size for flex basis
+            // Use intrinsic size + padding + borders
             flexBasisValue = intrinsicSize.height + paddingMain + borderMain;
           }
         }
@@ -573,23 +580,23 @@ export class LayoutEngine {
 
 
       if (isRow) {
-        if (typeof childProps.height === 'number') {
+        if (!useIntrinsicSize && typeof childProps.height === 'number') {
           baseCross = childProps.height;
         } else if (willStretch) {
           // For stretch alignment, use available cross-axis space (subtract padding and borders)
           baseCross = crossAxisSize - paddingCross - borderCross;
         } else {
-          // Add padding and borders to content size for cross axis
+          // Use intrinsic size + padding + borders for cross axis
           baseCross = intrinsicSize.height + paddingCross + borderCross;
         }
       } else {
-        if (typeof childProps.width === 'number') {
+        if (!useIntrinsicSize && typeof childProps.width === 'number') {
           baseCross = childProps.width;
         } else if (willStretch) {
           // For stretch alignment, use available cross-axis space (subtract padding and borders)
           baseCross = crossAxisSize - paddingCross - borderCross;
         } else {
-          // Add padding and borders to content size for cross axis
+          // Use intrinsic size + padding + borders for cross axis
           baseCross = intrinsicSize.width + paddingCross + borderCross;
         }
       }
@@ -1176,8 +1183,10 @@ export class LayoutEngine {
   }
 
   private _computeLayoutProps(element: Element, parentProps?: AdvancedLayoutProps): AdvancedLayoutProps {
-    // Filter out explicit size properties from parent - these should not be inherited
-    // Also filter out gap - it's specific to each flex container
+    // Filter out properties that should not be inherited from parent:
+    // - Size and position properties are element-specific
+    // - flexDirection defines how a container lays out its children, not how the container itself is laid out
+    // - gap is specific to each flex container
     const inheritableParentProps = parentProps ? {
       ...parentProps,
       width: undefined,
@@ -1186,6 +1195,7 @@ export class LayoutEngine {
       right: undefined,
       top: undefined,
       bottom: undefined,
+      flexDirection: undefined,  // Each container defines its own flex direction
       gap: undefined,
     } : undefined;
 

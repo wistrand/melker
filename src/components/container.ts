@@ -52,14 +52,26 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
    * Calculate intrinsic size for the container
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
-    // For containers, calculate size based on children
-    if (!this.children || this.children.length === 0) {
-      return { width: 0, height: 0 };
-    }
-
     // For flex containers, calculate minimum space needed for children
     const containerProps = this.props as ContainerProps & { style?: any };
     const rawStyle = containerProps?.style || {};
+
+    // Check for explicit style dimensions (user intent takes priority)
+    const explicitWidth = typeof rawStyle.width === 'number' ? rawStyle.width : undefined;
+    const explicitHeight = typeof rawStyle.height === 'number' ? rawStyle.height : undefined;
+
+    // If both dimensions are explicit, return them directly
+    if (explicitWidth !== undefined && explicitHeight !== undefined) {
+      return { width: explicitWidth, height: explicitHeight };
+    }
+
+    // For containers, calculate size based on children
+    if (!this.children || this.children.length === 0) {
+      return {
+        width: explicitWidth ?? 0,
+        height: explicitHeight ?? 0,
+      };
+    }
 
     // Apply container type defaults (same as layout engine's _computeStyle)
     // This ensures intrinsic size calculation matches layout behavior
@@ -160,8 +172,9 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
     }
 
     return {
-      width: totalWidth + paddingH + borderH,
-      height: totalHeight + paddingV + borderV,
+      // Use explicit dimension if set, otherwise use calculated size
+      width: explicitWidth ?? (totalWidth + paddingH + borderH),
+      height: explicitHeight ?? (totalHeight + paddingV + borderV),
     };
   }
 

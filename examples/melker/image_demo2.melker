@@ -1,0 +1,26 @@
+<melker>
+  <policy>
+  {
+    "name": "Image Demo",
+    "description": "Demonstrates the img component",
+    "permissions": {
+      "read": ["*"]
+    }
+  }
+  </policy>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      width: fill;
+      height: fill;
+      border:thin;
+    }
+  </style>
+
+  <container id="root">
+      <img src="media/melker-128.png"/>
+      <img src="media/melker-128.png" width="100%" height="100%"/>
+  </container>
+</melker>

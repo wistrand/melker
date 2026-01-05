@@ -1,0 +1,55 @@
+<melker>
+  <policy>
+  {
+    "name": "Image Demo",
+    "description": "Demonstrates the img component",
+    "permissions": {
+      "read": ["*"]
+    }
+  }
+  </policy>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      padding: 1;
+      gap: 1;
+    }
+    .row {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+    }
+    .caption {
+      color: gray;
+      font-style: italic;
+    }
+  </style>
+
+  <container id="root">
+    <text style="font-weight: bold; color: cyan;">Image Component Demo</text>
+    <text>The img tag displays images using sextant characters (2x3 pixels per cell).</text>
+
+    <text style="margin-top: 1;">Fixed dimensions (nested row layout):</text>
+    <container class="row">
+      <container>
+        <img src="media/melker-128.png" width="20" height="10" />
+        <text class="caption">20x10 chars</text>
+      </container>
+      <container>
+        <img src="media/melker-128.png" width="15" height="8" />
+        <text class="caption">15x8 chars</text>
+      </container>
+    </container>
+
+    <text style="margin-top: 1;">Percentage width (responsive):</text>
+    <img src="media/melker-128.png" width="100%" height="10" />
+    <text class="caption">width="100%" height="10"</text>
+
+    <img src="media/melker-128.png" width="50%" height="8" />
+    <text class="caption">width="50%" height="8"</text>
+
+    <button title="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
+  </container>
+</melker>

@@ -91,6 +91,7 @@ export interface CanvasProps extends BaseProps {
   backgroundColor?: string;          // Background color
   charAspectRatio?: number;          // Terminal char width/height ratio (default: 0.5)
   src?: string;                      // Image source path (loads and displays image)
+  objectFit?: 'contain' | 'fill' | 'cover';  // How image fits: contain (default), fill (stretch), cover (crop)
   dither?: DitherMode | boolean;     // Dithering mode for images (e.g., 'sierra-stable' for B&W themes)
   ditherBits?: number;               // Bits per channel for dithering (1-8, default: 1 for B&W)
   logo?: boolean;                    // Enable animated Melker logo
@@ -676,22 +677,43 @@ export class CanvasElement extends Element implements Renderable {
     const bufW = this._bufferWidth;
     const bufH = this._bufferHeight;
 
-    // Calculate scaling to fit while maintaining aspect ratio
-    // Account for pixel aspect ratio (terminal chars are taller than wide)
+    // Calculate scaling based on objectFit mode
     const pixelAspect = this.getPixelAspectRatio();
     const visualBufW = bufW * pixelAspect;
+    const objectFit = this.props.objectFit ?? 'contain';
 
-    const scaleX = visualBufW / img.width;
-    const scaleY = bufH / img.height;
-    const scale = Math.min(scaleX, scaleY);
+    let scaledW: number;
+    let scaledH: number;
+    let offsetX: number;
+    let offsetY: number;
 
-    // Calculate scaled dimensions
-    const scaledW = Math.floor(img.width * scale / pixelAspect);
-    const scaledH = Math.floor(img.height * scale);
-
-    // Calculate offset to center the image
-    const offsetX = Math.floor((bufW - scaledW) / 2);
-    const offsetY = Math.floor((bufH - scaledH) / 2);
+    if (objectFit === 'fill') {
+      // Stretch to fill entire buffer (may distort aspect ratio)
+      scaledW = bufW;
+      scaledH = bufH;
+      offsetX = 0;
+      offsetY = 0;
+    } else if (objectFit === 'cover') {
+      // Scale to cover entire buffer, cropping if needed
+      const scaleX = visualBufW / img.width;
+      const scaleY = bufH / img.height;
+      const scale = Math.max(scaleX, scaleY);
+      scaledW = Math.floor(img.width * scale / pixelAspect);
+      scaledH = Math.floor(img.height * scale);
+      // Center the crop
+      offsetX = Math.floor((bufW - scaledW) / 2);
+      offsetY = Math.floor((bufH - scaledH) / 2);
+    } else {
+      // 'contain' - fit while maintaining aspect ratio, center
+      const scaleX = visualBufW / img.width;
+      const scaleY = bufH / img.height;
+      const scale = Math.min(scaleX, scaleY);
+      scaledW = Math.floor(img.width * scale / pixelAspect);
+      scaledH = Math.floor(img.height * scale);
+      // Center the image
+      offsetX = Math.floor((bufW - scaledW) / 2);
+      offsetY = Math.floor((bufH - scaledH) / 2);
+    }
 
     // Clear the image background buffer (not the drawing layer)
     this._imageColorBuffer.fill(TRANSPARENT);
@@ -731,25 +753,45 @@ export class CanvasElement extends Element implements Renderable {
       applySierraStableDither(scaledData, scaledW, scaledH, bits);
     }
 
+    // Get background color for alpha blending (default to black if not specified)
+    let bgR = 0, bgG = 0, bgB = 0;
+    const bgColorProp = this.props.backgroundColor;
+    if (bgColorProp) {
+      const bg = unpackRGBA(cssToRgba(bgColorProp));
+      bgR = bg.r;
+      bgG = bg.g;
+      bgB = bg.b;
+    }
+
     // Render the scaled (and possibly dithered) image to the buffer
     for (let y = 0; y < scaledH; y++) {
       for (let x = 0; x < scaledW; x++) {
         const srcIdx = (y * scaledW + x) * 4;
-        const r = scaledData[srcIdx];
-        const g = scaledData[srcIdx + 1];
-        const b = scaledData[srcIdx + 2];
+        let r = scaledData[srcIdx];
+        let g = scaledData[srcIdx + 1];
+        let b = scaledData[srcIdx + 2];
         const a = scaledData[srcIdx + 3];
 
-        // Skip fully transparent pixels
+        // Skip fully transparent pixels (alpha < 128)
         if (a < 128) continue;
 
-        // Set the pixel in the image background buffer
+        // Pre-blend semi-transparent pixels with background color
+        // (Terminal cells can't do true alpha blending)
+        if (a < 255) {
+          const alpha = a / 255;
+          const invAlpha = 1 - alpha;
+          r = Math.round(r * alpha + bgR * invAlpha);
+          g = Math.round(g * alpha + bgG * invAlpha);
+          b = Math.round(b * alpha + bgB * invAlpha);
+        }
+
+        // Set the pixel in the image background buffer (now fully opaque)
         const bufX = offsetX + x;
         const bufY = offsetY + y;
 
         if (bufX >= 0 && bufX < bufW && bufY >= 0 && bufY < bufH) {
           const index = bufY * bufW + bufX;
-          this._imageColorBuffer[index] = packRGBA(r, g, b, a);
+          this._imageColorBuffer[index] = packRGBA(r, g, b, 255);
         }
       }
     }
@@ -1453,7 +1495,7 @@ export class CanvasElement extends Element implements Renderable {
         // Drawing layer takes priority
         color = drawingColor;
       } else if (imageColor !== TRANSPARENT) {
-        // Fall back to image layer
+        // Fall back to image layer (already pre-blended for alpha)
         color = imageColor;
       } else {
         // Transparent - use background or fully transparent

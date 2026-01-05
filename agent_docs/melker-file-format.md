@@ -67,6 +67,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<tabs>` | id, activeTab, onTabChange | Tabbed container |
 | `<tab>` | title, disabled | Tab panel (child of tabs) |
 | `<canvas>` | width, height, dither, ditherBits, onPaint | Pixel graphics (sextant chars) |
+| `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError | Image display (extends canvas) |
 | `<markdown>` | | Markdown text rendering |
 
 ## Styling
@@ -195,6 +196,7 @@ See `examples/melker/` for complete examples:
 - `canvas_test.melker` - Canvas graphics
 - `analog-clock.melker` - Canvas-based analog clock
 - `color_selector.melker` - HSL color picker with canvas
+- `image_demo.melker` - Image component with fixed and percentage dimensions
 - `markdown_viewer.melker` - Markdown rendering
 
 ## Running

@@ -11,6 +11,7 @@ export * from './dialog.ts';
 export * from './file-browser.ts';
 export * from './markdown.ts';
 export * from './canvas.ts';
+export * from './img.ts';
 export * from './video.ts';
 export * from './progress.ts';
 export * from './list.ts';

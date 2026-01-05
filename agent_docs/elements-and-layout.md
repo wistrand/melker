@@ -380,6 +380,59 @@ progress.getValue();             // Get current value
 progress.setIndeterminate(true); // Enable/disable indeterminate mode
 ```
 
+## Image Component
+
+The `<img>` component displays images in the terminal using sextant characters (2x3 pixels per cell).
+
+### Usage
+
+```xml
+<!-- Fixed dimensions -->
+<img src="media/image.png" width="30" height="15" />
+
+<!-- Percentage dimensions (responsive) -->
+<img src="media/image.png" width="100%" height="10" />
+
+<!-- With object-fit mode -->
+<img src="media/image.png" width="40" height="20" objectFit="contain" />
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `src` | string | - | Image source path (required) |
+| `alt` | string | - | Alternative text for accessibility |
+| `width` | number \| string | 30 | Width in columns or percentage (e.g., "50%") |
+| `height` | number \| string | 15 | Height in rows or percentage (e.g., "50%") |
+| `objectFit` | string | 'fill' | How image fits: 'contain' (preserve aspect), 'fill' (stretch), 'cover' (crop) |
+| `dither` | string | 'auto' | Dithering mode for limited-color themes |
+| `ditherBits` | number | - | Color depth for dithering (1-8) |
+| `onLoad` | function | - | Called when image loads successfully |
+| `onError` | function | - | Called when image fails to load |
+
+### Behavior
+
+- Extends `CanvasElement` - inherits all canvas rendering capabilities
+- Supports percentage dimensions for responsive sizing (recalculates on container resize)
+- Pre-blends semi-transparent pixels with black background during image load
+- `objectFit: 'fill'` stretches to fill dimensions (default, like HTML img)
+- `objectFit: 'contain'` preserves aspect ratio within bounds
+- `objectFit: 'cover'` fills dimensions, cropping as needed
+- `dither: 'auto'` applies appropriate dithering based on theme (sierra-stable for B&W/color, none for fullcolor)
+- Fixed-dimension images use `flexShrink: 0` to prevent layout compression
+- Percentage-dimension images are responsive and shrink with container
+
+### Path Resolution
+
+- Absolute paths (starting with `/`) are used as-is
+- HTTP/HTTPS URLs are fetched directly
+- Relative paths are resolved from the .melker file's directory
+
+### Implementation
+
+Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an HTML-like API for image display.
+
 ## Rendering Pipeline
 
 1. **Layout calculation** → LayoutNode tree

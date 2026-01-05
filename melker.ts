@@ -191,6 +191,7 @@ import { ContainerElement } from './src/components/container.ts';
 import { DialogElement } from './src/components/dialog.ts';
 import { MarkdownElement } from './src/components/markdown.ts';
 import { CanvasElement } from './src/components/canvas.ts';
+import { ImgElement } from './src/components/img.ts';
 import { VideoElement } from './src/components/video.ts';
 import { ListElement } from './src/components/list.ts';
 import { LiElement } from './src/components/li.ts';
@@ -318,6 +319,16 @@ registerComponent({
     disabled: false,
   },
   validate: (props) => CanvasElement.validate(props as any),
+});
+
+registerComponent({
+  type: 'img',
+  componentClass: ImgElement,
+  defaultProps: {
+    width: 30,
+    height: 15,
+    disabled: false,
+  },
 });
 
 registerComponent({

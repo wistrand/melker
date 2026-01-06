@@ -39,7 +39,7 @@ Comprehensive comparison of terminal UI libraries across languages.
 | Video playback | Y | - | - | - | - | - | - | - |
 | Pixel canvas | Y | - | - | - | - | ~ | - | Y |
 | Literate UI (.md) | Y | - | - | - | - | - | - | - |
-| Command palette | - | - | - | - | - | Y | - | - |
+| Command palette | Y | - | - | - | - | Y | - | - |
 | No_std/embedded | - | - | - | - | - | - | Y | - |
 | SSH/network serve | - | - | - | Y | - | Y | - | - |
 | Debug/remote inspect | Y | Y | - | - | - | Y | - | - |
@@ -191,7 +191,7 @@ text("Hello") | border | color(Color::Cyan)
 | Stars | New | 34k | 12k | 38k | 13k | 33k | 17k | 9k |
 | Paradigm | Declarative | React | Imperative | Elm/MVU | Imperative | Async | Immediate | Functional |
 | Build step | None | Required | None | Required | Required | None | Required | Required |
-| Widgets | 24+ | ~10 | 27+ | Via Bubbles | 15+ | 30+ | Via crates | 10+ |
+| Widgets | 30+ | ~10 | 27+ | Via Bubbles | 15+ | 30+ | Via crates | 10+ |
 | Maintained | Y | Y | Dormant | Y | Y | Y | Y | Y |
 | Used by | - | Gatsby, Yarn | - | GitHub, NVIDIA | gh CLI | Posting | gitui | - |
 
@@ -215,7 +215,9 @@ text("Hello") | border | color(Color::Cyan)
 | Textarea       |   Y    |  -  |    Y     |      Y      |   Y    |    Y    |   Y*    |   -    |
 | Checkbox       |   Y    |  -  |    Y     |      -      |   Y    |    Y    |   Y*    |   Y    |
 | Radio          |   Y    |  -  |    Y     |      -      |   -    |    Y    |    -    |   Y    |
-| Select/Dropdown |   -    |  Y  |    -     |      -      |   Y    |    Y    |    -    |   Y    |
+| Select/Dropdown |   Y    |  Y  |    -     |      -      |   Y    |    Y    |    -    |   Y    |
+| Combobox        |   Y    |  -  |    -     |      -      |   -    |    -    |    -    |   -    |
+| Autocomplete    |   Y    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
 | Slider         |   -    |  -  |    -     |      -      |   -    |    -    |    -    |   Y    |
 | Masked input   |   -    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
 | **Data**       |        |     |          |             |        |         |         |        |
@@ -249,7 +251,7 @@ text("Hello") | border | color(Color::Cyan)
 
 Y = Built-in, Y* = Via extension/crate (or canvas for Melker), ~ = Partial/limited, - = Not available
 
-**Melker gaps (high priority):** Tree, Select/Dropdown, Spinner
+**Melker gaps (high priority):** Tree, Spinner
 
 ## Architecture Patterns
 

@@ -391,9 +391,21 @@ ${script.code.split('\n').map(l => '  ' + l).join('\n')}
         description: `${handler.attributeName} handler at line ${originalLine}`,
       });
 
-      // Wrap handler code - if it's a simple expression, make it a statement
+      // Wrap handler code - add return for simple expressions
       const code = handler.code.trim();
-      addLine(`  ${code}`);
+      // If it's a simple expression (no semicolons, not a statement keyword), return its value
+      const isSimpleExpression = !code.includes(';') &&
+        !code.startsWith('if ') && !code.startsWith('if(') &&
+        !code.startsWith('for ') && !code.startsWith('for(') &&
+        !code.startsWith('while ') && !code.startsWith('while(') &&
+        !code.startsWith('return ') && !code.startsWith('return;') &&
+        !code.startsWith('throw ') &&
+        !code.startsWith('let ') && !code.startsWith('const ') && !code.startsWith('var ');
+      if (isSimpleExpression) {
+        addLine(`  return ${code};`);
+      } else {
+        addLine(`  ${code}`);
+      }
 
       addLine('}');
       addLine('');

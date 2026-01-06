@@ -1,0 +1,94 @@
+<melker>
+  <script>
+    $app.setCountry = (value, label) => {
+      const el = $melker.getElementById('selectedCountry');
+      if (el) el.props.text = 'Selected: ' + label;
+    };
+
+    $app.runCommand = (value, label) => {
+      const el = $melker.getElementById('selectedCommand');
+      if (el) el.props.text = 'Last command: ' + label;
+      alert('Executed: ' + label);
+    };
+  </script>
+
+  <style>
+    container {
+      padding: 1;
+      gap: 1;
+    }
+    .header {
+      bold: true;
+      color: cyan;
+    }
+    .selected {
+      color: green;
+    }
+  </style>
+
+  <container direction="column">
+    <text class="header">Combobox Demo</text>
+
+    <container direction="row" gap="2">
+      <text>Country:</text>
+      <combobox
+        placeholder="Select a country..."
+        onSelect="$app.setCountry(event.value, event.label)"
+        filter="fuzzy"
+      >
+        <group label="North America">
+          <option value="us">United States</option>
+          <option value="ca">Canada</option>
+          <option value="mx">Mexico</option>
+        </group>
+        <group label="Europe">
+          <option value="uk">United Kingdom</option>
+          <option value="de">Germany</option>
+          <option value="fr">France</option>
+          <option value="es">Spain</option>
+          <option value="it">Italy</option>
+        </group>
+        <group label="Asia">
+          <option value="jp">Japan</option>
+          <option value="cn">China</option>
+          <option value="kr">South Korea</option>
+          <option value="in">India</option>
+        </group>
+      </combobox>
+    </container>
+
+    <text id="selectedCountry" class="selected">Selected: (none)</text>
+
+    <text class="header">Command Palette Style</text>
+
+    <combobox
+      placeholder="Type a command..."
+      onSelect="$app.runCommand(event.value, event.label)"
+      filter="fuzzy"
+      maxVisible="6"
+    >
+      <group label="File">
+        <option value="file.new" shortcut="Ctrl+N">New File</option>
+        <option value="file.open" shortcut="Ctrl+O">Open File</option>
+        <option value="file.save" shortcut="Ctrl+S">Save</option>
+        <option value="file.saveAs" shortcut="Ctrl+Shift+S">Save As...</option>
+      </group>
+      <group label="Edit">
+        <option value="edit.undo" shortcut="Ctrl+Z">Undo</option>
+        <option value="edit.redo" shortcut="Ctrl+Y">Redo</option>
+        <option value="edit.cut" shortcut="Ctrl+X">Cut</option>
+        <option value="edit.copy" shortcut="Ctrl+C">Copy</option>
+        <option value="edit.paste" shortcut="Ctrl+V">Paste</option>
+      </group>
+      <group label="View">
+        <option value="view.zoomIn" shortcut="Ctrl++">Zoom In</option>
+        <option value="view.zoomOut" shortcut="Ctrl+-">Zoom Out</option>
+        <option value="view.fullscreen" shortcut="F11">Toggle Fullscreen</option>
+      </group>
+    </combobox>
+
+    <text id="selectedCommand" class="selected">Last command: (none)</text>
+
+    <text>Try typing to filter options. Use arrow keys to navigate, Enter to select.</text>
+  </container>
+</melker>

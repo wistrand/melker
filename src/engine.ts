@@ -604,6 +604,35 @@ export class MelkerEngine {
         return;
       }
 
+      // Handle open command palettes - they capture all keyboard input when open
+      const openCommandPalette = this._findOpenCommandPalette() as any;
+      if (openCommandPalette) {
+        // Escape closes the palette
+        if (event.key === 'Escape') {
+          openCommandPalette.close();
+          this.render();
+          return;
+        }
+
+        // Route all keyboard events to the open command palette
+        if (typeof openCommandPalette.onKeyPress === 'function') {
+          const keyPressEvent = createKeyPressEvent(event.key, {
+            code: event.code,
+            ctrlKey: event.ctrlKey,
+            altKey: event.altKey,
+            shiftKey: event.shiftKey,
+            metaKey: event.metaKey,
+            target: openCommandPalette.id,
+          });
+
+          const handled = openCommandPalette.onKeyPress(keyPressEvent);
+          if (handled && this._options.autoRender) {
+            this.render();
+          }
+          return;
+        }
+      }
+
       // Handle F7 specially for voice input
       if (['f7', 'F7'].includes(event.key)) {
         this._logger?.info('F7 pressed - voice input mode');
@@ -666,6 +695,24 @@ export class MelkerEngine {
             if (handled && this._options.autoRender) {
               this._debouncedInputRender();
             }
+          }
+        }
+        // Route to components that handle their own keyboard events (filterable lists, etc.)
+        else if (typeof (focusedElement as any).handlesOwnKeyboard === 'function' && (focusedElement as any).handlesOwnKeyboard() && typeof (focusedElement as any).onKeyPress === 'function') {
+          const keyPressEvent = createKeyPressEvent(event.key, {
+            code: event.code,
+            ctrlKey: event.ctrlKey,
+            altKey: event.altKey,
+            shiftKey: event.shiftKey,
+            metaKey: event.metaKey,
+            target: focusedElement.id,
+          });
+
+          const handled = (focusedElement as any).onKeyPress(keyPressEvent);
+
+          // Auto-render if the event was handled
+          if (handled && this._options.autoRender) {
+            this.render();
           }
         }
         // Handle Enter key on focused buttons
@@ -1802,6 +1849,28 @@ export class MelkerEngine {
   // Theme management
   getThemeManager(): ThemeManager {
     return this._themeManager;
+  }
+
+  /**
+   * Find an open command palette in the element tree
+   */
+  private _findOpenCommandPalette(): Element | null {
+    if (!this._document) return null;
+
+    const findInTree = (element: Element): Element | null => {
+      if (element.type === 'command-palette' && element.props.open === true) {
+        return element;
+      }
+      if (element.children) {
+        for (const child of element.children) {
+          const found = findInTree(child);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return findInTree(this._rootElement);
   }
 }
 

@@ -1,0 +1,19 @@
+<melker>
+  <container direction="column" padding="1" gap="1">
+    <text>Select Test</text>
+
+    <select id="mySelect" placeholder="Choose..." open="true">
+      <group label="Fruits">
+        <option value="apple">Apple</option>
+        <option value="banana">Banana</option>
+        <option value="cherry">Cherry</option>
+      </group>
+      <group label="Vegetables">
+        <option value="carrot">Carrot</option>
+        <option value="spinach">Spinach</option>
+      </group>
+    </select>
+
+    <text>Press arrows to navigate, Enter to select</text>
+  </container>
+</melker>

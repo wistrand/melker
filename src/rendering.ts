@@ -1,7 +1,7 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType } from './types.ts';
+import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, type Overlay } from './types.ts';
 import { clipBounds } from './geometry.ts';
 import { DualBuffer, TerminalBuffer, Cell } from './buffer.ts';
 import { ClippedDualBuffer } from './clipped-buffer.ts';
@@ -36,6 +36,8 @@ export interface RenderContext {
   elementViewport?: Viewport;
   // Scroll offset from parent scrollable container (for click coordinate translation)
   scrollOffset?: { x: number; y: number };
+  // Overlay collection for dropdown menus, tooltips, etc.
+  overlays?: Overlay[];
 }
 
 export interface LayoutNode {
@@ -117,10 +119,16 @@ export class RenderingEngine {
     this._document = document;
   }
 
+  // Collected overlays for the current render pass
+  private _overlays: Overlay[] = [];
+
   // Main render method that takes an element tree and renders to a buffer
   render(element: Element, buffer: DualBuffer, viewport: Bounds, focusedElementId?: string, textSelection?: TextSelection, hoveredElementId?: string, requestRender?: () => void): LayoutNode {
     // Clear scrollbar bounds for fresh render
     this._scrollbarBounds.clear();
+
+    // Clear overlays for fresh render
+    this._overlays = [];
 
     const context: RenderContext = {
       buffer,
@@ -130,6 +138,7 @@ export class RenderingEngine {
       textSelection,
       requestRender,
       viewportManager: this._viewportManager,
+      overlays: this._overlays,
     };
 
     // Use advanced layout engine
@@ -151,6 +160,9 @@ export class RenderingEngine {
 
     // Render normal content first
     this._renderNode(layoutTree, context);
+
+    // Render overlays (dropdowns, tooltips) after normal content but before modals
+    this._renderOverlays(buffer, viewport);
 
     // Apply low-contrast effect if there's a modal without backdrop (fullcolor theme only)
     const themeManager = getThemeManager();
@@ -1050,14 +1062,19 @@ export class RenderingEngine {
         hoveredElementId: context.hoveredElementId,
         requestRender: context.requestRender,
         scrollOffset: context.scrollOffset, // Pass scroll offset for click translation
+        viewport: context.viewport, // Full viewport for modal overlays
         // Allow components to register their scrollbar bounds for scroll-handler integration
         registerScrollbarBounds: (elementId: string, scrollbarBounds: ScrollbarBounds) => {
           this._scrollbarBounds.set(elementId, scrollbarBounds);
         },
+        // Allow components to register overlays (dropdowns, tooltips)
+        registerOverlay: (overlay: Overlay) => {
+          this._overlays.push(overlay);
+        },
       };
-      // Pass the overlays array from context if it exists
-      if ((context as any).overlays) {
-        (componentContext as any).overlays = (context as any).overlays;
+      // Pass the overlays array from context if it exists (for read access)
+      if (context.overlays) {
+        componentContext.overlays = context.overlays;
       }
       // Pass the actual buffer, components will handle clipping through the buffer interface
       // Wrap in try/catch for error boundary
@@ -1498,6 +1515,41 @@ export class RenderingEngine {
         this._renderNode(childLayoutNode, childContext);
       }
     }
+  }
+
+  // Render overlays (dropdowns, tooltips, etc.) on top of normal content
+  private _renderOverlays(buffer: DualBuffer, viewport: Bounds): void {
+    if (this._overlays.length === 0) return;
+
+    // Sort overlays by z-index (lower z-index rendered first, higher on top)
+    const sortedOverlays = [...this._overlays].sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const overlay of sortedOverlays) {
+      // Clip overlay bounds to viewport
+      const clippedBounds: Bounds = {
+        x: Math.max(overlay.bounds.x, viewport.x),
+        y: Math.max(overlay.bounds.y, viewport.y),
+        width: Math.min(overlay.bounds.x + overlay.bounds.width, viewport.x + viewport.width) - Math.max(overlay.bounds.x, viewport.x),
+        height: Math.min(overlay.bounds.y + overlay.bounds.height, viewport.y + viewport.height) - Math.max(overlay.bounds.y, viewport.y),
+      };
+
+      // Skip if overlay is completely outside viewport
+      if (clippedBounds.width <= 0 || clippedBounds.height <= 0) continue;
+
+      // Call the overlay's render function with the original bounds
+      // The render function is responsible for its own content
+      overlay.render(buffer, overlay.bounds, {});
+    }
+  }
+
+  // Get collected overlays for hit testing
+  getOverlays(): Overlay[] {
+    return this._overlays;
+  }
+
+  // Register an overlay (used by components during render)
+  registerOverlay(overlay: Overlay): void {
+    this._overlays.push(overlay);
   }
 
   // Collect all modal dialogs from the element tree

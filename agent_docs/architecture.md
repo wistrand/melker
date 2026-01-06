@@ -79,6 +79,7 @@
 | `src/scroll-handler.ts` | Scroll handling, scrollbar interaction |
 | `src/text-selection-handler.ts` | Text selection and drag handling |
 | `src/error-boundary.ts` | Error handling, rate limiting, error overlay |
+| `src/performance-dialog.ts` | Live performance stats dialog (Ctrl+Shift+P) |
 
 **Filterable List Components (`src/components/filterable-list/`):**
 | File | Purpose |

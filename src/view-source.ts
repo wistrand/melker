@@ -6,6 +6,7 @@ import { melker } from './template.ts';
 import { Element } from './types.ts';
 import { FocusManager } from './focus.ts';
 import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy } from './policy/mod.ts';
+import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 
 export interface ViewSourceDependencies {
   document: Document;
@@ -126,6 +127,11 @@ export class ViewSourceManager {
         this._deps.exit();
       }
     };
+    const onPerformance = () => {
+      this.close();
+      getGlobalPerformanceDialog().show();
+      this._deps.render();
+    };
 
     const scrollStyle = { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' };
 
@@ -202,7 +208,8 @@ export class ViewSourceManager {
     // Tab 5: Actions
     tabs.push(melker`
       <tab id="view-source-tab-actions" title="Actions">
-        <container id="view-source-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill' }}>
+        <container id="view-source-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <button id="view-source-action-perf" title="Performance Monitor" onClick=${onPerformance} />
           <button id="view-source-action-exit" title="Exit Application" onClick=${onExit} />
         </container>
       </tab>

@@ -744,9 +744,10 @@ export class LayoutEngine {
       // Single line nowrap - align-content has no effect
       linePositions = [0];
       // Only use container's cross size if it's explicitly set, otherwise use calculated size
+      // 'fill' counts as explicit because the container is constrained to available space
       const hasExplicitCrossSize = isRow
-        ? (typeof parentNode.layoutProps.height === 'number')
-        : (typeof parentNode.layoutProps.width === 'number');
+        ? (typeof parentNode.layoutProps.height === 'number' || parentNode.layoutProps.height === 'fill')
+        : (typeof parentNode.layoutProps.width === 'number' || parentNode.layoutProps.width === 'fill');
       if (hasExplicitCrossSize) {
         flexLines[0].crossSize = crossAxisSize;
       }

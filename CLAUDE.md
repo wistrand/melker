@@ -44,6 +44,8 @@ deno task check        # Type check
 
 ```
 melker.ts             - Main entry point, exports
+melker-launcher.ts    - Minimal launcher for policy enforcement and subprocess spawning
+melker-runner.ts      - .melker file runner (bundling, engine, app execution)
 src/
   engine.ts           - Main engine, lifecycle, events
   layout.ts           - Flexbox layout calculations
@@ -72,7 +74,7 @@ src/
   view-source.ts      - F12 View Source overlay
   stats-overlay.ts    - Performance stats overlay
   char-width.ts       - Character width utilities
-  melker-main.ts      - .melker file runner (supports file paths and URLs)
+  error-boundary.ts   - Error handling, rate limiting, error overlay
   lint.ts             - Lint mode validation, schemas
   lsp.ts              - Language Server Protocol for .melker files
   oauth.ts            - OAuth utilities
@@ -111,6 +113,16 @@ src/
     progress.ts       - Progress bar (extends Canvas)
     markdown.ts       - Markdown rendering
     color-utils.ts    - RGBA color utilities
+    filterable-list/  - Filterable list components
+      mod.ts          - Module exports
+      core.ts         - FilterableListCore base class
+      filter.ts       - Fuzzy/prefix/contains/exact algorithms
+      option.ts       - OptionElement
+      group.ts        - GroupElement
+      combobox.ts     - ComboboxElement
+      select.ts       - SelectElement
+      autocomplete.ts - AutocompleteElement
+      command-palette.ts - CommandPaletteElement
   video/              - Video processing
     mod.ts            - Video exports
     ffmpeg.ts         - FFmpeg integration

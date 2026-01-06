@@ -210,7 +210,7 @@ engine.setSource(sourceContent, '/path/to/file.melker', 'melker');
 engine.setSource(mdContent, '/path/to/file.md', 'md', convertedMelkerContent);
 ```
 
-The `melker-main.ts` runner automatically enables this for `.melker` and `.md` files.
+The `melker-runner.ts` runner automatically enables this for `.melker` and `.md` files.
 
 ### Implementation
 

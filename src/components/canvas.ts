@@ -2081,9 +2081,11 @@ export class CanvasElement extends Element implements Renderable {
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const style = this.props.style || {};
+    // Return 0 as fallback when width/height not explicitly set
+    // This allows flexbox stretch alignment to work correctly
     return {
-      width: style.width === 'fill' ? context.availableSpace.width : this.props.width,
-      height: style.height === 'fill' ? context.availableSpace.height : this.props.height
+      width: style.width === 'fill' ? context.availableSpace.width : (this.props.width ?? 0),
+      height: style.height === 'fill' ? context.availableSpace.height : (this.props.height ?? 0)
     };
   }
 

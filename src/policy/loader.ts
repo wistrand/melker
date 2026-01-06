@@ -210,7 +210,7 @@ async function fetchWellknownHosts(wellknownUrl: string): Promise<string[]> {
 }
 
 /**
- * Load .env files from app directory (same as melker-main.ts)
+ * Load .env files from app directory (same as melker-runner.ts)
  */
 function loadDotenvFiles(appPath: string): void {
   const appDir = dirname(appPath);

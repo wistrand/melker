@@ -30,6 +30,10 @@
 | Table Row | `src/components/table-row.ts` | tr element |
 | Table Cell | `src/components/table-cell.ts` | td/th elements |
 | Progress | `src/components/progress.ts` | Progress bar (extends Canvas) |
+| Combobox | `src/components/filterable-list/combobox.ts` | Dropdown with text filter |
+| Select | `src/components/filterable-list/select.ts` | Dropdown picker (no filter) |
+| Autocomplete | `src/components/filterable-list/autocomplete.ts` | Combobox + async search |
+| Command Palette | `src/components/filterable-list/command-palette.ts` | Modal command picker |
 
 **Utilities:**
 - `src/components/mod.ts` - Component exports
@@ -63,7 +67,8 @@
 | `src/debug-server.ts` | WebSocket debug server |
 | `src/headless.ts` | Headless mode for testing |
 | `melker.ts` | Main entry point, exports |
-| `src/melker-main.ts` | .melker file runner (supports URLs) |
+| `melker-launcher.ts` | Minimal launcher for policy enforcement and subprocess spawning |
+| `melker-runner.ts` | .melker file runner (bundling, engine, app execution) |
 | `src/lint.ts` | Lint mode validation, schemas |
 | `src/lsp.ts` | Language Server Protocol for .melker files |
 | `src/terminal-lifecycle.ts` | Terminal setup, cleanup, signal handlers |
@@ -73,6 +78,20 @@
 | `src/hit-test.ts` | Hit testing for mouse events, table parts |
 | `src/scroll-handler.ts` | Scroll handling, scrollbar interaction |
 | `src/text-selection-handler.ts` | Text selection and drag handling |
+| `src/error-boundary.ts` | Error handling, rate limiting, error overlay |
+
+**Filterable List Components (`src/components/filterable-list/`):**
+| File | Purpose |
+|------|---------|
+| `src/components/filterable-list/mod.ts` | Module exports |
+| `src/components/filterable-list/core.ts` | FilterableListCore base class |
+| `src/components/filterable-list/filter.ts` | Fuzzy/prefix/contains/exact algorithms |
+| `src/components/filterable-list/option.ts` | OptionElement (child element) |
+| `src/components/filterable-list/group.ts` | GroupElement (option grouping) |
+| `src/components/filterable-list/combobox.ts` | ComboboxElement |
+| `src/components/filterable-list/select.ts` | SelectElement |
+| `src/components/filterable-list/autocomplete.ts` | AutocompleteElement |
+| `src/components/filterable-list/command-palette.ts` | CommandPaletteElement |
 
 **Policy System (`src/policy/`):**
 | File | Purpose |

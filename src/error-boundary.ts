@@ -24,22 +24,125 @@ export interface ErrorOverlayOptions {
 }
 
 /**
+ * Rate limiting configuration
+ */
+export interface RateLimitConfig {
+  maxErrorsPerWindow: number;  // Max errors before rate limiting kicks in
+  windowMs: number;            // Time window in milliseconds
+  cooldownMs: number;          // How long to suppress after rate limit triggered
+}
+
+const DEFAULT_RATE_LIMIT: RateLimitConfig = {
+  maxErrorsPerWindow: 5,   // 5 errors...
+  windowMs: 1000,          // ...per second...
+  cooldownMs: 2000,        // ...then suppress for 2 seconds
+};
+
+/**
  * Error handler that collects and manages component errors
+ * Includes rate limiting to prevent error floods from blocking input
  */
 export class ErrorHandler {
   private _errors: ComponentError[] = [];
   private _maxErrors: number;
   private _onError?: (error: ComponentError) => void;
 
-  constructor(options: { maxErrors?: number; onError?: (error: ComponentError) => void } = {}) {
+  // Rate limiting state per component (keyed by elementId or elementType)
+  private _errorTimestamps: Map<string, number[]> = new Map();
+  private _rateLimited: Map<string, number> = new Map(); // key -> cooldown end time
+  private _rateLimitConfig: RateLimitConfig;
+  private _suppressedCount: Map<string, number> = new Map();
+
+  constructor(options: {
+    maxErrors?: number;
+    onError?: (error: ComponentError) => void;
+    rateLimit?: Partial<RateLimitConfig>;
+  } = {}) {
     this._maxErrors = options.maxErrors ?? 10;
     this._onError = options.onError;
+    this._rateLimitConfig = { ...DEFAULT_RATE_LIMIT, ...options.rateLimit };
+  }
+
+  /**
+   * Get component key for rate limiting (prefer id, fallback to type)
+   */
+  private _getComponentKey(element: Element): string {
+    return element.id || `type:${element.type}`;
+  }
+
+  /**
+   * Check if a component is currently rate limited
+   */
+  isRateLimited(element: Element): boolean {
+    const key = this._getComponentKey(element);
+    const cooldownEnd = this._rateLimited.get(key);
+    if (cooldownEnd && Date.now() < cooldownEnd) {
+      return true;
+    }
+    // Cooldown expired, remove from map
+    if (cooldownEnd) {
+      this._rateLimited.delete(key);
+      // Log summary of suppressed errors
+      const suppressed = this._suppressedCount.get(key) || 0;
+      if (suppressed > 0) {
+        logger.warn(`Rate limit lifted for ${key}, suppressed ${suppressed} errors`);
+        this._suppressedCount.delete(key);
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if error should be rate limited and update tracking
+   * Returns true if error should be suppressed
+   */
+  private _shouldRateLimit(element: Element): boolean {
+    const key = this._getComponentKey(element);
+    const now = Date.now();
+    const config = this._rateLimitConfig;
+
+    // Already rate limited?
+    if (this.isRateLimited(element)) {
+      // Track suppressed count
+      this._suppressedCount.set(key, (this._suppressedCount.get(key) || 0) + 1);
+      return true;
+    }
+
+    // Get or create timestamp array for this component
+    let timestamps = this._errorTimestamps.get(key);
+    if (!timestamps) {
+      timestamps = [];
+      this._errorTimestamps.set(key, timestamps);
+    }
+
+    // Add current timestamp and filter out old ones
+    timestamps.push(now);
+    const windowStart = now - config.windowMs;
+    const recentTimestamps = timestamps.filter(t => t > windowStart);
+    this._errorTimestamps.set(key, recentTimestamps);
+
+    // Check if we've exceeded the threshold
+    if (recentTimestamps.length > config.maxErrorsPerWindow) {
+      // Trigger rate limiting
+      this._rateLimited.set(key, now + config.cooldownMs);
+      this._suppressedCount.set(key, 0);
+      logger.warn(`Rate limiting errors for ${key}: ${recentTimestamps.length} errors in ${config.windowMs}ms`);
+      return false; // Let this last error through, then suppress
+    }
+
+    return false;
   }
 
   /**
    * Record a component error
+   * Returns false if error was rate-limited (suppressed)
    */
-  captureError(element: Element, error: Error, bounds?: Bounds): void {
+  captureError(element: Element, error: Error, bounds?: Bounds): boolean {
+    // Check rate limiting first
+    if (this._shouldRateLimit(element)) {
+      return false; // Error suppressed
+    }
+
     const componentError: ComponentError = {
       elementId: element.id,
       elementType: element.type,
@@ -61,6 +164,45 @@ export class ErrorHandler {
     }
 
     this._onError?.(componentError);
+    return true;
+  }
+
+  /**
+   * Get suppressed error count for a component
+   */
+  getSuppressedCount(element: Element): number {
+    return this._suppressedCount.get(this._getComponentKey(element)) || 0;
+  }
+
+  /**
+   * Clear rate limiting state (e.g., after user acknowledges errors)
+   */
+  clearRateLimits(): void {
+    this._rateLimited.clear();
+    this._errorTimestamps.clear();
+    this._suppressedCount.clear();
+  }
+
+  /**
+   * Get total suppressed error count across all components
+   */
+  getTotalSuppressedCount(): number {
+    let total = 0;
+    for (const count of this._suppressedCount.values()) {
+      total += count;
+    }
+    return total;
+  }
+
+  /**
+   * Check if any component is currently rate limited
+   */
+  hasRateLimitedComponents(): boolean {
+    const now = Date.now();
+    for (const cooldownEnd of this._rateLimited.values()) {
+      if (now < cooldownEnd) return true;
+    }
+    return false;
   }
 
   /**
@@ -161,7 +303,15 @@ export class ErrorOverlay {
   private _formatErrors(errors: ComponentError[]): string[] {
     const lines: string[] = [];
 
-    lines.push(`[!] ${errors.length} error${errors.length > 1 ? 's' : ''}`);
+    // Check for rate limiting status
+    const suppressed = this._errorHandler.getTotalSuppressedCount();
+    const isRateLimited = this._errorHandler.hasRateLimitedComponents();
+
+    if (isRateLimited && suppressed > 0) {
+      lines.push(`[!] ${errors.length} error${errors.length > 1 ? 's' : ''} (+${suppressed} suppressed)`);
+    } else {
+      lines.push(`[!] ${errors.length} error${errors.length > 1 ? 's' : ''}`);
+    }
 
     for (const err of errors) {
       const age = Math.floor((Date.now() - err.timestamp) / 1000);

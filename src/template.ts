@@ -1072,7 +1072,7 @@ export async function parseMelkerForBundler(
   return {
     sourceUrl,
     originalContent: content,
-    resolvedContent: content, // ${} substitution happens in melker-main.ts
+    resolvedContent: content, // ${} substitution happens in melker-runner.ts
     scripts,
     handlers,
     template,

@@ -46,12 +46,6 @@ export interface ColorPalette {
   modalBackground: TerminalColor;
   modalForeground: TerminalColor;
 
-  // Menu bar colors
-  menuBarBackground: TerminalColor;
-  menuBarText: TerminalColor;
-  menuBarItemSelected: TerminalColor;
-  menuBarItemSelectedText: TerminalColor;
-
   // Scrollbar colors
   scrollbarThumb: TerminalColor;
   scrollbarTrack: TerminalColor;
@@ -99,11 +93,6 @@ const BW_STD_PALETTE: ColorPalette = {
   modalBackground: 'black',
   modalForeground: 'white',
 
-  menuBarBackground: 'black',
-  menuBarText: 'white',
-  menuBarItemSelected: 'white',
-  menuBarItemSelectedText: 'black',
-
   scrollbarThumb: 'white',
   scrollbarTrack: 'brightBlack',
 };
@@ -141,11 +130,6 @@ const BW_DARK_PALETTE: ColorPalette = {
   sidebarForeground: 'black',
   modalBackground: 'white',
   modalForeground: 'black',
-
-  menuBarBackground: 'white',
-  menuBarText: 'black',
-  menuBarItemSelected: 'black',
-  menuBarItemSelectedText: 'white',
 
   scrollbarThumb: 'black',
   scrollbarTrack: 'gray',
@@ -187,11 +171,6 @@ const GRAY_STD_PALETTE: ColorPalette = {
   modalBackground: 'gray',
   modalForeground: 'black',
 
-  menuBarBackground: 'gray',
-  menuBarText: 'black',
-  menuBarItemSelected: 'black',
-  menuBarItemSelectedText: 'white',
-
   scrollbarThumb: 'black',
   scrollbarTrack: 'gray',
 };
@@ -230,11 +209,6 @@ const GRAY_DARK_PALETTE: ColorPalette = {
   sidebarForeground: 'gray',
   modalBackground: 'brightBlack',
   modalForeground: 'white',
-
-  menuBarBackground: 'brightBlack',
-  menuBarText: 'white',
-  menuBarItemSelected: 'white',
-  menuBarItemSelectedText: 'black',
 
   scrollbarThumb: 'white',
   scrollbarTrack: 'brightBlack',
@@ -275,11 +249,6 @@ const COLOR_STD_PALETTE: ColorPalette = {
   modalBackground: 'brightBlue',
   modalForeground: 'black',
 
-  menuBarBackground: 'brightBlue',
-  menuBarText: 'white',
-  menuBarItemSelected: 'white',
-  menuBarItemSelectedText: 'brightBlue',
-
   scrollbarThumb: 'brightBlue',
   scrollbarTrack: 'gray',
 };
@@ -317,11 +286,6 @@ const COLOR_DARK_PALETTE: ColorPalette = {
   sidebarForeground: 'cyan',
   modalBackground: 'blue',
   modalForeground: 'white',
-
-  menuBarBackground: 'blue',
-  menuBarText: 'white',
-  menuBarItemSelected: 'brightBlue',
-  menuBarItemSelectedText: 'white',
 
   scrollbarThumb: 'cyan',
   scrollbarTrack: 'brightBlack',
@@ -362,11 +326,6 @@ const FULLCOLOR_STD_PALETTE: ColorPalette = {
   modalBackground: '#2563eb',   // Blue-600
   modalForeground: '#f9fafb',   // Gray-50
 
-  menuBarBackground: '#3b82f6', // Blue-500
-  menuBarText: '#f9fafb',       // Gray-50
-  menuBarItemSelected: '#f9fafb', // Gray-50
-  menuBarItemSelectedText: '#3b82f6', // Blue-500
-
   scrollbarThumb: '#60a5fa',    // Blue-400
   scrollbarTrack: '#e5e7eb',    // Gray-200
 };
@@ -404,11 +363,6 @@ const FULLCOLOR_DARK_PALETTE: ColorPalette = {
   sidebarForeground: '#d1d5db', // Gray-300
   modalBackground: '#1e3a8a',   // Blue-900
   modalForeground: '#f9fafb',   // Gray-50
-
-  menuBarBackground: '#1e40af', // Blue-800
-  menuBarText: '#f9fafb',       // Gray-50
-  menuBarItemSelected: '#3b82f6', // Blue-500
-  menuBarItemSelectedText: '#f9fafb', // Gray-50
 
   scrollbarThumb: '#3b82f6',    // Blue-500
   scrollbarTrack: '#374151',    // Gray-700

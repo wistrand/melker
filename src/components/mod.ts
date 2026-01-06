@@ -21,12 +21,6 @@ export * from './li.ts';
 export * from './tab.ts';
 export * from './tabs.ts';
 
-// Menu components
-export * from './menu-item.ts';
-export * from './menu-separator.ts';
-export * from './menu.ts';
-export * from './menu-bar.ts';
-
 // Table components
 export * from './table.ts';
 export * from './table-section.ts';

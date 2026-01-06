@@ -663,6 +663,6 @@ export function shouldBeFocusable(
  */
 export function getDefaultTabIndex(elementType: string): number {
   // Interactive elements get tab index 0 by default
-  const interactiveElements = ['button', 'input', 'select', 'textarea', 'menu-item', 'menu', 'menu-bar'];
+  const interactiveElements = ['button', 'input', 'select', 'textarea'];
   return interactiveElements.includes(elementType.toLowerCase()) ? 0 : -1;
 }

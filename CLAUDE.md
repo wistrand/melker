@@ -98,10 +98,6 @@ src/
     textarea.ts       - Multi-line text input
     button.ts         - Clickable button
     dialog.ts         - Modal dialog
-    menu.ts           - Dropdown menu
-    menu-bar.ts       - Horizontal menu container
-    menu-item.ts      - Menu entry
-    menu-separator.ts - Menu separator
     list.ts           - List container
     li.ts             - List item
     checkbox.ts       - Toggle checkbox
@@ -339,7 +335,5 @@ See `agent_docs/melker-file-format.md` for syntax details.
 | `Alt+H` | Open AI accessibility assistant (text input) |
 | `F7` | Open AI assistant with voice input (or toggle recording if open) |
 | `F12` | Toggle View Source overlay (for .md files: shows Markdown/Melker tabs) |
-| `Escape` | Close View Source overlay / Close menus / Close AI dialog |
-| `F10` | Activate menu bar |
-| `Ctrl+M` | Alternative menu bar activation |
+| `Escape` | Close View Source overlay / Close AI dialog |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |

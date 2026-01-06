@@ -56,10 +56,6 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<button>` | id, title, onClick | Uses `title` not `label` |
 | `<dialog>` | id, title, open, modal, backdrop, draggable, width, height | Modal overlay (draggable via title bar) |
 | `<file-browser>` | id, path | File system navigation |
-| `<menu-bar>` | style | Horizontal menu container |
-| `<menu>` | title | Dropdown menu |
-| `<menu-item>` | title, onClick | Menu entry |
-| `<menu-separator>` | | Visual separator in menus |
 | `<checkbox>` | id, title, checked, onChange | Toggle checkbox |
 | `<radio>` | id, title, value, checked, name, onChange | Radio button |
 | `<list>` | style | List container |
@@ -188,7 +184,6 @@ See `examples/melker/` for complete examples:
 - `hello.melker` - Simple hello world
 - `counter.melker` - Basic counter with buttons
 - `dialog_demo.melker` - Dialog variants
-- `menu_example.melker` - Menu bar with dropdowns
 - `tabs_demo.melker` - Tabbed interface
 - `input-demo.melker` - Input fields
 - `textarea_demo.melker` - Multi-line text input

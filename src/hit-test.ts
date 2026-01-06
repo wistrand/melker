@@ -1,5 +1,5 @@
 // Hit testing for finding elements at screen coordinates
-// Handles dialogs, menus, and regular element tree traversal
+// Handles dialogs and regular element tree traversal
 
 import { Element, isInteractive, isTextSelectable, isScrollableType } from './types.ts';
 import { Document } from './document.ts';
@@ -19,7 +19,7 @@ export interface HitTestContext {
 
 /**
  * Hit testing system for finding elements at screen coordinates.
- * Handles overlay elements (dialogs, menus) and regular element tree traversal.
+ * Handles overlay elements (dialogs) and regular element tree traversal.
  */
 export class HitTester {
   private _document: Document;
@@ -52,12 +52,6 @@ export class HitTester {
     const dialogHit = this._hitTestOpenDialogs(x, y);
     if (dialogHit) {
       return dialogHit;
-    }
-
-    // Then check open menus (they are rendered as overlays on top)
-    const menuHit = this._hitTestOpenMenus(x, y);
-    if (menuHit) {
-      return menuHit;
     }
 
     // We need to traverse the layout tree to find which element is at the given coordinates
@@ -221,87 +215,6 @@ export class HitTester {
           logger.debug('Dialog hit test found (no bounds)', { id: child.id, type: child.type });
           return child;
         }
-      }
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Hit test open menus (rendered as overlays)
-   */
-  private _hitTestOpenMenus(x: number, y: number): Element | undefined {
-    // Find all menu-bars in the document
-    const menuBars = this._document.getElementsByType('menu-bar');
-
-    for (const menuBar of menuBars) {
-      // Check if menu-bar has an open menu
-      const getOpenMenu = (menuBar as any).getOpenMenu;
-      if (!getOpenMenu || typeof getOpenMenu !== 'function') {
-        continue;
-      }
-
-      const openMenu = getOpenMenu.call(menuBar);
-      if (!openMenu || !openMenu.props.visible) {
-        continue;
-      }
-
-      // Get menu-bar bounds to calculate menu position
-      const menuBarBounds = this._renderer.getContainerBounds(menuBar.id || '');
-      if (!menuBarBounds) {
-        continue;
-      }
-
-      // Calculate menu bounds (below menu-bar)
-      // Get menu intrinsic size
-      let menuWidth = 20;
-      let menuHeight = 3;
-      if (openMenu.intrinsicSize) {
-        const size = openMenu.intrinsicSize({});
-        menuWidth = size.width;
-        menuHeight = size.height;
-      }
-
-      // Calculate X position based on selected menu index
-      let menuX = menuBarBounds.x + 1;
-      const selectedIndex = (menuBar as any)._selectedMenuIndex || 0;
-      const menus = (menuBar as any).props.menus || [];
-      for (let i = 0; i < selectedIndex && i < menus.length; i++) {
-        const title = menus[i].props.title || `Menu ${i + 1}`;
-        menuX += title.length + 2;
-      }
-
-      const menuBounds = {
-        x: menuX,
-        y: menuBarBounds.y + 1, // Below menu-bar
-        width: Math.min(menuWidth, 50),
-        height: Math.min(menuHeight, 15)
-      };
-
-      // Check if click is within menu bounds
-      if (pointInBounds(x, y, menuBounds)) {
-        // Calculate which menu item was clicked based on y position
-        // Menu items start at y + 1 (inside border)
-        const relativeY = y - menuBounds.y - 1; // -1 for top border
-
-        if (relativeY >= 0 && relativeY < openMenu.children.length) {
-          const clickedItem = openMenu.children[relativeY];
-          if (clickedItem && (clickedItem.type === 'menu-item' || clickedItem.type === 'menu-separator')) {
-            logger.trace('Hit test found menu item', {
-              menuItemId: clickedItem.id,
-              relativeY,
-              x,
-              y
-            });
-            // Return the menu item (only if it's interactive)
-            if (clickedItem.type === 'menu-item' && !clickedItem.props.disabled) {
-              return clickedItem;
-            }
-          }
-        }
-
-        // Click is in menu but not on an item, return the menu itself
-        return openMenu;
       }
     }
 

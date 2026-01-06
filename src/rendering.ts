@@ -149,26 +149,8 @@ export class RenderingEngine {
     const modals: Element[] = [];
     this._collectModals(element, modals);
 
-    // Create an array to collect menu overlays during rendering
-    const menuOverlays: Array<{ element: Element; bounds: Bounds; style: any }> = [];
-    (context as any).overlays = menuOverlays;
-
     // Render normal content first
     this._renderNode(layoutTree, context);
-
-    // Render menu overlays that were collected during normal rendering
-    for (const overlay of menuOverlays) {
-      const componentContext: ComponentRenderContext = {
-        focusedElementId: context.focusedElementId,
-        hoveredElementId: context.hoveredElementId,
-        requestRender: context.requestRender,
-        buffer,
-        style: overlay.style,
-      };
-      if (typeof (overlay.element as any).render === 'function') {
-        (overlay.element as any).render(overlay.bounds, overlay.style, buffer, componentContext);
-      }
-    }
 
     // Apply low-contrast effect if there's a modal without backdrop (fullcolor theme only)
     const themeManager = getThemeManager();
@@ -298,32 +280,14 @@ export class RenderingEngine {
       viewportManager: this._viewportManager,
     };
 
-    // Collect modals and menu overlays
+    // Collect modals
     const modals: Element[] = [];
     this._collectModals(this._cachedElement, modals);
-    const menuOverlays: Array<{ element: Element; bounds: Bounds; style: any }> = [];
-    (context as any).overlays = menuOverlays;
 
     // Render content using cached layout (no layout recalculation)
     const renderNodeStart = performance.now();
     this._renderNode(this._cachedLayoutTree, context);
     this.selectionRenderTiming.renderNodeTime = performance.now() - renderNodeStart;
-
-    // Render menu overlays
-    const overlaysStart = performance.now();
-    for (const overlay of menuOverlays) {
-      const componentContext: ComponentRenderContext = {
-        focusedElementId: context.focusedElementId,
-        hoveredElementId: context.hoveredElementId,
-        requestRender: context.requestRender,
-        buffer,
-        style: overlay.style,
-      };
-      if (typeof (overlay.element as any).render === 'function') {
-        (overlay.element as any).render(overlay.bounds, overlay.style, buffer, componentContext);
-      }
-    }
-    this.selectionRenderTiming.overlaysTime = performance.now() - overlaysStart;
 
     // Apply low-contrast effect if there's a modal without backdrop (fullcolor theme only)
     const themeManager = getThemeManager();

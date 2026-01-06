@@ -18,10 +18,6 @@
 | Button | `src/components/button.ts` | Uses `title` prop (not `label`) |
 | Dialog | `src/components/dialog.ts` | Modal overlay |
 | File Browser | `src/components/file-browser.ts` | File system navigation |
-| Menu Bar | `src/components/menu-bar.ts` | Horizontal menu container |
-| Menu | `src/components/menu.ts` | Dropdown menu |
-| Menu Item | `src/components/menu-item.ts` | Menu entry |
-| Menu Separator | `src/components/menu-separator.ts` | Visual separator in menus |
 | Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars, onPaint, dither modes |
 | Video | `src/components/video.ts` | Video playback (extends Canvas), stopped on engine exit |
 | Markdown | `src/components/markdown.ts` | Markdown text rendering |

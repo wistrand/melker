@@ -195,10 +195,6 @@ import { ImgElement } from './src/components/img.ts';
 import { VideoElement } from './src/components/video.ts';
 import { ListElement } from './src/components/list.ts';
 import { LiElement } from './src/components/li.ts';
-import { MenuItemElement } from './src/components/menu-item.ts';
-import { MenuSeparatorElement } from './src/components/menu-separator.ts';
-import { MenuElement } from './src/components/menu.ts';
-import { MenuBarElement } from './src/components/menu-bar.ts';
 import { ProgressElement } from './src/components/progress.ts';
 import { registerComponent } from './src/element.ts';
 
@@ -391,53 +387,6 @@ registerComponent({
   },
   validate: (props) => LiElement.validate(props as any),
 });
-
-registerComponent({
-  type: 'menu-item',
-  componentClass: MenuItemElement,
-  defaultProps: {
-    title: '',
-    disabled: false,
-    checked: false,
-    separator: false,
-    tabIndex: 0,
-  },
-  validate: (props) => MenuItemElement.validate(props as any),
-});
-
-registerComponent({
-  type: 'menu-separator',
-  componentClass: MenuSeparatorElement,
-  defaultProps: {
-    disabled: true,
-  },
-  validate: (props) => MenuSeparatorElement.validate(props as any),
-});
-
-registerComponent({
-  type: 'menu',
-  componentClass: MenuElement,
-  defaultProps: {
-    items: [],
-    visible: false,
-    position: 'bottom',
-    autoClose: true,
-    tabIndex: 0,
-  },
-  validate: (props) => MenuElement.validate(props as any),
-});
-
-registerComponent({
-  type: 'menu-bar',
-  componentClass: MenuBarElement,
-  defaultProps: {
-    menus: [],
-    activated: false,
-    tabIndex: 0,
-  },
-  validate: (props) => MenuBarElement.validate(props as any),
-});
-
 
 // Run main if this is the entry point
 if (import.meta.main) {

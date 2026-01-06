@@ -12,6 +12,8 @@ declare global {
 import { Document } from './document.ts';
 import { DualBuffer } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
+import { InputElement } from './components/input.ts';
+import { TextareaElement } from './components/textarea.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
 import { Element, TextSelection, isClickable, ClickEvent, isWheelable } from './types.ts';
@@ -313,10 +315,11 @@ export class MelkerEngine {
     // Initialize core components
     this._initializeComponents();
 
-    // Initialize debounced input render action (50ms delay for paste operations)
+    // Initialize debounced input render action
+    // 16ms delay (~1 frame): fast render provides immediate feedback, full render for layout correctness
     this._debouncedInputRenderAction = createDebouncedAction(() => {
       this.render();
-    }, 50);
+    }, 16);
 
     // Initialize logger (async initialization will happen in start())
     this._initializeLogger();
@@ -537,6 +540,9 @@ export class MelkerEngine {
 
     // Single keyboard listener that routes to focused elements
     this._eventManager.addGlobalEventListener('keydown', (event: any) => {
+      // Mark input start time for latency tracking
+      getGlobalPerformanceDialog().markInputStart();
+
       const focusedElement = this._document!.focusedElement;
 
       // Log all key events for debugging
@@ -699,7 +705,7 @@ export class MelkerEngine {
       if (focusedElement) {
         // Route to text input if it's a text input or textarea element
         if (focusedElement.type === 'input' || focusedElement.type === 'textarea') {
-          const textInput = focusedElement as any; // Cast to InputElement or TextareaElement
+          const textInput = focusedElement as InputElement | TextareaElement;
           if (textInput.handleKeyInput) {
             this._logger?.debug('Key input routed to text input', {
               elementId: focusedElement.id,
@@ -710,8 +716,34 @@ export class MelkerEngine {
 
             const handled = textInput.handleKeyInput(event.key, event.ctrlKey, event.altKey, event.shiftKey);
 
-            // Auto-render if the input changed (debounced for rapid input like paste)
+            // Auto-render if the input changed
             if (handled && this._options.autoRender) {
+              // Check if any system dialogs are open (these are always overlays)
+              const hasSystemDialog = this._alertDialogManager?.isOpen() ||
+                                     this._confirmDialogManager?.isOpen() ||
+                                     this._promptDialogManager?.isOpen() ||
+                                     this._accessibilityDialogManager?.isOpen();
+
+              // Check if there's a document dialog that's an overlay (not an ancestor of this input)
+              const hasOverlayDialog = this._hasOverlayDialogFor(focusedElement);
+
+              // Try fast render first (immediate visual feedback)
+              // Skip if there's an overlay dialog - it would be overwritten
+              if (!hasSystemDialog && !hasOverlayDialog && textInput.canFastRender() && this._buffer) {
+                const bounds = this._renderer.findElementBounds(focusedElement.id);
+                if (bounds) {
+                  // Prepare buffer: copy previous content so fast render only updates input cells
+                  this._buffer.prepareForFastRender();
+                  if (textInput.fastRender(this._buffer, bounds, true)) {
+                    // Use fast path: outputs diff WITHOUT swapping buffers
+                    // This preserves buffer state for the debounced full render
+                    this._renderFastPath();
+                  }
+                }
+              }
+
+              // Always schedule debounced full render for layout correctness
+              // (handles text wrapping, size changes, etc.)
               this._debouncedInputRender();
             }
           }
@@ -947,6 +979,7 @@ export class MelkerEngine {
    * Batches multiple rapid input changes into a single render
    */
   private _debouncedInputRender(): void {
+    getGlobalPerformanceDialog().markRenderRequested();
     this._debouncedInputRenderAction.call();
   }
 
@@ -972,6 +1005,7 @@ export class MelkerEngine {
 
     try {
     const renderStartTime = performance.now();
+    getGlobalPerformanceDialog().markRenderStart();
     this._renderCount++;
     (globalThis as any).melkerRenderCount = this._renderCount;
 
@@ -1083,6 +1117,7 @@ export class MelkerEngine {
     if (perfDialog.isVisible() && this._buffer) {
       try {
         const errorHandler = getGlobalErrorHandler();
+        const breakdown = perfDialog.getLatencyBreakdown();
         const perfStats: PerformanceStats = {
           fps: perfDialog.getFps(),
           renderTime: this._lastRenderTime,
@@ -1097,6 +1132,13 @@ export class MelkerEngine {
           memoryUsage: this._buffer.stats?.memoryUsage || 0,
           errorCount: errorHandler.errorCount(),
           suppressedErrors: errorHandler.getTotalSuppressedCount(),
+          inputLatency: perfDialog.getLastInputLatency(),
+          inputLatencyAvg: perfDialog.getAverageInputLatency(),
+          handlerTime: breakdown.handler,
+          waitTime: breakdown.wait,
+          layoutTime2: breakdown.layout,
+          bufferTime: breakdown.buffer,
+          applyTime: breakdown.apply,
         };
         perfDialog.render(this._buffer, perfStats);
       } catch {
@@ -1107,6 +1149,7 @@ export class MelkerEngine {
     // Use optimized differential rendering instead of full clear+redraw
     const applyStartTime = performance.now();
     this._renderOptimized();
+    getGlobalPerformanceDialog().markApplyEnd();
     if (this._renderCount <= 3) {
       this._logger?.info(`Applied to terminal in ${(performance.now() - applyStartTime).toFixed(2)}ms`);
     }
@@ -1116,6 +1159,7 @@ export class MelkerEngine {
 
     // Record render time for performance dialog averaging
     getGlobalPerformanceDialog().recordRenderTime(totalRenderTime);
+    getGlobalPerformanceDialog().recordInputLatency(); // Record input-to-render latency if input was pending
 
     if (this._renderCount <= 3 || totalRenderTime > 50) {
       this._logger?.info(`Total render time: ${totalRenderTime.toFixed(2)}ms for render #${this._renderCount}`);
@@ -1215,6 +1259,40 @@ export class MelkerEngine {
         getGlobalScriptErrorOverlay().render(this._buffer);
       } catch {
         // Silently ignore script error overlay errors
+      }
+    }
+
+    // Render performance dialog if visible
+    const perfDialog = getGlobalPerformanceDialog();
+    if (perfDialog.isVisible() && this._buffer) {
+      try {
+        const errorHandler = getGlobalErrorHandler();
+        const breakdown = perfDialog.getLatencyBreakdown();
+        const perfStats: PerformanceStats = {
+          fps: perfDialog.getFps(),
+          renderTime: this._lastRenderTime,
+          renderTimeAvg: perfDialog.getAverageRenderTime(),
+          renderCount: this._renderCount,
+          layoutTime: this._lastLayoutTime,
+          layoutTimeAvg: perfDialog.getAverageLayoutTime(),
+          layoutNodeCount: this._layoutNodeCount,
+          totalCells: this._buffer.stats?.totalCells || 0,
+          changedCells: this._buffer.stats?.changedCells || 0,
+          bufferUtilization: this._buffer.stats?.bufferUtilization || 0,
+          memoryUsage: this._buffer.stats?.memoryUsage || 0,
+          errorCount: errorHandler.errorCount(),
+          suppressedErrors: errorHandler.getTotalSuppressedCount(),
+          inputLatency: perfDialog.getLastInputLatency(),
+          inputLatencyAvg: perfDialog.getAverageInputLatency(),
+          handlerTime: breakdown.handler,
+          waitTime: breakdown.wait,
+          layoutTime2: breakdown.layout,
+          bufferTime: breakdown.buffer,
+          applyTime: breakdown.apply,
+        };
+        perfDialog.render(this._buffer, perfStats);
+      } catch {
+        // Silently ignore performance dialog errors
       }
     }
 
@@ -1385,6 +1463,34 @@ export class MelkerEngine {
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
+    }
+  }
+
+  /**
+   * Fast render path for immediate visual feedback (e.g., typing in inputs)
+   * Does NOT swap buffers, allowing the debounced full render to work correctly
+   */
+  private _renderFastPath(): void {
+    if (typeof Deno !== 'undefined') {
+      // Get diff without swapping - leaves buffer state intact for full render
+      const differences = this._buffer.getDiffOnly();
+
+      if (differences.length === 0) {
+        return;
+      }
+
+      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._currentSize.width);
+      if (output.length > 0) {
+        if (!this._isInitialized) {
+          return;
+        }
+
+        const finalOutput = this._options.synchronizedOutput
+          ? ANSI.beginSync + output + ANSI.endSync
+          : output;
+
+        Deno.stdout.writeSync(new TextEncoder().encode(finalOutput));
+      }
     }
   }
 
@@ -1970,6 +2076,80 @@ export class MelkerEngine {
       }
     }
     return count;
+  }
+
+  /**
+   * Check if there are any open dialogs in the document tree
+   */
+  private _hasOpenDialogInDocument(): boolean {
+    if (!this._document?.root) return false;
+    return this._findOpenDialog(this._document.root);
+  }
+
+  private _findOpenDialog(element: Element): boolean {
+    if (element.type === 'dialog' && element.props?.open === true) {
+      return true;
+    }
+    if (element.children) {
+      for (const child of element.children) {
+        if (this._findOpenDialog(child)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if there's an open dialog that's NOT an ancestor of the given element
+   * (i.e., a dialog overlay that would be drawn on top of the element)
+   */
+  private _hasOverlayDialogFor(element: Element): boolean {
+    if (!this._document?.root) return false;
+
+    // Find all open dialogs and check if element is inside any of them
+    const openDialogs: Element[] = [];
+    this._collectOpenDialogs(this._document.root, openDialogs);
+
+    if (openDialogs.length === 0) return false;
+
+    // Check if element is a descendant of any open dialog
+    for (const dialog of openDialogs) {
+      if (this._isDescendantOf(element, dialog)) {
+        // Element is inside this dialog - this dialog is not an overlay for it
+        // But there might be OTHER open dialogs that are overlays
+        continue;
+      }
+      // This dialog doesn't contain the element - it's an overlay
+      return true;
+    }
+    return false;
+  }
+
+  private _collectOpenDialogs(element: Element, result: Element[]): void {
+    if (element.type === 'dialog' && element.props?.open === true) {
+      result.push(element);
+    }
+    if (element.children) {
+      for (const child of element.children) {
+        this._collectOpenDialogs(child, result);
+      }
+    }
+  }
+
+  /**
+   * Check if element is a descendant of container (by traversing container's children)
+   */
+  private _isDescendantOf(element: Element, container: Element): boolean {
+    if (container === element) return true;
+    if (container.children) {
+      for (const child of container.children) {
+        if (this._isDescendantOf(element, child)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }
 

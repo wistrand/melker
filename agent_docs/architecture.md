@@ -138,6 +138,24 @@
 |------|---------|
 | `src/utils/timing.ts` | Debounce and throttle utilities |
 
+## Render Pipeline
+
+Two render paths optimize for different scenarios:
+
+**Full Render** (debounced 16ms):
+```
+Event → State change → Layout calculation → Buffer render → Swap → Terminal output
+```
+
+**Fast Render** (immediate, for Input/Textarea):
+```
+Keystroke → Update state → Render to buffer (cached bounds) → Output diff → Terminal
+                         ↓
+                         Schedule full render (16ms debounce)
+```
+
+Fast render provides ~2ms latency for typing. See `agent_docs/fast-input-render-plan.md` for details.
+
 ## Style Inheritance
 
 Only these properties inherit to children:

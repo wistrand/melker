@@ -852,6 +852,111 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
     }
     return true;
   }
+
+  /**
+   * Fast render - updates only the text content at cached bounds.
+   * Skips layout calculation for immediate visual feedback.
+   * Returns true if fast render was performed, false if full render needed.
+   */
+  fastRender(buffer: DualBuffer, bounds: Bounds, isFocused: boolean): boolean {
+    // Flush any pending batched chars before rendering
+    if (this._pendingChars.length > 0) {
+      this._flushPendingChars();
+    }
+
+    const value = this._value;
+    const { placeholder } = this.props;
+
+    // Get styles
+    const elementStyle = this.props.style || {};
+    const bg = elementStyle.background || getThemeColor('inputBackground');
+    const fg = value
+      ? (elementStyle.color || getThemeColor('inputForeground'))
+      : getThemeColor('textMuted');
+
+    // Clear the textarea area
+    buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, {
+      char: ' ',
+      background: bg,
+      foreground: fg,
+    });
+
+    const displayLines = this._computeDisplayLines(bounds.width);
+
+    // Only use internal scroll if rows is set (fixed height mode)
+    const useInternalScroll = this.props.rows !== undefined;
+
+    // Adjust scroll to keep cursor visible (only in internal scroll mode)
+    if (useInternalScroll && isFocused) {
+      const cursorDisplay = this._cursorToDisplayPos(bounds.width);
+      if (cursorDisplay.row < this._scrollY) {
+        this._scrollY = cursorDisplay.row;
+      } else if (cursorDisplay.row >= this._scrollY + bounds.height) {
+        this._scrollY = cursorDisplay.row - bounds.height + 1;
+      }
+    } else if (!useInternalScroll) {
+      this._scrollY = 0;
+    }
+
+    const linesToRender = useInternalScroll ? bounds.height : displayLines.length;
+
+    // Show placeholder if empty
+    if (!value && placeholder) {
+      const placeholderLines = placeholder.split('\n');
+      for (let y = 0; y < Math.min(placeholderLines.length, linesToRender); y++) {
+        const text = placeholderLines[y].substring(0, bounds.width);
+        buffer.currentBuffer.setText(bounds.x, bounds.y + y, text, {
+          foreground: 'gray',
+          background: bg,
+        });
+      }
+    } else {
+      // Render lines
+      for (let y = 0; y < linesToRender; y++) {
+        const lineIdx = this._scrollY + y;
+        if (lineIdx < displayLines.length) {
+          const line = displayLines[lineIdx];
+          const text = line.text.substring(0, bounds.width);
+          buffer.currentBuffer.setText(bounds.x, bounds.y + y, text, {
+            foreground: fg,
+            background: bg,
+          });
+        }
+      }
+    }
+
+    // Render cursor when focused
+    if (isFocused) {
+      const cursorDisplay = this._cursorToDisplayPos(bounds.width);
+      const cursorScreenY = cursorDisplay.row - this._scrollY;
+      const maxY = useInternalScroll ? bounds.height : displayLines.length;
+
+      if (cursorScreenY >= 0 && cursorScreenY < maxY) {
+        const cursorX = bounds.x + Math.min(cursorDisplay.col, bounds.width - 1);
+        const cursorY = bounds.y + cursorScreenY;
+
+        const lineIdx = cursorDisplay.row;
+        const line = displayLines[lineIdx];
+        const hasCharAtCursor = line && cursorDisplay.col < line.text.length;
+        const cursorChar = hasCharAtCursor ? line.text[cursorDisplay.col] : ' ';
+
+        buffer.currentBuffer.setText(cursorX, cursorY, cursorChar, {
+          foreground: fg,
+          background: bg,
+          reverse: true,
+        });
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if the last key input can be fast rendered.
+   */
+  canFastRender(): boolean {
+    return true; // Textarea can always fast render
+  }
 }
 
 // Lint schema for textarea component

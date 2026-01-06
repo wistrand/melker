@@ -28,6 +28,16 @@ export interface PerformanceStats {
   // Error stats
   errorCount: number;
   suppressedErrors: number;
+
+  // Input latency stats (total and breakdown)
+  inputLatency: number;
+  inputLatencyAvg: number;
+  // Latency breakdown (all in ms)
+  handlerTime: number;   // Event handling + script execution
+  waitTime: number;      // Debounce delay (render requested -> render started)
+  layoutTime2: number;   // Layout calculation only
+  bufferTime: number;    // Rendering to buffer
+  applyTime: number;     // Writing to terminal
 }
 
 export interface PerformanceDialogOptions {
@@ -36,7 +46,7 @@ export interface PerformanceDialogOptions {
 }
 
 const DEFAULT_WIDTH = 32;
-const DEFAULT_HEIGHT = 14;
+const DEFAULT_HEIGHT = 19;
 
 /**
  * Performance monitoring dialog
@@ -59,9 +69,25 @@ export class PerformanceDialog {
   // Stats history for averages
   private _renderTimes: number[] = [];
   private _layoutTimes: number[] = [];
+  private _inputLatencies: number[] = [];
   private _lastFpsUpdate = 0;
   private _framesSinceLastFps = 0;
   private _currentFps = 0;
+
+  // Input latency tracking
+  private _inputStartTime = 0;
+  private _lastInputLatency = 0;
+
+  // Latency breakdown tracking
+  private _renderRequestedTime = 0;
+  private _renderStartTime = 0;
+  private _layoutEndTime = 0;
+  private _bufferEndTime = 0;
+  private _lastHandlerTime = 0;
+  private _lastWaitTime = 0;
+  private _lastLayoutTime2 = 0;
+  private _lastBufferTime = 0;
+  private _lastApplyTime = 0;
 
   // Current bounds (for hit testing)
   private _bounds: Bounds | null = null;
@@ -135,6 +161,117 @@ export class PerformanceDialog {
   getAverageLayoutTime(): number {
     if (this._layoutTimes.length === 0) return 0;
     return this._layoutTimes.reduce((a, b) => a + b, 0) / this._layoutTimes.length;
+  }
+
+  /**
+   * Mark the start of input processing (call when input event is received)
+   */
+  markInputStart(): void {
+    this._inputStartTime = performance.now();
+  }
+
+  /**
+   * Record input-to-render latency (call after render completes)
+   */
+  recordInputLatency(): void {
+    if (this._inputStartTime > 0) {
+      const latency = performance.now() - this._inputStartTime;
+      this._lastInputLatency = latency;
+      this._inputLatencies.push(latency);
+      if (this._inputLatencies.length > 60) {
+        this._inputLatencies.shift();
+      }
+      this._inputStartTime = 0; // Reset for next input
+    }
+  }
+
+  /**
+   * Get average input latency
+   */
+  getAverageInputLatency(): number {
+    if (this._inputLatencies.length === 0) return 0;
+    return this._inputLatencies.reduce((a, b) => a + b, 0) / this._inputLatencies.length;
+  }
+
+  /**
+   * Get last recorded input latency
+   */
+  getLastInputLatency(): number {
+    return this._lastInputLatency;
+  }
+
+  /**
+   * Mark when render is requested (call before debounce, e.g., in _debouncedInputRender)
+   */
+  markRenderRequested(): void {
+    this._renderRequestedTime = performance.now();
+    // Calculate handler time (input received -> render requested)
+    if (this._inputStartTime > 0) {
+      this._lastHandlerTime = this._renderRequestedTime - this._inputStartTime;
+    } else {
+      this._lastHandlerTime = 0;
+    }
+  }
+
+  /**
+   * Mark the start of render phase (call at beginning of render())
+   */
+  markRenderStart(): void {
+    this._renderStartTime = performance.now();
+    // Calculate wait time (render requested -> render started, i.e., debounce delay)
+    if (this._renderRequestedTime > 0) {
+      this._lastWaitTime = this._renderStartTime - this._renderRequestedTime;
+      this._renderRequestedTime = 0; // Reset for next cycle
+    } else {
+      // Direct render (no debounce) - handler time is input -> render start
+      if (this._inputStartTime > 0) {
+        this._lastHandlerTime = this._renderStartTime - this._inputStartTime;
+      }
+      this._lastWaitTime = 0;
+    }
+  }
+
+  /**
+   * Mark the end of layout phase (call after calculateLayout())
+   */
+  markLayoutEnd(): void {
+    this._layoutEndTime = performance.now();
+    if (this._renderStartTime > 0) {
+      this._lastLayoutTime2 = this._layoutEndTime - this._renderStartTime;
+    }
+  }
+
+  /**
+   * Mark the end of buffer rendering (call after _renderNode() completes)
+   */
+  markBufferEnd(): void {
+    this._bufferEndTime = performance.now();
+    if (this._layoutEndTime > 0) {
+      this._lastBufferTime = this._bufferEndTime - this._layoutEndTime;
+    }
+  }
+
+  /**
+   * Mark the end of apply phase (call after _renderOptimized())
+   */
+  markApplyEnd(): void {
+    const now = performance.now();
+    if (this._bufferEndTime > 0) {
+      this._lastApplyTime = now - this._bufferEndTime;
+    }
+  }
+
+  /**
+   * Get latency breakdown
+   */
+  getLatencyBreakdown(): { handler: number; wait: number; layout: number; buffer: number; apply: number } {
+    return {
+      handler: this._lastHandlerTime,
+      wait: this._lastWaitTime,
+      layout: this._lastLayoutTime2,
+      buffer: this._lastBufferTime,
+      apply: this._lastApplyTime,
+    };
   }
 
   /**
@@ -418,17 +555,35 @@ export class PerformanceDialog {
       return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
     };
 
+    // Calculate max FPS from average render time (theoretical capability)
+    const maxFps = stats.renderTimeAvg > 0 ? 1000 / stats.renderTimeAvg : 0;
+
     // Color based on thresholds
-    const fpsColor = stats.fps >= 30 ? '#22c55e' : stats.fps >= 15 ? '#eab308' : '#ef4444';
+    const maxFpsColor = maxFps >= 60 ? '#22c55e' : maxFps >= 30 ? '#eab308' : '#ef4444';
     const renderColor = stats.renderTime < 16 ? '#22c55e' : stats.renderTime < 33 ? '#eab308' : '#ef4444';
     const layoutColor = stats.layoutTime < 5 ? '#22c55e' : stats.layoutTime < 10 ? '#eab308' : '#ef4444';
+    // Input latency: <50ms good, <100ms ok, >100ms bad
+    const latencyColor = stats.inputLatency < 50 ? '#22c55e' : stats.inputLatency < 100 ? '#eab308' : '#ef4444';
+
+    // Format latency breakdown as compact string (h=handler, w=wait/debounce, l=layout, b=buffer, a=apply)
+    // Pad each number to 2 chars for stability
+    const pad = (n: number) => n.toFixed(0).padStart(2, ' ');
+    const hasBreakdown = stats.handlerTime > 0 || stats.waitTime > 0 || stats.layoutTime2 > 0 || stats.bufferTime > 0 || stats.applyTime > 0;
+    const breakdownStr = hasBreakdown
+      ? `${pad(stats.handlerTime)}+${pad(stats.waitTime)}+${pad(stats.layoutTime2)}+${pad(stats.bufferTime)}+${pad(stats.applyTime)}`
+      : '-';
 
     return [
-      { label: 'FPS', value: stats.fps.toFixed(1), color: fpsColor },
+      { label: 'Max FPS', value: maxFps > 0 ? maxFps.toFixed(0) : '-', color: maxFpsColor },
+      { label: 'Renders/s', value: stats.fps.toFixed(1) },
       { label: 'Render', value: formatMs(stats.renderTime), color: renderColor },
       { label: 'Render avg', value: formatMs(stats.renderTimeAvg) },
       { label: 'Layout', value: formatMs(stats.layoutTime), color: layoutColor },
       { label: 'Layout avg', value: formatMs(stats.layoutTimeAvg) },
+      { label: 'Input lat', value: stats.inputLatency > 0 ? formatMs(stats.inputLatency) : '-', color: stats.inputLatency > 0 ? latencyColor : undefined },
+      { label: 'Input avg', value: stats.inputLatencyAvg > 0 ? formatMs(stats.inputLatencyAvg) : '-' },
+      { label: 'Breakdown', value: breakdownStr },
+      { label: '', value: 'h+w+l+b+a' },
       { label: 'Nodes', value: String(stats.layoutNodeCount) },
       { label: 'Cells', value: `${stats.changedCells}/${stats.totalCells}` },
       { label: 'Memory', value: formatBytes(stats.memoryUsage) },

@@ -1,0 +1,65 @@
+<melker>
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      padding: 1;
+      gap: 1;
+    }
+    .row {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+      align-items: flex-start;
+    }
+    .label {
+      color: gray;
+    }
+  </style>
+
+  <container id="root">
+    <text style="font-weight: bold; color: cyan;">Chrome Collapse Demo</text>
+    <text style="color: gray;">Border (2) + padding (2) = 4 chars vertical chrome.</text>
+    <text style="color: gray;">When height is too small, padding collapses first, then border.</text>
+
+    <text style="margin-top: 1; color: yellow;">Height shrinking: 6 -> 5 -> 4 -> 3 -> 2</text>
+    <container class="row">
+      <container>
+        <container style="width: 12; height: 6; border: thin; padding: 1;">
+          <text>h=6 OK</text>
+        </container>
+        <text class="label">full chrome</text>
+      </container>
+
+      <container>
+        <container style="width: 12; height: 5; border: thin; padding: 1;">
+          <text>h=5 OK</text>
+        </container>
+        <text class="label">full chrome</text>
+      </container>
+
+      <container>
+        <container style="width: 12; height: 4; border: thin; padding: 1;">
+          <text>h=4</text>
+        </container>
+        <text class="label">pad reduced</text>
+      </container>
+
+      <container>
+        <container style="width: 12; height: 3; border: thin; padding: 1;">
+          <text>h=3</text>
+        </container>
+        <text class="label">no padding</text>
+      </container>
+
+      <container>
+        <container style="width: 12; height: 2; border: thin; padding: 1;">
+          <text>h=2</text>
+        </container>
+        <text class="label">border gone</text>
+      </container>
+    </container>
+
+    <button title="Exit" onClick="$melker.exit()" style="margin-top: 2;" />
+  </container>
+</melker>

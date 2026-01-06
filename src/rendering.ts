@@ -12,7 +12,7 @@ import { TextElement } from './components/text.ts';
 import { InputElement } from './components/input.ts';
 import { ButtonElement } from './components/button.ts';
 import { DialogElement } from './components/dialog.ts';
-import { SizingModel, globalSizingModel, BoxModel } from './sizing.ts';
+import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
 import { LayoutEngine, LayoutNode as AdvancedLayoutNode, LayoutContext, globalLayoutEngine } from './layout.ts';
 import { getThemeColor, getThemeManager } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
@@ -55,6 +55,8 @@ export interface LayoutNode {
     vertical?: any; // Will match ScrollbarLayout from viewport.ts
     horizontal?: any;
   };
+  // Chrome collapse state (padding/border reduced due to insufficient space)
+  chromeCollapse?: ChromeCollapseState;
 }
 
 // Scrollbar bounds for hit testing and drag handling
@@ -657,7 +659,7 @@ export class RenderingEngine {
 
   // Get content bounds (inside padding/border) using sizing model
   private _getContentBounds(bounds: Bounds, style: Style, isScrollable?: boolean): Bounds {
-    return this._sizingModel.calculateContentBounds(bounds, style, isScrollable);
+    return this._sizingModel.calculateContentBounds(bounds, style, isScrollable).bounds;
   }
 
 
@@ -708,8 +710,8 @@ export class RenderingEngine {
     // Render background
     this._renderBackground(clippedBounds, computedStyle, context.buffer);
 
-    // Render border
-    this._renderBorder(clippedBounds, computedStyle, context.buffer);
+    // Render border (skip collapsed borders if chrome was collapsed due to insufficient space)
+    this._renderBorder(clippedBounds, computedStyle, context.buffer, node.chromeCollapse);
 
 
 
@@ -949,14 +951,23 @@ export class RenderingEngine {
   }
 
   // Render border (supports individual sides and colors)
-  private _renderBorder(bounds: Bounds, style: Style, buffer: DualBuffer): void {
+  // chromeCollapse indicates which borders were collapsed due to insufficient space
+  private _renderBorder(bounds: Bounds, style: Style, buffer: DualBuffer, chromeCollapse?: ChromeCollapseState): void {
     const defaultColor = style.borderColor || style.color;
 
     // Check for individual border sides first, fallback to general border
-    const borderTop = style.borderTop || (style.border && style.border !== 'none' ? style.border : undefined);
-    const borderBottom = style.borderBottom || (style.border && style.border !== 'none' ? style.border : undefined);
-    const borderLeft = style.borderLeft || (style.border && style.border !== 'none' ? style.border : undefined);
-    const borderRight = style.borderRight || (style.border && style.border !== 'none' ? style.border : undefined);
+    let borderTop = style.borderTop || (style.border && style.border !== 'none' ? style.border : undefined);
+    let borderBottom = style.borderBottom || (style.border && style.border !== 'none' ? style.border : undefined);
+    let borderLeft = style.borderLeft || (style.border && style.border !== 'none' ? style.border : undefined);
+    let borderRight = style.borderRight || (style.border && style.border !== 'none' ? style.border : undefined);
+
+    // Skip collapsed borders
+    if (chromeCollapse) {
+      if (chromeCollapse.borderCollapsed.top) borderTop = undefined;
+      if (chromeCollapse.borderCollapsed.bottom) borderBottom = undefined;
+      if (chromeCollapse.borderCollapsed.left) borderLeft = undefined;
+      if (chromeCollapse.borderCollapsed.right) borderRight = undefined;
+    }
 
     // If no borders defined, exit
     if (!borderTop && !borderBottom && !borderLeft && !borderRight) return;
@@ -1439,6 +1450,8 @@ export class RenderingEngine {
       // Phase 2 properties
       actualContentSize: advanced.actualContentSize,
       scrollbars: advanced.scrollbars,
+      // Chrome collapse state
+      chromeCollapse: advanced.chromeCollapse,
     };
   }
 

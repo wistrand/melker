@@ -75,6 +75,7 @@ src/
   stats-overlay.ts    - Performance stats overlay
   char-width.ts       - Character width utilities
   error-boundary.ts   - Error handling, rate limiting, error overlay
+  performance-dialog.ts - Live performance stats dialog (Ctrl+Shift+P)
   lint.ts             - Lint mode validation, schemas
   lsp.ts              - Language Server Protocol for .melker files
   oauth.ts            - OAuth utilities
@@ -346,6 +347,7 @@ See `agent_docs/melker-file-format.md` for syntax details.
 
 | Key | Action |
 |-----|--------|
+| `F10` / `F11` | Toggle Performance dialog (live stats) |
 | `Alt+H` | Open AI accessibility assistant (text input) |
 | `F7` | Open AI assistant with voice input (or toggle recording if open) |
 | `F12` | Toggle View Source overlay (for .md files: shows Markdown/Melker tabs) |

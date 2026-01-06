@@ -68,8 +68,13 @@ import {
   type StatsOverlay,
 } from './stats-overlay.ts';
 import {
+  getGlobalErrorHandler,
   getGlobalErrorOverlay,
 } from './error-boundary.ts';
+import {
+  getGlobalPerformanceDialog,
+  type PerformanceStats,
+} from './performance-dialog.ts';
 import {
   getGlobalErrorOverlay as getGlobalScriptErrorOverlay,
 } from './error-overlay.ts';
@@ -217,6 +222,11 @@ export class MelkerEngine {
 
   // State persistence
   private _persistenceManager!: StatePersistenceManager;
+
+  // Performance tracking
+  private _lastLayoutTime = 0;
+  private _lastRenderTime = 0;
+  private _layoutNodeCount = 0;
 
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
     // Check environment variables for terminal setup overrides
@@ -574,6 +584,15 @@ export class MelkerEngine {
         return;
       }
 
+      // Handle F6, F10, F11, Shift+F12, or Ctrl+Shift+P for Performance dialog
+      if (event.key === 'F6' || event.key === 'F10' || event.key === 'F11' ||
+          (event.shiftKey && event.key === 'F12') ||
+          (event.ctrlKey && event.shiftKey && (event.key === 'p' || event.key === 'P'))) {
+        getGlobalPerformanceDialog().toggle();
+        this.render();
+        return;
+      }
+
       // Handle Escape to close View Source overlay
       if (event.key === 'Escape' && this._viewSourceManager?.isOpen()) {
         this._viewSourceManager.close();
@@ -647,7 +666,7 @@ export class MelkerEngine {
       }
 
       // Handle other function keys for AI Accessibility dialog
-      if (['f6', 'F6', 'f8', 'F8', 'f9', 'F9'].includes(event.key)) {
+      if (['f8', 'F8', 'f9', 'F9'].includes(event.key)) {
         this._logger?.info(event.key + ' pressed - opening accessibility dialog');
         this._ensureAccessibilityDialogManager();
         this._accessibilityDialogManager!.toggle();
@@ -792,14 +811,42 @@ export class MelkerEngine {
 
     // Text selection handling - delegated to TextSelectionHandler
     this._eventManager.addGlobalEventListener('mousedown', (event: any) => {
+      // Check if performance dialog should handle this
+      const perfDialog = getGlobalPerformanceDialog();
+      if (perfDialog.isVisible()) {
+        // Check close button first
+        if (perfDialog.isOnCloseButton(event.x, event.y)) {
+          perfDialog.hide();
+          this.render();
+          return;
+        }
+        // Then check title bar for dragging
+        if (perfDialog.isOnTitleBar(event.x, event.y)) {
+          perfDialog.startDrag(event.x, event.y);
+          return;
+        }
+      }
       this._textSelectionHandler.handleMouseDown(event);
     });
 
     this._eventManager.addGlobalEventListener('mousemove', (event: any) => {
+      // Check if performance dialog is being dragged
+      const perfDialog = getGlobalPerformanceDialog();
+      if (perfDialog.isDragging()) {
+        perfDialog.updateDrag(event.x, event.y, this._currentSize.width, this._currentSize.height);
+        this.render();
+        return;
+      }
       this._textSelectionHandler.handleMouseMove(event);
     });
 
     this._eventManager.addGlobalEventListener('mouseup', (event: any) => {
+      // End performance dialog drag if active
+      const perfDialog = getGlobalPerformanceDialog();
+      if (perfDialog.isDragging()) {
+        perfDialog.endDrag();
+        return;
+      }
       this._textSelectionHandler.handleMouseUp(event);
     });
   }
@@ -979,9 +1026,16 @@ export class MelkerEngine {
       this._logger?.debug(`[RENDER-DEBUG] root.type=${rootType}, children=${rootChildCount}, dateEl=${dateEl ? 'found' : 'null'}, class=${dateElClass}, hasRender=${hasRender}, hasIntrinsicSize=${hasIntrinsicSize}, inTree=${foundInTree}, dateEl.props.text=${dateEl?.props?.text || 'N/A'}`);
     }
 
-    this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
+    const layoutTree = this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
+    const layoutAndRenderTime = performance.now() - renderToBufferStartTime;
+    this._lastLayoutTime = layoutAndRenderTime;
+    this._layoutNodeCount = this._countLayoutNodes(layoutTree);
+
+    // Record layout time for performance dialog averaging
+    getGlobalPerformanceDialog().recordLayoutTime(layoutAndRenderTime);
+
     if (this._renderCount <= 3) {
-      this._logger?.info(`Rendered to buffer in ${(performance.now() - renderToBufferStartTime).toFixed(2)}ms`);
+      this._logger?.info(`Rendered to buffer in ${layoutAndRenderTime.toFixed(2)}ms`);
     }
 
     // Automatically detect and register focusable elements
@@ -1024,6 +1078,32 @@ export class MelkerEngine {
       }
     }
 
+    // Render performance dialog if visible
+    const perfDialog = getGlobalPerformanceDialog();
+    if (perfDialog.isVisible() && this._buffer) {
+      try {
+        const errorHandler = getGlobalErrorHandler();
+        const perfStats: PerformanceStats = {
+          fps: perfDialog.getFps(),
+          renderTime: this._lastRenderTime,
+          renderTimeAvg: perfDialog.getAverageRenderTime(),
+          renderCount: this._renderCount,
+          layoutTime: this._lastLayoutTime,
+          layoutTimeAvg: perfDialog.getAverageLayoutTime(),
+          layoutNodeCount: this._layoutNodeCount,
+          totalCells: this._buffer.stats?.totalCells || 0,
+          changedCells: this._buffer.stats?.changedCells || 0,
+          bufferUtilization: this._buffer.stats?.bufferUtilization || 0,
+          memoryUsage: this._buffer.stats?.memoryUsage || 0,
+          errorCount: errorHandler.errorCount(),
+          suppressedErrors: errorHandler.getTotalSuppressedCount(),
+        };
+        perfDialog.render(this._buffer, perfStats);
+      } catch {
+        // Silently ignore performance dialog errors
+      }
+    }
+
     // Use optimized differential rendering instead of full clear+redraw
     const applyStartTime = performance.now();
     this._renderOptimized();
@@ -1032,6 +1112,11 @@ export class MelkerEngine {
     }
 
     const totalRenderTime = performance.now() - renderStartTime;
+    this._lastRenderTime = totalRenderTime;
+
+    // Record render time for performance dialog averaging
+    getGlobalPerformanceDialog().recordRenderTime(totalRenderTime);
+
     if (this._renderCount <= 3 || totalRenderTime > 50) {
       this._logger?.info(`Total render time: ${totalRenderTime.toFixed(2)}ms for render #${this._renderCount}`);
     }
@@ -1871,6 +1956,20 @@ export class MelkerEngine {
     };
 
     return findInTree(this._rootElement);
+  }
+
+  /**
+   * Count layout nodes in a layout tree
+   */
+  private _countLayoutNodes(node: any): number {
+    if (!node) return 0;
+    let count = 1;
+    if (node.children) {
+      for (const child of node.children) {
+        count += this._countLayoutNodes(child);
+      }
+    }
+    return count;
   }
 }
 

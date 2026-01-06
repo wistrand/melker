@@ -56,6 +56,41 @@ Logs are written in structured format:
 
 If not configured: `./logs/melker.log`
 
+## Performance Dialog (`src/performance-dialog.ts`)
+
+A built-in movable, non-modal dialog showing live performance statistics.
+
+### Toggle
+
+Press `F6` to toggle visibility (also: `F10`, `F11`, `Shift+F12`).
+
+### Features
+
+- **Draggable**: Click and drag the title bar to move
+- **Non-modal**: Doesn't block UI interaction
+- **Live stats**: Updates on every render
+
+### Displayed Metrics
+
+| Metric | Description |
+|--------|-------------|
+| FPS | Frames per second (render frequency) |
+| Render | Last render time (ms) |
+| Render avg | Average render time over 60 frames |
+| Layout | Last layout time (ms) |
+| Layout avg | Average layout time over 60 frames |
+| Nodes | Number of layout nodes |
+| Cells | Changed/total buffer cells |
+| Memory | Estimated memory usage |
+| Renders | Total render count |
+| Errors | Component error count |
+
+### Color Coding
+
+- **Green**: Good performance (FPS >= 30, render < 16ms)
+- **Yellow**: Acceptable (FPS 15-30, render 16-33ms)
+- **Red**: Needs attention (FPS < 15, render > 33ms)
+
 ## Headless Mode (`src/headless.ts`)
 
 Run Melker apps without a real terminal - useful for testing and CI.

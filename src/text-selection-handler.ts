@@ -15,6 +15,9 @@ import { ScrollHandler } from './scroll-handler.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 import { DialogElement } from './components/dialog.ts';
 import { createThrottledAction, type ThrottledAction } from './utils/timing.ts';
+import { isStatsOverlayEnabled, getGlobalStatsOverlay } from './stats-overlay.ts';
+import { getGlobalPerformanceDialog, type PerformanceStats } from './performance-dialog.ts';
+import { getGlobalErrorHandler } from './error-boundary.ts';
 
 const logger = getLogger('text-selection');
 
@@ -725,6 +728,56 @@ export class TextSelectionHandler {
     this._renderDetailedStats.highlightTotal += rt.highlightTime;
     this._renderDetailedStats.overlaysTotal += rt.overlaysTime;
     this._renderDetailedStats.modalsTotal += rt.modalsTime;
+
+    // Update stats before rendering overlays
+    buffer.updateStatsOnly();
+
+    // Render stats overlay if enabled
+    if (isStatsOverlayEnabled()) {
+      try {
+        const statsOverlay = getGlobalStatsOverlay();
+        const stats = buffer.stats;
+        if (stats) {
+          statsOverlay.render(buffer, stats);
+        }
+      } catch {
+        // Silently ignore stats overlay errors
+      }
+    }
+
+    // Render performance dialog if visible
+    const perfDialog = getGlobalPerformanceDialog();
+    if (perfDialog.isVisible()) {
+      try {
+        const errorHandler = getGlobalErrorHandler();
+        const breakdown = perfDialog.getLatencyBreakdown();
+        const perfStats: PerformanceStats = {
+          fps: perfDialog.getFps(),
+          renderTime: 0, // Not tracked in selection-only render
+          renderTimeAvg: perfDialog.getAverageRenderTime(),
+          renderCount: 0,
+          layoutTime: 0,
+          layoutTimeAvg: perfDialog.getAverageLayoutTime(),
+          layoutNodeCount: 0,
+          totalCells: buffer.stats?.totalCells || 0,
+          changedCells: buffer.stats?.changedCells || 0,
+          bufferUtilization: buffer.stats?.bufferUtilization || 0,
+          memoryUsage: buffer.stats?.memoryUsage || 0,
+          errorCount: errorHandler.errorCount(),
+          suppressedErrors: errorHandler.getTotalSuppressedCount(),
+          inputLatency: perfDialog.getLastInputLatency(),
+          inputLatencyAvg: perfDialog.getAverageInputLatency(),
+          handlerTime: breakdown.handler,
+          waitTime: breakdown.wait,
+          layoutTime2: breakdown.layout,
+          bufferTime: breakdown.buffer,
+          applyTime: breakdown.apply,
+        };
+        perfDialog.render(buffer, perfStats);
+      } catch {
+        // Silently ignore performance dialog errors
+      }
+    }
 
     // Apply to terminal
     const terminalStart = performance.now();

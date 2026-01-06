@@ -15,6 +15,26 @@ Wrong order causes `ENOTTY` errors because alternate screen mode interferes with
 
 **Component registration** (`melker-runner.ts`): The `melker.ts` module MUST be imported BEFORE `parseMelkerFile` to ensure component registrations happen first.
 
+## Fast Render Path
+
+Input and Textarea components use a fast render path for immediate visual feedback (~2ms latency).
+
+**Key implementation** (see `src/engine.ts` keydown handler):
+1. `prepareForFastRender()` - Copy previous buffer to current
+2. `fastRender()` - Render only the input cells at cached bounds
+3. `getDiffOnly()` - Get diff WITHOUT swapping buffers
+4. `_renderFastPath()` - Output to terminal
+
+**Critical**: Must NOT swap buffers during fast render, or the debounced full render will diff against wrong baseline (causing flicker).
+
+**Dialog handling**: Fast render skipped when:
+- System dialogs open (alert, confirm, prompt, accessibility)
+- Overlay dialog exists (dialog that doesn't contain the focused input)
+
+Inputs inside an open dialog still use fast render.
+
+See `agent_docs/fast-input-render-plan.md` for full architecture.
+
 ## Engine Stop Sequence
 
 **CRITICAL**: Render guards prevent output after terminal cleanup.

@@ -74,22 +74,37 @@ Press `F6` to toggle visibility (also: `F10`, `F11`, `Shift+F12`).
 
 | Metric | Description |
 |--------|-------------|
-| FPS | Frames per second (render frequency) |
+| Max FPS | Theoretical max FPS (1000 / avgRenderTime) |
+| Renders/s | Actual renders per second (activity rate) |
 | Render | Last render time (ms) |
 | Render avg | Average render time over 60 frames |
 | Layout | Last layout time (ms) |
 | Layout avg | Average layout time over 60 frames |
+| Input lat | Input-to-render latency (ms) |
+| Input avg | Average input latency over 60 samples |
+| Breakdown | Latency breakdown (h+w+l+b+a) |
 | Nodes | Number of layout nodes |
 | Cells | Changed/total buffer cells |
 | Memory | Estimated memory usage |
 | Renders | Total render count |
 | Errors | Component error count |
 
+### Input Latency Breakdown
+
+The `h+w+l+b+a` format shows (each padded to 2 chars for stability):
+- **h** (handler): Time in event handler (ms)
+- **w** (wait): Debounce wait time (ms)
+- **l** (layout): Layout calculation time (ms)
+- **b** (buffer): Buffer rendering time (ms)
+- **a** (apply): Terminal output time (ms)
+
+Example: ` 1+16+ 2+ 1+ 0` = 1ms handler + 16ms wait + 2ms layout + 1ms buffer + 0ms apply
+
 ### Color Coding
 
-- **Green**: Good performance (FPS >= 30, render < 16ms)
-- **Yellow**: Acceptable (FPS 15-30, render 16-33ms)
-- **Red**: Needs attention (FPS < 15, render > 33ms)
+- **Green**: Good performance (Max FPS >= 60, render < 16ms)
+- **Yellow**: Acceptable (Max FPS 30-60, render 16-33ms)
+- **Red**: Needs attention (Max FPS < 30, render > 33ms)
 
 ## Headless Mode (`src/headless.ts`)
 

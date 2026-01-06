@@ -529,6 +529,19 @@ export class DualBuffer {
     return differences;
   }
 
+  // Get differences without swapping or clearing (for fast render path)
+  // This allows immediate visual feedback without disrupting the buffer state
+  // for the upcoming full render
+  getDiffOnly(): BufferDiff[] {
+    return this._currentBuffer.diff(this._previousBuffer);
+  }
+
+  // Prepare current buffer for fast render by copying previous buffer content
+  // This allows fast render to update only specific cells while preserving the rest
+  prepareForFastRender(): void {
+    this._currentBuffer.copyFrom(this._previousBuffer);
+  }
+
   // Force complete redraw (useful for initialization or after screen clear)
   forceRedraw(): BufferDiff[] {
     const differences: BufferDiff[] = [];

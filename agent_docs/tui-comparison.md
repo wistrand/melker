@@ -287,10 +287,16 @@ This distinction mirrors web vs native: Melker treats TUI apps like web pages (s
 
 | Strategy | Libraries | Description |
 |----------|-----------|-------------|
+| Immediate mode | Ratatui, FTXUI | Redraw entire UI each frame (fast in Rust/C++) |
 | Dual buffer | Melker, Ratatui | Compare buffers, write diff |
 | Damage buffer | Blessed | Track changed regions |
 | Yoga layout | Ink | Facebook's flexbox engine |
 | Virtual DOM | Ink | React reconciliation |
+
+**Performance notes:**
+- **Immediate mode** (Ratatui, FTXUI): Raw language speed makes full redraws fast
+- **Retained mode** (Melker, Ink, Textual): Layout caching reduces work per frame
+- **Melker's fast input path**: Bypasses layout for text input, renders at cached bounds
 
 ## Pixel Canvas
 
@@ -460,7 +466,7 @@ auto table = vbox({
 | **Melker** | Run `.melker` from URL, AI assistant, permission sandbox, literate UI |
 | **Ink** | Full React ecosystem, DevTools, Suspense |
 | **Textual** | Terminal + browser, CSS styling, command palette |
-| **Ratatui** | Rust safety, no_std support, 60 FPS performance |
+| **Ratatui** | Rust safety, no_std support, immediate mode performance |
 | **Bubble Tea** | Elm architecture, 38k stars, SSH/network serving |
 | **tview** | Battle-tested (gh CLI), rich widgets |
 | **FTXUI** | Zero deps, WebAssembly, pixel canvas |

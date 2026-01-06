@@ -18,6 +18,7 @@ import { getThemeColor, getThemeManager } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { getLogger } from './logging.ts';
 import { getGlobalErrorHandler, renderErrorPlaceholder } from './error-boundary.ts';
+import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 
 const renderLogger = getLogger('RenderEngine');
 
@@ -119,6 +120,25 @@ export class RenderingEngine {
     this._document = document;
   }
 
+  /**
+   * Find element bounds from cached layout tree (for fast rendering)
+   */
+  findElementBounds(elementId: string): Bounds | null {
+    if (!this._cachedLayoutTree) return null;
+    return this._findBoundsInTree(elementId, this._cachedLayoutTree);
+  }
+
+  private _findBoundsInTree(elementId: string, node: LayoutNode): Bounds | null {
+    if (node.element?.id === elementId) {
+      return node.bounds;
+    }
+    for (const child of node.children || []) {
+      const found = this._findBoundsInTree(elementId, child);
+      if (found) return found;
+    }
+    return null;
+  }
+
   // Collected overlays for the current render pass
   private _overlays: Overlay[] = [];
 
@@ -149,6 +169,7 @@ export class RenderingEngine {
     };
     const advancedLayoutTree = this._layoutEngine.calculateLayout(element, layoutContext);
     const layoutTree = this._convertAdvancedLayoutNode(advancedLayoutTree);
+    getGlobalPerformanceDialog().markLayoutEnd();
 
     // Build layout context map for scroll calculations
     this._currentLayoutContext = new Map();
@@ -261,6 +282,7 @@ export class RenderingEngine {
     this._cachedLayoutTree = layoutTree;
     this._cachedElement = element;
     this._cachedViewport = viewport;
+    getGlobalPerformanceDialog().markBufferEnd();
 
     return layoutTree;
   }

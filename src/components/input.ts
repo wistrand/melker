@@ -537,6 +537,83 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     }
     return true;
   }
+
+  /**
+   * Fast render - updates only the text content at cached bounds.
+   * Skips layout calculation for immediate visual feedback.
+   * Returns true if fast render was performed, false if full render needed.
+   */
+  fastRender(buffer: DualBuffer, bounds: Bounds, isFocused: boolean): boolean {
+    // Don't fast render if showing completions (needs full render for dropdown)
+    if (this._showingCompletions) {
+      return false;
+    }
+
+    const value = this._internalValue;
+    const cursorPos = this._cursorPosition;
+    const { placeholder } = this.props;
+    const isPassword = this.props.format === 'password';
+
+    // Get styles
+    const elementStyle = this.props.style || {};
+    const bg = elementStyle.background || getThemeColor('inputBackground');
+    const fg = value
+      ? (elementStyle.color || getThemeColor('inputForeground'))
+      : getThemeColor('textMuted');
+
+    // Clear the input area
+    buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, 1, {
+      char: ' ',
+      background: bg,
+      foreground: fg,
+    });
+
+    // Render text content
+    const maskedValue = isPassword && value ? '*'.repeat(value.length) : value;
+    const textToRender = maskedValue || placeholder || '';
+    const textStyle = (!value && placeholder)
+      ? { foreground: 'gray', background: bg }
+      : { foreground: fg, background: bg };
+
+    if (textToRender) {
+      // Truncate if longer than available width
+      let visibleText = textToRender;
+      if (textToRender.length > bounds.width) {
+        visibleText = textToRender.substring(textToRender.length - bounds.width);
+      }
+      buffer.currentBuffer.setText(bounds.x, bounds.y, visibleText, textStyle);
+    }
+
+    // Render cursor if focused
+    if (isFocused) {
+      const valueLength = value.length;
+      const actualCursorPos = Math.min(cursorPos, valueLength);
+      const cursorX = bounds.x + actualCursorPos;
+
+      if (cursorX >= bounds.x && cursorX < bounds.x + bounds.width) {
+        const hasCharAtCursor = actualCursorPos < value.length;
+        const cursorChar = hasCharAtCursor
+          ? (isPassword ? '*' : value[actualCursorPos])
+          : ' ';
+
+        buffer.currentBuffer.setText(cursorX, bounds.y, cursorChar, {
+          foreground: fg,
+          background: bg,
+          reverse: true,
+        });
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if the last key input can be fast rendered.
+   * Returns false for operations that need full render (completions, etc.)
+   */
+  canFastRender(): boolean {
+    return !this._showingCompletions;
+  }
 }
 
 // Lint schema for input component

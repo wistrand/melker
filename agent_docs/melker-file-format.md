@@ -70,7 +70,44 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<autocomplete>` | placeholder, onSearch, onSelect, debounce, minChars | Async search dropdown |
 | `<command-palette>` | open, onSelect, width | Modal command picker |
 | `<option>` | value, disabled, shortcut | Child of combobox/select/autocomplete/command-palette |
-| `<group>` | label | Groups options under a header |
+| `<group>` | label, system | Groups options under a header |
+
+## System Command Palette
+
+System commands are **automatically injected** into all command palettes. A "System" group is appended containing:
+
+| Command | Shortcut | Action |
+|---------|----------|--------|
+| Exit | Ctrl+C | Exit the application |
+| AI Assistant | F8 | Open AI accessibility dialog |
+| View Source | F12 | Toggle View Source overlay |
+| Performance Dialog | F6 | Toggle Performance stats |
+
+**Opt-out:** Add `system={false}` to disable system commands:
+```xml
+<command-palette system={false} onSelect="handleCommand(event.value)">
+  <!-- Only custom commands, no system group -->
+</command-palette>
+```
+
+**Control placement:** Use `<group system="true" />` to position system commands where you want:
+```xml
+<command-palette onSelect="handleCommand(event.value)">
+  <!-- System commands first -->
+  <group system="true" />
+  <group label="My Commands">
+    <option value="cmd1">Custom Command</option>
+  </group>
+</command-palette>
+```
+
+**If no command palette exists** in the document, a default system palette is injected (opened with Ctrl+K).
+
+**Visual formatting:**
+- Group headers are displayed in bold
+- Options within groups are indented by 1 character
+- Shortcuts are right-aligned with 1 character padding
+- Scrollbar overwrites the right border when needed
 
 ## Styling
 

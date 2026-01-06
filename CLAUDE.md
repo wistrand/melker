@@ -348,9 +348,10 @@ See `agent_docs/melker-file-format.md` for syntax details.
 
 | Key | Action |
 |-----|--------|
-| `F10` / `F11` | Toggle Performance dialog (live stats) |
-| `Alt+H` | Open AI accessibility assistant (text input) |
+| `Ctrl+K` | Toggle Command Palette |
+| `F6` | Toggle Performance dialog (live stats) |
 | `F7` | Open AI assistant with voice input (or toggle recording if open) |
+| `F8` | Open AI accessibility assistant (text input) |
 | `F12` | Toggle View Source overlay (for .md files: shows Markdown/Melker tabs) |
-| `Escape` | Close View Source overlay / Close AI dialog |
+| `Escape` | Close overlays / Close AI dialog |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |

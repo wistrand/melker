@@ -177,15 +177,23 @@ class AutocompleteElement extends ComboboxElement {
 
 ### CommandPaletteElement
 
-Modal overlay variant:
+Modal overlay variant with system command integration:
 
 ```typescript
 class CommandPaletteElement extends FilterableListCore {
   // Renders as centered modal (like dialog)
-  // Shortcuts display right-aligned
+  // Shortcuts display right-aligned with 1 char padding
+  // Options within groups indented by 1 char
+  // Scrollbar overwrites right border
   // Escape closes, fires onOpenChange
+
+  // Overrides to account for group headers taking rows:
+  override getVisibleRange(): { start, end }
+  override _ensureFocusedVisible(): void
 }
 ```
+
+**System Commands:** All command palettes automatically receive a "System" group with Exit, AI Assistant, View Source, and Performance Dialog commands. Opt-out with `system={false}` prop.
 
 ## Rendering Architecture
 

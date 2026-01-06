@@ -81,6 +81,77 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     super('command-palette', defaultProps, children);
   }
 
+  /**
+   * Override to account for group headers taking up rows
+   */
+  override getVisibleRange(): { start: number; end: number } {
+    const maxRows = this.props.maxVisible || 10;
+    const filtered = this.getFilteredOptions();
+    const start = this._scrollTop;
+
+    // Count how many options fit in maxRows, accounting for group headers
+    let rowsUsed = 0;
+    let currentGroup: string | undefined = undefined;
+    let end = start;
+
+    for (let i = start; i < filtered.length && rowsUsed < maxRows; i++) {
+      const option = filtered[i];
+      // Group header takes a row
+      if (option.group !== currentGroup) {
+        currentGroup = option.group;
+        if (currentGroup) {
+          rowsUsed++;
+          if (rowsUsed >= maxRows) break;
+        }
+      }
+      // Option takes a row
+      rowsUsed++;
+      end = i + 1;
+    }
+
+    return { start, end };
+  }
+
+  /**
+   * Override to properly calculate scroll limits with group headers
+   */
+  protected override _ensureFocusedVisible(): void {
+    const filtered = this.getFilteredOptions();
+    const maxRows = this.props.maxVisible || 10;
+
+    // Calculate how many options fit from current scroll position
+    const { end } = this.getVisibleRange();
+    const visibleCount = end - this._scrollTop;
+
+    if (this._focusedIndex < this._scrollTop) {
+      this._scrollTop = this._focusedIndex;
+    } else if (this._focusedIndex >= end) {
+      // Need to scroll down - find scroll position that shows focused item
+      // Work backwards from focused item to find proper scroll top
+      let rowsNeeded = 1; // The focused item itself
+      let currentGroup = filtered[this._focusedIndex]?.group;
+
+      for (let i = this._focusedIndex - 1; i >= 0 && rowsNeeded < maxRows; i--) {
+        const option = filtered[i];
+        if (option.group !== currentGroup) {
+          currentGroup = option.group;
+          if (filtered[i + 1]?.group) rowsNeeded++; // Group header for next group
+        }
+        rowsNeeded++;
+        if (rowsNeeded >= maxRows) {
+          this._scrollTop = i + 1;
+          break;
+        }
+      }
+      if (rowsNeeded < maxRows) {
+        this._scrollTop = 0;
+      }
+    }
+
+    // Clamp scroll
+    this._scrollTop = Math.max(0, this._scrollTop);
+  }
+
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     // Return minimal size to ensure render is called (needed to register overlay)
     // The actual modal content is rendered as an overlay and doesn't affect layout
@@ -338,16 +409,17 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
         }
       }
 
-      // Render option with shortcut
+      // Render option with shortcut (indent if in a group)
       const isFocused = i === this.getFocusedIndex();
-      this._renderOption(bounds.x + 1, y, contentWidth, option, isFocused, style, buffer);
+      const indent = option.group ? 1 : 0;
+      this._renderOption(bounds.x + 1 + indent, y, contentWidth - indent, option, isFocused, style, buffer);
       this._rowToOptionIndex.set(y, i);
       y++;
     }
 
-    // Render scrollbar
+    // Render scrollbar (overwrites right border)
     if (this.hasScroll()) {
-      const scrollbarX = bounds.x + bounds.width - 2;
+      const scrollbarX = bounds.x + bounds.width - 1;
       const scrollbarY = bounds.y + 3; // After title, input, separator
       const scrollbarHeight = bounds.height - 4; // Minus borders and header
       this._renderScrollbar(buffer, scrollbarX, scrollbarY, scrollbarHeight, style);
@@ -403,10 +475,10 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
       buffer.currentBuffer.setCell(x + i, y, { ...optionStyle, char: ' ' });
     }
 
-    // Calculate space for shortcut
+    // Calculate space for shortcut (1 char right padding)
     const shortcut = option.shortcut || '';
     const shortcutWidth = shortcut.length;
-    const labelWidth = width - shortcutWidth - (shortcut ? 2 : 0); // 2 for spacing
+    const labelWidth = width - shortcutWidth - (shortcut ? 3 : 0); // 2 for spacing + 1 for right padding
 
     // Render label (with match highlighting via bold)
     let label = option.label;
@@ -424,9 +496,9 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
       });
     }
 
-    // Render shortcut (right-aligned, dimmed unless focused)
+    // Render shortcut (right-aligned with 1 char padding, dimmed unless focused)
     if (shortcut) {
-      const shortcutX = x + width - shortcutWidth;
+      const shortcutX = x + width - shortcutWidth - 1;
       const shortcutStyle: Partial<Cell> = isFocused
         ? optionStyle
         : { ...style, foreground: getThemeColor('textMuted') };

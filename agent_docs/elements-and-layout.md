@@ -466,10 +466,9 @@ Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an
 1. **Layout calculation** → LayoutNode tree
 2. **Store bounds** → `_currentLayoutContext` map (id → LayoutNode)
 3. **Render pass** → Write to dual buffer
-4. **Overlay pass** → Render menus on top
-5. **Modal pass** → Render dialogs last
-6. **Selection pass** → Apply text selection highlighting
-7. **Buffer diff** → Output ANSI sequences
+4. **Modal pass** → Render dialogs last
+5. **Selection pass** → Apply text selection highlighting
+6. **Buffer diff** → Output ANSI sequences
 
 ## Style Inheritance
 

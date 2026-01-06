@@ -13,16 +13,6 @@ Critical implementation notes for Melker development.
 
 Wrong order causes `ENOTTY` errors because alternate screen mode interferes with raw mode.
 
-## Menu Overlay Rendering
-
-Dropdown menus are rendered as overlays after normal content to prevent sibling elements from overwriting them.
-
-**Pipeline** (see `src/rendering.ts` ~line 109):
-1. Normal rendering - all elements in tree order
-2. Menu collection - dropdowns stored in `$melker.overlays`
-3. Overlay pass - menus rendered on top
-4. Modal pass - dialogs render last
-
 **Component registration** (`src/melker-main.ts`): The `melker.ts` module MUST be imported BEFORE `parseMelkerFile` to ensure component registrations happen first.
 
 ## Engine Stop Sequence
@@ -86,9 +76,9 @@ Gray themes (`gray-std`, `gray-dark`) enforce grayscale conversion at render tim
 - Maps to 4 levels: black, brightBlack, gray, white
 - See `src/theme.ts` for implementation
 
-## Dialog/Menu Hit Testing
+## Dialog Hit Testing
 
-Overlays (dialogs, menus) require special hit testing since their children's bounds are stored separately from the main layout tree. See `_hitTestOpenDialogs()` and `_hitTestOpenMenus()` in `src/engine.ts`.
+Dialogs require special hit testing since their children's bounds are stored separately from the main layout tree. See `_hitTestOpenDialogs()` in `src/hit-test.ts`.
 
 ## Element Bounds
 

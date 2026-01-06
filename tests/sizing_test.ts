@@ -157,17 +157,17 @@ Deno.test('calculateContentBounds', () => {
     padding: 3,
   };
 
-  const contentBounds = model.calculateContentBounds(elementBounds, style);
+  const contentBoundsResult = model.calculateContentBounds(elementBounds, style);
 
   // Content starts after border + padding (margin is OUTSIDE element bounds)
-  assertEquals(contentBounds.x, 14); // 10 + 1 + 3
-  assertEquals(contentBounds.y, 24); // 20 + 1 + 3
+  assertEquals(contentBoundsResult.bounds.x, 14); // 10 + 1 + 3
+  assertEquals(contentBoundsResult.bounds.y, 24); // 20 + 1 + 3
 
   // Content size is reduced by border + padding on both sides (NOT margin)
   const expectedWidth = 100 - (1*2) - (3*2); // 92
   const expectedHeight = 60 - (1*2) - (3*2); // 52
-  assertEquals(contentBounds.width, expectedWidth);
-  assertEquals(contentBounds.height, expectedHeight);
+  assertEquals(contentBoundsResult.bounds.width, expectedWidth);
+  assertEquals(contentBoundsResult.bounds.height, expectedHeight);
 });
 
 Deno.test('calculateElementBounds', () => {

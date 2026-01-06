@@ -82,21 +82,6 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
         break;
       }
 
-      case 'menu':
-      case 'menu-bar': {
-        const isOpen = element.props.open === true;
-        lines.push(`${indent}[Menu${isOpen ? ' (open)' : ''}]`);
-        break;
-      }
-
-      case 'menu-item': {
-        const isSelected = element.props.selected === true;
-        if (element.props.title) {
-          lines.push(`${indent}[Menu Item: ${element.props.title}${isSelected ? ' (selected)' : ''}]`);
-        }
-        break;
-      }
-
       case 'list': {
         const itemCount = (element.children || []).filter(c => c.type === 'li').length;
         const selectedItem = (element.children || []).find(c => c.props.selected === true);
@@ -279,7 +264,7 @@ function getAvailableActions(document: Document): string[] {
 
   // Global actions
   actions.push('Tab / Shift+Tab: Navigate between focusable elements');
-  actions.push('Escape: Close dialogs or menus');
+  actions.push('Escape: Close dialogs');
   actions.push('F11 or Alt+H: Open accessibility assistant (this dialog)');
 
   // Context-specific actions
@@ -310,14 +295,6 @@ function getAvailableActions(document: Document): string[] {
       case 'list':
         actions.push('Arrow Up/Down: Navigate list items');
         actions.push('Enter: Select item');
-        break;
-
-      case 'menu':
-      case 'menu-item':
-        actions.push('Arrow Up/Down: Navigate menu items');
-        actions.push('Enter: Select menu item');
-        actions.push('Arrow Right: Open submenu');
-        actions.push('Arrow Left: Close submenu');
         break;
 
       case 'container':

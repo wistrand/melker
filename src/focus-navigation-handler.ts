@@ -121,28 +121,6 @@ export class FocusNavigationHandler {
   }
 
   /**
-   * Handle Alt key for menu bar activation
-   */
-  handleMenuBarActivation(): void {
-    if (!this._deps.document) return;
-
-    // Find the first menu bar in the document
-    const menuBar = this.findMenuBarElement(this._deps.document.root);
-    if (!menuBar) return;
-
-    // Toggle menu bar activation
-    if ((menuBar as any).handleKeyInput && (menuBar as any).handleKeyInput('F10')) {
-      // Focus the menu bar when activated
-      this._deps.document.focus(menuBar.id);
-
-      // Auto-render to show activation state
-      if (this._deps.autoRender) {
-        this._deps.onRender();
-      }
-    }
-  }
-
-  /**
    * Register an element and all its children with the document
    */
   registerElementTree(element: Element): void {
@@ -152,32 +130,6 @@ export class FocusNavigationHandler {
         this.registerElementTree(child);
       }
     }
-  }
-
-  /**
-   * Find menu bar element in the document tree
-   */
-  findMenuBarElement(element: Element): Element | null {
-    if (element.type === 'menu-bar') {
-      return element;
-    }
-
-    if (element.children) {
-      for (const child of element.children) {
-        // Handle double-nested arrays (container children issue)
-        if (Array.isArray(child)) {
-          for (const arrayItem of child) {
-            const found = this.findMenuBarElement(arrayItem);
-            if (found) return found;
-          }
-        } else {
-          const found = this.findMenuBarElement(child);
-          if (found) return found;
-        }
-      }
-    }
-
-    return null;
   }
 
   /**

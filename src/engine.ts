@@ -568,12 +568,6 @@ export class MelkerEngine {
         return;
       }
 
-      // Handle F10 key for menu bar activation (global)
-      if (event.key === 'F10') {
-        this._focusNavigationHandler.handleMenuBarActivation();
-        return;
-      }
-
       // Handle F12 key for View Source (global)
       if (event.key === 'F12') {
         this._viewSourceManager?.toggle();
@@ -607,12 +601,6 @@ export class MelkerEngine {
       // Handle Escape to close Accessibility dialog
       if (event.key === 'Escape' && this._accessibilityDialogManager?.isOpen()) {
         this._accessibilityDialogManager.close();
-        return;
-      }
-
-      // Handle Ctrl+M as alternative menu bar activation
-      if (event.ctrlKey && event.key === 'm') {
-        this._focusNavigationHandler.handleMenuBarActivation();
         return;
       }
 
@@ -694,20 +682,6 @@ export class MelkerEngine {
             this.render();
           }
         }
-        // Handle Enter key on focused menu items
-        else if (focusedElement.type === 'menu-item' && event.key === 'Enter') {
-          // Trigger click event on the focused menu item
-          this._document!.triggerElementEvent(focusedElement, {
-            type: 'click',
-            target: focusedElement,
-            timestamp: Date.now(),
-          });
-
-          // Re-render to show any state changes from the click handler
-          if (this._options.autoRender) {
-            this.render();
-          }
-        }
         // Handle Enter/Space key on Clickable elements (checkbox, radio, etc.)
         else if (isClickable(focusedElement) &&
                  (event.key === 'Enter' || event.key === ' ')) {
@@ -722,17 +696,6 @@ export class MelkerEngine {
 
           if (handled) {
             this.render();
-          }
-        }
-        // Handle keyboard navigation for menu components
-        else if (focusedElement.type === 'menu-bar' || focusedElement.type === 'menu' || focusedElement.type === 'menu-item') {
-          const menuComponent = focusedElement as any;
-          if (menuComponent.handleKeyInput) {
-            const handled = menuComponent.handleKeyInput(event.key, event.ctrlKey, event.altKey);
-            // Auto-render if the menu handled the key
-            if (handled && this._options.autoRender) {
-              this.render();
-            }
           }
         }
         // Generic keyboard event handling for components with onKeyPress method

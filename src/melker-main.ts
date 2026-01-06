@@ -164,13 +164,6 @@ async function wireBundlerHandlers(
       await wireBundlerHandlers(child, registry, context, logger, handlerCodeMap, errorTranslator);
     }
   }
-
-  // Also process items in props.items (used by menu components)
-  if (element.props?.items && Array.isArray(element.props.items)) {
-    for (const item of element.props.items) {
-      await wireBundlerHandlers(item, registry, context, logger, handlerCodeMap, errorTranslator);
-    }
-  }
 }
 
 /**

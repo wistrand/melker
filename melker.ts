@@ -389,12 +389,12 @@ registerComponent({
 });
 
 // Run main if this is the entry point
+// Delegates to melker-launcher.ts for policy enforcement and subprocess spawning
 if (import.meta.main) {
-  // Import main function from melker-main.ts
-  import('./src/melker-main.ts').then(({ main }) => {
-    return main();
+  import('./melker-launcher.ts').then((mod) => {
+    return mod.main();
   }).catch((error) => {
-    console.error(`💥 Fatal error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`Fatal error: ${error instanceof Error ? error.message : String(error)}`);
     Deno.exit(1);
   });
 }

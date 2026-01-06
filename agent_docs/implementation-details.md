@@ -13,7 +13,7 @@ Critical implementation notes for Melker development.
 
 Wrong order causes `ENOTTY` errors because alternate screen mode interferes with raw mode.
 
-**Component registration** (`src/melker-main.ts`): The `melker.ts` module MUST be imported BEFORE `parseMelkerFile` to ensure component registrations happen first.
+**Component registration** (`melker-runner.ts`): The `melker.ts` module MUST be imported BEFORE `parseMelkerFile` to ensure component registrations happen first.
 
 ## Engine Stop Sequence
 
@@ -45,6 +45,23 @@ The engine MUST:
 - Restore terminal before error output
 - Never suppress errors
 - Log fatal errors to file with `logger.fatal()`
+
+## Error Rate Limiting
+
+Component render errors are rate-limited to prevent error floods from blocking input (see `src/error-boundary.ts`).
+
+**Configuration:**
+- Max 5 errors per component per second
+- 2 second cooldown after rate limit triggers
+- Per-component tracking (by element ID or type)
+
+**Behavior:**
+1. First 5 errors logged normally
+2. 6th error triggers rate limiting with warning
+3. Subsequent errors suppressed during cooldown
+4. After cooldown, summary logged: "suppressed N errors"
+
+**Error overlay** shows "(+N suppressed)" when rate limiting is active.
 
 **Terminal restoration sequence** (see `src/terminal-lifecycle.ts`):
 1. Disable raw mode: `Deno.stdin.setRaw(false)`

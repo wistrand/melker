@@ -143,7 +143,9 @@ async function runWithPolicy(
   denoFlags.push('--no-prompt');
 
   // Build the subprocess command - run melker-runner.ts
-  const runnerEntry = new URL('./melker-runner.ts', import.meta.url).pathname;
+  const runnerUrl = new URL('./melker-runner.ts', import.meta.url);
+  // Use href for remote URLs, pathname for local files
+  const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
 
   // Filter out policy-related flags that shouldn't be passed to subprocess
   const filteredArgs = originalArgs.filter(arg =>
@@ -213,7 +215,8 @@ async function runRemoteWithPolicy(
     denoFlags.push('--no-prompt');
 
     // Build the subprocess command
-    const runnerEntry = new URL('./melker-runner.ts', import.meta.url).pathname;
+    const runnerUrl = new URL('./melker-runner.ts', import.meta.url);
+    const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
 
     // Filter out policy-related flags and replace URL with temp file
     const filteredArgs: string[] = [];
@@ -294,7 +297,8 @@ export async function main(): Promise<void> {
 
   // Handle --schema option (delegates to runner)
   if (args.includes('--schema')) {
-    const runnerEntry = new URL('./melker-runner.ts', import.meta.url).pathname;
+    const runnerUrl = new URL('./melker-runner.ts', import.meta.url);
+    const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
     const process = new Deno.Command(Deno.execPath(), {
       args: ['run', '--allow-all', '--unstable-bundle', runnerEntry, '--schema'],
       stdin: 'inherit',
@@ -307,7 +311,8 @@ export async function main(): Promise<void> {
 
   // Handle --lsp option (delegates to runner)
   if (args.includes('--lsp')) {
-    const runnerEntry = new URL('./melker-runner.ts', import.meta.url).pathname;
+    const runnerUrl = new URL('./melker-runner.ts', import.meta.url);
+    const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
     const process = new Deno.Command(Deno.execPath(), {
       args: ['run', '--allow-all', '--unstable-bundle', runnerEntry, '--lsp'],
       stdin: 'inherit',

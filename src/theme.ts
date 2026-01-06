@@ -648,6 +648,14 @@ export class ThemeManager {
   }
 
   private _parseThemeFromEnv(): string | null {
+    // Respect NO_COLOR standard (https://no-color.org/)
+    // When NO_COLOR is set (any value), use black-and-white theme
+    if (Deno.env.get('NO_COLOR') !== undefined) {
+      // Detect light/dark mode but force bw type
+      const isDark = detectDarkMode();
+      return isDark ? 'bw-dark' : 'bw-std';
+    }
+
     // Check MELKER_THEME environment variable
     // Format: "type-mode" (e.g., "color-dark", "bw-std", "fullcolor-dark")
     // Special values: "auto" (detect capabilities + light/dark), "auto-dark" (detect capabilities, force dark)

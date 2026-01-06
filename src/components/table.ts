@@ -1,6 +1,6 @@
 // Table component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, IntrinsicSizeContext, Bounds, ComponentRenderContext, BorderStyle, BORDER_CHARS, ClickEvent, isRenderable, isClickable } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, IntrinsicSizeContext, Bounds, ComponentRenderContext, BorderStyle, BorderChars, BORDER_CHARS, ClickEvent, isRenderable, isClickable } from '../types.ts';
 import type { KeyEvent } from '../events.ts';
 import type { Document } from '../document.ts';
 import type { DualBuffer, Cell, TerminalBuffer } from '../buffer.ts';
@@ -14,32 +14,6 @@ import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 
 const logger = getLogger('Table');
-
-// Extended border chars for table junctions
-interface TableBorderChars {
-  h: string;   // horizontal
-  v: string;   // vertical
-  tl: string;  // top-left
-  tr: string;  // top-right
-  bl: string;  // bottom-left
-  br: string;  // bottom-right
-  tm: string;  // top-middle (┬)
-  bm: string;  // bottom-middle (┴)
-  lm: string;  // left-middle (├)
-  rm: string;  // right-middle (┤)
-  mm: string;  // middle-middle (┼)
-}
-
-const TABLE_BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, TableBorderChars> = {
-  thin:           { h: '─', v: '│', tl: '┌', tr: '┐', bl: '└', br: '┘', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
-  thick:          { h: '━', v: '┃', tl: '┏', tr: '┓', bl: '┗', br: '┛', tm: '┳', bm: '┻', lm: '┣', rm: '┫', mm: '╋' },
-  double:         { h: '═', v: '║', tl: '╔', tr: '╗', bl: '╚', br: '╝', tm: '╦', bm: '╩', lm: '╠', rm: '╣', mm: '╬' },
-  rounded:        { h: '─', v: '│', tl: '╭', tr: '╮', bl: '╰', br: '╯', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
-  dashed:         { h: '┄', v: '┆', tl: '┌', tr: '┐', bl: '└', br: '┘', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
-  'dashed-rounded': { h: '┄', v: '┆', tl: '╭', tr: '╮', bl: '╰', br: '╯', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
-  ascii:          { h: '-', v: '|', tl: '+', tr: '+', bl: '+', br: '+', tm: '+', bm: '+', lm: '+', rm: '+', mm: '+' },
-  'ascii-rounded': { h: '-', v: '|', tl: '.', tr: '.', bl: "'", br: "'", tm: '+', bm: '+', lm: '+', rm: '+', mm: '+' },
-};
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -886,7 +860,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
     const borderStyle = this.props.border || 'thin';
     const hasBorder = borderStyle !== 'none';
-    const chars = hasBorder ? TABLE_BORDER_CHARS[borderStyle] : null;
+    const chars = hasBorder ? BORDER_CHARS[borderStyle] : null;
     const cellPadding = this.props.cellPadding || 1;
 
     // Calculate column widths (use user-specified widths if provided)
@@ -1263,7 +1237,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     columnWidths: number[],
     style: Partial<Cell>,
     borderStyle: Partial<Cell>,
-    chars: TableBorderChars | null,
+    chars: BorderChars | null,
     cellPadding: number,
     context?: ComponentRenderContext
   ): number {
@@ -1380,7 +1354,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     columnWidths: number[],
     style: Partial<Cell>,
     borderStyle: Partial<Cell>,
-    chars: TableBorderChars | null,
+    chars: BorderChars | null,
     cellPadding: number,
     isSelected: boolean,
     isFocused: boolean = false,

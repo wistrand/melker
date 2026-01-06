@@ -364,6 +364,80 @@ When `draggable={true}`, users can click and drag the title bar to move the dial
 
 The dialog position is stored in `offsetX` and `offsetY` props, which persist the drag offset from the centered position.
 
+## Filterable List Components
+
+A family of searchable/selectable list components built on a shared `FilterableListCore` base.
+
+See `agent_docs/filterable-list-architecture.md` for implementation details.
+
+### Components
+
+| Component | Description |
+|-----------|-------------|
+| `<combobox>` | Inline dropdown with text filter |
+| `<select>` | Dropdown picker without filter |
+| `<autocomplete>` | Combobox with async loading |
+| `<command-palette>` | Modal command picker |
+
+### Child Elements
+
+| Element | Description |
+|---------|-------------|
+| `<option>` | Selectable item (value, disabled, shortcut) |
+| `<group>` | Groups options under a header |
+
+### Quick Examples
+
+```xml
+<!-- Combobox with text filtering -->
+<combobox placeholder="Select country..." onSelect="$app.setCountry(event.value)">
+  <option value="us">United States</option>
+  <option value="uk">United Kingdom</option>
+</combobox>
+
+<!-- Simple select dropdown -->
+<select value="medium" onSelect="$app.setSize(event.value)">
+  <option value="small">Small</option>
+  <option value="medium">Medium</option>
+  <option value="large">Large</option>
+</select>
+
+<!-- Autocomplete with async search -->
+<autocomplete
+  placeholder="Search users..."
+  onSearch="$app.searchUsers(event.query)"
+  onSelect="$app.selectUser(event)"
+  debounce="300"
+/>
+
+<!-- Command palette -->
+<command-palette open="${$app.showPalette}" onSelect="$app.runCommand(event.value)">
+  <group label="File">
+    <option value="file.new" shortcut="Ctrl+N">New File</option>
+  </group>
+</command-palette>
+```
+
+### Key Props (shared)
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `open` | boolean | Dropdown visibility |
+| `filter` | string | 'fuzzy', 'prefix', 'contains', 'exact', 'none' |
+| `maxVisible` | number | Max dropdown height (default: 8) |
+| `onSelect` | function | Called when option selected |
+
+### Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `src/components/filterable-list/core.ts` | Shared base class |
+| `src/components/filterable-list/combobox.ts` | Combobox component |
+| `src/components/filterable-list/select.ts` | Select component |
+| `src/components/filterable-list/autocomplete.ts` | Autocomplete component |
+| `src/components/filterable-list/command-palette.ts` | Command palette component |
+| `src/components/filterable-list/filter.ts` | Fuzzy/prefix/contains matching |
+
 ## Progress Component
 
 The `<progress>` component displays a progress bar using canvas pixels for smooth sub-character fill.

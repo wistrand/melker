@@ -65,6 +65,12 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<canvas>` | width, height, dither, ditherBits, onPaint | Pixel graphics (sextant chars) |
 | `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError | Image display (extends canvas) |
 | `<markdown>` | | Markdown text rendering |
+| `<combobox>` | placeholder, filter, onSelect, maxVisible | Dropdown with text filter |
+| `<select>` | value, onSelect, maxVisible | Dropdown picker (no filter) |
+| `<autocomplete>` | placeholder, onSearch, onSelect, debounce, minChars | Async search dropdown |
+| `<command-palette>` | open, onSelect, width | Modal command picker |
+| `<option>` | value, disabled, shortcut | Child of combobox/select/autocomplete/command-palette |
+| `<group>` | label | Groups options under a header |
 
 ## Styling
 
@@ -194,6 +200,13 @@ See `examples/melker/` for complete examples:
 - `image_demo.melker` - Image component with fixed and percentage dimensions
 - `chrome_collapse_demo.melker` - Progressive chrome collapse when space is tight
 - `markdown_viewer.melker` - Markdown rendering
+- `combobox_simple.melker` - Basic combobox dropdown
+- `combobox_demo.melker` - Full combobox features
+- `select_simple.melker` - Basic select dropdown
+- `select_demo.melker` - Full select features
+- `autocomplete_demo.melker` - Async search dropdown
+- `command_palette_simple.melker` - Basic command palette
+- `command_palette_demo.melker` - Full command palette features
 
 ## Running
 

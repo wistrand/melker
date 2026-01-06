@@ -1,0 +1,72 @@
+<melker>
+  <script>
+    $app.selectedSize = '';
+    $app.selectedColor = '';
+
+    $app.setSize = (value, label) => {
+      $app.selectedSize = label;
+      const el = $melker.getElementById('sizeResult');
+      if (el) el.props.text = 'Size: ' + label;
+    };
+
+    $app.setColor = (value, label) => {
+      $app.selectedColor = label;
+      const el = $melker.getElementById('colorResult');
+      if (el) el.props.text = 'Color: ' + label;
+    };
+  </script>
+
+  <style>
+    container {
+      padding: 1;
+      gap: 1;
+    }
+    .header {
+      bold: true;
+      color: cyan;
+    }
+    .result {
+      color: green;
+    }
+  </style>
+
+  <container direction="column">
+    <text class="header">Select Component Demo</text>
+
+    <container direction="row" gap="2">
+      <text>Size:</text>
+      <select placeholder="Choose size..." onSelect="$app.setSize(event.value, event.label)">
+        <option value="xs">Extra Small</option>
+        <option value="s">Small</option>
+        <option value="m">Medium</option>
+        <option value="l">Large</option>
+        <option value="xl">Extra Large</option>
+      </select>
+    </container>
+    <text id="sizeResult" class="result">Size: (none)</text>
+
+    <container direction="row" gap="2">
+      <text>Color:</text>
+      <select placeholder="Choose color..." onSelect="$app.setColor(event.value, event.label)">
+        <group label="Primary">
+          <option value="red">Red</option>
+          <option value="blue">Blue</option>
+          <option value="yellow">Yellow</option>
+        </group>
+        <group label="Secondary">
+          <option value="green">Green</option>
+          <option value="orange">Orange</option>
+          <option value="purple">Purple</option>
+        </group>
+        <group label="Neutral">
+          <option value="black">Black</option>
+          <option value="white">White</option>
+          <option value="gray">Gray</option>
+        </group>
+      </select>
+    </container>
+    <text id="colorResult" class="result">Color: (none)</text>
+
+    <text>Use Tab to navigate, Enter/Space to open, arrows to navigate, Enter to select</text>
+  </container>
+</melker>

@@ -1,0 +1,19 @@
+<melker>
+  <container direction="column" padding="1" gap="1">
+    <text>Simple Combobox Test</text>
+
+    <combobox id="myCombo" placeholder="Select..." open="true" filter="fuzzy">
+      <group label="Fruits">
+        <option value="apple">Apple</option>
+        <option value="banana">Banana</option>
+        <option value="cherry">Cherry</option>
+      </group>
+      <group label="Vegetables">
+        <option value="carrot">Carrot</option>
+        <option value="spinach">Spinach</option>
+      </group>
+    </combobox>
+
+    <text>Press arrow keys to navigate, Enter to select</text>
+  </container>
+</melker>

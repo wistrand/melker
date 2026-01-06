@@ -1,0 +1,132 @@
+<melker>
+  <script type="typescript">
+    let fileCount = 0;
+    let zoomLevel = 100;
+    let sidebarVisible = true;
+    let terminalVisible = false;
+    let clipboard = "";
+    let undoStack: string[] = [];
+
+    function updateStatus(msg: string) {
+      const el = $melker.getElementById("status");
+      if (el) el.props.text = msg;
+    }
+
+    function updateState() {
+      const zoom = $melker.getElementById("zoom");
+      const sidebar = $melker.getElementById("sidebar");
+      const terminal = $melker.getElementById("terminal");
+      if (zoom) zoom.props.text = `Zoom: ${zoomLevel}%`;
+      if (sidebar) sidebar.props.text = `Sidebar: ${sidebarVisible ? "on" : "off"}`;
+      if (terminal) terminal.props.text = `Terminal: ${terminalVisible ? "on" : "off"}`;
+    }
+
+    // File commands
+    export function newFile() {
+      fileCount++;
+      updateStatus(`Created: Untitled-${fileCount}.txt`);
+    }
+    export function openFile() {
+      updateStatus("Opening file browser...");
+    }
+    export function saveFile() {
+      updateStatus("File saved successfully");
+    }
+    export function saveAs() {
+      updateStatus("Save as dialog opened...");
+    }
+
+    // Edit commands
+    export function undo() {
+      updateStatus(undoStack.length > 0 ? `Undo: ${undoStack.pop()}` : "Nothing to undo");
+    }
+    export function redo() {
+      updateStatus("Redo performed");
+    }
+    export function cut() {
+      clipboard = "[cut content]";
+      undoStack.push("Cut");
+      updateStatus("Cut to clipboard");
+    }
+    export function copy() {
+      clipboard = "[copied content]";
+      updateStatus("Copied to clipboard");
+    }
+    export function paste() {
+      if (clipboard) {
+        undoStack.push("Paste");
+        updateStatus(`Pasted: ${clipboard}`);
+      } else {
+        updateStatus("Clipboard empty");
+      }
+    }
+
+    // View commands
+    export function toggleSidebar() {
+      sidebarVisible = !sidebarVisible;
+      updateStatus(`Sidebar ${sidebarVisible ? "shown" : "hidden"}`);
+      updateState();
+    }
+    export function toggleTerminal() {
+      terminalVisible = !terminalVisible;
+      updateStatus(`Terminal ${terminalVisible ? "opened" : "closed"}`);
+      updateState();
+    }
+    export function zoomIn() {
+      zoomLevel = Math.min(200, zoomLevel + 10);
+      updateStatus(`Zoom: ${zoomLevel}%`);
+      updateState();
+    }
+    export function zoomOut() {
+      zoomLevel = Math.max(50, zoomLevel - 10);
+      updateStatus(`Zoom: ${zoomLevel}%`);
+      updateState();
+    }
+
+    export function openPalette() {
+      const palette = $melker.getElementById("palette");
+      if (palette) palette.props.open = true;
+    }
+  </script>
+
+  <container direction="column" padding="1" gap="1">
+    <text bold="true">Command Palette Demo</text>
+
+    <text>Press button or Ctrl+K to open</text>
+
+    <button title="Open Command Palette (Ctrl+K)" onClick="$app.openPalette();" />
+
+    <container direction="row" gap="2">
+      <text>Status:</text>
+      <text id="status" color="green">Ready</text>
+    </container>
+
+    <container direction="row" gap="3">
+      <text id="zoom" color="gray">Zoom: 100%</text>
+      <text id="sidebar" color="gray">Sidebar: on</text>
+      <text id="terminal" color="gray">Terminal: off</text>
+    </container>
+
+    <command-palette id="palette" placeholder="Search commands...">
+      <group label="File">
+        <option value="new-file" shortcut="Ctrl+N" onSelect="$app.newFile()">New File</option>
+        <option value="open-file" shortcut="Ctrl+O" onSelect="$app.openFile()">Open File</option>
+        <option value="save-file" shortcut="Ctrl+S" onSelect="$app.saveFile()">Save File</option>
+        <option value="save-as" shortcut="Ctrl+Shift+S" onSelect="$app.saveAs()">Save As</option>
+      </group>
+      <group label="Edit">
+        <option value="undo" shortcut="Ctrl+Z" onSelect="$app.undo()">Undo</option>
+        <option value="redo" shortcut="Ctrl+Y" onSelect="$app.redo()">Redo</option>
+        <option value="cut" shortcut="Ctrl+X" onSelect="$app.cut()">Cut</option>
+        <option value="copy" shortcut="Ctrl+C" onSelect="$app.copy()">Copy</option>
+        <option value="paste" shortcut="Ctrl+V" onSelect="$app.paste()">Paste</option>
+      </group>
+      <group label="View">
+        <option value="toggle-sidebar" onSelect="$app.toggleSidebar()">Toggle Sidebar</option>
+        <option value="toggle-terminal" onSelect="$app.toggleTerminal()">Toggle Terminal</option>
+        <option value="zoom-in" shortcut="Ctrl++" onSelect="$app.zoomIn()">Zoom In</option>
+        <option value="zoom-out" shortcut="Ctrl+-" onSelect="$app.zoomOut()">Zoom Out</option>
+      </group>
+    </command-palette>
+  </container>
+</melker>

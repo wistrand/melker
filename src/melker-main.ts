@@ -108,13 +108,14 @@ async function wireBundlerHandlers(
 
           element.props[propName] = async (event: any) => {
             try {
-              const result = capturedHandlerFn(event);
+              let result = capturedHandlerFn(event);
               if (result instanceof Promise) {
-                await result;
+                result = await result;
               }
               if (shouldAutoRender && context?.render) {
                 context.render();
               }
+              return result; // Return handler result for components that use it
             } catch (error) {
               const err = error instanceof Error ? error : new Error(String(error));
               let location: string | undefined;

@@ -154,6 +154,71 @@ export class TextSelectionHandler {
       }
     }
 
+    // Check for overlay clicks first (dropdowns, tooltips, etc.)
+    // Overlays render on top of normal content, so they should receive clicks first
+    const overlays = this._deps.renderer.getOverlays();
+    let clickedOnOverlay = false;
+    let clickedOverlayId: string | undefined;
+
+    // Check overlays in reverse order (highest z-index first)
+    for (let i = overlays.length - 1; i >= 0; i--) {
+      const overlay = overlays[i];
+      const hitBounds = overlay.hitTestBounds || overlay.bounds;
+      if (event.x >= hitBounds.x && event.x < hitBounds.x + hitBounds.width &&
+          event.y >= hitBounds.y && event.y < hitBounds.y + hitBounds.height) {
+        // Click is on this overlay
+        clickedOnOverlay = true;
+        clickedOverlayId = overlay.id;
+        if (overlay.onClick) {
+          const handled = overlay.onClick(event.x, event.y);
+          if (handled) {
+            // Request re-render after overlay click
+            if (this._options.autoRender) {
+              this._deps.onRender();
+            }
+            return; // Overlay consumed the click
+          }
+        }
+        // If overlay doesn't handle click, continue to normal processing
+        // but let the overlay's parent element handle it
+        break;
+      }
+    }
+
+    // Check for click-outside on overlays that weren't clicked
+    // This handles dismiss-on-click-outside behavior for dropdowns
+    let needsRender = false;
+    for (const overlay of overlays) {
+      if (overlay.onClickOutside && overlay.id !== clickedOverlayId) {
+        // Check if click is within overlay bounds
+        const hitBounds = overlay.hitTestBounds || overlay.bounds;
+        const isInsideOverlay = event.x >= hitBounds.x && event.x < hitBounds.x + hitBounds.width &&
+                                event.y >= hitBounds.y && event.y < hitBounds.y + hitBounds.height;
+
+        // Check if click is within any excluded bounds (like the trigger element)
+        let isInsideExcluded = false;
+        if (overlay.excludeBounds) {
+          for (const excludeBounds of overlay.excludeBounds) {
+            if (event.x >= excludeBounds.x && event.x < excludeBounds.x + excludeBounds.width &&
+                event.y >= excludeBounds.y && event.y < excludeBounds.y + excludeBounds.height) {
+              isInsideExcluded = true;
+              break;
+            }
+          }
+        }
+
+        // If click is outside overlay and not in excluded bounds, trigger callback
+        if (!isInsideOverlay && !isInsideExcluded) {
+          overlay.onClickOutside();
+          needsRender = true;
+        }
+      }
+    }
+
+    if (needsRender && this._options.autoRender) {
+      this._deps.onRender();
+    }
+
     // Perform hit testing to find the element at the clicked coordinates
     const targetElement = this._deps.hitTester.hitTest(event.x, event.y);
     const isAltPressed = event.altKey;

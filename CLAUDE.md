@@ -19,6 +19,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Script usage & context | `agent_docs/script_usage.md` |
 | Implementation details | `agent_docs/implementation-details.md` |
 | AI accessibility | `agent_docs/ai-accessibility.md` |
+| Filterable lists | `agent_docs/filterable-list-architecture.md` |
 | Examples | `examples/melker/*.melker` |
 
 ## Technology Stack
@@ -149,6 +150,7 @@ tests/                - Test files
 4. **Input type is `'input'`** - Not `'text-input'`
 5. **Auto-render in .melker handlers** - Event handlers auto-render after completion (return `false` to skip)
 6. **Avoid emojis** - They break terminal layout
+7. **Update component props explicitly** - In .melker files, reactive bindings like `${$app.var}` only work for initial values. To update props dynamically, use `$melker.getElementById('id').props.propName = value`
 
 ## Environment Variables
 

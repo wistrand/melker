@@ -209,7 +209,10 @@ export class SizingModel {
     }
 
     // Log collapse if it occurred
-    if (chromeCollapse) {
+    if (chromeCollapse && (chromeCollapse.paddingCollapsed?.horizontal > 0 || chromeCollapse.paddingCollapsed?.vertical > 0 ||
+      chromeCollapse.borderCollapsed?.left > 0 || chromeCollapse.borderCollapsed?.right > 0 ||
+      chromeCollapse.borderCollapsed?.top > 0 || chromeCollapse.borderCollapsed?.bottom > 0
+    )) {
       logger.debug(`Chrome collapsed: bounds=${elementBounds.width}x${elementBounds.height}, ` +
         `padding reduced by ${chromeCollapse.paddingCollapsed.horizontal}h/${chromeCollapse.paddingCollapsed.vertical}v, ` +
         `border collapsed: L=${chromeCollapse.borderCollapsed.left} R=${chromeCollapse.borderCollapsed.right} ` +

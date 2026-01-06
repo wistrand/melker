@@ -1,0 +1,27 @@
+<melker>
+  <script type="typescript">
+    let result = "";
+
+    export function handleSelect(e: { value: string }) {
+      result = `Selected: ${e.value}`;
+      // Close the palette after selection
+      const pal = $melker.getElementById("pal");
+      if (pal) {
+        pal.props.open = false;
+      }
+    }
+  </script>
+
+  <container direction="column" padding="1" gap="1">
+    <text>Command Palette Test (opens automatically)</text>
+    <text>Result: ${result}</text>
+
+    <command-palette id="pal" open="true" placeholder="Type to search..." onSelect="$app.handleSelect(event)">
+      <option value="apple">Apple</option>
+      <option value="banana">Banana</option>
+      <option value="cherry">Cherry</option>
+      <option value="date">Date</option>
+      <option value="elderberry">Elderberry</option>
+    </command-palette>
+  </container>
+</melker>

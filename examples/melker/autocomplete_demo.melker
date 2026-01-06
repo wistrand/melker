@@ -1,0 +1,91 @@
+<melker>
+  <script>
+    // Simulated async user search
+    const allUsers = [
+      { value: 'alice', label: 'Alice Anderson', email: 'alice@example.com' },
+      { value: 'bob', label: 'Bob Brown', email: 'bob@example.com' },
+      { value: 'charlie', label: 'Charlie Chen', email: 'charlie@example.com' },
+      { value: 'diana', label: 'Diana Davis', email: 'diana@example.com' },
+      { value: 'edward', label: 'Edward Evans', email: 'edward@example.com' },
+      { value: 'fiona', label: 'Fiona Fisher', email: 'fiona@example.com' },
+      { value: 'george', label: 'George Garcia', email: 'george@example.com' },
+      { value: 'helen', label: 'Helen Harris', email: 'helen@example.com' },
+      { value: 'ivan', label: 'Ivan Ivanov', email: 'ivan@example.com' },
+      { value: 'julia', label: 'Julia Johnson', email: 'julia@example.com' },
+    ];
+
+    export async function searchUsers(query: string) {
+
+      $melker.logger.info("query: " + query);
+
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Filter users by query (case-insensitive)
+      const q = query.toLowerCase();
+      const r = allUsers
+        .filter(u =>
+          u.label.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q)
+        )
+        .map(u => ({
+          value: u.value,
+          label: u.label + ' (' + u.email + ')',
+        }));
+
+      $melker.logger.info("r: " + JSON.stringify(r));
+      return r;
+    }
+
+    export function selectUser(event: { value: string; freeform?: boolean }) {
+      const resultEl = $melker.getElementById('result');
+      if (event.freeform) {
+        resultEl.props.text = 'Selected: ' + event.value + ' (custom entry)';
+      } else {
+        const user = allUsers.find(u => u.value === event.value);
+        if (user) {
+          resultEl.props.text = 'Selected: ' + user.label + ' - ' + user.email;
+        }
+      }
+    }
+  </script>
+
+  <style>
+    #main {
+      padding: 2;
+      gap: 1;
+    }
+    #title {
+      color: accent;
+      bold: true;
+    }
+    #result {
+      margin-top: 1;
+      color: success;
+    }
+  </style>
+
+  <container id="main" direction="column">
+    <text id="title">Autocomplete Demo - User Search</text>
+    <text>Type to search users (min 2 chars, 500ms debounce):</text>
+
+    <autocomplete
+      id="user-search"
+      placeholder="Search users..."
+      onSearch="$app.searchUsers(event.query)"
+      onSelect="$app.selectUser(event)"
+      minChars="1"
+      debounce="500"
+      width="40"
+    >
+      <group label="Recent">
+        <option value="alice">Alice Anderson</option>
+        <option value="bob">Bob Brown</option>
+      </group>
+    </autocomplete>
+
+    <text id="result">Selected: (none)</text>
+
+    <text color="textMuted">Press Escape or click away to close dropdown</text>
+  </container>
+</melker>

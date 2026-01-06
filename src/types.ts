@@ -35,7 +35,7 @@ export type TerminalColor =
 // Border styles using Unicode Box Drawing characters
 export type BorderStyle = 'none' | 'thin' | 'thick' | 'double' | 'rounded' | 'dashed' | 'dashed-rounded' | 'ascii' | 'ascii-rounded';
 
-// Border character definitions: h=horizontal, v=vertical, tl/tr/bl/br=corners
+// Border character definitions: h=horizontal, v=vertical, tl/tr/bl/br=corners, tm/bm/lm/rm/mm=junctions
 export interface BorderChars {
   h: string;   // horizontal line
   v: string;   // vertical line
@@ -43,17 +43,22 @@ export interface BorderChars {
   tr: string;  // top-right corner
   bl: string;  // bottom-left corner
   br: string;  // bottom-right corner
+  tm: string;  // top-middle junction (┬)
+  bm: string;  // bottom-middle junction (┴)
+  lm: string;  // left-middle junction (├)
+  rm: string;  // right-middle junction (┤)
+  mm: string;  // middle-middle junction (┼)
 }
 
 export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {
-  thin:           { h: '─', v: '│', tl: '┌', tr: '┐', bl: '└', br: '┘' },
-  thick:          { h: '━', v: '┃', tl: '┏', tr: '┓', bl: '┗', br: '┛' },
-  double:         { h: '═', v: '║', tl: '╔', tr: '╗', bl: '╚', br: '╝' },
-  rounded:        { h: '─', v: '│', tl: '╭', tr: '╮', bl: '╰', br: '╯' },
-  dashed:         { h: '┄', v: '┆', tl: '┌', tr: '┐', bl: '└', br: '┘' },
-  'dashed-rounded': { h: '┄', v: '┆', tl: '╭', tr: '╮', bl: '╰', br: '╯' },
-  ascii:          { h: '-', v: '|', tl: '+', tr: '+', bl: '+', br: '+' },
-  'ascii-rounded': { h: '-', v: '|', tl: '·', tr: '·', bl: '·', br: '·' },
+  thin:           { h: '─', v: '│', tl: '┌', tr: '┐', bl: '└', br: '┘', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
+  thick:          { h: '━', v: '┃', tl: '┏', tr: '┓', bl: '┗', br: '┛', tm: '┳', bm: '┻', lm: '┣', rm: '┫', mm: '╋' },
+  double:         { h: '═', v: '║', tl: '╔', tr: '╗', bl: '╚', br: '╝', tm: '╦', bm: '╩', lm: '╠', rm: '╣', mm: '╬' },
+  rounded:        { h: '─', v: '│', tl: '╭', tr: '╮', bl: '╰', br: '╯', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
+  dashed:         { h: '┄', v: '┆', tl: '┌', tr: '┐', bl: '└', br: '┘', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
+  'dashed-rounded': { h: '┄', v: '┆', tl: '╭', tr: '╮', bl: '╰', br: '╯', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
+  ascii:          { h: '-', v: '|', tl: '+', tr: '+', bl: '+', br: '+', tm: '+', bm: '+', lm: '+', rm: '+', mm: '+' },
+  'ascii-rounded': { h: '-', v: '|', tl: '·', tr: '·', bl: '·', br: '·', tm: '+', bm: '+', lm: '+', rm: '+', mm: '+' },
 };
 
 export interface Style extends Record<string, any> {
@@ -198,7 +203,34 @@ export interface ComponentRenderContext {
   hoveredElementId?: string;
   requestRender?: () => void;  // Callback for components to request a re-render
   scrollOffset?: { x: number; y: number };  // Scroll offset from parent scrollable container
+  /** Register an overlay to be rendered on top of normal content */
+  registerOverlay?: (overlay: Overlay) => void;
+  /** Full viewport/terminal bounds (for modal overlays) */
+  viewport?: Bounds;
   [key: string]: any;
+}
+
+/**
+ * Overlay - Content rendered on top of normal UI elements.
+ * Used for dropdowns, tooltips, context menus, etc.
+ */
+export interface Overlay {
+  /** Unique identifier for the overlay */
+  id: string;
+  /** Z-index for ordering overlays (higher = on top) */
+  zIndex: number;
+  /** Absolute bounds where the overlay should render */
+  bounds: Bounds;
+  /** The render function that draws the overlay content */
+  render: (buffer: DualBuffer, bounds: Bounds, style: Partial<Cell>) => void;
+  /** Optional: bounds for hit testing (click handling) */
+  hitTestBounds?: Bounds;
+  /** Optional: click handler for the overlay */
+  onClick?: (x: number, y: number) => boolean;
+  /** Optional: callback when click happens outside this overlay (for dismiss behavior) */
+  onClickOutside?: () => void;
+  /** Optional: additional bounds to exclude from click-outside detection (e.g., the trigger element) */
+  excludeBounds?: Bounds[];
 }
 
 // Layout context for intrinsic size calculation

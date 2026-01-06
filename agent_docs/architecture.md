@@ -66,6 +66,7 @@
 | `src/logging.ts` | File-based logging system |
 | `src/debug-server.ts` | WebSocket debug server |
 | `src/headless.ts` | Headless mode for testing |
+| `src/system-command-palette.ts` | System commands (Exit, AI, View Source, Performance) auto-injected into palettes |
 | `melker.ts` | Main entry point, exports |
 | `melker-launcher.ts` | Minimal launcher for policy enforcement and subprocess spawning |
 | `melker-runner.ts` | .melker file runner (bundling, engine, app execution) |

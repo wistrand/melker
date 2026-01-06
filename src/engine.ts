@@ -43,6 +43,11 @@ import {
   AccessibilityDialogManager,
 } from './ai/accessibility-dialog.ts';
 import {
+  createDefaultCommandPalette,
+  createSystemGroup,
+  SystemHandlers,
+} from './system-command-palette.ts';
+import {
   TerminalInputProcessor,
 } from './input.ts';
 import {
@@ -221,6 +226,9 @@ export class MelkerEngine {
 
   // AI Accessibility dialog feature
   private _accessibilityDialogManager?: AccessibilityDialogManager;
+
+  // System command palette (injected if no command palette exists)
+  private _systemCommandPalette?: Element;
 
   // State persistence
   private _persistenceManager!: StatePersistenceManager;
@@ -596,6 +604,12 @@ export class MelkerEngine {
           (event.ctrlKey && event.shiftKey && (event.key === 'p' || event.key === 'P'))) {
         getGlobalPerformanceDialog().toggle();
         this.render();
+        return;
+      }
+
+      // Handle Ctrl+K for Command Palette
+      if (event.ctrlKey && (event.key === 'k' || event.key === 'K')) {
+        this.toggleCommandPalette();
         return;
       }
 
@@ -1657,6 +1671,12 @@ export class MelkerEngine {
       this._rootElement.props.height = this._currentSize.height;
     }
 
+    // Inject system commands into all command palettes (opt-out with system={false})
+    this._injectSystemCommands();
+
+    // Inject default system command palette if no custom one exists
+    this._injectSystemCommandPalette();
+
     // Update focus manager document reference after UI update
     if (this._focusManager) {
       this._focusManager.setDocument(this._document);
@@ -2150,6 +2170,154 @@ export class MelkerEngine {
       }
     }
     return false;
+  }
+
+  /**
+   * Get system command handlers
+   */
+  private _getSystemHandlers(): SystemHandlers {
+    return {
+      exit: () => this.stop(),
+      aiDialog: () => {
+        this._ensureAccessibilityDialogManager();
+        this._accessibilityDialogManager!.toggle();
+        this.render();
+      },
+      viewSource: () => {
+        this._viewSourceManager?.toggle();
+        this.render();
+      },
+      performance: () => {
+        getGlobalPerformanceDialog().toggle();
+        this.render();
+      },
+    };
+  }
+
+  /**
+   * Get the system command palette (creates one if needed)
+   */
+  getSystemCommandPalette(): Element | undefined {
+    return this._systemCommandPalette;
+  }
+
+  /**
+   * Toggle the command palette (opens system palette if no custom one exists)
+   */
+  toggleCommandPalette(): void {
+    // First check for custom command palette
+    const customPalette = this._findOpenCommandPalette() || this._findCommandPalette();
+    if (customPalette) {
+      (customPalette as any).toggle?.();
+      this.render();
+      return;
+    }
+
+    // Fall back to system command palette
+    if (this._systemCommandPalette) {
+      (this._systemCommandPalette as any).toggle?.();
+      this.render();
+    }
+  }
+
+  /**
+   * Find any command palette in the document (open or closed)
+   */
+  private _findCommandPalette(): Element | null {
+    if (!this._document?.root) return null;
+    return this._findElementByType(this._document.root, 'command-palette');
+  }
+
+  /**
+   * Find element by type in tree
+   */
+  private _findElementByType(element: Element, type: string): Element | null {
+    if (element.type === type) return element;
+    if (element.children) {
+      for (const child of element.children) {
+        const found = this._findElementByType(child, type);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Inject system command palette if no command palette exists in document
+   */
+  private _injectSystemCommandPalette(): void {
+    // Check if document already has a command palette
+    if (this._findCommandPalette()) {
+      this._systemCommandPalette = undefined;
+      return;
+    }
+
+    // Create system command palette with direct handlers
+    this._systemCommandPalette = createDefaultCommandPalette(this._getSystemHandlers());
+
+    // Add to root element's children (document will register when traversing tree)
+    if (this._document?.root) {
+      if (!this._document.root.children) {
+        this._document.root.children = [];
+      }
+      this._document.root.children.push(this._systemCommandPalette);
+    }
+  }
+
+  /**
+   * Inject system commands into all command palettes
+   * System commands are added by default, opt-out with system={false}
+   */
+  private _injectSystemCommands(): void {
+    if (!this._document?.root) return;
+    this._injectSystemCommandsInElement(this._document.root);
+  }
+
+  private _injectSystemCommandsInElement(element: Element): void {
+    if (element.type === 'command-palette') {
+      // Opt-out: skip if system={false}
+      if (element.props?.system === false) {
+        // Recurse into children
+        if (element.children) {
+          for (const child of element.children) {
+            this._injectSystemCommandsInElement(child);
+          }
+        }
+        return;
+      }
+
+      if (!element.children) {
+        element.children = [];
+      }
+
+      // Check if system group already exists (from <group system="true" /> marker)
+      let hasSystemGroup = false;
+      for (let i = 0; i < element.children.length; i++) {
+        const child = element.children[i];
+        if (child.type === 'group' && child.props?.system === true) {
+          // Replace marker with actual system group
+          element.children[i] = createSystemGroup(this._getSystemHandlers());
+          hasSystemGroup = true;
+        }
+      }
+
+      // If no system group marker, append system group at the end
+      if (!hasSystemGroup) {
+        element.children.push(createSystemGroup(this._getSystemHandlers()));
+      }
+
+      // Refresh the cached options from updated children
+      if (typeof (element as any).refreshChildOptions === 'function') {
+        (element as any).refreshChildOptions();
+      }
+    }
+
+    // Recurse into children
+    if (element.children) {
+      for (const child of element.children) {
+        this._injectSystemCommandsInElement(child);
+      }
+    }
   }
 }
 

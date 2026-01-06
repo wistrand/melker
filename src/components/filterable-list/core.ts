@@ -197,6 +197,15 @@ export abstract class FilterableListCore extends Element implements Focusable {
   }
 
   /**
+   * Refresh child options from current children array
+   * Call this after dynamically adding children
+   */
+  refreshChildOptions(): void {
+    this._childOptions = this._extractOptionsFromChildren(this.children || []);
+    this._filterCacheValid = false;
+  }
+
+  /**
    * Get all options (from children + options prop)
    */
   getAllOptions(): OptionData[] {

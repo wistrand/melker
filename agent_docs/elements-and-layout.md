@@ -195,6 +195,34 @@ Uses **border-box** model by default (like modern CSS):
 └─────────────────────────────┘
 ```
 
+### Chrome Collapse
+
+When an element has insufficient space for content due to border and padding consuming all available space, Melker progressively collapses "chrome" (padding first, then border) to preserve minimum content space.
+
+**Collapse Order:**
+1. **Padding collapse** - Reduced proportionally per side
+2. **Border collapse** - Individual borders removed if still insufficient
+
+**Behavior:**
+- Silent collapse with debug logging (`SizingModel: Chrome collapsed: bounds=...`)
+- Inner containers collapse before outer (natural with recursive layout)
+- Minimum content area: 1 character
+- No visual indicator - collapsed elements simply render smaller
+
+**Example:**
+```xml
+<!-- With height: 3, border: thin (2), padding: 1 (2) = 4 chars chrome -->
+<!-- Only 3 available, so padding collapses to fit -->
+<container style="width: 12; height: 3; border: thin; padding: 1;">
+  <text>Content</text>
+</container>
+```
+
+**Implementation:**
+- `src/sizing.ts`: `ChromeCollapseState` interface, `calculateContentBounds()` logic
+- `src/layout.ts`: `chromeCollapse` field in `LayoutNode`
+- `src/rendering.ts`: `_renderBorder()` skips collapsed borders
+
 ## Tabs Component
 
 The `<tabs>` component provides a tabbed interface with clickable tab headers.

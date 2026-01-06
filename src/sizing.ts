@@ -2,6 +2,9 @@
 // Provides consistent and predictable element sizing calculations
 
 import { Style, BoxSpacing, Bounds, Size } from './types.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('SizingModel');
 
 export interface BoxModel {
   content: Size;
@@ -18,6 +21,23 @@ export interface BoxDimensions {
   left: number;
   horizontal: number; // left + right
   vertical: number;   // top + bottom
+}
+
+// Tracks which chrome (padding/border) was collapsed due to insufficient space
+export interface ChromeCollapseState {
+  paddingCollapsed: BoxDimensions;  // Amount reduced per side
+  borderCollapsed: {
+    top: boolean;
+    right: boolean;
+    bottom: boolean;
+    left: boolean;
+  };
+}
+
+// Return type for calculateContentBounds with optional collapse info
+export interface ContentBoundsResult {
+  bounds: Bounds;
+  chromeCollapse?: ChromeCollapseState;
 }
 
 export class SizingModel {
@@ -80,28 +100,95 @@ export class SizingModel {
 
   // Calculate content bounds within an element's total bounds
   // elementBounds represents the element's box (NOT including margin - margin is outside)
-  calculateContentBounds(elementBounds: Bounds, style: Style, isScrollable?: boolean): Bounds {
+  // Returns ContentBoundsResult with bounds and optional chromeCollapse info
+  calculateContentBounds(elementBounds: Bounds, style: Style, isScrollable?: boolean): ContentBoundsResult {
     // Note: Margin is OUTSIDE the element bounds, so it should NOT be subtracted from content bounds
-    // The element bounds already account for the element's size, not including margin
     const border = this._calculateBorderDimensions(style);
-    let padding = this._calculateBoxDimensions(style.padding || 0);
+    const originalPadding = this._calculateBoxDimensions(style.padding || 0);
 
-    // For very small scrollable containers, ensure minimum viable element bounds and reduce padding
-    if (isScrollable) {
-      const requiredMinimumSpace = border.vertical + 2; // Minimum for 1 line of content
+    let padding = { ...originalPadding };
+    let effectiveBorder = { ...border };
+    let chromeCollapse: ChromeCollapseState | undefined;
 
-      // If element bounds are too small, there's a flex layout issue
-      if (elementBounds.height < requiredMinimumSpace) {
-        // Emergency fix: Force minimum element bounds for scrollable containers
-        elementBounds = {
-          ...elementBounds,
-          height: requiredMinimumSpace
-        };
+    const MIN_CONTENT = 1;  // Minimum 1 character for content
+
+    // Check horizontal space - do we need to collapse?
+    const neededH = border.horizontal + padding.horizontal + MIN_CONTENT;
+    if (elementBounds.width < neededH) {
+      chromeCollapse = this._initCollapseState();
+      const excess = neededH - elementBounds.width;
+
+      // Phase 1: Collapse padding first (proportionally per side)
+      const padReduction = Math.min(padding.horizontal, excess);
+      if (padReduction > 0) {
+        const leftRed = padding.horizontal > 0
+          ? Math.ceil(padReduction * (padding.left / padding.horizontal))
+          : 0;
+        const rightRed = padReduction - leftRed;
+        chromeCollapse.paddingCollapsed.left = leftRed;
+        chromeCollapse.paddingCollapsed.right = rightRed;
+        chromeCollapse.paddingCollapsed.horizontal = padReduction;
+        padding.left = Math.max(0, padding.left - leftRed);
+        padding.right = Math.max(0, padding.right - rightRed);
+        padding.horizontal = padding.left + padding.right;
       }
 
-      const availableHeight = elementBounds.height - border.vertical;
+      // Phase 2: Collapse border if still not enough space
+      const remaining = excess - padReduction;
+      if (remaining > 0 && effectiveBorder.horizontal > 0) {
+        if (remaining >= 1 && effectiveBorder.left > 0) {
+          chromeCollapse.borderCollapsed.left = true;
+          effectiveBorder.left = 0;
+          effectiveBorder.horizontal--;
+        }
+        if (remaining >= 2 && effectiveBorder.right > 0) {
+          chromeCollapse.borderCollapsed.right = true;
+          effectiveBorder.right = 0;
+          effectiveBorder.horizontal--;
+        }
+      }
+    }
 
-      // If container is very small, limit padding to preserve content space
+    // Check vertical space - do we need to collapse?
+    const neededV = effectiveBorder.vertical + padding.vertical + MIN_CONTENT;
+    if (elementBounds.height < neededV) {
+      chromeCollapse = chromeCollapse || this._initCollapseState();
+      const excess = neededV - elementBounds.height;
+
+      // Phase 1: Collapse padding first (proportionally per side)
+      const padReduction = Math.min(padding.vertical, excess);
+      if (padReduction > 0) {
+        const topRed = padding.vertical > 0
+          ? Math.ceil(padReduction * (padding.top / padding.vertical))
+          : 0;
+        const bottomRed = padReduction - topRed;
+        chromeCollapse.paddingCollapsed.top = topRed;
+        chromeCollapse.paddingCollapsed.bottom = bottomRed;
+        chromeCollapse.paddingCollapsed.vertical = padReduction;
+        padding.top = Math.max(0, padding.top - topRed);
+        padding.bottom = Math.max(0, padding.bottom - bottomRed);
+        padding.vertical = padding.top + padding.bottom;
+      }
+
+      // Phase 2: Collapse border if still not enough space
+      const remaining = excess - padReduction;
+      if (remaining > 0 && effectiveBorder.vertical > 0) {
+        if (remaining >= 1 && effectiveBorder.top > 0) {
+          chromeCollapse.borderCollapsed.top = true;
+          effectiveBorder.top = 0;
+          effectiveBorder.vertical--;
+        }
+        if (remaining >= 2 && effectiveBorder.bottom > 0) {
+          chromeCollapse.borderCollapsed.bottom = true;
+          effectiveBorder.bottom = 0;
+          effectiveBorder.vertical--;
+        }
+      }
+    }
+
+    // Legacy scrollable container handling (keep for aggressive reduction in tiny scrollables)
+    if (isScrollable && !chromeCollapse) {
+      const availableHeight = elementBounds.height - effectiveBorder.vertical;
       if (availableHeight <= 2) {
         padding = {
           top: 0,
@@ -112,7 +199,6 @@ export class SizingModel {
           vertical: 0
         };
       } else if (availableHeight <= 4) {
-        // For small containers, limit vertical padding
         padding = {
           ...padding,
           top: Math.min(padding.top, 1),
@@ -122,18 +208,34 @@ export class SizingModel {
       }
     }
 
-    // Calculate content dimensions (only subtract border and padding, NOT margin)
-    const rawWidth = elementBounds.width - border.horizontal - padding.horizontal;
-    const rawHeight = elementBounds.height - border.vertical - padding.vertical;
+    // Log collapse if it occurred
+    if (chromeCollapse) {
+      logger.debug(`Chrome collapsed: bounds=${elementBounds.width}x${elementBounds.height}, ` +
+        `padding reduced by ${chromeCollapse.paddingCollapsed.horizontal}h/${chromeCollapse.paddingCollapsed.vertical}v, ` +
+        `border collapsed: L=${chromeCollapse.borderCollapsed.left} R=${chromeCollapse.borderCollapsed.right} ` +
+        `T=${chromeCollapse.borderCollapsed.top} B=${chromeCollapse.borderCollapsed.bottom}`);
+    }
 
-    // For scrollable containers, ensure minimum usable area
-    const minDimension = isScrollable ? 1 : 0;
+    // Calculate final content dimensions
+    const rawWidth = elementBounds.width - effectiveBorder.horizontal - padding.horizontal;
+    const rawHeight = elementBounds.height - effectiveBorder.vertical - padding.vertical;
 
     return {
-      x: elementBounds.x + border.left + padding.left,
-      y: elementBounds.y + border.top + padding.top,
-      width: Math.max(minDimension, rawWidth),
-      height: Math.max(minDimension, rawHeight),
+      bounds: {
+        x: elementBounds.x + effectiveBorder.left + padding.left,
+        y: elementBounds.y + effectiveBorder.top + padding.top,
+        width: Math.max(MIN_CONTENT, rawWidth),
+        height: Math.max(MIN_CONTENT, rawHeight),
+      },
+      chromeCollapse,
+    };
+  }
+
+  // Initialize an empty chrome collapse state
+  private _initCollapseState(): ChromeCollapseState {
+    return {
+      paddingCollapsed: { top: 0, right: 0, bottom: 0, left: 0, horizontal: 0, vertical: 0 },
+      borderCollapsed: { top: false, right: false, bottom: false, left: false },
     };
   }
 

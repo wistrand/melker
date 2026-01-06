@@ -196,3 +196,67 @@ Checkbox uses ASCII `[x]` instead of Unicode `[✓]` for consistent terminal wid
 - `[-]` - Indeterminate
 
 The Unicode checkmark `✓` has inconsistent width across terminals, causing layout issues. ASCII characters have predictable 1-char width.
+
+## Flex Layout Cross-Axis Calculation
+
+**CRITICAL**: The `baseCross` calculation in flex layout must handle three cases correctly (see `src/layout.ts` ~lines 586-608):
+
+### 1. Explicit cross-size (border-box)
+```typescript
+if (!useIntrinsicSize && typeof childProps.height === 'number') {
+  baseCross = childProps.height;  // Already includes padding+border
+}
+```
+
+### 2. Stretch alignment
+```typescript
+else if (willStretch) {
+  const intrinsicOuter = intrinsicSize.height + paddingCross + borderCross;
+  baseCross = Math.max(crossAxisSize, intrinsicOuter);  // Fill space, min intrinsic
+}
+```
+
+### 3. Non-stretch (intrinsic sizing)
+```typescript
+else {
+  baseCross = intrinsicSize.height + paddingCross + borderCross;  // Outer size
+}
+```
+
+**Key invariant**: `baseCross` is always the element's outer size (including padding and border). Do NOT add `paddingCross` again at finalization.
+
+**Common bugs:**
+- Adding `paddingCross` to `baseCross` at finalization (line ~915) causes double-counting
+- Using `crossAxisSize - paddingCross` for stretch can go negative when space is small (e.g., button with padding in a 1-row container)
+
+**Stretch finalization** (line ~934):
+```typescript
+case 'stretch':
+  finalCross = lineCrossSize - item.marginCross;  // Uses line size, not baseCross
+```
+
+For stretch, the final size comes from `lineCrossSize`, which is calculated from the maximum `baseCross` of all items in the line, plus any distributed free space from `align-content: stretch`.
+
+## Chrome Collapse Implementation
+
+When content bounds would be negative due to insufficient space, chrome (padding then border) is progressively collapsed (see `src/sizing.ts`).
+
+**Types:**
+```typescript
+interface ChromeCollapseState {
+  paddingCollapsed: BoxDimensions;  // Amount reduced per side
+  borderCollapsed: { top, right, bottom, left: boolean };
+}
+
+interface ContentBoundsResult {
+  bounds: Bounds;
+  chromeCollapse?: ChromeCollapseState;
+}
+```
+
+**Flow:**
+1. `calculateContentBounds()` detects insufficient space
+2. Padding reduced proportionally, tracking in `paddingCollapsed`
+3. If still insufficient, borders collapsed one side at a time
+4. State stored in `LayoutNode.chromeCollapse`
+5. `_renderBorder()` skips collapsed borders

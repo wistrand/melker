@@ -197,6 +197,7 @@ See `examples/melker/` for complete examples:
 - `analog-clock.melker` - Canvas-based analog clock
 - `color_selector.melker` - HSL color picker with canvas
 - `image_demo.melker` - Image component with fixed and percentage dimensions
+- `chrome_collapse_demo.melker` - Progressive chrome collapse when space is tight
 - `markdown_viewer.melker` - Markdown rendering
 
 ## Running

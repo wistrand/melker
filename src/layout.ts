@@ -2,7 +2,7 @@
 // Supports block, flex, and absolute positioning
 
 import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, Renderable, isRenderable, isScrollableType } from './types.ts';
-import { SizingModel, globalSizingModel, BoxModel } from './sizing.ts';
+import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
 import { getThemeColor } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { ViewportManager, globalViewportManager, ScrollbarLayout } from './viewport.ts';
@@ -55,6 +55,8 @@ export interface LayoutNode {
     vertical?: ScrollbarLayout;
     horizontal?: ScrollbarLayout;
   };
+  // Chrome collapse state (padding/border reduced due to insufficient space)
+  chromeCollapse?: ChromeCollapseState;
 }
 
 export interface LayoutContext {
@@ -133,7 +135,8 @@ export class LayoutEngine {
     );
 
     const isScrollable = isScrollableType(element.type) && element.props.scrollable;
-    let contentBounds = this._sizingModel.calculateContentBounds(bounds, computedStyle, isScrollable);
+    const contentBoundsResult = this._sizingModel.calculateContentBounds(bounds, computedStyle, isScrollable);
+    let contentBounds = contentBoundsResult.bounds;
 
     const node: LayoutNode = {
       element,
@@ -145,6 +148,7 @@ export class LayoutEngine {
       layoutProps,
       boxModel,
       zIndex: layoutProps.zIndex || 0,
+      chromeCollapse: contentBoundsResult.chromeCollapse,
     };
 
     // Calculate children layout
@@ -583,20 +587,22 @@ export class LayoutEngine {
         if (!useIntrinsicSize && typeof childProps.height === 'number') {
           baseCross = childProps.height;
         } else if (willStretch) {
-          // For stretch alignment, use available cross-axis space (subtract padding and borders)
-          baseCross = crossAxisSize - paddingCross - borderCross;
+          // For stretch alignment, use available space but ensure minimum intrinsic size
+          const intrinsicOuter = intrinsicSize.height + paddingCross + borderCross;
+          baseCross = Math.max(crossAxisSize, intrinsicOuter);
         } else {
-          // Use intrinsic size + padding + borders for cross axis
+          // Use intrinsic size + padding + borders for cross axis (outer size)
           baseCross = intrinsicSize.height + paddingCross + borderCross;
         }
       } else {
         if (!useIntrinsicSize && typeof childProps.width === 'number') {
           baseCross = childProps.width;
         } else if (willStretch) {
-          // For stretch alignment, use available cross-axis space (subtract padding and borders)
-          baseCross = crossAxisSize - paddingCross - borderCross;
+          // For stretch alignment, use available space but ensure minimum intrinsic size
+          const intrinsicOuter = intrinsicSize.width + paddingCross + borderCross;
+          baseCross = Math.max(crossAxisSize, intrinsicOuter);
         } else {
-          // Use intrinsic size + padding + borders for cross axis
+          // Use intrinsic size + padding + borders for cross axis (outer size)
           baseCross = intrinsicSize.width + paddingCross + borderCross;
         }
       }
@@ -907,16 +913,19 @@ export class LayoutEngine {
         switch (alignment) {
           case 'flex-start':
             crossPos = lineCrossStart + item.marginCrossStart;
-            finalCross = item.baseCross + item.paddingCross;
+            // baseCross already includes padding+border (from explicit size or intrinsic+chrome)
+            finalCross = item.baseCross;
             break;
 
           case 'flex-end':
-            finalCross = item.baseCross + item.paddingCross;
+            // baseCross already includes padding+border (from explicit size or intrinsic+chrome)
+            finalCross = item.baseCross;
             crossPos = lineCrossStart + lineCrossSize - finalCross - item.marginCrossEnd;
             break;
 
           case 'center':
-            finalCross = item.baseCross + item.paddingCross;
+            // baseCross already includes padding+border (from explicit size or intrinsic+chrome)
+            finalCross = item.baseCross;
             const totalCross = finalCross + item.marginCross;
             crossPos = lineCrossStart + (lineCrossSize - totalCross) / 2 + item.marginCrossStart;
             break;
@@ -930,9 +939,10 @@ export class LayoutEngine {
 
         // Ensure non-container elements get at least their minimum size
         // (containers can have 0 height, but buttons/text/etc need at least 1 line)
+        // Note: baseCross already includes padding+border (from explicit size or intrinsic+chrome)
         const isContainer = item.element.type === 'container';
         if (!isContainer) {
-          const minCross = item.baseCross + item.paddingCross;
+          const minCross = item.baseCross;
           finalCross = Math.max(finalCross, minCross);
         }
 

@@ -21,6 +21,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | AI accessibility | `agent_docs/ai-accessibility.md` |
 | Filterable lists | `agent_docs/filterable-list-architecture.md` |
 | Fast input rendering | `agent_docs/fast-input-render-plan.md` |
+| Project timeline | `agent_docs/project-timeline.md` |
 | Examples | `examples/melker/*.melker` |
 
 ## Technology Stack

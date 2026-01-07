@@ -324,7 +324,9 @@ function buildEnvVars(policyVars: string[] | undefined): string[] {
   // Implicit: XDG directories
   vars.push('HOME', 'XDG_STATE_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME');
 
-  // Implicit: All MELKER_* env vars found in source code
+  vars.push('TMPDIR','TEMP', 'TMP');
+
+    // Implicit: All MELKER_* env vars found in source code
   vars.push(
     // Core / Engine
     'MELKER_THEME',

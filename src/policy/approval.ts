@@ -162,6 +162,9 @@ function formatPolicyPermissions(policy: MelkerPolicy): string[] {
   if (p.browser) {
     lines.push('  browser: enabled');
   }
+  if (p.shader) {
+    lines.push('  shader: enabled');
+  }
 
   return lines;
 }

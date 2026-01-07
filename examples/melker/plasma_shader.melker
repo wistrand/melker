@@ -1,0 +1,101 @@
+<melker>
+  <policy>
+  {
+    "name": "Plasma Shader Demo",
+    "description": "Demonstrates shader utilities: noise2d, fbm, palette",
+    "permissions": {
+      "shader": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    // Shader utilities demo - using built-in noise2d, fbm, and palette functions
+    // The utils parameter provides: noise2d(x,y), fbm(x,y,octaves), palette(t,a,b,c,d)
+
+    // ShaderUtils type for reference
+    interface ShaderUtils {
+      noise2d(x: number, y: number): number;
+      fbm(x: number, y: number, octaves?: number): number;
+      palette(t: number, a: [number,number,number], b: [number,number,number], c: [number,number,number], d: [number,number,number]): [number,number,number];
+    }
+
+    // Classic demoscene plasma using fbm noise and IQ palette
+    export const plasmaShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      _source: any,
+      utils: ShaderUtils
+    ): [number, number, number] => {
+      // Normalize coordinates with aspect correction
+      const u = x / resolution.width;
+      const v = (y / resolution.height) / resolution.pixelAspect;
+
+      // Scale for noise sampling
+      const scale = 3.0;
+      const nx = u * scale + time * 0.3;
+      const ny = v * scale + time * 0.2;
+
+      // Use fbm for organic flowing noise
+      const n = utils.fbm(nx, ny, 2);
+
+      // Add some swirling motion
+      const angle = n * Math.PI * 2 + time;
+      const swirl = utils.noise2d(
+        u * 2 + Math.cos(angle) * 0.5,
+        v * 2 + Math.sin(angle) * 0.5
+      );
+
+      // Combine noise layers
+      const v1 = (n + swirl * 0.5) * 0.5 + 0.5;
+      const value = v1 + time * 0.1;
+
+      // Use IQ palette for beautiful color gradients
+      // Parameters: a + b * cos(2pi * (c * t + d))
+      // This creates a sunset-like palette
+      return utils.palette(
+        value,
+        [0.5, 0.5, 0.5],   // a: base color (gray)
+        [0.5, 0.5, 0.5],   // b: amplitude
+        [1.0, 1.0, 1.0],   // c: frequency
+        [0.0, 0.33, 0.67]  // d: phase offsets (creates rainbow)
+      );
+    };
+  </script>
+
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      Shader Utilities Demo
+    </text>
+
+    <text style="color: gray; margin-bottom: 1; text-align: center; font-size: small;">
+      Using fbm() noise and palette() for demoscene effects
+    </text>
+
+    <container style="width: fill; height: fill;">
+      <img
+        id="plasmaCanvas"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.plasmaShader"
+        shaderFps="30"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
+      <button
+        title="Exit"
+        style="background-color: gray; color: white; padding: 1;"
+        onClick="$melker.exit();"
+      />
+    </container>
+
+    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
+      Press Ctrl+C to exit
+    </text>
+  </container>
+</melker>

@@ -100,6 +100,13 @@ export interface PolicyPermissions {
    * Required for OAuth flows that need to open the authorization URL
    */
   browser?: boolean;
+
+  /**
+   * Shader access
+   * Set to true to allow running per-pixel shaders on canvas/img elements
+   * Shaders execute custom code per-pixel at high frame rates
+   */
+  shader?: boolean;
 }
 
 /**

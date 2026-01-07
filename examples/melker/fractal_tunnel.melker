@@ -1,0 +1,123 @@
+<melker>
+  <policy>
+  {
+    "name": "Fractal Tunnel",
+    "description": "Classic demoscene zooming fractal tunnel effect",
+    "permissions": {
+      "read": ["."],
+      "shader": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    // Fractal tunnel - classic demoscene effect
+    // Uses polar coordinates with fbm noise for organic tunnel walls
+
+    interface ShaderUtils {
+      noise2d(x: number, y: number): number;
+      fbm(x: number, y: number, octaves?: number): number;
+      palette(t: number, a: [number,number,number], b: [number,number,number], c: [number,number,number], d: [number,number,number]): [number,number,number];
+      smoothstep(edge0: number, edge1: number, x: number): number;
+      mix(a: number, b: number, t: number): number;
+      fract(x: number): number;
+    }
+
+    export const tunnelShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      _source: any,
+      utils: ShaderUtils
+    ): [number, number, number] => {
+
+      // Center and normalize coordinates
+      const cx = (x / resolution.width - 0.5) * 2;
+      const cy = (y / resolution.height - 0.5) * 2;
+
+      // Correct for buffer aspect ratio and pixel aspect ratio
+      const bufferAspect = resolution.width / resolution.height;
+      const px = cx * bufferAspect;
+      const py = cy / resolution.pixelAspect;
+
+      // Convert to polar coordinates
+      const angle = Math.atan2(py, px);
+      const dist = Math.sqrt(px * px + py * py);
+
+      // Avoid division by zero at center
+      if (dist < 0.001) {
+        return [0, 0, 0];
+      }
+
+      // Tunnel depth - inverse of distance creates zoom effect
+      const depth = 1.0 / dist + time * 2;
+
+      // Texture coordinates for tunnel walls
+      const tu = utils.fract(angle / (Math.PI * 2) + 0.5); // 0-1 around tunnel
+      const tv = utils.fract(depth * 0.5); // Along tunnel depth
+
+      // Add noise for organic rocky texture
+      const noiseScale = 4.0;
+      const n1 = utils.fbm(tu * noiseScale + time * 0.1, tv * noiseScale, 3);
+      const n2 = utils.noise2d(tu * 8 + depth, tv * 8);
+
+      // Combine noise layers
+      const texture = n1 * 0.7 + n2 * 0.3;
+
+      // Distance-based darkening (fog/depth effect)
+      const fog = utils.smoothstep(0.0, 2.0, dist);
+
+      // Pulsing light rings
+      const rings = Math.sin(depth * 6 - time * 3) * 0.5 + 0.5;
+      const ringIntensity = utils.smoothstep(0.3, 0.7, rings) * (1 - fog);
+
+      // Color based on angle and depth
+      const hue = utils.fract(angle / (Math.PI * 2) + depth * 0.1 + time * 0.05);
+
+      // Use IQ palette for psychedelic colors
+      const baseColor = utils.palette(
+        hue + texture * 0.2,
+        [0.5, 0.5, 0.5],
+        [0.5, 0.5, 0.5],
+        [1.0, 1.0, 0.5],
+        [0.8, 0.9, 0.3]
+      );
+
+      // Apply texture variation
+      const textureShade = utils.smoothstep(-0.5, 0.5, texture);
+
+      // Combine all effects
+      const brightness = utils.mix(0.3, 1.0, textureShade) * (1 - fog * 0.8);
+      const finalBrightness = brightness + ringIntensity * 0.5;
+
+      return [
+        baseColor[0] * finalBrightness,
+        baseColor[1] * finalBrightness,
+        baseColor[2] * finalBrightness,
+      ];
+    };
+  </script>
+
+  <container style="width: fill; height: fill; display: flex; flex-direction: column;">
+    <container style="width: fill; height: fill;">
+      <img
+        id="tunnel"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.tunnelShader"
+        shaderFps="30"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: black;">
+      <text style="color: cyan;">Fractal Tunnel</text>
+      <button
+        title="Exit"
+        onClick="$melker.exit();"
+      />
+    </container>
+  </container>
+</melker>

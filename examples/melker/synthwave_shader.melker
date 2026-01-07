@@ -1,0 +1,299 @@
+<melker>
+  <policy>
+  {
+    "name": "Synthwave Shader Demo",
+    "description": "Retro 80s synthwave sun, grid, and mountain",
+    "permissions": {
+      "shader": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    // Synthwave shader - sun, grid, mountain, clouds
+    // Based on "sun & grid" by Jan Mroz (jaszunio15) - CC BY 3.0
+
+    // Helper functions
+    const smoothstep = (edge0: number, edge1: number, x: number): number => {
+      const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+      return t * t * (3 - 2 * t);
+    };
+
+    const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
+    const mixVec3 = (a: number[], b: number[], t: number): number[] => [
+      mix(a[0], b[0], t),
+      mix(a[1], b[1], t),
+      mix(a[2], b[2], t)
+    ];
+
+    const fract = (x: number): number => x - Math.floor(x);
+    const mod = (x: number, y: number): number => x - y * Math.floor(x / y);
+    const clamp = (x: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, x));
+    const step = (edge: number, x: number): number => x < edge ? 0 : 1;
+    const length2 = (x: number, y: number): number => Math.sqrt(x * x + y * y);
+    const dot2 = (x: number, y: number): number => x * x + y * y;
+
+    // Sun with horizontal scan lines (aspect-corrected for circular appearance)
+    const sun = (uvX: number, uvY: number, time: number, battery: number, aspect: number): number => {
+      // Correct Y by pixel aspect ratio so sun appears circular
+      const len = length2(uvX, uvY * aspect);
+      const val = smoothstep(0.3, 0.29, len);
+      const bloom = smoothstep(0.7, 0.0, len);
+      let cut = 3.0 * Math.sin((uvY + time * 0.2 * (battery + 0.02)) * 100.0)
+                + clamp(uvY * 14.0 + 1.0, -6.0, 6.0);
+      cut = clamp(cut, 0.0, 1.0);
+      return clamp(val * cut, 0.0, 1.0) + bloom * 0.6;
+    };
+
+    // Perspective grid
+    const grid = (uvX: number, uvY: number, time: number, battery: number): number => {
+      const sizeX = uvY * 0.01;
+      const sizeY = uvY * uvY * 0.2 * 0.01;
+      const newX = uvX;
+      const newY = uvY + time * 4.0 * (battery + 0.05);
+      const fractX = Math.abs(fract(newX) - 0.5);
+      const fractY = Math.abs(fract(newY) - 0.5);
+      let linesX = smoothstep(sizeX, 0.0, fractX);
+      let linesY = smoothstep(sizeY, 0.0, fractY);
+      linesX += smoothstep(sizeX * 5.0, 0.0, fractX) * 0.4 * battery;
+      linesY += smoothstep(sizeY * 5.0, 0.0, fractY) * 0.4 * battery;
+      return clamp(linesX + linesY, 0.0, 3.0);
+    };
+
+    // Signed distance trapezoid (mountain)
+    const sdTrapezoid = (px: number, py: number, r1: number, r2: number, he: number): number => {
+      const k1x = r2, k1y = he;
+      const k2x = r2 - r1, k2y = 2.0 * he;
+      const pxAbs = Math.abs(px);
+
+      // ca
+      const caX = pxAbs - Math.min(pxAbs, py < 0.0 ? r1 : r2);
+      const caY = Math.abs(py) - he;
+
+      // cb
+      const dot_k2 = k2x * k2x + k2y * k2y;
+      const t = clamp((k1x - pxAbs) * k2x + (k1y - py) * k2y, 0.0, dot_k2) / dot_k2;
+      const cbX = pxAbs - k1x + k2x * t;
+      const cbY = py - k1y + k2y * t;
+
+      const s = (cbX < 0.0 && caY < 0.0) ? -1.0 : 1.0;
+      return s * Math.sqrt(Math.min(dot2(caX, caY), dot2(cbX, cbY)));
+    };
+
+    // Signed distance line segment
+    const sdLine = (px: number, py: number, ax: number, ay: number, bx: number, by: number): number => {
+      const pax = px - ax, pay = py - ay;
+      const bax = bx - ax, bay = by - ay;
+      const h = clamp((pax * bax + pay * bay) / (bax * bax + bay * bay), 0.0, 1.0);
+      return length2(pax - bax * h, pay - bay * h);
+    };
+
+    // Signed distance box
+    const sdBox = (px: number, py: number, bx: number, by: number): number => {
+      const dx = Math.abs(px) - bx;
+      const dy = Math.abs(py) - by;
+      return length2(Math.max(dx, 0), Math.max(dy, 0)) + Math.min(Math.max(dx, dy), 0.0);
+    };
+
+    // Smooth union of two SDFs
+    const opSmoothUnion = (d1: number, d2: number, k: number): number => {
+      const h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
+      return mix(d2, d1, h) - k * h * (1.0 - h);
+    };
+
+    // Cloud shape using lines and box
+    const sdCloud = (
+      px: number, py: number,
+      a1x: number, a1y: number, b1x: number, b1y: number,
+      a2x: number, a2y: number, b2x: number, b2y: number,
+      w: number
+    ): number => {
+      const lineVal1 = sdLine(px, py, a1x, a1y, b1x, b1y);
+      const lineVal2 = sdLine(px, py, a2x, a2y, b2x, b2y);
+
+      const ww = w * 1.5;
+      const leftX = Math.max(a1x + ww, a2x + ww);
+      const rightX = Math.min(b1x - ww, b2x - ww);
+      const boxCenterX = (leftX + rightX) * 0.5;
+      const boxCenterY = (a1y + a2y) * 0.5;
+      const boxH = Math.abs(a2y - a1y) * 0.5;
+
+      const boxVal = sdBox(px - boxCenterX, py - boxCenterY, 0.04, boxH) + w;
+
+      const uniVal1 = opSmoothUnion(lineVal1, boxVal, 0.05);
+      const uniVal2 = opSmoothUnion(lineVal2, boxVal, 0.05);
+
+      return Math.min(uniVal1, uniVal2);
+    };
+
+    export const synthwaveShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      _source: any,
+      _utils: any
+    ): [number, number, number] => {
+      // Normalize to -1 to 1, centered
+      let uvX = (2.0 * x - resolution.width) / resolution.height;
+      let uvY = (2.0 * y - resolution.height) / resolution.height;
+      // Flip Y for standard coordinate system
+      uvY = -uvY;
+
+      // Pixel aspect ratio for aspect-correct shapes (< 1 means pixels are taller than wide)
+      const aspect = resolution.pixelAspect;
+      const battery = 1.0;
+      let colR = 0.0, colG = 0.1, colB = 0.2;
+
+      // Grid (below horizon)
+      const fog = smoothstep(0.1, -0.02, Math.abs(uvY + 0.2));
+
+      if (uvY < -0.2) {
+        // Perspective transform for grid
+        const perspY = 3.0 / (Math.abs(uvY + 0.2) + 0.05);
+        const perspX = uvX * perspY * 1.0;
+
+        const gridVal = grid(perspX, perspY, time, battery);
+        colR = mix(colR, 1.0, gridVal);
+        colG = mix(colG, 0.5, gridVal);
+        colB = mix(colB, 1.0, gridVal);
+      } else {
+        // Sky region
+        const fujiD = Math.min(uvY * 4.5 - 0.5, 1.0);
+        const skyUvY = uvY - battery * 1.1 + 0.51;
+
+        // Sun position
+        const sunUvX = uvX + 0.75;
+        const sunUvY = skyUvY + 0.2;
+
+        // Base sky color (pink/magenta)
+        colR = 1.0; colG = 0.2; colB = 1.0;
+
+        // Sun gradient (orange at bottom)
+        const sunGrad = sunUvY * 2.0 + 0.2;
+        colR = mix(colR, 1.0, sunGrad);
+        colG = mix(colG, 0.4, sunGrad);
+        colB = mix(colB, 0.1, sunGrad);
+
+        // Apply sun (with aspect correction for circular shape)
+        const sunVal = sun(sunUvX, sunUvY, time, battery, 1/aspect);
+        colR = mix(0.0, colR, sunVal);
+        colG = mix(0.0, colG, sunVal);
+        colB = mix(0.0, colB, sunVal);
+
+        // Mountain (Fuji)
+        const fujiUvX = uvX - 0.75;
+        const fujiUvY = skyUvY + 0.5;
+        const fujiVal = sdTrapezoid(fujiUvX, fujiUvY, 1.75 + Math.pow(skyUvY * skyUvY, 2.1), 0.2, 0.5);
+
+        // Wave pattern on mountain
+        const waveVal = skyUvY + Math.sin(uvX * 20.0 + time * 2.0) * 0.05 + 0.2;
+        const waveWidth = smoothstep(0.0, 0.01, waveVal);
+
+        // Mountain fill
+        if (fujiVal < 0.0) {
+          const fujiColR = mix(0.0, 1.0, fujiD);
+          const fujiColG = mix(0.0, 0.0, fujiD);
+          const fujiColB = mix(0.25, 0.5, fujiD);
+          colR = fujiColR;
+          colG = fujiColG;
+          colB = fujiColB;
+
+          // Snow/wave on top
+          colR = mix(colR, 1.0, waveWidth);
+          colG = mix(colG, 0.5, waveWidth);
+          colB = mix(colB, 1.0, waveWidth);
+        }
+
+        // Mountain outline
+        const outline = 1.0 - smoothstep(0.0, 0.01, Math.abs(fujiVal));
+        colR = mix(colR, 1.0, outline);
+        colG = mix(colG, 0.5, outline);
+        colB = mix(colB, 1.0, outline);
+
+        // Horizon glow
+        if (fujiVal >= 0.0) {
+          const horizonT = clamp(skyUvY * 3.5 + 3.0, 0.0, 1.0);
+          const horizR = mix(1.0, 0.0, horizonT);
+          const horizG = mix(0.12, 0.0, horizonT);
+          const horizB = mix(0.8, 0.2, horizonT);
+          colR += horizR;
+          colG += horizG;
+          colB += horizB;
+        }
+
+        // Clouds - scrolling horizontally
+        const cloudUvX = mod(uvX + time * 0.1, 4.0) - 2.0;
+        const cloudUvY = skyUvY;
+        const cloudTime = time * 0.5;
+
+        // Cloud 1
+        let cloudY1 = -0.5;
+        const cloudVal1 = sdCloud(
+          cloudUvX, cloudUvY,
+          0.1 + Math.sin(cloudTime + 140.5) * 0.1, cloudY1,
+          1.05 + Math.cos(cloudTime * 0.9 - 36.56) * 0.1, cloudY1,
+          0.2 + Math.cos(cloudTime * 0.867 + 387.165) * 0.1, 0.25 + cloudY1,
+          0.5 + Math.cos(cloudTime * 0.9675 - 15.162) * 0.09, 0.25 + cloudY1,
+          0.075
+        );
+
+        // Cloud 2
+        let cloudY2 = -0.6;
+        const cloudVal2 = sdCloud(
+          cloudUvX, cloudUvY,
+          -0.9 + Math.cos(cloudTime * 1.02 + 541.75) * 0.1, cloudY2,
+          -0.5 + Math.sin(cloudTime * 0.9 - 316.56) * 0.1, cloudY2,
+          -1.5 + Math.cos(cloudTime * 0.867 + 37.165) * 0.1, 0.25 + cloudY2,
+          -0.6 + Math.sin(cloudTime * 0.9675 + 665.162) * 0.09, 0.25 + cloudY2,
+          0.075
+        );
+
+        const cloudVal = Math.min(cloudVal1, cloudVal2);
+
+        // Cloud fill (dark blue)
+        const cloudFill = 1.0 - smoothstep(0.075 - 0.0001, 0.075, cloudVal);
+        colR = mix(colR, 0.0, cloudFill);
+        colG = mix(colG, 0.0, cloudFill);
+        colB = mix(colB, 0.2, cloudFill);
+
+        // Cloud outline (white glow)
+        const cloudOutline = 1.0 - smoothstep(0.0, 0.01, Math.abs(cloudVal - 0.075));
+        colR += cloudOutline;
+        colG += cloudOutline;
+        colB += cloudOutline;
+      }
+
+      // Add fog
+      const fogVal = fog * fog * fog;
+      colR += fogVal;
+      colG += fogVal;
+      colB += fogVal;
+
+      // Slight desaturation based on battery
+      const gray = (colR + colG + colB) / 3.0 * 0.5;
+      const batteryMix = battery * 0.7;
+      colR = mix(gray, colR, batteryMix);
+      colG = mix(gray, colG, batteryMix);
+      colB = mix(gray, colB, batteryMix);
+
+      return [
+        clamp(colR * 255, 0, 255),
+        clamp(colG * 255, 0, 255),
+        clamp(colB * 255, 0, 255)
+      ];
+    };
+  </script>
+
+  <container style="width: fill; height: fill; display: flex;">
+    <img
+      id="synthwaveCanvas"
+      src="../../media/melker-128.png"
+      width="100%"
+      height="100%"
+      dither="auto"
+      onShader="$app.synthwaveShader"
+      shaderFps="30"
+    />
+  </container>
+</melker>

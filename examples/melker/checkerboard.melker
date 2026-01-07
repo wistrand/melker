@@ -1,0 +1,63 @@
+<melker>
+  <policy>
+  {
+    "name": "Checkerboard",
+    "description": "Simple animated checkerboard for debugging",
+    "permissions": {
+      "read": ["."],
+      "shader": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    let lasttime = -1;
+    let count = 0;
+    let pcount = 0;
+    export const checkerShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number },
+      _source: any,
+      _utils: any
+    ): [number, number, number] => {
+      if(lasttime !== time) {
+        $melker.logger.info("time=" + time + ", count=" + count + ", pcount=" + pcount);
+        lasttime = time;
+        count++;
+      }
+      pcount++;
+      // time=2.060550886;
+      // Size=6 aligns with sextant characters (2x3 pixels per terminal cell)
+      const size = 6;
+      const offset = Math.floor(time * 4); // Animate movement
+
+      const cx = Math.floor((x + offset) / size);
+      const cy = Math.floor(y / size);
+      const isWhite = (cx + cy) % 2 === 0;
+
+      if (isWhite) {
+        // Cycle through colors based on time
+        const phase = Math.floor(time) % 3;
+        if (phase === 0) return [100, 100, 100, 255];
+        if (phase === 1) return [100, 100, 100, 255];
+        return [100, 100, 200, 255];
+      } else {
+        return [0, 0, 0, 255];
+      }
+    };
+  </script>
+
+  <container style="width: fill; height: fill; display: flex;">
+    <img
+      id="checker"
+      src="../../media/melker-128.png"
+      width="100%"
+      height="100%"
+      dither="auto"
+      onShader="$app.checkerShader"
+      shaderFps="2"
+    />
+  </container>
+</melker>

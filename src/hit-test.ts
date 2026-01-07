@@ -65,9 +65,14 @@ export class HitTester {
    * Check if an element is interactive (can receive mouse events)
    */
   isInteractiveElement(element: Element): boolean {
-    // Elements with onClick handlers are interactive
-    if (element.props && typeof element.props.onClick === 'function') {
-      return true;
+    // Elements with mouse handlers are interactive
+    if (element.props) {
+      if (typeof element.props.onClick === 'function') return true;
+      if (typeof element.props.onMouseMove === 'function') return true;
+      if (typeof element.props.onMouseOver === 'function') return true;
+      if (typeof element.props.onMouseOut === 'function') return true;
+      if (typeof element.props.onMouseDown === 'function') return true;
+      if (typeof element.props.onMouseUp === 'function') return true;
     }
     if (isInteractive(element)) {
       return element.isInteractive();
@@ -291,45 +296,47 @@ export class HitTester {
       logger.info(`Hit test table: id=${element.id}, hasBounds=${!!bounds}, bounds=${bounds ? `(${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}` : 'none'}, inBounds=${bounds ? pointInBounds(x, y, bounds) : false}, isInteractive=${isInt}`);
     }
 
-    if (bounds && pointInBounds(x, y, bounds)) {
-      // For scrollable containers, transform coordinates for children
-      let childX = x;
-      let childY = y;
+    // For scrollable containers with bounds, transform coordinates for children
+    let childX = x;
+    let childY = y;
 
-      if (isScrollableType(element.type) && element.props.scrollable) {
-        const elementScrollX = (element.props.scrollX as number) || 0;
-        const elementScrollY = (element.props.scrollY as number) || 0;
+    if (bounds && isScrollableType(element.type) && element.props.scrollable) {
+      const elementScrollX = (element.props.scrollX as number) || 0;
+      const elementScrollY = (element.props.scrollY as number) || 0;
 
-        // Transform screen coordinates to content coordinates by ADDING scroll offset
-        // (rendering subtracts scroll, so hit test must add to invert)
-        childX = x + elementScrollX;
-        childY = y + elementScrollY;
+      // Transform screen coordinates to content coordinates by ADDING scroll offset
+      // (rendering subtracts scroll, so hit test must add to invert)
+      childX = x + elementScrollX;
+      childY = y + elementScrollY;
 
-        // Trace logging for all scrollable containers
-        logger.trace('Hit test with scrollable container', {
-          elementId: element.id || 'unknown',
-          elementScrollX,
-          elementScrollY,
-          mouseX: x,
-          mouseY: y,
-          transformedChildX: childX,
-          transformedChildY: childY,
-          hasScrollX: elementScrollX !== 0,
-          hasScrollY: elementScrollY !== 0,
-        });
-      }
+      // Trace logging for all scrollable containers
+      logger.trace('Hit test with scrollable container', {
+        elementId: element.id || 'unknown',
+        elementScrollX,
+        elementScrollY,
+        mouseX: x,
+        mouseY: y,
+        transformedChildX: childX,
+        transformedChildY: childY,
+        hasScrollX: elementScrollX !== 0,
+        hasScrollY: elementScrollY !== 0,
+      });
+    }
 
-      // Check children first (they are on top)
-      if (element.children) {
-        for (const child of element.children) {
-          // Use transformed coordinates for children, but keep original accumulated offsets for tracking
-          const hitChild = this._hitTestElement(child, childX, childY, scrollOffsetX, scrollOffsetY, tableForChildren);
-          if (hitChild) {
-            return hitChild;
-          }
+    // Check children first (they are on top)
+    // IMPORTANT: Always check children even if parent has no bounds (anonymous containers)
+    if (element.children) {
+      for (const child of element.children) {
+        // Use transformed coordinates for children, but keep original accumulated offsets for tracking
+        const hitChild = this._hitTestElement(child, childX, childY, scrollOffsetX, scrollOffsetY, tableForChildren);
+        if (hitChild) {
+          return hitChild;
         }
       }
+    }
 
+    // If we have bounds and point is inside, check if this element should be returned
+    if (bounds && pointInBounds(x, y, bounds)) {
       // If no child hit, check if this element should be returned
       if (this.isInteractiveElement(element) || this.isTextSelectableElement(element)) {
         return element;

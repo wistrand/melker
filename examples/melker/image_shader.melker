@@ -1,0 +1,190 @@
+<melker>
+  <policy>
+  {
+    "name": "Image Shader Demo",
+    "description": "Demonstrates per-pixel image shader effects",
+    "permissions": {
+      "read": ["."],
+      "shader": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    // Image shader effects - demonstrates per-pixel image manipulation
+    // The shader receives source.getPixel(x, y) to read original image pixels
+    // and source.mouse / source.mouseUV for mouse position
+
+    // Current effect mode
+    let effectMode = 1;
+    const effectNames = ['Passthrough', 'Spotlight', 'Grayscale', 'Invert', 'Sepia', 'Wave', 'RGB Shift', 'Ripple'];
+
+    // ShaderSource type for reference
+    interface ShaderSource {
+      getPixel(x: number, y: number): [number, number, number, number] | null;
+      hasImage: boolean;
+      width: number;
+      height: number;
+      mouse: { x: number; y: number };      // Pixel coords (-1 if not over)
+      mouseUV: { u: number; v: number };    // Normalized 0-1 (-1 if not over)
+    }
+
+    // Export the shader function
+    export const imageShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      source?: ShaderSource
+    ): [number, number, number] => {
+      // Get source pixel (or default to black if no image)
+      const pixel = source?.getPixel(x, y);
+      if (!pixel) return [0, 0, 0];
+
+      const [r, g, b] = pixel;
+      const u = x / resolution.width;
+      const v = y / resolution.height;
+
+      switch (effectMode) {
+        case 0: // Passthrough - original image
+          return [r, g, b];
+
+        case 1: { // Spotlight - follows mouse (aspect-corrected distance)
+          const mx = source?.mouseUV?.u ?? 0.5;
+          const my = source?.mouseUV?.v ?? 0.5;
+          if (mx < 0) return [r * 0.3, g * 0.3, b * 0.3]; // Dim when mouse not over
+          const dx = u - mx;
+          const dy = (v - my) / resolution.pixelAspect;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const spotlight = Math.max(0.2, 1 - dist * 3);
+          return [r * spotlight, g * spotlight, b * spotlight];
+        }
+
+        case 2: { // Grayscale
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          return [gray, gray, gray];
+        }
+
+        case 3: // Invert
+          return [255 - r, 255 - g, 255 - b];
+
+        case 4: { // Sepia
+          const tr = Math.min(255, 0.393 * r + 0.769 * g + 0.189 * b);
+          const tg = Math.min(255, 0.349 * r + 0.686 * g + 0.168 * b);
+          const tb = Math.min(255, 0.272 * r + 0.534 * g + 0.131 * b);
+          return [tr, tg, tb];
+        }
+
+        case 5: { // Wave distortion
+          const waveX = Math.sin(u * 20 + time * 3) * 3;
+          const srcX = Math.floor(x + waveX);
+          const wavePixel = source?.getPixel(srcX, y);
+          return wavePixel ? [wavePixel[0], wavePixel[1], wavePixel[2]] : [r, g, b];
+        }
+
+        case 6: { // RGB Channel Shift
+          const shift = Math.floor(Math.sin(time) * 5 + 5);
+          const rPixel = source?.getPixel(x - shift, y);
+          const bPixel = source?.getPixel(x + shift, y);
+          return [
+            rPixel ? rPixel[0] : r,
+            g,
+            bPixel ? bPixel[2] : b
+          ];
+        }
+
+        case 7: { // Ripple from mouse (aspect-corrected distance)
+          const mx = source?.mouse?.x ?? resolution.width / 2;
+          const my = source?.mouse?.y ?? resolution.height / 2;
+          if (mx < 0) return [r, g, b]; // No ripple when mouse not over
+          const dx = x - mx;
+          const dy = (y - my) / resolution.pixelAspect;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const ripple = Math.sin(dist * 0.2 - time * 5) * 5;
+          const angle = Math.atan2(dy, dx);
+          const srcX = Math.floor(x + Math.cos(angle) * ripple);
+          const srcY = Math.floor(y + Math.sin(angle) * ripple);
+          const ripplePixel = source?.getPixel(srcX, srcY);
+          return ripplePixel ? [ripplePixel[0], ripplePixel[1], ripplePixel[2]] : [r, g, b];
+        }
+
+        default:
+          return [r, g, b];
+      }
+    };
+
+    // Handle mouse move to update shader mouse position
+    export const handleMouseMove = (event: any) => {
+      const img = $melker.getElementById('shaderImg');
+      if (img && typeof img.updateShaderMouse === 'function') {
+        img.updateShaderMouse(event.x, event.y);
+      }
+    };
+
+    // Handle mouse leave
+    export const handleMouseOut = () => {
+      const img = $melker.getElementById('shaderImg');
+      if (img && typeof img.clearShaderMouse === 'function') {
+        img.clearShaderMouse();
+      }
+    };
+
+    // Cycle through effects
+    export const nextEffect = () => {
+      effectMode = (effectMode + 1) % effectNames.length;
+      $melker.getElementById('effectLabel').props.text = `Effect: ${effectNames[effectMode]}`;
+    };
+
+    export const prevEffect = () => {
+      effectMode = (effectMode - 1 + effectNames.length) % effectNames.length;
+      $melker.getElementById('effectLabel').props.text = `Effect: ${effectNames[effectMode]}`;
+    };
+
+    export const getEffectName = () => effectNames[effectMode];
+  </script>
+
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      Image Shader Demo
+    </text>
+
+    <text id="effectLabel" style="color: cyan; margin-bottom: 1; text-align: center;">
+      Effect: Spotlight
+    </text>
+
+    <container style="width: fill; height: fill;">
+      <img
+        id="shaderImg"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        objectFit="contain"
+        dither="auto"
+        onShader="$app.imageShader"
+        shaderFps="24"
+        onMouseMove="$app.handleMouseMove(event);"
+        onMouseOut="$app.handleMouseOut();"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
+      <button
+        title="< Prev"
+        onClick="$app.prevEffect();"
+      />
+      <button
+        title="Next >"
+        onClick="$app.nextEffect();"
+      />
+      <button
+        title="Exit"
+        style="background-color: gray;"
+        onClick="$melker.exit();"
+      />
+    </container>
+
+    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
+      Prev/Next to cycle effects. Spotlight and Ripple are mouse-interactive!
+    </text>
+  </container>
+</melker>

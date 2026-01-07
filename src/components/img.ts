@@ -6,6 +6,9 @@ import type { DualBuffer, Cell } from '../buffer.ts';
 import { CanvasElement, type CanvasProps } from './canvas.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { getLogger } from '../logging.ts';
+
+const logger = getLogger('ImgElement');
 
 export interface ImgProps extends Omit<CanvasProps, 'width' | 'height' | 'src'> {
   /** Image source path (relative to current file or absolute) */
@@ -168,6 +171,7 @@ export class ImgElement extends CanvasElement {
       const boundsChanged = bounds.width !== this._lastBoundsWidth || bounds.height !== this._lastBoundsHeight;
 
       if (boundsChanged) {
+        logger.debug(`Bounds changed: ${this._lastBoundsWidth}x${this._lastBoundsHeight} -> ${bounds.width}x${bounds.height}`);
         this._lastBoundsWidth = bounds.width;
         this._lastBoundsHeight = bounds.height;
 
@@ -177,6 +181,7 @@ export class ImgElement extends CanvasElement {
         // Update canvas dimensions if they changed (and valid)
         if (newWidth > 0 && newHeight > 0 && (newWidth !== this.props.width || newHeight !== this.props.height)) {
           // Resize the canvas buffer using parent's setSize method
+          logger.debug(`Calling setSize: ${this.props.width}x${this.props.height} -> ${newWidth}x${newHeight}`);
           this.setSize(newWidth, newHeight);
         }
       }
@@ -229,6 +234,8 @@ export const imgSchema: ComponentSchema = {
     ditherBits: { type: 'number', description: 'Color depth for dithering (1-8)' },
     onLoad: { type: ['function', 'string'], description: 'Called when image loads successfully' },
     onError: { type: ['function', 'string'], description: 'Called when image fails to load' },
+    onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source, utils) => [r,g,b]. utils: noise2d, fbm, palette, smoothstep, mix, fract' },
+    shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
   },
 };
 

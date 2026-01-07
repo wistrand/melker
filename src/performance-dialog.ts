@@ -395,7 +395,7 @@ export class PerformanceDialog {
     // Colors
     const bgColor = getThemeColor('background') || '#1a1a2e';
     const borderColor = getThemeColor('border') || '#4a4a6a';
-    const titleBg = getThemeColor('primary') || '#3b82f6';
+    const titleBg = getThemeColor('background') || '#1a1a2e';
     const textColor = getThemeColor('textPrimary') || '#e0e0e0';
     const labelColor = getThemeColor('textSecondary') || '#888888';
     const goodColor = '#22c55e';
@@ -429,11 +429,11 @@ export class PerformanceDialog {
       const px = x + i;
       if (px >= 0 && px < viewportWidth && y >= 0 && y < viewportHeight) {
         let char: string;
-        let fg = '#ffffff';
+        let fg = borderColor;
         // Check if in close button area
         if (px >= closeX && px < closeX + 3) {
           char = closeBtn[px - closeX];
-          fg = '#ff6b6b'; // Red-ish for close button
+          fg = textColor;
         } else if (px >= titleX && px < titleX + title.length) {
           char = title[px - titleX];
         } else if (i === 0) {

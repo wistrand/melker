@@ -233,6 +233,9 @@ export class MelkerEngine {
   // State persistence
   private _persistenceManager!: StatePersistenceManager;
 
+  // App policy (for permission checks)
+  private _policy?: MelkerPolicy;
+
   // Performance tracking
   private _lastLayoutTime = 0;
   private _lastRenderTime = 0;
@@ -1347,6 +1350,9 @@ export class MelkerEngine {
    * @param helpContent - Help text content (markdown)
    */
   setSource(content: string, filePath: string, type: 'md' | 'melker', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, systemInfo?: SystemInfo, helpContent?: string): void {
+    // Store policy for permission checks
+    this._policy = policy;
+
     if (!this._viewSourceManager) {
       this._viewSourceManager = new ViewSourceManager({
         document: this._document,
@@ -1746,6 +1752,47 @@ export class MelkerEngine {
     } catch {
       // Fallback if URL construction fails
       return `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}${url}`;
+    }
+  }
+
+  /**
+   * Check if a permission is granted by the app's policy
+   * @param permission - The permission to check (e.g., 'shader', 'clipboard')
+   * @returns true if permission is granted, false otherwise
+   */
+  hasPermission(permission: 'shader' | 'clipboard' | 'keyring' | 'browser' | 'ai' | 'all'): boolean {
+    // If no policy is set, deny permission
+    if (!this._policy) {
+      return false;
+    }
+
+    const perms = this._policy.permissions;
+    if (!perms) {
+      return false;
+    }
+
+    // 'all' permission grants everything
+    if (perms.all) {
+      return true;
+    }
+
+    // Check the specific permission
+    switch (permission) {
+      case 'shader':
+        return perms.shader === true;
+      case 'clipboard':
+        return perms.clipboard === true;
+      case 'keyring':
+        return perms.keyring === true;
+      case 'browser':
+        return perms.browser === true;
+      case 'ai':
+        return perms.ai === true || (Array.isArray(perms.ai) && perms.ai.length > 0);
+      case 'all':
+        // Already handled above - if we reach here, perms.all is falsy
+        return false;
+      default:
+        return false;
     }
   }
 

@@ -363,6 +363,7 @@ function buildEnvVars(policyVars: string[] | undefined): string[] {
     // Components
     'MELKER_MARKDOWN_DEBUG',
     'MELKER_AUTO_DITHER',
+    'MELKER_DITHER_BITS',
     "MELKER_OAUTH_WELLKNOWN",
     "MELKER_OAUTH_CLIENT_NAME",
     "MELKER_HEADLESS_MODE",

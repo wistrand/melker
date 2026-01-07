@@ -472,8 +472,14 @@ export function formatPolicy(policy: MelkerPolicy): string {
     lines.push('');
   }
 
+  if (p.shader) {
+    lines.push('Shader:');
+    lines.push('  enabled (allows per-pixel shader callbacks on canvas/img)');
+    lines.push('');
+  }
+
   // No permissions declared
-  if (!p.read?.length && !p.write?.length && !p.net?.length && !p.run?.length && !p.env?.length && !p.ai && !p.clipboard && !p.keyring && !p.browser) {
+  if (!p.read?.length && !p.write?.length && !p.net?.length && !p.run?.length && !p.env?.length && !p.ai && !p.clipboard && !p.keyring && !p.browser && !p.shader) {
     lines.push('(no permissions declared)');
   }
 

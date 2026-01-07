@@ -172,6 +172,51 @@ export const drawMyContent = (canvas: any): void => {
 };
 ```
 
+## Canvas onShader Handler
+
+Canvas/img elements support per-pixel shader callbacks for animated effects:
+
+```xml
+<img
+  src="image.png"
+  width="100%" height="100%"
+  onShader="$app.myShader"
+  shaderFps="30"
+  shaderRunTime="5000"
+/>
+```
+
+**Shader callback signature:**
+```typescript
+export const myShader = (
+  x: number,
+  y: number,
+  time: number,
+  resolution: { width: number; height: number; pixelAspect: number },
+  source?: ShaderSource,
+  utils?: ShaderUtils
+): [number, number, number] => {
+  // Return [r, g, b] or [r, g, b, a] (0-255 range)
+  return [255, 0, 0];
+};
+```
+
+**Key parameters:**
+- `resolution.pixelAspect`: ~0.5 (pixels are taller than wide due to sextant chars)
+- `source.getPixel(x, y)`: Read source image pixels `[r, g, b, a]`
+- `source.mouse/mouseUV`: Mouse position in pixels or normalized 0-1
+- `utils`: Built-in functions (`noise2d`, `fbm`, `palette`, `smoothstep`, `mix`, `fract`)
+
+**Aspect-correct shapes:** Divide y-distance by `pixelAspect`:
+```typescript
+const dy = (v - centerY) / resolution.pixelAspect;
+const dist = Math.sqrt(dx*dx + dy*dy);
+```
+
+**shaderRunTime:** Stops shader after specified ms, freezing final frame as a resizable image.
+
+**Permission:** Requires `"shader": true` in app policy.
+
 ## Confirm and Prompt Dialogs
 
 The engine provides `showConfirm()` and `showPrompt()` methods as terminal equivalents to browser dialogs.

@@ -1,6 +1,0 @@
-<melker>
-    <container>
-        <text style="border: thin; width: 20; text-align: center">Melker logo</text>
-        <canvas width="20" height="12" logo="true"/>
-    </container>
-</melker>

@@ -415,6 +415,19 @@ export class TextSelectionHandler {
     if (hoveredElementId !== this._hoveredElementId) {
       // Fire mouseout event for the previously hovered element
       if (this._hoveredElementId) {
+        const prevElement = this._deps.document.getElementById(this._hoveredElementId);
+        // Call onMouseOut handler directly if present
+        if (prevElement && typeof prevElement.props?.onMouseOut === 'function') {
+          const mouseOutEvent = {
+            type: 'mouseout',
+            x: event.x,
+            y: event.y,
+            button: event.button || 0,
+            target: prevElement,
+            timestamp: Date.now(),
+          };
+          prevElement.props.onMouseOut(mouseOutEvent);
+        }
         this._deps.eventManager.dispatchEvent({
           type: 'mouseout',
           x: event.x,
@@ -428,6 +441,18 @@ export class TextSelectionHandler {
 
       // Fire mouseover event for the newly hovered element
       if (hoveredElementId) {
+        // Call onMouseOver handler directly if present
+        if (hoveredElement && typeof hoveredElement.props?.onMouseOver === 'function') {
+          const mouseOverEvent = {
+            type: 'mouseover',
+            x: event.x,
+            y: event.y,
+            button: event.button || 0,
+            target: hoveredElement,
+            timestamp: Date.now(),
+          };
+          hoveredElement.props.onMouseOver(mouseOverEvent);
+        }
         this._deps.eventManager.dispatchEvent({
           type: 'mouseover',
           x: event.x,
@@ -455,6 +480,19 @@ export class TextSelectionHandler {
       button: event.button || 0,
       timestamp: Date.now(),
     });
+
+    // Call onMouseMove handler on the hovered element (if it has one)
+    if (hoveredElement && typeof hoveredElement.props?.onMouseMove === 'function') {
+      const mouseEvent = {
+        type: 'mousemove',
+        x: event.x,
+        y: event.y,
+        button: event.button || 0,
+        target: hoveredElement,
+        timestamp: Date.now(),
+      };
+      hoveredElement.props.onMouseMove(mouseEvent);
+    }
 
     if (this._isSelecting) {
       logger.debug('Mouse move during selection', {

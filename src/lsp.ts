@@ -242,6 +242,7 @@ const POLICY_PERMISSION_TYPES: Record<string, 'boolean' | 'string[]' | 'boolean 
   clipboard: 'boolean',
   keyring: 'boolean',
   browser: 'boolean',
+  shader: 'boolean',
 };
 
 // Valid policy permission keys

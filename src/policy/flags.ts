@@ -2,6 +2,7 @@
 
 import { resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
 import type { MelkerPolicy } from './types.ts';
+import { getTempDir } from '../xdg.ts';
 
 /**
  * Convert a policy to Deno command-line permission flags
@@ -239,8 +240,8 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[
 function buildReadPaths(policyPaths: string[] | undefined, appDir: string): string[] {
   const paths: string[] = [];
 
-  // Implicit: /tmp for bundler temp files
-  paths.push('/tmp');
+  // Implicit: temp dir for bundler temp files
+  paths.push(getTempDir());
 
   // Implicit: app directory (for loading .melker file itself)
   paths.push(appDir);
@@ -276,8 +277,8 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string): stri
 function buildWritePaths(policyPaths: string[] | undefined, appDir: string): string[] {
   const paths: string[] = [];
 
-  // Implicit: /tmp for bundler temp files
-  paths.push('/tmp');
+  // Implicit: temp dir for bundler temp files
+  paths.push(getTempDir());
 
   // Implicit: XDG state dir for persistence
   const xdgState = Deno.env.get('XDG_STATE_HOME') || `${Deno.env.get('HOME')}/.local/state`;

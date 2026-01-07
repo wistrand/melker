@@ -38,6 +38,13 @@ export interface PerformanceStats {
   layoutTime2: number;   // Layout calculation only
   bufferTime: number;    // Rendering to buffer
   applyTime: number;     // Writing to terminal
+
+  // Shader stats
+  shaderCount: number;       // Number of active shaders
+  shaderFrameTime: number;   // Last shader frame time (ms)
+  shaderFrameTimeAvg: number; // Average shader frame time (ms)
+  shaderFps: number;         // Shader frames per second
+  shaderPixels: number;      // Total pixels being rendered by shaders
 }
 
 export interface PerformanceDialogOptions {
@@ -46,7 +53,7 @@ export interface PerformanceDialogOptions {
 }
 
 const DEFAULT_WIDTH = 32;
-const DEFAULT_HEIGHT = 19;
+const DEFAULT_HEIGHT = 23;  // Increased to fit shader stats
 
 /**
  * Performance monitoring dialog
@@ -77,6 +84,15 @@ export class PerformanceDialog {
   // Input latency tracking
   private _inputStartTime = 0;
   private _lastInputLatency = 0;
+
+  // Shader stats tracking
+  private _shaderFrameTimes: number[] = [];
+  private _lastShaderFpsUpdate = 0;
+  private _shaderFramesSinceLastFps = 0;
+  private _currentShaderFps = 0;
+  private _activeShaderIds = new Set<string>();
+  private _lastShaderFrameTime = 0;
+  private _totalShaderPixels = 0;
 
   // Latency breakdown tracking
   private _renderRequestedTime = 0;
@@ -279,6 +295,96 @@ export class PerformanceDialog {
    */
   getFps(): number {
     return this._currentFps;
+  }
+
+  // ============ Shader Stats Methods ============
+
+  /**
+   * Register a shader (call when shader starts)
+   * @param id Unique identifier for the shader (e.g., canvas element id)
+   * @param pixelCount Number of pixels the shader renders
+   */
+  registerShader(id: string, pixelCount: number): void {
+    this._activeShaderIds.add(id);
+    // Recalculate total pixels
+    // Note: This is a simple approach - for accurate per-shader tracking,
+    // we'd need to store pixel counts per shader
+    this._totalShaderPixels += pixelCount;
+  }
+
+  /**
+   * Unregister a shader (call when shader stops)
+   * @param id Unique identifier for the shader
+   * @param pixelCount Number of pixels the shader was rendering
+   */
+  unregisterShader(id: string, pixelCount: number): void {
+    this._activeShaderIds.delete(id);
+    this._totalShaderPixels = Math.max(0, this._totalShaderPixels - pixelCount);
+    // Reset stats if no shaders active
+    if (this._activeShaderIds.size === 0) {
+      this._shaderFrameTimes = [];
+      this._currentShaderFps = 0;
+      this._lastShaderFrameTime = 0;
+      this._totalShaderPixels = 0;
+    }
+  }
+
+  /**
+   * Record a shader frame time
+   * @param ms Time in milliseconds for this shader frame
+   */
+  recordShaderFrameTime(ms: number): void {
+    this._lastShaderFrameTime = ms;
+    this._shaderFrameTimes.push(ms);
+    if (this._shaderFrameTimes.length > 60) {
+      this._shaderFrameTimes.shift();
+    }
+
+    // Update shader FPS calculation
+    this._shaderFramesSinceLastFps++;
+    const now = performance.now();
+    const elapsed = now - this._lastShaderFpsUpdate;
+    if (elapsed >= 1000) {
+      this._currentShaderFps = (this._shaderFramesSinceLastFps / elapsed) * 1000;
+      this._shaderFramesSinceLastFps = 0;
+      this._lastShaderFpsUpdate = now;
+    }
+  }
+
+  /**
+   * Get average shader frame time
+   */
+  getAverageShaderFrameTime(): number {
+    if (this._shaderFrameTimes.length === 0) return 0;
+    return this._shaderFrameTimes.reduce((a, b) => a + b, 0) / this._shaderFrameTimes.length;
+  }
+
+  /**
+   * Get current shader FPS
+   */
+  getShaderFps(): number {
+    return this._currentShaderFps;
+  }
+
+  /**
+   * Get number of active shaders
+   */
+  getActiveShaderCount(): number {
+    return this._activeShaderIds.size;
+  }
+
+  /**
+   * Get last shader frame time
+   */
+  getLastShaderFrameTime(): number {
+    return this._lastShaderFrameTime;
+  }
+
+  /**
+   * Get total shader pixels
+   */
+  getTotalShaderPixels(): number {
+    return this._totalShaderPixels;
   }
 
   /**
@@ -573,7 +679,12 @@ export class PerformanceDialog {
       ? `${pad(stats.handlerTime)}+${pad(stats.waitTime)}+${pad(stats.layoutTime2)}+${pad(stats.bufferTime)}+${pad(stats.applyTime)}`
       : '-';
 
-    return [
+    // Shader stats (only show if shaders are active)
+    const hasShaders = stats.shaderCount > 0;
+    // Color for shader frame time: <16ms good (60fps capable), <33ms ok (30fps), >33ms bad
+    const shaderTimeColor = stats.shaderFrameTime < 16 ? '#22c55e' : stats.shaderFrameTime < 33 ? '#eab308' : '#ef4444';
+
+    const lines: Array<{ label: string; value: string; color?: string }> = [
       { label: 'Max FPS', value: maxFps > 0 ? maxFps.toFixed(0) : '-', color: maxFpsColor },
       { label: 'Renders/s', value: stats.fps.toFixed(1) },
       { label: 'Render', value: formatMs(stats.renderTime), color: renderColor },
@@ -584,13 +695,25 @@ export class PerformanceDialog {
       { label: 'Input avg', value: stats.inputLatencyAvg > 0 ? formatMs(stats.inputLatencyAvg) : '-' },
       { label: 'Breakdown', value: breakdownStr },
       { label: '', value: 'h+w+l+b+a' },
-      { label: 'Nodes', value: String(stats.layoutNodeCount) },
-      { label: 'Cells', value: `${stats.changedCells}/${stats.totalCells}` },
-      { label: 'Memory', value: formatBytes(stats.memoryUsage) },
-      { label: 'Renders', value: String(stats.renderCount) },
-      { label: 'Errors', value: stats.errorCount > 0 ? String(stats.errorCount) : '-',
-        color: stats.errorCount > 0 ? '#ef4444' : undefined },
     ];
+
+    // Add shader stats section if shaders are running
+    if (hasShaders) {
+      lines.push({ label: '--- Shaders', value: `${stats.shaderCount} active ---` });
+      lines.push({ label: 'Shader FPS', value: stats.shaderFps > 0 ? stats.shaderFps.toFixed(1) : '-' });
+      lines.push({ label: 'Frame time', value: formatMs(stats.shaderFrameTime), color: shaderTimeColor });
+      lines.push({ label: 'Frame avg', value: formatMs(stats.shaderFrameTimeAvg) });
+      lines.push({ label: 'Pixels', value: stats.shaderPixels > 1000 ? `${(stats.shaderPixels / 1000).toFixed(1)}k` : String(stats.shaderPixels) });
+    }
+
+    lines.push({ label: 'Nodes', value: String(stats.layoutNodeCount) });
+    lines.push({ label: 'Cells', value: `${stats.changedCells}/${stats.totalCells}` });
+    lines.push({ label: 'Memory', value: formatBytes(stats.memoryUsage) });
+    lines.push({ label: 'Renders', value: String(stats.renderCount) });
+    lines.push({ label: 'Errors', value: stats.errorCount > 0 ? String(stats.errorCount) : '-',
+      color: stats.errorCount > 0 ? '#ef4444' : undefined });
+
+    return lines;
   }
 }
 

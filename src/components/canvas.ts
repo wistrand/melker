@@ -6,6 +6,7 @@ import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, rgbaToCss, cssToRgba } f
 import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, applyFloydSteinbergStableDither, applyOrderedDither, type DitherMode } from '../video/dither.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { getLogger } from '../logging.ts';
+import { getGlobalPerformanceDialog } from '../performance-dialog.ts';
 import * as Draw from './canvas-draw.ts';
 
 const logger = getLogger('canvas');
@@ -351,6 +352,7 @@ export class CanvasElement extends Element implements Renderable {
   private _shaderOutputBuffer: Uint32Array | null = null;  // Separate buffer for shader output (avoid race condition)
   private _shaderFrameInterval: number = 33;  // Target ms between frames
   private _shaderLastFrameTime: number = 0;  // Time of last frame start
+  private _shaderRegisteredId: string | null = null;  // ID registered with performance dialog
 
   // Pre-allocated working arrays for _renderToTerminal (avoid per-cell allocations)
   private _rtDrawingPixels: boolean[] = [false, false, false, false, false, false];
@@ -1076,6 +1078,12 @@ export class CanvasElement extends Element implements Renderable {
     this._shaderFrameInterval = Math.floor(1000 / fps);
     this._shaderLastFrameTime = performance.now();
 
+    // Register with performance dialog for stats tracking
+    const shaderId = this.props.id ?? `shader_${Date.now()}`;
+    this._shaderRegisteredId = shaderId;
+    const pixelCount = this._bufferWidth * this._bufferHeight;
+    getGlobalPerformanceDialog().registerShader(shaderId, pixelCount);
+
     // Schedule first frame via setTimeout to avoid running inside render()
     this._shaderTimer = setTimeout(() => {
       this._shaderLastFrameTime = performance.now();
@@ -1107,6 +1115,13 @@ export class CanvasElement extends Element implements Renderable {
     if (this._shaderTimer !== null) {
       clearTimeout(this._shaderTimer);
       this._shaderTimer = null;
+    }
+
+    // Unregister from performance dialog
+    if (this._shaderRegisteredId !== null) {
+      const pixelCount = this._bufferWidth * this._bufferHeight;
+      getGlobalPerformanceDialog().unregisterShader(this._shaderRegisteredId, pixelCount);
+      this._shaderRegisteredId = null;
     }
   }
 
@@ -1248,6 +1263,7 @@ export class CanvasElement extends Element implements Renderable {
 
     // Call shader for each pixel - write directly to _colorBuffer
     // (Bypassing intermediate buffer since JS is single-threaded)
+    const shaderExecStart = performance.now();
     const colorBuffer = this._colorBuffer;
     for (let y = 0; y < bufH; y++) {
       for (let x = 0; x < bufW; x++) {
@@ -1264,6 +1280,10 @@ export class CanvasElement extends Element implements Renderable {
         colorBuffer[index] = color;
       }
     }
+    const shaderExecTime = performance.now() - shaderExecStart;
+
+    // Record shader frame time for performance stats
+    getGlobalPerformanceDialog().recordShaderFrameTime(shaderExecTime);
 
     this._isDirty = true;
 

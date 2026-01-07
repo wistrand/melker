@@ -1,3 +1,4 @@
+#!/usr/bin/env -S deno run --allow-all
 // Main Melker library entry point
 
 // Export all types

@@ -18,14 +18,17 @@ The `.md` format is a **literate programming layer** that compiles to `.melker`.
 ## Running Examples
 
 ```bash
-# Run directly from markdown
+# Direct execution (melker.ts has executable shebang)
+./melker.ts examples/melker-md/hello.md
+
+# Or via deno run
 deno run --allow-all melker.ts examples/melker-md/hello.md
 
 # Convert to .melker format (prints to stdout)
-deno run --allow-all melker.ts --convert examples/melker-md/counter.md
+./melker.ts --convert examples/melker-md/counter.md
 
 # Convert and save to file
-deno run --allow-all melker.ts --convert examples/melker-md/counter.md > counter.melker
+./melker.ts --convert examples/melker-md/counter.md > counter.melker
 ```
 
 ## Example Files

@@ -12,6 +12,10 @@ enabling full npm: and jsr: import support.
 ## Running
 
 ```bash
+# Direct execution (melker.ts has executable shebang)
+./melker.ts examples/melker/bundler/bundler-demo.melker
+
+# Or via deno run
 deno run --allow-all melker.ts examples/melker/bundler/bundler-demo.melker
 ```
 
@@ -66,5 +70,5 @@ Bundles are cached in `~/.cache/melker/bundles/` based on content hash.
 Use `--no-cache` to force re-bundling:
 
 ```bash
-deno run --allow-all melker.ts --no-cache examples/melker/bundler/bundler-demo.melker
+./melker.ts --no-cache examples/melker/bundler/bundler-demo.melker
 ```

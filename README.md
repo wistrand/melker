@@ -67,6 +67,10 @@ Create `hello.melker`:
 Run it:
 
 ```bash
+# Direct execution (melker.ts has executable shebang)
+./melker.ts hello.melker
+
+# Or via deno run
 deno run --allow-all melker.ts hello.melker
 ```
 
@@ -110,7 +114,7 @@ Permissions are document metadata, visible before execution:
 
 Run `--show-policy` to inspect without running:
 ```bash
-deno run --allow-all melker.ts --show-policy app.melker
+./melker.ts --show-policy app.melker
 ```
 
 ### 3. Run from URL
@@ -119,7 +123,7 @@ Share apps via URL:
 
 ```bash
 # Run directly from URL
-deno run --allow-all melker.ts https://example.com/app.melker
+./melker.ts https://example.com/app.melker
 
 # Remote apps require explicit policy (enforced)
 # First run prompts for approval (hash-based)
@@ -210,7 +214,7 @@ Or `<style>` tags with selectors:
 
 Auto-detects terminal capabilities by default. Manual override:
 ```bash
-MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts app.melker
+MELKER_THEME=fullcolor-dark ./melker.ts app.melker
 ```
 
 Available: `auto`, `bw-std`, `bw-dark`, `gray-std`, `gray-dark`, `color-std`, `color-dark`, `fullcolor-std`, `fullcolor-dark`
@@ -287,23 +291,26 @@ Element state persists across runs using XDG state directory.
 ## Running Apps
 
 ```bash
-# Run local file
+# Direct execution (melker.ts has executable shebang)
+./melker.ts app.melker
+
+# Or via deno run
 deno run --allow-all melker.ts app.melker
 
 # Run from URL
-deno run --allow-all melker.ts https://example.com/app.melker
+./melker.ts https://example.com/app.melker
 
 # Show policy without running
-deno run --allow-all melker.ts --show-policy app.melker
+./melker.ts --show-policy app.melker
 
 # Trust mode (bypass approval prompt, for scripts)
-deno run --allow-all melker.ts --trust app.melker
+./melker.ts --trust app.melker
 
 # Watch mode (auto-reload on changes)
-deno run --allow-all melker.ts --watch app.melker
+./melker.ts --watch app.melker
 
 # Enable debug server
-MELKER_DEBUG_PORT=8080 deno run --allow-all melker.ts app.melker
+MELKER_DEBUG_PORT=8080 ./melker.ts app.melker
 ```
 
 ---
@@ -392,16 +399,16 @@ examples/
 
 ```bash
 # Counter with state
-deno run --allow-all melker.ts examples/melker/counter.melker
+./melker.ts examples/melker/counter.melker
 
 # Markdown viewer (pass file as argument)
-deno run --allow-all melker.ts examples/melker/markdown_viewer.melker README.md
+./melker.ts examples/melker/markdown_viewer.melker README.md
 
 # Dialog system
-deno run --allow-all melker.ts examples/melker/dialog_demo.melker
+./melker.ts examples/melker/dialog_demo.melker
 
 # Canvas animation
-deno run --allow-all melker.ts examples/melker/analog-clock.melker
+./melker.ts examples/melker/analog-clock.melker
 ```
 
 ---

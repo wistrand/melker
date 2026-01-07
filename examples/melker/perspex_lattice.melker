@@ -1,0 +1,218 @@
+<melker>
+  <policy>
+  {
+    "name": "Perspex Web Lattice",
+    "description": "Raymarched 2nd-order Voronoi with dark web lattice",
+    "permissions": {
+      "shader": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    // Perspex Web Lattice - Optimized version
+    // Raymarched 2nd order Voronoi with dark perspex web and fiery cells
+
+    // Precomputed constants
+    const TAU = 6.2831853;
+    const INV_1_2 = 1 / 1.2;
+
+    // Inline hash - avoids function call overhead
+    const hash = (px: number, py: number, time: number, out: Float64Array) => {
+      const n = Math.sin(px * 41 + py * 289);
+      const hx = (n * 262144) % 1;
+      const hy = (n * 32768) % 1;
+      out[0] = Math.sin((hx < 0 ? hx + 1 : hx) * TAU + time) * 0.45 + 0.5;
+      out[1] = Math.sin((hy < 0 ? hy + 1 : hy) * TAU + time) * 0.45 + 0.5;
+    };
+
+    // Reusable arrays to avoid allocations
+    const hashOut = new Float64Array(2);
+
+    // Inlined 2nd-order Voronoi + heightMap combined
+    // Returns: [voronoi value, isLattice (0 or 1)]
+    const heightMapFast = (px: number, py: number, time: number): number => {
+      const sx = px * 4, sy = py * 4;
+      const gx = Math.floor(sx), gy = Math.floor(sy);
+      const fx = sx - gx, fy = sy - gy;
+
+      let d1 = 2, d2 = 2;
+
+      // Unrolled 3x3 loop for speed
+      for (let yi = -1; yi <= 1; yi++) {
+        const cgy = gy + yi;
+        const offy = yi - fy;
+        for (let xi = -1; xi <= 1; xi++) {
+          hash(gx + xi, cgy, time, hashOut);
+          const ox = xi + hashOut[0] - fx;
+          const oy = offy + hashOut[1];
+          const dz = ox * ox + oy * oy;
+
+          if (dz < d1) { d2 = d1; d1 = dz; }
+          else if (dz < d2) { d2 = dz; }
+        }
+      }
+
+      const c = Math.max(d2 * INV_1_2 - d1, 0) * INV_1_2;
+      return c;
+    };
+
+    // Fast approximation of pow for integers
+    const pow2 = (x: number) => x * x;
+    const pow4 = (x: number) => { const x2 = x * x; return x2 * x2; };
+    const pow5 = (x: number) => { const x2 = x * x; return x2 * x2 * x; };
+    const pow8 = (x: number) => { const x2 = x * x; const x4 = x2 * x2; return x4 * x4; };
+    const pow32 = (x: number) => { const x2 = x * x; const x4 = x2 * x2; const x8 = x4 * x4; const x16 = x8 * x8; return x16 * x16; };
+
+    // Simplified noise - single octave, faster hash
+    const noise1 = (x: number, y: number, z: number): number => {
+      const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+      const fx = x - ix, fy = y - iy, fz = z - iz;
+      const ux = fx * fx * (3 - 2 * fx);
+      const uy = fy * fy * (3 - 2 * fy);
+      const uz = fz * fz * (3 - 2 * fz);
+
+      // Faster hash using bit operations concept
+      const h = (i: number, j: number, k: number) => {
+        const n = Math.sin(i * 7 + j * 157 + k * 113) * 43758.5453;
+        return n - Math.floor(n);
+      };
+
+      const a = h(ix, iy, iz), b = h(ix + 1, iy, iz);
+      const c = h(ix, iy + 1, iz), d = h(ix + 1, iy + 1, iz);
+      const e = h(ix, iy, iz + 1), f = h(ix + 1, iy, iz + 1);
+      const g = h(ix, iy + 1, iz + 1), hh = h(ix + 1, iy + 1, iz + 1);
+
+      const ab = a + (b - a) * ux, cd = c + (d - c) * ux;
+      const ef = e + (f - e) * ux, gh = g + (hh - g) * ux;
+      const abcd = ab + (cd - ab) * uy, efgh = ef + (gh - ef) * uy;
+
+      return abcd + (efgh - abcd) * uz;
+    };
+
+    export const perspexShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number }
+    ): [number, number, number] => {
+      const invW = 1 / resolution.width, invH = 1 / resolution.height;
+      const aspect = resolution.width * invH;
+
+      // Ray direction
+      let rx = (x * invW - 0.5) * 2 * aspect;
+      let ry = ((y * invH - 0.5) * 2) / resolution.pixelAspect;
+      let rz = 1.0;
+      const rLen = 1 / Math.sqrt(rx * rx + ry * ry + 1);
+      rx *= rLen; ry *= rLen; rz *= rLen;
+
+      // Rotate canvas
+      const angle = time * 0.125;
+      const ca = Math.cos(angle), sa = Math.sin(angle);
+      const rx2 = rx * ca - ry * sa;
+      ry = rx * sa + ry * ca;
+      rx = rx2;
+
+      // Raymarch - reduced iterations, larger steps
+      let t = 0;
+      for (let i = 0; i < 24; i++) {
+        const h = heightMapFast(rx * t, ry * t, time);
+        const d = 1 - rz * t - h * 0.1;
+        if (d < 0.002) break;
+        t += d * 0.8;
+        if (t > 2) return [0, 0, 0];
+      }
+
+      // Hit point
+      const px = rx * t, py = ry * t;
+
+      // Get height and determine ID
+      const hm = heightMapFast(px, py, time);
+      const isLattice = hm < 0.07;
+
+      // Simplified normal (only xy needed for mostly-flat surface)
+      const e = 0.01;
+      const h1 = heightMapFast(px + e, py, time);
+      const h2 = heightMapFast(px - e, py, time);
+      const h3 = heightMapFast(px, py + e, time);
+      const h4 = heightMapFast(px, py - e, time);
+
+      let nx = (h1 - h2) * 5;  // Scale for steeper apparent normals
+      let ny = (h3 - h4) * 5;
+      let nz = 1;
+      const nLen = 1 / Math.sqrt(nx * nx + ny * ny + 1);
+      nx *= nLen; ny *= nLen; nz *= nLen;
+
+      // Edge detection (simplified)
+      const edge = Math.min(1, Math.abs(h1 + h2 - hm * 2) + Math.abs(h3 + h4 - hm * 2)) * 8;
+
+      // Base color
+      const base = hm * 0.8 + 0.2;
+      let colR: number, colG: number, colB: number;
+
+      if (!isLattice) {
+        // Fiery palette
+        colR = Math.min(base * 2.25, 1.5);
+        colG = pow5(base) * 1.5;
+        colB = pow8(base) * pow8(base) * pow8(base) * 1.5;
+      } else {
+        // Dark lattice
+        const t = Math.max(0, 1 - hm - 0.7);
+        const smooth = t > 0 ? pow2(t / 0.3) * (3 - 2 * t / 0.3) * 0.2 : 0;
+        colR = colG = colB = smooth * 0.15;
+      }
+
+      // Simple diffuse (light from front-top)
+      const diff = Math.max(0.3, nz * 0.5 + ny * 0.3 + 0.4);
+      colR *= diff; colG *= diff; colB *= diff;
+
+      // Specular highlight
+      const spec = pow32(Math.max(0, nz * 0.7 + ny * 0.3));
+      const specMul = isLattice ? 0.8 : 0.4;
+      colR += spec * specMul;
+      colG += spec * specMul * 0.9;
+      colB += spec * specMul * 1.2;
+
+      // Simple environment reflection (one octave noise)
+      const envTime = time * 0.25;
+      const en = noise1((rx - envTime) * 3, (ry - envTime) * 3, rz * 3);
+      const envC = Math.max(0, en - 0.4) * (isLattice ? 0.3 : 0.6);
+      colR += pow4(envC) * 0.5;
+      colG += pow2(envC) * 0.4;
+      colB += envC * 0.6;
+
+      // Edge darkening
+      const edgeMul = 1 - edge * 0.5;
+      colR *= edgeMul; colG *= edgeMul; colB *= edgeMul;
+
+      // Gamma (fast sqrt approximation not needed, sqrt is fast)
+      return [
+        Math.sqrt(Math.min(1, Math.max(0, colR))) * 255,
+        Math.sqrt(Math.min(1, Math.max(0, colG))) * 255,
+        Math.sqrt(Math.min(1, Math.max(0, colB))) * 255
+      ];
+    };
+  </script>
+
+  <container style="width: fill; height: fill; display: flex; flex-direction: column;">
+    <container style="width: fill; height: fill;">
+      <img
+        id="perspexCanvas"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.perspexShader"
+        shaderFps="24"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: #1a0a00;">
+      <text style="color: #ff6622;">Perspex Web Lattice - 2nd Order Voronoi</text>
+      <button
+        title="Exit"
+        onClick="$melker.exit();"
+      />
+    </container>
+  </container>
+</melker>

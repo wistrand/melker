@@ -6,8 +6,12 @@ The `.melker` file format is an HTML-like declarative syntax for building Melker
 
 **Run with:**
 ```bash
+# Direct execution (melker.ts has executable shebang)
+./melker.ts <file>.melker
+./melker.ts http://server/path/file.melker  # URL support
+
+# Or via deno run
 deno run --allow-all melker.ts <file>.melker
-deno run --allow-all melker.ts http://server/path/file.melker  # URL support
 ```
 
 The launcher automatically adds `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
@@ -248,39 +252,42 @@ See `examples/melker/` for complete examples:
 ## Running
 
 ```bash
-# Simple launch (auto-detects and adds required flags)
+# Direct execution (melker.ts has executable shebang)
+./melker.ts examples/melker/counter.melker
+
+# Or via deno run
 deno run --allow-all melker.ts examples/melker/counter.melker
 
 # From URL
-deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
+./melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all melker.ts --lint examples/melker/counter.melker
+./melker.ts --lint examples/melker/counter.melker
 
 # Watch mode (auto-reload on file changes, local files only)
-deno run --allow-all melker.ts --watch examples/melker/counter.melker
+./melker.ts --watch examples/melker/counter.melker
 
 # Debug mode (shows bundler info, retains temp files at /tmp/melker-*.{ts,js})
-deno run --allow-all melker.ts --debug examples/melker/counter.melker
+./melker.ts --debug examples/melker/counter.melker
 
 # Enable bundle caching (disabled by default)
-deno run --allow-all melker.ts --cache examples/melker/counter.melker
+./melker.ts --cache examples/melker/counter.melker
 
 # Show app policy and exit
-deno run --allow-all melker.ts --show-policy examples/melker/counter.melker
+./melker.ts --show-policy examples/melker/counter.melker
 
 # Ignore policy, run with full permissions
-deno run --allow-all melker.ts --trust examples/melker/counter.melker
+./melker.ts --trust examples/melker/counter.melker
 
 # With logging
-MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug deno run --allow-all melker.ts app.melker
+MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug ./melker.ts app.melker
 
 # With theme (auto-detected by default, or specify manually)
-MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts app.melker
-MELKER_THEME=auto-dark deno run --allow-all melker.ts app.melker
+MELKER_THEME=fullcolor-dark ./melker.ts app.melker
+MELKER_THEME=auto-dark ./melker.ts app.melker
 
 # Start LSP server (for editor integration)
-deno run --allow-all melker.ts --lsp
+./melker.ts --lsp
 ```
 
 ## Markdown Format (.md) - Optional
@@ -303,10 +310,10 @@ The markdown format compiles to `.melker` and provides:
 
 ```bash
 # Run directly
-deno run --allow-all melker.ts examples/melker-md/counter.md
+./melker.ts examples/melker-md/counter.md
 
 # Convert to .melker format (prints to stdout)
-deno run --allow-all melker.ts --convert examples/melker-md/counter.md
+./melker.ts --convert examples/melker-md/counter.md
 ```
 
 ### Layout Blocks
@@ -567,19 +574,19 @@ When an `<oauth>` tag is present, the policy automatically includes:
 
 ```bash
 # Show policy and exit
-deno run --allow-all melker.ts --show-policy app.melker
+./melker.ts --show-policy app.melker
 
 # Ignore policy, run with full permissions (required for scripts/agents)
-deno run --allow-all melker.ts --trust app.melker
+./melker.ts --trust app.melker
 
 # Clear all cached approvals
-deno run --allow-all melker.ts --clear-approvals
+./melker.ts --clear-approvals
 
 # Revoke approval for specific path or URL
-deno run --allow-all melker.ts --revoke-approval /path/to/app.melker
+./melker.ts --revoke-approval /path/to/app.melker
 
 # Show cached approval
-deno run --allow-all melker.ts --show-approval /path/to/app.melker
+./melker.ts --show-approval /path/to/app.melker
 ```
 
 ### App Approval System

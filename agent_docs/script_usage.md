@@ -154,7 +154,7 @@ Available log methods (in order of severity):
 
 Set log level via environment variable:
 ```bash
-MELKER_LOG_LEVEL=DEBUG deno run --allow-all melker.ts app.melker
+MELKER_LOG_LEVEL=DEBUG ./melker.ts app.melker
 ```
 
 ## Script Types

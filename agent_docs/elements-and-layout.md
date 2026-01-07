@@ -561,6 +561,14 @@ const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);
 - Fixed-dimension images use `flexShrink: 0` to prevent layout compression
 - Percentage-dimension images are responsive and shrink with container
 
+### Supported Formats
+
+- **PNG** - Full support including alpha transparency and 16-bit depth (decoded via `npm:fast-png`)
+- **JPEG** - Full support (decoded via `npm:jpeg-js`)
+- **GIF** - Static images, first frame only (decoded via `npm:omggif`)
+
+All decoders are pure JavaScript - no native dependencies or Deno internal APIs.
+
 ### Path Resolution
 
 - Absolute paths (starting with `/`) are used as-is
@@ -569,7 +577,7 @@ const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);
 
 ### Implementation
 
-Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an HTML-like API for image display.
+Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an HTML-like API for image display. Image decoding is in `src/components/canvas.ts`.
 
 ## Rendering Pipeline
 

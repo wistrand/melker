@@ -10,6 +10,10 @@ import { getGlobalPerformanceDialog } from '../performance-dialog.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
 import { PIXEL_TO_CHAR } from './canvas-terminal.ts';
+// Pure JS image decoders (stable API, no Deno internals)
+import { decode as decodePng } from 'npm:fast-png';
+import { decode as decodeJpeg } from 'npm:jpeg-js';
+import { GifReader } from 'npm:omggif';
 
 const logger = getLogger('canvas');
 
@@ -386,53 +390,68 @@ export class CanvasElement extends Element implements Renderable {
     try {
       // Read the image file
       const imageBytes = await Deno.readFile(resolvedSrc);
-      const blob = new Blob([imageBytes]);
 
-      // Decode the image using createImageBitmap
-      const bitmap = await createImageBitmap(blob);
-
-      // Extract pixel data using Deno's internal [[bitmapData]] symbol
-      // deno-lint-ignore no-explicit-any
-      const bitmapAny = bitmap as any;
-      const bitmapDataSymbol = Object.getOwnPropertySymbols(bitmap)
-        .find(sym => sym.description === '[[bitmapData]]');
-
-      if (!bitmapDataSymbol) {
-        throw new Error('Could not find [[bitmapData]] symbol on ImageBitmap');
-      }
-
-      const pixelData = bitmapAny[bitmapDataSymbol] as Uint8Array;
-
-      // Detect bytes per pixel by comparing data length with expected sizes
-      const totalPixels = bitmap.width * bitmap.height;
-      const expectedRGBA = totalPixels * 4;
-      const expectedRGB = totalPixels * 3;
+      // Detect format by magic bytes and decode using stable pure-JS libraries
+      let width: number;
+      let height: number;
+      let pixelData: Uint8Array | Uint8ClampedArray;
       let bytesPerPixel: number;
 
-      if (pixelData.length === expectedRGBA) {
-        bytesPerPixel = 4; // RGBA
-      } else if (pixelData.length === expectedRGB) {
-        bytesPerPixel = 3; // RGB (no alpha)
+      // PNG magic: 0x89 0x50 0x4E 0x47
+      const isPng = imageBytes[0] === 0x89 && imageBytes[1] === 0x50 &&
+                    imageBytes[2] === 0x4E && imageBytes[3] === 0x47;
+      // JPEG magic: 0xFF 0xD8 0xFF
+      const isJpeg = imageBytes[0] === 0xFF && imageBytes[1] === 0xD8 && imageBytes[2] === 0xFF;
+      // GIF magic: GIF87a or GIF89a
+      const isGif = imageBytes[0] === 0x47 && imageBytes[1] === 0x49 && imageBytes[2] === 0x46 &&
+                    imageBytes[3] === 0x38 && (imageBytes[4] === 0x37 || imageBytes[4] === 0x39) &&
+                    imageBytes[5] === 0x61;
+
+      if (isPng) {
+        const decoded = decodePng(imageBytes);
+        width = decoded.width;
+        height = decoded.height;
+        bytesPerPixel = decoded.channels; // 3 for RGB, 4 for RGBA
+        // Handle 16-bit PNG by converting to 8-bit
+        if (decoded.depth === 16) {
+          const data16 = decoded.data as Uint16Array;
+          pixelData = new Uint8Array(data16.length);
+          for (let i = 0; i < data16.length; i++) {
+            pixelData[i] = data16[i] >> 8; // Take high byte
+          }
+        } else {
+          pixelData = decoded.data as Uint8Array;
+        }
+      } else if (isJpeg) {
+        const decoded = decodeJpeg(imageBytes, { useTArray: true, formatAsRGBA: true });
+        width = decoded.width;
+        height = decoded.height;
+        bytesPerPixel = 4; // jpeg-js with formatAsRGBA always gives RGBA
+        pixelData = decoded.data;
+      } else if (isGif) {
+        const gifReader = new GifReader(imageBytes);
+        width = gifReader.width;
+        height = gifReader.height;
+        bytesPerPixel = 4; // GIF decoder outputs RGBA
+        pixelData = new Uint8Array(width * height * 4);
+        gifReader.decodeAndBlitFrameRGBA(0, pixelData); // Decode first frame
       } else {
-        // Fallback: guess based on which is closer
-        bytesPerPixel = Math.abs(pixelData.length - expectedRGBA) < Math.abs(pixelData.length - expectedRGB) ? 4 : 3;
+        throw new Error(`Unsupported image format. Supported: PNG, JPEG, GIF`);
       }
 
-      // Store the loaded image (convert to Uint8ClampedArray)
+      // Store the loaded image
       this._loadedImage = {
-        width: bitmap.width,
-        height: bitmap.height,
+        width,
+        height,
         data: new Uint8ClampedArray(pixelData),
         bytesPerPixel,
       };
-
-      // Clean up
-      bitmap.close();
 
       // Render the image to the canvas
       this._renderImageToBuffer();
 
     } catch (error) {
+      logger.error("failed loadIimage, resolvedSrc " + resolvedSrc + " " + error);
       throw new Error(`Failed to load image '${src}': ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this._imageLoading = false;

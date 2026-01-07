@@ -315,6 +315,8 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   private _srcContent: string | null = null;
   private _lastSrc: string | null = null;
   private _hasLoadedContent: boolean = false;
+  // The actual resolved URL of the loaded markdown file (for resolving relative image paths)
+  private _resolvedSrcUrl: string | null = null;
   // Error message to display when content loading fails
   private _loadError: string | null = null;
   // Cache for image canvases (keyed by resolved src path)
@@ -379,7 +381,20 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         return null;
       }
 
-      const resolvedUrl = engine.resolveUrl(src);
+      let resolvedUrl = engine.resolveUrl(src);
+
+      // For relative paths (not starting with / or protocol), try cwd first
+      // This handles command-line arguments like "examples/foo.md"
+      if (!src.startsWith('/') && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('file://')) {
+        const cwdPath = `${Deno.cwd()}/${src}`;
+        try {
+          await Deno.stat(cwdPath);
+          // File exists at cwd-relative path, use it
+          resolvedUrl = `file://${cwdPath}`;
+        } catch {
+          // File doesn't exist at cwd, fall through to use baseUrl-resolved path
+        }
+      }
 
       if (resolvedUrl.startsWith('file://')) {
         // Local file access - use URL.pathname for proper parsing
@@ -397,6 +412,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       }
 
       this._lastSrc = src;
+      this._resolvedSrcUrl = resolvedUrl; // Store the actual resolved URL for image path resolution
       this._hasLoadedContent = true;
       return this._srcContent;
     } catch (error) {
@@ -2164,14 +2180,15 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       return src;
     }
 
-    // Get the markdown source path to resolve relative paths
-    const markdownSrc = this.props.src;
-    if (!markdownSrc) {
-      // No source path, use engine's base URL or current directory
+    // Use the actual resolved URL of the markdown file (set during loadUrl)
+    // This correctly handles cwd-relative paths passed as command-line arguments
+    const markdownUrl = this._resolvedSrcUrl;
+    if (!markdownUrl) {
+      // No resolved URL yet, fall back to engine resolution
       const engine = (globalThis as any).melkerEngine;
       if (engine && typeof engine.resolveUrl === 'function') {
         const resolved = engine.resolveUrl(src);
-        logger.debug('Resolved via engine (no markdown src)', { resolved });
+        logger.debug('Resolved via engine (no resolved markdown URL)', { resolved });
         return resolved;
       }
       logger.debug('No engine available, returning src as-is');
@@ -2180,20 +2197,16 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     // Resolve relative to markdown file's directory
     try {
-      const engine = (globalThis as any).melkerEngine;
-      if (engine && typeof engine.resolveUrl === 'function') {
-        // Get the directory of the markdown file
-        const markdownUrl = engine.resolveUrl(markdownSrc);
-        const markdownDir = markdownUrl.substring(0, markdownUrl.lastIndexOf('/') + 1);
-        const combinedUrl = markdownDir + src;
+      // Get the directory of the markdown file
+      const markdownDir = markdownUrl.substring(0, markdownUrl.lastIndexOf('/') + 1);
+      const combinedUrl = markdownDir + src;
 
-        // Normalize the URL to resolve ../ and ./
-        const normalizedUrl = new URL(combinedUrl);
-        // Return plain pathname (strip file:// protocol) for local files
-        const resolvedPath = normalizedUrl.protocol === 'file:' ? normalizedUrl.pathname : normalizedUrl.href;
-        logger.debug('Resolved relative to markdown file', { markdownUrl, markdownDir, combinedUrl, resolvedPath });
-        return resolvedPath;
-      }
+      // Normalize the URL to resolve ../ and ./
+      const normalizedUrl = new URL(combinedUrl);
+      // Return plain pathname (strip file:// protocol) for local files
+      const resolvedPath = normalizedUrl.protocol === 'file:' ? normalizedUrl.pathname : normalizedUrl.href;
+      logger.debug('Resolved relative to markdown file', { markdownUrl, markdownDir, combinedUrl, resolvedPath });
+      return resolvedPath;
     } catch (e) {
       logger.error('Error resolving image path: ' + String(e));
     }

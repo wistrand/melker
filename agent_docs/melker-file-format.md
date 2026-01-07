@@ -68,7 +68,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<tab>` | title, disabled | Tab panel (child of tabs) |
 | `<canvas>` | width, height, dither, ditherBits, onPaint, onShader, shaderFps, shaderRunTime | Pixel graphics (sextant chars) |
 | `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, shaderFps, shaderRunTime | Image display (extends canvas) |
-| `<markdown>` | | Markdown text rendering |
+| `<markdown>` | src, text, onLink | Markdown text rendering with image support |
 | `<combobox>` | placeholder, filter, onSelect, maxVisible | Dropdown with text filter |
 | `<select>` | value, onSelect, maxVisible | Dropdown picker (no filter) |
 | `<autocomplete>` | placeholder, onSearch, onSelect, debounce, minChars | Async search dropdown |
@@ -204,7 +204,12 @@ Canvas uses Unicode sextant characters (2x3 pixel blocks per terminal character)
 - `dither` - Dithering mode: `'auto'` | `'sierra-stable'` | `'floyd-steinberg'` | `'ordered'` | `'none'`
 - `ditherBits` - Color depth (1-8, default: 1 for B&W)
 - `onPaint` - Called before render with `{ canvas, bounds }`
-- `src` - Load image from file path
+- `src` - Load image from file path (PNG, JPEG, GIF supported)
+
+**Supported image formats:**
+- PNG (including alpha, 16-bit)
+- JPEG
+- GIF (first frame only)
 
 **Dither modes:**
 - `'auto'` - Uses sierra-stable for bw/color themes, no dither for fullcolor
@@ -223,6 +228,25 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
 
 // Lines use visual coordinates directly
 canvas.drawLineCorrected(x1, y1, x2, y2);
+```
+
+## Markdown Component
+
+Renders markdown content with support for images, links, and code blocks.
+
+**Props:**
+- `src` - Load markdown from file path (relative to cwd or absolute)
+- `text` - Inline markdown content
+- `onLink` - Handler for link clicks `{ url: string }`
+
+**Path Resolution:**
+- Command-line arguments (e.g., `argv[1]`) resolve relative to cwd first
+- Images inside markdown resolve relative to the markdown file's location
+- Links in markdown can be `.md` or `.melker` files (navigate) or `http://` URLs (open browser)
+
+**Example:**
+```xml
+<markdown src="${argv[1]:-README.md}" onLink="$app.handleLink(event)" />
 ```
 
 ## Examples

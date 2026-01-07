@@ -19,6 +19,7 @@
 | Dialog | `src/components/dialog.ts` | Modal overlay |
 | File Browser | `src/components/file-browser.ts` | File system navigation |
 | Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars, onPaint, onShader, dither modes |
+| Img | `src/components/img.ts` | Image display (extends Canvas), supports PNG/JPEG/GIF |
 | Video | `src/components/video.ts` | Video playback (extends Canvas), stopped on engine exit |
 | Markdown | `src/components/markdown.ts` | Markdown text rendering |
 | Checkbox | `src/components/checkbox.ts` | Toggle checkbox |

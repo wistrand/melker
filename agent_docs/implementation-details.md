@@ -124,6 +124,18 @@ All elements have `getBounds()` / `setBounds()` methods for accessing layout bou
 - `getBounds()` returns `{ x, y, width, height }` or `null` before first render
 - Useful for canvas components that need to resize to fill their container
 
+## Canvas Image Loading
+
+Canvas loads images using pure-JS decoders (no Deno internal APIs):
+
+| Format | Library | Notes |
+|--------|---------|-------|
+| PNG | `npm:fast-png` | Full support including alpha, 16-bit depth |
+| JPEG | `npm:jpeg-js` | Full support |
+| GIF | `npm:omggif` | First frame only (no animation) |
+
+Format detection uses magic bytes at file start.
+
 ## Canvas Dithering
 
 Canvas supports automatic dithering based on theme type:

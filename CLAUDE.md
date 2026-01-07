@@ -207,32 +207,35 @@ Melker follows the [XDG Base Directory Specification](https://specifications.fre
 ## Running .melker Files
 
 ```bash
-# Simple launch (auto-detects and adds required flags)
+# Direct execution (melker.ts has executable shebang)
+./melker.ts examples/melker/counter.melker
+
+# Or via deno run
 deno run --allow-all melker.ts examples/melker/counter.melker
 
 # From URL
-deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
+./melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all melker.ts --lint examples/melker/counter.melker
+./melker.ts --lint examples/melker/counter.melker
 
 # Watch mode (auto-reload on file changes, local files only)
-deno run --allow-all melker.ts --watch examples/melker/counter.melker
+./melker.ts --watch examples/melker/counter.melker
 
 # Debug mode (shows bundler info, retains temp files)
-deno run --allow-all melker.ts --debug examples/melker/counter.melker
+./melker.ts --debug examples/melker/counter.melker
 
 # Enable bundle caching (disabled by default)
-deno run --allow-all melker.ts --cache examples/melker/counter.melker
+./melker.ts --cache examples/melker/counter.melker
 
 # Show app policy and exit
-deno run --allow-all melker.ts --show-policy examples/melker/counter.melker
+./melker.ts --show-policy examples/melker/counter.melker
 
 # Run with full permissions, ignoring declared policy
-deno run --allow-all melker.ts --trust examples/melker/counter.melker
+./melker.ts --trust examples/melker/counter.melker
 
 # Start LSP server (for editor integration)
-deno run --allow-all melker.ts --lsp
+./melker.ts --lsp
 ```
 
 **Note:** The launcher automatically spawns a subprocess with `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).

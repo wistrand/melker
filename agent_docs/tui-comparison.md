@@ -26,24 +26,32 @@ Comprehensive comparison of terminal UI libraries across languages.
 | Permission sandbox | Y | - | - | - | - | - | - | - |
 | AI accessibility | Y | - | - | - | - | - | - | - |
 | OAuth built-in | Y | - | - | - | - | - | - | - |
-| State persistence | Y | - | - | - | - | - | - | - |
+| State persistence | Y | - | - | - | - | ~ | - | - |
 | LSP support | Y | - | - | - | - | - | - | - |
 | Web browser | Y | - | - | - | - | Y | Y | Y |
 | React ecosystem | - | Y | - | - | - | - | - | - |
 | Single binary | - | - | - | Y | Y | - | Y | Y |
 | Auto color degrade | Y | Y | Y | Y | Y | Y | Y | Y |
-| Mouse support | Y | - | Y | Y | Y | Y | Y | Y |
+| Mouse support | Y | ~ | Y | Y | Y | Y | Y | Y |
 | Unicode/emoji | Y | Y | Y | Y | Y | Y | Y | Y |
-| Animations | - | Y | Y | Y | - | Y | Y | Y |
+| Animations | ~ | Y | Y | Y | - | Y | Y | Y |
 | 16M colors | Y | Y | Y | Y | Y | Y | Y | Y |
 | Video playback | Y | - | - | - | - | - | - | - |
-| Pixel canvas | Y | - | - | - | - | ~ | - | Y |
+| Pixel canvas | Y | - | - | - | - | ~ | Y | Y |
 | Literate UI (.md) | Y | - | - | - | - | - | - | - |
 | Command palette | Y | - | - | - | - | Y | - | - |
 | No_std/embedded | - | - | - | - | - | - | Y | - |
 | SSH/network serve | - | - | - | Y | - | Y | - | - |
 | Debug/remote inspect | Y | Y | - | - | - | Y | - | - |
 | Maintained (2026) | Y | Y | - | Y | Y | Y | Y | Y |
+
+Y = Full support, ~ = Partial/limited support, - = Not available
+
+**Notes:**
+- **Ink mouse**: Requires additional package (ink-tap or similar)
+- **Melker animations**: Via canvas shaders, not general UI animations
+- **Textual state**: Reactive attributes, not automatic persistence like Melker
+- **Ratatui canvas**: Uses braille characters (2x4 per cell)
 
 ## Abstraction Levels
 
@@ -241,6 +249,7 @@ text("Hello") | border | color(Color::Cyan)
 | Alert          |   Y    |  -  |    Y     |      -      |   -    |    -    |    -    |   -    |
 | **Graphics**   |        |     |          |             |        |         |         |        |
 | Canvas         |   Y    |  -  |    -     |      -      |   -    |    ~    |    Y    |   Y    |
+| Shaders        |   Y    |  -  |    -     |      -      |   -    |    -    |    -    |   -    |
 | Image          |   Y*   |  -  |    Y     |      -      |   Y    |    -    |   Y*    |   -    |
 | Video          |   Y    |  -  |    Y     |      -      |   -    |    -    |    -    |   -    |
 | Chart          |   -    |  -  |    -     |      -      |   -    |    -    |    Y    |   Y    |
@@ -249,9 +258,9 @@ text("Hello") | border | color(Color::Cyan)
 | Calendar       |   -    |  -  |    -     |      -      |   -    |    -    |    Y    |   -    |
 | Scrollbar      |   Y    |  -  |    -     |      -      |   -    |    -    |    Y    |   -    |
 
-Y = Built-in, Y* = Via extension/crate (or canvas for Melker), ~ = Partial/limited, - = Not available
+Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 
-**Melker gaps (high priority):** Tree, Spinner
+**Melker gaps (high priority):** Tree, Spinner, Slider
 
 ## Architecture Patterns
 
@@ -308,6 +317,7 @@ This distinction mirrors web vs native: Melker treats TUI apps like web pages (s
 | True color | Y | Y | Y | - |
 | Auto-dither | Y | - | - | - |
 | onPaint callback | Y | - | - | - |
+| Shader support | Y | - | - | - |
 
 **Retained vs Immediate mode:**
 - **Retained**: Canvas maintains pixel buffer; framework handles when to redraw (`onPaint` callback)
@@ -323,6 +333,16 @@ function draw(canvas) {
   canvas.line(0, 0, 59, 29, color);
   canvas.rect(10, 10, 20, 15, color);
 }
+```
+
+**Melker** - Shader-based animation (TypeScript callback, not GLSL):
+```xml
+<canvas id="c" width="60" height="30" shaderFps="30"
+  onShader="(x, y, time, res, src, utils) => {
+    const n = utils.fbm(x * 0.05 + time, y * 0.05);
+    return utils.palette(n, [0.5,0.5,0.5], [0.5,0.5,0.5], [1,1,1], [0,0.33,0.67]);
+  }"
+/>
 ```
 
 **Ratatui** - Immediate mode with braille:

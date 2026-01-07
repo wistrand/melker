@@ -61,11 +61,14 @@ deno run --allow-all examples/template_demo.ts
 See `examples/melker/README.md` for declarative `.melker` template examples.
 
 ```bash
-# Run a .melker file
+# Direct execution (melker.ts has executable shebang)
+./melker.ts examples/melker/counter.melker
+
+# Or via deno run
 deno run --allow-all melker.ts examples/melker/counter.melker
 
 # Run from URL
-deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
+./melker.ts http://localhost:1990/melker/counter.melker
 ```
 
 ## Markdown Examples (`melker-md/`)
@@ -74,10 +77,10 @@ See `examples/melker-md/README.md` for markdown files with ASCII box layouts.
 
 ```bash
 # Run a markdown file directly
-deno run --allow-all melker.ts examples/melker-md/counter.md
+./melker.ts examples/melker-md/counter.md
 
 # Convert to .melker format
-deno run --allow-all melker.ts --convert examples/melker-md/counter.md
+./melker.ts --convert examples/melker-md/counter.md
 ```
 
 Features external scripts (`## Scripts` section) and OAuth (`json oauth` blocks).

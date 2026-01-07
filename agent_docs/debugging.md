@@ -41,8 +41,7 @@ MELKER_LOG_FILE=/tmp/debug.log
 MELKER_LOG_LEVEL=DEBUG
 
 # Example: Run with full debug logging
-MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=DEBUG \
-  deno run --allow-all melker.ts app.melker
+MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=DEBUG ./melker.ts app.melker
 ```
 
 ### Log Output Format
@@ -113,7 +112,7 @@ Run Melker apps without a real terminal - useful for testing and CI.
 ### Enable Headless Mode
 
 ```bash
-MELKER_HEADLESS=true deno run --allow-all melker.ts app.melker
+MELKER_HEADLESS=true ./melker.ts app.melker
 ```
 
 ### Features
@@ -127,8 +126,7 @@ MELKER_HEADLESS=true deno run --allow-all melker.ts app.melker
 
 Combine for remote testing:
 ```bash
-MELKER_HEADLESS=true MELKER_DEBUG_PORT=8080 \
-  deno run --allow-all melker.ts app.melker
+MELKER_HEADLESS=true MELKER_DEBUG_PORT=8080 ./melker.ts app.melker
 ```
 
 ## Debug Server (`src/debug-server.ts`)
@@ -138,7 +136,7 @@ WebSocket server for remote debugging and automation.
 ### Enable Debug Server
 
 ```bash
-MELKER_DEBUG_PORT=8080 deno run --allow-all melker.ts app.melker
+MELKER_DEBUG_PORT=8080 ./melker.ts app.melker
 ```
 
 Access at: `http://localhost:8080` (web UI) or `ws://localhost:8080` (WebSocket)
@@ -179,8 +177,7 @@ Subscribe to real-time updates:
 
 ### 1. Enable Logging
 ```bash
-MELKER_LOG_FILE=/tmp/app.log MELKER_LOG_LEVEL=DEBUG \
-  deno run --allow-all melker.ts app.melker
+MELKER_LOG_FILE=/tmp/app.log MELKER_LOG_LEVEL=DEBUG ./melker.ts app.melker
 ```
 
 ### 2. Watch Log File
@@ -191,8 +188,7 @@ tail -f /tmp/app.log
 ### 3. Watch Mode for Development
 ```bash
 # Auto-reload on file changes (local files only)
-MELKER_LOG_FILE=/tmp/app.log MELKER_LOG_LEVEL=DEBUG \
-  deno run --allow-all melker.ts --watch app.melker
+MELKER_LOG_FILE=/tmp/app.log MELKER_LOG_LEVEL=DEBUG ./melker.ts --watch app.melker
 ```
 
 Watch mode monitors the source file and automatically reloads the application when changes are detected. File change events are logged to the log file.
@@ -200,13 +196,12 @@ Watch mode monitors the source file and automatically reloads the application wh
 ### 4. Use Debug Server for Interaction
 ```bash
 # In another terminal
-MELKER_DEBUG_PORT=8080 MELKER_LOG_FILE=/tmp/app.log \
-  deno run --allow-all melker.ts app.melker
+MELKER_DEBUG_PORT=8080 MELKER_LOG_FILE=/tmp/app.log ./melker.ts app.melker
 ```
 
 ### 5. Disable Alternate Screen (See Raw Output)
 ```bash
-MELKER_NO_ALTERNATE_SCREEN=1 deno run --allow-all melker.ts app.melker
+MELKER_NO_ALTERNATE_SCREEN=1 ./melker.ts app.melker
 ```
 
 This keeps output in main buffer for scrollback review.

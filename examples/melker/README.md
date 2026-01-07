@@ -7,20 +7,23 @@ This directory contains `.melker` template files demonstrating the declarative H
 ## Running Examples
 
 ```bash
-# Run a .melker file
+# Direct execution (melker.ts has executable shebang)
+./melker.ts examples/melker/counter.melker
+
+# Or via deno run
 deno run --allow-all melker.ts examples/melker/counter.melker
 
 # Run from URL
-deno run --allow-all melker.ts http://localhost:1990/melker/counter.melker
+./melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-deno run --allow-all melker.ts --lint examples/melker/counter.melker
+./melker.ts --lint examples/melker/counter.melker
 
 # Display element tree
-deno run --allow-all melker.ts examples/melker/counter.melker --print-tree
+./melker.ts examples/melker/counter.melker --print-tree
 
 # Display JSON serialization
-deno run --allow-all melker.ts examples/melker/counter.melker --print-json
+./melker.ts examples/melker/counter.melker --print-json
 ```
 
 ## Core Examples

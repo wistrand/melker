@@ -926,6 +926,16 @@ export class MelkerEngine {
 
     // Logger is already initialized synchronously in constructor
 
+    // Termux detection for debugging
+    const isTermux = typeof Deno !== 'undefined' && Deno.env.get('PREFIX')?.includes('com.termux');
+    if (isTermux) {
+      console.error('[Melker] Engine starting on Termux');
+      console.error(`[Melker] TERM: ${Deno.env.get('TERM')}`);
+      console.error(`[Melker] Terminal size: ${this._currentSize.width}x${this._currentSize.height}`);
+      console.error(`[Melker] stdin.isTerminal: ${Deno.stdin.isTerminal()}`);
+      console.error(`[Melker] stdout.isTerminal: ${Deno.stdout.isTerminal()}`);
+    }
+
     // Log engine startup
     this._logger?.info('MelkerEngine starting', {
       terminalSize: this._currentSize,
@@ -935,15 +945,30 @@ export class MelkerEngine {
 
     // Start event system if enabled (raw mode must be enabled BEFORE terminal setup)
     if (this._options.enableEvents && this._inputProcessor) {
+      if (isTermux) {
+        console.error('[Melker] Starting input processor...');
+      }
       await this._inputProcessor.startListening();
+      if (isTermux) {
+        console.error('[Melker] Input processor started, setting up event handlers...');
+      }
       this._setupEventHandlers();
     }
 
     // Setup terminal (after raw mode is established)
+    if (isTermux) {
+      console.error('[Melker] Setting up terminal...');
+    }
     this._setupTerminal();
+    if (isTermux) {
+      console.error('[Melker] Terminal setup complete');
+    }
 
     // Re-query terminal size after setup (alternate screen switch may affect reported size)
     this._currentSize = this._getTerminalSize();
+    if (isTermux) {
+      console.error(`[Melker] Terminal size after setup: ${this._currentSize.width}x${this._currentSize.height}`);
+    }
 
     // Resize buffer to match current terminal size
     this._buffer.resize(this._currentSize.width, this._currentSize.height);
@@ -954,12 +979,24 @@ export class MelkerEngine {
       // This prevents the resize handler from thinking size changed when it hasn't
       (this._resizeHandler as any)._currentSize = { ...this._currentSize };
 
+      if (isTermux) {
+        console.error('[Melker] Starting resize handler...');
+      }
       await this._resizeHandler.startListening();
+      if (isTermux) {
+        console.error('[Melker] Resize handler started');
+      }
     }
 
     // Initial render - use force render for first display to ensure clean state
     if (this._options.autoRender) {
+      if (isTermux) {
+        console.error('[Melker] Performing initial render...');
+      }
       this.forceRender();
+      if (isTermux) {
+        console.error('[Melker] Initial render complete');
+      }
     }
 
     // Start debug server if enabled
@@ -980,6 +1017,9 @@ export class MelkerEngine {
     }
 
     // Setup cleanup handlers
+    if (isTermux) {
+      console.error('[Melker] Setting up cleanup handlers...');
+    }
     this._setupCleanupHandlers();
 
     this._isInitialized = true;
@@ -989,6 +1029,10 @@ export class MelkerEngine {
       renderCount: this._renderCount,
       focusableElements: this._focusNavigationHandler.findFocusableElements(this._document.root).length,
     });
+
+    if (isTermux) {
+      console.error('[Melker] Engine started successfully, waiting for input...');
+    }
   }
 
   /**

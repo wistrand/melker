@@ -327,6 +327,14 @@ export class TerminalInputProcessor {
     const readLoop = async () => {
       const buffer = new Uint8Array(1024); // Buffer for reading input
 
+      // Log startup for debugging (especially Termux issues)
+      const isTermux = Deno.env.get('PREFIX')?.includes('com.termux');
+      if (isTermux) {
+        console.error('[Melker] Input loop starting on Termux');
+        console.error(`[Melker] stdin.isTerminal: ${Deno.stdin.isTerminal()}`);
+        console.error(`[Melker] rawModeEnabled: ${this._rawModeEnabled}`);
+      }
+
       while (this._isListening) {
         try {
           // Use different reading approach based on raw mode availability
@@ -334,7 +342,10 @@ export class TerminalInputProcessor {
             // Raw mode: read directly from stdin
             const bytesRead = await Deno.stdin.read(buffer);
             if (bytesRead === null) {
-              // EOF reached
+              // EOF reached - log for debugging
+              if (isTermux) {
+                console.error('[Melker] stdin.read() returned null (EOF) - input loop exiting');
+              }
               break;
             }
 

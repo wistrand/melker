@@ -3,8 +3,12 @@
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from './color-utils.ts';
-import { applySierraStableDither, applyFloydSteinbergDither, applyOrderedDither, type DitherMode } from '../video/dither.ts';
+import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, applyFloydSteinbergStableDither, applyOrderedDither, type DitherMode } from '../video/dither.ts';
 import { getCurrentTheme } from '../theme.ts';
+import { getLogger } from '../logging.ts';
+import * as Draw from './canvas-draw.ts';
+
+const logger = getLogger('canvas');
 
 // Re-export color utilities for external use
 export { packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from './color-utils.ts';
@@ -84,6 +88,207 @@ for (const [char, pattern] of BLOCKS_2X3) {
   PIXEL_TO_CHAR[pattern] = char;
 }
 
+// Resolution info passed to shader callback
+export interface ShaderResolution {
+  width: number;      // Pixel buffer width
+  height: number;     // Pixel buffer height
+  pixelAspect: number; // Pixel width/height ratio (~0.5 for sextant chars, meaning taller than wide)
+  // To draw aspect-correct shapes, divide y by pixelAspect (or multiply by 1/pixelAspect)
+  // Example for a circle: dist = sqrt((u-cx)^2 + ((v-cy)/pixelAspect)^2)
+}
+
+// Source pixel accessor for image shaders
+export interface ShaderSource {
+  // Get pixel at (x, y) from source image - returns [r, g, b, a] or null if out of bounds/no image
+  getPixel(x: number, y: number): [number, number, number, number] | null;
+  // Check if source image is loaded
+  hasImage: boolean;
+  // Source image dimensions (0 if no image)
+  width: number;
+  height: number;
+  // Mouse position in pixel coordinates (-1, -1 if mouse not over canvas)
+  mouse: { x: number; y: number };
+  // Mouse position in normalized coordinates (0-1 range, -1 if not over canvas)
+  mouseUV: { u: number; v: number };
+}
+
+// Built-in shader utility functions (demoscene essentials)
+export interface ShaderUtils {
+  /** 2D Simplex noise - returns value in range [-1, 1] */
+  noise2d(x: number, y: number): number;
+  /** Fractal Brownian Motion - layered noise, returns value roughly in range [-1, 1] */
+  fbm(x: number, y: number, octaves?: number): number;
+  /** Inigo Quilez palette: a + b * cos(2π * (c * t + d)) - returns [r, g, b] in range [0, 255] */
+  palette(t: number, a: [number, number, number], b: [number, number, number], c: [number, number, number], d: [number, number, number]): [number, number, number];
+  /** Hermite interpolation: 0 when x <= edge0, 1 when x >= edge1, smooth curve between */
+  smoothstep(edge0: number, edge1: number, x: number): number;
+  /** Linear interpolation: a + (b - a) * t */
+  mix(a: number, b: number, t: number): number;
+  /** Fractional part: x - floor(x) */
+  fract(x: number): number;
+}
+
+// ============================================
+// Shader Utility Function Implementations
+// ============================================
+
+// Simplex 2D noise implementation
+// Based on Stefan Gustavson's implementation, optimized for TypeScript
+const F2 = 0.5 * (Math.sqrt(3) - 1);
+const G2 = (3 - Math.sqrt(3)) / 6;
+
+// Permutation table (256 values, doubled to avoid modulo)
+const perm = new Uint8Array(512);
+const gradP = new Array<{ x: number; y: number }>(512);
+
+// Gradient vectors for 2D
+const grad2 = [
+  { x: 1, y: 1 }, { x: -1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: -1 },
+  { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+];
+
+// Initialize permutation table with a fixed seed for reproducibility
+(function initNoise() {
+  const p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  // Fisher-Yates shuffle with fixed seed
+  let seed = 12345;
+  for (let i = 255; i > 0; i--) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    const j = seed % (i + 1);
+    [p[i], p[j]] = [p[j], p[i]];
+  }
+  for (let i = 0; i < 512; i++) {
+    perm[i] = p[i & 255];
+    gradP[i] = grad2[perm[i] % 8];
+  }
+})();
+
+function noise2d(x: number, y: number): number {
+  // Skew input space to determine which simplex cell we're in
+  const s = (x + y) * F2;
+  const i = Math.floor(x + s);
+  const j = Math.floor(y + s);
+
+  // Unskew back to (x, y) space
+  const t = (i + j) * G2;
+  const X0 = i - t;
+  const Y0 = j - t;
+  const x0 = x - X0;
+  const y0 = y - Y0;
+
+  // Determine which simplex we're in
+  const i1 = x0 > y0 ? 1 : 0;
+  const j1 = x0 > y0 ? 0 : 1;
+
+  // Offsets for corners
+  const x1 = x0 - i1 + G2;
+  const y1 = y0 - j1 + G2;
+  const x2 = x0 - 1 + 2 * G2;
+  const y2 = y0 - 1 + 2 * G2;
+
+  // Hash coordinates of corners
+  const ii = i & 255;
+  const jj = j & 255;
+
+  // Calculate contributions from corners
+  let n0 = 0, n1 = 0, n2 = 0;
+
+  let t0 = 0.5 - x0 * x0 - y0 * y0;
+  if (t0 >= 0) {
+    const g0 = gradP[ii + perm[jj]];
+    t0 *= t0;
+    n0 = t0 * t0 * (g0.x * x0 + g0.y * y0);
+  }
+
+  let t1 = 0.5 - x1 * x1 - y1 * y1;
+  if (t1 >= 0) {
+    const g1 = gradP[ii + i1 + perm[jj + j1]];
+    t1 *= t1;
+    n1 = t1 * t1 * (g1.x * x1 + g1.y * y1);
+  }
+
+  let t2 = 0.5 - x2 * x2 - y2 * y2;
+  if (t2 >= 0) {
+    const g2 = gradP[ii + 1 + perm[jj + 1]];
+    t2 *= t2;
+    n2 = t2 * t2 * (g2.x * x2 + g2.y * y2);
+  }
+
+  // Scale to [-1, 1]
+  return 70 * (n0 + n1 + n2);
+}
+
+function fbm(x: number, y: number, octaves: number = 4): number {
+  let value = 0;
+  let amplitude = 0.5;
+  let frequency = 1;
+  let maxValue = 0;
+
+  for (let i = 0; i < octaves; i++) {
+    value += amplitude * noise2d(x * frequency, y * frequency);
+    maxValue += amplitude;
+    amplitude *= 0.5;
+    frequency *= 2;
+  }
+
+  return value / maxValue; // Normalize to roughly [-1, 1]
+}
+
+function palette(
+  t: number,
+  a: [number, number, number],
+  b: [number, number, number],
+  c: [number, number, number],
+  d: [number, number, number]
+): [number, number, number] {
+  // Inigo Quilez palette: a + b * cos(2π * (c * t + d))
+  const TAU = Math.PI * 2;
+  return [
+    Math.max(0, Math.min(255, 255 * (a[0] + b[0] * Math.cos(TAU * (c[0] * t + d[0]))))),
+    Math.max(0, Math.min(255, 255 * (a[1] + b[1] * Math.cos(TAU * (c[1] * t + d[1]))))),
+    Math.max(0, Math.min(255, 255 * (a[2] + b[2] * Math.cos(TAU * (c[2] * t + d[2]))))),
+  ];
+}
+
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  // Clamp x to [0, 1] range relative to edges
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  // Hermite interpolation: 3t² - 2t³
+  return t * t * (3 - 2 * t);
+}
+
+function mix(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function fract(x: number): number {
+  return x - Math.floor(x);
+}
+
+// Singleton utils object to avoid creating per-frame
+const shaderUtils: ShaderUtils = {
+  noise2d,
+  fbm,
+  palette,
+  smoothstep,
+  mix,
+  fract,
+};
+
+// Shader callback type - TypeScript, not GLSL
+// Called for each pixel, returns RGB [0-255, 0-255, 0-255] or RGBA [0-255, 0-255, 0-255, 0-255]
+// The optional `source` parameter provides access to loaded image pixels (for img element)
+// The optional `utils` parameter provides built-in shader functions (noise2d, fbm, palette)
+export type ShaderCallback = (
+  x: number,
+  y: number,
+  time: number,
+  resolution: ShaderResolution,
+  source?: ShaderSource,
+  utils?: ShaderUtils
+) => [number, number, number] | [number, number, number, number];
+
 export interface CanvasProps extends BaseProps {
   width: number;                     // Canvas width in terminal columns
   height: number;                    // Canvas height in terminal rows
@@ -94,10 +299,10 @@ export interface CanvasProps extends BaseProps {
   objectFit?: 'contain' | 'fill' | 'cover';  // How image fits: contain (default), fill (stretch), cover (crop)
   dither?: DitherMode | boolean;     // Dithering mode for images (e.g., 'sierra-stable' for B&W themes)
   ditherBits?: number;               // Bits per channel for dithering (1-8, default: 1 for B&W)
-  logo?: boolean;                    // Enable animated Melker logo
-  logoColor?: string;                // Logo color (default: cyan)
-  logoSpeed?: number;                // Animation speed in ms per frame (default: 30)
   onPaint?: (event: { canvas: CanvasElement; bounds: Bounds }) => void;  // Called when canvas needs repainting
+  onShader?: ShaderCallback;         // Shader-style per-pixel callback (TypeScript, not GLSL)
+  shaderFps?: number;                // Shader frame rate (default: 30)
+  shaderRunTime?: number;            // Stop shader after this many ms, keep final frame as image
 }
 
 // Image data storage for loaded images
@@ -130,11 +335,22 @@ export class CanvasElement extends Element implements Renderable {
   private _imageLoading: boolean = false;
   private _imageSrc: string | null = null;
 
-  // Logo animation support
-  private _logoAnimationFrame: number = 0;
-  private _logoAnimationTimer: number | null = null;
-  private _logoAnimationComplete: boolean = false;
-  private _logoRequestRender: (() => void) | null = null;
+  // Shader animation support
+  private _shaderTimer: number | null = null;
+  private _shaderStartTime: number = 0;
+  private _shaderRequestRender: (() => void) | null = null;
+  private _shaderResolution: ShaderResolution = { width: 0, height: 0, pixelAspect: 0.7 };
+  private _shaderSource: ShaderSource | null = null;
+  private _shaderFinished: boolean = false;  // True when stopped due to shaderRunTime
+
+  // Mouse tracking for shader
+  private _shaderMouseX: number = -1;  // Pixel coordinates (-1 = not over canvas)
+  private _shaderMouseY: number = -1;
+  private _shaderBounds: Bounds | null = null;  // Cache bounds for mouse coordinate conversion
+  private _shaderPermissionWarned: boolean = false;  // Track if we've warned about missing permission
+  private _shaderOutputBuffer: Uint32Array | null = null;  // Separate buffer for shader output (avoid race condition)
+  private _shaderFrameInterval: number = 33;  // Target ms between frames
+  private _shaderLastFrameTime: number = 0;  // Time of last frame start
 
   // Pre-allocated working arrays for _renderToTerminal (avoid per-cell allocations)
   private _rtDrawingPixels: boolean[] = [false, false, false, false, false, false];
@@ -276,6 +492,13 @@ export class CanvasElement extends Element implements Renderable {
   }
 
   /**
+   * Set the current drawing color directly (without conversion)
+   */
+  setColorDirect(color: number): void {
+    this._currentColor = color;
+  }
+
+  /**
    * Set a pixel with a specific color
    */
   setPixelColor(x: number, y: number, color: number | string, value: boolean = true): void {
@@ -308,191 +531,35 @@ export class CanvasElement extends Element implements Renderable {
    * Draw a rectangle outline
    */
   drawRect(x: number, y: number, width: number, height: number): void {
-    // Floor inputs for consistent pixel placement
-    x = Math.floor(x);
-    y = Math.floor(y);
-    width = Math.floor(width);
-    height = Math.floor(height);
-    if (width <= 0 || height <= 0) return;
-
-    // Top and bottom edges
-    for (let i = 0; i < width; i++) {
-      this.setPixel(x + i, y, true);
-      this.setPixel(x + i, y + height - 1, true);
-    }
-
-    // Left and right edges
-    for (let i = 0; i < height; i++) {
-      this.setPixel(x, y + i, true);
-      this.setPixel(x + width - 1, y + i, true);
-    }
+    Draw.drawRect(this, x, y, width, height);
   }
 
   /**
    * Draw a filled rectangle
    */
   fillRect(x: number, y: number, width: number, height: number): void {
-    // Floor inputs for consistent pixel placement
-    x = Math.floor(x);
-    y = Math.floor(y);
-    width = Math.floor(width);
-    height = Math.floor(height);
-    if (width <= 0 || height <= 0) return;
-
-    for (let dy = 0; dy < height; dy++) {
-      for (let dx = 0; dx < width; dx++) {
-        this.setPixel(x + dx, y + dy, true);
-      }
-    }
+    Draw.fillRect(this, x, y, width, height);
   }
 
   /**
    * Draw a line using Bresenham's algorithm
    */
   drawLine(x0: number, y0: number, x1: number, y1: number): void {
-    // Floor inputs - Bresenham algorithm requires integers
-    x0 = Math.floor(x0);
-    y0 = Math.floor(y0);
-    x1 = Math.floor(x1);
-    y1 = Math.floor(y1);
-
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    let err = dx - dy;
-
-    let x = x0;
-    let y = y0;
-
-    while (true) {
-      this.setPixel(x, y, true);
-
-      if (x === x1 && y === y1) break;
-
-      const e2 = 2 * err;
-      if (e2 > -dy) {
-        err -= dy;
-        x += sx;
-      }
-      if (e2 < dx) {
-        err += dx;
-        y += sy;
-      }
-    }
+    Draw.drawLine(this, x0, y0, x1, y1);
   }
 
   /**
    * Draw a circle outline using midpoint circle algorithm
    */
   drawCircle(centerX: number, centerY: number, radius: number): void {
-    // Floor all inputs - Bresenham algorithm requires integers
-    centerX = Math.floor(centerX);
-    centerY = Math.floor(centerY);
-    radius = Math.floor(radius);
-    if (radius <= 0) return;
-
-    let x = 0;
-    let y = radius;
-    let d = 3 - 2 * radius;
-
-    while (y >= x) {
-      // Draw 8 octants
-      this.setPixel(centerX + x, centerY + y, true);
-      this.setPixel(centerX - x, centerY + y, true);
-      this.setPixel(centerX + x, centerY - y, true);
-      this.setPixel(centerX - x, centerY - y, true);
-      this.setPixel(centerX + y, centerY + x, true);
-      this.setPixel(centerX - y, centerY + x, true);
-      this.setPixel(centerX + y, centerY - x, true);
-      this.setPixel(centerX - y, centerY - x, true);
-
-      if (d < 0) {
-        d = d + 4 * x + 6;
-      } else {
-        d = d + 4 * (x - y) + 10;
-        y--;
-      }
-      x++;
-    }
+    Draw.drawCircle(this, centerX, centerY, radius);
   }
 
   /**
    * Draw an ellipse outline using midpoint ellipse algorithm
    */
   drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): void {
-    centerX = Math.floor(centerX);
-    centerY = Math.floor(centerY);
-    radiusX = Math.floor(radiusX);
-    radiusY = Math.floor(radiusY);
-
-    if (radiusX <= 0 || radiusY <= 0) return;
-
-    // Handle circle case
-    if (radiusX === radiusY) {
-      this.drawCircle(centerX, centerY, radiusX);
-      return;
-    }
-
-    let x = 0;
-    let y = radiusY;
-
-    // Decision parameters for regions
-    const rx2 = radiusX * radiusX;
-    const ry2 = radiusY * radiusY;
-    const twoRx2 = 2 * rx2;
-    const twoRy2 = 2 * ry2;
-
-    // Region 1
-    let p = Math.round(ry2 - rx2 * radiusY + 0.25 * rx2);
-    let px = 0;
-    let py = twoRx2 * y;
-
-    // Plot initial points
-    this.setPixel(centerX + x, centerY + y, true);
-    this.setPixel(centerX - x, centerY + y, true);
-    this.setPixel(centerX + x, centerY - y, true);
-    this.setPixel(centerX - x, centerY - y, true);
-
-    // Region 1: slope > -1
-    while (px < py) {
-      x++;
-      px += twoRy2;
-
-      if (p < 0) {
-        p += ry2 + px;
-      } else {
-        y--;
-        py -= twoRx2;
-        p += ry2 + px - py;
-      }
-
-      this.setPixel(centerX + x, centerY + y, true);
-      this.setPixel(centerX - x, centerY + y, true);
-      this.setPixel(centerX + x, centerY - y, true);
-      this.setPixel(centerX - x, centerY - y, true);
-    }
-
-    // Region 2: slope <= -1
-    p = Math.round(ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2);
-
-    while (y > 0) {
-      y--;
-      py -= twoRx2;
-
-      if (p > 0) {
-        p += rx2 - py;
-      } else {
-        x++;
-        px += twoRy2;
-        p += rx2 - py + px;
-      }
-
-      this.setPixel(centerX + x, centerY + y, true);
-      this.setPixel(centerX - x, centerY + y, true);
-      this.setPixel(centerX + x, centerY - y, true);
-      this.setPixel(centerX - x, centerY - y, true);
-    }
+    Draw.drawEllipse(this, centerX, centerY, radiusX, radiusY);
   }
 
   // ============================================
@@ -503,80 +570,56 @@ export class CanvasElement extends Element implements Renderable {
    * Draw a line with a specific color
    */
   drawLineColor(x0: number, y0: number, x1: number, y1: number, color: number | string): void {
-    const savedColor = this._currentColor;
-    this.setColor(color);
-    this.drawLine(x0, y0, x1, y1);
-    this._currentColor = savedColor;
+    Draw.drawLineColor(this, x0, y0, x1, y1, color);
   }
 
   /**
    * Draw a rectangle outline with a specific color
    */
   drawRectColor(x: number, y: number, width: number, height: number, color: number | string): void {
-    const savedColor = this._currentColor;
-    this.setColor(color);
-    this.drawRect(x, y, width, height);
-    this._currentColor = savedColor;
+    Draw.drawRectColor(this, x, y, width, height, color);
   }
 
   /**
    * Draw a filled rectangle with a specific color
    */
   fillRectColor(x: number, y: number, width: number, height: number, color: number | string): void {
-    const savedColor = this._currentColor;
-    this.setColor(color);
-    this.fillRect(x, y, width, height);
-    this._currentColor = savedColor;
+    Draw.fillRectColor(this, x, y, width, height, color);
   }
 
   /**
    * Draw a circle outline with a specific color
    */
   drawCircleColor(centerX: number, centerY: number, radius: number, color: number | string): void {
-    const savedColor = this._currentColor;
-    this.setColor(color);
-    this.drawCircle(centerX, centerY, radius);
-    this._currentColor = savedColor;
+    Draw.drawCircleColor(this, centerX, centerY, radius, color);
   }
 
   /**
    * Draw an ellipse outline with a specific color
    */
   drawEllipseColor(centerX: number, centerY: number, radiusX: number, radiusY: number, color: number | string): void {
-    const savedColor = this._currentColor;
-    this.setColor(color);
-    this.drawEllipse(centerX, centerY, radiusX, radiusY);
-    this._currentColor = savedColor;
+    Draw.drawEllipseColor(this, centerX, centerY, radiusX, radiusY, color);
   }
 
   /**
    * Draw a visually correct circle with a specific color
    */
   drawCircleCorrectedColor(centerX: number, centerY: number, radius: number, color: number | string): void {
-    const savedColor = this._currentColor;
-    this.setColor(color);
-    this.drawCircleCorrected(centerX, centerY, radius);
-    this._currentColor = savedColor;
+    Draw.drawCircleCorrectedColor(this, centerX, centerY, radius, color);
   }
 
   /**
    * Draw a visually correct square with a specific color
    */
   drawSquareCorrectedColor(x: number, y: number, size: number, color: number | string): void {
-    const savedColor = this._currentColor;
-    this.setColor(color);
-    this.drawSquareCorrected(x, y, size);
-    this._currentColor = savedColor;
+    Draw.drawSquareCorrectedColor(this, x, y, size, color);
   }
 
   /**
    * Fill a visually correct square with a specific color
    */
   fillSquareCorrectedColor(x: number, y: number, size: number, color: number | string): void {
-    const savedColor = this._currentColor;
-    this.setColor(color);
-    this.fillSquareCorrected(x, y, size);
-    this._currentColor = savedColor;
+    Draw.fillSquareCorrectedColor(this, x, y, size, color);
   }
 
   // ============================================
@@ -746,11 +789,19 @@ export class CanvasElement extends Element implements Renderable {
       }
     }
 
-    // Apply dithering if enabled
+    // Apply dithering if enabled (for static image loading path)
     const ditherMode = this.props.dither;
-    if (ditherMode === 'sierra-stable') {
-      const bits = this.props.ditherBits ?? 1; // Default to 1 bit (B&W)
+    const bits = this.props.ditherBits ?? 1;
+    if (ditherMode === 'sierra-stable' || ditherMode === true) {
       applySierraStableDither(scaledData, scaledW, scaledH, bits);
+    } else if (ditherMode === 'sierra') {
+      applySierraDither(scaledData, scaledW, scaledH, bits);
+    } else if (ditherMode === 'floyd-steinberg') {
+      applyFloydSteinbergDither(scaledData, scaledW, scaledH, bits);
+    } else if (ditherMode === 'floyd-steinberg-stable') {
+      applyFloydSteinbergStableDither(scaledData, scaledW, scaledH, bits);
+    } else if (ditherMode === 'ordered') {
+      applyOrderedDither(scaledData, scaledW, scaledH, bits);
     }
 
     // Get background color for alpha blending (default to black if not specified)
@@ -849,7 +900,7 @@ export class CanvasElement extends Element implements Renderable {
   /**
    * Get direct access to the image color buffer for optimized writes
    */
-  protected getImageColorBuffer(): Uint32Array {
+  getImageColorBuffer(): Uint32Array {
     return this._imageColorBuffer;
   }
 
@@ -866,6 +917,24 @@ export class CanvasElement extends Element implements Renderable {
     if (x >= 0 && x < bufW && y >= 0 && y < bufH) {
       const index = y * bufW + x;
       this._imageColorBuffer[index] = color;
+    }
+  }
+
+  /**
+   * Set a pixel in the image background buffer (public version)
+   * Writes to the same buffer as video, bypassing the drawing layer.
+   * @param x X coordinate in buffer space
+   * @param y Y coordinate in buffer space
+   * @param color CSS color string or packed RGBA value
+   */
+  setImagePixelColor(x: number, y: number, color: number | string): void {
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+    if (x >= 0 && x < bufW && y >= 0 && y < bufH) {
+      const index = y * bufW + x;
+      const colorValue = typeof color === 'string' ? cssToRgba(color) : color;
+      this._imageColorBuffer[index] = colorValue;
+      this._isDirty = true;
     }
   }
 
@@ -916,11 +985,7 @@ export class CanvasElement extends Element implements Renderable {
    * Internally draws an ellipse compensating for pixel aspect ratio.
    */
   drawCircleCorrected(centerX: number, centerY: number, radius: number): void {
-    const aspectRatio = this.getPixelAspectRatio();
-    // To make circle appear round, stretch X radius by inverse of aspect ratio
-    const radiusX = Math.round(radius / aspectRatio);
-    const radiusY = radius;
-    this.drawEllipse(centerX, centerY, radiusX, radiusY);
+    Draw.drawCircleCorrected(this, centerX, centerY, radius);
   }
 
   /**
@@ -928,21 +993,14 @@ export class CanvasElement extends Element implements Renderable {
    * Internally adjusts width to compensate for pixel aspect ratio.
    */
   drawSquareCorrected(x: number, y: number, size: number): void {
-    const aspectRatio = this.getPixelAspectRatio();
-    // To make square appear square, stretch width by inverse of aspect ratio
-    const width = Math.round(size / aspectRatio);
-    const height = size;
-    this.drawRect(x, y, width, height);
+    Draw.drawSquareCorrected(this, x, y, size);
   }
 
   /**
    * Draw a visually correct filled square (appears square on screen).
    */
   fillSquareCorrected(x: number, y: number, size: number): void {
-    const aspectRatio = this.getPixelAspectRatio();
-    const width = Math.round(size / aspectRatio);
-    const height = size;
-    this.fillRect(x, y, width, height);
+    Draw.fillSquareCorrected(this, x, y, size);
   }
 
   /**
@@ -950,11 +1008,7 @@ export class CanvasElement extends Element implements Renderable {
    * Input coordinates are in "visual" space where 1 unit = same distance in both axes.
    */
   drawLineCorrected(x0: number, y0: number, x1: number, y1: number): void {
-    const aspectRatio = this.getPixelAspectRatio();
-    // Scale X coordinates by inverse of aspect ratio
-    const px0 = Math.round(x0 / aspectRatio);
-    const px1 = Math.round(x1 / aspectRatio);
-    this.drawLine(px0, y0, px1, y1);
+    Draw.drawLineCorrected(this, x0, y0, x1, y1);
   }
 
   /**
@@ -963,8 +1017,7 @@ export class CanvasElement extends Element implements Renderable {
    * @returns [pixelX, pixelY]
    */
   visualToPixel(visualX: number, visualY: number): [number, number] {
-    const aspectRatio = this.getPixelAspectRatio();
-    return [Math.round(visualX / aspectRatio), visualY];
+    return Draw.visualToPixel(this, visualX, visualY);
   }
 
   /**
@@ -972,8 +1025,7 @@ export class CanvasElement extends Element implements Renderable {
    * @returns [visualX, visualY]
    */
   pixelToVisual(pixelX: number, pixelY: number): [number, number] {
-    const aspectRatio = this.getPixelAspectRatio();
-    return [pixelX * aspectRatio, pixelY];
+    return Draw.pixelToVisual(this, pixelX, pixelY);
   }
 
   /**
@@ -981,263 +1033,297 @@ export class CanvasElement extends Element implements Renderable {
    * Useful for centering and positioning with corrected coordinates.
    */
   getVisualSize(): { width: number; height: number } {
-    const aspectRatio = this.getPixelAspectRatio();
-    return {
-      width: this._bufferWidth * aspectRatio,
-      height: this._bufferHeight
-    };
+    return Draw.getVisualSize(this);
   }
 
   // ============================================
-  // Logo Animation Methods
+  // Shader Animation Methods
   // ============================================
 
-  // Pixelated "M" logo bitmap (15 rows x 11 columns)
-  // Each row is a binary pattern where 1 = pixel on
-  private static readonly MELKER_LOGO: number[] = [
-    0b11000000011, // M   M
-    0b11100000111, // MM MM
-    0b11100000111, // MM MM
-    0b11110001111, // MMM MMM
-    0b11110001111, // MMM  MMM
-    0b11011011011, // MM  M MM
-    0b11011011011, // MM  M MM
-    0b11011111011, // MM MMM MM
-    0b11001110011, // MM MMM MM
-    0b11001110011, // MM  M  MM
-    0b11000100011, // MM  M  MM
-    0b11000000011, // MM     MM
-    0b11000000011, // MM     MM
-    0b11000000011, // MM     MM
-    0b11000000011, // MM     MM
-  ];
-
-  private static readonly LOGO_WIDTH = 11;
-  private static readonly LOGO_HEIGHT = 15;
-
   /**
-   * Get logo colors based on theme and props.
-   * Default: green on black. In B&W themes: black on white.
+   * Start the shader animation loop.
+   * The onShader callback will be called for each pixel on every frame.
    */
-  private _getLogoColors(): { fgColor: string; bgColor: string } {
-    const theme = getCurrentTheme();
-    const isBW = theme.type === 'bw';
-
-    if (this.props.logoColor) {
-      // User specified color
-      return {
-        fgColor: this.props.logoColor,
-        bgColor: isBW ? 'white' : (this.props.backgroundColor ?? 'black'),
-      };
-    }
-
-    if (isBW) {
-      return { fgColor: 'black', bgColor: 'white' };
-    }
-
-    // Default: green on black
-    return { fgColor: '#00ff00', bgColor: this.props.backgroundColor ?? 'black' };
-  }
-
-  /**
-   * Start the logo animation (raster lines shifting in)
-   */
-  startLogoAnimation(requestRender?: () => void): void {
-    if (this._logoAnimationTimer !== null) {
+  startShader(requestRender?: () => void): void {
+    if (this._shaderTimer !== null) {
       return; // Already running
     }
 
-    this._logoRequestRender = requestRender ?? null;
-    this._logoAnimationFrame = 0;
-    this._logoAnimationComplete = false;
-    this.clear();
+    if (!this.props.onShader) {
+      return; // No shader callback
+    }
 
-    const speed = this.props.logoSpeed ?? 30;
+    // Check shader permission - requires explicit policy with shader: true
+    const engine = (globalThis as any).melkerEngine;
+    if (!engine || typeof engine.hasPermission !== 'function' || !engine.hasPermission('shader')) {
+      if (!this._shaderPermissionWarned) {
+        this._shaderPermissionWarned = true;
+        logger.warn(`Shader blocked: requires policy with "shader": true permission.`);
+      }
+      return; // Permission denied
+    }
 
-    this._logoAnimationTimer = setInterval(() => {
-      this._advanceLogoAnimation();
-    }, speed);
+    this._shaderRequestRender = requestRender ?? null;
+    this._shaderStartTime = performance.now();
+    this._shaderFinished = false;  // Reset in case of manual restart
+    this._shaderResolution = {
+      width: this._bufferWidth,
+      height: this._bufferHeight,
+      pixelAspect: this.getPixelAspectRatio()  // (2/3) * charAspectRatio
+    };
+
+    const fps = this.props.shaderFps ?? 30;
+    this._shaderFrameInterval = Math.floor(1000 / fps);
+    this._shaderLastFrameTime = performance.now();
+
+    // Schedule first frame via setTimeout to avoid running inside render()
+    this._shaderTimer = setTimeout(() => {
+      this._shaderLastFrameTime = performance.now();
+      this._runShaderFrame();
+    }, 0);
   }
 
   /**
-   * Stop the logo animation
+   * Schedule next shader frame with proper time-keeping.
+   * Uses setTimeout instead of setInterval to prevent frame overlap.
    */
-  stopLogoAnimation(): void {
-    if (this._logoAnimationTimer !== null) {
-      clearInterval(this._logoAnimationTimer);
-      this._logoAnimationTimer = null;
+  private _scheduleNextShaderFrame(): void {
+    if (this._shaderTimer === null) return; // Stopped
+
+    const now = performance.now();
+    const elapsed = now - this._shaderLastFrameTime;
+    const delay = Math.max(0, this._shaderFrameInterval - elapsed);
+
+    this._shaderTimer = setTimeout(() => {
+      this._shaderLastFrameTime = performance.now();
+      this._runShaderFrame();
+    }, delay);
+  }
+
+  /**
+   * Stop the shader animation loop
+   */
+  stopShader(): void {
+    if (this._shaderTimer !== null) {
+      clearTimeout(this._shaderTimer);
+      this._shaderTimer = null;
     }
   }
 
   /**
-   * Check if logo animation is complete
+   * Check if shader is currently running
    */
-  isLogoAnimationComplete(): boolean {
-    return this._logoAnimationComplete;
+  isShaderRunning(): boolean {
+    return this._shaderTimer !== null;
   }
 
   /**
-   * Draw the logo at current animation frame
+   * Freeze current shader output as a LoadedImage.
+   * This allows the final shader frame to be treated like a loaded image,
+   * supporting resize and repaint operations.
    */
-  private _advanceLogoAnimation(): void {
-    const logoW = CanvasElement.LOGO_WIDTH;
-    const logoH = CanvasElement.LOGO_HEIGHT;
-    const logo = CanvasElement.MELKER_LOGO;
+  private _freezeShaderAsImage(): void {
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+    const bufferSize = bufW * bufH;
 
-    // Calculate scale to fit the logo in the canvas
-    const aspectRatio = this.getPixelAspectRatio();
-    const maxLogoW = Math.floor(this._bufferWidth * 0.95);
-    const maxLogoH = Math.floor(this._bufferHeight * 0.95);
+    // Convert color buffer to RGBA Uint8ClampedArray format
+    const rgbaData = new Uint8ClampedArray(bufferSize * 4);
 
-    // Account for aspect ratio in scaling
-    const scaleX = Math.floor(maxLogoW / (logoW / aspectRatio));
-    const scaleY = Math.floor(maxLogoH / logoH);
-    const scale = Math.max(1, Math.min(scaleX, scaleY));
+    for (let i = 0; i < bufferSize; i++) {
+      const color = this._colorBuffer[i];
+      const rgba = unpackRGBA(color);
+      const idx = i * 4;
+      rgbaData[idx] = rgba.r;
+      rgbaData[idx + 1] = rgba.g;
+      rgbaData[idx + 2] = rgba.b;
+      rgbaData[idx + 3] = rgba.a;
+    }
 
-    // Scaled dimensions (corrected for aspect ratio)
-    const scaledW = Math.floor((logoW * scale) / aspectRatio);
-    const scaledH = logoH * scale;
+    // Store as a LoadedImage so resize logic works
+    this._loadedImage = {
+      width: bufW,
+      height: bufH,
+      data: rgbaData,
+      bytesPerPixel: 4,
+    };
 
-    // Center position
-    const startX = Math.floor((this._bufferWidth - scaledW) / 2);
-    const startY = Math.floor((this._bufferHeight - scaledH) / 2);
+    // Copy to image color buffer (background layer) for display
+    this._imageColorBuffer.set(this._colorBuffer);
 
-    // Total frames needed (one per row of scaled logo)
-    const totalFrames = scaledH + scaledW; // Extra frames for full slide-in
+    // Clear the drawing layer so image layer shows through
+    // (drawing layer has priority in rendering, so we need to clear it)
+    this._colorBuffer.fill(TRANSPARENT);
+    this._previousColorBuffer.fill(TRANSPARENT);  // Prevent _markClean() from restoring old content
 
-    // Get logo colors based on theme
-    const { fgColor, bgColor } = this._getLogoColors();
-    this.setColor(fgColor);
-    this.props.backgroundColor = bgColor;
+    // Invalidate dither cache to force re-render
+    this._ditherCacheValid = false;
 
-    // Clear the canvas for this frame
-    this.clear();
+    logger.debug(`Shader frozen as ${bufW}x${bufH} image`);
+  }
 
-    // Draw rows that have animated in
-    for (let scaledRow = 0; scaledRow < scaledH; scaledRow++) {
-      const logoRow = Math.floor(scaledRow / scale);
-      if (logoRow >= logoH) continue;
+  /**
+   * Run a single shader frame - calls onShader for each pixel
+   * Uses a separate output buffer to avoid race conditions with rendering.
+   */
+  private _runShaderFrame(): void {
+    const shader = this.props.onShader;
+    if (!shader) return;
 
-      const rowPattern = logo[logoRow];
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+    const bufferSize = bufW * bufH;
+    const elapsedMs = performance.now() - this._shaderStartTime;
+    const time = elapsedMs / 1000; // Time in seconds
 
-      // Calculate how far this row has shifted in
-      // Alternate direction: even rows from left, odd rows from right
-      const rowDelay = scaledRow; // Each row starts one frame after the previous
-      const framesIntoAnimation = this._logoAnimationFrame - rowDelay;
+    // Check if shaderRunTime is set and exceeded
+    if (this.props.shaderRunTime !== undefined && elapsedMs >= this.props.shaderRunTime) {
+      // Save current frame as a "frozen" image and stop the shader
+      this._freezeShaderAsImage();
+      this._shaderFinished = true;  // Prevent auto-restart in render()
+      this.stopShader();
+      // Request one final render to display the frozen frame
+      if (this._shaderRequestRender) {
+        this._shaderRequestRender();
+      }
+      return;
+    }
 
-      if (framesIntoAnimation < 0) continue; // Row hasn't started yet
+    // Update resolution in case canvas was resized
+    this._shaderResolution.width = bufW;
+    this._shaderResolution.height = bufH;
+    this._shaderResolution.pixelAspect = this.getPixelAspectRatio();
 
-      // Calculate shift offset (starts off-screen, moves to final position)
-      const fromRight = scaledRow % 2 === 1;
-      const maxShift = scaledW;
-      const currentShift = Math.min(framesIntoAnimation * 2, maxShift); // 2 pixels per frame
+    // Ensure shader output buffer exists and is correct size
+    if (!this._shaderOutputBuffer || this._shaderOutputBuffer.length !== bufferSize) {
+      this._shaderOutputBuffer = new Uint32Array(bufferSize);
+    }
+    const outputBuffer = this._shaderOutputBuffer;
 
-      for (let scaledCol = 0; scaledCol < scaledW; scaledCol++) {
-        // Map scaled column to logo column (simple linear mapping)
-        const logoCol = Math.floor((scaledCol * logoW) / scaledW);
-        if (logoCol >= logoW) continue;
+    // Create or update source accessor for image pixel access
+    const imageBuffer = this._imageColorBuffer;
+    const hasImage = this._loadedImage !== null;
+    const imgWidth = this._loadedImage?.width ?? 0;
+    const imgHeight = this._loadedImage?.height ?? 0;
 
-        // Check if this pixel is set in the logo
-        const bitPos = logoW - 1 - logoCol;
-        const isSet = (rowPattern >> bitPos) & 1;
+    // Create source accessor object (reuse if possible)
+    if (!this._shaderSource) {
+      this._shaderSource = {
+        hasImage: false,
+        width: 0,
+        height: 0,
+        getPixel: (_x: number, _y: number) => null,
+        mouse: { x: -1, y: -1 },
+        mouseUV: { u: -1, v: -1 },
+      };
+    }
 
-        if (isSet) {
-          // Calculate final x position
-          let drawX: number;
-          if (fromRight) {
-            // Slide in from right
-            const finalX = startX + scaledCol;
-            const offsetX = maxShift - currentShift;
-            drawX = finalX + offsetX;
-          } else {
-            // Slide in from left
-            const finalX = startX + scaledCol;
-            const offsetX = maxShift - currentShift;
-            drawX = finalX - offsetX;
-          }
+    // Update source properties
+    this._shaderSource.hasImage = hasImage;
+    this._shaderSource.width = imgWidth;
+    this._shaderSource.height = imgHeight;
 
-          const drawY = startY + scaledRow;
+    // Update mouse position
+    this._shaderSource.mouse.x = this._shaderMouseX;
+    this._shaderSource.mouse.y = this._shaderMouseY;
+    if (this._shaderMouseX >= 0 && this._shaderMouseY >= 0) {
+      this._shaderSource.mouseUV.u = this._shaderMouseX / bufW;
+      this._shaderSource.mouseUV.v = this._shaderMouseY / bufH;
+    } else {
+      this._shaderSource.mouseUV.u = -1;
+      this._shaderSource.mouseUV.v = -1;
+    }
 
-          // Only draw if in bounds
-          if (drawX >= 0 && drawX < this._bufferWidth) {
-            this.setPixel(drawX, drawY, true);
-          }
-        }
+    // Create getPixel function that reads from image buffer
+    // The image buffer contains the scaled/rendered image at buffer resolution
+    const source = this._shaderSource;
+    source.getPixel = (px: number, py: number): [number, number, number, number] | null => {
+      if (px < 0 || px >= bufW || py < 0 || py >= bufH) return null;
+      const idx = py * bufW + px;
+      const color = imageBuffer[idx];
+      if (color === TRANSPARENT) return null;
+      const rgba = unpackRGBA(color);
+      return [rgba.r, rgba.g, rgba.b, rgba.a];
+    };
+
+    // Call shader for each pixel - write directly to _colorBuffer
+    // (Bypassing intermediate buffer since JS is single-threaded)
+    const colorBuffer = this._colorBuffer;
+    for (let y = 0; y < bufH; y++) {
+      for (let x = 0; x < bufW; x++) {
+        const rgba = shader(x, y, time, this._shaderResolution, source, shaderUtils);
+        // Clamp values to 0-255
+        const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
+        const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
+        const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));
+        // Alpha is optional (defaults to 255 if not provided)
+        const a = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
+        // Pack and set pixel (TRANSPARENT if alpha is 0)
+        const color = a === 0 ? TRANSPARENT : packRGBA(r, g, b, a);
+        const index = y * bufW + x;
+        colorBuffer[index] = color;
       }
     }
 
-    this._logoAnimationFrame++;
+    this._isDirty = true;
 
-    // Check if animation is complete
-    if (this._logoAnimationFrame >= totalFrames + 10) { // Extra frames for settling
-      this._logoAnimationComplete = true;
-      this.stopLogoAnimation();
-      // Draw final complete logo
-      this._drawLogoComplete();
-    }
-
-    // Request re-render
-    if (this._logoRequestRender) {
-      this._logoRequestRender();
-    }
-  }
-
-  /**
-   * Draw the complete logo (no animation)
-   */
-  private _drawLogoComplete(): void {
-    const logoW = CanvasElement.LOGO_WIDTH;
-    const logoH = CanvasElement.LOGO_HEIGHT;
-    const logo = CanvasElement.MELKER_LOGO;
-
-    const aspectRatio = this.getPixelAspectRatio();
-    const maxLogoW = Math.floor(this._bufferWidth * 0.95);
-    const maxLogoH = Math.floor(this._bufferHeight * 0.95);
-
-    const scaleX = Math.floor(maxLogoW / (logoW / aspectRatio));
-    const scaleY = Math.floor(maxLogoH / logoH);
-    const scale = Math.max(1, Math.min(scaleX, scaleY));
-
-    const scaledW = Math.floor((logoW * scale) / aspectRatio);
-    const scaledH = logoH * scale;
-
-    const startX = Math.floor((this._bufferWidth - scaledW) / 2);
-    const startY = Math.floor((this._bufferHeight - scaledH) / 2);
-
-    // Get logo colors based on theme
-    const { fgColor, bgColor } = this._getLogoColors();
-    this.setColor(fgColor);
-    this.props.backgroundColor = bgColor;
-    this.clear();
-
-    for (let scaledRow = 0; scaledRow < scaledH; scaledRow++) {
-      const logoRow = Math.floor(scaledRow / scale);
-      if (logoRow >= logoH) continue;
-
-      const rowPattern = logo[logoRow];
-
-      for (let scaledCol = 0; scaledCol < scaledW; scaledCol++) {
-        // Map scaled column to logo column (simple linear mapping)
-        const logoCol = Math.floor((scaledCol * logoW) / scaledW);
-        if (logoCol >= logoW) continue;
-
-        const bitPos = logoW - 1 - logoCol;
-        const isSet = (rowPattern >> bitPos) & 1;
-
-        if (isSet) {
-          const drawX = startX + scaledCol;
-          const drawY = startY + scaledRow;
-          this.setPixel(drawX, drawY, true);
-        }
-      }
+    // Schedule render and next frame together to ensure proper ordering
+    // The render happens first, then next frame is scheduled after render completes
+    if (this._shaderRequestRender) {
+      const render = this._shaderRequestRender;
+      setTimeout(() => {
+        render();
+        this._scheduleNextShaderFrame();
+      }, 0);
+    } else {
+      this._scheduleNextShaderFrame();
     }
   }
 
   /**
-   * Draw the Melker logo without animation
+   * Update shader mouse position from terminal coordinates.
+   * Call this from onMouseMove handler to enable interactive shaders.
    */
-  drawLogo(): void {
-    this._drawLogoComplete();
+  updateShaderMouse(termX: number, termY: number): void {
+    if (!this._shaderBounds) {
+      this._shaderMouseX = -1;
+      this._shaderMouseY = -1;
+      return;
+    }
+
+    const bounds = this._shaderBounds;
+
+    // Check if mouse is within canvas bounds
+    if (termX < bounds.x || termX >= bounds.x + bounds.width ||
+        termY < bounds.y || termY >= bounds.y + bounds.height) {
+      this._shaderMouseX = -1;
+      this._shaderMouseY = -1;
+      return;
+    }
+
+    // Convert terminal coordinates to pixel coordinates
+    // Each terminal cell is 2 pixels wide and 3 pixels tall (sextant characters)
+    const localX = termX - bounds.x;
+    const localY = termY - bounds.y;
+
+    // Scale to pixel buffer coordinates
+    this._shaderMouseX = Math.floor((localX / bounds.width) * this._bufferWidth);
+    this._shaderMouseY = Math.floor((localY / bounds.height) * this._bufferHeight);
+  }
+
+  /**
+   * Clear shader mouse position (call on mouse leave)
+   */
+  clearShaderMouse(): void {
+    this._shaderMouseX = -1;
+    this._shaderMouseY = -1;
+  }
+
+  /**
+   * Get current shader mouse position in pixel coordinates
+   */
+  getShaderMouse(): { x: number; y: number } {
+    return { x: this._shaderMouseX, y: this._shaderMouseY };
   }
 
   /**
@@ -1436,36 +1522,86 @@ export class CanvasElement extends Element implements Renderable {
    */
   private _prepareDitheredBuffer(): Uint8Array | null {
     let ditherMode = this.props.dither;
+    const shaderActive = this._shaderTimer !== null;
 
-    // Handle 'auto' mode based on current theme
+    // Handle 'auto' mode based on env vars and theme
+    // Track if original mode was 'auto' for MELKER_DITHER_BITS handling
+    const wasAutoMode = ditherMode === 'auto';
     if (ditherMode === 'auto') {
-      const theme = getCurrentTheme();
-      if (theme.type === 'fullcolor') {
-        // Fullcolor theme: no dithering needed
-        return null;
+      // MELKER_AUTO_DITHER is always respected (any theme, any dither type)
+      const envDither = Deno.env.get("MELKER_AUTO_DITHER");
+      // MELKER_DITHER_BITS implies user wants dithering
+      const envBits = Deno.env.get("MELKER_DITHER_BITS");
+
+      if (envDither) {
+        ditherMode = envDither as DitherMode;
+      } else if (envBits) {
+        // User specified bits but not algorithm - use default algorithm
+        ditherMode = 'sierra-stable';
       } else {
-        // bw, gray, or color themes: use sierra-stable with 1 bit
-        ditherMode = (Deno.env.get("MELKER_AUTO_DITHER") || 'sierra-stable') as DitherMode;
-        // Note: ditherBits will default to 1 below if not specified
+        // No env override - use theme-based defaults
+        const theme = getCurrentTheme();
+        if (theme.type === 'fullcolor') {
+          // Fullcolor: no dithering needed (but shaders need snapshot)
+          if (!shaderActive) {
+            return null;
+          }
+          ditherMode = 'none'; // Passthrough mode for shader snapshot
+        } else {
+          // bw, gray, or color themes: default to sierra-stable
+          ditherMode = 'sierra-stable';
+        }
       }
     }
 
     // No dithering if not specified or explicitly disabled
     // Note: !ditherMode handles false, undefined, and empty string
+    // Exception: shaders need a snapshot buffer to avoid race conditions
     if (!ditherMode || ditherMode === 'none') {
-      return null;
+      if (!shaderActive) {
+        return null;
+      }
+      // For shaders with dither=none, still create snapshot but skip dithering
+    }
+
+    // Compute effective bits early for cache invalidation
+    // Priority: prop > env var (if auto mode) > theme-based default (if auto mode) > fallback
+    let effectiveBits: number;
+    if (this.props.ditherBits !== undefined) {
+      effectiveBits = this.props.ditherBits;
+    } else if (wasAutoMode) {
+      // Check MELKER_DITHER_BITS when dither="auto" was used
+      const envBits = Deno.env.get("MELKER_DITHER_BITS");
+      if (envBits) {
+        effectiveBits = parseInt(envBits, 10);
+        if (isNaN(effectiveBits) || effectiveBits < 1 || effectiveBits > 8) effectiveBits = 1;
+      } else {
+        // Theme-based defaults
+        const theme = getCurrentTheme();
+        switch (theme.type) {
+          case 'bw': effectiveBits = 1; break;       // 2 levels (black/white)
+          case 'gray': effectiveBits = 2; break;     // 4 levels of gray
+          case 'color': effectiveBits = 3; break;    // 8 levels per channel
+          case 'fullcolor': effectiveBits = 6; break; // 64 levels (subtle dithering)
+          default: effectiveBits = 1;
+        }
+      }
+    } else {
+      effectiveBits = 1;
     }
 
     // Invalidate cache if content changed (drawing methods set _isDirty)
-    if (this._isDirty) {
+    // For active shaders, ALWAYS invalidate - external events can trigger renders
+    // between shader write and our scheduled render, consuming _isDirty flag
+    if (this._isDirty || shaderActive) {
       this._ditherCacheValid = false;
     }
 
     // Check if dither settings changed
-    if (this._lastDitherMode !== ditherMode || this._lastDitherBits !== this.props.ditherBits) {
+    if (this._lastDitherMode !== ditherMode || this._lastDitherBits !== effectiveBits) {
       this._ditherCacheValid = false;
       this._lastDitherMode = ditherMode;
-      this._lastDitherBits = this.props.ditherBits;
+      this._lastDitherBits = effectiveBits;
     }
 
     // Return cached result if still valid
@@ -1520,15 +1656,17 @@ export class CanvasElement extends Element implements Renderable {
       cache[dstIdx + 3] = rgba.a;
     }
 
-    // Apply dithering algorithm
-    const bits = this.props.ditherBits ?? 1; // Default to 1 bit (B&W)
-
+    // Apply dithering algorithm (effectiveBits computed earlier for cache check)
     if (ditherMode === 'sierra-stable' || ditherMode === true) {
-      applySierraStableDither(cache, bufW, bufH, bits);
+      applySierraStableDither(cache, bufW, bufH, effectiveBits);
+    } else if (ditherMode === 'sierra') {
+      applySierraDither(cache, bufW, bufH, effectiveBits);
     } else if (ditherMode === 'floyd-steinberg') {
-      applyFloydSteinbergDither(cache, bufW, bufH, bits);
+      applyFloydSteinbergDither(cache, bufW, bufH, effectiveBits);
+    } else if (ditherMode === 'floyd-steinberg-stable') {
+      applyFloydSteinbergStableDither(cache, bufW, bufH, effectiveBits);
     } else if (ditherMode === 'ordered') {
-      applyOrderedDither(cache, bufW, bufH, bits);
+      applyOrderedDither(cache, bufW, bufH, effectiveBits);
     }
     // 'none' case already handled above
 
@@ -1541,12 +1679,21 @@ export class CanvasElement extends Element implements Renderable {
    * Optimized to minimize memory allocations by using pre-allocated arrays
    */
   private _renderToTerminal(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer): void {
-    const terminalWidth = Math.min(this.props.width, bounds.width);
+    let terminalWidth = Math.min(this.props.width, bounds.width);
     const terminalHeight = Math.min(this.props.height, bounds.height);
     const bufW = this._bufferWidth;
     const bufH = this._bufferHeight;
     const scale = this._scale;
     const halfScale = scale >> 1;
+
+    // Workaround for terminal edge rendering glitch:
+    // When canvas extends to the exact right edge of the terminal, some terminals
+    // have issues with sextant characters in the last column (autowrap, width calculation).
+    // Skip the last column when we're at the terminal edge to avoid visual artifacts.
+    const engine = (globalThis as any).melkerEngine;
+    if (engine && bounds.x + terminalWidth >= engine._currentSize?.width) {
+      terminalWidth = Math.max(1, terminalWidth - 1);
+    }
 
     // Check for dithered rendering mode
     const ditheredBuffer = this._prepareDitheredBuffer();
@@ -1812,12 +1959,18 @@ export class CanvasElement extends Element implements Renderable {
     buffer: DualBuffer,
     ditheredBuffer: Uint8Array
   ): void {
-    const terminalWidth = Math.min(this.props.width, bounds.width);
+    let terminalWidth = Math.min(this.props.width, bounds.width);
     const terminalHeight = Math.min(this.props.height, bounds.height);
     const bufW = this._bufferWidth;
     const bufH = this._bufferHeight;
     const scale = this._scale;
     const halfScale = scale >> 1;
+
+    // Workaround for terminal edge rendering glitch (same as non-dithered path)
+    const engine = (globalThis as any).melkerEngine;
+    if (engine && bounds.x + terminalWidth >= engine._currentSize?.width) {
+      terminalWidth = Math.max(1, terminalWidth - 1);
+    }
 
     // Use pre-allocated arrays
     const sextantPixels = this._rtSextantPixels;
@@ -2044,6 +2197,9 @@ export class CanvasElement extends Element implements Renderable {
    * Render the canvas to the terminal buffer
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
+    // Cache bounds for mouse coordinate conversion in shaders
+    this._shaderBounds = bounds;
+
     // Auto-load image from src prop if not already loaded/loading
     if (this.props.src && !this._loadedImage && !this._imageLoading && this._imageSrc !== this.props.src) {
       this.loadImage(this.props.src).then(() => {
@@ -2056,9 +2212,10 @@ export class CanvasElement extends Element implements Renderable {
       });
     }
 
-    // Auto-start logo animation if logo prop is true
-    if (this.props.logo && this._logoAnimationTimer === null && !this._logoAnimationComplete) {
-      this.startLogoAnimation(context.requestRender);
+    // Auto-start shader animation if onShader prop is provided
+    // Don't restart if shader finished due to shaderRunTime
+    if (this.props.onShader && this._shaderTimer === null && !this._shaderFinished) {
+      this.startShader(context.requestRender);
     }
 
     // Call onPaint handler to allow user to update canvas content before rendering
@@ -2070,9 +2227,11 @@ export class CanvasElement extends Element implements Renderable {
     // Always render to the buffer (buffer is rebuilt each frame)
     this._renderToTerminal(bounds, style, buffer);
     // Mark clean to track changes for next frame
-    if (this._isDirty) {
+    // Skip for active shaders - they rewrite every pixel and the buffer swap causes glitches
+    if (this._isDirty && this._shaderTimer === null) {
       this._markClean();
     }
+    this._isDirty = false;
   }
 
   /**
@@ -2149,6 +2308,8 @@ export class CanvasElement extends Element implements Renderable {
     this._previousColorBuffer = new Uint32Array(bufferSize);
     // Reallocate image background layer buffer
     this._imageColorBuffer = new Uint32Array(bufferSize);
+    // Reset shader output buffer (will be reallocated on next frame if needed)
+    this._shaderOutputBuffer = null;
     // Reset dither cache (will be reallocated on next render if needed)
     this._ditherCache = null;
     this._ditherCacheValid = false;
@@ -2192,10 +2353,10 @@ export const canvasSchema: ComponentSchema = {
     src: { type: 'string', description: 'Load image from file path' },
     dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'ordered'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
     ditherBits: { type: 'number', description: 'Color depth for dithering' },
-    logo: { type: 'boolean', description: 'Enable animated Melker logo' },
-    logoColor: { type: 'string', description: 'Logo color (default: cyan)' },
-    logoSpeed: { type: 'number', description: 'Animation speed in ms per frame (default: 30)' },
     onPaint: { type: ['function', 'string'], description: 'Called when canvas needs repainting, receives event with {canvas, bounds}' },
+    onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. source has getPixel(), mouse, mouseUV' },
+    shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
+    shaderRunTime: { type: 'number', description: 'Stop shader after this many ms, final frame becomes static image' },
   },
 };
 

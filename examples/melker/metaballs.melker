@@ -1,0 +1,152 @@
+<melker>
+  <policy>
+  {
+    "name": "Metaballs",
+    "description": "Raymarched smooth union metaballs",
+    "permissions": {
+      "read": ["."],
+      "shader": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    // Raymarched metaballs - optimized version
+    // Reduced spheres, ray steps, and simplified normal calculation
+
+    interface ShaderUtils {
+      smoothstep(edge0: number, edge1: number, x: number): number;
+      mix(a: number, b: number, t: number): number;
+      fract(x: number): number;
+    }
+
+    // Pre-computed sphere animation data (avoid recalculating per pixel)
+    const NUM_SPHERES = 6;
+    const sphereData: { speedMul: number; phaseX: number; phaseY: number; phaseZ: number; radius: number }[] = [];
+    for (let i = 0; i < NUM_SPHERES; i++) {
+      const fi = i;
+      const frac1 = (fi * 412.531 + 0.513) % 1;
+      const frac2 = (fi * 412.531 + 0.5124) % 1;
+      sphereData.push({
+        speedMul: (frac1 - 0.5) * 2.0,
+        phaseX: fi * 52.5126,
+        phaseY: fi * 64.62744,
+        phaseZ: fi * 632.25,
+        radius: 0.5 + 0.5 * frac2
+      });
+    }
+
+    // Cache for animated positions (updated once per frame)
+    let cachedTime = -1;
+    const spherePos: { x: number; y: number; z: number; r: number }[] =
+      Array.from({ length: NUM_SPHERES }, () => ({ x: 0, y: 0, z: 0, r: 0 }));
+
+    function updateSpherePositions(time: number): void {
+      if (Math.abs(time - cachedTime) < 0.001) return;
+      cachedTime = time;
+      for (let i = 0; i < NUM_SPHERES; i++) {
+        const s = sphereData[i];
+        const t = time * s.speedMul;
+        spherePos[i].x = Math.sin(t + s.phaseX) * 2.0;
+        spherePos[i].y = Math.sin(t + s.phaseY) * 2.0;
+        spherePos[i].z = Math.sin(t + s.phaseZ) * 0.8;
+        spherePos[i].r = s.radius;
+      }
+    }
+
+    // Scene map - uses cached sphere positions
+    function map(px: number, py: number, pz: number): number {
+      let d = 2.0;
+      for (let i = 0; i < NUM_SPHERES; i++) {
+        const s = spherePos[i];
+        const dx = px + s.x, dy = py + s.y, dz = pz + s.z;
+        const sphereDist = Math.sqrt(dx * dx + dy * dy + dz * dz) - s.r;
+        // Inline smooth union
+        const h = Math.max(0, Math.min(1, 0.5 + 0.5 * (d - sphereDist) / 0.4));
+        d = d * (1 - h) + sphereDist * h - 0.4 * h * (1 - h);
+      }
+      return d;
+    }
+
+    export const metaballShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      _source: any,
+      _utils: ShaderUtils
+    ): [number, number, number] => {
+      // Update sphere positions once per frame (first pixel)
+      if (x === 0 && y === 0) {
+        updateSpherePositions(time);
+      }
+
+      const u = x / resolution.width;
+      const v = y / resolution.height;
+      const bufferAspect = resolution.width / resolution.height;
+
+      // Ray setup (looking down -Z) with aspect correction
+      const rayX = (u - 0.5) * bufferAspect * 6.0;
+      const rayY = ((v - 0.5) / resolution.pixelAspect) * 6.0;
+      let pz = 3.0;
+
+      // Raymarching - reduced to 24 steps
+      let depth = 0.0;
+      for (let i = 0; i < 62; i++) {
+        const dist = map(rayX, rayY, pz - depth);
+        depth += dist;
+        if (dist < 0.01 || depth > 6.0) break;
+      }
+
+      depth = Math.min(6.0, depth);
+
+      // Simplified normal: use depth gradient instead of full normal calc
+      // This approximates the surface angle based on nearby depth samples
+      const eps = 0.1;
+      const dR = map(rayX + eps, rayY, pz - depth);
+      const dU = map(rayX, rayY + eps, pz - depth);
+      const nx = (dR - 0.01) * 5;
+      const ny = (dU - 0.01) * 5;
+      const b = Math.max(0, 0.5 + 0.3 * nx + 0.3 * ny);
+
+      // Colorful iridescent coloring
+      const phase = b + time * 3.0;
+      const colR = 0.5 + 0.5 * Math.cos(phase + u * 2.0);
+      const colG = 0.5 + 0.5 * Math.cos(phase + v * 2.0 + 2.0);
+      const colB = 0.5 + 0.5 * Math.cos(phase + u * 2.0 + 4.0);
+
+      // Apply lighting and depth fog
+      const light = 0.85 + b * 0.35;
+      const fog = Math.exp(-depth * 0.15);
+      const brightness = light * fog * 255;
+
+      return [
+        Math.min(255, colR * brightness),
+        Math.min(255, colG * brightness),
+        Math.min(255, colB * brightness)
+      ];
+    };
+  </script>
+
+  <container style="width: fill; height: fill; display: flex; flex-direction: column; padding: 1">
+    <container style="width: fill; height: fill;">
+      <img
+        id="metaballs"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.metaballShader"
+        shaderFps="20"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: black;">
+      <text style="color: magenta;">Raymarched Metaballs</text>
+      <button
+        title="Exit"
+        onClick="$melker.exit();"
+      />
+    </container>
+  </container>
+</melker>

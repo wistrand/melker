@@ -26,6 +26,26 @@ import {
 } from './src/policy/mod.ts';
 
 /**
+ * Reset terminal state after subprocess failure.
+ * Uses raw ANSI codes to avoid importing framework modules.
+ */
+function resetTerminalState(): void {
+  try {
+    Deno.stdin.setRaw(false);
+  } catch {
+    // Ignore - might already be in cooked mode
+  }
+  try {
+    const encoder = new TextEncoder();
+    // Reset: normal screen, show cursor, disable mouse, reset attributes
+    const reset = '\x1b[?1049l\x1b[?25h\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[0m';
+    Deno.stdout.writeSync(encoder.encode(reset));
+  } catch {
+    // Ignore write errors
+  }
+}
+
+/**
  * Check if a path is a URL (http:// or https://)
  */
 function isUrl(path: string): boolean {
@@ -186,6 +206,11 @@ async function runWithPolicy(
   Deno.removeSignalListener('SIGINT', ignoreSignal);
   Deno.removeSignalListener('SIGTERM', ignoreSignal);
 
+  // If subprocess failed, try to restore terminal state
+  if (status.code !== 0) {
+    resetTerminalState();
+  }
+
   // Exit with the subprocess exit code
   Deno.exit(status.code);
 }
@@ -265,6 +290,9 @@ async function runRemoteWithPolicy(
     Deno.removeSignalListener('SIGINT', ignoreSignal);
     Deno.removeSignalListener('SIGTERM', ignoreSignal);
 
+    if (status.code !== 0) {
+      resetTerminalState();
+    }
     Deno.exit(status.code);
   } finally {
     // Clean up temp directory
@@ -306,6 +334,7 @@ export async function main(): Promise<void> {
       stderr: 'inherit',
     });
     const status = await process.spawn().status;
+    if (status.code !== 0) resetTerminalState();
     Deno.exit(status.code);
   }
 
@@ -320,6 +349,7 @@ export async function main(): Promise<void> {
       stderr: 'inherit',
     });
     const status = await process.spawn().status;
+    if (status.code !== 0) resetTerminalState();
     Deno.exit(status.code);
   }
 

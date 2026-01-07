@@ -512,6 +512,42 @@ The `<img>` component displays images in the terminal using sextant characters (
 | `ditherBits` | number | - | Color depth for dithering (1-8) |
 | `onLoad` | function | - | Called when image loads successfully |
 | `onError` | function | - | Called when image fails to load |
+| `onShader` | function | - | Per-pixel shader callback (see Shaders section) |
+| `shaderFps` | number | 30 | Shader frame rate |
+| `shaderRunTime` | number | - | Stop shader after this many ms, freeze final frame as image |
+
+### Shaders
+
+The `<img>` and `<canvas>` components support per-pixel shader callbacks for animated effects:
+
+```xml
+<img
+  src="image.png"
+  width="100%"
+  height="100%"
+  onShader="$app.myShader"
+  shaderFps="30"
+  shaderRunTime="5000"
+/>
+```
+
+The shader callback receives:
+- `x, y`: Pixel coordinates
+- `time`: Elapsed time in seconds
+- `resolution`: `{ width, height, pixelAspect }` - pixelAspect is ~0.5 (pixels are taller than wide)
+- `source`: Image accessor with `getPixel(x, y)`, `mouse`, `mouseUV`
+- `utils`: Built-in functions: `noise2d`, `fbm`, `palette`, `smoothstep`, `mix`, `fract`
+
+Returns `[r, g, b]` or `[r, g, b, a]` (0-255 range).
+
+**Aspect-correct circles/shapes**: Divide y by `pixelAspect`:
+```typescript
+const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);
+```
+
+**shaderRunTime**: When set, the shader stops after the specified milliseconds and the final frame is preserved as a static image that supports resize.
+
+**Permission**: Requires `"shader": true` in the app's policy.
 
 ### Behavior
 

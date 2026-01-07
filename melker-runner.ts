@@ -46,7 +46,7 @@ async function wireBundlerHandlers(
   handlerCodeMap?: Map<string, string>,
   errorTranslator?: ErrorTranslator
 ): Promise<void> {
-  const noAutoRenderCallbacks = ['onPaint'];
+  const noAutoRenderCallbacks = ['onPaint', 'onShader'];
 
   if (element.props) {
     for (const [propName, propValue] of Object.entries(element.props)) {
@@ -57,7 +57,8 @@ async function wireBundlerHandlers(
         (propValue as any).__isStringHandler
       ) {
         const handlerCode = (propValue as any).__handlerCode;
-        const registryMatch = handlerCode.match(/__melker\.(__h\d+)\(([^)]*)\)/);
+        // Match both old format (__h0) and new format (__tag_id_event_0)
+        const registryMatch = handlerCode.match(/__melker\.((?:__h\d+)|(?:__[a-zA-Z_][a-zA-Z0-9_]*))\(([^)]*)\)/);
 
         let handlerId: string | undefined;
         let handlerFn: ((event?: unknown) => void | Promise<void>) | undefined;
@@ -79,46 +80,63 @@ async function wireBundlerHandlers(
           const capturedHandlerId = handlerId;
           const capturedHandlerFn = handlerFn;
 
-          element.props[propName] = async (event: any) => {
+          // Special handling for onShader - it returns a function reference, not event handler code
+          // Call the registry function once to get the actual shader function
+          if (propName === 'onShader') {
             try {
-              let result = capturedHandlerFn(event);
-              if (result instanceof Promise) {
-                result = await result;
+              const shaderFn = capturedHandlerFn();
+              if (typeof shaderFn === 'function') {
+                element.props[propName] = shaderFn;
+              } else {
+                logger?.error?.(`onShader must return a function, got ${typeof shaderFn}`);
               }
-              if (shouldAutoRender && context?.render) {
-                context.render();
-              }
-              return result;
             } catch (error) {
               const err = error instanceof Error ? error : new Error(String(error));
-              let location: string | undefined;
+              logger?.error?.(`Error getting shader function:`, err);
+              getGlobalErrorOverlay().showError(err.message);
+            }
+          } else {
+            element.props[propName] = async (event: any) => {
+              try {
+                let result = capturedHandlerFn(event);
+                if (result instanceof Promise) {
+                  result = await result;
+                }
+                if (shouldAutoRender && context?.render) {
+                  context.render();
+                }
+                return result;
+              } catch (error) {
+                const err = error instanceof Error ? error : new Error(String(error));
+                let location: string | undefined;
 
-              if (errorTranslator) {
-                const handlerMapping = errorTranslator.findBySourceId(capturedHandlerId);
-                if (handlerMapping) {
-                  location = `${errorTranslator.getSourceFile()}:${handlerMapping.originalLine}`;
-                  logger?.error?.(
-                    `Error in handler ${capturedHandlerId} at ${location}:`,
-                    err,
-                    {
-                      originalLine: handlerMapping.originalLine,
-                      sourceId: handlerMapping.sourceId,
-                      description: handlerMapping.description,
-                    }
-                  );
+                if (errorTranslator) {
+                  const handlerMapping = errorTranslator.findBySourceId(capturedHandlerId);
+                  if (handlerMapping) {
+                    location = `${errorTranslator.getSourceFile()}:${handlerMapping.originalLine}`;
+                    logger?.error?.(
+                      `Error in handler ${capturedHandlerId} at ${location}:`,
+                      err,
+                      {
+                        originalLine: handlerMapping.originalLine,
+                        sourceId: handlerMapping.sourceId,
+                        description: handlerMapping.description,
+                      }
+                    );
+                  } else {
+                    logger?.error?.(`Error in handler ${capturedHandlerId}:`, err);
+                  }
                 } else {
                   logger?.error?.(`Error in handler ${capturedHandlerId}:`, err);
                 }
-              } else {
-                logger?.error?.(`Error in handler ${capturedHandlerId}:`, err);
-              }
 
-              getGlobalErrorOverlay().showError(err.message, location);
-              if (context?.render) {
-                context.render();
+                getGlobalErrorOverlay().showError(err.message, location);
+                if (context?.render) {
+                  context.render();
+                }
               }
-            }
-          };
+            };
+          }
         } else {
           const errorMsg = `Handler not found in registry for ${propName}. Code: ${handlerCode.slice(0, 50)}...`;
           logger?.error?.(errorMsg);
@@ -365,7 +383,9 @@ export async function runMelkerFile(
     }
 
     const placeholderUI = createEl('container', { style: { width: 1, height: 1 } });
-    const engine = await createMelkerApp(placeholderUI);
+    // Calculate baseUrl from filepath for relative resource resolution
+    const baseUrl = getBaseUrl(filepath);
+    const engine = await createMelkerApp(placeholderUI, { baseUrl });
 
     if (persistEnabled) {
       await engine.enablePersistence(appId);
@@ -385,7 +405,7 @@ export async function runMelkerFile(
       parseResult.stylesheet.applyTo(parseResult.element);
     }
 
-    const basePath = getBaseUrl(filepath);
+    // baseUrl already calculated above when creating engine
     const sourceUrl = isUrl(filepath)
       ? filepath
       : `file://${filepath.startsWith('/') ? filepath : Deno.cwd() + '/' + filepath}`;
@@ -472,7 +492,7 @@ export async function runMelkerFile(
         return createEl(type, props, ...children);
       },
       melkerImport: async (specifier: string) => {
-        const resolvedUrl = new URL(specifier, basePath).href;
+        const resolvedUrl = new URL(specifier, baseUrl).href;
         return await import(resolvedUrl);
       },
       registerAITool: registerAITool,
@@ -1068,6 +1088,7 @@ async function main(): Promise<void> {
       await runMelkerFile(filepath, options, templateArgs);
     }
   } catch (error) {
+    restoreTerminal();
     if (error instanceof Deno.errors.NotFound) {
       console.error(`Error: File not found: ${filepath}`);
     } else {
@@ -1079,5 +1100,9 @@ async function main(): Promise<void> {
 
 // Run if this is the entry point
 if (import.meta.main) {
-  main();
+  main().catch((error) => {
+    restoreTerminal();
+    console.error(`Fatal error: ${error instanceof Error ? error.message : String(error)}`);
+    Deno.exit(1);
+  });
 }

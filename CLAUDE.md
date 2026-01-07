@@ -187,6 +187,8 @@ tests/                - Test files
 | `MELKER_AUDIO_GAIN` | Audio recording gain multiplier (default: `2.0`) |
 | `MELKER_AUDIO_DEBUG` | Replay recorded audio before transcription (`true` or `1`) |
 | `MELKER_FFMPEG` | Force ffmpeg on macOS instead of native Swift (`true` or `1`) |
+| `MELKER_AUTO_DITHER` | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `ordered`) |
+| `MELKER_DITHER_BITS` | Color depth for auto dithering (1-8, default: theme-based) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |
@@ -284,6 +286,7 @@ Melker apps can declare required permissions via an embedded `<policy>` tag. Whe
 | `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe |
 | `keyring` | Credentials: security, secret-tool, powershell |
 | `browser` | Browser opening: open, xdg-open, cmd |
+| `shader` | Allow per-pixel shaders on canvas/img elements |
 
 ```json
 {
@@ -292,7 +295,8 @@ Melker apps can declare required permissions via an embedded `<policy>` tag. Whe
     "ai": true,
     "clipboard": true,
     "keyring": true,
-    "browser": true
+    "browser": true,
+    "shader": true
   }
 }
 ```

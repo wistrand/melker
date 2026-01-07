@@ -154,6 +154,9 @@ export {
   LiElement,
 } from './src/components/mod.ts';
 
+// Canvas shader types
+export type { ShaderCallback, ShaderResolution, ShaderSource } from './src/components/canvas.ts';
+
 export {
   elementToJson,
   elementFromJson,
@@ -190,7 +193,7 @@ import { TextElement } from './src/components/text.ts';
 import { ContainerElement } from './src/components/container.ts';
 import { DialogElement } from './src/components/dialog.ts';
 import { MarkdownElement } from './src/components/markdown.ts';
-import { CanvasElement } from './src/components/canvas.ts';
+import { CanvasElement, type ShaderCallback, type ShaderResolution, type ShaderSource } from './src/components/canvas.ts';
 import { ImgElement } from './src/components/img.ts';
 import { VideoElement } from './src/components/video.ts';
 import { ListElement } from './src/components/list.ts';

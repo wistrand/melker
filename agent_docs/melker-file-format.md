@@ -62,8 +62,8 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<li>` | style | List item |
 | `<tabs>` | id, activeTab, onTabChange | Tabbed container |
 | `<tab>` | title, disabled | Tab panel (child of tabs) |
-| `<canvas>` | width, height, dither, ditherBits, onPaint | Pixel graphics (sextant chars) |
-| `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError | Image display (extends canvas) |
+| `<canvas>` | width, height, dither, ditherBits, onPaint, onShader, shaderFps, shaderRunTime | Pixel graphics (sextant chars) |
+| `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, shaderFps, shaderRunTime | Image display (extends canvas) |
 | `<markdown>` | | Markdown text rendering |
 | `<combobox>` | placeholder, filter, onSelect, maxVisible | Dropdown with text filter |
 | `<select>` | value, onSelect, maxVisible | Dropdown picker (no filter) |

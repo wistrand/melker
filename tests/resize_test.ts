@@ -15,7 +15,7 @@ import {
   RenderingEngine,
   ContainerElement,
   TextElement,
-} from '../melker.ts';
+} from '../mod.ts';
 
 Deno.test('ResizeHandler creation and basic properties', () => {
   const initialSize = { width: 100, height: 50 };

@@ -7,8 +7,8 @@ import { resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
 import { debounce } from './src/utils/timing.ts';
 import { restoreTerminal } from './src/terminal-lifecycle.ts';
 
-// Import all components to register them before template parsing
-import './src/components/mod.ts';
+// Import library to register components before template parsing
+import './mod.ts';
 
 // Bundler imports
 import {
@@ -251,12 +251,12 @@ export async function runMelkerFile(
   try {
     const filename = filepath.split('/').pop()?.replace(/\.melker$/, '') || 'unknown';
 
-    // Import melker.ts to ensure component registrations
-    await import('./melker.ts');
+    // Import mod.ts to ensure component registrations
+    await import('./mod.ts');
 
     const { melker: melkerTemplate, parseMelkerFile } = await import('./src/template.ts');
     const { getThemeColor: themeColor } = await import('./src/theme.ts');
-    const { getTerminalSize: terminalSize } = await import('./melker.ts');
+    const { getTerminalSize: terminalSize } = await import('./mod.ts');
     const { createElement: createEl } = await import('./src/element.ts');
     const { createApp: createMelkerApp } = await import('./src/engine.ts');
     const { getLogger, getGlobalLoggerOptions } = await import('./src/logging.ts');
@@ -834,7 +834,7 @@ export async function watchAndRun(
  * Generate schema markdown
  */
 async function generateSchemaMarkdown(): Promise<string> {
-  await import('./melker.ts');
+  await import('./mod.ts');
 
   const {
     getRegisteredComponents,

@@ -1,5 +1,5 @@
 // Minimal Example - Shows how easy it is to create a terminal UI
-import { createApp, createElement, getTerminalSize } from '../../melker.ts';
+import { createApp, createElement, getTerminalSize } from '../../mod.ts';
 
 function createUI(width: number, height: number) {
   return createElement('container', {

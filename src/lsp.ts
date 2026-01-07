@@ -36,8 +36,8 @@ import {
 // Import logging
 import { getLogger } from './logging.ts';
 
-// Import melker.ts to register all component schemas
-import '../melker.ts';
+// Import mod.ts to register all component schemas
+import '../mod.ts';
 
 const logger = getLogger('LSP');
 

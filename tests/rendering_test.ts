@@ -9,7 +9,7 @@ import {
   TextElement,
   Element,
   Bounds,
-} from '../melker.ts';
+} from '../mod.ts';
 
 Deno.test('RenderingEngine creation', () => {
   const engine = new RenderingEngine();

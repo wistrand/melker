@@ -7,7 +7,7 @@ import {
   traverseElements,
   appendChild,
   cloneElement,
-} from '../melker.ts';
+} from '../mod.ts';
 
 Deno.test('createElement creates basic element', () => {
   const element = createElement('container', {});

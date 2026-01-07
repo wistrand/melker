@@ -8,7 +8,7 @@ import {
   InputElement,
   TextElement,
   ButtonElement,
-} from '../melker.ts';
+} from '../mod.ts';
 
 Deno.test('Document creation with root element', () => {
   const root = new ContainerElement({ width: 400 }, [

@@ -44,8 +44,9 @@ deno task check        # Type check
 ## Project Structure
 
 ```
-melker.ts             - Main entry point, exports
-melker-launcher.ts    - Minimal launcher for policy enforcement and subprocess spawning
+melker.ts             - CLI entry point (symlink-safe, runs launcher)
+mod.ts                - Library entry point (exports, component registrations)
+melker-launcher.ts    - Policy enforcement and subprocess spawning
 melker-runner.ts      - .melker file runner (bundling, engine, app execution)
 src/
   engine.ts           - Main engine, lifecycle, events
@@ -241,6 +242,39 @@ deno run --allow-all melker.ts examples/melker/counter.melker
 **Note:** The launcher automatically spawns a subprocess with `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
 
 **Important:** Programmatic runs by agents/scripts must use `--trust` to bypass the interactive approval prompt.
+
+## Installation via Symlink
+
+The CLI can be installed system-wide via symlink:
+
+```bash
+ln -s /path/to/melker/melker.ts ~/.local/bin/melker
+```
+
+Then run from anywhere:
+
+```bash
+melker --trust app.melker
+```
+
+The CLI is symlink-safe - it resolves its real path before importing dependencies.
+
+## Library Usage
+
+For programmatic use, import from `mod.ts`:
+
+```typescript
+import { createElement, createApp, getTerminalSize } from './mod.ts';
+// or from URL: import { ... } from 'https://example.com/melker/mod.ts';
+
+const ui = createElement('container', { style: { border: 'single' } },
+  createElement('text', {}, 'Hello World')
+);
+
+const app = await createApp(ui);
+```
+
+**Note:** `melker.ts` is the CLI entry point only. All library exports are in `mod.ts`.
 
 ## App Policies (Permission Sandboxing)
 

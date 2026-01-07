@@ -9,7 +9,7 @@ import {
   type Element,
   type KeyPressEvent,
   type ClickEvent,
-} from '../../melker.ts';
+} from '../../mod.ts';
 
 console.log('=== Dialog Component Demo ===');
 console.log('Features:');

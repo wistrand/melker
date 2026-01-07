@@ -12,7 +12,8 @@
     "test:coverage": "deno test --allow-read --allow-env --allow-write --coverage=coverage/",
     "fmt": "deno fmt",
     "lint": "deno lint",
-    "check": "deno check src/**/*.ts"
+    "check": "deno check src/**/*.ts",
+    "skill:zip": "cd skills/creating-melker-apps && zip -r ../../creating-melker-apps.zip SKILL.md COMPONENTS.md EXAMPLES.md && echo 'Created creating-melker-apps.zip'"
   },
   "compilerOptions": {
     "strict": true,

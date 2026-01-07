@@ -23,6 +23,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Fast input rendering | `agent_docs/fast-input-render-plan.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
 | Examples | `examples/melker/*.melker` |
+| **AI Agent Skill** | `skills/creating-melker-apps/` |
 
 ## Technology Stack
 
@@ -36,6 +37,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 deno task dev          # Dev server with watch
 deno task test         # Run tests
 deno task check        # Type check
+deno task skill:zip    # Build AI agent skill zip
 ```
 
 **Note**: Don't run `deno fmt` or `deno lint` automatically (user preference).
@@ -164,10 +166,12 @@ tests/                - Test files
 1. **Never use `console.log()`** - Use file logging (`logger.debug()`, etc.)
 2. **`alert()` shows a modal dialog** - Works like browser alert but as a TUI dialog (dismiss with OK button or Escape)
 3. **Button uses `title` prop** - Not `label`
-4. **Input type is `'input'`** - Not `'text-input'`
-5. **Auto-render in .melker handlers** - Event handlers auto-render after completion (return `false` to skip)
-6. **Avoid emojis** - They break terminal layout
-7. **Update component props explicitly** - In .melker files, reactive bindings like `${$app.var}` only work for initial values. To update props dynamically, use `$melker.getElementById('id').props.propName = value`
+4. **Don't add border to buttons** - Buttons render with `[ ]` brackets by default; adding border creates `[ [ Button ] ]`
+5. **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes
+6. **Input type is `'input'`** - Not `'text-input'`
+7. **Auto-render in .melker handlers** - Event handlers auto-render after completion (return `false` to skip)
+8. **Avoid emojis** - They break terminal layout
+9. **Update component props explicitly** - In .melker files, reactive bindings like `${$app.var}` only work for initial values. To update props dynamically, use `$melker.getElementById('id').props.propName = value`
 
 ## Environment Variables
 
@@ -386,6 +390,33 @@ These are always granted (no need to declare):
 - **env**: All `MELKER_*` vars, `HOME`, XDG dirs, `TERM`, `COLORTERM`
 
 See `agent_docs/melker-file-format.md` for syntax details.
+
+## AI Agent Skill
+
+An AI agent skill for creating .melker apps is available at `skills/creating-melker-apps/`.
+
+### Skill Contents
+
+| File | Purpose |
+|------|---------|
+| `SKILL.md` | Main instructions, critical rules, quick start guide |
+| `COMPONENTS.md` | Complete component reference (20+ components) |
+| `EXAMPLES.md` | 11 complete working examples and best practices |
+
+### Building the Skill Zip
+
+```bash
+deno task skill:zip
+```
+
+Creates `creating-melker-apps.zip` in project root, ready for upload to claude.ai or Claude API.
+
+### Key Guidance in Skill
+
+- **Don't add border to buttons** - Buttons render with `[ ]` brackets by default
+- **Avoid specifying colors** - Let the theme engine handle styling
+- **Use `$melker.logger.debug()`** - Not `console.log()` (F12 shows log location)
+- **Button uses `title` prop** - Not `label`
 
 ## Runtime Keyboard Shortcuts
 

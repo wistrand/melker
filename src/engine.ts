@@ -958,13 +958,26 @@ export class MelkerEngine {
     // Setup terminal (after raw mode is established)
     if (isTermux) {
       console.error('[Melker] Setting up terminal...');
+      // On Termux, flush stderr before switching screens so we see the message
+      try {
+        // Write a marker that should appear even after alt screen switch
+        Deno.stderr.writeSync(new TextEncoder().encode('[Melker] About to switch to alternate screen\n'));
+      } catch { /* ignore */ }
     }
     this._setupTerminal();
     if (isTermux) {
-      console.error('[Melker] Terminal setup complete');
+      // These messages go to stderr which should still work on alt screen
+      try {
+        Deno.stderr.writeSync(new TextEncoder().encode('[Melker] Terminal setup complete\n'));
+      } catch { /* ignore */ }
     }
 
     // Re-query terminal size after setup (alternate screen switch may affect reported size)
+    if (isTermux) {
+      try {
+        Deno.stderr.writeSync(new TextEncoder().encode('[Melker] Getting terminal size...\n'));
+      } catch { /* ignore */ }
+    }
     this._currentSize = this._getTerminalSize();
     if (isTermux) {
       console.error(`[Melker] Terminal size after setup: ${this._currentSize.width}x${this._currentSize.height}`);

@@ -50,19 +50,41 @@ export function setupTerminal(options: TerminalLifecycleOptions): void {
     return;
   }
 
+  // Termux detection for debugging
+  const isTermux = typeof Deno !== 'undefined' && Deno.env.get('PREFIX')?.includes('com.termux');
+
   if (typeof Deno !== 'undefined') {
     const codes: string[] = [];
 
     if (options.alternateScreen) {
+      if (isTermux) {
+        console.error('[Melker] setupTerminal: adding alternate screen code');
+      }
       codes.push(ANSI.alternateScreen);
     }
 
     if (options.hideCursor) {
+      if (isTermux) {
+        console.error('[Melker] setupTerminal: adding hide cursor code');
+      }
       codes.push(ANSI.hideCursor);
     }
 
     if (codes.length > 0) {
-      Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
+      if (isTermux) {
+        console.error(`[Melker] setupTerminal: writing ${codes.length} ANSI codes to stdout...`);
+      }
+      try {
+        Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
+        if (isTermux) {
+          console.error('[Melker] setupTerminal: ANSI codes written successfully');
+        }
+      } catch (error) {
+        if (isTermux) {
+          console.error(`[Melker] setupTerminal: ERROR writing ANSI codes: ${error}`);
+        }
+        throw error;
+      }
     }
   }
 }

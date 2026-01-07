@@ -67,8 +67,9 @@
 | `src/debug-server.ts` | WebSocket debug server |
 | `src/headless.ts` | Headless mode for testing |
 | `src/system-command-palette.ts` | System commands (Exit, AI, View Source, Performance) auto-injected into palettes |
-| `melker.ts` | Main entry point, exports |
-| `melker-launcher.ts` | Minimal launcher for policy enforcement and subprocess spawning |
+| `melker.ts` | CLI entry point (symlink-safe, runs launcher) |
+| `mod.ts` | Library entry point (exports, component registrations) |
+| `melker-launcher.ts` | Policy enforcement and subprocess spawning |
 | `melker-runner.ts` | .melker file runner (bundling, engine, app execution) |
 | `src/lint.ts` | Lint mode validation, schemas |
 | `src/lsp.ts` | Language Server Protocol for .melker files |

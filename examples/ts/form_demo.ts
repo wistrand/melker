@@ -1,7 +1,7 @@
 #!/usr/bin/env deno run --allow-all
 
 // Demo showcasing radio buttons and checkboxes
-import { createApp, createElement } from '../../melker.ts';
+import { createApp, createElement } from '../../mod.ts';
 
 console.log('Form Components Demo - Radio buttons and checkboxes');
 console.log('Navigate with Tab/Shift+Tab, toggle with Space/Enter');

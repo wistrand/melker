@@ -1,5 +1,5 @@
 // TypeScript tabs demo
-import { createApp, melker } from '../melker.ts';
+import { createApp, melker } from '../mod.ts';
 
 const ui = melker`
   <container id="root" style="display: flex; flex-direction: column; padding: 1; border: thin;">

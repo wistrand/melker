@@ -7,7 +7,7 @@ import {
   getTerminalSize,
   getThemeColor,
   type Element
-} from '../melker.ts';
+} from '../mod.ts';
 import type { SelectionChangeEvent } from '../src/events.ts';
 
 // Sample list items

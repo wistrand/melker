@@ -24,6 +24,40 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 
 *See [full comparison](agent_docs/tui-comparison.md) with Ink, Textual, Bubble Tea, Ratatui, and others.*
 
+---
+
+## Installation
+
+Melker is distributed via git. No package managers, no registries, no version conflicts. Clone it, symlink it, done.
+
+### Requirements
+
+- **Deno 2.5+** (Node.js and Bun not supported)
+- ANSI-compatible terminal
+
+### Option 1: Clone and Run
+
+```bash
+git clone https://github.com/anthropics/melker.git
+cd melker
+./melker.ts examples/melker/hello.melker
+```
+
+### Option 2: Global Install via Symlink
+
+```bash
+# Clone to a permanent location
+git clone https://github.com/anthropics/melker.git ~/melker
+
+# Create symlink (ensure ~/.local/bin is in your PATH)
+ln -s ~/melker/melker.ts ~/.local/bin/melker
+
+# Run from anywhere
+melker --trust app.melker
+```
+
+The CLI is symlink-safe - it resolves its real path before importing dependencies.
+
 ### Not Just Trust - Real UI
 
 Melker apps look and feel like apps:
@@ -317,10 +351,10 @@ MELKER_DEBUG_PORT=8080 ./melker.ts app.melker
 
 ## TypeScript API
 
-For programmatic use:
+For programmatic use, import from `mod.ts`:
 
 ```typescript
-import { createElement, createApp } from '@melker/core';
+import { createElement, createApp } from './mod.ts';
 
 const ui = createElement('container', {
   style: { border: 'thin', padding: 2 }
@@ -335,7 +369,7 @@ const app = await createApp(ui);
 Or with template literals:
 
 ```typescript
-import { melker, createApp } from '@melker/core';
+import { melker, createApp } from './mod.ts';
 
 const ui = melker`
   <container style=${{ border: 'thin', padding: 2 }}>
@@ -347,12 +381,7 @@ const ui = melker`
 const app = await createApp(ui);
 ```
 
----
-
-## Requirements
-
-- **Deno 2.5+** (Node.js and Bun not supported)
-- ANSI-compatible terminal
+**Note:** `melker.ts` is the CLI entry point only. All library exports are in `mod.ts`.
 
 ---
 
@@ -377,7 +406,10 @@ deno task test      # Run tests
 ### Project Structure
 
 ```
-melker.ts              # Main entry point
+melker.ts              # CLI entry point (symlink-safe)
+mod.ts                 # Library entry point (exports)
+melker-launcher.ts     # Policy enforcement, subprocess spawning
+melker-runner.ts       # .melker file runner
 src/
   engine.ts            # Application engine
   layout.ts            # Flexbox layout

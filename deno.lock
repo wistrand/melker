@@ -1,19 +1,7 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@deno/cache-dir@0.8": "0.8.0",
-    "jsr:@deno/emit@0.44": "0.44.0",
-    "jsr:@deno/graph@~0.69.7": "0.69.10",
-    "jsr:@std/assert@0.223": "0.223.0",
-    "jsr:@std/assert@~0.218.2": "0.218.2",
-    "jsr:@std/bytes@~0.218.2": "0.218.2",
     "jsr:@std/encoding@1": "1.0.10",
-    "jsr:@std/fmt@~0.218.2": "0.218.2",
-    "jsr:@std/fs@~0.218.2": "0.218.2",
-    "jsr:@std/io@~0.218.2": "0.218.2",
-    "jsr:@std/path@0.223": "0.223.0",
-    "jsr:@std/path@~0.218.2": "0.218.2",
-    "npm:@types/node@*": "24.2.0",
     "npm:dotenv@^16.3.0": "16.6.1",
     "npm:html5parser@*": "2.0.2",
     "npm:mdast-util-from-markdown@2": "2.0.2",
@@ -23,62 +11,8 @@
     "npm:vscode-languageserver@9.0.1": "9.0.1"
   },
   "jsr": {
-    "@deno/cache-dir@0.8.0": {
-      "integrity": "e87e80a404958f6350d903e6238b72afb92468378b0b32111f7a1e4916ac7fe7",
-      "dependencies": [
-        "jsr:@deno/graph",
-        "jsr:@std/fmt",
-        "jsr:@std/fs",
-        "jsr:@std/io",
-        "jsr:@std/path@~0.218.2"
-      ]
-    },
-    "@deno/emit@0.44.0": {
-      "integrity": "0750d6b39780a2975915a8a0a513b817338c21749022545a713c49af52e21961",
-      "dependencies": [
-        "jsr:@deno/cache-dir",
-        "jsr:@std/path@0.223"
-      ]
-    },
-    "@deno/graph@0.69.10": {
-      "integrity": "38fe22ac5686f6ece5daeec5a4df65c6314d7d32adcc33f77917a13cfaffa26f"
-    },
-    "@std/assert@0.218.2": {
-      "integrity": "7f0a5a1a8cf86607cd6c2c030584096e1ffad27fc9271429a8cb48cfbdee5eaf"
-    },
-    "@std/assert@0.223.0": {
-      "integrity": "eb8d6d879d76e1cc431205bd346ed4d88dc051c6366365b1af47034b0670be24"
-    },
-    "@std/bytes@0.218.2": {
-      "integrity": "91fe54b232dcca73856b79a817247f4a651dbb60d51baafafb6408c137241670"
-    },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
-    },
-    "@std/fmt@0.218.2": {
-      "integrity": "99526449d2505aa758b6cbef81e7dd471d8b28ec0dcb1491d122b284c548788a"
-    },
-    "@std/fs@0.218.2": {
-      "integrity": "dd9431453f7282e8c577cc22c9e6d036055a9a980b5549f887d6012969fabcca"
-    },
-    "@std/io@0.218.2": {
-      "integrity": "c64fbfa087b7c9d4d386c5672f291f607d88cb7d44fc299c20c713e345f2785f",
-      "dependencies": [
-        "jsr:@std/assert@~0.218.2",
-        "jsr:@std/bytes"
-      ]
-    },
-    "@std/path@0.218.2": {
-      "integrity": "b568fd923d9e53ad76d17c513e7310bda8e755a3e825e6289a0ce536404e2662",
-      "dependencies": [
-        "jsr:@std/assert@~0.218.2"
-      ]
-    },
-    "@std/path@0.223.0": {
-      "integrity": "593963402d7e6597f5a6e620931661053572c982fc014000459edc1f93cc3989",
-      "dependencies": [
-        "jsr:@std/assert@0.223"
-      ]
     }
   },
   "npm": {
@@ -96,12 +30,6 @@
     },
     "@types/ms@2.1.0": {
       "integrity": "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA=="
-    },
-    "@types/node@24.2.0": {
-      "integrity": "sha512-3xyG3pMCq3oYCNg7/ZP+E1ooTaGB4cG8JWRsqqOYQdbWNY4zbaV0Ennrd7stjiJEFZCaybcIgpTjJWHRfBSIDw==",
-      "dependencies": [
-        "undici-types"
-      ]
     },
     "@types/unist@3.0.3": {
       "integrity": "sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q=="
@@ -510,9 +438,6 @@
     "tslib@2.8.1": {
       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     },
-    "undici-types@7.10.0": {
-      "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
-    },
     "unist-util-is@6.0.1": {
       "integrity": "sha512-LsiILbtBETkDz8I9p1dQ0uyRUWuaQzd/cuEeS1hoRSyW5E5XGmTzlwY1OrNzzakGowI9Dr/I8HVaw4hTtnxy8g==",
       "dependencies": [
@@ -566,31 +491,6 @@
     "zwitch@2.0.4": {
       "integrity": "sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A=="
     }
-  },
-  "redirects": {
-    "https://esm.sh/character-entities@^2.0.0?target=denonext": "https://esm.sh/character-entities@2.0.2?target=denonext",
-    "https://esm.sh/decode-named-character-reference@^1.0.0?target=denonext": "https://esm.sh/decode-named-character-reference@1.2.0?target=denonext",
-    "https://esm.sh/mdast-util-to-string@^4.0.0?target=denonext": "https://esm.sh/mdast-util-to-string@4.0.0?target=denonext",
-    "https://esm.sh/micromark-core-commonmark@^2.0.0?target=denonext": "https://esm.sh/micromark-core-commonmark@2.0.3?target=denonext",
-    "https://esm.sh/micromark-factory-destination@^2.0.0?target=denonext": "https://esm.sh/micromark-factory-destination@2.0.1?target=denonext",
-    "https://esm.sh/micromark-factory-label@^2.0.0?target=denonext": "https://esm.sh/micromark-factory-label@2.0.1?target=denonext",
-    "https://esm.sh/micromark-factory-space@^2.0.0?target=denonext": "https://esm.sh/micromark-factory-space@2.0.1?target=denonext",
-    "https://esm.sh/micromark-factory-title@^2.0.0?target=denonext": "https://esm.sh/micromark-factory-title@2.0.1?target=denonext",
-    "https://esm.sh/micromark-factory-whitespace@^2.0.0?target=denonext": "https://esm.sh/micromark-factory-whitespace@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-character@^2.0.0?target=denonext": "https://esm.sh/micromark-util-character@2.1.1?target=denonext",
-    "https://esm.sh/micromark-util-chunked@^2.0.0?target=denonext": "https://esm.sh/micromark-util-chunked@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-classify-character@^2.0.0?target=denonext": "https://esm.sh/micromark-util-classify-character@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-combine-extensions@^2.0.0?target=denonext": "https://esm.sh/micromark-util-combine-extensions@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-decode-numeric-character-reference@^2.0.0?target=denonext": "https://esm.sh/micromark-util-decode-numeric-character-reference@2.0.2?target=denonext",
-    "https://esm.sh/micromark-util-decode-string@^2.0.0?target=denonext": "https://esm.sh/micromark-util-decode-string@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-encode@^2.0.0?target=denonext": "https://esm.sh/micromark-util-encode@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-html-tag-name@^2.0.0?target=denonext": "https://esm.sh/micromark-util-html-tag-name@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-normalize-identifier@^2.0.0?target=denonext": "https://esm.sh/micromark-util-normalize-identifier@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-resolve-all@^2.0.0?target=denonext": "https://esm.sh/micromark-util-resolve-all@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-sanitize-uri@^2.0.0?target=denonext": "https://esm.sh/micromark-util-sanitize-uri@2.0.1?target=denonext",
-    "https://esm.sh/micromark-util-subtokenize@^2.0.0?target=denonext": "https://esm.sh/micromark-util-subtokenize@2.1.0?target=denonext",
-    "https://esm.sh/micromark@^4.0.0?target=denonext": "https://esm.sh/micromark@4.0.2?target=denonext",
-    "https://esm.sh/unist-util-stringify-position@^4.0.0?target=denonext": "https://esm.sh/unist-util-stringify-position@4.0.0?target=denonext"
   },
   "remote": {
     "https://deno.land/std@0.208.0/assert/_constants.ts": "8a9da298c26750b28b326b297316cdde860bc237533b07e1337c021379e6b2a9",
@@ -788,68 +688,6 @@
     "https://deno.land/x/djwt@v3.0.2/deps.ts": "a7954fe567f2097b4f6aca11d091b6df658e485a817ac4dee47257ed5c28fd6e",
     "https://deno.land/x/djwt@v3.0.2/mod.ts": "962d8f2c4d6a4db111f45d777b152356aec31ba7db0ca664601175a422629857",
     "https://deno.land/x/djwt@v3.0.2/signature.ts": "16238fbf558267c85dd6c0178045f006c8b914a7301db87149f3318326569272",
-    "https://deno.land/x/djwt@v3.0.2/util.ts": "5cb264d2125c553678e11446bcfa0494025d120e3f59d0a3ab38f6800def697d",
-    "https://esm.sh/character-entities@2.0.2/denonext/character-entities.mjs": "d15396c2d78022cb26a289c75ee1fb7aaa556334bb24ff7b1ca3634a2770c4ef",
-    "https://esm.sh/character-entities@2.0.2?target=denonext": "2d10b2ddc9c8e2977f63c2906c25adb68ed7e9bea396059d011463aa067149b9",
-    "https://esm.sh/decode-named-character-reference@1.2.0/denonext/decode-named-character-reference.mjs": "e22611bbd1fcac8a1bed55aa4a15f8b54de6d78e2672eb587c5933a7c33e28ea",
-    "https://esm.sh/decode-named-character-reference@1.2.0?target=denonext": "bf96e1ea9065f49b54ef2c82835d682593fe8afe9d260529ab5cfb44f316e355",
-    "https://esm.sh/mdast-util-from-markdown@2.0.0": "6d416579843a2aae5da362627c382756b07a709c9bc836c9b139fec6cc4c91dd",
-    "https://esm.sh/mdast-util-from-markdown@2.0.0/denonext/mdast-util-from-markdown.mjs": "d6cb2d8614baefaad0390a1bb6f09d2378917002f9df055ae6ce1fcd989d1aab",
-    "https://esm.sh/mdast-util-to-string@4.0.0/denonext/mdast-util-to-string.mjs": "0cc67aaadd998d60b82ab54c51f6320231f915aa6288694eb1a5eea017226a73",
-    "https://esm.sh/mdast-util-to-string@4.0.0?target=denonext": "8d15ff9b0a1cac20bfd8af081a133c6d7aac64e34fdd237aeb35cdb3521948ea",
-    "https://esm.sh/micromark-core-commonmark@2.0.3/denonext/micromark-core-commonmark.mjs": "672c110ff674d54beacf859caaccb66ad776316eeed024b5c1c86ed896c66cdf",
-    "https://esm.sh/micromark-core-commonmark@2.0.3?target=denonext": "c7f7707f941c6714f0189301caaded4abde8996d61e4173ef9bb8b1d4a9cdef8",
-    "https://esm.sh/micromark-factory-destination@2.0.1/denonext/micromark-factory-destination.mjs": "02e9933a1b99e5ca4bddb92658a310fbb9c6eade47e3c6e0d9c9ec2b0b6b1503",
-    "https://esm.sh/micromark-factory-destination@2.0.1?target=denonext": "20f6c02cb016930493fd90ead45cf9907af1e23cc31ac0666bd9d1f012392db2",
-    "https://esm.sh/micromark-factory-label@2.0.1/denonext/micromark-factory-label.mjs": "932e00402dd441f65871fe07a500722c8384475949606d74aa34d6e9d1affaed",
-    "https://esm.sh/micromark-factory-label@2.0.1?target=denonext": "36d5ecce5715456ef6df4b6df41f6afbd4664e88ebc938e3b968398e7a131873",
-    "https://esm.sh/micromark-factory-space@2.0.1/denonext/micromark-factory-space.mjs": "629330f72ac17c306c0a96fa8585564983a555acce6123dc5a19b4168844b3dc",
-    "https://esm.sh/micromark-factory-space@2.0.1?target=denonext": "534110c835418f7734d5a95c0b3d17a3407cc7ad185b29f614debd0fc764a273",
-    "https://esm.sh/micromark-factory-title@2.0.1/denonext/micromark-factory-title.mjs": "54836826d7b01f9df3eb879e28723e68cc651ff6ee1209e0d330fad7d9e2a1c9",
-    "https://esm.sh/micromark-factory-title@2.0.1?target=denonext": "89b698c68705321d42bb80f1de290de3eb5f47e75256abcd918c9307baac052e",
-    "https://esm.sh/micromark-factory-whitespace@2.0.1/denonext/micromark-factory-whitespace.mjs": "97e209d227ab5374ae9693f83386efa99374acd94f9fbfd1460423e1b5d201da",
-    "https://esm.sh/micromark-factory-whitespace@2.0.1?target=denonext": "31d15afad988724c6364cea162fd3693bccb899b03d5df916377981a7577f175",
-    "https://esm.sh/micromark-util-character@2.1.1/denonext/micromark-util-character.mjs": "f906588cf18dd5385e3eec4f0a2fba64c4e76fd8b646209b65011a386bc04d00",
-    "https://esm.sh/micromark-util-character@2.1.1?target=denonext": "e445c6bc3be10c82ccc5d79255b50683c22903f7c3cad535cda227b9325530ff",
-    "https://esm.sh/micromark-util-chunked@2.0.1/denonext/micromark-util-chunked.mjs": "1bf94c0d563ca1ec32d5ec293c5d99145865678ff0bdf8e96804a84d591b3691",
-    "https://esm.sh/micromark-util-chunked@2.0.1?target=denonext": "6647a0b1b1cfd638fd3a1fa272d2828d9989e5d78e0ef986572b72f5a3185b45",
-    "https://esm.sh/micromark-util-classify-character@2.0.1/denonext/micromark-util-classify-character.mjs": "d9e1f27ac78b50280e193cb0916205ef09b10a525d454de4ed62b32887795da6",
-    "https://esm.sh/micromark-util-classify-character@2.0.1?target=denonext": "5091803eac11e1066ee40e203056cbb98e6f935f9913016c35e29bb4a9bede0a",
-    "https://esm.sh/micromark-util-combine-extensions@2.0.1/denonext/micromark-util-combine-extensions.mjs": "390e174b64b38891ec66fb33c8abd147e88a537995464d876ba3273ad00d0288",
-    "https://esm.sh/micromark-util-combine-extensions@2.0.1?target=denonext": "2efbd7613fad4a46ea11f1dcad11b4026d9b83928f8189f39949cabc725211d4",
-    "https://esm.sh/micromark-util-decode-numeric-character-reference@2.0.2/denonext/micromark-util-decode-numeric-character-reference.mjs": "a0ad32383214578b5e535e342d616437e03e70221edd0a311ae65ee4b3564c53",
-    "https://esm.sh/micromark-util-decode-numeric-character-reference@2.0.2?target=denonext": "4913b8680d6ed01be5b15ee66ef9e01c70e29758bd07d776b5fc6e24a2189195",
-    "https://esm.sh/micromark-util-decode-string@2.0.1/denonext/micromark-util-decode-string.mjs": "c1158d76dd23af8ffd32342e613b43112337b6614219ff44d2368760009dcdca",
-    "https://esm.sh/micromark-util-decode-string@2.0.1?target=denonext": "065611d34090b46cea4d83d240a6db94a360c2095e1b70596b97efabf3a063ce",
-    "https://esm.sh/micromark-util-encode@2.0.1/denonext/micromark-util-encode.mjs": "fba5f874b451986181d4e9948ef8c9baba3b4f5120ec3579ea56f76877df4cb4",
-    "https://esm.sh/micromark-util-encode@2.0.1?target=denonext": "fc0f1c8fc2cad5e6edc2157f7faf3c0a59a73aeb49e03f8ccddd9a478c8f1ad8",
-    "https://esm.sh/micromark-util-html-tag-name@2.0.1/denonext/micromark-util-html-tag-name.mjs": "a71b054204ce74dc2eb87bb8f9b9fdfa2154efde7a95223853dd8fffc44977b7",
-    "https://esm.sh/micromark-util-html-tag-name@2.0.1?target=denonext": "7d3b4f82d036e0333fb31cd34182e40b9425f3202e7e50054654c7bdadfaadc1",
-    "https://esm.sh/micromark-util-normalize-identifier@2.0.1/denonext/micromark-util-normalize-identifier.mjs": "c8ca3b1cb2fc123195b6b3dfa2f7f313f5287ec1c890a636950bbb3f13bf18c9",
-    "https://esm.sh/micromark-util-normalize-identifier@2.0.1?target=denonext": "e9582a4c88f1d000a6881cd50b4ebc1e523719ca1bd30bf2c7b5ed9e57d0c72b",
-    "https://esm.sh/micromark-util-resolve-all@2.0.1/denonext/micromark-util-resolve-all.mjs": "553a992e0b3875bbfcdb41299f024878cbf726f264dff46db7a6c20e1908c6f0",
-    "https://esm.sh/micromark-util-resolve-all@2.0.1?target=denonext": "dcc380222d422919d39858699d6b27e9c902828dfd58c9e6c4c32933496d2c9d",
-    "https://esm.sh/micromark-util-sanitize-uri@2.0.1/denonext/micromark-util-sanitize-uri.mjs": "cf55ce70c5cc1379955116bf7ad8ae6a317078a47d48c44c69742358c81e1220",
-    "https://esm.sh/micromark-util-sanitize-uri@2.0.1?target=denonext": "14ec4f9c3a39e97707e89dd16cb7cf975387ea75442d319b308417b7f6abd74c",
-    "https://esm.sh/micromark-util-subtokenize@2.1.0/denonext/micromark-util-subtokenize.mjs": "43a653234a9f01479e063051f1e6237cd98d31c08aaf8fdf8fff82689bffdbed",
-    "https://esm.sh/micromark-util-subtokenize@2.1.0?target=denonext": "9260b377186fe70f3d07f902245736b0eb3bee21500abbaa5d7152453e5faf59",
-    "https://esm.sh/micromark@4.0.2/denonext/lib/compile.mjs": "de179ea8d69051838e67a7401330ee6385f995796c5c2407f66cfc41c72e1a33",
-    "https://esm.sh/micromark@4.0.2/denonext/lib/parse.mjs": "5b1195b93c1c798d07b2c37c5501ab8302b07c981de2502da5de96c193852a71",
-    "https://esm.sh/micromark@4.0.2/denonext/lib/postprocess.mjs": "888ee21a24ccca485159179ac8f423da81a820355d5b1a0216a7def7dd49309b",
-    "https://esm.sh/micromark@4.0.2/denonext/lib/preprocess.mjs": "eb3ca8178876c8bdda0c56b0191aedf59b9822de983d051bfbe6e02e6c4f2c0d",
-    "https://esm.sh/micromark@4.0.2/denonext/micromark.mjs": "d6a301df31742731490de7931fe6bc1d42dde369e2f3b58e685b09c1905b04b4",
-    "https://esm.sh/micromark@4.0.2?target=denonext": "b3012311265a68f11418c31073bdedf455b001a9f835615a0635258e36087305",
-    "https://esm.sh/unist-util-stringify-position@4.0.0/denonext/unist-util-stringify-position.mjs": "1e524ff61198426bbdd72735fe7c372b83dbb1c6e5bfa9ab7d0f15268eb65c52",
-    "https://esm.sh/unist-util-stringify-position@4.0.0?target=denonext": "b096f6b3c0936aeeafa56a86945fa7add4e1ec11986f61f09aabe332edab4581"
-  },
-  "workspace": {
-    "dependencies": [
-      "jsr:@deno/emit@0.44",
-      "npm:dotenv@^16.3.0",
-      "npm:html5parser@*",
-      "npm:mdast-util-from-markdown@2",
-      "npm:mdast-util-gfm@3",
-      "npm:micromark-extension-gfm@3"
-    ]
+    "https://deno.land/x/djwt@v3.0.2/util.ts": "5cb264d2125c553678e11446bcfa0494025d120e3f59d0a3ab38f6800def697d"
   }
 }

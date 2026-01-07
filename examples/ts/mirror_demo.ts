@@ -1,7 +1,7 @@
 #!/usr/bin/env deno run --allow-all
 
 // Demo showcasing the HTML mirror view capability
-import { createApp, createElement } from '../../melker.ts';
+import { createApp, createElement } from '../../mod.ts';
 
 console.log('🖥️ Mirror View Demo');
 console.log('This demo runs a Melker app with debug server enabled.');

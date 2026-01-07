@@ -9,7 +9,7 @@ import {
   getThemeManager,
   getCurrentTheme,
   getThemeColor,
-} from '../../melker.ts';
+} from '../../mod.ts';
 
 console.log('=== Theme System Demo ===');
 console.log('Available themes: bw-std, bw-dark, gray-std, gray-dark, color-std, color-dark, fullcolor-std, fullcolor-dark');

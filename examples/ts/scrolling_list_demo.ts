@@ -9,7 +9,7 @@ import {
   getThemeColor,
   type Element,
   type KeyPressEvent,
-} from '../../melker.ts';
+} from '../../mod.ts';
 
 console.log('=== Scrolling List Demo ===');
 console.log('Note: This demo requires a real terminal (TTY) for keyboard input.');

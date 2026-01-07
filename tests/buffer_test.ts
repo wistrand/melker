@@ -6,7 +6,7 @@ import {
   DualBuffer,
   Cell,
   TerminalRenderer,
-} from '../melker.ts';
+} from '../mod.ts';
 
 Deno.test('TerminalBuffer creation and basic operations', () => {
   const buffer = new TerminalBuffer(10, 5);

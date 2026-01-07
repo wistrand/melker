@@ -12,7 +12,7 @@ import {
   Element,
   Bounds,
   Size,
-} from '../melker.ts';
+} from '../mod.ts';
 
 Deno.test('LayoutEngine creation', () => {
   const engine = new LayoutEngine();

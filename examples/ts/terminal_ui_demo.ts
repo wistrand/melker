@@ -7,7 +7,7 @@ import {
   createElement,
   getTerminalSize,
   type Element,
-} from '../../melker.ts';
+} from '../../mod.ts';
 
 console.log('=== Terminal UI Demo ===');
 

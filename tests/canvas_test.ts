@@ -1,7 +1,7 @@
 // Tests for CanvasElement rendering
 
 import { assertEquals, assert } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { CanvasElement } from '../melker.ts';
+import { CanvasElement } from '../mod.ts';
 import { packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from '../src/components/canvas.ts';
 
 // ============================================

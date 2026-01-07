@@ -9,7 +9,7 @@ import {
   type Element,
   type KeyPressEvent,
   type ClickEvent,
-} from '../../melker.ts';
+} from '../../mod.ts';
 import { createFileBrowser, type FileInfo } from '../src/components/file-browser.ts';
 
 console.log('=== File Browser Component Demo ===');

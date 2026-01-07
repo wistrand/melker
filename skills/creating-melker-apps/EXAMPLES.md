@@ -379,10 +379,15 @@
 
 ## Async Data Loading
 
+Apps that access network, files, or system commands should declare a `<policy>` section.
+
 ```xml
 <melker>
+  <!-- Policy required for network access -->
   <policy>
   {
+    "name": "API Data Loader",
+    "description": "Fetches data from an API",
     "permissions": {
       "net": ["api.example.com"]
     }
@@ -439,4 +444,5 @@
 8. **Use `$melker.logger.debug()` for debugging** - Not `console.log()` (F12 shows log location)
 9. **Avoid emojis** - They break terminal character width calculations
 10. **Avoid specifying colors** - Let the theme engine handle colors; only use for canvas or intentional effects
-11. **Test with `--trust`** - Bypasses approval prompts during development
+11. **Add `<policy>` for file/network access** - Required for remote apps, recommended for all apps with external access
+12. **Test with `--trust`** - Bypasses approval prompts during development

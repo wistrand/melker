@@ -254,15 +254,17 @@ For more examples, see [EXAMPLES.md](EXAMPLES.md).
 
 ## Permissions (Policy)
 
-Apps can declare required permissions:
+**Recommendation:** Always add a `<policy>` section for apps that need file, network, or system access. This enables permission sandboxing and is **required for remote/URL-hosted apps**.
 
 ```xml
 <melker>
   <policy>
   {
     "name": "My App",
+    "description": "What the app does",
     "permissions": {
       "read": ["."],
+      "write": ["."],
       "net": ["api.example.com"]
     }
   }
@@ -271,7 +273,38 @@ Apps can declare required permissions:
 </melker>
 ```
 
-**Shortcuts:** `ai`, `clipboard`, `keyring`, `browser`
+**Permission types:**
+| Permission | Example | Description |
+|------------|---------|-------------|
+| `read` | `["."]` or `["*"]` | File system read access |
+| `write` | `["/data"]` | File system write access |
+| `net` | `["api.example.com"]` | Network access to hosts |
+| `run` | `["ffmpeg"]` | Execute system commands |
+| `env` | `["API_KEY"]` | Environment variable access |
+
+**Shortcuts** (set to `true` to enable):
+| Shortcut | Enables |
+|----------|---------|
+| `ai` | AI/media: ffmpeg, ffprobe, openrouter.ai |
+| `clipboard` | Clipboard: pbcopy, xclip, wl-copy |
+| `browser` | Browser opening: open, xdg-open |
+| `keyring` | Credential storage: security, secret-tool |
+
+**Example with shortcuts:**
+```xml
+<policy>
+{
+  "name": "My App",
+  "permissions": {
+    "read": ["."],
+    "clipboard": true,
+    "browser": true
+  }
+}
+</policy>
+```
+
+**When to omit policy:** Simple local apps with no file/network needs can skip the policy tag (they get full permissions when run with `--trust`).
 
 ## State Persistence
 

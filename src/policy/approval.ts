@@ -210,10 +210,11 @@ export function showApprovalPrompt(
 
 /**
  * Get the approval file path for a URL (public for printing location)
+ * Uses first 12 characters of SHA-256 hash for shorter filenames
  */
 export async function getApprovalFilePath(url: string): Promise<string> {
   const urlHash = await hashString(url);
-  return `${getApprovalsDir()}/${urlHash}.json`;
+  return `${getApprovalsDir()}/${urlHash.slice(0, 12)}.json`;
 }
 
 /**

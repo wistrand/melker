@@ -810,6 +810,12 @@ export class TextSelectionHandler {
           layoutTime2: breakdown.layout,
           bufferTime: breakdown.buffer,
           applyTime: breakdown.apply,
+          // Shader stats
+          shaderCount: perfDialog.getActiveShaderCount(),
+          shaderFrameTime: perfDialog.getLastShaderFrameTime(),
+          shaderFrameTimeAvg: perfDialog.getAverageShaderFrameTime(),
+          shaderFps: perfDialog.getShaderFps(),
+          shaderPixels: perfDialog.getTotalShaderPixels(),
         };
         perfDialog.render(buffer, perfStats);
       } catch {

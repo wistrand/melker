@@ -38,7 +38,7 @@ Melker is distributed via git. No package managers, no registries, no version co
 ### Option 1: Clone and Run
 
 ```bash
-git clone https://github.com/anthropics/melker.git
+git clone https://github.com/wistrand/melker.git
 cd melker
 ./melker.ts examples/melker/hello.melker
 ```
@@ -47,7 +47,7 @@ cd melker
 
 ```bash
 # Clone to a permanent location
-git clone https://github.com/anthropics/melker.git ~/melker
+git clone https://github.com/wistrand/melker.git ~/melker
 
 # Create symlink (ensure ~/.local/bin is in your PATH)
 ln -s ~/melker/melker.ts ~/.local/bin/melker

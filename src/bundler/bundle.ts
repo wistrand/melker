@@ -9,6 +9,7 @@
  */
 
 import { getLogger } from '../logging.ts';
+import { getTempDir } from '../xdg.ts';
 import type {
   BundleOptions,
   BundleResult,
@@ -83,7 +84,7 @@ export async function bundle(
     // Write generated TypeScript entry point
     await Deno.writeTextFile(sourceFile, generated.code);
     // Also save a debug copy for inspection
-    await Deno.writeTextFile('/tmp/melker-generated.ts', generated.code);
+    await Deno.writeTextFile(`${getTempDir()}/melker-generated.ts`, generated.code);
     logger.debug('Wrote generated TypeScript to temp file', {
       path: sourceFile,
       bytes: generated.code.length,
@@ -147,8 +148,9 @@ export async function bundle(
     const { code, sourceMap } = extractInlineSourcemap(bundledCode);
 
     // Debug: save bundled JS for inspection
-    await Deno.writeTextFile('/tmp/melker-bundled.js', code);
-    logger.debug('Saved bundled JS to /tmp/melker-bundled.js');
+    const debugBundlePath = `${getTempDir()}/melker-bundled.js`;
+    await Deno.writeTextFile(debugBundlePath, code);
+    logger.debug(`Saved bundled JS to ${debugBundlePath}`);
 
     const elapsed = performance.now() - startTime;
     logger.debug('Bundle completed successfully', {

@@ -57,6 +57,17 @@ export function getDataDir(): string {
 }
 
 /**
+ * Get the system temp directory.
+ * Checks TMPDIR (Unix/macOS), TEMP, TMP (Windows), falls back to /tmp.
+ */
+export function getTempDir(): string {
+  return Deno.env.get('TMPDIR') ||
+         Deno.env.get('TEMP') ||
+         Deno.env.get('TMP') ||
+         '/tmp';
+}
+
+/**
  * Ensure a directory exists, creating it recursively if needed.
  */
 export async function ensureDir(path: string): Promise<void> {

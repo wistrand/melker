@@ -129,7 +129,13 @@ export function setupCleanupHandlers(
 ): void {
   if (typeof Deno === 'undefined') return;
 
-  const cleanup = async () => {
+  // Termux detection for debugging
+  const isTermux = Deno.env.get('PREFIX')?.includes('com.termux');
+
+  const cleanup = async (signal?: string) => {
+    if (isTermux && signal) {
+      console.error(`[Melker] Signal received: ${signal} - triggering cleanup`);
+    }
     try {
       await onAsyncCleanup();
     } catch (error) {
@@ -149,13 +155,13 @@ export function setupCleanupHandlers(
   };
 
   // Handle standard signals
-  Deno.addSignalListener('SIGINT', cleanup);
-  Deno.addSignalListener('SIGTERM', cleanup);
+  Deno.addSignalListener('SIGINT', () => cleanup('SIGINT'));
+  Deno.addSignalListener('SIGTERM', () => cleanup('SIGTERM'));
 
   // Handle additional termination signals
   try {
-    Deno.addSignalListener('SIGHUP', cleanup);
-    Deno.addSignalListener('SIGQUIT', cleanup);
+    Deno.addSignalListener('SIGHUP', () => cleanup('SIGHUP'));
+    Deno.addSignalListener('SIGQUIT', () => cleanup('SIGQUIT'));
   } catch {
     // Some signals might not be available on all platforms
   }
@@ -176,6 +182,9 @@ export function setupCleanupHandlers(
       console.error('\nStack trace:');
       console.error(event.error.stack);
     }
+    if (isTermux) {
+      console.error('[Melker] Exiting due to uncaught error on Termux');
+    }
     Deno.exit(1);
   });
 
@@ -193,6 +202,9 @@ export function setupCleanupHandlers(
     if (reason instanceof Error && reason.stack) {
       console.error('\nStack trace:');
       console.error(reason.stack);
+    }
+    if (isTermux) {
+      console.error('[Melker] Exiting due to unhandled rejection on Termux');
     }
     Deno.exit(1);
   });

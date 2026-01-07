@@ -24,6 +24,7 @@ demo-logs/
 # Build output
 dist/
 build/
+creating-melker-apps.zip
 
 # Test artifacts
 coverage/

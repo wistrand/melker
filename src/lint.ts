@@ -1,6 +1,7 @@
 // Lint mode for validating element props and styles during template parsing
 
 import { getLogger } from './logging.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 const lintLogger = getLogger('Lint');
 
@@ -138,12 +139,9 @@ export function enableLint(enabled: boolean = true): void {
 }
 
 export function isLintEnabled(): boolean {
-  // Check environment variable if not explicitly set
+  // Check config if not explicitly set
   if (!_lintEnabled) {
-    const envLint = (typeof Deno !== 'undefined') ? Deno.env.get('MELKER_LINT') : undefined;
-    if (envLint === 'true' || envLint === '1') {
-      _lintEnabled = true;
-    }
+    _lintEnabled = MelkerConfig.get().lint;
   }
   return _lintEnabled;
 }

@@ -18,6 +18,8 @@
  * @module
  */
 
+import { MelkerConfig } from '../config/mod.ts';
+
 // Re-export types
 export type {
   SourcePosition,
@@ -249,8 +251,8 @@ export async function executeBundle(
 
     // Write bundled code to temp file
     await Deno.writeTextFile(bundleFile, assembled.bundledCode);
-    const retainBundle = Deno.env.get('MELKER_RETAIN_BUNDLE') === 'true' || Deno.env.get('MELKER_RETAIN_BUNDLE') === '1';
-    logger.info(`Bundled code written to: ${bundleFile}${retainBundle ? ' (MELKER_RETAIN_BUNDLE=true, will be retained)' : ''}`);
+    const retainBundle = MelkerConfig.get().debugRetainBundle;
+    logger.info(`Bundled code written to: ${bundleFile}${retainBundle ? ' (retainBundle=true, will be retained)' : ''}`);
 
     // Import the bundled module
     await import(`file://${bundleFile}`);

@@ -17,6 +17,9 @@ export interface MelkerPolicy {
 
   /** Permission declarations */
   permissions?: PolicyPermissions;
+
+  /** App-specific configuration overrides */
+  config?: Record<string, unknown>;
 }
 
 /**

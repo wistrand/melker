@@ -4,6 +4,7 @@
 import { type MelkerEngine } from './engine.ts';
 import { type Element } from './types.ts';
 import { isRunningHeadless } from './headless.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 export interface DebugServerOptions {
   port?: number;
@@ -75,9 +76,10 @@ export class MelkerDebugServer {
   private _lastSentBuffer: BufferSnapshot | null = null;
 
   constructor(options: DebugServerOptions = {}) {
+    const config = MelkerConfig.get();
     this._options = {
-      port: parseInt(Deno.env.get('MELKER_DEBUG_PORT') || '18080'),
-      host: Deno.env.get('MELKER_DEBUG_HOST') || 'localhost',
+      port: config.debugPort ?? 18080,
+      host: config.debugHost,
       enableBufferStreaming: true,
       enableEventInjection: true,
       ...options,
@@ -709,10 +711,9 @@ export class MelkerDebugServer {
       return true;
     }
 
-    // Allow in non-headless mode if explicitly enabled via env var
+    // Allow in non-headless mode if explicitly enabled via config
     // This enables the browser mirror to send mouse/keyboard events
-    const allowRemoteInput = Deno.env.get('MELKER_ALLOW_REMOTE_INPUT');
-    return allowRemoteInput === 'true' || allowRemoteInput === '1';
+    return MelkerConfig.get().debugAllowRemoteInput;
   }
 
   private _injectEvent(eventData: any): void {
@@ -2433,10 +2434,7 @@ export function createDebugServer(options?: DebugServerOptions): MelkerDebugServ
 
 // Check if debug server should be enabled
 export function isDebugEnabled(): boolean {
-  const debugPort = Deno.env.get('MELKER_DEBUG_PORT');
-  const debugEnabled = Deno.env.get('MELKER_DEBUG_ENABLED');
-
-  return !!(debugPort || debugEnabled === 'true' || debugEnabled === '1');
+  return MelkerConfig.get().debugPort !== undefined;
 }
 
 // Global debug server instance for logging integration

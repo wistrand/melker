@@ -84,7 +84,7 @@ System commands are **automatically injected** into all command palettes. A "Sys
 |---------|----------|--------|
 | Exit | Ctrl+C | Exit the application |
 | AI Assistant | F8 | Open AI accessibility dialog |
-| View Source | F12 | Toggle View Source overlay |
+| Dev Tools | F12 | Toggle Dev Tools overlay |
 | Performance Dialog | F6 | Toggle Performance stats |
 
 **Opt-out:** Add `system={false}` to disable system commands:
@@ -155,6 +155,7 @@ CSS-like properties in `style` attribute:
 - `$melker.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)
 - `$melker.alert(message)` - Show modal alert dialog
 - `$melker.setTitle(title)` - Set window/terminal title
+- `$melker.config` - Access configuration (schema + custom keys from policy)
 - Exported script functions available as `$app.functionName()` (or `$melker.exports.functionName()`)
 
 ## State Persistence
@@ -562,6 +563,7 @@ Apps can declare required permissions. When a policy is found, the app runs in a
 | `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe |
 | `keyring` | Credentials: security, secret-tool, powershell |
 | `browser` | Browser opening: open, xdg-open, cmd |
+| `shader` | Allow per-pixel shaders on canvas/img elements |
 
 ```json
 {
@@ -570,7 +572,8 @@ Apps can declare required permissions. When a policy is found, the app runs in a
     "ai": true,
     "clipboard": true,
     "keyring": true,
-    "browser": true
+    "browser": true,
+    "shader": true
   }
 }
 ```
@@ -586,6 +589,33 @@ Use `${VAR}` or `${VAR:-default}` syntax in policy JSON:
   }
 }
 ```
+
+### App-Specific Configuration
+
+Apps can define custom config values in their policy, accessible via `$melker.config`:
+
+```xml
+<policy>
+{
+  "permissions": { "read": ["."] },
+  "config": {
+    "theme": "bw-std",
+    "myapp": {
+      "scale": 1.5,
+      "debug": false
+    }
+  }
+}
+</policy>
+
+<script>
+// Access via generic getters (nested keys use dot-notation)
+const scale = $melker.config.getNumber('myapp.scale', 1.0);
+const debug = $melker.config.getBoolean('myapp.debug', false);
+</script>
+```
+
+See `agent_docs/config-architecture.md` for config priority and full API.
 
 ### OAuth Auto-Permissions
 

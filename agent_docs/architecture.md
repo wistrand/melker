@@ -5,7 +5,7 @@
 - **Document Model**: HTML-inspired elements with React-like createElement pattern, JSON serializable
 - **Dual-Buffer Rendering**: Character buffer + style buffer for efficient ANSI output
 - **Flexbox Layout**: Single layout engine with flex-wrap, border-box sizing
-- **Theming**: Environment-driven via `MELKER_THEME` (default: `auto`); auto-detects terminal capabilities or use manual themes (bw, gray, color, fullcolor variants)
+- **Theming**: Configurable via `--theme` flag, `MELKER_THEME` env, or config file (default: `auto`); auto-detects terminal capabilities or use manual themes (bw, gray, color, fullcolor variants)
 
 ## Components
 
@@ -67,7 +67,9 @@
 | `src/logging.ts` | File-based logging system |
 | `src/debug-server.ts` | WebSocket debug server |
 | `src/headless.ts` | Headless mode for testing |
-| `src/system-command-palette.ts` | System commands (Exit, AI, View Source, Performance) auto-injected into palettes |
+| `src/system-command-palette.ts` | System commands (Exit, AI, Dev Tools, Performance) auto-injected into palettes |
+| `src/dev-tools.ts` | F12 Dev Tools overlay (source, policy, config, system info) |
+| `src/config/` | Schema-driven config system (schema.json, config.ts, cli.ts) |
 | `melker.ts` | CLI entry point (symlink-safe, runs launcher) |
 | `mod.ts` | Library entry point (exports, component registrations) |
 | `melker-launcher.ts` | Policy enforcement and subprocess spawning |
@@ -180,4 +182,5 @@ const logger = getLogger('MyComponent');
 logger.debug('message', { context });
 ```
 
-Configure via `MELKER_LOG_FILE` and `MELKER_LOG_LEVEL` env vars.
+Configure via CLI flags (`--log-file`, `--log-level`), env vars, or config file.
+Priority: `default < policy < file < env < cli`

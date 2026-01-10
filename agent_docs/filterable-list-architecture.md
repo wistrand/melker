@@ -193,7 +193,7 @@ class CommandPaletteElement extends FilterableListCore {
 }
 ```
 
-**System Commands:** All command palettes automatically receive a "System" group with Exit, AI Assistant, View Source, and Performance Dialog commands. Opt-out with `system={false}` prop.
+**System Commands:** All command palettes automatically receive a "System" group with Exit, AI Assistant, Dev Tools, and Performance Dialog commands. Opt-out with `system={false}` prop.
 
 ## Rendering Architecture
 

@@ -8,7 +8,7 @@ import { melker } from './template.ts';
 export interface SystemHandlers {
   exit?: () => void;
   aiDialog?: () => void;
-  viewSource?: () => void;
+  devTools?: () => void;
   performance?: () => void;
 }
 
@@ -20,7 +20,7 @@ export function createSystemGroup(handlers: SystemHandlers): Element {
   return melker`<group label="System">
     <option value="exit" label="Exit" shortcut="Ctrl+C" onSelect=${handlers.exit} />
     <option value="ai-dialog" label="AI Assistant" shortcut="F8" onSelect=${handlers.aiDialog} />
-    <option value="view-source" label="View Source" shortcut="F12" onSelect=${handlers.viewSource} />
+    <option value="dev-tools" label="Dev Tools" shortcut="F12" onSelect=${handlers.devTools} />
     <option value="performance" label="Performance Dialog" shortcut="F6" onSelect=${handlers.performance} />
   </group>`;
 }

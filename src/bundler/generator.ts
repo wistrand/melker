@@ -51,6 +51,21 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
   stateFilePath: string | null;
   url: string;
   dirname: string;
+  config: {
+    getString(key: string, defaultValue: string): string;
+    getBoolean(key: string, defaultValue: boolean): boolean;
+    getNumber(key: string, defaultValue: number): number;
+    getValue(key: string): unknown;
+    hasKey(key: string): boolean;
+    theme: string;
+    logLevel: string;
+    logFile: string | undefined;
+    aiModel: string;
+    headlessEnabled: boolean;
+    debugPort: number | undefined;
+    persist: boolean;
+    lint: boolean;
+  };
   exports: Record<string, any>;`;
 
 /**

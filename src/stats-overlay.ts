@@ -3,6 +3,7 @@
 
 import type { BufferStats, DualBuffer } from './buffer.ts';
 import { getThemeColor } from './theme.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 export interface StatsOverlayOptions {
   enabled: boolean;
@@ -31,8 +32,7 @@ export class StatsOverlay {
   }
 
   private _checkEnvironmentVariable(): boolean {
-    const envVar = Deno.env.get('MELKER_SHOW_STATS');
-    return !!(envVar && envVar.toLowerCase() !== 'false' && envVar !== '0');
+    return MelkerConfig.get().debugShowStats;
   }
 
   isEnabled(): boolean {

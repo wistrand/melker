@@ -1,13 +1,15 @@
 // XDG Base Directory Specification support
 // https://specifications.freedesktop.org/basedir/latest/
 
+import { Env } from './env.ts';
+
 const APP_NAME = 'melker';
 
 /**
  * Get the home directory, with Windows fallback
  */
 function getHomeDir(): string {
-  return Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '.';
+  return Env.get('HOME') || Env.get('USERPROFILE') || '.';
 }
 
 /**
@@ -18,7 +20,7 @@ function getHomeDir(): string {
  * Default: $HOME/.local/state/melker
  */
 export function getStateDir(): string {
-  const xdgStateHome = Deno.env.get('XDG_STATE_HOME');
+  const xdgStateHome = Env.get('XDG_STATE_HOME');
   const baseDir = xdgStateHome || `${getHomeDir()}/.local/state`;
   return `${baseDir}/${APP_NAME}`;
 }
@@ -29,7 +31,7 @@ export function getStateDir(): string {
  * Default: $HOME/.config/melker
  */
 export function getConfigDir(): string {
-  const xdgConfigHome = Deno.env.get('XDG_CONFIG_HOME');
+  const xdgConfigHome = Env.get('XDG_CONFIG_HOME');
   const baseDir = xdgConfigHome || `${getHomeDir()}/.config`;
   return `${baseDir}/${APP_NAME}`;
 }
@@ -40,7 +42,7 @@ export function getConfigDir(): string {
  * Default: $HOME/.cache/melker
  */
 export function getCacheDir(): string {
-  const xdgCacheHome = Deno.env.get('XDG_CACHE_HOME');
+  const xdgCacheHome = Env.get('XDG_CACHE_HOME');
   const baseDir = xdgCacheHome || `${getHomeDir()}/.cache`;
   return `${baseDir}/${APP_NAME}`;
 }
@@ -51,7 +53,7 @@ export function getCacheDir(): string {
  * Default: $HOME/.local/share/melker
  */
 export function getDataDir(): string {
-  const xdgDataHome = Deno.env.get('XDG_DATA_HOME');
+  const xdgDataHome = Env.get('XDG_DATA_HOME');
   const baseDir = xdgDataHome || `${getHomeDir()}/.local/share`;
   return `${baseDir}/${APP_NAME}`;
 }
@@ -61,9 +63,9 @@ export function getDataDir(): string {
  * Checks TMPDIR (Unix/macOS), TEMP, TMP (Windows), falls back to /tmp.
  */
 export function getTempDir(): string {
-  return Deno.env.get('TMPDIR') ||
-         Deno.env.get('TEMP') ||
-         Deno.env.get('TMP') ||
+  return Env.get('TMPDIR') ||
+         Env.get('TEMP') ||
+         Env.get('TMP') ||
          '/tmp';
 }
 

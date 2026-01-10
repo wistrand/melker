@@ -7,6 +7,7 @@ import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, 
 import { getCurrentTheme } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 import { getGlobalPerformanceDialog } from '../performance-dialog.ts';
+import { MelkerConfig } from '../config/mod.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
 import { PIXEL_TO_CHAR } from './canvas-terminal.ts';
@@ -1292,18 +1293,19 @@ export class CanvasElement extends Element implements Renderable {
     let ditherMode = this.props.dither;
     const shaderActive = this._shaderTimer !== null;
 
-    // Handle 'auto' mode based on env vars and theme
-    // Track if original mode was 'auto' for MELKER_DITHER_BITS handling
+    // Handle 'auto' mode based on config and theme
+    // Track if original mode was 'auto' for dither.bits handling
     const wasAutoMode = ditherMode === 'auto';
     if (ditherMode === 'auto') {
-      // MELKER_AUTO_DITHER is always respected (any theme, any dither type)
-      const envDither = Deno.env.get("MELKER_AUTO_DITHER");
-      // MELKER_DITHER_BITS implies user wants dithering
-      const envBits = Deno.env.get("MELKER_DITHER_BITS");
+      // config dither.algorithm is always respected (any theme, any dither type)
+      const config = MelkerConfig.get();
+      const configDither = config.ditherAlgorithm;
+      // dither.bits implies user wants dithering
+      const configBits = config.ditherBits;
 
-      if (envDither) {
-        ditherMode = envDither as DitherMode;
-      } else if (envBits) {
+      if (configDither) {
+        ditherMode = configDither as DitherMode;
+      } else if (configBits !== undefined) {
         // User specified bits but not algorithm - use default algorithm
         ditherMode = 'sierra-stable';
       } else {
@@ -1338,11 +1340,11 @@ export class CanvasElement extends Element implements Renderable {
     if (this.props.ditherBits !== undefined) {
       effectiveBits = this.props.ditherBits;
     } else if (wasAutoMode) {
-      // Check MELKER_DITHER_BITS when dither="auto" was used
-      const envBits = Deno.env.get("MELKER_DITHER_BITS");
-      if (envBits) {
-        effectiveBits = parseInt(envBits, 10);
-        if (isNaN(effectiveBits) || effectiveBits < 1 || effectiveBits > 8) effectiveBits = 1;
+      // Check config dither.bits when dither="auto" was used
+      const configBits = MelkerConfig.get().ditherBits;
+      if (configBits !== undefined) {
+        effectiveBits = configBits;
+        if (effectiveBits < 1 || effectiveBits > 8) effectiveBits = 1;
       } else {
         // Theme-based defaults
         const theme = getCurrentTheme();

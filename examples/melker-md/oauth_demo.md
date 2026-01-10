@@ -2,7 +2,7 @@
 
 Config via `json oauth` block - auto-initializes on startup.
 
-OAuth configuration loaded from .env.local (see .env.local.example).
+Set environment variables before running: `OAUTH_WELLKNOWN`, `OAUTH_CLIENT_ID`, `OAUTH_AUDIENCE`.
 
 ```json oauth
 {

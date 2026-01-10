@@ -25,6 +25,10 @@ import {
   type MelkerPolicy,
 } from './src/policy/mod.ts';
 
+// CLI parsing from schema
+import { generateFlagHelp, parseCliFlags } from './src/config/cli.ts';
+import { MelkerConfig } from './src/config/config.ts';
+
 /**
  * Reset terminal state after subprocess failure.
  * Uses raw ANSI codes to avoid importing framework modules.
@@ -111,22 +115,25 @@ function printUsage(): void {
   console.log('  <file.md>      Path to a markdown file with melker-block code blocks');
   console.log('');
   console.log('Options:');
-  console.log('  --print-tree   Display the element tree structure and exit');
-  console.log('  --print-json   Display the JSON serialization and exit');
-  console.log('  --debug        Show system info, debug script transpilation');
-  console.log('  --lint         Enable lint mode to check for unsupported props/styles');
-  console.log('  --schema       Output component schema documentation as markdown and exit');
-  console.log('  --lsp          Start Language Server Protocol server for editor integration');
-  console.log('  --convert      Convert markdown to .melker format (prints to stdout)');
-  console.log('  --no-load      Skip loading persisted state (requires MELKER_PERSIST=true)');
-  console.log('  --cache        Use bundle cache (default: disabled)');
-  console.log('  --watch        Watch file for changes and auto-reload (local files only)');
-  console.log('  --show-policy  Display the app policy and exit');
-  console.log('  --trust        Run with full permissions, ignoring any declared policy');
-  console.log('  --clear-approvals      Clear all cached remote app approvals');
-  console.log('  --revoke-approval <path>  Revoke cached approval for a specific path or URL');
-  console.log('  --show-approval <path>    Show cached approval for a specific path or URL');
-  console.log('  --help, -h     Show this help message');
+  console.log('  --print-tree             Display element tree structure and exit');
+  console.log('  --print-json             Display JSON serialization and exit');
+  console.log('  --debug                  Show system info, debug script transpilation');
+  console.log('  --schema                 Output component schema markdown and exit');
+  console.log('  --lsp                    Start Language Server Protocol server');
+  console.log('  --convert                Convert markdown to .melker format (stdout)');
+  console.log('  --no-load                Skip loading persisted state');
+  console.log('  --cache                  Use bundle cache (default: disabled)');
+  console.log('  --watch                  Watch file for changes and auto-reload');
+  console.log('  --show-policy            Display app policy and exit');
+  console.log('  --print-config           Print current config with sources and exit');
+  console.log('  --trust                  Run with full permissions, ignoring policy');
+  console.log('  --clear-approvals        Clear all cached remote app approvals');
+  console.log('  --revoke-approval <path> Revoke cached approval for path or URL');
+  console.log('  --show-approval <path>   Show cached approval for path or URL');
+  console.log('  --help, -h               Show this help message');
+  console.log('');
+  // Add schema-driven config flags
+  console.log(generateFlagHelp());
   console.log('');
   console.log('Policy system (permission sandboxing):');
   console.log('  Apps can declare permissions via embedded <policy> tag or .policy.json file.');
@@ -353,6 +360,39 @@ export async function main(): Promise<void> {
     Deno.exit(status.code);
   }
 
+  // Handle --print-config
+  if (args.includes('--print-config')) {
+    // Parse CLI flags and find file path
+    const { flags: cliFlags, remaining } = parseCliFlags(args);
+    const fileIndex = remaining.findIndex(arg => !arg.startsWith('--'));
+    const filepath = fileIndex >= 0 ? remaining[fileIndex] : undefined;
+
+    // Load policy config if a file is provided
+    let policyConfig: Record<string, unknown> = {};
+    if (filepath && (filepath.endsWith('.melker') || filepath.endsWith('.md'))) {
+      try {
+        const absolutePath = filepath.startsWith('/') || isUrl(filepath)
+          ? filepath
+          : resolve(Deno.cwd(), filepath);
+        const policyResult = isUrl(filepath)
+          ? await loadPolicyFromContent(await loadContent(filepath), filepath)
+          : await loadPolicy(absolutePath);
+        if (policyResult.policy?.config) {
+          policyConfig = policyResult.policy.config;
+          console.log(`Policy config from: ${policyResult.source}${policyResult.path ? ` (${policyResult.path})` : ''}\n`);
+        }
+      } catch {
+        // Ignore errors - just print config without policy
+      }
+    }
+
+    // Reset and re-init with policy config
+    MelkerConfig.reset();
+    MelkerConfig.init({ policyConfig, cliFlags });
+    MelkerConfig.printConfig();
+    Deno.exit(0);
+  }
+
   // Handle --clear-approvals
   if (args.includes('--clear-approvals')) {
     const count = await clearAllApprovals();
@@ -402,16 +442,19 @@ export async function main(): Promise<void> {
     Deno.exit(0);
   }
 
-  // Parse options
+  // Parse schema-driven CLI flags to get remaining args (file path, etc.)
+  const { remaining: remainingArgs } = parseCliFlags(args);
+
+  // Parse options from remaining args
   const options = {
-    showPolicy: args.includes('--show-policy'),
-    trust: args.includes('--trust'),
-    watch: args.includes('--watch'),
+    showPolicy: remainingArgs.includes('--show-policy'),
+    trust: remainingArgs.includes('--trust'),
+    watch: remainingArgs.includes('--watch'),
   };
 
-  // Find the file argument
-  const filepathIndex = args.findIndex(arg => !arg.startsWith('--'));
-  const filepath = filepathIndex >= 0 ? args[filepathIndex] : undefined;
+  // Find the file argument from remaining args (after schema flags consumed)
+  const filepathIndex = remainingArgs.findIndex(arg => !arg.startsWith('--'));
+  const filepath = filepathIndex >= 0 ? remainingArgs[filepathIndex] : undefined;
 
   if (!filepath) {
     console.error('Error: No .melker or .md file specified');

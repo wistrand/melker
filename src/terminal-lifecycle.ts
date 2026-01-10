@@ -4,6 +4,7 @@
 import { ANSI } from './ansi-output.ts';
 import { isRunningHeadless } from './headless.ts';
 import { getLogger } from './logging.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 const logger = getLogger('terminal-lifecycle');
 
@@ -50,41 +51,26 @@ export function setupTerminal(options: TerminalLifecycleOptions): void {
     return;
   }
 
-  // Termux detection for debugging
-  const isTermux = typeof Deno !== 'undefined' && Deno.env.get('PREFIX')?.includes('com.termux');
+  // Check config for alternate screen setting
+  const noAltScreen = !MelkerConfig.get().terminalAlternateScreen;
 
   if (typeof Deno !== 'undefined') {
     const codes: string[] = [];
 
-    if (options.alternateScreen) {
-      if (isTermux) {
-        console.error('[Melker] setupTerminal: adding alternate screen code');
-      }
+    // Use alternate screen unless explicitly disabled
+    if (options.alternateScreen && !noAltScreen) {
       codes.push(ANSI.alternateScreen);
+    } else if (options.alternateScreen && noAltScreen) {
+      // Clear screen instead when not using alternate screen
+      codes.push('\x1b[2J\x1b[H'); // Clear screen and move to home
     }
 
     if (options.hideCursor) {
-      if (isTermux) {
-        console.error('[Melker] setupTerminal: adding hide cursor code');
-      }
       codes.push(ANSI.hideCursor);
     }
 
     if (codes.length > 0) {
-      if (isTermux) {
-        console.error(`[Melker] setupTerminal: writing ${codes.length} ANSI codes to stdout...`);
-      }
-      try {
-        Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
-        if (isTermux) {
-          console.error('[Melker] setupTerminal: ANSI codes written successfully');
-        }
-      } catch (error) {
-        if (isTermux) {
-          console.error(`[Melker] setupTerminal: ERROR writing ANSI codes: ${error}`);
-        }
-        throw error;
-      }
+      Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
     }
   }
 }
@@ -151,13 +137,7 @@ export function setupCleanupHandlers(
 ): void {
   if (typeof Deno === 'undefined') return;
 
-  // Termux detection for debugging
-  const isTermux = Deno.env.get('PREFIX')?.includes('com.termux');
-
-  const cleanup = async (signal?: string) => {
-    if (isTermux && signal) {
-      console.error(`[Melker] Signal received: ${signal} - triggering cleanup`);
-    }
+  const cleanup = async () => {
     try {
       await onAsyncCleanup();
     } catch (error) {
@@ -177,13 +157,13 @@ export function setupCleanupHandlers(
   };
 
   // Handle standard signals
-  Deno.addSignalListener('SIGINT', () => cleanup('SIGINT'));
-  Deno.addSignalListener('SIGTERM', () => cleanup('SIGTERM'));
+  Deno.addSignalListener('SIGINT', cleanup);
+  Deno.addSignalListener('SIGTERM', cleanup);
 
   // Handle additional termination signals
   try {
-    Deno.addSignalListener('SIGHUP', () => cleanup('SIGHUP'));
-    Deno.addSignalListener('SIGQUIT', () => cleanup('SIGQUIT'));
+    Deno.addSignalListener('SIGHUP', cleanup);
+    Deno.addSignalListener('SIGQUIT', cleanup);
   } catch {
     // Some signals might not be available on all platforms
   }
@@ -204,9 +184,6 @@ export function setupCleanupHandlers(
       console.error('\nStack trace:');
       console.error(event.error.stack);
     }
-    if (isTermux) {
-      console.error('[Melker] Exiting due to uncaught error on Termux');
-    }
     Deno.exit(1);
   });
 
@@ -224,9 +201,6 @@ export function setupCleanupHandlers(
     if (reason instanceof Error && reason.stack) {
       console.error('\nStack trace:');
       console.error(reason.stack);
-    }
-    if (isTermux) {
-      console.error('[Melker] Exiting due to unhandled rejection on Termux');
     }
     Deno.exit(1);
   });

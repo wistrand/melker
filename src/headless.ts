@@ -1,6 +1,9 @@
 // Headless mode support for Melker applications
 // Allows running Melker apps without a real terminal, using debug server for interaction
 
+import { Env } from './env.ts';
+import { MelkerConfig } from './config/mod.ts';
+
 export interface HeadlessOptions {
   width?: number;
   height?: number;
@@ -120,28 +123,24 @@ export class HeadlessDenoMock {
  * Check if headless mode should be enabled
  */
 export function isHeadlessEnabled(): boolean {
-  const headlessEnv = Deno?.env?.get?.('MELKER_HEADLESS');
-  const debugEnabled = Deno?.env?.get?.('MELKER_DEBUG_ENABLED');
-  const headlessFlag = Deno?.env?.get?.('MELKER_HEADLESS_MODE');
+  const config = MelkerConfig.get();
 
   return !!(
-    headlessEnv === 'true' ||
-    headlessEnv === '1' ||
-    headlessFlag === 'true' ||
-    headlessFlag === '1' ||
-    (debugEnabled && !Deno?.stdin?.isTerminal?.())
+    config.headlessEnabled ||
+    (config.debugPort && !Deno?.stdin?.isTerminal?.())
   );
 }
 
 /**
- * Get headless configuration from environment
+ * Get headless configuration from MelkerConfig
  */
 export function getHeadlessConfig(): HeadlessOptions {
+  const config = MelkerConfig.get();
   return {
-    width: parseInt(Deno?.env?.get?.('MELKER_HEADLESS_WIDTH') || '80'),
-    height: parseInt(Deno?.env?.get?.('MELKER_HEADLESS_HEIGHT') || '24'),
-    debugPort: parseInt(Deno?.env?.get?.('MELKER_DEBUG_PORT') || '18080'),
-    debugHost: Deno?.env?.get?.('MELKER_DEBUG_HOST') || 'localhost',
+    width: config.headlessWidth,
+    height: config.headlessHeight,
+    debugPort: config.debugPort,
+    debugHost: config.debugHost,
     enableBufferCapture: true,
   };
 }
@@ -182,7 +181,7 @@ export function setupHeadlessEnvironment(): {
  * Check if currently running in headless mode
  */
 export function isRunningHeadless(): boolean {
-  return Deno?.env?.get?.('MELKER_RUNNING_HEADLESS') === 'true';
+  return Env.get('MELKER_RUNNING_HEADLESS') === 'true';
 }
 
 /**

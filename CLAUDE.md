@@ -21,6 +21,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | AI accessibility | `agent_docs/ai-accessibility.md` |
 | Filterable lists | `agent_docs/filterable-list-architecture.md` |
 | Fast input rendering | `agent_docs/fast-input-render-plan.md` |
+| Config system | `agent_docs/config-architecture.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
 | Examples | `examples/melker/*.melker` |
 | **AI Agent Skill** | `skills/creating-melker-apps/` |
@@ -76,7 +77,7 @@ src/
   logging.ts          - File-based logging system
   debug-server.ts     - WebSocket debug server
   headless.ts         - Headless mode for testing
-  view-source.ts      - F12 View Source overlay
+  dev-tools.ts        - F12 Dev Tools overlay
   stats-overlay.ts    - Performance stats overlay
   char-width.ts       - Character width utilities
   error-boundary.ts   - Error handling, rate limiting, error overlay
@@ -92,6 +93,11 @@ src/
     types.ts          - Policy type definitions
     loader.ts         - Policy loading from <policy> tag or external file
     flags.ts          - Convert policy to Deno permission flags
+  config/             - Schema-driven configuration system
+    schema.json       - Config schema (source of truth)
+    config.ts         - MelkerConfig singleton class
+    cli.ts            - CLI parser and help generators
+    mod.ts            - Config module exports
   bundler/            - Runtime bundler for .melker files
     mod.ts            - Main bundler exports
     types.ts          - Bundler type definitions
@@ -181,6 +187,7 @@ tests/                - Test files
 | `MELKER_LOG_FILE` | Log file path |
 | `MELKER_LOG_LEVEL` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `MELKER_HEADLESS` | Headless mode for CI |
+| `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`) |
 | `MELKER_DEBUG_PORT` | Debug server port (implies `net: localhost`) |
 | `MELKER_ALLOW_REMOTE_INPUT` | Allow browser mirror to send mouse/keyboard events (`true` or `1`) |
 | `MELKER_LINT` | Enable lint mode (`true` or `1`) |
@@ -211,6 +218,25 @@ Melker follows the [XDG Base Directory Specification](https://specifications.fre
 | Cache | `~/.cache/melker/` | Non-essential cached data |
 | Data | `~/.local/share/melker/` | User data files |
 
+## Configuration System
+
+Configuration is schema-driven (`src/config/schema.json`) with layered overrides.
+
+**Priority order (lowest to highest):**
+1. Schema defaults
+2. Policy config (per-app `<policy>` tag)
+3. File config (`~/.config/melker/config.json`)
+4. Environment variables
+5. CLI flags (highest - explicit user intent)
+
+```bash
+# Show current config with sources
+./melker.ts --print-config
+
+# CLI flags override everything
+MELKER_THEME=fullcolor-dark ./melker.ts --theme bw-std  # uses bw-std
+```
+
 ## Running .melker Files
 
 ```bash
@@ -220,8 +246,11 @@ Melker follows the [XDG Base Directory Specification](https://specifications.fre
 # Or via deno run
 deno run --allow-all melker.ts examples/melker/counter.melker
 
-# From URL
+# From URL (running .melker files from remote)
 ./melker.ts http://localhost:1990/melker/counter.melker
+
+# Running melker.ts itself from remote URL (use --no-lock to avoid stale cache)
+deno run --allow-all --reload --no-lock http://localhost:1990/melker.ts app.melker
 
 # With lint validation
 ./melker.ts --lint examples/melker/counter.melker
@@ -426,6 +455,6 @@ Creates `creating-melker-apps.zip` in project root, ready for upload to claude.a
 | `F6` | Toggle Performance dialog (live stats) |
 | `F7` | Open AI assistant with voice input (or toggle recording if open) |
 | `F8` | Open AI accessibility assistant (text input) |
-| `F12` | Toggle View Source overlay (for .md files: shows Markdown/Melker tabs) |
+| `F12` | Toggle Dev Tools overlay (source, policy, config, system info) |
 | `Escape` | Close overlays / Close AI dialog |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |

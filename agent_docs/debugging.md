@@ -31,18 +31,25 @@ logger.error('Error message');
 | `ERROR` | Errors that need attention |
 | `FATAL` | Critical errors, application termination |
 
-### Configuration via Environment Variables
+### Configuration
+
+Use CLI flags (highest priority), environment variables, or config file:
 
 ```bash
-# Set log file path
-MELKER_LOG_FILE=/tmp/debug.log
+# Via CLI flags (highest priority)
+./melker.ts --log-file /tmp/debug.log --log-level DEBUG app.melker
 
-# Set minimum log level
-MELKER_LOG_LEVEL=DEBUG
-
-# Example: Run with full debug logging
+# Via environment variables
 MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=DEBUG ./melker.ts app.melker
+
+# Via config file (~/.config/melker/config.json)
+# { "log": { "level": "DEBUG", "file": "/tmp/debug.log" } }
+
+# Show current config with sources
+./melker.ts --print-config
 ```
+
+Priority order: `default < policy < file < env < cli`
 
 ### Log Output Format
 
@@ -231,27 +238,38 @@ If video frame data (sextant characters) appears on the terminal after exit:
 - Guards are in `render()`, `forceRender()`, `_renderOptimized()`, `_renderFullScreen()`
 - See `src/engine.ts` and `agent_docs/implementation-details.md` for details
 
-## View Source (F12)
+## Dev Tools (F12)
 
-Press **F12** at runtime to view the source file in a modal dialog overlay.
+Press **F12** at runtime to open the Dev Tools dialog.
+
+### Tabs
+
+| Tab | Description |
+|-----|-------------|
+| Help | App help text (if provided) |
+| Source | Original `.melker` source or converted content for `.md` files |
+| Policy | App permissions and Deno flags |
+| Markdown | Original markdown (for `.md` files only) |
+| System | Build info, scripts, bundle details |
+| Config | Current configuration with sources (schema + app-defined) |
+| Actions | Performance Monitor, Exit Application |
 
 ### Features
 
-- Shows the original `.melker` or `.md` source file
-- **Markdown files show two tabs**: "Markdown" (original source) and "Melker" (converted output)
-- Scrollable content area with keyboard navigation
+- Scrollable content areas with keyboard navigation
 - Tab buttons clickable with mouse or keyboard
-- **AI Assistant button**: Opens the AI accessibility dialog (closes View Source first)
+- **AI Assistant button**: Opens the AI accessibility dialog
+- **Config tab**: Shows same info as `--print-config` - schema config plus app-defined config from policy (shown under `[Category (app)]` sections)
 - Close with button click, Escape key, or F12 toggle
 
-### Enabling View Source
+### Enabling Dev Tools
 
 The engine's `setSource()` method must be called with the source content:
 
 ```typescript
 const engine = await createApp(root);
 engine.setSource(sourceContent, '/path/to/file.melker', 'melker');
-// or for markdown files (with converted content for Melker tab):
+// or for markdown files (with converted content for Source tab):
 engine.setSource(mdContent, '/path/to/file.md', 'md', convertedMelkerContent);
 ```
 
@@ -259,9 +277,9 @@ The `melker-runner.ts` runner automatically enables this for `.melker` and `.md`
 
 ### Implementation
 
-View Source is managed by `ViewSourceManager` (`src/view-source.ts`):
-- Creates a dialog overlay with scrollable content
-- For `.md` files: shows tabbed interface with original markdown and converted melker
+Dev Tools is managed by `DevToolsManager` (`src/dev-tools.ts`):
+- Creates a dialog overlay with tabbed content
+- Config tab uses `MelkerConfig.getConfigText()` for formatted display
 - Uses the `melker` template literal for clean element creation
 - Properly registers/unregisters elements from the document on open/close
 
@@ -272,4 +290,4 @@ View Source is managed by `ViewSourceManager` (`src/view-source.ts`):
 | `src/logging.ts` | Logger class, getLogger(), log levels |
 | `src/headless.ts` | HeadlessTerminal, HeadlessManager |
 | `src/debug-server.ts` | MelkerDebugServer, WebSocket API |
-| `src/view-source.ts` | ViewSourceManager, F12 overlay |
+| `src/dev-tools.ts` | DevToolsManager, F12 overlay |

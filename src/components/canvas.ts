@@ -1,6 +1,6 @@
 // Canvas component for basic graphics rendering using Unicode sextant characters
 
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, KeyPressEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from './color-utils.ts';
 import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, applyFloydSteinbergStableDither, applyOrderedDither, type DitherMode } from '../video/dither.ts';
@@ -38,6 +38,7 @@ export interface CanvasProps extends BaseProps {
   onShader?: ShaderCallback;         // Shader-style per-pixel callback (TypeScript, not GLSL)
   shaderFps?: number;                // Shader frame rate (default: 30)
   shaderRunTime?: number;            // Stop shader after this many ms, keep final frame as image
+  onKeyPress?: (event: KeyPressEvent) => boolean | void;  // Called on keyboard events when focused
 }
 
 // Image data storage for loaded images
@@ -48,7 +49,7 @@ interface LoadedImage {
   bytesPerPixel: number;    // 3 for RGB, 4 for RGBA
 }
 
-export class CanvasElement extends Element implements Renderable {
+export class CanvasElement extends Element implements Renderable, Focusable, Interactive {
   declare type: 'canvas';
   declare props: CanvasProps;
 
@@ -116,6 +117,7 @@ export class CanvasElement extends Element implements Renderable {
       charAspectRatio,
       backgroundColor: undefined,
       disabled: false,
+      tabIndex: props.onKeyPress ? 0 : -1,  // Focusable if has keyboard handler
       ...props,
       style: {
         // Default styles would go here (none currently)
@@ -138,6 +140,27 @@ export class CanvasElement extends Element implements Renderable {
     // Initialize image background layer buffer
     this._imageColorBuffer = new Uint32Array(bufferSize);
     this.clear();
+  }
+
+  // Focusable interface
+  canReceiveFocus(): boolean {
+    return !this.props.disabled && (this.props.tabIndex ?? -1) >= 0;
+  }
+
+  // Interactive interface
+  isInteractive(): boolean {
+    return !!this.props.onKeyPress;
+  }
+
+  /**
+   * Handle keyboard events when canvas has focus
+   */
+  onKeyPress(event: KeyPressEvent): boolean {
+    if (this.props.onKeyPress) {
+      const result = this.props.onKeyPress(event);
+      return result === true;
+    }
+    return false;
   }
 
   /**

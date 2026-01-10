@@ -1,8 +1,8 @@
 // Policy loader - loads policy from embedded tag or external file
 
 import { dirname, resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
-import { config as dotenvConfig } from 'npm:dotenv@^16.3.0';
 import type { MelkerPolicy, PolicyLoadResult } from './types.ts';
+import { Env } from '../env.ts';
 
 // WellKnown config fields that contain URLs
 interface WellKnownConfig {
@@ -33,9 +33,6 @@ export async function loadPolicy(appPath: string): Promise<PolicyLoadResult> {
     if (!policyTag) {
       return { policy: null, source: 'none' };
     }
-
-    // Load .env files before parsing policy (for env var substitution)
-    loadDotenvFiles(appPath);
 
     // Check for src attribute - load from external file
     if (policyTag.src) {
@@ -144,7 +141,7 @@ function extractOAuthWellknownUrl(content: string): string | null {
  */
 function substituteEnvVars(value: string): string {
   return value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (_match, varName, defaultValue) => {
-    const envValue = Deno.env.get(varName);
+    const envValue = Env.get(varName);
     if (envValue !== undefined) {
       return envValue;
     }
@@ -210,41 +207,13 @@ async function fetchWellknownHosts(wellknownUrl: string): Promise<string[]> {
 }
 
 /**
- * Load .env files from app directory (same as melker-runner.ts)
- */
-function loadDotenvFiles(appPath: string): void {
-  const appDir = dirname(appPath);
-  const cwd = Deno.cwd();
-
-  // Directories to load from, in order (later overrides earlier)
-  const dirs = [cwd];
-  if (appDir !== cwd) {
-    dirs.push(appDir);
-  }
-
-  // Files to try in each directory
-  const envFiles = ['.env', '.env.local'];
-
-  for (const dir of dirs) {
-    for (const envFile of envFiles) {
-      const envPath = `${dir}/${envFile}`;
-      try {
-        dotenvConfig({ path: envPath, override: false });
-      } catch {
-        // File doesn't exist or can't be read - that's fine
-      }
-    }
-  }
-}
-
-/**
  * Add wellknown endpoint hosts to net permissions
  */
 async function addWellknownHostsForOAuth(policy: MelkerPolicy, content: string): Promise<void> {
   const wellknownUrl = extractOAuthWellknownUrl(content);
   if (!wellknownUrl) return;
 
-  // Substitute environment variables (dotenv already loaded by loadPolicy)
+  // Substitute environment variables
   const resolvedUrl = substituteEnvVars(wellknownUrl);
   if (!resolvedUrl) return;
 

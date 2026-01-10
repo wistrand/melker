@@ -2,6 +2,8 @@
 // Simple synchronous logging - lost lines are lost
 
 import { getGlobalDebugServer } from './debug-server.ts';
+import { Env } from './env.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 // Flag to track if logging is disabled (e.g., no log file specified)
 let loggingDisabled = false;
@@ -11,7 +13,7 @@ let loggingDisabled = false;
  */
 function getDefaultLogFile(): string {
   try {
-    const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '.';
+    const home = Env.get('HOME') || Env.get('USERPROFILE') || '.';
     return `${home}/.cache/melker/logs/melker.log`;
   } catch {
     return './logs/melker.log';
@@ -255,31 +257,21 @@ export class Logger {
   }
 }
 
-// Environment variable configuration
-function getLogLevelFromEnv(): LogLevel | undefined {
-  try {
-    const envLevel = Deno.env.get('MELKER_LOG_LEVEL');
-    if (envLevel && envLevel.toUpperCase() in LOG_LEVELS) {
-      return envLevel.toUpperCase() as LogLevel;
-    }
-  } catch {
-    // Ignore env access errors
-  }
-  return undefined;
+// Configuration from MelkerConfig
+function getLogLevelFromConfig(): LogLevel {
+  const config = MelkerConfig.get();
+  return config.logLevel as LogLevel;
 }
 
-function getLogFileFromEnv(): string | undefined {
-  try {
-    return Deno.env.get('MELKER_LOG_FILE');
-  } catch {
-    return undefined;
-  }
+function getLogFileFromConfig(): string | undefined {
+  const config = MelkerConfig.get();
+  return config.logFile;
 }
 
 function createDefaultLoggerOptions(): LoggerOptions {
   return {
-    level: getLogLevelFromEnv() || 'INFO',
-    logFile: getLogFileFromEnv() ?? getDefaultLogFile(),
+    level: getLogLevelFromConfig(),
+    logFile: getLogFileFromConfig() ?? getDefaultLogFile(),
     format: 'structured',
     includeTimestamp: true,
     includeLevel: true,

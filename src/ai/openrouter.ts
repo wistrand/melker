@@ -2,6 +2,8 @@
 // Provides LLM access for accessibility features
 
 import { getLogger } from '../logging.ts';
+import { Env } from '../env.ts';
+import { MelkerConfig } from '../config/mod.ts';
 
 const logger = getLogger('ai:openrouter');
 
@@ -62,25 +64,27 @@ const DEFAULT_SITE_URL = 'https://github.com/melker';
 const DEFAULT_SITE_NAME = 'Melker';
 
 /**
- * Get OpenRouter configuration from environment variables
+ * Get OpenRouter configuration from MelkerConfig and environment
  */
 export function getOpenRouterConfig(): OpenRouterConfig | null {
-  const apiKey = Deno.env.get('OPENROUTER_API_KEY');
+  // API key is a secret, read from env directly
+  const apiKey = Env.get('OPENROUTER_API_KEY');
   if (!apiKey) {
     logger.warn('OPENROUTER_API_KEY not set - AI accessibility features disabled');
     return null;
   }
 
-  const model = Deno.env.get('MELKER_AI_MODEL') || DEFAULT_MODEL;
-  const endpoint = Deno.env.get('MELKER_AI_ENDPOINT') || DEFAULT_ENDPOINT;
+  const config = MelkerConfig.get();
+  const model = config.aiModel;
+  const endpoint = config.aiEndpoint;
   logger.info('OpenRouter configured', { model, endpoint });
 
   return {
     apiKey,
     model,
     endpoint,
-    siteUrl: Deno.env.get('MELKER_AI_SITE_URL') || DEFAULT_SITE_URL,
-    siteName: Deno.env.get('MELKER_AI_SITE_NAME') || DEFAULT_SITE_NAME,
+    siteUrl: config.aiSiteUrl || DEFAULT_SITE_URL,
+    siteName: config.aiSiteName || DEFAULT_SITE_NAME,
   };
 }
 
@@ -133,20 +137,13 @@ export async function streamChat(
       'Content-Type': 'application/json',
     };
 
-    // Parse and add custom headers from MELKER_AI_HEADERS env var
-    // Format: "header-name: header-value; another-header: value"
-    const customHeaders = Deno.env.get('MELKER_AI_HEADERS');
+    // Add custom headers from config
+    const customHeaders = MelkerConfig.get().aiHeaders;
     if (customHeaders) {
-      const pairs = customHeaders.split(';');
-      for (const pair of pairs) {
-        const colonIndex = pair.indexOf(':');
-        if (colonIndex > 0) {
-          const name = pair.substring(0, colonIndex).trim();
-          const value = pair.substring(colonIndex + 1).trim();
-          if (name && value) {
-            headers[name] = value;
-            logger.debug('Added custom header', { name, valueLength: value.length });
-          }
+      for (const [name, value] of Object.entries(customHeaders)) {
+        if (name && value) {
+          headers[name] = value;
+          logger.debug('Added custom header', { name, valueLength: value.length });
         }
       }
     }

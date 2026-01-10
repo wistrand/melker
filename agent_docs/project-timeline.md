@@ -102,6 +102,16 @@ Development history from git commits.
 - Performance dialog enhancements
 - Markdown path resolution fix (cwd-relative for CLI args)
 
+**Jan 8-10** - Configuration system and Dev Tools
+- Unified config system (`src/config/`): schema.json, config.ts, cli.ts
+- Schema-driven CLI parser with auto-generated help
+- Config priority: `default < policy < file < env < cli`
+- Policy config support (config in `<policy>` tag)
+- View Source renamed to Dev Tools (`src/dev-tools.ts`)
+- Config tab added to Dev Tools dialog (F12)
+- OAuth configuration options
+- Removed dotenv dependency
+
 ## Component Timeline
 
 | Component | Added | Notes |
@@ -123,6 +133,7 @@ Development history from git commits.
 4. **Jan 6**: Launcher/runner split for subprocess spawning
 5. **Jan 6**: Filterable list component family (`src/components/filterable-list/`)
 6. **Jan 7**: Canvas subsystem split (shader, draw, terminal modules)
+7. **Jan 8-10**: Unified config system (`src/config/`)
 
 ## Key Milestones
 
@@ -133,3 +144,4 @@ Development history from git commits.
 - **Build 100** (Jan 4): Stable input handling
 - **Build 110** (Jan 6): Chrome collapse, filterable lists
 - **Build 120** (Jan 7): Shaders, stable image loading
+- **Build 125** (Jan 10): Unified config system, Dev Tools

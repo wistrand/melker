@@ -246,8 +246,10 @@ Or `<style>` tags with selectors:
 
 ### Themes
 
-Auto-detects terminal capabilities by default. Manual override:
+Auto-detects terminal capabilities by default. Manual override via CLI flag or env var:
 ```bash
+./melker.ts --theme fullcolor-dark app.melker
+# or
 MELKER_THEME=fullcolor-dark ./melker.ts app.melker
 ```
 
@@ -392,16 +394,24 @@ deno task check     # Type check
 deno task test      # Run tests
 ```
 
-### Key Environment Variables
+### Configuration
 
-| Variable            | Purpose                           |
-|---------------------|-----------------------------------|
-| `MELKER_THEME`      | Theme selection (default: `auto`) |
-| `MELKER_DEBUG_PORT` | Enable debug server               |
-| `MELKER_HEADLESS`   | Headless mode for testing         |
-| `MELKER_PERSIST`    | Enable state persistence          |
-| `MELKER_LOG_FILE`   | Log file path                     |
-| `MELKER_LOG_LEVEL`  | `DEBUG`, `INFO`, `WARN`, `ERROR`  |
+Configuration can be set via CLI flags (highest priority), environment variables, or config file (`~/.config/melker/config.json`). Priority order: `default < policy < file < env < cli`
+
+```bash
+# View current config with sources
+./melker.ts --print-config
+```
+
+| Option | CLI Flag | Env Variable | Purpose |
+|--------|----------|--------------|---------|
+| Theme | `--theme` | `MELKER_THEME` | Theme selection (default: `auto`) |
+| Debug port | `--debug-port` | `MELKER_DEBUG_PORT` | Enable debug server |
+| Headless | `--headless` | `MELKER_HEADLESS` | Headless mode for testing |
+| Alt screen | `--no-alt-screen` | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer |
+| Persist | `--persist` | `MELKER_PERSIST` | Enable state persistence |
+| Log file | `--log-file` | `MELKER_LOG_FILE` | Log file path |
+| Log level | `--log-level` | `MELKER_LOG_LEVEL` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
 
 ### Project Structure
 

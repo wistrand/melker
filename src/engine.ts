@@ -10,6 +10,8 @@ declare global {
 }
 
 import { Document } from './document.ts';
+import { MelkerConfig } from './config/mod.ts';
+import { Env } from './env.ts';
 import { DualBuffer } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
 import { InputElement } from './components/input.ts';
@@ -26,9 +28,9 @@ import {
   FocusManager,
 } from './focus.ts';
 import {
-  ViewSourceManager,
+  DevToolsManager,
   type SystemInfo,
-} from './view-source.ts';
+} from './dev-tools.ts';
 import type { MelkerPolicy } from './policy/types.ts';
 import {
   AlertDialogManager,
@@ -212,8 +214,8 @@ export class MelkerEngine {
   // Debounced action for rapid input rendering (e.g., paste operations)
   private _debouncedInputRenderAction!: DebouncedAction;
 
-  // View Source feature
-  private _viewSourceManager?: ViewSourceManager;
+  // Dev Tools feature
+  private _devToolsManager?: DevToolsManager;
 
   // Alert dialog feature
   private _alertDialogManager?: AlertDialogManager;
@@ -242,14 +244,8 @@ export class MelkerEngine {
   private _layoutNodeCount = 0;
 
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
-    // Check environment variables for terminal setup overrides
-    const envAlternateScreen = typeof Deno !== 'undefined'
-      ? Deno.env.get('MELKER_NO_ALTERNATE_SCREEN')
-      : undefined;
-
-    const envDisableSync = typeof Deno !== 'undefined'
-      ? Deno.env.get('MELKER_NO_SYNC')
-      : undefined;
+    // Get terminal settings from config
+    const config = MelkerConfig.get();
 
     // Determine default base URL (current working directory)
     const cwd = typeof Deno !== 'undefined' ? Deno.cwd() : '';
@@ -260,12 +256,12 @@ export class MelkerEngine {
 
     // Set defaults
     this._options = {
-      alternateScreen: envAlternateScreen !== undefined ? false : true,
+      alternateScreen: config.terminalAlternateScreen,
       hideCursor: true,
       autoResize: true,
       debounceMs: 100,
       autoRender: true,
-      synchronizedOutput: envDisableSync !== undefined ? false : true,  // Enable by default unless disabled
+      synchronizedOutput: config.terminalSyncRendering,
       colorSupport: 'none',
       theme: 'color-std',
       initialWidth: 80,
@@ -597,7 +593,7 @@ export class MelkerEngine {
 
       // Handle F12 key for View Source (global)
       if (event.key === 'F12') {
-        this._viewSourceManager?.toggle();
+        this._devToolsManager?.toggle();
         return;
       }
 
@@ -617,8 +613,8 @@ export class MelkerEngine {
       }
 
       // Handle Escape to close View Source overlay
-      if (event.key === 'Escape' && this._viewSourceManager?.isOpen()) {
-        this._viewSourceManager.close();
+      if (event.key === 'Escape' && this._devToolsManager?.isOpen()) {
+        this._devToolsManager.close();
         return;
       }
 
@@ -926,62 +922,26 @@ export class MelkerEngine {
 
     // Logger is already initialized synchronously in constructor
 
-    // Termux detection for debugging
-    const isTermux = typeof Deno !== 'undefined' && Deno.env.get('PREFIX')?.includes('com.termux');
-    if (isTermux) {
-      console.error('[Melker] Engine starting on Termux');
-      console.error(`[Melker] TERM: ${Deno.env.get('TERM')}`);
-      console.error(`[Melker] Terminal size: ${this._currentSize.width}x${this._currentSize.height}`);
-      console.error(`[Melker] stdin.isTerminal: ${Deno.stdin.isTerminal()}`);
-      console.error(`[Melker] stdout.isTerminal: ${Deno.stdout.isTerminal()}`);
-    }
-
-    // Log engine startup
-    this._logger?.info('MelkerEngine starting', {
-      terminalSize: this._currentSize,
-      options: this._options,
-      rootElementType: this._rootElement.type,
+    // Log terminal info at startup
+    this._logger?.info('Terminal', {
+      size: `${this._currentSize.width}x${this._currentSize.height}`,
+      term: Env.get('TERM') || 'unknown',
+      colorterm: Env.get('COLORTERM') || 'none',
+      stdin: Deno.stdin.isTerminal() ? 'tty' : 'pipe',
+      stdout: Deno.stdout.isTerminal() ? 'tty' : 'pipe',
     });
 
     // Start event system if enabled (raw mode must be enabled BEFORE terminal setup)
     if (this._options.enableEvents && this._inputProcessor) {
-      if (isTermux) {
-        console.error('[Melker] Starting input processor...');
-      }
       await this._inputProcessor.startListening();
-      if (isTermux) {
-        console.error('[Melker] Input processor started, setting up event handlers...');
-      }
       this._setupEventHandlers();
     }
 
     // Setup terminal (after raw mode is established)
-    if (isTermux) {
-      console.error('[Melker] Setting up terminal...');
-      // On Termux, flush stderr before switching screens so we see the message
-      try {
-        // Write a marker that should appear even after alt screen switch
-        Deno.stderr.writeSync(new TextEncoder().encode('[Melker] About to switch to alternate screen\n'));
-      } catch { /* ignore */ }
-    }
     this._setupTerminal();
-    if (isTermux) {
-      // These messages go to stderr which should still work on alt screen
-      try {
-        Deno.stderr.writeSync(new TextEncoder().encode('[Melker] Terminal setup complete\n'));
-      } catch { /* ignore */ }
-    }
 
     // Re-query terminal size after setup (alternate screen switch may affect reported size)
-    if (isTermux) {
-      try {
-        Deno.stderr.writeSync(new TextEncoder().encode('[Melker] Getting terminal size...\n'));
-      } catch { /* ignore */ }
-    }
     this._currentSize = this._getTerminalSize();
-    if (isTermux) {
-      console.error(`[Melker] Terminal size after setup: ${this._currentSize.width}x${this._currentSize.height}`);
-    }
 
     // Resize buffer to match current terminal size
     this._buffer.resize(this._currentSize.width, this._currentSize.height);
@@ -992,24 +952,12 @@ export class MelkerEngine {
       // This prevents the resize handler from thinking size changed when it hasn't
       (this._resizeHandler as any)._currentSize = { ...this._currentSize };
 
-      if (isTermux) {
-        console.error('[Melker] Starting resize handler...');
-      }
       await this._resizeHandler.startListening();
-      if (isTermux) {
-        console.error('[Melker] Resize handler started');
-      }
     }
 
     // Initial render - use force render for first display to ensure clean state
     if (this._options.autoRender) {
-      if (isTermux) {
-        console.error('[Melker] Performing initial render...');
-      }
       this.forceRender();
-      if (isTermux) {
-        console.error('[Melker] Initial render complete');
-      }
     }
 
     // Start debug server if enabled
@@ -1030,9 +978,6 @@ export class MelkerEngine {
     }
 
     // Setup cleanup handlers
-    if (isTermux) {
-      console.error('[Melker] Setting up cleanup handlers...');
-    }
     this._setupCleanupHandlers();
 
     this._isInitialized = true;
@@ -1042,10 +987,6 @@ export class MelkerEngine {
       renderCount: this._renderCount,
       focusableElements: this._focusNavigationHandler.findFocusableElements(this._document.root).length,
     });
-
-    if (isTermux) {
-      console.error('[Melker] Engine started successfully, waiting for input...');
-    }
   }
 
   /**
@@ -1422,8 +1363,8 @@ export class MelkerEngine {
     // Store policy for permission checks
     this._policy = policy;
 
-    if (!this._viewSourceManager) {
-      this._viewSourceManager = new ViewSourceManager({
+    if (!this._devToolsManager) {
+      this._devToolsManager = new DevToolsManager({
         document: this._document,
         focusManager: this._focusManager,
         registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
@@ -1443,7 +1384,7 @@ export class MelkerEngine {
         },
       });
     }
-    this._viewSourceManager.setSource(content, filePath, type, convertedContent, policy, appDir, systemInfo, helpContent);
+    this._devToolsManager.setSource(content, filePath, type, convertedContent, policy, appDir, systemInfo, helpContent);
   }
 
   /**
@@ -2299,8 +2240,8 @@ export class MelkerEngine {
         this._accessibilityDialogManager!.toggle();
         this.render();
       },
-      viewSource: () => {
-        this._viewSourceManager?.toggle();
+      devTools: () => {
+        this._devToolsManager?.toggle();
         this.render();
       },
       performance: () => {

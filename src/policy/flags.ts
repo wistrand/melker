@@ -3,6 +3,8 @@
 import { resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
 import type { MelkerPolicy } from './types.ts';
 import { getTempDir } from '../xdg.ts';
+import { Env } from '../env.ts';
+import { MelkerConfig } from '../config/mod.ts';
 
 /**
  * Convert a policy to Deno command-line permission flags
@@ -51,7 +53,7 @@ function commandExists(cmd: string): boolean {
   }
 
   // Check common binary locations
-  const paths = (Deno.env.get('PATH') || '').split(':');
+  const paths = (Env.get('PATH') || '').split(':');
   for (const dir of paths) {
     try {
       const stat = Deno.statSync(`${dir}/${cmd}`);
@@ -185,8 +187,8 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[
 
   // Network permissions ("*" means all)
   // Implicit: localhost when debug server is enabled
-  const debugPort = Deno.env.get('MELKER_DEBUG_PORT');
-  if (debugPort) {
+  const debugPort = MelkerConfig.get().debugPort;
+  if (debugPort !== undefined) {
     if (!p.net) p.net = [];
     if (!p.net.includes('*') && !p.net.includes('localhost')) {
       p.net.push('localhost');
@@ -246,7 +248,7 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string): stri
   // Implicit: app directory (for loading .melker file itself)
   paths.push(appDir);
 
-  // Implicit: current working directory (for .env files loaded by dotenv)
+  // Implicit: current working directory
   try {
     paths.push(Deno.cwd());
   } catch {
@@ -254,7 +256,7 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string): stri
   }
 
   // Implicit: XDG state dir for persistence
-  const xdgState = Deno.env.get('XDG_STATE_HOME') || `${Deno.env.get('HOME')}/.local/state`;
+  const xdgState = Env.get('XDG_STATE_HOME') || `${Env.get('HOME')}/.local/state`;
   paths.push(`${xdgState}/melker`);
 
   // Policy paths (resolve relative to app dir)
@@ -281,18 +283,18 @@ function buildWritePaths(policyPaths: string[] | undefined, appDir: string): str
   paths.push(getTempDir());
 
   // Implicit: XDG state dir for persistence
-  const xdgState = Deno.env.get('XDG_STATE_HOME') || `${Deno.env.get('HOME')}/.local/state`;
+  const xdgState = Env.get('XDG_STATE_HOME') || `${Env.get('HOME')}/.local/state`;
   paths.push(`${xdgState}/melker`);
 
   // Implicit: log file directory
-  const logFile = Deno.env.get('MELKER_LOG_FILE');
+  const logFile = MelkerConfig.get().logFile;
   if (logFile) {
     // Add the directory containing the log file
     const logDir = logFile.substring(0, logFile.lastIndexOf('/')) || '.';
     paths.push(logDir);
   } else {
     // Default log location: $HOME/.cache/melker/logs/
-    const home = Deno.env.get('HOME');
+    const home = Env.get('HOME');
     if (home) {
       paths.push(`${home}/.cache/melker/logs`);
     }
@@ -313,77 +315,27 @@ function buildWritePaths(policyPaths: string[] | undefined, appDir: string): str
 }
 
 /**
+ * Get implicit env vars dynamically from current environment.
+ * Only includes vars that actually exist and are readable.
+ */
+function getImplicitEnvVars(): string[] {
+  return Env.keys().filter(name =>
+    name.startsWith('MELKER_') ||
+    name.startsWith('XDG_') ||
+    ['HOME', 'TERM', 'COLORTERM', 'COLORFGBG', 'NO_COLOR', 'PREFIX',
+     'TMPDIR', 'TEMP', 'TMP', 'PATH',
+     'OPENROUTER_API_KEY', 'DOTENV_KEY'].includes(name)
+  );
+}
+
+/**
  * Build environment variable list with implicit vars added
  */
 function buildEnvVars(policyVars: string[] | undefined): string[] {
-  const vars: string[] = [];
+  // Get implicit vars that exist in current environment
+  const vars = getImplicitEnvVars();
 
-  // Implicit: terminal detection
-  vars.push('TERM', 'COLORTERM', 'COLORFGBG', 'NO_COLOR', 'PREFIX');
-
-  // Implicit: XDG directories
-  vars.push('HOME', 'XDG_STATE_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME');
-
-  vars.push('TMPDIR','TEMP', 'TMP');
-
-    // Implicit: All MELKER_* env vars found in source code
-  vars.push(
-    // Core / Engine
-    'MELKER_THEME',
-    'MELKER_LOG_FILE',
-    'MELKER_LOG_LEVEL',
-    'MELKER_RUNNER',
-    'MELKER_LINT',
-    'MELKER_PERSIST',
-    'MELKER_RETAIN_BUNDLE',
-    'MELKER_NO_ALTERNATE_SCREEN',
-    'MELKER_NO_SYNC',
-    'MELKER_SHOW_STATS',
-    // Debug
-    'MELKER_DEBUG_PORT',
-    'MELKER_DEBUG_HOST',
-    'MELKER_DEBUG_ENABLED',
-    'MELKER_ALLOW_REMOTE_INPUT',
-    'MELKER_HEADLESS',
-    // AI
-    'MELKER_AI_MODEL',
-    'MELKER_AI_ENDPOINT',
-    'MELKER_AI_SITE_URL',
-    'MELKER_AI_SITE_NAME',
-    'MELKER_AI_HEADERS',
-    'MELKER_AUDIO_MODEL',
-    'MELKER_AUDIO_GAIN',
-    'MELKER_AUDIO_DEBUG',
-    'MELKER_FFMPEG',
-    // OAuth
-    'MELKER_OAUTH_WELLKNOWN_URL',
-    'MELKER_OAUTH_CLIENT_ID',
-    'MELKER_OAUTH_PORT',
-    'MELKER_OAUTH_PATH',
-    'MELKER_OAUTH_REDIRECT_URI',
-    'MELKER_OAUTH_SCOPES',
-    'MELKER_OAUTH_AUDIENCE',
-    // Components
-    'MELKER_MARKDOWN_DEBUG',
-    'MELKER_AUTO_DITHER',
-    'MELKER_DITHER_BITS',
-    "MELKER_OAUTH_WELLKNOWN",
-    "MELKER_OAUTH_CLIENT_NAME",
-    "MELKER_HEADLESS_MODE",
-    "MELKER_RUNNING_HEADLESS",
-    "MELKER_AUDIO",
-    "PATH",
-    "OAUTH_CLIENT_NAME",
-    "MELKER_REMOTE_URL"
-  );
-
-  // Implicit: OpenRouter API key for AI features
-  vars.push('OPENROUTER_API_KEY');
-
-  // Implicit: dotenv library
-  vars.push('DOTENV_KEY');
-
-  // Policy vars
+  // Merge with policy-declared vars
   if (policyVars) {
     vars.push(...policyVars);
   }

@@ -12,7 +12,7 @@ Melker includes an AI-powered accessibility assistant that allows users to ask q
 2. Open the AI assistant:
    - Press `Alt+H` to open with text input
    - Press `F7` to open and immediately start voice recording
-   - Click "AI Assistant" button in the F12 View Source dialog
+   - Click "AI Assistant" button in the F12 Dev Tools dialog
 
 3. Ask questions like:
    - "What's on this screen?"

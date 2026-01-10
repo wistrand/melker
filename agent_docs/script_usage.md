@@ -55,6 +55,23 @@ $melker: {
   logger: any;              // Pre-configured logger for the app
   getLogger(name: string): any;  // Create a named logger
 
+  // Configuration (schema + custom keys from policy)
+  config: {
+    // Typed properties (schema-defined)
+    theme: string;
+    logLevel: string;
+    headlessEnabled: boolean;
+    debugPort: number | undefined;
+    // ... other schema properties
+
+    // Generic getters (any key, including custom)
+    getString(key: string, defaultValue: string): string;
+    getBoolean(key: string, defaultValue: boolean): boolean;
+    getNumber(key: string, defaultValue: number): number;
+    getValue(key: string): unknown;
+    hasKey(key: string): boolean;
+  };
+
   // Internal
   engine: any;
 }
@@ -200,3 +217,59 @@ Load scripts from external files:
 ```
 
 Relative imports in external scripts are automatically resolved.
+
+## Configuration
+
+Apps can access configuration via `$melker.config`. This includes both schema-defined settings and custom app-specific config from the policy.
+
+### Reading Config
+
+```html
+<script>
+// Schema-defined properties (typed)
+const theme = $melker.config.theme;
+const headless = $melker.config.headlessEnabled;
+
+// Generic getters (any key, with default values)
+const scale = $melker.config.getNumber('myapp.scale', 1.0);
+const debug = $melker.config.getBoolean('myapp.debug', false);
+const name = $melker.config.getString('myapp.name', 'Untitled');
+
+// Check existence
+if ($melker.config.hasKey('myapp.optional')) {
+  const value = $melker.config.getValue('myapp.optional');
+}
+</script>
+```
+
+### Defining Custom Config
+
+Add custom config in the `<policy>` tag:
+
+```xml
+<policy>
+{
+  "permissions": { "read": ["."] },
+  "config": {
+    "myapp": {
+      "scale": 2.0,
+      "debug": true,
+      "name": "My App"
+    }
+  }
+}
+</policy>
+```
+
+Nested objects are flattened to dot-notation: `myapp.scale`, `myapp.debug`, `myapp.name`.
+
+### Config Priority
+
+Values are resolved in this order (highest priority last):
+1. Schema defaults
+2. Policy config (`<policy>` tag)
+3. File config (`~/.config/melker/config.json`)
+4. Environment variables
+5. CLI flags
+
+See `agent_docs/config-architecture.md` for full details.

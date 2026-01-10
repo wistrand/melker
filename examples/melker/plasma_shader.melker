@@ -5,6 +5,15 @@
     "description": "Demonstrates shader utilities: noise2d, fbm, palette",
     "permissions": {
       "shader": true
+    },
+    "config" : {
+      "theme": "auto-dark",
+      "dither": {
+        "bits" : 8
+      },
+      "plasma" : {
+        "scale" : 1.0
+      }
     }
   }
   </policy>
@@ -34,7 +43,7 @@
       const v = (y / resolution.height) / resolution.pixelAspect;
 
       // Scale for noise sampling
-      const scale = 3.0;
+      const scale = $melker.config.getNumber('plasma.scale', 2.0);
       const nx = u * scale + time * 0.3;
       const ny = v * scale + time * 0.2;
 

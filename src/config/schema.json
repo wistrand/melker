@@ -1,0 +1,216 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Melker configuration schema",
+  "properties": {
+    "theme": {
+      "type": "string",
+      "default": "auto",
+      "env": "MELKER_THEME",
+      "flag": "--theme",
+      "description": "Color theme"
+    },
+    "log.level": {
+      "type": "string",
+      "enum": ["TRACE", "DEBUG", "INFO", "WARN", "ERROR"],
+      "default": "INFO",
+      "env": "MELKER_LOG_LEVEL",
+      "flag": "--log-level",
+      "description": "Log verbosity"
+    },
+    "log.file": {
+      "type": "string",
+      "env": "MELKER_LOG_FILE",
+      "flag": "--log-file",
+      "description": "Log file path"
+    },
+    "ai.model": {
+      "type": "string",
+      "default": "openai/gpt-5.2-chat",
+      "env": "MELKER_AI_MODEL",
+      "description": "AI chat model"
+    },
+    "ai.audioModel": {
+      "type": "string",
+      "default": "openai/gpt-4o-audio-preview",
+      "env": "MELKER_AUDIO_MODEL",
+      "description": "Audio transcription model"
+    },
+    "ai.endpoint": {
+      "type": "string",
+      "default": "https://openrouter.ai/api/v1/chat/completions",
+      "env": "MELKER_AI_ENDPOINT",
+      "description": "AI API endpoint"
+    },
+    "ai.headers": {
+      "type": "object",
+      "env": "MELKER_AI_HEADERS",
+      "envFormat": "name: value; name2: value2",
+      "description": "Custom API headers"
+    },
+    "ai.siteName": {
+      "type": "string",
+      "env": "MELKER_AI_SITE_NAME",
+      "description": "Site name for AI API"
+    },
+    "ai.siteUrl": {
+      "type": "string",
+      "env": "MELKER_AI_SITE_URL",
+      "description": "Site URL for AI API"
+    },
+    "ai.audioGain": {
+      "type": "number",
+      "default": 2.0,
+      "env": "MELKER_AUDIO_GAIN",
+      "description": "Audio recording gain multiplier"
+    },
+    "dither.algorithm": {
+      "type": "string",
+      "enum": ["sierra-stable", "sierra", "floyd-steinberg", "ordered", "none"],
+      "env": "MELKER_AUTO_DITHER",
+      "description": "Dithering algorithm for images"
+    },
+    "dither.bits": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "env": "MELKER_DITHER_BITS",
+      "description": "Color depth for dithering"
+    },
+    "terminal.alternateScreen": {
+      "type": "boolean",
+      "default": true,
+      "env": "MELKER_NO_ALTERNATE_SCREEN",
+      "envInverted": true,
+      "flag": "--no-alt-screen",
+      "flagInverted": true,
+      "description": "Use alternate screen buffer"
+    },
+    "terminal.syncRendering": {
+      "type": "boolean",
+      "default": true,
+      "env": "MELKER_NO_SYNC",
+      "envInverted": true,
+      "description": "Synchronous rendering"
+    },
+    "terminal.forceFFmpeg": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_FFMPEG",
+      "description": "Force FFmpeg instead of native audio on macOS"
+    },
+    "headless.enabled": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_HEADLESS",
+      "flag": "--headless",
+      "description": "Run without terminal"
+    },
+    "headless.width": {
+      "type": "integer",
+      "default": 80,
+      "env": "MELKER_HEADLESS_WIDTH",
+      "description": "Virtual terminal width"
+    },
+    "headless.height": {
+      "type": "integer",
+      "default": 24,
+      "env": "MELKER_HEADLESS_HEIGHT",
+      "description": "Virtual terminal height"
+    },
+    "debug.port": {
+      "type": "integer",
+      "env": "MELKER_DEBUG_PORT",
+      "flag": "--debug-port",
+      "description": "WebSocket debug server port"
+    },
+    "debug.host": {
+      "type": "string",
+      "default": "localhost",
+      "env": "MELKER_DEBUG_HOST",
+      "description": "Debug server bind address"
+    },
+    "debug.allowRemoteInput": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_ALLOW_REMOTE_INPUT",
+      "description": "Allow input from debug clients"
+    },
+    "debug.retainBundle": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_RETAIN_BUNDLE",
+      "description": "Keep temp bundle files for debugging"
+    },
+    "debug.showStats": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_SHOW_STATS",
+      "description": "Show performance stats overlay"
+    },
+    "debug.markdownDebug": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_MARKDOWN_DEBUG",
+      "description": "Debug markdown rendering"
+    },
+    "debug.audioDebug": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_AUDIO_DEBUG",
+      "description": "Replay recorded audio before transcription"
+    },
+    "persist": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_PERSIST",
+      "flag": "--persist",
+      "description": "Enable state persistence"
+    },
+    "lint": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_LINT",
+      "flag": "--lint",
+      "description": "Enable lint validation"
+    },
+    "oauth.clientId": {
+      "type": "string",
+      "default": "melker-client",
+      "env": "MELKER_OAUTH_CLIENT_ID",
+      "description": "OAuth client ID"
+    },
+    "oauth.port": {
+      "type": "integer",
+      "default": 1900,
+      "env": "MELKER_OAUTH_PORT",
+      "description": "OAuth callback server port"
+    },
+    "oauth.path": {
+      "type": "string",
+      "default": "/melker/auth",
+      "env": "MELKER_OAUTH_PATH",
+      "description": "OAuth callback path"
+    },
+    "oauth.redirectUri": {
+      "type": "string",
+      "env": "MELKER_OAUTH_REDIRECT_URI",
+      "description": "OAuth redirect URI"
+    },
+    "oauth.scopes": {
+      "type": "string",
+      "default": "openid profile offline_access",
+      "env": "MELKER_OAUTH_SCOPES",
+      "description": "OAuth scopes (space-separated)"
+    },
+    "oauth.audience": {
+      "type": "string",
+      "env": "MELKER_OAUTH_AUDIENCE",
+      "description": "OAuth audience parameter"
+    },
+    "oauth.wellknownUrl": {
+      "type": "string",
+      "env": "MELKER_OAUTH_WELLKNOWN_URL",
+      "description": "OAuth well-known configuration URL"
+    }
+  }
+}

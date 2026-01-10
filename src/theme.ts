@@ -1,6 +1,8 @@
 // Theme system for Melker UI - Environment variable driven theming
 
 import type { TerminalColor } from './types.ts';
+import { Env } from './env.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 // Theme definitions
 export type ThemeType = 'bw' | 'gray' | 'color' | 'fullcolor';
@@ -426,8 +428,8 @@ export const THEMES: Record<string, Theme> = {
  * Detect terminal color support level
  */
 function detectColorSupport(): ThemeType {
-  const colorterm = Deno.env.get('COLORTERM') || '';
-  const term = Deno.env.get('TERM') || '';
+  const colorterm = Env.get('COLORTERM') || '';
+  const term = Env.get('TERM') || '';
 
   // Truecolor support
   if (colorterm === 'truecolor' || colorterm === '24bit') {
@@ -454,7 +456,7 @@ function detectColorSupport(): ThemeType {
  */
 function detectDarkMode(): boolean {
   // Try COLORFGBG first (format: "fg;bg" e.g., "15;0" = white on black)
-  const colorfgbg = Deno.env.get('COLORFGBG');
+  const colorfgbg = Env.get('COLORFGBG');
   if (colorfgbg) {
     const parts = colorfgbg.split(';');
     if (parts.length >= 2) {
@@ -650,19 +652,18 @@ export class ThemeManager {
   private _parseThemeFromEnv(): string | null {
     // Respect NO_COLOR standard (https://no-color.org/)
     // When NO_COLOR is set (any value), use black-and-white theme
-    if (Deno.env.get('NO_COLOR') !== undefined) {
+    if (Env.get('NO_COLOR') !== undefined) {
       // Detect light/dark mode but force bw type
       const isDark = detectDarkMode();
       return isDark ? 'bw-dark' : 'bw-std';
     }
 
-    // Check MELKER_THEME environment variable
+    // Check theme from config (file config, policy, CLI, or env var override)
     // Format: "type-mode" (e.g., "color-dark", "bw-std", "fullcolor-dark")
     // Special values: "auto" (detect capabilities + light/dark), "auto-dark" (detect capabilities, force dark)
-    const envTheme = Deno.env.get('MELKER_THEME');
-    if (!envTheme) return null;
+    const configTheme = MelkerConfig.get().theme;
 
-    const normalized = envTheme.toLowerCase().trim();
+    const normalized = configTheme.toLowerCase().trim();
 
     // Handle auto-detection themes
     if (normalized === 'auto') {
@@ -687,7 +688,7 @@ export class ThemeManager {
       return `${normalized}-std`;
     }
 
-    console.warn(`[Melker] Invalid theme '${envTheme}'. Using default 'bw-std'`);
+    console.warn(`[Melker] Invalid theme '${configTheme}'. Using default 'bw-std'`);
     return null;
   }
 

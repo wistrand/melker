@@ -13,6 +13,7 @@ import { CanvasElement } from './canvas.ts';
 import { getLogger } from '../logging.ts';
 import { parseMelkerFile } from '../template.ts';
 import { getStringWidth } from '../char-width.ts';
+import { MelkerConfig } from '../config/mod.ts';
 
 // ============================================================================
 // Text Utilities - display width calculation and text wrapping
@@ -297,10 +298,10 @@ interface MarkdownRenderContext {
   debugOverlay?: Map<number, { inputLine: number; renderedLine: number }>; // y -> line info
 }
 
-// Debug mode check - enabled via prop or MELKER_MARKDOWN_DEBUG env var (fallback)
+// Debug mode check - enabled via prop or config (fallback)
 function isMarkdownDebugEnabledFromEnv(): boolean {
   try {
-    return Deno.env.get('MELKER_MARKDOWN_DEBUG') === 'true' || Deno.env.get('MELKER_MARKDOWN_DEBUG') === '1';
+    return MelkerConfig.get().debugMarkdownDebug;
   } catch {
     return false;
   }

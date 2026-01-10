@@ -4,6 +4,7 @@
 import { encodeBase64 } from "jsr:@std/encoding@^1.0.0/base64";
 import { getLogger } from '../logging.ts';
 import { getOpenRouterConfig } from './openrouter.ts';
+import { MelkerConfig } from '../config/mod.ts';
 
 const logger = getLogger('ai:audio');
 
@@ -77,12 +78,13 @@ export class AudioRecorder {
     const channels = 1;
     const bitsPerSample = 16;
 
-    // Get gain from env or use default
-    const gain = parseFloat(Deno.env.get('MELKER_AUDIO_GAIN') || '') || DEFAULT_AUDIO_GAIN;
+    // Get gain from config
+    const config = MelkerConfig.get();
+    const gain = config.aiAudioGain;
 
     try {
       // Use platform-specific recording
-      const forceFFmpeg = Deno.env.get('MELKER_FFMPEG') === 'true' || Deno.env.get('MELKER_FFMPEG') === '1';
+      const forceFFmpeg = config.terminalForceFFmpeg;
       if (Deno.build.os === 'darwin' && !forceFFmpeg) {
         return await this._recordMacOS(durationSeconds, gain, sampleRate, channels, bitsPerSample);
       } else {
@@ -735,7 +737,7 @@ export async function transcribeAudio(
   }
 
   // Debug: play back the trimmed audio before sending
-  const audioDebug = Deno.env.get('MELKER_AUDIO_DEBUG') === 'true' || Deno.env.get('MELKER_AUDIO_DEBUG') === '1';
+  const audioDebug = MelkerConfig.get().debugAudioDebug;
   if (audioDebug) {
     await playbackAudio(trimmedWav);
   }
@@ -751,7 +753,7 @@ export async function transcribeAudio(
   const audioBase64 = encodeBase64(trimmedWav);
   logger.debug('Audio encoded', { base64Length: audioBase64.length });
 
-  const model = Deno.env.get("MELKER_AUDIO_MODEL") || AUDIO_MODEL;
+  const model = MelkerConfig.get().aiAudioModel;
 
   const endpoint = config.endpoint || 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -786,18 +788,12 @@ export async function transcribeAudio(
     'X-Title': config.siteName || 'Melker',
   };
 
-  // Parse custom headers from env
-  const customHeaders = Deno.env.get('MELKER_AI_HEADERS');
+  // Add custom headers from config
+  const customHeaders = MelkerConfig.get().aiHeaders;
   if (customHeaders) {
-    const pairs = customHeaders.split(';');
-    for (const pair of pairs) {
-      const colonIndex = pair.indexOf(':');
-      if (colonIndex > 0) {
-        const name = pair.substring(0, colonIndex).trim();
-        const value = pair.substring(colonIndex + 1).trim();
-        if (name && value) {
-          headers[name] = value;
-        }
+    for (const [name, value] of Object.entries(customHeaders)) {
+      if (name && value) {
+        headers[name] = value;
       }
     }
   }

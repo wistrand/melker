@@ -1,5 +1,5 @@
-// View Source overlay management
-// Shows source content in a modal dialog when F12 is pressed
+// Dev Tools overlay management
+// Shows dev tools in a modal dialog when F12 is pressed
 
 import { Document } from './document.ts';
 import { melker } from './template.ts';
@@ -7,8 +7,9 @@ import { Element } from './types.ts';
 import { FocusManager } from './focus.ts';
 import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy } from './policy/mod.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
+import { MelkerConfig } from './config/mod.ts';
 
-export interface ViewSourceDependencies {
+export interface DevToolsDependencies {
   document: Document;
   focusManager: FocusManager | null;
   registerElementTree: (element: Element) => void;
@@ -48,7 +49,7 @@ export interface SystemInfo {
   registeredHandlers: string[];
 }
 
-export interface ViewSourceState {
+export interface DevToolsState {
   content: string;
   filePath: string;
   type: 'melker' | 'md';
@@ -59,12 +60,12 @@ export interface ViewSourceState {
   helpContent?: string;       // Help text content (markdown)
 }
 
-export class ViewSourceManager {
+export class DevToolsManager {
   private _overlay?: Element;
-  private _state?: ViewSourceState;
-  private _deps: ViewSourceDependencies;
+  private _state?: DevToolsState;
+  private _deps: DevToolsDependencies;
 
-  constructor(deps: ViewSourceDependencies) {
+  constructor(deps: DevToolsDependencies) {
     this._deps = deps;
   }
 
@@ -76,7 +77,7 @@ export class ViewSourceManager {
   }
 
   /**
-   * Check if view source overlay is open
+   * Check if dev tools overlay is open
    */
   isOpen(): boolean {
     return this._overlay !== undefined;
@@ -90,7 +91,7 @@ export class ViewSourceManager {
   }
 
   /**
-   * Toggle View Source overlay (F12)
+   * Toggle Dev Tools overlay (F12)
    */
   toggle(): void {
     if (this._overlay) {
@@ -106,7 +107,7 @@ export class ViewSourceManager {
   }
 
   /**
-   * Open View Source overlay
+   * Open Dev Tools overlay
    */
   private _open(): void {
     if (!this._state) return;
@@ -142,9 +143,9 @@ export class ViewSourceManager {
     if (this._state.helpContent) {
       const helpContent = this._state.helpContent;
       tabs.push(melker`
-        <tab id="view-source-tab-help" title="Help">
-          <container id="view-source-scroll-help" scrollable=${true} focusable=${true} style=${scrollStyle}>
-            <markdown id="view-source-help-content" text=${helpContent} style=${{ textWrap: 'wrap' }} />
+        <tab id="dev-tools-tab-help" title="Help">
+          <container id="dev-tools-scroll-help" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <markdown id="dev-tools-help-content" text=${helpContent} style=${{ textWrap: 'wrap' }} />
           </container>
         </tab>
       `);
@@ -155,9 +156,9 @@ export class ViewSourceManager {
       ? this._state.convertedContent
       : this._state.content;
     tabs.push(melker`
-      <tab id="view-source-tab-melker" title="Source">
-        <container id="view-source-scroll-melker" scrollable=${true} focusable=${true} style=${scrollStyle}>
-          <text id="view-source-melker-content" text=${sourceContent} />
+      <tab id="dev-tools-tab-melker" title="Source">
+        <container id="dev-tools-scroll-melker" scrollable=${true} focusable=${true} style=${scrollStyle}>
+          <text id="dev-tools-melker-content" text=${sourceContent} />
         </container>
       </tab>
     `);
@@ -172,9 +173,9 @@ export class ViewSourceManager {
         policyText += formatDenoFlags(denoFlags);
       }
       tabs.push(melker`
-        <tab id="view-source-tab-policy" title="Policy">
-          <container id="view-source-scroll-policy" scrollable=${true} focusable=${true} style=${scrollStyle}>
-            <text id="view-source-policy-content" text=${policyText} style=${{ textWrap: 'wrap' }} />
+        <tab id="dev-tools-tab-policy" title="Policy">
+          <container id="dev-tools-scroll-policy" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <text id="dev-tools-policy-content" text=${policyText} style=${{ textWrap: 'wrap' }} />
           </container>
         </tab>
       `);
@@ -185,9 +186,9 @@ export class ViewSourceManager {
       const mdContent = this._state.content;
       const mdSrc = this._state.filePath;
       tabs.push(melker`
-        <tab id="view-source-tab-md" title="Markdown">
-          <container id="view-source-scroll-md" scrollable=${true} focusable=${true} style=${scrollStyle}>
-            <markdown id="view-source-markdown-content" text=${mdContent} src=${mdSrc} style=${{ textWrap: 'wrap' }} />
+        <tab id="dev-tools-tab-md" title="Markdown">
+          <container id="dev-tools-scroll-md" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <markdown id="dev-tools-markdown-content" text=${mdContent} src=${mdSrc} style=${{ textWrap: 'wrap' }} />
           </container>
         </tab>
       `);
@@ -197,20 +198,30 @@ export class ViewSourceManager {
     if (this._state.systemInfo) {
       const systemText = this._formatSystemInfo(this._state.systemInfo);
       tabs.push(melker`
-        <tab id="view-source-tab-system" title="System">
-          <container id="view-source-scroll-system" scrollable=${true} focusable=${true} style=${scrollStyle}>
-            <text id="view-source-system-content" text=${systemText} style=${{ textWrap: 'wrap' }} />
+        <tab id="dev-tools-tab-system" title="System">
+          <container id="dev-tools-scroll-system" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <text id="dev-tools-system-content" text=${systemText} style=${{ textWrap: 'wrap' }} />
           </container>
         </tab>
       `);
     }
 
-    // Tab 5: Actions
+    // Tab 5: Config
+    const configText = MelkerConfig.getConfigText();
     tabs.push(melker`
-      <tab id="view-source-tab-actions" title="Actions">
-        <container id="view-source-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <button id="view-source-action-perf" title="Performance Monitor" onClick=${onPerformance} />
-          <button id="view-source-action-exit" title="Exit Application" onClick=${onExit} />
+      <tab id="dev-tools-tab-config" title="Config">
+        <container id="dev-tools-scroll-config" scrollable=${true} focusable=${true} style=${scrollStyle}>
+          <text id="dev-tools-config-content" text=${configText} style=${{ textWrap: 'wrap' }} />
+        </container>
+      </tab>
+    `);
+
+    // Tab 6: Actions
+    tabs.push(melker`
+      <tab id="dev-tools-tab-actions" title="Actions">
+        <container id="dev-tools-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <button id="dev-tools-action-perf" title="Performance Monitor" onClick=${onPerformance} />
+          <button id="dev-tools-action-exit" title="Exit Application" onClick=${onExit} />
         </container>
       </tab>
     `);
@@ -221,14 +232,14 @@ export class ViewSourceManager {
     const footerStyle = { display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', width: 'fill', gap: 1 };
 
     this._overlay = melker`
-      <dialog id="view-source-dialog" title=${`Dev Tools - ${filename}`} open=${true} modal=${true} backdrop=${true} width=${0.9} height=${0.85}>
-        <container id="view-source-main" style=${mainStyle}>
-          <tabs id="view-source-tabs" style=${tabsStyle}>
+      <dialog id="dev-tools-dialog" title=${`Dev Tools - ${filename}`} open=${true} modal=${true} backdrop=${true} width=${0.9} height=${0.85}>
+        <container id="dev-tools-main" style=${mainStyle}>
+          <tabs id="dev-tools-tabs" style=${tabsStyle}>
             ${tabs}
           </tabs>
-          <container id="view-source-footer" style=${footerStyle}>
-            <button id="view-source-ai" title="AI Assistant" onClick=${onAIAssistant} />
-            <button id="view-source-close" title="Close" onClick=${onClose} />
+          <container id="dev-tools-footer" style=${footerStyle}>
+            <button id="dev-tools-ai" title="AI Assistant" onClick=${onAIAssistant} />
+            <button id="dev-tools-close" title="Close" onClick=${onClose} />
           </container>
         </container>
       </dialog>
@@ -248,7 +259,7 @@ export class ViewSourceManager {
 
     // Focus the first scroll container for arrow key navigation
     if (this._deps.focusManager) {
-      const firstTabScrollId = this._state.helpContent ? 'view-source-scroll-help' : 'view-source-scroll-melker';
+      const firstTabScrollId = this._state.helpContent ? 'dev-tools-scroll-help' : 'dev-tools-scroll-melker';
       this._deps.focusManager.focus(firstTabScrollId);
     }
   }
@@ -304,7 +315,7 @@ export class ViewSourceManager {
   }
 
   /**
-   * Close View Source overlay
+   * Close Dev Tools overlay
    */
   close(): void {
     if (!this._overlay) return;

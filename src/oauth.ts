@@ -2,6 +2,7 @@
 // Provides authentication for Melker applications with token persistence
 
 import { getLogger } from './logging.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 // Re-export types
 export type {
@@ -144,11 +145,12 @@ export class OAuthClient {
     if (options?.onLogout) this._onLogout = options.onLogout;
     if (options?.onFail) this._onFail = options.onFail;
 
-    const wellknownUrl = options?.wellknown || Deno.env.get('MELKER_OAUTH_WELLKNOWN_URL');
+    const melkerConfig = MelkerConfig.get();
+    const wellknownUrl = options?.wellknown || melkerConfig.oauthWellknownUrl;
     if (!wellknownUrl || wellknownUrl.trim() === '' || wellknownUrl.startsWith('$')) {
       this._config = null;
       this._initialized = false;
-      const error = new Error('OAuth wellknown URL not configured. Set OAUTH_WELLKNOWN in .env.local or provide wellknown option.');
+      const error = new Error('OAuth wellknown URL not configured. Set oauth.wellknownUrl in config or provide wellknown option.');
       logger.error('OAuth init failed: wellknown URL is empty or not configured');
       this._onFail?.(error);
       throw error;
@@ -156,28 +158,27 @@ export class OAuthClient {
 
     try {
       if (options?.wellknown) {
-        const port = parseInt(Deno.env.get('MELKER_OAUTH_PORT') || '1900');
-        const path = Deno.env.get('MELKER_OAUTH_PATH') || '/melker/auth';
-        const client_name = Deno.env.get('OAUTH_CLIENT_NAME') || '';
+        const port = melkerConfig.oauthPort;
+        const path = melkerConfig.oauthPath;
         const defaultScopes = ['openid'];
 
         this._config = {
           wellKnownUrl: options.wellknown,
-          clientId: options.clientId || Deno.env.get('MELKER_OAUTH_CLIENT_ID') || 'melker-client',
-          redirectUri: options.redirectUri || Deno.env.get('MELKER_OAUTH_REDIRECT_URI') || `http://localhost:${port}${path}`,
-          scopes: options.scopes?.split(' ') || Deno.env.get('MELKER_OAUTH_SCOPES')?.split(' ') || defaultScopes,
-          audience: options.audience || Deno.env.get('MELKER_OAUTH_AUDIENCE'),
+          clientId: options.clientId || melkerConfig.oauthClientId,
+          redirectUri: options.redirectUri || melkerConfig.oauthRedirectUri || `http://localhost:${port}${path}`,
+          scopes: options.scopes?.split(' ') || melkerConfig.oauthScopes.split(' ') || defaultScopes,
+          audience: options.audience || melkerConfig.oauthAudience,
           debugServer: options.debugServer,
         };
-        logger.info('OAuth config from options ', { client_name, clientId: this._config.clientId, redirectUri: this._config.redirectUri , scopes : this._config.scopes});
+        logger.info('OAuth config from options ', { clientId: this._config.clientId, redirectUri: this._config.redirectUri , scopes : this._config.scopes});
       } else {
         this._config = getOAuthConfigFromEnv();
-        logger.debug('OAuth config from environment');
+        logger.debug('OAuth config from MelkerConfig');
       }
     } catch (e) {
       this._config = null;
       this._initialized = false;
-      const error = new Error('Missing: MELKER_OAUTH_WELLKNOWN_URL');
+      const error = new Error('Missing: oauth.wellknownUrl');
       logger.error('OAuth init failed: missing wellknown URL ' + e);
       this._onFail?.(error);
       throw error;

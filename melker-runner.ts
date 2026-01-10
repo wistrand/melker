@@ -2,10 +2,11 @@
 // Sandboxed app execution - handles template parsing, bundling, and engine creation.
 // This is spawned by melker-launcher.ts with restricted Deno permissions.
 
-import { config as dotenvConfig } from 'npm:dotenv@^16.3.0';
 import { resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
 import { debounce } from './src/utils/timing.ts';
 import { restoreTerminal } from './src/terminal-lifecycle.ts';
+import { Env } from './src/env.ts';
+import { parseCliFlags, MelkerConfig } from './src/config/mod.ts';
 
 // Import library to register components before template parsing
 import './mod.ts';
@@ -29,8 +30,8 @@ import {
   type MelkerPolicy,
 } from './src/policy/mod.ts';
 
-// View source types
-import type { SystemInfo } from './src/view-source.ts';
+// Dev tools types
+import type { SystemInfo } from './src/dev-tools.ts';
 
 // Browser utility
 import { openBrowser } from './src/oauth/browser.ts';
@@ -168,31 +169,6 @@ async function loadContent(pathOrUrl: string): Promise<string> {
   return await Deno.readTextFile(pathOrUrl);
 }
 
-function loadDotenvFiles(melkerFilePath: string): void {
-  const cwd = Deno.cwd();
-  const melkerDir = melkerFilePath.startsWith('/')
-    ? melkerFilePath.split('/').slice(0, -1).join('/')
-    : `${cwd}/${melkerFilePath.split('/').slice(0, -1).join('/')}`;
-
-  const dirs = [cwd];
-  if (melkerDir !== cwd) {
-    dirs.push(melkerDir);
-  }
-
-  const envFiles = ['.env', '.env.local'];
-
-  for (const dir of dirs) {
-    for (const envFile of envFiles) {
-      const envPath = `${dir}/${envFile}`;
-      try {
-        dotenvConfig({ path: envPath, override: false });
-      } catch {
-        // File doesn't exist - that's fine
-      }
-    }
-  }
-}
-
 function getBaseUrl(pathOrUrl: string): string {
   if (isUrl(pathOrUrl)) {
     const url = new URL(pathOrUrl);
@@ -228,7 +204,7 @@ function substituteEnvVars(content: string, args: string[]): string {
   });
 
   content = content.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (_match, varName, defaultValue) => {
-    const envValue = Deno.env.get(varName);
+    const envValue = Env.get(varName);
     if (envValue !== undefined) {
       return envValue;
     }
@@ -268,10 +244,6 @@ export async function runMelkerFile(
 
     let templateContent = preloadedContent ?? await loadContent(filepath);
     const originalContent = templateContent;
-
-    if (!isUrl(filepath)) {
-      loadDotenvFiles(filepath);
-    }
 
     templateContent = substituteEnvVars(templateContent, templateArgs);
 
@@ -336,6 +308,7 @@ export async function runMelkerFile(
             exit: () => {},
             logger: debugLogger,
             getLogger: getLogger,
+            config: MelkerConfig.get(),
             exports: {} as Record<string, any>,
           };
 
@@ -391,7 +364,7 @@ export async function runMelkerFile(
       await engine.enablePersistence(appId);
     }
 
-    // Load policy for View Source feature
+    // Load policy for View Source feature and config
     let appPolicy: MelkerPolicy;
     if (!isUrl(filepath)) {
       const absolutePath = filepath.startsWith('/') ? filepath : resolve(Deno.cwd(), filepath);
@@ -399,6 +372,11 @@ export async function runMelkerFile(
       appPolicy = policyResult.policy ?? createAutoPolicy();
     } else {
       appPolicy = createAutoPolicy();
+    }
+
+    // Apply policy config (only overrides defaults, not env/cli)
+    if (appPolicy.config) {
+      MelkerConfig.applyPolicyConfig(appPolicy.config);
     }
 
     if (parseResult.stylesheet) {
@@ -497,6 +475,7 @@ export async function runMelkerFile(
       },
       registerAITool: registerAITool,
       getLogger: getLogger,
+      config: MelkerConfig.get(),
     };
 
     const ui = parseResult.element;
@@ -519,8 +498,8 @@ export async function runMelkerFile(
     const loggerOpts = getGlobalLoggerOptions();
     const currentTheme = getCurrentTheme();
     const handlerKeys = Object.keys(melkerRegistry).filter(k => k.startsWith('__h'));
-    const remoteUrl = Deno.env.get('MELKER_REMOTE_URL');
-    const isRunnerMode = Deno.env.get('MELKER_RUNNER') === '1';
+    const remoteUrl = Env.get('MELKER_REMOTE_URL');
+    const isRunnerMode = Env.get('MELKER_RUNNER') === '1';
     const approvalKey = remoteUrl || (isRunnerMode ? filepath : undefined);
     const approvalFile = approvalKey ? await getApprovalFilePath(approvalKey) : undefined;
 
@@ -644,7 +623,7 @@ export async function runMelkerFile(
         (engine as any)._isInitialized = false;
       }
 
-      const retainBundle = Deno.env.get('MELKER_RETAIN_BUNDLE') === 'true' || Deno.env.get('MELKER_RETAIN_BUNDLE') === '1';
+      const retainBundle = Env.get('MELKER_RETAIN_BUNDLE') === 'true' || Env.get('MELKER_RETAIN_BUNDLE') === '1';
       if (!retainBundle && tempDirs && tempDirs.length > 0) {
         for (const dir of tempDirs) {
           try {
@@ -981,26 +960,36 @@ async function main(): Promise<void> {
     // Never returns
   }
 
-  // Parse options
+  // Parse schema-driven CLI flags (--theme, --log-level, --lint, etc.)
+  // remaining contains non-flag args and unknown flags (--print-tree, etc.)
+  const { flags: cliFlags, remaining: remainingArgs } = parseCliFlags(args);
+
+  // Apply CLI flags to config (may already be auto-initialized via mod.ts import)
+  MelkerConfig.applyCliFlags(cliFlags);
+
+  // Get config values
+  const config = MelkerConfig.get();
+
+  // Parse options from remaining args (non-schema flags)
   const options = {
-    printTree: args.includes('--print-tree'),
-    printJson: args.includes('--print-json'),
-    debug: args.includes('--debug'),
-    lint: args.includes('--lint'),
-    noLoad: args.includes('--no-load'),
-    useCache: args.includes('--cache'),
-    watch: args.includes('--watch'),
+    printTree: remainingArgs.includes('--print-tree'),
+    printJson: remainingArgs.includes('--print-json'),
+    debug: remainingArgs.includes('--debug'),
+    lint: config.lint,  // Use config (supports --lint flag and MELKER_LINT env)
+    noLoad: remainingArgs.includes('--no-load'),
+    useCache: remainingArgs.includes('--cache'),
+    watch: remainingArgs.includes('--watch'),
   };
 
-  // Enable lint mode if requested
+  // Enable lint mode if requested (already set via config, but explicit call registers it)
   if (options.lint) {
     const { enableLint } = await import('./src/lint.ts');
     enableLint(true);
   }
 
-  // Find file argument
-  const filepathIndex = args.findIndex(arg => !arg.startsWith('--'));
-  const filepath = filepathIndex >= 0 ? args[filepathIndex] : undefined;
+  // Find file argument from remaining args (after schema flags consumed)
+  const filepathIndex = remainingArgs.findIndex(arg => !arg.startsWith('--'));
+  const filepath = filepathIndex >= 0 ? remainingArgs[filepathIndex] : undefined;
 
   if (!filepath) {
     console.error('Error: No .melker or .md file specified');
@@ -1008,7 +997,7 @@ async function main(): Promise<void> {
   }
 
   // Handle --convert
-  if (args.includes('--convert')) {
+  if (remainingArgs.includes('--convert')) {
     if (!filepath.endsWith('.md')) {
       console.error('Error: --convert requires a .md file');
       Deno.exit(1);
@@ -1043,7 +1032,7 @@ async function main(): Promise<void> {
       const melkerContent = markdownToMelker(mdContent, filepath, { elementTypes });
 
       const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
-      const mdTemplateArgs = [absoluteFilepath, ...args.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
+      const mdTemplateArgs = [absoluteFilepath, ...remainingArgs.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
 
       if (options.watch) {
         await watchAndRun(absoluteFilepath, options, mdTemplateArgs, {
@@ -1075,7 +1064,7 @@ async function main(): Promise<void> {
   }
 
   const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
-  const templateArgs = [absoluteFilepath, ...args.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
+  const templateArgs = [absoluteFilepath, ...remainingArgs.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
 
   try {
     if (!isUrl(filepath)) {

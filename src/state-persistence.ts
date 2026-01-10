@@ -4,15 +4,14 @@
 import { Element } from './types.ts';
 import { Document } from './document.ts';
 import { getStateDir, ensureDir } from './xdg.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 /**
- * Check if persistence is enabled globally via MELKER_PERSIST env var.
+ * Check if persistence is enabled globally via config.
  * Default: false (persistence disabled)
  */
 export function isPersistenceEnabled(): boolean {
-  const envValue = Deno.env.get('MELKER_PERSIST');
-  if (!envValue) return false;
-  return envValue.toLowerCase() === 'true' || envValue === '1';
+  return MelkerConfig.get().persist;
 }
 
 /**

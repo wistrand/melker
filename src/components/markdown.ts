@@ -322,6 +322,8 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   private _loadError: string | null = null;
   // Cache for image canvases (keyed by resolved src path)
   private _imageCanvases: Map<string, CanvasElement> = new Map();
+  // Cache for image aspect ratios (width/height) - used for auto-height calculation
+  private _imageAspectRatios: Map<string, number> = new Map();
   private _melkerElements: Map<string, Element> = new Map();
   // Link regions for click detection (rebuilt on each render)
   private _linkRegions: LinkRegion[] = [];
@@ -2089,15 +2091,36 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     height: number | undefined,
     ctx: MarkdownRenderContext
   ): number {
-    // Default dimensions
-    const imgWidth = width || 30;
-    const imgHeight = height || 15;
-
-    logger.debug('Rendering image element', { src, alt, width: imgWidth, height: imgHeight });
-
     // Resolve src relative to markdown source file
     const resolvedSrc = this._resolveImagePath(src);
     logger.debug('Resolved image path', { originalSrc: src, resolvedSrc });
+
+    // Calculate dimensions
+    const imgWidth = width || 30;
+    let imgHeight: number;
+
+    if (height !== undefined) {
+      // Height explicitly specified
+      imgHeight = height;
+    } else if (width !== undefined) {
+      // Width specified but height not - try to calculate from cached aspect ratio
+      const cachedAspect = this._imageAspectRatios.get(resolvedSrc);
+      if (cachedAspect !== undefined) {
+        // Calculate height from width and aspect ratio, accounting for terminal char aspect
+        // Terminal chars are typically ~2x taller than wide, so we divide by 2
+        imgHeight = Math.round(imgWidth / cachedAspect / 2);
+        logger.debug('Using cached aspect ratio for height', { cachedAspect, imgWidth, imgHeight });
+      } else {
+        // Aspect ratio not yet known - use placeholder height
+        imgHeight = 15;
+        logger.debug('Aspect ratio not cached, using placeholder height', { imgWidth, imgHeight });
+      }
+    } else {
+      // Neither specified - use defaults
+      imgHeight = 15;
+    }
+
+    logger.debug('Rendering image element', { src, alt, width: imgWidth, height: imgHeight });
 
     // Check if theme is B&W or color (limited palette) - apply dithering for better image quality
     const themeType = getThemeManager().getThemeType();
@@ -2127,6 +2150,24 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       logger.info('Starting image load', { resolvedSrc, ditherMode });
       canvas.loadImage(resolvedSrc).then(() => {
         logger.info('Image loaded successfully', { resolvedSrc });
+
+        // Cache the image aspect ratio for future renders
+        const loadedImage = (canvas as any)._loadedImage;
+        if (loadedImage && loadedImage.width && loadedImage.height) {
+          const aspectRatio = loadedImage.width / loadedImage.height;
+          const previousAspect = this._imageAspectRatios.get(resolvedSrc);
+          this._imageAspectRatios.set(resolvedSrc, aspectRatio);
+          logger.debug('Cached image aspect ratio', { resolvedSrc, aspectRatio });
+
+          // If this is a new aspect ratio and width was specified without height,
+          // we need to invalidate the cache and re-render with correct dimensions
+          if (previousAspect === undefined && width !== undefined && height === undefined) {
+            // Remove the old cache entry (wrong dimensions)
+            this._imageCanvases.delete(cacheKey);
+            logger.debug('Invalidating canvas cache for aspect ratio update', { cacheKey });
+          }
+        }
+
         // Trigger re-render when image loads
         if (ctx.context.requestRender) {
           ctx.context.requestRender();

@@ -590,6 +590,13 @@ Use `${VAR}` or `${VAR:-default}` syntax in policy JSON:
 }
 ```
 
+### Implicit Permissions
+
+These are always granted (no need to declare):
+- **read**: `/tmp`, app directory, XDG state dir, cwd
+- **write**: `/tmp`, XDG state dir, log file directory
+- **env**: All `MELKER_*` vars, `HOME`, XDG dirs, `TERM`, `COLORTERM`, plus any env vars from `configSchema`
+
 ### App-Specific Configuration
 
 Apps can define custom config values in their policy, accessible via `$melker.config`:
@@ -614,6 +621,31 @@ const scale = $melker.config.getNumber('myapp.scale', 1.0);
 const debug = $melker.config.getBoolean('myapp.debug', false);
 </script>
 ```
+
+### Config Schema (Env Var Overrides)
+
+To enable environment variable overrides for custom config, add a `configSchema`:
+
+```xml
+<policy>
+{
+  "permissions": { "shader": true },
+  "config": {
+    "plasma": { "scale": 1.5 }
+  },
+  "configSchema": {
+    "plasma.scale": {
+      "type": "number",
+      "env": "PLASMA_SCALE"
+    }
+  }
+}
+</policy>
+```
+
+Now users can override: `PLASMA_SCALE=3.0 ./melker.ts app.melker`
+
+Env vars declared in `configSchema` are **automatically added** to subprocess permissions - no need to add them to `"env"` in permissions.
 
 See `agent_docs/config-architecture.md` for config priority and full API.
 

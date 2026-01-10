@@ -6,13 +6,34 @@
     "permissions": {
       "shader": true
     },
-    "config" : {
+    "config": {
       "theme": "auto-dark",
-      "dither": {
-        "bits" : 8
+      "dither": { "bits": 8 }
+    },
+    "configSchema": {
+      "plasma.scale": {
+        "type": "number",
+        "default": 2.0,
+        "env": "PLASMA_SCALE",
+        "description": "Noise sampling scale (higher = more detail)"
       },
-      "plasma" : {
-        "scale" : 1.0
+      "plasma.speed": {
+        "type": "number",
+        "default": 0.3,
+        "env": "PLASMA_SPEED",
+        "description": "Animation speed multiplier"
+      },
+      "plasma.octaves": {
+        "type": "integer",
+        "default": 2,
+        "env": "PLASMA_OCTAVES",
+        "description": "FBM noise octaves (1-6, higher = more detail)"
+      },
+      "plasma.swirl": {
+        "type": "number",
+        "default": 0.5,
+        "env": "PLASMA_SWIRL",
+        "description": "Swirl effect intensity (0-1)"
       }
     }
   }
@@ -29,6 +50,14 @@
       palette(t: number, a: [number,number,number], b: [number,number,number], c: [number,number,number], d: [number,number,number]): [number,number,number];
     }
 
+    // Read config values (with env var override support via configSchema)
+    const cfg = {
+      scale: $melker.config.getNumber('plasma.scale', 2.0),
+      speed: $melker.config.getNumber('plasma.speed', 0.3),
+      octaves: $melker.config.getNumber('plasma.octaves', 2),
+      swirl: $melker.config.getNumber('plasma.swirl', 0.5),
+    };
+
     // Classic demoscene plasma using fbm noise and IQ palette
     export const plasmaShader = (
       x: number,
@@ -42,23 +71,22 @@
       const u = x / resolution.width;
       const v = (y / resolution.height) / resolution.pixelAspect;
 
-      // Scale for noise sampling
-      const scale = $melker.config.getNumber('plasma.scale', 2.0);
-      const nx = u * scale + time * 0.3;
-      const ny = v * scale + time * 0.2;
+      // Scale for noise sampling (configurable via PLASMA_SCALE env var)
+      const nx = u * cfg.scale + time * cfg.speed;
+      const ny = v * cfg.scale + time * cfg.speed * 0.67;
 
-      // Use fbm for organic flowing noise
-      const n = utils.fbm(nx, ny, 2);
+      // Use fbm for organic flowing noise (octaves configurable via PLASMA_OCTAVES)
+      const n = utils.fbm(nx, ny, cfg.octaves);
 
-      // Add some swirling motion
+      // Add some swirling motion (intensity configurable via PLASMA_SWIRL)
       const angle = n * Math.PI * 2 + time;
       const swirl = utils.noise2d(
-        u * 2 + Math.cos(angle) * 0.5,
-        v * 2 + Math.sin(angle) * 0.5
+        u * 2 + Math.cos(angle) * cfg.swirl,
+        v * 2 + Math.sin(angle) * cfg.swirl
       );
 
       // Combine noise layers
-      const v1 = (n + swirl * 0.5) * 0.5 + 0.5;
+      const v1 = (n + swirl * cfg.swirl) * 0.5 + 0.5;
       const value = v1 + time * 0.1;
 
       // Use IQ palette for beautiful color gradients
@@ -80,7 +108,7 @@
     </text>
 
     <text style="color: gray; margin-bottom: 1; text-align: center; font-size: small;">
-      Using fbm() noise and palette() for demoscene effects
+      Configurable via PLASMA_SCALE, PLASMA_SPEED, PLASMA_OCTAVES, PLASMA_SWIRL
     </text>
 
     <container style="width: fill; height: fill;">

@@ -263,13 +263,43 @@ Add custom config in the `<policy>` tag:
 
 Nested objects are flattened to dot-notation: `myapp.scale`, `myapp.debug`, `myapp.name`.
 
+### Enabling Env Var Overrides
+
+Add a `configSchema` to enable environment variable overrides for custom config:
+
+```xml
+<policy>
+{
+  "permissions": { "read": ["."] },
+  "config": {
+    "myapp": { "scale": 2.0 }
+  },
+  "configSchema": {
+    "myapp.scale": {
+      "type": "number",
+      "env": "MYAPP_SCALE"
+    }
+  }
+}
+</policy>
+```
+
+Now users can run: `MYAPP_SCALE=5.0 ./melker.ts app.melker`
+
+**Auto-permissions**: Env vars in `configSchema` are automatically added to subprocess permissions - no need to add them to `"env"` in permissions.
+
+**Debugging**: If an env var isn't accessible, a warning is logged once:
+```
+[Env] WARN: Access denied for env var: MYAPP_SCALE (add to policy permissions or configSchema)
+```
+
 ### Config Priority
 
-Values are resolved in this order (highest priority last):
-1. Schema defaults
-2. Policy config (`<policy>` tag)
-3. File config (`~/.config/melker/config.json`)
-4. Environment variables
-5. CLI flags
+For app-defined config (highest priority last):
+1. Schema defaults (from `configSchema.default`)
+2. Policy config (`<policy>` tag `config`)
+3. Environment variables (from `configSchema.env`)
+
+Note: CLI flags only apply to Melker's built-in config, not app-defined config.
 
 See `agent_docs/config-architecture.md` for full details.

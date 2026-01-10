@@ -215,10 +215,11 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[
   }
 
   // Environment permissions ("*" means all)
+  // Include env vars from configSchema automatically
   if (p.env?.includes('*')) {
     flags.push('--allow-env');
   } else {
-    const envVars = buildEnvVars(p.env);
+    const envVars = buildEnvVars(p.env, policy.configSchema);
     if (envVars.length > 0) {
       flags.push(`--allow-env=${envVars.join(',')}`);
     }
@@ -331,13 +332,25 @@ function getImplicitEnvVars(): string[] {
 /**
  * Build environment variable list with implicit vars added
  */
-function buildEnvVars(policyVars: string[] | undefined): string[] {
+function buildEnvVars(
+  policyVars: string[] | undefined,
+  configSchema?: Record<string, { env?: string }>,
+): string[] {
   // Get implicit vars that exist in current environment
   const vars = getImplicitEnvVars();
 
   // Merge with policy-declared vars
   if (policyVars) {
     vars.push(...policyVars);
+  }
+
+  // Auto-add env vars from configSchema (for custom config env overrides)
+  if (configSchema) {
+    for (const prop of Object.values(configSchema)) {
+      if (prop.env) {
+        vars.push(prop.env);
+      }
+    }
   }
 
   return [...new Set(vars)]; // Deduplicate

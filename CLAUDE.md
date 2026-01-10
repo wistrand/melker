@@ -230,12 +230,16 @@ Configuration is schema-driven (`src/config/schema.json`) with layered overrides
 5. CLI flags (highest - explicit user intent)
 
 ```bash
-# Show current config with sources
+# Show current config with sources (includes app-defined config)
 ./melker.ts --print-config
 
 # CLI flags override everything
 MELKER_THEME=fullcolor-dark ./melker.ts --theme bw-std  # uses bw-std
 ```
+
+**App-defined config**: Apps can define custom config in policy with optional env var overrides via `configSchema`. Env vars in `configSchema` are auto-added to subprocess permissions.
+
+See `agent_docs/config-architecture.md` for full details.
 
 ## Running .melker Files
 
@@ -416,7 +420,7 @@ deno run --allow-all melker.ts --show-approval /path/to/app.melker
 These are always granted (no need to declare):
 - **read**: `/tmp`, app directory, XDG state dir, cwd
 - **write**: `/tmp`, XDG state dir, log file directory
-- **env**: All `MELKER_*` vars, `HOME`, XDG dirs, `TERM`, `COLORTERM`
+- **env**: All `MELKER_*` vars, `HOME`, XDG dirs, `TERM`, `COLORTERM`, plus any env vars from `configSchema`
 
 See `agent_docs/melker-file-format.md` for syntax details.
 

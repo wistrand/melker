@@ -30,10 +30,22 @@ interface ConfigSchema {
 }
 
 /**
+ * Policy config schema property (for env var overrides)
+ */
+export interface PolicyConfigProperty {
+  type?: 'string' | 'boolean' | 'integer' | 'number';
+  default?: unknown;
+  env?: string;
+  envInverted?: boolean;
+  description?: string;
+}
+
+/**
  * Initialization options for MelkerConfig
  */
 export interface ConfigInitOptions {
   policyConfig?: Record<string, unknown>;
+  policyConfigSchema?: Record<string, PolicyConfigProperty>;
   cliFlags?: Record<string, unknown>;
 }
 
@@ -51,12 +63,14 @@ export type ConfigSource = 'default' | 'file' | 'policy' | 'cli' | 'env';
 
 export class MelkerConfig {
   private static instance: MelkerConfig | null = null;
+  private static policySchema: Record<string, PolicyConfigProperty> = {};
   private data: Record<string, unknown> = {};
   private sources: Record<string, ConfigSource> = {};
 
   private constructor(
     fileConfig: Record<string, unknown>,
     policyConfig: Record<string, unknown>,
+    policyConfigSchema: Record<string, PolicyConfigProperty>,
     cliFlags: Record<string, unknown>
   ) {
     const s = schema as ConfigSchema;
@@ -78,13 +92,61 @@ export class MelkerConfig {
       }
     }
 
-    // 3. Add custom keys from policy config (lower priority than file)
+    // 3. Add custom keys from policy config (with env var override support)
     const flatPolicyConfig = this.flattenObject(policyConfig);
     for (const [path, value] of Object.entries(flatPolicyConfig)) {
       if (!schemaKeys.has(path) && !(path in this.data)) {
+        // Check if policy schema defines an env var for this key
+        const propSchema = policyConfigSchema[path];
+        if (propSchema?.env) {
+          const envVal = Env.get(propSchema.env);
+          if (envVal !== undefined) {
+            const parsed = this.parseEnvValueForType(envVal, propSchema.type || 'string');
+            this.data[path] = propSchema.envInverted ? !parsed : parsed;
+            this.sources[path] = 'env';
+            continue;
+          }
+        }
         this.data[path] = value;
         this.sources[path] = 'policy';
       }
+    }
+
+    // 4. Process policy schema defaults (for keys not in policy config)
+    for (const [path, propSchema] of Object.entries(policyConfigSchema)) {
+      if (!(path in this.data)) {
+        // Check env var first
+        if (propSchema.env) {
+          const envVal = Env.get(propSchema.env);
+          if (envVal !== undefined) {
+            const parsed = this.parseEnvValueForType(envVal, propSchema.type || 'string');
+            this.data[path] = propSchema.envInverted ? !parsed : parsed;
+            this.sources[path] = 'env';
+            continue;
+          }
+        }
+        // Use default if defined
+        if (propSchema.default !== undefined) {
+          this.data[path] = propSchema.default;
+          this.sources[path] = 'default';
+        }
+      }
+    }
+  }
+
+  /**
+   * Parse env value based on type (for policy config schema)
+   */
+  private parseEnvValueForType(value: string, type: string): unknown {
+    switch (type) {
+      case 'boolean':
+        return value === 'true' || value === '1';
+      case 'integer':
+        return parseInt(value, 10);
+      case 'number':
+        return parseFloat(value);
+      default:
+        return value;
     }
   }
 
@@ -199,9 +261,11 @@ export class MelkerConfig {
       throw new Error('MelkerConfig already initialized. Call reset() first if re-initialization is needed.');
     }
     const fileConfig = this.loadConfigFile();
+    this.policySchema = options?.policyConfigSchema ?? {};
     this.instance = new MelkerConfig(
       fileConfig,
       options?.policyConfig ?? {},
+      this.policySchema,
       options?.cliFlags ?? {}
     );
     return this.instance;
@@ -229,6 +293,7 @@ export class MelkerConfig {
    */
   static reset(): void {
     this.instance = null;
+    this.policySchema = {};
   }
 
   /**
@@ -261,11 +326,16 @@ export class MelkerConfig {
    * Apply policy config to existing config (for late initialization)
    * Only applies values that aren't already set by higher-priority sources (env, cli).
    */
-  static applyPolicyConfig(policyConfig: Record<string, unknown>): void {
+  static applyPolicyConfig(policyConfig: Record<string, unknown>, policyConfigSchema?: Record<string, PolicyConfigProperty>): void {
     if (!this.instance) {
       // Not initialized yet, init with policy config
-      this.init({ policyConfig });
+      this.init({ policyConfig, policyConfigSchema });
       return;
+    }
+
+    // Store schema if provided
+    if (policyConfigSchema) {
+      this.policySchema = policyConfigSchema;
     }
 
     const s = schema as ConfigSchema;
@@ -285,12 +355,44 @@ export class MelkerConfig {
       }
     }
 
-    // Apply custom keys from policy (not in schema, not already set)
+    // Apply custom keys from policy (with env var override support)
     const flatPolicyConfig = this.instance.flattenObject(policyConfig);
     for (const [path, value] of Object.entries(flatPolicyConfig)) {
       if (!schemaKeys.has(path) && !(path in this.instance.data)) {
+        // Check if policy schema defines an env var for this key
+        const propSchema = this.policySchema[path];
+        if (propSchema?.env) {
+          const envVal = Env.get(propSchema.env);
+          if (envVal !== undefined) {
+            const parsed = this.instance.parseEnvValueForType(envVal, propSchema.type || 'string');
+            this.instance.data[path] = propSchema.envInverted ? !parsed : parsed;
+            this.instance.sources[path] = 'env';
+            continue;
+          }
+        }
         this.instance.data[path] = value;
         this.instance.sources[path] = 'policy';
+      }
+    }
+
+    // Process policy schema defaults (for keys not in policy config)
+    for (const [path, propSchema] of Object.entries(this.policySchema)) {
+      if (!(path in this.instance.data)) {
+        // Check env var first
+        if (propSchema.env) {
+          const envVal = Env.get(propSchema.env);
+          if (envVal !== undefined) {
+            const parsed = this.instance.parseEnvValueForType(envVal, propSchema.type || 'string');
+            this.instance.data[path] = propSchema.envInverted ? !parsed : parsed;
+            this.instance.sources[path] = 'env';
+            continue;
+          }
+        }
+        // Use default if defined
+        if (propSchema.default !== undefined) {
+          this.instance.data[path] = propSchema.default;
+          this.instance.sources[path] = 'default';
+        }
       }
     }
   }
@@ -428,10 +530,32 @@ export class MelkerConfig {
           const displayValue = value === undefined ? '(not set)' :
             typeof value === 'object' ? JSON.stringify(value) : String(value);
 
-          const sourceStr = source === 'policy' ? ' <- policy' :
-            source === 'file' ? ' <- config.json' : '';
+          // Get policy schema for this key (if exists)
+          const propSchema = this.policySchema[path];
 
-          lines.push(`  ${path} = ${displayValue}${sourceStr}`);
+          // Format source indicator
+          let sourceStr = '';
+          switch (source) {
+            case 'env':
+              sourceStr = propSchema?.env ? ` <- ${propSchema.env}` : ' <- env';
+              break;
+            case 'policy':
+              sourceStr = ' <- policy';
+              break;
+            case 'file':
+              sourceStr = ' <- config.json';
+              break;
+            case 'default':
+              sourceStr = '';
+              break;
+          }
+
+          // Show env var info for reference (on default values)
+          const refStr = (source === 'default' || source === 'policy') && propSchema?.env
+            ? ` (${propSchema.env})`
+            : '';
+
+          lines.push(`  ${path} = ${displayValue}${sourceStr}${refStr}`);
         }
         lines.push('');
       }

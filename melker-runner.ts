@@ -375,8 +375,8 @@ export async function runMelkerFile(
     }
 
     // Apply policy config (only overrides defaults, not env/cli)
-    if (appPolicy.config) {
-      MelkerConfig.applyPolicyConfig(appPolicy.config);
+    if (appPolicy.config || appPolicy.configSchema) {
+      MelkerConfig.applyPolicyConfig(appPolicy.config ?? {}, appPolicy.configSchema);
     }
 
     if (parseResult.stylesheet) {

@@ -27,7 +27,7 @@ import {
 
 // CLI parsing from schema
 import { generateFlagHelp, parseCliFlags } from './src/config/cli.ts';
-import { MelkerConfig } from './src/config/config.ts';
+import { MelkerConfig, type PolicyConfigProperty } from './src/config/config.ts';
 
 /**
  * Reset terminal state after subprocess failure.
@@ -369,6 +369,7 @@ export async function main(): Promise<void> {
 
     // Load policy config if a file is provided
     let policyConfig: Record<string, unknown> = {};
+    let policyConfigSchema: Record<string, PolicyConfigProperty> | undefined;
     if (filepath && (filepath.endsWith('.melker') || filepath.endsWith('.md'))) {
       try {
         const absolutePath = filepath.startsWith('/') || isUrl(filepath)
@@ -377,8 +378,9 @@ export async function main(): Promise<void> {
         const policyResult = isUrl(filepath)
           ? await loadPolicyFromContent(await loadContent(filepath), filepath)
           : await loadPolicy(absolutePath);
-        if (policyResult.policy?.config) {
-          policyConfig = policyResult.policy.config;
+        if (policyResult.policy?.config || policyResult.policy?.configSchema) {
+          policyConfig = policyResult.policy.config ?? {};
+          policyConfigSchema = policyResult.policy.configSchema as Record<string, PolicyConfigProperty> | undefined;
           console.log(`Policy config from: ${policyResult.source}${policyResult.path ? ` (${policyResult.path})` : ''}\n`);
         }
       } catch {
@@ -388,7 +390,7 @@ export async function main(): Promise<void> {
 
     // Reset and re-init with policy config
     MelkerConfig.reset();
-    MelkerConfig.init({ policyConfig, cliFlags });
+    MelkerConfig.init({ policyConfig, policyConfigSchema, cliFlags });
     MelkerConfig.printConfig();
     Deno.exit(0);
   }

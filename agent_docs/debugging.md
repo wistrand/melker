@@ -215,6 +215,18 @@ This keeps output in main buffer for scrollback review.
 
 ## Common Debug Scenarios
 
+### Permission Issues
+
+**Env var access denied warnings:**
+When your app tries to read an env var it doesn't have permission for, a warning is logged once per var:
+```
+[Env] WARN: Access denied for env var: MY_VAR (add to policy permissions or configSchema)
+```
+
+Fix by either:
+1. Adding to policy permissions: `"env": ["MY_VAR"]`
+2. Adding to configSchema (auto-adds permission): `"configSchema": { "my.key": { "env": "MY_VAR" } }`
+
 ### Layout Issues
 - Enable DEBUG logging to see layout calculations
 - Check bounds in log: `Bounds calculated for button | bounds={"x":2,"y":7,"width":16,"height":1}`

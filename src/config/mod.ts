@@ -1,6 +1,6 @@
 // Config module exports
 
-export { MelkerConfig, type ConfigInitOptions, type ConfigSource } from './config.ts';
+export { MelkerConfig, setLoggerGetter, type ConfigInitOptions, type ConfigSource } from './config.ts';
 export {
   parseCliFlags,
   generateConfigHelp,

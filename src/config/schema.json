@@ -98,6 +98,13 @@
       "env": "MELKER_FFMPEG",
       "description": "Force FFmpeg instead of native audio on macOS"
     },
+    "render.blockMode": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_BLOCK_MODE",
+      "flag": "--block-mode",
+      "description": "Use colored spaces instead of box-drawing and sextant characters"
+    },
     "headless.enabled": {
       "type": "boolean",
       "default": false,

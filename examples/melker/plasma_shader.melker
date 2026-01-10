@@ -7,31 +7,41 @@
       "shader": true
     },
     "config": {
-      "theme": "auto-dark",
-      "dither": { "bits": 8 }
+      "theme": "auto-dark"
     },
     "configSchema": {
       "plasma.scale": {
         "type": "number",
         "default": 2.0,
+        "min": 0.1,
+        "max": 10.0,
+        "step": 0.1,
         "env": "PLASMA_SCALE",
         "description": "Noise sampling scale (higher = more detail)"
       },
       "plasma.speed": {
         "type": "number",
         "default": 0.3,
+        "min": 0.0,
+        "max": 2.0,
+        "step": 0.1,
         "env": "PLASMA_SPEED",
         "description": "Animation speed multiplier"
       },
       "plasma.octaves": {
         "type": "integer",
         "default": 2,
+        "min": 1,
+        "max": 6,
         "env": "PLASMA_OCTAVES",
         "description": "FBM noise octaves (1-6, higher = more detail)"
       },
       "plasma.swirl": {
         "type": "number",
         "default": 0.5,
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.1,
         "env": "PLASMA_SWIRL",
         "description": "Swirl effect intensity (0-1)"
       }
@@ -50,12 +60,13 @@
       palette(t: number, a: [number,number,number], b: [number,number,number], c: [number,number,number], d: [number,number,number]): [number,number,number];
     }
 
-    // Read config values (with env var override support via configSchema)
+    // Read config values dynamically (with env var override support via configSchema)
+    // Using getters so runtime config updates from DevTools take effect immediately
     const cfg = {
-      scale: $melker.config.getNumber('plasma.scale', 2.0),
-      speed: $melker.config.getNumber('plasma.speed', 0.3),
-      octaves: $melker.config.getNumber('plasma.octaves', 2),
-      swirl: $melker.config.getNumber('plasma.swirl', 0.5),
+      get scale() { return $melker.config.getNumber('plasma.scale', 2.0); },
+      get speed() { return $melker.config.getNumber('plasma.speed', 0.3); },
+      get octaves() { return $melker.config.getNumber('plasma.octaves', 2); },
+      get swirl() { return $melker.config.getNumber('plasma.swirl', 0.5); },
     };
 
     // Classic demoscene plasma using fbm noise and IQ palette

@@ -2,7 +2,7 @@
 // Toggled with Ctrl+Shift+P, shows engine and layout statistics
 
 import type { DualBuffer } from './buffer.ts';
-import type { Bounds } from './types.ts';
+import { BORDER_CHARS, type Bounds } from './types.ts';
 import { getThemeColor } from './theme.ts';
 
 export interface PerformanceStats {
@@ -531,6 +531,7 @@ export class PerformanceDialog {
     const closeBtn = '[X]';
     const titleX = x + Math.floor((this._width - title.length) / 2);
     const closeX = x + this._width - 4; // Position for [X]
+    const borderChars = BORDER_CHARS.thin;
     for (let i = 0; i < this._width; i++) {
       const px = x + i;
       if (px >= 0 && px < viewportWidth && y >= 0 && y < viewportHeight) {
@@ -543,11 +544,11 @@ export class PerformanceDialog {
         } else if (px >= titleX && px < titleX + title.length) {
           char = title[px - titleX];
         } else if (i === 0) {
-          char = '\u250c';
+          char = borderChars.tl;
         } else if (i === this._width - 1) {
-          char = '\u2510';
+          char = borderChars.tr;
         } else {
-          char = '\u2500';
+          char = borderChars.h;
         }
         buffer.currentBuffer.setCell(px, y, {
           char,
@@ -616,11 +617,8 @@ export class PerformanceDialog {
     const vw = buffer.width;
     const vh = buffer.height;
 
-    // Box drawing characters
-    const chars = {
-      tl: '\u250c', tr: '\u2510', bl: '\u2514', br: '\u2518',
-      h: '\u2500', v: '\u2502'
-    };
+    // Use predefined border characters
+    const chars = BORDER_CHARS.thin;
 
     // Draw corners and edges
     for (let dy = 0; dy < h; dy++) {

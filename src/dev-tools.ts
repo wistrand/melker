@@ -5,9 +5,24 @@ import { Document } from './document.ts';
 import { melker } from './template.ts';
 import { Element } from './types.ts';
 import { FocusManager } from './focus.ts';
-import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy } from './policy/mod.ts';
+import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy, type PolicyConfigProperty } from './policy/mod.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('DevTools');
+
+/**
+ * Recursively register all elements in a tree with the document
+ */
+function registerElementsWithDocument(doc: Document, element: Element): void {
+  doc.addElement(element);
+  if (element.children) {
+    for (const child of element.children) {
+      registerElementsWithDocument(doc, child);
+    }
+  }
+}
 
 export interface DevToolsDependencies {
   document: Document;
@@ -216,7 +231,13 @@ export class DevToolsManager {
       </tab>
     `);
 
-    // Tab 6: Actions
+    // Tab 6: Edit Config (only if policy has configSchema)
+    if (this._state.policy?.configSchema) {
+      const editConfigTab = this._buildEditConfigTab(this._state.policy.configSchema);
+      tabs.push(editConfigTab);
+    }
+
+    // Tab 7: Actions
     tabs.push(melker`
       <tab id="dev-tools-tab-actions" title="Actions">
         <container id="dev-tools-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill', display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -232,7 +253,7 @@ export class DevToolsManager {
     const footerStyle = { display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', width: 'fill', gap: 1 };
 
     this._overlay = melker`
-      <dialog id="dev-tools-dialog" title=${`Dev Tools - ${filename}`} open=${true} modal=${true} backdrop=${true} width=${0.9} height=${0.85}>
+      <dialog id="dev-tools-dialog" title=${`Dev Tools - ${filename}`} open=${true} modal=${true} backdrop=${false} width=${0.9} height=${0.85}>
         <container id="dev-tools-main" style=${mainStyle}>
           <tabs id="dev-tools-tabs" style=${tabsStyle}>
             ${tabs}
@@ -251,6 +272,9 @@ export class DevToolsManager {
       root.children.push(this._overlay);
     }
     this._deps.registerElementTree(this._overlay);
+
+    // Also register with document's element registry for getElementById() to work
+    registerElementsWithDocument(this._deps.document, this._overlay);
 
     // Re-render
     if (this._deps.autoRender) {
@@ -312,6 +336,132 @@ export class DevToolsManager {
     lines.push(`  Handlers:   ${info.registeredHandlers.length > 0 ? info.registeredHandlers.join(', ') : 'none'}`);
 
     return lines.join('\n');
+  }
+
+  /**
+   * Build the Edit Config tab with inputs for each configSchema property
+   */
+  private _buildEditConfigTab(configSchema: Record<string, PolicyConfigProperty>): Element {
+    const config = MelkerConfig.get();
+    const document = this._deps.document;
+    const render = () => this._deps.render();
+
+    // Build input elements for each config property
+    const inputs: Element[] = [];
+    const inputIds: { key: string; id: string; type: string }[] = [];
+
+    for (const [key, prop] of Object.entries(configSchema)) {
+      const type = prop.type || 'string';
+      const envVar = prop.env ? ` (${prop.env})` : '';
+      const inputId = 'edit-config-' + key.replace(/\./g, '-');
+      inputIds.push({ key, id: inputId, type });
+      logger.debug(`Creating input for config key=${key}, id=${inputId}, type=${type}`);
+
+      // Create appropriate input based on type
+      if (type === 'boolean') {
+        const checked = config.getBoolean(key, prop.default as boolean ?? false);
+        inputs.push(melker`
+          <container style=${{ display: 'flex', flexDirection: 'row', gap: 1, marginBottom: 1 }}>
+            <checkbox id=${inputId} checked=${checked} />
+            <text text=${`${key}${envVar}`} style=${{ flex: 1 }} />
+          </container>
+        `);
+      } else if (type === 'number' || type === 'integer') {
+        const value = config.getNumber(key, prop.default as number ?? 0);
+        // Use slider if min/max are defined, otherwise use input
+        if (prop.min !== undefined && prop.max !== undefined) {
+          const step = prop.step ?? (type === 'integer' ? 1 : undefined);
+          inputs.push(melker`
+            <container style=${{ display: 'flex', flexDirection: 'row', gap: 1, marginBottom: 1 }}>
+              <text text=${key + envVar + ':'} style=${{ width: 20 }} />
+              <slider id=${inputId} min=${prop.min} max=${prop.max} step=${step} value=${value} showValue=${true} style=${{ flex: 1 }} />
+            </container>
+          `);
+        } else {
+          inputs.push(melker`
+            <container style=${{ display: 'flex', flexDirection: 'row', gap: 1, marginBottom: 1 }}>
+              <text text=${key + envVar + ':'} style=${{ width: 20 }} />
+              <input id=${inputId} value=${String(value)} style=${{ flex: 1 }} />
+            </container>
+          `);
+        }
+      } else {
+        // String type
+        const value = config.getString(key, prop.default as string ?? '');
+        inputs.push(melker`
+          <container style=${{ display: 'flex', flexDirection: 'row', gap: 1, marginBottom: 1 }}>
+            <text text=${key + envVar + ':'} style=${{ width: 20 }} />
+            <input id=${inputId} value=${value} style=${{ flex: 1 }} />
+          </container>
+        `);
+      }
+
+      if (prop.description) {
+        inputs.push(melker`<text text=${'  ' + prop.description} style=${{ color: 'gray', marginBottom: 1 }} />`);
+      }
+    }
+
+    // Update button handler - reads all input values and updates config
+    const onUpdate = () => {
+      logger.info('Update button clicked, reading values from inputs...');
+      // Log all registered element IDs for debugging
+      const allIds = Array.from(document.getAllElements()).map(e => e.id).filter(Boolean);
+      logger.debug(`Registered element IDs: ${allIds.join(', ')}`);
+
+      for (const { key, id, type } of inputIds) {
+        const element = document.getElementById(id);
+        logger.debug(`Looking up element id=${id}, found=${!!element}`);
+        if (!element) continue;
+
+        if (type === 'boolean') {
+          const checked = (element.props as { checked?: boolean }).checked ?? false;
+          logger.info(`Checkbox ${id}: checked=${checked}`);
+          config.setValue(key, checked);
+        } else if (type === 'number' || type === 'integer') {
+          // Check if it's a slider or input
+          const props = element.props as { value?: string | number };
+          const rawValue = props.value;
+          logger.info(`Number input ${id}: props.value="${rawValue}", type=${element.type}, props keys=${Object.keys(props).join(',')}`);
+
+          // Slider stores numeric value, input stores string
+          let num: number;
+          if (typeof rawValue === 'number') {
+            num = rawValue;
+          } else {
+            const strValue = rawValue ?? '';
+            num = type === 'integer' ? parseInt(strValue, 10) : parseFloat(strValue);
+          }
+
+          if (!isNaN(num)) {
+            config.setValue(key, num);
+          } else {
+            logger.warn(`Failed to parse "${rawValue}" as ${type}`);
+          }
+        } else {
+          const props = element.props as { value?: string };
+          logger.info(`Input ${id}: props.value="${props.value}"`);
+          const value = props.value ?? '';
+          config.setValue(key, value);
+        }
+      }
+      render();
+    };
+
+    const scrollStyle = { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' };
+
+    return melker`
+      <tab id="dev-tools-tab-edit-config" title="Edit Config">
+        <container style=${{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }}>
+          <container id="dev-tools-scroll-edit-config" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <text text="Edit app config values at runtime:" style=${{ marginBottom: 1, fontWeight: 'bold' }} />
+            ${inputs}
+          </container>
+          <container style=${{ padding: 1 }}>
+            <button id="dev-tools-update-config" title="Update" onClick=${onUpdate} />
+          </container>
+        </container>
+      </tab>
+    `;
   }
 
   /**

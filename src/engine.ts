@@ -10,7 +10,7 @@ declare global {
 }
 
 import { Document } from './document.ts';
-import { MelkerConfig } from './config/mod.ts';
+import { MelkerConfig, setLoggerGetter } from './config/mod.ts';
 import { Env } from './env.ts';
 import { DualBuffer } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
@@ -131,6 +131,9 @@ import {
   registerForEmergencyCleanup,
   unregisterFromEmergencyCleanup,
 } from './terminal-lifecycle.ts';
+
+// Initialize config logger getter (breaks circular dependency between config.ts and logging.ts)
+setLoggerGetter(() => getLogger('Config'));
 
 export interface MelkerEngineOptions {
   // Terminal setup
@@ -716,8 +719,18 @@ export class MelkerEngine {
       }
 
       if (focusedElement) {
+        // Route to slider element for arrow key handling
+        if (focusedElement.type === 'slider') {
+          const slider = focusedElement as any;
+          if (slider.handleKeyInput) {
+            const handled = slider.handleKeyInput(event.key, event.ctrlKey, event.altKey);
+            if (handled && this._options.autoRender) {
+              this.render();
+            }
+          }
+        }
         // Route to text input if it's a text input or textarea element
-        if (focusedElement.type === 'input' || focusedElement.type === 'textarea') {
+        else if (focusedElement.type === 'input' || focusedElement.type === 'textarea') {
           const textInput = focusedElement as InputElement | TextareaElement;
           if (textInput.handleKeyInput) {
             this._logger?.debug('Key input routed to text input', {

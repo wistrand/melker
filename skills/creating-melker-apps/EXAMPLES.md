@@ -432,6 +432,51 @@ Apps that access network, files, or system commands should declare a `<policy>` 
 </melker>
 ```
 
+## Slider Controls
+
+```xml
+<melker>
+  <script type="typescript">
+    let volume = 50;
+    let brightness = 75;
+
+    export function updateVolume(event: { value: string }) {
+      volume = parseFloat(event.value);
+      $melker.getElementById('volumeLabel')!.props.text = `Volume: ${Math.round(volume)}%`;
+    }
+
+    export function updateBrightness(event: { value: string }) {
+      brightness = parseFloat(event.value);
+      $melker.getElementById('brightnessLabel')!.props.text = `Brightness: ${Math.round(brightness)}%`;
+    }
+  </script>
+
+  <container style="width: 50; border: thin; padding: 2; display: flex; flex-direction: column; gap: 1;">
+    <text style="font-weight: bold;">Settings</text>
+
+    <!-- Basic slider with value display -->
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <text style="width: 12;">Volume:</text>
+      <slider min="0" max="100" value="50" showValue="true" style="flex: 1;" onChange="$app.updateVolume(event)" />
+    </container>
+    <text id="volumeLabel" style="color: gray;">Volume: 50%</text>
+
+    <!-- Slider with step -->
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <text style="width: 12;">Brightness:</text>
+      <slider min="0" max="100" step="10" value="75" showValue="true" style="flex: 1;" onChange="$app.updateBrightness(event)" />
+    </container>
+    <text id="brightnessLabel" style="color: gray;">Brightness: 75%</text>
+
+    <!-- Slider with snap points -->
+    <text style="margin-top: 1;">Quality:</text>
+    <slider min="0" max="100" snaps="[0, 25, 50, 75, 100]" value="50" showValue="true" />
+
+    <button title="Close" style="margin-top: 1;" onClick="$melker.exit();" />
+  </container>
+</melker>
+```
+
 ## Tips & Best Practices
 
 1. **Use flexbox for layouts** - `display: flex` with `flex-direction: column` or `row`

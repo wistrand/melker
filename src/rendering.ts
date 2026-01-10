@@ -19,6 +19,7 @@ import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { getLogger } from './logging.ts';
 import { getGlobalErrorHandler, renderErrorPlaceholder } from './error-boundary.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
+import { MelkerConfig } from './config/mod.ts';
 
 const renderLogger = getLogger('RenderEngine');
 
@@ -976,14 +977,29 @@ export class RenderingEngine {
     const leftColor = style.borderLeftColor || defaultColor;
     const rightColor = style.borderRightColor || defaultColor;
 
+    // Check if block mode is enabled (use colored spaces instead of box-drawing characters)
+    const blockMode = MelkerConfig.get().blockMode;
+
     // Create cell styles for each side
-    const topStyle: Partial<Cell> = { foreground: topColor, background: style.backgroundColor };
-    const bottomStyle: Partial<Cell> = { foreground: bottomColor, background: style.backgroundColor };
-    const leftStyle: Partial<Cell> = { foreground: leftColor, background: style.backgroundColor };
-    const rightStyle: Partial<Cell> = { foreground: rightColor, background: style.backgroundColor };
+    // In block mode, use foreground color as background (spaces need bg color to be visible)
+    const topStyle: Partial<Cell> = blockMode
+      ? { background: topColor || style.backgroundColor }
+      : { foreground: topColor, background: style.backgroundColor };
+    const bottomStyle: Partial<Cell> = blockMode
+      ? { background: bottomColor || style.backgroundColor }
+      : { foreground: bottomColor, background: style.backgroundColor };
+    const leftStyle: Partial<Cell> = blockMode
+      ? { background: leftColor || style.backgroundColor }
+      : { foreground: leftColor, background: style.backgroundColor };
+    const rightStyle: Partial<Cell> = blockMode
+      ? { background: rightColor || style.backgroundColor }
+      : { foreground: rightColor, background: style.backgroundColor };
 
     // Get border characters (use the first available border style for consistency)
-    const activeStyle = (borderTop || borderBottom || borderLeft || borderRight || 'thin') as Exclude<BorderStyle, 'none'>;
+    // In block mode, always use 'block' style (spaces)
+    const activeStyle = blockMode
+      ? 'block'
+      : ((borderTop || borderBottom || borderLeft || borderRight || 'thin') as Exclude<BorderStyle, 'none'>);
     const chars = BORDER_CHARS[activeStyle] || BORDER_CHARS.thin;
 
     // Draw individual border sides

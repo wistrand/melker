@@ -115,6 +115,9 @@ Each property in schema.json can have:
 - `terminal.syncRendering` - Synchronous rendering (inverted env: MELKER_NO_SYNC)
 - `terminal.forceFFmpeg` - Force FFmpeg instead of native audio on macOS
 
+### Render
+- `render.blockMode` - Use colored spaces instead of box-drawing/sextant chars (env: MELKER_BLOCK_MODE, flag: --block-mode)
+
 ### Headless
 - `headless.enabled` - Run without terminal (flag: --headless)
 - `headless.width` - Virtual terminal width
@@ -294,9 +297,14 @@ Apps can define a schema for custom config keys to enable **environment variable
 |-------|------|-------------|
 | `type` | string | Value type: `string`, `boolean`, `integer`, `number` |
 | `default` | any | Default value (if not in config) |
+| `min` | number | Minimum value (for number/integer, enables slider in DevTools) |
+| `max` | number | Maximum value (for number/integer, enables slider in DevTools) |
+| `step` | number | Step size for slider (auto: 1 for integer) |
 | `env` | string | Environment variable name for override |
 | `envInverted` | boolean | If true, env presence means opposite value |
 | `description` | string | Documentation |
+
+When `min` and `max` are both defined for a numeric type, the DevTools Edit Config tab displays a slider instead of a text input.
 
 ### Priority with Schema
 

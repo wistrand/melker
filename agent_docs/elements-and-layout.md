@@ -482,6 +482,67 @@ progress.getValue();             // Get current value
 progress.setIndeterminate(true); // Enable/disable indeterminate mode
 ```
 
+## Slider Component
+
+The `<slider>` component allows numeric value selection within a range using keyboard or mouse.
+
+### Usage
+
+```xml
+<!-- Basic slider -->
+<slider min="0" max="100" value="50" onChange="$app.handleChange(event)" />
+
+<!-- With step increments -->
+<slider min="0" max="10" step="1" value="5" showValue="true" />
+
+<!-- With snap points -->
+<slider min="0" max="100" snaps="[0, 25, 50, 75, 100]" value="25" />
+
+<!-- Vertical orientation -->
+<slider min="0" max="100" value="50" orientation="vertical" style="height: 8;" />
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `min` | number | 0 | Minimum value |
+| `max` | number | 100 | Maximum value |
+| `value` | number | 0 | Current value |
+| `step` | number | - | Discrete step size (e.g., 5 = values 0,5,10...) |
+| `snaps` | number[] | - | Array of specific snap points |
+| `orientation` | string | 'horizontal' | 'horizontal' or 'vertical' |
+| `showValue` | boolean | false | Display value label after slider |
+| `onChange` | function | - | Called when value changes |
+
+### Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| Arrow Left/Down | Decrease by step (or to previous snap) |
+| Arrow Right/Up | Increase by step (or to next snap) |
+| Page Down | Decrease by 10% of range |
+| Page Up | Increase by 10% of range |
+| Home | Jump to minimum |
+| End | Jump to maximum |
+
+### Visual
+
+```
+▓▓▓▓▓▓▓●────────── 50    (horizontal with showValue)
+```
+
+- Focused slider shows thumb with reverse video (inverted colors)
+- Theme-aware: Unicode characters for color themes, ASCII for B&W
+
+### Methods
+
+```typescript
+const slider = document.getElementById('mySlider');
+slider.setValue(75);    // Set value programmatically
+slider.getValue();      // Get current value
+```
+
 ## Image Component
 
 The `<img>` component displays images in the terminal using sextant characters (2x3 pixels per cell).

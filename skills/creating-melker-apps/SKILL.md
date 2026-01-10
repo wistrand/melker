@@ -100,7 +100,7 @@ For complete component reference, see [COMPONENTS.md](COMPONENTS.md).
 ```
 
 **Layout:** `display`, `flex-direction`, `flex`, `width`, `height`, `padding`, `margin`, `gap`
-**Borders:** `border` (none|thin|thick|double|rounded|dashed|ascii)
+**Borders:** `border` (none|thin|thick|double|rounded|dashed|dashed-rounded|ascii|ascii-rounded|block)
 **Text:** `font-weight`, `text-align`, `text-wrap`
 **Size values:** Numbers (columns/rows), percentages (`100%`), `fill`
 

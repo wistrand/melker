@@ -13,6 +13,12 @@ export interface PolicyConfigProperty {
   type?: 'string' | 'boolean' | 'integer' | 'number';
   /** Default value */
   default?: unknown;
+  /** Minimum value (for number/integer types, enables slider in DevTools) */
+  min?: number;
+  /** Maximum value (for number/integer types, enables slider in DevTools) */
+  max?: number;
+  /** Step size (for number/integer types with slider) */
+  step?: number;
   /** Environment variable that can override this value */
   env?: string;
   /** If true, env var presence means false (e.g., NO_FEATURE=1 means feature=false) */

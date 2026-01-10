@@ -226,8 +226,8 @@ text("Hello") | border | color(Color::Cyan)
 | Select/Dropdown |   Y    |  Y  |    -     |      -      |   Y    |    Y    |    -    |   Y    |
 | Combobox        |   Y    |  -  |    -     |      -      |   -    |    -    |    -    |   -    |
 | Autocomplete    |   Y    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
-| Slider         |   -    |  -  |    -     |      -      |   -    |    -    |    -    |   Y    |
-| Masked input   |   -    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
+| Slider         |   Y    |  -  |    -     |      -      |   -    |    -    |    -    |   Y    |
+| Masked input   |   Y    |  -  |    -     |      -      |   -    |    Y    |    -    |   -    |
 | **Data**       |        |     |          |             |        |         |         |        |
 | Table          |   Y    | Y*  |    Y     |      Y      |   Y    |    Y    |    Y    |   -    |
 | Tree           |   -    |  -  |    Y     |      -      |   Y    |    Y    |    -    |   -    |
@@ -260,7 +260,7 @@ text("Hello") | border | color(Color::Cyan)
 
 Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 
-**Melker gaps (high priority):** Tree, Spinner, Slider
+**Melker gaps (high priority):** Tree, Spinner
 
 ## Architecture Patterns
 

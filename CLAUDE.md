@@ -203,6 +203,7 @@ tests/                - Test files
 | `MELKER_FFMPEG` | Force ffmpeg on macOS instead of native Swift (`true` or `1`) |
 | `MELKER_AUTO_DITHER` | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `ordered`) |
 | `MELKER_DITHER_BITS` | Color depth for auto dithering (1-8, default: theme-based) |
+| `MELKER_BLOCK_MODE` | Use colored spaces instead of box-drawing/sextant chars (`true` or `1`) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |

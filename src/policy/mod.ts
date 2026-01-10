@@ -6,6 +6,7 @@ export type {
   PolicyPermissions,
   PolicyLoadResult,
   PolicyArgs,
+  PolicyConfigProperty,
 } from './types.ts';
 
 export {

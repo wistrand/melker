@@ -153,6 +153,7 @@ export {
   VideoElement,
   ListElement,
   LiElement,
+  SliderElement,
 } from './src/components/mod.ts';
 
 // Canvas shader types
@@ -200,6 +201,7 @@ import { VideoElement } from './src/components/video.ts';
 import { ListElement } from './src/components/list.ts';
 import { LiElement } from './src/components/li.ts';
 import { ProgressElement } from './src/components/progress.ts';
+import { SliderElement } from './src/components/slider.ts';
 import { registerComponent } from './src/element.ts';
 
 // Auto-register core components when library is imported
@@ -359,6 +361,21 @@ registerComponent({
     disabled: false,
   },
   validate: (props) => ProgressElement.validate(props as any),
+});
+
+registerComponent({
+  type: 'slider',
+  componentClass: SliderElement,
+  defaultProps: {
+    min: 0,
+    max: 100,
+    value: 0,
+    orientation: 'horizontal',
+    showValue: false,
+    disabled: false,
+    tabIndex: 0,
+  },
+  validate: (props) => SliderElement.validate(props as any),
 });
 
 registerComponent({

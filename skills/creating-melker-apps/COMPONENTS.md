@@ -34,7 +34,7 @@ Flexbox layout container. The primary building block for layouts.
 - `gap`: spacing between children
 - `width`, `height`: number, percentage (`100%`), or `fill`
 - `padding`, `margin`: spacing (single number or `padding-top`, etc.)
-- `border`: `none` | `thin` | `thick` | `double` | `rounded` | `dashed` | `ascii`
+- `border`: `none` | `thin` | `thick` | `double` | `rounded` | `dashed` | `dashed-rounded` | `ascii` | `ascii-rounded` | `block`
 - `overflow`: `visible` | `hidden` | `auto` | `scroll`
 
 ### text
@@ -452,6 +452,34 @@ Progress bar.
 />
 ```
 
+### slider
+
+Numeric value selection with keyboard/mouse.
+
+```xml
+<!-- Basic slider -->
+<slider min="0" max="100" value="50" onChange="$app.handleChange(event)" />
+
+<!-- With step increments -->
+<slider min="0" max="10" step="1" value="5" showValue="true" />
+
+<!-- With snap points -->
+<slider min="0" max="100" snaps="[0, 25, 50, 75, 100]" value="25" />
+
+<!-- Vertical -->
+<slider min="0" max="100" value="50" orientation="vertical" style="height: 8;" />
+```
+
+**Props:**
+- `min` / `max` - Range (default: 0-100)
+- `value` - Current value
+- `step` - Discrete increments (e.g., 5 = 0,5,10...)
+- `snaps` - Array of snap points `[0, 25, 50, 75, 100]`
+- `orientation` - `horizontal` (default) or `vertical`
+- `showValue` - Display value label
+
+**Keyboard:** Arrow keys (small step), Page Up/Down (10%), Home/End (min/max)
+
 ## File Browser
 
 ```xml
@@ -471,8 +499,10 @@ Progress bar.
 - `double` - Double line
 - `rounded` - Rounded corners
 - `dashed` - Dashed line
+- `dashed-rounded` - Dashed with rounded corners
 - `ascii` - ASCII characters
 - `ascii-rounded` - ASCII with rounded corners
+- `block` - Colored spaces (for terminals without Unicode support)
 
 ### Colors
 **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes.

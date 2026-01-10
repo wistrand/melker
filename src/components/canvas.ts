@@ -1465,11 +1465,20 @@ export class CanvasElement extends Element implements Renderable {
       terminalWidth = Math.max(1, terminalWidth - 1);
     }
 
+    // Cache blockMode config (avoid repeated lookups in hot path)
+    const blockMode = MelkerConfig.get().blockMode;
+
     // Check for dithered rendering mode
     const ditheredBuffer = this._prepareDitheredBuffer();
     if (ditheredBuffer) {
       // Use dithered rendering path
-      this._renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer);
+      this._renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, blockMode);
+      return;
+    }
+
+    // Block mode: 1 colored space per cell instead of sextant characters
+    if (blockMode) {
+      this._renderBlockMode(bounds, style, buffer, terminalWidth, terminalHeight);
       return;
     }
 
@@ -1727,7 +1736,8 @@ export class CanvasElement extends Element implements Renderable {
     bounds: Bounds,
     style: Partial<Cell>,
     buffer: DualBuffer,
-    ditheredBuffer: Uint8Array
+    ditheredBuffer: Uint8Array,
+    blockMode: boolean
   ): void {
     let terminalWidth = Math.min(this.props.width, bounds.width);
     const terminalHeight = Math.min(this.props.height, bounds.height);
@@ -1795,6 +1805,36 @@ export class CanvasElement extends Element implements Renderable {
           }
         }
 
+        // Block mode: average colors and output colored space
+        if (blockMode) {
+          if (!hasAnyPixel) continue;
+
+          // Average all non-transparent colors
+          let totalR = 0, totalG = 0, totalB = 0, count = 0;
+          for (let i = 0; i < 6; i++) {
+            const color = sextantColors[i];
+            if (color !== TRANSPARENT) {
+              totalR += (color >> 24) & 0xFF;
+              totalG += (color >> 16) & 0xFF;
+              totalB += (color >> 8) & 0xFF;
+              count++;
+            }
+          }
+          const avgColor = count > 0
+            ? rgbaToCss(packRGBA(Math.round(totalR / count), Math.round(totalG / count), Math.round(totalB / count), 255))
+            : propsBg ?? (hasStyleBg ? style.background as string : undefined);
+
+          if (!avgColor) continue;
+
+          buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+            char: ' ',
+            background: avgColor,
+            bold: style.bold,
+            dim: style.dim,
+          });
+          continue;
+        }
+
         // Use quantization for color selection (same as image path)
         this._quantizeBlockColorsInline(sextantColors, sextantPixels);
         const fgColor = this._qFgColor !== 0 ? rgbaToCss(this._qFgColor) : undefined;
@@ -1829,6 +1869,82 @@ export class CanvasElement extends Element implements Renderable {
           char,
           cellStyle
         );
+      }
+    }
+  }
+
+  /**
+   * Block mode rendering: 1 colored space per terminal cell (no sextant characters)
+   * Each cell shows averaged color from the corresponding 2x3 pixel region
+   */
+  private _renderBlockMode(
+    bounds: Bounds,
+    style: Partial<Cell>,
+    buffer: DualBuffer,
+    terminalWidth: number,
+    terminalHeight: number
+  ): void {
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+    const scale = this._scale;
+    const halfScale = scale >> 1;
+    const hasStyleBg = style.background !== undefined;
+    const propsBg = this.props.backgroundColor;
+
+    for (let ty = 0; ty < terminalHeight; ty++) {
+      const baseBufferY = ty * 3 * scale;
+
+      for (let tx = 0; tx < terminalWidth; tx++) {
+        const baseBufferX = tx * 2 * scale;
+
+        // Sample center pixel of 2x3 block and average colors
+        let totalR = 0, totalG = 0, totalB = 0, count = 0;
+
+        // Sample 6 pixels in 2x3 grid
+        for (let py = 0; py < 3; py++) {
+          const bufferY = baseBufferY + py * scale + halfScale;
+          if (bufferY < 0 || bufferY >= bufH) continue;
+          const rowOffset = bufferY * bufW;
+
+          for (let px = 0; px < 2; px++) {
+            const bufferX = baseBufferX + px * scale + halfScale;
+            if (bufferX < 0 || bufferX >= bufW) continue;
+
+            const bufIndex = rowOffset + bufferX;
+            // Check drawing layer first, then image layer
+            let color = this._colorBuffer[bufIndex];
+            if (color === TRANSPARENT) {
+              color = this._imageColorBuffer[bufIndex];
+            }
+            if (color !== TRANSPARENT) {
+              totalR += (color >> 24) & 0xFF;
+              totalG += (color >> 16) & 0xFF;
+              totalB += (color >> 8) & 0xFF;
+              count++;
+            }
+          }
+        }
+
+        // Determine background color
+        let bgColor: string | undefined;
+        if (count > 0) {
+          const avgR = Math.round(totalR / count);
+          const avgG = Math.round(totalG / count);
+          const avgB = Math.round(totalB / count);
+          bgColor = rgbaToCss(packRGBA(avgR, avgG, avgB, 255));
+        } else {
+          bgColor = propsBg ?? (hasStyleBg ? style.background as string : undefined);
+        }
+
+        // Skip empty cells with no background
+        if (!bgColor) continue;
+
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char: ' ',
+          background: bgColor,
+          bold: style.bold,
+          dim: style.dim,
+        });
       }
     }
   }

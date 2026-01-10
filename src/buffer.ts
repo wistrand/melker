@@ -274,23 +274,28 @@ export class TerminalBuffer {
   ): void {
     const chars = BORDER_CHARS[borderStyle] || BORDER_CHARS.thin;
 
+    // For block style, use foreground as background (spaces need bg color to be visible)
+    const cellStyle = borderStyle === 'block'
+      ? { ...style, background: style.foreground || style.background, foreground: undefined }
+      : style;
+
     // Top and bottom borders
     for (let i = 1; i < width - 1; i++) {
-      this.setCell(x + i, y, { char: chars.h, ...style });
-      this.setCell(x + i, y + height - 1, { char: chars.h, ...style });
+      this.setCell(x + i, y, { char: chars.h, ...cellStyle });
+      this.setCell(x + i, y + height - 1, { char: chars.h, ...cellStyle });
     }
 
     // Left and right borders
     for (let i = 1; i < height - 1; i++) {
-      this.setCell(x, y + i, { char: chars.v, ...style });
-      this.setCell(x + width - 1, y + i, { char: chars.v, ...style });
+      this.setCell(x, y + i, { char: chars.v, ...cellStyle });
+      this.setCell(x + width - 1, y + i, { char: chars.v, ...cellStyle });
     }
 
     // Corners
-    this.setCell(x, y, { char: chars.tl, ...style });
-    this.setCell(x + width - 1, y, { char: chars.tr, ...style });
-    this.setCell(x, y + height - 1, { char: chars.bl, ...style });
-    this.setCell(x + width - 1, y + height - 1, { char: chars.br, ...style });
+    this.setCell(x, y, { char: chars.tl, ...cellStyle });
+    this.setCell(x + width - 1, y, { char: chars.tr, ...cellStyle });
+    this.setCell(x, y + height - 1, { char: chars.bl, ...cellStyle });
+    this.setCell(x + width - 1, y + height - 1, { char: chars.br, ...cellStyle });
   }
 
   // Compare with another buffer and return differences

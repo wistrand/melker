@@ -33,7 +33,8 @@ export type TerminalColor =
   | string; // Allow custom colors/hex values
 
 // Border styles using Unicode Box Drawing characters
-export type BorderStyle = 'none' | 'thin' | 'thick' | 'double' | 'rounded' | 'dashed' | 'dashed-rounded' | 'ascii' | 'ascii-rounded';
+// 'block' uses spaces with background color (for terminals without box-drawing support)
+export type BorderStyle = 'none' | 'thin' | 'thick' | 'double' | 'rounded' | 'dashed' | 'dashed-rounded' | 'ascii' | 'ascii-rounded' | 'block';
 
 // Border character definitions: h=horizontal, v=vertical, tl/tr/bl/br=corners, tm/bm/lm/rm/mm=junctions
 export interface BorderChars {
@@ -59,6 +60,7 @@ export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {
   'dashed-rounded': { h: '┄', v: '┆', tl: '╭', tr: '╮', bl: '╰', br: '╯', tm: '┬', bm: '┴', lm: '├', rm: '┤', mm: '┼' },
   ascii:          { h: '-', v: '|', tl: '+', tr: '+', bl: '+', br: '+', tm: '+', bm: '+', lm: '+', rm: '+', mm: '+' },
   'ascii-rounded': { h: '-', v: '|', tl: '·', tr: '·', bl: '·', br: '·', tm: '+', bm: '+', lm: '+', rm: '+', mm: '+' },
+  block:          { h: ' ', v: ' ', tl: ' ', tr: ' ', bl: ' ', br: ' ', tm: ' ', bm: ' ', lm: ' ', rm: ' ', mm: ' ' },
 };
 
 export interface Style extends Record<string, any> {
@@ -377,6 +379,7 @@ import type { CanvasProps } from './components/canvas.ts';
 import type { TabProps } from './components/tab.ts';
 import type { TabsProps } from './components/tabs.ts';
 import type { ProgressProps } from './components/progress.ts';
+import type { SliderProps } from './components/slider.ts';
 
 // Type mapping for known element types to their specific props
 export interface ComponentPropsMap {
@@ -392,6 +395,7 @@ export interface ComponentPropsMap {
   'tab': TabProps;
   'tabs': TabsProps;
   'progress': ProgressProps;
+  'slider': SliderProps;
 }
 
 // Type mapping for known element types to their element classes
@@ -407,6 +411,7 @@ export type KnownElementTypeMap = {
   'tab': Element;
   'tabs': Element;
   'progress': Element;
+  'slider': Element;
 };
 
 // Helper type to get props for a component type

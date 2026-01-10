@@ -5,6 +5,24 @@ import schema from './schema.json' with { type: 'json' };
 import { Env } from '../env.ts';
 import { getConfigDir } from '../xdg.ts';
 
+// Lazy logger initialization to avoid circular dependency
+// (config.ts is loaded before logging.ts is fully initialized)
+// We store getLogger function reference once available
+let _loggerGetter: (() => { debug: (msg: string) => void; info: (msg: string) => void; warn: (msg: string) => void }) | null = null;
+let _configLogger: { debug: (msg: string) => void; info: (msg: string) => void; warn: (msg: string) => void } | null = null;
+
+export function setLoggerGetter(getter: () => { debug: (msg: string) => void; info: (msg: string) => void; warn: (msg: string) => void }): void {
+  _loggerGetter = getter;
+}
+
+function getConfigLogger(): { debug: (msg: string) => void; info: (msg: string) => void; warn: (msg: string) => void } {
+  if (!_configLogger && _loggerGetter) {
+    _configLogger = _loggerGetter();
+  }
+  // Return no-op logger if not yet initialized
+  return _configLogger ?? { debug: () => {}, info: () => {}, warn: () => {} };
+}
+
 /**
  * Schema property definition
  */
@@ -59,7 +77,7 @@ export interface ConfigInitOptions {
  * 4. Env vars
  * 5. CLI flags (highest - explicit user intent)
  */
-export type ConfigSource = 'default' | 'file' | 'policy' | 'cli' | 'env';
+export type ConfigSource = 'default' | 'file' | 'policy' | 'cli' | 'env' | 'runtime';
 
 export class MelkerConfig {
   private static instance: MelkerConfig | null = null;
@@ -545,6 +563,12 @@ export class MelkerConfig {
             case 'file':
               sourceStr = ' <- config.json';
               break;
+            case 'cli':
+              sourceStr = ' <- cli';
+              break;
+            case 'runtime':
+              sourceStr = ' <- runtime';
+              break;
             case 'default':
               sourceStr = '';
               break;
@@ -611,6 +635,40 @@ export class MelkerConfig {
    */
   hasKey(key: string): boolean {
     return key in this.data;
+  }
+
+  /**
+   * Set a config value at runtime (for DevTools Edit Config)
+   * Coerces value to the correct type based on schema to avoid repeated parsing
+   */
+  setValue(key: string, value: unknown): void {
+    const oldValue = this.data[key];
+
+    // Coerce value based on schema type (policy schema or main schema)
+    const policyProp = MelkerConfig.policySchema[key];
+    const schemaProp = (schema as ConfigSchema).properties[key];
+    const propType = policyProp?.type ?? schemaProp?.type;
+
+    let coercedValue = value;
+    if (propType && typeof value === 'string') {
+      switch (propType) {
+        case 'number':
+          coercedValue = parseFloat(value);
+          if (isNaN(coercedValue as number)) coercedValue = value;
+          break;
+        case 'integer':
+          coercedValue = parseInt(value, 10);
+          if (isNaN(coercedValue as number)) coercedValue = value;
+          break;
+        case 'boolean':
+          coercedValue = value === 'true' || value === '1';
+          break;
+      }
+    }
+
+    this.data[key] = coercedValue;
+    this.sources[key] = 'runtime';
+    getConfigLogger().info(`Config updated: ${key} = ${JSON.stringify(coercedValue)} (was: ${JSON.stringify(oldValue)})`);
   }
 
   // ============================================================================
@@ -680,6 +738,11 @@ export class MelkerConfig {
 
   get terminalForceFFmpeg(): boolean {
     return this.data['terminal.forceFFmpeg'] as boolean;
+  }
+
+  // Render
+  get blockMode(): boolean {
+    return this.data['render.blockMode'] as boolean;
   }
 
   // Headless

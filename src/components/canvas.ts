@@ -1036,16 +1036,13 @@ export class CanvasElement extends Element implements Renderable {
 
     this._isDirty = true;
 
-    // Schedule render and next frame together to ensure proper ordering
-    // The render happens first, then next frame is scheduled after render completes
+    // Schedule next frame immediately based on elapsed time, then request render
+    // This keeps consistent frame timing regardless of render duration
+    this._scheduleNextShaderFrame();
+
+    // Request render (will show current frame's output)
     if (this._shaderRequestRender) {
-      const render = this._shaderRequestRender;
-      setTimeout(() => {
-        render();
-        this._scheduleNextShaderFrame();
-      }, 0);
-    } else {
-      this._scheduleNextShaderFrame();
+      this._shaderRequestRender();
     }
   }
 

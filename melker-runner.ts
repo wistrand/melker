@@ -47,7 +47,11 @@ async function wireBundlerHandlers(
   handlerCodeMap?: Map<string, string>,
   errorTranslator?: ErrorTranslator
 ): Promise<void> {
-  const noAutoRenderCallbacks = ['onPaint', 'onShader'];
+  // These callbacks don't need auto-render after each call:
+  // - onPaint/onShader: rendering is handled by the component's own loop
+  // - onMouseMove/onMouseOut/onMouseOver: typically just update state, component handles display
+  // - onInput: fast input rendering is handled separately
+  const noAutoRenderCallbacks = ['onPaint', 'onShader', 'onMouseMove', 'onMouseOut', 'onMouseOver', 'onInput'];
 
   if (element.props) {
     for (const [propName, propValue] of Object.entries(element.props)) {

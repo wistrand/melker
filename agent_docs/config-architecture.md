@@ -253,6 +253,89 @@ Apps can define both standard and custom config values in their policy:
 
 Custom config keys (like `myapp.scale`) are flattened to dot-notation and accessible via generic getters.
 
+## Policy Config Schema
+
+Apps can define a schema for custom config keys to enable **environment variable overrides**:
+
+```xml
+<policy>
+{
+  "name": "Plasma Demo",
+  "permissions": { "shader": true },
+  "config": {
+    "plasma": {
+      "scale": 1.5,
+      "speed": 2.0,
+      "debug": false
+    }
+  },
+  "configSchema": {
+    "plasma.scale": {
+      "type": "number",
+      "env": "PLASMA_SCALE",
+      "description": "Plasma effect scale multiplier"
+    },
+    "plasma.speed": {
+      "type": "number",
+      "env": "PLASMA_SPEED"
+    },
+    "plasma.debug": {
+      "type": "boolean",
+      "env": "PLASMA_DEBUG"
+    }
+  }
+}
+</policy>
+```
+
+### Config Schema Properties
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Value type: `string`, `boolean`, `integer`, `number` |
+| `default` | any | Default value (if not in config) |
+| `env` | string | Environment variable name for override |
+| `envInverted` | boolean | If true, env presence means opposite value |
+| `description` | string | Documentation |
+
+### Priority with Schema
+
+For keys with a configSchema entry:
+1. **Default** - from configSchema.default (lowest)
+2. **Policy** - from policy.config
+3. **Env var** - from configSchema.env (highest for app config)
+
+CLI flags do not apply to app-defined config (only schema-defined keys).
+
+### Auto-Permissions for Env Vars
+
+When a `configSchema` declares an `env` field, the env var is **automatically added** to the subprocess permissions. You don't need to manually add it to `"env"` in permissions:
+
+```json
+{
+  "permissions": { "shader": true },
+  "configSchema": {
+    "plasma.scale": { "type": "number", "env": "PLASMA_SCALE" }
+  }
+}
+```
+
+The subprocess will automatically have permission to read `PLASMA_SCALE` without needing `"env": ["PLASMA_SCALE"]` in permissions.
+
+### Example Usage
+
+```bash
+# Override plasma.scale via env var
+PLASMA_SCALE=3.0 ./melker.ts --trust plasma_demo.melker
+
+# print-config shows the env override
+./melker.ts --print-config plasma_demo.melker
+# [Plasma (app)]
+#   plasma.scale = 3 <- PLASMA_SCALE
+#   plasma.speed = 2 <- policy (PLASMA_SPEED)
+#   plasma.debug = false <- policy (PLASMA_DEBUG)
+```
+
 ## Usage Examples
 
 ```typescript

@@ -1,3 +1,5 @@
+import { getLogger } from './logging.ts';
+
 /**
  * Safe environment variable access with readability caching.
  * Caches which vars are readable (have permission), not the values themselves.
@@ -8,6 +10,7 @@
 export class Env {
   private static readable = new Map<string, boolean>();
   private static initialized = false;
+  private static warnedDenied = new Set<string>();
 
   /** Initialize by discovering readable vars */
   private static init(): void {
@@ -46,6 +49,12 @@ export class Env {
       return value;
     } catch {
       this.readable.set(name, false);
+      // Warn once per denied env var
+      if (!this.warnedDenied.has(name)) {
+        this.warnedDenied.add(name);
+        const logger = getLogger('Env');
+        logger.warn(`Access denied for env var: ${name} (add to policy permissions or configSchema)`);
+      }
       return undefined;
     }
   }

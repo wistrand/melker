@@ -5,6 +5,22 @@
  * Melker policy schema - declares what permissions an app needs.
  * Maps directly to Deno permission flags.
  */
+/**
+ * Schema property definition for app-defined config
+ */
+export interface PolicyConfigProperty {
+  /** Value type */
+  type?: 'string' | 'boolean' | 'integer' | 'number';
+  /** Default value */
+  default?: unknown;
+  /** Environment variable that can override this value */
+  env?: string;
+  /** If true, env var presence means false (e.g., NO_FEATURE=1 means feature=false) */
+  envInverted?: boolean;
+  /** Description for documentation */
+  description?: string;
+}
+
 export interface MelkerPolicy {
   /** App name (optional, for display) */
   name?: string;
@@ -18,8 +34,15 @@ export interface MelkerPolicy {
   /** Permission declarations */
   permissions?: PolicyPermissions;
 
-  /** App-specific configuration overrides */
+  /** App-specific configuration values */
   config?: Record<string, unknown>;
+
+  /**
+   * Schema for app-specific config properties.
+   * Enables env var overrides for custom config keys.
+   * Keys use dot-notation (e.g., "plasma.scale").
+   */
+  configSchema?: Record<string, PolicyConfigProperty>;
 }
 
 /**

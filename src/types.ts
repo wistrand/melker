@@ -2,6 +2,8 @@
 
 import type { KeyPressEvent, ChangeEvent } from './events.ts';
 
+// Re-export event types for component use
+export type { KeyPressEvent, ChangeEvent };
 
 export interface Position {
   x: number;

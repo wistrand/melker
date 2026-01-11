@@ -154,7 +154,13 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
       buffer.currentBuffer.setText(textX, textY, displayText, buttonStyle);
     } else {
       // Default button style: render brackets separately so only label can be bold
-      const maxTextLength = bounds.width;
+      // Account for padding in the content area calculation
+      const paddingValue = this.props.style?.padding || 0;
+      const paddingLeft = typeof paddingValue === 'number' ? paddingValue : (paddingValue.left || 0);
+      const paddingRight = typeof paddingValue === 'number' ? paddingValue : (paddingValue.right || 0);
+
+      const contentWidth = bounds.width - paddingLeft - paddingRight;
+      const maxTextLength = contentWidth;
       let truncatedLabel = title;
 
       // Account for "[ " and " ]" (4 characters)
@@ -166,19 +172,20 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
       // Calculate horizontal position based on text-align for bracket style
       const textAlign = this.props.style?.textAlign || 'center';
       const fullButtonWidth = 4 + truncatedLabel.length; // "[ " + label + " ]"
-      let buttonStartX = bounds.x;
+      let buttonStartX = bounds.x + paddingLeft;
 
-      if (bounds.width > fullButtonWidth) {
+      if (contentWidth > fullButtonWidth) {
+        const contentStartX = bounds.x + paddingLeft;
         switch (textAlign) {
           case 'left':
-            buttonStartX = bounds.x;
+            buttonStartX = contentStartX;
             break;
           case 'right':
-            buttonStartX = bounds.x + bounds.width - fullButtonWidth;
+            buttonStartX = contentStartX + contentWidth - fullButtonWidth;
             break;
           case 'center':
           default:
-            buttonStartX = bounds.x + Math.floor((bounds.width - fullButtonWidth) / 2);
+            buttonStartX = contentStartX + Math.floor((contentWidth - fullButtonWidth) / 2);
             break;
         }
       }
@@ -212,6 +219,7 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
 
   /**
    * Calculate intrinsic size for the button
+   * Note: Returns content size WITHOUT borders (layout engine adds borders separately)
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const { title, variant } = this.props;
@@ -221,25 +229,21 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
     const hasBorder = style$?.border || style$?.borderLeft || style$?.borderRight || style$?.borderTop || style$?.borderBottom;
     const isPlain = variant === 'plain';
 
-    // Calculate border widths
-    const borderLeftWidth = (style$?.border || style$?.borderLeft) ? 1 : 0;
-    const borderRightWidth = (style$?.border || style$?.borderRight) ? 1 : 0;
-
     let width = 0;
 
     if (title) {
       const labelLength = title.length;
 
       if (hasBorder || isPlain) {
-        // Content size is just the text width plus borders
-        width = labelLength + borderLeftWidth + borderRightWidth;
+        // Content size is just the text width (borders added by layout engine)
+        width = labelLength;
       } else {
-        // Default button style adds "[ ]" around title
+        // Default button style adds "[ ]" around title (these are content, not borders)
         width = labelLength + 4; // "[ " + label + " ]"
       }
     } else {
       if (hasBorder || isPlain) {
-        width = borderLeftWidth + borderRightWidth;
+        width = 0; // No content, borders added by layout engine
       } else {
         width = 4; // Minimum for "[ ]"
       }

@@ -170,7 +170,10 @@ Clickable button. **Uses `title` not `label`**.
 - `onClick` - Click handler
 - `style` - Styling
 
-**Note:** Buttons render with `[ ]` brackets by default. Don't add `border` to buttons or you'll get double brackets like `[ [ Button ] ]`. Let the theme engine handle button styling.
+**Notes:**
+- Buttons render with `[ ]` brackets by default. Don't add `border` to buttons or you'll get double brackets like `[ [ Button ] ]`.
+- For default `[ ]` buttons, vertical padding is ignored (buttons stay single-line). Horizontal padding adds space around the brackets.
+- Let the theme engine handle button styling.
 
 ### dialog
 
@@ -550,5 +553,12 @@ Only use colors for canvas drawing or very intentional effects. If needed, use n
 
 ### Size Values
 - Numbers: `40` (columns/rows)
-- Percentages: `100%`, `50%`
-- Fill: `fill` (expand to available space)
+- Percentages: `100%`, `50%` (works in `style.width`, `style.height`)
+- Fill: `fill` (expand to *remaining* available space after siblings)
+
+**Table column widths:**
+Use `style.width` on `<th>` elements for column sizing:
+```xml
+<th style="width: 20%">Name</th>
+<th style="width: fill">Description</th>
+```

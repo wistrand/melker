@@ -101,7 +101,7 @@
 
     <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
       <button
-        title="✅ Clock Running"
+        title="Clock Running"
         style="background-color: blue; color: white; padding: 1;"
         onClick="
           // Clock is already running, this is just a status indicator

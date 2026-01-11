@@ -281,6 +281,45 @@ Checkbox uses ASCII `[x]` instead of Unicode `[✓]` for consistent terminal wid
 
 The Unicode checkmark `✓` has inconsistent width across terminals, causing layout issues. ASCII characters have predictable 1-char width.
 
+## intrinsicSize Contract
+
+Component `intrinsicSize()` methods must return **content size only** (without padding or border). The layout engine adds padding and border separately.
+
+**Contract:**
+```typescript
+// Component intrinsicSize returns content dimensions only
+intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
+  // DO NOT include padding or border here
+  return { width: contentWidth, height: contentHeight };
+}
+
+// Layout engine adds padding + border for outer size:
+const intrinsicOuter = intrinsicSize.width + paddingCross + borderCross;
+```
+
+**Rationale:**
+- Prevents double-counting when layout adds chrome
+- Consistent behavior across all components
+- Layout engine has full control over box model calculations
+
+**Exceptions:**
+- Default buttons (`[ ]` style) include brackets in width (4 chars) since brackets are content, not border
+- Components with explicit `style.width`/`height` may return those values
+
+## Single-Line Element Padding
+
+For single-line elements (buttons, text, input) without borders, vertical padding is ignored in flex cross-axis calculation.
+
+**Implementation** (`src/layout.ts`):
+```typescript
+let effectivePaddingCross = paddingCross;
+if (isRow && intrinsicSize.height === 1 && borderCross === 0) {
+  effectivePaddingCross = 0;  // Skip vertical padding for single-line elements
+}
+```
+
+This prevents buttons from expanding to 3 lines when `padding: 1` is applied.
+
 ## Flex Layout Cross-Axis Calculation
 
 **CRITICAL**: The `baseCross` calculation in flex layout must handle three cases correctly (see `src/layout.ts` ~lines 586-608):

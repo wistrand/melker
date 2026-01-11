@@ -871,14 +871,15 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
   }
 
   // Intrinsic size for layout
+  // Note: Returns content size WITHOUT borders (layout engine adds them separately)
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const showBreadcrumb = this.fbProps.showBreadcrumb ?? true;
     const showFilter = this.fbProps.showFilter ?? true;
     const showButtons = this.fbProps.showButtons ?? true;
     const maxVisible = this.fbProps.maxVisible || 10;
 
-    // Calculate height
-    let height = 2; // Top and bottom border
+    // Calculate content height (borders are added by layout engine)
+    let height = 0;
     if (showBreadcrumb) height += 1;
     if (showFilter) height += 1;
     height += maxVisible; // List area

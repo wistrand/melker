@@ -666,6 +666,17 @@ export class LayoutEngine {
       // Calculate base cross size (also needs padding and borders added)
       let baseCross: number;
 
+      // For single-line elements (like buttons, text, input) without border,
+      // don't add vertical padding to cross-axis - they don't expand vertically
+      // This is determined by checking if intrinsic height is 1 (for row layout)
+      // or intrinsic width is 1 (for column layout) with no border
+      let effectivePaddingCross = paddingCross;
+      if (isRow && intrinsicSize.height === 1 && borderCross === 0) {
+        effectivePaddingCross = 0;
+      } else if (!isRow && intrinsicSize.width === 1 && borderCross === 0) {
+        effectivePaddingCross = 0;
+      }
+
       // Check if item will be stretched (default align-items is 'stretch')
       // When wrapping is enabled, don't stretch items to full container size during base size calculation
       // as this would make each wrapped line too large. Items will be stretched to their line's size later.
@@ -679,22 +690,22 @@ export class LayoutEngine {
           baseCross = childProps.height;
         } else if (willStretch) {
           // For stretch alignment, use available space but ensure minimum intrinsic size
-          const intrinsicOuter = intrinsicSize.height + paddingCross + borderCross;
+          const intrinsicOuter = intrinsicSize.height + effectivePaddingCross + borderCross;
           baseCross = Math.max(crossAxisSize, intrinsicOuter);
         } else {
           // Use intrinsic size + padding + borders for cross axis (outer size)
-          baseCross = intrinsicSize.height + paddingCross + borderCross;
+          baseCross = intrinsicSize.height + effectivePaddingCross + borderCross;
         }
       } else {
         if (!useIntrinsicSize && typeof childProps.width === 'number') {
           baseCross = childProps.width;
         } else if (willStretch) {
           // For stretch alignment, use available space but ensure minimum intrinsic size
-          const intrinsicOuter = intrinsicSize.width + paddingCross + borderCross;
+          const intrinsicOuter = intrinsicSize.width + effectivePaddingCross + borderCross;
           baseCross = Math.max(crossAxisSize, intrinsicOuter);
         } else {
           // Use intrinsic size + padding + borders for cross axis (outer size)
-          baseCross = intrinsicSize.width + paddingCross + borderCross;
+          baseCross = intrinsicSize.width + effectivePaddingCross + borderCross;
         }
       }
 

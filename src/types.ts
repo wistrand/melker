@@ -65,6 +65,9 @@ export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {
   block:          { h: ' ', v: ' ', tl: ' ', tr: ' ', bl: ' ', br: ' ', tm: ' ', bm: ' ', lm: ' ', rm: ' ', mm: ' ' },
 };
 
+// Percentage string type for width/height (e.g., "50%", "100%")
+export type PercentageString = `${number}%`;
+
 export interface Style extends Record<string, any> {
   color?: TerminalColor;
   backgroundColor?: TerminalColor;
@@ -88,8 +91,8 @@ export interface Style extends Record<string, any> {
   display?: 'block' | 'flex';
   position?: 'static' | 'relative' | 'absolute' | 'fixed';
   overflow?: 'visible' | 'hidden' | 'scroll';
-  width?: number | 'auto' | 'fill';
-  height?: number | 'auto' | 'fill';
+  width?: number | 'auto' | 'fill' | PercentageString;
+  height?: number | 'auto' | 'fill' | PercentageString;
   top?: number;
   right?: number;
   bottom?: number;
@@ -121,9 +124,6 @@ export interface BoxSpacing {
   bottom?: number;
   left?: number;
 }
-
-// Percentage string type for width/height (e.g., "50%", "100%")
-export type PercentageString = `${number}%`;
 
 export interface LayoutProps {
   width?: number | 'auto' | 'fill' | PercentageString;

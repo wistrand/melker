@@ -215,6 +215,53 @@ Modal dialog overlay.
 </script>
 ```
 
+### file-browser
+
+File system browser for selecting files and directories. Auto-initializes when rendered.
+
+```xml
+<dialog id="file-dialog" title="Open File" open="false" modal="true" width="70" height="20">
+  <file-browser
+    id="fb"
+    selectionMode="single"
+    selectType="file"
+    onSelect="$app.handleSelect(event)"
+    onCancel="$app.closeDialog()"
+    maxVisible="12"
+  />
+</dialog>
+```
+
+**Props:**
+- `path` - Initial directory (default: current working directory)
+- `selectionMode` - `single` | `multiple`
+- `selectType` - `file` | `directory` | `both`
+- `filter` - `fuzzy` | `prefix` | `contains` | `exact` | `none`
+- `showHidden` - Show dotfiles
+- `extensions` - Filter by extensions, e.g. `['.ts', '.js']`
+- `showFilter` - Show filter input (default: true)
+- `showBreadcrumb` - Show path bar (default: true)
+- `showButtons` - Show Cancel/Open buttons (default: true)
+- `showSize` - Show file sizes (default: true)
+- `maxVisible` - Visible rows (default: 10)
+- `selectLabel` - Open button label (default: "Open")
+- `cancelLabel` - Cancel button label (default: "Cancel")
+
+**Events:**
+- `onSelect` - `event.path` (string), `event.paths` (array), `event.isDirectory`
+- `onCancel` - Called when cancelled
+- `onNavigate` - Called when navigating to new directory
+- `onError` - `event.code`, `event.message`
+
+**Keyboard:**
+- Arrow keys - navigate list
+- Enter - open directory / select file
+- Backspace - go to parent directory
+- Escape - cancel
+- Type to filter
+
+**Permission:** Requires `read` permission in policy.
+
 ## Tabs
 
 ### tabs / tab

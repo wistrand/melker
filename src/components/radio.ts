@@ -23,6 +23,7 @@ export class RadioElement extends Element implements Renderable, Focusable, Clic
       ...props,
       style: {
         // Default styles would go here (none currently)
+        paddingLeft: 1,
         ...props.style
       },
     };

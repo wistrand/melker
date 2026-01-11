@@ -875,18 +875,25 @@ export async function extractScriptsForBundler(
 function findContainingElement(content: string, offset: number): { tag: string; id?: string; line: number } {
   const before = content.slice(0, offset);
 
-  // Find the most recent opening tag
-  const tagMatch = before.match(/<(\w+)(?:\s[^>]*)?$/);
+  // Find the most recent opening tag (supports hyphenated tags like file-browser)
+  const tagMatch = before.match(/<([\w-]+)(?:\s[^>]*)?$/);
   const tag = tagMatch?.[1] || 'unknown';
 
   // Count lines
   const line = (before.match(/\n/g) || []).length + 1;
 
-  // Try to find id attribute nearby
-  const nearbyContent = content.slice(Math.max(0, offset - 200), Math.min(content.length, offset + 200));
-  const idMatch = nearbyContent.match(/\bid=["']([^"']+)["']/);
+  // Find the ID within the current element's opening tag
+  // Look backwards for the '<' that starts this tag, then forward to find '>' or the offset
+  let id: string | undefined;
+  if (tagMatch) {
+    // tagMatch[0] is the matched portion like '<button id="foo" onPress'
+    // We need to extract the id from this specific tag
+    const tagContent = tagMatch[0];
+    const idInTagMatch = tagContent.match(/\bid=["']([^"']+)["']/);
+    id = idInTagMatch?.[1];
+  }
 
-  return { tag, id: idMatch?.[1], line };
+  return { tag, id, line };
 }
 
 /**

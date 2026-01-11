@@ -8,6 +8,8 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 
 **[Read the Manifesto](MANIFESTO.md)** for the philosophy behind this approach.
 
+**[Read the FAQ](FAQ.md)** for common questions.
+
 ---
 
 ## Why Melker?

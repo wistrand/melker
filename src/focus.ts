@@ -177,6 +177,14 @@ export class FocusManager {
   }
 
   /**
+   * Check if an element is registered as focusable and currently visible/enabled
+   */
+  isFocusable(elementId: string): boolean {
+    const element = this._getFocusableElement(elementId);
+    return element !== null && element.visible && !element.disabled;
+  }
+
+  /**
    * Focus an element by ID
    */
   focus(elementId: string, options: FocusOptions = {}): boolean {
@@ -288,16 +296,26 @@ export class FocusManager {
   trapFocus(options: FocusTrappingOptions): void {
     this._focusTraps.push(options);
 
-    // Focus initial element if specified
-    if (options.initialFocus) {
-      this.focus(options.initialFocus);
-    } else {
-      // Focus first element in container
-      const containerElements = this._getElementsInContainer(options.containerId);
-      if (containerElements.length > 0) {
-        this.focus(containerElements[0]);
+    // Defer initial focus to allow render cycle to complete
+    // This ensures element bounds are available for focus validation
+    setTimeout(() => {
+      // Focus initial element if specified
+      if (options.initialFocus) {
+        if (!this.focus(options.initialFocus)) {
+          // If initial focus fails, try first element in container
+          const containerElements = this._getElementsInContainer(options.containerId);
+          if (containerElements.length > 0) {
+            this.focus(containerElements[0]);
+          }
+        }
+      } else {
+        // Focus first element in container
+        const containerElements = this._getElementsInContainer(options.containerId);
+        if (containerElements.length > 0) {
+          this.focus(containerElements[0]);
+        }
       }
-    }
+    }, 0);
   }
 
   /**
@@ -355,13 +373,38 @@ export class FocusManager {
    * Get all focusable elements within a container
    */
   private _getElementsInContainer(containerId: string): string[] {
-    // This would need integration with the component tree to determine
-    // which elements are children of the container
-    // For now, return all elements (would be implemented with actual DOM tree)
+    if (!this._document) {
+      return [];
+    }
+
+    const container = this._document.getElementById(containerId);
+    if (!container) {
+      return [];
+    }
+
+    // Helper to check if an element is a descendant of the container
+    const isDescendant = (elementId: string): boolean => {
+      const element = this._document!.getElementById(elementId);
+      if (!element) return false;
+
+      // Check if this element is inside the container by traversing the container's tree
+      const checkInTree = (node: Element): boolean => {
+        if (node.id === elementId) return true;
+        if (node.children) {
+          for (const child of node.children) {
+            if (checkInTree(child)) return true;
+          }
+        }
+        return false;
+      };
+
+      return checkInTree(container);
+    };
+
     return Array.from(this._focusableElementIds)
       .filter(id => {
         const element = this._getFocusableElement(id);
-        return element && element.visible && !element.disabled;
+        return element && element.visible && !element.disabled && isDescendant(id);
       });
   }
 

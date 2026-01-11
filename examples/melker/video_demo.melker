@@ -102,10 +102,9 @@
       style="flex: 1 1 0;"
       loop="true"
       fps="24"
-      dither="${argv[2]:-false}"
-      colorDepth="${argv[3]:-8}"
-      startTime="${argv[4]:-0}"
-      subtitle="${argv[5]:-.srt}"
+      dither="auto"
+      startTime="${argv[2]:-0}"
+      subtitle="${argv[3]:-.srt}"
       audio="${MELKER_AUDIO:-true}"
       onPlay="
         const status = $melker.getElementById('status');

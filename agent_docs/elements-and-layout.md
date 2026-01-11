@@ -438,6 +438,63 @@ See `agent_docs/filterable-list-architecture.md` for implementation details.
 | `src/components/filterable-list/command-palette.ts` | Command palette component |
 | `src/components/filterable-list/filter.ts` | Fuzzy/prefix/contains matching |
 
+## File Browser Component
+
+The `<file-browser>` component provides file system navigation for selecting files and directories.
+
+### Usage
+
+```xml
+<dialog id="file-dialog" title="Open File" open="false" modal="true" width="70" height="20">
+  <file-browser
+    id="fb"
+    selectionMode="single"
+    selectType="file"
+    onSelect="$app.handleSelect(event)"
+    onCancel="$app.closeDialog()"
+    maxVisible="12"
+  />
+</dialog>
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `path` | string | cwd | Initial directory |
+| `selectionMode` | string | 'single' | 'single' or 'multiple' |
+| `selectType` | string | 'file' | 'file', 'directory', or 'both' |
+| `filter` | string | 'fuzzy' | Filter mode |
+| `showHidden` | boolean | false | Show dotfiles |
+| `maxVisible` | number | 10 | Visible rows |
+
+### Events
+
+| Event | Properties | Description |
+|-------|------------|-------------|
+| `onSelect` | path, paths, isDirectory | File/dir selected |
+| `onCancel` | - | Cancelled |
+| `onNavigate` | path | Navigated to directory |
+| `onError` | code, message | Error occurred |
+
+### Keyboard
+
+- Arrow keys: Navigate list
+- Enter: Open directory / select file
+- Backspace: Parent directory
+- Escape: Cancel
+- Type: Filter entries
+
+### Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `src/components/file-browser/file-browser.ts` | Main component |
+| `src/components/file-browser/file-entry.ts` | Type definitions |
+| `src/components/file-browser/file-utils.ts` | Directory loading utilities |
+
+See `agent_docs/file-browser-architecture.md` for detailed architecture.
+
 ## Progress Component
 
 The `<progress>` component displays a progress bar using canvas pixels for smooth sub-character fill.

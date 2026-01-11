@@ -20,6 +20,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Implementation details | `agent_docs/implementation-details.md` |
 | AI accessibility | `agent_docs/ai-accessibility.md` |
 | Filterable lists | `agent_docs/filterable-list-architecture.md` |
+| File browser | `agent_docs/file-browser-architecture.md` |
 | Fast input rendering | `agent_docs/fast-input-render-plan.md` |
 | Config system | `agent_docs/config-architecture.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
@@ -135,6 +136,11 @@ src/
       select.ts       - SelectElement
       autocomplete.ts - AutocompleteElement
       command-palette.ts - CommandPaletteElement
+    file-browser/     - File system browser component
+      mod.ts          - Module exports
+      file-browser.ts - FileBrowserElement (main component)
+      file-entry.ts   - Type definitions
+      file-utils.ts   - Directory loading, formatting utilities
   video/              - Video processing
     mod.ts            - Video exports
     ffmpeg.ts         - FFmpeg integration

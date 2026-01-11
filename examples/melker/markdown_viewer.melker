@@ -65,7 +65,8 @@ If no file is specified, defaults to `README.md`.
         <container id="header">
             <button class="big" title="Back" onClick="$app.goBack()"/>
             <button title="Fwd" onClick="$app.goForward()"/>
-            <text style="font-weight: bold; flex: 1; padding-left: 1;">
+            <button title="Open..." onClick="$app.openFileBrowser()"/>
+            <text id="title-text" style="font-weight: bold; flex: 1; padding-left: 1;">
                 ${argv[1]:-README.md}
             </text>
             <button title="Exit" onClick="$melker.exit();" />
@@ -74,6 +75,26 @@ If no file is specified, defaults to `README.md`.
         <container id="content-area" scrollable="true" style="flex: 1 1 0; padding: 1;">
             <markdown id="markdown-content"  src="${argv[1]:-README.md}"  onLink="$app.handleLink(event)" style="text-wrap: wrap;"/>
         </container>
+
+        <dialog
+          id="file-dialog"
+          title="Open Markdown File"
+          open="false"
+          modal="true"
+          width="70"
+          height="20"
+          onClose="$app.closeFileBrowser()"
+        >
+          <file-browser
+            id="file-browser"
+            selectionMode="single"
+            selectType="file"
+            showHidden="false"
+            onSelect="$app.handleFileSelect(event)"
+            onCancel="$app.closeFileBrowser()"
+            maxVisible="12"
+          />
+        </dialog>
     </container>
 
 
@@ -84,6 +105,44 @@ If no file is specified, defaults to `README.md`.
 
     function updateTitle(src: string) {
       $melker.setTitle('Melker - ' + src);
+      const titleText = $melker.getElementById('title-text');
+      if (titleText) titleText.props.text = src;
+    }
+
+    // File browser dialog
+    export function openFileBrowser() {
+      const dialog = $melker.getElementById('file-dialog');
+      if (dialog) dialog.props.open = true;
+      $melker.render();
+    }
+
+    export function closeFileBrowser() {
+      const dialog = $melker.getElementById('file-dialog');
+      if (dialog) dialog.props.open = false;
+      $melker.render();
+    }
+
+    export function handleFileSelect(event: { path: string }) {
+      const filePath = event.path;
+      closeFileBrowser();
+
+      // Only open markdown files
+      if (!filePath.endsWith('.md') && !filePath.endsWith('.melker')) {
+        return;
+      }
+
+      const markdown = $melker.getElementById('markdown-content');
+      if (markdown) {
+        const currentSrc = markdown.props.src || '';
+        // Push current page to back stack
+        if (currentSrc) {
+          backStack.push(currentSrc);
+          forwardStack.length = 0;
+        }
+        markdown.props.src = filePath;
+        updateTitle(filePath);
+        $melker.render();
+      }
     }
 
 

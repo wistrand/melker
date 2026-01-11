@@ -2,6 +2,9 @@
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getThemeColor } from '../theme.ts';
+import { getLogger } from '../logging.ts';
+
+const liLogger = getLogger('li');
 
 export interface LiProps extends BaseProps {
   // Li components provide list styling with markers and indentation
@@ -23,7 +26,10 @@ export class LiElement extends Element implements Renderable {
     const defaultProps: LiProps = {
       style: {
         display: 'block',
-        paddingLeft: defaultIndent, // Default indentation
+        // No paddingLeft - li.render() handles marker + text layout
+        // Ensure li doesn't shrink to 0 height in flex container
+        flexShrink: 0,
+        height: 1,
         ...props.style
       },
       marker: props.marker ?? '-', // Default list marker
@@ -59,10 +65,57 @@ export class LiElement extends Element implements Renderable {
   }
 
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
-    // Li components provide structure and indentation
-    // The parent list component handles all marker rendering
-    // so we don't need to render anything here - just let the layout system
-    // handle child rendering with the proper indentation (paddingLeft)
+    // Debug: log bounds for each li
+    liLogger.debug(`li.render: id=${this.id}, bounds=${JSON.stringify(bounds)}, focused=${this.props.focused}`);
+
+    // Li components render: marker + child content (text, etc.)
+    const { focused, selected } = this.props;
+
+    // Determine marker based on focused/selected state
+    let marker: string;
+    let markerStyle: Partial<Cell> = { ...style };
+
+    if (focused && selected) {
+      marker = '*';
+      markerStyle.foreground = getThemeColor('focusPrimary');
+      markerStyle.background = getThemeColor('focusBackground');
+    } else if (focused) {
+      marker = '>';
+      markerStyle.foreground = getThemeColor('focusPrimary');
+      markerStyle.background = getThemeColor('focusBackground');
+    } else if (selected) {
+      marker = '*';
+      markerStyle.foreground = getThemeColor('primary');
+    } else {
+      marker = '-';
+      markerStyle.foreground = getThemeColor('textSecondary');
+    }
+
+    // Render marker at the start of the line
+    buffer.currentBuffer.setCell(bounds.x, bounds.y, {
+      char: marker,
+      foreground: markerStyle.foreground,
+      background: markerStyle.background,
+    });
+
+    // Get the text content from child text elements and render after marker
+    if (this.children && this.children.length > 0) {
+      for (const child of this.children) {
+        if (child.type === 'text' && child.props?.text) {
+          const text = String(child.props.text);
+
+          // Leave space for marker + space, truncate to fit remaining width
+          const textX = bounds.x + 2;
+          const availableWidth = bounds.width - 2;
+          const displayText = text.length > availableWidth
+            ? text.substring(0, availableWidth)
+            : text;
+
+          // Render text after the marker
+          buffer.currentBuffer.setText(textX, bounds.y, displayText, style);
+        }
+      }
+    }
   }
 
   // Validation for li props
@@ -74,6 +127,7 @@ export class LiElement extends Element implements Renderable {
 
 // Lint schema for li component
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { registerComponent } from '../element.ts';
 
 export const liSchema: ComponentSchema = {
   description: 'List item within a list container',
@@ -87,3 +141,16 @@ export const liSchema: ComponentSchema = {
 };
 
 registerComponentSchema('li', liSchema);
+
+// Register li component for createElement
+registerComponent({
+  type: 'li',
+  componentClass: LiElement,
+  defaultProps: {
+    style: {
+      display: 'block',
+      flexShrink: 0,
+      height: 1,
+    },
+  },
+});

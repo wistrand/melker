@@ -29,3 +29,6 @@ export * from './table-cell.ts';
 
 // Filterable list components (combobox, select, etc.)
 export * from './filterable-list/mod.ts';
+
+// File browser component
+export * from './file-browser/mod.ts';

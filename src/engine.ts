@@ -246,6 +246,9 @@ export class MelkerEngine {
   private _lastRenderTime = 0;
   private _layoutNodeCount = 0;
 
+  // Track modal dialogs with focus traps
+  private _trappedModalDialogIds = new Set<string>();
+
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
     // Get terminal settings from config
     const config = MelkerConfig.get();
@@ -968,11 +971,6 @@ export class MelkerEngine {
       await this._resizeHandler.startListening();
     }
 
-    // Initial render - use force render for first display to ensure clean state
-    if (this._options.autoRender) {
-      this.forceRender();
-    }
-
     // Start debug server if enabled
     if (this._debugServer) {
       try {
@@ -993,7 +991,13 @@ export class MelkerEngine {
     // Setup cleanup handlers
     this._setupCleanupHandlers();
 
+    // Mark as initialized BEFORE initial render (forceRender checks this flag)
     this._isInitialized = true;
+
+    // Initial render - use force render for first display to ensure clean state
+    if (this._options.autoRender) {
+      this.forceRender();
+    }
 
     // Log successful initialization
     this._logger?.info('MelkerEngine started successfully', {
@@ -1205,6 +1209,9 @@ export class MelkerEngine {
 
     // Trigger debounced state persistence (if enabled)
     this._persistenceManager.triggerDebouncedSave();
+
+    // Update focus traps for modal dialogs
+    this._updateModalFocusTraps();
     } finally {
       this._isRendering = false;
       this._logger?.trace('render() finished, _isRendering = false');
@@ -1342,6 +1349,9 @@ export class MelkerEngine {
 
     // Force complete redraw
     this._renderFullScreen();
+
+    // Update focus traps for modal dialogs
+    this._updateModalFocusTraps();
     } finally {
       this._isRendering = false;
     }
@@ -2240,6 +2250,80 @@ export class MelkerEngine {
       }
     }
     return false;
+  }
+
+  /**
+   * Update focus traps for modal dialogs
+   * Called after each render to ensure focus is trapped when modals open/close
+   */
+  private _updateModalFocusTraps(): void {
+    if (!this._document?.root) return;
+
+    // Collect all open modal dialogs
+    const openModalDialogs: Element[] = [];
+    this._collectOpenModalDialogs(this._document.root, openModalDialogs);
+
+    const currentOpenIds = new Set(openModalDialogs.map(d => d.id).filter(Boolean) as string[]);
+
+    // Release traps for dialogs that closed
+    for (const dialogId of this._trappedModalDialogIds) {
+      if (!currentOpenIds.has(dialogId)) {
+        this._logger?.debug(`Releasing focus trap for closed modal: ${dialogId}`);
+        this._focusManager.releaseFocusTrap(dialogId, true);
+        this._trappedModalDialogIds.delete(dialogId);
+      }
+    }
+
+    // Set up traps for newly opened dialogs
+    for (const dialog of openModalDialogs) {
+      if (dialog.id && !this._trappedModalDialogIds.has(dialog.id)) {
+        this._logger?.debug(`Setting up focus trap for modal: ${dialog.id}`);
+
+        // Find the first focusable element inside the dialog
+        // Check canReceiveFocus() directly since elements may not be registered yet
+        let initialFocus: string | undefined;
+        const findFirstFocusable = (element: Element): string | undefined => {
+          // Check if this element can receive focus
+          if (element.id) {
+            const canFocus = (element as any).canReceiveFocus;
+            if (typeof canFocus === 'function' && canFocus.call(element)) {
+              return element.id;
+            }
+          }
+          // Check children
+          if (element.children) {
+            for (const child of element.children) {
+              const found = findFirstFocusable(child);
+              if (found) return found;
+            }
+          }
+          return undefined;
+        };
+
+        initialFocus = findFirstFocusable(dialog);
+
+        this._focusManager.trapFocus({
+          containerId: dialog.id,
+          initialFocus,
+          restoreFocus: true,
+        });
+        this._trappedModalDialogIds.add(dialog.id);
+      }
+    }
+  }
+
+  /**
+   * Collect all open modal dialogs from the element tree
+   */
+  private _collectOpenModalDialogs(element: Element, result: Element[]): void {
+    if (element.type === 'dialog' && element.props?.open === true && element.props?.modal === true) {
+      result.push(element);
+    }
+    if (element.children) {
+      for (const child of element.children) {
+        this._collectOpenModalDialogs(child, result);
+      }
+    }
   }
 
   /**

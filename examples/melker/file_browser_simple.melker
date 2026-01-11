@@ -1,0 +1,58 @@
+<melker>
+  <policy>
+  {
+    "name": "Simple File Browser",
+    "description": "Simple test of file browser component",
+    "permissions": {
+      "read": ["*"]
+    }
+  }
+  </policy>
+
+  <script>
+    $app.selectedPath = '(none)';
+
+    $app.handleSelect = (event) => {
+      $app.selectedPath = event.path;
+      const text = $melker.getElementById('selected-text');
+      if (text) text.props.content = event.path;
+      $melker.logger.info('Selected:', event.path);
+    };
+
+    $app.handleError = (event) => {
+      $melker.logger.error('Error:', event.message);
+    };
+
+    // Initialize file browser after render
+    $app.init = async () => {
+      const fb = $melker.getElementById('file-browser');
+      if (fb && fb.initialize) {
+        await fb.initialize();
+      }
+    };
+
+    setTimeout(() => $app.init(), 100);
+  </script>
+
+  <container direction="column" gap="1" padding="1" height="100%">
+    <text bold="true">Simple File Browser Test</text>
+
+    <container direction="column" flex="1" border="single">
+      <file-browser
+        id="file-browser"
+        selectionMode="single"
+        selectType="file"
+        showHidden="false"
+        showButtons="false"
+        onSelect="$app.handleSelect(event)"
+        onError="$app.handleError(event)"
+        maxVisible="15"
+      />
+    </container>
+
+    <container direction="row" gap="1">
+      <text dim="true">Selected:</text>
+      <text id="selected-text">(none)</text>
+    </container>
+  </container>
+</melker>

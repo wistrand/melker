@@ -145,6 +145,11 @@ export class RenderingEngine {
 
   // Main render method that takes an element tree and renders to a buffer
   render(element: Element, buffer: DualBuffer, viewport: Bounds, focusedElementId?: string, textSelection?: TextSelection, hoveredElementId?: string, requestRender?: () => void): LayoutNode {
+    // Store requestRender globally so components can access it even if not passed through context
+    if (requestRender) {
+      (globalThis as any).__melkerRequestRender = requestRender;
+    }
+
     // Clear scrollbar bounds for fresh render
     this._scrollbarBounds.clear();
 
@@ -300,6 +305,11 @@ export class RenderingEngine {
   renderSelectionOnly(buffer: DualBuffer, textSelection: TextSelection, focusedElementId?: string, hoveredElementId?: string, requestRender?: () => void): boolean {
     if (!this._cachedLayoutTree || !this._cachedElement || !this._cachedViewport) {
       return false; // No cached layout, need full render
+    }
+
+    // Store requestRender globally so components can access it even if not passed through context
+    if (requestRender) {
+      (globalThis as any).__melkerRequestRender = requestRender;
     }
 
     // Reset timing for this render

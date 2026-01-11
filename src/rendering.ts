@@ -627,11 +627,13 @@ export class RenderingEngine {
       requestedWidth = parentBounds.width - marginHorizontal;
     } else if (width === 'auto') {
       requestedWidth = this._calculateAutoWidth(element, style);
-    } else if (typeof width === 'string' && (width as string).endsWith('%')) {
+    } else if (typeof width === 'string' && width.endsWith('%')) {
       const percentage = parseFloat(width) / 100;
       requestedWidth = Math.floor((parentBounds.width - marginHorizontal) * percentage);
-    } else {
+    } else if (typeof width === 'number') {
       requestedWidth = width;
+    } else {
+      requestedWidth = parentBounds.width - marginHorizontal;
     }
 
     // Calculate height (check both props and style section)
@@ -641,11 +643,13 @@ export class RenderingEngine {
     } else if (height === 'auto' || height === undefined) {
       // Default to auto (content-based) height when not specified
       requestedHeight = this._calculateAutoHeight(element, style);
-    } else if (typeof height === 'string' && (height as string).endsWith('%')) {
+    } else if (typeof height === 'string' && height.endsWith('%')) {
       const percentage = parseFloat(height) / 100;
       requestedHeight = Math.floor((parentBounds.height - marginVertical) * percentage);
-    } else {
+    } else if (typeof height === 'number') {
       requestedHeight = height;
+    } else {
+      requestedHeight = this._calculateAutoHeight(element, style);
     }
 
     // Use sizing model to calculate the complete box model

@@ -174,9 +174,36 @@ Uses **border-box** model by default (like modern CSS):
 - Content area = total - padding - border
 
 **Size values:**
-- Number: Fixed character width/height
+- Number: Fixed character width/height (e.g., `width="40"`)
 - `'auto'`: Size to content
-- `'fill'`: Expand to fill available space
+- `'fill'`: Expand to fill *remaining* available space
+- `'NN%'`: Percentage of parent's available space (e.g., `width="50%"`)
+
+**`fill` vs percentage:**
+- `fill` is context-aware - takes remaining space after siblings
+- `100%` always means 100% of parent, regardless of siblings
+
+```xml
+<!-- fill takes remaining 80% -->
+<container style="display: flex; flexDirection: row">
+  <text width="20%">Sidebar</text>
+  <container width="fill">Main content</container>
+</container>
+
+<!-- 100% would cause overflow (20% + 100% = 120%) -->
+```
+
+**Table column widths:**
+Use `width` on `<th>` elements for O(1) column sizing (skips row sampling):
+```xml
+<thead>
+  <tr>
+    <th width="20%">Name</th>
+    <th width="10%">Status</th>
+    <th width="fill">Description</th>
+  </tr>
+</thead>
+```
 
 ### Box Model
 
@@ -299,6 +326,28 @@ The `<table>` component provides data tables with optional scrollable body.
 - `<tfoot>` - Fixed footer section (not scrollable)
 - `<tr>` - Table row
 - `<td>` / `<th>` - Table cells (th renders bold)
+
+### Column Width Hints
+
+For large tables, specify `width` on header cells to skip expensive row sampling:
+
+```xml
+<thead>
+  <tr>
+    <th width="5%">ID</th>
+    <th width="20%">Name</th>
+    <th width="15%">Status</th>
+    <th width="fill">Description</th>
+  </tr>
+</thead>
+```
+
+**Width values:**
+- Number: Fixed character width (e.g., `width="8"`)
+- `'NN%'`: Percentage of table width (e.g., `width="20%"`)
+- `'fill'`: Take remaining space after fixed/percentage columns
+
+When all `<th>` have explicit widths, column sizing is O(columns) instead of O(rows x columns).
 
 ### Props
 

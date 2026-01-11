@@ -768,14 +768,14 @@ $melker.engine.onMount(async function() {
   <table columnBorders="false" style="border: thin; flex: 1;" sortColumn="3" sortDirection="desc">
     <thead>
       <tr>
-        <th width="5%">PID</th>
-        <th width="8%">USER</th>
-        <th width="3%">S</th>
-        <th width="6%" align="right">CPU%</th>
-        <th width="6%" align="right">MEM%</th>
-        <th width="6%" align="right">RES</th>
-        <th width="8%" align="right">TIME+</th>
-        <th width="fill">Command</th>
+        <th colWidth="5%">PID</th>
+        <th colWidth="8%">USER</th>
+        <th colWidth="3%">S</th>
+        <th colWidth="6%" align="right">CPU%</th>
+        <th colWidth="6%" align="right">MEM%</th>
+        <th colWidth="6%" align="right">RES</th>
+        <th colWidth="8%" align="right">TIME+</th>
+        <th colWidth="fill">Command</th>
       </tr>
     </thead>
     <tbody id="procTableBody" scrollable="true" selectable="single" onActivate="showProcessDetails">

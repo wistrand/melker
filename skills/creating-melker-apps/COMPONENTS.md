@@ -307,44 +307,6 @@ List container with items.
 </list>
 ```
 
-### table
-
-Data table with optional scrollable body and sortable headers.
-
-```xml
-<table style="border: thin; flex: 1;" sortColumn="1" sortDirection="desc">
-  <thead>
-    <tr>
-      <th width="10%">ID</th>
-      <th width="30%">Name</th>
-      <th width="fill">Description</th>
-    </tr>
-  </thead>
-  <tbody scrollable="true" selectable="single">
-    <tr><td>1</td><td>Alice</td><td>Developer</td></tr>
-    <tr><td>2</td><td>Bob</td><td>Designer</td></tr>
-  </tbody>
-</table>
-```
-
-**table Props:**
-- `border`: Border style
-- `columnBorders`: Show column separators (`true`|`false`)
-- `sortColumn`: Column index for initial sort
-- `sortDirection`: `asc` | `desc`
-
-**th Props (column width hints for performance):**
-- `width`: number (chars), percentage (`20%`), or `fill`
-- `align`: `left` | `center` | `right`
-- `sortable`: Enable sorting (`true`|`false`)
-
-**tbody Props:**
-- `scrollable`: Enable vertical scrolling
-- `selectable`: `single` | `multiple` | `false`
-- `onActivate`: Double-click/Enter handler
-
-**Performance tip:** Specify `width` on all `<th>` elements to skip expensive row sampling. With explicit widths, column sizing is O(columns) instead of O(rows x columns).
-
 ## Filterable Lists
 
 ### combobox

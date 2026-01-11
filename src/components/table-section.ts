@@ -232,6 +232,7 @@ export class TableSectionElement extends ContainerElement implements Renderable 
 
   /**
    * Calculate intrinsic size
+   * Optimized for scrollable tbody - uses cached dimensions from table render
    */
   override intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const rows = this.getRows();
@@ -239,18 +240,48 @@ export class TableSectionElement extends ContainerElement implements Renderable 
       return { width: 0, height: 0 };
     }
 
+    // Fast path for scrollable tbody - use cached/available dimensions
+    // The table component handles actual sizing; tbody just needs to report viewport size
+    if (this.type === 'tbody' && this.props.scrollable) {
+      // If we have actual bounds from render, use those
+      if (this._actualBounds) {
+        return { width: this._actualBounds.width, height: this._actualBounds.height };
+      }
+      // Otherwise use maxHeight or available space
+      const height = this.props.maxHeight || context.availableSpace.height;
+      return { width: context.availableSpace.width, height };
+    }
+
+    // For thead/tfoot or non-scrollable tbody, sample rows for width
+    // and sum heights (these are typically small)
     let maxWidth = 0;
     let totalHeight = 0;
 
-    for (const row of rows) {
-      const size = row.intrinsicSize(context);
+    // Sample up to 10 rows for width estimation
+    const sampleCount = Math.min(10, rows.length);
+    for (let i = 0; i < sampleCount; i++) {
+      const size = rows[i].intrinsicSize(context);
       maxWidth = Math.max(maxWidth, size.width);
-      totalHeight += size.height;
     }
 
-    // For scrollable tbody, cap height at maxHeight
-    if (this.type === 'tbody' && this.props.scrollable && this.props.maxHeight) {
-      totalHeight = Math.min(totalHeight, this.props.maxHeight);
+    // For non-scrollable, calculate total height (typically small number of rows)
+    for (const row of rows) {
+      // Fast path: assume 1 row height for simple rows
+      const children = row.children;
+      let isSimple = true;
+      if (children) {
+        for (const cell of children) {
+          if (cell.children && cell.children.length > 0) {
+            const firstChild = cell.children[0];
+            if (!(cell.children.length === 1 && firstChild.type === 'text' &&
+                  firstChild.props.text !== undefined && !String(firstChild.props.text).includes('\n'))) {
+              isSimple = false;
+              break;
+            }
+          }
+        }
+      }
+      totalHeight += isSimple ? 1 : row.intrinsicSize(context).height;
     }
 
     return { width: maxWidth, height: totalHeight };

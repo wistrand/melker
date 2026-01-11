@@ -632,8 +632,6 @@ export class RenderingEngine {
       requestedWidth = Math.floor((parentBounds.width - marginHorizontal) * percentage);
     } else if (typeof width === 'number') {
       requestedWidth = width;
-    } else {
-      requestedWidth = parentBounds.width - marginHorizontal;
     }
 
     // Calculate height (check both props and style section)
@@ -648,8 +646,6 @@ export class RenderingEngine {
       requestedHeight = Math.floor((parentBounds.height - marginVertical) * percentage);
     } else if (typeof height === 'number') {
       requestedHeight = height;
-    } else {
-      requestedHeight = this._calculateAutoHeight(element, style);
     }
 
     // Use sizing model to calculate the complete box model

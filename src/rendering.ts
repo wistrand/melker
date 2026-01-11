@@ -609,10 +609,6 @@ export class RenderingEngine {
   ): Bounds {
     const props = element.props as LayoutProps;
 
-    // First, determine the requested size
-    let requestedWidth: number;
-    let requestedHeight: number;
-
     // Get margin for calculations
     const margin = typeof (style.margin || 0) === 'number'
       ? { top: style.margin as number, right: style.margin as number, bottom: style.margin as number, left: style.margin as number }
@@ -622,6 +618,8 @@ export class RenderingEngine {
     const marginVertical = (margin.top || 0) + (margin.bottom || 0);
 
     // Calculate width (check both props and style section)
+    // Default to fill behavior if not specified or unrecognized value
+    let requestedWidth: number;
     const width = style.width !== undefined ? style.width : props.width;
     if (width === 'fill' || width === undefined) {
       requestedWidth = parentBounds.width - marginHorizontal;
@@ -632,9 +630,14 @@ export class RenderingEngine {
       requestedWidth = Math.floor((parentBounds.width - marginHorizontal) * percentage);
     } else if (typeof width === 'number') {
       requestedWidth = width;
+    } else {
+      // Fallback for unrecognized values
+      requestedWidth = parentBounds.width - marginHorizontal;
     }
 
     // Calculate height (check both props and style section)
+    // Default to auto behavior if not specified or unrecognized value
+    let requestedHeight: number;
     const height = style.height !== undefined ? style.height : props.height;
     if (height === 'fill') {
       requestedHeight = parentBounds.height - marginVertical;
@@ -646,6 +649,9 @@ export class RenderingEngine {
       requestedHeight = Math.floor((parentBounds.height - marginVertical) * percentage);
     } else if (typeof height === 'number') {
       requestedHeight = height;
+    } else {
+      // Fallback for unrecognized values
+      requestedHeight = this._calculateAutoHeight(element, style);
     }
 
     // Use sizing model to calculate the complete box model

@@ -109,6 +109,15 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
             childHeight += 2; // Add top + bottom border
           }
 
+          // Add horizontal padding space for elements without explicit dimensions but with padding
+          // Note: Only add horizontal padding here; vertical padding is handled by layout engine
+          // to avoid double-counting (layout engine adds padding when sizing flex items)
+          const childPadding = child.props?.style?.padding;
+          if (childPadding !== undefined && child.props?.style?.width === undefined) {
+            const padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
+            childWidth += padH;
+          }
+
           totalWidth += childWidth;
           totalHeight = Math.max(totalHeight, childHeight);
           childCount++;
@@ -135,6 +144,14 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
             childHeight += 2; // Add top + bottom border
           }
 
+          // Add horizontal padding space for elements without explicit dimensions but with padding
+          // Note: Only add horizontal padding here; vertical padding is handled by layout engine
+          const childPadding = child.props?.style?.padding;
+          if (childPadding !== undefined && child.props?.style?.width === undefined) {
+            const padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
+            childWidth += padH;
+          }
+
           totalWidth = Math.max(totalWidth, childWidth);
           totalHeight += childHeight;
           childCount++;
@@ -146,35 +163,14 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
       }
     }
 
-    // Add own padding and border to the returned size
-    // This ensures the layout engine allocates enough space for this container
-    let paddingH = 0;
-    let paddingV = 0;
-    let borderH = 0;
-    let borderV = 0;
-
-    // Parse padding (can be number or shorthand)
-    const padding = style.padding;
-    if (typeof padding === 'number') {
-      paddingH = padding * 2;  // left + right
-      paddingV = padding * 2;  // top + bottom
-    } else if (typeof style.paddingLeft === 'number' || typeof style.paddingRight === 'number' ||
-               typeof style.paddingTop === 'number' || typeof style.paddingBottom === 'number') {
-      paddingH = (style.paddingLeft || 0) + (style.paddingRight || 0);
-      paddingV = (style.paddingTop || 0) + (style.paddingBottom || 0);
-    }
-
-    // Parse border
-    const border = style.border;
-    if (border === 'thin' || border === 'thick' || border === 'double' || border === 'rounded') {
-      borderH = 2;  // left + right
-      borderV = 2;  // top + bottom
-    }
+    // Note: Do NOT add own padding/border here - layout engine adds them separately
+    // (intrinsicSize returns content size only, layout adds padding + border for outer size)
+    // Child borders are added above because we need to know total space children will occupy
 
     return {
-      // Use explicit dimension if set, otherwise use calculated size
-      width: explicitWidth ?? (totalWidth + paddingH + borderH),
-      height: explicitHeight ?? (totalHeight + paddingV + borderV),
+      // Use explicit dimension if set, otherwise use calculated child size
+      width: explicitWidth ?? totalWidth,
+      height: explicitHeight ?? totalHeight,
     };
   }
 

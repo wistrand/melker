@@ -49,8 +49,9 @@ If no file is specified, defaults to `README.md`.
         #header {
             display: flex;
             flex-direction: row;
-            padding-right: 1;
-            border: thin;
+            padding: 1;
+            border: none;
+            background-color: gray;
         }
         #root {
           display: flex;

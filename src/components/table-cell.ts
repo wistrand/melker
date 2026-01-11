@@ -59,9 +59,22 @@ export class TableCellElement extends Element implements Renderable {
 
   /**
    * Get explicit column width if set
+   * Falls back to style.width if colWidth is not set, allowing percentage widths via style
    */
   getColWidth(): number | 'fill' | `${number}%` | undefined {
-    return this.props.colWidth;
+    // Explicit colWidth takes precedence
+    if (this.props.colWidth !== undefined) {
+      return this.props.colWidth;
+    }
+    // Fall back to style.width for percentage/fill support
+    const styleWidth = this.props.style?.width;
+    if (styleWidth === 'fill' || typeof styleWidth === 'number') {
+      return styleWidth;
+    }
+    if (typeof styleWidth === 'string' && styleWidth.endsWith('%')) {
+      return styleWidth as `${number}%`;
+    }
+    return undefined;
   }
 
   /**

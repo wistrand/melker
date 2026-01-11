@@ -25,11 +25,12 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 
 1. **Button uses `title` prop** - Not `label`
 2. **Don't add border to buttons** - Buttons already have `[ ]` brackets; adding border creates `[ [ Button ] ]`
-3. **Input type is `'input'`** - Not `'text-input'`
-4. **Never use `console.log()`** - Use `$melker.logger.debug()`, `.info()`, `.warn()`, `.error()`
-5. **Auto-render** - Event handlers auto-render; return `false` to skip
-6. **Update props explicitly** - Use `$melker.getElementById('id').props.propName = value`
-7. **Avoid emojis** - They break terminal layout
+3. **Button padding** - Vertical padding ignored for `[ ]` buttons (they stay 1 line); horizontal padding works
+4. **Input type is `'input'`** - Not `'text-input'`
+5. **Never use `console.log()`** - Use `$melker.logger.debug()`, `.info()`, `.warn()`, `.error()`
+6. **Auto-render** - Event handlers auto-render; return `false` to skip
+7. **Update props explicitly** - Use `$melker.getElementById('id').props.propName = value`
+8. **Avoid emojis** - They break terminal layout
 
 ## File Structure
 
@@ -102,7 +103,10 @@ For complete component reference, see [COMPONENTS.md](COMPONENTS.md).
 **Layout:** `display`, `flex-direction`, `flex`, `width`, `height`, `padding`, `margin`, `gap`
 **Borders:** `border` (none|thin|thick|double|rounded|dashed|dashed-rounded|ascii|ascii-rounded|block)
 **Text:** `font-weight`, `text-align`, `text-wrap`
-**Size values:** Numbers (columns/rows), percentages (`100%`), `fill`
+**Size values:**
+- Numbers: `40` (columns/rows)
+- Percentages: `50%`, `100%` (in `style.width`/`style.height`)
+- `fill`: Expands to *remaining* available space (differs from 100%)
 
 **Note:** `display: flex` is auto-inferred when flex container properties are present (`flex-direction`, `justify-content`, `align-items`, `gap`, etc.), so it can be omitted.
 

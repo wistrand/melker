@@ -194,16 +194,18 @@ Uses **border-box** model by default (like modern CSS):
 ```
 
 **Table column widths:**
-Use `width` on `<th>` elements for O(1) column sizing (skips row sampling):
+Use `width` (via `style` or `colWidth` prop) on `<th>` elements for O(1) column sizing (skips row sampling):
 ```xml
 <thead>
   <tr>
-    <th width="20%">Name</th>
-    <th width="10%">Status</th>
-    <th width="fill">Description</th>
+    <th style="width: 20%">Name</th>
+    <th style="width: 10%">Status</th>
+    <th style="width: fill">Description</th>
   </tr>
 </thead>
 ```
+
+Both `style.width` and the `colWidth` prop work for percentages, fixed widths, and `fill`. The `style.width` approach is preferred as it's consistent with other elements.
 
 ### Box Model
 
@@ -221,6 +223,25 @@ Use `width` on `<th>` elements for O(1) column sizing (skips row sampling):
 │  └───────────────────────┘  │
 └─────────────────────────────┘
 ```
+
+### Single-Line Element Padding
+
+For single-line elements (buttons, text, input) without borders, vertical padding is ignored in cross-axis sizing. This prevents buttons from expanding to multiple lines when padding is applied.
+
+**Behavior:**
+- Horizontal padding: Applied normally, adds space left/right
+- Vertical padding: Ignored for elements with `intrinsicSize.height === 1` and no border
+
+**Example:**
+```xml
+<!-- Button stays 1 line tall, horizontal padding adds 2 chars -->
+<button title="Submit" style="padding: 1;" />
+
+<!-- Bordered button respects vertical padding (3 lines) -->
+<button title="Submit" style="padding: 1; border: thin;" />
+```
+
+This ensures default `[ ]` style buttons remain single-line while bordered buttons can expand.
 
 ### Chrome Collapse
 

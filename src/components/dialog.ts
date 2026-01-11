@@ -234,17 +234,10 @@ export class DialogElement extends Element implements Renderable {
     return this._isResizing;
   }
 
-  intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
-    // Closed dialogs should not take any space (they render as overlays when open)
-    if (!this.props.open) {
-      return { width: 0, height: 0 };
-    }
-
-    // Open dialog takes full available space for backdrop
-    return {
-      width: context.availableSpace.width || 80,
-      height: context.availableSpace.height || 24
-    };
+  intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
+    // Dialogs are rendered as overlays (separately from normal layout flow)
+    // They should never take layout space
+    return { width: 0, height: 0 };
   }
 
   static validate(props: DialogProps): boolean {

@@ -67,18 +67,31 @@ export class TableCellElement extends Element implements Renderable {
       return { width: 1, height: 1 };
     }
 
+    // Fast path: single text child (most common case for table cells)
+    if (this.children.length === 1) {
+      const child = this.children[0];
+      if (child.type === 'text' && child.props.text !== undefined) {
+        const text = String(child.props.text);
+        // Simple single-line text
+        if (!text.includes('\n')) {
+          return { width: Math.max(1, text.length), height: 1 };
+        }
+      }
+    }
+
     let maxWidth = 0;
     let totalHeight = 0;
 
     for (const child of this.children) {
-      if ('intrinsicSize' in child && typeof child.intrinsicSize === 'function') {
-        const size = child.intrinsicSize(context);
-        maxWidth = Math.max(maxWidth, size.width);
-        totalHeight += size.height;
-      } else if (child.type === 'text' && child.props.text) {
+      // Fast path for text elements (avoid 'in' operator overhead)
+      if (child.type === 'text' && child.props.text !== undefined) {
         const text = String(child.props.text);
         maxWidth = Math.max(maxWidth, text.length);
         totalHeight += 1;
+      } else if ('intrinsicSize' in child && typeof child.intrinsicSize === 'function') {
+        const size = child.intrinsicSize(context);
+        maxWidth = Math.max(maxWidth, size.width);
+        totalHeight += size.height;
       }
     }
 

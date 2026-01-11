@@ -34,6 +34,7 @@ export interface TextSelectionHandlerDeps {
   eventManager: EventManager;
   logger?: ComponentLogger;
   onRender: () => void;
+  onRenderDialogOnly: () => void;  // Fast render for dialog drag/resize
   onRenderOptimized: () => void;  // Apply buffer to terminal (optimized diff rendering)
   onElementClick: (element: Element, event: any) => void;
 }
@@ -64,6 +65,8 @@ export class TextSelectionHandler {
   private _draggingDialog: DialogElement | null = null;
   // Dialog resize state
   private _resizingDialog: DialogElement | null = null;
+  // Throttled action for dialog drag/resize renders (~60fps)
+  private _throttledDialogRender!: ThrottledAction;
   // Generic draggable element state
   private _draggingElement: (Element & Draggable) | null = null;
   private _dragZone: string | null = null;
@@ -97,6 +100,13 @@ export class TextSelectionHandler {
     // Initialize throttled selection render (~60fps, leading + trailing edges)
     this._throttledSelectionRender = createThrottledAction(
       () => this._renderSelectionOnly(),
+      16,  // ~60fps
+      { leading: true, trailing: true }
+    );
+
+    // Initialize throttled dialog drag/resize render (~60fps) using fast dialog-only path
+    this._throttledDialogRender = createThrottledAction(
+      () => this._deps.onRenderDialogOnly(),
       16,  // ~60fps
       { leading: true, trailing: true }
     );
@@ -365,18 +375,18 @@ export class TextSelectionHandler {
    * Handle mouse move events for text selection
    */
   handleMouseMove(event: any): void {
-    // Handle dialog resize first
+    // Handle dialog resize first (throttled to ~60fps)
     if (this._resizingDialog) {
       if (this._resizingDialog.updateResize(event.x, event.y)) {
-        this._deps.onRender();
+        this._throttledDialogRender.trigger();
       }
       return;
     }
 
-    // Handle dialog drag
+    // Handle dialog drag (throttled to ~60fps)
     if (this._draggingDialog) {
       if (this._draggingDialog.updateDrag(event.x, event.y)) {
-        this._deps.onRender();
+        this._throttledDialogRender.trigger();
       }
       return;
     }
@@ -531,6 +541,7 @@ export class TextSelectionHandler {
     if (this._resizingDialog) {
       this._resizingDialog.endResize();
       this._resizingDialog = null;
+      this._throttledDialogRender.flush(); // Ensure final position is rendered
       return; // Don't process other mouse up events
     }
 
@@ -538,6 +549,7 @@ export class TextSelectionHandler {
     if (this._draggingDialog) {
       this._draggingDialog.endDrag();
       this._draggingDialog = null;
+      this._throttledDialogRender.flush(); // Ensure final position is rendered
       return; // Don't process other mouse up events
     }
 

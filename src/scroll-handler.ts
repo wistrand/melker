@@ -34,6 +34,7 @@ export interface ScrollHandlerContext {
   renderer: RenderingEngine;
   autoRender: boolean;
   onRender: () => void;
+  onRenderDialogOnly?: () => void;
   calculateScrollDimensions: (containerOrId: Element | string) => { width: number; height: number } | null;
 }
 
@@ -46,6 +47,7 @@ export class ScrollHandler {
   private _renderer: RenderingEngine;
   private _autoRender: boolean;
   private _onRender: () => void;
+  private _onRenderDialogOnly?: () => void;
   private _calculateScrollDimensions: (containerOrId: Element | string) => { width: number; height: number } | null;
   private _scrollbarDrag: ScrollbarDragState | null = null;
 
@@ -54,7 +56,57 @@ export class ScrollHandler {
     this._renderer = context.renderer;
     this._autoRender = context.autoRender;
     this._onRender = context.onRender;
+    this._onRenderDialogOnly = context.onRenderDialogOnly;
     this._calculateScrollDimensions = context.calculateScrollDimensions;
+  }
+
+  /**
+   * Check if an element is inside a dialog by searching from root
+   */
+  private _isInsideDialog(element: Element): boolean {
+    // Find all open dialogs and check if any contains this element
+    const dialogs = this._findOpenDialogs(this._document.root);
+    for (const dialog of dialogs) {
+      if (this._containsElement(dialog, element)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Find all open dialog elements in the tree
+   */
+  private _findOpenDialogs(root: Element): Element[] {
+    const dialogs: Element[] = [];
+    const stack: Element[] = [root];
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      if (current.type === 'dialog' && current.props.open) {
+        dialogs.push(current);
+      }
+      if (current.children) {
+        for (const child of current.children) {
+          stack.push(child);
+        }
+      }
+    }
+    return dialogs;
+  }
+
+  /**
+   * Check if a container element contains a target element
+   */
+  private _containsElement(container: Element, target: Element): boolean {
+    if (container === target) return true;
+    if (container.children) {
+      for (const child of container.children) {
+        if (this._containsElement(child, target)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -342,7 +394,12 @@ export class ScrollHandler {
 
         // Auto-render if anything changed
         if (updated && this._autoRender) {
-          this._onRender();
+          // Use fast dialog-only render when scrolling inside a dialog
+          if (this._onRenderDialogOnly && this._isInsideDialog(targetContainer)) {
+            this._onRenderDialogOnly();
+          } else {
+            this._onRender();
+          }
         }
       }
     }

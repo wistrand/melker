@@ -104,6 +104,8 @@ For complete component reference, see [COMPONENTS.md](COMPONENTS.md).
 **Text:** `font-weight`, `text-align`, `text-wrap`
 **Size values:** Numbers (columns/rows), percentages (`100%`), `fill`
 
+**Note:** `display: flex` is auto-inferred when flex container properties are present (`flex-direction`, `justify-content`, `align-items`, `gap`, etc.), so it can be omitted.
+
 **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes. Only use `color`/`background-color` for canvas drawing or very intentional effects.
 
 ## Event Handling

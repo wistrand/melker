@@ -26,7 +26,7 @@ Flexbox layout container. The primary building block for layouts.
 - `scrollable` - Enable scrolling (`true`|`false`)
 
 **Style properties:**
-- `display`: `flex` | `block`
+- `display`: `flex` | `block` (auto-inferred as `flex` when flex container properties present)
 - `flex-direction`: `row` | `column`
 - `flex`: grow factor (e.g., `1`)
 - `justify-content`: `flex-start` | `center` | `flex-end` | `space-between` | `space-around`

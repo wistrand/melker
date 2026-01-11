@@ -408,18 +408,55 @@ ${script.code.split('\n').map(l => '  ' + l).join('\n')}
 
       // Wrap handler code - add return for simple expressions
       const code = handler.code.trim();
-      // If it's a simple expression (no semicolons, not a statement keyword), return its value
-      const isSimpleExpression = !code.includes(';') &&
-        !code.startsWith('if ') && !code.startsWith('if(') &&
-        !code.startsWith('for ') && !code.startsWith('for(') &&
-        !code.startsWith('while ') && !code.startsWith('while(') &&
-        !code.startsWith('return ') && !code.startsWith('return;') &&
-        !code.startsWith('throw ') &&
-        !code.startsWith('let ') && !code.startsWith('const ') && !code.startsWith('var ');
-      if (isSimpleExpression) {
-        addLine(`  return ${code};`);
+
+      // Check if code is a function reference (identifier or property access without call)
+      // e.g., "showProcessDetails" or "$app.showProcessDetails" or "foo.bar.baz"
+      const isFunctionReference = /^[\w$]+(\.[\w$]+)*$/.test(code);
+
+      // If it's a function reference, call it with event param
+      // (function references always receive the event object)
+      if (isFunctionReference) {
+        // Ensure 'event' param exists in handler signature (parser may not have detected it)
+        const hasEventParam = handler.params.some(p => p.name === 'event');
+        if (!hasEventParam) {
+          // Remove the last line (function signature) and re-add with event param
+          lines.pop();
+          currentLine--;
+          const asyncKw = handler.isAsync ? 'async ' : '';
+          const returnType = handler.isAsync ? 'Promise<void>' : 'void';
+          const existingParams = handler.params.map((p) => `${p.name}: ${p.type}`).join(', ');
+          const newParams = existingParams ? `event: any, ${existingParams}` : 'event: any';
+          addLine(`${asyncKw}function ${handler.id}(${newParams}): ${returnType} {`, {
+            originalLine,
+            sourceId: handler.id,
+            description: `${handler.attributeName} handler at line ${originalLine}`,
+          });
+        }
+
+        // Look up in $app first for exported functions, fall back to direct reference
+        if (code.includes('.')) {
+          // Already qualified (e.g., $app.fn), call directly
+          addLine(`  return ${code}(event);`);
+        } else {
+          // Bare identifier - try $app first, then direct
+          addLine(`  const __fn = $app.${code} ?? (typeof ${code} !== 'undefined' ? ${code} : undefined);`);
+          addLine(`  if (__fn) return __fn(event);`);
+          addLine(`  throw new Error('${code} is not defined');`);
+        }
       } else {
-        addLine(`  ${code}`);
+        // If it's a simple expression (no semicolons, not a statement keyword), return its value
+        const isSimpleExpression = !code.includes(';') &&
+          !code.startsWith('if ') && !code.startsWith('if(') &&
+          !code.startsWith('for ') && !code.startsWith('for(') &&
+          !code.startsWith('while ') && !code.startsWith('while(') &&
+          !code.startsWith('return ') && !code.startsWith('return;') &&
+          !code.startsWith('throw ') &&
+          !code.startsWith('let ') && !code.startsWith('const ') && !code.startsWith('var ');
+        if (isSimpleExpression) {
+          addLine(`  return ${code};`);
+        } else {
+          addLine(`  ${code}`);
+        }
       }
 
       addLine('}');

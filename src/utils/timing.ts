@@ -157,10 +157,14 @@ export function throttle<T extends (...args: unknown[]) => void>(
 export interface ThrottledAction {
   /** Trigger a throttled call */
   call: () => void;
+  /** Trigger a throttled call (alias for call) */
+  trigger: () => void;
   /** Cancel any pending trailing call */
   cancel: () => void;
   /** Reset the throttle timer (next call will execute immediately if leading) */
   reset: () => void;
+  /** Execute any pending trailing call immediately */
+  flush: () => void;
 }
 
 /**
@@ -228,6 +232,21 @@ export function createThrottledAction(
       }
       lastExecuteTime = 0;
       pendingTrailing = false;
+    },
+
+    flush: () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (pendingTrailing) {
+        execute();
+      }
+    },
+
+    // Alias for call
+    get trigger() {
+      return this.call;
     },
   };
 }

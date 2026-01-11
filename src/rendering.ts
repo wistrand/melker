@@ -101,6 +101,8 @@ export class RenderingEngine {
   private _cachedLayoutTree?: LayoutNode;
   private _cachedElement?: Element;
   private _cachedViewport?: Bounds;
+  // Cache for modal layouts (avoids recalculating on every render)
+  private _cachedModalLayouts: Map<Element, { bounds: Bounds; layouts: LayoutNode[] }> = new Map();
   // Scrollbar bounds for drag handling
   private _scrollbarBounds: Map<string, ScrollbarBounds> = new Map();
   // Document reference for element lookup
@@ -155,6 +157,7 @@ export class RenderingEngine {
 
     // Clear overlays for fresh render
     this._overlays = [];
+    // Note: Modal layout cache is NOT cleared here - it invalidates based on bounds changes
 
     const context: RenderContext = {
       buffer,
@@ -363,6 +366,65 @@ export class RenderingEngine {
       const highlightStart = performance.now();
       this._applySelectionHighlight(textSelection, buffer);
       this.selectionRenderTiming.highlightTime = performance.now() - highlightStart;
+    }
+
+    return true;
+  }
+
+  // Dialog-only render - re-renders main content from cache, then modals at new position
+  // Used during dialog drag/resize - skips layout calculation, uses cached layout tree
+  renderDialogOnly(buffer: DualBuffer, focusedElementId?: string, hoveredElementId?: string, requestRender?: () => void): boolean {
+    if (!this._cachedLayoutTree || !this._cachedElement || !this._cachedViewport) {
+      return false; // No cached layout, need full render
+    }
+
+    // Clear buffer for fresh render
+    buffer.clear();
+
+    // Store requestRender globally
+    if (requestRender) {
+      (globalThis as any).__melkerRequestRender = requestRender;
+    }
+
+    const context: RenderContext = {
+      buffer,
+      viewport: this._cachedViewport,
+      focusedElementId,
+      hoveredElementId,
+      requestRender,
+      viewportManager: this._viewportManager,
+    };
+
+    // Re-render main content using cached layout (no layout recalculation)
+    this._renderNode(this._cachedLayoutTree, context);
+
+    // Render overlays
+    this._renderOverlays(buffer, this._cachedViewport);
+
+    // Collect modals
+    const modals: Element[] = [];
+    this._collectModals(this._cachedElement, modals);
+
+    // Apply low-contrast effect if there's a modal without backdrop (fullcolor theme only)
+    const themeManager = getThemeManager();
+    const theme = themeManager.getCurrentTheme();
+    if (theme.type === 'fullcolor') {
+      const hasModalWithoutBackdrop = modals.some(modal =>
+        modal instanceof DialogElement &&
+        (modal as DialogElement).props.open &&
+        (modal as DialogElement).props.modal === true &&
+        (modal as DialogElement).props.backdrop === false
+      );
+      if (hasModalWithoutBackdrop) {
+        buffer.currentBuffer.applyLowContrastEffect(theme.mode === 'dark');
+      }
+    }
+
+    // Render modals at their new positions
+    for (const modal of modals) {
+      if ((modal as any).props?.open) {
+        this._renderModal(modal, context);
+      }
     }
 
     return true;
@@ -1533,17 +1595,39 @@ export class RenderingEngine {
         height: dialogHeight - titleHeight - 1  // Above bottom border
       };
 
-      // Render each child in the content area
-      for (const child of modal.children) {
-        const childLayoutContext = {
-          viewport: contentBounds,
-          parentBounds: contentBounds,
-          availableSpace: { width: contentBounds.width, height: contentBounds.height }
-        };
+      // Check if we can use cached layout for this modal
+      const cached = this._cachedModalLayouts.get(modal);
+      const boundsMatch = cached &&
+        cached.bounds.x === contentBounds.x &&
+        cached.bounds.y === contentBounds.y &&
+        cached.bounds.width === contentBounds.width &&
+        cached.bounds.height === contentBounds.height;
 
-        const childLayout = this._layoutEngine.calculateLayout(child, childLayoutContext);
-        const childLayoutNode = this._convertAdvancedLayoutNode(childLayout);
+      let childLayouts: LayoutNode[];
 
+      if (boundsMatch && cached) {
+        // Use cached layout
+        childLayouts = cached.layouts;
+      } else {
+        // Calculate layout for each child
+        childLayouts = [];
+        for (const child of modal.children) {
+          const childLayoutContext = {
+            viewport: contentBounds,
+            parentBounds: contentBounds,
+            availableSpace: { width: contentBounds.width, height: contentBounds.height }
+          };
+
+          const childLayout = this._layoutEngine.calculateLayout(child, childLayoutContext);
+          const childLayoutNode = this._convertAdvancedLayoutNode(childLayout);
+          childLayouts.push(childLayoutNode);
+        }
+        // Cache the layout
+        this._cachedModalLayouts.set(modal, { bounds: { ...contentBounds }, layouts: childLayouts });
+      }
+
+      // Render each child using the (possibly cached) layout
+      for (const childLayoutNode of childLayouts) {
         // Store dialog children's bounds in layout context for hit testing
         if (this._currentLayoutContext) {
           this._buildLayoutContext(childLayoutNode, this._currentLayoutContext);

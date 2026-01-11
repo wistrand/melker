@@ -20,6 +20,13 @@ export class ContentMeasurer {
       return { width: 0, height: 0 };
     }
 
+    // Fast path for scrollable containers with many children
+    // Uses sampling to estimate total height instead of measuring all children
+    const FAST_PATH_THRESHOLD = 50;
+    if (container.props?.scrollable && container.children.length > FAST_PATH_THRESHOLD) {
+      return this._measureContainerFastPath(container, availableWidth);
+    }
+
     let totalHeight = 0;
     let maxWidth = 0;
     const childMeasurements: Array<{ element: Element; size: Size; margin: any }> = [];
@@ -96,6 +103,35 @@ export class ContentMeasurer {
       bottom: this._parseNumberValue(style.marginBottom) || 0,
       left: this._parseNumberValue(style.marginLeft) || 0
     };
+  }
+
+  /**
+   * Fast path measurement for scrollable containers with many children
+   * Uses sampling to estimate total height instead of measuring all children
+   */
+  private _measureContainerFastPath(container: Element, availableWidth: number): Size {
+    const children = container.children!;
+    const childCount = children.length;
+
+    // Sample first few children to estimate row height
+    const sampleSize = Math.min(10, childCount);
+    let totalSampleHeight = 0;
+    let maxWidth = 0;
+
+    for (let i = 0; i < sampleSize; i++) {
+      const child = children[i];
+      const childSize = this.measureElement(child, availableWidth);
+      const childMargin = this._getChildMargin(child);
+
+      totalSampleHeight += childSize.height + (childMargin.top || 0) + (childMargin.bottom || 0);
+      maxWidth = Math.max(maxWidth, childSize.width + (childMargin.left || 0) + (childMargin.right || 0));
+    }
+
+    // Estimate total height based on sample
+    const avgRowHeight = totalSampleHeight / sampleSize;
+    const estimatedTotalHeight = Math.ceil(avgRowHeight * childCount);
+
+    return { width: maxWidth, height: estimatedTotalHeight };
   }
 
   /**

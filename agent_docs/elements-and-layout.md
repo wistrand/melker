@@ -111,17 +111,17 @@ Default layout is flexbox with column direction.
 
 ### Flex Layout Gotchas
 
-**1. `display: 'flex'` must be explicit**
+**1. `display: 'flex'` is auto-inferred** *(Build 142+)*
 
-The default display is `'block'`, not `'flex'`. Setting `flexDirection` alone does NOT enable flex layout:
+When flex container properties are present (`flexDirection`, `justifyContent`, `alignItems`, `alignContent`, `flexWrap`, `gap`), `display: 'flex'` is automatically inferred:
 
 ```typescript
-// WRONG - flex properties won't work (block layout)
+// Both work - display: flex is auto-inferred from flexDirection
 { flexDirection: 'column', width: 'fill', height: 'fill' }
-
-// CORRECT - flex layout enabled
 { display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }
 ```
+
+Note: Flex *item* properties (`flex`, `flexGrow`, `flexShrink`, `flexBasis`) don't trigger auto-inference.
 
 **2. `flexDirection: 'row'` must be explicit for horizontal layouts**
 

@@ -534,7 +534,7 @@ Apps that access network, files, or system commands should declare a `<policy>` 
 
 ## Tips & Best Practices
 
-1. **Use flexbox for layouts** - `display: flex` with `flex-direction: column` or `row`
+1. **Use flexbox for layouts** - `flex-direction: column` or `row` (display: flex is auto-inferred)
 2. **Set explicit dimensions** - Use `width` and `height` for predictable layouts
 3. **Use `fill` for full-screen** - `width: fill; height: fill;` or `100%`
 4. **Group related elements** - Wrap in containers with gap/margin

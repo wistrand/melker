@@ -112,6 +112,13 @@ Development history from git commits.
 - OAuth configuration options
 - Removed dotenv dependency
 
+**Jan 11** - Performance optimizations and DX improvements
+- Table render caching: sorted rows, content height, column widths
+- Dialog scroll performance: use `renderDialogOnly()` fast path for scroll events inside dialogs
+- Scroll handler detects if target is inside dialog via `_isInsideDialog()`
+- Avoids full layout recalculation when scrolling in dialogs with large tables in background
+- Auto-infer `display: flex` when flex container properties present (no need to explicitly set it)
+
 ## Component Timeline
 
 | Component | Added | Notes |
@@ -145,3 +152,4 @@ Development history from git commits.
 - **Build 110** (Jan 6): Chrome collapse, filterable lists
 - **Build 120** (Jan 7): Shaders, stable image loading
 - **Build 125** (Jan 10): Unified config system, Dev Tools
+- **Build 142** (Jan 11): Table caching, dialog scroll optimization

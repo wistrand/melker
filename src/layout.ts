@@ -65,6 +65,9 @@ export interface LayoutContext {
   availableSpace: Size;
   parentStyle?: Style;
   parentLayoutProps?: AdvancedLayoutProps;
+  // For scrollable containers - enables virtual layout optimization
+  scrollOffset?: { x: number; y: number };
+  isScrollableParent?: boolean;
 }
 
 export class LayoutEngine {
@@ -246,6 +249,9 @@ export class LayoutEngine {
           },
           parentStyle: computedStyle,
           parentLayoutProps: layoutProps,
+          // Pass scroll info for virtual layout optimization
+          scrollOffset,
+          isScrollableParent: true,
         };
       } else {
         // Normal layout - constrain children to actual content bounds
@@ -423,6 +429,91 @@ export class LayoutEngine {
       return absoluteChildren.map(child =>
         this._layoutAbsolute(child, context, parentNode)
       );
+    }
+
+    // Virtual layout optimization for scrollable containers with many children
+    // This avoids O(n) intrinsic size calculations for non-visible children
+    const VIRTUAL_THRESHOLD = 50; // Only virtualize if more than this many children
+    const VIRTUAL_BUFFER = 5; // Extra rows above/below visible area
+
+    if (context.isScrollableParent && !isRow && flexChildren.length > VIRTUAL_THRESHOLD) {
+      const scrollY = context.scrollOffset?.y || 0;
+      const viewportHeight = context.viewport.height;
+
+      // Sample first few children to estimate uniform height
+      const sampleSize = Math.min(5, flexChildren.length);
+      let totalSampleHeight = 0;
+      for (let i = 0; i < sampleSize; i++) {
+        const child = flexChildren[i];
+        if (isRenderable(child)) {
+          const size = child.intrinsicSize({ availableSpace: context.availableSpace });
+          totalSampleHeight += size.height;
+        } else {
+          totalSampleHeight += 1; // Default row height
+        }
+      }
+      const estimatedRowHeight = Math.max(1, Math.ceil(totalSampleHeight / sampleSize));
+
+      // Calculate visible range
+      const startIndex = Math.max(0, Math.floor(scrollY / estimatedRowHeight) - VIRTUAL_BUFFER);
+      const endIndex = Math.min(flexChildren.length, Math.ceil((scrollY + viewportHeight) / estimatedRowHeight) + VIRTUAL_BUFFER);
+
+      logger.debug(`Virtual layout: ${flexChildren.length} children, visible ${startIndex}-${endIndex}, rowHeight=${estimatedRowHeight}`);
+
+      // Create layout nodes only for visible children
+      const nodes: LayoutNode[] = [];
+      let currentY = context.parentBounds.y;
+
+      for (let i = 0; i < flexChildren.length; i++) {
+        const child = flexChildren[i];
+
+        if (i >= startIndex && i < endIndex) {
+          // Full layout for visible children
+          const childBounds: Bounds = {
+            x: context.parentBounds.x,
+            y: currentY,
+            width: context.availableSpace.width,
+            height: estimatedRowHeight
+          };
+          const childNode = this.calculateLayout(child, { ...context, parentBounds: childBounds }, parentNode);
+          nodes.push(childNode);
+          currentY += childNode.bounds.height;
+        } else {
+          // Placeholder for non-visible children (minimal node, skips intrinsic calc)
+          const placeholderBounds: Bounds = {
+            x: context.parentBounds.x,
+            y: currentY,
+            width: context.availableSpace.width,
+            height: estimatedRowHeight
+          };
+          const zeroDims = { top: 0, right: 0, bottom: 0, left: 0, horizontal: 0, vertical: 0 };
+          nodes.push({
+            element: child,
+            bounds: placeholderBounds,
+            contentBounds: placeholderBounds,
+            visible: false,
+            children: [],
+            computedStyle: {},
+            layoutProps: this._computeLayoutProps(child),
+            boxModel: {
+              content: { width: placeholderBounds.width, height: placeholderBounds.height },
+              padding: zeroDims,
+              border: zeroDims,
+              margin: zeroDims,
+              total: { width: placeholderBounds.width, height: placeholderBounds.height }
+            },
+            zIndex: 0,
+          });
+          currentY += estimatedRowHeight;
+        }
+      }
+
+      // Handle absolute children
+      for (const child of absoluteChildren) {
+        nodes.push(this._layoutAbsolute(child, context, parentNode));
+      }
+
+      return nodes;
     }
 
     // Step 1: Calculate hypothetical sizes for flex children
@@ -1287,8 +1378,20 @@ export class LayoutEngine {
     if (style.width !== undefined) result.width = style.width;
     if (style.height !== undefined) result.height = style.height;
 
-
-    // No special cases - all elements inherit layout properties normally
+    // Auto-infer display: flex when flex container properties are present
+    // This makes the framework more ergonomic - no need to explicitly set display: flex
+    if (result.display !== 'flex') {
+      const hasFlexContainerProps =
+        style.flexDirection !== undefined ||
+        style.justifyContent !== undefined ||
+        style.alignItems !== undefined ||
+        style.alignContent !== undefined ||
+        style.flexWrap !== undefined ||
+        style.gap !== undefined;
+      if (hasFlexContainerProps) {
+        result.display = 'flex';
+      }
+    }
 
     return result;
   }

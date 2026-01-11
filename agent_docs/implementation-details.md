@@ -321,6 +321,85 @@ case 'stretch':
 
 For stretch, the final size comes from `lineCrossSize`, which is calculated from the maximum `baseCross` of all items in the line, plus any distributed free space from `align-content: stretch`.
 
+## Dialog Intrinsic Size
+
+Dialogs must return zero intrinsic size since they are rendered as overlays, not part of normal layout flow.
+
+**Problem:** When dialog is open, background content disappears even with `backdrop="false"`.
+
+**Cause:** Dialog's `intrinsicSize()` returned full viewport size when open, consuming layout space.
+
+**Fix** (`src/components/dialog.ts`):
+```typescript
+intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
+  return { width: 0, height: 0 };  // Dialogs are overlays
+}
+```
+
+## Dialog-Only Render Path
+
+For performance, dialog interactions use a fast render path that skips full layout recalculation:
+
+**Triggers:**
+- Dialog drag/resize (throttled to ~60fps)
+- Scrolling inside a dialog (via `ScrollHandler._isInsideDialog()`)
+
+**Implementation** (`src/rendering.ts` `renderDialogOnly()`):
+1. Check for cached layout tree - return false if none
+2. Clear buffer
+3. Re-render main content from cached layout (no layout recalculation)
+4. Apply low-contrast effect for non-backdrop modals
+5. Render modals at new positions
+
+**Scroll handler integration** (`src/scroll-handler.ts`):
+```typescript
+if (updated && this._autoRender) {
+  if (this._onRenderDialogOnly && this._isInsideDialog(targetContainer)) {
+    this._onRenderDialogOnly();  // Fast path
+  } else {
+    this._onRender();  // Full render
+  }
+}
+```
+
+## Flex Display Auto-Inference
+
+`display: flex` is automatically inferred when flex container properties are present in style.
+
+**Trigger properties:** `flexDirection`, `justifyContent`, `alignItems`, `alignContent`, `flexWrap`, `gap`
+
+**Implementation** (`src/layout.ts` `_computeLayoutProps()`):
+```typescript
+if (result.display !== 'flex') {
+  const hasFlexContainerProps =
+    style.flexDirection !== undefined ||
+    style.justifyContent !== undefined ||
+    style.alignItems !== undefined ||
+    style.alignContent !== undefined ||
+    style.flexWrap !== undefined ||
+    style.gap !== undefined;
+  if (hasFlexContainerProps) {
+    result.display = 'flex';
+  }
+}
+```
+
+Note: Flex *item* properties (`flex`, `flexGrow`, `flexShrink`, `flexBasis`) don't trigger auto-inference since they describe how an element behaves inside a flex container, not that the element itself is a flex container.
+
+## Table Render Caching
+
+Tables with many rows cache expensive calculations to avoid O(n) loops on every render.
+
+**Caches** (`src/components/table.ts`):
+- `_cachedSortedRows` - Avoids O(n log n) sort
+- `_cachedContentHeight` - Avoids O(n) row height calculation
+- `_cachedColumnWidths` - Avoids O(n) intrinsicSize() calls
+
+**Cache invalidation:**
+- Cache keys include row count, sort parameters, column settings
+- Uses `children.length` (O(1)) instead of `getRows().length` (O(n)) for cache key
+- Caches invalidate when data actually changes
+
 ## Chrome Collapse Implementation
 
 When content bounds would be negative due to insufficient space, chrome (padding then border) is progressively collapsed (see `src/sizing.ts`).

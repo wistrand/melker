@@ -422,6 +422,7 @@ export class MelkerEngine {
       renderer: this._renderer,
       autoRender: this._options.autoRender,
       onRender: () => this.render(),
+      onRenderDialogOnly: () => this.renderDialogOnly(),
       calculateScrollDimensions: (containerOrId) => this.calculateScrollDimensions(containerOrId),
     });
 
@@ -460,6 +461,7 @@ export class MelkerEngine {
         eventManager: this._eventManager,
         logger: this._logger,
         onRender: () => this.render(),
+        onRenderDialogOnly: () => this.renderDialogOnly(),
         onRenderOptimized: () => this._renderOptimized(),
         onElementClick: (element, event) => this._elementClickHandler.handleElementClick(element, event),
       }
@@ -1215,6 +1217,59 @@ export class MelkerEngine {
     } finally {
       this._isRendering = false;
       this._logger?.trace('render() finished, _isRendering = false');
+    }
+  }
+
+  /**
+   * Fast render for dialog drag/resize - only updates dialog overlay, preserves background
+   */
+  renderDialogOnly(): void {
+    if (!this._isInitialized) {
+      return;
+    }
+
+    if (this._isRendering) {
+      return;
+    }
+    this._isRendering = true;
+
+    try {
+      const renderStartTime = performance.now();
+      this._renderCount++;
+
+      // Use dialog-only render (copies background from previous buffer, renders only modals)
+      const success = this._renderer.renderDialogOnly(
+        this._buffer,
+        this._document.focusedElement?.id,
+        this._textSelectionHandler.getHoveredElementId() || undefined,
+        () => this.render()
+      );
+
+      if (!success) {
+        // Fall back to full render if no cached layout
+        this._isRendering = false;
+        this.render();
+        return;
+      }
+
+      // Output to terminal
+      const differences = this._buffer.swapAndGetDiff();
+      if (differences.length > 0 && typeof Deno !== 'undefined') {
+        const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._currentSize.width);
+        if (output.length > 0) {
+          const finalOutput = this._options.synchronizedOutput
+            ? ANSI.beginSync + output + ANSI.endSync
+            : output;
+          Deno.stdout.writeSync(new TextEncoder().encode(finalOutput));
+        }
+      }
+
+      const totalTime = performance.now() - renderStartTime;
+      if (totalTime > 30) {
+        this._logger?.debug(`Dialog-only render: ${totalTime.toFixed(2)}ms`);
+      }
+    } finally {
+      this._isRendering = false;
     }
   }
 

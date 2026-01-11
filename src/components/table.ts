@@ -171,6 +171,18 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   private _totalContentLines: number = 0;
   private _viewportLines: number = 0;
 
+  // Sorted rows cache - avoid re-sorting on every render
+  private _cachedSortedRows: TableRowElement[] | null = null;
+  private _sortCacheKey: string = '';
+
+  // Content height cache - avoid recalculating row heights on every render
+  private _cachedContentHeight: number = 0;
+  private _contentHeightCacheKey: string = '';
+
+  // Column widths cache - avoid iterating all rows on every render
+  private _cachedColumnWidths: number[] = [];
+  private _columnWidthsCacheKey: string = '';
+
   constructor(props: TableProps = {}, children: Element[] = []) {
     const defaultProps: TableProps = {
       border: 'thin',
@@ -342,6 +354,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
   /**
    * Get sorted tbody rows based on current sort state
+   * Uses caching to avoid re-sorting on every render
    */
   private _getSortedRows(rows: TableRowElement[]): TableRowElement[] {
     const sortColumn = this.props.sortColumn;
@@ -349,6 +362,17 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
     if (sortColumn === undefined || sortDirection === undefined) {
       return rows;
+    }
+
+    // Build cache key from sort params and row boundaries
+    // Uses count + first/last row IDs for fast change detection
+    const firstRowId = rows.length > 0 ? (rows[0].getDataId() || rows[0].id || '') : '';
+    const lastRowId = rows.length > 0 ? (rows[rows.length - 1].getDataId() || rows[rows.length - 1].id || '') : '';
+    const cacheKey = `${sortColumn}:${sortDirection}:${rows.length}:${firstRowId}:${lastRowId}`;
+
+    // Return cached result if still valid
+    if (this._cachedSortedRows && this._sortCacheKey === cacheKey) {
+      return this._cachedSortedRows;
     }
 
     // Get or create comparator for this column
@@ -373,6 +397,10 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       const result = comparator!(valueA, valueB);
       return sortDirection === 'asc' ? result : -result;
     });
+
+    // Cache the result
+    this._cachedSortedRows = sorted;
+    this._sortCacheKey = cacheKey;
 
     return sorted;
   }
@@ -435,15 +463,27 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   }
 
   /**
+   * Table should capture focus for all children when interactive.
+   * This tells hit-testing to return the table instead of text elements inside cells,
+   * allowing the table to handle clicks for sorting, row selection, etc.
+   */
+  capturesFocusForChildren(): boolean {
+    return true;
+  }
+
+  /**
    * Handle click events on cell components, rows and scrollbar
    */
   handleClick(event: ClickEvent, document: Document): boolean {
     const clickX = event.position.x;
     const clickY = event.position.y;
 
-    logger.info(`Table.handleClick: click at (${clickX}, ${clickY}), cellComponentBounds=${this._cellComponentBounds.length}`);
+    logger.debug(`Table.handleClick: click at (${clickX}, ${clickY}), cellComponentBounds=${this._cellComponentBounds.length}, headerCellBounds=${this._headerCellBounds.length}`);
     for (const { element, bounds } of this._cellComponentBounds) {
-      logger.info(`  - ${element.type}/${element.id}: (${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}`);
+      logger.trace(`  - ${element.type}/${element.id}: (${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}`);
+    }
+    for (const { columnIndex, bounds } of this._headerCellBounds) {
+      logger.trace(`  header column ${columnIndex}: (${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}`);
     }
 
     // First check if click is on a sortable header cell
@@ -835,6 +875,15 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     const cellPadding = this.props.cellPadding || 1;
     const hasBorder = this.props.border !== 'none';
 
+    // Check cache - use row count and sort cache key to detect data changes
+    // Use children.length directly (O(1)) instead of getRows().length (O(n))
+    const tbody = this.getTbody();
+    const tbodyChildCount = tbody?.children?.length ?? 0;
+    const cacheKey = `${availableWidth}:${expandToFill}:${columnCount}:${tbodyChildCount}:${cellPadding}:${hasBorder}:${this._sortCacheKey}`;
+    if (this._columnWidthsCacheKey === cacheKey && this._cachedColumnWidths.length === columnCount) {
+      return this._cachedColumnWidths;
+    }
+
     // Calculate intrinsic widths for each column (use a small available width to get natural sizes)
     const intrinsicWidths: number[] = new Array(columnCount).fill(0);
 
@@ -866,10 +915,19 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     if (expandToFill && totalNeeded < availableWidth) {
       const extra = availableWidth - totalNeeded;
       const perColumn = Math.floor(extra / columnCount);
+      const remainder = extra % columnCount;
       for (let i = 0; i < columnCount; i++) {
         widths[i] += perColumn;
+        // Distribute remainder to first columns (1 extra char each)
+        if (i < remainder) {
+          widths[i] += 1;
+        }
       }
     }
+
+    // Cache result
+    this._cachedColumnWidths = widths;
+    this._columnWidthsCacheKey = cacheKey;
 
     return widths;
   }
@@ -1034,10 +1092,18 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       const borderCount = showColumnBorders ? this._columnWidths.length + 1 : 2;
       const tableWidth = this._columnWidths.reduce((sum, w) => sum + w, 0) + borderCount;
 
-      // Calculate total content height in lines
-      let totalContentLines = 0;
-      for (const row of rows) {
-        totalContentLines += this._calculateRowHeight(row, this._columnWidths, cellPadding);
+      // Calculate total content height in lines (cached)
+      const heightCacheKey = `${rows.length}:${cellPadding}:${this._columnWidths.join(',')}:${this._sortCacheKey}`;
+      let totalContentLines: number;
+      if (this._contentHeightCacheKey === heightCacheKey && this._cachedContentHeight > 0) {
+        totalContentLines = this._cachedContentHeight;
+      } else {
+        totalContentLines = 0;
+        for (const row of rows) {
+          totalContentLines += this._calculateRowHeight(row, this._columnWidths, cellPadding);
+        }
+        this._cachedContentHeight = totalContentLines;
+        this._contentHeightCacheKey = heightCacheKey;
       }
 
       // Store metrics for wheel handling
@@ -1313,12 +1379,16 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       const cellContentX = contentX + cellPadding;
 
       // Track cell bounds for click detection (only for th cells that can be sorted)
-      if (cell.isHeader() && cell.props.sortable !== false) {
+      const isHeaderCell = cell.isHeader();
+      const sortable = cell.props.sortable !== false;
+      logger.debug(`_renderHeaderRow: cell=${cellIdx}, type=${cell.type}, isHeader=${isHeaderCell}, sortable=${sortable}`);
+      if (isHeaderCell && sortable) {
         this._headerCellBounds.push({
           cell,
           columnIndex: colIndex,
           bounds: { x: contentX, y, width: cellWidth, height: rowHeight }
         });
+        logger.debug(`_renderHeaderRow: added header cell bounds for column ${colIndex}`);
       }
 
       // Get cell text content and add sort indicator if this column is sorted
@@ -1821,12 +1891,13 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const hasBorder = this.props.border !== 'none';
     const cellPadding = this.props.cellPadding || 1;
+    const showColumnBorders = this.props.columnBorders ?? true;
     // Use expandToFill: false to get natural/intrinsic widths (important for nested tables)
     const columnWidths = this._calculateColumnWidths(context.availableSpace.width, false);
     const columnCount = columnWidths.length;
 
-    // Width = sum of columns + borders
-    const borderWidth = hasBorder ? columnCount + 1 : 0;
+    // Width = sum of columns + borders (respect columnBorders setting)
+    const borderWidth = hasBorder ? (showColumnBorders ? columnCount + 1 : 2) : 0;
     const width = columnWidths.reduce((sum, w) => sum + w, 0) + borderWidth;
 
     // Height = all rows (with actual heights for multi-line rows) + border lines

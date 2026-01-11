@@ -293,6 +293,11 @@ export class TextElement extends Element implements Renderable, TextSelectable {
     // Convert to string if needed (handles numeric values like 0)
     text = String(text);
 
+    // Fast path for simple single-line text (most common case)
+    if (textWrap !== 'wrap' && !text.includes('\n')) {
+      return { width: text.length, height: 1 };
+    }
+
     // Split text by newlines to get accurate dimensions
     const lines = text.split('\n');
     let width = 0;

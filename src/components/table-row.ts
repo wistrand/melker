@@ -88,18 +88,36 @@ export class TableRowElement extends Element implements Renderable {
    * Calculate intrinsic size
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
-    const cells = this.getCells();
-    if (cells.length === 0) {
+    if (!this.children || this.children.length === 0) {
       return { width: 0, height: 1 };
     }
 
     let totalWidth = 0;
     let maxHeight = 1;
 
-    for (const cell of cells) {
-      const size = cell.intrinsicSize(context);
-      totalWidth += size.width;
-      maxHeight = Math.max(maxHeight, size.height);
+    // Iterate directly over children instead of getCells() to avoid array allocation
+    for (const child of this.children) {
+      // Only process td/th cells
+      if (child.type !== 'td' && child.type !== 'th') continue;
+
+      // Fast path: if cell has single text child, calculate directly
+      if (child.children && child.children.length === 1) {
+        const textChild = child.children[0];
+        if (textChild.type === 'text' && textChild.props.text !== undefined) {
+          const text = String(textChild.props.text);
+          if (!text.includes('\n')) {
+            totalWidth += Math.max(1, text.length);
+            continue; // height is 1, maxHeight already 1
+          }
+        }
+      }
+
+      // Fall back to intrinsicSize for complex cells
+      if ('intrinsicSize' in child && typeof child.intrinsicSize === 'function') {
+        const size = child.intrinsicSize(context);
+        totalWidth += size.width;
+        maxHeight = Math.max(maxHeight, size.height);
+      }
     }
 
     return { width: totalWidth, height: maxHeight };

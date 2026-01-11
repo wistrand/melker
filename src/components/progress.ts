@@ -4,6 +4,14 @@ import { Element, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '.
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { CanvasElement, CanvasProps } from './canvas.ts';
 import { getCurrentTheme } from '../theme.ts';
+import { lerpColor, type ColorSpace } from './color-utils.ts';
+
+export interface GradientStop {
+  stop: number;              // Position 0-1 (0 = start, 1 = end)
+  color: string;             // Color at this position
+}
+
+export type { ColorSpace } from './color-utils.ts';
 
 export interface ProgressProps extends Omit<CanvasProps, 'width' | 'height'> {
   width?: number;            // Bar width in terminal columns (default: 20)
@@ -13,8 +21,10 @@ export interface ProgressProps extends Omit<CanvasProps, 'width' | 'height'> {
   min?: number;              // Minimum value (default: 0)
   indeterminate?: boolean;   // Animated loading state (default: false)
   showValue?: boolean;       // Display percentage text after bar (default: false)
-  fillColor?: string;        // Color for filled portion
+  fillColor?: string;        // Color for filled portion (ignored if gradient set)
   emptyColor?: string;       // Color for empty portion
+  gradient?: GradientStop[]; // Gradient colors based on position in bar
+  colorSpace?: ColorSpace;   // Color interpolation space: 'rgb', 'hsl', 'oklch' (default: 'rgb')
   animationSpeed?: number;   // Indeterminate animation speed in ms (default: 50)
 }
 
@@ -88,6 +98,42 @@ export class ProgressElement extends CanvasElement {
   }
 
   /**
+   * Get color at position from gradient using the configured color space
+   */
+  private _getGradientColor(position: number): string {
+    const gradient = this.props.gradient;
+    if (!gradient || gradient.length === 0) {
+      return this._getColors().fillColor;
+    }
+
+    // Sort stops by position
+    const sorted = [...gradient].sort((a, b) => a.stop - b.stop);
+
+    // Clamp position to 0-1
+    position = Math.max(0, Math.min(1, position));
+
+    // Find surrounding stops
+    let lower = sorted[0];
+    let upper = sorted[sorted.length - 1];
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (position >= sorted[i].stop && position <= sorted[i + 1].stop) {
+        lower = sorted[i];
+        upper = sorted[i + 1];
+        break;
+      }
+    }
+
+    // Handle edge cases
+    if (position <= lower.stop) return lower.color;
+    if (position >= upper.stop) return upper.color;
+
+    // Interpolate between stops using configured color space
+    const t = (position - lower.stop) / (upper.stop - lower.stop);
+    return lerpColor(lower.color, upper.color, t, this.props.colorSpace || 'rgb');
+  }
+
+  /**
    * Calculate current progress percentage
    */
   private _getPercentage(): number {
@@ -136,8 +182,19 @@ export class ProgressElement extends CanvasElement {
 
     // Draw filled portion
     if (fillPixels > 0) {
-      this.setColor(fillColor);
-      this.fillRect(0, 0, fillPixels, bufH);
+      if (this.props.gradient && this.props.gradient.length > 0) {
+        // Draw with gradient - each column gets its color based on position
+        for (let x = 0; x < fillPixels; x++) {
+          const position = x / bufW;
+          const color = this._getGradientColor(position);
+          this.setColor(color);
+          this.fillRect(x, 0, 1, bufH);
+        }
+      } else {
+        // Single color fill
+        this.setColor(fillColor);
+        this.fillRect(0, 0, fillPixels, bufH);
+      }
     }
   }
 
@@ -327,8 +384,10 @@ export const progressSchema: ComponentSchema = {
     min: { type: 'number', description: 'Minimum value (default: 0)' },
     indeterminate: { type: 'boolean', description: 'Show animated loading state' },
     showValue: { type: 'boolean', description: 'Display percentage text after bar' },
-    fillColor: { type: 'string', description: 'Color for filled portion' },
+    fillColor: { type: 'string', description: 'Color for filled portion (ignored if gradient set)' },
     emptyColor: { type: 'string', description: 'Color for empty portion' },
+    gradient: { type: 'array', description: 'Gradient color stops: [{stop: 0-1, color: "#hex"}]' },
+    colorSpace: { type: 'string', enum: ['rgb', 'hsl', 'oklch'], description: 'Color interpolation space (default: rgb)' },
     animationSpeed: { type: 'number', description: 'Indeterminate animation speed in ms (default: 50)' },
     width: { type: 'number', description: 'Bar width in terminal columns (default: 20)' },
     height: { type: 'number', description: 'Bar height in terminal rows (default: 1)' },

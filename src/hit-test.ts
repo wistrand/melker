@@ -46,7 +46,7 @@ export class HitTester {
    */
   hitTest(x: number, y: number): Element | undefined {
     // Debug logging for hit test events
-    logger.trace(`Hit test at (${x}, ${y})`);
+    logger.debug(`Hit test at (${x}, ${y})`);
 
     // First check open dialogs (they are rendered as top-most overlays)
     const dialogHit = this._hitTestOpenDialogs(x, y);
@@ -57,7 +57,7 @@ export class HitTester {
     // We need to traverse the layout tree to find which element is at the given coordinates
     // Start with no scroll offset accumulation
     const result = this._hitTestElement(this._document.root, x, y, 0, 0);
-    logger.trace(`Hit test result: ${result?.type}/${result?.id}`);
+    logger.debug(`Hit test result: ${result?.type}/${result?.id}, isClickable=${result ? 'handleClick' in result : 'N/A'}`);
     return result;
   }
 
@@ -311,10 +311,10 @@ export class HitTester {
     const isTable = element.type === 'table';
     const tableForChildren = isTable ? element : containingTable;
 
-    // Log for table elements specifically
-    if (isTable) {
+    // Log for table and container elements
+    if (isTable || element.type === 'container') {
       const isInt = this.isInteractiveElement(element);
-      logger.debug(`Hit test table: id=${element.id}, hasBounds=${!!bounds}, bounds=${bounds ? `(${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}` : 'none'}, inBounds=${bounds ? pointInBounds(x, y, bounds) : false}, isInteractive=${isInt}`);
+      logger.debug(`Hit test ${element.type}: id=${element.id}, pos=(${x},${y}), hasBounds=${!!bounds}, bounds=${bounds ? `(${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}` : 'none'}, inBounds=${bounds ? pointInBounds(x, y, bounds) : false}, isInteractive=${isInt}`);
     }
 
     // For scrollable containers with bounds, transform coordinates for children

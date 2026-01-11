@@ -154,19 +154,7 @@ export class DevToolsManager {
     // Build tabs array in order: Help (if present), Source, Policy (if present), Markdown (if .md file), System, Actions
     const tabs: Element[] = [];
 
-    // Tab 0: Help (if present)
-    if (this._state.helpContent) {
-      const helpContent = this._state.helpContent;
-      tabs.push(melker`
-        <tab id="dev-tools-tab-help" title="Help">
-          <container id="dev-tools-scroll-help" scrollable=${true} focusable=${true} style=${scrollStyle}>
-            <markdown id="dev-tools-help-content" text=${helpContent} style=${{ textWrap: 'wrap' }} />
-          </container>
-        </tab>
-      `);
-    }
-
-    // Tab 1: Source (Melker source or converted content for .md files)
+    // Tab 0: Source (Melker source or converted content for .md files)
     const sourceContent = this._state.type === 'md' && this._state.convertedContent
       ? this._state.convertedContent
       : this._state.content;
@@ -177,6 +165,18 @@ export class DevToolsManager {
         </container>
       </tab>
     `);
+
+    // Tab 1: Help (if present)
+    if (this._state.helpContent) {
+      const helpContent = this._state.helpContent;
+      tabs.push(melker`
+        <tab id="dev-tools-tab-help" title="Help">
+          <container id="dev-tools-scroll-help" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <markdown id="dev-tools-help-content" text=${helpContent} style=${{ textWrap: 'wrap' }} />
+          </container>
+        </tab>
+      `);
+    }
 
     // Tab 2: Policy (if present)
     if (this._state.policy) {

@@ -1,0 +1,114 @@
+<melker>
+  <policy>
+  {
+    "name": "File Browser Demo",
+    "description": "Demonstrates the file browser component in a dialog",
+    "permissions": {
+      "read": ["*"]
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    let dialogOpen = false;
+    let selectionMode = 'single';
+    let selectType = 'file';
+    let selectedPath = '(none)';
+
+    export function openBrowser() {
+      dialogOpen = true;
+      // Update file browser props before opening
+      const fb = $melker.getElementById('file-browser');
+      if (fb) {
+        fb.props.selectionMode = selectionMode;
+        fb.props.selectType = selectType;
+      }
+      updateDialog();
+    }
+
+    export function closeBrowser() {
+      dialogOpen = false;
+      updateDialog();
+    }
+
+    export function handleSelect(event: any) {
+      selectedPath = event.path;
+      closeBrowser();
+      const text = $melker.getElementById('selected-text');
+      if (text) text.props.text = selectedPath;
+      $melker.render();
+    }
+
+    export function handleError(event: any) {
+      $melker.logger.error('File browser error:', event.message);
+    }
+
+    export function setMode(mode: string) {
+      selectionMode = mode;
+    }
+
+    export function setSelectType(type: string) {
+      selectType = type;
+    }
+
+    function updateDialog() {
+      const dialog = $melker.getElementById('browser-dialog');
+      if (dialog) dialog.props.open = dialogOpen;
+      $melker.render();
+    }
+  </script>
+
+  <container style="width: fill; height: fill; display: flex; flex-direction: column; padding: 1;">
+    <text style="font-weight: bold; margin-bottom: 1;">File Browser Demo</text>
+    <text style="margin-bottom: 1;">Test the file browser component inside a dialog.</text>
+
+    <container style="display: flex; flex-direction: row; margin-bottom: 1;">
+      <button id="open-btn" title="Open File Browser" onClick="$app.openBrowser()" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; margin-bottom: 1;">
+      <text style="margin-right: 1;">Mode:</text>
+      <radio id="mode-single" name="mode" title="Single" checked="true" onChange="$app.setMode('single')" />
+      <radio id="mode-multiple" name="mode" title="Multiple" onChange="$app.setMode('multiple')" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; margin-bottom: 1;">
+      <text style="margin-right: 1;">Select:</text>
+      <radio id="type-file" name="selectType" title="Files" checked="true" onChange="$app.setSelectType('file')" />
+      <radio id="type-dir" name="selectType" title="Dirs" onChange="$app.setSelectType('directory')" />
+      <radio id="type-both" name="selectType" title="Both" onChange="$app.setSelectType('both')" />
+    </container>
+
+    <container style="display: flex; flex-direction: column; margin-top: 1;">
+      <text dim="true">Selected:</text>
+      <text id="selected-text">(none)</text>
+    </container>
+
+    <text style="margin-top: 2; color: gray;">
+      Controls: Arrows=navigate, Enter=select, Backspace=up, Escape=close
+    </text>
+
+    <dialog
+      id="browser-dialog"
+      title="Select File"
+      open="false"
+      modal="true"
+      backdrop="false"
+      draggable="true"
+      width="70"
+      height="20"
+      onClose="$app.closeBrowser()"
+    >
+      <file-browser
+        id="file-browser"
+        selectionMode="single"
+        selectType="file"
+        showHidden="false"
+        onSelect="$app.handleSelect(event)"
+        onCancel="$app.closeBrowser()"
+        onError="$app.handleError(event)"
+        maxVisible="12"
+      />
+    </dialog>
+  </container>
+</melker>

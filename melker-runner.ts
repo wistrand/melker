@@ -421,6 +421,7 @@ export async function runMelkerFile(
       exports: {} as Record<string, any>,
       getElementById: (id: string) => engine?.document?.getElementById(id),
       render: () => engine.render(),
+      focus: (id: string) => engine.focusElement(id),
       exit: () => exitHandler(),
       quit: () => exitHandler(),
       setTitle: (title: string) => engine.setTitle(title),

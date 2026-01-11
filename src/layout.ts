@@ -610,7 +610,7 @@ export class LayoutEngine {
       return {
         element: child,
         flexGrow: flexGrow,
-        flexShrink: childProps.flexShrink || 1,
+        flexShrink: childProps.flexShrink ?? 1,
         flexBasis: flexBasisValue,
         hypotheticalMain: flexBasisValue,  // Base size including padding
         outerMain: flexBasisValue + marginMain,  // Outer size with padding + margin

@@ -202,6 +202,7 @@ import { ListElement } from './src/components/list.ts';
 import { LiElement } from './src/components/li.ts';
 import { ProgressElement } from './src/components/progress.ts';
 import { SliderElement } from './src/components/slider.ts';
+import './src/components/file-browser/file-browser.ts'; // Self-registering component
 import { registerComponent } from './src/element.ts';
 
 // Auto-register core components when library is imported
@@ -387,6 +388,11 @@ registerComponent({
     focusedItem: 0,
     scrollTop: 0,
     showSelectionMarkers: true,
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'visible',
+    },
   },
   validate: (_props) => true, // ListElement doesn't have a validate method
 });
@@ -397,8 +403,8 @@ registerComponent({
   defaultProps: {
     style: {
       display: 'block',
-      width: '100%',
-      paddingLeft: 2, // Default indentation
+      flexShrink: 0,
+      height: 1,
     },
     marker: '-', // Default list marker
     indent: 2,   // Default indentation level

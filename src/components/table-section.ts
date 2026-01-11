@@ -18,11 +18,17 @@ export interface SelectEvent {
   action: 'add' | 'remove' | 'replace';
 }
 
+export interface ActivateEvent {
+  type: 'activate';
+  rowId: string;
+}
+
 export interface TableSectionProps extends ContainerProps {
   // For tbody
   maxHeight?: number;
   selectable?: TableSelectionMode;
   onSelect?: (event: SelectEvent) => void;
+  onActivate?: (event: ActivateEvent) => void;
 }
 
 export class TableSectionElement extends ContainerElement implements Renderable {
@@ -133,6 +139,18 @@ export class TableSectionElement extends ContainerElement implements Renderable 
         selectedIds: this.getSelectedIds(),
         rowId: id,
         action,
+      });
+    }
+  }
+
+  /**
+   * Activate a row (double-click or Enter)
+   */
+  activateRow(id: string): void {
+    if (this.props.onActivate) {
+      this.props.onActivate({
+        type: 'activate',
+        rowId: id,
       });
     }
   }
@@ -303,6 +321,7 @@ const tbodySchema: ComponentSchema = {
     maxHeight: { type: 'number', description: 'Maximum visible rows when scrollable' },
     selectable: { type: 'string', enum: ['none', 'single', 'multi'], description: 'Row selection mode' },
     onSelect: { type: 'function', description: 'Selection change handler' },
+    onActivate: { type: 'function', description: 'Row activation handler (double-click or Enter)' },
   },
 };
 

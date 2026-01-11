@@ -188,75 +188,9 @@ export class ListElement extends Element implements Renderable, Focusable {
 
 
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
-    // Let the layout system render the children first, then overlay markers
-    const {
-      selectionMode = 'single',
-      selectedItems = [],
-      focusedItem = 0,
-      showSelectionMarkers = true
-    } = this.props;
-
-    const itemCount = this.children?.length || 0;
-    if (itemCount === 0) return;
-
-    // Render markers as overlay on top of the li elements
-    // Each li element has paddingLeft: 2, so we render markers in that space
-    const containerPadding = (typeof this.props.style?.padding === 'number' ? this.props.style.padding : 1);
-
-    for (let i = 0; i < itemCount; i++) {
-      const childElement = this.children?.[i];
-      if (childElement?.type !== 'li') continue;
-
-      const isSelected = selectedItems.includes(i);
-      const isFocused = i === focusedItem;
-
-      // Calculate Y position: account for container padding + item index
-      // Add 1 to align with where the layout system actually places the li elements
-      const itemY = bounds.y + containerPadding + i + 1;
-
-      // Calculate X position: account for container padding
-      const markerX = bounds.x + containerPadding;
-
-      // Check if the item is within visible bounds
-      if (itemY >= bounds.y + bounds.height) break;
-
-      // Position 0: Combined focus and selection marker
-      let marker: string;
-      let foregroundColor: string;
-      let backgroundColor: string;
-
-      if (isFocused && isSelected) {
-        // Focused and selected: use * with focus colors
-        marker = '*';
-        foregroundColor = getThemeColor('focusPrimary');
-        backgroundColor = getThemeColor('focusBackground');
-      } else if (isFocused && !isSelected) {
-        // Focused but not selected: use > with focus colors
-        marker = '>';
-        foregroundColor = getThemeColor('focusPrimary');
-        backgroundColor = getThemeColor('focusBackground');
-      } else if (!isFocused && isSelected) {
-        // Selected but not focused: use * with selection colors
-        marker = '*';
-        foregroundColor = getThemeColor('primary');
-        backgroundColor = getThemeColor('background');
-      } else {
-        // Neither focused nor selected: use - with normal colors
-        marker = '-';
-        foregroundColor = getThemeColor('textSecondary');
-        backgroundColor = getThemeColor('background');
-      }
-
-      buffer.currentBuffer.setCell(markerX, itemY, {
-        char: marker,
-        foreground: foregroundColor,
-        background: backgroundColor
-      });
-
-      // Since text starts immediately after the focus/li marker,
-      // we integrate the selection state into the main marker
-      // Future improvement: adjust li paddingLeft to make room for separate markers
-    }
+    // Li children handle their own marker rendering based on focused/selected props
+    // The layout system handles rendering the li elements with their content
+    // This method is intentionally empty - list is just a container
   }
 
 
@@ -343,6 +277,7 @@ export class ListElement extends Element implements Renderable, Focusable {
 
 // Lint schema for list component
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { registerComponent } from '../element.ts';
 
 export const listSchema: ComponentSchema = {
   description: 'Scrollable list container with optional selection',
@@ -357,3 +292,21 @@ export const listSchema: ComponentSchema = {
 };
 
 registerComponentSchema('list', listSchema);
+
+// Register list component for createElement
+registerComponent({
+  type: 'list',
+  componentClass: ListElement,
+  defaultProps: {
+    selectionMode: 'single',
+    selectedItems: [],
+    focusedItem: 0,
+    scrollTop: 0,
+    showSelectionMarkers: true,
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'visible',
+    },
+  },
+});

@@ -13,6 +13,9 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
   declare type: 'button';
   declare props: ButtonProps;
 
+  // Store last render bounds for click detection
+  private _lastRenderBounds: Bounds | null = null;
+
   constructor(props: ButtonProps, children: Element[] = []) {
     const defaultProps: ButtonProps = {
       variant: 'default',
@@ -32,6 +35,9 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
    * Render the button to the terminal buffer
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
+    // Store bounds for click detection
+    this._lastRenderBounds = bounds;
+
     const { title } = this.props;
     if (!title) return;
 
@@ -254,6 +260,16 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
    */
   handleClick(event: ClickEvent, _document: Document): boolean {
     if (this.props.disabled) return false;
+
+    // Check if click is within our bounds (if bounds are available)
+    if (this._lastRenderBounds && event.position) {
+      const { x, y } = event.position;
+      const b = this._lastRenderBounds;
+      if (x < b.x || x >= b.x + b.width || y < b.y || y >= b.y + b.height) {
+        // Click is outside button bounds
+        return false;
+      }
+    }
 
     // Call onClick handler if provided
     if (typeof this.props.onClick === 'function') {

@@ -170,8 +170,9 @@ export class HitTester {
 
   /**
    * Hit test dialog children recursively using rendered bounds
+   * @param containingTable - Track the containing table for table part handling
    */
-  private _hitTestDialogChildren(element: Element, x: number, y: number, _contentBounds: Bounds): Element | undefined {
+  private _hitTestDialogChildren(element: Element, x: number, y: number, _contentBounds: Bounds, containingTable?: Element): Element | undefined {
     if (!element.children || element.children.length === 0) {
       return undefined;
     }
@@ -179,6 +180,10 @@ export class HitTester {
     for (const child of element.children) {
       // Skip invisible elements - they don't participate in hit testing
       if (child.props?.visible === false) continue;
+
+      // Track if we're entering a table
+      const isTable = child.type === 'table';
+      const tableForChildren = isTable ? child : containingTable;
 
       // Try to get the rendered bounds for this child
       const childBounds = child.id ? this._renderer.getContainerBounds(child.id) : undefined;
@@ -195,9 +200,18 @@ export class HitTester {
       });
 
       if (childBounds && pointInBounds(x, y, childBounds)) {
+        // Check if this component captures focus for all its children
+        // If so, return this component instead of searching children
+        if (typeof (child as any).capturesFocusForChildren === 'function' &&
+            (child as any).capturesFocusForChildren() &&
+            this.isInteractiveElement(child)) {
+          logger.debug('Dialog hit test found (captures focus for children)', { id: child.id, type: child.type });
+          return child;
+        }
+
         // If it has children, recursively search them FIRST (not just containers - also tabs, etc.)
         if (child.children && child.children.length > 0) {
-          const nestedHit = this._hitTestDialogChildren(child, x, y, childBounds);
+          const nestedHit = this._hitTestDialogChildren(child, x, y, childBounds, tableForChildren);
           if (nestedHit) {
             return nestedHit;
           }
@@ -208,10 +222,17 @@ export class HitTester {
           logger.debug('Dialog hit test found', { id: child.id, type: child.type });
           return child;
         }
+
+        // Special handling for table parts: if we're inside a table and hit a table part,
+        // return the containing table instead (if it's interactive)
+        if (this._isTablePart(child) && containingTable && this.isInteractiveElement(containingTable)) {
+          logger.debug(`Dialog hit test: table part ${child.type}/${child.id} -> returning table ${containingTable.id}`);
+          return containingTable;
+        }
       } else if (!childBounds) {
         // No bounds stored - check recursively if has children, or return if interactive/text-selectable
         if (child.children && child.children.length > 0) {
-          const nestedHit = this._hitTestDialogChildren(child, x, y, _contentBounds);
+          const nestedHit = this._hitTestDialogChildren(child, x, y, _contentBounds, tableForChildren);
           if (nestedHit) {
             return nestedHit;
           }
@@ -293,7 +314,7 @@ export class HitTester {
     // Log for table elements specifically
     if (isTable) {
       const isInt = this.isInteractiveElement(element);
-      logger.info(`Hit test table: id=${element.id}, hasBounds=${!!bounds}, bounds=${bounds ? `(${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}` : 'none'}, inBounds=${bounds ? pointInBounds(x, y, bounds) : false}, isInteractive=${isInt}`);
+      logger.debug(`Hit test table: id=${element.id}, hasBounds=${!!bounds}, bounds=${bounds ? `(${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}` : 'none'}, inBounds=${bounds ? pointInBounds(x, y, bounds) : false}, isInteractive=${isInt}`);
     }
 
     // For scrollable containers with bounds, transform coordinates for children
@@ -321,6 +342,16 @@ export class HitTester {
         hasScrollX: elementScrollX !== 0,
         hasScrollY: elementScrollY !== 0,
       });
+    }
+
+    // Check if this component captures focus for all its children
+    // If so, return this component instead of searching children
+    if (bounds && pointInBounds(x, y, bounds) &&
+        typeof (element as any).capturesFocusForChildren === 'function' &&
+        (element as any).capturesFocusForChildren() &&
+        this.isInteractiveElement(element)) {
+      logger.debug('Hit test found (captures focus for children)', { id: element.id, type: element.type });
+      return element;
     }
 
     // Check children first (they are on top)

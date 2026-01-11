@@ -184,7 +184,11 @@ export function showApprovalPrompt(
     return false;
   }
 
-  console.log('\n\x1b[1mRemote App Permission Request\x1b[0m\n');
+  if(url.startsWith("file:")) {
+    console.log('\n\x1b[1mRemote App Permission Request\x1b[0m\n');
+  } else {
+    console.log('\n\x1b[1mLocal App Permission Request\x1b[0m\n');
+  }
   console.log(`URL: ${url}`);
 
   if (policy.name) {

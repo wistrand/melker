@@ -174,6 +174,61 @@
 </melker>
 ```
 
+## File Browser Dialog
+
+```xml
+<melker>
+  <policy>
+  {
+    "name": "File Opener",
+    "permissions": { "read": ["*"] }
+  }
+  </policy>
+
+  <script type="typescript">
+    let selectedFile = '(none)';
+
+    export function openFileBrowser() {
+      const dialog = $melker.getElementById('file-dialog');
+      if (dialog) dialog.props.open = true;
+      $melker.render();
+    }
+
+    export function closeFileBrowser() {
+      const dialog = $melker.getElementById('file-dialog');
+      if (dialog) dialog.props.open = false;
+      $melker.render();
+    }
+
+    export function handleFileSelect(event: { path: string }) {
+      selectedFile = event.path;
+      closeFileBrowser();
+      const text = $melker.getElementById('selected-text');
+      if (text) text.props.text = selectedFile;
+      $melker.render();
+    }
+  </script>
+
+  <container style="width: 100%; height: 100%; padding: 2;">
+    <text style="font-weight: bold; margin-bottom: 1;">File Browser Demo</text>
+    <button title="Open File..." onClick="$app.openFileBrowser()" />
+    <text style="margin-top: 1;">Selected:</text>
+    <text id="selected-text">(none)</text>
+
+    <dialog id="file-dialog" title="Select File" open="false" modal="true" width="70" height="20">
+      <file-browser
+        id="file-browser"
+        selectionMode="single"
+        selectType="file"
+        onSelect="$app.handleFileSelect(event)"
+        onCancel="$app.closeFileBrowser()"
+        maxVisible="12"
+      />
+    </dialog>
+  </container>
+</melker>
+```
+
 ## Tabbed Settings
 
 ```xml

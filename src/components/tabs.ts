@@ -145,7 +145,9 @@ export class TabsElement extends Element {
           ...button.props.style,
           fontWeight: isActive ? 'bold' : 'normal',
           borderLeft: 'thin',
-          ...(isLast ? { borderRight: 'thin' } : { paddingLeft: 1 }),
+          borderTop: 'thin',
+          height : 2,
+          ...(isLast ? { borderRight: 'thin', paddingLeft: 1, paddingRight: 1  } : { paddingLeft: 1, paddingRight: 1 }),
         };
       }
     }

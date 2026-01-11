@@ -23,8 +23,6 @@ examples/
 | `terminal_ui_demo.ts` | Complete terminal application with responsive layouts |
 | `interactive_demo.ts` | Event handling, focus management, user interaction |
 | `dialog_demo.ts` | Modal dialogs |
-| `file_browser_demo.ts` | File system navigation in modal |
-| `file_browser_standalone.ts` | Standalone file browser application |
 | `form_demo.ts` | Radio buttons and checkboxes |
 | `simple_list_demo.ts` | Basic list component |
 | `mixed_list_demo.ts` | List with different child types |

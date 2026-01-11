@@ -413,18 +413,6 @@ Deno.test('parseMelkerFile parses dialog element', () => {
   assertEquals(result.element.children!.length, 2);
 });
 
-Deno.test('parseMelkerFile parses file-browser element', () => {
-  const content = `
-    <file-browser id="browser" path="/home" style="width: 40; height: 20;" />
-  `;
-
-  const result = parseMelkerFile(content);
-
-  assertEquals(result.element.type, 'file-browser');
-  assertEquals(result.element.props.id, 'browser');
-  assertEquals(result.element.props.path, '/home');
-});
-
 // ============================================
 // Integration with existing example files
 // ============================================

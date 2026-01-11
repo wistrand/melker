@@ -58,7 +58,7 @@ export interface RenderContext {
 // Fallback element types when context.elementTypes is not provided
 const DEFAULT_ELEMENT_TYPES = new Set([
   'text', 'button', 'input', 'textarea', 'checkbox', 'radio',
-  'list', 'li', 'canvas', 'file-browser', 'markdown',
+  'list', 'li', 'canvas', 'markdown',
 ]);
 
 /**

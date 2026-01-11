@@ -480,16 +480,6 @@ Numeric value selection with keyboard/mouse.
 
 **Keyboard:** Arrow keys (small step), Page Up/Down (10%), Home/End (min/max)
 
-## File Browser
-
-```xml
-<file-browser
-  id="browser"
-  path="."
-  onSelect="$app.onFileSelect(event.path)"
-/>
-```
-
 ## Styling Reference
 
 ### Border Types

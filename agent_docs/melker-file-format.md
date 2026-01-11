@@ -59,7 +59,6 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<textarea>` | id, placeholder, value, rows, cols, wrap, maxLength | Multi-line text input |
 | `<button>` | id, title, onClick | Uses `title` not `label` |
 | `<dialog>` | id, title, open, modal, backdrop, draggable, width, height | Modal overlay (draggable via title bar) |
-| `<file-browser>` | id, path | File system navigation |
 | `<checkbox>` | id, title, checked, onChange | Toggle checkbox |
 | `<radio>` | id, title, value, checked, name, onChange | Radio button |
 | `<list>` | style | List container |

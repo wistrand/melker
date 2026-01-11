@@ -434,13 +434,26 @@ ${script.code.split('\n').map(l => '  ' + l).join('\n')}
         }
 
         // Look up in $app first for exported functions, fall back to direct reference
+        // Special case: onShader/onPaint expect a function reference, not a call
+        const isCallbackRef = handler.attributeName === 'onShader' || handler.attributeName === 'onPaint';
         if (code.includes('.')) {
-          // Already qualified (e.g., $app.fn), call directly
-          addLine(`  return ${code}(event);`);
+          // Already qualified (e.g., $app.fn)
+          if (isCallbackRef) {
+            // Return the function reference directly (runtime will call it with shader/paint args)
+            addLine(`  return ${code};`);
+          } else {
+            // Call with event param
+            addLine(`  return ${code}(event);`);
+          }
         } else {
           // Bare identifier - try $app first, then direct
           addLine(`  const __fn = $app.${code} ?? (typeof ${code} !== 'undefined' ? ${code} : undefined);`);
-          addLine(`  if (__fn) return __fn(event);`);
+          if (isCallbackRef) {
+            // Return the function reference directly
+            addLine(`  if (__fn) return __fn;`);
+          } else {
+            addLine(`  if (__fn) return __fn(event);`);
+          }
           addLine(`  throw new Error('${code} is not defined');`);
         }
       } else {

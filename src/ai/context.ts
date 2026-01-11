@@ -98,13 +98,6 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
         break;
       }
 
-      case 'file-browser': {
-        const currentPath = element.props.currentPath || '/';
-        const selectedFile = element.props.selectedFile;
-        lines.push(`${indent}[File Browser: ${currentPath}${selectedFile ? ', selected: ' + selectedFile : ''}]`);
-        break;
-      }
-
       case 'textarea': {
         const placeholder = element.props.placeholder || 'text area';
         const value = element.props.value || '';

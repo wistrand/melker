@@ -9,7 +9,7 @@ Development history from git commits.
 **Dec 11** - Core framework established
 - Dual-buffer rendering system (`buffer.ts`)
 - Component system with registry (`element.ts`, `components/mod.ts`)
-- Initial components: button, canvas, checkbox, container, dialog, file-browser, input, list, li, markdown, radio, text, textarea, video
+- Initial components: button, canvas, checkbox, container, dialog, input, list, li, markdown, radio, text, textarea, video
 - Flexbox layout engine (`layout.ts`)
 - Event system (`events.ts`)
 - Theme support (`theme.ts`)

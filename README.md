@@ -215,7 +215,6 @@ Press F12 to open Dev Tools:
 |---------------|--------------------------|-----------------------|
 | canvas        | Pixel graphics           | -                     |
 | video         | Media playback           | FFmpeg                |
-| file-browser  | Filesystem navigation    | read permission       |
 | oauth         | Auth flows               | net permission        |
 
 ### Layout

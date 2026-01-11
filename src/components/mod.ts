@@ -8,7 +8,6 @@ export * from './button.ts';
 export * from './radio.ts';
 export * from './checkbox.ts';
 export * from './dialog.ts';
-export * from './file-browser.ts';
 export * from './markdown.ts';
 export * from './canvas.ts';
 export * from './img.ts';

@@ -903,7 +903,8 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     // Use children.length directly (O(1)) instead of getRows().length (O(n))
     const tbody = this.getTbody();
     const tbodyChildCount = tbody?.children?.length ?? 0;
-    const cacheKey = `${availableWidth}:${expandToFill}:${columnCount}:${tbodyChildCount}:${cellPadding}:${hasBorder}:${this._sortCacheKey}`;
+    // IMPORTANT: Include showColumnBorders in cache key - it affects borderWidth which affects all width calculations
+    const cacheKey = `${availableWidth}:${expandToFill}:${columnCount}:${tbodyChildCount}:${cellPadding}:${hasBorder}:${showColumnBorders}:${this._sortCacheKey}`;
     if (this._columnWidthsCacheKey === cacheKey && this._cachedColumnWidths.length === columnCount) {
       return this._cachedColumnWidths;
     }
@@ -927,8 +928,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
         let colIndex = 0;
         for (const cell of headerCells) {
           const colWidth = cell.getColWidth();
-          // 'auto' or undefined means no explicit width
-          if (colWidth === undefined || colWidth === 'auto') {
+          if (colWidth === undefined) {
             allExplicit = false;
             break;
           }
@@ -962,6 +962,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
             const fixedTotal = explicitWidths.reduce((sum, w) => sum + w, 0);
             const fillWidth = Math.max(cellPadding * 2 + 1, contentAvailable - fixedTotal);
             explicitWidths[fillIndex] = fillWidth;
+            logger.debug(`Fast path fill column: availableWidth=${availableWidth}, borderWidth=${borderWidth}, contentAvailable=${contentAvailable}, fixedTotal=${fixedTotal}, fillWidth=${fillWidth}, total=${explicitWidths.reduce((s, w) => s + w, 0)}`);
           } else if (expandToFill && percentageIndices.length === 0) {
             // Distribute extra space evenly (only if no percentages used)
             const totalNeeded = explicitWidths.reduce((sum, w) => sum + w, 0);
@@ -1267,6 +1268,11 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       // Calculate table width accounting for column borders setting
       const borderCount = showColumnBorders ? this._columnWidths.length + 1 : 2;
       const tableWidth = this._columnWidths.reduce((sum, w) => sum + w, 0) + borderCount;
+      const columnWidthSum = this._columnWidths.reduce((sum, w) => sum + w, 0);
+      logger.trace(`Table render widths: bounds.x=${bounds.x}, bounds.width=${bounds.width}, columnWidthSum=${columnWidthSum}, borderCount=${borderCount}, tableWidth=${tableWidth}, showColumnBorders=${showColumnBorders}`);
+      if (tableWidth !== bounds.width) {
+        logger.warn(`Table width mismatch: tableWidth=${tableWidth} != bounds.width=${bounds.width}, columnWidths=[${this._columnWidths.join(',')}]`);
+      }
 
       // Calculate total content height in lines (cached)
       const heightCacheKey = `${rows.length}:${cellPadding}:${this._columnWidths.join(',')}:${this._sortCacheKey}`;
@@ -1299,7 +1305,12 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
       // Determine if we need scrollbar (reserve space for it)
       const needsScrollbar = isScrollable && totalContentLines > availableTbodyHeight && hasBorder;
-      const scrollbarX = bounds.x + tableWidth - 1;
+      // Cap scrollbar position to buffer width to prevent drawing outside visible area (defensive)
+      const rawScrollbarX = bounds.x + tableWidth - 1;
+      const scrollbarX = Math.min(rawScrollbarX, buffer.width - 1);
+      if (rawScrollbarX !== scrollbarX) {
+        logger.warn(`Table scrollbarX capped: raw=${rawScrollbarX} -> ${scrollbarX} (bounds.x=${bounds.x}, tableWidth=${tableWidth}, buffer.width=${buffer.width})`);
+      }
 
       if (isScrollable && totalContentLines > availableTbodyHeight) {
         // Use ClippedDualBuffer for line-by-line scrolling
@@ -2103,25 +2114,23 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     const showColumnBorders = this.props.columnBorders ?? true;
     // Use expandToFill: false to get natural/intrinsic widths (important for nested tables)
     const columnWidths = this._calculateColumnWidths(context.availableSpace.width, false);
-    const columnCount = columnWidths.length;
 
-    // Width = sum of columns + borders (respect columnBorders setting)
-    const borderWidth = hasBorder ? (showColumnBorders ? columnCount + 1 : 2) : 0;
-    const width = columnWidths.reduce((sum, w) => sum + w, 0) + borderWidth;
+    // Width = sum of columns only (borders are added by the layout engine separately)
+    // Note: columnWidths are calculated from (availableSpace - borderWidth), so they represent content width
+    const width = columnWidths.reduce((sum, w) => sum + w, 0);
 
-    // Height = all rows (with actual heights for multi-line rows) + border lines
+    // Height = all rows (with actual heights for multi-line rows) + internal separators
+    // Note: Top/bottom borders are added by the layout engine separately
     let height = 0;
     const thead = this.getThead();
     const tbody = this.getTbody();
     const tfoot = this.getTfoot();
 
-    if (hasBorder) height++; // Top border
-
     if (thead) {
       for (const row of thead.getRows()) {
         height += this._calculateRowHeight(row, columnWidths, cellPadding);
       }
-      if (tbody || tfoot) height++; // Separator
+      if (hasBorder && (tbody || tfoot)) height++; // Internal separator (part of content)
     }
 
     if (tbody) {
@@ -2131,7 +2140,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       for (const row of visibleRows) {
         height += this._calculateRowHeight(row, columnWidths, cellPadding);
       }
-      if (tfoot) height++; // Separator
+      if (hasBorder && tfoot) height++; // Internal separator (part of content)
     }
 
     if (tfoot) {
@@ -2139,8 +2148,6 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
         height += this._calculateRowHeight(row, columnWidths, cellPadding);
       }
     }
-
-    if (hasBorder) height++; // Bottom border
 
     return { width, height };
   }

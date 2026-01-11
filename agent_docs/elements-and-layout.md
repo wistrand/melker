@@ -327,28 +327,6 @@ The `<table>` component provides data tables with optional scrollable body.
 - `<tr>` - Table row
 - `<td>` / `<th>` - Table cells (th renders bold)
 
-### Column Width Hints
-
-For large tables, specify `width` on header cells to skip expensive row sampling:
-
-```xml
-<thead>
-  <tr>
-    <th width="5%">ID</th>
-    <th width="20%">Name</th>
-    <th width="15%">Status</th>
-    <th width="fill">Description</th>
-  </tr>
-</thead>
-```
-
-**Width values:**
-- Number: Fixed character width (e.g., `width="8"`)
-- `'NN%'`: Percentage of table width (e.g., `width="20%"`)
-- `'fill'`: Take remaining space after fixed/percentage columns
-
-When all `<th>` have explicit widths, column sizing is O(columns) instead of O(rows x columns).
-
 ### Props
 
 **Table:**

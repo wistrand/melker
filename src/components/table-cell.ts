@@ -13,10 +13,12 @@ export interface TableCellProps extends BaseProps {
   // For th elements
   sortable?: boolean;
   onCompare?: (a: string, b: string) => number;
-  // Note: 'width' is inherited from LayoutProps and supports:
+  // Explicit column width hint (avoids expensive intrinsic size calculation)
   // - number: fixed character width (content only, padding added automatically)
   // - 'fill': take remaining space after fixed/percentage columns
   // - 'NN%': percentage of available table width
+  // Note: named 'colWidth' to avoid conflict with inherited 'width' from LayoutProps
+  colWidth?: number | 'fill' | `${number}%`;
 }
 
 export class TableCellElement extends Element implements Renderable {
@@ -56,10 +58,10 @@ export class TableCellElement extends Element implements Renderable {
   }
 
   /**
-   * Get explicit column width if set (from inherited 'width' prop)
+   * Get explicit column width if set
    */
-  getColWidth(): number | 'auto' | 'fill' | string | undefined {
-    return this.props.width;
+  getColWidth(): number | 'fill' | `${number}%` | undefined {
+    return this.props.colWidth;
   }
 
   /**
@@ -172,7 +174,7 @@ const cellSchema: ComponentSchema = {
     rowspan: { type: 'number', description: 'Number of rows to span' },
     align: { type: 'string', enum: ['left', 'center', 'right'], description: 'Horizontal alignment' },
     valign: { type: 'string', enum: ['top', 'center', 'bottom'], description: 'Vertical alignment' },
-    width: { type: ['number', 'string'], description: 'Column width (number, "NN%" percentage, or "fill" for remaining space)' },
+    colWidth: { type: ['number', 'string'], description: 'Explicit column width (number, "NN%" percentage, or "fill" for remaining space)' },
   },
 };
 

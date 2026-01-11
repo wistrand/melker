@@ -122,9 +122,12 @@ export interface BoxSpacing {
   left?: number;
 }
 
+// Percentage string type for width/height (e.g., "50%", "100%")
+export type PercentageString = `${number}%`;
+
 export interface LayoutProps {
-  width?: number | 'auto' | 'fill';
-  height?: number | 'auto' | 'fill';
+  width?: number | 'auto' | 'fill' | PercentageString;
+  height?: number | 'auto' | 'fill' | PercentageString;
   display?: 'block' | 'flex';
   overflow?: 'visible' | 'hidden' | 'scroll';
 

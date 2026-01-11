@@ -864,6 +864,28 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   }
 
   /**
+   * Fast path to get cell text width without full intrinsicSize overhead
+   */
+  private _getCellTextWidth(cell: TableCellElement): number {
+    const children = cell.children;
+    if (!children || children.length === 0) return 1;
+
+    // Fast path: single text child (most common case for table cells)
+    if (children.length === 1) {
+      const child = children[0];
+      if (child.type === 'text' && child.props.text !== undefined) {
+        const text = String(child.props.text);
+        if (!text.includes('\n')) {
+          return Math.max(1, text.length);
+        }
+      }
+    }
+
+    // Fallback to full intrinsicSize for complex cells
+    return cell.intrinsicSize({ availableSpace: { width: 200, height: 100 } }).width;
+  }
+
+  /**
    * Calculate column widths based on content
    * @param availableWidth - maximum width available for the table
    * @param expandToFill - if true, expand columns to fill available width (default: true for root tables)
@@ -874,6 +896,8 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
     const cellPadding = this.props.cellPadding || 1;
     const hasBorder = this.props.border !== 'none';
+    const showColumnBorders = this.props.columnBorders ?? true;
+    const borderWidth = hasBorder ? (showColumnBorders ? columnCount + 1 : 2) : 0;
 
     // Check cache - use row count and sort cache key to detect data changes
     // Use children.length directly (O(1)) instead of getRows().length (O(n))
@@ -884,22 +908,176 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       return this._cachedColumnWidths;
     }
 
-    // Calculate intrinsic widths for each column (use a small available width to get natural sizes)
+    // Fast path: Check if all headers have explicit widths
+    // This completely avoids sampling body rows
+    const thead = this.getThead();
+    if (thead) {
+      const headerRows = thead.getRows();
+      if (headerRows.length > 0) {
+        const headerCells = headerRows[0].getCells();
+        let allExplicit = true;
+        let fillIndex = -1;
+        const explicitWidths: number[] = [];
+        const percentageIndices: number[] = [];
+        const percentageValues: number[] = [];
+
+        // Available width for content (excluding borders)
+        const contentAvailable = availableWidth - borderWidth;
+
+        let colIndex = 0;
+        for (const cell of headerCells) {
+          const colWidth = cell.getColWidth();
+          // 'auto' or undefined means no explicit width
+          if (colWidth === undefined || colWidth === 'auto') {
+            allExplicit = false;
+            break;
+          }
+          if (colWidth === 'fill') {
+            fillIndex = colIndex;
+            explicitWidths.push(0); // Placeholder, will calculate
+          } else if (typeof colWidth === 'string' && colWidth.endsWith('%')) {
+            // Percentage width
+            const percent = parseFloat(colWidth) / 100;
+            percentageIndices.push(colIndex);
+            percentageValues.push(percent);
+            explicitWidths.push(0); // Placeholder, will calculate
+          } else if (typeof colWidth === 'number') {
+            explicitWidths.push(colWidth + cellPadding * 2);
+          }
+          colIndex++;
+        }
+
+        if (allExplicit && explicitWidths.length === columnCount) {
+          // All headers have explicit widths - skip all sampling!
+
+          // Calculate percentage widths first
+          for (let i = 0; i < percentageIndices.length; i++) {
+            const idx = percentageIndices[i];
+            const percent = percentageValues[i];
+            explicitWidths[idx] = Math.max(cellPadding * 2 + 1, Math.floor(contentAvailable * percent));
+          }
+
+          if (fillIndex >= 0) {
+            // Calculate 'fill' column width from remaining space
+            const fixedTotal = explicitWidths.reduce((sum, w) => sum + w, 0);
+            const fillWidth = Math.max(cellPadding * 2 + 1, contentAvailable - fixedTotal);
+            explicitWidths[fillIndex] = fillWidth;
+          } else if (expandToFill && percentageIndices.length === 0) {
+            // Distribute extra space evenly (only if no percentages used)
+            const totalNeeded = explicitWidths.reduce((sum, w) => sum + w, 0);
+            if (totalNeeded < contentAvailable) {
+              const extra = contentAvailable - totalNeeded;
+              const perColumn = Math.floor(extra / columnCount);
+              const remainder = extra % columnCount;
+              for (let i = 0; i < columnCount; i++) {
+                explicitWidths[i] += perColumn;
+                if (i < remainder) explicitWidths[i]++;
+              }
+            }
+          }
+
+          this._cachedColumnWidths = explicitWidths;
+          this._columnWidthsCacheKey = cacheKey;
+          return explicitWidths;
+        }
+      }
+    }
+
+    // Slow path: Calculate intrinsic widths for each column
     const intrinsicWidths: number[] = new Array(columnCount).fill(0);
 
-    for (const row of this.getAllRows()) {
-      let colIndex = 0;
-      for (const cell of row.getCells()) {
-        const colspan = cell.getColspan();
-        // Use a small intrinsic width to prevent nested tables from over-expanding
-        const cellWidth = cell.intrinsicSize({ availableSpace: { width: 200, height: 100 } }).width;
-
-        if (colspan === 1) {
-          intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
+    // Step 1: Get header widths first (headers define minimum widths and rarely change)
+    if (thead) {
+      for (const row of thead.getRows()) {
+        let colIndex = 0;
+        for (const cell of row.getCells()) {
+          const colspan = cell.getColspan();
+          if (colspan === 1) {
+            // Use explicit width if set, otherwise calculate
+            const explicitWidth = cell.getColWidth();
+            if (typeof explicitWidth === 'number') {
+              intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], explicitWidth);
+            } else {
+              const cellWidth = this._getCellTextWidth(cell);
+              intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
+            }
+          }
+          colIndex += colspan;
         }
-        // For colspan > 1, we'd need to distribute width (simplified for now)
+      }
+    }
 
-        colIndex += colspan;
+    // Step 2: Sample body rows for large tables (optimization for 50+ rows)
+    // For smaller tables, check all rows
+    const SAMPLE_THRESHOLD = 50;
+
+    if (tbody) {
+      const rows = tbody.getRows();
+      const rowCount = rows.length;
+
+      if (rowCount <= SAMPLE_THRESHOLD) {
+        // Small table: check all rows
+        for (const row of rows) {
+          let colIndex = 0;
+          for (const cell of row.getCells()) {
+            const colspan = cell.getColspan();
+            if (colspan === 1) {
+              const cellWidth = this._getCellTextWidth(cell);
+              intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
+            }
+            colIndex += colspan;
+          }
+        }
+      } else {
+        // Large table: sample rows (first 10, last 5, 5 evenly distributed)
+        const sampleIndices = new Set<number>();
+
+        // First 10 rows
+        for (let i = 0; i < Math.min(10, rowCount); i++) {
+          sampleIndices.add(i);
+        }
+
+        // Last 5 rows
+        for (let i = Math.max(0, rowCount - 5); i < rowCount; i++) {
+          sampleIndices.add(i);
+        }
+
+        // 5 evenly distributed middle rows
+        if (rowCount > 15) {
+          const step = Math.floor((rowCount - 15) / 6);
+          for (let i = 1; i <= 5; i++) {
+            sampleIndices.add(10 + i * step);
+          }
+        }
+
+        for (const idx of sampleIndices) {
+          const row = rows[idx];
+          let colIndex = 0;
+          for (const cell of row.getCells()) {
+            const colspan = cell.getColspan();
+            if (colspan === 1) {
+              const cellWidth = this._getCellTextWidth(cell);
+              intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
+            }
+            colIndex += colspan;
+          }
+        }
+      }
+    }
+
+    // Step 3: Check tfoot if present
+    const tfoot = this.getTfoot();
+    if (tfoot) {
+      for (const row of tfoot.getRows()) {
+        let colIndex = 0;
+        for (const cell of row.getCells()) {
+          const colspan = cell.getColspan();
+          if (colspan === 1) {
+            const cellWidth = this._getCellTextWidth(cell);
+            intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
+          }
+          colIndex += colspan;
+        }
       }
     }
 
@@ -907,8 +1085,6 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     const widths = intrinsicWidths.map(w => w + cellPadding * 2);
 
     // Calculate total width needed
-    const showColumnBorders = this.props.columnBorders ?? true;
-    const borderWidth = hasBorder ? (showColumnBorders ? columnCount + 1 : 2) : 0; // vertical borders
     const totalNeeded = widths.reduce((sum, w) => sum + w, 0) + borderWidth;
 
     // If we have more space and expansion is enabled, distribute evenly
@@ -1307,15 +1483,48 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   }
 
   /**
+   * Fast path to check if a cell is simple single-line text
+   */
+  private _isSingleLineTextCell(cell: TableCellElement): boolean {
+    const children = cell.children;
+    if (!children || children.length === 0) return true;
+    if (children.length !== 1) return false;
+
+    const child = children[0];
+    if (child.type === 'text' && child.props.text !== undefined) {
+      const text = String(child.props.text);
+      return !text.includes('\n');
+    }
+    return false;
+  }
+
+  /**
    * Calculate the height of a row based on its cells
    */
   private _calculateRowHeight(row: TableRowElement, columnWidths: number[], cellPadding: number): number {
-    let maxHeight = 1;
-
     const cells = row.getCells();
+
+    // Fast path: if all cells are simple single-line text, height is 1
+    let allSimple = true;
+    for (const cell of cells) {
+      if (!this._isSingleLineTextCell(cell)) {
+        allSimple = false;
+        break;
+      }
+    }
+    if (allSimple) return 1;
+
+    // Slow path: calculate actual heights
+    let maxHeight = 1;
     let colIndex = 0;
 
     for (const cell of cells) {
+      // Skip simple cells in the slow path too
+      if (this._isSingleLineTextCell(cell)) {
+        colIndex += cell.getColspan();
+        continue;
+      }
+
       const colspan = cell.getColspan();
       let cellWidth = 0;
 

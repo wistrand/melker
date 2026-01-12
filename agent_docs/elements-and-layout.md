@@ -790,7 +790,7 @@ img.setSource('data:image/png;base64,...');  // or file path
 
 ### Shaders
 
-The `<img>` and `<canvas>` components support per-pixel shader callbacks for animated effects:
+The `<img>` and `<canvas>` components support per-pixel shader callbacks for animated effects. **Prefer `<img>` over `<canvas>`** for shaders - images scale better on resize.
 
 ```xml
 <img

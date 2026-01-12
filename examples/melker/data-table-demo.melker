@@ -1,0 +1,113 @@
+<melker>
+  <title>Data Table Demo</title>
+
+  <script type="typescript">
+    // Generate sample data
+    const firstNames = ['Alice', 'Bob', 'Carol', 'David', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack',
+      'Karen', 'Leo', 'Mia', 'Noah', 'Olivia', 'Paul', 'Quinn', 'Rachel', 'Sam', 'Tina'];
+    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+      'Rodriguez', 'Martinez', 'Wilson', 'Anderson', 'Taylor', 'Thomas', 'Moore', 'Jackson'];
+    const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Support', 'Legal'];
+    const statuses = ['Active', 'Away', 'Busy', 'Offline'];
+
+    function randomInt(min: number, max: number): number {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomItem<T>(arr: T[]): T {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // Generate 100 employees
+    export const rows: (string | number)[][] = [];
+    for (let i = 1; i <= 100; i++) {
+      rows.push([
+        i,
+        randomItem(firstNames) + ' ' + randomItem(lastNames),
+        randomItem(departments),
+        randomItem(statuses),
+        randomInt(30000, 150000),
+        randomInt(1, 20) + ' years',
+      ]);
+    }
+
+    export const columns = [
+      { header: 'ID', width: 5, align: 'right' as const },
+      { header: 'Name', width: '25%' as const },
+      { header: 'Department', width: '20%' as const },
+      { header: 'Status', width: 10 },
+      { header: 'Salary', width: 12, align: 'right' as const },
+      { header: 'Tenure' },
+    ];
+
+    export const footer = [
+      ['', rows.length + ' employees', '', '', '', ''],
+    ];
+
+    let sortColumn: number | undefined = undefined;
+    let sortDirection: 'asc' | 'desc' | undefined = undefined;
+
+    export function handleSort(event: { columnIndex: number; direction: 'asc' | 'desc' }) {
+      sortColumn = event.columnIndex;
+      sortDirection = event.direction;
+      const table = $melker.getElementById('employees');
+      if (table) {
+        table.props.sortColumn = sortColumn;
+        table.props.sortDirection = sortDirection;
+      }
+      $melker.logger.info('Sorted by column ' + event.columnIndex + ' ' + event.direction);
+    }
+
+    export function handleSelect(event: { rowIndex: number; selectedRows: number[] }) {
+      const statusEl = $melker.getElementById('status');
+      if (statusEl) {
+        if (event.selectedRows.length === 0) {
+          statusEl.props.text = 'No selection';
+        } else if (event.selectedRows.length === 1) {
+          const row = rows[event.rowIndex];
+          statusEl.props.text = 'Selected: ' + row[1] + ' (' + row[2] + ')';
+        } else {
+          statusEl.props.text = 'Selected ' + event.selectedRows.length + ' rows';
+        }
+      }
+    }
+
+    export function handleActivate(event: { rowIndex: number }) {
+      const row = rows[event.rowIndex];
+      $melker.alert('Employee Details:\n\nID: ' + row[0] + '\nName: ' + row[1] + '\nDepartment: ' + row[2] + '\nStatus: ' + row[3] + '\nSalary: $' + row[4].toLocaleString() + '\nTenure: ' + row[5]);
+    }
+  </script>
+
+  <script type="typescript" async="ready">
+    const table = $melker.getElementById('employees');
+    if (table) {
+      table.props.columns = $app.columns;
+      table.props.rows = $app.rows;
+      table.props.footer = $app.footer;
+      $melker.render();
+    }
+  </script>
+
+  <container style="flex-direction: column; width: 100%; height: 100%; gap: 1; padding: 0">
+    <container style="flex-direction: row; justify-content: space-between; padding: 0 1;">
+      <text style="font-weight: bold;">Employee Directory (100 rows)</text>
+      <text id="status">No selection</text>
+    </container>
+
+    <data-table
+      id="employees"
+      style="width: fill; height: fill;"
+      selectable="single"
+      onSort="$app.handleSort(event)"
+      onSelect="$app.handleSelect(event)"
+      onActivate="$app.handleActivate(event)"
+    />
+
+    <container style="flex-direction: row; gap: 2; padding: 0 1;">
+      <text>Click header to sort</text>
+      <text>Arrow keys to navigate</text>
+      <text>Enter to view details</text>
+      <button title="Exit" onClick="$melker.exit()" />
+    </container>
+  </container>
+</melker>

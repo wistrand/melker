@@ -1,26 +1,23 @@
 <melker>
   <title>State Persistence Demo</title>
 
-  <script type="typescript">
+  <script type="typescript" async="ready">
     // Check persistence status on mount and update UI accordingly
-    $melker.engine.onMount(() => {
-      const statusText = $melker.getElementById('statusText');
-      const warningBanner = $melker.getElementById('warningBanner');
-      const footerText = $melker.getElementById('footerText');
+    const statusText = $melker.getElementById('statusText');
+    const warningBanner = $melker.getElementById('warningBanner');
+    const footerText = $melker.getElementById('footerText');
 
-      if ($melker.persistenceEnabled) {
-        statusText.props.text = 'State Persistence Demo - Your input is saved automatically!';
-        statusText.props.style = { ...statusText.props.style, color: 'green' };
-        warningBanner.props.style = { ...warningBanner.props.style, display: 'none' };
-        footerText.props.text = 'State saved to: ' + $melker.stateFilePath;
-      } else {
-        statusText.props.text = 'State Persistence Demo - PERSISTENCE DISABLED';
-        statusText.props.style = { ...statusText.props.style, color: 'red' };
-        warningBanner.props.style = { ...warningBanner.props.style, display: 'flex' };
-        footerText.props.text = 'Persistence disabled - run with MELKER_PERSIST=true';
-      }
-      $melker.render();
-    });
+    if ($melker.persistenceEnabled) {
+      statusText.props.text = 'State Persistence Demo - Your input is saved automatically!';
+      statusText.props.style = { ...statusText.props.style, color: 'green' };
+      warningBanner.props.style = { ...warningBanner.props.style, display: 'none' };
+      footerText.props.text = 'State saved to: ' + $melker.stateFilePath;
+    } else {
+      statusText.props.text = 'State Persistence Demo - PERSISTENCE DISABLED';
+      statusText.props.style = { ...statusText.props.style, color: 'red' };
+      warningBanner.props.style = { ...warningBanner.props.style, display: 'flex' };
+      footerText.props.text = 'Persistence disabled - run with MELKER_PERSIST=true';
+    }
   </script>
 
   <style>

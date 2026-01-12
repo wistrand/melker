@@ -49,6 +49,47 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<oauth>` | OAuth2 PKCE configuration |
 | `<policy>` | Permission policy declaration |
 
+## Script Lifecycle
+
+Scripts can run at different times during app startup:
+
+| Script Type | When | Use Case |
+|-------------|------|----------|
+| `<script>` | Before render | Define exports, setup state |
+| `<script async="init">` | Before render (async) | Async initialization, data fetching |
+| `<script async="ready">` | After first render | Access rendered elements, start timers |
+
+### Initialization Pattern
+
+**Preferred: Use `async="ready"` for post-render initialization:**
+
+```xml
+<script type="typescript">
+  export function startClock(canvas: any) {
+    setInterval(() => drawClock(canvas), 1000);
+  }
+</script>
+
+<script type="typescript" async="ready">
+  const canvas = $melker.getElementById('clock');
+  $app.startClock(canvas);
+</script>
+```
+
+**Alternative: `$melker.engine.onMount()` for programmatic registration:**
+
+```xml
+<script type="typescript">
+  $melker.engine.onMount(() => {
+    // Runs after first render
+  });
+</script>
+```
+
+Use `onMount()` when you need to conditionally register initialization or register from within functions. Prefer `async="ready"` for simpler, declarative initialization.
+
+**Note:** Markdown format (`.md` files) does not support `async="ready"` - use `onMount()` instead.
+
 ## Components
 
 | Component | Key Props | Notes |

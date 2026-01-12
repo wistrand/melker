@@ -196,16 +196,52 @@ const data = await fetch('/api/data').then(r => r.json());
 </script>
 ```
 
-### Ready Scripts
+### Ready Scripts (Recommended for Initialization)
 
-Run after first render, support `await`:
+Run after first render, support `await`. **This is the preferred pattern for post-render initialization:**
 
 ```html
 <script async="ready">
 // DOM is rendered, can access elements
 const el = $melker.getElementById('my-element');
+el.props.text = 'Initialized!';
 </script>
 ```
+
+**Calling exported functions from ready scripts:**
+
+```html
+<script type="typescript">
+  export function init() {
+    const canvas = $melker.getElementById('myCanvas');
+    // Initialize canvas, start timers, etc.
+  }
+</script>
+
+<script type="typescript" async="ready">
+  $app.init();
+</script>
+```
+
+**Note:** Functions called via `$app.*` must be exported from their script block.
+
+### onMount (Alternative Pattern)
+
+The `$melker.engine.onMount()` API provides programmatic callback registration:
+
+```html
+<script>
+$melker.engine.onMount(() => {
+  const el = $melker.getElementById('my-element');
+  // Initialize after render
+});
+</script>
+```
+
+**When to use each:**
+- `async="ready"` - Preferred, declarative, cleaner separation
+- `onMount()` - When you need to register callbacks from within other logic
+- Markdown format (`.md` files) - Must use `onMount()` since `async="ready"` isn't supported
 
 ## External Scripts
 

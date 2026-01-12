@@ -70,18 +70,18 @@
       canvas.fillRect(pxCenterX - 1, pxCenterY - 1, 3, 3);
     };
 
-    // Auto-start the clock when engine is fully mounted
-    $melker.engine.onMount(() => {
-      const canvas = $melker.getElementById('clockCanvas');
-      if (canvas) {
-        // Update every second
-        setInterval(() => {
-          drawClock(canvas);
-          $melker.engine.render();
-        }, 1000);
-      }
-    });
+  </script>
 
+  <script type="typescript" async="ready">
+    // Auto-start the clock when engine is fully mounted
+    const canvas = $melker.getElementById('clockCanvas');
+    if (canvas) {
+      // Update every second
+      setInterval(() => {
+        $app.drawClock(canvas);
+        $melker.engine.render();
+      }, 1000);
+    }
   </script>
 
   <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">

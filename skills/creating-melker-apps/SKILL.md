@@ -165,6 +165,31 @@ Events auto-render after completion:
 </script>
 ```
 
+### Script Lifecycle
+
+| Type | Attribute | When | Use Case |
+|------|-----------|------|----------|
+| Sync | (default) | Before render | State setup, function definitions |
+| Init | `async="init"` | Before first render | Async data loading |
+| Ready | `async="ready"` | After first render | DOM initialization, timers |
+
+**Preferred pattern for post-render initialization:**
+
+```xml
+<script type="typescript">
+  export function init() {
+    const canvas = $melker.getElementById('myCanvas');
+    // Start timers, initialize canvas, etc.
+  }
+</script>
+
+<script type="typescript" async="ready">
+  $app.init();
+</script>
+```
+
+**Alternative:** Use `$melker.engine.onMount()` for programmatic callback registration (required for `.md` files).
+
 ## Common Patterns
 
 ### Counter

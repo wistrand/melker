@@ -718,8 +718,8 @@ async function refresh(): Promise<void> {
   updateUI();
 }
 
-// Start after mount
-$melker.engine.onMount(async function() {
+// Initialize app (called on ready)
+export async function init() {
   await refresh();
   $melker.engine.render();
 
@@ -727,7 +727,11 @@ $melker.engine.onMount(async function() {
     await refresh();
     $melker.engine.render();
   }, 2000);
-});
+}
+</script>
+
+<script type="typescript" async="ready">
+  await $app.init();
 </script>
 
 <style>

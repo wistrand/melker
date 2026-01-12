@@ -2,6 +2,8 @@
 
 *Run text with meaning*
 
+**Website:** [melker.sh](https://melker.sh)
+
 A TUI framework for apps you want to share safely.
 
 Melker apps are documents you can read before you run them. Share via URL, declare permissions in a policy, inspect with Dev Tools.
@@ -87,9 +89,9 @@ Melker apps look and feel like apps:
 
 #### Showcase
 
-A task manager in 170 lines: [View source](examples/melker/showcase.melker)
+A system monitor: [View source](examples/melker/htop.melker)
 
-<img src="docs/showcase.png" width="80%">
+<img src="docs/htop.png" width="80%">
 
 ---
 
@@ -216,21 +218,24 @@ Press F12 to open Dev Tools:
 
 **Core** - no external dependencies:
 
-| Category    | Components                                  |
-|-------------|---------------------------------------------|
-| Layout      | container, flexbox, tabs                    |
-| Text        | text, markdown                              |
-| Input       | input, textarea, checkbox, radio            |
-| Navigation  | button, menu-bar, menu, menu-item           |
-| Data        | table (sorting, selection, scrolling), list |
-| Dialogs     | dialog, alert, confirm, prompt              |
-| Feedback    | progress                                    |
+| Category    | Components                                        |
+|-------------|---------------------------------------------------|
+| Layout      | container, flexbox, tabs                          |
+| Text        | text, markdown                                    |
+| Input       | input, textarea, checkbox, radio, slider          |
+| Navigation  | button, menu-bar, menu, menu-item                 |
+| Data        | table, data-table, list                           |
+| Dropdowns   | combobox, select, autocomplete, command-palette   |
+| Dialogs     | dialog, alert, confirm, prompt                    |
+| Feedback    | progress                                          |
+| Files       | file-browser                                      |
 
 **Advanced** - for specific needs:
 
 | Component     | Purpose                  | Requires              |
 |---------------|--------------------------|-----------------------|
-| canvas        | Pixel graphics           | -                     |
+| canvas        | Pixel graphics, shaders  | -                     |
+| img           | Image display            | -                     |
 | video         | Media playback           | FFmpeg                |
 | oauth         | Auth flows               | net permission        |
 

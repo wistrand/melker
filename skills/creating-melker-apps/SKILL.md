@@ -28,9 +28,13 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 3. **Button padding** - Vertical padding ignored for `[ ]` buttons (they stay 1 line); horizontal padding works
 4. **Input type is `'input'`** - Not `'text-input'`
 5. **`console.log()` redirects to logger** - Automatically redirected to `$melker.logger.info()` (disable with `--no-console-override`)
-6. **Auto-render** - Event handlers auto-render; return `false` to skip
-7. **Update props explicitly** - Use `$melker.getElementById('id').props.propName = value`
+6. **Auto-render** - Event handlers auto-render; call `$melker.skipRender()` to skip
+7. **Use getValue/setValue** - Not `.props.value =`. All value-holding components support `getValue()`/`setValue()`
 8. **Avoid emojis** - They break terminal layout
+9. **Export functions for handlers** - Functions must be `export function` to use in `onClick="$app.fn()"`
+10. **Scrollable is a prop** - Use `scrollable="true"` not `style="overflow: scroll"`
+11. **Dialog show/hide** - Use `dialog.show()`, `dialog.hide()` or `.props.open = true/false`
+12. **Avoid specifying colors** - Let the theme engine handle colors
 
 ## File Structure
 
@@ -74,16 +78,22 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 | `<input>` | placeholder, value, format, onInput | Single-line (format: 'text'\|'password') |
 | `<textarea>` | placeholder, rows, cols, wrap | Multi-line |
 | `<button>` | **label**, onClick | `<button>Label</button>` or `label="Label"` |
-| `<dialog>` | title, open, modal, backdrop | Modal overlay |
+| `<dialog>` | title, open, modal, backdrop, draggable | Modal overlay |
 | `<checkbox>` | title, checked, onChange | Toggle |
 | `<radio>` | title, value, name, onChange | Radio button |
 | `<tabs>` / `<tab>` | activeTab, onChange / title | Tabbed panels |
 | `<list>` / `<li>` | style | Lists |
 | `<canvas>` | width, height, onPaint | Pixel graphics |
-| `<img>` | src, width, height, dither | Images |
+| `<img>` | src, width, height, objectFit, dither | Images |
 | `<combobox>` | placeholder, filter, onSelect | Filterable dropdown |
 | `<select>` | value, onSelect | Dropdown picker |
+| `<autocomplete>` | placeholder, onSearch, onSelect, debounce | Async search dropdown |
+| `<command-palette>` | open, onSelect, width | Modal command picker |
 | `<markdown>` | src, text, onLink | Markdown rendering |
+| `<slider>` | min, max, value, step, onChange | Range input |
+| `<progress>` | value, max, showValue, indeterminate | Progress bar |
+| `<data-table>` | columns, rows, selectable, onSelect | Array-based table |
+| `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
 
 For complete component reference, see [COMPONENTS.md](COMPONENTS.md).
 

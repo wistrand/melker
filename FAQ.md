@@ -172,13 +172,24 @@ It doesn't run in the background or send data without user action.
 
 ## Development Experience
 
-### Why avoid console.log()?
+### Console logging
 
-`console.log()` writes to stdout, which corrupts the TUI display. The file logger (`$melker.logger.debug()`) writes to a separate file that won't interfere with rendering.
+`console.log()` is automatically redirected to `$melker.logger.info()`, so it won't corrupt the TUI display. Objects are formatted using `Deno.inspect()` for readable output.
 
-We considered intercepting `console.log()` and redirecting it, but that would mask a real mistake (accidentally logging to stdout). Explicit is better than implicit.
+```javascript
+console.log("debug info");           // → $melker.logger.info()
+console.warn("warning");             // → $melker.logger.warn()
+console.error("error");              // → $melker.logger.error()
+```
+
+For more control, use the logger directly: `$melker.logger.debug()`, etc.
 
 **Tip:** F12 opens Dev Tools which shows the log file location. Use `tail -f` in another terminal for printf-style debugging.
+
+**Disable redirect** (for debugging, outputs to terminal):
+```bash
+./melker.ts --no-console-override app.melker
+```
 
 ### Why avoid emojis?
 
@@ -269,7 +280,7 @@ Choose Textual if you're in a Python shop and want a mature ecosystem. Choose Me
 
 ### How does this compare to other TUI frameworks?
 
-It compares interestinglngy. See [TUI comparison](agent_docs/tui-comparison.md)
+See [TUI comparison](agent_docs/tui-comparison.md) for a detailed breakdown.
  
 ---
 

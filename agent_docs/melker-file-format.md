@@ -115,6 +115,14 @@ Use `onMount()` when you need to conditionally register initialization or regist
 | `<command-palette>` | open, onSelect, width | Modal command picker |
 | `<option>` | value, disabled, shortcut | Child of combobox/select/autocomplete/command-palette |
 | `<group>` | label, system | Groups options under a header |
+| `<slider>` | min, max, value, step, snaps, orientation, showValue, onChange | Range input |
+| `<file-browser>` | path, selectionMode, selectType, filter, showHidden, maxVisible, onSelect, onCancel | File/dir picker |
+| `<data-table>` | columns, rows, footer, selectable, sortColumn, sortDirection, onSelect, onActivate | Array-based table |
+| `<table>` | style | HTML-like table container |
+| `<thead>`, `<tbody>`, `<tfoot>` | scrollable (tbody) | Table sections |
+| `<tr>` | style | Table row |
+| `<td>`, `<th>` | colspan, rowspan, align, valign | Table cells |
+| `<progress>` | value, max, min, width, height, showValue, indeterminate | Progress bar |
 
 ## System Command Palette
 

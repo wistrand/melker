@@ -559,7 +559,7 @@ Apps that access network, files, or system commands should declare a `<policy>` 
     <text style="font-weight: bold;">API Data Loader</text>
 
     <button
-      title="Load Data"
+      label="Load Data"
       style="margin: 1 0;"
       onClick="$app.loadData()"
     />

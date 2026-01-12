@@ -34,6 +34,9 @@
 | Select | `src/components/filterable-list/select.ts` | Dropdown picker (no filter) |
 | Autocomplete | `src/components/filterable-list/autocomplete.ts` | Combobox + async search |
 | Command Palette | `src/components/filterable-list/command-palette.ts` | Modal command picker |
+| Slider | `src/components/slider.ts` | Range input with keyboard/mouse drag |
+| File Browser | `src/components/file-browser/file-browser.ts` | Directory navigation, file selection |
+| Data Table | `src/components/data-table.ts` | High-performance array-based table |
 
 **Utilities:**
 - `src/components/mod.ts` - Component exports
@@ -97,6 +100,14 @@
 | `src/components/filterable-list/select.ts` | SelectElement |
 | `src/components/filterable-list/autocomplete.ts` | AutocompleteElement |
 | `src/components/filterable-list/command-palette.ts` | CommandPaletteElement |
+
+**File Browser (`src/components/file-browser/`):**
+| File | Purpose |
+|------|---------|
+| `src/components/file-browser/mod.ts` | Module exports |
+| `src/components/file-browser/file-browser.ts` | FileBrowserElement (main component) |
+| `src/components/file-browser/file-entry.ts` | Type definitions |
+| `src/components/file-browser/file-utils.ts` | Directory loading, formatting utilities |
 
 **Policy System (`src/policy/`):**
 | File | Purpose |

@@ -102,7 +102,7 @@ Development history from git commits.
 - Performance dialog enhancements
 - Markdown path resolution fix (cwd-relative for CLI args)
 
-**Jan 8-10** - Configuration system and Dev Tools
+**Jan 8-10** - Configuration system, Slider, and Dev Tools
 - Unified config system (`src/config/`): schema.json, config.ts, cli.ts
 - Schema-driven CLI parser with auto-generated help
 - Config priority: `default < policy < file < env < cli`
@@ -111,13 +111,33 @@ Development history from git commits.
 - Config tab added to Dev Tools dialog (F12)
 - OAuth configuration options
 - Removed dotenv dependency
+- New slider component (`src/components/slider.ts`)
+- Breakout game demo (`examples/melker/breakout.melker`)
+- Slider demo (`examples/melker/slider_demo.melker`)
+- Canvas touch/drag improvements for games
 
-**Jan 11** - Performance optimizations and DX improvements
+**Jan 11** - File Browser and Performance
+- File browser component (`src/components/file-browser/`): directory navigation, file selection, keyboard shortcuts
+- htop.melker demo started: real-time system monitor with process table
+- FAQ.md added: comprehensive project FAQ
+- Color utilities (`src/components/color-utils.ts`): RGBA parsing, HSL conversion
 - Table render caching: sorted rows, content height, column widths
-- Dialog scroll performance: use `renderDialogOnly()` fast path for scroll events inside dialogs
+- Dialog scroll performance: `renderDialogOnly()` fast path for scroll events
 - Scroll handler detects if target is inside dialog via `_isInsideDialog()`
-- Avoids full layout recalculation when scrolling in dialogs with large tables in background
-- Auto-infer `display: flex` when flex container properties present (no need to explicitly set it)
+- Auto-infer `display: flex` when flex container properties present
+- Debounce/throttle utilities (`src/utils/timing.ts`)
+
+**Jan 12** - Website Launch and Documentation
+- melker.sh website created (`docs/`): landing page, examples gallery, installation guide
+- GitHub Pages with custom domain (CNAME)
+- Screenshot assets for showcase (htop, markdown-viewer, analog-clock, video-demo)
+- htop.melker polished: CPU/memory graphs, process sorting, kill signals
+- File browser improvements: path navigation, permissions display
+- Key Features linked to documentation
+- Layout and rendering refinements
+- CalVer release scheme documented (`agent_docs/calver-release-plan.md`)
+- Documentation cleanup: removed outdated plan docs (table-component-plan, lint-mode-plan, signing-plan)
+- Updated architecture.md and melker-file-format.md with slider, file-browser, data-table components
 
 ## Component Timeline
 
@@ -131,6 +151,8 @@ Development history from git commits.
 | combobox, select | Jan 6 | Dropdown components |
 | autocomplete | Jan 6 | Async search dropdown |
 | command-palette | Jan 6 | Modal command picker |
+| slider | Jan 10 | Range input with drag support |
+| file-browser | Jan 11 | Directory navigation, file selection |
 
 ## Architecture Evolution
 
@@ -141,6 +163,8 @@ Development history from git commits.
 5. **Jan 6**: Filterable list component family (`src/components/filterable-list/`)
 6. **Jan 7**: Canvas subsystem split (shader, draw, terminal modules)
 7. **Jan 8-10**: Unified config system (`src/config/`)
+8. **Jan 11**: File browser component family (`src/components/file-browser/`)
+9. **Jan 12**: Website and documentation (`docs/`, melker.sh)
 
 ## Key Milestones
 
@@ -151,5 +175,6 @@ Development history from git commits.
 - **Build 100** (Jan 4): Stable input handling
 - **Build 110** (Jan 6): Chrome collapse, filterable lists
 - **Build 120** (Jan 7): Shaders, stable image loading
-- **Build 125** (Jan 10): Unified config system, Dev Tools
-- **Build 142** (Jan 11): Table caching, dialog scroll optimization
+- **Build 135** (Jan 10): Slider component, breakout game, config system
+- **Build 147** (Jan 11): File browser, htop demo, FAQ, table caching
+- **Build 159** (Jan 12): melker.sh website launch

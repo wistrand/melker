@@ -24,6 +24,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Fast input rendering | `agent_docs/fast-input-render-plan.md` |
 | Config system | `agent_docs/config-architecture.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
+| Release scheme | `agent_docs/calver-release-plan.md` |
 | Examples | `examples/melker/*.melker` |
 | **AI Agent Skill** | `skills/creating-melker-apps/` |
 
@@ -470,3 +471,15 @@ Creates `creating-melker-apps.zip` in project root, ready for upload to claude.a
 | `F12` | Toggle Dev Tools overlay (source, policy, config, system info) |
 | `Escape` | Close overlays / Close AI dialog |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |
+
+## Releases
+
+Melker uses CalVer with format `YYYY.MM.PATCH` (e.g., `v2026.01.1`). Releases are git tags only.
+
+```bash
+# Create release
+git tag -a v2026.01.1 -m "v2026.01.1"
+git push origin v2026.01.1
+```
+
+See `agent_docs/calver-release-plan.md` for details.

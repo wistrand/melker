@@ -296,6 +296,97 @@ Tabbed interface.
 - `title` - Tab label
 - `disabled` - Disable tab
 
+## Data Table
+
+### data-table
+
+High-performance table for large datasets with simple array-based data.
+
+**Inline JSON (simplest):**
+```xml
+<data-table
+  id="users"
+  style="width: fill; height: 20;"
+  selectable="single"
+  sortColumn="0"
+  sortDirection="asc"
+>
+{
+  "columns": [
+    { "header": "ID", "width": 5, "align": "right" },
+    { "header": "Name", "width": "30%" },
+    { "header": "Status", "width": 10 },
+    { "header": "Notes" }
+  ],
+  "rows": [
+    [1, "Alice", "Active", "Engineer"],
+    [2, "Bob", "Away", "Designer"],
+    [3, "Carol", "Active", "Manager"]
+  ]
+}
+</data-table>
+```
+
+**Dynamic data via script:**
+```xml
+<script type="typescript">
+  export const columns = [
+    { header: 'ID', width: 5, align: 'right' as const },
+    { header: 'Name', width: '30%' as const },
+  ];
+  export let rows: (string | number)[][] = [];
+
+  export async function loadData() {
+    // Fetch data from API, populate rows
+    rows = [[1, 'Alice'], [2, 'Bob']];
+    const table = $melker.getElementById('users');
+    if (table) {
+      table.props.rows = rows;
+      $melker.render();
+    }
+  }
+</script>
+
+<script type="typescript" async="ready">
+  const table = $melker.getElementById('users');
+  if (table) table.props.columns = $app.columns;
+</script>
+
+<data-table id="users" style="width: fill; height: 20;" selectable="single" />
+```
+
+**Props:**
+- `columns` - Column definitions (set via script, not attribute)
+- `rows` - Row data as 2D array (set via script)
+- `footer` - Footer rows (optional)
+- `rowHeight` - Lines per row (default: 1)
+- `showHeader` - Show header (default: true)
+- `showFooter` - Show footer (default: true)
+- `showColumnBorders` - Column separators (default: false)
+- `border` - Border style (default: 'thin')
+- `sortColumn` - Initial sort column index
+- `sortDirection` - `asc` | `desc`
+- `selectable` - `none` | `single` | `multi`
+- `onSelect` - Selection handler (`event.rowIndex`, `event.selectedRows`)
+- `onActivate` - Enter/double-click handler (`event.rowIndex`)
+- `onSort` - Sort notification (optional, sorting works without it)
+
+**Column definition:**
+```typescript
+{ header: 'Name', width: '20%', align: 'right', sortable: true }
+```
+- `width`: number (chars), `'20%'`, or `'fill'`
+- `align`: `'left'` | `'center'` | `'right'`
+- `sortable`: boolean (default: true)
+
+**Notes:**
+- Use inline JSON for static data (simplest), script for dynamic data
+- Can mix: inline columns + script-set rows
+- JSON parse errors are logged to the logging system
+- Sorting is automatic - click headers to sort, no handler needed
+- Events report original row indices (not sorted positions)
+- Use for large datasets; use `<table>` for complex cell content
+
 ## Lists
 
 ### list / li

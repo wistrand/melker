@@ -268,6 +268,50 @@
 </melker>
 ```
 
+## Data Table with Sorting
+
+```xml
+<melker>
+  <title>Employee Directory</title>
+
+  <container style="width: 100%; height: 100%; display: flex; flex-direction: column; gap: 1; padding: 1;">
+    <text style="font-weight: bold;">Employee Directory</text>
+
+    <data-table
+      id="employees"
+      style="width: fill; height: fill;"
+      selectable="single"
+      sortColumn="0"
+      sortDirection="asc"
+    >
+    {
+      "columns": [
+        { "header": "ID", "width": 5, "align": "right" },
+        { "header": "Name", "width": "25%" },
+        { "header": "Department", "width": "20%" },
+        { "header": "Status", "width": 10 },
+        { "header": "Salary", "width": 12, "align": "right" }
+      ],
+      "rows": [
+        [1, "Alice Smith", "Engineering", "Active", 95000],
+        [2, "Bob Johnson", "Marketing", "Away", 72000],
+        [3, "Carol Williams", "Engineering", "Active", 105000],
+        [4, "David Brown", "Sales", "Active", 68000],
+        [5, "Eve Davis", "HR", "Busy", 62000]
+      ]
+    }
+    </data-table>
+
+    <container style="display: flex; flex-direction: row; gap: 2;">
+      <text>Click header to sort</text>
+      <text>Arrow keys to navigate</text>
+      <text>Enter to select</text>
+      <button title="Exit" onClick="$melker.exit()" />
+    </container>
+  </container>
+</melker>
+```
+
 ## Command Palette App
 
 ```xml

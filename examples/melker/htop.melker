@@ -80,7 +80,7 @@ interface State {
 }
 
 interface RowActivateEvent {
-  rowId: string;
+  rowIndex: number;
 }
 
 // Platform detection
@@ -567,16 +567,8 @@ export async function killProcess(): Promise<void> {
 
 // Handle row double-click - show process details dialog
 export function showProcessDetails(event: RowActivateEvent): void {
-  const pid = parseInt(event.rowId);
-
-  $melker.logger.info("pid " + pid);
-  // Find the process in our data
-  for (let i = 0; i < state.processes.length; i++) {
-    if (state.processes[i].pid === pid) {
-      state.selectedProcess = state.processes[i];
-      break;
-    }
-  }
+  // data-table gives us rowIndex directly
+  state.selectedProcess = state.processes[event.rowIndex];
   if (state.selectedProcess) {
     const dialog = $melker.getElementById("processDialog");
     if (dialog) {
@@ -695,29 +687,21 @@ function updateUI(): void {
     infoEl.props.text = "Tasks: " + state.taskCounts.total + ", " + state.taskCounts.running + " running\nLoad: " + loadStr + "\nUptime: " + state.uptime;
   }
 
-  // Process table body - add ALL processes, let table handle scrolling
-  const tbody = $melker.getElementById("procTableBody");
-  if (tbody) {
-    tbody.children = [];
-    const td = (text: string, align?: "right") => {
-      const el = $melker.createElement("td", align ? { align } : {});
-      el.children.push($melker.createElement("text", { text }));
-      return el;
-    };
-    for (const proc of state.processes) {
-      const tr = $melker.createElement("tr", { "data-id": proc.pid.toString() });
-      tr.children.push(
-        td(proc.pid.toString()),
-        td(proc.user),
-        td(proc.state),
-        td(proc.cpu.toFixed(1), "right"),
-        td(proc.mem.toFixed(1), "right"),
-        td(fmtB(proc.rss), "right"),
-        td(fmtT(proc.time), "right"),
-        td(proc.command)
-      );
-      tbody.children.push(tr);
-    }
+  // Process table - update rows data
+  const procTable = $melker.getElementById("procTable");
+  if (procTable) {
+    procTable.props.rows = state.processes.map(function(proc) {
+      return [
+        proc.pid,
+        proc.user,
+        proc.state,
+        proc.cpu.toFixed(1),
+        proc.mem.toFixed(1),
+        fmtB(proc.rss),
+        fmtT(proc.time),
+        proc.command
+      ];
+    });
   }
 }
 
@@ -765,22 +749,28 @@ $melker.engine.onMount(async function() {
     </container>
   </container>
 
-  <table columnBorders="false" style="border: thin; flex: 1;" sortColumn="3" sortDirection="desc">
-    <thead>
-      <tr>
-        <th colWidth="5%">PID</th>
-        <th colWidth="8%">USER</th>
-        <th colWidth="3%">S</th>
-        <th colWidth="6%" align="right">CPU%</th>
-        <th colWidth="6%" align="right">MEM%</th>
-        <th colWidth="6%" align="right">RES</th>
-        <th colWidth="8%" align="right">TIME+</th>
-        <th colWidth="fill">Command</th>
-      </tr>
-    </thead>
-    <tbody id="procTableBody" scrollable="true" selectable="single" onActivate="showProcessDetails">
-    </tbody>
-  </table>
+  <data-table
+    id="procTable"
+    style="border: thin; flex: 1;"
+    showColumnBorders="false"
+    sortColumn="3"
+    sortDirection="desc"
+    selectable="single"
+    onActivate="$app.showProcessDetails(event)"
+  >
+  {
+    "columns": [
+      { "header": "PID", "width": 12 },
+      { "header": "USER", "width": "8%" },
+      { "header": "S", "width": "3%" },
+      { "header": "CPU%", "width": 8, "align": "right" },
+      { "header": "MEM%", "width": "6%", "align": "right" },
+      { "header": "RES", "width": "6%", "align": "right" },
+      { "header": "TIME+", "width": "8%", "align": "right" },
+      { "header": "Command" }
+    ]
+  }
+  </data-table>
 
   <container class="footer">
     <text> Ctrl+C:Quit  Scroll:Mouse wheel  Click header to sort  Double-click row for details</text>

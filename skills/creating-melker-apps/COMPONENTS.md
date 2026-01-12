@@ -533,26 +533,72 @@ canvas.markDirty();
 
 ### img
 
-Image display (PNG, JPEG, GIF).
+Image display (PNG, JPEG, GIF). Supports file paths and data URLs.
 
 ```xml
-<img
-  src="./image.png"
-  width="40"
-  height="20"
-  objectFit="contain"
-  dither="auto"
-  onLoad="$app.onImageLoad()"
-  onError="$app.onImageError(event.error)"
-/>
+<!-- From file -->
+<img src="./image.png" width="40" height="20" />
+
+<!-- From data URL (inline base64) -->
+<img src="data:image/png;base64,iVBORw0KGgo..." width="40" height="20" />
 ```
 
 **Props:**
-- `src` - Image path
-- `width`, `height` - Dimensions
+- `src` - Image path or data URL (`data:image/png;base64,...`)
+- `width`, `height` - Dimensions (number or percentage)
 - `objectFit`: `contain` | `cover` | `fill`
 - `dither` - Dithering mode
 - `onLoad`, `onError` - Load callbacks
+- `onShader`, `shaderFps`, `shaderRunTime` - Animation (see Shaders)
+
+**Methods:**
+- `setSource(url)` - Change image source (clears existing image and triggers reload)
+- `clearImage()` - Clear the loaded image
+- `loadImage(url)` - Load image directly (async, no auto re-render)
+
+**Dynamic image switching:**
+```typescript
+// Use setSource() to change images dynamically
+const img = $melker.getElementById('my-image');
+img.setSource('data:image/png;base64,...');  // or file path
+```
+
+### Shaders (canvas/img)
+
+Per-pixel shader callbacks for animated effects on `<canvas>` or `<img>`:
+
+```xml
+<img
+  src="image.png"
+  width="60"
+  height="20"
+  onShader="$app.waveEffect"
+  shaderFps="30"
+  shaderRunTime="5000"
+/>
+```
+
+```typescript
+export function waveEffect(x, y, time, resolution, source, utils) {
+  // Distort source image with wave
+  const offset = Math.sin(y * 0.1 + time * 2) * 3;
+  return source.getPixel(x + offset, y);
+}
+```
+
+**Shader callback params:**
+- `x, y` - Pixel coordinates
+- `time` - Elapsed seconds
+- `resolution` - `{ width, height, pixelAspect }`
+- `source` - `getPixel(x, y)`, `mouse`, `mouseUV`
+- `utils` - `noise2d`, `fbm`, `palette`, `smoothstep`, `mix`, `fract`
+
+**Props:**
+- `onShader` - Shader function (returns RGBA packed int or `[r,g,b,a]`)
+- `shaderFps` - Frame rate (default: 30)
+- `shaderRunTime` - Stop after N ms (freeze final frame)
+
+**Permission:** Requires `shader: true` in policy.
 
 ### markdown
 

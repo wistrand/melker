@@ -386,9 +386,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   // ============================================
 
   /**
-   * Load an image from a file path and render it to the canvas.
+   * Load an image from a file path or data URL and render it to the canvas.
    * The image is scaled to fit the canvas while maintaining aspect ratio.
-   * @param src Path to the image file (PNG, JPG, etc.) - relative paths resolve from cwd
+   * @param src Path to image file (PNG, JPEG, GIF), or data URL (data:image/png;base64,...)
    */
   async loadImage(src: string): Promise<void> {
     if (this._imageLoading) {
@@ -398,22 +398,40 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     this._imageLoading = true;
     this._imageSrc = src;
 
-    // Resolve the path for file reading
-    let resolvedSrc: string;
-    if (src.startsWith('file://')) {
-      // Handle file:// URLs - extract the path
-      resolvedSrc = new URL(src).pathname;
-    } else if (src.startsWith('/')) {
-      // Absolute path
-      resolvedSrc = src;
-    } else {
-      // Relative path - resolve from cwd
-      resolvedSrc = `${Deno.cwd()}/${src}`;
-    }
-
     try {
-      // Read the image file
-      const imageBytes = await Deno.readFile(resolvedSrc);
+      let imageBytes: Uint8Array;
+
+      // Handle data: URLs (inline base64-encoded images)
+      if (src.startsWith('data:')) {
+        // Parse data URL: data:[<mediatype>][;base64],<data>
+        const match = src.match(/^data:([^;,]+)?(?:;base64)?,(.*)$/);
+        if (!match) {
+          throw new Error('Invalid data URL format');
+        }
+        const base64Data = match[2];
+        // Decode base64 to binary
+        const binaryString = atob(base64Data);
+        imageBytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          imageBytes[i] = binaryString.charCodeAt(i);
+        }
+      } else {
+        // Resolve the path for file reading
+        let resolvedSrc: string;
+        if (src.startsWith('file://')) {
+          // Handle file:// URLs - extract the path
+          resolvedSrc = new URL(src).pathname;
+        } else if (src.startsWith('/')) {
+          // Absolute path
+          resolvedSrc = src;
+        } else {
+          // Relative path - resolve from cwd
+          resolvedSrc = `${Deno.cwd()}/${src}`;
+        }
+
+        // Read the image file
+        imageBytes = await Deno.readFile(resolvedSrc);
+      }
 
       // Detect format by magic bytes and decode using stable pure-JS libraries
       let width: number;
@@ -475,7 +493,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       this._renderImageToBuffer();
 
     } catch (error) {
-      logger.error("failed loadIimage, resolvedSrc " + resolvedSrc + " " + error);
+      logger.error(`Failed to load image '${src}': ${error}`);
       throw new Error(`Failed to load image '${src}': ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this._imageLoading = false;
@@ -657,6 +675,15 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Clear the image background buffer
     this._imageColorBuffer.fill(TRANSPARENT);
     this._isDirty = true;
+  }
+
+  /**
+   * Set a new image source URL (clears existing image and triggers reload)
+   * Convenience method that replaces clearImage() + props.src = url
+   */
+  setSource(url: string): void {
+    this.clearImage();
+    this.props.src = url;
   }
 
   // ============================================

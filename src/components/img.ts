@@ -113,9 +113,10 @@ export class ImgElement extends CanvasElement {
   private _resolveSrc(): string {
     const src = this._originalSrc;
 
-    // If already absolute, return as-is
+    // If already absolute or data URL, return as-is
     if (src.startsWith('http://') || src.startsWith('https://') ||
-        src.startsWith('file://') || src.startsWith('/')) {
+        src.startsWith('file://') || src.startsWith('/') ||
+        src.startsWith('data:')) {
       return src;
     }
 
@@ -225,7 +226,7 @@ registerComponent({
 export const imgSchema: ComponentSchema = {
   description: 'Display an image in the terminal',
   props: {
-    src: { type: 'string', required: true, description: 'Image source path' },
+    src: { type: 'string', required: true, description: 'Image source path or data URL (data:image/png;base64,...)' },
     alt: { type: 'string', description: 'Alternative text for accessibility' },
     width: { type: ['number', 'string'], description: 'Width in columns or percentage (e.g., 30 or "50%")' },
     height: { type: ['number', 'string'], description: 'Height in rows or percentage (e.g., 15 or "50%")' },

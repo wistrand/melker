@@ -67,6 +67,9 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 | `$melker.alert(message)` | Show modal alert |
 | `$melker.copyToClipboard(text)` | Copy to clipboard |
 | `$melker.logger.debug/info/warn/error()` | Log to file (F12 shows location) |
+| `$melker.config.getString/getNumber/getBoolean(key, default)` | Read config values |
+| `$melker.url` | Source file URL |
+| `$melker.dirname` | Source directory path |
 | `$app.functionName()` | Call exported script functions |
 
 ## Core Components

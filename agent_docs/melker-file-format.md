@@ -98,7 +98,7 @@ Use `onMount()` when you need to conditionally register initialization or regist
 | `<text>` | id, style | Inner content or `text` prop |
 | `<input>` | id, placeholder, value, format, onKeyPress, onInput | Single-line text input (format: 'text'\|'password') |
 | `<textarea>` | id, placeholder, value, rows, cols, wrap, maxLength | Multi-line text input |
-| `<button>` | id, title, onClick | Uses `title` not `label` |
+| `<button>` | id, label, onClick | `<button>Label</button>` or `label="Label"` |
 | `<dialog>` | id, title, open, modal, backdrop, draggable, width, height | Modal overlay (draggable via title bar) |
 | `<checkbox>` | id, title, checked, onChange | Toggle checkbox |
 | `<radio>` | id, title, value, checked, name, onChange | Radio button |
@@ -414,7 +414,8 @@ Use special delimiters to define element types without `type:` property lines:
 | `+--<type(param)> content--+` | with param | `+--<radio(plan)> Free--+` → `<radio title="Free" name="plan" />` |
 
 The explicit `<type>` syntax maps content to appropriate props:
-- `<checkbox>`, `<radio>`, `<button>` → `title` prop
+- `<checkbox>`, `<radio>` → `title` prop
+- `<button>` → `label` prop
 - `<radio(name)>` → `title` prop + `name` prop for radio group
 - `<text>`, `<markdown>` → `text` prop
 - `<input>`, `<textarea>` → `placeholder` prop

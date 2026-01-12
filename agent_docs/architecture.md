@@ -15,7 +15,7 @@
 | Text | `src/components/text.ts` | Text display with wrapping |
 | Input | `src/components/input.ts` | Single-line text input |
 | Textarea | `src/components/textarea.ts` | Multi-line text input with cursor |
-| Button | `src/components/button.ts` | Uses `title` prop (not `label`) |
+| Button | `src/components/button.ts` | Uses `label` prop or content syntax |
 | Dialog | `src/components/dialog.ts` | Modal overlay |
 | Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars, onPaint, onShader, dither modes |
 | Img | `src/components/img.ts` | Image display (extends Canvas), supports PNG/JPEG/GIF |

@@ -65,7 +65,7 @@ From `types.ts` Style interface:
 | `text` | `text`, `src`, `wrap` |
 | `input` | `value`, `placeholder`, `maxLength`, `readOnly`, `cursorPosition`, `complete` |
 | `textarea` | `value`, `placeholder`, `maxLength`, `readOnly`, `rows`, `cols`, `wrap` |
-| `button` | `title`, `variant` |
+| `button` | `label`, `variant` |
 | `checkbox` | `title`, `checked`, `indeterminate` |
 | `radio` | `title`, `value`, `checked`, `name` |
 | `dialog` | `title`, `modal`, `backdrop`, `open` |
@@ -130,7 +130,7 @@ interface LintWarning {
 Warnings collected during parse, displayed via logging system after completion:
 
 ```
-[Lint] WARN: Unknown property "lable" on <button>. Did you mean "title"?
+[Lint] WARN: Unknown property "lable" on <button>. Did you mean "label"?
 [Lint] WARN: Unknown style "colours" on <text>. Did you mean "color"?
 ```
 

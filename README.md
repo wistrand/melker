@@ -170,7 +170,7 @@ Share apps via URL:
 
 **Programmatic** - TypeScript API:
 ```typescript
-const btn = createElement('button', { title: 'Click', onClick: () => count++ });
+const btn = createElement('button', { label: 'Click', onClick: () => count++ });
 ```
 
 **Declarative** - `.melker` files:
@@ -364,7 +364,7 @@ const ui = createElement('container', {
   style: { border: 'thin', padding: 2 }
 },
   createElement('text', { text: 'Hello!' }),
-  createElement('button', { title: 'OK', onClick: () => app.exit() })
+  createElement('button', { label: 'OK', onClick: () => app.exit() })
 );
 
 const app = await createApp(ui);

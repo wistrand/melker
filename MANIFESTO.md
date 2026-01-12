@@ -125,7 +125,7 @@ Documentation and UI in the same file. The help text is the app.
 
 **3. Programmatic** - TypeScript `createElement` API
 ```typescript
-const btn = createElement('button', { title: 'Click', onClick: () => count++ });
+const btn = createElement('button', { label: 'Click', onClick: () => count++ });
 ```
 For embedding Melker in larger applications or when you need full programmatic control. Loses some inspectability benefits.
 

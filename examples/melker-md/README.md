@@ -108,7 +108,8 @@ Use special delimiters in box names to define element types without `type:` prop
 ````
 
 The explicit `<type>` syntax supports any element type:
-- `<checkbox>`, `<radio>`, `<button>` → `title` prop
+- `<checkbox>`, `<radio>` → `title` prop
+- `<button>` → `label` prop
 - `<radio(name)>` → `title` prop + `name` prop for radio group
 - `<text>`, `<markdown>` → `text` prop (content)
 - `<input>`, `<textarea>` → `placeholder` prop

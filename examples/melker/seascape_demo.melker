@@ -1,0 +1,263 @@
+<melker>
+  <title>Seascape Shader</title>
+
+  <policy>
+  {
+    "name": "Seascape Shader Demo",
+    "description": "Animated ocean shader by TDM",
+    "permissions": {
+      "shader": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    // "Seascape" by Alexander Alekseev aka TDM - 2014
+    // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+    // Optimized port to Melker shader format
+
+    // Reduced iterations for performance (was 8, 3, 5)
+    const NUM_STEPS = 5;
+    const ITER_GEOMETRY = 2;
+    const ITER_FRAGMENT = 3;
+    const SEA_HEIGHT = 0.6;
+    const SEA_CHOPPY = 4.0;
+    const SEA_SPEED = 0.8;
+    const SEA_FREQ = 0.16;
+
+    // Precomputed constants
+    const SEA_BASE_R = 0.0, SEA_BASE_G = 0.09, SEA_BASE_B = 0.18;
+    const SEA_WATER_R = 0.0576, SEA_WATER_G = 0.0648, SEA_WATER_B = 0.0432; // pre-multiplied by 0.12
+    const OCT_M00 = 1.6, OCT_M01 = 1.2, OCT_M10 = -1.2, OCT_M11 = 1.6;
+
+    // Inline hash - avoid function call overhead
+    const hash = (px: number, py: number): number => {
+      const h = px * 127.1 + py * 311.7;
+      const s = Math.sin(h) * 43758.5453123;
+      return s - Math.floor(s);
+    };
+
+    // Optimized noise - no array allocations
+    const noise = (px: number, py: number): number => {
+      const ix = Math.floor(px), iy = Math.floor(py);
+      const fx = px - ix, fy = py - iy;
+      const ux = fx * fx * (3.0 - 2.0 * fx);
+      const uy = fy * fy * (3.0 - 2.0 * fy);
+      const a = hash(ix, iy), b = hash(ix + 1, iy);
+      const c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
+      return -1.0 + 2.0 * (a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy);
+    };
+
+    // Optimized sea octave - no array allocations
+    const seaOctave = (ux: number, uy: number, choppy: number): number => {
+      const n = noise(ux, uy);
+      const nux = ux + n, nuy = uy + n;
+      const sinX = Math.sin(nux), sinY = Math.sin(nuy);
+      const cosX = Math.cos(nux), cosY = Math.cos(nuy);
+      let wvx = 1.0 - (sinX < 0 ? -sinX : sinX);
+      let wvy = 1.0 - (sinY < 0 ? -sinY : sinY);
+      const swvx = cosX < 0 ? -cosX : cosX;
+      const swvy = cosY < 0 ? -cosY : cosY;
+      wvx = wvx + (swvx - wvx) * wvx;
+      wvy = wvy + (swvy - wvy) * wvy;
+      const m = wvx * wvy;
+      return Math.pow(1.0 - Math.pow(m, 0.65), choppy);
+    };
+
+    // Height map - coarse version for tracing
+    const map = (px: number, py: number, pz: number, seaTime: number): number => {
+      let freq = SEA_FREQ, amp = SEA_HEIGHT, choppy = SEA_CHOPPY;
+      let ux = px * 0.75, uy = pz;
+      let h = 0.0;
+      for (let i = 0; i < ITER_GEOMETRY; i++) {
+        const tf = seaTime * freq;
+        const d = seaOctave((ux + seaTime) * freq, (uy + seaTime) * freq, choppy)
+                + seaOctave((ux - seaTime) * freq, (uy - seaTime) * freq, choppy);
+        h += d * amp;
+        const nux = OCT_M00 * ux + OCT_M01 * uy;
+        uy = OCT_M10 * ux + OCT_M11 * uy;
+        ux = nux;
+        freq *= 1.9;
+        amp *= 0.22;
+        choppy = choppy + (1.0 - choppy) * 0.2;
+      }
+      return py - h;
+    };
+
+    // Height map - detailed version for normals
+    const mapDetailed = (px: number, py: number, pz: number, seaTime: number): number => {
+      let freq = SEA_FREQ, amp = SEA_HEIGHT, choppy = SEA_CHOPPY;
+      let ux = px * 0.75, uy = pz;
+      let h = 0.0;
+      for (let i = 0; i < ITER_FRAGMENT; i++) {
+        const d = seaOctave((ux + seaTime) * freq, (uy + seaTime) * freq, choppy)
+                + seaOctave((ux - seaTime) * freq, (uy - seaTime) * freq, choppy);
+        h += d * amp;
+        const nux = OCT_M00 * ux + OCT_M01 * uy;
+        uy = OCT_M10 * ux + OCT_M11 * uy;
+        ux = nux;
+        freq *= 1.9;
+        amp *= 0.22;
+        choppy = choppy + (1.0 - choppy) * 0.2;
+      }
+      return py - h;
+    };
+
+    // Height map tracing - returns distance
+    const heightMapTracing = (
+      ox: number, oy: number, oz: number,
+      dx: number, dy: number, dz: number,
+      seaTime: number
+    ): number => {
+      let tm = 0.0, tx = 1000.0;
+      let hx = map(ox + dx * tx, oy + dy * tx, oz + dz * tx, seaTime);
+      if (hx > 0.0) return tx; // Looking at sky
+      let hm = map(ox, oy, oz, seaTime);
+      let tmid = 0.0;
+      for (let i = 0; i < NUM_STEPS; i++) {
+        tmid = tm + (tx - tm) * hm / (hm - hx);
+        const hmid = map(ox + dx * tmid, oy + dy * tmid, oz + dz * tmid, seaTime);
+        if (hmid < 0.0) { tx = tmid; hx = hmid; }
+        else { tm = tmid; hm = hmid; }
+      }
+      return tmid;
+    };
+
+    export const seascapeShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      _source: any,
+      _utils: any
+    ): [number, number, number] => {
+      const seaTime = 1.0 + time * SEA_SPEED;
+      const { width, height, pixelAspect } = resolution;
+      const invHeight = 1.0 / height;
+
+      // Normalize coordinates
+      let uvx = (2.0 * x - width) * invHeight;
+      let uvy = -(2.0 * y - height) * invHeight / pixelAspect;
+
+      // Camera rotation (precompute sin/cos)
+      const ang0 = Math.sin(time * 3.0) * 0.1;
+      const ang1 = Math.sin(time) * 0.2 + 0.3;
+      const c0 = Math.cos(ang0), s0 = Math.sin(ang0);
+      const c1 = Math.cos(ang1), s1 = Math.sin(ang1);
+
+      // Ray origin
+      const ox = 0.0, oy = 3.5, oz = time * 5.0;
+
+      // Ray direction (normalized)
+      const invLen = 1.0 / Math.sqrt(uvx * uvx + uvy * uvy + 4.0);
+      let dx = uvx * invLen, dy = uvy * invLen, dz = -2.0 * invLen;
+
+      // Rotate around X then Y
+      let tmp = dy * c1 + dz * s1;
+      dz = -dy * s1 + dz * c1;
+      dy = tmp;
+      tmp = dx * c0 + dz * s0;
+      dz = -dx * s0 + dz * c0;
+      dx = tmp;
+
+      // Trace to find water surface
+      const dist = heightMapTracing(ox, oy, oz, dx, dy, dz, seaTime);
+
+      // Hit point
+      const px = ox + dx * dist;
+      const py = oy + dy * dist;
+      const pz = oz + dz * dist;
+
+      // Sky color (based on ray direction)
+      const skyT = (Math.max(dy, 0.0) * 0.8 + 0.2) * 0.8;
+      const omt = 1.0 - skyT;
+      const skyR = omt * omt, skyG = omt, skyB = 0.6 + omt * 0.4;
+
+      // Distance for attenuation
+      const distSq = (px - ox) * (px - ox) + (py - oy) * (py - oy) + (pz - oz) * (pz - oz);
+
+      // Normal calculation
+      const eps = distSq * 0.1 * invHeight;
+      const h0 = mapDetailed(px, py, pz, seaTime);
+      const hx = mapDetailed(px + eps, py, pz, seaTime);
+      const hz = mapDetailed(px, py, pz + eps, seaTime);
+      const nLen = Math.sqrt((h0 - hx) * (h0 - hx) + eps * eps + (h0 - hz) * (h0 - hz));
+      const nx = (h0 - hx) / nLen, ny = eps / nLen, nz = (h0 - hz) / nLen;
+
+      // Light direction (precomputed normalized [0, 1, 0.8])
+      const lx = 0.0, ly = 0.7809, lz = 0.6247;
+
+      // Fresnel
+      const dotNE = nx * (-dx) + ny * (-dy) + nz * (-dz);
+      const fresnel = Math.pow(Math.max(0, 1.0 - dotNE), 3.0) * 0.5;
+
+      // Reflect direction for sky lookup
+      const dotNI = nx * dx + ny * dy + nz * dz;
+      const refY = dy - 2.0 * dotNI * ny;
+      const refT = (Math.max(refY, 0.0) * 0.8 + 0.2) * 0.8;
+      const refOmt = 1.0 - refT;
+      const reflR = refOmt * refOmt, reflG = refOmt, reflB = 0.6 + refOmt * 0.4;
+
+      // Diffuse
+      const dotNL = nx * lx + ny * ly + nz * lz;
+      const diff = Math.pow(dotNL * 0.4 + 0.6, 80.0);
+
+      // Sea color
+      const refractR = SEA_BASE_R + diff * SEA_WATER_R;
+      const refractG = SEA_BASE_G + diff * SEA_WATER_G;
+      const refractB = SEA_BASE_B + diff * SEA_WATER_B;
+
+      let seaR = refractR + (reflR - refractR) * fresnel;
+      let seaG = refractG + (reflG - refractG) * fresnel;
+      let seaB = refractB + (reflB - refractB) * fresnel;
+
+      // Attenuation
+      const atten = Math.max(1.0 - distSq * 0.001, 0.0);
+      seaR *= atten; seaG *= atten; seaB *= atten;
+
+      // Specular
+      const refLx = dx - 2.0 * dotNI * nx;
+      const refLy = dy - 2.0 * dotNI * ny;
+      const refLz = dz - 2.0 * dotNI * nz;
+      const spec = Math.pow(Math.max(refLx * lx + refLy * ly + refLz * lz, 0.0), 60.0);
+      seaR += spec; seaG += spec; seaB += spec;
+
+      // Blend sky and sea
+      const blend = Math.pow(Math.min(Math.max(height * 0.01 / (height * 0.01 + (py < 0 ? -py : py)), 0), 1), 0.3);
+      let r = skyR + (seaR - skyR) * blend;
+      let g = skyG + (seaG - skyG) * blend;
+      let b = skyB + (seaB - skyB) * blend;
+
+      // Gamma
+      r = Math.pow(r, 0.65) * 255;
+      g = Math.pow(g, 0.65) * 255;
+      b = Math.pow(b, 0.65) * 255;
+
+      return [
+        r < 0 ? 0 : r > 255 ? 255 : r,
+        g < 0 ? 0 : g > 255 ? 255 : g,
+        b < 0 ? 0 : b > 255 ? 255 : b
+      ];
+    };
+  </script>
+
+  <container style="display: flex; flex-direction: column; width: fill; height: fill;">
+    <text style="text-align: center; font-weight: bold; margin-bottom: 1;">
+      Seascape - TDM 2014 (CC BY-NC-SA 3.0)
+    </text>
+    <container style="width: fill; height: fill;">
+      <img
+        id="seascape"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.seascapeShader"
+        shaderFps="30"
+      />
+    </container>
+    <container style="flex-direction: row; justify-content: center; gap: 2; margin-top: 1;">
+      <button onClick="$melker.exit()">Exit</button>
+    </container>
+  </container>
+</melker>

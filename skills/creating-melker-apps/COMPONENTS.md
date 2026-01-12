@@ -154,19 +154,19 @@ Radio button (use `name` for grouping).
 
 ### button
 
-Clickable button. **Uses `label` not `title`**.
+Clickable button. Supports content syntax or `label` prop.
 
 ```xml
-<button
-  id="submit"
-  label="Submit"
-  onClick="$app.handleSubmit()"
-/>
+<!-- Content syntax (preferred) -->
+<button onClick="$app.handleSubmit()">Submit</button>
+
+<!-- Prop syntax -->
+<button label="Submit" onClick="$app.handleSubmit()" />
 ```
 
 **Props:**
 - `id` - Element ID
-- `label` - Button text (NOT `title`)
+- `label` - Button text (can also use content: `<button>Label</button>`)
 - `onClick` - Click handler
 - `style` - Styling
 

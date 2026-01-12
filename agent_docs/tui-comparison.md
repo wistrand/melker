@@ -66,7 +66,7 @@ Y = Full support, ~ = Partial/limited support, - = Not available
 
 1. **Programmatic** - TypeScript createElement API:
 ```typescript
-const btn = createElement('button', { title: 'Click', onClick: () => count++ });
+const btn = createElement('button', { label: 'Click', onClick: () => count++ });
 root.appendChild(btn);
 ```
 

@@ -6,6 +6,20 @@
   <title>Melker - Run text with meaning</title>
   <meta name="description" content="A TUI framework for apps you want to share safely. Document-first terminal apps with permission sandboxing.">
   <link rel="icon" type="image/png" href="favicon.png">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://melker.sh/">
+  <meta property="og:title" content="Melker - Run text with meaning">
+  <meta property="og:description" content="A TUI framework for apps you want to share safely. Document-first terminal apps with permission sandboxing.">
+  <meta property="og:image" content="https://melker.sh/logo.png">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:url" content="https://melker.sh/">
+  <meta name="twitter:title" content="Melker - Run text with meaning">
+  <meta name="twitter:description" content="A TUI framework for apps you want to share safely. Document-first terminal apps with permission sandboxing.">
+  <meta name="twitter:image" content="https://melker.sh/logo.png">
   <style>
     :root {
       --bg: #0d1117;
@@ -51,8 +65,24 @@
     /* Header */
     header {
       padding: 48px 0;
-      text-align: center;
       border-bottom: 1px solid var(--border);
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 48px;
+    }
+
+    .header-logo {
+      flex-shrink: 0;
+      width: 240px;
+      height: 240px;
+      border-radius: 32px;
+    }
+
+    .header-text {
+      flex: 1;
     }
 
     header h1 {
@@ -66,20 +96,19 @@
       font-size: 1.25rem;
       color: var(--text-secondary);
       font-style: italic;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }
 
     header .description {
       font-size: 1.1rem;
       color: var(--text-secondary);
       max-width: 600px;
-      margin: 0 auto 32px;
+      margin-bottom: 24px;
     }
 
     .cta-buttons {
       display: flex;
       gap: 16px;
-      justify-content: center;
       flex-wrap: wrap;
     }
 
@@ -191,22 +220,32 @@
       margin: 0;
     }
 
-    /* Showcase */
-    .showcase {
+    /* Showcase Gallery */
+    .showcase-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
       margin-top: 24px;
     }
 
-    .showcase img {
-      width: 100%;
-      border-radius: 8px;
+    .showcase-item {
+      background: var(--bg-secondary);
       border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
     }
 
-    .showcase-caption {
+    .showcase-item img {
+      width: 100%;
+      display: block;
+    }
+
+    .showcase-item a {
+      display: block;
+      padding: 12px 16px;
       text-align: center;
-      color: var(--text-secondary);
       font-size: 0.9rem;
-      margin-top: 12px;
+      border-top: 1px solid var(--border);
     }
 
     /* Comparison table */
@@ -293,6 +332,20 @@
 
     /* Responsive */
     @media (max-width: 640px) {
+      .header-content {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .header-logo {
+        width: 120px;
+        height: 120px;
+      }
+
+      .cta-buttons {
+        justify-content: center;
+      }
+
       header h1 {
         font-size: 2rem;
       }
@@ -314,15 +367,21 @@
 <body>
   <header>
     <div class="container">
-      <h1>Melker</h1>
-      <p class="tagline">Run text with meaning</p>
-      <p class="description">
-        A TUI framework for apps you want to share safely.
-        Document-first terminal apps with permission sandboxing.
-      </p>
-      <div class="cta-buttons">
-        <a href="https://github.com/wistrand/melker" class="btn btn-primary">View on GitHub</a>
-        <a href="https://github.com/wistrand/melker/blob/main/MANIFESTO.md" class="btn btn-secondary">Read the Manifesto</a>
+      <div class="header-content">
+        <div class="header-text">
+          <h1>Melker</h1>
+          <p class="tagline">Run text with meaning</p>
+          <p class="description">
+            A TUI framework for apps you want to share safely.
+            Document-first terminal apps with permission sandboxing.
+          </p>
+          <div class="cta-buttons">
+            <a href="https://github.com/wistrand/melker" class="btn btn-primary">View on GitHub</a>
+            <a href="https://github.com/wistrand/melker/blob/main/MANIFESTO.md" class="btn btn-secondary">Read the Manifesto</a>
+            <a href="https://github.com/wistrand/melker/blob/main/FAQ.md" class="btn btn-secondary">Read the FAQ</a>
+          </div>
+        </div>
+        <img src="logo.png" alt="Melker logo" class="header-logo">
       </div>
     </div>
   </header>
@@ -330,64 +389,11 @@
   <main>
     <section>
       <div class="container">
-        <h2>Why Melker?</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Feature</th>
-              <th>Melker</th>
-              <th>Other TUI Frameworks</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Run from URL</td>
-              <td class="check">&#10003;</td>
-              <td>-</td>
-            </tr>
-            <tr>
-              <td>Permission sandbox</td>
-              <td class="check">&#10003;</td>
-              <td>-</td>
-            </tr>
-            <tr>
-              <td>App approval system</td>
-              <td class="check">&#10003;</td>
-              <td>-</td>
-            </tr>
-            <tr>
-              <td>Inspect policy before run</td>
-              <td class="check">&#10003;</td>
-              <td>-</td>
-            </tr>
-            <tr>
-              <td>Dev Tools (F12)</td>
-              <td class="check">&#10003;</td>
-              <td>-</td>
-            </tr>
-            <tr>
-              <td>No build step</td>
-              <td class="check">&#10003;</td>
-              <td>Some</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="showcase">
-          <img src="showcase.png" alt="Melker showcase - a task manager app">
-          <p class="showcase-caption">A task manager in 170 lines of declarative markup</p>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <div class="container">
         <h2>Key Features</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 1.1rem;">
+          Apps are readable documents, not opaque binaries. View source, inspect handlers, understand before you run.
+        </p>
         <div class="features">
-          <div class="feature">
-            <h3>Document-First</h3>
-            <p>Apps are readable documents, not opaque binaries. View source, inspect handlers, understand before you run.</p>
-          </div>
           <div class="feature">
             <h3>Explicit Policy</h3>
             <p>Permissions declared in metadata, visible before execution. No hidden capabilities.</p>
@@ -407,6 +413,38 @@
           <div class="feature">
             <h3>Dev Tools</h3>
             <p>Press F12 to inspect source, policy, and system info at runtime.</p>
+          </div>
+          <div class="feature">
+            <h3>No Build Step</h3>
+            <p>Write markup, run immediately. No compilation, no bundling, no waiting.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2><a href="https://github.com/wistrand/melker/tree/main/examples/melker" style="color: inherit;">Examples</a></h2>
+        <div class="showcase-gallery">
+          <div class="showcase-item">
+            <img src="showcase.png" alt="Melker showcase - a task manager app">
+            <a href="https://github.com/wistrand/melker/blob/main/examples/melker/showcase.melker">showcase.melker</a>
+          </div>
+          <div class="showcase-item">
+            <img src="htop.png" alt="Melker htop - system monitor">
+            <a href="https://github.com/wistrand/melker/blob/main/examples/melker/htop.melker">htop.melker</a>
+          </div>
+          <div class="showcase-item">
+            <img src="markdown-viewer.png" alt="Melker markdown viewer">
+            <a href="https://github.com/wistrand/melker/blob/main/examples/melker/markdown_viewer.melker">markdown_viewer.melker</a>
+          </div>
+          <div class="showcase-item">
+            <img src="analog-clock.png" alt="Melker analog clock">
+            <a href="https://github.com/wistrand/melker/blob/main/examples/melker/analog-clock.melker">analog-clock.melker</a>
+          </div>
+          <div class="showcase-item">
+            <img src="video-demo.png" alt="Melker video playback">
+            <a href="https://github.com/wistrand/melker/blob/main/examples/melker/video_demo.melker">video_demo.melker</a>
           </div>
         </div>
       </div>

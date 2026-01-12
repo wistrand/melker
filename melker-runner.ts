@@ -354,13 +354,6 @@ export async function runMelkerFile(
 
     const parseResult = parseMelkerFile(templateContent);
 
-    let originalTitle: string | undefined;
-    if (parseResult.title) {
-      originalTitle = '';
-      const encoder = new TextEncoder();
-      await Deno.stdout.write(encoder.encode(`\x1b]0;${parseResult.title}\x07`));
-    }
-
     const placeholderUI = createEl('container', { style: { width: 1, height: 1 } });
     // Calculate baseUrl from filepath for relative resource resolution
     const baseUrl = getBaseUrl(filepath);
@@ -378,6 +371,15 @@ export async function runMelkerFile(
       appPolicy = policyResult.policy ?? createAutoPolicy();
     } else {
       appPolicy = createAutoPolicy();
+    }
+
+    // Set terminal title (use policy name as fallback if no <title> tag)
+    let originalTitle: string | undefined;
+    const appTitle = parseResult.title || appPolicy.name;
+    if (appTitle) {
+      originalTitle = '';
+      const encoder = new TextEncoder();
+      await Deno.stdout.write(encoder.encode(`\x1b]0;${appTitle}\x07`));
     }
 
     // Apply policy config (only overrides defaults, not env/cli)

@@ -6,6 +6,8 @@ Guidance for Claude Code when working with Melker.
 
 **Melker** - *Run text with meaning*
 
+Website: https://melker.sh
+
 Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-inspired document model. It renders component trees to ANSI terminals using a dual-buffer system.
 
 ## Quick Reference

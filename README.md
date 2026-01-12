@@ -61,6 +61,20 @@ melker --trust app.melker
 
 The CLI is symlink-safe - it resolves its real path before importing dependencies.
 
+### Releases
+
+Melker uses CalVer (`YYYY.MM.PATCH`). List available releases:
+
+```bash
+git tag --list 'v*' | sort -V
+```
+
+Checkout a specific release:
+
+```bash
+git checkout v2026.01.1
+```
+
 ### Not Just Trust - Real UI
 
 Melker apps look and feel like apps:

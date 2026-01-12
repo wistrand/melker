@@ -479,7 +479,7 @@ Melker uses CalVer with format `YYYY.MM.PATCH` (e.g., `v2026.01.1`). Releases ar
 ```bash
 # Create release
 git tag -a v2026.01.1 -m "v2026.01.1"
-git push origin v2026.01.1
+git push origin main --tags
 ```
 
 See `agent_docs/calver-release-plan.md` for details.

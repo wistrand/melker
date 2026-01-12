@@ -312,6 +312,7 @@ See `examples/melker/` for complete examples:
 - `analog-clock.melker` - Canvas-based analog clock
 - `color_selector.melker` - HSL color picker with canvas
 - `image_demo.melker` - Image component with fixed and percentage dimensions
+- `data_url_image.melker` - Inline base64-encoded images (data URLs)
 - `chrome_collapse_demo.melker` - Progressive chrome collapse when space is tight
 - `markdown_viewer.melker` - Markdown rendering
 - `combobox_simple.melker` - Basic combobox dropdown

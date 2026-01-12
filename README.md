@@ -223,7 +223,7 @@ Press F12 to open Dev Tools:
 | Layout      | container, flexbox, tabs                          |
 | Text        | text, markdown                                    |
 | Input       | input, textarea, checkbox, radio, slider          |
-| Navigation  | button, menu-bar, menu, menu-item                 |
+| Navigation  | button, command-palette                           |
 | Data        | table, data-table, list                           |
 | Dropdowns   | combobox, select, autocomplete, command-palette   |
 | Dialogs     | dialog, alert, confirm, prompt                    |

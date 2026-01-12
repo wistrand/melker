@@ -751,13 +751,16 @@ The `<img>` component displays images in the terminal using sextant characters (
 
 <!-- With object-fit mode -->
 <img src="media/image.png" width="40" height="20" objectFit="contain" />
+
+<!-- Data URL (inline base64-encoded image) -->
+<img src="data:image/png;base64,iVBORw0KGgo..." width="20" height="10" />
 ```
 
 ### Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `src` | string | - | Image source path (required) |
+| `src` | string | - | Image source path or data URL (required) |
 | `alt` | string | - | Alternative text for accessibility |
 | `width` | number \| string | 30 | Width in columns or percentage (e.g., "50%") |
 | `height` | number \| string | 15 | Height in rows or percentage (e.g., "50%") |
@@ -769,6 +772,21 @@ The `<img>` component displays images in the terminal using sextant characters (
 | `onShader` | function | - | Per-pixel shader callback (see Shaders section) |
 | `shaderFps` | number | 30 | Shader frame rate |
 | `shaderRunTime` | number | - | Stop shader after this many ms, freeze final frame as image |
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `setSource(url)` | Change image source (clears existing image and triggers reload) |
+| `clearImage()` | Clear the loaded image |
+| `loadImage(url)` | Load image directly (async, no auto re-render) |
+| `refreshImage()` | Re-render the loaded image (e.g., after resize) |
+
+```typescript
+// Dynamic image switching
+const img = $melker.getElementById('my-image');
+img.setSource('data:image/png;base64,...');  // or file path
+```
 
 ### Shaders
 
@@ -825,6 +843,7 @@ All decoders are pure JavaScript - no native dependencies or Deno internal APIs.
 
 ### Path Resolution
 
+- Data URLs (`data:image/png;base64,...`) are decoded directly (no file access)
 - Absolute paths (starting with `/`) are used as-is
 - HTTP/HTTPS URLs are fetched directly
 - Relative paths are resolved from the .melker file's directory

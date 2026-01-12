@@ -1,0 +1,98 @@
+<melker>
+  <title>Data URL Image Demo</title>
+
+  <script type="typescript">
+    // Small 8x8 red square PNG (base64 encoded)
+    export const redSquare = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR4nGP8z8AARLjBCFEAAB0TD/lC6vFjAAAAAElFTkSuQmCC';
+
+    // Small 8x8 blue square PNG
+    export const blueSquare = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR4nGNkYPj/nwEPGCEKAA0jD/mfxFlEAAAAAElFTkSuQmCC';
+
+    // Small 8x8 green square PNG
+    export const greenSquare = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEUlEQVR4nGNk+A+EeMAIUQAAFRsP+eK4oX8AAAAASUVORK5CYII=';
+
+    // Gradient PNG (16x16)
+    export const gradient = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUElEQVR4nKXMQQEAEQBFwS+BbbARRBBBBBFEoIEIIogggggiiEAH7zDXMVI5VtL3yMjS4KeBo4GnQaBBpEGiQaZBpUGjQafBoMGkwaLBZsEFaSIuYo+wCv4AAAAASUVORK5CYII=';
+
+    export function setImage(name: string) {
+      const img = $melker.getElementById('demo-image');
+      if (!img) return;
+
+      switch (name) {
+        case 'red': img.setSource(redSquare); break;
+        case 'blue': img.setSource(blueSquare); break;
+        case 'green': img.setSource(greenSquare); break;
+        case 'gradient': img.setSource(gradient); break;
+      }
+    }
+
+    // Initialize all images on ready
+    export function initImages() {
+      // Main demo image
+      setImage('red');
+
+      // Side-by-side images
+      const imgRed = $melker.getElementById('img-red');
+      const imgBlue = $melker.getElementById('img-blue');
+      const imgGreen = $melker.getElementById('img-green');
+      const imgGradient = $melker.getElementById('img-gradient');
+
+      // Set src - auto-load will trigger during render
+      if (imgRed) imgRed.props.src = redSquare;
+      if (imgBlue) imgBlue.props.src = blueSquare;
+      if (imgGreen) imgGreen.props.src = greenSquare;
+      if (imgGradient) imgGradient.props.src = gradient;
+    }
+  </script>
+
+  <script async="ready">
+    $app.initImages();
+    // Trigger render after setting src values
+    $melker.render();
+  </script>
+
+  <container style="width: 100%; height: 100%; flex-direction: column; gap: 2; padding: 2;">
+    <text style="font-weight: bold;">Data URL Image Demo</text>
+    <text>Images embedded as base64 data URLs - no external files needed.</text>
+
+    <container style="flex-direction: row; gap: 2; align-items: center;">
+      <container style="border: thin; padding: 1;">
+        <img id="demo-image" width="20" height="10" objectFit="fill" />
+      </container>
+
+      <container style="flex-direction: column; gap: 1;">
+        <text>Select image:</text>
+        <container style="flex-direction: row; gap: 1;">
+          <button onClick="$app.setImage('red')">Red</button>
+          <button onClick="$app.setImage('blue')">Blue</button>
+          <button onClick="$app.setImage('green')">Green</button>
+          <button onClick="$app.setImage('gradient')">Gradient</button>
+        </container>
+      </container>
+    </container>
+
+    <container style="flex-direction: column; gap: 1; margin-top: 2;">
+      <text style="font-weight: bold;">All images side by side:</text>
+      <container style="flex-direction: row; gap: 2;">
+        <container style="flex-direction: column; align-items: center;">
+          <img id="img-red" width="10" height="5" />
+          <text>Red</text>
+        </container>
+        <container style="flex-direction: column; align-items: center;">
+          <img id="img-blue" width="10" height="5" />
+          <text>Blue</text>
+        </container>
+        <container style="flex-direction: column; align-items: center;">
+          <img id="img-green" width="10" height="5" />
+          <text>Green</text>
+        </container>
+        <container style="flex-direction: column; align-items: center;">
+          <img id="img-gradient" width="10" height="5" />
+          <text>Gradient</text>
+        </container>
+      </container>
+    </container>
+
+    <button style="margin-top: 2;" onClick="$melker.exit()">Exit</button>
+  </container>
+</melker>

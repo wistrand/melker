@@ -476,6 +476,51 @@
 </melker>
 ```
 
+## Auto-Start with async="ready"
+
+Use `async="ready"` scripts for initialization that needs access to rendered elements:
+
+```xml
+<melker>
+  <script type="typescript">
+    let intervalId: number | undefined;
+
+    // Initialize the clock (called on ready)
+    export function init() {
+      const canvas = $melker.getElementById('clockCanvas');
+      if (canvas) {
+        drawClock(canvas);
+        intervalId = setInterval(() => {
+          drawClock(canvas);
+          $melker.engine.render();
+        }, 1000);
+      }
+    }
+
+    export function drawClock(canvas: any) {
+      canvas.clear();
+      const now = new Date();
+      const seconds = now.getSeconds();
+      // Draw clock face and hands...
+      canvas.markDirty();
+    }
+  </script>
+
+  <!-- Ready script runs after first render -->
+  <script type="typescript" async="ready">
+    $app.init();
+  </script>
+
+  <container style="width: 100%; height: 100%; border: thin; padding: 1;">
+    <text style="font-weight: bold; margin-bottom: 1;">Clock</text>
+    <canvas id="clockCanvas" width="60" height="20" />
+    <button title="Exit" onClick="$melker.exit()" />
+  </container>
+</melker>
+```
+
+**Note:** Functions called from `async="ready"` scripts must be exported to be accessible via `$app.*`.
+
 ## Async Data Loading
 
 Apps that access network, files, or system commands should declare a `<policy>` section.

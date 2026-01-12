@@ -419,8 +419,8 @@ function startTimerUpdate() {
   }, 1000);
 }
 
-// Initialize app when mounted
-$melker.engine.onMount(() => {
+// Initialize app (called on ready)
+export function init() {
   $melker.logger?.info('Procrastinate Pro application started', {
     action: 'app_start',
     timestamp: new Date().toISOString(),
@@ -442,8 +442,12 @@ $melker.engine.onMount(() => {
     features: ['draft_creation', 'snoozing', 'giving_up', 'timer_updates'],
     initialDrafts: drafts.length
   }, 'ProcrastinateApp');
-});
+}
 
+  </script>
+
+  <script type="typescript" async="ready">
+    $app.init();
   </script>
 
   <container style="border: thin; border-color: magenta; width: fill; height: fill; display: flex; flex-direction: column; background-color: blue; color: white;">

@@ -97,7 +97,7 @@
     }
 
     // Draw rainbow gradient on a canvas
-    function drawRainbow(canvas: any) {
+    export function drawRainbow(canvas: any) {
       const pixelWidth = canvas.getBufferWidth();
       const pixelHeight = canvas.getBufferHeight();
 
@@ -113,7 +113,7 @@
     }
 
     // Draw B&W gradient on a canvas
-    function drawBWGradient(canvas: any) {
+    export function drawBWGradient(canvas: any) {
       const pixelWidth = canvas.getBufferWidth();
       const pixelHeight = canvas.getBufferHeight();
 
@@ -128,35 +128,36 @@
     }
 
     // Canvas IDs
-    const rainbowCanvases = [
+    export const rainbowCanvases = [
       'rainbow-none', 'rainbow-sierra-1', 'rainbow-sierra-2',
       'rainbow-floyd-1', 'rainbow-floyd-2', 'rainbow-ordered-2'
     ];
 
-    const bwCanvases = [
+    export const bwCanvases = [
       'bw-none', 'bw-sierra-1', 'bw-sierra-2',
       'bw-floyd-1', 'bw-floyd-2', 'bw-ordered-2'
     ];
 
+  </script>
+
+  <script type="typescript" async="ready">
     // Draw gradients after mount (when elements are ready)
-    $melker.engine.onMount(() => {
-      for (const id of rainbowCanvases) {
-        const canvas = $melker.getElementById(id);
-        if (canvas) {
-          drawRainbow(canvas);
-          canvas.markDirty();
-        }
+    for (const id of $app.rainbowCanvases) {
+      const canvas = $melker.getElementById(id);
+      if (canvas) {
+        $app.drawRainbow(canvas);
+        canvas.markDirty();
       }
+    }
 
-      for (const id of bwCanvases) {
-        const canvas = $melker.getElementById(id);
-        if (canvas) {
-          drawBWGradient(canvas);
-          canvas.markDirty();
-        }
+    for (const id of $app.bwCanvases) {
+      const canvas = $melker.getElementById(id);
+      if (canvas) {
+        $app.drawBWGradient(canvas);
+        canvas.markDirty();
       }
+    }
 
-      $melker.engine.render();
-    });
+    $melker.engine.render();
   </script>
 </melker>

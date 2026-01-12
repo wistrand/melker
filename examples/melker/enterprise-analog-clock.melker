@@ -427,8 +427,17 @@
       }
     });
 
-    // Initialize application on mount
-    $melker.engine.onMount(() => {
+    // Cleanup on exit
+    function cleanup(): void {
+      stopClock();
+      console.log('Enterprise Analog Clock stopped gracefully');
+    }
+
+    // Export cleanup for potential external use
+    (globalThis as any).cleanupClock = cleanup;
+
+    // Initialize application (called on ready)
+    export function init(): void {
       try {
         canvas = $melker.getElementById('clockCanvas');
         if (canvas) {
@@ -453,19 +462,14 @@
           startClock();
         }
       } catch (error) {
-        logError(error instanceof Error ? error.message : String(error), 'onMount');
+        logError(error instanceof Error ? error.message : String(error), 'init');
       }
-    });
-
-    // Cleanup on exit
-    function cleanup(): void {
-      stopClock();
-      console.log('Enterprise Analog Clock stopped gracefully');
     }
 
-    // Export cleanup for potential external use
-    (globalThis as any).cleanupClock = cleanup;
+  </script>
 
+  <script type="typescript" async="ready">
+    $app.init();
   </script>
 
   <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; background-color: black; color: white;">

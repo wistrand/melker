@@ -22,7 +22,7 @@
     };
 
     // Load and display an image on the canvas
-    const loadAndDisplayImage = async (canvas: any, imagePath: string): Promise<void> => {
+    export const loadAndDisplayImage = async (canvas: any, imagePath: string): Promise<void> => {
       try {
         await canvas.loadImage(imagePath);
         // Draw overlay on top of the image
@@ -59,39 +59,40 @@
       $melker.engine.render();
     });
 
+  </script>
+
+  <script type="typescript" async="ready">
     // Initial load on mount
-    $melker.engine.onMount(async () => {
-      const canvas = $melker.getElementById('imageCanvas');
-      const status = $melker.getElementById('statusText');
+    const canvas = $melker.getElementById('imageCanvas');
+    const status = $melker.getElementById('statusText');
 
-      if (canvas) {
-        // Calculate initial canvas size based on current terminal size
-        const terminalSize = $melker.engine.getTerminalSize();
-        const canvasWidth = Math.max(20, terminalSize.width - 4);
-        const canvasHeight = Math.max(10, terminalSize.height - 8);
+    if (canvas) {
+      // Calculate initial canvas size based on current terminal size
+      const terminalSize = $melker.engine.getTerminalSize();
+      const canvasWidth = Math.max(20, terminalSize.width - 4);
+      const canvasHeight = Math.max(10, terminalSize.height - 8);
 
-        // Resize the canvas to fit
-        canvas.setSize(canvasWidth, canvasHeight);
+      // Resize the canvas to fit
+      canvas.setSize(canvasWidth, canvasHeight);
 
-        // Get the image path from props or use default
-        const imagePath = canvas.props.src || 'examples/melker/test_image.png';
+      // Get the image path from props or use default
+      const imagePath = canvas.props.src || 'examples/melker/test_image.png';
 
-        if (status) {
-          status.props.text = 'Loading: ' + imagePath;
-          $melker.engine.render();
-        }
-
-        // Load the image
-        await loadAndDisplayImage(canvas, imagePath);
-
-        if (status && canvas.hasImage()) {
-          const imgSize = canvas.getImageSize();
-          status.props.text = 'Image ' + imgSize.width + 'x' + imgSize.height + ' with overlay - Resize to rescale';
-        }
-
+      if (status) {
+        status.props.text = 'Loading: ' + imagePath;
         $melker.engine.render();
       }
-    });
+
+      // Load the image
+      await $app.loadAndDisplayImage(canvas, imagePath);
+
+      if (status && canvas.hasImage()) {
+        const imgSize = canvas.getImageSize();
+        status.props.text = 'Image ' + imgSize.width + 'x' + imgSize.height + ' with overlay - Resize to rescale';
+      }
+
+      $melker.engine.render();
+    }
   </script>
 
   <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">

@@ -26,6 +26,7 @@ Cross-platform data sources:
 // Type definitions
 interface Process {
   pid: number;
+  ppid: number;
   user: string;
   state: string;
   cpu: number;
@@ -34,6 +35,9 @@ interface Process {
   rss: number;
   time: number;
   command: string;
+  // Tree view fields (computed)
+  depth?: number;
+  treePrefix?: string;
 }
 
 interface CpuCore {
@@ -77,10 +81,12 @@ interface State {
   prevTotalCpuTime: number;
   prevProcCpuTimes: Record<number, number>;
   selectedProcess: Process | null;
+  treeView: boolean;
 }
 
 interface RowActivateEvent {
   rowIndex: number;
+  row: (string | number)[];
 }
 
 // Platform detection
@@ -101,6 +107,7 @@ const state: State = {
   prevTotalCpuTime: 0,
   prevProcCpuTimes: {},
   selectedProcess: null,
+  treeView: false,
 };
 
 // Parse /proc/stat for CPU usage (Linux)
@@ -395,6 +402,8 @@ async function getProcessesLinux(): Promise<Process[]> {
         const comm = statMatch[1];
         const procState = statMatch[2];
         const statParts = stat.split(")")[1].trim().split(/\s+/);
+        // statParts[0] = state, [1] = ppid, ..., [11] = utime, [12] = stime
+        const ppid = parseInt(statParts[1]) || 0;
         const utime = parseInt(statParts[11]) || 0;
         const stime = parseInt(statParts[12]) || 0;
         const procTime = utime + stime;
@@ -427,6 +436,7 @@ async function getProcessesLinux(): Promise<Process[]> {
 
         procs.push({
           pid: pid,
+          ppid: ppid,
           user: uid.substring(0, 8),
           state: procState,
           cpu: Math.min(100, Math.max(0, cpuPercent)),
@@ -454,9 +464,9 @@ async function getProcessesMacOS(): Promise<Process[]> {
 
   try {
     // Use ps with specific format for predictable parsing
-    // USER PID %CPU %MEM VSZ RSS STAT TIME COMMAND
+    // USER PID PPID %CPU %MEM VSZ RSS STAT TIME COMMAND
     const cmd = new Deno.Command("ps", {
-      args: ["-axo", "user=,pid=,pcpu=,pmem=,vsz=,rss=,state=,time=,comm="]
+      args: ["-axo", "user=,pid=,ppid=,pcpu=,pmem=,vsz=,rss=,state=,time=,comm="]
     });
     const result = await cmd.output();
     const output = new TextDecoder().decode(result.stdout);
@@ -465,17 +475,18 @@ async function getProcessesMacOS(): Promise<Process[]> {
     for (const line of lines) {
       // Parse fixed-width columns
       const parts = line.trim().split(/\s+/);
-      if (parts.length < 9) continue;
+      if (parts.length < 10) continue;
 
       const user = parts[0];
       const pid = parseInt(parts[1]);
-      const cpu = parseFloat(parts[2]) || 0;
-      const mem = parseFloat(parts[3]) || 0;
-      const vsz = (parseInt(parts[4]) || 0) * 1024; // VSZ is in KB
-      const rss = (parseInt(parts[5]) || 0) * 1024; // RSS is in KB
-      const procState = parts[6].charAt(0); // First char of state
-      const timeStr = parts[7];
-      const command = parts.slice(8).join(" ");
+      const ppid = parseInt(parts[2]) || 0;
+      const cpu = parseFloat(parts[3]) || 0;
+      const mem = parseFloat(parts[4]) || 0;
+      const vsz = (parseInt(parts[5]) || 0) * 1024; // VSZ is in KB
+      const rss = (parseInt(parts[6]) || 0) * 1024; // RSS is in KB
+      const procState = parts[7].charAt(0); // First char of state
+      const timeStr = parts[8];
+      const command = parts.slice(9).join(" ");
 
       if (isNaN(pid)) continue;
 
@@ -497,6 +508,7 @@ async function getProcessesMacOS(): Promise<Process[]> {
 
       procs.push({
         pid: pid,
+        ppid: ppid,
         user: user.substring(0, 8),
         state: mappedState,
         cpu: Math.min(100, Math.max(0, cpu)),
@@ -519,6 +531,85 @@ async function getProcesses(): Promise<Process[]> {
     return getProcessesMacOS();
   }
   return getProcessesLinux();
+}
+
+// Build process tree and return processes in tree order with depth/prefix
+function buildProcessTree(processes: Process[]): Process[] {
+  // Build PID lookup and children map
+  const pidSet = new Set<number>();
+  const childrenMap = new Map<number, Process[]>();
+
+  for (const proc of processes) {
+    pidSet.add(proc.pid);
+  }
+
+  for (const proc of processes) {
+    const parent = proc.ppid;
+    if (!childrenMap.has(parent)) {
+      childrenMap.set(parent, []);
+    }
+    childrenMap.get(parent)!.push(proc);
+  }
+
+  // Find root processes (ppid=0 or ppid not in our process list)
+  const roots: Process[] = [];
+  for (const proc of processes) {
+    if (proc.ppid === 0 || !pidSet.has(proc.ppid)) {
+      roots.push(proc);
+    }
+  }
+
+  // Sort roots by PID for consistent ordering
+  roots.sort((a, b) => a.pid - b.pid);
+
+  // DFS traversal to build tree-ordered list
+  const result: Process[] = [];
+
+  function traverse(proc: Process, depth: number, prefix: string, isLast: boolean): void {
+    // Clone process and add tree info
+    const treeProc = { ...proc };
+    treeProc.depth = depth;
+
+    if (depth === 0) {
+      treeProc.treePrefix = "";
+    } else {
+      treeProc.treePrefix = prefix + (isLast ? "└─" : "├─");
+    }
+
+    result.push(treeProc);
+
+    // Get and sort children
+    const children = childrenMap.get(proc.pid) || [];
+    children.sort((a, b) => a.pid - b.pid);
+
+    // Calculate prefix for children
+    const childPrefix = depth === 0 ? "" : prefix + (isLast ? "  " : "│ ");
+
+    for (let i = 0; i < children.length; i++) {
+      traverse(children[i], depth + 1, childPrefix, i === children.length - 1);
+    }
+  }
+
+  for (let i = 0; i < roots.length; i++) {
+    traverse(roots[i], 0, "", i === roots.length - 1);
+  }
+
+  return result;
+}
+
+// Set tree view state
+export function setTreeView(enabled: boolean): void {
+  state.treeView = enabled;
+  // When enabling tree view, clear sorting so tree order is preserved
+  if (enabled) {
+    const procTable = $melker.getElementById("procTable");
+    if (procTable) {
+      procTable.props.sortColumn = undefined;
+      procTable.props.sortDirection = undefined;
+    }
+  }
+  updateUI();
+  $melker.render();
 }
 
 // Format bytes
@@ -567,8 +658,9 @@ export async function killProcess(): Promise<void> {
 
 // Handle row double-click - show process details dialog
 export function showProcessDetails(event: RowActivateEvent): void {
-  // data-table gives us rowIndex directly
-  state.selectedProcess = state.processes[event.rowIndex];
+  // Look up process by PID from row data (first column)
+  const pid = typeof event.row[0] === 'number' ? event.row[0] : parseInt(String(event.row[0]));
+  state.selectedProcess = state.processes.find(p => p.pid === pid) || null;
   if (state.selectedProcess) {
     const dialog = $melker.getElementById("processDialog");
     if (dialog) {
@@ -581,6 +673,7 @@ export function showProcessDetails(event: RowActivateEvent): void {
           "| Property | Value |\n" +
           "|----------|-------|\n" +
           "| **PID** | " + state.selectedProcess.pid + " |\n" +
+          "| **PPID** | " + state.selectedProcess.ppid + " |\n" +
           "| **User** | " + state.selectedProcess.user + " |\n" +
           "| **State** | " + stateName + " |\n" +
           "| **CPU** | " + state.selectedProcess.cpu.toFixed(1) + "% |\n" +
@@ -690,7 +783,15 @@ function updateUI(): void {
   // Process table - update rows data
   const procTable = $melker.getElementById("procTable");
   if (procTable) {
-    procTable.props.rows = state.processes.map(function(proc) {
+    // Apply tree view if enabled
+    const displayProcs = state.treeView ? buildProcessTree(state.processes) : state.processes;
+
+    procTable.props.rows = displayProcs.map(function(proc) {
+      // Prepend tree prefix to command when in tree view
+      const commandDisplay = state.treeView && proc.treePrefix
+        ? proc.treePrefix + proc.command
+        : proc.command;
+
       return [
         proc.pid,
         proc.user,
@@ -699,9 +800,15 @@ function updateUI(): void {
         proc.mem.toFixed(1),
         fmtB(proc.rss),
         fmtT(proc.time),
-        proc.command
+        commandDisplay
       ];
     });
+  }
+
+  // Sync tree checkbox state
+  const treeChk = $melker.getElementById("treeChk");
+  if (treeChk) {
+    treeChk.props.checked = state.treeView;
   }
 }
 
@@ -738,7 +845,7 @@ export async function init() {
 .row { display: flex; flex-direction: row; }
 .meters { display: flex; flex-direction: column; width: 50%; }
 .info { display: flex; flex-direction: column; width: 50%; white-space: pre; }
-.footer { display: flex; flex-direction: row; background: white; color: black; }
+.footer { display: flex; flex-direction: row; flex-shrink: 0; }
 </style>
 
 <container style="display: flex; flex-direction: column; height: 100%; padding: 1">
@@ -777,7 +884,8 @@ export async function init() {
   </data-table>
 
   <container class="footer">
-    <text> Ctrl+C:Quit  Scroll:Mouse wheel  Click header to sort  Double-click row for details</text>
+    <checkbox id="treeChk" title="Tree" onClick="$app.setTreeView(event.target.props.checked)" style="padding-right: 1"/>
+    <text> Ctrl+C:Quit  Scroll:Mouse  Click header:sort  Double-click:details</text>
   </container>
 
   <dialog id="processDialog" title="Process Details" style="width: 80; height: 18;" modal="true" backdrop="false" draggable="true" resizable="true">

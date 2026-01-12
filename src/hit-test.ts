@@ -318,30 +318,37 @@ export class HitTester {
     }
 
     // For scrollable containers with bounds, transform coordinates for children
+    // But ONLY if the click is within the scrollable container's bounds
     let childX = x;
     let childY = y;
+    let isInsideScrollable = true;
 
     if (bounds && isScrollableType(element.type) && element.props.scrollable) {
-      const elementScrollX = (element.props.scrollX as number) || 0;
-      const elementScrollY = (element.props.scrollY as number) || 0;
+      // If click is outside the scrollable container's bounds, don't search its children
+      if (!pointInBounds(x, y, bounds)) {
+        isInsideScrollable = false;
+      } else {
+        const elementScrollX = (element.props.scrollX as number) || 0;
+        const elementScrollY = (element.props.scrollY as number) || 0;
 
-      // Transform screen coordinates to content coordinates by ADDING scroll offset
-      // (rendering subtracts scroll, so hit test must add to invert)
-      childX = x + elementScrollX;
-      childY = y + elementScrollY;
+        // Transform screen coordinates to content coordinates by ADDING scroll offset
+        // (rendering subtracts scroll, so hit test must add to invert)
+        childX = x + elementScrollX;
+        childY = y + elementScrollY;
 
-      // Trace logging for all scrollable containers
-      logger.trace('Hit test with scrollable container', {
-        elementId: element.id || 'unknown',
-        elementScrollX,
-        elementScrollY,
-        mouseX: x,
-        mouseY: y,
-        transformedChildX: childX,
-        transformedChildY: childY,
-        hasScrollX: elementScrollX !== 0,
-        hasScrollY: elementScrollY !== 0,
-      });
+        // Trace logging for all scrollable containers
+        logger.trace('Hit test with scrollable container', {
+          elementId: element.id || 'unknown',
+          elementScrollX,
+          elementScrollY,
+          mouseX: x,
+          mouseY: y,
+          transformedChildX: childX,
+          transformedChildY: childY,
+          hasScrollX: elementScrollX !== 0,
+          hasScrollY: elementScrollY !== 0,
+        });
+      }
     }
 
     // Check if this component captures focus for all its children
@@ -356,7 +363,8 @@ export class HitTester {
 
     // Check children first (they are on top)
     // IMPORTANT: Always check children even if parent has no bounds (anonymous containers)
-    if (element.children) {
+    // BUT skip children of scrollable containers if click is outside their bounds
+    if (element.children && isInsideScrollable) {
       for (const child of element.children) {
         // Use transformed coordinates for children, but keep original accumulated offsets for tracking
         const hitChild = this._hitTestElement(child, childX, childY, scrollOffsetX, scrollOffsetY, tableForChildren);

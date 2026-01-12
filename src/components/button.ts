@@ -5,7 +5,7 @@ import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 
 export interface ButtonProps extends BaseProps {
-  title: string;
+  label?: string;
   variant?: 'default' | 'primary' | 'secondary' | 'plain';
 }
 
@@ -32,23 +32,30 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
   }
 
   /**
+   * Get the button text
+   */
+  private getLabel(): string {
+    return this.props.label || '';
+  }
+
+  /**
    * Render the button to the terminal buffer
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
     // Store bounds for click detection
     this._lastRenderBounds = bounds;
 
-    const { title } = this.props;
-    if (!title) return;
+    const label = this.getLabel();
+    if (!label) return;
 
     // Debug: Check for invalid bounds
     if (isNaN(bounds.x) || isNaN(bounds.y) || isNaN(bounds.width) || isNaN(bounds.height)) {
-      console.error(`Button render error: Invalid bounds for button "${title}":`, {
+      console.error(`Button render error: Invalid bounds for button "${label}":`, {
         bounds,
         buttonId: this.id,
         props: this.props
       });
-      throw new Error(`Invalid bounds for button "${title}": x=${bounds.x}, y=${bounds.y}, width=${bounds.width}, height=${bounds.height}`);
+      throw new Error(`Invalid bounds for button "${label}": x=${bounds.x}, y=${bounds.y}, width=${bounds.width}, height=${bounds.height}`);
     }
 
     // Check if this button is focused or hovered
@@ -66,7 +73,7 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
 
     if (hasBorder || isPlain) {
       // If button has a border or is plain, render without brackets
-      displayText = title;
+      displayText = label;
       if (isFocused) {
         if (isPlain) {
           // For plain buttons, show focus with background or bold
@@ -110,7 +117,7 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
       // Truncate if needed
       const maxTextLength = contentBounds.width;
       if (displayText.length > maxTextLength) {
-        displayText = title.substring(0, maxTextLength);
+        displayText = label.substring(0, maxTextLength);
       }
 
       // Calculate vertical position based on vertical-align
@@ -161,12 +168,12 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
 
       const contentWidth = bounds.width - paddingLeft - paddingRight;
       const maxTextLength = contentWidth;
-      let truncatedLabel = title;
+      let truncatedLabel = label;
 
       // Account for "[ " and " ]" (4 characters)
-      if (title.length + 4 > maxTextLength) {
+      if (label.length + 4 > maxTextLength) {
         const innerMaxLength = Math.max(1, maxTextLength - 4);
-        truncatedLabel = title.substring(0, innerMaxLength);
+        truncatedLabel = label.substring(0, innerMaxLength);
       }
 
       // Calculate horizontal position based on text-align for bracket style
@@ -222,7 +229,8 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
    * Note: Returns content size WITHOUT borders (layout engine adds borders separately)
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
-    const { title, variant } = this.props;
+    const { variant } = this.props;
+    const label = this.getLabel();
     const style$ = this.props.style;
 
     // Check for any border (matches render logic)
@@ -231,14 +239,14 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
 
     let width = 0;
 
-    if (title) {
-      const labelLength = title.length;
+    if (label) {
+      const labelLength = label.length;
 
       if (hasBorder || isPlain) {
         // Content size is just the text width (borders added by layout engine)
         width = labelLength;
       } else {
-        // Default button style adds "[ ]" around title (these are content, not borders)
+        // Default button style adds "[ ]" around label (these are content, not borders)
         width = labelLength + 4; // "[ " + label + " ]"
       }
     } else {
@@ -298,7 +306,7 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
   }
 
   static validate(props: ButtonProps): boolean {
-    if (typeof props.title !== 'string' || props.title.length === 0) {
+    if (typeof props.label !== 'string' || props.label.length === 0) {
       return false;
     }
     if (props.variant !== undefined && !['default', 'primary', 'secondary', 'plain'].includes(props.variant)) {
@@ -314,7 +322,7 @@ import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 export const buttonSchema: ComponentSchema = {
   description: 'Clickable button with keyboard and mouse support',
   props: {
-    title: { type: 'string', required: true, description: 'Button label text' },
+    label: { type: 'string', description: 'Button label text' },
     variant: { type: 'string', enum: ['default', 'primary', 'secondary', 'plain'], description: 'Visual style variant' },
   },
 };

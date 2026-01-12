@@ -101,17 +101,17 @@
 
     <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
       <button
-        title="Clock Running"
+        label="Clock Running"
         style="background-color: blue; color: white; padding: 1;"
         onClick="
           // Clock is already running, this is just a status indicator
-          // event.target.props.title = '🕐 Auto-started on load';
+          // event.target.props.label = 'Auto-started on load';
           $melker.engine.render();
         "
       />
 
       <button
-        title="Exit"
+        label="Exit"
         style="background-color: gray; color: white; padding: 1;"
         onClick="$melker.exit();"
       />

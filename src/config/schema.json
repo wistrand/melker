@@ -180,6 +180,15 @@
       "flag": "--lint",
       "description": "Enable lint validation"
     },
+    "script.consoleOverride": {
+      "type": "boolean",
+      "default": true,
+      "env": "MELKER_NO_CONSOLE_OVERRIDE",
+      "envInverted": true,
+      "flag": "--no-console-override",
+      "flagInverted": true,
+      "description": "Disable console.log redirect to logger"
+    },
     "oauth.clientId": {
       "type": "string",
       "default": "melker-client",

@@ -109,13 +109,13 @@ The selected color is displayed in three formats:
         const textColor = luminance > 0.5 ? 'black' : 'white';
         const previewText = $melker.getElementById('preview-text');
         if (previewText) {
-          previewText.props.text = hex;
+          previewText.setValue(hex);
           previewText.props.style.color = textColor;
         }
       }
-      if (hexValue) hexValue.props.text = hex;
-      if (rgbValue) rgbValue.props.text = 'rgb(' + r + ', ' + g + ', ' + b + ')';
-      if (hslValue) hslValue.props.text = 'hsl(' + selectedHue + ', ' + selectedSat + '%, ' + selectedLight + '%)';
+      if (hexValue) hexValue.setValue(hex);
+      if (rgbValue) rgbValue.setValue('rgb(' + r + ', ' + g + ', ' + b + ')');
+      if (hslValue) hslValue.setValue('hsl(' + selectedHue + ', ' + selectedSat + '%, ' + selectedLight + '%)');
     }
 
     export function paintHueSatPalette(event: any) {
@@ -263,12 +263,12 @@ The selected color is displayed in three formats:
           <text id="hsl-value">hsl(0, 100%, 50%)</text>
         </container>
 
-        <button title="Copy Hex" onClick="
+        <button label="Copy Hex" onClick="
           const hex = $melker.getElementById('hex-value');
           if (hex) {
-            const success = await $melker.copyToClipboard(hex.props.text);
+            const success = await $melker.copyToClipboard(hex.getValue());
             if (success) {
-              alert('Copied: ' + hex.props.text);
+              alert('Copied: ' + hex.getValue());
             } else {
               alert('Failed to copy (no clipboard tool available)');
             }

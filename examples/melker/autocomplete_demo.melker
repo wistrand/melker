@@ -40,11 +40,11 @@
     export function selectUser(event: { value: string; freeform?: boolean }) {
       const resultEl = $melker.getElementById('result');
       if (event.freeform) {
-        resultEl.props.text = 'Selected: ' + event.value + ' (custom entry)';
+        resultEl.setValue('Selected: ' + event.value + ' (custom entry)');
       } else {
         const user = allUsers.find(u => u.value === event.value);
         if (user) {
-          resultEl.props.text = 'Selected: ' + user.label + ' - ' + user.email;
+          resultEl.setValue('Selected: ' + user.label + ' - ' + user.email);
         }
       }
     }

@@ -14,13 +14,13 @@
   <container style="display: flex; flex-direction: row; margin-bottom: 2; ">
     <button
       id="decrementBtn"
-      title="-"
+      label="-"
       style="flex: 1; border: thin; vertical-align: center; text-align: center;"
       onClick="
         const counterEl = $melker.getElementById('counter');
         if (counterEl) {
-          const currentValue = parseInt(counterEl.props.text) || 0;
-          counterEl.props.text = String(currentValue - 1);
+          const currentValue = parseInt(counterEl.getValue()) || 0;
+          counterEl.setValue(String(currentValue - 1));
         }
       "
     />
@@ -31,13 +31,13 @@
 
     <button
       id="incrementBtn"
-      title="+"
+      label="+"
       style="flex: 1; border: thin; vertical-align: center; text-align: center;"
       onClick="
         const counterEl = $melker.getElementById('counter');
         if (counterEl) {
-          const currentValue = parseInt(counterEl.props.text) || 0;
-          counterEl.props.text = String(currentValue + 1);
+          const currentValue = parseInt(counterEl.getValue()) || 0;
+          counterEl.setValue(String(currentValue + 1));
         }
       "
     />
@@ -45,12 +45,12 @@
 
   <button
     id="resetBtn"
-    title="Reset to 0"
+    label="Reset to 0"
     style="border: thin; height: 3;"
     onClick="
       const counterEl = $melker.getElementById('counter');
       if (counterEl) {
-        counterEl.props.text = '0';
+        counterEl.setValue('0');
       }
     "
   />

@@ -15,7 +15,6 @@ import {
 import type { DualBuffer, Cell } from '../../buffer.ts';
 import type { KeyPressEvent } from '../../events.ts';
 import type { ClickEvent } from '../../types.ts';
-import { createChangeEvent } from '../../events.ts';
 import { getThemeColor } from '../../theme.ts';
 import { registerComponent } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
@@ -43,7 +42,7 @@ export interface ComboboxProps extends FilterableListCoreProps {
  *
  * Usage:
  * ```xml
- * <combobox placeholder="Select country..." onSelect="$app.setCountry(event.value)">
+ * <combobox placeholder="Select country..." onChange="$app.setCountry(event.value)">
  *   <option value="us">United States</option>
  *   <option value="uk">United Kingdom</option>
  *   <group label="Europe">
@@ -667,9 +666,13 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
       this._cursorPosition = cursor;
       this.setFilterValue(value);
 
-      // Trigger onChange for the input
-      if (this.props.onChange) {
-        this.props.onChange(createChangeEvent(value, this.id));
+      // Trigger onFilterChange for the input text change
+      if (this.props.onFilterChange) {
+        this.props.onFilterChange({
+          type: 'filterChange',
+          value: value,
+          targetId: this.id,
+        });
       }
     }
 
@@ -764,15 +767,18 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
     this.props.value = value;
     this.props.selectedValue = value;
 
-    // Fire onSelect with the freeform value
+    // Fire onChange/onSelect with the freeform value
+    const event: OptionSelectEvent = {
+      type: 'select',
+      value: value,
+      label: value,
+      freeform: true,
+      targetId: this.id,
+    };
+    if (this.props.onChange) {
+      this.props.onChange(event);
+    }
     if (this.props.onSelect) {
-      const event: OptionSelectEvent = {
-        type: 'select',
-        value: value,
-        label: value,
-        freeform: true,
-        targetId: this.id,
-      };
       this.props.onSelect(event);
     }
 
@@ -830,7 +836,8 @@ export const comboboxSchema: ComponentSchema = {
     allowFreeText: { type: 'boolean', description: 'Allow submitting values not in list' },
     dropdownWidth: { type: 'number', description: 'Override dropdown width' },
     showClearButton: { type: 'boolean', description: 'Show clear button' },
-    onSelect: { type: 'function', description: 'Called when option is selected' },
+    onChange: { type: 'handler', description: 'Called when option is selected (preferred). Event: { value, label, option?, freeform?, targetId }' },
+    onSelect: { type: 'handler', description: 'Called when option is selected (deprecated: use onChange)' },
     onFilterChange: { type: 'function', description: 'Called when filter text changes' },
     onOpenChange: { type: 'function', description: 'Called when dropdown opens/closes' },
   },

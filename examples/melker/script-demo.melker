@@ -40,10 +40,10 @@
           const validation = $app.validateName(event.value);
 
           if (validation) {
-            statusEl.props.text = 'Status: ' + validation;
+            statusEl.setValue('Status: ' + validation);
             statusEl.props.style = { ...statusEl.props.style, color: 'red' };
           } else {
-            statusEl.props.text = 'Status: Valid name - ' + $app.getCurrentTime();
+            statusEl.setValue('Status: Valid name - ' + $app.getCurrentTime());
             statusEl.props.style = { ...statusEl.props.style, color: 'green' };
           }
           $melker.render();
@@ -53,19 +53,19 @@
 
     <container style="display: flex; flex-direction: row; margin-bottom: 2;">
       <button
-        title="Greet with Script"
+        label="Greet with Script"
         style="margin-right: 2; background-color: green; color: white;"
         onClick="
           const nameEl = $melker.getElementById('nameInput');
           const outputEl = $melker.getElementById('output');
-          const name = nameEl ? nameEl.props.value || 'World' : 'World';
+          const name = nameEl ? nameEl.getValue() || 'World' : 'World';
 
           const validation = $app.validateName(name);
           if (validation) {
-            outputEl.props.text = '❌ ' + validation;
+            outputEl.setValue('X ' + validation);
             outputEl.props.style = { ...outputEl.props.style, color: 'red' };
           } else {
-            outputEl.props.text = $app.formatMessage(name);
+            outputEl.setValue($app.formatMessage(name));
             outputEl.props.style = { ...outputEl.props.style, color: 'green' };
           }
           $melker.render();
@@ -73,18 +73,18 @@
       />
 
       <button
-        title="Show Time"
+        label="Show Time"
         style="margin-right: 2; background-color: blue; color: white;"
         onClick="
           const outputEl = $melker.getElementById('output');
-          outputEl.props.text = '⏰ Current time: ' + $app.getCurrentTime();
+          outputEl.setValue('Current time: ' + $app.getCurrentTime());
           outputEl.props.style = { ...outputEl.props.style, color: 'blue' };
           $melker.render();
         "
       />
 
       <button
-        title="Exit"
+        label="Exit"
         style="background-color: gray; color: white;"
         onClick="$melker.exit();"
       />

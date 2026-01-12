@@ -8,9 +8,9 @@
   <container style="margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">1. Default Flex (Column Direction - NEW DEFAULT)</text>
     <container style="display: flex; height: 8; border: thin; border-color: cyan; padding: 1; gap: 1;">
-      <button title="Item 1" style="background-color: red; color: white;" />
-      <button title="Item 2" style="background-color: yellow; color: black;" />
-      <button title="Item 3" style="background-color: green; color: black;" />
+      <button label="Item 1" style="background-color: red; color: white;" />
+      <button label="Item 2" style="background-color: yellow; color: black;" />
+      <button label="Item 3" style="background-color: green; color: black;" />
     </container>
   </container>
 
@@ -18,9 +18,9 @@
   <container style="margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">2. Row Direction (Horizontal)</text>
     <container style="display: flex; flex-direction: row; height: 3; border: thin; border-color: cyan; padding: 1; gap: 1; height: 8">
-      <button title="Left" style="background-color: red; flex: 1;" />
-      <button title="Center" style="background-color: yellow; flex: 2;" />
-      <button title="Right" style="background-color: green; flex: 1;" />
+      <button label="Left" style="background-color: red; flex: 1;" />
+      <button label="Center" style="background-color: yellow; flex: 2;" />
+      <button label="Right" style="background-color: green; flex: 1;" />
     </container>
   </container>
 
@@ -41,25 +41,25 @@
     <!-- Space Between -->
     <text style="color: gray; padding-left: 2;">space-between:</text>
     <container style="display: flex; flex-direction: row; justify-content: space-between; height: 3; border: thin; border-color: gray; padding: 1;">
-      <button title="A" style="background-color: red; width: 8;" />
-      <button title="B" style="background-color: yellow; width: 8;" />
-      <button title="C" style="background-color: green; width: 8;" />
+      <button label="A" style="background-color: red; width: 8;" />
+      <button label="B" style="background-color: yellow; width: 8;" />
+      <button label="C" style="background-color: green; width: 8;" />
     </container>
 
     <!-- Center -->
     <text style="color: gray; padding-left: 2; margin-top: 1;">center:</text>
     <container style="display: flex; flex-direction: row; justify-content: center; height: 3; border: thin; border-color: gray; padding: 1; gap: 1;">
-      <button title="A" style="background-color: red; width: 8;" />
-      <button title="B" style="background-color: yellow; width: 8;" />
-      <button title="C" style="background-color: green; width: 8;" />
+      <button label="A" style="background-color: red; width: 8;" />
+      <button label="B" style="background-color: yellow; width: 8;" />
+      <button label="C" style="background-color: green; width: 8;" />
     </container>
 
     <!-- Space Around -->
     <text style="color: gray; padding-left: 2; margin-top: 1;">space-around:</text>
     <container style="display: flex; flex-direction: row; justify-content: space-around; height: 3; border: thin; border-color: gray; padding: 1;">
-      <button title="A" style="background-color: red; width: 8;" />
-      <button title="B" style="background-color: yellow; width: 8;" />
-      <button title="C" style="background-color: green; width: 8;" />
+      <button label="A" style="background-color: red; width: 8;" />
+      <button label="B" style="background-color: yellow; width: 8;" />
+      <button label="C" style="background-color: green; width: 8;" />
     </container>
   </container>
 
@@ -83,12 +83,12 @@
   <container style="margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">6. Flex Wrap (Multiple Lines)</text>
     <container style="display: flex; flex-direction: row; flex-wrap: wrap; height: 8; border: thin; border-color: cyan; padding: 1; gap: 1;">
-      <button title="Item 1" style="background-color: red; width: 20; height: 3;" />
-      <button title="Item 2" style="background-color: yellow; width: 20; height: 3;" />
-      <button title="Item 3" style="background-color: green; width: 20; height: 3;" />
-      <button title="Item 4" style="background-color: blue; width: 20; height: 3;" />
-      <button title="Item 5" style="background-color: magenta; width: 20; height: 3;" />
-      <button title="Item 6" style="background-color: cyan; width: 20; height: 3;" />
+      <button label="Item 1" style="background-color: red; width: 20; height: 3;" />
+      <button label="Item 2" style="background-color: yellow; width: 20; height: 3;" />
+      <button label="Item 3" style="background-color: green; width: 20; height: 3;" />
+      <button label="Item 4" style="background-color: blue; width: 20; height: 3;" />
+      <button label="Item 5" style="background-color: magenta; width: 20; height: 3;" />
+      <button label="Item 6" style="background-color: cyan; width: 20; height: 3;" />
     </container>
   </container>
 
@@ -129,9 +129,9 @@
   <container style="margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">9. Gap Property (Spacing Between Items)</text>
     <container style="display: flex; flex-direction: row; height: 3; border: thin; border-color: cyan; padding: 1; gap: 3;">
-      <button title="Gap: 3" style="background-color: red; flex: 1;" />
-      <button title="Gap: 3" style="background-color: yellow; flex: 1;" />
-      <button title="Gap: 3" style="background-color: green; flex: 1;" />
+      <button label="Gap: 3" style="background-color: red; flex: 1;" />
+      <button label="Gap: 3" style="background-color: yellow; flex: 1;" />
+      <button label="Gap: 3" style="background-color: green; flex: 1;" />
     </container>
   </container>
 
@@ -141,29 +141,29 @@
     <container style="display: flex; flex-direction: row; height: 5; border: thin; border-color: cyan; padding: 1; gap: 1;">
       <button
         id="flex-button-1"
-        title="Click to grow!"
+        label="Click to grow!"
         style="background-color: red; flex: 1;"
         onClick="
           const btn = $melker.getElementById('flex-button-1');
           const currentFlex = btn.props.style.flex || 1;
           btn.props.style = { ...btn.props.style, flex: currentFlex === 1 ? 3 : 1 };
-          btn.props.title = currentFlex === 1 ? 'Click to shrink!' : 'Click to grow!';
+          btn.props.label = currentFlex === 1 ? 'Click to shrink!' : 'Click to grow!';
           $melker.render();
         "
       />
       <button
-        title="Static"
+        label="Static"
         style="background-color: yellow; flex: 1;"
       />
       <button
         id="flex-button-3"
-        title="Click to grow!"
+        label="Click to grow!"
         style="background-color: green; flex: 1;"
         onClick="
           const btn = $melker.getElementById('flex-button-3');
           const currentFlex = btn.props.style.flex || 1;
           btn.props.style = { ...btn.props.style, flex: currentFlex === 1 ? 3 : 1 };
-          btn.props.title = currentFlex === 1 ? 'Click to shrink!' : 'Click to grow!';
+          btn.props.label = currentFlex === 1 ? 'Click to shrink!' : 'Click to grow!';
           $melker.render();
         "
       />

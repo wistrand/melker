@@ -78,13 +78,13 @@
       const statusEl = $melker.getElementById('status');
       if (!statusEl) return; // Guard for initialization
       if (gameOver) {
-        statusEl.props.text = `GAME OVER - Score: ${score} - Press R to restart`;
+        statusEl.setValue(`GAME OVER - Score: ${score} - Press R to restart`);
       } else if (gameWon) {
-        statusEl.props.text = `YOU WIN! Score: ${score} - Press R to restart`;
+        statusEl.setValue(`YOU WIN! Score: ${score} - Press R to restart`);
       } else if (paused) {
-        statusEl.props.text = `Score: ${score} | Lives: ${lives} | Press SPACE to start`;
+        statusEl.setValue(`Score: ${score} | Lives: ${lives} | Press SPACE to start`);
       } else {
-        statusEl.props.text = `Score: ${score} | Lives: ${lives}`;
+        statusEl.setValue(`Score: ${score} | Lives: ${lives}`);
       }
     }
 

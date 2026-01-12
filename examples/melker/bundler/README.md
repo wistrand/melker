@@ -44,7 +44,7 @@ are available to the other.
 Event handlers are written as inline strings:
 
 ```xml
-<button title="Click" onClick="incrementCounter(); $melker.render()" />
+<button label="Click" onClick="incrementCounter(); $melker.render()" />
 ```
 
 The bundler compiles these into a registry (`__melker.__h0`, `__melker.__h1`, etc.)

@@ -26,7 +26,7 @@ HTML-like table component for Melker with scrollable body, row selection, sortin
     <tr data-id="1">
       <td>1</td>
       <td><text style="font-weight: bold;">Alice</text></td>
-      <td><button title="Edit" onClick="edit(1)" /></td>
+      <td><button label="Edit" onClick="edit(1)" /></td>
     </tr>
     <tr data-id="2">
       <td>2</td>
@@ -382,8 +382,8 @@ interface TableBorderChars extends BorderChars {
         <td>${u.name}</td>
         <td>${u.created}</td>
         <td>
-          <button title="✎" onClick="$app.edit('${u.id}')" />
-          <button title="✕" onClick="$app.delete('${u.id}')" />
+          <button label="✎" onClick="$app.edit('${u.id}')" />
+          <button label="✕" onClick="$app.delete('${u.id}')" />
         </td>
       </tr>
     `).join('')}
@@ -393,7 +393,7 @@ interface TableBorderChars extends BorderChars {
     <tr>
       <td colspan="3">Total: ${users.length} users</td>
       <td>
-        <button title="Add" onClick="$app.addUser()" />
+        <button label="Add" onClick="$app.addUser()" />
       </td>
     </tr>
   </tfoot>

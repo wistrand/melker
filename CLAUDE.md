@@ -174,13 +174,13 @@ tests/                - Test files
 
 ## Critical Rules
 
-1. **Never use `console.log()`** - Use file logging (`logger.debug()`, etc.)
+1. **Console redirects to logger** - `console.log()` redirects to `$melker.logger.info()` (won't break TUI), but prefer explicit `$melker.logger.debug()` etc.
 2. **`alert()` shows a modal dialog** - Works like browser alert but as a TUI dialog (dismiss with OK button or Escape)
-3. **Button uses `title` prop** - Not `label`
+3. **Button uses `label` prop** - Not `title`
 4. **Don't add border to buttons** - Buttons render with `[ ]` brackets by default; adding border creates `[ [ Button ] ]`
 5. **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes
 6. **Input type is `'input'`** - Not `'text-input'`
-7. **Auto-render in .melker handlers** - Event handlers auto-render after completion (return `false` to skip)
+7. **Auto-render in .melker handlers** - Event handlers auto-render after completion (call `$melker.skipRender()` to skip)
 8. **Avoid emojis** - They break terminal layout
 9. **Update component props explicitly** - In .melker files, reactive bindings like `${$app.var}` only work for initial values. To update props dynamically, use `$melker.getElementById('id').props.propName = value`
 
@@ -196,6 +196,7 @@ tests/                - Test files
 | `MELKER_DEBUG_PORT` | Debug server port (implies `net: localhost`) |
 | `MELKER_ALLOW_REMOTE_INPUT` | Allow browser mirror to send mouse/keyboard events (`true` or `1`) |
 | `MELKER_LINT` | Enable lint mode (`true` or `1`) |
+| `MELKER_NO_CONSOLE_OVERRIDE` | Disable console.log redirect to logger (`true` or `1`) |
 | `MELKER_PERSIST` | Enable state persistence (`true` or `1`, default: false) |
 | `MELKER_RETAIN_BUNDLE` | Keep temp bundle files for debugging (`true` or `1`) |
 | `OPENROUTER_API_KEY` | API key for AI assistant (OpenRouter) |
@@ -359,6 +360,7 @@ Melker apps can declare required permissions via an embedded `<policy>` tag. Whe
 | `run` | commands or `["*"]` | `--allow-run` |
 | `env` | variables or `["*"]` | `--allow-env` |
 | `ffi` | libraries or `["*"]` | `--allow-ffi` |
+| `sys` | interfaces or `["*"]` | `--allow-sys` |
 
 ### Permission Shortcuts
 
@@ -454,8 +456,8 @@ Creates `creating-melker-apps.zip` in project root, ready for upload to claude.a
 
 - **Don't add border to buttons** - Buttons render with `[ ]` brackets by default
 - **Avoid specifying colors** - Let the theme engine handle styling
-- **Use `$melker.logger.debug()`** - Not `console.log()` (F12 shows log location)
-- **Button uses `title` prop** - Not `label`
+- **Console redirects to logger** - `console.log()` redirects to `$melker.logger` (F12 shows log location)
+- **Button uses `label` prop** - Not `title`
 
 ## Runtime Keyboard Shortcuts
 

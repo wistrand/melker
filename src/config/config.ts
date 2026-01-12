@@ -333,7 +333,8 @@ export class MelkerConfig {
       if (prop.flag && path in cliFlags) {
         const flagVal = cliFlags[path];
         if (flagVal !== undefined) {
-          this.instance.data[path] = prop.flagInverted ? !flagVal : flagVal;
+          // Note: flagInverted is already handled in parseCliFlags, don't invert again
+          this.instance.data[path] = flagVal;
           this.instance.sources[path] = 'cli';
         }
       }
@@ -795,6 +796,11 @@ export class MelkerConfig {
   // Lint
   get lint(): boolean {
     return this.data['lint'] as boolean;
+  }
+
+  // Script
+  get consoleOverride(): boolean {
+    return this.data['script.consoleOverride'] as boolean;
   }
 
   // OAuth

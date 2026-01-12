@@ -136,7 +136,7 @@
 
     <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
       <button
-        title="Exit"
+        label="Exit"
         style="background-color: gray; color: white; padding: 1;"
         onClick="$melker.exit();"
       />

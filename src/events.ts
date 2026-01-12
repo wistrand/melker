@@ -83,6 +83,8 @@ export interface KeyPressEvent extends BaseEvent {
 export interface ChangeEvent extends BaseEvent {
   type: 'change';
   value: string;
+  // Optional properties for checkbox/radio
+  checked?: boolean;
 }
 
 export interface SelectionChangeEvent extends BaseEvent {

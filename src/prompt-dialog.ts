@@ -84,8 +84,8 @@ export class PromptDialogManager {
               id="prompt-footer"
               style="display: flex; flex-direction: row; justify-content: center; width: fill; gap: 2"
             >
-              <button id="prompt-ok" title="OK" onClick=${onOk} />
-              <button id="prompt-cancel" title="Cancel" onClick=${onCancel} />
+              <button id="prompt-ok" label="OK" onClick=${onOk} />
+              <button id="prompt-cancel" label="Cancel" onClick=${onCancel} />
             </container>
           </container>
         </dialog>

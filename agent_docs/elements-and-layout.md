@@ -235,10 +235,10 @@ For single-line elements (buttons, text, input) without borders, vertical paddin
 **Example:**
 ```xml
 <!-- Button stays 1 line tall, horizontal padding adds 2 chars -->
-<button title="Submit" style="padding: 1;" />
+<button label="Submit" style="padding: 1;" />
 
 <!-- Bordered button respects vertical padding (3 lines) -->
-<button title="Submit" style="padding: 1; border: thin;" />
+<button label="Submit" style="padding: 1; border: thin;" />
 ```
 
 This ensures default `[ ]` style buttons remain single-line while bordered buttons can expand.
@@ -278,27 +278,31 @@ The `<tabs>` component provides a tabbed interface with clickable tab headers.
 ### Usage
 
 ```xml
-<tabs id="settings" activeTab="0">
-  <tab title="General">
+<tabs id="settings">
+  <tab id="general" title="General">
     <text>General settings content</text>
   </tab>
-  <tab title="Advanced">
+  <tab id="advanced" title="Advanced">
     <text>Advanced settings content</text>
   </tab>
-  <tab title="About">
+  <tab id="about" title="About">
     <text>About content</text>
   </tab>
 </tabs>
+
+<!-- To start on a specific tab, use activeTab with the tab's id -->
+<tabs id="settings" activeTab="advanced">...</tabs>
 ```
 
 ### Props
 
 **Tabs container:**
 - `id` - Element identifier
-- `activeTab` - Index of active tab (0-based)
-- `onTabChange` - Handler called when tab changes
+- `activeTab` - ID of active tab (must match a tab's id attribute)
+- `onChange` - Handler called when tab changes (`event.tabId`, `event.index`)
 
 **Tab panel:**
+- `id` - Tab identifier (used for activeTab reference)
 - `title` - Tab header text (required)
 - `disabled` - Disable tab selection
 
@@ -466,7 +470,7 @@ The `<dialog>` component provides modal overlay dialogs.
 ```xml
 <dialog id="settings" title="Settings" open=${true} modal=${true}>
   <text>Dialog content</text>
-  <button title="Close" onClick="dialog.props.open = false" />
+  <button label="Close" onClick="dialog.props.open = false" />
 </dialog>
 ```
 
@@ -522,13 +526,13 @@ See `agent_docs/filterable-list-architecture.md` for implementation details.
 
 ```xml
 <!-- Combobox with text filtering -->
-<combobox placeholder="Select country..." onSelect="$app.setCountry(event.value)">
+<combobox placeholder="Select country..." onChange="$app.setCountry(event.value)">
   <option value="us">United States</option>
   <option value="uk">United Kingdom</option>
 </combobox>
 
 <!-- Simple select dropdown -->
-<select value="medium" onSelect="$app.setSize(event.value)">
+<select value="medium" onChange="$app.setSize(event.value)">
   <option value="small">Small</option>
   <option value="medium">Medium</option>
   <option value="large">Large</option>

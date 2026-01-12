@@ -96,7 +96,7 @@ Create `hello.melker`:
 
   <container style="border: thin; padding: 1;">
     <text style="font-weight: bold; color: cyan;">Hello, Terminal!</text>
-    <button title="Exit" onClick="$melker.exit()" />
+    <button label="Exit" onClick="$melker.exit()" />
   </container>
 </melker>
 ```
@@ -175,7 +175,7 @@ const btn = createElement('button', { title: 'Click', onClick: () => count++ });
 
 **Declarative** - `.melker` files:
 ```html
-<button title="Click" onClick="count++" />
+<button label="Click" onClick="count++" />
 ```
 
 **Literate** - `.melker.md` Markdown with embedded UI:
@@ -184,7 +184,7 @@ const btn = createElement('button', { title: 'Click', onClick: () => count++ });
 
 Documentation and UI in the same file:
 
-<button title="Click" onClick="count++" />
+<button label="Click" onClick="count++" />
 ```
 
 ### 5. Dev Tools
@@ -378,7 +378,7 @@ import { melker, createApp } from './mod.ts';
 const ui = melker`
   <container style=${{ border: 'thin', padding: 2 }}>
     <text>Hello!</text>
-    <button title="OK" onClick=${() => app.exit()} />
+    <button label="OK" onClick=${() => app.exit()} />
   </container>
 `;
 

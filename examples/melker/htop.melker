@@ -669,7 +669,7 @@ export function showProcessDetails(event: RowActivateEvent): void {
       if (content) {
         const stateNames = { R: "Running", S: "Sleeping", D: "Disk Sleep", Z: "Zombie", T: "Stopped", I: "Idle" };
         const stateName = stateNames[state.selectedProcess.state] || state.selectedProcess.state;
-        content.props.text =
+        content.setValue(
           "| Property | Value |\n" +
           "|----------|-------|\n" +
           "| **PID** | " + state.selectedProcess.pid + " |\n" +
@@ -681,7 +681,7 @@ export function showProcessDetails(event: RowActivateEvent): void {
           "| **RSS** | " + fmtB(state.selectedProcess.rss) + " |\n" +
           "| **VSZ** | " + fmtB(state.selectedProcess.vsz) + " |\n" +
           "| **Time** | " + fmtT(state.selectedProcess.time) + " |\n" +
-          "| **Command** | " + state.selectedProcess.command + " |";
+          "| **Command** | " + state.selectedProcess.command + " |");
       }
       dialog.props.open = true;
     }
@@ -777,7 +777,7 @@ function updateUI(): void {
   const infoEl = $melker.getElementById("info");
   if (infoEl) {
     const loadStr = state.loadAvg[0].toFixed(2) + " " + state.loadAvg[1].toFixed(2) + " " + state.loadAvg[2].toFixed(2);
-    infoEl.props.text = "Tasks: " + state.taskCounts.total + ", " + state.taskCounts.running + " running\nLoad: " + loadStr + "\nUptime: " + state.uptime;
+    infoEl.setValue("Tasks: " + state.taskCounts.total + ", " + state.taskCounts.running + " running\nLoad: " + loadStr + "\nUptime: " + state.uptime);
   }
 
   // Process table - update rows data
@@ -786,7 +786,7 @@ function updateUI(): void {
     // Apply tree view if enabled
     const displayProcs = state.treeView ? buildProcessTree(state.processes) : state.processes;
 
-    procTable.props.rows = displayProcs.map(function(proc) {
+    procTable.setValue(displayProcs.map(function(proc) {
       // Prepend tree prefix to command when in tree view
       const commandDisplay = state.treeView && proc.treePrefix
         ? proc.treePrefix + proc.command
@@ -802,7 +802,7 @@ function updateUI(): void {
         fmtT(proc.time),
         commandDisplay
       ];
-    });
+    }));
   }
 
   // Sync tree checkbox state
@@ -884,7 +884,7 @@ export async function init() {
   </data-table>
 
   <container class="footer">
-    <checkbox id="treeChk" title="Tree" onClick="$app.setTreeView(event.target.props.checked)" style="padding-right: 1"/>
+    <checkbox id="treeChk" title="Tree" onChange="$app.setTreeView(event.checked)" style="padding-right: 1"/>
     <text> Ctrl+C:Quit  Scroll:Mouse  Click header:sort  Double-click:details</text>
   </container>
 
@@ -894,8 +894,8 @@ export async function init() {
         <markdown id="dialogContent" style="text-wrap: wrap; width: fill"></markdown>
       </container>
       <container style="display: flex; flex-direction: row; justify-content: center; padding-top: 1; gap: 2">
-        <button title="Kill" onClick="killProcess"></button>
-        <button title="Close" onClick="closeDialog"></button>
+        <button label="Kill" onClick="killProcess"></button>
+        <button label="Close" onClick="closeDialog"></button>
       </container>
     </container>
   </dialog>

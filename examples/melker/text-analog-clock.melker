@@ -68,14 +68,14 @@
       for (let i = 0; i < clockLines.length; i++) {
         const lineElement = $melker.getElementById(`clockLine${i}`);
         if (lineElement) {
-          lineElement.props.text = clockLines[i];
+          lineElement.setValue(clockLines[i]);
         }
       }
 
       // Update digital time
       const timeElement = $melker.getElementById('digitalTime');
       if (timeElement) {
-        timeElement.props.text = now.toLocaleTimeString();
+        timeElement.setValue(now.toLocaleTimeString());
       }
 
       $melker.render();
@@ -114,24 +114,24 @@
 
     <container style="display: flex; flex-direction: row; margin-top: 1; gap: 1;">
       <button
-        title="Start Clock"
+        label="Start Clock"
         style="background-color: green; color: white;"
         onClick="
           const startBtn: any = event.target;
-          startBtn.props.title = 'Running...';
+          startBtn.props.label = 'Running...';
           startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'orange' };
           $app.startClock(context);
         "
       />
 
       <button
-        title="Update Now"
+        label="Update Now"
         style="background-color: blue; color: white;"
         onClick="$app.updateClock(context);"
       />
 
       <button
-        title="Exit"
+        label="Exit"
         style="background-color: gray; color: white;"
         onClick="$melker.exit();"
       />

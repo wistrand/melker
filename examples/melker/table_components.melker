@@ -65,7 +65,7 @@ Demonstrates table cells containing various UI components.
       const total = Object.keys(taskStates).length;
       const statusText = $melker.getElementById('statusText');
       if (statusText) {
-        statusText.props.text = `Tasks: ${completed}/${total} completed`;
+        statusText.setValue(`Tasks: ${completed}/${total} completed`);
       }
     }
 
@@ -101,31 +101,31 @@ Demonstrates table cells containing various UI components.
           <td><checkbox id="task1" checked="true" onChange="$app.toggleTask('task1')" /></td>
           <td>Set up project structure</td>
           <td><text text="High" class="status-active" /></td>
-          <td><button title="View" onClick="$app.viewDetails('Setup')" /></td>
+          <td><button label="View" onClick="$app.viewDetails('Setup')" /></td>
         </tr>
         <tr>
           <td><checkbox id="task2" onChange="$app.toggleTask('task2')" /></td>
           <td>Implement core features</td>
           <td><text text="High" class="status-active" /></td>
-          <td><button title="View" onClick="$app.viewDetails('Core')" /></td>
+          <td><button label="View" onClick="$app.viewDetails('Core')" /></td>
         </tr>
         <tr>
           <td><checkbox id="task3" checked="true" onChange="$app.toggleTask('task3')" /></td>
           <td>Write documentation</td>
           <td><text text="Medium" class="status-pending" /></td>
-          <td><button title="View" onClick="$app.viewDetails('Docs')" /></td>
+          <td><button label="View" onClick="$app.viewDetails('Docs')" /></td>
         </tr>
         <tr>
           <td><checkbox id="task4" onChange="$app.toggleTask('task4')" /></td>
           <td>Add unit tests</td>
           <td><text text="Medium" class="status-pending" /></td>
-          <td><button title="View" onClick="$app.viewDetails('Tests')" /></td>
+          <td><button label="View" onClick="$app.viewDetails('Tests')" /></td>
         </tr>
         <tr>
           <td><checkbox id="task5" onChange="$app.toggleTask('task5')" /></td>
           <td>Deploy to production</td>
           <td><text text="Low" class="status-inactive" /></td>
-          <td><button title="View" onClick="$app.viewDetails('Deploy')" /></td>
+          <td><button label="View" onClick="$app.viewDetails('Deploy')" /></td>
         </tr>
       </tbody>
     </table>
@@ -150,8 +150,8 @@ Demonstrates table cells containing various UI components.
           <td><text text="Active" class="status-active" /></td>
           <td>
             <container style="display: flex; flex-direction: row; gap: 1;">
-              <button title="Edit" onClick="$app.editRow('alice')" />
-              <button title="Del" onClick="$app.deleteRow('alice')" />
+              <button label="Edit" onClick="$app.editRow('alice')" />
+              <button label="Del" onClick="$app.deleteRow('alice')" />
             </container>
           </td>
         </tr>
@@ -161,8 +161,8 @@ Demonstrates table cells containing various UI components.
           <td><text text="Pending" class="status-pending" /></td>
           <td>
             <container style="display: flex; flex-direction: row; gap: 1;">
-              <button title="Edit" onClick="$app.editRow('bob')" />
-              <button title="Del" onClick="$app.deleteRow('bob')" />
+              <button label="Edit" onClick="$app.editRow('bob')" />
+              <button label="Del" onClick="$app.deleteRow('bob')" />
             </container>
           </td>
         </tr>
@@ -172,15 +172,15 @@ Demonstrates table cells containing various UI components.
           <td><text text="Inactive" class="status-inactive" /></td>
           <td>
             <container style="display: flex; flex-direction: row; gap: 1;">
-              <button title="Edit" onClick="$app.editRow('carol')" />
-              <button title="Del" onClick="$app.deleteRow('carol')" />
+              <button label="Edit" onClick="$app.editRow('carol')" />
+              <button label="Del" onClick="$app.deleteRow('carol')" />
             </container>
           </td>
         </tr>
       </tbody>
     </table>
 
-    <button title="Exit" onClick="$melker.exit()" style="margin-top: 2;" />
+    <button label="Exit" onClick="$melker.exit()" style="margin-top: 2;" />
   </container>
 
 </melker>

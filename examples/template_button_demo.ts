@@ -52,23 +52,23 @@ function createButtonDemo() {
 
       <text style=${{ marginBottom: 1 }}>1. Default button sizing (no flex):</text>
       <container style=${rowStyle}>
-        <button title="Button A" tabIndex=${1} />
-        <button title="Button B" tabIndex=${2} />
-        <button title="Button C" tabIndex=${3} />
+        <button label="Button A" tabIndex=${1} />
+        <button label="Button B" tabIndex=${2} />
+        <button label="Button C" tabIndex=${3} />
       </container>
 
       <text style=${{ marginBottom: 1 }}>2. Buttons with flex: 1:</text>
       <container style=${rowStyle}>
-        <button title="Button A" style=${{ flex: 1 }} tabIndex=${4} />
-        <button title="Button B" style=${{ flex: 1 }} tabIndex=${5} />
-        <button title="Button C" style=${{ flex: 1 }} tabIndex=${6} />
+        <button label="Button A" style=${{ flex: 1 }} tabIndex=${4} />
+        <button label="Button B" style=${{ flex: 1 }} tabIndex=${5} />
+        <button label="Button C" style=${{ flex: 1 }} tabIndex=${6} />
       </container>
 
       <text style=${{ marginBottom: 1 }}>3. Different content lengths (no flex):</text>
       <container style=${rowStyle}>
-        <button title="Short" tabIndex=${7} />
-        <button title="Medium Length" tabIndex=${8} />
-        <button title="Very Long Button Text" tabIndex=${9} />
+        <button label="Short" tabIndex=${7} />
+        <button label="Medium Length" tabIndex=${8} />
+        <button label="Very Long Button Text" tabIndex=${9} />
       </container>
 
       <text style=${{ marginTop: 1, color: getThemeColor('success'), fontWeight: 'bold' }}>✅ Buttons now size correctly in flex containers!</text>

@@ -216,7 +216,7 @@ export class AccessibilityDialogManager {
             id="accessibility-footer"
             style="display: flex; flex-direction: row; justify-content: flex-end; width: fill; margin-top: 1"
           >
-            <button id="accessibility-close-btn" title="Close" onClick=${onClose} />
+            <button id="accessibility-close-btn" label="Close" onClick=${onClose} />
           </container>
         </container>
       </dialog>
@@ -290,9 +290,9 @@ export class AccessibilityDialogManager {
               style="flex: 1"
               onKeyPress=${onInputKeyPress}
             />
-            <button id="accessibility-listen-btn" title="Listen" onClick=${onListen} style="" />
-            <button id="accessibility-send-btn" title="Send" onClick=${onSend} style="" />
-            <button id="accessibility-close-btn" title="Close" onClick=${onClose} style="" />
+            <button id="accessibility-listen-btn" label="Listen" onClick=${onListen} style="" />
+            <button id="accessibility-send-btn" label="Send" onClick=${onSend} style="" />
+            <button id="accessibility-close-btn" label="Close" onClick=${onClose} style="" />
           </container>
         </container>
       </dialog>

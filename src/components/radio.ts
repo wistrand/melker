@@ -1,6 +1,6 @@
 // Radio button component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent, ChangeEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 
@@ -9,6 +9,8 @@ export interface RadioProps extends BaseProps {
   value: string | number;
   checked?: boolean;
   name?: string; // Radio group name
+  // onChange inherited from BaseProps - event includes { checked: boolean, value: string }
+  onClick?: (event: ClickEvent) => void; // Deprecated: use onChange instead
 }
 
 export class RadioElement extends Element implements Renderable, Focusable, Clickable, Interactive {
@@ -63,24 +65,40 @@ export class RadioElement extends Element implements Renderable, Focusable, Clic
   }
 
   /**
-   * Get the current checked state
+   * Get the current checked state (standard API)
    */
-  isChecked(): boolean {
+  getValue(): boolean {
     return this.props.checked || false;
   }
 
   /**
+   * Set the checked state (standard API)
+   */
+  setValue(checked: boolean): void {
+    this.props.checked = checked;
+  }
+
+  /**
+   * Get the current checked state
+   * @deprecated Use getValue() instead
+   */
+  isChecked(): boolean {
+    return this.getValue();
+  }
+
+  /**
    * Set the checked state
+   * @deprecated Use setValue() instead
    */
   setChecked(checked: boolean): void {
-    this.props.checked = checked;
+    this.setValue(checked);
   }
 
   /**
    * Toggle the checked state
    */
   toggle(): void {
-    this.props.checked = !this.props.checked;
+    this.setValue(!this.props.checked);
   }
 
   /**
@@ -128,7 +146,21 @@ export class RadioElement extends Element implements Renderable, Focusable, Clic
     // Check this radio
     this.props.checked = true;
 
-    // Call onClick handler if provided
+    // Create change event with checked property
+    const changeEvent: ChangeEvent = {
+      type: 'change',
+      value: String(this.props.value),
+      checked: true,
+      target: this.id,
+      timestamp: Date.now(),
+    };
+
+    // Call onChange handler if provided (preferred)
+    if (typeof this.props.onChange === 'function') {
+      this.props.onChange(changeEvent);
+    }
+
+    // Call onClick handler if provided (backwards compat, deprecated)
     if (typeof this.props.onClick === 'function') {
       this.props.onClick(event);
     }
@@ -170,6 +202,8 @@ export const radioSchema: ComponentSchema = {
     value: { type: ['string', 'number'], required: true, description: 'Value when selected' },
     checked: { type: 'boolean', description: 'Whether this option is selected' },
     name: { type: 'string', description: 'Group name for mutual exclusion' },
+    onChange: { type: 'handler', description: 'Called when selection changes. Event: { checked: boolean, value: string, target }' },
+    onClick: { type: 'handler', description: 'Deprecated: use onChange instead' },
   },
 };
 

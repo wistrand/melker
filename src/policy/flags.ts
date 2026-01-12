@@ -234,6 +234,16 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[
     }
   }
 
+  // System info permissions ("*" means all)
+  // Valid interfaces: hostname, osRelease, osUptime, loadavg, networkInterfaces, systemMemoryInfo, uid, gid
+  if (p.sys && p.sys.length > 0) {
+    if (p.sys.includes('*')) {
+      flags.push('--allow-sys');
+    } else {
+      flags.push(`--allow-sys=${p.sys.join(',')}`);
+    }
+  }
+
   return flags;
 }
 

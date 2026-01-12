@@ -189,8 +189,8 @@ Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/m
 // @melker handler #copy-hex.onClick
 const hex = $melker.getElementById('hex-value');
 if (hex) {
-  $melker.copyToClipboard(hex.props.text);
-  alert('Copied: ' + hex.props.text);
+  $melker.copyToClipboard(hex.getValue());
+  alert('Copied: ' + hex.getValue());
 }
 ```
 
@@ -233,13 +233,13 @@ function updateColorDisplay() {
     const textColor = luminance > 0.5 ? 'black' : 'white';
     const previewText = $melker.getElementById('preview-text');
     if (previewText) {
-      previewText.props.text = hex;
+      previewText.setValue(hex);
       previewText.props.style.color = textColor;
     }
   }
-  if (hexValue) hexValue.props.text = hex;
-  if (rgbValue) rgbValue.props.text = 'rgb(' + r + ', ' + g + ', ' + b + ')';
-  if (hslValue) hslValue.props.text = 'hsl(' + selectedHue + ', ' + selectedSat + '%, ' + selectedLight + '%)';
+  if (hexValue) hexValue.setValue(hex);
+  if (rgbValue) rgbValue.setValue('rgb(' + r + ', ' + g + ', ' + b + ')');
+  if (hslValue) hslValue.setValue('hsl(' + selectedHue + ', ' + selectedSat + '%, ' + selectedLight + '%)');
 }
 
 function paintHueSatPalette(event: any) {

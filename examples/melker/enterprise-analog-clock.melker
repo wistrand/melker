@@ -214,7 +214,7 @@
       const digitalElement = $melker.getElementById('digitalTime');
       if (digitalElement && clockConfig.showDigital) {
         const time = formatDigitalTime(getCurrentTime());
-        digitalElement.props.text = time;
+        digitalElement.setValue(time);
       }
     }
 
@@ -223,7 +223,7 @@
       if (tzElement) {
         const tz = timezones.find(t => t.value === clockConfig.timezone);
         const label = tz ? tz.label : clockConfig.timezone;
-        tzElement.props.text = `Zone: ${label}`;
+        tzElement.setValue(`Zone: ${label}`);
       }
     }
 
@@ -240,7 +240,7 @@
           `Rate: ${clockConfig.refreshRate}ms`
         ].join(' | ');
 
-        statsElement.props.text = stats;
+        statsElement.setValue(stats);
       }
     }
 
@@ -267,7 +267,7 @@
       // Update start button
       const startBtn = $melker.getElementById('startBtn');
       if (startBtn) {
-        startBtn.props.title = '⏹️ Stop';
+        startBtn.props.label = 'Stop';
         startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'red' };
       }
     }
@@ -284,7 +284,7 @@
       // Update start button
       const startBtn = $melker.getElementById('startBtn');
       if (startBtn) {
-        startBtn.props.title = '▶️ Start';
+        startBtn.props.label = 'Start';
         startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'green' };
       }
     }
@@ -332,7 +332,7 @@
       clockConfig.showSeconds = !clockConfig.showSeconds;
       const btn = $melker.getElementById('secondsBtn');
       if (btn) {
-        btn.props.title = clockConfig.showSeconds ? '🕐 Hide Seconds' : '🕐 Show Seconds';
+        btn.props.label = clockConfig.showSeconds ? 'Hide Seconds' : 'Show Seconds';
         btn.props.style = {
           ...btn.props.style,
           backgroundColor: clockConfig.showSeconds ? 'blue' : 'gray'
@@ -354,7 +354,7 @@
       }
 
       if (btn) {
-        btn.props.title = clockConfig.showDigital ? '📱 Hide Digital' : '📱 Show Digital';
+        btn.props.label = clockConfig.showDigital ? 'Hide Digital' : 'Show Digital';
         btn.props.style = {
           ...btn.props.style,
           backgroundColor: clockConfig.showDigital ? 'purple' : 'gray'
@@ -367,7 +367,7 @@
       clockConfig.show24Hour = !clockConfig.show24Hour;
       const btn = $melker.getElementById('formatBtn');
       if (btn) {
-        btn.props.title = clockConfig.show24Hour ? '🕛 12 Hour' : '🕛 24 Hour';
+        btn.props.label = clockConfig.show24Hour ? '12 Hour' : '24 Hour';
         btn.props.style = {
           ...btn.props.style,
           backgroundColor: clockConfig.show24Hour ? 'orange' : 'gray'
@@ -390,7 +390,7 @@
       }
 
       if (btn) {
-        btn.props.title = clockConfig.showStatistics ? '📊 Hide Stats' : '📊 Show Stats';
+        btn.props.label = clockConfig.showStatistics ? 'Hide Stats' : 'Show Stats';
         btn.props.style = {
           ...btn.props.style,
           backgroundColor: clockConfig.showStatistics ? 'teal' : 'gray'
@@ -413,7 +413,7 @@
 
       const btn = $melker.getElementById('rateBtn');
       if (btn) {
-        btn.props.title = `⚡ Rate: ${clockConfig.refreshRate}ms`;
+        btn.props.label = `Rate: ${clockConfig.refreshRate}ms`;
       }
       $melker.engine.render();
     }
@@ -500,26 +500,26 @@
     <container style="display: flex; flex-direction: row; justify-content: center; gap: 1;">
       <button
         id="startBtn"
-        title="▶️ Start"
+        label="Start"
         style="background-color: green; color: white; padding: 1;"
         onClick="$app.toggleClock();"
       />
 
       <button
-        title="🌍 Timezone"
+        label="Timezone"
         style="background-color: blue; color: white; padding: 1;"
         onClick="$app.cycleTimezone();"
       />
 
       <button
-        title="🎨 Theme"
+        label="Theme"
         style="background-color: purple; color: white; padding: 1;"
         onClick="$app.cycleTheme();"
       />
 
       <button
         id="secondsBtn"
-        title="🕐 Hide Seconds"
+        label="Hide Seconds"
         style="background-color: blue; color: white; padding: 1;"
         onClick="$app.toggleSeconds();"
       />
@@ -529,34 +529,34 @@
     <container style="display: flex; flex-direction: row; justify-content: center; gap: 1;">
       <button
         id="digitalBtn"
-        title="📱 Hide Digital"
+        label="Hide Digital"
         style="background-color: purple; color: white; padding: 1;"
         onClick="$app.toggleDigital();"
       />
 
       <button
         id="formatBtn"
-        title="🕛 24 Hour"
+        label="24 Hour"
         style="background-color: gray; color: white; padding: 1;"
         onClick="$app.toggle24Hour();"
       />
 
       <button
         id="rateBtn"
-        title="⚡ Rate: 1000ms"
+        label="Rate: 1000ms"
         style="background-color: orange; color: white; padding: 1;"
         onClick="$app.adjustRefreshRate();"
       />
 
       <button
         id="statsBtn"
-        title="📊 Show Stats"
+        label="Show Stats"
         style="background-color: gray; color: white; padding: 1;"
         onClick="$app.toggleStatistics();"
       />
 
       <button
-        title="❌ Exit"
+        label="Exit"
         style="background-color: red; color: white; padding: 1;"
         onClick="$melker.exit();"
       />

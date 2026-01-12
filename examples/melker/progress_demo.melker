@@ -54,8 +54,8 @@
     <container class="row">
       <text class="label">Interactive:</text>
       <progress id="p" value="0" width="15" showValue="true" />
-      <button title="+10" onClick="const p = $melker.getElementById('p'); p.setValue(Math.min(100, p.getValue() + 10));" />
-      <button title="-10" onClick="const p = $melker.getElementById('p'); p.setValue(Math.max(0, p.getValue() - 10));" />
+      <button label="+10" onClick="const p = $melker.getElementById('p'); p.setValue(Math.min(100, p.getValue() + 10));" />
+      <button label="-10" onClick="const p = $melker.getElementById('p'); p.setValue(Math.max(0, p.getValue() - 10));" />
     </container>
 
     <text style="color: gray">Ctrl+C to exit</text>

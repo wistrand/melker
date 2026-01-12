@@ -28,12 +28,12 @@
 
       if (video.isPlaying()) {
         video.pause();
-        status.props.text = 'Status: Paused';
-        if (playBtn) playBtn.props.title = 'Play';
+        status.setValue('Status: Paused');
+        if (playBtn) playBtn.props.label = 'Play';
       } else if (video.isPaused()) {
         video.resume();
-        status.props.text = 'Status: Playing';
-        if (playBtn) playBtn.props.title = 'Pause';
+        status.setValue('Status: Playing');
+        if (playBtn) playBtn.props.label = 'Pause';
       }
       $melker.render();
     }
@@ -86,7 +86,7 @@
       const timeDisplay = $melker.getElementById('time-display');
       if (!video || !timeDisplay) return;
       const currentTime = video.getCurrentTime();
-      timeDisplay.props.text = formatTime(currentTime);
+      timeDisplay.setValue(formatTime(currentTime));
     }
 
   </script>
@@ -109,28 +109,28 @@
       onPlay="
         const status = $melker.getElementById('status');
         const playBtn = $melker.getElementById('play-btn');
-        if (status) status.props.text = 'Status: Playing';
-        if (playBtn) playBtn.props.title = 'Pause';
+        if (status) status.setValue('Status: Playing');
+        if (playBtn) playBtn.props.label = 'Pause';
         $melker.render();
       "
       onPause="
         const status = $melker.getElementById('status');
         const playBtn = $melker.getElementById('play-btn');
-        if (status) status.props.text = 'Status: Paused';
-        if (playBtn) playBtn.props.title = 'Play';
+        if (status) status.setValue('Status: Paused');
+        if (playBtn) playBtn.props.label = 'Play';
         $melker.render();
       "
       onEnd="
         const status = $melker.getElementById('status');
         const playBtn = $melker.getElementById('play-btn');
-        if (status) status.props.text = 'Status: Ended';
-        if (playBtn) playBtn.props.title = 'Play';
+        if (status) status.setValue('Status: Ended');
+        if (playBtn) playBtn.props.label = 'Play';
         $melker.render();
       "
       onError="
         const status = $melker.getElementById('status');
         if (status) {
-          status.props.text = 'Status: Error - ' + event.message;
+          status.setValue('Status: Error - ' + event.message);
           $melker.render();
         }
       "
@@ -148,37 +148,37 @@
     <container style="height: 3; display: flex; flex-direction: row; padding: 0; justify-content: center;">
       <button
         id="back-min-btn"
-        title="-1m"
+        label="-1m"
         style="width: 8; height: 3;"
         onClick="$app.seekBackwardMin();"
       />
       <button
         id="back-btn"
-        title="-10s"
+        label="-10s"
         style="width: 8; height: 3;"
         onClick="$app.seekBackward();"
       />
       <button
         id="play-btn"
-        title="Pause"
+        label="Pause"
         style="width: 10; height: 3;"
         onClick="$app.togglePlayback();"
       />
       <button
         id="fwd-btn"
-        title="+10s"
+        label="+10s"
         style="width: 8; height: 3;"
         onClick="$app.seekForward();"
       />
       <button
         id="fwd-min-btn"
-        title="+1m"
+        label="+1m"
         style="width: 8; height: 3;"
         onClick="$app.seekForwardMin();"
       />
       <button
         id="quit-btn"
-        title="Quit"
+        label="Quit"
         style="width: 10; height: 3;"
         onClick="$app.quit();"
       />

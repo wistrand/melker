@@ -95,6 +95,20 @@ import { getOAuthConfigFromEnv } from './oauth/config.ts';
 // Module logger
 const logger = getLogger('oauth');
 
+// Track active callback server for cleanup
+let _activeCallbackServer: OAuthCallbackServer | null = null;
+
+/**
+ * Stop any active callback server
+ */
+export async function stopCallbackServer(): Promise<void> {
+  if (_activeCallbackServer) {
+    logger.debug('Stopping active callback server');
+    await _activeCallbackServer.stop();
+    _activeCallbackServer = null;
+  }
+}
+
 // =============================================================================
 // OAUTH CLIENT CLASS
 // =============================================================================
@@ -525,9 +539,16 @@ export async function authenticateWithPKCE(
   const port = parsePort(config.redirectUri);
   const path = parsePath(config.redirectUri);
   const keepAlive = config.debugServer ?? true;
+
+  // Stop any existing callback server before starting a new one
+  await stopCallbackServer();
+
   logger.info('Starting callback server', { port, path, keepAlive });
   const callbackServer = new OAuthCallbackServer({ port, path, keepAlive });
   await callbackServer.start();
+
+  // Track for later cleanup
+  _activeCallbackServer = callbackServer;
 
   try {
     const state = generateState();
@@ -581,6 +602,7 @@ export async function authenticateWithPKCE(
     } else {
       logger.debug('Stopping callback server');
       await callbackServer.stop();
+      _activeCallbackServer = null;
     }
   }
 }
@@ -596,6 +618,9 @@ export async function logout(config: OAuthConfig): Promise<void> {
  * Internal logout with config
  */
 async function logoutWithConfig(config: OAuthConfig): Promise<void> {
+  // Stop any active callback server
+  await stopCallbackServer();
+
   logger.debug('Removing stored token');
   const tokenStore = new OAuthTokenStore();
   await tokenStore.removeToken(config.wellKnownUrl, config.clientId);

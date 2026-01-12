@@ -144,7 +144,7 @@
     <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: black;">
       <text style="color: magenta;">Raymarched Metaballs</text>
       <button
-        title="Exit"
+        label="Exit"
         onClick="$melker.exit();"
       />
     </container>

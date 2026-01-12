@@ -72,7 +72,7 @@ root.appendChild(btn);
 
 2. **Declarative** - `.melker` HTML-like files:
 ```xml
-<button title="Click" onClick="count++" />
+<button label="Click" onClick="count++" />
 ```
 
 3. **Literate** - `.melker.md` Markdown with embedded UI:
@@ -81,7 +81,7 @@ root.appendChild(btn);
 
 This button increments a counter:
 
-<button title="Click" onClick="count++" />
+<button label="Click" onClick="count++" />
 
 The count is displayed below.
 ```
@@ -105,7 +105,7 @@ Most frameworks only offer programmatic APIs. Ink adds JSX but requires a build 
 
 **Melker** - Declarative HTML-like:
 ```xml
-<button title="Click" onClick="count++; render()" />
+<button label="Click" onClick="count++; render()" />
 ```
 
 **Ink** - React JSX:

@@ -44,7 +44,7 @@
         selectType="file"
         showHidden="false"
         showButtons="false"
-        onSelect="$app.handleSelect(event)"
+        onChange="$app.handleSelect(event)"
         onError="$app.handleError(event)"
         maxVisible="15"
       />

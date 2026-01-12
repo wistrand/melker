@@ -16,7 +16,7 @@
         const el = $melker.getElementById("t3");
         if(el) {
             $melker.logger.warn("set t3 to " + str);
-            el.props.text = str;
+            el.setValue(str);
             $melker.engine.render();
         } else {
            $melker.logger.warn("no t3");

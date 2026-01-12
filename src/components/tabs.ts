@@ -7,9 +7,17 @@ import { getLogger } from '../logging.ts';
 
 const logger = getLogger('Tabs');
 
-export interface TabsProps extends BaseProps {
-  activeTab?: string | number;  // Tab id or index
-  onTabChange?: (tabId: string, index: number) => void;
+export interface TabChangeEvent {
+  type: 'change';
+  tabId: string;
+  index: number;
+  targetId: string;
+}
+
+export interface TabsProps extends Omit<BaseProps, 'onChange'> {
+  activeTab?: string;  // Tab id (must match a tab's id attribute)
+  onChange?: (event: TabChangeEvent) => void;  // Preferred
+  onTabChange?: (tabId: string, index: number) => void;  // Deprecated: use onChange
 }
 
 export class TabsElement extends Element {
@@ -23,7 +31,7 @@ export class TabsElement extends Element {
 
   constructor(props: TabsProps, children: Element[] = []) {
     const defaultProps: TabsProps = {
-      activeTab: 0,
+      // activeTab defaults to first tab's id (set after we know children)
       ...props,
       style: {
         display: 'flex',
@@ -63,16 +71,17 @@ export class TabsElement extends Element {
   }
 
   /**
-   * Resolve activeTab prop to an index
+   * Resolve activeTab prop (string id) to an index
    */
   private _resolveActiveTab(): void {
     const { activeTab } = this.props;
 
-    if (typeof activeTab === 'number') {
-      this._activeIndex = Math.max(0, Math.min(activeTab, this._tabElements.length - 1));
-    } else if (typeof activeTab === 'string') {
+    if (typeof activeTab === 'string') {
       const index = this._tabElements.findIndex(tab => tab.id === activeTab);
       this._activeIndex = index >= 0 ? index : 0;
+    } else {
+      // Default to first tab
+      this._activeIndex = 0;
     }
   }
 
@@ -90,7 +99,7 @@ export class TabsElement extends Element {
 
       const button = createElement('button', {
         id: `${this.id}-tab-${i}`,
-        title: tab.props.title,
+        label: tab.props.title,
         disabled: tab.props.disabled,
         tabIndex: 0,
         onClick: () => this._handleTabClick(tabIndex),
@@ -161,8 +170,20 @@ export class TabsElement extends Element {
       this._activeIndex = index;
 
       const activeTab = this._tabElements[index];
-      if (this.props.onTabChange && activeTab) {
-        this.props.onTabChange(activeTab.id, index);
+      if (activeTab) {
+        // Call onChange (preferred)
+        if (this.props.onChange) {
+          this.props.onChange({
+            type: 'change',
+            tabId: activeTab.id,
+            index: index,
+            targetId: this.id,
+          });
+        }
+        // Call onTabChange (deprecated, backwards compat)
+        if (this.props.onTabChange) {
+          this.props.onTabChange(activeTab.id, index);
+        }
       }
 
       // Update visibility - no children array changes needed
@@ -224,7 +245,7 @@ export class TabsElement extends Element {
 
   static validate(props: TabsProps): boolean {
     if (props.activeTab !== undefined) {
-      if (typeof props.activeTab !== 'string' && typeof props.activeTab !== 'number') {
+      if (typeof props.activeTab !== 'string') {
         return false;
       }
     }
@@ -239,7 +260,7 @@ registerComponent({
   type: 'tabs',
   componentClass: TabsElement,
   defaultProps: {
-    activeTab: 0,
+    // activeTab defaults to first tab if not specified
   },
 });
 
@@ -249,8 +270,9 @@ import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 export const tabsSchema: ComponentSchema = {
   description: 'Tabbed container with switchable panels',
   props: {
-    activeTab: { type: ['string', 'number'], description: 'Active tab id or index' },
-    onTabChange: { type: 'function', description: 'Tab change handler' },
+    activeTab: { type: 'string', description: 'Active tab id (must match a tab child id)' },
+    onChange: { type: 'handler', description: 'Called when tab changes (preferred). Event: { tabId, index, targetId }' },
+    onTabChange: { type: 'handler', description: 'Called when tab changes (deprecated: use onChange)' },
   },
 };
 

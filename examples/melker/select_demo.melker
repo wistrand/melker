@@ -6,13 +6,13 @@
     $app.setSize = (value, label) => {
       $app.selectedSize = label;
       const el = $melker.getElementById('sizeResult');
-      if (el) el.props.text = 'Size: ' + label;
+      if (el) el.setValue('Size: ' + label);
     };
 
     $app.setColor = (value, label) => {
       $app.selectedColor = label;
       const el = $melker.getElementById('colorResult');
-      if (el) el.props.text = 'Color: ' + label;
+      if (el) el.setValue('Color: ' + label);
     };
   </script>
 
@@ -35,7 +35,7 @@
 
     <container direction="row" gap="2">
       <text>Size:</text>
-      <select placeholder="Choose size..." onSelect="$app.setSize(event.value, event.label)">
+      <select placeholder="Choose size..." onChange="$app.setSize(event.value, event.label)">
         <option value="xs">Extra Small</option>
         <option value="s">Small</option>
         <option value="m">Medium</option>
@@ -47,7 +47,7 @@
 
     <container direction="row" gap="2">
       <text>Color:</text>
-      <select placeholder="Choose color..." onSelect="$app.setColor(event.value, event.label)">
+      <select placeholder="Choose color..." onChange="$app.setColor(event.value, event.label)">
         <group label="Primary">
           <option value="red">Red</option>
           <option value="blue">Blue</option>

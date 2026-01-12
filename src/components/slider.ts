@@ -537,6 +537,7 @@ export const sliderSchema: ComponentSchema = {
     trackColor: { type: 'string', description: 'Track color override' },
     thumbColor: { type: 'string', description: 'Thumb color override' },
     fillColor: { type: 'string', description: 'Filled portion color override' },
+    onChange: { type: 'handler', description: 'Called when value changes. Event: { value: string, target }' },
   },
 };
 

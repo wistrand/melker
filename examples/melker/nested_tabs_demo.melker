@@ -3,10 +3,10 @@
 
   <!-- Demonstrates nested tab containers using melker-block format. -->
   <container id="root" style="display: flex; flex-direction: column; width: 100%; height: 100%">
-    <tabs id="outer-tabs" activeTab="0" style="display: flex; flex-direction: column">
+    <tabs id="outer-tabs" style="display: flex; flex-direction: column">
       <tab title="Settings" style="display: flex; flex-direction: column; width: 100%; height: 100%">
         <text id="application-settings">Application Settings</text>
-        <tabs id="settings-tabs" activeTab="0" style="display: flex; flex-direction: column">
+        <tabs id="settings-tabs" style="display: flex; flex-direction: column">
           <tab title="General" style="display: flex; flex-direction: column; gap: 1">
             <text id="username">Username:</text>
             <input id="settings-username" />
@@ -25,7 +25,7 @@
             <input id="debug-input" />
             <checkbox id="enable-logging" title="Enable logging" />
             <checkbox id="verbose-output" title="Verbose output" />
-            <button id="reset-to-defaults" title="Reset to Defaults" onClick="const username = $melker.getElementById('settings-username');
+            <button id="reset-to-defaults" label="Reset to Defaults" onClick="const username = $melker.getElementById('settings-username');
 const debugInput = $melker.getElementById('debug-input');
 if (username) username.setValue('');
 if (debugInput) debugInput.setValue('');
@@ -38,7 +38,7 @@ $melker.render();" />
         <text id="select-a-tab-above-t">Select a tab above to view settings.</text>
       </tab>
       <tab title="Help" style="display: flex; flex-direction: column; width: 100%; height: 100%">
-        <tabs id="help-tabs" activeTab="0" style="display: flex; flex-direction: column">
+        <tabs id="help-tabs" style="display: flex; flex-direction: column">
           <tab title="FAQ" style="display: flex; flex-direction: column; gap: 1">
             <text id="a-use-the-settings-t">A: Use the Settings tab above.</text>
             <text id="frequently-asked-que">Frequently Asked Questions</text>

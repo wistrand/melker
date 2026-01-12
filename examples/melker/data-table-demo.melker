@@ -35,12 +35,12 @@
       const statusEl = $melker.getElementById('status');
       if (statusEl) {
         if (event.selectedRows.length === 0) {
-          statusEl.props.text = 'No selection';
+          statusEl.setValue('No selection');
         } else if (event.selectedRows.length === 1) {
           const row = rows[event.rowIndex];
-          statusEl.props.text = 'Selected: ' + row[1] + ' (' + row[2] + ')';
+          statusEl.setValue('Selected: ' + row[1] + ' (' + row[2] + ')');
         } else {
-          statusEl.props.text = 'Selected ' + event.selectedRows.length + ' rows';
+          statusEl.setValue('Selected ' + event.selectedRows.length + ' rows');
         }
       }
     }
@@ -71,7 +71,7 @@
       id="employees"
       style="width: fill; height: fill;"
       selectable="single"
-      onSelect="$app.handleSelect(event)"
+      onChange="$app.handleSelect(event)"
       onActivate="$app.handleActivate(event)"
     >
     {
@@ -90,7 +90,7 @@
       <text>Click header to sort</text>
       <text>Arrow keys to navigate</text>
       <text>Enter to view details</text>
-      <button title="Exit" onClick="$melker.exit()" />
+      <button label="Exit" onClick="$melker.exit()" />
     </container>
   </container>
 </melker>

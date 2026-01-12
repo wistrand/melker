@@ -52,7 +52,7 @@ export interface DropdownRow {
 /**
  * Common props for all filterable list components
  */
-export interface FilterableListCoreProps extends BaseProps {
+export interface FilterableListCoreProps extends Omit<BaseProps, 'onChange'> {
   /** Current filter/input text */
   value?: string;
   /** Currently selected option value */
@@ -71,7 +71,9 @@ export interface FilterableListCoreProps extends BaseProps {
   options?: OptionData[] | (() => OptionData[]);
 
   // Events
-  /** Called when an option is selected */
+  /** Called when an option is selected (preferred) */
+  onChange?: (event: OptionSelectEvent) => void;
+  /** Called when an option is selected (deprecated: use onChange) */
   onSelect?: (event: OptionSelectEvent) => void;
   /** Called when filter input value changes */
   onFilterChange?: (event: FilterChangeEvent) => void;
@@ -514,7 +516,11 @@ export abstract class FilterableListCore extends Element implements Focusable {
       }
     }
 
-    // Call parent's onSelect handler if defined
+    // Call parent's onChange handler if defined (preferred)
+    if (this.props.onChange) {
+      this.props.onChange(event);
+    }
+    // Call parent's onSelect handler if defined (backwards compat)
     if (this.props.onSelect) {
       this.props.onSelect(event);
     }

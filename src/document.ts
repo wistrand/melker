@@ -396,8 +396,8 @@ export class Document {
         break;
 
       case 'button':
-        if (element.props.title) {
-          props.push(`"${element.props.title}"`);
+        if (element.props.label) {
+          props.push(`"${element.props.label}"`);
         }
         if (element.props.variant && element.props.variant !== 'default') {
           props.push(`variant: ${element.props.variant}`);

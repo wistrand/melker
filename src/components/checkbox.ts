@@ -1,6 +1,6 @@
 // Checkbox component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent, ChangeEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { getStringWidth } from '../char-width.ts';
@@ -9,6 +9,8 @@ export interface CheckboxProps extends BaseProps {
   title: string;
   checked?: boolean;
   indeterminate?: boolean; // For tri-state checkboxes
+  // onChange inherited from BaseProps - event includes { checked: boolean, value: string }
+  onClick?: (event: ClickEvent) => void; // Deprecated: use onChange instead
 }
 
 export class CheckboxElement extends Element implements Renderable, Focusable, Clickable, Interactive {
@@ -71,10 +73,29 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
   }
 
   /**
+   * Get the current checked state (standard API)
+   */
+  getValue(): boolean {
+    return this.props.checked || false;
+  }
+
+  /**
+   * Set the checked state (standard API)
+   */
+  setValue(checked: boolean): void {
+    this.props.checked = checked;
+    // Clear indeterminate when explicitly setting checked state
+    if (checked !== undefined) {
+      this.props.indeterminate = false;
+    }
+  }
+
+  /**
    * Get the current checked state
+   * @deprecated Use getValue() instead
    */
   isChecked(): boolean {
-    return this.props.checked || false;
+    return this.getValue();
   }
 
   /**
@@ -86,13 +107,10 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
 
   /**
    * Set the checked state
+   * @deprecated Use setValue() instead
    */
   setChecked(checked: boolean): void {
-    this.props.checked = checked;
-    // Clear indeterminate when explicitly setting checked state
-    if (checked !== undefined) {
-      this.props.indeterminate = false;
-    }
+    this.setValue(checked);
   }
 
   /**
@@ -112,10 +130,10 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
   toggle(): void {
     if (this.props.indeterminate) {
       // If indeterminate, go to checked
-      this.setChecked(true);
+      this.setValue(true);
     } else {
       // Normal toggle
-      this.props.checked = !this.props.checked;
+      this.setValue(!this.props.checked);
     }
   }
 
@@ -155,7 +173,23 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
     // Toggle the checked state
     this.toggle();
 
-    // Call onClick handler if provided
+    const checked = this.props.checked || false;
+
+    // Create change event with checked property
+    const changeEvent: ChangeEvent = {
+      type: 'change',
+      value: String(checked),
+      checked: checked,
+      target: this.id,
+      timestamp: Date.now(),
+    };
+
+    // Call onChange handler if provided (preferred)
+    if (typeof this.props.onChange === 'function') {
+      this.props.onChange(changeEvent);
+    }
+
+    // Call onClick handler if provided (backwards compat, deprecated)
     if (typeof this.props.onClick === 'function') {
       this.props.onClick(event);
     }
@@ -193,6 +227,8 @@ export const checkboxSchema: ComponentSchema = {
     title: { type: 'string', required: true, description: 'Checkbox label text' },
     checked: { type: 'boolean', description: 'Whether checkbox is checked' },
     indeterminate: { type: 'boolean', description: 'Show partial/mixed state' },
+    onChange: { type: 'handler', description: 'Called when checked state changes. Event: { checked: boolean, target, targetId }' },
+    onClick: { type: 'handler', description: 'Deprecated: use onChange instead' },
   },
 };
 

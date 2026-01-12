@@ -79,8 +79,8 @@ export class ConfirmDialogManager {
               id="confirm-footer"
               style="display: flex; flex-direction: row; justify-content: center; width: fill; gap: 2"
             >
-              <button id="confirm-ok" title="OK" onClick=${onOk} />
-              <button id="confirm-cancel" title="Cancel" onClick=${onCancel} />
+              <button id="confirm-ok" label="OK" onClick=${onOk} />
+              <button id="confirm-cancel" label="Cancel" onClick=${onCancel} />
             </container>
           </container>
         </dialog>

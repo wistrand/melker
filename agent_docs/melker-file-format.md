@@ -104,7 +104,7 @@ Use `onMount()` when you need to conditionally register initialization or regist
 | `<radio>` | id, title, value, checked, name, onChange | Radio button |
 | `<list>` | style | List container |
 | `<li>` | style | List item |
-| `<tabs>` | id, activeTab, onTabChange | Tabbed container |
+| `<tabs>` | id, activeTab, onChange | Tabbed container |
 | `<tab>` | title, disabled | Tab panel (child of tabs) |
 | `<canvas>` | width, height, dither, ditherBits, onPaint, onShader, shaderFps, shaderRunTime | Pixel graphics (sextant chars) |
 | `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, shaderFps, shaderRunTime | Image display (extends canvas) |
@@ -170,17 +170,17 @@ CSS-like properties in `style` attribute:
 
 ```xml
 <!-- Auto-renders after handler completes -->
-<button onClick="counterEl.props.text = String(count + 1)" />
+<button onClick="counterEl.setValue(String(count + 1))" />
 
-<!-- Return false to skip auto-render -->
-<button onClick="console.log('no changes'); return false" />
+<!-- Call skipRender() to skip auto-render -->
+<button onClick="doSomething(); $melker.skipRender()" />
 
 <!-- Async handlers also auto-render when the promise resolves -->
 <button onClick="
-  statusEl.props.text = 'Loading...';
+  statusEl.setValue('Loading...');
   $melker.render();  // explicit render for intermediate state
   await fetchData();
-  statusEl.props.text = 'Done';
+  statusEl.setValue('Done');
   // auto-renders here
 " />
 ```
@@ -407,7 +407,7 @@ Use special delimiters to define element types without `type:` property lines:
 
 | Syntax | Element | Example |
 |--------|---------|---------|
-| `+--[Title]--+` | button | `+--[Click Me]--+` → `<button title="Click Me" />` |
+| `+--[Title]--+` | button | `+--[Click Me]--+` → `<button label="Click Me" />` |
 | `+--"content"--+` | text | `+--"Hello!"--+` → `<text>Hello!</text>` |
 | `+--{id}--+` | input | `+--{username}--+` → `<input id="username" />` |
 | `+--<type> content--+` | explicit | `+--<checkbox> Remember--+` → `<checkbox title="Remember" />` |

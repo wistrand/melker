@@ -2,12 +2,12 @@
   <script>
     $app.setCountry = (value, label) => {
       const el = $melker.getElementById('selectedCountry');
-      if (el) el.props.text = 'Selected: ' + label;
+      if (el) el.setValue('Selected: ' + label);
     };
 
     $app.runCommand = (value, label) => {
       const el = $melker.getElementById('selectedCommand');
-      if (el) el.props.text = 'Last command: ' + label;
+      if (el) el.setValue('Last command: ' + label);
       alert('Executed: ' + label);
     };
   </script>

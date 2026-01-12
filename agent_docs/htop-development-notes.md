@@ -52,13 +52,16 @@ Note: `flex`, `flex-grow`, `flex-shrink`, `flex-basis` are flex *item* propertie
 
 **Mistake**: Called `dialog.open()` method.
 
-**Solution**: Dialog uses boolean prop, not method.
+**Solution**: Use the convenience methods or set the prop directly.
 
 ```javascript
-// Open dialog
-dialog.props.open = true;
+// Preferred - use methods
+dialog.show();           // Open
+dialog.hide();           // Close
+dialog.setVisible(true); // Set visibility
 
-// Close dialog
+// Also works - direct prop access
+dialog.props.open = true;
 dialog.props.open = false;
 ```
 
@@ -69,8 +72,8 @@ dialog.props.open = false;
 **Solution**: Markdown uses `text` prop.
 
 ```javascript
-var md = $melker.getElementById("myMarkdown");
-md.props.text = "# Hello\n\nWorld";
+const md = $melker.getElementById("myMarkdown");
+md.setValue("# Hello\n\nWorld");
 ```
 
 ## 6. Dialog Layout

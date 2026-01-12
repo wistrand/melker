@@ -33,7 +33,7 @@ function handleReset() {
 function updateCounterDisplay() {
   const counterElement = engine.document.getElementById('counter-display');
   if (counterElement) {
-    counterElement.props.text = `Count: ${counter}`;
+    counterElement.setValue(`Count: ${counter}`);
     engine.render();
   }
 }
@@ -75,7 +75,7 @@ function createElementUI() {
       }
     },
       createElement('button', {
-        title: 'Increment',
+        label: 'Increment',
         onClick: handleIncrement,
         tabIndex: 1
       }),
@@ -90,7 +90,7 @@ function createElementUI() {
         }
       }),
       createElement('button', {
-        title: 'Reset',
+        label: 'Reset',
         onClick: handleReset,
         tabIndex: 2,
         style: { color: getThemeColor('warning') }
@@ -107,7 +107,7 @@ function createElementUI() {
       }
     },
       createElement('button', {
-        title: 'Switch to Template Syntax',
+        label: 'Switch to Template Syntax',
         onClick: handleToggle,
         tabIndex: 3,
         style: {
@@ -160,13 +160,13 @@ function createTemplateUI() {
       <text style=${headerStyle}>🎯 Template Literal Syntax</text>
 
       <container style=${{ display: 'flex', flexDirection: 'row', gap: 2, justifyContent: 'center', marginBottom: 2 }}>
-        <button title="Increment" onClick=${handleIncrement} tabIndex=${1} />
+        <button label="Increment" onClick=${handleIncrement} tabIndex=${1} />
         <text
           id="counter-display"
           style=${{ color: getThemeColor('success'), fontWeight: 'bold', minWidth: 12, textAlign: 'center' }}
         >Count: ${counter}</text>
         <button
-          title="Reset"
+          label="Reset"
           onClick=${handleReset}
           tabIndex=${2}
           style=${{ color: getThemeColor('warning') }}
@@ -175,7 +175,7 @@ function createTemplateUI() {
 
       <container style=${{ display: 'flex', flexDirection: 'row', justifyContent: 'center', marginBottom: 2 }}>
         <button
-          title="Switch to createElement Syntax"
+          label="Switch to createElement Syntax"
           onClick=${handleToggle}
           tabIndex=${3}
           style=${{ backgroundColor: getThemeColor('success'), color: getThemeColor('surface') }}

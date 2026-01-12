@@ -680,7 +680,8 @@ export const commandPaletteSchema: ComponentSchema = {
     width: { type: 'number', description: 'Width of the palette' },
     maxHeight: { type: 'number', description: 'Maximum height of the palette' },
     shortcut: { type: 'string', description: 'Keyboard shortcut to open (e.g., "Ctrl+Shift+P")' },
-    onSelect: { type: 'function', description: 'Callback when command is selected' },
+    onChange: { type: 'handler', description: 'Called when command is selected (preferred). Event: { value, label, option?, targetId }' },
+    onSelect: { type: 'handler', description: 'Called when command is selected (deprecated: use onChange)' },
   },
 };
 

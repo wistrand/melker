@@ -33,7 +33,7 @@
         // Show error in status text
         const status = $melker.getElementById('statusText');
         if (status) {
-          status.props.text = 'Error: ' + (err instanceof Error ? err.message : String(err));
+          status.setValue('Error: ' + (err instanceof Error ? err.message : String(err)));
         }
       }
     };
@@ -79,7 +79,7 @@
       const imagePath = canvas.props.src || 'examples/melker/test_image.png';
 
       if (status) {
-        status.props.text = 'Loading: ' + imagePath;
+        status.setValue('Loading: ' + imagePath);
         $melker.engine.render();
       }
 
@@ -88,7 +88,7 @@
 
       if (status && canvas.hasImage()) {
         const imgSize = canvas.getImageSize();
-        status.props.text = 'Image ' + imgSize.width + 'x' + imgSize.height + ' with overlay - Resize to rescale';
+        status.setValue('Image ' + imgSize.width + 'x' + imgSize.height + ' with overlay - Resize to rescale');
       }
 
       $melker.engine.render();

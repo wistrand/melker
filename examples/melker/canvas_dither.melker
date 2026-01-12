@@ -68,7 +68,7 @@
     </container>
 
     <container style="margin-top: 1">
-      <button id="btn-quit" title="Quit" onClick="$melker.exit()" />
+      <button id="btn-quit" label="Quit" onClick="$melker.exit()" />
     </container>
   </container>
 

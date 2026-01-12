@@ -32,9 +32,9 @@
 
       const ex = examples[currentExample];
 
-      titleEl.props.text = ex.name;
-      counterEl.props.text = `Example ${currentExample + 1} of 8`;
-      descEl.props.text = ex.desc;
+      titleEl.setValue(ex.name);
+      counterEl.setValue(`Example ${currentExample + 1} of 8`);
+      descEl.setValue(ex.desc);
 
       // Update container
       containerEl.props.style.flexDirection = ex.dir;
@@ -129,13 +129,13 @@
     <!-- Controls -->
     <container style="display: flex; flex-direction: row; gap: 2;">
       <button
-        title="Previous"
+        label="Previous"
         style="width: 15; height: 3; background-color: blue;"
         onClick="$app.prevExample();"
       />
 
       <button
-        title="Next"
+        label="Next"
         style="width: 15; height: 3; background-color: blue;"
         onClick="$app.nextExample();"
       />

@@ -8,15 +8,15 @@
     const footerText = $melker.getElementById('footerText');
 
     if ($melker.persistenceEnabled) {
-      statusText.props.text = 'State Persistence Demo - Your input is saved automatically!';
+      statusText.setValue('State Persistence Demo - Your input is saved automatically!');
       statusText.props.style = { ...statusText.props.style, color: 'green' };
       warningBanner.props.style = { ...warningBanner.props.style, display: 'none' };
-      footerText.props.text = 'State saved to: ' + $melker.stateFilePath;
+      footerText.setValue('State saved to: ' + $melker.stateFilePath);
     } else {
-      statusText.props.text = 'State Persistence Demo - PERSISTENCE DISABLED';
+      statusText.setValue('State Persistence Demo - PERSISTENCE DISABLED');
       statusText.props.style = { ...statusText.props.style, color: 'red' };
       warningBanner.props.style = { ...warningBanner.props.style, display: 'flex' };
-      footerText.props.text = 'Persistence disabled - run with MELKER_PERSIST=true';
+      footerText.setValue('Persistence disabled - run with MELKER_PERSIST=true');
     }
   </script>
 
@@ -160,7 +160,7 @@
     <!-- Footer -->
     <container style="display: flex; flex-direction: row; justify-content: space-between; margin-top: 1; padding-top: 1; border-top: thin;">
       <text id="footerText" style="color: gray;">Checking persistence status...</text>
-      <button title="Exit" onClick="$melker.exit();" style="background-color: red;" />
+      <button label="Exit" onClick="$melker.exit();" style="background-color: red;" />
     </container>
 
   </container>

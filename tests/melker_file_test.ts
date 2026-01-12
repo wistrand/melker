@@ -49,13 +49,13 @@ Deno.test('parseMelkerFile parses text element with content', () => {
   assertEquals(result.element.props.text, 'Hello from Melker!');
 });
 
-Deno.test('parseMelkerFile parses button with title', () => {
-  const content = `<button title="Click Me!" style="background-color: blue;" />`;
+Deno.test('parseMelkerFile parses button with label', () => {
+  const content = `<button label="Click Me!" style="background-color: blue;" />`;
 
   const result = parseMelkerFile(content);
 
   assertEquals(result.element.type, 'button');
-  assertEquals(result.element.props.title, 'Click Me!');
+  assertEquals(result.element.props.label, 'Click Me!');
 });
 
 Deno.test('parseMelkerFile parses nested children', () => {
@@ -243,7 +243,7 @@ Deno.test('parseMelkerFile parses complex script with exports', () => {
       </script>
       <container style="width: 50; height: 20;">
         <text id="output">Ready</text>
-        <button title="Click" />
+        <button label="Click" />
       </container>
     </melker>
   `;
@@ -401,7 +401,7 @@ Deno.test('parseMelkerFile parses dialog element', () => {
   const content = `
     <dialog id="myDialog" title="Confirm" open="true" modal="true">
       <text>Are you sure?</text>
-      <button title="OK" />
+      <button label="OK" />
     </dialog>
   `;
 

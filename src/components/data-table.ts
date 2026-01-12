@@ -30,7 +30,7 @@ const logger = getLogger('DataTable');
 export type CellValue = string | number | boolean | null | undefined;
 export type DataTableRows = CellValue[][];
 export type DataTableFooter = CellValue[][];
-export type SortDirection = 'asc' | 'desc';
+export type DataTableSortDirection = 'asc' | 'desc';
 
 export interface DataTableColumn {
   header: string;
@@ -40,25 +40,26 @@ export interface DataTableColumn {
   comparator?: (a: CellValue, b: CellValue) => number;
 }
 
-export interface SortEvent {
+export interface DataTableSortEvent {
   type: 'sort';
   columnIndex: number;
-  direction: SortDirection;
+  direction: DataTableSortDirection;
 }
 
-export interface SelectEvent {
+export interface DataTableSelectEvent {
   type: 'select';
   rowIndex: number;
   selectedRows: number[];
   action: 'replace' | 'add' | 'toggle';
 }
 
-export interface ActivateEvent {
+export interface DataTableActivateEvent {
   type: 'activate';
   rowIndex: number;
+  row: CellValue[];
 }
 
-export interface DataTableProps extends BaseProps {
+export interface DataTableProps extends Omit<BaseProps, 'onChange'> {
   columns: DataTableColumn[];
   rows: DataTableRows;
   footer?: DataTableFooter;
@@ -77,14 +78,15 @@ export interface DataTableProps extends BaseProps {
 
   // Sorting
   sortColumn?: number;
-  sortDirection?: SortDirection;
-  onSort?: (event: SortEvent) => void;
+  sortDirection?: DataTableSortDirection;
+  onSort?: (event: DataTableSortEvent) => void;
 
   // Selection
   selectable?: 'none' | 'single' | 'multi';
   selectedRows?: number[];
-  onSelect?: (event: SelectEvent) => void;
-  onActivate?: (event: ActivateEvent) => void;
+  onChange?: (event: DataTableSelectEvent) => void;  // Preferred for selection changes
+  onSelect?: (event: DataTableSelectEvent) => void;  // Deprecated: use onChange
+  onActivate?: (event: DataTableActivateEvent) => void;
 }
 
 /**
@@ -859,12 +861,14 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     }
 
     // Fire event with original indices
-    this.props.onSelect?.({
+    const selectEvent: DataTableSelectEvent = {
       type: 'select',
       rowIndex: originalIndex,
       selectedRows: [...this._selectedRows],
       action: mode,
-    });
+    };
+    this.props.onChange?.(selectEvent);
+    this.props.onSelect?.(selectEvent);
   }
 
   // Keyboard handling - called by engine for focused element
@@ -943,6 +947,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         this.props.onActivate?.({
           type: 'activate',
           rowIndex: originalIndex,
+          row: this.props.rows[originalIndex] || [],
         });
         return true;
     }
@@ -995,6 +1000,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
           this.props.onActivate?.({
             type: 'activate',
             rowIndex: originalIndex,
+            row: this.props.rows[originalIndex] || [],
           });
           // Reset double-click tracking
           this._lastClickTime = 0;
@@ -1031,7 +1037,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   private _handleSortClick(columnIndex: number): void {
     const { sortColumn, sortDirection } = this.props;
 
-    let newDirection: SortDirection;
+    let newDirection: DataTableSortDirection;
     if (sortColumn === columnIndex) {
       // Toggle direction
       newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -1126,6 +1132,23 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       this._ensureRowVisible(sortedPos);
     }
   }
+
+  /**
+   * Get the table rows (standard API)
+   */
+  getValue(): DataTableRows {
+    return this.props.rows;
+  }
+
+  /**
+   * Set the table rows (standard API)
+   */
+  setValue(rows: DataTableRows): void {
+    this.props.rows = rows;
+    // Invalidate sort cache when data changes
+    this._sortCacheKey = '';
+    this._sortedIndices = null;
+  }
 }
 
 // Component schema for lint validation
@@ -1146,11 +1169,12 @@ export const dataTableSchema: ComponentSchema = {
     },
     sortColumn: { type: 'number', description: 'Column index to sort by' },
     sortDirection: { type: 'string', enum: ['asc', 'desc'], description: 'Sort direction' },
-    onSort: { type: ['function', 'string'], description: 'Sort change handler' },
+    onSort: { type: 'handler', description: 'Sort change handler' },
     selectable: { type: 'string', enum: ['none', 'single', 'multi'], description: 'Selection mode (default: none)' },
     selectedRows: { type: 'array', description: 'Selected row indices (controlled)' },
-    onSelect: { type: ['function', 'string'], description: 'Selection change handler' },
-    onActivate: { type: ['function', 'string'], description: 'Row activation handler (Enter/double-click)' },
+    onChange: { type: 'handler', description: 'Selection change handler (preferred)' },
+    onSelect: { type: 'handler', description: 'Selection change handler (deprecated: use onChange)' },
+    onActivate: { type: 'handler', description: 'Row activation handler (Enter/double-click)' },
   },
 };
 

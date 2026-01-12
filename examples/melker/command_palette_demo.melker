@@ -9,16 +9,16 @@
 
     function updateStatus(msg: string) {
       const el = $melker.getElementById("status");
-      if (el) el.props.text = msg;
+      if (el) el.setValue(msg);
     }
 
     function updateState() {
       const zoom = $melker.getElementById("zoom");
       const sidebar = $melker.getElementById("sidebar");
       const terminal = $melker.getElementById("terminal");
-      if (zoom) zoom.props.text = `Zoom: ${zoomLevel}%`;
-      if (sidebar) sidebar.props.text = `Sidebar: ${sidebarVisible ? "on" : "off"}`;
-      if (terminal) terminal.props.text = `Terminal: ${terminalVisible ? "on" : "off"}`;
+      if (zoom) zoom.setValue(`Zoom: ${zoomLevel}%`);
+      if (sidebar) sidebar.setValue(`Sidebar: ${sidebarVisible ? "on" : "off"}`);
+      if (terminal) terminal.setValue(`Terminal: ${terminalVisible ? "on" : "off"}`);
     }
 
     // File commands
@@ -94,7 +94,7 @@
 
     <text>Press button or Ctrl+K to open</text>
 
-    <button title="Open Command Palette (Ctrl+K)" onClick="$app.openPalette();" />
+    <button label="Open Command Palette (Ctrl+K)" onClick="$app.openPalette();" />
 
     <container direction="row" gap="2">
       <text>Status:</text>

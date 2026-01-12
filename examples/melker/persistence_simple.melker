@@ -35,7 +35,7 @@
 
     <!-- Buttons -->
     <container id="buttons" style="display: flex; flex-direction: row; gap: 1">
-      <button id="exit-btn" title="Exit" onClick="$melker.exit();" />
+      <button id="exit-btn" label="Exit" onClick="$melker.exit();" />
     </container>
   </container>
 </melker>

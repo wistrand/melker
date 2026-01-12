@@ -34,7 +34,7 @@ Deno.test('createElement with props sets properties', () => {
 
 Deno.test('createElement with children creates structure', () => {
   const child1 = createElement('text', { text: 'Child 1' });
-  const child2 = createElement('button', { title: 'Child 2' });
+  const child2 = createElement('button', { label: 'Child 2' });
   const parent = createElement('container', {}, child1, child2);
 
   assertEquals(parent.children?.length || 0, 2);
@@ -70,7 +70,7 @@ Deno.test('traverseElements visits all elements', () => {
 
   const child1 = createElement('text', { text: 'Child 1', id: 'child1' });
 
-  const child2 = createElement('button', { title: 'Child 2', id: 'child2' });
+  const child2 = createElement('button', { label: 'Child 2', id: 'child2' });
 
   const parent = createElement('container', { id: 'parent' }, child1, child2);
 
@@ -143,11 +143,11 @@ Deno.test('cloneElement creates deep copy', () => {
 });
 
 Deno.test('cloneElement with new props merges correctly', () => {
-  const original = createElement('button', { title: 'Original', variant: 'default', id: 'original' });
+  const original = createElement('button', { label: 'Original', variant: 'default', id: 'original' });
 
   const cloned = cloneElement(original, { variant: 'primary', disabled: true });
 
-  assertEquals(cloned.props.title, 'Original'); // Original prop preserved
+  assertEquals(cloned.props.label, 'Original'); // Original prop preserved
   assertEquals(cloned.props.variant, 'primary'); // New prop overrides
   assertEquals(cloned.props.disabled, true); // New prop added
 });

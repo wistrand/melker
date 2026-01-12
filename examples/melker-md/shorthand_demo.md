@@ -6,7 +6,7 @@ Demonstrates shorthand type syntax for declaring elements without `type:` proper
 
 | Syntax | Element | Generated |
 |--------|---------|-----------|
-| `+--[Title]--+` | button | `<button title="Title" />` |
+| `+--[Title]--+` | button | `<button label="Title" />` |
 | `+--"content"--+` | text | `<text>content</text>` |
 | `+--{id}--+` | input | `<input id="id" />` |
 | `+--<type> content--+` | explicit | `<type title/text="content" />` |

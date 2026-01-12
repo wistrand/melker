@@ -67,6 +67,34 @@ export class DialogElement extends Element implements Renderable {
   }
 
   /**
+   * Set dialog visibility
+   */
+  setVisible(visible: boolean): void {
+    this.props.open = visible;
+  }
+
+  /**
+   * Check if dialog is visible
+   */
+  isVisible(): boolean {
+    return this.props.open === true;
+  }
+
+  /**
+   * Show the dialog (alias for setVisible(true))
+   */
+  show(): void {
+    this.setVisible(true);
+  }
+
+  /**
+   * Hide the dialog (alias for setVisible(false))
+   */
+  hide(): void {
+    this.setVisible(false);
+  }
+
+  /**
    * Check if a point is on the title bar (for drag initiation)
    */
   isOnTitleBar(x: number, y: number): boolean {

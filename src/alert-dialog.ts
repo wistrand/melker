@@ -73,7 +73,7 @@ export class AlertDialogManager {
             id="alert-footer"
             style="display: flex; flex-direction: row; justify-content: center; width: fill"
           >
-            <button id="alert-ok" title="OK" onClick=${onClose} />
+            <button id="alert-ok" label="OK" onClick=${onClose} />
           </container>
         </container>
       </dialog>

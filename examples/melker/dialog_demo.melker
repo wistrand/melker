@@ -67,19 +67,19 @@
       <container style="display: flex; flex-direction: row; margin-bottom: 2;">
         <button
           id="btn-info"
-          title="Info Dialog"
+          label="Info Dialog"
           style="width: 16; margin-right: 2; background-color: #3b82f6; color: white;"
           onClick="$app.openDialog1();"
         />
         <button
           id="btn-confirm"
-          title="Confirm Dialog"
+          label="Confirm Dialog"
           style="width: 18; margin-right: 2; background-color: #10b981; color: white;"
           onClick="$app.openDialog2();"
         />
         <button
           id="btn-form"
-          title="Form Dialog"
+          label="Form Dialog"
           style="width: 16; background-color: #8b5cf6; color: white;"
           onClick="$app.openDialog3();"
         />
@@ -109,7 +109,7 @@
         <container style="display: flex; flex-direction: row; justify-content: flex-end; margin-top: 2;">
           <button
             id="info-ok"
-            title="OK"
+            label="OK"
             style="width: 10; background-color: #3b82f6; color: white;"
             onClick="$app.closeDialog1();"
           />
@@ -126,13 +126,13 @@
         <container style="display: flex; flex-direction: row; justify-content: flex-end; margin-top: 2;">
           <button
             id="confirm-cancel"
-            title="Cancel"
+            label="Cancel"
             style="width: 10; margin-right: 2; background-color: #6b7280; color: white;"
             onClick="$app.closeDialog2();"
           />
           <button
             id="confirm-ok"
-            title="Confirm"
+            label="Confirm"
             style="width: 10; background-color: #10b981; color: white;"
             onClick="$app.closeDialog2();"
           />
@@ -158,13 +158,13 @@
         <container style="display: flex; flex-direction: row; justify-content: flex-end; margin-top: 2;">
           <button
             id="form-cancel"
-            title="Cancel"
+            label="Cancel"
             style="width: 10; margin-right: 2; background-color: #6b7280; color: white;"
             onClick="$app.closeDialog3();"
           />
           <button
             id="form-submit"
-            title="Submit"
+            label="Submit"
             style="width: 10; background-color: #8b5cf6; color: white;"
             onClick="$app.closeDialog3();"
           />

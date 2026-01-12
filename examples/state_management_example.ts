@@ -23,7 +23,7 @@ function badUpdatePattern() {
 function updateCounter() {
   const counterElement = engine.document.getElementById('counter-display');
   if (counterElement) {
-    counterElement.props.text = `Count: ${counter}`;
+    counterElement.setValue(`Count: ${counter}`);
     engine.render(); // Efficient redraw of only what changed
   }
 }
@@ -31,7 +31,7 @@ function updateCounter() {
 function updateMessage() {
   const messageElement = engine.document.getElementById('message-display');
   if (messageElement) {
-    messageElement.props.text = message;
+    messageElement.setValue(message);
     engine.render(); // Efficient redraw
   }
 }
@@ -103,7 +103,7 @@ function createCompleteUI() {
 
       <!-- Counter section with ID for targeted updates -->
       <container style=${buttonRowStyle}>
-        <button title="Decrement" onClick=${handleDecrement} tabIndex=${1} />
+        <button label="Decrement" onClick=${handleDecrement} tabIndex=${1} />
         <text
           id="counter-display"
           style=${{
@@ -113,7 +113,7 @@ function createCompleteUI() {
             textAlign: 'center'
           }}
         >Count: ${counter}</text>
-        <button title="Increment" onClick=${handleIncrement} tabIndex=${2} />
+        <button label="Increment" onClick=${handleIncrement} tabIndex=${2} />
       </container>
 
       <!-- Message section with ID for targeted updates -->
@@ -127,8 +127,8 @@ function createCompleteUI() {
           }}
         >${message}</text>
         <container style=${buttonRowStyle}>
-          <button title="Update Message" onClick=${handleUpdateMessage} tabIndex=${3} />
-          <button title="Reset All" onClick=${handleReset} tabIndex=${4} style=${{ color: getThemeColor('warning') }} />
+          <button label="Update Message" onClick=${handleUpdateMessage} tabIndex=${3} />
+          <button label="Reset All" onClick=${handleReset} tabIndex=${4} style=${{ color: getThemeColor('warning') }} />
         </container>
       </container>
 
@@ -140,8 +140,8 @@ Key principles:
 • Avoid recreating entire UI trees
 • Only use updateUI() when structure changes
 
-❌ BAD: engine.updateUI(newCompleteTree)
-✅ GOOD: element.props.text = newValue; engine.render()
+BAD: engine.updateUI(newCompleteTree)
+GOOD: element.setValue(newValue); engine.render()
       </text>
 
       <text style=${{ marginTop: 1, fontWeight: 'bold' }}>Press Escape to exit</text>

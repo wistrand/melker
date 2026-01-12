@@ -41,7 +41,7 @@ export interface SelectProps extends FilterableListCoreProps {
  *
  * Usage:
  * ```xml
- * <select placeholder="Choose..." onSelect="$app.setValue(event.value)">
+ * <select placeholder="Choose..." onChange="$app.setValue(event.value)">
  *   <option value="a">Option A</option>
  *   <option value="b">Option B</option>
  *   <group label="More Options">
@@ -535,15 +535,19 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
         // Update selected value
         this.props.selectedValue = option.id;
 
-        // Fire onSelect callback
+        // Fire onChange/onSelect callback
+        const event = {
+          type: 'select' as const,
+          value: option.id,
+          label: option.label,
+          option: option,
+          targetId: this.id,
+        };
+        if (this.props.onChange) {
+          this.props.onChange(event);
+        }
         if (this.props.onSelect) {
-          this.props.onSelect({
-            type: 'select',
-            value: option.id,
-            label: option.label,
-            option: option,
-            targetId: this.id,
-          });
+          this.props.onSelect(event);
         }
 
         // Close dropdown
@@ -634,7 +638,8 @@ export const selectSchema: ComponentSchema = {
     maxVisible: { type: 'number', description: 'Maximum visible options in dropdown' },
     dropdownWidth: { type: 'number', description: 'Override dropdown width' },
     width: { type: 'number', description: 'Width of the select trigger' },
-    onSelect: { type: 'function', description: 'Callback when option is selected' },
+    onChange: { type: 'handler', description: 'Called when option is selected (preferred). Event: { value, label, option, targetId }' },
+    onSelect: { type: 'handler', description: 'Called when option is selected (deprecated: use onChange)' },
   },
 };
 

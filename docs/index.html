@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Melker - Run text with meaning</title>
+  <meta name="description" content="A TUI framework for apps you want to share safely. Document-first terminal apps with permission sandboxing.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-secondary: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent: #58a6ff;
+      --accent-secondary: #388bfd;
+      --code-bg: #1c2128;
+      --success: #3fb950;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      padding: 48px 0;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 3rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    header .tagline {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      font-style: italic;
+      margin-bottom: 24px;
+    }
+
+    header .description {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-secondary);
+      text-decoration: none;
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+      text-decoration: none;
+    }
+
+    /* Sections */
+    section {
+      padding: 64px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section:last-of-type {
+      border-bottom: none;
+    }
+
+    section h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+
+    /* Features */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .feature {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .feature h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .feature p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* Code */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.9em;
+    }
+
+    .code-block {
+      margin: 16px 0;
+    }
+
+    .code-block-title {
+      background: var(--border);
+      padding: 8px 16px;
+      border-radius: 6px 6px 0 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-bottom: none;
+    }
+
+    .code-block pre {
+      border-radius: 0 0 6px 6px;
+      margin: 0;
+    }
+
+    /* Showcase */
+    .showcase {
+      margin-top: 24px;
+    }
+
+    .showcase img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .showcase-caption {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+
+    /* Comparison table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      font-weight: 600;
+      background: var(--bg-secondary);
+    }
+
+    td:not(:first-child), th:not(:first-child) {
+      text-align: center;
+    }
+
+    .check {
+      color: var(--success);
+    }
+
+    /* Installation steps */
+    .steps {
+      counter-reset: step;
+    }
+
+    .step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .step-number {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      color: var(--bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-content h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .step-content p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+
+    /* Footer */
+    footer {
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+    }
+
+    footer a:hover {
+      color: var(--text);
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      header h1 {
+        font-size: 2rem;
+      }
+
+      header .tagline {
+        font-size: 1rem;
+      }
+
+      section {
+        padding: 48px 0;
+      }
+
+      .step {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Melker</h1>
+      <p class="tagline">Run text with meaning</p>
+      <p class="description">
+        A TUI framework for apps you want to share safely.
+        Document-first terminal apps with permission sandboxing.
+      </p>
+      <div class="cta-buttons">
+        <a href="https://github.com/wistrand/melker" class="btn btn-primary">View on GitHub</a>
+        <a href="https://github.com/wistrand/melker/blob/main/MANIFESTO.md" class="btn btn-secondary">Read the Manifesto</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="container">
+        <h2>Why Melker?</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Melker</th>
+              <th>Other TUI Frameworks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Run from URL</td>
+              <td class="check">&#10003;</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>Permission sandbox</td>
+              <td class="check">&#10003;</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>App approval system</td>
+              <td class="check">&#10003;</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>Inspect policy before run</td>
+              <td class="check">&#10003;</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>Dev Tools (F12)</td>
+              <td class="check">&#10003;</td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>No build step</td>
+              <td class="check">&#10003;</td>
+              <td>Some</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="showcase">
+          <img src="showcase.png" alt="Melker showcase - a task manager app">
+          <p class="showcase-caption">A task manager in 170 lines of declarative markup</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2>Key Features</h2>
+        <div class="features">
+          <div class="feature">
+            <h3>Document-First</h3>
+            <p>Apps are readable documents, not opaque binaries. View source, inspect handlers, understand before you run.</p>
+          </div>
+          <div class="feature">
+            <h3>Explicit Policy</h3>
+            <p>Permissions declared in metadata, visible before execution. No hidden capabilities.</p>
+          </div>
+          <div class="feature">
+            <h3>Run from URL</h3>
+            <p>Share apps via URL. Remote apps require policy and user approval.</p>
+          </div>
+          <div class="feature">
+            <h3>Flexbox Layout</h3>
+            <p>Modern layout with flex, gap, padding. CSS-like styling with 16 million colors.</p>
+          </div>
+          <div class="feature">
+            <h3>Rich Components</h3>
+            <p>Tables, dialogs, forms, canvas graphics, video playback, OAuth flows.</p>
+          </div>
+          <div class="feature">
+            <h3>Dev Tools</h3>
+            <p>Press F12 to inspect source, policy, and system info at runtime.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2>Installation</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Clone the repository</h3>
+              <p>Melker is distributed via git. No package managers required.</p>
+              <pre>git clone https://github.com/wistrand/melker.git
+cd melker</pre>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Run an example</h3>
+              <p>Requires Deno 2.5+. Node.js and Bun are not supported.</p>
+              <pre>./melker.ts examples/melker/hello.melker</pre>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Optional: Install globally</h3>
+              <p>Create a symlink to run from anywhere.</p>
+              <pre>ln -s $(pwd)/melker.ts ~/.local/bin/melker</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2>Quick Start</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">
+          Create a <code>hello.melker</code> file:
+        </p>
+        <div class="code-block">
+          <div class="code-block-title">hello.melker</div>
+          <pre>&lt;melker&gt;
+  &lt;policy&gt;
+  {
+    "name": "Hello App",
+    "permissions": {}
+  }
+  &lt;/policy&gt;
+
+  &lt;container style="border: thin; padding: 1;"&gt;
+    &lt;text style="font-weight: bold;"&gt;Hello, Terminal!&lt;/text&gt;
+    &lt;button label="Exit" onClick="$melker.exit()" /&gt;
+  &lt;/container&gt;
+&lt;/melker&gt;</pre>
+        </div>
+        <p style="color: var(--text-secondary); margin: 24px 0 16px;">
+          Run it:
+        </p>
+        <pre>./melker.ts hello.melker</pre>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2>Releases</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 16px;">
+          Melker uses CalVer (<code>YYYY.MM.PATCH</code>). Releases are git tags.
+        </p>
+        <pre># List available releases
+git tag --list 'v*' | sort -V
+
+# Checkout a specific release
+git checkout v2026.01.1</pre>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>
+        <a href="https://github.com/wistrand/melker">GitHub</a> &middot;
+        <a href="https://github.com/wistrand/melker/blob/main/LICENSE.txt">MIT License</a> &middot;
+        <a href="https://github.com/wistrand/melker/blob/main/FAQ.md">FAQ</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

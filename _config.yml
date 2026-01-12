@@ -1,3 +1,17 @@
 theme: jekyll-theme-minimal
 title: Melker
 description: Terminal UI framework for Deno and TypeScript
+include:
+  - README.md
+  - FAQ.md
+  - MANIFESTO.md
+  - CLAUDE.md
+  - agent_docs/
+  - skills/creating-melker-apps/
+exclude:
+  - "**/*.ts"
+  - "**/*.json"
+  - "**/*.melker"
+  - src/
+  - examples/
+  - tests/

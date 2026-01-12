@@ -1,4 +1,5 @@
 <melker>
+  <title>Clock</title>
   <script type="typescript">
     // Analog clock rendering functions using Melker's pixel canvas
     // Uses aspect-ratio corrected methods for visually round circles

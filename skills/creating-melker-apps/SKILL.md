@@ -23,7 +23,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 
 ## Critical Rules
 
-1. **Button uses `label` prop** - Not `title`
+1. **Button label** - Use `<button>Label</button>` or `label="Label"` (not `title`)
 2. **Don't add border to buttons** - Buttons already have `[ ]` brackets; adding border creates `[ [ Button ] ]`
 3. **Button padding** - Vertical padding ignored for `[ ]` buttons (they stay 1 line); horizontal padding works
 4. **Input type is `'input'`** - Not `'text-input'`
@@ -73,7 +73,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 | `<text>` | id, style | Text content |
 | `<input>` | placeholder, value, format, onInput | Single-line (format: 'text'\|'password') |
 | `<textarea>` | placeholder, rows, cols, wrap | Multi-line |
-| `<button>` | **label**, onClick | Uses `label` NOT `title` |
+| `<button>` | **label**, onClick | `<button>Label</button>` or `label="Label"` |
 | `<dialog>` | title, open, modal, backdrop | Modal overlay |
 | `<checkbox>` | title, checked, onChange | Toggle |
 | `<radio>` | title, value, name, onChange | Radio button |

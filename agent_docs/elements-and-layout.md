@@ -34,7 +34,7 @@ Element (abstract base class)
 
 ```typescript
 // Create elements via createElement()
-const button = createElement('button', { title: 'Click' });
+const button = createElement('button', { label: 'Click' });
 const container = createElement('container', { style: { display: 'flex' } }, button);
 ```
 

@@ -165,7 +165,7 @@ private _rebuildUI(): void {
   if (showBreadcrumb) {
     uiElements.push(createElement('container', { ... },
       createElement('text', { text: 'Path: ' + this._currentPath }),
-      createElement('button', { title: '^', onClick: () => this._navigateUp() })
+      createElement('button', { label: '^', onClick: () => this._navigateUp() })
     ));
   }
 
@@ -194,8 +194,8 @@ private _rebuildUI(): void {
   // Action buttons
   if (showButtons) {
     uiElements.push(createElement('container', { ... },
-      createElement('button', { title: 'Cancel', onClick: () => this._handleCancel() }),
-      createElement('button', { title: 'Open', onClick: () => this._handleEnterFromButton() })
+      createElement('button', { label: 'Cancel', onClick: () => this._handleCancel() }),
+      createElement('button', { label: 'Open', onClick: () => this._handleEnterFromButton() })
     ));
   }
 

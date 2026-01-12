@@ -176,7 +176,7 @@ tests/                - Test files
 
 1. **Console redirects to logger** - `console.log()` redirects to `$melker.logger.info()` (won't break TUI), but prefer explicit `$melker.logger.debug()` etc.
 2. **`alert()` shows a modal dialog** - Works like browser alert but as a TUI dialog (dismiss with OK button or Escape)
-3. **Button uses `label` prop** - Not `title`
+3. **Button label** - Use `<button>Label</button>` or `label="Label"` (not `title`)
 4. **Don't add border to buttons** - Buttons render with `[ ]` brackets by default; adding border creates `[ [ Button ] ]`
 5. **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes
 6. **Input type is `'input'`** - Not `'text-input'`
@@ -457,7 +457,7 @@ Creates `creating-melker-apps.zip` in project root, ready for upload to claude.a
 - **Don't add border to buttons** - Buttons render with `[ ]` brackets by default
 - **Avoid specifying colors** - Let the theme engine handle styling
 - **Console redirects to logger** - `console.log()` redirects to `$melker.logger` (F12 shows log location)
-- **Button uses `label` prop** - Not `title`
+- **Button label** - Use `<button>Label</button>` or `label="Label"` (not `title`)
 
 ## Runtime Keyboard Shortcuts
 

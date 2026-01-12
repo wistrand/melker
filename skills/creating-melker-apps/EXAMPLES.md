@@ -41,10 +41,7 @@
       />
     </container>
 
-    <button
-      label="Reset"
-      onClick="$melker.getElementById('counter').setValue('0');"
-    />
+    <button onClick="$melker.getElementById('counter').setValue('0');">Reset</button>
   </container>
 </melker>
 ```

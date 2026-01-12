@@ -719,6 +719,22 @@ function convertToElement(node: ParsedNode, context: TemplateContext): Element {
       });
     }
 
+    // Handle <button>label</button> syntax - use text content as label prop
+    if (node.name === 'button' && children.length > 0 && !props.label) {
+      const hasOnlyTextChildren = children.every(child => child.type === 'text');
+      if (hasOnlyTextChildren) {
+        const labelContent = children
+          .map(child => child.props.text)
+          .join('')
+          .trim();
+
+        return createElement('button', {
+          ...props,
+          label: labelContent
+        });
+      }
+    }
+
     // Handle <td>content</td> and <th>content</th> - wrap plain text in text element
     if ((node.name === 'td' || node.name === 'th') && children.length > 0) {
       // Check if all children are plain text elements (from text nodes)

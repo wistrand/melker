@@ -31,7 +31,7 @@ Melker has **no reactivity system**. All UI updates require explicit `getElement
 <text>$ENV{FOO:-bar}</text>       <!-- Value of FOO or "bar" if unset -->
 ```
 
-## 2. Button Uses `label`, Not `title`
+## 2. Button Uses `label` or Content, Not `title`
 
 **Mistake**: Using `title` attribute for button text.
 
@@ -39,7 +39,10 @@ Melker has **no reactivity system**. All UI updates require explicit `getElement
 <!-- WRONG - title is not supported -->
 <button title="Click Me" />
 
-<!-- CORRECT - use label -->
+<!-- CORRECT - content syntax (preferred) -->
+<button>Click Me</button>
+
+<!-- CORRECT - label prop -->
 <button label="Click Me" />
 ```
 

@@ -4,9 +4,9 @@
   "name": "melker-htop",
   "description": "Cross-platform terminal system monitor inspired by htop",
   "permissions": {
-    "all": true
+    "all" : true
   },
-  "comment": "Linux uses /proc filesystem, macOS uses sysctl/vm_stat/ps commands"
+  "comment": "Linux uses /proc filesystem, macOS uses sysctl/vm_stat/ps commands. Reading /proc  needs all permissions"
 }
 </policy>
 

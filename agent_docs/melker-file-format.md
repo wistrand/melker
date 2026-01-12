@@ -568,6 +568,10 @@ Apps can declare required permissions. When a policy is found, the app runs in a
   {
     "name": "My App",
     "description": "What the app does",
+    "comment": [
+      "This comment is shown in the approval prompt.",
+      "Use it to explain what the app does or why it needs permissions."
+    ],
     "permissions": {
       "read": ["."],
       "net": ["api.example.com"],
@@ -578,6 +582,18 @@ Apps can declare required permissions. When a policy is found, the app runs in a
   <!-- UI content -->
 </melker>
 ```
+
+### Policy Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | App name (shown in approval prompt) |
+| `version` | string | App version |
+| `description` | string | Short description |
+| `comment` | string \| string[] | Detailed comment shown in approval prompt |
+| `permissions` | object | Permission declarations |
+| `config` | object | App-specific configuration values |
+| `configSchema` | object | Schema for env var overrides |
 
 ### External Policy File
 
@@ -595,6 +611,7 @@ Apps can declare required permissions. When a policy is found, the app runs in a
 | `run` | `["ffmpeg", "ffprobe"]` or `["*"]` | `--allow-run` |
 | `env` | `["MY_VAR"]` or `["*"]` | `--allow-env` |
 | `ffi` | `["libfoo.so"]` or `["*"]` | `--allow-ffi` |
+| `sys` | `["hostname", "osRelease"]` or `["*"]` | `--allow-sys` |
 
 ### Permission Shortcuts
 
@@ -722,8 +739,8 @@ All .melker files require first-run approval (use `--trust` to bypass).
 
 **Local files:**
 - Policy tag is optional (uses auto-policy with all permissions if missing)
-- Approval is path-based (persists across file edits for dev experience)
-- Re-approval only needed if file is moved/renamed
+- Approval is policy-hash-based (code changes don't require re-approval)
+- Re-approval needed if policy changes (permissions, name, comment, etc.) or file moved/renamed
 
 **Remote files (http:// or https://):**
 - Policy tag is mandatory (fails without it)

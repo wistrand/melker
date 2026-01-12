@@ -5,6 +5,11 @@
   {
     "name": "Seascape Shader Demo",
     "description": "Animated ocean shader by TDM",
+    "comment": [
+      "Port of the famous 'Seascape' shader by Alexander Alekseev (TDM).",
+      "Renders an animated ocean with waves, reflections, and sky.",
+      "License: CC BY-NC-SA 3.0"
+    ],
     "permissions": {
       "shader": true
     }

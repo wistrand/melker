@@ -177,11 +177,23 @@
       font-size: 1.1rem;
       font-weight: 600;
       margin-bottom: 8px;
+      color: var(--text);
     }
 
     .feature p {
       color: var(--text-secondary);
       font-size: 0.95rem;
+    }
+
+    a.feature {
+      display: block;
+      text-decoration: none;
+      transition: border-color 0.2s;
+    }
+
+    a.feature:hover {
+      border-color: var(--accent);
+      text-decoration: none;
     }
 
     /* Code */
@@ -394,30 +406,30 @@
           Apps are readable documents, not opaque binaries. View source, inspect handlers, understand before you run.
         </p>
         <div class="features">
-          <div class="feature">
+          <a href="https://github.com/wistrand/melker/blob/main/agent_docs/melker-file-format.md#policy-tag" class="feature">
             <h3>Explicit Policy</h3>
             <p>Permissions declared in metadata, visible before execution. No hidden capabilities.</p>
-          </div>
-          <div class="feature">
+          </a>
+          <a href="https://github.com/wistrand/melker/blob/main/CLAUDE.md#running-melker-files" class="feature">
             <h3>Run from URL</h3>
             <p>Share apps via URL. Remote apps require policy and user approval.</p>
-          </div>
-          <div class="feature">
+          </a>
+          <a href="https://github.com/wistrand/melker/blob/main/agent_docs/elements-and-layout.md" class="feature">
             <h3>Flexbox Layout</h3>
             <p>Modern layout with flex, gap, padding. CSS-like styling with 16 million colors.</p>
-          </div>
-          <div class="feature">
+          </a>
+          <a href="https://github.com/wistrand/melker/blob/main/agent_docs/elements-and-layout.md#element-types" class="feature">
             <h3>Rich Components</h3>
             <p>Tables, dialogs, forms, canvas graphics, video playback, OAuth flows.</p>
-          </div>
-          <div class="feature">
+          </a>
+          <a href="https://github.com/wistrand/melker/blob/main/agent_docs/debugging.md" class="feature">
             <h3>Dev Tools</h3>
             <p>Press F12 to inspect source, policy, and system info at runtime.</p>
-          </div>
-          <div class="feature">
+          </a>
+          <a href="https://github.com/wistrand/melker/blob/main/agent_docs/melker-file-format.md" class="feature">
             <h3>No Build Step</h3>
             <p>Write markup, run immediately. No compilation, no bundling, no waiting.</p>
-          </div>
+          </a>
         </div>
       </div>
     </section>
@@ -426,10 +438,6 @@
       <div class="container">
         <h2><a href="https://github.com/wistrand/melker/tree/main/examples/melker" style="color: inherit;">Examples</a></h2>
         <div class="showcase-gallery">
-          <div class="showcase-item">
-            <img src="showcase.png" alt="Melker showcase - a task manager app">
-            <a href="https://github.com/wistrand/melker/blob/main/examples/melker/showcase.melker">showcase.melker</a>
-          </div>
           <div class="showcase-item">
             <img src="htop.png" alt="Melker htop - system monitor">
             <a href="https://github.com/wistrand/melker/blob/main/examples/melker/htop.melker">htop.melker</a>
@@ -447,6 +455,31 @@
             <a href="https://github.com/wistrand/melker/blob/main/examples/melker/video_demo.melker">video_demo.melker</a>
           </div>
         </div>
+
+        <h3 style="margin-top: 48px; margin-bottom: 16px;">Quick Start</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">
+          Create a <code>hello.melker</code> file:
+        </p>
+        <div class="code-block">
+          <div class="code-block-title">hello.melker</div>
+          <pre>&lt;melker&gt;
+  &lt;policy&gt;
+  {
+    "name": "Hello App",
+    "permissions": {}
+  }
+  &lt;/policy&gt;
+
+  &lt;container style="border: thin; padding: 1;"&gt;
+    &lt;text style="font-weight: bold;"&gt;Hello, Terminal!&lt;/text&gt;
+    &lt;button label="Exit" onClick="$melker.exit()" /&gt;
+  &lt;/container&gt;
+&lt;/melker&gt;</pre>
+        </div>
+        <p style="color: var(--text-secondary); margin: 24px 0 16px;">
+          Run it:
+        </p>
+        <pre>./melker.ts hello.melker</pre>
       </div>
     </section>
 
@@ -480,35 +513,6 @@ cd melker</pre>
             </div>
           </div>
         </div>
-      </div>
-    </section>
-
-    <section>
-      <div class="container">
-        <h2>Quick Start</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 24px;">
-          Create a <code>hello.melker</code> file:
-        </p>
-        <div class="code-block">
-          <div class="code-block-title">hello.melker</div>
-          <pre>&lt;melker&gt;
-  &lt;policy&gt;
-  {
-    "name": "Hello App",
-    "permissions": {}
-  }
-  &lt;/policy&gt;
-
-  &lt;container style="border: thin; padding: 1;"&gt;
-    &lt;text style="font-weight: bold;"&gt;Hello, Terminal!&lt;/text&gt;
-    &lt;button label="Exit" onClick="$melker.exit()" /&gt;
-  &lt;/container&gt;
-&lt;/melker&gt;</pre>
-        </div>
-        <p style="color: var(--text-secondary); margin: 24px 0 16px;">
-          Run it:
-        </p>
-        <pre>./melker.ts hello.melker</pre>
       </div>
     </section>
 

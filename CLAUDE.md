@@ -402,8 +402,8 @@ All .melker files require first-run approval (use `--trust` to bypass).
 
 **Local files:**
 - Policy tag is optional (uses auto-policy with all permissions if missing)
-- Approval is path-based (persists across file edits for dev experience)
-- Re-approval only needed if file is moved/renamed
+- Approval is policy-hash-based (code changes don't require re-approval)
+- Re-approval needed if policy changes (permissions, name, comment, etc.) or file moved/renamed
 
 **Remote files (http:// or https://):**
 - Policy tag is mandatory (fails without it)

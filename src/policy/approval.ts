@@ -150,6 +150,9 @@ function formatPolicyPermissions(policy: MelkerPolicy): string[] {
   if (p.ffi?.length) {
     lines.push(`  ffi: ${p.ffi.join(', ')}`);
   }
+  if (p.sys?.length) {
+    lines.push(`  sys: ${p.sys.join(', ')}`);
+  }
   if (p.ai) {
     lines.push('  ai: enabled');
   }
@@ -196,6 +199,17 @@ export function showApprovalPrompt(
   }
   if (policy.description) {
     console.log(`Description: ${policy.description}`);
+  }
+
+  // Show comment if present (supports string or array of strings)
+  if (policy.comment) {
+    console.log('\n\x1b[36mComment:\x1b[0m');
+    const comments = Array.isArray(policy.comment)
+      ? policy.comment
+      : policy.comment.split('\n');
+    for (const line of comments) {
+      console.log(`  ${line}`);
+    }
   }
 
   const permLines = formatPolicyPermissions(policy);
@@ -274,31 +288,59 @@ export async function getApproval(url: string): Promise<ApprovalRecord | null> {
 }
 
 /**
- * Check if a local file has been approved (path-based, no content hash)
- * Local approvals persist across file edits for better dev experience.
+ * Calculate a hash of the policy for local approval comparison.
+ * Only hashes the policy, not the file content - so code changes don't
+ * trigger re-approval, but policy changes do.
  */
-export async function checkLocalApproval(filepath: string): Promise<boolean> {
+async function hashPolicy(policy: MelkerPolicy): Promise<string> {
+  const policyJson = JSON.stringify(policy, Object.keys(policy).sort());
+  return await hashString(policyJson);
+}
+
+/**
+ * Check if a local file has been approved with the current policy.
+ * Local approvals persist across file edits (code changes) but
+ * policy changes trigger re-approval.
+ */
+export async function checkLocalApproval(
+  filepath: string,
+  currentPolicy: MelkerPolicy
+): Promise<boolean> {
   try {
     const filePath = await getApprovalFilePath(filepath);
-    await Deno.stat(filePath);  // Just check if approval file exists
-    return true;
+    const json = await Deno.readTextFile(filePath);
+    const record: ApprovalRecord = JSON.parse(json);
+
+    // Calculate current policy hash
+    const currentHash = await hashPolicy(currentPolicy);
+
+    // Compare with stored hash (supports old 'local' marker for backwards compat)
+    if (record.hash === 'local') {
+      // Old approval without policy hash - re-approve to get new format
+      return false;
+    }
+
+    return record.hash === currentHash;
   } catch {
     return false;
   }
 }
 
 /**
- * Save approval for a local file (path-based, no content hash)
- * Uses 'local' as hash marker to indicate path-based approval.
+ * Save approval for a local file with policy hash.
+ * Hash is based on policy only (not file content) so code changes
+ * don't require re-approval, but policy changes do.
  */
 export async function saveLocalApproval(
   filepath: string,
   policy: MelkerPolicy,
   denoFlags: string[]
 ): Promise<void> {
+  const policyHash = await hashPolicy(policy);
+
   const record: ApprovalRecord = {
     url: filepath,  // Using 'url' field for path
-    hash: 'local',  // Marker indicating path-based approval
+    hash: policyHash,  // Hash of policy for change detection
     approvedAt: new Date().toISOString(),
     policy,
     denoFlags,

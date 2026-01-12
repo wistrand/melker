@@ -37,6 +37,13 @@ export interface MelkerPolicy {
   /** App description (optional, for display) */
   description?: string;
 
+  /**
+   * Optional comment shown in approval prompt.
+   * Use this to explain what the app does or why it needs certain permissions.
+   * Supports multiple lines (use \n or array of strings).
+   */
+  comment?: string | string[];
+
   /** Permission declarations */
   permissions?: PolicyPermissions;
 

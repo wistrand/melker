@@ -365,6 +365,15 @@ export function formatPolicy(policy: MelkerPolicy): string {
   if (policy.description) {
     lines.push(`  ${policy.description}`);
   }
+  if (policy.comment) {
+    lines.push('');
+    const comments = Array.isArray(policy.comment)
+      ? policy.comment
+      : policy.comment.split('\n');
+    for (const line of comments) {
+      lines.push(`  ${line}`);
+    }
+  }
   lines.push('');
 
   // Permissions

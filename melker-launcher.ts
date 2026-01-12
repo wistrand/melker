@@ -410,7 +410,10 @@ export async function main(): Promise<void> {
       console.error('Error: --revoke-approval requires a path or URL argument');
       Deno.exit(1);
     }
-    const revoked = await revokeApproval(target);
+    // Resolve to absolute path for local files (approvals are stored by absolute path)
+    const isUrl = target.startsWith('http://') || target.startsWith('https://');
+    const lookupPath = isUrl ? target : resolve(Deno.cwd(), target);
+    const revoked = await revokeApproval(lookupPath);
     if (revoked) {
       console.log(`Revoked approval for: ${target}`);
     } else {
@@ -427,11 +430,15 @@ export async function main(): Promise<void> {
       console.error('Error: --show-approval requires a path or URL argument');
       Deno.exit(1);
     }
-    const record = await getApproval(target);
+    // Resolve to absolute path for local files (approvals are stored by absolute path)
+    const isUrl = target.startsWith('http://') || target.startsWith('https://');
+    const lookupPath = isUrl ? target : resolve(Deno.cwd(), target);
+    const record = await getApproval(lookupPath);
     if (record) {
-      const approvalFile = await getApprovalFilePath(target);
-      console.log(`\nApproval record for: ${target}\n`);
-      console.log(`File: ${approvalFile}`);
+      const approvalFile = await getApprovalFilePath(lookupPath);
+      console.log(`\nApproval record for: ${target}`);
+      console.log(`  (resolved: ${lookupPath})\n`);
+      console.log(`Approval file: ${approvalFile}`);
       console.log(`Approved: ${record.approvedAt}`);
       console.log(`Hash: ${record.hash.substring(0, 16)}...`);
       console.log('\nPolicy:');
@@ -439,7 +446,42 @@ export async function main(): Promise<void> {
       console.log('\nDeno flags:');
       console.log(formatDenoFlags(record.denoFlags));
     } else {
-      console.log(`No approval found for: ${target}`);
+      // No approval - check if file exists and show its policy
+      console.log(`\nNo approval found for: ${target}\n`);
+
+      // Check if it's a local file that exists
+      const isUrl = target.startsWith('http://') || target.startsWith('https://');
+      if (!isUrl) {
+        try {
+          const stat = await Deno.stat(target);
+          if (stat.isFile) {
+            console.log('Local app has not been approved yet.');
+            console.log('Run the app to trigger the approval prompt.\n');
+
+            // Try to load and show the policy
+            try {
+              const result = await loadPolicy(target);
+              if (result.policy) {
+                console.log('App policy:');
+                console.log(formatPolicy(result.policy));
+              } else {
+                console.log('No policy declared in file (will use auto-policy with all permissions).');
+              }
+            } catch {
+              // Ignore policy load errors
+            }
+          }
+        } catch (e) {
+          if (e instanceof Deno.errors.NotFound) {
+            console.log('File not found.');
+          } else {
+            console.log(`Cannot access file: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+      } else {
+        console.log('Remote app has not been approved yet.');
+        console.log('Run the app to trigger the approval prompt.');
+      }
     }
     Deno.exit(0);
   }
@@ -581,8 +623,8 @@ export async function main(): Promise<void> {
         }
       }
 
-      // Local file approval check
-      const isApproved = await checkLocalApproval(absoluteFilepath);
+      // Local file approval check (compares policy hash - code changes ok, policy changes re-approve)
+      const isApproved = await checkLocalApproval(absoluteFilepath, policy);
 
       if (!isApproved) {
         const approved = showApprovalPrompt(absoluteFilepath, policy);

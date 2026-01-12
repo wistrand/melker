@@ -300,6 +300,7 @@ For more examples, see [EXAMPLES.md](EXAMPLES.md).
   {
     "name": "My App",
     "description": "What the app does",
+    "comment": "Optional detailed explanation shown in approval prompt",
     "permissions": {
       "read": ["."],
       "write": ["."],
@@ -311,6 +312,14 @@ For more examples, see [EXAMPLES.md](EXAMPLES.md).
 </melker>
 ```
 
+**Policy fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | App name (shown in approval prompt) |
+| `description` | string | Short description |
+| `comment` | string \| string[] | Detailed comment shown in approval prompt |
+| `permissions` | object | Permission declarations (see below) |
+
 **Permission types:**
 | Permission | Example | Description |
 |------------|---------|-------------|
@@ -319,6 +328,8 @@ For more examples, see [EXAMPLES.md](EXAMPLES.md).
 | `net` | `["api.example.com"]` | Network access to hosts |
 | `run` | `["ffmpeg"]` | Execute system commands |
 | `env` | `["API_KEY"]` | Environment variable access |
+| `ffi` | `["libfoo.so"]` | FFI library access |
+| `sys` | `["hostname", "osRelease"]` | System information access |
 
 **Shortcuts** (set to `true` to enable):
 | Shortcut | Enables |

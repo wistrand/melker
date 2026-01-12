@@ -26,6 +26,7 @@ export * from './table.ts';
 export * from './table-section.ts';
 export * from './table-row.ts';
 export * from './table-cell.ts';
+export * from './data-table.ts';
 
 // Filterable list components (combobox, select, etc.)
 export * from './filterable-list/mod.ts';

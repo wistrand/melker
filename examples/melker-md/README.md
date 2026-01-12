@@ -345,9 +345,9 @@ Use a `json oauth` fenced block for OAuth2 PKCE configuration:
 ````markdown
 ```json oauth
 {
-  "wellknown": "${OAUTH_WELLKNOWN}",
-  "clientId": "${OAUTH_CLIENT_ID}",
-  "audience": "${OAUTH_AUDIENCE}",
+  "wellknown": "$ENV{MELKER_OAUTH_WELLKNOWN}",
+  "clientId": "$ENV{MELKER_OAUTH_CLIENT_ID}",
+  "audience": "$ENV{MELKER_OAUTH_AUDIENCE}",
   "autoLogin": true,
   "onLogin": "$app.onLoginCallback(event)",
   "onLogout": "$app.onLogoutCallback(event)",

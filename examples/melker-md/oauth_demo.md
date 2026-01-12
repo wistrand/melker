@@ -6,14 +6,14 @@ Set environment variables before running: `OAUTH_WELLKNOWN`, `OAUTH_CLIENT_ID`, 
 
 ```json oauth
 {
-  "wellknown": "${OAUTH_WELLKNOWN}",
-  "clientId": "${OAUTH_CLIENT_ID}",
-  "audience": "${OAUTH_AUDIENCE}",
+  "wellknown": "$ENV{MELKER_OAUTH_WELLKNOWN}",
+  "clientId": "$ENV{MELKER_OAUTH_CLIENT_ID}",
+  "audience": "$ENV{MELKER_OAUTH_AUDIENCE}",
   "autoLogin": true,
   "onLogin": "$app.onLoginCallback()",
   "onLogout": "$app.onLogoutCallback()",
   "onFail": "$app.onFailCallback(error)",
-  "debugServer": "${OAUTH_DEBUG_SERVER:-true}"
+  "debugServer": "$ENV{MELKER_OAUTH_DEBUG_SERVER:-true}"
 }
 ```
 

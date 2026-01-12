@@ -2,7 +2,7 @@
   <title>OAuth2 PKCE Login</title>
 
   <!-- OAuth callbacks receive unified event: { type: 'oauth', action: string, error?: Error } -->
-  <oauth wellknown="${OAUTH_WELLKNOWN}" client-id="${OAUTH_CLIENT_ID}" audience="${OAUTH_AUDIENCE}" auto-login="true" onLogin="$app.onLoginCallback(event)" onLogout="$app.onLogoutCallback(event)" onFail="$app.onFailCallback(event)" debugServer="${OAUTH_DEBUG_SERVER:-true}" />
+  <oauth wellknown="$ENV{MELKER_OAUTH_WELLKNOWN}" client-id="$ENV{MELKER_OAUTH_CLIENT_ID}" audience="$ENV{MELKER_OAUTH_AUDIENCE}" auto-login="true" onLogin="$app.onLoginCallback(event)" onLogout="$app.onLogoutCallback(event)" onFail="$app.onFailCallback(event)" debugServer="$ENV{MELKER_OAUTH_DEBUG_SERVER:-true}" />
 
   <script src="./oauth_handlers.ts" />
 

@@ -7,20 +7,20 @@
   <!-- OAuth configuration loaded from .env.local (see .env.local.example) -->
   <!-- OAuth callbacks receive unified event: { type: 'oauth', action: string, error?: Error } -->
   <oauth
-    wellknown="${MELKER_OAUTH_WELLKNOWN}"
-    client-id="${MELKER_OAUTH_CLIENT_ID}"
-    audience="${MELKER_OAUTH_AUDIENCE}"
+    wellknown="$ENV{MELKER_OAUTH_WELLKNOWN}"
+    client-id="$ENV{MELKER_OAUTH_CLIENT_ID}"
+    audience="$ENV{MELKER_OAUTH_AUDIENCE}"
     auto-login="true"
     onLogin="$app.onLoginCallback(event)"
     onLogout="$app.onLogoutCallback(event)"
     onFail="$app.onFailCallback(event)"
-    debugServer="{MELKER_OAUTH_DEBUG_SERVER:-true}"
+    debugServer="$ENV{MELKER_OAUTH_DEBUG_SERVER:-true}"
   />
 
     <policy>
       {
         "permissions": {
-          "net": ["${MELKER_OAUTH_WELLKNOWN}"],
+          "net": ["$ENV{MELKER_OAUTH_WELLKNOWN}"],
           "keyring": true
         }
       }

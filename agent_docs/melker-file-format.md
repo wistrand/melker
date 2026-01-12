@@ -492,9 +492,9 @@ Use a `json oauth` fenced block for OAuth2 PKCE configuration:
 ````markdown
 ```json oauth
 {
-  "wellknown": "${OAUTH_WELLKNOWN}",
-  "clientId": "${OAUTH_CLIENT_ID}",
-  "audience": "${OAUTH_AUDIENCE}",
+  "wellknown": "$ENV{OAUTH_WELLKNOWN}",
+  "clientId": "$ENV{OAUTH_CLIENT_ID}",
+  "audience": "$ENV{OAUTH_AUDIENCE}",
   "autoLogin": true,
   "onLogin": "$app.onLoginCallback(event)",
   "onLogout": "$app.onLogoutCallback(event)",
@@ -579,12 +579,12 @@ Apps can declare required permissions. When a policy is found, the app runs in a
 
 ### Environment Variables in Policy
 
-Use `${VAR}` or `${VAR:-default}` syntax in policy JSON:
+Use `$ENV{VAR}` or `$ENV{VAR:-default}` syntax in policy JSON:
 
 ```json
 {
   "permissions": {
-    "net": ["${API_HOST:-api.example.com}"]
+    "net": ["$ENV{API_HOST:-api.example.com}"]
   }
 }
 ```

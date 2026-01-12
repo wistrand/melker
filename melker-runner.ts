@@ -207,7 +207,7 @@ function substituteEnvVars(content: string, args: string[]): string {
     return defaultValue !== undefined ? defaultValue : '';
   });
 
-  content = content.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (_match, varName, defaultValue) => {
+  content = content.replace(/\$ENV\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (_match, varName, defaultValue) => {
     const envValue = Env.get(varName);
     if (envValue !== undefined) {
       return envValue;

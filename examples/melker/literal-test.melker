@@ -1,0 +1,31 @@
+<melker>
+    <policy>
+      {
+        "permissions": {
+          "read": ["*"],
+          "env" : ["VV"]
+        }
+      }
+    </policy>
+    <script type="javascript" async="ready">
+        $melker.logger.info("ready");
+
+        const v1 = "a value";
+        const str = `v1=${ENV[VV]}`;
+
+        const el = $melker.getElementById("t3");
+        if(el) {
+            $melker.logger.warn("set t3 to " + str);
+            el.props.text = str;
+            $melker.engine.render();
+        } else {
+           $melker.logger.warn("no t3");
+        }
+
+    </script>
+    <container style="flex-direction: column; border: thin: width: fill; height: fill">
+        <text>apa</text>
+        <text>${argv[0]}</text>
+        <text id="t3">--</text>
+    </container>
+</melker>

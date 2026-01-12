@@ -140,7 +140,7 @@ function extractOAuthWellknownUrl(content: string): string | null {
  * Supports: ${VAR} and ${VAR:-default}
  */
 function substituteEnvVars(value: string): string {
-  return value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (_match, varName, defaultValue) => {
+  return value.replace(/\$\ENV{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (_match, varName, defaultValue) => {
     const envValue = Env.get(varName);
     if (envValue !== undefined) {
       return envValue;

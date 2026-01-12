@@ -38,8 +38,8 @@ git tag --list 'v2026.01.*' | sort -V | tail -1
 # Create annotated tag (example: first release of Jan 2026)
 git tag -a v2026.01.1 -m "v2026.01.1"
 
-# Push tag
-git push origin v2026.01.1
+# Push branch and tag
+git push origin main --tags
 ```
 
 Annotated tags (`-a`) store tagger identity, date, and message - preferred over lightweight tags.

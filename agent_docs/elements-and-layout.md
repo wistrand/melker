@@ -309,6 +309,90 @@ The `<tabs>` component provides a tabbed interface with clickable tab headers.
 - Navigate with Tab/Shift+Tab, activate with Enter or click
 - Default tab style includes `border: thin; margin-top: 1`
 
+## Data Table Component
+
+The `<data-table>` component is a high-performance table for displaying large datasets with simple array-based data.
+
+### Usage
+
+**Inline JSON (simplest for static data, parse errors logged):**
+
+```xml
+<data-table
+  id="users"
+  style="width: fill; height: 20;"
+  selectable="single"
+  sortColumn="0"
+  sortDirection="asc"
+>
+{
+  "columns": [
+    { "header": "ID", "width": 5, "align": "right" },
+    { "header": "Name", "width": "30%" },
+    { "header": "Status", "width": 10 },
+    { "header": "Description" }
+  ],
+  "rows": [
+    [1, "Alice", "Active", "Engineer"],
+    [2, "Bob", "Away", "Designer"]
+  ]
+}
+</data-table>
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `columns` | DataTableColumn[] | [] | Column definitions (set via script) |
+| `rows` | CellValue[][] | [] | Row data (set via script) |
+| `footer` | CellValue[][] | - | Footer rows |
+| `rowHeight` | number | 1 | Lines per row |
+| `showHeader` | boolean | true | Show header row |
+| `showFooter` | boolean | true | Show footer if data exists |
+| `showColumnBorders` | boolean | false | Show column separators |
+| `border` | BorderStyle | 'thin' | Table border style |
+| `sortColumn` | number | - | Initial sort column index |
+| `sortDirection` | 'asc'\|'desc' | - | Initial sort direction |
+| `selectable` | 'none'\|'single'\|'multi' | 'none' | Selection mode |
+| `onSelect` | function | - | Selection change handler |
+| `onActivate` | function | - | Enter/double-click handler |
+| `onSort` | function | - | Sort change notification (optional) |
+
+### Column Definition
+
+```typescript
+interface DataTableColumn {
+  header: string;                              // Header text
+  width?: number | `${number}%` | 'fill';     // Column width
+  align?: 'left' | 'center' | 'right';        // Text alignment
+  sortable?: boolean;                          // Enable sorting (default: true)
+  comparator?: (a, b) => number;               // Custom sort function
+}
+```
+
+### Behavior
+
+- **Sorting**: Click headers to sort; handled internally, no handler needed
+- **Selection**: Arrow keys navigate, Enter/double-click activates
+- **Scrolling**: Mouse wheel, scrollbar drag, keyboard (PageUp/Down, Home/End)
+- **Events**: Always report original row indices (not sorted positions)
+
+### When to Use data-table vs table
+
+| Use `<data-table>` when | Use `<table>` when |
+|------------------------|-------------------|
+| Large datasets (100+ rows) | Complex cell content (buttons, inputs) |
+| Simple text/number cells | Variable row heights |
+| Performance is critical | Need nested elements in cells |
+| Data is array-based | Building table dynamically with elements |
+
+### Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `src/components/data-table.ts` | Component implementation |
+
 ## Table Component
 
 The `<table>` component provides data tables with optional scrollable body.

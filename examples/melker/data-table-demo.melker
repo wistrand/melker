@@ -18,9 +18,9 @@
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    // Generate 100 employees
+    // Generate 5000 employees
     export const rows: (string | number)[][] = [];
-    for (let i = 1; i <= 100; i++) {
+    for (let i = 1; i <= 5000; i++) {
       rows.push([
         i,
         randomItem(firstNames) + ' ' + randomItem(lastNames),
@@ -29,33 +29,6 @@
         randomInt(30000, 150000),
         randomInt(1, 20) + ' years',
       ]);
-    }
-
-    export const columns = [
-      { header: 'ID', width: 5, align: 'right' as const },
-      { header: 'Name', width: '25%' as const },
-      { header: 'Department', width: '20%' as const },
-      { header: 'Status', width: 10 },
-      { header: 'Salary', width: 12, align: 'right' as const },
-      { header: 'Tenure' },
-    ];
-
-    export const footer = [
-      ['', rows.length + ' employees', '', '', '', ''],
-    ];
-
-    let sortColumn: number | undefined = undefined;
-    let sortDirection: 'asc' | 'desc' | undefined = undefined;
-
-    export function handleSort(event: { columnIndex: number; direction: 'asc' | 'desc' }) {
-      sortColumn = event.columnIndex;
-      sortDirection = event.direction;
-      const table = $melker.getElementById('employees');
-      if (table) {
-        table.props.sortColumn = sortColumn;
-        table.props.sortDirection = sortDirection;
-      }
-      $melker.logger.info('Sorted by column ' + event.columnIndex + ' ' + event.direction);
     }
 
     export function handleSelect(event: { rowIndex: number; selectedRows: number[] }) {
@@ -79,18 +52,18 @@
   </script>
 
   <script type="typescript" async="ready">
+    // Set dynamic rows and footer (columns are inline JSON)
     const table = $melker.getElementById('employees');
     if (table) {
-      table.props.columns = $app.columns;
       table.props.rows = $app.rows;
-      table.props.footer = $app.footer;
+      table.props.footer = [['', $app.rows.length + ' employees', '', '', '', '']];
       $melker.render();
     }
   </script>
 
   <container style="flex-direction: column; width: 100%; height: 100%; gap: 1; padding: 0">
     <container style="flex-direction: row; justify-content: space-between; padding: 0 1;">
-      <text style="font-weight: bold;">Employee Directory (100 rows)</text>
+      <text style="font-weight: bold;">Employee Directory</text>
       <text id="status">No selection</text>
     </container>
 
@@ -98,10 +71,20 @@
       id="employees"
       style="width: fill; height: fill;"
       selectable="single"
-      onSort="$app.handleSort(event)"
       onSelect="$app.handleSelect(event)"
       onActivate="$app.handleActivate(event)"
-    />
+    >
+    {
+      "columns": [
+        { "header": "ID", "width": 5, "align": "right" },
+        { "header": "Name", "width": "25%" },
+        { "header": "Department", "width": "20%" },
+        { "header": "Status", "width": 10 },
+        { "header": "Salary", "width": 12, "align": "right" },
+        { "header": "Tenure" }
+      ]
+    }
+    </data-table>
 
     <container style="flex-direction: row; gap: 2; padding: 0 1;">
       <text>Click header to sort</text>

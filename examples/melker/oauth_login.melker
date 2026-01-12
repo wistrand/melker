@@ -36,10 +36,10 @@
     </container>
 
     <container style="display: flex; flex-direction: row; gap: 2; flex: 0 0 auto; border: thin">
-      <button id="btn-login"   title="Login"   onClick="$app.onLogin()" />
-      <button id="btn-refresh" title="Refresh" onClick="$app.onRefresh()" disabled="true" />
-      <button id="btn-logout"  title="Logout"  onClick="$app.onLogout()"  disabled="true" />
-      <button id="btn-quit"    title="Quit"    onClick="$melker.exit()" />
+      <button id="btn-login"   label="Login"   onClick="$app.onLogin()" />
+      <button id="btn-refresh" label="Refresh" onClick="$app.onRefresh()" disabled="true" />
+      <button id="btn-logout"  label="Logout"  onClick="$app.onLogout()"  disabled="true" />
+      <button id="btn-quit"    label="Quit"    onClick="$melker.exit()" />
     </container>
   </container>
 
@@ -49,7 +49,7 @@
     // UI update helpers
     function updateUI(loggedIn: boolean) {
       const mdEl = $melker.getElementById('token-info');
-      if (mdEl) mdEl.props.text = oauth.getTokensMarkdown();
+      if (mdEl) mdEl.setValue(oauth.getTokensMarkdown());
 
       const get = (id: string) => $melker.getElementById(id);
       const loginBtn = get('btn-login');
@@ -64,16 +64,16 @@
     function showStatus(msg: string) {
       const el = $melker.getElementById('status');
       const errEl = $melker.getElementById('error');
-      if (el) el.props.text = msg;
-      if (errEl) errEl.props.text = '';
+      if (el) el.setValue(msg);
+      if (errEl) errEl.setValue('');
       $melker.render();
     }
 
     function showError(msg: string) {
       const el = $melker.getElementById('status');
       const errEl = $melker.getElementById('error');
-      if (el) el.props.text = 'Error';
-      if (errEl) errEl.props.text = msg;
+      if (el) el.setValue('Error');
+      if (errEl) errEl.setValue(msg);
       $melker.render();
     }
 

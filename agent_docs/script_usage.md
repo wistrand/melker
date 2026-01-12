@@ -204,7 +204,7 @@ Run after first render, support `await`. **This is the preferred pattern for pos
 <script async="ready">
 // DOM is rendered, can access elements
 const el = $melker.getElementById('my-element');
-el.props.text = 'Initialized!';
+el.setValue('Initialized!');
 </script>
 ```
 

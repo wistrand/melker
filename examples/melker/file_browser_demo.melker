@@ -35,7 +35,7 @@
       selectedPath = event.path;
       closeBrowser();
       const text = $melker.getElementById('selected-text');
-      if (text) text.props.text = selectedPath;
+      if (text) text.setValue(selectedPath);
       $melker.render();
     }
 
@@ -63,7 +63,7 @@
     <text style="margin-bottom: 1;">Test the file browser component inside a dialog.</text>
 
     <container style="display: flex; flex-direction: row; margin-bottom: 1;">
-      <button id="open-btn" title="Open File Browser" onClick="$app.openBrowser()" />
+      <button id="open-btn" label="Open File Browser" onClick="$app.openBrowser()" />
     </container>
 
     <container style="display: flex; flex-direction: row; margin-bottom: 1;">
@@ -104,7 +104,7 @@
         selectionMode="single"
         selectType="file"
         showHidden="false"
-        onSelect="$app.handleSelect(event)"
+        onChange="$app.handleSelect(event)"
         onCancel="$app.closeBrowser()"
         onError="$app.handleError(event)"
         maxVisible="12"

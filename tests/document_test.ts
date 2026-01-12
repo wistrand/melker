@@ -13,7 +13,7 @@ import {
 Deno.test('Document creation with root element', () => {
   const root = new ContainerElement({ width: 400 }, [
     new TextElement({ text: 'Test', id: 'text1' }),
-    new ButtonElement({ title: 'Click', id: 'btn1' }),
+    new ButtonElement({ label: 'Click', id: 'btn1' }),
   ]);
 
   const doc = new Document(root);
@@ -25,7 +25,7 @@ Deno.test('Document creation with root element', () => {
 Deno.test('Document auto-generates IDs when enabled', () => {
   const root = new ContainerElement({}, [
     new TextElement({ text: 'Test' }), // No ID provided
-    new ButtonElement({ title: 'Click' }), // No ID provided
+    new ButtonElement({ label: 'Click' }), // No ID provided
   ]);
 
   const doc = createDocument(root, { autoGenerateIds: true });
@@ -41,20 +41,20 @@ Deno.test('Document auto-generates IDs when enabled', () => {
 Deno.test('Document respects existing IDs', () => {
   const root = new ContainerElement({ id: 'root' }, [
     new TextElement({ text: 'Test', id: 'existing-text' }),
-    new ButtonElement({ title: 'Click', id: 'existing-btn' }),
+    new ButtonElement({ label: 'Click', id: 'existing-btn' }),
   ]);
 
   const doc = new Document(root);
 
   assertEquals(doc.getElementById('root'), root);
   assertEquals(doc.getElementById('existing-text')?.props.text, 'Test');
-  assertEquals(doc.getElementById('existing-btn')?.props.title, 'Click');
+  assertEquals(doc.getElementById('existing-btn')?.props.label, 'Click');
 });
 
 Deno.test('Document element registry operations', () => {
   const root = new ContainerElement({ id: 'root' });
   const text = new TextElement({ text: 'Test', id: 'text' });
-  const button = new ButtonElement({ title: 'Click', id: 'button' });
+  const button = new ButtonElement({ label: 'Click', id: 'button' });
 
   root.children = [text, button];
 
@@ -127,7 +127,7 @@ Deno.test('Document focus management disabled', () => {
 
 Deno.test('Document event handling', () => {
   const root = new ContainerElement({ id: 'root' });
-  const button = new ButtonElement({ title: 'Click', id: 'button' });
+  const button = new ButtonElement({ label: 'Click', id: 'button' });
 
   root.children = [button];
 
@@ -167,7 +167,7 @@ Deno.test('Document element management', () => {
   assertEquals(doc.elementCount, 2);
 
   // Add new element
-  const newElement = new ButtonElement({ title: 'New', id: 'new-btn' });
+  const newElement = new ButtonElement({ label: 'New', id: 'new-btn' });
   doc.addElement(newElement);
 
   assertEquals(doc.elementCount, 3);
@@ -187,7 +187,7 @@ Deno.test('Document search functionality', () => {
   const root = new ContainerElement({ id: 'root' });
   const text1 = new TextElement({ text: 'Hello', style: { textWrap: 'wrap' }, id: 'text1' });
   const text2 = new TextElement({ text: 'World', style: { textWrap: 'nowrap' }, id: 'text2' });
-  const button = new ButtonElement({ title: 'Click', variant: 'primary', id: 'button' });
+  const button = new ButtonElement({ label: 'Click', variant: 'primary', id: 'button' });
 
   root.children = [text1, text2, button];
 
@@ -237,7 +237,7 @@ Deno.test('Document statistics', () => {
   const container = new ContainerElement({ id: 'container' });
   const text1 = new TextElement({ text: 'Text 1', id: 'text1' });
   const text2 = new TextElement({ text: 'Text 2', id: 'text2' });
-  const button = new ButtonElement({ title: 'Button', id: 'button' });
+  const button = new ButtonElement({ label: 'Button', id: 'button' });
 
   container.children = [text1, text2];
   root.children = [container, button];
@@ -286,7 +286,7 @@ Deno.test('Document refresh functionality', () => {
   assertEquals(doc.elementCount, 2);
 
   // Manually add element to root without registering
-  const newChild = new ButtonElement({ title: 'Manual', id: 'manual' });
+  const newChild = new ButtonElement({ label: 'Manual', id: 'manual' });
   if (!root.children) {
     root.children = [];
   }
@@ -304,7 +304,7 @@ Deno.test('Document refresh functionality', () => {
 Deno.test('Document asTree() method', () => {
   const root = new ContainerElement({ id: 'root', width: 400 });
   const text = new TextElement({ text: 'Hello World', id: 'text' });
-  const button = new ButtonElement({ title: 'Click Me', variant: 'primary', id: 'button' });
+  const button = new ButtonElement({ label: 'Click Me', variant: 'primary', id: 'button' });
 
   root.children = [text, button];
 

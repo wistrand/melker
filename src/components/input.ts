@@ -629,6 +629,8 @@ export const inputSchema: ComponentSchema = {
     cursorPosition: { type: 'number', description: 'Cursor position in text' },
     format: { type: 'string', enum: ['text', 'password'], description: 'Input format: text (default) or password (masked with *)' },
     complete: { type: 'function', description: 'Tab completion callback' },
+    onChange: { type: 'handler', description: 'Called when value changes. Event: { value: string, target }' },
+    onKeyPress: { type: 'handler', description: 'Called on Enter key. Event: { key, target }' },
   },
 };
 

@@ -86,7 +86,7 @@ Use special delimiters in box names to define element types without `type:` prop
 
 | Syntax | Element | Example |
 |--------|---------|---------|
-| `+--[Title]--+` | button | `+--[Click Me]--+` → `<button title="Click Me" />` |
+| `+--[Title]--+` | button | `+--[Click Me]--+` → `<button label="Click Me" />` |
 | `+--"content"--+` | text | `+--"Hello!"--+` → `<text>Hello!</text>` |
 | `+--{id}--+` | input | `+--{username}--+` → `<input id="username" />` |
 | `+--<type> content--+` | explicit | `+--<checkbox> Remember--+` → `<checkbox title="Remember" />` |
@@ -235,10 +235,10 @@ Use `│ Tab1 │ Tab2 │` lines to create a tabbed interface. The asterisk (`*
 This generates a `<tabs>` element with `<tab>` children:
 
 ```xml
-<tabs id="settings" activeTab="0">
-  <tab title="General">...</tab>
-  <tab title="Advanced">...</tab>
-  <tab title="About">...</tab>
+<tabs id="settings">
+  <tab id="general" title="General">...</tab>
+  <tab id="advanced" title="Advanced">...</tab>
+  <tab id="about" title="About">...</tab>
 </tabs>
 ```
 

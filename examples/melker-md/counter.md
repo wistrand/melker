@@ -49,7 +49,7 @@ A simple counter demonstrating the melker-block markdown syntax.
 | | type:    | | : *1        | | type:    |      |
 | | button   | | type: text  | | button   |      |
 | | id: dec  | | id: count   | | id: inc  |      |
-| | title: - | | text: 0     | | title: + |      |
+| | label: - | | text: 0     | | label: + |      |
 | +----------+ +-------------+ +----------+      |
 +------------------------------------------------+
 ```
@@ -63,7 +63,7 @@ let count = 0;
 function update() {
   const el = $melker.getElementById('count');
   if (el) {
-    el.props.text = String(count);
+    el.setValue(String(count));
     $melker.render();
   }
 }

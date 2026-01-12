@@ -210,7 +210,7 @@
     <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: #1a0a00;">
       <text style="color: #ff6622;">Perspex Web Lattice - 2nd Order Voronoi</text>
       <button
-        title="Exit"
+        label="Exit"
         onClick="$melker.exit();"
       />
     </container>

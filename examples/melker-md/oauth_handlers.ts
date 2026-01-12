@@ -6,7 +6,7 @@ const oauth = $melker.oauth;
 // UI update helpers
 function updateUI(loggedIn: boolean) {
   const mdEl = $melker.getElementById('token-info');
-  if (mdEl) mdEl.props.text = oauth.getTokensMarkdown();
+  if (mdEl) mdEl.setValue(oauth.getTokensMarkdown());
 
   const get = (id: string) => $melker.getElementById(id);
   const loginBtn = get('btn-login');
@@ -21,16 +21,16 @@ function updateUI(loggedIn: boolean) {
 function showStatus(msg: string) {
   const el = $melker.getElementById('status');
   const errEl = $melker.getElementById('error');
-  if (el) el.props.text = msg;
-  if (errEl) errEl.props.text = '';
+  if (el) el.setValue(msg);
+  if (errEl) errEl.setValue('');
   $melker.render();
 }
 
 function showError(msg: string) {
   const el = $melker.getElementById('status');
   const errEl = $melker.getElementById('error');
-  if (el) el.props.text = 'Error';
-  if (errEl) errEl.props.text = msg;
+  if (el) el.setValue('Error');
+  if (errEl) errEl.setValue(msg);
   $melker.render();
 }
 

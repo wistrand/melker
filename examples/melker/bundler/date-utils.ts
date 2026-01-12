@@ -11,9 +11,9 @@ function updateDates(): void {
   const timeEl = $melker.getElementById("time");
   const dayEl = $melker.getElementById("day");
 
-  if (dateEl) dateEl.props.text = format(now, "MMMM do, yyyy");
-  if (timeEl) timeEl.props.text = format(now, "HH:mm:ss");
-  if (dayEl) dayEl.props.text = format(now, "EEEE");
+  if (dateEl) dateEl.setValue(format(now, "MMMM do, yyyy"));
+  if (timeEl) timeEl.setValue(format(now, "HH:mm:ss"));
+  if (dayEl) dayEl.setValue(format(now, "EEEE"));
 }
 
 // Export for use in inline handlers and ready hook

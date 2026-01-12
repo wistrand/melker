@@ -33,7 +33,7 @@ Demonstrates the HTML-like table component with headers, body, and footer.
       // Update selection text with selected employee info
       const selectionText = $melker.getElementById('selectionText');
       if (selectionText && event.selectedIds.length > 0) {
-        selectionText.props.text = `Selected: ${event.selectedIds.join(', ')}`;
+        selectionText.setValue(`Selected: ${event.selectedIds.join(', ')}`);
       }
     }
   </script>
@@ -112,7 +112,7 @@ Demonstrates the HTML-like table component with headers, body, and footer.
 
     <text id="selectionText" text="Click a row to select" style="margin-top: 1;" />
 
-    <button title="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
+    <button label="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
     <text text="Use ↑/↓ arrow keys to navigate, Escape to clear selection" style="margin-top: 1;" />
   </container>
 

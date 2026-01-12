@@ -972,6 +972,8 @@ export const textareaSchema: ComponentSchema = {
     rows: { type: 'number', description: 'Visible rows (height hint)' },
     cols: { type: 'number', description: 'Visible columns (width hint)' },
     wrap: { type: 'string', enum: ['soft', 'off'], description: 'Text wrapping mode' },
+    onChange: { type: 'handler', description: 'Called when value changes. Event: { value: string, target }' },
+    onKeyPress: { type: 'handler', description: 'Called on key press. Return true to prevent default. Event: { key, ctrlKey, altKey, shiftKey, target }' },
   },
 };
 

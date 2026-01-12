@@ -17,7 +17,7 @@
           }
           var listingEl = $melker.getElementById("file-listing");
           if (listingEl) {
-            listingEl.props.text = entries.join("\n");
+            listingEl.setValue(entries.join("\n"));
           }
           return {
             success: true,
@@ -39,8 +39,8 @@
       handler: function(args) {
         var counterEl = $melker.getElementById("counter");
         if (counterEl) {
-          var oldValue = parseInt(counterEl.props.text) || 0;
-          counterEl.props.text = String(Number(args.value) || 0);
+          var oldValue = parseInt(counterEl.getValue()) || 0;
+          counterEl.setValue(String(Number(args.value) || 0));
           return { success: true, message: "Counter changed from " + oldValue + " to " + args.value };
         }
         return { success: false, message: "Counter element not found" };
@@ -59,8 +59,8 @@
         if (logEl) {
           var timestamp = new Date().toLocaleTimeString();
           var entry = "[" + timestamp + "] " + args.message;
-          var current = logEl.props.text || "";
-          logEl.props.text = current ? current + "\n" + entry : entry;
+          var current = logEl.getValue() || "";
+          logEl.setValue(current ? current + "\n" + entry : entry);
           return { success: true, message: "Added to log: " + args.message };
         }
         return { success: false, message: "Log element not found" };
@@ -80,17 +80,17 @@
         <text text="Counter" style="bold: true" />
         <text id="counter" text="0" />
         <container style="display: flex; flex-direction: row; gap: 1; margin-top: 1">
-          <button id="decrement" title="-" onClick="
+          <button id="decrement" label="-" onClick="
             var el = $melker.getElementById('counter');
-            if (el) el.props.text = String((parseInt(el.props.text) || 0) - 1);
+            if (el) el.setValue(String((parseInt(el.getValue()) || 0) - 1));
           " />
-          <button id="increment" title="+" onClick="
+          <button id="increment" label="+" onClick="
             var el = $melker.getElementById('counter');
-            if (el) el.props.text = String((parseInt(el.props.text) || 0) + 1);
+            if (el) el.setValue(String((parseInt(el.getValue()) || 0) + 1));
           " />
-          <button id="reset" title="Reset" onClick="
+          <button id="reset" label="Reset" onClick="
             var el = $melker.getElementById('counter');
-            if (el) el.props.text = '0';
+            if (el) el.setValue('0');
           " />
         </container>
       </container>

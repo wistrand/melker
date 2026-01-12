@@ -132,12 +132,12 @@
     // Cycle through effects
     export const nextEffect = () => {
       effectMode = (effectMode + 1) % effectNames.length;
-      $melker.getElementById('effectLabel').props.text = `Effect: ${effectNames[effectMode]}`;
+      $melker.getElementById('effectLabel').setValue(`Effect: ${effectNames[effectMode]}`);
     };
 
     export const prevEffect = () => {
       effectMode = (effectMode - 1 + effectNames.length) % effectNames.length;
-      $melker.getElementById('effectLabel').props.text = `Effect: ${effectNames[effectMode]}`;
+      $melker.getElementById('effectLabel').setValue(`Effect: ${effectNames[effectMode]}`);
     };
 
     export const getEffectName = () => effectNames[effectMode];
@@ -169,15 +169,15 @@
 
     <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
       <button
-        title="< Prev"
+        label="< Prev"
         onClick="$app.prevEffect();"
       />
       <button
-        title="Next >"
+        label="Next >"
         onClick="$app.nextEffect();"
       />
       <button
-        title="Exit"
+        label="Exit"
         style="background-color: gray;"
         onClick="$melker.exit();"
       />

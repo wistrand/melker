@@ -56,7 +56,7 @@ function handleInputSubmit() {
 function updateCounterDisplay() {
   const counterElement = engine.document.getElementById('counter-display');
   if (counterElement) {
-    counterElement.props.text = `Counter: ${counter}`;
+    counterElement.setValue(`Counter: ${counter}`);
     engine.render(); // Trigger a redraw
   }
 }
@@ -72,7 +72,7 @@ function updateInputDisplay() {
 function updateTextDisplay() {
   const textElement = engine.document.getElementById('text-display');
   if (textElement) {
-    textElement.props.text = displayedText;
+    textElement.setValue(displayedText);
     engine.render(); // Trigger a redraw
   }
 }
@@ -124,16 +124,16 @@ function createTemplateUI() {
       <text style=${headerStyle}>🎯 Template Literal Demo</text>
 
       <container style=${buttonRowStyle}>
-        <button title="Decrement" onClick=${handleDecrement} tabIndex=${1} />
+        <button label="Decrement" onClick=${handleDecrement} tabIndex=${1} />
         <text
           id="counter-display"
           style=${{ color: getThemeColor('success'), fontWeight: 'bold', minWidth: 15, textAlign: 'center' }}
         >Counter: ${counter}</text>
-        <button title="Increment" onClick=${handleIncrement} tabIndex=${2} />
+        <button label="Increment" onClick=${handleIncrement} tabIndex=${2} />
       </container>
 
       <container style=${buttonRowStyle}>
-        <button title="Reset" onClick=${handleReset} tabIndex=${3} style=${{ color: getThemeColor('warning') }} />
+        <button label="Reset" onClick=${handleReset} tabIndex=${3} style=${{ color: getThemeColor('warning') }} />
       </container>
 
       <container style=${inputRowStyle}>

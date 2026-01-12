@@ -154,19 +154,19 @@ Radio button (use `name` for grouping).
 
 ### button
 
-Clickable button. **Uses `title` not `label`**.
+Clickable button. **Uses `label` not `title`**.
 
 ```xml
 <button
   id="submit"
-  title="Submit"
+  label="Submit"
   onClick="$app.handleSubmit()"
 />
 ```
 
 **Props:**
 - `id` - Element ID
-- `title` - Button text (NOT `label`)
+- `label` - Button text (NOT `title`)
 - `onClick` - Click handler
 - `style` - Styling
 
@@ -192,7 +192,7 @@ Modal dialog overlay.
 >
   <container style="padding: 1;">
     <text>Dialog content</text>
-    <button title="Close" onClick="$app.closeDialog()" />
+    <button label="Close" onClick="$app.closeDialog()" />
   </container>
 </dialog>
 ```
@@ -274,25 +274,29 @@ File system browser for selecting files and directories. Auto-initializes when r
 Tabbed interface.
 
 ```xml
-<tabs id="settings" activeTab="0" onTabChange="$app.onTabChange(event.index)">
-  <tab title="General">
+<tabs id="settings" onChange="$app.onChange(event.tabId, event.index)">
+  <tab id="general" title="General">
     <text>General settings content</text>
   </tab>
-  <tab title="Advanced">
+  <tab id="advanced" title="Advanced">
     <text>Advanced settings content</text>
   </tab>
-  <tab title="About" disabled="true">
+  <tab id="about" title="About" disabled="true">
     <text>About content</text>
   </tab>
 </tabs>
+
+<!-- To start on a specific tab -->
+<tabs id="settings" activeTab="advanced">...</tabs>
 ```
 
 **tabs Props:**
 - `id` - Element ID
-- `activeTab` - Active tab index (0-based)
-- `onTabChange` - Called on tab switch (`event.index`)
+- `activeTab` - Active tab id (must match a tab's id attribute)
+- `onChange` - Called on tab switch (`event.tabId`, `event.index`)
 
 **tab Props:**
+- `id` - Tab ID (used for activeTab reference)
 - `title` - Tab label
 - `disabled` - Disable tab
 
@@ -341,7 +345,7 @@ High-performance table for large datasets with simple array-based data.
     rows = [[1, 'Alice'], [2, 'Bob']];
     const table = $melker.getElementById('users');
     if (table) {
-      table.props.rows = rows;
+      table.setValue(rows);
       $melker.render();
     }
   }
@@ -349,7 +353,7 @@ High-performance table for large datasets with simple array-based data.
 
 <script type="typescript" async="ready">
   const table = $melker.getElementById('users');
-  if (table) table.props.columns = $app.columns;
+  if (table) table.props.columns = $app.columns;  // columns still use props
 </script>
 
 <data-table id="users" style="width: fill; height: 20;" selectable="single" />
@@ -437,7 +441,7 @@ Dropdown with text filter.
 Simple dropdown picker (no filter).
 
 ```xml
-<select id="size" value="medium" onSelect="$app.onSelect(event.value)">
+<select id="size" value="medium" onChange="$app.onSelect(event.value)">
   <option value="small">Small</option>
   <option value="medium">Medium</option>
   <option value="large">Large</option>

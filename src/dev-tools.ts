@@ -241,8 +241,8 @@ export class DevToolsManager {
     tabs.push(melker`
       <tab id="dev-tools-tab-actions" title="Actions">
         <container id="dev-tools-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <button id="dev-tools-action-perf" title="Performance Monitor" onClick=${onPerformance} />
-          <button id="dev-tools-action-exit" title="Exit Application" onClick=${onExit} />
+          <button id="dev-tools-action-perf" label="Performance Monitor" onClick=${onPerformance} />
+          <button id="dev-tools-action-exit" label="Exit Application" onClick=${onExit} />
         </container>
       </tab>
     `);
@@ -259,8 +259,8 @@ export class DevToolsManager {
             ${tabs}
           </tabs>
           <container id="dev-tools-footer" style=${footerStyle}>
-            <button id="dev-tools-ai" title="AI Assistant" onClick=${onAIAssistant} />
-            <button id="dev-tools-close" title="Close" onClick=${onClose} />
+            <button id="dev-tools-ai" label="AI Assistant" onClick=${onAIAssistant} />
+            <button id="dev-tools-close" label="Close" onClick=${onClose} />
           </container>
         </container>
       </dialog>
@@ -457,7 +457,7 @@ export class DevToolsManager {
             ${inputs}
           </container>
           <container style=${{ padding: 1 }}>
-            <button id="dev-tools-update-config" title="Update" onClick=${onUpdate} />
+            <button id="dev-tools-update-config" label="Update" onClick=${onUpdate} />
           </container>
         </container>
       </tab>

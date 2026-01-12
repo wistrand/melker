@@ -90,7 +90,7 @@ function updateScrollableList() {
 function updateRowCount() {
   const countElement = engine.document.getElementById('row-count');
   if (countElement && countElement.props) {
-    countElement.props.text = `Total rows: ${textRows.length}`;
+    countElement.setValue(`Total rows: ${textRows.length}`);
   }
 }
 
@@ -176,7 +176,7 @@ function createScrollingUI(): Element {
         alignItems: 'center'
       }}>
         <button
-          title="Add Random Row"
+          label="Add Random Row"
           id="add-button"
           tabIndex=${2}
           style=${{
@@ -217,7 +217,7 @@ function createScrollingUI(): Element {
         </text>
 
         <button
-          title="Exit"
+          label="Exit"
           id="exit-button"
           tabIndex=${3}
           style=${{

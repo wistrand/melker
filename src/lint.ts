@@ -6,7 +6,7 @@ import { MelkerConfig } from './config/mod.ts';
 const lintLogger = getLogger('Lint');
 
 // Schema types
-export type PropType = 'string' | 'number' | 'boolean' | 'function' | 'object' | 'array' | 'any';
+export type PropType = 'string' | 'number' | 'boolean' | 'function' | 'object' | 'array' | 'any' | 'handler';
 
 export interface PropSchema {
   type: PropType | PropType[];

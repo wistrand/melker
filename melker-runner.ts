@@ -103,11 +103,12 @@ async function wireBundlerHandlers(
           } else {
             element.props[propName] = async (event: any) => {
               try {
-                let result = capturedHandlerFn(event);
+                let result: unknown = capturedHandlerFn(event);
                 if (result instanceof Promise) {
                   result = await result;
                 }
-                if (shouldAutoRender && context?.render) {
+                // Auto-render unless skipRender() was called or result is false (legacy)
+                if (shouldAutoRender && context?.render && result !== false && !context._shouldSkipRender()) {
                   context.render();
                 }
                 return result;
@@ -139,6 +140,7 @@ async function wireBundlerHandlers(
                 if (context?.render) {
                   context.render();
                 }
+                return undefined;
               }
             };
           }
@@ -415,12 +417,21 @@ export async function runMelkerFile(
 
     let exitHandler: () => Promise<void> = () => engine.stop().then(() => { Deno.exit(0); });
 
+    // Flag to skip auto-render after event handler
+    let _skipNextRender = false;
+
     const context = {
       url: sourceUrl,
       dirname: sourceDirname,
       exports: {} as Record<string, any>,
       getElementById: (id: string) => engine?.document?.getElementById(id),
       render: () => engine.render(),
+      skipRender: () => { _skipNextRender = true; },
+      _shouldSkipRender: () => {
+        const skip = _skipNextRender;
+        _skipNextRender = false;  // Reset after checking
+        return skip;
+      },
       focus: (id: string) => engine.focusElement(id),
       exit: () => exitHandler(),
       quit: () => exitHandler(),

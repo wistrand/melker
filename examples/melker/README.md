@@ -127,7 +127,7 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
     function handleClick() {
       count++;
       const el = $melker.getElementById('output');
-      el.props.text = `Clicked ${count} times!`;
+      el.setValue(`Clicked ${count} times!`);
       // Auto-renders after handler completes
     }
 
@@ -138,7 +138,7 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
   <container style="width: 40; height: 10; border: thin;">
     <text id="output">Hello!</text>
     <!-- Call exported functions via $app (alias for $melker.exports) -->
-    <button title="Click" onClick="$app.handleClick()" />
+    <button label="Click" onClick="$app.handleClick()" />
   </container>
 </melker>
 ```

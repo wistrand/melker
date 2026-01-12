@@ -25,8 +25,8 @@
       </text>
 
       <button
-        title="Click Me!"
-        onClick="alert('Hello from Melker!')"
+        label="Click Me!"
+        onClick="console.log('hello log file'); alert('Hello from Melker!')"
       />
     </container>
 

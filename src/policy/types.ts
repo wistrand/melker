@@ -105,6 +105,13 @@ export interface PolicyPermissions {
   ffi?: string[];
 
   /**
+   * System information access
+   * Interface names: hostname, osRelease, osUptime, loadavg, networkInterfaces, systemMemoryInfo, uid, gid
+   * Maps to --allow-sys=iface1,iface2
+   */
+  sys?: string[];
+
+  /**
    * AI assistant access (shortcut)
    * Enables: run=[swift,ffmpeg,ffprobe,pactl,ffplay], net=[openrouter.ai]
    * Set to true or ["*"] for full AI access

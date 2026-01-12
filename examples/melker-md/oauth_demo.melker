@@ -16,10 +16,10 @@
     </container>
     <!-- Button row. -->
     <container id="buttons" style="border: thin; flex: 0 0 auto; display: flex; flex-direction: row; gap: 2">
-      <button id="btn-quit" title="Quit" onClick="$melker.exit()" />
-      <button id="btn-login" title="Login" />
-      <button id="btn-logout" title="Logout" disabled="true" />
-      <button id="btn-refresh" title="Refresh" disabled="true" />
+      <button id="btn-quit" label="Quit" onClick="$melker.exit()" />
+      <button id="btn-login" label="Login" />
+      <button id="btn-logout" label="Logout" disabled="true" />
+      <button id="btn-refresh" label="Refresh" disabled="true" />
     </container>
   </container>
 </melker>

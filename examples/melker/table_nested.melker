@@ -121,7 +121,7 @@ Demonstrates tables nested inside table cells.
       </tfoot>
     </table>
 
-    <button title="Exit" onClick="$melker.exit()" style="margin-top: 2;" />
+    <button label="Exit" onClick="$melker.exit()" style="margin-top: 2;" />
   </container>
 
 </melker>

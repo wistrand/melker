@@ -14,8 +14,8 @@
           const input = $melker.getElementById('messageInput');
           const output = $melker.getElementById('messageOutput');
           if (input && output) {
-            output.props.text = 'You said: ' + input.props.value;
-            input.props.value = '';
+            output.setValue('You said: ' + input.getValue());
+            input.setValue('');
           }
         }
       "

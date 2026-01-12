@@ -10,25 +10,25 @@
       <text id="email">Email:</text>
       <input id="email-input" />
       <text id="subscription">Subscription:</text>
-      <radio id="free-plan" title="Free Plan" />
-      <radio id="pro-plan" title="Pro Plan" />
-      <radio id="enterprise" title="Enterprise" />
+      <radio name="plan" id="free-plan" title="Free Plan" />
+      <radio name="plan" id="pro-plan" title="Pro Plan" />
+      <radio name="plan" id="enterprise" title="Enterprise" />
       <text id="options">Options:</text>
       <checkbox id="receive-newsletter" title="Receive newsletter" />
       <checkbox id="enable-two-factor-au" title="Enable two-factor auth" />
     </container>
     <container id="buttons" style="display: flex; flex-direction: row; gap: 1">
-      <button id="submit" title="Submit" onClick="const name = $melker.getElementById('name-input')?.getValue() ?? '';
+      <button id="submit" label="Submit" onClick="const name = $melker.getElementById('name-input')?.getValue() ?? '';
 const email = $melker.getElementById('email-input')?.getValue() ?? '';
 if (!name || !email) {
   alert('Please fill in all fields');
   return;
 }
 alert('Submitted: ' + name + ' (' + email + ')');" />
-      <button id="clear" title="Clear" onClick="$melker.getElementById('name-input')?.setValue('');
+      <button id="clear" label="Clear" onClick="$melker.getElementById('name-input')?.setValue('');
 $melker.getElementById('email-input')?.setValue('');
 alert('Form cleared');" />
-      <button id="cancel" title="Cancel" onClick="$melker.exit();" />
+      <button id="cancel" label="Cancel" onClick="$melker.exit();" />
     </container>
   </container>
 </melker>

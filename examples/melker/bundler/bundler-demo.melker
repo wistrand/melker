@@ -11,7 +11,7 @@
       clickCount++;
       const counterEl = $melker.getElementById("counter");
       if (counterEl) {
-        counterEl.props.text = "Clicks: " + String(clickCount);
+        counterEl.setValue("Clicks: " + String(clickCount));
       }
     }
 
@@ -19,7 +19,7 @@
       clickCount = 0;
       const counterEl = $melker.getElementById("counter");
       if (counterEl) {
-        counterEl.props.text = "Clicks: 0";
+        counterEl.setValue("Clicks: 0");
       }
     }
 
@@ -51,8 +51,8 @@
 
     <text text="Click Counter" style="bold: true; color: yellow"/>
     <text id="counter" text="Clicks: 0"/>
-    <button title="Click Me!" onClick="$app.incrementCounter();"/>
-    <button title="Reset" onClick="$app.resetCounter();"/>
-    <button title="Exit" onClick="$melker.exit()"/>
+    <button label="Click Me!" onClick="$app.incrementCounter();"/>
+    <button label="Reset" onClick="$app.resetCounter();"/>
+    <button label="Exit" onClick="$melker.exit()"/>
   </container>
 </melker>

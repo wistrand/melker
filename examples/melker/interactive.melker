@@ -1,6 +1,6 @@
-<container style="width: 60; height: 20; border: thin; padding: 2; display: flex; flex-direction: column;">
+<container style="width: fill; height: fill; border: thin; padding: 2; display: flex; flex-direction: column;">
   <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
-    🎮 Interactive Melker Demo
+    Interactive Melker Demo
   </text>
 
   <text style="margin-bottom: 1;" id="status">
@@ -11,21 +11,21 @@
     <text style="margin-right: 2;">Name:</text>
     <input
       id="nameInput"
-      style="width: 20; border: thin;"
+      style="width: 20;"
       placeholder="Enter your name"
       onInput="
         const statusEl = $melker.getElementById('status');
         if (statusEl) {
-          statusEl.props.text = 'Status: Hello, ' + event.value + '!';
+          statusEl.setValue('Status: Hello, ' + event.value + '!');
         }
       "
       onKeyPress="
         if (event.key === 'Enter') {
           const nameEl = $melker.getElementById('nameInput');
           const outputEl = $melker.getElementById('output');
-          const name = nameEl ? nameEl.props.value || 'World' : 'World';
+          const name = nameEl ? nameEl.getValue() || 'World' : 'World';
           if (outputEl) {
-            outputEl.props.text = '🎉 Hello, ' + name + '! Welcome to Melker!';
+            outputEl.setValue('Hello, ' + name + '! Welcome to Melker!');
           }
         }
       "
@@ -35,35 +35,35 @@
   <container style="display: flex; flex-direction: row; margin-bottom: 2;">
     <button
       id="greetBtn"
-      title="Say Hello"
+      label="Say Hello"
       style="margin-right: 2; background-color: blue; color: white;"
       onClick="
         const nameEl = $melker.getElementById('nameInput');
         const outputEl = $melker.getElementById('output');
-        const name = nameEl ? nameEl.props.value || 'World' : 'World';
+        const name = nameEl ? nameEl.getValue() || 'World' : 'World';
         if (outputEl) {
-          outputEl.props.text = '🎉 Hello, ' + name + '! Welcome to Melker!';
+          outputEl.setValue('Hello, ' + name + '! Welcome to Melker!');
         }
       "
     />
 
     <button
       id="clearBtn"
-      title="Clear"
+      label="Clear"
       style="margin-right: 2; background-color: red; color: white;"
       onClick="
         const nameEl = $melker.getElementById('nameInput');
         const outputEl = $melker.getElementById('output');
         const statusEl = $melker.getElementById('status');
-        if (nameEl) nameEl.props.value = '';
-        if (outputEl) outputEl.props.text = '';
-        if (statusEl) statusEl.props.text = 'Status: Cleared!';
+        if (nameEl) nameEl.setValue('');
+        if (outputEl) outputEl.setValue('');
+        if (statusEl) statusEl.setValue('Status: Cleared!');
       "
     />
 
     <button
       id="exitBtn"
-      title="Exit"
+      label="Exit"
       style="background-color: gray; color: white;"
       onClick="$melker.exit();"
     />

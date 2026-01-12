@@ -172,9 +172,8 @@ Element-specific properties (borders, padding, margin) do NOT cascade.
 
 ## Logging
 
-**CRITICAL**: Never use `console.log()` - it interferes with terminal UI.
+In Melker scripts, `console.log()` redirects to `$melker.logger.info()` automatically. For framework code, use the logger directly:
 
-Use file-based logging:
 ```typescript
 import { getLogger } from './logging.ts';
 const logger = getLogger('MyComponent');
@@ -183,3 +182,5 @@ logger.debug('message', { context });
 
 Configure via CLI flags (`--log-file`, `--log-level`), env vars, or config file.
 Priority: `default < policy < file < env < cli`
+
+Use `--no-console-override` to disable console redirect (for debugging).

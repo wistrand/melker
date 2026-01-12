@@ -45,7 +45,7 @@ const logger = getLogger('file-browser');
 /**
  * Props for the FileBrowser component
  */
-export interface FileBrowserProps extends BaseProps {
+export interface FileBrowserProps extends Omit<BaseProps, 'onChange'> {
   /** Initial directory path (default: current working directory) */
   path?: string;
 
@@ -86,7 +86,10 @@ export interface FileBrowserProps extends BaseProps {
   cancelLabel?: string;
 
   // Events
-  /** Called when file/directory is selected */
+  /** Called when file/directory is selected (preferred) */
+  onChange?: (event: FileSelectEvent) => void;
+
+  /** Called when file/directory is selected (deprecated: use onChange) */
   onSelect?: (event: FileSelectEvent) => void;
 
   /** Called when cancel is pressed */
@@ -450,9 +453,8 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
         targetId: this.id,
       };
 
-      if (this.fbProps.onSelect) {
-        this.fbProps.onSelect(event);
-      }
+      this.fbProps.onChange?.(event);
+      this.fbProps.onSelect?.(event);
     } else {
       const event: FileSelectEvent = {
         type: 'select',
@@ -463,9 +465,8 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
         targetId: this.id,
       };
 
-      if (this.fbProps.onSelect) {
-        this.fbProps.onSelect(event);
-      }
+      this.fbProps.onChange?.(event);
+      this.fbProps.onSelect?.(event);
     }
   }
 
@@ -1252,10 +1253,11 @@ export const fileBrowserSchema: ComponentSchema = {
       enum: ['fuzzy', 'prefix', 'contains', 'exact', 'none'],
       description: 'Filter algorithm',
     },
-    onSelect: { type: 'function', description: 'Called when file/directory selected' },
-    onCancel: { type: 'function', description: 'Called when cancel pressed' },
-    onNavigate: { type: 'function', description: 'Called when navigating to new path' },
-    onError: { type: 'function', description: 'Called when error occurs' },
+    onChange: { type: 'handler', description: 'Called when file/directory selected (preferred)' },
+    onSelect: { type: 'handler', description: 'Called when file/directory selected (deprecated: use onChange)' },
+    onCancel: { type: 'handler', description: 'Called when cancel pressed' },
+    onNavigate: { type: 'handler', description: 'Called when navigating to new path' },
+    onError: { type: 'handler', description: 'Called when error occurs' },
   },
 };
 

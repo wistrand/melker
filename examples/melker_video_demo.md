@@ -35,7 +35,7 @@ Display an image using the canvas element:
 Interactive button (note: click events work when focused):
 
 ```melker
-<button title="Click Me" style="width: 15; height: 1;" />
+<button label="Click Me" style="width: 15; height: 1;" />
 ```
 
 ## Text Example

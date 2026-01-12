@@ -211,23 +211,23 @@ interface ExtractedIdentifier {
 
 /**
  * Parse shorthand type syntax in box names:
- *   [Button Title]     → button with title
+ *   [Button Label]     → button with label
  *   "Text content"     → text with content
  *   {inputId}          → input with id
  *   <type> content     → explicit type with content
  *   <type(param)> content → explicit type with parameter (e.g., <radio(group)> Option)
  */
 function parseShorthandType(content: string): ExtractedIdentifier | null {
-  // [Button Title] → button
+  // [Button Label] → button
   const buttonMatch = content.match(/^\[(.+)\]$/);
   if (buttonMatch) {
-    const title = buttonMatch[1].trim();
-    // Generate id from title (lowercase, spaces to hyphens)
-    const id = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const label = buttonMatch[1].trim();
+    // Generate id from label (lowercase, spaces to hyphens)
+    const id = label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     return {
       id: id || 'button',
       inferredType: 'button',
-      inferredProps: { title },
+      inferredProps: { label },
     };
   }
 

@@ -53,14 +53,14 @@ function initializeDefaultDeadline() {
 function showToast(message, color = 'green') {
   const toastEl = $melker.getElementById('toast');
   if (toastEl) {
-    toastEl.props.text = message;
+    toastEl.setValue(message);
     toastEl.props.style = { ...toastEl.props.style, color: color };
     $melker.render();
 
     // Clear toast after 3 seconds
     setTimeout(() => {
       if (toastEl) {
-        toastEl.props.text = '';
+        toastEl.setValue('');
         $melker.render();
       }
     }, 3000);
@@ -221,7 +221,7 @@ export function giveUpDraft(draftId) {
 function updateScore() {
   const scoreEl = $melker.getElementById('score');
   if (scoreEl) {
-    scoreEl.props.text = `Score: ${procrastinationScore}`;
+    scoreEl.setValue(`Score: ${procrastinationScore}`);
     $melker.render();
   }
 }
@@ -343,7 +343,7 @@ function updateDraftsList() {
         // Give up button for expired drafts
         const giveUpBtn = $melker.createElement('button', {
           id: 'draft-' + draft.id + '-giveup',
-          title: 'Give Up',
+          label: 'Give Up',
           style: {
             backgroundColor: 'red',
             color: 'white',
@@ -358,7 +358,7 @@ function updateDraftsList() {
       // Snooze buttons (available for both active and expired)
       const btn10min = $melker.createElement('button', {
         id: `draft-${draft.id}-10min`,
-        title: '+10min',
+        label: '+10min',
         style: {
           backgroundColor: 'green',
           color: 'white',
@@ -371,7 +371,7 @@ function updateDraftsList() {
 
       const btn1hr = $melker.createElement('button', {
         id: `draft-${draft.id}-1hr`,
-        title: '+1hr',
+        label: '+1hr',
         style: {
           backgroundColor: 'yellow',
           color: 'black',
@@ -384,7 +384,7 @@ function updateDraftsList() {
 
       const btn1day = $melker.createElement('button', {
         id: `draft-${draft.id}-1day`,
-        title: '+1day',
+        label: '+1day',
         style: {
           backgroundColor: 'magenta',
           color: 'white',
@@ -477,7 +477,7 @@ export function init() {
         <input id="deadline-input" type="time" value=""
                style="background-color: blue; color: white; margin-bottom: 1;" />
 
-        <button id="create-draft-btn" title="Create Draft"
+        <button id="create-draft-btn" label="Create Draft"
                 style="background-color: magenta; color: white; border: thin; border-color: brightMagenta; padding: 1; margin-bottom: 1;"
                 onClick="$app.createDraft()" />
 

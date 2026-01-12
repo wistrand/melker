@@ -14,7 +14,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
   <title>My App</title>
   <container style="border: thin; padding: 1;">
     <text>Hello, World!</text>
-    <button title="Click Me" onClick="alert('Clicked!')" />
+    <button label="Click Me" onClick="alert('Clicked!')" />
   </container>
 </melker>
 ```
@@ -23,11 +23,11 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 
 ## Critical Rules
 
-1. **Button uses `title` prop** - Not `label`
+1. **Button uses `label` prop** - Not `title`
 2. **Don't add border to buttons** - Buttons already have `[ ]` brackets; adding border creates `[ [ Button ] ]`
 3. **Button padding** - Vertical padding ignored for `[ ]` buttons (they stay 1 line); horizontal padding works
 4. **Input type is `'input'`** - Not `'text-input'`
-5. **Never use `console.log()`** - Use `$melker.logger.debug()`, `.info()`, `.warn()`, `.error()`
+5. **`console.log()` redirects to logger** - Automatically redirected to `$melker.logger.info()` (disable with `--no-console-override`)
 6. **Auto-render** - Event handlers auto-render; return `false` to skip
 7. **Update props explicitly** - Use `$melker.getElementById('id').props.propName = value`
 8. **Avoid emojis** - They break terminal layout
@@ -58,6 +58,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 |-----|-------------|
 | `$melker.getElementById(id)` | Get element by ID |
 | `$melker.render()` | Trigger re-render (for intermediate states) |
+| `$melker.skipRender()` | Skip auto-render after handler completes |
 | `$melker.exit()` | Exit application |
 | `$melker.alert(message)` | Show modal alert |
 | `$melker.copyToClipboard(text)` | Copy to clipboard |
@@ -72,11 +73,11 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 | `<text>` | id, style | Text content |
 | `<input>` | placeholder, value, format, onInput | Single-line (format: 'text'\|'password') |
 | `<textarea>` | placeholder, rows, cols, wrap | Multi-line |
-| `<button>` | **title**, onClick | Uses `title` NOT `label` |
+| `<button>` | **label**, onClick | Uses `label` NOT `title` |
 | `<dialog>` | title, open, modal, backdrop | Modal overlay |
 | `<checkbox>` | title, checked, onChange | Toggle |
 | `<radio>` | title, value, name, onChange | Radio button |
-| `<tabs>` / `<tab>` | activeTab, onTabChange / title | Tabbed panels |
+| `<tabs>` / `<tab>` | activeTab, onChange / title | Tabbed panels |
 | `<list>` / `<li>` | style | Lists |
 | `<canvas>` | width, height, onPaint | Pixel graphics |
 | `<img>` | src, width, height, dither | Images |
@@ -118,12 +119,12 @@ Events auto-render after completion:
 
 ```xml
 <!-- Simple handler -->
-<button title="Click" onClick="alert('Hi!')" />
+<button label="Click" onClick="alert('Hi!')" />
 
 <!-- Access elements -->
 <button onClick="
   const el = $melker.getElementById('counter');
-  el.props.text = String(parseInt(el.props.text) + 1);
+  el.setValue(String(parseInt(el.getValue()) + 1));
 " />
 
 <!-- Call exported functions -->
@@ -131,14 +132,17 @@ Events auto-render after completion:
 
 <!-- Async with intermediate state -->
 <button onClick="
-  statusEl.props.text = 'Loading...';
+  statusEl.setValue('Loading...');
   $melker.render();
   await fetchData();
-  statusEl.props.text = 'Done';
+  statusEl.setValue('Done');
 " />
 
 <!-- Skip auto-render -->
-<button onClick="console.log('no UI change'); return false" />
+<button onClick="
+  doSomethingWithoutUIChange();
+  $melker.skipRender();
+" />
 ```
 
 **Event objects:**
@@ -157,7 +161,7 @@ Events auto-render after completion:
   export function increment() {
     count++;
     const el = $melker.getElementById('counter');
-    if (el) el.props.text = String(count);
+    if (el) el.setValue(String(count));
     $melker.render();
   }
 
@@ -196,14 +200,14 @@ Events auto-render after completion:
 
 ```xml
 <container style="display: flex; flex-direction: row; gap: 1;">
-  <button title="-" onClick="
+  <button label="-" onClick="
     const el = $melker.getElementById('count');
-    el.props.text = String(parseInt(el.props.text) - 1);
+    el.setValue(String(parseInt(el.getValue()) - 1));
   " />
   <text id="count">0</text>
-  <button title="+" onClick="
+  <button label="+" onClick="
     const el = $melker.getElementById('count');
-    el.props.text = String(parseInt(el.props.text) + 1);
+    el.setValue(String(parseInt(el.getValue()) + 1));
   " />
 </container>
 ```
@@ -216,7 +220,7 @@ Events auto-render after completion:
   <input id="name" placeholder="Enter name" />
   <text>Email:</text>
   <input id="email" placeholder="Enter email" />
-  <button title="Submit" onClick="
+  <button label="Submit" onClick="
     const name = $melker.getElementById('name')?.getValue() ?? '';
     const email = $melker.getElementById('email')?.getValue() ?? '';
     if (!name || !email) {
@@ -245,11 +249,11 @@ Events auto-render after completion:
   }
 </script>
 
-<button title="Open" onClick="$app.openDialog()" />
+<button label="Open" onClick="$app.openDialog()" />
 <dialog id="myDialog" title="My Dialog" open="false" modal="true" backdrop="true">
   <container style="padding: 1;">
     <text>Dialog content here</text>
-    <button title="Close" onClick="$app.closeDialog()" />
+    <button label="Close" onClick="$app.closeDialog()" />
   </container>
 </dialog>
 ```
@@ -257,20 +261,23 @@ Events auto-render after completion:
 ### Tabs
 
 ```xml
-<tabs id="myTabs" activeTab="0">
-  <tab title="Tab 1">
+<tabs id="myTabs">
+  <tab id="tab1" title="Tab 1">
     <text>Content for tab 1</text>
   </tab>
-  <tab title="Tab 2">
+  <tab id="tab2" title="Tab 2">
     <text>Content for tab 2</text>
   </tab>
 </tabs>
+
+<!-- To start on a specific tab, use activeTab with tab id -->
+<tabs id="myTabs" activeTab="tab2">...</tabs>
 ```
 
 ### Combobox with Groups
 
 ```xml
-<combobox placeholder="Select..." filter="fuzzy" onSelect="$app.onSelect(event.value, event.label)">
+<combobox placeholder="Select..." filter="fuzzy" onChange="$app.onSelect(event.value, event.label)">
   <group label="Group A">
     <option value="a1">Option A1</option>
     <option value="a2">Option A2</option>
@@ -349,7 +356,9 @@ Elements with `id` are auto-persisted. Opt-out with `persist="false"`:
 
 ## Debugging
 
-- Use `$melker.logger.debug()`, `.info()`, `.warn()`, `.error()` for logging
+- `console.log()` is automatically redirected to `$melker.logger.info()` (won't break TUI)
+- Objects are formatted safely using `Deno.inspect()` (handles circular refs)
+- Use `--no-console-override` or `MELKER_NO_CONSOLE_OVERRIDE=1` to output to terminal instead
 - Press F12 for Dev Tools dialog (shows log file location, view source)
 - Press F6 for Performance dialog
 - Set `MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=DEBUG` for custom log location

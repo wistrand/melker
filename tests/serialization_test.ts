@@ -53,13 +53,13 @@ Deno.test('deserializeElement recreates correct structure', () => {
 });
 
 Deno.test('elementToJson converts element to JSON string', () => {
-  const button = new ButtonElement({ title: 'Click me', id: 'btn1' });
+  const button = new ButtonElement({ label: 'Click me', id: 'btn1' });
   const json = elementToJson(button);
 
   const parsed = JSON.parse(json);
   assertEquals(parsed.type, 'button');
   assertEquals(parsed.id, 'btn1');
-  assertEquals(parsed.props.title, 'Click me');
+  assertEquals(parsed.props.label, 'Click me');
   assertEquals(parsed.children, []);
 });
 
@@ -68,7 +68,7 @@ Deno.test('elementFromJson recreates element from JSON string', () => {
     "type": "button",
     "id": "test-btn",
     "props": {
-      "title": "Test Button",
+      "label": "Test Button",
       "variant": "primary"
     },
     "children": []
@@ -78,13 +78,13 @@ Deno.test('elementFromJson recreates element from JSON string', () => {
 
   assertEquals(element.type, 'button');
   assertEquals(element.id, 'test-btn');
-  assertEquals(element.props.title, 'Test Button');
+  assertEquals(element.props.label, 'Test Button');
   assertEquals(element.props.variant, 'primary');
 });
 
 Deno.test('Round-trip serialization preserves structure', () => {
   const textEl = new TextElement({ text: 'Original text', style: { textWrap: 'nowrap' } });
-  const buttonEl = new ButtonElement({ title: 'Original button', variant: 'secondary' });
+  const buttonEl = new ButtonElement({ label: 'Original button', variant: 'secondary' });
   const original = new ContainerElement({ width: 300, style: { display: 'block' } }, [textEl, buttonEl]);
 
   const json = elementToJson(original);
@@ -99,7 +99,7 @@ Deno.test('Round-trip serialization preserves structure', () => {
   assertEquals(recreated.children?.[0]?.props.text, 'Original text');
 
   assertEquals(recreated.children?.[1]?.type, 'button');
-  assertEquals(recreated.children?.[1]?.props.title, 'Original button');
+  assertEquals(recreated.children?.[1]?.props.label, 'Original button');
   assertEquals(recreated.children?.[1]?.props.variant, 'secondary');
 });
 

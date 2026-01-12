@@ -22,28 +22,28 @@
     <container style="display: flex; flex-direction: row; gap: 1; margin-bottom: 2;">
       <button
         id="decrementBtn"
-        title="-"
+        label="-"
         style="flex: 1;"
         onClick="
           const el = $melker.getElementById('counter');
-          el.props.text = String(parseInt(el.props.text) - 1);
+          el.setValue(String(parseInt(el.getValue()) - 1));
         "
       />
       <text id="counter" style="width: 8; text-align: center; font-weight: bold;">0</text>
       <button
         id="incrementBtn"
-        title="+"
+        label="+"
         style="flex: 1;"
         onClick="
           const el = $melker.getElementById('counter');
-          el.props.text = String(parseInt(el.props.text) + 1);
+          el.setValue(String(parseInt(el.getValue()) + 1));
         "
       />
     </container>
 
     <button
-      title="Reset"
-      onClick="$melker.getElementById('counter').props.text = '0';"
+      label="Reset"
+      onClick="$melker.getElementById('counter').setValue('0');"
     />
   </container>
 </melker>
@@ -74,7 +74,7 @@
     <checkbox id="terms" title="I agree to the terms" />
 
     <container style="display: flex; flex-direction: row; gap: 1; margin-top: 1;">
-      <button title="Submit" onClick="
+      <button label="Submit" onClick="
         const name = $melker.getElementById('name')?.getValue() ?? '';
         const email = $melker.getElementById('email')?.getValue() ?? '';
         const terms = $melker.getElementById('terms')?.props.checked;
@@ -89,12 +89,12 @@
         }
         alert('Registration successful: ' + name);
       " />
-      <button title="Clear" onClick="
+      <button label="Clear" onClick="
         $melker.getElementById('name')?.setValue('');
         $melker.getElementById('email')?.setValue('');
         $melker.getElementById('password')?.setValue('');
       " />
-      <button title="Cancel" onClick="$melker.exit();" />
+      <button label="Cancel" onClick="$melker.exit();" />
     </container>
   </container>
 </melker>
@@ -131,16 +131,16 @@
     <text style="font-weight: bold; margin-bottom: 2;">Dialog Demo</text>
 
     <container style="display: flex; flex-direction: row; gap: 2;">
-      <button title="Info" onClick="$app.openDialog('info-dialog')" />
-      <button title="Confirm" onClick="$app.openDialog('confirm-dialog')" />
-      <button title="Form" onClick="$app.openDialog('form-dialog')" />
+      <button label="Info" onClick="$app.openDialog('info-dialog')" />
+      <button label="Confirm" onClick="$app.openDialog('confirm-dialog')" />
+      <button label="Form" onClick="$app.openDialog('form-dialog')" />
     </container>
 
     <!-- Info Dialog -->
     <dialog id="info-dialog" title="Information" open="false" modal="true" backdrop="true">
       <container style="padding: 1;">
         <text style="margin-bottom: 2;">This is an informational message.</text>
-        <button title="OK" onClick="$app.closeDialog('info-dialog')" />
+        <button label="OK" onClick="$app.closeDialog('info-dialog')" />
       </container>
     </dialog>
 
@@ -149,8 +149,8 @@
       <container style="padding: 1;">
         <text style="margin-bottom: 2;">Are you sure you want to proceed?</text>
         <container style="display: flex; flex-direction: row; gap: 1; justify-content: flex-end;">
-          <button title="Cancel" onClick="$app.closeDialog('confirm-dialog')" />
-          <button title="Confirm" onClick="$app.handleConfirm()" />
+          <button label="Cancel" onClick="$app.closeDialog('confirm-dialog')" />
+          <button label="Confirm" onClick="$app.handleConfirm()" />
         </container>
       </container>
     </dialog>
@@ -161,8 +161,8 @@
         <text>Name:</text>
         <input id="form-name" placeholder="Your name" style="width: 30;" />
         <container style="display: flex; flex-direction: row; gap: 1; justify-content: flex-end;">
-          <button title="Cancel" onClick="$app.closeDialog('form-dialog')" />
-          <button title="Submit" onClick="
+          <button label="Cancel" onClick="$app.closeDialog('form-dialog')" />
+          <button label="Submit" onClick="
             const name = $melker.getElementById('form-name')?.getValue();
             if (name) alert('Hello, ' + name + '!');
             $app.closeDialog('form-dialog');
@@ -204,14 +204,14 @@
       selectedFile = event.path;
       closeFileBrowser();
       const text = $melker.getElementById('selected-text');
-      if (text) text.props.text = selectedFile;
+      if (text) text.setValue(selectedFile);
       $melker.render();
     }
   </script>
 
   <container style="width: 100%; height: 100%; padding: 2;">
     <text style="font-weight: bold; margin-bottom: 1;">File Browser Demo</text>
-    <button title="Open File..." onClick="$app.openFileBrowser()" />
+    <button label="Open File..." onClick="$app.openFileBrowser()" />
     <text style="margin-top: 1;">Selected:</text>
     <text id="selected-text">(none)</text>
 
@@ -238,7 +238,7 @@
   <container style="width: 60; height: 20; border: thin; padding: 1;">
     <text style="font-weight: bold; margin-bottom: 1;">Application Settings</text>
 
-    <tabs id="settings-tabs" activeTab="0">
+    <tabs id="settings-tabs">
       <tab title="General">
         <container style="padding: 1; display: flex; flex-direction: column; gap: 1;">
           <text>Username:</text>
@@ -306,7 +306,7 @@
       <text>Click header to sort</text>
       <text>Arrow keys to navigate</text>
       <text>Enter to select</text>
-      <button title="Exit" onClick="$melker.exit()" />
+      <button label="Exit" onClick="$melker.exit()" />
     </container>
   </container>
 </melker>
@@ -319,7 +319,7 @@
   <script>
     export function runCommand(value, label) {
       const status = $melker.getElementById('status');
-      status.props.text = 'Executed: ' + label;
+      status.setValue('Executed: ' + label);
 
       switch (value) {
         case 'new':
@@ -366,7 +366,7 @@
   <script>
     export function selectItem(value, label) {
       const selected = $melker.getElementById('selected');
-      selected.props.text = 'Selected: ' + label + ' (' + value + ')';
+      selected.setValue('Selected: ' + label + ' (' + value + ')');
     }
   </script>
 
@@ -418,9 +418,9 @@
       <!-- Sidebar -->
       <container style="width: 20; border-right: thin; padding: 1;">
         <text style="font-weight: bold; margin-bottom: 1;">Menu</text>
-        <button title="Dashboard" style="width: 100%; margin-bottom: 1;" />
-        <button title="Settings" style="width: 100%; margin-bottom: 1;" />
-        <button title="Help" style="width: 100%;" />
+        <button label="Dashboard" style="width: 100%; margin-bottom: 1;" />
+        <button label="Settings" style="width: 100%; margin-bottom: 1;" />
+        <button label="Help" style="width: 100%;" />
       </container>
 
       <!-- Content area -->
@@ -514,7 +514,7 @@ Use `async="ready"` scripts for initialization that needs access to rendered ele
   <container style="width: 100%; height: 100%; border: thin; padding: 1;">
     <text style="font-weight: bold; margin-bottom: 1;">Clock</text>
     <canvas id="clockCanvas" width="60" height="20" />
-    <button title="Exit" onClick="$melker.exit()" />
+    <button label="Exit" onClick="$melker.exit()" />
   </container>
 </melker>
 ```
@@ -543,17 +543,17 @@ Apps that access network, files, or system commands should declare a `<policy>` 
       const status = $melker.getElementById('status');
       const result = $melker.getElementById('result');
 
-      status.props.text = 'Loading...';
+      status.setValue('Loading...');
       $melker.render();
 
       try {
         const response = await fetch('https://api.example.com/data');
         const data = await response.json();
-        result.props.text = JSON.stringify(data, null, 2);
-        status.props.text = 'Loaded successfully';
+        result.setValue(JSON.stringify(data, null, 2));
+        status.setValue('Loaded successfully');
       } catch (error) {
-        status.props.text = 'Error: ' + error.message;
-        result.props.text = '';
+        status.setValue('Error: ' + error.message);
+        result.setValue('');
       }
     }
   </script>
@@ -586,12 +586,12 @@ Apps that access network, files, or system commands should declare a `<policy>` 
 
     export function updateVolume(event: { value: string }) {
       volume = parseFloat(event.value);
-      $melker.getElementById('volumeLabel')!.props.text = `Volume: ${Math.round(volume)}%`;
+      $melker.getElementById('volumeLabel')!.setValue(`Volume: ${Math.round(volume)}%`);
     }
 
     export function updateBrightness(event: { value: string }) {
       brightness = parseFloat(event.value);
-      $melker.getElementById('brightnessLabel')!.props.text = `Brightness: ${Math.round(brightness)}%`;
+      $melker.getElementById('brightnessLabel')!.setValue(`Brightness: ${Math.round(brightness)}%`);
     }
   </script>
 
@@ -616,7 +616,7 @@ Apps that access network, files, or system commands should declare a `<policy>` 
     <text style="margin-top: 1;">Quality:</text>
     <slider min="0" max="100" snaps="[0, 25, 50, 75, 100]" value="50" showValue="true" />
 
-    <button title="Close" style="margin-top: 1;" onClick="$melker.exit();" />
+    <button label="Close" style="margin-top: 1;" onClick="$melker.exit();" />
   </container>
 </melker>
 ```
@@ -630,7 +630,7 @@ Apps that access network, files, or system commands should declare a `<policy>` 
 5. **Use IDs for dynamic elements** - Required for `getElementById()`
 6. **Export functions in scripts** - Access via `$app.functionName()`
 7. **Call `$melker.render()` in async** - For intermediate state updates
-8. **Use `$melker.logger.debug()` for debugging** - Not `console.log()` (F12 shows log location)
+8. **`console.log()` works** - Automatically redirects to `$melker.logger.info()` (F12 shows log location)
 9. **Avoid emojis** - They break terminal character width calculations
 10. **Avoid specifying colors** - Let the theme engine handle colors; only use for canvas or intentional effects
 11. **Add `<policy>` for file/network access** - Required for remote apps, recommended for all apps with external access

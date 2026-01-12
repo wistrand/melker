@@ -20,7 +20,7 @@
         if (stats && textarea) {
           const val = textarea.getValue();
           const lines = val.split('\\n').length;
-          stats.props.text = 'Lines: ' + lines + ' | Scroll with mouse wheel';
+          stats.setValue('Lines: ' + lines + ' | Scroll with mouse wheel');
           // Scroll to keep cursor visible when typing
           if (container && textarea.getCursorDisplayRow) {
             const cursorRow = textarea.getCursorDisplayRow();
@@ -41,7 +41,7 @@
 
   <container style="display: flex; flex-direction: row; gap: 2; margin-top: 1;">
     <button
-      title="Add Lines"
+      label="Add Lines"
       style="width: 12; height: 3; border: thin;"
       onClick="
         const textarea = $melker.getElementById('editor');
@@ -64,7 +64,7 @@
       "
     />
     <button
-      title="Clear"
+      label="Clear"
       style="width: 10; height: 3; border: thin;"
       onClick="
         const textarea = $melker.getElementById('editor');
@@ -77,7 +77,7 @@
       "
     />
     <button
-      title="Quit"
+      label="Quit"
       style="width: 10; height: 3; border: thin;"
       onClick="$melker.exit()"
     />

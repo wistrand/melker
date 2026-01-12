@@ -396,7 +396,7 @@ function renderButton(
     }
   }
 
-  attributes.push(`title="${escapeXml(button.title)}"`);
+  attributes.push(`label="${escapeXml(button.title)}"`);
 
   if (button.onClick) {
     attributes.push(`onClick="${escapeXml(button.onClick)}"`);

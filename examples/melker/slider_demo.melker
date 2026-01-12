@@ -21,22 +21,22 @@
 
     export function updateBasic(event: { value: string }) {
       basicValue = parseFloat(event.value);
-      $melker.getElementById('basicLabel')!.props.text = `Value: ${Math.round(basicValue)}`;
+      $melker.getElementById('basicLabel')!.setValue(`Value: ${Math.round(basicValue)}`);
     }
 
     export function updateStep(event: { value: string }) {
       stepValue = parseFloat(event.value);
-      $melker.getElementById('stepLabel')!.props.text = `Step value: ${stepValue}`;
+      $melker.getElementById('stepLabel')!.setValue(`Step value: ${stepValue}`);
     }
 
     export function updateSnap(event: { value: string }) {
       snapValue = parseFloat(event.value);
-      $melker.getElementById('snapLabel')!.props.text = `Snap value: ${snapValue}%`;
+      $melker.getElementById('snapLabel')!.setValue(`Snap value: ${snapValue}%`);
     }
 
     export function updateVolume(event: { value: string }) {
       volumeValue = parseFloat(event.value);
-      $melker.getElementById('volumeLabel')!.props.text = `Volume: ${Math.round(volumeValue)}%`;
+      $melker.getElementById('volumeLabel')!.setValue(`Volume: ${Math.round(volumeValue)}%`);
     }
 
     export function updateRed(event: { value: string }) {
@@ -60,7 +60,7 @@
       const b = Math.round(blue).toString(16).padStart(2, '0');
       const label = $melker.getElementById('colorLabel');
       if (label) {
-        label.props.text = 'Color: #' + r + g + b;
+        label.setValue('Color: #' + r + g + b);
       }
     }
   </script>
@@ -177,7 +177,7 @@
     </container>
 
     <container style="display: flex; flex-direction: row; gap: 2; justify-content: center;">
-      <button title="Exit" onClick="$melker.exit();" />
+      <button label="Exit" onClick="$melker.exit();" />
     </container>
   </container>
 </melker>

@@ -1,10 +1,31 @@
 # Debugging Melker Applications
 
-## Critical Rule: No console.log()
+## Console Logging
 
-**NEVER use `console.log()` in Melker applications.** It interferes with terminal UI rendering.
+In Melker scripts, `console.log()` is automatically redirected to `$melker.logger.info()`, so it won't break the TUI. Objects are formatted using `Deno.inspect()` for safe, readable output.
 
-Use the file-based logging system instead.
+```javascript
+// All safe - redirected to logger
+console.log("debug info");
+console.log("user:", { name: "John" });  // objects formatted nicely
+console.warn("warning");
+console.error("error");
+```
+
+**Mapping:**
+- `console.log`, `console.info` → `$melker.logger.info()`
+- `console.warn` → `$melker.logger.warn()`
+- `console.error` → `$melker.logger.error()`
+- `console.debug` → `$melker.logger.debug()`
+
+**Disable override** (for debugging, outputs to terminal):
+```bash
+./melker.ts --no-console-override app.melker
+# or
+MELKER_NO_CONSOLE_OVERRIDE=1 ./melker.ts app.melker
+```
+
+For more control, use the logger directly:
 
 ## Logging System (`src/logging.ts`)
 

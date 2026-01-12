@@ -47,7 +47,7 @@ A `.melker` file is:
 
   <container style="border: thin; padding: 1;">
     <text>Click to fetch data</text>
-    <button title="Fetch" onClick="fetchData()" />
+    <button label="Fetch" onClick="fetchData()" />
   </container>
 </melker>
 ```
@@ -109,7 +109,7 @@ Most TUI frameworks offer one way to build UIs: programmatic APIs. Melker offers
 
 **1. Declarative (preferred)** - `.melker` HTML-like files
 ```html
-<button title="Click" onClick="count++" />
+<button label="Click" onClick="count++" />
 ```
 This is the primary way to build Melker apps. Declarative files enable the full trust model: visible structure, inspectable handlers, declared policy, and sandboxed execution.
 
@@ -119,7 +119,7 @@ This is the primary way to build Melker apps. Declarative files enable the full 
 
 This button increments a counter:
 
-<button title="Click" onClick="count++" />
+<button label="Click" onClick="count++" />
 ```
 Documentation and UI in the same file. The help text is the app.
 

@@ -365,6 +365,23 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   }
 
   /**
+   * Get the markdown text value (alias for getContent for API consistency)
+   */
+  getValue(): string {
+    return this.getContent() ?? '';
+  }
+
+  /**
+   * Set the markdown text value
+   */
+  setValue(text: string): void {
+    this.props.text = text;
+    // Invalidate the parsed AST cache
+    this._parsedAst = null;
+    this._lastParsedText = null;
+  }
+
+  /**
    * Fetch content from src URL if specified
    */
   private async _fetchSrcContent(): Promise<string | null> {

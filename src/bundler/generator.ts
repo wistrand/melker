@@ -11,6 +11,7 @@
  */
 
 import { getLogger } from '../logging.ts';
+import { MelkerConfig } from '../config/mod.ts';
 import type {
   ParsedScript,
   ParsedHandler,
@@ -69,9 +70,9 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
   exports: Record<string, any>;`;
 
 /**
- * Header added to all inline script modules for $melker access.
+ * Base header for inline script modules (without console override).
  */
-const SCRIPT_MODULE_HEADER = `// Runtime globals (injected via globalThis before import)
+const SCRIPT_MODULE_HEADER_BASE = `// Runtime globals (injected via globalThis before import)
 const $melker = (globalThis as any).$melker as {
 ${MELKER_INTERFACE_MEMBERS}
 };
@@ -86,6 +87,51 @@ const prompt = (message: string, defaultValue?: string) => $melker.prompt(messag
 const $app = (globalThis as any).$app as Record<string, any>;
 
 `;
+
+/**
+ * Console override code - redirects console.log to $melker.logger.
+ */
+const CONSOLE_OVERRIDE_CODE = `// Console override - redirect to $melker.logger to avoid breaking TUI
+// Use Deno.inspect for safe, smart formatting (handles circular refs, etc.)
+const __formatArg = (arg: unknown): string => {
+  if (typeof arg === 'string') return arg;
+  return Deno.inspect(arg, { colors: false, depth: 4 });
+};
+const __formatArgs = (...args: unknown[]): string => args.map(__formatArg).join(' ');
+const console = {
+  log: (...args: unknown[]) => $melker.logger?.info?.(__formatArgs(...args)),
+  info: (...args: unknown[]) => $melker.logger?.info?.(__formatArgs(...args)),
+  warn: (...args: unknown[]) => $melker.logger?.warn?.(__formatArgs(...args)),
+  error: (...args: unknown[]) => $melker.logger?.error?.(__formatArgs(...args)),
+  debug: (...args: unknown[]) => $melker.logger?.debug?.(__formatArgs(...args)),
+  trace: (...args: unknown[]) => $melker.logger?.debug?.(__formatArgs(...args)),
+  dir: (obj: unknown) => $melker.logger?.debug?.(__formatArg(obj)),
+  table: (data: unknown) => $melker.logger?.info?.(__formatArg(data)),
+  assert: (condition: unknown, ...args: unknown[]) => {
+    if (!condition) $melker.logger?.error?.('Assertion failed:', __formatArgs(...args));
+  },
+  count: () => {}, // no-op
+  countReset: () => {}, // no-op
+  group: () => {}, // no-op
+  groupCollapsed: () => {}, // no-op
+  groupEnd: () => {}, // no-op
+  time: () => {}, // no-op
+  timeEnd: () => {}, // no-op
+  timeLog: () => {}, // no-op
+  clear: () => {}, // no-op
+};
+
+`;
+
+/**
+ * Get the script module header, optionally including console override.
+ */
+function getScriptModuleHeader(includeConsoleOverride: boolean): string {
+  if (includeConsoleOverride) {
+    return SCRIPT_MODULE_HEADER_BASE + CONSOLE_OVERRIDE_CODE;
+  }
+  return SCRIPT_MODULE_HEADER_BASE;
+}
 
 /**
  * Generate TypeScript source from parsed .melker content.
@@ -104,6 +150,10 @@ export function generate(parsed: ParseResult): GeneratedSource {
   const lineMap = new Map<number, LineMapping>();
   const scriptModules: ScriptModule[] = [];
   let currentLine = 1;
+
+  // Get config for console override
+  const consoleOverride = MelkerConfig.get().consoleOverride;
+  const scriptModuleHeader = getScriptModuleHeader(consoleOverride);
 
   logger.debug('Starting TypeScript generation', {
     scripts: parsed.scripts.length,
@@ -172,6 +222,40 @@ export function generate(parsed: ParseResult): GeneratedSource {
   addLine('const $app = (globalThis as any).$app as Record<string, any>;');
   addLine('');
 
+  // Console override (conditional based on config)
+  if (consoleOverride) {
+    addLine('// Console override - redirect to $melker.logger to avoid breaking TUI');
+    addLine('// Use Deno.inspect for safe, smart formatting (handles circular refs, etc.)');
+    addLine('const __formatArg = (arg: unknown): string => {');
+    addLine('  if (typeof arg === \'string\') return arg;');
+    addLine('  return Deno.inspect(arg, { colors: false, depth: 4 });');
+    addLine('};');
+    addLine('const __formatArgs = (...args: unknown[]): string => args.map(__formatArg).join(\' \');');
+    addLine('const console = {');
+    addLine('  log: (...args: unknown[]) => $melker.logger?.info?.(__formatArgs(...args)),');
+    addLine('  info: (...args: unknown[]) => $melker.logger?.info?.(__formatArgs(...args)),');
+    addLine('  warn: (...args: unknown[]) => $melker.logger?.warn?.(__formatArgs(...args)),');
+    addLine('  error: (...args: unknown[]) => $melker.logger?.error?.(__formatArgs(...args)),');
+    addLine('  debug: (...args: unknown[]) => $melker.logger?.debug?.(__formatArgs(...args)),');
+    addLine('  trace: (...args: unknown[]) => $melker.logger?.debug?.(__formatArgs(...args)),');
+    addLine('  dir: (obj: unknown) => $melker.logger?.debug?.(__formatArg(obj)),');
+    addLine('  table: (data: unknown) => $melker.logger?.info?.(__formatArg(data)),');
+    addLine('  assert: (condition: unknown, ...args: unknown[]) => {');
+    addLine('    if (!condition) $melker.logger?.error?.(\'Assertion failed:\', __formatArgs(...args));');
+    addLine('  },');
+    addLine('  count: () => {}, // no-op');
+    addLine('  countReset: () => {}, // no-op');
+    addLine('  group: () => {}, // no-op');
+    addLine('  groupCollapsed: () => {}, // no-op');
+    addLine('  groupEnd: () => {}, // no-op');
+    addLine('  time: () => {}, // no-op');
+    addLine('  timeEnd: () => {}, // no-op');
+    addLine('  timeLog: () => {}, // no-op');
+    addLine('  clear: () => {}, // no-op');
+    addLine('};');
+    addLine('');
+  }
+
   // =========================================================================
   // Section 2: Script Imports
   // =========================================================================
@@ -187,7 +271,7 @@ export function generate(parsed: ParseResult): GeneratedSource {
     const originalLine = script.sourceRange.start.line;
 
     // Create module content with header and script code
-    const content = SCRIPT_MODULE_HEADER + script.code;
+    const content = scriptModuleHeader + script.code;
 
     scriptModules.push({
       filename,
@@ -294,7 +378,7 @@ export function generate(parsed: ParseResult): GeneratedSource {
       const originalLine = script.sourceRange.start.line;
 
       // Init scripts are async, wrap in exported function
-      const content = SCRIPT_MODULE_HEADER + `
+      const content = scriptModuleHeader + `
 export async function __initFn(): Promise<void> {
 ${script.code.split('\n').map(l => '  ' + l).join('\n')}
 }
@@ -342,7 +426,7 @@ ${script.code.split('\n').map(l => '  ' + l).join('\n')}
       const originalLine = script.sourceRange.start.line;
 
       // Ready scripts are async, wrap in exported function
-      const content = SCRIPT_MODULE_HEADER + `
+      const content = scriptModuleHeader + `
 export async function __readyFn(): Promise<void> {
 ${script.code.split('\n').map(l => '  ' + l).join('\n')}
 }

@@ -159,9 +159,9 @@
         </table>
 
         <container style="display: flex; flex-direction: row; margin-top: 1; gap: 1;">
-          <button title="Add Task" style="background-color: #3b82f6; color: white;" onClick="$app.addTask()" />
-          <button title="Mark Done" onClick="$app.markDone()" />
-          <button title="Delete" style="color: red;" onClick="$app.deleteTask()" />
+          <button label="Add Task" style="background-color: #3b82f6; color: white;" onClick="$app.addTask()" />
+          <button label="Mark Done" onClick="$app.markDone()" />
+          <button label="Delete" style="color: red;" onClick="$app.deleteTask()" />
         </container>
       </container>
     </container>

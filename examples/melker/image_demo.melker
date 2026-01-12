@@ -50,6 +50,6 @@
     <img src="../../media/melker-128.png" width="50%" height="8" />
     <text class="caption">width="50%" height="8"</text>
 
-    <button title="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
+    <button label="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
   </container>
 </melker>

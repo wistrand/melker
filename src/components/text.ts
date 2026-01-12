@@ -328,6 +328,20 @@ export class TextElement extends Element implements Renderable, TextSelectable {
   }
 
   /**
+   * Get the text content (standard API)
+   */
+  getValue(): string {
+    return this.props.text ?? '';
+  }
+
+  /**
+   * Set the text content (standard API)
+   */
+  setValue(text: string): void {
+    this.props.text = text;
+  }
+
+  /**
    * Check if this text supports text selection
    */
   isTextSelectable(): boolean {

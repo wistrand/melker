@@ -15,7 +15,7 @@
         const val = textarea.getValue();
         const lines = val.split('\\n').length;
         const chars = val.length;
-        stats.props.text = 'Lines: ' + lines + ' | Chars: ' + chars;
+        stats.setValue('Lines: ' + lines + ' | Chars: ' + chars);
         $melker.render();
       }
     "
@@ -25,33 +25,33 @@
 
   <container style="display: flex; flex-direction: row; gap: 2; margin-top: 1;">
     <button
-      title="Clear"
+      label="Clear"
       style="width: 10; height: 3; border: thin;"
       onClick="
         const textarea = $melker.getElementById('editor');
         const stats = $melker.getElementById('stats');
         if (textarea) {
           textarea.setValue('');
-          if (stats) stats.props.text = 'Lines: 1 | Chars: 0';
+          if (stats) stats.setValue('Lines: 1 | Chars: 0');
           $melker.render();
         }
       "
     />
     <button
-      title="Sample"
+      label="Sample"
       style="width: 10; height: 3; border: thin;"
       onClick="
         const textarea = $melker.getElementById('editor');
         const stats = $melker.getElementById('stats');
         if (textarea) {
           textarea.setValue('Hello World!\\nThis is a multiline\\ntextarea component.\\n\\nUse arrow keys to navigate.');
-          if (stats) stats.props.text = 'Lines: 5 | Chars: 77';
+          if (stats) stats.setValue('Lines: 5 | Chars: 77');
           $melker.render();
         }
       "
     />
     <button
-      title="Quit"
+      label="Quit"
       style="width: 10; height: 3; border: thin;"
       onClick="$melker.exit()"
     />

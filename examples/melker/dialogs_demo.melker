@@ -91,7 +91,7 @@ Demonstrates the browser-like dialog functions: alert(), confirm(), and prompt()
     function updateResult(text: string) {
       const resultEl = $melker.getElementById('resultText');
       if (resultEl) {
-        resultEl.props.text = text;
+        resultEl.setValue(text);
       }
     }
   </script>
@@ -102,13 +102,13 @@ Demonstrates the browser-like dialog functions: alert(), confirm(), and prompt()
     <text text="Click a button to see the corresponding dialog:" />
 
     <container class="button-row">
-      <button title="alert()" onClick="$app.showAlert()" />
-      <button title="confirm()" onClick="$app.showConfirm()" />
-      <button title="prompt()" onClick="$app.showPrompt()" />
+      <button label="alert()" onClick="$app.showAlert()" />
+      <button label="confirm()" onClick="$app.showConfirm()" />
+      <button label="prompt()" onClick="$app.showPrompt()" />
     </container>
 
     <container class="button-row">
-      <button title="Chained Dialogs" onClick="$app.showChainedDialogs()" />
+      <button label="Chained Dialogs" onClick="$app.showChainedDialogs()" />
     </container>
 
     <container id="result">
@@ -118,7 +118,7 @@ Demonstrates the browser-like dialog functions: alert(), confirm(), and prompt()
 
     <text text="Press Escape to cancel confirm/prompt dialogs" style="margin-top: 1;" />
 
-    <button title="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
+    <button label="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
   </container>
 
 </melker>

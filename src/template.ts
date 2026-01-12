@@ -280,7 +280,7 @@ export function parseMelkerFile(content: string): MelkerParseResult {
  * const ui = melker`
  *   <container style={{ display: 'flex', flexDirection: 'column' }}>
  *     <text style={{ fontWeight: 'bold' }}>Hello World</text>
- *     <button title="Click me" onClick=${handleClick} />
+ *     <button label="Click me" onClick=${handleClick} />
  *   </container>
  * `;
  * ```

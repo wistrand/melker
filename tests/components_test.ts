@@ -22,7 +22,7 @@ Deno.test('Element classes exist and can be instantiated', () => {
   const containerEl = new ContainerElement();
   const textInputEl = new InputElement();
   const textEl = new TextElement({ text: 'Test' });
-  const buttonEl = new ButtonElement({ title: 'Test Button' });
+  const buttonEl = new ButtonElement({ label: 'Test Button' });
   const radioEl = new RadioElement({ title: 'Test Radio', value: 'test' });
   const checkboxEl = new CheckboxElement({ title: 'Test Checkbox' });
   const dialogEl = new DialogElement();
@@ -105,24 +105,24 @@ Deno.test('TextOutput element validates props correctly', () => {
 });
 
 Deno.test('Button element creates valid elements', () => {
-  const element = new ButtonElement({ title: 'Click Me', variant: 'primary' });
+  const element = new ButtonElement({ label: 'Click Me', variant: 'primary' });
 
   assertEquals(element.type, 'button');
-  assertEquals(element.props.title, 'Click Me');
+  assertEquals(element.props.label, 'Click Me');
   assertEquals(element.props.variant, 'primary');
   assertEquals(element.props.disabled, false); // Default prop
   assertEquals(element.props.tabIndex, 0); // Default prop
 });
 
 Deno.test('Button element validates props correctly', () => {
-  assertEquals(ButtonElement.validate({ title: 'Valid Button' }), true);
-  assertEquals(ButtonElement.validate({ title: 'Test', variant: 'primary' }), true);
-  assertEquals(ButtonElement.validate({ title: 'Test', variant: 'secondary' }), true);
-  assertEquals(ButtonElement.validate({ title: 'Test', variant: 'default' }), true);
+  assertEquals(ButtonElement.validate({ label: 'Valid Button' }), true);
+  assertEquals(ButtonElement.validate({ label: 'Test', variant: 'primary' }), true);
+  assertEquals(ButtonElement.validate({ label: 'Test', variant: 'secondary' }), true);
+  assertEquals(ButtonElement.validate({ label: 'Test', variant: 'default' }), true);
 
-  assertEquals(ButtonElement.validate({ title: '' }), false);
-  assertEquals(ButtonElement.validate({ title: 123 as any }), false);
-  assertEquals(ButtonElement.validate({ title: 'Test', variant: 'invalid' as any }), false);
+  assertEquals(ButtonElement.validate({ label: '' }), false);
+  assertEquals(ButtonElement.validate({ label: 123 as any }), false);
+  assertEquals(ButtonElement.validate({ label: 'Test', variant: 'invalid' as any }), false);
 });
 
 Deno.test('Dialog element creates valid elements', () => {
@@ -239,7 +239,7 @@ Deno.test('Checkbox element state management', () => {
 
 Deno.test('Element constructors work with children', () => {
   const textEl = new TextElement({ text: 'Test Text' });
-  const buttonEl = new ButtonElement({ title: 'Test Button' });
+  const buttonEl = new ButtonElement({ label: 'Test Button' });
   const containerEl = new ContainerElement({}, [textEl, buttonEl]);
 
   assertEquals(containerEl.children?.length || 0, 2);
@@ -252,7 +252,7 @@ Deno.test('Element default props are applied', () => {
   const containerEl = new ContainerElement();
   const textInputEl = new InputElement();
   const textEl = new TextElement({ text: 'Test' });
-  const buttonEl = new ButtonElement({ title: 'Test' });
+  const buttonEl = new ButtonElement({ label: 'Test' });
   const dialogEl = new DialogElement();
 
   // Container style defaults are provided by static getDefaultStyle(), not props.style

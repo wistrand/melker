@@ -64,13 +64,13 @@ If no file is specified, defaults to `README.md`.
 
     <container id="root">
         <container id="header">
-            <button class="big" title="Back" onClick="$app.goBack()"/>
-            <button title="Fwd" onClick="$app.goForward()"/>
-            <button title="Open..." onClick="$app.openFileBrowser()"/>
+            <button class="big" label="Back" onClick="$app.goBack()"/>
+            <button label="Fwd" onClick="$app.goForward()"/>
+            <button label="Open..." onClick="$app.openFileBrowser()"/>
             <text id="title-text" style="font-weight: bold; flex: 1; padding-left: 1;">
                 ${argv[1]:-README.md}
             </text>
-            <button title="Exit" onClick="$melker.exit();" />
+            <button label="Exit" onClick="$melker.exit();" />
         </container>
 
         <container id="content-area" scrollable="true" style="flex: 1 1 0; padding: 1;">
@@ -91,7 +91,7 @@ If no file is specified, defaults to `README.md`.
             selectionMode="single"
             selectType="file"
             showHidden="false"
-            onSelect="$app.handleFileSelect(event)"
+            onChange="$app.handleFileSelect(event)"
             onCancel="$app.closeFileBrowser()"
             maxVisible="12"
           />
@@ -107,7 +107,7 @@ If no file is specified, defaults to `README.md`.
     function updateTitle(src: string) {
       $melker.setTitle('Melker - ' + src);
       const titleText = $melker.getElementById('title-text');
-      if (titleText) titleText.props.text = src;
+      if (titleText) titleText.setValue(src);
     }
 
     // File browser dialog

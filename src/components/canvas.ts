@@ -1513,26 +1513,25 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     }
 
     // Cache render mode config (avoid repeated lookups in hot path)
-    const blockMode = MelkerConfig.get().blockMode;
-    const asciiMode = MelkerConfig.get().asciiMode;
+    const gfxMode = MelkerConfig.get().gfxMode;
 
     // Check for dithered rendering mode
     const ditheredBuffer = this._prepareDitheredBuffer();
     if (ditheredBuffer) {
       // Use dithered rendering path
-      this._renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, blockMode, asciiMode);
+      this._renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, gfxMode);
       return;
     }
 
     // Block mode: 1 colored space per cell instead of sextant characters
-    if (blockMode) {
+    if (gfxMode === 'block') {
       this._renderBlockMode(bounds, style, buffer, terminalWidth, terminalHeight);
       return;
     }
 
     // ASCII mode: pattern (spatial mapping) or luma (brightness-based)
-    if (asciiMode !== 'off') {
-      this._renderAsciiMode(bounds, style, buffer, terminalWidth, terminalHeight, asciiMode);
+    if (gfxMode === 'pattern' || gfxMode === 'luma') {
+      this._renderAsciiMode(bounds, style, buffer, terminalWidth, terminalHeight, gfxMode);
       return;
     }
 
@@ -1791,8 +1790,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     style: Partial<Cell>,
     buffer: DualBuffer,
     ditheredBuffer: Uint8Array,
-    blockMode: boolean,
-    asciiMode: 'off' | 'pattern' | 'luma'
+    gfxMode: 'sextant' | 'block' | 'pattern' | 'luma'
   ): void {
     let terminalWidth = Math.min(this.props.width, bounds.width);
     const terminalHeight = Math.min(this.props.height, bounds.height);
@@ -1861,7 +1859,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         }
 
         // Block mode: average colors and output colored space
-        if (blockMode) {
+        if (gfxMode === 'block') {
           if (!hasAnyPixel) continue;
 
           // Average all non-transparent colors
@@ -1891,13 +1889,13 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         }
 
         // ASCII mode: convert dithered pixels to ASCII characters
-        if (asciiMode !== 'off') {
+        if (gfxMode === 'pattern' || gfxMode === 'luma') {
           if (!hasAnyPixel) continue;
 
           let char: string;
           let fgColor: string | undefined;
 
-          if (asciiMode === 'luma') {
+          if (gfxMode === 'luma') {
             // Luminance mode: average brightness → density character
             let totalR = 0, totalG = 0, totalB = 0, count = 0;
             for (let i = 0; i < 6; i++) {

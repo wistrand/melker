@@ -82,7 +82,7 @@ export function parseCliFlags(args: string[]): ParsedCliFlags {
         }
 
         // Parse value based on type
-        flags[path] = parseValue(flagValue, prop);
+        flags[path] = parseValue(flagValue, prop, flagName);
       }
     } else if (arg.startsWith('--')) {
       // Unknown flag - pass through to remaining (launcher-specific flags)
@@ -101,7 +101,13 @@ export function parseCliFlags(args: string[]): ParsedCliFlags {
 /**
  * Parse a string value to the appropriate type based on schema
  */
-function parseValue(value: string, prop: ConfigProperty): unknown {
+function parseValue(value: string, prop: ConfigProperty, flagName?: string): unknown {
+  // Validate enum values
+  if (prop.enum && !prop.enum.includes(value)) {
+    console.error(`Error: Invalid value '${value}' for ${flagName || 'option'}. Valid values: ${prop.enum.join(', ')}`);
+    Deno.exit(1);
+  }
+
   switch (prop.type) {
     case 'boolean':
       return value === 'true' || value === '1';

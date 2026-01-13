@@ -23,7 +23,7 @@ melker --trust hello.melker
 
 ## Core Concepts
 
-**Structure:** `<melker>` contains special tags + one UI root
+**Structure:** `<melker>` contains special tags + UI elements
 
 ```xml
 <melker>
@@ -32,6 +32,15 @@ melker --trust hello.melker
   <script type="typescript">/* code */</script>
   <policy>{"permissions": {...}}</policy>
   <container><!-- UI tree --></container>
+</melker>
+```
+
+**Multiple top-level elements** are auto-wrapped in a flex column container:
+```xml
+<melker>
+  <text>Header</text>
+  <container style="flex: 1;">Content</container>
+  <text>Footer</text>
 </melker>
 ```
 

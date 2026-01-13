@@ -1,0 +1,42 @@
+<melker>
+  <title>Multi-Root Layout</title>
+
+  <script type="typescript">
+    let count = 0;
+
+    export function increment() {
+      count++;
+      const el = $melker.getElementById('count');
+      if (el) el.setValue(String(count));
+    }
+
+    export function decrement() {
+      count--;
+      const el = $melker.getElementById('count');
+      if (el) el.setValue(String(count));
+    }
+  </script>
+
+  <!-- Multiple top-level elements are auto-wrapped in a flex column container -->
+
+  <container style="border: thin; padding: 1;">
+    <text style="font-weight: bold;">Header</text>
+  </container>
+
+  <container style="flex: 1; border: thin; padding: 1; gap: 1;">
+    <text>This example has three top-level elements.</text>
+    <text>They are automatically wrapped in a synthetic container</text>
+    <text>with flex-direction: column and full width/height.</text>
+    <container style="flex-direction: row; gap: 1; align-items: center;">
+      <button label="-" onClick="$app.decrement()" />
+      <text id="count">0</text>
+      <button label="+" onClick="$app.increment()" />
+    </container>
+  </container>
+
+  <container style="border: thin; padding: 1; flex-direction: row; justify-content: space-between;">
+    <text>Footer</text>
+    <button label="Exit" onClick="$melker.exit()" />
+  </container>
+
+</melker>

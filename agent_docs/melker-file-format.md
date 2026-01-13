@@ -38,6 +38,17 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 </melker>
 ```
 
+**Multiple top-level elements** are automatically wrapped in a flex column container:
+
+```xml
+<melker>
+  <text>Header</text>
+  <container style="flex: 1;">Content</container>
+  <text>Footer</text>
+</melker>
+<!-- Becomes: <container style="display: flex; flex-direction: column; width: 100%; height: 100%;"> ... </container> -->
+```
+
 ## Special Tags
 
 | Tag | Description |

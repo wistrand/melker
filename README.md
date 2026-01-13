@@ -22,7 +22,7 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 | Permission sandbox           |   Y    |          -           |
 | App approval system          |   Y    |          -           |
 | Inspect policy before run    |   Y    |          -           |
-| Dev Tools (view source, policy) |   Y    |          -           |
+| Dev Tools (source, policy, inspect) |   Y    |          -           |
 | Literate UI (Markdown)       |   Y    |          -           |
 | No build step                |   Y    |         Some         |
 
@@ -136,7 +136,7 @@ Before running, you can see:
 - The UI has one text element and one exit button
 - The handler calls `$melker.exit()`, nothing else
 
-Press **F12** to open Dev Tools and view source, policy, and system info.
+Press **F12** to open Dev Tools to view source, policy, document tree, and system info.
 
 For a complete tutorial, see [`agent_docs/getting-started.md`](agent_docs/getting-started.md).
 
@@ -210,6 +210,7 @@ Documentation and UI in the same file:
 Press F12 to open Dev Tools:
 - View source
 - Inspect policy
+- Inspect document tree (live element hierarchy with values)
 - See system info
 
 ---

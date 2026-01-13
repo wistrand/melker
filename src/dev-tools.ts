@@ -237,7 +237,11 @@ export class DevToolsManager {
       tabs.push(editConfigTab);
     }
 
-    // Tab 7: Actions
+    // Tab 7: Inspect (document tree view)
+    const inspectTab = this._buildInspectTab();
+    tabs.push(inspectTab);
+
+    // Tab 8: Actions
     tabs.push(melker`
       <tab id="dev-tools-tab-actions" title="Actions">
         <container id="dev-tools-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill', display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -462,6 +466,205 @@ export class DevToolsManager {
         </container>
       </tab>
     `;
+  }
+
+  /**
+   * Build the Inspect tab showing document tree view
+   */
+  private _buildInspectTab(): Element {
+    const document = this._deps.document;
+    const render = () => this._deps.render();
+
+    // Generate tree, excluding dev-tools elements
+    const generateTree = (): string => {
+      const root = document.root;
+      if (!root) return '(no document)';
+
+      // First pass: calculate max width for alignment
+      const maxWidth = this._calculateMaxNodeWidth(root, 0);
+
+      // Second pass: build tree with alignment
+      return this._buildFilteredTree(root, '', true, maxWidth);
+    };
+
+    const treeContent = generateTree();
+    const scrollStyle = { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' };
+
+    // Refresh button handler
+    const onRefresh = () => {
+      const textEl = document.getElementById('dev-tools-inspect-content');
+      if (textEl) {
+        textEl.props.text = generateTree();
+        render();
+      }
+    };
+
+    return melker`
+      <tab id="dev-tools-tab-inspect" title="Inspect">
+        <container style=${{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }}>
+          <container id="dev-tools-scroll-inspect" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <text id="dev-tools-inspect-content" text=${treeContent} />
+          </container>
+          <container style=${{ padding: 1 }}>
+            <button id="dev-tools-refresh-inspect" label="Refresh" onClick=${onRefresh} />
+          </container>
+        </container>
+      </tab>
+    `;
+  }
+
+  /**
+   * Calculate max width of node names (type#id) for alignment
+   */
+  private _calculateMaxNodeWidth(element: Element, depth: number): number {
+    // Skip dev-tools elements
+    if (element.id?.startsWith('dev-tools-')) {
+      return 0;
+    }
+
+    // Calculate width: depth indent (4 chars per level) + type + #id
+    const nodeWidth = depth * 4 + element.type.length + (element.id ? 1 + element.id.length : 0);
+    let maxWidth = nodeWidth;
+
+    // Check children
+    if (element.children && element.children.length > 0) {
+      for (const child of element.children) {
+        const childMax = this._calculateMaxNodeWidth(child, depth + 1);
+        if (childMax > maxWidth) maxWidth = childMax;
+      }
+    }
+
+    return maxWidth;
+  }
+
+  /**
+   * Build a filtered tree string, excluding dev-tools elements
+   */
+  private _buildFilteredTree(element: Element, prefix: string, isLast: boolean, alignWidth: number): string {
+    // Skip dev-tools elements
+    if (element.id?.startsWith('dev-tools-')) {
+      return '';
+    }
+
+    let result = prefix;
+
+    // Add tree branch characters
+    if (prefix !== '') {
+      result += isLast ? '└── ' : '├── ';
+    }
+
+    // Format element node with alignment
+    result += this._formatInspectNode(element, prefix.length, alignWidth);
+    result += '\n';
+
+    // Process children, filtering out dev-tools elements
+    if (element.children && element.children.length > 0) {
+      const filteredChildren = element.children.filter(c => !c.id?.startsWith('dev-tools-'));
+      const childPrefix = prefix + (isLast ? '    ' : '│   ');
+
+      filteredChildren.forEach((child, index) => {
+        const isLastChild = index === filteredChildren.length - 1;
+        result += this._buildFilteredTree(child, childPrefix, isLastChild, alignWidth);
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Format an element node for the inspect tree
+   */
+  private _formatInspectNode(element: Element, prefixLen: number, alignWidth: number): string {
+    // Build the type#id part
+    let nodeName = element.type;
+    if (element.id) {
+      nodeName += `#${element.id}`;
+    }
+
+    // Build the props part
+    const keyProps: string[] = [];
+
+    switch (element.type) {
+      case 'button':
+        if (element.props.label) {
+          keyProps.push(`label="${element.props.label}"`);
+        }
+        break;
+      case 'dialog':
+        if (element.props.title) {
+          keyProps.push(`title="${element.props.title}"`);
+        }
+        if (element.props.open) {
+          keyProps.push('open');
+        }
+        break;
+      case 'tab':
+        if (element.props.title) {
+          keyProps.push(`title="${element.props.title}"`);
+        }
+        break;
+    }
+
+    // Try to get value from getValue() if available
+    const valueSnippet = this._getValueSnippet(element);
+    if (valueSnippet !== null) {
+      keyProps.push(valueSnippet);
+    }
+
+    // Calculate padding for alignment
+    const currentWidth = prefixLen + 4 + nodeName.length; // 4 for tree branch chars
+    const padding = Math.max(1, alignWidth - currentWidth + 2);
+
+    let result = nodeName;
+
+    if (keyProps.length > 0) {
+      result += ' '.repeat(padding) + `[${keyProps.join(', ')}]`;
+    }
+
+    // Add focus indicator
+    if (this._deps.document.focusedElement === element) {
+      result += ' *focused*';
+    }
+
+    return result;
+  }
+
+  /**
+   * Get a snippet from element's getValue() if available
+   */
+  private _getValueSnippet(element: Element): string | null {
+    // Check if element has getValue method
+    const el = element as { getValue?: () => unknown };
+    if (typeof el.getValue !== 'function') {
+      return null;
+    }
+
+    try {
+      const value = el.getValue();
+
+      if (value === undefined || value === null) {
+        return null;
+      }
+
+      // Format based on type
+      if (typeof value === 'string') {
+        if (value === '') return null;
+        const displayText = value.length > 25 ? value.substring(0, 22) + '...' : value;
+        // Replace newlines for display
+        const singleLine = displayText.replace(/\n/g, '\\n');
+        return `"${singleLine}"`;
+      } else if (typeof value === 'boolean') {
+        return value ? 'checked' : 'unchecked';
+      } else if (typeof value === 'number') {
+        return `value=${value}`;
+      } else if (Array.isArray(value)) {
+        return `rows=${value.length}`;
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   /**

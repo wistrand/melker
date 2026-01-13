@@ -1,6 +1,8 @@
 # Debugging Melker Applications
 
-## Console Logging
+## Console Logging (App Code Only)
+
+**Important:** This section applies to **app code** (`.melker` files, examples). For **Melker internal development** (files in `src/`, `mod.ts`, `melker-*.ts`), see the "Logging System" section below - `console.log()` is **strictly forbidden** in Melker source code.
 
 In Melker scripts, `console.log()` is automatically redirected to `$melker.logger.info()`, so it won't break the TUI. Objects are formatted using `Deno.inspect()` for safe, readable output.
 
@@ -28,6 +30,8 @@ MELKER_NO_CONSOLE_OVERRIDE=1 ./melker.ts app.melker
 For more control, use the logger directly:
 
 ## Logging System (`src/logging.ts`)
+
+**CRITICAL for Melker Development:** When working on Melker's internal code (files in `src/`, `mod.ts`, `melker-*.ts`), you **MUST** use the logging system. **NEVER use `console.log()` in Melker source code** - this is strictly forbidden. Only app code (`.melker` files, examples) can use the overridden `console.log()`.
 
 ### Basic Usage
 
@@ -285,6 +289,7 @@ Press **F12** at runtime to open the Dev Tools dialog.
 | Markdown | Original markdown (for `.md` files only) |
 | System | Build info, scripts, bundle details |
 | Config | Current configuration with sources (schema + app-defined) |
+| Inspect | Live document tree view with Refresh button |
 | Actions | Performance Monitor, Exit Application |
 
 ### Features

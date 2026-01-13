@@ -180,7 +180,9 @@ let count = 0;
 const config = { debug: true };
 ```
 
-## 11. Console Redirects to Logger
+## 11. Console Redirects to Logger (App Code Only)
+
+**Note:** This applies to **app code** (`.melker` files, examples) only. For Melker internal development (files in `src/`, `mod.ts`, `melker-*.ts`), `console.log()` is **strictly forbidden** - use the logging system instead.
 
 Console methods are automatically redirected to `$melker.logger` in melker scripts, so they won't break the TUI. However, using `$melker.logger` directly is recommended for better control:
 

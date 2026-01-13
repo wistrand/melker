@@ -452,6 +452,8 @@ An AI agent skill for creating .melker apps is available at `skills/creating-mel
 | `SKILL.md` | Main instructions, critical rules, quick start guide |
 | `COMPONENTS.md` | Complete component reference (20+ components) |
 | `EXAMPLES.md` | 11 complete working examples and best practices |
+| `TYPES.md` | TypeScript types for `$melker`, `Element`, events |
+| `TROUBLESHOOTING.md` | Common errors, debug strategies |
 
 ### Building the Skill Zip
 

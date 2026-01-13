@@ -7,6 +7,48 @@ description: Creates Terminal UI applications using Melker's .melker file format
 
 Melker is a Deno library for building rich Terminal UI interfaces using an HTML-inspired document model. Apps are written in `.melker` files with XML-like syntax.
 
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/anthropics/melker.git
+cd melker
+
+# Run directly (no build step needed)
+./melker.ts app.melker
+
+# Optional: install globally via symlink
+ln -s $(pwd)/melker.ts ~/.local/bin/melker
+# Then run from anywhere: melker app.melker
+```
+
+**From URL (no install):**
+```bash
+deno run --allow-all https://melker.sh/melker.ts app.melker
+```
+
+## Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| **Runtime** | Deno 2.5+ (required) |
+| **Platform** | Linux, macOS, Windows (WSL recommended) |
+| **Terminal** | Any ANSI-compatible terminal (iTerm2, Alacritty, Kitty, Windows Terminal, etc.) |
+
+**Terminal Feature Support:**
+
+| Feature | Requirements |
+|---------|--------------|
+| Basic TUI | Any terminal with ANSI support |
+| Mouse support | Terminal with mouse reporting (most modern terminals) |
+| True color | Terminal with 24-bit color support |
+| Images/video | Terminal with sextant/block character support |
+
+**Known Limitations:**
+- Windows CMD.exe has limited ANSI support; use Windows Terminal or WSL
+- Some SSH clients may not pass through mouse events
+- Very old terminals (VT100) lack color support
+
 ## Quick Start
 
 ```xml
@@ -224,6 +266,8 @@ Events auto-render after completion:
 
 **Alternative:** Use `$melker.engine.onMount()` for programmatic callback registration (required for `.md` files).
 
+For TypeScript type definitions (`$melker`, `Element`, event objects), see [TYPES.md](TYPES.md).
+
 ## Common Patterns
 
 ### Counter
@@ -403,3 +447,5 @@ Elements with `id` are auto-persisted. Opt-out with `persist="false"`:
 - Press F12 for Dev Tools dialog (source, policy, document tree, log file location)
 - Press F6 for Performance dialog
 - Set `MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=DEBUG` for custom log location
+
+For common errors and debug strategies, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

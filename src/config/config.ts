@@ -742,12 +742,8 @@ export class MelkerConfig {
   }
 
   // Render
-  get blockMode(): boolean {
-    return this.data['render.blockMode'] as boolean;
-  }
-
-  get asciiMode(): 'off' | 'pattern' | 'luma' {
-    return this.data['render.asciiMode'] as 'off' | 'pattern' | 'luma';
+  get gfxMode(): 'sextant' | 'block' | 'pattern' | 'luma' {
+    return this.data['render.gfxMode'] as 'sextant' | 'block' | 'pattern' | 'luma';
   }
 
   // Headless

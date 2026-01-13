@@ -98,20 +98,13 @@
       "env": "MELKER_FFMPEG",
       "description": "Force FFmpeg instead of native audio on macOS"
     },
-    "render.blockMode": {
-      "type": "boolean",
-      "default": false,
-      "env": "MELKER_BLOCK_MODE",
-      "flag": "--block-mode",
-      "description": "Use colored spaces instead of box-drawing and sextant characters"
-    },
-    "render.asciiMode": {
+    "render.gfxMode": {
       "type": "string",
-      "enum": ["off", "pattern", "luma"],
-      "default": "off",
-      "env": "MELKER_ASCII_MODE",
-      "flag": "--ascii-mode",
-      "description": "ASCII rendering mode: pattern (spatial mapping) or luma (brightness-based)"
+      "enum": ["sextant", "block", "pattern", "luma"],
+      "default": "sextant",
+      "env": "MELKER_GFX_MODE",
+      "flag": "--gfx-mode",
+      "description": "Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness)"
     },
     "headless.enabled": {
       "type": "boolean",

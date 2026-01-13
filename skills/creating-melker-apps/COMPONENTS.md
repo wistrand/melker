@@ -391,6 +391,53 @@ High-performance table for large datasets with simple array-based data.
 - Events report original row indices (not sorted positions)
 - Use for large datasets; use `<table>` for complex cell content
 
+### table / thead / tbody / tr / th / td
+
+HTML-like table for complex cell content (buttons, inputs, etc.).
+
+```xml
+<table border="thin" style="width: 60;">
+  <thead>
+    <tr>
+      <th width="20">Name</th>
+      <th width="fill">Actions</th>
+    </tr>
+  </thead>
+  <tbody selectable="single" onSelect="$app.handleSelect(event)">
+    <tr data-id="1">
+      <td>Alice</td>
+      <td><button label="Edit" onClick="$app.edit(1)" /></td>
+    </tr>
+    <tr data-id="2">
+      <td>Bob</td>
+      <td><button label="Edit" onClick="$app.edit(2)" /></td>
+    </tr>
+  </tbody>
+</table>
+```
+
+**Table props:**
+- `border` - Border style (thin, thick, double, etc.)
+- `columnBorders` - Show internal column borders (default: true)
+- `resizable` - Allow column resizing (default: false)
+- `sortColumn`, `sortDirection`, `onSort` - Sorting
+
+**Cell props (th/td):**
+- `width` - Column width: number (chars), percentage, or `'fill'`
+- `align` - `left` | `center` | `right`
+- `valign` - `top` | `center` | `bottom`
+- `colspan`, `rowspan` - Cell spanning
+- `sortable` - Enable sorting on this column (th only)
+
+**tbody props:**
+- `selectable` - `none` | `single` | `multi`
+- `maxHeight` - Scrollable height
+- `onSelect`, `onActivate` - Selection callbacks
+
+**Notes:**
+- Use `data-table` for simple array data; use `table` for complex cells
+- Row `data-id` is returned in selection events
+
 ## Lists
 
 ### list / li
@@ -531,10 +578,10 @@ canvas.setPixel(x, y);
 canvas.markDirty();
 ```
 
-**Alternative rendering modes** (CLI flags for terminals without Unicode):
-- `--block-mode` - Colored spaces instead of sextant chars
-- `--ascii-mode=pattern` - ASCII chars with spatial mapping
-- `--ascii-mode=luma` - ASCII chars based on brightness
+**Alternative rendering modes** (`--gfx-mode` flag for terminals without Unicode):
+- `block` - Colored spaces instead of sextant chars
+- `pattern` - ASCII chars with spatial mapping
+- `luma` - ASCII chars based on brightness
 
 ### img
 
@@ -633,9 +680,24 @@ Video playback (requires ffmpeg).
   width="80"
   height="24"
   autoplay="true"
-  controls="true"
+  loop="false"
+  audio="true"
 />
 ```
+
+**Props:**
+- `src` - Video file path
+- `width`, `height` - Dimensions in terminal cells
+- `autoplay` - Start playing automatically (default: true)
+- `loop` - Loop playback (default: false)
+- `fps` - Target frame rate (default: 24)
+- `audio` - Enable audio via ffplay (default: false)
+- `muted` - Mute audio (default: false)
+- `volume` - Audio volume 0-100 (default: 100)
+- `subtitle` - Path to .srt subtitle file
+- `startTime` - Start time (e.g., "1:30", "0:05:30", "90")
+- `dither` - Dithering mode for B&W themes
+- `onFrame`, `onEnd` - Callbacks
 
 ### progress
 

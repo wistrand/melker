@@ -29,7 +29,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 4. **Input type is `'input'`** - Not `'text-input'`
 5. **`console.log()` redirects to logger** - Automatically redirected to `$melker.logger.info()` (disable with `--no-console-override`)
 6. **Auto-render** - Event handlers auto-render; call `$melker.skipRender()` to skip
-7. **Use getValue/setValue** - Not `.props.value =`. All value-holding components support `getValue()`/`setValue()`
+7. **Use getValue/setValue for values** - For input/textarea/select content. Use `.props.*` for other props like `open`, `checked`
 8. **Avoid emojis** - They break terminal layout
 9. **Export functions for handlers** - Functions must be `export function` to use in `onClick="$app.fn()"`
 10. **Scrollable is a prop** - Use `scrollable="true"` not `style="overflow: scroll"`
@@ -88,6 +88,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 | `<list>` / `<li>` | style | Lists |
 | `<canvas>` | width, height, onPaint | Pixel graphics |
 | `<img>` | src, width, height, objectFit, dither | Images |
+| `<video>` | src, width, height, autoplay, loop, audio | Video (requires ffmpeg) |
 | `<combobox>` | placeholder, filter, onSelect | Filterable dropdown |
 | `<select>` | value, onSelect | Dropdown picker |
 | `<autocomplete>` | placeholder, onSearch, onSelect, debounce | Async search dropdown |
@@ -96,9 +97,10 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 | `<slider>` | min, max, value, step, onChange | Range input |
 | `<progress>` | value, max, showValue, indeterminate | Progress bar |
 | `<data-table>` | columns, rows, selectable, onSelect | Array-based table |
+| `<table>` | border, columnBorders, resizable | HTML-like table |
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
 
-For complete component reference, see [COMPONENTS.md](COMPONENTS.md).
+For complete component reference, see [COMPONENTS.md](COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md).
 
 ## Styling
 

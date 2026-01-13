@@ -38,10 +38,7 @@ Melker is distributed via git. No package managers, no registries, no version co
 
 - **Deno 2.5+** (Node.js and Bun not supported)
 - ANSI-compatible terminal
-- **Nerd Fonts** (recommended for graphics) - Melker uses sextant characters for canvas/image rendering. On macOS, install a [Nerd Font](https://www.nerdfonts.com/) and configure your terminal to use it. Alternatives for terminals without Unicode support:
-  - `--block-mode` - colored spaces (lower resolution)
-  - `--ascii-mode=pattern` - ASCII characters with spatial mapping
-  - `--ascii-mode=luma` - ASCII characters based on brightness
+- **Nerd Fonts** (recommended for graphics) - Melker uses sextant characters for canvas/image rendering. On macOS, install a [Nerd Font](https://www.nerdfonts.com/) and configure your terminal to use it. For terminals without Unicode support, use `--gfx-mode=block` (colored spaces), `--gfx-mode=pattern` (ASCII spatial), or `--gfx-mode=luma` (ASCII brightness).
 
 ### Option 1: Clone and Run
 
@@ -140,6 +137,8 @@ Before running, you can see:
 - The handler calls `$melker.exit()`, nothing else
 
 Press **F12** to open Dev Tools and view source, policy, and system info.
+
+For a complete tutorial, see [`agent_docs/getting-started.md`](agent_docs/getting-started.md).
 
 ---
 
@@ -430,8 +429,7 @@ Configuration can be set via CLI flags (highest priority), environment variables
 | Option | CLI Flag | Env Variable | Purpose |
 |--------|----------|--------------|---------|
 | Theme | `--theme` | `MELKER_THEME` | Theme selection (default: `auto`) |
-| Block mode | `--block-mode` | `MELKER_BLOCK_MODE` | Use colored spaces instead of sextant chars |
-| ASCII mode | `--ascii-mode` | `MELKER_ASCII_MODE` | ASCII rendering: `pattern` or `luma` |
+| Graphics mode | `--gfx-mode` | `MELKER_GFX_MODE` | `sextant` (default), `block`, `pattern`, `luma` |
 | Debug port | `--debug-port` | `MELKER_DEBUG_PORT` | Enable debug server |
 | Headless | `--headless` | `MELKER_HEADLESS` | Headless mode for testing |
 | Alt screen | `--no-alt-screen` | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer |

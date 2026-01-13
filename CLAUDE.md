@@ -14,6 +14,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 
 | What | Where |
 |------|-------|
+| Getting started | `agent_docs/getting-started.md` |
 | Architecture details | `agent_docs/architecture.md` |
 | Elements & layout | `agent_docs/elements-and-layout.md` |
 | Debugging & logging | `agent_docs/debugging.md` |
@@ -27,7 +28,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Config system | `agent_docs/config-architecture.md` |
 | DX footguns | `agent_docs/dx-footguns.md` |
 | TUI comparison | `agent_docs/tui-comparison.md` |
-| ASCII mode | `agent_docs/ascii-mode.md` |
+| Graphics modes | `agent_docs/gfx-modes.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
 | Release scheme | `agent_docs/calver-release-plan.md` |
 | Examples | `examples/melker/*.melker` |
@@ -188,7 +189,7 @@ tests/                - Test files
 6. **Input type is `'input'`** - Not `'text-input'`
 7. **Auto-render in .melker handlers** - Event handlers auto-render after completion (call `$melker.skipRender()` to skip)
 8. **Avoid emojis** - They break terminal layout
-9. **Update component props explicitly** - In .melker files, reactive bindings like `${$app.var}` only work for initial values. To update props dynamically, use `$melker.getElementById('id').props.propName = value`
+9. **Update component props explicitly** - In .melker files, there are no reactive bindings like `${$app.var}` . To update props dynamically, use `$melker.getElementById('id').props.propName = value`
 
 ## Environment Variables
 
@@ -215,8 +216,7 @@ tests/                - Test files
 | `MELKER_FFMPEG` | Force ffmpeg on macOS instead of native Swift (`true` or `1`) |
 | `MELKER_AUTO_DITHER` | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `ordered`) |
 | `MELKER_DITHER_BITS` | Color depth for auto dithering (1-8, default: theme-based) |
-| `MELKER_BLOCK_MODE` | Use colored spaces instead of box-drawing/sextant chars (`true` or `1`) |
-| `MELKER_ASCII_MODE` | ASCII rendering: `pattern` (spatial mapping) or `luma` (brightness-based), `off` to disable |
+| `MELKER_GFX_MODE` | Graphics mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |
@@ -483,7 +483,7 @@ Creates `docs/skill-creating-melker-apps.zip`, available at https://melker.sh/sk
 Melker uses CalVer with format `YYYY.MM.PATCH` (e.g., `v2026.01.1`). Releases are git tags only.
 
 ```bash
-# Create release
+# For humans only—do not run as agent
 git tag -a v2026.01.1 -m "v2026.01.1"
 git push origin main --tags
 ```

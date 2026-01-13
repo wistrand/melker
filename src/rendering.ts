@@ -1056,26 +1056,26 @@ export class RenderingEngine {
     const rightColor = style.borderRightColor || defaultColor;
 
     // Check if block mode is enabled (use colored spaces instead of box-drawing characters)
-    const blockMode = MelkerConfig.get().blockMode;
+    const useBlockBorders = MelkerConfig.get().gfxMode === 'block';
 
     // Create cell styles for each side
     // In block mode, use foreground color as background (spaces need bg color to be visible)
-    const topStyle: Partial<Cell> = blockMode
+    const topStyle: Partial<Cell> = useBlockBorders
       ? { background: topColor || style.backgroundColor }
       : { foreground: topColor, background: style.backgroundColor };
-    const bottomStyle: Partial<Cell> = blockMode
+    const bottomStyle: Partial<Cell> = useBlockBorders
       ? { background: bottomColor || style.backgroundColor }
       : { foreground: bottomColor, background: style.backgroundColor };
-    const leftStyle: Partial<Cell> = blockMode
+    const leftStyle: Partial<Cell> = useBlockBorders
       ? { background: leftColor || style.backgroundColor }
       : { foreground: leftColor, background: style.backgroundColor };
-    const rightStyle: Partial<Cell> = blockMode
+    const rightStyle: Partial<Cell> = useBlockBorders
       ? { background: rightColor || style.backgroundColor }
       : { foreground: rightColor, background: style.backgroundColor };
 
     // Get border characters (use the first available border style for consistency)
     // In block mode, always use 'block' style (spaces)
-    const activeStyle = blockMode
+    const activeStyle = useBlockBorders
       ? 'block'
       : ((borderTop || borderBottom || borderLeft || borderRight || 'thin') as Exclude<BorderStyle, 'none'>);
     const chars = BORDER_CHARS[activeStyle] || BORDER_CHARS.thin;

@@ -116,8 +116,7 @@ Each property in schema.json can have:
 - `terminal.forceFFmpeg` - Force FFmpeg instead of native audio on macOS
 
 ### Render
-- `render.blockMode` - Use colored spaces instead of box-drawing/sextant chars (env: MELKER_BLOCK_MODE, flag: --block-mode)
-- `render.asciiMode` - ASCII rendering mode: `pattern` (spatial mapping) or `luma` (brightness-based), `off` to disable (env: MELKER_ASCII_MODE, flag: --ascii-mode)
+- `render.gfxMode` - Graphics rendering mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness) (env: MELKER_GFX_MODE, flag: --gfx-mode)
 
 ### Headless
 - `headless.enabled` - Run without terminal (flag: --headless)

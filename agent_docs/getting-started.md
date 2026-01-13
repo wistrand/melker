@@ -23,6 +23,9 @@ ln -s $(pwd)/melker.ts ~/.local/bin/melker
 
 ```bash
 melker hello.melker
+
+# Watch mode - auto-reload on file changes
+melker --watch hello.melker
 ```
 
 ## Core Concepts
@@ -57,13 +60,19 @@ melker hello.melker
 **Interactivity:** Export functions, access via `$app.*`
 
 ```xml
-<script>
-  export function increment() {
-    const el = $melker.getElementById('count');
-    el.setValue(String(parseInt(el.getValue()) + 1));
-  }
-</script>
-<button onClick="$app.increment()">+1</button>
+<melker>
+  <container style="flex-direction: row; gap: 1;">
+    <text id="count">0</text>
+    <button onClick="$app.increment()">+1</button>
+  </container>
+
+  <script>
+    export function increment() {
+      const el = $melker.getElementById('count');
+      el.setValue(String(parseInt(el.getValue()) + 1));
+    }
+  </script>
+</melker>
 ```
 
 ## Critical Rules
@@ -73,7 +82,7 @@ melker hello.melker
 3. **No button borders** – Buttons have built-in `[ ]` brackets
 4. **Export functions** – Required for `$app.*` access
 5. **Avoid colors** – Let theme engine handle styling
-6. **Console is safe** – Redirects to logger, won't break TUI
+6. **Console is safe (in app code)** – Redirects to logger, won't break TUI
 
 ## Script Types
 
@@ -114,8 +123,9 @@ melker hello.melker
 
 ## Debugging
 
-- **F12** – Dev Tools overlay (source, config, log path)
-- **console.log()** – Safe, writes to log file
+- **--watch** – Auto-reload on file changes (recommended for development)
+- **F12** – Dev Tools overlay (source, policy, inspect, config, log path)
+- **console.log()** – Safe in app code, writes to log file
 - **--debug** – Verbose bundler output
 
 ## Next Steps

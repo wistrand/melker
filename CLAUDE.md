@@ -181,16 +181,17 @@ tests/                - Test files
 
 ## Critical Rules
 
-1. **Console redirects to logger** - `console.log()` redirects to `$melker.logger.info()` (won't break TUI), but prefer explicit `$melker.logger.debug()` etc.
-2. **`alert()` shows a modal dialog** - Works like browser alert but as a TUI dialog (dismiss with OK button or Escape)
-3. **Button label** - Use `<button>Label</button>` or `label="Label"` (not `title`)
-4. **Don't add border to buttons** - Buttons render with `[ ]` brackets by default; adding border creates `[ [ Button ] ]`
-5. **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes
-6. **Input type is `'input'`** - Not `'text-input'`
-7. **Auto-render in .melker handlers** - Event handlers auto-render after completion (call `$melker.skipRender()` to skip)
-8. **Avoid emojis** - They break terminal layout
-9. **Update component props explicitly** - In .melker files, there are no reactive bindings like `${$app.var}` . To update props dynamically, use `$melker.getElementById('id').props.propName = value`
-10. **flex-direction is a style** - Use `style="flex-direction: row"` not `direction="row"`. Wrap select/combobox in row container to prevent cross-axis stretching.
+1. **NO console.log in Melker source code** - When developing Melker itself (files in `src/`, `mod.ts`, `melker-*.ts`), **NEVER use `console.log()`**. This is strictly forbidden. Always use the logging system: `logger.debug()`, `logger.info()`, `logger.warn()`, `logger.error()`. Only app code (`.melker` files, examples) can use the overridden `console.log()` which redirects to the logger.
+2. **Console redirects to logger (app code only)** - In `.melker` app code, `console.log()` redirects to `$melker.logger.info()` (won't break TUI), but prefer explicit `$melker.logger.debug()` etc.
+3. **`alert()` shows a modal dialog** - Works like browser alert but as a TUI dialog (dismiss with OK button or Escape)
+4. **Button label** - Use `<button>Label</button>` or `label="Label"` (not `title`)
+5. **Don't add border to buttons** - Buttons render with `[ ]` brackets by default; adding border creates `[ [ Button ] ]`
+6. **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes
+7. **Input type is `'input'`** - Not `'text-input'`
+8. **Auto-render in .melker handlers** - Event handlers auto-render after completion (call `$melker.skipRender()` to skip)
+9. **Avoid emojis** - They break terminal layout
+10. **Update component props explicitly** - In .melker files, there are no reactive bindings like `${$app.var}` . To update props dynamically, use `$melker.getElementById('id').props.propName = value`
+11. **flex-direction is a style** - Use `style="flex-direction: row"` not `direction="row"`. Wrap select/combobox in row container to prevent cross-axis stretching.
 
 ## Environment Variables
 
@@ -475,7 +476,7 @@ Creates `docs/skill-creating-melker-apps.zip`, available at https://melker.sh/sk
 | `F6` | Toggle Performance dialog (live stats) |
 | `F7` | Open AI assistant with voice input (or toggle recording if open) |
 | `F8` | Open AI accessibility assistant (text input) |
-| `F12` | Toggle Dev Tools overlay (source, policy, config, system info) |
+| `F12` | Toggle Dev Tools overlay (source, policy, config, inspect, system info) |
 | `Escape` | Close overlays / Close AI dialog |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |
 

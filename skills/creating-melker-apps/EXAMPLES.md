@@ -627,7 +627,7 @@ Apps that access network, files, or system commands should declare a `<policy>` 
 5. **Use IDs for dynamic elements** - Required for `getElementById()`
 6. **Export functions in scripts** - Access via `$app.functionName()`
 7. **Call `$melker.render()` in async** - For intermediate state updates
-8. **`console.log()` works** - Automatically redirects to `$melker.logger.info()` (F12 shows log location)
+8. **`console.log()` works in app code** - Automatically redirects to `$melker.logger.info()` (F12 shows log location)
 9. **Avoid emojis** - They break terminal character width calculations
 10. **Avoid specifying colors** - Let the theme engine handle colors; only use for canvas or intentional effects
 11. **Add `<policy>` for file/network access** - Required for remote apps, recommended for all apps with external access

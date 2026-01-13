@@ -70,7 +70,7 @@
 | `src/debug-server.ts` | WebSocket debug server |
 | `src/headless.ts` | Headless mode for testing |
 | `src/system-command-palette.ts` | System commands (Exit, AI, Dev Tools, Performance) auto-injected into palettes |
-| `src/dev-tools.ts` | F12 Dev Tools overlay (source, policy, config, system info) |
+| `src/dev-tools.ts` | F12 Dev Tools overlay (source, policy, config, inspect, system info) |
 | `src/config/` | Schema-driven config system (schema.json, config.ts, cli.ts) |
 | `melker.ts` | CLI entry point (symlink-safe, runs launcher) |
 | `mod.ts` | Library entry point (exports, component registrations) |
@@ -183,7 +183,9 @@ Element-specific properties (borders, padding, margin) do NOT cascade.
 
 ## Logging
 
-In Melker scripts, `console.log()` redirects to `$melker.logger.info()` automatically. For framework code, use the logger directly:
+**For app code** (`.melker` files, examples): `console.log()` redirects to `$melker.logger.info()` automatically.
+
+**For Melker internal code** (files in `src/`, `mod.ts`, `melker-*.ts`): **NEVER use `console.log()`** - this is strictly forbidden. Always use the logging system:
 
 ```typescript
 import { getLogger } from './logging.ts';
@@ -194,4 +196,4 @@ logger.debug('message', { context });
 Configure via CLI flags (`--log-file`, `--log-level`), env vars, or config file.
 Priority: `default < policy < file < env < cli`
 
-Use `--no-console-override` to disable console redirect (for debugging).
+Use `--no-console-override` to disable console redirect (for debugging app code).

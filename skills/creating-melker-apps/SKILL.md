@@ -27,7 +27,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 2. **Don't add border to buttons** - Buttons already have `[ ]` brackets; adding border creates `[ [ Button ] ]`
 3. **Button padding** - Vertical padding ignored for `[ ]` buttons (they stay 1 line); horizontal padding works
 4. **Input type is `'input'`** - Not `'text-input'`
-5. **`console.log()` redirects to logger** - Automatically redirected to `$melker.logger.info()` (disable with `--no-console-override`)
+5. **`console.log()` redirects to logger (in app code)** - Automatically redirected to `$melker.logger.info()` (disable with `--no-console-override`)
 6. **Auto-render** - Event handlers auto-render; call `$melker.skipRender()` to skip
 7. **Use getValue/setValue for values** - For input/textarea/select content. Use `.props.*` for other props like `open`, `checked`
 8. **Avoid emojis** - They break terminal layout
@@ -397,9 +397,9 @@ Elements with `id` are auto-persisted. Opt-out with `persist="false"`:
 
 ## Debugging
 
-- `console.log()` is automatically redirected to `$melker.logger.info()` (won't break TUI)
+- `console.log()` in app code is automatically redirected to `$melker.logger.info()` (won't break TUI)
 - Objects are formatted safely using `Deno.inspect()` (handles circular refs)
 - Use `--no-console-override` or `MELKER_NO_CONSOLE_OVERRIDE=1` to output to terminal instead
-- Press F12 for Dev Tools dialog (shows log file location, view source)
+- Press F12 for Dev Tools dialog (source, policy, document tree, log file location)
 - Press F6 for Performance dialog
 - Set `MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=DEBUG` for custom log location

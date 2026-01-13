@@ -198,6 +198,8 @@ container#main [flex, column]
   input#name placeholder="Enter name"
 ```
 
+**Privacy:** Password inputs (`format="password"`) are automatically masked as `value="****"` and not sent to the AI.
+
 ### Focused Element
 Currently focused element ID and type.
 

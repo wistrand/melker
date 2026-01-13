@@ -185,8 +185,13 @@ function buildElementTree(root: Element, excludeIds: Set<string>): string {
       info.push(element.props.visible ? 'active' : 'hidden');
     }
     if (element.props.value !== undefined && element.props.value !== '') {
-      const val = String(element.props.value);
-      info.push(`value="${val.length > 20 ? val.slice(0, 17) + '...' : val}"`);
+      // Mask password values
+      if (element.type === 'input' && element.props.format === 'password') {
+        info.push(`value="****"`);
+      } else {
+        const val = String(element.props.value);
+        info.push(`value="${val.length > 50 ? val.slice(0, 47) + '...' : val}"`);
+      }
     }
 
     if (info.length > 0) {
@@ -234,7 +239,12 @@ function describeFocusedElement(document: Document): string {
   }
 
   if (focused.props.value !== undefined) {
-    parts.push(`Value: "${focused.props.value}"`);
+    // Mask password values
+    if (focused.type === 'input' && focused.props.format === 'password') {
+      parts.push(`Value: "****"`);
+    } else {
+      parts.push(`Value: "${focused.props.value}"`);
+    }
   }
 
   if (focused.props.placeholder) {

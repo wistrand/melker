@@ -27,6 +27,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Config system | `agent_docs/config-architecture.md` |
 | DX footguns | `agent_docs/dx-footguns.md` |
 | TUI comparison | `agent_docs/tui-comparison.md` |
+| ASCII mode | `agent_docs/ascii-mode.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
 | Release scheme | `agent_docs/calver-release-plan.md` |
 | Examples | `examples/melker/*.melker` |
@@ -215,6 +216,7 @@ tests/                - Test files
 | `MELKER_AUTO_DITHER` | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `ordered`) |
 | `MELKER_DITHER_BITS` | Color depth for auto dithering (1-8, default: theme-based) |
 | `MELKER_BLOCK_MODE` | Use colored spaces instead of box-drawing/sextant chars (`true` or `1`) |
+| `MELKER_ASCII_MODE` | ASCII rendering: `pattern` (spatial mapping) or `luma` (brightness-based), `off` to disable |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |

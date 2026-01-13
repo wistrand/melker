@@ -105,6 +105,14 @@
       "flag": "--block-mode",
       "description": "Use colored spaces instead of box-drawing and sextant characters"
     },
+    "render.asciiMode": {
+      "type": "string",
+      "enum": ["off", "pattern", "luma"],
+      "default": "off",
+      "env": "MELKER_ASCII_MODE",
+      "flag": "--ascii-mode",
+      "description": "ASCII rendering mode: pattern (spatial mapping) or luma (brightness-based)"
+    },
     "headless.enabled": {
       "type": "boolean",
       "default": false,

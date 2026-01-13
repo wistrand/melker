@@ -38,7 +38,10 @@ Melker is distributed via git. No package managers, no registries, no version co
 
 - **Deno 2.5+** (Node.js and Bun not supported)
 - ANSI-compatible terminal
-- **Nerd Fonts** (recommended for graphics) - Melker uses sextant characters for canvas/image rendering. On macOS, install a [Nerd Font](https://www.nerdfonts.com/) and configure your terminal to use it. Alternatively, run with `--block-mode` or `MELKER_BLOCK_MODE=true` to use colored spaces instead.
+- **Nerd Fonts** (recommended for graphics) - Melker uses sextant characters for canvas/image rendering. On macOS, install a [Nerd Font](https://www.nerdfonts.com/) and configure your terminal to use it. Alternatives for terminals without Unicode support:
+  - `--block-mode` - colored spaces (lower resolution)
+  - `--ascii-mode=pattern` - ASCII characters with spatial mapping
+  - `--ascii-mode=luma` - ASCII characters based on brightness
 
 ### Option 1: Clone and Run
 
@@ -427,7 +430,8 @@ Configuration can be set via CLI flags (highest priority), environment variables
 | Option | CLI Flag | Env Variable | Purpose |
 |--------|----------|--------------|---------|
 | Theme | `--theme` | `MELKER_THEME` | Theme selection (default: `auto`) |
-| Block mode | `--block-mode` | `MELKER_BLOCK_MODE` | Use colored spaces instead of sextant chars (for terminals without Nerd Fonts) |
+| Block mode | `--block-mode` | `MELKER_BLOCK_MODE` | Use colored spaces instead of sextant chars |
+| ASCII mode | `--ascii-mode` | `MELKER_ASCII_MODE` | ASCII rendering: `pattern` or `luma` |
 | Debug port | `--debug-port` | `MELKER_DEBUG_PORT` | Enable debug server |
 | Headless | `--headless` | `MELKER_HEADLESS` | Headless mode for testing |
 | Alt screen | `--no-alt-screen` | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer |

@@ -631,4 +631,4 @@ Apps that access network, files, or system commands should declare a `<policy>` 
 9. **Avoid emojis** - They break terminal character width calculations
 10. **Avoid specifying colors** - Let the theme engine handle colors; only use for canvas or intentional effects
 11. **Add `<policy>` for file/network access** - Required for remote apps, recommended for all apps with external access
-12. **Test with `--trust`** - Bypasses approval prompts during development
+12. **Use `--trust` for CI/scripts** - Bypasses interactive approval prompt that would hang non-interactive environments

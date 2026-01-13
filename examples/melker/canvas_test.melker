@@ -1,4 +1,22 @@
 <melker>
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1;">
+      Canvas Test - Aspect-Corrected Circle and Square
+    </text>
+
+    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center;">
+      <canvas
+        id="testCanvas"
+        width="60"
+        height="20"
+      />
+    </container>
+
+    <text style="color: gray; margin-top: 1;">
+      Circle and square should appear visually correct - Resize to redraw
+    </text>
+  </container>
+
   <script type="typescript">
     // Draw a centered circle and square on the canvas using aspect-corrected methods
     export const drawShapes = (canvas: any): void => {
@@ -73,22 +91,4 @@
       $melker.engine.render();
     }
   </script>
-
-  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
-    <text style="font-weight: bold; margin-bottom: 1;">
-      Canvas Test - Aspect-Corrected Circle and Square
-    </text>
-
-    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center;">
-      <canvas
-        id="testCanvas"
-        width="60"
-        height="20"
-      />
-    </container>
-
-    <text style="color: gray; margin-top: 1;">
-      Circle and square should appear visually correct - Resize to redraw
-    </text>
-  </container>
 </melker>

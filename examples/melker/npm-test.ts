@@ -16,6 +16,16 @@ function updateTime() {
   state.formattedDate = format(state.currentTime, 'EEEE, MMMM do, yyyy');
   state.timeAgo = formatDistance(state.birthDate, state.currentTime, { addSuffix: true });
   state.age = formatDistance(state.birthDate, state.currentTime);
+
+  // Update UI elements
+  const timeEl = $melker.getElementById('time');
+  const dateEl = $melker.getElementById('date');
+  const ageEl = $melker.getElementById('age');
+  const timeAgoEl = $melker.getElementById('timeAgo');
+  if (timeEl) timeEl.setValue(state.formattedTime);
+  if (dateEl) dateEl.setValue(state.formattedDate);
+  if (ageEl) ageEl.setValue(state.age);
+  if (timeAgoEl) timeAgoEl.setValue(state.timeAgo);
 }
 
 // Initial update

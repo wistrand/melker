@@ -1,4 +1,45 @@
 <melker>
+  <style>
+    #main {
+      padding: 2;
+      gap: 1;
+    }
+    #title {
+      color: accent;
+      bold: true;
+    }
+    #result {
+      margin-top: 1;
+      color: success;
+    }
+  </style>
+
+  <container id="main" style="flex-direction: column">
+    <text id="title">Autocomplete Demo - User Search</text>
+    <text>Type to search users (min 2 chars, 500ms debounce):</text>
+
+    <container style="flex-direction: row">
+      <autocomplete
+        id="user-search"
+        placeholder="Search users..."
+        onSearch="$app.searchUsers(event.query)"
+        onSelect="$app.selectUser(event)"
+        minChars="1"
+        debounce="500"
+        width="40"
+      >
+        <group label="Recent">
+          <option value="alice">Alice Anderson</option>
+          <option value="bob">Bob Brown</option>
+        </group>
+      </autocomplete>
+    </container>
+
+    <text id="result">Selected: (none)</text>
+
+    <text color="textMuted">Press Escape or click away to close dropdown</text>
+  </container>
+
   <script>
     // Simulated async user search
     const allUsers = [
@@ -49,43 +90,4 @@
       }
     }
   </script>
-
-  <style>
-    #main {
-      padding: 2;
-      gap: 1;
-    }
-    #title {
-      color: accent;
-      bold: true;
-    }
-    #result {
-      margin-top: 1;
-      color: success;
-    }
-  </style>
-
-  <container id="main" direction="column">
-    <text id="title">Autocomplete Demo - User Search</text>
-    <text>Type to search users (min 2 chars, 500ms debounce):</text>
-
-    <autocomplete
-      id="user-search"
-      placeholder="Search users..."
-      onSearch="$app.searchUsers(event.query)"
-      onSelect="$app.selectUser(event)"
-      minChars="1"
-      debounce="500"
-      width="40"
-    >
-      <group label="Recent">
-        <option value="alice">Alice Anderson</option>
-        <option value="bob">Bob Brown</option>
-      </group>
-    </autocomplete>
-
-    <text id="result">Selected: (none)</text>
-
-    <text color="textMuted">Press Escape or click away to close dropdown</text>
-  </container>
 </melker>

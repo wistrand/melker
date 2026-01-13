@@ -1,17 +1,4 @@
 <melker>
-  <script>
-    $app.setCountry = (value, label) => {
-      const el = $melker.getElementById('selectedCountry');
-      if (el) el.setValue('Selected: ' + label);
-    };
-
-    $app.runCommand = (value, label) => {
-      const el = $melker.getElementById('selectedCommand');
-      if (el) el.setValue('Last command: ' + label);
-      alert('Executed: ' + label);
-    };
-  </script>
-
   <style>
     container {
       padding: 1;
@@ -26,13 +13,14 @@
     }
   </style>
 
-  <container direction="column">
+  <container style="flex-direction: column">
     <text class="header">Combobox Demo</text>
 
-    <container direction="row" gap="2">
+    <container style="flex-direction: row; gap: 2">
       <text>Country:</text>
       <combobox
         placeholder="Select a country..."
+        style="width: 25;"
         onSelect="$app.setCountry(event.value, event.label)"
         filter="fuzzy"
       >
@@ -63,6 +51,7 @@
 
     <combobox
       placeholder="Type a command..."
+      style="width: 30;"
       onSelect="$app.runCommand(event.value, event.label)"
       filter="fuzzy"
       maxVisible="6"
@@ -91,4 +80,17 @@
 
     <text>Try typing to filter options. Use arrow keys to navigate, Enter to select.</text>
   </container>
+
+  <script>
+    $app.setCountry = (value, label) => {
+      const el = $melker.getElementById('selectedCountry');
+      if (el) el.setValue('Selected: ' + label);
+    };
+
+    $app.runCommand = (value, label) => {
+      const el = $melker.getElementById('selectedCommand');
+      if (el) el.setValue('Last command: ' + label);
+      alert('Executed: ' + label);
+    };
+  </script>
 </melker>

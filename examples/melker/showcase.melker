@@ -6,34 +6,6 @@
   }
   </policy>
 
-  <script>
-    let selectedTask: string | null = null;
-
-    export function onTaskSelect(event: any) {
-      selectedTask = event.selectedIds[0] || null;
-    }
-
-    export function addTask() {
-      alert('Add Task clicked');
-    }
-
-    export function markDone() {
-      if (selectedTask) {
-        alert('Mark Done: task ' + selectedTask);
-      } else {
-        alert('No task selected');
-      }
-    }
-
-    export function deleteTask() {
-      if (selectedTask) {
-        alert('Delete: task ' + selectedTask);
-      } else {
-        alert('No task selected');
-      }
-    }
-  </script>
-
   <style>
     #root {
       display: flex;
@@ -171,4 +143,32 @@
       <text>8 tasks | Press F12 for Dev Tools | Ctrl+C to exit</text>
     </container>
   </container>
+
+  <script>
+    let selectedTask: string | null = null;
+
+    export function onTaskSelect(event: any) {
+      selectedTask = event.selectedIds[0] || null;
+    }
+
+    export function addTask() {
+      alert('Add Task clicked');
+    }
+
+    export function markDone() {
+      if (selectedTask) {
+        alert('Mark Done: task ' + selectedTask);
+      } else {
+        alert('No task selected');
+      }
+    }
+
+    export function deleteTask() {
+      if (selectedTask) {
+        alert('Delete: task ' + selectedTask);
+      } else {
+        alert('No task selected');
+      }
+    }
+  </script>
 </melker>

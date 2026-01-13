@@ -11,85 +11,6 @@
   </policy>
 
   <title>Melker Video Player - ${argv[1]:-wallace.mkv}</title>
-  <script type="typescript">
-    // Video demo - demonstrates the self-contained video element
-    // The video component now handles:
-    // - Auto-capturing requestRender from render context
-    // - Auto-sizing based on layout bounds
-    // - Auto-resizing on terminal resize
-    // - Autoplay (when enabled, which is the default)
-
-    export function togglePlayback() {
-      const video = $melker.getElementById('player');
-      const status = $melker.getElementById('status');
-      const playBtn = $melker.getElementById('play-btn');
-
-      if (!video || !status) return;
-
-      if (video.isPlaying()) {
-        video.pause();
-        status.setValue('Status: Paused');
-        if (playBtn) playBtn.props.label = 'Play';
-      } else if (video.isPaused()) {
-        video.resume();
-        status.setValue('Status: Playing');
-        if (playBtn) playBtn.props.label = 'Pause';
-      }
-      $melker.render();
-    }
-
-    export function quit() {
-      const video = $melker.getElementById('player');
-      if (video) video.stop();
-      $melker.exit();
-    }
-
-    export function seekBackward() {
-      const video = $melker.getElementById('player');
-      if (!video) return;
-      const currentTime = video.getCurrentTime();
-      const newTime = Math.max(0, currentTime - 10);
-      video.play(newTime);
-    }
-
-    export function seekForward() {
-      const video = $melker.getElementById('player');
-      if (!video) return;
-      const currentTime = video.getCurrentTime();
-      video.play(currentTime + 10);
-    }
-
-    export function seekBackwardMin() {
-      const video = $melker.getElementById('player');
-      if (!video) return;
-      const currentTime = video.getCurrentTime();
-      const newTime = Math.max(0, currentTime - 60);
-      video.play(newTime);
-    }
-
-    export function seekForwardMin() {
-      const video = $melker.getElementById('player');
-      if (!video) return;
-      const currentTime = video.getCurrentTime();
-      video.play(currentTime + 60);
-    }
-
-    function formatTime(seconds) {
-      const h = Math.floor(seconds / 3600);
-      const m = Math.floor((seconds % 3600) / 60);
-      const s = Math.floor(seconds % 60);
-      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-
-    export function updateTime() {
-      const video = $melker.getElementById('player');
-      const timeDisplay = $melker.getElementById('time-display');
-      if (!video || !timeDisplay) return;
-      const currentTime = video.getCurrentTime();
-      timeDisplay.setValue(formatTime(currentTime));
-    }
-
-  </script>
 
   <container
     id="main"
@@ -184,4 +105,84 @@
       />
     </container>
   </container>
+
+  <script type="typescript">
+    // Video demo - demonstrates the self-contained video element
+    // The video component now handles:
+    // - Auto-capturing requestRender from render context
+    // - Auto-sizing based on layout bounds
+    // - Auto-resizing on terminal resize
+    // - Autoplay (when enabled, which is the default)
+
+    export function togglePlayback() {
+      const video = $melker.getElementById('player');
+      const status = $melker.getElementById('status');
+      const playBtn = $melker.getElementById('play-btn');
+
+      if (!video || !status) return;
+
+      if (video.isPlaying()) {
+        video.pause();
+        status.setValue('Status: Paused');
+        if (playBtn) playBtn.props.label = 'Play';
+      } else if (video.isPaused()) {
+        video.resume();
+        status.setValue('Status: Playing');
+        if (playBtn) playBtn.props.label = 'Pause';
+      }
+      $melker.render();
+    }
+
+    export function quit() {
+      const video = $melker.getElementById('player');
+      if (video) video.stop();
+      $melker.exit();
+    }
+
+    export function seekBackward() {
+      const video = $melker.getElementById('player');
+      if (!video) return;
+      const currentTime = video.getCurrentTime();
+      const newTime = Math.max(0, currentTime - 10);
+      video.play(newTime);
+    }
+
+    export function seekForward() {
+      const video = $melker.getElementById('player');
+      if (!video) return;
+      const currentTime = video.getCurrentTime();
+      video.play(currentTime + 10);
+    }
+
+    export function seekBackwardMin() {
+      const video = $melker.getElementById('player');
+      if (!video) return;
+      const currentTime = video.getCurrentTime();
+      const newTime = Math.max(0, currentTime - 60);
+      video.play(newTime);
+    }
+
+    export function seekForwardMin() {
+      const video = $melker.getElementById('player');
+      if (!video) return;
+      const currentTime = video.getCurrentTime();
+      video.play(currentTime + 60);
+    }
+
+    function formatTime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    export function updateTime() {
+      const video = $melker.getElementById('player');
+      const timeDisplay = $melker.getElementById('time-display');
+      if (!video || !timeDisplay) return;
+      const currentTime = video.getCurrentTime();
+      timeDisplay.setValue(formatTime(currentTime));
+    }
+
+  </script>
 </melker>

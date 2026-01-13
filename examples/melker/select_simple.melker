@@ -1,5 +1,5 @@
 <melker>
-  <container direction="column" padding="1" gap="1">
+  <container style="flex-direction: column; padding: 1; gap: 1">
     <text>Select Test</text>
 
     <select id="mySelect" placeholder="Choose..." open="true">

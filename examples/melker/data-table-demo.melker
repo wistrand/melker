@@ -1,6 +1,39 @@
 <melker>
   <title>Data Table Demo</title>
 
+  <container style="flex-direction: column; width: 100%; height: 100%; gap: 1; padding: 0">
+    <container style="flex-direction: row; justify-content: space-between; padding: 0 1;">
+      <text style="font-weight: bold;">Employee Directory</text>
+      <text id="status">No selection</text>
+    </container>
+
+    <data-table
+      id="employees"
+      style="width: fill; height: fill;"
+      selectable="single"
+      onChange="$app.handleSelect(event)"
+      onActivate="$app.handleActivate(event)"
+    >
+    {
+      "columns": [
+        { "header": "ID", "width": 5, "align": "right" },
+        { "header": "Name", "width": "25%" },
+        { "header": "Department", "width": "20%" },
+        { "header": "Status", "width": 10 },
+        { "header": "Salary", "width": 12, "align": "right" },
+        { "header": "Tenure" }
+      ]
+    }
+    </data-table>
+
+    <container style="flex-direction: row; gap: 2; padding: 0 1;">
+      <text>Click header to sort</text>
+      <text>Arrow keys to navigate</text>
+      <text>Enter to view details</text>
+      <button label="Exit" onClick="$melker.exit()" />
+    </container>
+  </container>
+
   <script type="typescript">
     // Generate sample data
     const firstNames = ['Alice', 'Bob', 'Carol', 'David', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack',
@@ -60,37 +93,4 @@
       $melker.render();
     }
   </script>
-
-  <container style="flex-direction: column; width: 100%; height: 100%; gap: 1; padding: 0">
-    <container style="flex-direction: row; justify-content: space-between; padding: 0 1;">
-      <text style="font-weight: bold;">Employee Directory</text>
-      <text id="status">No selection</text>
-    </container>
-
-    <data-table
-      id="employees"
-      style="width: fill; height: fill;"
-      selectable="single"
-      onChange="$app.handleSelect(event)"
-      onActivate="$app.handleActivate(event)"
-    >
-    {
-      "columns": [
-        { "header": "ID", "width": 5, "align": "right" },
-        { "header": "Name", "width": "25%" },
-        { "header": "Department", "width": "20%" },
-        { "header": "Status", "width": 10 },
-        { "header": "Salary", "width": 12, "align": "right" },
-        { "header": "Tenure" }
-      ]
-    }
-    </data-table>
-
-    <container style="flex-direction: row; gap: 2; padding: 0 1;">
-      <text>Click header to sort</text>
-      <text>Arrow keys to navigate</text>
-      <text>Enter to view details</text>
-      <button label="Exit" onClick="$melker.exit()" />
-    </container>
-  </container>
 </melker>

@@ -1,4 +1,20 @@
 <melker>
+  <container style="flex-direction: column">
+    <text text="Bundler Demo - npm: imports" style="bold: true; color: cyan"/>
+    <text text="Requires: deno run --unstable-bundle" style="color: gray"/>
+
+    <text text="Date Information (via date-fns)" style="bold: true; color: yellow"/>
+    <text id="date" text="Loading..."/>
+    <text id="time" text="Loading..."/>
+    <text id="day" text="Loading..."/>
+
+    <text text="Click Counter" style="bold: true; color: yellow"/>
+    <text id="counter" text="Clicks: 0"/>
+    <button label="Click Me!" onClick="$app.incrementCounter();"/>
+    <button label="Reset" onClick="$app.resetCounter();"/>
+    <button label="Exit" onClick="$melker.exit()"/>
+  </container>
+
   <!-- External script with npm: imports (requires --unstable-bundle) -->
   <script type="typescript" src="./date-utils.ts"/>
 
@@ -39,20 +55,4 @@
       $melker.render();
     }, 1000);
   </script>
-
-  <container style="flex-direction: column">
-    <text text="Bundler Demo - npm: imports" style="bold: true; color: cyan"/>
-    <text text="Requires: deno run --unstable-bundle" style="color: gray"/>
-
-    <text text="Date Information (via date-fns)" style="bold: true; color: yellow"/>
-    <text id="date" text="Loading..."/>
-    <text id="time" text="Loading..."/>
-    <text id="day" text="Loading..."/>
-
-    <text text="Click Counter" style="bold: true; color: yellow"/>
-    <text id="counter" text="Clicks: 0"/>
-    <button label="Click Me!" onClick="$app.incrementCounter();"/>
-    <button label="Reset" onClick="$app.resetCounter();"/>
-    <button label="Exit" onClick="$melker.exit()"/>
-  </container>
 </melker>

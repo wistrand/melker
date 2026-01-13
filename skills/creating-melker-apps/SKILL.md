@@ -19,7 +19,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 </melker>
 ```
 
-**Run:** `./melker.ts --trust app.melker`
+**Run:** `./melker.ts app.melker`
 
 ## Critical Rules
 
@@ -35,24 +35,28 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 10. **Scrollable is a prop** - Use `scrollable="true"` not `style="overflow: scroll"`
 11. **Dialog show/hide** - Use `dialog.show()`, `dialog.hide()` or `.props.open = true/false`
 12. **Avoid specifying colors** - Let the theme engine handle colors
+13. **flex-direction is a style** - Use `style="flex-direction: row"` not `direction="row"`
+14. **Prevent cross-axis stretching** - In column containers, wrap select/combobox/autocomplete in a row container to prevent full-width stretching
 
 ## File Structure
 
 ```xml
 <melker>
   <title>App Title</title>
-
+  <policy>{"permissions": {...}}</policy>
   <style>
     #myId { font-weight: bold; }
     .myClass { padding: 1; }
   </style>
 
+  <!-- UI components -->
+  <container>...</container>
+
+  <!-- Scripts last -->
   <script type="typescript">
     let count = 0;
     export function increment() { count++; }
   </script>
-
-  <container><!-- UI tree --></container>
 </melker>
 ```
 
@@ -379,7 +383,7 @@ For more examples, see [EXAMPLES.md](EXAMPLES.md).
 </policy>
 ```
 
-**When to omit policy:** Simple local apps with no file/network needs can skip the policy tag (they get full permissions when run with `--trust`).
+**When to omit policy:** Simple local apps with no file/network needs can skip the policy tag. They'll use an auto-generated permissive policy.
 
 ## State Persistence
 

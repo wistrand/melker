@@ -333,7 +333,7 @@ The subprocess will automatically have permission to read `PLASMA_SCALE` without
 ### Example Usage
 
 ```bash
-# Override plasma.scale via env var
+# Override plasma.scale via env var (--trust for non-interactive/CI)
 PLASMA_SCALE=3.0 ./melker.ts --trust plasma_demo.melker
 
 # print-config shows the env override

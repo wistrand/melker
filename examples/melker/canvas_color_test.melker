@@ -1,4 +1,26 @@
 <melker>
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1;">
+      Canvas Color Test - Multiple Colors
+    </text>
+
+    <container style="width: fill; height: fill;">
+      <canvas
+        id="testCanvas"
+        width="60"
+        height="20"
+        style="width: fill; height: fill"
+        dither="$ENV{DITHER:-none}"
+        ditherBits="1"
+        onPaint="$app.drawColoredShapes(event.canvas)"
+      />
+    </container>
+
+    <text style="color: gray; margin-top: 1;">
+      Colored circles and rectangles - Resize to redraw
+    </text>
+  </container>
+
   <script type="typescript">
     // Draw colored shapes on the canvas using its actual bounds
     export const drawColoredShapes = (canvas: any): void => {
@@ -53,26 +75,4 @@
     };
 
   </script>
-
-  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
-    <text style="font-weight: bold; margin-bottom: 1;">
-      Canvas Color Test - Multiple Colors
-    </text>
-
-    <container style="width: fill; height: fill;">
-      <canvas
-        id="testCanvas"
-        width="60"
-        height="20"
-        style="width: fill; height: fill"
-        dither="$ENV{DITHER:-none}"
-        ditherBits="1"
-        onPaint="$app.drawColoredShapes(event.canvas)"
-      />
-    </container>
-
-    <text style="color: gray; margin-top: 1;">
-      Colored circles and rectangles - Resize to redraw
-    </text>
-  </container>
 </melker>

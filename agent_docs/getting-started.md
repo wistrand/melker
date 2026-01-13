@@ -4,7 +4,11 @@
 
 ```bash
 # Requires Deno 2.5+
-ln -s /path/to/melker/melker.ts ~/.local/bin/melker
+git clone https://github.com/wistrand/melker.git
+cd melker
+
+# Optional: install globally
+ln -s $(pwd)/melker.ts ~/.local/bin/melker
 ```
 
 ## Hello World
@@ -18,7 +22,7 @@ ln -s /path/to/melker/melker.ts ~/.local/bin/melker
 ```
 
 ```bash
-melker --trust hello.melker
+melker hello.melker
 ```
 
 ## Core Concepts
@@ -28,10 +32,10 @@ melker --trust hello.melker
 ```xml
 <melker>
   <title>App Name</title>
-  <style>/* CSS-like rules */</style>
-  <script type="typescript">/* code */</script>
   <policy>{"permissions": {...}}</policy>
-  <container><!-- UI tree --></container>
+  <style>/* CSS-like rules */</style>
+  <container><!-- UI --></container>
+  <script type="typescript">/* code */</script>
 </melker>
 ```
 

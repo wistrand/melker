@@ -1,58 +1,4 @@
 <melker>
-  <script type="typescript">
-    let dialog1Open = false;
-    let dialog2Open = false;
-    let dialog3Open = false;
-
-    export function openDialog1() {
-      dialog1Open = true;
-      updateDialogs();
-    }
-
-    export function openDialog2() {
-      dialog2Open = true;
-      updateDialogs();
-    }
-
-    export function openDialog3() {
-      dialog3Open = true;
-      updateDialogs();
-    }
-
-    export function closeDialog1() {
-      dialog1Open = false;
-      updateDialogs();
-    }
-
-    export function closeDialog2() {
-      dialog2Open = false;
-      updateDialogs();
-    }
-
-    export function closeDialog3() {
-      dialog3Open = false;
-      updateDialogs();
-    }
-
-    export function closeAllDialogs() {
-      dialog1Open = false;
-      dialog2Open = false;
-      dialog3Open = false;
-      updateDialogs();
-    }
-
-    function updateDialogs() {
-      const d1 = $melker.getElementById('info-dialog');
-      const d2 = $melker.getElementById('confirm-dialog');
-      const d3 = $melker.getElementById('form-dialog');
-      if (d1) d1.props.open = dialog1Open;
-      if (d2) d2.props.open = dialog2Open;
-      if (d3) d3.props.open = dialog3Open;
-      $melker.render();
-    }
-
-  </script>
-
   <container style="width: fill; height: fill; display: flex; flex-direction: column;">
     <!-- Header -->
     <container style="border-bottom: thin; padding: 1; background-color: #1e3a5f;">
@@ -172,4 +118,58 @@
       </container>
     </dialog>
   </container>
+
+  <script type="typescript">
+    let dialog1Open = false;
+    let dialog2Open = false;
+    let dialog3Open = false;
+
+    export function openDialog1() {
+      dialog1Open = true;
+      updateDialogs();
+    }
+
+    export function openDialog2() {
+      dialog2Open = true;
+      updateDialogs();
+    }
+
+    export function openDialog3() {
+      dialog3Open = true;
+      updateDialogs();
+    }
+
+    export function closeDialog1() {
+      dialog1Open = false;
+      updateDialogs();
+    }
+
+    export function closeDialog2() {
+      dialog2Open = false;
+      updateDialogs();
+    }
+
+    export function closeDialog3() {
+      dialog3Open = false;
+      updateDialogs();
+    }
+
+    export function closeAllDialogs() {
+      dialog1Open = false;
+      dialog2Open = false;
+      dialog3Open = false;
+      updateDialogs();
+    }
+
+    function updateDialogs() {
+      const d1 = $melker.getElementById('info-dialog');
+      const d2 = $melker.getElementById('confirm-dialog');
+      const d3 = $melker.getElementById('form-dialog');
+      if (d1) d1.props.open = dialog1Open;
+      if (d2) d2.props.open = dialog2Open;
+      if (d3) d3.props.open = dialog3Open;
+      $melker.render();
+    }
+
+  </script>
 </melker>

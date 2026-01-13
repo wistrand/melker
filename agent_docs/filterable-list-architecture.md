@@ -110,6 +110,7 @@ Combines text input with dropdown navigation:
 
 ```typescript
 class ComboboxElement extends FilterableListCore {
+  private static _autoIdCounter = 0  // Auto-generate IDs for hit testing
   private _inputValue: string
   private _cursorPosition: number
 
@@ -126,6 +127,9 @@ class ComboboxElement extends FilterableListCore {
     if (option) this.selectOption(option)
     else if (this._inputValue) this.selectFreeformValue(this._inputValue)
   }
+
+  // Capture clicks - don't let child options receive clicks
+  capturesFocusForChildren(): boolean { return true }
 }
 ```
 
@@ -135,9 +139,14 @@ Simplified picker without text input:
 
 ```typescript
 class SelectElement extends FilterableListCore {
+  private static _autoIdCounter = 0  // Auto-generate IDs for hit testing
+
   // No text input - displays selected label only
   // Click/Enter/Space opens dropdown
   // Arrow keys navigate, Enter selects
+
+  // Capture clicks - don't let child options receive clicks
+  capturesFocusForChildren(): boolean { return true }
 }
 ```
 
@@ -274,6 +283,43 @@ This prevents Enter/Space from being intercepted by Clickable handling.
 | Home | - | Focus first |
 | End | - | Focus last |
 | PageUp/Down | - | Scroll by page |
+
+## Mouse Click Handling
+
+### Hit Testing
+
+Select and Combobox elements contain child option elements with text. To ensure clicks on the component toggle the dropdown (rather than being captured by child text elements), both implement `capturesFocusForChildren()`:
+
+```typescript
+// In SelectElement and ComboboxElement
+capturesFocusForChildren(): boolean {
+  return true  // Hit tester returns this element, not children
+}
+```
+
+The hit tester in `hit-test.ts` checks this method before searching children:
+
+```typescript
+if (typeof element.capturesFocusForChildren === 'function' &&
+    element.capturesFocusForChildren() &&
+    this.isInteractiveElement(element)) {
+  return element  // Return parent, skip children
+}
+```
+
+### Auto-Generated IDs
+
+Both SelectElement and ComboboxElement auto-generate IDs if not provided, required for hit testing to find bounds:
+
+```typescript
+private static _autoIdCounter = 0
+
+constructor(props) {
+  if (!props.id) {
+    props.id = `select-auto-${SelectElement._autoIdCounter++}`
+  }
+}
+```
 
 ## Events
 

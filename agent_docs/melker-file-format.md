@@ -23,6 +23,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 ```xml
 <melker>
   <title>App Title</title>
+  <policy>{"permissions": {...}}</policy>
 
   <style>
     button { background-color: blue; }
@@ -30,11 +31,13 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
     .myClass { border: thin; }
   </style>
 
+  <!-- UI components -->
+  <container>...</container>
+
+  <!-- Scripts last -->
   <script type="typescript">
     // TypeScript code - export functions via: export { fn1, fn2 }
   </script>
-
-  <container><!-- UI --></container>
 </melker>
 ```
 
@@ -180,6 +183,33 @@ CSS-like properties in `style` attribute:
 - **Borders:** border (none/thin/thick/double/rounded/dashed/dashed-rounded/ascii/ascii-rounded/block), border-top/right/bottom/left, border-color
 - **Colors:** color, background-color (names or hex like `#00d9ff`)
 - **Text:** font-weight (bold/normal), text-align, text-wrap
+
+**Important:** `flex-direction` is a style property, not an attribute. Use `style="flex-direction: row"` not `direction="row"`:
+
+```xml
+<!-- CORRECT -->
+<container style="flex-direction: row; gap: 2">
+  <text>Label:</text>
+  <select>...</select>
+</container>
+
+<!-- WRONG - direction is not a valid attribute -->
+<container direction="row">...</container>
+```
+
+**Cross-axis stretching:** In column containers, children stretch horizontally by default. Wrap elements in a row container to use their intrinsic width:
+
+```xml
+<container style="flex-direction: column">
+  <!-- This select will stretch to full width -->
+  <select>...</select>
+
+  <!-- Wrap in row to prevent stretching -->
+  <container style="flex-direction: row">
+    <select>...</select>
+  </container>
+</container>
+```
 
 ## Events & Context
 
@@ -333,6 +363,8 @@ See `examples/melker/` for complete examples:
 - `autocomplete_demo.melker` - Async search dropdown
 - `command_palette_simple.melker` - Basic command palette
 - `command_palette_demo.melker` - Full command palette features
+- `file_browser_simple.melker` - Basic file browser
+- `ai-tools-demo.melker` - Custom AI tool registration
 
 ## Running
 
@@ -361,7 +393,7 @@ deno run --allow-all melker.ts examples/melker/counter.melker
 # Show app policy and exit
 ./melker.ts --show-policy examples/melker/counter.melker
 
-# Ignore policy, run with full permissions
+# Trust mode (for CI/scripts - bypasses approval prompt that would hang)
 ./melker.ts --trust examples/melker/counter.melker
 
 # With logging
@@ -740,7 +772,7 @@ When an `<oauth>` tag is present, the policy automatically includes:
 # Show policy and exit
 ./melker.ts --show-policy app.melker
 
-# Ignore policy, run with full permissions (required for scripts/agents)
+# Trust mode (for CI/scripts - bypasses approval prompt that would hang)
 ./melker.ts --trust app.melker
 
 # Clear all cached approvals
@@ -755,7 +787,7 @@ When an `<oauth>` tag is present, the policy automatically includes:
 
 ### App Approval System
 
-All .melker files require first-run approval (use `--trust` to bypass).
+All .melker files require first-run approval. Use `--trust` for CI/scripts to bypass the interactive prompt.
 
 **Local files:**
 - Policy tag is optional (uses auto-policy with all permissions if missing)

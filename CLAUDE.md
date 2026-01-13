@@ -190,6 +190,7 @@ tests/                - Test files
 7. **Auto-render in .melker handlers** - Event handlers auto-render after completion (call `$melker.skipRender()` to skip)
 8. **Avoid emojis** - They break terminal layout
 9. **Update component props explicitly** - In .melker files, there are no reactive bindings like `${$app.var}` . To update props dynamically, use `$melker.getElementById('id').props.propName = value`
+10. **flex-direction is a style** - Use `style="flex-direction: row"` not `direction="row"`. Wrap select/combobox in row container to prevent cross-axis stretching.
 
 ## Environment Variables
 
@@ -285,7 +286,7 @@ deno run --allow-all --reload --no-lock http://localhost:1990/melker.ts app.melk
 # Show app policy and exit
 ./melker.ts --show-policy examples/melker/counter.melker
 
-# Run with full permissions, ignoring declared policy
+# Trust mode (for CI/scripts - bypasses approval prompt that would hang)
 ./melker.ts --trust examples/melker/counter.melker
 
 # Start LSP server (for editor integration)
@@ -294,7 +295,7 @@ deno run --allow-all --reload --no-lock http://localhost:1990/melker.ts app.melk
 
 **Note:** The launcher automatically spawns a subprocess with `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
 
-**Important:** Programmatic runs by agents/scripts must use `--trust` to bypass the interactive approval prompt.
+**Important:** Use `--trust` for CI, automated scripts, and debugging. Without it, the app waits for interactive approval which will hang non-interactive environments.
 
 ## Installation via Symlink
 
@@ -307,7 +308,7 @@ ln -s /path/to/melker/melker.ts ~/.local/bin/melker
 Then run from anywhere:
 
 ```bash
-melker --trust app.melker
+melker app.melker
 ```
 
 The CLI is symlink-safe - it resolves its real path before importing dependencies.
@@ -405,7 +406,7 @@ When an `<oauth>` tag is present, the policy automatically includes:
 
 ### App Approval System
 
-All .melker files require first-run approval (use `--trust` to bypass).
+All .melker files require first-run approval. Use `--trust` for CI/scripts to bypass the interactive prompt.
 
 **Local files:**
 - Policy tag is optional (uses auto-policy with all permissions if missing)

@@ -1,22 +1,6 @@
 <melker>
   <title>Multi-Root Layout</title>
 
-  <script type="typescript">
-    let count = 0;
-
-    export function increment() {
-      count++;
-      const el = $melker.getElementById('count');
-      if (el) el.setValue(String(count));
-    }
-
-    export function decrement() {
-      count--;
-      const el = $melker.getElementById('count');
-      if (el) el.setValue(String(count));
-    }
-  </script>
-
   <!-- Multiple top-level elements are auto-wrapped in a flex column container -->
 
   <container style="border: thin; padding: 1;">
@@ -39,4 +23,19 @@
     <button label="Exit" onClick="$melker.exit()" />
   </container>
 
+  <script type="typescript">
+    let count = 0;
+
+    export function increment() {
+      count++;
+      const el = $melker.getElementById('count');
+      if (el) el.setValue(String(count));
+    }
+
+    export function decrement() {
+      count--;
+      const el = $melker.getElementById('count');
+      if (el) el.setValue(String(count));
+    }
+  </script>
 </melker>

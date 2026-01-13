@@ -9,55 +9,6 @@
   }
   </policy>
 
-  <script type="typescript">
-    let dialogOpen = false;
-    let selectionMode = 'single';
-    let selectType = 'file';
-    let selectedPath = '(none)';
-
-    export function openBrowser() {
-      dialogOpen = true;
-      // Update file browser props before opening
-      const fb = $melker.getElementById('file-browser');
-      if (fb) {
-        fb.props.selectionMode = selectionMode;
-        fb.props.selectType = selectType;
-      }
-      updateDialog();
-    }
-
-    export function closeBrowser() {
-      dialogOpen = false;
-      updateDialog();
-    }
-
-    export function handleSelect(event: any) {
-      selectedPath = event.path;
-      closeBrowser();
-      const text = $melker.getElementById('selected-text');
-      if (text) text.setValue(selectedPath);
-      $melker.render();
-    }
-
-    export function handleError(event: any) {
-      $melker.logger.error('File browser error:', event.message);
-    }
-
-    export function setMode(mode: string) {
-      selectionMode = mode;
-    }
-
-    export function setSelectType(type: string) {
-      selectType = type;
-    }
-
-    function updateDialog() {
-      const dialog = $melker.getElementById('browser-dialog');
-      if (dialog) dialog.props.open = dialogOpen;
-      $melker.render();
-    }
-  </script>
-
   <container style="width: fill; height: fill; display: flex; flex-direction: column; padding: 1;">
     <text style="font-weight: bold; margin-bottom: 1;">File Browser Demo</text>
     <text style="margin-bottom: 1;">Test the file browser component inside a dialog.</text>
@@ -111,4 +62,53 @@
       />
     </dialog>
   </container>
+
+  <script type="typescript">
+    let dialogOpen = false;
+    let selectionMode = 'single';
+    let selectType = 'file';
+    let selectedPath = '(none)';
+
+    export function openBrowser() {
+      dialogOpen = true;
+      // Update file browser props before opening
+      const fb = $melker.getElementById('file-browser');
+      if (fb) {
+        fb.props.selectionMode = selectionMode;
+        fb.props.selectType = selectType;
+      }
+      updateDialog();
+    }
+
+    export function closeBrowser() {
+      dialogOpen = false;
+      updateDialog();
+    }
+
+    export function handleSelect(event: any) {
+      selectedPath = event.path;
+      closeBrowser();
+      const text = $melker.getElementById('selected-text');
+      if (text) text.setValue(selectedPath);
+      $melker.render();
+    }
+
+    export function handleError(event: any) {
+      $melker.logger.error('File browser error:', event.message);
+    }
+
+    export function setMode(mode: string) {
+      selectionMode = mode;
+    }
+
+    export function setSelectType(type: string) {
+      selectType = type;
+    }
+
+    function updateDialog() {
+      const dialog = $melker.getElementById('browser-dialog');
+      if (dialog) dialog.props.open = dialogOpen;
+      $melker.render();
+    }
+  </script>
 </melker>

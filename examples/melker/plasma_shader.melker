@@ -49,6 +49,40 @@
   }
   </policy>
 
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      Shader Utilities Demo
+    </text>
+
+    <text style="color: gray; margin-bottom: 1; text-align: center; font-size: small;">
+      Configurable via PLASMA_SCALE, PLASMA_SPEED, PLASMA_OCTAVES, PLASMA_SWIRL
+    </text>
+
+    <container style="width: fill; height: fill;">
+      <img
+        id="plasmaCanvas"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.plasmaShader"
+        shaderFps="30"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
+      <button
+        label="Exit"
+        style="background-color: gray; color: white; padding: 1;"
+        onClick="$melker.exit();"
+      />
+    </container>
+
+    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
+      Press Ctrl+C to exit
+    </text>
+  </container>
+
   <script type="typescript">
     // Shader utilities demo - using built-in noise2d, fbm, and palette functions
     // The utils parameter provides: noise2d(x,y), fbm(x,y,octaves), palette(t,a,b,c,d)
@@ -112,38 +146,4 @@
       );
     };
   </script>
-
-  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
-    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
-      Shader Utilities Demo
-    </text>
-
-    <text style="color: gray; margin-bottom: 1; text-align: center; font-size: small;">
-      Configurable via PLASMA_SCALE, PLASMA_SPEED, PLASMA_OCTAVES, PLASMA_SWIRL
-    </text>
-
-    <container style="width: fill; height: fill;">
-      <img
-        id="plasmaCanvas"
-        src="../../media/melker-128.png"
-        width="100%"
-        height="100%"
-        dither="auto"
-        onShader="$app.plasmaShader"
-        shaderFps="30"
-      />
-    </container>
-
-    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
-      <button
-        label="Exit"
-        style="background-color: gray; color: white; padding: 1;"
-        onClick="$melker.exit();"
-      />
-    </container>
-
-    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
-      Press Ctrl+C to exit
-    </text>
-  </container>
 </melker>

@@ -9,6 +9,28 @@
   }
   </policy>
 
+  <container style="flex-direction: column; gap: 1; padding: 1; height: 100%">
+    <text bold="true">Simple File Browser Test</text>
+
+    <container style="flex-direction: column; flex: 1; border: single">
+      <file-browser
+        id="file-browser"
+        selectionMode="single"
+        selectType="file"
+        showHidden="false"
+        showButtons="false"
+        onChange="$app.handleSelect(event)"
+        onError="$app.handleError(event)"
+        maxVisible="15"
+      />
+    </container>
+
+    <container style="flex-direction: row; gap: 1">
+      <text dim="true">Selected:</text>
+      <text id="selected-text">(none)</text>
+    </container>
+  </container>
+
   <script>
     $app.selectedPath = '(none)';
 
@@ -33,26 +55,4 @@
 
     setTimeout(() => $app.init(), 100);
   </script>
-
-  <container direction="column" gap="1" padding="1" height="100%">
-    <text bold="true">Simple File Browser Test</text>
-
-    <container direction="column" flex="1" border="single">
-      <file-browser
-        id="file-browser"
-        selectionMode="single"
-        selectType="file"
-        showHidden="false"
-        showButtons="false"
-        onChange="$app.handleSelect(event)"
-        onError="$app.handleError(event)"
-        maxVisible="15"
-      />
-    </container>
-
-    <container direction="row" gap="1">
-      <text dim="true">Selected:</text>
-      <text id="selected-text">(none)</text>
-    </container>
-  </container>
 </melker>

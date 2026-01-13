@@ -58,7 +58,7 @@ git clone https://github.com/wistrand/melker.git ~/melker
 ln -s ~/melker/melker.ts ~/.local/bin/melker
 
 # Run from anywhere
-melker --trust app.melker
+melker app.melker
 ```
 
 The CLI is symlink-safe - it resolves its real path before importing dependencies.
@@ -362,7 +362,7 @@ deno run --allow-all melker.ts app.melker
 # Show policy without running
 ./melker.ts --show-policy app.melker
 
-# Trust mode (bypass approval prompt, for scripts)
+# Trust mode (for CI/scripts - bypasses approval prompt that would hang)
 ./melker.ts --trust app.melker
 
 # Watch mode (auto-reload on changes)

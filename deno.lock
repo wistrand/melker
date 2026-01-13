@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@std/encoding@1": "1.0.10",
     "npm:@types/node@*": "24.2.0",
+    "npm:date-fns@*": "4.1.0",
     "npm:dotenv@^16.3.0": "16.6.1",
     "npm:fast-png@*": "8.0.0",
     "npm:html5parser@*": "2.0.2",
@@ -49,6 +50,9 @@
     },
     "character-entities@2.0.2": {
       "integrity": "sha512-shx7oQ0Awen/BRIdkjkvz54PnEEI/EjwXDSIZp86/KKdbafHh1Df/RYGBhn4hbe2+uKC9FnT5UCEdyPz3ai9hQ=="
+    },
+    "date-fns@4.1.0": {
+      "integrity": "sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg=="
     },
     "debug@4.4.3": {
       "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",

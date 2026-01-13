@@ -454,6 +454,16 @@ List container with items.
 
 ## Filterable Lists
 
+**Note:** In column containers, these components stretch to full width by default. Wrap in a row container to use intrinsic width:
+
+```xml
+<container style="flex-direction: column">
+  <container style="flex-direction: row">
+    <select>...</select>
+  </container>
+</container>
+```
+
 ### combobox
 
 Dropdown with text filter.

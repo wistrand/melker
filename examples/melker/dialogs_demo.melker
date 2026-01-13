@@ -39,6 +39,31 @@ Demonstrates the browser-like dialog functions: alert(), confirm(), and prompt()
     }
   </style>
 
+  <container id="root">
+    <text id="header">Dialog Functions Demo</text>
+
+    <text text="Click a button to see the corresponding dialog:" />
+
+    <container class="button-row">
+      <button label="alert()" onClick="$app.showAlert()" />
+      <button label="confirm()" onClick="$app.showConfirm()" />
+      <button label="prompt()" onClick="$app.showPrompt()" />
+    </container>
+
+    <container class="button-row">
+      <button label="Chained Dialogs" onClick="$app.showChainedDialogs()" />
+    </container>
+
+    <container id="result">
+      <text text="Result:" style="font-weight: bold;" />
+      <text id="resultText" text="(no dialog shown yet)" />
+    </container>
+
+    <text text="Press Escape to cancel confirm/prompt dialogs" style="margin-top: 1;" />
+
+    <button label="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
+  </container>
+
   <script>
     export function showAlert() {
       alert('This is an alert message!\n\nPress OK or Escape to close.');
@@ -95,30 +120,5 @@ Demonstrates the browser-like dialog functions: alert(), confirm(), and prompt()
       }
     }
   </script>
-
-  <container id="root">
-    <text id="header">Dialog Functions Demo</text>
-
-    <text text="Click a button to see the corresponding dialog:" />
-
-    <container class="button-row">
-      <button label="alert()" onClick="$app.showAlert()" />
-      <button label="confirm()" onClick="$app.showConfirm()" />
-      <button label="prompt()" onClick="$app.showPrompt()" />
-    </container>
-
-    <container class="button-row">
-      <button label="Chained Dialogs" onClick="$app.showChainedDialogs()" />
-    </container>
-
-    <container id="result">
-      <text text="Result:" style="font-weight: bold;" />
-      <text id="resultText" text="(no dialog shown yet)" />
-    </container>
-
-    <text text="Press Escape to cancel confirm/prompt dialogs" style="margin-top: 1;" />
-
-    <button label="Exit" onClick="$melker.exit()" style="margin-top: 1;" />
-  </container>
 
 </melker>

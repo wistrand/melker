@@ -10,6 +10,28 @@
   }
   </policy>
 
+  <container style="width: fill; height: fill; display: flex; flex-direction: column;">
+    <container style="width: fill; height: fill;">
+      <img
+        id="tunnel"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.tunnelShader"
+        shaderFps="30"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: black;">
+      <text style="color: cyan;">Fractal Tunnel</text>
+      <button
+        label="Exit"
+        onClick="$melker.exit();"
+      />
+    </container>
+  </container>
+
   <script type="typescript">
     // Fractal tunnel - classic demoscene effect
     // Uses polar coordinates with fbm noise for organic tunnel walls
@@ -98,26 +120,4 @@
       ];
     };
   </script>
-
-  <container style="width: fill; height: fill; display: flex; flex-direction: column;">
-    <container style="width: fill; height: fill;">
-      <img
-        id="tunnel"
-        src="../../media/melker-128.png"
-        width="100%"
-        height="100%"
-        dither="auto"
-        onShader="$app.tunnelShader"
-        shaderFps="30"
-      />
-    </container>
-
-    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: black;">
-      <text style="color: cyan;">Fractal Tunnel</text>
-      <button
-        label="Exit"
-        onClick="$melker.exit();"
-      />
-    </container>
-  </container>
 </melker>

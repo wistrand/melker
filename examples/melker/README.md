@@ -121,6 +121,14 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
     .myClass { border: thin; }
   </style>
 
+  <!-- UI components first -->
+  <container style="width: 40; height: 10; border: thin;">
+    <text id="output">Hello!</text>
+    <!-- Call exported functions via $app (alias for $melker.exports) -->
+    <button label="Click" onClick="$app.handleClick()" />
+  </container>
+
+  <!-- Scripts last -->
   <script type="typescript">
     let count = 0;
 
@@ -134,12 +142,6 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
     // Export functions to make them available in handlers
     export { handleClick };  // Accessible as $app.handleClick()
   </script>
-
-  <container style="width: 40; height: 10; border: thin;">
-    <text id="output">Hello!</text>
-    <!-- Call exported functions via $app (alias for $melker.exports) -->
-    <button label="Click" onClick="$app.handleClick()" />
-  </container>
 </melker>
 ```
 

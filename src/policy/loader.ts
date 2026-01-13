@@ -4,6 +4,32 @@ import { dirname, resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
 import type { MelkerPolicy, PolicyLoadResult } from './types.ts';
 import { Env } from '../env.ts';
 
+/**
+ * Extract policy from markdown JSON block with "@melker": "policy"
+ */
+function extractPolicyFromMarkdown(content: string): MelkerPolicy | null {
+  // Find JSON code blocks
+  const jsonBlockRegex = /```json\s*\n([\s\S]*?)```/g;
+  let match;
+
+  while ((match = jsonBlockRegex.exec(content)) !== null) {
+    const jsonContent = match[1].trim();
+    try {
+      const parsed = JSON.parse(jsonContent);
+      // Check if this is a policy block
+      if (parsed && typeof parsed === 'object' && parsed['@melker'] === 'policy') {
+        // Remove the @melker marker and return the policy
+        const { '@melker': _, ...policy } = parsed;
+        return policy as MelkerPolicy;
+      }
+    } catch {
+      // Not valid JSON or not a policy block, continue
+    }
+  }
+
+  return null;
+}
+
 // WellKnown config fields that contain URLs
 interface WellKnownConfig {
   issuer?: string;
@@ -19,6 +45,7 @@ interface WellKnownConfig {
  * Supports:
  * 1. Embedded <policy>{...json...}</policy> tag
  * 2. External file via <policy src="path/to/policy.json"></policy>
+ * 3. Markdown JSON block with "@melker": "policy" (for .md files)
  *
  * @param appPath Path to the .melker file
  * @returns Policy load result with policy (or null) and source
@@ -27,8 +54,24 @@ export async function loadPolicy(appPath: string): Promise<PolicyLoadResult> {
   try {
     const content = await Deno.readTextFile(appPath);
     const appDir = dirname(appPath);
-    const policyTag = extractPolicyTag(content);
     const hasOAuth = hasOAuthTag(content);
+
+    // Check for markdown policy format first (for .md files)
+    if (appPath.endsWith('.md')) {
+      const mdPolicy = extractPolicyFromMarkdown(content);
+      if (mdPolicy) {
+        // Add OAuth permissions if needed
+        if (hasOAuth) {
+          addOAuthPermissions(mdPolicy);
+          await addWellknownHostsForOAuth(mdPolicy, content);
+        }
+        return { policy: mdPolicy, source: 'embedded' };
+      }
+      // No policy found in markdown
+      return { policy: null, source: 'none' };
+    }
+
+    const policyTag = extractPolicyTag(content);
 
     if (!policyTag) {
       return { policy: null, source: 'none' };
@@ -252,8 +295,25 @@ export async function loadPolicyFromContent(
   content: string,
   sourceUrl?: string
 ): Promise<PolicyLoadResult> {
-  const policyTag = extractPolicyTag(content);
   const hasOAuth = hasOAuthTag(content);
+
+  // Check for markdown policy format (for .md files)
+  const isMarkdown = sourceUrl?.endsWith('.md') || false;
+  if (isMarkdown) {
+    const mdPolicy = extractPolicyFromMarkdown(content);
+    if (mdPolicy) {
+      // Add OAuth permissions if needed
+      if (hasOAuth) {
+        addOAuthPermissions(mdPolicy);
+        await addWellknownHostsForOAuth(mdPolicy, content);
+      }
+      return { policy: mdPolicy, source: 'embedded' };
+    }
+    // No policy found in markdown
+    return { policy: null, source: 'none' };
+  }
+
+  const policyTag = extractPolicyTag(content);
 
   if (!policyTag) {
     return { policy: null, source: 'none' };
@@ -290,10 +350,18 @@ export async function loadPolicyFromContent(
 }
 
 /**
- * Check if content has a <policy> tag (without parsing it)
+ * Check if content has a <policy> tag or markdown policy block (without parsing it)
  */
 export function hasPolicyTag(content: string): boolean {
-  return /<policy[\s>]/i.test(content);
+  // Check for XML-style <policy> tag
+  if (/<policy[\s>]/i.test(content)) {
+    return true;
+  }
+  // Check for markdown JSON policy block
+  if (/"@melker"\s*:\s*"policy"/.test(content)) {
+    return true;
+  }
+  return false;
 }
 
 interface PolicyTagResult {

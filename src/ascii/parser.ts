@@ -544,7 +544,11 @@ export function parseCompactHints(hintsStr: string): LayoutHints {
 }
 
 /**
- * Parse button shortcut syntax: [ #id @handler() Title ]
+ * Parse button shortcut syntax:
+ *   [ Title ]              -> button with label "Title"
+ *   [ id: Title ]          -> button with id="id" and label "Title"
+ *   [ #id Title ]          -> button with id="id" and label "Title" (legacy)
+ *   [ #id @handler() Title ] -> with onClick handler (legacy)
  */
 export function parseButtonShortcuts(line: string, lineNumber: number): ParsedButton[] {
   const buttons: ParsedButton[] = [];
@@ -560,18 +564,25 @@ export function parseButtonShortcuts(line: string, lineNumber: number): ParsedBu
     let onClick: string | undefined;
     let title = content;
 
-    // Parse #id
-    const idMatch = title.match(/^#(\S+)/);
-    if (idMatch) {
-      id = idMatch[1];
-      title = title.substring(idMatch[0].length).trim();
-    }
+    // Parse id: label syntax (preferred)
+    const colonMatch = title.match(/^([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.+)$/);
+    if (colonMatch) {
+      id = colonMatch[1];
+      title = colonMatch[2].trim();
+    } else {
+      // Parse #id (legacy syntax)
+      const idMatch = title.match(/^#(\S+)/);
+      if (idMatch) {
+        id = idMatch[1];
+        title = title.substring(idMatch[0].length).trim();
+      }
 
-    // Parse @handler()
-    const handlerMatch = title.match(/^@(\S+\(\))/);
-    if (handlerMatch) {
-      onClick = handlerMatch[1];
-      title = title.substring(handlerMatch[0].length).trim();
+      // Parse @handler() (legacy syntax)
+      const handlerMatch = title.match(/^@(\S+\(\))/);
+      if (handlerMatch) {
+        onClick = handlerMatch[1];
+        title = title.substring(handlerMatch[0].length).trim();
+      }
     }
 
     if (title) {

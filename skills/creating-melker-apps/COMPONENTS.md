@@ -664,7 +664,7 @@ export function waveEffect(x, y, time, resolution, source, utils) {
 
 ### markdown
 
-Render markdown content.
+Render markdown content with full CommonMark support including images.
 
 ```xml
 <markdown
@@ -679,6 +679,17 @@ Render markdown content.
 - `src` - Markdown file path
 - `text` - Inline markdown
 - `onLink` - Link click handler (`event.url`)
+- `enableGfm` - Enable GitHub Flavored Markdown (tables, strikethrough)
+
+**Supported Syntax:**
+- Headings, paragraphs, lists (ordered/unordered)
+- Bold, italic, inline code
+- Code blocks with syntax highlighting
+- Blockquotes, horizontal rules
+- Links (clickable via `onLink`)
+- Images: `![alt text](path/to/image.png)` - rendered at full width, aspect ratio preserved
+- Tables (with `enableGfm="true"`)
+- HTML `<img>` tags with width/height attributes (e.g., `width="50%"`)
 
 ### video
 

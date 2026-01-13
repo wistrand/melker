@@ -35,8 +35,12 @@ export interface RenderContext {
   handlers?: Map<string, Map<string, string>>; // id -> event -> code
   /** Properties from json:#id blocks */
   jsonProperties?: Map<string, Record<string, unknown>>;
-  /** Global script content from melker-script blocks */
+  /** Global script content from melker-script blocks (sync - before render) */
   scriptContent?: string;
+  /** Init script content (async="init" - before first render) */
+  initScriptContent?: string;
+  /** Ready script content (async="ready" - after first render) */
+  readyScriptContent?: string;
   /** Style content from melker-style blocks */
   styleContent?: string;
   /** JSON data from melker-json:NAME blocks */
@@ -53,6 +57,10 @@ export interface RenderContext {
   externalScripts?: ExternalScript[];
   /** OAuth configuration from json oauth block */
   oauthConfig?: OAuthConfig;
+  /** Policy content (JSON string) from @melker: "policy" block */
+  policyContent?: string;
+  /** Button shortcuts parsed from [ label ] syntax */
+  buttonShortcuts?: Map<string, { id: string; title: string; onClick?: string }>;
 }
 
 // Fallback element types when context.elementTypes is not provided
@@ -80,6 +88,24 @@ export function renderToMelker(
     // Add title from root block name
     if (context.title) {
       lines.push(`${indent}<title>${escapeXml(context.title)}</title>`);
+      lines.push('');
+    }
+
+    // Add policy configuration
+    if (context.policyContent) {
+      lines.push(`${indent}<policy>`);
+      // Pretty print the JSON for readability
+      try {
+        const policyObj = JSON.parse(context.policyContent);
+        const prettyJson = JSON.stringify(policyObj, null, 2);
+        for (const line of prettyJson.split('\n')) {
+          lines.push(`${indent}${line}`);
+        }
+      } catch {
+        // If JSON parsing fails, output as-is
+        lines.push(`${indent}${context.policyContent}`);
+      }
+      lines.push(`${indent}</policy>`);
       lines.push('');
     }
 
@@ -117,19 +143,9 @@ export function renderToMelker(
       lines.push(`${indent}</style>`);
       lines.push('');
     }
-
-    // Add script
-    if (context.scriptContent) {
-      lines.push(`${indent}<script type="typescript">`);
-      for (const line of context.scriptContent.split('\n')) {
-        lines.push(`${indent}${indent}${line}`);
-      }
-      lines.push(`${indent}</script>`);
-      lines.push('');
-    }
   }
 
-  // Render root boxes
+  // Render root boxes (UI components)
   for (const rootBox of structure.rootBoxes) {
     // Add root comment if present
     if (context.rootComment) {
@@ -140,6 +156,39 @@ export function renderToMelker(
   }
 
   if (includeRoot) {
+    // Add scripts last (after UI components, as documented)
+    lines.push('');
+
+    // Add sync script (default - runs before render)
+    if (context.scriptContent) {
+      lines.push(`${indent}<script type="typescript">`);
+      for (const line of context.scriptContent.split('\n')) {
+        lines.push(`${indent}${indent}${line}`);
+      }
+      lines.push(`${indent}</script>`);
+      lines.push('');
+    }
+
+    // Add init script (async="init" - runs before first render, for async data loading)
+    if (context.initScriptContent) {
+      lines.push(`${indent}<script type="typescript" async="init">`);
+      for (const line of context.initScriptContent.split('\n')) {
+        lines.push(`${indent}${indent}${line}`);
+      }
+      lines.push(`${indent}</script>`);
+      lines.push('');
+    }
+
+    // Add ready script (async="ready" - runs after first render, for DOM initialization)
+    if (context.readyScriptContent) {
+      lines.push(`${indent}<script type="typescript" async="ready">`);
+      for (const line of context.readyScriptContent.split('\n')) {
+        lines.push(`${indent}${indent}${line}`);
+      }
+      lines.push(`${indent}</script>`);
+      lines.push('');
+    }
+
     lines.push('</melker>');
   }
 
@@ -156,6 +205,25 @@ function renderBox(
 ): string[] {
   const lines: string[] = [];
   const prefix = indent.repeat(depth);
+
+  // Check if this is a button shortcut reference
+  if (context.buttonShortcuts?.has(box.id)) {
+    const buttonInfo = context.buttonShortcuts.get(box.id)!;
+    const attrs: string[] = [`id="${escapeXml(buttonInfo.id)}"`, `label="${escapeXml(buttonInfo.title)}"`];
+
+    // Add onClick from shortcut or from handler context
+    if (buttonInfo.onClick) {
+      attrs.push(`onClick="${escapeXml(buttonInfo.onClick)}"`);
+    } else if (context.handlers?.has(buttonInfo.id)) {
+      const handlers = context.handlers.get(buttonInfo.id)!;
+      if (handlers.has('onClick')) {
+        attrs.push(`onClick="${escapeXml(handlers.get('onClick')!)}"`);
+      }
+    }
+
+    lines.push(`${prefix}<button ${attrs.join(' ')} />`);
+    return lines;
+  }
 
   // Check if this is a reference to a component (defined in a separate melker-block)
   // A box is a component reference if:

@@ -6,7 +6,7 @@ import { renderToMelker, RenderContext } from './melker-renderer.ts';
 import { ERROR_MESSAGES, formatParseError } from './errors.ts';
 
 export interface ExtractedBlock {
-  type: 'root' | 'component' | 'script' | 'handler' | 'style' | 'json' | 'json-props' | 'title' | 'oauth' | 'external-scripts';
+  type: 'root' | 'component' | 'script' | 'handler' | 'style' | 'json' | 'json-props' | 'title' | 'oauth' | 'policy' | 'external-scripts';
   name?: string;
   elementId?: string;
   event?: string;
@@ -14,6 +14,8 @@ export interface ExtractedBlock {
   line: number;
   /** Prose text preceding this block (for XML comments) */
   precedingProse?: string;
+  /** Script type: 'sync' (default), 'init' (before render), 'ready' (after render) */
+  scriptType?: 'sync' | 'init' | 'ready';
 }
 
 export interface ExternalScript {
@@ -90,6 +92,7 @@ export function parseMarkdownMelker(
   const components = new Map<string, BoxStructure>();
   const componentComments = new Map<string, string>();
   const componentBlocks = blocks.filter((b) => b.type === 'component');
+  const allButtons: ButtonWithId[] = [];
 
   for (const block of componentBlocks) {
     const parseResult = parseAsciiBoxWithButtons(block.content, block.line);
@@ -100,6 +103,11 @@ export function parseMarkdownMelker(
         line: e.line ? e.line + block.line : block.line,
       })));
       continue;
+    }
+
+    // Collect buttons from component blocks
+    if (parseResult.buttons) {
+      allButtons.push(...parseResult.buttons);
     }
 
     if (parseResult.structure && parseResult.structure.rootBoxes.length > 0) {
@@ -124,6 +132,11 @@ export function parseMarkdownMelker(
     return { errors, warnings, filePath };
   }
 
+  // Collect buttons from root block
+  if (rootParseResult.buttons) {
+    allButtons.push(...rootParseResult.buttons);
+  }
+
   // Mark boxes as references if they match component IDs
   if (rootParseResult.structure) {
     markComponentReferences(rootParseResult.structure, components);
@@ -133,6 +146,11 @@ export function parseMarkdownMelker(
   const context = buildRenderContext(blocks, errors, warnings);
   context.components = components;
   context.elementTypes = options?.elementTypes;
+
+  // Add button shortcuts to context
+  if (allButtons.length > 0) {
+    context.buttonShortcuts = new Map(allButtons.map(b => [b.id, b]));
+  }
 
   // Extract external scripts from ## Scripts section
   const externalScripts = extractScriptsSection(markdown);
@@ -207,28 +225,37 @@ function markComponentReferences(
   }
 }
 
-/**
- * Parse ASCII box content with button shortcut support
- */
-function parseAsciiBoxWithButtons(content: string, baseLineNumber: number): ParseResult {
-  // First, transform button shortcuts into proper boxes
-  const transformedContent = transformButtonShortcuts(content);
-
-  // Parse the transformed content
-  return parseAsciiBoxes(transformedContent);
+/** Parsed button with its generated ID */
+interface ButtonWithId {
+  id: string;
+  title: string;
+  onClick?: string;
 }
 
 /**
- * Transform button shortcuts [ Title ] into box syntax
+ * Parse ASCII box content with button shortcut support
+ */
+function parseAsciiBoxWithButtons(content: string, baseLineNumber: number): ParseResult & { buttons?: ButtonWithId[] } {
+  // First, transform button shortcuts into proper boxes
+  const { content: transformedContent, buttons } = transformButtonShortcutsWithInfo(content);
+
+  // Parse the transformed content
+  const result = parseAsciiBoxes(transformedContent);
+  return { ...result, buttons };
+}
+
+/**
+ * Transform button shortcuts [ Title ] into box syntax and collect button info
  * This is a preprocessing step before parsing
  *
  * IMPORTANT: This does NOT transform brackets that are part of shorthand box syntax:
  *   +--[Button Title]--+  -> This is a shorthand box, NOT a button shortcut
  *   | [ Button Title ] |  -> This IS a button shortcut that gets transformed
  */
-function transformButtonShortcuts(content: string): string {
+function transformButtonShortcutsWithInfo(content: string): { content: string; buttons: ButtonWithId[] } {
   const lines = content.split('\n');
   const result: string[] = [];
+  const allButtons: ButtonWithId[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -249,8 +276,14 @@ function transformButtonShortcuts(content: string): string {
           const buttonId = button.id ?? `btn_${i}_${button.bounds.left}`;
           const buttonBox = `+--${buttonId}--+`;
 
+          // Store button info for later rendering
+          allButtons.push({
+            id: buttonId,
+            title: button.title,
+            onClick: button.onClick,
+          });
+
           // Replace the button shortcut with a reference
-          const original = line.substring(button.bounds.left, button.bounds.right);
           transformedLine =
             transformedLine.substring(0, button.bounds.left) +
             buttonBox +
@@ -265,7 +298,7 @@ function transformButtonShortcuts(content: string): string {
     }
   }
 
-  return result.join('\n');
+  return { content: result.join('\n'), buttons: allButtons };
 }
 
 function extractCodeBlocks(markdown: string): CodeBlock[] {
@@ -440,7 +473,9 @@ function categorizeBlocks(codeBlocks: CodeBlock[], errors: ParseError[]): Extrac
 /**
  * Extract melker directive from TypeScript/JavaScript block
  * Supports:
- *   // @melker script
+ *   // @melker script           -> sync script (before render)
+ *   // @melker script init      -> async init script (before first render)
+ *   // @melker script ready     -> async ready script (after first render)
  *   // @melker handler #id.event
  */
 function extractTypeScriptBlock(
@@ -461,12 +496,15 @@ function extractTypeScriptBlock(
   // Remove the directive line from content
   const blockContent = lines.slice(1).join('\n').trim();
 
-  // Parse directive: "script" or "handler #id.event"
-  if (directive === 'script') {
+  // Parse directive: "script", "script init", "script ready", or "handler #id.event"
+  const scriptMatch = directive.match(/^script(?:\s+(init|ready))?$/);
+  if (scriptMatch) {
+    const asyncType = scriptMatch[1] as 'init' | 'ready' | undefined;
     return {
       type: 'script',
       content: blockContent,
       line: startLine,
+      scriptType: asyncType ?? 'sync',
     };
   }
 
@@ -482,7 +520,7 @@ function extractTypeScriptBlock(
   }
 
   errors.push({
-    message: `Invalid @melker directive: "${directive}". Expected "script" or "handler #id.event"`,
+    message: `Invalid @melker directive: "${directive}". Expected "script", "script init", "script ready", or "handler #id.event"`,
     line: startLine,
   });
   return null;
@@ -511,6 +549,7 @@ function extractCssBlock(content: string, startLine: number): ExtractedBlock | n
 /**
  * Extract melker metadata from JSON block
  * Supports:
+ *   { "@melker": "policy", ... }    -> policy configuration
  *   { "@name": "configName", ... }  -> named JSON data
  *   { "@target": "#id", ... }       -> element properties
  *   ```json oauth``` block          -> OAuth configuration
@@ -550,6 +589,17 @@ function extractJsonBlock(
 
   if (typeof parsed !== 'object' || parsed === null) {
     return null;
+  }
+
+  // Check for @melker: "policy" (policy configuration)
+  if ('@melker' in parsed && parsed['@melker'] === 'policy') {
+    // Remove @melker from the content for storage
+    const { '@melker': _, ...rest } = parsed;
+    return {
+      type: 'policy',
+      content: JSON.stringify(rest),
+      line: startLine,
+    };
   }
 
   // Check for @title (document title)
@@ -609,10 +659,20 @@ function buildRenderContext(
     jsonData: new Map(),
   };
 
-  // Process script blocks
+  // Process script blocks by type
   const scriptBlocks = blocks.filter((b) => b.type === 'script');
-  if (scriptBlocks.length > 0) {
-    context.scriptContent = scriptBlocks.map((b) => b.content).join('\n\n');
+  const syncScripts = scriptBlocks.filter((b) => b.scriptType === 'sync' || !b.scriptType);
+  const initScripts = scriptBlocks.filter((b) => b.scriptType === 'init');
+  const readyScripts = scriptBlocks.filter((b) => b.scriptType === 'ready');
+
+  if (syncScripts.length > 0) {
+    context.scriptContent = syncScripts.map((b) => b.content).join('\n\n');
+  }
+  if (initScripts.length > 0) {
+    context.initScriptContent = initScripts.map((b) => b.content).join('\n\n');
+  }
+  if (readyScripts.length > 0) {
+    context.readyScriptContent = readyScripts.map((b) => b.content).join('\n\n');
   }
 
   // Process style blocks
@@ -677,6 +737,14 @@ function buildRenderContext(
         line: lastOauthBlock.line,
       });
     }
+  }
+
+  // Process policy blocks
+  const policyBlocks = blocks.filter((b) => b.type === 'policy');
+  if (policyBlocks.length > 0) {
+    // Use the last policy block if multiple (allows override)
+    const lastPolicyBlock = policyBlocks[policyBlocks.length - 1];
+    context.policyContent = lastPolicyBlock.content;
   }
 
   return context;

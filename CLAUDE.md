@@ -455,7 +455,7 @@ An AI agent skill for creating .melker apps is available at `skills/creating-mel
 deno task skill:zip
 ```
 
-Creates `creating-melker-apps.zip` in project root, ready for upload to claude.ai or Claude API.
+Creates `docs/skill-creating-melker-apps.zip`, available at https://melker.sh/skill-creating-melker-apps.zip
 
 ### Key Guidance in Skill
 

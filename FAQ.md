@@ -30,7 +30,7 @@ Melker isn't the right choice for:
 
 Melker's permission sandboxing is built on Deno's `--allow-read`, `--allow-net`, etc. flags. This isn't possible in Node.js without reimplementing OS-level sandboxing. We chose security and clean architecture over ecosystem size.
 
-If your organization already uses Node.js, Melker may not be the right fit. We're not trying to win market share—we're building for use cases where sandboxed execution matters.
+If your organization already uses Node.js, Melker may not be the right fit. We're not trying to win market share - we're building for use cases where sandboxed execution matters.
 
 ### Deno.bundle() is unstable. What's the migration path?
 
@@ -95,11 +95,11 @@ ncurses is a C library with:
 - terminfo database issues across platforms
 - No component model or layout engine
 
-We're not wrapping ncurses because we'd inherit its problems. The dual-buffer system isn't novel—it's the same approach ncurses uses, implemented in TypeScript with proper Unicode handling.
+We're not wrapping ncurses because we'd inherit its problems. The dual-buffer system isn't novel - it's the same approach ncurses uses, implemented in TypeScript with proper Unicode handling.
 
 ### Why flexbox instead of CSS Grid?
 
-Flexbox is one-dimensional (row OR column). Most UI layouts are hierarchical stacks with occasional horizontal sections—flexbox handles this naturally. CSS Grid is two-dimensional and better for tabular layouts, but adds complexity.
+Flexbox is one-dimensional (row OR column). Most UI layouts are hierarchical stacks with occasional horizontal sections - flexbox handles this naturally. CSS Grid is two-dimensional and better for tabular layouts, but adds complexity.
 
 We may add Grid support later if there's demand, but flexbox covers 90% of use cases with a simpler mental model.
 
@@ -128,7 +128,7 @@ Two reasons:
 1. **TypeScript type checking** catches errors at bundle time instead of runtime
 2. **Bundled output runs faster** than interpretation would
 
-The cache (`--cache` flag) makes subsequent runs instant. The default is no-cache because during development you want to see changes immediately. Watch mode (`--watch`) rebundles automatically on file changes (~200ms).
+The cache (`--cache` flag) makes subsequent runs instant. The default is no-cache because during development you want to see changes immediately. Watch mode (`--watch`) rebundles automatically on file changes (under half a second).
  
 ---
 
@@ -138,7 +138,7 @@ The cache (`--cache` flag) makes subsequent runs instant. The default is no-cach
 
 The AI assistant is **not** a replacement for screen readers. It's a supplement for cases where traditional screen readers struggle (complex context-dependent UIs).
 
-Terminal screen readers work by scraping the character buffer—there's no ARIA equivalent for terminals. We'd love to improve this but don't have a solution yet. If you have expertise in terminal accessibility, we welcome discussion.
+Terminal screen readers work by scraping the character buffer - there's no ARIA equivalent for terminals. We'd love to improve this but don't have a solution yet. If you have expertise in terminal accessibility, we welcome discussion.
 
 The AI approach has real limitations:
 
@@ -160,9 +160,10 @@ When you press F7/F8, Melker sends to OpenRouter (or your configured endpoint):
 - System information beyond what's visible in the UI
 - Files on disk (unless displayed in the UI)
 - Environment variables or other system credentials
+- Password input values (inputs with `format="password"` are masked as `****`)
 
 **Privacy considerations:**
-- If your app displays sensitive data (passwords in text fields, API keys, etc.), that data is sent to the AI
+- If your app displays sensitive data (API keys in plain text fields, etc.), that data is sent to the AI
 - For sensitive apps, disable AI features or use a self-hosted model endpoint via `MELKER_AI_ENDPOINT`
 
 The AI feature is opt-in (requires pressing F7/F8 and configuring AI endpoint and key). 
@@ -254,10 +255,10 @@ Test on multiple terminals. Accept imperfection.
 
 | Metric | Typical Value |
 |--------|---------------|
-| Keystroke-to-display latency | ~2ms (fast path) |
-| Full render cycle | ~16ms (debounced) |
-| Bundle time | ~200ms (first run, cacheable) |
-| Memory usage | ~30-50MB (Deno baseline + app) |
+| Keystroke-to-display latency | < 5ms (fast path) |
+| Full render cycle | < 20ms (debounced) |
+| Bundle time | < 500ms (first run, cacheable) |
+| Memory usage | 30-50MB (Deno baseline + app) |
 
 We haven't done rigorous benchmarking against Textual/bubbletea/ratatui. Contributions welcome.
  
@@ -274,7 +275,7 @@ We haven't done rigorous benchmarking against Textual/bubbletea/ratatui. Contrib
 | Sandboxing | Built-in policy system | None |
 | Maturity | Newer | More mature |
 | AI features | Built-in | None |
-| Startup time | ~200ms (bundle) | ~500ms (Python) |
+| Startup time | < 500ms (bundle) | < 1s (Python) |
 
 Choose Textual if you're in a Python shop and want a mature ecosystem. Choose Melker if you want TypeScript, sandboxing, or AI accessibility features.
 
@@ -307,7 +308,7 @@ General
 
 ### Who maintains this? What's the bus factor?
 
-Melker is maintained by a small team with heavy AI assistance. Most of the code, documentation, and architecture decisions were developed collaboratively with Claude (Anthropic's AI). This isn't a secret—it's core to how the project works.
+Melker is maintained by a small team with heavy AI assistance. Most of the code, documentation, and architecture decisions were developed collaboratively with Claude (Anthropic's AI). This isn't a secret - it's core to how the project works.
 
 **What this means:**
 - The `agent_docs/` folder exists because AI agents need context to contribute effectively
@@ -341,7 +342,7 @@ The headless mode disables terminal raw mode and alternate screen, allowing prog
 - Questions and help
 - Showing off what you've built
 
-Issues and Pull Requests are not currently enabled. Start a Discussion instead.
+Issues and Pull Requests are disabled. We're a small team and prefer the conversational format of Discussions.
 
 **When reporting bugs, include:**
 - Melker version (`./melker.ts --version`)
@@ -371,4 +372,4 @@ Issues and Pull Requests are not currently enabled. Start a Discussion instead.
  
 ---
 
-*Have a question not covered here? Check the docs in `agent_docs/` or open an issue.*
+*Have a question not covered here? Check the docs in `agent_docs/` or start a Discussion.*

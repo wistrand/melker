@@ -56,6 +56,17 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 </melker>
 ```
 
+**Multiple top-level elements:** You can have multiple UI elements at the top level - they are automatically wrapped in a flex column container:
+
+```xml
+<melker>
+  <text>Header</text>
+  <container style="flex: 1;">Content</container>
+  <text>Footer</text>
+</melker>
+<!-- Internally becomes: <container style="display: flex; flex-direction: column; width: 100%; height: 100%;"> ... </container> -->
+```
+
 ## Context API
 
 | API | Description |

@@ -143,6 +143,15 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
 </melker>
 ```
 
+**Multiple top-level elements** are auto-wrapped in a flex column container:
+```html
+<melker>
+  <text>Header</text>
+  <container style="flex: 1;">Content</container>
+  <text>Footer</text>
+</melker>
+```
+
 ### Available Context
 
 In event handlers and scripts:

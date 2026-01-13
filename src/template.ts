@@ -163,9 +163,9 @@ export function parseMelkerFile(content: string): MelkerParseResult {
     // Check if we have a top-level melker tag
     const rootNode = ast[0];
     if (rootNode.type === 'Tag' && rootNode.name === 'melker') {
-      // Extract scripts, title, style, oauth config, help, and find the UI element
+      // Extract scripts, title, style, oauth config, help, and find UI elements
       const scripts: Array<{ type: string; content: string; src?: string }> = [];
-      let uiElement: any = null;
+      const uiElements: any[] = [];
       let title: string | undefined = undefined;
       let stylesheet: Stylesheet | undefined = undefined;
       let oauthConfig: OAuthParseConfig | undefined = undefined;
@@ -229,15 +229,35 @@ export function parseMelkerFile(content: string): MelkerParseResult {
               // Extract inline help content (markdown)
               helpContent = child.body?.map((node: any) => node.type === 'Text' ? node.value : '').join('') || undefined;
             }
-          } else if (child.type === 'Tag' && !uiElement && !child.name.startsWith('!')) {
-            // This should be the UI element (skip comments which start with !)
-            uiElement = child;
+          } else if (child.type === 'Tag' && !child.name.startsWith('!')) {
+            // Collect UI elements (skip comments which start with !)
+            uiElements.push(child);
           }
         }
       }
 
-      if (!uiElement) {
+      if (uiElements.length === 0) {
         throw new Error('No UI element found in melker tag');
+      }
+
+      // If multiple UI elements, wrap in a synthetic container
+      let uiElement: any;
+      if (uiElements.length === 1) {
+        uiElement = uiElements[0];
+      } else {
+        // Synthetic wrapper with flex column layout, full size
+        uiElement = {
+          type: 'Tag',
+          name: 'container',
+          attributes: [
+            {
+              type: 'Attribute',
+              name: { value: 'style' },
+              value: { value: 'display: flex; flex-direction: column; width: 100%; height: 100%;' }
+            }
+          ],
+          body: uiElements,
+        };
       }
 
       // Convert the UI element to Element using existing parsing logic

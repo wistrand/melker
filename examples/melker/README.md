@@ -45,7 +45,7 @@ deno run --allow-all melker.ts examples/melker/counter.melker
 | `tabs_demo.melker` | Tabbed interface component |
 | `textarea_demo.melker` | Multi-line text input |
 | `textarea_scrollable.melker` | Textarea in scrollable container |
-| `markdown_viewer.melker` | Markdown rendering |
+| `markdown_viewer.melker` | Markdown rendering with image support |
 
 ## Layout Examples
 

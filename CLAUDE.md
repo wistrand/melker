@@ -131,7 +131,7 @@ src/
     img.ts            - Image component (extends canvas)
     video.ts          - Video playback
     progress.ts       - Progress bar (extends Canvas)
-    markdown.ts       - Markdown rendering
+    markdown.ts       - Markdown rendering with image support
     color-utils.ts    - RGBA color utilities
     filterable-list/  - Filterable list components
       mod.ts          - Module exports

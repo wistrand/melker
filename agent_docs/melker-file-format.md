@@ -355,7 +355,7 @@ See `examples/melker/` for complete examples:
 - `image_demo.melker` - Image component with fixed and percentage dimensions
 - `data_url_image.melker` - Inline base64-encoded images (data URLs)
 - `chrome_collapse_demo.melker` - Progressive chrome collapse when space is tight
-- `markdown_viewer.melker` - Markdown rendering
+- `markdown_viewer.melker` - Markdown rendering with image support
 - `combobox_simple.melker` - Basic combobox dropdown
 - `combobox_demo.melker` - Full combobox features
 - `select_simple.melker` - Basic select dropdown

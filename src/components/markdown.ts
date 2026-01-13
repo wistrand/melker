@@ -786,6 +786,14 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    * Render paragraph node
    */
   private _renderParagraph(node: Paragraph, ctx: MarkdownRenderContext): number {
+    // For image-only paragraphs, convert to <img> tag and use exact same path as HTML img
+    if (node.children.length === 1 && node.children[0].type === 'image') {
+      const img = node.children[0] as Image;
+      const alt = img.alt ? ` alt="${img.alt}"` : '';
+      const htmlNode = { type: 'html', value: `<img src="${img.url}"${alt} width="100%">` } as Html;
+      return this._renderHtml(htmlNode, ctx);
+    }
+
     const height = this._renderInlineElements(node.children, ctx);
 
     // Add spacing after paragraph only if not inside a list item
@@ -2047,7 +2055,9 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    * Render markdown image node ![alt](url)
    */
   private _renderImage(node: Image, ctx: MarkdownRenderContext): number {
-    return this._renderImageElement(node.url, node.alt, undefined, undefined, ctx);
+    // Use available width so aspect ratio is calculated correctly
+    const width = ctx.bounds.width;
+    return this._renderImageElement(node.url, node.alt, width, undefined, ctx);
   }
 
   /**
@@ -2176,12 +2186,16 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
           this._imageAspectRatios.set(resolvedSrc, aspectRatio);
           logger.debug('Cached image aspect ratio', { resolvedSrc, aspectRatio });
 
-          // If this is a new aspect ratio and width was specified without height,
-          // we need to invalidate the cache and re-render with correct dimensions
-          if (previousAspect === undefined && width !== undefined && height === undefined) {
-            // Remove the old cache entry (wrong dimensions)
-            this._imageCanvases.delete(cacheKey);
-            logger.debug('Invalidating canvas cache for aspect ratio update', { cacheKey });
+          // If this is a new aspect ratio, reset height stabilization to allow re-layout
+          if (previousAspect === undefined) {
+            this._heightStabilized = false;
+            logger.debug('Reset height stabilization for new image aspect ratio');
+
+            // Invalidate the cache and re-render with correct dimensions
+            if (width !== undefined && height === undefined) {
+              this._imageCanvases.delete(cacheKey);
+              logger.debug('Invalidating canvas cache for aspect ratio update', { cacheKey });
+            }
           }
         }
 

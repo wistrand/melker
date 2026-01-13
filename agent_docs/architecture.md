@@ -20,7 +20,7 @@
 | Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars, onPaint, onShader, dither modes |
 | Img | `src/components/img.ts` | Image display (extends Canvas), supports PNG/JPEG/GIF |
 | Video | `src/components/video.ts` | Video playback (extends Canvas), stopped on engine exit |
-| Markdown | `src/components/markdown.ts` | Markdown text rendering |
+| Markdown | `src/components/markdown.ts` | Markdown text rendering with image support (`![alt](url)`) |
 | Checkbox | `src/components/checkbox.ts` | Toggle checkbox |
 | Radio | `src/components/radio.ts` | Radio button |
 | List | `src/components/list.ts` | List container |

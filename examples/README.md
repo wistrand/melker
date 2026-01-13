@@ -47,7 +47,7 @@ deno run --allow-all examples/ts/minimal_example.ts
 | `analog_clock_demo.ts` | Canvas-based analog clock |
 | `canvas_graphics_demo.ts` | Canvas drawing primitives |
 | `list_demo.ts` | List component example |
-| `markdown_template_viewer.ts` | Markdown rendering |
+| `markdown_template_viewer.ts` | Markdown rendering with image support |
 
 ```bash
 # Run a template example

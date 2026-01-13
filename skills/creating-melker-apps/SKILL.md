@@ -150,7 +150,7 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `<select>` | value, onSelect | Dropdown picker |
 | `<autocomplete>` | placeholder, onSearch, onSelect, debounce | Async search dropdown |
 | `<command-palette>` | open, onSelect, width | Modal command picker |
-| `<markdown>` | src, text, onLink | Markdown rendering |
+| `<markdown>` | src, text, onLink, enableGfm | Markdown rendering with image support |
 | `<slider>` | min, max, value, step, onChange | Range input |
 | `<progress>` | value, max, showValue, indeterminate | Progress bar |
 | `<data-table>` | columns, rows, selectable, onSelect | Array-based table |

@@ -62,12 +62,19 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
   /** Map of dropdown row Y position to option index (null = group header) */
   private _rowToOptionIndex: Map<number, number | null> = new Map();
 
+  private static _autoIdCounter = 0;
+
   constructor(props: SelectProps = {}, children: Element[] = []) {
     const defaultProps: SelectProps = {
       filter: 'none', // No filtering for select
       maxVisible: 8,
       ...props,
     };
+
+    // Auto-generate ID if not provided (needed for hit testing)
+    if (!defaultProps.id) {
+      defaultProps.id = `select-auto-${SelectElement._autoIdCounter++}`;
+    }
 
     super('select', defaultProps, children);
   }
@@ -225,9 +232,9 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
       foreground: getThemeColor('textMuted'),
     });
 
-    // Show focus cursor at start
+    // Show focus cursor at start of text
     if (isFocused && !this.props.open) {
-      buffer.currentBuffer.setCell(bounds.x, bounds.y, {
+      buffer.currentBuffer.setCell(bounds.x + 1, bounds.y, {
         char: truncatedText[0] || ' ',
         foreground: triggerStyle.foreground,
         background: triggerStyle.background,
@@ -584,30 +591,27 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     return this.handleKeyPress(event);
   }
 
-  // Click handling
-  handleClick(event: ClickEvent): boolean {
-    if (!this._triggerBounds) return false;
+  // Click handling - toggle dropdown on any click (hit testing already confirmed click is on this element)
+  handleClick(_event: ClickEvent): boolean {
+    if (this.props.disabled) return false;
 
-    const { x, y } = event.position;
-
-    // Check if click is on trigger
-    if (x >= this._triggerBounds.x && x < this._triggerBounds.x + this._triggerBounds.width &&
-        y >= this._triggerBounds.y && y < this._triggerBounds.y + this._triggerBounds.height) {
-      // Toggle dropdown
-      if (this.props.open) {
-        this.close();
-      } else {
-        this.open();
-      }
-      return true;
+    // Toggle dropdown
+    if (this.props.open) {
+      this.close();
+    } else {
+      this.open();
     }
-
-    return false;
+    return true;
   }
 
   // Focusable interface
   override canReceiveFocus(): boolean {
     return this.props.disabled !== true;
+  }
+
+  // Capture all clicks - don't let children (options) receive clicks
+  capturesFocusForChildren(): boolean {
+    return true;
   }
 
   // Interactive interface

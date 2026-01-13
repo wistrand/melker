@@ -311,8 +311,8 @@ export class HitTester {
     const isTable = element.type === 'table';
     const tableForChildren = isTable ? element : containingTable;
 
-    // Log for table and container elements
-    if (isTable || element.type === 'container') {
+    // Log for table, container, select, and combobox elements
+    if (isTable || element.type === 'container' || element.type === 'select' || element.type === 'combobox') {
       const isInt = this.isInteractiveElement(element);
       logger.debug(`Hit test ${element.type}: id=${element.id}, pos=(${x},${y}), hasBounds=${!!bounds}, bounds=${bounds ? `(${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}` : 'none'}, inBounds=${bounds ? pointInBounds(x, y, bounds) : false}, isInteractive=${isInt}`);
     }

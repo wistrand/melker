@@ -1,4 +1,108 @@
 <melker>
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; background-color: black; color: white;">
+
+    <!-- Header -->
+    <container style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: thin; border-color: gray;">
+      <text style="font-weight: bold; color: cyan; text-align: left;">⚡ Enterprise Analog Clock v1.0.0</text>
+      <text id="timezoneDisplay" style="color: yellow; text-align: right;">Zone: UTC</text>
+    </container>
+
+    <!-- Main clock area -->
+    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center; border: thin; border-color: gray;">
+      <canvas
+        id="clockCanvas"
+        width="48"
+        height="12"
+        style="width: fill; height: fill; background-color: black;"
+        onPaint="$app.drawAnalogClock(event.canvas)"
+      />
+    </container>
+
+    <!-- Digital time display -->
+    <text id="digitalTime" style="font-weight: bold; font-size: large; text-align: center; color: white;">
+      00:00:00
+    </text>
+
+    <!-- Control panel -->
+    <container style="display: flex; flex-direction: row; justify-content: center; gap: 1;">
+      <button
+        id="startBtn"
+        label="Start"
+        style="background-color: green; color: white; padding: 1;"
+        onClick="$app.toggleClock();"
+      />
+
+      <button
+        label="Timezone"
+        style="background-color: blue; color: white; padding: 1;"
+        onClick="$app.cycleTimezone();"
+      />
+
+      <button
+        label="Theme"
+        style="background-color: purple; color: white; padding: 1;"
+        onClick="$app.cycleTheme();"
+      />
+
+      <button
+        id="secondsBtn"
+        label="Hide Seconds"
+        style="background-color: blue; color: white; padding: 1;"
+        onClick="$app.toggleSeconds();"
+      />
+    </container>
+
+    <!-- Settings panel -->
+    <container style="display: flex; flex-direction: row; justify-content: center; gap: 1;">
+      <button
+        id="digitalBtn"
+        label="Hide Digital"
+        style="background-color: purple; color: white; padding: 1;"
+        onClick="$app.toggleDigital();"
+      />
+
+      <button
+        id="formatBtn"
+        label="24 Hour"
+        style="background-color: gray; color: white; padding: 1;"
+        onClick="$app.toggle24Hour();"
+      />
+
+      <button
+        id="rateBtn"
+        label="Rate: 1000ms"
+        style="background-color: orange; color: white; padding: 1;"
+        onClick="$app.adjustRefreshRate();"
+      />
+
+      <button
+        id="statsBtn"
+        label="Show Stats"
+        style="background-color: gray; color: white; padding: 1;"
+        onClick="$app.toggleStatistics();"
+      />
+
+      <button
+        label="Exit"
+        style="background-color: red; color: white; padding: 1;"
+        onClick="$melker.exit();"
+      />
+    </container>
+
+    <!-- Statistics display (hidden by default) -->
+    <text id="statistics" style="color: cyan; text-align: center; font-size: small; display: none;">
+      Statistics will appear here
+    </text>
+
+    <!-- Footer -->
+    <container style="border-top: thin; border-color: gray;">
+      <text style="color: gray; text-align: center; font-size: small;">
+        🚀 Enterprise-grade terminal clock with timezone support, themes, and real-time statistics
+      </text>
+    </container>
+
+  </container>
+
   <script type="typescript">
     /**
      * Enterprise Analog Clock Application
@@ -471,108 +575,4 @@
   <script type="typescript" async="ready">
     $app.init();
   </script>
-
-  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; background-color: black; color: white;">
-
-    <!-- Header -->
-    <container style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: thin; border-color: gray;">
-      <text style="font-weight: bold; color: cyan; text-align: left;">⚡ Enterprise Analog Clock v1.0.0</text>
-      <text id="timezoneDisplay" style="color: yellow; text-align: right;">Zone: UTC</text>
-    </container>
-
-    <!-- Main clock area -->
-    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center; border: thin; border-color: gray;">
-      <canvas
-        id="clockCanvas"
-        width="48"
-        height="12"
-        style="width: fill; height: fill; background-color: black;"
-        onPaint="$app.drawAnalogClock(event.canvas)"
-      />
-    </container>
-
-    <!-- Digital time display -->
-    <text id="digitalTime" style="font-weight: bold; font-size: large; text-align: center; color: white;">
-      00:00:00
-    </text>
-
-    <!-- Control panel -->
-    <container style="display: flex; flex-direction: row; justify-content: center; gap: 1;">
-      <button
-        id="startBtn"
-        label="Start"
-        style="background-color: green; color: white; padding: 1;"
-        onClick="$app.toggleClock();"
-      />
-
-      <button
-        label="Timezone"
-        style="background-color: blue; color: white; padding: 1;"
-        onClick="$app.cycleTimezone();"
-      />
-
-      <button
-        label="Theme"
-        style="background-color: purple; color: white; padding: 1;"
-        onClick="$app.cycleTheme();"
-      />
-
-      <button
-        id="secondsBtn"
-        label="Hide Seconds"
-        style="background-color: blue; color: white; padding: 1;"
-        onClick="$app.toggleSeconds();"
-      />
-    </container>
-
-    <!-- Settings panel -->
-    <container style="display: flex; flex-direction: row; justify-content: center; gap: 1;">
-      <button
-        id="digitalBtn"
-        label="Hide Digital"
-        style="background-color: purple; color: white; padding: 1;"
-        onClick="$app.toggleDigital();"
-      />
-
-      <button
-        id="formatBtn"
-        label="24 Hour"
-        style="background-color: gray; color: white; padding: 1;"
-        onClick="$app.toggle24Hour();"
-      />
-
-      <button
-        id="rateBtn"
-        label="Rate: 1000ms"
-        style="background-color: orange; color: white; padding: 1;"
-        onClick="$app.adjustRefreshRate();"
-      />
-
-      <button
-        id="statsBtn"
-        label="Show Stats"
-        style="background-color: gray; color: white; padding: 1;"
-        onClick="$app.toggleStatistics();"
-      />
-
-      <button
-        label="Exit"
-        style="background-color: red; color: white; padding: 1;"
-        onClick="$melker.exit();"
-      />
-    </container>
-
-    <!-- Statistics display (hidden by default) -->
-    <text id="statistics" style="color: cyan; text-align: center; font-size: small; display: none;">
-      Statistics will appear here
-    </text>
-
-    <!-- Footer -->
-    <container style="border-top: thin; border-color: gray;">
-      <text style="color: gray; text-align: center; font-size: small;">
-        🚀 Enterprise-grade terminal clock with timezone support, themes, and real-time statistics
-      </text>
-    </container>
-
-  </container>
 </melker>

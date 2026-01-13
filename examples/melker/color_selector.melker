@@ -72,6 +72,66 @@ The selected color is displayed in three formats:
     }
   </style>
 
+  <container id="root" style="border: thin; display: flex; flex-direction: column">
+    <text id="header">Color Selector (click to pick)</text>
+
+    <container id="main">
+      <container id="palette-container" style="border: thick">
+        <text class="label">Hue / Saturation:</text>
+        <canvas
+          id="hue-sat-canvas"
+          width="72"
+          height="24"
+          dither="auto"
+          onPaint="$app.paintHueSatPalette(event)"
+          onClick="$app.handlePaletteClick(event)"
+        />
+
+        <text class="label">Lightness:</text>
+        <canvas
+          id="lightness-canvas"
+          width="72"
+          height="2"
+          dither="auto"
+          onPaint="$app.paintLightnessPalette(event)"
+          onClick="$app.handleLightnessClick(event)"
+        />
+      </container>
+
+      <container id="info-panel" style="border: thin">
+        <text class="label">Selected Color:</text>
+        <container id="preview" style="background-color: #ff0000;">
+          <text id="preview-text" style="color: white;">#ff0000</text>
+        </container>
+
+        <container id="color-values">
+          <text class="label">Hex:</text>
+          <text id="hex-value">#ff0000</text>
+
+          <text class="label">RGB:</text>
+          <text id="rgb-value">rgb(255, 0, 0)</text>
+
+          <text class="label">HSL:</text>
+          <text id="hsl-value">hsl(0, 100%, 50%)</text>
+        </container>
+
+        <button label="Copy Hex" onClick="
+          const hex = $melker.getElementById('hex-value');
+          if (hex) {
+            const success = await $melker.copyToClipboard(hex.getValue());
+            if (success) {
+              alert('Copied: ' + hex.getValue());
+            } else {
+              alert('Failed to copy (no clipboard tool available)');
+            }
+          }
+        " />
+      </container>
+    </container>
+
+    <text style="color: gray;">Run with MELKER_THEME=fullcolor-dark for best result. Press Ctrl+C to exit.</text>
+  </container>
+
   <script type="typescript">
     let selectedHue = 0;
     let selectedSat = 100;
@@ -220,63 +280,4 @@ The selected color is displayed in three formats:
 
   </script>
 
-  <container id="root" style="border: thin; display: flex; flex-direction: column">
-    <text id="header">Color Selector (click to pick)</text>
-
-    <container id="main">
-      <container id="palette-container" style="border: thick">
-        <text class="label">Hue / Saturation:</text>
-        <canvas
-          id="hue-sat-canvas"
-          width="72"
-          height="24"
-          dither="auto"
-          onPaint="$app.paintHueSatPalette(event)"
-          onClick="$app.handlePaletteClick(event)"
-        />
-
-        <text class="label">Lightness:</text>
-        <canvas
-          id="lightness-canvas"
-          width="72"
-          height="2"
-          dither="auto"
-          onPaint="$app.paintLightnessPalette(event)"
-          onClick="$app.handleLightnessClick(event)"
-        />
-      </container>
-
-      <container id="info-panel" style="border: thin">
-        <text class="label">Selected Color:</text>
-        <container id="preview" style="background-color: #ff0000;">
-          <text id="preview-text" style="color: white;">#ff0000</text>
-        </container>
-
-        <container id="color-values">
-          <text class="label">Hex:</text>
-          <text id="hex-value">#ff0000</text>
-
-          <text class="label">RGB:</text>
-          <text id="rgb-value">rgb(255, 0, 0)</text>
-
-          <text class="label">HSL:</text>
-          <text id="hsl-value">hsl(0, 100%, 50%)</text>
-        </container>
-
-        <button label="Copy Hex" onClick="
-          const hex = $melker.getElementById('hex-value');
-          if (hex) {
-            const success = await $melker.copyToClipboard(hex.getValue());
-            if (success) {
-              alert('Copied: ' + hex.getValue());
-            } else {
-              alert('Failed to copy (no clipboard tool available)');
-            }
-          }
-        " />
-      </container>
-    </container>
-
-    <text style="color: gray;">Run with MELKER_THEME=fullcolor-dark for best result. Press Ctrl+C to exit.</text>
-  </container>
 </melker>

@@ -58,6 +58,7 @@ export class ElementClickHandler {
 
     // Handle clicks on Clickable elements (button, checkbox, radio, etc.)
     // Note: markdown has handleClick but with different signature (x, y) - handled separately below
+    this._deps.logger?.debug(`Checking isClickable for ${element.type}/${element.id}: ${isClickable(element)}`);
     if (isClickable(element) && element.type !== 'markdown') {
       const clickEvent: ClickEvent = {
         type: 'click',
@@ -66,7 +67,9 @@ export class ElementClickHandler {
         timestamp: Date.now(),
       };
 
+      this._deps.logger?.debug(`Calling handleClick on ${element.type}/${element.id}`);
       const handled = element.handleClick(clickEvent, this._deps.document);
+      this._deps.logger?.debug(`handleClick returned: ${handled}`);
 
       if (handled && this._deps.autoRender) {
         this._deps.onRender();

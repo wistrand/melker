@@ -1,4 +1,77 @@
 <melker>
+  <container style="width: fill; height: fill; padding: 2; display: flex; flex-direction: column; background-color: black;">
+    <!-- Header -->
+    <text style="color: cyan; font-weight: bold; text-align: center; margin-bottom: 1;">
+      Flexbox Visualizer
+    </text>
+
+    <text style="color: gray; text-align: center; margin-bottom: 2; font-size: 11;">
+      Simple visualization of flexbox layout properties
+    </text>
+
+    <!-- Example Title and Counter -->
+    <text id="exampleTitle" style="color: cyan; font-weight: bold; margin-bottom: 1;">
+      flex-direction: row
+    </text>
+
+    <text id="exampleCounter" style="color: gray; margin-bottom: 1;">
+      Example 1 of 8
+    </text>
+
+    <text id="description" style="color: gray; margin-bottom: 2;">
+      Items flow horizontally
+    </text>
+
+    <!-- Visualization Container -->
+    <container
+      id="flexContainer"
+      style="
+        display: flex;
+        flex-direction: row;
+        height: 8;
+        width: 60;
+        border: thin;
+        border-color: cyan;
+        padding: 1;
+        margin-bottom: 2;
+      "
+    >
+      <text style="background-color: red; padding: 1; width: 10;">1</text>
+      <text style="background-color: yellow; padding: 1; width: 10;">2</text>
+      <text style="background-color: green; padding: 1; width: 10;">3</text>
+    </container>
+
+    <!-- Property Info -->
+    <container style="border: thin; border-color: gray; padding: 1; margin-bottom: 2; width: 60;">
+      <text style="color: cyan; margin-bottom: 1;">Flexbox Properties:</text>
+      <text style="color: gray;">flex-direction: row | column | row-reverse | column-reverse</text>
+      <text style="color: gray;">flex-wrap: nowrap | wrap | wrap-reverse</text>
+      <text style="color: gray;">justify-content: flex-start | center | space-between | ...</text>
+      <text style="color: gray;">align-items: stretch | center | flex-start | flex-end</text>
+      <text style="color: gray;">gap: spacing between items</text>
+    </container>
+
+    <!-- Controls -->
+    <container style="display: flex; flex-direction: row; gap: 2;">
+      <button
+        label="Previous"
+        style="width: 15; height: 3; background-color: blue;"
+        onClick="$app.prevExample();"
+      />
+
+      <button
+        label="Next"
+        style="width: 15; height: 3; background-color: blue;"
+        onClick="$app.nextExample();"
+      />
+    </container>
+
+    <!-- Help Text -->
+    <text style="color: gray; margin-top: 2; text-align: center;">
+      Use buttons to cycle through examples | Press Q to exit
+    </text>
+  </container>
+
   <script type="typescript">
     let currentExample = 0;
 
@@ -73,77 +146,4 @@
     }
 
   </script>
-
-  <container style="width: fill; height: fill; padding: 2; display: flex; flex-direction: column; background-color: black;">
-    <!-- Header -->
-    <text style="color: cyan; font-weight: bold; text-align: center; margin-bottom: 1;">
-      Flexbox Visualizer
-    </text>
-
-    <text style="color: gray; text-align: center; margin-bottom: 2; font-size: 11;">
-      Simple visualization of flexbox layout properties
-    </text>
-
-    <!-- Example Title and Counter -->
-    <text id="exampleTitle" style="color: cyan; font-weight: bold; margin-bottom: 1;">
-      flex-direction: row
-    </text>
-
-    <text id="exampleCounter" style="color: gray; margin-bottom: 1;">
-      Example 1 of 8
-    </text>
-
-    <text id="description" style="color: gray; margin-bottom: 2;">
-      Items flow horizontally
-    </text>
-
-    <!-- Visualization Container -->
-    <container
-      id="flexContainer"
-      style="
-        display: flex;
-        flex-direction: row;
-        height: 8;
-        width: 60;
-        border: thin;
-        border-color: cyan;
-        padding: 1;
-        margin-bottom: 2;
-      "
-    >
-      <text style="background-color: red; padding: 1; width: 10;">1</text>
-      <text style="background-color: yellow; padding: 1; width: 10;">2</text>
-      <text style="background-color: green; padding: 1; width: 10;">3</text>
-    </container>
-
-    <!-- Property Info -->
-    <container style="border: thin; border-color: gray; padding: 1; margin-bottom: 2; width: 60;">
-      <text style="color: cyan; margin-bottom: 1;">Flexbox Properties:</text>
-      <text style="color: gray;">flex-direction: row | column | row-reverse | column-reverse</text>
-      <text style="color: gray;">flex-wrap: nowrap | wrap | wrap-reverse</text>
-      <text style="color: gray;">justify-content: flex-start | center | space-between | ...</text>
-      <text style="color: gray;">align-items: stretch | center | flex-start | flex-end</text>
-      <text style="color: gray;">gap: spacing between items</text>
-    </container>
-
-    <!-- Controls -->
-    <container style="display: flex; flex-direction: row; gap: 2;">
-      <button
-        label="Previous"
-        style="width: 15; height: 3; background-color: blue;"
-        onClick="$app.prevExample();"
-      />
-
-      <button
-        label="Next"
-        style="width: 15; height: 3; background-color: blue;"
-        onClick="$app.nextExample();"
-      />
-    </container>
-
-    <!-- Help Text -->
-    <text style="color: gray; margin-top: 2; text-align: center;">
-      Use buttons to cycle through examples | Press Q to exit
-    </text>
-  </container>
 </melker>

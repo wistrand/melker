@@ -1,4 +1,64 @@
 <melker>
+  <container style="border: thin; border-color: magenta; width: fill; height: fill; display: flex; flex-direction: column; background-color: blue; color: white;">
+
+    <!-- Header -->
+    <container style="background-color: magenta; color: white; font-weight: bold; padding: 1; border-bottom: thin; border-color: magenta; flex: 0 0 auto; flex-direction: row">
+      <text text="Procrastinate Pro" style="font-weight: bold;" />
+      <text id="score" text="Score: 0" style="font-weight: bold;" />
+    </container>
+
+    <!-- Toast Message Area -->
+    <text id="toast" text="" style="padding: 1; font-weight: bold; height: 1; background-color: brightBlack;" />
+
+    <!-- Main Content Area (side by side) -->
+    <container style="flex: 1 1 0; display: flex; flex-direction: row; flex-wrap: wrap">
+
+      <!-- Left Side - Draft Creation (1/3 width) -->
+      <container style="flex: 1 1 0; display: flex; flex-direction: column; border-right: thin; border-color: gray; background-color: brightBlack; padding: 1;">
+
+        <text text="Create New Draft" style="color: yellow; font-weight: bold; margin-bottom: 1;" />
+
+        <text text="What to avoid:" style="color: gray; margin-bottom: 1;" />
+        <input id="draft-input" placeholder="What do you want to avoid doing today?"
+               style="background-color: blue; color: white; margin-bottom: 1;" />
+
+        <text text="Deadline:" style="color: gray; margin-bottom: 1;" />
+        <input id="deadline-input" type="time" value=""
+               style="background-color: blue; color: white; margin-bottom: 1;" />
+
+        <button id="create-draft-btn" label="Create Draft"
+                style="background-color: magenta; color: white; border: thin; border-color: brightMagenta; padding: 1; margin-bottom: 1;"
+                onClick="$app.createDraft()" />
+
+        <text text="Tip: Default deadline is 1hr from now" style="color: gray; font-size: small; margin-bottom: 1;" />
+
+        <!-- FAQ Section -->
+        <container style="border-top: thin; border-color: gray; padding-top: 1; margin-top: 1;">
+          <text text="FAQ" style="color: yellow; font-weight: bold; margin-bottom: 1;" />
+          <text text="Q: Why can't I finish tasks?" style="color: yellow; margin-bottom: 1;" />
+          <text text="A: This is who you are now. Embrace it." style="color: gray; margin-bottom: 1;" />
+          <text text="What if everything expires?" style="color: yellow; margin-bottom: 1;" />
+          <text text="A: Perfect! You're becoming a procrastination master." style="color: gray;" />
+        </container>
+      </container>
+
+      <!-- Right Side - Drafts List (2/3 width) -->
+      <container style="flex: 2 1 0; display: flex; flex-direction: column; padding: 1;">
+
+        <text text="Your Procrastination Drafts" style="color: cyan; font-weight: bold; margin-bottom: 1;" />
+
+        <!-- Scrollable Drafts List -->
+        <container id="drafts-list" scrollable="true" style="flex: 1 1 0; flex-direction: column; border: thin; border-color: gray; padding: 1;">
+          <!-- Dynamic content will be inserted here by JavaScript -->
+        </container>
+
+        <text text="Click buttons to snooze drafts or give up on expired ones" style="color: gray; font-size: small; margin-top: 1;" />
+      </container>
+
+    </container>
+
+  </container>
+
   <script type="typescript">
 let procrastinationScore = 0;
 let drafts = [];
@@ -449,64 +509,4 @@ export function init() {
   <script type="typescript" async="ready">
     $app.init();
   </script>
-
-  <container style="border: thin; border-color: magenta; width: fill; height: fill; display: flex; flex-direction: column; background-color: blue; color: white;">
-
-    <!-- Header -->
-    <container style="background-color: magenta; color: white; font-weight: bold; padding: 1; border-bottom: thin; border-color: magenta; flex: 0 0 auto; flex-direction: row">
-      <text text="Procrastinate Pro" style="font-weight: bold;" />
-      <text id="score" text="Score: 0" style="font-weight: bold;" />
-    </container>
-
-    <!-- Toast Message Area -->
-    <text id="toast" text="" style="padding: 1; font-weight: bold; height: 1; background-color: brightBlack;" />
-
-    <!-- Main Content Area (side by side) -->
-    <container style="flex: 1 1 0; display: flex; flex-direction: row; flex-wrap: wrap">
-
-      <!-- Left Side - Draft Creation (1/3 width) -->
-      <container style="flex: 1 1 0; display: flex; flex-direction: column; border-right: thin; border-color: gray; background-color: brightBlack; padding: 1;">
-
-        <text text="Create New Draft" style="color: yellow; font-weight: bold; margin-bottom: 1;" />
-
-        <text text="What to avoid:" style="color: gray; margin-bottom: 1;" />
-        <input id="draft-input" placeholder="What do you want to avoid doing today?"
-               style="background-color: blue; color: white; margin-bottom: 1;" />
-
-        <text text="Deadline:" style="color: gray; margin-bottom: 1;" />
-        <input id="deadline-input" type="time" value=""
-               style="background-color: blue; color: white; margin-bottom: 1;" />
-
-        <button id="create-draft-btn" label="Create Draft"
-                style="background-color: magenta; color: white; border: thin; border-color: brightMagenta; padding: 1; margin-bottom: 1;"
-                onClick="$app.createDraft()" />
-
-        <text text="Tip: Default deadline is 1hr from now" style="color: gray; font-size: small; margin-bottom: 1;" />
-
-        <!-- FAQ Section -->
-        <container style="border-top: thin; border-color: gray; padding-top: 1; margin-top: 1;">
-          <text text="FAQ" style="color: yellow; font-weight: bold; margin-bottom: 1;" />
-          <text text="Q: Why can't I finish tasks?" style="color: yellow; margin-bottom: 1;" />
-          <text text="A: This is who you are now. Embrace it." style="color: gray; margin-bottom: 1;" />
-          <text text="Q: What if everything expires?" style="color: yellow; margin-bottom: 1;" />
-          <text text="A: Perfect! You're becoming a procrastination master." style="color: gray;" />
-        </container>
-      </container>
-
-      <!-- Right Side - Drafts List (2/3 width) -->
-      <container style="flex: 2 1 0; display: flex; flex-direction: column; padding: 1;">
-
-        <text text="Your Procrastination Drafts" style="color: cyan; font-weight: bold; margin-bottom: 1;" />
-
-        <!-- Scrollable Drafts List -->
-        <container id="drafts-list" scrollable="true" style="flex: 1 1 0; flex-direction: column; border: thin; border-color: gray; padding: 1;">
-          <!-- Dynamic content will be inserted here by JavaScript -->
-        </container>
-
-        <text text="Click buttons to snooze drafts or give up on expired ones" style="color: gray; font-size: small; margin-top: 1;" />
-      </container>
-
-    </container>
-
-  </container>
 </melker>

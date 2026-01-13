@@ -9,6 +9,28 @@
   }
   </policy>
 
+  <container style="width: fill; height: fill; display: flex; flex-direction: column;">
+    <container style="width: fill; height: fill;">
+      <img
+        id="perspexCanvas"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.perspexShader"
+        shaderFps="24"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: #1a0a00;">
+      <text style="color: #ff6622;">Perspex Web Lattice - 2nd Order Voronoi</text>
+      <button
+        label="Exit"
+        onClick="$melker.exit();"
+      />
+    </container>
+  </container>
+
   <script type="typescript">
     // Perspex Web Lattice - Optimized version
     // Raymarched 2nd order Voronoi with dark perspex web and fiery cells
@@ -193,26 +215,4 @@
       ];
     };
   </script>
-
-  <container style="width: fill; height: fill; display: flex; flex-direction: column;">
-    <container style="width: fill; height: fill;">
-      <img
-        id="perspexCanvas"
-        src="../../media/melker-128.png"
-        width="100%"
-        height="100%"
-        dither="auto"
-        onShader="$app.perspexShader"
-        shaderFps="24"
-      />
-    </container>
-
-    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center; background-color: #1a0a00;">
-      <text style="color: #ff6622;">Perspex Web Lattice - 2nd Order Voronoi</text>
-      <button
-        label="Exit"
-        onClick="$melker.exit();"
-      />
-    </container>
-  </container>
 </melker>

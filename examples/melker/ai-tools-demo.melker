@@ -1,4 +1,58 @@
 <melker>
+  <policy>
+  {
+    "name": "AI Tools Demo",
+    "description": "Demonstrates custom AI tools for file listing, counter control, and logging",
+    "permissions": {
+      "read": ["."],
+      "ai": true
+    }
+  }
+  </policy>
+
+  <container style="display: flex; flex-direction: column; height: fill; padding: 1; gap: 1">
+    <text text="AI Tools Demo" style="bold: true; color: cyan" />
+    <text text="Press Alt+H to open the AI assistant and try:" style="color: gray" />
+    <text text="  - list files in the current directory" style="color: gray" />
+    <text text="  - set counter to 100" style="color: gray" />
+    <text text="  - add log message hello world" style="color: gray" />
+
+    <container style="display: flex; flex-direction: row; gap: 2; margin-top: 1">
+      <container style="display: flex; flex-direction: column; flex: 1; border: thin; padding: 1">
+        <text text="Counter" style="bold: true" />
+        <text id="counter" text="0" />
+        <container style="display: flex; flex-direction: row; gap: 1; margin-top: 1">
+          <button id="decrement" label="-" onClick="
+            var el = $melker.getElementById('counter');
+            if (el) el.setValue(String((parseInt(el.getValue()) || 0) - 1));
+          " />
+          <button id="increment" label="+" onClick="
+            var el = $melker.getElementById('counter');
+            if (el) el.setValue(String((parseInt(el.getValue()) || 0) + 1));
+          " />
+          <button id="reset" label="Reset" onClick="
+            var el = $melker.getElementById('counter');
+            if (el) el.setValue('0');
+          " />
+        </container>
+      </container>
+
+      <container style="flex: 2; border: thin; padding: 1">
+        <text text="Activity Log" style="bold: true" />
+        <container scrollable="true" style="height: 6; overflow: scroll">
+          <text id="activity-log" text="(no activity yet)" style="color: gray" />
+        </container>
+      </container>
+    </container>
+
+    <container style="flex: 1; border: thin; padding: 1; margin-top: 1">
+      <text text="File Listing" style="bold: true" />
+      <container scrollable="true" style="flex: 1; overflow: scroll">
+        <text id="file-listing" text="(use AI to list files)" style="color: gray" />
+      </container>
+    </container>
+  </container>
+
   <script>
     // Tool to list files in a directory
     $melker.registerAITool({
@@ -67,47 +121,4 @@
       }
     });
   </script>
-
-  <container style="display: flex; flex-direction: column; height: fill; padding: 1; gap: 1">
-    <text text="AI Tools Demo" style="bold: true; color: cyan" />
-    <text text="Press Alt+H to open the AI assistant and try:" style="color: gray" />
-    <text text="  - list files in the current directory" style="color: gray" />
-    <text text="  - set counter to 100" style="color: gray" />
-    <text text="  - add log message hello world" style="color: gray" />
-
-    <container style="display: flex; flex-direction: row; gap: 2; margin-top: 1">
-      <container style="display: flex; flex-direction: column; flex: 1; border: thin; padding: 1">
-        <text text="Counter" style="bold: true" />
-        <text id="counter" text="0" />
-        <container style="display: flex; flex-direction: row; gap: 1; margin-top: 1">
-          <button id="decrement" label="-" onClick="
-            var el = $melker.getElementById('counter');
-            if (el) el.setValue(String((parseInt(el.getValue()) || 0) - 1));
-          " />
-          <button id="increment" label="+" onClick="
-            var el = $melker.getElementById('counter');
-            if (el) el.setValue(String((parseInt(el.getValue()) || 0) + 1));
-          " />
-          <button id="reset" label="Reset" onClick="
-            var el = $melker.getElementById('counter');
-            if (el) el.setValue('0');
-          " />
-        </container>
-      </container>
-
-      <container style="flex: 2; border: thin; padding: 1">
-        <text text="Activity Log" style="bold: true" />
-        <container scrollable="true" style="height: 6; overflow: scroll">
-          <text id="activity-log" text="(no activity yet)" style="color: gray" />
-        </container>
-      </container>
-    </container>
-
-    <container style="flex: 1; border: thin; padding: 1; margin-top: 1">
-      <text text="File Listing" style="bold: true" />
-      <container scrollable="true" style="flex: 1; overflow: scroll">
-        <text id="file-listing" text="(use AI to list files)" style="color: gray" />
-      </container>
-    </container>
-  </container>
 </melker>

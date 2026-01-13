@@ -7,6 +7,122 @@
   }
   </policy>
 
+  <container style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column; gap: 1;">
+    <text style="font-weight: bold;">Slider Component Demo</text>
+    <text style="color: gray;">Use arrow keys or click/drag to adjust values. Tab to navigate.</text>
+
+    <!-- Basic slider -->
+    <container style="border: thin; padding: 1;">
+      <text style="font-weight: bold;">Basic Slider</text>
+      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
+        <slider
+          id="basicSlider"
+          min="0"
+          max="100"
+          value="50"
+          style="width: 30;"
+          onChange="$app.updateBasic(event)"
+        />
+        <text id="basicLabel">Value: 50</text>
+      </container>
+    </container>
+
+    <!-- Slider with step -->
+    <container style="border: thin; padding: 1;">
+      <text style="font-weight: bold;">Slider with Step (step=5)</text>
+      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
+        <slider
+          id="stepSlider"
+          min="0"
+          max="50"
+          step="5"
+          value="5"
+          showValue="true"
+          style="width: 30;"
+          onChange="$app.updateStep(event)"
+        />
+        <text id="stepLabel">Step value: 5</text>
+      </container>
+    </container>
+
+    <!-- Slider with snaps -->
+    <container style="border: thin; padding: 1;">
+      <text style="font-weight: bold;">Slider with Snap Points [0, 25, 50, 75, 100]</text>
+      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
+        <slider
+          id="snapSlider"
+          min="0"
+          max="100"
+          snaps="[0, 25, 50, 75, 100]"
+          value="25"
+          showValue="true"
+          style="width: 30;"
+          onChange="$app.updateSnap(event)"
+        />
+        <text id="snapLabel">Snap value: 25%</text>
+      </container>
+    </container>
+
+    <!-- Volume slider with icon -->
+    <container style="border: thin; padding: 1;">
+      <text style="font-weight: bold;">Volume Control</text>
+      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
+        <text>Vol:</text>
+        <slider
+          id="volumeSlider"
+          min="0"
+          max="100"
+          value="75"
+          showValue="true"
+          style="width: 25;"
+          onChange="$app.updateVolume(event)"
+        />
+        <text id="volumeLabel">Volume: 75%</text>
+      </container>
+    </container>
+
+    <!-- RGB Color picker (horizontal) -->
+    <container style="border: thin; padding: 1;">
+      <text style="font-weight: bold;">RGB Color Picker</text>
+      <container style="display: flex; flex-direction: row; gap: 1;">
+        <text style="width: 2;">R:</text>
+        <slider id="redSlider" min="0" max="255" value="128" showValue="true" style="width: 20;" onChange="$app.updateRed(event)" />
+      </container>
+      <container style="display: flex; flex-direction: row; gap: 1;">
+        <text style="width: 2;">G:</text>
+        <slider id="greenSlider" min="0" max="255" value="64" showValue="true" style="width: 20;" onChange="$app.updateGreen(event)" />
+      </container>
+      <container style="display: flex; flex-direction: row; gap: 1;">
+        <text style="width: 2;">B:</text>
+        <slider id="blueSlider" min="0" max="255" value="192" showValue="true" style="width: 20;" onChange="$app.updateBlue(event)" />
+      </container>
+      <text id="colorLabel">Color: (see hex below)</text>
+    </container>
+
+    <!-- RGB Color picker (vertical sliders) -->
+    <container style="border: thin; padding: 1;">
+      <text style="font-weight: bold;">RGB Vertical Sliders</text>
+      <container style="display: flex; flex-direction: row; gap: 3; height: 8;">
+        <container style="display: flex; flex-direction: column; align-items: center;">
+          <slider id="redSliderV" min="0" max="255" value="128" orientation="vertical" style="height: 6;" onChange="$app.updateRed(event)" />
+          <text>R</text>
+        </container>
+        <container style="display: flex; flex-direction: column; align-items: center;">
+          <slider id="greenSliderV" min="0" max="255" value="64" orientation="vertical" style="height: 6;" onChange="$app.updateGreen(event)" />
+          <text>G</text>
+        </container>
+        <container style="display: flex; flex-direction: column; align-items: center;">
+          <slider id="blueSliderV" min="0" max="255" value="192" orientation="vertical" style="height: 6;" onChange="$app.updateBlue(event)" />
+          <text>B</text>
+        </container>
+      </container>
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 2; justify-content: center;">
+      <button label="Exit" onClick="$melker.exit();" />
+    </container>
+  </container>
+
   <script type="typescript">
     // Slider values
     let basicValue = 50;
@@ -64,120 +180,4 @@
       }
     }
   </script>
-
-  <container style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column; gap: 1;">
-    <text style="font-weight: bold;">Slider Component Demo</text>
-    <text style="color: gray;">Use arrow keys or click/drag to adjust values. Tab to navigate.</text>
-
-    <!-- Basic slider -->
-    <container style="border: thin; padding: 1;">
-      <text style="font-weight: bold;">Basic Slider</text>
-      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
-        <slider
-          id="basicSlider"
-          min="0"
-          max="100"
-          value="${basicValue}"
-          style="width: 30;"
-          onChange="$app.updateBasic(event)"
-        />
-        <text id="basicLabel">Value: 50</text>
-      </container>
-    </container>
-
-    <!-- Slider with step -->
-    <container style="border: thin; padding: 1;">
-      <text style="font-weight: bold;">Slider with Step (step=5)</text>
-      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
-        <slider
-          id="stepSlider"
-          min="0"
-          max="50"
-          step="5"
-          value="${stepValue}"
-          showValue="true"
-          style="width: 30;"
-          onChange="$app.updateStep(event)"
-        />
-        <text id="stepLabel">Step value: 5</text>
-      </container>
-    </container>
-
-    <!-- Slider with snaps -->
-    <container style="border: thin; padding: 1;">
-      <text style="font-weight: bold;">Slider with Snap Points [0, 25, 50, 75, 100]</text>
-      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
-        <slider
-          id="snapSlider"
-          min="0"
-          max="100"
-          snaps="[0, 25, 50, 75, 100]"
-          value="${snapValue}"
-          showValue="true"
-          style="width: 30;"
-          onChange="$app.updateSnap(event)"
-        />
-        <text id="snapLabel">Snap value: 25%</text>
-      </container>
-    </container>
-
-    <!-- Volume slider with icon -->
-    <container style="border: thin; padding: 1;">
-      <text style="font-weight: bold;">Volume Control</text>
-      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
-        <text>Vol:</text>
-        <slider
-          id="volumeSlider"
-          min="0"
-          max="100"
-          value="${volumeValue}"
-          showValue="true"
-          style="width: 25;"
-          onChange="$app.updateVolume(event)"
-        />
-        <text id="volumeLabel">Volume: 75%</text>
-      </container>
-    </container>
-
-    <!-- RGB Color picker (horizontal) -->
-    <container style="border: thin; padding: 1;">
-      <text style="font-weight: bold;">RGB Color Picker</text>
-      <container style="display: flex; flex-direction: row; gap: 1;">
-        <text style="width: 2;">R:</text>
-        <slider id="redSlider" min="0" max="255" value="${red}" showValue="true" style="width: 20;" onChange="$app.updateRed(event)" />
-      </container>
-      <container style="display: flex; flex-direction: row; gap: 1;">
-        <text style="width: 2;">G:</text>
-        <slider id="greenSlider" min="0" max="255" value="${green}" showValue="true" style="width: 20;" onChange="$app.updateGreen(event)" />
-      </container>
-      <container style="display: flex; flex-direction: row; gap: 1;">
-        <text style="width: 2;">B:</text>
-        <slider id="blueSlider" min="0" max="255" value="${blue}" showValue="true" style="width: 20;" onChange="$app.updateBlue(event)" />
-      </container>
-      <text id="colorLabel">Color: (see hex below)</text>
-    </container>
-
-    <!-- RGB Color picker (vertical sliders) -->
-    <container style="border: thin; padding: 1;">
-      <text style="font-weight: bold;">RGB Vertical Sliders</text>
-      <container style="display: flex; flex-direction: row; gap: 3; height: 8;">
-        <container style="display: flex; flex-direction: column; align-items: center;">
-          <slider id="redSliderV" min="0" max="255" value="${red}" orientation="vertical" style="height: 6;" onChange="$app.updateRed(event)" />
-          <text>R</text>
-        </container>
-        <container style="display: flex; flex-direction: column; align-items: center;">
-          <slider id="greenSliderV" min="0" max="255" value="${green}" orientation="vertical" style="height: 6;" onChange="$app.updateGreen(event)" />
-          <text>G</text>
-        </container>
-        <container style="display: flex; flex-direction: column; align-items: center;">
-          <slider id="blueSliderV" min="0" max="255" value="${blue}" orientation="vertical" style="height: 6;" onChange="$app.updateBlue(event)" />
-          <text>B</text>
-        </container>
-      </container>
-    </container>
-
-    <container style="display: flex; flex-direction: row; gap: 2; justify-content: center;">
-      <button label="Exit" onClick="$melker.exit();" />
-    </container>
-  </container>
 </melker>

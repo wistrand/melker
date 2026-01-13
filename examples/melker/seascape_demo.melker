@@ -16,6 +16,26 @@
   }
   </policy>
 
+  <container style="display: flex; flex-direction: column; width: fill; height: fill;">
+    <text style="text-align: center; font-weight: bold; margin-bottom: 1;">
+      Seascape - TDM 2014 (CC BY-NC-SA 3.0)
+    </text>
+    <container style="width: fill; height: fill;">
+      <img
+        id="seascape"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.seascapeShader"
+        shaderFps="30"
+      />
+    </container>
+    <container style="flex-direction: row; justify-content: center; gap: 2; margin-top: 1;">
+      <button onClick="$melker.exit()">Exit</button>
+    </container>
+  </container>
+
   <script type="typescript">
     // "Seascape" by Alexander Alekseev aka TDM - 2014
     // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
@@ -245,24 +265,4 @@
       ];
     };
   </script>
-
-  <container style="display: flex; flex-direction: column; width: fill; height: fill;">
-    <text style="text-align: center; font-weight: bold; margin-bottom: 1;">
-      Seascape - TDM 2014 (CC BY-NC-SA 3.0)
-    </text>
-    <container style="width: fill; height: fill;">
-      <img
-        id="seascape"
-        src="../../media/melker-128.png"
-        width="100%"
-        height="100%"
-        dither="auto"
-        onShader="$app.seascapeShader"
-        shaderFps="30"
-      />
-    </container>
-    <container style="flex-direction: row; justify-content: center; gap: 2; margin-top: 1;">
-      <button onClick="$melker.exit()">Exit</button>
-    </container>
-  </container>
 </melker>

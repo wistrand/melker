@@ -41,47 +41,6 @@ Demonstrates table cells containing various UI components.
     }
   </style>
 
-  <script>
-    // Task completion states
-    const taskStates: Record<string, boolean> = {
-      'task1': true,
-      'task2': false,
-      'task3': true,
-      'task4': false,
-      'task5': false,
-    };
-
-    export function toggleTask(taskId: string) {
-      taskStates[taskId] = !taskStates[taskId];
-      const checkbox = $melker.getElementById(taskId);
-      if (checkbox) {
-        checkbox.props.checked = taskStates[taskId];
-      }
-      updateProgress();
-    }
-
-    export function updateProgress() {
-      const completed = Object.values(taskStates).filter(v => v).length;
-      const total = Object.keys(taskStates).length;
-      const statusText = $melker.getElementById('statusText');
-      if (statusText) {
-        statusText.setValue(`Tasks: ${completed}/${total} completed`);
-      }
-    }
-
-    export function editRow(rowId: string) {
-      alert(`Editing row: ${rowId}`);
-    }
-
-    export function deleteRow(rowId: string) {
-      alert(`Delete row: ${rowId}?`);
-    }
-
-    export function viewDetails(name: string) {
-      alert(`Details for: ${name}`);
-    }
-  </script>
-
   <container id="root">
     <text id="header">Table with Components Demo</text>
 
@@ -182,5 +141,46 @@ Demonstrates table cells containing various UI components.
 
     <button label="Exit" onClick="$melker.exit()" style="margin-top: 2;" />
   </container>
+
+  <script>
+    // Task completion states
+    const taskStates: Record<string, boolean> = {
+      'task1': true,
+      'task2': false,
+      'task3': true,
+      'task4': false,
+      'task5': false,
+    };
+
+    export function toggleTask(taskId: string) {
+      taskStates[taskId] = !taskStates[taskId];
+      const checkbox = $melker.getElementById(taskId);
+      if (checkbox) {
+        checkbox.props.checked = taskStates[taskId];
+      }
+      updateProgress();
+    }
+
+    export function updateProgress() {
+      const completed = Object.values(taskStates).filter(v => v).length;
+      const total = Object.keys(taskStates).length;
+      const statusText = $melker.getElementById('statusText');
+      if (statusText) {
+        statusText.setValue(`Tasks: ${completed}/${total} completed`);
+      }
+    }
+
+    export function editRow(rowId: string) {
+      alert(`Editing row: ${rowId}`);
+    }
+
+    export function deleteRow(rowId: string) {
+      alert(`Delete row: ${rowId}?`);
+    }
+
+    export function viewDetails(name: string) {
+      alert(`Details for: ${name}`);
+    }
+  </script>
 
 </melker>

@@ -1,4 +1,53 @@
 <melker>
+  <container style="width: 40; height: 20; border: thin; padding: 2; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      🕐 Text Analog Clock
+    </text>
+
+    <container style="border: thin; padding: 1; font-family: monospace; background-color: black; color: green;">
+      <text id="clockLine0" style="text-align: center;">       </text>
+      <text id="clockLine1" style="text-align: center;">       </text>
+      <text id="clockLine2" style="text-align: center;">       </text>
+      <text id="clockLine3" style="text-align: center;">   •   </text>
+      <text id="clockLine4" style="text-align: center;">       </text>
+      <text id="clockLine5" style="text-align: center;">       </text>
+      <text id="clockLine6" style="text-align: center;">       </text>
+    </container>
+
+    <text id="digitalTime" style="font-weight: bold; margin-top: 1; color: blue; text-align: center;">
+      --:--:--
+    </text>
+
+    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 1;">
+      <button
+        label="Start Clock"
+        style="background-color: green; color: white;"
+        onClick="
+          const startBtn: any = event.target;
+          startBtn.props.label = 'Running...';
+          startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'orange' };
+          $app.startClock(context);
+        "
+      />
+
+      <button
+        label="Update Now"
+        style="background-color: blue; color: white;"
+        onClick="$app.updateClock(context);"
+      />
+
+      <button
+        label="Exit"
+        style="background-color: gray; color: white;"
+        onClick="$melker.exit();"
+      />
+    </container>
+
+    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
+      H=Hour hand, M=Minute hand, Numbers=12,3,6,9 positions
+    </text>
+  </container>
+
   <script type="typescript">
     // Simple text-based analog clock using Unicode characters
     const createClockDisplay = (): string[] => {
@@ -92,53 +141,4 @@
     };
 
   </script>
-
-  <container style="width: 40; height: 20; border: thin; padding: 2; display: flex; flex-direction: column; align-items: center;">
-    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
-      🕐 Text Analog Clock
-    </text>
-
-    <container style="border: thin; padding: 1; font-family: monospace; background-color: black; color: green;">
-      <text id="clockLine0" style="text-align: center;">       </text>
-      <text id="clockLine1" style="text-align: center;">       </text>
-      <text id="clockLine2" style="text-align: center;">       </text>
-      <text id="clockLine3" style="text-align: center;">   •   </text>
-      <text id="clockLine4" style="text-align: center;">       </text>
-      <text id="clockLine5" style="text-align: center;">       </text>
-      <text id="clockLine6" style="text-align: center;">       </text>
-    </container>
-
-    <text id="digitalTime" style="font-weight: bold; margin-top: 1; color: blue; text-align: center;">
-      --:--:--
-    </text>
-
-    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 1;">
-      <button
-        label="Start Clock"
-        style="background-color: green; color: white;"
-        onClick="
-          const startBtn: any = event.target;
-          startBtn.props.label = 'Running...';
-          startBtn.props.style = { ...startBtn.props.style, backgroundColor: 'orange' };
-          $app.startClock(context);
-        "
-      />
-
-      <button
-        label="Update Now"
-        style="background-color: blue; color: white;"
-        onClick="$app.updateClock(context);"
-      />
-
-      <button
-        label="Exit"
-        style="background-color: gray; color: white;"
-        onClick="$melker.exit();"
-      />
-    </container>
-
-    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
-      H=Hour hand, M=Minute hand, Numbers=12,3,6,9 positions
-    </text>
-  </container>
 </melker>

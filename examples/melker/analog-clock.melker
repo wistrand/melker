@@ -1,5 +1,44 @@
 <melker>
   <title>Clock</title>
+
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      🕐 Analog Clock
+    </text>
+
+    <container style="width: fill; height: fill;">
+      <canvas
+        id="clockCanvas"
+        width="60"
+        height="20"
+        style="width: fill; height: fill"
+        onPaint="$app.drawClock(event.canvas)"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
+      <button
+        label="Clock Running"
+        style="background-color: blue; color: white; padding: 1;"
+        onClick="
+          // Clock is already running, this is just a status indicator
+          // event.target.props.label = 'Auto-started on load';
+          $melker.engine.render();
+        "
+      />
+
+      <button
+        label="Exit"
+        style="background-color: gray; color: white; padding: 1;"
+        onClick="$melker.exit();"
+      />
+    </container>
+
+    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
+      Analog clock auto-starts on load • Resizes with terminal • Press Ctrl+C to exit
+    </text>
+  </container>
+
   <script type="typescript">
     // Analog clock rendering functions using Melker's pixel canvas
     // Uses aspect-ratio corrected methods for visually round circles
@@ -85,41 +124,4 @@
     }
   </script>
 
-  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
-    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
-      🕐 Analog Clock
-    </text>
-
-    <container style="width: fill; height: fill;">
-      <canvas
-        id="clockCanvas"
-        width="60"
-        height="20"
-        style="width: fill; height: fill"
-        onPaint="$app.drawClock(event.canvas)"
-      />
-    </container>
-
-    <container style="display: flex; flex-direction: row; margin-top: 1; gap: 2; justify-content: center;">
-      <button
-        label="Clock Running"
-        style="background-color: blue; color: white; padding: 1;"
-        onClick="
-          // Clock is already running, this is just a status indicator
-          // event.target.props.label = 'Auto-started on load';
-          $melker.engine.render();
-        "
-      />
-
-      <button
-        label="Exit"
-        style="background-color: gray; color: white; padding: 1;"
-        onClick="$melker.exit();"
-      />
-    </container>
-
-    <text style="color: yellow; margin-top: 1; text-align: center; font-size: small;">
-      Analog clock auto-starts on load • Resizes with terminal • Press Ctrl+C to exit
-    </text>
-  </container>
 </melker>

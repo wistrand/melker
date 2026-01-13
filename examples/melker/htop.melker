@@ -22,6 +22,66 @@ Cross-platform data sources:
 | Processes   | /proc/<pid>/*               | ps -axo user=,pid=,...           |
 </help>
 
+<style>
+.row { display: flex; flex-direction: row; }
+.meters { display: flex; flex-direction: column; width: 50%; }
+.info { display: flex; flex-direction: column; width: 50%; white-space: pre; }
+.footer { display: flex; flex-direction: row; flex-shrink: 0; }
+</style>
+
+<container style="display: flex; flex-direction: column; height: 100%; padding: 1">
+  <container class="row">
+    <container class="meters">
+      <container id="cpuMeters" style="display: flex; flex-direction: row; padding-bottom: 1"></container>
+      <container id="memMeter"></container>
+      <container id="swpMeter"></container>
+    </container>
+    <container class="info">
+      <text id="info"></text>
+    </container>
+  </container>
+
+  <data-table
+    id="procTable"
+    style="border: thin; flex: 1;"
+    showColumnBorders="false"
+    sortColumn="3"
+    sortDirection="desc"
+    selectable="single"
+    onActivate="$app.showProcessDetails(event)"
+  >
+  {
+    "columns": [
+      { "header": "PID", "width": 12 },
+      { "header": "USER", "width": "8%" },
+      { "header": "S", "width": "3%" },
+      { "header": "CPU%", "width": 8, "align": "right" },
+      { "header": "MEM%", "width": "6%", "align": "right" },
+      { "header": "RES", "width": "6%", "align": "right" },
+      { "header": "TIME+", "width": "8%", "align": "right" },
+      { "header": "Command" }
+    ]
+  }
+  </data-table>
+
+  <container class="footer">
+    <checkbox id="treeChk" title="Tree" onChange="$app.setTreeView(event.checked)" style="padding-right: 1"/>
+    <text> Ctrl+C:Quit  Scroll:Mouse  Click header:sort  Double-click:details</text>
+  </container>
+
+  <dialog id="processDialog" title="Process Details" style="width: 80; height: 18;" modal="true" backdrop="false" draggable="true" resizable="true">
+    <container style="display: flex; flex-direction: column; height: 100%; width: fill">
+      <container scrollable="true" style="flex: 1 1 0; width: fill">
+        <markdown id="dialogContent" style="text-wrap: wrap; width: fill"></markdown>
+      </container>
+      <container style="display: flex; flex-direction: row; justify-content: center; padding-top: 1; gap: 2">
+        <button label="Kill" onClick="killProcess"></button>
+        <button label="Close" onClick="closeDialog"></button>
+      </container>
+    </container>
+  </dialog>
+</container>
+
 <script type="typescript">
 // Type definitions
 interface Process {
@@ -840,64 +900,4 @@ export async function init() {
 <script type="typescript" async="ready">
   await $app.init();
 </script>
-
-<style>
-.row { display: flex; flex-direction: row; }
-.meters { display: flex; flex-direction: column; width: 50%; }
-.info { display: flex; flex-direction: column; width: 50%; white-space: pre; }
-.footer { display: flex; flex-direction: row; flex-shrink: 0; }
-</style>
-
-<container style="display: flex; flex-direction: column; height: 100%; padding: 1">
-  <container class="row">
-    <container class="meters">
-      <container id="cpuMeters" style="display: flex; flex-direction: row; padding-bottom: 1"></container>
-      <container id="memMeter"></container>
-      <container id="swpMeter"></container>
-    </container>
-    <container class="info">
-      <text id="info"></text>
-    </container>
-  </container>
-
-  <data-table
-    id="procTable"
-    style="border: thin; flex: 1;"
-    showColumnBorders="false"
-    sortColumn="3"
-    sortDirection="desc"
-    selectable="single"
-    onActivate="$app.showProcessDetails(event)"
-  >
-  {
-    "columns": [
-      { "header": "PID", "width": 12 },
-      { "header": "USER", "width": "8%" },
-      { "header": "S", "width": "3%" },
-      { "header": "CPU%", "width": 8, "align": "right" },
-      { "header": "MEM%", "width": "6%", "align": "right" },
-      { "header": "RES", "width": "6%", "align": "right" },
-      { "header": "TIME+", "width": "8%", "align": "right" },
-      { "header": "Command" }
-    ]
-  }
-  </data-table>
-
-  <container class="footer">
-    <checkbox id="treeChk" title="Tree" onChange="$app.setTreeView(event.checked)" style="padding-right: 1"/>
-    <text> Ctrl+C:Quit  Scroll:Mouse  Click header:sort  Double-click:details</text>
-  </container>
-
-  <dialog id="processDialog" title="Process Details" style="width: 80; height: 18;" modal="true" backdrop="false" draggable="true" resizable="true">
-    <container style="display: flex; flex-direction: column; height: 100%; width: fill">
-      <container scrollable="true" style="flex: 1 1 0; width: fill">
-        <markdown id="dialogContent" style="text-wrap: wrap; width: fill"></markdown>
-      </container>
-      <container style="display: flex; flex-direction: row; justify-content: center; padding-top: 1; gap: 2">
-        <button label="Kill" onClick="killProcess"></button>
-        <button label="Close" onClick="closeDialog"></button>
-      </container>
-    </container>
-  </dialog>
-</container>
 </melker>

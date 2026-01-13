@@ -1,25 +1,4 @@
 <melker>
-  <script type="typescript">
-    // Helper functions to be available in the context
-    export const formatMessage = (name) => {
-      return `🌟 Hello, ${name}! Welcome to Melker with scripts!`;
-    };
-
-    export const getCurrentTime = () => {
-      return new Date().toLocaleTimeString();
-    };
-
-    export const validateName = (name) => {
-      if (!name || name.trim().length === 0) {
-        return 'Please enter a valid name';
-      }
-      if (name.length < 2) {
-        return 'Name must be at least 2 characters long';
-      }
-      return null;
-    };
-  </script>
-
   <container style="width: 50; height: 15; border: thin; padding: 2; display: flex; flex-direction: column;">
     <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
       📜 Melker Script Demo
@@ -98,4 +77,25 @@
       This demo shows TypeScript functions defined in script tags!
     </text>
   </container>
+
+  <script type="typescript">
+    // Helper functions to be available in the context
+    export const formatMessage = (name) => {
+      return `🌟 Hello, ${name}! Welcome to Melker with scripts!`;
+    };
+
+    export const getCurrentTime = () => {
+      return new Date().toLocaleTimeString();
+    };
+
+    export const validateName = (name) => {
+      if (!name || name.trim().length === 0) {
+        return 'Please enter a valid name';
+      }
+      if (name.length < 2) {
+        return 'Name must be at least 2 characters long';
+      }
+      return null;
+    };
+  </script>
 </melker>

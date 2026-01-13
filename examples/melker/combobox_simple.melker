@@ -1,5 +1,5 @@
 <melker>
-  <container direction="column" padding="1" gap="1">
+  <container style="flex-direction: column; padding: 1; gap: 1">
     <text>Simple Combobox Test</text>
 
     <combobox id="myCombo" placeholder="Select..." open="true" filter="fuzzy">

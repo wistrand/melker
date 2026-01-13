@@ -1,4 +1,23 @@
 <melker>
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1;">
+      Canvas Image Test - Image Background with Drawing Overlay
+    </text>
+
+    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center;">
+      <canvas
+        id="imageCanvas"
+        width="60"
+        height="20"
+        src="examples/melker/test_image.png"
+      />
+    </container>
+
+    <text id="statusText" style="color: gray; margin-top: 1;">
+      Loading image...
+    </text>
+  </container>
+
   <script type="typescript">
     // Draw overlay graphics on top of the image
     const drawOverlay = (canvas: any): void => {
@@ -94,23 +113,4 @@
       $melker.engine.render();
     }
   </script>
-
-  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
-    <text style="font-weight: bold; margin-bottom: 1;">
-      Canvas Image Test - Image Background with Drawing Overlay
-    </text>
-
-    <container style="width: fill; height: fill; display: flex; align-items: center; justify-content: center;">
-      <canvas
-        id="imageCanvas"
-        width="60"
-        height="20"
-        src="examples/melker/test_image.png"
-      />
-    </container>
-
-    <text id="statusText" style="color: gray; margin-top: 1;">
-      Loading image...
-    </text>
-  </container>
 </melker>

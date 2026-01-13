@@ -258,3 +258,43 @@ Let the theme engine handle colors for best appearance across all themes.
 Container props (trigger auto-inference): `flex-direction`, `justify-content`, `align-items`, `align-content`, `flex-wrap`, `gap`
 
 Item props (don't trigger): `flex`, `flex-grow`, `flex-shrink`, `flex-basis`
+
+## 15. flex-direction Is a Style, Not an Attribute
+
+**Mistake**: Using `direction` attribute instead of `flex-direction` style.
+
+```xml
+<!-- WRONG - direction is not a valid attribute -->
+<container direction="row">
+  <text>Left</text>
+  <text>Right</text>
+</container>
+
+<!-- CORRECT - use style -->
+<container style="flex-direction: row; gap: 2">
+  <text>Left</text>
+  <text>Right</text>
+</container>
+```
+
+## 16. Cross-Axis Stretching in Column Containers
+
+**Mistake**: Elements stretching to full width in column containers.
+
+In flexbox column layout, children stretch horizontally (cross-axis) by default. This causes select, combobox, and other components to fill the entire width even when they have a fixed `width` prop.
+
+```xml
+<!-- PROBLEM - select stretches to full width -->
+<container style="flex-direction: column">
+  <select width="20">...</select>
+</container>
+
+<!-- SOLUTION - wrap in row container -->
+<container style="flex-direction: column">
+  <container style="flex-direction: row">
+    <select width="20">...</select>
+  </container>
+</container>
+```
+
+This is standard flexbox behavior - in a column container, `align-items` defaults to `stretch`.

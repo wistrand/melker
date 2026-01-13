@@ -28,6 +28,8 @@ export interface ComboboxProps extends FilterableListCoreProps {
   dropdownWidth?: number;
   /** Show clear button when value is present */
   showClearButton?: boolean;
+  /** Width of the combobox input */
+  width?: number;
 }
 
 /**
@@ -67,6 +69,8 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
   /** Map of dropdown row Y position to option index (null = group header) */
   private _rowToOptionIndex: Map<number, number | null> = new Map();
 
+  private static _autoIdCounter = 0;
+
   constructor(props: ComboboxProps = {}, children: Element[] = []) {
     const defaultProps: ComboboxProps = {
       showClearButton: true,
@@ -75,20 +79,32 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
       ...props,
     };
 
+    // Auto-generate ID if not provided (needed for hit testing)
+    if (!defaultProps.id) {
+      defaultProps.id = `combobox-auto-${ComboboxElement._autoIdCounter++}`;
+    }
+
     super('combobox', defaultProps, children);
     this._inputValue = props.value || '';
     this._cursorPosition = this._inputValue.length;
   }
 
-  intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
+  intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
     // Input field is always 1 row high
-    // Width based on placeholder or minimum
+    // Width based on placeholder, value, or options - NOT available space
     const placeholder = this.props.placeholder || '';
     const value = this.props.value || '';
-    const minWidth = Math.max(placeholder.length, value.length, 15);
+
+    // Find longest option label
+    let maxOptionWidth = 0;
+    for (const option of this.getAllOptions()) {
+      maxOptionWidth = Math.max(maxOptionWidth, option.label.length);
+    }
+
+    const contentWidth = Math.max(placeholder.length, value.length, maxOptionWidth, 10);
 
     return {
-      width: Math.min(minWidth + 3, context.availableSpace.width), // +3 for dropdown indicator
+      width: contentWidth + 3, // +3 for dropdown indicator
       height: 1, // Just the input row (dropdown renders as overlay)
     };
   }
@@ -692,52 +708,14 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
     return this.handleKeyInput(key, ctrlKey, altKey);
   }
 
-  // Handle clicks
-  handleClick(event: ClickEvent): boolean {
+  // Handle clicks - toggle/open dropdown (hit testing already confirmed click is on this element)
+  // Dropdown option clicks are handled by the overlay system
+  handleClick(_event: ClickEvent): boolean {
     if (this.props.disabled) return false;
 
-    const { x, y } = event.position;
-
-    // Check if click is on input
-    if (this._inputBounds && this._isInBounds(x, y, this._inputBounds)) {
-      // Click on dropdown indicator
-      if (x === this._inputBounds.x + this._inputBounds.width - 1) {
-        this.toggle();
-      } else {
-        // Click on input - open dropdown
-        if (!this.props.open) {
-          this.open();
-        }
-      }
-      return true;
-    }
-
-    // Check if click is on dropdown option
-    if (this.props.open && this._dropdownBounds && this._isInBounds(x, y, this._dropdownBounds)) {
-      // Use the row mapping to find which option was clicked
-      const optionIndex = this._rowToOptionIndex.get(y);
-
-      if (optionIndex !== undefined && optionIndex !== null) {
-        // It's an option row, not a group header
-        const filtered = this.getFilteredOptions();
-        if (optionIndex >= 0 && optionIndex < filtered.length) {
-          const option = filtered[optionIndex];
-          if (!option.disabled) {
-            this.selectOption(option);
-          }
-        }
-      }
-      // If optionIndex is null, it's a group header - ignore click
-      return true;
-    }
-
-    // Click outside - close dropdown
-    if (this.props.open) {
-      this.close();
-      return true;
-    }
-
-    return false;
+    // Toggle dropdown
+    this.toggle();
+    return true;
   }
 
   private _isInBounds(x: number, y: number, bounds: Bounds): boolean {
@@ -806,6 +784,11 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
   isInteractive(): boolean {
     return !this.props.disabled;
   }
+
+  // Capture all clicks - don't let children (options) receive clicks
+  capturesFocusForChildren(): boolean {
+    return true;
+  }
 }
 
 // Register the combobox component
@@ -835,6 +818,7 @@ export const comboboxSchema: ComponentSchema = {
     options: { type: 'array', description: 'Data-driven options (alternative to children)' },
     allowFreeText: { type: 'boolean', description: 'Allow submitting values not in list' },
     dropdownWidth: { type: 'number', description: 'Override dropdown width' },
+    width: { type: 'number', description: 'Width of the combobox input' },
     showClearButton: { type: 'boolean', description: 'Show clear button' },
     onChange: { type: 'handler', description: 'Called when option is selected (preferred). Event: { value, label, option?, freeform?, targetId }' },
     onSelect: { type: 'handler', description: 'Called when option is selected (deprecated: use onChange)' },

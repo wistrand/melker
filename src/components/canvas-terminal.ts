@@ -81,6 +81,82 @@ for (const [char, pattern] of BLOCKS_2X3) {
   PIXEL_TO_CHAR[pattern] = char;
 }
 
+// ASCII pattern mapping - maps 6-bit sextant patterns to ASCII characters
+// Bit layout: bit5=top-left, bit4=top-right, bit3=mid-left, bit2=mid-right, bit1=bot-left, bit0=bot-right
+// Grid visualization:
+//   [5] [4]   top row
+//   [3] [2]   mid row
+//   [1] [0]   bottom row
+export const PATTERN_TO_ASCII: string[] = [
+  ' ',  // 0b000000 - empty
+  '.',  // 0b000001 - bottom-right only
+  ',',  // 0b000010 - bottom-left only
+  '_',  // 0b000011 - bottom row
+  ':',  // 0b000100 - mid-right only
+  ']',  // 0b000101 - right column bottom half
+  '/',  // 0b000110 - diagonal bottom-left to mid-right
+  'J',  // 0b000111 - right and bottom
+  ':',  // 0b001000 - mid-left only
+  '\\', // 0b001001 - diagonal mid-left to bottom-right
+  '[',  // 0b001010 - left column bottom half
+  'L',  // 0b001011 - left and bottom
+  '=',  // 0b001100 - mid row
+  'd',  // 0b001101 - mid-right, mid-left, bottom
+  'b',  // 0b001110 - mid-left, mid-right, bottom-left
+  'o',  // 0b001111 - bottom 2 rows
+  "'",  // 0b010000 - top-right only
+  '\\', // 0b010001 - diagonal top-right to bottom-right
+  '/',  // 0b010010 - diagonal top-right to bottom-left
+  ')',  // 0b010011 - top-right, bottom row
+  '|',  // 0b010100 - right column top half
+  '|',  // 0b010101 - right column (full)
+  '/',  // 0b010110 - top-right, mid-right, bottom-left
+  '|',  // 0b010111 - right column + bottom-left
+  '/',  // 0b011000 - top-right, mid-left
+  '\\', // 0b011001 - top-right, mid-left, bottom-right
+  '/',  // 0b011010 - top-right, mid-left, bottom-left
+  'h',  // 0b011011 - all except mid-right, top-left
+  'T',  // 0b011100 - top-right, mid row
+  'I',  // 0b011101 - right column + mid-left
+  'f',  // 0b011110 - top-right, mid row, bottom-left
+  'F',  // 0b011111 - all except top-left
+  '`',  // 0b100000 - top-left only
+  '/',  // 0b100001 - diagonal top-left to bottom-right
+  '\\', // 0b100010 - diagonal top-left to bottom-left
+  '(',  // 0b100011 - top-left, bottom row
+  '\\', // 0b100100 - top-left, mid-right
+  '\\', // 0b100101 - top-left, mid-right, bottom-right
+  '\\', // 0b100110 - top-left, mid-right, bottom-left
+  'k',  // 0b100111 - all except top-right, mid-left
+  '|',  // 0b101000 - left column top half
+  '/',  // 0b101001 - top-left, mid-left, bottom-right
+  '|',  // 0b101010 - left column (full)
+  '|',  // 0b101011 - left column + bottom-right
+  'T',  // 0b101100 - top-left, mid row
+  'I',  // 0b101101 - left column + mid-right
+  'E',  // 0b101110 - left column + mid-right, bottom
+  'E',  // 0b101111 - all except top-right
+  '"',  // 0b110000 - top row
+  '\\', // 0b110001 - top row, bottom-right
+  '/',  // 0b110010 - top row, bottom-left
+  'n',  // 0b110011 - top row, bottom row
+  'P',  // 0b110100 - top row, mid-right
+  'D',  // 0b110101 - top row, right column bottom
+  'P',  // 0b110110 - top row, mid-right, bottom-left
+  'R',  // 0b110111 - all except mid-left
+  'P',  // 0b111000 - top row, mid-left
+  'b',  // 0b111001 - top row, mid-left, bottom-right
+  'D',  // 0b111010 - top row, left column bottom
+  'B',  // 0b111011 - all except mid-right
+  '^',  // 0b111100 - top row, mid row
+  'H',  // 0b111101 - all except bottom-left
+  'H',  // 0b111110 - all except bottom-right
+  '#',  // 0b111111 - full block
+];
+
+// Luminance-based ASCII ramp (from light to dark)
+export const LUMA_RAMP = ' .:-=+*#%@';
+
 /**
  * Convert a 2x3 sextant pixel pattern to a terminal character.
  * Sextant bit pattern:

@@ -531,6 +531,11 @@ canvas.setPixel(x, y);
 canvas.markDirty();
 ```
 
+**Alternative rendering modes** (CLI flags for terminals without Unicode):
+- `--block-mode` - Colored spaces instead of sextant chars
+- `--ascii-mode=pattern` - ASCII chars with spatial mapping
+- `--ascii-mode=luma` - ASCII chars based on brightness
+
 ### img
 
 Image display (PNG, JPEG, GIF). Supports file paths and data URLs.

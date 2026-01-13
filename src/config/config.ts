@@ -746,6 +746,10 @@ export class MelkerConfig {
     return this.data['render.blockMode'] as boolean;
   }
 
+  get asciiMode(): 'off' | 'pattern' | 'luma' {
+    return this.data['render.asciiMode'] as 'off' | 'pattern' | 'luma';
+  }
+
   // Headless
   get headlessEnabled(): boolean {
     return this.data['headless.enabled'] as boolean;

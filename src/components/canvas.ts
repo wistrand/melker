@@ -10,7 +10,7 @@ import { getGlobalPerformanceDialog } from '../performance-dialog.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
-import { PIXEL_TO_CHAR } from './canvas-terminal.ts';
+import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
 // Pure JS image decoders (stable API, no Deno internals)
 import { decode as decodePng } from 'npm:fast-png';
 import { decode as decodeJpeg } from 'npm:jpeg-js';
@@ -1512,20 +1512,27 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       terminalWidth = Math.max(1, terminalWidth - 1);
     }
 
-    // Cache blockMode config (avoid repeated lookups in hot path)
+    // Cache render mode config (avoid repeated lookups in hot path)
     const blockMode = MelkerConfig.get().blockMode;
+    const asciiMode = MelkerConfig.get().asciiMode;
 
     // Check for dithered rendering mode
     const ditheredBuffer = this._prepareDitheredBuffer();
     if (ditheredBuffer) {
       // Use dithered rendering path
-      this._renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, blockMode);
+      this._renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, blockMode, asciiMode);
       return;
     }
 
     // Block mode: 1 colored space per cell instead of sextant characters
     if (blockMode) {
       this._renderBlockMode(bounds, style, buffer, terminalWidth, terminalHeight);
+      return;
+    }
+
+    // ASCII mode: pattern (spatial mapping) or luma (brightness-based)
+    if (asciiMode !== 'off') {
+      this._renderAsciiMode(bounds, style, buffer, terminalWidth, terminalHeight, asciiMode);
       return;
     }
 
@@ -1784,7 +1791,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     style: Partial<Cell>,
     buffer: DualBuffer,
     ditheredBuffer: Uint8Array,
-    blockMode: boolean
+    blockMode: boolean,
+    asciiMode: 'off' | 'pattern' | 'luma'
   ): void {
     let terminalWidth = Math.min(this.props.width, bounds.width);
     const terminalHeight = Math.min(this.props.height, bounds.height);
@@ -1876,6 +1884,92 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
           buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
             char: ' ',
             background: avgColor,
+            bold: style.bold,
+            dim: style.dim,
+          });
+          continue;
+        }
+
+        // ASCII mode: convert dithered pixels to ASCII characters
+        if (asciiMode !== 'off') {
+          if (!hasAnyPixel) continue;
+
+          let char: string;
+          let fgColor: string | undefined;
+
+          if (asciiMode === 'luma') {
+            // Luminance mode: average brightness → density character
+            let totalR = 0, totalG = 0, totalB = 0, count = 0;
+            for (let i = 0; i < 6; i++) {
+              const color = sextantColors[i];
+              if (color !== TRANSPARENT) {
+                totalR += (color >> 24) & 0xFF;
+                totalG += (color >> 16) & 0xFF;
+                totalB += (color >> 8) & 0xFF;
+                count++;
+              }
+            }
+            if (count === 0) continue;
+
+            const avgR = totalR / count;
+            const avgG = totalG / count;
+            const avgB = totalB / count;
+            const luma = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+            const charIndex = Math.floor((luma / 255) * (LUMA_RAMP.length - 1));
+            char = LUMA_RAMP[Math.min(charIndex, LUMA_RAMP.length - 1)];
+            fgColor = rgbaToCss(packRGBA(Math.round(avgR), Math.round(avgG), Math.round(avgB), 255));
+          } else {
+            // Pattern mode: use brightness thresholding
+            const brightness: number[] = [-1, -1, -1, -1, -1, -1];
+            let minBright = 256, maxBright = -1;
+            let validCount = 0;
+
+            for (let i = 0; i < 6; i++) {
+              const color = sextantColors[i];
+              if (color !== TRANSPARENT) {
+                const r = (color >> 24) & 0xFF;
+                const g = (color >> 16) & 0xFF;
+                const b = (color >> 8) & 0xFF;
+                const bright = (r * 77 + g * 150 + b * 29) >> 8;
+                brightness[i] = bright;
+                if (bright < minBright) minBright = bright;
+                if (bright > maxBright) maxBright = bright;
+                validCount++;
+              }
+            }
+            if (validCount === 0) continue;
+
+            // Threshold and build pattern
+            const threshold = (minBright + maxBright) >> 1;
+            let pattern = 0;
+            let fgR = 0, fgG = 0, fgB = 0, fgCount = 0;
+
+            // Bit positions: 5=top-left, 4=top-right, 3=mid-left, 2=mid-right, 1=bot-left, 0=bot-right
+            const bitPos = [5, 4, 3, 2, 1, 0];
+            for (let i = 0; i < 6; i++) {
+              if (brightness[i] >= threshold) {
+                pattern |= (1 << bitPos[i]);
+                const color = sextantColors[i];
+                fgR += (color >> 24) & 0xFF;
+                fgG += (color >> 16) & 0xFF;
+                fgB += (color >> 8) & 0xFF;
+                fgCount++;
+              }
+            }
+
+            if (pattern === 0) continue;
+            char = PATTERN_TO_ASCII[pattern];
+            if (fgCount > 0) {
+              fgColor = rgbaToCss(packRGBA(Math.round(fgR / fgCount), Math.round(fgG / fgCount), Math.round(fgB / fgCount), 255));
+            }
+          }
+
+          if (char === ' ') continue;
+
+          buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+            char,
+            foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
+            background: propsBg ?? (hasStyleBg ? style.background as string : undefined),
             bold: style.bold,
             dim: style.dim,
           });
@@ -1992,6 +2086,168 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
           bold: style.bold,
           dim: style.dim,
         });
+      }
+    }
+  }
+
+  /**
+   * ASCII mode rendering - converts canvas to ASCII characters.
+   * Two modes:
+   * - 'pattern': Maps 2x3 sextant patterns to spatially-similar ASCII chars
+   * - 'luma': Maps pixel brightness to density character ramp
+   */
+  private _renderAsciiMode(
+    bounds: Bounds,
+    style: Partial<Cell>,
+    buffer: DualBuffer,
+    terminalWidth: number,
+    terminalHeight: number,
+    mode: 'pattern' | 'luma'
+  ): void {
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+    const scale = this._scale;
+    const halfScale = scale >> 1;
+    const hasStyleFg = style.foreground !== undefined;
+    const hasStyleBg = style.background !== undefined;
+    const propsBg = this.props.backgroundColor;
+
+    for (let ty = 0; ty < terminalHeight; ty++) {
+      const baseBufferY = ty * 3 * scale;
+
+      for (let tx = 0; tx < terminalWidth; tx++) {
+        const baseBufferX = tx * 2 * scale;
+
+        if (mode === 'luma') {
+          // Luminance mode: average brightness → density character
+          let totalR = 0, totalG = 0, totalB = 0, count = 0;
+
+          for (let py = 0; py < 3; py++) {
+            const bufferY = baseBufferY + py * scale + halfScale;
+            if (bufferY < 0 || bufferY >= bufH) continue;
+            const rowOffset = bufferY * bufW;
+
+            for (let px = 0; px < 2; px++) {
+              const bufferX = baseBufferX + px * scale + halfScale;
+              if (bufferX < 0 || bufferX >= bufW) continue;
+
+              const bufIndex = rowOffset + bufferX;
+              let color = this._colorBuffer[bufIndex];
+              if (color === TRANSPARENT) {
+                color = this._imageColorBuffer[bufIndex];
+              }
+              if (color !== TRANSPARENT) {
+                totalR += (color >> 24) & 0xFF;
+                totalG += (color >> 16) & 0xFF;
+                totalB += (color >> 8) & 0xFF;
+                count++;
+              }
+            }
+          }
+
+          if (count === 0) continue;
+
+          const avgR = totalR / count;
+          const avgG = totalG / count;
+          const avgB = totalB / count;
+          // Perceptual luminance: 0.299*R + 0.587*G + 0.114*B
+          const luma = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+          const charIndex = Math.floor((luma / 255) * (LUMA_RAMP.length - 1));
+          const char = LUMA_RAMP[Math.min(charIndex, LUMA_RAMP.length - 1)];
+
+          if (char === ' ') continue;
+
+          const fgColor = rgbaToCss(packRGBA(Math.round(avgR), Math.round(avgG), Math.round(avgB), 255));
+          buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+            char,
+            foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
+            background: propsBg ?? (hasStyleBg ? style.background as string : undefined),
+            bold: style.bold,
+            dim: style.dim,
+          });
+        } else {
+          // Pattern mode: use brightness thresholding to determine pattern
+          // Similar to sextant quantization - bright pixels are "on", dark are "off"
+          const colors: number[] = [0, 0, 0, 0, 0, 0];
+          const brightness: number[] = [-1, -1, -1, -1, -1, -1];
+          let minBright = 256, maxBright = -1;
+          let validCount = 0;
+
+          // Sample 2x3 grid - index matches bit position
+          // Index: 0=top-left, 1=top-right, 2=mid-left, 3=mid-right, 4=bot-left, 5=bot-right
+          const positions = [
+            [0, 0], [1, 0],  // top row
+            [0, 1], [1, 1],  // mid row
+            [0, 2], [1, 2],  // bottom row
+          ];
+
+          for (let i = 0; i < 6; i++) {
+            const [px, py] = positions[i];
+            const bufferX = baseBufferX + px * scale + halfScale;
+            const bufferY = baseBufferY + py * scale + halfScale;
+            if (bufferX < 0 || bufferX >= bufW || bufferY < 0 || bufferY >= bufH) continue;
+
+            const bufIndex = bufferY * bufW + bufferX;
+            let color = this._colorBuffer[bufIndex];
+            if (color === TRANSPARENT) {
+              color = this._imageColorBuffer[bufIndex];
+            }
+            if (color !== TRANSPARENT) {
+              colors[i] = color;
+              const r = (color >> 24) & 0xFF;
+              const g = (color >> 16) & 0xFF;
+              const b = (color >> 8) & 0xFF;
+              const bright = (r * 77 + g * 150 + b * 29) >> 8;
+              brightness[i] = bright;
+              if (bright < minBright) minBright = bright;
+              if (bright > maxBright) maxBright = bright;
+              validCount++;
+            }
+          }
+
+          if (validCount === 0) continue;
+
+          // Use brightness threshold to determine pattern
+          const threshold = (minBright + maxBright) >> 1;
+          let pattern = 0;
+          let fgR = 0, fgG = 0, fgB = 0, fgCount = 0;
+
+          // Bit positions: 5=top-left, 4=top-right, 3=mid-left, 2=mid-right, 1=bot-left, 0=bot-right
+          const bitPos = [5, 4, 3, 2, 1, 0];
+          for (let i = 0; i < 6; i++) {
+            if (brightness[i] >= threshold) {
+              pattern |= (1 << bitPos[i]);
+              const color = colors[i];
+              fgR += (color >> 24) & 0xFF;
+              fgG += (color >> 16) & 0xFF;
+              fgB += (color >> 8) & 0xFF;
+              fgCount++;
+            }
+          }
+
+          if (pattern === 0) continue;
+
+          const char = PATTERN_TO_ASCII[pattern];
+          if (char === ' ') continue;
+
+          let fgColor: string | undefined;
+          if (fgCount > 0) {
+            fgColor = rgbaToCss(packRGBA(
+              Math.round(fgR / fgCount),
+              Math.round(fgG / fgCount),
+              Math.round(fgB / fgCount),
+              255
+            ));
+          }
+
+          buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+            char,
+            foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
+            background: propsBg ?? (hasStyleBg ? style.background as string : undefined),
+            bold: style.bold,
+            dim: style.dim,
+          });
+        }
       }
     }
   }

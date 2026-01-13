@@ -75,7 +75,8 @@ export function parseCliFlags(args: string[]): ParsedCliFlags {
             flagValue = args[i + 1];
             i++;
           } else {
-            console.error(`Error: ${flagName} requires a value`);
+            const enumHint = prop.enum ? ` [${prop.enum.join('|')}]` : '';
+            console.error(`Error: ${flagName} requires a value${enumHint}`);
             Deno.exit(1);
           }
         }

@@ -11,7 +11,7 @@ Melker is a Deno library for building rich Terminal UI interfaces using an HTML-
 
 ```bash
 # Clone the repository
-git clone https://github.com/anthropics/melker.git
+git clone https://github.com/wistrand/melker.git
 cd melker
 
 # Run directly (no build step needed)

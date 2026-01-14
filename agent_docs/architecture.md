@@ -75,7 +75,7 @@
 | `melker.ts` | CLI entry point (symlink-safe, runs launcher) |
 | `mod.ts` | Library entry point (exports, component registrations) |
 | `melker-launcher.ts` | Policy enforcement and subprocess spawning |
-| `melker-runner.ts` | .melker file runner (bundling, engine, app execution) |
+| `src/melker-runner.ts` | .melker file runner (bundling, engine, app execution) |
 | `src/lint.ts` | Lint mode validation, schemas |
 | `src/lsp.ts` | Language Server Protocol for .melker files |
 | `src/terminal-lifecycle.ts` | Terminal setup, cleanup, signal handlers |
@@ -133,7 +133,15 @@
 |------|---------|
 | `src/video/mod.ts` | Video module exports |
 | `src/video/ffmpeg.ts` | FFmpeg integration |
-| `src/video/dither.ts` | Dithering algorithms (auto, sierra-stable, floyd-steinberg, ordered) |
+| `src/video/dither.ts` | Re-exports from dither/ directory |
+| `src/video/dither/` | Dithering algorithms directory |
+| `src/video/dither/mod.ts` | Dithering module exports |
+| `src/video/dither/types.ts` | DitherMode, ThresholdMatrix, ColorSupport types |
+| `src/video/dither/utils.ts` | Shared buffers and helper functions |
+| `src/video/dither/threshold.ts` | Ordered (Bayer), blue-noise, custom threshold matrix dithering |
+| `src/video/dither/floyd-steinberg.ts` | Floyd-Steinberg and Floyd-Steinberg-Stable |
+| `src/video/dither/sierra.ts` | Sierra and Sierra-Stable |
+| `src/video/dither/atkinson.ts` | Atkinson and Atkinson-Stable |
 | `src/video/subtitle.ts` | Subtitle handling |
 | `src/video/waveform.ts` | Audio waveform visualization |
 

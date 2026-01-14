@@ -728,6 +728,10 @@ export class MelkerConfig {
     return this.data['dither.bits'] as number | undefined;
   }
 
+  get blueNoisePath(): string | undefined {
+    return this.data['dither.blueNoisePath'] as string | undefined;
+  }
+
   // Terminal
   get terminalAlternateScreen(): boolean {
     return this.data['terminal.alternateScreen'] as boolean;
@@ -742,7 +746,12 @@ export class MelkerConfig {
   }
 
   // Render
-  get gfxMode(): 'sextant' | 'block' | 'pattern' | 'luma' {
+  get gfxMode(): 'sextant' | 'block' | 'pattern' | 'luma' | undefined {
+    // Only return gfxMode if explicitly set (env, cli, file, policy) - not schema default
+    // This allows per-element gfxMode props to take effect when no global override
+    if (this.sources['render.gfxMode'] === 'default') {
+      return undefined;
+    }
     return this.data['render.gfxMode'] as 'sextant' | 'block' | 'pattern' | 'luma';
   }
 

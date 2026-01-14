@@ -144,6 +144,22 @@ Canvas supports automatic dithering based on theme type:
 - `fullcolor` theme: No dithering (true color rendering)
 - `bw`, `gray`, `color` themes: Uses `sierra-stable` with 1 bit (B&W)
 
+**Available algorithms** (see `src/video/dither/`):
+- `sierra-stable` / `sierra` - Sierra 2-row error diffusion
+- `floyd-steinberg` / `floyd-steinberg-stable` - Classic Floyd-Steinberg
+- `atkinson` / `atkinson-stable` - Bill Atkinson's algorithm (75% error diffusion)
+- `blue-noise` - Threshold dithering using void-and-cluster blue noise matrix
+- `ordered` - Bayer 8x8 ordered dithering
+- `none` - No dithering
+
+**Stable variants** reduce vertical error propagation for temporal stability in video/animation.
+
+**Blue noise dithering:**
+- Uses 64x64 threshold matrix from `media/blue-noise-64.png`
+- No visible grid pattern like Bayer, temporally stable like ordered dithering
+- Custom matrix path via `dither.blueNoisePath` config or `MELKER_BLUE_NOISE_PATH` env var
+- Falls back to ordered dithering if matrix fails to load
+
 **Implementation** (see `src/components/canvas.ts` `_prepareDitheredBuffer()`):
 ```typescript
 if (ditherMode === 'auto') {

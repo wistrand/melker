@@ -2151,12 +2151,9 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     // Check if theme is B&W or color (limited palette) - apply dithering for better image quality
     const themeType = getThemeManager().getThemeType();
-    const ditherMode = (themeType === 'bw' || themeType === 'color') ? 'sierra-stable' as const : undefined;
-    // B&W uses 1 bit, color uses 4 bits (16 levels per channel)
-    const ditherBits = themeType === 'bw' ? 1 : themeType === 'color' ? 4 : undefined;
 
     // Create a unique cache key combining src, dimensions, and dither settings
-    const cacheKey = `${resolvedSrc}:${imgWidth}x${imgHeight}:${ditherMode || 'none'}:${ditherBits ?? 0}`;
+    const cacheKey = `${resolvedSrc}:${imgWidth}x${imgHeight}`;
 
     // Check if we already have a canvas for this image
     let canvas = this._imageCanvases.get(cacheKey);
@@ -2166,15 +2163,14 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       canvas = new CanvasElement({
         width: imgWidth,
         height: imgHeight,
-        dither: ditherMode,
-        ditherBits: ditherBits,
+        dither: 'auto'
       }, []);
 
       // Store in cache
       this._imageCanvases.set(cacheKey, canvas);
 
       // Start loading the image asynchronously
-      logger.info('Starting image load', { resolvedSrc, ditherMode });
+      logger.info('Starting image load', { resolvedSrc });
       canvas.loadImage(resolvedSrc).then(() => {
         logger.info('Image loaded successfully', { resolvedSrc });
 

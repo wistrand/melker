@@ -444,8 +444,8 @@ Configuration can be set via CLI flags (highest priority), environment variables
 melker.ts              # CLI entry point (symlink-safe)
 mod.ts                 # Library entry point (exports)
 melker-launcher.ts     # Policy enforcement, subprocess spawning
-melker-runner.ts       # .melker file runner
 src/
+  melker-runner.ts     # .melker file runner
   engine.ts            # Application engine
   layout.ts            # Flexbox layout
   rendering.ts         # Render pipeline

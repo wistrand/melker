@@ -10,6 +10,9 @@ import { getThemeManager } from '../theme.ts';
 import {
   applyFloydSteinbergDither,
   applyFloydSteinbergStableDither,
+  applyAtkinsonDither,
+  applyAtkinsonStableDither,
+  applyBlueNoiseDither,
   applyOrderedDither,
   applySierraDither,
   applySierraStableDither,
@@ -1100,6 +1103,12 @@ export class VideoElement extends CanvasElement {
         applySierraDither(frameData, frameWidth, frameHeight, bits);
       } else if (mode === 'sierra-stable') {
         applySierraStableDither(frameData, frameWidth, frameHeight, bits);
+      } else if (mode === 'atkinson') {
+        applyAtkinsonDither(frameData, frameWidth, frameHeight, bits);
+      } else if (mode === 'atkinson-stable') {
+        applyAtkinsonStableDither(frameData, frameWidth, frameHeight, bits);
+      } else if (mode === 'blue-noise') {
+        applyBlueNoiseDither(frameData, frameWidth, frameHeight, bits);
       }
     }
 
@@ -1385,7 +1394,7 @@ export const videoSchema: ComponentSchema = {
     autoplay: { type: 'boolean', description: 'Start playing automatically' },
     loop: { type: 'boolean', description: 'Loop playback' },
     fps: { type: 'number', description: 'Playback frames per second' },
-    dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'ordered'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
+    dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'atkinson', 'atkinson-stable', 'ordered', 'blue-noise'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
     colorDepth: { type: 'number', description: 'Color bit depth' },
     muted: { type: 'boolean', description: 'Mute audio' },
     audio: { type: 'boolean', description: 'Enable audio playback' },

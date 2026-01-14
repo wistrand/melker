@@ -38,26 +38,30 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
   private _lastBounds: Bounds | null = null;
 
   constructor(props: SliderProps, children: Element[] = []) {
+    // Parse numeric values from strings (XML attributes come as strings)
+    const min = props.min !== undefined ? Number(props.min) : 0;
+    const max = props.max !== undefined ? Number(props.max) : 100;
+    const value = props.value !== undefined ? Number(props.value) : 0;
+    const step = props.step !== undefined ? Number(props.step) : undefined;
+
     const defaultProps: SliderProps = {
-      min: 0,
-      max: 100,
-      value: 0,
       orientation: 'horizontal',
       showValue: false,
       disabled: false,
       tabIndex: 0,
       ...props,
+      // Override with parsed numbers
+      min,
+      max,
+      step,
+      value: Math.max(min, Math.min(max, value)),
       style: {
         ...props.style
       },
     };
 
-    // Clamp initial value to range
-    const min = defaultProps.min ?? 0;
-    const max = defaultProps.max ?? 100;
-    if (defaultProps.value !== undefined) {
-      defaultProps.value = Math.max(min, Math.min(max, defaultProps.value));
-    }
+    // Ensure value is clamped
+    defaultProps.value = Math.max(min, Math.min(max, defaultProps.value ?? min));
 
     super('slider', defaultProps, children);
   }
@@ -373,15 +377,18 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const { showValue, orientation = 'horizontal' } = this.props;
+    const style = this.props.style || {};
 
     if (orientation === 'vertical') {
-      return { width: 1, height: 10 };  // Default vertical height
+      // Respect style height if set
+      const height = typeof style.height === 'number' ? style.height : 10;
+      return { width: 1, height };
     }
 
-    // Horizontal: minimum track width + value display
-    let width = 10;  // Minimum track width
-    if (showValue) {
-      // Reserve space for largest possible value
+    // Horizontal: respect style width if set, otherwise use minimum
+    let width = typeof style.width === 'number' ? style.width : 10;
+    if (showValue && typeof style.width !== 'number') {
+      // Only add value space to minimum width, not explicit width
       const { max = 100 } = this.props;
       width += String(Math.round(max)).length + 1;
     }

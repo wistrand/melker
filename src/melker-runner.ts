@@ -3,13 +3,13 @@
 // This is spawned by melker-launcher.ts with restricted Deno permissions.
 
 import { resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
-import { debounce } from './src/utils/timing.ts';
-import { restoreTerminal } from './src/terminal-lifecycle.ts';
-import { Env } from './src/env.ts';
-import { parseCliFlags, MelkerConfig } from './src/config/mod.ts';
+import { debounce } from './utils/timing.ts';
+import { restoreTerminal } from './terminal-lifecycle.ts';
+import { Env } from './env.ts';
+import { parseCliFlags, MelkerConfig } from './config/mod.ts';
 
 // Import library to register components before template parsing
-import './mod.ts';
+import '../mod.ts';
 
 // Bundler imports
 import {
@@ -18,9 +18,9 @@ import {
   callReady,
   ErrorTranslator,
   type MelkerRegistry,
-} from './src/bundler/mod.ts';
-import { parseMelkerForBundler } from './src/template.ts';
-import { getGlobalErrorOverlay } from './src/error-overlay.ts';
+} from './bundler/mod.ts';
+import { parseMelkerForBundler } from './template.ts';
+import { getGlobalErrorOverlay } from './error-overlay.ts';
 
 // Policy imports (for View Source feature only)
 import {
@@ -28,13 +28,13 @@ import {
   formatPolicy,
   getApprovalFilePath,
   type MelkerPolicy,
-} from './src/policy/mod.ts';
+} from './policy/mod.ts';
 
 // Dev tools types
-import type { SystemInfo } from './src/dev-tools.ts';
+import type { SystemInfo } from './dev-tools.ts';
 
 // Browser utility
-import { openBrowser } from './src/oauth/browser.ts';
+import { openBrowser } from './oauth/browser.ts';
 
 /**
  * Wire up bundler registry handlers to UI elements.
@@ -234,18 +234,18 @@ export async function runMelkerFile(
     const filename = filepath.split('/').pop()?.replace(/\.melker$/, '') || 'unknown';
 
     // Import mod.ts to ensure component registrations
-    await import('./mod.ts');
+    await import('../mod.ts');
 
-    const { melker: melkerTemplate, parseMelkerFile } = await import('./src/template.ts');
-    const { getThemeColor: themeColor } = await import('./src/theme.ts');
-    const { getTerminalSize: terminalSize } = await import('./mod.ts');
-    const { createElement: createEl } = await import('./src/element.ts');
-    const { createApp: createMelkerApp } = await import('./src/engine.ts');
-    const { getLogger, getGlobalLoggerOptions } = await import('./src/logging.ts');
-    const { getCurrentTheme } = await import('./src/theme.ts');
-    const oauth = await import('./src/oauth.ts');
-    const { hashFilePath } = await import('./src/state-persistence.ts');
-    const { registerAITool, clearCustomTools } = await import('./src/ai/mod.ts');
+    const { melker: melkerTemplate, parseMelkerFile } = await import('./template.ts');
+    const { getThemeColor: themeColor } = await import('./theme.ts');
+    const { getTerminalSize: terminalSize } = await import('../mod.ts');
+    const { createElement: createEl } = await import('./element.ts');
+    const { createApp: createMelkerApp } = await import('./engine.ts');
+    const { getLogger, getGlobalLoggerOptions } = await import('./logging.ts');
+    const { getCurrentTheme } = await import('./theme.ts');
+    const oauth = await import('./oauth.ts');
+    const { hashFilePath } = await import('./state-persistence.ts');
+    const { registerAITool, clearCustomTools } = await import('./ai/mod.ts');
     const { dirname } = await import('https://deno.land/std@0.208.0/path/mod.ts');
 
     let templateContent = preloadedContent ?? await loadContent(filepath);
@@ -258,8 +258,8 @@ export async function runMelkerFile(
       const parseResult = parseMelkerFile(templateContent);
       const ui = parseResult.element;
 
-      const { Document } = await import('./src/document.ts');
-      const { elementToJson } = await import('./src/serialization.ts');
+      const { Document } = await import('./document.ts');
+      const { elementToJson } = await import('./serialization.ts');
 
       if (options.printJson) {
         const json = elementToJson(ui);
@@ -340,8 +340,8 @@ export async function runMelkerFile(
     }
 
     // Normal app execution
-    const { loadFromFile, DEFAULT_PERSISTENCE_MAPPINGS, isPersistenceEnabled, getStateFilePath } = await import('./src/state-persistence.ts');
-    const { setPersistenceContext } = await import('./src/element.ts');
+    const { loadFromFile, DEFAULT_PERSISTENCE_MAPPINGS, isPersistenceEnabled, getStateFilePath } = await import('./state-persistence.ts');
+    const { setPersistenceContext } = await import('./element.ts');
     const appId = await hashFilePath(filepath);
     const persistEnabled = isPersistenceEnabled();
     const loadedState = await loadFromFile(appId, options.noLoad);
@@ -745,7 +745,7 @@ export async function watchAndRun(
   viewSource?: { content: string; path: string; type: 'md' | 'melker'; convertedContent?: string },
   preloadedContent?: string
 ): Promise<void> {
-  const { getLogger } = await import('./src/logging.ts');
+  const { getLogger } = await import('./logging.ts');
   const logger = getLogger('FileWatcher');
 
   const watchPath = filepath;
@@ -764,7 +764,7 @@ export async function watchAndRun(
 
     if (isReload) {
       logger.info(`Reloading application: ${filepath}`);
-      const { clearCustomTools } = await import('./src/ai/mod.ts');
+      const { clearCustomTools } = await import('./ai/mod.ts');
       clearCustomTools();
     } else {
       logger.info(`Starting application with file watch: ${filepath}`);
@@ -772,8 +772,8 @@ export async function watchAndRun(
 
     try {
       if (filepath.endsWith('.md')) {
-        const { getRegisteredComponents } = await import('./src/lint.ts');
-        const { markdownToMelker } = await import('./src/ascii/mod.ts');
+        const { getRegisteredComponents } = await import('./lint.ts');
+        const { markdownToMelker } = await import('./ascii/mod.ts');
 
         const mdContent = await loadContent(filepath);
         const elementTypes = new Set(getRegisteredComponents());
@@ -831,14 +831,14 @@ export async function watchAndRun(
  * Generate schema markdown
  */
 async function generateSchemaMarkdown(): Promise<string> {
-  await import('./mod.ts');
+  await import('../mod.ts');
 
   const {
     getRegisteredComponents,
     getComponentSchema,
     BASE_PROPS_SCHEMA,
     BASE_STYLES_SCHEMA,
-  } = await import('./src/lint.ts');
+  } = await import('./lint.ts');
 
   const lines: string[] = [];
 
@@ -904,10 +904,11 @@ async function generateSchemaMarkdown(): Promise<string> {
       lines.push('|----------|------|----------|-------------|');
 
       for (const [propName, prop] of Object.entries(schema.props).sort((a, b) => a[0].localeCompare(b[0]))) {
-        const type = formatType(prop.type);
-        const required = prop.required ? 'Yes' : '';
-        const desc = prop.description || '';
-        const enumVals = prop.enum ? ` (${prop.enum.join(', ')})` : '';
+        const p = prop as { type?: string | string[]; required?: boolean; description?: string; enum?: string[] };
+        const type = formatType(p.type ?? 'unknown');
+        const required = p.required ? 'Yes' : '';
+        const desc = p.description || '';
+        const enumVals = p.enum ? ` (${p.enum.join(', ')})` : '';
         lines.push(`| \`${propName}\` | ${type}${enumVals} | ${required} | ${desc} |`);
       }
       lines.push('');
@@ -973,7 +974,7 @@ async function main(): Promise<void> {
 
   // Handle --lsp
   if (args.includes('--lsp')) {
-    const { startLspServer } = await import('./src/lsp.ts');
+    const { startLspServer } = await import('./lsp.ts');
     await startLspServer();
     // Never returns
   }
@@ -1001,7 +1002,7 @@ async function main(): Promise<void> {
 
   // Enable lint mode if requested (already set via config, but explicit call registers it)
   if (options.lint) {
-    const { enableLint } = await import('./src/lint.ts');
+    const { enableLint } = await import('./lint.ts');
     enableLint(true);
   }
 
@@ -1022,9 +1023,9 @@ async function main(): Promise<void> {
     }
 
     try {
-      await import('./src/components/mod.ts');
-      const { getRegisteredComponents } = await import('./src/lint.ts');
-      const { markdownToMelker } = await import('./src/ascii/mod.ts');
+      await import('./components/mod.ts');
+      const { getRegisteredComponents } = await import('./lint.ts');
+      const { markdownToMelker } = await import('./ascii/mod.ts');
 
       const mdContent = await Deno.readTextFile(filepath);
       const elementTypes = new Set(getRegisteredComponents());
@@ -1041,9 +1042,9 @@ async function main(): Promise<void> {
   // Handle .md files
   if (filepath.endsWith('.md')) {
     try {
-      await import('./src/components/mod.ts');
-      const { getRegisteredComponents } = await import('./src/lint.ts');
-      const { markdownToMelker } = await import('./src/ascii/mod.ts');
+      await import('./components/mod.ts');
+      const { getRegisteredComponents } = await import('./lint.ts');
+      const { markdownToMelker } = await import('./ascii/mod.ts');
 
       const mdContent = await loadContent(filepath);
       const elementTypes = new Set(getRegisteredComponents());

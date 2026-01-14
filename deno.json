@@ -7,7 +7,7 @@
   "description": "A Deno library for creating rich Terminal UI interfaces with flexbox-based layouts",
   "exports": "./mod.ts",
   "tasks": {
-    "test": "deno test --allow-read --allow-env --allow-write",
+    "test": "deno test --allow-read --allow-env --allow-write --allow-run --unstable-bundle",
     "test:watch": "deno test --allow-read --allow-env --allow-write --watch",
     "test:coverage": "deno test --allow-read --allow-env --allow-write --coverage=coverage/",
     "fmt": "deno fmt",

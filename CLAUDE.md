@@ -208,6 +208,7 @@ tests/                - Test files
 | `MELKER_THEME` | Theme (default: `auto`): `auto-dark`, `auto-std`, `bw-std`, `fullcolor-dark`, etc. |
 | `MELKER_LOG_FILE` | Log file path |
 | `MELKER_LOG_LEVEL` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| `MELKER_LOG_BUFFER_SIZE` | In-memory log buffer size for DevTools Log tab (default: 500, range: 10-10000) |
 | `MELKER_HEADLESS` | Headless mode for CI |
 | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`) |
 | `MELKER_DEBUG_PORT` | Debug server port (implies `net: localhost`) |
@@ -487,7 +488,7 @@ Creates `docs/skill-creating-melker-apps.zip`, available at https://melker.sh/sk
 | `F6` | Toggle Performance dialog (live stats) |
 | `F7` | Open AI assistant with voice input (or toggle recording if open) |
 | `F8` | Open AI accessibility assistant (text input) |
-| `F12` | Toggle Dev Tools overlay (source, policy, config, inspect, system info) |
+| `F12` | Toggle Dev Tools overlay (source, policy, config, inspect, log, system info) |
 | `Escape` | Close overlays / Close AI dialog |
 | `Tab` / `Shift+Tab` | Navigate focusable elements |
 

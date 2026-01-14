@@ -85,7 +85,31 @@ Logs are written in structured format:
 
 ### Default Log Location
 
-If not configured: `./logs/melker.log`
+If not configured: `~/.cache/melker/logs/melker.log`
+
+### In-Memory Log Buffer
+
+Log entries are also kept in an in-memory FIFO buffer for the DevTools Log tab. Configure the buffer size:
+
+```bash
+# Via environment variable
+MELKER_LOG_BUFFER_SIZE=1000 ./melker.ts app.melker
+
+# Via config file (~/.config/melker/config.json)
+# { "log": { "bufferSize": 1000 } }
+```
+
+Default: 500 entries, range: 10-10000.
+
+Access programmatically:
+```typescript
+import { getRecentLogEntries, clearLogBuffer, getLogBufferSize } from './logging.ts';
+
+const entries = getRecentLogEntries();      // Get all entries
+const last100 = getRecentLogEntries(100);   // Get last 100 entries
+clearLogBuffer();                            // Clear the buffer
+const size = getLogBufferSize();             // Current entry count
+```
 
 ## Performance Dialog (`src/performance-dialog.ts`)
 
@@ -290,6 +314,7 @@ Press **F12** at runtime to open the Dev Tools dialog.
 | System | Build info, scripts, bundle details |
 | Config | Current configuration with sources (schema + app-defined) |
 | Inspect | Live document tree view with Refresh button |
+| Log | Recent log entries in data-table with sorting, shows log file path |
 | Actions | Performance Monitor, Exit Application |
 
 ### Features

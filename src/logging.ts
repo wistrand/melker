@@ -8,6 +8,51 @@ import { MelkerConfig } from './config/mod.ts';
 // Flag to track if logging is disabled (e.g., no log file specified)
 let loggingDisabled = false;
 
+// In-memory log buffer for DevTools Log tab
+const logBuffer: LogEntry[] = [];
+
+/**
+ * Get configured log buffer max size
+ */
+function getLogBufferMaxSize(): number {
+  return MelkerConfig.get().getNumber('log.bufferSize', 500);
+}
+
+/**
+ * Add an entry to the in-memory log buffer (FIFO)
+ */
+function addToLogBuffer(entry: LogEntry): void {
+  logBuffer.push(entry);
+  const maxSize = getLogBufferMaxSize();
+  while (logBuffer.length > maxSize) {
+    logBuffer.shift();
+  }
+}
+
+/**
+ * Get recent log entries from the in-memory buffer
+ */
+export function getRecentLogEntries(count?: number): LogEntry[] {
+  if (count === undefined || count >= logBuffer.length) {
+    return [...logBuffer];
+  }
+  return logBuffer.slice(-count);
+}
+
+/**
+ * Clear the in-memory log buffer
+ */
+export function clearLogBuffer(): void {
+  logBuffer.length = 0;
+}
+
+/**
+ * Get the current log buffer size
+ */
+export function getLogBufferSize(): number {
+  return logBuffer.length;
+}
+
 /**
  * Get default log file path (~/.cache/melker/logs/melker.log)
  */
@@ -183,6 +228,9 @@ export class Logger {
 
   private _writeEntry(entry: LogEntry): void {
     this._ensureInitialized();
+
+    // Add to in-memory buffer (always, regardless of file logging)
+    addToLogBuffer(entry);
 
     // Broadcast to debug server if available
     const debugServer = getGlobalDebugServer();

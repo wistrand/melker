@@ -8,7 +8,7 @@ import { FocusManager } from './focus.ts';
 import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy, type PolicyConfigProperty } from './policy/mod.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { MelkerConfig } from './config/mod.ts';
-import { getLogger } from './logging.ts';
+import { getLogger, getRecentLogEntries, getGlobalLoggerOptions, type LogEntry } from './logging.ts';
 
 const logger = getLogger('DevTools');
 
@@ -241,7 +241,11 @@ export class DevToolsManager {
     const inspectTab = this._buildInspectTab();
     tabs.push(inspectTab);
 
-    // Tab 8: Actions
+    // Tab 8: Log (recent log entries)
+    const logTab = this._buildLogTab();
+    tabs.push(logTab);
+
+    // Tab 9: Actions
     tabs.push(melker`
       <tab id="dev-tools-tab-actions" title="Actions">
         <container id="dev-tools-actions-content" style=${{ flex: 1, padding: 1, width: 'fill', height: 'fill', display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -340,6 +344,91 @@ export class DevToolsManager {
     lines.push(`  Handlers:   ${info.registeredHandlers.length > 0 ? info.registeredHandlers.join(', ') : 'none'}`);
 
     return lines.join('\n');
+  }
+
+  /**
+   * Format log entries for display
+   */
+  private _formatLogEntries(entries: LogEntry[]): string {
+    if (entries.length === 0) {
+      return '(no log entries)';
+    }
+
+    return entries.map(entry => {
+      // Format: HH:MM:SS.mmm [LEVEL] Source: message
+      const time = entry.timestamp.toISOString().slice(11, 23); // HH:MM:SS.mmm
+      const source = entry.source ? `${entry.source}: ` : '';
+      let line = `${time} [${entry.level}] ${source}${entry.message}`;
+
+      if (entry.context && Object.keys(entry.context).length > 0) {
+        line += ' | ' + Object.entries(entry.context)
+          .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+          .join(', ');
+      }
+
+      if (entry.error) {
+        line += ` | Error: ${entry.error.message}`;
+      }
+
+      return line;
+    }).join('\n');
+  }
+
+  /**
+   * Build the Log tab showing recent log entries
+   */
+  private _buildLogTab(): Element {
+    const document = this._deps.document;
+    const render = () => this._deps.render();
+
+    const columns = [
+      { header: 'Time', width: 12 },
+      { header: 'Level', width: 5 },
+      { header: 'Source', width: 20 },
+      { header: 'Message' },
+    ];
+
+    const generateRows = (): (string | null)[][] => {
+      const entries = getRecentLogEntries();
+      return entries.map(entry => [
+        entry.timestamp.toISOString().slice(11, 23), // HH:MM:SS.mmm
+        entry.level,
+        entry.source || '',
+        entry.message + (entry.context && Object.keys(entry.context).length > 0
+          ? ' | ' + Object.entries(entry.context).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ')
+          : '') + (entry.error ? ` | Error: ${entry.error.message}` : ''),
+      ]);
+    };
+
+    const rows = generateRows();
+
+    // Refresh button handler
+    const onRefresh = () => {
+      const tableEl = document.getElementById('dev-tools-log-table');
+      if (tableEl) {
+        tableEl.props.rows = generateRows();
+        render();
+      }
+    };
+
+    const { logFile } = getGlobalLoggerOptions();
+
+    return melker`
+      <tab id="dev-tools-tab-log" title="Log">
+        <container style=${{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }}>
+          <data-table
+            id="dev-tools-log-table"
+            columns=${columns}
+            rows=${rows}
+            style=${{ flex: 1, width: 'fill', height: 'fill' }}
+          />
+          <container style=${{ display: 'flex', flexDirection: 'row', padding: 1, gap: 2, alignItems: 'center' }}>
+            <text text=${`Log file: ${logFile}`} style=${{ flex: 1, color: 'gray' }} />
+            <button id="dev-tools-refresh-log" label="Refresh" onClick=${onRefresh} />
+          </container>
+        </container>
+      </tab>
+    `;
   }
 
   /**

@@ -1015,6 +1015,15 @@ async function main(): Promise<void> {
     Deno.exit(1);
   }
 
+  // Log the file path/URL at startup
+  {
+    const { getLogger } = await import('./logging.ts');
+    const logger = getLogger('Runner');
+    const remoteUrl = Env.get('MELKER_REMOTE_URL');
+    const displayPath = remoteUrl || (filepath.startsWith('/') ? filepath : resolve(Deno.cwd(), filepath));
+    logger.info(`Starting | file="${displayPath}"`);
+  }
+
   // Handle --convert
   if (remainingArgs.includes('--convert')) {
     if (!filepath.endsWith('.md')) {

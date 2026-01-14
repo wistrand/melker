@@ -141,9 +141,9 @@ function printUsage(): void {
   console.log('  Use --trust to bypass policy enforcement (runs with full permissions).');
   console.log('');
   console.log('Examples:');
-  console.log('  deno run --allow-all melker.ts examples/melker/counter.melker');
-  console.log('  deno run --allow-all melker.ts --show-policy app.melker');
-  console.log('  deno run --allow-all melker.ts --trust app.melker');
+  console.log('  melker.ts examples/melker/counter.melker');
+  console.log('  melker.ts --show-policy app.melker');
+  console.log('  melker.ts --trust app.melker');
 }
 
 /**

@@ -1105,7 +1105,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
   /**
    * Update shader mouse position from terminal coordinates.
-   * Call this from onMouseMove handler to enable interactive shaders.
+   * Called automatically by the engine for elements with onShader.
+   * Can also be called manually if needed.
    */
   updateShaderMouse(termX: number, termY: number): void {
     if (!this._shaderBounds) {

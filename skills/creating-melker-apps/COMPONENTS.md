@@ -660,6 +660,8 @@ export function waveEffect(x, y, time, resolution, source, utils) {
 - `source` - `getPixel(x, y)`, `mouse`, `mouseUV`
 - `utils` - `noise2d`, `fbm`, `palette`, `smoothstep`, `mix`, `fract`
 
+**Mouse tracking:** Automatic. `source.mouse` (pixel coords) and `source.mouseUV` (0-1 normalized) update as mouse moves over the element. Values are -1 when mouse is outside.
+
 **Props:**
 - `onShader` - Shader function (returns RGBA packed int or `[r,g,b,a]`)
 - `shaderFps` - Frame rate (default: 30)

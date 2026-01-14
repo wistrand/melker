@@ -426,6 +426,10 @@ export class TextSelectionHandler {
       // Fire mouseout event for the previously hovered element
       if (this._hoveredElementId) {
         const prevElement = this._deps.document.getElementById(this._hoveredElementId);
+        // Auto-clear shader mouse position when leaving element with shader
+        if (prevElement && prevElement.props?.onShader && typeof (prevElement as any).clearShaderMouse === 'function') {
+          (prevElement as any).clearShaderMouse();
+        }
         // Call onMouseOut handler directly if present
         if (prevElement && typeof prevElement.props?.onMouseOut === 'function') {
           const mouseOutEvent = {
@@ -490,6 +494,11 @@ export class TextSelectionHandler {
       button: event.button || 0,
       timestamp: Date.now(),
     });
+
+    // Auto-update shader mouse position for elements with onShader
+    if (hoveredElement && hoveredElement.props?.onShader && typeof (hoveredElement as any).updateShaderMouse === 'function') {
+      (hoveredElement as any).updateShaderMouse(event.x, event.y);
+    }
 
     // Call onMouseMove handler on the hovered element (if it has one)
     if (hoveredElement && typeof hoveredElement.props?.onMouseMove === 'function') {

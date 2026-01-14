@@ -73,6 +73,8 @@ export class HitTester {
       if (typeof element.props.onMouseOut === 'function') return true;
       if (typeof element.props.onMouseDown === 'function') return true;
       if (typeof element.props.onMouseUp === 'function') return true;
+      // Elements with shaders need mouse tracking for source.mouse
+      if (element.props.onShader) return true;
     }
     if (isInteractive(element)) {
       return element.isInteractive();

@@ -232,7 +232,7 @@ export const myShader = (
 **Key parameters:**
 - `resolution.pixelAspect`: ~0.5 (pixels are taller than wide due to sextant chars)
 - `source.getPixel(x, y)`: Read source image pixels `[r, g, b, a]`
-- `source.mouse/mouseUV`: Mouse position in pixels or normalized 0-1
+- `source.mouse/mouseUV`: Mouse position in pixels or normalized 0-1 (auto-tracked, -1 when outside)
 - `utils`: Built-in functions (`noise2d`, `fbm`, `palette`, `smoothstep`, `mix`, `fract`)
 
 **Aspect-correct shapes:** Divide y-distance by `pixelAspect`:

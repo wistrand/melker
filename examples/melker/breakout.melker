@@ -28,7 +28,6 @@
         onShader="$app.gameShader"
         shaderFps="60"
         dither="auto"
-        onMouseMove="$app.handleMouse(event)"
         onKeyPress="$app.handleKey(event)"
       />
     </container>
@@ -132,14 +131,6 @@
         }
       } else if (event.key === 'r' || event.key === 'R') {
         resetGame();
-      }
-    }
-
-    // Mouse control for paddle
-    export function handleMouse(event: { x: number; y: number }) {
-      const canvas = $melker.getElementById('game');
-      if (canvas && typeof canvas.updateShaderMouse === 'function') {
-        canvas.updateShaderMouse(event.x, event.y);
       }
     }
 

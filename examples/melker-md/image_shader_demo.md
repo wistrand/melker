@@ -89,8 +89,6 @@ Non-style properties for the image element. The `@target` specifies which elemen
   "dither": "auto",
   "onShader": "$app.rippleShader",
   "shaderFps": 24,
-  "onMouseMove": "$app.handleMouseMove(event);",
-  "onMouseOut": "$app.handleMouseOut();",
   "width": "100%",
   "height": "100%"
 }
@@ -159,21 +157,6 @@ export function rippleShader(
   return ripplePixel ? [ripplePixel[0], ripplePixel[1], ripplePixel[2]] : [r, g, b];
 }
 
-// Handle mouse move to update shader mouse position
-export function handleMouseMove(event: { x: number; y: number }) {
-  const img = $melker.getElementById('shaderImg');
-  if (img && typeof (img as any).updateShaderMouse === 'function') {
-    (img as any).updateShaderMouse(event.x, event.y);
-  }
-}
-
-// Handle mouse leave
-export function handleMouseOut() {
-  const img = $melker.getElementById('shaderImg');
-  if (img && typeof (img as any).clearShaderMouse === 'function') {
-    (img as any).clearShaderMouse();
-  }
-}
 ```
 
 ## Ready Script
@@ -191,8 +174,7 @@ $melker.logger.info(message);
 
 This demonstrates:
 - `img` element with `onShader` for per-pixel effects
-- Mouse-interactive shader using `source.mouse` position
-- `onMouseMove` and `onMouseOut` handlers for mouse tracking
+- Mouse-interactive shader using `source.mouse` position (auto-tracked)
 - Aspect-corrected distance calculation via `resolution.pixelAspect`
 - Radial pixel displacement creating ripple waves
 - `// @melker script ready` for post-render initialization

@@ -812,6 +812,8 @@ The shader callback receives:
 
 Returns `[r, g, b]` or `[r, g, b, a]` (0-255 range).
 
+**Mouse tracking**: Automatic for elements with `onShader`. The `source.mouse` (pixel coords) and `source.mouseUV` (normalized 0-1) update automatically as the mouse moves over the element. Values are -1 when mouse is not over the element.
+
 **Aspect-correct circles/shapes**: Divide y by `pixelAspect`:
 ```typescript
 const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);

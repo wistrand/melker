@@ -29,8 +29,6 @@
         dither="auto"
         onShader="$app.imageShader"
         shaderFps="24"
-        onMouseMove="$app.handleMouseMove(event);"
-        onMouseOut="$app.handleMouseOut();"
       />
     </container>
 
@@ -155,22 +153,6 @@
 
         default:
           return [r, g, b];
-      }
-    };
-
-    // Handle mouse move to update shader mouse position
-    export const handleMouseMove = (event: any) => {
-      const img = $melker.getElementById('shaderImg');
-      if (img && typeof img.updateShaderMouse === 'function') {
-        img.updateShaderMouse(event.x, event.y);
-      }
-    };
-
-    // Handle mouse leave
-    export const handleMouseOut = () => {
-      const img = $melker.getElementById('shaderImg');
-      if (img && typeof img.clearShaderMouse === 'function') {
-        img.clearShaderMouse();
       }
     };
 

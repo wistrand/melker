@@ -3,7 +3,7 @@
 import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, KeyPressEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from './color-utils.ts';
-import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, applyFloydSteinbergStableDither, applyOrderedDither, type DitherMode } from '../video/dither.ts';
+import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, applyFloydSteinbergStableDither, applyAtkinsonDither, applyAtkinsonStableDither, applyBlueNoiseDither, applyOrderedDither, applyThresholdDither, loadThresholdMatrixFromPng, type DitherMode, type ThresholdMatrix } from '../video/dither.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 import { getGlobalPerformanceDialog } from '../performance-dialog.ts';
@@ -34,6 +34,7 @@ export interface CanvasProps extends BaseProps {
   objectFit?: 'contain' | 'fill' | 'cover';  // How image fits: contain (default), fill (stretch), cover (crop)
   dither?: DitherMode | boolean;     // Dithering mode for images (e.g., 'sierra-stable' for B&W themes)
   ditherBits?: number;               // Bits per channel for dithering (1-8, default: 1 for B&W)
+  gfxMode?: 'sextant' | 'block' | 'pattern' | 'luma';  // Per-element graphics mode (global config overrides)
   onPaint?: (event: { canvas: CanvasElement; bounds: Bounds }) => void;  // Called when canvas needs repainting
   onShader?: ShaderCallback;         // Shader-style per-pixel callback (TypeScript, not GLSL)
   shaderFps?: number;                // Shader frame rate (default: 30)
@@ -592,8 +593,14 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       applyFloydSteinbergDither(scaledData, scaledW, scaledH, bits);
     } else if (ditherMode === 'floyd-steinberg-stable') {
       applyFloydSteinbergStableDither(scaledData, scaledW, scaledH, bits);
+    } else if (ditherMode === 'atkinson') {
+      applyAtkinsonDither(scaledData, scaledW, scaledH, bits);
+    } else if (ditherMode === 'atkinson-stable') {
+      applyAtkinsonStableDither(scaledData, scaledW, scaledH, bits);
     } else if (ditherMode === 'ordered') {
       applyOrderedDither(scaledData, scaledW, scaledH, bits);
+    } else if (ditherMode === 'blue-noise') {
+      applyBlueNoiseDither(scaledData, scaledW, scaledH, bits);
     }
 
     // Get background color for alpha blending (default to black if not specified)
@@ -1482,8 +1489,14 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       applyFloydSteinbergDither(cache, bufW, bufH, effectiveBits);
     } else if (ditherMode === 'floyd-steinberg-stable') {
       applyFloydSteinbergStableDither(cache, bufW, bufH, effectiveBits);
+    } else if (ditherMode === 'atkinson') {
+      applyAtkinsonDither(cache, bufW, bufH, effectiveBits);
+    } else if (ditherMode === 'atkinson-stable') {
+      applyAtkinsonStableDither(cache, bufW, bufH, effectiveBits);
     } else if (ditherMode === 'ordered') {
       applyOrderedDither(cache, bufW, bufH, effectiveBits);
+    } else if (ditherMode === 'blue-noise') {
+      applyBlueNoiseDither(cache, bufW, bufH, effectiveBits);
     }
     // 'none' case already handled above
 
@@ -1513,7 +1526,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     }
 
     // Cache render mode config (avoid repeated lookups in hot path)
-    const gfxMode = MelkerConfig.get().gfxMode;
+    // Global config overrides per-element prop
+    const globalGfxMode = MelkerConfig.get().gfxMode;
+    const gfxMode = globalGfxMode || this.props.gfxMode || 'sextant';
 
     // Check for dithered rendering mode
     const ditheredBuffer = this._prepareDitheredBuffer();
@@ -2388,7 +2403,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     this._shaderBounds = bounds;
 
     // Auto-load image from src prop if not already loaded/loading
-    if (this.props.src && !this._loadedImage && !this._imageLoading && this._imageSrc !== this.props.src) {
+    // Skip for video elements (they handle src differently via ffmpeg)
+    if ((this.type as string) !== 'video' && this.props.src && !this._loadedImage && !this._imageLoading && this._imageSrc !== this.props.src) {
       this.loadImage(this.props.src).then(() => {
         // Request re-render when image loads
         if (context.requestRender) {
@@ -2538,8 +2554,9 @@ export const canvasSchema: ComponentSchema = {
     backgroundColor: { type: 'string', description: 'Background color' },
     charAspectRatio: { type: 'number', description: 'Character aspect ratio adjustment' },
     src: { type: 'string', description: 'Load image from file path' },
-    dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'ordered'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
+    dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'atkinson', 'atkinson-stable', 'ordered', 'blue-noise'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
     ditherBits: { type: 'number', description: 'Color depth for dithering' },
+    gfxMode: { type: 'string', enum: ['sextant', 'block', 'pattern', 'luma'], description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
     onPaint: { type: ['function', 'string'], description: 'Called when canvas needs repainting, receives event with {canvas, bounds}' },
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. source has getPixel(), mouse, mouseUV' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },

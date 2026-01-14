@@ -64,7 +64,13 @@ charIndex = floor(luma / 255 * (ramp.length - 1))
 
 ## Configuration
 
-**Environment variable:**
+**Per-element prop (on canvas/img):**
+```xml
+<img src="image.png" gfxMode="luma" />
+<canvas gfxMode="pattern" onPaint="..." />
+```
+
+**Environment variable (overrides per-element):**
 ```bash
 MELKER_GFX_MODE=sextant   # default, Unicode sextant chars
 MELKER_GFX_MODE=block     # colored spaces
@@ -72,13 +78,15 @@ MELKER_GFX_MODE=pattern   # ASCII spatial mapping
 MELKER_GFX_MODE=luma      # ASCII brightness-based
 ```
 
-**CLI flag:**
+**CLI flag (overrides per-element):**
 ```bash
 --gfx-mode=sextant
 --gfx-mode=block
 --gfx-mode=pattern
 --gfx-mode=luma
 ```
+
+**Priority:** Global config (env/CLI) > per-element prop > default (sextant)
 
 ## Color Support
 
@@ -110,3 +118,10 @@ All modes apply ANSI foreground color:
 | block | 1x1 per cell | Compatibility | No |
 | pattern | 2x3 per cell | UI, shapes | No |
 | luma | 2x3 per cell | Images | No |
+
+## Demo
+
+See `examples/melker/gfx_modes_demo.melker` for a visual comparison of:
+- Graphics modes (sextant, block, pattern, luma)
+- Dithering algorithms (none, sierra-stable, floyd-steinberg, atkinson, atkinson-stable, ordered, blue-noise)
+- Dither bits (1-4 bit color depth)

@@ -1,0 +1,172 @@
+<melker>
+  <title>Graphics Modes and Dithering Demo</title>
+
+  <policy>
+  {
+    "name": "GFX Modes Demo",
+    "permissions": { "shader": true }
+  }
+  </policy>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      padding: 1;
+    }
+    .row {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+      margin-bottom: 1;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      border: single;
+      padding: 1;
+      width: 24;
+      height: 14;
+    }
+    .label {
+      text-align: center;
+      margin-bottom: 1;
+    }
+    .controls {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+      align-items: center;
+      margin-bottom: 1;
+    }
+  </style>
+
+  <container id="root" scrollable="true">
+    <text style="text-align: center; margin-bottom: 1">Graphics Modes and Dithering Demo</text>
+    <text style="margin-bottom: 1">Showing melker logo with different rendering options. Best viewed with MELKER_THEME=bw-std or fullcolor-dark.</text>
+
+    <!-- Rotation control -->
+    <container class="controls">
+      <text>Rotation:</text>
+      <slider id="angle-slider" min="-180" max="180" value="0" step="5" showValue="true" style="width: 80" onChange="$app.setAngle(event.value)" />
+      <button label="Reset" onClick="$app.resetAngle()" />
+    </container>
+
+    <!-- Row 1: GFX Modes -->
+    <text style="margin-top: 1">GFX Modes (per-element, global MELKER_GFX_MODE overrides):</text>
+    <container class="row">
+      <container class="card">
+        <text class="label">sextant (default)</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="sextant" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">block</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="block" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">pattern</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="pattern" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">luma</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="luma" onShader="$app.rotate" shaderFps="1" />
+      </container>
+    </container>
+
+    <!-- Row 2: Dither Algorithms -->
+    <text style="margin-top: 1">Dither Algorithms:</text>
+    <container class="row">
+      <container class="card">
+        <text class="label">none</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="none" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">sierra-stable</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">floyd-steinberg</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="floyd-steinberg" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">atkinson</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="atkinson" onShader="$app.rotate" shaderFps="1" />
+      </container>
+    </container>
+    <container class="row">
+      <container class="card">
+        <text class="label">atkinson-stable</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="atkinson-stable" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">ordered</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="ordered" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">blue-noise</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="blue-noise" onShader="$app.rotate" shaderFps="1" />
+      </container>
+    </container>
+
+    <!-- Row 3: Dither Bits -->
+    <text style="margin-top: 1">Dither Bits (color depth):</text>
+    <container class="row">
+      <container class="card">
+        <text class="label">1 bit (mono)</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="1" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">2 bits (4 levels)</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="2" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">3 bits (8 levels)</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="3" onShader="$app.rotate" shaderFps="1" />
+      </container>
+      <container class="card">
+        <text class="label">4 bits (16 levels)</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="4" onShader="$app.rotate" shaderFps="1" />
+      </container>
+    </container>
+
+    <container style="display: flex; justify-content: center; margin-top: 2">
+      <button id="exit-btn" label="Exit" onClick="$melker.exit()" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    let angle = 0;
+    let rad = angle * Math.PI / 180;
+    let cosrad = Math.cos(rad);
+    let sinrad = Math.sin(rad);
+
+    export function setAngle(value: string) {
+      angle = parseFloat(value);
+      rad = angle * Math.PI / 180;
+      cosrad = Math.cos(rad);
+      sinrad = Math.sin(rad);
+    }
+
+    export function resetAngle() {
+      setAngle(0);
+      $melker.getElementById('angle-slider').props.value = 0;
+    }
+
+    export function rotate(x: number, y: number, _time: number, resolution: { width: number; height: number; pixelAspect: number }, source: { getPixel: (x: number, y: number) => [number, number, number, number] | null }) {
+      const cx = resolution.width / 2;
+      const cy = resolution.height / 2;
+      const aspect = resolution.pixelAspect;
+
+      // Translate to center
+      const dx = x - cx;
+      const dy = (y - cy) / aspect;  // Convert to visual space
+
+      // Rotate in visual space
+      const rx = dx * cosrad - dy * sinrad + cx;
+      const ry = (dx * sinrad + dy * cosrad) * aspect + cy;  // Back to pixel space
+
+      const pixel = source.getPixel(Math.floor(rx), Math.floor(ry));
+      return pixel || [0, 0, 0, 0];
+    }
+  </script>
+</melker>

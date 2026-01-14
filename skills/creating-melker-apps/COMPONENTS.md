@@ -573,6 +573,7 @@ Pixel graphics using Unicode sextant characters (2x3 pixels per cell).
 - `width`, `height` - Dimensions in terminal cells
 - `dither`: `auto` | `sierra-stable` | `floyd-steinberg` | `ordered` | `none`
 - `ditherBits` - Color depth (1-8)
+- `gfxMode`: `sextant` | `block` | `pattern` | `luma` - Per-element graphics mode
 - `onPaint` - Draw callback (`event.canvas`)
 
 **Canvas API:**
@@ -588,10 +589,13 @@ canvas.setPixel(x, y);
 canvas.markDirty();
 ```
 
-**Alternative rendering modes** (`--gfx-mode` flag for terminals without Unicode):
-- `block` - Colored spaces instead of sextant chars
+**Graphics modes** (per-element `gfxMode` prop or global `--gfx-mode` flag):
+- `sextant` - Unicode sextant chars (default, highest resolution)
+- `block` - Colored spaces (no Unicode needed)
 - `pattern` - ASCII chars with spatial mapping
 - `luma` - ASCII chars based on brightness
+
+Global `MELKER_GFX_MODE` env var or `--gfx-mode` flag overrides per-element prop.
 
 ### img
 
@@ -610,6 +614,7 @@ Image display (PNG, JPEG, GIF). Supports file paths and data URLs.
 - `width`, `height` - Dimensions (number or percentage)
 - `objectFit`: `contain` | `cover` | `fill`
 - `dither` - Dithering mode
+- `gfxMode` - Graphics mode: `sextant` (default), `block`, `pattern`, `luma` (global `MELKER_GFX_MODE` overrides)
 - `onLoad`, `onError` - Load callbacks
 - `onShader`, `shaderFps`, `shaderRunTime` - Animation (see Shaders)
 

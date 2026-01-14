@@ -76,6 +76,11 @@
       "env": "MELKER_DITHER_BITS",
       "description": "Color depth for dithering"
     },
+    "dither.blueNoisePath": {
+      "type": "string",
+      "env": "MELKER_BLUE_NOISE_PATH",
+      "description": "Path to blue noise threshold matrix PNG (default: bundled media/blue-noise-64.png)"
+    },
     "terminal.alternateScreen": {
       "type": "boolean",
       "default": true,

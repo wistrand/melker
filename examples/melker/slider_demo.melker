@@ -7,30 +7,56 @@
   }
   </policy>
 
+ <style>
+    .wrap {
+       border: thin;
+    }
+
+    .wrap2 {
+       display: flex; flex-direction: row; gap: 2; align-items: center;
+    }
+ </style>
+
   <container style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column; gap: 1;">
     <text style="font-weight: bold;">Slider Component Demo</text>
     <text style="color: gray;">Use arrow keys or click/drag to adjust values. Tab to navigate.</text>
 
     <!-- Basic slider -->
-    <container style="border: thin; padding: 1;">
+    <container class="wrap">
       <text style="font-weight: bold;">Basic Slider</text>
-      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
+      <container class="wrap2">
         <slider
           id="basicSlider"
           min="0"
           max="100"
           value="50"
-          style="width: 30;"
+          style="width: 50;"
           onChange="$app.updateBasic(event)"
         />
         <text id="basicLabel">Value: 50</text>
       </container>
     </container>
 
-    <!-- Slider with step -->
-    <container style="border: thin; padding: 1;">
+      <!-- Negative Basic slider -->
+      <container class="wrap">
+          <text style="font-weight: bold;">Basic Slider</text>
+          <container class="wrap2">
+              <slider
+                      id="negbasicSlider"
+                      min="-100"
+                      max="100"
+                      value="50"
+                      style="width: 50;"
+                      onChange="$app.negupdateBasic(event)"
+              />
+              <text id="negbasicLabel">Value: 50</text>
+          </container>
+      </container>
+
+      <!-- Slider with step -->
+    <container class="wrap">
       <text style="font-weight: bold;">Slider with Step (step=5)</text>
-      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
+      <container class="wrap2">
         <slider
           id="stepSlider"
           min="0"
@@ -38,7 +64,7 @@
           step="5"
           value="5"
           showValue="true"
-          style="width: 30;"
+          style="width: 50;"
           onChange="$app.updateStep(event)"
         />
         <text id="stepLabel">Step value: 5</text>
@@ -46,9 +72,9 @@
     </container>
 
     <!-- Slider with snaps -->
-    <container style="border: thin; padding: 1;">
+    <container class="wrap">
       <text style="font-weight: bold;">Slider with Snap Points [0, 25, 50, 75, 100]</text>
-      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
+      <container class="wrap2">
         <slider
           id="snapSlider"
           min="0"
@@ -56,7 +82,7 @@
           snaps="[0, 25, 50, 75, 100]"
           value="25"
           showValue="true"
-          style="width: 30;"
+          style="width: 50;"
           onChange="$app.updateSnap(event)"
         />
         <text id="snapLabel">Snap value: 25%</text>
@@ -64,9 +90,9 @@
     </container>
 
     <!-- Volume slider with icon -->
-    <container style="border: thin; padding: 1;">
+    <container class="wrap">
       <text style="font-weight: bold;">Volume Control</text>
-      <container style="display: flex; flex-direction: row; gap: 2; align-items: center;">
+      <container class="wrap2">
         <text>Vol:</text>
         <slider
           id="volumeSlider"
@@ -82,7 +108,7 @@
     </container>
 
     <!-- RGB Color picker (horizontal) -->
-    <container style="border: thin; padding: 1;">
+    <container class="wrap">
       <text style="font-weight: bold;">RGB Color Picker</text>
       <container style="display: flex; flex-direction: row; gap: 1;">
         <text style="width: 2;">R:</text>
@@ -100,9 +126,9 @@
     </container>
 
     <!-- RGB Color picker (vertical sliders) -->
-    <container style="border: thin; padding: 1;">
+    <container class="wrap">
       <text style="font-weight: bold;">RGB Vertical Sliders</text>
-      <container style="display: flex; flex-direction: row; gap: 3; height: 8;">
+      <container style="display: flex; flex-direction: row; gap: 3;">
         <container style="display: flex; flex-direction: column; align-items: center;">
           <slider id="redSliderV" min="0" max="255" value="128" orientation="vertical" style="height: 6;" onChange="$app.updateRed(event)" />
           <text>R</text>
@@ -138,6 +164,11 @@
     export function updateBasic(event: { value: string }) {
       basicValue = parseFloat(event.value);
       $melker.getElementById('basicLabel')!.setValue(`Value: ${Math.round(basicValue)}`);
+    }
+
+    export function negupdateBasic(event: { value: string }) {
+      basicValue = parseFloat(event.value);
+      $melker.getElementById('negbasicLabel')!.setValue(`Value: ${Math.round(basicValue)}`);
     }
 
     export function updateStep(event: { value: string }) {

@@ -59,8 +59,8 @@ deno task skill:zip    # Build AI agent skill zip
 melker.ts             - CLI entry point (symlink-safe, runs launcher)
 mod.ts                - Library entry point (exports, component registrations)
 melker-launcher.ts    - Policy enforcement and subprocess spawning
-melker-runner.ts      - .melker file runner (bundling, engine, app execution)
 src/
+  melker-runner.ts    - .melker file runner (bundling, engine, app execution)
   engine.ts           - Main engine, lifecycle, events
   layout.ts           - Flexbox layout calculations
   rendering.ts        - Render pipeline, overlays
@@ -151,7 +151,15 @@ src/
   video/              - Video processing
     mod.ts            - Video exports
     ffmpeg.ts         - FFmpeg integration
-    dither.ts         - Dithering algorithms
+    dither.ts         - Re-exports from dither/ directory
+    dither/           - Dithering algorithms
+      mod.ts          - Dithering exports
+      types.ts        - DitherMode, ThresholdMatrix types
+      utils.ts        - Shared buffers and helpers
+      threshold.ts    - Ordered, blue-noise, threshold matrix dithering
+      floyd-steinberg.ts - Floyd-Steinberg algorithms
+      sierra.ts       - Sierra algorithms
+      atkinson.ts     - Atkinson algorithms
     subtitle.ts       - Subtitle handling
     waveform.ts       - Audio waveform
   chat/               - Chat utilities
@@ -216,8 +224,9 @@ tests/                - Test files
 | `MELKER_AUDIO_GAIN` | Audio recording gain multiplier (default: `2.0`) |
 | `MELKER_AUDIO_DEBUG` | Replay recorded audio before transcription (`true` or `1`) |
 | `MELKER_FFMPEG` | Force ffmpeg on macOS instead of native Swift (`true` or `1`) |
-| `MELKER_AUTO_DITHER` | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `ordered`) |
+| `MELKER_AUTO_DITHER` | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `atkinson`, `blue-noise`, `ordered`) |
 | `MELKER_DITHER_BITS` | Color depth for auto dithering (1-8, default: theme-based) |
+| `MELKER_BLUE_NOISE_PATH` | Path to blue noise threshold matrix PNG (default: bundled `media/blue-noise-64.png`) |
 | `MELKER_GFX_MODE` | Graphics mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |

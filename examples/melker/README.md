@@ -67,6 +67,7 @@ deno run --allow-all melker.ts examples/melker/counter.melker
 | `canvas_test.melker` | Canvas drawing basics |
 | `canvas_color_test.melker` | Canvas color drawing |
 | `color_selector.melker` | HSL color picker with canvas click |
+| `gfx_modes_demo.melker` | GFX modes and dithering showcase |
 | `video_demo.melker` | Video playback |
 
 ### Canvas Features

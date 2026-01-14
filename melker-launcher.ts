@@ -170,7 +170,7 @@ async function runWithPolicy(
   denoFlags.push('--no-prompt');
 
   // Build the subprocess command - run melker-runner.ts
-  const runnerUrl = new URL('./melker-runner.ts', import.meta.url);
+  const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
   // Use href for remote URLs, pathname for local files
   const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
 
@@ -247,7 +247,7 @@ async function runRemoteWithPolicy(
     denoFlags.push('--no-prompt');
 
     // Build the subprocess command
-    const runnerUrl = new URL('./melker-runner.ts', import.meta.url);
+    const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
     const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
 
     // Filter out policy-related flags and replace URL with temp file
@@ -332,7 +332,7 @@ export async function main(): Promise<void> {
 
   // Handle --schema option (delegates to runner)
   if (args.includes('--schema')) {
-    const runnerUrl = new URL('./melker-runner.ts', import.meta.url);
+    const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
     const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
     const process = new Deno.Command(Deno.execPath(), {
       args: ['run', '--allow-all', '--unstable-bundle', runnerEntry, '--schema'],
@@ -347,7 +347,7 @@ export async function main(): Promise<void> {
 
   // Handle --lsp option (delegates to runner)
   if (args.includes('--lsp')) {
-    const runnerUrl = new URL('./melker-runner.ts', import.meta.url);
+    const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
     const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
     const process = new Deno.Command(Deno.execPath(), {
       args: ['run', '--allow-all', '--unstable-bundle', runnerEntry, '--lsp'],

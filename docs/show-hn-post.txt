@@ -1,0 +1,23 @@
+Title: Show HN: Melker - Terminal UIs you can read before you run
+
+URL: https://melker.sh
+
+First comment:
+
+Melker: Run text with meaning.
+
+Melker is a Deno/TypeScript library and runtime for creating terminal UIs using an HTML-like document model. Apps are single .melker files with HTML-like syntax and embedded TypeScript.
+
+The idea: TUI apps should be inspectable like web pages. Before running, the source and permissions are visible. No hidden network calls or file access.
+
+Key features:
+
+- Embedded permission policy (sandboxed subprocess)
+- Run from URL with first-run approval
+- F12 Dev Tools (view source, inspect document tree)
+- Flexbox layout, 20+ components
+- No build step, TypeScript runs directly
+
+Motivation: Sharing TUI tools shouldn't require asking people to trust arbitrary code.
+
+Requires Deno 2.5+.

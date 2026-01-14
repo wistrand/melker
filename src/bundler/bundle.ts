@@ -23,7 +23,7 @@ import {
   getBundleUnavailableHint,
 } from './errors.ts';
 
-const logger = getLogger('Bundler:Bundle');
+const logger = getLogger('Bundler');
 
 /**
  * Bundle generated TypeScript using Deno.bundle().

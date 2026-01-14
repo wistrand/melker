@@ -325,18 +325,34 @@ function buildWritePaths(policyPaths: string[] | undefined, appDir: string): str
   return [...new Set(paths)]; // Deduplicate
 }
 
+// Env vars that should always be whitelisted even if they don't exist yet.
+// These are either set by the launcher after flags are built, or are standard
+// terminal vars that code might check.
+const ALWAYS_ALLOWED_ENV = [
+  // Set by launcher after permission flags are built
+  'MELKER_RUNNER',
+  'MELKER_REMOTE_URL',
+  // Set at runtime by headless mode
+  'MELKER_RUNNING_HEADLESS',
+  // Terminal vars that may or may not be set
+  'COLORFGBG',
+];
+
 /**
- * Get implicit env vars dynamically from current environment.
- * Only includes vars that actually exist and are readable.
+ * Get implicit env vars dynamically from current environment,
+ * plus vars that should always be allowed.
  */
 function getImplicitEnvVars(): string[] {
-  return Env.keys().filter(name =>
+  const vars = Env.keys().filter(name =>
     name.startsWith('MELKER_') ||
     name.startsWith('XDG_') ||
     ['HOME', 'TERM', 'COLORTERM', 'COLORFGBG', 'NO_COLOR', 'PREFIX',
      'TMPDIR', 'TEMP', 'TMP', 'PATH',
      'OPENROUTER_API_KEY', 'DOTENV_KEY'].includes(name)
   );
+  // Add vars that should always be allowed (even if not currently set)
+  vars.push(...ALWAYS_ALLOWED_ENV);
+  return [...new Set(vars)]; // Deduplicate
 }
 
 /**

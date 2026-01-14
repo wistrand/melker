@@ -96,6 +96,7 @@ Each property in schema.json can have:
 ### Logging
 - `log.level` - Log verbosity: TRACE, DEBUG, INFO, WARN, ERROR
 - `log.file` - Log file path
+- `log.bufferSize` - In-memory log buffer size for DevTools Log tab (default: 500, range: 10-10000)
 
 ### AI
 - `ai.model` - AI chat model

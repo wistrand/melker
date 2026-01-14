@@ -819,6 +819,15 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       virtualY += rowHeight;
     }
 
+    // Draw vertical borders for empty space below data rows
+    const borderPropStyle = this.props.border || 'thin';
+    const borderChars = BORDER_CHARS[borderPropStyle !== 'none' ? borderPropStyle : 'thin'];
+    const rightBorderX = bounds.x + effectiveWidth - 1;
+    for (let emptyY = virtualY; emptyY < bodyStartY + bodyHeight; emptyY++) {
+      buffer.currentBuffer.setCell(bounds.x, emptyY, { char: borderChars.v, ...style });
+      buffer.currentBuffer.setCell(rightBorderX, emptyY, { char: borderChars.v, ...style });
+    }
+
     y = bodyStartY + bodyHeight;
 
     // Draw scrollbar if needed

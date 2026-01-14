@@ -23,6 +23,14 @@
       "flag": "--log-file",
       "description": "Log file path"
     },
+    "log.bufferSize": {
+      "type": "integer",
+      "default": 500,
+      "minimum": 10,
+      "maximum": 10000,
+      "env": "MELKER_LOG_BUFFER_SIZE",
+      "description": "In-memory log buffer size for DevTools"
+    },
     "ai.model": {
       "type": "string",
       "default": "openai/gpt-5.2-chat",

@@ -1,7 +1,7 @@
 // Hit testing for finding elements at screen coordinates
 // Handles dialogs and regular element tree traversal
 
-import { Element, isInteractive, isTextSelectable, isScrollableType } from './types.ts';
+import { Element, isInteractive, isTextSelectable, isScrollableType, isFocusCapturable } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { getLogger } from './logging.ts';
@@ -204,8 +204,8 @@ export class HitTester {
       if (childBounds && pointInBounds(x, y, childBounds)) {
         // Check if this component captures focus for all its children
         // If so, return this component instead of searching children
-        if (typeof (child as any).capturesFocusForChildren === 'function' &&
-            (child as any).capturesFocusForChildren() &&
+        if (isFocusCapturable(child) &&
+            child.capturesFocusForChildren() &&
             this.isInteractiveElement(child)) {
           logger.debug('Dialog hit test found (captures focus for children)', { id: child.id, type: child.type });
           return child;
@@ -356,8 +356,8 @@ export class HitTester {
     // Check if this component captures focus for all its children
     // If so, return this component instead of searching children
     if (bounds && pointInBounds(x, y, bounds) &&
-        typeof (element as any).capturesFocusForChildren === 'function' &&
-        (element as any).capturesFocusForChildren() &&
+        isFocusCapturable(element) &&
+        element.capturesFocusForChildren() &&
         this.isInteractiveElement(element)) {
       logger.debug('Hit test found (captures focus for children)', { id: element.id, type: element.type });
       return element;

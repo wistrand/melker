@@ -462,6 +462,69 @@ Tables with many rows cache expensive calculations to avoid O(n) loops on every 
 - Uses `children.length` (O(1)) instead of `getRows().length` (O(n)) for cache key
 - Caches invalidate when data actually changes
 
+## Element Interfaces and Type Guards
+
+Melker uses TypeScript interfaces with type guards for duck-typed element methods. This provides type safety without requiring all elements to implement all interfaces.
+
+**Core interfaces** (see `src/types.ts`):
+
+| Interface | Method | Purpose |
+|-----------|--------|---------|
+| `Focusable` | `canReceiveFocus()` | Elements that can receive keyboard focus |
+| `FocusCapturable` | `capturesFocusForChildren()` | Elements that handle focus for all children (dialogs) |
+| `Clickable` | `handleClick(event, document)` | Elements handling click events with full event object |
+| `PositionalClickHandler` | `handleClick(x, y)` | Elements handling clicks with coordinates (markdown, textarea) |
+| `Toggleable` | `toggle()` | Elements with open/closed state (command palettes) |
+| `KeyInputHandler` | `handleKeyInput(value)` | Elements handling text input |
+| `ContentGettable` | `getContent()` | Elements returning their text content |
+| `HasIntrinsicSize` | `intrinsicSize(context)` | Elements calculating their own size |
+| `Renderable` | `render()`, `intrinsicSize()` | Elements with full rendering capability |
+| `Wheelable` | `canHandleWheel()`, `handleWheel()` | Elements handling scroll wheel |
+| `Draggable` | `getDragZone()`, `handleDrag*()` | Elements with drag interactions |
+| `KeyboardElement` | `handlesOwnKeyboard()`, `onKeyPress()` | Elements with custom keyboard handling |
+| `ShaderElement` | `updateShaderMouse()`, `clearShaderMouse()` | Elements supporting shader mouse tracking |
+
+**Type guards** follow the pattern `is<Interface>(element)` or `has<Method>(element)`:
+
+```typescript
+import { isFocusable, hasPositionalClickHandler, isToggleable } from './types.ts';
+
+// Type-safe method access after guard
+if (isFocusable(element)) {
+  if (element.canReceiveFocus()) {
+    // Handle focusable element
+  }
+}
+
+if (hasPositionalClickHandler(element)) {
+  element.handleClick(x, y);  // TypeScript knows this is valid
+}
+```
+
+**Implementation pattern** for type guards:
+```typescript
+export function isFocusable(element: Element): element is Element & Focusable {
+  const el = element as unknown as Record<string, unknown>;
+  return typeof el.canReceiveFocus === 'function';
+}
+```
+
+**Global type declarations** (`src/globals.d.ts`):
+
+The `globals.d.ts` file declares global variables used throughout the codebase:
+- `melkerEngine` - Global engine instance
+- `$melker` - Context object for .melker scripts
+- `$app` - Alias for `$melker.exports`
+- `argv` - Command-line arguments
+- `__melker` - Handler registry
+- `__melkerRequestRender` - Render request function
+- `logger` - Global logger instance
+
+To include global declarations in the module graph (required for test type checking), `types.ts` imports `globals.d.ts`:
+```typescript
+import './globals.d.ts';
+```
+
 ## Chrome Collapse Implementation
 
 When content bounds would be negative due to insufficient space, chrome (padding then border) is progressively collapsed (see `src/sizing.ts`).

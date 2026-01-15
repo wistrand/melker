@@ -1,6 +1,6 @@
 // Container component implementation
 
-import { Element, BaseProps, Renderable, TextSelectable, IntrinsicSizeContext, Bounds, ComponentRenderContext } from '../types.ts';
+import { Element, BaseProps, Renderable, TextSelectable, IntrinsicSizeContext, Bounds, ComponentRenderContext, isRenderable, hasIntrinsicSize } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 
 export interface ContainerProps extends BaseProps {
@@ -95,8 +95,8 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
     if (isFlexRow) {
       // Row layout: sum widths, take max height
       for (const child of this.children) {
-        if ((child as any).intrinsicSize) {
-          const intrinsicSize = (child as any).intrinsicSize(context);
+        if (hasIntrinsicSize(child)) {
+          const intrinsicSize = child.intrinsicSize(context);
           // Use explicit numeric dimensions if available, otherwise use intrinsic size + border space
           let childWidth = typeof child.props?.style?.width === 'number' ? child.props.style.width : intrinsicSize.width;
           let childHeight = typeof child.props?.style?.height === 'number' ? child.props.style.height : intrinsicSize.height;
@@ -130,8 +130,8 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
     } else {
       // Column layout or block: take max width, sum heights
       for (const child of this.children) {
-        if ((child as any).intrinsicSize) {
-          const intrinsicSize = (child as any).intrinsicSize(context);
+        if (hasIntrinsicSize(child)) {
+          const intrinsicSize = child.intrinsicSize(context);
           // Use explicit numeric dimensions if available, otherwise use intrinsic size + border space
           let childWidth = typeof child.props?.style?.width === 'number' ? child.props.style.width : intrinsicSize.width;
           let childHeight = typeof child.props?.style?.height === 'number' ? child.props.style.height : intrinsicSize.height;

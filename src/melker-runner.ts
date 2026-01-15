@@ -36,6 +36,9 @@ import type { SystemInfo } from './dev-tools.ts';
 // Browser utility
 import { openBrowser } from './oauth/browser.ts';
 
+// Global types
+import type { MelkerContext } from './globals.d.ts';
+
 /**
  * Wire up bundler registry handlers to UI elements.
  */
@@ -438,11 +441,11 @@ export async function runMelkerFile(
     // Flag to skip auto-render after event handler
     let _skipNextRender = false;
 
-    const context = {
+    const context : MelkerContext = {
       url: sourceUrl,
       dirname: sourceDirname,
       exports: {} as Record<string, any>,
-      getElementById: (id: string) => engine?.document?.getElementById(id),
+      getElementById: (id: string) => engine?.document?.getElementById(id) ?? null,
       render: () => engine.render(),
       skipRender: () => { _skipNextRender = true; },
       _shouldSkipRender: () => {

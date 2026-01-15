@@ -122,7 +122,7 @@ export class ImgElement extends CanvasElement {
     }
 
     // Try to resolve using the engine
-    const engine = (globalThis as any).melkerEngine;
+    const engine = globalThis.melkerEngine;
     if (engine && typeof engine.resolveUrl === 'function') {
       const resolved = engine.resolveUrl(src);
       // Convert file:// URL to path

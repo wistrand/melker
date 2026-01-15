@@ -260,7 +260,7 @@ export function registerForEmergencyCleanup(instance: CleanupableInstance): void
     }
 
     // Store for potential external access
-    (globalThis as any)._melkerEmergencyCleanup = emergencyCleanup;
+    globalThis._melkerEmergencyCleanup = emergencyCleanup;
   }
 }
 

@@ -739,8 +739,8 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     // When table extends to the exact right edge of the terminal, some terminals
     // have issues with characters in the last column (autowrap, cursor positioning).
     // Reduce width by 1 when at the terminal edge to avoid visual artifacts.
-    const engine = (globalThis as any).melkerEngine;
-    const atTerminalEdge = engine && bounds.x + bounds.width >= engine._currentSize?.width;
+    const engine = globalThis.melkerEngine;
+    const atTerminalEdge = engine && bounds.x + bounds.width >= engine.terminalSize?.width;
     const effectiveWidth = atTerminalEdge ? bounds.width - 1 : bounds.width;
 
     const headerHeight = showHeader ? 2 : 0; // header row + separator

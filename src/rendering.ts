@@ -149,7 +149,7 @@ export class RenderingEngine {
   render(element: Element, buffer: DualBuffer, viewport: Bounds, focusedElementId?: string, textSelection?: TextSelection, hoveredElementId?: string, requestRender?: () => void): LayoutNode {
     // Store requestRender globally so components can access it even if not passed through context
     if (requestRender) {
-      (globalThis as any).__melkerRequestRender = requestRender;
+      globalThis.__melkerRequestRender = requestRender;
     }
 
     // Clear scrollbar bounds for fresh render
@@ -312,7 +312,7 @@ export class RenderingEngine {
 
     // Store requestRender globally so components can access it even if not passed through context
     if (requestRender) {
-      (globalThis as any).__melkerRequestRender = requestRender;
+      globalThis.__melkerRequestRender = requestRender;
     }
 
     // Reset timing for this render
@@ -383,7 +383,7 @@ export class RenderingEngine {
 
     // Store requestRender globally
     if (requestRender) {
-      (globalThis as any).__melkerRequestRender = requestRender;
+      globalThis.__melkerRequestRender = requestRender;
     }
 
     const context: RenderContext = {
@@ -748,7 +748,7 @@ export class RenderingEngine {
   // Render a layout node to the buffer
   private _renderNode(node: LayoutNode, context: RenderContext): void {
     // Debug: log visibility
-    const gLogger = (globalThis as any).logger;
+    const gLogger = globalThis.logger;
 
     if (!node.visible) return;
 
@@ -766,7 +766,7 @@ export class RenderingEngine {
     const { element, bounds, computedStyle } = node;
 
     // Debug: Log ALL node renders
-    const gLogger = (globalThis as any).logger;
+    const gLogger = globalThis.logger;
 
     // Skip dialog elements - they are rendered separately by _renderModal
     // to ensure proper layering and avoid double rendering

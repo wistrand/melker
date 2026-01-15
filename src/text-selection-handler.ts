@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { DualBuffer } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
-import { Element, TextSelection, Bounds, isClickable, ClickEvent, isDraggable, Draggable } from './types.ts';
+import { Element, TextSelection, Bounds, isClickable, ClickEvent, isDraggable, Draggable, hasShaderMethods } from './types.ts';
 import { clampToBounds } from './geometry.ts';
 import {
   EventManager,
@@ -443,8 +443,8 @@ export class TextSelectionHandler {
       if (this._hoveredElementId) {
         const prevElement = this._deps.document.getElementById(this._hoveredElementId);
         // Auto-clear shader mouse position when leaving element with shader
-        if (prevElement && prevElement.props?.onShader && typeof (prevElement as any).clearShaderMouse === 'function') {
-          (prevElement as any).clearShaderMouse();
+        if (prevElement && prevElement.props?.onShader && hasShaderMethods(prevElement)) {
+          prevElement.clearShaderMouse();
         }
         // Call onMouseOut handler directly if present
         if (prevElement && typeof prevElement.props?.onMouseOut === 'function') {
@@ -512,8 +512,8 @@ export class TextSelectionHandler {
     });
 
     // Auto-update shader mouse position for elements with onShader
-    if (hoveredElement && hoveredElement.props?.onShader && typeof (hoveredElement as any).updateShaderMouse === 'function') {
-      (hoveredElement as any).updateShaderMouse(event.x, event.y);
+    if (hoveredElement && hoveredElement.props?.onShader && hasShaderMethods(hoveredElement)) {
+      hoveredElement.updateShaderMouse(event.x, event.y);
     }
 
     // Call onMouseMove handler on the hovered element (if it has one)

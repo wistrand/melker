@@ -1384,8 +1384,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // When canvas extends to the exact right edge of the terminal, some terminals
     // have issues with sextant characters in the last column (autowrap, width calculation).
     // Skip the last column when we're at the terminal edge to avoid visual artifacts.
-    const engine = (globalThis as any).melkerEngine;
-    if (engine && bounds.x + terminalWidth >= engine._currentSize?.width) {
+    const engine = globalThis.melkerEngine;
+    if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
       terminalWidth = Math.max(1, terminalWidth - 1);
     }
 
@@ -1679,8 +1679,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     const halfScale = scale >> 1;
 
     // Workaround for terminal edge rendering glitch (same as non-dithered path)
-    const engine = (globalThis as any).melkerEngine;
-    if (engine && bounds.x + terminalWidth >= engine._currentSize?.width) {
+    const engine = globalThis.melkerEngine;
+    if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
       terminalWidth = Math.max(1, terminalWidth - 1);
     }
 

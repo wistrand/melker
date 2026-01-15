@@ -109,7 +109,7 @@ export function startShader(
   }
 
   // Check shader permission
-  const engine = (globalThis as any).melkerEngine;
+  const engine = globalThis.melkerEngine;
   if (!engine || typeof engine.hasPermission !== 'function' || !engine.hasPermission('shader')) {
     if (!state.permissionWarned) {
       state.permissionWarned = true;

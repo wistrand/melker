@@ -6,48 +6,68 @@ Scripts in `.melker` files have access to these global types.
 
 ```typescript
 interface MelkerContext {
-  // Element access
-  getElementById(id: string): Element | undefined;
+  // Source info
+  url: string;              // Source file URL
+  dirname: string;          // Source directory path
 
-  // Rendering
+  // App exports (same as $app)
+  exports: Record<string, unknown>;
+
+  // DOM-like APIs
+  getElementById(id: string): Element | null;
+  focus(id: string): void;
+  createElement(type: string, props?: Record<string, unknown>, ...children: unknown[]): Element;
+
+  // Render control
   render(): void;           // Trigger re-render
   skipRender(): void;       // Skip auto-render after handler
 
   // App lifecycle
-  exit(code?: number): void;
+  exit(): Promise<void>;
+  quit(): Promise<void>;    // Alias for exit()
+  setTitle(title: string): void;
 
   // Dialogs
-  alert(message: string): Promise<void>;
+  alert(message: string): void;
   confirm(message: string): Promise<boolean>;
   prompt(message: string, defaultValue?: string): Promise<string | null>;
 
-  // Clipboard
+  // System integration
   copyToClipboard(text: string): Promise<boolean>;
-
-  // Browser
   openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
 
-  // Cache directory (app-specific, always exists)
-  cacheDir: string;
+  // Engine access
+  engine: MelkerEngine;     // Direct engine access (advanced)
 
   // Logging
-  logger: {
-    debug(message: string, ...args: unknown[]): void;
-    info(message: string, ...args: unknown[]): void;
-    warn(message: string, ...args: unknown[]): void;
-    error(message: string, ...args: unknown[]): void;
-  };
+  logger: MelkerLogger | null;
+  logging: MelkerLogger | null;  // Alias for logger
+  getLogger(name: string): MelkerLogger;
+
+  // State persistence
+  persistenceEnabled: boolean;
+  stateFilePath: string | null;
+
+  // OAuth (when configured via <oauth> tag)
+  oauth: unknown;
+  oauthConfig: unknown;
+
+  // Dynamic imports
+  melkerImport(specifier: string): Promise<unknown>;
+
+  // AI tools
+  registerAITool(tool: unknown): void;
 
   // Configuration
-  config: {
-    getString(key: string, defaultValue?: string): string;
-    getNumber(key: string, defaultValue?: number): number;
-    getBoolean(key: string, defaultValue?: boolean): boolean;
-  };
+  config: MelkerConfig;
+  cacheDir: string;         // App-specific cache directory (always exists)
+}
 
-  // File info
-  url: string;              // Source file URL
-  dirname: string;          // Source directory path
+interface MelkerLogger {
+  debug(message: string, ...args: unknown[]): void;
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
 }
 ```
 

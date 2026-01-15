@@ -1,6 +1,6 @@
 // Tab component implementation - child of tabs container
 
-import { Element, BaseProps, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, IntrinsicSizeContext, isRenderable, hasIntrinsicSize } from '../types.ts';
 
 export interface TabProps extends BaseProps {
   title: string;
@@ -38,8 +38,8 @@ export class TabElement extends Element {
     let totalHeight = 0;
 
     for (const child of this.children) {
-      if ((child as any).intrinsicSize) {
-        const childSize = (child as any).intrinsicSize(context);
+      if (hasIntrinsicSize(child)) {
+        const childSize = child.intrinsicSize(context);
         maxWidth = Math.max(maxWidth, childSize.width);
         totalHeight += childSize.height;
       }

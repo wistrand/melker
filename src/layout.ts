@@ -715,6 +715,7 @@ export class LayoutEngine {
         flexShrink: childProps.flexShrink ?? 1,
         flexBasis: flexBasisValue,
         hypotheticalMain: flexBasisValue,  // Base size including padding
+        finalMain: flexBasisValue,  // Will be adjusted during grow/shrink calculation
         outerMain: flexBasisValue + marginMain,  // Outer size with padding + margin
         baseCross: baseCross,
         outerCross: baseCross + marginCross,  // Outer cross with padding + margin
@@ -806,9 +807,9 @@ export class LayoutEngine {
         lineItems.forEach(item => {
           if (totalGrow > 0) {
             const growShare = (item.flexGrow / totalGrow) * freeSpace;
-            (item as any).finalMain = item.hypotheticalMain + growShare;
+            item.finalMain = item.hypotheticalMain + growShare;
           } else {
-            (item as any).finalMain = item.hypotheticalMain;
+            item.finalMain = item.hypotheticalMain;
           }
         });
       } else {
@@ -822,9 +823,9 @@ export class LayoutEngine {
             const scaledShrink = item.flexShrink * item.hypotheticalMain;
             const shrinkRatio = scaledShrink / totalShrinkScaled;
             const shrinkAmount = shrinkRatio * Math.abs(freeSpace);
-            (item as any).finalMain = Math.max(0, item.hypotheticalMain - shrinkAmount);
+            item.finalMain = Math.max(0, item.hypotheticalMain - shrinkAmount);
           } else {
-            (item as any).finalMain = item.hypotheticalMain;
+            item.finalMain = item.hypotheticalMain;
           }
         });
       }
@@ -933,7 +934,7 @@ export class LayoutEngine {
     flexLines.forEach((line, lineIndex) => {
       const lineItems = line.items;
       const totalGaps = gap * Math.max(0, lineItems.length - 1);
-      const totalMainUsed = lineItems.reduce((sum, item) => sum + (item as any).finalMain + item.marginMain, 0);
+      const totalMainUsed = lineItems.reduce((sum, item) => sum + item.finalMain + item.marginMain, 0);
       const remainingSpace = mainAxisSize - totalMainUsed - totalGaps;
 
       let mainPositions: number[] = [];
@@ -944,7 +945,7 @@ export class LayoutEngine {
           pos = 0;
           lineItems.forEach((item, i) => {
             mainPositions.push(pos + item.marginStart);
-            pos += (item as any).finalMain + item.marginMain + (i < lineItems.length - 1 ? gap : 0);
+            pos += item.finalMain + item.marginMain + (i < lineItems.length - 1 ? gap : 0);
           });
           break;
 
@@ -952,7 +953,7 @@ export class LayoutEngine {
           pos = remainingSpace;
           lineItems.forEach((item, i) => {
             mainPositions.push(pos + item.marginStart);
-            pos += (item as any).finalMain + item.marginMain + (i < lineItems.length - 1 ? gap : 0);
+            pos += item.finalMain + item.marginMain + (i < lineItems.length - 1 ? gap : 0);
           });
           break;
 
@@ -960,7 +961,7 @@ export class LayoutEngine {
           pos = remainingSpace / 2;
           lineItems.forEach((item, i) => {
             mainPositions.push(pos + item.marginStart);
-            pos += (item as any).finalMain + item.marginMain + (i < lineItems.length - 1 ? gap : 0);
+            pos += item.finalMain + item.marginMain + (i < lineItems.length - 1 ? gap : 0);
           });
           break;
 
@@ -969,7 +970,7 @@ export class LayoutEngine {
           pos = 0;
           lineItems.forEach((item, i) => {
             mainPositions.push(pos + item.marginStart);
-            pos += (item as any).finalMain + item.marginMain + spaceBetween + (i < lineItems.length - 1 ? gap : 0);
+            pos += item.finalMain + item.marginMain + spaceBetween + (i < lineItems.length - 1 ? gap : 0);
           });
           break;
         }
@@ -979,7 +980,7 @@ export class LayoutEngine {
           pos = spaceAround;
           lineItems.forEach((item, i) => {
             mainPositions.push(pos + item.marginStart);
-            pos += (item as any).finalMain + item.marginMain + spaceAround * 2 + (i < lineItems.length - 1 ? gap : 0);
+            pos += item.finalMain + item.marginMain + spaceAround * 2 + (i < lineItems.length - 1 ? gap : 0);
           });
           break;
         }
@@ -989,7 +990,7 @@ export class LayoutEngine {
           pos = spaceEvenly;
           lineItems.forEach((item, i) => {
             mainPositions.push(pos + item.marginStart);
-            pos += (item as any).finalMain + item.marginMain + spaceEvenly + (i < lineItems.length - 1 ? gap : 0);
+            pos += item.finalMain + item.marginMain + spaceEvenly + (i < lineItems.length - 1 ? gap : 0);
           });
           break;
         }
@@ -998,7 +999,7 @@ export class LayoutEngine {
       // Apply reverse if needed
       if (isReverse) {
         mainPositions = mainPositions.map((p, i) =>
-          mainAxisSize - p - (lineItems[i] as any).finalMain
+          mainAxisSize - p - lineItems[i].finalMain
         );
       }
 
@@ -1057,7 +1058,7 @@ export class LayoutEngine {
           bounds = {
             x: Math.round(context.parentBounds.x + mainPos),
             y: Math.round(context.parentBounds.y + crossPos),
-            width: Math.round((item as any).finalMain),
+            width: Math.round(item.finalMain),
             height: Math.round(finalCross),
           };
         } else {
@@ -1065,7 +1066,7 @@ export class LayoutEngine {
             x: Math.round(context.parentBounds.x + crossPos),
             y: Math.round(context.parentBounds.y + mainPos),
             width: Math.round(finalCross),
-            height: Math.round((item as any).finalMain),
+            height: Math.round(item.finalMain),
           };
         }
 
@@ -1220,10 +1221,10 @@ export class LayoutEngine {
     const result = { ...style };
 
     // Normalize padding
-    const paddingTop = (style as any).paddingTop;
-    const paddingRight = (style as any).paddingRight;
-    const paddingBottom = (style as any).paddingBottom;
-    const paddingLeft = (style as any).paddingLeft;
+    const paddingTop = style.paddingTop;
+    const paddingRight = style.paddingRight;
+    const paddingBottom = style.paddingBottom;
+    const paddingLeft = style.paddingLeft;
 
     if (paddingTop !== undefined || paddingRight !== undefined ||
         paddingBottom !== undefined || paddingLeft !== undefined) {
@@ -1250,17 +1251,17 @@ export class LayoutEngine {
       };
 
       // Clean up individual properties
-      delete (result as any).paddingTop;
-      delete (result as any).paddingRight;
-      delete (result as any).paddingBottom;
-      delete (result as any).paddingLeft;
+      delete result.paddingTop;
+      delete result.paddingRight;
+      delete result.paddingBottom;
+      delete result.paddingLeft;
     }
 
     // Normalize margin
-    const marginTop = (style as any).marginTop;
-    const marginRight = (style as any).marginRight;
-    const marginBottom = (style as any).marginBottom;
-    const marginLeft = (style as any).marginLeft;
+    const marginTop = style.marginTop;
+    const marginRight = style.marginRight;
+    const marginBottom = style.marginBottom;
+    const marginLeft = style.marginLeft;
 
     if (marginTop !== undefined || marginRight !== undefined ||
         marginBottom !== undefined || marginLeft !== undefined) {
@@ -1287,10 +1288,10 @@ export class LayoutEngine {
       };
 
       // Clean up individual properties
-      delete (result as any).marginTop;
-      delete (result as any).marginRight;
-      delete (result as any).marginBottom;
-      delete (result as any).marginLeft;
+      delete result.marginTop;
+      delete result.marginRight;
+      delete result.marginBottom;
+      delete result.marginLeft;
     }
 
     return result;

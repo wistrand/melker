@@ -18,7 +18,7 @@ import { InputElement } from './components/input.ts';
 import { TextareaElement } from './components/textarea.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
-import { Element, TextSelection, isClickable, ClickEvent, isWheelable } from './types.ts';
+import { Element, TextSelection, isClickable, ClickEvent, isWheelable, isKeyboardElement, hasKeyPressHandler, isToggleable } from './types.ts';
 import {
   EventManager,
   type MelkerEvent,
@@ -314,7 +314,7 @@ export class MelkerEngine {
     this._currentSize = this._getTerminalSize();
 
     // Make engine globally accessible for components that need URL resolution
-    (globalThis as any).melkerEngine = this;
+    globalThis.melkerEngine = this;
 
     // Set element size to match terminal size if not specified
     const style = this._rootElement.props.style || {};
@@ -780,7 +780,7 @@ export class MelkerEngine {
           }
         }
         // Route to components that handle their own keyboard events (filterable lists, etc.)
-        else if (typeof (focusedElement as any).handlesOwnKeyboard === 'function' && (focusedElement as any).handlesOwnKeyboard() && typeof (focusedElement as any).onKeyPress === 'function') {
+        else if (isKeyboardElement(focusedElement) && focusedElement.handlesOwnKeyboard()) {
           const keyPressEvent = createKeyPressEvent(event.key, {
             code: event.code,
             ctrlKey: event.ctrlKey,
@@ -790,7 +790,7 @@ export class MelkerEngine {
             target: focusedElement.id,
           });
 
-          const handled = (focusedElement as any).onKeyPress(keyPressEvent);
+          const handled = focusedElement.onKeyPress(keyPressEvent);
 
           // Auto-render if the event was handled
           if (handled && this._options.autoRender) {
@@ -828,7 +828,7 @@ export class MelkerEngine {
           }
         }
         // Generic keyboard event handling for components with onKeyPress method
-        else if (focusedElement && typeof (focusedElement as any).onKeyPress === 'function') {
+        else if (focusedElement && hasKeyPressHandler(focusedElement)) {
           const keyPressEvent = createKeyPressEvent(event.key, {
             code: event.code,
             ctrlKey: event.ctrlKey,
@@ -838,7 +838,7 @@ export class MelkerEngine {
             target: focusedElement.id,
           });
 
-          const handled = (focusedElement as any).onKeyPress(keyPressEvent);
+          const handled = focusedElement.onKeyPress(keyPressEvent);
 
           // Auto-render if the event was handled
           if (handled && this._options.autoRender) {
@@ -1061,7 +1061,7 @@ export class MelkerEngine {
     const renderStartTime = performance.now();
     getGlobalPerformanceDialog().markRenderStart();
     this._renderCount++;
-    (globalThis as any).melkerRenderCount = this._renderCount;
+    globalThis.melkerRenderCount = this._renderCount;
 
     // Always log initial renders for debugging
     if (this._renderCount <= 3) {
@@ -2436,15 +2436,15 @@ export class MelkerEngine {
   toggleCommandPalette(): void {
     // First check for custom command palette
     const customPalette = this._findOpenCommandPalette() || this._findCommandPalette();
-    if (customPalette) {
-      (customPalette as any).toggle?.();
+    if (customPalette && isToggleable(customPalette)) {
+      customPalette.toggle();
       this.render();
       return;
     }
 
     // Fall back to system command palette
-    if (this._systemCommandPalette) {
-      (this._systemCommandPalette as any).toggle?.();
+    if (this._systemCommandPalette && isToggleable(this._systemCommandPalette)) {
+      this._systemCommandPalette.toggle();
       this.render();
     }
   }

@@ -43,7 +43,7 @@ export class TextElement extends Element implements Renderable, TextSelectable {
 
     try {
       // Get the global engine for base URL resolution
-      const engine = (globalThis as any).melkerEngine;
+      const engine = globalThis.melkerEngine;
       if (!engine) {
         throw new Error('No global Melker engine available for URL resolution');
       }
@@ -75,8 +75,8 @@ export class TextElement extends Element implements Renderable, TextSelectable {
     let { text, src } = this.props;
 
     // Debug: log ALL text render calls (during first few renders)
-    const logger = (globalThis as any).logger;
-    const renderCount = (globalThis as any).melkerRenderCount || 0;
+    const logger = globalThis.logger;
+    const renderCount = globalThis.melkerRenderCount || 0;
 
     // Get textWrap from style (default to 'nowrap')
     const elementStyle = this.props.style || {};
@@ -102,7 +102,7 @@ export class TextElement extends Element implements Renderable, TextSelectable {
         this._fetchSrcContent().then(content => {
           if (content !== null) {
             // Try to trigger a full re-render
-            const engine = (globalThis as any).melkerEngine;
+            const engine = globalThis.melkerEngine;
             if (engine && engine.forceRender) {
               engine.forceRender();
             }

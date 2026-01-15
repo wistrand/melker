@@ -1,6 +1,6 @@
 // Tabs component implementation - container for tab children
 
-import { Element, BaseProps, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, IntrinsicSizeContext, isRenderable, hasIntrinsicSize } from '../types.ts';
 import { TabElement } from './tab.ts';
 import { createElement } from '../element.ts';
 import { getLogger } from '../logging.ts';
@@ -232,7 +232,7 @@ export class TabsElement extends Element {
     let maxContentHeight = 0;
 
     for (const tab of this._tabElements) {
-      const tabSize = (tab as any).intrinsicSize?.(context) || { width: 0, height: 0 };
+      const tabSize = hasIntrinsicSize(tab) ? tab.intrinsicSize(context) : { width: 0, height: 0 };
       maxContentWidth = Math.max(maxContentWidth, tabSize.width);
       maxContentHeight = Math.max(maxContentHeight, tabSize.height);
     }

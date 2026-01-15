@@ -191,6 +191,27 @@ Only these properties inherit to children:
 
 Element-specific properties (borders, padding, margin) do NOT cascade.
 
+## Type System
+
+Melker uses TypeScript interfaces with type guards for optional element capabilities. See `src/types.ts` for all interfaces.
+
+**Key type guards:**
+- `isFocusable(element)` - Can receive keyboard focus
+- `isFocusCapturable(element)` - Captures focus for children (dialogs)
+- `isClickable(element)` - Handles click events
+- `hasPositionalClickHandler(element)` - Handles clicks with x,y coordinates
+- `isToggleable(element)` - Has toggle() method (command palettes)
+- `hasKeyInputHandler(element)` - Handles text input
+- `hasGetContent(element)` - Returns text content
+- `hasIntrinsicSize(element)` - Calculates own size
+- `isRenderable(element)` - Has render() and intrinsicSize()
+- `isWheelable(element)` - Handles scroll wheel
+- `isKeyboardElement(element)` - Custom keyboard handling
+
+**Global type declarations** (`src/globals.d.ts`):
+Declares `melkerEngine`, `$melker`, `$app`, `argv`, `__melker`, `logger`, etc.
+Imported by `types.ts` to include in module graph for test type checking.
+
 ## Logging
 
 **For app code** (`.melker` files, examples): `console.log()` redirects to `$melker.logger.info()` automatically.

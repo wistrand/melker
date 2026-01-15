@@ -285,7 +285,7 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
     }
 
     // Fallback to global requestRender (set by renderer)
-    const globalRender = (globalThis as any).__melkerRequestRender;
+    const globalRender = globalThis.__melkerRequestRender;
     if (globalRender) {
       globalRender();
       return;
@@ -293,7 +293,7 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
 
     // Neither available - schedule a retry
     setTimeout(() => {
-      const globalRenderRetry = (globalThis as any).__melkerRequestRender;
+      const globalRenderRetry = globalThis.__melkerRequestRender;
       if (this._requestRender) {
         this._requestRender();
       } else if (globalRenderRetry) {

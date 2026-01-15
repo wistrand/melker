@@ -245,6 +245,7 @@ export async function executeBundle(
     // We inject the context and argv as globals before importing
 
     // Set up globals that the bundled code expects
+    // Use casts because context is generic Record<string, unknown> but will have the right shape at runtime
     (globalThis as any).$melker = context;
     (globalThis as any).$app = context.exports; // Alias for $melker.exports
     (globalThis as any).argv = Deno.args.slice(1);

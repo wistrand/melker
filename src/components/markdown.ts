@@ -3,7 +3,7 @@
 // Phase 2: Heading, paragraph, and basic inline formatting
 // Phase 3: Lists, code blocks, and blockquotes
 
-import { Element, BaseProps, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, hasIntrinsicSize } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { fromMarkdown } from 'npm:mdast-util-from-markdown@^2.0.0';
 import { gfm } from 'npm:micromark-extension-gfm@^3.0.0';
@@ -395,7 +395,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     try {
       // Get engine instance to resolve URL
-      const engine = (globalThis as any).melkerEngine;
+      const engine = globalThis.melkerEngine;
       if (!engine || typeof engine.resolveUrl !== 'function') {
         console.error('Engine not available for URL resolution');
         return null;
@@ -485,7 +485,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
             this._heightStabilized = false; // Reset for new content
             this._lastRenderedHeight = 0;
             // Try to trigger a full re-render with layout recalculation
-            const engine = (globalThis as any).melkerEngine;
+            const engine = globalThis.melkerEngine;
             if (engine && typeof engine.forceRender === 'function') {
               engine.forceRender();
               // Force another render after a short delay to ensure layout recalculation
@@ -497,7 +497,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
             }
           } else {
             // Content is null - either error or still loading, trigger re-render to show error
-            const engine = (globalThis as any).melkerEngine;
+            const engine = globalThis.melkerEngine;
             if (engine && typeof engine.forceRender === 'function') {
               engine.forceRender();
             }
@@ -580,7 +580,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       this._heightStabilized = true;
 
       // Use forceRender from engine if available for full layout recalculation
-      const engine = (globalThis as any).melkerEngine;
+      const engine = globalThis.melkerEngine;
       if (engine && typeof engine.forceRender === 'function') {
         // Schedule with small delay to allow current render to complete
         setTimeout(() => {
@@ -1569,11 +1569,10 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         }
 
         // If element has intrinsicSize, use it
-        if (typeof (renderable as any).intrinsicSize === 'function') {
+        if (hasIntrinsicSize(element)) {
           try {
-            const intrinsic = (renderable as any).intrinsicSize({
-              availableWidth: ctx.bounds.width,
-              availableHeight: 100,
+            const intrinsic = element.intrinsicSize({
+              availableSpace: { width: ctx.bounds.width, height: 100 },
             });
             if (intrinsic.height) {
               elementHeight = intrinsic.height;
@@ -2254,7 +2253,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     const markdownUrl = this._resolvedSrcUrl;
     if (!markdownUrl) {
       // No resolved URL yet, fall back to engine resolution
-      const engine = (globalThis as any).melkerEngine;
+      const engine = globalThis.melkerEngine;
       if (engine && typeof engine.resolveUrl === 'function') {
         const resolved = engine.resolveUrl(src);
         logger.debug('Resolved via engine (no resolved markdown URL)', { resolved });

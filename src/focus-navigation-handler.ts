@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { FocusManager } from './focus.ts';
 import { HitTester } from './hit-test.ts';
-import { Element } from './types.ts';
+import { Element, isFocusable } from './types.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 
 export interface FocusNavigationHandlerDeps {
@@ -83,16 +83,16 @@ export class FocusNavigationHandler {
       this._logger.trace('Found button element during focus detection', {
         type: element.type,
         id: element.id || 'no-id',
-        hasCanReceiveFocus: !!(element as any).canReceiveFocus,
+        hasCanReceiveFocus: isFocusable(element),
         isInteractive: this._deps.hitTester.isInteractiveElement(element),
         disabled: element.props.disabled,
       });
     }
 
     // Check if element can receive focus using the Focusable interface
-    if ((element as any).canReceiveFocus && typeof (element as any).canReceiveFocus === 'function') {
+    if (isFocusable(element)) {
       try {
-        if ((element as any).canReceiveFocus()) {
+        if (element.canReceiveFocus()) {
           focusableElements.push(element);
         }
       } catch (error) {

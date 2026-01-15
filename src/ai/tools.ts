@@ -3,6 +3,7 @@
 
 import { Document } from '../document.ts';
 import { getLogger } from '../logging.ts';
+import { hasKeyInputHandler, hasGetContent } from '../types.ts';
 
 const logger = getLogger('ai:tools');
 
@@ -393,8 +394,8 @@ function executeSendEvent(
     }
 
     case 'keypress': {
-      if (typeof (element as any).handleKeyInput === 'function') {
-        (element as any).handleKeyInput(value || '');
+      if (hasKeyInputHandler(element)) {
+        element.handleKeyInput(value || '');
         context.render();
         return { success: true, message: `Sent keypress '${value}' to ${elementId}` };
       }
@@ -434,8 +435,8 @@ function executeReadElement(
     case 'markdown':
       // Markdown can have inline text OR fetched content from src
       // Use public getContent() method if available
-      if (typeof (element as any).getContent === 'function') {
-        content = (element as any).getContent() as string | undefined;
+      if (hasGetContent(element)) {
+        content = element.getContent();
       } else {
         content = element.props.text as string | undefined;
       }

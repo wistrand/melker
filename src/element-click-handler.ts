@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { HitTester } from './hit-test.ts';
-import { Element, isClickable, ClickEvent } from './types.ts';
+import { Element, isClickable, ClickEvent, hasPositionalClickHandler } from './types.ts';
 import { type ComponentLogger } from './logging.ts';
 
 export interface ElementClickHandlerDeps {
@@ -77,25 +77,23 @@ export class ElementClickHandler {
     }
 
     // Handle markdown element clicks (for link detection)
-    if (element.type === 'markdown') {
-      this._deps.logger?.debug(`Engine: Markdown element clicked at (${event.x}, ${event.y}), hasHandleClick: ${!!(element as any).handleClick}`);
-      if ((element as any).handleClick) {
-        // Pass absolute coordinates - markdown tracks its own render bounds
-        const handled = (element as any).handleClick(event.x, event.y);
-        this._deps.logger?.debug(`Engine: Markdown handleClick returned: ${handled}`);
-        if (handled && this._deps.autoRender) {
-          this._deps.onRender();
-        }
+    if (element.type === 'markdown' && hasPositionalClickHandler(element)) {
+      this._deps.logger?.debug(`Engine: Markdown element clicked at (${event.x}, ${event.y}), hasHandleClick: true`);
+      // Pass absolute coordinates - markdown tracks its own render bounds
+      const handled = element.handleClick(event.x, event.y);
+      this._deps.logger?.debug(`Engine: Markdown handleClick returned: ${handled}`);
+      if (handled && this._deps.autoRender) {
+        this._deps.onRender();
       }
     }
 
     // Handle textarea clicks (position cursor)
-    if (element.type === 'textarea') {
+    if (element.type === 'textarea' && hasPositionalClickHandler(element)) {
       const bounds = this._deps.renderer.getContainerBounds(element.id || '');
-      if (bounds && (element as any).handleClick) {
+      if (bounds) {
         const relativeX = event.x - bounds.x;
         const relativeY = event.y - bounds.y;
-        const handled = (element as any).handleClick(relativeX, relativeY);
+        const handled = element.handleClick(relativeX, relativeY);
         if (handled && this._deps.autoRender) {
           this._deps.onRender();
         }

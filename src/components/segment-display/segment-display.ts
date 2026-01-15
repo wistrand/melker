@@ -142,7 +142,7 @@ export class SegmentDisplayElement extends Element implements Renderable {
         this._scrollOffset = 0;
       }
       // Request re-render
-      const engine = (globalThis as any).melkerEngine;
+      const engine = globalThis.melkerEngine;
       if (engine?.render) {
         engine.render();
       }

@@ -30,6 +30,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | DX footguns | `agent_docs/dx-footguns.md` |
 | TUI comparison | `agent_docs/tui-comparison.md` |
 | Graphics modes | `agent_docs/gfx-modes.md` |
+| Map example | `agent_docs/map-example.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
 | Release scheme | `agent_docs/calver-release-plan.md` |
 | Examples | `examples/melker/*.melker` |
@@ -203,6 +204,7 @@ tests/                - Test files
 9. **Avoid emojis** - They break terminal layout
 10. **Update component props explicitly** - In .melker files, there are no reactive bindings like `${$app.var}` . To update props dynamically, use `$melker.getElementById('id').props.propName = value`
 11. **flex-direction is a style** - Use `style="flex-direction: row"` not `direction="row"`. Wrap select/combobox in row container to prevent cross-axis stretching.
+12. **Primitive exports are copied by value** - `$app.varName = value` modifies a copy, not the original. Use setter functions: `export function setVar(v) { varName = v; }`
 
 ## Environment Variables
 

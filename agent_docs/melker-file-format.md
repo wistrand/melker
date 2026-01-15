@@ -58,10 +58,39 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 |-----|-------------|
 | `<melker>` | Root wrapper (optional) |
 | `<title>` | Window/terminal title |
+| `<help>` | Markdown help text (shown in DevTools F12 > Help tab) |
 | `<style>` | CSS-like stylesheet rules (selector { props }) |
 | `<script>` | TypeScript/JavaScript code block |
 | `<oauth>` | OAuth2 PKCE configuration |
 | `<policy>` | Permission policy declaration |
+
+## Help Tag
+
+The `<help>` tag provides usage documentation displayed in DevTools (F12 > Help tab).
+
+Content is rendered as markdown:
+
+```xml
+<help>
+## Usage
+
+```
+myapp.melker [options]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `--foo` | Enable foo mode |
+
+## Examples
+
+```bash
+myapp.melker --foo bar
+```
+</help>
+```
 
 ## Script Lifecycle
 
@@ -103,6 +132,8 @@ Scripts can run at different times during app startup:
 Use `onMount()` when you need to conditionally register initialization or register from within functions. Prefer `async="ready"` for simpler, declarative initialization.
 
 **Note:** Markdown format (`.md` files) does not support `async="ready"` - use `onMount()` instead.
+
+**Important:** Primitive exports (`export let count = 0`) are copied by value to `$app`. Use setter functions to modify them from other scripts: `export function setCount(n) { count = n; }`. See `agent_docs/dx-footguns.md` #17.
 
 ## Components
 

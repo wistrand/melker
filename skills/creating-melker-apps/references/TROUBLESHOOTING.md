@@ -5,6 +5,7 @@
 | Error | Cause | Solution |
 |-------|-------|----------|
 | `$app.functionName is not a function` | Function not exported | Add `export` keyword: `export function functionName()` |
+| `$app.varName = value` doesn't update original | Primitives copied by value | Use setter function: `export function setVar(v) { varName = v; }` |
 | `Cannot read properties of undefined (reading 'getValue')` | Element not found | Check element `id` matches, ensure element exists before access |
 | `Permission denied` | Missing policy permission | Add required permission to `<policy>` section |
 | `Deno.bundle is not a function` | Old Deno version | Update to Deno 2.5+ |

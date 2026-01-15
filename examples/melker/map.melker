@@ -19,6 +19,44 @@
   }
   </policy>
 
+  <help>
+## Usage
+
+```
+map.melker [location] [zoom] [provider]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| location | Location name (e.g., `"Tokyo"`) or coordinates (e.g., `"35.6762,139.6503"`) |
+| zoom | Zoom level 0-20 (default: 5, or 12 if location specified) |
+| provider | `terrain`, `streets`, `voyager-nolabels`, `voyager`, `openstreetmap` (default), `satellite` |
+
+## Examples
+
+```bash
+map.melker                              # Start at London, zoom 5
+map.melker "New York"                   # Search and navigate to New York
+map.melker "35.6762,139.6503" 15        # Tokyo coordinates at zoom 15
+map.melker paris 12 satellite           # Paris with satellite imagery
+```
+
+## Controls
+
+| Key | Action |
+|-----|--------|
+| Mouse drag | Pan the map |
+| Scroll wheel | Zoom in/out at cursor |
+| Double-click | Zoom in at cursor (Shift+double-click to zoom out) |
+| Arrow keys / WASD / HJKL | Pan the map |
+| `+` / `-` | Zoom in/out |
+| `p` | Cycle through providers |
+| `1`-`6` | Select provider by number |
+| Home | Reset to London at zoom 5 |
+  </help>
+
   <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
     <!-- Header with controls -->
     <container style="display: flex; flex-direction: row; padding: 1; gap: 2; align-items: center;">
@@ -33,7 +71,7 @@
       />
 
       <text>Provider:</text>
-      <select id="provider" selectedValue="openstreetmap" onChange="$app.onProviderChange(event)">
+      <select id="provider" selectedValue="${argv[3]:-openstreetmap}" onChange="$app.onProviderChange(event)">
         <option value="terrain">Terrain</option>
         <option value="streets">Streets</option>
         <option value="voyager-nolabels">Voyager No Labels</option>
@@ -43,8 +81,8 @@
       </select>
 
       <text>Zoom:</text>
-      <slider id="zoomSlider" min="0" max="20" value="5" step="1" style="width: 20;" onChange="$app.onZoomSlider(event)" />
-      <text id="zoomLabel">5</text>
+      <slider id="zoomSlider" min="0" max="20" value="${argv[2]:-5}" step="1" style="width: 20;" onChange="$app.onZoomSlider(event)" />
+      <text id="zoomLabel">${argv[2]:-5}</text>
       <text id="loading" style="color: yellow;"></text>
     </container>
 
@@ -85,7 +123,7 @@
       subdomains?: string[];
     }
 
-    const MAP_PROVIDERS: Record<string, Provider> = {
+    export const MAP_PROVIDERS: Record<string, Provider> = {
       'terrain': {
         name: 'Terrain',
         url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
@@ -127,8 +165,8 @@
       }
     };
 
-    const PROVIDER_KEYS = Object.keys(MAP_PROVIDERS);
-    const MAX_ZOOM = 20;  // Allow over-zooming for subpixel detail
+    export const PROVIDER_KEYS = Object.keys(MAP_PROVIDERS);
+    export const MAX_ZOOM = 20;  // Allow over-zooming for subpixel detail
     const TILE_SIZE = 256;  // Standard tile size in pixels
 
     // Decoded tile image type
@@ -139,11 +177,19 @@
       bytesPerPixel: number;
     }
 
-    // Map state
-    let currentProvider = 'openstreetmap';
-    let centerLat = 51.5074;  // London
-    let centerLon = -0.1278;
-    let zoom = 5;
+    // Map state - initialized from argv if provided
+    const argLocation = "${argv[1]:-}".trim();
+    const argZoom = "${argv[2]:-}".trim();
+    const argProvider = "${argv[3]:-}".trim();
+    export let currentProvider = (argProvider && Object.keys(MAP_PROVIDERS).includes(argProvider)) ? argProvider : 'openstreetmap';
+    export let centerLat = 51.5074;  // London default
+    export let centerLon = -0.1278;
+    export let zoom = argZoom ? Math.max(0, Math.min(MAX_ZOOM, parseInt(argZoom, 10) || 5)) : 5;
+    // If location arg provided, wait for geo lookup before rendering
+    let waitingForLocation = !!argLocation;
+    export function setReady() { waitingForLocation = false; }
+    export function setZoom(z: number) { zoom = z; }
+    export function setCenter(lat: number, lon: number) { centerLat = lat; centerLon = lon; }
     let loadingCount = 0;
 
     // Drag state
@@ -236,12 +282,32 @@
       }
     }
 
+    // Mercator projection utilities
+    function latToMercatorY(lat: number): number {
+      // Convert latitude to Mercator Y (0-1 range for world)
+      const latRad = lat * Math.PI / 180;
+      return (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2;
+    }
+
+    function mercatorYToLat(y: number): number {
+      // Convert Mercator Y (0-1 range) back to latitude
+      const n = Math.PI - 2 * Math.PI * y;
+      return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+    }
+
+    function lonToMercatorX(lon: number): number {
+      return (lon + 180) / 360;
+    }
+
+    function mercatorXToLon(x: number): number {
+      return x * 360 - 180;
+    }
+
     // Tile math utilities
     function latLonToTile(lat: number, lon: number, z: number): { x: number; y: number; offsetX: number; offsetY: number } {
       const n = Math.pow(2, z);
-      const xFloat = (lon + 180) / 360 * n;
-      const latRad = lat * Math.PI / 180;
-      const yFloat = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
+      const xFloat = lonToMercatorX(lon) * n;
+      const yFloat = latToMercatorY(lat) * n;
 
       const x = Math.floor(xFloat);
       const y = Math.floor(yFloat);
@@ -404,6 +470,10 @@
       const el = $melker.getElementById('loading');
       if (el) {
         el.setValue(loadingCount > 0 ? `Loading ${loadingCount}...` : '');
+        // Trigger render when loading finishes to clear the text
+        if (loadingCount === 0) {
+          $melker.render();
+        }
       }
     }
 
@@ -428,6 +498,11 @@
 
       // Clear canvas
       canvas.clear();
+
+      // Skip rendering if waiting for initial location lookup
+      if (waitingForLocation) {
+        return;
+      }
 
       // Get pixel aspect ratio to correct for non-square terminal pixels
       // Value < 1 means pixels are taller than wide (sextant is 2x3)
@@ -518,7 +593,7 @@
       }
     }
 
-    function updateUI() {
+    export function updateUI() {
       const labelEl = $melker.getElementById('zoomLabel');
       if (labelEl) {
         const providerMaxZoom = MAP_PROVIDERS[currentProvider].maxZoom;
@@ -705,24 +780,34 @@
       const scaledTileH = TILE_SIZE * scale;
       const scaledTileW = scaledTileH / pixelAspect;
 
-      // Degrees per pixel (different for X and Y due to aspect)
-      const degreesPerPixelX = 360 / (scaledTileW * Math.pow(2, zoom));
-      const degreesPerPixelY = 360 / (scaledTileH * Math.pow(2, zoom));
-      const lonOffset = offsetX * degreesPerPixelX;
-      const latOffset = -offsetY * degreesPerPixelY * Math.cos(centerLat * Math.PI / 180);
+      // Work in Mercator space (linear)
+      const n = Math.pow(2, zoom);
+      const mercatorPerPixelX = 1 / (scaledTileW * n);
+      const mercatorPerPixelY = 1 / (scaledTileH * n);
 
-      const mouseLon = centerLon + lonOffset;
-      const mouseLat = centerLat + latOffset;
+      // Get center in Mercator coordinates
+      const centerMercX = lonToMercatorX(centerLon);
+      const centerMercY = latToMercatorY(centerLat);
 
+      // Get mouse position in Mercator coordinates
+      const mouseMercX = centerMercX + offsetX * mercatorPerPixelX;
+      const mouseMercY = centerMercY + offsetY * mercatorPerPixelY;
+
+      // Change zoom level
       zoom = zoomIn ? zoom + 1 : zoom - 1;
 
-      const newDegreesPerPixelX = 360 / (scaledTileW * Math.pow(2, zoom));
-      const newDegreesPerPixelY = 360 / (scaledTileH * Math.pow(2, zoom));
-      const newLonOffset = offsetX * newDegreesPerPixelX;
-      const newLatOffset = -offsetY * newDegreesPerPixelY * Math.cos(mouseLat * Math.PI / 180);
+      // Recalculate Mercator per pixel at new zoom
+      const newN = Math.pow(2, zoom);
+      const newMercatorPerPixelX = 1 / (scaledTileW * newN);
+      const newMercatorPerPixelY = 1 / (scaledTileH * newN);
 
-      centerLon = mouseLon - newLonOffset;
-      centerLat = mouseLat - newLatOffset;
+      // New center keeps mouse position fixed
+      const newCenterMercX = mouseMercX - offsetX * newMercatorPerPixelX;
+      const newCenterMercY = mouseMercY - offsetY * newMercatorPerPixelY;
+
+      // Convert back to lat/lon
+      centerLon = mercatorXToLon(newCenterMercX);
+      centerLat = mercatorYToLat(newCenterMercY);
 
       centerLat = Math.max(-85, Math.min(85, centerLat));
       while (centerLon > 180) centerLon -= 360;
@@ -752,12 +837,19 @@
       const scaledTileH = TILE_SIZE * scale;
       const scaledTileW = scaledTileH / pixelAspect;
 
-      // Degrees per pixel (different for X and Y due to aspect)
-      const degreesPerPixelX = 360 / (scaledTileW * Math.pow(2, zoom));
-      const degreesPerPixelY = 360 / (scaledTileH * Math.pow(2, zoom));
+      // Work in Mercator space
+      const n = Math.pow(2, zoom);
+      const mercatorPerPixelX = 1 / (scaledTileW * n);
+      const mercatorPerPixelY = 1 / (scaledTileH * n);
 
-      let lon = centerLon + offsetX * degreesPerPixelX;
-      let lat = centerLat - offsetY * degreesPerPixelY * Math.cos(centerLat * Math.PI / 180);
+      const centerMercX = lonToMercatorX(centerLon);
+      const centerMercY = latToMercatorY(centerLat);
+
+      const mercX = centerMercX + offsetX * mercatorPerPixelX;
+      const mercY = centerMercY + offsetY * mercatorPerPixelY;
+
+      let lon = mercatorXToLon(mercX);
+      const lat = mercatorYToLat(mercY);
 
       // Wrap longitude
       while (lon > 180) lon -= 360;
@@ -790,13 +882,19 @@
         const scaledTileH = TILE_SIZE * scale;
         const scaledTileW = scaledTileH / pixelAspect;
 
-        // Degrees per pixel (different for X and Y due to aspect)
-        const degreesPerPixelX = 360 / (scaledTileW * Math.pow(2, zoom));
-        const degreesPerPixelY = 360 / (scaledTileH * Math.pow(2, zoom));
+        // Work in Mercator space
+        const n = Math.pow(2, zoom);
+        const mercatorPerPixelX = 1 / (scaledTileW * n);
+        const mercatorPerPixelY = 1 / (scaledTileH * n);
 
-        centerLon = dragStartLon - pixelDeltaX * degreesPerPixelX;
-        // Latitude calculation is more complex due to Mercator projection
-        centerLat = dragStartLat + pixelDeltaY * degreesPerPixelY * Math.cos(dragStartLat * Math.PI / 180);
+        const startMercX = lonToMercatorX(dragStartLon);
+        const startMercY = latToMercatorY(dragStartLat);
+
+        const newMercX = startMercX - pixelDeltaX * mercatorPerPixelX;
+        const newMercY = startMercY - pixelDeltaY * mercatorPerPixelY;
+
+        centerLon = mercatorXToLon(newMercX);
+        centerLat = mercatorYToLat(newMercY);
 
         // Clamp latitude
         centerLat = Math.max(-85, Math.min(85, centerLat));
@@ -836,7 +934,6 @@
       const pixelAspect = mapEl.getPixelAspectRatio?.() || (2/3);
 
       // Convert mouse terminal position to buffer position
-      // Terminal cells are 2x3 sextant pixels
       const mouseBufferX = event.x * 2;
       const mouseBufferY = event.y * 3;
 
@@ -851,28 +948,34 @@
       const scaledTileH = TILE_SIZE * scale;
       const scaledTileW = scaledTileH / pixelAspect;
 
-      // Degrees per pixel (different for X and Y due to aspect)
-      const degreesPerPixelX = 360 / (scaledTileW * Math.pow(2, zoom));
-      const degreesPerPixelY = 360 / (scaledTileH * Math.pow(2, zoom));
-      const lonOffset = offsetX * degreesPerPixelX;
-      const latOffset = -offsetY * degreesPerPixelY * Math.cos(centerLat * Math.PI / 180);
+      // Work in Mercator space (linear)
+      const n = Math.pow(2, zoom);
+      const mercatorPerPixelX = 1 / (scaledTileW * n);
+      const mercatorPerPixelY = 1 / (scaledTileH * n);
 
-      // Calculate the lat/lon under the mouse
-      const mouseLon = centerLon + lonOffset;
-      const mouseLat = centerLat + latOffset;
+      // Get center in Mercator coordinates
+      const centerMercX = lonToMercatorX(centerLon);
+      const centerMercY = latToMercatorY(centerLat);
+
+      // Get mouse position in Mercator coordinates
+      const mouseMercX = centerMercX + offsetX * mercatorPerPixelX;
+      const mouseMercY = centerMercY + offsetY * mercatorPerPixelY;
 
       // Change zoom level
       zoom = zoomingIn ? zoom + 1 : zoom - 1;
 
-      // After zoom, adjust center so the point under the mouse stays in place
-      const newDegreesPerPixelX = 360 / (scaledTileW * Math.pow(2, zoom));
-      const newDegreesPerPixelY = 360 / (scaledTileH * Math.pow(2, zoom));
-      const newLonOffset = offsetX * newDegreesPerPixelX;
-      const newLatOffset = -offsetY * newDegreesPerPixelY * Math.cos(mouseLat * Math.PI / 180);
+      // Recalculate Mercator per pixel at new zoom
+      const newN = Math.pow(2, zoom);
+      const newMercatorPerPixelX = 1 / (scaledTileW * newN);
+      const newMercatorPerPixelY = 1 / (scaledTileH * newN);
 
-      // New center should be: mouseLat/Lon - newOffset
-      centerLon = mouseLon - newLonOffset;
-      centerLat = mouseLat - newLatOffset;
+      // New center keeps mouse position fixed
+      const newCenterMercX = mouseMercX - offsetX * newMercatorPerPixelX;
+      const newCenterMercY = mouseMercY - offsetY * newMercatorPerPixelY;
+
+      // Convert back to lat/lon
+      centerLon = mercatorXToLon(newCenterMercX);
+      centerLat = mercatorYToLat(newCenterMercY);
 
       // Clamp latitude
       centerLat = Math.max(-85, Math.min(85, centerLat));
@@ -956,6 +1059,63 @@
   <script async="ready">
     // Initialize tile file cache
     await $app.initTileCache();
+
+    // Handle initial location from command line (provider and zoom set via template)
+    const initialLocation = "${argv[1]:-}".trim();
+    if (initialLocation) {
+      // Check if it's coordinates (lat,lon format)
+      const coordMatch = initialLocation.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+
+      if (coordMatch) {
+        // Direct coordinates - no geo lookup needed
+        const lat = parseFloat(coordMatch[1]);
+        const lon = parseFloat(coordMatch[2]);
+        if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+          $app.setCenter(lat, lon);
+          $app.setReady();
+          $app.updateUI();
+
+          // Show coordinates in search field
+          const searchEl = $melker.getElementById('search') as any;
+          if (searchEl) {
+            searchEl.props.value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+          }
+        } else {
+          $app.setReady();
+          $app.updateUI();
+        }
+      } else {
+        // Location name - do geolookup
+        // Save zoom (onLocationSelect would set it to 12)
+        const savedZoom = $app.zoom;
+
+        // Do geolookup and pick first result
+        const results = await $app.onSearchInput(initialLocation);
+
+        // Clear waiting flag to allow rendering
+        $app.setReady();
+
+        if (results.length > 0) {
+          $app.onLocationSelect({ value: results[0].id, label: results[0].label });
+
+          // Restore zoom if it was specified via argv
+          const argZoom = "${argv[2]:-}".trim();
+          if (argZoom) {
+            $app.setZoom(savedZoom);
+            $app.updateUI();
+          }
+
+          // Show selected location in autocomplete (onLocationSelect clears it)
+          const searchEl = $melker.getElementById('search') as any;
+          if (searchEl) {
+            searchEl.props.value = results[0].label;
+          }
+        } else {
+          // No results - render default location
+          $app.updateUI();
+        }
+      }
+    }
 
     // Focus the map element
     $melker.engine.focusElement('map');

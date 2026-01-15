@@ -586,17 +586,26 @@ Pixel graphics using Unicode sextant characters (2x3 pixels per cell).
 
 **Canvas API:**
 ```typescript
+// Buffer info
+canvas.getBufferSize();      // { width, height } in pixels
+canvas.getBufferWidth();     // Buffer width in pixels
+canvas.getBufferHeight();    // Buffer height in pixels
+canvas.getVisualSize();      // Aspect-corrected size
+canvas.getPixelAspectRatio(); // ~0.67 for sextant (pixels are taller than wide)
+
+// Drawing
 canvas.clear();
-canvas.getBufferSize();  // { width, height } in pixels
-canvas.getVisualSize();  // Aspect-corrected size
-canvas.drawCircleCorrected(x, y, radius);
-canvas.drawSquareCorrected(x, y, size);
+canvas.setPixel(x, y);
 canvas.drawLine(x1, y1, x2, y2);
 canvas.fillRect(x, y, width, height);
-canvas.setPixel(x, y);
-canvas.drawImage(image, dx, dy, dw, dh);  // Draw full image
-canvas.drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh);  // Draw image portion
-canvas.markDirty();
+canvas.drawCircleCorrected(x, y, radius);  // Aspect-corrected circle
+canvas.drawSquareCorrected(x, y, size);    // Aspect-corrected square
+canvas.drawImage(image, dx, dy, dw, dh);
+canvas.drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh);
+canvas.markDirty();  // Mark for re-render
+
+// Image decoding
+canvas.decodeImageBytes(bytes);  // Uint8Array -> { width, height, data, bytesPerPixel }
 ```
 
 **Graphics modes** (per-element `gfxMode` prop or global `--gfx-mode` flag):

@@ -84,12 +84,17 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 12. **Avoid specifying colors** - Let the theme engine handle colors
 13. **flex-direction is a style** - Use `style="flex-direction: row"` not `direction="row"`
 14. **Prevent cross-axis stretching** - In column containers, wrap select/combobox/autocomplete in a row container to prevent full-width stretching
+15. **Primitive exports are copied by value** - `$app.varName = value` modifies a copy, not the original. Use setter functions to modify variables from other scripts
 
 ## File Structure
 
 ```xml
 <melker>
   <title>App Title</title>
+  <help>
+## Usage
+`myapp.melker [args]`
+  </help>
   <policy>{"permissions": {...}}</policy>
   <style>
     #myId { font-weight: bold; }
@@ -106,6 +111,8 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
   </script>
 </melker>
 ```
+
+- `<help>` - Markdown help text shown in DevTools (F12 > Help tab)
 
 **Multiple top-level elements:** You can have multiple UI elements at the top level - they are automatically wrapped in a flex column container:
 

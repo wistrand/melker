@@ -124,6 +124,22 @@ export const myVar = 'value';
 
 The `exports = { ... }` convenience pattern does NOT work in external files - use `export function` or `export const` instead.
 
+**Important: Primitive exports are copied by value.** When you export a primitive (number, string, boolean), `$app.varName` holds a copy. Assigning `$app.varName = newValue` modifies the copy, not the original variable:
+
+```html
+<script>
+  export let count = 0;
+  export function setCount(n) { count = n; }  // Use setter to modify original
+</script>
+
+<script async="ready">
+  $app.count = 10;     // WRONG - modifies copy, original still 0
+  $app.setCount(10);   // CORRECT - modifies original via setter
+</script>
+```
+
+Objects are copied by reference, so `$app.obj.prop = value` does modify the original.
+
 ## Logging
 
 ### Using the Default Logger

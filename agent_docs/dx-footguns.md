@@ -300,3 +300,33 @@ In flexbox column layout, children stretch horizontally (cross-axis) by default.
 ```
 
 This is standard flexbox behavior - in a column container, `align-items` defaults to `stretch`.
+
+## 17. Exported Variables Can't Be Modified from Ready Script
+
+**Mistake**: Trying to modify an `export let` variable from `<script async="ready">`.
+
+```xml
+<script type="typescript">
+  export let count = 0;
+</script>
+
+<script async="ready">
+  $app.count = 10;  // WRONG - sets a copy, not the original
+  console.log($app.count);  // Shows 10, but original is still 0
+</script>
+```
+
+**Solution**: Use setter functions to modify variables from other scripts:
+
+```xml
+<script type="typescript">
+  export let count = 0;
+  export function setCount(n: number) { count = n; }
+</script>
+
+<script async="ready">
+  $app.setCount(10);  // CORRECT - modifies the original
+</script>
+```
+
+**Why this happens**: The bundler merges exports into `$app` by copying values. For primitives (numbers, strings, booleans), `$app.count` holds a copy of the value, not a reference to the original binding. Setting `$app.count = 10` modifies the copy on `$app`, but the module-internal `count` variable remains unchanged. Objects work differently - they're copied by reference, so `$app.config.debug = true` would modify the original object.

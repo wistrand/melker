@@ -665,3 +665,14 @@ Open URLs in the system browser (requires `browser: true` in policy):
 11. **Add `<policy>` for file/network access** - Required for remote apps, recommended for all apps with external access
 12. **Use `--trust` for CI/scripts** - Bypasses interactive approval prompt that would hang non-interactive environments
 13. **Use `$melker.openBrowser(url)` for links** - Requires `browser: true` in policy permissions
+
+## Advanced Examples
+
+For more complex patterns, see these examples in the codebase:
+
+| Example | Patterns Demonstrated |
+|---------|----------------------|
+| `map.melker` | Canvas `onPaint`, async tile fetching, `decodeImageBytes()`, command line args via `${argv[N]}`, variable sharing between scripts (setter functions), delaying render until async completes, `$melker.cacheDir` |
+| `htop.melker` | Data table, live updates, process management |
+| `analog-clock.melker` | Canvas animation, aspect ratio correction |
+| `markdown_viewer.melker` | File loading, markdown rendering |

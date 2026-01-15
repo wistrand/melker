@@ -685,7 +685,10 @@ The `<canvas>` component provides pixel graphics using Unicode sextant character
 |--------|-------------|
 | `clear()` | Clear the canvas |
 | `getBufferSize()` | Get pixel buffer dimensions `{ width, height }` |
+| `getBufferWidth()` | Get buffer width in pixels |
+| `getBufferHeight()` | Get buffer height in pixels |
 | `getVisualSize()` | Get aspect-corrected visual size |
+| `getPixelAspectRatio()` | Get pixel aspect ratio (~0.67 for sextant) |
 | `setPixel(x, y)` | Set a pixel at coordinates |
 | `fillRect(x, y, w, h)` | Fill a rectangle |
 | `drawLine(x1, y1, x2, y2)` | Draw a line between two points |
@@ -693,6 +696,7 @@ The `<canvas>` component provides pixel graphics using Unicode sextant character
 | `drawSquareCorrected(x, y, size)` | Draw aspect-corrected square |
 | `drawImage(image, dx, dy, dw, dh)` | Draw full image at position |
 | `drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh)` | Draw portion of image |
+| `decodeImageBytes(bytes)` | Decode PNG/JPEG/GIF bytes to `{ width, height, data, bytesPerPixel }` |
 | `markDirty()` | Mark canvas for re-render |
 
 ### drawImageRegion

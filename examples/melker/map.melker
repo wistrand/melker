@@ -23,7 +23,7 @@
     <!-- Header with controls -->
     <container style="display: flex; flex-direction: row; padding: 1; gap: 2; align-items: center;">
       <text>Go to:</text>
-      <autocomplete style="width: 25"
+      <autocomplete
         id="search"
         placeholder="Search location..."
         style="width: 25;"
@@ -154,8 +154,35 @@
     let dragStartLon = 0;
 
     // Tile cache: "provider/z/x/y" -> decoded tile data (in-memory)
+    // Uses LRU eviction to prevent unbounded memory growth
+    const MAX_TILE_CACHE_SIZE = 256;  // ~64MB at 256KB per decoded tile
     const tileCache = new Map<string, DecodedTile>();
     const pendingFetches = new Set<string>();
+
+    // LRU cache helpers - Map maintains insertion order, so we delete+re-insert on access
+    function getTileFromCache(key: string): DecodedTile | undefined {
+      const tile = tileCache.get(key);
+      if (tile) {
+        // Move to end (most recently used)
+        tileCache.delete(key);
+        tileCache.set(key, tile);
+      }
+      return tile;
+    }
+
+    function setTileInCache(key: string, tile: DecodedTile): void {
+      // Evict oldest entries if at capacity
+      while (tileCache.size >= MAX_TILE_CACHE_SIZE) {
+        const oldestKey = tileCache.keys().next().value;
+        if (oldestKey) {
+          tileCache.delete(oldestKey);
+          $melker.logger.debug(`Evicted tile from cache: ${oldestKey}`);
+        } else {
+          break;
+        }
+      }
+      tileCache.set(key, tile);
+    }
 
     // File-based tile cache directory (initialized in ready script)
     let tileCacheDir: string | null = null;
@@ -267,7 +294,7 @@
         const parentY = tileY >> zoomDiff;
 
         const cacheKey = getTileCacheKey(parentX, parentY, parentZ, providerKey);
-        const parentTile = tileCache.get(cacheKey);
+        const parentTile = getTileFromCache(cacheKey);
 
         if (parentTile) {
           // Calculate which portion of the parent tile to use
@@ -297,9 +324,10 @@
     async function fetchTile(tileX: number, tileY: number, z: number, providerKey: string): Promise<DecodedTile | null> {
       const cacheKey = getTileCacheKey(tileX, tileY, z, providerKey);
 
-      // Return from memory cache
-      if (tileCache.has(cacheKey)) {
-        return tileCache.get(cacheKey)!;
+      // Return from memory cache (updates LRU order)
+      const cached = getTileFromCache(cacheKey);
+      if (cached) {
+        return cached;
       }
 
       // Already fetching
@@ -341,8 +369,8 @@
         // Decode the tile
         const decoded = decodeImageBytes(bytes);
 
-        // Add to memory cache
-        tileCache.set(cacheKey, decoded);
+        // Add to memory cache (with LRU eviction)
+        setTileInCache(cacheKey, decoded);
         $melker.logger.debug(`Cached tile: ${cacheKey} (${tileCache.size} in memory)`);
 
         // Trigger repaint
@@ -461,7 +489,7 @@
 
           // Get cached tile or start fetch (at tile zoom level)
           const cacheKey = getTileCacheKey(wrappedTileX, tileY, tileZoom, currentProvider);
-          const tile = tileCache.get(cacheKey);
+          const tile = getTileFromCache(cacheKey);
 
           if (tile) {
             // Verify tile dimensions match expected size
@@ -553,9 +581,21 @@
 
     let searchResults: SearchResult[] = [];
 
+    // Rate limiting for Nominatim (max 1 request per second per OSM policy)
+    const NOMINATIM_MIN_INTERVAL = 1000 + 100;  // ms
+    let lastNominatimRequest = 0;
+
     // Called when autocomplete triggers search (already debounced by component)
-    export async function onSearchInput(query: string): Promise<{ value: string; label: string }[]> {
+    export async function onSearchInput(query: string): Promise<{ id: string; label: string; disabled: boolean }[]> {
       try {
+        // Enforce rate limit: wait if last request was less than 1 second ago
+        const now = Date.now();
+        const elapsed = now - lastNominatimRequest;
+        if (elapsed < NOMINATIM_MIN_INTERVAL) {
+          await new Promise(resolve => setTimeout(resolve, NOMINATIM_MIN_INTERVAL - elapsed));
+        }
+        lastNominatimRequest = Date.now();
+
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8`;
         const response = await fetch(url, {
           headers: { 'User-Agent': 'MelkerMapViewer/1.0' }

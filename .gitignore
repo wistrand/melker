@@ -54,3 +54,5 @@ about-magic.md
 
 # Local Netlify folder
 .netlify
+.mailmap
+

@@ -11,10 +11,15 @@ import { MelkerConfig } from '../config/mod.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
 import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
-// Pure JS image decoders (stable API, no Deno internals)
-import { decode as decodePng } from 'npm:fast-png';
-import { decode as decodeJpeg } from 'npm:jpeg-js';
-import { GifReader } from 'npm:omggif';
+import { decodeImageBytes, loadImageFromSource, type LoadedImage } from './canvas-image.ts';
+import {
+  createShaderState, startShader, stopShader, isShaderRunning,
+  updateShaderMouse, clearShaderMouse, getShaderMouse,
+  type ShaderState, type ShaderContext
+} from './canvas-shader-runner.ts';
+
+// Re-export for external use
+export { type LoadedImage } from './canvas-image.ts';
 
 const logger = getLogger('canvas');
 
@@ -42,14 +47,6 @@ export interface CanvasProps extends BaseProps {
   onKeyPress?: (event: KeyPressEvent) => boolean | void;  // Called on keyboard events when focused
 }
 
-// Image data storage for loaded images
-interface LoadedImage {
-  width: number;
-  height: number;
-  data: Uint8ClampedArray;  // RGB or RGBA pixel data
-  bytesPerPixel: number;    // 3 for RGB, 4 for RGBA
-}
-
 export class CanvasElement extends Element implements Renderable, Focusable, Interactive {
   declare type: 'canvas';
   declare props: CanvasProps;
@@ -72,23 +69,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   private _imageLoading: boolean = false;
   private _imageSrc: string | null = null;
 
-  // Shader animation support
-  private _shaderTimer: number | null = null;
-  private _shaderStartTime: number = 0;
-  private _shaderRequestRender: (() => void) | null = null;
-  private _shaderResolution: ShaderResolution = { width: 0, height: 0, pixelAspect: 0.7 };
-  private _shaderSource: ShaderSource | null = null;
-  private _shaderFinished: boolean = false;  // True when stopped due to shaderRunTime
-
-  // Mouse tracking for shader
-  private _shaderMouseX: number = -1;  // Pixel coordinates (-1 = not over canvas)
-  private _shaderMouseY: number = -1;
-  private _shaderBounds: Bounds | null = null;  // Cache bounds for mouse coordinate conversion
-  private _shaderPermissionWarned: boolean = false;  // Track if we've warned about missing permission
-  private _shaderOutputBuffer: Uint32Array | null = null;  // Separate buffer for shader output (avoid race condition)
-  private _shaderFrameInterval: number = 33;  // Target ms between frames
-  private _shaderLastFrameTime: number = 0;  // Time of last frame start
-  private _shaderRegisteredId: string | null = null;  // ID registered with performance dialog
+  // Shader animation state (shared object for zero-overhead access)
+  private _shaderState: ShaderState = createShaderState();
 
   // Pre-allocated working arrays for _renderToTerminal (avoid per-cell allocations)
   private _rtDrawingPixels: boolean[] = [false, false, false, false, false, false];
@@ -387,121 +369,18 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   // ============================================
 
   /**
-   * Load an image from a file path or data URL and render it to the canvas.
-   * The image is scaled to fit the canvas while maintaining aspect ratio.
-   * @param src Path to image file (PNG, JPEG, GIF), or data URL (data:image/png;base64,...)
-   */
-  /**
    * Decode image bytes (PNG, JPEG, GIF) to pixel data
    * Can be used to decode fetched tile data before calling drawImage()
    */
   decodeImageBytes(imageBytes: Uint8Array): LoadedImage {
-    // Detect format by magic bytes and decode using stable pure-JS libraries
-    let width: number;
-    let height: number;
-    let pixelData: Uint8Array | Uint8ClampedArray;
-    let bytesPerPixel: number;
-
-    // PNG magic: 0x89 0x50 0x4E 0x47
-    const isPng = imageBytes[0] === 0x89 && imageBytes[1] === 0x50 &&
-                  imageBytes[2] === 0x4E && imageBytes[3] === 0x47;
-    // JPEG magic: 0xFF 0xD8 0xFF
-    const isJpeg = imageBytes[0] === 0xFF && imageBytes[1] === 0xD8 && imageBytes[2] === 0xFF;
-    // GIF magic: GIF87a or GIF89a
-    const isGif = imageBytes[0] === 0x47 && imageBytes[1] === 0x49 && imageBytes[2] === 0x46 &&
-                  imageBytes[3] === 0x38 && (imageBytes[4] === 0x37 || imageBytes[4] === 0x39) &&
-                  imageBytes[5] === 0x61;
-
-    if (isPng) {
-      const decoded = decodePng(imageBytes) as {
-        width: number;
-        height: number;
-        data: Uint8Array | Uint16Array;
-        depth: number;
-        channels: number;
-        palette?: number[][];  // [[r,g,b], [r,g,b], ...] for indexed PNGs
-      };
-      width = decoded.width;
-      height = decoded.height;
-      let rawData: Uint8Array;
-
-      // Handle 16-bit PNG by converting to 8-bit
-      if (decoded.depth === 16) {
-        const data16 = decoded.data as Uint16Array;
-        rawData = new Uint8Array(data16.length);
-        for (let i = 0; i < data16.length; i++) {
-          rawData[i] = data16[i] >> 8; // Take high byte
-        }
-      } else {
-        rawData = decoded.data as Uint8Array;
-      }
-
-      // Handle indexed/palette PNGs - expand palette to RGB
-      if (decoded.palette && decoded.channels === 1) {
-        const palette = decoded.palette;
-        bytesPerPixel = 4;
-        pixelData = new Uint8Array(width * height * 4);
-        for (let i = 0; i < width * height; i++) {
-          const colorIndex = rawData[i];
-          const color = palette[colorIndex] || [0, 0, 0];
-          pixelData[i * 4] = color[0];
-          pixelData[i * 4 + 1] = color[1];
-          pixelData[i * 4 + 2] = color[2];
-          pixelData[i * 4 + 3] = 255;
-        }
-      } else if (decoded.channels === 1) {
-        // Grayscale -> RGBA
-        bytesPerPixel = 4;
-        pixelData = new Uint8Array(width * height * 4);
-        for (let i = 0; i < width * height; i++) {
-          const gray = rawData[i];
-          pixelData[i * 4] = gray;
-          pixelData[i * 4 + 1] = gray;
-          pixelData[i * 4 + 2] = gray;
-          pixelData[i * 4 + 3] = 255;
-        }
-      } else if (decoded.channels === 2) {
-        // Grayscale + Alpha -> RGBA
-        bytesPerPixel = 4;
-        pixelData = new Uint8Array(width * height * 4);
-        for (let i = 0; i < width * height; i++) {
-          const gray = rawData[i * 2];
-          const alpha = rawData[i * 2 + 1];
-          pixelData[i * 4] = gray;
-          pixelData[i * 4 + 1] = gray;
-          pixelData[i * 4 + 2] = gray;
-          pixelData[i * 4 + 3] = alpha;
-        }
-      } else {
-        // RGB (3) or RGBA (4) - use as-is
-        bytesPerPixel = decoded.channels;
-        pixelData = rawData;
-      }
-    } else if (isJpeg) {
-      const decoded = decodeJpeg(imageBytes, { useTArray: true, formatAsRGBA: true });
-      width = decoded.width;
-      height = decoded.height;
-      bytesPerPixel = 4; // jpeg-js with formatAsRGBA always gives RGBA
-      pixelData = decoded.data;
-    } else if (isGif) {
-      const gifReader = new GifReader(imageBytes);
-      width = gifReader.width;
-      height = gifReader.height;
-      bytesPerPixel = 4; // GIF decoder outputs RGBA
-      pixelData = new Uint8Array(width * height * 4);
-      gifReader.decodeAndBlitFrameRGBA(0, pixelData); // Decode first frame
-    } else {
-      throw new Error(`Unsupported image format. Supported: PNG, JPEG, GIF`);
-    }
-
-    return {
-      width,
-      height,
-      data: new Uint8ClampedArray(pixelData),
-      bytesPerPixel,
-    };
+    return decodeImageBytes(imageBytes);
   }
 
+  /**
+   * Load an image from a file path or data URL and render it to the canvas.
+   * The image is scaled to fit the canvas while maintaining aspect ratio.
+   * @param src Path to image file (PNG, JPEG, GIF), or data URL (data:image/png;base64,...)
+   */
   async loadImage(src: string): Promise<void> {
     if (this._imageLoading) {
       return; // Already loading
@@ -511,42 +390,11 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     this._imageSrc = src;
 
     try {
-      let imageBytes: Uint8Array;
-
-      // Handle data: URLs (inline base64-encoded images)
-      if (src.startsWith('data:')) {
-        // Parse data URL: data:[<mediatype>][;base64],<data>
-        const match = src.match(/^data:([^;,]+)?(?:;base64)?,(.*)$/);
-        if (!match) {
-          throw new Error('Invalid data URL format');
-        }
-        const base64Data = match[2];
-        // Decode base64 to binary
-        const binaryString = atob(base64Data);
-        imageBytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          imageBytes[i] = binaryString.charCodeAt(i);
-        }
-      } else {
-        // Resolve the path for file reading
-        let resolvedSrc: string;
-        if (src.startsWith('file://')) {
-          // Handle file:// URLs - extract the path
-          resolvedSrc = new URL(src).pathname;
-        } else if (src.startsWith('/')) {
-          // Absolute path
-          resolvedSrc = src;
-        } else {
-          // Relative path - resolve from cwd
-          resolvedSrc = `${Deno.cwd()}/${src}`;
-        }
-
-        // Read the image file
-        imageBytes = await Deno.readFile(resolvedSrc);
-      }
+      // Load image bytes from source (file path or data URL)
+      const imageBytes = await loadImageFromSource(src);
 
       // Decode and store the image
-      this._loadedImage = this.decodeImageBytes(imageBytes);
+      this._loadedImage = decodeImageBytes(imageBytes);
 
       // Render the image to the canvas
       this._renderImageToBuffer();
@@ -1088,258 +936,46 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   // ============================================
 
   /**
+   * Get shader context for runner functions
+   */
+  private _getShaderContext(): ShaderContext {
+    return {
+      colorBuffer: this._colorBuffer,
+      imageColorBuffer: this._imageColorBuffer,
+      bufferWidth: this._bufferWidth,
+      bufferHeight: this._bufferHeight,
+      onShader: this.props.onShader,
+      shaderFps: this.props.shaderFps,
+      shaderRunTime: this.props.shaderRunTime,
+      id: this.props.id,
+      getPixelAspectRatio: () => this.getPixelAspectRatio(),
+      setDirty: () => { this._isDirty = true; },
+      setLoadedImage: (img: LoadedImage) => { this._loadedImage = img; },
+      previousColorBuffer: this._previousColorBuffer,
+      invalidateDitherCache: () => { this._ditherCacheValid = false; },
+    };
+  }
+
+  /**
    * Start the shader animation loop.
    * The onShader callback will be called for each pixel on every frame.
    */
   startShader(requestRender?: () => void): void {
-    if (this._shaderTimer !== null) {
-      return; // Already running
-    }
-
-    if (!this.props.onShader) {
-      return; // No shader callback
-    }
-
-    // Check shader permission - requires explicit policy with shader: true
-    const engine = (globalThis as any).melkerEngine;
-    if (!engine || typeof engine.hasPermission !== 'function' || !engine.hasPermission('shader')) {
-      if (!this._shaderPermissionWarned) {
-        this._shaderPermissionWarned = true;
-        logger.warn(`Shader blocked: requires policy with "shader": true permission.`);
-      }
-      return; // Permission denied
-    }
-
-    this._shaderRequestRender = requestRender ?? null;
-    this._shaderStartTime = performance.now();
-    this._shaderFinished = false;  // Reset in case of manual restart
-    this._shaderResolution = {
-      width: this._bufferWidth,
-      height: this._bufferHeight,
-      pixelAspect: this.getPixelAspectRatio()  // (2/3) * charAspectRatio
-    };
-
-    const fps = this.props.shaderFps ?? 30;
-    this._shaderFrameInterval = Math.floor(1000 / fps);
-    this._shaderLastFrameTime = performance.now();
-
-    // Register with performance dialog for stats tracking
-    const shaderId = this.props.id ?? `shader_${Date.now()}`;
-    this._shaderRegisteredId = shaderId;
-    const pixelCount = this._bufferWidth * this._bufferHeight;
-    getGlobalPerformanceDialog().registerShader(shaderId, pixelCount);
-
-    // Schedule first frame via setTimeout to avoid running inside render()
-    this._shaderTimer = setTimeout(() => {
-      this._shaderLastFrameTime = performance.now();
-      this._runShaderFrame();
-    }, 0);
-  }
-
-  /**
-   * Schedule next shader frame with proper time-keeping.
-   * Uses setTimeout instead of setInterval to prevent frame overlap.
-   */
-  private _scheduleNextShaderFrame(): void {
-    if (this._shaderTimer === null) return; // Stopped
-
-    const now = performance.now();
-    const elapsed = now - this._shaderLastFrameTime;
-    const delay = Math.max(0, this._shaderFrameInterval - elapsed);
-
-    this._shaderTimer = setTimeout(() => {
-      this._shaderLastFrameTime = performance.now();
-      this._runShaderFrame();
-    }, delay);
+    startShader(this._shaderState, this._getShaderContext(), requestRender);
   }
 
   /**
    * Stop the shader animation loop
    */
   stopShader(): void {
-    if (this._shaderTimer !== null) {
-      clearTimeout(this._shaderTimer);
-      this._shaderTimer = null;
-    }
-
-    // Unregister from performance dialog
-    if (this._shaderRegisteredId !== null) {
-      const pixelCount = this._bufferWidth * this._bufferHeight;
-      getGlobalPerformanceDialog().unregisterShader(this._shaderRegisteredId, pixelCount);
-      this._shaderRegisteredId = null;
-    }
+    stopShader(this._shaderState, this._getShaderContext());
   }
 
   /**
    * Check if shader is currently running
    */
   isShaderRunning(): boolean {
-    return this._shaderTimer !== null;
-  }
-
-  /**
-   * Freeze current shader output as a LoadedImage.
-   * This allows the final shader frame to be treated like a loaded image,
-   * supporting resize and repaint operations.
-   */
-  private _freezeShaderAsImage(): void {
-    const bufW = this._bufferWidth;
-    const bufH = this._bufferHeight;
-    const bufferSize = bufW * bufH;
-
-    // Convert color buffer to RGBA Uint8ClampedArray format
-    const rgbaData = new Uint8ClampedArray(bufferSize * 4);
-
-    for (let i = 0; i < bufferSize; i++) {
-      const color = this._colorBuffer[i];
-      const rgba = unpackRGBA(color);
-      const idx = i * 4;
-      rgbaData[idx] = rgba.r;
-      rgbaData[idx + 1] = rgba.g;
-      rgbaData[idx + 2] = rgba.b;
-      rgbaData[idx + 3] = rgba.a;
-    }
-
-    // Store as a LoadedImage so resize logic works
-    this._loadedImage = {
-      width: bufW,
-      height: bufH,
-      data: rgbaData,
-      bytesPerPixel: 4,
-    };
-
-    // Copy to image color buffer (background layer) for display
-    this._imageColorBuffer.set(this._colorBuffer);
-
-    // Clear the drawing layer so image layer shows through
-    // (drawing layer has priority in rendering, so we need to clear it)
-    this._colorBuffer.fill(TRANSPARENT);
-    this._previousColorBuffer.fill(TRANSPARENT);  // Prevent _markClean() from restoring old content
-
-    // Invalidate dither cache to force re-render
-    this._ditherCacheValid = false;
-
-    logger.debug(`Shader frozen as ${bufW}x${bufH} image`);
-  }
-
-  /**
-   * Run a single shader frame - calls onShader for each pixel
-   * Uses a separate output buffer to avoid race conditions with rendering.
-   */
-  private _runShaderFrame(): void {
-    const shader = this.props.onShader;
-    if (!shader) return;
-
-    const bufW = this._bufferWidth;
-    const bufH = this._bufferHeight;
-    const bufferSize = bufW * bufH;
-    const elapsedMs = performance.now() - this._shaderStartTime;
-    const time = elapsedMs / 1000; // Time in seconds
-
-    // Check if shaderRunTime is set and exceeded
-    if (this.props.shaderRunTime !== undefined && elapsedMs >= this.props.shaderRunTime) {
-      // Save current frame as a "frozen" image and stop the shader
-      this._freezeShaderAsImage();
-      this._shaderFinished = true;  // Prevent auto-restart in render()
-      this.stopShader();
-      // Request one final render to display the frozen frame
-      if (this._shaderRequestRender) {
-        this._shaderRequestRender();
-      }
-      return;
-    }
-
-    // Update resolution in case canvas was resized
-    this._shaderResolution.width = bufW;
-    this._shaderResolution.height = bufH;
-    this._shaderResolution.pixelAspect = this.getPixelAspectRatio();
-
-    // Ensure shader output buffer exists and is correct size
-    if (!this._shaderOutputBuffer || this._shaderOutputBuffer.length !== bufferSize) {
-      this._shaderOutputBuffer = new Uint32Array(bufferSize);
-    }
-    const outputBuffer = this._shaderOutputBuffer;
-
-    // Create or update source accessor for image pixel access
-    const imageBuffer = this._imageColorBuffer;
-    const hasImage = this._loadedImage !== null;
-    const imgWidth = this._loadedImage?.width ?? 0;
-    const imgHeight = this._loadedImage?.height ?? 0;
-
-    // Create source accessor object (reuse if possible)
-    if (!this._shaderSource) {
-      this._shaderSource = {
-        hasImage: false,
-        width: 0,
-        height: 0,
-        getPixel: (_x: number, _y: number) => null,
-        mouse: { x: -1, y: -1 },
-        mouseUV: { u: -1, v: -1 },
-      };
-    }
-
-    // Update source properties
-    this._shaderSource.hasImage = hasImage;
-    this._shaderSource.width = imgWidth;
-    this._shaderSource.height = imgHeight;
-
-    // Update mouse position
-    this._shaderSource.mouse.x = this._shaderMouseX;
-    this._shaderSource.mouse.y = this._shaderMouseY;
-    if (this._shaderMouseX >= 0 && this._shaderMouseY >= 0) {
-      this._shaderSource.mouseUV.u = this._shaderMouseX / bufW;
-      this._shaderSource.mouseUV.v = this._shaderMouseY / bufH;
-    } else {
-      this._shaderSource.mouseUV.u = -1;
-      this._shaderSource.mouseUV.v = -1;
-    }
-
-    // Create getPixel function that reads from image buffer
-    // The image buffer contains the scaled/rendered image at buffer resolution
-    const source = this._shaderSource;
-    source.getPixel = (px: number, py: number): [number, number, number, number] | null => {
-      if (px < 0 || px >= bufW || py < 0 || py >= bufH) return null;
-      const idx = py * bufW + px;
-      const color = imageBuffer[idx];
-      if (color === TRANSPARENT) return null;
-      const rgba = unpackRGBA(color);
-      return [rgba.r, rgba.g, rgba.b, rgba.a];
-    };
-
-    // Call shader for each pixel - write directly to _colorBuffer
-    // (Bypassing intermediate buffer since JS is single-threaded)
-    const shaderExecStart = performance.now();
-    const colorBuffer = this._colorBuffer;
-    for (let y = 0; y < bufH; y++) {
-      for (let x = 0; x < bufW; x++) {
-        const rgba = shader(x, y, time, this._shaderResolution, source, shaderUtils);
-        // Clamp values to 0-255
-        const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
-        const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
-        const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));
-        // Alpha is optional (defaults to 255 if not provided)
-        const a = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
-        // Pack and set pixel (TRANSPARENT if alpha is 0)
-        const color = a === 0 ? TRANSPARENT : packRGBA(r, g, b, a);
-        const index = y * bufW + x;
-        colorBuffer[index] = color;
-      }
-    }
-    const shaderExecTime = performance.now() - shaderExecStart;
-
-    // Record shader frame time for performance stats
-    getGlobalPerformanceDialog().recordShaderFrameTime(shaderExecTime);
-
-    this._isDirty = true;
-
-    // Schedule next frame immediately based on elapsed time, then request render
-    // This keeps consistent frame timing regardless of render duration
-    this._scheduleNextShaderFrame();
-
-    // Request render (will show current frame's output)
-    if (this._shaderRequestRender) {
-      this._shaderRequestRender();
-    }
+    return isShaderRunning(this._shaderState);
   }
 
   /**
@@ -1348,45 +984,35 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    * Can also be called manually if needed.
    */
   updateShaderMouse(termX: number, termY: number): void {
-    if (!this._shaderBounds) {
-      this._shaderMouseX = -1;
-      this._shaderMouseY = -1;
-      return;
-    }
-
-    const bounds = this._shaderBounds;
-
-    // Check if mouse is within canvas bounds
-    if (termX < bounds.x || termX >= bounds.x + bounds.width ||
-        termY < bounds.y || termY >= bounds.y + bounds.height) {
-      this._shaderMouseX = -1;
-      this._shaderMouseY = -1;
-      return;
-    }
-
-    // Convert terminal coordinates to pixel coordinates
-    // Each terminal cell is 2 pixels wide and 3 pixels tall (sextant characters)
-    const localX = termX - bounds.x;
-    const localY = termY - bounds.y;
-
-    // Scale to pixel buffer coordinates
-    this._shaderMouseX = Math.floor((localX / bounds.width) * this._bufferWidth);
-    this._shaderMouseY = Math.floor((localY / bounds.height) * this._bufferHeight);
+    updateShaderMouse(this._shaderState, termX, termY, this._bufferWidth, this._bufferHeight);
   }
 
   /**
    * Clear shader mouse position (call on mouse leave)
    */
   clearShaderMouse(): void {
-    this._shaderMouseX = -1;
-    this._shaderMouseY = -1;
+    clearShaderMouse(this._shaderState);
   }
 
   /**
    * Get current shader mouse position in pixel coordinates
    */
   getShaderMouse(): { x: number; y: number } {
-    return { x: this._shaderMouseX, y: this._shaderMouseY };
+    return getShaderMouse(this._shaderState);
+  }
+
+  /**
+   * Check if shader finished due to shaderRunTime
+   */
+  isShaderFinished(): boolean {
+    return this._shaderState.finished;
+  }
+
+  /**
+   * Set shader bounds for mouse coordinate conversion
+   */
+  setShaderBounds(bounds: Bounds | null): void {
+    this._shaderState.bounds = bounds;
   }
 
   /**
@@ -1585,7 +1211,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   private _prepareDitheredBuffer(): Uint8Array | null {
     let ditherMode = this.props.dither;
-    const shaderActive = this._shaderTimer !== null;
+    const shaderActive = this._shaderState.timer !== null;
 
     // Handle 'auto' mode based on config and theme
     // Track if original mode was 'auto' for dither.bits handling
@@ -2638,7 +2264,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
     // Cache bounds for mouse coordinate conversion in shaders
-    this._shaderBounds = bounds;
+    this._shaderState.bounds = bounds;
 
     // Auto-load image from src prop if not already loaded/loading
     // Skip for video elements (they handle src differently via ffmpeg)
@@ -2655,7 +2281,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     // Auto-start shader animation if onShader prop is provided
     // Don't restart if shader finished due to shaderRunTime
-    if (this.props.onShader && this._shaderTimer === null && !this._shaderFinished) {
+    if (this.props.onShader && this._shaderState.timer === null && !this._shaderState.finished) {
       this.startShader(context.requestRender);
     }
 
@@ -2669,7 +2295,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     this._renderToTerminal(bounds, style, buffer);
     // Mark clean to track changes for next frame
     // Skip for active shaders - they rewrite every pixel and the buffer swap causes glitches
-    if (this._isDirty && this._shaderTimer === null) {
+    if (this._isDirty && this._shaderState.timer === null) {
       this._markClean();
     }
     this._isDirty = false;
@@ -2750,7 +2376,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Reallocate image background layer buffer
     this._imageColorBuffer = new Uint32Array(bufferSize);
     // Reset shader output buffer (will be reallocated on next frame if needed)
-    this._shaderOutputBuffer = null;
+    this._shaderState.outputBuffer = null;
     // Reset dither cache (will be reallocated on next render if needed)
     this._ditherCache = null;
     this._ditherCacheValid = false;

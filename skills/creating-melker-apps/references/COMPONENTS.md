@@ -609,18 +609,21 @@ Global `MELKER_GFX_MODE` env var or `--gfx-mode` flag overrides per-element prop
 
 ### img
 
-Image display (PNG, JPEG, GIF). Supports file paths and data URLs.
+Image display (PNG, JPEG, GIF). Supports file paths, HTTP/HTTPS URLs, and data URLs.
 
 ```xml
 <!-- From file -->
 <img src="./image.png" width="40" height="20" />
+
+<!-- From HTTP/HTTPS URL (requires net permission) -->
+<img src="https://example.com/image.png" width="40" height="20" />
 
 <!-- From data URL (inline base64) -->
 <img src="data:image/png;base64,iVBORw0KGgo..." width="40" height="20" />
 ```
 
 **Props:**
-- `src` - Image path or data URL (`data:image/png;base64,...`)
+- `src` - Image path, HTTP/HTTPS URL, or data URL
 - `width`, `height` - Dimensions (number or percentage)
 - `objectFit`: `contain` | `cover` | `fill`
 - `dither` - Dithering mode
@@ -637,7 +640,7 @@ Image display (PNG, JPEG, GIF). Supports file paths and data URLs.
 ```typescript
 // Use setSource() to change images dynamically
 const img = $melker.getElementById('my-image');
-img.setSource('data:image/png;base64,...');  // or file path
+img.setSource('https://example.com/image.png');  // or file path or data URL
 ```
 
 ### Shaders (canvas/img)

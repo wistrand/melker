@@ -136,6 +136,13 @@ Canvas loads images using pure-JS decoders (no Deno internal APIs):
 
 Format detection uses magic bytes at file start.
 
+**Supported source types:**
+- File paths (absolute or relative)
+- HTTP/HTTPS URLs (requires `net` permission for target host)
+- Data URLs (`data:image/png;base64,...`)
+
+Image loading code is in `src/components/canvas-image.ts`.
+
 ## Canvas Dithering
 
 Canvas supports automatic dithering based on theme type:

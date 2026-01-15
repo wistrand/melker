@@ -821,7 +821,7 @@ The `<img>` component displays images in the terminal using sextant characters (
 ```typescript
 // Dynamic image switching
 const img = $melker.getElementById('my-image');
-img.setSource('data:image/png;base64,...');  // or file path
+img.setSource('https://example.com/image.png');  // or file path or data URL
 ```
 
 ### Shaders
@@ -888,7 +888,7 @@ All decoders are pure JavaScript - no native dependencies or Deno internal APIs.
 
 ### Implementation
 
-Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an HTML-like API for image display. Image decoding is in `src/components/canvas.ts`.
+Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an HTML-like API for image display. Image decoding is in `src/components/canvas-image.ts`.
 
 ## Rendering Pipeline
 

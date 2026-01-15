@@ -128,7 +128,9 @@ src/
     radio.ts          - Radio button
     tabs.ts           - Tabbed container
     tab.ts            - Tab panel (child of tabs)
-    canvas.ts         - Pixel graphics (sextant chars), image loading (PNG/JPEG/GIF)
+    canvas.ts         - Pixel graphics (sextant chars), rendering, dithering
+    canvas-image.ts   - Image loading/decoding (PNG/JPEG/GIF, HTTP/HTTPS, data URLs)
+    canvas-shader-runner.ts - Shader animation runner
     img.ts            - Image component (extends canvas)
     video.ts          - Video playback
     progress.ts       - Progress bar (extends Canvas)

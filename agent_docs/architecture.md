@@ -18,6 +18,8 @@
 | Button | `src/components/button.ts` | Uses `label` prop or content syntax |
 | Dialog | `src/components/dialog.ts` | Modal overlay |
 | Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars, onPaint, onShader, dither modes |
+| Canvas Image | `src/components/canvas-image.ts` | Image loading/decoding (file paths, HTTP/HTTPS, data URLs) |
+| Canvas Shader | `src/components/canvas-shader-runner.ts` | Shader animation runner |
 | Img | `src/components/img.ts` | Image display (extends Canvas), supports PNG/JPEG/GIF |
 | Video | `src/components/video.ts` | Video playback (extends Canvas), stopped on engine exit |
 | Markdown | `src/components/markdown.ts` | Markdown text rendering with image support (`![alt](url)`) |

@@ -2,7 +2,7 @@
 // Sandboxed app execution - handles template parsing, bundling, and engine creation.
 // This is spawned by melker-launcher.ts with restricted Deno permissions.
 
-import { resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
+import { resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
 import { debounce } from './utils/timing.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { Env } from './env.ts';
@@ -246,7 +246,7 @@ export async function runMelkerFile(
     const oauth = await import('./oauth.ts');
     const { hashFilePath } = await import('./state-persistence.ts');
     const { registerAITool, clearCustomTools } = await import('./ai/mod.ts');
-    const { dirname } = await import('https://deno.land/std@0.208.0/path/mod.ts');
+    const { dirname } = await import('https://deno.land/std@0.224.0/path/mod.ts');
 
     let templateContent = preloadedContent ?? await loadContent(filepath);
     const originalContent = templateContent;
@@ -396,6 +396,7 @@ export async function runMelkerFile(
       : resolve(Deno.cwd(), filepath);
     const urlHash = await getUrlHash(absolutePathForHash);
     const appCacheDir = getAppCacheDir(urlHash);
+    const logger = (() => { try { return getLogger(filename); } catch { return null; } })();
     // Ensure cache dir exists (in case manually deleted between runs)
     // Fail-safe: don't crash startup if cache dir can't be created
     try {
@@ -421,8 +422,6 @@ export async function runMelkerFile(
         return lastSlash >= 0 ? sourceUrl.substring(0, lastSlash) : '.';
       }
     })();
-
-    const logger = (() => { try { return getLogger(filename); } catch { return null; } })();
 
     const oauthConfig = parseResult.oauthConfig ? {
       wellknown: parseResult.oauthConfig.wellknown,

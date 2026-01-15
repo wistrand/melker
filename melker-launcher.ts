@@ -2,7 +2,7 @@
 // Security-auditable entry point that handles policy enforcement and subprocess spawning.
 // Does NOT import framework code - only policy module and std library.
 
-import { dirname, resolve } from 'https://deno.land/std@0.208.0/path/mod.ts';
+import { dirname, resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
 
 // Policy imports for permission enforcement
 import {

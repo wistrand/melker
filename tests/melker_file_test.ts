@@ -1,6 +1,6 @@
 // Tests for .melker file parsing
 
-import { assertEquals, assertExists, assertThrows, assertStringIncludes } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { assertEquals, assertExists, assertThrows, assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import { parseMelkerFile } from '../src/template.ts';
 
 // ============================================

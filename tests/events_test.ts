@@ -1,6 +1,6 @@
 // Comprehensive tests for the event system
 
-import { assertEquals, assertExists, assert } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { assertEquals, assertExists, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   EventManager,
   getGlobalEventManager,

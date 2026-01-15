@@ -1,6 +1,6 @@
 // Tests for lint schema validation - ensures lint schemas match types.ts definitions
 
-import { assertEquals, assert } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import { BASE_STYLES_SCHEMA, BASE_PROPS_SCHEMA } from '../src/lint.ts';
 
 // Explicitly declared properties in the Style interface from types.ts

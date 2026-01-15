@@ -1,6 +1,6 @@
 // Tests for element data model
 
-import { assertEquals, assertExists, assertNotEquals, assert } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { assertEquals, assertExists, assertNotEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   createElement,
   findElementById,

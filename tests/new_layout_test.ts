@@ -1,6 +1,6 @@
 // Tests for the new layout engine and content measurement improvements
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
+import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { ContentMeasurer, globalContentMeasurer } from '../src/content-measurer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from '../src/viewport.ts';
 import { ViewportDualBuffer, ViewportBufferProxy } from '../src/viewport-buffer.ts';

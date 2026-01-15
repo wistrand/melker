@@ -1,6 +1,6 @@
 // Complete Integration Test for All Three Phases
 
-import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
+import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { RenderingEngine } from '../src/rendering.ts';
 import { TextElement } from '../src/components/text.ts';
 import { ContainerElement } from '../src/components/container.ts';

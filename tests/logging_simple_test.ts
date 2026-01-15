@@ -1,6 +1,6 @@
 // Simple logging tests to verify basic functionality
 
-import { assertEquals, assertExists, assertStringIncludes } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { assertEquals, assertExists, assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import { createLogger, getLogger } from '../src/logging.ts';
 
 const testLogDir = './test-logs-simple';

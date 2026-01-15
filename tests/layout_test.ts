@@ -1,6 +1,6 @@
 // Tests for the Advanced Layout Engine
 
-import { assertEquals, assertNotEquals, assert } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { assertEquals, assertNotEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   LayoutEngine,
   AdvancedLayoutNode as LayoutNode,

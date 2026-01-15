@@ -1,6 +1,6 @@
 // Tests for the basic rendering engine
 
-import { assertEquals, assert } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   RenderingEngine,
   LayoutNode,

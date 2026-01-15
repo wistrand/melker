@@ -246,6 +246,22 @@ export class TextSelectionHandler {
       timestamp: Date.now(),
     });
 
+    // Call element's onMouseDown handler if it exists
+    if (targetElement && typeof targetElement.props.onMouseDown === 'function') {
+      const mouseDownEvent = {
+        type: 'mousedown' as const,
+        x: event.x,
+        y: event.y,
+        button: event.button || 0,
+        shiftKey: event.shift || false,
+        ctrlKey: event.ctrl || false,
+        altKey: event.alt || false,
+        target: targetElement,
+        timestamp: Date.now(),
+      };
+      targetElement.props.onMouseDown(mouseDownEvent);
+    }
+
     if (event.button === 0) { // Left mouse button
       // Track multi-click (double/triple click)
       const now = Date.now();
@@ -589,6 +605,19 @@ export class TextSelectionHandler {
       target: targetElement?.id,
       timestamp: Date.now(),
     });
+
+    // Call element's onMouseUp handler if it exists
+    if (targetElement && typeof targetElement.props.onMouseUp === 'function') {
+      const mouseUpEvent = {
+        type: 'mouseup' as const,
+        x: event.x,
+        y: event.y,
+        button: event.button || 0,
+        target: targetElement,
+        timestamp: Date.now(),
+      };
+      targetElement.props.onMouseUp(mouseUpEvent);
+    }
 
     if (event.button === 0 && this._isSelecting) { // Left mouse button
       this._isSelecting = false;

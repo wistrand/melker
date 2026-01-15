@@ -155,6 +155,8 @@ Runtime flags, not user config:
 - `MELKER_REMOTE_URL` - Original URL when loading remote files
 - `MELKER_RUNNING_HEADLESS` - Set by headless mode at runtime
 
+See `agent_docs/env-permission-analysis.md` for detailed analysis of env var permission handling.
+
 ## MelkerConfig API
 
 ```typescript

@@ -24,6 +24,12 @@ interface MelkerContext {
   // Clipboard
   copyToClipboard(text: string): Promise<boolean>;
 
+  // Browser
+  openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
+
+  // Cache directory (app-specific, always exists)
+  cacheDir: string;
+
   // Logging
   logger: {
     debug(message: string, ...args: unknown[]): void;

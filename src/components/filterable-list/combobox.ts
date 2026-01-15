@@ -91,6 +91,12 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
 
   intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
     // Input field is always 1 row high
+    // Respect explicit width from props or style
+    const explicitWidth = this.props.width ?? (this.props.style as any)?.width;
+    if (typeof explicitWidth === 'number') {
+      return { width: explicitWidth, height: 1 };
+    }
+
     // Width based on placeholder, value, or options - NOT available space
     const placeholder = this.props.placeholder || '';
     const value = this.props.value || '';
@@ -98,7 +104,8 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
     // Find longest option label
     let maxOptionWidth = 0;
     for (const option of this.getAllOptions()) {
-      maxOptionWidth = Math.max(maxOptionWidth, option.label.length);
+      const label = option.label || '';
+      maxOptionWidth = Math.max(maxOptionWidth, label.length);
     }
 
     const contentWidth = Math.max(placeholder.length, value.length, maxOptionWidth, 10);
@@ -148,7 +155,10 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
 
         const maxVisible = this.props.maxVisible || 8;
         const dropdownHeight = Math.min(totalRows, maxVisible) + 2; // +2 for border
-        const dropdownWidth = this.props.dropdownWidth || bounds.width;
+        // Dropdown can be wider than input to fit content
+        const minDropdownWidth = bounds.width;
+        const contentWidth = this._getMaxOptionWidth() + 4; // +4 for borders and padding
+        const dropdownWidth = this.props.dropdownWidth || Math.max(minDropdownWidth, contentWidth);
 
         const dropdownBounds: Bounds = {
           x: bounds.x,
@@ -307,7 +317,10 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
 
     const maxVisible = this.props.maxVisible || 8;
     const dropdownHeight = Math.min(totalRows, maxVisible) + 2; // +2 for border
-    const dropdownWidth = this.props.dropdownWidth || inputBounds.width;
+    // Dropdown can be wider than input to fit content
+    const minDropdownWidth = inputBounds.width;
+    const contentWidth = this._getMaxOptionWidth() + 4; // +4 for borders and padding
+    const dropdownWidth = this.props.dropdownWidth || Math.max(minDropdownWidth, contentWidth);
 
     // Position dropdown below input
     const dropdownBounds: Bounds = {
@@ -446,10 +459,44 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
   }
 
   /**
+   * Get the maximum option label width (for dropdown sizing)
+   */
+  protected _getMaxOptionWidth(): number {
+    let maxWidth = 0;
+    for (const option of this.getAllOptions()) {
+      const label = option.label || '';
+      maxWidth = Math.max(maxWidth, label.length);
+    }
+    return maxWidth;
+  }
+
+  /**
    * Handle click on dropdown (used by overlay system)
    */
   private _handleDropdownClick(x: number, y: number): boolean {
     if (!this._dropdownBounds) return false;
+
+    // Check if click is on the scrollbar
+    if (this.hasScroll()) {
+      const scrollbarX = this._dropdownBounds.x + this._dropdownBounds.width - 2;
+      if (x === scrollbarX) {
+        // Handle scrollbar click - scroll to position based on y
+        const scrollbarY = this._dropdownBounds.y + 1;
+        const scrollbarHeight = this._dropdownBounds.height - 2;
+        const clickOffset = y - scrollbarY;
+
+        if (clickOffset >= 0 && clickOffset < scrollbarHeight) {
+          const totalItems = this.getFilteredCount();
+          const visibleCount = this._getVisibleCount();
+          const maxScroll = Math.max(0, totalItems - visibleCount);
+
+          // Map click position to scroll position
+          const scrollPosition = Math.round((clickOffset / Math.max(1, scrollbarHeight - 1)) * maxScroll);
+          this._scrollTop = Math.max(0, Math.min(scrollPosition, maxScroll));
+          return true;
+        }
+      }
+    }
 
     // Use the row mapping to find which option was clicked
     const optionIndex = this._rowToOptionIndex.get(y);
@@ -582,8 +629,8 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
     }
 
     // Render label with match highlighting (bold for matched chars when focused)
-    const label = option.label;
-    const matchIndices = new Set(option.match.matchIndices);
+    const label = option.label || '';
+    const matchIndices = new Set(option.match?.matchIndices || []);
     const maxLabelWidth = width - (option.shortcut ? option.shortcut.length + 2 : 0);
 
     for (let i = 0; i < Math.min(label.length, maxLabelWidth); i++) {
@@ -766,9 +813,10 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
   // Override selectOption to also set input value to selected label
   override selectOption(option: OptionData): void {
     // Set input value to selected option's label
-    this._inputValue = option.label;
-    this._cursorPosition = option.label.length;
-    this.props.value = option.label;
+    const label = option.label || '';
+    this._inputValue = label;
+    this._cursorPosition = label.length;
+    this.props.value = label;
 
     // Call parent to fire event and close
     super.selectOption(option);

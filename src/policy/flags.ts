@@ -106,7 +106,7 @@ function getBrowserCommand(): string {
   }
 }
 
-export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[] {
+export function policyToDenoFlags(policy: MelkerPolicy, appDir: string, urlHash?: string): string[] {
   const flags: string[] = [];
   const p = policy.permissions || {};
 
@@ -169,7 +169,7 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[
   if (p.read?.includes('*')) {
     flags.push('--allow-read');
   } else {
-    const readPaths = buildReadPaths(p.read, appDir);
+    const readPaths = buildReadPaths(p.read, appDir, urlHash);
     if (readPaths.length > 0) {
       flags.push(`--allow-read=${readPaths.join(',')}`);
     }
@@ -179,7 +179,7 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[
   if (p.write?.includes('*')) {
     flags.push('--allow-write');
   } else {
-    const writePaths = buildWritePaths(p.write, appDir);
+    const writePaths = buildWritePaths(p.write, appDir, urlHash);
     if (writePaths.length > 0) {
       flags.push(`--allow-write=${writePaths.join(',')}`);
     }
@@ -250,7 +250,7 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string): string[
 /**
  * Build read paths with implicit paths added
  */
-function buildReadPaths(policyPaths: string[] | undefined, appDir: string): string[] {
+function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHash?: string): string[] {
   const paths: string[] = [];
 
   // Implicit: temp dir for bundler temp files
@@ -270,6 +270,12 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string): stri
   const xdgState = Env.get('XDG_STATE_HOME') || `${Env.get('HOME')}/.local/state`;
   paths.push(`${xdgState}/melker`);
 
+  // Implicit: app-specific cache dir (only if urlHash provided)
+  if (urlHash) {
+    const xdgCache = Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`;
+    paths.push(`${xdgCache}/melker/app-cache/${urlHash}`);
+  }
+
   // Policy paths (resolve relative to app dir)
   if (policyPaths) {
     for (const p of policyPaths) {
@@ -287,7 +293,7 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string): stri
 /**
  * Build write paths with implicit paths added
  */
-function buildWritePaths(policyPaths: string[] | undefined, appDir: string): string[] {
+function buildWritePaths(policyPaths: string[] | undefined, appDir: string, urlHash?: string): string[] {
   const paths: string[] = [];
 
   // Implicit: temp dir for bundler temp files
@@ -311,6 +317,12 @@ function buildWritePaths(policyPaths: string[] | undefined, appDir: string): str
     }
   }
 
+  // Implicit: app-specific cache dir (only if urlHash provided)
+  if (urlHash) {
+    const xdgCache = Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`;
+    paths.push(`${xdgCache}/melker/app-cache/${urlHash}`);
+  }
+
   // Policy paths (resolve relative to app dir)
   if (policyPaths) {
     for (const p of policyPaths) {
@@ -325,33 +337,42 @@ function buildWritePaths(policyPaths: string[] | undefined, appDir: string): str
   return [...new Set(paths)]; // Deduplicate
 }
 
-// Env vars that should always be whitelisted even if they don't exist yet.
-// These are either set by the launcher after flags are built, or are standard
-// terminal vars that code might check.
+// Vars that must ALWAYS be whitelisted (even if not currently set).
+// These are essential for basic operation.
 const ALWAYS_ALLOWED_ENV = [
+  // Basic terminal/system vars
+  'HOME', 'USERPROFILE', 'TERM', 'COLORTERM', 'COLORFGBG', 'NO_COLOR', 'PREFIX',
+  'TMPDIR', 'TEMP', 'TMP', 'PATH',
   // Set by launcher after permission flags are built
   'MELKER_RUNNER',
   'MELKER_REMOTE_URL',
   // Set at runtime by headless mode
   'MELKER_RUNNING_HEADLESS',
-  // Terminal vars that may or may not be set
-  'COLORFGBG',
 ];
 
 /**
  * Get implicit env vars dynamically from current environment,
  * plus vars that should always be allowed.
+ * XDG_* and MELKER_* vars are only included when actually present.
  */
 function getImplicitEnvVars(): string[] {
-  const vars = Env.keys().filter(name =>
-    name.startsWith('MELKER_') ||
-    name.startsWith('XDG_') ||
-    ['HOME', 'TERM', 'COLORTERM', 'COLORFGBG', 'NO_COLOR', 'PREFIX',
-     'TMPDIR', 'TEMP', 'TMP', 'PATH',
-     'OPENROUTER_API_KEY', 'DOTENV_KEY'].includes(name)
-  );
-  // Add vars that should always be allowed (even if not currently set)
-  vars.push(...ALWAYS_ALLOWED_ENV);
+  // Start with vars that are always allowed
+  const vars = [...ALWAYS_ALLOWED_ENV];
+
+  // Add XDG_* and MELKER_* vars that are actually present in the environment
+  for (const name of Env.keys()) {
+    if (name.startsWith('XDG_') || name.startsWith('MELKER_')) {
+      vars.push(name);
+    }
+  }
+
+  // Add other specific vars if present
+  for (const name of ['OPENROUTER_API_KEY', 'DOTENV_KEY']) {
+    if (Env.get(name) !== undefined) {
+      vars.push(name);
+    }
+  }
+
   return [...new Set(vars)]; // Deduplicate
 }
 

@@ -11,8 +11,8 @@ import { getLogger } from '../logging.ts';
 const logger = getLogger('ImgElement');
 
 export interface ImgProps extends Omit<CanvasProps, 'width' | 'height' | 'src'> {
-  /** Image source path (relative to current file or absolute) */
-  src: string;
+  /** Image source path (relative to current file or absolute). Optional if using loadImageFromBytes() */
+  src?: string;
   /** Alternative text for accessibility */
   alt?: string;
   /** Width in terminal columns, or percentage string like "50%" */
@@ -33,7 +33,7 @@ export class ImgElement extends CanvasElement {
   // Store callbacks separately to avoid type conflicts
   private _onLoad?: () => void;
   private _onError?: (error: Error) => void;
-  private _originalSrc: string;
+  private _originalSrc: string | undefined;
   private _srcResolved: boolean = false;
   private _originalWidth: number | string;
   private _originalHeight: number | string;
@@ -110,8 +110,9 @@ export class ImgElement extends CanvasElement {
   /**
    * Resolve src path relative to the .melker file
    */
-  private _resolveSrc(): string {
+  private _resolveSrc(): string | undefined {
     const src = this._originalSrc;
+    if (!src) return undefined;
 
     // If already absolute or data URL, return as-is
     if (src.startsWith('http://') || src.startsWith('https://') ||
@@ -160,7 +161,9 @@ export class ImgElement extends CanvasElement {
     // Resolve src on first render (when engine is available)
     if (!this._srcResolved && this._originalSrc) {
       const resolvedSrc = this._resolveSrc();
-      this.props.src = resolvedSrc;
+      if (resolvedSrc) {
+        this.props.src = resolvedSrc;
+      }
       this._srcResolved = true;
     }
 
@@ -226,7 +229,7 @@ registerComponent({
 export const imgSchema: ComponentSchema = {
   description: 'Display an image in the terminal',
   props: {
-    src: { type: 'string', required: true, description: 'Image source path or data URL (data:image/png;base64,...)' },
+    src: { type: 'string', required: false, description: 'Image source path or data URL (data:image/png;base64,...). Optional if loading via loadImageFromBytes()' },
     alt: { type: 'string', description: 'Alternative text for accessibility' },
     width: { type: ['number', 'string'], description: 'Width in columns or percentage (e.g., 30 or "50%")' },
     height: { type: ['number', 'string'], description: 'Height in rows or percentage (e.g., 15 or "50%")' },

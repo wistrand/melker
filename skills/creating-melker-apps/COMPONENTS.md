@@ -492,6 +492,8 @@ Dropdown with text filter.
 - `filter`: `fuzzy` | `prefix` | `contains` | `exact`
 - `maxVisible` - Max visible options
 - `onSelect` - Selection handler (`event.value`, `event.label`)
+- `width` or `style.width` - Explicit width (dropdown can expand to fit content)
+- `dropdownWidth` - Override dropdown width
 
 ### select
 
@@ -504,6 +506,12 @@ Simple dropdown picker (no filter).
   <option value="large">Large</option>
 </select>
 ```
+
+**Props:**
+- `value` - Selected value
+- `onChange` - Selection handler (`event.value`)
+- `width` or `style.width` - Explicit width (dropdown can expand to fit content)
+- `dropdownWidth` - Override dropdown width
 
 ### autocomplete
 
@@ -586,6 +594,8 @@ canvas.drawSquareCorrected(x, y, size);
 canvas.drawLine(x1, y1, x2, y2);
 canvas.fillRect(x, y, width, height);
 canvas.setPixel(x, y);
+canvas.drawImage(image, dx, dy, dw, dh);  // Draw full image
+canvas.drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh);  // Draw image portion
 canvas.markDirty();
 ```
 

@@ -675,6 +675,42 @@ progress.getValue();             // Get current value
 progress.setIndeterminate(true); // Enable/disable indeterminate mode
 ```
 
+## Canvas Component
+
+The `<canvas>` component provides pixel graphics using Unicode sextant characters (2x3 pixels per cell).
+
+### Canvas Methods
+
+| Method | Description |
+|--------|-------------|
+| `clear()` | Clear the canvas |
+| `getBufferSize()` | Get pixel buffer dimensions `{ width, height }` |
+| `getVisualSize()` | Get aspect-corrected visual size |
+| `setPixel(x, y)` | Set a pixel at coordinates |
+| `fillRect(x, y, w, h)` | Fill a rectangle |
+| `drawLine(x1, y1, x2, y2)` | Draw a line between two points |
+| `drawCircleCorrected(x, y, radius)` | Draw aspect-corrected circle |
+| `drawSquareCorrected(x, y, size)` | Draw aspect-corrected square |
+| `drawImage(image, dx, dy, dw, dh)` | Draw full image at position |
+| `drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh)` | Draw portion of image |
+| `markDirty()` | Mark canvas for re-render |
+
+### drawImageRegion
+
+Draw a portion of an image to the canvas with scaling:
+
+```typescript
+canvas.drawImageRegion(
+  image,     // Image data or Uint8Array (PNG/JPEG bytes)
+  sx, sy,    // Source rectangle top-left corner
+  sw, sh,    // Source rectangle dimensions
+  dx, dy,    // Destination position
+  dw, dh     // Destination dimensions (scales if different from sw, sh)
+);
+```
+
+Useful for tile-based rendering where you need to draw portions of larger images.
+
 ## Slider Component
 
 The `<slider>` component allows numeric value selection within a range using keyboard or mouse.

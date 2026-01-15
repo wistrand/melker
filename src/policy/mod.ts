@@ -32,4 +32,5 @@ export {
   getApproval,
   checkLocalApproval,
   saveLocalApproval,
+  getUrlHash,
 } from './approval.ts';

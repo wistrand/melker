@@ -33,6 +33,7 @@ $melker: {
   setTitle(title: string): void;
   alert(message: string): void;
   copyToClipboard(text: string): Promise<boolean>;
+  openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
 
   // Element creation
   createElement(type: string, props?: Record<string, any>, ...children: any[]): any;
@@ -46,6 +47,9 @@ $melker: {
   // State persistence
   persistenceEnabled: boolean;
   stateFilePath: string | null;
+
+  // App-specific cache directory (always exists)
+  cacheDir: string;
 
   // OAuth
   oauth: any;

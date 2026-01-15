@@ -79,8 +79,14 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     super('select', defaultProps, children);
   }
 
-  intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
+  intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
     // Trigger is always 1 row high
+    // Respect explicit width from props or style
+    const explicitWidth = this.props.width ?? (this.props.style as any)?.width;
+    if (typeof explicitWidth === 'number') {
+      return { width: explicitWidth, height: 1 };
+    }
+
     // Width based on placeholder, selected value, or options
     const placeholder = this.props.placeholder || '';
     const selectedOption = this.getSelectedOption();
@@ -95,7 +101,7 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     const minWidth = Math.max(placeholder.length, selectedLabel.length, maxOptionWidth, 10);
 
     return {
-      width: this.props.width || minWidth + 4, // +4 for padding and dropdown indicator
+      width: minWidth + 4, // +4 for padding and dropdown indicator
       height: 1, // Just the trigger row (dropdown renders as overlay)
     };
   }
@@ -131,7 +137,10 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
 
         const maxVisible = this.props.maxVisible || 8;
         const dropdownHeight = Math.min(totalRows, maxVisible) + 2; // +2 for border
-        const dropdownWidth = this.props.dropdownWidth || bounds.width;
+        // Dropdown can be wider than trigger to fit content
+        const minDropdownWidth = bounds.width;
+        const contentWidth = this._getMaxOptionWidth() + 4; // +4 for borders and padding
+        const dropdownWidth = this.props.dropdownWidth || Math.max(minDropdownWidth, contentWidth);
 
         const dropdownBounds: Bounds = {
           x: bounds.x,
@@ -277,7 +286,10 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
 
     const maxVisible = this.props.maxVisible || 8;
     const dropdownHeight = Math.min(totalRows, maxVisible) + 2;
-    const dropdownWidth = this.props.dropdownWidth || triggerBounds.width;
+    // Dropdown can be wider than trigger to fit content
+    const minDropdownWidth = triggerBounds.width;
+    const contentWidth = this._getMaxOptionWidth() + 4; // +4 for borders and padding
+    const dropdownWidth = this.props.dropdownWidth || Math.max(minDropdownWidth, contentWidth);
 
     const dropdownBounds: Bounds = {
       x: triggerBounds.x,
@@ -397,8 +409,42 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     }
   }
 
+  /**
+   * Get the maximum option label width (for dropdown sizing)
+   */
+  private _getMaxOptionWidth(): number {
+    let maxWidth = 0;
+    for (const option of this.getAllOptions()) {
+      const label = option.label || '';
+      maxWidth = Math.max(maxWidth, label.length);
+    }
+    return maxWidth;
+  }
+
   private _handleDropdownClick(x: number, y: number): boolean {
     if (!this._dropdownBounds) return false;
+
+    // Check if click is on the scrollbar
+    if (this.hasScroll()) {
+      const scrollbarX = this._dropdownBounds.x + this._dropdownBounds.width - 2;
+      if (x === scrollbarX) {
+        // Handle scrollbar click - scroll to position based on y
+        const scrollbarY = this._dropdownBounds.y + 1;
+        const scrollbarHeight = this._dropdownBounds.height - 2;
+        const clickOffset = y - scrollbarY;
+
+        if (clickOffset >= 0 && clickOffset < scrollbarHeight) {
+          const totalItems = this.getFilteredCount();
+          const visibleCount = this._getVisibleCount();
+          const maxScroll = Math.max(0, totalItems - visibleCount);
+
+          // Map click position to scroll position
+          const scrollPosition = Math.round((clickOffset / Math.max(1, scrollbarHeight - 1)) * maxScroll);
+          this._scrollTop = Math.max(0, Math.min(scrollPosition, maxScroll));
+          return true;
+        }
+      }
+    }
 
     const optionIndex = this._rowToOptionIndex.get(y);
 

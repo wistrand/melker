@@ -50,6 +50,8 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
   registerAITool(tool: any): void;
   persistenceEnabled: boolean;
   stateFilePath: string | null;
+  cacheDir: string;
+  ensureCacheDir(): Promise<string>;
   url: string;
   dirname: string;
   config: {

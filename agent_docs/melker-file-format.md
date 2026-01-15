@@ -365,6 +365,7 @@ See `examples/melker/` for complete examples:
 - `command_palette_demo.melker` - Full command palette features
 - `file_browser_simple.melker` - Basic file browser
 - `ai-tools-demo.melker` - Custom AI tool registration
+- `map.melker` - Tile-based map viewer with multiple providers (OSM, CARTO, etc.)
 
 ## Running
 
@@ -705,7 +706,9 @@ Use `$ENV{VAR}` or `$ENV{VAR:-default}` syntax in policy JSON:
 These are always granted (no need to declare):
 - **read**: `/tmp`, app directory, XDG state dir, cwd
 - **write**: `/tmp`, XDG state dir, log file directory
-- **env**: All `MELKER_*` vars, `HOME`, XDG dirs, `TERM`, `COLORTERM`, plus any env vars from `configSchema`
+- **env**: All `MELKER_*` vars, `HOME`, `USERPROFILE` (Windows), XDG dirs, `TERM`, `COLORTERM`, `PATH`, plus any env vars from `configSchema`
+
+See `agent_docs/env-permission-analysis.md` for detailed analysis of env var handling.
 
 ### App-Specific Configuration
 

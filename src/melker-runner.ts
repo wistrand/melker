@@ -342,6 +342,8 @@ export async function runMelkerFile(
     // Normal app execution
     const { loadFromFile, DEFAULT_PERSISTENCE_MAPPINGS, isPersistenceEnabled, getStateFilePath } = await import('./state-persistence.ts');
     const { setPersistenceContext } = await import('./element.ts');
+    const { getAppCacheDir, ensureDir } = await import('./xdg.ts');
+    const { getUrlHash } = await import('./policy/mod.ts');
     const appId = await hashFilePath(filepath);
     const persistEnabled = isPersistenceEnabled();
     const loadedState = await loadFromFile(appId, options.noLoad);
@@ -385,6 +387,21 @@ export async function runMelkerFile(
     // Apply policy config (only overrides defaults, not env/cli)
     if (appPolicy.config || appPolicy.configSchema) {
       MelkerConfig.applyPolicyConfig(appPolicy.config ?? {}, appPolicy.configSchema);
+    }
+
+    // Compute app-specific cache directory (uses same hash as approval file)
+    // Must use resolve() to match the exact path computation in the launcher
+    const absolutePathForHash = isUrl(filepath)
+      ? filepath
+      : resolve(Deno.cwd(), filepath);
+    const urlHash = await getUrlHash(absolutePathForHash);
+    const appCacheDir = getAppCacheDir(urlHash);
+    // Ensure cache dir exists (in case manually deleted between runs)
+    // Fail-safe: don't crash startup if cache dir can't be created
+    try {
+      await ensureDir(appCacheDir);
+    } catch (error) {
+      logger?.warn(`Failed to create cache dir: ${error}`);
     }
 
     if (parseResult.stylesheet) {
@@ -470,10 +487,17 @@ export async function runMelkerFile(
         return false;
       },
       openBrowser: async (url: string) => {
+        // Check if browser permission is enabled
+        if (!appPolicy.permissions?.browser) {
+          logger?.error('openBrowser() requires "browser": true in policy permissions');
+          return false;
+        }
         try {
+          logger?.info('openBrowser ' + url);
           await openBrowser(url);
           return true;
-        } catch {
+        } catch (error) {
+          logger?.error(`Failed to open browser: ${error}`);
           return false;
         }
       },
@@ -494,6 +518,7 @@ export async function runMelkerFile(
       registerAITool: registerAITool,
       getLogger: getLogger,
       config: MelkerConfig.get(),
+      cacheDir: appCacheDir,
     };
 
     const ui = parseResult.element;

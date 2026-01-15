@@ -48,6 +48,28 @@ export function getCacheDir(): string {
 }
 
 /**
+ * Get the app-cache base directory.
+ * App-specific cache directories are stored here with hash-based names.
+ *
+ * Default: $HOME/.cache/melker/app-cache/
+ */
+export function getAppCacheBaseDir(): string {
+  return `${getCacheDir()}/app-cache`;
+}
+
+/**
+ * Get the app-specific cache directory using a URL hash.
+ * Uses the same hash as the approval system for consistency.
+ *
+ * Path: $HOME/.cache/melker/app-cache/<urlHash>/
+ *
+ * @param urlHash - The first 12 characters of the SHA-256 hash of the URL/filepath
+ */
+export function getAppCacheDir(urlHash: string): string {
+  return `${getAppCacheBaseDir()}/${urlHash}`;
+}
+
+/**
  * Get the XDG data directory for user-specific data files.
  *
  * Default: $HOME/.local/share/melker

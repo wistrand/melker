@@ -150,6 +150,40 @@ class SelectElement extends FilterableListCore {
 }
 ```
 
+## Width Handling
+
+### Explicit Width
+
+Both `SelectElement` and `ComboboxElement` respect explicit width from props or style:
+
+```typescript
+intrinsicSize(context) {
+  // Explicit width takes precedence
+  const explicitWidth = this.props.width ?? this.props.style?.width;
+  if (typeof explicitWidth === 'number') {
+    return { width: explicitWidth, height: 1 };
+  }
+  // Otherwise calculate from content
+  return { width: this._calculateContentWidth(), height: 1 };
+}
+```
+
+### Dropdown Expansion
+
+The dropdown can expand wider than the input to fit content:
+
+```typescript
+// Dropdown width calculation
+const minDropdownWidth = inputBounds.width;
+const contentWidth = this._getMaxOptionWidth() + 4;  // padding for scrollbar
+const dropdownWidth = props.dropdownWidth || Math.max(minDropdownWidth, contentWidth);
+```
+
+This allows:
+- Input to respect explicit `style="width: 20"` or `width="20"`
+- Dropdown to expand to fit longer option labels
+- Override with `dropdownWidth` prop if needed
+
 ### AutocompleteElement
 
 Extends ComboboxElement with async search:

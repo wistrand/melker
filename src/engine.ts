@@ -853,6 +853,26 @@ export class MelkerEngine {
       // Check for Wheelable elements first (e.g., table with scrollable tbody)
       const target = this._hitTester.hitTest(event.x, event.y);
       this._logger?.debug(`Engine wheel: target=${target?.type}/${target?.id}, isWheelable=${target ? isWheelable(target) : false}`);
+
+      // Call element's onWheel handler if it exists
+      if (target && typeof target.props?.onWheel === 'function') {
+        const wheelEvent = {
+          type: 'wheel' as const,
+          x: event.x,
+          y: event.y,
+          deltaX: event.deltaX || 0,
+          deltaY: event.deltaY || 0,
+          target,
+          timestamp: Date.now(),
+        };
+        target.props.onWheel(wheelEvent);
+        // Auto-render after handler if enabled
+        if (this._options.autoRender) {
+          this.render();
+        }
+        return; // Event was handled by the onWheel handler
+      }
+
       if (target && isWheelable(target)) {
         const canHandle = target.canHandleWheel(event.x, event.y);
         this._logger?.debug(`Engine wheel: canHandleWheel=${canHandle}`);

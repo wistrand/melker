@@ -1,7 +1,7 @@
 // Approval cache for remote .melker files
 // Stores user approvals based on content + policy + deno flags hash
 
-import { getCacheDir, ensureDir } from '../xdg.ts';
+import { getCacheDir, ensureDir, getAppCacheDir } from '../xdg.ts';
 import type { MelkerPolicy } from './types.ts';
 
 /**
@@ -41,6 +41,42 @@ async function hashString(input: string): Promise<string> {
 }
 
 /**
+ * Get the URL hash used for approval files and cache directories.
+ * Returns first 12 characters of SHA-256 hash for shorter, unique identifiers.
+ */
+export async function getUrlHash(url: string): Promise<string> {
+  const fullHash = await hashString(url);
+  return fullHash.slice(0, 12);
+}
+
+/**
+ * Create the app-specific cache directory for a URL/filepath.
+ * Called during approval to ensure the cache dir exists before the app runs.
+ */
+async function createAppCacheDir(url: string): Promise<void> {
+  const urlHash = await getUrlHash(url);
+  const cacheDir = getAppCacheDir(urlHash);
+  await ensureDir(cacheDir);
+}
+
+/**
+ * Recursively sort object keys for consistent JSON serialization
+ */
+function sortObjectKeys(obj: unknown): unknown {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sortObjectKeys);
+  }
+  const sorted: Record<string, unknown> = {};
+  for (const key of Object.keys(obj).sort()) {
+    sorted[key] = sortObjectKeys((obj as Record<string, unknown>)[key]);
+  }
+  return sorted;
+}
+
+/**
  * Calculate approval hash from content, resolved policy, and Deno flags
  *
  * This hash changes if:
@@ -53,8 +89,9 @@ export async function calculateApprovalHash(
   resolvedPolicy: MelkerPolicy,
   denoFlags: string[]
 ): Promise<string> {
-  // Sort policy keys for consistent serialization
-  const policyJson = JSON.stringify(resolvedPolicy, Object.keys(resolvedPolicy).sort());
+  // Sort policy keys recursively for consistent serialization
+  const sortedPolicy = sortObjectKeys(resolvedPolicy);
+  const policyJson = JSON.stringify(sortedPolicy);
   // Sort flags for consistent ordering
   const flagsStr = denoFlags.slice().sort().join(' ');
 
@@ -115,6 +152,9 @@ export async function saveApproval(
 
   // Ensure approvals directory exists
   await ensureDir(getApprovalsDir());
+
+  // Create app-specific cache directory
+  await createAppCacheDir(url);
 
   const filePath = await getApprovalFilePath(url);
   await Deno.writeTextFile(filePath, JSON.stringify(record, null, 2));
@@ -293,7 +333,9 @@ export async function getApproval(url: string): Promise<ApprovalRecord | null> {
  * trigger re-approval, but policy changes do.
  */
 async function hashPolicy(policy: MelkerPolicy): Promise<string> {
-  const policyJson = JSON.stringify(policy, Object.keys(policy).sort());
+  // Sort all keys recursively for consistent serialization
+  const sortedPolicy = sortObjectKeys(policy);
+  const policyJson = JSON.stringify(sortedPolicy);
   return await hashString(policyJson);
 }
 
@@ -347,6 +389,10 @@ export async function saveLocalApproval(
   };
 
   await ensureDir(getApprovalsDir());
+
+  // Create app-specific cache directory
+  await createAppCacheDir(filepath);
+
   const filePath = await getApprovalFilePath(filepath);
   await Deno.writeTextFile(filePath, JSON.stringify(record, null, 2));
 }

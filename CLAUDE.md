@@ -26,6 +26,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | File browser | `agent_docs/file-browser-architecture.md` |
 | Data table | `agent_docs/data-table.md` |
 | Config system | `agent_docs/config-architecture.md` |
+| Env permissions | `agent_docs/env-permission-analysis.md` |
 | DX footguns | `agent_docs/dx-footguns.md` |
 | TUI comparison | `agent_docs/tui-comparison.md` |
 | Graphics modes | `agent_docs/gfx-modes.md` |
@@ -447,7 +448,9 @@ deno run --allow-all melker.ts --show-approval /path/to/app.melker
 These are always granted (no need to declare):
 - **read**: `/tmp`, app directory, XDG state dir, cwd
 - **write**: `/tmp`, XDG state dir, log file directory
-- **env**: All `MELKER_*` vars, `HOME`, XDG dirs, `TERM`, `COLORTERM`, plus any env vars from `configSchema`
+- **env**: All `MELKER_*` vars, `HOME`, `USERPROFILE` (Windows), XDG dirs, `TERM`, `COLORTERM`, `PATH`, plus any env vars from `configSchema`
+
+See `agent_docs/env-permission-analysis.md` for detailed analysis of env var handling.
 
 See `agent_docs/melker-file-format.md` for syntax details.
 

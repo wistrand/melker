@@ -22,6 +22,7 @@ import {
   getApproval,
   checkLocalApproval,
   saveLocalApproval,
+  getUrlHash,
   type MelkerPolicy,
 } from './src/policy/mod.ts';
 
@@ -160,8 +161,11 @@ async function runWithPolicy(
     : resolve(Deno.cwd(), filepath);
   const appDir = dirname(absolutePath);
 
+  // Compute URL hash for app-specific cache directory
+  const urlHash = await getUrlHash(absolutePath);
+
   // Convert policy to Deno permission flags
-  const denoFlags = policyToDenoFlags(policy, appDir);
+  const denoFlags = policyToDenoFlags(policy, appDir, urlHash);
 
   // Required: --unstable-bundle for Deno.bundle() API
   denoFlags.push('--unstable-bundle');
@@ -237,8 +241,11 @@ async function runRemoteWithPolicy(
   await Deno.writeTextFile(tempFile, content);
 
   try {
+    // Compute URL hash for app-specific cache directory (use original URL, not temp file)
+    const urlHash = await getUrlHash(url);
+
     // Convert policy to Deno permission flags
-    const denoFlags = policyToDenoFlags(policy, Deno.cwd());
+    const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash);
 
     // Required: --unstable-bundle for Deno.bundle() API
     denoFlags.push('--unstable-bundle');
@@ -539,19 +546,21 @@ export async function main(): Promise<void> {
         }
         const policyResult = await loadPolicyFromContent(content, filepath);
         const policy = policyResult.policy ?? createAutoPolicy();
+        const urlHash = await getUrlHash(filepath);
         console.log(`\nPolicy source: ${policyResult.source}\n`);
         console.log(formatPolicy(policy));
         console.log('\nDeno permission flags:');
-        const flags = policyToDenoFlags(policy, Deno.cwd());
+        const flags = policyToDenoFlags(policy, Deno.cwd(), urlHash);
         console.log(formatDenoFlags(flags));
       } else {
         const policyResult = await loadPolicy(absoluteFilepath);
         const policy = policyResult.policy ?? createAutoPolicy();
+        const urlHash = await getUrlHash(absoluteFilepath);
         const source = policyResult.policy ? policyResult.source : 'auto';
         console.log(`\nPolicy source: ${source}${policyResult.path ? ` (${policyResult.path})` : ''}\n`);
         console.log(formatPolicy(policy));
         console.log('\nDeno permission flags:');
-        const flags = policyToDenoFlags(policy, dirname(absoluteFilepath));
+        const flags = policyToDenoFlags(policy, dirname(absoluteFilepath), urlHash);
         console.log(formatDenoFlags(flags));
       }
       Deno.exit(0);
@@ -587,7 +596,8 @@ export async function main(): Promise<void> {
       }
 
       // Generate Deno flags and check approval
-      const denoFlags = policyToDenoFlags(policy, Deno.cwd());
+      const urlHash = await getUrlHash(filepath);
+      const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash);
       const isApproved = await checkApproval(filepath, content, policy, denoFlags);
 
       if (!isApproved) {
@@ -609,7 +619,8 @@ export async function main(): Promise<void> {
     if (!isUrl(filepath) && !options.trust) {
       const policyResult = await loadPolicy(absoluteFilepath);
       const policy = policyResult.policy ?? createAutoPolicy();
-      const denoFlags = policyToDenoFlags(policy, dirname(absoluteFilepath));
+      const urlHash = await getUrlHash(absoluteFilepath);
+      const denoFlags = policyToDenoFlags(policy, dirname(absoluteFilepath), urlHash);
 
       // Validate policy if present
       if (policyResult.policy) {

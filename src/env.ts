@@ -45,15 +45,24 @@ export class Env {
     // Unknown - try and cache readability
     try {
       const value = Deno.env.get(name);
-      this.readable.set(name, true);
+      // Only mark as readable if var actually exists (has a value)
+      // This prevents Env.keys() from returning vars that don't exist
+      if (value !== undefined) {
+        this.readable.set(name, true);
+      }
       return value;
     } catch {
       this.readable.set(name, false);
-      // Warn once per denied env var
+      // Log once per denied env var
       if (!this.warnedDenied.has(name)) {
         this.warnedDenied.add(name);
         const logger = getLogger('Env');
-        logger.warn(`Access denied for env var: ${name} (add to policy permissions or configSchema)`);
+        // MELKER_* and XDG_* are expected internal reads - debug level only
+        if (name.startsWith('MELKER_') || name.startsWith('XDG_')) {
+          logger.debug(`Env var not permitted: ${name}`);
+        } else {
+          logger.warn(`Access denied for env var: ${name} (add to policy permissions or configSchema)`);
+        }
       }
       return undefined;
     }

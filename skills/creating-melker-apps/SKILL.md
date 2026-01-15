@@ -123,6 +123,8 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `$melker.exit()` | Exit application |
 | `$melker.alert(message)` | Show modal alert |
 | `$melker.copyToClipboard(text)` | Copy to clipboard |
+| `$melker.openBrowser(url)` | Open URL in system browser (requires `browser: true` in policy) |
+| `$melker.cacheDir` | App-specific cache directory path (always exists) |
 | `$melker.logger.debug/info/warn/error()` | Log to file (F12 shows location) |
 | `$melker.config.getString/getNumber/getBoolean(key, default)` | Read config values |
 | `$melker.url` | Source file URL |

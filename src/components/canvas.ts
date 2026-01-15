@@ -391,6 +391,117 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    * The image is scaled to fit the canvas while maintaining aspect ratio.
    * @param src Path to image file (PNG, JPEG, GIF), or data URL (data:image/png;base64,...)
    */
+  /**
+   * Decode image bytes (PNG, JPEG, GIF) to pixel data
+   * Can be used to decode fetched tile data before calling drawImage()
+   */
+  decodeImageBytes(imageBytes: Uint8Array): LoadedImage {
+    // Detect format by magic bytes and decode using stable pure-JS libraries
+    let width: number;
+    let height: number;
+    let pixelData: Uint8Array | Uint8ClampedArray;
+    let bytesPerPixel: number;
+
+    // PNG magic: 0x89 0x50 0x4E 0x47
+    const isPng = imageBytes[0] === 0x89 && imageBytes[1] === 0x50 &&
+                  imageBytes[2] === 0x4E && imageBytes[3] === 0x47;
+    // JPEG magic: 0xFF 0xD8 0xFF
+    const isJpeg = imageBytes[0] === 0xFF && imageBytes[1] === 0xD8 && imageBytes[2] === 0xFF;
+    // GIF magic: GIF87a or GIF89a
+    const isGif = imageBytes[0] === 0x47 && imageBytes[1] === 0x49 && imageBytes[2] === 0x46 &&
+                  imageBytes[3] === 0x38 && (imageBytes[4] === 0x37 || imageBytes[4] === 0x39) &&
+                  imageBytes[5] === 0x61;
+
+    if (isPng) {
+      const decoded = decodePng(imageBytes) as {
+        width: number;
+        height: number;
+        data: Uint8Array | Uint16Array;
+        depth: number;
+        channels: number;
+        palette?: number[][];  // [[r,g,b], [r,g,b], ...] for indexed PNGs
+      };
+      width = decoded.width;
+      height = decoded.height;
+      let rawData: Uint8Array;
+
+      // Handle 16-bit PNG by converting to 8-bit
+      if (decoded.depth === 16) {
+        const data16 = decoded.data as Uint16Array;
+        rawData = new Uint8Array(data16.length);
+        for (let i = 0; i < data16.length; i++) {
+          rawData[i] = data16[i] >> 8; // Take high byte
+        }
+      } else {
+        rawData = decoded.data as Uint8Array;
+      }
+
+      // Handle indexed/palette PNGs - expand palette to RGB
+      if (decoded.palette && decoded.channels === 1) {
+        const palette = decoded.palette;
+        bytesPerPixel = 4;
+        pixelData = new Uint8Array(width * height * 4);
+        for (let i = 0; i < width * height; i++) {
+          const colorIndex = rawData[i];
+          const color = palette[colorIndex] || [0, 0, 0];
+          pixelData[i * 4] = color[0];
+          pixelData[i * 4 + 1] = color[1];
+          pixelData[i * 4 + 2] = color[2];
+          pixelData[i * 4 + 3] = 255;
+        }
+      } else if (decoded.channels === 1) {
+        // Grayscale -> RGBA
+        bytesPerPixel = 4;
+        pixelData = new Uint8Array(width * height * 4);
+        for (let i = 0; i < width * height; i++) {
+          const gray = rawData[i];
+          pixelData[i * 4] = gray;
+          pixelData[i * 4 + 1] = gray;
+          pixelData[i * 4 + 2] = gray;
+          pixelData[i * 4 + 3] = 255;
+        }
+      } else if (decoded.channels === 2) {
+        // Grayscale + Alpha -> RGBA
+        bytesPerPixel = 4;
+        pixelData = new Uint8Array(width * height * 4);
+        for (let i = 0; i < width * height; i++) {
+          const gray = rawData[i * 2];
+          const alpha = rawData[i * 2 + 1];
+          pixelData[i * 4] = gray;
+          pixelData[i * 4 + 1] = gray;
+          pixelData[i * 4 + 2] = gray;
+          pixelData[i * 4 + 3] = alpha;
+        }
+      } else {
+        // RGB (3) or RGBA (4) - use as-is
+        bytesPerPixel = decoded.channels;
+        pixelData = rawData;
+      }
+    } else if (isJpeg) {
+      const decoded = decodeJpeg(imageBytes, { useTArray: true, formatAsRGBA: true });
+      width = decoded.width;
+      height = decoded.height;
+      bytesPerPixel = 4; // jpeg-js with formatAsRGBA always gives RGBA
+      pixelData = decoded.data;
+    } else if (isGif) {
+      const gifReader = new GifReader(imageBytes);
+      width = gifReader.width;
+      height = gifReader.height;
+      bytesPerPixel = 4; // GIF decoder outputs RGBA
+      pixelData = new Uint8Array(width * height * 4);
+      gifReader.decodeAndBlitFrameRGBA(0, pixelData); // Decode first frame
+    } else {
+      throw new Error(`Unsupported image format. Supported: PNG, JPEG, GIF`);
+    }
+
+    return {
+      width,
+      height,
+      data: new Uint8ClampedArray(pixelData),
+      bytesPerPixel,
+    };
+  }
+
   async loadImage(src: string): Promise<void> {
     if (this._imageLoading) {
       return; // Already loading
@@ -434,61 +545,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         imageBytes = await Deno.readFile(resolvedSrc);
       }
 
-      // Detect format by magic bytes and decode using stable pure-JS libraries
-      let width: number;
-      let height: number;
-      let pixelData: Uint8Array | Uint8ClampedArray;
-      let bytesPerPixel: number;
-
-      // PNG magic: 0x89 0x50 0x4E 0x47
-      const isPng = imageBytes[0] === 0x89 && imageBytes[1] === 0x50 &&
-                    imageBytes[2] === 0x4E && imageBytes[3] === 0x47;
-      // JPEG magic: 0xFF 0xD8 0xFF
-      const isJpeg = imageBytes[0] === 0xFF && imageBytes[1] === 0xD8 && imageBytes[2] === 0xFF;
-      // GIF magic: GIF87a or GIF89a
-      const isGif = imageBytes[0] === 0x47 && imageBytes[1] === 0x49 && imageBytes[2] === 0x46 &&
-                    imageBytes[3] === 0x38 && (imageBytes[4] === 0x37 || imageBytes[4] === 0x39) &&
-                    imageBytes[5] === 0x61;
-
-      if (isPng) {
-        const decoded = decodePng(imageBytes);
-        width = decoded.width;
-        height = decoded.height;
-        bytesPerPixel = decoded.channels; // 3 for RGB, 4 for RGBA
-        // Handle 16-bit PNG by converting to 8-bit
-        if (decoded.depth === 16) {
-          const data16 = decoded.data as Uint16Array;
-          pixelData = new Uint8Array(data16.length);
-          for (let i = 0; i < data16.length; i++) {
-            pixelData[i] = data16[i] >> 8; // Take high byte
-          }
-        } else {
-          pixelData = decoded.data as Uint8Array;
-        }
-      } else if (isJpeg) {
-        const decoded = decodeJpeg(imageBytes, { useTArray: true, formatAsRGBA: true });
-        width = decoded.width;
-        height = decoded.height;
-        bytesPerPixel = 4; // jpeg-js with formatAsRGBA always gives RGBA
-        pixelData = decoded.data;
-      } else if (isGif) {
-        const gifReader = new GifReader(imageBytes);
-        width = gifReader.width;
-        height = gifReader.height;
-        bytesPerPixel = 4; // GIF decoder outputs RGBA
-        pixelData = new Uint8Array(width * height * 4);
-        gifReader.decodeAndBlitFrameRGBA(0, pixelData); // Decode first frame
-      } else {
-        throw new Error(`Unsupported image format. Supported: PNG, JPEG, GIF`);
-      }
-
-      // Store the loaded image
-      this._loadedImage = {
-        width,
-        height,
-        data: new Uint8ClampedArray(pixelData),
-        bytesPerPixel,
-      };
+      // Decode and store the image
+      this._loadedImage = this.decodeImageBytes(imageBytes);
 
       // Render the image to the canvas
       this._renderImageToBuffer();
@@ -499,6 +557,187 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     } finally {
       this._imageLoading = false;
     }
+  }
+
+  /**
+   * Load an image directly from raw bytes (PNG, JPEG, or GIF data)
+   * Use this when you've already fetched the image data (e.g., from fetch())
+   * @param bytes Raw image file bytes
+   */
+  loadImageFromBytes(bytes: Uint8Array): void {
+    try {
+      this._loadedImage = this.decodeImageBytes(bytes);
+      this._imageSrc = '[bytes]';
+      this._renderImageToBuffer();
+    } catch (error) {
+      logger.error(`Failed to decode image from bytes: ${error}`);
+      throw new Error(`Failed to decode image from bytes: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Draw an image onto the canvas at a specific position
+   * Similar to CanvasRenderingContext2D.drawImage()
+   * @param image Image data to draw (LoadedImage format or raw bytes)
+   * @param dx Destination X position in canvas pixels
+   * @param dy Destination Y position in canvas pixels
+   * @param dw Destination width (optional, defaults to image width)
+   * @param dh Destination height (optional, defaults to image height)
+   */
+  drawImage(
+    image: { width: number; height: number; data: Uint8ClampedArray; bytesPerPixel: number } | Uint8Array,
+    dx: number,
+    dy: number,
+    dw?: number,
+    dh?: number
+  ): void {
+    // Decode if raw bytes were passed
+    let img: LoadedImage;
+    if (image instanceof Uint8Array) {
+      img = this.decodeImageBytes(image);
+    } else {
+      img = image as LoadedImage;
+    }
+
+    const destWidth = dw ?? img.width;
+    const destHeight = dh ?? img.height;
+
+    // Floor destination position to avoid fractional pixel issues
+    const dxInt = Math.floor(dx);
+    const dyInt = Math.floor(dy);
+
+    // Calculate visible region (clip to buffer bounds)
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+
+    const startX = Math.max(0, -dxInt);
+    const startY = Math.max(0, -dyInt);
+    const endX = Math.min(destWidth, bufW - dxInt);
+    const endY = Math.min(destHeight, bufH - dyInt);
+
+    if (startX >= endX || startY >= endY) return; // Nothing visible
+
+    // Scale factors
+    const scaleX = img.width / destWidth;
+    const scaleY = img.height / destHeight;
+    const bpp = img.bytesPerPixel;
+
+    // Draw only the visible portion
+    for (let y = startY; y < endY; y++) {
+      const bufY = dyInt + y;
+      const srcY = Math.floor(y * scaleY);
+      const srcRowOffset = srcY * img.width * bpp;
+      const bufRowOffset = bufY * bufW;
+
+      for (let x = startX; x < endX; x++) {
+        const srcX = Math.floor(x * scaleX);
+        const srcIdx = srcRowOffset + srcX * bpp;
+
+        const r = img.data[srcIdx];
+        const g = img.data[srcIdx + 1];
+        const b = img.data[srcIdx + 2];
+        const a = bpp === 4 ? img.data[srcIdx + 3] : 255;
+
+        // Skip fully transparent pixels
+        if (a === 0) continue;
+
+        // Pack and set pixel
+        const color = packRGBA(r, g, b, a);
+        const bufX = dxInt + x;
+        this._colorBuffer[bufRowOffset + bufX] = color;
+      }
+    }
+
+    this._isDirty = true;
+  }
+
+  /**
+   * Draw a region of an image onto the canvas
+   * Similar to CanvasRenderingContext2D.drawImage() with 9 arguments
+   * @param image Image data to draw (LoadedImage format or raw bytes)
+   * @param sx Source X position in image pixels
+   * @param sy Source Y position in image pixels
+   * @param sw Source width in image pixels
+   * @param sh Source height in image pixels
+   * @param dx Destination X position in canvas pixels
+   * @param dy Destination Y position in canvas pixels
+   * @param dw Destination width in canvas pixels
+   * @param dh Destination height in canvas pixels
+   */
+  drawImageRegion(
+    image: { width: number; height: number; data: Uint8ClampedArray; bytesPerPixel: number } | Uint8Array,
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number
+  ): void {
+    // Decode if raw bytes were passed
+    let img: LoadedImage;
+    if (image instanceof Uint8Array) {
+      img = this.decodeImageBytes(image);
+    } else {
+      img = image as LoadedImage;
+    }
+
+    // Clamp source rectangle to image bounds
+    const srcX = Math.max(0, Math.floor(sx));
+    const srcY = Math.max(0, Math.floor(sy));
+    const srcW = Math.min(sw, img.width - srcX);
+    const srcH = Math.min(sh, img.height - srcY);
+
+    if (srcW <= 0 || srcH <= 0) return;
+
+    // Floor destination position
+    const dxInt = Math.floor(dx);
+    const dyInt = Math.floor(dy);
+
+    // Calculate visible region (clip to buffer bounds)
+    const bufW = this._bufferWidth;
+    const bufH = this._bufferHeight;
+
+    const startX = Math.max(0, -dxInt);
+    const startY = Math.max(0, -dyInt);
+    const endX = Math.min(dw, bufW - dxInt);
+    const endY = Math.min(dh, bufH - dyInt);
+
+    if (startX >= endX || startY >= endY) return; // Nothing visible
+
+    // Scale factors from source region to destination
+    const scaleX = srcW / dw;
+    const scaleY = srcH / dh;
+    const bpp = img.bytesPerPixel;
+
+    // Draw only the visible portion
+    for (let y = startY; y < endY; y++) {
+      const bufY = dyInt + y;
+      const imgY = srcY + Math.floor(y * scaleY);
+      const srcRowOffset = imgY * img.width * bpp;
+      const bufRowOffset = bufY * bufW;
+
+      for (let x = startX; x < endX; x++) {
+        const imgX = srcX + Math.floor(x * scaleX);
+        const srcIdx = srcRowOffset + imgX * bpp;
+
+        const r = img.data[srcIdx];
+        const g = img.data[srcIdx + 1];
+        const b = img.data[srcIdx + 2];
+        const a = bpp === 4 ? img.data[srcIdx + 3] : 255;
+
+        // Skip fully transparent pixels
+        if (a === 0) continue;
+
+        // Pack and set pixel
+        const color = packRGBA(r, g, b, a);
+        const bufX = dxInt + x;
+        this._colorBuffer[bufRowOffset + bufX] = color;
+      }
+    }
+
+    this._isDirty = true;
   }
 
   /**
@@ -1367,11 +1606,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         // No env override - use theme-based defaults
         const theme = getCurrentTheme();
         if (theme.type === 'fullcolor') {
-          // Fullcolor: no dithering needed (but shaders need snapshot)
-          if (!shaderActive) {
-            return null;
-          }
-          ditherMode = 'none'; // Passthrough mode for shader snapshot
+          // Fullcolor: no dithering needed, use passthrough mode
+          // Still use dithered path to properly handle drawImage() content
+          ditherMode = 'none';
         } else {
           // bw, gray, or color themes: default to sierra-stable
           ditherMode = 'sierra-stable';
@@ -1381,13 +1618,13 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     // No dithering if not specified or explicitly disabled
     // Note: !ditherMode handles false, undefined, and empty string
-    // Exception: shaders need a snapshot buffer to avoid race conditions
-    if (!ditherMode || ditherMode === 'none') {
+    // Exception: dither="auto" sets ditherMode='none' for fullcolor - still need dithered path
+    if (!ditherMode) {
       if (!shaderActive) {
         return null;
       }
-      // For shaders with dither=none, still create snapshot but skip dithering
     }
+    // ditherMode='none' means passthrough (no dithering but use dithered rendering path)
 
     // Compute effective bits early for cache invalidation
     // Priority: prop > env var (if auto mode) > theme-based default (if auto mode) > fallback

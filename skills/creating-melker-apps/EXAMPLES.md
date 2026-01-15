@@ -618,6 +618,38 @@ Apps that access network, files, or system commands should declare a `<policy>` 
 </melker>
 ```
 
+## Open Browser Example
+
+Open URLs in the system browser (requires `browser: true` in policy):
+
+```xml
+<melker>
+  <policy>
+  {
+    "name": "Link Opener",
+    "permissions": {
+      "browser": true
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    export async function openLink(url: string) {
+      const success = await $melker.openBrowser(url);
+      if (!success) {
+        alert('Failed to open browser');
+      }
+    }
+  </script>
+
+  <container style="width: 50; border: thin; padding: 2; display: flex; flex-direction: column; gap: 1;">
+    <text style="font-weight: bold;">Links</text>
+    <button label="Open GitHub" onClick="$app.openLink('https://github.com')" />
+    <button label="Open Docs" onClick="$app.openLink('https://melker.sh')" />
+  </container>
+</melker>
+```
+
 ## Tips & Best Practices
 
 1. **Use flexbox for layouts** - `flex-direction: column` or `row` (display: flex is auto-inferred)
@@ -632,3 +664,4 @@ Apps that access network, files, or system commands should declare a `<policy>` 
 10. **Avoid specifying colors** - Let the theme engine handle colors; only use for canvas or intentional effects
 11. **Add `<policy>` for file/network access** - Required for remote apps, recommended for all apps with external access
 12. **Use `--trust` for CI/scripts** - Bypasses interactive approval prompt that would hang non-interactive environments
+13. **Use `$melker.openBrowser(url)` for links** - Requires `browser: true` in policy permissions

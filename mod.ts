@@ -202,6 +202,7 @@ import { ListElement } from './src/components/list.ts';
 import { LiElement } from './src/components/li.ts';
 import { ProgressElement } from './src/components/progress.ts';
 import { SliderElement } from './src/components/slider.ts';
+import { SegmentDisplayElement } from './src/components/segment-display/mod.ts';
 import './src/components/file-browser/file-browser.ts'; // Self-registering component
 import { registerComponent } from './src/element.ts';
 
@@ -413,4 +414,16 @@ registerComponent({
     selectionMode: 'single',
   },
   validate: (props) => LiElement.validate(props as any),
+});
+
+registerComponent({
+  type: 'segment-display',
+  componentClass: SegmentDisplayElement,
+  defaultProps: {
+    renderer: 'box-drawing',
+    scroll: false,
+    scrollSpeed: 24,
+    scrollGap: 3,
+  },
+  validate: (props) => SegmentDisplayElement.validate(props as any),
 });

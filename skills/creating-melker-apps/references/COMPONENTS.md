@@ -790,6 +790,44 @@ Numeric value selection with keyboard/mouse.
 
 **Keyboard:** Arrow keys (small step), Page Up/Down (10%), Home/End (min/max)
 
+### segment-display
+
+LCD/LED-style digit and text display using Unicode characters.
+
+```xml
+<!-- Basic clock -->
+<segment-display value="12:45:30" style="height: 5; color: green;" />
+
+<!-- Different renderers -->
+<segment-display value="1234567890" renderer="rounded" style="color: cyan;" />
+<segment-display value="HELLO" renderer="geometric" style="height: 7; color: yellow;" />
+
+<!-- Scrolling text -->
+<segment-display value="HELLO WORLD" scroll="true" scrollSpeed="24" style="width: 50;" />
+
+<!-- LCD style with off-segments -->
+<segment-display value="88:88" style="color: #00ff00; off-color: #003300;" />
+```
+
+**Props:**
+- `value` - Text to display
+- `renderer` - Style: `box-drawing` (default), `rounded`, `geometric`
+- `scroll` - Enable horizontal scrolling
+- `scrollSpeed` - Speed in ms (default: 24)
+- `scrollGap` - Gap between repeated text (default: 3)
+
+**Style:**
+- `height` - 5 or 7 rows (default: 5)
+- `color` - "On" segment color
+- `off-color` - "Off" segment color (dimmed LCD effect)
+- `background-color` - Background
+
+**Character support:** Full A-Z, 0-9, symbols (: . , - _ = " ' [ ] ? ! etc.), accented chars (Å Ä Ö É È)
+
+**Methods:**
+- `getValue()` - Get current value
+- `setValue(value)` - Set value
+
 ## Styling Reference
 
 ### Border Types

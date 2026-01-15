@@ -532,7 +532,7 @@ export class LayoutEngine {
         try {
           contentSize = child.intrinsicSize(intrinsicSizeContext);
         } catch (error) {
-          console.error(`Error calculating intrinsic size for element ${child.type}:`, error);
+          logger.error(`Error calculating intrinsic size for element ${child.type}`, error instanceof Error ? error : undefined);
         }
       } else {
         // For non-renderable elements (containers), calculate intrinsic size
@@ -1502,7 +1502,7 @@ export class LayoutEngine {
         contentSize = element.intrinsicSize(intrinsicSizeContext);
       } catch (error) {
         // Fallback if intrinsicSize method fails
-        console.error(`Error calculating intrinsic size for element ${element.type}:`, error);
+        logger.error(`Error calculating intrinsic size for element ${element.type}`, error instanceof Error ? error : undefined);
       }
     } else if (element.type === 'container' && element.children && element.children.length > 0) {
       // For containers, calculate intrinsic size based on children

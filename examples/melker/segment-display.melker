@@ -1,0 +1,102 @@
+<melker>
+  <title>Segment Display Demo</title>
+
+  <style>
+    .demo-section {
+      flex-direction: column;
+      gap: 1;
+      border: none;
+      padding: 0;
+    }
+  </style>
+
+  <help>
+## Segment Display Demo
+
+Demonstrates the `segment-display` component with various renderers and styles.
+
+### Renderers
+- `box-drawing` - Clean lines using box drawing characters
+- `rounded` - Rounded corners
+- `geometric` - Geometric shapes for chunky LCD look
+
+  </help>
+
+  <container style="flex-direction: column; padding: 1; gap: 1;">
+    <text style="font-weight: bold;">Segment Display Component Demo</text>
+
+    <!-- Clock with different renderers -->
+    <container class="demo-section">
+      <text>Box Drawing (default):</text>
+      <segment-display id="clock1" value="12:45:30" style="height: 5; color: green;" />
+    </container>
+
+    <container class="demo-section">
+      <text>Rounded Renderer:</text>
+      <segment-display value="1234567890" style="height: 5; color: cyan;" renderer="rounded" />
+    </container>
+
+    <container class="demo-section">
+      <text>Geometric Renderer (7 rows):</text>
+      <segment-display value="HELLO" style="height: 7; color: yellow;" renderer="geometric" />
+    </container>
+
+    <container class="demo-section">
+      <text>Scrolling Text:</text>
+      <segment-display id="scroller" value="HELLO SEGMENT DISPLAY" style="height: 7; width: 50; color: magenta;" />
+    </container>
+
+    <container style="flex-direction: row; gap: 2;">
+      <button label="Start Clock" onClick="$app.startClock()" />
+      <button label="Stop Clock" onClick="$app.stopClock()" />
+      <button label="Start Scroll" onClick="$app.startScroll()" />
+      <button label="Stop Scroll" onClick="$app.stopScroll()" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    let clockInterval: number | null = null;
+
+    export function startClock() {
+      if (clockInterval) return;
+
+      clockInterval = setInterval(() => {
+        const now = new Date();
+        const time = [
+          now.getHours().toString().padStart(2, '0'),
+          now.getMinutes().toString().padStart(2, '0'),
+          now.getSeconds().toString().padStart(2, '0'),
+        ].join(':') + '.' + now.getMilliseconds().toString().padStart(3, '0');
+
+        const display = $melker.getElementById('clock1');
+        if (display) {
+          display.setValue(time);
+        }
+        $melker.render();
+      }, 50);
+    }
+
+    export function stopClock() {
+      if (clockInterval) {
+        clearInterval(clockInterval);
+        clockInterval = null;
+      }
+    }
+
+    export function startScroll() {
+      const scroller = $melker.getElementById('scroller');
+      if (scroller) {
+        scroller.props.scroll = true;
+        $melker.render();
+      }
+    }
+
+    export function stopScroll() {
+      const scroller = $melker.getElementById('scroller');
+      if (scroller) {
+        scroller.props.scroll = false;
+        $melker.render();
+      }
+    }
+  </script>
+</melker>

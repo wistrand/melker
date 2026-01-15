@@ -33,3 +33,6 @@ export * from './filterable-list/mod.ts';
 
 // File browser component
 export * from './file-browser/mod.ts';
+
+// Segment display component
+export * from './segment-display/mod.ts';

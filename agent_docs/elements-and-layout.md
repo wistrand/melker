@@ -776,6 +776,94 @@ slider.setValue(75);    // Set value programmatically
 slider.getValue();      // Get current value
 ```
 
+## Segment Display Component
+
+The `<segment-display>` component renders LCD/LED-style digits and text using Unicode characters with multiple visual styles.
+
+### Usage
+
+```xml
+<!-- Basic clock display -->
+<segment-display value="12:45:30" style="height: 5; color: green;" />
+
+<!-- Different renderers -->
+<segment-display value="1234567890" renderer="rounded" style="color: cyan;" />
+<segment-display value="HELLO" renderer="geometric" style="height: 7; color: yellow;" />
+
+<!-- With scrolling -->
+<segment-display value="HELLO WORLD" scroll="true" scrollSpeed="24" style="width: 50;" />
+
+<!-- LCD style with off-segments visible -->
+<segment-display value="88:88" style="color: #00ff00; off-color: #003300;" />
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | string | - | Text to display |
+| `renderer` | string | 'box-drawing' | Visual style: 'box-drawing', 'rounded', 'geometric' |
+| `scroll` | boolean | false | Enable horizontal scrolling |
+| `scrollSpeed` | number | 24 | Scroll speed in milliseconds |
+| `scrollGap` | number | 3 | Gap between repeated text when scrolling |
+
+### Style Properties
+
+| Property | Values | Description |
+|----------|--------|-------------|
+| `height` | 5, 7 | Display height in rows (only 5 or 7 supported) |
+| `color` | any color | Color for "on" segments |
+| `off-color` | any color | Color for "off" segments (dimmed LCD effect) |
+| `background-color` | any color | Background color |
+| `width` | number | Width limit for scrolling |
+
+### Renderers
+
+| Renderer | Characters | Description |
+|----------|------------|-------------|
+| `box-drawing` | ━ ┃ | Clean thin lines (default) |
+| `rounded` | ╭ ╮ ╰ ╯ ━ ┃ | Rounded corners, modern look |
+| `geometric` | ▬ ▮ ▯ | Chunky LCD aesthetic |
+
+### Character Support
+
+The component supports the full ASCII character set with best-effort 7-segment approximations:
+- **Digits**: 0-9
+- **Letters**: A-Z (uppercase and lowercase)
+- **Special**: : . , - _ = " ' [ ] ( ) / \ ? ! + * # % & @ ^ < > |
+- **Accented**: Å Ä Ö É È (and lowercase variants)
+
+### 7-Segment Layout
+
+```
+   aaaa
+  f    b
+  f    b
+   gggg
+  e    c
+  e    c
+   dddd
+```
+
+### Methods
+
+```typescript
+const display = document.getElementById('myDisplay');
+display.setValue('12:34');  // Set value programmatically
+display.getValue();         // Get current value
+```
+
+### Visual Example
+
+**"42" with box-drawing renderer (5-row):**
+```
+      ━━━━
+     ┃     ┃
+ ━━━━ ━━━━
+┃        ┃
+ ━━━━
+```
+
 ## Image Component
 
 The `<img>` component displays images in the terminal using sextant characters (2x3 pixels per cell).

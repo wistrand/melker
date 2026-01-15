@@ -2,7 +2,8 @@
 
 ## Overview
 
-Melker uses Calendar Versioning (CalVer) for releases. Releases are **git tags only** - no GitHub releases, changelogs, or package publishing.
+Melker uses Calendar Versioning (CalVer) for releases. Releases are **git tags only** - no GitHub releases, 
+changelogs, CI build steps or package publishing.
 
 ## Version Format
 

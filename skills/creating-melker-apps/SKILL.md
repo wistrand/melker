@@ -1,6 +1,11 @@
 ---
 name: creating-melker-apps
 description: Creates Terminal UI applications using Melker's .melker file format. Use when the user asks to build terminal apps, TUI interfaces, create .melker files, or mentions Melker components like containers, buttons, dialogs, tabs, canvas, or forms.
+license: MIT
+compatibility: Requires Deno 2.5+, ANSI-compatible terminal
+metadata:
+  author: wistrand
+  website: https://melker.sh
 ---
 
 # Creating Melker Apps
@@ -159,7 +164,7 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `<table>` | border, columnBorders, resizable | HTML-like table |
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
 
-For complete component reference, see [COMPONENTS.md](COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md).
+For complete component reference, see [COMPONENTS.md](references/COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md).
 
 ## Styling
 
@@ -268,7 +273,7 @@ Events auto-render after completion:
 
 **Alternative:** Use `$melker.engine.onMount()` for programmatic callback registration (required for `.md` files).
 
-For TypeScript type definitions (`$melker`, `Element`, event objects), see [TYPES.md](TYPES.md).
+For TypeScript type definitions (`$melker`, `Element`, event objects), see [TYPES.md](references/TYPES.md).
 
 ## Common Patterns
 
@@ -364,7 +369,7 @@ For TypeScript type definitions (`$melker`, `Element`, event objects), see [TYPE
 </combobox>
 ```
 
-For more examples, see [EXAMPLES.md](EXAMPLES.md).
+For more examples, see [EXAMPLES.md](references/EXAMPLES.md).
 
 ## Permissions (Policy)
 
@@ -450,5 +455,5 @@ Elements with `id` are auto-persisted. Opt-out with `persist="false"`:
 - Press F6 for Performance dialog
 - Set `MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=DEBUG` for custom log location
 
-For common errors and debug strategies, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+For common errors and debug strategies, see [TROUBLESHOOTING.md](references/TROUBLESHOOTING.md).
 

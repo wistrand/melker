@@ -1081,23 +1081,35 @@ export class VideoElement extends CanvasElement {
     // Apply dithering if enabled
     let dither = this.props.dither;
 
-    // Handle 'auto' mode based on current theme
+    // Handle 'auto' mode based on config and theme
     if (dither === 'auto') {
-      const theme = getThemeManager().getCurrentTheme();
-      if (theme.type === 'fullcolor') {
-        // Fullcolor theme: no dithering needed
-        dither = false;
+      const config = MelkerConfig.get();
+      const configDither = config.ditherAlgorithm;
+      const configBits = config.ditherBits;
+
+      if (configDither) {
+        // Config dither.algorithm is always respected
+        dither = configDither as DitherMode;
+      } else if (configBits !== undefined) {
+        // User specified bits but not algorithm - use blue-noise for video
+        dither = 'blue-noise';
       } else {
-        // bw, gray, or color themes: use sierra-stable with 1 bit
-        dither = 'sierra-stable';
+        // No config override - use theme-based defaults
+        const theme = getThemeManager().getCurrentTheme();
+        if (theme.type === 'fullcolor') {
+          // Fullcolor theme: no dithering needed
+          dither = false;
+        } else {
+          // bw, gray, or color themes: use blue-noise for video (less temporal flicker)
+          dither = 'blue-noise';
+        }
       }
     }
 
     if (dither && dither !== 'none') {
-      // Use explicit colorDepth if set, otherwise derive from theme
-      // For auto mode (now resolved to sierra-stable), default to 1 bit for bw/color themes
-      const isAutoResolved = this.props.dither === 'auto';
-      const bits = this.props.colorDepth ?? (isAutoResolved ? 1 : colorSupportToBits(getThemeManager().getColorSupport()));
+      // Use explicit colorDepth if set, then config, otherwise derive from theme's color support
+      const config = MelkerConfig.get();
+      const bits = this.props.colorDepth ?? config.ditherBits ?? colorSupportToBits(getThemeManager().getColorSupport());
 
       // Determine dither mode: true defaults to 'floyd-steinberg-stable', string specifies mode
       const mode: DitherMode = typeof dither === 'boolean' ? 'floyd-steinberg-stable' : dither;

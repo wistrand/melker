@@ -95,6 +95,23 @@ All modes apply ANSI foreground color:
 - Falls back to theme foreground if no pixel color
 - B&W themes strip colors at render time (theme-respecting)
 
+## Auto Theme Detection
+
+When `dither="auto"`, theme and dithering are determined from terminal capabilities:
+
+| TERM / COLORTERM | Theme Type | Color Support | Dither Bits | Dither (canvas/img) | Dither (video) |
+|------------------|------------|---------------|-------------|---------------------|----------------|
+| `COLORTERM=truecolor` | fullcolor | truecolor | - | none | none |
+| `TERM=*256color*` | color | 256 | 3 | sierra-stable | blue-noise |
+| `TERM=xterm/screen/tmux` | gray | 16 | 1 | sierra-stable | blue-noise |
+| (fallback) | bw | none | 1 | sierra-stable | blue-noise |
+
+Video uses blue-noise for less temporal flicker between frames.
+
+**Override via config:**
+- `MELKER_AUTO_DITHER=<algorithm>` - forces dithering even on fullcolor
+- `MELKER_DITHER_BITS=<1-8>` - overrides auto bit depth
+
 ## Implementation
 
 **Files:**

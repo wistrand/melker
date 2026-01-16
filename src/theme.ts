@@ -399,13 +399,13 @@ export const THEMES: Record<string, Theme> = {
   'color-std': {
     type: 'color',
     mode: 'std',
-    colorSupport: '16',
+    colorSupport: '256',
     palette: COLOR_STD_PALETTE,
   },
   'color-dark': {
     type: 'color',
     mode: 'dark',
-    colorSupport: '16',
+    colorSupport: '256',
     palette: COLOR_DARK_PALETTE,
   },
   'fullcolor-std': {

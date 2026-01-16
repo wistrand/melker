@@ -38,6 +38,7 @@ import {
   calculateOutputDimensions,
   getVideoDimensions,
 } from '../video/ffmpeg.ts';
+import { MelkerConfig } from '../config/mod.ts';
 
 // Re-export types for backwards compatibility
 export type { DitherMode } from '../video/dither.ts';
@@ -408,8 +409,8 @@ export class VideoElement extends CanvasElement {
    * Start audio playback via ffplay (synchronized with video)
    */
   private _startAudioPlayback(src: string, startTime: number): void {
-    // Skip if audio is disabled or muted
-    if (!this.props.audio || this.props.muted) return;
+    // Skip if audio is disabled, component is muted, or global audio is muted
+    if (!this.props.audio || this.props.muted || MelkerConfig.get().audioMuted) return;
 
     // Stop any existing audio playback
     this._stopAudioPlayback();

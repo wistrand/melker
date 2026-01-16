@@ -111,6 +111,13 @@
       "env": "MELKER_FFMPEG",
       "description": "Force FFmpeg instead of native audio on macOS"
     },
+    "audio.muted": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_AUDIO_MUTED",
+      "flag": "--muted",
+      "description": "Mute all audio playback globally"
+    },
     "render.gfxMode": {
       "type": "string",
       "enum": ["sextant", "block", "pattern", "luma"],

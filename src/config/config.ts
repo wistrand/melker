@@ -719,6 +719,11 @@ export class MelkerConfig {
     return this.data['ai.audioGain'] as number;
   }
 
+  // Audio
+  get audioMuted(): boolean {
+    return this.data['audio.muted'] as boolean;
+  }
+
   // Dithering
   get ditherAlgorithm(): string | undefined {
     return this.data['dither.algorithm'] as string | undefined;

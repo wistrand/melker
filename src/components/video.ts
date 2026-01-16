@@ -199,6 +199,11 @@ export class VideoElement extends CanvasElement {
           logger.warn('Cannot derive subtitle path: no video source specified');
           return;
         }
+        if(this.props.src.startsWith("http://") || this.props.src.startsWith("https://") || this.props.src.startsWith("rtsp:")) {
+          logger.info("no subtitles for remote video " + this.props.src);
+          return;
+        }
+
         const srcPath = this.props.src.startsWith('/') ? this.props.src : `${Deno.cwd()}/${this.props.src}`;
         // Replace extension with .srt
         const lastDot = srcPath.lastIndexOf('.');
@@ -842,7 +847,10 @@ export class VideoElement extends CanvasElement {
     await this.stopVideo();
 
     // Resolve relative paths from cwd
-    const resolvedSrc = src.startsWith('/') ? src : `${Deno.cwd()}/${src}`;
+    const resolvedSrc = (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("rtsp:"))
+      ? src
+      : (src.startsWith('/') ? src : `${Deno.cwd()}/${src}`);
+
     this._videoSrc = resolvedSrc;
     this._videoOptions = {
       fps: 30,

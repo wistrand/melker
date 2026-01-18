@@ -163,7 +163,7 @@ export class TerminalBuffer {
       this._cells[y][x] = { ...cell };
       this._wideCharMap[y][x] = false;
     }
-    // Skip zero-width and control characters
+    // Zero-width characters are ignored
   }
 
   // Clear wide character at position if it exists
@@ -299,28 +299,44 @@ export class TerminalBuffer {
   }
 
   // Compare with another buffer and return differences
+  // Uses direct cell access (no cloning) for comparison, only clones for output
   diff(otherBuffer: TerminalBuffer): BufferDiff[] {
     const differences: BufferDiff[] = [];
-
     const maxHeight = Math.max(this._height, otherBuffer._height);
     const maxWidth = Math.max(this._width, otherBuffer._width);
 
     for (let y = 0; y < maxHeight; y++) {
-      for (let x = 0; x < maxWidth; x++) {
-        const thisCell = this.getCell(x, y) || this._defaultCell;
-        const otherCell = otherBuffer.getCell(x, y) || otherBuffer._defaultCell;
+      const thisRow = this._cells[y];
+      const otherRow = otherBuffer._cells[y];
 
-        if (!this._cellsEqual(thisCell, otherCell)) {
-          differences.push({
-            x,
-            y,
-            cell: { ...thisCell },
-          });
+      for (let x = 0; x < maxWidth; x++) {
+        // Direct access, no cloning for comparison
+        const thisCell = thisRow?.[x] ?? this._defaultCell;
+        const otherCell = otherRow?.[x] ?? otherBuffer._defaultCell;
+
+        if (!this._cellsEqualDirect(thisCell, otherCell)) {
+          differences.push({ x, y, cell: { ...thisCell } }); // Clone only for output
         }
       }
     }
 
     return differences;
+  }
+
+  // Direct cell comparison (no cloning needed when accessing cells directly)
+  private _cellsEqualDirect(a: Cell, b: Cell): boolean {
+    return (
+      a.char === b.char &&
+      a.foreground === b.foreground &&
+      a.background === b.background &&
+      a.bold === b.bold &&
+      a.italic === b.italic &&
+      a.underline === b.underline &&
+      a.dim === b.dim &&
+      a.reverse === b.reverse &&
+      a.width === b.width &&
+      a.isWideCharContinuation === b.isWideCharContinuation
+    );
   }
 
   // Copy content from another buffer
@@ -452,7 +468,7 @@ export class DualBuffer {
       bufferUtilization: 0,
       renderFrequency: 0,
       frameCount: 0,
-      memoryUsage: this._estimateMemoryUsage()
+      memoryUsage: this._estimateMemoryUsage(),
     };
   }
 

@@ -1,7 +1,7 @@
 // Segment Display Component
 // Renders LCD/LED-style digits using Unicode characters
 
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../../types.ts';
+import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext, TextSelectable, SelectableTextProvider } from '../../types.ts';
 import type { DualBuffer, Cell } from '../../buffer.ts';
 import { getCharset, isSpecialChar, type SegmentMask } from './charsets.ts';
 import { getRenderer, type SegmentRenderer } from './renderers.ts';
@@ -15,9 +15,11 @@ export interface SegmentDisplayProps extends BaseProps {
   scrollGap?: number;          // Gap between repeated text (default: 3)
 }
 
-export class SegmentDisplayElement extends Element implements Renderable {
+export class SegmentDisplayElement extends Element implements Renderable, TextSelectable, SelectableTextProvider {
   declare type: 'segment-display';
   declare props: SegmentDisplayProps;
+
+  private static _autoIdCounter = 0;
 
   private _renderer: SegmentRenderer | null = null;
   private _charset: Record<string, SegmentMask> | null = null;
@@ -26,8 +28,15 @@ export class SegmentDisplayElement extends Element implements Renderable {
   private _lastValue: string | null = null;
   private _renderedLines: string[] | null = null;
   private _totalWidth = 0;
+  // Track x-position boundaries for each logical character (for selection mapping)
+  private _charBoundaries: number[] = [];
 
   constructor(props: SegmentDisplayProps, children: Element[] = []) {
+    // Auto-generate ID if not provided (needed for text selection)
+    if (!props.id) {
+      props.id = `__segment-display-${SegmentDisplayElement._autoIdCounter++}`;
+    }
+
     const defaultProps: SegmentDisplayProps = {
       disabled: false,
       renderer: 'box-drawing',
@@ -98,6 +107,9 @@ export class SegmentDisplayElement extends Element implements Renderable {
     const lines: string[] = Array(height).fill('');
     let totalWidth = 0;
 
+    // Track character boundaries for selection mapping
+    this._charBoundaries = [0]; // First char starts at 0
+
     for (const char of value) {
       let rendered;
 
@@ -122,6 +134,8 @@ export class SegmentDisplayElement extends Element implements Renderable {
           lines[i] += rendered.lines[i] || ' '.repeat(rendered.width);
         }
         totalWidth += rendered.width;
+        // Record the end position of this character (start of next)
+        this._charBoundaries.push(totalWidth);
       }
     }
 
@@ -279,12 +293,98 @@ export class SegmentDisplayElement extends Element implements Renderable {
   }
 
   /**
+   * Check if this element supports text selection
+   */
+  isTextSelectable(): boolean {
+    return true;
+  }
+
+  /**
+   * Get the logical text for selection (the actual value, not graphical chars)
+   * @param selectionBounds - Optional bounds to select only part of the value
+   */
+  getSelectableText(selectionBounds?: { startX: number; endX: number }): string {
+    const value = this.getNormalizedValue();
+
+    // If no bounds or no character boundaries, return full value
+    if (!selectionBounds || this._charBoundaries.length === 0) {
+      return value;
+    }
+
+    const { startX, endX } = selectionBounds;
+
+    // Find which logical characters are within the selection
+    // _charBoundaries contains [0, end1, end2, end3, ...] where endN is the x position after char N
+    let startCharIndex = 0;
+    let endCharIndex = value.length - 1;
+
+    // Find first character that overlaps with selection
+    for (let i = 0; i < this._charBoundaries.length - 1; i++) {
+      const charStart = this._charBoundaries[i];
+      const charEnd = this._charBoundaries[i + 1] - 1;
+      // If selection overlaps this character
+      if (startX <= charEnd && endX >= charStart) {
+        startCharIndex = i;
+        break;
+      }
+    }
+
+    // Find last character that overlaps with selection
+    for (let i = this._charBoundaries.length - 2; i >= 0; i--) {
+      const charStart = this._charBoundaries[i];
+      const charEnd = this._charBoundaries[i + 1] - 1;
+      // If selection overlaps this character
+      if (startX <= charEnd && endX >= charStart) {
+        endCharIndex = i;
+        break;
+      }
+    }
+
+    return value.slice(startCharIndex, endCharIndex + 1);
+  }
+
+  /**
+   * Get aligned selection highlight bounds that snap to character boundaries
+   * This makes the visual selection highlight entire segment characters instead of terminal cells
+   */
+  getSelectionHighlightBounds(startX: number, endX: number): { startX: number; endX: number } | undefined {
+    if (this._charBoundaries.length < 2) {
+      return undefined; // No character boundaries, use default highlighting
+    }
+
+    // Find the first character that overlaps with the selection start
+    let alignedStartX = 0;
+    for (let i = 0; i < this._charBoundaries.length - 1; i++) {
+      const charStart = this._charBoundaries[i];
+      const charEnd = this._charBoundaries[i + 1] - 1;
+      if (startX <= charEnd) {
+        alignedStartX = charStart;
+        break;
+      }
+    }
+
+    // Find the last character that overlaps with the selection end
+    let alignedEndX = this._charBoundaries[this._charBoundaries.length - 1] - 1;
+    for (let i = this._charBoundaries.length - 2; i >= 0; i--) {
+      const charStart = this._charBoundaries[i];
+      const charEnd = this._charBoundaries[i + 1] - 1;
+      if (endX >= charStart) {
+        alignedEndX = charEnd;
+        break;
+      }
+    }
+
+    return { startX: alignedStartX, endX: alignedEndX };
+  }
+
+  /**
    * Set the value
    */
   setValue(value: string): void {
     this.props.value = value;
     this._lastValue = null; // Force re-render
     this._renderedLines = null;
+    this._charBoundaries = [];
   }
 
   /**
@@ -294,6 +394,7 @@ export class SegmentDisplayElement extends Element implements Renderable {
     this._renderer = null;
     this._renderedLines = null;
     this._lastValue = null;
+    this._charBoundaries = [];
   }
 
   static validate(props: SegmentDisplayProps): boolean {

@@ -2361,6 +2361,16 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       throw new Error(`Invalid canvas size: ${width}x${height}`);
     }
 
+    // If shader is running, stop it and save state for restart
+    // We'll restart it after buffer reallocation so it gets a fresh context
+    const shaderWasRunning = this._shaderState.timer !== null;
+    const savedRequestRender = this._shaderState.requestRender;
+    // Preserve elapsed time so animation continues smoothly after resize
+    const elapsedTime = shaderWasRunning ? performance.now() - this._shaderState.startTime : 0;
+    if (shaderWasRunning) {
+      this.stopShader();
+    }
+
     // Update props
     this.props.width = width;
     this.props.height = height;
@@ -2384,6 +2394,13 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Clear the new canvas and mark as dirty for re-render
     this.markDirty();
     this.clear();
+
+    // Restart shader if it was running, with fresh context pointing to new buffers
+    if (shaderWasRunning && this.props.onShader) {
+      this.startShader(savedRequestRender ?? undefined);
+      // Restore elapsed time so animation continues from where it left off
+      this._shaderState.startTime = performance.now() - elapsedTime;
+    }
   }
 
   static validate(props: CanvasProps): boolean {

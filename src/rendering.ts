@@ -1,7 +1,7 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, type Overlay } from './types.ts';
+import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { clipBounds } from './geometry.ts';
 import { DualBuffer, TerminalBuffer, Cell } from './buffer.ts';
 import { ClippedDualBuffer } from './clipped-buffer.ts';
@@ -432,6 +432,20 @@ export class RenderingEngine {
 
   // Extract text from selection (public method for deferred extraction)
   extractSelectionText(selection: TextSelection, buffer: DualBuffer): string {
+    // Check if the selected component provides custom selectable text
+    if (selection.componentId && this._document) {
+      const element = this._document.getElementById(selection.componentId);
+      if (element && hasSelectableText(element)) {
+        // Calculate selection bounds relative to component
+        const { start, end, componentBounds } = selection;
+        if (componentBounds) {
+          const x1 = Math.min(start.x, end.x) - componentBounds.x;
+          const x2 = Math.max(start.x, end.x) - componentBounds.x;
+          return element.getSelectableText({ startX: x1, endX: x2 });
+        }
+        return element.getSelectableText();
+      }
+    }
     return this._extractTextFromBuffer(selection, buffer);
   }
 
@@ -511,7 +525,7 @@ export class RenderingEngine {
   private _applySelectionHighlight(selection: TextSelection, buffer: DualBuffer): void {
     if (!selection.isActive) return;
 
-    const { start, end, componentBounds, mode } = selection;
+    const { start, end, componentBounds, mode, componentId } = selection;
 
     if (mode === 'global') {
       // Global mode: strict rectangular selection
@@ -534,31 +548,59 @@ export class RenderingEngine {
 
       const boundsLeft = componentBounds?.x ?? 0;
       const boundsRight = componentBounds ? componentBounds.x + componentBounds.width - 1 : buffer.currentBuffer.width - 1;
+      const boundsTop = componentBounds?.y ?? 0;
+      const boundsBottom = componentBounds ? componentBounds.y + componentBounds.height - 1 : buffer.currentBuffer.height - 1;
 
-      for (let y = firstPos.y; y <= lastPos.y; y++) {
-        let lineStartX: number;
-        let lineEndX: number;
-
-        if (firstPos.y === lastPos.y) {
-          // Single line selection
-          lineStartX = firstPos.x;
-          lineEndX = lastPos.x;
-        } else if (y === firstPos.y) {
-          // First line: from click position to end of line
-          lineStartX = firstPos.x;
-          lineEndX = boundsRight;
-        } else if (y === lastPos.y) {
-          // Last line: from start of line to mouse position
-          lineStartX = boundsLeft;
-          lineEndX = lastPos.x;
-        } else {
-          // Middle lines: full width
-          lineStartX = boundsLeft;
-          lineEndX = boundsRight;
+      // Check if component provides custom highlight bounds (e.g., segment display snapping to char boundaries)
+      let alignedBounds: { startX: number; endX: number } | undefined;
+      if (componentId && componentBounds && this._document) {
+        const element = this._document.getElementById(componentId);
+        if (element && hasSelectionHighlightBounds(element)) {
+          // Convert screen coordinates to element-relative coordinates
+          const relStartX = Math.min(firstPos.x, lastPos.x) - componentBounds.x;
+          const relEndX = Math.max(firstPos.x, lastPos.x) - componentBounds.x;
+          alignedBounds = element.getSelectionHighlightBounds(relStartX, relEndX);
         }
+      }
 
-        for (let x = lineStartX; x <= lineEndX; x++) {
-          this._highlightCell(buffer, x, y);
+      // If component provides aligned bounds, highlight the entire component height
+      // (for multi-line components like segment displays where each character spans all rows)
+      if (alignedBounds) {
+        const lineStartX = boundsLeft + alignedBounds.startX;
+        const lineEndX = boundsLeft + alignedBounds.endX;
+        // Highlight all rows within component bounds
+        for (let y = boundsTop; y <= boundsBottom; y++) {
+          for (let x = lineStartX; x <= lineEndX; x++) {
+            this._highlightCell(buffer, x, y);
+          }
+        }
+      } else {
+        // Standard flow selection for text editors
+        for (let y = firstPos.y; y <= lastPos.y; y++) {
+          let lineStartX: number;
+          let lineEndX: number;
+
+          if (firstPos.y === lastPos.y) {
+            // Single line selection
+            lineStartX = firstPos.x;
+            lineEndX = lastPos.x;
+          } else if (y === firstPos.y) {
+            // First line: from click position to end of line
+            lineStartX = firstPos.x;
+            lineEndX = boundsRight;
+          } else if (y === lastPos.y) {
+            // Last line: from start of line to mouse position
+            lineStartX = boundsLeft;
+            lineEndX = lastPos.x;
+          } else {
+            // Middle lines: full width
+            lineStartX = boundsLeft;
+            lineEndX = boundsRight;
+          }
+
+          for (let x = lineStartX; x <= lineEndX; x++) {
+            this._highlightCell(buffer, x, y);
+          }
         }
       }
     }

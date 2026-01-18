@@ -405,6 +405,7 @@ export class MelkerEngine {
     };
     this._buffer = new DualBuffer(this._currentSize.width, this._currentSize.height, defaultCell);
     this._renderer = new RenderingEngine();
+    this._renderer.setDocument(this._document);
     this._terminalRenderer = new TerminalRenderer({
       colorSupport: this._options.colorSupport,
       alternateScreen: this._options.alternateScreen,
@@ -495,14 +496,14 @@ export class MelkerEngine {
     this._currentSize = newSize;
 
     // Update hit tester viewport size
-    this._hitTester.updateContext({ viewportSize: newSize });
+    this._hitTester.updateContext({ viewportSize: this._currentSize });
 
     // Resize buffer
-    this._buffer.resize(newSize.width, newSize.height);
+    this._buffer.resize(this._currentSize.width, this._currentSize.height);
 
     // Update root element dimensions
-    this._rootElement.props.width = newSize.width;
-    this._rootElement.props.height = newSize.height;
+    this._rootElement.props.width = this._currentSize.width;
+    this._rootElement.props.height = this._currentSize.height;
 
     // Dispatch resize event to document
     const resizeEvent = {
@@ -1091,6 +1092,7 @@ export class MelkerEngine {
       width: this._currentSize.width,
       height: this._currentSize.height,
     };
+
     const renderToBufferStartTime = performance.now();
 
     // Debug: log root element info

@@ -407,6 +407,37 @@ export function isTextSelectable(element: Element): element is Element & TextSel
   return 'isTextSelectable' in element && typeof element.isTextSelectable === 'function';
 }
 
+// SelectableTextProvider interface for elements that provide custom text for selection
+// Instead of extracting rendered characters from the buffer, use the logical value
+export interface SelectableTextProvider {
+  /**
+   * Get the logical text for selection (e.g., "12:34" instead of graphical chars)
+   * @param selectionBounds - Optional bounds of the visual selection relative to element
+   *                          If provided, returns only the characters within those bounds
+   */
+  getSelectableText(selectionBounds?: { startX: number; endX: number }): string;
+
+  /**
+   * Get aligned selection highlight bounds that snap to character boundaries
+   * This allows components like segment displays to highlight entire graphical
+   * characters instead of individual terminal cells
+   * @param startX - Selection start x relative to element
+   * @param endX - Selection end x relative to element
+   * @returns Snapped start and end x positions, or undefined to use default highlighting
+   */
+  getSelectionHighlightBounds?(startX: number, endX: number): { startX: number; endX: number } | undefined;
+}
+
+// Type guard for SelectableTextProvider interface
+export function hasSelectableText(element: Element): element is Element & SelectableTextProvider {
+  return 'getSelectableText' in element && typeof element.getSelectableText === 'function';
+}
+
+// Type guard for checking if element provides custom highlight bounds
+export function hasSelectionHighlightBounds(element: Element): element is Element & { getSelectionHighlightBounds: (startX: number, endX: number) => { startX: number; endX: number } | undefined } {
+  return 'getSelectionHighlightBounds' in element && typeof element.getSelectionHighlightBounds === 'function';
+}
+
 // Draggable interface for elements that handle mouse drag (scrollbars, resizers, etc.)
 export interface Draggable {
   /**

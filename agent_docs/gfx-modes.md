@@ -22,6 +22,11 @@ ASCII characters with spatial mapping using brightness thresholding.
 
 **Best for:** UI elements, lines, boxes, geometric shapes, shaders
 
+**Character set (17 chars, gamma-adjusted for visual density):**
+- Punctuation: ` . , ' \` " _ - | / \ + * =`
+- Letters: `L j T y m M B` (geometric shapes, density-matched)
+- Density progression: `. , ' \`" _ - | / \` → `+` → `*` → `m M` → `B`
+
 **How it works:**
 - Samples 2x3 pixel grid (same as sextant characters)
 - Calculates brightness for each pixel
@@ -29,20 +34,31 @@ ASCII characters with spatial mapping using brightness thresholding.
 - Bright pixels become foreground (the ASCII char)
 - Dark pixels become background
 - Maps 6-bit pattern to ASCII via 64-entry lookup table
+- Characters matched to pixel count for consistent visual density
 
-**Pattern mapping examples:**
+**Pattern mapping by density:**
 ```
-Pattern          Bits       ASCII
-top-left         100000     '
-top-right        010000     '
-bottom-left      000010     ,
-bottom-right     000001     ,
-top row          110000     "
-bottom row       000011     _
-left column      101010     |
-right column     010101     |
-full block       111111     #
-diagonal         100001     \
+Pixels  Examples              ASCII
+0       empty                 (space)
+1       corners, dots         . , ' `
+2       lines, diagonals      _ - " | / \
+3       shapes, junctions     L j T y +
+4       medium-dense          * =
+5       dense shapes          m M B
+6       full block            B
+```
+
+**Key pattern examples:**
+```
+Pattern          Bits       Pixels  ASCII
+L-corner         001011     3       L
+j-hook           000111     3       j
+T-junction       011100     3       T
+y-junction       011001     3       y
+medium-dense     001111     4       *
+m-pillars        011011     5       m
+M-shape          011111     5       M
+full block       111111     6       B
 ```
 
 ### luma

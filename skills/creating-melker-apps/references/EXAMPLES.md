@@ -473,6 +473,68 @@
 </melker>
 ```
 
+## Animated Shader
+
+Per-pixel shaders for animated effects. Requires `shader: true` in policy.
+
+```xml
+<melker>
+  <policy>
+  {
+    "permissions": { "shader": true }
+  }
+  </policy>
+
+  <script type="typescript">
+    export function noiseShader(
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      _source: unknown,
+      utils: {
+        simplex3d: (x: number, y: number, z: number) => number;
+        palette: (t: number, a: [number, number, number], b: [number, number, number], c: [number, number, number], d: [number, number, number]) => [number, number, number];
+      }
+    ): [number, number, number] {
+      // Normalize coordinates
+      const u = x / resolution.width;
+      const v = y / resolution.height;
+
+      // Scale and animate (z = time for animation)
+      const scale = 4.0;
+      const n = utils.simplex3d(u * scale, (v / resolution.pixelAspect) * scale, time * 0.5);
+
+      // Map noise from [-1, 1] to [0, 1]
+      const t = (n + 1) * 0.5;
+
+      // Apply color palette (Inigo Quilez style)
+      return utils.palette(t,
+        [0.5, 0.5, 0.5],  // a - base
+        [0.5, 0.5, 0.5],  // b - amplitude
+        [1.0, 1.0, 1.0],  // c - frequency
+        [0.0, 0.1, 0.2]   // d - phase (fire colors)
+      );
+    }
+  </script>
+
+  <container style="flex-direction: column; padding: 1; height: fill; width: fill;">
+    <text style="font-weight: bold;">Animated Noise Shader</text>
+    <img
+      width="100%"
+      height="100%"
+      style="flex: 1;"
+      onShader="$app.noiseShader"
+      shaderFps="30"
+    />
+  </container>
+</melker>
+```
+
+**Shader utils available:** `noise2d`, `simplex2d`, `simplex3d`, `perlin2d`, `perlin3d`, `fbm`, `fbm3d`, `palette`, `smoothstep`, `mix`, `fract`
+
+**Aspect correction:** Divide y by `resolution.pixelAspect` (~0.5) for circles/correct shapes.
+
 ## Auto-Start with async="ready"
 
 Use `async="ready"` scripts for initialization that needs access to rendered elements:
@@ -676,3 +738,4 @@ For more complex patterns, see these examples in the codebase:
 | `htop.melker` | Data table, live updates, process management |
 | `analog-clock.melker` | Canvas animation, aspect ratio correction |
 | `markdown_viewer.melker` | File loading, markdown rendering |
+| `noise-shader-demo.melker` | Per-pixel shaders, 3D noise animation, `simplex3d`/`perlin3d`/`fbm3d`, Inigo Quilez palettes, select controls |

@@ -692,7 +692,7 @@ export function waveEffect(x, y, time, resolution, source, utils) {
 - `time` - Elapsed seconds
 - `resolution` - `{ width, height, pixelAspect }`
 - `source` - `getPixel(x, y)`, `mouse`, `mouseUV`
-- `utils` - `noise2d`, `fbm`, `palette`, `smoothstep`, `mix`, `fract`
+- `utils` - `noise2d`, `simplex2d`, `simplex3d`, `perlin2d`, `perlin3d`, `fbm`, `fbm3d`, `palette`, `smoothstep`, `mix`, `fract`
 
 **Mouse tracking:** Automatic. `source.mouse` (pixel coords) and `source.mouseUV` (0-1 normalized) update as mouse moves over the element. Values are -1 when mouse is outside.
 

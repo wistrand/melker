@@ -950,7 +950,7 @@ The shader callback receives:
 - `time`: Elapsed time in seconds
 - `resolution`: `{ width, height, pixelAspect }` - pixelAspect is ~0.5 (pixels are taller than wide)
 - `source`: Image accessor with `getPixel(x, y)`, `mouse`, `mouseUV`
-- `utils`: Built-in functions: `noise2d`, `fbm`, `palette`, `smoothstep`, `mix`, `fract`
+- `utils`: Built-in functions: `noise2d`, `simplex2d`, `simplex3d`, `perlin2d`, `perlin3d`, `fbm`, `fbm3d`, `palette`, `smoothstep`, `mix`, `fract`
 
 Returns `[r, g, b]` or `[r, g, b, a]` (0-255 range).
 

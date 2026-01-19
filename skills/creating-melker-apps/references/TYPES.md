@@ -158,6 +158,59 @@ interface PaintEvent {
   type: 'paint';
   canvas: CanvasAPI;
 }
+
+// Shader function signature
+type ShaderFunction = (
+  x: number,
+  y: number,
+  time: number,
+  resolution: { width: number; height: number; pixelAspect: number },
+  source: ShaderSource | undefined,
+  utils: ShaderUtils
+) => [number, number, number] | [number, number, number, number];
+
+interface ShaderSource {
+  getPixel(x: number, y: number): [number, number, number, number];
+  width: number;
+  height: number;
+}
+```
+
+## ShaderUtils Interface
+
+Built-in utility functions available in `onShader` callbacks:
+
+```typescript
+interface ShaderUtils {
+  /** 2D Simplex noise - returns value in range [-1, 1] */
+  noise2d(x: number, y: number): number;
+  /** 2D Simplex noise (alias for noise2d) - returns value in range [-1, 1] */
+  simplex2d(x: number, y: number): number;
+  /** 3D Simplex noise - returns value in range [-1, 1] */
+  simplex3d(x: number, y: number, z: number): number;
+  /** 2D Classic Perlin noise (1985) - returns value in range [-1, 1] */
+  perlin2d(x: number, y: number): number;
+  /** 3D Classic Perlin noise (1985) - returns value in range [-1, 1] */
+  perlin3d(x: number, y: number, z: number): number;
+  /** Fractal Brownian Motion - layered noise, returns value roughly in range [-1, 1] */
+  fbm(x: number, y: number, octaves?: number): number;
+  /** 3D Fractal Brownian Motion - layered 3D noise, returns value roughly in range [-1, 1] */
+  fbm3d(x: number, y: number, z: number, octaves?: number): number;
+  /** Inigo Quilez palette: a + b * cos(2π * (c * t + d)) - returns [r, g, b] in range [0, 255] */
+  palette(
+    t: number,
+    a: [number, number, number],
+    b: [number, number, number],
+    c: [number, number, number],
+    d: [number, number, number]
+  ): [number, number, number];
+  /** Hermite interpolation: 0 when x <= edge0, 1 when x >= edge1, smooth curve between */
+  smoothstep(edge0: number, edge1: number, x: number): number;
+  /** Linear interpolation: a + (b - a) * t */
+  mix(a: number, b: number, t: number): number;
+  /** Fractional part: x - floor(x) */
+  fract(x: number): number;
+}
 ```
 
 ## `$app` Namespace

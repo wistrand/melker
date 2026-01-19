@@ -284,9 +284,9 @@ export class DevToolsManager {
     // Also register with document's element registry for getElementById() to work
     registerElementsWithDocument(this._deps.document, this._overlay);
 
-    // Re-render
+    // Force render to ensure clean display (dirty row tracking can miss rows)
     if (this._deps.autoRender) {
-      this._deps.render();
+      this._deps.forceRender();
     }
 
     // Focus the first scroll container for arrow key navigation

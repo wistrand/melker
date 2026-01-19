@@ -1,0 +1,182 @@
+<melker>
+  <title>3D Noise Shader Demo</title>
+
+  <policy>
+  {
+    "permissions": {
+      "shader": true
+    }
+  }
+  </policy>
+
+  <help>
+## 3D Noise Shader Demo
+
+Demonstrates animated noise using 3D noise functions with time as the Z-axis.
+
+### Noise Types
+- **Simplex 3D** - Fast, no directional artifacts
+- **Perlin 3D** - Classic 1985 gradient noise
+- **FBM 3D** - Fractal Brownian Motion (layered noise)
+
+### Controls
+- Select noise type from dropdown
+- Adjust animation speed with slider
+- Adjust noise scale with slider
+  </help>
+
+  <container style="flex-direction: column; padding: 1; gap: 1; height: fill; width: fill">
+    <text style="font-weight: bold;">3D Noise Shader Demo</text>
+
+    <container style="flex-direction: row; gap: 2; width: fill">
+      <container style="flex-direction: row; gap: 1;">
+        <text>Noise:</text>
+        <select id="noiseType" selectedValue="simplex3d" onChange="$app.onNoiseChange(event)">
+          <option value="simplex3d">Simplex 3D</option>
+          <option value="perlin3d">Perlin 3D</option>
+          <option value="fbm3d">FBM 3D</option>
+        </select>
+      </container>
+
+      <container style="flex-direction: row; gap: 1;">
+        <text>Speed:</text>
+        <slider id="speed" min="0.1" max="3" value="0.5" step="0.1" style="width: 15;" onChange="$app.onSpeedChange(event)" />
+        <text id="speedLabel">0.5x</text>
+      </container>
+
+      <container style="flex-direction: row; gap: 1;">
+        <text>Scale:</text>
+        <slider id="scale" min="0.5" max="8" value="3" step="0.5" style="width: 15;" onChange="$app.onScaleChange(event)" />
+        <text id="scaleLabel">3.0</text>
+      </container>
+
+      <container style="flex-direction: row; gap: 1;">
+        <text>Palette:</text>
+        <select id="palette" selectedValue="fire" onChange="$app.onPaletteChange(event)">
+          <option value="fire">Fire</option>
+          <option value="ocean">Ocean</option>
+          <option value="cloud">Cloud</option>
+          <option value="plasma">Plasma</option>
+          <option value="grayscale">Grayscale</option>
+        </select>
+      </container>
+    </container>
+
+    <img
+      id="noiseCanvas"
+      width="100%"
+      height="100%"
+      style="flex: 1;"
+      onShader="$app.noiseShader"
+      shaderFps="30"
+    />
+  </container>
+
+  <script type="typescript">
+    // Shader parameters
+    let noiseType: 'simplex3d' | 'perlin3d' | 'fbm3d' = 'simplex3d';
+    let speed = 0.5;
+    let scale = 3.0;
+    let paletteType: 'fire' | 'ocean' | 'cloud' | 'plasma' | 'grayscale' = 'fire';
+
+    // Color palettes (Inigo Quilez style: a + b * cos(2π * (c * t + d)))
+    const palettes = {
+      fire: {
+        a: [0.5, 0.5, 0.5] as [number, number, number],
+        b: [0.5, 0.5, 0.5] as [number, number, number],
+        c: [1.0, 1.0, 1.0] as [number, number, number],
+        d: [0.0, 0.1, 0.2] as [number, number, number],
+      },
+      ocean: {
+        a: [0.5, 0.5, 0.5] as [number, number, number],
+        b: [0.5, 0.5, 0.5] as [number, number, number],
+        c: [1.0, 1.0, 1.0] as [number, number, number],
+        d: [0.3, 0.2, 0.2] as [number, number, number],
+      },
+      cloud: {
+        a: [0.6, 0.7, 0.9] as [number, number, number],
+        b: [0.4, 0.3, 0.1] as [number, number, number],
+        c: [1.0, 1.0, 1.0] as [number, number, number],
+        d: [0.0, 0.05, 0.1] as [number, number, number],
+      },
+      plasma: {
+        a: [0.5, 0.5, 0.5] as [number, number, number],
+        b: [0.5, 0.5, 0.5] as [number, number, number],
+        c: [2.0, 1.0, 0.0] as [number, number, number],
+        d: [0.5, 0.2, 0.25] as [number, number, number],
+      },
+      grayscale: {
+        a: [0.5, 0.5, 0.5] as [number, number, number],
+        b: [0.5, 0.5, 0.5] as [number, number, number],
+        c: [0.0, 0.0, 0.0] as [number, number, number],
+        d: [0.0, 0.0, 0.0] as [number, number, number],
+      },
+    };
+
+    export function noiseShader(
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      _source: unknown,
+      utils: {
+        simplex3d: (x: number, y: number, z: number) => number;
+        perlin3d: (x: number, y: number, z: number) => number;
+        fbm3d: (x: number, y: number, z: number, octaves?: number) => number;
+        palette: (t: number, a: [number, number, number], b: [number, number, number], c: [number, number, number], d: [number, number, number]) => [number, number, number];
+      }
+    ): [number, number, number] {
+      // Normalize coordinates
+      const u = x / resolution.width;
+      const v = y / resolution.height;
+
+      // Scale and animate
+      const nx = u * scale;
+      const ny = (v / resolution.pixelAspect) * scale;
+      const nz = time * speed;
+
+      // Get noise value based on selected type
+      let n: number;
+      switch (noiseType) {
+        case 'simplex3d':
+          n = utils.simplex3d(nx, ny, nz);
+          break;
+        case 'perlin3d':
+          n = utils.perlin3d(nx, ny, nz);
+          break;
+        case 'fbm3d':
+          n = utils.fbm3d(nx, ny, nz, 4);
+          break;
+        default:
+          n = utils.simplex3d(nx, ny, nz);
+      }
+
+      // Map noise from [-1, 1] to [0, 1]
+      const t = (n + 1) * 0.5;
+
+      // Apply palette
+      const p = palettes[paletteType];
+      return utils.palette(t, p.a, p.b, p.c, p.d);
+    }
+
+    export function onNoiseChange(event: { value: string }) {
+      noiseType = event.value as typeof noiseType;
+    }
+
+    export function onSpeedChange(event: { value: number | string }) {
+      speed = Number(event.value);
+      const label = $melker.getElementById('speedLabel');
+      if (label) label.props.text = `${speed.toFixed(1)}x`;
+    }
+
+    export function onScaleChange(event: { value: number | string }) {
+      scale = Number(event.value);
+      const label = $melker.getElementById('scaleLabel');
+      if (label) label.props.text = scale.toFixed(1);
+    }
+
+    export function onPaletteChange(event: { value: string }) {
+      paletteType = event.value as typeof paletteType;
+    }
+  </script>
+</melker>

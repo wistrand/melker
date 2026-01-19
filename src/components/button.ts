@@ -95,10 +95,15 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
       const borderBottomWidth = (style$?.border || style$?.borderBottom) ? 1 : 0;
 
       const paddingValue = this.props.style?.padding || 0;
-      const paddingLeft = typeof paddingValue === 'number' ? paddingValue : (paddingValue.left || 0);
-      const paddingTop = typeof paddingValue === 'number' ? paddingValue : (paddingValue.top || 0);
-      const paddingRight = typeof paddingValue === 'number' ? paddingValue : (paddingValue.right || 0);
-      const paddingBottom = typeof paddingValue === 'number' ? paddingValue : (paddingValue.bottom || 0);
+      const basePaddingLeft = typeof paddingValue === 'number' ? paddingValue : (paddingValue.left || 0);
+      const basePaddingTop = typeof paddingValue === 'number' ? paddingValue : (paddingValue.top || 0);
+      const basePaddingRight = typeof paddingValue === 'number' ? paddingValue : (paddingValue.right || 0);
+      const basePaddingBottom = typeof paddingValue === 'number' ? paddingValue : (paddingValue.bottom || 0);
+      // Check for individual padding overrides (paddingLeft, paddingRight, etc.)
+      const paddingLeft = (style$?.paddingLeft as number | undefined) ?? basePaddingLeft;
+      const paddingTop = (style$?.paddingTop as number | undefined) ?? basePaddingTop;
+      const paddingRight = (style$?.paddingRight as number | undefined) ?? basePaddingRight;
+      const paddingBottom = (style$?.paddingBottom as number | undefined) ?? basePaddingBottom;
 
       // Content must not overlap with borders - calculate inner content area
       const contentBounds: Bounds = {

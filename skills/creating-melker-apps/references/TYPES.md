@@ -80,9 +80,9 @@ interface Element {
   props: Record<string, unknown>;
   children?: Element[];
 
-  // Value access (input, textarea, text, select, etc.)
-  getValue(): string | number | boolean;
-  setValue(value: string): void;
+  // Value access - available on most form components
+  getValue(): string | number | boolean | undefined;
+  setValue(value: string | number | boolean): void;
 
   // Focus
   focus(): void;
@@ -93,6 +93,22 @@ interface Element {
   hide?(): void;
 }
 ```
+
+**getValue()/setValue() by component type:**
+
+| Component | getValue() returns | setValue() accepts |
+|-----------|-------------------|-------------------|
+| `input` | string | string |
+| `textarea` | string | string |
+| `checkbox` | boolean | boolean |
+| `radio` | boolean | boolean |
+| `slider` | number | number |
+| `select` | string \| undefined | string |
+| `combobox` | string \| undefined | string (also updates input display) |
+| `autocomplete` | string \| undefined | string (also updates input display) |
+| `command-palette` | string \| undefined | string (also updates input display) |
+| `text` | string | string |
+| `segment-display` | string | string |
 
 ## Event Objects
 

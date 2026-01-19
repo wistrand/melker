@@ -1388,8 +1388,21 @@ export class LayoutEngine {
     if (style.left !== undefined) result.left = style.left;
     if (style.zIndex !== undefined) result.zIndex = style.zIndex;
     if (style.overflow !== undefined) result.overflow = style.overflow;
-    if (style.width !== undefined) result.width = style.width;
-    if (style.height !== undefined) result.height = style.height;
+    // Parse width/height - XML attributes come as strings, need to convert numeric strings to numbers
+    if (style.width !== undefined) {
+      if (typeof style.width === 'string' && !isNaN(parseFloat(style.width)) && !style.width.endsWith('%')) {
+        result.width = parseFloat(style.width);
+      } else {
+        result.width = style.width;
+      }
+    }
+    if (style.height !== undefined) {
+      if (typeof style.height === 'string' && !isNaN(parseFloat(style.height)) && !style.height.endsWith('%')) {
+        result.height = parseFloat(style.height);
+      } else {
+        result.height = style.height;
+      }
+    }
 
     // Auto-infer display: flex when flex container properties are present
     // This makes the framework more ergonomic - no need to explicitly set display: flex
@@ -1457,9 +1470,17 @@ export class LayoutEngine {
       width = context.availableSpace.width;
     } else if (typeof layoutProps.width === 'number') {
       width = layoutProps.width;
-    } else if (typeof layoutProps.width === 'string' && layoutProps.width.endsWith('%')) {
-      const percentage = parseFloat(layoutProps.width) / 100;
-      width = Math.floor(context.availableSpace.width * percentage);
+    } else if (typeof layoutProps.width === 'string') {
+      if (layoutProps.width.endsWith('%')) {
+        const percentage = parseFloat(layoutProps.width) / 100;
+        width = Math.floor(context.availableSpace.width * percentage);
+      } else {
+        // Parse numeric strings like "30" from XML attributes
+        const parsed = parseFloat(layoutProps.width);
+        if (!isNaN(parsed)) {
+          width = parsed;
+        }
+      }
     } else if (isFlexContainer && !hasExplicitWidth) {
       // Flex containers with no explicit width should use available space
       width = context.availableSpace.width;
@@ -1469,9 +1490,17 @@ export class LayoutEngine {
       height = context.availableSpace.height;
     } else if (typeof layoutProps.height === 'number') {
       height = layoutProps.height;
-    } else if (typeof layoutProps.height === 'string' && layoutProps.height.endsWith('%')) {
-      const percentage = parseFloat(layoutProps.height) / 100;
-      height = Math.floor(context.availableSpace.height * percentage);
+    } else if (typeof layoutProps.height === 'string') {
+      if (layoutProps.height.endsWith('%')) {
+        const percentage = parseFloat(layoutProps.height) / 100;
+        height = Math.floor(context.availableSpace.height * percentage);
+      } else {
+        // Parse numeric strings like "5" from XML attributes
+        const parsed = parseFloat(layoutProps.height);
+        if (!isNaN(parsed)) {
+          height = parsed;
+        }
+      }
     } else if (isFlexContainer && !hasExplicitHeight) {
       // Row-flex containers should use intrinsic height (content-based)
       // Column-flex containers can use available space for stretching

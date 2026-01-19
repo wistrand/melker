@@ -1,0 +1,88 @@
+<melker>
+  <title>International Segment Display</title>
+
+  <style>
+    .section {
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+    }
+    .row {
+      flex-direction: row;
+      gap: 2;
+    }
+  </style>
+
+  <help>
+## Interactive Segment Display Demo
+  </help>
+
+  <container scrollable="true" style="flex-direction: column; padding: 1; gap: 1; border: thin">
+    <text style="font-weight: bold;">Interactive Segment Display</text>
+
+    <!-- Interactive input - at top for easy testing -->
+    <container class="section">
+      <text>Try your own text:</text>
+      <container class="row">
+        <input id="textInput" value="HELLO" style="width: 30;" onChange="$app.updateDisplay()" />
+        <select id="rendererSelect" onSelect="$app.onRendererChange(event)">
+          <option value="box-drawing">Box Drawing</option>
+            <option value="rounded">Rounded</option>
+            <option value="block">Block</option>
+          <option value="geometric">Geometric</option>
+        </select>
+        <checkbox id="showOffSegments" label="Show off segments" onChange="$app.onOffSegmentsChange(event)" />
+        <checkbox id="scrollEnabled" label="Scroll" onChange="$app.onScrollChange(event)" />
+        <checkbox id="height7" label="Height 7" checked="true" onChange="$app.onHeightChange(event)" />
+      </container>
+      <segment-display id="customDisplay" value="HELLO" style="height: 7; color: yellow;" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    export function updateDisplay() {
+      const input = $melker.getElementById('textInput') as { getValue: () => string };
+      const display = $melker.getElementById('customDisplay');
+
+      if (input && display) {
+        display.setValue(input.getValue().toUpperCase());
+      }
+    }
+
+    export function onRendererChange(event: { value: string }) {
+      const display = $melker.getElementById('customDisplay');
+      if (display) {
+        display.props.renderer = event.value;
+        display.invalidateRenderer();
+      }
+    }
+
+    export function onOffSegmentsChange(event: { checked: boolean }) {
+      const display = $melker.getElementById('customDisplay');
+      if (display) {
+        if (event.checked) {
+          display.props.style = { ...display.props.style, 'off-color': 'gray' };
+        } else {
+          const { 'off-color': _, ...rest } = display.props.style || {};
+          display.props.style = rest;
+        }
+        display.invalidateRenderer();
+      }
+    }
+
+    export function onScrollChange(event: { checked: boolean }) {
+      const display = $melker.getElementById('customDisplay');
+      if (display) {
+        display.props.scroll = event.checked;
+      }
+    }
+
+    export function onHeightChange(event: { checked: boolean }) {
+      const display = $melker.getElementById('customDisplay');
+      if (display) {
+        display.props.style = { ...display.props.style, height: event.checked ? 7 : 5 };
+        display.invalidateRenderer();
+      }
+    }
+  </script>
+</melker>

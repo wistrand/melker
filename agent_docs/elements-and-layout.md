@@ -563,6 +563,20 @@ See `agent_docs/filterable-list-architecture.md` for implementation details.
 | `maxVisible` | number | Max dropdown height (default: 8) |
 | `onSelect` | function | Called when option selected |
 
+### Methods (shared)
+
+All filterable list components provide consistent value access methods:
+
+```typescript
+const select = document.getElementById('mySelect');
+select.getValue();         // Get selected value (string | undefined)
+select.setValue('option1'); // Set selected value (scrolls to option)
+
+// For combobox/autocomplete, setValue also updates the input display
+const combo = document.getElementById('myCombo');
+combo.setValue('us');      // Selects option and shows its label in input
+```
+
 ### Implementation Files
 
 | File | Purpose |

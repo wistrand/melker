@@ -1,0 +1,161 @@
+<melker>
+  <title>International Segment Display</title>
+
+  <style>
+    .section {
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+    }
+    .row {
+      flex-direction: row;
+      gap: 2;
+    }
+  </style>
+
+  <help>
+## International Segment Display Demo
+
+Demonstrates the segment display with international characters.
+
+### Supported Languages
+- Scandinavian: Swedish, Danish, Norwegian, Icelandic
+- Western European: French, German, Spanish, Portuguese
+- Central European: Polish, Czech, Slovak
+- Other: Turkish, Romanian, Greek
+
+### Currency Symbols
+Euro, Pound, Yen, Cent
+
+### Renderers
+- `box-drawing` - Clean lines (default)
+- `rounded` - Rounded corners
+- `geometric` - Chunky LCD look
+  </help>
+
+  <container scrollable="true" style="flex-direction: column; padding: 1; gap: 1; border: thin">
+    <text style="font-weight: bold;">International Segment Display</text>
+
+    <!-- Interactive input - at top for easy testing -->
+    <container class="section">
+      <text>Try your own text:</text>
+      <container class="row">
+        <input id="textInput" value="HELLO" style="width: 20;" onChange="$app.updateDisplay()" />
+        <select id="rendererSelect" onSelect="$app.onRendererChange(event)">
+          <option value="box-drawing">Box Drawing</option>
+          <option value="rounded">Rounded</option>
+          <option value="geometric">Geometric</option>
+        </select>
+        <checkbox id="showOffSegments" label="Show off segments" onChange="$app.onOffSegmentsChange(event)" />
+      </container>
+      <segment-display id="customDisplay" value="HELLO" style="height: 7; color: yellow;" />
+    </container>
+
+    <!-- Greetings in different languages -->
+    <container class="section">
+      <text>Swedish (Å, Ä, Ö):</text>
+      <segment-display value="VÄLKOMMEN" style="height: 5; color: cyan;" />
+    </container>
+
+    <container class="section">
+      <text>Danish/Norwegian (Ø, Æ):</text>
+      <segment-display value="FARØERNE" style="height: 5; color: yellow;" renderer="rounded" />
+    </container>
+
+    <container class="section">
+      <text>French (É, È, Ç, Ê):</text>
+      <segment-display value="CAFÉ FRANÇAIS" style="height: 5; color: magenta;" />
+    </container>
+
+    <container class="section">
+      <text>German (ß, Ü):</text>
+      <segment-display value="GRÜß GOTT" style="height: 5; color: green;" renderer="geometric" />
+    </container>
+
+    <container class="section">
+      <text>Spanish (Ñ):</text>
+      <segment-display value="ESPAÑA" style="height: 5; color: red;" />
+    </container>
+
+    <!-- Currency display -->
+    <container class="section">
+      <text>Currency symbols (€, £, ¥):</text>
+      <container class="row">
+        <segment-display value="€123.45" style="height: 5; color: green;" />
+        <segment-display value="£99.99" style="height: 5; color: cyan;" />
+        <segment-display value="¥5000" style="height: 5; color: yellow;" />
+      </container>
+    </container>
+
+    <!-- Greek letters -->
+    <container class="section">
+      <text>Greek letters (Π, Ω, Σ, Δ):</text>
+      <segment-display value="ΠΩΣΔ" style="height: 7; color: white;" renderer="geometric" />
+    </container>
+
+    <!-- Temperature display -->
+    <container class="section">
+      <text>Temperature with degree symbol (°):</text>
+      <segment-display id="temp" value="23.5°C" style="height: 5; color: cyan;" />
+    </container>
+
+    <!-- Scrolling international text -->
+    <container class="section">
+      <text>Scrolling multilingual:</text>
+      <segment-display id="scroller" value="HALLÅ BÖNJÖUR HØLÅ CIÄO GRÜSS" style="height: 5; width: 60; color: magenta;" scroll="true" scrollSpeed="100" />
+    </container>
+
+    <container class="row">
+      <button label="Start Scroll" onClick="$app.startScroll()" />
+      <button label="Stop Scroll" onClick="$app.stopScroll()" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    export function updateDisplay() {
+      const input = $melker.getElementById('textInput') as { getValue: () => string };
+      const display = $melker.getElementById('customDisplay');
+
+      if (input && display) {
+        display.setValue(input.getValue().toUpperCase());
+      }
+    }
+
+    export function onRendererChange(event: { value: string }) {
+      const display = $melker.getElementById('customDisplay');
+      if (display) {
+        display.props.renderer = event.value;
+        display.invalidateRenderer();
+      }
+    }
+
+    export function onOffSegmentsChange(event: { checked: boolean }) {
+      const display = $melker.getElementById('customDisplay');
+      if (display) {
+        if (event.checked) {
+          display.props.style = { ...display.props.style, 'off-color': 'gray' };
+        } else {
+          const { 'off-color': _, ...rest } = display.props.style || {};
+          display.props.style = rest;
+        }
+        display.invalidateRenderer();
+      }
+    }
+
+    export function startScroll() {
+      const scroller = $melker.getElementById('scroller');
+      if (scroller) {
+        scroller.props.scroll = true;
+        $melker.render();
+      }
+    }
+
+    export function stopScroll() {
+      const scroller = $melker.getElementById('scroller');
+      if (scroller) {
+        scroller.props.scroll = false;
+        $melker.render();
+      }
+    }
+  </script>
+</melker>

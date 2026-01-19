@@ -10,7 +10,7 @@ metadata:
 
 # Creating Melker Apps
 
-Melker is a Deno library for building rich Terminal UI interfaces using an HTML-inspired document model. Apps are written in `.melker` files with XML-like syntax.
+Melker is a Deno library for building rich Terminal UI interfaces using an HTML-inspired document model. Apps are written in `.melker` files (UTF-8 encoded) with XML-like syntax.
 
 ## Installation
 

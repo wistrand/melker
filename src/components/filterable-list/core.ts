@@ -639,6 +639,35 @@ export abstract class FilterableListCore extends Element implements Focusable {
     return this.findOptionByValue(this.props.selectedValue);
   }
 
+  /**
+   * Get the currently selected value
+   */
+  getValue(): string | undefined {
+    return this.props.selectedValue;
+  }
+
+  /**
+   * Set the selected value programmatically
+   */
+  setValue(value: string | undefined): void {
+    if (value === undefined) {
+      this.props.selectedValue = undefined;
+      return;
+    }
+
+    const option = this.findOptionByValue(value);
+    if (option) {
+      this.props.selectedValue = value;
+      // Scroll to make the selected option visible
+      const filtered = this.getFilteredOptions();
+      const index = filtered.findIndex(o => o.id === value);
+      if (index >= 0) {
+        this._focusedIndex = index;
+        this._ensureFocusedVisible();
+      }
+    }
+  }
+
   // Focusable interface
   canReceiveFocus(): boolean {
     return !this.props.disabled;

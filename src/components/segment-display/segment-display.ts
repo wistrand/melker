@@ -264,10 +264,14 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
    * Calculate intrinsic size
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
-    const value = this.getNormalizedValue();
-    if (!value) return { width: 0, height: 0 };
-
     const renderer = this.getRendererInstance();
+    const value = this.getNormalizedValue();
+
+    // Always report the renderer's height even if value is empty
+    // This ensures proper layout space allocation for scrollable containers
+    if (!value) {
+      return { width: 0, height: renderer.charHeight };
+    }
 
     // Calculate width: each char + special chars
     let width = 0;

@@ -4,6 +4,8 @@
 
 The `.melker` file format is an HTML-like declarative syntax for building Melker terminal UIs.
 
+**Encoding:** UTF-8 (supports international characters, symbols, and emoji in text content)
+
 **Run with:**
 ```bash
 # Direct execution (melker.ts has executable shebang)

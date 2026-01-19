@@ -647,6 +647,28 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     return true;
   }
 
+  // Override setValue to also update the input display
+  override setValue(value: string | undefined): void {
+    if (value === undefined) {
+      this.props.selectedValue = undefined;
+      this._inputValue = '';
+      this._cursorPosition = 0;
+      this.props.value = '';
+      return;
+    }
+
+    const option = this.findOptionByValue(value);
+    if (option) {
+      // Update input to show selected option's label
+      const label = option.label || '';
+      this._inputValue = label;
+      this._cursorPosition = label.length;
+      this.props.value = label;
+    }
+    // Call parent to set selectedValue and scroll
+    super.setValue(value);
+  }
+
   // Toggle the palette
   override toggle(): void {
     if (this.props.open) {

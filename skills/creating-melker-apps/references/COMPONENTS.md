@@ -495,6 +495,10 @@ Dropdown with text filter.
 - `width` or `style.width` - Explicit width (dropdown can expand to fit content)
 - `dropdownWidth` - Override dropdown width
 
+**Methods:**
+- `getValue()` - Get selected value
+- `setValue(value)` - Set selected value (also updates input display)
+
 ### select
 
 Simple dropdown picker (no filter).
@@ -512,6 +516,10 @@ Simple dropdown picker (no filter).
 - `onChange` - Selection handler (`event.value`)
 - `width` or `style.width` - Explicit width (dropdown can expand to fit content)
 - `dropdownWidth` - Override dropdown width
+
+**Methods:**
+- `getValue()` - Get selected value
+- `setValue(value)` - Set selected value
 
 ### autocomplete
 
@@ -532,6 +540,10 @@ Async search dropdown.
 - `onSearch` - Called with query (`event.query`)
 - `debounce` - Debounce delay in ms
 - `minChars` - Minimum chars before search
+
+**Methods:**
+- `getValue()` - Get selected value
+- `setValue(value)` - Set selected value (also updates input display)
 
 ### command-palette
 

@@ -142,6 +142,47 @@ export class RenderingEngine {
     return null;
   }
 
+  /**
+   * Find the cumulative scroll offset for an element from all scrollable parent containers
+   */
+  private _findScrollOffset(elementId: string): { x: number; y: number } {
+    if (!this._cachedLayoutTree) return { x: 0, y: 0 };
+    const result = { x: 0, y: 0 };
+    this._accumulateScrollOffset(elementId, this._cachedLayoutTree, result);
+    return result;
+  }
+
+  private _accumulateScrollOffset(
+    elementId: string,
+    node: LayoutNode,
+    result: { x: number; y: number },
+    parentScrollX = 0,
+    parentScrollY = 0
+  ): boolean {
+    // Check if this node is the target element
+    if (node.element?.id === elementId) {
+      result.x = parentScrollX;
+      result.y = parentScrollY;
+      return true;
+    }
+
+    // Calculate scroll offset if this is a scrollable container
+    let scrollX = parentScrollX;
+    let scrollY = parentScrollY;
+    if (node.element && isScrollableType(node.element.type) && node.element.props.scrollable) {
+      scrollX += (node.element.props.scrollX as number) || 0;
+      scrollY += (node.element.props.scrollY as number) || 0;
+    }
+
+    // Recurse into children
+    for (const child of node.children || []) {
+      if (this._accumulateScrollOffset(elementId, child, result, scrollX, scrollY)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Collected overlays for the current render pass
   private _overlays: Overlay[] = [];
 
@@ -546,19 +587,27 @@ export class RenderingEngine {
       const firstPos = isStartBeforeEnd ? start : end;
       const lastPos = isStartBeforeEnd ? end : start;
 
-      const boundsLeft = componentBounds?.x ?? 0;
-      const boundsRight = componentBounds ? componentBounds.x + componentBounds.width - 1 : buffer.currentBuffer.width - 1;
-      const boundsTop = componentBounds?.y ?? 0;
-      const boundsBottom = componentBounds ? componentBounds.y + componentBounds.height - 1 : buffer.currentBuffer.height - 1;
+      // Get scroll offset from parent scrollable containers
+      const scrollOffset = componentId ? this._findScrollOffset(componentId) : { x: 0, y: 0 };
+
+      // Adjust selection positions for scroll (subtract scroll offset to get screen position)
+      const adjustedFirstPos = { x: firstPos.x - scrollOffset.x, y: firstPos.y - scrollOffset.y };
+      const adjustedLastPos = { x: lastPos.x - scrollOffset.x, y: lastPos.y - scrollOffset.y };
+
+      // Adjust component bounds for scroll
+      const boundsLeft = (componentBounds?.x ?? 0) - scrollOffset.x;
+      const boundsRight = componentBounds ? componentBounds.x + componentBounds.width - 1 - scrollOffset.x : buffer.currentBuffer.width - 1;
+      const boundsTop = (componentBounds?.y ?? 0) - scrollOffset.y;
+      const boundsBottom = componentBounds ? componentBounds.y + componentBounds.height - 1 - scrollOffset.y : buffer.currentBuffer.height - 1;
 
       // Check if component provides custom highlight bounds (e.g., segment display snapping to char boundaries)
       let alignedBounds: { startX: number; endX: number } | undefined;
       if (componentId && componentBounds && this._document) {
         const element = this._document.getElementById(componentId);
         if (element && hasSelectionHighlightBounds(element)) {
-          // Convert screen coordinates to element-relative coordinates
-          const relStartX = Math.min(firstPos.x, lastPos.x) - componentBounds.x;
-          const relEndX = Math.max(firstPos.x, lastPos.x) - componentBounds.x;
+          // Convert screen coordinates to element-relative coordinates (use original relative positions)
+          const relStartX = Math.min(firstPos.x, lastPos.x) - (componentBounds?.x ?? 0);
+          const relEndX = Math.max(firstPos.x, lastPos.x) - (componentBounds?.x ?? 0);
           alignedBounds = element.getSelectionHighlightBounds(relStartX, relEndX);
         }
       }
@@ -575,23 +624,23 @@ export class RenderingEngine {
           }
         }
       } else {
-        // Standard flow selection for text editors
-        for (let y = firstPos.y; y <= lastPos.y; y++) {
+        // Standard flow selection for text editors (use adjusted positions for scroll)
+        for (let y = adjustedFirstPos.y; y <= adjustedLastPos.y; y++) {
           let lineStartX: number;
           let lineEndX: number;
 
-          if (firstPos.y === lastPos.y) {
+          if (adjustedFirstPos.y === adjustedLastPos.y) {
             // Single line selection
-            lineStartX = firstPos.x;
-            lineEndX = lastPos.x;
-          } else if (y === firstPos.y) {
+            lineStartX = adjustedFirstPos.x;
+            lineEndX = adjustedLastPos.x;
+          } else if (y === adjustedFirstPos.y) {
             // First line: from click position to end of line
-            lineStartX = firstPos.x;
+            lineStartX = adjustedFirstPos.x;
             lineEndX = boundsRight;
-          } else if (y === lastPos.y) {
+          } else if (y === adjustedLastPos.y) {
             // Last line: from start of line to mouse position
             lineStartX = boundsLeft;
-            lineEndX = lastPos.x;
+            lineEndX = adjustedLastPos.x;
           } else {
             // Middle lines: full width
             lineStartX = boundsLeft;

@@ -27,9 +27,16 @@ export class ContentMeasurer {
       return this._measureContainerFastPath(container, availableWidth);
     }
 
+    // Get gap from container style (for flex containers)
+    const containerStyle = container.props?.style || {};
+    const gap = this._parseNumberValue(containerStyle.gap) || 0;
+    const flexDirection = containerStyle.flexDirection || containerStyle['flex-direction'] || 'column';
+    const isColumn = flexDirection === 'column';
+
     let totalHeight = 0;
     let maxWidth = 0;
     const childMeasurements: Array<{ element: Element; size: Size; margin: any }> = [];
+    let visibleChildCount = 0;
 
     for (const child of container.children) {
       const childSize = this.measureElement(child, availableWidth);
@@ -39,6 +46,12 @@ export class ContentMeasurer {
       maxWidth = Math.max(maxWidth, childSize.width + (childMargin.left || 0) + (childMargin.right || 0));
 
       childMeasurements.push({ element: child, size: childSize, margin: childMargin });
+      visibleChildCount++;
+    }
+
+    // Add gaps between children (for column layout)
+    if (isColumn && visibleChildCount > 1 && gap > 0) {
+      totalHeight += (visibleChildCount - 1) * gap;
     }
 
     // Debug: Uncomment to debug content measurement issues
@@ -113,6 +126,10 @@ export class ContentMeasurer {
     const children = container.children!;
     const childCount = children.length;
 
+    // Get gap from container style
+    const containerStyle = container.props?.style || {};
+    const gap = this._parseNumberValue(containerStyle.gap) || 0;
+
     // Sample first few children to estimate row height
     const sampleSize = Math.min(10, childCount);
     let totalSampleHeight = 0;
@@ -127,8 +144,8 @@ export class ContentMeasurer {
       maxWidth = Math.max(maxWidth, childSize.width + (childMargin.left || 0) + (childMargin.right || 0));
     }
 
-    // Estimate total height based on sample
-    const avgRowHeight = totalSampleHeight / sampleSize;
+    // Estimate total height based on sample (include gap in average)
+    const avgRowHeight = (totalSampleHeight + (sampleSize - 1) * gap) / sampleSize;
     const estimatedTotalHeight = Math.ceil(avgRowHeight * childCount);
 
     return { width: maxWidth, height: estimatedTotalHeight };
@@ -162,9 +179,18 @@ export class ContentMeasurer {
       case 'button':
         return this._estimateButtonSize(element);
 
-      case 'container':
-        // For containers, recursively measure children
-        return this.measureContainer(element, availableWidth);
+      case 'container': {
+        // For containers, recursively measure children and add padding/border
+        const contentSize = this.measureContainer(element, availableWidth);
+        const style = element.props?.style || {};
+        const padding = this._parseNumberValue(style.padding) || 0;
+        const border = style.border ? 1 : 0; // thin border = 1
+        const extraSpace = (padding + border) * 2;
+        return {
+          width: contentSize.width + extraSpace,
+          height: contentSize.height + extraSpace,
+        };
+      }
 
       default:
         // Conservative fallback for unknown element types

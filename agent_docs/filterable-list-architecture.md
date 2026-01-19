@@ -55,6 +55,10 @@ abstract class FilterableListCore extends Element implements Focusable {
   selectFocused(): void                      // Select current option
   selectOption(option): void                 // Fire onSelect event
 
+  // Value access (consistent with other form components)
+  getValue(): string | undefined             // Get props.selectedValue
+  setValue(value: string | undefined): void  // Set props.selectedValue, scroll to option
+
   // Marker for engine keyboard routing
   handlesOwnKeyboard(): boolean { return true }
 }
@@ -126,6 +130,12 @@ class ComboboxElement extends FilterableListCore {
     // Select option OR freeform text entry
     if (option) this.selectOption(option)
     else if (this._inputValue) this.selectFreeformValue(this._inputValue)
+  }
+
+  // Override setValue to also update input display
+  override setValue(value: string | undefined): void {
+    // Also updates _inputValue and props.value to show label
+    super.setValue(value)
   }
 
   // Capture clicks - don't let child options receive clicks

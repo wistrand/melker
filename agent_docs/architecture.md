@@ -3,7 +3,7 @@
 ## Core Concepts
 
 - **Document Model**: HTML-inspired elements with React-like createElement pattern, JSON serializable
-- **Dual-Buffer Rendering**: Character buffer + style buffer for efficient ANSI output
+- **Dual-Buffer Rendering**: Character buffer + style buffer for efficient ANSI output, with dirty row tracking for O(dirtyRows × width) diff instead of O(width × height)
 - **Flexbox Layout**: Single layout engine with flex-wrap, border-box sizing
 - **Theming**: Configurable via `--theme` flag, `MELKER_THEME` env, or config file (default: `auto`); auto-detects terminal capabilities or use manual themes (bw, gray, color, fullcolor variants)
 

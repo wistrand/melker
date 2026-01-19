@@ -4,6 +4,7 @@ import { Bounds, BORDER_CHARS } from './types.ts';
 import { getCharWidth, getStringWidth, analyzeString, type CharInfo } from './char-width.ts';
 import { getThemeManager, colorToGray, colorToLowContrast } from './theme.ts';
 import type { TerminalColor, BorderStyle } from './types.ts';
+import { getLogger } from './logging.ts';
 
 export interface Cell {
   char: string;
@@ -33,6 +34,9 @@ export class TerminalBuffer {
   private _defaultCell: Cell;
   // Track which cells are occupied by wide characters
   private _wideCharMap: boolean[][]; // true if cell is occupied by a wide char
+  // Dirty row tracking (injected by DualBuffer)
+  private _dirtyRows?: Set<number>;
+  private _referenceBuffer?: TerminalBuffer;
 
   constructor(width: number, height: number, defaultCell: Cell = { char: ' ' }) {
     this._width = width;
@@ -112,6 +116,18 @@ export class TerminalBuffer {
     }
   }
 
+  // Enable dirty row tracking (called by DualBuffer)
+  setDirtyTracking(referenceBuffer: TerminalBuffer, dirtyRows: Set<number>): void {
+    this._referenceBuffer = referenceBuffer;
+    this._dirtyRows = dirtyRows;
+  }
+
+  // Disable dirty row tracking
+  clearDirtyTracking(): void {
+    this._referenceBuffer = undefined;
+    this._dirtyRows = undefined;
+  }
+
   // Set a single cell with wide character support
   setCell(x: number, y: number, cell: Cell): void {
     if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
@@ -164,6 +180,15 @@ export class TerminalBuffer {
       this._wideCharMap[y][x] = false;
     }
     // Zero-width characters are ignored
+
+    // Track dirty row if tracking enabled
+    if (this._dirtyRows && this._referenceBuffer) {
+      const written = this._cells[y][x];
+      const reference = this._referenceBuffer._cells[y]?.[x];
+      if (!reference || !this._cellsEqualDirect(written, reference)) {
+        this._dirtyRows.add(y);
+      }
+    }
   }
 
   // Clear wide character at position if it exists
@@ -431,6 +456,10 @@ export interface BufferStats {
   renderFrequency: number; // renders per second
   frameCount: number;
   memoryUsage: number; // estimated bytes
+  // Dirty row tracking stats
+  dirtyRows: number;
+  totalRows: number;
+  scannedCells: number;
 }
 
 export class DualBuffer {
@@ -439,6 +468,9 @@ export class DualBuffer {
   private _width: number;
   private _height: number;
   private _renderOptions: RenderOptions;
+
+  // Dirty row tracking
+  private _dirtyRows = new Set<number>();
 
   // Statistics tracking
   private _stats?: BufferStats;
@@ -457,6 +489,9 @@ export class DualBuffer {
       cursorY: 0,
     };
 
+    // Enable dirty row tracking on current buffer
+    this._currentBuffer.setDirtyTracking(this._previousBuffer, this._dirtyRows);
+
     // Initialize statistics immediately for overlay support
     this._stats = {
       totalCells: width * height,
@@ -469,6 +504,9 @@ export class DualBuffer {
       renderFrequency: 0,
       frameCount: 0,
       memoryUsage: this._estimateMemoryUsage(),
+      dirtyRows: 0,
+      totalRows: height,
+      scannedCells: 0,
     };
   }
 
@@ -507,10 +545,22 @@ export class DualBuffer {
 
   // Resize both buffers
   resize(newWidth: number, newHeight: number): void {
+    // Disable tracking during resize
+    this._currentBuffer.clearDirtyTracking();
+
     this._width = newWidth;
     this._height = newHeight;
     this._currentBuffer.resize(newWidth, newHeight);
     this._previousBuffer.resize(newWidth, newHeight);
+
+    // Mark all rows dirty (size change = full redraw)
+    this._dirtyRows.clear();
+    for (let y = 0; y < this._height; y++) {
+      this._dirtyRows.add(y);
+    }
+
+    // Re-enable tracking
+    this._currentBuffer.setDirtyTracking(this._previousBuffer, this._dirtyRows);
 
     // Update stats with new size
     if (this._stats) {
@@ -534,10 +584,13 @@ export class DualBuffer {
   // Swap buffers and return differences for rendering
   swapAndGetDiff(): BufferDiff[] {
     const startTime = performance.now();
-    const differences = this._currentBuffer.diff(this._previousBuffer);
+    const differences = this._computeDirtyDiff();
 
     // Update statistics
     this._updateStats(differences, startTime);
+
+    // Disable tracking on old current buffer
+    this._currentBuffer.clearDirtyTracking();
 
     // Swap buffers
     const temp = this._previousBuffer;
@@ -547,20 +600,71 @@ export class DualBuffer {
     // Clear the new current buffer for next frame
     this._currentBuffer.clear();
 
+    // Enable tracking on new current buffer (pointing to new previous)
+    this._currentBuffer.setDirtyTracking(this._previousBuffer, this._dirtyRows);
+
+    // Reset dirty rows for next frame
+    this._dirtyRows.clear();
+
     return differences;
+  }
+
+  // Compute diff using only dirty rows
+  private _computeDirtyDiff(): BufferDiff[] {
+    const differences: BufferDiff[] = [];
+    const currentCells = this._currentBuffer.cells;
+    const previousCells = this._previousBuffer.cells;
+
+    for (const y of this._dirtyRows) {
+      const currentRow = currentCells[y];
+      const previousRow = previousCells[y];
+      if (!currentRow || !previousRow) continue;
+
+      for (let x = 0; x < this._width; x++) {
+        const current = currentRow[x];
+        const previous = previousRow[x];
+        if (!this._cellsEqualDirect(current, previous)) {
+          differences.push({ x, y, cell: { ...current } });
+        }
+      }
+    }
+
+    return differences;
+  }
+
+  // Direct cell comparison (no cloning needed when accessing cells directly)
+  private _cellsEqualDirect(a: Cell, b: Cell): boolean {
+    return (
+      a.char === b.char &&
+      a.foreground === b.foreground &&
+      a.background === b.background &&
+      a.bold === b.bold &&
+      a.italic === b.italic &&
+      a.underline === b.underline &&
+      a.dim === b.dim &&
+      a.reverse === b.reverse &&
+      a.width === b.width &&
+      a.isWideCharContinuation === b.isWideCharContinuation
+    );
   }
 
   // Get differences without swapping or clearing (for fast render path)
   // This allows immediate visual feedback without disrupting the buffer state
   // for the upcoming full render
   getDiffOnly(): BufferDiff[] {
-    return this._currentBuffer.diff(this._previousBuffer);
+    return this._computeDirtyDiff();
   }
 
   // Prepare current buffer for fast render by copying previous buffer content
   // This allows fast render to update only specific cells while preserving the rest
   prepareForFastRender(): void {
+    // Temporarily disable tracking during copy
+    this._currentBuffer.clearDirtyTracking();
+
     this._currentBuffer.copyFrom(this._previousBuffer);
+
+    // Re-enable tracking (dirty rows preserved from before copy)
+    this._currentBuffer.setDirtyTracking(this._previousBuffer, this._dirtyRows);
   }
 
   // Force complete redraw (useful for initialization or after screen clear)
@@ -596,7 +700,10 @@ export class DualBuffer {
         bufferUtilization: 0,
         renderFrequency: 0,
         frameCount: 0,
-        memoryUsage: this._estimateMemoryUsage()
+        memoryUsage: this._estimateMemoryUsage(),
+        dirtyRows: 0,
+        totalRows: this._height,
+        scannedCells: 0,
       };
       this._renderTimes = [];
       this._startTime = Date.now();
@@ -629,6 +736,20 @@ export class DualBuffer {
     this._stats.nonEmptyCells = this._countNonEmptyCells();
     this._stats.bufferUtilization = (this._stats.nonEmptyCells / this._stats.totalCells) * 100;
     this._stats.memoryUsage = this._estimateMemoryUsage();
+
+    // Update dirty row stats
+    this._stats.dirtyRows = this._dirtyRows.size;
+    this._stats.totalRows = this._height;
+    this._stats.scannedCells = this._dirtyRows.size * this._width;
+
+    // Log dirty stats
+    const savedPercent = this._stats.totalCells > 0
+      ? Math.round((1 - this._stats.scannedCells / this._stats.totalCells) * 100)
+      : 0;
+    getLogger('buffer').debug(
+      `Diff scan: ${this._stats.scannedCells}/${this._stats.totalCells} cells (${savedPercent}% saved), ` +
+      `${this._stats.dirtyRows}/${this._stats.totalRows} rows dirty, ${this._stats.changedCells} cells changed`
+    );
 
     this._lastFrameTime = currentTime;
   }
@@ -670,7 +791,10 @@ export class DualBuffer {
       bufferUtilization: 0,
       renderFrequency: 0,
       frameCount: 0,
-      memoryUsage: this._estimateMemoryUsage()
+      memoryUsage: this._estimateMemoryUsage(),
+      dirtyRows: 0,
+      totalRows: this._height,
+      scannedCells: 0,
     };
     this._renderTimes = [];
     this._startTime = Date.now();

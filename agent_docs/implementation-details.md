@@ -27,6 +27,8 @@ Input and Textarea components use a fast render path for immediate visual feedba
 
 **Critical**: Must NOT swap buffers during fast render, or the debounced full render will diff against wrong baseline (causing flicker).
 
+**Dirty row tracking**: Both fast and full render benefit from dirty row tracking - only rows with changed cells are scanned during diff. See `agent_docs/dirty-row-tracking.md`.
+
 **Dialog handling**: Fast render skipped when:
 - System dialogs open (alert, confirm, prompt, accessibility)
 - Overlay dialog exists (dialog that doesn't contain the focused input)
@@ -34,6 +36,26 @@ Input and Textarea components use a fast render path for immediate visual feedba
 Inputs inside an open dialog still use fast render.
 
 See `agent_docs/fast-input-render-plan.md` for full architecture.
+
+## Dirty Row Tracking
+
+Buffer diff operations use dirty row tracking to avoid full O(width × height) scans.
+
+**How it works** (see `src/buffer.ts`):
+1. DualBuffer injects tracking into TerminalBuffer via `setDirtyTracking()`
+2. When `setCell()` writes a cell differing from reference buffer, that row is marked dirty
+3. `swapAndGetDiff()` only scans dirty rows via `_computeDirtyDiff()`
+4. After diff, dirty set is cleared for next frame
+
+**Performance**: Typical 70-95% savings. Form with 13 content rows in 47-row terminal: scans 1599 cells instead of 5781 (72% saved).
+
+**Special cases**:
+- Resize marks all rows dirty (full redraw)
+- `prepareForFastRender()` preserves dirty rows during buffer copy
+
+**Limitation**: Conservative marking due to multi-pass rendering. Container background fills mark rows dirty even if children restore original content. Actual diff finds 0 changes but rows are still scanned.
+
+See `agent_docs/dirty-row-tracking.md` for full documentation.
 
 ## Engine Stop Sequence
 

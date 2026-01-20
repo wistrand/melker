@@ -3,6 +3,7 @@
 
 import type { BufferStats, DualBuffer } from './buffer.ts';
 import { getThemeColor } from './theme.ts';
+import { COLORS } from './components/color-utils.ts';
 import { MelkerConfig } from './config/mod.ts';
 
 export interface StatsOverlayOptions {
@@ -121,8 +122,8 @@ export class StatsOverlay {
     lines: string[]
   ): void {
     // Use a semi-transparent dark background for contrast
-    const bgColor = '#000000';
-    const textColor = getThemeColor('textSecondary') || '#888888';
+    const bgColor = COLORS.black;
+    const textColor = getThemeColor('textSecondary') ?? COLORS.gray;
 
     // Draw text content directly
     for (let i = 0; i < lines.length; i++) {

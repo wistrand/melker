@@ -136,12 +136,18 @@ Diff scan: 1599/5781 cells (72% saved), 13/47 rows dirty, 2 cells changed
 4. Those cells match the previous frame, so the row isn't in the diff
 5. Terminal shows stale content from the previous frame
 
-**Solution**: Use `forceRender()` instead of `render()` when opening modal dialogs. This bypasses dirty row tracking and outputs all cells. All built-in dialogs (alert, confirm, prompt, accessibility, dev-tools) use `forceRender()` on open.
+**Automatic Solution**: The engine automatically detects when dialogs open and uses a full diff for that render cycle. This is transparent to apps - just use `render()` as normal. The engine tracks which dialogs were open in the previous frame and, if any new dialog is detected, marks the buffer for a full diff via `DualBuffer.markForceNextRender()`.
 
 ```typescript
-// In dialog managers:
-show(): void {
-  // ... create and add dialog ...
-  this._deps.forceRender();  // NOT render()
+// In engine.render():
+const currentOpenDialogs = this._collectOpenDialogIds();
+for (const id of currentOpenDialogs) {
+  if (!this._previouslyOpenDialogIds.has(id)) {
+    this._buffer.markForceNextRender();  // Automatic!
+    break;
+  }
 }
+this._previouslyOpenDialogIds = currentOpenDialogs;
 ```
+
+Built-in dialogs (alert, confirm, prompt, accessibility, dev-tools) also call `forceRender()` directly for immediate feedback.

@@ -6,7 +6,7 @@
 import { createElement, createApp, getTerminalSize } from '../mod.ts';
 import type { FileSelectEvent, FileErrorEvent } from '../src/components/file-browser/mod.ts';
 
-const { rows } = getTerminalSize();
+const { height: rows } = getTerminalSize();
 
 // Track state
 let selectedPath = '(none)';

@@ -5,7 +5,7 @@ import type { Transport } from "npm:@modelcontextprotocol/sdk/shared/transport.j
 import type { Tool } from "npm:@modelcontextprotocol/sdk/types.js";
 
 
-conole.log("Client=", Client);
+console.log("Client=", Client);
 
 export interface ChatOptions {
   data: any;

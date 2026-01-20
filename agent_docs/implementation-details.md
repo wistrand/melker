@@ -52,11 +52,10 @@ Buffer diff operations use dirty row tracking to avoid full O(width × height) s
 **Special cases**:
 - Resize marks all rows dirty (full redraw)
 - `prepareForFastRender()` preserves dirty rows during buffer copy
-- **Modal dialogs must use `forceRender()`** on open (not `render()`) to avoid stale content
+- **Modal dialogs are handled automatically** - engine detects newly opened dialogs and uses full diff
 
 **Limitations**:
 - Conservative marking due to multi-pass rendering. Container background fills mark rows dirty even if children restore original content.
-- Modal dialog transitions can miss rows if app content matches previous frame. All built-in dialogs use `forceRender()` on open.
 
 See `agent_docs/dirty-row-tracking.md` for full documentation.
 

@@ -90,7 +90,7 @@ function updateScrollableList() {
 function updateRowCount() {
   const countElement = engine.document.getElementById('row-count');
   if (countElement && countElement.props) {
-    countElement.setValue(`Total rows: ${textRows.length}`);
+    (countElement as any).setValue(`Total rows: ${textRows.length}`);
   }
 }
 

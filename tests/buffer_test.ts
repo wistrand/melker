@@ -7,6 +7,7 @@ import {
   Cell,
   TerminalRenderer,
 } from '../mod.ts';
+import { COLORS } from '../src/components/color-utils.ts';
 
 Deno.test('TerminalBuffer creation and basic operations', () => {
   const buffer = new TerminalBuffer(10, 5);
@@ -24,7 +25,7 @@ Deno.test('TerminalBuffer setCell and getCell', () => {
 
   const testCell: Cell = {
     char: 'A',
-    foreground: 'red',
+    foreground: COLORS.red,
     bold: true,
   };
 
@@ -32,7 +33,7 @@ Deno.test('TerminalBuffer setCell and getCell', () => {
   const retrieved = buffer.getCell(2, 3);
 
   assertEquals(retrieved?.char, 'A');
-  assertEquals(retrieved?.foreground, 'red');
+  assertEquals(retrieved?.foreground, COLORS.red);
   assertEquals(retrieved?.bold, true);
 });
 
@@ -53,7 +54,7 @@ Deno.test('TerminalBuffer bounds checking', () => {
 Deno.test('TerminalBuffer setText', () => {
   const buffer = new TerminalBuffer(10, 3);
 
-  buffer.setText(2, 1, 'Hello', { foreground: 'blue' });
+  buffer.setText(2, 1, 'Hello', { foreground: COLORS.blue });
 
   assertEquals(buffer.getCell(2, 1)?.char, 'H');
   assertEquals(buffer.getCell(3, 1)?.char, 'e');
@@ -62,8 +63,8 @@ Deno.test('TerminalBuffer setText', () => {
   assertEquals(buffer.getCell(6, 1)?.char, 'o');
 
   // Check styling
-  assertEquals(buffer.getCell(2, 1)?.foreground, 'blue');
-  assertEquals(buffer.getCell(6, 1)?.foreground, 'blue');
+  assertEquals(buffer.getCell(2, 1)?.foreground, COLORS.blue);
+  assertEquals(buffer.getCell(6, 1)?.foreground, COLORS.blue);
 });
 
 Deno.test('TerminalBuffer setText with overflow', () => {
@@ -80,13 +81,13 @@ Deno.test('TerminalBuffer setText with overflow', () => {
 Deno.test('TerminalBuffer fillRect', () => {
   const buffer = new TerminalBuffer(5, 5);
 
-  buffer.fillRect(1, 1, 3, 2, { char: '#', foreground: 'red' });
+  buffer.fillRect(1, 1, 3, 2, { char: '#', foreground: COLORS.red });
 
   // Check filled area
   for (let y = 1; y < 3; y++) {
     for (let x = 1; x < 4; x++) {
       assertEquals(buffer.getCell(x, y)?.char, '#');
-      assertEquals(buffer.getCell(x, y)?.foreground, 'red');
+      assertEquals(buffer.getCell(x, y)?.foreground, COLORS.red);
     }
   }
 
@@ -98,7 +99,7 @@ Deno.test('TerminalBuffer fillRect', () => {
 Deno.test('TerminalBuffer drawBorder', () => {
   const buffer = new TerminalBuffer(5, 4);
 
-  buffer.drawBorder(0, 0, 5, 4, { foreground: 'blue' }, 'thin');
+  buffer.drawBorder(0, 0, 5, 4, { foreground: COLORS.blue }, 'thin');
 
   // Check corners
   assertEquals(buffer.getCell(0, 0)?.char, '┌');
@@ -116,7 +117,7 @@ Deno.test('TerminalBuffer drawBorder', () => {
   assertEquals(buffer.getCell(2, 1)?.char, ' ');
 
   // Check styling
-  assertEquals(buffer.getCell(0, 0)?.foreground, 'blue');
+  assertEquals(buffer.getCell(0, 0)?.foreground, COLORS.blue);
 });
 
 Deno.test('TerminalBuffer border styles', () => {
@@ -145,7 +146,7 @@ Deno.test('TerminalBuffer diff calculation', () => {
 
   // Make some changes to buffer2
   buffer2.setCell(0, 0, { char: 'A' });
-  buffer2.setCell(2, 2, { char: 'B', foreground: 'red' });
+  buffer2.setCell(2, 2, { char: 'B', foreground: COLORS.red });
 
   diff = buffer2.diff(buffer1);
   assertEquals(diff.length, 2);
@@ -159,7 +160,7 @@ Deno.test('TerminalBuffer diff calculation', () => {
 
   assert(diffB);
   assertEquals(diffB.cell.char, 'B');
-  assertEquals(diffB.cell.foreground, 'red');
+  assertEquals(diffB.cell.foreground, COLORS.red);
 });
 
 Deno.test('TerminalBuffer resize', () => {
@@ -195,7 +196,7 @@ Deno.test('TerminalBuffer resize', () => {
 Deno.test('TerminalBuffer clone and copyFrom', () => {
   const original = new TerminalBuffer(3, 3);
   original.setText(0, 0, 'TEST');
-  original.setCell(2, 2, { char: 'X', foreground: 'red' });
+  original.setCell(2, 2, { char: 'X', foreground: COLORS.red });
 
   const cloned = original.clone();
 
@@ -203,7 +204,7 @@ Deno.test('TerminalBuffer clone and copyFrom', () => {
   assertEquals(cloned.height, original.height);
   assertEquals(cloned.getCell(0, 0)?.char, 'T');
   assertEquals(cloned.getCell(2, 2)?.char, 'X');
-  assertEquals(cloned.getCell(2, 2)?.foreground, 'red');
+  assertEquals(cloned.getCell(2, 2)?.foreground, COLORS.red);
 
   // Modify clone shouldn't affect original
   cloned.setCell(1, 1, { char: 'Y' });

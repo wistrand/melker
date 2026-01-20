@@ -6,6 +6,7 @@ import type { ChangeEvent, KeyPressEvent } from '../events.ts';
 import { createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
 import { createDebouncedAction, type DebouncedAction } from '../utils/timing.ts';
+import { COLORS, parseColor } from './color-utils.ts';
 
 export interface TextareaProps extends BaseProps {
   value?: string;
@@ -324,7 +325,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
 
     // Show placeholder if empty
     if (!value && placeholder) {
-      const placeholderStyle = { ...textareaStyle, foreground: 'gray' };
+      const placeholderStyle = { ...textareaStyle, foreground: COLORS.gray };
       const placeholderLines = placeholder.split('\n');
       for (let y = 0; y < Math.min(placeholderLines.length, linesToRender); y++) {
         const text = placeholderLines[y].substring(0, bounds.width);
@@ -867,11 +868,11 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
     const value = this._value;
     const { placeholder } = this.props;
 
-    // Get styles
+    // Get styles - parse colors to PackedRGBA
     const elementStyle = this.props.style || {};
-    const bg = elementStyle.background || getThemeColor('inputBackground');
+    const bg = parseColor(elementStyle.background) || getThemeColor('inputBackground');
     const fg = value
-      ? (elementStyle.color || getThemeColor('inputForeground'))
+      ? (parseColor(elementStyle.color) || getThemeColor('inputForeground'))
       : getThemeColor('textMuted');
 
     // Clear the textarea area
@@ -906,7 +907,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       for (let y = 0; y < Math.min(placeholderLines.length, linesToRender); y++) {
         const text = placeholderLines[y].substring(0, bounds.width);
         buffer.currentBuffer.setText(bounds.x, bounds.y + y, text, {
-          foreground: 'gray',
+          foreground: COLORS.gray,
           background: bg,
         });
       }

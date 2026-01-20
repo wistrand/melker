@@ -1,8 +1,9 @@
 // Theme system for Melker UI - Environment variable driven theming
 
-import type { TerminalColor } from './types.ts';
+import type { PackedRGBA } from './types.ts';
 import { Env } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { COLORS, parseColor, packRGBA, unpackRGBA } from './components/color-utils.ts';
 
 // Theme definitions
 export type ThemeType = 'bw' | 'gray' | 'color' | 'fullcolor';
@@ -10,47 +11,47 @@ export type ThemeMode = 'std' | 'dark';
 
 export interface ColorPalette {
   // Basic UI colors
-  primary: TerminalColor;
-  secondary: TerminalColor;
-  background: TerminalColor;
-  foreground: TerminalColor;
-  surface: TerminalColor;
-  border: TerminalColor;
+  primary: PackedRGBA;
+  secondary: PackedRGBA;
+  background: PackedRGBA;
+  foreground: PackedRGBA;
+  surface: PackedRGBA;
+  border: PackedRGBA;
 
   // Status colors
-  success: TerminalColor;
-  warning: TerminalColor;
-  error: TerminalColor;
-  info: TerminalColor;
+  success: PackedRGBA;
+  warning: PackedRGBA;
+  error: PackedRGBA;
+  info: PackedRGBA;
 
   // Interactive element colors
-  buttonPrimary: TerminalColor;
-  buttonSecondary: TerminalColor;
-  buttonBackground: TerminalColor;
-  inputBackground: TerminalColor;
-  inputForeground: TerminalColor;
-  inputBorder: TerminalColor;
+  buttonPrimary: PackedRGBA;
+  buttonSecondary: PackedRGBA;
+  buttonBackground: PackedRGBA;
+  inputBackground: PackedRGBA;
+  inputForeground: PackedRGBA;
+  inputBorder: PackedRGBA;
 
   // Focus states
-  focusPrimary: TerminalColor;
-  focusBackground: TerminalColor;
+  focusPrimary: PackedRGBA;
+  focusBackground: PackedRGBA;
 
   // Content colors
-  textPrimary: TerminalColor;
-  textSecondary: TerminalColor;
-  textMuted: TerminalColor;
+  textPrimary: PackedRGBA;
+  textSecondary: PackedRGBA;
+  textMuted: PackedRGBA;
 
   // Component-specific colors
-  headerBackground: TerminalColor;
-  headerForeground: TerminalColor;
-  sidebarBackground: TerminalColor;
-  sidebarForeground: TerminalColor;
-  modalBackground: TerminalColor;
-  modalForeground: TerminalColor;
+  headerBackground: PackedRGBA;
+  headerForeground: PackedRGBA;
+  sidebarBackground: PackedRGBA;
+  sidebarForeground: PackedRGBA;
+  modalBackground: PackedRGBA;
+  modalForeground: PackedRGBA;
 
   // Scrollbar colors
-  scrollbarThumb: TerminalColor;
-  scrollbarTrack: TerminalColor;
+  scrollbarThumb: PackedRGBA;
+  scrollbarTrack: PackedRGBA;
 }
 
 export interface Theme {
@@ -62,312 +63,313 @@ export interface Theme {
 
 // Black & White theme - maximum compatibility
 const BW_STD_PALETTE: ColorPalette = {
-  primary: 'white',
-  secondary: 'white',
-  background: 'black',
-  foreground: 'white',
-  surface: 'black',
-  border: 'white',
+  primary: COLORS.white,
+  secondary: COLORS.white,
+  background: COLORS.black,
+  foreground: COLORS.white,
+  surface: COLORS.black,
+  border: COLORS.white,
 
-  success: 'white',
-  warning: 'white',
-  error: 'white',
-  info: 'white',
+  success: COLORS.white,
+  warning: COLORS.white,
+  error: COLORS.white,
+  info: COLORS.white,
 
-  buttonPrimary: 'black',
-  buttonSecondary: 'white',
-  buttonBackground: 'white',
-  inputBackground: 'black',
-  inputForeground: 'white',
-  inputBorder: 'white',
+  buttonPrimary: COLORS.black,
+  buttonSecondary: COLORS.white,
+  buttonBackground: COLORS.white,
+  inputBackground: COLORS.black,
+  inputForeground: COLORS.white,
+  inputBorder: COLORS.white,
 
-  focusPrimary: 'black',
-  focusBackground: 'white',
+  focusPrimary: COLORS.black,
+  focusBackground: COLORS.white,
 
-  textPrimary: 'white',
-  textSecondary: 'white',
-  textMuted: 'white',
+  textPrimary: COLORS.white,
+  textSecondary: COLORS.white,
+  textMuted: COLORS.white,
 
-  headerBackground: 'black',
-  headerForeground: 'white',
-  sidebarBackground: 'black',
-  sidebarForeground: 'white',
-  modalBackground: 'black',
-  modalForeground: 'white',
+  headerBackground: COLORS.black,
+  headerForeground: COLORS.white,
+  sidebarBackground: COLORS.black,
+  sidebarForeground: COLORS.white,
+  modalBackground: COLORS.black,
+  modalForeground: COLORS.white,
 
-  scrollbarThumb: 'white',
-  scrollbarTrack: 'brightBlack',
+  scrollbarThumb: COLORS.white,
+  scrollbarTrack: COLORS.brightBlack,
 };
 
 const BW_DARK_PALETTE: ColorPalette = {
-  primary: 'black',
-  secondary: 'black',
-  background: 'white',
-  foreground: 'black',
-  surface: 'white',
-  border: 'black',
+  primary: COLORS.black,
+  secondary: COLORS.black,
+  background: COLORS.white,
+  foreground: COLORS.black,
+  surface: COLORS.white,
+  border: COLORS.black,
 
-  success: 'black',
-  warning: 'black',
-  error: 'black',
-  info: 'black',
+  success: COLORS.black,
+  warning: COLORS.black,
+  error: COLORS.black,
+  info: COLORS.black,
 
-  buttonPrimary: 'white',
-  buttonSecondary: 'black',
-  buttonBackground: 'black',
-  inputBackground: 'white',
-  inputForeground: 'black',
-  inputBorder: 'black',
+  buttonPrimary: COLORS.white,
+  buttonSecondary: COLORS.black,
+  buttonBackground: COLORS.black,
+  inputBackground: COLORS.white,
+  inputForeground: COLORS.black,
+  inputBorder: COLORS.black,
 
-  focusPrimary: 'white',
-  focusBackground: 'black',
+  focusPrimary: COLORS.white,
+  focusBackground: COLORS.black,
 
-  textPrimary: 'black',
-  textSecondary: 'black',
-  textMuted: 'black',
+  textPrimary: COLORS.black,
+  textSecondary: COLORS.black,
+  textMuted: COLORS.black,
 
-  headerBackground: 'white',
-  headerForeground: 'black',
-  sidebarBackground: 'white',
-  sidebarForeground: 'black',
-  modalBackground: 'white',
-  modalForeground: 'black',
+  headerBackground: COLORS.white,
+  headerForeground: COLORS.black,
+  sidebarBackground: COLORS.white,
+  sidebarForeground: COLORS.black,
+  modalBackground: COLORS.white,
+  modalForeground: COLORS.black,
 
-  scrollbarThumb: 'black',
-  scrollbarTrack: 'gray',
+  scrollbarThumb: COLORS.black,
+  scrollbarTrack: COLORS.gray,
 };
 
 // Grayscale theme - uses basic terminal grays
 // Gray std is now the inverse (previously dark)
 const GRAY_STD_PALETTE: ColorPalette = {
-  primary: 'black',
-  secondary: 'gray',
-  background: 'white',
-  foreground: 'black',
-  surface: 'gray',
-  border: 'gray',
+  primary: COLORS.black,
+  secondary: COLORS.gray,
+  background: COLORS.white,
+  foreground: COLORS.black,
+  surface: COLORS.gray,
+  border: COLORS.gray,
 
-  success: 'black',
-  warning: 'gray',
-  error: 'black',
-  info: 'gray',
+  success: COLORS.black,
+  warning: COLORS.gray,
+  error: COLORS.black,
+  info: COLORS.gray,
 
-  buttonPrimary: 'white',
-  buttonSecondary: 'gray',
-  buttonBackground: 'black',
-  inputBackground: 'gray',
-  inputForeground: 'black',
-  inputBorder: 'gray',
+  buttonPrimary: COLORS.white,
+  buttonSecondary: COLORS.gray,
+  buttonBackground: COLORS.black,
+  inputBackground: COLORS.gray,
+  inputForeground: COLORS.black,
+  inputBorder: COLORS.gray,
 
-  focusPrimary: 'white',
-  focusBackground: 'black',
+  focusPrimary: COLORS.white,
+  focusBackground: COLORS.black,
 
-  textPrimary: 'black',
-  textSecondary: 'gray',
-  textMuted: 'gray',
+  textPrimary: COLORS.black,
+  textSecondary: COLORS.gray,
+  textMuted: COLORS.gray,
 
-  headerBackground: 'gray',
-  headerForeground: 'black',
-  sidebarBackground: 'white',
-  sidebarForeground: 'gray',
-  modalBackground: 'gray',
-  modalForeground: 'black',
+  headerBackground: COLORS.gray,
+  headerForeground: COLORS.black,
+  sidebarBackground: COLORS.white,
+  sidebarForeground: COLORS.gray,
+  modalBackground: COLORS.gray,
+  modalForeground: COLORS.black,
 
-  scrollbarThumb: 'black',
-  scrollbarTrack: 'gray',
+  scrollbarThumb: COLORS.black,
+  scrollbarTrack: COLORS.gray,
 };
 
 // Gray dark is now the original std palette
 const GRAY_DARK_PALETTE: ColorPalette = {
-  primary: 'white',
-  secondary: 'gray',
-  background: 'black',
-  foreground: 'white',
-  surface: 'brightBlack',
-  border: 'gray',
+  primary: COLORS.white,
+  secondary: COLORS.gray,
+  background: COLORS.black,
+  foreground: COLORS.white,
+  surface: COLORS.brightBlack,
+  border: COLORS.gray,
 
-  success: 'white',
-  warning: 'gray',
-  error: 'white',
-  info: 'gray',
+  success: COLORS.white,
+  warning: COLORS.gray,
+  error: COLORS.white,
+  info: COLORS.gray,
 
-  buttonPrimary: 'black',
-  buttonSecondary: 'gray',
-  buttonBackground: 'white',
-  inputBackground: 'brightBlack',
-  inputForeground: 'white',
-  inputBorder: 'gray',
+  buttonPrimary: COLORS.black,
+  buttonSecondary: COLORS.gray,
+  buttonBackground: COLORS.white,
+  inputBackground: COLORS.brightBlack,
+  inputForeground: COLORS.white,
+  inputBorder: COLORS.gray,
 
-  focusPrimary: 'black',
-  focusBackground: 'white',
+  focusPrimary: COLORS.black,
+  focusBackground: COLORS.white,
 
-  textPrimary: 'white',
-  textSecondary: 'gray',
-  textMuted: 'brightBlack',
+  textPrimary: COLORS.white,
+  textSecondary: COLORS.gray,
+  textMuted: COLORS.brightBlack,
 
-  headerBackground: 'brightBlack',
-  headerForeground: 'white',
-  sidebarBackground: 'black',
-  sidebarForeground: 'gray',
-  modalBackground: 'brightBlack',
-  modalForeground: 'white',
+  headerBackground: COLORS.brightBlack,
+  headerForeground: COLORS.white,
+  sidebarBackground: COLORS.black,
+  sidebarForeground: COLORS.gray,
+  modalBackground: COLORS.brightBlack,
+  modalForeground: COLORS.white,
 
-  scrollbarThumb: 'white',
-  scrollbarTrack: 'brightBlack',
+  scrollbarThumb: COLORS.white,
+  scrollbarTrack: COLORS.brightBlack,
 };
 
 // Color theme - uses 16 basic ANSI colors
 const COLOR_STD_PALETTE: ColorPalette = {
-  primary: 'brightBlue',
-  secondary: 'brightCyan',
-  background: 'white',
-  foreground: 'black',
-  surface: 'gray',
-  border: 'brightBlack',
+  primary: COLORS.brightBlue,
+  secondary: COLORS.brightCyan,
+  background: COLORS.white,
+  foreground: COLORS.black,
+  surface: COLORS.gray,
+  border: COLORS.brightBlack,
 
-  success: 'brightGreen',
-  warning: 'brightYellow',
-  error: 'brightRed',
-  info: 'brightCyan',
+  success: COLORS.brightGreen,
+  warning: COLORS.brightYellow,
+  error: COLORS.brightRed,
+  info: COLORS.brightCyan,
 
-  buttonPrimary: 'black',
-  buttonSecondary: 'brightCyan',
-  buttonBackground: 'brightBlue',
-  inputBackground: 'gray',
-  inputForeground: 'black',
-  inputBorder: 'brightCyan',
+  buttonPrimary: COLORS.black,
+  buttonSecondary: COLORS.brightCyan,
+  buttonBackground: COLORS.brightBlue,
+  inputBackground: COLORS.gray,
+  inputForeground: COLORS.black,
+  inputBorder: COLORS.brightCyan,
 
-  focusPrimary: 'brightYellow',
-  focusBackground: 'brightBlue',
+  focusPrimary: COLORS.brightYellow,
+  focusBackground: COLORS.brightBlue,
 
-  textPrimary: 'black',
-  textSecondary: 'brightBlack',
-  textMuted: 'gray',
+  textPrimary: COLORS.black,
+  textSecondary: COLORS.brightBlack,
+  textMuted: COLORS.gray,
 
-  headerBackground: 'brightBlue',
-  headerForeground: 'black',
-  sidebarBackground: 'gray',
-  sidebarForeground: 'brightCyan',
-  modalBackground: 'brightBlue',
-  modalForeground: 'black',
+  headerBackground: COLORS.brightBlue,
+  headerForeground: COLORS.black,
+  sidebarBackground: COLORS.gray,
+  sidebarForeground: COLORS.brightCyan,
+  modalBackground: COLORS.brightBlue,
+  modalForeground: COLORS.black,
 
-  scrollbarThumb: 'brightBlue',
-  scrollbarTrack: 'gray',
+  scrollbarThumb: COLORS.brightBlue,
+  scrollbarTrack: COLORS.gray,
 };
 
 const COLOR_DARK_PALETTE: ColorPalette = {
-  primary: 'brightBlue',
-  secondary: 'cyan',
-  background: 'black',
-  foreground: 'white',
-  surface: 'brightBlack',
-  border: 'white',
+  primary: COLORS.brightBlue,
+  secondary: COLORS.cyan,
+  background: COLORS.black,
+  foreground: COLORS.white,
+  surface: COLORS.brightBlack,
+  border: COLORS.white,
 
-  success: 'green',
-  warning: 'yellow',
-  error: 'red',
-  info: 'cyan',
+  success: COLORS.green,
+  warning: COLORS.yellow,
+  error: COLORS.red,
+  info: COLORS.cyan,
 
-  buttonPrimary: 'white',
-  buttonSecondary: 'cyan',
-  buttonBackground: 'blue',
-  inputBackground: 'brightBlack',
-  inputForeground: 'white',
-  inputBorder: 'cyan',
+  buttonPrimary: COLORS.white,
+  buttonSecondary: COLORS.cyan,
+  buttonBackground: COLORS.blue,
+  inputBackground: COLORS.brightBlack,
+  inputForeground: COLORS.white,
+  inputBorder: COLORS.cyan,
 
-  focusPrimary: 'yellow',
-  focusBackground: 'blue',
+  focusPrimary: COLORS.yellow,
+  focusBackground: COLORS.blue,
 
-  textPrimary: 'brightWhite',
-  textSecondary: 'white',
-  textMuted: 'gray',
+  textPrimary: COLORS.brightWhite,
+  textSecondary: COLORS.white,
+  textMuted: COLORS.gray,
 
-  headerBackground: 'blue',
-  headerForeground: 'white',
-  sidebarBackground: 'brightBlack',
-  sidebarForeground: 'cyan',
-  modalBackground: 'blue',
-  modalForeground: 'white',
+  headerBackground: COLORS.blue,
+  headerForeground: COLORS.white,
+  sidebarBackground: COLORS.brightBlack,
+  sidebarForeground: COLORS.cyan,
+  modalBackground: COLORS.blue,
+  modalForeground: COLORS.white,
 
-  scrollbarThumb: 'cyan',
-  scrollbarTrack: 'brightBlack',
+  scrollbarThumb: COLORS.cyan,
+  scrollbarTrack: COLORS.brightBlack,
 };
 
 // Full color theme - uses 256 colors and true color
+// Colors stored as packed RGBA (0xRRGGBBAA)
 const FULLCOLOR_STD_PALETTE: ColorPalette = {
-  primary: '#60a5fa',      // Blue-400
-  secondary: '#22d3ee',    // Cyan-400
-  background: '#ffffff',   // True white
-  foreground: '#000000',   // True black
-  surface: '#f3f4f6',      // Gray-100
-  border: '#9ca3af',       // Gray-400
+  primary: 0x60a5faFF,      // Blue-400
+  secondary: 0x22d3eeFF,    // Cyan-400
+  background: 0xFFFFFFFF,   // True white
+  foreground: 0x000000FF,   // True black
+  surface: 0xf3f4f6FF,      // Gray-100
+  border: 0x9ca3afFF,       // Gray-400
 
-  success: '#34d399',      // Emerald-400
-  warning: '#fbbf24',      // Amber-400
-  error: '#f87171',        // Red-400
-  info: '#60a5fa',         // Blue-400
+  success: 0x34d399FF,      // Emerald-400
+  warning: 0xfbbf24FF,      // Amber-400
+  error: 0xf87171FF,        // Red-400
+  info: 0x60a5faFF,         // Blue-400
 
-  buttonPrimary: '#000000',
-  buttonSecondary: '#22d3ee',
-  buttonBackground: '#60a5fa',
-  inputBackground: '#f9fafb',  // Gray-50
-  inputForeground: '#111827',  // Gray-900
-  inputBorder: '#d1d5db',      // Gray-300
+  buttonPrimary: 0x000000FF,
+  buttonSecondary: 0x22d3eeFF,
+  buttonBackground: 0x60a5faFF,
+  inputBackground: 0xf9fafbFF,  // Gray-50
+  inputForeground: 0x111827FF,  // Gray-900
+  inputBorder: 0xd1d5dbFF,      // Gray-300
 
-  focusPrimary: '#f59e0b',     // Amber-500
-  focusBackground: '#3b82f6',  // Blue-500
+  focusPrimary: 0xf59e0bFF,     // Amber-500
+  focusBackground: 0x3b82f6FF,  // Blue-500
 
-  textPrimary: '#111827',      // Gray-900
-  textSecondary: '#374151',    // Gray-700
-  textMuted: '#9ca3af',        // Gray-400
+  textPrimary: 0x111827FF,      // Gray-900
+  textSecondary: 0x374151FF,    // Gray-700
+  textMuted: 0x9ca3afFF,        // Gray-400
 
-  headerBackground: '#3b82f6', // Blue-500
-  headerForeground: '#f9fafb', // Gray-50
-  sidebarBackground: '#f3f4f6', // Gray-100
-  sidebarForeground: '#374151', // Gray-700
-  modalBackground: '#2563eb',   // Blue-600
-  modalForeground: '#f9fafb',   // Gray-50
+  headerBackground: 0x3b82f6FF, // Blue-500
+  headerForeground: 0xf9fafbFF, // Gray-50
+  sidebarBackground: 0xf3f4f6FF, // Gray-100
+  sidebarForeground: 0x374151FF, // Gray-700
+  modalBackground: 0x2563ebFF,   // Blue-600
+  modalForeground: 0xf9fafbFF,   // Gray-50
 
-  scrollbarThumb: '#60a5fa',    // Blue-400
-  scrollbarTrack: '#e5e7eb',    // Gray-200
+  scrollbarThumb: 0x60a5faFF,    // Blue-400
+  scrollbarTrack: 0xe5e7ebFF,    // Gray-200
 };
 
 const FULLCOLOR_DARK_PALETTE: ColorPalette = {
-  primary: '#3b82f6',      // Blue-500
-  secondary: '#06b6d4',    // Cyan-500
-  background: '#000000',   // True black
-  foreground: '#ffffff',   // True white
-  surface: '#1f2937',      // Gray-800
-  border: '#6b7280',       // Gray-500
+  primary: 0x3b82f6FF,      // Blue-500
+  secondary: 0x06b6d4FF,    // Cyan-500
+  background: 0x000000FF,   // True black
+  foreground: 0xFFFFFFFF,   // True white
+  surface: 0x1f2937FF,      // Gray-800
+  border: 0x6b7280FF,       // Gray-500
 
-  success: '#10b981',      // Emerald-500
-  warning: '#f59e0b',      // Amber-500
-  error: '#ef4444',        // Red-500
-  info: '#3b82f6',         // Blue-500
+  success: 0x10b981FF,      // Emerald-500
+  warning: 0xf59e0bFF,      // Amber-500
+  error: 0xef4444FF,        // Red-500
+  info: 0x3b82f6FF,         // Blue-500
 
-  buttonPrimary: '#ffffff',
-  buttonSecondary: '#06b6d4',
-  buttonBackground: '#3b82f6',
-  inputBackground: '#111827',  // Gray-900
-  inputForeground: '#f9fafb',  // Gray-50
-  inputBorder: '#374151',      // Gray-700
+  buttonPrimary: 0xFFFFFFFF,
+  buttonSecondary: 0x06b6d4FF,
+  buttonBackground: 0x3b82f6FF,
+  inputBackground: 0x111827FF,  // Gray-900
+  inputForeground: 0xf9fafbFF,  // Gray-50
+  inputBorder: 0x374151FF,      // Gray-700
 
-  focusPrimary: '#fbbf24',     // Amber-400
-  focusBackground: '#1e40af',  // Blue-800
+  focusPrimary: 0xfbbf24FF,     // Amber-400
+  focusBackground: 0x1e40afFF,  // Blue-800
 
-  textPrimary: '#f9fafb',      // Gray-50
-  textSecondary: '#d1d5db',    // Gray-300
-  textMuted: '#6b7280',        // Gray-500
+  textPrimary: 0xf9fafbFF,      // Gray-50
+  textSecondary: 0xd1d5dbFF,    // Gray-300
+  textMuted: 0x6b7280FF,        // Gray-500
 
-  headerBackground: '#1e40af', // Blue-800
-  headerForeground: '#f9fafb', // Gray-50
-  sidebarBackground: '#1f2937', // Gray-800
-  sidebarForeground: '#d1d5db', // Gray-300
-  modalBackground: '#1e3a8a',   // Blue-900
-  modalForeground: '#f9fafb',   // Gray-50
+  headerBackground: 0x1e40afFF, // Blue-800
+  headerForeground: 0xf9fafbFF, // Gray-50
+  sidebarBackground: 0x1f2937FF, // Gray-800
+  sidebarForeground: 0xd1d5dbFF, // Gray-300
+  modalBackground: 0x1e3a8aFF,   // Blue-900
+  modalForeground: 0xf9fafbFF,   // Gray-50
 
-  scrollbarThumb: '#3b82f6',    // Blue-500
-  scrollbarTrack: '#374151',    // Gray-700
+  scrollbarThumb: 0x3b82f6FF,    // Blue-500
+  scrollbarTrack: 0x374151FF,    // Gray-700
 };
 
 // Theme definitions
@@ -489,78 +491,25 @@ function detectTheme(forceMode?: 'dark' | 'std'): string {
 
 // Theme manager class
 // Color to grayscale conversion helper
-export function colorToGray(color: TerminalColor, isDark: boolean): TerminalColor {
-  // If already a grayscale color, return as-is
-  if (color === 'black' || color === 'white' || color === 'gray' || color === 'brightBlack') {
-    return color;
-  }
+// Takes packed RGBA and returns packed RGBA grayscale equivalent
+export function colorToGray(color: PackedRGBA, isDark: boolean): PackedRGBA {
+  // Extract RGB from packed color
+  const r = (color >> 24) & 0xFF;
+  const g = (color >> 16) & 0xFF;
+  const b = (color >> 8) & 0xFF;
 
-  // Hex color conversion
-  if (typeof color === 'string' && color.startsWith('#')) {
-    const hex = color.substring(1);
-    let r: number, g: number, b: number;
+  // Calculate luminance (perceived brightness)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-    if (hex.length === 3) {
-      r = parseInt(hex[0] + hex[0], 16);
-      g = parseInt(hex[1] + hex[1], 16);
-      b = parseInt(hex[2] + hex[2], 16);
-    } else if (hex.length === 6) {
-      r = parseInt(hex.substring(0, 2), 16);
-      g = parseInt(hex.substring(2, 4), 16);
-      b = parseInt(hex.substring(4, 6), 16);
-    } else {
-      return isDark ? 'black' : 'white';
-    }
-
-    // Calculate luminance (perceived brightness)
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    // Map to grayscale based on luminance
-    if (luminance < 0.25) {
-      return 'black';
-    } else if (luminance < 0.5) {
-      return 'brightBlack';
-    } else if (luminance < 0.75) {
-      return 'gray';
-    } else {
-      return 'white';
-    }
-  }
-
-  // Named color conversion - map to approximate gray based on perceived brightness
-  const colorBrightnessMap: Record<string, number> = {
-    // Dark colors
-    'black': 0.0,
-    'red': 0.3,
-    'green': 0.4,
-    'yellow': 0.6,
-    'blue': 0.25,
-    'magenta': 0.35,
-    'cyan': 0.5,
-    'white': 1.0,
-    // Bright colors
-    'brightBlack': 0.4,
-    'brightRed': 0.5,
-    'brightGreen': 0.6,
-    'brightYellow': 0.8,
-    'brightBlue': 0.45,
-    'brightMagenta': 0.55,
-    'brightCyan': 0.7,
-    'brightWhite': 1.0,
-    'gray': 0.5,
-  };
-
-  const brightness = colorBrightnessMap[color as string] ?? 0.5;
-
-  // Map to available grayscale
-  if (brightness < 0.25) {
-    return 'black';
-  } else if (brightness < 0.5) {
-    return 'brightBlack';
-  } else if (brightness < 0.75) {
-    return 'gray';
+  // Map to grayscale based on luminance
+  if (luminance < 0.25) {
+    return COLORS.black;
+  } else if (luminance < 0.5) {
+    return COLORS.brightBlack;
+  } else if (luminance < 0.75) {
+    return COLORS.gray;
   } else {
-    return 'white';
+    return COLORS.white;
   }
 }
 
@@ -569,73 +518,25 @@ export function colorToGray(color: TerminalColor, isDark: boolean): TerminalColo
  * This desaturates the color and reduces contrast, making it appear "inactive".
  * Used when modal=true, backdrop=false to visually indicate blocked background.
  */
-export function colorToLowContrast(color: TerminalColor, isDark: boolean): string {
-  // Parse hex color
-  if (typeof color === 'string' && color.startsWith('#')) {
-    const hex = color.substring(1);
-    let r: number, g: number, b: number;
+export function colorToLowContrast(color: PackedRGBA, isDark: boolean): PackedRGBA {
+  // Extract RGB from packed color
+  const r = (color >> 24) & 0xFF;
+  const g = (color >> 16) & 0xFF;
+  const b = (color >> 8) & 0xFF;
 
-    if (hex.length === 3) {
-      r = parseInt(hex[0] + hex[0], 16);
-      g = parseInt(hex[1] + hex[1], 16);
-      b = parseInt(hex[2] + hex[2], 16);
-    } else if (hex.length === 6) {
-      r = parseInt(hex.substring(0, 2), 16);
-      g = parseInt(hex.substring(2, 4), 16);
-      b = parseInt(hex.substring(4, 6), 16);
-    } else {
-      return isDark ? '#404040' : '#c0c0c0';
-    }
+  // Convert to grayscale using luminance
+  const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
 
-    // Convert to grayscale using luminance
-    const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-
-    // Reduce contrast by pulling toward middle gray
-    const middleGray = isDark ? 80 : 180;
-    const contrastFactor = 0.4; // How much to reduce contrast (0 = full gray, 1 = original)
-    const result = Math.round(middleGray + (gray - middleGray) * contrastFactor);
-
-    // Clamp to valid range
-    const clamped = Math.max(0, Math.min(255, result));
-    const hexResult = clamped.toString(16).padStart(2, '0');
-    return `#${hexResult}${hexResult}${hexResult}`;
-  }
-
-  // Handle rgb/rgba format
-  if (typeof color === 'string' && color.startsWith('rgb')) {
-    const match = color.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-    if (match) {
-      const r = parseInt(match[1]);
-      const g = parseInt(match[2]);
-      const b = parseInt(match[3]);
-
-      const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-      const middleGray = isDark ? 80 : 180;
-      const contrastFactor = 0.4;
-      const result = Math.round(middleGray + (gray - middleGray) * contrastFactor);
-      const clamped = Math.max(0, Math.min(255, result));
-      const hexResult = clamped.toString(16).padStart(2, '0');
-      return `#${hexResult}${hexResult}${hexResult}`;
-    }
-  }
-
-  // Named colors - map to approximate gray
-  const colorBrightnessMap: Record<string, number> = {
-    'black': 0.0, 'red': 0.3, 'green': 0.4, 'yellow': 0.6,
-    'blue': 0.25, 'magenta': 0.35, 'cyan': 0.5, 'white': 1.0,
-    'brightBlack': 0.4, 'brightRed': 0.5, 'brightGreen': 0.6, 'brightYellow': 0.8,
-    'brightBlue': 0.45, 'brightMagenta': 0.55, 'brightCyan': 0.7, 'brightWhite': 1.0,
-    'gray': 0.5,
-  };
-
-  const brightness = colorBrightnessMap[color as string] ?? 0.5;
-  const gray = Math.round(brightness * 255);
+  // Reduce contrast by pulling toward middle gray
   const middleGray = isDark ? 80 : 180;
-  const contrastFactor = 0.4;
+  const contrastFactor = 0.4; // How much to reduce contrast (0 = full gray, 1 = original)
   const result = Math.round(middleGray + (gray - middleGray) * contrastFactor);
+
+  // Clamp to valid range
   const clamped = Math.max(0, Math.min(255, result));
-  const hexResult = clamped.toString(16).padStart(2, '0');
-  return `#${hexResult}${hexResult}${hexResult}`;
+
+  // Return as packed RGBA (grayscale has r=g=b)
+  return packRGBA(clamped, clamped, clamped, 255);
 }
 
 export class ThemeManager {
@@ -732,7 +633,7 @@ export class ThemeManager {
   }
 
   // Get themed colors
-  getColor(colorName: keyof ColorPalette): TerminalColor {
+  getColor(colorName: keyof ColorPalette): PackedRGBA {
     return this._currentTheme.palette[colorName];
   }
 
@@ -785,7 +686,7 @@ export function getCurrentTheme(): Theme {
   return getThemeManager().getCurrentTheme();
 }
 
-export function getThemeColor(colorName: keyof ColorPalette): TerminalColor {
+export function getThemeColor(colorName: keyof ColorPalette): PackedRGBA {
   return getThemeManager().getColor(colorName);
 }
 

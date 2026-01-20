@@ -107,8 +107,9 @@
 
     function updateDialog() {
       const dialog = $melker.getElementById('browser-dialog');
-      if (dialog) dialog.props.open = dialogOpen;
-      $melker.render();
+      if (dialog) {
+        dialog.setVisible(dialogOpen);
+      }
     }
   </script>
 </melker>

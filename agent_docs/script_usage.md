@@ -23,7 +23,6 @@ $melker: {
 
   // Rendering
   render(): void;
-  forceRender(): void;
 
   // App lifecycle
   exit(): void;

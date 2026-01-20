@@ -3,6 +3,7 @@
 
 import type { DualBuffer } from './buffer.ts';
 import { getThemeColor } from './theme.ts';
+import { COLORS, parseColor } from './components/color-utils.ts';
 import { getGlobalLoggerOptions } from './logging.ts';
 
 export interface ErrorInfo {
@@ -103,8 +104,8 @@ export class ErrorOverlay {
     width: number
   ): void {
     // Use red background for error visibility
-    const bgColor = getThemeColor('error') || '#cc0000';
-    const textColor = '#ffffff';
+    const bgColor = getThemeColor('error') ?? parseColor('#cc0000')!;
+    const textColor = COLORS.white;
 
     for (let i = 0; i < lines.length && i < 3; i++) {
       const line = lines[i];

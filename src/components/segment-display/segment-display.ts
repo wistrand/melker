@@ -212,10 +212,10 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
     // Build cell style
     const cellStyle: Partial<Cell> = { ...style };
     if (onColor) {
-      cellStyle.foreground = onColor as string;
+      cellStyle.foreground = onColor as number;
     }
     if (bgColor) {
-      cellStyle.background = bgColor as string;
+      cellStyle.background = bgColor as number;
     }
 
     // Render lines to buffer
@@ -245,7 +245,7 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
           // Check if this is an "off" segment character
           const isOffChar = char === '·' || char === '░' || char === '▯' || char === '─';
           if (isOffChar) {
-            charStyle.foreground = offColor as string;
+            charStyle.foreground = offColor as number;
           }
 
           buffer.currentBuffer.setCell(bounds.x + x, bounds.y + y, {

@@ -9,6 +9,7 @@ import {
 } from './types.ts';
 import { Document } from './document.ts';
 import { PersistedState, PersistenceMapping } from './state-persistence.ts';
+import { normalizeStyle } from './components/color-utils.ts';
 
 /**
  * Persistence context for createElement to merge saved state
@@ -194,6 +195,10 @@ export function createElement<TType extends keyof ComponentPropsMap | string>(
     if (componentDef.defaultProps?.style && (props as any)?.style) {
       mergedProps.style = { ...componentDef.defaultProps.style, ...(props as any).style };
     }
+    // Normalize style colors (convert strings to packed RGBA numbers)
+    if (mergedProps.style) {
+      mergedProps.style = normalizeStyle(mergedProps.style);
+    }
     // Parse class string into classList array
     normalizeClassProps(mergedProps);
 
@@ -214,6 +219,11 @@ export function createElement<TType extends keyof ComponentPropsMap | string>(
 
   // Fallback: create basic element (for built-in types or unregistered components)
   let mergedProps: Record<string, any> = { ...props };
+
+  // Normalize style colors (convert strings to packed RGBA numbers)
+  if (mergedProps.style) {
+    mergedProps.style = normalizeStyle(mergedProps.style);
+  }
 
   // Parse class string into classList array
   normalizeClassProps(mergedProps);

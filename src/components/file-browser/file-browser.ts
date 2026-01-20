@@ -15,6 +15,7 @@ import {
   isClickable,
 } from '../../types.ts';
 import type { DualBuffer, Cell } from '../../buffer.ts';
+import { COLORS } from '../color-utils.ts';
 import type { Document } from '../../document.ts';
 import type { KeyPressEvent, ChangeEvent } from '../../events.ts';
 import { registerComponent, createElement } from '../../element.ts';
@@ -632,15 +633,15 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
         },
       },
         createElement('text', {
-          style: { color: 'red', fontWeight: 'bold' },
+          style: { color: COLORS.red, fontWeight: 'bold' },
           text: '[!] ' + this._error.message
         }),
         createElement('text', {
-          style: { color: 'gray' },
+          style: { color: COLORS.gray },
           text: this._getErrorHint(this._error.code)
         }),
         createElement('text', {
-          style: { color: 'gray' },
+          style: { color: COLORS.gray },
           text: 'Press Backspace to go back, Ctrl+R to retry'
         }),
       );
@@ -658,7 +659,7 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
         },
       },
         createElement('text', {
-          style: { color: 'gray' },
+          style: { color: COLORS.gray },
           text: this._filterValue ? 'No matches' : '(empty directory)'
         }),
       );

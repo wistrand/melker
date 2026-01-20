@@ -1,6 +1,8 @@
 // ANSI output generation for terminal rendering
 // Handles cursor movement optimization, color codes, and cell styling
 
+import type { PackedRGBA } from './types.ts';
+
 // ANSI escape codes for terminal control
 export const ANSI = {
   clearScreen: '\x1b[2J',
@@ -25,8 +27,8 @@ export interface AnsiOutputOptions {
 
 export interface BufferCell {
   char: string;
-  foreground?: string;
-  background?: string;
+  foreground?: PackedRGBA;
+  background?: PackedRGBA;
   bold?: boolean;
   dim?: boolean;
   italic?: boolean;
@@ -282,103 +284,84 @@ export class AnsiOutputGenerator {
   }
 
   /**
-   * Convert color to ANSI escape code
+   * Convert packed RGBA color to ANSI escape code
+   * Colors are now stored as packed 32-bit RGBA (0xRRGGBBAA)
    */
-  private _getColorCode(color: string, isBackground: boolean): string {
-    const offset = isBackground ? 10 : 0;
-
-    // Handle named colors - map to ANSI codes for 16/256 color modes
-    const namedColors: Record<string, number> = {
-      black: 30, red: 31, green: 32, yellow: 33,
-      blue: 34, magenta: 35, cyan: 36, white: 37,
-      gray: 90, grey: 90,
-      brightred: 91, brightgreen: 92, brightyellow: 93,
-      brightblue: 94, brightmagenta: 95, brightcyan: 96, brightwhite: 97,
-    };
-
-    // Named colors to RGB for truecolor mode (standard CSS/web colors)
-    const namedColorsRgb: Record<string, { r: number; g: number; b: number }> = {
-      black: { r: 0, g: 0, b: 0 },
-      red: { r: 255, g: 0, b: 0 },
-      green: { r: 0, g: 128, b: 0 },
-      yellow: { r: 255, g: 255, b: 0 },
-      blue: { r: 0, g: 0, b: 255 },
-      magenta: { r: 255, g: 0, b: 255 },
-      cyan: { r: 0, g: 255, b: 255 },
-      white: { r: 255, g: 255, b: 255 },
-      gray: { r: 128, g: 128, b: 128 },
-      grey: { r: 128, g: 128, b: 128 },
-      brightred: { r: 255, g: 85, b: 85 },
-      brightgreen: { r: 85, g: 255, b: 85 },
-      brightyellow: { r: 255, g: 255, b: 85 },
-      brightblue: { r: 85, g: 85, b: 255 },
-      brightmagenta: { r: 255, g: 85, b: 255 },
-      brightcyan: { r: 85, g: 255, b: 255 },
-      brightwhite: { r: 255, g: 255, b: 255 },
-    };
-
-    const colorLower = color.toLowerCase();
-    const namedColor = namedColors[colorLower];
-    if (namedColor !== undefined) {
-      // For 'none' color support, don't output colors
-      if (this._colorSupport === 'none') {
-        return '';
-      }
-      // In truecolor mode, use actual RGB values for named colors
-      if (this._colorSupport === 'truecolor') {
-        const rgb = namedColorsRgb[colorLower];
-        if (rgb) {
-          const code = isBackground ? 48 : 38;
-          return `\x1b[${code};2;${rgb.r};${rgb.g};${rgb.b}m`;
-        }
-      }
-      // For 16/256 color modes, use basic ANSI codes
-      return `\x1b[${namedColor + offset}m`;
-    }
-
+  private _getColorCode(color: number, isBackground: boolean): string {
     // If color support is disabled, don't use any colors
     if (this._colorSupport === 'none') {
       return '';
     }
 
-    // Handle hex colors (#RGB or #RRGGBB)
-    if (color.startsWith('#')) {
-      const rgb = this._parseHexColor(color);
-      if (rgb) {
-        if (this._colorSupport === 'truecolor') {
-          const code = isBackground ? 48 : 38;
-          return `\x1b[${code};2;${rgb.r};${rgb.g};${rgb.b}m`;
-        } else if (this._colorSupport === '256') {
-          const color256 = this._hexTo256Color(rgb);
-          const code = isBackground ? 48 : 38;
-          return `\x1b[${code};5;${color256}m`;
-        }
-        // For '16' color support, fall back to nearest named color
-        return this._getNearestNamedColor(rgb, isBackground);
-      }
+    // Extract RGB from packed color
+    const r = (color >> 24) & 0xFF;
+    const g = (color >> 16) & 0xFF;
+    const b = (color >> 8) & 0xFF;
+
+    if (this._colorSupport === 'truecolor') {
+      const code = isBackground ? 48 : 38;
+      return `\x1b[${code};2;${r};${g};${b}m`;
+    } else if (this._colorSupport === '256') {
+      const color256 = this._hexTo256Color({ r, g, b });
+      const code = isBackground ? 48 : 38;
+      return `\x1b[${code};5;${color256}m`;
     }
 
-    // Handle rgb(r,g,b) format
-    const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-    if (rgbMatch) {
-      const r = parseInt(rgbMatch[1]);
-      const g = parseInt(rgbMatch[2]);
-      const b = parseInt(rgbMatch[3]);
+    // For '16' color support, find nearest named color
+    return this._getColorCode16(color, isBackground);
+  }
 
-      if (this._colorSupport === 'truecolor') {
-        const code = isBackground ? 48 : 38;
-        return `\x1b[${code};2;${r};${g};${b}m`;
-      } else if (this._colorSupport === '256') {
-        const color256 = this._hexTo256Color({ r, g, b });
-        const code = isBackground ? 48 : 38;
-        return `\x1b[${code};5;${color256}m`;
-      }
-      // For '16' color support, fall back to nearest named color
-      return this._getNearestNamedColor({ r, g, b }, isBackground);
+  /**
+   * Map packed RGBA to nearest 16-color ANSI code
+   */
+  private _getColorCode16(color: number, isBackground: boolean): string {
+    const offset = isBackground ? 10 : 0;
+    const r = (color >> 24) & 0xFF;
+    const g = (color >> 16) & 0xFF;
+    const b = (color >> 8) & 0xFF;
+    const code = this._rgbTo16Color(r, g, b);
+    return `\x1b[${code + offset}m`;
+  }
+
+  /**
+   * Convert RGB to nearest 16-color ANSI code
+   */
+  private _rgbTo16Color(r: number, g: number, b: number): number {
+    // Calculate brightness
+    const brightness = (r + g + b) / 3;
+    const isBright = brightness > 127;
+
+    // Determine dominant color channel(s)
+    const max = Math.max(r, g, b);
+    const threshold = max * 0.6;
+
+    const hasRed = r >= threshold;
+    const hasGreen = g >= threshold;
+    const hasBlue = b >= threshold;
+
+    // Map to ANSI color codes
+    if (!hasRed && !hasGreen && !hasBlue) {
+      return isBright ? 90 : 30; // gray/black
     }
-
-    // Fallback to default
-    return '';
+    if (hasRed && hasGreen && hasBlue) {
+      return isBright ? 97 : 37; // white
+    }
+    if (hasRed && hasGreen) {
+      return isBright ? 93 : 33; // yellow
+    }
+    if (hasRed && hasBlue) {
+      return isBright ? 95 : 35; // magenta
+    }
+    if (hasGreen && hasBlue) {
+      return isBright ? 96 : 36; // cyan
+    }
+    if (hasRed) {
+      return isBright ? 91 : 31; // red
+    }
+    if (hasGreen) {
+      return isBright ? 92 : 32; // green
+    }
+    return isBright ? 94 : 34; // blue
   }
 
   /**

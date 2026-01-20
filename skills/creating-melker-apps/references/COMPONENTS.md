@@ -183,8 +183,7 @@ Modal dialog overlay.
 <dialog
   id="myDialog"
   title="Dialog Title"
-  open="false"
-  modal="true"
+    modal="true"
   backdrop="true"
   draggable="true"
   width="40"
@@ -206,16 +205,19 @@ Modal dialog overlay.
 - `draggable` - Allow dragging by title bar
 - `width`, `height` - Dialog dimensions (number, "50%", or "fill")
 
+**Methods:**
+- `show()` - Open the dialog
+- `hide()` - Close the dialog
+- `setVisible(bool)` - Set visibility
+
 **Pattern:**
 ```xml
 <script>
   export function openDialog() {
-    $melker.getElementById('myDialog').props.open = true;
-    $melker.render();
+    $melker.getElementById('myDialog').show();
   }
   export function closeDialog() {
-    $melker.getElementById('myDialog').props.open = false;
-    $melker.render();
+    $melker.getElementById('myDialog').hide();
   }
 </script>
 ```
@@ -552,8 +554,7 @@ Modal command picker (opens with Ctrl+K).
 ```xml
 <command-palette
   id="palette"
-  open="false"
-  onSelect="$app.runCommand(event.value)"
+    onSelect="$app.runCommand(event.value)"
   width="50"
 >
   <group label="File">

@@ -7,6 +7,7 @@ import { ContainerElement } from '../src/components/container.ts';
 import { DualBuffer } from '../src/buffer.ts';
 import { ViewportDualBuffer, ViewportBufferProxy } from '../src/viewport-buffer.ts';
 import { globalViewportManager } from '../src/viewport.ts';
+import { COLORS } from '../src/components/color-utils.ts';
 
 Deno.test('Viewport System - Basic clipping functionality', () => {
   const renderingEngine = new RenderingEngine();
@@ -94,7 +95,7 @@ Deno.test('ViewportBufferProxy - Wide character clipping', () => {
   const proxy = new ViewportBufferProxy(buffer.currentBuffer, viewport);
 
   // Test wide character handling - emoji should be clipped properly
-  proxy.setText(1, 1, '🌟ABC', { foreground: 'white' });
+  proxy.setText(1, 1, '🌟ABC', { foreground: COLORS.white });
 
   // Wide character at position 1,1 should be clipped if it doesn't fit
   const cell = buffer.currentBuffer.getCell(1, 1);
@@ -124,7 +125,7 @@ Deno.test('ViewportDualBuffer - Integration with rendering', () => {
   assertEquals(viewportBuffer.viewport.contentSize.height, 12);
 
   // Test buffer operations work
-  viewportBuffer.currentBuffer.setText(5, 5, 'Test', { foreground: 'white' });
+  viewportBuffer.currentBuffer.setText(5, 5, 'Test', { foreground: COLORS.white });
 
   // Should be able to get diff
   const diff = viewportBuffer.swapAndGetDiff();

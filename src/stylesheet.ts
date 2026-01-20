@@ -3,6 +3,7 @@
 
 import type { Element, Style } from './types.ts';
 import { hasClass } from './element.ts';
+import { parseColor } from './components/color-utils.ts';
 
 /**
  * Selector types supported by the stylesheet system
@@ -131,6 +132,10 @@ export function parseStyleProperties(cssString: string): Style {
     // Convert kebab-case to camelCase for properties like border-color
     const camelKey = key.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
 
+    // Check if this is a color property
+    const isColorProp = camelKey === 'color' || camelKey === 'backgroundColor' ||
+                        camelKey === 'borderColor' || camelKey.endsWith('Color');
+
     // Try to parse as number
     if (/^\d+(\.\d+)?$/.test(value)) {
       style[camelKey] = parseFloat(value);
@@ -143,7 +148,13 @@ export function parseStyleProperties(cssString: string): Style {
     }
     // Handle quoted strings - remove quotes
     else if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      style[camelKey] = value.slice(1, -1);
+      const unquoted = value.slice(1, -1);
+      // If it's a color property, parse to packed RGBA
+      style[camelKey] = isColorProp ? parseColor(unquoted) : unquoted;
+    }
+    // Color properties - parse to packed RGBA
+    else if (isColorProp) {
+      style[camelKey] = parseColor(value);
     }
     // Keep as string
     else {

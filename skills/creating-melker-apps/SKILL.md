@@ -80,7 +80,7 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 8. **Avoid emojis** - They break terminal layout
 9. **Export functions for handlers** - Functions must be `export function` to use in `onClick="$app.fn()"`
 10. **Scrollable is a prop** - Use `scrollable="true"` not `style="overflow: scroll"`
-11. **Dialog show/hide** - Use `dialog.show()`, `dialog.hide()` or `.props.open = true/false`
+11. **Dialog show/hide** - Use `dialog.show()`, `dialog.hide()`, or `dialog.setVisible(bool)`
 12. **Avoid specifying colors** - Let the theme engine handle colors
 13. **flex-direction is a style** - Use `style="flex-direction: row"` not `direction="row"`
 14. **Prevent cross-axis stretching** - In column containers, wrap select/combobox/autocomplete in a row container to prevent full-width stretching
@@ -324,21 +324,16 @@ For TypeScript type definitions (`$melker`, `Element`, event objects), see [TYPE
 
 ```xml
 <script>
-  let dialogOpen = false;
   export function openDialog() {
-    dialogOpen = true;
-    $melker.getElementById('myDialog').props.open = true;
-    $melker.render();
+    $melker.getElementById('myDialog').show();
   }
   export function closeDialog() {
-    dialogOpen = false;
-    $melker.getElementById('myDialog').props.open = false;
-    $melker.render();
+    $melker.getElementById('myDialog').hide();
   }
 </script>
 
 <button label="Open" onClick="$app.openDialog()" />
-<dialog id="myDialog" title="My Dialog" open="false" modal="true" backdrop="true">
+<dialog id="myDialog" title="My Dialog" modal="true" backdrop="true">
   <container style="padding: 1;">
     <text>Dialog content here</text>
     <button label="Close" onClick="$app.closeDialog()" />

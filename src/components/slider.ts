@@ -5,6 +5,7 @@ import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { createChangeEvent } from '../events.ts';
 import { getCurrentTheme } from '../theme.ts';
+import { COLORS } from './color-utils.ts';
 import { getStringWidth } from '../char-width.ts';
 import { parseDimension } from '../utils/dimensions.ts';
 
@@ -256,7 +257,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     // Apply styling
     const sliderStyle = { ...style };
     if (isDisabled) {
-      sliderStyle.foreground = 'gray';
+      sliderStyle.foreground = COLORS.gray;
     }
 
     // For focused state, use reverse video on the thumb for visibility
@@ -297,7 +298,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
 
     const sliderStyle = { ...style };
     if (isDisabled) {
-      sliderStyle.foreground = 'gray';
+      sliderStyle.foreground = COLORS.gray;
     }
 
     for (let i = 0; i < trackHeight; i++) {

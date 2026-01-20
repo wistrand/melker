@@ -8,7 +8,7 @@ import {
   getThemeColor,
   type Element
 } from '../../mod.ts';
-import type { SelectionChangeEvent } from '../src/events.ts';
+import type { SelectionChangeEvent } from '../../src/events.ts';
 
 function createSimpleListDemo(): Element {
   const terminalSize = getTerminalSize();

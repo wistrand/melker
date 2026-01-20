@@ -4,6 +4,7 @@
 import type { DualBuffer } from './buffer.ts';
 import { BORDER_CHARS, type Bounds } from './types.ts';
 import { getThemeColor } from './theme.ts';
+import { parseColor } from './components/color-utils.ts';
 
 export interface PerformanceStats {
   // Render stats
@@ -499,14 +500,14 @@ export class PerformanceDialog {
     this._bounds = { x, y, width: this._width, height: this._height };
 
     // Colors
-    const bgColor = getThemeColor('background') || '#1a1a2e';
-    const borderColor = getThemeColor('border') || '#4a4a6a';
-    const titleBg = getThemeColor('background') || '#1a1a2e';
-    const textColor = getThemeColor('textPrimary') || '#e0e0e0';
-    const labelColor = getThemeColor('textSecondary') || '#888888';
-    const goodColor = '#22c55e';
-    const warnColor = '#eab308';
-    const badColor = '#ef4444';
+    const bgColor = getThemeColor('background') ?? parseColor('#1a1a2e')!;
+    const borderColor = getThemeColor('border') ?? parseColor('#4a4a6a')!;
+    const titleBg = getThemeColor('background') ?? parseColor('#1a1a2e')!;
+    const textColor = getThemeColor('textPrimary') ?? parseColor('#e0e0e0')!;
+    const labelColor = getThemeColor('textSecondary') ?? parseColor('#888888')!;
+    const goodColor = parseColor('#22c55e')!;
+    const warnColor = parseColor('#eab308')!;
+    const badColor = parseColor('#ef4444')!;
 
     // Draw background
     for (let dy = 0; dy < this._height; dy++) {
@@ -560,7 +561,7 @@ export class PerformanceDialog {
     }
 
     // Format and draw stats
-    const lines = this._formatStats(stats);
+    const lines = this._formatStats(stats, goodColor, warnColor, badColor);
     for (let i = 0; i < lines.length; i++) {
       const lineY = y + 2 + i;
       if (lineY >= viewportHeight - 1) break;
@@ -611,7 +612,7 @@ export class PerformanceDialog {
     }
   }
 
-  private _drawBorder(buffer: DualBuffer, x: number, y: number, borderColor: string, bgColor: string): void {
+  private _drawBorder(buffer: DualBuffer, x: number, y: number, borderColor: number, bgColor: number): void {
     const w = this._width;
     const h = this._height;
     const vw = buffer.width;
@@ -651,7 +652,7 @@ export class PerformanceDialog {
     }
   }
 
-  private _formatStats(stats: PerformanceStats): Array<{ label: string; value: string; color?: string }> {
+  private _formatStats(stats: PerformanceStats, goodColor: number, warnColor: number, badColor: number): Array<{ label: string; value: string; color?: number }> {
     const formatMs = (ms: number) => `${ms.toFixed(1)}ms`;
     const formatBytes = (bytes: number) => {
       if (bytes < 1024) return `${bytes}B`;
@@ -663,11 +664,11 @@ export class PerformanceDialog {
     const maxFps = stats.renderTimeAvg > 0 ? 1000 / stats.renderTimeAvg : 0;
 
     // Color based on thresholds
-    const maxFpsColor = maxFps >= 60 ? '#22c55e' : maxFps >= 30 ? '#eab308' : '#ef4444';
-    const renderColor = stats.renderTime < 16 ? '#22c55e' : stats.renderTime < 33 ? '#eab308' : '#ef4444';
-    const layoutColor = stats.layoutTime < 5 ? '#22c55e' : stats.layoutTime < 10 ? '#eab308' : '#ef4444';
+    const maxFpsColor = maxFps >= 60 ? goodColor : maxFps >= 30 ? warnColor : badColor;
+    const renderColor = stats.renderTime < 16 ? goodColor : stats.renderTime < 33 ? warnColor : badColor;
+    const layoutColor = stats.layoutTime < 5 ? goodColor : stats.layoutTime < 10 ? warnColor : badColor;
     // Input latency: <50ms good, <100ms ok, >100ms bad
-    const latencyColor = stats.inputLatency < 50 ? '#22c55e' : stats.inputLatency < 100 ? '#eab308' : '#ef4444';
+    const latencyColor = stats.inputLatency < 50 ? goodColor : stats.inputLatency < 100 ? warnColor : badColor;
 
     // Format latency breakdown as compact string (h=handler, w=wait/debounce, l=layout, b=buffer, a=apply)
     // Pad each number to 2 chars for stability
@@ -680,9 +681,9 @@ export class PerformanceDialog {
     // Shader stats (only show if shaders are active)
     const hasShaders = stats.shaderCount > 0;
     // Color for shader frame time: <16ms good (60fps capable), <33ms ok (30fps), >33ms bad
-    const shaderTimeColor = stats.shaderFrameTime < 16 ? '#22c55e' : stats.shaderFrameTime < 33 ? '#eab308' : '#ef4444';
+    const shaderTimeColor = stats.shaderFrameTime < 16 ? goodColor : stats.shaderFrameTime < 33 ? warnColor : badColor;
 
-    const lines: Array<{ label: string; value: string; color?: string }> = [
+    const lines: Array<{ label: string; value: string; color?: number }> = [
       { label: 'Max FPS', value: maxFps > 0 ? maxFps.toFixed(0) : '-', color: maxFpsColor },
       { label: 'Renders/s', value: stats.fps.toFixed(1) },
       { label: 'Render', value: formatMs(stats.renderTime), color: renderColor },
@@ -709,7 +710,7 @@ export class PerformanceDialog {
     lines.push({ label: 'Memory', value: formatBytes(stats.memoryUsage) });
     lines.push({ label: 'Renders', value: String(stats.renderCount) });
     lines.push({ label: 'Errors', value: stats.errorCount > 0 ? String(stats.errorCount) : '-',
-      color: stats.errorCount > 0 ? '#ef4444' : undefined });
+      color: stats.errorCount > 0 ? badColor : undefined });
 
     return lines;
   }

@@ -175,8 +175,8 @@ export class TerminalRenderer {
     let currentX = -1;
     let currentY = -1;
     let lastStyle = {
-      foreground: '',
-      background: '',
+      foreground: 0 as number | undefined,
+      background: 0 as number | undefined,
       bold: false,
       italic: false,
       underline: false,
@@ -229,8 +229,8 @@ export class TerminalRenderer {
 
         // Apply styling only when it changes
         const newStyle = {
-          foreground: cellDiff.cell.foreground || '',
-          background: cellDiff.cell.background || '',
+          foreground: cellDiff.cell.foreground,
+          background: cellDiff.cell.background,
           bold: cellDiff.cell.bold || false,
           italic: cellDiff.cell.italic || false,
           underline: cellDiff.cell.underline || false,
@@ -392,126 +392,30 @@ export class TerminalRenderer {
     return codes.join('');
   }
 
-  // Convert color to ANSI escape code
-  private _getColorCode(color: string, isBackground: boolean): string {
+  // Convert packed RGBA color to ANSI escape code
+  // Color is packed as 0xRRGGBBAA
+  private _getColorCode(color: number, isBackground: boolean): string {
     const offset = isBackground ? 10 : 0;
 
-    // Handle named colors - map to ANSI codes for 16/256 color modes
-    const namedColors: Record<string, number> = {
-      black: 30, red: 31, green: 32, yellow: 33,
-      blue: 34, magenta: 35, cyan: 36, white: 37,
-      gray: 90, grey: 90,
-      brightred: 91, brightgreen: 92, brightyellow: 93,
-      brightblue: 94, brightmagenta: 95, brightcyan: 96, brightwhite: 97,
-    };
+    // Extract RGB from packed color (ignore alpha)
+    const r = (color >> 24) & 0xFF;
+    const g = (color >> 16) & 0xFF;
+    const b = (color >> 8) & 0xFF;
 
-    // Named colors to RGB for truecolor mode (standard CSS/web colors)
-    const namedColorsRgb: Record<string, { r: number; g: number; b: number }> = {
-      black: { r: 0, g: 0, b: 0 },
-      red: { r: 255, g: 0, b: 0 },
-      green: { r: 0, g: 128, b: 0 },
-      yellow: { r: 255, g: 255, b: 0 },
-      blue: { r: 0, g: 0, b: 255 },
-      magenta: { r: 255, g: 0, b: 255 },
-      cyan: { r: 0, g: 255, b: 255 },
-      white: { r: 255, g: 255, b: 255 },
-      gray: { r: 128, g: 128, b: 128 },
-      grey: { r: 128, g: 128, b: 128 },
-      brightred: { r: 255, g: 85, b: 85 },
-      brightgreen: { r: 85, g: 255, b: 85 },
-      brightyellow: { r: 255, g: 255, b: 85 },
-      brightblue: { r: 85, g: 85, b: 255 },
-      brightmagenta: { r: 255, g: 85, b: 255 },
-      brightcyan: { r: 85, g: 255, b: 255 },
-      brightwhite: { r: 255, g: 255, b: 255 },
-    };
-
-    const colorLower = color.toLowerCase();
-    const namedColor = namedColors[colorLower];
-    if (namedColor !== undefined) {
-      // In truecolor mode, use actual RGB values for named colors
-      if (this._options.colorSupport === 'truecolor') {
-        const rgb = namedColorsRgb[colorLower];
-        if (rgb) {
-          const code = isBackground ? 48 : 38;
-          return `\x1b[${code};2;${rgb.r};${rgb.g};${rgb.b}m`;
-        }
-      }
-      // For 16/256 color modes, use basic ANSI codes
-      return `\x1b[${namedColor + offset}m`;
-    }
-
-    // Handle hex colors (#RGB or #RRGGBB)
-    if (color.startsWith('#')) {
-      const rgb = this._parseHexColor(color);
-      if (rgb) {
-        if (this._options.colorSupport === 'truecolor') {
-          const code = isBackground ? 48 : 38;
-          return `\x1b[${code};2;${rgb.r};${rgb.g};${rgb.b}m`;
-        } else if (this._options.colorSupport === '256') {
-          const color256 = this._hexTo256Color(color);
-          const code = isBackground ? 48 : 38;
-          return `\x1b[${code};5;${color256}m`;
-        } else if (this._options.colorSupport === '16') {
-          const color16 = this._rgbTo16Color(rgb.r, rgb.g, rgb.b);
-          return `\x1b[${color16 + offset}m`;
-        }
-      }
-    }
-
-    // Handle rgb(r,g,b) format
-    const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-    if (rgbMatch) {
-      const [, rs, gs, bs] = rgbMatch;
-      const r = parseInt(rs, 10);
-      const g = parseInt(gs, 10);
-      const b = parseInt(bs, 10);
-      if (this._options.colorSupport === 'truecolor') {
-        const code = isBackground ? 48 : 38;
-        return `\x1b[${code};2;${r};${g};${b}m`;
-      } else if (this._options.colorSupport === '256') {
-        const color256 = this._rgbTo256Color(r, g, b);
-        const code = isBackground ? 48 : 38;
-        return `\x1b[${code};5;${color256}m`;
-      } else if (this._options.colorSupport === '16') {
-        const color16 = this._rgbTo16Color(r, g, b);
-        return `\x1b[${color16 + offset}m`;
-      }
+    if (this._options.colorSupport === 'truecolor') {
+      const code = isBackground ? 48 : 38;
+      return `\x1b[${code};2;${r};${g};${b}m`;
+    } else if (this._options.colorSupport === '256') {
+      const color256 = this._rgbTo256Color(r, g, b);
+      const code = isBackground ? 48 : 38;
+      return `\x1b[${code};5;${color256}m`;
+    } else if (this._options.colorSupport === '16') {
+      const color16 = this._rgbTo16Color(r, g, b);
+      return `\x1b[${color16 + offset}m`;
     }
 
     // Fallback to default
     return '';
-  }
-
-  // Parse hex color to RGB
-  private _parseHexColor(hex: string): { r: number; g: number; b: number } | null {
-    const match = hex.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-    if (!match) return null;
-
-    const color = match[1];
-    if (color.length === 3) {
-      // #RGB -> #RRGGBB
-      const [r, g, b] = color.split('').map(c => c + c);
-      return {
-        r: parseInt(r, 16),
-        g: parseInt(g, 16),
-        b: parseInt(b, 16),
-      };
-    } else {
-      // #RRGGBB
-      return {
-        r: parseInt(color.substr(0, 2), 16),
-        g: parseInt(color.substr(2, 2), 16),
-        b: parseInt(color.substr(4, 2), 16),
-      };
-    }
-  }
-
-  // Convert hex color to closest 256-color palette index
-  private _hexTo256Color(hex: string): number {
-    const rgb = this._parseHexColor(hex);
-    if (!rgb) return 15; // Default to white
-    return this._rgbTo256Color(rgb.r, rgb.g, rgb.b);
   }
 
   // Convert RGB to closest 256-color palette index
@@ -523,33 +427,14 @@ export class TerminalRenderer {
     return 16 + (36 * rIdx) + (6 * gIdx) + bIdx;
   }
 
-  // Get 16-color code for a color string (returns foreground code 30-37 or 90-97)
-  private _getColorCode16(color: string): number {
-    // Handle named colors
-    const namedColors: Record<string, number> = {
-      black: 30, red: 31, green: 32, yellow: 33,
-      blue: 34, magenta: 35, cyan: 36, white: 37,
-      gray: 90, grey: 90, brightblack: 90, // brightBlack from colorToGray maps to gray (90)
-      brightred: 91, brightgreen: 92, brightyellow: 93,
-      brightblue: 94, brightmagenta: 95, brightcyan: 96, brightwhite: 97,
-    };
-    const namedColor = namedColors[color.toLowerCase()];
-    if (namedColor !== undefined) return namedColor;
+  // Get 16-color code for a packed RGBA color (returns foreground code 30-37 or 90-97)
+  private _getColorCode16(color: number): number {
+    // Extract RGB from packed color
+    const r = (color >> 24) & 0xFF;
+    const g = (color >> 16) & 0xFF;
+    const b = (color >> 8) & 0xFF;
 
-    // Handle hex colors
-    if (color.startsWith('#')) {
-      const rgb = this._parseHexColor(color);
-      if (rgb) return this._rgbTo16Color(rgb.r, rgb.g, rgb.b);
-    }
-
-    // Handle rgb(r,g,b) format
-    const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-    if (rgbMatch) {
-      const [, r, g, b] = rgbMatch;
-      return this._rgbTo16Color(parseInt(r, 10), parseInt(g, 10), parseInt(b, 10));
-    }
-
-    return 37; // Default to white
+    return this._rgbTo16Color(r, g, b);
   }
 
   // Ensure fg and bg have enough contrast for visibility

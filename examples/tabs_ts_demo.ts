@@ -19,4 +19,4 @@ const ui = melker`
   </container>
 `;
 
-const { context, engine } = await createApp(ui);
+const engine = await createApp(ui);

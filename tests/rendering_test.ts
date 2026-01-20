@@ -10,6 +10,7 @@ import {
   Element,
   Bounds,
 } from '../mod.ts';
+import { COLORS } from '../src/components/color-utils.ts';
 
 Deno.test('RenderingEngine creation', () => {
   const engine = new RenderingEngine();
@@ -32,7 +33,7 @@ Deno.test('Text with styling', () => {
   const textElement = new TextElement({
     text: 'Styled',
     style: {
-      color: 'red',
+      color: COLORS.red,
       fontWeight: 'bold',
     }
   });
@@ -46,7 +47,7 @@ Deno.test('Text with styling', () => {
   // Should have rendered 6 characters for "Styled"
   assertEquals(diff.length, 6);
   assertEquals(diff[0].cell.char, 'S');
-  assertEquals(diff[0].cell.foreground, 'red');
+  assertEquals(diff[0].cell.foreground, COLORS.red);
   assertEquals(diff[0].cell.bold, true);
 });
 
@@ -57,7 +58,7 @@ Deno.test('Container with border', () => {
     height: 5,
     style: {
       border: 'thin',
-      borderColor: 'blue',
+      borderColor: COLORS.blue,
     }
   });
 

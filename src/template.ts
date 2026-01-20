@@ -6,6 +6,7 @@ import type { Element } from './types.ts';
 import { parse } from 'npm:html5parser';
 import { Stylesheet } from './stylesheet.ts';
 import { isLintEnabled, validateElementProps, addWarning, reportWarnings, clearWarnings, BASE_STYLES_SCHEMA, getComponentSchema, getRegisteredComponents } from './lint.ts';
+import { parseColor } from './components/color-utils.ts';
 
 // Types for template processing
 interface TemplateContext {
@@ -545,6 +546,10 @@ function parseCssStyleString(cssString: string): Record<string, any> {
     // Convert kebab-case to camelCase for properties like border-color
     const camelKey = key.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase());
 
+    // Check if this is a color property
+    const isColorProp = camelKey === 'color' || camelKey === 'backgroundColor' ||
+                        camelKey === 'borderColor' || camelKey.endsWith('Color');
+
     // Try to parse as number
     if (/^\d+(\.\d+)?$/.test(value)) {
       style[camelKey] = parseFloat(value);
@@ -557,7 +562,13 @@ function parseCssStyleString(cssString: string): Record<string, any> {
     }
     // Handle quoted strings - remove quotes
     else if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      style[camelKey] = value.slice(1, -1);
+      const unquoted = value.slice(1, -1);
+      // If it's a color property, parse to packed RGBA
+      style[camelKey] = isColorProp ? parseColor(unquoted) : unquoted;
+    }
+    // Color properties - parse to packed RGBA
+    else if (isColorProp) {
+      style[camelKey] = parseColor(value);
     }
     // Keep as string
     else {

@@ -13,6 +13,7 @@
     "fmt": "deno fmt",
     "lint": "deno lint",
     "check": "deno check src/**/*.ts",
+    "check-ts-examples": "deno check examples/**/*.ts",
     "skill:zip": "cd skills/creating-melker-apps && zip -r ../../docs/skill-creating-melker-apps.zip SKILL.md COMPONENTS.md EXAMPLES.md TYPES.md TROUBLESHOOTING.md && echo 'Created creating-melker-apps.zip'"
   },
   "compilerOptions": {

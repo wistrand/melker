@@ -15,6 +15,7 @@ import { DialogElement } from './components/dialog.ts';
 import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
 import { LayoutEngine, LayoutNode as AdvancedLayoutNode, LayoutContext, globalLayoutEngine } from './layout.ts';
 import { getThemeColor, getThemeManager } from './theme.ts';
+import { COLORS, parseColor } from './components/color-utils.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { getLogger } from './logging.ts';
 import { getGlobalErrorHandler, renderErrorPlaceholder } from './error-boundary.ts';
@@ -679,14 +680,15 @@ export class RenderingEngine {
   }
 
   // Convert Style to Partial<Cell> format for components
+  // Style colors may be strings (ColorInput) - parse them to PackedRGBA
   private _styleToCellStyle(style: Style): Partial<Cell> {
     const cellStyle: Partial<Cell> = {};
 
     if (style.color) {
-      cellStyle.foreground = style.color;
+      cellStyle.foreground = parseColor(style.color);
     }
     if (style.backgroundColor) {
-      cellStyle.background = style.backgroundColor;
+      cellStyle.background = parseColor(style.backgroundColor);
     }
     if (style.fontWeight === 'bold') {
       cellStyle.bold = true;
@@ -1115,7 +1117,7 @@ export class RenderingEngine {
 
     const cell: Cell = {
       char: ' ',
-      background: style.backgroundColor,
+      background: parseColor(style.backgroundColor),
     };
 
     buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, cell);
@@ -1143,11 +1145,15 @@ export class RenderingEngine {
     // If no borders defined, exit
     if (!borderTop && !borderBottom && !borderLeft && !borderRight) return;
 
+    // Parse colors (convert ColorInput to PackedRGBA)
+    const parsedDefaultColor = parseColor(defaultColor);
+    const parsedBgColor = parseColor(style.backgroundColor);
+
     // Get individual border colors (fall back to borderColor, then color)
-    const topColor = style.borderTopColor || defaultColor;
-    const bottomColor = style.borderBottomColor || defaultColor;
-    const leftColor = style.borderLeftColor || defaultColor;
-    const rightColor = style.borderRightColor || defaultColor;
+    const topColor = parseColor(style.borderTopColor) || parsedDefaultColor;
+    const bottomColor = parseColor(style.borderBottomColor) || parsedDefaultColor;
+    const leftColor = parseColor(style.borderLeftColor) || parsedDefaultColor;
+    const rightColor = parseColor(style.borderRightColor) || parsedDefaultColor;
 
     // Check if block mode is enabled (use colored spaces instead of box-drawing characters)
     const useBlockBorders = MelkerConfig.get().gfxMode === 'block';
@@ -1155,17 +1161,17 @@ export class RenderingEngine {
     // Create cell styles for each side
     // In block mode, use foreground color as background (spaces need bg color to be visible)
     const topStyle: Partial<Cell> = useBlockBorders
-      ? { background: topColor || style.backgroundColor }
-      : { foreground: topColor, background: style.backgroundColor };
+      ? { background: topColor || parsedBgColor }
+      : { foreground: topColor, background: parsedBgColor };
     const bottomStyle: Partial<Cell> = useBlockBorders
-      ? { background: bottomColor || style.backgroundColor }
-      : { foreground: bottomColor, background: style.backgroundColor };
+      ? { background: bottomColor || parsedBgColor }
+      : { foreground: bottomColor, background: parsedBgColor };
     const leftStyle: Partial<Cell> = useBlockBorders
-      ? { background: leftColor || style.backgroundColor }
-      : { foreground: leftColor, background: style.backgroundColor };
+      ? { background: leftColor || parsedBgColor }
+      : { foreground: leftColor, background: parsedBgColor };
     const rightStyle: Partial<Cell> = useBlockBorders
-      ? { background: rightColor || style.backgroundColor }
-      : { foreground: rightColor, background: style.backgroundColor };
+      ? { background: rightColor || parsedBgColor }
+      : { foreground: rightColor, background: parsedBgColor };
 
     // Get border characters (use the first available border style for consistency)
     // In block mode, always use 'block' style (spaces)
@@ -1227,8 +1233,8 @@ export class RenderingEngine {
     context: RenderContext
   ): void {
     const cellStyle: Partial<Cell> = {
-      foreground: style.color,
-      background: style.backgroundColor,
+      foreground: parseColor(style.color),
+      background: parseColor(style.backgroundColor),
       bold: style.fontWeight === 'bold',
     };
 
@@ -1433,8 +1439,8 @@ export class RenderingEngine {
     const thumbPosition = Math.min(availableTrackSpace, Math.floor(scrollProgress * availableTrackSpace));
 
     // Render scrollbar track
-    const thumbColor = getThemeColor('scrollbarThumb') || style.foreground || 'white';
-    const trackColor = getThemeColor('scrollbarTrack') || 'gray';
+    const thumbColor = getThemeColor('scrollbarThumb') ?? style.foreground ?? COLORS.white;
+    const trackColor = getThemeColor('scrollbarTrack') ?? COLORS.gray;
 
     for (let y = 0; y < scrollbarHeight; y++) {
       const char = (y >= thumbPosition && y < thumbPosition + thumbSize) ? '█' : '░';
@@ -1483,8 +1489,8 @@ export class RenderingEngine {
     const thumbPosition = Math.floor(scrollProgress * availableTrackSpace);
 
     // Render scrollbar track
-    const thumbColor = getThemeColor('scrollbarThumb') || style.foreground || 'white';
-    const trackColor = getThemeColor('scrollbarTrack') || 'gray';
+    const thumbColor = getThemeColor('scrollbarThumb') ?? style.foreground ?? COLORS.white;
+    const trackColor = getThemeColor('scrollbarTrack') ?? COLORS.gray;
 
     for (let x = 0; x < scrollbarWidth; x++) {
       const char = (x >= thumbPosition && x < thumbPosition + thumbSize) ? '█' : '░';

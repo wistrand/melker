@@ -1,20 +1,64 @@
 // Color utility functions for RGBA color manipulation
 
+import type { PackedRGBA, ColorInput } from '../types.ts';
+
 // Color constants
-export const TRANSPARENT = 0x00000000; // Fully transparent (alpha = 0)
-export const DEFAULT_FG = 0xFFFFFFFF;  // White, fully opaque
+export const TRANSPARENT: PackedRGBA = 0x00000000; // Fully transparent (alpha = 0)
+export const DEFAULT_FG: PackedRGBA = 0xFFFFFFFF;  // White, fully opaque
+
+/**
+ * Named terminal colors as packed RGBA values
+ * Use these instead of string literals for colors in components
+ */
+export const COLORS: Record<string, PackedRGBA> = {
+  // Standard ANSI colors
+  black: 0x000000FF,
+  red: 0xFF0000FF,
+  green: 0x00FF00FF,
+  yellow: 0xFFFF00FF,
+  blue: 0x0000FFFF,
+  magenta: 0xFF00FFFF,
+  cyan: 0x00FFFFFF,
+  white: 0xFFFFFFFF,
+  gray: 0x808080FF,
+  grey: 0x808080FF,  // Alias
+  // Bright ANSI colors
+  brightBlack: 0x808080FF,
+  brightRed: 0xFF5555FF,
+  brightGreen: 0x55FF55FF,
+  brightYellow: 0xFFFF55FF,
+  brightBlue: 0x5555FFFF,
+  brightMagenta: 0xFF55FFFF,
+  brightCyan: 0x55FFFFFF,
+  brightWhite: 0xFFFFFFFF,
+  // Common web colors
+  orange: 0xFFA500FF,
+  purple: 0x800080FF,
+  pink: 0xFFC0CBFF,
+  transparent: TRANSPARENT,
+};
+
+/**
+ * Parse any color input (string or number) to packed RGBA
+ * Handles CSS strings (hex, rgb(), named) and passes through numbers
+ */
+export function parseColor(color: ColorInput | undefined): PackedRGBA | undefined {
+  if (color === undefined) return undefined;
+  if (typeof color === 'number') return color;
+  return cssToRgba(color);
+}
 
 /**
  * Pack RGBA components into a single 32-bit value
  */
-export function packRGBA(r: number, g: number, b: number, a: number = 255): number {
+export function packRGBA(r: number, g: number, b: number, a: number = 255): PackedRGBA {
   return ((r & 0xFF) << 24) | ((g & 0xFF) << 16) | ((b & 0xFF) << 8) | (a & 0xFF);
 }
 
 /**
  * Unpack a 32-bit RGBA value into components
  */
-export function unpackRGBA(color: number): { r: number; g: number; b: number; a: number } {
+export function unpackRGBA(color: PackedRGBA): { r: number; g: number; b: number; a: number } {
   return {
     r: (color >> 24) & 0xFF,
     g: (color >> 16) & 0xFF,
@@ -31,7 +75,7 @@ const _COLOR_CACHE_MAX_SIZE = 4096;
 /**
  * Convert packed RGBA to CSS color string (cached)
  */
-export function rgbaToCss(color: number): string {
+export function rgbaToCss(color: PackedRGBA): string {
   // Check cache first
   const cached = _colorStringCache.get(color);
   if (cached !== undefined) {
@@ -69,7 +113,7 @@ export function rgbaToCss(color: number): string {
 /**
  * Parse CSS color string to packed RGBA
  */
-export function cssToRgba(css: string): number {
+export function cssToRgba(css: string): PackedRGBA {
   // Handle hex colors
   if (css.startsWith('#')) {
     const hex = css.slice(1);
@@ -101,7 +145,7 @@ export function cssToRgba(css: string): number {
     return packRGBA(r, g, b, a);
   }
   // Handle named colors (basic set)
-  const namedColors: Record<string, number> = {
+  const namedColors: Record<string, PackedRGBA> = {
     'black': packRGBA(0, 0, 0, 255),
     'white': packRGBA(255, 255, 255, 255),
     'red': packRGBA(255, 0, 0, 255),
@@ -329,4 +373,55 @@ export function lerpColor(color1: string, color2: string, t: number, colorSpace:
     const rgb = oklchToRgb(l, c, h);
     return rgbToHex(rgb.r, rgb.g, rgb.b);
   }
+}
+
+/**
+ * Format a packed RGBA color as a hex string for debugging/logging
+ * @param color - Packed RGBA color
+ * @returns Hex string like "#RRGGBB" or "#RRGGBBAA" if alpha != 255
+ */
+export function formatColorForDebug(color: PackedRGBA | undefined): string {
+  if (color === undefined) return 'undefined';
+  const r = (color >> 24) & 0xFF;
+  const g = (color >> 16) & 0xFF;
+  const b = (color >> 8) & 0xFF;
+  const a = color & 0xFF;
+  const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  return a === 255 ? hex : `${hex}${a.toString(16).padStart(2, '0')}`;
+}
+
+// Color property names that should be parsed from strings to packed numbers
+const COLOR_STYLE_PROPS = new Set([
+  'color',
+  'backgroundColor',
+  'background',      // Alias for backgroundColor
+  'foreground',      // Alias for color
+  'borderColor',
+  'borderTopColor',
+  'borderBottomColor',
+  'borderLeftColor',
+  'borderRightColor',
+]);
+
+/**
+ * Normalize a style object by converting color strings to packed RGBA numbers.
+ * This is called at entry points (createElement, stylesheet parsing) to ensure
+ * all color values in Style are numbers internally.
+ *
+ * @param style - Style object that may contain color strings
+ * @returns Style object with all colors as packed RGBA numbers
+ */
+export function normalizeStyle<T extends Record<string, unknown>>(style: T): T {
+  if (!style || typeof style !== 'object') return style;
+
+  const result = { ...style };
+  for (const key of Object.keys(result)) {
+    if (COLOR_STYLE_PROPS.has(key)) {
+      const value = result[key];
+      if (typeof value === 'string') {
+        (result as Record<string, unknown>)[key] = cssToRgba(value);
+      }
+    }
+  }
+  return result;
 }

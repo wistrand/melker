@@ -8,6 +8,7 @@ import { DualBuffer } from '../src/buffer.ts';
 import { TextElement } from '../src/components/text.ts';
 import { ContainerElement } from '../src/components/container.ts';
 import { RenderingEngine } from '../src/rendering.ts';
+import { COLORS } from '../src/components/color-utils.ts';
 
 Deno.test('ContentMeasurer - Basic element measurement', () => {
   const measurer = new ContentMeasurer();
@@ -170,7 +171,7 @@ Deno.test('ViewportDualBuffer - Integration test', () => {
   assertEquals(viewportBuffer.viewport.bounds.width, 80);
 
   // Test buffer operations
-  viewportBuffer.currentBuffer.setText(10, 5, 'Test', { foreground: 'white' });
+  viewportBuffer.currentBuffer.setText(10, 5, 'Test', { foreground: COLORS.white });
 
   const cell = buffer.currentBuffer.getCell(10, 5);
   assertEquals(cell?.char, 'T');

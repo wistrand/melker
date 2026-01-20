@@ -30,12 +30,13 @@ export interface TextSelection {
   mode: 'component' | 'global';  // Selection mode
 }
 
-// Common terminal/ANSI colors
-export type TerminalColor =
-  | 'black' | 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white'
-  | 'gray' | 'grey' | 'brightBlack' | 'brightRed' | 'brightGreen' | 'brightYellow'
-  | 'brightBlue' | 'brightMagenta' | 'brightCyan' | 'brightWhite'
-  | string; // Allow custom colors/hex values
+// Packed RGBA color - 32-bit number in 0xRRGGBBAA format
+// Used internally for efficient color storage and manipulation
+export type PackedRGBA = number;
+
+// User input color type - accepts CSS color strings or packed RGBA numbers
+// Use this for component props and user-facing APIs
+export type ColorInput = string | PackedRGBA;
 
 // Border styles using Unicode Box Drawing characters
 // 'block' uses spaces with background color (for terminals without box-drawing support)
@@ -72,19 +73,21 @@ export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {
 export type PercentageString = `${number}%`;
 
 export interface Style extends Record<string, any> {
-  color?: TerminalColor;
-  backgroundColor?: TerminalColor;
+  color?: ColorInput;
+  backgroundColor?: ColorInput;
+  background?: ColorInput;   // Alias for backgroundColor
+  foreground?: ColorInput;   // Alias for color
   fontWeight?: 'normal' | 'bold';
   border?: BorderStyle;
   borderTop?: BorderStyle;
   borderBottom?: BorderStyle;
   borderLeft?: BorderStyle;
   borderRight?: BorderStyle;
-  borderColor?: TerminalColor;
-  borderTopColor?: TerminalColor;
-  borderBottomColor?: TerminalColor;
-  borderLeftColor?: TerminalColor;
-  borderRightColor?: TerminalColor;
+  borderColor?: ColorInput;
+  borderTopColor?: ColorInput;
+  borderBottomColor?: ColorInput;
+  borderLeftColor?: ColorInput;
+  borderRightColor?: ColorInput;
   padding?: number | BoxSpacing;
   margin?: number | BoxSpacing;
   marginBottom?: number;

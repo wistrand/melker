@@ -103,19 +103,11 @@
 <melker>
   <script type="typescript">
     export function openDialog(id: string) {
-      const dialog = $melker.getElementById(id);
-      if (dialog) {
-        dialog.props.open = true;
-        $melker.render();
-      }
+      $melker.getElementById(id)?.show();
     }
 
     export function closeDialog(id: string) {
-      const dialog = $melker.getElementById(id);
-      if (dialog) {
-        dialog.props.open = false;
-        $melker.render();
-      }
+      $melker.getElementById(id)?.hide();
     }
 
     export function handleConfirm() {
@@ -134,7 +126,7 @@
     </container>
 
     <!-- Info Dialog -->
-    <dialog id="info-dialog" title="Information" open="false" modal="true" backdrop="true">
+    <dialog id="info-dialog" title="Information"  modal="true" backdrop="true">
       <container style="padding: 1;">
         <text style="margin-bottom: 2;">This is an informational message.</text>
         <button label="OK" onClick="$app.closeDialog('info-dialog')" />
@@ -142,7 +134,7 @@
     </dialog>
 
     <!-- Confirm Dialog -->
-    <dialog id="confirm-dialog" title="Confirm" open="false" modal="true" backdrop="true">
+    <dialog id="confirm-dialog" title="Confirm"  modal="true" backdrop="true">
       <container style="padding: 1;">
         <text style="margin-bottom: 2;">Are you sure you want to proceed?</text>
         <container style="display: flex; flex-direction: row; gap: 1; justify-content: flex-end;">
@@ -153,7 +145,7 @@
     </dialog>
 
     <!-- Form Dialog -->
-    <dialog id="form-dialog" title="Enter Details" open="false" modal="true" backdrop="true">
+    <dialog id="form-dialog" title="Enter Details"  modal="true" backdrop="true">
       <container style="padding: 1; display: flex; flex-direction: column; gap: 1;">
         <text>Name:</text>
         <input id="form-name" placeholder="Your name" style="width: 30;" />
@@ -186,23 +178,17 @@
     let selectedFile = '(none)';
 
     export function openFileBrowser() {
-      const dialog = $melker.getElementById('file-dialog');
-      if (dialog) dialog.props.open = true;
-      $melker.render();
+      $melker.getElementById('file-dialog')?.show();
     }
 
     export function closeFileBrowser() {
-      const dialog = $melker.getElementById('file-dialog');
-      if (dialog) dialog.props.open = false;
-      $melker.render();
+      $melker.getElementById('file-dialog')?.hide();
     }
 
     export function handleFileSelect(event: { path: string }) {
       selectedFile = event.path;
       closeFileBrowser();
-      const text = $melker.getElementById('selected-text');
-      if (text) text.setValue(selectedFile);
-      $melker.render();
+      $melker.getElementById('selected-text')?.setValue(selectedFile);
     }
   </script>
 
@@ -212,7 +198,7 @@
     <text style="margin-top: 1;">Selected:</text>
     <text id="selected-text">(none)</text>
 
-    <dialog id="file-dialog" title="Select File" open="false" modal="true" width="70" height="20">
+    <dialog id="file-dialog" title="Select File"  modal="true" width="70" height="20">
       <file-browser
         id="file-browser"
         selectionMode="single"

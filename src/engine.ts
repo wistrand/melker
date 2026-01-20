@@ -249,6 +249,9 @@ export class MelkerEngine {
   // Track modal dialogs with focus traps
   private _trappedModalDialogIds = new Set<string>();
 
+  // Track which dialogs were open in previous frame (for auto force-render on dialog open)
+  private _previouslyOpenDialogIds = new Set<string>();
+
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
     // Get terminal settings from config
     const config = MelkerConfig.get();
@@ -1078,6 +1081,23 @@ export class MelkerEngine {
       });
     }
 
+    // Auto-detect newly opened dialogs and mark for force render
+    // This ensures dialogs render correctly without requiring apps to call forceRender
+    const currentOpenDialogs = this._collectOpenDialogIds();
+    let dialogJustOpened = false;
+    for (const id of currentOpenDialogs) {
+      if (!this._previouslyOpenDialogIds.has(id)) {
+        dialogJustOpened = true;
+        break;
+      }
+    }
+    if (dialogJustOpened) {
+      this._buffer.markForceNextRender();
+      this._logger?.debug('Dialog opened, marking for full diff');
+    }
+    // Update tracking for next frame
+    this._previouslyOpenDialogIds = currentOpenDialogs;
+
     // Clear buffer
     const clearStartTime = performance.now();
     this._buffer.clear();
@@ -1293,6 +1313,15 @@ export class MelkerEngine {
     } finally {
       this._isRendering = false;
     }
+  }
+
+  /**
+   * Mark the next render() call to do a full diff instead of dirty-row optimization.
+   * This is useful when opening dialogs or making changes that dirty tracking might miss.
+   * Unlike forceRender(), this doesn't render immediately - it just marks the next render.
+   */
+  requestForceRender(): void {
+    this._buffer.markForceNextRender();
   }
 
   /**
@@ -2312,6 +2341,21 @@ export class MelkerEngine {
         this._collectOpenDialogs(child, result);
       }
     }
+  }
+
+  /**
+   * Collect IDs of all currently open dialogs (for change detection)
+   */
+  private _collectOpenDialogIds(): Set<string> {
+    const dialogs: Element[] = [];
+    this._collectOpenDialogs(this._document.root, dialogs);
+    const ids = new Set<string>();
+    for (const dialog of dialogs) {
+      // Use id if available, otherwise create a stable identifier from the element
+      const id = dialog.props?.id || dialog.id || `dialog-${dialogs.indexOf(dialog)}`;
+      ids.add(id);
+    }
+    return ids;
   }
 
   /**

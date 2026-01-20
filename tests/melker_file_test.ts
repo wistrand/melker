@@ -2,6 +2,7 @@
 
 import { assertEquals, assertExists, assertThrows, assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import { parseMelkerFile } from '../src/template.ts';
+import { COLORS, cssToRgba } from '../src/components/color-utils.ts';
 
 // ============================================
 // Simple .melker files (no wrapper, no scripts)
@@ -340,8 +341,9 @@ Deno.test('parseMelkerFile parses color styles', () => {
 
   const result = parseMelkerFile(content);
 
-  assertEquals(result.element.props.style.color, 'red');
-  assertEquals(result.element.props.style.backgroundColor, 'blue');
+  // Colors are normalized to PackedRGBA format (using cssToRgba which returns signed 32-bit)
+  assertEquals(result.element.props.style.color, cssToRgba('red'));
+  assertEquals(result.element.props.style.backgroundColor, cssToRgba('blue'));
 });
 
 Deno.test('parseMelkerFile parses hex color styles', () => {
@@ -353,8 +355,9 @@ Deno.test('parseMelkerFile parses hex color styles', () => {
 
   const result = parseMelkerFile(content);
 
-  assertEquals(result.element.props.style.color, '#00d9ff');
-  assertEquals(result.element.props.style.backgroundColor, '#ff0000');
+  // Colors are normalized to PackedRGBA format
+  assertEquals(result.element.props.style.color, cssToRgba('#00d9ff'));
+  assertEquals(result.element.props.style.backgroundColor, cssToRgba('#ff0000'));
 });
 
 // ============================================

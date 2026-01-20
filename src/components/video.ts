@@ -2,7 +2,7 @@
 // Extends CanvasElement with video-specific functionality
 
 import { CanvasElement, CanvasProps } from './canvas.ts';
-import { packRGBA } from './color-utils.ts';
+import { packRGBA, COLORS } from './color-utils.ts';
 import { Element, Bounds, ComponentRenderContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getLogger } from '../logging.ts';
@@ -786,8 +786,8 @@ export class VideoElement extends CanvasElement {
         // Set the character with high contrast (white on black)
         buffer.currentBuffer.setCell(x, y, {
           char: text[j],
-          foreground: 'white',
-          background: 'black',
+          foreground: COLORS.white,
+          background: COLORS.black,
           bold: true,
         });
       }

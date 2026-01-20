@@ -1,8 +1,8 @@
 // Canvas component for basic graphics rendering using Unicode sextant characters
 
-import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, KeyPressEvent } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, KeyPressEvent, ColorInput } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
-import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from './color-utils.ts';
+import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, cssToRgba, parseColor } from './color-utils.ts';
 import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, applyFloydSteinbergStableDither, applyAtkinsonDither, applyAtkinsonStableDither, applyBlueNoiseDither, applyOrderedDither, applyThresholdDither, loadThresholdMatrixFromPng, type DitherMode, type ThresholdMatrix } from '../video/dither.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { getLogger } from '../logging.ts';
@@ -33,7 +33,7 @@ export interface CanvasProps extends BaseProps {
   width: number;                     // Canvas width in terminal columns
   height: number;                    // Canvas height in terminal rows
   scale?: number;                    // Pixel scale factor (default: 1)
-  backgroundColor?: string;          // Background color
+  backgroundColor?: ColorInput;      // Background color
   charAspectRatio?: number;          // Terminal char width/height ratio (default: 0.5)
   src?: string;                      // Image source path (loads and displays image)
   objectFit?: 'contain' | 'fill' | 'cover';  // How image fits: contain (default), fill (stretch), cover (crop)
@@ -705,10 +705,13 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     let bgR = 0, bgG = 0, bgB = 0;
     const bgColorProp = this.props.backgroundColor;
     if (bgColorProp) {
-      const bg = unpackRGBA(cssToRgba(bgColorProp));
-      bgR = bg.r;
-      bgG = bg.g;
-      bgB = bg.b;
+      const bgPacked = parseColor(bgColorProp);
+      if (bgPacked !== undefined) {
+        const bg = unpackRGBA(bgPacked);
+        bgR = bg.r;
+        bgG = bg.g;
+        bgB = bg.b;
+      }
     }
 
     // Render the scaled (and possibly dithered) image to the buffer
@@ -1060,8 +1063,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   private _quantizeBlockColors(colors: number[]): {
     pixels: boolean[];
-    fgColor: string | undefined;
-    bgColor: string | undefined;
+    fgColor: number | undefined;
+    bgColor: number | undefined;
   } {
     // Calculate brightness for each pixel inline (avoid function call overhead)
     let validCount = 0;
@@ -1104,8 +1107,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       for (let i = 0; i < 6; i++) {
         if (colors[i] !== TRANSPARENT) this._qPixels[i] = true;
       }
-      const color = rgbaToCss(firstColor);
-      return { pixels: this._qPixels, fgColor: color, bgColor: color };
+      return { pixels: this._qPixels, fgColor: firstColor, bgColor: firstColor };
     }
 
     // Use median brightness as threshold (faster than sorting)
@@ -1161,8 +1163,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     return {
       pixels: this._qPixels,
-      fgColor: this._qFgColor !== 0 ? rgbaToCss(this._qFgColor) : undefined,
-      bgColor: this._qBgColor !== 0 ? rgbaToCss(this._qBgColor) : undefined
+      fgColor: this._qFgColor !== 0 ? this._qFgColor : undefined,
+      bgColor: this._qBgColor !== 0 ? this._qBgColor : undefined
     };
   }
 
@@ -1336,7 +1338,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         // Transparent - use background or fully transparent
         const bgColor = this.props.backgroundColor;
         if (bgColor) {
-          color = cssToRgba(bgColor);
+          color = parseColor(bgColor) ?? TRANSPARENT;
         } else {
           // Fully transparent
           cache[dstIdx] = 0;
@@ -1439,7 +1441,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Pre-compute base style properties
     const hasStyleFg = style.foreground !== undefined;
     const hasStyleBg = style.background !== undefined;
-    const propsBg = this.props.backgroundColor;
+    const propsBg = this.props.backgroundColor ? parseColor(this.props.backgroundColor) : undefined;
 
     for (let ty = 0; ty < terminalHeight; ty++) {
       const baseBufferY = ty * 3 * scale;
@@ -1572,8 +1574,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
           if (imagePixels[5] && imageColors[5] !== TRANSPARENT) hasImageOn = true;
         }
 
-        let fgColor: string | undefined;
-        let bgColor: string | undefined;
+        let fgColor: number | undefined;
+        let bgColor: number | undefined;
 
         if (hasDrawingOn && hasImageOn) {
           // Two-color optimization: drawing as fg, image as bg
@@ -1592,14 +1594,14 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
             }
           }
 
-          if (fgColorVal !== 0) fgColor = rgbaToCss(fgColorVal);
-          if (bgColorVal !== 0) bgColor = rgbaToCss(bgColorVal);
+          if (fgColorVal !== 0) fgColor = fgColorVal;
+          if (bgColorVal !== 0) bgColor = bgColorVal;
 
         } else if (hasImageOn && !hasDrawingOn) {
           // Image-only block: use color quantization for sextant detail
           this._quantizeBlockColorsInline(imageColors, sextantPixels);
-          fgColor = this._qFgColor !== 0 ? rgbaToCss(this._qFgColor) : undefined;
-          bgColor = this._qBgColor !== 0 ? rgbaToCss(this._qBgColor) : undefined;
+          fgColor = this._qFgColor !== 0 ? this._qFgColor : undefined;
+          bgColor = this._qBgColor !== 0 ? this._qBgColor : undefined;
 
         } else {
           // Standard compositing: drawing on top of image
@@ -1631,8 +1633,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
             }
           }
 
-          if (fgColorVal !== 0) fgColor = rgbaToCss(fgColorVal);
-          if (bgColorVal !== 0) bgColor = rgbaToCss(bgColorVal);
+          if (fgColorVal !== 0) fgColor = fgColorVal;
+          if (bgColorVal !== 0) bgColor = bgColorVal;
         }
 
         // Convert pixels to sextant character
@@ -1702,7 +1704,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Pre-compute base style properties
     const hasStyleFg = style.foreground !== undefined;
     const hasStyleBg = style.background !== undefined;
-    const propsBg = this.props.backgroundColor;
+    const propsBg = this.props.backgroundColor ? parseColor(this.props.backgroundColor) : undefined;
 
     for (let ty = 0; ty < terminalHeight; ty++) {
       const baseBufferY = ty * 3 * scale;
@@ -1764,8 +1766,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
             }
           }
           const avgColor = count > 0
-            ? rgbaToCss(packRGBA(Math.round(totalR / count), Math.round(totalG / count), Math.round(totalB / count), 255))
-            : propsBg ?? (hasStyleBg ? style.background as string : undefined);
+            ? packRGBA(Math.round(totalR / count), Math.round(totalG / count), Math.round(totalB / count), 255)
+            : propsBg ?? (hasStyleBg ? style.background : undefined);
 
           if (!avgColor) continue;
 
@@ -1783,7 +1785,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
           if (!hasAnyPixel) continue;
 
           let char: string;
-          let fgColor: string | undefined;
+          let fgColor: number | undefined;
 
           if (gfxMode === 'luma') {
             // Luminance mode: average brightness → density character
@@ -1805,7 +1807,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
             const luma = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
             const charIndex = Math.floor((luma / 255) * (LUMA_RAMP.length - 1));
             char = LUMA_RAMP[Math.min(charIndex, LUMA_RAMP.length - 1)];
-            fgColor = rgbaToCss(packRGBA(Math.round(avgR), Math.round(avgG), Math.round(avgB), 255));
+            fgColor = packRGBA(Math.round(avgR), Math.round(avgG), Math.round(avgB), 255);
           } else {
             // Pattern mode: use brightness thresholding
             const brightness: number[] = [-1, -1, -1, -1, -1, -1];
@@ -1848,7 +1850,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
             if (pattern === 0) continue;
             char = PATTERN_TO_ASCII[pattern];
             if (fgCount > 0) {
-              fgColor = rgbaToCss(packRGBA(Math.round(fgR / fgCount), Math.round(fgG / fgCount), Math.round(fgB / fgCount), 255));
+              fgColor = packRGBA(Math.round(fgR / fgCount), Math.round(fgG / fgCount), Math.round(fgB / fgCount), 255);
             }
           }
 
@@ -1857,7 +1859,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
           buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
             char,
             foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
-            background: propsBg ?? (hasStyleBg ? style.background as string : undefined),
+            background: propsBg ?? (hasStyleBg ? style.background : undefined),
             bold: style.bold,
             dim: style.dim,
           });
@@ -1866,8 +1868,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
         // Use quantization for color selection (same as image path)
         this._quantizeBlockColorsInline(sextantColors, sextantPixels);
-        const fgColor = this._qFgColor !== 0 ? rgbaToCss(this._qFgColor) : undefined;
-        const bgColor = this._qBgColor !== 0 ? rgbaToCss(this._qBgColor) : undefined;
+        const fgColor = this._qFgColor !== 0 ? this._qFgColor : undefined;
+        const bgColor = this._qBgColor !== 0 ? this._qBgColor : undefined;
 
         // Convert pixels to sextant character
         const pattern = (sextantPixels[5] ? 0b000001 : 0) |
@@ -1918,7 +1920,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     const scale = this._scale;
     const halfScale = scale >> 1;
     const hasStyleBg = style.background !== undefined;
-    const propsBg = this.props.backgroundColor;
+    const propsBg = this.props.backgroundColor ? parseColor(this.props.backgroundColor) : undefined;
 
     for (let ty = 0; ty < terminalHeight; ty++) {
       const baseBufferY = ty * 3 * scale;
@@ -1955,14 +1957,14 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         }
 
         // Determine background color
-        let bgColor: string | undefined;
+        let bgColor: number | undefined;
         if (count > 0) {
           const avgR = Math.round(totalR / count);
           const avgG = Math.round(totalG / count);
           const avgB = Math.round(totalB / count);
-          bgColor = rgbaToCss(packRGBA(avgR, avgG, avgB, 255));
+          bgColor = packRGBA(avgR, avgG, avgB, 255);
         } else {
-          bgColor = propsBg ?? (hasStyleBg ? style.background as string : undefined);
+          bgColor = propsBg ?? (hasStyleBg ? style.background : undefined);
         }
 
         // Skip empty cells with no background
@@ -1998,7 +2000,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     const halfScale = scale >> 1;
     const hasStyleFg = style.foreground !== undefined;
     const hasStyleBg = style.background !== undefined;
-    const propsBg = this.props.backgroundColor;
+    const propsBg = this.props.backgroundColor ? parseColor(this.props.backgroundColor) : undefined;
 
     for (let ty = 0; ty < terminalHeight; ty++) {
       const baseBufferY = ty * 3 * scale;
@@ -2045,11 +2047,11 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
           if (char === ' ') continue;
 
-          const fgColor = rgbaToCss(packRGBA(Math.round(avgR), Math.round(avgG), Math.round(avgB), 255));
+          const fgColor = packRGBA(Math.round(avgR), Math.round(avgG), Math.round(avgB), 255);
           buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
             char,
             foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
-            background: propsBg ?? (hasStyleBg ? style.background as string : undefined),
+            background: propsBg ?? (hasStyleBg ? style.background : undefined),
             bold: style.bold,
             dim: style.dim,
           });
@@ -2118,20 +2120,20 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
           const char = PATTERN_TO_ASCII[pattern];
           if (char === ' ') continue;
 
-          let fgColor: string | undefined;
+          let fgColor: number | undefined;
           if (fgCount > 0) {
-            fgColor = rgbaToCss(packRGBA(
+            fgColor = packRGBA(
               Math.round(fgR / fgCount),
               Math.round(fgG / fgCount),
               Math.round(fgB / fgCount),
               255
-            ));
+            );
           }
 
           buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
             char,
             foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
-            background: propsBg ?? (hasStyleBg ? style.background as string : undefined),
+            background: propsBg ?? (hasStyleBg ? style.background : undefined),
             bold: style.bold,
             dim: style.dim,
           });

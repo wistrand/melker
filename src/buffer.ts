@@ -1,15 +1,15 @@
 // Dual-buffer system for efficient terminal rendering
 
-import { Bounds, BORDER_CHARS } from './types.ts';
+import { Bounds, BORDER_CHARS, type PackedRGBA } from './types.ts';
 import { getCharWidth, getStringWidth, analyzeString, type CharInfo } from './char-width.ts';
 import { getThemeManager, colorToGray, colorToLowContrast } from './theme.ts';
-import type { TerminalColor, BorderStyle } from './types.ts';
+import type { BorderStyle } from './types.ts';
 import { getLogger } from './logging.ts';
 
 export interface Cell {
   char: string;
-  foreground?: string;
-  background?: string;
+  foreground?: PackedRGBA;
+  background?: PackedRGBA;
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
@@ -139,10 +139,10 @@ export class TerminalBuffer {
     if (theme.type === 'gray') {
       const isDark = theme.mode === 'dark';
       if (cell.foreground) {
-        cell.foreground = colorToGray(cell.foreground as TerminalColor, isDark);
+        cell.foreground = colorToGray(cell.foreground, isDark);
       }
       if (cell.background) {
-        cell.background = colorToGray(cell.background as TerminalColor, isDark);
+        cell.background = colorToGray(cell.background, isDark);
       }
     }
 
@@ -279,10 +279,10 @@ export class TerminalBuffer {
       for (let x = 0; x < this._width; x++) {
         const cell = this._cells[y][x];
         if (cell.foreground) {
-          cell.foreground = colorToLowContrast(cell.foreground as TerminalColor, isDark);
+          cell.foreground = colorToLowContrast(cell.foreground, isDark);
         }
         if (cell.background) {
-          cell.background = colorToLowContrast(cell.background as TerminalColor, isDark);
+          cell.background = colorToLowContrast(cell.background, isDark);
         }
       }
     }
@@ -472,6 +472,9 @@ export class DualBuffer {
   // Dirty row tracking
   private _dirtyRows = new Set<number>();
 
+  // Force next render to bypass dirty tracking (for dialog opens, etc.)
+  private _forceNextRender = false;
+
   // Statistics tracking
   private _stats?: BufferStats;
   private _renderTimes: number[] = [];
@@ -574,6 +577,15 @@ export class DualBuffer {
     this._currentBuffer.clear();
   }
 
+  /**
+   * Mark the next render to bypass dirty tracking and do a full diff.
+   * Use this when opening dialogs or making changes that dirty tracking might miss.
+   * The flag is automatically cleared after the next swapAndGetDiff() call.
+   */
+  markForceNextRender(): void {
+    this._forceNextRender = true;
+  }
+
   // Update statistics without swapping buffers (useful for real-time stats)
   updateStatsOnly(): void {
     const startTime = performance.now();
@@ -584,7 +596,15 @@ export class DualBuffer {
   // Swap buffers and return differences for rendering
   swapAndGetDiff(): BufferDiff[] {
     const startTime = performance.now();
-    const differences = this._computeDirtyDiff();
+
+    // Check if force render was requested (e.g., dialog opened)
+    const useFullDiff = this._forceNextRender;
+    if (this._forceNextRender) {
+      this._forceNextRender = false; // Reset flag
+    }
+
+    // Use full diff if force render requested, otherwise use dirty row optimization
+    const differences = useFullDiff ? this._computeFullDiff() : this._computeDirtyDiff();
 
     // Update statistics
     this._updateStats(differences, startTime);
@@ -609,13 +629,36 @@ export class DualBuffer {
     return differences;
   }
 
-  // Compute diff using only dirty rows
+  // Compute diff using only dirty rows (optimized path)
   private _computeDirtyDiff(): BufferDiff[] {
     const differences: BufferDiff[] = [];
     const currentCells = this._currentBuffer.cells;
     const previousCells = this._previousBuffer.cells;
 
     for (const y of this._dirtyRows) {
+      const currentRow = currentCells[y];
+      const previousRow = previousCells[y];
+      if (!currentRow || !previousRow) continue;
+
+      for (let x = 0; x < this._width; x++) {
+        const current = currentRow[x];
+        const previous = previousRow[x];
+        if (!this._cellsEqualDirect(current, previous)) {
+          differences.push({ x, y, cell: { ...current } });
+        }
+      }
+    }
+
+    return differences;
+  }
+
+  // Compute diff for all rows (used when force render is requested)
+  private _computeFullDiff(): BufferDiff[] {
+    const differences: BufferDiff[] = [];
+    const currentCells = this._currentBuffer.cells;
+    const previousCells = this._previousBuffer.cells;
+
+    for (let y = 0; y < this._height; y++) {
       const currentRow = currentCells[y];
       const previousRow = previousCells[y];
       if (!currentRow || !previousRow) continue;

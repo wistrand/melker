@@ -4,6 +4,7 @@
 import type { DualBuffer } from './buffer.ts';
 import type { Element, Bounds } from './types.ts';
 import { getThemeColor } from './theme.ts';
+import { COLORS, parseColor } from './components/color-utils.ts';
 import { getLogger } from './logging.ts';
 
 const logger = getLogger('ErrorBoundary');
@@ -338,8 +339,8 @@ export class ErrorOverlay {
   }
 
   private _renderOverlay(buffer: DualBuffer, x: number, y: number, width: number, lines: string[]): void {
-    const bgColor = getThemeColor('error') || '#8b0000';
-    const textColor = '#ffffff';
+    const bgColor = getThemeColor('error') ?? parseColor('#8b0000')!;
+    const textColor = COLORS.white;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].padEnd(width).slice(0, width);
@@ -371,8 +372,8 @@ export function renderErrorPlaceholder(
   elementType: string,
   error: Error
 ): void {
-  const errorColor = getThemeColor('error') || '#ff0000';
-  const bgColor = getThemeColor('background') || '#000000';
+  const errorColor = getThemeColor('error') ?? COLORS.red;
+  const bgColor = getThemeColor('background') ?? COLORS.black;
 
   // Format: [!] type: message
   const shortMsg = error.message.slice(0, bounds.width - elementType.length - 6);

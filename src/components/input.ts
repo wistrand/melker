@@ -5,6 +5,7 @@ import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ChangeEvent, KeyPressEvent } from '../events.ts';
 import { createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
+import { COLORS, parseColor } from './color-utils.ts';
 
 export interface InputProps extends BaseProps {
   value?: string;
@@ -111,7 +112,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     if (!value && placeholder) {
       textStyle = {
         ...inputCellStyle,
-        foreground: 'gray',
+        foreground: COLORS.gray,
       };
     }
 
@@ -145,7 +146,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
           // Then render the new preview text
           buffer.currentBuffer.setText(previewStartX, bounds.y, truncatedPreview, {
             ...textStyle,
-            foreground: 'gray',
+            foreground: COLORS.gray,
             // Make it visibly different from regular text
             underline: true
           });
@@ -554,11 +555,11 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     const { placeholder } = this.props;
     const isPassword = this.props.format === 'password';
 
-    // Get styles
+    // Get styles - colors are already parsed to numbers at entry points
     const elementStyle = this.props.style || {};
-    const bg = elementStyle.background || getThemeColor('inputBackground');
+    const bg = parseColor(elementStyle.background) || getThemeColor('inputBackground');
     const fg = value
-      ? (elementStyle.color || getThemeColor('inputForeground'))
+      ? (parseColor(elementStyle.color) || getThemeColor('inputForeground'))
       : getThemeColor('textMuted');
 
     // Clear the input area
@@ -572,7 +573,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     const maskedValue = isPassword && value ? '*'.repeat(value.length) : value;
     const textToRender = maskedValue || placeholder || '';
     const textStyle = (!value && placeholder)
-      ? { foreground: 'gray', background: bg }
+      ? { foreground: COLORS.gray, background: bg }
       : { foreground: fg, background: bg };
 
     if (textToRender) {

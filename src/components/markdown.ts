@@ -14,6 +14,8 @@ import { getLogger } from '../logging.ts';
 import { parseMelkerFile } from '../template.ts';
 import { getStringWidth } from '../char-width.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { COLORS, parseColor } from './color-utils.ts';
+import type { ColorInput } from '../types.ts';
 
 // ============================================================================
 // Text Utilities - display width calculation and text wrapping
@@ -117,13 +119,13 @@ export interface MarkdownStyleConfig {
     [level: number]: { bold?: boolean; underline?: boolean; italic?: boolean; dim?: boolean };
   };
   // Code block style overrides
-  codeBlock?: { background?: string; foreground?: string };
+  codeBlock?: { background?: ColorInput; foreground?: ColorInput };
   // Inline code style overrides
-  inlineCode?: { background?: string; foreground?: string };
+  inlineCode?: { background?: ColorInput; foreground?: ColorInput };
   // Blockquote style overrides
-  blockquote?: { foreground?: string; italic?: boolean };
+  blockquote?: { foreground?: ColorInput; italic?: boolean };
   // Link style overrides
-  link?: { foreground?: string; underline?: boolean };
+  link?: { foreground?: ColorInput; underline?: boolean };
 }
 
 // Default style configuration
@@ -614,12 +616,12 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     debugOverlay: Map<number, { inputLine: number; renderedLine: number }>
   ): void {
     const lineNumStyle: Partial<Cell> = {
-      foreground: 'cyan',
-      background: 'black'
+      foreground: COLORS.cyan,
+      background: COLORS.black
     };
     const spacingStyle: Partial<Cell> = {
-      foreground: 'brightBlack',
-      background: 'black'
+      foreground: COLORS.brightBlack,
+      background: COLORS.black
     };
 
     // Overlay width: "999/999" = 7 chars, plus 8 chars offset to avoid scrollbar
@@ -2296,15 +2298,15 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         // color-dark: use black bg with cyan text for good contrast
         return {
           ...baseStyle,
-          background: 'black',
-          foreground: 'cyan'
+          background: COLORS.black,
+          foreground: COLORS.cyan
         };
       } else {
         // color-std: use brightBlack bg with white text for good contrast
         return {
           ...baseStyle,
-          background: 'brightBlack',
-          foreground: 'white'
+          background: COLORS.brightBlack,
+          foreground: COLORS.white
         };
       }
     }
@@ -2324,8 +2326,8 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     const customStyle = this.props.styles?.inlineCode || {};
     return {
       ...baseStyle,
-      background: customStyle.background || getThemeColor('surface'),
-      foreground: customStyle.foreground || getThemeColor('info')
+      background: parseColor(customStyle.background) ?? getThemeColor('surface'),
+      foreground: parseColor(customStyle.foreground) ?? getThemeColor('info')
     };
   }
 
@@ -2338,7 +2340,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     return {
       ...baseStyle,
       underline: customStyle.underline ?? defaultStyle.underline,
-      foreground: customStyle.foreground || getThemeColor('primary')
+      foreground: parseColor(customStyle.foreground) ?? getThemeColor('primary')
     };
   }
 
@@ -2351,7 +2353,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     return {
       ...baseStyle,
-      foreground: customStyle.foreground || getThemeColor('textMuted'),
+      foreground: parseColor(customStyle.foreground) ?? getThemeColor('textMuted'),
       italic: customStyle.italic ?? defaultStyle.italic
     };
   }

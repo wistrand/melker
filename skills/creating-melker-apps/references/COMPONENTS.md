@@ -596,6 +596,8 @@ Pixel graphics using Unicode sextant characters (2x3 pixels per cell).
 - `ditherBits` - Color depth (1-8)
 - `gfxMode`: `sextant` | `block` | `pattern` | `luma` - Per-element graphics mode
 - `onPaint` - Draw callback (`event.canvas`)
+- `onShader` - Per-pixel shader callback, runs every frame (see Shaders section)
+- `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)
 
 **Canvas API:**
 ```typescript
@@ -652,6 +654,7 @@ Image display (PNG, JPEG, GIF). Supports file paths, HTTP/HTTPS URLs, and data U
 - `gfxMode` - Graphics mode: `sextant` (default), `block`, `pattern`, `luma` (global `MELKER_GFX_MODE` overrides)
 - `onLoad`, `onError` - Load callbacks
 - `onShader`, `shaderFps`, `shaderRunTime` - Animation (see Shaders)
+- `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)
 
 **Methods:**
 - `setSrc(url)` - Load image immediately (async, last call wins if called rapidly)

@@ -520,8 +520,8 @@ ${script.code.split('\n').map(l => '  ' + l).join('\n')}
         }
 
         // Look up in $app first for exported functions, fall back to direct reference
-        // Special case: onShader/onPaint expect a function reference, not a call
-        const isCallbackRef = handler.attributeName === 'onShader' || handler.attributeName === 'onPaint';
+        // Special case: onShader/onFilter/onPaint expect a function reference, not a call
+        const isCallbackRef = handler.attributeName === 'onShader' || handler.attributeName === 'onFilter' || handler.attributeName === 'onPaint';
         if (code.includes('.')) {
           // Already qualified (e.g., $app.fn)
           if (isCallbackRef) {

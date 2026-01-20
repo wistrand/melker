@@ -88,9 +88,9 @@ async function wireBundlerHandlers(
           const capturedHandlerId = handlerId;
           const capturedHandlerFn = handlerFn;
 
-          // Special handling for onShader - it returns a function reference, not event handler code
-          // Call the registry function once to get the actual shader function
-          if (propName === 'onShader') {
+          // Special handling for onShader/onFilter - they return a function reference, not event handler code
+          // Call the registry function once to get the actual shader/filter function
+          if (propName === 'onShader' || propName === 'onFilter') {
             try {
               const shaderFn = capturedHandlerFn();
               if (typeof shaderFn === 'function') {
@@ -446,6 +446,8 @@ export async function runMelkerFile(
       dirname: sourceDirname,
       exports: {} as Record<string, any>,
       getElementById: (id: string) => engine?.document?.getElementById(id) ?? null,
+      querySelector: (selector: string) => engine?.document?.querySelector(selector) ?? null,
+      querySelectorAll: (selector: string) => engine?.document?.querySelectorAll(selector) ?? [],
       render: () => engine.render(),
       skipRender: () => { _skipNextRender = true; },
       _shouldSkipRender: () => {

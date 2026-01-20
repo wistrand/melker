@@ -2,6 +2,7 @@
 
 import { Element } from './types.ts';
 import { findElementById, traverseElements } from './element.ts';
+import { selectorStringMatches } from './stylesheet.ts';
 
 export interface DocumentOptions {
   autoGenerateIds?: boolean;
@@ -54,6 +55,21 @@ export class Document {
 
   getElementsByType(type: string): Element[] {
     return this.getAllElements().filter(el => el.type === type);
+  }
+
+  /**
+   * Query elements using CSS-like selectors.
+   * Supports: type (img), #id, .class, combinations (button.primary), comma-separated (img, canvas)
+   */
+  querySelectorAll(selector: string): Element[] {
+    return this.getAllElements().filter(el => selectorStringMatches(selector, el));
+  }
+
+  /**
+   * Query first element matching CSS-like selector.
+   */
+  querySelector(selector: string): Element | undefined {
+    return this.getAllElements().find(el => selectorStringMatches(selector, el));
   }
 
   // Focus management

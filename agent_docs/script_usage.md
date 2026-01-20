@@ -18,8 +18,8 @@ $melker: {
 
   // DOM-like methods
   getElementById(id: string): any;
-  querySelector(selector: string): any;
-  querySelectorAll(selector: string): any[];
+  querySelector(selector: string): any;       // CSS-like: type, #id, .class, combinations, comma OR
+  querySelectorAll(selector: string): any[];  // Returns all matches
 
   // Rendering
   render(): void;

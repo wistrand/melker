@@ -153,8 +153,8 @@ Use `onMount()` when you need to conditionally register initialization or regist
 | `<li>` | style | List item |
 | `<tabs>` | id, activeTab, onChange | Tabbed container |
 | `<tab>` | title, disabled | Tab panel (child of tabs) |
-| `<canvas>` | width, height, dither, ditherBits, onPaint, onShader, shaderFps, shaderRunTime | Pixel graphics (sextant chars) |
-| `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, shaderFps, shaderRunTime | Image display (extends canvas) |
+| `<canvas>` | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant chars) |
+| `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
 | `<markdown>` | src, text, onLink | Markdown text rendering with image support |
 | `<combobox>` | placeholder, filter, onSelect, maxVisible | Dropdown with text filter |
 | `<select>` | value, onSelect, maxVisible | Dropdown picker (no filter) |
@@ -272,6 +272,8 @@ CSS-like properties in `style` attribute:
 - `$melker.dirname` - Source directory path (e.g. `/path/to`)
 - `$melker.exports` / `$app` - User exports namespace (script exports are added here)
 - `$melker.getElementById(id)` - Get element by ID
+- `$melker.querySelector(selector)` - Get first element matching CSS selector (type, #id, .class, combinations, comma OR)
+- `$melker.querySelectorAll(selector)` - Get all elements matching CSS selector
 - `$melker.render()` - Trigger re-render (for intermediate updates in async handlers)
 - `$melker.exit()` - Exit application
 - `$melker.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)

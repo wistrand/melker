@@ -42,6 +42,7 @@ export interface CanvasProps extends BaseProps {
   gfxMode?: 'sextant' | 'block' | 'pattern' | 'luma';  // Per-element graphics mode (global config overrides)
   onPaint?: (event: { canvas: CanvasElement; bounds: Bounds }) => void;  // Called when canvas needs repainting
   onShader?: ShaderCallback;         // Shader-style per-pixel callback (TypeScript, not GLSL)
+  onFilter?: ShaderCallback;         // One-time filter callback, runs once when image loads (same signature as onShader)
   shaderFps?: number;                // Shader frame rate (default: 30)
   shaderRunTime?: number;            // Stop shader after this many ms, keep final frame as image
   onKeyPress?: (event: KeyPressEvent) => boolean | void;  // Called on keyboard events when focused
@@ -694,6 +695,34 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         scaledData[dstIdx + 2] = img.data[srcIdx + 2]; // B
         // Alpha: use from data if RGBA, otherwise assume fully opaque
         scaledData[dstIdx + 3] = bpp === 4 ? img.data[srcIdx + 3] : 255;
+      }
+    }
+
+    // Apply onFilter if set (one-time per-pixel filter, same signature as onShader)
+    if (this.props.onFilter) {
+      const engine = globalThis.melkerEngine;
+      if (engine?.hasPermission?.('shader')) {
+        const resolution: ShaderResolution = { width: scaledW, height: scaledH, pixelAspect: this.getPixelAspectRatio() };
+        const srcCopy = new Uint8Array(scaledData); // Copy for source.getPixel
+        const source: ShaderSource = {
+          hasImage: true, width: scaledW, height: scaledH,
+          mouse: { x: -1, y: -1 }, mouseUV: { u: -1, v: -1 },
+          getPixel: (px, py) => {
+            if (px < 0 || px >= scaledW || py < 0 || py >= scaledH) return null;
+            const i = (py * scaledW + px) * 4;
+            return [srcCopy[i], srcCopy[i + 1], srcCopy[i + 2], srcCopy[i + 3]];
+          },
+        };
+        for (let y = 0; y < scaledH; y++) {
+          for (let x = 0; x < scaledW; x++) {
+            const rgba = this.props.onFilter(x, y, 0, resolution, source, shaderUtils);
+            const idx = (y * scaledW + x) * 4;
+            scaledData[idx] = Math.max(0, Math.min(255, Math.floor(rgba[0])));
+            scaledData[idx + 1] = Math.max(0, Math.min(255, Math.floor(rgba[1])));
+            scaledData[idx + 2] = Math.max(0, Math.min(255, Math.floor(rgba[2])));
+            scaledData[idx + 3] = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
+          }
+        }
       }
     }
 
@@ -2470,6 +2499,7 @@ export const canvasSchema: ComponentSchema = {
     gfxMode: { type: 'string', enum: ['sextant', 'block', 'pattern', 'luma'], description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
     onPaint: { type: ['function', 'string'], description: 'Called when canvas needs repainting, receives event with {canvas, bounds}' },
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. source has getPixel(), mouse, mouseUV' },
+    onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
     shaderRunTime: { type: 'number', description: 'Stop shader after this many ms, final frame becomes static image' },
   },

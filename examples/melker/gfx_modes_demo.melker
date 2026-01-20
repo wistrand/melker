@@ -57,19 +57,19 @@
     <container class="row">
       <container class="card">
         <text class="label">sextant (default)</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="sextant" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="sextant" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">block</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="block" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="block" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">pattern</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="pattern" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="pattern" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">luma</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="luma" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="luma" onFilter="$app.rotate" />
       </container>
     </container>
 
@@ -78,33 +78,33 @@
     <container class="row">
       <container class="card">
         <text class="label">none</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="none" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="none" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">sierra-stable</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">floyd-steinberg</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="floyd-steinberg" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="floyd-steinberg" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">atkinson</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="atkinson" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="atkinson" onFilter="$app.rotate" />
       </container>
     </container>
     <container class="row">
       <container class="card">
         <text class="label">atkinson-stable</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="atkinson-stable" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="atkinson-stable" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">ordered</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="ordered" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="ordered" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">blue-noise</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="blue-noise" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="blue-noise" onFilter="$app.rotate" />
       </container>
     </container>
 
@@ -113,19 +113,19 @@
     <container class="row">
       <container class="card">
         <text class="label">1 bit (mono)</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="1" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="1" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">2 bits (4 levels)</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="2" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="2" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">3 bits (8 levels)</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="3" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="3" onFilter="$app.rotate" />
       </container>
       <container class="card">
         <text class="label">4 bits (16 levels)</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="4" onShader="$app.rotate" shaderFps="1" />
+        <img src="../../media/melker-128.png" width="20" height="10" dither="sierra-stable" ditherBits="4" onFilter="$app.rotate" />
       </container>
     </container>
 
@@ -145,10 +145,12 @@
       rad = angle * Math.PI / 180;
       cosrad = Math.cos(rad);
       sinrad = Math.sin(rad);
+      // Re-apply filter to all images
+      $melker.querySelectorAll('img').forEach((img) => img.refreshImage?.());
     }
 
     export function resetAngle() {
-      setAngle(0);
+      setAngle('0');
       $melker.getElementById('angle-slider').props.value = 0;
     }
 

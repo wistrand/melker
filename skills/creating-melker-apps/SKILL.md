@@ -130,6 +130,8 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | API | Description |
 |-----|-------------|
 | `$melker.getElementById(id)` | Get element by ID |
+| `$melker.querySelector(selector)` | Get first element matching CSS selector (type, #id, .class, combinations) |
+| `$melker.querySelectorAll(selector)` | Get all elements matching CSS selector |
 | `$melker.render()` | Trigger re-render (for intermediate states) |
 | `$melker.skipRender()` | Skip auto-render after handler completes |
 | `$melker.exit()` | Exit application |
@@ -157,8 +159,8 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `<radio>` | title, value, name, onChange | Radio button |
 | `<tabs>` / `<tab>` | activeTab, onChange / title | Tabbed panels |
 | `<list>` / `<li>` | style | Lists |
-| `<canvas>` | width, height, onPaint | Pixel graphics |
-| `<img>` | src, width, height, objectFit, dither | Images |
+| `<canvas>` | width, height, onPaint, onShader, onFilter | Pixel graphics |
+| `<img>` | src, width, height, objectFit, dither, onFilter | Images |
 | `<video>` | src, width, height, autoplay, loop, audio | Video (requires ffmpeg) |
 | `<combobox>` | placeholder, filter, onSelect | Filterable dropdown |
 | `<select>` | value, onSelect | Dropdown picker |

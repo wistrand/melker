@@ -241,6 +241,7 @@ export const imgSchema: ComponentSchema = {
     onLoad: { type: ['function', 'string'], description: 'Called when image loads successfully' },
     onError: { type: ['function', 'string'], description: 'Called when image fails to load' },
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source, utils) => [r,g,b]. utils: noise2d, fbm, palette, smoothstep, mix, fract' },
+    onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
   },
   styleWarnings: {

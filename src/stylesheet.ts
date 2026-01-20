@@ -111,6 +111,18 @@ export function selectorMatches(selector: StyleSelector, element: Element): bool
 }
 
 /**
+ * Check if a selector string matches an element.
+ * Supports comma-separated selectors (OR): "img, canvas, .media"
+ */
+export function selectorStringMatches(selectorString: string, element: Element): boolean {
+  // Handle comma-separated selectors (OR)
+  if (selectorString.includes(',')) {
+    return selectorString.split(',').some(s => selectorStringMatches(s.trim(), element));
+  }
+  return selectorMatches(parseSelector(selectorString), element);
+}
+
+/**
  * Parse a CSS-like style value string into a Style object
  * Converts "width: 40; height: 10; border: thin;" to { width: 40, height: 10, border: 'thin' }
  */

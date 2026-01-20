@@ -1183,6 +1183,19 @@ export class RenderingEngine {
     // Draw individual border sides
     if (borderTop && borderTop !== 'none') {
       this._drawHorizontalLine(bounds.x, bounds.y, bounds.width, borderTop, topStyle, buffer, chars);
+
+      // Draw border title centered in top border
+      if (style.borderTitle) {
+        const title = ` ${style.borderTitle} `;
+        const titleLen = title.length;
+        const availableWidth = bounds.width - 2; // Exclude corners
+        if (titleLen <= availableWidth) {
+          const startX = bounds.x + 1 + Math.floor((availableWidth - titleLen) / 2);
+          for (let i = 0; i < titleLen; i++) {
+            buffer.currentBuffer.setCell(startX + i, bounds.y, { char: title[i], ...topStyle });
+          }
+        }
+      }
     }
     if (borderBottom && borderBottom !== 'none') {
       this._drawHorizontalLine(bounds.x, bounds.y + bounds.height - 1, bounds.width, borderBottom, bottomStyle, buffer, chars);

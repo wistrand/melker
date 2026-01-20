@@ -919,15 +919,16 @@ The `<img>` component displays images in the terminal using sextant characters (
 
 | Method | Description |
 |--------|-------------|
-| `setSource(url)` | Change image source (clears existing image and triggers reload) |
+| `setSrc(url)` | Load image immediately (async, last call wins if called rapidly) |
+| `setSource(url)` | Set props.src and clear existing image (loads during next render) |
 | `clearImage()` | Clear the loaded image |
-| `loadImage(url)` | Load image directly (async, no auto re-render) |
+| `loadImage(url)` | Low-level async load (same as setSrc) |
 | `refreshImage()` | Re-render the loaded image (e.g., after resize) |
 
 ```typescript
-// Dynamic image switching
+// Preferred: setSrc loads immediately
 const img = $melker.getElementById('my-image');
-img.setSource('https://example.com/image.png');  // or file path or data URL
+await img.setSrc('https://example.com/image.png');  // or file path or data URL
 ```
 
 ### Shaders

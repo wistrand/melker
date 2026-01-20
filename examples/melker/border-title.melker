@@ -1,0 +1,36 @@
+<melker>
+  <title>Border Title Demo</title>
+
+  <container style="width: 100%; height: 100%; padding: 1; display: flex; flex-direction: column; gap: 1;">
+    <text style="font-weight: bold;">Border Title Demo</text>
+
+    <container style="flex-direction: row; gap: 1; flex: 1;">
+      <container style="border: thin; border-title: Settings; flex: 1; padding: 1;">
+        <text>Thin border with title</text>
+      </container>
+
+      <container style="border: rounded; border-title: Options; flex: 1; padding: 1;">
+        <text>Rounded border with title</text>
+      </container>
+
+      <container style="border: double; border-title: Config; flex: 1; padding: 1;">
+        <text>Double border with title</text>
+      </container>
+    </container>
+
+    <container style="flex-direction: row; gap: 1; flex: 1;">
+      <container style="border: dashed; borderTitle: Input; flex: 1; padding: 1;">
+        <input placeholder="Type here..." />
+      </container>
+
+      <container style="border: thick; borderTitle: Actions; flex: 1; padding: 1; gap: 1;">
+        <button label="Button 1" />
+        <button label="Button 2" />
+      </container>
+    </container>
+
+    <container style="border: ascii; borderTitle: ASCII Style; padding: 1;">
+      <text>ASCII border characters work too</text>
+    </container>
+  </container>
+</melker>

@@ -393,16 +393,18 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    * @param src Path to image file (PNG, JPEG, GIF), or data URL (data:image/png;base64,...)
    */
   async loadImage(src: string): Promise<void> {
-    if (this._imageLoading) {
-      return; // Already loading
-    }
-
-    this._imageLoading = true;
+    // Track the requested src - last one wins
     this._imageSrc = src;
+    this._imageLoading = true;
 
     try {
       // Load image bytes from source (file path or data URL)
       const imageBytes = await loadImageFromSource(src);
+
+      // Check if src changed while loading - if so, skip (stale result)
+      if (this._imageSrc !== src) {
+        return;
+      }
 
       // Decode and store the image
       this._loadedImage = decodeImageBytes(imageBytes);
@@ -411,11 +413,26 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       this._renderImageToBuffer();
 
     } catch (error) {
-      logger.error(`Failed to load image '${src}': ${error}`);
-      throw new Error(`Failed to load image '${src}': ${error instanceof Error ? error.message : String(error)}`);
+      // Only log/throw if this is still the current src
+      if (this._imageSrc === src) {
+        logger.error(`Failed to load image '${src}': ${error}`);
+        throw new Error(`Failed to load image '${src}': ${error instanceof Error ? error.message : String(error)}`);
+      }
     } finally {
-      this._imageLoading = false;
+      // Only clear loading flag if this is still the current src
+      if (this._imageSrc === src) {
+        this._imageLoading = false;
+      }
     }
+  }
+
+  /**
+   * Set the image source and load it
+   * Convenience method that combines setting src and loading
+   * @param src Path to image file (PNG, JPEG, GIF), or data URL (data:image/png;base64,...)
+   */
+  async setSrc(src: string): Promise<void> {
+    await this.loadImage(src);
   }
 
   /**

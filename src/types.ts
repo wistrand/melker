@@ -88,6 +88,7 @@ export interface Style extends Record<string, any> {
   borderBottomColor?: ColorInput;
   borderLeftColor?: ColorInput;
   borderRightColor?: ColorInput;
+  borderTitle?: string;
   padding?: number | BoxSpacing;
   margin?: number | BoxSpacing;
   marginBottom?: number;

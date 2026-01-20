@@ -1,0 +1,77 @@
+<melker>
+  <title>QR Code Generator</title>
+
+  <policy>
+  {
+    "name": "QR Code Generator",
+    "description": "Generate QR codes from text input",
+    "permissions": {
+      "net": ["registry.npmjs.org", "cdn.jsdelivr.net"]
+    }
+  }
+  </policy>
+
+  <script type="typescript">
+    import encodeQR from 'npm:qr';
+
+    let currentText = 'Hello Melker!';
+
+    export async function updateQR(text: string) {
+      if (!text) {
+        text = ' '; // QR needs at least something
+      }
+      currentText = text;
+
+      try {
+        const gifBytes = encodeQR(text, 'gif');
+        const base64 = btoa(String.fromCharCode(...gifBytes));
+        const dataUrl = `data:image/gif;base64,${base64}`;
+
+        const img = $melker.getElementById('qr-img');
+        await img?.setSrc(dataUrl);
+      } catch (err) {
+        $melker.logger?.error('QR generation failed', err);
+      }
+    }
+
+    export async function init() {
+      // Set initial input value
+      const input = $melker.getElementById('text-input');
+      if (input) {
+        input.setValue(currentText);
+      }
+      // Generate initial QR code
+      await updateQR(currentText);
+      $melker.render();
+    }
+  </script>
+
+  <script type="typescript" async="ready">
+    await $app.init();
+  </script>
+
+  <container style="width: 100%; height: 100%; padding: 2; display: flex; flex-direction: column; gap: 1; border: thin">
+    <text style="font-weight: bold;">QR Code Generator</text>
+
+    <container style="flex-direction: row; gap: 1; align-items: center; borderTitle: Text; border-top: thin">
+      <input
+        id="text-input"
+        placeholder="Enter text to encode..."
+        style="flex: 1;"
+        onChange="$app.updateQR(event.value)"
+      />
+    </container>
+
+    <container style="flex: 1; display: flex; justify-content: center; align-items: center;">
+      <img
+        id="qr-img"
+        width="fill"
+        height="fill"
+        objectFit="contain"
+        dither="none"
+      />
+    </container>
+
+    <text>Type in the input field to generate a QR code</text>
+  </container>
+</melker>

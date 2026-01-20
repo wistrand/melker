@@ -654,15 +654,16 @@ Image display (PNG, JPEG, GIF). Supports file paths, HTTP/HTTPS URLs, and data U
 - `onShader`, `shaderFps`, `shaderRunTime` - Animation (see Shaders)
 
 **Methods:**
-- `setSource(url)` - Change image source (clears existing image and triggers reload)
+- `setSrc(url)` - Load image immediately (async, last call wins if called rapidly)
+- `setSource(url)` - Set props.src and clear existing image (loads during next render)
 - `clearImage()` - Clear the loaded image
-- `loadImage(url)` - Load image directly (async, no auto re-render)
+- `loadImage(url)` - Low-level async load (same as setSrc)
 
 **Dynamic image switching:**
 ```typescript
-// Use setSource() to change images dynamically
+// Preferred: setSrc loads immediately
 const img = $melker.getElementById('my-image');
-img.setSource('https://example.com/image.png');  // or file path or data URL
+await img.setSrc('https://example.com/image.png');  // or file path or data URL
 ```
 
 ### Shaders (canvas/img)
@@ -854,6 +855,15 @@ LCD/LED-style digit and text display using Unicode characters.
 - `ascii` - ASCII characters
 - `ascii-rounded` - ASCII with rounded corners
 - `block` - Colored spaces (for terminals without Unicode support)
+
+### Border Title
+Use `borderTitle` to display a centered title in the top border:
+```xml
+<container style="border: thin; borderTitle: Settings;">
+  <!-- content -->
+</container>
+```
+Renders as: `┌─ Settings ─┐`
 
 ### Colors
 **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes.

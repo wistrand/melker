@@ -655,7 +655,7 @@ export class VideoElement extends CanvasElement {
   /**
    * Set video source and optionally start playback
    */
-  async setSrc(src: string, autoplay = true): Promise<void> {
+  override async setSrc(src: string, autoplay = true): Promise<void> {
     this.props.src = src;
     if (autoplay) {
       await this.play();

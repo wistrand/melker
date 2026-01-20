@@ -10,6 +10,7 @@
     "npm:mdast-util-gfm@3": "3.1.0",
     "npm:micromark-extension-gfm@3": "3.0.0",
     "npm:omggif@*": "1.0.10",
+    "npm:qr@*": "0.5.4",
     "npm:vscode-languageserver-textdocument@*": "1.0.12",
     "npm:vscode-languageserver@9.0.1": "9.0.1"
   },
@@ -462,6 +463,9 @@
     },
     "omggif@1.0.10": {
       "integrity": "sha512-LMJTtvgc/nugXj0Vcrrs68Mn2D1r0zf630VNtqtpI1FEO7e+O9FP4gqs9AcnBaSEeoHIPm28u6qgPR0oyEpGSw=="
+    },
+    "qr@0.5.4": {
+      "integrity": "sha512-gjVMHOt7CX+BQd7JLQ9fnS4kJK4Lj4u+Conq52tcCbW7YH3mATTtBbTMA+7cQ1rKOkDo61olFHJReawe+XFxIA=="
     },
     "tslib@2.8.1": {
       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="

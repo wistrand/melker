@@ -213,7 +213,7 @@ System commands are **automatically injected** into all command palettes. A "Sys
 CSS-like properties in `style` attribute:
 
 - **Layout:** width, height, display (flex/block), flex-direction, flex, padding, margin, overflow
-- **Borders:** border (none/thin/thick/double/rounded/dashed/dashed-rounded/ascii/ascii-rounded/block), border-top/right/bottom/left, border-color
+- **Borders:** border (none/thin/thick/double/rounded/dashed/dashed-rounded/ascii/ascii-rounded/block), border-top/right/bottom/left, border-color, border-title
 - **Colors:** color, background-color (names or hex like `#00d9ff`)
 - **Text:** font-weight (bold/normal), text-align, text-wrap
 

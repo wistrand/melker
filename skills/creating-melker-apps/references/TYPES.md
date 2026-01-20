@@ -91,6 +91,11 @@ interface Element {
   // Dialog-specific
   show?(): void;
   hide?(): void;
+
+  // Image/Canvas-specific (img, canvas, video)
+  setSrc?(url: string): Promise<void>;
+  loadImage?(url: string): Promise<void>;
+  clearImage?(): void;
 }
 ```
 
@@ -109,6 +114,14 @@ interface Element {
 | `command-palette` | string \| undefined | string (also updates input display) |
 | `text` | string | string |
 | `segment-display` | string | string |
+
+**Image methods (img, canvas, video):**
+
+| Method | Description |
+|--------|-------------|
+| `setSrc(url)` | Load image immediately (async, last call wins) |
+| `loadImage(url)` | Same as setSrc (low-level) |
+| `clearImage()` | Clear the loaded image |
 
 ## Event Objects
 

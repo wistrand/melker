@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Writing Your First Melker App - Tutorial</title>
+  <meta name="description" content="Step-by-step tutorial for building a QR Code Generator app with Melker, introducing core concepts progressively.">
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://melker.sh/tutorial.html">
+  <meta property="og:title" content="Writing Your First Melker App - Tutorial">
+  <meta property="og:description" content="Step-by-step tutorial for building a QR Code Generator app with Melker.">
+  <meta property="og:image" content="https://melker.sh/qr-demo.png">
+
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-secondary: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent: #58a6ff;
+      --accent-secondary: #388bfd;
+      --code-bg: #1c2128;
+      --success: #3fb950;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      padding: 32px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    header .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .hero-image {
+      max-width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+
+    .learn-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 8px;
+      list-style: none;
+      margin-top: 16px;
+    }
+
+    .learn-list li {
+      color: var(--text-secondary);
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .learn-list li::before {
+      content: ">";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+
+    /* Navigation */
+    nav {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+
+    nav a {
+      margin-right: 16px;
+      font-size: 0.9rem;
+    }
+
+    /* Steps */
+    .step {
+      padding: 48px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step:last-of-type {
+      border-bottom: none;
+    }
+
+    .step h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .step h2 .step-num {
+      color: var(--accent);
+      margin-right: 8px;
+    }
+
+    .step p {
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .step ul {
+      margin: 16px 0;
+      padding-left: 24px;
+    }
+
+    .step li {
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .step li code {
+      color: var(--text);
+    }
+
+    /* Code */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin: 16px 0;
+    }
+
+    code {
+      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.9em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .code-block {
+      margin: 16px 0;
+    }
+
+    .code-block-title {
+      background: var(--border);
+      padding: 8px 16px;
+      border-radius: 6px 6px 0 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-bottom: none;
+    }
+
+    .code-block pre {
+      border-radius: 0 0 6px 6px;
+      margin: 0;
+    }
+
+    /* Concepts box */
+    .concepts {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      margin-top: 24px;
+    }
+
+    .concepts h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+
+    .concepts ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .concepts li {
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+    }
+
+    .concepts li code {
+      color: var(--text);
+    }
+
+    /* Summary table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      font-weight: 600;
+      background: var(--bg-secondary);
+    }
+
+    td code {
+      font-size: 0.85rem;
+    }
+
+    /* Footer */
+    footer {
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a {
+      color: var(--text-secondary);
+    }
+
+    footer a:hover {
+      color: var(--text);
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      header h1 {
+        font-size: 1.75rem;
+      }
+
+      .step {
+        padding: 32px 0;
+      }
+
+      .step h2 {
+        font-size: 1.25rem;
+      }
+
+      pre {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Writing Your First Melker App</h1>
+      <p class="subtitle">Build a QR Code Generator while learning core concepts step by step.</p>
+
+      <img src="qr-demo.png" alt="QR Code Generator Demo" class="hero-image">
+
+      <p style="color: var(--text-secondary);">What you'll learn:</p>
+      <ul class="learn-list">
+        <li>Basic file structure</li>
+        <li>Layout with flexbox</li>
+        <li>Text and styling</li>
+        <li>Input handling and events</li>
+        <li>Scripts and the $melker API</li>
+        <li>Dynamic image display</li>
+        <li>Policies and permissions</li>
+      </ul>
+    </div>
+  </header>
+
+  <nav>
+    <div class="container">
+      <a href="index.html">Home</a>
+      <a href="#step1">1. Structure</a>
+      <a href="#step2">2. Layout</a>
+      <a href="#step3">3. Input</a>
+      <a href="#step4">4. Events</a>
+      <a href="#step5">5. Scripts</a>
+      <a href="#step6">6. Elements</a>
+      <a href="#step7">7. Init</a>
+      <a href="#step8">8. Images</a>
+      <a href="#step9">9. npm</a>
+      <a href="#step10">10. Policy</a>
+      <a href="#complete">Complete</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="container">
+
+      <section class="step" id="step1">
+        <h2><span class="step-num">Step 1:</span> Basic Structure</h2>
+        <p>Every Melker app starts with a <code>&lt;melker&gt;</code> root element:</p>
+
+        <div class="code-block">
+          <div class="code-block-title">qr-code.melker</div>
+          <pre>&lt;melker&gt;
+  &lt;title&gt;QR Code Generator&lt;/title&gt;
+
+  &lt;container&gt;
+    &lt;text&gt;Hello, Melker!&lt;/text&gt;
+  &lt;/container&gt;
+&lt;/melker&gt;</pre>
+        </div>
+
+        <p>Save this as <code>qr-code.melker</code> and run it:</p>
+        <pre>./melker.ts qr-code.melker</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>&lt;melker&gt;</code> - Root element (required)</li>
+            <li><code>&lt;title&gt;</code> - Sets the terminal window title</li>
+            <li><code>&lt;container&gt;</code> - Layout container (like a <code>&lt;div&gt;</code>)</li>
+            <li><code>&lt;text&gt;</code> - Display text content</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step2">
+        <h2><span class="step-num">Step 2:</span> Layout with Flexbox</h2>
+        <p>Melker uses flexbox for layout. Let's create a structured UI:</p>
+
+        <pre>&lt;melker&gt;
+  &lt;title&gt;QR Code Generator&lt;/title&gt;
+
+  &lt;container style="width: 100%; height: 100%; padding: 2; display: flex; flex-direction: column; gap: 1; border: thin"&gt;
+    &lt;text style="font-weight: bold;"&gt;QR Code Generator&lt;/text&gt;
+
+    &lt;container style="flex-direction: row; gap: 1; align-items: center;"&gt;
+      &lt;text&gt;Text:&lt;/text&gt;
+      &lt;text&gt;[ input will go here ]&lt;/text&gt;
+    &lt;/container&gt;
+
+    &lt;container style="flex: 1; display: flex; justify-content: center; align-items: center;"&gt;
+      &lt;text&gt;[ QR code will go here ]&lt;/text&gt;
+    &lt;/container&gt;
+
+    &lt;text&gt;Type in the input field to generate a QR code&lt;/text&gt;
+  &lt;/container&gt;
+&lt;/melker&gt;</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>style</code> attribute with CSS-like properties</li>
+            <li><code>width: 100%; height: 100%</code> - Fill available space</li>
+            <li><code>flex-direction: column</code> - Stack children vertically</li>
+            <li><code>flex-direction: row</code> - Arrange children horizontally</li>
+            <li><code>flex: 1</code> - Expand to fill remaining space</li>
+            <li><code>gap: 1</code> - Space between children (terminal rows/columns)</li>
+            <li><code>border: thin</code> - Add a border</li>
+            <li><code>padding: 2</code> - Inner spacing</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step3">
+        <h2><span class="step-num">Step 3:</span> Adding an Input Field</h2>
+        <p>Replace the placeholder with an actual input:</p>
+
+        <pre>&lt;container style="flex-direction: row; gap: 1; align-items: center;"&gt;
+  &lt;text&gt;Text:&lt;/text&gt;
+  &lt;input
+    id="text-input"
+    placeholder="Enter text to encode..."
+    style="flex: 1;"
+  /&gt;
+&lt;/container&gt;</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>&lt;input&gt;</code> - Single-line text input</li>
+            <li><code>id</code> - Unique identifier for accessing from scripts</li>
+            <li><code>placeholder</code> - Hint text shown when empty</li>
+            <li><code>style="flex: 1"</code> - Input expands to fill available width</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step4">
+        <h2><span class="step-num">Step 4:</span> Handling Events</h2>
+        <p>Add an event handler to respond to input changes:</p>
+
+        <pre>&lt;input
+  id="text-input"
+  placeholder="Enter text to encode..."
+  style="flex: 1;"
+  onChange="$melker.alert('You typed: ' + event.value)"
+/&gt;</pre>
+
+        <p>Type something and press Enter - you'll see an alert dialog!</p>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>onChange</code> - Event handler (fires when input value changes)</li>
+            <li><code>event.value</code> - The current input value</li>
+            <li><code>$melker.alert()</code> - Show a modal alert dialog</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step5">
+        <h2><span class="step-num">Step 5:</span> Adding a Script</h2>
+        <p>For more complex logic, use a <code>&lt;script&gt;</code> block. Scripts use TypeScript:</p>
+
+        <pre>&lt;melker&gt;
+  &lt;title&gt;QR Code Generator&lt;/title&gt;
+
+  &lt;script type="typescript"&gt;
+    let currentText = 'Hello Melker!';
+
+    export function updateText(text: string) {
+      currentText = text;
+      $melker.alert('Current text: ' + currentText);
+    }
+  &lt;/script&gt;
+
+  &lt;container style="width: 100%; height: 100%; padding: 2; ..."&gt;
+    &lt;!-- ... --&gt;
+    &lt;input
+      id="text-input"
+      placeholder="Enter text to encode..."
+      style="flex: 1;"
+      onChange="$app.updateText(event.value)"
+    /&gt;
+    &lt;!-- ... --&gt;
+  &lt;/container&gt;
+&lt;/melker&gt;</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>&lt;script type="typescript"&gt;</code> - TypeScript code block</li>
+            <li><code>export function</code> - Functions must be exported to be callable</li>
+            <li><code>$app.functionName()</code> - Call exported functions from handlers</li>
+            <li>Script variables persist across function calls</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step6">
+        <h2><span class="step-num">Step 6:</span> Accessing Elements from Scripts</h2>
+        <p>Use <code>$melker.getElementById()</code> to access and manipulate elements:</p>
+
+        <pre>&lt;script type="typescript"&gt;
+  let currentText = 'Hello Melker!';
+
+  export function updateText(text: string) {
+    if (!text) text = ' ';
+    currentText = text;
+
+    // Update a text element to show the current value
+    const display = $melker.getElementById('display');
+    if (display) {
+      display.setValue('Current: ' + currentText);
+    }
+  }
+&lt;/script&gt;
+
+&lt;!-- In your UI --&gt;
+&lt;text id="display"&gt;Current: Hello Melker!&lt;/text&gt;</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>$melker.getElementById(id)</code> - Get an element by its ID</li>
+            <li><code>element.setValue(value)</code> - Set the element's display value</li>
+            <li>Null checking with <code>if (element)</code> - Element may not exist</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step7">
+        <h2><span class="step-num">Step 7:</span> Async Initialization</h2>
+        <p>For setup that needs to run after the UI is ready, use an async script:</p>
+
+        <pre>&lt;script type="typescript"&gt;
+  let currentText = 'Hello Melker!';
+
+  export async function init() {
+    // Set initial input value
+    const input = $melker.getElementById('text-input');
+    if (input) {
+      input.setValue(currentText);
+    }
+    $melker.render();
+  }
+
+  export function updateText(text: string) {
+    currentText = text;
+  }
+&lt;/script&gt;
+
+&lt;script type="typescript" async="ready"&gt;
+  await $app.init();
+&lt;/script&gt;</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>async="ready"</code> - Script runs after first render (UI is ready)</li>
+            <li><code>$melker.render()</code> - Manually trigger a re-render</li>
+            <li>Separating initialization from function definitions</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step8">
+        <h2><span class="step-num">Step 8:</span> Displaying Images</h2>
+        <p>Add an <code>&lt;img&gt;</code> element and load images dynamically:</p>
+
+        <pre>&lt;container style="flex: 1; display: flex; justify-content: center; align-items: center;"&gt;
+  &lt;img
+    id="qr-img"
+    width="fill"
+    height="fill"
+    objectFit="contain"
+    dither="none"
+  /&gt;
+&lt;/container&gt;</pre>
+
+        <p>Load images from scripts using <code>setSrc()</code>:</p>
+
+        <pre>export async function updateQR(text: string) {
+  const img = $melker.getElementById('qr-img');
+  await img?.setSrc('path/to/image.png');
+  // Or use a data URL:
+  // await img?.setSrc('data:image/gif;base64,...');
+}</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>&lt;img&gt;</code> - Image display component</li>
+            <li><code>width="fill"</code>, <code>height="fill"</code> - Fill available space</li>
+            <li><code>objectFit="contain"</code> - Maintain aspect ratio</li>
+            <li><code>element.setSrc(url)</code> - Load an image (async, last call wins)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step9">
+        <h2><span class="step-num">Step 9:</span> Using npm Packages</h2>
+        <p>Melker runs on Deno and can import npm packages directly:</p>
+
+        <pre>import encodeQR from 'npm:qr';
+
+export async function updateQR(text: string) {
+  const gifBytes = encodeQR(text, 'gif');
+  const base64 = btoa(String.fromCharCode(...gifBytes));
+  const dataUrl = `data:image/gif;base64,${base64}`;
+
+  const img = $melker.getElementById('qr-img');
+  await img?.setSrc(dataUrl);
+}</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>import ... from 'npm:package'</code> - Import npm packages</li>
+            <li>Generating data URLs for dynamic images</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="step10">
+        <h2><span class="step-num">Step 10:</span> Adding Permissions with Policy</h2>
+        <p>When your app needs network access (like downloading npm packages), declare permissions:</p>
+
+        <pre>&lt;melker&gt;
+  &lt;title&gt;QR Code Generator&lt;/title&gt;
+
+  &lt;policy&gt;
+  {
+    "name": "QR Code Generator",
+    "description": "Generate QR codes from text input",
+    "permissions": {
+      "net": ["registry.npmjs.org", "cdn.jsdelivr.net"]
+    }
+  }
+  &lt;/policy&gt;
+
+  &lt;!-- rest of app --&gt;
+&lt;/melker&gt;</pre>
+
+        <div class="concepts">
+          <h4>Concepts introduced</h4>
+          <ul>
+            <li><code>&lt;policy&gt;</code> - JSON permission declaration</li>
+            <li><code>permissions.net</code> - Network access to specific hosts</li>
+            <li>Users approve permissions on first run</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="step" id="complete">
+        <h2>Complete App</h2>
+        <p>Here's the final QR Code Generator:</p>
+
+        <pre>&lt;melker&gt;
+  &lt;title&gt;QR Code Generator&lt;/title&gt;
+
+  &lt;policy&gt;
+  {
+    "name": "QR Code Generator",
+    "description": "Generate QR codes from text input",
+    "permissions": {
+      "net": ["registry.npmjs.org", "cdn.jsdelivr.net"]
+    }
+  }
+  &lt;/policy&gt;
+
+  &lt;script type="typescript"&gt;
+    import encodeQR from 'npm:qr';
+
+    let currentText = 'Hello Melker!';
+
+    export async function updateQR(text: string) {
+      if (!text) {
+        text = ' '; // QR needs at least something
+      }
+      currentText = text;
+
+      try {
+        const gifBytes = encodeQR(text, 'gif');
+        const base64 = btoa(String.fromCharCode(...gifBytes));
+        const dataUrl = `data:image/gif;base64,${base64}`;
+
+        const img = $melker.getElementById('qr-img');
+        await img?.setSrc(dataUrl);
+      } catch (err) {
+        $melker.logger?.error('QR generation failed', err);
+      }
+    }
+
+    export async function init() {
+      const input = $melker.getElementById('text-input');
+      if (input) {
+        input.setValue(currentText);
+      }
+      await updateQR(currentText);
+      $melker.render();
+    }
+  &lt;/script&gt;
+
+  &lt;script type="typescript" async="ready"&gt;
+    await $app.init();
+  &lt;/script&gt;
+
+  &lt;container style="width: 100%; height: 100%; padding: 2; display: flex; flex-direction: column; gap: 1; border: thin"&gt;
+    &lt;text style="font-weight: bold;"&gt;QR Code Generator&lt;/text&gt;
+
+    &lt;container style="flex-direction: row; gap: 1; align-items: center;"&gt;
+      &lt;text&gt;Text:&lt;/text&gt;
+      &lt;input
+        id="text-input"
+        placeholder="Enter text to encode..."
+        style="flex: 1;"
+        onChange="$app.updateQR(event.value)"
+      /&gt;
+    &lt;/container&gt;
+
+    &lt;container style="flex: 1; display: flex; justify-content: center; align-items: center;"&gt;
+      &lt;img
+        id="qr-img"
+        width="fill"
+        height="fill"
+        objectFit="contain"
+        dither="none"
+      /&gt;
+    &lt;/container&gt;
+
+    &lt;text&gt;Type in the input field to generate a QR code&lt;/text&gt;
+  &lt;/container&gt;
+&lt;/melker&gt;</pre>
+      </section>
+
+      <section class="step">
+        <h2>Key Takeaways</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Concept</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Root element</td>
+              <td><code>&lt;melker&gt;...&lt;/melker&gt;</code></td>
+            </tr>
+            <tr>
+              <td>Window title</td>
+              <td><code>&lt;title&gt;My App&lt;/title&gt;</code></td>
+            </tr>
+            <tr>
+              <td>Layout</td>
+              <td><code>&lt;container style="flex-direction: column"&gt;</code></td>
+            </tr>
+            <tr>
+              <td>Styling</td>
+              <td><code>style="border: thin; padding: 1; gap: 1"</code></td>
+            </tr>
+            <tr>
+              <td>Text input</td>
+              <td><code>&lt;input id="myInput" onChange="..." /&gt;</code></td>
+            </tr>
+            <tr>
+              <td>Event handlers</td>
+              <td><code>onChange="$app.myFunction(event.value)"</code></td>
+            </tr>
+            <tr>
+              <td>Scripts</td>
+              <td><code>&lt;script type="typescript"&gt;export function ...</code></td>
+            </tr>
+            <tr>
+              <td>Async init</td>
+              <td><code>&lt;script async="ready"&gt;await $app.init()&lt;/script&gt;</code></td>
+            </tr>
+            <tr>
+              <td>Get elements</td>
+              <td><code>$melker.getElementById('id')</code></td>
+            </tr>
+            <tr>
+              <td>Set values</td>
+              <td><code>element.setValue('text')</code></td>
+            </tr>
+            <tr>
+              <td>Load images</td>
+              <td><code>await img.setSrc('url')</code></td>
+            </tr>
+            <tr>
+              <td>Manual render</td>
+              <td><code>$melker.render()</code></td>
+            </tr>
+            <tr>
+              <td>Logging</td>
+              <td><code>$melker.logger?.error('message', err)</code></td>
+            </tr>
+            <tr>
+              <td>Permissions</td>
+              <td><code>&lt;policy&gt;{"permissions": {"net": [...]}}&lt;/policy&gt;</code></td>
+            </tr>
+            <tr>
+              <td>npm packages</td>
+              <td><code>import pkg from 'npm:package'</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="step">
+        <h2>Next Steps</h2>
+        <ul>
+          <li>Explore more components: <code>&lt;button&gt;</code>, <code>&lt;checkbox&gt;</code>, <code>&lt;select&gt;</code>, <code>&lt;dialog&gt;</code>, <code>&lt;tabs&gt;</code></li>
+          <li>See the <a href="https://github.com/wistrand/melker/blob/main/skills/creating-melker-apps/references/COMPONENTS.md">full component reference</a></li>
+          <li>Check out <a href="https://github.com/wistrand/melker/tree/main/examples/melker">more example apps</a></li>
+          <li>Press F12 at runtime to open DevTools (inspect elements, view logs)</li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>
+        <a href="index.html">Home</a> &middot;
+        <a href="https://github.com/wistrand/melker">GitHub</a> &middot;
+        <a href="https://github.com/wistrand/melker/blob/main/LICENSE.txt">MIT License</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

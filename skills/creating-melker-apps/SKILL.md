@@ -171,7 +171,7 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `<table>` | border, columnBorders, resizable | HTML-like table |
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
 
-For complete component reference, see [COMPONENTS.md](references/COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md) and [writing-your-first-app.md](https://github.com/wistrand/melker/blob/main/agent_docs/writing-your-first-app.md).
+For complete component reference, see [COMPONENTS.md](references/COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md) and [melker.sh/tutorial.html](https://melker.sh/tutorial.html).
 
 ## Styling
 

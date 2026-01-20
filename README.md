@@ -138,7 +138,7 @@ Before running, you can see:
 
 Press **F12** to open Dev Tools to view source, policy, document tree, and system info.
 
-For tutorials, see [`agent_docs/getting-started.md`](agent_docs/getting-started.md) and [`agent_docs/writing-your-first-app.md`](agent_docs/writing-your-first-app.md).
+For tutorials, see [`agent_docs/getting-started.md`](agent_docs/getting-started.md) and the [step-by-step tutorial](https://melker.sh/tutorial.html).
 
 ---
 

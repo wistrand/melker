@@ -5,6 +5,10 @@ import type { DualBuffer, Cell } from '../buffer.ts';
 import { CanvasElement, CanvasProps } from './canvas.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { lerpColor, type ColorSpace } from './color-utils.ts';
+import { getLogger } from '../logging.ts';
+import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
+
+const logger = getLogger('progress');
 
 export interface GradientStop {
   stop: number;              // Position 0-1 (0 = start, 1 = end)
@@ -14,8 +18,8 @@ export interface GradientStop {
 export type { ColorSpace } from './color-utils.ts';
 
 export interface ProgressProps extends Omit<CanvasProps, 'width' | 'height'> {
-  width?: number;            // Bar width in terminal columns (default: 20)
-  height?: number;           // Bar height in terminal rows (default: 1)
+  width?: number | string;   // Bar width: number, "50%", or "fill" (default: 20)
+  height?: number | string;  // Bar height: number, "50%", or "fill" (default: 1)
   value?: number;            // Current value (default: 0)
   max?: number;              // Maximum value (default: 100)
   min?: number;              // Minimum value (default: 0)
@@ -35,21 +39,37 @@ export class ProgressElement extends CanvasElement {
   private _animationDirection: number = 1;
   private _requestRender: (() => void) | null = null;
 
+  // Responsive sizing state (like img)
+  private _originalWidth: number | string;
+  private _originalHeight: number | string;
+  private _lastBoundsWidth: number = 0;
+  private _lastBoundsHeight: number = 0;
+
   constructor(props: ProgressProps, children: Element[] = []) {
-    // Set default dimensions
-    const width = props.width ?? 20;
-    const height = props.height ?? 1;
+    // Store original dimensions for percentage calculation
+    const origWidth = props.width ?? 20;
+    const origHeight = props.height ?? 1;
+
+    // Check if using responsive dimensions (percentage, fill, or decimal 0-1)
+    const usesResponsive = isResponsiveDimension(origWidth) || isResponsiveDimension(origHeight);
+
+    // Parse initial dimensions using parseDimension to handle numeric strings from XML
+    // For responsive values, use defaults (will be recalculated in render)
+    // For fixed values (including numeric strings like "20"), parse them properly
+    const width = isResponsiveDimension(origWidth) ? 20 : parseDimension(origWidth, 0, 20);
+    const height = isResponsiveDimension(origHeight) ? 1 : parseDimension(origHeight, 0, 1);
 
     // Call parent constructor with canvas props
-    // Merge style to enforce minimum dimensions (prevent layout compression)
+    // Merge style to enforce minimum dimensions (prevent layout compression AND stretching)
     super(
       {
         ...props,
         width,
         height,
         style: {
-          flexShrink: 0,  // Don't shrink below intrinsic size
-          height,         // Enforce height
+          // Prevent flex stretching - set explicit height in style and prevent grow/shrink
+          // This ensures the layout engine doesn't give more space than the canvas needs
+          ...(usesResponsive ? {} : { flexShrink: 0, flexGrow: 0, height }),
           ...props.style,
         },
       } as CanvasProps,
@@ -58,6 +78,18 @@ export class ProgressElement extends CanvasElement {
 
     // Override type
     (this as { type: string }).type = 'progress';
+
+    // Store original dimensions for responsive recalculation
+    this._originalWidth = origWidth;
+    this._originalHeight = origHeight;
+
+    // Warn about common sizing footgun: style dimensions don't affect buffer size
+    if (props.style?.width !== undefined && props.width === undefined) {
+      logger.warn(`progress: style.width only affects layout, not buffer resolution. Use width prop instead (supports "100%", "fill", or number).`);
+    }
+    if (props.style?.height !== undefined && props.height === undefined) {
+      logger.warn(`progress: style.height only affects layout, not buffer resolution. Use height prop instead (supports "100%", "fill", or number).`);
+    }
 
     // Set default props
     this.props.value = props.value ?? 0;
@@ -301,6 +333,24 @@ export class ProgressElement extends CanvasElement {
     buffer: DualBuffer,
     context: ComponentRenderContext
   ): void {
+    // Recalculate percentage dimensions if bounds changed (like img)
+    if (bounds.width > 0 && bounds.height > 0) {
+      const boundsChanged = bounds.width !== this._lastBoundsWidth || bounds.height !== this._lastBoundsHeight;
+
+      if (boundsChanged) {
+        this._lastBoundsWidth = bounds.width;
+        this._lastBoundsHeight = bounds.height;
+
+        const newWidth = parseDimension(this._originalWidth, bounds.width, 20);
+        const newHeight = parseDimension(this._originalHeight, bounds.height, 1);
+
+        // Update canvas dimensions if they changed (and valid)
+        if (newWidth > 0 && newHeight > 0 && (newWidth !== this.props.width || newHeight !== this.props.height)) {
+          this.setSize(newWidth, newHeight);
+        }
+      }
+    }
+
     // Start/stop animation based on indeterminate state
     if (this.props.indeterminate && this._animationTimer === null) {
       this._startAnimation(context.requestRender);
@@ -340,7 +390,9 @@ export class ProgressElement extends CanvasElement {
    * Calculate intrinsic size
    */
   override intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
-    let width = this.props.width ?? 20;
+    // Use parseDimension for responsive dimensions
+    let width = parseDimension(this._originalWidth, context.availableSpace.width, 20);
+    const height = parseDimension(this._originalHeight, context.availableSpace.height, 1);
 
     // Add space for percentage text if shown
     if (this.props.showValue) {
@@ -348,8 +400,8 @@ export class ProgressElement extends CanvasElement {
     }
 
     return {
-      width,
-      height: this.props.height ?? 1,
+      width: width > 0 ? width : 20,
+      height: height > 0 ? height : 1,
     };
   }
 
@@ -363,10 +415,11 @@ export class ProgressElement extends CanvasElement {
     if (props.min !== undefined && typeof props.min !== 'number') {
       return false;
     }
-    if (props.width !== undefined && (typeof props.width !== 'number' || props.width <= 0)) {
+    // width/height can be number or string (for percentages, "fill")
+    if (props.width !== undefined && typeof props.width !== 'number' && typeof props.width !== 'string') {
       return false;
     }
-    if (props.height !== undefined && (typeof props.height !== 'number' || props.height <= 0)) {
+    if (props.height !== undefined && typeof props.height !== 'number' && typeof props.height !== 'string') {
       return false;
     }
     return true;
@@ -389,8 +442,12 @@ export const progressSchema: ComponentSchema = {
     gradient: { type: 'array', description: 'Gradient color stops: [{stop: 0-1, color: "#hex"}]' },
     colorSpace: { type: 'string', enum: ['rgb', 'hsl', 'oklch'], description: 'Color interpolation space (default: rgb)' },
     animationSpeed: { type: 'number', description: 'Indeterminate animation speed in ms (default: 50)' },
-    width: { type: 'number', description: 'Bar width in terminal columns (default: 20)' },
-    height: { type: 'number', description: 'Bar height in terminal rows (default: 1)' },
+    width: { type: ['number', 'string'], description: 'Bar width: number, "50%", or "fill" (default: 20)' },
+    height: { type: ['number', 'string'], description: 'Bar height: number, "50%", or "fill" (default: 1)' },
+  },
+  styleWarnings: {
+    width: 'Use width prop instead of style.width for progress bar sizing. style.width only affects layout, not pixel resolution.',
+    height: 'Use height prop instead of style.height for progress bar sizing. style.height only affects layout, not pixel resolution.',
   },
 };
 

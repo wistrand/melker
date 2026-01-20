@@ -204,7 +204,7 @@ Modal dialog overlay.
 - `modal` - Block interaction with background
 - `backdrop` - Show darkened backdrop
 - `draggable` - Allow dragging by title bar
-- `width`, `height` - Dialog dimensions
+- `width`, `height` - Dialog dimensions (number, "50%", or "fill")
 
 **Pattern:**
 ```xml

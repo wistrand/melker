@@ -482,8 +482,8 @@ The `<dialog>` component provides modal overlay dialogs.
 | `open` | boolean | false | Whether dialog is visible |
 | `modal` | boolean | true | Block interaction with background |
 | `backdrop` | boolean | true | Show semi-transparent backdrop |
-| `width` | number | 80% | Width (0-1 = percentage, >1 = chars) |
-| `height` | number | 70% | Height (0-1 = percentage, >1 = chars) |
+| `width` | number\|string | 80% | Width: number, "50%", "fill", or 0<v<1 decimal |
+| `height` | number\|string | 70% | Height: number, "50%", "fill", or 0<v<1 decimal |
 | `draggable` | boolean | false | Allow dragging by title bar |
 | `offsetX` | number | 0 | Horizontal offset from center |
 | `offsetY` | number | 0 | Vertical offset from center |

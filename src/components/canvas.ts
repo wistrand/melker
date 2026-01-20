@@ -110,6 +110,17 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     super('canvas', defaultProps, children);
 
+    // Warn about common sizing footgun: style dimensions don't affect buffer size
+    // Only warn for actual canvas elements, not subclasses (img has its own warning)
+    if (this.constructor === CanvasElement) {
+      if (props.style?.width !== undefined) {
+        logger.warn(`canvas: style.width only affects layout, not buffer resolution. Use width prop for buffer sizing.`);
+      }
+      if (props.style?.height !== undefined) {
+        logger.warn(`canvas: style.height only affects layout, not buffer resolution. Use height prop for buffer sizing.`);
+      }
+    }
+
     this._scale = scale;
     this._charAspectRatio = charAspectRatio;
     // Each terminal character represents a 2x3 pixel block
@@ -2442,6 +2453,10 @@ export const canvasSchema: ComponentSchema = {
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. source has getPixel(), mouse, mouseUV' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
     shaderRunTime: { type: 'number', description: 'Stop shader after this many ms, final frame becomes static image' },
+  },
+  styleWarnings: {
+    width: 'Use width prop instead of style.width for canvas buffer sizing. style.width only affects layout, not pixel resolution.',
+    height: 'Use height prop instead of style.height for canvas buffer sizing. style.height only affects layout, not pixel resolution.',
   },
 };
 

@@ -128,3 +128,20 @@ Diff scan: 1599/5781 cells (72% saved), 13/47 rows dirty, 2 cells changed
 **Conservative marking**: Rows are marked dirty based on intermediate writes, not final state. If a container fills background before children render, rows get marked dirty even if the final content matches the reference. This is acceptable - the actual diff still finds 0 changes, we just scan more rows than strictly necessary.
 
 **Row-level granularity**: Entire rows are marked dirty, not individual cells. A single changed cell marks its entire row for scanning. Cell-level tracking would add memory overhead.
+
+**Modal dialog transitions**: When opening a modal dialog, rows may not be marked dirty if the app content underneath happens to match the previous frame's content at those positions. This occurs because:
+1. Buffer is cleared (doesn't trigger dirty tracking)
+2. App content renders first - if it matches previous frame, rows aren't marked dirty
+3. Modal renders on top, but if some cells in the modal area weren't explicitly written (gaps, margins), they retain app content
+4. Those cells match the previous frame, so the row isn't in the diff
+5. Terminal shows stale content from the previous frame
+
+**Solution**: Use `forceRender()` instead of `render()` when opening modal dialogs. This bypasses dirty row tracking and outputs all cells. All built-in dialogs (alert, confirm, prompt, accessibility, dev-tools) use `forceRender()` on open.
+
+```typescript
+// In dialog managers:
+show(): void {
+  // ... create and add dialog ...
+  this._deps.forceRender();  // NOT render()
+}
+```

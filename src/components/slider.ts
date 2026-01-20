@@ -6,8 +6,9 @@ import type { Document } from '../document.ts';
 import { createChangeEvent } from '../events.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { getStringWidth } from '../char-width.ts';
+import { parseDimension } from '../utils/dimensions.ts';
 
-export interface SliderProps extends BaseProps {
+export interface SliderProps extends Omit<BaseProps, 'width' | 'height'> {
   // Value range
   min?: number;
   max?: number;
@@ -22,6 +23,10 @@ export interface SliderProps extends BaseProps {
 
   // Display
   showValue?: boolean;   // Show value label
+
+  // Dimensions (flow to style if style not set)
+  width?: number | string;   // Slider width: number, "50%", or "fill" (flows to style.width)
+  height?: number | string;  // Slider height: number, "50%", or "fill" (flows to style.height)
 
   // Colors (optional, theme provides defaults)
   trackColor?: string;
@@ -44,6 +49,14 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     const value = props.value !== undefined ? Number(props.value) : 0;
     const step = props.step !== undefined ? Number(props.step) : undefined;
 
+    // Flow width/height props to style if style doesn't have them
+    // This allows using <slider width="30" /> instead of <slider style="width: 30;" />
+    const styleWithDimensions = {
+      ...props.style,
+      ...(props.width !== undefined && props.style?.width === undefined ? { width: props.width } : {}),
+      ...(props.height !== undefined && props.style?.height === undefined ? { height: props.height } : {}),
+    };
+
     const defaultProps: SliderProps = {
       orientation: 'horizontal',
       showValue: false,
@@ -55,9 +68,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
       max,
       step,
       value: Math.max(min, Math.min(max, value)),
-      style: {
-        ...props.style
-      },
+      style: styleWithDimensions,
     };
 
     // Ensure value is clamped
@@ -380,14 +391,21 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     const style = this.props.style || {};
 
     if (orientation === 'vertical') {
-      // Respect style height if set
-      const height = typeof style.height === 'number' ? style.height : 10;
+      // Respect style height if set (style takes precedence, props are fallback)
+      const explicitHeight = style.height ?? this.props.height;
+      const height = explicitHeight !== undefined
+        ? parseDimension(explicitHeight, context.availableSpace.height, 10)
+        : 10;
       return { width: 1, height };
     }
 
-    // Horizontal: respect style width if set, otherwise use minimum
-    let width = typeof style.width === 'number' ? style.width : 10;
-    if (showValue && typeof style.width !== 'number') {
+    // Horizontal: respect style width if set (style takes precedence, props are fallback)
+    const explicitWidth = style.width ?? this.props.width;
+    let width = explicitWidth !== undefined
+      ? parseDimension(explicitWidth, context.availableSpace.width, 10)
+      : 10;
+
+    if (showValue && explicitWidth === undefined) {
       // Only add value space to minimum width, not explicit width
       const { max = 100 } = this.props;
       width += String(Math.round(max)).length + 1;
@@ -541,6 +559,8 @@ export const sliderSchema: ComponentSchema = {
     snaps: { type: 'array', description: 'Array of snap points' },
     orientation: { type: 'string', description: 'horizontal or vertical' },
     showValue: { type: 'boolean', description: 'Show value label' },
+    width: { type: ['number', 'string'], description: 'Slider width (flows to style.width)' },
+    height: { type: ['number', 'string'], description: 'Slider height (flows to style.height)' },
     trackColor: { type: 'string', description: 'Track color override' },
     thumbColor: { type: 'string', description: 'Thumb color override' },
     fillColor: { type: 'string', description: 'Filled portion color override' },

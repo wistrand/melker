@@ -7,6 +7,7 @@ import { CanvasElement, type CanvasProps } from './canvas.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
+import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
 
 const logger = getLogger('ImgElement');
 
@@ -45,12 +46,13 @@ export class ImgElement extends CanvasElement {
     const origWidth = props.width ?? 30;
     const origHeight = props.height ?? 15;
 
-    // Check if using percentage dimensions (responsive)
-    const usesPercentage = typeof origWidth === 'string' || typeof origHeight === 'string';
+    // Check if using responsive dimensions (percentage, fill, or decimal 0-1)
+    const usesResponsive = isResponsiveDimension(origWidth) || isResponsiveDimension(origHeight);
 
-    // Parse initial dimensions (percentages will be recalculated in render)
-    const width = typeof origWidth === 'number' ? origWidth : 30;
-    const height = typeof origHeight === 'number' ? origHeight : 15;
+    // Parse initial dimensions (responsive values will be recalculated in render)
+    // Use a placeholder size for responsive dimensions
+    const width = isResponsiveDimension(origWidth) ? 30 : (typeof origWidth === 'number' ? origWidth : 30);
+    const height = isResponsiveDimension(origHeight) ? 15 : (typeof origHeight === 'number' ? origHeight : 15);
 
     // Call parent constructor with canvas props
     // Don't pass src yet - we'll resolve it in render
@@ -62,8 +64,8 @@ export class ImgElement extends CanvasElement {
         src: undefined, // Will be set after resolution
         style: {
           // Only prevent shrinking for fixed-dimension images
-          // Percentage-based images should be responsive (shrink with container)
-          ...(usesPercentage ? {} : { flexShrink: 0 }),
+          // Responsive images should shrink with container
+          ...(usesResponsive ? {} : { flexShrink: 0 }),
           ...props.style,
         },
       } as CanvasProps,
@@ -72,6 +74,15 @@ export class ImgElement extends CanvasElement {
 
     // Override type
     (this as { type: string }).type = 'img';
+
+    // Warn about common sizing footgun: style dimensions don't affect buffer size
+    // Note: This is img-specific advice (use props with %, fill support)
+    if (props.style?.width !== undefined && props.width === undefined) {
+      logger.warn(`img: style.width doesn't resize image buffer. Use width prop instead (supports "100%", "fill", or number).`);
+    }
+    if (props.style?.height !== undefined && props.height === undefined) {
+      logger.warn(`img: style.height doesn't resize image buffer. Use height prop instead (supports "100%", "fill", or number).`);
+    }
 
     // Store original values for resolution
     this._originalSrc = props.src;
@@ -91,20 +102,11 @@ export class ImgElement extends CanvasElement {
   }
 
   /**
-   * Parse a dimension value (number or percentage string)
+   * Parse a dimension value (number, percentage string, or "fill")
+   * Uses shared utility for consistent behavior across components.
    */
   private _parseDimension(value: number | string, available: number): number {
-    if (typeof value === 'number') {
-      return value;
-    }
-    // Parse percentage string like "50%"
-    const match = value.match(/^(\d+(?:\.\d+)?)\s*%$/);
-    if (match) {
-      return Math.round((parseFloat(match[1]) / 100) * available);
-    }
-    // Try parsing as plain number
-    const num = parseInt(value, 10);
-    return isNaN(num) ? 30 : num;
+    return parseDimension(value, available, 30);
   }
 
   /**
@@ -240,6 +242,10 @@ export const imgSchema: ComponentSchema = {
     onError: { type: ['function', 'string'], description: 'Called when image fails to load' },
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source, utils) => [r,g,b]. utils: noise2d, fbm, palette, smoothstep, mix, fract' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
+  },
+  styleWarnings: {
+    width: 'Use width prop instead of style.width for image buffer sizing. style.width only affects layout, not pixel resolution. Props support "100%", "fill", or number.',
+    height: 'Use height prop instead of style.height for image buffer sizing. style.height only affects layout, not pixel resolution. Props support "100%", "fill", or number.',
   },
 };
 

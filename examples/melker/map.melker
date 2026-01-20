@@ -469,7 +469,7 @@ map.melker paris 12 satellite           # Paris with satellite imagery
       }
       const el = $melker.getElementById('loading');
       if (el) {
-        el.setValue(loadingCount > 0 ? `Loading ${loadingCount}...` : '');
+        el.setValue(loadingCount > 0 ? `${loadingCount}` : '');
         // Trigger render when loading finishes to clear the text
         if (loadingCount === 0) {
           $melker.render();

@@ -142,17 +142,134 @@ if (dialog.isVisible()) { ... }
 
 ## 8. Width/Height: Props vs Style
 
-Some components use props, others use style:
+Different components use different conventions. The most common footgun is using `style.width/height` on canvas-family components.
+
+**Mitigations:** Runtime warnings are logged when style.width/height is used on canvas-family without props. Lint mode (`--lint`) also catches these issues.
+
+### Canvas-Family: Props Define Buffer Size
+
+For `canvas`, `img`, `video`, and `progress`, the `width`/`height` **props** define the pixel buffer resolution. Style only affects layout positioning, NOT the actual pixel count.
 
 ```xml
-<!-- Props (specific dimensions) -->
-<canvas width="60" height="20" />
-<dialog style="width: 80; height: 20;" />
+<!-- FOOTGUN: style.width doesn't resize the image buffer -->
+<img style="width: fill; height: fill;" src="photo.png" />
+<!-- Result: Uses default 30x15 buffer, stretched to fill layout -->
+<!-- Runtime warning logged, lint warning if --lint enabled -->
 
-<!-- Style (layout) -->
+<!-- CORRECT: Use props for buffer sizing -->
+<img width="fill" height="fill" src="photo.png" />
+<img width="100%" height="100%" src="photo.png" />
+<img width="60" height="30" src="photo.png" />
+```
+
+**Why:** Canvas-family components pre-allocate pixel buffers at construction time. Style can't change the buffer after creation.
+
+### img Supports Responsive Props
+
+The `img` component props support multiple formats:
+
+```xml
+<!-- Fixed size -->
+<img width="60" height="30" src="photo.png" />
+
+<!-- Percentage of parent -->
+<img width="100%" height="100%" src="photo.png" />
+<img width="50%" height="50%" src="photo.png" />
+
+<!-- Fill available space -->
+<img width="fill" height="fill" src="photo.png" />
+
+<!-- Combine props (buffer) with style (layout) -->
+<img width="fill" height="fill" style="flex: 1;" src="photo.png" />
+```
+
+### Dialog Supports Multiple Formats
+
+Dialog width/height props support numbers, percentages, decimals, and "fill":
+
+```xml
+<!-- Fixed size -->
+<dialog width="60" height="20" />
+
+<!-- String percentage -->
+<dialog width="80%" height="90%" />
+
+<!-- Fill available space -->
+<dialog width="fill" height="fill" />
+
+<!-- Decimal 0 < value < 1 (legacy, still supported) -->
+<dialog width={0.8} height={0.9} />  <!-- 80% x 90% -->
+```
+
+**Note:** Decimal percentages must be strictly less than 1. The value `1` is treated as absolute (1 terminal unit), not 100%. Use `"100%"` or `"fill"` for full size.
+
+### Select/Combobox/Slider: Consistent Precedence
+
+These components all support both props and style, with **style taking precedence**. They also support percentage values:
+
+```xml
+<!-- Fixed size -->
+<select width="20">...</select>
+<combobox width="30" />
+<slider width="20" />
+
+<!-- Percentage of parent -->
+<select width="50%">...</select>
+<combobox width="80%" />
+<slider width="50%" />
+
+<!-- Fill available space -->
+<select width="fill">...</select>
+<combobox width="fill" />
+<slider width="fill" />
+
+<!-- Style wins when both specified -->
+<select width="20" style="width: 30;">...</select>  <!-- width=30 -->
+```
+
+### Layout Components Use Style Only
+
+Container, text, and data-table ignore width/height props - use style:
+
+```xml
+<!-- WRONG: props ignored -->
+<container width="50" />
+<text width="40" />
+
+<!-- CORRECT: use style -->
 <container style="width: fill; height: fill;" />
+<container style="width: 50%; height: 100%;" />
+<text style="width: 40;" />  <!-- Limits text wrapping -->
 <data-table style="width: fill;" />
 ```
+
+### Percentage Support Varies by Component
+
+| Component | `"%"` support | `"fill"` support | Where |
+|-----------|--------------|------------------|-------|
+| img | ✓ | ✓ | props |
+| dialog | ✓ | ✓ | props |
+| container | ✓ | ✓ | style |
+| text | ✓ | ✓ | style |
+| canvas/video | ✗ | ✗ | N/A (fixed buffer) |
+| progress | ✓ | ✓ | props only |
+| slider | ✓ | ✓ | props or style |
+| select/combobox | ✓ | ✓ | props or style |
+
+### Quick Reference: What to Use
+
+| Component | Fixed size | Responsive/fill |
+|-----------|-----------|-----------------|
+| canvas | `width={30} height={20}` | N/A (buffer must be fixed) |
+| img | `width={30} height={20}` | `width="fill"` or `width="100%"` |
+| video | `width={30} height={20}` | N/A |
+| progress | `width={20}` | `width="50%"` or `width="fill"` |
+| dialog | `width={60} height={20}` | `width="80%"` or `width="fill"` |
+| slider | `width={20}` | `width="50%"` or `width="fill"` |
+| select | `width={20}` | `width="50%"` or `width="fill"` |
+| combobox | `width={30}` | `width="50%"` or `width="fill"` |
+| container | `style="width: 30;"` | `style="width: fill;"` |
+| text | `style="width: 40;"` | `style="width: fill;"` |
 
 ## 9. Boolean Props in XML Are Strings
 

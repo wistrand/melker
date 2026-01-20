@@ -20,6 +20,7 @@ import { registerComponent } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
 import { FilterableListCore, FilterableListCoreProps, OptionData, FilteredOptionData, OptionSelectEvent } from './core.ts';
 import { getLogger } from '../../logging.ts';
+import { parseDimension } from '../../utils/dimensions.ts';
 
 const logger = getLogger('combobox');
 
@@ -28,8 +29,8 @@ export interface ComboboxProps extends FilterableListCoreProps {
   dropdownWidth?: number;
   /** Show clear button when value is present */
   showClearButton?: boolean;
-  /** Width of the combobox input */
-  width?: number;
+  /** Width of the combobox input (number, "50%", or "fill") */
+  width?: number | string;
 }
 
 /**
@@ -89,12 +90,14 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
     this._cursorPosition = this._inputValue.length;
   }
 
-  intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
+  intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     // Input field is always 1 row high
-    // Respect explicit width from props or style
-    const explicitWidth = this.props.width ?? (this.props.style as any)?.width;
-    if (typeof explicitWidth === 'number') {
-      return { width: explicitWidth, height: 1 };
+    // Respect explicit width from style or props (style takes precedence, props are fallback)
+    const explicitWidth = (this.props.style as any)?.width ?? this.props.width;
+    if (explicitWidth !== undefined) {
+      // Use parseDimension to support "50%", "fill", etc.
+      const width = parseDimension(explicitWidth, context.availableSpace.width, 10);
+      return { width, height: 1 };
     }
 
     // Width based on placeholder, value, or options - NOT available space
@@ -888,7 +891,7 @@ export const comboboxSchema: ComponentSchema = {
     options: { type: 'array', description: 'Data-driven options (alternative to children)' },
     allowFreeText: { type: 'boolean', description: 'Allow submitting values not in list' },
     dropdownWidth: { type: 'number', description: 'Override dropdown width' },
-    width: { type: 'number', description: 'Width of the combobox input' },
+    width: { type: ['number', 'string'], description: 'Width of the combobox input (number, "50%", or "fill")' },
     showClearButton: { type: 'boolean', description: 'Show clear button' },
     onChange: { type: 'handler', description: 'Called when option is selected (preferred). Event: { value, label, option?, freeform?, targetId }' },
     onSelect: { type: 'handler', description: 'Called when option is selected (deprecated: use onChange)' },

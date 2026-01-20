@@ -19,10 +19,12 @@ export interface ComponentSchema {
   description?: string;  // Component description
   props: Record<string, PropSchema>;
   styles?: Record<string, PropSchema>;  // Component-specific styles (rare)
+  /** Warnings to show when specific style properties are used (e.g., canvas warns about style.width) */
+  styleWarnings?: Record<string, string>;
 }
 
 export interface LintWarning {
-  type: 'unknown-prop' | 'unknown-style' | 'invalid-prop-type' | 'invalid-style-value' | 'unknown-element';
+  type: 'unknown-prop' | 'unknown-style' | 'invalid-prop-type' | 'invalid-style-value' | 'unknown-element' | 'style-warning';
   elementType: string;
   property: string;
   value?: any;
@@ -254,6 +256,17 @@ export function validateElementProps(
               property: styleName,
               value: styleValue,
               message: `Invalid value "${styleValue}" for style "${displayName}" on <${elementType}>. Valid values: ${styleSchema.enum.join(', ')}`,
+            });
+          }
+
+          // Check for component-specific style warnings (e.g., canvas warns about style.width/height)
+          if (schema.styleWarnings && schema.styleWarnings[styleName]) {
+            warnings.push({
+              type: 'style-warning',
+              elementType,
+              property: styleName,
+              value: styleValue,
+              message: schema.styleWarnings[styleName],
             });
           }
         }

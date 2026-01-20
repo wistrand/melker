@@ -3,16 +3,17 @@
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import { DualBuffer, Cell } from '../buffer.ts';
 import { getThemeColor } from '../theme.ts';
+import { parseDimension } from '../utils/dimensions.ts';
 
-export interface DialogProps extends BaseProps {
+export interface DialogProps extends Omit<BaseProps, 'width' | 'height'> {
   title?: string;
   modal?: boolean;
   backdrop?: boolean;
   open?: boolean;
-  /** Dialog width as percentage (0-1) or absolute characters */
-  width?: number;
-  /** Dialog height as percentage (0-1) or absolute characters */
-  height?: number;
+  /** Dialog width: number (absolute), decimal 0<v<1 (percentage), "50%" (percentage string), or "fill" */
+  width?: number | string;
+  /** Dialog height: number (absolute), decimal 0<v<1 (percentage), "50%" (percentage string), or "fill" */
+  height?: number | string;
   /** Enable dragging by title bar */
   draggable?: boolean;
   /** Enable resizing from bottom-right corner */
@@ -299,15 +300,18 @@ export class DialogElement extends Element implements Renderable {
     }
 
     // Calculate centered dialog position
-    // Use props if provided, otherwise use defaults
-    const widthProp = this.props.width;
-    const heightProp = this.props.height;
-    const dialogWidth = widthProp !== undefined
-      ? (widthProp <= 1 ? Math.floor(bounds.width * widthProp) : Math.min(widthProp, bounds.width - 4))
-      : Math.min(Math.floor(bounds.width * 0.8), 60);
-    const dialogHeight = heightProp !== undefined
-      ? (heightProp <= 1 ? Math.floor(bounds.height * heightProp) : Math.min(heightProp, bounds.height - 4))
-      : Math.min(Math.floor(bounds.height * 0.7), 20);
+    // Use shared dimension parser (supports number, decimal 0-1, "50%", "fill")
+    // Cap dimensions to leave margin around dialog
+    const defaultWidth = Math.min(Math.floor(bounds.width * 0.8), 60);
+    const defaultHeight = Math.min(Math.floor(bounds.height * 0.7), 20);
+    const dialogWidth = Math.min(
+      parseDimension(this.props.width, bounds.width, defaultWidth),
+      bounds.width - 4
+    );
+    const dialogHeight = Math.min(
+      parseDimension(this.props.height, bounds.height, defaultHeight),
+      bounds.height - 4
+    );
 
     // Apply drag offset to centered position
     const offsetX = this.props.offsetX || 0;

@@ -18,32 +18,32 @@
 
     <container class="row">
       <text class="label">0%:</text>
-      <progress value="0" width="20" />
+      <progress value="0" width="20" height="1" />
     </container>
 
     <container class="row">
       <text class="label">50%:</text>
-      <progress value="50" width="20" />
+      <progress value="50" width="20" height="1" />
     </container>
 
     <container class="row">
       <text class="label">100%:</text>
-      <progress value="100" width="20" />
+      <progress value="100" width="20" height="1" />
     </container>
 
     <container class="row">
       <text class="label">With value:</text>
-      <progress value="67" width="20" showValue="true" />
+      <progress value="67" width="20" height="1" showValue="true" />
     </container>
 
     <container class="row">
       <text class="label">Custom colors:</text>
-      <progress value="60" width="20" fillColor="#2196F3" emptyColor="#1a1a2e" />
+      <progress value="60" width="20" height="1" fillColor="#2196F3" emptyColor="#1a1a2e" />
     </container>
 
     <container class="row">
       <text class="label">Indeterminate:</text>
-      <progress indeterminate="true" width="20" fillColor="cyan" />
+      <progress indeterminate="true" width="20" height="1" fillColor="cyan" />
     </container>
 
     <container class="row">
@@ -53,7 +53,7 @@
 
     <container class="row">
       <text class="label">Interactive:</text>
-      <progress id="p" value="0" width="15" showValue="true" />
+      <progress id="p" value="0" width="15" height="1" showValue="true" />
       <button label="+10" onClick="const p = $melker.getElementById('p'); p.setValue(Math.min(100, p.getValue() + 10));" />
       <button label="-10" onClick="const p = $melker.getElementById('p'); p.setValue(Math.max(0, p.getValue() - 10));" />
     </container>

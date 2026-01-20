@@ -130,6 +130,14 @@ export class VideoElement extends CanvasElement {
 
     // Override type to 'video'
     (this as unknown as { type: string }).type = 'video';
+
+    // Warn about common sizing footgun: style dimensions don't affect buffer size
+    if (props.style?.width !== undefined) {
+      logger.warn(`video: style.width only affects layout, not buffer resolution. Use width prop for buffer sizing.`);
+    }
+    if (props.style?.height !== undefined) {
+      logger.warn(`video: style.height only affects layout, not buffer resolution. Use height prop for buffer sizing.`);
+    }
   }
 
   /**
@@ -1432,6 +1440,10 @@ export const videoSchema: ComponentSchema = {
     scale: { type: 'number', description: 'Scaling factor' },
     backgroundColor: { type: 'string', description: 'Background color' },
     charAspectRatio: { type: 'number', description: 'Character aspect ratio' },
+  },
+  styleWarnings: {
+    width: 'Use width prop instead of style.width for video buffer sizing. style.width only affects layout, not pixel resolution.',
+    height: 'Use height prop instead of style.height for video buffer sizing. style.height only affects layout, not pixel resolution.',
   },
 };
 

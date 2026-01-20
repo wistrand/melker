@@ -20,14 +20,15 @@ import { registerComponent } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
 import { FilterableListCore, FilterableListCoreProps, OptionData, FilteredOptionData } from './core.ts';
 import { getLogger } from '../../logging.ts';
+import { parseDimension } from '../../utils/dimensions.ts';
 
 const logger = getLogger('select');
 
 export interface SelectProps extends FilterableListCoreProps {
   /** Override dropdown width (default: same as trigger) */
   dropdownWidth?: number;
-  /** Width of the select trigger */
-  width?: number;
+  /** Width of the select trigger (number, "50%", or "fill") */
+  width?: number | string;
 }
 
 /**
@@ -79,12 +80,14 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     super('select', defaultProps, children);
   }
 
-  intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
+  intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     // Trigger is always 1 row high
-    // Respect explicit width from props or style
-    const explicitWidth = this.props.width ?? (this.props.style as any)?.width;
-    if (typeof explicitWidth === 'number') {
-      return { width: explicitWidth, height: 1 };
+    // Respect explicit width from style or props (style takes precedence, props are fallback)
+    const explicitWidth = (this.props.style as any)?.width ?? this.props.width;
+    if (explicitWidth !== undefined) {
+      // Use parseDimension to support "50%", "fill", etc.
+      const width = parseDimension(explicitWidth, context.availableSpace.width, 10);
+      return { width, height: 1 };
     }
 
     // Width based on placeholder, selected value, or options
@@ -687,7 +690,7 @@ export const selectSchema: ComponentSchema = {
     disabled: { type: 'boolean', description: 'Whether select is disabled' },
     maxVisible: { type: 'number', description: 'Maximum visible options in dropdown' },
     dropdownWidth: { type: 'number', description: 'Override dropdown width' },
-    width: { type: 'number', description: 'Width of the select trigger' },
+    width: { type: ['number', 'string'], description: 'Width of the select trigger (number, "50%", or "fill")' },
     onChange: { type: 'handler', description: 'Called when option is selected (preferred). Event: { value, label, option, targetId }' },
     onSelect: { type: 'handler', description: 'Called when option is selected (deprecated: use onChange)' },
   },

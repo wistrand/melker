@@ -76,6 +76,7 @@ src/
   template.ts         - .melker file parsing
   types.ts            - Core type definitions, interfaces, type guards
   globals.d.ts        - Global type declarations (melkerEngine, $melker, etc.)
+  deps.ts             - Centralized npm dependencies (for remote URL execution support)
   element.ts          - Element creation, component registry
   document.ts         - Document class, element registry
   events.ts           - Event system, EventManager

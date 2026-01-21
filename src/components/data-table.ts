@@ -17,12 +17,13 @@ import {
   ClickEvent,
 } from '../types.ts';
 import type { KeyPressEvent } from '../events.ts';
-import type { DualBuffer, Cell } from '../buffer.ts';
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { ClippedDualBuffer } from '../clipped-buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
+import { renderScrollbar } from './scrollbar.ts';
 
 const logger = getLogger('DataTable');
 
@@ -409,9 +410,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       const colWidth = this._columnWidths[i];
 
       // Draw horizontal line for column
-      for (let j = 0; j < colWidth; j++) {
-        buffer.currentBuffer.setCell(cellX + j, y, { char: chars.h, ...style });
-      }
+      buffer.currentBuffer.setText(cellX, y, chars.h.repeat(colWidth), style);
       cellX += colWidth;
 
       // Draw junction or separator
@@ -425,9 +424,9 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     }
 
     // Fill remaining space before right corner (for scrollbar area)
-    while (cellX < x + totalWidth - 1) {
-      buffer.currentBuffer.setCell(cellX, y, { char: chars.h, ...style });
-      cellX++;
+    const remainingH = x + totalWidth - 1 - cellX;
+    if (remainingH > 0) {
+      buffer.currentBuffer.setText(cellX, y, chars.h.repeat(remainingH), style);
     }
 
     // Draw right corner
@@ -444,23 +443,16 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   ): void {
     if (height <= 0 || this._totalContentLines <= this._viewportLines) return;
 
-    // Calculate thumb size and position
-    const thumbSize = Math.max(1, Math.floor((this._viewportLines / this._totalContentLines) * height));
-    const maxScroll = this._totalContentLines - this._viewportLines;
-    const scrollRatio = maxScroll > 0 ? this._scrollY / maxScroll : 0;
-    const thumbPos = Math.floor(scrollRatio * (height - thumbSize));
-
     // Store bounds for hit testing
     this._scrollbarBounds = { x, y, width: 1, height };
 
-    // Draw track and thumb
-    for (let i = 0; i < height; i++) {
-      const isThumb = i >= thumbPos && i < thumbPos + thumbSize;
-      buffer.currentBuffer.setCell(x, y + i, {
-        char: isThumb ? '█' : '░',
-        ...style,
-      });
-    }
+    renderScrollbar(buffer, x, y, height, {
+      scrollTop: this._scrollY,
+      totalItems: this._totalContentLines,
+      visibleItems: this._viewportLines,
+      thumbStyle: style,
+      trackStyle: style,
+    });
   }
 
   // Render header row
@@ -502,9 +494,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
       // Render with bold style for headers
       const headerStyle = { ...style, bold: true };
-      for (let j = 0; j < aligned.length && j < width; j++) {
-        buffer.currentBuffer.setCell(cellX + j, y, { char: aligned[j], ...headerStyle });
-      }
+      buffer.currentBuffer.setText(cellX, y, aligned.substring(0, width), headerStyle);
 
       cellX += width;
 
@@ -513,15 +503,15 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         buffer.currentBuffer.setCell(cellX, y, { char: chars.v, ...style });
         cellX++;
       } else if (i < columns.length - 1) {
-        buffer.currentBuffer.setCell(cellX, y, { char: ' ', ...style });
+        buffer.currentBuffer.setCell(cellX, y, { char: EMPTY_CHAR, ...style });
         cellX++;
       }
     }
 
     // Fill remaining space before right border (for scrollbar area)
-    while (cellX < x + totalWidth - 1) {
-      buffer.currentBuffer.setCell(cellX, y, { char: ' ', ...style });
-      cellX++;
+    const remainingSpace = x + totalWidth - 1 - cellX;
+    if (remainingSpace > 0) {
+      buffer.currentBuffer.fillLine(cellX, y, remainingSpace, style);
     }
 
     // Draw right border
@@ -566,10 +556,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         }
 
         const aligned = this._align(displayText, width, col.align || 'left');
-
-        for (let j = 0; j < aligned.length && j < width; j++) {
-          buffer.currentBuffer.setCell(cellX + j, y + line, { char: aligned[j], ...style });
-        }
+        buffer.currentBuffer.setText(cellX, y + line, aligned.substring(0, width), style);
 
         cellX += width;
 
@@ -580,7 +567,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
           cellX++;
         } else if (colIndex < columns.length - 1) {
           // Add space between columns when no column borders (with content style)
-          buffer.currentBuffer.setCell(cellX, y + line, { char: ' ', ...style });
+          buffer.currentBuffer.setCell(cellX, y + line, { char: EMPTY_CHAR, ...style });
           cellX++;
         }
       }
@@ -589,9 +576,9 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       // or at current position if no scrollbar
       if (scrollbarX >= 0) {
         // Fill gap between content and scrollbar position (with content style)
-        while (cellX < scrollbarX) {
-          buffer.currentBuffer.setCell(cellX, y + line, { char: ' ', ...style });
-          cellX++;
+        const gap = scrollbarX - cellX;
+        if (gap > 0) {
+          buffer.currentBuffer.fillLine(cellX, y + line, gap, style);
         }
         // Draw border at scrollbar position (will be overwritten) - use border style
         buffer.currentBuffer.setCell(scrollbarX, y + line, { char: chars.v, ...borderCellStyle });
@@ -629,9 +616,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
       // Render with bold style for footer
       const footerStyle = { ...style, bold: true };
-      for (let j = 0; j < aligned.length && j < width; j++) {
-        buffer.currentBuffer.setCell(cellX + j, y, { char: aligned[j], ...footerStyle });
-      }
+      buffer.currentBuffer.setText(cellX, y, aligned.substring(0, width), footerStyle);
 
       cellX += width;
 
@@ -640,15 +625,15 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         buffer.currentBuffer.setCell(cellX, y, { char: chars.v, ...style });
         cellX++;
       } else if (colIndex < columns.length - 1) {
-        buffer.currentBuffer.setCell(cellX, y, { char: ' ', ...style });
+        buffer.currentBuffer.setCell(cellX, y, { char: EMPTY_CHAR, ...style });
         cellX++;
       }
     }
 
     // Fill remaining space before right border (for scrollbar area)
-    while (cellX < x + totalWidth - 1) {
-      buffer.currentBuffer.setCell(cellX, y, { char: ' ', ...style });
-      cellX++;
+    const remainingFooter = x + totalWidth - 1 - cellX;
+    if (remainingFooter > 0) {
+      buffer.currentBuffer.fillLine(cellX, y, remainingFooter, style);
     }
 
     // Draw right border
@@ -950,7 +935,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         }
         return true;
 
-      case 'Enter':
+      case 'Enter': {
         // Activate row
         const originalIndex = this._getOriginalIndex(this._focusedSortedIndex);
         this.props.onActivate?.({
@@ -959,6 +944,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
           row: this.props.rows[originalIndex] || [],
         });
         return true;
+      }
     }
 
     return false;

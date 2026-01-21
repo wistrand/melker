@@ -40,23 +40,26 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
         }
         break;
 
-      case 'input':
+      case 'input': {
         const placeholder = element.props.placeholder || 'text input';
         const value = element.props.value || '';
         lines.push(`${indent}[Input: ${placeholder}${value ? ' = "' + value + '"' : ''}]`);
         break;
+      }
 
-      case 'checkbox':
+      case 'checkbox': {
         const checked = element.props.checked ? 'checked' : 'unchecked';
         const cbTitle = element.props.title || 'checkbox';
         lines.push(`${indent}[Checkbox: ${cbTitle} (${checked})]`);
         break;
+      }
 
-      case 'radio':
+      case 'radio': {
         const selected = element.props.checked ? 'selected' : 'unselected';
         const rbTitle = element.props.title || 'radio';
         lines.push(`${indent}[Radio: ${rbTitle} (${selected})]`);
         break;
+      }
 
       case 'dialog':
         if (element.props.open && element.props.title) {

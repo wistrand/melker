@@ -150,13 +150,13 @@ All elements have `getBounds()` / `setBounds()` methods for accessing layout bou
 
 ## Canvas Image Loading
 
-Canvas loads images using pure-JS decoders (no Deno internal APIs):
+Canvas loads images using pure-JS decoders (no Deno internal APIs). All decoders are centralized in `src/deps.ts` for remote URL execution support.
 
 | Format | Library | Notes |
 |--------|---------|-------|
-| PNG | `npm:fast-png` | Full support including alpha, 16-bit depth |
-| JPEG | `npm:jpeg-js` | Full support |
-| GIF | `npm:omggif` | First frame only (no animation) |
+| PNG | fast-png | Full support including alpha, 16-bit depth |
+| JPEG | jpeg-js | Full support |
+| GIF | omggif | First frame only (no animation) |
 
 Format detection uses magic bytes at file start.
 
@@ -165,7 +165,7 @@ Format detection uses magic bytes at file start.
 - HTTP/HTTPS URLs (requires `net` permission for target host)
 - Data URLs (`data:image/png;base64,...`)
 
-Image loading code is in `src/components/canvas-image.ts`.
+Image loading code is in `src/components/canvas-image.ts`, with decoders imported from `src/deps.ts`.
 
 ## Canvas Dithering
 

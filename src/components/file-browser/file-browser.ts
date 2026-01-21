@@ -38,8 +38,7 @@ import {
   isRootPath,
   formatSize,
 } from './file-utils.ts';
-import type { FilterMode } from '../filterable-list/filter.ts';
-import { applyFilter } from '../filterable-list/filter.ts';
+import { type FilterMode, applyFilter } from '../filterable-list/filter.ts';
 
 const logger = getLogger('file-browser');
 

@@ -1,7 +1,7 @@
 // Performance dialog for live stats monitoring
 // Toggled with Ctrl+Shift+P, shows engine and layout statistics
 
-import type { DualBuffer } from './buffer.ts';
+import { type DualBuffer, EMPTY_CHAR } from './buffer.ts';
 import { BORDER_CHARS, type Bounds } from './types.ts';
 import { getThemeColor } from './theme.ts';
 import { parseColor } from './components/color-utils.ts';
@@ -516,7 +516,7 @@ export class PerformanceDialog {
         const py = y + dy;
         if (px >= 0 && px < viewportWidth && py >= 0 && py < viewportHeight) {
           buffer.currentBuffer.setCell(px, py, {
-            char: ' ',
+            char: EMPTY_CHAR,
             foreground: textColor,
             background: bgColor,
           });

@@ -1,5 +1,5 @@
 // Viewport-based buffer system that replaces ClippedDualBuffer
-import { TerminalBuffer, DualBuffer, Cell, RenderOptions, BufferDiff } from './buffer.ts';
+import { TerminalBuffer, DualBuffer, Cell, RenderOptions, BufferDiff, EMPTY_CHAR } from './buffer.ts';
 import { Viewport, CoordinateTransform } from './viewport.ts';
 import { analyzeString } from './char-width.ts';
 
@@ -58,7 +58,7 @@ export class ViewportBufferProxy {
     const clip = this._viewport.clipRect;
     for (let y = clip.y; y < clip.y + clip.height; y++) {
       for (let x = clip.x; x < clip.x + clip.width; x++) {
-        this._buffer.setCell(x, y, { char: ' ' });
+        this._buffer.setCell(x, y, { char: EMPTY_CHAR });
       }
     }
   }

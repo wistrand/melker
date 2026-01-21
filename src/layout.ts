@@ -1031,12 +1031,13 @@ export class LayoutEngine {
             crossPos = lineCrossStart + lineCrossSize - finalCross - item.marginCrossEnd;
             break;
 
-          case 'center':
+          case 'center': {
             // baseCross already includes padding+border (from explicit size or intrinsic+chrome)
             finalCross = item.baseCross;
             const totalCross = finalCross + item.marginCross;
             crossPos = lineCrossStart + (lineCrossSize - totalCross) / 2 + item.marginCrossStart;
             break;
+          }
 
           case 'stretch':
           default:

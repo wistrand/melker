@@ -1,7 +1,7 @@
 // Dialog component implementation
 
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
-import { DualBuffer, Cell } from '../buffer.ts';
+import { DualBuffer, Cell, EMPTY_CHAR } from '../buffer.ts';
 import { getThemeColor } from '../theme.ts';
 import { parseDimension } from '../utils/dimensions.ts';
 
@@ -334,7 +334,7 @@ export class DialogElement extends Element implements Renderable {
 
   private _renderBackdrop(bounds: Bounds, buffer: DualBuffer): void {
     const backdropStyle: Cell = {
-      char: ' ',
+      char: EMPTY_CHAR,
       background: getThemeColor('modalBackground'),
       foreground: getThemeColor('modalForeground'),
     };
@@ -368,7 +368,7 @@ export class DialogElement extends Element implements Renderable {
 
       // Clear title area
       for (let x = bounds.x + 1; x < bounds.x + bounds.width - 1; x++) {
-        buffer.currentBuffer.setCell(x, contentY, { ...titleStyle, char: ' ' });
+        buffer.currentBuffer.setCell(x, contentY, { ...titleStyle, char: EMPTY_CHAR });
       }
 
       // Center the title
@@ -390,7 +390,7 @@ export class DialogElement extends Element implements Renderable {
     // Clear content area
     for (let y = contentBounds.y; y < contentBounds.y + contentBounds.height; y++) {
       for (let x = contentBounds.x; x < contentBounds.x + contentBounds.width; x++) {
-        buffer.currentBuffer.setCell(x, y, { ...modalStyle, char: ' ' });
+        buffer.currentBuffer.setCell(x, y, { ...modalStyle, char: EMPTY_CHAR });
       }
     }
 

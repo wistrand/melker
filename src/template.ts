@@ -3,7 +3,7 @@
 
 import { createElement } from './element.ts';
 import type { Element } from './types.ts';
-import { parse } from 'npm:html5parser';
+import { parseHtml as parse } from './deps.ts';
 import { Stylesheet } from './stylesheet.ts';
 import { isLintEnabled, validateElementProps, addWarning, reportWarnings, clearWarnings, BASE_STYLES_SCHEMA, getComponentSchema, getRegisteredComponents } from './lint.ts';
 import { parseColor } from './components/color-utils.ts';

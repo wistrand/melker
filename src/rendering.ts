@@ -1,9 +1,9 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Node, Style, Position, Size, Bounds, LayoutProps, BoxSpacing, Renderable, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
+import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { clipBounds } from './geometry.ts';
-import { DualBuffer, TerminalBuffer, Cell } from './buffer.ts';
+import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
 import { ClippedDualBuffer } from './clipped-buffer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
 import { ViewportDualBuffer } from './viewport-buffer.ts';
@@ -1122,7 +1122,7 @@ export class RenderingEngine {
     if (!style.backgroundColor) return;
 
     const cell: Cell = {
-      char: ' ',
+      char: EMPTY_CHAR,
       background: parseColor(style.backgroundColor),
     };
 
@@ -1637,7 +1637,7 @@ export class RenderingEngine {
   // Utility method to render a simple element tree for testing
   renderElement(element: Element, width: number, height: number): string {
     const defaultCell = {
-      char: ' ',
+      char: EMPTY_CHAR,
       background: getThemeColor('background'),
       foreground: getThemeColor('textPrimary')
     };

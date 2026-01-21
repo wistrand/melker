@@ -11,7 +11,7 @@ import {
   type Overlay,
   BORDER_CHARS,
 } from '../../types.ts';
-import type { DualBuffer, Cell } from '../../buffer.ts';
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../../buffer.ts';
 import type { KeyPressEvent } from '../../events.ts';
 import { getThemeColor } from '../../theme.ts';
 import { registerComponent } from '../../element.ts';
@@ -312,7 +312,7 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     for (let y = 0; y < bounds.height; y++) {
       for (let x = 0; x < bounds.width; x++) {
         buffer.currentBuffer.setCell(bounds.x + x, bounds.y + y, {
-          char: ' ',
+          char: EMPTY_CHAR,
           background: style.background,
         });
       }
@@ -350,9 +350,7 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     };
 
     // Clear input area
-    for (let i = 0; i < width; i++) {
-      buffer.currentBuffer.setCell(x + i, y, { char: ' ', background: inputStyle.background });
-    }
+    buffer.currentBuffer.fillLine(x, y, width, { background: inputStyle.background });
 
     // Render text or placeholder
     const displayText = value || placeholder;
@@ -434,9 +432,7 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     };
 
     // Clear line
-    for (let i = 0; i < width; i++) {
-      buffer.currentBuffer.setCell(x + i, y, { char: ' ', background: style.background });
-    }
+    buffer.currentBuffer.fillLine(x, y, width, { background: style.background });
 
     // Render label
     const truncatedLabel = label.length > width ? label.substring(0, width - 1) + '~' : label;
@@ -471,9 +467,7 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     }
 
     // Clear line with full style (including reverse for focused)
-    for (let i = 0; i < width; i++) {
-      buffer.currentBuffer.setCell(x + i, y, { ...optionStyle, char: ' ' });
-    }
+    buffer.currentBuffer.fillLine(x, y, width, optionStyle);
 
     // Calculate space for shortcut (1 char right padding)
     const shortcut = option.shortcut || '';

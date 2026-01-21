@@ -12,7 +12,7 @@ import {
   type Overlay,
   BORDER_CHARS,
 } from '../../types.ts';
-import type { DualBuffer, Cell } from '../../buffer.ts';
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../../buffer.ts';
 import type { KeyPressEvent } from '../../events.ts';
 import type { ClickEvent } from '../../types.ts';
 import { getThemeColor } from '../../theme.ts';
@@ -222,7 +222,7 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     const triggerWidth = bounds.width;
     for (let x = 0; x < triggerWidth; x++) {
       buffer.currentBuffer.setCell(bounds.x + x, bounds.y, {
-        char: ' ',
+        char: EMPTY_CHAR,
         background: triggerStyle.background,
         foreground: triggerStyle.foreground,
       });
@@ -506,7 +506,7 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     for (let y = 1; y < bounds.height - 1; y++) {
       buffer.currentBuffer.setCell(bounds.x, bounds.y + y, { char: chars.v, ...borderStyle });
       for (let x = 1; x < bounds.width - 1; x++) {
-        buffer.currentBuffer.setCell(bounds.x + x, bounds.y + y, { char: ' ', background: style.background });
+        buffer.currentBuffer.setCell(bounds.x + x, bounds.y + y, { char: EMPTY_CHAR, background: style.background });
       }
       buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + y, { char: chars.v, ...borderStyle });
     }
@@ -527,9 +527,7 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     };
 
     // Clear line
-    for (let i = 0; i < width; i++) {
-      buffer.currentBuffer.setCell(x + i, y, { char: ' ', background: style.background });
-    }
+    buffer.currentBuffer.fillLine(x, y, width, { background: style.background });
 
     // Render label
     const truncatedLabel = label.length > width ? label.substring(0, width - 1) + '~' : label;
@@ -564,9 +562,7 @@ export class SelectElement extends FilterableListCore implements Renderable, Foc
     }
 
     // Clear line with full style (including reverse for focused)
-    for (let i = 0; i < width; i++) {
-      buffer.currentBuffer.setCell(x + i, y, { ...optionStyle, char: ' ' });
-    }
+    buffer.currentBuffer.fillLine(x, y, width, optionStyle);
 
     // Render label
     const truncatedLabel = option.label.length > width ? option.label.substring(0, width - 1) + '~' : option.label;

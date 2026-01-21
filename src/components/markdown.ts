@@ -3,11 +3,9 @@
 // Phase 2: Heading, paragraph, and basic inline formatting
 // Phase 3: Lists, code blocks, and blockquotes
 
-import { Element, BaseProps, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, hasIntrinsicSize } from '../types.ts';
-import type { DualBuffer, Cell } from '../buffer.ts';
-import { fromMarkdown } from 'npm:mdast-util-from-markdown@^2.0.0';
-import { gfm } from 'npm:micromark-extension-gfm@^3.0.0';
-import { gfmFromMarkdown } from 'npm:mdast-util-gfm@^3.0.0';
+import { Element, BaseProps, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, hasIntrinsicSize, type ColorInput } from '../types.ts';
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
+import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { CanvasElement } from './canvas.ts';
 import { getLogger } from '../logging.ts';
@@ -15,7 +13,6 @@ import { parseMelkerFile } from '../template.ts';
 import { getStringWidth } from '../char-width.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { COLORS, parseColor } from './color-utils.ts';
-import type { ColorInput } from '../types.ts';
 
 // ============================================================================
 // Text Utilities - display width calculation and text wrapping
@@ -28,6 +25,31 @@ function padEndDisplayWidth(str: string, targetWidth: number, padChar: string = 
   const currentWidth = getStringWidth(str);
   if (currentWidth >= targetWidth) return str;
   return str + padChar.repeat(targetWidth - currentWidth);
+}
+
+/**
+ * Find optimal break point in text for word wrapping
+ * Prefers breaking at spaces or after commas within the maxWidth limit
+ * @returns Break index, or maxWidth if no good break point found
+ */
+function findBreakPoint(text: string, maxWidth: number): number {
+  if (maxWidth <= 0) return maxWidth;
+
+  const searchArea = text.substring(0, maxWidth + 1);
+  const lastSpace = searchArea.lastIndexOf(' ');
+  const lastComma = searchArea.lastIndexOf(',');
+
+  let bestBreak = -1;
+  if (lastSpace > 0 && lastSpace < maxWidth) {
+    bestBreak = lastSpace;
+  }
+  if (lastComma > 0 && lastComma + 1 <= maxWidth) {
+    if (lastComma + 1 > bestBreak) {
+      bestBreak = lastComma + 1;
+    }
+  }
+
+  return bestBreak > 0 ? bestBreak : maxWidth;
 }
 
 /**
@@ -48,26 +70,7 @@ function wrapTextToLines(text: string, width: number): string[] {
       break;
     }
 
-    // Find a good break point (space or comma)
-    let breakPoint = width;
-    const searchArea = remaining.substring(0, width + 1);
-    const lastSpace = searchArea.lastIndexOf(' ');
-    const lastComma = searchArea.lastIndexOf(',');
-
-    // Use the later of space or comma (prefer breaking after comma)
-    let bestBreak = -1;
-    if (lastSpace > 0 && lastSpace < width) {
-      bestBreak = lastSpace;
-    }
-    if (lastComma > 0 && lastComma + 1 <= width) {
-      // Break after the comma if it's a better position
-      if (lastComma + 1 > bestBreak) {
-        bestBreak = lastComma + 1;
-      }
-    }
-    if (bestBreak > 0) {
-      breakPoint = bestBreak;
-    }
+    const breakPoint = findBreakPoint(remaining, width);
 
     lines.push(remaining.substring(0, breakPoint).trimEnd());
     remaining = remaining.substring(breakPoint).trimStart();
@@ -531,7 +534,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     // Clear the rendering area first to prevent garbage characters
     buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, {
-      char: ' ',
+      char: EMPTY_CHAR,
       foreground: style.foreground,
       background: style.background
     });
@@ -842,8 +845,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   private _renderStrong(node: Strong, ctx: MarkdownRenderContext): number {
     // This method is only called for block-level strong elements
     // Most strong elements are handled by _renderInlineElement
-    const boldStyle = { ...ctx.style, bold: true };
-    const boldContext = { ...ctx, style: boldStyle };
+    const boldContext = { ...ctx, style: this._getBoldStyle(ctx.style) };
     return this._renderInlineElements(node.children, boldContext);
   }
 
@@ -853,8 +855,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   private _renderEmphasis(node: Emphasis, ctx: MarkdownRenderContext): number {
     // This method is only called for block-level emphasis elements
     // Most emphasis elements are handled by _renderInlineElement
-    const emphasisStyle = { ...ctx.style, italic: true, dim: true };
-    const emphasisContext = { ...ctx, style: emphasisStyle };
+    const emphasisContext = { ...ctx, style: this._getEmphasisStyle(ctx.style) };
     return this._renderInlineElements(node.children, emphasisContext);
   }
 
@@ -1006,20 +1007,18 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         break;
 
       case 'strong':
-        const boldStyle = { ...style, bold: true };
         for (const child of (node as Strong).children) {
-          this._collectSpans(child, boldStyle, spans, linkUrl, linkTitle);
+          this._collectSpans(child, this._getBoldStyle(style), spans, linkUrl, linkTitle);
         }
         break;
 
       case 'emphasis':
-        const emphasisStyle = { ...style, italic: true, dim: true };
         for (const child of (node as Emphasis).children) {
-          this._collectSpans(child, emphasisStyle, spans, linkUrl, linkTitle);
+          this._collectSpans(child, this._getEmphasisStyle(style), spans, linkUrl, linkTitle);
         }
         break;
 
-      case 'inlineCode':
+      case 'inlineCode': {
         const codeValue = (node as InlineCode).value;
         const codeStyle = this._getInlineCodeStyle(style);
         // Auto-link .md file references (e.g., `path/to/file.md`)
@@ -1032,14 +1031,16 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
           spans.push({ text: codeValue, style: codeStyle, linkUrl, linkTitle });
         }
         break;
+      }
 
-      case 'link':
+      case 'link': {
         const linkNode = node as Link;
         const linkStyle = this._getLinkStyle(style);
         for (const child of linkNode.children) {
           this._collectSpans(child, linkStyle, spans, linkNode.url, linkNode.title);
         }
         break;
+      }
 
       default:
         if ('children' in node && Array.isArray(node.children)) {
@@ -1056,34 +1057,38 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    */
   private _renderInlineElement(node: ASTNode, x: number, y: number, ctx: MarkdownRenderContext): number {
     switch (node.type) {
-      case 'text':
+      case 'text': {
         const text = (node as Text).value;
         ctx.buffer.currentBuffer.setText(x, y, text, ctx.style);
         return text.length;
+      }
 
-      case 'strong':
-        const boldStyle = { ...ctx.style, bold: true };
+      case 'strong': {
+        const boldStyle = this._getBoldStyle(ctx.style);
         let boldWidth = 0;
         for (const child of (node as Strong).children) {
           boldWidth += this._renderInlineElement(child, x + boldWidth, y, { ...ctx, style: boldStyle });
         }
         return boldWidth;
+      }
 
-      case 'emphasis':
-        const emphasisStyle = { ...ctx.style, italic: true, dim: true };
+      case 'emphasis': {
+        const emphasisStyle = this._getEmphasisStyle(ctx.style);
         let emphasisWidth = 0;
         for (const child of (node as Emphasis).children) {
           emphasisWidth += this._renderInlineElement(child, x + emphasisWidth, y, { ...ctx, style: emphasisStyle });
         }
         return emphasisWidth;
+      }
 
-      case 'inlineCode':
+      case 'inlineCode': {
         const inlineCodeStyle = this._getInlineCodeStyle(ctx.style);
         const codeText = (node as InlineCode).value;
         ctx.buffer.currentBuffer.setText(x, y, codeText, inlineCodeStyle);
         return codeText.length;
+      }
 
-      case 'link':
+      case 'link': {
         const linkNode = node as Link;
         // Style for links: underline and use primary color
         const inlineLinkStyle = this._getLinkStyle(ctx.style);
@@ -1102,8 +1107,9 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         });
         logger.debug(`Registered link region: x=${x}, y=${y}, width=${linkWidth}, url=${linkNode.url}`);
         return linkWidth;
+      }
 
-      default:
+      default: {
         // For unknown inline elements, try to render children
         if ('children' in node && Array.isArray(node.children)) {
           let width = 0;
@@ -1113,6 +1119,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
           return width;
         }
         return 0;
+      }
     }
   }
 
@@ -1194,26 +1201,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         continue;
       }
 
-      // Find natural break point or use available width
-      let breakPoint = availableWidth;
-      const searchArea = remainingText.substring(0, availableWidth + 1);
-      const spaceIndex = searchArea.lastIndexOf(' ');
-      const commaIndex = searchArea.lastIndexOf(',');
-
-      // Use the later of space or comma (prefer breaking after comma)
-      let bestBreak = -1;
-      if (spaceIndex > 0 && spaceIndex < availableWidth) {
-        bestBreak = spaceIndex;
-      }
-      if (commaIndex > 0 && commaIndex + 1 <= availableWidth) {
-        // Break after the comma if it's a better position
-        if (commaIndex + 1 > bestBreak) {
-          bestBreak = commaIndex + 1;
-        }
-      }
-      if (bestBreak > 0) {
-        breakPoint = bestBreak;
-      }
+      const breakPoint = findBreakPoint(remainingText, availableWidth);
 
       const line = remainingText.substring(0, breakPoint).trimEnd();
       if (line.length > 0) {
@@ -1973,14 +1961,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         }
 
         // Need to wrap - find a good break point
-        let breakPoint = availableWidth;
-        if (availableWidth > 0) {
-          const searchArea = remainingText.substring(0, availableWidth + 1);
-          const lastSpace = searchArea.lastIndexOf(' ');
-          if (lastSpace > 0) {
-            breakPoint = lastSpace;
-          }
-        }
+        const breakPoint = availableWidth > 0 ? findBreakPoint(remainingText, availableWidth) : availableWidth;
 
         if (breakPoint > 0 && availableWidth > 0) {
           // Add portion to current line - preserve link info
@@ -2023,10 +2004,11 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     switch (alignment) {
       case 'right':
         return ' '.repeat(padding) + text;
-      case 'center':
+      case 'center': {
         const leftPad = Math.floor(padding / 2);
         const rightPad = padding - leftPad;
         return ' '.repeat(leftPad) + text + ' '.repeat(rightPad);
+      }
       case 'left':
       default:
         return text + ' '.repeat(padding);
@@ -2320,6 +2302,20 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   }
 
   /**
+   * Get bold (strong) style
+   */
+  private _getBoldStyle(baseStyle: Partial<Cell>): Partial<Cell> {
+    return { ...baseStyle, bold: true };
+  }
+
+  /**
+   * Get emphasis (italic) style
+   */
+  private _getEmphasisStyle(baseStyle: Partial<Cell>): Partial<Cell> {
+    return { ...baseStyle, italic: true, dim: true };
+  }
+
+  /**
    * Get inline code style
    */
   private _getInlineCodeStyle(baseStyle: Partial<Cell>): Partial<Cell> {
@@ -2443,16 +2439,18 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     switch (node.type) {
       case 'heading':
         return 2; // Title + blank line
-      case 'paragraph':
+      case 'paragraph': {
         const text = this._extractTextContent(node);
         return Math.max(1, Math.ceil(text.length / Math.max(1, availableWidth - 4))) + 1;
-      case 'list':
+      }
+      case 'list': {
         let listLines = 0;
         for (const item of node.children || []) {
           listLines += this._estimateNodeLines(item, availableWidth - 2);
         }
         return listLines;
-      case 'listItem':
+      }
+      case 'listItem': {
         // List items can contain nested content (paragraphs, nested lists)
         let itemLines = 0;
         for (const child of node.children || []) {
@@ -2460,25 +2458,29 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         }
         // At minimum, a list item takes 1 line
         return Math.max(1, itemLines);
+      }
       case 'code':
         return (node.value?.split('\n') || []).length + 3; // code lines + lang label + spacing before/after
-      case 'blockquote':
+      case 'blockquote': {
         // Blockquotes contain nested content
         let quoteLines = 2; // spacing before/after
         for (const child of node.children || []) {
           quoteLines += this._estimateNodeLines(child, availableWidth - 2);
         }
         return quoteLines;
-      case 'table':
+      }
+      case 'table': {
         // Table: top border + header + separator + rows + bottom border + spacing
         const numRows = (node.children || []).length;
         return numRows + 4; // rows + top/bottom borders + header separator + spacing
-      case 'root':
+      }
+      case 'root': {
         let rootLines = 0;
         for (const child of node.children || []) {
           rootLines += this._estimateNodeLines(child, availableWidth);
         }
         return rootLines;
+      }
       default:
         return 1;
     }

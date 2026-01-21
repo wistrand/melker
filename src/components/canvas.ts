@@ -1,12 +1,11 @@
 // Canvas component for basic graphics rendering using Unicode sextant characters
 
 import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, KeyPressEvent, ColorInput } from '../types.ts';
-import type { DualBuffer, Cell } from '../buffer.ts';
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, cssToRgba, parseColor } from './color-utils.ts';
-import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, applyFloydSteinbergStableDither, applyAtkinsonDither, applyAtkinsonStableDither, applyBlueNoiseDither, applyOrderedDither, applyThresholdDither, loadThresholdMatrixFromPng, type DitherMode, type ThresholdMatrix } from '../video/dither.ts';
+import { applySierraStableDither, applySierraDither, applyFloydSteinbergDither, applyFloydSteinbergStableDither, applyAtkinsonDither, applyAtkinsonStableDither, applyBlueNoiseDither, applyOrderedDither, type DitherMode } from '../video/dither.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { getLogger } from '../logging.ts';
-import { getGlobalPerformanceDialog } from '../performance-dialog.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
@@ -1818,7 +1817,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
           if (!avgColor) continue;
 
           buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-            char: ' ',
+            char: EMPTY_CHAR,
             background: avgColor,
             bold: style.bold,
             dim: style.dim,
@@ -2017,7 +2016,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         if (!bgColor) continue;
 
         buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-          char: ' ',
+          char: EMPTY_CHAR,
           background: bgColor,
           bold: style.bold,
           dim: style.dim,

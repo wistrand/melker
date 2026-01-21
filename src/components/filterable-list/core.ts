@@ -7,6 +7,7 @@ import { GroupElement } from './group.ts';
 import { filterOptions, FilteredOption, FilterMode, FuzzyMatchResult } from './filter.ts';
 import { getLogger } from '../../logging.ts';
 import { getThemeColor } from '../../theme.ts';
+import { renderScrollbar } from '../scrollbar.ts';
 
 const logger = getLogger('filterable-list');
 
@@ -698,27 +699,13 @@ export abstract class FilterableListCore extends Element implements Focusable {
   ): void {
     if (!this.hasScroll() || height < 2) return;
 
-    const filtered = this.getFilteredOptions();
-    const totalItems = filtered.length;
-    const visibleItems = this._getVisibleCount();
-    const scrollTop = this._scrollTop;
-
-    // Calculate thumb size and position
-    const thumbSize = Math.max(1, Math.floor((visibleItems / totalItems) * height));
-    const maxScroll = totalItems - visibleItems;
-    const thumbPosition = maxScroll > 0
-      ? Math.floor((scrollTop / maxScroll) * (height - thumbSize))
-      : 0;
-
-    // Draw track
-    for (let i = 0; i < height; i++) {
-      const isThumb = i >= thumbPosition && i < thumbPosition + thumbSize;
-      buffer.currentBuffer.setCell(x, y + i, {
-        char: isThumb ? '█' : '░',
-        foreground: isThumb ? getThemeColor('primary') : getThemeColor('border'),
-        background: style.background,
-      });
-    }
+    renderScrollbar(buffer, x, y, height, {
+      scrollTop: this._scrollTop,
+      totalItems: this.getFilteredOptions().length,
+      visibleItems: this._getVisibleCount(),
+      thumbStyle: { foreground: getThemeColor('primary'), background: style.background },
+      trackStyle: { foreground: getThemeColor('border'), background: style.background },
+    });
   }
 
   // Abstract methods for subclasses

@@ -3,7 +3,6 @@
 
 import { type MelkerEngine } from './engine.ts';
 import { type Element } from './types.ts';
-import { isRunningHeadless } from './headless.ts';
 import { MelkerConfig } from './config/mod.ts';
 
 export interface DebugServerOptions {

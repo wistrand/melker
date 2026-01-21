@@ -526,6 +526,7 @@ export class TerminalRenderer {
       (globalThis as any).process.stdout.write(output);
     } else {
       // Fallback for environments without process.stdout
+      // deno-lint-ignore no-control-regex
       console.log(output.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '[ESC]'));
     }
   }

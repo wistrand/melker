@@ -1,9 +1,7 @@
 // Image loading and decoding for canvas component
 // Supports PNG, JPEG, and GIF formats
 
-import { decode as decodePng } from 'npm:fast-png';
-import { decode as decodeJpeg } from 'npm:jpeg-js';
-import { GifReader } from 'npm:omggif';
+import { decodePng, decodeJpeg, GifReader } from '../deps.ts';
 
 /**
  * Decoded image data in a standard format

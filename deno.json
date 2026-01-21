@@ -11,7 +11,8 @@
     "test:watch": "deno test --allow-read --allow-env --allow-write --watch",
     "test:coverage": "deno test --allow-read --allow-env --allow-write --coverage=coverage/",
     "fmt": "deno fmt",
-    "lint": "deno lint",
+    "lint-real" : "deno lint --rules-exclude=no-inner-declarations,prefer-const,require-await,no-explicit-any,no-unused-vars src",
+    "lint-all": "deno lint src",
     "check": "deno check src/**/*.ts",
     "check-ts-examples": "deno check examples/**/*.ts",
     "skill:zip": "cd skills/creating-melker-apps && zip -r ../../docs/skill-creating-melker-apps.zip SKILL.md references/ && echo 'Created skill-creating-melker-apps.zip'"

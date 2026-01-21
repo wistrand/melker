@@ -110,6 +110,7 @@ export async function bundle(
     if (!result.success && result.errors?.length > 0) {
       // Format all errors for display
       const errorMessages = result.errors
+        // deno-lint-ignore no-control-regex
         .map((e: { text: string }) => e.text.replace(/\x1b\[[0-9;]*m/g, '')) // strip ANSI codes
         .join('\n\n');
 

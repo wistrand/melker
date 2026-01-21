@@ -1,10 +1,15 @@
 // Dual-buffer system for efficient terminal rendering
 
-import { Bounds, BORDER_CHARS, type PackedRGBA } from './types.ts';
-import { getCharWidth, getStringWidth, analyzeString, type CharInfo } from './char-width.ts';
+import { BORDER_CHARS, type PackedRGBA, type BorderStyle } from './types.ts';
+import { getCharWidth, getStringWidth, analyzeString } from './char-width.ts';
 import { getThemeManager, colorToGray, colorToLowContrast } from './theme.ts';
-import type { BorderStyle } from './types.ts';
 import { getLogger } from './logging.ts';
+
+/**
+ * Character used for filling/clearing cells.
+ * Change to '.' or '·' for debugging to visualize fill areas.
+ */
+export const EMPTY_CHAR = ' ';
 
 export interface Cell {
   char: string;
@@ -38,7 +43,7 @@ export class TerminalBuffer {
   private _dirtyRows?: Set<number>;
   private _referenceBuffer?: TerminalBuffer;
 
-  constructor(width: number, height: number, defaultCell: Cell = { char: ' ' }) {
+  constructor(width: number, height: number, defaultCell: Cell = { char: EMPTY_CHAR }) {
     this._width = width;
     this._height = height;
     this._defaultCell = defaultCell;
@@ -264,6 +269,13 @@ export class TerminalBuffer {
     return getStringWidth(text);
   }
 
+  // Fill a horizontal line with EMPTY_CHAR (for clearing/background fill)
+  fillLine(x: number, y: number, width: number, style: Partial<Cell> = {}): void {
+    for (let i = 0; i < width && x + i < this._width; i++) {
+      this.setCell(x + i, y, { char: EMPTY_CHAR, ...style });
+    }
+  }
+
   // Fill rectangle with character/style
   fillRect(x: number, y: number, width: number, height: number, cell: Cell): void {
     for (let dy = 0; dy < height; dy++) {
@@ -481,7 +493,7 @@ export class DualBuffer {
   private _lastFrameTime: number = 0;
   private _startTime: number = Date.now();
 
-  constructor(width: number, height: number, defaultCell: Cell = { char: ' ' }) {
+  constructor(width: number, height: number, defaultCell: Cell = { char: EMPTY_CHAR }) {
     this._width = width;
     this._height = height;
     this._currentBuffer = new TerminalBuffer(width, height, defaultCell);
@@ -803,7 +815,7 @@ export class DualBuffer {
     for (let y = 0; y < this._height; y++) {
       for (let x = 0; x < this._width; x++) {
         const cell = this._currentBuffer.getCell(x, y);
-        if (cell && cell.char !== ' ') {
+        if (cell && cell.char !== EMPTY_CHAR) {
           count++;
         }
       }
@@ -857,7 +869,7 @@ export class DualBuffer {
     for (let y = 0; y < this._height; y++) {
       for (let x = 0; x < this._width; x++) {
         const cell = this._currentBuffer.getCell(x, y);
-        if (cell && cell.char !== ' ' && !cell.isWideCharContinuation) {
+        if (cell && cell.char !== EMPTY_CHAR && !cell.isWideCharContinuation) {
           nonEmptyCells++;
           if (cell.width === 2) {
             wideCharCells++;

@@ -980,11 +980,11 @@ const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);
 
 ### Supported Formats
 
-- **PNG** - Full support including alpha transparency and 16-bit depth (decoded via `npm:fast-png`)
-- **JPEG** - Full support (decoded via `npm:jpeg-js`)
-- **GIF** - Static images, first frame only (decoded via `npm:omggif`)
+- **PNG** - Full support including alpha transparency and 16-bit depth (fast-png)
+- **JPEG** - Full support (jpeg-js)
+- **GIF** - Static images, first frame only (omggif)
 
-All decoders are pure JavaScript - no native dependencies or Deno internal APIs.
+All decoders are pure JavaScript (centralized in `src/deps.ts`) - no native dependencies or Deno internal APIs.
 
 ### Path Resolution
 
@@ -995,7 +995,7 @@ All decoders are pure JavaScript - no native dependencies or Deno internal APIs.
 
 ### Implementation
 
-Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an HTML-like API for image display. Image decoding is in `src/components/canvas-image.ts`.
+Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an HTML-like API for image display. Image decoding is in `src/components/canvas-image.ts`, with decoders imported from `src/deps.ts`.
 
 ## Rendering Pipeline
 

@@ -2,10 +2,9 @@
 // Children must be 'li' elements which can contain any other components
 import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
-import type { KeyPressEvent, SelectionChangeEvent } from '../events.ts';
-import { createKeyPressEvent, createSelectionChangeEvent } from '../events.ts';
+import { type KeyPressEvent, type SelectionChangeEvent, createSelectionChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
-import { ContainerElement, ContainerProps } from './container.ts';
+import { renderScrollbar } from './scrollbar.ts';
 
 export type SelectionMode = 'none' | 'single' | 'multiple';
 
@@ -201,33 +200,15 @@ export class ListElement extends Element implements Renderable, Focusable {
     totalItems: number,
     visibleItems: number
   ): void {
-    const scrollbarX = bounds.x + bounds.width - 1;
-    const scrollbarHeight = bounds.height;
-
-    // Clear scrollbar area
-    for (let i = 0; i < scrollbarHeight; i++) {
-      buffer.currentBuffer.setCell(scrollbarX, bounds.y + i, {
-        char: '│',
-        foreground: getThemeColor('border'),
-        background: getThemeColor('surface')
-      });
-    }
-
-    // Calculate thumb position and size
-    const thumbSize = Math.max(1, Math.floor((visibleItems / totalItems) * scrollbarHeight));
-    const thumbPosition = Math.floor((scrollTop / (totalItems - visibleItems)) * (scrollbarHeight - thumbSize));
-
-    // Render thumb
-    for (let i = 0; i < thumbSize; i++) {
-      const thumbY = bounds.y + thumbPosition + i;
-      if (thumbY >= bounds.y && thumbY < bounds.y + scrollbarHeight) {
-        buffer.currentBuffer.setCell(scrollbarX, thumbY, {
-          char: '█',
-          foreground: getThemeColor('primary'),
-          background: getThemeColor('surface')
-        });
-      }
-    }
+    renderScrollbar(buffer, bounds.x + bounds.width - 1, bounds.y, bounds.height, {
+      scrollTop,
+      totalItems,
+      visibleItems,
+      thumbChar: '█',
+      trackChar: '│',
+      thumbStyle: { foreground: getThemeColor('primary'), background: getThemeColor('surface') },
+      trackStyle: { foreground: getThemeColor('border'), background: getThemeColor('surface') },
+    });
   }
 
   // Utility methods for external control

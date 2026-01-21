@@ -1,6 +1,6 @@
 // Threshold-based dithering: ordered (Bayer), threshold matrix, and blue noise
 
-import { decode as decodePng } from 'npm:fast-png';
+import { decodePng } from '../../deps.ts';
 import { MelkerConfig } from '../../config/mod.ts';
 import { BAYER_8X8, type ThresholdMatrix } from './types.ts';
 import { quantizeChannel, rgbToGray } from './utils.ts';

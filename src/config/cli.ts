@@ -111,20 +111,22 @@ function parseValue(value: string, prop: ConfigProperty, flagName?: string): unk
   switch (prop.type) {
     case 'boolean':
       return value === 'true' || value === '1';
-    case 'integer':
+    case 'integer': {
       const intVal = parseInt(value, 10);
       if (isNaN(intVal)) {
         console.error(`Error: Invalid integer value: ${value}`);
         Deno.exit(1);
       }
       return intVal;
-    case 'number':
+    }
+    case 'number': {
       const numVal = parseFloat(value);
       if (isNaN(numVal)) {
         console.error(`Error: Invalid number value: ${value}`);
         Deno.exit(1);
       }
       return numVal;
+    }
     default:
       return value;
   }

@@ -12,7 +12,7 @@ declare global {
 import { Document } from './document.ts';
 import { MelkerConfig, setLoggerGetter } from './config/mod.ts';
 import { Env } from './env.ts';
-import { DualBuffer } from './buffer.ts';
+import { DualBuffer, EMPTY_CHAR } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
 import { InputElement } from './components/input.ts';
 import { TextareaElement } from './components/textarea.ts';
@@ -402,7 +402,7 @@ export class MelkerEngine {
 
     // Initialize buffer and renderers with theme-aware default cell
     const defaultCell = {
-      char: ' ',
+      char: EMPTY_CHAR,
       background: getThemeColor('background'),
       foreground: getThemeColor('textPrimary')
     };

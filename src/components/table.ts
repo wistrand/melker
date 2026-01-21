@@ -3,7 +3,7 @@
 import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, IntrinsicSizeContext, Bounds, ComponentRenderContext, BorderStyle, BorderChars, BORDER_CHARS, ClickEvent, isRenderable, isClickable } from '../types.ts';
 import type { KeyEvent } from '../events.ts';
 import type { Document } from '../document.ts';
-import type { DualBuffer, Cell, TerminalBuffer } from '../buffer.ts';
+import type { DualBuffer, Cell } from '../buffer.ts';
 import { ClippedDualBuffer } from '../clipped-buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
@@ -12,6 +12,7 @@ import { TableRowElement } from './table-row.ts';
 import { TableCellElement } from './table-cell.ts';
 import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
+import { renderScrollbar } from './scrollbar.ts';
 
 const logger = getLogger('Table');
 
@@ -251,20 +252,21 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
         }
         return true;
 
-      case 'Enter':
+      case 'Enter': {
         // Select current row and fire event
         const rowId = rows[focusedIndex]?.getDataId();
         if (rowId) {
           tbody.selectRow(rowId, selectable === 'single' ? 'replace' : 'add');
         }
         return true;
+      }
 
       case 'Escape':
         // Clear selection
         tbody.clearSelection();
         return true;
 
-      case 'Home':
+      case 'Home': {
         // Jump to first row
         tbody.setFocusedRowIndex(0);
         if (selectable === 'single') {
@@ -273,8 +275,9 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
         }
         this._ensureRowVisible(0);
         return true;
+      }
 
-      case 'End':
+      case 'End': {
         // Jump to last row
         const lastIndex = rows.length - 1;
         tbody.setFocusedRowIndex(lastIndex);
@@ -284,6 +287,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
         }
         this._ensureRowVisible(lastIndex);
         return true;
+      }
     }
 
     return false;
@@ -1496,6 +1500,23 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   /**
    * Fast path to check if a cell is simple single-line text
    */
+  /**
+   * Calculate total cell width for a colspan, optionally including internal borders
+   */
+  private _calculateColspanWidth(
+    colspan: number,
+    colIndex: number,
+    columnWidths: number[],
+    includeBorders: boolean = false
+  ): number {
+    let cellWidth = 0;
+    for (let i = 0; i < colspan && colIndex + i < columnWidths.length; i++) {
+      cellWidth += columnWidths[colIndex + i];
+      if (i > 0 && includeBorders) cellWidth++;
+    }
+    return cellWidth;
+  }
+
   private _isSingleLineTextCell(cell: TableCellElement): boolean {
     const children = cell.children;
     if (!children || children.length === 0) return true;
@@ -1537,11 +1558,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       }
 
       const colspan = cell.getColspan();
-      let cellWidth = 0;
-
-      for (let i = 0; i < colspan && colIndex + i < columnWidths.length; i++) {
-        cellWidth += columnWidths[colIndex + i];
-      }
+      const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths);
 
       const contentWidth = cellWidth - cellPadding * 2;
       const cellHeight = cell.intrinsicSize({ availableSpace: { width: contentWidth, height: 100 } }).height;
@@ -1586,13 +1603,8 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
       const cell = cells[cellIdx];
       const colspan = cell.getColspan();
-      let cellWidth = 0;
-
       // Calculate total cell width (including spanned columns)
-      for (let i = 0; i < colspan && colIndex + i < columnWidths.length; i++) {
-        cellWidth += columnWidths[colIndex + i];
-        if (i > 0 && hasBorder && showColumnBorders) cellWidth++; // Include border between spanned columns
-      }
+      const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, hasBorder && showColumnBorders);
 
       const align = cell.props.align || 'left';
       const cellContentWidth = cellWidth - cellPadding * 2;
@@ -1650,11 +1662,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
         const cell = cells[cellIdx];
         const colspan = cell.getColspan();
-        let cellWidth = 0;
-        for (let i = 0; i < colspan && colIndex + i < columnWidths.length; i++) {
-          cellWidth += columnWidths[colIndex + i];
-          if (i > 0 && showColumnBorders) cellWidth++;
-        }
+        const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, showColumnBorders);
         borderX += cellWidth;
 
         // Only draw internal borders if showColumnBorders is true, always draw right border
@@ -1729,18 +1737,15 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     if (isSelected) {
       for (let line = 0; line < linesToRender; line++) {
         let currentX = x + (hasBorder ? 1 : 0);
+        let colIdx = 0;
         for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
           const cell = cells[cellIdx];
           const colspan = cell.getColspan();
-          let cellWidth = 0;
-          let colIdx = 0;
-          for (let i = 0; i < colspan && colIdx + i < columnWidths.length; i++) {
-            cellWidth += columnWidths[colIdx + i];
-            if (i > 0 && hasBorder && showColumnBorders) cellWidth++;
-          }
-          buffer.currentBuffer.setText(currentX, y + line, ' '.repeat(cellWidth), style);
+          const cellWidth = this._calculateColspanWidth(colspan, colIdx, columnWidths, hasBorder && showColumnBorders);
+          buffer.currentBuffer.fillLine(currentX, y + line, cellWidth, style);
           const isLastCell = cellIdx === cells.length - 1;
           currentX += cellWidth + (hasBorder && (showColumnBorders || isLastCell) ? 1 : 0);
+          colIdx += colspan;
         }
       }
     }
@@ -1751,13 +1756,8 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
       const cell = cells[cellIdx];
       const colspan = cell.getColspan();
-      let cellWidth = 0;
-
       // Calculate total cell width (including spanned columns)
-      for (let i = 0; i < colspan && colIndex + i < columnWidths.length; i++) {
-        cellWidth += columnWidths[colIndex + i];
-        if (i > 0 && hasBorder && showColumnBorders) cellWidth++; // Include border between spanned columns
-      }
+      const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, hasBorder && showColumnBorders);
 
       const align = cell.props.align || 'left';
       const cellContentWidth = cellWidth - cellPadding * 2;
@@ -1805,11 +1805,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
         for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
           const cell = cells[cellIdx];
           const colspan = cell.getColspan();
-          let cellWidth = 0;
-          for (let i = 0; i < colspan && colIndex + i < columnWidths.length; i++) {
-            cellWidth += columnWidths[colIndex + i];
-            if (i > 0 && showColumnBorders) cellWidth++;
-          }
+          const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, showColumnBorders);
           borderX += cellWidth;
 
           // Only draw internal borders if showColumnBorders is true, always draw right border
@@ -1871,7 +1867,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       if (child.type === 'container' && child.children) {
         if (skipLines === 0) {
           const containerWidth = this._estimateContainerWidth(child, width);
-          this._renderContainerChildrenClipped(buffer, currentX, y, containerWidth, child, style, context);
+          this._renderContainerChildren(buffer, currentX, y, containerWidth, child, style, context);
           currentX += containerWidth;
         }
       } else if (isRenderable(child)) {
@@ -1921,10 +1917,10 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   }
 
   /**
-   * Render container children within a cell (for clipped rendering)
+   * Render container children within a cell
    * Tracks each child component for click handling
    */
-  private _renderContainerChildrenClipped(
+  private _renderContainerChildren(
     buffer: DualBuffer | ClippedDualBuffer,
     x: number,
     y: number,
@@ -2054,38 +2050,6 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     return totalWidth;
   }
 
-  /**
-   * Render children of a container within a cell
-   */
-  private _renderContainerChildren(
-    buffer: DualBuffer,
-    x: number,
-    y: number,
-    width: number,
-    container: Element,
-    style: Partial<Cell>,
-    context: ComponentRenderContext
-  ): void {
-    if (!container.children || container.children.length === 0) return;
-
-    const gap = container.props.style?.gap || 0;
-    let currentX = x;
-
-    for (const child of container.children) {
-      if (isRenderable(child)) {
-        const size = child.intrinsicSize({ availableSpace: { width, height: 1 } });
-        const childBounds: Bounds = { x: currentX, y, width: size.width, height: 1 };
-        child.render(childBounds, style, buffer, context);
-        // Track component bounds for click handling
-        this._cellComponentBounds.push({ element: child, bounds: childBounds });
-        currentX += size.width + gap;
-      } else if (child.type === 'text' && child.props.text) {
-        const text = String(child.props.text);
-        buffer.currentBuffer.setText(currentX, y, text, style);
-        currentX += text.length + gap;
-      }
-    }
-  }
 
   /**
    * Get text content from a cell
@@ -2176,25 +2140,13 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   ): void {
     if (trackHeight <= 0 || totalRows <= 0) return;
 
-    // Calculate scrollbar thumb size based on ratio of visible to total rows
-    const visibleRatio = visibleRowCount !== undefined
-      ? Math.min(1, visibleRowCount / totalRows)
-      : Math.min(1, trackHeight / (totalRows * 2)); // Fallback estimate
-
-    const thumbHeight = Math.max(1, Math.round(visibleRatio * trackHeight));
-
-    // Calculate thumb position based on scroll position
-    const maxScrollY = Math.max(1, totalRows - (visibleRowCount || 1));
-    const scrollRatio = Math.min(1, scrollY / maxScrollY);
-    const maxThumbPosition = trackHeight - thumbHeight;
-    const thumbPosition = Math.round(scrollRatio * maxThumbPosition);
-
-    // Draw the scrollbar track and thumb
-    for (let i = 0; i < trackHeight; i++) {
-      const isThumb = i >= thumbPosition && i < thumbPosition + thumbHeight;
-      const char = isThumb ? '█' : '░';
-      buffer.currentBuffer.setText(x, y + i, char, style);
-    }
+    renderScrollbar(buffer, x, y, trackHeight, {
+      scrollTop: scrollY,
+      totalItems: totalRows,
+      visibleItems: visibleRowCount ?? Math.floor(trackHeight / 2),
+      thumbStyle: style,
+      trackStyle: style,
+    });
   }
 
   /**
@@ -2212,11 +2164,12 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   ): void {
     if (trackHeight <= 0) return;
 
-    for (let i = 0; i < trackHeight; i++) {
-      const isThumb = i >= thumbPosition && i < thumbPosition + thumbHeight;
-      const char = isThumb ? '█' : '░';
-      buffer.currentBuffer.setText(x, y + i, char, style);
-    }
+    renderScrollbar(buffer, x, y, trackHeight, {
+      thumbPosition,
+      thumbSize: thumbHeight,
+      thumbStyle: style,
+      trackStyle: style,
+    });
   }
 
   /**

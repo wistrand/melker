@@ -12,7 +12,7 @@ import {
   type Overlay,
   BORDER_CHARS,
 } from '../../types.ts';
-import type { DualBuffer, Cell } from '../../buffer.ts';
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../../buffer.ts';
 import type { KeyPressEvent } from '../../events.ts';
 import type { ClickEvent } from '../../types.ts';
 import { getThemeColor } from '../../theme.ts';
@@ -247,7 +247,7 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
     // Clear input area
     for (let x = 0; x < bounds.width; x++) {
       buffer.currentBuffer.setCell(bounds.x + x, bounds.y, {
-        char: ' ',
+        char: EMPTY_CHAR,
         background: inputStyle.background,
         foreground: inputStyle.foreground,
       });
@@ -562,7 +562,7 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
       buffer.currentBuffer.setCell(bounds.x, bounds.y + y, { ...borderStyle, char: chars.v });
       // Fill interior
       for (let x = 1; x < bounds.width - 1; x++) {
-        buffer.currentBuffer.setCell(bounds.x + x, bounds.y + y, { ...style, char: ' ' });
+        buffer.currentBuffer.setCell(bounds.x + x, bounds.y + y, { ...style, char: EMPTY_CHAR });
       }
       buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + y, { ...borderStyle, char: chars.v });
     }
@@ -590,9 +590,7 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
     };
 
     // Clear line
-    for (let i = 0; i < width; i++) {
-      buffer.currentBuffer.setCell(x + i, y, { ...style, char: ' ' });
-    }
+    buffer.currentBuffer.fillLine(x, y, width, style);
 
     // Render label
     const displayLabel = label.substring(0, width);
@@ -627,9 +625,7 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
     }
 
     // Clear line with background
-    for (let i = 0; i < width; i++) {
-      buffer.currentBuffer.setCell(x + i, y, { ...optionStyle, char: ' ' });
-    }
+    buffer.currentBuffer.fillLine(x, y, width, optionStyle);
 
     // Render label with match highlighting (bold for matched chars when focused)
     const label = option.label || '';

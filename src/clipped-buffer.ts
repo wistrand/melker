@@ -1,5 +1,5 @@
 // Clipped Buffer Proxy - clips all buffer operations to a bounds rectangle
-import { TerminalBuffer, DualBuffer, Cell, RenderOptions, BufferDiff } from './buffer.ts';
+import { TerminalBuffer, DualBuffer, Cell, RenderOptions, BufferDiff, EMPTY_CHAR } from './buffer.ts';
 import { Bounds } from './types.ts';
 import { analyzeString } from './char-width.ts';
 
@@ -84,6 +84,22 @@ export class ClippedBufferProxy {
     }
   }
 
+  fillLine(x: number, y: number, width: number, style: Partial<Cell> = {}): void {
+    // Check Y bounds
+    if (y < this.clipBounds.y || y >= this.clipBounds.y + this.clipBounds.height) {
+      return;
+    }
+
+    // Clip X range
+    const startX = Math.max(x, this.clipBounds.x);
+    const endX = Math.min(x + width, this.clipBounds.x + this.clipBounds.width);
+    const clippedWidth = endX - startX;
+
+    if (clippedWidth > 0) {
+      this.buffer.fillLine(startX, y, clippedWidth, style);
+    }
+  }
+
   getCell(x: number, y: number): Cell | null {
     return this.buffer.getCell(x, y) || null;
   }
@@ -92,7 +108,7 @@ export class ClippedBufferProxy {
     // Clear only the clipped area
     for (let y = this.clipBounds.y; y < this.clipBounds.y + this.clipBounds.height; y++) {
       for (let x = this.clipBounds.x; x < this.clipBounds.x + this.clipBounds.width; x++) {
-        this.buffer.setCell(x, y, { char: ' ' });
+        this.buffer.setCell(x, y, { char: EMPTY_CHAR });
       }
     }
   }

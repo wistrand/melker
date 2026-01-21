@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { DualBuffer } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
-import { Element, TextSelection, Bounds, isClickable, ClickEvent, isDraggable, Draggable, hasShaderMethods } from './types.ts';
+import { Element, TextSelection, Bounds, isDraggable, Draggable, hasShaderMethods } from './types.ts';
 import { clampToBounds } from './geometry.ts';
 import {
   EventManager,

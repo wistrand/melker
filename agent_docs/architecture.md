@@ -61,6 +61,7 @@
 | `src/document.ts` | Document class, element registry, focus |
 | `src/events.ts` | Event system, EventManager |
 | `src/types.ts` | Core type definitions |
+| `src/deps.ts` | Centralized npm dependencies (HTML parsing, image decoding, markdown, LSP) |
 | `src/sizing.ts` | Box model, border-box sizing |
 | `src/viewport.ts` | Viewport management for scrolling |
 | `src/viewport-buffer.ts` | Viewport buffer proxies |

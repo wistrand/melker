@@ -1,8 +1,7 @@
 // Input component implementation
 
 import { Element, BaseProps, Renderable, Focusable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
-import type { DualBuffer, Cell } from '../buffer.ts';
-import type { ChangeEvent, KeyPressEvent } from '../events.ts';
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
 import { COLORS, parseColor } from './color-utils.ts';
@@ -96,7 +95,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
 
     // Clear the input area first - make sure it's visible
     buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, 1, {
-      char: ' ',
+      char: EMPTY_CHAR,
       background: inputCellStyle.background,
       foreground: inputCellStyle.foreground,
     });
@@ -564,7 +563,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
 
     // Clear the input area
     buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, 1, {
-      char: ' ',
+      char: EMPTY_CHAR,
       background: bg,
       foreground: fg,
     });

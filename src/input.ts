@@ -460,6 +460,7 @@ export class TerminalInputProcessor {
    */
   private _parseMouseSequence(sequence: string): RawMouseInput | RawWheelInput | null {
     // SGR mouse format: \x1b[<button;x;yM (press) or \x1b[<button;x;ym (release)
+    // deno-lint-ignore no-control-regex
     const sgrMatch = sequence.match(/\x1b\[<(\d+);(\d+);(\d+)([Mm])/);
     if (sgrMatch) {
       const button = parseInt(sgrMatch[1]);
@@ -627,6 +628,7 @@ export class TerminalInputProcessor {
     }
 
     // Modified keys (with Ctrl, Alt, Shift)
+    // deno-lint-ignore no-control-regex
     const modifiedMatch = sequence.match(/\x1b\[1;(\d+)([ABCD~])/);
     if (modifiedMatch) {
       const modifierCode = parseInt(modifiedMatch[1]);
@@ -670,6 +672,7 @@ export class TerminalInputProcessor {
 
     // Kitty/xterm extended key encoding: CSI number ; modifiers u
     // e.g., \x1b[13;5u = Ctrl+Enter, \x1b[13;3u = Alt+Enter
+    // deno-lint-ignore no-control-regex
     const kittyMatch = sequence.match(/\x1b\[(\d+);(\d+)u/);
     if (kittyMatch) {
       const keyCode = parseInt(kittyMatch[1]);

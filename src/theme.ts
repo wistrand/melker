@@ -3,7 +3,7 @@
 import type { PackedRGBA } from './types.ts';
 import { Env } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
-import { COLORS, parseColor, packRGBA, unpackRGBA } from './components/color-utils.ts';
+import { COLORS, packRGBA } from './components/color-utils.ts';
 
 // Theme definitions
 export type ThemeType = 'bw' | 'gray' | 'color' | 'fullcolor';

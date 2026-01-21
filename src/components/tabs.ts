@@ -2,7 +2,7 @@
 
 import { Element, BaseProps, IntrinsicSizeContext, isRenderable, hasIntrinsicSize } from '../types.ts';
 import { TabElement } from './tab.ts';
-import { createElement } from '../element.ts';
+import { createElement, registerComponent } from '../element.ts';
 import { getLogger } from '../logging.ts';
 
 const logger = getLogger('Tabs');
@@ -254,8 +254,6 @@ export class TabsElement extends Element {
 }
 
 // Register component for createElement
-import { registerComponent } from '../element.ts';
-
 registerComponent({
   type: 'tabs',
   componentClass: TabsElement,

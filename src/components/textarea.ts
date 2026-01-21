@@ -1,9 +1,8 @@
 // Textarea component implementation - multiline text input
 
 import { Element, BaseProps, Renderable, Focusable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
-import type { DualBuffer, Cell } from '../buffer.ts';
-import type { ChangeEvent, KeyPressEvent } from '../events.ts';
-import { createKeyPressEvent, createChangeEvent } from '../events.ts';
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
+import { type KeyPressEvent, createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
 import { createDebouncedAction, type DebouncedAction } from '../utils/timing.ts';
 import { COLORS, parseColor } from './color-utils.ts';
@@ -296,7 +295,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
 
     // Clear the textarea area
     buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, {
-      char: ' ',
+      char: EMPTY_CHAR,
       background: textareaStyle.background,
       foreground: textareaStyle.foreground,
     });
@@ -877,7 +876,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
 
     // Clear the textarea area
     buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, {
-      char: ' ',
+      char: EMPTY_CHAR,
       background: bg,
       foreground: fg,
     });

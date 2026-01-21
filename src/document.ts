@@ -1,7 +1,7 @@
 // Document class for managing runtime information about a root element
 
 import { Element } from './types.ts';
-import { findElementById, traverseElements } from './element.ts';
+import { traverseElements } from './element.ts';
 import { selectorStringMatches } from './stylesheet.ts';
 
 export interface DocumentOptions {

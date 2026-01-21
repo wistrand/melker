@@ -78,10 +78,17 @@ These are set via `style=""` attribute, not direct props:
 | `orientation` | `'horizontal'` \| `'vertical'` | `'horizontal'` | Bar direction |
 | `barWidth` | `number` | `1` | Bar thickness in characters |
 | `gap` | `number` | `1` | Gap between entries |
+| `barStyle` | `'solid'` \| `'led'` | `'solid'` | Bar rendering style |
+| `ledWidth` | `number` | `3` (h) / `1` (v) | LED segment width in characters |
+| `highValue` | `number` | `80` | Percentage threshold for warning color (LED mode) |
+| `ledColorLow` | `string` | `'yellow'` | Color below threshold (LED mode) |
+| `ledColorHigh` | `string` | `'red'` | Color at/above threshold (LED mode) |
 
 ```xml
 <data-bars style="orientation: vertical; height: 10; gap: 0" ... />
 ```
+
+**Note:** LED style (`barStyle: led`) works for single-series and grouped multi-series bars. Stacked bars fall back to solid style.
 
 ---
 
@@ -171,6 +178,22 @@ MEM:▃▃▄▅▇█████  89%
 - Uses `series[].name` as row label
 - Each entry = one character
 - Keeps fractional precision even in BW mode (single row per series)
+
+### LED Mode (bar-style: led)
+```
+led-width: 1  Usage ▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊▊   75%
+led-width: 2  Usage █▊█▊█▊█▊█▊█▊█▊█▊█▊█▊█▊█▊█▊█▊█▊█▊█▊█▊   75%
+led-width: 3  Usage ██▊██▊██▊██▊██▊██▊██▊██▊██▊██▊██▊██▊   75%
+```
+- Creates retro LED meter look with visible gaps between segments
+- Each segment = (ledWidth-1) full blocks + 1 partial LED char
+- Partial chars: `▊` (horizontal 3/4 block), `▆` (vertical 3/4 block)
+- The gap comes from the partial character shape (no explicit spacing)
+- **Defaults to 0-100 scale** (no need to set `min`/`max` for percentage values)
+- Color transitions from `ledColorLow` to `ledColorHigh` at `highValue` threshold
+- Works for single-series and grouped multi-series bars
+- Stacked bars fall back to solid style
+- BW mode: shows LED segments without color differentiation
 
 ---
 
@@ -274,6 +297,11 @@ export const dataBarsSchema: ComponentSchema = {
     orientation: { type: 'string', enum: ['horizontal', 'vertical'], description: 'Bar direction (default: horizontal)' },
     barWidth: { type: 'number', description: 'Bar thickness in characters (default: 1)' },
     gap: { type: 'number', description: 'Gap between entries (default: 1)' },
+    barStyle: { type: 'string', enum: ['solid', 'led'], description: 'Bar style (default: solid)' },
+    ledWidth: { type: 'number', description: 'LED segment width in characters (default: 3 horizontal, 1 vertical)' },
+    highValue: { type: 'number', description: 'Percentage threshold for warning color (default: 80)' },
+    ledColorLow: { type: 'string', description: 'LED color below threshold (default: yellow)' },
+    ledColorHigh: { type: 'string', description: 'LED color at/above threshold (default: red)' },
   },
 };
 ```
@@ -364,6 +392,53 @@ export const dataBarsSchema: ComponentSchema = {
     $melker.render();
   }, 1000);
 </script>
+```
+
+### LED Bar (Basic)
+```xml
+<data-bars
+  series='[{"name": "CPU"}]'
+  bars='[[75]]'
+  labels='["Usage"]'
+  showValues="true"
+  style="bar-style: led"
+/>
+```
+Output: `Usage ██▊██▊██▊██▊██▊██▊██▊██▊██▊██▊  75%` (all yellow, below 80% threshold)
+
+Note: LED bars default to 0-100 scale and `ledWidth: 3` for horizontal orientation.
+
+### LED Bar with Warning Colors
+```xml
+<data-bars
+  series='[{"name": "CPU"}]'
+  bars='[[95]]'
+  labels='["Usage"]'
+  showValues="true"
+  style="bar-style: led; high-value: 80"
+/>
+```
+Output shows yellow segments up to 80%, red segments from 80-95%.
+
+### LED Bar with Custom Colors
+```xml
+<data-bars
+  series='[{"name": "Temp"}]'
+  bars='[[85]]'
+  labels='["CPU"]'
+  style="bar-style: led; high-value: 70; led-color-low: green; led-color-high: orange"
+/>
+```
+
+### Vertical LED Bar
+```xml
+<data-bars
+  series='[{"name": "Level"}]'
+  bars='[[90]]'
+  labels='["Tank"]'
+  showValues="true"
+  style="orientation: vertical; bar-style: led; height: 10"
+/>
 ```
 
 ---

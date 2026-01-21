@@ -119,6 +119,99 @@
           </container>
         </container>
       </tab>
+
+      <tab title="LED">
+        <container style="padding: 1; height: fill" scrollable="true">
+          <container class="section">
+            <text>LED width comparison (animated):</text>
+            <data-bars
+              id="ledW1"
+              series='[{"name": "w=1"}]'
+              bars='[[75]]'
+              labels='[""]'
+              showValues="true"
+              style="bar-style: led; led-width: 1"
+            />
+            <data-bars
+              id="ledW2"
+              series='[{"name": "w=2"}]'
+              bars='[[75]]'
+              labels='[""]'
+              showValues="true"
+              style="bar-style: led; led-width: 2"
+            />
+            <data-bars
+              id="ledW3"
+              series='[{"name": "w=3"}]'
+              bars='[[75]]'
+              labels='[""]'
+              showValues="true"
+              style="bar-style: led"
+            />
+          </container>
+
+          <container class="section">
+            <text>LED with Warning (above 80% threshold):</text>
+            <data-bars
+              id="ledWarning"
+              series='[{"name": "CPU"}]'
+              bars='[[95]]'
+              labels='["Usage"]'
+              showValues="true"
+              style="bar-style: led; high-value: 80"
+            />
+          </container>
+
+          <container class="section">
+            <text>Custom Colors (green/orange at 70%):</text>
+            <data-bars
+              id="ledCustom"
+              series='[{"name": "Temp"}]'
+              bars='[[85]]'
+              labels='["Sensor"]'
+              showValues="true"
+              style="bar-style: led; high-value: 70; led-color-low: green; led-color-high: orange"
+            />
+          </container>
+
+          <container class="section">
+            <text>Multiple Meters (grouped series):</text>
+            <data-bars
+              id="ledGrouped"
+              series='[{"name": "CPU"}, {"name": "MEM"}, {"name": "DISK"}]'
+              bars='[[45, 78, 92]]'
+              labels='["System"]'
+              showValues="true"
+              style="bar-style: led; high-value: 85"
+            />
+          </container>
+
+          <container class="section" style="flex-direction: row; gap: 2;">
+            <container>
+              <text>Vertical (default):</text>
+              <data-bars
+                id="ledVertical1"
+                series='[{"name": "Level"}]'
+                bars='[[70]]'
+                labels='["Tank"]'
+                showValues="true"
+                style="orientation: vertical; bar-style: led; height: 10"
+              />
+            </container>
+            <container>
+              <text>Vertical (w=2):</text>
+              <data-bars
+                id="ledVertical2"
+                series='[{"name": "Temp"}]'
+                bars='[[90]]'
+                labels='["Core"]'
+                showValues="true"
+                style="orientation: vertical; bar-style: led; led-width: 2; bar-width: 2; height: 14; high-value: 75"
+              />
+            </container>
+          </container>
+        </container>
+      </tab>
     </tabs>
   </container>
 
@@ -156,5 +249,54 @@
         if (status) status.props.text = 'Streaming stopped.';
       }
     }
+
+    // LED animation - smoothly varying values
+    const ledState = {
+      w1: 75, w2: 75, w3: 75,
+      warning: 70,
+      custom: 60,
+      cpu: 45, mem: 78, disk: 50,
+      v1: 70, v2: 50
+    };
+
+    function smoothRandom(current: number, speed = 5): number {
+      const delta = (Math.random() - 0.5) * speed * 2;
+      return Math.max(5, Math.min(100, current + delta));
+    }
+
+    setInterval(() => {
+      // Update LED values with smooth random walk
+      ledState.w1 = smoothRandom(ledState.w1);
+      ledState.w2 = smoothRandom(ledState.w2);
+      ledState.w3 = smoothRandom(ledState.w3);
+      ledState.warning = smoothRandom(ledState.warning, 8);
+      ledState.custom = smoothRandom(ledState.custom, 6);
+      ledState.cpu = smoothRandom(ledState.cpu, 4);
+      ledState.mem = smoothRandom(ledState.mem, 2);
+      ledState.disk = smoothRandom(ledState.disk, 3);
+      ledState.v1 = smoothRandom(ledState.v1);
+      ledState.v2 = smoothRandom(ledState.v2, 8);
+
+      // Update all LED bars
+      const ledW1 = $melker.getElementById('ledW1');
+      const ledW2 = $melker.getElementById('ledW2');
+      const ledW3 = $melker.getElementById('ledW3');
+      const ledWarning = $melker.getElementById('ledWarning');
+      const ledCustom = $melker.getElementById('ledCustom');
+      const ledGrouped = $melker.getElementById('ledGrouped');
+      const ledV1 = $melker.getElementById('ledVertical1');
+      const ledV2 = $melker.getElementById('ledVertical2');
+
+      if (ledW1) ledW1.setValue([[Math.round(ledState.w1)]]);
+      if (ledW2) ledW2.setValue([[Math.round(ledState.w2)]]);
+      if (ledW3) ledW3.setValue([[Math.round(ledState.w3)]]);
+      if (ledWarning) ledWarning.setValue([[Math.round(ledState.warning)]]);
+      if (ledCustom) ledCustom.setValue([[Math.round(ledState.custom)]]);
+      if (ledGrouped) ledGrouped.setValue([[Math.round(ledState.cpu), Math.round(ledState.mem), Math.round(ledState.disk)]]);
+      if (ledV1) ledV1.setValue([[Math.round(ledState.v1)]]);
+      if (ledV2) ledV2.setValue([[Math.round(ledState.v2)]]);
+
+      $melker.render();
+    }, 200);
   </script>
 </melker>

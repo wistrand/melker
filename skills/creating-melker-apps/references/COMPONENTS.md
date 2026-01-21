@@ -465,6 +465,35 @@ Data-driven bar charts with support for horizontal/vertical orientation, stacked
 | `orientation` | `string` | `'horizontal'` | `'horizontal'` \| `'vertical'` |
 | `barWidth` | `number` | `1` | Bar thickness in chars |
 | `gap` | `number` | `1` | Gap between entries |
+| `barStyle` | `string` | `'solid'` | `'solid'` \| `'led'` (LED meter style) |
+| `ledWidth` | `number` | `3`/`1` | LED segment width (default: 3 horizontal, 1 vertical) |
+| `highValue` | `number` | `80` | Threshold % for warning color (LED mode) |
+| `ledColorLow` | `string` | `'yellow'` | Color below threshold (LED mode) |
+| `ledColorHigh` | `string` | `'red'` | Color at/above threshold (LED mode) |
+
+**LED mode example:**
+```xml
+<data-bars
+  series='[{"name": "CPU"}]'
+  bars='[[85]]'
+  labels='["Usage"]'
+  showValues="true"
+  style="bar-style: led"
+/>
+```
+Output: `Usage ██▊██▊██▊██▊██▊██▊██▊██▊██▊  85%` (yellow up to 80%, red above)
+
+LED mode creates retro LED meter visuals with gaps between segments. Each segment = (ledWidth-1) full blocks + 1 partial LED char (`▊` horizontal, `▆` vertical). The gap comes from the partial character shape. **Defaults to 0-100 scale** (no need to set `min`/`max`). Color transitions from `ledColorLow` to `ledColorHigh` at `highValue` threshold (default: 80%). Works for single-series and grouped multi-series (stacked bars fall back to solid).
+
+**LED with custom colors:**
+```xml
+<data-bars
+  series='[{"name": "Temp"}]'
+  bars='[[70]]'
+  labels='["CPU"]'
+  style="bar-style: led; high-value: 60; led-color-low: green; led-color-high: orange"
+/>
+```
 
 **Series definition:**
 ```typescript

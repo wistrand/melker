@@ -99,6 +99,10 @@ const FULL_BLOCK = '█';
 // BW mode patterns for multi-series differentiation (no sub-char precision available)
 const BW_PATTERNS = ['█', '▓', '▒', '░'];
 
+// LED style characters (with visible gaps)
+const LED_H_CHAR = '▊';  // Horizontal LED segment (3/4 block, gap on right)
+const LED_V_CHAR = '▆';  // Vertical LED segment (3/4 block, gap on top)
+
 // ===== Default Props =====
 
 const defaultProps: Partial<DataBarsProps> = {
@@ -197,6 +201,33 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     return style?.gap ?? 1;
   }
 
+  private _getBarStyle(): 'solid' | 'led' {
+    const style = this.props.style as Style | undefined;
+    return style?.barStyle ?? 'solid';
+  }
+
+  private _getLedWidth(): number {
+    const style = this.props.style as Style | undefined;
+    // Default: 3 for horizontal (wider segments), 1 for vertical
+    const defaultWidth = this._getOrientation() === 'horizontal' ? 3 : 1;
+    return style?.ledWidth ?? defaultWidth;
+  }
+
+  private _getHighValue(): number {
+    const style = this.props.style as Style | undefined;
+    return style?.highValue ?? 80;
+  }
+
+  private _getLedColorLow(): string {
+    const style = this.props.style as Style | undefined;
+    return style?.ledColorLow ?? 'yellow';
+  }
+
+  private _getLedColorHigh(): string {
+    const style = this.props.style as Style | undefined;
+    return style?.ledColorHigh ?? 'red';
+  }
+
   // Get color for a series (uses series.color if specified, otherwise grayscale palette)
   private _getSeriesColor(seriesIndex: number): PackedRGBA | undefined {
     const theme = getCurrentTheme();
@@ -229,6 +260,13 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     return BW_PATTERNS[seriesIndex % BW_PATTERNS.length];
   }
 
+  // Check if any series has stacking enabled
+  private _hasStacking(): boolean {
+    const { series } = this.props;
+    if (!series || series.length <= 1) return false;
+    return series.some(s => s.stack !== undefined);
+  }
+
   // ===== Interface Implementations =====
 
   canReceiveFocus(): boolean {
@@ -243,11 +281,12 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
 
   private _calculateScale(): void {
     const { series, bars, min, max } = this.props;
+    const isLed = this._getBarStyle() === 'led';
 
     if (!bars || !Array.isArray(bars) || bars.length === 0) {
       this._minValue = 0;
-      this._maxValue = 0;
-      this._scale = 1;
+      this._maxValue = isLed ? 100 : 0;
+      this._scale = isLed ? 100 : 1;
       return;
     }
 
@@ -266,8 +305,9 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
       }
     }
 
+    // LED bars default to 0-100 scale (percentage-based)
     this._minValue = min ?? 0;
-    this._maxValue = max ?? dataMax;
+    this._maxValue = max ?? (isLed ? 100 : dataMax);
     this._scale = this._maxValue - this._minValue;
     if (this._scale === 0) this._scale = 1;
   }
@@ -347,6 +387,83 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     }
 
     return Math.max(1, drawn);
+  }
+
+  private _renderHorizontalLedBar(
+    buffer: DualBuffer,
+    x: number,
+    y: number,
+    value: number,
+    availableWidth: number,
+    style: Partial<Cell>
+  ): number {
+    const highValue = this._getHighValue();
+    const ledColorLow = this._getLedColorLow();
+    const ledColorHigh = this._getLedColorHigh();
+    const barWidth = this._getBarWidth();
+    const ledWidth = this._getLedWidth();
+
+    const normalizedValue = (value - this._minValue) / this._scale;
+    // Each segment = ledWidth chars total (full blocks + partial LED char)
+    const segmentCount = Math.floor(availableWidth / ledWidth);
+    const filledSegments = Math.round(Math.max(0, Math.min(1, normalizedValue)) * segmentCount);
+    const thresholdSegment = Math.floor((highValue / 100) * segmentCount);
+
+    let drawn = 0;
+    for (let i = 0; i < filledSegments; i++) {
+      const color = i >= thresholdSegment ? ledColorHigh : ledColorLow;
+      const segmentColor = parseColor(color);
+      const segmentStyle = segmentColor ? { ...style, foreground: segmentColor } : style;
+
+      // Render (ledWidth-1) full blocks + 1 partial LED char
+      for (let w = 0; w < ledWidth; w++) {
+        const char = w < ledWidth - 1 ? FULL_BLOCK : LED_H_CHAR;
+        for (let row = 0; row < barWidth; row++) {
+          buffer.currentBuffer.setCell(x + drawn, y + row, { char, ...segmentStyle });
+        }
+        drawn++;
+      }
+    }
+    return drawn;
+  }
+
+  private _renderVerticalLedBar(
+    buffer: DualBuffer,
+    x: number,
+    baseY: number,
+    value: number,
+    availableHeight: number,
+    style: Partial<Cell>
+  ): number {
+    const highValue = this._getHighValue();
+    const ledColorLow = this._getLedColorLow();
+    const ledColorHigh = this._getLedColorHigh();
+    const barWidth = this._getBarWidth();
+    const ledWidth = this._getLedWidth();
+
+    const normalizedValue = (value - this._minValue) / this._scale;
+    // Each segment = ledWidth chars total (full blocks + partial LED char)
+    const segmentCount = Math.floor(availableHeight / ledWidth);
+    const filledSegments = Math.round(Math.max(0, Math.min(1, normalizedValue)) * segmentCount);
+    const thresholdSegment = Math.floor((highValue / 100) * segmentCount);
+
+    let drawn = 0;
+    for (let i = 0; i < filledSegments; i++) {
+      const color = i >= thresholdSegment ? ledColorHigh : ledColorLow;
+      const segmentColor = parseColor(color);
+      const segmentStyle = segmentColor ? { ...style, foreground: segmentColor } : style;
+
+      // Render (ledWidth-1) full blocks + 1 partial LED char
+      // For vertical: partial char at bottom of segment, full blocks above
+      for (let h = 0; h < ledWidth; h++) {
+        const char = h === 0 ? LED_V_CHAR : FULL_BLOCK;
+        for (let col = 0; col < barWidth; col++) {
+          buffer.currentBuffer.setCell(x + col, baseY - drawn, { char, ...segmentStyle });
+        }
+        drawn++;
+      }
+    }
+    return drawn;
   }
 
   private _formatValue(entry: BarValue[], seriesIndex: number): string {
@@ -582,6 +699,8 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
         }
       } else {
         // Render grouped bars (one per series)
+        const useLedStyle = this._getBarStyle() === 'led' && !this._hasStacking() && !this._isBwMode();
+
         for (let sIdx = 0; sIdx < series.length; sIdx++) {
           const value = entry[sIdx] ?? 0;
 
@@ -595,19 +714,29 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
 
           // Draw bar
           const barX = bounds.x + labelWidth;
-          const eighths = this._valueToEighths(value, barAreaWidth);
-          const seriesColor = this._getSeriesColor(sIdx);
-          const barStyle = seriesColor ? { ...style, foreground: seriesColor } : style;
-          // BW mode with multiple series: use pattern instead of fractional chars
-          const bwPattern = this._isBwMode() && series.length > 1 ? this._getSeriesPattern(sIdx) : undefined;
-          // Render thick bars (multiple rows)
-          for (let row = 0; row < barWidth; row++) {
-            this._renderHorizontalBar(buffer, barX, y + row, eighths, barStyle, bwPattern);
-          }
 
-          this._barBounds.set(`${entryIdx}-${sIdx}`, {
-            x: barX, y, width: Math.max(1, Math.ceil(eighths / 8)), height: barWidth
-          });
+          if (useLedStyle) {
+            // LED style rendering
+            const drawn = this._renderHorizontalLedBar(buffer, barX, y, value, barAreaWidth, style);
+            this._barBounds.set(`${entryIdx}-${sIdx}`, {
+              x: barX, y, width: Math.max(1, drawn), height: barWidth
+            });
+          } else {
+            // Solid style rendering
+            const eighths = this._valueToEighths(value, barAreaWidth);
+            const seriesColor = this._getSeriesColor(sIdx);
+            const barStyle = seriesColor ? { ...style, foreground: seriesColor } : style;
+            // BW mode with multiple series: use pattern instead of fractional chars
+            const bwPattern = this._isBwMode() && series.length > 1 ? this._getSeriesPattern(sIdx) : undefined;
+            // Render thick bars (multiple rows)
+            for (let row = 0; row < barWidth; row++) {
+              this._renderHorizontalBar(buffer, barX, y + row, eighths, barStyle, bwPattern);
+            }
+
+            this._barBounds.set(`${entryIdx}-${sIdx}`, {
+              x: barX, y, width: Math.max(1, Math.ceil(eighths / 8)), height: barWidth
+            });
+          }
 
           // Draw value
           if (showValues) {
@@ -711,22 +840,34 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
         }
       } else {
         // Render grouped bars (one per series, side by side)
+        const useLedStyle = this._getBarStyle() === 'led' && !this._hasStacking() && !this._isBwMode();
+
         for (let sIdx = 0; sIdx < series.length; sIdx++) {
           const value = entry[sIdx] ?? 0;
-          const eighths = this._valueToEighths(value, barAreaHeight);
-          const seriesColor = this._getSeriesColor(sIdx);
-          const barStyle = seriesColor ? { ...style, foreground: seriesColor } : style;
-          // BW mode with multiple series: use pattern instead of fractional chars
-          const bwPattern = this._isBwMode() && series.length > 1 ? this._getSeriesPattern(sIdx) : undefined;
 
-          // Render thick bars (multiple columns)
-          for (let col = 0; col < barWidth; col++) {
-            this._renderVerticalBar(buffer, x + col, baseY, eighths, barStyle, bwPattern);
+          if (useLedStyle) {
+            // LED style rendering
+            const drawn = this._renderVerticalLedBar(buffer, x, baseY, value, barAreaHeight, style);
+            this._barBounds.set(`${entryIdx}-${sIdx}`, {
+              x, y: baseY - drawn, width: barWidth, height: Math.max(1, drawn)
+            });
+          } else {
+            // Solid style rendering
+            const eighths = this._valueToEighths(value, barAreaHeight);
+            const seriesColor = this._getSeriesColor(sIdx);
+            const barStyle = seriesColor ? { ...style, foreground: seriesColor } : style;
+            // BW mode with multiple series: use pattern instead of fractional chars
+            const bwPattern = this._isBwMode() && series.length > 1 ? this._getSeriesPattern(sIdx) : undefined;
+
+            // Render thick bars (multiple columns)
+            for (let col = 0; col < barWidth; col++) {
+              this._renderVerticalBar(buffer, x + col, baseY, eighths, barStyle, bwPattern);
+            }
+
+            this._barBounds.set(`${entryIdx}-${sIdx}`, {
+              x, y: baseY - Math.ceil(eighths / 8), width: barWidth, height: Math.max(1, Math.ceil(eighths / 8))
+            });
           }
-
-          this._barBounds.set(`${entryIdx}-${sIdx}`, {
-            x, y: baseY - Math.ceil(eighths / 8), width: barWidth, height: Math.max(1, Math.ceil(eighths / 8))
-          });
 
           // Value on top
           if (showValues && sIdx === 0) {
@@ -1058,6 +1199,11 @@ export const dataBarsSchema: ComponentSchema = {
     orientation: { type: 'string', enum: ['horizontal', 'vertical'], description: 'Bar direction (default: horizontal)' },
     barWidth: { type: 'number', description: 'Bar thickness in characters (default: 1)' },
     gap: { type: 'number', description: 'Gap between entries (default: 1)' },
+    barStyle: { type: 'string', enum: ['solid', 'led'], description: 'Bar style (default: solid, led for single/grouped series)' },
+    ledWidth: { type: 'number', description: 'LED segment width in characters (default: 3 horizontal, 1 vertical)' },
+    highValue: { type: 'number', description: 'LED threshold percentage for warning color (default: 80)' },
+    ledColorLow: { type: 'string', description: 'LED color below threshold (default: yellow)' },
+    ledColorHigh: { type: 'string', description: 'LED color at/above threshold (default: red)' },
   },
 };
 

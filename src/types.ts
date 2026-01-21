@@ -124,6 +124,11 @@ export interface Style extends Record<string, any> {
   // Data-bars style properties
   orientation?: 'horizontal' | 'vertical';
   barWidth?: number;
+  barStyle?: 'solid' | 'led';
+  ledWidth?: number;
+  highValue?: number;
+  ledColorLow?: string;
+  ledColorHigh?: string;
 
   // Allow any additional style properties for flexibility
   [key: string]: any;

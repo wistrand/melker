@@ -121,6 +121,10 @@ export interface Style extends Record<string, any> {
   textAlign?: 'center' | 'left' | 'right';
   verticalAlign?: 'center' | 'top' | 'bottom';
 
+  // Data-bars style properties
+  orientation?: 'horizontal' | 'vertical';
+  barWidth?: number;
+
   // Allow any additional style properties for flexibility
   [key: string]: any;
 }

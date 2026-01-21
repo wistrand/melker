@@ -27,6 +27,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Filterable lists | `agent_docs/filterable-list-architecture.md` |
 | File browser | `agent_docs/file-browser-architecture.md` |
 | Data table | `agent_docs/data-table.md` |
+| Data bars | `agent_docs/data-bars.md` |
 | Config system | `agent_docs/config-architecture.md` |
 | Env permissions | `agent_docs/env-permission-analysis.md` |
 | DX footguns | `agent_docs/dx-footguns.md` |
@@ -138,6 +139,7 @@ src/
     img.ts            - Image component (extends canvas)
     video.ts          - Video playback
     progress.ts       - Progress bar (extends Canvas)
+    data-bars.ts      - Bar charts (horizontal/vertical, stacked/grouped, sparklines)
     markdown.ts       - Markdown rendering with image support
     color-utils.ts    - RGBA color utilities
     filterable-list/  - Filterable list components

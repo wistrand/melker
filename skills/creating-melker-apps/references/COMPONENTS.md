@@ -393,6 +393,102 @@ High-performance table for large datasets with simple array-based data.
 - Events report original row indices (not sorted positions)
 - Use for large datasets; use `<table>` for complex cell content
 
+### data-bars
+
+Data-driven bar charts with support for horizontal/vertical orientation, stacked/grouped bars, and sparkline mode.
+
+```xml
+<!-- Simple horizontal bars -->
+<data-bars
+  series='[{"name": "Sales"}]'
+  bars='[[100], [150], [80], [120]]'
+  labels='["Q1", "Q2", "Q3", "Q4"]'
+  showValues="true"
+/>
+
+<!-- Grouped bars (multiple series) -->
+<data-bars
+  series='[{"name": "2023"}, {"name": "2024"}]'
+  bars='[[50, 65], [60, 80], [45, 70]]'
+  labels='["Q1", "Q2", "Q3"]'
+  showValues="true"
+/>
+
+<!-- Stacked bars -->
+<data-bars
+  series='[{"name": "A", "stack": "total"}, {"name": "B", "stack": "total"}]'
+  bars='[[30, 20], [25, 35], [40, 25]]'
+  labels='["Jan", "Feb", "Mar"]'
+  showValues="true"
+  valueFormat="sum"
+/>
+
+<!-- Vertical bars -->
+<data-bars
+  series='[{"name": "Sales"}]'
+  bars='[[40], [75], [55], [90]]'
+  labels='["Q1", "Q2", "Q3", "Q4"]'
+  showValues="true"
+  style="orientation: vertical; height: 10"
+/>
+
+<!-- Sparkline (no labels, height: 1) -->
+<data-bars
+  series='[{"name": "CPU"}]'
+  bars='[[10], [25], [40], [55], [70], [85], [75], [60]]'
+  showValues="true"
+  style="orientation: vertical; height: 1; gap: 0"
+/>
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `series` | `DataBarSeries[]` | required | Series definitions |
+| `bars` | `number[][][]` | required | 2D array: `bars[entry][series]` |
+| `labels` | `string[]` | - | Category labels |
+| `showLabels` | `boolean` | `true` | Show labels |
+| `showValues` | `boolean` | `false` | Show values |
+| `valueFormat` | `string` | auto | `'value'` \| `'sum'` \| `'last/max'` \| `'percent'` |
+| `showLegend` | `boolean` | `false` | Show series legend |
+| `min` | `number` | auto | Minimum scale value |
+| `max` | `number` | auto | Maximum scale value |
+| `selectable` | `boolean` | `false` | Enable bar selection |
+| `onHover` | `handler` | - | Hover event |
+| `onSelect` | `handler` | - | Selection event |
+
+**Style props** (via `style=""`):
+
+| Style | Type | Default | Description |
+|-------|------|---------|-------------|
+| `orientation` | `string` | `'horizontal'` | `'horizontal'` \| `'vertical'` |
+| `barWidth` | `number` | `1` | Bar thickness in chars |
+| `gap` | `number` | `1` | Gap between entries |
+
+**Series definition:**
+```typescript
+{ name: 'Series A', color: '#ff0000', stack: 'group1' }
+```
+- `name`: Series label
+- `color`: Optional color override
+- `stack`: Stack group ID (series with same stack are stacked)
+
+**Streaming API (for real-time sparklines):**
+```typescript
+const sparkline = $melker.getElementById('mySparkline');
+sparkline.appendEntry([value]);  // Add new data point
+sparkline.shiftEntry();          // Remove oldest point
+sparkline.getValue();            // Get current bars array
+$melker.render();
+```
+
+**Notes:**
+- In BW mode, multi-series uses patterns (█▓▒░) instead of colors
+- Sparkline mode: omit `labels`, set `height: 1`, `gap: 0`
+- Stacked bars: use same `stack` value on series to stack them
+- Auto-detects valueFormat: `'sum'` for stacked, `'last/max'` for sparklines
+
 ### table / thead / tbody / tr / th / td
 
 HTML-like table for complex cell content (buttons, inputs, etc.).

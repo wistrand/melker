@@ -295,6 +295,118 @@
 </melker>
 ```
 
+## Data Bars Dashboard
+
+```xml
+<melker>
+  <title>Sales Dashboard</title>
+
+  <container style="display: flex; flex-direction: column; padding: 1; height: fill">
+    <text style="font-weight: bold;">Quarterly Sales Dashboard</text>
+
+    <tabs style="flex: 1;">
+      <tab title="By Region">
+        <container style="padding: 1;" scrollable="true">
+          <text>Regional Sales (2024):</text>
+          <data-bars
+            series='[{"name": "Sales"}]'
+            bars='[[120], [95], [150], [80]]'
+            labels='["North", "South", "East", "West"]'
+            showValues="true"
+          />
+
+          <text style="margin-top: 1;">Year-over-Year Comparison:</text>
+          <data-bars
+            series='[{"name": "2023"}, {"name": "2024"}]'
+            bars='[[100, 120], [85, 95], [130, 150], [90, 80]]'
+            labels='["North", "South", "East", "West"]'
+            showValues="true"
+          />
+        </container>
+      </tab>
+
+      <tab title="Stacked">
+        <container style="padding: 1;">
+          <text>Revenue by Product Line:</text>
+          <data-bars
+            series='[
+              {"name": "Hardware", "stack": "total"},
+              {"name": "Software", "stack": "total"},
+              {"name": "Services", "stack": "total"}
+            ]'
+            bars='[[30, 45, 25], [35, 40, 30], [40, 35, 35], [45, 50, 40]]'
+            labels='["Q1", "Q2", "Q3", "Q4"]'
+            showValues="true"
+            valueFormat="sum"
+          />
+        </container>
+      </tab>
+
+      <tab title="Live Metrics">
+        <container style="padding: 1;">
+          <text id="status">Click Start to begin monitoring</text>
+          <data-bars
+            id="cpuSparkline"
+            series='[{"name": "CPU"}]'
+            bars='[]'
+            showValues="true"
+            max="100"
+            style="orientation: vertical; height: 1; gap: 0"
+          />
+          <data-bars
+            id="memSparkline"
+            series='[{"name": "MEM"}]'
+            bars='[]'
+            showValues="true"
+            valueFormat="percent"
+            max="100"
+            style="orientation: vertical; height: 1; gap: 0"
+          />
+          <container style="flex-direction: row; gap: 1; margin-top: 1;">
+            <button label="Start" onClick="$app.startMonitoring()" />
+            <button label="Stop" onClick="$app.stopMonitoring()" />
+          </container>
+        </container>
+      </tab>
+    </tabs>
+  </container>
+
+  <script type="typescript">
+    let intervalId: number | null = null;
+    const MAX_POINTS = 40;
+
+    export function startMonitoring() {
+      if (intervalId !== null) return;
+
+      $melker.getElementById('status').props.text = 'Monitoring...';
+
+      intervalId = setInterval(() => {
+        const cpu = $melker.getElementById('cpuSparkline');
+        const mem = $melker.getElementById('memSparkline');
+
+        cpu.appendEntry([Math.random() * 100]);
+        mem.appendEntry([50 + Math.random() * 50]);
+
+        if (cpu.getValue().length > MAX_POINTS) {
+          cpu.shiftEntry();
+          mem.shiftEntry();
+        }
+
+        $melker.render();
+      }, 500);
+    }
+
+    export function stopMonitoring() {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+        $melker.getElementById('status').props.text = 'Monitoring stopped';
+      }
+    }
+  </script>
+</melker>
+```
+
 ## Command Palette App
 
 ```xml
@@ -722,6 +834,7 @@ For more complex patterns, see these examples in the codebase:
 |---------|----------------------|
 | `map.melker` | Canvas `onPaint`, async tile fetching, `decodeImageBytes()`, command line args via `${argv[N]}`, variable sharing between scripts (setter functions), delaying render until async completes, `$melker.cacheDir` |
 | `htop.melker` | Data table, live updates, process management |
+| `data-bars-demo.melker` | Bar charts, sparklines, stacked/grouped bars, streaming data |
 | `analog-clock.melker` | Canvas animation, aspect ratio correction |
 | `markdown_viewer.melker` | File loading, markdown rendering |
 | `noise-shader-demo.melker` | Per-pixel shaders, 3D noise animation, `simplex3d`/`perlin3d`/`fbm3d`, Inigo Quilez palettes, select controls |

@@ -170,6 +170,7 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `<slider>` | min, max, value, step, onChange | Range input |
 | `<progress>` | value, max, showValue, indeterminate | Progress bar |
 | `<data-table>` | columns, rows, selectable, onSelect | Array-based table |
+| `<data-bars>` | series, bars, labels, showValues | Bar charts (stacked/grouped/sparkline) |
 | `<table>` | border, columnBorders, resizable | HTML-like table |
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
 

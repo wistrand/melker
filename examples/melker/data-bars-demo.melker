@@ -1,0 +1,159 @@
+<melker>
+  <title>Data Bars Demo</title>
+
+  <style>
+    .section {
+      margin-bottom: 1;
+    }
+  </style>
+
+  <container style="display: flex; flex-direction: column; padding: 1; height: fill">
+    <text style="font-weight: bold;">Data Bars Component Demo</text>
+
+    <tabs style="flex: 1;">
+      <tab title="Horizontal">
+        <container style="padding: 1; height: fill" scrollable="true">
+          <container class="section">
+            <text>Simple:</text>
+            <data-bars
+              series='[{"name": "Sales"}]'
+              bars='[[100], [150], [80], [120], [90]]'
+              labels='["Q1", "Q2", "Q3", "Q4", "Q5"]'
+              showValues="true"
+            />
+          </container>
+
+          <container class="section">
+            <text>Grouped (2023 vs 2024):</text>
+            <data-bars
+              series='[{"name": "2023"}, {"name": "2024"}]'
+              bars='[[50, 65], [60, 80], [45, 70], [55, 75]]'
+              labels='["Q1", "Q2", "Q3", "Q4"]'
+              showValues="true"
+            />
+          </container>
+
+          <container>
+            <text>Stacked:</text>
+            <data-bars
+              series='[{"name": "A", "stack": "total"}, {"name": "B", "stack": "total"}, {"name": "C", "stack": "total"}]'
+              bars='[[30, 20, 15], [25, 30, 20], [35, 25, 25]]'
+              labels='["Jan", "Feb", "Mar"]'
+              showValues="true"
+              valueFormat="sum"
+            />
+          </container>
+        </container>
+      </tab>
+
+      <tab title="Vertical">
+        <container style="padding: 1; flex-direction: row; height: fill" scrollable="true">
+          <container class="section">
+            <text>Simple:</text>
+            <data-bars
+              series='[{"name": "Sales"}]'
+              bars='[[40], [75], [55], [90]]'
+              labels='["Q1", "Q2", "Q3", "Q4"]'
+              showValues="true"
+              style="orientation: vertical; height: 10"
+            />
+          </container>
+
+          <container class="section">
+            <text>Grouped:</text>
+            <data-bars
+              series='[{"name": "2023"}, {"name": "2024"}]'
+              bars='[[50, 65], [60, 80], [45, 70], [55, 75]]'
+              labels='["Q1", "Q2", "Q3", "Q4"]'
+              showValues="true"
+              style="orientation: vertical; height: 10"
+            />
+          </container>
+
+          <container class="section">
+            <text>Stacked:</text>
+            <data-bars
+              series='[{"name": "A", "stack": "total"}, {"name": "B", "stack": "total"}]'
+              bars='[[30, 20], [25, 35], [40, 25], [35, 30]]'
+              labels='["Q1", "Q2", "Q3", "Q4"]'
+              showValues="true"
+              valueFormat="sum"
+              style="orientation: vertical; height: 10"
+            />
+          </container>
+
+          <container>
+            <text>Sparklines:</text>
+            <data-bars
+              series='[{"name": "CPU"}]'
+              bars='[[10], [25], [40], [55], [70], [85], [75], [60], [45], [30], [20], [35], [50], [65], [80]]'
+              showValues="true"
+              style="orientation: vertical; height: 1; gap: 1"
+            />
+            <data-bars
+              series='[{"name": "MEM"}]'
+              bars='[[50], [52], [55], [58], [62], [65], [68], [72], [75], [78], [80], [82], [85], [87], [89]]'
+              showValues="true"
+              valueFormat="percent"
+              style="orientation: vertical; height: 1; gap: 1"
+            />
+          </container>
+        </container>
+      </tab>
+
+      <tab title="Streaming">
+        <container style="padding: 1;" scrollable="true">
+          <text id="streamStatus">Real-time Streaming (click to start):</text>
+          <data-bars
+            id="liveSparkline"
+            series='[{"name": "LIVE"}]'
+            bars='[]'
+            showValues="true"
+            max="100"
+            style="orientation: vertical; height: 1; gap: 0"
+          />
+          <container style="flex-direction: row; gap: 1;">
+            <button label="Start" onClick="$app.startStreaming()" id="startBtn" />
+            <button label="Stop" onClick="$app.stopStreaming()" id="stopBtn" />
+          </container>
+        </container>
+      </tab>
+    </tabs>
+  </container>
+
+  <script type="typescript">
+    let intervalId: number | null = null;
+    const MAX_POINTS = 30;
+
+    export function startStreaming() {
+      if (intervalId !== null) return;
+
+      const status = $melker.getElementById('streamStatus');
+      if (status) status.props.text = 'Streaming...';
+
+      intervalId = setInterval(() => {
+        const sparkline = $melker.getElementById('liveSparkline');
+        if (!sparkline) return;
+
+        const value = Math.random() * 100;
+        sparkline.appendEntry([value]);
+
+        if (sparkline.getValue().length > MAX_POINTS) {
+          sparkline.shiftEntry();
+        }
+
+        $melker.render();
+      }, 1000);
+    }
+
+    export function stopStreaming() {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+
+        const status = $melker.getElementById('streamStatus');
+        if (status) status.props.text = 'Streaming stopped.';
+      }
+    }
+  </script>
+</melker>

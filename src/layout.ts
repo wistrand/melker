@@ -234,17 +234,20 @@ export class LayoutEngine {
 
         // Use real content dimensions instead of artificial virtual space
         const actualContentHeight = Math.max(actualContentSize.height, contentBounds.height);
+        // Reduce available width when vertical scrollbar is present
+        const hasVerticalScrollbar = viewport.scrollbars.vertical?.visible ?? false;
+        const childAvailableWidth = hasVerticalScrollbar ? contentBounds.width - 1 : contentBounds.width;
 
         childContext = {
           ...context,
           parentBounds: {
             x: contentBounds.x,
             y: contentBounds.y,
-            width: contentBounds.width, // Use actual width for proper layout
+            width: childAvailableWidth, // Reduce width for scrollbar
             height: actualContentHeight, // Real content height, not 10000
           },
           availableSpace: {
-            width: contentBounds.width,
+            width: childAvailableWidth, // Reduce width for scrollbar
             height: actualContentHeight // Real content height for proper layout
           },
           parentStyle: computedStyle,

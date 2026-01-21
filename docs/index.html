@@ -56,6 +56,10 @@
       text-decoration: underline;
     }
 
+    a.clear:hover {
+        text-decoration: none;
+    }
+
     .container {
       max-width: 960px;
       margin: 0 auto;
@@ -74,10 +78,28 @@
       gap: 48px;
     }
 
-    .header-logo {
+    .logo-wrapper {
+      position: relative;
       flex-shrink: 0;
       width: 256px;
       height: 256px;
+    }
+
+    .header-logo {
+      width: 256px;
+      height: 256px;
+      cursor: pointer;
+    }
+
+    #logo-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: none;
+    }
+
+    #logo-canvas.active {
+      display: block;
     }
 
     .header-text {
@@ -348,6 +370,7 @@
         text-align: center;
       }
 
+      .logo-wrapper,
       .header-logo {
         width: 128px;
         height: 128px;
@@ -387,7 +410,10 @@
             Document-first terminal apps with permission sandboxing.
           </p>
         </div>
-        <img src="melker-128.png" alt="Melker logo" class="header-logo">
+        <a class="clear logo-wrapper" href="https://github.com/wistrand/melker/blob/main/examples/melker/image_shader.melker">
+          <img title="melker image demo" id="logo-img" src="melker-128.png" alt="Melker logo" class="header-logo">
+          <canvas title="melker image demo" id="logo-canvas" class="header-logo" width="256" height="256"></canvas>
+        </a>
       </div>
       <div class="cta-buttons">
         <a href="tutorial.html" class="btn btn-primary" title="Step-by-step tutorial building a QR Code Generator">Tutorial</a>
@@ -542,5 +568,140 @@ git checkout v2026.01.1</pre>
       </p>
     </div>
   </footer>
+  <script>
+    // Logo canvas with ripple effect on hover
+    // Falls back to static img if getImageData fails (file:// CORS) or JS disabled
+    (function() {
+      const canvas = document.getElementById('logo-canvas');
+      const ctx = canvas.getContext('2d');
+      const img = document.getElementById('logo-img');
+      const wrapper = document.querySelector('.logo-wrapper');
+      let imageData = null;
+      let animationId = null;
+      let mouseX = -1;
+      let mouseY = -1;
+      let startTime = 0;
+      let isHovering = false;
+
+      // Try to initialize canvas with image data
+      function init() {
+        if (!img.complete) {
+          img.addEventListener('load', init);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, 256, 256);
+        try {
+          // This fails on file:// due to CORS - ripple effect only works over HTTP
+          imageData = ctx.getImageData(0, 0, 256, 256);
+          // Success - show canvas over img
+          canvas.classList.add('active');
+        } catch (e) {
+          // Gracefully degrade to static img (already visible)
+          imageData = null;
+        }
+      }
+      init();
+
+      function getPixel(data, x, y, width) {
+        if (x < 0 || x >= width || y < 0 || y >= 256) return null;
+        const i = (y * width + x) * 4;
+        return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+      }
+
+      function applyRipple() {
+        if (!imageData || !isHovering) return;
+
+        const time = (performance.now() - startTime) / 1000;
+        const output = ctx.createImageData(256, 256);
+        const src = imageData.data;
+        const dst = output.data;
+        const width = 256;
+        const height = 256;
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+
+            if (mouseX < 0) {
+              // No mouse - passthrough
+              dst[i] = src[i];
+              dst[i + 1] = src[i + 1];
+              dst[i + 2] = src[i + 2];
+              dst[i + 3] = src[i + 3];
+              continue;
+            }
+
+            // Ripple distortion from mouse position
+            const dx = x - mouseX;
+            const dy = y - mouseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const ripple = Math.sin(dist * 0.15 - time * 5) * 8;
+            const angle = Math.atan2(dy, dx);
+            const srcX = Math.floor(x + Math.cos(angle) * ripple);
+            const srcY = Math.floor(y + Math.sin(angle) * ripple);
+
+            const pixel = getPixel(src, srcX, srcY, width);
+            if (pixel) {
+              dst[i] = pixel[0];
+              dst[i + 1] = pixel[1];
+              dst[i + 2] = pixel[2];
+              dst[i + 3] = pixel[3];
+            } else {
+              dst[i] = src[i];
+              dst[i + 1] = src[i + 1];
+              dst[i + 2] = src[i + 2];
+              dst[i + 3] = src[i + 3];
+            }
+          }
+        }
+
+        ctx.putImageData(output, 0, 0);
+        animationId = requestAnimationFrame(applyRipple);
+      }
+
+      function getCoords(e) {
+        const rect = wrapper.getBoundingClientRect();
+        const scaleX = 256 / rect.width;
+        const scaleY = 256 / rect.height;
+        return {
+          x: (e.clientX - rect.left) * scaleX,
+          y: (e.clientY - rect.top) * scaleY
+        };
+      }
+
+      // Events on wrapper so they work regardless of which element is on top
+      wrapper.addEventListener('mouseenter', function(e) {
+        if (!imageData) return;
+        isHovering = true;
+        startTime = performance.now();
+        const coords = getCoords(e);
+        mouseX = coords.x;
+        mouseY = coords.y;
+        if (!animationId) {
+          applyRipple();
+        }
+      });
+
+      wrapper.addEventListener('mousemove', function(e) {
+        if (!imageData) return;
+        const coords = getCoords(e);
+        mouseX = coords.x;
+        mouseY = coords.y;
+      });
+
+      wrapper.addEventListener('mouseleave', function() {
+        if (!imageData) return;
+        isHovering = false;
+        mouseX = -1;
+        mouseY = -1;
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        // Restore original image
+        ctx.putImageData(imageData, 0, 0);
+      });
+    })();
+  </script>
 </body>
 </html>

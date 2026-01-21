@@ -285,6 +285,41 @@ Events auto-render after completion:
 
 For TypeScript type definitions (`$melker`, `Element`, event objects), see [TYPES.md](references/TYPES.md).
 
+## Variable Substitution
+
+Melker supports bash-style variable expansion during pre-processing:
+
+### Environment Variables
+
+| Syntax | Behavior |
+|--------|----------|
+| `$ENV{VAR}` | Value or empty string |
+| `$ENV{VAR:-default}` | Value or default if unset/empty |
+| `$ENV{VAR:+alternate}` | Alternate if set, else empty |
+| `$ENV{VAR:?error}` | Value or exit with error if unset/empty |
+
+### Command-Line Arguments
+
+| Syntax | Behavior |
+|--------|----------|
+| `${argv[N]}` | Argument at index N |
+| `${argv[N]:-default}` | Argument or default |
+| `${argv[N]:+alternate}` | Alternate if exists |
+| `${argv[N]:?error}` | Argument or exit with error |
+
+### Examples
+
+```xml
+<!-- Required config -->
+<text>API: $ENV{API_KEY:?API_KEY is required}</text>
+
+<!-- Conditional debug -->
+<text>$ENV{DEBUG:+Debug mode}</text>
+
+<!-- File argument with default -->
+<markdown src="${argv[1]:-README.md}" />
+```
+
 ## Common Patterns
 
 ### Counter

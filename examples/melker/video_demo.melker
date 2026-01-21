@@ -19,7 +19,7 @@
     <!-- Video element - just specify src, everything else is automatic! -->
     <video
       id="player"
-      src="${argv[1]:-media/seal.mkv}"
+      src="${argv[1]:?first arg should be a video file, for example media/seal.mkv}"
       style="flex: 1 1 0;"
       loop="true"
       fps="24"

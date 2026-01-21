@@ -416,7 +416,13 @@ Melker apps can declare required permissions via an embedded `<policy>` tag. Whe
 
 ### Environment Variables in Policy
 
-Use `$ENV{VAR}` or `$ENV{VAR:-default}` syntax in policy JSON.
+Use `$ENV{VAR}` syntax in policy JSON with bash-style operators:
+- `$ENV{VAR}` — value or empty
+- `$ENV{VAR:-default}` — value or default if unset/empty
+- `$ENV{VAR:+alternate}` — alternate if set, else empty
+- `$ENV{VAR:?error}` — value or throw error if unset/empty
+
+Same operators work for `${argv[N]}` in .melker files.
 
 ### OAuth Auto-Permissions
 

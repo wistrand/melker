@@ -7,6 +7,7 @@ import { debounce } from './utils/timing.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { Env } from './env.ts';
 import { parseCliFlags, MelkerConfig } from './config/mod.ts';
+import { getLogger } from './logging.ts';
 
 // Import library to register components before template parsing
 import '../mod.ts';
@@ -204,21 +205,60 @@ function createAutoPolicy(): MelkerPolicy {
 }
 
 function substituteEnvVars(content: string, args: string[]): string {
-  content = content.replace(/\$\{argv\[(\d+)\](?::-([^}]*))?\}/g, (_match, indexStr, defaultValue) => {
-    const index = parseInt(indexStr, 10);
-    if (index < args.length) {
-      return args[index];
-    }
-    return defaultValue !== undefined ? defaultValue : '';
-  });
+  const logger = getLogger('Runner');
 
-  content = content.replace(/\$ENV\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g, (_match, varName, defaultValue) => {
-    const envValue = Env.get(varName);
-    if (envValue !== undefined) {
-      return envValue;
+  // argv substitution with all operators: :- (default), :+ (alternate), :? (required)
+  content = content.replace(
+    /\$\{argv\[(\d+)\](?:(:[-+?])([^}]*))?\}/g,
+    (_match, indexStr, operator, value) => {
+      const index = parseInt(indexStr, 10);
+      const argValue = index < args.length ? args[index] : undefined;
+      const isSet = argValue !== undefined && argValue !== '';
+
+      switch (operator) {
+        case ':-':
+          return isSet ? argValue : (value ?? '');
+        case ':+':
+          return isSet ? value : '';
+        case ':?':
+          if (!isSet) {
+            const msg = `argv[${index}]: ${value || 'argument is required'}`;
+            logger.error(msg);
+            console.error(msg);
+            Deno.exit(1);
+          }
+          return argValue;
+        default:
+          return argValue ?? '';
+      }
     }
-    return defaultValue !== undefined ? defaultValue : '';
-  });
+  );
+
+  // ENV substitution with all operators: :- (default), :+ (alternate), :? (required)
+  content = content.replace(
+    /\$ENV\{([A-Za-z_][A-Za-z0-9_]*)(?:(:[-+?])([^}]*))?\}/g,
+    (_match, varName, operator, value) => {
+      const envValue = Env.get(varName);
+      const isSet = envValue !== undefined && envValue !== '';
+
+      switch (operator) {
+        case ':-':
+          return isSet ? envValue : (value ?? '');
+        case ':+':
+          return isSet ? value : '';
+        case ':?':
+          if (!isSet) {
+            const msg = `${varName}: ${value || 'environment variable is required'}`;
+            logger.error(msg);
+            console.error(msg);
+            Deno.exit(1);
+          }
+          return envValue;
+        default:
+          return envValue ?? '';
+      }
+    }
+  );
 
   return content;
 }

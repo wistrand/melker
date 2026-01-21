@@ -137,6 +137,44 @@ Use `onMount()` when you need to conditionally register initialization or regist
 
 **Important:** Primitive exports (`export let count = 0`) are copied by value to `$app`. Use setter functions to modify them from other scripts: `export function setCount(n) { count = n; }`. See `agent_docs/dx-footguns.md` #17.
 
+## Variable Substitution
+
+Melker supports bash-style variable expansion for environment variables and command-line arguments during pre-processing:
+
+### Environment Variables
+
+| Syntax | Behavior |
+|--------|----------|
+| `$ENV{VAR}` | Value of VAR, or empty string if unset |
+| `$ENV{VAR:-default}` | Value of VAR, or "default" if unset/empty |
+| `$ENV{VAR:+alternate}` | "alternate" if VAR is set and non-empty, else empty |
+| `$ENV{VAR:?error msg}` | Value of VAR, or throws error if unset/empty |
+
+### Command-Line Arguments
+
+| Syntax | Behavior |
+|--------|----------|
+| `${argv[N]}` | Argument at index N, or empty string |
+| `${argv[N]:-default}` | Argument at index N, or "default" if missing |
+| `${argv[N]:+alternate}` | "alternate" if argument exists, else empty |
+| `${argv[N]:?error msg}` | Argument at index N, or throws error if missing |
+
+### Examples
+
+```xml
+<!-- Required API key -->
+<text>Using API: $ENV{API_KEY:?API_KEY environment variable is required}</text>
+
+<!-- Conditional debug output -->
+<text>$ENV{DEBUG:+Debug mode enabled}</text>
+
+<!-- File argument with default -->
+<markdown src="${argv[1]:-README.md}" />
+
+<!-- Required file argument -->
+<markdown src="${argv[1]:?Usage: myapp.melker <filename>}" />
+```
+
 ## Components
 
 | Component | Key Props | Notes |

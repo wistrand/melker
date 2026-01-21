@@ -20,6 +20,7 @@
               bars='[[100], [150], [80], [120], [90]]'
               labels='["Q1", "Q2", "Q3", "Q4", "Q5"]'
               showValues="true"
+              style="bar-width: 2"
             />
           </container>
 
@@ -66,7 +67,7 @@
               bars='[[50, 65], [60, 80], [45, 70], [55, 75]]'
               labels='["Q1", "Q2", "Q3", "Q4"]'
               showValues="true"
-              style="orientation: vertical; height: 10"
+              style="orientation: vertical; height: 10; bar-width: 2; gap: 3"
             />
           </container>
 

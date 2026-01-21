@@ -556,7 +556,11 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
             };
             // BW mode with multiple series: use pattern instead of fractional chars
             const bwPattern = this._isBwMode() && series.length > 1 ? this._getSeriesPattern(sIdx) : undefined;
-            const drawn = this._renderHorizontalBar(buffer, barX, y, eighths, barStyle, bwPattern);
+            // Render thick bars (multiple rows)
+            let drawn = 0;
+            for (let row = 0; row < barWidth; row++) {
+              drawn = this._renderHorizontalBar(buffer, barX, y + row, eighths, barStyle, bwPattern);
+            }
 
             this._barBounds.set(`${entryIdx}-${sIdx}`, {
               x: barX, y, width: Math.max(1, Math.ceil(eighths / 8)), height: barWidth
@@ -596,7 +600,10 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
           const barStyle = seriesColor ? { ...style, foreground: seriesColor } : style;
           // BW mode with multiple series: use pattern instead of fractional chars
           const bwPattern = this._isBwMode() && series.length > 1 ? this._getSeriesPattern(sIdx) : undefined;
-          this._renderHorizontalBar(buffer, barX, y, eighths, barStyle, bwPattern);
+          // Render thick bars (multiple rows)
+          for (let row = 0; row < barWidth; row++) {
+            this._renderHorizontalBar(buffer, barX, y + row, eighths, barStyle, bwPattern);
+          }
 
           this._barBounds.set(`${entryIdx}-${sIdx}`, {
             x: barX, y, width: Math.max(1, Math.ceil(eighths / 8)), height: barWidth
@@ -678,7 +685,11 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
             // BW mode with multiple series: use pattern instead of fractional chars
             const bwPattern = this._isBwMode() && series.length > 1 ? this._getSeriesPattern(sIdx) : undefined;
 
-            const drawn = this._renderVerticalBar(buffer, x, currentBaseY, eighths, barStyle, bwPattern);
+            // Render thick bars (multiple columns)
+            let drawn = 0;
+            for (let col = 0; col < barWidth; col++) {
+              drawn = this._renderVerticalBar(buffer, x + col, currentBaseY, eighths, barStyle, bwPattern);
+            }
 
             this._barBounds.set(`${entryIdx}-${sIdx}`, {
               x, y: currentBaseY - drawn, width: barWidth, height: drawn
@@ -708,7 +719,10 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
           // BW mode with multiple series: use pattern instead of fractional chars
           const bwPattern = this._isBwMode() && series.length > 1 ? this._getSeriesPattern(sIdx) : undefined;
 
-          this._renderVerticalBar(buffer, x, baseY, eighths, barStyle, bwPattern);
+          // Render thick bars (multiple columns)
+          for (let col = 0; col < barWidth; col++) {
+            this._renderVerticalBar(buffer, x + col, baseY, eighths, barStyle, bwPattern);
+          }
 
           this._barBounds.set(`${entryIdx}-${sIdx}`, {
             x, y: baseY - Math.ceil(eighths / 8), width: barWidth, height: Math.max(1, Math.ceil(eighths / 8))

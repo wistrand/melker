@@ -486,7 +486,9 @@ export class RenderingEngine {
         if (componentBounds) {
           const x1 = Math.min(start.x, end.x) - componentBounds.x;
           const x2 = Math.max(start.x, end.x) - componentBounds.x;
-          return element.getSelectableText({ startX: x1, endX: x2 });
+          const y1 = Math.min(start.y, end.y) - componentBounds.y;
+          const y2 = Math.max(start.y, end.y) - componentBounds.y;
+          return element.getSelectableText({ startX: x1, endX: x2, startY: y1, endY: y2 });
         }
         return element.getSelectableText();
       }
@@ -605,24 +607,28 @@ export class RenderingEngine {
       const boundsBottom = componentBounds ? componentBounds.y + componentBounds.height - 1 - scrollOffset.y : buffer.currentBuffer.height - 1;
 
       // Check if component provides custom highlight bounds (e.g., segment display snapping to char boundaries)
-      let alignedBounds: { startX: number; endX: number } | undefined;
+      let alignedBounds: { startX: number; endX: number; startY?: number; endY?: number } | undefined;
       if (componentId && componentBounds && this._document) {
         const element = this._document.getElementById(componentId);
         if (element && hasSelectionHighlightBounds(element)) {
           // Convert screen coordinates to element-relative coordinates (use original relative positions)
           const relStartX = Math.min(firstPos.x, lastPos.x) - (componentBounds?.x ?? 0);
           const relEndX = Math.max(firstPos.x, lastPos.x) - (componentBounds?.x ?? 0);
-          alignedBounds = element.getSelectionHighlightBounds(relStartX, relEndX);
+          const relStartY = Math.min(firstPos.y, lastPos.y) - (componentBounds?.y ?? 0);
+          const relEndY = Math.max(firstPos.y, lastPos.y) - (componentBounds?.y ?? 0);
+          alignedBounds = element.getSelectionHighlightBounds(relStartX, relEndX, relStartY, relEndY);
         }
       }
 
-      // If component provides aligned bounds, highlight the entire component height
-      // (for multi-line components like segment displays where each character spans all rows)
+      // If component provides aligned bounds, highlight within those bounds
+      // Use Y bounds if provided (for row-based components like horizontal data-bars),
+      // otherwise highlight entire component height (for column-based like segment displays)
       if (alignedBounds) {
         const lineStartX = boundsLeft + alignedBounds.startX;
         const lineEndX = boundsLeft + alignedBounds.endX;
-        // Highlight all rows within component bounds
-        for (let y = boundsTop; y <= boundsBottom; y++) {
+        const highlightStartY = alignedBounds.startY !== undefined ? boundsTop + alignedBounds.startY : boundsTop;
+        const highlightEndY = alignedBounds.endY !== undefined ? boundsTop + alignedBounds.endY : boundsBottom;
+        for (let y = highlightStartY; y <= highlightEndY; y++) {
           for (let x = lineStartX; x <= lineEndX; x++) {
             this._highlightCell(buffer, x, y);
           }

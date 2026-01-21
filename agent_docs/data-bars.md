@@ -174,11 +174,36 @@ MEM:▃▃▄▅▇█████  89%
 
 ---
 
-## 6. Class Structure
+## 6. Text Selection
+
+The `data-bars` component supports text selection. When you select bars with the mouse, the selection is copied to the clipboard in the same JSON format as the input:
+
+```json
+{
+  "series": [
+    { "name": "Sales" },
+    { "name": "Revenue", "stack": "total" }
+  ],
+  "bars": [
+    [100, 50],
+    [150, 75]
+  ],
+  "labels": ["Q1", "Q2"]
+}
+```
+
+- **Horizontal bars**: Selection uses Y coordinates (row-based selection)
+- **Vertical bars**: Selection uses X coordinates (column-based selection)
+- Only selected entries are included in `bars` and `labels`
+- Full `series` definitions are always included
+
+---
+
+## 7. Class Structure
 
 ```typescript
 export class DataBarsElement extends Element implements
-  Renderable, Focusable, Clickable, Interactive
+  Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider
 {
   declare type: 'data-bars';
   declare props: DataBarsProps;
@@ -210,6 +235,11 @@ export class DataBarsElement extends Element implements
   private _renderVertical(bounds, style, buffer): void;
   private _renderSparklines(bounds, style, buffer): void;
 
+  // Text selection
+  isTextSelectable(): boolean;
+  getSelectableText(selectionBounds?: SelectionBounds): string;
+  getSelectionHighlightBounds(startX, endX, startY?, endY?): { startX, endX, startY?, endY? } | undefined;
+
   // Public API
   getValue(): DataBarsData;
   setValue(bars: DataBarsData): void;
@@ -220,7 +250,7 @@ export class DataBarsElement extends Element implements
 
 ---
 
-## 7. Component Schema
+## 8. Component Schema
 
 ```typescript
 export const dataBarsSchema: ComponentSchema = {
@@ -250,7 +280,7 @@ export const dataBarsSchema: ComponentSchema = {
 
 ---
 
-## 8. Usage Examples
+## 9. Usage Examples
 
 ### Simple Horizontal Bars
 ```xml
@@ -338,7 +368,7 @@ export const dataBarsSchema: ComponentSchema = {
 
 ---
 
-## 9. File Location
+## 10. File Location
 
 `src/components/data-bars.ts`
 

@@ -483,6 +483,12 @@ sparkline.getValue();            // Get current bars array
 $melker.render();
 ```
 
+**Text Selection:**
+- Supports mouse text selection - copies selected entries as JSON to clipboard
+- Output format matches input: `{ series, bars, labels }` but only for selected entries
+- Horizontal bars: selection uses Y coordinates (row-based)
+- Vertical bars: selection uses X coordinates (column-based)
+
 **Notes:**
 - In BW mode, multi-series uses patterns (█▓▒░) instead of colors
 - Sparkline mode: omit `labels`, set `height: 1`, `gap: 0`

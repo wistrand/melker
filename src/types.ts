@@ -415,6 +415,14 @@ export function isTextSelectable(element: Element): element is Element & TextSel
   return 'isTextSelectable' in element && typeof element.isTextSelectable === 'function';
 }
 
+// Selection bounds for SelectableTextProvider
+export interface SelectionBounds {
+  startX: number;
+  endX: number;
+  startY?: number;  // Optional Y bounds for 2D selection (e.g., horizontal bar charts)
+  endY?: number;
+}
+
 // SelectableTextProvider interface for elements that provide custom text for selection
 // Instead of extracting rendered characters from the buffer, use the logical value
 export interface SelectableTextProvider {
@@ -423,7 +431,7 @@ export interface SelectableTextProvider {
    * @param selectionBounds - Optional bounds of the visual selection relative to element
    *                          If provided, returns only the characters within those bounds
    */
-  getSelectableText(selectionBounds?: { startX: number; endX: number }): string;
+  getSelectableText(selectionBounds?: SelectionBounds): string;
 
   /**
    * Get aligned selection highlight bounds that snap to character boundaries
@@ -431,9 +439,11 @@ export interface SelectableTextProvider {
    * characters instead of individual terminal cells
    * @param startX - Selection start x relative to element
    * @param endX - Selection end x relative to element
-   * @returns Snapped start and end x positions, or undefined to use default highlighting
+   * @param startY - Optional selection start y relative to element
+   * @param endY - Optional selection end y relative to element
+   * @returns Snapped bounds, or undefined to use default highlighting
    */
-  getSelectionHighlightBounds?(startX: number, endX: number): { startX: number; endX: number } | undefined;
+  getSelectionHighlightBounds?(startX: number, endX: number, startY?: number, endY?: number): { startX: number; endX: number; startY?: number; endY?: number } | undefined;
 }
 
 // Type guard for SelectableTextProvider interface
@@ -442,7 +452,7 @@ export function hasSelectableText(element: Element): element is Element & Select
 }
 
 // Type guard for checking if element provides custom highlight bounds
-export function hasSelectionHighlightBounds(element: Element): element is Element & { getSelectionHighlightBounds: (startX: number, endX: number) => { startX: number; endX: number } | undefined } {
+export function hasSelectionHighlightBounds(element: Element): element is Element & { getSelectionHighlightBounds: (startX: number, endX: number, startY?: number, endY?: number) => { startX: number; endX: number; startY?: number; endY?: number } | undefined } {
   return 'getSelectionHighlightBounds' in element && typeof element.getSelectionHighlightBounds === 'function';
 }
 

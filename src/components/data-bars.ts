@@ -8,6 +8,9 @@ import {
   Focusable,
   Clickable,
   Interactive,
+  TextSelectable,
+  SelectableTextProvider,
+  SelectionBounds,
   IntrinsicSizeContext,
   Bounds,
   ComponentRenderContext,
@@ -108,11 +111,12 @@ const defaultProps: Partial<DataBarsProps> = {
 
 // ===== DataBarsElement Class =====
 
-export class DataBarsElement extends Element implements Renderable, Focusable, Clickable, Interactive {
+export class DataBarsElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider {
   declare type: 'data-bars';
   declare props: DataBarsProps;
 
-  private _barBounds: Map<string, Bounds> = new Map();
+  private _barBounds: Map<string, Bounds> = new Map();  // "entry-series" -> bounds
+  private _elementBounds: Bounds | null = null;  // Track element bounds for selection
   private _minValue: number = 0;
   private _maxValue: number = 0;
   private _scale: number = 1;
@@ -482,6 +486,7 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
 
     this._calculateScale();
     this._barBounds.clear();
+    this._elementBounds = bounds;  // Store for selection calculations
     this.setBounds(bounds);
 
     if (this._getOrientation() === 'vertical') {
@@ -817,6 +822,152 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     }
 
     return false;
+  }
+
+  // ===== Text Selection =====
+
+  /**
+   * Check if this element supports text selection
+   */
+  isTextSelectable(): boolean {
+    return true;
+  }
+
+  /**
+   * Get the JSON representation of selected bars for clipboard
+   * Output matches input format: { series, bars, labels } but only for selected entries
+   * @param selectionBounds - Optional bounds of the visual selection relative to element
+   */
+  getSelectableText(selectionBounds?: SelectionBounds): string {
+    const { bars, series, labels } = this.props;
+
+    if (!bars || bars.length === 0 || !this._elementBounds) {
+      return '';
+    }
+
+    const orientation = this._getOrientation();
+
+    // Find which entry indices are within the selection bounds
+    const selectedEntryIndices = new Set<number>();
+
+    for (const [key, b] of this._barBounds) {
+      const [entryIdx] = key.split('-').map(Number);
+
+      // Convert bar bounds to be relative to element
+      const relativeStartX = b.x - this._elementBounds.x;
+      const relativeEndX = relativeStartX + b.width - 1;
+      const relativeStartY = b.y - this._elementBounds.y;
+      const relativeEndY = relativeStartY + b.height - 1;
+
+      // Check if this bar overlaps with selection
+      let overlaps = true;
+      if (selectionBounds) {
+        // For horizontal bars, primarily check Y overlap (entries are rows)
+        // For vertical bars, primarily check X overlap (entries are columns)
+        const xOverlaps = relativeStartX <= selectionBounds.endX && relativeEndX >= selectionBounds.startX;
+
+        if (orientation === 'horizontal') {
+          // Horizontal bars: must overlap in Y, X overlap is secondary
+          const yOverlaps = selectionBounds.startY !== undefined && selectionBounds.endY !== undefined
+            ? (relativeStartY <= selectionBounds.endY && relativeEndY >= selectionBounds.startY)
+            : true;
+          overlaps = xOverlaps && yOverlaps;
+        } else {
+          // Vertical bars: check X overlap
+          overlaps = xOverlaps;
+        }
+      }
+
+      if (overlaps) {
+        selectedEntryIndices.add(entryIdx);
+      }
+    }
+
+    if (selectedEntryIndices.size === 0) {
+      return '';
+    }
+
+    // Sort entry indices for consistent output
+    const sortedIndices = [...selectedEntryIndices].sort((a, b) => a - b);
+
+    // Build output in same format as input: { series, bars, labels }
+    const output: { series: DataBarSeries[]; bars: BarValue[][]; labels?: string[] } = {
+      series: series.map(s => {
+        const entry: DataBarSeries = { name: s.name };
+        if (s.color) entry.color = s.color;
+        if (s.stack) entry.stack = s.stack;
+        return entry;
+      }),
+      bars: sortedIndices.map(idx => bars[idx] ?? []),
+    };
+
+    // Include labels if present
+    if (labels && labels.length > 0) {
+      output.labels = sortedIndices.map(idx => labels[idx] ?? '');
+    }
+
+    return JSON.stringify(output, null, 2);
+  }
+
+  /**
+   * Get aligned selection highlight bounds that snap to bar boundaries
+   */
+  getSelectionHighlightBounds(startX: number, endX: number, startY?: number, endY?: number): { startX: number; endX: number; startY?: number; endY?: number } | undefined {
+    if (this._barBounds.size === 0 || !this._elementBounds) {
+      return undefined;
+    }
+
+    const orientation = this._getOrientation();
+
+    // Find the bar edges within the selection
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let hasOverlap = false;
+
+    for (const [_key, b] of this._barBounds) {
+      // Convert to relative coordinates
+      const relativeStartX = b.x - this._elementBounds.x;
+      const relativeEndX = relativeStartX + b.width - 1;
+      const relativeStartY = b.y - this._elementBounds.y;
+      const relativeEndY = relativeStartY + b.height - 1;
+
+      // Check X overlap
+      const xOverlaps = relativeStartX <= endX && relativeEndX >= startX;
+
+      if (orientation === 'horizontal') {
+        // Horizontal bars: must overlap in both X and Y
+        const yOverlaps = startY !== undefined && endY !== undefined
+          ? (relativeStartY <= endY && relativeEndY >= startY)
+          : true;
+
+        if (xOverlaps && yOverlaps) {
+          hasOverlap = true;
+          minX = Math.min(minX, relativeStartX);
+          maxX = Math.max(maxX, relativeEndX);
+          minY = Math.min(minY, relativeStartY);
+          maxY = Math.max(maxY, relativeEndY);
+        }
+      } else {
+        // Vertical bars: check X overlap only
+        if (xOverlaps) {
+          hasOverlap = true;
+          minX = Math.min(minX, relativeStartX);
+          maxX = Math.max(maxX, relativeEndX);
+        }
+      }
+    }
+
+    if (!hasOverlap) {
+      return undefined;
+    }
+
+    // For horizontal bars, return Y bounds; for vertical bars, return X bounds only
+    if (orientation === 'horizontal') {
+      return { startX: minX, endX: maxX, startY: minY, endY: maxY };
+    }
+    return { startX: minX, endX: maxX };
   }
 
   // ===== Getters and Setters =====

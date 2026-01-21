@@ -433,10 +433,14 @@ export async function runMelkerFile(
     }
 
     // Compute app-specific cache directory (uses same hash as approval file)
+    // For remote apps, use the original URL from env (launcher passes temp file path)
     // Must use resolve() to match the exact path computation in the launcher
-    const absolutePathForHash = isUrl(filepath)
-      ? filepath
-      : resolve(Deno.cwd(), filepath);
+    const remoteUrlForHash = Env.get('MELKER_REMOTE_URL');
+    const absolutePathForHash = remoteUrlForHash
+      ? remoteUrlForHash
+      : isUrl(filepath)
+        ? filepath
+        : resolve(Deno.cwd(), filepath);
     const urlHash = await getUrlHash(absolutePathForHash);
     const appCacheDir = getAppCacheDir(urlHash);
     const logger = (() => { try { return getLogger(filename); } catch { return null; } })();

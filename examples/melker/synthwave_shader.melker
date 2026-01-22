@@ -4,7 +4,8 @@
     "name": "Synthwave Shader Demo",
     "description": "Retro 80s synthwave sun, grid, and mountain",
     "permissions": {
-      "shader": true
+      "shader": true,
+      "net": ["samesite"]
     }
   }
   </policy>

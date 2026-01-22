@@ -165,6 +165,13 @@ Format detection uses magic bytes at file start.
 - HTTP/HTTPS URLs (requires `net` permission for target host)
 - Data URLs (`data:image/png;base64,...`)
 
+**HTTP/HTTPS caching:**
+- Remote images are cached using an LRU cache (max 50 entries)
+- Cache stores Promises to handle concurrent requests for the same URL
+- Cache returns copies of byte arrays to prevent mutation
+- Failed fetches are removed from cache to allow retry
+- See `src/lru-cache.ts` for the generic LRU implementation
+
 Image loading code is in `src/components/canvas-image.ts`, with decoders imported from `src/deps.ts`.
 
 ## Canvas Dithering

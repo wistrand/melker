@@ -71,6 +71,7 @@ export interface DevToolsState {
   convertedContent?: string;  // For .md files: the converted .melker content
   policy?: MelkerPolicy;      // Policy if present
   appDir?: string;            // App directory for resolving policy paths
+  sourceUrl?: string;         // Source URL for remote apps (for "samesite" net permission)
   systemInfo?: SystemInfo;    // System info if available
   helpContent?: string;       // Help text content (markdown)
 }
@@ -87,8 +88,8 @@ export class DevToolsManager {
   /**
    * Set the source content to display
    */
-  setSource(content: string, filePath: string, type: 'melker' | 'md', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, systemInfo?: SystemInfo, helpContent?: string): void {
-    this._state = { content, filePath, type, convertedContent, policy, appDir, systemInfo, helpContent };
+  setSource(content: string, filePath: string, type: 'melker' | 'md', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, sourceUrl?: string, systemInfo?: SystemInfo, helpContent?: string): void {
+    this._state = { content, filePath, type, convertedContent, policy, appDir, sourceUrl, systemInfo, helpContent };
   }
 
   /**
@@ -180,9 +181,9 @@ export class DevToolsManager {
 
     // Tab 2: Policy (if present)
     if (this._state.policy) {
-      let policyText = formatPolicy(this._state.policy);
+      let policyText = formatPolicy(this._state.policy, this._state.sourceUrl);
       const appDir = this._state.appDir || '.';
-      const denoFlags = policyToDenoFlags(this._state.policy, appDir);
+      const denoFlags = policyToDenoFlags(this._state.policy, appDir, undefined, this._state.sourceUrl);
       if (denoFlags.length > 0) {
         policyText += '\nDeno permission flags:\n';
         policyText += formatDenoFlags(denoFlags);

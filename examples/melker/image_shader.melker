@@ -5,7 +5,8 @@
     "description": "Demonstrates per-pixel image shader effects",
     "permissions": {
       "read": ["."],
-      "shader": true
+      "shader": true,
+      "net": ["samesite"]
     }
   }
   </policy>

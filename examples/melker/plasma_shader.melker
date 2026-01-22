@@ -4,7 +4,8 @@
     "name": "Plasma Shader Demo",
     "description": "Demonstrates shader utilities: noise2d, fbm, palette",
     "permissions": {
-      "shader": true
+      "shader": true,
+      "net": ["samesite"]
     },
     "config": {
       "theme": "auto-dark"

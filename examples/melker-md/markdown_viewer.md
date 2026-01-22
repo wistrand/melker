@@ -6,6 +6,22 @@ Show README.md: `deno run --allow-all melker.ts examples/melker-md/markdown_view
 
 To view .melker output: `deno run --allow-all melker.ts --convert examples/melker-md/markdown_viewer.md`
 
+
+## Policy
+
+The markdown viewer needs permission to read any file or url to access .md files.
+
+```json
+{
+  "@melker": "policy",
+  "name": "Markdown viewer",
+  "permissions": {
+    "read": ["*"],
+    "net": ["*"]
+  }
+}
+```
+
 ## Styles
 
 CSS styles using standard `css` block with `/* @melker style */` directive.

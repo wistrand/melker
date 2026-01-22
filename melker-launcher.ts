@@ -155,6 +155,7 @@ async function runWithPolicy(
   policy: MelkerPolicy,
   originalArgs: string[]
 ): Promise<void> {
+
   // Get directory containing the .melker file for resolving relative paths
   const absolutePath = filepath.startsWith('/')
     ? filepath
@@ -236,8 +237,10 @@ async function runRemoteWithPolicy(
   originalArgs: string[]
 ): Promise<void> {
   // Write approved content to temp file to avoid TOCTOU issues
+  // Preserve original extension so runner knows whether to parse as markdown
   const tempDir = await Deno.makeTempDir({ prefix: 'melker-remote-' });
-  const tempFile = `${tempDir}/app.melker`;
+  const ext = url.endsWith('.md') ? '.md' : '.melker';
+  const tempFile = `${tempDir}/app${ext}`;
   await Deno.writeTextFile(tempFile, content);
 
   try {
@@ -245,7 +248,8 @@ async function runRemoteWithPolicy(
     const urlHash = await getUrlHash(url);
 
     // Convert policy to Deno permission flags
-    const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash);
+    // Pass the source URL for "samesite" net permission resolution
+    const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash, url);
 
     // Required: --unstable-bundle for Deno.bundle() API
     denoFlags.push('--unstable-bundle');
@@ -257,14 +261,14 @@ async function runRemoteWithPolicy(
     const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
     const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
 
-    // Filter out policy-related flags and replace URL with temp file
+    // Filter out policy-related flags and replace app URL with temp file
     const filteredArgs: string[] = [];
     for (const arg of originalArgs) {
       if (arg.startsWith('--show-policy') || arg.startsWith('--trust')) {
         continue;
       }
-      // Replace the URL with temp file path
-      if (arg === url || arg.startsWith('http://') || arg.startsWith('https://')) {
+      // Only replace the app URL with temp file path, preserve other URL arguments
+      if (arg === url) {
         filteredArgs.push(tempFile);
       } else {
         filteredArgs.push(arg);
@@ -279,17 +283,19 @@ async function runRemoteWithPolicy(
       ...filteredArgs,
     ];
 
+    const env = {
+        ...Deno.env.toObject(),
+        MELKER_RUNNER: '1',
+        MELKER_REMOTE_URL: url, // Pass original URL for reference
+      };
+
     // Spawn subprocess with restricted permissions
     const process = new Deno.Command(cmd[0], {
       args: cmd.slice(1),
       stdin: 'inherit',
       stdout: 'inherit',
       stderr: 'inherit',
-      env: {
-        ...Deno.env.toObject(),
-        MELKER_RUNNER: '1',
-        MELKER_REMOTE_URL: url, // Pass original URL for reference
-      },
+      env: env
     });
 
     const child = process.spawn();
@@ -449,7 +455,7 @@ export async function main(): Promise<void> {
       console.log(`Approved: ${record.approvedAt}`);
       console.log(`Hash: ${record.hash.substring(0, 16)}...`);
       console.log('\nPolicy:');
-      console.log(formatPolicy(record.policy));
+      console.log(formatPolicy(record.policy, isUrl ? lookupPath : undefined));
       console.log('\nDeno flags:');
       console.log(formatDenoFlags(record.denoFlags));
     } else {
@@ -546,11 +552,13 @@ export async function main(): Promise<void> {
         }
         const policyResult = await loadPolicyFromContent(content, filepath);
         const policy = policyResult.policy ?? createAutoPolicy();
+
         const urlHash = await getUrlHash(filepath);
         console.log(`\nPolicy source: ${policyResult.source}\n`);
-        console.log(formatPolicy(policy));
+        // Pass source URL for "samesite" resolution (filepath is the URL)
+        console.log(formatPolicy(policy, filepath));
         console.log('\nDeno permission flags:');
-        const flags = policyToDenoFlags(policy, Deno.cwd(), urlHash);
+        const flags = policyToDenoFlags(policy, Deno.cwd(), urlHash, filepath);
         console.log(formatDenoFlags(flags));
       } else {
         const policyResult = await loadPolicy(absoluteFilepath);
@@ -596,8 +604,9 @@ export async function main(): Promise<void> {
       }
 
       // Generate Deno flags and check approval
+      // Pass source URL for "samesite" resolution
       const urlHash = await getUrlHash(filepath);
-      const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash);
+      const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash, filepath);
       const isApproved = await checkApproval(filepath, content, policy, denoFlags);
 
       if (!isApproved) {

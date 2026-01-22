@@ -159,9 +159,10 @@
 | `src/ai/accessibility-dialog.ts` | Dialog UI and conversation management |
 | `src/ai/audio.ts` | Audio recording, transcription, and silence trimming |
 
-**Utilities (`src/utils/`):**
+**Utilities:**
 | File | Purpose |
 |------|---------|
+| `src/lru-cache.ts` | Generic LRU cache with configurable max size |
 | `src/utils/timing.ts` | Debounce and throttle utilities |
 
 ## Render Pipeline

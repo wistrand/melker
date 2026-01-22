@@ -401,7 +401,9 @@ export async function runMelkerFile(
 
     const placeholderUI = createEl('container', { style: { width: 1, height: 1 } });
     // Calculate baseUrl from filepath for relative resource resolution
-    const baseUrl = getBaseUrl(filepath);
+
+    const baseUrl = getBaseUrl(Env.get("MELKER_REMOTE_URL") || filepath);
+
     const engine = await createMelkerApp(placeholderUI, { baseUrl });
 
     if (persistEnabled) {
@@ -635,9 +637,9 @@ export async function runMelkerFile(
     }
 
     if (viewSource) {
-      engine.setSource(viewSource.content, viewSource.path, viewSource.type, viewSource.convertedContent, appPolicy, sourceDirname, systemInfo, helpContent);
+      engine.setSource(viewSource.content, viewSource.path, viewSource.type, viewSource.convertedContent, appPolicy, sourceDirname, remoteUrl, systemInfo, helpContent);
     } else {
-      engine.setSource(originalContent, filepath, 'melker', undefined, appPolicy, sourceDirname, systemInfo, helpContent);
+      engine.setSource(originalContent, filepath, 'melker', undefined, appPolicy, sourceDirname, remoteUrl, systemInfo, helpContent);
     }
 
     // Initialize OAuth if configured

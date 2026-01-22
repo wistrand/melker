@@ -1,14 +1,5 @@
 <melker>
-  <policy>
-  {
-    "name": "Image Demo",
-    "description": "Demonstrates the img component",
-    "permissions": {
-      "read": ["*"],
-      "net": ["samesite"]
-    }
-  }
-  </policy>
+    <!-- intentionally no policy to test aut policy for local files -->
 
   <style>
     #root {

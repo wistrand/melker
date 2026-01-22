@@ -4,7 +4,8 @@
     "name": "Image Demo",
     "description": "Demonstrates the img component",
     "permissions": {
-      "read": ["*"]
+      "read": ["*"],
+      "net" : ["samesite"]
     }
   }
   </policy>

@@ -5,7 +5,8 @@
     "description": "Raymarched smooth union metaballs",
     "permissions": {
       "read": ["."],
-      "shader": true
+      "shader": true,
+      "net": ["samesite"]
     }
   }
   </policy>

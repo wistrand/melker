@@ -1485,10 +1485,11 @@ export class MelkerEngine {
    * @param convertedContent - For .md files: the converted .melker content
    * @param policy - App policy if present
    * @param appDir - App directory for resolving policy paths
+   * @param sourceUrl - Source URL for remote apps (for "samesite" net permission)
    * @param systemInfo - System info for debug tab
    * @param helpContent - Help text content (markdown)
    */
-  setSource(content: string, filePath: string, type: 'md' | 'melker', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, systemInfo?: SystemInfo, helpContent?: string): void {
+  setSource(content: string, filePath: string, type: 'md' | 'melker', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, sourceUrl?: string, systemInfo?: SystemInfo, helpContent?: string): void {
     // Store policy for permission checks
     this._policy = policy;
 
@@ -1513,7 +1514,7 @@ export class MelkerEngine {
         },
       });
     }
-    this._devToolsManager.setSource(content, filePath, type, convertedContent, policy, appDir, systemInfo, helpContent);
+    this._devToolsManager.setSource(content, filePath, type, convertedContent, policy, appDir, sourceUrl, systemInfo, helpContent);
   }
 
   /**
@@ -1883,6 +1884,12 @@ export class MelkerEngine {
   resolveUrl(url: string): string {
     if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://')) {
       return url; // Already absolute
+    }
+
+    // Absolute file path (Unix) - convert to file:// URL
+    // Don't let these be resolved against http:// base URLs
+    if (url.startsWith('/')) {
+      return `file://${url}`;
     }
 
     const baseUrl = this._options.baseUrl || 'file://';

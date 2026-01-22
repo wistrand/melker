@@ -2,6 +2,8 @@
 // Supports PNG, JPEG, and GIF formats
 
 import { decodePng, decodeJpeg, GifReader } from '../deps.ts';
+import { getLogger } from '../logging.ts';
+import { LRUCache } from '../lru-cache.ts';
 
 /**
  * Decoded image data in a standard format
@@ -12,6 +14,8 @@ export interface LoadedImage {
   data: Uint8ClampedArray;  // RGB or RGBA pixel data
   bytesPerPixel: number;    // 3 for RGB, 4 for RGBA
 }
+
+const logger = getLogger("canvas-image");
 
 /**
  * Detect image format from magic bytes
@@ -164,10 +168,38 @@ export function decodeImageBytes(imageBytes: Uint8Array): LoadedImage {
   }
 }
 
+// Cache for fetched images (HTTP/HTTPS URLs only)
+// Stores Promises to handle concurrent requests for the same URL
+// Uses LRU eviction when max size is exceeded
+const imageCache = new LRUCache<string, Promise<Uint8Array>>(50);
+
+/**
+ * Clear the image cache
+ */
+export function clearImageCache(): void {
+  imageCache.clear();
+  logger.debug('image cache cleared');
+}
+
+/**
+ * Fetch image from URL (internal, used by cache)
+ */
+async function fetchImageBytes(url: string): Promise<Uint8Array> {
+  logger.debug("fetch image " + url);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+
 /**
  * Load image from a file path, data URL, or HTTP/HTTPS URL
  */
 export async function loadImageFromSource(src: string): Promise<Uint8Array> {
+
+  logger.debug("loadImageFromSource path " + src);
+
   // Handle data: URLs (inline base64-encoded images)
   if (src.startsWith('data:')) {
     // Parse data URL: data:[<mediatype>][;base64],<data>
@@ -185,13 +217,30 @@ export async function loadImageFromSource(src: string): Promise<Uint8Array> {
     return imageBytes;
   }
 
-  // Handle HTTP/HTTPS URLs
+  // Handle HTTP/HTTPS URLs (with caching)
   if (src.startsWith('http://') || src.startsWith('https://')) {
-    const response = await fetch(src);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+    // Check cache first - cache stores Promises to handle concurrent requests
+    // LRUCache.get() automatically updates LRU order
+    const cached = imageCache.get(src);
+    if (cached) {
+      logger.debug('image cache hit: ' + src);
+      const bytes = await cached;
+      return new Uint8Array(bytes); // Return a copy
     }
-    return new Uint8Array(await response.arrayBuffer());
+
+    // Create and cache the fetch Promise immediately to prevent race conditions
+    // LRUCache.set() automatically evicts oldest entries if over max size
+    const fetchPromise = fetchImageBytes(src);
+    imageCache.set(src, fetchPromise);
+
+    try {
+      const bytes = await fetchPromise;
+      return new Uint8Array(bytes); // Return a copy
+    } catch (error) {
+      // Remove from cache on error so retry is possible
+      imageCache.delete(src);
+      throw error;
+    }
   }
 
   // Resolve the path for file reading
@@ -205,6 +254,8 @@ export async function loadImageFromSource(src: string): Promise<Uint8Array> {
   } else {
     // Relative path - resolve from cwd
     resolvedSrc = `${Deno.cwd()}/${src}`;
+
+    logger.debug("relative path " + src  + " -> " + resolvedSrc);
   }
 
   // Read the image file

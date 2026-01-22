@@ -280,6 +280,30 @@ async function addWellknownHostsForOAuth(policy: MelkerPolicy, content: string):
   }
 }
 
+export function addSourceURLNet(policy: MelkerPolicy, sourceUrl: string) {
+
+  if(!(sourceUrl?.startsWith("http://") || sourceUrl?.startsWith("https://"))) {
+    return;
+  }
+
+  const host = extractHost(sourceUrl);
+  if (!host) return; // Invalid URL
+
+  if (!policy.permissions) {
+    policy.permissions = {};
+  }
+  if (!policy.permissions.net) {
+    policy.permissions.net = [];
+  }
+
+  // Add hosts if not using wildcard
+  if (policy.permissions.net.includes('*')) return;
+
+  if (!policy.permissions.net.includes(host)) {
+    policy.permissions.net.push(host);
+  }
+}
+
 /**
  * Load policy from content string (for remote files)
  *
@@ -336,6 +360,7 @@ export async function loadPolicyFromContent(
       // Add OAuth permissions if needed
       if (hasOAuth) {
         addOAuthPermissions(policy);
+
         await addWellknownHostsForOAuth(policy, content);
       }
       return { policy, source: 'embedded' };
@@ -422,9 +447,25 @@ export function validatePolicy(policy: MelkerPolicy): string[] {
 }
 
 /**
- * Format policy for display
+ * Extract host from a URL, returns null if invalid
  */
-export function formatPolicy(policy: MelkerPolicy): string {
+function extractHostFromUrl(url: string): string | null {
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return null;
+  }
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format policy for display
+ * @param policy The policy to format
+ * @param sourceUrl Optional source URL for expanding "samesite" in net permissions
+ */
+export function formatPolicy(policy: MelkerPolicy, sourceUrl?: string): string {
   const lines: string[] = [];
 
   // Header
@@ -472,8 +513,13 @@ export function formatPolicy(policy: MelkerPolicy): string {
 
   if (p.net?.length) {
     lines.push('Network:');
+    const sourceHost = sourceUrl ? extractHostFromUrl(sourceUrl) : null;
     for (const host of p.net) {
-      lines.push(`  ${host}`);
+      if (host === 'samesite' && sourceHost) {
+        lines.push(`  samesite (${sourceHost})`);
+      } else {
+        lines.push(`  ${host}`);
+      }
     }
     lines.push('');
   }

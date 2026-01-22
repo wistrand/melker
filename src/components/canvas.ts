@@ -398,6 +398,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     this._imageLoading = true;
 
     try {
+      logger.debug("loadImage " + src);
       // Load image bytes from source (file path or data URL)
       const imageBytes = await loadImageFromSource(src);
 

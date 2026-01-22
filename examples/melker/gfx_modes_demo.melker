@@ -4,7 +4,7 @@
   <policy>
   {
     "name": "GFX Modes Demo",
-    "permissions": { "shader": true }
+    "permissions": { "shader": true, "net": ["samesite"] }
   }
   </policy>
 

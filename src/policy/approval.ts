@@ -103,7 +103,7 @@ export async function calculateApprovalHash(
     flagsStr
   ].join('\n');
 
-  return await hashString(combined);
+  return  await hashString(combined);
 }
 
 /**
@@ -116,6 +116,7 @@ export async function checkApproval(
   denoFlags: string[]
 ): Promise<boolean> {
   try {
+
     const filePath = await getApprovalFilePath(url);
     const json = await Deno.readTextFile(filePath);
     const record: ApprovalRecord = JSON.parse(json);
@@ -125,7 +126,7 @@ export async function checkApproval(
 
     // Check if hash matches
     return record.hash === currentHash;
-  } catch {
+  } catch (e) {
     // File doesn't exist or is invalid - not approved
     return false;
   }
@@ -161,9 +162,23 @@ export async function saveApproval(
 }
 
 /**
+ * Extract host from a URL, returns null if invalid
+ */
+function extractHost(url: string): string | null {
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return null;
+  }
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Format policy permissions for display in approval prompt
  */
-function formatPolicyPermissions(policy: MelkerPolicy): string[] {
+function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): string[] {
   const lines: string[] = [];
   const p = policy.permissions || {};
 
@@ -179,7 +194,15 @@ function formatPolicyPermissions(policy: MelkerPolicy): string[] {
     lines.push(`  write: ${p.write.join(', ')}`);
   }
   if (p.net?.length) {
-    lines.push(`  net: ${p.net.join(', ')}`);
+    // Expand "samesite" to show actual host
+    const sourceHost = sourceUrl ? extractHost(sourceUrl) : null;
+    const netDisplay = p.net.map(entry => {
+      if (entry === 'samesite' && sourceHost) {
+        return `samesite (${sourceHost})`;
+      }
+      return entry;
+    });
+    lines.push(`  net: ${netDisplay.join(', ')}`);
   }
   if (p.run?.length) {
     lines.push(`  run: ${p.run.join(', ')}`);
@@ -227,7 +250,7 @@ export function showApprovalPrompt(
     return false;
   }
 
-  if(url.startsWith("file:")) {
+  if(url.startsWith("http://") || url.startsWith("https://")) {
     console.log('\n\x1b[1mRemote App Permission Request\x1b[0m\n');
   } else {
     console.log('\n\x1b[1mLocal App Permission Request\x1b[0m\n');
@@ -252,7 +275,7 @@ export function showApprovalPrompt(
     }
   }
 
-  const permLines = formatPolicyPermissions(policy);
+  const permLines = formatPolicyPermissions(policy, url);
   console.log('\nRequested permissions:');
   if (permLines.length === 0) {
     console.log('  (no permissions requested)');

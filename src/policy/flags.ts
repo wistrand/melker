@@ -45,6 +45,23 @@ function extractHost(value: string): string {
 }
 
 /**
+ * Extract host from source URL for "samesite" permission
+ * Returns null if URL is invalid or not provided
+ */
+function extractSourceHost(sourceUrl: string | undefined): string | null {
+  if (!sourceUrl) return null;
+  if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
+    return null; // Only HTTP/HTTPS URLs have a meaningful "samesite"
+  }
+  try {
+    const url = new URL(sourceUrl);
+    return url.host;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Check if a command exists in PATH
  */
 function commandExists(cmd: string): boolean {
@@ -106,7 +123,7 @@ function getBrowserCommand(): string {
   }
 }
 
-export function policyToDenoFlags(policy: MelkerPolicy, appDir: string, urlHash?: string): string[] {
+export function policyToDenoFlags(policy: MelkerPolicy, appDir: string, urlHash?: string, sourceUrl?: string): string[] {
   const flags: string[] = [];
   const p = policy.permissions || {};
 
@@ -200,8 +217,19 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string, urlHash?
       flags.push('--allow-net');
     } else {
       // Extract hosts from URLs (Deno only accepts hosts/domains, not full URLs)
-      const hosts = p.net.map(extractHost);
-      flags.push(`--allow-net=${[...new Set(hosts)].join(',')}`);
+      // Handle special "samesite" value - expands to the host of the source URL
+      const sourceHost = extractSourceHost(sourceUrl);
+      const hosts = p.net
+        .map(entry => {
+          if (entry === 'samesite') {
+            return sourceHost; // null if no valid source URL
+          }
+          return extractHost(entry);
+        })
+        .filter((h): h is string => h !== null); // Remove nulls (unresolved samesite)
+      if (hosts.length > 0) {
+        flags.push(`--allow-net=${[...new Set(hosts)].join(',')}`);
+      }
     }
   }
 
@@ -400,7 +428,7 @@ function buildEnvVars(
     }
   }
 
-  return [...new Set(vars)]; // Deduplicate
+  return [...new Set(vars)].sort(); // Deduplicate and sort for stable hash
 }
 
 /**

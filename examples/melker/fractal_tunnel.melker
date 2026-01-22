@@ -5,7 +5,8 @@
     "description": "Classic demoscene zooming fractal tunnel effect",
     "permissions": {
       "read": ["."],
-      "shader": true
+      "shader": true,
+      "net": ["samesite"]
     }
   }
   </policy>

@@ -16,7 +16,8 @@ Declares permissions required by the app. The `shader` permission enables per-pi
   "name": "Image Shader Demo",
   "permissions": {
     "read": ["."],
-    "shader": true
+    "shader": true,
+    "net": ["samesite"]
   }
 }
 ```

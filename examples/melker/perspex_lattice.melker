@@ -4,7 +4,8 @@
     "name": "Perspex Web Lattice",
     "description": "Raymarched 2nd-order Voronoi with dark web lattice",
     "permissions": {
-      "shader": true
+      "shader": true,
+      "net": ["samesite"]
     }
   }
   </policy>

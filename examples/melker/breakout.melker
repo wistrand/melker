@@ -4,7 +4,8 @@
     "name": "Breakout",
     "description": "Classic breakout game using shader rendering",
     "permissions": {
-      "shader": true
+      "shader": true,
+      "net": ["samesite"]
     }
   }
   </policy>

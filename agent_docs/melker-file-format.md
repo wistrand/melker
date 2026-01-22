@@ -733,11 +733,23 @@ Apps can declare required permissions. When a policy is found, the app runs in a
 |------------|---------|-----------|
 | `read` | `["."]` or `["*"]` | `--allow-read` |
 | `write` | `["/data"]` or `["*"]` | `--allow-write` |
-| `net` | `["api.example.com"]` or `["*"]` | `--allow-net` |
+| `net` | `["api.example.com"]`, `["samesite"]`, or `["*"]` | `--allow-net` |
 | `run` | `["ffmpeg", "ffprobe"]` or `["*"]` | `--allow-run` |
 | `env` | `["MY_VAR"]` or `["*"]` | `--allow-env` |
 | `ffi` | `["libfoo.so"]` or `["*"]` | `--allow-ffi` |
 | `sys` | `["hostname", "osRelease"]` or `["*"]` | `--allow-sys` |
+
+**Special net value - `"samesite"`**: For remote apps, `"samesite"` expands to the host of the app's source URL. This allows apps to load resources (images, data) from their origin without hardcoding the host:
+
+```json
+{
+  "permissions": {
+    "net": ["samesite"]
+  }
+}
+```
+
+For `https://example.com/apps/myapp.melker`, `"samesite"` expands to `example.com`.
 
 ### Permission Shortcuts
 

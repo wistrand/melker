@@ -103,6 +103,7 @@ src/
   xdg.ts              - XDG Base Directory support
   state-persistence.ts - State persistence for apps
   terminal-lifecycle.ts - Terminal setup, cleanup, signal handlers
+  lru-cache.ts        - Generic LRU cache with configurable max size
   policy/             - Permission policy system
     mod.ts            - Policy module exports
     types.ts          - Policy type definitions
@@ -386,11 +387,23 @@ Melker apps can declare required permissions via an embedded `<policy>` tag. Whe
 |------------|--------|-----------|
 | `read` | paths or `["*"]` | `--allow-read` |
 | `write` | paths or `["*"]` | `--allow-write` |
-| `net` | hosts or `["*"]` | `--allow-net` |
+| `net` | hosts, `"samesite"`, or `["*"]` | `--allow-net` |
 | `run` | commands or `["*"]` | `--allow-run` |
 | `env` | variables or `["*"]` | `--allow-env` |
 | `ffi` | libraries or `["*"]` | `--allow-ffi` |
 | `sys` | interfaces or `["*"]` | `--allow-sys` |
+
+**Special net value - `"samesite"`**: For remote apps, `"samesite"` expands to the host of the app's source URL. This allows apps to load resources (images, data) from their origin without hardcoding the host:
+
+```json
+{
+  "permissions": {
+    "net": ["samesite"]
+  }
+}
+```
+
+For `https://example.com/apps/myapp.melker`, `"samesite"` expands to `example.com`.
 
 ### Permission Shortcuts
 

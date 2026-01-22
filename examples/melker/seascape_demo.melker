@@ -11,7 +11,8 @@
       "License: CC BY-NC-SA 3.0"
     ],
     "permissions": {
-      "shader": true
+      "shader": true,
+      "net": ["samesite"]
     }
   }
   </policy>

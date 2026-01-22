@@ -398,6 +398,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       return this._srcContent;
     }
 
+    let resolvedUrl = '';
     try {
       // Get engine instance to resolve URL
       const engine = globalThis.melkerEngine;
@@ -406,7 +407,8 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         return null;
       }
 
-      let resolvedUrl = engine.resolveUrl(src);
+
+      resolvedUrl = engine.resolveUrl(src);
 
       // For relative paths (not starting with / or protocol), try cwd first
       // This handles command-line arguments like "examples/foo.md"
@@ -441,13 +443,13 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       this._hasLoadedContent = true;
       return this._srcContent;
     } catch (error) {
-      logger.warn("Failed to load " + src, { error: String(error) });
+      logger.warn("Failed to load " + src + " " + resolvedUrl, { error: String(error) });
       // Set error message for UI display
       const errorName = (error as any)?.name || 'Error';
       if (errorName === 'NotFound') {
         this._loadError = `File not found: ${src}`;
       } else {
-        this._loadError = `Failed to load: ${src} ` + error;
+        this._loadError = `Failed to load: ${src} ${resolvedUrl}` + error;
       }
       this._srcContent = null;
       this._lastSrc = src; // Mark this src as attempted to prevent retry loops
@@ -2571,7 +2573,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       logger.debug(`  Checking region x=${region.x}-${region.x + region.width}, y=${region.y}: inX=${inX}, inY=${inY}`);
       if (inX && inY) {
         // Found a link - call the onLink handler if provided
-        logger.info(`  MATCH FOUND! Calling onLink with url=${region.url}`);
+        logger.debug(`  Match found. Calling onLink with url=${region.url}`);
         if (typeof this.props.onLink === 'function') {
           try {
             this.props.onLink({

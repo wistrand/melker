@@ -579,3 +579,100 @@ interface ContentBoundsResult {
 3. If still insufficient, borders collapsed one side at a time
 4. State stored in `LayoutNode.chromeCollapse`
 5. `_renderBorder()` skips collapsed borders
+
+## Buffer setCell Optimizations
+
+The `setCell()` method in `src/buffer.ts` is a hot path called for every cell during rendering. Several optimizations reduce overhead:
+
+### Theme Caching
+
+Theme state is cached at render start to avoid repeated `getThemeManager().getCurrentTheme()` calls:
+
+```typescript
+// In TerminalBuffer
+private _isGrayTheme: boolean = false;
+private _isGrayDark: boolean = false;
+
+updateThemeCache(): void {
+  const theme = getThemeManager().getCurrentTheme();
+  this._isGrayTheme = theme.type === 'gray';
+  this._isGrayDark = theme.mode === 'dark';
+}
+```
+
+The engine calls `_buffer.updateThemeCache()` once at the start of each render.
+
+### ASCII Fast-Path
+
+Character width detection skips the expensive `getCharWidth()` call for ASCII printable characters (code 32-126), which always have width 1:
+
+```typescript
+if (char.length === 1) {
+  const code = char.charCodeAt(0);
+  charWidth = (code >= 32 && code <= 126) ? 1 : getCharWidth(char);
+}
+```
+
+### Conditional Wide Character Clearing
+
+The `_clearWideCharAt()` function is only called when the target cell is actually part of a wide character:
+
+```typescript
+if (this._wideCharMap[y][x]) {
+  this._clearWideCharAt(x, y);
+}
+```
+
+## Lazy Stats Computation
+
+The Performance Dialog (F6) displays live statistics. Expensive stats are only computed when the dialog is visible:
+
+**Always computed (cheap):**
+- `frameCount` - Incremented each render
+- `changedCells` - Length of diff array
+- Dirty row count
+
+**Computed only when visible (expensive):**
+- `nonEmptyCells` - O(width × height) scan via `_countNonEmptyCells()`
+- Timing averages - Rolling average calculations
+- Memory usage estimates
+
+```typescript
+// In _updateStats()
+const perfDialogOpen = getGlobalPerformanceDialog().isVisible();
+if (perfDialogOpen) {
+  // Compute expensive stats only when needed
+  this._stats.nonEmptyCells = this._countNonEmptyCells();
+  // ... other expensive computations
+}
+```
+
+## Partial Write Handling
+
+Terminal output uses `Deno.stdout.writeSync()`, which may not write all bytes in a single call under system load (e.g., during Chrome DevTools profiling).
+
+**Problem:** Partial writes can split ANSI escape sequences, corrupting terminal display.
+
+**Solution:** The engine uses `_writeAllSync()` which loops until all bytes are written:
+
+```typescript
+private _writeAllSync(data: Uint8Array): void {
+  let written = 0;
+  while (written < data.length) {
+    const n = Deno.stdout.writeSync(data.subarray(written));
+    if (n === 0) break;  // Guard against infinite loop
+    written += n;
+    if (written < data.length) {
+      this._logger?.debug('Partial stdout write', { written, total: data.length });
+    }
+  }
+}
+```
+
+**TextEncoder reuse:** A module-level `textEncoder` instance is reused across all render paths, avoiding ~60 allocations per second at 60fps.
+
+All 4 render paths use this helper:
+- `_renderDialogOnly()` (dialog-only render)
+- `_renderOptimized()` (diff-based render)
+- `_renderFastPath()` (immediate feedback)
+- `_renderFullScreen()` (full redraw)

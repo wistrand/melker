@@ -145,6 +145,9 @@ import {
 // Initialize config logger getter (breaks circular dependency between config.ts and logging.ts)
 setLoggerGetter(() => getLogger('Config'));
 
+// Reusable TextEncoder to avoid per-render allocations
+const textEncoder = new TextEncoder();
+
 export interface MelkerEngineOptions {
   // Terminal setup
   alternateScreen?: boolean;
@@ -820,6 +823,10 @@ export class MelkerEngine {
     try {
     const renderStartTime = performance.now();
     getGlobalPerformanceDialog().markRenderStart();
+
+    // Update theme cache once per render (avoids repeated lookups in setCell hot path)
+    this._buffer?.updateThemeCache();
+
     this._renderCount++;
     globalThis.melkerRenderCount = this._renderCount;
 
@@ -1058,7 +1065,7 @@ export class MelkerEngine {
           const finalOutput = this._options.synchronizedOutput
             ? ANSI.beginSync + output + ANSI.endSync
             : output;
-          Deno.stdout.writeSync(new TextEncoder().encode(finalOutput));
+          this._writeAllSync(textEncoder.encode(finalOutput));
         }
       }
 
@@ -1349,6 +1356,31 @@ export class MelkerEngine {
   }
 
   /**
+   * Write all bytes to stdout, handling partial writes.
+   * Logs a warning if partial writes occur (indicates system contention).
+   */
+  private _writeAllSync(data: Uint8Array): void {
+    let written = 0;
+    while (written < data.length) {
+      const n = Deno.stdout.writeSync(data.subarray(written));
+      if (n === 0) {
+        // Should not happen with sync write, but guard against infinite loop
+        this._logger?.error('writeSync returned 0 bytes', undefined, { total: data.length, written });
+        break;
+      }
+      written += n;
+      if (written < data.length) {
+        // Partial write occurred - handled by loop, log for diagnostics
+        this._logger?.debug('Partial stdout write', {
+          written,
+          total: data.length,
+          remaining: data.length - written,
+        });
+      }
+    }
+  }
+
+  /**
    * Optimized rendering that only updates changed parts of the terminal
    */
   private _renderOptimized(): void {
@@ -1374,7 +1406,7 @@ export class MelkerEngine {
           ? ANSI.beginSync + output + ANSI.endSync
           : output;
 
-        Deno.stdout.writeSync(new TextEncoder().encode(finalOutput));
+        this._writeAllSync(textEncoder.encode(finalOutput));
       }
 
       // Notify debug clients of render completion
@@ -1405,7 +1437,7 @@ export class MelkerEngine {
           ? ANSI.beginSync + output + ANSI.endSync
           : output;
 
-        Deno.stdout.writeSync(new TextEncoder().encode(finalOutput));
+        this._writeAllSync(textEncoder.encode(finalOutput));
       }
     }
   }
@@ -1436,7 +1468,7 @@ export class MelkerEngine {
         ? ANSI.beginSync + clearAndDrawOutput + ANSI.endSync
         : clearAndDrawOutput;
 
-      Deno.stdout.writeSync(new TextEncoder().encode(finalOutput));
+      this._writeAllSync(textEncoder.encode(finalOutput));
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();

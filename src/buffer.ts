@@ -4,6 +4,7 @@ import { BORDER_CHARS, type PackedRGBA, type BorderStyle } from './types.ts';
 import { getCharWidth, getStringWidth, analyzeString } from './char-width.ts';
 import { getThemeManager, colorToGray, colorToLowContrast } from './theme.ts';
 import { getLogger } from './logging.ts';
+import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 
 /**
  * Character used for filling/clearing cells.
@@ -42,6 +43,9 @@ export class TerminalBuffer {
   // Dirty row tracking (injected by DualBuffer)
   private _dirtyRows?: Set<number>;
   private _referenceBuffer?: TerminalBuffer;
+  // Cached theme state for hot path optimization
+  private _isGrayTheme: boolean = false;
+  private _isGrayDark: boolean = false;
 
   constructor(width: number, height: number, defaultCell: Cell = { char: EMPTY_CHAR }) {
     this._width = width;
@@ -49,6 +53,18 @@ export class TerminalBuffer {
     this._defaultCell = defaultCell;
     this._cells = this._createEmptyBuffer();
     this._wideCharMap = this._createWideCharMap();
+    this._updateThemeCache();
+  }
+
+  // Update cached theme state (call when theme changes)
+  updateThemeCache(): void {
+    this._updateThemeCache();
+  }
+
+  private _updateThemeCache(): void {
+    const theme = getThemeManager().getCurrentTheme();
+    this._isGrayTheme = theme.type === 'gray';
+    this._isGrayDark = theme.mode === 'dark';
   }
 
   get width(): number {
@@ -139,23 +155,38 @@ export class TerminalBuffer {
       return;
     }
 
-    // Apply gray theme conversion if needed
-    const theme = getThemeManager().getCurrentTheme();
-    if (theme.type === 'gray') {
-      const isDark = theme.mode === 'dark';
+    // Apply gray theme conversion if needed (uses cached theme state)
+    if (this._isGrayTheme) {
       if (cell.foreground) {
-        cell.foreground = colorToGray(cell.foreground, isDark);
+        cell.foreground = colorToGray(cell.foreground, this._isGrayDark);
       }
       if (cell.background) {
-        cell.background = colorToGray(cell.background, isDark);
+        cell.background = colorToGray(cell.background, this._isGrayDark);
       }
     }
 
-    // Clear any existing wide character that might be affected
-    this._clearWideCharAt(x, y);
+    // Fast path: determine character width
+    // For ASCII printable chars (32-126), width is always 1
+    let charWidth: number;
+    if (cell.width !== undefined) {
+      charWidth = cell.width;
+    } else {
+      const char = cell.char;
+      if (char.length === 1) {
+        const code = char.charCodeAt(0);
+        // ASCII printable range: space (32) to tilde (126)
+        charWidth = (code >= 32 && code <= 126) ? 1 : getCharWidth(char);
+      } else {
+        charWidth = getCharWidth(char);
+      }
+      cell.width = charWidth;
+    }
 
-    const charWidth = cell.width ?? getCharWidth(cell.char);
-    cell.width = charWidth;
+    // Only clear existing wide char if the target cell is part of a wide char
+    // This skips the function call overhead in the common case
+    if (this._wideCharMap[y][x]) {
+      this._clearWideCharAt(x, y);
+    }
 
     if (charWidth === 2) {
       // Wide character - needs two cells
@@ -165,7 +196,9 @@ export class TerminalBuffer {
       }
 
       // Clear any existing wide char at the next position
-      this._clearWideCharAt(x + 1, y);
+      if (this._wideCharMap[y][x + 1]) {
+        this._clearWideCharAt(x + 1, y);
+      }
 
       // Set the main cell
       this._cells[y][x] = { ...cell };
@@ -553,6 +586,12 @@ export class DualBuffer {
     return { ...this._stats };
   }
 
+  // Update theme cache on both buffers (call when theme changes or before render)
+  updateThemeCache(): void {
+    this._currentBuffer.updateThemeCache();
+    this._previousBuffer.updateThemeCache();
+  }
+
   // Update render options
   setRenderOptions(options: Partial<RenderOptions>): void {
     this._renderOptions = { ...this._renderOptions, ...options };
@@ -764,49 +803,51 @@ export class DualBuffer {
       this._startTime = Date.now();
     }
 
-    const endTime = performance.now();
-    const renderTime = endTime - startTime;
-    const currentTime = Date.now();
-
-    // Update render timing
-    this._stats.lastRenderTime = renderTime;
-    this._renderTimes.push(renderTime);
-
-    // Keep only last 60 render times for rolling average
-    if (this._renderTimes.length > 60) {
-      this._renderTimes.shift();
-    }
-
-    this._stats.averageRenderTime = this._renderTimes.reduce((a, b) => a + b, 0) / this._renderTimes.length;
-
-    // Update frame count and frequency
+    // Always update basic stats (cheap)
     this._stats.frameCount++;
     this._stats.renderOperations++;
-
-    const elapsedSeconds = (currentTime - this._startTime) / 1000;
-    this._stats.renderFrequency = this._stats.frameCount / Math.max(elapsedSeconds, 1);
-
-    // Update cell statistics
     this._stats.changedCells = differences.length;
-    this._stats.nonEmptyCells = this._countNonEmptyCells();
-    this._stats.bufferUtilization = (this._stats.nonEmptyCells / this._stats.totalCells) * 100;
-    this._stats.memoryUsage = this._estimateMemoryUsage();
-
-    // Update dirty row stats
     this._stats.dirtyRows = this._dirtyRows.size;
     this._stats.totalRows = this._height;
     this._stats.scannedCells = this._dirtyRows.size * this._width;
 
-    // Log dirty stats
-    const savedPercent = this._stats.totalCells > 0
-      ? Math.round((1 - this._stats.scannedCells / this._stats.totalCells) * 100)
-      : 0;
-    getLogger('buffer').debug(
-      `Diff scan: ${this._stats.scannedCells}/${this._stats.totalCells} cells (${savedPercent}% saved), ` +
-      `${this._stats.dirtyRows}/${this._stats.totalRows} rows dirty, ${this._stats.changedCells} cells changed`
-    );
+    // Only compute expensive stats when Performance Dialog is visible
+    const perfDialogOpen = getGlobalPerformanceDialog().isVisible();
+    if (perfDialogOpen) {
+      const endTime = performance.now();
+      const renderTime = endTime - startTime;
+      const currentTime = Date.now();
 
-    this._lastFrameTime = currentTime;
+      // Update render timing
+      this._stats.lastRenderTime = renderTime;
+      this._renderTimes.push(renderTime);
+
+      // Keep only last 60 render times for rolling average
+      if (this._renderTimes.length > 60) {
+        this._renderTimes.shift();
+      }
+
+      this._stats.averageRenderTime = this._renderTimes.reduce((a, b) => a + b, 0) / this._renderTimes.length;
+
+      const elapsedSeconds = (currentTime - this._startTime) / 1000;
+      this._stats.renderFrequency = this._stats.frameCount / Math.max(elapsedSeconds, 1);
+
+      // Expensive: full buffer scan for non-empty cells
+      this._stats.nonEmptyCells = this._countNonEmptyCells();
+      this._stats.bufferUtilization = (this._stats.nonEmptyCells / this._stats.totalCells) * 100;
+      this._stats.memoryUsage = this._estimateMemoryUsage();
+
+      this._lastFrameTime = currentTime;
+
+      // Log dirty stats only when dialog is open
+      const savedPercent = this._stats.totalCells > 0
+        ? Math.round((1 - this._stats.scannedCells / this._stats.totalCells) * 100)
+        : 0;
+      getLogger('buffer').debug(
+        `Diff scan: ${this._stats.scannedCells}/${this._stats.totalCells} cells (${savedPercent}% saved), ` +
+        `${this._stats.dirtyRows}/${this._stats.totalRows} rows dirty, ${this._stats.changedCells} cells changed`
+      );
+    }
   }
 
   // Count non-empty cells in current buffer

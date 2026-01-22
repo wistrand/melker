@@ -343,6 +343,9 @@ Certain Deno flags can be forwarded to the app subprocess:
 | `--no-check` | Skip type checking (faster startup) |
 | `--quiet`, `-q` | Suppress diagnostic output |
 | `--cached-only` | Require remote deps already cached (offline mode) |
+| `--inspect` | Enable V8 inspector (Chrome DevTools debugging) |
+| `--inspect-wait` | Enable V8 inspector, wait for connection |
+| `--inspect-brk` | Enable V8 inspector, break at start |
 
 **Flag placement matters** when running melker.ts from a remote URL:
 

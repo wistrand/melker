@@ -346,6 +346,43 @@ Dev Tools is managed by `DevToolsManager` (`src/dev-tools.ts`):
 - Uses the `melker` template literal for clean element creation
 - Properly registers/unregisters elements from the document on open/close
 
+## V8 Inspector Debugging
+
+Melker forwards V8 inspector flags to subprocesses for Chrome DevTools debugging.
+
+### Enable Inspector
+
+```bash
+# Start with inspector (executes immediately)
+./melker.ts --inspect app.melker
+
+# Wait for debugger before executing
+./melker.ts --inspect-wait app.melker
+
+# Break at first line
+./melker.ts --inspect-brk app.melker
+```
+
+Then open `chrome://inspect` in Chrome and click "inspect" on the Deno target.
+
+### Supported Flags
+
+| Flag | Behavior |
+|------|----------|
+| `--inspect` | Enable inspector, execute immediately |
+| `--inspect-wait` | Enable inspector, wait for connection |
+| `--inspect-brk` | Enable inspector, break at first line |
+
+### Known Issues with Profiling
+
+When using Chrome DevTools Performance profiling, rendering may appear corrupted. This is caused by:
+
+1. **Partial stdout writes** - Under profiling load, `Deno.stdout.writeSync()` may not write all bytes in a single call
+2. **GC pauses** - Profiling increases garbage collection, which can pause execution mid-render
+3. **Synchronized update mode** - ANSI escape sequences (`\x1b[?2026h`...`\x1b[?2026l`) may be split
+
+**Mitigation:** The engine uses a write loop that completes partial writes (see `_writeAllSync()` in `src/engine.ts`). Partial write events are logged at DEBUG level for diagnostics.
+
 ## Key Files
 
 | File | Purpose |

@@ -385,6 +385,7 @@ export class LayoutEngine {
     parentNode: LayoutNode
   ): LayoutNode[] {
     const flexStartTime = performance.now();
+    /*
     logger.trace(`Starting flexbox layout with ${children.length} children`, {
       parentId: parentNode.element.id,
       childCount: children.length,
@@ -393,6 +394,8 @@ export class LayoutEngine {
       justifyContent: parentNode.layoutProps.justifyContent,
       alignItems: parentNode.layoutProps.alignItems,
     });
+    
+     */
 
     const flexProps = parentNode.layoutProps;
     const isRow = flexProps.flexDirection === 'row' || flexProps.flexDirection === 'row-reverse';

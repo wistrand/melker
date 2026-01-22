@@ -30,6 +30,10 @@ ln -s $(pwd)/melker.ts ~/.local/bin/melker
 **From URL (no install):**
 ```bash
 deno run --allow-all https://melker.sh/melker.ts app.melker
+
+# Pin to specific version for reproducibility:
+deno run --allow-all https://melker.sh/melker-v2026.01.1.ts app.melker  # CalVer tag
+deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit hash
 ```
 
 **Deno flags** forwarded to app subprocess: `--reload`, `--no-lock`, `--no-check`, `--quiet`/`-q`, `--cached-only`

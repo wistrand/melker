@@ -1,0 +1,8 @@
+[build]
+  publish = "."
+
+# Edge function for dynamic Melker launcher
+# Serves versioned launchers: /melker.ts, /melker-v2026.01.1.ts, /melker-abc123f.ts
+[[edge_functions]]
+  path = "/melker*.ts"
+  function = "melker"

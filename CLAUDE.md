@@ -193,7 +193,10 @@ examples/             - Example applications
   melker/             - .melker file examples
 tests/                - Test files
 docs/                 - Website content (served at melker.sh)
-  melker.ts           - Remote launcher (https://melker.sh/melker.ts)
+  netlify/
+    edge-functions/
+      melker.ts       - Edge function for versioned launcher URLs
+  netlify.toml        - Netlify configuration
   index.html          - Landing page
   tutorial.html       - Step-by-step tutorial
 ```
@@ -350,7 +353,17 @@ deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app
 
 When running melker.ts from a remote URL, Deno flags before `melker.ts` control how Deno fetches and caches the launcher itself. Flags after `melker.ts` are forwarded to the subprocess that runs your app. If you want `--reload` to affect both, specify it in both positions.
 
-**Note:** `https://melker.sh/melker.ts` serves the latest commit from the `main` branch on GitHub. Use `--reload` to fetch the newest version.
+**Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub. Use `--reload` to fetch the newest version. For reproducible builds, pin to a specific version:
+
+```bash
+# Pin to CalVer release
+deno run --allow-all https://melker.sh/melker-v2026.01.1.ts app.melker
+
+# Pin to specific commit
+deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker
+```
+
+Non-existent versions show a clean error: `Version not found: v2026.01.99`
 
 ## Installation via Symlink
 

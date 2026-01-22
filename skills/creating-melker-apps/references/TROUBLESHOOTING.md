@@ -112,7 +112,14 @@ stty sane
 # Flags before melker.ts affect the launcher, flags after affect the app
 # melker.sh/melker.ts serves the latest commit from main on GitHub
 deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
+
+# For reproducible builds, pin to a specific version:
+deno run --allow-all https://melker.sh/melker-v2026.01.1.ts app.melker  # CalVer tag
+deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit hash
 ```
+
+**"Version not found" error:**
+Non-existent versions (tags or commits) show: `Version not found: v2026.01.99`. Check available versions at https://github.com/wistrand/melker/tags
 
 **Type checking too slow:**
 ```bash

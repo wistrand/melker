@@ -192,6 +192,10 @@ examples/             - Example applications
   *.ts                - TypeScript examples (melker template API)
   melker/             - .melker file examples
 tests/                - Test files
+docs/                 - Website content (served at melker.sh)
+  melker.ts           - Remote launcher (https://melker.sh/melker.ts)
+  index.html          - Landing page
+  tutorial.html       - Step-by-step tutorial
 ```
 
 ## Code Style
@@ -319,6 +323,34 @@ deno run --allow-all --reload --no-lock http://localhost:1990/melker.ts app.melk
 **Note:** The launcher automatically spawns a subprocess with `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
 
 **Important:** Use `--trust` for CI, automated scripts, and debugging. Without it, the app waits for interactive approval which will hang non-interactive environments.
+
+### Deno Flags
+
+Certain Deno flags can be forwarded to the app subprocess:
+
+| Flag | Purpose |
+|------|---------|
+| `--reload` | Reload remote modules (bypass Deno cache) |
+| `--no-lock` | Disable lockfile |
+| `--no-check` | Skip type checking (faster startup) |
+| `--quiet`, `-q` | Suppress diagnostic output |
+| `--cached-only` | Require remote deps already cached (offline mode) |
+
+**Flag placement matters** when running melker.ts from a remote URL:
+
+```bash
+# Local melker.ts, remote app - flags after melker.ts are forwarded to app
+./melker.ts --reload http://example.com/app.melker
+
+# Remote melker.ts - flags may need to appear TWICE:
+# - BEFORE melker.ts: affects loading melker.ts itself
+# - AFTER melker.ts: forwarded to the app subprocess
+deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
+```
+
+When running melker.ts from a remote URL, Deno flags before `melker.ts` control how Deno fetches and caches the launcher itself. Flags after `melker.ts` are forwarded to the subprocess that runs your app. If you want `--reload` to affect both, specify it in both positions.
+
+**Note:** `https://melker.sh/melker.ts` serves the latest commit from the `main` branch on GitHub. Use `--reload` to fetch the newest version.
 
 ## Installation via Symlink
 

@@ -78,6 +78,7 @@
 | `melker.ts` | CLI entry point (symlink-safe, runs launcher) |
 | `mod.ts` | Library entry point (exports, component registrations) |
 | `melker-launcher.ts` | Policy enforcement and subprocess spawning |
+| `docs/melker.ts` | Remote launcher served at https://melker.sh/melker.ts |
 | `src/melker-runner.ts` | .melker file runner (bundling, engine, app execution) |
 | `src/lint.ts` | Lint mode validation, schemas |
 | `src/lsp.ts` | Language Server Protocol for .melker files |

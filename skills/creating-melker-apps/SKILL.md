@@ -32,6 +32,13 @@ ln -s $(pwd)/melker.ts ~/.local/bin/melker
 deno run --allow-all https://melker.sh/melker.ts app.melker
 ```
 
+**Deno flags** forwarded to app subprocess: `--reload`, `--no-lock`, `--no-check`, `--quiet`/`-q`, `--cached-only`
+
+```bash
+./melker.ts --reload https://example.com/app.melker  # Reload remote modules
+./melker.ts --quiet app.melker                        # Suppress diagnostic output
+```
+
 ## Requirements
 
 | Requirement | Details |

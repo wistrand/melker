@@ -479,7 +479,24 @@ MELKER_THEME=auto-dark ./melker.ts app.melker
 
 # Start LSP server (for editor integration)
 ./melker.ts --lsp
+
+# Deno flags (forwarded to app subprocess)
+./melker.ts --reload http://example.com/app.melker    # Reload remote modules
+./melker.ts --no-lock app.melker                       # Disable lockfile
+./melker.ts --no-check app.melker                      # Skip type checking
+./melker.ts --quiet app.melker                         # Suppress diagnostic output
+./melker.ts --cached-only app.melker                   # Offline mode
 ```
+
+**Running melker.ts from a remote URL:** Deno flags may need to appear in two places:
+
+```bash
+# Flags BEFORE melker.ts affect loading the launcher itself
+# Flags AFTER melker.ts are forwarded to the app subprocess
+deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
+```
+
+**Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub.
 
 ## Markdown Format (.md) - Optional
 

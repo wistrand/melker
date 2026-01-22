@@ -373,6 +373,26 @@ deno run --allow-all melker.ts app.melker
 MELKER_DEBUG_PORT=8080 ./melker.ts app.melker
 ```
 
+### Deno Flags
+
+These Deno flags are forwarded to the app subprocess:
+
+```bash
+./melker.ts --reload https://example.com/app.melker  # Reload remote modules
+./melker.ts --no-lock app.melker                      # Disable lockfile
+./melker.ts --no-check app.melker                     # Skip type checking
+./melker.ts --quiet app.melker                        # Suppress diagnostic output
+./melker.ts --cached-only app.melker                  # Offline mode
+```
+
+**Running melker.ts from a remote URL:** Deno flags may need to appear twice - before `melker.ts` (affects loading the launcher) and after (forwarded to the app):
+
+```bash
+deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
+```
+
+**Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub.
+
 ---
 
 ## TypeScript API
@@ -458,6 +478,8 @@ src/
 examples/
   melker/              # .melker file examples
   ts/                  # TypeScript examples
+docs/
+  melker.ts            # Remote launcher (https://melker.sh/melker.ts)
 ```
 
 ---

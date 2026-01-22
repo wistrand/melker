@@ -99,6 +99,27 @@ stty sane
 - Try a different terminal (iTerm2, Alacritty, Kitty)
 - Verify SSH client passes mouse events (`ssh -t`)
 
+## Remote/Cache Issues
+
+**Remote app not updating (stale cache):**
+```bash
+# Force reload remote modules
+./melker.ts --reload https://example.com/app.melker
+```
+
+**Running melker.ts from remote URL with stale cache:**
+```bash
+# Flags before melker.ts affect the launcher, flags after affect the app
+# melker.sh/melker.ts serves the latest commit from main on GitHub
+deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
+```
+
+**Type checking too slow:**
+```bash
+# Skip type checking for faster startup
+./melker.ts --no-check app.melker
+```
+
 ## Debug Strategies
 
 1. **Check the log file** - Press F12, look at log file path, then `tail -f /path/to/log`
@@ -106,3 +127,4 @@ stty sane
 3. **Inspect document tree** - F12 -> Inspect tab shows live element hierarchy
 4. **Add strategic logging** - `$melker.logger.debug('state:', myVar)`
 5. **Check policy** - F12 -> Policy tab shows effective permissions
+6. **Suppress noise** - Use `--quiet` to hide Deno's download/check messages

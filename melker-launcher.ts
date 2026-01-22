@@ -85,6 +85,24 @@ function createAutoPolicy(): MelkerPolicy {
 }
 
 /**
+ * Deno flags that should be forwarded to the subprocess
+ */
+const FORWARDED_DENO_FLAGS = [
+  '--reload',      // Reload remote modules
+  '--no-lock',     // Disable lockfile
+  '--no-check',    // Skip type checking (faster startup)
+  '--quiet', '-q', // Suppress diagnostic output
+  '--cached-only', // Require remote deps already cached (offline mode)
+];
+
+/**
+ * Extract Deno flags from args that should be forwarded to subprocess
+ */
+function extractForwardedDenoFlags(args: string[]): string[] {
+  return args.filter(arg => FORWARDED_DENO_FLAGS.includes(arg));
+}
+
+/**
  * Check Deno version meets minimum requirement
  */
 function checkDenoVersion(): void {
@@ -133,6 +151,13 @@ function printUsage(): void {
   console.log('  --show-approval <path>   Show cached approval for path or URL');
   console.log('  --help, -h               Show this help message');
   console.log('');
+  console.log('Deno flags (forwarded to subprocess):');
+  console.log('  --reload                 Reload remote modules');
+  console.log('  --no-lock                Disable lockfile');
+  console.log('  --no-check               Skip type checking (faster startup)');
+  console.log('  --quiet, -q              Suppress diagnostic output');
+  console.log('  --cached-only            Require remote deps already cached');
+  console.log('');
   // Add schema-driven config flags
   console.log(generateFlagHelp());
   console.log('');
@@ -168,6 +193,9 @@ async function runWithPolicy(
   // Convert policy to Deno permission flags
   const denoFlags = policyToDenoFlags(policy, appDir, urlHash);
 
+  // Extract forwarded Deno flags (--reload, --no-lock, etc.)
+  const forwardedFlags = extractForwardedDenoFlags(originalArgs);
+
   // Required: --unstable-bundle for Deno.bundle() API
   denoFlags.push('--unstable-bundle');
 
@@ -179,15 +207,17 @@ async function runWithPolicy(
   // Use href for remote URLs, pathname for local files
   const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
 
-  // Filter out policy-related flags that shouldn't be passed to subprocess
+  // Filter out policy-related flags and forwarded Deno flags that shouldn't be passed to subprocess
   const filteredArgs = originalArgs.filter(arg =>
     !arg.startsWith('--show-policy') &&
-    !arg.startsWith('--trust')
+    !arg.startsWith('--trust') &&
+    !FORWARDED_DENO_FLAGS.includes(arg)
   );
 
   const cmd = [
     Deno.execPath(),
     'run',
+    ...forwardedFlags,
     ...denoFlags,
     runnerEntry,
     ...filteredArgs,
@@ -251,6 +281,9 @@ async function runRemoteWithPolicy(
     // Pass the source URL for "samesite" net permission resolution
     const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash, url);
 
+    // Extract forwarded Deno flags (--reload, --no-lock, etc.)
+    const forwardedFlags = extractForwardedDenoFlags(originalArgs);
+
     // Required: --unstable-bundle for Deno.bundle() API
     denoFlags.push('--unstable-bundle');
 
@@ -261,10 +294,13 @@ async function runRemoteWithPolicy(
     const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
     const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
 
-    // Filter out policy-related flags and replace app URL with temp file
+    // Filter out policy-related flags, forwarded Deno flags, and replace app URL with temp file
     const filteredArgs: string[] = [];
     for (const arg of originalArgs) {
       if (arg.startsWith('--show-policy') || arg.startsWith('--trust')) {
+        continue;
+      }
+      if (FORWARDED_DENO_FLAGS.includes(arg)) {
         continue;
       }
       // Only replace the app URL with temp file path, preserve other URL arguments
@@ -278,6 +314,7 @@ async function runRemoteWithPolicy(
     const cmd = [
       Deno.execPath(),
       'run',
+      ...forwardedFlags,
       ...denoFlags,
       runnerEntry,
       ...filteredArgs,

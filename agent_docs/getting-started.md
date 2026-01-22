@@ -121,6 +121,22 @@ melker --watch hello.melker
 </policy>
 ```
 
+## CLI Options
+
+```bash
+melker app.melker              # Run app
+melker --watch app.melker      # Auto-reload on changes
+melker --show-policy app.melker # Show permissions
+melker --trust app.melker      # Bypass approval prompt (CI/scripts)
+```
+
+**Deno flags** forwarded to subprocess: `--reload`, `--no-lock`, `--no-check`, `--quiet`/`-q`, `--cached-only`
+
+```bash
+# Reload remote modules
+melker --reload http://example.com/app.melker
+```
+
 ## Debugging
 
 - **--watch** – Auto-reload on file changes (recommended for development)

@@ -997,6 +997,55 @@ All decoders are pure JavaScript (centralized in `src/deps.ts`) - no native depe
 
 Located in `src/components/img.ts`. Subclass of `CanvasElement` that provides an HTML-like API for image display. Image decoding is in `src/components/canvas-image.ts`, with decoders imported from `src/deps.ts`.
 
+## Video Component
+
+Video playback component using FFmpeg for decoding. Extends Canvas.
+
+### Basic Usage
+
+```xml
+<video
+  src="video.mp4"
+  width="80"
+  height="40"
+  autoplay="true"
+/>
+```
+
+### Supported Sources
+
+| Source Type | Example | Notes |
+|-------------|---------|-------|
+| Local files | `src="video.mp4"` | Relative or absolute paths |
+| HTTP/HTTPS | `src="https://example.com/video.mp4"` | Requires `net` permission |
+| RTSP streams | `src="rtsp://192.168.1.191:8080/h264.sdp"` | Live streaming, requires `net` permission |
+
+### RTSP Streaming Example
+
+```bash
+./melker.ts examples/melker/video_demo.melker rtsp://192.168.1.191:8080/h264.sdp
+```
+
+RTSP streams work with all themes and graphics modes:
+- Themes: `fullcolor-dark`, `gray-std`, `bw-std`, etc.
+- Graphics modes: `sextant` (default), `block`, `pattern`, `luma`
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `src` | string | Video source (file path, URL, or RTSP URL) |
+| `width` | number | Pixel buffer width |
+| `height` | number | Pixel buffer height |
+| `autoplay` | boolean | Start playing immediately |
+| `loop` | boolean | Loop playback |
+| `muted` | boolean | Mute audio |
+| `dither` | string | Dithering algorithm (`auto`, `none`, `sierra-stable`, etc.) |
+
+### Implementation
+
+Located in `src/components/video.ts`. Uses FFmpeg (`src/video/ffmpeg.ts`) for decoding. Video playback is automatically stopped when the engine exits to prevent render-after-cleanup issues.
+
 ## Rendering Pipeline
 
 1. **Layout calculation** → LayoutNode tree

@@ -18,7 +18,9 @@
 | Button | `src/components/button.ts` | Uses `label` prop or content syntax |
 | Dialog | `src/components/dialog.ts` | Modal overlay |
 | Canvas | `src/components/canvas.ts` | Pixel graphics via sextant chars, onPaint, onShader, dither modes |
-| Canvas Image | `src/components/canvas-image.ts` | Image loading/decoding (file paths, HTTP/HTTPS, data URLs) |
+| Canvas Render | `src/components/canvas-render.ts` | Terminal rendering (sextant, block, ASCII modes), color quantization |
+| Canvas Dither | `src/components/canvas-dither.ts` | Buffer compositing and dithering algorithms |
+| Canvas Image | `src/components/canvas-image.ts` | Image loading/decoding/rendering (file paths, HTTP/HTTPS, data URLs, scaling, alpha blending) |
 | Canvas Shader | `src/components/canvas-shader-runner.ts` | Shader animation runner |
 | Img | `src/components/img.ts` | Image display (extends Canvas), supports PNG/JPEG/GIF |
 | Video | `src/components/video.ts` | Video playback (extends Canvas), stopped on engine exit |
@@ -49,6 +51,9 @@
 | File | Purpose |
 |------|---------|
 | `src/engine.ts` | Main application engine, lifecycle, event handling, render guards |
+| `src/engine-keyboard-handler.ts` | Keyboard event handling (extracted from engine.ts) |
+| `src/engine-system-palette.ts` | System command palette logic (extracted from engine.ts) |
+| `src/engine-dialog-utils.ts` | Dialog traversal and focus trap utilities (extracted from engine.ts) |
 | `src/layout.ts` | Flexbox layout calculations |
 | `src/rendering.ts` | Render pipeline, overlay handling |
 | `src/buffer.ts` | Dual-buffer system |

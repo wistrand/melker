@@ -1,0 +1,978 @@
+// Canvas terminal rendering - extracted from canvas.ts for modularity
+// Handles conversion of pixel buffers to terminal characters (sextant, block, ASCII modes)
+// All hot path optimizations preserved via pre-allocated arrays in CanvasRenderState
+
+import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
+import { type Bounds } from '../types.ts';
+import { TRANSPARENT, DEFAULT_FG, packRGBA, parseColor } from './color-utils.ts';
+import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
+import { MelkerConfig } from '../config/mod.ts';
+
+// Minimal interface for canvas data needed by render functions
+export interface CanvasRenderData {
+  colorBuffer: Uint32Array;
+  imageColorBuffer: Uint32Array;
+  bufferWidth: number;
+  bufferHeight: number;
+  scale: number;
+  propsWidth: number;
+  propsHeight: number;
+  backgroundColor?: number | string;
+}
+
+/**
+ * Pre-allocated state for canvas rendering operations.
+ * Created once per CanvasElement instance to avoid GC pressure in hot paths.
+ */
+export class CanvasRenderState {
+  // Working arrays for _renderToTerminal (avoid per-cell allocations)
+  readonly drawingPixels: boolean[] = [false, false, false, false, false, false];
+  readonly drawingColors: number[] = [0, 0, 0, 0, 0, 0];
+  readonly imagePixels: boolean[] = [false, false, false, false, false, false];
+  readonly imageColors: number[] = [0, 0, 0, 0, 0, 0];
+  readonly sextantPixels: boolean[] = [false, false, false, false, false, false];
+  readonly compositePixels: boolean[] = [false, false, false, false, false, false];
+  readonly compositeColors: number[] = [0, 0, 0, 0, 0, 0];
+  readonly isDrawing: boolean[] = [false, false, false, false, false, false];
+
+  // Reusable cell style object
+  readonly cellStyle: Partial<Cell> = {};
+
+  // Quantization buffers
+  readonly qPixels: boolean[] = [false, false, false, false, false, false];
+  readonly qBrightness: number[] = [0, 0, 0, 0, 0, 0];
+  qFgColor: number = 0;
+  qBgColor: number = 0;
+}
+
+/**
+ * Quantize 6 colors into foreground/background groups for sextant rendering.
+ * Uses median brightness split with averaged colors per group.
+ * Results stored in state.qFgColor, state.qBgColor, and sextantPixels array.
+ */
+export function quantizeBlockColorsInline(
+  colors: number[],
+  sextantPixels: boolean[],
+  state: CanvasRenderState
+): void {
+  // First pass: calculate brightness, find min/max, check if all same
+  let validCount = 0;
+  let totalBrightness = 0;
+  let minBright = 1000, maxBright = -1;
+  let firstColor = 0;
+  let allSame = true;
+
+  for (let i = 0; i < 6; i++) {
+    const color = colors[i];
+    sextantPixels[i] = false;
+    if (color !== TRANSPARENT) {
+      const r = (color >> 24) & 0xFF;
+      const g = (color >> 16) & 0xFF;
+      const b = (color >> 8) & 0xFF;
+      const bright = (r * 77 + g * 150 + b * 29) >> 8;
+      state.qBrightness[i] = bright;
+      totalBrightness += bright;
+      if (bright < minBright) minBright = bright;
+      if (bright > maxBright) maxBright = bright;
+      if (validCount === 0) {
+        firstColor = color;
+      } else if (color !== firstColor) {
+        allSame = false;
+      }
+      validCount++;
+    } else {
+      state.qBrightness[i] = -1;
+    }
+  }
+
+  if (validCount === 0) {
+    state.qFgColor = 0;
+    state.qBgColor = 0;
+    return;
+  }
+
+  if (allSame) {
+    for (let i = 0; i < 6; i++) {
+      if (colors[i] !== TRANSPARENT) sextantPixels[i] = true;
+    }
+    state.qFgColor = firstColor;
+    state.qBgColor = firstColor;
+    return;
+  }
+
+  // Second pass: partition by threshold and accumulate color sums
+  let threshold = (minBright + maxBright) >> 1;
+  let fgR = 0, fgG = 0, fgB = 0, fgCount = 0;
+  let bgR = 0, bgG = 0, bgB = 0, bgCount = 0;
+
+  for (let i = 0; i < 6; i++) {
+    const bright = state.qBrightness[i];
+    if (bright < 0) continue;
+
+    const color = colors[i];
+    const r = (color >> 24) & 0xFF;
+    const g = (color >> 16) & 0xFF;
+    const b = (color >> 8) & 0xFF;
+
+    if (bright >= threshold) {
+      sextantPixels[i] = true;
+      fgR += r; fgG += g; fgB += b; fgCount++;
+    } else {
+      bgR += r; bgG += g; bgB += b; bgCount++;
+    }
+  }
+
+  // If all went to one group, use mean brightness as threshold
+  if (fgCount === 0 || bgCount === 0) {
+    threshold = (totalBrightness / validCount) | 0;
+    fgR = fgG = fgB = fgCount = 0;
+    bgR = bgG = bgB = bgCount = 0;
+
+    for (let i = 0; i < 6; i++) {
+      const bright = state.qBrightness[i];
+      if (bright < 0) continue;
+
+      const color = colors[i];
+      const r = (color >> 24) & 0xFF;
+      const g = (color >> 16) & 0xFF;
+      const b = (color >> 8) & 0xFF;
+
+      if (bright >= threshold) {
+        sextantPixels[i] = true;
+        fgR += r; fgG += g; fgB += b; fgCount++;
+      } else {
+        sextantPixels[i] = false;
+        bgR += r; bgG += g; bgB += b; bgCount++;
+      }
+    }
+  }
+
+  // Compute averaged colors
+  if (fgCount > 0) {
+    state.qFgColor = packRGBA(
+      (fgR / fgCount) | 0,
+      (fgG / fgCount) | 0,
+      (fgB / fgCount) | 0,
+      255
+    );
+  } else {
+    state.qFgColor = 0;
+  }
+
+  if (bgCount > 0) {
+    state.qBgColor = packRGBA(
+      (bgR / bgCount) | 0,
+      (bgG / bgCount) | 0,
+      (bgB / bgCount) | 0,
+      255
+    );
+  } else {
+    state.qBgColor = 0;
+  }
+
+  // Fallback: if one group empty, use the other's color for both
+  if (state.qFgColor === 0 && state.qBgColor !== 0) {
+    state.qFgColor = state.qBgColor;
+  } else if (state.qBgColor === 0 && state.qFgColor !== 0) {
+    state.qBgColor = state.qFgColor;
+  }
+}
+
+/**
+ * Block mode rendering: 1 colored space per terminal cell (no sextant characters)
+ * Each cell shows averaged color from the corresponding 2x3 pixel region
+ */
+export function renderBlockMode(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  terminalWidth: number,
+  terminalHeight: number,
+  data: CanvasRenderData
+): void {
+  const bufW = data.bufferWidth;
+  const bufH = data.bufferHeight;
+  const scale = data.scale;
+  const halfScale = scale >> 1;
+  const hasStyleBg = style.background !== undefined;
+  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+
+  for (let ty = 0; ty < terminalHeight; ty++) {
+    const baseBufferY = ty * 3 * scale;
+
+    for (let tx = 0; tx < terminalWidth; tx++) {
+      const baseBufferX = tx * 2 * scale;
+
+      // Sample center pixel of 2x3 block and average colors
+      let totalR = 0, totalG = 0, totalB = 0, count = 0;
+
+      // Sample 6 pixels in 2x3 grid
+      for (let py = 0; py < 3; py++) {
+        const bufferY = baseBufferY + py * scale + halfScale;
+        if (bufferY < 0 || bufferY >= bufH) continue;
+        const rowOffset = bufferY * bufW;
+
+        for (let px = 0; px < 2; px++) {
+          const bufferX = baseBufferX + px * scale + halfScale;
+          if (bufferX < 0 || bufferX >= bufW) continue;
+
+          const bufIndex = rowOffset + bufferX;
+          // Check drawing layer first, then image layer
+          let color = data.colorBuffer[bufIndex];
+          if (color === TRANSPARENT) {
+            color = data.imageColorBuffer[bufIndex];
+          }
+          if (color !== TRANSPARENT) {
+            totalR += (color >> 24) & 0xFF;
+            totalG += (color >> 16) & 0xFF;
+            totalB += (color >> 8) & 0xFF;
+            count++;
+          }
+        }
+      }
+
+      // Determine background color
+      let bgColor: number | undefined;
+      if (count > 0) {
+        const avgR = Math.round(totalR / count);
+        const avgG = Math.round(totalG / count);
+        const avgB = Math.round(totalB / count);
+        bgColor = packRGBA(avgR, avgG, avgB, 255);
+      } else {
+        bgColor = propsBg ?? (hasStyleBg ? style.background : undefined);
+      }
+
+      // Skip empty cells with no background
+      if (!bgColor) continue;
+
+      buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+        char: EMPTY_CHAR,
+        background: bgColor,
+        bold: style.bold,
+        dim: style.dim,
+      });
+    }
+  }
+}
+
+/**
+ * ASCII mode rendering - converts canvas to ASCII characters.
+ * Two modes:
+ * - 'pattern': Maps 2x3 sextant patterns to spatially-similar ASCII chars
+ * - 'luma': Maps pixel brightness to density character ramp
+ */
+export function renderAsciiMode(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  terminalWidth: number,
+  terminalHeight: number,
+  mode: 'pattern' | 'luma',
+  data: CanvasRenderData
+): void {
+  const bufW = data.bufferWidth;
+  const bufH = data.bufferHeight;
+  const scale = data.scale;
+  const halfScale = scale >> 1;
+  const hasStyleFg = style.foreground !== undefined;
+  const hasStyleBg = style.background !== undefined;
+  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+
+  for (let ty = 0; ty < terminalHeight; ty++) {
+    const baseBufferY = ty * 3 * scale;
+
+    for (let tx = 0; tx < terminalWidth; tx++) {
+      const baseBufferX = tx * 2 * scale;
+
+      if (mode === 'luma') {
+        // Luminance mode: average brightness → density character
+        let totalR = 0, totalG = 0, totalB = 0, count = 0;
+
+        for (let py = 0; py < 3; py++) {
+          const bufferY = baseBufferY + py * scale + halfScale;
+          if (bufferY < 0 || bufferY >= bufH) continue;
+          const rowOffset = bufferY * bufW;
+
+          for (let px = 0; px < 2; px++) {
+            const bufferX = baseBufferX + px * scale + halfScale;
+            if (bufferX < 0 || bufferX >= bufW) continue;
+
+            const bufIndex = rowOffset + bufferX;
+            let color = data.colorBuffer[bufIndex];
+            if (color === TRANSPARENT) {
+              color = data.imageColorBuffer[bufIndex];
+            }
+            if (color !== TRANSPARENT) {
+              totalR += (color >> 24) & 0xFF;
+              totalG += (color >> 16) & 0xFF;
+              totalB += (color >> 8) & 0xFF;
+              count++;
+            }
+          }
+        }
+
+        if (count === 0) continue;
+
+        const avgR = totalR / count;
+        const avgG = totalG / count;
+        const avgB = totalB / count;
+        // Perceptual luminance: 0.299*R + 0.587*G + 0.114*B
+        const luma = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+        const charIndex = Math.floor((luma / 255) * (LUMA_RAMP.length - 1));
+        const char = LUMA_RAMP[Math.min(charIndex, LUMA_RAMP.length - 1)];
+
+        if (char === ' ') continue;
+
+        const fgColor = packRGBA(Math.round(avgR), Math.round(avgG), Math.round(avgB), 255);
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char,
+          foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
+          background: propsBg ?? (hasStyleBg ? style.background : undefined),
+          bold: style.bold,
+          dim: style.dim,
+        });
+      } else {
+        // Pattern mode: use brightness thresholding to determine pattern
+        // Similar to sextant quantization - bright pixels are "on", dark are "off"
+        const colors: number[] = [0, 0, 0, 0, 0, 0];
+        const brightness: number[] = [-1, -1, -1, -1, -1, -1];
+        let minBright = 256, maxBright = -1;
+        let validCount = 0;
+
+        // Sample 2x3 grid - index matches bit position
+        // Index: 0=top-left, 1=top-right, 2=mid-left, 3=mid-right, 4=bot-left, 5=bot-right
+        const positions = [
+          [0, 0], [1, 0],  // top row
+          [0, 1], [1, 1],  // mid row
+          [0, 2], [1, 2],  // bottom row
+        ];
+
+        for (let i = 0; i < 6; i++) {
+          const [px, py] = positions[i];
+          const bufferX = baseBufferX + px * scale + halfScale;
+          const bufferY = baseBufferY + py * scale + halfScale;
+          if (bufferX < 0 || bufferX >= bufW || bufferY < 0 || bufferY >= bufH) continue;
+
+          const bufIndex = bufferY * bufW + bufferX;
+          let color = data.colorBuffer[bufIndex];
+          if (color === TRANSPARENT) {
+            color = data.imageColorBuffer[bufIndex];
+          }
+          if (color !== TRANSPARENT) {
+            colors[i] = color;
+            const r = (color >> 24) & 0xFF;
+            const g = (color >> 16) & 0xFF;
+            const b = (color >> 8) & 0xFF;
+            const bright = (r * 77 + g * 150 + b * 29) >> 8;
+            brightness[i] = bright;
+            if (bright < minBright) minBright = bright;
+            if (bright > maxBright) maxBright = bright;
+            validCount++;
+          }
+        }
+
+        if (validCount === 0) continue;
+
+        // Use brightness threshold to determine pattern
+        const threshold = (minBright + maxBright) >> 1;
+        let pattern = 0;
+        let fgR = 0, fgG = 0, fgB = 0, fgCount = 0;
+
+        // Bit positions: 5=top-left, 4=top-right, 3=mid-left, 2=mid-right, 1=bot-left, 0=bot-right
+        const bitPos = [5, 4, 3, 2, 1, 0];
+        for (let i = 0; i < 6; i++) {
+          if (brightness[i] >= threshold) {
+            pattern |= (1 << bitPos[i]);
+            const color = colors[i];
+            fgR += (color >> 24) & 0xFF;
+            fgG += (color >> 16) & 0xFF;
+            fgB += (color >> 8) & 0xFF;
+            fgCount++;
+          }
+        }
+
+        if (pattern === 0) continue;
+
+        const char = PATTERN_TO_ASCII[pattern];
+        if (char === ' ') continue;
+
+        let fgColor: number | undefined;
+        if (fgCount > 0) {
+          fgColor = packRGBA(
+            Math.round(fgR / fgCount),
+            Math.round(fgG / fgCount),
+            Math.round(fgB / fgCount),
+            255
+          );
+        }
+
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char,
+          foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
+          background: propsBg ?? (hasStyleBg ? style.background : undefined),
+          bold: style.bold,
+          dim: style.dim,
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Render from dithered buffer to terminal.
+ * Uses the pre-composited and dithered RGBA buffer for output.
+ */
+export function renderDitheredToTerminal(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  ditheredBuffer: Uint8Array,
+  gfxMode: 'sextant' | 'block' | 'pattern' | 'luma',
+  data: CanvasRenderData,
+  state: CanvasRenderState
+): void {
+  let terminalWidth = Math.min(data.propsWidth, bounds.width);
+  const terminalHeight = Math.min(data.propsHeight, bounds.height);
+  const bufW = data.bufferWidth;
+  const bufH = data.bufferHeight;
+  const scale = data.scale;
+  const halfScale = scale >> 1;
+
+  // Workaround for terminal edge rendering glitch (same as non-dithered path)
+  const engine = globalThis.melkerEngine;
+  if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
+    terminalWidth = Math.max(1, terminalWidth - 1);
+  }
+
+  // Use pre-allocated arrays
+  const sextantPixels = state.sextantPixels;
+  const sextantColors = state.compositeColors;
+
+  // Pre-compute base style properties
+  const hasStyleFg = style.foreground !== undefined;
+  const hasStyleBg = style.background !== undefined;
+  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+
+  for (let ty = 0; ty < terminalHeight; ty++) {
+    const baseBufferY = ty * 3 * scale;
+
+    for (let tx = 0; tx < terminalWidth; tx++) {
+      const baseBufferX = tx * 2 * scale;
+
+      // Sample 2x3 block from dithered buffer
+      // The positions match the non-dithered path sampling
+      const positions = [
+        // Row 0: (0,0), (1,0)
+        { x: baseBufferX + halfScale, y: baseBufferY + halfScale },
+        { x: baseBufferX + scale + halfScale, y: baseBufferY + halfScale },
+        // Row 1: (0,1), (1,1)
+        { x: baseBufferX + halfScale, y: baseBufferY + scale + halfScale },
+        { x: baseBufferX + scale + halfScale, y: baseBufferY + scale + halfScale },
+        // Row 2: (0,2), (1,2)
+        { x: baseBufferX + halfScale, y: baseBufferY + 2 * scale + halfScale },
+        { x: baseBufferX + scale + halfScale, y: baseBufferY + 2 * scale + halfScale },
+      ];
+
+      let hasAnyPixel = false;
+
+      for (let i = 0; i < 6; i++) {
+        const pos = positions[i];
+        if (pos.x >= 0 && pos.x < bufW && pos.y >= 0 && pos.y < bufH) {
+          const bufIndex = pos.y * bufW + pos.x;
+          const rgbaIdx = bufIndex * 4;
+          const r = ditheredBuffer[rgbaIdx];
+          const g = ditheredBuffer[rgbaIdx + 1];
+          const b = ditheredBuffer[rgbaIdx + 2];
+          const a = ditheredBuffer[rgbaIdx + 3];
+
+          // Consider pixel "on" if not fully transparent
+          // Note: black pixels are valid colors for dithering, don't treat as "off"
+          const isOn = a >= 128;
+          sextantPixels[i] = isOn;
+          sextantColors[i] = isOn ? packRGBA(r, g, b, a) : TRANSPARENT;
+          if (isOn) hasAnyPixel = true;
+        } else {
+          sextantPixels[i] = false;
+          sextantColors[i] = TRANSPARENT;
+        }
+      }
+
+      // Block mode: average colors and output colored space
+      if (gfxMode === 'block') {
+        if (!hasAnyPixel) continue;
+
+        // Average all non-transparent colors
+        let totalR = 0, totalG = 0, totalB = 0, count = 0;
+        for (let i = 0; i < 6; i++) {
+          const color = sextantColors[i];
+          if (color !== TRANSPARENT) {
+            totalR += (color >> 24) & 0xFF;
+            totalG += (color >> 16) & 0xFF;
+            totalB += (color >> 8) & 0xFF;
+            count++;
+          }
+        }
+        const avgColor = count > 0
+          ? packRGBA(Math.round(totalR / count), Math.round(totalG / count), Math.round(totalB / count), 255)
+          : propsBg ?? (hasStyleBg ? style.background : undefined);
+
+        if (!avgColor) continue;
+
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char: EMPTY_CHAR,
+          background: avgColor,
+          bold: style.bold,
+          dim: style.dim,
+        });
+        continue;
+      }
+
+      // ASCII mode: convert dithered pixels to ASCII characters
+      if (gfxMode === 'pattern' || gfxMode === 'luma') {
+        if (!hasAnyPixel) continue;
+
+        let char: string;
+        let fgColor: number | undefined;
+
+        if (gfxMode === 'luma') {
+          // Luminance mode: average brightness → density character
+          let totalR = 0, totalG = 0, totalB = 0, count = 0;
+          for (let i = 0; i < 6; i++) {
+            const color = sextantColors[i];
+            if (color !== TRANSPARENT) {
+              totalR += (color >> 24) & 0xFF;
+              totalG += (color >> 16) & 0xFF;
+              totalB += (color >> 8) & 0xFF;
+              count++;
+            }
+          }
+          if (count === 0) continue;
+
+          const avgR = totalR / count;
+          const avgG = totalG / count;
+          const avgB = totalB / count;
+          const luma = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+          const charIndex = Math.floor((luma / 255) * (LUMA_RAMP.length - 1));
+          char = LUMA_RAMP[Math.min(charIndex, LUMA_RAMP.length - 1)];
+          fgColor = packRGBA(Math.round(avgR), Math.round(avgG), Math.round(avgB), 255);
+        } else {
+          // Pattern mode: use brightness thresholding
+          const brightness: number[] = [-1, -1, -1, -1, -1, -1];
+          let minBright = 256, maxBright = -1;
+          let validCount = 0;
+
+          for (let i = 0; i < 6; i++) {
+            const color = sextantColors[i];
+            if (color !== TRANSPARENT) {
+              const r = (color >> 24) & 0xFF;
+              const g = (color >> 16) & 0xFF;
+              const b = (color >> 8) & 0xFF;
+              const bright = (r * 77 + g * 150 + b * 29) >> 8;
+              brightness[i] = bright;
+              if (bright < minBright) minBright = bright;
+              if (bright > maxBright) maxBright = bright;
+              validCount++;
+            }
+          }
+          if (validCount === 0) continue;
+
+          // Threshold and build pattern
+          const threshold = (minBright + maxBright) >> 1;
+          let pattern = 0;
+          let fgR = 0, fgG = 0, fgB = 0, fgCount = 0;
+
+          // Bit positions: 5=top-left, 4=top-right, 3=mid-left, 2=mid-right, 1=bot-left, 0=bot-right
+          const bitPos = [5, 4, 3, 2, 1, 0];
+          for (let i = 0; i < 6; i++) {
+            if (brightness[i] >= threshold) {
+              pattern |= (1 << bitPos[i]);
+              const color = sextantColors[i];
+              fgR += (color >> 24) & 0xFF;
+              fgG += (color >> 16) & 0xFF;
+              fgB += (color >> 8) & 0xFF;
+              fgCount++;
+            }
+          }
+
+          if (pattern === 0) continue;
+          char = PATTERN_TO_ASCII[pattern];
+          if (fgCount > 0) {
+            fgColor = packRGBA(Math.round(fgR / fgCount), Math.round(fgG / fgCount), Math.round(fgB / fgCount), 255);
+          }
+        }
+
+        if (char === ' ') continue;
+
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char,
+          foreground: fgColor ?? (hasStyleFg ? style.foreground : undefined),
+          background: propsBg ?? (hasStyleBg ? style.background : undefined),
+          bold: style.bold,
+          dim: style.dim,
+        });
+        continue;
+      }
+
+      // Use quantization for color selection (same as image path)
+      quantizeBlockColorsInline(sextantColors, sextantPixels, state);
+      const fgColor = state.qFgColor !== 0 ? state.qFgColor : undefined;
+      const bgColor = state.qBgColor !== 0 ? state.qBgColor : undefined;
+
+      // Convert pixels to sextant character
+      const pattern = (sextantPixels[5] ? 0b000001 : 0) |
+                     (sextantPixels[4] ? 0b000010 : 0) |
+                     (sextantPixels[3] ? 0b000100 : 0) |
+                     (sextantPixels[2] ? 0b001000 : 0) |
+                     (sextantPixels[1] ? 0b010000 : 0) |
+                     (sextantPixels[0] ? 0b100000 : 0);
+      const char = PIXEL_TO_CHAR[pattern];
+
+      // Skip empty cells with no background
+      if (char === ' ' && bgColor === undefined && !propsBg) {
+        continue;
+      }
+
+      // Reuse cell style object to avoid allocation
+      const cellStyle = state.cellStyle;
+      cellStyle.foreground = fgColor ?? (hasStyleFg ? style.foreground : undefined);
+      cellStyle.background = bgColor ?? propsBg ?? (hasStyleBg ? style.background : undefined);
+      cellStyle.bold = style.bold;
+      cellStyle.dim = style.dim;
+      cellStyle.italic = style.italic;
+      cellStyle.underline = style.underline;
+
+      buffer.currentBuffer.setText(
+        bounds.x + tx,
+        bounds.y + ty,
+        char,
+        cellStyle
+      );
+    }
+  }
+}
+
+/**
+ * Main sextant render path - converts pixel buffers to terminal sextant characters.
+ * Handles compositing of drawing and image layers with optimized hot path.
+ */
+export function renderSextantToTerminal(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  data: CanvasRenderData,
+  state: CanvasRenderState
+): void {
+  let terminalWidth = Math.min(data.propsWidth, bounds.width);
+  const terminalHeight = Math.min(data.propsHeight, bounds.height);
+  const bufW = data.bufferWidth;
+  const bufH = data.bufferHeight;
+  const scale = data.scale;
+  const halfScale = scale >> 1;
+
+  // Workaround for terminal edge rendering glitch:
+  // When canvas extends to the exact right edge of the terminal, some terminals
+  // have issues with sextant characters in the last column (autowrap, width calculation).
+  // Skip the last column when we're at the terminal edge to avoid visual artifacts.
+  const engine = globalThis.melkerEngine;
+  if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
+    terminalWidth = Math.max(1, terminalWidth - 1);
+  }
+
+  // Use pre-allocated arrays
+  const drawingPixels = state.drawingPixels;
+  const drawingColors = state.drawingColors;
+  const imagePixels = state.imagePixels;
+  const imageColors = state.imageColors;
+  const sextantPixels = state.sextantPixels;
+  const compositePixels = state.compositePixels;
+  const compositeColors = state.compositeColors;
+  const isDrawing = state.isDrawing;
+
+  // Pre-compute base style properties
+  const hasStyleFg = style.foreground !== undefined;
+  const hasStyleBg = style.background !== undefined;
+  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+
+  for (let ty = 0; ty < terminalHeight; ty++) {
+    const baseBufferY = ty * 3 * scale;
+
+    for (let tx = 0; tx < terminalWidth; tx++) {
+      const baseBufferX = tx * 2 * scale;
+
+      // Sample 2x3 block - track drawing and image layers separately
+      // Unrolled for performance (avoid nested loop overhead)
+      let hasDrawingOn = false;
+      let hasImageOn = false;
+
+      // Row 0
+      {
+        const bufferY = baseBufferY + halfScale;
+        const rowOffset = bufferY * bufW;
+
+        // Pixel (0,0)
+        const bufferX0 = baseBufferX + halfScale;
+        if (bufferX0 >= 0 && bufferX0 < bufW && bufferY >= 0 && bufferY < bufH) {
+          const bufIndex = rowOffset + bufferX0;
+          drawingColors[0] = data.colorBuffer[bufIndex];
+          drawingPixels[0] = drawingColors[0] !== TRANSPARENT;
+          imageColors[0] = data.imageColorBuffer[bufIndex];
+          imagePixels[0] = imageColors[0] !== TRANSPARENT;
+        } else {
+          drawingPixels[0] = false;
+          drawingColors[0] = TRANSPARENT;
+          imagePixels[0] = false;
+          imageColors[0] = TRANSPARENT;
+        }
+        if (drawingPixels[0] && drawingColors[0] !== TRANSPARENT && drawingColors[0] !== DEFAULT_FG) hasDrawingOn = true;
+        if (imagePixels[0] && imageColors[0] !== TRANSPARENT) hasImageOn = true;
+
+        // Pixel (1,0)
+        const bufferX1 = baseBufferX + scale + halfScale;
+        if (bufferX1 >= 0 && bufferX1 < bufW && bufferY >= 0 && bufferY < bufH) {
+          const bufIndex = rowOffset + bufferX1;
+          drawingColors[1] = data.colorBuffer[bufIndex];
+          drawingPixels[1] = drawingColors[1] !== TRANSPARENT;
+          imageColors[1] = data.imageColorBuffer[bufIndex];
+          imagePixels[1] = imageColors[1] !== TRANSPARENT;
+        } else {
+          drawingPixels[1] = false;
+          drawingColors[1] = TRANSPARENT;
+          imagePixels[1] = false;
+          imageColors[1] = TRANSPARENT;
+        }
+        if (drawingPixels[1] && drawingColors[1] !== TRANSPARENT && drawingColors[1] !== DEFAULT_FG) hasDrawingOn = true;
+        if (imagePixels[1] && imageColors[1] !== TRANSPARENT) hasImageOn = true;
+      }
+
+      // Row 1
+      {
+        const bufferY = baseBufferY + scale + halfScale;
+        const rowOffset = bufferY * bufW;
+
+        // Pixel (0,1)
+        const bufferX0 = baseBufferX + halfScale;
+        if (bufferX0 >= 0 && bufferX0 < bufW && bufferY >= 0 && bufferY < bufH) {
+          const bufIndex = rowOffset + bufferX0;
+          drawingColors[2] = data.colorBuffer[bufIndex];
+          drawingPixels[2] = drawingColors[2] !== TRANSPARENT;
+          imageColors[2] = data.imageColorBuffer[bufIndex];
+          imagePixels[2] = imageColors[2] !== TRANSPARENT;
+        } else {
+          drawingPixels[2] = false;
+          drawingColors[2] = TRANSPARENT;
+          imagePixels[2] = false;
+          imageColors[2] = TRANSPARENT;
+        }
+        if (drawingPixels[2] && drawingColors[2] !== TRANSPARENT && drawingColors[2] !== DEFAULT_FG) hasDrawingOn = true;
+        if (imagePixels[2] && imageColors[2] !== TRANSPARENT) hasImageOn = true;
+
+        // Pixel (1,1)
+        const bufferX1 = baseBufferX + scale + halfScale;
+        if (bufferX1 >= 0 && bufferX1 < bufW && bufferY >= 0 && bufferY < bufH) {
+          const bufIndex = rowOffset + bufferX1;
+          drawingColors[3] = data.colorBuffer[bufIndex];
+          drawingPixels[3] = drawingColors[3] !== TRANSPARENT;
+          imageColors[3] = data.imageColorBuffer[bufIndex];
+          imagePixels[3] = imageColors[3] !== TRANSPARENT;
+        } else {
+          drawingPixels[3] = false;
+          drawingColors[3] = TRANSPARENT;
+          imagePixels[3] = false;
+          imageColors[3] = TRANSPARENT;
+        }
+        if (drawingPixels[3] && drawingColors[3] !== TRANSPARENT && drawingColors[3] !== DEFAULT_FG) hasDrawingOn = true;
+        if (imagePixels[3] && imageColors[3] !== TRANSPARENT) hasImageOn = true;
+      }
+
+      // Row 2
+      {
+        const bufferY = baseBufferY + 2 * scale + halfScale;
+        const rowOffset = bufferY * bufW;
+
+        // Pixel (0,2)
+        const bufferX0 = baseBufferX + halfScale;
+        if (bufferX0 >= 0 && bufferX0 < bufW && bufferY >= 0 && bufferY < bufH) {
+          const bufIndex = rowOffset + bufferX0;
+          drawingColors[4] = data.colorBuffer[bufIndex];
+          drawingPixels[4] = drawingColors[4] !== TRANSPARENT;
+          imageColors[4] = data.imageColorBuffer[bufIndex];
+          imagePixels[4] = imageColors[4] !== TRANSPARENT;
+        } else {
+          drawingPixels[4] = false;
+          drawingColors[4] = TRANSPARENT;
+          imagePixels[4] = false;
+          imageColors[4] = TRANSPARENT;
+        }
+        if (drawingPixels[4] && drawingColors[4] !== TRANSPARENT && drawingColors[4] !== DEFAULT_FG) hasDrawingOn = true;
+        if (imagePixels[4] && imageColors[4] !== TRANSPARENT) hasImageOn = true;
+
+        // Pixel (1,2)
+        const bufferX1 = baseBufferX + scale + halfScale;
+        if (bufferX1 >= 0 && bufferX1 < bufW && bufferY >= 0 && bufferY < bufH) {
+          const bufIndex = rowOffset + bufferX1;
+          drawingColors[5] = data.colorBuffer[bufIndex];
+          drawingPixels[5] = drawingColors[5] !== TRANSPARENT;
+          imageColors[5] = data.imageColorBuffer[bufIndex];
+          imagePixels[5] = imageColors[5] !== TRANSPARENT;
+        } else {
+          drawingPixels[5] = false;
+          drawingColors[5] = TRANSPARENT;
+          imagePixels[5] = false;
+          imageColors[5] = TRANSPARENT;
+        }
+        if (drawingPixels[5] && drawingColors[5] !== TRANSPARENT && drawingColors[5] !== DEFAULT_FG) hasDrawingOn = true;
+        if (imagePixels[5] && imageColors[5] !== TRANSPARENT) hasImageOn = true;
+      }
+
+      let fgColor: number | undefined;
+      let bgColor: number | undefined;
+
+      if (hasDrawingOn && hasImageOn) {
+        // Two-color optimization: drawing as fg, image as bg
+        // Compute sextant pattern and find dominant colors inline
+        let fgColorVal = 0;
+        let bgColorVal = 0;
+
+        for (let i = 0; i < 6; i++) {
+          const isOn = drawingPixels[i] && drawingColors[i] !== TRANSPARENT && drawingColors[i] !== DEFAULT_FG;
+          sextantPixels[i] = isOn;
+          if (isOn && fgColorVal === 0) {
+            fgColorVal = drawingColors[i];
+          }
+          if (imagePixels[i] && imageColors[i] !== TRANSPARENT && bgColorVal === 0) {
+            bgColorVal = imageColors[i];
+          }
+        }
+
+        if (fgColorVal !== 0) fgColor = fgColorVal;
+        if (bgColorVal !== 0) bgColor = bgColorVal;
+
+      } else if (hasImageOn && !hasDrawingOn) {
+        // Image-only block: use color quantization for sextant detail
+        quantizeBlockColorsInline(imageColors, sextantPixels, state);
+        fgColor = state.qFgColor !== 0 ? state.qFgColor : undefined;
+        bgColor = state.qBgColor !== 0 ? state.qBgColor : undefined;
+
+      } else {
+        // Standard compositing: drawing on top of image
+        let fgColorVal = 0;
+        let bgColorVal = 0;
+
+        for (let i = 0; i < 6; i++) {
+          if (drawingPixels[i] || (drawingColors[i] !== TRANSPARENT && drawingColors[i] !== DEFAULT_FG)) {
+            compositePixels[i] = drawingPixels[i];
+            compositeColors[i] = drawingColors[i];
+            isDrawing[i] = true;
+          } else {
+            compositePixels[i] = imagePixels[i];
+            compositeColors[i] = imageColors[i];
+            isDrawing[i] = false;
+          }
+          sextantPixels[i] = compositePixels[i];
+
+          // Find dominant colors inline
+          const color = compositeColors[i];
+          if (compositePixels[i]) {
+            if (color !== TRANSPARENT && color !== DEFAULT_FG && fgColorVal === 0) {
+              fgColorVal = color;
+            }
+          } else {
+            if (color !== TRANSPARENT && bgColorVal === 0) {
+              bgColorVal = color;
+            }
+          }
+        }
+
+        if (fgColorVal !== 0) fgColor = fgColorVal;
+        if (bgColorVal !== 0) bgColor = bgColorVal;
+      }
+
+      // Convert pixels to sextant character
+      // Sextant bit pattern: bit 0 = bottom-right[5], bit 1 = bottom-left[4],
+      //                      bit 2 = middle-right[3], bit 3 = middle-left[2],
+      //                      bit 4 = top-right[1], bit 5 = top-left[0]
+      const pattern = (sextantPixels[5] ? 0b000001 : 0) |
+                     (sextantPixels[4] ? 0b000010 : 0) |
+                     (sextantPixels[3] ? 0b000100 : 0) |
+                     (sextantPixels[2] ? 0b001000 : 0) |
+                     (sextantPixels[1] ? 0b010000 : 0) |
+                     (sextantPixels[0] ? 0b100000 : 0);
+      const char = PIXEL_TO_CHAR[pattern];
+
+      // Skip empty cells with no background
+      if (char === ' ' && bgColor === undefined && !propsBg) {
+        continue;
+      }
+
+      // Reuse cell style object to avoid allocation
+      const cellStyle = state.cellStyle;
+      cellStyle.foreground = fgColor ?? (hasStyleFg ? style.foreground : undefined);
+      cellStyle.background = bgColor ?? propsBg ?? (hasStyleBg ? style.background : undefined);
+      cellStyle.bold = style.bold;
+      cellStyle.dim = style.dim;
+      cellStyle.italic = style.italic;
+      cellStyle.underline = style.underline;
+
+      buffer.currentBuffer.setText(
+        bounds.x + tx,
+        bounds.y + ty,
+        char,
+        cellStyle
+      );
+    }
+  }
+}
+
+/**
+ * Main entry point for canvas terminal rendering.
+ * Dispatches to appropriate render mode based on config and dither state.
+ */
+export function renderToTerminal(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  data: CanvasRenderData,
+  state: CanvasRenderState,
+  ditheredBuffer: Uint8Array | null,
+  gfxMode: 'sextant' | 'block' | 'pattern' | 'luma'
+): void {
+  let terminalWidth = Math.min(data.propsWidth, bounds.width);
+  const terminalHeight = Math.min(data.propsHeight, bounds.height);
+
+  // Workaround for terminal edge rendering glitch
+  const engine = globalThis.melkerEngine;
+  if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
+    terminalWidth = Math.max(1, terminalWidth - 1);
+  }
+
+  // Check for dithered rendering mode
+  if (ditheredBuffer) {
+    renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, gfxMode, data, state);
+    return;
+  }
+
+  // Block mode: 1 colored space per cell instead of sextant characters
+  if (gfxMode === 'block') {
+    renderBlockMode(bounds, style, buffer, terminalWidth, terminalHeight, data);
+    return;
+  }
+
+  // ASCII mode: pattern (spatial mapping) or luma (brightness-based)
+  if (gfxMode === 'pattern' || gfxMode === 'luma') {
+    renderAsciiMode(bounds, style, buffer, terminalWidth, terminalHeight, gfxMode, data);
+    return;
+  }
+
+  // Default: sextant rendering
+  renderSextantToTerminal(bounds, style, buffer, data, state);
+}
+
+/**
+ * Get effective graphics mode from config and props
+ */
+export function getEffectiveGfxMode(
+  propsGfxMode?: 'sextant' | 'block' | 'pattern' | 'luma'
+): 'sextant' | 'block' | 'pattern' | 'luma' {
+  const globalGfxMode = MelkerConfig.get().gfxMode;
+  return globalGfxMode || propsGfxMode || 'sextant';
+}

@@ -1,9 +1,10 @@
-// Image loading and decoding for canvas component
+// Image loading, decoding, and rendering for canvas component
 // Supports PNG, JPEG, and GIF formats
 
 import { decodePng, decodeJpeg, GifReader } from '../deps.ts';
 import { getLogger } from '../logging.ts';
 import { LRUCache } from '../lru-cache.ts';
+import { TRANSPARENT, packRGBA, unpackRGBA, parseColor } from './color-utils.ts';
 
 /**
  * Decoded image data in a standard format
@@ -260,4 +261,215 @@ export async function loadImageFromSource(src: string): Promise<Uint8Array> {
 
   // Read the image file
   return await Deno.readFile(resolvedSrc);
+}
+
+// ============================================
+// Image Rendering to Buffer
+// ============================================
+
+/**
+ * Object fit modes for image rendering
+ */
+export type ObjectFit = 'contain' | 'fill' | 'cover';
+
+/**
+ * Data needed for image rendering calculations
+ */
+export interface ImageRenderConfig {
+  bufferWidth: number;
+  bufferHeight: number;
+  pixelAspectRatio: number;
+  objectFit: ObjectFit;
+  backgroundColor?: number | string;
+}
+
+/**
+ * Result of image scaling calculation
+ */
+export interface ImageScaleResult {
+  scaledWidth: number;
+  scaledHeight: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+/**
+ * Calculate image scaling dimensions based on objectFit mode
+ */
+export function calculateImageScaling(
+  image: LoadedImage,
+  config: ImageRenderConfig
+): ImageScaleResult {
+  const { bufferWidth, bufferHeight, pixelAspectRatio, objectFit } = config;
+  const visualBufW = bufferWidth * pixelAspectRatio;
+
+  let scaledW: number;
+  let scaledH: number;
+  let offsetX: number;
+  let offsetY: number;
+
+  if (objectFit === 'fill') {
+    // Stretch to fill entire buffer (may distort aspect ratio)
+    scaledW = bufferWidth;
+    scaledH = bufferHeight;
+    offsetX = 0;
+    offsetY = 0;
+  } else if (objectFit === 'cover') {
+    // Scale to cover entire buffer, cropping if needed
+    const scaleX = visualBufW / image.width;
+    const scaleY = bufferHeight / image.height;
+    const scale = Math.max(scaleX, scaleY);
+    scaledW = Math.floor(image.width * scale / pixelAspectRatio);
+    scaledH = Math.floor(image.height * scale);
+    // Center the crop
+    offsetX = Math.floor((bufferWidth - scaledW) / 2);
+    offsetY = Math.floor((bufferHeight - scaledH) / 2);
+  } else {
+    // 'contain' - fit while maintaining aspect ratio, center
+    const scaleX = visualBufW / image.width;
+    const scaleY = bufferHeight / image.height;
+    const scale = Math.min(scaleX, scaleY);
+    scaledW = Math.floor(image.width * scale / pixelAspectRatio);
+    scaledH = Math.floor(image.height * scale);
+    // Center the image
+    offsetX = Math.floor((bufferWidth - scaledW) / 2);
+    offsetY = Math.floor((bufferHeight - scaledH) / 2);
+  }
+
+  return {
+    scaledWidth: scaledW,
+    scaledHeight: scaledH,
+    offsetX,
+    offsetY,
+  };
+}
+
+/**
+ * Scale image to a temporary RGBA buffer using nearest neighbor sampling
+ */
+export function scaleImageToBuffer(
+  image: LoadedImage,
+  scaledWidth: number,
+  scaledHeight: number
+): Uint8Array {
+  const scaledData = new Uint8Array(scaledWidth * scaledHeight * 4);
+  const bpp = image.bytesPerPixel;
+
+  for (let y = 0; y < scaledHeight; y++) {
+    for (let x = 0; x < scaledWidth; x++) {
+      // Map buffer coordinates to image coordinates
+      const imgX = (x / scaledWidth) * image.width;
+      const imgY = (y / scaledHeight) * image.height;
+
+      // Nearest neighbor sampling
+      const srcX = Math.floor(imgX);
+      const srcY = Math.floor(imgY);
+
+      // Get pixel color from image (using correct bytes per pixel)
+      const srcIdx = (srcY * image.width + srcX) * bpp;
+      const dstIdx = (y * scaledWidth + x) * 4;
+
+      scaledData[dstIdx] = image.data[srcIdx];         // R
+      scaledData[dstIdx + 1] = image.data[srcIdx + 1]; // G
+      scaledData[dstIdx + 2] = image.data[srcIdx + 2]; // B
+      // Alpha: use from data if RGBA, otherwise assume fully opaque
+      scaledData[dstIdx + 3] = bpp === 4 ? image.data[srcIdx + 3] : 255;
+    }
+  }
+
+  return scaledData;
+}
+
+/**
+ * Render scaled RGBA data to the image color buffer with alpha blending
+ */
+export function renderScaledDataToBuffer(
+  scaledData: Uint8Array,
+  scaledWidth: number,
+  scaledHeight: number,
+  offsetX: number,
+  offsetY: number,
+  imageColorBuffer: Uint32Array,
+  bufferWidth: number,
+  bufferHeight: number,
+  backgroundColor?: number | string
+): void {
+  // Get background color for alpha blending (default to black if not specified)
+  let bgR = 0, bgG = 0, bgB = 0;
+  if (backgroundColor) {
+    const bgPacked = parseColor(backgroundColor);
+    if (bgPacked !== undefined) {
+      const bg = unpackRGBA(bgPacked);
+      bgR = bg.r;
+      bgG = bg.g;
+      bgB = bg.b;
+    }
+  }
+
+  // Render the scaled data to the buffer
+  for (let y = 0; y < scaledHeight; y++) {
+    for (let x = 0; x < scaledWidth; x++) {
+      const srcIdx = (y * scaledWidth + x) * 4;
+      let r = scaledData[srcIdx];
+      let g = scaledData[srcIdx + 1];
+      let b = scaledData[srcIdx + 2];
+      const a = scaledData[srcIdx + 3];
+
+      // Skip fully transparent pixels (alpha < 128)
+      if (a < 128) continue;
+
+      // Pre-blend semi-transparent pixels with background color
+      // (Terminal cells can't do true alpha blending)
+      if (a < 255) {
+        const alpha = a / 255;
+        const invAlpha = 1 - alpha;
+        r = Math.round(r * alpha + bgR * invAlpha);
+        g = Math.round(g * alpha + bgG * invAlpha);
+        b = Math.round(b * alpha + bgB * invAlpha);
+      }
+
+      // Set the pixel in the image background buffer (now fully opaque)
+      const bufX = offsetX + x;
+      const bufY = offsetY + y;
+
+      if (bufX >= 0 && bufX < bufferWidth && bufY >= 0 && bufY < bufferHeight) {
+        const index = bufY * bufferWidth + bufX;
+        imageColorBuffer[index] = packRGBA(r, g, b, 255);
+      }
+    }
+  }
+}
+
+/**
+ * Full image rendering pipeline: scale, then render to buffer.
+ * For simple cases without filters or dithering.
+ */
+export function renderImageToBuffer(
+  image: LoadedImage,
+  imageColorBuffer: Uint32Array,
+  config: ImageRenderConfig
+): { scaledData: Uint8Array; scaling: ImageScaleResult } {
+  // Clear the image buffer
+  imageColorBuffer.fill(TRANSPARENT);
+
+  // Calculate scaling
+  const scaling = calculateImageScaling(image, config);
+
+  // Scale image to temp buffer
+  const scaledData = scaleImageToBuffer(image, scaling.scaledWidth, scaling.scaledHeight);
+
+  // Render to image buffer (caller may want to apply filters/dithering to scaledData first)
+  renderScaledDataToBuffer(
+    scaledData,
+    scaling.scaledWidth,
+    scaling.scaledHeight,
+    scaling.offsetX,
+    scaling.offsetY,
+    imageColorBuffer,
+    config.bufferWidth,
+    config.bufferHeight,
+    config.backgroundColor
+  );
+
+  return { scaledData, scaling };
 }

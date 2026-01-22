@@ -67,6 +67,9 @@ melker-launcher.ts    - Policy enforcement and subprocess spawning
 src/
   melker-runner.ts    - .melker file runner (bundling, engine, app execution)
   engine.ts           - Main engine, lifecycle, events
+  engine-keyboard-handler.ts - Keyboard event handling
+  engine-system-palette.ts - System command palette logic
+  engine-dialog-utils.ts - Dialog traversal and focus trap utilities
   layout.ts           - Flexbox layout calculations
   rendering.ts        - Render pipeline, overlays
   buffer.ts           - Dual-buffer system
@@ -135,8 +138,10 @@ src/
     radio.ts          - Radio button
     tabs.ts           - Tabbed container
     tab.ts            - Tab panel (child of tabs)
-    canvas.ts         - Pixel graphics (sextant chars), rendering, dithering
-    canvas-image.ts   - Image loading/decoding (PNG/JPEG/GIF, HTTP/HTTPS, data URLs)
+    canvas.ts         - Pixel graphics (sextant chars), buffer management
+    canvas-render.ts  - Terminal rendering (sextant, block, ASCII modes), color quantization
+    canvas-dither.ts  - Buffer compositing and dithering algorithms
+    canvas-image.ts   - Image loading/decoding/rendering (PNG/JPEG/GIF, scaling, alpha blending)
     canvas-shader-runner.ts - Shader animation runner
     img.ts            - Image component (extends canvas)
     video.ts          - Video playback

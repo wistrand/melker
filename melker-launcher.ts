@@ -88,11 +88,14 @@ function createAutoPolicy(): MelkerPolicy {
  * Deno flags that should be forwarded to the subprocess
  */
 const FORWARDED_DENO_FLAGS = [
-  '--reload',      // Reload remote modules
-  '--no-lock',     // Disable lockfile
-  '--no-check',    // Skip type checking (faster startup)
-  '--quiet', '-q', // Suppress diagnostic output
-  '--cached-only', // Require remote deps already cached (offline mode)
+  '--reload',       // Reload remote modules
+  '--no-lock',      // Disable lockfile
+  '--no-check',     // Skip type checking (faster startup)
+  '--quiet', '-q',  // Suppress diagnostic output
+  '--cached-only',  // Require remote deps already cached (offline mode)
+  '--inspect',      // Enable V8 inspector
+  '--inspect-wait', // Enable V8 inspector, wait for connection
+  '--inspect-brk',  // Enable V8 inspector, break at start
 ];
 
 /**

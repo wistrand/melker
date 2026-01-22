@@ -14,15 +14,12 @@ import { MelkerConfig, setLoggerGetter } from './config/mod.ts';
 import { Env } from './env.ts';
 import { DualBuffer, EMPTY_CHAR } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
-import { InputElement } from './components/input.ts';
-import { TextareaElement } from './components/textarea.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
-import { Element, TextSelection, isClickable, ClickEvent, isWheelable, isKeyboardElement, hasKeyPressHandler, isToggleable } from './types.ts';
+import { Element, TextSelection, isWheelable } from './types.ts';
 import {
   EventManager,
   type MelkerEvent,
-  createKeyPressEvent,
 } from './events.ts';
 import {
   FocusManager,
@@ -45,10 +42,19 @@ import {
   AccessibilityDialogManager,
 } from './ai/accessibility-dialog.ts';
 import {
-  createDefaultCommandPalette,
-  createSystemGroup,
-  SystemHandlers,
-} from './system-command-palette.ts';
+  getSystemHandlers,
+  findOpenCommandPalette,
+  toggleCommandPalette as toggleCommandPaletteHelper,
+  injectSystemCommandPalette,
+  injectSystemCommands,
+  type SystemPaletteContext,
+} from './engine-system-palette.ts';
+import {
+  hasOverlayDialogFor,
+  collectOpenDialogIds,
+  updateModalFocusTraps,
+  type ModalFocusTrapContext,
+} from './engine-dialog-utils.ts';
 import {
   TerminalInputProcessor,
 } from './input.ts';
@@ -126,11 +132,15 @@ import {
   setupTerminal,
   cleanupTerminal,
   emergencyCleanupTerminal,
-  restoreTerminal,
   setupCleanupHandlers,
   registerForEmergencyCleanup,
   unregisterFromEmergencyCleanup,
 } from './terminal-lifecycle.ts';
+import {
+  handleKeyboardEvent,
+  type KeyboardHandlerContext,
+  type RawKeyEvent,
+} from './engine-keyboard-handler.ts';
 
 // Initialize config logger getter (breaks circular dependency between config.ts and logging.ts)
 setLoggerGetter(() => getLogger('Config'));
@@ -558,298 +568,44 @@ export class MelkerEngine {
     if (!this._eventManager || !this._document) return;
 
     // Single keyboard listener that routes to focused elements
+    // Keyboard handling delegated to engine-keyboard-handler.ts
     this._eventManager.addGlobalEventListener('keydown', (event: any) => {
-      // Mark input start time for latency tracking
-      getGlobalPerformanceDialog().markInputStart();
+      const ctx: KeyboardHandlerContext = {
+        // Core components
+        document: this._document!,
+        logger: this._logger,
+        buffer: this._buffer,
+        renderer: this._renderer,
+        inputProcessor: this._inputProcessor,
 
-      const focusedElement = this._document!.focusedElement;
+        // Handlers
+        focusNavigationHandler: this._focusNavigationHandler,
+        scrollHandler: this._scrollHandler,
+        textSelectionHandler: this._textSelectionHandler,
 
-      // Log all key events for debugging
-      this._logger?.debug('Key event received', {
-        key: event.key,
-        code: event.code,
-        ctrlKey: event.ctrlKey,
-        altKey: event.altKey,
-        shiftKey: event.shiftKey,
-        metaKey: event.metaKey,
-      });
+        // Dialog managers
+        devToolsManager: this._devToolsManager,
+        alertDialogManager: this._alertDialogManager,
+        confirmDialogManager: this._confirmDialogManager,
+        promptDialogManager: this._promptDialogManager,
+        getAccessibilityDialogManager: () => this._accessibilityDialogManager,
 
-      // Handle Ctrl+C for graceful exit
-      if (event.ctrlKey && event.key?.toLowerCase() === 'c') {
-        // CRITICAL: Restore terminal FIRST, synchronously, before anything else
-        // This ensures the terminal is restored even if something goes wrong later
-        restoreTerminal();
+        // Options
+        autoRender: this._options.autoRender,
+        onExit: this._options.onExit,
 
-        // Stop the input loop
-        if (this._inputProcessor) {
-          this._inputProcessor.stopListeningSync();
-        }
+        // Engine methods (bound callbacks)
+        render: () => this.render(),
+        stop: () => this.stop(),
+        toggleCommandPalette: () => this.toggleCommandPalette(),
+        findOpenCommandPalette: () => this._findOpenCommandPalette(),
+        ensureAccessibilityDialogManager: () => this._ensureAccessibilityDialogManager(),
+        hasOverlayDialogFor: (element) => hasOverlayDialogFor(element, this._document?.root),
+        debouncedInputRender: () => this._debouncedInputRender(),
+        renderFastPath: () => this._renderFastPath(),
+      };
 
-        if (this._options.onExit) {
-          // Use custom exit handler
-          Promise.resolve(this._options.onExit())
-            .finally(() => Deno.exit(0));
-        } else {
-          // Default behavior - do graceful cleanup then exit
-          this.stop()
-            .finally(() => Deno.exit(0));
-        }
-        return;
-      }
-
-      // Handle Tab key for focus navigation
-      if (event.key === 'Tab') {
-        this._focusNavigationHandler.handleTabNavigation(event.shiftKey);
-        return;
-      }
-
-      // Handle F12 key for View Source (global)
-      if (event.key === 'F12') {
-        this._devToolsManager?.toggle();
-        return;
-      }
-
-      // Handle F6, F10, F11, Shift+F12, or Ctrl+Shift+P for Performance dialog
-      if (event.key === 'F6' || event.key === 'F10' || event.key === 'F11' ||
-          (event.shiftKey && event.key === 'F12') ||
-          (event.ctrlKey && event.shiftKey && (event.key === 'p' || event.key === 'P'))) {
-        getGlobalPerformanceDialog().toggle();
-        this.render();
-        return;
-      }
-
-      // Handle Ctrl+K for Command Palette
-      if (event.ctrlKey && (event.key === 'k' || event.key === 'K')) {
-        this.toggleCommandPalette();
-        return;
-      }
-
-      // Handle Escape to close View Source overlay
-      if (event.key === 'Escape' && this._devToolsManager?.isOpen()) {
-        this._devToolsManager.close();
-        return;
-      }
-
-      // Handle Escape to close Alert dialog
-      if (event.key === 'Escape' && this._alertDialogManager?.isOpen()) {
-        this._alertDialogManager.close();
-        return;
-      }
-
-      // Handle Escape to close Confirm dialog (cancels)
-      if (event.key === 'Escape' && this._confirmDialogManager?.isOpen()) {
-        this._confirmDialogManager.close(false);
-        return;
-      }
-
-      // Handle Escape to close Prompt dialog (cancels)
-      if (event.key === 'Escape' && this._promptDialogManager?.isOpen()) {
-        this._promptDialogManager.close(null);
-        return;
-      }
-
-      // Handle Escape to close Accessibility dialog
-      if (event.key === 'Escape' && this._accessibilityDialogManager?.isOpen()) {
-        this._accessibilityDialogManager.close();
-        return;
-      }
-
-      // Handle open command palettes - they capture all keyboard input when open
-      const openCommandPalette = this._findOpenCommandPalette() as any;
-      if (openCommandPalette) {
-        // Escape closes the palette
-        if (event.key === 'Escape') {
-          openCommandPalette.close();
-          this.render();
-          return;
-        }
-
-        // Route all keyboard events to the open command palette
-        if (typeof openCommandPalette.onKeyPress === 'function') {
-          const keyPressEvent = createKeyPressEvent(event.key, {
-            code: event.code,
-            ctrlKey: event.ctrlKey,
-            altKey: event.altKey,
-            shiftKey: event.shiftKey,
-            metaKey: event.metaKey,
-            target: openCommandPalette.id,
-          });
-
-          const handled = openCommandPalette.onKeyPress(keyPressEvent);
-          if (handled && this._options.autoRender) {
-            this.render();
-          }
-          return;
-        }
-      }
-
-      // Handle F7 specially for voice input
-      if (['f7', 'F7'].includes(event.key)) {
-        this._logger?.info('F7 pressed - voice input mode');
-        this._ensureAccessibilityDialogManager();
-        // If dialog is open, toggle listening. If closed, open and start listening.
-        if (this._accessibilityDialogManager!.isOpen()) {
-          this._accessibilityDialogManager!.toggleListen();
-        } else {
-          this._accessibilityDialogManager!.showAndListen();
-        }
-        return;
-      }
-
-      // Handle other function keys for AI Accessibility dialog
-      if (['f8', 'F8', 'f9', 'F9'].includes(event.key)) {
-        this._logger?.info(event.key + ' pressed - opening accessibility dialog');
-        this._ensureAccessibilityDialogManager();
-        this._accessibilityDialogManager!.toggle();
-        return;
-      }
-
-      // Handle Ctrl+/ or Alt+/ or Ctrl+? or Alt+? for AI Accessibility dialog
-      if ((event.ctrlKey || event.altKey) && (['/', '?', 'h', 'H'].includes(event.key))) {
-        this._logger?.info('Accessibility shortcut pressed', { key: event.key, ctrlKey: event.ctrlKey, altKey: event.altKey });
-        this._ensureAccessibilityDialogManager();
-        this._accessibilityDialogManager!.toggle();
-        return;
-      }
-
-
-      // Handle Alt+N || Alt+C for copying selection to clipboard
-      if (event.altKey && (event.key === 'n' || event.key === 'c')) {
-        this._textSelectionHandler.copySelectionToClipboard();
-        return;
-      }
-
-      // Handle arrow keys for scrolling in scrollable containers
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key) && focusedElement) {
-        const scrollableParent = this._scrollHandler.findScrollableParent(focusedElement);
-        if (scrollableParent && this._scrollHandler.handleArrowKeyScroll(event.key, scrollableParent)) {
-          return; // Arrow key was handled by scrolling
-        }
-      }
-
-      if (focusedElement) {
-        // Route to slider element for arrow key handling
-        if (focusedElement.type === 'slider') {
-          const slider = focusedElement as any;
-          if (slider.handleKeyInput) {
-            const handled = slider.handleKeyInput(event.key, event.ctrlKey, event.altKey);
-            if (handled && this._options.autoRender) {
-              this.render();
-            }
-          }
-        }
-        // Route to text input if it's a text input or textarea element
-        else if (focusedElement.type === 'input' || focusedElement.type === 'textarea') {
-          const textInput = focusedElement as InputElement | TextareaElement;
-          if (textInput.handleKeyInput) {
-            this._logger?.debug('Key input routed to text input', {
-              elementId: focusedElement.id,
-              key: event.key,
-              ctrlKey: event.ctrlKey,
-              altKey: event.altKey,
-            });
-
-            const handled = textInput.handleKeyInput(event.key, event.ctrlKey, event.altKey, event.shiftKey);
-
-            // Auto-render if the input changed
-            if (handled && this._options.autoRender) {
-              // Check if any system dialogs are open (these are always overlays)
-              const hasSystemDialog = this._alertDialogManager?.isOpen() ||
-                                     this._confirmDialogManager?.isOpen() ||
-                                     this._promptDialogManager?.isOpen() ||
-                                     this._accessibilityDialogManager?.isOpen();
-
-              // Check if there's a document dialog that's an overlay (not an ancestor of this input)
-              const hasOverlayDialog = this._hasOverlayDialogFor(focusedElement);
-
-              // Try fast render first (immediate visual feedback)
-              // Skip if there's an overlay dialog - it would be overwritten
-              if (!hasSystemDialog && !hasOverlayDialog && textInput.canFastRender() && this._buffer) {
-                const bounds = this._renderer.findElementBounds(focusedElement.id);
-                if (bounds) {
-                  // Prepare buffer: copy previous content so fast render only updates input cells
-                  this._buffer.prepareForFastRender();
-                  if (textInput.fastRender(this._buffer, bounds, true)) {
-                    // Use fast path: outputs diff WITHOUT swapping buffers
-                    // This preserves buffer state for the debounced full render
-                    this._renderFastPath();
-                  }
-                }
-              }
-
-              // Always schedule debounced full render for layout correctness
-              // (handles text wrapping, size changes, etc.)
-              this._debouncedInputRender();
-            }
-          }
-        }
-        // Route to components that handle their own keyboard events (filterable lists, etc.)
-        else if (isKeyboardElement(focusedElement) && focusedElement.handlesOwnKeyboard()) {
-          const keyPressEvent = createKeyPressEvent(event.key, {
-            code: event.code,
-            ctrlKey: event.ctrlKey,
-            altKey: event.altKey,
-            shiftKey: event.shiftKey,
-            metaKey: event.metaKey,
-            target: focusedElement.id,
-          });
-
-          const handled = focusedElement.onKeyPress(keyPressEvent);
-
-          // Auto-render if the event was handled
-          if (handled && this._options.autoRender) {
-            this.render();
-          }
-        }
-        // Handle Enter key on focused buttons
-        else if (focusedElement.type === 'button' && event.key === 'Enter') {
-          // Trigger click event on the focused button
-          this._document!.triggerElementEvent(focusedElement, {
-            type: 'click',
-            target: focusedElement,
-            timestamp: Date.now(),
-          });
-
-          // Re-render to show any state changes from the click handler
-          if (this._options.autoRender) {
-            this.render();
-          }
-        }
-        // Handle Enter/Space key on Clickable elements (checkbox, radio, etc.)
-        else if (isClickable(focusedElement) &&
-                 (event.key === 'Enter' || event.key === ' ')) {
-          const clickEvent: ClickEvent = {
-            type: 'click',
-            target: focusedElement,
-            position: { x: 0, y: 0 },
-            timestamp: Date.now(),
-          };
-
-          const handled = focusedElement.handleClick(clickEvent, this._document!);
-
-          if (handled) {
-            this.render();
-          }
-        }
-        // Generic keyboard event handling for components with onKeyPress method
-        else if (focusedElement && hasKeyPressHandler(focusedElement)) {
-          const keyPressEvent = createKeyPressEvent(event.key, {
-            code: event.code,
-            ctrlKey: event.ctrlKey,
-            altKey: event.altKey,
-            shiftKey: event.shiftKey,
-            metaKey: event.metaKey,
-            target: focusedElement.id,
-          });
-
-          const handled = focusedElement.onKeyPress(keyPressEvent);
-
-          // Auto-render if the event was handled
-          if (handled && this._options.autoRender) {
-            this.render();
-          }
-        }
-      }
+      handleKeyboardEvent(event as RawKeyEvent, ctx);
     });
 
     // Automatic scroll handling for scrollable containers
@@ -1083,7 +839,7 @@ export class MelkerEngine {
 
     // Auto-detect newly opened dialogs and mark for force render
     // This ensures dialogs render correctly without requiring apps to call forceRender
-    const currentOpenDialogs = this._collectOpenDialogIds();
+    const currentOpenDialogs = collectOpenDialogIds(this._document?.root);
     let dialogJustOpened = false;
     for (const id of currentOpenDialogs) {
       if (!this._previouslyOpenDialogIds.has(id)) {
@@ -1255,7 +1011,7 @@ export class MelkerEngine {
     this._persistenceManager.triggerDebouncedSave();
 
     // Update focus traps for modal dialogs
-    this._updateModalFocusTraps();
+    updateModalFocusTraps(this._getModalFocusTrapContext());
     } finally {
       this._isRendering = false;
       this._logger?.trace('render() finished, _isRendering = false');
@@ -1457,7 +1213,7 @@ export class MelkerEngine {
     this._renderFullScreen();
 
     // Update focus traps for modal dialogs
-    this._updateModalFocusTraps();
+    updateModalFocusTraps(this._getModalFocusTrapContext());
     } finally {
       this._isRendering = false;
     }
@@ -1818,10 +1574,11 @@ export class MelkerEngine {
     }
 
     // Inject system commands into all command palettes (opt-out with system={false})
-    this._injectSystemCommands();
+    const ctx = this._getSystemPaletteContext();
+    injectSystemCommands(ctx);
 
     // Inject default system command palette if no custom one exists
-    this._injectSystemCommandPalette();
+    injectSystemCommandPalette(ctx);
 
     // Update focus manager document reference after UI update
     if (this._focusManager) {
@@ -2256,25 +2013,38 @@ export class MelkerEngine {
   }
 
   /**
+   * Get context for system palette operations
+   */
+  private _getSystemPaletteContext(): SystemPaletteContext {
+    return {
+      document: this._document,
+      systemCommandPalette: this._systemCommandPalette,
+      devToolsManager: this._devToolsManager,
+      getAccessibilityDialogManager: () => this._accessibilityDialogManager,
+      stop: () => this.stop(),
+      render: () => this.render(),
+      ensureAccessibilityDialogManager: () => this._ensureAccessibilityDialogManager(),
+      setSystemCommandPalette: (palette) => { this._systemCommandPalette = palette; },
+    };
+  }
+
+  /**
+   * Get context for modal focus trap operations
+   */
+  private _getModalFocusTrapContext(): ModalFocusTrapContext {
+    return {
+      root: this._document?.root,
+      trappedModalDialogIds: this._trappedModalDialogIds,
+      focusManager: this._focusManager,
+      logger: this._logger,
+    };
+  }
+
+  /**
    * Find an open command palette in the element tree
    */
   private _findOpenCommandPalette(): Element | null {
-    if (!this._document) return null;
-
-    const findInTree = (element: Element): Element | null => {
-      if (element.type === 'command-palette' && element.props.open === true) {
-        return element;
-      }
-      if (element.children) {
-        for (const child of element.children) {
-          const found = findInTree(child);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    return findInTree(this._rootElement);
+    return findOpenCommandPalette(this._getSystemPaletteContext());
   }
 
   /**
@@ -2292,191 +2062,6 @@ export class MelkerEngine {
   }
 
   /**
-   * Check if there are any open dialogs in the document tree
-   */
-  private _hasOpenDialogInDocument(): boolean {
-    if (!this._document?.root) return false;
-    return this._findOpenDialog(this._document.root);
-  }
-
-  private _findOpenDialog(element: Element): boolean {
-    if (element.type === 'dialog' && element.props?.open === true) {
-      return true;
-    }
-    if (element.children) {
-      for (const child of element.children) {
-        if (this._findOpenDialog(child)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Check if there's an open dialog that's NOT an ancestor of the given element
-   * (i.e., a dialog overlay that would be drawn on top of the element)
-   */
-  private _hasOverlayDialogFor(element: Element): boolean {
-    if (!this._document?.root) return false;
-
-    // Find all open dialogs and check if element is inside any of them
-    const openDialogs: Element[] = [];
-    this._collectOpenDialogs(this._document.root, openDialogs);
-
-    if (openDialogs.length === 0) return false;
-
-    // Check if element is a descendant of any open dialog
-    for (const dialog of openDialogs) {
-      if (this._isDescendantOf(element, dialog)) {
-        // Element is inside this dialog - this dialog is not an overlay for it
-        // But there might be OTHER open dialogs that are overlays
-        continue;
-      }
-      // This dialog doesn't contain the element - it's an overlay
-      return true;
-    }
-    return false;
-  }
-
-  private _collectOpenDialogs(element: Element, result: Element[]): void {
-    if (element.type === 'dialog' && element.props?.open === true) {
-      result.push(element);
-    }
-    if (element.children) {
-      for (const child of element.children) {
-        this._collectOpenDialogs(child, result);
-      }
-    }
-  }
-
-  /**
-   * Collect IDs of all currently open dialogs (for change detection)
-   */
-  private _collectOpenDialogIds(): Set<string> {
-    const dialogs: Element[] = [];
-    this._collectOpenDialogs(this._document.root, dialogs);
-    const ids = new Set<string>();
-    for (const dialog of dialogs) {
-      // Use id if available, otherwise create a stable identifier from the element
-      const id = dialog.props?.id || dialog.id || `dialog-${dialogs.indexOf(dialog)}`;
-      ids.add(id);
-    }
-    return ids;
-  }
-
-  /**
-   * Check if element is a descendant of container (by traversing container's children)
-   */
-  private _isDescendantOf(element: Element, container: Element): boolean {
-    if (container === element) return true;
-    if (container.children) {
-      for (const child of container.children) {
-        if (this._isDescendantOf(element, child)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Update focus traps for modal dialogs
-   * Called after each render to ensure focus is trapped when modals open/close
-   */
-  private _updateModalFocusTraps(): void {
-    if (!this._document?.root) return;
-
-    // Collect all open modal dialogs
-    const openModalDialogs: Element[] = [];
-    this._collectOpenModalDialogs(this._document.root, openModalDialogs);
-
-    const currentOpenIds = new Set(openModalDialogs.map(d => d.id).filter(Boolean) as string[]);
-
-    // Release traps for dialogs that closed
-    for (const dialogId of this._trappedModalDialogIds) {
-      if (!currentOpenIds.has(dialogId)) {
-        this._logger?.debug(`Releasing focus trap for closed modal: ${dialogId}`);
-        this._focusManager.releaseFocusTrap(dialogId, true);
-        this._trappedModalDialogIds.delete(dialogId);
-      }
-    }
-
-    // Set up traps for newly opened dialogs
-    for (const dialog of openModalDialogs) {
-      if (dialog.id && !this._trappedModalDialogIds.has(dialog.id)) {
-        this._logger?.debug(`Setting up focus trap for modal: ${dialog.id}`);
-
-        // Find the first focusable element inside the dialog
-        // Check canReceiveFocus() directly since elements may not be registered yet
-        let initialFocus: string | undefined;
-        const findFirstFocusable = (element: Element): string | undefined => {
-          // Check if this element can receive focus
-          if (element.id) {
-            const canFocus = (element as any).canReceiveFocus;
-            if (typeof canFocus === 'function' && canFocus.call(element)) {
-              return element.id;
-            }
-          }
-          // Check children
-          if (element.children) {
-            for (const child of element.children) {
-              const found = findFirstFocusable(child);
-              if (found) return found;
-            }
-          }
-          return undefined;
-        };
-
-        initialFocus = findFirstFocusable(dialog);
-
-        this._focusManager.trapFocus({
-          containerId: dialog.id,
-          initialFocus,
-          restoreFocus: true,
-        });
-        this._trappedModalDialogIds.add(dialog.id);
-      }
-    }
-  }
-
-  /**
-   * Collect all open modal dialogs from the element tree
-   */
-  private _collectOpenModalDialogs(element: Element, result: Element[]): void {
-    if (element.type === 'dialog' && element.props?.open === true && element.props?.modal === true) {
-      result.push(element);
-    }
-    if (element.children) {
-      for (const child of element.children) {
-        this._collectOpenModalDialogs(child, result);
-      }
-    }
-  }
-
-  /**
-   * Get system command handlers
-   */
-  private _getSystemHandlers(): SystemHandlers {
-    return {
-      exit: () => this.stop(),
-      aiDialog: () => {
-        this._ensureAccessibilityDialogManager();
-        this._accessibilityDialogManager!.toggle();
-        this.render();
-      },
-      devTools: () => {
-        this._devToolsManager?.toggle();
-        this.render();
-      },
-      performance: () => {
-        getGlobalPerformanceDialog().toggle();
-        this.render();
-      },
-    };
-  }
-
-  /**
    * Get the system command palette (creates one if needed)
    */
   getSystemCommandPalette(): Element | undefined {
@@ -2487,119 +2072,7 @@ export class MelkerEngine {
    * Toggle the command palette (opens system palette if no custom one exists)
    */
   toggleCommandPalette(): void {
-    // First check for custom command palette
-    const customPalette = this._findOpenCommandPalette() || this._findCommandPalette();
-    if (customPalette && isToggleable(customPalette)) {
-      customPalette.toggle();
-      this.render();
-      return;
-    }
-
-    // Fall back to system command palette
-    if (this._systemCommandPalette && isToggleable(this._systemCommandPalette)) {
-      this._systemCommandPalette.toggle();
-      this.render();
-    }
-  }
-
-  /**
-   * Find any command palette in the document (open or closed)
-   */
-  private _findCommandPalette(): Element | null {
-    if (!this._document?.root) return null;
-    return this._findElementByType(this._document.root, 'command-palette');
-  }
-
-  /**
-   * Find element by type in tree
-   */
-  private _findElementByType(element: Element, type: string): Element | null {
-    if (element.type === type) return element;
-    if (element.children) {
-      for (const child of element.children) {
-        const found = this._findElementByType(child, type);
-        if (found) return found;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Inject system command palette if no command palette exists in document
-   */
-  private _injectSystemCommandPalette(): void {
-    // Check if document already has a command palette
-    if (this._findCommandPalette()) {
-      this._systemCommandPalette = undefined;
-      return;
-    }
-
-    // Create system command palette with direct handlers
-    this._systemCommandPalette = createDefaultCommandPalette(this._getSystemHandlers());
-
-    // Add to root element's children (document will register when traversing tree)
-    if (this._document?.root) {
-      if (!this._document.root.children) {
-        this._document.root.children = [];
-      }
-      this._document.root.children.push(this._systemCommandPalette);
-    }
-  }
-
-  /**
-   * Inject system commands into all command palettes
-   * System commands are added by default, opt-out with system={false}
-   */
-  private _injectSystemCommands(): void {
-    if (!this._document?.root) return;
-    this._injectSystemCommandsInElement(this._document.root);
-  }
-
-  private _injectSystemCommandsInElement(element: Element): void {
-    if (element.type === 'command-palette') {
-      // Opt-out: skip if system={false}
-      if (element.props?.system === false) {
-        // Recurse into children
-        if (element.children) {
-          for (const child of element.children) {
-            this._injectSystemCommandsInElement(child);
-          }
-        }
-        return;
-      }
-
-      if (!element.children) {
-        element.children = [];
-      }
-
-      // Check if system group already exists (from <group system="true" /> marker)
-      let hasSystemGroup = false;
-      for (let i = 0; i < element.children.length; i++) {
-        const child = element.children[i];
-        if (child.type === 'group' && child.props?.system === true) {
-          // Replace marker with actual system group
-          element.children[i] = createSystemGroup(this._getSystemHandlers());
-          hasSystemGroup = true;
-        }
-      }
-
-      // If no system group marker, append system group at the end
-      if (!hasSystemGroup) {
-        element.children.push(createSystemGroup(this._getSystemHandlers()));
-      }
-
-      // Refresh the cached options from updated children
-      if (typeof (element as any).refreshChildOptions === 'function') {
-        (element as any).refreshChildOptions();
-      }
-    }
-
-    // Recurse into children
-    if (element.children) {
-      for (const child of element.children) {
-        this._injectSystemCommandsInElement(child);
-      }
-    }
+    toggleCommandPaletteHelper(this._getSystemPaletteContext());
   }
 }
 

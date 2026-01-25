@@ -68,8 +68,8 @@
         <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="pattern" onFilter="$app.rotate" />
       </container>
       <container class="card">
-        <text class="label">luma</text>
-        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="luma" onFilter="$app.rotate" />
+        <text class="label">sixel</text>
+        <img src="../../media/melker-128.png" width="20" height="10" dither="auto" gfxMode="sixel" onFilter="$app.rotate" />
       </container>
     </container>
 

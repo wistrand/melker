@@ -1811,6 +1811,31 @@ export class RenderingEngine {
     this._overlays.push(overlay);
   }
 
+  /**
+   * Check if any UI overlays or dialogs are currently visible.
+   * Used by sixel rendering to know when to hide graphics.
+   */
+  hasVisibleOverlays(): boolean {
+    // Check for dropdown overlays (select, combobox, command palette)
+    if (this._overlays.length > 0) {
+      return true;
+    }
+
+    // Check for open dialogs (using cached root element from last render)
+    if (this._cachedElement) {
+      const modals: Element[] = [];
+      this._collectModals(this._cachedElement, modals);
+      const hasOpenDialog = modals.some(modal =>
+        (modal as any).props?.open === true
+      );
+      if (hasOpenDialog) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   // Collect all modal dialogs from the element tree
   private _collectModals(element: Element, modals: Element[]): void {
     if (element.type === 'dialog') {

@@ -371,6 +371,12 @@ const ALWAYS_ALLOWED_ENV = [
   // Basic terminal/system vars
   'HOME', 'USERPROFILE', 'TERM', 'COLORTERM', 'COLORFGBG', 'NO_COLOR', 'PREFIX',
   'TMPDIR', 'TEMP', 'TMP', 'PATH',
+  // Terminal identification (for sixel detection)
+  'TERM_PROGRAM', 'VTE_VERSION', 'WT_SESSION',
+  // Multiplexer detection (tmux/screen - sixel disabled in multiplexers)
+  'TMUX', 'STY',
+  // SSH session detection (for sixel bandwidth considerations)
+  'SSH_CLIENT', 'SSH_CONNECTION', 'SSH_TTY',
   // Set by launcher after permission flags are built
   'MELKER_RUNNER',
   'MELKER_REMOTE_URL',

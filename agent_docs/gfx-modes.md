@@ -2,6 +2,18 @@
 
 Controls how canvas/image pixels are rendered to terminal characters.
 
+## Pixel Aspect Ratio
+
+Terminal character cells are typically taller than wide, so sextant pixels (2 wide × 3 tall per cell) are not square. The `canvas.getPixelAspectRatio()` method returns the correct ratio for aspect-correct drawing.
+
+**Calculation:**
+- Sixel mode: 1.0 (square pixels at native resolution)
+- Other modes: `(3 * cellWidth) / (2 * cellHeight)` when detected, else `(2/3) * charAspectRatio` prop
+
+Cell size is detected via WindowOps query at startup and used even without sixel support.
+
+**Aspect-corrected methods:** `drawCircleCorrected()`, `drawSquareCorrected()`, `drawLineCorrected()`, `visualToPixel()`, `pixelToVisual()`
+
 ## Modes
 
 ### sextant (default)
@@ -78,6 +90,51 @@ charIndex = floor(luma / 255 * (ramp.length - 1))
  .:-=+*#%@
 ```
 
+### sixel
+
+True pixel graphics via DEC Sixel protocol - native pixel rendering without character cell limitations.
+
+**Best for:** High-quality images, photos, video on supported terminals
+
+**Requirements:**
+- Terminal with sixel support (xterm -ti vt340, mlterm, foot, WezTerm, iTerm2)
+- Not running in tmux/screen (multiplexers don't reliably pass sixel)
+- Not running over SSH (auto-disabled for bandwidth optimization)
+
+**How it works:**
+- Detects sixel support at startup via DA1 escape sequence
+- Renders canvas content to sixel format (6-pixel vertical strips)
+- Quantizes colors to 256-color palette (keyframe mode for video/shaders)
+- Outputs sixel data as overlay after buffer rendering
+- Falls back to sextant if sixel not available or disabled
+
+**Palette modes:**
+- `cached` - Static images (`<img>` without callbacks): compute once, reuse forever
+- `keyframe` - Dynamic content (video, `onShader`, `onPaint`, `onFilter`): cache palette, re-index frames, regenerate on >2% color drift
+- `dynamic` - Available but not used (keyframe preferred for performance)
+
+**Pre-quantization dithering** (dynamic content only):
+- Applies `blue-noise` dithering by default before 256-color quantization
+- 3 bits per channel (8 levels) reduces banding in gradients
+- Set `dither="none"` to disable, or specify algorithm (`ordered`, `floyd-steinberg`, etc.)
+- Respects `MELKER_DITHER_BITS` env var and `ditherBits` prop
+
+**Limitations:**
+- Not all terminals support sixel
+- Disabled automatically in tmux/screen and over SSH
+- Higher bandwidth than character modes (10-100x larger output)
+- Dialog/dropdown occlusion clears sixels (shows through buffer)
+- Clipped sixels show `.` placeholder (can't be partially rendered)
+- Konsole has right-edge rendering quirk (use mlterm for best results)
+
+**Detection:**
+- DA1 query checks for sixel support flag (4)
+- XTSMGRAPHICS queries for color registers and geometry (sixel only)
+- WindowOps query for cell size in pixels (always queried for accurate aspect ratio)
+- Environment-based fallback for known sixel terminals
+- Multiplexer detection via `$TMUX`, `$STY`
+- SSH detection via `$SSH_CLIENT`, `$SSH_CONNECTION`, `$SSH_TTY`
+
 ## Configuration
 
 **Per-element prop (on canvas/img):**
@@ -92,6 +149,7 @@ MELKER_GFX_MODE=sextant   # default, Unicode sextant chars
 MELKER_GFX_MODE=block     # colored spaces
 MELKER_GFX_MODE=pattern   # ASCII spatial mapping
 MELKER_GFX_MODE=luma      # ASCII brightness-based
+MELKER_GFX_MODE=sixel     # true pixels (requires terminal support)
 ```
 
 **CLI flag (overrides per-element):**
@@ -100,6 +158,7 @@ MELKER_GFX_MODE=luma      # ASCII brightness-based
 --gfx-mode=block
 --gfx-mode=pattern
 --gfx-mode=luma
+--gfx-mode=sixel
 ```
 
 **Priority:** Global config (env/CLI) > per-element prop > default (sextant)
@@ -134,23 +193,32 @@ Video uses blue-noise for less temporal flicker between frames.
 - `src/config/schema.json` - Config option definition
 - `src/components/canvas-terminal.ts` - `PATTERN_TO_ASCII` lookup table, `LUMA_RAMP`
 - `src/components/canvas.ts` - `_renderAsciiMode()`, `_renderBlockMode()`, dithered path handling
+- `src/components/canvas-render.ts` - `renderSixelPlaceholder()`, `generateSixelOutput()`
 - `src/rendering.ts` - Border rendering in block mode
+- `src/sixel/detect.ts` - Terminal sixel capability detection
+- `src/sixel/encoder.ts` - Sixel format encoder
+- `src/sixel/palette.ts` - Color quantization for sixel
+- `src/engine.ts` - Sixel overlay rendering in render pipeline
 
 ## Use Cases
 
-- **sextant**: Default, best quality
+- **sextant**: Default, best quality for most use cases
 - **block**: Terminals without Nerd Fonts
 - **pattern**: Legacy terminals, SSH to old systems, retro look
 - **luma**: Image-heavy content on legacy terminals
+- **sixel**: Photos, high-quality images on supported terminals
 
 ## Comparison
 
-| Mode | Resolution | Best for | Unicode |
-|------|------------|----------|---------|
-| sextant | 2x3 per cell | Everything | Required |
-| block | 1x1 per cell | Compatibility | No |
-| pattern | 2x3 per cell | UI, shapes | No |
-| luma | 2x3 per cell | Images | No |
+| Mode | Resolution | Best for | Unicode | Terminal Support |
+|------|------------|----------|---------|------------------|
+| sextant | 2x3 per cell | Everything | Required | Most modern |
+| block | 1x1 per cell | Compatibility | No | All |
+| pattern | 2x3 per cell | UI, shapes | No | All |
+| luma | 2x3 per cell | Images | No | All |
+| sixel | True pixels | High-quality images | No | xterm, mlterm, foot, WezTerm, iTerm2, Konsole* |
+
+*Konsole has a right-edge rendering quirk. Use mlterm for best sixel quality.
 
 ## Demo
 

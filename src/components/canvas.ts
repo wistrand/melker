@@ -14,8 +14,8 @@ import { getLogger } from '../logging.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
 import {
-  CanvasRenderState, renderToTerminal, getEffectiveGfxMode,
-  type CanvasRenderData
+  CanvasRenderState, renderToTerminal, getEffectiveGfxMode, generateSixelOutput,
+  type CanvasRenderData, type GfxMode, type SixelOutputData
 } from './canvas-render.ts';
 import {
   decodeImageBytes, loadImageFromSource,
@@ -30,6 +30,7 @@ import {
 import {
   DitherState, prepareDitheredBuffer, type DitherData
 } from './canvas-dither.ts';
+import { MelkerConfig } from '../config/mod.ts';
 
 // Re-export for external use
 export { type LoadedImage } from './canvas-image.ts';
@@ -52,7 +53,7 @@ export interface CanvasProps extends BaseProps {
   objectFit?: 'contain' | 'fill' | 'cover';  // How image fits: contain (default), fill (stretch), cover (crop)
   dither?: DitherMode | boolean;     // Dithering mode for images (e.g., 'sierra-stable' for B&W themes)
   ditherBits?: number;               // Bits per channel for dithering (1-8, default: 1 for B&W)
-  gfxMode?: 'sextant' | 'block' | 'pattern' | 'luma';  // Per-element graphics mode (global config overrides)
+  gfxMode?: GfxMode;  // Per-element graphics mode (global config overrides)
   onPaint?: (event: { canvas: CanvasElement; bounds: Bounds }) => void;  // Called when canvas needs repainting
   onShader?: ShaderCallback;         // Shader-style per-pixel callback (TypeScript, not GLSL)
   onFilter?: ShaderCallback;         // One-time filter callback, runs once when image loads (same signature as onShader)
@@ -65,7 +66,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   declare type: 'canvas';
   declare props: CanvasProps;
 
-  // Backing color buffer (scale * width * 2) x (scale * height * 3)
+  // Backing color buffer (scale * width * 2) x (scale * height * 3) for sextant mode
+  // Or (width * cellWidth) x (height * cellHeight) for sixel mode
   // TRANSPARENT (0) means pixel off, any other value means pixel on with that color
   private _colorBuffer: Uint32Array;  // RGBA color per pixel (packed)
   private _previousColorBuffer: Uint32Array;  // For dirty tracking
@@ -77,6 +79,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   private _charAspectRatio: number;
   private _isDirty: boolean = false;
   private _currentColor: number = DEFAULT_FG;  // Current drawing color
+  // Pixel multiplier per terminal cell (2x3 for sextant, cellWidth x cellHeight for sixel)
+  private _pixelsPerCellX: number = 2;
+  private _pixelsPerCellY: number = 3;
 
   // Image loading support
   private _loadedImage: LoadedImage | null = null;
@@ -91,6 +96,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
   // Dithering state - managed by canvas-dither.ts
   private _ditherState: DitherState = new DitherState();
+
+  // Sixel output data (generated during render when gfxMode='sixel')
+  private _sixelOutput: SixelOutputData | null = null;
 
   constructor(props: CanvasProps, children: Element[] = []) {
     const scale = Math.max(1, Math.floor(props.scale || 1));
@@ -125,9 +133,13 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     this._scale = scale;
     this._charAspectRatio = charAspectRatio;
-    // Each terminal character represents a 2x3 pixel block
-    this._bufferWidth = props.width * 2 * scale;
-    this._bufferHeight = props.height * 3 * scale;
+
+    // Calculate buffer dimensions based on gfx mode
+    const dims = this._calculateBufferDimensions(props.width, props.height, scale);
+    this._bufferWidth = dims.width;
+    this._bufferHeight = dims.height;
+    this._pixelsPerCellX = dims.pixelsPerCellX;
+    this._pixelsPerCellY = dims.pixelsPerCellY;
 
     // Initialize color buffers (TRANSPARENT = pixel off, other value = pixel on)
     const bufferSize = this._bufferWidth * this._bufferHeight;
@@ -136,6 +148,59 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Initialize image background layer buffer
     this._imageColorBuffer = new Uint32Array(bufferSize);
     this.clear();
+  }
+
+  /**
+   * Calculate buffer dimensions based on graphics mode.
+   * Sixel mode uses full terminal pixel resolution (cellWidth x cellHeight per cell).
+   * Other modes use sextant resolution (2x3 pixels per cell).
+   */
+  private _calculateBufferDimensions(width: number, height: number, scale: number): {
+    width: number;
+    height: number;
+    pixelsPerCellX: number;
+    pixelsPerCellY: number;
+  } {
+    const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
+    const engine = globalThis.melkerEngine;
+    const capabilities = engine?.sixelCapabilities;
+
+    logger.debug('_calculateBufferDimensions', {
+      terminalSize: `${width}x${height}`,
+      gfxMode,
+      hasEngine: !!engine,
+      hasCaps: !!capabilities,
+      capsSupported: capabilities?.supported,
+      cellSize: capabilities ? `${capabilities.cellWidth}x${capabilities.cellHeight}` : 'n/a',
+    });
+
+    if (gfxMode === 'sixel') {
+      if (capabilities?.supported && capabilities.cellWidth > 0 && capabilities.cellHeight > 0) {
+        // Sixel mode: use full terminal pixel resolution
+        const result = {
+          width: width * capabilities.cellWidth,
+          height: height * capabilities.cellHeight,
+          pixelsPerCellX: capabilities.cellWidth,
+          pixelsPerCellY: capabilities.cellHeight,
+        };
+        return result;
+      }
+      // Fallback if sixel caps not available yet - use 8x16 defaults
+      return {
+        width: width * 8,
+        height: height * 16,
+        pixelsPerCellX: 8,
+        pixelsPerCellY: 16,
+      };
+    }
+
+    // Non-sixel modes: use sextant resolution (2x3 pixels per terminal cell)
+    return {
+      width: width * 2 * scale,
+      height: height * 3 * scale,
+      pixelsPerCellX: 2 * scale,
+      pixelsPerCellY: 3 * scale,
+    };
   }
 
   // Focusable interface
@@ -829,12 +894,35 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
   /**
    * Get the effective pixel aspect ratio (width/height).
-   * This combines the sextant block ratio (2:3) with the terminal character ratio.
+   * - Sixel mode: 1.0 (square pixels at native terminal resolution)
+   * - Other modes: Uses detected cell size if available, else charAspectRatio prop
+   *
+   * For sextant mode, each character cell is 2 columns × 3 rows of pixels:
+   * - Each pixel is (cellWidth/2) wide × (cellHeight/3) tall
+   * - Aspect ratio = (cellWidth/2) / (cellHeight/3) = (3 * cellWidth) / (2 * cellHeight)
+   *
    * A value < 1 means pixels are taller than wide.
    */
   getPixelAspectRatio(): number {
-    // Sextant blocks are 2 pixels wide x 3 pixels tall per character
-    // Combined with terminal character aspect ratio (width/height)
+    const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
+
+    if (gfxMode === 'sixel') {
+      // Sixel mode renders square pixels at native terminal resolution
+      return 1.0;
+    }
+
+    // Check for detected cell size from terminal capabilities
+    const engine = globalThis.melkerEngine;
+    const capabilities = engine?.sixelCapabilities;
+
+    if (capabilities?.cellWidth && capabilities?.cellHeight) {
+      // Use detected cell dimensions for accurate aspect ratio
+      // Sextant pixel = (cellWidth/2) wide × (cellHeight/3) tall
+      return (3 * capabilities.cellWidth) / (2 * capabilities.cellHeight);
+    }
+
+    // Fallback to charAspectRatio prop (default 1.05)
+    // Combined with sextant block ratio (2 wide : 3 tall per char)
     return (2 / 3) * this._charAspectRatio;
   }
 
@@ -1099,6 +1187,29 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Cache bounds for mouse coordinate conversion in shaders
     this._shaderState.bounds = bounds;
 
+    // Check if buffer needs resizing due to sixel capabilities becoming available
+    // This happens when canvas was created before engine started
+    const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
+    if (gfxMode === 'sixel') {
+      const engine = globalThis.melkerEngine;
+      const capabilities = engine?.sixelCapabilities;
+      if (capabilities?.supported && capabilities.cellWidth > 0 && capabilities.cellHeight > 0) {
+        const expectedWidth = this.props.width * capabilities.cellWidth;
+        const expectedHeight = this.props.height * capabilities.cellHeight;
+        if (this._bufferWidth !== expectedWidth || this._bufferHeight !== expectedHeight) {
+          logger.debug('sixel resize triggered', {
+            old: `${this._bufferWidth}x${this._bufferHeight}`,
+            new: `${expectedWidth}x${expectedHeight}`,
+          });
+          this.setSize(this.props.width, this.props.height);
+          // Re-render image to the new buffer (image was loaded into old smaller buffer)
+          if (this._loadedImage) {
+            this._renderImageToBuffer();
+          }
+        }
+      }
+    }
+
     // Auto-load image from src prop if not already loaded/loading
     // Skip for video elements (they handle src differently via ffmpeg)
     if ((this.type as string) !== 'video' && this.props.src && !this._loadedImage && !this._imageLoading && this._imageSrc !== this.props.src) {
@@ -1124,14 +1235,127 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       this.props.onPaint({ canvas: this, bounds });
     }
 
-    // Always render to the buffer (buffer is rebuilt each frame)
+    // Render to the buffer (sextant/block/pattern/luma, or placeholder for sixel)
     this._renderToTerminal(bounds, style, buffer);
+
+    // Generate sixel output if in sixel mode
+    if (gfxMode === 'sixel') {
+      // Check if element is fully visible within the visible area
+      // Sixel graphics can't be clipped, so we skip rendering if element extends outside visible area
+      // Use clipRect if available (for scrollable containers), otherwise fall back to viewport
+      const visibleArea = (context as any).clipRect || context.viewport;
+      const isFullyVisible = !visibleArea || (
+        bounds.x >= visibleArea.x &&
+        bounds.y >= visibleArea.y &&
+        bounds.x + bounds.width <= visibleArea.x + visibleArea.width &&
+        bounds.y + bounds.height <= visibleArea.y + visibleArea.height
+      );
+
+      logger.debug('Sixel visibility check', {
+        id: this.id,
+        bounds,
+        clipRect: (context as any).clipRect,
+        viewport: context.viewport,
+        visibleArea,
+        isFullyVisible,
+      });
+
+      if (isFullyVisible) {
+        this._generateSixelOutput(bounds);
+      } else {
+        logger.debug('Sixel skipped - element extends outside viewport', {
+          id: this.id,
+          bounds,
+          visibleArea,
+        });
+        this._sixelOutput = null;
+      }
+    } else {
+      this._sixelOutput = null;
+    }
+
     // Mark clean to track changes for next frame
     // Skip for active shaders - they rewrite every pixel and the buffer swap causes glitches
     if (this._isDirty && this._shaderState.timer === null) {
       this._markClean();
     }
     this._isDirty = false;
+  }
+
+  /**
+   * Generate sixel output for this canvas.
+   * Called during render when gfxMode='sixel'.
+   */
+  private _generateSixelOutput(bounds: Bounds): void {
+    // Get sixel capabilities from engine
+    const engine = globalThis.melkerEngine;
+    const capabilities = engine?.sixelCapabilities;
+
+    if (!capabilities?.supported) {
+      this._sixelOutput = null;
+      return;
+    }
+
+    // Prepare render data
+    const data: CanvasRenderData = {
+      colorBuffer: this._colorBuffer,
+      imageColorBuffer: this._imageColorBuffer,
+      bufferWidth: this._bufferWidth,
+      bufferHeight: this._bufferHeight,
+      scale: this._scale,
+      propsWidth: this.props.width,
+      propsHeight: this.props.height,
+      backgroundColor: this.props.backgroundColor,
+    };
+
+    // Determine palette mode based on content type.
+    // See src/sixel/palette.ts for detailed documentation on palette modes.
+    //
+    // - Static images: 'cached' - palette and indexed data computed once, reused
+    // - Video/Shaders/Filters/onPaint: 'keyframe' - palette cached from first good frame,
+    //   subsequent frames re-indexed against it. Regenerates on >2% color error
+    //   or brightness gap. Fast (no quantization per frame).
+    const isVideo = (this.type as string) === 'video';
+    const isDynamic = !!this.props.onShader || !!this.props.onFilter || !!this.props.onPaint;
+    const paletteMode = (isVideo || isDynamic) ? 'keyframe' : 'cached';
+
+    // Cache key includes dimensions - same src at different sizes needs separate entries
+    const cacheKey = `${this.props.src || this.id}:${this._bufferWidth}x${this._bufferHeight}`;
+
+    // Determine dither settings for sixel mode
+    // Dynamic content benefits from dithering to reduce color banding before 256-color quantization
+    let ditherMode: DitherMode | false = false;
+    if (isDynamic) {
+      const dither = this.props.dither;
+      if (dither === undefined || dither === 'auto' || dither === true) {
+        // Default to blue-noise for dynamic sixel content
+        ditherMode = 'blue-noise';
+      } else if (typeof dither === 'string' && dither !== 'none') {
+        ditherMode = dither as DitherMode;
+      }
+    }
+    // Priority: prop > env var > default (3 bits = 8 levels per channel)
+    const ditherBits = this.props.ditherBits ?? MelkerConfig.get().ditherBits ?? 3;
+
+    this._sixelOutput = generateSixelOutput(bounds, data, capabilities, paletteMode, cacheKey, ditherMode, ditherBits);
+    if (this._sixelOutput) {
+      this._sixelOutput.elementId = this.id;
+    }
+  }
+
+  /**
+   * Get sixel output data for this canvas (if in sixel mode).
+   * Used by engine to render sixel overlays after buffer output.
+   */
+  getSixelOutput(): SixelOutputData | null {
+    return this._sixelOutput;
+  }
+
+  /**
+   * Check if this canvas is in sixel mode
+   */
+  isSixelMode(): boolean {
+    return getEffectiveGfxMode(this.props.gfxMode) === 'sixel';
   }
 
   /**
@@ -1208,9 +1432,19 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     this.props.width = width;
     this.props.height = height;
 
-    // Recalculate buffer dimensions
-    this._bufferWidth = width * 2 * this._scale;
-    this._bufferHeight = height * 3 * this._scale;
+    // Recalculate buffer dimensions based on gfx mode
+    const dims = this._calculateBufferDimensions(width, height, this._scale);
+    this._bufferWidth = dims.width;
+    this._bufferHeight = dims.height;
+    this._pixelsPerCellX = dims.pixelsPerCellX;
+    this._pixelsPerCellY = dims.pixelsPerCellY;
+
+    logger.debug('setSize buffer dimensions', {
+      terminalSize: `${width}x${height}`,
+      bufferSize: `${this._bufferWidth}x${this._bufferHeight}`,
+      pixelsPerCell: `${this._pixelsPerCellX}x${this._pixelsPerCellY}`,
+      gfxMode: getEffectiveGfxMode(this.props.gfxMode),
+    });
 
     // Reallocate color buffers
     const bufferSize = this._bufferWidth * this._bufferHeight;

@@ -12,6 +12,15 @@ import {
   createMouseEvent,
   createWheelEvent,
 } from './events.ts';
+// Sixel detection integration - see src/sixel/detect.ts for architecture docs.
+// Detection writes queries to stdout, we read responses here and route them
+// via feedDetectionInput(). This avoids orphaned stdin reads that would
+// swallow Ctrl+C and other input.
+import {
+  isDetectionInProgress,
+  feedDetectionInput,
+  checkDetectionTimeout,
+} from './sixel/detect.ts';
 
 export interface TerminalInputOptions {
   enableMouse?: boolean;
@@ -329,6 +338,9 @@ export class TerminalInputProcessor {
 
       while (this._isListening) {
         try {
+          // Check sixel detection timeout on each iteration
+          checkDetectionTimeout();
+
           // Use different reading approach based on raw mode availability
           if (this._rawModeEnabled) {
             // Raw mode: read directly from stdin
@@ -340,6 +352,15 @@ export class TerminalInputProcessor {
 
             // Process only the bytes that were actually read
             const inputData = buffer.slice(0, bytesRead);
+
+            // Check if sixel detection is in progress - feed data to it first
+            if (isDetectionInProgress()) {
+              if (feedDetectionInput(inputData)) {
+                // Data was consumed by detection, don't process as normal input
+                continue;
+              }
+            }
+
             const events = this.processRawInput(inputData);
 
             for (const event of events) {

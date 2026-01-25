@@ -8,6 +8,7 @@ import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { CanvasElement } from './canvas.ts';
+import { type SixelOutputData, getEffectiveGfxMode } from './canvas-render.ts';
 import { getLogger } from '../logging.ts';
 import { parseMelkerFile } from '../template.ts';
 import { getStringWidth } from '../char-width.ts';
@@ -2145,10 +2146,17 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     if (!canvas) {
       // Create a new Canvas element with dithering for B&W/color themes
+      // Include src prop for sixel palette caching and id for debugging
+      const canvasId = `md-img-${this._imageCanvases.size}`;
+      const isSixel = getEffectiveGfxMode() === 'sixel';
       canvas = new CanvasElement({
+        id: canvasId,
         width: imgWidth,
         height: imgHeight,
-        dither: 'auto'
+        dither: 'auto',
+        // 3-bit (8 levels) for sixel - good balance of quality and palette usage
+        ...(isSixel && { ditherBits: 3 }),
+        src: resolvedSrc,
       }, []);
 
       // Store in cache
@@ -2592,6 +2600,30 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     logger.info(`handleClick: no match found`);
     return false;
+  }
+
+  /**
+   * Get sixel outputs from embedded image canvases.
+   * Used by engine to render sixel graphics for images in markdown content.
+   */
+  getSixelOutputs(): SixelOutputData[] {
+    const outputs: SixelOutputData[] = [];
+    logger.debug('getSixelOutputs called', { canvasCount: this._imageCanvases.size });
+    for (const [key, canvas] of this._imageCanvases.entries()) {
+      const sixelOutput = canvas.getSixelOutput();
+      logger.debug('Checking canvas for sixel output', {
+        key,
+        hasSixelOutput: !!sixelOutput,
+        hasData: !!sixelOutput?.data,
+        hasBounds: !!sixelOutput?.bounds,
+        isSixelMode: canvas.isSixelMode(),
+      });
+      if (sixelOutput?.data && sixelOutput.bounds) {
+        outputs.push(sixelOutput);
+      }
+    }
+    logger.debug('getSixelOutputs returning', { outputCount: outputs.length });
+    return outputs;
   }
 }
 

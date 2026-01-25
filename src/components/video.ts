@@ -39,6 +39,7 @@ import {
   getVideoDimensions,
 } from '../video/ffmpeg.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { getGlobalPaletteCache } from '../sixel/palette.ts';
 
 // Re-export types for backwards compatibility
 export type { DitherMode } from '../video/dither.ts';
@@ -676,6 +677,9 @@ export class VideoElement extends CanvasElement {
     }
   }
 
+  // Track if we've cleared the palette cache for this video session
+  private _paletteCacheCleared = false;
+
   /**
    * Render the video element
    * Captures requestRender from context, handles auto-sizing and triggers autoplay
@@ -725,6 +729,15 @@ export class VideoElement extends CanvasElement {
     if (context.requestRender && !this.props.renderCallback) {
       logger.debug('Captured requestRender from context');
       this.setRenderCallback(context.requestRender);
+    }
+
+    // Clear stale palette cache before first sixel render
+    // This must happen before super.render() which calls _generateSixelOutput()
+    if (!this._paletteCacheCleared) {
+      const cacheKey = this.props.src || this.id;
+      getGlobalPaletteCache().invalidate(cacheKey);
+      this._paletteCacheCleared = true;
+      logger.info('Cleared stale palette cache', { cacheKey });
     }
 
     // Call parent render
@@ -860,6 +873,9 @@ export class VideoElement extends CanvasElement {
       ? src
       : (src.startsWith('/') ? src : `${Deno.cwd()}/${src}`);
 
+    // Reset palette cache flag so next render clears stale cache
+    this._paletteCacheCleared = false;
+
     this._videoSrc = resolvedSrc;
     this._videoOptions = {
       fps: 30,
@@ -958,6 +974,7 @@ export class VideoElement extends CanvasElement {
 
   /**
    * Internal method to read and render video frames from ffmpeg stdout
+   * Implements frame skipping when rendering can't keep up with playback
    */
   private async _readVideoFrames(frameWidth: number, frameHeight: number): Promise<void> {
     if (!this._videoProcess || !this._videoOptions) return;
@@ -968,12 +985,14 @@ export class VideoElement extends CanvasElement {
     let frameOffset = 0;
     const fps = this._videoOptions.fps!;
     const frameInterval = 1000 / fps;
-    let lastFrameTime = performance.now();
+
+    // Frame skipping: track where we should be vs where we are
+    const playbackStartTime = performance.now();
+    let framesDecoded = 0;
+    let framesRendered = 0;
+    let framesSkipped = 0;
 
     logger.info('Starting frame reader', { frameWidth, frameHeight, frameSize, fps });
-
-    let totalBytesRead = 0;
-    let frameCount = 0;
 
     try {
       while (this._videoPlaying) {
@@ -985,7 +1004,6 @@ export class VideoElement extends CanvasElement {
         // Handle pause
         if (this._videoPaused) {
           await new Promise(resolve => setTimeout(resolve, 50));
-          lastFrameTime = performance.now();
           continue;
         }
 
@@ -993,6 +1011,7 @@ export class VideoElement extends CanvasElement {
 
         if (done) {
           // Video ended
+          logger.info('Video playback stats', { framesDecoded, framesRendered, framesSkipped });
           if (this._videoOptions.loop) {
             // Restart the video
             reader.releaseLock();
@@ -1016,35 +1035,58 @@ export class VideoElement extends CanvasElement {
             frameBuffer.set(value.subarray(dataOffset, dataOffset + toCopy), frameOffset);
             frameOffset += toCopy;
             dataOffset += toCopy;
-            totalBytesRead += toCopy;  // Track bytes as we process them
 
             // Complete frame ready
             if (frameOffset >= frameSize) {
-              frameCount++;
-              // Timing control
-              const now = performance.now();
-              const elapsed = now - lastFrameTime;
-              if (elapsed < frameInterval) {
-                await new Promise(resolve => setTimeout(resolve, frameInterval - elapsed));
-              }
-              lastFrameTime = performance.now();
+              framesDecoded++;
+              frameOffset = 0;
 
-              // Render frame to image buffer
+              // Frame skipping logic: check if we're behind schedule
+              const now = performance.now();
+              const elapsed = now - playbackStartTime;
+              const expectedFrame = Math.floor(elapsed / frameInterval);
+
+              // Skip this frame if we're more than 1 frame behind
+              // (keep the data in buffer, but don't render it)
+              if (framesDecoded < expectedFrame - 1) {
+                framesSkipped++;
+                // Still update frame count for timestamp tracking
+                this._videoFrameCount++;
+                continue;
+              }
+
+              // If we're ahead of schedule, wait
+              const targetTime = framesDecoded * frameInterval;
+              if (elapsed < targetTime) {
+                await new Promise(resolve => setTimeout(resolve, targetTime - elapsed));
+              }
+
+              // Render this frame
               this._renderVideoFrame(frameBuffer, frameWidth, frameHeight);
               this._videoFrameCount++;
+              framesRendered++;
 
               // Callback
               if (this._videoOptions?.onFrame) {
                 this._videoOptions.onFrame(this._videoFrameCount);
               }
 
-              frameOffset = 0;
+              // Log frame skip stats periodically
+              if (framesDecoded % 100 === 0 && framesSkipped > 0) {
+                logger.debug('Frame skip stats', {
+                  decoded: framesDecoded,
+                  rendered: framesRendered,
+                  skipped: framesSkipped,
+                  skipRate: `${((framesSkipped / framesDecoded) * 100).toFixed(1)}%`,
+                });
+              }
             }
           }
         }
       }
     } finally {
       reader.releaseLock();
+      logger.info('Video playback ended', { framesDecoded, framesRendered, framesSkipped });
     }
   }
 
@@ -1088,6 +1130,13 @@ export class VideoElement extends CanvasElement {
 
     // Apply dithering if enabled
     let dither = this.props.dither;
+    const isSixel = this.isSixelMode();
+
+    // For sixel mode, default to dithering if not explicitly set
+    // This helps median-cut quantization by reducing unique color count
+    if (dither === undefined && isSixel) {
+      dither = 'auto';
+    }
 
     // Handle 'auto' mode based on config and theme
     if (dither === 'auto') {
@@ -1100,6 +1149,9 @@ export class VideoElement extends CanvasElement {
         dither = configDither as DitherMode;
       } else if (configBits !== undefined) {
         // User specified bits but not algorithm - use blue-noise for video
+        dither = 'blue-noise';
+      } else if (isSixel) {
+        // Sixel mode: always use dithering to reduce color count for better quantization
         dither = 'blue-noise';
       } else {
         // No config override - use theme-based defaults
@@ -1116,8 +1168,10 @@ export class VideoElement extends CanvasElement {
 
     if (dither && dither !== 'none') {
       // Use explicit colorDepth if set, then config, otherwise derive from theme's color support
+      // For sixel mode, default to 4 bits to ensure good palette quantization
       const config = MelkerConfig.get();
-      const bits = this.props.colorDepth ?? config.ditherBits ?? colorSupportToBits(getThemeManager().getColorSupport());
+      const sixelDefaultBits = 4; // 16 levels per channel = 4096 colors, good for median-cut
+      const bits = this.props.colorDepth ?? config.ditherBits ?? (isSixel ? sixelDefaultBits : colorSupportToBits(getThemeManager().getColorSupport()));
 
       // Determine dither mode: true defaults to 'floyd-steinberg-stable', string specifies mode
       const mode: DitherMode = typeof dither === 'boolean' ? 'floyd-steinberg-stable' : dither;

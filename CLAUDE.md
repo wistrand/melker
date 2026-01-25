@@ -33,6 +33,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | DX footguns | `agent_docs/dx-footguns.md` |
 | TUI comparison | `agent_docs/tui-comparison.md` |
 | Graphics modes | `agent_docs/gfx-modes.md` |
+| Sixel architecture | `agent_docs/sixel-architecture.md` |
 | Map example | `agent_docs/map-example.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
 | Release scheme | `agent_docs/calver-release-plan.md` |
@@ -178,6 +179,11 @@ src/
       atkinson.ts     - Atkinson algorithms
     subtitle.ts       - Subtitle handling
     waveform.ts       - Audio waveform
+  sixel/              - Sixel graphics support
+    mod.ts            - Sixel module exports
+    detect.ts         - Terminal sixel capability detection
+    encoder.ts        - Pure TypeScript sixel encoder
+    palette.ts        - Color quantization, palette caching
   chat/               - Chat utilities
     chat-fetch-util.ts - HTTP fetch helpers
   ai/                 - AI accessibility system
@@ -252,7 +258,7 @@ docs/                 - Website content (served at melker.sh)
 | `MELKER_AUTO_DITHER` | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `atkinson`, `blue-noise`, `ordered`) |
 | `MELKER_DITHER_BITS` | Color depth for auto dithering (1-8, default: theme-based) |
 | `MELKER_BLUE_NOISE_PATH` | Path to blue noise threshold matrix PNG (default: bundled `media/blue-noise-64.png`) |
-| `MELKER_GFX_MODE` | Graphics mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness) |
+| `MELKER_GFX_MODE` | Graphics mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness), `sixel` (true pixels, auto-disabled in tmux/SSH) |
 | `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
 | `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
 | `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |

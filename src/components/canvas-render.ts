@@ -7,6 +7,24 @@ import { type Bounds } from '../types.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, parseColor } from './color-utils.ts';
 import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import {
+  encodeToSixel,
+  positionedSixel,
+  quantizePalette,
+  type PaletteMode,
+  type SixelCapabilities,
+} from '../sixel/mod.ts';
+import {
+  applyFloydSteinbergDither,
+  applyFloydSteinbergStableDither,
+  applyAtkinsonDither,
+  applyAtkinsonStableDither,
+  applyBlueNoiseDither,
+  applyOrderedDither,
+  applySierraDither,
+  applySierraStableDither,
+  type DitherMode,
+} from '../video/dither.ts';
 
 // Minimal interface for canvas data needed by render functions
 export interface CanvasRenderData {
@@ -176,6 +194,255 @@ export function quantizeBlockColorsInline(
   } else if (state.qBgColor === 0 && state.qFgColor !== 0) {
     state.qBgColor = state.qFgColor;
   }
+}
+
+/**
+ * Sixel placeholder: fills region with spaces so buffer content doesn't flash before sixel overlay.
+ * The sixel overlay is drawn AFTER buffer output, covering whatever the buffer shows.
+ */
+export function renderSixelPlaceholder(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  terminalWidth: number,
+  terminalHeight: number,
+  data: CanvasRenderData
+): void {
+  // Use style background, props background, or transparent
+  const hasStyleBg = style.background !== undefined;
+  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+  const bgColor = hasStyleBg ? style.background : (propsBg ?? TRANSPARENT);
+
+  for (let ty = 0; ty < terminalHeight; ty++) {
+    for (let tx = 0; tx < terminalWidth; tx++) {
+      buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+        char: '.',
+        foreground: bgColor !== TRANSPARENT ? bgColor : 0x666666FF,
+        background: TRANSPARENT,
+      });
+    }
+  }
+}
+
+/**
+ * Sixel output data for a canvas element
+ */
+export interface SixelOutputData {
+  /** Positioned sixel sequence (includes cursor save/restore) */
+  data: string;
+  /** Canvas bounds for occlusion detection */
+  bounds: Bounds;
+  /** Element ID for tracking */
+  elementId?: string;
+}
+
+/**
+ * Scale pixel buffer using nearest-neighbor interpolation.
+ * Fast and preserves hard edges.
+ */
+function scalePixelBuffer(
+  src: Uint32Array,
+  srcWidth: number,
+  srcHeight: number,
+  dstWidth: number,
+  dstHeight: number
+): Uint32Array {
+  const dst = new Uint32Array(dstWidth * dstHeight);
+
+  const xRatio = srcWidth / dstWidth;
+  const yRatio = srcHeight / dstHeight;
+
+  for (let y = 0; y < dstHeight; y++) {
+    const srcY = Math.floor(y * yRatio);
+    const srcRowOffset = srcY * srcWidth;
+    const dstRowOffset = y * dstWidth;
+
+    for (let x = 0; x < dstWidth; x++) {
+      const srcX = Math.floor(x * xRatio);
+      dst[dstRowOffset + x] = src[srcRowOffset + srcX];
+    }
+  }
+
+  return dst;
+}
+
+/**
+ * Generate sixel output from canvas data.
+ * Returns positioned sixel sequence ready to write to terminal.
+ * Scales image to fill the terminal cell area at full pixel resolution.
+ *
+ * @param ditherMode - Optional dithering mode to apply before quantization.
+ *                     Reduces color banding for dynamic content (onPaint/onShader/onFilter).
+ * @param ditherBits - Bits per channel for dithering (default 3 = 8 levels per channel).
+ */
+export function generateSixelOutput(
+  bounds: Bounds,
+  data: CanvasRenderData,
+  capabilities: SixelCapabilities,
+  paletteMode: PaletteMode = 'cached',
+  cacheKey?: string,
+  ditherMode?: DitherMode | false,
+  ditherBits?: number
+): SixelOutputData | null {
+  if (!capabilities.supported) {
+    return null;
+  }
+
+  // Composite drawing layer over image layer
+  const pixelCount = data.bufferWidth * data.bufferHeight;
+  const composited = new Uint32Array(pixelCount);
+  let hasContent = false;
+
+  for (let i = 0; i < pixelCount; i++) {
+    const drawColor = data.colorBuffer[i];
+    const imageColor = data.imageColorBuffer[i];
+
+    // Drawing layer takes priority over image layer
+    if (drawColor !== TRANSPARENT) {
+      composited[i] = drawColor;
+      hasContent = true;
+    } else if (imageColor !== TRANSPARENT) {
+      composited[i] = imageColor;
+      hasContent = true;
+    } else {
+      // Transparent - use background color or transparent
+      const bgColor = data.backgroundColor ? parseColor(data.backgroundColor) : TRANSPARENT;
+      composited[i] = bgColor ?? TRANSPARENT;
+    }
+  }
+
+  // Skip if no content (e.g., image not yet loaded)
+  if (!hasContent) {
+    return null;
+  }
+
+  // Calculate target pixel dimensions based on terminal cell size
+  // Use min(props, bounds) to match the placeholder and other render modes
+  let terminalWidth = Math.min(data.propsWidth, bounds.width);
+  const terminalHeight = Math.min(data.propsHeight, bounds.height);
+
+  // Workaround for terminal edge rendering glitch (same as sextant path)
+  // When canvas extends to exact right edge, skip the last column to avoid artifacts
+  const engine = globalThis.melkerEngine;
+  if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
+    terminalWidth = Math.max(1, terminalWidth - 1);
+  }
+
+  const rawTargetWidth = terminalWidth * capabilities.cellWidth;
+  const rawTargetHeight = terminalHeight * capabilities.cellHeight;
+
+  // Round height DOWN to nearest multiple of 6 (sixel row height)
+  // This ensures the sixel doesn't extend beyond the intended cell bounds
+  // Without this, ceil(height/6)*6 pixels would be rendered, potentially
+  // bleeding into the next row of terminal cells
+  const targetWidth = rawTargetWidth;
+  const targetHeight = Math.floor(rawTargetHeight / 6) * 6;
+
+  // Scale composited buffer to target size if different
+  let scaledBuffer: Uint32Array = composited;
+  let finalWidth = data.bufferWidth;
+  let finalHeight = data.bufferHeight;
+
+  if (targetWidth !== data.bufferWidth || targetHeight !== data.bufferHeight) {
+    scaledBuffer = scalePixelBuffer(
+      composited,
+      data.bufferWidth,
+      data.bufferHeight,
+      targetWidth,
+      targetHeight
+    ) as Uint32Array;
+    finalWidth = targetWidth;
+    finalHeight = targetHeight;
+  }
+
+  // Apply dithering before quantization (reduces color banding for dynamic content)
+  if (ditherMode && ditherMode !== 'none') {
+    const bits = ditherBits ?? 3;  // 3 bits = 8 levels per channel
+    const pixelCount = finalWidth * finalHeight;
+
+    // Convert Uint32Array (packed RGBA) to Uint8Array (interleaved RGBA) for dithering
+    const rgba = new Uint8Array(pixelCount * 4);
+    for (let i = 0; i < pixelCount; i++) {
+      const c = scaledBuffer[i];
+      rgba[i * 4] = (c >>> 24) & 0xff;      // R
+      rgba[i * 4 + 1] = (c >>> 16) & 0xff;  // G
+      rgba[i * 4 + 2] = (c >>> 8) & 0xff;   // B
+      rgba[i * 4 + 3] = c & 0xff;           // A
+    }
+
+    // Apply selected dither algorithm
+    switch (ditherMode) {
+      case 'ordered':
+        applyOrderedDither(rgba, finalWidth, finalHeight, bits);
+        break;
+      case 'floyd-steinberg':
+        applyFloydSteinbergDither(rgba, finalWidth, finalHeight, bits);
+        break;
+      case 'floyd-steinberg-stable':
+        applyFloydSteinbergStableDither(rgba, finalWidth, finalHeight, bits);
+        break;
+      case 'sierra':
+        applySierraDither(rgba, finalWidth, finalHeight, bits);
+        break;
+      case 'sierra-stable':
+        applySierraStableDither(rgba, finalWidth, finalHeight, bits);
+        break;
+      case 'atkinson':
+        applyAtkinsonDither(rgba, finalWidth, finalHeight, bits);
+        break;
+      case 'atkinson-stable':
+        applyAtkinsonStableDither(rgba, finalWidth, finalHeight, bits);
+        break;
+      case 'blue-noise':
+      default:
+        applyBlueNoiseDither(rgba, finalWidth, finalHeight, bits);
+        break;
+    }
+
+    // Convert back to Uint32Array (packed RGBA)
+    for (let i = 0; i < pixelCount; i++) {
+      scaledBuffer[i] = packRGBA(
+        rgba[i * 4],
+        rgba[i * 4 + 1],
+        rgba[i * 4 + 2],
+        rgba[i * 4 + 3]
+      );
+    }
+  }
+
+  // Quantize to palette
+  // Use 255 max - some terminals (Konsole) have issues with color index 255
+  const maxColors = Math.min(capabilities.colorRegisters, 255);
+  const paletteResult = quantizePalette(scaledBuffer, paletteMode, maxColors, cacheKey);
+
+  // Skip if palette is empty (shouldn't happen if hasContent, but safety check)
+  if (paletteResult.colors.length === 0) {
+    return null;
+  }
+
+  // Encode to sixel
+  const sixelOutput = encodeToSixel({
+    palette: paletteResult.colors,
+    indexed: paletteResult.indexed,
+    width: finalWidth,
+    height: finalHeight,
+    transparentIndex: paletteResult.transparentIndex,
+    useRLE: true,
+  });
+
+  // Position at canvas bounds
+  const positioned = positionedSixel(sixelOutput.data, bounds.x, bounds.y);
+
+  // Return bounds that reflect actual sixel coverage (may be smaller than layout bounds)
+  return {
+    data: positioned,
+    bounds: {
+      x: bounds.x,
+      y: bounds.y,
+      width: terminalWidth,
+      height: terminalHeight,
+    },
+  };
 }
 
 /**
@@ -934,7 +1201,7 @@ export function renderToTerminal(
   data: CanvasRenderData,
   state: CanvasRenderState,
   ditheredBuffer: Uint8Array | null,
-  gfxMode: 'sextant' | 'block' | 'pattern' | 'luma'
+  gfxMode: GfxMode
 ): void {
   let terminalWidth = Math.min(data.propsWidth, bounds.width);
   const terminalHeight = Math.min(data.propsHeight, bounds.height);
@@ -943,6 +1210,13 @@ export function renderToTerminal(
   const engine = globalThis.melkerEngine;
   if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
     terminalWidth = Math.max(1, terminalWidth - 1);
+  }
+
+  // Sixel mode: fill with spaces, actual sixel output is handled by engine overlay
+  // Use same dimensions as other modes (min of props and bounds)
+  if (gfxMode === 'sixel') {
+    renderSixelPlaceholder(bounds, style, buffer, terminalWidth, terminalHeight, data);
+    return;
   }
 
   // Check for dithered rendering mode
@@ -967,12 +1241,27 @@ export function renderToTerminal(
   renderSextantToTerminal(bounds, style, buffer, data, state);
 }
 
+/** Graphics rendering mode */
+export type GfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel';
+
 /**
- * Get effective graphics mode from config and props
+ * Get effective graphics mode from config and props.
+ * Falls back to sextant if sixel is requested but not available.
  */
 export function getEffectiveGfxMode(
-  propsGfxMode?: 'sextant' | 'block' | 'pattern' | 'luma'
-): 'sextant' | 'block' | 'pattern' | 'luma' {
-  const globalGfxMode = MelkerConfig.get().gfxMode;
-  return globalGfxMode || propsGfxMode || 'sextant';
+  propsGfxMode?: GfxMode
+): GfxMode {
+  const globalGfxMode = MelkerConfig.get().gfxMode as GfxMode | undefined;
+  const result = globalGfxMode || propsGfxMode || 'sextant';
+
+  // Fall back to sextant if sixel requested but not available
+  if (result === 'sixel') {
+    const engine = globalThis.melkerEngine;
+    const capabilities = engine?.sixelCapabilities;
+    if (!capabilities?.supported) {
+      return 'sextant';
+    }
+  }
+
+  return result;
 }

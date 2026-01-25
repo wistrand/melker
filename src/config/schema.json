@@ -120,11 +120,11 @@
     },
     "render.gfxMode": {
       "type": "string",
-      "enum": ["sextant", "block", "pattern", "luma"],
+      "enum": ["sextant", "block", "pattern", "luma", "sixel"],
       "default": "sextant",
       "env": "MELKER_GFX_MODE",
       "flag": "--gfx-mode",
-      "description": "Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness)"
+      "description": "Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness), sixel (true pixels, requires terminal support)"
     },
     "headless.enabled": {
       "type": "boolean",

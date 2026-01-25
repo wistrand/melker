@@ -394,7 +394,7 @@ export class LayoutEngine {
       justifyContent: parentNode.layoutProps.justifyContent,
       alignItems: parentNode.layoutProps.alignItems,
     });
-    
+
      */
 
     const flexProps = parentNode.layoutProps;

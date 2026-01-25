@@ -141,6 +141,10 @@ import {
   type KeyboardHandlerContext,
   type RawKeyEvent,
 } from './engine-keyboard-handler.ts';
+import {
+  detectSixelCapabilities,
+  type SixelCapabilities,
+} from './sixel/mod.ts';
 
 // Initialize config logger getter (breaks circular dependency between config.ts and logging.ts)
 setLoggerGetter(() => getLogger('Config'));
@@ -224,6 +228,7 @@ export class MelkerEngine {
   private _currentSize: { width: number; height: number };
   private _isInitialized = false;
   private _isRendering = false;  // Render lock to prevent re-render during render
+  private _pendingRender = false;  // Track if render was requested during _isRendering
   private _renderCount = 0;
   private _customResizeHandlers: Array<(event: { previousSize: { width: number; height: number }, newSize: { width: number; height: number }, timestamp: number }) => void> = [];
   private _mountHandlers: Array<() => void | Promise<void>> = [];
@@ -264,6 +269,15 @@ export class MelkerEngine {
 
   // Track which dialogs were open in previous frame (for auto force-render on dialog open)
   private _previouslyOpenDialogIds = new Set<string>();
+
+  // Sixel graphics capabilities (detected at startup)
+  private _sixelCapabilities?: SixelCapabilities;
+
+  // Track previous sixel bounds for clearing on scroll/move
+  private _previousSixelBounds: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+  // Track if scroll happened this frame (for Konsole sixel workaround)
+  private _scrollHappenedThisFrame = false;
 
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
     // Get terminal settings from config
@@ -643,6 +657,7 @@ export class MelkerEngine {
           const handled = target.handleWheel(event.deltaX || 0, event.deltaY || 0);
           this._logger?.debug(`Engine wheel: handleWheel returned ${handled}`);
           if (handled) {
+            this._scrollHappenedThisFrame = true;
             if (this._options.autoRender) {
               this.render();
             }
@@ -652,6 +667,7 @@ export class MelkerEngine {
       }
       // Fall through to default scroll handler
       this._logger?.debug(`Engine wheel: falling through to scroll-handler`);
+      this._scrollHappenedThisFrame = true;
       this._scrollHandler.handleScrollEvent(event);
     });
 
@@ -732,14 +748,33 @@ export class MelkerEngine {
       stdout: Deno.stdout.isTerminal() ? 'tty' : 'pipe',
     });
 
-    // Start event system if enabled (raw mode must be enabled BEFORE terminal setup)
+    // Setup terminal FIRST (alternate screen) before sixel detection
+    // This ensures any late terminal query responses go to the alternate screen
+    // (which gets cleared on render) rather than appearing on the main screen
+    this._setupTerminal();
+
+    // Start event system BEFORE sixel detection
+    // Detection queries are written to terminal and responses are read by the input loop
     if (this._options.enableEvents && this._inputProcessor) {
       await this._inputProcessor.startListening();
       this._setupEventHandlers();
     }
 
-    // Setup terminal (after raw mode is established)
-    this._setupTerminal();
+    // Detect sixel capabilities - queries are written here, responses read by input loop
+    try {
+      const skipQueries = isRunningHeadless() || !Deno.stdout.isTerminal();
+      this._sixelCapabilities = await detectSixelCapabilities(false, skipQueries);
+      this._logger?.info('Sixel detection', {
+        supported: this._sixelCapabilities.supported,
+        colors: this._sixelCapabilities.colorRegisters,
+        cellSize: `${this._sixelCapabilities.cellWidth}x${this._sixelCapabilities.cellHeight}`,
+        method: this._sixelCapabilities.detectionMethod,
+        multiplexer: this._sixelCapabilities.inMultiplexer,
+        remote: this._sixelCapabilities.isRemote,
+      });
+    } catch (error) {
+      this._logger?.warn('Sixel detection failed', { error: String(error) });
+    }
 
     // Re-query terminal size after setup (alternate screen switch may affect reported size)
     this._currentSize = this._getTerminalSize();
@@ -815,10 +850,12 @@ export class MelkerEngine {
 
     // Render lock: prevent re-render during render (e.g., onPaint callback)
     if (this._isRendering) {
-      this._logger?.debug('Skipping render - already rendering (render lock active)');
+      this._pendingRender = true;  // Mark that another render is waiting
+      this._logger?.debug('Render requested during render - marking pending');
       return;
     }
     this._isRendering = true;
+    this._pendingRender = false;  // Clear pending flag at start of render
 
     try {
     const renderStartTime = performance.now();
@@ -1022,6 +1059,13 @@ export class MelkerEngine {
     } finally {
       this._isRendering = false;
       this._logger?.trace('render() finished, _isRendering = false');
+
+      // If a render was requested while we were rendering, trigger it now
+      if (this._pendingRender) {
+        this._pendingRender = false;
+        // Use queueMicrotask to avoid stack overflow from synchronous recursion
+        queueMicrotask(() => this.render());
+      }
     }
   }
 
@@ -1034,9 +1078,11 @@ export class MelkerEngine {
     }
 
     if (this._isRendering) {
+      this._pendingRender = true;
       return;
     }
     this._isRendering = true;
+    this._pendingRender = false;
 
     try {
       const renderStartTime = performance.now();
@@ -1075,6 +1121,11 @@ export class MelkerEngine {
       }
     } finally {
       this._isRendering = false;
+
+      if (this._pendingRender) {
+        this._pendingRender = false;
+        queueMicrotask(() => this.render());
+      }
     }
   }
 
@@ -1099,10 +1150,12 @@ export class MelkerEngine {
 
     // Render lock: prevent re-render during render
     if (this._isRendering) {
-      this._logger?.debug('Skipping forceRender - already rendering (render lock active)');
+      this._pendingRender = true;  // Mark that another render is waiting
+      this._logger?.debug('ForceRender requested during render - marking pending');
       return;
     }
     this._isRendering = true;
+    this._pendingRender = false;  // Clear pending flag at start of render
 
     try {
     this._renderCount++;
@@ -1223,6 +1276,12 @@ export class MelkerEngine {
     updateModalFocusTraps(this._getModalFocusTrapContext());
     } finally {
       this._isRendering = false;
+
+      // If a render was requested while we were rendering, trigger it now
+      if (this._pendingRender) {
+        this._pendingRender = false;
+        queueMicrotask(() => this.render());
+      }
     }
   }
 
@@ -1381,15 +1440,253 @@ export class MelkerEngine {
   }
 
   /**
+   * Collect sixel outputs from all canvas elements in the document.
+   * Returns array of { data, bounds } for each sixel.
+   */
+  private _collectSixelOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> {
+    if (!this._sixelCapabilities?.supported) {
+      return [];
+    }
+
+    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> = [];
+
+    // Traverse document tree to find canvas elements with sixel output
+    const collectFromElement = (element: Element): void => {
+      // Check if this is a canvas element with sixel output
+      if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
+        const canvas = element as { getSixelOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number } } | null };
+        if (canvas.getSixelOutput) {
+          const sixelOutput = canvas.getSixelOutput();
+          if (sixelOutput?.data && sixelOutput.bounds) {
+            outputs.push({ data: sixelOutput.data, bounds: sixelOutput.bounds });
+          }
+        }
+      }
+
+      // Check if this is a markdown element with embedded image canvases
+      if (element.type === 'markdown') {
+        const markdown = element as { getSixelOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> };
+        if (markdown.getSixelOutputs) {
+          const sixelOutputs = markdown.getSixelOutputs();
+          for (const output of sixelOutputs) {
+            if (output?.data && output.bounds) {
+              outputs.push({ data: output.data, bounds: output.bounds });
+            }
+          }
+        }
+      }
+
+      // Recurse into children
+      if (element.children) {
+        for (const child of element.children) {
+          collectFromElement(child);
+        }
+      }
+    };
+
+    if (this._document.root) {
+      collectFromElement(this._document.root);
+    }
+
+    if (outputs.length > 0) {
+      this._logger?.debug('Collected sixel outputs', { count: outputs.length });
+    }
+
+    return outputs;
+  }
+
+  /**
+   * Generate a blank/clear sixel to erase graphics at a specific position.
+   * This overwrites any existing sixel graphics with transparent pixels.
+   */
+  private _generateClearSixel(
+    x: number,
+    y: number,
+    widthChars: number,
+    heightChars: number
+  ): string {
+    if (!this._sixelCapabilities) return '';
+
+    const cellWidth = this._sixelCapabilities.cellWidth || 8;
+    const cellHeight = this._sixelCapabilities.cellHeight || 16;
+
+    const pixelWidth = widthChars * cellWidth;
+    const rawPixelHeight = heightChars * cellHeight;
+
+    // Round height DOWN to nearest multiple of 6 (sixel row height)
+    // This matches the content sixel dimensions and ensures we don't
+    // draw black pixels into terminal rows below the intended bounds
+    const pixelHeight = Math.floor(rawPixelHeight / 6) * 6;
+
+    // Sixel rows are 6 pixels tall
+    const sixelRows = pixelHeight / 6;
+
+    // Build a blank sixel: transparent pixels (color 0, no data = blank)
+    // DCS P1;P2;P3 q <data> ST
+    // P1=0 (normal aspect), P2=0 (no background), P3=0 (horizontal grid)
+    // Use "raster attributes" to set size: " Pan ; Pad ; Ph ; Pv
+    // Pan=1, Pad=1 (aspect ratio 1:1), Ph=width, Pv=height
+
+    let sixel = '';
+    // Position cursor
+    sixel += `\x1b[${y + 1};${x + 1}H`;
+    // Start sixel sequence with raster attributes
+    sixel += `\x1bP0;0;0q"1;1;${pixelWidth};${pixelHeight}`;
+    // Define color 0 as transparent/background (black with 0% intensity works as clear)
+    sixel += '#0;2;0;0;0';
+    // Select color 0
+    sixel += '#0';
+    // Fill each row with solid color 0 (character '~' = 0x7E = 63 = all 6 pixels ON)
+    // Using '?' (all off) might be treated as transparent, so we use solid black instead
+    // Use RLE: !<count><char>
+    const solidRow = `!${pixelWidth}~`;
+    for (let row = 0; row < sixelRows; row++) {
+      sixel += solidRow;
+      if (row < sixelRows - 1) {
+        sixel += '-'; // Move to next sixel row
+      }
+    }
+    // End sixel sequence
+    sixel += '\x1b\\';
+
+    return sixel;
+  }
+
+  /**
+   * Clear areas where sixels were previously rendered but are no longer present.
+   * This prevents "ghost" sixels when content scrolls or moves.
+   */
+  private _clearStaleSixelAreas(
+    currentBounds: Array<{ x: number; y: number; width: number; height: number }>
+  ): void {
+    if (this._previousSixelBounds.length === 0) {
+      return;
+    }
+
+    // Find areas in previous bounds that don't overlap with current bounds
+    const staleBounds: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+    for (const prev of this._previousSixelBounds) {
+      let isStale = true;
+      for (const curr of currentBounds) {
+        // Check if previous bounds match current bounds (same position and size)
+        if (prev.x === curr.x && prev.y === curr.y &&
+            prev.width === curr.width && prev.height === curr.height) {
+          isStale = false;
+          break;
+        }
+      }
+      if (isStale) {
+        staleBounds.push(prev);
+      }
+    }
+
+    if (staleBounds.length === 0) {
+      return;
+    }
+
+    this._logger?.debug('Clearing stale sixel areas', {
+      count: staleBounds.length,
+      staleBounds,
+      previousCount: this._previousSixelBounds.length,
+      currentCount: currentBounds.length,
+    });
+
+    // Clear stale areas by outputting blank sixels
+    // This overwrites the old sixel graphics with transparent/blank pixels
+    let clearOutput = '';
+    for (const bounds of staleBounds) {
+      clearOutput += this._generateClearSixel(bounds.x, bounds.y, bounds.width, bounds.height);
+    }
+
+    if (clearOutput) {
+      this._writeAllSync(textEncoder.encode(clearOutput));
+    }
+  }
+
+  /**
+   * Output sixel graphics overlays after buffer rendering.
+   * Sixel data bypasses the buffer and is positioned directly on the terminal.
+   */
+  private _renderSixelOverlays(): void {
+    if (!this._sixelCapabilities?.supported) {
+      this._logger?.debug('Sixel overlays skipped - not supported');
+      return;
+    }
+
+    // Check if any overlays are active (dropdowns, dialogs, tooltips, etc.)
+    // Sixel graphics render on top of everything, so we must hide them when
+    // overlays are visible to prevent sixels from obscuring the overlay content.
+    if (this._renderer?.hasVisibleOverlays()) {
+      this._logger?.debug('Sixel overlays skipped - UI overlays active');
+      // Clear any previously rendered sixels so they don't obscure the overlay
+      this._clearStaleSixelAreas([]);
+      this._previousSixelBounds = [];
+      return;
+    }
+
+    // Note: We intentionally DO NOT skip sixel rendering when _pendingRender is true.
+    // Video playback relies on sixel rendering every frame - skipping would show only
+    // the first frame. The _pendingRender optimization applies to the main buffer
+    // rendering, not sixel overlays.
+
+    const sixelOutputs = this._collectSixelOutputs();
+    this._logger?.debug('Sixel outputs collected', {
+      count: sixelOutputs.length,
+      bounds: sixelOutputs.map(o => o.bounds),
+      previousBounds: this._previousSixelBounds,
+    });
+
+    // Extract current bounds
+    const currentBounds = sixelOutputs.map(o => o.bounds);
+
+    // Clear areas where sixels were previously rendered but moved/removed
+    this._clearStaleSixelAreas(currentBounds);
+
+    // Update previous bounds for next frame
+    this._previousSixelBounds = currentBounds;
+
+    if (sixelOutputs.length === 0) {
+      return;
+    }
+
+    // Output all sixel data
+    // Each sixel output already includes cursor positioning
+    const combined = sixelOutputs.map(o => o.data).join('');
+    this._writeAllSync(textEncoder.encode(combined));
+
+    this._logger?.debug('Rendered sixel overlays', { count: sixelOutputs.length });
+  }
+
+  /**
    * Optimized rendering that only updates changed parts of the terminal
    */
   private _renderOptimized(): void {
     if (typeof Deno !== 'undefined') {
-      const differences = this._buffer.swapAndGetDiff();
+      // Konsole workaround: force full redraw when scrolling with sixel visible
+      // Konsole has a right-edge rendering quirk that leaves artifacts when using diff-based updates
+      const hasKonsoleQuirk = this._sixelCapabilities?.quirks?.includes('konsole-sixel-edge');
+      const hasSixelVisible = this._previousSixelBounds.length > 0;
+      const needsForceRedraw = hasKonsoleQuirk && this._scrollHappenedThisFrame && hasSixelVisible;
 
-      // Only render if there are actual changes
+      // Reset scroll flag after checking
+      this._scrollHappenedThisFrame = false;
+
+      // Clear sixel areas completely before force redraw to remove all artifacts
+      if (needsForceRedraw && this._previousSixelBounds.length > 0) {
+        this._clearStaleSixelAreas([]);
+        this._previousSixelBounds = [];
+      }
+
+      const differences = needsForceRedraw
+        ? this._buffer.forceRedraw()
+        : this._buffer.swapAndGetDiff();
+
+      // Only render buffer if there are actual changes
       if (differences.length === 0) {
-        // Still notify debug clients even when no changes to render
+        // Still render sixel overlays (content may have changed even if buffer hasn't)
+        this._renderSixelOverlays();
+        // Notify debug clients
         this._debugServer?.notifyRenderComplete();
         return;
       }
@@ -1401,6 +1698,13 @@ export class MelkerEngine {
           return;
         }
 
+        // If overlays are visible, clear sixels BEFORE outputting buffer
+        // This ensures the dropdown/dialog is visible immediately without sixel interference
+        if (this._renderer?.hasVisibleOverlays() && this._previousSixelBounds.length > 0) {
+          this._clearStaleSixelAreas([]);
+          this._previousSixelBounds = [];
+        }
+
         // Begin synchronized output to reduce flicker
         const finalOutput = this._options.synchronizedOutput
           ? ANSI.beginSync + output + ANSI.endSync
@@ -1408,6 +1712,9 @@ export class MelkerEngine {
 
         this._writeAllSync(textEncoder.encode(finalOutput));
       }
+
+      // Render sixel overlays after buffer output
+      this._renderSixelOverlays();
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
@@ -1447,6 +1754,12 @@ export class MelkerEngine {
    */
   private _renderFullScreen(): void {
     if (typeof Deno !== 'undefined') {
+      // If overlays are visible, clear sixels BEFORE full screen redraw
+      if (this._renderer?.hasVisibleOverlays() && this._previousSixelBounds.length > 0) {
+        this._clearStaleSixelAreas([]);
+        this._previousSixelBounds = [];
+      }
+
       // Begin synchronized output for full screen redraw
       let clearAndDrawOutput = ANSI.clearScreen + ANSI.cursorHome;
 
@@ -1469,6 +1782,9 @@ export class MelkerEngine {
         : clearAndDrawOutput;
 
       this._writeAllSync(textEncoder.encode(finalOutput));
+
+      // Render sixel overlays after buffer output
+      this._renderSixelOverlays();
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
@@ -1763,6 +2079,20 @@ export class MelkerEngine {
    */
   get document(): Document {
     return this._document;
+  }
+
+  /**
+   * Get sixel graphics capabilities (or undefined if not detected)
+   */
+  get sixelCapabilities(): SixelCapabilities | undefined {
+    return this._sixelCapabilities;
+  }
+
+  /**
+   * Check if sixel graphics are available
+   */
+  get isSixelAvailable(): boolean {
+    return this._sixelCapabilities?.supported ?? false;
   }
 
   /**

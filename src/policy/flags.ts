@@ -371,8 +371,10 @@ const ALWAYS_ALLOWED_ENV = [
   // Basic terminal/system vars
   'HOME', 'USERPROFILE', 'TERM', 'COLORTERM', 'COLORFGBG', 'NO_COLOR', 'PREFIX',
   'TMPDIR', 'TEMP', 'TMP', 'PATH',
-  // Terminal identification (for sixel detection)
+  // Terminal identification (for sixel/kitty detection)
   'TERM_PROGRAM', 'VTE_VERSION', 'WT_SESSION',
+  // Kitty graphics protocol detection
+  'KITTY_WINDOW_ID', 'WEZTERM_PANE', 'GHOSTTY_RESOURCES_DIR',
   // Multiplexer detection (tmux/screen - sixel disabled in multiplexers)
   'TMUX', 'STY',
   // SSH session detection (for sixel bandwidth considerations)

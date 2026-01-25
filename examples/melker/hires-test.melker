@@ -1,0 +1,107 @@
+<melker>
+  <title>Graphics Modes and Dithering Demo</title>
+
+  <policy>
+  {
+    "name": "GFX Modes Demo",
+    "permissions": { "shader": true, "net": ["samesite"] }
+  }
+  </policy>
+
+  <style>
+    #root {
+      display: flex;
+      flex-direction: column;
+      padding: 1;
+    }
+    .row {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+      margin-bottom: 1;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      border: none;
+      padding: 1;
+    }
+    .label {
+      text-align: center;
+      margin-bottom: 1;
+    }
+    .controls {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+      align-items: center;
+      margin-bottom: 1;
+    }
+  </style>
+
+  <container id="root" scrollable="true">
+    <text style="text-align: center; margin-bottom: 1">hires test</text>
+
+    <!-- Rotation control -->
+    <container class="controls">
+      <text>Rotation:</text>
+      <slider id="angle-slider" min="-180" max="180" value="0" step="5" showValue="true" style="width: 80" onChange="$app.setAngle(event.value)" />
+      <button label="Reset" onClick="$app.resetAngle()" />
+    </container>
+
+    <container class="card">
+      <text class="label">hires</text>
+      <img src="../../media/melker-128.png" width="32" dither="auto" gfxMode="hires" onFilter="$app.rotate" />
+    </container>
+      <container class="card">
+          <text class="label">hires</text>
+          <img src="../../media/melker-128.png" width="31" dither="auto" gfxMode="hires" onFilter="$app.rotate" />
+      </container>
+      <container class="card">
+          <text class="label">hires</text>
+          <img src="../../media/melker-128.png" width="30" dither="auto" gfxMode="hires" onFilter="$app.rotate" />
+      </container>
+      <container class="card">
+          <text class="label">hires</text>
+          <img src="../../media/melker-128.png" width="29" dither="auto" gfxMode="hires" onFilter="$app.rotate" />
+      </container>
+  </container>
+
+  <script type="typescript">
+    let angle = 0;
+    let rad = angle * Math.PI / 180;
+    let cosrad = Math.cos(rad);
+    let sinrad = Math.sin(rad);
+
+    export function setAngle(value: string) {
+      angle = parseFloat(value);
+      rad = angle * Math.PI / 180;
+      cosrad = Math.cos(rad);
+      sinrad = Math.sin(rad);
+      // Re-apply filter to all images
+      $melker.querySelectorAll('img').forEach((img) => img.refreshImage?.());
+    }
+
+    export function resetAngle() {
+      setAngle('0');
+      $melker.getElementById('angle-slider').props.value = 0;
+    }
+
+    export function rotate(x: number, y: number, _time: number, resolution: { width: number; height: number; pixelAspect: number }, source: { getPixel: (x: number, y: number) => [number, number, number, number] | null }) {
+      const cx = resolution.width / 2;
+      const cy = resolution.height / 2;
+      const aspect = resolution.pixelAspect;
+
+      // Translate to center
+      const dx = x - cx;
+      const dy = (y - cy) / aspect;  // Convert to visual space
+
+      // Rotate in visual space
+      const rx = dx * cosrad - dy * sinrad + cx;
+      const ry = (dx * sinrad + dy * cosrad) * aspect + cy;  // Back to pixel space
+
+      const pixel = source.getPixel(Math.floor(rx), Math.floor(ry));
+      return pixel || [0, 0, 0, 0];
+    }
+  </script>
+</melker>

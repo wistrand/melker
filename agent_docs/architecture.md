@@ -187,7 +187,7 @@ Keystroke → Update state → Render to buffer (cached bounds) → Output diff 
                          Schedule full render (16ms debounce)
 ```
 
-Fast render provides ~2ms latency for typing. See `agent_docs/fast-input-render-plan.md` for details.
+Fast render provides ~2ms latency for typing. See `agent_docs/fast-input-render.md` for details.
 
 ## Style Inheritance
 

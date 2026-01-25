@@ -33,10 +33,12 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | DX footguns | `agent_docs/dx-footguns.md` |
 | TUI comparison | `agent_docs/tui-comparison.md` |
 | Graphics modes | `agent_docs/gfx-modes.md` |
+| Graphics architecture | `agent_docs/graphics-architecture.md` |
 | Sixel architecture | `agent_docs/sixel-architecture.md` |
+| Kitty architecture | `agent_docs/kitty-architecture.md` |
 | Map example | `agent_docs/map-example.md` |
 | Project timeline | `agent_docs/project-timeline.md` |
-| Release scheme | `agent_docs/calver-release-plan.md` |
+| Release scheme | `agent_docs/calver-release.md` |
 | Examples | `examples/melker/*.melker` |
 | **AI Agent Skill** | `skills/creating-melker-apps/` |
 

@@ -145,6 +145,10 @@ import {
   detectSixelCapabilities,
   type SixelCapabilities,
 } from './sixel/mod.ts';
+import {
+  detectKittyCapabilities,
+  type KittyCapabilities,
+} from './kitty/mod.ts';
 
 // Initialize config logger getter (breaks circular dependency between config.ts and logging.ts)
 setLoggerGetter(() => getLogger('Config'));
@@ -273,8 +277,14 @@ export class MelkerEngine {
   // Sixel graphics capabilities (detected at startup)
   private _sixelCapabilities?: SixelCapabilities;
 
+  // Kitty graphics capabilities (detected at startup)
+  private _kittyCapabilities?: KittyCapabilities;
+
   // Track previous sixel bounds for clearing on scroll/move
   private _previousSixelBounds: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+  // Track previous kitty image IDs for cleanup
+  private _previousKittyImageIds: number[] = [];
 
   // Track if scroll happened this frame (for Konsole sixel workaround)
   private _scrollHappenedThisFrame = false;
@@ -774,6 +784,21 @@ export class MelkerEngine {
       });
     } catch (error) {
       this._logger?.warn('Sixel detection failed', { error: String(error) });
+    }
+
+    // Detect kitty capabilities - only if sixel not supported (kitty is preferred)
+    try {
+      const skipQueries = isRunningHeadless() || !Deno.stdout.isTerminal();
+      this._kittyCapabilities = await detectKittyCapabilities(false, skipQueries);
+      this._logger?.info('Kitty detection', {
+        supported: this._kittyCapabilities.supported,
+        method: this._kittyCapabilities.detectionMethod,
+        terminal: this._kittyCapabilities.terminalProgram,
+        multiplexer: this._kittyCapabilities.inMultiplexer,
+        remote: this._kittyCapabilities.isRemote,
+      });
+    } catch (error) {
+      this._logger?.warn('Kitty detection failed', { error: String(error) });
     }
 
     // Re-query terminal size after setup (alternate screen switch may affect reported size)
@@ -1659,6 +1684,122 @@ export class MelkerEngine {
   }
 
   /**
+   * Collect kitty outputs from all canvas elements in the document.
+   * Returns array of { data, bounds, imageId } for each kitty image.
+   */
+  private _collectKittyOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> {
+    if (!this._kittyCapabilities?.supported) {
+      return [];
+    }
+
+    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> = [];
+
+    // Traverse document tree to find canvas elements with kitty output
+    const collectFromElement = (element: Element): void => {
+      // Check if this is a canvas element with kitty output
+      if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
+        const canvas = element as { getKittyOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean } | null };
+        if (canvas.getKittyOutput) {
+          const kittyOutput = canvas.getKittyOutput();
+          if (kittyOutput?.data && kittyOutput.bounds) {
+            outputs.push({ data: kittyOutput.data, bounds: kittyOutput.bounds, imageId: kittyOutput.imageId, fromCache: kittyOutput.fromCache });
+          }
+        }
+      }
+
+      // Check if this is a markdown element with embedded image canvases
+      if (element.type === 'markdown') {
+        const markdown = element as { getKittyOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> };
+        if (markdown.getKittyOutputs) {
+          const kittyOutputs = markdown.getKittyOutputs();
+          for (const output of kittyOutputs) {
+            if (output?.data && output.bounds) {
+              outputs.push({ data: output.data, bounds: output.bounds, imageId: output.imageId, fromCache: output.fromCache });
+            }
+          }
+        }
+      }
+
+      // Recurse into children
+      if (element.children) {
+        for (const child of element.children) {
+          collectFromElement(child);
+        }
+      }
+    };
+
+    if (this._document.root) {
+      collectFromElement(this._document.root);
+    }
+
+    if (outputs.length > 0) {
+      this._logger?.debug('Collected kitty outputs', { count: outputs.length });
+    }
+
+    return outputs;
+  }
+
+  /**
+   * Output kitty graphics overlays after buffer rendering.
+   * Kitty data bypasses the buffer and is positioned directly on the terminal.
+   */
+  private _renderKittyOverlays(): void {
+    if (!this._kittyCapabilities?.supported) {
+      this._logger?.debug('Kitty overlays skipped - not supported');
+      return;
+    }
+
+    // Check if any overlays are active (dropdowns, dialogs, tooltips, etc.)
+    // Kitty graphics render on top of everything, so we must hide them when
+    // overlays are visible to prevent kitty images from obscuring the overlay content.
+    if (this._renderer?.hasVisibleOverlays()) {
+      this._logger?.debug('Kitty overlays skipped - UI overlays active');
+      // Delete any previously rendered kitty images so they don't obscure the overlay
+      if (this._previousKittyImageIds.length > 0) {
+        const deleteCommands = this._previousKittyImageIds.map(id => `\x1b_Ga=d,d=i,i=${id},q=2\x1b\\`).join('');
+        this._writeAllSync(textEncoder.encode(deleteCommands));
+        this._previousKittyImageIds = [];
+      }
+      return;
+    }
+
+    const kittyOutputs = this._collectKittyOutputs();
+    this._logger?.debug('Kitty outputs collected', {
+      count: kittyOutputs.length,
+      bounds: kittyOutputs.map(o => o.bounds),
+      previousIds: this._previousKittyImageIds,
+    });
+
+    // Extract current image IDs
+    const currentImageIds = kittyOutputs.map(o => o.imageId);
+
+    // Filter to only outputs that need to be sent (not from cache)
+    // Cached outputs already have their image displayed with the same stable ID
+    const outputsToSend = kittyOutputs.filter(o => !o.fromCache);
+
+    // Output new/changed images - uses stable IDs so Kitty replaces in-place
+    // This eliminates flicker from the old display+delete cycle
+    if (outputsToSend.length > 0) {
+      // Each kitty output already includes cursor positioning
+      const combined = outputsToSend.map(o => o.data).join('');
+      this._writeAllSync(textEncoder.encode(combined));
+      this._logger?.debug('Rendered kitty overlays', { count: outputsToSend.length, cached: kittyOutputs.length - outputsToSend.length });
+    }
+
+    // Delete stale images (elements that were removed, not just updated)
+    // With stable IDs, an element keeps the same ID while updating content
+    const removedIds = this._previousKittyImageIds.filter(id => !currentImageIds.includes(id));
+    if (removedIds.length > 0) {
+      const deleteCommands = removedIds.map(id => `\x1b_Ga=d,d=i,i=${id},q=2\x1b\\`).join('');
+      this._writeAllSync(textEncoder.encode(deleteCommands));
+      this._logger?.debug('Deleted stale kitty images', { ids: removedIds });
+    }
+
+    // Update previous IDs for next frame
+    this._previousKittyImageIds = currentImageIds;
+  }
+
+  /**
    * Optimized rendering that only updates changed parts of the terminal
    */
   private _renderOptimized(): void {
@@ -1684,8 +1825,9 @@ export class MelkerEngine {
 
       // Only render buffer if there are actual changes
       if (differences.length === 0) {
-        // Still render sixel overlays (content may have changed even if buffer hasn't)
+        // Still render graphics overlays (content may have changed even if buffer hasn't)
         this._renderSixelOverlays();
+        this._renderKittyOverlays();
         // Notify debug clients
         this._debugServer?.notifyRenderComplete();
         return;
@@ -1698,11 +1840,18 @@ export class MelkerEngine {
           return;
         }
 
-        // If overlays are visible, clear sixels BEFORE outputting buffer
-        // This ensures the dropdown/dialog is visible immediately without sixel interference
-        if (this._renderer?.hasVisibleOverlays() && this._previousSixelBounds.length > 0) {
-          this._clearStaleSixelAreas([]);
-          this._previousSixelBounds = [];
+        // If overlays are visible, clear graphics BEFORE outputting buffer
+        // This ensures the dropdown/dialog is visible immediately without graphics interference
+        if (this._renderer?.hasVisibleOverlays()) {
+          if (this._previousSixelBounds.length > 0) {
+            this._clearStaleSixelAreas([]);
+            this._previousSixelBounds = [];
+          }
+          if (this._previousKittyImageIds.length > 0) {
+            const deleteCommands = this._previousKittyImageIds.map(id => `\x1b_Ga=d,d=i,i=${id},q=2\x1b\\`).join('');
+            this._writeAllSync(textEncoder.encode(deleteCommands));
+            this._previousKittyImageIds = [];
+          }
         }
 
         // Begin synchronized output to reduce flicker
@@ -1713,8 +1862,9 @@ export class MelkerEngine {
         this._writeAllSync(textEncoder.encode(finalOutput));
       }
 
-      // Render sixel overlays after buffer output
+      // Render graphics overlays after buffer output
       this._renderSixelOverlays();
+      this._renderKittyOverlays();
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
@@ -1754,10 +1904,17 @@ export class MelkerEngine {
    */
   private _renderFullScreen(): void {
     if (typeof Deno !== 'undefined') {
-      // If overlays are visible, clear sixels BEFORE full screen redraw
-      if (this._renderer?.hasVisibleOverlays() && this._previousSixelBounds.length > 0) {
-        this._clearStaleSixelAreas([]);
-        this._previousSixelBounds = [];
+      // If overlays are visible, clear graphics BEFORE full screen redraw
+      if (this._renderer?.hasVisibleOverlays()) {
+        if (this._previousSixelBounds.length > 0) {
+          this._clearStaleSixelAreas([]);
+          this._previousSixelBounds = [];
+        }
+        if (this._previousKittyImageIds.length > 0) {
+          const deleteCommands = this._previousKittyImageIds.map(id => `\x1b_Ga=d,d=i,i=${id},q=2\x1b\\`).join('');
+          this._writeAllSync(textEncoder.encode(deleteCommands));
+          this._previousKittyImageIds = [];
+        }
       }
 
       // Begin synchronized output for full screen redraw
@@ -1783,8 +1940,9 @@ export class MelkerEngine {
 
       this._writeAllSync(textEncoder.encode(finalOutput));
 
-      // Render sixel overlays after buffer output
+      // Render graphics overlays after buffer output
       this._renderSixelOverlays();
+      this._renderKittyOverlays();
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
@@ -2093,6 +2251,20 @@ export class MelkerEngine {
    */
   get isSixelAvailable(): boolean {
     return this._sixelCapabilities?.supported ?? false;
+  }
+
+  /**
+   * Get kitty graphics capabilities (or undefined if not detected)
+   */
+  get kittyCapabilities(): KittyCapabilities | undefined {
+    return this._kittyCapabilities;
+  }
+
+  /**
+   * Check if kitty graphics are available
+   */
+  get isKittyAvailable(): boolean {
+    return this._kittyCapabilities?.supported ?? false;
   }
 
   /**

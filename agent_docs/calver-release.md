@@ -1,4 +1,4 @@
-# CalVer Release Plan
+# CalVer Release Scheme
 
 ## Overview
 

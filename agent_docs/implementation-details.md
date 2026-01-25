@@ -35,7 +35,7 @@ Input and Textarea components use a fast render path for immediate visual feedba
 
 Inputs inside an open dialog still use fast render.
 
-See `agent_docs/fast-input-render-plan.md` for full architecture.
+See `agent_docs/fast-input-render.md` for full architecture.
 
 ## Dirty Row Tracking
 

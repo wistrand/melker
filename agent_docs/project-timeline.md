@@ -135,7 +135,7 @@ Development history from git commits.
 - File browser improvements: path navigation, permissions display
 - Key Features linked to documentation
 - Layout and rendering refinements
-- CalVer release scheme documented (`agent_docs/calver-release-plan.md`)
+- CalVer release scheme documented (`agent_docs/calver-release.md`)
 - Documentation cleanup: removed outdated plan docs (table-component-plan, lint-mode-plan, signing-plan)
 - Updated architecture.md and melker-file-format.md with slider, file-browser, data-table components
 

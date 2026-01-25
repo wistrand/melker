@@ -7,7 +7,7 @@ Controls how canvas/image pixels are rendered to terminal characters.
 Terminal character cells are typically taller than wide, so sextant pixels (2 wide × 3 tall per cell) are not square. The `canvas.getPixelAspectRatio()` method returns the correct ratio for aspect-correct drawing.
 
 **Calculation:**
-- Sixel mode: 1.0 (square pixels at native resolution)
+- Sixel/Kitty modes: 1.0 (square pixels at native resolution)
 - Other modes: `(3 * cellWidth) / (2 * cellHeight)` when detected, else `(2/3) * charAspectRatio` prop
 
 Cell size is detected via WindowOps query at startup and used even without sixel support.
@@ -135,6 +135,55 @@ True pixel graphics via DEC Sixel protocol - native pixel rendering without char
 - Multiplexer detection via `$TMUX`, `$STY`
 - SSH detection via `$SSH_CLIENT`, `$SSH_CONNECTION`, `$SSH_TTY`
 
+### kitty
+
+True pixel graphics via Kitty Graphics Protocol - modern terminal graphics with true alpha blending.
+
+**Best for:** High-quality images, photos, video on Kitty-compatible terminals
+
+**Requirements:**
+- Terminal with Kitty graphics support (Kitty, Ghostty, WezTerm, Konsole)
+- Not running in tmux/screen (multiplexers don't pass Kitty protocol)
+
+**How it works:**
+- Detects Kitty support at startup via `a=q` query action
+- Renders canvas content to RGBA pixel data
+- Encodes as base64 with chunking (max 4096 bytes per chunk)
+- Outputs Kitty data as overlay after buffer rendering
+- Falls back to sextant if Kitty not available
+
+**Advantages over sixel:**
+- True 32-bit RGBA (no quantization needed)
+- Better alpha blending
+- PNG passthrough support (future)
+- Image ID-based cleanup
+
+**Limitations:**
+- Narrower terminal support than sixel
+- Disabled automatically in tmux/screen
+- Higher bandwidth for raw RGBA than quantized sixel
+
+**Detection:**
+- Query action with 1x1 RGB image: `ESC_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA ESC\`
+- Environment hints: `KITTY_WINDOW_ID`, `WEZTERM_PANE`, `GHOSTTY_RESOURCES_DIR`
+- Multiplexer detection via `$TMUX`, `$STY`
+
+### hires
+
+Auto-select best available high-resolution graphics mode.
+
+**Best for:** Portable apps that want the best graphics quality on any terminal
+
+**Fallback order:**
+1. `kitty` - if Kitty graphics protocol supported
+2. `sixel` - if sixel supported
+3. `sextant` - universal fallback
+
+**How it works:**
+- Checks terminal capabilities at startup
+- Automatically selects the highest quality mode available
+- No manual configuration needed for cross-terminal compatibility
+
 ## Configuration
 
 **Per-element prop (on canvas/img):**
@@ -150,6 +199,8 @@ MELKER_GFX_MODE=block     # colored spaces
 MELKER_GFX_MODE=pattern   # ASCII spatial mapping
 MELKER_GFX_MODE=luma      # ASCII brightness-based
 MELKER_GFX_MODE=sixel     # true pixels (requires terminal support)
+MELKER_GFX_MODE=kitty     # true pixels via Kitty protocol
+MELKER_GFX_MODE=hires     # auto: kitty → sixel → sextant
 ```
 
 **CLI flag (overrides per-element):**
@@ -159,6 +210,8 @@ MELKER_GFX_MODE=sixel     # true pixels (requires terminal support)
 --gfx-mode=pattern
 --gfx-mode=luma
 --gfx-mode=sixel
+--gfx-mode=kitty
+--gfx-mode=hires
 ```
 
 **Priority:** Global config (env/CLI) > per-element prop > default (sextant)
@@ -193,12 +246,14 @@ Video uses blue-noise for less temporal flicker between frames.
 - `src/config/schema.json` - Config option definition
 - `src/components/canvas-terminal.ts` - `PATTERN_TO_ASCII` lookup table, `LUMA_RAMP`
 - `src/components/canvas.ts` - `_renderAsciiMode()`, `_renderBlockMode()`, dithered path handling
-- `src/components/canvas-render.ts` - `renderSixelPlaceholder()`, `generateSixelOutput()`
+- `src/components/canvas-render.ts` - `renderSixelPlaceholder()`, `generateSixelOutput()`, `generateKittyOutput()`
 - `src/rendering.ts` - Border rendering in block mode
 - `src/sixel/detect.ts` - Terminal sixel capability detection
 - `src/sixel/encoder.ts` - Sixel format encoder
 - `src/sixel/palette.ts` - Color quantization for sixel
-- `src/engine.ts` - Sixel overlay rendering in render pipeline
+- `src/kitty/detect.ts` - Terminal kitty capability detection
+- `src/kitty/encoder.ts` - Kitty format encoder
+- `src/engine.ts` - Sixel/Kitty overlay rendering in render pipeline
 
 ## Use Cases
 
@@ -206,7 +261,9 @@ Video uses blue-noise for less temporal flicker between frames.
 - **block**: Terminals without Nerd Fonts
 - **pattern**: Legacy terminals, SSH to old systems, retro look
 - **luma**: Image-heavy content on legacy terminals
-- **sixel**: Photos, high-quality images on supported terminals
+- **sixel**: Photos, high-quality images on xterm/mlterm/foot
+- **kitty**: Photos, high-quality images on Kitty/Ghostty/WezTerm
+- **hires**: Portable apps that want best available graphics
 
 ## Comparison
 
@@ -217,6 +274,8 @@ Video uses blue-noise for less temporal flicker between frames.
 | pattern | 2x3 per cell | UI, shapes | No | All |
 | luma | 2x3 per cell | Images | No | All |
 | sixel | True pixels | High-quality images | No | xterm, mlterm, foot, WezTerm, iTerm2, Konsole* |
+| kitty | True pixels | High-quality images | No | Kitty, Ghostty, WezTerm, Konsole |
+| hires | True pixels | Portable high-quality | No | Auto-selects best available |
 
 *Konsole has a right-edge rendering quirk. Use mlterm for best sixel quality.
 
@@ -226,3 +285,9 @@ See `examples/melker/gfx_modes_demo.melker` for a visual comparison of:
 - Graphics modes (sextant, block, pattern, luma)
 - Dithering algorithms (none, sierra-stable, floyd-steinberg, atkinson, atkinson-stable, ordered, blue-noise)
 - Dither bits (1-4 bit color depth)
+
+## See Also
+
+- [Graphics Architecture](graphics-architecture.md) — Common detection, rendering pipeline, configuration
+- [Sixel Architecture](sixel-architecture.md) — Sixel protocol details, palette quantization
+- [Kitty Architecture](kitty-architecture.md) — Kitty protocol details, stable image IDs

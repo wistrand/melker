@@ -8,7 +8,7 @@ import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { CanvasElement } from './canvas.ts';
-import { type SixelOutputData, getEffectiveGfxMode } from './canvas-render.ts';
+import { type SixelOutputData, type KittyOutputData, getEffectiveGfxMode } from './canvas-render.ts';
 import { getLogger } from '../logging.ts';
 import { parseMelkerFile } from '../template.ts';
 import { getStringWidth } from '../char-width.ts';
@@ -2623,6 +2623,22 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       }
     }
     logger.debug('getSixelOutputs returning', { outputCount: outputs.length });
+    return outputs;
+  }
+
+  /**
+   * Get kitty outputs from embedded image canvases.
+   * Used by engine to render kitty graphics for images in markdown content.
+   */
+  getKittyOutputs(): KittyOutputData[] {
+    const outputs: KittyOutputData[] = [];
+    for (const [key, canvas] of this._imageCanvases.entries()) {
+      const kittyOutput = canvas.getKittyOutput();
+      if (kittyOutput?.data && kittyOutput.bounds) {
+        outputs.push(kittyOutput);
+      }
+    }
+    logger.debug('getKittyOutputs returning', { outputCount: outputs.length });
     return outputs;
   }
 }

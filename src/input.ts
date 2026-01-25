@@ -17,10 +17,49 @@ import {
 // via feedDetectionInput(). This avoids orphaned stdin reads that would
 // swallow Ctrl+C and other input.
 import {
-  isDetectionInProgress,
-  feedDetectionInput,
-  checkDetectionTimeout,
+  isDetectionInProgress as isSixelDetectionInProgress,
+  feedDetectionInput as feedSixelDetectionInput,
+  checkDetectionTimeout as checkSixelDetectionTimeout,
+  getDetectionTimeout as getSixelDetectionTimeout,
 } from './sixel/detect.ts';
+// Kitty detection integration - same pattern as sixel
+import {
+  isKittyDetectionInProgress,
+  feedKittyDetectionInput,
+  checkKittyDetectionTimeout,
+  getKittyDetectionTimeout,
+} from './kitty/detect.ts';
+
+// Combined detection helpers
+function isDetectionInProgress(): boolean {
+  return isSixelDetectionInProgress() || isKittyDetectionInProgress();
+}
+
+function feedDetectionInput(data: Uint8Array): boolean {
+  // Try sixel first, then kitty
+  if (isSixelDetectionInProgress() && feedSixelDetectionInput(data)) {
+    return true;
+  }
+  if (isKittyDetectionInProgress() && feedKittyDetectionInput(data)) {
+    return true;
+  }
+  return false;
+}
+
+function checkDetectionTimeout(): void {
+  checkSixelDetectionTimeout();
+  checkKittyDetectionTimeout();
+}
+
+// Get minimum remaining timeout across all detection processes
+function getDetectionTimeoutRemaining(): number {
+  const sixelTimeout = getSixelDetectionTimeout();
+  const kittyTimeout = getKittyDetectionTimeout();
+  // Return minimum non-zero, or 0 if both are 0
+  if (sixelTimeout === 0) return kittyTimeout;
+  if (kittyTimeout === 0) return sixelTimeout;
+  return Math.min(sixelTimeout, kittyTimeout);
+}
 
 export interface TerminalInputOptions {
   enableMouse?: boolean;
@@ -343,8 +382,31 @@ export class TerminalInputProcessor {
 
           // Use different reading approach based on raw mode availability
           if (this._rawModeEnabled) {
-            // Raw mode: read directly from stdin
-            const bytesRead = await Deno.stdin.read(buffer);
+            // During detection, use timed reads to check timeouts regularly
+            // Without this, detection hangs until user input arrives
+            const detecting = isDetectionInProgress();
+            let bytesRead: number | null;
+
+            if (detecting) {
+              // Race stdin read against detection timeout
+              const timeoutMs = Math.max(10, Math.min(50, getDetectionTimeoutRemaining() + 10));
+              const timeoutPromise = new Promise<null>(resolve =>
+                setTimeout(() => resolve(null), timeoutMs)
+              );
+              const readPromise = Deno.stdin.read(buffer);
+
+              const result = await Promise.race([readPromise, timeoutPromise]);
+              if (result === null) {
+                // Timeout - check detection timeouts and continue
+                checkDetectionTimeout();
+                continue;
+              }
+              bytesRead = result;
+            } else {
+              // Raw mode: read directly from stdin
+              bytesRead = await Deno.stdin.read(buffer);
+            }
+
             if (bytesRead === null) {
               // EOF reached
               break;

@@ -15,6 +15,12 @@ import {
   type SixelCapabilities,
 } from '../sixel/mod.ts';
 import {
+  encodeToKitty,
+  positionedKitty,
+  generateImageId,
+  type KittyCapabilities,
+} from '../kitty/mod.ts';
+import {
   applyFloydSteinbergDither,
   applyFloydSteinbergStableDither,
   applyAtkinsonDither,
@@ -61,6 +67,88 @@ export class CanvasRenderState {
   readonly qBrightness: number[] = [0, 0, 0, 0, 0, 0];
   qFgColor: number = 0;
   qBgColor: number = 0;
+
+  // Kitty compositing buffer (reused across frames, grows as needed)
+  private _kittyCompositedBuffer: Uint32Array | null = null;
+
+  // Kitty image cache - skip re-encoding when content unchanged
+  private _kittyContentHash: number = 0;
+  private _kittyCachedOutput: KittyOutputData | null = null;
+  private _kittyCachedBounds: { x: number; y: number; width: number; height: number } | null = null;
+
+  // Stable image ID for this canvas - reused across frames to enable in-place replacement
+  // This eliminates flicker from the display+delete cycle that occurs with new IDs each frame
+  private _kittyStableImageId: number = generateImageId();
+
+  /**
+   * Get or create a kitty compositing buffer of the required size.
+   * Reuses existing buffer if large enough, otherwise allocates a new one.
+   */
+  getKittyCompositedBuffer(pixelCount: number): Uint32Array {
+    if (!this._kittyCompositedBuffer || this._kittyCompositedBuffer.length < pixelCount) {
+      this._kittyCompositedBuffer = new Uint32Array(pixelCount);
+    }
+    return this._kittyCompositedBuffer;
+  }
+
+  /**
+   * Compute a fast hash of a Uint32Array buffer.
+   * Uses FNV-1a variant for speed with reasonable collision resistance.
+   */
+  computeBufferHash(buffer: Uint32Array, length: number): number {
+    let hash = 2166136261; // FNV offset basis
+    for (let i = 0; i < length; i++) {
+      hash ^= buffer[i];
+      hash = Math.imul(hash, 16777619); // FNV prime
+    }
+    return hash >>> 0; // Convert to unsigned
+  }
+
+  /**
+   * Check if kitty content matches cache and return cached output if so.
+   * Returns null if cache miss (content changed or bounds changed).
+   */
+  getKittyCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }): KittyOutputData | null {
+    if (
+      this._kittyCachedOutput &&
+      this._kittyContentHash === contentHash &&
+      this._kittyCachedBounds &&
+      this._kittyCachedBounds.x === bounds.x &&
+      this._kittyCachedBounds.y === bounds.y &&
+      this._kittyCachedBounds.width === bounds.width &&
+      this._kittyCachedBounds.height === bounds.height
+    ) {
+      return this._kittyCachedOutput;
+    }
+    return null;
+  }
+
+  /**
+   * Store kitty output in cache.
+   */
+  setKittyCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }, output: KittyOutputData): void {
+    this._kittyContentHash = contentHash;
+    this._kittyCachedBounds = { ...bounds };
+    this._kittyCachedOutput = output;
+  }
+
+  /**
+   * Invalidate kitty cache (e.g., on resize).
+   */
+  invalidateKittyCache(): void {
+    this._kittyContentHash = 0;
+    this._kittyCachedOutput = null;
+    this._kittyCachedBounds = null;
+  }
+
+  /**
+   * Get stable image ID for this canvas.
+   * Reusing the same ID across frames allows Kitty to replace images in-place,
+   * eliminating flicker from the display+delete cycle.
+   */
+  getKittyStableImageId(): number {
+    return this._kittyStableImageId;
+  }
 }
 
 /**
@@ -234,6 +322,22 @@ export interface SixelOutputData {
   bounds: Bounds;
   /** Element ID for tracking */
   elementId?: string;
+}
+
+/**
+ * Kitty output data for a canvas element
+ */
+export interface KittyOutputData {
+  /** Positioned kitty sequence (includes cursor positioning) */
+  data: string;
+  /** Canvas bounds for occlusion detection */
+  bounds: Bounds;
+  /** Image ID for cleanup/deletion */
+  imageId: number;
+  /** Element ID for tracking */
+  elementId?: string;
+  /** True if this output is from cache (already displayed, skip writing) */
+  fromCache?: boolean;
 }
 
 /**
@@ -443,6 +547,153 @@ export function generateSixelOutput(
       height: terminalHeight,
     },
   };
+}
+
+/**
+ * Generate Kitty graphics output from canvas data.
+ * Returns positioned Kitty sequence ready to write to terminal.
+ * Simpler than sixel - no quantization needed, supports full 32-bit RGBA.
+ */
+export function generateKittyOutput(
+  bounds: Bounds,
+  data: CanvasRenderData,
+  capabilities: KittyCapabilities,
+  renderState?: CanvasRenderState,
+): KittyOutputData | null {
+  if (!capabilities.supported) {
+    return null;
+  }
+
+  // Composite drawing layer over image layer
+  const pixelCount = data.bufferWidth * data.bufferHeight;
+  // Reuse buffer from render state if available, otherwise allocate
+  const composited = renderState
+    ? renderState.getKittyCompositedBuffer(pixelCount)
+    : new Uint32Array(pixelCount);
+  let hasContent = false;
+
+  // Parse background color once outside loop
+  const bgColor = data.backgroundColor ? (parseColor(data.backgroundColor) ?? TRANSPARENT) : TRANSPARENT;
+
+  for (let i = 0; i < pixelCount; i++) {
+    const drawColor = data.colorBuffer[i];
+    const imageColor = data.imageColorBuffer[i];
+
+    // Drawing layer takes priority over image layer
+    if (drawColor !== TRANSPARENT) {
+      composited[i] = drawColor;
+      hasContent = true;
+    } else if (imageColor !== TRANSPARENT) {
+      composited[i] = imageColor;
+      hasContent = true;
+    } else {
+      // Transparent - use background color
+      composited[i] = bgColor;
+    }
+  }
+
+  // Skip if no content (e.g., image not yet loaded)
+  if (!hasContent) {
+    return null;
+  }
+
+  // Calculate target terminal dimensions
+  let terminalWidth = Math.min(data.propsWidth, bounds.width);
+  const terminalHeight = Math.min(data.propsHeight, bounds.height);
+
+  // Workaround for terminal edge rendering glitch (same as sextant/sixel path)
+  const engine = globalThis.melkerEngine;
+  if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
+    terminalWidth = Math.max(1, terminalWidth - 1);
+  }
+
+  // Check cache if render state available
+  if (renderState) {
+    const contentHash = renderState.computeBufferHash(composited, pixelCount);
+    const targetBounds = { x: bounds.x, y: bounds.y, width: terminalWidth, height: terminalHeight };
+
+    const cached = renderState.getKittyCachedOutput(contentHash, targetBounds);
+    if (cached) {
+      // Cache hit - return existing output with fromCache flag
+      // Engine will skip writing to terminal (image already displayed)
+      return { ...cached, fromCache: true };
+    }
+
+    // Cache miss - encode and store using stable image ID
+    // Stable ID enables in-place replacement, eliminating display+delete flicker
+    const kittyOutput = encodeToKitty({
+      pixels: composited,
+      width: data.bufferWidth,
+      height: data.bufferHeight,
+      format: 'rgba',
+      columns: terminalWidth,
+      rows: terminalHeight,
+      imageId: renderState.getKittyStableImageId(),
+    });
+
+    const positioned = positionedKitty(kittyOutput, bounds.x + 1, bounds.y + 1);
+
+    const output: KittyOutputData = {
+      data: positioned,
+      bounds: targetBounds,
+      imageId: kittyOutput.imageId,
+    };
+
+    renderState.setKittyCachedOutput(contentHash, targetBounds, output);
+    return output;
+  }
+
+  // No render state - encode without caching (fallback path)
+  const kittyOutput = encodeToKitty({
+    pixels: composited,
+    width: data.bufferWidth,
+    height: data.bufferHeight,
+    format: 'rgba',
+    columns: terminalWidth,
+    rows: terminalHeight,
+  });
+
+  // Position at canvas bounds (col and row are 1-based for ANSI cursor)
+  const positioned = positionedKitty(kittyOutput, bounds.x + 1, bounds.y + 1);
+
+  return {
+    data: positioned,
+    bounds: {
+      x: bounds.x,
+      y: bounds.y,
+      width: terminalWidth,
+      height: terminalHeight,
+    },
+    imageId: kittyOutput.imageId,
+  };
+}
+
+/**
+ * Kitty placeholder: fills region with dots so buffer content doesn't flash before kitty overlay.
+ * Similar to sixel placeholder.
+ */
+export function renderKittyPlaceholder(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  terminalWidth: number,
+  terminalHeight: number,
+  data: CanvasRenderData
+): void {
+  // Use style background, props background, or transparent
+  const hasStyleBg = style.background !== undefined;
+  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+  const bgColor = hasStyleBg ? style.background : (propsBg ?? TRANSPARENT);
+
+  for (let ty = 0; ty < terminalHeight; ty++) {
+    for (let tx = 0; tx < terminalWidth; tx++) {
+      buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+        char: '.',
+        foreground: bgColor !== TRANSPARENT ? bgColor : 0x666666FF,
+        background: TRANSPARENT,
+      });
+    }
+  }
 }
 
 /**
@@ -694,7 +945,7 @@ export function renderDitheredToTerminal(
   style: Partial<Cell>,
   buffer: DualBuffer,
   ditheredBuffer: Uint8Array,
-  gfxMode: 'sextant' | 'block' | 'pattern' | 'luma',
+  gfxMode: ResolvedGfxMode,
   data: CanvasRenderData,
   state: CanvasRenderState
 ): void {
@@ -1201,7 +1452,7 @@ export function renderToTerminal(
   data: CanvasRenderData,
   state: CanvasRenderState,
   ditheredBuffer: Uint8Array | null,
-  gfxMode: GfxMode
+  gfxMode: ResolvedGfxMode
 ): void {
   let terminalWidth = Math.min(data.propsWidth, bounds.width);
   const terminalHeight = Math.min(data.propsHeight, bounds.height);
@@ -1212,10 +1463,16 @@ export function renderToTerminal(
     terminalWidth = Math.max(1, terminalWidth - 1);
   }
 
-  // Sixel mode: fill with spaces, actual sixel output is handled by engine overlay
+  // Sixel mode: fill with placeholder, actual sixel output is handled by engine overlay
   // Use same dimensions as other modes (min of props and bounds)
   if (gfxMode === 'sixel') {
     renderSixelPlaceholder(bounds, style, buffer, terminalWidth, terminalHeight, data);
+    return;
+  }
+
+  // Kitty mode: fill with placeholder, actual kitty output is handled by engine overlay
+  if (gfxMode === 'kitty') {
+    renderKittyPlaceholder(bounds, style, buffer, terminalWidth, terminalHeight, data);
     return;
   }
 
@@ -1241,8 +1498,11 @@ export function renderToTerminal(
   renderSextantToTerminal(bounds, style, buffer, data, state);
 }
 
-/** Graphics rendering mode */
-export type GfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel';
+/** Graphics rendering mode (user-facing, includes 'hires' auto-select) */
+export type GfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'hires';
+
+/** Resolved graphics mode (after 'hires' is expanded to actual mode) */
+export type ResolvedGfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty';
 
 /**
  * Get effective graphics mode from config and props.
@@ -1250,18 +1510,40 @@ export type GfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel';
  */
 export function getEffectiveGfxMode(
   propsGfxMode?: GfxMode
-): GfxMode {
+): ResolvedGfxMode {
   const globalGfxMode = MelkerConfig.get().gfxMode as GfxMode | undefined;
-  const result = globalGfxMode || propsGfxMode || 'sextant';
+  const requested = globalGfxMode || propsGfxMode || 'sextant';
 
-  // Fall back to sextant if sixel requested but not available
-  if (result === 'sixel') {
-    const engine = globalThis.melkerEngine;
-    const capabilities = engine?.sixelCapabilities;
-    if (!capabilities?.supported) {
-      return 'sextant';
+  const engine = globalThis.melkerEngine;
+  const kittySupported = engine?.kittyCapabilities?.supported ?? false;
+  const sixelSupported = engine?.sixelCapabilities?.supported ?? false;
+
+  // hires: try kitty → sixel → sextant (best available high-resolution mode)
+  if (requested === 'hires') {
+    if (kittySupported) {
+      return 'kitty';
     }
+    if (sixelSupported) {
+      return 'sixel';
+    }
+    return 'sextant';
   }
 
-  return result;
+  // kitty: falls back directly to sextant
+  if (requested === 'kitty') {
+    if (!kittySupported) {
+      return 'sextant';
+    }
+    return 'kitty';
+  }
+
+  // sixel: falls back to sextant
+  if (requested === 'sixel') {
+    if (!sixelSupported) {
+      return 'sextant';
+    }
+    return 'sixel';
+  }
+
+  return requested;
 }

@@ -9,6 +9,3 @@ Test of scaled screenshot png
 # Full size
 <img src="../docs/showcase.png">
 
-
-# Full size
-<img src="../docs/showcase2.png">

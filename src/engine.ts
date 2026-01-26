@@ -1635,7 +1635,7 @@ export class MelkerEngine {
    */
   private _renderSixelOverlays(): void {
     if (!this._sixelCapabilities?.supported) {
-      this._logger?.debug('Sixel overlays skipped - not supported');
+      this._logger?.trace('Sixel overlays skipped - not supported');
       return;
     }
 
@@ -1745,7 +1745,7 @@ export class MelkerEngine {
    */
   private _renderKittyOverlays(): void {
     if (!this._kittyCapabilities?.supported) {
-      this._logger?.debug('Kitty overlays skipped - not supported');
+      this._logger?.trace('Kitty overlays skipped - not supported');
       return;
     }
 

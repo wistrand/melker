@@ -244,6 +244,27 @@ export function getKittyDetectionTimeout(): number {
 }
 
 /**
+ * Check if input looks like a kitty graphics response.
+ * Kitty response format: \x1b_G... (APC sequence starting with G)
+ *
+ * User input doesn't use APC sequences, so this is safe.
+ *
+ * @param combinedBuffer - The response buffer + new input combined
+ */
+function looksLikeKittyResponse(combinedBuffer: string): boolean {
+  // Kitty response: ESC _ G ...
+  if (combinedBuffer.startsWith('\x1b_G')) {
+    return true;
+  }
+
+  // For partial sequences like bare ESC or \x1b_, we let them through.
+  // If it was actually the start of a kitty response, bytes usually
+  // arrive together or we'll catch it on the next read.
+
+  return false;
+}
+
+/**
  * Feed input data to kitty detection state machine.
  * Called by the main input loop with raw terminal data.
  * Returns true if data was consumed by detection, false if it should be processed normally.
@@ -266,7 +287,17 @@ export function feedKittyDetectionInput(data: Uint8Array): boolean {
   if (Date.now() - state.startTime > state.timeoutMs) {
     logger.debug('Kitty detection timeout');
     handleDetectionTimeout();
-    return true;
+    // Don't consume the input - let it be processed as user input
+    return false;
+  }
+
+  // Only consume input that looks like a kitty response
+  // User input (regular keys, arrow keys, etc.) should pass through
+  if (!looksLikeKittyResponse(state.responseBuffer + text)) {
+    logger.debug('User input during kitty detection - passing through', {
+      inputPreview: text.slice(0, 10).replace(/\x1b/g, 'ESC'),
+    });
+    return false;
   }
 
   // Accumulate response

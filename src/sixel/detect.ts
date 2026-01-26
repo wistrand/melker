@@ -442,6 +442,37 @@ export function getDetectionTimeout(): number {
 }
 
 /**
+ * Check if input looks like a terminal response to our queries.
+ * Terminal responses have specific patterns:
+ * - DA1/XTSMGRAPHICS: \x1b[?...  (CSI with private marker)
+ * - Cellsize: \x1b[6;...  (CSI starting with 6;)
+ *
+ * User input like arrow keys (\x1b[A) or function keys (\x1b[11~)
+ * don't have these patterns and should pass through.
+ *
+ * @param combinedBuffer - The response buffer + new input combined
+ */
+function looksLikeTerminalResponse(combinedBuffer: string): boolean {
+  // CSI with private marker (DA1, XTSMGRAPHICS responses)
+  if (combinedBuffer.startsWith('\x1b[?')) {
+    return true;
+  }
+
+  // Cellsize response: \x1b[6;height;width;t
+  // Note: PageDown is \x1b[6~ which doesn't have the semicolon
+  if (combinedBuffer.startsWith('\x1b[6;')) {
+    return true;
+  }
+
+  // For partial sequences like bare ESC or \x1b[, we let them through
+  // as potential user input (ESC key, arrow keys). If it was actually
+  // the start of a terminal response, bytes usually arrive together
+  // or we'll catch it on the next read.
+
+  return false;
+}
+
+/**
  * Feed input data to detection state machine.
  * Called by the main input loop with raw terminal data.
  * Returns true if data was consumed by detection, false if it should be processed normally.
@@ -464,7 +495,18 @@ export function feedDetectionInput(data: Uint8Array): boolean {
   if (Date.now() - state.startTime > state.timeoutMs) {
     logger.debug('Detection phase timeout', { phase: state.phase });
     handlePhaseTimeout();
-    return true;
+    // Don't consume the input - let it be processed as user input
+    return false;
+  }
+
+  // Only consume input that looks like a terminal response to our queries
+  // User input (regular keys, arrow keys, etc.) should pass through
+  if (!looksLikeTerminalResponse(state.responseBuffer + text)) {
+    logger.debug('User input during detection - passing through', {
+      phase: state.phase,
+      inputPreview: text.slice(0, 10).replace(/\x1b/g, 'ESC'),
+    });
+    return false;
   }
 
   // Accumulate response

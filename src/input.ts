@@ -375,6 +375,13 @@ export class TerminalInputProcessor {
     const readLoop = async () => {
       const buffer = new Uint8Array(1024); // Buffer for reading input
 
+      // Track pending read to avoid orphaned reads during detection.
+      // When Promise.race times out, the read promise is still pending.
+      // If we create a new read on the next iteration, the old one becomes
+      // "orphaned" and will consume the next user input. By reusing the same
+      // read promise, we ensure input goes to the right place.
+      let pendingRead: Promise<number | null> | null = null;
+
       while (this._isListening) {
         try {
           // Check sixel detection timeout on each iteration
@@ -388,23 +395,37 @@ export class TerminalInputProcessor {
             let bytesRead: number | null;
 
             if (detecting) {
+              // Reuse pending read or create new one
+              // This prevents orphaned reads from consuming user input
+              if (!pendingRead) {
+                pendingRead = Deno.stdin.read(buffer);
+              }
+
               // Race stdin read against detection timeout
               const timeoutMs = Math.max(10, Math.min(50, getDetectionTimeoutRemaining() + 10));
               const timeoutPromise = new Promise<null>(resolve =>
                 setTimeout(() => resolve(null), timeoutMs)
               );
-              const readPromise = Deno.stdin.read(buffer);
 
-              const result = await Promise.race([readPromise, timeoutPromise]);
+              const result = await Promise.race([pendingRead, timeoutPromise]);
               if (result === null) {
-                // Timeout - check detection timeouts and continue
+                // Timeout - keep pendingRead for next iteration (don't create orphaned read)
                 checkDetectionTimeout();
                 continue;
               }
               bytesRead = result;
+              pendingRead = null; // Clear after successful read
             } else {
-              // Raw mode: read directly from stdin
-              bytesRead = await Deno.stdin.read(buffer);
+              // Not detecting - but if there's a pending read from detection phase,
+              // we MUST await it (can't cancel Deno.stdin.read). Otherwise it becomes
+              // an orphaned read that will consume the next user input.
+              if (pendingRead) {
+                bytesRead = await pendingRead;
+                pendingRead = null;
+              } else {
+                // Raw mode: read directly from stdin
+                bytesRead = await Deno.stdin.read(buffer);
+              }
             }
 
             if (bytesRead === null) {

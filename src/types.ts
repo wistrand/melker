@@ -259,6 +259,8 @@ export interface Overlay {
 // Layout context for intrinsic size calculation
 export interface IntrinsicSizeContext {
   availableSpace: { width: number; height: number };
+  /** Parent element's computed style (for orientation-aware components like separator) */
+  parentStyle?: Style;
 }
 
 // Focusable interface for components that can receive focus

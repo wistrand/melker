@@ -1,0 +1,41 @@
+<melker>
+  <container style="padding: 1; gap: 1;">
+    <text style="font-weight: bold;">Horizontal Separators (column flex)</text>
+
+    <text>Content above</text>
+
+    <separator />
+
+    <text>Content below</text>
+
+    <separator label="Settings" />
+
+    <text>Settings content</text>
+
+    <separator label="Advanced" style="border-style: double; color: blue;" />
+
+    <text>Advanced content</text>
+
+    <separator style="border-style: dashed" />
+
+    <text>Final section</text>
+
+    <separator label="Vertical Demo" />
+
+    <text style="font-weight: bold;">Vertical Separators (row flex)</text>
+
+    <container style="flex-direction: row; height: 5; gap: 1;">
+      <text>Left panel</text>
+      <separator />
+      <text>Middle panel</text>
+      <separator label="OR" />
+      <text>Right panel</text>
+    </container>
+
+    <container style="flex-direction: row; height: 8; gap: 1; margin-top: 1;">
+      <text>Option A</text>
+      <separator label="versus" style="border-style: double;" />
+      <text>Option B</text>
+    </container>
+  </container>
+</melker>

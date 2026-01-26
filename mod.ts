@@ -202,6 +202,7 @@ import { ListElement } from './src/components/list.ts';
 import { LiElement } from './src/components/li.ts';
 import { ProgressElement } from './src/components/progress.ts';
 import { SliderElement } from './src/components/slider.ts';
+import { SeparatorElement } from './src/components/separator.ts';
 import { SegmentDisplayElement } from './src/components/segment-display/mod.ts';
 import './src/components/file-browser/file-browser.ts'; // Self-registering component
 import { registerComponent } from './src/element.ts';
@@ -378,6 +379,13 @@ registerComponent({
     tabIndex: 0,
   },
   validate: (props) => SliderElement.validate(props as any),
+});
+
+registerComponent({
+  type: 'separator',
+  componentClass: SeparatorElement,
+  defaultProps: {},
+  validate: (props) => SeparatorElement.validate(props as any),
 });
 
 registerComponent({

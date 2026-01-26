@@ -533,7 +533,8 @@ export class LayoutEngine {
       let contentSize = { width: 10, height: 1 }; // Default fallback
       if (isRenderable(child)) {
         const intrinsicSizeContext: IntrinsicSizeContext = {
-          availableSpace: context.availableSpace
+          availableSpace: context.availableSpace,
+          parentStyle: context.parentStyle,
         };
         try {
           contentSize = child.intrinsicSize(intrinsicSizeContext);
@@ -1532,7 +1533,8 @@ export class LayoutEngine {
     // Delegate to component's intrinsicSize method if available
     if (isRenderable(element)) {
       const intrinsicSizeContext: IntrinsicSizeContext = {
-        availableSpace: context.availableSpace
+        availableSpace: context.availableSpace,
+        parentStyle: context.parentStyle,
       };
 
       try {

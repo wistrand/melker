@@ -130,6 +130,7 @@ Detailed file layout for the Melker codebase.
 | `img.ts`                  | Image component (extends canvas)       |
 | `video.ts`                | Video playback                         |
 | `progress.ts`             | Progress bar (extends Canvas)          |
+| `separator.ts`            | Horizontal/vertical line with optional label |
 | `data-bars.ts`            | Bar charts (horizontal/vertical, stacked/grouped) |
 | `markdown.ts`             | Markdown rendering with image support  |
 | `color-utils.ts`          | RGBA color utilities                   |

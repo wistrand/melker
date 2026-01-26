@@ -421,7 +421,7 @@ Deno.test('parseMelkerFile parses dialog element', () => {
 // ============================================
 
 Deno.test('parseMelkerFile parses hello.melker style', async () => {
-  const content = await Deno.readTextFile('examples/melker/hello.melker');
+  const content = await Deno.readTextFile('examples/basics/hello.melker');
   const result = parseMelkerFile(content);
 
   assertEquals(result.element.type, 'container');
@@ -431,7 +431,7 @@ Deno.test('parseMelkerFile parses hello.melker style', async () => {
 });
 
 Deno.test('parseMelkerFile parses counter.melker with inline handlers', async () => {
-  const content = await Deno.readTextFile('examples/melker/counter.melker');
+  const content = await Deno.readTextFile('examples/basics/counter.melker');
   const result = parseMelkerFile(content);
 
   assertEquals(result.element.type, 'container');

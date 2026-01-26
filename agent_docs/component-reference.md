@@ -790,6 +790,77 @@ slider.setValue(75);    // Set value programmatically
 slider.getValue();      // Get current value
 ```
 
+## Separator Component
+
+The `<separator>` component renders a horizontal or vertical line with optional centered label text. Orientation is automatically determined by the parent's flex direction.
+
+### Usage
+
+```xml
+<!-- Horizontal separator (default, in column flex) -->
+<separator />
+
+<!-- With label -->
+<separator label="Settings" />
+
+<!-- With style -->
+<separator label="Advanced" style="border-style: double; color: blue;" />
+
+<!-- Vertical separator (automatic in row flex) -->
+<container style="flex-direction: row; height: 5;">
+  <text>Left</text>
+  <separator label="OR" />
+  <text>Right</text>
+</container>
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | string | - | Optional text centered in the line |
+| `style` | Style | - | Standard style object |
+
+### Style Properties
+
+| Property | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `border-style` | BorderStyle | 'thin' | Line style: thin, thick, double, dashed, etc. |
+| `color` | ColorInput | theme | Line and label color |
+
+### Automatic Orientation
+
+The separator detects its parent's flex direction and renders accordingly:
+
+| Parent flex-direction | Separator | Line char | Size |
+|-----------------------|-----------|-----------|------|
+| `column` (default) | Horizontal | `─` | width: fill, height: 1 |
+| `row` | Vertical | `│` | width: 1, height: fill |
+
+### Visual Examples
+
+**Horizontal (column flex):**
+```
+───────────────────────────────────────
+─────────────── Settings ──────────────
+═══════════════ Advanced ══════════════
+```
+
+**Vertical (row flex):**
+```
+Left │ Middle │ Right
+     │        O
+     │        R
+     │        │
+```
+
+### Behavior
+
+- Self-closing element (no children allowed)
+- Fills available space in its orientation
+- Label text renders vertically when separator is vertical
+- Inherits theme colors by default
+
 ## Segment Display Component
 
 The `<segment-display>` component renders LCD/LED-style digits and text using Unicode characters with multiple visual styles.

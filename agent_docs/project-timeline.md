@@ -1,180 +1,163 @@
 # Melker Project Timeline
 
-Development history from git commits.
+Development history from December 2025 to January 2026.
 
-## Week 1: Foundation (Dec 7-14, 2025)
+## December 2025: Foundation
 
-**Dec 7** - Initial commit
+### Week 1 (Dec 7-14)
 
-**Dec 11** - Core framework established
-- Dual-buffer rendering system (`buffer.ts`)
-- Component system with registry (`element.ts`, `components/mod.ts`)
-- Initial components: button, canvas, checkbox, container, dialog, input, list, li, markdown, radio, text, textarea, video
-- Flexbox layout engine (`layout.ts`)
-- Event system (`events.ts`)
-- Theme support (`theme.ts`)
+**Dec 7** — Initial commit
 
-**Dec 12** - Markdown and video improvements
-- Markdown rendering enhancements
-- Canvas and video component fixes
+**Dec 11** — Core framework
+- Dual-buffer rendering, flexbox layout, event system, theme support
+- Initial components: button, canvas, checkbox, container, dialog, input, list, markdown, radio, text, textarea, video
 
-**Dec 13** - Tabs component
-- Added `tabs.ts` and `tab.ts` components
-- Dialog improvements
+**Dec 13** — Tabs component added
 
-**Dec 14** - Input handling and polish
-- Button, checkbox, input, textarea improvements
-- Container and radio fixes
-- Tab navigation
+**Dec 14** — Input handling polish, tab navigation
 
-## Week 2: Features (Dec 15-21, 2025)
+### Week 2 (Dec 15-21)
 
-**Dec 15** - Dialog and text improvements
-- Dialog enhancements
-- Markdown and text rendering
-- Textarea scrolling
+**Dec 15-18** — Text and dialog refinements
+- Textarea scrolling, text wrapping, markdown rendering
 
-**Dec 16** - Input focus
-- Input component focus handling
+**Dec 19** — Video playback working (Build 70)
 
-**Dec 17** - Text wrapping
-- Text component improvements
+**Dec 21** — Canvas improvements
 
-**Dec 18** - Text rendering
-- Additional text component fixes
+### Week 3 (Dec 22-31)
 
-**Dec 19** - Build 70
+**Dec 23** — Bundler system for .melker files
 
-**Dec 21** - Canvas improvements
-- Canvas component enhancements
+## January 2026: Rapid Development
 
-## Week 3: Holiday Break (Dec 22-31, 2025)
+### Week 4 (Jan 2-3)
 
-**Dec 23** - Bundler improvements
-- Generator refactoring
-- Script handling updates
-
-## Week 4: Major Features (Jan 2-3, 2026)
-
-**Jan 2** - Policy system and LSP
+**Jan 2** — Security and tooling
 - Permission policy system (`src/policy/`)
-- LSP server for .melker files (`lsp.ts`)
+- LSP server for editor integration
 - Draggable dialogs
-- View source overlay improvements
-- Border rendering improvements
 
-**Jan 3** - Tables, Progress, Approval system
-- Table components: `table.ts`, `table-row.ts`, `table-cell.ts`, `table-section.ts`
-- Progress bar component (`progress.ts`)
-- App approval system for security
-- Confirm and prompt dialogs
-- Debug server enhancements
-- Theme improvements
-- TUI comparison documentation
+**Jan 3** — Tables and approval
+- Table components with scrolling
+- Progress bar component
+- App approval system for sandboxing
+- Confirm/prompt dialogs
 
-## Week 5: Components and Polish (Jan 4-7, 2026)
+### Week 5 (Jan 4-7)
 
-**Jan 4** - Documentation and showcase
-- README and MANIFESTO updates
-- Showcase demo
-- Input handling improvements
+**Jan 4** — Documentation refresh
 
-**Jan 5** - Image component
-- New `img.ts` component (extends canvas)
-- Percentage-based responsive dimensions
-- Image loading in canvas
+**Jan 5** — Image component (extends canvas with responsive sizing)
 
-**Jan 6** - Filterable lists and architecture
-- Filterable list components: combobox, select, autocomplete, command-palette
-- FilterableListCore base class with fuzzy/prefix/contains matching
-- Chrome collapse for tight layouts
-- Menu components removed (replaced by command palette)
-- Launcher/runner architecture split (`melker-launcher.ts`, `melker-runner.ts`)
-- Performance dialog (F6)
-- Fast input rendering optimization
-- System command palette (Ctrl+K)
+**Jan 6** — Filterable lists
+- Combobox, select, autocomplete, command-palette
+- Fuzzy/prefix/contains matching
+- Launcher/runner architecture split
+- Performance dialog (F6), system palette (Ctrl+K)
 
-**Jan 7** - Shaders and stable image loading
-- Canvas shader system (`canvas-shader.ts`, `canvas-draw.ts`)
-- Shader demos: plasma, metaballs, synthwave, fractal tunnel
-- Pure-JS image decoders (PNG via fast-png, JPEG via jpeg-js, GIF via omggif)
-- Module reorganization (`mod.ts` as library entry point)
-- Performance dialog enhancements
-- Markdown path resolution fix (cwd-relative for CLI args)
+**Jan 7** — Shaders and image loading
+- Canvas shader system (plasma, metaballs, synthwave demos)
+- Pure-JS image decoders (PNG, JPEG, GIF)
 
-**Jan 8-10** - Configuration system, Slider, and Dev Tools
-- Unified config system (`src/config/`): schema.json, config.ts, cli.ts
-- Schema-driven CLI parser with auto-generated help
-- Config priority: `default < policy < file < env < cli`
-- Policy config support (config in `<policy>` tag)
-- View Source renamed to Dev Tools (`src/dev-tools.ts`)
-- Config tab added to Dev Tools dialog (F12)
-- OAuth configuration options
-- Removed dotenv dependency
-- New slider component (`src/components/slider.ts`)
-- Breakout game demo (`examples/melker/breakout.melker`)
-- Slider demo (`examples/melker/slider_demo.melker`)
-- Canvas touch/drag improvements for games
+### Week 6 (Jan 8-12)
 
-**Jan 11** - File Browser and Performance
-- File browser component (`src/components/file-browser/`): directory navigation, file selection, keyboard shortcuts
-- htop.melker demo started: real-time system monitor with process table
-- FAQ.md added: comprehensive project FAQ
-- Color utilities (`src/components/color-utils.ts`): RGBA parsing, HSL conversion
-- Table render caching: sorted rows, content height, column widths
-- Dialog scroll performance: `renderDialogOnly()` fast path for scroll events
-- Scroll handler detects if target is inside dialog via `_isInsideDialog()`
-- Auto-infer `display: flex` when flex container properties present
-- Debounce/throttle utilities (`src/utils/timing.ts`)
+**Jan 8-10** — Configuration and slider
+- Schema-driven config system with layered overrides
+- Dev Tools dialog (F12) with config tab
+- Slider component, breakout game demo
 
-**Jan 12** - Website Launch and Documentation
-- melker.sh website created (`docs/`): landing page, examples gallery, installation guide
-- GitHub Pages with custom domain (CNAME)
-- Screenshot assets for showcase (htop, markdown-viewer, analog-clock, video-demo)
-- htop.melker polished: CPU/memory graphs, process sorting, kill signals
-- File browser improvements: path navigation, permissions display
-- Key Features linked to documentation
-- Layout and rendering refinements
-- CalVer release scheme documented (`agent_docs/calver-release.md`)
-- Documentation cleanup: removed outdated plan docs (table-component-plan, lint-mode-plan, signing-plan)
-- Updated architecture.md and melker-file-format.md with slider, file-browser, data-table components
+**Jan 11** — File browser
+- Directory navigation, file selection, keyboard shortcuts
+- htop.melker demo (system monitor)
+- Table render caching, dialog scroll optimization
 
-## Component Timeline
+**Jan 12** — Website launch
+- melker.sh with landing page and examples gallery
+- CalVer release scheme (YYYY.MM.PATCH)
 
-| Component | Added | Notes |
-|-----------|-------|-------|
-| Core (button, text, input, etc.) | Dec 11 | Initial framework |
-| tabs, tab | Dec 13 | Tabbed interface |
-| table, tr, td, th, thead, tbody | Jan 3 | Data tables with scrolling |
-| progress | Jan 3 | Canvas-based progress bar |
-| img | Jan 5 | Image display (extends canvas) |
-| combobox, select | Jan 6 | Dropdown components |
-| autocomplete | Jan 6 | Async search dropdown |
-| command-palette | Jan 6 | Modal command picker |
-| slider | Jan 10 | Range input with drag support |
-| file-browser | Jan 11 | Directory navigation, file selection |
+### Week 7 (Jan 13-22)
 
-## Architecture Evolution
+**Jan 13** — Skill documentation (TROUBLESHOOTING.md, TYPES.md)
 
-1. **Dec 11**: Monolithic structure with all code in `src/`
-2. **Dec 23**: Bundler system for .melker files (`src/bundler/`)
-3. **Jan 2**: Policy system for permissions (`src/policy/`)
-4. **Jan 6**: Launcher/runner split for subprocess spawning
-5. **Jan 6**: Filterable list component family (`src/components/filterable-list/`)
-6. **Jan 7**: Canvas subsystem split (shader, draw, terminal modules)
-7. **Jan 8-10**: Unified config system (`src/config/`)
-8. **Jan 11**: File browser component family (`src/components/file-browser/`)
-9. **Jan 12**: Website and documentation (`docs/`, melker.sh)
+**Jan 14** — Dithering refactor
+- Algorithms split into `src/video/dither/` module
+- Floyd-Steinberg, Sierra, Atkinson, threshold/blue-noise
+- Dev Tools log tab with in-memory buffer
 
-## Key Milestones
+**Jan 15-18** — Segment display and maps
+- 7/14/16-segment LCD display component
+- Map viewer with OpenStreetMap tiles
+- Canvas modules split (image, shader-runner)
 
-- **Build 10** (Dec 12): Basic rendering working
-- **Build 40** (Dec 15): Interactive components functional
-- **Build 70** (Dec 19): Video playback working
-- **Build 90** (Jan 2): Policy and security system
-- **Build 100** (Jan 4): Stable input handling
-- **Build 110** (Jan 6): Chrome collapse, filterable lists
-- **Build 120** (Jan 7): Shaders, stable image loading
-- **Build 135** (Jan 10): Slider component, breakout game, config system
-- **Build 147** (Jan 11): File browser, htop demo, FAQ, table caching
-- **Build 159** (Jan 12): melker.sh website launch
+**Jan 19-20** — Dirty row tracking
+- Buffer diff optimization (72% cell scan reduction)
+- Only scan rows that actually changed
+
+**Jan 21-22** — Data visualization and tutorial
+- Data bars component (charts, sparklines)
+- Tutorial page on melker.sh
+- Netlify edge functions for versioned URLs
+- Engine refactor (keyboard, palette, dialog modules)
+- QR code example, border titles, scrollbar component
+
+### Week 8 (Jan 25-26)
+
+**Jan 25-26** — Graphics protocols
+- Sixel graphics (detection, encoding, palette quantization)
+- Kitty graphics (detection, encoding, stable image IDs)
+- Documentation reorganization
+
+---
+
+## Components
+
+| Component        | Added  | Description                            |
+|------------------|--------|----------------------------------------|
+| Core set         | Dec 11 | button, text, input, textarea, etc.    |
+| tabs             | Dec 13 | Tabbed panels                          |
+| table            | Jan 3  | Data tables with scrolling             |
+| progress         | Jan 3  | Progress bar (canvas-based)            |
+| img              | Jan 5  | Image display                          |
+| combobox         | Jan 6  | Filterable dropdown                    |
+| select           | Jan 6  | Dropdown picker                        |
+| autocomplete     | Jan 6  | Async search dropdown                  |
+| command-palette  | Jan 6  | Modal command picker                   |
+| slider           | Jan 10 | Range input                            |
+| file-browser     | Jan 11 | Directory/file picker                  |
+| segment-display  | Jan 16 | LCD-style displays                     |
+| data-bars        | Jan 21 | Bar charts and sparklines              |
+
+## Architecture
+
+| Date   | Change                                              |
+|--------|-----------------------------------------------------|
+| Dec 11 | Monolithic `src/` structure                         |
+| Dec 23 | Bundler system (`src/bundler/`)                     |
+| Jan 2  | Policy system (`src/policy/`)                       |
+| Jan 6  | Launcher/runner split, filterable-list family       |
+| Jan 7  | Canvas subsystem (shader, draw, terminal)           |
+| Jan 10 | Config system (`src/config/`)                       |
+| Jan 11 | File browser family (`src/components/file-browser/`) |
+| Jan 12 | Website (`docs/`, melker.sh)                        |
+| Jan 14 | Dithering module (`src/video/dither/`)              |
+| Jan 16 | Segment display (`src/components/segment-display/`) |
+| Jan 22 | Engine split, canvas render modules                 |
+| Jan 25 | Sixel (`src/sixel/`), Kitty (`src/kitty/`)          |
+
+## Milestones
+
+| Build | Date   | Achievement                              |
+|-------|--------|------------------------------------------|
+| 10    | Dec 12 | Basic rendering                          |
+| 40    | Dec 15 | Interactive components                   |
+| 70    | Dec 19 | Video playback                           |
+| 90    | Jan 2  | Policy and security                      |
+| 110   | Jan 6  | Filterable lists, command palette        |
+| 120   | Jan 7  | Shaders, image loading                   |
+| 147   | Jan 11 | File browser, htop demo                  |
+| 159   | Jan 12 | Website launch                           |
+| 200   | Jan 18 | Segment display, map viewer              |
+| 226   | Jan 20 | Dirty row tracking                       |
+| 239   | Jan 22 | Data bars, tutorial                      |
+| 242   | Jan 26 | Sixel and Kitty graphics                 |

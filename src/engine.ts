@@ -1773,17 +1773,16 @@ export class MelkerEngine {
     // Extract current image IDs
     const currentImageIds = kittyOutputs.map(o => o.imageId);
 
-    // Filter to only outputs that need to be sent (not from cache)
-    // Cached outputs already have their image displayed with the same stable ID
-    const outputsToSend = kittyOutputs.filter(o => !o.fromCache);
-
-    // Output new/changed images - uses stable IDs so Kitty replaces in-place
-    // This eliminates flicker from the old display+delete cycle
-    if (outputsToSend.length > 0) {
+    // Always send all kitty outputs (like sixel does).
+    // Buffer placeholder rendering overwrites kitty cells each frame, so we must
+    // re-send the image. The caching in generateKittyOutput() still saves encoding
+    // time (hash check + reuse encoded data), we just can't skip the terminal write.
+    if (kittyOutputs.length > 0) {
       // Each kitty output already includes cursor positioning
-      const combined = outputsToSend.map(o => o.data).join('');
+      const combined = kittyOutputs.map(o => o.data).join('');
       this._writeAllSync(textEncoder.encode(combined));
-      this._logger?.debug('Rendered kitty overlays', { count: outputsToSend.length, cached: kittyOutputs.length - outputsToSend.length });
+      const cached = kittyOutputs.filter(o => o.fromCache).length;
+      this._logger?.debug('Rendered kitty overlays', { count: kittyOutputs.length, cached });
     }
 
     // Delete stale images (elements that were removed, not just updated)

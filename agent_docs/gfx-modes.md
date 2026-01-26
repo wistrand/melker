@@ -150,6 +150,9 @@ True pixel graphics via Kitty Graphics Protocol - modern terminal graphics with 
 - Renders canvas content to RGBA pixel data
 - Encodes as base64 with chunking (max 4096 bytes per chunk)
 - Outputs Kitty data as overlay after buffer rendering
+- Re-sends image every frame (buffer placeholder overwrites kitty cells)
+- Uses content hash caching to avoid re-encoding unchanged content
+- Uses stable image IDs for flicker-free in-place replacement
 - Falls back to sextant if Kitty not available
 
 **Advantages over sixel:**

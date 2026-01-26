@@ -451,3 +451,8 @@ How file browser works in dialogs:
 | `src/focus.ts` | Focus management, trapFocus with deferred initial focus |
 | `src/engine.ts` | findFirstFocusable checks canReceiveFocus() |
 | `agent_docs/filterable-list-architecture.md` | Filter architecture reference |
+
+## See Also
+
+- [component-reference.md](component-reference.md) — All component documentation
+- [filterable-list-architecture.md](filterable-list-architecture.md) — Filter algorithms

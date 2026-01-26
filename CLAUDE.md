@@ -12,35 +12,68 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 
 ## Quick Reference
 
-| What | Where |
-|------|-------|
-| Getting started | `agent_docs/getting-started.md` |
-| First app tutorial | `docs/tutorial.html` |
-| Architecture details | `agent_docs/architecture.md` |
-| Elements & layout | `agent_docs/elements-and-layout.md` |
-| Debugging & logging | `agent_docs/debugging.md` |
-| .melker file format | `agent_docs/melker-file-format.md` |
-| Script usage & context | `agent_docs/script_usage.md` |
-| Implementation details | `agent_docs/implementation-details.md` |
-| Dirty row tracking | `agent_docs/dirty-row-tracking.md` |
-| AI accessibility | `agent_docs/ai-accessibility.md` |
-| Filterable lists | `agent_docs/filterable-list-architecture.md` |
-| File browser | `agent_docs/file-browser-architecture.md` |
-| Data table | `agent_docs/data-table.md` |
-| Data bars | `agent_docs/data-bars.md` |
-| Config system | `agent_docs/config-architecture.md` |
-| Env permissions | `agent_docs/env-permission-analysis.md` |
-| DX footguns | `agent_docs/dx-footguns.md` |
-| TUI comparison | `agent_docs/tui-comparison.md` |
-| Graphics modes | `agent_docs/gfx-modes.md` |
-| Graphics architecture | `agent_docs/graphics-architecture.md` |
-| Sixel architecture | `agent_docs/sixel-architecture.md` |
-| Kitty architecture | `agent_docs/kitty-architecture.md` |
-| Map example | `agent_docs/map-example.md` |
-| Project timeline | `agent_docs/project-timeline.md` |
-| Release scheme | `agent_docs/calver-release.md` |
-| Examples | `examples/melker/*.melker` |
-| **AI Agent Skill** | `skills/creating-melker-apps/` |
+| What                | Where                                                      |
+|---------------------|------------------------------------------------------------|
+| Getting started     | [getting-started.md](agent_docs/getting-started.md)        |
+| .melker file format | [melker-file-format.md](agent_docs/melker-file-format.md)  |
+| First app tutorial  | [tutorial.html](docs/tutorial.html)                        |
+| Examples            | [examples/melker/](examples/melker/)                       |
+| **AI Agent Skill**  | [skills/creating-melker-apps/](skills/creating-melker-apps/) |
+
+## Documentation Index
+
+### For App Developers
+
+| Topic                          | Doc                                                    |
+|--------------------------------|--------------------------------------------------------|
+| Script context ($melker, $app) | [script_usage.md](agent_docs/script_usage.md)          |
+| Graphics modes                 | [gfx-modes.md](agent_docs/gfx-modes.md)                |
+| Debugging & logging            | [debugging.md](agent_docs/debugging.md)                |
+| Common mistakes                | [dx-footguns.md](agent_docs/dx-footguns.md)            |
+| AI assistant                   | [ai-accessibility.md](agent_docs/ai-accessibility.md)  |
+
+### Component Reference
+
+| Component                                         | Doc                                                                            |
+|---------------------------------------------------|--------------------------------------------------------------------------------|
+| Filterable lists (combobox, select, autocomplete) | [filterable-list-architecture.md](agent_docs/filterable-list-architecture.md)  |
+| File browser                                      | [file-browser-architecture.md](agent_docs/file-browser-architecture.md)        |
+| Data table                                        | [data-table.md](agent_docs/data-table.md)                                      |
+| Data bars (charts)                                | [data-bars.md](agent_docs/data-bars.md)                                        |
+
+### For Contributors (Internals)
+
+| Topic               | Doc                                                              |
+|---------------------|------------------------------------------------------------------|
+| Project structure   | [project-structure.md](agent_docs/project-structure.md)          |
+| Core architecture   | [architecture.md](agent_docs/architecture.md)                    |
+| Component reference | [component-reference.md](agent_docs/component-reference.md)      |
+| Config system       | [config-architecture.md](agent_docs/config-architecture.md)      |
+| Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)  |
+| Sixel protocol      | [sixel-architecture.md](agent_docs/sixel-architecture.md)        |
+| Kitty protocol      | [kitty-architecture.md](agent_docs/kitty-architecture.md)        |
+
+### Deep Dives
+
+| Topic              | Doc                                                                |
+|--------------------|--------------------------------------------------------------------|
+| Dirty row tracking | [dirty-row-tracking.md](agent_docs/dirty-row-tracking.md)          |
+| Fast input render  | [fast-input-render.md](agent_docs/fast-input-render.md)            |
+| Env permissions    | [env-permission-analysis.md](agent_docs/env-permission-analysis.md) |
+
+### Examples & Patterns
+
+| Example    | Doc                                        |
+|------------|--------------------------------------------|
+| Map viewer | [map-example.md](agent_docs/map-example.md) |
+
+### Project
+
+| Topic          | Doc                                                    |
+|----------------|--------------------------------------------------------|
+| Timeline       | [project-timeline.md](agent_docs/project-timeline.md)  |
+| Release scheme | [calver-release.md](agent_docs/calver-release.md)      |
+| TUI comparison | [tui-comparison.md](agent_docs/tui-comparison.md)      |
 
 ## Technology Stack
 
@@ -63,160 +96,40 @@ deno task skill:zip    # Build AI agent skill zip
 
 ## Project Structure
 
-```
-melker.ts             - CLI entry point (symlink-safe, runs launcher)
-mod.ts                - Library entry point (exports, component registrations)
-melker-launcher.ts    - Policy enforcement and subprocess spawning
-src/
-  melker-runner.ts    - .melker file runner (bundling, engine, app execution)
-  engine.ts           - Main engine, lifecycle, events
-  engine-keyboard-handler.ts - Keyboard event handling
-  engine-system-palette.ts - System command palette logic
-  engine-dialog-utils.ts - Dialog traversal and focus trap utilities
-  layout.ts           - Flexbox layout calculations
-  rendering.ts        - Render pipeline, overlays
-  buffer.ts           - Dual-buffer system
-  renderer.ts         - ANSI terminal output
-  focus.ts            - Focus/tab navigation
-  theme.ts            - Theming system
-  template.ts         - .melker file parsing
-  types.ts            - Core type definitions, interfaces, type guards
-  globals.d.ts        - Global type declarations (melkerEngine, $melker, etc.)
-  deps.ts             - Centralized npm dependencies (for remote URL execution support)
-  element.ts          - Element creation, component registry
-  document.ts         - Document class, element registry
-  events.ts           - Event system, EventManager
-  input.ts            - Raw terminal input, mouse events
-  resize.ts           - Terminal resize handling
-  sizing.ts           - Box model, border-box sizing
-  viewport.ts         - Viewport management for scrolling
-  viewport-buffer.ts  - Viewport buffer proxies
-  content-measurer.ts - Content size measurement
-  clipped-buffer.ts   - Clipped buffer rendering
-  stylesheet.ts       - CSS-like stylesheet system
-  serialization.ts    - Element serialization/deserialization
-  logging.ts          - File-based logging system
-  debug-server.ts     - WebSocket debug server
-  headless.ts         - Headless mode for testing
-  dev-tools.ts        - F12 Dev Tools overlay
-  stats-overlay.ts    - Performance stats overlay
-  char-width.ts       - Character width utilities
-  error-boundary.ts   - Error handling, rate limiting, error overlay
-  performance-dialog.ts - Live performance stats dialog (Ctrl+Shift+P)
-  lint.ts             - Lint mode validation, schemas
-  lsp.ts              - Language Server Protocol for .melker files
-  oauth.ts            - OAuth utilities
-  xdg.ts              - XDG Base Directory support
-  state-persistence.ts - State persistence for apps
-  terminal-lifecycle.ts - Terminal setup, cleanup, signal handlers
-  lru-cache.ts        - Generic LRU cache with configurable max size
-  policy/             - Permission policy system
-    mod.ts            - Policy module exports
-    types.ts          - Policy type definitions
-    loader.ts         - Policy loading from <policy> tag or external file
-    flags.ts          - Convert policy to Deno permission flags
-  config/             - Schema-driven configuration system
-    schema.json       - Config schema (source of truth)
-    config.ts         - MelkerConfig singleton class
-    cli.ts            - CLI parser and help generators
-    mod.ts            - Config module exports
-  bundler/            - Runtime bundler for .melker files
-    mod.ts            - Main bundler exports
-    types.ts          - Bundler type definitions
-    generator.ts      - TypeScript code generation
-    bundle.ts         - Deno.bundle() integration
-    errors.ts         - Error translation to source lines
-    cache.ts          - Bundle caching
-  components/         - Component implementations
-    mod.ts            - Component exports
-    container.ts      - Flexbox container
-    text.ts           - Text display
-    input.ts          - Single-line text input
-    textarea.ts       - Multi-line text input
-    button.ts         - Clickable button
-    dialog.ts         - Modal dialog
-    list.ts           - List container
-    li.ts             - List item
-    checkbox.ts       - Toggle checkbox
-    radio.ts          - Radio button
-    tabs.ts           - Tabbed container
-    tab.ts            - Tab panel (child of tabs)
-    canvas.ts         - Pixel graphics (sextant chars), buffer management
-    canvas-render.ts  - Terminal rendering (sextant, block, ASCII modes), color quantization
-    canvas-dither.ts  - Buffer compositing and dithering algorithms
-    canvas-image.ts   - Image loading/decoding/rendering (PNG/JPEG/GIF, scaling, alpha blending)
-    canvas-shader-runner.ts - Shader animation runner
-    img.ts            - Image component (extends canvas)
-    video.ts          - Video playback
-    progress.ts       - Progress bar (extends Canvas)
-    data-bars.ts      - Bar charts (horizontal/vertical, stacked/grouped, sparklines)
-    markdown.ts       - Markdown rendering with image support
-    color-utils.ts    - RGBA color utilities
-    filterable-list/  - Filterable list components
-      mod.ts          - Module exports
-      core.ts         - FilterableListCore base class
-      filter.ts       - Fuzzy/prefix/contains/exact algorithms
-      option.ts       - OptionElement
-      group.ts        - GroupElement
-      combobox.ts     - ComboboxElement
-      select.ts       - SelectElement
-      autocomplete.ts - AutocompleteElement
-      command-palette.ts - CommandPaletteElement
-    file-browser/     - File system browser component
-      mod.ts          - Module exports
-      file-browser.ts - FileBrowserElement (main component)
-      file-entry.ts   - Type definitions
-      file-utils.ts   - Directory loading, formatting utilities
-  video/              - Video processing
-    mod.ts            - Video exports
-    ffmpeg.ts         - FFmpeg integration
-    dither.ts         - Re-exports from dither/ directory
-    dither/           - Dithering algorithms
-      mod.ts          - Dithering exports
-      types.ts        - DitherMode, ThresholdMatrix types
-      utils.ts        - Shared buffers and helpers
-      threshold.ts    - Ordered, blue-noise, threshold matrix dithering
-      floyd-steinberg.ts - Floyd-Steinberg algorithms
-      sierra.ts       - Sierra algorithms
-      atkinson.ts     - Atkinson algorithms
-    subtitle.ts       - Subtitle handling
-    waveform.ts       - Audio waveform
-  sixel/              - Sixel graphics support
-    mod.ts            - Sixel module exports
-    detect.ts         - Terminal sixel capability detection
-    encoder.ts        - Pure TypeScript sixel encoder
-    palette.ts        - Color quantization, palette caching
-  chat/               - Chat utilities
-    chat-fetch-util.ts - HTTP fetch helpers
-  ai/                 - AI accessibility system
-    mod.ts            - AI module exports
-    openrouter.ts     - OpenRouter API streaming client
-    context.ts        - UI context builder for AI
-    cache.ts          - Query response cache
-    tools.ts          - AI tool system (built-in + custom)
-    accessibility-dialog.ts - AI assistant dialog
-    audio.ts          - Audio recording and transcription
-    macos-audio-record.swift - Native macOS audio capture
-  utils/              - Shared utilities
-    timing.ts         - Debounce and throttle functions
-agent_docs/           - Documentation for AI agents
-examples/             - Example applications
-  ts/                 - TypeScript examples (createElement API)
-  *.ts                - TypeScript examples (melker template API)
-  melker/             - .melker file examples
-tests/                - Test files
-docs/                 - Website content (served at melker.sh)
-  netlify/
-    edge-functions/
-      melker.ts       - Edge function for versioned launcher URLs
-  netlify.toml        - Netlify configuration
-  index.html          - Landing page
-  tutorial.html       - Step-by-step tutorial
-```
+| Path                 | Purpose                                     |
+|----------------------|---------------------------------------------|
+| `melker.ts`          | CLI entry point (symlink-safe)              |
+| `mod.ts`             | Library entry point (all exports)           |
+| `melker-launcher.ts` | Policy enforcement, subprocess spawning     |
+| `src/engine.ts`      | Main engine, lifecycle, events              |
+| `src/layout.ts`      | Flexbox layout calculations                 |
+| `src/rendering.ts`   | Render pipeline, overlays                   |
+| `src/components/`    | UI component implementations                |
+| `src/policy/`        | Permission policy system                    |
+| `src/config/`        | Schema-driven configuration                 |
+| `src/bundler/`       | Runtime bundler for .melker files           |
+| `src/sixel/`         | Sixel graphics support                      |
+| `src/kitty/`         | Kitty graphics support                      |
+| `src/ai/`            | AI accessibility system                     |
+| `agent_docs/`        | Documentation for AI agents                 |
+| `examples/melker/`   | .melker file examples                       |
+
+See [project-structure.md](agent_docs/project-structure.md) for detailed file listing.
 
 ## Code Style
 
 2-space indent, single quotes, semicolons, 100 char width.
+
+## Documentation Style
+
+- **Use markdown links** for file references: `[doc.md](path/to/doc.md)` not `` `path/to/doc.md` ``
+- **Align table columns** by padding cells to consistent widths:
+  ```markdown
+  | Name    | Description              |
+  |---------|--------------------------|
+  | `foo`   | Short description        |
+  | `bar`   | Another description here |
+  ```
 
 ## Critical Rules
 
@@ -235,46 +148,46 @@ docs/                 - Website content (served at melker.sh)
 
 ## Environment Variables
 
-| Variable | Purpose |
-|----------|---------|
-| `MELKER_THEME` | Theme (default: `auto`): `auto-dark`, `auto-std`, `bw-std`, `fullcolor-dark`, etc. |
-| `MELKER_LOG_FILE` | Log file path |
-| `MELKER_LOG_LEVEL` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
-| `MELKER_LOG_BUFFER_SIZE` | In-memory log buffer size for DevTools Log tab (default: 500, range: 10-10000) |
-| `MELKER_HEADLESS` | Headless mode for CI |
-| `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`) |
-| `MELKER_DEBUG_PORT` | Debug server port (implies `net: localhost`) |
-| `MELKER_ALLOW_REMOTE_INPUT` | Allow browser mirror to send mouse/keyboard events (`true` or `1`) |
-| `MELKER_LINT` | Enable lint mode (`true` or `1`) |
-| `MELKER_NO_CONSOLE_OVERRIDE` | Disable console.log redirect to logger (`true` or `1`) |
-| `MELKER_PERSIST` | Enable state persistence (`true` or `1`, default: false) |
-| `MELKER_RETAIN_BUNDLE` | Keep temp bundle files for debugging (`true` or `1`) |
-| `OPENROUTER_API_KEY` | API key for AI assistant (OpenRouter) |
-| `MELKER_AI_MODEL` | AI chat model (default: `openai/gpt-5.2-chat`) |
-| `MELKER_AUDIO_MODEL` | AI transcription model (default: `openai/gpt-4o-audio-preview`) |
-| `MELKER_AI_ENDPOINT` | API endpoint (default: `https://openrouter.ai/api/v1/chat/completions`) |
-| `MELKER_AI_HEADERS` | Custom headers (`name: value; name2: value2`) |
-| `MELKER_AUDIO_GAIN` | Audio recording gain multiplier (default: `2.0`) |
-| `MELKER_AUDIO_DEBUG` | Replay recorded audio before transcription (`true` or `1`) |
-| `MELKER_FFMPEG` | Force ffmpeg on macOS instead of native Swift (`true` or `1`) |
-| `MELKER_AUTO_DITHER` | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `atkinson`, `blue-noise`, `ordered`) |
-| `MELKER_DITHER_BITS` | Color depth for auto dithering (1-8, default: theme-based) |
-| `MELKER_BLUE_NOISE_PATH` | Path to blue noise threshold matrix PNG (default: bundled `media/blue-noise-64.png`) |
-| `MELKER_GFX_MODE` | Graphics mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness), `sixel` (true pixels, auto-disabled in tmux/SSH) |
-| `XDG_STATE_HOME` | Override state dir (default: `~/.local/state`) |
-| `XDG_CONFIG_HOME` | Override config dir (default: `~/.config`) |
-| `XDG_CACHE_HOME` | Override cache dir (default: `~/.cache`) |
+| Variable                     | Purpose                                                                                                                                                            |
+|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MELKER_THEME`               | Theme (default: `auto`): `auto-dark`, `auto-std`, `bw-std`, `fullcolor-dark`, etc.                                                                                 |
+| `MELKER_LOG_FILE`            | Log file path                                                                                                                                                      |
+| `MELKER_LOG_LEVEL`           | `DEBUG`, `INFO`, `WARN`, `ERROR`                                                                                                                                   |
+| `MELKER_LOG_BUFFER_SIZE`     | In-memory log buffer size for DevTools Log tab (default: 500, range: 10-10000)                                                                                     |
+| `MELKER_HEADLESS`            | Headless mode for CI                                                                                                                                               |
+| `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`)                                                                                                                    |
+| `MELKER_DEBUG_PORT`          | Debug server port (implies `net: localhost`)                                                                                                                       |
+| `MELKER_ALLOW_REMOTE_INPUT`  | Allow browser mirror to send mouse/keyboard events (`true` or `1`)                                                                                                 |
+| `MELKER_LINT`                | Enable lint mode (`true` or `1`)                                                                                                                                   |
+| `MELKER_NO_CONSOLE_OVERRIDE` | Disable console.log redirect to logger (`true` or `1`)                                                                                                             |
+| `MELKER_PERSIST`             | Enable state persistence (`true` or `1`, default: false)                                                                                                           |
+| `MELKER_RETAIN_BUNDLE`       | Keep temp bundle files for debugging (`true` or `1`)                                                                                                               |
+| `OPENROUTER_API_KEY`         | API key for AI assistant (OpenRouter)                                                                                                                              |
+| `MELKER_AI_MODEL`            | AI chat model (default: `openai/gpt-5.2-chat`)                                                                                                                     |
+| `MELKER_AUDIO_MODEL`         | AI transcription model (default: `openai/gpt-4o-audio-preview`)                                                                                                    |
+| `MELKER_AI_ENDPOINT`         | API endpoint (default: `https://openrouter.ai/api/v1/chat/completions`)                                                                                            |
+| `MELKER_AI_HEADERS`          | Custom headers (`name: value; name2: value2`)                                                                                                                      |
+| `MELKER_AUDIO_GAIN`          | Audio recording gain multiplier (default: `2.0`)                                                                                                                   |
+| `MELKER_AUDIO_DEBUG`         | Replay recorded audio before transcription (`true` or `1`)                                                                                                         |
+| `MELKER_FFMPEG`              | Force ffmpeg on macOS instead of native Swift (`true` or `1`)                                                                                                      |
+| `MELKER_AUTO_DITHER`         | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `atkinson`, `blue-noise`, `ordered`)                                               |
+| `MELKER_DITHER_BITS`         | Color depth for auto dithering (1-8, default: theme-based)                                                                                                         |
+| `MELKER_BLUE_NOISE_PATH`     | Path to blue noise threshold matrix PNG (default: bundled `media/blue-noise-64.png`)                                                                               |
+| `MELKER_GFX_MODE`            | Graphics mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness), `sixel` (true pixels, auto-disabled in tmux/SSH) |
+| `XDG_STATE_HOME`             | Override state dir (default: `~/.local/state`)                                                                                                                     |
+| `XDG_CONFIG_HOME`            | Override config dir (default: `~/.config`)                                                                                                                         |
+| `XDG_CACHE_HOME`             | Override cache dir (default: `~/.cache`)                                                                                                                           |
 
 ## XDG Base Directory Spec
 
 Melker follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/latest/):
 
-| Directory | Default | Purpose |
-|-----------|---------|---------|
-| State | `~/.local/state/melker/` | Persisted app state |
-| Config | `~/.config/melker/` | User configuration |
-| Cache | `~/.cache/melker/` | Non-essential cached data |
-| Data | `~/.local/share/melker/` | User data files |
+| Directory | Default                    | Purpose                   |
+|-----------|----------------------------|---------------------------|
+| State     | `~/.local/state/melker/`   | Persisted app state       |
+| Config    | `~/.config/melker/`        | User configuration        |
+| Cache     | `~/.cache/melker/`         | Non-essential cached data |
+| Data      | `~/.local/share/melker/`   | User data files           |
 
 ## Configuration System
 
@@ -297,89 +210,21 @@ MELKER_THEME=fullcolor-dark ./melker.ts --theme bw-std  # uses bw-std
 
 **App-defined config**: Apps can define custom config in policy with optional env var overrides via `configSchema`. Env vars in `configSchema` are auto-added to subprocess permissions.
 
-See `agent_docs/config-architecture.md` for full details.
+See [config-architecture.md](agent_docs/config-architecture.md) for full details.
 
 ## Running .melker Files
 
 ```bash
-# Direct execution (melker.ts has executable shebang)
-./melker.ts examples/melker/counter.melker
-
-# Or via deno run
-deno run --allow-all melker.ts examples/melker/counter.melker
-
-# From URL (running .melker files from remote)
-./melker.ts http://localhost:1990/melker/counter.melker
-
-# Running melker.ts itself from remote URL (use --no-lock to avoid stale cache)
-deno run --allow-all --reload --no-lock http://localhost:1990/melker.ts app.melker
-
-# With lint validation
-./melker.ts --lint examples/melker/counter.melker
-
-# Watch mode (auto-reload on file changes, local files only)
-./melker.ts --watch examples/melker/counter.melker
-
-# Debug mode (shows bundler info, retains temp files)
-./melker.ts --debug examples/melker/counter.melker
-
-# Enable bundle caching (disabled by default)
-./melker.ts --cache examples/melker/counter.melker
-
-# Show app policy and exit
-./melker.ts --show-policy examples/melker/counter.melker
-
-# Trust mode (for CI/scripts - bypasses approval prompt that would hang)
-./melker.ts --trust examples/melker/counter.melker
-
-# Start LSP server (for editor integration)
-./melker.ts --lsp
+./melker.ts app.melker              # Direct execution
+./melker.ts --watch app.melker      # Auto-reload on changes
+./melker.ts --trust app.melker      # CI/scripts (bypass approval prompt)
+./melker.ts --debug app.melker      # Debug mode
+./melker.ts --lsp                   # Start LSP server
 ```
 
-**Note:** The launcher automatically spawns a subprocess with `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
+**Important:** Use `--trust` for CI and automated scripts to bypass interactive approval.
 
-**Important:** Use `--trust` for CI, automated scripts, and debugging. Without it, the app waits for interactive approval which will hang non-interactive environments.
-
-### Deno Flags
-
-Certain Deno flags can be forwarded to the app subprocess:
-
-| Flag | Purpose |
-|------|---------|
-| `--reload` | Reload remote modules (bypass Deno cache) |
-| `--no-lock` | Disable lockfile |
-| `--no-check` | Skip type checking (faster startup) |
-| `--quiet`, `-q` | Suppress diagnostic output |
-| `--cached-only` | Require remote deps already cached (offline mode) |
-| `--inspect` | Enable V8 inspector (Chrome DevTools debugging) |
-| `--inspect-wait` | Enable V8 inspector, wait for connection |
-| `--inspect-brk` | Enable V8 inspector, break at start |
-
-**Flag placement matters** when running melker.ts from a remote URL:
-
-```bash
-# Local melker.ts, remote app - flags after melker.ts are forwarded to app
-./melker.ts --reload http://example.com/app.melker
-
-# Remote melker.ts - flags may need to appear TWICE:
-# - BEFORE melker.ts: affects loading melker.ts itself
-# - AFTER melker.ts: forwarded to the app subprocess
-deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
-```
-
-When running melker.ts from a remote URL, Deno flags before `melker.ts` control how Deno fetches and caches the launcher itself. Flags after `melker.ts` are forwarded to the subprocess that runs your app. If you want `--reload` to affect both, specify it in both positions.
-
-**Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub. Use `--reload` to fetch the newest version. For reproducible builds, pin to a specific version:
-
-```bash
-# Pin to CalVer release
-deno run --allow-all https://melker.sh/melker-v2026.01.1.ts app.melker
-
-# Pin to specific commit
-deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker
-```
-
-Non-existent versions show a clean error: `Version not found: v2026.01.99`
+See [getting-started.md](agent_docs/getting-started.md) for full CLI options, Deno flags, and remote execution.
 
 ## Installation via Symlink
 
@@ -416,133 +261,17 @@ const app = await createApp(ui);
 
 ## App Policies (Permission Sandboxing)
 
-Melker apps can declare required permissions via an embedded `<policy>` tag. When a policy is found, the app runs in a subprocess with only those permissions.
+Apps declare permissions via `<policy>` tag, running in a sandboxed subprocess:
 
-### Declaring a Policy
-
-**Inline JSON:**
 ```xml
-<melker>
-  <policy>
-  {
-    "name": "My App",
-    "description": "App description",
-    "permissions": {
-      "read": ["."],
-      "net": ["api.example.com"]
-    }
-  }
-  </policy>
-  <!-- UI content -->
-</melker>
+<policy>{"permissions": {"read": ["."], "net": ["api.example.com"]}}</policy>
 ```
 
-**External file:**
-```xml
-<policy src="app.policy.json"></policy>
-```
+**Permission shortcuts:** `ai`, `clipboard`, `keyring`, `browser`, `shader`
 
-### Permission Types
+**Approval:** All apps require first-run approval. Use `--trust` for CI/scripts.
 
-| Permission | Values | Deno Flag |
-|------------|--------|-----------|
-| `read` | paths or `["*"]` | `--allow-read` |
-| `write` | paths or `["*"]` | `--allow-write` |
-| `net` | hosts, `"samesite"`, or `["*"]` | `--allow-net` |
-| `run` | commands or `["*"]` | `--allow-run` |
-| `env` | variables or `["*"]` | `--allow-env` |
-| `ffi` | libraries or `["*"]` | `--allow-ffi` |
-| `sys` | interfaces or `["*"]` | `--allow-sys` |
-
-**Special net value - `"samesite"`**: For remote apps, `"samesite"` expands to the host of the app's source URL. This allows apps to load resources (images, data) from their origin without hardcoding the host:
-
-```json
-{
-  "permissions": {
-    "net": ["samesite"]
-  }
-}
-```
-
-For `https://example.com/apps/myapp.melker`, `"samesite"` expands to `example.com`.
-
-### Permission Shortcuts
-
-| Shortcut | Description |
-|----------|-------------|
-| `ai` | AI/media: swift, ffmpeg, ffprobe, pactl, ffplay + openrouter.ai |
-| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe |
-| `keyring` | Credentials: security, secret-tool, powershell |
-| `browser` | Browser opening: open, xdg-open, cmd |
-| `shader` | Allow per-pixel shaders on canvas/img elements |
-
-```json
-{
-  "permissions": {
-    "read": ["."],
-    "ai": true,
-    "clipboard": true,
-    "keyring": true,
-    "browser": true,
-    "shader": true
-  }
-}
-```
-
-### Environment Variables in Policy
-
-Use `$ENV{VAR}` syntax in policy JSON with bash-style operators:
-- `$ENV{VAR}` — value or empty
-- `$ENV{VAR:-default}` — value or default if unset/empty
-- `$ENV{VAR:+alternate}` — alternate if set, else empty
-- `$ENV{VAR:?error}` — value or throw error if unset/empty
-
-Same operators work for `${argv[N]}` in .melker files.
-
-### OAuth Auto-Permissions
-
-When an `<oauth>` tag is present, the policy automatically includes:
-- `localhost` in net permissions (callback server)
-- `browser: true` (authorization URL)
-- All hosts from the wellknown endpoint
-
-### App Approval System
-
-All .melker files require first-run approval. Use `--trust` for CI/scripts to bypass the interactive prompt.
-
-**Local files:**
-- Policy tag is optional (uses auto-policy with all permissions if missing)
-- Approval is policy-hash-based (code changes don't require re-approval)
-- Re-approval needed if policy changes (permissions, name, comment, etc.) or file moved/renamed
-
-**Remote files (http:// or https://):**
-- Policy tag is mandatory (fails without it)
-- Approval is hash-based (content + policy + deno flags)
-- Re-approval required if app content, policy, or Deno flags change
-
-**Approval management flags:**
-```bash
-# Clear all cached approvals
-deno run --allow-all melker.ts --clear-approvals
-
-# Revoke approval for specific path or URL
-deno run --allow-all melker.ts --revoke-approval /path/to/app.melker
-deno run --allow-all melker.ts --revoke-approval https://example.com/app.melker
-
-# Show cached approval
-deno run --allow-all melker.ts --show-approval /path/to/app.melker
-```
-
-### Implicit Permissions
-
-These are always granted (no need to declare):
-- **read**: `/tmp`, app directory, XDG state dir, cwd
-- **write**: `/tmp`, XDG state dir, log file directory
-- **env**: All `MELKER_*` vars, `HOME`, `USERPROFILE` (Windows), XDG dirs, `TERM`, `COLORTERM`, `PATH`, plus any env vars from `configSchema`
-
-See `agent_docs/env-permission-analysis.md` for detailed analysis of env var handling.
-
-See `agent_docs/melker-file-format.md` for syntax details.
+See [melker-file-format.md](agent_docs/melker-file-format.md) for full policy syntax and permissions.
 
 ## AI Agent Skill
 
@@ -550,13 +279,13 @@ An AI agent skill for creating .melker apps is available at `skills/creating-mel
 
 ### Skill Contents
 
-| File | Purpose |
-|------|---------|
-| `SKILL.md` | Main instructions, critical rules, quick start guide |
-| `COMPONENTS.md` | Complete component reference (20+ components) |
-| `EXAMPLES.md` | 11 complete working examples and best practices |
-| `TYPES.md` | TypeScript types for `$melker`, `Element`, events |
-| `TROUBLESHOOTING.md` | Common errors, debug strategies |
+| File                  | Purpose                                            |
+|-----------------------|----------------------------------------------------|
+| `SKILL.md`            | Main instructions, critical rules, quick start guide |
+| `COMPONENTS.md`       | Complete component reference (20+ components)      |
+| `EXAMPLES.md`         | 11 complete working examples and best practices    |
+| `TYPES.md`            | TypeScript types for `$melker`, `Element`, events  |
+| `TROUBLESHOOTING.md`  | Common errors, debug strategies                    |
 
 ### Building the Skill Zip
 
@@ -575,15 +304,15 @@ Creates `docs/skill-creating-melker-apps.zip`, available at https://melker.sh/sk
 
 ## Runtime Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `Ctrl+K` | Toggle Command Palette |
-| `F6` | Toggle Performance dialog (live stats) |
-| `F7` | Open AI assistant with voice input (or toggle recording if open) |
-| `F8` | Open AI accessibility assistant (text input) |
-| `F12` | Toggle Dev Tools overlay (source, policy, config, inspect, log, system info) |
-| `Escape` | Close overlays / Close AI dialog |
-| `Tab` / `Shift+Tab` | Navigate focusable elements |
+| Key                 | Action                                                                       |
+|---------------------|------------------------------------------------------------------------------|
+| `Ctrl+K`            | Toggle Command Palette                                                       |
+| `F6`                | Toggle Performance dialog (live stats)                                       |
+| `F7`                | Open AI assistant with voice input (or toggle recording if open)             |
+| `F8`                | Open AI accessibility assistant (text input)                                 |
+| `F12`               | Toggle Dev Tools overlay (source, policy, config, inspect, log, system info) |
+| `Escape`            | Close overlays / Close AI dialog                                             |
+| `Tab` / `Shift+Tab` | Navigate focusable elements                                                  |
 
 ## Releases
 
@@ -595,4 +324,4 @@ git tag -a v2026.01.1 -m "v2026.01.1"
 git push origin main --tags
 ```
 
-See `agent_docs/calver-release-plan.md` for details.
+See [calver-release.md](agent_docs/calver-release.md) for details.

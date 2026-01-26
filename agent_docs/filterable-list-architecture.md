@@ -431,3 +431,8 @@ getAllOptions(): OptionData[] {
 | `examples/melker/autocomplete_demo.melker` | Async search |
 | `examples/melker/command_palette_simple.melker` | Basic palette |
 | `examples/melker/command_palette_demo.melker` | Full features |
+
+## See Also
+
+- [component-reference.md](component-reference.md) — All component documentation
+- [file-browser-architecture.md](file-browser-architecture.md) — File browser (uses filter algorithms)

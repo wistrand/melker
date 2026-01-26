@@ -60,37 +60,42 @@ Inputs inside an open dialog still use fast render.
 
 ## Components with Fast Render
 
-| Component | Benefit |
-|-----------|---------|
-| Input | High - immediate keystroke feedback |
-| Textarea | High - immediate keystroke feedback |
-| Canvas | Potential - already has pixel buffer |
-| Progress | Potential - simple bar redraw |
+| Component | Benefit                              |
+|-----------|--------------------------------------|
+| Input     | High - immediate keystroke feedback  |
+| Textarea  | High - immediate keystroke feedback  |
+| Canvas    | Potential - already has pixel buffer |
+| Progress  | Potential - simple bar redraw        |
 
 ---
 
 ## Files Modified
 
-| File | Changes |
-|------|---------|
-| `src/buffer.ts` | `getDiffOnly()`, `prepareForFastRender()` |
-| `src/rendering.ts` | `findElementBounds()` |
-| `src/components/input.ts` | `fastRender()`, `canFastRender()` |
-| `src/components/textarea.ts` | `fastRender()`, `canFastRender()` |
-| `src/engine.ts` | `_renderFastPath()`, dialog detection |
+| File                          | Changes                                    |
+|-------------------------------|--------------------------------------------|
+| `src/buffer.ts`               | `getDiffOnly()`, `prepareForFastRender()`  |
+| `src/rendering.ts`            | `findElementBounds()`                      |
+| `src/components/input.ts`     | `fastRender()`, `canFastRender()`          |
+| `src/components/textarea.ts`  | `fastRender()`, `canFastRender()`          |
+| `src/engine.ts`               | `_renderFastPath()`, dialog detection      |
 
 ---
 
 ## Performance
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Typing latency | ~50ms+ | ~2-5ms |
-| Debounce delay | 50ms | 16ms |
-| Full render frequency | Same | Same |
+| Metric               | Before  | After   |
+|----------------------|---------|---------|
+| Typing latency       | ~50ms+  | ~2-5ms  |
+| Debounce delay       | 50ms    | 16ms    |
+| Full render frequency | Same    | Same    |
 
 ---
 
 ## Status
 
 **Implemented** - Production ready
+
+## See Also
+
+- [dirty-row-tracking.md](dirty-row-tracking.md) — Buffer diff optimization
+- [architecture.md](architecture.md) — Render pipeline overview

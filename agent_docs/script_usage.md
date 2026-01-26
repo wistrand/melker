@@ -357,4 +357,9 @@ For app-defined config (highest priority last):
 
 Note: CLI flags only apply to Melker's built-in config, not app-defined config.
 
-See `agent_docs/config-architecture.md` for full details.
+## See Also
+
+- [config-architecture.md](config-architecture.md) — Full config system details
+- [debugging.md](debugging.md) — Logging and debugging tools
+- [melker-file-format.md](melker-file-format.md) — .melker file syntax
+- [dx-footguns.md](dx-footguns.md) — Common mistakes to avoid

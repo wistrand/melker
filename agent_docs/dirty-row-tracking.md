@@ -85,10 +85,10 @@ private _computeDirtyDiff(): BufferDiff[] {
 
 ## Performance
 
-| Operation | Before | After |
-|-----------|--------|-------|
-| setCell | O(1) | O(1) + 1 comparison |
-| diff | O(width × height) | O(dirtyRows × width) |
+| Operation | Before             | After               |
+|-----------|--------------------|---------------------|
+| setCell   | O(1)               | O(1) + 1 comparison |
+| diff      | O(width × height)  | O(dirtyRows × width) |
 
 **Real-world example** (form demo, 123×47 terminal):
 - 13/47 rows contain form content
@@ -97,13 +97,13 @@ private _computeDirtyDiff(): BufferDiff[] {
 
 ## Tracking Paths
 
-| Path | Flow | Tracked |
-|------|------|---------|
-| Direct DualBuffer | `buffer.currentBuffer.setCell()` → TerminalBuffer | ✓ |
-| ClippedDualBuffer | `clipped.currentBuffer.setCell()` → ClippedBufferProxy → TerminalBuffer | ✓ |
-| ViewportDualBuffer | `viewport.currentBuffer.setCell()` → ViewportBufferProxy → TerminalBuffer | ✓ |
-| Fast render | `buffer.currentBuffer.fillRect()` → TerminalBuffer.setCell() | ✓ |
-| setText/fillRect | Internal loops call setCell() | ✓ |
+| Path               | Flow                                                                      | Tracked |
+|--------------------|---------------------------------------------------------------------------|---------|
+| Direct DualBuffer  | `buffer.currentBuffer.setCell()` → TerminalBuffer                          | ✓       |
+| ClippedDualBuffer  | `clipped.currentBuffer.setCell()` → ClippedBufferProxy → TerminalBuffer    | ✓       |
+| ViewportDualBuffer | `viewport.currentBuffer.setCell()` → ViewportBufferProxy → TerminalBuffer  | ✓       |
+| Fast render        | `buffer.currentBuffer.fillRect()` → TerminalBuffer.setCell()               | ✓       |
+| setText/fillRect   | Internal loops call setCell()                                              | ✓       |
 
 ## Stats
 
@@ -151,3 +151,8 @@ this._previouslyOpenDialogIds = currentOpenDialogs;
 ```
 
 Built-in dialogs (alert, confirm, prompt, accessibility, dev-tools) also call `forceRender()` directly for immediate feedback.
+
+## See Also
+
+- [fast-input-render.md](fast-input-render.md) — Fast render path for input components
+- [architecture.md](architecture.md) — Render pipeline overview

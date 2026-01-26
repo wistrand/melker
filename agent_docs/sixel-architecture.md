@@ -73,9 +73,9 @@ Color quantization for 256-color limit.
 
 **Palette modes:**
 
-| Mode | Description | Used By |
-|------|-------------|---------|
-| `cached` | Compute once, reuse forever | Static `<img>` |
+| Mode       | Description                    | Used By                |
+|------------|--------------------------------|------------------------|
+| `cached`   | Compute once, reuse forever    | Static `<img>`         |
 | `keyframe` | Cache palette, re-index frames | Video, shaders, filters |
 
 **Keyframe mode:**
@@ -119,11 +119,11 @@ quantizePalette(pixels, mode, maxColors, cacheKey): PaletteResult
 
 ## Performance
 
-| Content Type | Palette Mode | Notes |
-|--------------|--------------|-------|
-| Static image | cached | O(1) after first frame |
-| Video | keyframe | Fast re-indexing between keyframes |
-| Shader | keyframe | Regenerates on >2% color drift |
+| Content Type | Palette Mode | Notes                              |
+|--------------|--------------|-----------------------------------|
+| Static image | cached       | O(1) after first frame             |
+| Video        | keyframe     | Fast re-indexing between keyframes |
+| Shader       | keyframe     | Regenerates on >2% color drift     |
 
 **Optimizations:**
 - Color LUT: 32KB table for O(1) palette lookups instead of O(n) search
@@ -136,12 +136,18 @@ quantizePalette(pixels, mode, maxColors, cacheKey): PaletteResult
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/sixel/mod.ts` | Module exports |
-| `src/sixel/detect.ts` | Capability detection |
+| File                   | Purpose              |
+|------------------------|----------------------|
+| `src/sixel/mod.ts`     | Module exports       |
+| `src/sixel/detect.ts`  | Capability detection |
 | `src/sixel/encoder.ts` | Sixel format encoder |
-| `src/sixel/palette.ts` | Color quantization |
+| `src/sixel/palette.ts` | Color quantization   |
+
+## See Also
+
+- [graphics-architecture.md](graphics-architecture.md) — Common graphics pipeline
+- [kitty-architecture.md](kitty-architecture.md) — Kitty graphics protocol
+- [gfx-modes.md](gfx-modes.md) — All graphics modes
 
 ## References
 

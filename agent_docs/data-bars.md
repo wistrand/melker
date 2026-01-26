@@ -448,3 +448,7 @@ Output shows yellow segments up to 80%, red segments from 80-95%.
 `src/components/data-bars.ts`
 
 Exported from `src/components/mod.ts`.
+
+## See Also
+
+- [component-reference.md](component-reference.md) — All component documentation

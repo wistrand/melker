@@ -429,3 +429,9 @@ const speed = $melker.config.getNumber('plasma.speed', 1.0);  // 2.0
 7. **Backward compatible** - Env vars still work as escape hatch
 8. **Late initialization** - applyCliFlags/applyPolicyConfig for staged init
 9. **Custom config** - Apps can define their own config keys in policy
+
+## See Also
+
+- [script_usage.md](script_usage.md) — Accessing config from scripts
+- [melker-file-format.md](melker-file-format.md) — Policy tag syntax
+- [env-permission-analysis.md](env-permission-analysis.md) — Environment variable handling

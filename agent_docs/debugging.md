@@ -48,12 +48,12 @@ logger.error('Error message');
 
 ### Log Levels
 
-| Level | Use For |
-|-------|---------|
-| `DEBUG` | Detailed debugging info, variable dumps |
-| `INFO` | General operational messages |
-| `WARN` | Potential issues, recoverable errors |
-| `ERROR` | Errors that need attention |
+| Level   | Use For                                  |
+|---------|------------------------------------------|
+| `DEBUG` | Detailed debugging info, variable dumps  |
+| `INFO`  | General operational messages             |
+| `WARN`  | Potential issues, recoverable errors     |
+| `ERROR` | Errors that need attention               |
 | `FATAL` | Critical errors, application termination |
 
 ### Configuration
@@ -127,22 +127,22 @@ Press `F6` to toggle visibility (also: `F10`, `F11`, `Shift+F12`).
 
 ### Displayed Metrics
 
-| Metric | Description |
-|--------|-------------|
-| Max FPS | Theoretical max FPS (1000 / avgRenderTime) |
-| Renders/s | Actual renders per second (activity rate) |
-| Render | Last render time (ms) |
-| Render avg | Average render time over 60 frames |
-| Layout | Last layout time (ms) |
-| Layout avg | Average layout time over 60 frames |
-| Input lat | Input-to-render latency (ms) |
-| Input avg | Average input latency over 60 samples |
-| Breakdown | Latency breakdown (h+w+l+b+a) |
-| Nodes | Number of layout nodes |
-| Cells | Changed/total buffer cells |
-| Memory | Estimated memory usage |
-| Renders | Total render count |
-| Errors | Component error count |
+| Metric     | Description                                |
+|------------|--------------------------------------------|
+| Max FPS    | Theoretical max FPS (1000 / avgRenderTime) |
+| Renders/s  | Actual renders per second (activity rate)  |
+| Render     | Last render time (ms)                      |
+| Render avg | Average render time over 60 frames         |
+| Layout     | Last layout time (ms)                      |
+| Layout avg | Average layout time over 60 frames         |
+| Input lat  | Input-to-render latency (ms)               |
+| Input avg  | Average input latency over 60 samples      |
+| Breakdown  | Latency breakdown (h+w+l+b+a)              |
+| Nodes      | Number of layout nodes                     |
+| Cells      | Changed/total buffer cells                 |
+| Memory     | Estimated memory usage                     |
+| Renders    | Total render count                         |
+| Errors     | Component error count                      |
 
 ### Input Latency Breakdown
 
@@ -201,15 +201,15 @@ Access at: `http://localhost:8080` (web UI) or `ws://localhost:8080` (WebSocket)
 
 Send JSON messages via WebSocket:
 
-| Command | Purpose |
-|---------|---------|
-| `get-engine-state` | Get engine status, element count, focus |
-| `get-buffer` | Get current buffer snapshot |
-| `get-document-tree` | Get element tree structure |
-| `inject-event` | Inject keyboard/mouse events |
-| `trigger-render` | Force a re-render |
-| `get-headless-status` | Headless mode info |
-| `get-terminal-output` | Get captured terminal output |
+| Command               | Purpose                                 |
+|-----------------------|-----------------------------------------|
+| `get-engine-state`    | Get engine status, element count, focus |
+| `get-buffer`          | Get current buffer snapshot             |
+| `get-document-tree`   | Get element tree structure              |
+| `inject-event`        | Inject keyboard/mouse events            |
+| `trigger-render`      | Force a re-render                       |
+| `get-headless-status` | Headless mode info                      |
+| `get-terminal-output` | Get captured terminal output            |
 
 ### Event Injection Examples
 
@@ -297,7 +297,7 @@ If video frame data (sextant characters) appears on the terminal after exit:
 - This is a race condition: video frame renders after alternate screen exit
 - The engine has render guards that check `_isInitialized` before `writeSync()`
 - Guards are in `render()`, `forceRender()`, `_renderOptimized()`, `_renderFullScreen()`
-- See `src/engine.ts` and `agent_docs/implementation-details.md` for details
+- See `src/engine.ts` for details on render guards
 
 ## Dev Tools (F12)
 
@@ -305,17 +305,17 @@ Press **F12** at runtime to open the Dev Tools dialog.
 
 ### Tabs
 
-| Tab | Description |
-|-----|-------------|
-| Help | App help text (if provided) |
-| Source | Original `.melker` source or converted content for `.md` files |
-| Policy | App permissions and Deno flags |
-| Markdown | Original markdown (for `.md` files only) |
-| System | Build info, scripts, bundle details |
-| Config | Current configuration with sources (schema + app-defined) |
-| Inspect | Live document tree view with Refresh button |
-| Log | Recent log entries in data-table with sorting, shows log file path |
-| Actions | Performance Monitor, Exit Application |
+| Tab      | Description                                                         |
+|----------|---------------------------------------------------------------------|
+| Help     | App help text (if provided)                                         |
+| Source   | Original `.melker` source or converted content for `.md` files      |
+| Policy   | App permissions and Deno flags                                      |
+| Markdown | Original markdown (for `.md` files only)                            |
+| System   | Build info, scripts, bundle details                                 |
+| Config   | Current configuration with sources (schema + app-defined)           |
+| Inspect  | Live document tree view with Refresh button                         |
+| Log      | Recent log entries in data-table with sorting, shows log file path  |
+| Actions  | Performance Monitor, Exit Application                               |
 
 ### Features
 
@@ -367,11 +367,11 @@ Then open `chrome://inspect` in Chrome and click "inspect" on the Deno target.
 
 ### Supported Flags
 
-| Flag | Behavior |
-|------|----------|
-| `--inspect` | Enable inspector, execute immediately |
+| Flag             | Behavior                              |
+|------------------|---------------------------------------|
+| `--inspect`      | Enable inspector, execute immediately |
 | `--inspect-wait` | Enable inspector, wait for connection |
-| `--inspect-brk` | Enable inspector, break at first line |
+| `--inspect-brk`  | Enable inspector, break at first line |
 
 ### Known Issues with Profiling
 
@@ -385,9 +385,15 @@ When using Chrome DevTools Performance profiling, rendering may appear corrupted
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/logging.ts` | Logger class, getLogger(), log levels |
-| `src/headless.ts` | HeadlessTerminal, HeadlessManager |
-| `src/debug-server.ts` | MelkerDebugServer, WebSocket API |
-| `src/dev-tools.ts` | DevToolsManager, F12 overlay |
+| File                  | Purpose                             |
+|-----------------------|-------------------------------------|
+| `src/logging.ts`      | Logger class, getLogger(), log levels |
+| `src/headless.ts`     | HeadlessTerminal, HeadlessManager   |
+| `src/debug-server.ts` | MelkerDebugServer, WebSocket API    |
+| `src/dev-tools.ts`    | DevToolsManager, F12 overlay        |
+
+## See Also
+
+- [architecture.md](architecture.md) — Core architecture, render pipeline
+- [script_usage.md](script_usage.md) — $melker context and logging API
+- [config-architecture.md](config-architecture.md) — Configuration system

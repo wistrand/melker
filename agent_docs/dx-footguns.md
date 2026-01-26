@@ -447,3 +447,9 @@ This is standard flexbox behavior - in a column container, `align-items` default
 ```
 
 **Why this happens**: The bundler merges exports into `$app` by copying values. For primitives (numbers, strings, booleans), `$app.count` holds a copy of the value, not a reference to the original binding. Setting `$app.count = 10` modifies the copy on `$app`, but the module-internal `count` variable remains unchanged. Objects work differently - they're copied by reference, so `$app.config.debug = true` would modify the original object.
+
+## See Also
+
+- [getting-started.md](getting-started.md) — Quick start guide
+- [script_usage.md](script_usage.md) — Script context and $melker API
+- [component-reference.md](component-reference.md) — Component documentation

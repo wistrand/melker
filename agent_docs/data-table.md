@@ -187,3 +187,7 @@ For dynamic data (e.g., fetched from API, generated), use a script:
 | Sort | O(n log n), cached |
 | Selection lookup | O(1) |
 | Click hit test | O(visible rows) |
+
+## See Also
+
+- [component-reference.md](component-reference.md) — All component documentation (includes `<table>` for complex cells)

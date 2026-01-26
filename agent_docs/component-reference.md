@@ -1,6 +1,6 @@
-# Elements and Layout
+# Component Reference
 
-How Melker's element system and layout engine work.
+Detailed documentation for Melker components.
 
 ## Element System
 
@@ -1080,3 +1080,11 @@ Layout properties (padding, margin, border widths) do NOT inherit.
 | `src/content-measurer.ts` | ContentMeasurer, intrinsic size calculation |
 | `src/focus.ts` | FocusManager, tab navigation |
 | `src/events.ts` | EventManager, event dispatching |
+
+## See Also
+
+- [architecture.md](architecture.md) — Core architecture, layout engine
+- [filterable-list-architecture.md](filterable-list-architecture.md) — Combobox, select, autocomplete internals
+- [file-browser-architecture.md](file-browser-architecture.md) — File browser internals
+- [data-table.md](data-table.md) — Data table component
+- [data-bars.md](data-bars.md) — Bar chart components

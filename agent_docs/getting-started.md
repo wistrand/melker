@@ -147,6 +147,6 @@ melker --reload http://example.com/app.melker
 ## Next Steps
 
 - Examples: [`examples/melker/*.melker`](../examples/melker/)
-- Components: [`COMPONENTS.md`](../skills/creating-melker-apps/COMPONENTS.md)
+- Components: [`COMPONENTS.md`](../skills/creating-melker-apps/references/COMPONENTS.md)
 - Footguns: [`dx-footguns.md`](dx-footguns.md)
 - Full reference: [`CLAUDE.md`](../CLAUDE.md)

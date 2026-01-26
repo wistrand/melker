@@ -917,3 +917,9 @@ Approvals are cached in `~/.cache/melker/approvals/`.
 See `examples/melker/markdown_viewer.melker` and `examples/melker/video_demo.melker` for policy examples.
 
 See `examples/melker-md/` for complete examples and `examples/melker-md/README.md` for full syntax reference.
+
+## See Also
+
+- [getting-started.md](getting-started.md) — Quick start guide
+- [script_usage.md](script_usage.md) — Script context and $melker API
+- [config-architecture.md](config-architecture.md) — Configuration and policy details

@@ -2,46 +2,48 @@
 
 *Run text with meaning*
 
-This directory contains `.melker` template files demonstrating the declarative HTML-like syntax.
+This directory contains `.melker` template files demonstrating scripts and advanced patterns.
 
 ## Running Examples
 
 ```bash
-./melker.ts examples/melker/persistence-demo.melker
-./melker.ts examples/melker/interactive.melker
+./melker.ts examples/melker/script-demo.melker
+./melker.ts examples/melker/oauth-login.melker
 ```
 
 For basic examples (hello, counter, form, dialog, tabs), see `examples/basics/`.
 
 For component demos (input, select, table, slider, etc.), see `examples/components/`.
 
+For layout examples (flexbox, borders, scrolling), see `examples/layout/`.
+
 For canvas, shaders, images, and video, see `examples/canvas/`.
-
-## Advanced Patterns
-
-| File | Description |
-|------|-------------|
-| `textarea-scrollable.melker` | Textarea in scrollable container |
-| `persistence-demo.melker` | State persistence with password input |
-| `interactive.melker` | Advanced event handling patterns |
-
-## Layout Examples
-
-| File | Description |
-|------|-------------|
-| `flex-demo.melker` | Flexbox layout examples |
-| `flexbox-visualizer.melker` | Interactive flexbox demo |
-| `one-column-scroll.melker` | Single column scrolling |
-| `three-column-scroll.melker` | Multi-column scrolling |
-| `horizontal-column-scroll.melker` | Horizontal scroll layout |
 
 ## Script Examples
 
-| File | Description |
-|------|-------------|
-| `script-demo.melker` | Inline script sections |
-| `external-script-demo.melker` | External script loading via src |
-| `oauth-login.melker` | OAuth2 PKCE integration |
+| File                        | Description                        |
+|-----------------------------|------------------------------------|
+| `script-demo.melker`        | Inline script sections             |
+| `external-script-demo.melker` | External script loading via src  |
+| `npm-import-demo.melker`    | Importing npm packages             |
+
+## Advanced Patterns
+
+| File                     | Description                           |
+|--------------------------|---------------------------------------|
+| `oauth-login.melker`     | OAuth2 PKCE integration               |
+| `persistence-demo.melker` | State persistence with password input |
+| `ai-tools-demo.melker`   | AI accessibility tools demo           |
+| `interactive.melker`     | Advanced event handling patterns      |
+| `qr-code.melker`         | QR code generation                    |
+
+## Supporting Files
+
+| File/Directory | Description                    |
+|----------------|--------------------------------|
+| `bundler/`     | Bundler test files             |
+| `utils.ts`     | Shared utility functions       |
+| `.env.local.example` | Environment variable template |
 
 ## .melker File Format
 
@@ -135,10 +137,10 @@ External scripts (`<script src="...">`) are imported as ES modules and their exp
 
 ### Special Tags
 
-| Tag | Description |
-|-----|-------------|
-| `<melker>` | Root wrapper (optional) |
-| `<style>` | CSS-like stylesheet rules |
-| `<script>` | TypeScript/JavaScript code |
-| `<oauth>` | OAuth2 PKCE configuration |
-| `<title>` | Window title |
+| Tag        | Description                    |
+|------------|--------------------------------|
+| `<melker>` | Root wrapper (optional)        |
+| `<style>`  | CSS-like stylesheet rules      |
+| `<script>` | TypeScript/JavaScript code     |
+| `<oauth>`  | OAuth2 PKCE configuration      |
+| `<title>`  | Window title                   |

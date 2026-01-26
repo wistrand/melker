@@ -231,9 +231,11 @@ Detailed file layout for the Melker codebase.
 | `examples/showcase/`   | Polished apps (htop, map, breakout)   |
 | `examples/basics/`     | Learning progression                  |
 | `examples/components/` | Component demos                       |
+| `examples/layout/`     | Flexbox, borders, scrolling           |
 | `examples/canvas/`     | Canvas graphics, shaders, video       |
 | `examples/typescript/` | TypeScript examples                   |
-| `examples/melker/`     | .melker file examples                 |
+| `examples/melker/`     | Scripts, advanced patterns            |
+| `examples/_internal/`  | Test files and variants               |
 | `tests/`               | Test files                            |
 | `docs/`                | Website content (served at melker.sh) |
 | `skills/`              | AI agent skills                       |

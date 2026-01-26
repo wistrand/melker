@@ -443,22 +443,22 @@ Renders markdown content with support for images, links, and code blocks.
 - `markdown-viewer.melker` - Markdown rendering with image support
 - `color-selector.melker` - HSL color picker with canvas
 
-**Layout** (`examples/melker/`):
+**Layout** (`examples/layout/`):
 - `flex-demo.melker` - Flexbox layout examples
 - `flexbox-visualizer.melker` - Interactive flexbox demo
 - `borders.melker` - Border styles
 
-**Canvas** (`examples/melker/`):
+**Canvas** (`examples/canvas/`):
 - `analog-clock.melker` - Canvas-based analog clock
-- `canvas-test.melker` - Canvas graphics
-- `image-demo.melker` - Image component
-- `gfx-modes-demo.melker` - GFX modes and dithering
-- `plasma-shader.melker` - Plasma shader effect
-- `metaballs.melker` - Metaballs animation
+- `basics.melker` - Canvas graphics basics
+- `gfx-modes.melker` - GFX modes and dithering
+- `shaders/plasma-shader.melker` - Plasma shader effect
+- `shaders/metaballs.melker` - Metaballs animation
+- `images/image-demo.melker` - Image component
 
 **Advanced** (`examples/melker/`):
 - `ai-tools-demo.melker` - Custom AI tool registration
-- `chrome-collapse-demo.melker` - Progressive chrome collapse
+- `persistence-demo.melker` - State persistence
 
 ## Running
 

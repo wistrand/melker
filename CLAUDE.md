@@ -17,7 +17,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Getting started     | [getting-started.md](agent_docs/getting-started.md)        |
 | .melker file format | [melker-file-format.md](agent_docs/melker-file-format.md)  |
 | First app tutorial  | [tutorial.html](docs/tutorial.html)                        |
-| Examples            | [examples/melker/](examples/melker/)                       |
+| Examples            | [examples/](examples/) (basics, components, layout, canvas) |
 | **AI Agent Skill**  | [skills/creating-melker-apps/](skills/creating-melker-apps/) |
 
 ## Documentation Index
@@ -112,7 +112,7 @@ deno task skill:zip    # Build AI agent skill zip
 | `src/kitty/`         | Kitty graphics support                      |
 | `src/ai/`            | AI accessibility system                     |
 | `agent_docs/`        | Documentation for AI agents                 |
-| `examples/melker/`   | .melker file examples                       |
+| `examples/`          | Example apps (showcase, basics, components, layout, canvas, melker) |
 
 See [project-structure.md](agent_docs/project-structure.md) for detailed file listing.
 

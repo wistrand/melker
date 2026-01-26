@@ -224,19 +224,19 @@ Detailed file layout for the Melker codebase.
 
 ## Other Directories
 
-| Directory      | Purpose                                    |
-|----------------|--------------------------------------------|
-| `agent_docs/`  | Documentation for AI agents                |
-| `examples/`    | Example applications                       |
-| `examples/showcase/` | Polished apps (htop, map, breakout)   |
-| `examples/basics/` | Learning progression                    |
-| `examples/components/` | Component demos                      |
-| `examples/canvas/` | Canvas graphics, shaders, video        |
-| `examples/typescript/` | TypeScript examples                  |
-| `examples/melker/` | .melker file examples                  |
-| `tests/`       | Test files                                 |
-| `docs/`        | Website content (served at melker.sh)      |
-| `skills/`      | AI agent skills                            |
+| Directory              | Purpose                               |
+|------------------------|---------------------------------------|
+| `agent_docs/`          | Documentation for AI agents           |
+| `examples/`            | Example applications                  |
+| `examples/showcase/`   | Polished apps (htop, map, breakout)   |
+| `examples/basics/`     | Learning progression                  |
+| `examples/components/` | Component demos                       |
+| `examples/canvas/`     | Canvas graphics, shaders, video       |
+| `examples/typescript/` | TypeScript examples                   |
+| `examples/melker/`     | .melker file examples                 |
+| `tests/`               | Test files                            |
+| `docs/`                | Website content (served at melker.sh) |
+| `skills/`              | AI agent skills                       |
 
 ## See Also
 

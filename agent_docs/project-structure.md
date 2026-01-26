@@ -228,7 +228,11 @@ Detailed file layout for the Melker codebase.
 |----------------|--------------------------------------------|
 | `agent_docs/`  | Documentation for AI agents                |
 | `examples/`    | Example applications                       |
-| `examples/ts/` | TypeScript examples (createElement API)    |
+| `examples/showcase/` | Polished apps (htop, map, breakout)   |
+| `examples/basics/` | Learning progression                    |
+| `examples/components/` | Component demos                      |
+| `examples/canvas/` | Canvas graphics, shaders, video        |
+| `examples/typescript/` | TypeScript examples                  |
 | `examples/melker/` | .melker file examples                  |
 | `tests/`       | Test files                                 |
 | `docs/`        | Website content (served at melker.sh)      |

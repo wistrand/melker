@@ -2,9 +2,9 @@
 
 A markdown file viewer with navigation history (back/forward).
 
-Show README.md: `deno run --allow-all melker.ts examples/melker-md/markdown_viewer.md README.md`
+Show README.md: `deno run --allow-all melker.ts examples/melker-md/markdown-viewer.md README.md`
 
-To view .melker output: `deno run --allow-all melker.ts --convert examples/melker-md/markdown_viewer.md`
+To view .melker output: `deno run --allow-all melker.ts --convert examples/melker-md/markdown-viewer.md`
 
 
 ## Policy

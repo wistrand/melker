@@ -2,7 +2,7 @@
 
 A tile-based map viewer demonstrating advanced Melker patterns.
 
-**Source:** [examples/melker/map.melker](../examples/melker/map.melker)
+**Source:** [examples/showcase/map.melker](../examples/showcase/map.melker)
 
 ## Melker Patterns Demonstrated
 

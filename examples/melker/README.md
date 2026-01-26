@@ -7,45 +7,23 @@ This directory contains `.melker` template files demonstrating the declarative H
 ## Running Examples
 
 ```bash
-# Direct execution (melker.ts has executable shebang)
-./melker.ts examples/melker/counter.melker
-
-# Or via deno run
-deno run --allow-all melker.ts examples/melker/counter.melker
-
-# Run from URL
-./melker.ts http://localhost:1990/melker/counter.melker
-
-# With lint validation
-./melker.ts --lint examples/melker/counter.melker
-
-# Display element tree
-./melker.ts examples/melker/counter.melker --print-tree
-
-# Display JSON serialization
-./melker.ts examples/melker/counter.melker --print-json
+./melker.ts examples/melker/persistence-demo.melker
+./melker.ts examples/melker/interactive.melker
 ```
 
-## Core Examples
+For basic examples (hello, counter, form, dialog, tabs), see `examples/basics/`.
+
+For component demos (input, select, table, slider, etc.), see `examples/components/`.
+
+For canvas, shaders, images, and video, see `examples/canvas/`.
+
+## Advanced Patterns
 
 | File | Description |
 |------|-------------|
-| `hello.melker` | Simple greeting with text and button |
-| `counter.melker` | Interactive counter with style tag |
-| `input-demo.melker` | Input field with Enter key handling |
-| `persistence_demo.melker` | State persistence with password input |
+| `textarea-scrollable.melker` | Textarea in scrollable container |
+| `persistence-demo.melker` | State persistence with password input |
 | `interactive.melker` | Advanced event handling patterns |
-
-## Component Demos
-
-| File | Description |
-|------|-------------|
-| `dialog_demo.melker` | Modal dialog examples |
-| `menu_example.melker` | Menu bar with dropdowns |
-| `tabs_demo.melker` | Tabbed interface component |
-| `textarea_demo.melker` | Multi-line text input |
-| `textarea_scrollable.melker` | Textarea in scrollable container |
-| `markdown_viewer.melker` | Markdown rendering with image support |
 
 ## Layout Examples
 
@@ -57,59 +35,13 @@ deno run --allow-all melker.ts examples/melker/counter.melker
 | `three-column-scroll.melker` | Multi-column scrolling |
 | `horizontal-column-scroll.melker` | Horizontal scroll layout |
 
-## Canvas & Graphics
-
-| File | Description |
-|------|-------------|
-| `analog-clock.melker` | Canvas-based analog clock |
-| `enterprise-analog-clock.melker` | Feature-rich clock demo |
-| `text-analog-clock.melker` | Text-based clock |
-| `canvas_test.melker` | Canvas drawing basics |
-| `canvas_color_test.melker` | Canvas color drawing |
-| `color_selector.melker` | HSL color picker with canvas click |
-| `gfx_modes_demo.melker` | GFX modes and dithering showcase |
-| `video_demo.melker` | Video playback |
-
-### Canvas Features
-
-Canvas uses sextant characters (2x3 pixel blocks per terminal character).
-
-**Auto-sizing with onPaint:**
-```xml
-<canvas
-  id="myCanvas"
-  width="60" height="20"
-  style="width: fill; height: fill"
-  onPaint="$melker.drawContent(event.canvas)"
-/>
-```
-
-**Dithering modes:**
-- `dither="auto"` - Adapts to theme (sierra-stable for B&W, none for fullcolor)
-- `dither="sierra-stable"` - Best for B&W themes
-- `dither="none"` - True color rendering
-
-**Aspect-ratio corrected drawing:**
-```typescript
-// Use visual coordinates for round circles
-const visSize = canvas.getVisualSize();
-const [pxCenterX, pxCenterY] = canvas.visualToPixel(visSize.width/2, visSize.height/2);
-canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
-```
-
 ## Script Examples
 
 | File | Description |
 |------|-------------|
 | `script-demo.melker` | Inline script sections |
 | `external-script-demo.melker` | External script loading via src |
-| `oauth_login.melker` | OAuth2 PKCE integration |
-
-## Fun Examples
-
-| File | Description |
-|------|-------------|
-| `procrastinate.melker` | Productivity app |
+| `oauth-login.melker` | OAuth2 PKCE integration |
 
 ## .melker File Format
 

@@ -9,7 +9,7 @@ Display an image using the canvas element:
 
 ```melker
 <canvas
-  src="../media/melker-1024.png"
+  src="../../media/melker-1024.png"
   width="40"
   height="15"
 />

@@ -26,11 +26,11 @@ Here is some `inline code` in a sentence.
 
 Here's an image reference using HTML img tag (default 30x15):
 
-<img src="../media/melker-128.png" alt="Maze Image">
+<img src="../../media/melker-128.png" alt="Maze Image">
 
 And with explicit dimensions (20 chars):
 
-<img src="../media/melker-128.png" alt="Small Maze" width="20ch">
+<img src="../../media/melker-128.png" alt="Small Maze" width="20ch">
 
 Markdown-style image:
 
@@ -119,7 +119,7 @@ const user: User = { name: 'Alice', age: 30 };
 ### Bash
 
 ```bash
-deno run --allow-all melker.ts examples/melker/counter.melker
+deno run --allow-all melker.ts examples/basics/counter.melker
 ```
 
 ## Blockquotes

@@ -35,14 +35,14 @@ deno run --allow-all melker.ts examples/melker-md/hello.md
 
 - `hello.md` - Minimal hello world example
 - `counter.md` - Interactive counter with buttons and event handlers
-- `form_demo.md` - Form with inputs, radio buttons, checkboxes, buttons
-- `markdown_viewer.md` - Markdown file viewer with navigation history
+- `form-demo.md` - Form with inputs, radio buttons, checkboxes, buttons
+- `markdown-viewer.md` - Markdown file viewer with navigation history
 - `analog-clock.md` - Canvas-based analog clock with visual ASCII layout
-- `color_selector.md` - HSL color picker with interactive canvas
-- `tabs_demo.md` - Tabbed interface with multiple panels
-- `nested_tabs_demo.md` - Nested tabs with settings panels
-- `oauth_demo.md` - OAuth2 PKCE login with external script
-- `shorthand_demo.md` - Shorthand type syntax for buttons, text, inputs
+- `color-selector.md` - HSL color picker with interactive canvas
+- `tabs-demo.md` - Tabbed interface with multiple panels
+- `nested_tabs-demo.md` - Nested tabs with settings panels
+- `oauth-demo.md` - OAuth2 PKCE login with external script
+- `shorthand-demo.md` - Shorthand type syntax for buttons, text, inputs
 
 ## Syntax Overview
 
@@ -250,7 +250,7 @@ This generates a `<tabs>` element with `<tab>` children:
 - Tab titles come from the tab bar line, not from child box IDs
 - Child boxes can be component references (defined in separate `melker-block` blocks)
 
-See `tabs_demo.md` for a complete example.
+See `tabs-demo.md` for a complete example.
 
 ### Scripts
 
@@ -366,7 +366,7 @@ interface OAuthEvent {
 }
 ```
 
-Generates an `<oauth ... />` element. See `oauth_demo.md` for a complete example.
+Generates an `<oauth ... />` element. See `oauth-demo.md` for a complete example.
 
 ## Block Type Summary
 

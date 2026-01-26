@@ -45,7 +45,7 @@ Melker is distributed via git. No package managers, no registries, no version co
 ```bash
 git clone https://github.com/wistrand/melker.git
 cd melker
-./melker.ts examples/melker/hello.melker
+./melker.ts examples/basics/hello.melker
 ```
 
 ### Option 2: Global Install via Symlink
@@ -89,7 +89,7 @@ Melker apps look and feel like apps:
 
 #### Showcase
 
-A system monitor: [View source](examples/melker/htop.melker)
+A system monitor: [View source](examples/showcase/htop.melker)
 
 ![system monitor](docs/htop.png)
 
@@ -500,16 +500,16 @@ docs/
 
 ```bash
 # Counter with state
-./melker.ts examples/melker/counter.melker
+./melker.ts examples/basics/counter.melker
 
 # Markdown viewer (pass file as argument)
-./melker.ts examples/melker/markdown_viewer.melker README.md
+./melker.ts examples/showcase/markdown-viewer.melker README.md
 
 # Dialog system
-./melker.ts examples/melker/dialog_demo.melker
+./melker.ts examples/basics/dialog-demo.melker
 
 # Canvas animation
-./melker.ts examples/melker/analog-clock.melker
+./melker.ts examples/canvas/analog-clock.melker
 ```
 
 ---

@@ -21,7 +21,7 @@
   </style>
 
   <container id="root">
-      <img src="../../media/melker-128.png"/>
-      <img src="../../media/melker-128.png" width="100%" height="100%"/>
+      <img src="../../../media/melker-128.png"/>
+      <img src="../../../media/melker-128.png" width="100%" height="100%"/>
   </container>
 </melker>

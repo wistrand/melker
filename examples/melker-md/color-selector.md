@@ -2,7 +2,7 @@
 
 An HSL color picker with interactive canvas for selecting hue, saturation, and lightness.
 
-Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/melker-md/color_selector.md`
+Run with: `MELKER_THEME=fullcolor-dark deno run --allow-all melker.ts examples/melker-md/color-selector.md`
 
 <img src="color_selector.png" alt="Color Selector Screenshot" />
 

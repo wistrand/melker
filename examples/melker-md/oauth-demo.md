@@ -18,7 +18,7 @@ Set environment variables before running: `OAUTH_WELLKNOWN`, `OAUTH_CLIENT_ID`, 
 ```
 
 ## Scripts
-- [oauth handlers](./oauth_handlers.ts)
+- [oauth handlers](./oauth-handlers.ts)
 
 ## Main UI
 

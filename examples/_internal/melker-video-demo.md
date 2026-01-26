@@ -9,7 +9,7 @@ The following is a video element embedded in markdown:
 
 ```melker
 <video
-  src="../media/seal.mp4"
+  src="../../media/seal.mp4"
   width="120"
   height="40"
   autoplay="true"
@@ -24,7 +24,7 @@ Display an image using the canvas element:
 
 ```melker
 <canvas
-  src="../media/melker-1024.png"
+  src="../../media/melker-1024.png"
   width="40"
   height="15"
 />

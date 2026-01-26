@@ -338,10 +338,10 @@ The subprocess will automatically have permission to read `PLASMA_SCALE` without
 
 ```bash
 # Override plasma.scale via env var (--trust for non-interactive/CI)
-PLASMA_SCALE=3.0 ./melker.ts --trust plasma_demo.melker
+PLASMA_SCALE=3.0 ./melker.ts --trust examples/canvas/shaders/plasma-shader.melker
 
 # print-config shows the env override
-./melker.ts --print-config plasma_demo.melker
+./melker.ts --print-config examples/canvas/shaders/plasma-shader.melker
 # [Plasma (app)]
 #   plasma.scale = 3 <- PLASMA_SCALE
 #   plasma.speed = 2 <- policy (PLASMA_SPEED)

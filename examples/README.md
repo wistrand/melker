@@ -2,175 +2,147 @@
 
 *Run text with meaning*
 
-This directory contains focused examples demonstrating different aspects of the Melker terminal UI library.
+Examples demonstrating the Melker terminal UI library.
+
+## Quick Start
+
+```bash
+# Run a .melker file
+./melker.ts examples/basics/hello.melker
+
+# Run a TypeScript example
+deno run --allow-all examples/typescript/create-element/minimal-example.ts
+```
 
 ## Directory Structure
 
 ```
 examples/
-├── ts/                    # TypeScript examples using createElement API
-├── melker/               # .melker declarative template files
-├── melker-md/            # Markdown files with ASCII box layouts
-└── *.ts                  # TypeScript examples using melker template API
+├── showcase/        # Polished apps
+├── basics/          # Learning progression
+├── components/      # Component demos
+├── canvas/          # Graphics, shaders, video
+├── melker/          # .melker template files
+├── melker-md/       # Markdown format
+├── typescript/      # TypeScript API examples
+└── _internal/       # Test files
 ```
 
-## TypeScript Examples with createElement (`ts/`)
+## Showcase
 
-| Example | Description |
-|---------|-------------|
-| `basic_usage.ts` | Core API - createElement, serialization, tree manipulation |
-| `minimal_example.ts` | Minimal Melker setup |
-| `terminal_ui_demo.ts` | Complete terminal application with responsive layouts |
-| `interactive_demo.ts` | Event handling, focus management, user interaction |
-| `dialog_demo.ts` | Modal dialogs |
-| `form_demo.ts` | Radio buttons and checkboxes |
-| `simple_list_demo.ts` | Basic list component |
-| `mixed_list_demo.ts` | List with different child types |
-| `scrolling_list_demo.ts` | Scrollable list container |
-| `mirror_demo.ts` | Debug server HTML mirror |
-| `template_comparison.ts` | createElement vs melker template comparison |
-| `theme_demo.ts` | Theme system demonstration |
+Polished applications demonstrating Melker's capabilities.
+
+| App | Description |
+|-----|-------------|
+| [htop.melker](showcase/htop.melker) | System monitor with CPU/memory graphs |
+| [map.melker](showcase/map.melker) | Interactive map with OpenStreetMap tiles |
+| [breakout.melker](showcase/breakout.melker) | Classic breakout game |
+| [markdown-viewer.melker](showcase/markdown-viewer.melker) | Markdown file viewer |
 
 ```bash
-# Run a TypeScript example
-deno run --allow-all examples/ts/minimal_example.ts
+./melker.ts examples/showcase/htop.melker
 ```
 
-## TypeScript Examples with melker Templates (root)
+## Basics
 
-| Example | Description |
-|---------|-------------|
-| `template_demo.ts` | Template literal syntax usage |
-| `chat_demo.ts` | Interactive chat application |
-| `state_management_example.ts` | State management patterns |
-| `tabs_ts_demo.ts` | Tabbed interface component |
-| `analog_clock_demo.ts` | Canvas-based analog clock |
-| `canvas_graphics_demo.ts` | Canvas drawing primitives |
-| `list_demo.ts` | List component example |
-| `markdown_template_viewer.ts` | Markdown rendering with image support |
+Learning progression for beginners. Start here.
+
+| File | Concepts |
+|------|----------|
+| [hello.melker](basics/hello.melker) | Minimal app, text, button |
+| [counter.melker](basics/counter.melker) | State, getElementById, setValue |
+| [form-demo.melker](basics/form-demo.melker) | Input fields, form layout |
+| [dialog-demo.melker](basics/dialog-demo.melker) | Modal dialogs |
+| [tabs-demo.melker](basics/tabs-demo.melker) | Tabbed interface |
 
 ```bash
-# Run a template example
-deno run --allow-all examples/template_demo.ts
+./melker.ts examples/basics/counter.melker
 ```
 
-## .melker File Examples (`melker/`)
+## Components
 
-See `examples/melker/README.md` for declarative `.melker` template examples.
+One canonical demo per component type.
+
+| Component | File |
+|-----------|------|
+| Input | [input.melker](components/input.melker) |
+| Textarea | [textarea.melker](components/textarea.melker) |
+| Select | [select.melker](components/select.melker) |
+| Combobox | [combobox.melker](components/combobox.melker) |
+| Autocomplete | [autocomplete.melker](components/autocomplete.melker) |
+| Command Palette | [command-palette.melker](components/command-palette.melker) |
+| Table | [table.melker](components/table.melker) |
+| Data Table | [data-table.melker](components/data-table.melker) |
+| Data Bars | [data-bars.melker](components/data-bars.melker) |
+| Slider | [slider.melker](components/slider.melker) |
+| Progress | [progress.melker](components/progress.melker) |
+| File Browser | [file-browser.melker](components/file-browser.melker) |
+| Segment Display | [segment-display.melker](components/segment-display.melker) |
 
 ```bash
-# Direct execution (melker.ts has executable shebang)
-./melker.ts examples/melker/counter.melker
-
-# Or via deno run
-deno run --allow-all melker.ts examples/melker/counter.melker
-
-# Run from URL
-./melker.ts http://localhost:1990/melker/counter.melker
+./melker.ts examples/components/slider.melker
 ```
 
-## Markdown Examples (`melker-md/`)
+## Canvas & Graphics
 
-See `examples/melker-md/README.md` for markdown files with ASCII box layouts.
+Pixel graphics, shaders, images, and video.
+
+| Category | Examples |
+|----------|----------|
+| Basics | [basics.melker](canvas/basics.melker), [dithering.melker](canvas/dithering.melker), [gfx-modes.melker](canvas/gfx-modes.melker) |
+| Clocks | [analog-clock.melker](canvas/analog-clock.melker), [text-analog-clock.melker](canvas/text-analog-clock.melker) |
+| Shaders | [plasma-shader.melker](canvas/shaders/plasma-shader.melker), [metaballs.melker](canvas/shaders/metaballs.melker), [synthwave-shader.melker](canvas/shaders/synthwave-shader.melker) |
+| Images | [image-demo.melker](canvas/images/image-demo.melker), [data-url-image.melker](canvas/images/data-url-image.melker) |
+| Video | [video-demo.melker](canvas/video/video-demo.melker) |
 
 ```bash
-# Run a markdown file directly
+./melker.ts examples/canvas/shaders/plasma-shader.melker
+```
+
+## TypeScript API
+
+Programmatic usage with two API styles.
+
+| Style | Description | Example |
+|-------|-------------|---------|
+| createElement | Low-level imperative API | [minimal-example.ts](typescript/create-element/minimal-example.ts) |
+| Template | Declarative tagged templates | [template-demo.ts](typescript/template/template-demo.ts) |
+
+```bash
+deno run --allow-all examples/typescript/create-element/minimal-example.ts
+```
+
+## .melker Files
+
+Additional .melker examples in `melker/`:
+
+| Category | Files |
+|----------|-------|
+| Layout | flex-demo, flexbox-visualizer, borders |
+| Scrolling | one-column-scroll, three-column-scroll |
+| Scripts | script-demo, external-script-demo, npm-import-demo |
+| Advanced | persistence-demo, oauth-login, ai-tools-demo |
+
+## Markdown Format
+
+Markdown files with embedded UI in `melker-md/`:
+
+```bash
 ./melker.ts examples/melker-md/counter.md
-
-# Convert to .melker format
-./melker.ts --convert examples/melker-md/counter.md
 ```
 
-Features external scripts (`## Scripts` section) and OAuth (`json oauth` blocks).
+## Running Examples
 
-## Key Patterns Demonstrated
+```bash
+# .melker files (direct execution)
+./melker.ts examples/basics/hello.melker
 
-### Element Creation
-```typescript
-const element = createElement('container', {
-  style: { width: 80, height: 24, border: 'thin' },
-  id: 'my-container'
-},
-  createElement('text', { text: 'Hello!' })
-);
+# .melker files (via deno)
+deno run --allow-all melker.ts examples/basics/hello.melker
+
+# TypeScript files
+deno run --allow-all examples/typescript/create-element/minimal-example.ts
+
+# From URL
+./melker.ts https://example.com/app.melker
 ```
-
-### Event Handling
-```typescript
-createElement('button', {
-  title: 'Click Me',
-  onClick: (event: ClickEvent) => {
-    console.log('Button clicked!');
-  }
-})
-```
-
-### Automatic Scrolling
-```typescript
-// Scrolling is automatic for any container with scrollable: true
-createElement('container', {
-  scrollable: true,
-  style: { height: 10 }
-}, children);
-
-// Auto-scroll to bottom programmatically
-engine.scrollToBottom('container-id');
-```
-
-### MelkerEngine Setup
-```typescript
-const ui = createElement('container', {
-  style: { width: 80, height: 24, border: 'thin', padding: 1 }
-},
-  createElement('text', { text: 'Hello, Melker!' })
-);
-
-// Simple setup with excellent defaults
-const app = await createApp(ui);
-```
-
-**Default options include:**
-- `autoResize: true` - Handle terminal resize automatically
-- `autoRender: true` - Re-render when UI changes
-- `alternateScreen: true` - Use full-screen mode
-- `hideCursor: true` - Hide terminal cursor
-- `enableEvents: true` - Enable keyboard/mouse events
-- `colorSupport: 'truecolor'` - Full color support
-
-### Input Elements
-```typescript
-// Regular text input
-createElement('input', {
-  id: 'username',
-  placeholder: 'Enter username'
-});
-
-// Password input (characters masked with *)
-createElement('input', {
-  id: 'password',
-  format: 'password',
-  placeholder: 'Enter password'
-});
-```
-
-### Automatic Focus Management
-```typescript
-// Focus is automatic! Elements with types 'input' and 'button'
-// are automatically focusable.
-
-createElement('input', {
-  id: 'my-input',
-  placeholder: 'Type here...'
-});
-
-// Tab navigates between focusable elements
-// Shift+Tab navigates in reverse
-```
-
-## Best Practices
-
-- **Direct event handlers** - Attach events directly to elements
-- **Automatic scrolling** - Set `scrollable: true` for mouse wheel handling
-- **Automatic focus** - Inputs and buttons are automatically focusable
-- **Responsive layouts** - UI adapts to terminal size changes
-- **State management** - Update UI by recreating element tree with new state

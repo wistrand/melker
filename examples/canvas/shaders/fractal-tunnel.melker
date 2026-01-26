@@ -15,7 +15,7 @@
     <container style="width: fill; height: fill;">
       <img
         id="tunnel"
-        src="../../media/melker-128.png"
+        src="../../../media/melker-128.png"
         width="100%"
         height="100%"
         dither="auto"

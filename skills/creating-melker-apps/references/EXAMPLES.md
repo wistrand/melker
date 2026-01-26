@@ -832,9 +832,9 @@ For more complex patterns, see these examples in the codebase:
 
 | Example | Patterns Demonstrated |
 |---------|----------------------|
-| `map.melker` | Canvas `onPaint`, async tile fetching, `decodeImageBytes()`, command line args via `${argv[N]}`, variable sharing between scripts (setter functions), delaying render until async completes, `$melker.cacheDir` |
-| `htop.melker` | Data table, live updates, process management |
-| `data-bars-demo.melker` | Bar charts, sparklines, stacked/grouped bars, streaming data |
-| `analog-clock.melker` | Canvas animation, aspect ratio correction |
-| `markdown_viewer.melker` | File loading, markdown rendering |
-| `noise-shader-demo.melker` | Per-pixel shaders, 3D noise animation, `simplex3d`/`perlin3d`/`fbm3d`, Inigo Quilez palettes, select controls |
+| `map.melker` (showcase/) | Canvas `onPaint`, async tile fetching, `decodeImageBytes()`, command line args via `${argv[N]}`, variable sharing between scripts (setter functions), delaying render until async completes, `$melker.cacheDir` |
+| `htop.melker` (showcase/) | Data table, live updates, process management |
+| `data-bars.melker` (components/) | Bar charts, sparklines, stacked/grouped bars, streaming data |
+| `analog-clock.melker` (canvas/) | Canvas animation, aspect ratio correction |
+| `markdown-viewer.melker` (showcase/) | File loading, markdown rendering |
+| `noise.melker` (canvas/shaders/) | Per-pixel shaders, 3D noise animation, `simplex3d`/`perlin3d`/`fbm3d`, Inigo Quilez palettes, select controls |

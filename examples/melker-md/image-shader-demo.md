@@ -2,9 +2,9 @@
 
 A mouse-interactive ripple shader effect applied to an image.
 
-Run with: `melker.ts examples/melker-md/image_shader_demo.md`
+Run with: `melker.ts examples/melker-md/image-shader-demo.md`
 
-To see the generated .melker file: `melker.ts examples/melker-md/image_shader_demo.md --convert`
+To see the generated .melker file: `melker.ts examples/melker-md/image-shader-demo.md --convert`
 
 ## Policy
 
@@ -47,7 +47,7 @@ The root layout using ASCII box notation. Hints like `: c = f` set flex directio
 
 This will create a layout like this: 
 
-![Image Shader Demo](image_shader_demo.png)
+![Image Shader Demo](image-shader-demo.png)
 
 
 ## Components

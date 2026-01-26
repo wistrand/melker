@@ -424,13 +424,13 @@ getAllOptions(): OptionData[] {
 
 | File | Description |
 |------|-------------|
-| `examples/melker/combobox_simple.melker` | Basic combobox |
-| `examples/melker/combobox_demo.melker` | Full features |
-| `examples/melker/select_simple.melker` | Basic select |
-| `examples/melker/select_demo.melker` | Full features |
-| `examples/melker/autocomplete_demo.melker` | Async search |
-| `examples/melker/command_palette_simple.melker` | Basic palette |
-| `examples/melker/command_palette_demo.melker` | Full features |
+| `examples/components/combobox.melker` | Combobox with full features |
+| `examples/components/select.melker` | Select dropdown |
+| `examples/components/autocomplete.melker` | Async search |
+| `examples/components/command-palette.melker` | Command palette |
+| `examples/_internal/combobox-simple.melker` | Basic combobox (minimal) |
+| `examples/_internal/select-simple.melker` | Basic select (minimal) |
+| `examples/_internal/command-palette-simple.melker` | Basic palette (minimal) |
 
 ## See Also
 

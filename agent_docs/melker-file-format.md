@@ -414,61 +414,81 @@ Renders markdown content with support for images, links, and code blocks.
 
 ## Examples
 
-See `examples/melker/` for complete examples:
+**Basics** (`examples/basics/`):
 - `hello.melker` - Simple hello world
 - `counter.melker` - Basic counter with buttons
-- `dialog_demo.melker` - Dialog variants
-- `tabs_demo.melker` - Tabbed interface
-- `input-demo.melker` - Input fields
-- `textarea_demo.melker` - Multi-line text input
+- `form-demo.melker` - Input fields, checkbox, radio
+- `dialog-demo.melker` - Dialog variants
+- `tabs-demo.melker` - Tabbed interface
+
+**Components** (`examples/components/`):
+- `input.melker` - Input fields
+- `textarea.melker` - Multi-line text input
+- `combobox.melker` - Editable dropdown with filtering
+- `select.melker` - Dropdown selection
+- `autocomplete.melker` - Text input with suggestions
+- `command-palette.melker` - Keyboard-driven command picker
+- `table.melker` - Basic table
+- `data-table.melker` - Data-driven table
+- `data-bars.melker` - Bar charts and sparklines
+- `slider.melker` - Numeric slider
+- `progress.melker` - Progress bar
+- `file-browser.melker` - File system browser
+- `segment-display.melker` - 7-segment LED display
+
+**Showcase** (`examples/showcase/`):
+- `htop.melker` - System monitor
+- `map.melker` - Tile-based map viewer with multiple providers
+- `breakout.melker` - Breakout game
+- `markdown-viewer.melker` - Markdown rendering with image support
+- `color-selector.melker` - HSL color picker with canvas
+
+**Layout** (`examples/melker/`):
 - `flex-demo.melker` - Flexbox layout examples
-- `canvas_test.melker` - Canvas graphics
+- `flexbox-visualizer.melker` - Interactive flexbox demo
+- `borders.melker` - Border styles
+
+**Canvas** (`examples/melker/`):
 - `analog-clock.melker` - Canvas-based analog clock
-- `color_selector.melker` - HSL color picker with canvas
-- `image_demo.melker` - Image component with fixed and percentage dimensions
-- `data_url_image.melker` - Inline base64-encoded images (data URLs)
-- `chrome_collapse_demo.melker` - Progressive chrome collapse when space is tight
-- `markdown_viewer.melker` - Markdown rendering with image support
-- `combobox_simple.melker` - Basic combobox dropdown
-- `combobox_demo.melker` - Full combobox features
-- `select_simple.melker` - Basic select dropdown
-- `select_demo.melker` - Full select features
-- `autocomplete_demo.melker` - Async search dropdown
-- `command_palette_simple.melker` - Basic command palette
-- `command_palette_demo.melker` - Full command palette features
-- `file_browser_simple.melker` - Basic file browser
+- `canvas-test.melker` - Canvas graphics
+- `image-demo.melker` - Image component
+- `gfx-modes-demo.melker` - GFX modes and dithering
+- `plasma-shader.melker` - Plasma shader effect
+- `metaballs.melker` - Metaballs animation
+
+**Advanced** (`examples/melker/`):
 - `ai-tools-demo.melker` - Custom AI tool registration
-- `map.melker` - Tile-based map viewer with multiple providers (OSM, CARTO, etc.)
+- `chrome-collapse-demo.melker` - Progressive chrome collapse
 
 ## Running
 
 ```bash
 # Direct execution (melker.ts has executable shebang)
-./melker.ts examples/melker/counter.melker
+./melker.ts examples/basics/counter.melker
 
 # Or via deno run
-deno run --allow-all melker.ts examples/melker/counter.melker
+deno run --allow-all melker.ts examples/basics/counter.melker
 
 # From URL
 ./melker.ts http://localhost:1990/melker/counter.melker
 
 # With lint validation
-./melker.ts --lint examples/melker/counter.melker
+./melker.ts --lint examples/basics/counter.melker
 
 # Watch mode (auto-reload on file changes, local files only)
-./melker.ts --watch examples/melker/counter.melker
+./melker.ts --watch examples/basics/counter.melker
 
 # Debug mode (shows bundler info, retains temp files at /tmp/melker-*.{ts,js})
-./melker.ts --debug examples/melker/counter.melker
+./melker.ts --debug examples/basics/counter.melker
 
 # Enable bundle caching (disabled by default)
-./melker.ts --cache examples/melker/counter.melker
+./melker.ts --cache examples/basics/counter.melker
 
 # Show app policy and exit
-./melker.ts --show-policy examples/melker/counter.melker
+./melker.ts --show-policy examples/basics/counter.melker
 
 # Trust mode (for CI/scripts - bypasses approval prompt that would hang)
-./melker.ts --trust examples/melker/counter.melker
+./melker.ts --trust examples/basics/counter.melker
 
 # With logging
 MELKER_LOG_FILE=/tmp/debug.log MELKER_LOG_LEVEL=debug ./melker.ts app.melker
@@ -914,7 +934,7 @@ All .melker files require first-run approval. Use `--trust` for CI/scripts to by
 
 Approvals are cached in `~/.cache/melker/approvals/`.
 
-See `examples/melker/markdown_viewer.melker` and `examples/melker/video_demo.melker` for policy examples.
+See `examples/showcase/markdown-viewer.melker` and `examples/canvas/video/video-demo.melker` for policy examples.
 
 See `examples/melker-md/` for complete examples and `examples/melker-md/README.md` for full syntax reference.
 

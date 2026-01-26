@@ -281,7 +281,7 @@ Video uses blue-noise for less temporal flicker between frames.
 
 ## Demo
 
-See `examples/melker/gfx_modes_demo.melker` for a visual comparison of:
+See `examples/canvas/gfx-modes.melker` for a visual comparison of:
 - Graphics modes (sextant, block, pattern, luma)
 - Dithering algorithms (none, sierra-stable, floyd-steinberg, atkinson, atkinson-stable, ordered, blue-noise)
 - Dither bits (1-4 bit color depth)

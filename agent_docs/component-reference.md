@@ -1023,7 +1023,7 @@ Video playback component using FFmpeg for decoding. Extends Canvas.
 ### RTSP Streaming Example
 
 ```bash
-./melker.ts examples/melker/video_demo.melker rtsp://192.168.1.191:8080/h264.sdp
+./melker.ts examples/canvas/video/video-demo.melker rtsp://192.168.1.191:8080/h264.sdp
 ```
 
 RTSP streams work with all themes and graphics modes:

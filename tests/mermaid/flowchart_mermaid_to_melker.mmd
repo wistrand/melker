@@ -1,0 +1,86 @@
+flowchart TB
+    subgraph Input
+        MMD[.mmd Mermaid file]
+        JSON[.json Graph file]
+    end
+
+    subgraph Detection
+        DETECT[detectParserType]
+        SEQ_MATCH[sequenceDiagram?]
+        CLASS_MATCH[classDiagram?]
+        FLOW_MATCH[flowchart/graph?]
+    end
+
+    subgraph Parsers
+        JP[JsonParser]
+        MP[MermaidParser]
+        SP[SequenceParser]
+        CP[ClassDiagramParser]
+    end
+
+    subgraph IntermediateReps
+        GD[GraphDefinition]
+        SD[SequenceDefinition]
+        CD[ClassDiagramDefinition]
+    end
+
+    subgraph LayoutEngine
+        CALC[calculateLayout]
+        LAYOUT[GraphLayout]
+    end
+
+    subgraph Converters
+        G2M[graphToMelker]
+        S2M[sequenceToMelker]
+        C2M[classToMelker]
+    end
+
+    subgraph OutputXML
+        MELKER[melker tag]
+        POLICY[policy tag]
+        STYLE[style tag]
+        CONTAINER[container tag]
+        TABLE[table tag]
+        CONN[connector tag]
+        TEXT[text tag]
+        SEP[separator tag]
+    end
+
+    MMD --> DETECT
+    JSON --> JP
+
+    DETECT --> SEQ_MATCH
+    DETECT --> CLASS_MATCH
+    DETECT --> FLOW_MATCH
+
+    SEQ_MATCH --> SP
+    CLASS_MATCH --> CP
+    FLOW_MATCH --> MP
+
+    JP --> GD
+    MP --> GD
+    SP --> SD
+    CP --> CD
+
+    GD --> CALC
+    CD --> CALC
+    CALC --> LAYOUT
+
+    GD --> G2M
+    LAYOUT --> G2M
+    SD --> S2M
+    CD --> C2M
+    LAYOUT --> C2M
+
+    G2M --> MELKER
+    S2M --> MELKER
+    C2M --> MELKER
+
+    MELKER --> POLICY
+    MELKER --> STYLE
+    MELKER --> CONTAINER
+    MELKER --> TABLE
+    CONTAINER --> CONN
+    CONTAINER --> TEXT
+    CONTAINER --> SEP
+    TABLE --> TEXT

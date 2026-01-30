@@ -377,6 +377,17 @@ export class HitTester {
       }
     }
 
+    // Special handling for components with inline-rendered subtree elements (e.g., mermaid graphs)
+    // Subtree elements are not children (to avoid double rendering) but need hit testing
+    // IMPORTANT: Use original absolute coordinates (x, y), not relative coordinates (childX, childY)
+    // because subtree element bounds are registered in absolute screen coordinates
+    if (bounds && pointInBounds(x, y, bounds)) {
+      const subtreeHit = this._hitTestSubtreeElements(element, x, y);
+      if (subtreeHit) {
+        return subtreeHit;
+      }
+    }
+
     // If we have bounds and point is inside, check if this element should be returned
     if (bounds && pointInBounds(x, y, bounds)) {
       // If no child hit, check if this element should be returned
@@ -389,6 +400,60 @@ export class HitTester {
       if (this._isTablePart(element) && containingTable && this.isInteractiveElement(containingTable)) {
         logger.debug(`Hit test: table part ${element.type}/${element.id} -> returning table ${containingTable.id}`);
         return containingTable;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Hit test subtree elements within a component
+   * Subtree elements are rendered inline but not as children, so they need special hit testing
+   */
+  private _hitTestSubtreeElements(element: Element, x: number, y: number): Element | undefined {
+    // Check if component has getSubtreeElements method
+    const component = element as any;
+    if (typeof component.getSubtreeElements !== 'function') {
+      return undefined;
+    }
+
+    const subtreeElements = component.getSubtreeElements() as Element[];
+
+    for (const subtreeRoot of subtreeElements) {
+      const hit = this._hitTestSubtreeElement(subtreeRoot, x, y);
+      if (hit) {
+        return hit;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Recursively hit test within a subtree element tree
+   * Uses dynamically registered bounds from renderElementSubtree
+   */
+  private _hitTestSubtreeElement(element: Element, x: number, y: number): Element | undefined {
+    // Skip invisible elements
+    if (element.props?.visible === false) return undefined;
+
+    // Get bounds from renderer (includes dynamicBounds from renderElementSubtree)
+    const bounds = element.id ? this._renderer.getContainerBounds(element.id) : undefined;
+
+    // Check children first (depth-first to find most specific element)
+    if (element.children) {
+      for (const child of element.children) {
+        const hit = this._hitTestSubtreeElement(child, x, y);
+        if (hit) {
+          return hit;
+        }
+      }
+    }
+
+    // Check if this element is interactive and point is inside bounds
+    if (bounds && pointInBounds(x, y, bounds)) {
+      if (this.isInteractiveElement(element)) {
+        return element;
       }
     }
 

@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant Client
+    participant Server
+    participant Database
+
+    Client->>Server: This is a very long message that should test how word wrapping works in the sequence diagram
+    Server->>Database: SELECT * FROM users WHERE email = 'user@example.com' AND status = 'active' ORDER BY created_at DESC LIMIT 100
+    Database-->>Server: Returns a large result set containing user information including name, email, address, and preferences
+    Server-->>Client: JSON response with paginated user data and metadata about the total count and available pages
+
+    Note over Server: Processing takes a while because the query involves multiple table joins and complex filtering logic
+
+    Client->>Server: Another request with lots of parameters and a very detailed payload structure
+    Server-->>Client: Short reply

@@ -1,0 +1,36 @@
+flowchart LR
+    subgraph Source
+        COMMIT[Git Commit]
+        PR[Pull Request]
+    end
+
+    subgraph CI
+        LINT[Lint]
+        TEST[Run Tests]
+        BUILD[Build]
+        TYPECHECK[Type Check]
+    end
+
+    subgraph CD
+        STAGE[Deploy Staging]
+        APPROVE{Manual Approval}
+        PROD[Deploy Production]
+    end
+
+    subgraph Notify
+        SLACK[Slack]
+        EMAIL[Email]
+    end
+
+    COMMIT --> PR
+    PR --> LINT
+    PR --> TEST
+    PR --> TYPECHECK
+    LINT --> BUILD
+    TEST --> BUILD
+    TYPECHECK --> BUILD
+    BUILD --> STAGE
+    STAGE --> APPROVE
+    APPROVE --> PROD
+    PROD --> SLACK
+    PROD --> EMAIL

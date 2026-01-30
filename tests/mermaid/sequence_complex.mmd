@@ -1,0 +1,28 @@
+sequenceDiagram
+    title Order Processing Flow
+
+    actor Customer
+    participant WebApp
+    participant API
+    participant Database
+
+    Customer->>WebApp: Place Order
+    WebApp->>API: POST /orders
+    API->>Database: INSERT order
+
+    alt Order valid
+        Database-->>API: Success
+        API-->>WebApp: 201 Created
+        WebApp-->>Customer: Order Confirmed
+    else Order invalid
+        Database-->>API: Error
+        API-->>WebApp: 400 Bad Request
+        WebApp-->>Customer: Please fix errors
+    end
+
+    loop Every 5 seconds
+        WebApp->>API: GET /order/status
+        API-->>WebApp: Status update
+    end
+
+    Note over WebApp,API: Async processing

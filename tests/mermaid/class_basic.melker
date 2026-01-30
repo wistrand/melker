@@ -1,0 +1,82 @@
+<melker>
+<policy>
+{
+  "name": "Class Diagram: tests/mermaid/class_basic.mmd"
+}
+</policy>
+
+<style>
+.class-diagram {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3;
+}
+.class-diagram-row { flex-direction: row; }
+.class-diagram-col { flex-direction: column; }
+
+.class-level {
+  display: flex;
+  gap: 3;
+}
+.class-level-row { flex-direction: row; }
+.class-level-col { flex-direction: column; }
+
+.class-annotation {
+  text-align: center;
+}
+.class-name {
+  text-align: center;
+  font-weight: bold;
+}
+</style>
+
+<container class="class-diagram class-diagram-col" scrollable="true">
+  <container class="class-level class-level-row">
+    <container id="class-Animal" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Animal</text>
+      <separator />
+      <text>+name: String</text>
+      <text>+age: int</text>
+      <separator />
+      <text>+makeSound()*</text>
+    </container>
+    <container id="class-Flyable" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Flyable</text>
+      <separator />
+      <text> </text>
+      <separator />
+      <text>+fly()</text>
+    </container>
+  </container>
+  <container class="class-level class-level-row">
+    <container id="class-Dog" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Dog</text>
+      <separator />
+      <text>+breed: String</text>
+      <separator />
+      <text>+bark()</text>
+    </container>
+    <container id="class-Cat" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Cat</text>
+      <separator />
+      <text>-lives: int</text>
+      <separator />
+      <text>+meow()</text>
+    </container>
+  </container>
+  <container class="class-level class-level-row">
+    <container id="class-Owner" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Owner</text>
+    </container>
+  </container>
+
+  <!-- Relationships -->
+  <connector from="class-Animal" to="class-Dog" arrow="end" />
+  <connector from="class-Animal" to="class-Cat" arrow="end" />
+  <connector from="class-Dog" to="class-Owner" arrow="end" label="1 owns *" />
+</container>
+</melker>

@@ -4,13 +4,13 @@ A data-driven table component optimized for performance with simple data arrays 
 
 ## Key Differences from `<table>`
 
-| Aspect | `<table>` | `<data-table>` |
-|--------|-----------|----------------|
-| Data source | Nested elements (thead/tbody/tr/td) | `columns` and `rows` props with arrays |
-| Cell content | Any component (buttons, inputs, nested tables) | Simple values only (string/number) |
-| Row height | Variable per row (based on cell intrinsicSize) | Uniform (configurable, default 1) |
-| Rendering | Complex multi-pass with component delegation | Simple direct text rendering |
-| Use case | Complex tables with interactive cells | Large datasets, simple display |
+| Aspect       | `<table>`                                       | `<data-table>`                          |
+|--------------|------------------------------------------------|-----------------------------------------|
+| Data source  | Nested elements (thead/tbody/tr/td)            | `columns` and `rows` props with arrays  |
+| Cell content | Any component (buttons, inputs, nested tables) | Simple values only (string/number)      |
+| Row height   | Variable per row (based on cell intrinsicSize) | Uniform (configurable, default 1)       |
+| Rendering    | Complex multi-pass with component delegation   | Simple direct text rendering            |
+| Use case     | Complex tables with interactive cells          | Large datasets, simple display          |
 
 ## Data Structure
 
@@ -163,30 +163,30 @@ For dynamic data (e.g., fetched from API, generated), use a script:
 
 ## Keyboard Navigation
 
-| Key | Action |
-|-----|--------|
-| Arrow Up/Down | Move selection |
-| Page Up/Down | Move by page |
-| Home/End | Jump to first/last |
-| Enter | Activate row |
-| Space | Toggle selection (multi mode) |
+| Key            | Action                         |
+|----------------|--------------------------------|
+| Arrow Up/Down  | Move selection                 |
+| Page Up/Down   | Move by page                   |
+| Home/End       | Jump to first/last             |
+| Enter          | Activate row                   |
+| Space          | Toggle selection (multi mode)  |
 
 ## Implementation Files
 
-| File | Purpose |
-|------|---------|
+| File                           | Purpose                  |
+|--------------------------------|--------------------------|
 | `src/components/data-table.ts` | Component implementation |
-| `src/components/mod.ts` | Component export |
+| `src/components/mod.ts`        | Component export         |
 
 ## Performance
 
-| Operation | Complexity |
-|-----------|-----------|
-| Column width calc | O(columns) |
-| Row render | O(visible rows) |
-| Sort | O(n log n), cached |
-| Selection lookup | O(1) |
-| Click hit test | O(visible rows) |
+| Operation         | Complexity         |
+|-------------------|--------------------|
+| Column width calc | O(columns)         |
+| Row render        | O(visible rows)    |
+| Sort              | O(n log n), cached |
+| Selection lookup  | O(1)               |
+| Click hit test    | O(visible rows)    |
 
 ## See Also
 

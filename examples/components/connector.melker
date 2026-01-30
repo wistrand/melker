@@ -1,0 +1,77 @@
+<melker>
+  <title>Connector Demo</title>
+
+  <container style="width: 100%; height: 100%; padding: 2; display: flex; flex-direction: column; gap: 2">
+    <text style="font-weight: bold">Connector Component Demo</text>
+
+    <!-- Horizontal connection example -->
+    <container style="border: thin; borderTitle: Horizontal; padding: 1">
+      <container style="flex-direction: row; justify-content: space-between; align-items: center; height: 5">
+        <container id="box-a" style="border: single; padding: 0 2; background-color: blue">
+          <text>Box A</text>
+        </container>
+
+        <container id="box-b" style="border: single; padding: 0 2; background-color: green">
+          <text>Box B</text>
+        </container>
+
+        <container id="box-c" style="border: single; padding: 0 2; background-color: red">
+          <text>Box C</text>
+        </container>
+
+        <!-- Connectors draw lines between elements -->
+        <connector from="box-a" to="box-b" arrow="end" />
+        <connector from="box-b" to="box-c" arrow="end" />
+      </container>
+    </container>
+
+    <!-- Vertical connection example -->
+    <container style="border: thin; borderTitle: Vertical; padding: 1; flex: 1">
+      <container style="flex-direction: column; align-items: center; justify-content: space-between; height: fill">
+        <container id="top-box" style="border: double; padding: 0 3; background-color: magenta">
+          <text>Top</text>
+        </container>
+
+        <container id="middle-box" style="border: single; padding: 0 2; background-color: cyan">
+          <text>Middle</text>
+        </container>
+
+        <container id="bottom-box" style="border: dashed; padding: 0 2; background-color: yellow">
+          <text>Bottom</text>
+        </container>
+
+        <connector from="top-box" to="middle-box" arrow="end" />
+        <connector from="middle-box" to="bottom-box" arrow="both" />
+      </container>
+    </container>
+
+    <!-- Different routing and arrow styles -->
+    <container style="border: thin; borderTitle: Styles; padding: 1">
+      <container style="flex-direction: row; gap: 4; align-items: center">
+        <container style="flex-direction: column; gap: 2; align-items: center">
+          <container id="style-a" style="border: single; padding: 0 1">
+            <text>A</text>
+          </container>
+          <container id="style-b" style="border: single; padding: 0 1">
+            <text>B</text>
+          </container>
+        </container>
+
+        <container style="flex-direction: column; gap: 2; align-items: center">
+          <container id="style-c" style="border: single; padding: 0 1">
+            <text>C</text>
+          </container>
+          <container id="style-d" style="border: single; padding: 0 1">
+            <text>D</text>
+          </container>
+        </container>
+
+        <!-- Cross connections with different styles -->
+        <connector from="style-a" to="style-d" arrow="end" style="color: green" />
+        <connector from="style-b" to="style-c" arrow="start" style="color: red" />
+      </container>
+    </container>
+
+    <text style="color: gray">Connectors draw lines between elements using box-drawing characters</text>
+  </container>
+</melker>

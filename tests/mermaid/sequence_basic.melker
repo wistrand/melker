@@ -1,0 +1,101 @@
+<melker>
+<policy>
+{
+  "name": "Sequence: tests/mermaid/sequence_basic.mmd"
+}
+</policy>
+
+<style>
+.sequence-container {
+  width: fill;
+  height: auto;
+  padding: 1;
+}
+.sequence-table {
+  width: fill;
+}
+.participant {
+  text-align: center;
+}
+.actor {
+  text-align: center;
+}
+.lifeline {
+  text-align: center;
+}
+.note {
+  text-align: center;
+}
+</style>
+
+<container style="padding: 1; flex-direction: column" scrollable="true">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="8">
+    <thead>
+      <tr>
+        <th id="seq-Alice" class="participant">Alice</th>
+        <th id="seq-Bob" class="participant">Bob</th>
+        <th id="seq-Carol" class="participant">Carol</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Alice -> Bob: Hello Bob -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-0-Alice" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-Bob" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Bob -> Alice: Hi Alice -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-1-Alice" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-Bob" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Alice -> Bob: How are you? -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-2-Alice" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-Bob" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Bob thinks -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Bob thinks</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Bob -> Alice: I'm good -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-3-Alice" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-Bob" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Alice -> Carol: Hi Carol -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-4-Alice" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-Carol" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Carol -> Alice: Hello! -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-5-Alice" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-Carol" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td id="seq-bottom-Alice" class="participant">Alice</td>
+        <td id="seq-bottom-Bob" class="participant">Bob</td>
+        <td id="seq-bottom-Carol" class="participant">Carol</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Message connectors -->
+  <connector from="seq-msg-0-Alice" to="seq-msg-0-Bob" routing="horizontal" arrow="end" label="Hello Bob" />
+  <connector from="seq-msg-1-Bob" to="seq-msg-1-Alice" routing="horizontal" arrow="end" label="Hi Alice" style="line-style: dashed" />
+  <connector from="seq-msg-2-Alice" to="seq-msg-2-Bob" routing="horizontal" arrow="end" label="How are you?" />
+  <connector from="seq-msg-3-Bob" to="seq-msg-3-Alice" routing="horizontal" arrow="end" label="I'm good" style="line-style: dashed" />
+  <connector from="seq-msg-4-Alice" to="seq-msg-4-Carol" routing="horizontal" arrow="end" label="Hi Carol" />
+  <connector from="seq-msg-5-Carol" to="seq-msg-5-Alice" routing="horizontal" arrow="end" label="Hello!" style="line-style: dashed" />
+</container>
+</melker>

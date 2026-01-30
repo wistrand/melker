@@ -20,7 +20,7 @@
         <text>rounded</text>
       </container>
 
-      <container style="border: dashed; width: 22; height: 3; padding-left: 1">
+      <container style="border: dotted; width: 22; height: 3; padding-left: 1">
         <text>dashed</text>
       </container>
 

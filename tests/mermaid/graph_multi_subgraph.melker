@@ -1,0 +1,85 @@
+<melker>
+<policy>
+{
+  "name": "Graph: tests/mermaid/graph_multi_subgraph.mmd"
+}
+</policy>
+
+<style>
+.graph {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5;
+  align-items: flex-start;
+  align-content: flex-start;
+  flex-shrink: 0;
+}
+.graph-row { flex-direction: row; }
+.graph-col { flex-direction: column; }
+
+.subgraph {
+  border: thin;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4;
+}
+.subgraph-row { flex-direction: row; }
+.subgraph-col { flex-direction: column; }
+
+.node {
+  border: thin;
+  padding: 0 1;
+  flex-shrink: 0;
+}
+.node-diamond { border: double; }
+.node-hexagon { border: thick; }
+</style>
+
+<container class="graph graph-row" scrollable="true">
+  <!-- Subgraph: Frontend -->
+  <container id="graph-subgraph-Frontend" class="subgraph subgraph-col" style="border-title: Frontend">
+    <container id="graph-node-A" class="node">
+      <text>React App</text>
+    </container>
+    <container id="graph-node-B" class="node">
+      <text>Redux Store</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Backend -->
+  <container id="graph-subgraph-Backend" class="subgraph subgraph-col" style="border-title: Backend">
+    <container id="graph-node-C" class="node">
+      <text>API Gateway</text>
+    </container>
+    <container id="graph-node-D" class="node">
+      <text>Auth Service</text>
+    </container>
+    <container id="graph-node-E" class="node">
+      <text>Data Service</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Database -->
+  <container id="graph-subgraph-Database" class="subgraph subgraph-col" style="border-title: Database">
+    <container id="graph-node-G" class="node">
+      <text>Redis Cache</text>
+    </container>
+    <container id="graph-node-F" class="node">
+      <text>PostgreSQL</text>
+    </container>
+  </container>
+
+
+  <!-- Connectors -->
+  <connector from="graph-node-A" to="graph-node-B" arrow="end" />
+  <connector from="graph-node-C" to="graph-node-D" arrow="end" />
+  <connector from="graph-node-C" to="graph-node-E" arrow="end" />
+  <connector from="graph-node-B" to="graph-node-C" arrow="end" />
+  <connector from="graph-node-D" to="graph-node-G" arrow="end" />
+  <connector from="graph-node-E" to="graph-node-F" arrow="end" />
+</container>
+</melker>

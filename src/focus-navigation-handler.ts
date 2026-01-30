@@ -74,6 +74,7 @@ export class FocusNavigationHandler {
 
   /**
    * Find all focusable elements in the element tree
+   * Also searches mermaid elements inside markdown components
    */
   findFocusableElements(element: Element): Element[] {
     const focusableElements: Element[] = [];
@@ -108,6 +109,18 @@ export class FocusNavigationHandler {
           id: element.id,
         });
         focusableElements.push(element);
+      }
+    }
+
+    // Check mermaid elements if this is a markdown component
+    // Mermaid elements are not in the document tree but contain interactive elements
+    if (element.type === 'markdown') {
+      const markdown = element as any;
+      if (typeof markdown.getMermaidElements === 'function') {
+        const mermaidElements = markdown.getMermaidElements() as Element[];
+        for (const mermaidRoot of mermaidElements) {
+          focusableElements.push(...this.findFocusableElements(mermaidRoot));
+        }
       }
     }
 

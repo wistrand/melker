@@ -1,0 +1,37 @@
+graph LR
+    subgraph Client
+        A[Web App]
+        B[Mobile App]
+    end
+
+    subgraph Gateway
+        C[Load Balancer]
+        D[API Gateway]
+        C --> D
+    end
+
+    subgraph Services
+        E[User Service]
+        F[Order Service]
+        G[Product Service]
+        H[Payment Service]
+    end
+
+    subgraph Data
+        I[Users DB]
+        J[Orders DB]
+        K[Products DB]
+        L[Message Queue]
+    end
+
+    A --> C
+    B --> C
+    D --> E
+    D --> F
+    D --> G
+    D --> H
+    E --> I
+    F --> J
+    F --> L
+    G --> K
+    H --> L

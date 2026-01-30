@@ -1,0 +1,25 @@
+flowchart LR
+  Input --> Validate --> Submit
+
+%%melker:Input
+%%<container style="flex-direction: column; gap: 1">
+%%  <text>Username:</text>
+%%  <input placeholder="Enter username"/>
+%%  <text>Password:</text>
+%%  <input placeholder="Enter password"/>
+%%</container>
+%%end
+
+%%melker:Validate
+%%<container style="flex-direction: column">
+%%  <checkbox title="Remember me"/>
+%%  <checkbox title="Accept terms"/>
+%%</container>
+%%end
+
+%%melker:Submit
+%%<container style="flex-direction: column; gap: 1">
+%%  <button label="Login"/>
+%%  <button label="Cancel"/>
+%%</container>
+%%end

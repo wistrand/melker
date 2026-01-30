@@ -139,6 +139,15 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
         traverse(child, depth + 1);
       }
     }
+
+    // Traverse subtree elements (e.g., mermaid graphs in markdown)
+    const component = element as any;
+    if (typeof component.getSubtreeElements === 'function') {
+      const subtreeElements = component.getSubtreeElements() as Element[];
+      for (const subtreeEl of subtreeElements) {
+        traverse(subtreeEl, depth + 1);
+      }
+    }
   }
 
   traverse(root, 0);
@@ -205,8 +214,16 @@ function buildElementTree(root: Element, excludeIds: Set<string>): string {
 
     // Process children
     const children = (element.children || []).filter(c => !excludeIds.has(c.id));
-    children.forEach((child, index) => {
-      traverse(child, childPrefix, index === children.length - 1);
+
+    // Include subtree elements (e.g., mermaid graphs in markdown)
+    const component = element as any;
+    const subtreeElements: Element[] = typeof component.getSubtreeElements === 'function'
+      ? component.getSubtreeElements().filter((c: Element) => !excludeIds.has(c.id))
+      : [];
+
+    const allChildren = [...children, ...subtreeElements];
+    allChildren.forEach((child, index) => {
+      traverse(child, childPrefix, index === allChildren.length - 1);
     });
   }
 

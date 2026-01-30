@@ -1,0 +1,348 @@
+<melker>
+<policy>
+{
+  "name": "Sequence: tests/mermaid/seq_terminal_detection.mmd"
+}
+</policy>
+
+<style>
+.sequence-container {
+  width: fill;
+  height: auto;
+  padding: 1;
+}
+.sequence-table {
+  width: fill;
+}
+.participant {
+  text-align: center;
+}
+.actor {
+  text-align: center;
+}
+.lifeline {
+  text-align: center;
+}
+.note {
+  text-align: center;
+}
+</style>
+
+<container style="padding: 1; flex-direction: column" scrollable="true">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="15">
+    <thead>
+      <tr>
+        <th id="seq-E" class="participant">Engine</th>
+        <th id="seq-S" class="participant">SixelDetect</th>
+        <th id="seq-K" class="participant">KittyDetect</th>
+        <th id="seq-I" class="participant">InputLoop</th>
+        <th id="seq-T" class="participant">Terminal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Note: Engine starts -->
+      <tr>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Engine starts</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- E -> S: startSixelDetection() -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-0-E" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> S: detectMultiplexer() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> S: detectRemoteSession() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> S: checkTerminalEnv() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Phase 1: DA1 -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Phase 1: DA1</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> T: ESC[c -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- T -> I: ESC[?...c -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- I -> S: feedDetectionInput() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> S: parseDA1Response() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Phase 2: Colors -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Phase 2: Colors</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> T: ESC[?1;1S -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- T -> I: ESC[?1;0;256S -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- I -> S: feedDetectionInput() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Phase 3: Geometry -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Phase 3: Geometry</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> T: ESC[?2;1S -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- T -> I: ESC[?2;0;W;HS -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-12-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-12-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- I -> S: feedDetectionInput() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-13-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-13-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Phase 4: Cell Size -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Phase 4: Cell Size</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> T: ESC[16t -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-14-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-14-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- T -> I: ESC[6;H;Wt -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-15-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-15-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- I -> S: feedDetectionInput() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-16-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-16-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> S: parseCellSizeResponse() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-17-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> E: SixelCapabilities -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-18-E" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-18-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- E -> K: startKittyDetection() -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-19-E" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-19-K" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- K -> K: detectMultiplexer() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-20-K" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- K -> K: checkTerminalEnv() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-21-K" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Kitty Query -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Kitty Query</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- K -> T: ESC_Gi=31;...ESC\ -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-22-K" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-22-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- T -> I: ESC_Gi=31;OKESC\ -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-23-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-23-T" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- I -> K: feedKittyDetectionInput() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-24-K" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-24-I" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- K -> K: parseKittyResponse() -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-25-K" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- K -> E: KittyCapabilities -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-26-E" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-26-K" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Detection Complete -->
+      <tr>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Detection Complete</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td id="seq-bottom-E" class="participant">Engine</td>
+        <td id="seq-bottom-S" class="participant">SixelDetect</td>
+        <td id="seq-bottom-K" class="participant">KittyDetect</td>
+        <td id="seq-bottom-I" class="participant">InputLoop</td>
+        <td id="seq-bottom-T" class="participant">Terminal</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Message connectors -->
+  <connector from="seq-msg-0-E" to="seq-msg-0-S" routing="horizontal" arrow="end" label="startSixelDetection()" />
+  <connector from="seq-msg-4-S" to="seq-msg-4-T" routing="horizontal" arrow="end" label="ESC[c" />
+  <connector from="seq-msg-5-T" to="seq-msg-5-I" routing="horizontal" arrow="end" label="ESC[?...c" style="line-style: dashed" />
+  <connector from="seq-msg-6-I" to="seq-msg-6-S" routing="horizontal" arrow="end" label="feedDetectionInput()" />
+  <connector from="seq-msg-8-S" to="seq-msg-8-T" routing="horizontal" arrow="end" label="ESC[?1;1S" />
+  <connector from="seq-msg-9-T" to="seq-msg-9-I" routing="horizontal" arrow="end" label="ESC[?1;0;256S" style="line-style: dashed" />
+  <connector from="seq-msg-10-I" to="seq-msg-10-S" routing="horizontal" arrow="end" label="feedDetectionInput()" />
+  <connector from="seq-msg-11-S" to="seq-msg-11-T" routing="horizontal" arrow="end" label="ESC[?2;1S" />
+  <connector from="seq-msg-12-T" to="seq-msg-12-I" routing="horizontal" arrow="end" label="ESC[?2;0;W;HS" style="line-style: dashed" />
+  <connector from="seq-msg-13-I" to="seq-msg-13-S" routing="horizontal" arrow="end" label="feedDetectionInput()" />
+  <connector from="seq-msg-14-S" to="seq-msg-14-T" routing="horizontal" arrow="end" label="ESC[16t" />
+  <connector from="seq-msg-15-T" to="seq-msg-15-I" routing="horizontal" arrow="end" label="ESC[6;H;Wt" style="line-style: dashed" />
+  <connector from="seq-msg-16-I" to="seq-msg-16-S" routing="horizontal" arrow="end" label="feedDetectionInput()" />
+  <connector from="seq-msg-18-S" to="seq-msg-18-E" routing="horizontal" arrow="end" label="SixelCapabilities" style="line-style: dashed" />
+  <connector from="seq-msg-19-E" to="seq-msg-19-K" routing="horizontal" arrow="end" label="startKittyDetection()" />
+  <connector from="seq-msg-22-K" to="seq-msg-22-T" routing="horizontal" arrow="end" label="ESC_Gi=31;...ESC\" />
+  <connector from="seq-msg-23-T" to="seq-msg-23-I" routing="horizontal" arrow="end" label="ESC_Gi=31;OKESC\" style="line-style: dashed" />
+  <connector from="seq-msg-24-I" to="seq-msg-24-K" routing="horizontal" arrow="end" label="feedKittyDetectionInput()" />
+  <connector from="seq-msg-26-K" to="seq-msg-26-E" routing="horizontal" arrow="end" label="KittyCapabilities" style="line-style: dashed" />
+</container>
+</melker>

@@ -1,0 +1,27 @@
+flowchart LR
+  Download --> Extract --> Install --> Done
+
+%%melker:Download
+%%<container style="flex-direction: column">
+%%  <text>Downloading...</text>
+%%  <progress value="100" max="100"/>
+%%</container>
+%%end
+
+%%melker:Extract
+%%<container style="flex-direction: column">
+%%  <text>Extracting...</text>
+%%  <progress value="75" max="100"/>
+%%</container>
+%%end
+
+%%melker:Install
+%%<container style="flex-direction: column">
+%%  <text>Installing...</text>
+%%  <progress value="30" max="100"/>
+%%</container>
+%%end
+
+%%melker:Done
+%%<text style="color: green">Complete!</text>
+%%end

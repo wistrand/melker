@@ -706,6 +706,78 @@ Children of filterable lists.
 </group>
 ```
 
+## Diagram Components
+
+### connector
+
+Draw lines between elements. Uses box-drawing characters for clean orthogonal routing.
+
+```xml
+<container style="flex-direction: row; gap: 4">
+  <container id="box-a" style="border: thin; padding: 1">Source</container>
+  <container id="box-b" style="border: thin; padding: 1">Target</container>
+  <connector from="box-a" to="box-b" arrow="end" />
+</container>
+```
+
+**Props:**
+- `from` - Source element ID (required)
+- `to` - Target element ID (required)
+- `fromSide`: `auto` | `top` | `bottom` | `left` | `right` | `center`
+- `toSide`: `auto` | `top` | `bottom` | `left` | `right` | `center`
+- `arrow`: `none` | `start` | `end` | `both` (default: `end`)
+- `label` - Text at midpoint
+- `routing`: `direct` | `orthogonal` (default: `orthogonal`)
+- `style` - `color`, `lineStyle` (`thin`, `thick`, `double`, `dashed`)
+
+### graph
+
+Render diagrams from Mermaid syntax or JSON. Auto-detects diagram type.
+
+```xml
+<!-- Flowchart -->
+<graph>
+  flowchart LR
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Done]
+    B -->|No| D[Retry]
+</graph>
+
+<!-- Sequence diagram -->
+<graph>
+  sequenceDiagram
+    participant U as User
+    participant S as Server
+    U->>S: Request
+    S-->>U: Response
+</graph>
+
+<!-- Class diagram -->
+<graph>
+  classDiagram
+    class Animal {
+      +name: String
+      +makeSound()
+    }
+    Animal <|-- Dog
+</graph>
+
+<!-- Load from URL -->
+<graph src="./flow.mmd" />
+```
+
+**Props:**
+- `type`: `mermaid` | `json` (auto-detected)
+- `src` - Load from URL
+- `text` - Inline content
+- `scrollable` - Enable scrolling (default: `true`)
+- `style` - Container style overrides
+
+**Supported Mermaid:**
+- Flowcharts: `flowchart TB/LR/BT/RL`, nodes `[rect]` `{diamond}` `((circle))`, edges `-->` `-.->` `==>`, labels `-->|text|`, subgraphs
+- Sequence: `sequenceDiagram`, participants, messages `->>` `-->>`, notes, fragments `alt`/`opt`/`loop`
+- Class: `classDiagram`, classes with members, relationships `<|--` `*--` `o--` `-->`
+
 ## Media Components
 
 ### canvas

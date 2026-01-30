@@ -604,7 +604,8 @@ export class DevToolsManager {
   }
 
   /**
-   * Calculate max width of node names (type#id) for alignment
+   * Calculate max width of node names (type#id.class) for alignment
+   * Also includes subtree elements from components that render inline subtrees
    */
   private _calculateMaxNodeWidth(element: Element, depth: number): number {
     // Skip dev-tools elements
@@ -612,8 +613,17 @@ export class DevToolsManager {
       return 0;
     }
 
-    // Calculate width: depth indent (4 chars per level) + type + #id
-    const nodeWidth = depth * 4 + element.type.length + (element.id ? 1 + element.id.length : 0);
+    // Calculate width: depth indent (4 chars per level) + type + #id + .classes
+    let nodeWidth = depth * 4 + element.type.length;
+    if (element.id) {
+      nodeWidth += 1 + element.id.length; // #id
+    }
+    // Add class names width (classList is an array after normalization)
+    const classList = element.props?.classList as string[] | undefined;
+    if (classList && classList.length > 0) {
+      // Classes are shown as .class1.class2
+      nodeWidth += classList.reduce((sum, c) => sum + 1 + c.length, 0); // .class for each
+    }
     let maxWidth = nodeWidth;
 
     // Check children
@@ -624,13 +634,25 @@ export class DevToolsManager {
       }
     }
 
+    // Check subtree elements (e.g., mermaid graphs in markdown)
+    const component = element as any;
+    if (typeof component.getSubtreeElements === 'function') {
+      const subtreeElements = component.getSubtreeElements() as Element[];
+      for (const subtreeEl of subtreeElements) {
+        // Add 10 for "(subtree) " prefix
+        const subtreeMax = this._calculateMaxNodeWidth(subtreeEl, depth + 1) + 10;
+        if (subtreeMax > maxWidth) maxWidth = subtreeMax;
+      }
+    }
+
     return maxWidth;
   }
 
   /**
    * Build a filtered tree string, excluding dev-tools elements
+   * Also includes subtree elements from components that render inline subtrees
    */
-  private _buildFilteredTree(element: Element, prefix: string, isLast: boolean, alignWidth: number): string {
+  private _buildFilteredTree(element: Element, prefix: string, isLast: boolean, alignWidth: number, isSubtree: boolean = false): string {
     // Skip dev-tools elements
     if (element.id?.startsWith('dev-tools-')) {
       return '';
@@ -643,20 +665,28 @@ export class DevToolsManager {
       result += isLast ? '└── ' : '├── ';
     }
 
-    // Format element node with alignment
-    result += this._formatInspectNode(element, prefix.length, alignWidth);
+    // Format element node with alignment, marking subtree elements
+    const nodeText = this._formatInspectNode(element, prefix.length, alignWidth);
+    result += isSubtree ? `(subtree) ${nodeText}` : nodeText;
     result += '\n';
 
     // Process children, filtering out dev-tools elements
-    if (element.children && element.children.length > 0) {
-      const filteredChildren = element.children.filter(c => !c.id?.startsWith('dev-tools-'));
-      const childPrefix = prefix + (isLast ? '    ' : '│   ');
+    const filteredChildren = (element.children || []).filter(c => !c.id?.startsWith('dev-tools-'));
 
-      filteredChildren.forEach((child, index) => {
-        const isLastChild = index === filteredChildren.length - 1;
-        result += this._buildFilteredTree(child, childPrefix, isLastChild, alignWidth);
-      });
-    }
+    // Check for subtree elements (e.g., mermaid graphs in markdown)
+    const component = element as any;
+    const subtreeElements: Element[] = typeof component.getSubtreeElements === 'function'
+      ? component.getSubtreeElements()
+      : [];
+
+    const allChildren = [...filteredChildren, ...subtreeElements];
+    const childPrefix = prefix + (isLast ? '    ' : '│   ');
+
+    allChildren.forEach((child, index) => {
+      const isLastChild = index === allChildren.length - 1;
+      const isChildSubtree = index >= filteredChildren.length; // Subtree elements come after regular children
+      result += this._buildFilteredTree(child, childPrefix, isLastChild, alignWidth, isChildSubtree);
+    });
 
     return result;
   }
@@ -665,10 +695,15 @@ export class DevToolsManager {
    * Format an element node for the inspect tree
    */
   private _formatInspectNode(element: Element, prefixLen: number, alignWidth: number): string {
-    // Build the type#id part
+    // Build the type#id.class part
     let nodeName = element.type;
     if (element.id) {
       nodeName += `#${element.id}`;
+    }
+    // Add class names (classList is an array after normalization)
+    const classList = element.props?.classList as string[] | undefined;
+    if (classList && classList.length > 0) {
+      nodeName += classList.map(c => `.${c}`).join('');
     }
 
     // Build the props part

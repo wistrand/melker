@@ -1,0 +1,41 @@
+classDiagram
+    direction LR
+
+    class Subject {
+        <<interface>>
+        +attach(observer)
+        +detach(observer)
+        +notify()
+    }
+
+    class Observer {
+        <<interface>>
+        +update(subject)
+    }
+
+    class ConcreteSubject {
+        -state: any
+        -observers: Observer[]
+        +getState() any
+        +setState(state)
+        +attach(observer)
+        +detach(observer)
+        +notify()
+    }
+
+    class ConcreteObserverA {
+        -subject: Subject
+        +update(subject)
+    }
+
+    class ConcreteObserverB {
+        -subject: Subject
+        +update(subject)
+    }
+
+    Subject <|.. ConcreteSubject
+    Observer <|.. ConcreteObserverA
+    Observer <|.. ConcreteObserverB
+    ConcreteSubject --> Observer
+    ConcreteObserverA --> Subject
+    ConcreteObserverB --> Subject

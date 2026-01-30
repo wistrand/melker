@@ -86,26 +86,28 @@ melker --watch hello.melker
 
 ## Script Types
 
-| Attribute | When | Use Case |
-|-----------|------|----------|
-| (none) | Before render | Define exports, setup state |
-| `async="init"` | Before render (async) | Fetch data, async setup |
-| `async="ready"` | After first render | Access rendered elements, start timers |
+| Attribute        | When                   | Use Case                              |
+|------------------|------------------------|---------------------------------------|
+| (none)           | Before render          | Define exports, setup state           |
+| `async="init"`   | Before render (async)  | Fetch data, async setup               |
+| `async="ready"`  | After first render     | Access rendered elements, start timers |
 
 ## Common Components
 
-| Type | Purpose |
-|------|---------|
-| `container` | Flexbox layout |
-| `text` | Static text |
-| `input` | Single-line input |
-| `button` | Clickable action |
-| `checkbox` / `radio` | Toggle/select |
-| `dialog` | Modal overlay |
-| `tabs` / `tab` | Tabbed panels |
-| `combobox` / `select` | Dropdowns |
-| `data-table` | Sortable table |
-| `canvas` | Pixel graphics |
+| Type                  | Purpose              |
+|-----------------------|----------------------|
+| `container`           | Flexbox layout       |
+| `text`                | Static text          |
+| `input`               | Single-line input    |
+| `button`              | Clickable action     |
+| `checkbox` / `radio`  | Toggle/select        |
+| `dialog`              | Modal overlay        |
+| `tabs` / `tab`        | Tabbed panels        |
+| `combobox` / `select` | Dropdowns            |
+| `data-table`          | Sortable table       |
+| `canvas`              | Pixel graphics       |
+| `graph`               | Mermaid diagrams     |
+| `connector`           | Lines between elements |
 
 ## Permissions (for file/network access)
 
@@ -128,6 +130,7 @@ melker app.melker              # Run app
 melker --watch app.melker      # Auto-reload on changes
 melker --show-policy app.melker # Show permissions
 melker --trust app.melker      # Bypass approval prompt (CI/scripts)
+melker --stdout app.melker     # Output single frame to stdout and exit
 ```
 
 **Deno flags** forwarded to subprocess: `--reload`, `--no-lock`, `--no-check`, `--quiet`/`-q`, `--cached-only`
@@ -140,6 +143,7 @@ melker --reload http://example.com/app.melker
 ## Debugging
 
 - **--watch** – Auto-reload on file changes (recommended for development)
+- **--stdout** – Output single frame to stdout (useful for layout debugging, piping)
 - **F12** – Dev Tools overlay (source, policy, inspect, config, log path)
 - **console.log()** – Safe in app code, writes to log file
 - **--debug** – Verbose bundler output

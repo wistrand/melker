@@ -1,0 +1,69 @@
+<melker>
+<policy>
+{
+  "name": "Graph: tests/mermaid/graph_long_chain.mmd"
+}
+</policy>
+
+<style>
+.graph {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5;
+  align-items: flex-start;
+  align-content: flex-start;
+  flex-shrink: 0;
+}
+.graph-row { flex-direction: row; }
+.graph-col { flex-direction: column; }
+
+.subgraph {
+  border: thin;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4;
+}
+.subgraph-row { flex-direction: row; }
+.subgraph-col { flex-direction: column; }
+
+.node {
+  border: thin;
+  padding: 0 1;
+  flex-shrink: 0;
+}
+.node-diamond { border: double; }
+.node-hexagon { border: thick; }
+</style>
+
+<container class="graph graph-row" scrollable="true">
+  <container id="graph-node-A" class="node">
+    <text>Start</text>
+  </container>
+  <container id="graph-node-B" class="node">
+    <text>Step 1</text>
+  </container>
+  <container id="graph-node-C" class="node">
+    <text>Step 2</text>
+  </container>
+  <container id="graph-node-D" class="node">
+    <text>Step 3</text>
+  </container>
+  <container id="graph-node-E" class="node">
+    <text>Step 4</text>
+  </container>
+  <container id="graph-node-F" class="node">
+    <text>End</text>
+  </container>
+
+  <!-- Connectors -->
+  <connector from="graph-node-A" to="graph-node-B" arrow="end" />
+  <connector from="graph-node-B" to="graph-node-C" arrow="end" />
+  <connector from="graph-node-C" to="graph-node-D" arrow="end" />
+  <connector from="graph-node-D" to="graph-node-E" arrow="end" />
+  <connector from="graph-node-E" to="graph-node-F" arrow="end" />
+</container>
+</melker>

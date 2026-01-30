@@ -1,0 +1,38 @@
+flowchart TB
+    subgraph Request
+        START[Receive Request]
+        VALIDATE{Valid Input?}
+    end
+
+    subgraph Process
+        AUTH{Authenticated?}
+        PERM{Has Permission?}
+        EXEC[Execute Action]
+    end
+
+    subgraph Errors
+        E400[400 Bad Request]
+        E401[401 Unauthorized]
+        E403[403 Forbidden]
+        E500[500 Server Error]
+    end
+
+    subgraph Response
+        SUCCESS[200 OK]
+        LOG[Log Result]
+    end
+
+    START --> VALIDATE
+    VALIDATE -->|No| E400
+    VALIDATE -->|Yes| AUTH
+    AUTH -->|No| E401
+    AUTH -->|Yes| PERM
+    PERM -->|No| E403
+    PERM -->|Yes| EXEC
+    EXEC -->|Error| E500
+    EXEC -->|Success| SUCCESS
+    SUCCESS --> LOG
+    E400 --> LOG
+    E401 --> LOG
+    E403 --> LOG
+    E500 --> LOG

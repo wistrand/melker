@@ -1,0 +1,8 @@
+graph TD
+    A[Input] --> B[Validate]
+    B --> C{Decision}
+    C --> D[Process A]
+    C --> E[Process B]
+    D --> F[Merge]
+    E --> F
+    F --> G[Output]

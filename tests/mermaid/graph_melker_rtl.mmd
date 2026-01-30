@@ -1,0 +1,23 @@
+flowchart RL
+  Output --> Process --> Input
+
+%%melker:Input
+%%<container style="flex-direction: column">
+%%  <text>Source</text>
+%%  <input placeholder="Enter data"/>
+%%</container>
+%%end
+
+%%melker:Process
+%%<container style="flex-direction: column">
+%%  <text style="font-weight: bold">Transform</text>
+%%  <progress indeterminate="true"/>
+%%</container>
+%%end
+
+%%melker:Output
+%%<container style="flex-direction: column">
+%%  <text>Result</text>
+%%  <text style="border: thin; padding: 0 1">Output here</text>
+%%</container>
+%%end

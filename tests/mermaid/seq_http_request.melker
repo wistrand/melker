@@ -1,0 +1,158 @@
+<melker>
+<policy>
+{
+  "name": "Sequence: tests/mermaid/seq_http_request.mmd"
+}
+</policy>
+
+<style>
+.sequence-container {
+  width: fill;
+  height: auto;
+  padding: 1;
+}
+.sequence-table {
+  width: fill;
+}
+.participant {
+  text-align: center;
+}
+.actor {
+  text-align: center;
+}
+.lifeline {
+  text-align: center;
+}
+.note {
+  text-align: center;
+}
+</style>
+
+<container style="padding: 1; flex-direction: column" scrollable="true">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="11">
+    <thead>
+      <tr>
+        <th id="seq-B" class="participant">Browser</th>
+        <th id="seq-S" class="participant">Server</th>
+        <th id="seq-C" class="participant">Cache</th>
+        <th id="seq-D" class="participant">Database</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- B -> S: GET /api/users/123 -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-0-B" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> C: Check cache -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-C" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- C -> S: Cache miss -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-C" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> D: SELECT * FROM users -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-D" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- D -> S: User data -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-D" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> C: Store in cache -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-C" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> B: 200 OK + JSON -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-6-B" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Render user profile -->
+      <tr>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Render user profile</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- B -> S: PUT /api/users/123 -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-7-B" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> D: UPDATE users SET... -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-D" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- D -> S: OK -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-D" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> C: Invalidate cache -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-C" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- S -> B: 200 OK -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-11-B" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-S" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td id="seq-bottom-B" class="participant">Browser</td>
+        <td id="seq-bottom-S" class="participant">Server</td>
+        <td id="seq-bottom-C" class="participant">Cache</td>
+        <td id="seq-bottom-D" class="participant">Database</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Message connectors -->
+  <connector from="seq-msg-0-B" to="seq-msg-0-S" routing="horizontal" arrow="end" label="GET /api/users/123" />
+  <connector from="seq-msg-1-S" to="seq-msg-1-C" routing="horizontal" arrow="end" label="Check cache" />
+  <connector from="seq-msg-2-C" to="seq-msg-2-S" routing="horizontal" arrow="end" label="Cache miss" style="line-style: dashed" />
+  <connector from="seq-msg-3-S" to="seq-msg-3-D" routing="horizontal" arrow="end" label="SELECT * FROM users" />
+  <connector from="seq-msg-4-D" to="seq-msg-4-S" routing="horizontal" arrow="end" label="User data" style="line-style: dashed" />
+  <connector from="seq-msg-5-S" to="seq-msg-5-C" routing="horizontal" arrow="end" label="Store in cache" />
+  <connector from="seq-msg-6-S" to="seq-msg-6-B" routing="horizontal" arrow="end" label="200 OK + JSON" style="line-style: dashed" />
+  <connector from="seq-msg-7-B" to="seq-msg-7-S" routing="horizontal" arrow="end" label="PUT /api/users/123" />
+  <connector from="seq-msg-8-S" to="seq-msg-8-D" routing="horizontal" arrow="end" label="UPDATE users SET..." />
+  <connector from="seq-msg-9-D" to="seq-msg-9-S" routing="horizontal" arrow="end" label="OK" style="line-style: dashed" />
+  <connector from="seq-msg-10-S" to="seq-msg-10-C" routing="horizontal" arrow="end" label="Invalidate cache" />
+  <connector from="seq-msg-11-S" to="seq-msg-11-B" routing="horizontal" arrow="end" label="200 OK" style="line-style: dashed" />
+</container>
+</melker>

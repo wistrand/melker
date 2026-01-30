@@ -99,6 +99,10 @@ export class RenderingEngine {
   private _layoutEngine: LayoutEngine;
   private _viewportManager: ViewportManager;
   private _currentLayoutContext?: Map<string, LayoutNode>;
+  // Track cumulative scroll offset for each element (for connector bounds adjustment)
+  private _scrollOffsets?: Map<string, { x: number; y: number }>;
+  // Dynamically registered element bounds (for components that render children internally like tables)
+  private _dynamicBounds?: Map<string, Bounds>;
   // Cache for selection-only renders
   private _cachedLayoutTree?: LayoutNode;
   private _cachedElement?: Element;
@@ -225,6 +229,8 @@ export class RenderingEngine {
 
     // Build layout context map for scroll calculations
     this._currentLayoutContext = new Map();
+    this._scrollOffsets = new Map();
+    this._dynamicBounds = new Map();
     this._buildLayoutContext(layoutTree, this._currentLayoutContext);
 
     // Collect all modal dialogs for separate rendering
@@ -264,6 +270,28 @@ export class RenderingEngine {
           requestRender: context.requestRender,
           buffer,
           style: modalCellStyle,
+          getElementBounds: (elementId: string) => {
+            const dynamicBounds = this._dynamicBounds?.get(elementId);
+            if (dynamicBounds) return dynamicBounds;
+            const layoutBounds = this._currentLayoutContext?.get(elementId)?.bounds;
+            if (!layoutBounds) return undefined;
+            const scrollOffset = this._scrollOffsets?.get(elementId);
+            if (!scrollOffset || (scrollOffset.x === 0 && scrollOffset.y === 0)) {
+              return layoutBounds;
+            }
+            return {
+              x: layoutBounds.x - scrollOffset.x,
+              y: layoutBounds.y - scrollOffset.y,
+              width: layoutBounds.width,
+              height: layoutBounds.height,
+            };
+          },
+          registerElementBounds: (elementId: string, elementBounds: Bounds) => {
+            if (!this._dynamicBounds) {
+              this._dynamicBounds = new Map();
+            }
+            this._dynamicBounds.set(elementId, elementBounds);
+          },
         };
         modal.render(viewport, modalCellStyle, buffer, componentContext);
 
@@ -844,6 +872,10 @@ export class RenderingEngine {
 
   // Check if element should be visible
   private _isVisible(element: Element, bounds: Bounds): boolean {
+    // Connectors have 0x0 bounds but still need to render (they draw based on connected elements)
+    if (element.type === 'connector') {
+      return element.props.visible !== false;
+    }
     return bounds.width > 0 && bounds.height > 0 && element.props.visible !== false;
   }
 
@@ -884,7 +916,12 @@ export class RenderingEngine {
       renderLogger.trace(`[CLIP-DEBUG] text element clipped out, id="${element.id || 'none'}", bounds=${JSON.stringify(bounds)}, clippedBounds=${JSON.stringify(clippedBounds)}, clipRect=${JSON.stringify(context.clipRect)}, viewport=${JSON.stringify(context.viewport)}`);
     }
 
-    if (clippedBounds.width <= 0 || clippedBounds.height <= 0) return;
+    // Skip elements with no visible bounds, except connectors which draw based on connected elements
+    if (clippedBounds.width <= 0 || clippedBounds.height <= 0) {
+      if (element.type !== 'connector') {
+        return;
+      }
+    }
 
     // Render background
     this._renderBackground(clippedBounds, computedStyle, context.buffer);
@@ -1306,6 +1343,63 @@ export class RenderingEngine {
         registerOverlay: (overlay: Overlay) => {
           this._overlays.push(overlay);
         },
+        // Allow components to look up element bounds by ID (for connectors)
+        // Bounds are adjusted for cumulative scroll offset from parent scrollable containers
+        getElementBounds: (elementId: string) => {
+          // First check dynamically registered bounds (e.g., from table cells)
+          const dynamicBounds = this._dynamicBounds?.get(elementId);
+          if (dynamicBounds) return dynamicBounds;
+          // Then check layout context
+          const layoutBounds = this._currentLayoutContext?.get(elementId)?.bounds;
+          if (!layoutBounds) return undefined;
+          const scrollOffset = this._scrollOffsets?.get(elementId);
+          if (!scrollOffset || (scrollOffset.x === 0 && scrollOffset.y === 0)) {
+            return layoutBounds;
+          }
+          // Return bounds adjusted for scroll offset
+          return {
+            x: layoutBounds.x - scrollOffset.x,
+            y: layoutBounds.y - scrollOffset.y,
+            width: layoutBounds.width,
+            height: layoutBounds.height,
+          };
+        },
+        // Get all element bounds (for connector obstacle avoidance)
+        // Bounds are adjusted for cumulative scroll offset from parent scrollable containers
+        getAllElementBounds: () => {
+          const bounds = new Map<string, Bounds>();
+          // Include dynamically registered bounds (e.g., from table cells)
+          if (this._dynamicBounds) {
+            for (const [id, b] of this._dynamicBounds.entries()) {
+              bounds.set(id, b);
+            }
+          }
+          if (this._currentLayoutContext) {
+            for (const [id, info] of this._currentLayoutContext.entries()) {
+              if (info.bounds) {
+                const scrollOffset = this._scrollOffsets?.get(id);
+                if (!scrollOffset || (scrollOffset.x === 0 && scrollOffset.y === 0)) {
+                  bounds.set(id, info.bounds);
+                } else {
+                  bounds.set(id, {
+                    x: info.bounds.x - scrollOffset.x,
+                    y: info.bounds.y - scrollOffset.y,
+                    width: info.bounds.width,
+                    height: info.bounds.height,
+                  });
+                }
+              }
+            }
+          }
+          return bounds;
+        },
+        // Allow components to register element bounds dynamically (for table cells, etc.)
+        registerElementBounds: (elementId: string, elementBounds: Bounds) => {
+          if (!this._dynamicBounds) {
+            this._dynamicBounds = new Map();
+          }
+          this._dynamicBounds.set(elementId, elementBounds);
+        },
       };
       // Pass the overlays array from context if it exists (for read access)
       if (context.overlays) {
@@ -1351,12 +1445,33 @@ export class RenderingEngine {
   }
 
   // Build layout context map for quick lookup during rendering
-  private _buildLayoutContext(node: LayoutNode, context: Map<string, LayoutNode>): void {
+  // Also tracks cumulative scroll offsets for connector bounds adjustment
+  private _buildLayoutContext(
+    node: LayoutNode,
+    context: Map<string, LayoutNode>,
+    scrollOffset: { x: number; y: number } = { x: 0, y: 0 }
+  ): void {
     if (node.element.id) {
       context.set(node.element.id, node);
+      // Store the cumulative scroll offset for this element
+      if (this._scrollOffsets) {
+        this._scrollOffsets.set(node.element.id, { ...scrollOffset });
+      }
     }
+
+    // Check if this element is scrollable and accumulate its scroll offset
+    let childScrollOffset = scrollOffset;
+    if (node.element.props?.scrollable) {
+      const scrollX = node.element.props.scrollX ?? 0;
+      const scrollY = node.element.props.scrollY ?? 0;
+      childScrollOffset = {
+        x: scrollOffset.x + scrollX,
+        y: scrollOffset.y + scrollY,
+      };
+    }
+
     for (const child of node.children) {
-      this._buildLayoutContext(child, context);
+      this._buildLayoutContext(child, context, childScrollOffset);
     }
   }
 
@@ -1539,8 +1654,17 @@ export class RenderingEngine {
       }
     }
 
+    // First check dynamically registered bounds (e.g., from mermaid elements, table cells)
+    // These are elements rendered via renderElementSubtree that aren't in the main layout tree
+    const dynamicBounds = this._dynamicBounds?.get(containerId);
+    if (dynamicBounds) {
+      renderLogger.debug(`getContainerBounds(${containerId}): found in dynamicBounds ${dynamicBounds.x},${dynamicBounds.y} ${dynamicBounds.width}x${dynamicBounds.height}`);
+      return dynamicBounds;
+    }
+
     const layoutNode = this._currentLayoutContext?.get(containerId);
     if (!layoutNode) {
+      renderLogger.debug(`getContainerBounds(${containerId}): not in dynamicBounds or layoutContext`);
       return undefined;
     }
 
@@ -1689,6 +1813,28 @@ export class RenderingEngine {
       requestRender: context.requestRender,
       buffer,
       style: modalCellStyle,
+      getElementBounds: (elementId: string) => {
+        const dynamicBounds = this._dynamicBounds?.get(elementId);
+        if (dynamicBounds) return dynamicBounds;
+        const layoutBounds = this._currentLayoutContext?.get(elementId)?.bounds;
+        if (!layoutBounds) return undefined;
+        const scrollOffset = this._scrollOffsets?.get(elementId);
+        if (!scrollOffset || (scrollOffset.x === 0 && scrollOffset.y === 0)) {
+          return layoutBounds;
+        }
+        return {
+          x: layoutBounds.x - scrollOffset.x,
+          y: layoutBounds.y - scrollOffset.y,
+          width: layoutBounds.width,
+          height: layoutBounds.height,
+        };
+      },
+      registerElementBounds: (elementId: string, elementBounds: Bounds) => {
+        if (!this._dynamicBounds) {
+          this._dynamicBounds = new Map();
+        }
+        this._dynamicBounds.set(elementId, elementBounds);
+      },
     };
     modal.render(viewport, modalCellStyle, buffer, componentContext);
 
@@ -1846,6 +1992,73 @@ export class RenderingEngine {
       for (const child of element.children) {
         this._collectModals(child, modals);
       }
+    }
+  }
+}
+
+/**
+ * Render an element subtree into a buffer at specified bounds.
+ * This is a standalone helper for components that need to render nested element trees.
+ * Used by markdown to render mermaid graphs inline.
+ *
+ * If a context with registerElementBounds is provided, element bounds will be registered
+ * with the main renderer, enabling proper hit testing and interaction.
+ */
+export function renderElementSubtree(
+  element: Element,
+  buffer: DualBuffer,
+  bounds: Bounds,
+  context?: ComponentRenderContext
+): void {
+  const renderer = new RenderingEngine();
+
+  // Create a wrapper context that forwards registerElementBounds to the parent context
+  // This allows elements rendered in the subtree to be found by hit testing
+  const wrapperContext: ComponentRenderContext = {
+    buffer,
+    style: context?.style || {},
+    focusedElementId: context?.focusedElementId,
+    hoveredElementId: context?.hoveredElementId,
+    requestRender: context?.requestRender,
+    scrollOffset: context?.scrollOffset,
+    viewport: context?.viewport,
+    getElementBounds: context?.getElementBounds,
+    getAllElementBounds: context?.getAllElementBounds,
+    // Forward registerElementBounds to parent context
+    registerElementBounds: context?.registerElementBounds,
+  };
+
+  // Render the subtree - pass focusedElementId and hoveredElementId so inputs show cursor
+  const layoutTree = renderer.render(
+    element,
+    buffer,
+    bounds,
+    context?.focusedElementId,    // Pass focused element so inputs show cursor
+    undefined,                     // textSelection - not needed for subtree
+    context?.hoveredElementId,    // Pass hovered element for hover effects
+    context?.requestRender        // Pass requestRender callback
+  );
+
+  // Register all element bounds from the layout tree with the parent context
+  // This enables hit testing for elements rendered in the subtree
+  if (context?.registerElementBounds) {
+    registerBoundsFromLayoutTree(layoutTree, context.registerElementBounds);
+  }
+}
+
+/**
+ * Recursively register element bounds from a layout tree
+ */
+function registerBoundsFromLayoutTree(
+  node: LayoutNode,
+  registerElementBounds: (elementId: string, bounds: Bounds) => void
+): void {
+  if (node.element && node.bounds && node.element.id) {
+    registerElementBounds(node.element.id, node.bounds);
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      registerBoundsFromLayoutTree(child, registerElementBounds);
     }
   }
 }

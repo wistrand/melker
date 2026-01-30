@@ -1,0 +1,160 @@
+<melker>
+<policy>
+{
+  "name": "Sequence: tests/mermaid/sequence_complex.mmd"
+}
+</policy>
+
+<style>
+.sequence-container {
+  width: fill;
+  height: auto;
+  padding: 1;
+}
+.sequence-table {
+  width: fill;
+}
+.participant {
+  text-align: center;
+}
+.actor {
+  text-align: center;
+}
+.lifeline {
+  text-align: center;
+}
+.note {
+  text-align: center;
+}
+</style>
+
+<container style="padding: 1; flex-direction: column" scrollable="true">
+  <text style="text-align: center; padding-bottom: 1">Order Processing Flow</text>
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="11">
+    <thead>
+      <tr>
+        <th id="seq-Customer" class="actor">Customer</th>
+        <th id="seq-WebApp" class="participant">WebApp</th>
+        <th id="seq-API" class="participant">API</th>
+        <th id="seq-Database" class="participant">Database</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Customer -> WebApp: Place Order -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-0-Customer" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-WebApp" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- WebApp -> API: POST /orders -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-WebApp" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-API" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- API -> Database: INSERT order -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-API" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-Database" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Fragment: alt -->
+      <tr>
+        <td colspan="4">[alt Order valid]</td>
+      </tr>
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-API" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-Database" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-WebApp" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-API" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <tr>
+        <td class="lifeline"><container id="seq-msg-5-Customer" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-WebApp" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <tr>
+        <td colspan="4">[else Order invalid]</td>
+      </tr>
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-API" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-Database" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-WebApp" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-API" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <tr>
+        <td class="lifeline"><container id="seq-msg-8-Customer" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-WebApp" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <tr>
+        <td colspan="4">[end]</td>
+      </tr>
+      <!-- Fragment: loop -->
+      <tr>
+        <td colspan="4">[loop Every 5 seconds]</td>
+      </tr>
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-WebApp" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-API" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-WebApp" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-API" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <tr>
+        <td colspan="4">[end]</td>
+      </tr>
+      <!-- Note: Async processing -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Async processing</text></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Async processing</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td id="seq-bottom-Customer" class="actor">Customer</td>
+        <td id="seq-bottom-WebApp" class="participant">WebApp</td>
+        <td id="seq-bottom-API" class="participant">API</td>
+        <td id="seq-bottom-Database" class="participant">Database</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Message connectors -->
+  <connector from="seq-msg-0-Customer" to="seq-msg-0-WebApp" routing="horizontal" arrow="end" label="Place Order" />
+  <connector from="seq-msg-1-WebApp" to="seq-msg-1-API" routing="horizontal" arrow="end" label="POST /orders" />
+  <connector from="seq-msg-2-API" to="seq-msg-2-Database" routing="horizontal" arrow="end" label="INSERT order" />
+  <connector from="seq-msg-3-Database" to="seq-msg-3-API" routing="horizontal" arrow="end" label="Success" />
+  <connector from="seq-msg-4-API" to="seq-msg-4-WebApp" routing="horizontal" arrow="end" label="201 Created" />
+  <connector from="seq-msg-5-WebApp" to="seq-msg-5-Customer" routing="horizontal" arrow="end" label="Order Confirmed" />
+  <connector from="seq-msg-6-Database" to="seq-msg-6-API" routing="horizontal" arrow="end" label="Error" />
+  <connector from="seq-msg-7-API" to="seq-msg-7-WebApp" routing="horizontal" arrow="end" label="400 Bad Request" />
+  <connector from="seq-msg-8-WebApp" to="seq-msg-8-Customer" routing="horizontal" arrow="end" label="Please fix errors" />
+  <connector from="seq-msg-9-WebApp" to="seq-msg-9-API" routing="horizontal" arrow="end" label="GET /order/status" />
+  <connector from="seq-msg-10-API" to="seq-msg-10-WebApp" routing="horizontal" arrow="end" label="Status update" />
+</container>
+</melker>

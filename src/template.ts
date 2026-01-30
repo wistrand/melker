@@ -73,6 +73,27 @@ function preprocessSelfClosingTags(content: string): string {
 }
 
 /**
+ * Escape XML content inside <graph> tags to prevent the HTML parser from
+ * treating embedded elements (like <button> in %%melker blocks) as actual elements.
+ * The graph component will unescape these when extracting the content.
+ */
+function escapeGraphContent(content: string): string {
+  // Match <graph ...>...</graph> including the content between them
+  // Use a non-greedy match for the content and handle nested tags carefully
+  return content.replace(
+    /(<graph[^>]*>)([\s\S]*?)(<\/graph>)/gi,
+    (_match, openTag: string, innerContent: string, closeTag: string) => {
+      // Escape < and > in the inner content, except for the opening and closing tags
+      // Only escape if the inner content contains XML-like elements
+      const escaped = innerContent
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return openTag + escaped + closeTag;
+    }
+  );
+}
+
+/**
  * Validate style tag content for lint mode.
  * Checks selectors and properties against schema.
  */
@@ -152,8 +173,9 @@ function validateStyleContent(styleContent: string): void {
  */
 export function parseMelkerFile(content: string): MelkerParseResult {
   try {
-    // Preprocess to handle self-closing special tags
-    const preprocessed = preprocessSelfClosingTags(content.trim());
+    // Preprocess to handle self-closing special tags and escape graph content
+    let preprocessed = preprocessSelfClosingTags(content.trim());
+    preprocessed = escapeGraphContent(preprocessed);
     // Parse the content to check for melker wrapper tag
     const ast = parse(preprocessed);
 
@@ -766,11 +788,36 @@ function convertToElement(node: ParsedNode, context: TemplateContext): Element {
       }
     }
 
-    // Handle <td>content</td> and <th>content</th> - wrap plain text in text element
-    if ((node.name === 'td' || node.name === 'th') && children.length > 0) {
-      // Check if all children are plain text elements (from text nodes)
+    // Handle <markdown>content</markdown> syntax - use text content as text prop
+    // Join with newlines to preserve line breaks (important for markdown parsing)
+    if (node.name === 'markdown' && children.length > 0 && !props.text && !props.src) {
       const hasOnlyTextChildren = children.every(child => child.type === 'text');
       if (hasOnlyTextChildren) {
+        const markdownContent = children
+          .map(child => child.props.text)
+          .join('\n');
+
+        return createElement('markdown', {
+          ...props,
+          text: markdownContent
+        });
+      }
+    }
+
+    // Handle <td>content</td> and <th>content</th> - wrap plain text in text element
+    // BUT preserve explicit <text id="..."> elements - only combine plain text content
+    if ((node.name === 'td' || node.name === 'th') && children.length > 0) {
+      // Check if all children are PLAIN text elements (from text content nodes, not explicit <text> elements)
+      // Plain text elements only have the 'text' prop (and maybe __sourceLocation)
+      // Explicit <text id="..." text="..."> elements have 'id' or other props
+      const isPlainTextChild = (child: Element) => {
+        if (child.type !== 'text') return false;
+        // Check if this is just a plain text content node (no id or other significant props)
+        const propKeys = Object.keys(child.props).filter(k => k !== 'text' && k !== '__sourceLocation');
+        return propKeys.length === 0;
+      };
+      const hasOnlyPlainTextChildren = children.every(isPlainTextChild);
+      if (hasOnlyPlainTextChildren) {
         // Combine text content and wrap in a single text element
         const textContent = children
           .map(child => child.props.text)
@@ -804,6 +851,19 @@ export function offsetToLineCol(source: string, offset: number): { line: number;
 
 // Export SourceLocation type for use in error reporting
 export type { SourceLocation };
+
+/**
+ * Parse XML content string directly to an Element.
+ * Useful for dynamically generating UI from XML strings.
+ *
+ * @param xml The XML content to parse (should be a single root element)
+ * @returns The parsed Element
+ */
+export function parseXmlToElement(xml: string): Element {
+  const context: TemplateContext = { expressions: [], expressionIndex: 0 };
+  const parsed = parseHtmlLike(xml.trim(), context);
+  return convertToElement(parsed, context);
+}
 
 // =============================================================================
 // Bundler Integration - Handler Extraction

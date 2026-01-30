@@ -113,10 +113,22 @@ export class FocusManager {
 
   /**
    * Find element by ID using tree traversal (same approach as engine)
+   * Also searches subtree elements inside components that render inline subtrees
    */
   private _findElementById(element: Element, targetId: string): Element | null {
     if (element.id === targetId) {
       return element;
+    }
+
+    // Check subtree elements if this component has any
+    // Subtree elements are rendered inline but not as children (e.g., mermaid graphs in markdown)
+    const component = element as any;
+    if (typeof component.getSubtreeElements === 'function') {
+      const subtreeElements = component.getSubtreeElements() as Element[];
+      for (const subtreeRoot of subtreeElements) {
+        const found = this._findElementById(subtreeRoot, targetId);
+        if (found) return found;
+      }
     }
 
     if (element.children) {
@@ -190,6 +202,7 @@ export class FocusManager {
   focus(elementId: string, options: FocusOptions = {}): boolean {
     const element = this._getFocusableElement(elementId);
     if (!element || element.disabled || !element.visible) {
+      this._logger?.debug(`Focus failed for ${elementId}: element=${!!element}, disabled=${element?.disabled}, visible=${element?.visible}`);
       return false;
     }
 
@@ -525,8 +538,26 @@ export class FocusManager {
 
   /**
    * Find parent element of a given element ID
+   * Also searches subtree elements inside components that render inline subtrees
    */
   private _findParentElement(current: Element, targetId: string): Element | null {
+    // Check subtree elements if this component has any
+    const component = current as any;
+    if (typeof component.getSubtreeElements === 'function') {
+      const subtreeElements = component.getSubtreeElements() as Element[];
+      for (const subtreeRoot of subtreeElements) {
+        // If the subtree root itself is the target, parent is the component
+        if (subtreeRoot.id === targetId) {
+          return current;
+        }
+        // Search within the subtree
+        const foundInSubtree = this._findParentElement(subtreeRoot, targetId);
+        if (foundInSubtree) {
+          return foundInSubtree;
+        }
+      }
+    }
+
     if (!current.children) {
       return null;
     }

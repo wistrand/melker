@@ -73,6 +73,11 @@ import {
   type HeadlessManager,
 } from './headless.ts';
 import {
+  isStdoutEnabled,
+  getStdoutManager,
+  type StdoutManager,
+} from './stdout.ts';
+import {
   getThemeManager,
   getThemeColor,
   type ThemeManager,
@@ -399,12 +404,26 @@ export class MelkerEngine {
       return this._headlessManager.terminal;
     }
 
+    // If in stdout mode, use configured stdout dimensions (fallback to actual terminal size)
+    if (isStdoutEnabled()) {
+      const config = MelkerConfig.get();
+      const actualSize = this._getActualTerminalSize();
+      return {
+        width: config.stdoutWidth ?? actualSize.width,
+        height: config.stdoutHeight ?? actualSize.height,
+      };
+    }
+
+    return this._getActualTerminalSize();
+  }
+
+  private _getActualTerminalSize(): { width: number; height: number } {
     try {
       if (typeof Deno !== 'undefined' && Deno.consoleSize) {
         const size = Deno.consoleSize();
         return { width: size.columns, height: size.rows };
       }
-    } catch (error) {
+    } catch {
       // Fallback to options
     }
     return {
@@ -428,11 +447,13 @@ export class MelkerEngine {
       this._focusManager.setBoundsProvider((elementId: string) => {
         return this._renderer.getContainerBounds(elementId);
       });
+      // Disable raw mode and input in stdout mode - terminal stays in normal mode
+      const stdoutMode = isStdoutEnabled();
       this._inputProcessor = new TerminalInputProcessor({
-        enableMouse: this._options.enableMouse,
-        enableFocusEvents: this._options.enableFocusEvents,
-        enableRawMode: true, // Enable raw mode to capture input properly
-        mouseReporting: this._options.mouseReporting,
+        enableMouse: stdoutMode ? false : this._options.enableMouse,
+        enableFocusEvents: stdoutMode ? false : this._options.enableFocusEvents,
+        enableRawMode: stdoutMode ? false : true, // Disable raw mode in stdout mode
+        mouseReporting: stdoutMode ? 'none' : this._options.mouseReporting,
         mapMetaToAlt: this._options.mapMetaToAlt,
       }, this._eventManager);
     }
@@ -508,8 +529,8 @@ export class MelkerEngine {
       }
     );
 
-    // Set up resize handler if enabled
-    if (this._options.autoResize) {
+    // Set up resize handler if enabled (skip in stdout mode - fixed size output)
+    if (this._options.autoResize && !isStdoutEnabled()) {
       this._resizeHandler = new ResizeHandler(this._currentSize, {
         debounceMs: this._options.debounceMs,
         autoRender: false, // Disable auto-render, we handle it manually via onResize
@@ -772,7 +793,7 @@ export class MelkerEngine {
 
     // Detect sixel capabilities - queries are written here, responses read by input loop
     try {
-      const skipQueries = isRunningHeadless() || !Deno.stdout.isTerminal();
+      const skipQueries = isRunningHeadless() || isStdoutEnabled() || !Deno.stdout.isTerminal();
       this._sixelCapabilities = await detectSixelCapabilities(false, skipQueries);
       this._logger?.info('Sixel detection', {
         supported: this._sixelCapabilities.supported,
@@ -788,7 +809,7 @@ export class MelkerEngine {
 
     // Detect kitty capabilities - only if sixel not supported (kitty is preferred)
     try {
-      const skipQueries = isRunningHeadless() || !Deno.stdout.isTerminal();
+      const skipQueries = isRunningHeadless() || isStdoutEnabled() || !Deno.stdout.isTerminal();
       this._kittyCapabilities = await detectKittyCapabilities(false, skipQueries);
       this._logger?.info('Kitty detection', {
         supported: this._kittyCapabilities.supported,
@@ -1314,6 +1335,10 @@ export class MelkerEngine {
    * Set the terminal window title
    */
   setTitle(title: string): void {
+    // Skip setting title in stdout mode - no terminal control
+    if (isStdoutEnabled()) {
+      return;
+    }
     this._terminalRenderer.setTitle(title);
   }
 
@@ -1444,6 +1469,11 @@ export class MelkerEngine {
    * Logs a warning if partial writes occur (indicates system contention).
    */
   private _writeAllSync(data: Uint8Array): void {
+    // Skip terminal writes in stdout mode - buffer will be output at end
+    if (isStdoutEnabled()) {
+      return;
+    }
+
     let written = 0;
     while (written < data.length) {
       const n = Deno.stdout.writeSync(data.subarray(written));

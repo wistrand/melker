@@ -1,0 +1,101 @@
+<melker>
+<policy>
+{
+  "name": "Sequence: tests/mermaid/sequence_long_text.mmd"
+}
+</policy>
+
+<style>
+.sequence-container {
+  width: fill;
+  height: auto;
+  padding: 1;
+}
+.sequence-table {
+  width: fill;
+}
+.participant {
+  text-align: center;
+}
+.actor {
+  text-align: center;
+}
+.lifeline {
+  text-align: center;
+}
+.note {
+  text-align: center;
+}
+</style>
+
+<container style="padding: 1; flex-direction: column" scrollable="true">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="57">
+    <thead>
+      <tr>
+        <th id="seq-Client" class="participant">Client</th>
+        <th id="seq-Server" class="participant">Server</th>
+        <th id="seq-Database" class="participant">Database</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Client -> Server: This is a very long message that should test how word wrapping works in the sequence diagram -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-0-Client" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-Server" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Server -> Database: SELECT * FROM users WHERE email = 'user@example.com' AND status = 'active' ORDER BY created_at DESC LIMIT 100 -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-Server" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-Database" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Database -> Server: Returns a large result set containing user information including name, email, address, and preferences -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-Server" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-Database" style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Server -> Client: JSON response with paginated user data and metadata about the total count and available pages -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-3-Client" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-Server" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Note: Processing takes a while because the query involves multiple table joins and complex filtering logic -->
+      <tr>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Processing takes a while because the query involves multiple table joins and complex filtering logic</text></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Client -> Server: Another request with lots of parameters and a very detailed payload structure -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-4-Client" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-Server" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+      <!-- Server -> Client: Short reply -->
+      <tr>
+        <td class="lifeline"><container id="seq-msg-5-Client" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-Server" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td id="seq-bottom-Client" class="participant">Client</td>
+        <td id="seq-bottom-Server" class="participant">Server</td>
+        <td id="seq-bottom-Database" class="participant">Database</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Message connectors -->
+  <connector from="seq-msg-0-Client" to="seq-msg-0-Server" routing="horizontal" arrow="end" label="This is a very long message that should test how word wrapping works in the sequence diagram" />
+  <connector from="seq-msg-1-Server" to="seq-msg-1-Database" routing="horizontal" arrow="end" label="SELECT * FROM users WHERE email = 'user@example.com' AND status = 'active' ORDER BY created_at DESC LIMIT 100" />
+  <connector from="seq-msg-2-Database" to="seq-msg-2-Server" routing="horizontal" arrow="end" label="Returns a large result set containing user information including name, email, address, and preferences" style="line-style: dashed" />
+  <connector from="seq-msg-3-Server" to="seq-msg-3-Client" routing="horizontal" arrow="end" label="JSON response with paginated user data and metadata about the total count and available pages" style="line-style: dashed" />
+  <connector from="seq-msg-4-Client" to="seq-msg-4-Server" routing="horizontal" arrow="end" label="Another request with lots of parameters and a very detailed payload structure" />
+  <connector from="seq-msg-5-Server" to="seq-msg-5-Client" routing="horizontal" arrow="end" label="Short reply" style="line-style: dashed" />
+</container>
+</melker>

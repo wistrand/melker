@@ -1,0 +1,110 @@
+<melker>
+<policy>
+{
+  "name": "Graph: tests/mermaid/graph_microservices.mmd"
+}
+</policy>
+
+<style>
+.graph {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5;
+  align-items: flex-start;
+  align-content: flex-start;
+  flex-shrink: 0;
+}
+.graph-row { flex-direction: row; }
+.graph-col { flex-direction: column; }
+
+.subgraph {
+  border: thin;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4;
+}
+.subgraph-row { flex-direction: row; }
+.subgraph-col { flex-direction: column; }
+
+.node {
+  border: thin;
+  padding: 0 1;
+  flex-shrink: 0;
+}
+.node-diamond { border: double; }
+.node-hexagon { border: thick; }
+</style>
+
+<container class="graph graph-row" scrollable="true">
+  <!-- Subgraph: Client -->
+  <container id="graph-subgraph-Client" class="subgraph subgraph-col" style="border-title: Client">
+    <container id="graph-node-A" class="node">
+      <text>Web App</text>
+    </container>
+    <container id="graph-node-B" class="node">
+      <text>Mobile App</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Gateway -->
+  <container id="graph-subgraph-Gateway" class="subgraph subgraph-col" style="border-title: Gateway">
+    <container id="graph-node-C" class="node">
+      <text>Load Balancer</text>
+    </container>
+    <container id="graph-node-D" class="node">
+      <text>API Gateway</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Services -->
+  <container id="graph-subgraph-Services" class="subgraph subgraph-col" style="border-title: Services">
+    <container id="graph-node-E" class="node">
+      <text>User Service</text>
+    </container>
+    <container id="graph-node-F" class="node">
+      <text>Order Service</text>
+    </container>
+    <container id="graph-node-H" class="node">
+      <text>Payment Service</text>
+    </container>
+    <container id="graph-node-G" class="node">
+      <text>Product Service</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Data -->
+  <container id="graph-subgraph-Data" class="subgraph subgraph-col" style="border-title: Data">
+    <container id="graph-node-I" class="node">
+      <text>Users DB</text>
+    </container>
+    <container id="graph-node-J" class="node">
+      <text>Orders DB</text>
+    </container>
+    <container id="graph-node-L" class="node">
+      <text>Message Queue</text>
+    </container>
+    <container id="graph-node-K" class="node">
+      <text>Products DB</text>
+    </container>
+  </container>
+
+
+  <!-- Connectors -->
+  <connector from="graph-node-C" to="graph-node-D" arrow="end" />
+  <connector from="graph-node-A" to="graph-node-C" arrow="end" />
+  <connector from="graph-node-B" to="graph-node-C" arrow="end" />
+  <connector from="graph-node-D" to="graph-node-E" arrow="end" />
+  <connector from="graph-node-D" to="graph-node-F" arrow="end" />
+  <connector from="graph-node-D" to="graph-node-G" arrow="end" />
+  <connector from="graph-node-D" to="graph-node-H" arrow="end" />
+  <connector from="graph-node-E" to="graph-node-I" arrow="end" />
+  <connector from="graph-node-F" to="graph-node-J" arrow="end" />
+  <connector from="graph-node-F" to="graph-node-L" arrow="end" />
+  <connector from="graph-node-G" to="graph-node-K" arrow="end" />
+  <connector from="graph-node-H" to="graph-node-L" arrow="end" />
+</container>
+</melker>

@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant B as Browser
+    participant S as Server
+    participant C as Cache
+    participant D as Database
+
+    B->>S: GET /api/users/123
+    S->>C: Check cache
+    C-->>S: Cache miss
+
+    S->>D: SELECT * FROM users
+    D-->>S: User data
+
+    S->>C: Store in cache
+    S-->>B: 200 OK + JSON
+
+    Note over B: Render user profile
+
+    B->>S: PUT /api/users/123
+    S->>D: UPDATE users SET...
+    D-->>S: OK
+    S->>C: Invalidate cache
+    S-->>B: 200 OK

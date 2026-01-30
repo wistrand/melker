@@ -369,6 +369,7 @@ export class TextElement extends Element implements Renderable, TextSelectable {
 
 // Lint schema for text component
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { registerComponent } from '../element.ts';
 
 export const textSchema: ComponentSchema = {
   description: 'Display text content with optional styling',
@@ -379,3 +380,10 @@ export const textSchema: ComponentSchema = {
 };
 
 registerComponentSchema('text', textSchema);
+
+// Register text component for createElement
+registerComponent({
+  type: 'text',
+  componentClass: TextElement,
+  defaultProps: {},
+});

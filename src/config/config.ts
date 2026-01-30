@@ -845,4 +845,21 @@ export class MelkerConfig {
   get oauthWellknownUrl(): string | undefined {
     return this.data['oauth.wellknownUrl'] as string | undefined;
   }
+
+  // Stdout mode
+  get stdoutEnabled(): boolean {
+    return this.data['stdout.enabled'] as boolean;
+  }
+
+  get stdoutTimeout(): number {
+    return this.data['stdout.timeout'] as number;
+  }
+
+  get stdoutWidth(): number | undefined {
+    return this.data['stdout.width'] as number | undefined;
+  }
+
+  get stdoutHeight(): number | undefined {
+    return this.data['stdout.height'] as number | undefined;
+  }
 }

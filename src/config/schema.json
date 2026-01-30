@@ -248,6 +248,37 @@
       "type": "string",
       "env": "MELKER_OAUTH_WELLKNOWN_URL",
       "description": "OAuth well-known configuration URL"
+    },
+    "stdout.enabled": {
+      "type": "boolean",
+      "default": false,
+      "flag": "--stdout",
+      "description": "Output buffer to stdout after timeout (no terminal control)"
+    },
+    "stdout.timeout": {
+      "type": "integer",
+      "default": 200,
+      "minimum": 0,
+      "maximum": 60000,
+      "env": "MELKER_STDOUT_TIMEOUT",
+      "flag": "--stdout-timeout",
+      "description": "Milliseconds to wait before printing buffer (default: 500)"
+    },
+    "stdout.width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "env": "MELKER_STDOUT_WIDTH",
+      "flag": "--stdout-width",
+      "description": "Output width in columns (default: terminal width)"
+    },
+    "stdout.height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "env": "MELKER_STDOUT_HEIGHT",
+      "flag": "--stdout-height",
+      "description": "Output height in rows (default: terminal height)"
     }
   }
 }

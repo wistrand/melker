@@ -1,0 +1,66 @@
+<melker>
+<policy>
+{
+  "name": "Graph: tests/mermaid/graph_melker_rtl.mmd"
+}
+</policy>
+
+<style>
+.graph {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5;
+  align-items: flex-start;
+  align-content: flex-start;
+  flex-shrink: 0;
+}
+.graph-row { flex-direction: row; }
+.graph-col { flex-direction: column; }
+
+.subgraph {
+  border: thin;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4;
+}
+.subgraph-row { flex-direction: row; }
+.subgraph-col { flex-direction: column; }
+
+.node {
+  border: thin;
+  padding: 0 1;
+  flex-shrink: 0;
+}
+.node-diamond { border: double; }
+.node-hexagon { border: thick; }
+</style>
+
+<container class="graph graph-row" scrollable="true">
+  <container id="graph-node-Output" class="node">
+    <container style="flex-direction: column">
+      <text>Result</text>
+      <text style="border: thin; padding: 0 1">Output here</text>
+    </container>
+  </container>
+  <container id="graph-node-Process" class="node">
+    <container style="flex-direction: column">
+      <text style="font-weight: bold">Transform</text>
+      <progress indeterminate="true"/>
+    </container>
+  </container>
+  <container id="graph-node-Input" class="node">
+    <container style="flex-direction: column">
+      <text>Source</text>
+      <input placeholder="Enter data"/>
+    </container>
+  </container>
+
+  <!-- Connectors -->
+  <connector from="graph-node-Output" to="graph-node-Process" arrow="end" />
+  <connector from="graph-node-Process" to="graph-node-Input" arrow="end" />
+</container>
+</melker>

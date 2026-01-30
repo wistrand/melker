@@ -184,6 +184,8 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `<data-bars>` | series, bars, labels, showValues | Bar charts (stacked/grouped/sparkline) |
 | `<table>` | border, columnBorders, resizable | HTML-like table |
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
+| `<graph>` | type, src, text, scrollable | Mermaid/JSON diagrams (flowchart, sequence, class) |
+| `<connector>` | from, to, arrow, label, routing | Draw lines between elements |
 
 For complete component reference, see [COMPONENTS.md](references/COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md) and [melker.sh/tutorial.html](https://melker.sh/tutorial.html).
 

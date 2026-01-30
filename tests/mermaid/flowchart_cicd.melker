@@ -1,0 +1,107 @@
+<melker>
+<policy>
+{
+  "name": "Graph: tests/mermaid/flowchart_cicd.mmd"
+}
+</policy>
+
+<style>
+.graph {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5;
+  align-items: flex-start;
+  align-content: flex-start;
+  flex-shrink: 0;
+}
+.graph-row { flex-direction: row; }
+.graph-col { flex-direction: column; }
+
+.subgraph {
+  border: thin;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4;
+}
+.subgraph-row { flex-direction: row; }
+.subgraph-col { flex-direction: column; }
+
+.node {
+  border: thin;
+  padding: 0 1;
+  flex-shrink: 0;
+}
+.node-diamond { border: double; }
+.node-hexagon { border: thick; }
+</style>
+
+<container class="graph graph-row" scrollable="true">
+  <!-- Subgraph: Source -->
+  <container id="graph-subgraph-Source" class="subgraph subgraph-col" style="border-title: Source">
+    <container id="graph-node-COMMIT" class="node">
+      <text>Git Commit</text>
+    </container>
+    <container id="graph-node-PR" class="node">
+      <text>Pull Request</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: CI -->
+  <container id="graph-subgraph-CI" class="subgraph subgraph-col" style="border-title: CI">
+    <container id="graph-node-LINT" class="node">
+      <text>Lint</text>
+    </container>
+    <container id="graph-node-TEST" class="node">
+      <text>Run Tests</text>
+    </container>
+    <container id="graph-node-TYPECHECK" class="node">
+      <text>Type Check</text>
+    </container>
+    <container id="graph-node-BUILD" class="node">
+      <text>Build</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: CD -->
+  <container id="graph-subgraph-CD" class="subgraph subgraph-col" style="border-title: CD">
+    <container id="graph-node-STAGE" class="node">
+      <text>Deploy Staging</text>
+    </container>
+    <container id="graph-node-APPROVE" class="node node-diamond">
+      <text>Manual Approval</text>
+    </container>
+    <container id="graph-node-PROD" class="node">
+      <text>Deploy Production</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Notify -->
+  <container id="graph-subgraph-Notify" class="subgraph subgraph-col" style="border-title: Notify">
+    <container id="graph-node-SLACK" class="node">
+      <text>Slack</text>
+    </container>
+    <container id="graph-node-EMAIL" class="node">
+      <text>Email</text>
+    </container>
+  </container>
+
+
+  <!-- Connectors -->
+  <connector from="graph-node-COMMIT" to="graph-node-PR" arrow="end" />
+  <connector from="graph-node-PR" to="graph-node-LINT" arrow="end" />
+  <connector from="graph-node-PR" to="graph-node-TEST" arrow="end" />
+  <connector from="graph-node-PR" to="graph-node-TYPECHECK" arrow="end" />
+  <connector from="graph-node-LINT" to="graph-node-BUILD" arrow="end" />
+  <connector from="graph-node-TEST" to="graph-node-BUILD" arrow="end" />
+  <connector from="graph-node-TYPECHECK" to="graph-node-BUILD" arrow="end" />
+  <connector from="graph-node-BUILD" to="graph-node-STAGE" arrow="end" />
+  <connector from="graph-node-STAGE" to="graph-node-APPROVE" arrow="end" />
+  <connector from="graph-node-APPROVE" to="graph-node-PROD" arrow="end" />
+  <connector from="graph-node-PROD" to="graph-node-SLACK" arrow="end" />
+  <connector from="graph-node-PROD" to="graph-node-EMAIL" arrow="end" />
+</container>
+</melker>

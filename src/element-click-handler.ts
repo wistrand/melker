@@ -36,23 +36,15 @@ export class ElementClickHandler {
 
     // Set focus on clickable elements
     if (this._deps.hitTester.isInteractiveElement(element) && element.id) {
-      // Always ensure element is registered before focusing
-      try {
-        this._deps.onRegisterFocusable(element.id);
-      } catch (_error) {
-        // Element might already be registered, that's fine
-      }
+      // Register element as focusable (idempotent operation)
+      this._deps.onRegisterFocusable(element.id);
 
-      // Now focus the element (should always work since we just registered it)
-      try {
-        this._deps.onFocusElement(element.id);
+      // Focus the element - bounds should be registered via renderElementSubtree
+      this._deps.onFocusElement(element.id);
 
-        // Auto-render to show focus changes (cursor, highlighting, etc.)
-        if (this._deps.autoRender) {
-          this._deps.onRender();
-        }
-      } catch (_focusError) {
-        // Focus failed even after registration - this shouldn't happen
+      // Auto-render to show focus changes (cursor, highlighting, etc.)
+      if (this._deps.autoRender) {
+        this._deps.onRender();
       }
     }
 

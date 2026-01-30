@@ -1,0 +1,26 @@
+graph TD
+    subgraph Ingestion
+        A[Data Source] --> B[ETL Process]
+    end
+
+    subgraph Processing
+        C[Transform] --> D[Validate] --> E[Enrich]
+    end
+
+    subgraph Storage
+        F[Data Lake]
+        G[Data Warehouse]
+    end
+
+    subgraph Analytics
+        H[Reports]
+        I[Dashboards]
+        J[ML Models]
+    end
+
+    B --> C
+    E --> F
+    E --> G
+    F --> J
+    G --> H
+    G --> I

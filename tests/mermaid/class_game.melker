@@ -1,0 +1,133 @@
+<melker>
+<policy>
+{
+  "name": "Class Diagram: tests/mermaid/class_game.mmd"
+}
+</policy>
+
+<style>
+.class-diagram {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3;
+}
+.class-diagram-row { flex-direction: row; }
+.class-diagram-col { flex-direction: column; }
+
+.class-level {
+  display: flex;
+  gap: 3;
+}
+.class-level-row { flex-direction: row; }
+.class-level-col { flex-direction: column; }
+
+.class-annotation {
+  text-align: center;
+}
+.class-name {
+  text-align: center;
+  font-weight: bold;
+}
+</style>
+
+<container class="class-diagram class-diagram-col" scrollable="true">
+  <container class="class-level class-level-row">
+    <container id="class-GameObject" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«abstract»</text>
+      <text class="class-name">GameObject</text>
+      <separator />
+      <text>+x: int</text>
+      <text>+y: int</text>
+      <separator />
+      <text>+update()*</text>
+      <text>+render()*</text>
+    </container>
+    <container id="class-GameWorld" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">GameWorld</text>
+      <separator />
+      <text>-player: Player</text>
+      <text>-enemies: Enemy[]</text>
+      <text>-items: Item[]</text>
+      <separator />
+      <text>+tick()</text>
+      <text>+spawnEnemy()</text>
+      <text>+checkCollisions()</text>
+    </container>
+  </container>
+  <container class="class-level class-level-row">
+    <container id="class-Player" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Player</text>
+      <separator />
+      <text>+health: int</text>
+      <text>+score: int</text>
+      <separator />
+      <text>+move(dx, dy)</text>
+      <text>+attack()</text>
+      <text>+takeDamage(amount)</text>
+    </container>
+    <container id="class-Enemy" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«abstract»</text>
+      <text class="class-name">Enemy</text>
+      <separator />
+      <text>+damage: int</text>
+      <separator />
+      <text>+chase(target)</text>
+      <text>+attack()*</text>
+    </container>
+    <container id="class-Item" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Item</text>
+      <separator />
+      <text> </text>
+      <separator />
+      <text>+use(player)</text>
+    </container>
+  </container>
+  <container class="class-level class-level-row">
+    <container id="class-Zombie" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Zombie</text>
+      <separator />
+      <text>+speed: int</text>
+      <separator />
+      <text>+attack()</text>
+    </container>
+    <container id="class-Ghost" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Ghost</text>
+      <separator />
+      <text>+visible: bool</text>
+      <separator />
+      <text>+attack()</text>
+      <text>+vanish()</text>
+    </container>
+    <container id="class-HealthPack" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">HealthPack</text>
+      <separator />
+      <text>+healAmount: int</text>
+      <separator />
+      <text>+use(player)</text>
+    </container>
+    <container id="class-Weapon" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Weapon</text>
+      <separator />
+      <text>+damage: int</text>
+      <text>+range: int</text>
+      <separator />
+      <text>+use(player)</text>
+    </container>
+  </container>
+
+  <!-- Relationships -->
+  <connector from="class-GameObject" to="class-Player" arrow="end" />
+  <connector from="class-GameObject" to="class-Enemy" arrow="end" />
+  <connector from="class-Enemy" to="class-Zombie" arrow="end" />
+  <connector from="class-Enemy" to="class-Ghost" arrow="end" />
+  <connector from="class-Item" to="class-HealthPack" arrow="end" style="line-style: dashed" />
+  <connector from="class-Item" to="class-Weapon" arrow="end" style="line-style: dashed" />
+  <connector from="class-GameWorld" to="class-Player" arrow="end" />
+  <connector from="class-GameWorld" to="class-Enemy" arrow="end" />
+  <connector from="class-GameWorld" to="class-Item" arrow="end" />
+</container>
+</melker>

@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant U as User
+    participant A as App
+    participant I as Identity Provider
+    participant R as Resource Server
+
+    U->>A: Click Login
+    A->>I: Redirect to /authorize
+    I->>U: Show login form
+    U->>I: Enter credentials
+    I->>I: Validate credentials
+
+    Note over I: Generate auth code
+
+    I-->>A: Redirect with code
+    A->>I: POST /token with code
+    I-->>A: Access + Refresh tokens
+
+    Note over A: Store tokens securely
+
+    A->>R: GET /api/data + Bearer token
+    R->>R: Validate token
+    R-->>A: Protected data
+    A-->>U: Display data

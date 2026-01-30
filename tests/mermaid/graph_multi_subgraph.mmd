@@ -1,0 +1,23 @@
+graph LR
+    subgraph Frontend
+        A[React App]
+        B[Redux Store]
+        A --> B
+    end
+
+    subgraph Backend
+        C[API Gateway]
+        D[Auth Service]
+        E[Data Service]
+        C --> D
+        C --> E
+    end
+
+    subgraph Database
+        F[PostgreSQL]
+        G[Redis Cache]
+    end
+
+    B --> C
+    D --> G
+    E --> F

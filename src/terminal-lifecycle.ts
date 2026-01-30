@@ -3,10 +3,18 @@
 
 import { ANSI } from './ansi-output.ts';
 import { isRunningHeadless } from './headless.ts';
-import { getLogger } from './logging.ts';
+import { getLogger, type ComponentLogger } from './logging.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { isStdoutEnabled } from './stdout.ts';
 
-const logger = getLogger('terminal-lifecycle');
+// Lazy logger initialization to avoid triggering MelkerConfig.get() before CLI flags are applied
+let _logger: ComponentLogger | undefined;
+function getTerminalLogger(): ComponentLogger {
+  if (!_logger) {
+    _logger = getLogger('terminal-lifecycle');
+  }
+  return _logger;
+}
 
 /**
  * Full terminal restore - disables raw mode, mouse reporting, alternate screen.
@@ -48,6 +56,11 @@ export interface TerminalLifecycleOptions {
 export function setupTerminal(options: TerminalLifecycleOptions): void {
   // Skip terminal setup in headless mode - let virtual terminal handle it
   if (isRunningHeadless()) {
+    return;
+  }
+
+  // Skip terminal setup in stdout mode - keep terminal in normal mode
+  if (isStdoutEnabled()) {
     return;
   }
 
@@ -173,7 +186,7 @@ export function setupCleanupHandlers(
   globalThis.addEventListener('error', (event) => {
     // Log to file FIRST (before terminal cleanup might interfere)
     const err = event.error instanceof Error ? event.error : new Error(String(event.error));
-    logger.fatal('Uncaught error', err);
+    getTerminalLogger().fatal('Uncaught error', err);
 
     // Full terminal restore (raw mode, mouse, alternate screen)
     restoreTerminal();
@@ -191,7 +204,7 @@ export function setupCleanupHandlers(
     // Log to file FIRST (before terminal cleanup might interfere)
     const reason = event.reason;
     const err = reason instanceof Error ? reason : new Error(String(reason));
-    logger.fatal('Unhandled promise rejection', err);
+    getTerminalLogger().fatal('Unhandled promise rejection', err);
 
     // Full terminal restore (raw mode, mouse, alternate screen)
     restoreTerminal();

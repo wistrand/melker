@@ -40,7 +40,7 @@ export type ColorInput = string | PackedRGBA;
 
 // Border styles using Unicode Box Drawing characters
 // 'block' uses spaces with background color (for terminals without box-drawing support)
-export type BorderStyle = 'none' | 'thin' | 'thick' | 'double' | 'rounded' | 'dashed' | 'dashed-rounded' | 'ascii' | 'ascii-rounded' | 'block';
+export type BorderStyle = 'none' | 'thin' | 'thick' | 'double' | 'rounded' | 'dashed' | 'dashed-rounded' | 'ascii' | 'ascii-rounded' | 'block' | 'dotted';
 
 // Border character definitions: h=horizontal, v=vertical, tl/tr/bl/br=corners, tm/bm/lm/rm/mm=junctions
 export interface BorderChars {
@@ -67,6 +67,7 @@ export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {
   ascii:          { h: '-', v: '|', tl: '+', tr: '+', bl: '+', br: '+', tm: '+', bm: '+', lm: '+', rm: '+', mm: '+' },
   'ascii-rounded': { h: '-', v: '|', tl: '·', tr: '·', bl: '·', br: '·', tm: '+', bm: '+', lm: '+', rm: '+', mm: '+' },
   block:          { h: ' ', v: ' ', tl: ' ', tr: ' ', bl: ' ', br: ' ', tm: ' ', bm: ' ', lm: ' ', rm: ' ', mm: ' ' },
+  dotted:         { h: '·', v: '·', tl: '·', tr: '·', bl: '·', br: '·', tm: '·', bm: '·', lm: '·', rm: '·', mm: '·' },
 };
 
 // Percentage string type for width/height (e.g., "50%", "100%")
@@ -184,19 +185,30 @@ export interface BaseProps extends LayoutProps, EventHandlers, Record<string, an
 
 
 
+// Global element ID counter for auto-generation
+let _elementIdCounter = 0;
+
+/**
+ * Generate a unique element ID
+ */
+export function generateElementId(): string {
+  return `el-${++_elementIdCounter}`;
+}
+
 // Base element class
 export abstract class Element {
-  type: string;
+  readonly type: string;
+  readonly id: string;
   props: Record<string, any>;
   children?: Element[];
-  id: string;
   protected _bounds: Bounds | null = null;
 
   constructor(type: string, props: Record<string, any> = {}, children?: Element[]) {
     this.type = type;
     this.props = props;
     this.children = children;
-    this.id = props.id || '';
+    // Always generate an ID if not provided - ensures all elements are identifiable
+    this.id = props.id || generateElementId();
   }
 
   /**
@@ -230,6 +242,12 @@ export interface ComponentRenderContext {
   registerOverlay?: (overlay: Overlay) => void;
   /** Full viewport/terminal bounds (for modal overlays) */
   viewport?: Bounds;
+  /** Look up computed bounds for any element by ID (available after layout) */
+  getElementBounds?: (elementId: string) => Bounds | undefined;
+  /** Get all element bounds (for connector obstacle avoidance) */
+  getAllElementBounds?: () => Map<string, Bounds>;
+  /** Register element bounds dynamically (for components that render children internally like tables) */
+  registerElementBounds?: (elementId: string, bounds: Bounds) => void;
   [key: string]: any;
 }
 

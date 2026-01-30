@@ -30,6 +30,9 @@ export * from './src/debug-server.ts';
 // Export headless mode
 export * from './src/headless.ts';
 
+// Export stdout mode
+export * from './src/stdout.ts';
+
 // Export theme system
 export * from './src/theme.ts';
 
@@ -203,6 +206,8 @@ import { LiElement } from './src/components/li.ts';
 import { ProgressElement } from './src/components/progress.ts';
 import { SliderElement } from './src/components/slider.ts';
 import { SeparatorElement } from './src/components/separator.ts';
+import { ConnectorElement } from './src/components/connector.ts';
+import { GraphElement } from './src/components/graph/mod.ts';
 import { SegmentDisplayElement } from './src/components/segment-display/mod.ts';
 import './src/components/file-browser/file-browser.ts'; // Self-registering component
 import { registerComponent } from './src/element.ts';
@@ -386,6 +391,30 @@ registerComponent({
   componentClass: SeparatorElement,
   defaultProps: {},
   validate: (props) => SeparatorElement.validate(props as any),
+});
+
+registerComponent({
+  type: 'connector',
+  componentClass: ConnectorElement,
+  defaultProps: {
+    arrow: 'end',
+    routing: 'orthogonal',
+    // Connectors use absolute positioning since they render to arbitrary positions
+    // based on connected elements, not within their own layout bounds
+    style: { position: 'absolute' },
+  },
+  validate: (props) => ConnectorElement.validate(props as any),
+});
+
+registerComponent({
+  type: 'graph',
+  componentClass: GraphElement,
+  defaultProps: {
+    type: 'mermaid',
+    // Graph elements use flex layout and fill parent to properly size their generated children
+    style: { display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' },
+  },
+  validate: (props) => GraphElement.validate(props as any),
 });
 
 registerComponent({

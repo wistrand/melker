@@ -1,0 +1,33 @@
+flowchart LR
+  Start --> Check{Decision}
+  Check --> |Yes| Success
+  Check --> |No| Retry
+  Retry --> Check
+
+%%melker:Start
+%%<button label="Begin Process"/>
+%%end
+
+%%melker:Check
+%%<container style="flex-direction: column">
+%%  <text style="font-weight: bold">Is valid?</text>
+%%  <select>
+%%    <option value="yes">Yes</option>
+%%    <option value="no">No</option>
+%%  </select>
+%%</container>
+%%end
+
+%%melker:Success
+%%<container style="flex-direction: column">
+%%  <text style="color: green">Success!</text>
+%%  <img src="../../media/melker-128.png" width="10" height="5"/>
+%%</container>
+%%end
+
+%%melker:Retry
+%%<container style="flex-direction: column">
+%%  <text style="color: yellow">Retry</text>
+%%  <input placeholder="Fix input"/>
+%%</container>
+%%end

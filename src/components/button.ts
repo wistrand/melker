@@ -323,6 +323,7 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
 
 // Lint schema for button component
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { registerComponent } from '../element.ts';
 
 export const buttonSchema: ComponentSchema = {
   description: 'Clickable button with keyboard and mouse support',
@@ -333,3 +334,14 @@ export const buttonSchema: ComponentSchema = {
 };
 
 registerComponentSchema('button', buttonSchema);
+
+// Register button component
+registerComponent({
+  type: 'button',
+  componentClass: ButtonElement,
+  defaultProps: {
+    variant: 'default',
+    disabled: false,
+    tabIndex: 0,
+  },
+});

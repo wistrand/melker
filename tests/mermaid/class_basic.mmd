@@ -1,0 +1,22 @@
+classDiagram
+    direction TB
+    class Animal {
+        +String name
+        +int age
+        +makeSound()*
+    }
+    class Dog {
+        +String breed
+        +bark()
+    }
+    class Cat {
+        -int lives
+        +meow()
+    }
+    class Flyable {
+        <<interface>>
+        +fly()
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat
+    Dog "1" --> "*" Owner : owns

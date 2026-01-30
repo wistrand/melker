@@ -40,6 +40,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | File browser                                      | [file-browser-architecture.md](agent_docs/file-browser-architecture.md)        |
 | Data table                                        | [data-table.md](agent_docs/data-table.md)                                      |
 | Data bars (charts)                                | [data-bars.md](agent_docs/data-bars.md)                                        |
+| Mermaid diagrams in markdown                      | [mermaid-support.md](agent_docs/mermaid-support.md)                            |
 
 ### For Contributors (Internals)
 
@@ -49,17 +50,19 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Core architecture   | [architecture.md](agent_docs/architecture.md)                    |
 | Component reference | [component-reference.md](agent_docs/component-reference.md)      |
 | Config system       | [config-architecture.md](agent_docs/config-architecture.md)      |
+| Graph/diagrams      | [graph-architecture.md](agent_docs/graph-architecture.md)        |
 | Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)  |
 | Sixel protocol      | [sixel-architecture.md](agent_docs/sixel-architecture.md)        |
 | Kitty protocol      | [kitty-architecture.md](agent_docs/kitty-architecture.md)        |
 
 ### Deep Dives
 
-| Topic              | Doc                                                                |
-|--------------------|--------------------------------------------------------------------|
-| Dirty row tracking | [dirty-row-tracking.md](agent_docs/dirty-row-tracking.md)          |
-| Fast input render  | [fast-input-render.md](agent_docs/fast-input-render.md)            |
-| Env permissions    | [env-permission-analysis.md](agent_docs/env-permission-analysis.md) |
+| Topic              | Doc                                                                  |
+|--------------------|----------------------------------------------------------------------|
+| Dirty row tracking | [dirty-row-tracking.md](agent_docs/dirty-row-tracking.md)            |
+| Fast input render  | [fast-input-render.md](agent_docs/fast-input-render.md)              |
+| Env permissions    | [env-permission-analysis.md](agent_docs/env-permission-analysis.md)  |
+| Layout engine      | [layout-engine-notes.md](agent_docs/layout-engine-notes.md)          |
 
 ### Examples & Patterns
 
@@ -155,6 +158,9 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 | `MELKER_LOG_LEVEL`           | `DEBUG`, `INFO`, `WARN`, `ERROR`                                                                                                                                   |
 | `MELKER_LOG_BUFFER_SIZE`     | In-memory log buffer size for DevTools Log tab (default: 500, range: 10-10000)                                                                                     |
 | `MELKER_HEADLESS`            | Headless mode for CI                                                                                                                                               |
+| `MELKER_STDOUT_WIDTH`        | Stdout mode output width (default: terminal width)                                                                                                                 |
+| `MELKER_STDOUT_HEIGHT`       | Stdout mode output height (default: terminal height)                                                                                                               |
+| `MELKER_STDOUT_TIMEOUT`      | Stdout mode wait time in ms before output (default: 500)                                                                                                           |
 | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`)                                                                                                                    |
 | `MELKER_DEBUG_PORT`          | Debug server port (implies `net: localhost`)                                                                                                                       |
 | `MELKER_ALLOW_REMOTE_INPUT`  | Allow browser mirror to send mouse/keyboard events (`true` or `1`)                                                                                                 |
@@ -219,10 +225,13 @@ See [config-architecture.md](agent_docs/config-architecture.md) for full details
 ./melker.ts --watch app.melker      # Auto-reload on changes
 ./melker.ts --trust app.melker      # CI/scripts (bypass approval prompt)
 ./melker.ts --debug app.melker      # Debug mode
+./melker.ts --stdout app.melker     # Output single frame to stdout and exit
 ./melker.ts --lsp                   # Start LSP server
 ```
 
 **Important:** Use `--trust` for CI and automated scripts to bypass interactive approval.
+
+**Stdout mode:** `--stdout` renders a single frame to stdout without terminal control sequences. Useful for debugging, testing, and piping. Options: `--stdout-width`, `--stdout-height`, `--stdout-timeout`.
 
 See [getting-started.md](agent_docs/getting-started.md) for full CLI options, Deno flags, and remote execution.
 

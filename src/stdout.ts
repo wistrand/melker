@@ -1,0 +1,296 @@
+// Stdout mode for Melker applications
+// Outputs rendered buffer to stdout without cursor movement sequences
+// Used for debugging, testing, and piping output to other tools
+
+import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
+import { MelkerConfig } from './config/mod.ts';
+import { getLogger, type ComponentLogger } from './logging.ts';
+import { getThemeManager } from './theme.ts';
+import type { PackedRGBA } from './types.ts';
+
+// Lazy logger initialization to avoid triggering MelkerConfig.get() before CLI flags are applied
+let _logger: ComponentLogger | undefined;
+function getStdoutLogger(): ComponentLogger {
+  if (!_logger) {
+    _logger = getLogger('stdout');
+  }
+  return _logger;
+}
+
+export interface StdoutOptions {
+  width: number;
+  height: number;
+  timeout: number;
+  colorSupport: 'none' | '16' | '256' | 'truecolor';
+}
+
+/**
+ * Check if stdout mode is enabled
+ */
+export function isStdoutEnabled(): boolean {
+  const config = MelkerConfig.get();
+  return !!(config as any).stdoutEnabled;
+}
+
+/**
+ * Get actual terminal size (for default stdout dimensions)
+ */
+function getActualTerminalSize(): { width: number; height: number } {
+  try {
+    if (typeof Deno !== 'undefined' && Deno.consoleSize) {
+      const size = Deno.consoleSize();
+      return { width: size.columns, height: size.rows };
+    }
+  } catch {
+    // Fallback
+  }
+  return { width: 80, height: 24 };
+}
+
+/**
+ * Get stdout configuration from MelkerConfig
+ */
+export function getStdoutConfig(): StdoutOptions {
+  const config = MelkerConfig.get();
+  // Get color support from theme manager (respects MELKER_THEME)
+  const colorSupport = getThemeManager().getColorSupport();
+  // Default to terminal size if not explicitly set
+  const terminalSize = getActualTerminalSize();
+  return {
+    width: config.stdoutWidth ?? terminalSize.width,
+    height: config.stdoutHeight ?? terminalSize.height,
+    timeout: config.stdoutTimeout ?? 500,
+    colorSupport,
+  };
+}
+
+/**
+ * Convert a buffer to stdout-friendly output (no cursor moves, only style + chars)
+ * Each row is printed as a line with style sequences and newline at end
+ */
+export function bufferToStdout(buffer: DualBuffer, options: { colorSupport: 'none' | '16' | '256' | 'truecolor' } = { colorSupport: 'truecolor' }): string {
+  const lines: string[] = [];
+  // Use display buffer (previousBuffer) which has the rendered content after swap
+  const termBuffer = buffer.getDisplayBuffer();
+  const width = termBuffer.width;
+  const height = termBuffer.height;
+
+  for (let y = 0; y < height; y++) {
+    let line = '';
+    let currentStyle = '';
+
+    for (let x = 0; x < width; x++) {
+      const cell = termBuffer.getCell(x, y);
+      if (!cell) {
+        line += EMPTY_CHAR;
+        continue;
+      }
+
+      // Skip continuation cells (second half of wide chars)
+      if (cell.isWideCharContinuation) {
+        continue;
+      }
+
+      // Generate style code for this cell
+      const cellStyle = generateCellStyle(cell, options.colorSupport);
+
+      // Only emit style change if different from current
+      if (cellStyle !== currentStyle) {
+        line += cellStyle;
+        currentStyle = cellStyle;
+      }
+
+      // Output the character
+      line += cell.char || EMPTY_CHAR;
+    }
+
+    // Reset at end of line
+    line += '\x1b[0m';
+    lines.push(line);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Generate ANSI style codes for a cell (no cursor movement)
+ */
+function generateCellStyle(cell: Cell, colorSupport: 'none' | '16' | '256' | 'truecolor'): string {
+  const codes: string[] = ['\x1b[0m']; // Reset
+
+  // Colors only if color support is enabled
+  if (colorSupport !== 'none') {
+    // Foreground color
+    if (cell.foreground) {
+      codes.push(getColorCode(cell.foreground, false, colorSupport));
+    }
+
+    // Background color
+    if (cell.background) {
+      codes.push(getColorCode(cell.background, true, colorSupport));
+    }
+  }
+
+  // Text attributes
+  if (cell.bold) codes.push('\x1b[1m');
+  if (cell.dim) codes.push('\x1b[2m');
+  if (cell.italic) codes.push('\x1b[3m');
+  if (cell.underline) codes.push('\x1b[4m');
+  if (cell.reverse) codes.push('\x1b[7m');
+
+  return codes.join('');
+}
+
+/**
+ * Convert packed RGBA color to ANSI escape code
+ */
+function getColorCode(color: PackedRGBA, isBackground: boolean, colorSupport: 'none' | '16' | '256' | 'truecolor'): string {
+  if (colorSupport === 'none') {
+    return '';
+  }
+
+  // Extract RGB from packed color
+  const r = (color >> 24) & 0xFF;
+  const g = (color >> 16) & 0xFF;
+  const b = (color >> 8) & 0xFF;
+
+  if (colorSupport === 'truecolor') {
+    const code = isBackground ? 48 : 38;
+    return `\x1b[${code};2;${r};${g};${b}m`;
+  } else if (colorSupport === '256') {
+    const color256 = rgbTo256Color(r, g, b);
+    const code = isBackground ? 48 : 38;
+    return `\x1b[${code};5;${color256}m`;
+  }
+
+  // 16-color fallback
+  return getColorCode16(r, g, b, isBackground);
+}
+
+/**
+ * Convert RGB to 256-color palette index
+ */
+function rgbTo256Color(r: number, g: number, b: number): number {
+  const ri = Math.round(r / 51);
+  const gi = Math.round(g / 51);
+  const bi = Math.round(b / 51);
+  return 16 + (36 * ri) + (6 * gi) + bi;
+}
+
+/**
+ * Convert RGB to 16-color ANSI code
+ */
+function getColorCode16(r: number, g: number, b: number, isBackground: boolean): string {
+  const offset = isBackground ? 10 : 0;
+  const brightness = (r + g + b) / 3;
+  const isBright = brightness > 127;
+
+  const max = Math.max(r, g, b);
+  const threshold = max * 0.6;
+
+  const hasRed = r >= threshold;
+  const hasGreen = g >= threshold;
+  const hasBlue = b >= threshold;
+
+  let code: number;
+  if (!hasRed && !hasGreen && !hasBlue) {
+    code = isBright ? 90 : 30; // gray/black
+  } else if (hasRed && hasGreen && hasBlue) {
+    code = isBright ? 97 : 37; // white
+  } else if (hasRed && hasGreen) {
+    code = isBright ? 93 : 33; // yellow
+  } else if (hasRed && hasBlue) {
+    code = isBright ? 95 : 35; // magenta
+  } else if (hasGreen && hasBlue) {
+    code = isBright ? 96 : 36; // cyan
+  } else if (hasRed) {
+    code = isBright ? 91 : 31; // red
+  } else if (hasGreen) {
+    code = isBright ? 92 : 32; // green
+  } else {
+    code = isBright ? 94 : 34; // blue
+  }
+
+  return `\x1b[${code + offset}m`;
+}
+
+/**
+ * Stdout mode manager - handles running app and outputting buffer
+ */
+export class StdoutManager {
+  private _config: StdoutOptions;
+  private _buffer: DualBuffer | null = null;
+
+  constructor() {
+    this._config = getStdoutConfig();
+  }
+
+  get config(): StdoutOptions {
+    return this._config;
+  }
+
+  /**
+   * Set the buffer to output (called by engine)
+   */
+  setBuffer(buffer: DualBuffer): void {
+    this._buffer = buffer;
+  }
+
+  /**
+   * Output the buffer content to stdout
+   */
+  async outputBuffer(): Promise<void> {
+    if (!this._buffer) {
+      getStdoutLogger().warn('No buffer to output');
+      return;
+    }
+
+    const output = bufferToStdout(this._buffer, { colorSupport: this._config.colorSupport });
+
+    // Write to stdout
+    const encoder = new TextEncoder();
+    await Deno.stdout.write(encoder.encode(output + '\n'));
+  }
+
+  /**
+   * Wait for timeout then output buffer
+   */
+  async waitAndOutput(): Promise<void> {
+    getStdoutLogger().debug(`Waiting ${this._config.timeout}ms before output`);
+    await new Promise(resolve => setTimeout(resolve, this._config.timeout));
+    await this.outputBuffer();
+  }
+}
+
+// Global stdout manager instance
+let globalStdoutManager: StdoutManager | undefined;
+
+/**
+ * Get or create global stdout manager
+ */
+export function getStdoutManager(): StdoutManager {
+  if (!globalStdoutManager) {
+    globalStdoutManager = new StdoutManager();
+  }
+  return globalStdoutManager;
+}
+
+/**
+ * Initialize stdout mode if enabled
+ */
+export function initializeStdoutMode(): StdoutManager | null {
+  if (!isStdoutEnabled()) {
+    return null;
+  }
+
+  const manager = getStdoutManager();
+  getStdoutLogger().info(`Stdout mode enabled, timeout=${manager.config.timeout}ms`);
+  return manager;
+}
+
+/**
+ * Cleanup stdout mode
+ */
+export function cleanupStdoutMode(): void {
+  globalStdoutManager = undefined;
+}

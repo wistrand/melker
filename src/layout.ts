@@ -1612,6 +1612,11 @@ export class LayoutEngine {
   }
 
   private _isVisible(element: Element, bounds: Bounds): boolean {
+    // Connectors have 0x0 bounds but still need to be visible (they draw based on connected elements)
+    if (element.type === 'connector') {
+      return element.props?.visible !== false;
+    }
+
     // Check basic visibility
     if (bounds.width <= 0 || bounds.height <= 0) return false;
     if (element.props?.visible === false) return false;

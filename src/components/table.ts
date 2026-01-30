@@ -874,13 +874,53 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     const children = cell.children;
     if (!children || children.length === 0) return 1;
 
-    // Fast path: single text child (most common case for table cells)
+    // Fast path: single child (text or container with text)
     if (children.length === 1) {
       const child = children[0];
+
+      // Direct text child
       if (child.type === 'text' && child.props.text !== undefined) {
         const text = String(child.props.text);
+        // For wrapped text, return minimal width so column doesn't expand to fit full text
+        const textWrap = child.props.style?.textWrap;
+        if (textWrap === 'wrap') {
+          // Return length of longest word as minimum width
+          const words = text.split(/\s+/);
+          const longestWord = Math.max(1, ...words.map(w => w.length));
+          return Math.min(longestWord, 20); // Cap at 20 to avoid very long words dominating
+        }
         if (!text.includes('\n')) {
           return Math.max(1, text.length);
+        }
+      }
+
+      // Container child - check for wrapped text inside
+      if (child.type === 'container' && child.children) {
+        let containerWidth = 0;
+        // Account for container's border-left
+        const borderLeft = child.props.style?.borderLeft;
+        if (borderLeft && borderLeft !== 'none') {
+          containerWidth += 1;
+        }
+
+        // Check container's children for wrapped text
+        for (const containerChild of child.children) {
+          if (containerChild.type === 'text' && containerChild.props.text !== undefined) {
+            const text = String(containerChild.props.text);
+            const textWrap = containerChild.props.style?.textWrap;
+            if (textWrap === 'wrap') {
+              // Return minimal width for wrapped text
+              const words = text.split(/\s+/);
+              const longestWord = Math.max(1, ...words.map(w => w.length));
+              containerWidth += Math.min(longestWord, 20);
+            } else if (!text.includes('\n')) {
+              containerWidth += text.length;
+            }
+          }
+        }
+
+        if (containerWidth > 0) {
+          return Math.max(1, containerWidth);
         }
       }
     }
@@ -1163,14 +1203,14 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       for (const row of thead.getRows()) {
         fixedHeight += this._calculateRowHeight(row, this._columnWidths, cellPadding);
       }
-      if (tbody || tfoot) fixedHeight++; // Separator after thead
+      if (hasBorder && (tbody || tfoot)) fixedHeight++; // Separator after thead (only with border)
     }
 
     if (tfoot) {
       for (const row of tfoot.getRows()) {
         fixedHeight += this._calculateRowHeight(row, this._columnWidths, cellPadding);
       }
-      if (tbody) fixedHeight++; // Separator before tfoot (counted when tbody exists)
+      if (hasBorder && tbody) fixedHeight++; // Separator before tfoot (only with border)
     }
 
     // Calculate total tbody height needed
@@ -1525,6 +1565,9 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     const child = children[0];
     if (child.type === 'text' && child.props.text !== undefined) {
       const text = String(child.props.text);
+      // Check for text-wrap style - wrapped text is not single-line
+      const textWrap = child.props.style?.textWrap;
+      if (textWrap === 'wrap') return false;
       return !text.includes('\n');
     }
     return false;
@@ -1606,7 +1649,9 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       // Calculate total cell width (including spanned columns)
       const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, hasBorder && showColumnBorders);
 
-      const align = cell.props.align || 'left';
+      // Check both props.align and style.textAlign for alignment
+      const styleTextAlign = cell.props.style?.textAlign || cell.props.style?.['text-align'];
+      const align = cell.props.align || styleTextAlign || 'left';
       const cellContentWidth = cellWidth - cellPadding * 2;
       const cellContentX = contentX + cellPadding;
 
@@ -1621,6 +1666,16 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
           bounds: { x: contentX, y, width: cellWidth, height: rowHeight }
         });
         logger.debug(`_renderHeaderRow: added header cell bounds for column ${colIndex}`);
+      }
+
+      // Register cell bounds if cell has an ID (for connectors to find table cells)
+      if (cell.id && context?.registerElementBounds) {
+        context.registerElementBounds(cell.id, {
+          x: contentX,
+          y,
+          width: cellWidth,
+          height: rowHeight,
+        });
       }
 
       // Get cell text content and add sort indicator if this column is sorted
@@ -1759,16 +1814,33 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       // Calculate total cell width (including spanned columns)
       const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, hasBorder && showColumnBorders);
 
-      const align = cell.props.align || 'left';
+      // Check both props.align and style.textAlign for alignment
+      const styleTextAlign = cell.props.style?.textAlign || cell.props.style?.['text-align'];
+      const align = cell.props.align || styleTextAlign || 'left';
       const cellContentWidth = cellWidth - cellPadding * 2;
       const cellContentX = contentX + cellPadding;
 
+      // Register cell bounds if cell has an ID (for connectors to find table cells)
+      if (cell.id && context?.registerElementBounds) {
+        context.registerElementBounds(cell.id, {
+          x: contentX,
+          y,
+          width: cellWidth,
+          height: linesToRender,
+        });
+      }
+
       // Render cell children with clipping
+      logger.debug(`_renderRow: cell.children=${cell.children?.length || 0}, context=${!!context}, hasRegister=${!!context?.registerElementBounds}`);
+      if (cell.children && cell.children.length > 0) {
+        logger.debug(`_renderRow: first child type=${cell.children[0]?.type}, id=${cell.children[0]?.id}`);
+      }
       if (cell.children && cell.children.length > 0 && context) {
         this._renderCellChildrenClipped(buffer, cellContentX, y, cellContentWidth, linesToRender, cell, align, style, context, skipLines);
       } else {
         // Fallback to text content for cells without proper children
         // Only render if the text line is visible (not skipped)
+        logger.debug(`_renderRow: using fallback path for cell`);
         if (skipLines === 0) {
           const content = this._getCellContent(cell);
           let textX = cellContentX;
@@ -1862,12 +1934,22 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
     // For renderable children (like nested tables), we need to render to a virtual position
     // and then copy only the visible lines
+    logger.debug(`_renderCellChildrenClipped: cell has ${cell.children.length} children`);
     for (const child of cell.children) {
+      logger.debug(`_renderCellChildrenClipped: child type=${child.type}, id=${child.id}, isRenderable=${isRenderable(child)}`);
       // Handle containers specially - render their children and track each for click handling
-      if (child.type === 'container' && child.children) {
+      if (child.type === 'container') {
         if (skipLines === 0) {
           const containerWidth = this._estimateContainerWidth(child, width);
-          this._renderContainerChildren(buffer, currentX, y, containerWidth, child, style, context);
+          const containerBounds: Bounds = { x: currentX, y, width: containerWidth, height: maxLines };
+          this._renderContainerChildren(buffer, currentX, y, containerWidth, child, style, context, maxLines);
+          this._cellComponentBounds.push({ element: child, bounds: containerBounds });
+
+          // Register bounds for containers with IDs (for connectors)
+          if (child.id && context?.registerElementBounds) {
+            logger.debug(`_renderCellChildrenClipped: registering container bounds for id=${child.id}, bounds=${JSON.stringify(containerBounds)}`);
+            context.registerElementBounds(child.id, containerBounds);
+          }
           currentX += containerWidth;
         }
       } else if (isRenderable(child)) {
@@ -1883,6 +1965,12 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
           const nestedContext = { ...context, nestedInTable: true };
           child.render(childBounds, style, buffer, nestedContext);
           this._cellComponentBounds.push({ element: child, bounds: childBounds });
+
+          // Register bounds for child elements with IDs (for connectors)
+          if (child.id && context?.registerElementBounds) {
+            logger.debug(`_renderCellChildrenClipped: registering bounds for id=${child.id}, bounds=${JSON.stringify(childBounds)}`);
+            context.registerElementBounds(child.id, childBounds);
+          }
         } else {
           // Need to clip top lines - render to a temporary offset and rely on buffer clipping
           // For now, render at adjusted Y and let component handle partial rendering
@@ -1901,6 +1989,11 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
             const nestedContext = { ...context, nestedInTable: true };
             child.render(childBounds, style, buffer, nestedContext);
             this._cellComponentBounds.push({ element: child, bounds: childBounds });
+
+            // Register bounds for child elements with IDs (for connectors)
+            if (child.id && context?.registerElementBounds) {
+              context.registerElementBounds(child.id, childBounds);
+            }
           }
         }
         currentX += size.width;
@@ -1910,6 +2003,17 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
           const text = String(child.props.text);
           const truncated = text.substring(0, width);
           buffer.currentBuffer.setText(currentX, y, truncated, style);
+
+          // Register bounds for text elements with IDs (for connectors)
+          if (child.id && context?.registerElementBounds) {
+            context.registerElementBounds(child.id, {
+              x: currentX,
+              y,
+              width: text.length,
+              height: 1,
+            });
+          }
+
           currentX += text.length;
         }
       }
@@ -1927,17 +2031,31 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     width: number,
     container: Element,
     style: Partial<Cell>,
-    context: ComponentRenderContext
+    context: ComponentRenderContext,
+    height: number = 1
   ): void {
-    if (!container.children || container.children.length === 0) return;
-
     const gap = container.props.style?.gap || 0;
     let currentX = x;
 
+    // Draw container's border-left if specified
+    const borderLeft = container.props.style?.borderLeft;
+    if (borderLeft && borderLeft !== 'none') {
+      const borderChars = BORDER_CHARS[borderLeft as keyof typeof BORDER_CHARS] || BORDER_CHARS['thin'];
+      for (let i = 0; i < height; i++) {
+        buffer.currentBuffer.setCell(x, y + i, { char: borderChars.v, ...style });
+      }
+      currentX = x + 1; // Offset content after border
+    }
+
+    if (!container.children || container.children.length === 0) return;
+
+    // Calculate available width after border
+    const availableWidth = width - (currentX - x);
+
     for (const child of container.children) {
       if (isRenderable(child)) {
-        const size = child.intrinsicSize({ availableSpace: { width, height: 1 } });
-        const childBounds: Bounds = { x: currentX, y, width: size.width, height: 1 };
+        const size = child.intrinsicSize({ availableSpace: { width: availableWidth, height } });
+        const childBounds: Bounds = { x: currentX, y, width: availableWidth, height };
         child.render(childBounds, style, buffer, context);
         // Track component bounds for click handling
         this._cellComponentBounds.push({ element: child, bounds: childBounds });
@@ -2007,7 +2125,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
       // Handle containers specially - render their children inline
       if (child.type === 'container' && child.children) {
-        this._renderContainerChildren(buffer, currentX, y, childWidth, child, style, context);
+        this._renderContainerChildren(buffer, currentX, y, childWidth, child, style, context, height);
         currentX += childWidth;
       } else if (isRenderable(child)) {
         const childBounds: Bounds = { x: currentX, y, width: childWidth, height: childHeight };
@@ -2028,9 +2146,16 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
    * Estimate width of a container element
    */
   private _estimateContainerWidth(container: Element, availableWidth: number): number {
-    if (!container.children || container.children.length === 0) return 0;
-
     let totalWidth = 0;
+
+    // Account for border-left width
+    const borderLeft = container.props.style?.borderLeft;
+    if (borderLeft && borderLeft !== 'none') {
+      totalWidth += 1;
+    }
+
+    if (!container.children || container.children.length === 0) return totalWidth;
+
     const gap = container.props.style?.gap || 0;
 
     for (const child of container.children) {

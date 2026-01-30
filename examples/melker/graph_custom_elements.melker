@@ -1,0 +1,48 @@
+<melker>
+<policy>{"name": "Graph Custom Elements Demo"}</policy>
+
+<container style="width: fill; height: fill; padding: 1;">
+  <text style="font-weight: bold; margin-bottom: 1;">Graph with Custom Node Elements</text>
+
+  <tabs>
+    <tab title="Mermaid">
+      <graph>
+        flowchart LR
+          A --> B --> C
+
+        %%melker:A
+        %%<button label="Start" onClick="alert('Started!')" />
+        %%end
+
+        %%melker:B
+        %%<container style="flex-direction: row; gap: 1">
+        %%  <input id="process-input" placeholder="Value" style="width: 10" />
+        %%  <button label="Go" onClick="alert('Processing: ' + $melker.getElementById('process-input').getValue())" />
+        %%</container>
+        %%end
+
+        %%melker:C
+        %%<checkbox id="done-check" title="Done" />
+        %%end
+      </graph>
+    </tab>
+
+    <tab title="JSON">
+      <graph type="json">
+        {
+          "direction": "TB",
+          "nodes": [
+            { "id": "start", "label": "Start", "element": "<button label=\"Begin\" onClick=\"alert('Begin!')\" />" },
+            { "id": "input", "label": "Input", "element": "<input placeholder=\"Enter data\" style=\"width: 15\" />" },
+            { "id": "end", "label": "End" }
+          ],
+          "edges": [
+            { "from": "start", "to": "input" },
+            { "from": "input", "to": "end" }
+          ]
+        }
+      </graph>
+    </tab>
+  </tabs>
+</container>
+</melker>

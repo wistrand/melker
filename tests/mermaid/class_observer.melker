@@ -1,0 +1,91 @@
+<melker>
+<policy>
+{
+  "name": "Class Diagram: tests/mermaid/class_observer.mmd"
+}
+</policy>
+
+<style>
+.class-diagram {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3;
+}
+.class-diagram-row { flex-direction: row; }
+.class-diagram-col { flex-direction: column; }
+
+.class-level {
+  display: flex;
+  gap: 3;
+}
+.class-level-row { flex-direction: row; }
+.class-level-col { flex-direction: column; }
+
+.class-annotation {
+  text-align: center;
+}
+.class-name {
+  text-align: center;
+  font-weight: bold;
+}
+</style>
+
+<container class="class-diagram class-diagram-row" scrollable="true">
+  <container class="class-level class-level-col">
+    <container id="class-ConcreteObserverA" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">ConcreteObserverA</text>
+      <separator />
+      <text>-subject: Subject</text>
+      <separator />
+      <text>+update(subject)</text>
+    </container>
+    <container id="class-ConcreteObserverB" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">ConcreteObserverB</text>
+      <separator />
+      <text>-subject: Subject</text>
+      <separator />
+      <text>+update(subject)</text>
+    </container>
+    <container id="class-ConcreteSubject" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">ConcreteSubject</text>
+      <separator />
+      <text>-state: any</text>
+      <text>-observers: Observer[]</text>
+      <separator />
+      <text>+setState(state)</text>
+      <text>+attach(observer)</text>
+      <text>+detach(observer)</text>
+      <text>+notify()</text>
+    </container>
+    <container id="class-Subject" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Subject</text>
+      <separator />
+      <text> </text>
+      <separator />
+      <text>+attach(observer)</text>
+      <text>+detach(observer)</text>
+      <text>+notify()</text>
+    </container>
+    <container id="class-Observer" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Observer</text>
+      <separator />
+      <text> </text>
+      <separator />
+      <text>+update(subject)</text>
+    </container>
+  </container>
+
+  <!-- Relationships -->
+  <connector from="class-Subject" to="class-ConcreteSubject" arrow="end" style="line-style: dashed" />
+  <connector from="class-Observer" to="class-ConcreteObserverA" arrow="end" style="line-style: dashed" />
+  <connector from="class-Observer" to="class-ConcreteObserverB" arrow="end" style="line-style: dashed" />
+  <connector from="class-ConcreteSubject" to="class-Observer" arrow="end" />
+  <connector from="class-ConcreteObserverA" to="class-Subject" arrow="end" />
+  <connector from="class-ConcreteObserverB" to="class-Subject" arrow="end" />
+</container>
+</melker>

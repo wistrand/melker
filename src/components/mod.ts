@@ -15,6 +15,8 @@ export * from './video.ts';
 export * from './progress.ts';
 export * from './slider.ts';
 export * from './separator.ts';
+export * from './connector.ts';
+export * from './connector-utils.ts';
 export * from './list.ts';
 export * from './li.ts';
 
@@ -38,3 +40,6 @@ export * from './file-browser/mod.ts';
 
 // Segment display component
 export * from './segment-display/mod.ts';
+
+// Graph component
+export * from './graph/mod.ts';

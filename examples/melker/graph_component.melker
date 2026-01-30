@@ -1,0 +1,70 @@
+<melker>
+<policy>
+{
+  "name": "Graph Component Demo"
+}
+</policy>
+
+<style>
+.graph-container {
+  height: fill;
+}
+</style>
+
+<container style="display: flex; flex-direction: column; width: fill; height: fill">
+  <text style="font-weight: bold; padding: 1">Graph Component Demo</text>
+
+  <tabs style="width: fill; height: fill">
+    <tab title="Flowchart">
+      <graph scrollable="true" class="graph-container" style="border: dotted;">
+flowchart LR
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E
+      </graph>
+    </tab>
+
+    <tab title="Sequence">
+      <graph class="graph-container">
+sequenceDiagram
+    participant U as User
+    participant S as Server
+    participant D as Database
+
+    U->>S: HTTP Request
+    S->>D: Query
+    D-->>S: Result
+    S-->>U: Response
+      </graph>
+    </tab>
+
+    <tab title="Class">
+      <graph class="graph-container">
+classDiagram
+    direction TB
+
+    class Animal {
+        +name: String
+        +age: int
+        +makeSound()*
+    }
+
+    class Dog {
+        +breed: String
+        +bark()
+    }
+
+    class Cat {
+        -lives: int
+        +meow()
+    }
+
+    Animal <|-- Dog
+    Animal <|-- Cat
+      </graph>
+    </tab>
+  </tabs>
+</container>
+</melker>

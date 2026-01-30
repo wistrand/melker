@@ -1,0 +1,182 @@
+classDiagram
+    direction TB
+
+    %% Base Element class
+    class Element {
+        <<abstract>>
+        +String type
+        +Record props
+        +Element[] children
+        +String id
+        -Bounds _bounds
+        +getBounds() Bounds
+        +setBounds(bounds)
+    }
+
+    %% Core Interfaces
+    class Renderable {
+        <<interface>>
+        +render(bounds, style, buffer, context)
+        +intrinsicSize(context) Size
+    }
+
+    class Focusable {
+        <<interface>>
+        +canReceiveFocus() boolean
+    }
+
+    class Clickable {
+        <<interface>>
+        +handleClick(event, document) boolean
+    }
+
+    class Interactive {
+        <<interface>>
+        +isInteractive() boolean
+    }
+
+    class TextSelectable {
+        <<interface>>
+        +isTextSelectable() boolean
+    }
+
+    class KeyboardElement {
+        <<interface>>
+        +handlesOwnKeyboard() boolean
+        +onKeyPress(event) boolean
+    }
+
+    class Wheelable {
+        <<interface>>
+        +canHandleWheel(x, y) boolean
+        +handleWheel(deltaX, deltaY) boolean
+    }
+
+    class Draggable {
+        <<interface>>
+        +getDragZone(x, y) String
+        +handleDragStart(zone, x, y)
+        +handleDragMove(zone, x, y)
+        +handleDragEnd(zone, x, y)
+    }
+
+    %% Concrete Component Classes
+    class ContainerElement {
+        +Boolean scrollable
+        +Number scrollX
+        +Number scrollY
+        +render()
+        +intrinsicSize()
+    }
+
+    class TextElement {
+        +String text
+        +String src
+        -String _srcContent
+        +render()
+        +intrinsicSize()
+        +getValue() String
+        +setValue(text)
+    }
+
+    class ButtonElement {
+        +String label
+        +String variant
+        -Bounds _lastRenderBounds
+        +render()
+        +intrinsicSize()
+        +canReceiveFocus() boolean
+        +handleClick(event) boolean
+        +isInteractive() boolean
+    }
+
+    class InputElement {
+        +String value
+        +String placeholder
+        +Number maxLength
+        +Boolean readOnly
+        -String _internalValue
+        -Number _cursorPosition
+        +render()
+        +intrinsicSize()
+        +handleKeyInput(key) boolean
+        +getValue() String
+        +setValue(value)
+    }
+
+    class SeparatorElement {
+        +String label
+        -Boolean _isVertical
+        +render()
+        +intrinsicSize()
+        +isVertical() boolean
+    }
+
+    class DialogElement {
+        +String title
+        +Boolean modal
+        +Boolean visible
+        +render()
+        +intrinsicSize()
+        +show()
+        +hide()
+    }
+
+    class SliderElement {
+        +Number value
+        +Number min
+        +Number max
+        +Number step
+        +render()
+        +intrinsicSize()
+        +handleClick()
+        +handleWheel()
+    }
+
+    class ProgressElement {
+        +Number value
+        +Number max
+        +String format
+        +render()
+        +intrinsicSize()
+    }
+
+    %% Inheritance relationships
+    Element <|-- ContainerElement
+    Element <|-- TextElement
+    Element <|-- ButtonElement
+    Element <|-- InputElement
+    Element <|-- SeparatorElement
+    Element <|-- DialogElement
+    Element <|-- SliderElement
+    Element <|-- ProgressElement
+
+    %% Interface implementations
+    Renderable <|.. ContainerElement
+    TextSelectable <|.. ContainerElement
+
+    Renderable <|.. TextElement
+    TextSelectable <|.. TextElement
+
+    Renderable <|.. ButtonElement
+    Focusable <|.. ButtonElement
+    Clickable <|.. ButtonElement
+    Interactive <|.. ButtonElement
+    TextSelectable <|.. ButtonElement
+
+    Renderable <|.. InputElement
+    Focusable <|.. InputElement
+    Interactive <|.. InputElement
+    TextSelectable <|.. InputElement
+
+    Renderable <|.. SeparatorElement
+
+    Renderable <|.. DialogElement
+    Focusable <|.. DialogElement
+
+    Renderable <|.. SliderElement
+    Focusable <|.. SliderElement
+    Clickable <|.. SliderElement
+    Wheelable <|.. SliderElement
+
+    Renderable <|.. ProgressElement

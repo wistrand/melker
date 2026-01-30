@@ -1,0 +1,30 @@
+flowchart TB
+  Start --> Process --> Decision
+  Decision --> |Yes| Success
+  Decision --> |No| Failure
+
+%%melker:Start
+%%<container style="flex-direction: column">
+%%  <text style="font-weight: bold">Begin</text>
+%%  <button label="Launch"/>
+%%</container>
+%%end
+
+%%melker:Process
+%%<container style="flex-direction: column">
+%%  <input placeholder="Enter value"/>
+%%  <progress value="50" max="100"/>
+%%</container>
+%%end
+
+%%melker:Decision
+%%<text style="color: yellow">Check?</text>
+%%end
+
+%%melker:Success
+%%<text style="color: green">OK</text>
+%%end
+
+%%melker:Failure
+%%<text style="color: red">FAIL</text>
+%%end

@@ -192,6 +192,17 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
   }
 }
 
+// Register container component for createElement to create ContainerElement instances
+import { registerComponent } from '../element.ts';
+
+registerComponent({
+  type: 'container',
+  componentClass: ContainerElement,
+  defaultProps: {
+    style: ContainerElement.getDefaultStyle(),
+  },
+});
+
 // Lint schema for container component
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 

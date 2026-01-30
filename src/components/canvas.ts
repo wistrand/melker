@@ -123,14 +123,14 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     super('canvas', defaultProps, children);
 
-    // Warn about common sizing footgun: style dimensions don't affect buffer size
-    // Only warn for actual canvas elements, not subclasses (img has its own warning)
+    // info about common sizing footgun: style dimensions don't affect buffer size
+    // Only  for actual canvas elements, not subclasses (img has its own warning)
     if (this.constructor === CanvasElement) {
       if (props.style?.width !== undefined) {
-        logger.warn(`canvas: style.width only affects layout, not buffer resolution. Use width prop for buffer sizing.`);
+        logger.info(`canvas: style.width only affects layout, not buffer resolution. Use width prop for buffer sizing.`);
       }
       if (props.style?.height !== undefined) {
-        logger.warn(`canvas: style.height only affects layout, not buffer resolution. Use height prop for buffer sizing.`);
+        logger.info(`canvas: style.height only affects layout, not buffer resolution. Use height prop for buffer sizing.`);
       }
     }
 

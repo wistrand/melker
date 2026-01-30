@@ -1,0 +1,109 @@
+<melker>
+<policy>
+{
+  "name": "Graph: tests/mermaid/flowchart_error_handling.mmd"
+}
+</policy>
+
+<style>
+.graph {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5;
+  align-items: flex-start;
+  align-content: flex-start;
+  flex-shrink: 0;
+}
+.graph-row { flex-direction: row; }
+.graph-col { flex-direction: column; }
+
+.subgraph {
+  border: thin;
+  padding: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4;
+}
+.subgraph-row { flex-direction: row; }
+.subgraph-col { flex-direction: column; }
+
+.node {
+  border: thin;
+  padding: 0 1;
+  flex-shrink: 0;
+}
+.node-diamond { border: double; }
+.node-hexagon { border: thick; }
+</style>
+
+<container class="graph graph-col" scrollable="true">
+  <!-- Subgraph: Request -->
+  <container id="graph-subgraph-Request" class="subgraph subgraph-row" style="border-title: Request">
+    <container id="graph-node-START" class="node">
+      <text>Receive Request</text>
+    </container>
+    <container id="graph-node-VALIDATE" class="node node-diamond">
+      <text>Valid Input?</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Process -->
+  <container id="graph-subgraph-Process" class="subgraph subgraph-row" style="border-title: Process">
+    <container id="graph-node-AUTH" class="node node-diamond">
+      <text>Authenticated?</text>
+    </container>
+    <container id="graph-node-PERM" class="node node-diamond">
+      <text>Has Permission?</text>
+    </container>
+    <container id="graph-node-EXEC" class="node">
+      <text>Execute Action</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Errors -->
+  <container id="graph-subgraph-Errors" class="subgraph subgraph-row" style="border-title: Errors">
+    <container id="graph-node-E400" class="node">
+      <text>400 Bad Request</text>
+    </container>
+    <container id="graph-node-E401" class="node">
+      <text>401 Unauthorized</text>
+    </container>
+    <container id="graph-node-E403" class="node">
+      <text>403 Forbidden</text>
+    </container>
+    <container id="graph-node-E500" class="node">
+      <text>500 Server Error</text>
+    </container>
+  </container>
+
+  <!-- Subgraph: Response -->
+  <container id="graph-subgraph-Response" class="subgraph subgraph-row" style="border-title: Response">
+    <container id="graph-node-SUCCESS" class="node">
+      <text>200 OK</text>
+    </container>
+    <container id="graph-node-LOG" class="node">
+      <text>Log Result</text>
+    </container>
+  </container>
+
+
+  <!-- Connectors -->
+  <connector from="graph-node-START" to="graph-node-VALIDATE" arrow="end" />
+  <connector from="graph-node-VALIDATE" to="graph-node-E400" arrow="end" label="No" />
+  <connector from="graph-node-VALIDATE" to="graph-node-AUTH" arrow="end" label="Yes" />
+  <connector from="graph-node-AUTH" to="graph-node-E401" arrow="end" label="No" />
+  <connector from="graph-node-AUTH" to="graph-node-PERM" arrow="end" label="Yes" />
+  <connector from="graph-node-PERM" to="graph-node-E403" arrow="end" label="No" />
+  <connector from="graph-node-PERM" to="graph-node-EXEC" arrow="end" label="Yes" />
+  <connector from="graph-node-EXEC" to="graph-node-E500" arrow="end" label="Error" />
+  <connector from="graph-node-EXEC" to="graph-node-SUCCESS" arrow="end" label="Success" />
+  <connector from="graph-node-SUCCESS" to="graph-node-LOG" arrow="end" />
+  <connector from="graph-node-E400" to="graph-node-LOG" arrow="end" />
+  <connector from="graph-node-E401" to="graph-node-LOG" arrow="end" />
+  <connector from="graph-node-E403" to="graph-node-LOG" arrow="end" />
+  <connector from="graph-node-E500" to="graph-node-LOG" arrow="end" />
+</container>
+</melker>

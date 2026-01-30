@@ -1,0 +1,71 @@
+classDiagram
+    direction TB
+
+    class GameObject {
+        <<abstract>>
+        +int x
+        +int y
+        +update()*
+        +render()*
+    }
+
+    class Player {
+        +int health
+        +int score
+        +move(dx, dy)
+        +attack()
+        +takeDamage(amount)
+    }
+
+    class Enemy {
+        <<abstract>>
+        +int damage
+        +chase(target)
+        +attack()*
+    }
+
+    class Zombie {
+        +int speed
+        +attack()
+    }
+
+    class Ghost {
+        +bool visible
+        +attack()
+        +vanish()
+    }
+
+    class Item {
+        <<interface>>
+        +use(player)
+    }
+
+    class HealthPack {
+        +int healAmount
+        +use(player)
+    }
+
+    class Weapon {
+        +int damage
+        +int range
+        +use(player)
+    }
+
+    class GameWorld {
+        -Player player
+        -Enemy[] enemies
+        -Item[] items
+        +tick()
+        +spawnEnemy()
+        +checkCollisions()
+    }
+
+    GameObject <|-- Player
+    GameObject <|-- Enemy
+    Enemy <|-- Zombie
+    Enemy <|-- Ghost
+    Item <|.. HealthPack
+    Item <|.. Weapon
+    GameWorld --> Player
+    GameWorld --> Enemy
+    GameWorld --> Item

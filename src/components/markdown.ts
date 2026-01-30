@@ -9,11 +9,13 @@ import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { CanvasElement } from './canvas.ts';
 import { type SixelOutputData, type KittyOutputData, getEffectiveGfxMode } from './canvas-render.ts';
+import { GraphElement } from './graph/mod.ts';
 import { getLogger } from '../logging.ts';
 import { parseMelkerFile } from '../template.ts';
 import { getStringWidth } from '../char-width.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { COLORS, parseColor } from './color-utils.ts';
+import { renderElementSubtree } from '../rendering.ts';
 
 // ============================================================================
 // Text Utilities - display width calculation and text wrapping
@@ -331,6 +333,8 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   // Cache for image aspect ratios (width/height) - used for auto-height calculation
   private _imageAspectRatios: Map<string, number> = new Map();
   private _melkerElements: Map<string, Element> = new Map();
+  // Cache for parsed mermaid graph elements
+  private _mermaidElements: Map<string, GraphElement> = new Map();
   // Link regions for click detection (rebuilt on each render)
   private _linkRegions: LinkRegion[] = [];
   // Last render bounds for click coordinate mapping
@@ -359,13 +363,25 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   }
 
   /**
-   * Get the markdown content (either from text prop or loaded from src)
+   * Get the markdown content (either from text prop, children, or loaded from src)
    */
   getContent(): string | null {
     // Prefer inline text prop
     if (this.props.text) {
       return this.props.text;
     }
+
+    // Check for text children (from <markdown>content</markdown> syntax)
+    if (this.children && this.children.length > 0) {
+      const textContent = this.children
+        .filter(child => child.type === 'text')
+        .map(child => child.props.text ?? '')
+        .join('');
+      if (textContent) {
+        return textContent;
+      }
+    }
+
     // Fall back to loaded src content
     return this._srcContent;
   }
@@ -671,10 +687,84 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         // Standard markdown parsing
         this._parsedAst = fromMarkdown(text);
       }
+
+      // Note: Mermaid blocks are rendered inline via _renderMermaidBlock
+      // They are cached in _mermaidElements for reuse but NOT added as children
+      // This allows them to flow naturally with markdown content
+      this._cacheMermaidElements();
     } catch (error) {
       console.error('Failed to parse markdown:', error);
       this._parsedAst = null;
     }
+  }
+
+  /**
+   * Cache mermaid code blocks as GraphElements for rendering
+   * Elements are NOT added as children (that causes double rendering)
+   * Hit testing is handled via getMermaidElements() which the hit tester checks
+   */
+  private _cacheMermaidElements(): void {
+    if (!this._parsedAst) return;
+
+    // Find all mermaid code blocks in the AST
+    const mermaidBlocks = this._findMermaidBlocks(this._parsedAst);
+
+    for (let i = 0; i < mermaidBlocks.length; i++) {
+      const code = mermaidBlocks[i];
+      const cacheKey = `mermaid:${code.trim()}`;
+
+      // Get or create GraphElement (skip if already cached)
+      if (!this._mermaidElements.has(cacheKey)) {
+        const graphElement = new GraphElement(
+          {
+            id: `md-mermaid-${i}`,
+            type: 'mermaid',
+            text: code,
+            scrollable: false,
+            // Use 'auto' sizing so graph expands to fit its content naturally
+            style: { width: 'auto', height: 'auto' }
+          },
+          []
+        );
+        this._mermaidElements.set(cacheKey, graphElement);
+      }
+    }
+  }
+
+  /**
+   * Get subtree elements for hit testing and focus management
+   * Subtree elements are rendered inline but not as children (e.g., mermaid graphs)
+   * Called by Document and HitTester to find interactive elements
+   */
+  getSubtreeElements(): Element[] {
+    const elements: Element[] = [];
+    for (const graphElement of this._mermaidElements.values()) {
+      const generated = graphElement.getGeneratedElement();
+      if (generated) {
+        elements.push(generated);
+      }
+    }
+    return elements;
+  }
+
+  /**
+   * Recursively find all mermaid code blocks in AST
+   */
+  private _findMermaidBlocks(node: ASTNode): string[] {
+    const blocks: string[] = [];
+
+    if (node.type === 'code' && (node as Code).lang === 'mermaid') {
+      blocks.push((node as Code).value);
+    }
+
+    // Check children
+    if ('children' in node && Array.isArray(node.children)) {
+      for (const child of node.children) {
+        blocks.push(...this._findMermaidBlocks(child));
+      }
+    }
+
+    return blocks;
   }
 
   /**
@@ -1432,6 +1522,11 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       return this._renderMelkerBlock(code, ctx);
     }
 
+    // Special handling for mermaid blocks - render as graph elements
+    if (language === 'mermaid') {
+      return this._renderMermaidBlock(code, ctx);
+    }
+
     // Use local y tracking - don't modify ctx.currentY (caller does that)
     let localY = ctx.currentY;
 
@@ -1615,6 +1710,84 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
     return totalHeight;
   }
+
+  /**
+   * Render a mermaid code block inline (similar to melker blocks)
+   * Uses the graph element and renders it at the current position
+   */
+  private _renderMermaidBlock(code: string, ctx: MarkdownRenderContext): number {
+    // Use local y tracking
+    let localY = ctx.currentY;
+    let totalHeight = 1; // spacing before
+    localY += 1;
+
+    try {
+      // Find the cached graph element for this code
+      const cacheKey = `mermaid:${code.trim()}`;
+      const graphElement = this._mermaidElements.get(cacheKey);
+
+      if (!graphElement) {
+        // Graph not found - show error
+        const errorStyle = { ...ctx.style, foreground: getThemeColor('error') };
+        ctx.buffer.currentBuffer.setText(ctx.currentX, localY, '[Mermaid: graph not found]', errorStyle);
+        return totalHeight + 2;
+      }
+
+      // Get intrinsic size of the graph
+      // For flex containers with wrapping, intrinsic size may be smaller than rendered size
+      // Use available width for proper layout calculation
+      const availableWidth = Math.max(ctx.bounds.width, 80);
+      const intrinsicSize = graphElement.intrinsicSize({
+        availableSpace: { width: availableWidth, height: 200 },
+      });
+
+      // Use the available width for the graph so flex layout works correctly
+      const graphWidth = availableWidth;
+
+      // Calculate height based on content wrapping
+      // For horizontal flowcharts with flex-wrap, content wraps vertically when it doesn't fit
+      // Estimate: if content is Nx wider than available space, it will wrap to N rows
+      const widthRatio = Math.max(1, Math.ceil(intrinsicSize.width / availableWidth));
+      // Each row needs the intrinsic height plus gap space for wrapping
+      // Add minimal padding for borders
+      const rowHeight = intrinsicSize.height + 2;
+      const graphHeight = rowHeight * widthRatio;
+
+      // Create bounds for the graph
+      const graphBounds: Bounds = {
+        x: ctx.currentX,
+        y: localY,
+        width: graphWidth,
+        height: graphHeight,
+      };
+
+      // Get the generated element (container with nodes)
+      const generatedElement = graphElement.getGeneratedElement();
+      if (generatedElement) {
+        // Render the graph subtree using the standalone render helper
+        // The helper registers element bounds with the main renderer for hit testing
+        renderElementSubtree(generatedElement, ctx.buffer, graphBounds, ctx.context);
+      }
+
+      totalHeight += graphHeight;
+      localY += graphHeight;
+    } catch (error) {
+      // Render error message
+      const errorStyle = { ...ctx.style, foreground: getThemeColor('error') };
+      const errorMsg = `[Mermaid error: ${error instanceof Error ? error.message : String(error)}]`;
+      ctx.buffer.currentBuffer.setText(ctx.currentX, localY, errorMsg.substring(0, ctx.bounds.width), errorStyle);
+      totalHeight += 1;
+      localY += 1;
+    }
+
+    // Add spacing after
+    totalHeight += 1;
+
+    return totalHeight;
+  }
+
+  // Kept for reference - old ASCII rendering code removed
+  // The layout system now handles mermaid graph rendering with proper focus/click support
 
   /**
    * Render blockquote with left border
@@ -2387,6 +2560,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     const availableWidth = context.availableSpace.width || 80;
 
     // Use actual rendered height if available (most accurate)
+    // Note: This includes mermaid blocks which are rendered inline
     if (this._lastRenderedHeight > 0) {
       return {
         width: availableWidth,
@@ -2401,9 +2575,17 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     }
 
     if (this._parsedAst) {
+      let height = this._estimateContentHeight(this._parsedAst, availableWidth);
+      // Add estimated height for mermaid blocks (from cached elements)
+      for (const graphElement of this._mermaidElements.values()) {
+        if (hasIntrinsicSize(graphElement)) {
+          const graphSize = graphElement.intrinsicSize(context);
+          height += graphSize.height + 2; // +2 for spacing before/after
+        }
+      }
       return {
         width: availableWidth,
-        height: this._estimateContentHeight(this._parsedAst, availableWidth)
+        height
       };
     }
 
@@ -2598,6 +2780,10 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       }
     }
 
+    // Note: Mermaid graph element bounds are registered with the main renderer via
+    // renderElementSubtree, so hit testing finds them automatically. No manual
+    // click handling needed here - the engine routes clicks to the appropriate elements.
+
     logger.info(`handleClick: no match found`);
     return false;
   }
@@ -2645,6 +2831,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
 // Lint schema for markdown component
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { registerComponent } from '../element.ts';
 
 export const markdownSchema: ComponentSchema = {
   description: 'Render markdown content with syntax highlighting',
@@ -2662,3 +2849,14 @@ export const markdownSchema: ComponentSchema = {
 };
 
 registerComponentSchema('markdown', markdownSchema);
+
+// Register markdown component for createElement to create MarkdownElement instances
+registerComponent({
+  type: 'markdown',
+  componentClass: MarkdownElement,
+  defaultProps: {
+    enableGfm: true,
+    listIndent: 2,
+    codeTheme: 'auto',
+  },
+});

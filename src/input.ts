@@ -148,8 +148,11 @@ export class TerminalInputProcessor {
       await this._enableMouseReporting();
     }
 
-    // Start reading input regardless of raw mode status
-    this._startInputLoop();
+    // Only start input loop if raw mode is enabled
+    // In stdout mode, raw mode is disabled and we don't want to read stdin
+    if (this._rawModeEnabled) {
+      this._startInputLoop();
+    }
   }
 
   /**

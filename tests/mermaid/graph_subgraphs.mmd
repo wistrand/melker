@@ -1,0 +1,8 @@
+flowchart LR
+  subgraph Client
+    A[Browser] --> B[App]
+  end
+  subgraph Server
+    C[API] --> D[DB]
+  end
+  B --> C

@@ -346,22 +346,22 @@ The `<data-table>` component is a high-performance table for displaying large da
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `columns` | DataTableColumn[] | [] | Column definitions (set via script) |
-| `rows` | CellValue[][] | [] | Row data (set via script) |
-| `footer` | CellValue[][] | - | Footer rows |
-| `rowHeight` | number | 1 | Lines per row |
-| `showHeader` | boolean | true | Show header row |
-| `showFooter` | boolean | true | Show footer if data exists |
-| `showColumnBorders` | boolean | false | Show column separators |
-| `border` | BorderStyle | 'thin' | Table border style |
-| `sortColumn` | number | - | Initial sort column index |
-| `sortDirection` | 'asc'\|'desc' | - | Initial sort direction |
-| `selectable` | 'none'\|'single'\|'multi' | 'none' | Selection mode |
-| `onSelect` | function | - | Selection change handler |
-| `onActivate` | function | - | Enter/double-click handler |
-| `onSort` | function | - | Sort change notification (optional) |
+| Prop                | Type                         | Default  | Description                          |
+|---------------------|------------------------------|----------|--------------------------------------|
+| `columns`           | DataTableColumn[]            | []       | Column definitions (set via script)  |
+| `rows`              | CellValue[][]                | []       | Row data (set via script)            |
+| `footer`            | CellValue[][]                | -        | Footer rows                          |
+| `rowHeight`         | number                       | 1        | Lines per row                        |
+| `showHeader`        | boolean                      | true     | Show header row                      |
+| `showFooter`        | boolean                      | true     | Show footer if data exists           |
+| `showColumnBorders` | boolean                      | false    | Show column separators               |
+| `border`            | BorderStyle                  | 'thin'   | Table border style                   |
+| `sortColumn`        | number                       | -        | Initial sort column index            |
+| `sortDirection`     | `'asc'` \| `'desc'`          | -        | Initial sort direction               |
+| `selectable`        | `'none'` \| `'single'` \| `'multi'` | 'none' | Selection mode                  |
+| `onSelect`          | function                     | -        | Selection change handler             |
+| `onActivate`        | function                     | -        | Enter/double-click handler           |
+| `onSort`            | function                     | -        | Sort change notification (optional)  |
 
 ### Column Definition
 
@@ -384,17 +384,17 @@ interface DataTableColumn {
 
 ### When to Use data-table vs table
 
-| Use `<data-table>` when | Use `<table>` when |
-|------------------------|-------------------|
-| Large datasets (100+ rows) | Complex cell content (buttons, inputs) |
-| Simple text/number cells | Variable row heights |
-| Performance is critical | Need nested elements in cells |
-| Data is array-based | Building table dynamically with elements |
+| Use `<data-table>` when        | Use `<table>` when                       |
+|--------------------------------|------------------------------------------|
+| Large datasets (100+ rows)     | Complex cell content (buttons, inputs)   |
+| Simple text/number cells       | Variable row heights                     |
+| Performance is critical        | Need nested elements in cells            |
+| Data is array-based            | Building table dynamically with elements |
 
 ### Implementation Files
 
-| File | Purpose |
-|------|---------|
+| File                           | Purpose                  |
+|--------------------------------|--------------------------|
 | `src/components/data-table.ts` | Component implementation |
 
 ## Table Component
@@ -439,11 +439,14 @@ The `<table>` component provides data tables with optional scrollable body.
 ### Props
 
 **Table:**
+- `border` - Border style: `'single'` (default), `'double'`, `'rounded'`, `'none'`
+- `columnBorders` - Show vertical column separators (default: `true`)
+- `cellPadding` - Padding inside cells in characters (default: `1`)
 - `style.width` / `style.height` - Table dimensions
-- Standard container styling
 
 **tbody:**
 - `scrollable` - Enable vertical scrolling when content exceeds height
+- `maxHeight` - Maximum visible rows when scrollable
 
 ### Behavior
 
@@ -454,12 +457,12 @@ The `<table>` component provides data tables with optional scrollable body.
 
 ### Implementation Files
 
-| File | Purpose |
-|------|---------|
-| `src/components/table.ts` | Table container, column width calc |
-| `src/components/table-section.ts` | thead/tbody/tfoot sections |
-| `src/components/table-row.ts` | Row container |
-| `src/components/table-cell.ts` | td/th cells |
+| File                              | Purpose                      |
+|-----------------------------------|------------------------------|
+| `src/components/table.ts`         | Table container, column calc |
+| `src/components/table-section.ts` | thead/tbody/tfoot sections   |
+| `src/components/table-row.ts`     | Row container                |
+| `src/components/table-cell.ts`    | td/th cells                  |
 
 ## Dialog Component
 
@@ -476,17 +479,17 @@ The `<dialog>` component provides modal overlay dialogs.
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `title` | string | - | Title bar text |
-| `open` | boolean | false | Whether dialog is visible |
-| `modal` | boolean | true | Block interaction with background |
-| `backdrop` | boolean | true | Show semi-transparent backdrop |
-| `width` | number\|string | 80% | Width: number, "50%", "fill", or 0<v<1 decimal |
-| `height` | number\|string | 70% | Height: number, "50%", "fill", or 0<v<1 decimal |
-| `draggable` | boolean | false | Allow dragging by title bar |
-| `offsetX` | number | 0 | Horizontal offset from center |
-| `offsetY` | number | 0 | Vertical offset from center |
+| Prop        | Type           | Default | Description                                      |
+|-------------|----------------|---------|--------------------------------------------------|
+| `title`     | string         | -       | Title bar text                                   |
+| `open`      | boolean        | false   | Whether dialog is visible                        |
+| `modal`     | boolean        | true    | Block interaction with background                |
+| `backdrop`  | boolean        | true    | Show semi-transparent backdrop                   |
+| `width`     | number\|string | 80%     | Width: number, "50%", "fill", or 0<v<1 decimal   |
+| `height`    | number\|string | 70%     | Height: number, "50%", "fill", or 0<v<1 decimal  |
+| `draggable` | boolean        | false   | Allow dragging by title bar                      |
+| `offsetX`   | number         | 0       | Horizontal offset from center                    |
+| `offsetY`   | number         | 0       | Vertical offset from center                      |
 
 ### Draggable Dialogs
 
@@ -508,19 +511,19 @@ See `agent_docs/filterable-list-architecture.md` for implementation details.
 
 ### Components
 
-| Component | Description |
-|-----------|-------------|
-| `<combobox>` | Inline dropdown with text filter |
-| `<select>` | Dropdown picker without filter |
-| `<autocomplete>` | Combobox with async loading |
-| `<command-palette>` | Modal command picker |
+| Component           | Description                      |
+|---------------------|----------------------------------|
+| `<combobox>`        | Inline dropdown with text filter |
+| `<select>`          | Dropdown picker without filter   |
+| `<autocomplete>`    | Combobox with async loading      |
+| `<command-palette>` | Modal command picker             |
 
 ### Child Elements
 
-| Element | Description |
-|---------|-------------|
+| Element    | Description                              |
+|------------|------------------------------------------|
 | `<option>` | Selectable item (value, disabled, shortcut) |
-| `<group>` | Groups options under a header |
+| `<group>`  | Groups options under a header            |
 
 ### Quick Examples
 
@@ -556,12 +559,12 @@ See `agent_docs/filterable-list-architecture.md` for implementation details.
 
 ### Key Props (shared)
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `open` | boolean | Dropdown visibility |
-| `filter` | string | 'fuzzy', 'prefix', 'contains', 'exact', 'none' |
-| `maxVisible` | number | Max dropdown height (default: 8) |
-| `onSelect` | function | Called when option selected |
+| Prop         | Type     | Description                                    |
+|--------------|----------|------------------------------------------------|
+| `open`       | boolean  | Dropdown visibility                            |
+| `filter`     | string   | 'fuzzy', 'prefix', 'contains', 'exact', 'none' |
+| `maxVisible` | number   | Max dropdown height (default: 8)               |
+| `onSelect`   | function | Called when option selected                    |
 
 ### Methods (shared)
 
@@ -579,14 +582,14 @@ combo.setValue('us');      // Selects option and shows its label in input
 
 ### Implementation Files
 
-| File | Purpose |
-|------|---------|
-| `src/components/filterable-list/core.ts` | Shared base class |
-| `src/components/filterable-list/combobox.ts` | Combobox component |
-| `src/components/filterable-list/select.ts` | Select component |
-| `src/components/filterable-list/autocomplete.ts` | Autocomplete component |
-| `src/components/filterable-list/command-palette.ts` | Command palette component |
-| `src/components/filterable-list/filter.ts` | Fuzzy/prefix/contains matching |
+| File                                              | Purpose                      |
+|---------------------------------------------------|------------------------------|
+| `src/components/filterable-list/core.ts`          | Shared base class            |
+| `src/components/filterable-list/combobox.ts`      | Combobox component           |
+| `src/components/filterable-list/select.ts`        | Select component             |
+| `src/components/filterable-list/autocomplete.ts`  | Autocomplete component       |
+| `src/components/filterable-list/command-palette.ts` | Command palette component  |
+| `src/components/filterable-list/filter.ts`        | Fuzzy/prefix/contains matching |
 
 ## File Browser Component
 
@@ -609,23 +612,23 @@ The `<file-browser>` component provides file system navigation for selecting fil
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `path` | string | cwd | Initial directory |
-| `selectionMode` | string | 'single' | 'single' or 'multiple' |
-| `selectType` | string | 'file' | 'file', 'directory', or 'both' |
-| `filter` | string | 'fuzzy' | Filter mode |
-| `showHidden` | boolean | false | Show dotfiles |
-| `maxVisible` | number | 10 | Visible rows |
+| Prop            | Type    | Default  | Description                      |
+|-----------------|---------|----------|----------------------------------|
+| `path`          | string  | cwd      | Initial directory                |
+| `selectionMode` | string  | 'single' | 'single' or 'multiple'           |
+| `selectType`    | string  | 'file'   | 'file', 'directory', or 'both'   |
+| `filter`        | string  | 'fuzzy'  | Filter mode                      |
+| `showHidden`    | boolean | false    | Show dotfiles                    |
+| `maxVisible`    | number  | 10       | Visible rows                     |
 
 ### Events
 
-| Event | Properties | Description |
-|-------|------------|-------------|
-| `onSelect` | path, paths, isDirectory | File/dir selected |
-| `onCancel` | - | Cancelled |
-| `onNavigate` | path | Navigated to directory |
-| `onError` | code, message | Error occurred |
+| Event        | Properties                 | Description            |
+|--------------|----------------------------|------------------------|
+| `onSelect`   | path, paths, isDirectory   | File/dir selected      |
+| `onCancel`   | -                          | Cancelled              |
+| `onNavigate` | path                       | Navigated to directory |
+| `onError`    | code, message              | Error occurred         |
 
 ### Keyboard
 
@@ -637,10 +640,10 @@ The `<file-browser>` component provides file system navigation for selecting fil
 
 ### Implementation Files
 
-| File | Purpose |
-|------|---------|
-| `src/components/file-browser/file-browser.ts` | Main component |
-| `src/components/file-browser/file-entry.ts` | Type definitions |
+| File                                        | Purpose                     |
+|---------------------------------------------|-----------------------------|
+| `src/components/file-browser/file-browser.ts` | Main component            |
+| `src/components/file-browser/file-entry.ts` | Type definitions            |
 | `src/components/file-browser/file-utils.ts` | Directory loading utilities |
 
 See `agent_docs/file-browser-architecture.md` for detailed architecture.
@@ -659,18 +662,18 @@ The `<progress>` component displays a progress bar using canvas pixels for smoot
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `value` | number | 0 | Current progress value |
-| `max` | number | 100 | Maximum value |
-| `min` | number | 0 | Minimum value |
-| `width` | number | 20 | Bar width in terminal columns |
-| `height` | number | 1 | Bar height in terminal rows |
-| `showValue` | boolean | false | Display percentage text after bar |
-| `indeterminate` | boolean | false | Show animated loading state |
-| `fillColor` | string | theme | Color for filled portion |
-| `emptyColor` | string | theme | Color for empty portion |
-| `animationSpeed` | number | 50 | Indeterminate animation speed (ms) |
+| Prop             | Type    | Default | Description                          |
+|------------------|---------|---------|--------------------------------------|
+| `value`          | number  | 0       | Current progress value               |
+| `max`            | number  | 100     | Maximum value                        |
+| `min`            | number  | 0       | Minimum value                        |
+| `width`          | number  | 20      | Bar width in terminal columns        |
+| `height`         | number  | 1       | Bar height in terminal rows          |
+| `showValue`      | boolean | false   | Display percentage text after bar    |
+| `indeterminate`  | boolean | false   | Show animated loading state          |
+| `fillColor`      | string  | theme   | Color for filled portion             |
+| `emptyColor`     | string  | theme   | Color for empty portion              |
+| `animationSpeed` | number  | 50      | Indeterminate animation speed (ms)   |
 
 ### Behavior
 
@@ -695,23 +698,23 @@ The `<canvas>` component provides pixel graphics using Unicode sextant character
 
 ### Canvas Methods
 
-| Method | Description |
-|--------|-------------|
-| `clear()` | Clear the canvas |
-| `getBufferSize()` | Get pixel buffer dimensions `{ width, height }` |
-| `getBufferWidth()` | Get buffer width in pixels |
-| `getBufferHeight()` | Get buffer height in pixels |
-| `getVisualSize()` | Get aspect-corrected visual size |
-| `getPixelAspectRatio()` | Get pixel aspect ratio (~0.67 for sextant) |
-| `setPixel(x, y)` | Set a pixel at coordinates |
-| `fillRect(x, y, w, h)` | Fill a rectangle |
-| `drawLine(x1, y1, x2, y2)` | Draw a line between two points |
-| `drawCircleCorrected(x, y, radius)` | Draw aspect-corrected circle |
-| `drawSquareCorrected(x, y, size)` | Draw aspect-corrected square |
-| `drawImage(image, dx, dy, dw, dh)` | Draw full image at position |
-| `drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh)` | Draw portion of image |
-| `decodeImageBytes(bytes)` | Decode PNG/JPEG/GIF bytes to `{ width, height, data, bytesPerPixel }` |
-| `markDirty()` | Mark canvas for re-render |
+| Method                                               | Description                                                      |
+|------------------------------------------------------|------------------------------------------------------------------|
+| `clear()`                                            | Clear the canvas                                                 |
+| `getBufferSize()`                                    | Get pixel buffer dimensions `{ width, height }`                  |
+| `getBufferWidth()`                                   | Get buffer width in pixels                                       |
+| `getBufferHeight()`                                  | Get buffer height in pixels                                      |
+| `getVisualSize()`                                    | Get aspect-corrected visual size                                 |
+| `getPixelAspectRatio()`                              | Get pixel aspect ratio (~0.67 for sextant)                       |
+| `setPixel(x, y)`                                     | Set a pixel at coordinates                                       |
+| `fillRect(x, y, w, h)`                               | Fill a rectangle                                                 |
+| `drawLine(x1, y1, x2, y2)`                           | Draw a line between two points                                   |
+| `drawCircleCorrected(x, y, radius)`                  | Draw aspect-corrected circle                                     |
+| `drawSquareCorrected(x, y, size)`                    | Draw aspect-corrected square                                     |
+| `drawImage(image, dx, dy, dw, dh)`                   | Draw full image at position                                      |
+| `drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh)` | Draw portion of image                                        |
+| `decodeImageBytes(bytes)`                            | Decode PNG/JPEG/GIF bytes to `{ width, height, data, bytesPerPixel }` |
+| `markDirty()`                                        | Mark canvas for re-render                                        |
 
 ### drawImageRegion
 
@@ -751,27 +754,27 @@ The `<slider>` component allows numeric value selection within a range using key
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `min` | number | 0 | Minimum value |
-| `max` | number | 100 | Maximum value |
-| `value` | number | 0 | Current value |
-| `step` | number | - | Discrete step size (e.g., 5 = values 0,5,10...) |
-| `snaps` | number[] | - | Array of specific snap points |
-| `orientation` | string | 'horizontal' | 'horizontal' or 'vertical' |
-| `showValue` | boolean | false | Display value label after slider |
-| `onChange` | function | - | Called when value changes |
+| Prop          | Type     | Default      | Description                                  |
+|---------------|----------|--------------|----------------------------------------------|
+| `min`         | number   | 0            | Minimum value                                |
+| `max`         | number   | 100          | Maximum value                                |
+| `value`       | number   | 0            | Current value                                |
+| `step`        | number   | -            | Discrete step size (e.g., 5 = values 0,5,10...) |
+| `snaps`       | number[] | -            | Array of specific snap points                |
+| `orientation` | string   | 'horizontal' | 'horizontal' or 'vertical'                   |
+| `showValue`   | boolean  | false        | Display value label after slider             |
+| `onChange`    | function | -            | Called when value changes                    |
 
 ### Keyboard Navigation
 
-| Key | Action |
-|-----|--------|
-| Arrow Left/Down | Decrease by step (or to previous snap) |
-| Arrow Right/Up | Increase by step (or to next snap) |
-| Page Down | Decrease by 10% of range |
-| Page Up | Increase by 10% of range |
-| Home | Jump to minimum |
-| End | Jump to maximum |
+| Key              | Action                                   |
+|------------------|------------------------------------------|
+| Arrow Left/Down  | Decrease by step (or to previous snap)   |
+| Arrow Right/Up   | Increase by step (or to next snap)       |
+| Page Down        | Decrease by 10% of range                 |
+| Page Up          | Increase by 10% of range                 |
+| Home             | Jump to minimum                          |
+| End              | Jump to maximum                          |
 
 ### Visual
 
@@ -816,26 +819,26 @@ The `<separator>` component renders a horizontal or vertical line with optional 
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `label` | string | - | Optional text centered in the line |
-| `style` | Style | - | Standard style object |
+| Prop    | Type   | Default | Description                        |
+|---------|--------|---------|-----------------------------------|
+| `label` | string | -       | Optional text centered in the line |
+| `style` | Style  | -       | Standard style object              |
 
 ### Style Properties
 
-| Property | Values | Default | Description |
-|----------|--------|---------|-------------|
-| `border-style` | BorderStyle | 'thin' | Line style: thin, thick, double, dashed, etc. |
-| `color` | ColorInput | theme | Line and label color |
+| Property       | Values      | Default | Description                                  |
+|----------------|-------------|---------|----------------------------------------------|
+| `border-style` | BorderStyle | 'thin'  | Line style: thin, thick, double, dashed, etc. |
+| `color`        | ColorInput  | theme   | Line and label color                         |
 
 ### Automatic Orientation
 
 The separator detects its parent's flex direction and renders accordingly:
 
-| Parent flex-direction | Separator | Line char | Size |
-|-----------------------|-----------|-----------|------|
-| `column` (default) | Horizontal | `─` | width: fill, height: 1 |
-| `row` | Vertical | `│` | width: 1, height: fill |
+| Parent flex-direction | Separator  | Line char | Size                     |
+|-----------------------|------------|-----------|--------------------------|
+| `column` (default)    | Horizontal | `─`       | width: fill, height: 1   |
+| `row`                 | Vertical   | `│`       | width: 1, height: fill   |
 
 ### Visual Examples
 
@@ -861,6 +864,207 @@ Left │ Middle │ Right
 - Label text renders vertically when separator is vertical
 - Inherits theme colors by default
 
+## Connector Component
+
+The `<connector>` component draws a line between two elements identified by their IDs. Uses box-drawing characters for orthogonal routing.
+
+### Usage
+
+```xml
+<!-- Basic connector between two elements -->
+<container style="flex-direction: row; gap: 4">
+  <container id="box-a" style="border: single; padding: 1">Source</container>
+  <container id="box-b" style="border: single; padding: 1">Target</container>
+  <connector from="box-a" to="box-b" arrow="end" />
+</container>
+
+<!-- Vertical connector -->
+<container style="flex-direction: column; gap: 2; align-items: center">
+  <container id="top" style="border: single; padding: 1">Top</container>
+  <container id="bottom" style="border: single; padding: 1">Bottom</container>
+  <connector from="top" to="bottom" arrow="both" />
+</container>
+
+<!-- With label and custom style -->
+<connector from="start" to="end" label="flow" style="color: green; lineStyle: double" />
+```
+
+### Props
+
+| Prop       | Type   | Default      | Description                                                        |
+|------------|--------|--------------|-------------------------------------------------------------------|
+| `from`     | string | **required** | ID of the source element                                           |
+| `to`       | string | **required** | ID of the target element                                           |
+| `fromSide` | string | `'auto'`     | Side to connect from: `'top'`, `'bottom'`, `'left'`, `'right'`, `'center'`, `'auto'` |
+| `toSide`   | string | `'auto'`     | Side to connect to: `'top'`, `'bottom'`, `'left'`, `'right'`, `'center'`, `'auto'` |
+| `arrow`    | string | `'end'`      | Arrow style: `'none'`, `'start'`, `'end'`, `'both'`                |
+| `label`    | string | -            | Optional label text at midpoint                                    |
+| `routing`  | string | `'orthogonal'` | Line routing: `'direct'` or `'orthogonal'`                       |
+
+### Style Properties
+
+| Property    | Values                                | Description        |
+|-------------|---------------------------------------|--------------------|
+| `color`     | color                                 | Line color         |
+| `lineStyle` | `'thin'`, `'thick'`, `'double'`, `'dashed'` | Line drawing style |
+
+### Visual Examples
+
+**Horizontal connector:**
+```
+┌────────┐          ┌────────┐
+│ Source │─────────▶│ Target │
+└────────┘          └────────┘
+```
+
+**Vertical connector with both arrows:**
+```
+┌─────┐
+│ Top │
+└──┬──┘
+   ▲
+   │
+   ▼
+┌─────┐
+│ Bot │
+└─────┘
+```
+
+**Orthogonal routing (auto-bends):**
+```
+┌───┐
+│ A │──┐
+└───┘  │
+       │  ┌───┐
+       └─▶│ B │
+          └───┘
+```
+
+### Behavior
+
+- Connector takes minimal layout space (1x1) but draws based on connected elements' positions
+- Elements must have `id` attributes to be referenced
+- Side selection defaults to 'auto' which chooses the best side based on relative positions
+- Lines are drawn using box-drawing characters (─ │ ┌ ┐ └ ┘)
+- Arrow heads use Unicode triangles (▶ ◀ ▲ ▼)
+
+## Graph Component
+
+The `<graph>` component renders diagrams from Mermaid syntax or JSON input. Supports flowcharts, sequence diagrams, and class diagrams.
+
+### Usage
+
+```xml
+<!-- Flowchart -->
+<graph>
+  flowchart LR
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Done]
+    B -->|No| D[Retry]
+</graph>
+
+<!-- Sequence diagram -->
+<graph>
+  sequenceDiagram
+    participant U as User
+    participant S as Server
+    U->>S: Request
+    S-->>U: Response
+</graph>
+
+<!-- Class diagram -->
+<graph>
+  classDiagram
+    class Animal {
+      +name: String
+      +makeSound()
+    }
+    class Dog
+    Animal <|-- Dog
+</graph>
+
+<!-- Load from URL -->
+<graph src="./diagrams/flow.mmd" />
+
+<!-- JSON input -->
+<graph type="json">
+  {
+    "direction": "TB",
+    "nodes": [
+      { "id": "a", "label": "Node A", "shape": "rect" },
+      { "id": "b", "label": "Node B", "shape": "diamond" }
+    ],
+    "edges": [
+      { "from": "a", "to": "b", "arrow": "end" }
+    ]
+  }
+</graph>
+```
+
+### Props
+
+| Prop         | Type    | Default | Description                                               |
+|--------------|---------|---------|-----------------------------------------------------------|
+| `type`       | string  | auto    | Parser type: 'mermaid' or 'json' (auto-detected from content) |
+| `src`        | string  | -       | Load content from URL                                     |
+| `text`       | string  | -       | Inline content (alternative to children)                  |
+| `scrollable` | boolean | true    | Enable scrolling                                          |
+| `style`      | Style   | -       | Container style overrides                                 |
+
+### Content Priority
+
+1. `src` attribute (loads from URL)
+2. `text` attribute
+3. Children text content
+
+### Diagram Types (Auto-Detected)
+
+| Type      | Mermaid Keywords       |
+|-----------|------------------------|
+| Flowchart | `flowchart`, `graph`   |
+| Sequence  | `sequenceDiagram`      |
+| Class     | `classDiagram`         |
+
+### Supported Mermaid Syntax
+
+**Flowcharts:**
+- Directions: `TB`, `LR`, `BT`, `RL`
+- Node shapes: `[rect]`, `{diamond}`, `((circle))`, `{{hexagon}}`
+- Edges: `-->`, `---`, `-.->`, `==>`, with labels `-->|label|`
+- Subgraphs: `subgraph name ... end`
+
+**Sequence Diagrams:**
+- Participants: `participant A as Alias`
+- Messages: `->>`, `-->>`, `-x`, `--x`
+- Notes: `Note over A: text`
+- Fragments: `alt`, `opt`, `loop`, `par`
+
+**Class Diagrams:**
+- Classes: `class Name { +attr: Type; +method() }`
+- Relationships: `<|--` (inheritance), `*--` (composition), `o--` (aggregation), `-->` (association)
+- Annotations: `<<interface>>`, `<<abstract>>`
+
+### Styling
+
+The graph generates internal CSS classes that can be overridden. Use `style` prop for container-level overrides:
+
+```xml
+<graph style="border: none; padding: 2;">
+  flowchart LR
+    A --> B
+</graph>
+```
+
+### Implementation Files
+
+| File                                      | Purpose                                  |
+|-------------------------------------------|------------------------------------------|
+| `src/components/graph/graph.ts`           | GraphElement component                   |
+| `src/components/graph/graph-to-melker.ts` | Converts parsed graph to melker elements |
+| `src/components/graph/layout.ts`          | Graph layout algorithm                   |
+| `src/components/graph/parsers/`           | Mermaid and JSON parsers                 |
+| `src/components/graph/types.ts`           | GraphDefinition interfaces               |
+
 ## Segment Display Component
 
 The `<segment-display>` component renders LCD/LED-style digits and text using Unicode characters with multiple visual styles.
@@ -884,31 +1088,31 @@ The `<segment-display>` component renders LCD/LED-style digits and text using Un
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `value` | string | - | Text to display |
-| `renderer` | string | 'box-drawing' | Visual style: 'box-drawing', 'rounded', 'geometric' |
-| `scroll` | boolean | false | Enable horizontal scrolling |
-| `scrollSpeed` | number | 24 | Scroll speed in milliseconds |
-| `scrollGap` | number | 3 | Gap between repeated text when scrolling |
+| Prop          | Type    | Default       | Description                                           |
+|---------------|---------|---------------|-------------------------------------------------------|
+| `value`       | string  | -             | Text to display                                       |
+| `renderer`    | string  | 'box-drawing' | Visual style: 'box-drawing', 'rounded', 'geometric'   |
+| `scroll`      | boolean | false         | Enable horizontal scrolling                           |
+| `scrollSpeed` | number  | 24            | Scroll speed in milliseconds                          |
+| `scrollGap`   | number  | 3             | Gap between repeated text when scrolling              |
 
 ### Style Properties
 
-| Property | Values | Description |
-|----------|--------|-------------|
-| `height` | 5, 7 | Display height in rows (only 5 or 7 supported) |
-| `color` | any color | Color for "on" segments |
-| `off-color` | any color | Color for "off" segments (dimmed LCD effect) |
-| `background-color` | any color | Background color |
-| `width` | number | Width limit for scrolling |
+| Property           | Values    | Description                                      |
+|--------------------|-----------|--------------------------------------------------|
+| `height`           | 5, 7      | Display height in rows (only 5 or 7 supported)   |
+| `color`            | any color | Color for "on" segments                          |
+| `off-color`        | any color | Color for "off" segments (dimmed LCD effect)     |
+| `background-color` | any color | Background color                                 |
+| `width`            | number    | Width limit for scrolling                        |
 
 ### Renderers
 
-| Renderer | Characters | Description |
-|----------|------------|-------------|
-| `box-drawing` | ━ ┃ | Clean thin lines (default) |
-| `rounded` | ╭ ╮ ╰ ╯ ━ ┃ | Rounded corners, modern look |
-| `geometric` | ▬ ▮ ▯ | Chunky LCD aesthetic |
+| Renderer      | Characters       | Description                    |
+|---------------|------------------|--------------------------------|
+| `box-drawing` | ━ ┃              | Clean thin lines (default)     |
+| `rounded`     | ╭ ╮ ╰ ╯ ━ ┃     | Rounded corners, modern look   |
+| `geometric`   | ▬ ▮ ▯            | Chunky LCD aesthetic           |
 
 ### Character Support
 
@@ -971,30 +1175,30 @@ The `<img>` component displays images in the terminal using sextant characters (
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `src` | string | - | Image source path or data URL (required) |
-| `alt` | string | - | Alternative text for accessibility |
-| `width` | number \| string | 30 | Width in columns or percentage (e.g., "50%") |
-| `height` | number \| string | 15 | Height in rows or percentage (e.g., "50%") |
-| `objectFit` | string | 'fill' | How image fits: 'contain' (preserve aspect), 'fill' (stretch), 'cover' (crop) |
-| `dither` | string | 'auto' | Dithering mode for limited-color themes |
-| `ditherBits` | number | - | Color depth for dithering (1-8) |
-| `onLoad` | function | - | Called when image loads successfully |
-| `onError` | function | - | Called when image fails to load |
-| `onShader` | function | - | Per-pixel shader callback (see Shaders section) |
-| `shaderFps` | number | 30 | Shader frame rate |
-| `shaderRunTime` | number | - | Stop shader after this many ms, freeze final frame as image |
+| Prop             | Type             | Default | Description                                                              |
+|------------------|------------------|---------|--------------------------------------------------------------------------|
+| `src`            | string           | -       | Image source path or data URL (required)                                 |
+| `alt`            | string           | -       | Alternative text for accessibility                                       |
+| `width`          | number \| string | 30      | Width in columns or percentage (e.g., "50%")                             |
+| `height`         | number \| string | 15      | Height in rows or percentage (e.g., "50%")                               |
+| `objectFit`      | string           | 'fill'  | How image fits: 'contain' (preserve aspect), 'fill' (stretch), 'cover' (crop) |
+| `dither`         | string           | 'auto'  | Dithering mode for limited-color themes                                  |
+| `ditherBits`     | number           | -       | Color depth for dithering (1-8)                                          |
+| `onLoad`         | function         | -       | Called when image loads successfully                                     |
+| `onError`        | function         | -       | Called when image fails to load                                          |
+| `onShader`       | function         | -       | Per-pixel shader callback (see Shaders section)                          |
+| `shaderFps`      | number           | 30      | Shader frame rate                                                        |
+| `shaderRunTime`  | number           | -       | Stop shader after this many ms, freeze final frame as image              |
 
 ### Methods
 
-| Method | Description |
-|--------|-------------|
-| `setSrc(url)` | Load image immediately (async, last call wins if called rapidly) |
-| `setSource(url)` | Set props.src and clear existing image (loads during next render) |
-| `clearImage()` | Clear the loaded image |
-| `loadImage(url)` | Low-level async load (same as setSrc) |
-| `refreshImage()` | Re-render the loaded image (e.g., after resize) |
+| Method            | Description                                                          |
+|-------------------|----------------------------------------------------------------------|
+| `setSrc(url)`     | Load image immediately (async, last call wins if called rapidly)     |
+| `setSource(url)`  | Set props.src and clear existing image (loads during next render)    |
+| `clearImage()`    | Clear the loaded image                                               |
+| `loadImage(url)`  | Low-level async load (same as setSrc)                                |
+| `refreshImage()`  | Re-render the loaded image (e.g., after resize)                      |
 
 ```typescript
 // Preferred: setSrc loads immediately
@@ -1085,11 +1289,11 @@ Video playback component using FFmpeg for decoding. Extends Canvas.
 
 ### Supported Sources
 
-| Source Type | Example | Notes |
-|-------------|---------|-------|
-| Local files | `src="video.mp4"` | Relative or absolute paths |
-| HTTP/HTTPS | `src="https://example.com/video.mp4"` | Requires `net` permission |
-| RTSP streams | `src="rtsp://192.168.1.191:8080/h264.sdp"` | Live streaming, requires `net` permission |
+| Source Type  | Example                                       | Notes                                    |
+|--------------|-----------------------------------------------|------------------------------------------|
+| Local files  | `src="video.mp4"`                             | Relative or absolute paths               |
+| HTTP/HTTPS   | `src="https://example.com/video.mp4"`         | Requires `net` permission                |
+| RTSP streams | `src="rtsp://192.168.1.191:8080/h264.sdp"`    | Live streaming, requires `net` permission |
 
 ### RTSP Streaming Example
 
@@ -1103,15 +1307,15 @@ RTSP streams work with all themes and graphics modes:
 
 ### Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `src` | string | Video source (file path, URL, or RTSP URL) |
-| `width` | number | Pixel buffer width |
-| `height` | number | Pixel buffer height |
-| `autoplay` | boolean | Start playing immediately |
-| `loop` | boolean | Loop playback |
-| `muted` | boolean | Mute audio |
-| `dither` | string | Dithering algorithm (`auto`, `none`, `sierra-stable`, etc.) |
+| Prop       | Type    | Description                                              |
+|------------|---------|----------------------------------------------------------|
+| `src`      | string  | Video source (file path, URL, or RTSP URL)               |
+| `width`    | number  | Pixel buffer width                                       |
+| `height`   | number  | Pixel buffer height                                      |
+| `autoplay` | boolean | Start playing immediately                                |
+| `loop`     | boolean | Loop playback                                            |
+| `muted`    | boolean | Mute audio                                               |
+| `dither`   | string  | Dithering algorithm (`auto`, `none`, `sierra-stable`, etc.) |
 
 ### Implementation
 
@@ -1138,19 +1342,19 @@ Layout properties (padding, margin, border widths) do NOT inherit.
 
 ## Key Files Reference
 
-| File | Responsibility |
-|------|----------------|
-| `src/types.ts` | Core interfaces: Element, Style, Bounds, Props |
-| `src/element.ts` | createElement, component registry |
-| `src/document.ts` | Document class, element registry, focus |
-| `src/layout.ts` | LayoutEngine, flexbox algorithm |
-| `src/sizing.ts` | SizingModel, box model calculations |
-| `src/rendering.ts` | RenderingEngine, layout-to-buffer |
-| `src/viewport.ts` | ViewportManager, scrolling support |
-| `src/viewport-buffer.ts` | ViewportBufferProxy, ViewportDualBuffer |
-| `src/content-measurer.ts` | ContentMeasurer, intrinsic size calculation |
-| `src/focus.ts` | FocusManager, tab navigation |
-| `src/events.ts` | EventManager, event dispatching |
+| File                      | Responsibility                               |
+|---------------------------|----------------------------------------------|
+| `src/types.ts`            | Core interfaces: Element, Style, Bounds, Props |
+| `src/element.ts`          | createElement, component registry            |
+| `src/document.ts`         | Document class, element registry, focus      |
+| `src/layout.ts`           | LayoutEngine, flexbox algorithm              |
+| `src/sizing.ts`           | SizingModel, box model calculations          |
+| `src/rendering.ts`        | RenderingEngine, layout-to-buffer            |
+| `src/viewport.ts`         | ViewportManager, scrolling support           |
+| `src/viewport-buffer.ts`  | ViewportBufferProxy, ViewportDualBuffer      |
+| `src/content-measurer.ts` | ContentMeasurer, intrinsic size calculation  |
+| `src/focus.ts`            | FocusManager, tab navigation                 |
+| `src/events.ts`           | EventManager, event dispatching              |
 
 ## See Also
 

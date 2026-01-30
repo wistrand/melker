@@ -2,13 +2,16 @@
 
 import { Element } from './types.ts';
 import { traverseElements } from './element.ts';
-import { selectorStringMatches } from './stylesheet.ts';
+import { selectorStringMatches, Stylesheet, applyStylesheet } from './stylesheet.ts';
 
 export interface DocumentOptions {
   autoGenerateIds?: boolean;
   trackFocusedElement?: boolean;
   enableEventHandling?: boolean;
 }
+
+// Max size for subtree search miss cache (prevents unbounded memory growth)
+const SUBTREE_MISS_CACHE_MAX_SIZE = 1000;
 
 export class Document {
   private _root: Element;
@@ -17,6 +20,11 @@ export class Document {
   private _eventListeners: Map<string, Set<(event: any) => void>> = new Map();
   private _options: Required<DocumentOptions>;
   private _elementIdCounter = 0;
+  private _stylesheets: Stylesheet[] = [];
+  // Cache for IDs that were not found in subtree elements (avoids repeated tree traversals)
+  // Subtree elements are rendered inline by components (e.g., mermaid graphs in markdown)
+  // Bounded to SUBTREE_MISS_CACHE_MAX_SIZE entries to prevent memory growth
+  private _subtreeSearchMisses: Set<string> = new Set();
 
   constructor(root: Element, options: DocumentOptions = {}) {
     this._options = {
@@ -50,7 +58,73 @@ export class Document {
   }
 
   getElementById(id: string): Element | undefined {
-    return this._elementRegistry.get(id);
+    // First check the registry (fast path)
+    const registryElement = this._elementRegistry.get(id);
+    if (registryElement) {
+      return registryElement;
+    }
+
+    // Check if we already know this ID doesn't exist in subtree elements
+    if (this._subtreeSearchMisses.has(id)) {
+      return undefined;
+    }
+
+    // Fallback: search subtree elements inside components that render inline subtrees
+    // (e.g., mermaid graphs in markdown are not in the document tree but need to be focusable)
+    const found = this._findElementInSubtrees(this._root, id);
+    if (!found) {
+      // Cache the miss to avoid future tree traversals
+      // Clear cache if it grows too large (simple eviction strategy)
+      if (this._subtreeSearchMisses.size >= SUBTREE_MISS_CACHE_MAX_SIZE) {
+        this._subtreeSearchMisses.clear();
+      }
+      this._subtreeSearchMisses.add(id);
+    }
+    return found;
+  }
+
+  /**
+   * Search for an element by ID within subtree elements rendered by components
+   * Subtree elements are rendered inline (e.g., mermaid graphs) but not part of the document tree
+   */
+  private _findElementInSubtrees(element: Element, targetId: string): Element | undefined {
+    // Check if this component has subtree elements (e.g., markdown with mermaid graphs)
+    const component = element as any;
+    if (typeof component.getSubtreeElements === 'function') {
+      const subtreeElements = component.getSubtreeElements() as Element[];
+      for (const subtreeRoot of subtreeElements) {
+        const found = this._searchElementTree(subtreeRoot, targetId);
+        if (found) return found;
+      }
+    }
+
+    // Recursively check children
+    if (element.children) {
+      for (const child of element.children) {
+        const found = this._findElementInSubtrees(child, targetId);
+        if (found) return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Search an element tree for an element by ID
+   */
+  private _searchElementTree(element: Element, targetId: string): Element | undefined {
+    if (element.id === targetId) {
+      return element;
+    }
+
+    if (element.children) {
+      for (const child of element.children) {
+        const found = this._searchElementTree(child, targetId);
+        if (found) return found;
+      }
+    }
+
+    return undefined;
   }
 
   getElementsByType(type: string): Element[] {
@@ -86,7 +160,14 @@ export class Document {
       ? this.getElementById(elementOrId)
       : elementOrId;
 
-    if (!element || !this._elementRegistry.has(element.id)) {
+    // Element must exist (either in registry or found via mermaid search)
+    if (!element) {
+      return false;
+    }
+
+    // Verify element is either in registry or can be found via getElementById
+    // (which now also searches mermaid elements)
+    if (!this._elementRegistry.has(element.id) && !this.getElementById(element.id)) {
       return false;
     }
 
@@ -180,6 +261,37 @@ export class Document {
     }
 
     return true;
+  }
+
+  // Stylesheet management
+
+  /**
+   * Add a stylesheet to the document.
+   * @param stylesheet The stylesheet to add
+   * @param prepend If true, add to the beginning of the list (lower priority, can be overridden)
+   */
+  addStylesheet(stylesheet: Stylesheet, prepend: boolean = false): void {
+    if (prepend) {
+      this._stylesheets.unshift(stylesheet);
+    } else {
+      this._stylesheets.push(stylesheet);
+    }
+  }
+
+  /**
+   * Get all stylesheets in the document
+   */
+  get stylesheets(): readonly Stylesheet[] {
+    return this._stylesheets;
+  }
+
+  /**
+   * Apply all stylesheets to an element and its children
+   */
+  applyStylesToElement(element: Element): void {
+    for (const stylesheet of this._stylesheets) {
+      applyStylesheet(element, stylesheet);
+    }
   }
 
   // Search and traversal
@@ -280,6 +392,7 @@ export class Document {
     const previousFocusedElementId = this._focusedElement?.id;
 
     this._elementRegistry.clear();
+    this._subtreeSearchMisses.clear();
     this._focusedElement = undefined;
 
     // Register all elements in the tree
@@ -297,11 +410,7 @@ export class Document {
   }
 
   private _registerElement(element: Element): void {
-    // Auto-generate ID if needed
-    if (this._options.autoGenerateIds && !element.id) {
-      element.id = this.generateElementId();
-    }
-
+    // All elements now have IDs from the Element constructor
     // Register in element registry
     if (element.id) {
       this._elementRegistry.set(element.id, element);

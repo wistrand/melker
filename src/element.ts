@@ -102,12 +102,7 @@ class BasicElement extends Element {
   }
 }
 
-let elementIdCounter = 0;
 const componentRegistry: ComponentRegistry = {};
-
-function generateElementId(): string {
-  return `mel-${++elementIdCounter}`;
-}
 
 /**
  * Parse class string into classList array and normalize props
@@ -206,14 +201,6 @@ export function createElement<TType extends keyof ComponentPropsMap | string>(
     mergedProps = mergePersistedProps(type, mergedProps, _persistenceContext) as typeof mergedProps;
 
     const componentInstance = new componentDef.componentClass(mergedProps, children);
-
-    // Generate ID if not provided
-    if (!componentInstance.id && !mergedProps.id) {
-      componentInstance.id = generateElementId();
-    } else if (mergedProps.id && !componentInstance.id) {
-      componentInstance.id = mergedProps.id;
-    }
-
     return componentInstance;
   }
 
@@ -230,11 +217,6 @@ export function createElement<TType extends keyof ComponentPropsMap | string>(
 
   // Merge persisted props (if element has ID and persistence is enabled)
   mergedProps = mergePersistedProps(type, mergedProps, _persistenceContext);
-
-  // Generate ID if not provided
-  if (!mergedProps.id) {
-    mergedProps.id = generateElementId();
-  }
 
   const element = new BasicElement(type, mergedProps, children);
 

@@ -810,6 +810,67 @@ Open URLs in the system browser (requires `browser: true` in policy):
 </melker>
 ```
 
+## Graph/Diagram Example
+
+Render flowcharts, sequence diagrams, and class diagrams using Mermaid syntax:
+
+```xml
+<melker>
+  <container style="width: fill; height: fill; padding: 1;">
+    <text style="font-weight: bold; margin-bottom: 1;">Diagrams</text>
+
+    <tabs>
+      <!-- Flowchart -->
+      <tab title="Flowchart">
+        <graph>
+          flowchart LR
+            A[Start] --> B{Decision}
+            B -->|Yes| C[Process]
+            B -->|No| D[Skip]
+            C --> E[End]
+            D --> E
+        </graph>
+      </tab>
+
+      <!-- Sequence Diagram -->
+      <tab title="Sequence">
+        <graph>
+          sequenceDiagram
+            participant U as User
+            participant S as Server
+            participant D as Database
+            U->>S: Request
+            S->>D: Query
+            D-->>S: Result
+            S-->>U: Response
+        </graph>
+      </tab>
+
+      <!-- Class Diagram -->
+      <tab title="Class">
+        <graph>
+          classDiagram
+            class Animal {
+              +name: String
+              +makeSound()
+            }
+            class Dog {
+              +breed: String
+              +bark()
+            }
+            Animal <|-- Dog
+        </graph>
+      </tab>
+    </tabs>
+  </container>
+</melker>
+```
+
+**Supported diagram types:**
+- **Flowcharts**: `flowchart LR/TB/RL/BT`, nodes `[rect]` `{diamond}` `((circle))`, edges `-->` `-.->` `==>`, labels `-->|text|`
+- **Sequence**: `sequenceDiagram`, participants, messages `->>` `-->>`, notes
+- **Class**: `classDiagram`, classes with members, relationships `<|--` `*--` `o--`
+
 ## Tips & Best Practices
 
 1. **Use flexbox for layouts** - `flex-direction: column` or `row` (display: flex is auto-inferred)
@@ -838,3 +899,4 @@ For more complex patterns, see these examples in the codebase:
 | `analog-clock.melker` (canvas/) | Canvas animation, aspect ratio correction |
 | `markdown-viewer.melker` (showcase/) | File loading, markdown rendering |
 | `noise.melker` (canvas/shaders/) | Per-pixel shaders, 3D noise animation, `simplex3d`/`perlin3d`/`fbm3d`, Inigo Quilez palettes, select controls |
+| `graph_component.melker` (melker/) | Graph diagrams with tabs, flowchart/sequence/class diagrams, Mermaid syntax |

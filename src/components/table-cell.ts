@@ -94,13 +94,17 @@ export class TableCellElement extends Element implements Renderable {
     }
 
     // Fast path: single text child (most common case for table cells)
+    // Skip fast path if text has wrap style - need to calculate wrapped height
     if (this.children.length === 1) {
       const child = this.children[0];
       if (child.type === 'text' && child.props.text !== undefined) {
-        const text = String(child.props.text);
-        // Simple single-line text
-        if (!text.includes('\n')) {
-          return { width: Math.max(1, text.length), height: 1 };
+        const textWrap = child.props.style?.textWrap;
+        if (textWrap !== 'wrap') {
+          const text = String(child.props.text);
+          // Simple single-line text
+          if (!text.includes('\n')) {
+            return { width: Math.max(1, text.length), height: 1 };
+          }
         }
       }
     }
@@ -109,15 +113,64 @@ export class TableCellElement extends Element implements Renderable {
     let totalHeight = 0;
 
     for (const child of this.children) {
-      // Fast path for text elements (avoid 'in' operator overhead)
-      if (child.type === 'text' && child.props.text !== undefined) {
+      // Check if child has intrinsicSize method (Renderable) - use it for proper calculations
+      if ('intrinsicSize' in child && typeof child.intrinsicSize === 'function') {
+        const size = (child as any).intrinsicSize(context);
+        maxWidth = Math.max(maxWidth, size.width);
+        totalHeight += size.height;
+      } else if (child.type === 'container' && child.children) {
+        // Handle container children - calculate size based on container's contents
+        let containerWidth = 0;
+        let containerHeight = 1;
+
+        // Account for container's border-left
+        const borderLeft = child.props.style?.borderLeft;
+        if (borderLeft && borderLeft !== 'none') {
+          containerWidth += 1;
+        }
+
+        // Calculate available width for container contents (after border)
+        const containerContentWidth = Math.max(1, context.availableSpace.width - containerWidth);
+
+        // Calculate size of container's children
+        for (const containerChild of child.children) {
+          // Check for wrapped text first (most important case for row height)
+          if (containerChild.type === 'text' && containerChild.props.text !== undefined) {
+            const text = String(containerChild.props.text);
+            const textWrap = containerChild.props.style?.textWrap;
+            if (textWrap === 'wrap' && containerContentWidth > 0) {
+              // Calculate wrapped text height based on available width
+              const lines = text.split('\n');
+              let wrappedHeight = 0;
+              for (const line of lines) {
+                if (line.trim() === '') {
+                  wrappedHeight += 1;
+                } else {
+                  wrappedHeight += Math.max(1, Math.ceil(line.length / containerContentWidth));
+                }
+              }
+              containerHeight = Math.max(containerHeight, wrappedHeight);
+            } else if (text.includes('\n')) {
+              containerHeight = Math.max(containerHeight, text.split('\n').length);
+            }
+          } else if ('intrinsicSize' in containerChild && typeof containerChild.intrinsicSize === 'function') {
+            // For other renderable children, pass adjusted context
+            const adjustedContext = {
+              ...context,
+              availableSpace: { ...context.availableSpace, width: containerContentWidth }
+            };
+            const size = (containerChild as any).intrinsicSize(adjustedContext);
+            containerHeight = Math.max(containerHeight, size.height);
+          }
+        }
+
+        maxWidth = Math.max(maxWidth, context.availableSpace.width);
+        totalHeight = Math.max(totalHeight, containerHeight);
+      } else if (child.type === 'text' && child.props.text !== undefined) {
+        // Fallback for plain text elements without intrinsicSize
         const text = String(child.props.text);
         maxWidth = Math.max(maxWidth, text.length);
         totalHeight += 1;
-      } else if ('intrinsicSize' in child && typeof child.intrinsicSize === 'function') {
-        const size = child.intrinsicSize(context);
-        maxWidth = Math.max(maxWidth, size.width);
-        totalHeight += size.height;
       }
     }
 

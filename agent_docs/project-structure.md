@@ -131,6 +131,8 @@ Detailed file layout for the Melker codebase.
 | `video.ts`                | Video playback                         |
 | `progress.ts`             | Progress bar (extends Canvas)          |
 | `separator.ts`            | Horizontal/vertical line with optional label |
+| `connector.ts`            | Draw lines between elements by ID      |
+| `connector-utils.ts`      | Line drawing utilities, box-drawing chars |
 | `data-bars.ts`            | Bar charts (horizontal/vertical, stacked/grouped) |
 | `markdown.ts`             | Markdown rendering with image support  |
 | `color-utils.ts`          | RGBA color utilities                   |
@@ -151,12 +153,28 @@ Detailed file layout for the Melker codebase.
 
 #### `components/file-browser/` - File Browser
 
-| File              | Purpose                          |
-|-------------------|----------------------------------|
-| `mod.ts`          | Module exports                   |
+| File              | Purpose                             |
+|-------------------|-------------------------------------|
+| `mod.ts`          | Module exports                      |
 | `file-browser.ts` | FileBrowserElement (main component) |
-| `file-entry.ts`   | Type definitions                 |
+| `file-entry.ts`   | Type definitions                    |
 | `file-utils.ts`   | Directory loading, formatting utilities |
+
+#### `components/graph/` - Graph/Diagram Rendering
+
+| File                             | Purpose                                   |
+|----------------------------------|-------------------------------------------|
+| `mod.ts`                         | Module exports                            |
+| `graph.ts`                       | GraphElement component                    |
+| `graph-to-melker.ts`             | Converts parsed graph to melker elements  |
+| `layout.ts`                      | Graph layout algorithm (level-based)      |
+| `types.ts`                       | GraphDefinition, SequenceDefinition, etc. |
+| `parsers/mod.ts`                 | Parser registry and factory               |
+| `parsers/types.ts`               | Parser interfaces                         |
+| `parsers/mermaid-flowchart.ts`   | Mermaid flowchart parser                  |
+| `parsers/mermaid-sequence.ts`    | Mermaid sequence diagram parser           |
+| `parsers/mermaid-class.ts`       | Mermaid class diagram parser              |
+| `parsers/json.ts`                | JSON graph parser                         |
 
 #### `video/` - Video Processing
 

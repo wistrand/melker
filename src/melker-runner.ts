@@ -8,6 +8,7 @@ import { restoreTerminal } from './terminal-lifecycle.ts';
 import { Env } from './env.ts';
 import { parseCliFlags, MelkerConfig } from './config/mod.ts';
 import { getLogger } from './logging.ts';
+import { isStdoutEnabled, getStdoutConfig, bufferToStdout } from './stdout.ts';
 
 // Import library to register components before template parsing
 import '../mod.ts';
@@ -149,9 +150,62 @@ async function wireBundlerHandlers(
             };
           }
         } else {
-          const errorMsg = `Handler not found in registry for ${propName}. Code: ${handlerCode.slice(0, 50)}...`;
-          logger?.error?.(errorMsg);
-          getGlobalErrorOverlay().showError(errorMsg);
+          // Handler not in registry - check if it's inline code (from dynamic content like graph components)
+          // Inline handlers don't contain __melker. references
+          const isInlineHandler = !handlerCode.includes('__melker.');
+
+          if (isInlineHandler) {
+            // Create a function that evaluates the inline handler code
+            // Provide access to $melker, $app, event, and common globals
+            const shouldAutoRender = !noAutoRenderCallbacks.includes(propName);
+
+            element.props[propName] = async (event: any) => {
+              try {
+                // Build evaluation context with globals
+                const evalContext = {
+                  $melker: context,
+                  $app: (registry as any).$app || {},
+                  event,
+                  alert: (msg: string) => context?.showAlert?.(msg) || globalThis.alert?.(msg),
+                  console: globalThis.console,
+                };
+
+                // Create function with context variables in scope
+                const handlerFn = new Function(
+                  '$melker', '$app', 'event', 'alert', 'console',
+                  `return (async () => { ${handlerCode} })();`
+                );
+
+                const result = await handlerFn(
+                  evalContext.$melker,
+                  evalContext.$app,
+                  evalContext.event,
+                  evalContext.alert,
+                  evalContext.console
+                );
+
+                // Auto-render unless skipRender() was called
+                if (shouldAutoRender && context?.render && !context._shouldSkipRender()) {
+                  context.render();
+                }
+                return result;
+              } catch (error) {
+                const err = error instanceof Error ? error : new Error(String(error));
+                logger?.error?.(`Error in inline handler for ${propName}: ${err.message}`);
+                getGlobalErrorOverlay().showError(`Handler error: ${err.message}`);
+                if (context?.render) {
+                  context.render();
+                }
+                return undefined;
+              }
+            };
+
+            logger?.debug?.(`Wired inline handler for ${propName}: ${handlerCode.slice(0, 30)}...`);
+          } else {
+            const errorMsg = `Handler not found in registry for ${propName}. Code: ${handlerCode.slice(0, 50)}...`;
+            logger?.error?.(errorMsg);
+            getGlobalErrorOverlay().showError(errorMsg);
+          }
         }
       }
     }
@@ -421,9 +475,10 @@ export async function runMelkerFile(
     }
 
     // Set terminal title (use policy name as fallback if no <title> tag)
+    // Skip in stdout mode - no terminal control
     let originalTitle: string | undefined;
     const appTitle = parseResult.title || appPolicy.name;
-    if (appTitle) {
+    if (appTitle && !isStdoutEnabled()) {
       originalTitle = '';
       const encoder = new TextEncoder();
       await Deno.stdout.write(encoder.encode(`\x1b]0;${appTitle}\x07`));
@@ -703,6 +758,27 @@ export async function runMelkerFile(
     (engine as any).forceRender();
     (engine as any)._triggerMountHandlers();
     await callReady(melkerRegistry);
+
+    // Handle stdout mode - output buffer after timeout and exit
+    if (isStdoutEnabled()) {
+      const stdoutConfig = getStdoutConfig();
+      const stdoutLogger = getLogger('stdout');
+      stdoutLogger.info(`Stdout mode: waiting ${stdoutConfig.timeout}ms`);
+
+      // Wait for the configured timeout
+      await new Promise(resolve => setTimeout(resolve, stdoutConfig.timeout));
+
+      // Get the buffer from the engine and output it
+      const buffer = (engine as any)._buffer;
+      if (buffer) {
+        const output = bufferToStdout(buffer, { colorSupport: stdoutConfig.colorSupport });
+        const encoder = new TextEncoder();
+        await Deno.stdout.write(encoder.encode(output + '\n'));
+      }
+
+      // Exit cleanly
+      Deno.exit(0);
+    }
 
     // Set up graceful shutdown
     let cleanupInProgress = false;

@@ -1,0 +1,216 @@
+<melker>
+<policy>
+{
+  "name": "Class Diagram: tests/mermaid/class_melker_components.mmd"
+}
+</policy>
+
+<style>
+.class-diagram {
+  width: fill;
+  height: fill;
+  padding: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3;
+}
+.class-diagram-row { flex-direction: row; }
+.class-diagram-col { flex-direction: column; }
+
+.class-level {
+  display: flex;
+  gap: 3;
+}
+.class-level-row { flex-direction: row; }
+.class-level-col { flex-direction: column; }
+
+.class-annotation {
+  text-align: center;
+}
+.class-name {
+  text-align: center;
+  font-weight: bold;
+}
+</style>
+
+<container class="class-diagram class-diagram-col" scrollable="true">
+  <container class="class-level class-level-row">
+    <container id="class-KeyboardElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">KeyboardElement</text>
+    </container>
+    <container id="class-Element" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«abstract»</text>
+      <text class="class-name">Element</text>
+      <separator />
+      <text>+type: String</text>
+      <text>+props: Record</text>
+      <text>+children: Element[]</text>
+      <text>+id: String</text>
+      <text>-_bounds: Bounds</text>
+      <separator />
+      <text>+setBounds(bounds)</text>
+    </container>
+    <container id="class-Renderable" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Renderable</text>
+      <separator />
+      <text> </text>
+      <separator />
+      <text>+render(bounds, style, buffer, context)</text>
+    </container>
+    <container id="class-TextSelectable" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">TextSelectable</text>
+    </container>
+    <container id="class-Focusable" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Focusable</text>
+    </container>
+    <container id="class-Interactive" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Interactive</text>
+    </container>
+    <container id="class-Clickable" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Clickable</text>
+    </container>
+    <container id="class-Wheelable" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Wheelable</text>
+    </container>
+    <container id="class-Draggable" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Draggable</text>
+      <separator />
+      <text> </text>
+      <separator />
+      <text>+handleDragStart(zone, x, y)</text>
+      <text>+handleDragMove(zone, x, y)</text>
+      <text>+handleDragEnd(zone, x, y)</text>
+    </container>
+  </container>
+  <container class="class-level class-level-row">
+    <container id="class-SeparatorElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">SeparatorElement</text>
+      <separator />
+      <text>+label: String</text>
+      <text>-_isVertical: Boolean</text>
+      <separator />
+      <text>+render()</text>
+      <text>+intrinsicSize()</text>
+    </container>
+    <container id="class-ProgressElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">ProgressElement</text>
+      <separator />
+      <text>+value: Number</text>
+      <text>+max: Number</text>
+      <text>+format: String</text>
+      <separator />
+      <text>+render()</text>
+      <text>+intrinsicSize()</text>
+    </container>
+    <container id="class-ContainerElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">ContainerElement</text>
+      <separator />
+      <text>+scrollable: Boolean</text>
+      <text>+scrollX: Number</text>
+      <text>+scrollY: Number</text>
+      <separator />
+      <text>+render()</text>
+      <text>+intrinsicSize()</text>
+    </container>
+    <container id="class-TextElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">TextElement</text>
+      <separator />
+      <text>+text: String</text>
+      <text>+src: String</text>
+      <text>-_srcContent: String</text>
+      <separator />
+      <text>+render()</text>
+      <text>+intrinsicSize()</text>
+      <text>+setValue(text)</text>
+    </container>
+    <container id="class-DialogElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">DialogElement</text>
+      <separator />
+      <text>+title: String</text>
+      <text>+modal: Boolean</text>
+      <text>+visible: Boolean</text>
+      <separator />
+      <text>+render()</text>
+      <text>+intrinsicSize()</text>
+      <text>+show()</text>
+      <text>+hide()</text>
+    </container>
+    <container id="class-InputElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">InputElement</text>
+      <separator />
+      <text>+value: String</text>
+      <text>+placeholder: String</text>
+      <text>+maxLength: Number</text>
+      <text>+readOnly: Boolean</text>
+      <text>-_internalValue: String</text>
+      <text>-_cursorPosition: Number</text>
+      <separator />
+      <text>+render()</text>
+      <text>+intrinsicSize()</text>
+      <text>+setValue(value)</text>
+    </container>
+    <container id="class-ButtonElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">ButtonElement</text>
+      <separator />
+      <text>+label: String</text>
+      <text>+variant: String</text>
+      <text>-_lastRenderBounds: Bounds</text>
+      <separator />
+      <text>+render()</text>
+      <text>+intrinsicSize()</text>
+    </container>
+    <container id="class-SliderElement" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">SliderElement</text>
+      <separator />
+      <text>+value: Number</text>
+      <text>+min: Number</text>
+      <text>+max: Number</text>
+      <text>+step: Number</text>
+      <separator />
+      <text>+render()</text>
+      <text>+intrinsicSize()</text>
+      <text>+handleClick()</text>
+      <text>+handleWheel()</text>
+    </container>
+  </container>
+
+  <!-- Relationships -->
+  <connector from="class-Element" to="class-ContainerElement" arrow="end" />
+  <connector from="class-Element" to="class-TextElement" arrow="end" />
+  <connector from="class-Element" to="class-ButtonElement" arrow="end" />
+  <connector from="class-Element" to="class-InputElement" arrow="end" />
+  <connector from="class-Element" to="class-SeparatorElement" arrow="end" />
+  <connector from="class-Element" to="class-DialogElement" arrow="end" />
+  <connector from="class-Element" to="class-SliderElement" arrow="end" />
+  <connector from="class-Element" to="class-ProgressElement" arrow="end" />
+  <connector from="class-Renderable" to="class-ContainerElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-TextSelectable" to="class-ContainerElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-TextElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-TextSelectable" to="class-TextElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Focusable" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Clickable" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Interactive" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-TextSelectable" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-InputElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Focusable" to="class-InputElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Interactive" to="class-InputElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-TextSelectable" to="class-InputElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-SeparatorElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-DialogElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Focusable" to="class-DialogElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-SliderElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Focusable" to="class-SliderElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Clickable" to="class-SliderElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Wheelable" to="class-SliderElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-ProgressElement" arrow="end" style="line-style: dashed" />
+</container>
+</melker>

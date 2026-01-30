@@ -262,6 +262,60 @@ MELKER_NO_ALTERNATE_SCREEN=1 ./melker.ts app.melker
 
 This keeps output in main buffer for scrollback review.
 
+### 6. Stdout Mode (Single Frame Output)
+
+Output a rendered frame directly to stdout without any terminal control:
+
+```bash
+# Basic stdout mode (waits 500ms, then outputs and exits)
+./melker.ts --stdout --trust app.melker
+
+# Custom timeout (100ms)
+./melker.ts --stdout --stdout-timeout 100 --trust app.melker
+
+# Custom dimensions (60x20) - defaults to terminal size if not specified
+./melker.ts --stdout --stdout-width 60 --stdout-height 20 --trust app.melker
+
+# Black and white output (no colors)
+MELKER_THEME=bw-std ./melker.ts --stdout --trust app.melker
+
+# Pipe to file or other tools
+./melker.ts --stdout --trust app.melker > output.txt
+./melker.ts --stdout --trust app.melker | less -R
+```
+
+**CLI Flags:**
+
+| Flag               | Description                                      |
+|--------------------|--------------------------------------------------|
+| `--stdout`         | Enable stdout mode                               |
+| `--stdout-width`   | Output width in columns (default: terminal width) |
+| `--stdout-height`  | Output height in rows (default: terminal height)  |
+| `--stdout-timeout` | Wait time in ms before output (default: 500)     |
+
+**Environment Variables:**
+
+| Variable               | Description                                      |
+|------------------------|--------------------------------------------------|
+| `MELKER_STDOUT_WIDTH`  | Output width in columns                          |
+| `MELKER_STDOUT_HEIGHT` | Output height in rows                            |
+| `MELKER_STDOUT_TIMEOUT`| Wait time in ms before output                    |
+| `MELKER_THEME`         | Use `bw-std` for black and white output          |
+
+**Features:**
+- Terminal stays in normal mode (no raw mode, no alternate screen)
+- No terminal detection queries (sixel/kitty)
+- No input reading or resize handling
+- Output uses ANSI style sequences (colors, bold) but NO cursor positioning
+- Each row printed as a line with newline separator
+- App exits immediately after output
+
+**Use cases:**
+- Quick visual debugging of layout issues
+- Capturing rendered output for comparison/testing
+- Piping output to other tools for analysis
+- CI/automated testing of visual output
+
 ## Common Debug Scenarios
 
 ### Permission Issues
@@ -385,12 +439,13 @@ When using Chrome DevTools Performance profiling, rendering may appear corrupted
 
 ## Key Files
 
-| File                  | Purpose                             |
-|-----------------------|-------------------------------------|
+| File                  | Purpose                               |
+|-----------------------|---------------------------------------|
 | `src/logging.ts`      | Logger class, getLogger(), log levels |
-| `src/headless.ts`     | HeadlessTerminal, HeadlessManager   |
-| `src/debug-server.ts` | MelkerDebugServer, WebSocket API    |
-| `src/dev-tools.ts`    | DevToolsManager, F12 overlay        |
+| `src/headless.ts`     | HeadlessTerminal, HeadlessManager     |
+| `src/stdout.ts`       | Stdout mode, bufferToStdout()         |
+| `src/debug-server.ts` | MelkerDebugServer, WebSocket API      |
+| `src/dev-tools.ts`    | DevToolsManager, F12 overlay          |
 
 ## See Also
 

@@ -56,15 +56,15 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 
 ## Special Tags
 
-| Tag | Description |
-|-----|-------------|
-| `<melker>` | Root wrapper (optional) |
-| `<title>` | Window/terminal title |
-| `<help>` | Markdown help text (shown in DevTools F12 > Help tab) |
-| `<style>` | CSS-like stylesheet rules (selector { props }) |
-| `<script>` | TypeScript/JavaScript code block |
-| `<oauth>` | OAuth2 PKCE configuration |
-| `<policy>` | Permission policy declaration |
+| Tag        | Description                                           |
+|------------|-------------------------------------------------------|
+| `<melker>` | Root wrapper (optional)                               |
+| `<title>`  | Window/terminal title                                 |
+| `<help>`   | Markdown help text (shown in DevTools F12 > Help tab) |
+| `<style>`  | CSS-like stylesheet rules (selector { props })        |
+| `<script>` | TypeScript/JavaScript code block                      |
+| `<oauth>`  | OAuth2 PKCE configuration                             |
+| `<policy>` | Permission policy declaration                         |
 
 ## Help Tag
 
@@ -98,11 +98,11 @@ myapp.melker --foo bar
 
 Scripts can run at different times during app startup:
 
-| Script Type | When | Use Case |
-|-------------|------|----------|
-| `<script>` | Before render | Define exports, setup state |
-| `<script async="init">` | Before render (async) | Async initialization, data fetching |
-| `<script async="ready">` | After first render | Access rendered elements, start timers |
+| Script Type               | When                   | Use Case                              |
+|---------------------------|------------------------|---------------------------------------|
+| `<script>`                | Before render          | Define exports, setup state           |
+| `<script async="init">`   | Before render (async)  | Async initialization, data fetching   |
+| `<script async="ready">`  | After first render     | Access rendered elements, start timers |
 
 ### Initialization Pattern
 
@@ -143,21 +143,21 @@ Melker supports bash-style variable expansion for environment variables and comm
 
 ### Environment Variables
 
-| Syntax | Behavior |
-|--------|----------|
-| `$ENV{VAR}` | Value of VAR, or empty string if unset |
-| `$ENV{VAR:-default}` | Value of VAR, or "default" if unset/empty |
-| `$ENV{VAR:+alternate}` | "alternate" if VAR is set and non-empty, else empty |
-| `$ENV{VAR:?error msg}` | Value of VAR, or throws error if unset/empty |
+| Syntax                  | Behavior                                              |
+|-------------------------|-------------------------------------------------------|
+| `$ENV{VAR}`             | Value of VAR, or empty string if unset                |
+| `$ENV{VAR:-default}`    | Value of VAR, or "default" if unset/empty             |
+| `$ENV{VAR:+alternate}`  | "alternate" if VAR is set and non-empty, else empty   |
+| `$ENV{VAR:?error msg}`  | Value of VAR, or throws error if unset/empty          |
 
 ### Command-Line Arguments
 
-| Syntax | Behavior |
-|--------|----------|
-| `${argv[N]}` | Argument at index N, or empty string |
-| `${argv[N]:-default}` | Argument at index N, or "default" if missing |
-| `${argv[N]:+alternate}` | "alternate" if argument exists, else empty |
-| `${argv[N]:?error msg}` | Argument at index N, or throws error if missing |
+| Syntax                   | Behavior                                              |
+|--------------------------|-------------------------------------------------------|
+| `${argv[N]}`             | Argument at index N, or empty string                  |
+| `${argv[N]:-default}`    | Argument at index N, or "default" if missing          |
+| `${argv[N]:+alternate}`  | "alternate" if argument exists, else empty            |
+| `${argv[N]:?error msg}`  | Argument at index N, or throws error if missing       |
 
 ### Examples
 
@@ -177,48 +177,50 @@ Melker supports bash-style variable expansion for environment variables and comm
 
 ## Components
 
-| Component | Key Props | Notes |
-|-----------|-----------|-------|
-| `<container>` | style, scrollable | Flexbox layout container |
-| `<text>` | id, style | Inner content or `text` prop |
-| `<input>` | id, placeholder, value, format, onKeyPress, onInput | Single-line text input (format: 'text'\|'password') |
-| `<textarea>` | id, placeholder, value, rows, cols, wrap, maxLength | Multi-line text input |
-| `<button>` | id, label, onClick | `<button>Label</button>` or `label="Label"` |
-| `<dialog>` | id, title, open, modal, backdrop, draggable, width, height | Modal overlay (draggable via title bar) |
-| `<checkbox>` | id, title, checked, onChange | Toggle checkbox |
-| `<radio>` | id, title, value, checked, name, onChange | Radio button |
-| `<list>` | style | List container |
-| `<li>` | style | List item |
-| `<tabs>` | id, activeTab, onChange | Tabbed container |
-| `<tab>` | title, disabled | Tab panel (child of tabs) |
-| `<canvas>` | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant chars) |
-| `<img>` | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
-| `<markdown>` | src, text, onLink | Markdown text rendering with image support |
-| `<combobox>` | placeholder, filter, onSelect, maxVisible | Dropdown with text filter |
-| `<select>` | value, onSelect, maxVisible | Dropdown picker (no filter) |
-| `<autocomplete>` | placeholder, onSearch, onSelect, debounce, minChars | Async search dropdown |
-| `<command-palette>` | open, onSelect, width | Modal command picker |
-| `<option>` | value, disabled, shortcut | Child of combobox/select/autocomplete/command-palette |
-| `<group>` | label, system | Groups options under a header |
-| `<slider>` | min, max, value, step, snaps, orientation, showValue, onChange | Range input |
-| `<file-browser>` | path, selectionMode, selectType, filter, showHidden, maxVisible, onSelect, onCancel | File/dir picker |
-| `<data-table>` | columns, rows, footer, selectable, sortColumn, sortDirection, onSelect, onActivate | Array-based table |
-| `<table>` | style | HTML-like table container |
-| `<thead>`, `<tbody>`, `<tfoot>` | scrollable (tbody) | Table sections |
-| `<tr>` | style | Table row |
-| `<td>`, `<th>` | colspan, rowspan, align, valign | Table cells |
-| `<progress>` | value, max, min, width, height, showValue, indeterminate | Progress bar |
+| Component                       | Key Props                                                                          | Notes                                     |
+|---------------------------------|------------------------------------------------------------------------------------|-------------------------------------------|
+| `<container>`                   | style, scrollable                                                                  | Flexbox layout container                  |
+| `<text>`                        | id, style                                                                          | Inner content or `text` prop              |
+| `<input>`                       | id, placeholder, value, format, onKeyPress, onInput                                | Single-line text input (format: 'text'\|'password') |
+| `<textarea>`                    | id, placeholder, value, rows, cols, wrap, maxLength                                | Multi-line text input                     |
+| `<button>`                      | id, label, onClick                                                                 | `<button>Label</button>` or `label="Label"` |
+| `<dialog>`                      | id, title, open, modal, backdrop, draggable, width, height                         | Modal overlay (draggable via title bar)   |
+| `<checkbox>`                    | id, title, checked, onChange                                                       | Toggle checkbox                           |
+| `<radio>`                       | id, title, value, checked, name, onChange                                          | Radio button                              |
+| `<list>`                        | style                                                                              | List container                            |
+| `<li>`                          | style                                                                              | List item                                 |
+| `<tabs>`                        | id, activeTab, onChange                                                            | Tabbed container                          |
+| `<tab>`                         | title, disabled                                                                    | Tab panel (child of tabs)                 |
+| `<canvas>`                      | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant chars)      |
+| `<img>`                         | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
+| `<markdown>`                    | src, text, onLink                                                                  | Markdown text rendering with image support |
+| `<combobox>`                    | placeholder, filter, onSelect, maxVisible                                          | Dropdown with text filter                 |
+| `<select>`                      | value, onSelect, maxVisible                                                        | Dropdown picker (no filter)               |
+| `<autocomplete>`                | placeholder, onSearch, onSelect, debounce, minChars                                | Async search dropdown                     |
+| `<command-palette>`             | open, onSelect, width                                                              | Modal command picker                      |
+| `<option>`                      | value, disabled, shortcut                                                          | Child of combobox/select/autocomplete/command-palette |
+| `<group>`                       | label, system                                                                      | Groups options under a header             |
+| `<slider>`                      | min, max, value, step, snaps, orientation, showValue, onChange                     | Range input                               |
+| `<file-browser>`                | path, selectionMode, selectType, filter, showHidden, maxVisible, onSelect, onCancel | File/dir picker                          |
+| `<data-table>`                  | columns, rows, footer, selectable, sortColumn, sortDirection, onSelect, onActivate | Array-based table                        |
+| `<table>`                       | style                                                                              | HTML-like table container                 |
+| `<thead>`, `<tbody>`, `<tfoot>` | scrollable (tbody)                                                                 | Table sections                            |
+| `<tr>`                          | style                                                                              | Table row                                 |
+| `<td>`, `<th>`                  | colspan, rowspan, align, valign                                                    | Table cells                               |
+| `<progress>`                    | value, max, min, width, height, showValue, indeterminate                           | Progress bar                              |
+| `<connector>`                   | from, to, fromSide, toSide, arrow, label, routing                                  | Draw lines between elements               |
+| `<graph>`                       | type, src, text, scrollable, style                                                 | Mermaid/JSON diagrams (flowchart, sequence, class) |
 
 ## System Command Palette
 
 System commands are **automatically injected** into all command palettes. A "System" group is appended containing:
 
-| Command | Shortcut | Action |
-|---------|----------|--------|
-| Exit | Ctrl+C | Exit the application |
-| AI Assistant | F8 | Open AI accessibility dialog |
-| Dev Tools | F12 | Toggle Dev Tools overlay |
-| Performance Dialog | F6 | Toggle Performance stats |
+| Command            | Shortcut | Action                         |
+|--------------------|----------|--------------------------------|
+| Exit               | Ctrl+C   | Exit the application           |
+| AI Assistant       | F8       | Open AI accessibility dialog   |
+| Dev Tools          | F12      | Toggle Dev Tools overlay       |
+| Performance Dialog | F6       | Toggle Performance stats       |
 
 **Opt-out:** Add `system={false}` to disable system commands:
 ```xml
@@ -324,14 +326,14 @@ CSS-like properties in `style` attribute:
 
 Melker apps automatically persist UI state across restarts. The following element types and properties are saved:
 
-| Element | Property | Condition |
-|---------|----------|-----------|
-| `<input>` | value | Except password inputs |
-| `<textarea>` | value | Always |
-| `<checkbox>` | checked | Always |
-| `<radio>` | checked | Always |
-| `<tabs>` | activeTab | Always |
-| `<container>` | scrollY, scrollX | When `scrollable="true"` |
+| Element       | Property         | Condition                   |
+|---------------|------------------|-----------------------------|
+| `<input>`     | value            | Except password inputs      |
+| `<textarea>`  | value            | Always                      |
+| `<checkbox>`  | checked          | Always                      |
+| `<radio>`     | checked          | Always                      |
+| `<tabs>`      | activeTab        | Always                      |
+| `<container>` | scrollY, scrollX | When `scrollable="true"`    |
 
 **How it works:**
 - State is saved to `~/.melker/state/<app-id>.json` (app-id is a hash of the file path)
@@ -530,12 +532,12 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker
 
 Melker apps can **optionally** be written in markdown files using ASCII box diagrams. This is a **documentation-friendly layer** on top of `.melker` files, not a replacement.
 
-| Use Case | Recommended Format |
-|----------|-------------------|
-| Production apps | `.melker` - precise, easy to edit |
-| Examples & tutorials | `.md` - self-documenting, visual |
-| Quick prototypes | `.md` - sketch layouts visually |
-| Generated/tooling | `.melker` - machine-friendly |
+| Use Case             | Recommended Format                |
+|----------------------|-----------------------------------|
+| Production apps      | `.melker` - precise, easy to edit |
+| Examples & tutorials | `.md` - self-documenting, visual  |
+| Quick prototypes     | `.md` - sketch layouts visually   |
+| Generated/tooling    | `.melker` - machine-friendly      |
 
 The markdown format compiles to `.melker` and provides:
 - Visual ASCII layout diagrams that match the rendered output
@@ -576,12 +578,12 @@ Use `melker-block` code blocks. The **first block is the root**, subsequent bloc
 
 Use special delimiters to define element types without `type:` property lines:
 
-| Syntax | Element | Example |
-|--------|---------|---------|
-| `+--[Title]--+` | button | `+--[Click Me]--+` → `<button label="Click Me" />` |
-| `+--"content"--+` | text | `+--"Hello!"--+` → `<text>Hello!</text>` |
-| `+--{id}--+` | input | `+--{username}--+` → `<input id="username" />` |
-| `+--<type> content--+` | explicit | `+--<checkbox> Remember--+` → `<checkbox title="Remember" />` |
+| Syntax                        | Element    | Example                                                        |
+|-------------------------------|------------|----------------------------------------------------------------|
+| `+--[Title]--+`               | button     | `+--[Click Me]--+` → `<button label="Click Me" />`             |
+| `+--"content"--+`             | text       | `+--"Hello!"--+` → `<text>Hello!</text>`                       |
+| `+--{id}--+`                  | input      | `+--{username}--+` → `<input id="username" />`                 |
+| `+--<type> content--+`        | explicit   | `+--<checkbox> Remember--+` → `<checkbox title="Remember" />`  |
 | `+--<type(param)> content--+` | with param | `+--<radio(plan)> Free--+` → `<radio title="Free" name="plan" />` |
 
 The explicit `<type>` syntax maps content to appropriate props:
@@ -628,14 +630,14 @@ Cycle detection prevents infinite loops (A -> B -> A).
 
 Compact hints on lines starting with `: `:
 
-| Hint | Meaning |
-|------|---------|
-| `r` / `c` | row / column direction (optional - auto-detected) |
-| `0`-`9` | gap value |
-| `<` `=` `>` `~` | justify: start / center / end / space-between |
-| `^` `-` `v` `+` | align: start / center / end / stretch |
-| `*N` | flex: N |
-| `f` | fill (width + height 100%) |
+| Hint            | Meaning                                          |
+|-----------------|--------------------------------------------------|
+| `r` / `c`       | row / column direction (optional - auto-detected) |
+| `0`-`9`         | gap value                                        |
+| `<` `=` `>` `~` | justify: start / center / end / space-between    |
+| `^` `-` `v` `+` | align: start / center / end / stretch            |
+| `*N`            | flex: N                                          |
+| `f`             | fill (width + height 100%)                       |
 
 **Auto-detection:** Flex direction is inferred from child positions - children stacked vertically → column, side by side → row.
 
@@ -756,15 +758,15 @@ Apps can declare required permissions. When a policy is found, the app runs in a
 
 ### Policy Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | App name (shown in approval prompt) |
-| `version` | string | App version |
-| `description` | string | Short description |
-| `comment` | string \| string[] | Detailed comment shown in approval prompt |
-| `permissions` | object | Permission declarations |
-| `config` | object | App-specific configuration values |
-| `configSchema` | object | Schema for env var overrides |
+| Field          | Type               | Description                               |
+|----------------|--------------------|-------------------------------------------|
+| `name`         | string             | App name (shown in approval prompt)       |
+| `version`      | string             | App version                               |
+| `description`  | string             | Short description                         |
+| `comment`      | string \| string[] | Detailed comment shown in approval prompt |
+| `permissions`  | object             | Permission declarations                   |
+| `config`       | object             | App-specific configuration values         |
+| `configSchema` | object             | Schema for env var overrides              |
 
 ### External Policy File
 
@@ -774,15 +776,15 @@ Apps can declare required permissions. When a policy is found, the app runs in a
 
 ### Permission Types
 
-| Permission | Example | Deno Flag |
-|------------|---------|-----------|
-| `read` | `["."]` or `["*"]` | `--allow-read` |
-| `write` | `["/data"]` or `["*"]` | `--allow-write` |
-| `net` | `["api.example.com"]`, `["samesite"]`, or `["*"]` | `--allow-net` |
-| `run` | `["ffmpeg", "ffprobe"]` or `["*"]` | `--allow-run` |
-| `env` | `["MY_VAR"]` or `["*"]` | `--allow-env` |
-| `ffi` | `["libfoo.so"]` or `["*"]` | `--allow-ffi` |
-| `sys` | `["hostname", "osRelease"]` or `["*"]` | `--allow-sys` |
+| Permission | Example                                            | Deno Flag       |
+|------------|----------------------------------------------------|-----------------|
+| `read`     | `["."]` or `["*"]`                                 | `--allow-read`  |
+| `write`    | `["/data"]` or `["*"]`                             | `--allow-write` |
+| `net`      | `["api.example.com"]`, `["samesite"]`, or `["*"]` | `--allow-net`   |
+| `run`      | `["ffmpeg", "ffprobe"]` or `["*"]`                 | `--allow-run`   |
+| `env`      | `["MY_VAR"]` or `["*"]`                            | `--allow-env`   |
+| `ffi`      | `["libfoo.so"]` or `["*"]`                         | `--allow-ffi`   |
+| `sys`      | `["hostname", "osRelease"]` or `["*"]`             | `--allow-sys`   |
 
 **Special net value - `"samesite"`**: For remote apps, `"samesite"` expands to the host of the app's source URL. This allows apps to load resources (images, data) from their origin without hardcoding the host:
 
@@ -798,13 +800,13 @@ For `https://example.com/apps/myapp.melker`, `"samesite"` expands to `example.co
 
 ### Permission Shortcuts
 
-| Shortcut | Description |
-|----------|-------------|
-| `ai` | AI/media: swift, ffmpeg, ffprobe, pactl, ffplay + openrouter.ai |
-| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe |
-| `keyring` | Credentials: security, secret-tool, powershell |
-| `browser` | Browser opening: open, xdg-open, cmd |
-| `shader` | Allow per-pixel shaders on canvas/img elements |
+| Shortcut    | Description                                                 |
+|-------------|-------------------------------------------------------------|
+| `ai`        | AI/media: swift, ffmpeg, ffprobe, pactl, ffplay + openrouter.ai |
+| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe           |
+| `keyring`   | Credentials: security, secret-tool, powershell              |
+| `browser`   | Browser opening: open, xdg-open, cmd                        |
+| `shader`    | Allow per-pixel shaders on canvas/img elements              |
 
 ```json
 {

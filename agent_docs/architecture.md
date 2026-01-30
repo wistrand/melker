@@ -173,51 +173,51 @@ When `stop()` is called:
 
 ## Components
 
-| Component       | File                                | Notes                          |
-|-----------------|-------------------------------------|--------------------------------|
-| Container       | `container.ts`                      | Flexbox layout, scrolling      |
-| Text            | `text.ts`                           | Text display with wrapping     |
-| Input           | `input.ts`                          | Single-line text input         |
-| Textarea        | `textarea.ts`                       | Multi-line text input          |
-| Button          | `button.ts`                         | Uses `label` prop or content   |
-| Dialog          | `dialog.ts`                         | Modal overlay, draggable       |
-| Canvas          | `canvas.ts`                         | Pixel graphics, onPaint, onShader |
-| Img             | `img.ts`                            | Image display (PNG/JPEG/GIF)   |
-| Video           | `video.ts`                          | Video playback via FFmpeg      |
-| Markdown        | `markdown.ts`                       | Markdown with image support    |
-| Checkbox        | `checkbox.ts`                       | Toggle checkbox                |
-| Radio           | `radio.ts`                          | Radio button                   |
-| List/Li         | `list.ts`, `li.ts`                  | List container and items       |
-| Table           | `table.ts`                          | Data table with sections       |
-| Data Table      | `data-table.ts`                     | High-performance array-based   |
-| Tabs/Tab        | `tabs.ts`, `tab.ts`                 | Tabbed interface               |
-| Progress        | `progress.ts`                       | Progress bar                   |
-| Slider          | `slider.ts`                         | Range input                    |
-| Combobox        | `filterable-list/combobox.ts`       | Dropdown with filter           |
-| Select          | `filterable-list/select.ts`         | Dropdown picker                |
-| Autocomplete    | `filterable-list/autocomplete.ts`   | Async search                   |
-| Command Palette | `filterable-list/command-palette.ts` | Modal commands                 |
-| File Browser    | `file-browser/file-browser.ts`      | Directory navigation           |
+| Component       | File                                 | Notes                             |
+|-----------------|--------------------------------------|-----------------------------------|
+| Container       | `container.ts`                       | Flexbox layout, scrolling         |
+| Text            | `text.ts`                            | Text display with wrapping        |
+| Input           | `input.ts`                           | Single-line text input            |
+| Textarea        | `textarea.ts`                        | Multi-line text input             |
+| Button          | `button.ts`                          | Uses `label` prop or content      |
+| Dialog          | `dialog.ts`                          | Modal overlay, draggable          |
+| Canvas          | `canvas.ts`                          | Pixel graphics, onPaint, onShader |
+| Img             | `img.ts`                             | Image display (PNG/JPEG/GIF)      |
+| Video           | `video.ts`                           | Video playback via FFmpeg         |
+| Markdown        | `markdown.ts`                        | Markdown with image support       |
+| Checkbox        | `checkbox.ts`                        | Toggle checkbox                   |
+| Radio           | `radio.ts`                           | Radio button                      |
+| List/Li         | `list.ts`, `li.ts`                   | List container and items          |
+| Table           | `table.ts`                           | Data table with sections          |
+| Data Table      | `data-table.ts`                      | High-performance array-based      |
+| Tabs/Tab        | `tabs.ts`, `tab.ts`                  | Tabbed interface                  |
+| Progress        | `progress.ts`                        | Progress bar                      |
+| Slider          | `slider.ts`                          | Range input                       |
+| Combobox        | `filterable-list/combobox.ts`        | Dropdown with filter              |
+| Select          | `filterable-list/select.ts`          | Dropdown picker                   |
+| Autocomplete    | `filterable-list/autocomplete.ts`    | Async search                      |
+| Command Palette | `filterable-list/command-palette.ts` | Modal commands                    |
+| File Browser    | `file-browser/file-browser.ts`       | Directory navigation              |
 
 ## Key Files
 
-| File               | Purpose                       |
-|--------------------|-------------------------------|
+| File               | Purpose                        |
+|--------------------|--------------------------------|
 | `src/engine.ts`    | Main engine, lifecycle, events |
-| `src/layout.ts`    | Flexbox layout calculations   |
-| `src/rendering.ts` | Render pipeline, overlays     |
-| `src/buffer.ts`    | Dual-buffer system            |
-| `src/renderer.ts`  | ANSI terminal output          |
-| `src/focus.ts`     | Focus management              |
-| `src/theme.ts`     | Theming system                |
-| `src/input.ts`     | Raw terminal input, mouse     |
-| `src/template.ts`  | .melker file parsing          |
-| `src/element.ts`   | Element creation, registry    |
-| `src/document.ts`  | Document class                |
-| `src/events.ts`    | Event system                  |
-| `src/types.ts`     | Core type definitions         |
-| `src/sizing.ts`    | Box model                     |
-| `src/viewport.ts`  | Scrolling support             |
+| `src/layout.ts`    | Flexbox layout calculations    |
+| `src/rendering.ts` | Render pipeline, overlays      |
+| `src/buffer.ts`    | Dual-buffer system             |
+| `src/renderer.ts`  | ANSI terminal output           |
+| `src/focus.ts`     | Focus management               |
+| `src/theme.ts`     | Theming system                 |
+| `src/input.ts`     | Raw terminal input, mouse      |
+| `src/template.ts`  | .melker file parsing           |
+| `src/element.ts`   | Element creation, registry     |
+| `src/document.ts`  | Document class                 |
+| `src/events.ts`    | Event system                   |
+| `src/types.ts`     | Core type definitions          |
+| `src/sizing.ts`    | Box model                      |
+| `src/viewport.ts`  | Scrolling support              |
 
 ## See Also
 

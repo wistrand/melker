@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    participant E as Engine
+    participant S as SixelDetect
+    participant K as KittyDetect
+    participant I as InputLoop
+    participant T as Terminal
+
+    Note over E: Engine starts
+
+    E->>S: startSixelDetection()
+    S->>S: detectMultiplexer()
+    S->>S: detectRemoteSession()
+    S->>S: checkTerminalEnv()
+
+    Note over S: Phase 1: DA1
+    S->>T: ESC[c
+    T-->>I: ESC[?...c
+    I->>S: feedDetectionInput()
+    S->>S: parseDA1Response()
+
+    Note over S: Phase 2: Colors
+    S->>T: ESC[?1;1S
+    T-->>I: ESC[?1;0;256S
+    I->>S: feedDetectionInput()
+
+    Note over S: Phase 3: Geometry
+    S->>T: ESC[?2;1S
+    T-->>I: ESC[?2;0;W;HS
+    I->>S: feedDetectionInput()
+
+    Note over S: Phase 4: Cell Size
+    S->>T: ESC[16t
+    T-->>I: ESC[6;H;Wt
+    I->>S: feedDetectionInput()
+    S->>S: parseCellSizeResponse()
+
+    S-->>E: SixelCapabilities
+
+    E->>K: startKittyDetection()
+    K->>K: detectMultiplexer()
+    K->>K: checkTerminalEnv()
+
+    Note over K: Kitty Query
+    K->>T: ESC_Gi=31;...ESC\
+    T-->>I: ESC_Gi=31;OKESC\
+    I->>K: feedKittyDetectionInput()
+    K->>K: parseKittyResponse()
+
+    K-->>E: KittyCapabilities
+
+    Note over E: Detection Complete

@@ -59,7 +59,7 @@ export class MarkdownCodeRenderer {
         const graphElement = new GraphElement({
           id: `md-mermaid-${i}`,
           type: 'mermaid',
-          content: code.trim(),
+          text: code.trim(),
         }, []);
         // GraphElement generates children automatically when getGeneratedElement() is called
         this._mermaidElements.set(cacheKey, graphElement);

@@ -35,6 +35,7 @@
   padding: 0 1;
   flex-shrink: 0;
 }
+.node-rounded { border: rounded; }
 .node-diamond { border: double; }
 .node-hexagon { border: thick; }
 </style>
@@ -43,13 +44,13 @@
   <container id="graph-node-A" class="node">
     <text>Rectangle</text>
   </container>
-  <container id="graph-node-B" class="node">
+  <container id="graph-node-B" class="node node-rounded">
     <text>Rounded</text>
   </container>
   <container id="graph-node-C" class="node node-diamond">
     <text>Diamond</text>
   </container>
-  <container id="graph-node-D" class="node">
+  <container id="graph-node-D" class="node node-rounded">
     <text>Circle</text>
   </container>
 

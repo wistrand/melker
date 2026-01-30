@@ -35,6 +35,7 @@
   padding: 0 1;
   flex-shrink: 0;
 }
+.node-rounded { border: rounded; }
 .node-diamond { border: double; }
 .node-hexagon { border: thick; }
 </style>

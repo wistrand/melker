@@ -223,6 +223,7 @@ See [config-architecture.md](agent_docs/config-architecture.md) for full details
 
 ```bash
 ./melker.ts app.melker              # Direct execution
+./melker.ts diagram.mmd             # Run mermaid file directly (no approval needed)
 ./melker.ts --watch app.melker      # Auto-reload on changes
 ./melker.ts --trust app.melker      # CI/scripts (bypass approval prompt)
 ./melker.ts --debug app.melker      # Debug mode
@@ -231,6 +232,8 @@ See [config-architecture.md](agent_docs/config-architecture.md) for full details
 ./melker.ts --color=always app.melker # Force ANSI colors even when piped
 ./melker.ts --lsp                   # Start LSP server
 ```
+
+**Mermaid files:** Plain `.mmd` files can be run directly and require no permissions or approval prompts.
 
 **Important:** Use `--trust` for CI and automated scripts to bypass interactive approval.
 

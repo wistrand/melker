@@ -67,8 +67,8 @@ export interface SystemInfo {
 export interface DevToolsState {
   content: string;
   filePath: string;
-  type: 'melker' | 'md';
-  convertedContent?: string;  // For .md files: the converted .melker content
+  type: 'melker' | 'md' | 'mmd';
+  convertedContent?: string;  // For .md/.mmd files: the converted .melker content
   policy?: MelkerPolicy;      // Policy if present
   appDir?: string;            // App directory for resolving policy paths
   sourceUrl?: string;         // Source URL for remote apps (for "samesite" net permission)
@@ -88,7 +88,7 @@ export class DevToolsManager {
   /**
    * Set the source content to display
    */
-  setSource(content: string, filePath: string, type: 'melker' | 'md', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, sourceUrl?: string, systemInfo?: SystemInfo, helpContent?: string): void {
+  setSource(content: string, filePath: string, type: 'melker' | 'md' | 'mmd', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, sourceUrl?: string, systemInfo?: SystemInfo, helpContent?: string): void {
     this._state = { content, filePath, type, convertedContent, policy, appDir, sourceUrl, systemInfo, helpContent };
   }
 
@@ -155,8 +155,8 @@ export class DevToolsManager {
     // Build tabs array in order: Help (if present), Source, Policy (if present), Markdown (if .md file), System, Actions
     const tabs: Element[] = [];
 
-    // Tab 0: Source (Melker source or converted content for .md files)
-    const sourceContent = this._state.type === 'md' && this._state.convertedContent
+    // Tab 0: Source (Melker source or converted content for .md/.mmd files)
+    const sourceContent = (this._state.type === 'md' || this._state.type === 'mmd') && this._state.convertedContent
       ? this._state.convertedContent
       : this._state.content;
     tabs.push(melker`
@@ -205,6 +205,18 @@ export class DevToolsManager {
         <tab id="dev-tools-tab-md" title="Markdown">
           <container id="dev-tools-scroll-md" scrollable=${true} focusable=${true} style=${scrollStyle}>
             <markdown id="dev-tools-markdown-content" text=${mdContent} src=${mdSrc} style=${{ textWrap: 'wrap' }} />
+          </container>
+        </tab>
+      `);
+    }
+
+    // Tab 3b: Mermaid (if .mmd file)
+    if (this._state.type === 'mmd') {
+      const mmdContent = this._state.content;
+      tabs.push(melker`
+        <tab id="dev-tools-tab-mmd" title="Mermaid">
+          <container id="dev-tools-scroll-mmd" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <text id="dev-tools-mermaid-content" text=${mmdContent} style=${{ textWrap: 'wrap' }} />
           </container>
         </tab>
       `);

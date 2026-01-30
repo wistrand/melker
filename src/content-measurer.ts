@@ -31,9 +31,11 @@ export class ContentMeasurer {
     const containerStyle = container.props?.style || {};
     const gap = this._parseNumberValue(containerStyle.gap) || 0;
     const flexDirection = containerStyle.flexDirection || containerStyle['flex-direction'] || 'column';
-    const isColumn = flexDirection === 'column';
+    const isRow = flexDirection === 'row' || flexDirection === 'row-reverse';
 
     let totalHeight = 0;
+    let totalWidth = 0;
+    let maxHeight = 0;
     let maxWidth = 0;
     const childMeasurements: Array<{ element: Element; size: Size; margin: any }> = [];
     let visibleChildCount = 0;
@@ -42,17 +44,31 @@ export class ContentMeasurer {
       const childSize = this.measureElement(child, availableWidth);
       const childMargin = this._getChildMargin(child);
 
-      totalHeight += childSize.height + (childMargin.top || 0) + (childMargin.bottom || 0);
-      maxWidth = Math.max(maxWidth, childSize.width + (childMargin.left || 0) + (childMargin.right || 0));
+      const childHeightWithMargin = childSize.height + (childMargin.top || 0) + (childMargin.bottom || 0);
+      const childWidthWithMargin = childSize.width + (childMargin.left || 0) + (childMargin.right || 0);
+
+      totalHeight += childHeightWithMargin;
+      totalWidth += childWidthWithMargin;
+      maxHeight = Math.max(maxHeight, childHeightWithMargin);
+      maxWidth = Math.max(maxWidth, childWidthWithMargin);
 
       childMeasurements.push({ element: child, size: childSize, margin: childMargin });
       visibleChildCount++;
     }
 
-    // Add gaps between children (for column layout)
-    if (isColumn && visibleChildCount > 1 && gap > 0) {
-      totalHeight += (visibleChildCount - 1) * gap;
+    // Add gaps between children
+    if (visibleChildCount > 1 && gap > 0) {
+      if (isRow) {
+        totalWidth += (visibleChildCount - 1) * gap;
+      } else {
+        totalHeight += (visibleChildCount - 1) * gap;
+      }
     }
+
+    // For row layout: width is sum, height is max
+    // For column layout: width is max, height is sum
+    const resultWidth = isRow ? totalWidth : maxWidth;
+    const resultHeight = isRow ? maxHeight : totalHeight;
 
     // Debug: Uncomment to debug content measurement issues
     // if (container.props?.scrollable && container.props?.id) {
@@ -70,7 +86,7 @@ export class ContentMeasurer {
     //   });
     // }
 
-    return { width: maxWidth, height: totalHeight };
+    return { width: maxWidth, height: resultHeight };
   }
 
   /**

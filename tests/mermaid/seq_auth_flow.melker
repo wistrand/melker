@@ -23,13 +23,21 @@
 .lifeline {
   text-align: center;
 }
+.lifeline-bar {
+  border-left: thin;
+  height: 2;
+}
 .note {
   text-align: center;
+}
+.note-bar {
+  border-left: thin;
+  height: 2;
 }
 </style>
 
 <container style="padding: 1; flex-direction: column" scrollable="true">
-  <table class="sequence-table" border="none" columnBorders="false" cellPadding="14">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="1">
     <thead>
       <tr>
         <th id="seq-U" class="participant">User</th>
@@ -41,101 +49,101 @@
     <tbody>
       <!-- U -> A: Click Login -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-0-U" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-0-A" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-U" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-A" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- A -> I: Redirect to /authorize -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-1-A" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-1-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-A" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> U: Show login form -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-2-U" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-2-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-U" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- U -> I: Enter credentials -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-3-U" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-3-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-U" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> I: Validate credentials -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-4-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Generate auth code -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Generate auth code</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Generate auth code</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> A: Redirect with code -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-5-A" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-5-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-A" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- A -> I: POST /token with code -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-6-A" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-6-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-A" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> A: Access + Refresh tokens -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-7-A" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-7-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-A" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Store tokens securely -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Store tokens securely</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Store tokens securely</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- A -> R: GET /api/data + Bearer token -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-8-A" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-8-R" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-A" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-R" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- R -> R: Validate token -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-9-R" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-R" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- R -> A: Protected data -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-10-A" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-10-R" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-A" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-R" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- A -> U: Display data -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-11-U" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-11-A" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-U" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-A" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
     </tbody>
     <tfoot>

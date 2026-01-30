@@ -12,14 +12,14 @@
   padding: 1;
   display: flex;
   flex-direction: column;
-  gap: 3;
+  gap: 5;
 }
 .class-diagram-row { flex-direction: row; }
 .class-diagram-col { flex-direction: column; }
 
 .class-level {
   display: flex;
-  gap: 3;
+  gap: 5;
 }
 .class-level-row { flex-direction: row; }
 .class-level-col { flex-direction: column; }
@@ -51,6 +51,9 @@
       <separator />
       <text>+fly()</text>
     </container>
+    <container id="class-Owner" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Owner</text>
+    </container>
   </container>
   <container class="class-level class-level-row">
     <container id="class-Dog" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
@@ -68,15 +71,10 @@
       <text>+meow()</text>
     </container>
   </container>
-  <container class="class-level class-level-row">
-    <container id="class-Owner" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
-      <text class="class-name">Owner</text>
-    </container>
-  </container>
 
   <!-- Relationships -->
-  <connector from="class-Animal" to="class-Dog" arrow="end" />
-  <connector from="class-Animal" to="class-Cat" arrow="end" />
+  <connector from="class-Animal" to="class-Dog" arrow="start" />
+  <connector from="class-Animal" to="class-Cat" arrow="start" />
   <connector from="class-Dog" to="class-Owner" arrow="end" label="1 owns *" />
 </container>
 </melker>

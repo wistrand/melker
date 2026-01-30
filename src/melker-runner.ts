@@ -27,6 +27,7 @@ import { getGlobalErrorOverlay } from './error-overlay.ts';
 // Policy imports (for View Source feature only)
 import {
   loadPolicy,
+  loadPolicyFromContent,
   formatPolicy,
   getApprovalFilePath,
   type MelkerPolicy,
@@ -324,7 +325,7 @@ export async function runMelkerFile(
   filepath: string,
   options: { printTree?: boolean; printJson?: boolean; debug?: boolean; noLoad?: boolean; useCache?: boolean; watch?: boolean } = {},
   templateArgs: string[] = [],
-  viewSource?: { content: string; path: string; type: 'md' | 'melker'; convertedContent?: string },
+  viewSource?: { content: string; path: string; type: 'md' | 'melker' | 'mmd'; convertedContent?: string },
   preloadedContent?: string
 ): Promise<RunMelkerResult | void> {
   try {
@@ -466,7 +467,11 @@ export async function runMelkerFile(
 
     // Load policy for View Source feature and config
     let appPolicy: MelkerPolicy;
-    if (!isUrl(filepath)) {
+    if (preloadedContent) {
+      // Use policy from generated content (e.g., for .mmd files)
+      const policyResult = await loadPolicyFromContent(preloadedContent, filepath);
+      appPolicy = policyResult.policy ?? createAutoPolicy();
+    } else if (!isUrl(filepath)) {
       const absolutePath = filepath.startsWith('/') ? filepath : resolve(Deno.cwd(), filepath);
       const policyResult = await loadPolicy(absolutePath);
       appPolicy = policyResult.policy ?? createAutoPolicy();
@@ -903,7 +908,7 @@ export async function watchAndRun(
   filepath: string,
   options: { printTree?: boolean; printJson?: boolean; debug?: boolean; noLoad?: boolean; useCache?: boolean; watch?: boolean },
   templateArgs: string[],
-  viewSource?: { content: string; path: string; type: 'md' | 'melker'; convertedContent?: string },
+  viewSource?: { content: string; path: string; type: 'md' | 'melker' | 'mmd'; convertedContent?: string },
   preloadedContent?: string
 ): Promise<void> {
   const { getLogger } = await import('./logging.ts');
@@ -1099,7 +1104,12 @@ function printUsage(): void {
   console.log('This is typically invoked by melker-launcher.ts with restricted permissions.');
   console.log('');
   console.log('Usage:');
-  console.log('  deno run [flags] melker-runner.ts <file.melker> [options]');
+  console.log('  deno run [flags] melker-runner.ts <file> [options]');
+  console.log('');
+  console.log('Supported file types:');
+  console.log('  .melker        Melker UI template');
+  console.log('  .md            Markdown document');
+  console.log('  .mmd           Mermaid diagram (rendered as graph)');
   console.log('');
   console.log('Options:');
   console.log('  --print-tree   Display the element tree structure and exit');
@@ -1172,7 +1182,7 @@ async function main(): Promise<void> {
   const filepath = filepathIndex >= 0 ? remainingArgs[filepathIndex] : undefined;
 
   if (!filepath) {
-    console.error('Error: No .melker or .md file specified');
+    console.error('Error: No .melker, .md, or .mmd file specified');
     Deno.exit(1);
   }
 
@@ -1246,9 +1256,47 @@ async function main(): Promise<void> {
     }
   }
 
+  // Handle .mmd (mermaid) files - wrap in <graph> component
+  if (filepath.endsWith('.mmd')) {
+    try {
+      const mmdContent = await loadContent(filepath);
+      // Wrap mermaid content in a melker template with graph component
+      const melkerContent = `<melker>
+<policy>{"name": "${filepath}"}</policy>
+<graph type="mermaid">
+${mmdContent}
+</graph>
+</melker>`;
+
+      const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
+      const mmdTemplateArgs = [absoluteFilepath, ...remainingArgs.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
+
+      if (options.watch) {
+        await watchAndRun(absoluteFilepath, options, mmdTemplateArgs, {
+          content: mmdContent,
+          path: absoluteFilepath,
+          type: 'mmd',
+          convertedContent: melkerContent,
+        }, melkerContent);
+      } else {
+        await runMelkerFile(absoluteFilepath, options, mmdTemplateArgs, {
+          content: mmdContent,
+          path: absoluteFilepath,
+          type: 'mmd',
+          convertedContent: melkerContent,
+        }, melkerContent);
+      }
+
+      return;
+    } catch (error) {
+      console.error(`Error running mermaid file: ${error instanceof Error ? error.message : String(error)}`);
+      Deno.exit(1);
+    }
+  }
+
   // Validate extension
   if (!filepath.endsWith('.melker')) {
-    console.error('Error: File must have .melker or .md extension');
+    console.error('Error: File must have .melker, .md, or .mmd extension');
     Deno.exit(1);
   }
 

@@ -947,6 +947,7 @@ The `<connector>` component draws a line between two elements identified by thei
 - Side selection defaults to 'auto' which chooses the best side based on relative positions
 - Lines are drawn using box-drawing characters (─ │ ┌ ┐ └ ┘)
 - Arrow heads use Unicode triangles (▶ ◀ ▲ ▼)
+- Labels are automatically clipped to fit within the horizontal span of the line
 
 ## Graph Component
 

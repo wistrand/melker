@@ -2,11 +2,36 @@
 
 ## Overview
 
-Melker supports [Mermaid](https://mermaid.js.org/) diagrams in two ways:
-1. **In markdown** - Fenced code blocks with `mermaid` language identifier
-2. **Direct component** - `<graph type="mermaid">` element in .melker files
+Melker supports [Mermaid](https://mermaid.js.org/) diagrams in three ways:
+1. **Direct .mmd files** - Run mermaid files directly with `melker diagram.mmd`
+2. **In markdown** - Fenced code blocks with `mermaid` language identifier
+3. **Direct component** - `<graph type="mermaid">` element in .melker files
 
 Diagrams are rendered as interactive elements with Unicode box drawing, supporting focus, keyboard navigation, and mouse interaction.
+
+---
+
+## Running .mmd Files Directly
+
+Melker can run `.mmd` (Mermaid) files directly without wrapping them in a `.melker` file:
+
+```bash
+melker diagram.mmd           # Run a mermaid file
+melker --watch diagram.mmd   # Watch mode with auto-reload
+melker --stdout diagram.mmd  # Output single frame to stdout
+```
+
+Plain `.mmd` files (without `%%melker` directives) require no permissions and run without approval prompts.
+
+### Adding Custom Configuration
+
+Use `%%melker` comments to add policy or configuration:
+
+```mermaid
+%%melker policy: {"name": "My Diagram", "permissions": {"read": ["."]}}
+flowchart LR
+    A --> B --> C
+```
 
 ---
 

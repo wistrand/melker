@@ -12,14 +12,14 @@
   padding: 1;
   display: flex;
   flex-direction: column;
-  gap: 3;
+  gap: 5;
 }
 .class-diagram-row { flex-direction: row; }
 .class-diagram-col { flex-direction: column; }
 
 .class-level {
   display: flex;
-  gap: 3;
+  gap: 5;
 }
 .class-level-row { flex-direction: row; }
 .class-level-col { flex-direction: column; }
@@ -183,34 +183,34 @@
   </container>
 
   <!-- Relationships -->
-  <connector from="class-Element" to="class-ContainerElement" arrow="end" />
-  <connector from="class-Element" to="class-TextElement" arrow="end" />
-  <connector from="class-Element" to="class-ButtonElement" arrow="end" />
-  <connector from="class-Element" to="class-InputElement" arrow="end" />
-  <connector from="class-Element" to="class-SeparatorElement" arrow="end" />
-  <connector from="class-Element" to="class-DialogElement" arrow="end" />
-  <connector from="class-Element" to="class-SliderElement" arrow="end" />
-  <connector from="class-Element" to="class-ProgressElement" arrow="end" />
-  <connector from="class-Renderable" to="class-ContainerElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-TextSelectable" to="class-ContainerElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Renderable" to="class-TextElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-TextSelectable" to="class-TextElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Renderable" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Focusable" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Clickable" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Interactive" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-TextSelectable" to="class-ButtonElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Renderable" to="class-InputElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Focusable" to="class-InputElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Interactive" to="class-InputElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-TextSelectable" to="class-InputElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Renderable" to="class-SeparatorElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Renderable" to="class-DialogElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Focusable" to="class-DialogElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Renderable" to="class-SliderElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Focusable" to="class-SliderElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Clickable" to="class-SliderElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Wheelable" to="class-SliderElement" arrow="end" style="line-style: dashed" />
-  <connector from="class-Renderable" to="class-ProgressElement" arrow="end" style="line-style: dashed" />
+  <connector from="class-Element" to="class-ContainerElement" arrow="start" />
+  <connector from="class-Element" to="class-TextElement" arrow="start" />
+  <connector from="class-Element" to="class-ButtonElement" arrow="start" />
+  <connector from="class-Element" to="class-InputElement" arrow="start" />
+  <connector from="class-Element" to="class-SeparatorElement" arrow="start" />
+  <connector from="class-Element" to="class-DialogElement" arrow="start" />
+  <connector from="class-Element" to="class-SliderElement" arrow="start" />
+  <connector from="class-Element" to="class-ProgressElement" arrow="start" />
+  <connector from="class-Renderable" to="class-ContainerElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-TextSelectable" to="class-ContainerElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-TextElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-TextSelectable" to="class-TextElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-ButtonElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Focusable" to="class-ButtonElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Clickable" to="class-ButtonElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Interactive" to="class-ButtonElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-TextSelectable" to="class-ButtonElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-InputElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Focusable" to="class-InputElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Interactive" to="class-InputElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-TextSelectable" to="class-InputElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-SeparatorElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-DialogElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Focusable" to="class-DialogElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-SliderElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Focusable" to="class-SliderElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Clickable" to="class-SliderElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Wheelable" to="class-SliderElement" arrow="start" style="line-style: dashed" />
+  <connector from="class-Renderable" to="class-ProgressElement" arrow="start" style="line-style: dashed" />
 </container>
 </melker>

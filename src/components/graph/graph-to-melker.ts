@@ -118,6 +118,9 @@ function escapeXml(str: string): string {
  */
 function getNodeClass(shape: NodeShape): string {
   switch (shape) {
+    case 'rounded':
+    case 'circle':
+      return 'node node-rounded';
     case 'diamond':
       return 'node node-diamond';
     case 'hexagon':
@@ -150,14 +153,16 @@ function getNodeContent(node: GraphNode, indentLevel: number, indentFn: (level: 
  * Get inline style for node based on shape
  */
 function getNodeInlineStyle(shape: NodeShape): string {
-  const base = 'border: thin; padding: 0 1';
   switch (shape) {
+    case 'rounded':
+    case 'circle':
+      return 'border: rounded; padding: 0 1';
     case 'diamond':
       return 'border: double; padding: 0 1';
     case 'hexagon':
       return 'border: thick; padding: 0 1';
     default:
-      return base;
+      return 'border: thin; padding: 0 1';
   }
 }
 
@@ -360,6 +365,7 @@ export function graphToMelker(content: string, options: GraphToMelkerOptions): s
   lines.push('  padding: 0 1;');
   lines.push('  flex-shrink: 0;');
   lines.push('}');
+  lines.push('.node-rounded { border: rounded; }');
   lines.push('.node-diamond { border: double; }');
   lines.push('.node-hexagon { border: thick; }');
   lines.push('</style>');
@@ -458,32 +464,9 @@ export function sequenceToMelker(content: string, options: { name?: string; cont
   // Total columns = number of participants
   const totalCols = seq.participants.length;
 
-  // Calculate the longest message label to determine cellPadding
-  let maxLabelLen = 0;
-  const getParticipantIdx = (id: string) => seq.participants.findIndex(p => p.id === id);
-
-  const processEvents = (events: SequenceEvent[]) => {
-    for (const event of events) {
-      if (event.type === 'message' && event.message.label) {
-        const fromIdx = getParticipantIdx(event.message.from);
-        const toIdx = getParticipantIdx(event.message.to);
-        if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
-          const spanCols = Math.abs(toIdx - fromIdx);
-          // Each column in the span needs (labelLen / spanCols) width
-          const widthPerCol = Math.ceil(event.message.label.length / spanCols);
-          maxLabelLen = Math.max(maxLabelLen, widthPerCol);
-        }
-      } else if (event.type === 'fragment') {
-        for (const section of event.fragment.sections) {
-          processEvents(section.events);
-        }
-      }
-    }
-  };
-  processEvents(seq.events);
-
-  // Calculate cellPadding needed: half the max label length on each side, minus default padding
-  const cellPadding = Math.max(1, Math.ceil(maxLabelLen / 2) + 2);
+  // Use a fixed reasonable cellPadding - labels will be clipped if too long
+  // This prevents the table from becoming excessively wide with long messages
+  const cellPadding = 1;
 
   lines.push('<melker>');
   lines.push('<policy>');
@@ -513,8 +496,16 @@ export function sequenceToMelker(content: string, options: { name?: string; cont
   lines.push('.lifeline {');
   lines.push('  text-align: center;');
   lines.push('}');
+  lines.push('.lifeline-bar {');
+  lines.push('  border-left: thin;');
+  lines.push('  height: 2;');
+  lines.push('}');
   lines.push('.note {');
   lines.push('  text-align: center;');
+  lines.push('}');
+  lines.push('.note-bar {');
+  lines.push('  border-left: thin;');
+  lines.push('  height: 2;');
   lines.push('}');
   lines.push('</style>');
   lines.push('');
@@ -562,11 +553,11 @@ export function sequenceToMelker(content: string, options: { name?: string; cont
 
       // Participant column with lifeline - ID on container for connector alignment
       if (isFrom) {
-        lines.push(`${indent(4)}<td class="lifeline"><container id="seq-msg-${msgIndex}-${fromId}" style="border-left: thin"><text text="" /></container></td>`);
+        lines.push(`${indent(4)}<td class="lifeline"><container id="seq-msg-${msgIndex}-${fromId}" class="lifeline-bar"><text text="" /></container></td>`);
       } else if (isTo) {
-        lines.push(`${indent(4)}<td class="lifeline"><container id="seq-msg-${msgIndex}-${toId}" style="border-left: thin"><text text="" /></container></td>`);
+        lines.push(`${indent(4)}<td class="lifeline"><container id="seq-msg-${msgIndex}-${toId}" class="lifeline-bar"><text text="" /></container></td>`);
       } else {
-        lines.push(`${indent(4)}<td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>`);
+        lines.push(`${indent(4)}<td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>`);
       }
     }
     lines.push(`${indent(3)}</tr>`);
@@ -608,9 +599,9 @@ export function sequenceToMelker(content: string, options: { name?: string; cont
 
         if (isTarget && (note.position === 'over' || note.position === 'right')) {
           // Note cell: container with border-left maintains lifeline, text wraps inside
-          lines.push(`${indent(4)}<td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">${escapeXml(note.text)}</text></container></td>`);
+          lines.push(`${indent(4)}<td class="note"><container class="note-bar"><text style="text-wrap: wrap">${escapeXml(note.text)}</text></container></td>`);
         } else {
-          lines.push(`${indent(4)}<td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>`);
+          lines.push(`${indent(4)}<td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>`);
         }
       }
 
@@ -696,6 +687,12 @@ export function classToMelker(content: string, options: { name?: string; contain
   const diagram = parser.parse(content);
 
   // Convert to graph for layout calculation
+  // Only use inheritance-type relationships for layout (defines class hierarchy)
+  // Other relationships (association, dependency) don't affect vertical positioning
+  const hierarchyRelations = diagram.relations.filter(r =>
+    r.type === 'inheritance' || r.type === 'realization'
+  );
+
   const graphDef: GraphDefinition = {
     direction: diagram.direction || 'TB',
     nodes: diagram.classes.map(c => ({
@@ -703,7 +700,7 @@ export function classToMelker(content: string, options: { name?: string; contain
       label: c.label || c.id,
       shape: 'rect' as NodeShape,
     })),
-    edges: diagram.relations.map(r => ({
+    edges: hierarchyRelations.map(r => ({
       from: r.from,
       to: r.to,
       label: r.label,
@@ -738,14 +735,14 @@ export function classToMelker(content: string, options: { name?: string; contain
   lines.push('  padding: 1;');
   lines.push('  display: flex;');
   lines.push('  flex-direction: column;');
-  lines.push('  gap: 3;');
+  lines.push('  gap: 5;');
   lines.push('}');
   lines.push('.class-diagram-row { flex-direction: row; }');
   lines.push('.class-diagram-col { flex-direction: column; }');
   lines.push('');
   lines.push('.class-level {');
   lines.push('  display: flex;');
-  lines.push('  gap: 3;');
+  lines.push('  gap: 5;');
   lines.push('}');
   lines.push('.class-level-row { flex-direction: row; }');
   lines.push('.class-level-col { flex-direction: column; }');
@@ -945,10 +942,11 @@ function getRelationStyle(type: ClassRelationType): { lineStyle: 'thin' | 'dashe
 function getRelationArrow(type: ClassRelationType): 'end' | 'none' | 'start' {
   switch (type) {
     case 'inheritance':
+    case 'realization':
+      // Arrow points to superclass/interface (the 'from' side in mermaid syntax)
+      return 'start';
     case 'association':
     case 'dependency':
-    case 'realization':
-      return 'end';
     case 'composition':
     case 'aggregation':
       return 'end';

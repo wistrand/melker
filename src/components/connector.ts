@@ -398,14 +398,21 @@ export class ConnectorElement extends Element implements Renderable {
     const isHorizontalLine = horizontalLength > verticalLength;
     const hasEnoughHorizontalSpace = horizontalLength >= minInlineSpace;
 
-    // For inline labels on horizontal lines, calculate available width and truncate if needed
+    // Truncate label to fit within available horizontal space
     let displayLabel = label;
     if (isHorizontalLine && hasEnoughHorizontalSpace) {
+      // Inline label: reserve space for line visibility and padding
       const reservedSpace = 4; // Reserve 2 chars on each side for visible line
       const labelPadding = 2;  // 1 space on each side of label text
       const availableWidth = Math.max(0, horizontalLength - reservedSpace - labelPadding);
       if (label.length > availableWidth) {
         displayLabel = label.substring(0, availableWidth);
+      }
+    } else if (horizontalLength > 0) {
+      // Label positioned above/below: clip to horizontal span of the line
+      const maxWidth = Math.max(4, horizontalLength - 2); // Leave 1 char margin on each side
+      if (label.length > maxWidth) {
+        displayLabel = label.substring(0, maxWidth);
       }
     }
 

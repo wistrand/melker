@@ -187,6 +187,21 @@ function calculateLayout(graph: GraphDefinition): LayoutResult {
 }
 ```
 
+### Class Diagram Layout
+
+For class diagrams, only **inheritance-type relationships** (inheritance, realization) determine the hierarchy. Other relationships (association, dependency, composition, aggregation) are rendered as connectors but don't affect level assignment. This prevents cyclic dependencies from collapsing all classes to a single level.
+
+```typescript
+// Only use inheritance edges for layout calculation
+const hierarchyRelations = diagram.relations.filter(r =>
+  r.type === 'inheritance' || r.type === 'realization'
+);
+```
+
+Arrow directions follow UML conventions:
+- **Inheritance/Realization**: Arrow points to superclass/interface (`arrow="start"`)
+- **Association/Dependency**: Arrow points to the target (`arrow="end"`)
+
 ### Layout Result
 
 ```typescript

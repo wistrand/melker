@@ -23,13 +23,21 @@
 .lifeline {
   text-align: center;
 }
+.lifeline-bar {
+  border-left: thin;
+  height: 2;
+}
 .note {
   text-align: center;
+}
+.note-bar {
+  border-left: thin;
+  height: 2;
 }
 </style>
 
 <container style="padding: 1; flex-direction: column" scrollable="true">
-  <table class="sequence-table" border="none" columnBorders="false" cellPadding="11">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="1">
     <thead>
       <tr>
         <th id="seq-B" class="participant">Browser</th>
@@ -41,94 +49,94 @@
     <tbody>
       <!-- B -> S: GET /api/users/123 -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-0-B" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-0-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-B" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> C: Check cache -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-1-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-1-C" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-C" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- C -> S: Cache miss -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-2-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-2-C" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-C" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> D: SELECT * FROM users -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-3-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-3-D" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-D" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- D -> S: User data -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-4-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-4-D" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-D" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> C: Store in cache -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-5-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-5-C" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-C" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> B: 200 OK + JSON -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-6-B" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-6-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-B" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Render user profile -->
       <tr>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Render user profile</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Render user profile</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- B -> S: PUT /api/users/123 -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-7-B" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-7-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-B" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> D: UPDATE users SET... -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-8-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-8-D" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-D" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- D -> S: OK -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-9-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-9-D" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-D" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> C: Invalidate cache -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-10-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-10-C" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-C" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> B: 200 OK -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-11-B" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-11-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-B" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
     </tbody>
     <tfoot>

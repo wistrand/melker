@@ -257,6 +257,11 @@ CSS-like properties in `style` attribute:
 - **Colors:** color, background-color (names or hex like `#00d9ff`)
 - **Text:** font-weight (bold/normal), text-align, text-wrap
 
+**CSS shorthand for padding/margin:** Supports 2, 3, or 4 value shorthand like CSS:
+- `padding: 1 2` → top/bottom: 1, left/right: 2
+- `padding: 1 2 3` → top: 1, left/right: 2, bottom: 3
+- `padding: 1 2 3 4` → top: 1, right: 2, bottom: 3, left: 4
+
 **Important:** `flex-direction` is a style property, not an attribute. Use `style="flex-direction: row"` not `direction="row"`:
 
 ```xml

@@ -12,14 +12,14 @@
   padding: 1;
   display: flex;
   flex-direction: column;
-  gap: 3;
+  gap: 5;
 }
 .class-diagram-row { flex-direction: row; }
 .class-diagram-col { flex-direction: column; }
 
 .class-level {
   display: flex;
-  gap: 3;
+  gap: 5;
 }
 .class-level-row { flex-direction: row; }
 .class-level-col { flex-direction: column; }
@@ -56,6 +56,14 @@
       <text>+spawnEnemy()</text>
       <text>+checkCollisions()</text>
     </container>
+    <container id="class-Item" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-annotation">«interface»</text>
+      <text class="class-name">Item</text>
+      <separator />
+      <text> </text>
+      <separator />
+      <text>+use(player)</text>
+    </container>
   </container>
   <container class="class-level class-level-row">
     <container id="class-Player" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
@@ -77,11 +85,18 @@
       <text>+chase(target)</text>
       <text>+attack()*</text>
     </container>
-    <container id="class-Item" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
-      <text class="class-annotation">«interface»</text>
-      <text class="class-name">Item</text>
+    <container id="class-HealthPack" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">HealthPack</text>
       <separator />
-      <text> </text>
+      <text>+healAmount: int</text>
+      <separator />
+      <text>+use(player)</text>
+    </container>
+    <container id="class-Weapon" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
+      <text class="class-name">Weapon</text>
+      <separator />
+      <text>+damage: int</text>
+      <text>+range: int</text>
       <separator />
       <text>+use(player)</text>
     </container>
@@ -102,30 +117,15 @@
       <text>+attack()</text>
       <text>+vanish()</text>
     </container>
-    <container id="class-HealthPack" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
-      <text class="class-name">HealthPack</text>
-      <separator />
-      <text>+healAmount: int</text>
-      <separator />
-      <text>+use(player)</text>
-    </container>
-    <container id="class-Weapon" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
-      <text class="class-name">Weapon</text>
-      <separator />
-      <text>+damage: int</text>
-      <text>+range: int</text>
-      <separator />
-      <text>+use(player)</text>
-    </container>
   </container>
 
   <!-- Relationships -->
-  <connector from="class-GameObject" to="class-Player" arrow="end" />
-  <connector from="class-GameObject" to="class-Enemy" arrow="end" />
-  <connector from="class-Enemy" to="class-Zombie" arrow="end" />
-  <connector from="class-Enemy" to="class-Ghost" arrow="end" />
-  <connector from="class-Item" to="class-HealthPack" arrow="end" style="line-style: dashed" />
-  <connector from="class-Item" to="class-Weapon" arrow="end" style="line-style: dashed" />
+  <connector from="class-GameObject" to="class-Player" arrow="start" />
+  <connector from="class-GameObject" to="class-Enemy" arrow="start" />
+  <connector from="class-Enemy" to="class-Zombie" arrow="start" />
+  <connector from="class-Enemy" to="class-Ghost" arrow="start" />
+  <connector from="class-Item" to="class-HealthPack" arrow="start" style="line-style: dashed" />
+  <connector from="class-Item" to="class-Weapon" arrow="start" style="line-style: dashed" />
   <connector from="class-GameWorld" to="class-Player" arrow="end" />
   <connector from="class-GameWorld" to="class-Enemy" arrow="end" />
   <connector from="class-GameWorld" to="class-Item" arrow="end" />

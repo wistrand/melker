@@ -23,13 +23,21 @@
 .lifeline {
   text-align: center;
 }
+.lifeline-bar {
+  border-left: thin;
+  height: 2;
+}
 .note {
   text-align: center;
+}
+.note-bar {
+  border-left: thin;
+  height: 2;
 }
 </style>
 
 <container style="padding: 1; flex-direction: column" scrollable="true">
-  <table class="sequence-table" border="none" columnBorders="false" cellPadding="15">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="1">
     <thead>
       <tr>
         <th id="seq-E" class="participant">Engine</th>
@@ -42,275 +50,275 @@
     <tbody>
       <!-- Note: Engine starts -->
       <tr>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Engine starts</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Engine starts</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- E -> S: startSixelDetection() -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-0-E" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-0-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-E" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> S: detectMultiplexer() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-1-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> S: detectRemoteSession() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-2-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> S: checkTerminalEnv() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-3-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Phase 1: DA1 -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Phase 1: DA1</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Phase 1: DA1</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> T: ESC[c -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-4-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-4-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- T -> I: ESC[?...c -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-5-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-5-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> S: feedDetectionInput() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-6-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-6-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> S: parseDA1Response() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-7-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Phase 2: Colors -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Phase 2: Colors</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Phase 2: Colors</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> T: ESC[?1;1S -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-8-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-8-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- T -> I: ESC[?1;0;256S -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-9-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-9-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> S: feedDetectionInput() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-10-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-10-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Phase 3: Geometry -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Phase 3: Geometry</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Phase 3: Geometry</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> T: ESC[?2;1S -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-11-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-11-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-11-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- T -> I: ESC[?2;0;W;HS -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-12-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-12-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-12-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-12-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> S: feedDetectionInput() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-13-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-13-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-13-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-13-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Phase 4: Cell Size -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Phase 4: Cell Size</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Phase 4: Cell Size</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> T: ESC[16t -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-14-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-14-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-14-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-14-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- T -> I: ESC[6;H;Wt -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-15-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-15-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-15-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-15-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> S: feedDetectionInput() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-16-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-16-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-16-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-16-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> S: parseCellSizeResponse() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-17-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-17-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- S -> E: SixelCapabilities -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-18-E" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-18-S" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-18-E" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-18-S" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- E -> K: startKittyDetection() -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-19-E" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-19-K" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-19-E" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-19-K" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- K -> K: detectMultiplexer() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-20-K" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-20-K" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- K -> K: checkTerminalEnv() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-21-K" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-21-K" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Kitty Query -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Kitty Query</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Kitty Query</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- K -> T: ESC_Gi=31;...ESC\ -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-22-K" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-22-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-22-K" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-22-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- T -> I: ESC_Gi=31;OKESC\ -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-23-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-23-T" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-23-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-23-T" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- I -> K: feedKittyDetectionInput() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-24-K" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-24-I" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-24-K" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-24-I" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- K -> K: parseKittyResponse() -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-25-K" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-25-K" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- K -> E: KittyCapabilities -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-26-E" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-26-K" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-26-E" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-26-K" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Detection Complete -->
       <tr>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Detection Complete</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Detection Complete</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
     </tbody>
     <tfoot>

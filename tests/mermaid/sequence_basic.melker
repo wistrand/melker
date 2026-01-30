@@ -23,13 +23,21 @@
 .lifeline {
   text-align: center;
 }
+.lifeline-bar {
+  border-left: thin;
+  height: 2;
+}
 .note {
   text-align: center;
+}
+.note-bar {
+  border-left: thin;
+  height: 2;
 }
 </style>
 
 <container style="padding: 1; flex-direction: column" scrollable="true">
-  <table class="sequence-table" border="none" columnBorders="false" cellPadding="8">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="1">
     <thead>
       <tr>
         <th id="seq-Alice" class="participant">Alice</th>
@@ -40,45 +48,45 @@
     <tbody>
       <!-- Alice -> Bob: Hello Bob -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-0-Alice" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-0-Bob" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-Alice" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-Bob" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Bob -> Alice: Hi Alice -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-1-Alice" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-1-Bob" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-Alice" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-Bob" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Alice -> Bob: How are you? -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-2-Alice" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-2-Bob" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-Alice" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-Bob" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Note: Bob thinks -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Bob thinks</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Bob thinks</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Bob -> Alice: I'm good -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-3-Alice" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-3-Bob" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-Alice" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-Bob" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Alice -> Carol: Hi Carol -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-4-Alice" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-4-Carol" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-Alice" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-Carol" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Carol -> Alice: Hello! -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-5-Alice" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-5-Carol" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-Alice" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-Carol" class="lifeline-bar"><text text="" /></container></td>
       </tr>
     </tbody>
     <tfoot>

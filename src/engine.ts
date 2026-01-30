@@ -1361,7 +1361,7 @@ export class MelkerEngine {
    * @param systemInfo - System info for debug tab
    * @param helpContent - Help text content (markdown)
    */
-  setSource(content: string, filePath: string, type: 'md' | 'melker', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, sourceUrl?: string, systemInfo?: SystemInfo, helpContent?: string): void {
+  setSource(content: string, filePath: string, type: 'md' | 'melker' | 'mmd', convertedContent?: string, policy?: MelkerPolicy, appDir?: string, sourceUrl?: string, systemInfo?: SystemInfo, helpContent?: string): void {
     // Store policy for permission checks
     this._policy = policy;
 

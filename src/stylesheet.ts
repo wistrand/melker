@@ -148,6 +148,26 @@ export function parseStyleProperties(cssString: string): Style {
     const isColorProp = camelKey === 'color' || camelKey === 'backgroundColor' ||
                         camelKey === 'borderColor' || camelKey.endsWith('Color');
 
+    // Check if this is padding or margin with CSS shorthand (e.g., "0 1", "1 2 3", "1 2 3 4")
+    const isBoxSpacingProp = camelKey === 'padding' || camelKey === 'margin';
+    if (isBoxSpacingProp) {
+      const parts = value.split(/\s+/).map(p => parseFloat(p));
+      if (parts.length >= 2 && parts.every(p => !isNaN(p))) {
+        // CSS shorthand: 2 values = vertical horizontal
+        //               3 values = top horizontal bottom
+        //               4 values = top right bottom left
+        if (parts.length === 2) {
+          style[camelKey] = { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] };
+        } else if (parts.length === 3) {
+          style[camelKey] = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
+        } else if (parts.length >= 4) {
+          style[camelKey] = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
+        }
+        continue;
+      }
+      // Fall through to single number or string handling
+    }
+
     // Try to parse as number
     if (/^\d+(\.\d+)?$/.test(value)) {
       style[camelKey] = parseFloat(value);

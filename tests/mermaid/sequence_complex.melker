@@ -23,14 +23,22 @@
 .lifeline {
   text-align: center;
 }
+.lifeline-bar {
+  border-left: thin;
+  height: 2;
+}
 .note {
   text-align: center;
+}
+.note-bar {
+  border-left: thin;
+  height: 2;
 }
 </style>
 
 <container style="padding: 1; flex-direction: column" scrollable="true">
   <text style="text-align: center; padding-bottom: 1">Order Processing Flow</text>
-  <table class="sequence-table" border="none" columnBorders="false" cellPadding="11">
+  <table class="sequence-table" border="none" columnBorders="false" cellPadding="1">
     <thead>
       <tr>
         <th id="seq-Customer" class="actor">Customer</th>
@@ -42,67 +50,67 @@
     <tbody>
       <!-- Customer -> WebApp: Place Order -->
       <tr>
-        <td class="lifeline"><container id="seq-msg-0-Customer" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-0-WebApp" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-Customer" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-0-WebApp" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- WebApp -> API: POST /orders -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-1-WebApp" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-1-API" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-WebApp" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-1-API" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- API -> Database: INSERT order -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-2-API" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-2-Database" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-API" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-2-Database" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <!-- Fragment: alt -->
       <tr>
         <td colspan="4">[alt Order valid]</td>
       </tr>
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-3-API" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-3-Database" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-API" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-3-Database" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-4-WebApp" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-4-API" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-WebApp" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-4-API" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <tr>
-        <td class="lifeline"><container id="seq-msg-5-Customer" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-5-WebApp" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-Customer" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-5-WebApp" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <tr>
         <td colspan="4">[else Order invalid]</td>
       </tr>
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-6-API" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-6-Database" style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-API" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-6-Database" class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-7-WebApp" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-7-API" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-WebApp" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-7-API" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <tr>
-        <td class="lifeline"><container id="seq-msg-8-Customer" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-8-WebApp" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-Customer" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-8-WebApp" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <tr>
         <td colspan="4">[end]</td>
@@ -112,26 +120,26 @@
         <td colspan="4">[loop Every 5 seconds]</td>
       </tr>
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-9-WebApp" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-9-API" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-WebApp" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-9-API" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-10-WebApp" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container id="seq-msg-10-API" style="border-left: thin"><text text="" /></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-WebApp" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container id="seq-msg-10-API" class="lifeline-bar"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
       <tr>
         <td colspan="4">[end]</td>
       </tr>
       <!-- Note: Async processing -->
       <tr>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Async processing</text></container></td>
-        <td class="note"><container style="border-left: thin"><text style="text-wrap: wrap">Async processing</text></container></td>
-        <td class="lifeline"><container style="border-left: thin"><text text="" /></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Async processing</text></container></td>
+        <td class="note"><container class="note-bar"><text style="text-wrap: wrap">Async processing</text></container></td>
+        <td class="lifeline"><container class="lifeline-bar"><text text="" /></container></td>
       </tr>
     </tbody>
     <tfoot>

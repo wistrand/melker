@@ -85,6 +85,25 @@ function createAutoPolicy(): MelkerPolicy {
 }
 
 /**
+ * Create an empty policy for plain mermaid files (no permissions needed)
+ */
+function createEmptyMermaidPolicy(filepath: string): MelkerPolicy {
+  return {
+    name: filepath,
+    description: 'Auto-generated policy for plain mermaid file (no permissions)',
+    permissions: {},
+  };
+}
+
+/**
+ * Check if a mermaid file has %%melker directives (custom policy/config)
+ */
+function hasMelkerDirectives(content: string): boolean {
+  // Look for %%melker comments which indicate custom configuration
+  return /%%\s*melker/i.test(content);
+}
+
+/**
  * Deno flags that should be forwarded to the subprocess
  */
 const FORWARDED_DENO_FLAGS = [
@@ -129,12 +148,12 @@ function printUsage(): void {
   console.log('Requires: Deno >= 2.5.0 (Node.js and Bun are not supported)');
   console.log('');
   console.log('Usage:');
-  console.log('  deno run --allow-all melker.ts <file.melker> [options]');
-  console.log('  deno run --allow-all melker.ts <file.md> [options]');
+  console.log('  deno run --allow-all melker.ts <file> [options]');
   console.log('');
-  console.log('Arguments:');
-  console.log('  <file.melker>  Path to a .melker template file');
-  console.log('  <file.md>      Path to a markdown file with melker-block code blocks');
+  console.log('Supported file types:');
+  console.log('  <file.melker>  Melker UI template');
+  console.log('  <file.md>      Markdown document');
+  console.log('  <file.mmd>     Mermaid diagram (rendered as graph)');
   console.log('');
   console.log('Options:');
   console.log('  --print-tree             Display element tree structure and exit');
@@ -272,7 +291,7 @@ async function runRemoteWithPolicy(
   // Write approved content to temp file to avoid TOCTOU issues
   // Preserve original extension so runner knows whether to parse as markdown
   const tempDir = await Deno.makeTempDir({ prefix: 'melker-remote-' });
-  const ext = url.endsWith('.md') ? '.md' : '.melker';
+  const ext = url.endsWith('.md') ? '.md' : url.endsWith('.mmd') ? '.mmd' : '.melker';
   const tempFile = `${tempDir}/app${ext}`;
   await Deno.writeTextFile(tempFile, content);
 
@@ -423,7 +442,7 @@ export async function main(): Promise<void> {
     // Load policy config if a file is provided
     let policyConfig: Record<string, unknown> = {};
     let policyConfigSchema: Record<string, PolicyConfigProperty> | undefined;
-    if (filepath && (filepath.endsWith('.melker') || filepath.endsWith('.md'))) {
+    if (filepath && (filepath.endsWith('.melker') || filepath.endsWith('.md') || filepath.endsWith('.mmd'))) {
       try {
         const absolutePath = filepath.startsWith('/') || isUrl(filepath)
           ? filepath
@@ -554,14 +573,14 @@ export async function main(): Promise<void> {
   const filepath = filepathIndex >= 0 ? remainingArgs[filepathIndex] : undefined;
 
   if (!filepath) {
-    console.error('Error: No .melker or .md file specified');
+    console.error('Error: No .melker, .md, or .mmd file specified');
     console.error('Use --help for usage information');
     Deno.exit(1);
   }
 
   // Validate file extension
-  if (!filepath.endsWith('.melker') && !filepath.endsWith('.md')) {
-    console.error('Error: File must have .melker or .md extension');
+  if (!filepath.endsWith('.melker') && !filepath.endsWith('.md') && !filepath.endsWith('.mmd')) {
+    console.error('Error: File must have .melker, .md, or .mmd extension');
     Deno.exit(1);
   }
 
@@ -601,6 +620,18 @@ export async function main(): Promise<void> {
         const flags = policyToDenoFlags(policy, Deno.cwd(), urlHash, filepath);
         console.log(formatDenoFlags(flags));
       } else {
+        // For plain .mmd files, use the empty mermaid policy
+        if (filepath.endsWith('.mmd')) {
+          const content = await loadContent(filepath);
+          if (!hasMelkerDirectives(content)) {
+            const policy = createEmptyMermaidPolicy(filepath);
+            console.log(`\nPolicy source: auto (plain mermaid file)\n`);
+            console.log(formatPolicy(policy));
+            console.log('\nDeno permission flags:');
+            console.log('  (none - no permissions required)');
+            Deno.exit(0);
+          }
+        }
         const policyResult = await loadPolicy(absoluteFilepath);
         const policy = policyResult.policy ?? createAutoPolicy();
         const urlHash = await getUrlHash(absoluteFilepath);
@@ -662,6 +693,16 @@ export async function main(): Promise<void> {
 
       await runRemoteWithPolicy(filepath, content, policy, args);
       return;
+    }
+
+    // Plain .mmd files without %%melker directives - run with empty policy, no approval needed
+    if (!isUrl(filepath) && filepath.endsWith('.mmd')) {
+      const content = await loadContent(filepath);
+      if (!hasMelkerDirectives(content)) {
+        // Plain mermaid file - no approval needed, use empty policy
+        await runWithPolicy(absoluteFilepath, createEmptyMermaidPolicy(filepath), args);
+        return;
+      }
     }
 
     // Local file approval and policy enforcement (unless --trust)

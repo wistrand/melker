@@ -537,3 +537,32 @@ export class ConnectorElement extends Element implements Renderable {
     return true;
   }
 }
+
+// Lint schema for connector component
+import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { registerComponent } from '../element.ts';
+
+export const connectorSchema: ComponentSchema = {
+  description: 'Draw a line between two elements identified by their IDs',
+  props: {
+    from: { type: 'string', required: true, description: 'ID of the source element' },
+    to: { type: 'string', required: true, description: 'ID of the target element' },
+    fromSide: { type: 'string', enum: ['auto', 'top', 'bottom', 'left', 'right'], description: 'Which side of the source element to connect from' },
+    toSide: { type: 'string', enum: ['auto', 'top', 'bottom', 'left', 'right'], description: 'Which side of the target element to connect to' },
+    arrow: { type: 'string', enum: ['none', 'end', 'start', 'both'], description: 'Arrow style (default: end)' },
+    label: { type: 'string', description: 'Optional label text displayed at midpoint' },
+    routing: { type: 'string', enum: ['direct', 'orthogonal', 'horizontal', 'vertical'], description: 'Routing style (default: orthogonal)' },
+  },
+};
+
+registerComponentSchema('connector', connectorSchema);
+
+// Register connector component for createElement
+registerComponent({
+  type: 'connector',
+  componentClass: ConnectorElement,
+  defaultProps: {
+    arrow: 'end',
+    routing: 'orthogonal',
+  },
+});

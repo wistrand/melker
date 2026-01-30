@@ -3,19 +3,55 @@
 // Phase 2: Heading, paragraph, and basic inline formatting
 // Phase 3: Lists, code blocks, and blockquotes
 
-import { Element, BaseProps, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, hasIntrinsicSize, type ColorInput } from '../types.ts';
+import { Element, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, hasIntrinsicSize } from '../types.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
-import { CanvasElement } from './canvas.ts';
-import { type SixelOutputData, type KittyOutputData, getEffectiveGfxMode } from './canvas-render.ts';
+import { type SixelOutputData, type KittyOutputData } from './canvas-render.ts';
 import { GraphElement } from './graph/mod.ts';
 import { getLogger } from '../logging.ts';
-import { parseMelkerFile } from '../template.ts';
 import { getStringWidth } from '../char-width.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { COLORS, parseColor } from './color-utils.ts';
-import { renderElementSubtree } from '../rendering.ts';
+import { MarkdownImageRenderer } from './markdown-image.ts';
+import { renderTable as renderTableHelper, type TableRenderHelpers } from './markdown-table.ts';
+import { MarkdownCodeRenderer, type CodeRenderHelpers } from './markdown-code.ts';
+
+// Types
+import {
+  type Position,
+  type SpacingRule,
+  type NodeType,
+  DEFAULT_SPACING,
+  getSpacing,
+  type MarkdownStyleConfig,
+  DEFAULT_STYLES,
+  type ASTNode,
+  type Root,
+  type Paragraph,
+  type Heading,
+  type Text,
+  type Strong,
+  type Emphasis,
+  type InlineCode,
+  type List,
+  type ListItem,
+  type Code,
+  type Blockquote,
+  type Table,
+  type TableRow,
+  type TableCell,
+  type Html,
+  type Image,
+  type Link,
+  type LinkRegion,
+  type LinkEvent,
+  type MarkdownProps,
+  type MarkdownRenderContext,
+} from './markdown-types.ts';
+
+// Re-export public types
+export type { MarkdownStyleConfig, LinkEvent, MarkdownProps } from './markdown-types.ts';
 
 // ============================================================================
 // Text Utilities - display width calculation and text wrapping
@@ -86,226 +122,6 @@ function wrapTextToLines(text: string, width: number): string[] {
 
 const logger = getLogger('Markdown');
 
-// Position info from mdast (source location tracking)
-interface Position {
-  start: { line: number; column: number; offset?: number };
-  end: { line: number; column: number; offset?: number };
-}
-
-// Unified spacing configuration for markdown elements
-interface SpacingRule {
-  before: number;  // Lines before element
-  after: number;   // Lines after element
-}
-
-type NodeType = 'paragraph' | 'heading' | 'list' | 'listItem' | 'code' | 'blockquote' | 'table' | 'image' | 'html';
-
-// Default spacing rules for each node type
-const DEFAULT_SPACING: Record<NodeType, SpacingRule> = {
-  paragraph: { before: 0, after: 1 },
-  heading: { before: 0, after: 1 },
-  list: { before: 0, after: 1 },      // Only for top-level lists
-  listItem: { before: 0, after: 0 },
-  code: { before: 0, after: 1 },
-  blockquote: { before: 1, after: 1 },
-  table: { before: 1, after: 1 },
-  image: { before: 0, after: 1 },
-  html: { before: 0, after: 0 },
-};
-
-// Get spacing for a node type
-function getSpacing(nodeType: NodeType): SpacingRule {
-  return DEFAULT_SPACING[nodeType] || { before: 0, after: 0 };
-}
-
-// Style configuration for markdown elements
-export interface MarkdownStyleConfig {
-  // Heading styles by level (1-6)
-  heading?: {
-    [level: number]: { bold?: boolean; underline?: boolean; italic?: boolean; dim?: boolean };
-  };
-  // Code block style overrides
-  codeBlock?: { background?: ColorInput; foreground?: ColorInput };
-  // Inline code style overrides
-  inlineCode?: { background?: ColorInput; foreground?: ColorInput };
-  // Blockquote style overrides
-  blockquote?: { foreground?: ColorInput; italic?: boolean };
-  // Link style overrides
-  link?: { foreground?: ColorInput; underline?: boolean };
-}
-
-// Default style configuration
-const DEFAULT_STYLES: Required<MarkdownStyleConfig> = {
-  heading: {
-    1: { bold: true, underline: true },
-    2: { bold: true },
-    3: { underline: true },
-    4: {},
-    5: {},
-    6: {}
-  },
-  codeBlock: {}, // Uses theme colors
-  inlineCode: {}, // Uses theme colors
-  blockquote: { italic: true },
-  link: { underline: true }
-};
-
-// Define the AST node types we need (subset of mdast types)
-interface ASTNode {
-  type: string;
-  children?: ASTNode[];
-  value?: string;
-  depth?: number;
-  position?: Position; // Source position info from parser
-}
-
-interface Root extends ASTNode {
-  type: 'root';
-  children: ASTNode[];
-}
-
-interface Paragraph extends ASTNode {
-  type: 'paragraph';
-  children: ASTNode[];
-}
-
-interface Heading extends ASTNode {
-  type: 'heading';
-  depth: 1 | 2 | 3 | 4 | 5 | 6;
-  children: ASTNode[];
-}
-
-interface Text extends ASTNode {
-  type: 'text';
-  value: string;
-}
-
-interface Strong extends ASTNode {
-  type: 'strong';
-  children: ASTNode[];
-}
-
-interface Emphasis extends ASTNode {
-  type: 'emphasis';
-  children: ASTNode[];
-}
-
-interface InlineCode extends ASTNode {
-  type: 'inlineCode';
-  value: string;
-}
-
-// Phase 3: New node types for lists, code blocks, and blockquotes
-interface List extends ASTNode {
-  type: 'list';
-  ordered: boolean;
-  start?: number;
-  children: ListItem[];
-}
-
-interface ListItem extends ASTNode {
-  type: 'listItem';
-  children: ASTNode[];
-}
-
-interface Code extends ASTNode {
-  type: 'code';
-  value: string;
-  lang?: string;
-  meta?: string;
-}
-
-interface Blockquote extends ASTNode {
-  type: 'blockquote';
-  children: ASTNode[];
-}
-
-// Table types (GFM extension)
-interface Table extends ASTNode {
-  type: 'table';
-  align?: ('left' | 'center' | 'right' | null)[];
-  children: TableRow[];
-}
-
-interface TableRow extends ASTNode {
-  type: 'tableRow';
-  children: TableCell[];
-}
-
-interface TableCell extends ASTNode {
-  type: 'tableCell';
-  children: ASTNode[];
-}
-
-// HTML node (for raw HTML like <img> tags)
-interface Html extends ASTNode {
-  type: 'html';
-  value: string;
-}
-
-// Image node (for markdown ![alt](url) syntax)
-interface Image extends ASTNode {
-  type: 'image';
-  url: string;
-  alt?: string;
-  title?: string;
-}
-
-// Link node (for markdown [text](url) syntax)
-interface Link extends ASTNode {
-  type: 'link';
-  url: string;
-  title?: string;
-  children: ASTNode[];
-}
-
-// Link region for click detection
-interface LinkRegion {
-  x: number;
-  y: number;
-  width: number;
-  url: string;
-  title?: string;
-}
-
-// Link event passed to onLink handler
-export interface LinkEvent {
-  url: string;
-  title?: string;
-}
-
-export interface MarkdownProps extends BaseProps {
-  text?: string;                      // Raw markdown content (consistent with TextProps) - optional when src is used
-  src?: string;                       // URL to fetch markdown content from (relative to engine base URL)
-  maxWidth?: number;                  // Max rendering width
-  enableGfm?: boolean;                // Enable GitHub Flavored Markdown (default: true)
-  listIndent?: number;                // List item indentation (default: 2)
-  codeTheme?: 'light' | 'dark' | 'auto';  // Code block theme (default: 'auto')
-  onLink?: (event: LinkEvent) => void;  // Callback when a link is clicked
-  debug?: boolean;                    // Enable debug overlay (shows line numbers)
-  styles?: MarkdownStyleConfig;       // Custom styles for markdown elements
-}
-
-interface MarkdownRenderContext {
-  bounds: Bounds;
-  style: Partial<Cell>;
-  buffer: DualBuffer;
-  context: ComponentRenderContext;
-  currentY: number;                   // Current vertical position
-  currentX: number;                   // Current horizontal position
-  baseStyle: Partial<Cell>;          // Base style for this render context
-  listDepth?: number;                 // Current list nesting depth (Phase 3)
-  listType?: 'ordered' | 'unordered'; // Current list type (Phase 3)
-  listStart?: number;                 // Starting number for ordered lists (Phase 3)
-  itemNumber?: number;                // Current item number in ordered list (Phase 3)
-  itemIndex?: number;                 // Current item index in list (Phase 3)
-  // Debug tracking
-  debugEnabled?: boolean;             // Whether debug overlay is enabled
-  inputLine?: number;                 // Current input source line number
-  renderedLine?: number;              // Current rendered output line number
-  debugOverlay?: Map<number, { inputLine: number; renderedLine: number }>; // y -> line info
-}
-
 // Debug mode check - enabled via prop or config (fallback)
 function isMarkdownDebugEnabledFromEnv(): boolean {
   try {
@@ -324,17 +140,12 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   private _srcContent: string | null = null;
   private _lastSrc: string | null = null;
   private _hasLoadedContent: boolean = false;
-  // The actual resolved URL of the loaded markdown file (for resolving relative image paths)
-  private _resolvedSrcUrl: string | null = null;
   // Error message to display when content loading fails
   private _loadError: string | null = null;
-  // Cache for image canvases (keyed by resolved src path)
-  private _imageCanvases: Map<string, CanvasElement> = new Map();
-  // Cache for image aspect ratios (width/height) - used for auto-height calculation
-  private _imageAspectRatios: Map<string, number> = new Map();
-  private _melkerElements: Map<string, Element> = new Map();
-  // Cache for parsed mermaid graph elements
-  private _mermaidElements: Map<string, GraphElement> = new Map();
+  // Image rendering (handles canvas caching, aspect ratios, path resolution)
+  private _imageRenderer: MarkdownImageRenderer = new MarkdownImageRenderer();
+  // Code block rendering (handles melker blocks, mermaid diagrams, code blocks)
+  private _codeRenderer: MarkdownCodeRenderer = new MarkdownCodeRenderer();
   // Link regions for click detection (rebuilt on each render)
   private _linkRegions: LinkRegion[] = [];
   // Last render bounds for click coordinate mapping
@@ -343,8 +154,6 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   private _lastScrollOffset: { x: number; y: number } = { x: 0, y: 0 };
   // Actual rendered content height (set during render)
   private _lastRenderedHeight: number = 0;
-  // Flag to prevent infinite re-render loops
-  private _heightStabilized: boolean = false;
 
   constructor(props: MarkdownProps, children: Element[] = []) {
     const defaultProps: MarkdownProps = {
@@ -456,7 +265,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       }
 
       this._lastSrc = src;
-      this._resolvedSrcUrl = resolvedUrl; // Store the actual resolved URL for image path resolution
+      this._imageRenderer.setResolvedSrcUrl(resolvedUrl); // Store the actual resolved URL for image path resolution
       this._hasLoadedContent = true;
       return this._srcContent;
     } catch (error) {
@@ -497,7 +306,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         if (this._lastSrc !== src) {
           this._loadError = null;
           this._hasLoadedContent = false;
-          this._heightStabilized = false; // Reset for new content
+          this._imageRenderer.reset(); // Reset for new content
           this._lastRenderedHeight = 0;
         }
         this._fetchSrcContent().then(content => {
@@ -506,7 +315,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
             this._parsedAst = null;
             this._lastParsedText = null;
             this._loadError = null; // Clear any previous error
-            this._heightStabilized = false; // Reset for new content
+            this._imageRenderer.reset(); // Reset for new content
             this._lastRenderedHeight = 0;
             // Try to trigger a full re-render with layout recalculation
             const engine = globalThis.melkerEngine;
@@ -599,9 +408,9 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     // This implements the "two-pass" layout: first render determines actual height,
     // then re-layout updates scrollable parent containers with correct dimensions
     const heightDiff = Math.abs(this._lastRenderedHeight - previousHeight);
-    if (heightDiff > 0 && !this._heightStabilized) {
+    if (heightDiff > 0 && !this._imageRenderer.isHeightStabilized()) {
       // Mark as stabilized to prevent infinite loops
-      this._heightStabilized = true;
+      this._imageRenderer.setHeightStabilized(true);
 
       // Use forceRender from engine if available for full layout recalculation
       const engine = globalThis.melkerEngine;
@@ -617,7 +426,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       }
     } else if (heightDiff === 0 && previousHeight > 0) {
       // Height has stabilized
-      this._heightStabilized = true;
+      this._imageRenderer.setHeightStabilized(true);
     }
 
     // Debug overlay: show line counters on right side if enabled
@@ -689,7 +498,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       }
 
       // Note: Mermaid blocks are rendered inline via _renderMermaidBlock
-      // They are cached in _mermaidElements for reuse but NOT added as children
+      // They are cached in the code renderer for reuse but NOT added as children
       // This allows them to flow naturally with markdown content
       this._cacheMermaidElements();
     } catch (error) {
@@ -701,34 +510,14 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
   /**
    * Cache mermaid code blocks as GraphElements for rendering
    * Elements are NOT added as children (that causes double rendering)
-   * Hit testing is handled via getMermaidElements() which the hit tester checks
+   * Hit testing is handled via getSubtreeElements() which the hit tester checks
    */
   private _cacheMermaidElements(): void {
     if (!this._parsedAst) return;
 
-    // Find all mermaid code blocks in the AST
+    // Find all mermaid code blocks in the AST and cache them in the code renderer
     const mermaidBlocks = this._findMermaidBlocks(this._parsedAst);
-
-    for (let i = 0; i < mermaidBlocks.length; i++) {
-      const code = mermaidBlocks[i];
-      const cacheKey = `mermaid:${code.trim()}`;
-
-      // Get or create GraphElement (skip if already cached)
-      if (!this._mermaidElements.has(cacheKey)) {
-        const graphElement = new GraphElement(
-          {
-            id: `md-mermaid-${i}`,
-            type: 'mermaid',
-            text: code,
-            scrollable: false,
-            // Use 'auto' sizing so graph expands to fit its content naturally
-            style: { width: 'auto', height: 'auto' }
-          },
-          []
-        );
-        this._mermaidElements.set(cacheKey, graphElement);
-      }
-    }
+    this._codeRenderer.cacheMermaidBlocks(mermaidBlocks);
   }
 
   /**
@@ -738,7 +527,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    */
   getSubtreeElements(): Element[] {
     const elements: Element[] = [];
-    for (const graphElement of this._mermaidElements.values()) {
+    for (const graphElement of this._codeRenderer.getMermaidElements().values()) {
       const generated = graphElement.getGeneratedElement();
       if (generated) {
         elements.push(generated);
@@ -1511,283 +1300,15 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
   /**
    * Render code block with syntax highlighting
+   * Delegates to MarkdownCodeRenderer
    */
   private _renderCodeBlock(node: Code, ctx: MarkdownRenderContext): number {
-    const { codeTheme } = this.props;
-    const code = node.value;
-    const language = node.lang;
-
-    // Special handling for melker blocks - render as actual UI elements
-    if (language === 'melker') {
-      return this._renderMelkerBlock(code, ctx);
-    }
-
-    // Special handling for mermaid blocks - render as graph elements
-    if (language === 'mermaid') {
-      return this._renderMermaidBlock(code, ctx);
-    }
-
-    // Use local y tracking - don't modify ctx.currentY (caller does that)
-    let localY = ctx.currentY;
-
-    // No extra spacing before code block - paragraphs already add trailing spacing
-    let totalHeight = 0;
-
-    // Create code block style
-    const codeStyle = this._getCodeBlockStyle(codeTheme, ctx.baseStyle);
-
-    // Render language label outside the block on top-right (if present)
-    // Label appears on the line just before the code content, right-aligned above the block
-    if (language) {
-      const langStyle = {
-        ...ctx.baseStyle,
-        foreground: getThemeColor('textMuted'),
-        dim: true
-      };
-
-      const langLabel = language;
-      // Right-align to the block's right edge (bounds.x + bounds.width), offset 2 chars left
-      const blockRightEdge = ctx.bounds.x + ctx.bounds.width;
-      const labelX = blockRightEdge - langLabel.length - 2;
-      ctx.buffer.currentBuffer.setText(labelX, localY, langLabel, langStyle);
-      totalHeight += 1;
-      localY += 1;
-    }
-
-    // Split code into lines and render each
-    const lines = code.split('\n');
-    const maxWidth = ctx.bounds.width - 4; // Leave some padding
-    const fullWidth = ctx.bounds.width; // Full width for background fill
-
-    for (const line of lines) {
-      const lineDisplayWidth = getStringWidth(line);
-      if (lineDisplayWidth <= maxWidth) {
-        // Single line - pad to full width for background (use display width)
-        const paddedLine = `  ${line}`;
-        const fullLine = padEndDisplayWidth(paddedLine, fullWidth);
-        ctx.buffer.currentBuffer.setText(ctx.currentX, localY, fullLine, codeStyle);
-        totalHeight += 1;
-        localY += 1;
-      } else {
-        // Wrap long lines - need to be more careful with wide chars
-        // For now, use simple character-based wrapping (may split wide chars incorrectly)
-        let remainingLine = line;
-        while (remainingLine.length > 0) {
-          // Find how many chars fit in maxWidth-2 display columns
-          let chunkEnd = 0;
-          let chunkWidth = 0;
-          while (chunkEnd < remainingLine.length && chunkWidth < maxWidth - 2) {
-            const charWidth = getStringWidth(remainingLine[chunkEnd]);
-            if (chunkWidth + charWidth > maxWidth - 2) break;
-            chunkWidth += charWidth;
-            chunkEnd++;
-          }
-          if (chunkEnd === 0) chunkEnd = 1; // Ensure progress
-          const chunk = remainingLine.substring(0, chunkEnd);
-          const paddedChunk = `  ${chunk}`;
-          const fullLine = padEndDisplayWidth(paddedChunk, fullWidth);
-          ctx.buffer.currentBuffer.setText(ctx.currentX, localY, fullLine, codeStyle);
-          remainingLine = remainingLine.substring(chunkEnd);
-          totalHeight += 1;
-          localY += 1;
-        }
-      }
-    }
-
-    // Add spacing after code block
-    const spacing = getSpacing('code');
-    totalHeight += spacing.after;
-
-    return totalHeight;
+    const helpers: CodeRenderHelpers = {
+      resolveImagePath: (src) => this._imageRenderer.resolveImagePath(src),
+      getMarkdownSrc: () => this.props.src,
+    };
+    return this._codeRenderer.renderCodeBlock(node, ctx, this.props.codeTheme, helpers);
   }
-
-  /**
-   * Render a melker code block as actual UI elements
-   */
-  private _renderMelkerBlock(code: string, ctx: MarkdownRenderContext): number {
-    // Use local y tracking
-    let localY = ctx.currentY;
-    let totalHeight = 1; // spacing before
-    localY += 1;
-
-    try {
-      // Create a cache key from the code content and markdown src (for path resolution)
-      const cacheKey = `${this.props.src || ''}:${code.trim()}`;
-
-      // Check if we have a cached element
-      let element = this._melkerElements.get(cacheKey);
-
-      if (!element) {
-        // Parse the melker content
-        const parseResult = parseMelkerFile(code);
-        element = parseResult.element;
-
-        // Resolve file paths for elements that have them (canvas, video)
-        // This makes relative paths resolve from the markdown file's directory
-        if (element.props.src && typeof element.props.src === 'string') {
-          element.props.src = this._resolveImagePath(element.props.src);
-        }
-        // Also resolve video-specific paths (subtitle, poster)
-        if (element.props.subtitle && typeof element.props.subtitle === 'string') {
-          element.props.subtitle = this._resolveImagePath(element.props.subtitle);
-        }
-        if (element.props.poster && typeof element.props.poster === 'string') {
-          element.props.poster = this._resolveImagePath(element.props.poster);
-        }
-
-        // Cache the element
-        this._melkerElements.set(cacheKey, element);
-      }
-
-      // Check if element is Renderable (has a render method)
-      const elementAsAny = element as unknown as Record<string, unknown>;
-      if (element && typeof elementAsAny.render === 'function') {
-        const renderable = element as unknown as Renderable;
-
-        // Get element dimensions from props or intrinsicSize
-        let elementWidth = ctx.bounds.width;
-        let elementHeight = 15; // Default height
-
-        // Try to get dimensions from element props
-        if (element.props.width && typeof element.props.width === 'number') {
-          elementWidth = Math.min(element.props.width, ctx.bounds.width);
-        }
-        if (element.props.height && typeof element.props.height === 'number') {
-          elementHeight = element.props.height;
-        }
-
-        // If element has intrinsicSize, use it
-        if (hasIntrinsicSize(element)) {
-          try {
-            const intrinsic = element.intrinsicSize({
-              availableSpace: { width: ctx.bounds.width, height: 100 },
-            });
-            if (intrinsic.height) {
-              elementHeight = intrinsic.height;
-            }
-          } catch {
-            // Use defaults
-          }
-        }
-
-        // Create bounds for the element
-        const elementBounds: Bounds = {
-          x: ctx.currentX,
-          y: localY,
-          width: elementWidth,
-          height: elementHeight,
-        };
-
-        // Render the element
-        renderable.render(elementBounds, ctx.style, ctx.buffer, ctx.context);
-
-        totalHeight += elementHeight;
-        localY += elementHeight;
-      } else {
-        // Fallback: render error message
-        const errorStyle = {
-          ...ctx.style,
-          foreground: getThemeColor('error'),
-        };
-        ctx.buffer.currentBuffer.setText(ctx.currentX, localY, '[Melker block: element not renderable]', errorStyle);
-        totalHeight += 1;
-        localY += 1;
-      }
-    } catch (error) {
-      // Render error message
-      const errorStyle = {
-        ...ctx.style,
-        foreground: getThemeColor('error'),
-      };
-      const errorMsg = `[Melker error: ${error instanceof Error ? error.message : String(error)}]`;
-      ctx.buffer.currentBuffer.setText(ctx.currentX, localY, errorMsg.substring(0, ctx.bounds.width), errorStyle);
-      totalHeight += 1;
-      localY += 1;
-    }
-
-    // Add spacing after
-    totalHeight += 1;
-
-    return totalHeight;
-  }
-
-  /**
-   * Render a mermaid code block inline (similar to melker blocks)
-   * Uses the graph element and renders it at the current position
-   */
-  private _renderMermaidBlock(code: string, ctx: MarkdownRenderContext): number {
-    // Use local y tracking
-    let localY = ctx.currentY;
-    let totalHeight = 1; // spacing before
-    localY += 1;
-
-    try {
-      // Find the cached graph element for this code
-      const cacheKey = `mermaid:${code.trim()}`;
-      const graphElement = this._mermaidElements.get(cacheKey);
-
-      if (!graphElement) {
-        // Graph not found - show error
-        const errorStyle = { ...ctx.style, foreground: getThemeColor('error') };
-        ctx.buffer.currentBuffer.setText(ctx.currentX, localY, '[Mermaid: graph not found]', errorStyle);
-        return totalHeight + 2;
-      }
-
-      // Get intrinsic size of the graph
-      // For flex containers with wrapping, intrinsic size may be smaller than rendered size
-      // Use available width for proper layout calculation
-      const availableWidth = Math.max(ctx.bounds.width, 80);
-      const intrinsicSize = graphElement.intrinsicSize({
-        availableSpace: { width: availableWidth, height: 200 },
-      });
-
-      // Use the available width for the graph so flex layout works correctly
-      const graphWidth = availableWidth;
-
-      // Calculate height based on content wrapping
-      // For horizontal flowcharts with flex-wrap, content wraps vertically when it doesn't fit
-      // Estimate: if content is Nx wider than available space, it will wrap to N rows
-      const widthRatio = Math.max(1, Math.ceil(intrinsicSize.width / availableWidth));
-      // Each row needs the intrinsic height plus gap space for wrapping
-      // Add minimal padding for borders
-      const rowHeight = intrinsicSize.height + 2;
-      const graphHeight = rowHeight * widthRatio;
-
-      // Create bounds for the graph
-      const graphBounds: Bounds = {
-        x: ctx.currentX,
-        y: localY,
-        width: graphWidth,
-        height: graphHeight,
-      };
-
-      // Get the generated element (container with nodes)
-      const generatedElement = graphElement.getGeneratedElement();
-      if (generatedElement) {
-        // Render the graph subtree using the standalone render helper
-        // The helper registers element bounds with the main renderer for hit testing
-        renderElementSubtree(generatedElement, ctx.buffer, graphBounds, ctx.context);
-      }
-
-      totalHeight += graphHeight;
-      localY += graphHeight;
-    } catch (error) {
-      // Render error message
-      const errorStyle = { ...ctx.style, foreground: getThemeColor('error') };
-      const errorMsg = `[Mermaid error: ${error instanceof Error ? error.message : String(error)}]`;
-      ctx.buffer.currentBuffer.setText(ctx.currentX, localY, errorMsg.substring(0, ctx.bounds.width), errorStyle);
-      totalHeight += 1;
-      localY += 1;
-    }
-
-    // Add spacing after
-    totalHeight += 1;
-
-    return totalHeight;
-  }
-
-  // Kept for reference - old ASCII rendering code removed
-  // The layout system now handles mermaid graph rendering with proper focus/click support
 
   /**
    * Render blockquote with left border
@@ -1853,342 +1374,12 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    * Render table (GFM extension)
    */
   private _renderTable(node: Table, ctx: MarkdownRenderContext): number {
-    if (!node.children || node.children.length === 0) {
-      return 0;
-    }
-
-    let totalHeight = 0;
-    const alignments = node.align || [];
-    const spacing = getSpacing('table');
-
-    // First pass: calculate column widths
-    const columnWidths = this._calculateTableColumnWidths(node, ctx);
-    const numColumns = columnWidths.length;
-
-    if (numColumns === 0) {
-      return 0;
-    }
-
-    // Use local y tracking - don't modify ctx.currentY (caller does that)
-    let localY = ctx.currentY;
-
-    // Add spacing before table
-    totalHeight += spacing.before;
-    localY += spacing.before;
-
-    // Box-drawing characters for table borders
-    const borderChars = {
-      topLeft: '\u250c',     // +
-      topRight: '\u2510',    // +
-      bottomLeft: '\u2514',  // +
-      bottomRight: '\u2518', // +
-      horizontal: '\u2500',  // -
-      vertical: '\u2502',    // |
-      leftT: '\u251c',       // +-
-      rightT: '\u2524',      // -+
-      topT: '\u252c',        // T
-      bottomT: '\u2534',     // inverted T
-      cross: '\u253c',       // +
+    const helpers: TableRenderHelpers = {
+      extractTextContent: (n) => this._extractTextContent(n),
+      flattenInlineElements: (nodes, style) => this._flattenInlineElements(nodes, style),
+      registerLinkRegion: (region) => this._linkRegions.push(region),
     };
-
-    const borderStyle = {
-      ...ctx.style,
-      foreground: getThemeColor('border')
-    };
-
-    // Create a local context with our local y position
-    const localCtx = { ...ctx, currentY: localY };
-
-    // Draw top border
-    this._drawTableBorderLine(localCtx, columnWidths, borderChars.topLeft, borderChars.horizontal, borderChars.topT, borderChars.topRight, borderStyle);
-    totalHeight += 1;
-    localY += 1;
-    localCtx.currentY = localY;
-
-    // Render rows
-    for (let rowIndex = 0; rowIndex < node.children.length; rowIndex++) {
-      const row = node.children[rowIndex];
-      const isHeader = rowIndex === 0;
-
-      // Render the row content
-      const rowHeight = this._renderTableRow(row, localCtx, columnWidths, alignments, isHeader, borderChars.vertical, borderStyle);
-      totalHeight += rowHeight;
-      localY += rowHeight;
-      localCtx.currentY = localY;
-
-      // Draw separator after header row
-      if (isHeader && node.children.length > 1) {
-        this._drawTableBorderLine(localCtx, columnWidths, borderChars.leftT, borderChars.horizontal, borderChars.cross, borderChars.rightT, borderStyle);
-        totalHeight += 1;
-        localY += 1;
-        localCtx.currentY = localY;
-      }
-    }
-
-    // Draw bottom border
-    this._drawTableBorderLine(localCtx, columnWidths, borderChars.bottomLeft, borderChars.horizontal, borderChars.bottomT, borderChars.bottomRight, borderStyle);
-    totalHeight += 1;
-    localY += 1;
-
-    // Add spacing after table
-    totalHeight += spacing.after;
-
-    return totalHeight;
-  }
-
-  /**
-   * Calculate column widths for a table
-   */
-  private _calculateTableColumnWidths(node: Table, ctx: MarkdownRenderContext): number[] {
-    const columnWidths: number[] = [];
-    const maxColumnWidth = 30; // Max width before wrapping
-
-    // Find max width for each column (capped at maxColumnWidth)
-    for (const row of node.children) {
-      for (let colIndex = 0; colIndex < row.children.length; colIndex++) {
-        const cell = row.children[colIndex];
-        const cellText = this._extractTextContent(cell);
-        // Use actual text length but cap at maxColumnWidth
-        const cellWidth = Math.min(cellText.length, maxColumnWidth);
-
-        if (columnWidths.length <= colIndex) {
-          columnWidths.push(cellWidth);
-        } else {
-          columnWidths[colIndex] = Math.max(columnWidths[colIndex], cellWidth);
-        }
-      }
-    }
-
-    // Ensure minimum column width of 3
-    return columnWidths.map(w => Math.max(w, 3));
-  }
-
-  /**
-   * Draw a horizontal border line for the table
-   */
-  private _drawTableBorderLine(
-    ctx: MarkdownRenderContext,
-    columnWidths: number[],
-    leftChar: string,
-    fillChar: string,
-    separatorChar: string,
-    rightChar: string,
-    style: Partial<Cell>
-  ): void {
-    let line = leftChar;
-
-    for (let i = 0; i < columnWidths.length; i++) {
-      line += fillChar.repeat(columnWidths[i] + 2); // +2 for padding
-      if (i < columnWidths.length - 1) {
-        line += separatorChar;
-      }
-    }
-
-    line += rightChar;
-    ctx.buffer.currentBuffer.setText(ctx.currentX, ctx.currentY, line, style);
-  }
-
-  /**
-   * Render a table row with multi-line cell support and inline formatting
-   */
-  private _renderTableRow(
-    row: TableRow,
-    ctx: MarkdownRenderContext,
-    columnWidths: number[],
-    alignments: ('left' | 'center' | 'right' | null)[],
-    isHeader: boolean,
-    verticalChar: string,
-    borderStyle: Partial<Cell>
-  ): number {
-    // First, collect styled spans for each cell and wrap them
-    const wrappedCells: Array<Array<Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}>>> = [];
-    let maxLines = 1;
-
-    // Base style for cells
-    const baseCellStyle = isHeader
-      ? { ...ctx.style, bold: true, foreground: getThemeColor('primary') }
-      : { ...ctx.style };
-
-    for (let colIndex = 0; colIndex < columnWidths.length; colIndex++) {
-      const cell = row.children[colIndex];
-      const width = columnWidths[colIndex];
-
-      if (!cell) {
-        wrappedCells.push([[{ text: ' '.repeat(width), style: baseCellStyle }]]);
-        continue;
-      }
-
-      // Get styled spans from cell content
-      const spans = this._flattenInlineElements(cell.children, baseCellStyle);
-
-      // Wrap styled spans into lines
-      const lines = this._wrapStyledSpans(spans, width);
-      wrappedCells.push(lines);
-      maxLines = Math.max(maxLines, lines.length);
-    }
-
-    // Render each line of the row
-    for (let lineIndex = 0; lineIndex < maxLines; lineIndex++) {
-      let x = ctx.currentX;
-      const y = ctx.currentY + lineIndex;
-
-      // Draw left border
-      ctx.buffer.currentBuffer.setText(x, y, verticalChar, borderStyle);
-      x += 1;
-
-      // Render each cell for this line
-      for (let colIndex = 0; colIndex < columnWidths.length; colIndex++) {
-        const width = columnWidths[colIndex];
-        const alignment = alignments[colIndex] || 'left';
-        const cellLines = wrappedCells[colIndex];
-
-        // Get the line spans (or empty if this cell has fewer lines)
-        const lineSpans = lineIndex < cellLines.length ? cellLines[lineIndex] : [];
-
-        // Calculate total text length for alignment
-        const totalLength = lineSpans.reduce((sum, span) => sum + span.text.length, 0);
-        const padding = width - totalLength;
-
-        // Calculate alignment padding
-        let leftPad = 0;
-        let rightPad = 0;
-        if (padding > 0) {
-          switch (alignment) {
-            case 'right':
-              leftPad = padding;
-              break;
-            case 'center':
-              leftPad = Math.floor(padding / 2);
-              rightPad = padding - leftPad;
-              break;
-            case 'left':
-            default:
-              rightPad = padding;
-              break;
-          }
-        }
-
-        // Draw cell content with padding
-        ctx.buffer.currentBuffer.setText(x, y, ' ', ctx.style); // left cell padding
-        x += 1;
-
-        // Left alignment padding
-        if (leftPad > 0) {
-          ctx.buffer.currentBuffer.setText(x, y, ' '.repeat(leftPad), baseCellStyle);
-          x += leftPad;
-        }
-
-        // Render styled spans and register link regions
-        for (const span of lineSpans) {
-          ctx.buffer.currentBuffer.setText(x, y, span.text, span.style);
-          // Register link region if this span is a link
-          if (span.linkUrl) {
-            this._linkRegions.push({
-              x: x,
-              y: y,
-              width: span.text.length,
-              url: span.linkUrl,
-              title: span.linkTitle
-            });
-          }
-          x += span.text.length;
-        }
-
-        // Right alignment padding
-        if (rightPad > 0) {
-          ctx.buffer.currentBuffer.setText(x, y, ' '.repeat(rightPad), baseCellStyle);
-          x += rightPad;
-        }
-
-        ctx.buffer.currentBuffer.setText(x, y, ' ', ctx.style); // right cell padding
-        x += 1;
-
-        // Draw column separator
-        ctx.buffer.currentBuffer.setText(x, y, verticalChar, borderStyle);
-        x += 1;
-      }
-    }
-
-    return maxLines; // Return actual row height
-  }
-
-  /**
-   * Wrap styled spans into lines that fit within a given width
-   */
-  private _wrapStyledSpans(
-    spans: Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}>,
-    width: number
-  ): Array<Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}>> {
-    const lines: Array<Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}>> = [];
-    let currentLine: Array<{text: string, style: Partial<Cell>, linkUrl?: string, linkTitle?: string}> = [];
-    let currentLineWidth = 0;
-
-    for (const span of spans) {
-      let remainingText = span.text;
-
-      while (remainingText.length > 0) {
-        const availableWidth = width - currentLineWidth;
-
-        if (remainingText.length <= availableWidth) {
-          // Whole text fits on current line - preserve link info
-          currentLine.push({ text: remainingText, style: span.style, linkUrl: span.linkUrl, linkTitle: span.linkTitle });
-          currentLineWidth += remainingText.length;
-          break;
-        }
-
-        // Need to wrap - find a good break point
-        const breakPoint = availableWidth > 0 ? findBreakPoint(remainingText, availableWidth) : availableWidth;
-
-        if (breakPoint > 0 && availableWidth > 0) {
-          // Add portion to current line - preserve link info
-          const chunk = remainingText.substring(0, breakPoint).trimEnd();
-          if (chunk.length > 0) {
-            currentLine.push({ text: chunk, style: span.style, linkUrl: span.linkUrl, linkTitle: span.linkTitle });
-          }
-          remainingText = remainingText.substring(breakPoint).trimStart();
-        }
-
-        // Start new line
-        if (currentLine.length > 0) {
-          lines.push(currentLine);
-        }
-        currentLine = [];
-        currentLineWidth = 0;
-      }
-    }
-
-    // Don't forget the last line
-    if (currentLine.length > 0) {
-      lines.push(currentLine);
-    }
-
-    // Ensure at least one line (even if empty)
-    if (lines.length === 0) {
-      lines.push([]);
-    }
-
-    return lines;
-  }
-
-  /**
-   * Align text within a given width
-   */
-  private _alignText(text: string, width: number, alignment: 'left' | 'center' | 'right' | null): string {
-    const padding = width - text.length;
-    if (padding <= 0) return text;
-
-    switch (alignment) {
-      case 'right':
-        return ' '.repeat(padding) + text;
-      case 'center': {
-        const leftPad = Math.floor(padding / 2);
-        const rightPad = padding - leftPad;
-        return ' '.repeat(leftPad) + text + ' '.repeat(rightPad);
-      }
-      case 'left':
-      default:
-        return text + ' '.repeat(padding);
-    }
+    return renderTableHelper(node, ctx, helpers);
   }
 
   /**
@@ -2214,274 +1405,14 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    * Render markdown image node ![alt](url)
    */
   private _renderImage(node: Image, ctx: MarkdownRenderContext): number {
-    // Use available width so aspect ratio is calculated correctly
-    const width = ctx.bounds.width;
-    return this._renderImageElement(node.url, node.alt, width, undefined, ctx);
-  }
-
-  /**
-   * Parse a dimension value with optional unit suffix.
-   * - Bare numbers or 'px' suffix: treated as CSS pixels, converted to chars (divide by 8)
-   * - 'ch' suffix: treated as characters, used as-is
-   * - '%' suffix: percentage of available width
-   */
-  private _parseDimension(value: string, availableWidth: number): number {
-    const match = value.match(/^(\d+(?:\.\d+)?)(px|ch|%)?$/i);
-    if (!match) return 0;
-
-    const num = parseFloat(match[1]);
-    const unit = (match[2] || 'px').toLowerCase();
-
-    switch (unit) {
-      case 'ch':
-        return Math.round(num);
-      case '%':
-        return Math.round((num / 100) * availableWidth);
-      case 'px':
-      default:
-        // Convert pixels to characters (approx 8px per char)
-        return Math.round(num / 8);
-    }
+    return this._imageRenderer.renderImage(node, ctx);
   }
 
   /**
    * Parse and render an <img> tag
    */
   private _renderImgTag(attributes: string, ctx: MarkdownRenderContext): number {
-    // Parse attributes
-    const srcMatch = attributes.match(/src\s*=\s*["']([^"']+)["']/i);
-    const widthMatch = attributes.match(/width\s*=\s*["']?(\d+(?:px|ch|%)?|\d+)["']?/i);
-    const heightMatch = attributes.match(/height\s*=\s*["']?(\d+(?:px|ch|%)?|\d+)["']?/i);
-    const altMatch = attributes.match(/alt\s*=\s*["']([^"']*)["']/i);
-
-    if (!srcMatch) {
-      return 0; // No src, skip
-    }
-
-    const src = srcMatch[1];
-    const availableWidth = ctx.bounds.width;
-    const width = widthMatch ? this._parseDimension(widthMatch[1], availableWidth) : undefined;
-    const height = heightMatch ? this._parseDimension(heightMatch[1], availableWidth) : undefined;
-    const alt = altMatch ? altMatch[1] : undefined;
-
-    return this._renderImageElement(src, alt, width, height, ctx);
-  }
-
-  /**
-   * Render an image using Canvas element
-   */
-  private _renderImageElement(
-    src: string,
-    alt: string | undefined,
-    width: number | undefined,
-    height: number | undefined,
-    ctx: MarkdownRenderContext
-  ): number {
-    // Resolve src relative to markdown source file
-    const resolvedSrc = this._resolveImagePath(src);
-    logger.debug('Resolved image path', { originalSrc: src, resolvedSrc });
-
-    // Calculate dimensions
-    const imgWidth = width || 30;
-    let imgHeight: number;
-
-    if (height !== undefined) {
-      // Height explicitly specified
-      imgHeight = height;
-    } else if (width !== undefined) {
-      // Width specified but height not - try to calculate from cached aspect ratio
-      const cachedAspect = this._imageAspectRatios.get(resolvedSrc);
-      if (cachedAspect !== undefined) {
-        // Calculate height from width and aspect ratio, accounting for terminal char aspect
-        // Terminal chars are typically ~2x taller than wide, so we divide by 2
-        imgHeight = Math.round(imgWidth / cachedAspect / 2);
-        logger.debug('Using cached aspect ratio for height', { cachedAspect, imgWidth, imgHeight });
-      } else {
-        // Aspect ratio not yet known - use placeholder height
-        imgHeight = 15;
-        logger.debug('Aspect ratio not cached, using placeholder height', { imgWidth, imgHeight });
-      }
-    } else {
-      // Neither specified - use defaults
-      imgHeight = 15;
-    }
-
-    logger.debug('Rendering image element', { src, alt, width: imgWidth, height: imgHeight });
-
-    // Check if theme is B&W or color (limited palette) - apply dithering for better image quality
-    const themeType = getThemeManager().getThemeType();
-
-    // Create a unique cache key combining src, dimensions, and dither settings
-    const cacheKey = `${resolvedSrc}:${imgWidth}x${imgHeight}`;
-
-    // Check if we already have a canvas for this image
-    let canvas = this._imageCanvases.get(cacheKey);
-
-    if (!canvas) {
-      // Create a new Canvas element with dithering for B&W/color themes
-      // Include src prop for sixel palette caching and id for debugging
-      const canvasId = `md-img-${this._imageCanvases.size}`;
-      const isSixel = getEffectiveGfxMode() === 'sixel';
-      canvas = new CanvasElement({
-        id: canvasId,
-        width: imgWidth,
-        height: imgHeight,
-        dither: 'auto',
-        // 3-bit (8 levels) for sixel - good balance of quality and palette usage
-        ...(isSixel && { ditherBits: 3 }),
-        src: resolvedSrc,
-      }, []);
-
-      // Store in cache
-      this._imageCanvases.set(cacheKey, canvas);
-
-      // Start loading the image asynchronously
-      logger.info('Starting image load', { resolvedSrc });
-      canvas.loadImage(resolvedSrc).then(() => {
-        logger.info('Image loaded successfully', { resolvedSrc });
-
-        // Cache the image aspect ratio for future renders
-        const loadedImage = (canvas as any)._loadedImage;
-        if (loadedImage && loadedImage.width && loadedImage.height) {
-          const aspectRatio = loadedImage.width / loadedImage.height;
-          const previousAspect = this._imageAspectRatios.get(resolvedSrc);
-          this._imageAspectRatios.set(resolvedSrc, aspectRatio);
-          logger.debug('Cached image aspect ratio', { resolvedSrc, aspectRatio });
-
-          // If this is a new aspect ratio, reset height stabilization to allow re-layout
-          if (previousAspect === undefined) {
-            this._heightStabilized = false;
-            logger.debug('Reset height stabilization for new image aspect ratio');
-
-            // Invalidate the cache and re-render with correct dimensions
-            if (width !== undefined && height === undefined) {
-              this._imageCanvases.delete(cacheKey);
-              logger.debug('Invalidating canvas cache for aspect ratio update', { cacheKey });
-            }
-          }
-        }
-
-        // Trigger re-render when image loads
-        if (ctx.context.requestRender) {
-          ctx.context.requestRender();
-        }
-      }).catch((err) => {
-        logger.error('Failed to load image: ' + String(err), undefined, { resolvedSrc });
-      });
-    }
-
-    // Render the canvas at current position
-    const bounds: Bounds = {
-      x: ctx.currentX,
-      y: ctx.currentY,
-      width: Math.min(imgWidth, ctx.bounds.width),
-      height: imgHeight,
-    };
-
-    canvas.render(bounds, ctx.style, ctx.buffer, ctx.context);
-
-    // Add alt text below image if provided
-    let totalHeight = imgHeight + 1; // +1 for spacing
-
-    if (alt) {
-      const altStyle = {
-        ...ctx.style,
-        foreground: getThemeColor('textMuted'),
-        italic: true,
-      };
-      const altText = `[${alt}]`;
-      ctx.buffer.currentBuffer.setText(ctx.currentX, ctx.currentY + imgHeight, altText, altStyle);
-      totalHeight += 1;
-    }
-
-    return totalHeight;
-  }
-
-  /**
-   * Resolve image path relative to markdown source file
-   */
-  private _resolveImagePath(src: string): string {
-    logger.debug('Resolving image path', { src, markdownSrc: this.props.src });
-
-    // If src is already absolute URL, return as-is
-    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('file://')) {
-      logger.debug('Image src is absolute URL');
-      return src;
-    }
-
-    // If src is absolute path, return as-is
-    if (src.startsWith('/')) {
-      logger.debug('Image src is absolute path');
-      return src;
-    }
-
-    // Use the actual resolved URL of the markdown file (set during loadUrl)
-    // This correctly handles cwd-relative paths passed as command-line arguments
-    const markdownUrl = this._resolvedSrcUrl;
-    if (!markdownUrl) {
-      // No resolved URL yet, fall back to engine resolution
-      const engine = globalThis.melkerEngine;
-      if (engine && typeof engine.resolveUrl === 'function') {
-        const resolved = engine.resolveUrl(src);
-        logger.debug('Resolved via engine (no resolved markdown URL)', { resolved });
-        return resolved;
-      }
-      logger.debug('No engine available, returning src as-is');
-      return src;
-    }
-
-    // Resolve relative to markdown file's directory
-    try {
-      // Get the directory of the markdown file
-      const markdownDir = markdownUrl.substring(0, markdownUrl.lastIndexOf('/') + 1);
-      const combinedUrl = markdownDir + src;
-
-      // Normalize the URL to resolve ../ and ./
-      const normalizedUrl = new URL(combinedUrl);
-      // Return plain pathname (strip file:// protocol) for local files
-      const resolvedPath = normalizedUrl.protocol === 'file:' ? normalizedUrl.pathname : normalizedUrl.href;
-      logger.debug('Resolved relative to markdown file', { markdownUrl, markdownDir, combinedUrl, resolvedPath });
-      return resolvedPath;
-    } catch (e) {
-      logger.error('Error resolving image path: ' + String(e));
-    }
-
-    return src;
-  }
-
-  /**
-   * Get code block style based on theme
-   */
-  private _getCodeBlockStyle(theme: string | undefined, baseStyle: Partial<Cell>): Partial<Cell> {
-    const themeType = getThemeManager().getThemeType();
-    const isDarkMode = getThemeManager().isDarkMode();
-
-    // For 16-color themes (color-std, color-dark), use high-contrast combinations
-    // because surface and textSecondary may have poor contrast
-    if (themeType === 'color') {
-      if (isDarkMode) {
-        // color-dark: use black bg with cyan text for good contrast
-        return {
-          ...baseStyle,
-          background: COLORS.black,
-          foreground: COLORS.cyan
-        };
-      } else {
-        // color-std: use brightBlack bg with white text for good contrast
-        return {
-          ...baseStyle,
-          background: COLORS.brightBlack,
-          foreground: COLORS.white
-        };
-      }
-    }
-
-    // For other themes (bw, gray, fullcolor), use standard palette colors
-    return {
-      ...baseStyle,
-      background: getThemeColor('surface'),
-      foreground: getThemeColor('textSecondary')
-    };
+    return this._imageRenderer.renderImgTag(attributes, ctx);
   }
 
   /**
@@ -2577,7 +1508,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     if (this._parsedAst) {
       let height = this._estimateContentHeight(this._parsedAst, availableWidth);
       // Add estimated height for mermaid blocks (from cached elements)
-      for (const graphElement of this._mermaidElements.values()) {
+      for (const graphElement of this._codeRenderer.getMermaidElements().values()) {
         if (hasIntrinsicSize(graphElement)) {
           const graphSize = graphElement.intrinsicSize(context);
           height += graphSize.height + 2; // +2 for spacing before/after
@@ -2793,23 +1724,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    * Used by engine to render sixel graphics for images in markdown content.
    */
   getSixelOutputs(): SixelOutputData[] {
-    const outputs: SixelOutputData[] = [];
-    logger.debug('getSixelOutputs called', { canvasCount: this._imageCanvases.size });
-    for (const [key, canvas] of this._imageCanvases.entries()) {
-      const sixelOutput = canvas.getSixelOutput();
-      logger.debug('Checking canvas for sixel output', {
-        key,
-        hasSixelOutput: !!sixelOutput,
-        hasData: !!sixelOutput?.data,
-        hasBounds: !!sixelOutput?.bounds,
-        isSixelMode: canvas.isSixelMode(),
-      });
-      if (sixelOutput?.data && sixelOutput.bounds) {
-        outputs.push(sixelOutput);
-      }
-    }
-    logger.debug('getSixelOutputs returning', { outputCount: outputs.length });
-    return outputs;
+    return this._imageRenderer.getSixelOutputs();
   }
 
   /**
@@ -2817,15 +1732,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    * Used by engine to render kitty graphics for images in markdown content.
    */
   getKittyOutputs(): KittyOutputData[] {
-    const outputs: KittyOutputData[] = [];
-    for (const [key, canvas] of this._imageCanvases.entries()) {
-      const kittyOutput = canvas.getKittyOutput();
-      if (kittyOutput?.data && kittyOutput.bounds) {
-        outputs.push(kittyOutput);
-      }
-    }
-    logger.debug('getKittyOutputs returning', { outputCount: outputs.length });
-    return outputs;
+    return this._imageRenderer.getKittyOutputs();
   }
 }
 

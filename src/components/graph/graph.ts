@@ -386,6 +386,22 @@ export class GraphElement extends Element implements Renderable {
   }
 }
 
+// Lint schema for graph component
+import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
+
+export const graphSchema: ComponentSchema = {
+  description: 'Render diagrams from mermaid or JSON syntax',
+  props: {
+    type: { type: 'string', enum: ['mermaid', 'json', 'sequence', 'class'], description: 'Parser type (default: auto-detect)' },
+    src: { type: 'string', description: 'Load content from URL' },
+    text: { type: 'string', description: 'Inline content (alternative to children text)' },
+    content: { type: 'string', description: 'Inline content (alias for text)' },
+    scrollable: { type: 'boolean', description: 'Enable scrolling (default: true)' },
+  },
+};
+
+registerComponentSchema('graph', graphSchema);
+
 // Register the graph component
 registerComponent({
   type: 'graph',

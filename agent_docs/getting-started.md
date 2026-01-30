@@ -131,7 +131,11 @@ melker --watch app.melker      # Auto-reload on changes
 melker --show-policy app.melker # Show permissions
 melker --trust app.melker      # Bypass approval prompt (CI/scripts)
 melker --stdout app.melker     # Output single frame to stdout and exit
+melker --interactive app.melker # Force TUI mode even when piped
+melker --color=always app.melker # Force ANSI colors even when piped
 ```
+
+**Piping:** When stdout is not a TTY (piped or redirected), Melker automatically renders a single frame and exits with plain text output (no ANSI codes). Use `--interactive` to force TUI mode, or `--color=always` to include ANSI codes when piping to tools that support them (e.g., `less -R`).
 
 **Deno flags** forwarded to subprocess: `--reload`, `--no-lock`, `--no-check`, `--quiet`/`-q`, `--cached-only`
 

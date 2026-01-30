@@ -862,4 +862,8 @@ export class MelkerConfig {
   get stdoutHeight(): number | undefined {
     return this.data['stdout.height'] as number | undefined;
   }
+
+  get stdoutColor(): 'auto' | 'always' | 'never' {
+    return (this.data['stdout.color'] as 'auto' | 'always' | 'never') ?? 'auto';
+  }
 }

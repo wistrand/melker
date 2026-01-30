@@ -161,6 +161,7 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 | `MELKER_STDOUT_WIDTH`        | Stdout mode output width (default: terminal width)                                                                                                                 |
 | `MELKER_STDOUT_HEIGHT`       | Stdout mode output height (default: terminal height)                                                                                                               |
 | `MELKER_STDOUT_TIMEOUT`      | Stdout mode wait time in ms before output (default: 500)                                                                                                           |
+| `MELKER_STDOUT_COLOR`        | ANSI color output: `auto` (strip when piped), `always` (force colors), `never` (no colors)                                                                         |
 | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`)                                                                                                                    |
 | `MELKER_DEBUG_PORT`          | Debug server port (implies `net: localhost`)                                                                                                                       |
 | `MELKER_ALLOW_REMOTE_INPUT`  | Allow browser mirror to send mouse/keyboard events (`true` or `1`)                                                                                                 |
@@ -226,12 +227,23 @@ See [config-architecture.md](agent_docs/config-architecture.md) for full details
 ./melker.ts --trust app.melker      # CI/scripts (bypass approval prompt)
 ./melker.ts --debug app.melker      # Debug mode
 ./melker.ts --stdout app.melker     # Output single frame to stdout and exit
+./melker.ts --interactive app.melker # Force TUI mode even when piped
+./melker.ts --color=always app.melker # Force ANSI colors even when piped
 ./melker.ts --lsp                   # Start LSP server
 ```
 
 **Important:** Use `--trust` for CI and automated scripts to bypass interactive approval.
 
-**Stdout mode:** `--stdout` renders a single frame to stdout without terminal control sequences. Useful for debugging, testing, and piping. Options: `--stdout-width`, `--stdout-height`, `--stdout-timeout`.
+**Piping:** When stdout is not a TTY (piped or redirected), Melker automatically renders a single frame with plain text (no ANSI codes) and exits. Use `--interactive` to force TUI mode, or `--color=always` to keep ANSI codes.
+
+```bash
+./melker.ts app.melker > snapshot.txt       # Auto-detects non-TTY, plain text
+./melker.ts app.melker | grep "Error"       # Plain text output
+./melker.ts --interactive app.melker | cat  # Force TUI mode
+./melker.ts --color=always app.melker | less -R  # Keep ANSI colors
+```
+
+**Stdout mode:** `--stdout` explicitly enables single-frame output. Options: `--stdout-width`, `--stdout-height`, `--stdout-timeout`, `--color`.
 
 See [getting-started.md](agent_docs/getting-started.md) for full CLI options, Deno flags, and remote execution.
 

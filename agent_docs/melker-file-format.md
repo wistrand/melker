@@ -502,6 +502,15 @@ MELKER_THEME=auto-dark ./melker.ts app.melker
 # Start LSP server (for editor integration)
 ./melker.ts --lsp
 
+# Single-frame output (renders once and exits)
+./melker.ts --stdout examples/basics/counter.melker
+
+# Force interactive mode even when piped
+./melker.ts --interactive examples/basics/counter.melker | cat
+
+# Force ANSI colors when piping (e.g., to less -R)
+./melker.ts --color=always examples/basics/counter.melker | less -R
+
 # Deno flags (forwarded to app subprocess)
 ./melker.ts --reload http://example.com/app.melker    # Reload remote modules
 ./melker.ts --no-lock app.melker                       # Disable lockfile
@@ -509,6 +518,31 @@ MELKER_THEME=auto-dark ./melker.ts app.melker
 ./melker.ts --quiet app.melker                         # Suppress diagnostic output
 ./melker.ts --cached-only app.melker                   # Offline mode
 ```
+
+**Piping and Redirection:**
+
+When stdout is not a TTY (piped or redirected), Melker automatically:
+1. Renders a single frame after a timeout (default 200ms)
+2. Strips ANSI escape codes for clean text output
+3. Exits immediately
+
+```bash
+# These work naturally - auto-detects non-TTY
+./melker.ts app.melker > snapshot.txt
+./melker.ts app.melker | head -20
+./melker.ts app.melker | grep "Error"
+
+# Force interactive TUI mode even when piped
+./melker.ts --interactive app.melker | cat
+
+# Force ANSI colors when piping to tools that support them
+./melker.ts --color=always app.melker | less -R
+```
+
+**Color modes:**
+- `--color=auto` (default): Strip ANSI when piped, keep when TTY
+- `--color=always`: Force ANSI colors even when piped
+- `--color=never`: Strip ANSI colors even on TTY
 
 **Running melker.ts from a remote URL:** Deno flags may need to appear in two places:
 

@@ -22,14 +22,57 @@ export interface StdoutOptions {
   height: number;
   timeout: number;
   colorSupport: 'none' | '16' | '256' | 'truecolor';
+  stripAnsi: boolean;
 }
 
 /**
- * Check if stdout mode is enabled
+ * Check if stdout is a TTY (interactive terminal)
+ */
+export function isStdoutTTY(): boolean {
+  try {
+    return Deno.stdout.isTerminal();
+  } catch {
+    // If we can't determine, assume not a TTY (safer for piping)
+    return false;
+  }
+}
+
+/**
+ * Check if stdout mode is enabled (explicit flag OR auto-detected non-TTY)
+ * Respects --interactive flag which forces TUI mode even when piped
  */
 export function isStdoutEnabled(): boolean {
   const config = MelkerConfig.get();
-  return !!(config as any).stdoutEnabled;
+  const explicitlyEnabled = !!(config as any).stdoutEnabled;
+  const forceInteractive = !!(config as any).stdoutInteractive;
+
+  // --interactive flag overrides auto-detection
+  if (forceInteractive) {
+    return explicitlyEnabled; // Only enable stdout mode if explicitly requested
+  }
+
+  // Auto-enable if stdout is not a TTY (piped or redirected)
+  if (!explicitlyEnabled && !isStdoutTTY()) {
+    return true;
+  }
+
+  return explicitlyEnabled;
+}
+
+/**
+ * Check if stdout mode was auto-enabled (not explicitly set via --stdout flag)
+ */
+export function isStdoutAutoEnabled(): boolean {
+  const config = MelkerConfig.get();
+  const explicitlyEnabled = !!(config as any).stdoutEnabled;
+  const forceInteractive = !!(config as any).stdoutInteractive;
+
+  // --interactive flag prevents auto-enabling
+  if (forceInteractive) {
+    return false;
+  }
+
+  return !explicitlyEnabled && !isStdoutTTY();
 }
 
 /**
@@ -56,24 +99,49 @@ export function getStdoutConfig(): StdoutOptions {
   const colorSupport = getThemeManager().getColorSupport();
   // Default to terminal size if not explicitly set
   const terminalSize = getActualTerminalSize();
+
+  // Determine ANSI stripping based on --color flag
+  // auto (default): strip when piped (not a TTY)
+  // always: force colors even when piped
+  // never: strip colors even on TTY
+  const colorMode = config.stdoutColor;
+  let stripAnsi: boolean;
+  if (colorMode === 'always') {
+    stripAnsi = false;
+  } else if (colorMode === 'never') {
+    stripAnsi = true;
+  } else {
+    // auto: strip when piped (not a TTY)
+    stripAnsi = !isStdoutTTY();
+  }
+
   return {
     width: config.stdoutWidth ?? terminalSize.width,
     height: config.stdoutHeight ?? terminalSize.height,
     timeout: config.stdoutTimeout ?? 500,
-    colorSupport,
+    colorSupport: stripAnsi ? 'none' : colorSupport,
+    stripAnsi,
   };
 }
 
 /**
  * Convert a buffer to stdout-friendly output (no cursor moves, only style + chars)
  * Each row is printed as a line with style sequences and newline at end
+ *
+ * When stripAnsi is true (auto-detected when piped), outputs plain text only.
  */
-export function bufferToStdout(buffer: DualBuffer, options: { colorSupport: 'none' | '16' | '256' | 'truecolor' } = { colorSupport: 'truecolor' }): string {
+export function bufferToStdout(
+  buffer: DualBuffer,
+  options: { colorSupport: 'none' | '16' | '256' | 'truecolor'; stripAnsi?: boolean } = { colorSupport: 'truecolor' }
+): string {
   const lines: string[] = [];
   // Use display buffer (previousBuffer) which has the rendered content after swap
   const termBuffer = buffer.getDisplayBuffer();
   const width = termBuffer.width;
   const height = termBuffer.height;
+
+  // Strip ANSI when piped or when color support is 'none'
+  const stripAnsi = options.stripAnsi ?? (options.colorSupport === 'none');
 
   for (let y = 0; y < height; y++) {
     let line = '';
@@ -91,21 +159,26 @@ export function bufferToStdout(buffer: DualBuffer, options: { colorSupport: 'non
         continue;
       }
 
-      // Generate style code for this cell
-      const cellStyle = generateCellStyle(cell, options.colorSupport);
+      // Only add style codes if not stripping ANSI
+      if (!stripAnsi) {
+        // Generate style code for this cell
+        const cellStyle = generateCellStyle(cell, options.colorSupport);
 
-      // Only emit style change if different from current
-      if (cellStyle !== currentStyle) {
-        line += cellStyle;
-        currentStyle = cellStyle;
+        // Only emit style change if different from current
+        if (cellStyle !== currentStyle) {
+          line += cellStyle;
+          currentStyle = cellStyle;
+        }
       }
 
       // Output the character
       line += cell.char || EMPTY_CHAR;
     }
 
-    // Reset at end of line
-    line += '\x1b[0m';
+    // Reset at end of line (only if using ANSI)
+    if (!stripAnsi) {
+      line += '\x1b[0m';
+    }
     lines.push(line);
   }
 
@@ -245,7 +318,10 @@ export class StdoutManager {
       return;
     }
 
-    const output = bufferToStdout(this._buffer, { colorSupport: this._config.colorSupport });
+    const output = bufferToStdout(this._buffer, {
+      colorSupport: this._config.colorSupport,
+      stripAnsi: this._config.stripAnsi,
+    });
 
     // Write to stdout
     const encoder = new TextEncoder();

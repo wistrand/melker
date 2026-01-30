@@ -255,6 +255,12 @@
       "flag": "--stdout",
       "description": "Output buffer to stdout after timeout (no terminal control)"
     },
+    "stdout.interactive": {
+      "type": "boolean",
+      "default": false,
+      "flag": "--interactive",
+      "description": "Force interactive TUI mode even when stdout is not a TTY"
+    },
     "stdout.timeout": {
       "type": "integer",
       "default": 200,
@@ -279,6 +285,14 @@
       "env": "MELKER_STDOUT_HEIGHT",
       "flag": "--stdout-height",
       "description": "Output height in rows (default: terminal height)"
+    },
+    "stdout.color": {
+      "type": "string",
+      "enum": ["auto", "always", "never"],
+      "default": "auto",
+      "env": "MELKER_STDOUT_COLOR",
+      "flag": "--color",
+      "description": "ANSI color output: auto (strip when piped), always (force colors), never (no colors)"
     }
   }
 }

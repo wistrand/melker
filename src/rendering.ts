@@ -18,6 +18,7 @@ import { getThemeColor, getThemeManager } from './theme.ts';
 import { COLORS, parseColor } from './components/color-utils.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { getLogger } from './logging.ts';
+import { ensureError } from './utils/error.ts';
 import { getGlobalErrorHandler, renderErrorPlaceholder } from './error-boundary.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { MelkerConfig } from './config/mod.ts';
@@ -889,7 +890,7 @@ export class RenderingEngine {
     try {
       this._renderNodeInternal(node, context);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
+      const err = ensureError(error);
       getGlobalErrorHandler().captureError(node.element, err, node.bounds);
       renderErrorPlaceholder(context.buffer as DualBuffer, node.bounds, node.element.type, err);
     }
@@ -1410,7 +1411,7 @@ export class RenderingEngine {
       try {
         element.render(bounds, cellStyle, renderBuffer as any, componentContext);
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
+        const err = ensureError(error);
         getGlobalErrorHandler().captureError(element, err, bounds);
         renderErrorPlaceholder(buffer as DualBuffer, bounds, element.type, err);
       }

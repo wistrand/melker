@@ -19,6 +19,7 @@
  */
 
 import { MelkerConfig } from '../config/mod.ts';
+import { ensureError } from '../utils/error.ts';
 
 // Re-export types
 export type {
@@ -284,7 +285,7 @@ export async function executeBundle(
     restoreTerminal();
 
     // Ensure we have an Error object
-    const err = error instanceof Error ? error : new Error(String(error));
+    const err = ensureError(error);
 
     // Log to file for debugging
     logger.error('Bundle execution failed', err, {
@@ -328,7 +329,7 @@ export async function callReady(registry: MelkerRegistry): Promise<void> {
       // CRITICAL: Restore terminal and show error - never fail silently
       restoreTerminal();
 
-      const err = error instanceof Error ? error : new Error(String(error));
+      const err = ensureError(error);
       logger.error('__ready failed', err);
 
       console.error('\n\x1b[31m__ready hook failed:\x1b[0m', err.message);
@@ -371,7 +372,7 @@ export function wrapHandler(
         context.render();
       }
     } catch (error) {
-      logger.error('Handler error', error instanceof Error ? error : new Error(String(error)), {
+      logger.error('Handler error', ensureError(error), {
         handlerName,
       });
       throw error;

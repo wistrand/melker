@@ -4,6 +4,7 @@
 import { getLogger } from '../logging.ts';
 import { Env } from '../env.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { ensureError } from '../utils/error.ts';
 
 const logger = getLogger('ai:openrouter');
 
@@ -333,7 +334,7 @@ export async function streamChat(
       callback.onComplete(fullResponse);
     }
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
+    const err = ensureError(error);
     logger.error('Chat stream error', err);
     callback.onError(err);
   }

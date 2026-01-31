@@ -3,6 +3,7 @@
 import { dirname, resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
 import type { MelkerPolicy, PolicyLoadResult } from './types.ts';
 import { Env } from '../env.ts';
+import { extractHostFromUrl } from './url-utils.ts';
 
 /**
  * Extract policy from markdown JSON block with "@melker": "policy"
@@ -192,17 +193,6 @@ function substituteEnvVars(value: string): string {
   });
 }
 
-/**
- * Extract host from a URL
- */
-function extractHost(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    return parsed.host;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Fetch wellknown config and extract all hosts from URL fields
@@ -211,7 +201,7 @@ async function fetchWellknownHosts(wellknownUrl: string): Promise<string[]> {
   const hosts: string[] = [];
 
   // Add the wellknown URL's host itself
-  const wellknownHost = extractHost(wellknownUrl);
+  const wellknownHost = extractHostFromUrl(wellknownUrl);
   if (wellknownHost) {
     hosts.push(wellknownHost);
   }
@@ -236,7 +226,7 @@ async function fetchWellknownHosts(wellknownUrl: string): Promise<string[]> {
     for (const field of urlFields) {
       const value = config[field];
       if (value) {
-        const host = extractHost(value);
+        const host = extractHostFromUrl(value);
         if (host && !hosts.includes(host)) {
           hosts.push(host);
         }
@@ -281,12 +271,7 @@ async function addWellknownHostsForOAuth(policy: MelkerPolicy, content: string):
 }
 
 export function addSourceURLNet(policy: MelkerPolicy, sourceUrl: string) {
-
-  if(!(sourceUrl?.startsWith("http://") || sourceUrl?.startsWith("https://"))) {
-    return;
-  }
-
-  const host = extractHost(sourceUrl);
+  const host = extractHostFromUrl(sourceUrl);
   if (!host) return; // Invalid URL
 
   if (!policy.permissions) {
@@ -444,20 +429,6 @@ export function validatePolicy(policy: MelkerPolicy): string[] {
   }
 
   return errors;
-}
-
-/**
- * Extract host from a URL, returns null if invalid
- */
-function extractHostFromUrl(url: string): string | null {
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    return null;
-  }
-  try {
-    return new URL(url).host;
-  } catch {
-    return null;
-  }
 }
 
 /**

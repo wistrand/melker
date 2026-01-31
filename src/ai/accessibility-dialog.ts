@@ -8,6 +8,7 @@ import { Element } from '../types.ts';
 import { FocusManager } from '../focus.ts';
 import { getLogger } from '../logging.ts';
 import { getOpenRouterConfig, streamChat, type ChatMessage, type ToolCallRequest } from './openrouter.ts';
+import { ensureError } from '../utils/error.ts';
 import { buildContext, buildSystemPrompt, hashContext, type UIContext } from './context.ts';
 import { getGlobalCache } from './cache.ts';
 import { toolsToOpenRouterFormat, executeTool, type ToolContext, type ToolCall } from './tools.ts';
@@ -789,7 +790,7 @@ export class AccessibilityDialogManager {
       // Automatically send the transcribed text as a question
       await this._handleAsk();
     } catch (error) {
-      logger.error('Audio recording/transcription failed', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Audio recording/transcription failed', ensureError(error));
       this._isListening = false;
       if (listenBtn) {
         listenBtn.props.title = 'Listen';
@@ -912,7 +913,7 @@ export class AccessibilityDialogManager {
         });
       }
     } catch (error) {
-      logger.error('Error compacting history', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Error compacting history', ensureError(error));
     } finally {
       this._isCompacting = false;
       if (statusElement) {

@@ -10,6 +10,7 @@
 
 import { getLogger } from '../logging.ts';
 import { getTempDir } from '../xdg.ts';
+import { ensureError } from '../utils/error.ts';
 import type {
   BundleOptions,
   BundleResult,
@@ -185,14 +186,14 @@ export async function bundle(
     // Parse the error for better display
     const parsed = parseBundleError(error, generated);
 
-    logger.error('Bundle failed', error instanceof Error ? error : new Error(String(error)), {
+    logger.error('Bundle failed', ensureError(error), {
       sourceUrl: generated.sourceUrl,
       parsedLocation: parsed.location,
     });
 
     displayFatalError(
       'bundle',
-      error instanceof Error ? error : new Error(String(error)),
+      ensureError(error),
       {
         filepath: generated.sourceUrl,
         sourceLocation: parsed.location,

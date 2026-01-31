@@ -8,6 +8,7 @@ import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
 import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
+import { ensureError } from '../utils/error.ts';
 
 const logger = getLogger('ImgElement');
 
@@ -149,7 +150,7 @@ export class ImgElement extends CanvasElement {
       }
     } catch (error) {
       if (this._onError) {
-        this._onError(error instanceof Error ? error : new Error(String(error)));
+        this._onError(ensureError(error));
       } else {
         throw error;
       }

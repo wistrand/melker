@@ -4,6 +4,9 @@
 
 import { dirname, resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
 
+// Shared utilities
+import { isUrl, loadContent } from './src/utils/content-loader.ts';
+
 // Policy imports for permission enforcement
 import {
   loadPolicy,
@@ -48,27 +51,6 @@ function resetTerminalState(): void {
   } catch {
     // Ignore write errors
   }
-}
-
-/**
- * Check if a path is a URL (http:// or https://)
- */
-function isUrl(path: string): boolean {
-  return path.startsWith('http://') || path.startsWith('https://');
-}
-
-/**
- * Load content from a file path or URL
- */
-async function loadContent(pathOrUrl: string): Promise<string> {
-  if (isUrl(pathOrUrl)) {
-    const response = await fetch(pathOrUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${pathOrUrl}: ${response.status} ${response.statusText}`);
-    }
-    return await response.text();
-  }
-  return await Deno.readTextFile(pathOrUrl);
 }
 
 /**

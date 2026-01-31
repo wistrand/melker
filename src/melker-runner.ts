@@ -4,6 +4,8 @@
 
 import { resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
 import { debounce } from './utils/timing.ts';
+import { isUrl, loadContent } from './utils/content-loader.ts';
+import { ensureError } from './utils/error.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { Env } from './env.ts';
 import { parseCliFlags, MelkerConfig } from './config/mod.ts';
@@ -102,7 +104,7 @@ async function wireBundlerHandlers(
                 logger?.error?.(`onShader must return a function, got ${typeof shaderFn}`);
               }
             } catch (error) {
-              const err = error instanceof Error ? error : new Error(String(error));
+              const err = ensureError(error);
               logger?.error?.(`Error getting shader function:`, err);
               getGlobalErrorOverlay().showError(err.message);
             }
@@ -119,7 +121,7 @@ async function wireBundlerHandlers(
                 }
                 return result;
               } catch (error) {
-                const err = error instanceof Error ? error : new Error(String(error));
+                const err = ensureError(error);
                 let location: string | undefined;
 
                 if (errorTranslator) {
@@ -191,7 +193,7 @@ async function wireBundlerHandlers(
                 }
                 return result;
               } catch (error) {
-                const err = error instanceof Error ? error : new Error(String(error));
+                const err = ensureError(error);
                 logger?.error?.(`Error in inline handler for ${propName}: ${err.message}`);
                 getGlobalErrorOverlay().showError(`Handler error: ${err.message}`);
                 if (context?.render) {
@@ -217,21 +219,6 @@ async function wireBundlerHandlers(
       await wireBundlerHandlers(child, registry, context, logger, handlerCodeMap, errorTranslator);
     }
   }
-}
-
-function isUrl(path: string): boolean {
-  return path.startsWith('http://') || path.startsWith('https://');
-}
-
-async function loadContent(pathOrUrl: string): Promise<string> {
-  if (isUrl(pathOrUrl)) {
-    const response = await fetch(pathOrUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${pathOrUrl}: ${response.status} ${response.statusText}`);
-    }
-    return await response.text();
-  }
-  return await Deno.readTextFile(pathOrUrl);
 }
 
 function getBaseUrl(pathOrUrl: string): string {

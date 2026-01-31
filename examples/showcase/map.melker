@@ -59,7 +59,7 @@ map.melker paris 12 satellite           # Paris with satellite imagery
 
   <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
     <!-- Header with controls -->
-    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; align-items: center;">
+    <container style="display: flex; flex-direction: row; padding-top: 1; padding-left: 1; padding-right: 1; gap: 2; align-items: center;">
       <text>Go to:</text>
       <autocomplete
         id="search"
@@ -104,7 +104,7 @@ map.melker paris 12 satellite           # Paris with satellite imagery
     </container>
 
     <!-- Footer with attribution and coordinates -->
-    <container style="display: flex; flex-direction: row; padding: 1; justify-content: space-between;">
+    <container style="display: flex; flex-direction: row; padding-left: 1; padding-right: 1; justify-content: space-between;">
       <text id="attribution">(C) OpenStreetMap, (C) CARTO</text>
       <container style="display: flex; flex-direction: row; gap: 1; align-items: center;">
         <text id="coords">51.5074, -0.1278</text>

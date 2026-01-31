@@ -2,6 +2,8 @@
  * Chat fetch utilities for streaming chat content from APIs
  */
 
+import { ensureError } from '../utils/error.ts';
+
 // Types for chat streaming
 export interface ChatOptions {
   data: unknown;
@@ -127,7 +129,7 @@ export async function fetchStreamedChatContent(
     }
   } catch (error) {
     if (onError) {
-      await onError(error instanceof Error ? error : new Error(String(error)));
+      await onError(ensureError(error));
     }
   }
 }

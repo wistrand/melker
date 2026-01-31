@@ -5,6 +5,7 @@ import type { MelkerPolicy } from './types.ts';
 import { getTempDir } from '../xdg.ts';
 import { Env } from '../env.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { extractHostFromUrl, extractHostOrValue } from './url-utils.ts';
 
 /**
  * Convert a policy to Deno command-line permission flags
@@ -26,40 +27,6 @@ const KEYRING_COMMANDS_ALL = ['security', 'secret-tool', 'powershell'];
 // Cache for command existence checks
 const commandExistsCache = new Map<string, boolean>();
 
-/**
- * Extract host from a URL or return the string as-is if it's already a host
- */
-function extractHost(value: string): string {
-  // If it looks like a URL, extract the host
-  if (value.startsWith('http://') || value.startsWith('https://')) {
-    try {
-      const url = new URL(value);
-      return url.host; // Returns host with port if present
-    } catch {
-      // Invalid URL, return as-is
-      return value;
-    }
-  }
-  // Already a host/domain
-  return value;
-}
-
-/**
- * Extract host from source URL for "samesite" permission
- * Returns null if URL is invalid or not provided
- */
-function extractSourceHost(sourceUrl: string | undefined): string | null {
-  if (!sourceUrl) return null;
-  if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
-    return null; // Only HTTP/HTTPS URLs have a meaningful "samesite"
-  }
-  try {
-    const url = new URL(sourceUrl);
-    return url.host;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Check if a command exists in PATH
@@ -218,13 +185,13 @@ export function policyToDenoFlags(policy: MelkerPolicy, appDir: string, urlHash?
     } else {
       // Extract hosts from URLs (Deno only accepts hosts/domains, not full URLs)
       // Handle special "samesite" value - expands to the host of the source URL
-      const sourceHost = extractSourceHost(sourceUrl);
+      const sourceHost = sourceUrl ? extractHostFromUrl(sourceUrl) : null;
       const hosts = p.net
         .map(entry => {
           if (entry === 'samesite') {
             return sourceHost; // null if no valid source URL
           }
-          return extractHost(entry);
+          return extractHostOrValue(entry);
         })
         .filter((h): h is string => h !== null); // Remove nulls (unresolved samesite)
       if (hosts.length > 0) {

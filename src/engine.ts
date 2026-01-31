@@ -11,6 +11,7 @@ declare global {
 
 import { Document } from './document.ts';
 import { MelkerConfig, setLoggerGetter } from './config/mod.ts';
+import { ensureError } from './utils/error.ts';
 import { Env } from './env.ts';
 import { DualBuffer, EMPTY_CHAR } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
@@ -580,7 +581,7 @@ export class MelkerEngine {
       try {
         handler(resizeEvent);
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
+        const err = ensureError(error);
         this._logger?.error('Error in resize handler', err);
         // Show error visually - never fail silently
         getGlobalScriptErrorOverlay().showError(err.message, 'resize handler');
@@ -2393,7 +2394,7 @@ export class MelkerEngine {
         // Handle async handlers - catch any rejected promises
         if (result && typeof (result as { catch?: unknown }).catch === 'function') {
           (result as Promise<void>).catch((error) => {
-            const err = error instanceof Error ? error : new Error(String(error));
+            const err = ensureError(error);
             this._logger?.error('Error in async mount handler', err);
             // CRITICAL: Restore terminal and show error - never fail silently
             this.cleanupTerminal();
@@ -2406,7 +2407,7 @@ export class MelkerEngine {
           });
         }
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
+        const err = ensureError(error);
         this._logger?.error('Error in mount handler', err);
         // CRITICAL: Restore terminal and show error - never fail silently
         this.cleanupTerminal();

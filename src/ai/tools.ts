@@ -4,6 +4,7 @@
 import { Document } from '../document.ts';
 import { getLogger } from '../logging.ts';
 import { hasKeyInputHandler, hasGetContent } from '../types.ts';
+import { ensureError } from '../utils/error.ts';
 
 const logger = getLogger('ai:tools');
 
@@ -292,11 +293,11 @@ export async function executeTool(toolCall: ToolCall, context: ToolContext): Pro
       message: `Unknown tool: ${toolCall.name}`,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error('Tool execution error', error instanceof Error ? error : new Error(errorMsg));
+    const err = ensureError(error);
+    logger.error('Tool execution error', err);
     return {
       success: false,
-      message: `Error executing tool: ${errorMsg}`,
+      message: `Error executing tool: ${err.message}`,
     };
   }
 }
@@ -492,7 +493,7 @@ function executeExitProgram(context: ToolContext): ToolResult {
     try {
       await context.exitProgram();
     } catch (error) {
-      logger.error('Error during program exit', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Error during program exit', ensureError(error));
     }
   }, 200);
   return { success: true, message: 'Exiting program...' };

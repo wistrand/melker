@@ -3,6 +3,7 @@
 
 import { getCacheDir, ensureDir, getAppCacheDir } from '../xdg.ts';
 import type { MelkerPolicy } from './types.ts';
+import { extractHostFromUrl } from './url-utils.ts';
 
 /**
  * Approval record stored in cache
@@ -162,20 +163,6 @@ export async function saveApproval(
 }
 
 /**
- * Extract host from a URL, returns null if invalid
- */
-function extractHost(url: string): string | null {
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    return null;
-  }
-  try {
-    return new URL(url).host;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Format policy permissions for display in approval prompt
  */
 function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): string[] {
@@ -195,7 +182,7 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
   }
   if (p.net?.length) {
     // Expand "samesite" to show actual host
-    const sourceHost = sourceUrl ? extractHost(sourceUrl) : null;
+    const sourceHost = sourceUrl ? extractHostFromUrl(sourceUrl) : null;
     const netDisplay = p.net.map(entry => {
       if (entry === 'samesite' && sourceHost) {
         return `samesite (${sourceHost})`;

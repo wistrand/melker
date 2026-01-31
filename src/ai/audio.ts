@@ -5,6 +5,7 @@ import { encodeBase64 } from "jsr:@std/encoding@^1.0.0/base64";
 import { getLogger } from '../logging.ts';
 import { getOpenRouterConfig } from './openrouter.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { ensureError } from '../utils/error.ts';
 
 const logger = getLogger('ai:audio');
 
@@ -91,7 +92,7 @@ export class AudioRecorder {
         return await this._recordFFmpeg(durationSeconds, gain, sampleRate, channels, bitsPerSample);
       }
     } catch (error) {
-      logger.error('Audio recording failed', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Audio recording failed', ensureError(error));
       await this._cleanup();
       throw error;
     } finally {
@@ -833,7 +834,7 @@ export async function transcribeAudio(
     logger.info('Transcription complete', { length: content.length });
     return content.trim();
   } catch (error) {
-    logger.error('Transcription failed', error instanceof Error ? error : new Error(String(error)));
+    logger.error('Transcription failed', ensureError(error));
     return null;
   }
 }

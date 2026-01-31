@@ -385,5 +385,9 @@ registerComponentSchema('text', textSchema);
 registerComponent({
   type: 'text',
   componentClass: TextElement,
-  defaultProps: {},
+  defaultProps: {
+    wrap: false,
+    disabled: false,
+  },
+  validate: (props) => TextElement.validate(props as any),
 });

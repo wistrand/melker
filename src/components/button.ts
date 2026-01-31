@@ -344,4 +344,5 @@ registerComponent({
     disabled: false,
     tabIndex: 0,
   },
+  validate: (props) => ButtonElement.validate(props as any),
 });

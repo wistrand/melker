@@ -4,6 +4,7 @@
 import { getCacheDir, ensureDir, getAppCacheDir } from '../xdg.ts';
 import type { MelkerPolicy } from './types.ts';
 import { extractHostFromUrl } from './url-utils.ts';
+import { isUrl } from '../utils/content-loader.ts';
 
 /**
  * Approval record stored in cache
@@ -237,7 +238,7 @@ export function showApprovalPrompt(
     return false;
   }
 
-  if(url.startsWith("http://") || url.startsWith("https://")) {
+  if (isUrl(url)) {
     console.log('\n\x1b[1mRemote App Permission Request\x1b[0m\n');
   } else {
     console.log('\n\x1b[1mLocal App Permission Request\x1b[0m\n');

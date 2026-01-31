@@ -5,6 +5,7 @@ import { getGlobalEventManager, createFocusEvent, type EventManager } from './ev
 import { type Element } from './types.ts';
 import { type Document } from './document.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
+import { hasElementWithId } from './utils/tree-traversal.ts';
 
 export interface FocusableElement {
   id: string;
@@ -399,19 +400,7 @@ export class FocusManager {
     const isDescendant = (elementId: string): boolean => {
       const element = this._document!.getElementById(elementId);
       if (!element) return false;
-
-      // Check if this element is inside the container by traversing the container's tree
-      const checkInTree = (node: Element): boolean => {
-        if (node.id === elementId) return true;
-        if (node.children) {
-          for (const child of node.children) {
-            if (checkInTree(child)) return true;
-          }
-        }
-        return false;
-      };
-
-      return checkInTree(container);
+      return hasElementWithId(elementId, container);
     };
 
     return Array.from(this._focusableElementIds)

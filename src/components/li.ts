@@ -152,5 +152,11 @@ registerComponent({
       flexShrink: 0,
       height: 1,
     },
+    marker: '-', // Default list marker
+    indent: 2,   // Default indentation level
+    focused: false,
+    selected: false,
+    selectionMode: 'single',
   },
+  validate: (props) => LiElement.validate(props as any),
 });

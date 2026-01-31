@@ -407,9 +407,9 @@ registerComponent({
   type: 'graph',
   componentClass: GraphElement,
   defaultProps: {
-    style: {
-      width: 'fill',
-      height: 'fill',
-    },
+    type: 'mermaid',
+    // Graph elements use flex layout and fill parent to properly size their generated children
+    style: { display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' },
   },
+  validate: (props) => GraphElement.validate(props as any),
 });

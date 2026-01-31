@@ -7,6 +7,7 @@ import { Element, Bounds, ComponentRenderContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getLogger } from '../logging.ts';
 import { getThemeManager } from '../theme.ts';
+import { isRemoteUrl } from '../utils/content-loader.ts';
 import {
   applyFloydSteinbergDither,
   applyFloydSteinbergStableDither,
@@ -209,7 +210,7 @@ export class VideoElement extends CanvasElement {
           logger.warn('Cannot derive subtitle path: no video source specified');
           return;
         }
-        if(this.props.src.startsWith("http://") || this.props.src.startsWith("https://") || this.props.src.startsWith("rtsp:")) {
+        if (isRemoteUrl(this.props.src)) {
           logger.info("no subtitles for remote video " + this.props.src);
           return;
         }
@@ -869,7 +870,7 @@ export class VideoElement extends CanvasElement {
     await this.stopVideo();
 
     // Resolve relative paths from cwd
-    const resolvedSrc = (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("rtsp:"))
+    const resolvedSrc = isRemoteUrl(src)
       ? src
       : (src.startsWith('/') ? src : `${Deno.cwd()}/${src}`);
 
@@ -1466,6 +1467,7 @@ export class VideoElement extends CanvasElement {
 }
 
 // Lint schema for video component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const videoSchema: ComponentSchema = {
@@ -1502,3 +1504,17 @@ export const videoSchema: ComponentSchema = {
 };
 
 registerComponentSchema('video', videoSchema);
+
+// Register video component
+registerComponent({
+  type: 'video',
+  componentClass: VideoElement,
+  defaultProps: {
+    scale: 1,
+    autoplay: true,
+    loop: false,
+    fps: 24,
+    disabled: false,
+  },
+  validate: (props) => VideoElement.validate(props as any),
+});

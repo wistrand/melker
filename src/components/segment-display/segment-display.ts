@@ -422,6 +422,7 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
 }
 
 // Lint schema for segment-display component
+import { registerComponent } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
 
 export const segmentDisplaySchema: ComponentSchema = {
@@ -440,3 +441,16 @@ export const segmentDisplaySchema: ComponentSchema = {
 };
 
 registerComponentSchema('segment-display', segmentDisplaySchema);
+
+// Register segment-display component
+registerComponent({
+  type: 'segment-display',
+  componentClass: SegmentDisplayElement,
+  defaultProps: {
+    renderer: 'box-drawing',
+    scroll: false,
+    scrollSpeed: 24,
+    scrollGap: 3,
+  },
+  validate: (props) => SegmentDisplayElement.validate(props as any),
+});

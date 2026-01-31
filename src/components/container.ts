@@ -199,8 +199,13 @@ registerComponent({
   type: 'container',
   componentClass: ContainerElement,
   defaultProps: {
-    style: ContainerElement.getDefaultStyle(),
+    // Note: style defaults are handled by ContainerElement constructor
+    // Don't add style here as it would override stylesheet styles
+    scrollable: false,
+    scrollX: 0,
+    scrollY: 0,
   },
+  validate: (props) => ContainerElement.validate(props as any),
 });
 
 // Lint schema for container component

@@ -442,6 +442,7 @@ export class DialogElement extends Element implements Renderable {
 }
 
 // Lint schema for dialog component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const dialogSchema: ComponentSchema = {
@@ -457,3 +458,15 @@ export const dialogSchema: ComponentSchema = {
 };
 
 registerComponentSchema('dialog', dialogSchema);
+
+// Register dialog component
+registerComponent({
+  type: 'dialog',
+  componentClass: DialogElement,
+  defaultProps: {
+    modal: true,
+    backdrop: true,
+    disabled: false,
+  },
+  validate: (props) => DialogElement.validate(props as any),
+});

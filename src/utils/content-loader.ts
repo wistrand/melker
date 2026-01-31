@@ -8,6 +8,14 @@ export function isUrl(path: string): boolean {
 }
 
 /**
+ * Check if a path is a remote/network URL (http://, https://, or rtsp://)
+ * Used for video streams that can include RTSP protocol
+ */
+export function isRemoteUrl(path: string): boolean {
+  return path.startsWith('http://') || path.startsWith('https://') || path.startsWith('rtsp:');
+}
+
+/**
  * Load content from a file path or URL
  */
 export async function loadContent(pathOrUrl: string): Promise<string> {

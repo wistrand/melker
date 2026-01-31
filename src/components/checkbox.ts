@@ -219,6 +219,7 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
 }
 
 // Lint schema for checkbox component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const checkboxSchema: ComponentSchema = {
@@ -233,3 +234,16 @@ export const checkboxSchema: ComponentSchema = {
 };
 
 registerComponentSchema('checkbox', checkboxSchema);
+
+// Register checkbox component
+registerComponent({
+  type: 'checkbox',
+  componentClass: CheckboxElement,
+  defaultProps: {
+    checked: false,
+    indeterminate: false,
+    disabled: false,
+    tabIndex: 0,
+  },
+  validate: (props) => CheckboxElement.validate(props as any),
+});

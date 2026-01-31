@@ -290,4 +290,5 @@ registerComponent({
       overflow: 'visible',
     },
   },
+  validate: (_props) => true, // ListElement doesn't have a validate method
 });

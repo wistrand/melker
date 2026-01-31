@@ -225,6 +225,7 @@ registerComponent({
   defaultProps: {
     width: 30,
     height: 15,
+    disabled: false,
   },
 });
 

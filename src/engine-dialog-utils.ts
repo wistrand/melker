@@ -3,6 +3,17 @@
 
 import type { Element } from './types.ts';
 import type { ComponentLogger } from './logging.ts';
+import {
+  hasElement,
+  collectElements,
+  isDescendant,
+  findElement,
+  isOpenDialog,
+  isOpenModalDialog,
+} from './utils/tree-traversal.ts';
+
+// Re-export for backwards compatibility
+export { isDescendant as isDescendantOf } from './utils/tree-traversal.ts';
 
 /**
  * Options for focus trapping (matches FocusManager.trapFocus signature)
@@ -35,17 +46,7 @@ export interface ModalFocusTrapContext {
  * Find if any open dialog exists in element tree (recursive)
  */
 export function findOpenDialog(element: Element): boolean {
-  if (element.type === 'dialog' && element.props?.open === true) {
-    return true;
-  }
-  if (element.children) {
-    for (const child of element.children) {
-      if (findOpenDialog(child)) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return hasElement(element, isOpenDialog);
 }
 
 /**
@@ -60,30 +61,10 @@ export function hasOpenDialogInDocument(root: Element | undefined): boolean {
  * Collect all open dialogs from element tree
  */
 export function collectOpenDialogs(element: Element, result: Element[]): void {
-  if (element.type === 'dialog' && element.props?.open === true) {
-    result.push(element);
-  }
-  if (element.children) {
-    for (const child of element.children) {
-      collectOpenDialogs(child, result);
-    }
-  }
+  collectElements(element, isOpenDialog, result);
 }
 
-/**
- * Check if element is a descendant of container
- */
-export function isDescendantOf(element: Element, container: Element): boolean {
-  if (container === element) return true;
-  if (container.children) {
-    for (const child of container.children) {
-      if (isDescendantOf(element, child)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
+// isDescendantOf is re-exported from tree-traversal.ts above
 
 /**
  * Check if there's an open dialog that's NOT an ancestor of the given element
@@ -100,7 +81,7 @@ export function hasOverlayDialogFor(element: Element, root: Element | undefined)
 
   // Check if element is a descendant of any open dialog
   for (const dialog of openDialogs) {
-    if (isDescendantOf(element, dialog)) {
+    if (isDescendant(element, dialog)) {
       // Element is inside this dialog - this dialog is not an overlay for it
       // But there might be OTHER open dialogs that are overlays
       continue;
@@ -132,35 +113,19 @@ export function collectOpenDialogIds(root: Element | undefined): Set<string> {
  * Collect all open modal dialogs from element tree
  */
 export function collectOpenModalDialogs(element: Element, result: Element[]): void {
-  if (element.type === 'dialog' && element.props?.open === true && element.props?.modal === true) {
-    result.push(element);
-  }
-  if (element.children) {
-    for (const child of element.children) {
-      collectOpenModalDialogs(child, result);
-    }
-  }
+  collectElements(element, isOpenModalDialog, result);
 }
 
 /**
  * Find first focusable element inside a container
  */
 function findFirstFocusable(element: Element): string | undefined {
-  // Check if this element can receive focus
-  if (element.id) {
-    const canFocus = (element as any).canReceiveFocus;
-    if (typeof canFocus === 'function' && canFocus.call(element)) {
-      return element.id;
-    }
-  }
-  // Check children
-  if (element.children) {
-    for (const child of element.children) {
-      const found = findFirstFocusable(child);
-      if (found) return found;
-    }
-  }
-  return undefined;
+  const focusable = findElement(element, (el) => {
+    if (!el.id) return false;
+    const canFocus = (el as unknown as { canReceiveFocus?: () => boolean }).canReceiveFocus;
+    return typeof canFocus === 'function' && canFocus.call(el);
+  });
+  return focusable?.id;
 }
 
 /**

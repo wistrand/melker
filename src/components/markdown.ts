@@ -16,6 +16,7 @@ import { COLORS, parseColor } from './color-utils.ts';
 import { MarkdownImageRenderer } from './markdown-image.ts';
 import { renderTable as renderTableHelper, type TableRenderHelpers } from './markdown-table.ts';
 import { MarkdownCodeRenderer, type CodeRenderHelpers } from './markdown-code.ts';
+import { isUrl } from '../utils/content-loader.ts';
 
 // Types
 import {
@@ -253,7 +254,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         // Local file access - use URL.pathname for proper parsing
         const filePath = new URL(resolvedUrl).pathname;
         this._srcContent = await Deno.readTextFile(filePath);
-      } else if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
+      } else if (isUrl(resolvedUrl)) {
         // HTTP/HTTPS URL
         const response = await fetch(resolvedUrl);
         if (!response.ok) {
@@ -1762,8 +1763,11 @@ registerComponent({
   type: 'markdown',
   componentClass: MarkdownElement,
   defaultProps: {
+    wrap: true,
+    disabled: false,
     enableGfm: true,
     listIndent: 2,
     codeTheme: 'auto',
   },
+  validate: (props) => MarkdownElement.validate(props as any),
 });

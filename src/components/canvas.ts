@@ -1560,6 +1560,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 }
 
 // Lint schema for canvas component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const canvasSchema: ComponentSchema = {
@@ -1587,3 +1588,14 @@ export const canvasSchema: ComponentSchema = {
 };
 
 registerComponentSchema('canvas', canvasSchema);
+
+// Register canvas component
+registerComponent({
+  type: 'canvas',
+  componentClass: CanvasElement,
+  defaultProps: {
+    scale: 1,
+    disabled: false,
+  },
+  validate: (props) => CanvasElement.validate(props as any),
+});

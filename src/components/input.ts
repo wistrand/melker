@@ -617,6 +617,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
 }
 
 // Lint schema for input component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const inputSchema: ComponentSchema = {
@@ -635,3 +636,18 @@ export const inputSchema: ComponentSchema = {
 };
 
 registerComponentSchema('input', inputSchema);
+
+// Register input component
+registerComponent({
+  type: 'input',
+  componentClass: InputElement,
+  defaultProps: {
+    value: '',
+    placeholder: '',
+    readOnly: false,
+    disabled: false,
+    tabIndex: 0,
+    cursorPosition: 0,
+  },
+  validate: (props) => InputElement.validate(props as any),
+});

@@ -164,3 +164,23 @@ export class SeparatorElement extends Element implements Renderable {
     return true;
   }
 }
+
+// Register separator component
+import { registerComponent } from '../element.ts';
+import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+
+export const separatorSchema: ComponentSchema = {
+  description: 'Horizontal or vertical line with optional centered label. Orientation is automatic based on parent flex-direction.',
+  props: {
+    label: { type: 'string', description: 'Optional text centered in the line' },
+  },
+};
+
+registerComponentSchema('separator', separatorSchema);
+
+registerComponent({
+  type: 'separator',
+  componentClass: SeparatorElement,
+  defaultProps: {},
+  validate: (props) => SeparatorElement.validate(props as any),
+});

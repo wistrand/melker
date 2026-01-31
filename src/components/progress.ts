@@ -427,6 +427,7 @@ export class ProgressElement extends CanvasElement {
 }
 
 // Lint schema for progress component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const progressSchema: ComponentSchema = {
@@ -452,3 +453,21 @@ export const progressSchema: ComponentSchema = {
 };
 
 registerComponentSchema('progress', progressSchema);
+
+// Register progress component
+registerComponent({
+  type: 'progress',
+  componentClass: ProgressElement,
+  defaultProps: {
+    width: 20,
+    height: 1,
+    value: 0,
+    max: 100,
+    min: 0,
+    indeterminate: false,
+    showValue: false,
+    animationSpeed: 50,
+    disabled: false,
+  },
+  validate: (props) => ProgressElement.validate(props as any),
+});

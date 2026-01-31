@@ -548,6 +548,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
 }
 
 // Lint schema for slider component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const sliderSchema: ComponentSchema = {
@@ -570,3 +571,19 @@ export const sliderSchema: ComponentSchema = {
 };
 
 registerComponentSchema('slider', sliderSchema);
+
+// Register slider component
+registerComponent({
+  type: 'slider',
+  componentClass: SliderElement,
+  defaultProps: {
+    min: 0,
+    max: 100,
+    value: 0,
+    orientation: 'horizontal',
+    showValue: false,
+    disabled: false,
+    tabIndex: 0,
+  },
+  validate: (props) => SliderElement.validate(props as any),
+});

@@ -5,6 +5,7 @@ import { decodePng, decodeJpeg, GifReader } from '../deps.ts';
 import { getLogger } from '../logging.ts';
 import { LRUCache } from '../lru-cache.ts';
 import { TRANSPARENT, packRGBA, unpackRGBA, parseColor } from './color-utils.ts';
+import { isUrl } from '../utils/content-loader.ts';
 
 /**
  * Decoded image data in a standard format
@@ -219,7 +220,7 @@ export async function loadImageFromSource(src: string): Promise<Uint8Array> {
   }
 
   // Handle HTTP/HTTPS URLs (with caching)
-  if (src.startsWith('http://') || src.startsWith('https://')) {
+  if (isUrl(src)) {
     // Check cache first - cache stores Promises to handle concurrent requests
     // LRUCache.get() automatically updates LRU order
     const cached = imageCache.get(src);

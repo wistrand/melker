@@ -571,5 +571,9 @@ registerComponent({
   defaultProps: {
     arrow: 'end',
     routing: 'orthogonal',
+    // Connectors use absolute positioning since they render to arbitrary positions
+    // based on connected elements, not within their own layout bounds
+    style: { position: 'absolute' },
   },
+  validate: (props) => ConnectorElement.validate(props as any),
 });

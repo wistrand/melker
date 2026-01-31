@@ -193,6 +193,7 @@ export class RadioElement extends Element implements Renderable, Focusable, Clic
 }
 
 // Lint schema for radio component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const radioSchema: ComponentSchema = {
@@ -208,3 +209,15 @@ export const radioSchema: ComponentSchema = {
 };
 
 registerComponentSchema('radio', radioSchema);
+
+// Register radio component
+registerComponent({
+  type: 'radio',
+  componentClass: RadioElement,
+  defaultProps: {
+    checked: false,
+    disabled: false,
+    tabIndex: 0,
+  },
+  validate: (props) => RadioElement.validate(props as any),
+});

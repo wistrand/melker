@@ -960,6 +960,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
 }
 
 // Lint schema for textarea component
+import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 
 export const textareaSchema: ComponentSchema = {
@@ -978,3 +979,20 @@ export const textareaSchema: ComponentSchema = {
 };
 
 registerComponentSchema('textarea', textareaSchema);
+
+// Register textarea component
+registerComponent({
+  type: 'textarea',
+  componentClass: TextareaElement,
+  defaultProps: {
+    value: '',
+    placeholder: '',
+    readOnly: false,
+    disabled: false,
+    tabIndex: 0,
+    // rows: undefined - omit to allow expandable mode in scrollable containers
+    cols: 40,
+    wrap: 'soft',
+  },
+  validate: (props) => TextareaElement.validate(props as any),
+});

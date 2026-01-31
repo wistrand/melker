@@ -60,9 +60,10 @@ export class FocusNavigationHandler {
       const firstFocusable = focusableElements[0];
       if (firstFocusable?.id) {
         try {
-          this._deps.onFocusElement(firstFocusable.id);
+          const focused = this._deps.onFocusElement(firstFocusable.id);
           // Auto-render to show initial focus state (unless skipped)
-          if (this._deps.autoRender && !skipAutoRender) {
+          // Only render if focus actually succeeded to avoid infinite loop
+          if (focused && this._deps.autoRender && !skipAutoRender) {
             this._deps.onRender();
           }
         } catch (_error) {

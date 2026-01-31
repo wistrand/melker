@@ -770,29 +770,30 @@ See `examples/melker-md/oauth_demo.md` for a complete example.
 
 ## Policy (Permission Sandboxing)
 
-Apps can declare required permissions. When a policy is found, the app runs in a subprocess with only those permissions.
+Apps declare required permissions via a `<policy>` tag. The app runs in a sandboxed subprocess with only those permissions.
 
-### Inline Policy
+### Syntax
+
+**Inline policy:**
 
 ```xml
-<melker>
-  <policy>
-  {
-    "name": "My App",
-    "description": "What the app does",
-    "comment": [
-      "This comment is shown in the approval prompt.",
-      "Use it to explain what the app does or why it needs permissions."
-    ],
-    "permissions": {
-      "read": ["."],
-      "net": ["api.example.com"],
-      "run": ["ffmpeg"]
-    }
+<policy>
+{
+  "name": "My App",
+  "comment": "Why these permissions are needed",
+  "permissions": {
+    "read": ["."],
+    "net": ["api.example.com"],
+    "run": ["ffmpeg"]
   }
-  </policy>
-  <!-- UI content -->
-</melker>
+}
+</policy>
+```
+
+**External policy file:**
+
+```xml
+<policy src="app.policy.json"></policy>
 ```
 
 ### Policy Fields
@@ -807,108 +808,63 @@ Apps can declare required permissions. When a policy is found, the app runs in a
 | `config`       | object             | App-specific configuration values         |
 | `configSchema` | object             | Schema for env var overrides              |
 
-### External Policy File
-
-```xml
-<policy src="app.policy.json"></policy>
-```
-
 ### Permission Types
 
-| Permission | Example                                            | Deno Flag       |
-|------------|----------------------------------------------------|-----------------|
-| `read`     | `["."]` or `["*"]`                                 | `--allow-read`  |
-| `write`    | `["/data"]` or `["*"]`                             | `--allow-write` |
-| `net`      | `["api.example.com"]`, `["samesite"]`, or `["*"]` | `--allow-net`   |
-| `run`      | `["ffmpeg", "ffprobe"]` or `["*"]`                 | `--allow-run`   |
-| `env`      | `["MY_VAR"]` or `["*"]`                            | `--allow-env`   |
-| `ffi`      | `["libfoo.so"]` or `["*"]`                         | `--allow-ffi`   |
-| `sys`      | `["hostname", "osRelease"]` or `["*"]`             | `--allow-sys`   |
+**Array permissions** (list of allowed values, use `["*"]` for wildcard):
 
-**Special net value - `"samesite"`**: For remote apps, `"samesite"` expands to the host of the app's source URL. This allows apps to load resources (images, data) from their origin without hardcoding the host:
+| Permission | Example                            | Deno Flag       |
+|------------|------------------------------------|-----------------|
+| `read`     | `["."]` or `["*"]`                 | `--allow-read`  |
+| `write`    | `["/data"]` or `["*"]`             | `--allow-write` |
+| `net`      | `["api.example.com", "samesite"]`  | `--allow-net`   |
+| `run`      | `["ffmpeg", "ffprobe"]`            | `--allow-run`   |
+| `env`      | `["MY_VAR"]` or `["*"]`            | `--allow-env`   |
+| `ffi`      | `["libfoo.so"]`                    | `--allow-ffi`   |
+| `sys`      | `["hostname", "osRelease"]`        | `--allow-sys`   |
 
-```json
-{
-  "permissions": {
-    "net": ["samesite"]
-  }
-}
+**Boolean shortcuts** (expand to multiple permissions):
+
+| Shortcut    | Description                                                      |
+|-------------|------------------------------------------------------------------|
+| `ai`        | AI/media: ffmpeg, ffprobe, swift, pactl, ffplay + openrouter.ai  |
+| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe                |
+| `keyring`   | Credentials: security, secret-tool, powershell                   |
+| `browser`   | Browser opening: open, xdg-open, cmd                             |
+| `shader`    | Allow per-pixel shaders on canvas/img elements                   |
+
+**Special values:**
+- `"samesite"` in `net` - expands to the host of the source URL (for remote apps)
+- `$ENV{VAR}` or `$ENV{VAR:-default}` - environment variable substitution
+
+### CLI Options
+
+```bash
+./melker.ts --show-policy app.melker      # Show policy and exit
+./melker.ts --trust app.melker            # Bypass approval prompt (CI/scripts)
+./melker.ts --clear-approvals             # Clear all cached approvals
+./melker.ts --revoke-approval app.melker  # Revoke specific approval
 ```
 
-For `https://example.com/apps/myapp.melker`, `"samesite"` expands to `example.com`.
+### CLI Permission Overrides
 
-### Permission Shortcuts
+Modify permissions at runtime without editing the policy:
 
-| Shortcut    | Description                                                 |
-|-------------|-------------------------------------------------------------|
-| `ai`        | AI/media: swift, ffmpeg, ffprobe, pactl, ffplay + openrouter.ai |
-| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe           |
-| `keyring`   | Credentials: security, secret-tool, powershell              |
-| `browser`   | Browser opening: open, xdg-open, cmd                        |
-| `shader`    | Allow per-pixel shaders on canvas/img elements              |
-
-```json
-{
-  "permissions": {
-    "read": ["."],
-    "ai": true,
-    "clipboard": true,
-    "keyring": true,
-    "browser": true,
-    "shader": true
-  }
-}
+```bash
+./melker.ts --allow-net=api.example.com app.melker  # Add permission
+./melker.ts --deny-run=rm app.melker                # Remove permission
+./melker.ts --allow-ai --deny-net=openrouter.ai app.melker  # Combine
 ```
 
-### Environment Variables in Policy
-
-Use `$ENV{VAR}` or `$ENV{VAR:-default}` syntax in policy JSON:
-
-```json
-{
-  "permissions": {
-    "net": ["$ENV{API_HOST:-api.example.com}"]
-  }
-}
-```
-
-### Implicit Permissions
-
-These are always granted (no need to declare):
-- **read**: `/tmp`, app directory, XDG state dir, cwd
-- **write**: `/tmp`, XDG state dir, log file directory
-- **env**: All `MELKER_*` vars, `HOME`, `USERPROFILE` (Windows), XDG dirs, `TERM`, `COLORTERM`, `PATH`, plus any env vars from `configSchema`
-
-See `agent_docs/env-permission-analysis.md` for detailed analysis of env var handling.
+See [policy-architecture.md](policy-architecture.md) for complete documentation on:
+- All `--allow-*` and `--deny-*` flags
+- Override precedence rules
+- Implicit paths (auto-granted permissions)
+- Approval system details
+- Deno flag generation
 
 ### App-Specific Configuration
 
-Apps can define custom config values in their policy, accessible via `$melker.config`:
-
-```xml
-<policy>
-{
-  "permissions": { "read": ["."] },
-  "config": {
-    "theme": "bw-std",
-    "myapp": {
-      "scale": 1.5,
-      "debug": false
-    }
-  }
-}
-</policy>
-
-<script>
-// Access via generic getters (nested keys use dot-notation)
-const scale = $melker.config.getNumber('myapp.scale', 1.0);
-const debug = $melker.config.getBoolean('myapp.debug', false);
-</script>
-```
-
-### Config Schema (Env Var Overrides)
-
-To enable environment variable overrides for custom config, add a `configSchema`:
+Apps can define custom config in policy, accessible via `$melker.config`:
 
 ```xml
 <policy>
@@ -918,20 +874,13 @@ To enable environment variable overrides for custom config, add a `configSchema`
     "plasma": { "scale": 1.5 }
   },
   "configSchema": {
-    "plasma.scale": {
-      "type": "number",
-      "env": "PLASMA_SCALE"
-    }
+    "plasma.scale": { "type": "number", "env": "PLASMA_SCALE" }
   }
 }
 </policy>
 ```
 
-Now users can override: `PLASMA_SCALE=3.0 ./melker.ts app.melker`
-
-Env vars declared in `configSchema` are **automatically added** to subprocess permissions - no need to add them to `"env"` in permissions.
-
-See `agent_docs/config-architecture.md` for config priority and full API.
+Env vars in `configSchema` are auto-added to subprocess permissions. See [config-architecture.md](config-architecture.md) for details.
 
 ### OAuth Auto-Permissions
 
@@ -940,47 +889,11 @@ When an `<oauth>` tag is present, the policy automatically includes:
 - `browser: true` (for opening authorization URL)
 - All hosts discovered from the wellknown endpoint
 
-### CLI Options
-
-```bash
-# Show policy and exit
-./melker.ts --show-policy app.melker
-
-# Trust mode (for CI/scripts - bypasses approval prompt that would hang)
-./melker.ts --trust app.melker
-
-# Clear all cached approvals
-./melker.ts --clear-approvals
-
-# Revoke approval for specific path or URL
-./melker.ts --revoke-approval /path/to/app.melker
-
-# Show cached approval
-./melker.ts --show-approval /path/to/app.melker
-```
-
-### App Approval System
-
-All .melker files require first-run approval. Use `--trust` for CI/scripts to bypass the interactive prompt.
-
-**Local files:**
-- Policy tag is optional (uses auto-policy with all permissions if missing)
-- Approval is policy-hash-based (code changes don't require re-approval)
-- Re-approval needed if policy changes (permissions, name, comment, etc.) or file moved/renamed
-
-**Remote files (http:// or https://):**
-- Policy tag is mandatory (fails without it)
-- Approval is hash-based (content + policy + deno flags)
-- Re-approval required if app content, policy, or Deno flags change
-
-Approvals are cached in `~/.cache/melker/approvals/`.
-
-See `examples/showcase/markdown-viewer.melker` and `examples/canvas/video/video-demo.melker` for policy examples.
-
 See `examples/melker-md/` for complete examples and `examples/melker-md/README.md` for full syntax reference.
 
 ## See Also
 
 - [getting-started.md](getting-started.md) — Quick start guide
 - [script_usage.md](script_usage.md) — Script context and $melker API
-- [config-architecture.md](config-architecture.md) — Configuration and policy details
+- [policy-architecture.md](policy-architecture.md) — Permission system details
+- [config-architecture.md](config-architecture.md) — Configuration system

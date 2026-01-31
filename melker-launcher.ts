@@ -28,6 +28,11 @@ import {
   getUrlHash,
   type MelkerPolicy,
 } from './src/policy/mod.ts';
+import {
+  getPermissionOverrides,
+  applyPermissionOverrides,
+  hasOverrides,
+} from './src/policy/permission-overrides.ts';
 
 // CLI parsing from schema
 import { generateFlagHelp, parseCliFlags } from './src/config/cli.ts';
@@ -194,8 +199,13 @@ async function runWithPolicy(
   // Compute URL hash for app-specific cache directory
   const urlHash = await getUrlHash(absolutePath);
 
+  // Apply CLI permission overrides (--allow-* / --deny-*)
+  const overrides = getPermissionOverrides(MelkerConfig.get());
+  const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
+  const effectivePolicy = { ...policy, permissions: effectivePermissions };
+
   // Convert policy to Deno permission flags
-  const denoFlags = policyToDenoFlags(policy, appDir, urlHash);
+  const denoFlags = policyToDenoFlags(effectivePolicy, appDir, urlHash, undefined, activeDenies, overrides.deny);
 
   // Extract forwarded Deno flags (--reload, --no-lock, etc.)
   const forwardedFlags = extractForwardedDenoFlags(originalArgs);
@@ -228,15 +238,21 @@ async function runWithPolicy(
   ];
 
   // Spawn subprocess with restricted permissions
+  // Pass permission overrides to runner if any were specified
+  const envOverrides: Record<string, string> = {
+    ...Deno.env.toObject(),
+    MELKER_RUNNER: '1', // Signal that policy has been checked
+  };
+  if (hasOverrides(overrides)) {
+    envOverrides.MELKER_PERMISSION_OVERRIDES = JSON.stringify(overrides);
+  }
+
   const process = new Deno.Command(cmd[0], {
     args: cmd.slice(1),
     stdin: 'inherit',
     stdout: 'inherit',
     stderr: 'inherit',
-    env: {
-      ...Deno.env.toObject(),
-      MELKER_RUNNER: '1', // Signal that policy has been checked
-    },
+    env: envOverrides,
   });
 
   const child = process.spawn();
@@ -281,9 +297,14 @@ async function runRemoteWithPolicy(
     // Compute URL hash for app-specific cache directory (use original URL, not temp file)
     const urlHash = await getUrlHash(url);
 
+    // Apply CLI permission overrides (--allow-* / --deny-*)
+    const overrides = getPermissionOverrides(MelkerConfig.get());
+    const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
+    const effectivePolicy = { ...policy, permissions: effectivePermissions };
+
     // Convert policy to Deno permission flags
     // Pass the source URL for "samesite" net permission resolution
-    const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash, url);
+    const denoFlags = policyToDenoFlags(effectivePolicy, Deno.cwd(), urlHash, url, activeDenies, overrides.deny);
 
     // Extract forwarded Deno flags (--reload, --no-lock, etc.)
     const forwardedFlags = extractForwardedDenoFlags(originalArgs);
@@ -324,11 +345,14 @@ async function runRemoteWithPolicy(
       ...filteredArgs,
     ];
 
-    const env = {
+    const env: Record<string, string> = {
         ...Deno.env.toObject(),
         MELKER_RUNNER: '1',
         MELKER_REMOTE_URL: url, // Pass original URL for reference
       };
+    if (hasOverrides(overrides)) {
+      env.MELKER_PERMISSION_OVERRIDES = JSON.stringify(overrides);
+    }
 
     // Spawn subprocess with restricted permissions
     const process = new Deno.Command(cmd[0], {
@@ -541,7 +565,11 @@ export async function main(): Promise<void> {
   }
 
   // Parse schema-driven CLI flags to get remaining args (file path, etc.)
-  const { remaining: remainingArgs } = parseCliFlags(args);
+  const { flags: cliFlags, remaining: remainingArgs } = parseCliFlags(args);
+
+  // Initialize config with CLI flags (for permission overrides)
+  MelkerConfig.reset();
+  MelkerConfig.init({ cliFlags });
 
   // Parse options from remaining args
   const options = {
@@ -584,6 +612,10 @@ export async function main(): Promise<void> {
 
     // Handle --show-policy flag
     if (options.showPolicy) {
+      // Get CLI permission overrides
+      const overrides = getPermissionOverrides(MelkerConfig.get());
+      const hasCliOverrides = hasOverrides(overrides);
+
       if (isUrl(filepath)) {
         const content = await loadContent(filepath);
         if (!hasPolicyTag(content)) {
@@ -594,12 +626,16 @@ export async function main(): Promise<void> {
         const policyResult = await loadPolicyFromContent(content, filepath);
         const policy = policyResult.policy ?? createAutoPolicy();
 
+        // Apply CLI overrides
+        const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
+        const effectivePolicy = { ...policy, permissions: effectivePermissions };
+
         const urlHash = await getUrlHash(filepath);
-        console.log(`\nPolicy source: ${policyResult.source}\n`);
+        console.log(`\nPolicy source: ${policyResult.source}${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
         // Pass source URL for "samesite" resolution (filepath is the URL)
-        console.log(formatPolicy(policy, filepath));
+        console.log(formatPolicy(effectivePolicy, filepath));
         console.log('\nDeno permission flags:');
-        const flags = policyToDenoFlags(policy, Deno.cwd(), urlHash, filepath);
+        const flags = policyToDenoFlags(effectivePolicy, Deno.cwd(), urlHash, filepath, activeDenies, overrides.deny);
         console.log(formatDenoFlags(flags));
       } else {
         // For plain .mmd files, use the empty mermaid policy
@@ -607,21 +643,32 @@ export async function main(): Promise<void> {
           const content = await loadContent(filepath);
           if (!hasMelkerDirectives(content)) {
             const policy = createEmptyMermaidPolicy(filepath);
-            console.log(`\nPolicy source: auto (plain mermaid file)\n`);
-            console.log(formatPolicy(policy));
+            // Apply CLI overrides even to empty policy
+            const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
+            const effectivePolicy = { ...policy, permissions: effectivePermissions };
+            const urlHash = await getUrlHash(absoluteFilepath);
+
+            console.log(`\nPolicy source: auto (plain mermaid file)${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
+            console.log(formatPolicy(effectivePolicy));
             console.log('\nDeno permission flags:');
-            console.log('  (none - no permissions required)');
+            const flags = policyToDenoFlags(effectivePolicy, dirname(absoluteFilepath), urlHash, undefined, activeDenies, overrides.deny);
+            console.log(formatDenoFlags(flags));
             Deno.exit(0);
           }
         }
         const policyResult = await loadPolicy(absoluteFilepath);
         const policy = policyResult.policy ?? createAutoPolicy();
+
+        // Apply CLI overrides
+        const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
+        const effectivePolicy = { ...policy, permissions: effectivePermissions };
+
         const urlHash = await getUrlHash(absoluteFilepath);
         const source = policyResult.policy ? policyResult.source : 'auto';
-        console.log(`\nPolicy source: ${source}${policyResult.path ? ` (${policyResult.path})` : ''}\n`);
-        console.log(formatPolicy(policy));
+        console.log(`\nPolicy source: ${source}${policyResult.path ? ` (${policyResult.path})` : ''}${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
+        console.log(formatPolicy(effectivePolicy));
         console.log('\nDeno permission flags:');
-        const flags = policyToDenoFlags(policy, dirname(absoluteFilepath), urlHash);
+        const flags = policyToDenoFlags(effectivePolicy, dirname(absoluteFilepath), urlHash, undefined, activeDenies, overrides.deny);
         console.log(formatDenoFlags(flags));
       }
       Deno.exit(0);

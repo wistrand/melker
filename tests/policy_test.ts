@@ -1,6 +1,6 @@
 // Policy system tests
 
-import { assertEquals, assertExists, assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assert, assertEquals, assertExists, assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   loadPolicy,
   loadPolicyFromContent,
@@ -10,7 +10,13 @@ import {
   policyToDenoFlags,
   formatDenoFlags,
   type MelkerPolicy,
+  type PolicyPermissions,
 } from '../src/policy/mod.ts';
+import {
+  applyPermissionOverrides,
+  hasOverrides,
+  type PermissionOverrides,
+} from '../src/policy/permission-overrides.ts';
 
 // =============================================================================
 // Policy Loading Tests
@@ -757,5 +763,822 @@ Deno.test({
   } finally {
     await Deno.remove(tempDir, { recursive: true });
   }
+  },
+});
+
+// =============================================================================
+// Permission Override Tests
+// =============================================================================
+
+Deno.test('hasOverrides returns false for empty overrides', () => {
+  const overrides: PermissionOverrides = { allow: {}, deny: {} };
+  assertEquals(hasOverrides(overrides), false);
+});
+
+Deno.test('hasOverrides returns true for allow overrides', () => {
+  const overrides: PermissionOverrides = {
+    allow: { read: ['/tmp'] },
+    deny: {},
+  };
+  assertEquals(hasOverrides(overrides), true);
+});
+
+Deno.test('hasOverrides returns true for deny overrides', () => {
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { net: ['evil.com'] },
+  };
+  assertEquals(hasOverrides(overrides), true);
+});
+
+Deno.test('applyPermissionOverrides merges allow arrays', () => {
+  const base = { read: ['/app'] };
+  const overrides: PermissionOverrides = {
+    allow: { read: ['/tmp', '/data'] },
+    deny: {},
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  assertEquals(permissions.read?.includes('/app'), true);
+  assertEquals(permissions.read?.includes('/tmp'), true);
+  assertEquals(permissions.read?.includes('/data'), true);
+});
+
+Deno.test('applyPermissionOverrides deduplicates merged arrays', () => {
+  const base = { net: ['api.example.com'] };
+  const overrides: PermissionOverrides = {
+    allow: { net: ['api.example.com', 'cdn.example.com'] },
+    deny: {},
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // Should not have duplicates
+  const count = permissions.net?.filter(h => h === 'api.example.com').length;
+  assertEquals(count, 1);
+});
+
+Deno.test('applyPermissionOverrides skips allow when base has wildcard', () => {
+  const base = { read: ['*'] };
+  const overrides: PermissionOverrides = {
+    allow: { read: ['/tmp'] },
+    deny: {},
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // Should still just have wildcard, not the additional path
+  assertEquals(permissions.read, ['*']);
+});
+
+Deno.test('applyPermissionOverrides filters out denied values', () => {
+  const base = { net: ['api.example.com', 'evil.com', 'cdn.example.com'] };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { net: ['evil.com'] },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  assertEquals(permissions.net?.includes('api.example.com'), true);
+  assertEquals(permissions.net?.includes('cdn.example.com'), true);
+  assertEquals(permissions.net?.includes('evil.com'), false);
+});
+
+Deno.test('applyPermissionOverrides removes empty arrays after deny', () => {
+  const base = { run: ['rm'] };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { run: ['rm'] },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  assertEquals(permissions.run, undefined);
+});
+
+Deno.test('applyPermissionOverrides tracks active denies for wildcard', () => {
+  const base = { read: ['*'] };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { read: ['/etc/passwd', '/etc/shadow'] },
+  };
+
+  const { permissions, activeDenies } = applyPermissionOverrides(base, overrides);
+
+  // Wildcard should remain
+  assertEquals(permissions.read, ['*']);
+  // Denies should be tracked as active denies
+  assertEquals(activeDenies.read?.includes('/etc/passwd'), true);
+  assertEquals(activeDenies.read?.includes('/etc/shadow'), true);
+});
+
+Deno.test('applyPermissionOverrides handles deny.all', () => {
+  const base = { read: ['.'], net: ['*'], run: ['git'] };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { all: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  assertEquals(permissions, {});
+});
+
+Deno.test('applyPermissionOverrides handles allow.all', () => {
+  const base = {};
+  const overrides: PermissionOverrides = {
+    allow: { all: true },
+    deny: {},
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  assertEquals(permissions.all, true);
+});
+
+Deno.test('applyPermissionOverrides applies boolean allows', () => {
+  const base = {};
+  const overrides: PermissionOverrides = {
+    allow: { ai: true, clipboard: true },
+    deny: {},
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // Shortcuts are expanded and then cleared, so check the expanded values
+  // AI expands to run commands and net hosts
+  assertEquals(permissions.net?.includes('openrouter.ai'), true);
+});
+
+Deno.test('applyPermissionOverrides applies boolean denies', () => {
+  const base = { ai: true, clipboard: true };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { ai: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // AI shortcut should be removed (but clipboard remains and expands)
+  // Note: shortcuts are expanded before boolean denies, so ai's values are added then ai flag is cleared
+  assertEquals(permissions.ai, undefined);
+});
+
+Deno.test('applyPermissionOverrides expands shortcuts before denies', () => {
+  const base = {};
+  const overrides: PermissionOverrides = {
+    allow: { ai: true },
+    deny: { net: ['openrouter.ai'] },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // AI shortcut adds openrouter.ai, but deny should remove it
+  // net array becomes empty and is deleted, so it's undefined or doesn't include the denied host
+  assertEquals(permissions.net === undefined || !permissions.net.includes('openrouter.ai'), true);
+});
+
+Deno.test('applyPermissionOverrides deny removes specific shortcut command', () => {
+  const base = {};
+  const overrides: PermissionOverrides = {
+    allow: { ai: true },
+    deny: { run: ['ffmpeg'] },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // AI shortcut adds ffmpeg (if available), but deny should remove it
+  // If run array is undefined (no commands available) or doesn't include ffmpeg, that's correct
+  assert(!permissions.run?.includes('ffmpeg'), 'ffmpeg should not be in run permissions after deny');
+  // Other AI commands should remain (if available on system)
+  // Note: ffprobe, pactl, ffplay may or may not be available depending on system
+});
+
+Deno.test('policyToDenoFlags includes active deny flags', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      read: ['*'],
+    },
+  };
+  const activeDenies = { read: ['/etc/passwd'] };
+
+  const flags = policyToDenoFlags(policy, '/app', undefined, undefined, activeDenies);
+
+  assertEquals(flags.includes('--allow-read'), true);
+  const denyFlag = flags.find(f => f.startsWith('--deny-read='));
+  assertExists(denyFlag);
+  assertStringIncludes(denyFlag, '/etc/passwd');
+});
+
+Deno.test('policyToDenoFlags includes multiple deny flag types', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      read: ['*'],
+      net: ['*'],
+      run: ['*'],
+    },
+  };
+  const activeDenies = {
+    read: ['/etc/passwd'],
+    net: ['evil.com'],
+    run: ['rm'],
+  };
+
+  const flags = policyToDenoFlags(policy, '/app', undefined, undefined, activeDenies);
+
+  const denyRead = flags.find(f => f.startsWith('--deny-read='));
+  const denyNet = flags.find(f => f.startsWith('--deny-net='));
+  const denyRun = flags.find(f => f.startsWith('--deny-run='));
+
+  assertExists(denyRead);
+  assertExists(denyNet);
+  assertExists(denyRun);
+  assertStringIncludes(denyRead, '/etc/passwd');
+  assertStringIncludes(denyNet, 'evil.com');
+  assertStringIncludes(denyRun, 'rm');
+});
+
+Deno.test('policyToDenoFlags omits deny flags when no active denies', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      read: ['*'],
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+
+  const denyFlag = flags.find(f => f.startsWith('--deny-'));
+  assertEquals(denyFlag, undefined);
+});
+
+Deno.test('applyPermissionOverrides deny-shader with all:true expands to explicit permissions', () => {
+  // When base has 'all: true' and we deny a boolean permission like 'shader',
+  // we need to expand 'all' into explicit permissions (except the denied one)
+  const base: PolicyPermissions = { all: true };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { shader: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // 'all' should be cleared since we're denying a specific permission
+  assertEquals(permissions.all, undefined);
+  // shader should NOT be granted (it was denied)
+  assertEquals(permissions.shader, undefined);
+  // Other boolean permissions should be explicitly granted
+  assertEquals(permissions.clipboard, true);
+  assertEquals(permissions.keyring, true);
+  assertEquals(permissions.browser, true);
+  assertEquals(permissions.ai, true);
+  // Array permissions should be expanded to wildcard
+  assertEquals(permissions.read?.includes('*'), true);
+  assertEquals(permissions.write?.includes('*'), true);
+  assertEquals(permissions.net?.includes('*'), true);
+  assertEquals(permissions.run?.includes('*'), true);
+});
+
+Deno.test('applyPermissionOverrides deny-shader without all:true just removes shader', () => {
+  // When base doesn't have 'all: true', denying shader just removes it
+  // Note: shortcut permissions (clipboard, ai, etc.) are expanded and cleared
+  const base: PolicyPermissions = { shader: true, read: ['/data'] };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { shader: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // shader should be removed
+  assertEquals(permissions.shader, undefined);
+  // read should remain unchanged
+  assertEquals(permissions.read?.includes('/data'), true);
+  // all should still be undefined
+  assertEquals(permissions.all, undefined);
+});
+
+// =============================================================================
+// CLI Permission Override Integration Tests
+// =============================================================================
+
+Deno.test({
+  name: 'melker.ts --allow-read adds read permission',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "Override Test",
+    "permissions": {}
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--allow-read=/custom/path', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      assertStringIncludes(output, '/custom/path');
+      assertStringIncludes(output, 'CLI overrides');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts --deny-net removes network permission',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "Deny Test",
+    "permissions": {
+      "net": ["api.example.com", "evil.com"]
+    }
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--deny-net=evil.com', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      assertStringIncludes(output, 'api.example.com');
+      // evil.com should be removed from the policy
+      assertEquals(output.includes('--allow-net=evil.com'), false);
+      assertEquals(output.includes('--allow-net=api.example.com'), true);
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts --allow-ai expands AI permissions',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "AI Test",
+    "permissions": {}
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--allow-ai', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      // AI shortcut should add openrouter.ai
+      assertStringIncludes(output, 'openrouter.ai');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts --allow-ai --deny-net removes AI network permission',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "AI Deny Test",
+    "permissions": {}
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--allow-ai', '--deny-net=openrouter.ai', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      // openrouter.ai should be denied/removed
+      assertEquals(output.includes('--allow-net=openrouter.ai'), false);
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts --deny-read with wildcard generates --deny-read flag',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "Wildcard Deny Test",
+    "permissions": {
+      "read": ["*"]
+    }
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--deny-read=/etc/passwd', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      // Should have both allow-read (wildcard) and deny-read
+      assertStringIncludes(output, '--allow-read');
+      assertStringIncludes(output, '--deny-read=/etc/passwd');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts comma-separated values are parsed correctly',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "Comma Test",
+    "permissions": {}
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--allow-net=api.example.com,cdn.example.com', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      // Both hosts should be present (as separate items, not one combined string)
+      assertStringIncludes(output, 'api.example.com');
+      assertStringIncludes(output, 'cdn.example.com');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+// =============================================================================
+// Auto-Policy Permission Override Tests
+// =============================================================================
+
+Deno.test({
+  name: 'melker.ts auto-policy shows --allow-all by default',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    // Create app WITHOUT policy tag - will get auto-policy
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      assertStringIncludes(output, 'Policy source: auto');
+      assertStringIncludes(output, '--allow-all');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts auto-policy with --deny-all removes all permissions',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    // Create app WITHOUT policy tag - will get auto-policy
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--deny-all', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      assertStringIncludes(output, 'CLI overrides');
+      // Should NOT have --allow-all anymore
+      assertEquals(output.includes('--allow-all'), false);
+      // Should show no permissions
+      assertStringIncludes(output, '(no permissions');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts auto-policy --allow-read is redundant (already has all)',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    // Create app WITHOUT policy tag - will get auto-policy with all: true
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--allow-read=/tmp', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      // Should still have --allow-all (adding specific paths is redundant)
+      assertStringIncludes(output, '--allow-all');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'applyPermissionOverrides handles all: true base with specific allow',
+  fn: () => {
+    const base = { all: true };
+    const overrides: PermissionOverrides = {
+      allow: { read: ['/tmp'] },
+      deny: {},
+    };
+
+    const { permissions } = applyPermissionOverrides(base, overrides);
+
+    // all: true should remain, specific allows are redundant
+    assertEquals(permissions.all, true);
+  },
+});
+
+Deno.test({
+  name: 'applyPermissionOverrides deny.all overrides allow.all',
+  fn: () => {
+    const base = { all: true };
+    const overrides: PermissionOverrides = {
+      allow: { all: true },
+      deny: { all: true },
+    };
+
+    const { permissions } = applyPermissionOverrides(base, overrides);
+
+    // deny.all is checked first and clears everything
+    assertEquals(permissions, {});
+  },
+});
+
+// =============================================================================
+// Implicit Path Filtering Tests
+// =============================================================================
+
+Deno.test({
+  name: 'melker.ts --deny-write filters implicit /tmp from write paths',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "Deny Implicit Test",
+    "permissions": {}
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--deny-write=/tmp', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout, stderr } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+      const errOutput = new TextDecoder().decode(stderr);
+
+      assertEquals(code, 0);
+      // /tmp should NOT be in the --allow-write list
+      const writeMatch = output.match(/--allow-write=([^\s]+)/);
+      if (writeMatch) {
+        assertEquals(writeMatch[1].includes('/tmp'), false, 'implicit /tmp should be filtered from write paths');
+      }
+      // Should see a warning about denying implicit path
+      assertStringIncludes(errOutput, 'Warning');
+      assertStringIncludes(errOutput, '/tmp');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts --deny-read filters implicit /tmp from read paths',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "Deny Implicit Read Test",
+    "permissions": {}
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--deny-read=/tmp', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout, stderr } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+      const errOutput = new TextDecoder().decode(stderr);
+
+      assertEquals(code, 0);
+      // /tmp should NOT be in the --allow-read list
+      const readMatch = output.match(/--allow-read=([^\s]+)/);
+      if (readMatch) {
+        assertEquals(readMatch[1].includes('/tmp'), false, 'implicit /tmp should be filtered from read paths');
+      }
+      // Should see a warning about denying implicit path
+      assertStringIncludes(errOutput, 'Warning');
+      assertStringIncludes(errOutput, '/tmp');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts --deny-write and --deny-read can both filter /tmp',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "Deny Both Test",
+    "permissions": {}
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--deny-read=/tmp', '--deny-write=/tmp', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout, stderr } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+      const errOutput = new TextDecoder().decode(stderr);
+
+      assertEquals(code, 0);
+
+      // /tmp should NOT be in either allow list
+      const readMatch = output.match(/--allow-read=([^\s]+)/);
+      const writeMatch = output.match(/--allow-write=([^\s]+)/);
+
+      if (readMatch) {
+        assertEquals(readMatch[1].includes('/tmp'), false, '/tmp should be filtered from read paths');
+      }
+      if (writeMatch) {
+        assertEquals(writeMatch[1].includes('/tmp'), false, '/tmp should be filtered from write paths');
+      }
+
+      // Should see warnings for both read and write
+      assertStringIncludes(errOutput, 'read access');
+      assertStringIncludes(errOutput, 'write access');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
   },
 });

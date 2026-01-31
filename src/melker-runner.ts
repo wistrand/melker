@@ -34,6 +34,10 @@ import {
   getApprovalFilePath,
   type MelkerPolicy,
 } from './policy/mod.ts';
+import {
+  applyPermissionOverrides,
+  type PermissionOverrides,
+} from './policy/permission-overrides.ts';
 
 // Dev tools types
 import type { SystemInfo } from './dev-tools.ts';
@@ -464,6 +468,18 @@ export async function runMelkerFile(
       appPolicy = policyResult.policy ?? createAutoPolicy();
     } else {
       appPolicy = createAutoPolicy();
+    }
+
+    // Apply CLI permission overrides passed from launcher
+    const overridesJson = Env.get('MELKER_PERMISSION_OVERRIDES');
+    if (overridesJson) {
+      try {
+        const overrides = JSON.parse(overridesJson) as PermissionOverrides;
+        const { permissions } = applyPermissionOverrides(appPolicy.permissions, overrides);
+        appPolicy = { ...appPolicy, permissions };
+      } catch {
+        // Ignore invalid JSON - shouldn't happen as launcher serializes it
+      }
     }
 
     // Set terminal title (use policy name as fallback if no <title> tag)

@@ -78,12 +78,17 @@ Detailed file layout for the Melker codebase.
 
 #### `policy/` - Permission Policy System
 
-| File        | Purpose                                        |
-|-------------|------------------------------------------------|
-| `mod.ts`    | Policy module exports                          |
-| `types.ts`  | Policy type definitions                        |
-| `loader.ts` | Policy loading from `<policy>` tag or external file |
-| `flags.ts`  | Convert policy to Deno permission flags        |
+See [policy-architecture.md](policy-architecture.md) for comprehensive documentation.
+
+| File                      | Purpose                                            |
+|---------------------------|----------------------------------------------------|
+| `mod.ts`                  | Policy module exports                              |
+| `types.ts`                | Policy type definitions                            |
+| `loader.ts`               | Policy loading from `<policy>` tag or external file |
+| `flags.ts`                | Convert policy to Deno permission flags            |
+| `permission-overrides.ts` | CLI --allow-*/--deny-* flag handling               |
+| `approval.ts`             | Approval prompts and hash-based caching            |
+| `url-utils.ts`            | Extract hosts from URLs for net permissions        |
 
 #### `config/` - Schema-Driven Configuration
 

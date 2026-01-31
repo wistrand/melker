@@ -50,6 +50,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Core architecture   | [architecture.md](agent_docs/architecture.md)                    |
 | Component reference | [component-reference.md](agent_docs/component-reference.md)      |
 | Config system       | [config-architecture.md](agent_docs/config-architecture.md)      |
+| Policy system       | [policy-architecture.md](agent_docs/policy-architecture.md)      |
 | Graph/diagrams      | [graph-architecture.md](agent_docs/graph-architecture.md)        |
 | Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)  |
 | Sixel protocol      | [sixel-architecture.md](agent_docs/sixel-architecture.md)        |
@@ -231,6 +232,12 @@ See [config-architecture.md](agent_docs/config-architecture.md) for full details
 ./melker.ts --interactive app.melker # Force TUI mode even when piped
 ./melker.ts --color=always app.melker # Force ANSI colors even when piped
 ./melker.ts --lsp                   # Start LSP server
+
+# Permission overrides (add/remove permissions from policy)
+./melker.ts --allow-net=api.example.com app.melker  # Add network permission
+./melker.ts --deny-read=/etc/passwd app.melker      # Deny specific path
+./melker.ts --allow-ai app.melker                   # Enable AI shortcut
+./melker.ts --allow-ai --deny-net=openrouter.ai app.melker  # AI without network
 ```
 
 **Mermaid files:** Plain `.mmd` files can be run directly and require no permissions or approval prompts.
@@ -294,6 +301,27 @@ Apps declare permissions via `<policy>` tag, running in a sandboxed subprocess:
 **Permission shortcuts:** `ai`, `clipboard`, `keyring`, `browser`, `shader`
 
 **Approval:** All apps require first-run approval. Use `--trust` for CI/scripts.
+
+**CLI Permission Overrides:** Use `--allow-*` and `--deny-*` flags to modify permissions at runtime:
+
+| Flag                     | Description                                      |
+|--------------------------|--------------------------------------------------|
+| `--allow-read=PATH`      | Add read permission for PATH                     |
+| `--deny-read=PATH`       | Remove read permission for PATH                  |
+| `--allow-net=HOST`       | Add network permission for HOST                  |
+| `--deny-net=HOST`        | Remove network permission for HOST               |
+| `--allow-run=CMD`        | Add subprocess permission for CMD                |
+| `--deny-run=CMD`         | Remove subprocess permission for CMD             |
+| `--allow-ai`             | Enable AI shortcut (ffmpeg, openrouter.ai, etc.) |
+| `--deny-ai`              | Disable AI shortcut                              |
+| `--allow-all`            | Grant all permissions                            |
+| `--deny-all`             | Revoke all permissions                           |
+
+Multiple values can be comma-separated: `--allow-net=api.example.com,cdn.example.com`
+
+When base permission is `*` (wildcard), `--deny-*` generates Deno's `--deny-*` flags instead of filtering.
+
+`--deny-read` and `--deny-write` also filter implicit paths (temp dir, state dir, cache). A warning is shown when denying implicit paths.
 
 See [melker-file-format.md](agent_docs/melker-file-format.md) for full policy syntax and permissions.
 

@@ -134,6 +134,11 @@ melker --trust app.melker      # Bypass approval prompt (CI/scripts)
 melker --stdout app.melker     # Output single frame to stdout and exit
 melker --interactive app.melker # Force TUI mode even when piped
 melker --color=always app.melker # Force ANSI colors even when piped
+
+# Permission overrides
+melker --allow-net=api.example.com app.melker  # Add network permission
+melker --deny-read=/etc/passwd app.melker      # Deny specific path
+melker --allow-ai app.melker                   # Enable AI shortcut
 ```
 
 **Mermaid files:** Plain `.mmd` files can be run directly and require no permissions or approval.

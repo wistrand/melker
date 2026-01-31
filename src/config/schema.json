@@ -293,6 +293,150 @@
       "env": "MELKER_STDOUT_COLOR",
       "flag": "--color",
       "description": "ANSI color output: auto (strip when piped), always (force colors), never (no colors)"
+    },
+    "allow.read": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--allow-read",
+      "description": "Additional read paths to allow"
+    },
+    "allow.write": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--allow-write",
+      "description": "Additional write paths to allow"
+    },
+    "allow.net": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--allow-net",
+      "description": "Additional network hosts to allow"
+    },
+    "allow.run": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--allow-run",
+      "description": "Additional commands to allow"
+    },
+    "allow.env": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--allow-env",
+      "description": "Additional environment variables to allow"
+    },
+    "allow.ffi": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--allow-ffi",
+      "description": "Additional FFI libraries to allow"
+    },
+    "allow.sys": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--allow-sys",
+      "description": "Additional system info to allow"
+    },
+    "allow.all": {
+      "type": "boolean",
+      "flag": "--allow-all",
+      "description": "Allow all permissions"
+    },
+    "allow.ai": {
+      "type": "boolean",
+      "flag": "--allow-ai",
+      "description": "Allow AI tools (ffmpeg, openrouter.ai)"
+    },
+    "allow.clipboard": {
+      "type": "boolean",
+      "flag": "--allow-clipboard",
+      "description": "Allow clipboard access"
+    },
+    "allow.keyring": {
+      "type": "boolean",
+      "flag": "--allow-keyring",
+      "description": "Allow keyring access"
+    },
+    "allow.browser": {
+      "type": "boolean",
+      "flag": "--allow-browser",
+      "description": "Allow opening browser"
+    },
+    "allow.shader": {
+      "type": "boolean",
+      "flag": "--allow-shader",
+      "description": "Allow shader execution"
+    },
+    "deny.read": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--deny-read",
+      "description": "Read paths to deny"
+    },
+    "deny.write": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--deny-write",
+      "description": "Write paths to deny"
+    },
+    "deny.net": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--deny-net",
+      "description": "Network hosts to deny"
+    },
+    "deny.run": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--deny-run",
+      "description": "Commands to deny"
+    },
+    "deny.env": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--deny-env",
+      "description": "Environment variables to deny"
+    },
+    "deny.ffi": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--deny-ffi",
+      "description": "FFI libraries to deny"
+    },
+    "deny.sys": {
+      "type": "array",
+      "items": { "type": "string" },
+      "flag": "--deny-sys",
+      "description": "System info to deny"
+    },
+    "deny.all": {
+      "type": "boolean",
+      "flag": "--deny-all",
+      "description": "Deny all permissions"
+    },
+    "deny.ai": {
+      "type": "boolean",
+      "flag": "--deny-ai",
+      "description": "Deny AI tools"
+    },
+    "deny.clipboard": {
+      "type": "boolean",
+      "flag": "--deny-clipboard",
+      "description": "Deny clipboard access"
+    },
+    "deny.keyring": {
+      "type": "boolean",
+      "flag": "--deny-keyring",
+      "description": "Deny keyring access"
+    },
+    "deny.browser": {
+      "type": "boolean",
+      "flag": "--deny-browser",
+      "description": "Deny opening browser"
+    },
+    "deny.shader": {
+      "type": "boolean",
+      "flag": "--deny-shader",
+      "description": "Deny shader execution"
     }
   }
 }

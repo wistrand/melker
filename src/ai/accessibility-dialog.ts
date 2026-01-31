@@ -17,6 +17,27 @@ import { AudioRecorder, transcribeAudio } from './audio.ts';
 
 const logger = getLogger('ai:dialog');
 
+/**
+ * Transform Deno permission errors into more helpful messages for AI features
+ */
+function formatAIError(error: Error | string): string {
+  const msg = typeof error === 'string' ? error : error.message;
+
+  // Check for network permission errors related to AI hosts
+  if (msg.includes('Requires net access to') &&
+      (msg.includes('openrouter.ai') || msg.includes('api.openai.com'))) {
+    return 'AI network access denied. Run with --allow-ai flag to enable AI features.';
+  }
+
+  // Check for run permission errors related to AI commands (ffmpeg, etc.)
+  if (msg.includes('Requires run access to') &&
+      (msg.includes('ffmpeg') || msg.includes('ffprobe') || msg.includes('ffplay') || msg.includes('swift'))) {
+    return 'AI audio features require additional permissions. Run with --allow-ai flag to enable.';
+  }
+
+  return msg;
+}
+
 export interface AccessibilityDialogDependencies {
   document: Document;
   focusManager: FocusManager | null;
@@ -629,12 +650,13 @@ export class AccessibilityDialogManager {
             },
             onError: (error) => {
               logger.error('Continuation call failed', error);
+              const errorMsg = formatAIError(error);
               // Add placeholder assistant message to maintain alternation
               this._messageHistory.push({
                 role: 'assistant',
-                content: `[Error during response: ${error.message}]`
+                content: `[Error during response: ${errorMsg}]`
               });
-              this._conversationHistory += `*Error: ${error.message}*`;
+              this._conversationHistory += `*Error: ${errorMsg}*`;
               responseElement.props.text = this._conversationHistory;
               if (statusElement) {
                 statusElement.props.text = '';
@@ -647,7 +669,8 @@ export class AccessibilityDialogManager {
         onError: (error) => {
           // Remove the user message that failed
           this._messageHistory.pop();
-          this._conversationHistory += `*Error: ${error.message}*`;
+          const errorMsg = formatAIError(error);
+          this._conversationHistory += `*Error: ${errorMsg}*`;
           responseElement.props.text = this._conversationHistory;
           if (statusElement) {
             statusElement.props.text = '';
@@ -659,7 +682,8 @@ export class AccessibilityDialogManager {
     } catch (error) {
       // Remove the user message that failed
       this._messageHistory.pop();
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const rawMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = formatAIError(rawMsg);
       this._conversationHistory += `*Error: ${errorMsg}*`;
       responseElement.props.text = this._conversationHistory;
       if (statusElement) {
@@ -806,6 +830,8 @@ export class AccessibilityDialogManager {
           compactError = `${spawnMatch[1]} not found`;
         } else if (errorMsg.includes('NotFound') || errorMsg.includes('ENOENT') || errorMsg.includes('No such file')) {
           compactError = 'Command not found';
+        } else if (errorMsg.includes('Requires run access to')) {
+          compactError = 'Run with --allow-ai';
         } else if (errorMsg.includes('permission') || errorMsg.includes('Permission')) {
           compactError = 'Mic permission denied';
         } else if (errorMsg.includes('pulse') || errorMsg.includes('ALSA')) {

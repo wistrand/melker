@@ -134,6 +134,12 @@ Each property in schema.json can have:
 - `debug.markdownDebug` - Debug markdown rendering
 - `debug.audioDebug` - Replay recorded audio before transcription
 
+### Permission Overrides
+
+CLI flags (`--allow-*`, `--deny-*`) modify policy permissions at runtime. These are parsed from the command line and applied before spawning the sandboxed subprocess.
+
+See [policy-architecture.md](policy-architecture.md) for complete documentation on permission overrides, implicit paths, and Deno flag generation.
+
 ### OAuth
 - `oauth.clientId` - OAuth client ID
 - `oauth.port` - OAuth callback server port
@@ -434,4 +440,5 @@ const speed = $melker.config.getNumber('plasma.speed', 1.0);  // 2.0
 
 - [script_usage.md](script_usage.md) — Accessing config from scripts
 - [melker-file-format.md](melker-file-format.md) — Policy tag syntax
+- [policy-architecture.md](policy-architecture.md) — Permission system and CLI overrides
 - [env-permission-analysis.md](env-permission-analysis.md) — Environment variable handling

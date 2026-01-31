@@ -1,0 +1,19 @@
+Melker - Terminal UI framework with permission sandboxing (built on Deno)
+
+I've been working on Melker, a terminal UI framework that treats apps as readable documents with explicit permission policies.
+
+Website: https://melker.sh
+GitHub: https://github.com/wistrand/melker
+What it does
+
+  - HTML-like markup for terminal UIs (<container>, <button>, <tabs>, <dialog>, etc.)
+  - DevTools-like inspection of apps
+  - Flexbox layout with CSS-like styling
+  - Permission sandboxing via <policy> tags - apps declare what they need, users approve before running
+  - Canvas graphics, video playback, Mermaid diagrams
+  - Run apps from URLs with mandatory policy review
+  - No build step - write markup, run immediately
+
+Melker uses Deno's permission system (--allow-read, --allow-net, etc.) to enforce sandboxing. Apps run in subprocesses with only the permissions they declare. The runtime bundler uses Deno's APIs, and the whole thing is TypeScript-native.
+
+Feedback welcome - especially on the permission model and DX.

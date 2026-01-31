@@ -274,6 +274,9 @@ export function showApprovalPrompt(
   }
   console.log('');
 
+  if (permLines.length === 0) {
+    return confirm('Allow this app to run?');
+  }
   return confirm('Allow this app to run with these permissions?');
 }
 

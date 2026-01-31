@@ -1,0 +1,238 @@
+<melker>
+<title>Mermaid Diagram Viewer</title>
+
+<policy>
+{
+  "name": "Mermaid Diagram Viewer",
+  "description": "Interactive mermaid diagram showcase with flowcharts, sequence diagrams, and class diagrams",
+  "permissions": {}
+}
+</policy>
+
+<help>
+# Mermaid Diagram Viewer
+
+Interactive showcase of Mermaid diagram types supported by Melker.
+
+## Supported Diagram Types
+
+| Type              | Description                              |
+|-------------------|------------------------------------------|
+| `flowchart`       | Flow diagrams with nodes, edges, labels  |
+| `sequenceDiagram` | Message passing between participants     |
+| `classDiagram`    | Class hierarchies and relationships      |
+
+## Keyboard Shortcuts
+
+| Key       | Action                    |
+|-----------|---------------------------|
+| Tab       | Switch between tabs       |
+| Arrow     | Scroll within diagram     |
+| Ctrl+C    | Exit                      |
+
+## Running .mmd Files
+
+Melker can run mermaid files directly:
+
+```bash
+melker diagram.mmd           # Run a mermaid file
+melker --watch diagram.mmd   # Watch mode
+melker --stdout diagram.mmd  # Output to stdout
+```
+</help>
+
+<style>
+.header {
+  font-weight: bold;
+  padding: 1;
+  border-bottom: thin;
+}
+.diagram-area {
+  flex: 1;
+  overflow: hidden;
+}
+.info {
+  padding: 1;
+  border-top: thin;
+}
+</style>
+
+<container style="display: flex; flex-direction: column; width: 100%; height: 100%">
+  <text class="header">Mermaid Diagram Viewer</text>
+
+  <tabs id="tabs" style="flex: 1" onChange="$app.updateInfo(event.index)">
+
+    <tab title="Git Flow">
+      <graph scrollable="true" class="diagram-area">
+flowchart LR
+    subgraph Local
+        WD[Working Dir] -->|git add| SA[Staging Area]
+        SA -->|git commit| LR[Local Repo]
+        LR -->|git checkout| WD
+    end
+
+    subgraph Remote
+        RR[Remote Repo]
+    end
+
+    LR -->|git push| RR
+    RR -->|git pull| LR
+    RR -->|git fetch| LR
+    RR -->|git clone| LR
+      </graph>
+    </tab>
+
+    <tab title="HTTP Request">
+      <graph scrollable="true" class="diagram-area">
+sequenceDiagram
+    participant B as Browser
+    participant S as Server
+    participant C as Cache
+    participant DB as Database
+
+    B->>S: GET /api/users
+    S->>C: Check cache
+    alt Cache hit
+        C-->>S: Cached data
+    else Cache miss
+        S->>DB: SELECT * FROM users
+        DB-->>S: User records
+        S->>C: Store in cache
+    end
+    S-->>B: JSON response
+      </graph>
+    </tab>
+
+    <tab title="Auth Flow">
+      <graph scrollable="true" class="diagram-area">
+flowchart TD
+    A[User visits app] --> B{Logged in?}
+    B -->|No| C[Show login form]
+    C --> D[Enter credentials]
+    D --> E{Valid?}
+    E -->|No| F[Show error]
+    F --> C
+    E -->|Yes| G[Create session]
+    G --> H[Redirect to app]
+    B -->|Yes| H
+    H --> I[Load dashboard]
+      </graph>
+    </tab>
+
+    <tab title="MVC Pattern">
+      <graph scrollable="true" class="diagram-area">
+classDiagram
+    direction LR
+
+    class Model {
+        -data: Object
+        +getData() Object
+        +setData(data)
+        +notify()
+    }
+
+    class View {
+        -template: String
+        +render(data)
+        +bindEvents()
+    }
+
+    class Controller {
+        -model: Model
+        -view: View
+        +handleInput(event)
+        +updateModel(data)
+    }
+
+    Controller --> Model : updates
+    Controller --> View : updates
+    Model --> View : notifies
+    View --> Controller : user events
+      </graph>
+    </tab>
+
+    <tab title="Microservices">
+      <graph scrollable="true" class="diagram-area">
+sequenceDiagram
+    participant GW as API Gateway
+    participant US as User Service
+    participant OS as Order Service
+    participant PS as Payment Service
+    participant MQ as Message Queue
+
+    GW->>US: Authenticate
+    US-->>GW: Token
+    GW->>OS: Create order
+    OS->>US: Validate user
+    US-->>OS: OK
+    OS->>MQ: Order created event
+    MQ-->>PS: Process payment
+    PS-->>MQ: Payment complete
+    MQ-->>OS: Update status
+    OS-->>GW: Order confirmed
+      </graph>
+    </tab>
+
+    <tab title="Design Patterns">
+      <graph scrollable="true" class="diagram-area">
+classDiagram
+    direction TB
+
+    class Subject {
+        &lt;&lt;interface&gt;&gt;
+        +attach(Observer)
+        +detach(Observer)
+        +notify()
+    }
+
+    class Observer {
+        &lt;&lt;interface&gt;&gt;
+        +update()*
+    }
+
+    class ConcreteSubject {
+        -state: int
+        -observers: List~Observer~
+        +getState() int
+        +setState(state)
+    }
+
+    class ConcreteObserverA {
+        -subject: Subject
+        +update()
+    }
+
+    class ConcreteObserverB {
+        -subject: Subject
+        +update()
+    }
+
+    Subject <|.. ConcreteSubject
+    Observer <|.. ConcreteObserverA
+    Observer <|.. ConcreteObserverB
+    ConcreteSubject --> Observer : notifies
+      </graph>
+    </tab>
+
+  </tabs>
+
+  <text id="info" class="info">Tab 1/6: Git workflow - local and remote operations</text>
+</container>
+
+<script type="typescript">
+const descriptions = [
+  'Git workflow - local and remote repository operations',
+  'HTTP request lifecycle with caching and database',
+  'User authentication flow with session management',
+  'Model-View-Controller architectural pattern',
+  'Microservices communication via API gateway and message queue',
+  'Observer design pattern with subject and observers'
+];
+
+export function updateInfo(index: number) {
+  const info = $melker.getElementById('info');
+  info.props.text = `Tab ${index + 1}/${descriptions.length}: ${descriptions[index]}`;
+}
+</script>
+
+</melker>

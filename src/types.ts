@@ -79,6 +79,10 @@ export interface Style extends Record<string, any> {
   background?: ColorInput;   // Alias for backgroundColor
   foreground?: ColorInput;   // Alias for color
   fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  textDecoration?: 'none' | 'underline';
+  dim?: boolean;
+  reverse?: boolean;
   border?: BorderStyle;
   borderTop?: BorderStyle;
   borderBottom?: BorderStyle;

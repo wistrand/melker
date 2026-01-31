@@ -88,6 +88,8 @@ export class RenderingEngine {
       color: getThemeColor('textPrimary'),
       backgroundColor: getThemeColor('background'),
       fontWeight: 'normal',
+      fontStyle: 'normal',
+      textDecoration: 'none',
       border: 'none',
       borderColor: getThemeColor('border'),
       padding: 0,
@@ -1293,6 +1295,10 @@ export class RenderingEngine {
       foreground: parseColor(style.color),
       background: parseColor(style.backgroundColor),
       bold: style.fontWeight === 'bold',
+      italic: style.fontStyle === 'italic',
+      underline: style.textDecoration === 'underline',
+      dim: style.dim,
+      reverse: style.reverse,
     };
 
     // Use viewport system only for scrollable containers

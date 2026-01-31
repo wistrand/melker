@@ -1337,6 +1337,10 @@ Only these properties inherit from parent:
 - `color`
 - `backgroundColor`
 - `fontWeight`
+- `fontStyle`
+- `textDecoration`
+- `dim`
+- `reverse`
 - `borderColor`
 
 Layout properties (padding, margin, border widths) do NOT inherit.

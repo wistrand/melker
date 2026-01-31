@@ -137,7 +137,7 @@ Fast render provides ~2ms latency. See [fast-input-render.md](fast-input-render.
 ## Style Inheritance
 
 Only these properties inherit to children:
-- `color`, `backgroundColor`, `fontWeight`, `borderColor`
+- `color`, `backgroundColor`, `fontWeight`, `fontStyle`, `textDecoration`, `dim`, `reverse`, `borderColor`
 
 Layout properties (borders, padding, margin) do NOT cascade.
 

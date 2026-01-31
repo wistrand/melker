@@ -1183,6 +1183,8 @@ export class LayoutEngine {
       color: getThemeColor('textPrimary'),
       backgroundColor: getThemeColor('background'),
       fontWeight: 'normal',
+      fontStyle: 'normal',
+      textDecoration: 'none',
       border: 'none',
       borderColor: getThemeColor('border'),
       padding: 0,
@@ -1207,6 +1209,10 @@ export class LayoutEngine {
       color: parentStyle.color,
       backgroundColor : parentStyle.backgroundColor,
       fontWeight: parentStyle.fontWeight,
+      fontStyle: parentStyle.fontStyle,
+      textDecoration: parentStyle.textDecoration,
+      dim: parentStyle.dim,
+      reverse: parentStyle.reverse,
       borderColor: parentStyle.borderColor, // Border color can inherit for consistency
     } : {};
 

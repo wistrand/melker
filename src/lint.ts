@@ -74,6 +74,10 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
 
   // Font
   fontWeight: { type: 'string', enum: ['normal', 'bold'], description: 'Text weight' },
+  fontStyle: { type: 'string', enum: ['normal', 'italic'], description: 'Text style' },
+  textDecoration: { type: 'string', enum: ['none', 'underline'], description: 'Text decoration' },
+  dim: { type: 'boolean', description: 'Dim/faded text' },
+  reverse: { type: 'boolean', description: 'Swap foreground and background colors' },
 
   // Border
   border: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'], description: 'Border on all sides' },

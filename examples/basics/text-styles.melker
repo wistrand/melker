@@ -1,0 +1,67 @@
+<melker>
+<policy>
+{
+  "name": "Text Styles Demo",
+  "description": "Demonstrates text styling properties",
+  "permissions": {}
+}
+</policy>
+
+<style>
+.section {
+  border: thin;
+}
+.section-title {
+  font-weight: bold;
+  margin-bottom: 1;
+}
+</style>
+
+<container scrollable="true" style="padding: 1;">
+  <text style="font-weight: bold; margin-bottom: 1">Text Style Properties</text>
+
+  <container class="section">
+    <text class="section-title">font-weight</text>
+    <text style="font-weight: normal">font-weight: normal (default)</text>
+    <text style="font-weight: bold">font-weight: bold</text>
+  </container>
+
+  <container class="section">
+    <text class="section-title">font-style</text>
+    <text style="font-style: normal">font-style: normal (default)</text>
+    <text style="font-style: italic">font-style: italic</text>
+  </container>
+
+  <container class="section">
+    <text class="section-title">text-decoration</text>
+    <text style="text-decoration: none;">text-decoration: none (default)</text>
+    <text style="text-decoration: underline">text-decoration: underline</text>
+  </container>
+
+  <container class="section">
+    <text class="section-title">dim</text>
+    <text>dim: false (default)</text>
+    <text style="dim: true">dim: true - faded/muted text</text>
+  </container>
+
+  <container class="section">
+    <text class="section-title">reverse</text>
+    <text>reverse: false (default)</text>
+    <text style="reverse: true">reverse: true - swapped fg/bg</text>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Combinations</text>
+    <text style="font-weight: bold; font-style: italic">bold + italic</text>
+    <text style="font-weight: bold; text-decoration: underline">bold + underline</text>
+    <text style="font-style: italic; text-decoration: underline">italic + underline</text>
+    <text style="font-weight: bold; font-style: italic; text-decoration: underline">bold + italic + underline</text>
+    <text style="dim: true; font-style: italic">dim + italic</text>
+    <text style="reverse: true; font-weight: bold">reverse + bold</text>
+  </container>
+
+  <container style="flex-direction: row; gap: 2; margin-top: 1">
+    <button label="Exit" onClick="$melker.exit()" />
+  </container>
+</container>
+</melker>

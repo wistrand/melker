@@ -118,8 +118,17 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
             childWidth += padH;
           }
 
-          totalWidth += childWidth;
-          totalHeight = Math.max(totalHeight, childHeight);
+          // Add child margin to size calculations
+          const childMargin = child.props?.style?.margin;
+          let marginH = 0;
+          let marginV = 0;
+          if (childMargin !== undefined) {
+            marginH = typeof childMargin === 'number' ? childMargin * 2 : ((childMargin.left || 0) + (childMargin.right || 0));
+            marginV = typeof childMargin === 'number' ? childMargin * 2 : ((childMargin.top || 0) + (childMargin.bottom || 0));
+          }
+
+          totalWidth += childWidth + marginH;
+          totalHeight = Math.max(totalHeight, childHeight + marginV);
           childCount++;
         }
       }
@@ -152,8 +161,15 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
             childWidth += padH;
           }
 
+          // Add child margin to height calculation
+          const childMargin = child.props?.style?.margin;
+          let marginV = 0;
+          if (childMargin !== undefined) {
+            marginV = typeof childMargin === 'number' ? childMargin * 2 : ((childMargin.top || 0) + (childMargin.bottom || 0));
+          }
+
           totalWidth = Math.max(totalWidth, childWidth);
-          totalHeight += childHeight;
+          totalHeight += childHeight + marginV;
           childCount++;
         }
       }

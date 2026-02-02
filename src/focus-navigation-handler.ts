@@ -43,17 +43,16 @@ export class FocusNavigationHandler {
       elementTypes: focusableElements.map(el => ({ type: el.type, id: el.id || 'no-id' })),
     });
 
-    // Register all elements first
+    // Collect all valid focusable element IDs
+    const currentIds = new Set<string>();
     for (const element of focusableElements) {
       if (element.id) {
-        try {
-          this._deps.onRegisterFocusable(element.id);
-          this._logger.trace(`Successfully registered focusable element: ${element.id}`);
-        } catch (error) {
-          this._logger.warn(`Failed to register focusable element: ${element.id} - ${error instanceof Error ? error.message : String(error)}`);
-        }
+        currentIds.add(element.id);
       }
     }
+
+    // Sync focus manager - removes stale IDs and adds new ones
+    this._deps.focusManager.syncFocusableElements(currentIds);
 
     // Only auto-focus if NO element is focused and we have focusable elements
     if (!this._deps.document.focusedElement && focusableElements.length > 0) {

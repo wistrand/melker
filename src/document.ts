@@ -25,6 +25,9 @@ export class Document {
   // Subtree elements are rendered inline by components (e.g., mermaid graphs in markdown)
   // Bounded to SUBTREE_MISS_CACHE_MAX_SIZE entries to prevent memory growth
   private _subtreeSearchMisses: Set<string> = new Set();
+  // Track IDs that were explicitly removed via removeElement()
+  // These should not be found by tree search even if still in the DOM
+  private _removedIds: Set<string> = new Set();
 
   constructor(root: Element, options: DocumentOptions = {}) {
     this._options = {
@@ -58,6 +61,11 @@ export class Document {
   }
 
   getElementById(id: string): Element | undefined {
+    // Check if explicitly removed (not findable even if still in tree)
+    if (this._removedIds.has(id)) {
+      return undefined;
+    }
+
     // First check the registry (fast path)
     const registryElement = this._elementRegistry.get(id);
     if (registryElement) {
@@ -84,10 +92,15 @@ export class Document {
   }
 
   /**
-   * Search for an element by ID within subtree elements rendered by components
-   * Subtree elements are rendered inline (e.g., mermaid graphs) but not part of the document tree
+   * Search for an element by ID within the element tree and subtree elements
+   * This handles both regular children and special subtree elements (e.g., mermaid graphs)
    */
   private _findElementInSubtrees(element: Element, targetId: string): Element | undefined {
+    // Check if this element matches
+    if (element.id === targetId) {
+      return element;
+    }
+
     // Check if this component has subtree elements (e.g., markdown with mermaid graphs)
     const component = element as any;
     if (typeof component.getSubtreeElements === 'function') {
@@ -247,8 +260,9 @@ export class Document {
       return false;
     }
 
-    // Remove from registry
+    // Remove from registry and mark as removed
     this._elementRegistry.delete(element.id);
+    this._removedIds.add(element.id);
 
     // Clear focus if this element was focused
     if (this._focusedElement === element) {
@@ -393,6 +407,7 @@ export class Document {
 
     this._elementRegistry.clear();
     this._subtreeSearchMisses.clear();
+    this._removedIds.clear();
     this._focusedElement = undefined;
 
     // Register all elements in the tree

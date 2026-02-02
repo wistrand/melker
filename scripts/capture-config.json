@@ -1,0 +1,112 @@
+{
+  "$schema": "./capture-schema.json",
+  "defaults": {
+    "type": "screenshot",
+    "delay": 3,
+    "duration": 5,
+    "fps": 30,
+    "resolution": "1280x900x24",
+    "terminal": "kitty",
+    "thumbnailWidth": 320
+  },
+  "output": {
+    "screenshots": "docs/screenshots",
+    "videos": "docs/screenshots/videos",
+    "thumbnails": "docs/screenshots/thumbnails"
+  },
+  "items": [
+    {
+      "app": "examples/showcase/breakout.melker",
+      "description": "Classic Breakout game clone with colorful bricks and paddle"
+    },
+    {
+      "app": "examples/showcase/color-selector.melker",
+      "description": "Interactive HSL color picker with preview"
+    },
+    {
+      "app": "examples/showcase/htop.melker",
+      "description": "System monitor clone showing processes, CPU and memory usage"
+    },
+    {
+      "app": "examples/showcase/map.melker",
+      "description": "OpenStreetMap viewer with pan, zoom and location search"
+    },
+    {
+      "app": "examples/showcase/markdown-viewer.melker",
+      "description": "Markdown renderer with syntax highlighting and image support"
+    },
+    {
+      "app": "examples/showcase/mermaid.melker",
+      "description": "Mermaid diagram renderer for flowcharts and sequence diagrams"
+    },
+    {
+      "app": "examples/showcase/procrastinate.melker",
+      "description": "Humorous task management app with snooze and give-up buttons"
+    },
+    {
+      "app": "examples/canvas/shaders/plasma-shader.melker",
+      "description": "Animated plasma effect using FBM noise and IQ color palette (sextant mode)",
+      "type": "video",
+      "duration": 5
+    },
+    {
+      "app": "examples/canvas/shaders/plasma-shader.melker",
+      "description": "Plasma shader rendered with Sixel graphics protocol",
+      "type": "video",
+      "duration": 5,
+      "output": "plasma-shader-sixel",
+      "gfxMode": "sixel"
+    },
+    {
+      "app": "examples/canvas/shaders/plasma-shader.melker",
+      "description": "Plasma shader with ASCII luma (brightness-based) rendering",
+      "type": "screenshot",
+      "output": "plasma-shader-luma",
+      "gfxMode": "luma"
+    },
+    {
+      "app": "examples/canvas/shaders/plasma-shader.melker",
+      "description": "Plasma shader with ASCII pattern (spatial) rendering",
+      "type": "screenshot",
+      "output": "plasma-shader-pattern",
+      "gfxMode": "pattern"
+    },
+    {
+      "app": "examples/canvas/video/video-demo.melker",
+      "args": ["media/seal.mp4"],
+      "description": "Video player demo with seal video (sextant mode)",
+      "type": "video",
+      "output": "video-demo-seal",
+      "duration": 5
+    },
+    {
+      "app": "examples/canvas/video/video-demo.melker",
+      "args": ["media/seal.mp4"],
+      "description": "Video player with Sixel graphics - highest quality",
+      "type": "video",
+      "output": "video-demo-seal-sixel",
+      "duration": 5,
+      "gfxMode": "sixel"
+    },
+    {
+      "app": "examples/canvas/video/video-demo.melker",
+      "args": ["media/seal.mp4"],
+      "description": "Video player with block characters - simple colored squares",
+      "type": "screenshot",
+      "output": "video-demo-seal-block",
+      "gfxMode": "block"
+    },
+    {
+      "app": "examples/showcase/map.melker",
+      "description": "Map viewer with Sixel graphics for detailed tiles",
+      "output": "map-sixel",
+      "gfxMode": "sixel"
+    },
+    {
+      "app": "examples/showcase/map.melker",
+      "description": "Map viewer with ASCII luma rendering",
+      "output": "map-luma",
+      "gfxMode": "luma"
+    }
+  ]
+}

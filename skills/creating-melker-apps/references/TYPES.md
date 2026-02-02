@@ -33,6 +33,7 @@ interface MelkerContext {
   prompt(message: string, defaultValue?: string): Promise<string | null>;
 
   // Toast notifications (non-modal)
+  // Duplicate messages (same text+type) reset timer and show count: "Message (2)"
   toast: {
     show(message: string, options?: ToastOptions): string;
     dismiss(id: string): void;

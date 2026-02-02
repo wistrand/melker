@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Melker Capture Config",
+  "description": "Configuration for capturing screenshots and videos of Melker apps",
+  "type": "object",
+  "properties": {
+    "defaults": {
+      "type": "object",
+      "description": "Default settings applied to all items",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["screenshot", "video"],
+          "default": "screenshot",
+          "description": "Default capture type"
+        },
+        "delay": {
+          "type": "number",
+          "default": 2,
+          "description": "Default delay before capture in seconds"
+        },
+        "duration": {
+          "type": "number",
+          "default": 3,
+          "description": "Default video duration in seconds"
+        },
+        "fps": {
+          "type": "number",
+          "default": 30,
+          "description": "Default video framerate"
+        },
+        "resolution": {
+          "type": "string",
+          "default": "1280x900x24",
+          "description": "Xvfb resolution (WIDTHxHEIGHTxDEPTH)"
+        },
+        "terminal": {
+          "type": "string",
+          "enum": ["kitty", "xterm"],
+          "default": "kitty",
+          "description": "Terminal emulator to use"
+        },
+        "thumbnailWidth": {
+          "type": "number",
+          "default": 320,
+          "description": "Thumbnail width in pixels"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "description": "Output directories (relative to project root)",
+      "properties": {
+        "screenshots": {
+          "type": "string",
+          "default": "docs/screenshots",
+          "description": "Directory for screenshots"
+        },
+        "videos": {
+          "type": "string",
+          "default": "docs/screenshots/videos",
+          "description": "Directory for videos"
+        },
+        "thumbnails": {
+          "type": "string",
+          "default": "docs/screenshots/thumbnails",
+          "description": "Directory for thumbnails"
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "description": "Items to capture",
+      "items": {
+        "type": "object",
+        "required": ["app"],
+        "properties": {
+          "app": {
+            "type": "string",
+            "description": "Path to the .melker file (relative to project root)"
+          },
+          "args": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Arguments to pass to the app"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["screenshot", "video"],
+            "description": "Capture type (overrides default)"
+          },
+          "output": {
+            "type": "string",
+            "description": "Output filename without extension (auto-generated if not specified)"
+          },
+          "delay": {
+            "type": "number",
+            "description": "Delay before capture in seconds (overrides default)"
+          },
+          "duration": {
+            "type": "number",
+            "description": "Video duration in seconds (overrides default, video only)"
+          },
+          "fps": {
+            "type": "number",
+            "description": "Video framerate (overrides default, video only)"
+          },
+          "skip": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip this item"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of what this capture shows"
+          },
+          "gfxMode": {
+            "type": "string",
+            "enum": ["sextant", "block", "sixel", "pattern", "luma"],
+            "description": "Graphics rendering mode (--gfx-mode flag)"
+          }
+        }
+      }
+    }
+  },
+  "required": ["items"]
+}

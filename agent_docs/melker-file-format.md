@@ -412,7 +412,7 @@ CSS-like properties in `style` attribute:
 - `$melker.exit()` - Exit application
 - `$melker.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)
 - `$melker.alert(message)` - Show modal alert dialog
-- `$melker.toast.show(message, options?)` - Show non-modal toast notification (returns toast ID)
+- `$melker.toast.show(message, options?)` - Show non-modal toast (duplicates reset timer and show count)
 - `$melker.toast.dismiss(id)` - Dismiss a specific toast
 - `$melker.toast.dismissAll()` - Dismiss all toasts
 - `$melker.toast.setPosition(position)` - Set toast position ('top' or 'bottom')

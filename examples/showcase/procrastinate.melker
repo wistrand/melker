@@ -25,7 +25,7 @@
                style="margin-bottom: 1;" />
 
         <button id="create-draft-btn" label="Create Draft"
-                style="margin-bottom: 1;"
+                style="margin-bottom: 1; border: thin"
                 onClick="$app.createDraft()" />
 
         <text text="Tip: Default deadline is 1hr from now" style="dim: true; margin-bottom: 1;" />
@@ -140,6 +140,7 @@ export function createDraft() {
   inputEl.props.value = '';
 
   showToast('Draft created! Another responsibility delayed!', 'success');
+  needsFullRebuild = true;
   updateDraftsList();
 }
 
@@ -184,6 +185,7 @@ export function giveUpDraft(draftId) {
 
   showToast(messages[Math.floor(Math.random() * messages.length)], 'error');
   updateScore();
+  needsFullRebuild = true;
   updateDraftsList();
 }
 
@@ -210,7 +212,10 @@ function formatTimeRemaining(deadline) {
   return `${seconds}s`;
 }
 
-function updateDraftsList() {
+// Track if we need a full rebuild vs just time update
+let needsFullRebuild = true;
+
+function rebuildDraftsList() {
   const listEl = $melker.getElementById('drafts-list');
   if (!listEl) return;
 
@@ -218,6 +223,7 @@ function updateDraftsList() {
 
   if (drafts.length === 0) {
     listEl.children.push($melker.createElement('text', {
+      id: 'empty-message',
       text: 'No drafts yet. Start avoiding responsibilities!',
       style: { dim: true, fontStyle: 'italic' }
     }));
@@ -230,6 +236,7 @@ function updateDraftsList() {
       const timeRemaining = formatTimeRemaining(draft.deadline);
 
       const draftRow = $melker.createElement('container', {
+        id: `row-${draft.id}`,
         style: {
           display: 'flex',
           flexDirection: 'row',
@@ -241,15 +248,17 @@ function updateDraftsList() {
       });
 
       const draftInfo = $melker.createElement('container', {
-        style: { flex: 1, marginRight: 1 }
+        style: { flex: 1, marginRight: 1, alignItems: 'flex-start' }
       });
 
       draftInfo.children.push($melker.createElement('text', {
+        id: `title-${draft.id}`,
         text: `${index + 1}. ${draft.text}`,
         style: { fontWeight: 'bold', dim: isExpired }
       }));
 
       draftInfo.children.push($melker.createElement('text', {
+        id: `time-${draft.id}`,
         text: isExpired ? 'EXPIRED!' : timeRemaining,
         style: { dim: !isExpired }
       }));
@@ -260,23 +269,24 @@ function updateDraftsList() {
         style: { display: 'flex', flexDirection: 'row', gap: 1 }
       });
 
-      if (isExpired) {
-        const giveUpBtn = $melker.createElement('button', {
-          label: 'Give Up'
-        });
-        giveUpBtn.props.onClick = () => giveUpDraft(draft.id);
-        actionsContainer.children.push(giveUpBtn);
-      }
+      // Always create give-up button but set visible based on expired status
+      const giveUpBtn = $melker.createElement('button', {
+        id: `giveup-${draft.id}`,
+        label: 'Give Up',
+        visible: isExpired
+      });
+      giveUpBtn.props.onClick = () => giveUpDraft(draft.id);
+      actionsContainer.children.push(giveUpBtn);
 
-      const btn10min = $melker.createElement('button', { label: '+10m' });
+      const btn10min = $melker.createElement('button', { id: `snooze10-${draft.id}`, label: '+10m' });
       btn10min.props.onClick = () => snoozeDraft(draft.id, 10);
       actionsContainer.children.push(btn10min);
 
-      const btn1hr = $melker.createElement('button', { label: '+1h' });
+      const btn1hr = $melker.createElement('button', { id: `snooze60-${draft.id}`, label: '+1h' });
       btn1hr.props.onClick = () => snoozeDraft(draft.id, 60);
       actionsContainer.children.push(btn1hr);
 
-      const btn1day = $melker.createElement('button', { label: '+1d' });
+      const btn1day = $melker.createElement('button', { id: `snooze1440-${draft.id}`, label: '+1d' });
       btn1day.props.onClick = () => snoozeDraft(draft.id, 1440);
       actionsContainer.children.push(btn1day);
 
@@ -285,13 +295,59 @@ function updateDraftsList() {
     });
   }
 
+  needsFullRebuild = false;
   $melker.render();
+}
+
+function updateTimersOnly() {
+  let anyExpiredChanged = false;
+
+  drafts.forEach((draft) => {
+    const now = new Date();
+    const wasExpired = draft.expired;
+    const isExpired = draft.deadline <= now;
+    draft.expired = isExpired;
+
+    // Update time text
+    const timeEl = $melker.getElementById(`time-${draft.id}`);
+    if (timeEl) {
+      const timeRemaining = formatTimeRemaining(draft.deadline);
+      timeEl.props.text = isExpired ? 'EXPIRED!' : timeRemaining;
+      timeEl.props.style = { dim: !isExpired };
+    }
+
+    // Update title dim state
+    const titleEl = $melker.getElementById(`title-${draft.id}`);
+    if (titleEl) {
+      titleEl.props.style = { fontWeight: 'bold', dim: isExpired };
+    }
+
+    // Update give-up button visibility
+    const giveUpBtn = $melker.getElementById(`giveup-${draft.id}`);
+    if (giveUpBtn) {
+      giveUpBtn.props.visible = isExpired;
+    }
+
+    if (wasExpired !== isExpired) {
+      anyExpiredChanged = true;
+    }
+  });
+
+  $melker.render();
+}
+
+function updateDraftsList() {
+  if (needsFullRebuild) {
+    rebuildDraftsList();
+  } else {
+    updateTimersOnly();
+  }
 }
 
 function startTimerUpdate() {
   setInterval(() => {
     if (drafts.length > 0) {
-      updateDraftsList();
+      updateTimersOnly();
     }
   }, 1000);
 }
@@ -300,8 +356,9 @@ export function init() {
   createSampleDrafts();
   initializeDefaultDeadline();
   updateScore();
-  startTimerUpdate();
+  needsFullRebuild = true;
   updateDraftsList();
+  startTimerUpdate();
 }
   </script>
 

@@ -45,6 +45,7 @@ $melker: {
   openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
 
   // Toast notifications (non-modal)
+  // Note: Calling show() with identical message+type resets timer and shows count (2), (3)...
   toast: {
     show(message: string, options?: ToastOptions): string;  // Returns toast ID
     dismiss(id: string): void;

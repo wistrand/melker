@@ -267,6 +267,68 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 |-------------|-------------------------------|
 | `timing.ts` | Debounce and throttle functions |
 
+## Scripts Directory (`scripts/`)
+
+Utility scripts for development and documentation.
+
+| File                   | Purpose                                      |
+|------------------------|----------------------------------------------|
+| `capture.ts`           | Screenshot/video capture using Xvfb          |
+| `capture-config.json`  | Default capture configuration                |
+| `capture-schema.json`  | JSON schema for capture config               |
+
+### Capture Script
+
+Automates capturing screenshots and videos of Melker apps for documentation. Uses Xvfb (virtual X server), ImageMagick, and ffmpeg.
+
+```bash
+# Run with default config
+./scripts/capture.ts
+
+# Run with custom config
+./scripts/capture.ts my-config.json
+
+# Dry run (show what would be captured)
+./scripts/capture.ts --dry-run
+```
+
+**Dependencies:** `xorg-server-xvfb`, `imagemagick`, `ffmpeg`, `kitty`
+
+**Config structure:**
+```json
+{
+  "defaults": {
+    "type": "screenshot",
+    "delay": 2,
+    "duration": 3,
+    "fps": 30,
+    "resolution": "1280x900x24",
+    "thumbnailWidth": 320
+  },
+  "output": {
+    "screenshots": "docs/screenshots",
+    "videos": "docs/screenshots/videos",
+    "thumbnails": "docs/screenshots/thumbnails"
+  },
+  "items": [
+    { "app": "examples/showcase/breakout.melker" },
+    { "app": "examples/canvas/plasma.melker", "type": "video", "duration": 5 }
+  ]
+}
+```
+
+**Item options:**
+- `app` - Path to .melker file (required)
+- `args` - Arguments to pass to app
+- `type` - "screenshot" or "video"
+- `output` - Output filename (without extension)
+- `delay` - Seconds to wait before capture
+- `duration` - Video duration in seconds
+- `fps` - Video framerate
+- `gfxMode` - Graphics mode (sextant, block, sixel, etc.)
+- `skip` - Skip this item
+- `description` - Human-readable description
+
 ## Other Directories
 
 | Directory              | Purpose                               |

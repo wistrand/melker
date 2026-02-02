@@ -50,13 +50,28 @@ export class ToastManager {
   }
 
   /**
-   * Show a toast notification
+   * Show a toast notification.
+   * If an identical message (same text and type) is already displayed,
+   * resets the expiration timer on the existing toast instead.
    */
   show(message: string, options?: ToastOptions): string {
     const type: ToastType = options?.type ?? 'info';
     const duration = options?.duration ?? this._config.defaultDuration;
     const closable = options?.closable ?? true;
     const bell = options?.bell ?? (this._config.bell && type === 'error');
+
+    // Check for existing toast with same message and type
+    const existing = this._toasts.find(t => t.message === message && t.type === type);
+    if (existing) {
+      // Reset expiration by updating createdAt and increment count
+      existing.createdAt = Date.now();
+      existing.duration = duration;
+      existing.count++;
+      this._lastActivity = Date.now();
+      this._scheduleExpiryTimer();
+      this._requestRender?.();
+      return existing.id;
+    }
 
     const toast: ToastEntry = {
       id: generateId(),
@@ -67,6 +82,7 @@ export class ToastManager {
       closable,
       bell,
       action: options?.action,
+      count: 1,
     };
 
     // Dismiss oldest if at max capacity

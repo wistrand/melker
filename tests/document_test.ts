@@ -292,8 +292,10 @@ Deno.test('Document refresh functionality', () => {
   }
   root.children.push(newChild);
 
-  // Before refresh, new element not in registry
-  assertEquals(doc.getElementById('manual'), undefined);
+  // Before refresh, new element not in registry (but findable via tree search)
+  assertEquals(doc.elementCount, 2);
+  // getElementById finds elements in tree even if not registered (DOM-like behavior)
+  assertEquals(doc.getElementById('manual'), newChild);
 
   // After refresh, new element should be registered
   doc.refreshDocument();

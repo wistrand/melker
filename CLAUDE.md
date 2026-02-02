@@ -96,6 +96,14 @@ deno task check        # Type check
 deno task skill:zip    # Build AI agent skill zip
 ```
 
+**Capture script** (screenshots/videos for docs):
+```bash
+./scripts/capture.ts              # Run with default config
+./scripts/capture.ts --dry-run    # Preview what would be captured
+./scripts/capture.ts config.json  # Use custom config
+```
+Requires: `xorg-server-xvfb`, `imagemagick`, `ffmpeg`, `kitty`
+
 **Note**: Don't run `deno fmt` or `deno lint` automatically (user preference).
 
 - never execute git add, commit or push commands

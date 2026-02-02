@@ -20,6 +20,84 @@ const BORDER = {
 /** Cached bounds for click handling */
 let _lastBounds: Bounds | null = null;
 
+/** Track maximum width during current toast session (resets when all toasts dismissed) */
+let _sessionMaxWidth: number = 0;
+
+/**
+ * Calculate required width for a toast entry (icon + message + count + action + close)
+ */
+function calculateToastWidth(toast: ToastEntry): number {
+  let width = 2; // icon + space
+  width += toast.message.length;
+  if (toast.count > 1) {
+    width += ` (${toast.count})`.length;
+  }
+  if (toast.action) {
+    width += toast.action.label.length + 3; // space + [ + label + ]
+  }
+  if (toast.closable) {
+    width += 3; // space + close button + space
+  }
+  return width;
+}
+
+/**
+ * Calculate optimal width for toast container based on messages
+ */
+function calculateOptimalWidth(toasts: ToastEntry[], maxWidth: number, minWidth: number): number {
+  if (toasts.length === 0) return minWidth;
+
+  // Find the longest toast content
+  let maxContentWidth = 0;
+  for (const toast of toasts) {
+    const contentWidth = calculateToastWidth(toast);
+    if (contentWidth > maxContentWidth) {
+      maxContentWidth = contentWidth;
+    }
+  }
+
+  // Add border padding (2 for left/right borders)
+  const requiredWidth = maxContentWidth + 2;
+
+  // Clamp between min and max
+  return Math.max(minWidth, Math.min(requiredWidth, maxWidth));
+}
+
+/**
+ * Clip text on word boundary close to the middle
+ */
+function clipTextMiddle(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+
+  const ellipsis = '…';
+  const availableLength = maxLength - ellipsis.length;
+  if (availableLength <= 0) return ellipsis;
+
+  // Try to find a word boundary near the middle
+  const targetLength = availableLength;
+  const words = text.split(/(\s+)/);
+
+  let result = '';
+  for (const word of words) {
+    if (result.length + word.length <= targetLength) {
+      result += word;
+    } else {
+      // Check if we can fit part of the word up to a reasonable break point
+      const remaining = targetLength - result.length;
+      if (remaining > 3 && word.length > 0 && !word.match(/^\s+$/)) {
+        // Add partial word only if it's substantial
+        result += word.slice(0, remaining);
+      }
+      break;
+    }
+  }
+
+  // Trim trailing whitespace before adding ellipsis
+  result = result.trimEnd();
+
+  return result + ellipsis;
+}
+
 /**
  * Render toast overlay directly to buffer.
  * Returns true if toasts were rendered.
@@ -29,6 +107,7 @@ export function renderToastOverlay(buffer: DualBuffer): boolean {
 
   if (!manager.hasVisibleToasts()) {
     _lastBounds = null;
+    _sessionMaxWidth = 0; // Reset session width when no toasts
     return false;
   }
 
@@ -37,14 +116,22 @@ export function renderToastOverlay(buffer: DualBuffer): boolean {
 
   if (toasts.length === 0) {
     _lastBounds = null;
+    _sessionMaxWidth = 0; // Reset session width when no toasts
     return false;
   }
 
   const viewportWidth = buffer.width;
   const viewportHeight = buffer.height;
 
-  // Calculate dimensions
-  const width = Math.min(config.width, viewportWidth - 4);
+  // Calculate optimal width based on content
+  const maxWidth = viewportWidth - 4; // Leave margin on sides
+  const minWidth = Math.min(config.width, maxWidth); // Use config as minimum
+  const optimalWidth = calculateOptimalWidth(toasts, maxWidth, minWidth);
+
+  // Only expand, never shrink during a session
+  _sessionMaxWidth = Math.max(_sessionMaxWidth, optimalWidth);
+  const width = Math.min(_sessionMaxWidth, maxWidth); // Re-check max in case viewport shrunk
+
   const height = toasts.length + 2; // border + toasts + border (close-all on border)
 
   // Calculate position (centered horizontally)
@@ -95,6 +182,7 @@ export function createToastOverlay(
   const manager = getToastManager();
 
   if (!manager.hasVisibleToasts()) {
+    _sessionMaxWidth = 0; // Reset session width when no toasts
     return null;
   }
 
@@ -102,11 +190,19 @@ export function createToastOverlay(
   const toasts = manager.getActiveToasts();
 
   if (toasts.length === 0) {
+    _sessionMaxWidth = 0; // Reset session width when no toasts
     return null;
   }
 
-  // Calculate dimensions
-  const width = Math.min(config.width, viewportWidth - 4);
+  // Calculate optimal width based on content
+  const maxWidth = viewportWidth - 4;
+  const minWidth = Math.min(config.width, maxWidth);
+  const optimalWidth = calculateOptimalWidth(toasts, maxWidth, minWidth);
+
+  // Only expand, never shrink during a session
+  _sessionMaxWidth = Math.max(_sessionMaxWidth, optimalWidth);
+  const width = Math.min(_sessionMaxWidth, maxWidth); // Re-check max in case viewport shrunk
+
   const height = toasts.length + 2; // border + toasts + border (close-all on border)
 
   // Calculate position (centered horizontally)
@@ -248,13 +344,19 @@ function renderToast(
     });
   }
 
-  // Message text (truncated to fit)
-  const maxMessageWidth = width - 2 - closeButtonWidth - actionWidth;
-  let message = toast.message;
-  if (message.length > maxMessageWidth) {
-    message = message.slice(0, maxMessageWidth - 1) + '…';
-  }
+  // Message text (clipped on word boundary if too long)
+  const countSuffix = toast.count > 1 ? ` (${toast.count})` : '';
+  const maxMessageWidth = width - 2 - closeButtonWidth - actionWidth - countSuffix.length;
+  const message = clipTextMiddle(toast.message, maxMessageWidth);
   buffer.currentBuffer.setText(x + 2, y, message, baseStyle);
+
+  // Show count if > 1
+  if (toast.count > 1) {
+    buffer.currentBuffer.setText(x + 2 + message.length, y, countSuffix, {
+      ...baseStyle,
+      foreground: dimColor,
+    });
+  }
 }
 
 /**

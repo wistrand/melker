@@ -630,6 +630,26 @@ export class FocusManager {
     this._tabOrder = [];
     this._focusTraps = [];
   }
+
+  /**
+   * Sync focusable elements - remove IDs not in the provided set and add new ones
+   * This ensures the registry stays in sync with what's actually in the document
+   */
+  syncFocusableElements(currentIds: Set<string>): void {
+    // Remove IDs that are no longer valid
+    for (const id of this._focusableElementIds) {
+      if (!currentIds.has(id)) {
+        this._focusableElementIds.delete(id);
+      }
+    }
+
+    // Add new IDs
+    for (const id of currentIds) {
+      this._focusableElementIds.add(id);
+    }
+
+    this._updateTabOrder();
+  }
 }
 
 // Global focus manager instance

@@ -16,6 +16,10 @@ Programmatic non-modal notification system for Melker.
 | Max toasts      | 5 default, configurable, dismiss oldest on overflow   |
 | Bell            | Optional `\x07` for error toasts                      |
 | Rendering       | Direct buffer rendering (z-index 300)                 |
+| Duplicates      | Same message+type resets timer, shows count (2), (3)  |
+| Width           | Auto-sizes to content, config.width is minimum        |
+| Width stability | Only expands during session, never shrinks            |
+| Text overflow   | Clips on word boundary with ellipsis                  |
 
 ---
 
@@ -95,6 +99,7 @@ interface ToastEntry {
   closable: boolean;
   bell: boolean;
   action?: ToastAction;
+  count: number;           // Duplicate count (displayed when > 1)
 }
 
 interface ToastConfig {
@@ -199,6 +204,32 @@ interface MelkerContext {
 
 ---
 
+## Duplicate Handling
+
+When `toast.show()` is called with a message that matches an existing toast (same message text AND same type), instead of creating a new toast:
+
+1. The existing toast's expiration timer is reset (`createdAt` updated to now)
+2. The duplicate count is incremented
+3. When count > 1, it's displayed after the message: `Message text (2)`
+
+This prevents toast spam when the same event fires repeatedly.
+
+---
+
+## Auto-Sizing Width
+
+The toast container width automatically adjusts based on content:
+
+1. **Calculate optimal width** from longest toast (icon + message + count + action + close button)
+2. **Minimum width** is `config.width` (default 40 characters)
+3. **Maximum width** is `viewport.width - 4` (margin on sides)
+4. **Width stability:** Container only expands during a toast session, never shrinks
+5. **Session reset:** When all toasts are dismissed, width resets to minimum
+
+**Text overflow:** Long messages are clipped on word boundary with ellipsis (`…`)
+
+---
+
 ## Auto-Close Behavior
 
 **Timer-driven expiry:**
@@ -291,6 +322,11 @@ $melker.toast.dismissAll();
 
 // Change position at runtime
 $melker.toast.setPosition('top');
+
+// Duplicate handling - calling show() with same message resets timer
+$melker.toast.show('Saving...', { type: 'info' });
+// ... called again ...
+$melker.toast.show('Saving...', { type: 'info' });  // Shows "Saving... (2)" instead of new toast
 ```
 
 ---

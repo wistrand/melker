@@ -46,6 +46,8 @@ export interface ToastEntry {
   bell: boolean;
   /** Optional action button */
   action?: ToastAction;
+  /** Duplicate count (shown when > 1) */
+  count: number;
 }
 
 /** Toast configuration from schema */

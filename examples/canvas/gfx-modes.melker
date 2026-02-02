@@ -41,7 +41,7 @@
     }
   </style>
 
-  <container id="root" scrollable="true">
+  <container id="root" style="overflow: scroll">
     <text style="text-align: center; margin-bottom: 1">Graphics Modes and Dithering Demo</text>
     <text style="margin-bottom: 1">Showing melker logo with different rendering options. Best viewed with MELKER_THEME=bw-std or fullcolor-dark.</text>
 

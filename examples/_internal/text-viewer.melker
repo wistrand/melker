@@ -25,7 +25,7 @@
             <button label="Exit" onClick="$melker.exit();" />
         </container>
 
-        <container id="content-area" scrollable="true" style="flex: 1 1 0; padding: 1;">
+        <container id="content-area" style="overflow: scroll; flex: 1 1 0; padding: 1;">
             <text id="test-content"  src="${argv[1]:-README.md}"  style="text-wrap: wrap;"/>
         </container>
     </container>

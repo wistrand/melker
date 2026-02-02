@@ -40,7 +40,7 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" scrollable="true">
+<container class="graph graph-row" style="overflow: scroll">
   <!-- Subgraph: Frontend -->
   <container id="graph-subgraph-Frontend" class="subgraph subgraph-col" style="border-title: Frontend">
     <container id="graph-node-A" class="node">

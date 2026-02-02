@@ -67,7 +67,7 @@ doc.focus('inputId');
 
 ### Flexbox
 
-Default layout is flexbox with column direction.
+The root viewport, `container`, `dialog`, and `tab` elements all default to `display: flex` with `flexDirection: column`.
 
 **Container properties:**
 - `display`: `'flex'` | `'block'`

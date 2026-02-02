@@ -316,7 +316,7 @@ Uses FFmpeg for decoding, dithering for display.
   <thead>
     <tr><th>Name</th><th>Role</th></tr>
   </thead>
-  <tbody scrollable="true" selectable="single">
+  <tbody style="overflow: scroll" selectable="single">
     <tr data-id="1"><td>Alice</td><td>Admin</td></tr>
     <tr data-id="2"><td>Bob</td><td>User</td></tr>
   </tbody>

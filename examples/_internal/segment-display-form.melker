@@ -17,7 +17,7 @@
 ## Interactive Segment Display Demo
   </help>
 
-  <container scrollable="true" style="flex-direction: column; padding: 1; gap: 1; border: thin">
+  <container style="overflow: scroll; flex-direction: column; padding: 1; gap: 1; border: thin">
     <text style="font-weight: bold;">Interactive Segment Display</text>
 
     <!-- Interactive input - at top for easy testing -->

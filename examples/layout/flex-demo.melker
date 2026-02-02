@@ -1,4 +1,4 @@
-<container scrollable="true" style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column;">
+<container style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column; overflow: scroll">
   <!-- Title Section -->
   <text style="color: cyan; font-weight: bold; padding: 1; text-align: center;">
     Flexbox Layout Demonstration

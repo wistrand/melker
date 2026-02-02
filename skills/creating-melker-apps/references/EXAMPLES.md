@@ -306,7 +306,7 @@
 
     <tabs style="flex: 1;">
       <tab title="By Region">
-        <container style="padding: 1;" scrollable="true">
+        <container style="padding: 1; overflow: scroll">
           <text>Regional Sales (2024):</text>
           <data-bars
             series='[{"name": "Sales"}]'

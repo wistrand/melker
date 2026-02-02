@@ -40,7 +40,7 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-col" scrollable="true">
+<container class="graph graph-col" style="overflow: scroll">
   <container id="graph-node-Start" class="node">
     <container style="flex-direction: column">
       <text style="font-weight: bold">Begin</text>

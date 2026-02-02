@@ -103,7 +103,7 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
   textWrap: { type: 'string', enum: ['nowrap', 'wrap'], description: 'Text wrapping behavior' },
   display: { type: 'string', enum: ['block', 'flex'], description: 'Layout mode' },
   position: { type: 'string', enum: ['static', 'relative', 'absolute', 'fixed'], description: 'Positioning mode' },
-  overflow: { type: 'string', enum: ['visible', 'hidden', 'scroll'], description: 'Content overflow behavior' },
+  overflow: { type: 'string', enum: ['visible', 'hidden', 'scroll', 'auto'], description: 'Content overflow behavior' },
   width: { type: ['number', 'string'], description: 'Element width' },
   height: { type: ['number', 'string'], description: 'Element height' },
   minWidth: { type: ['number', 'string'], description: 'Minimum width' },

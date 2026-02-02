@@ -40,7 +40,7 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" scrollable="true">
+<container class="graph graph-row" style="overflow: scroll">
   <container id="graph-node-Start" class="node">
     <button label="Begin Process"/>
   </container>

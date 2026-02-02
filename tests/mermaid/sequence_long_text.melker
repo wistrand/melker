@@ -36,7 +36,7 @@
 }
 </style>
 
-<container style="padding: 1; flex-direction: column" scrollable="true">
+<container style="padding: 1; flex-direction: column" style="overflow: scroll">
   <table class="sequence-table" border="none" columnBorders="false" cellPadding="1">
     <thead>
       <tr>

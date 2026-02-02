@@ -64,7 +64,6 @@ Token info display area.
 
 ```melker-block
 +--tokenArea------------------------------+
-| scrollable: true                        |
 | style: flex: 1 1 0; overflow: scroll;   |
 |   margin-top: 1; margin-bottom: 1;      |
 |   border: thin                          |

@@ -46,7 +46,7 @@
 }
 </style>
 
-<container scrollable="true" style="padding: 1">
+<container style="overflow: scroll; padding: 1; height: fill">
   <text style="font-weight: bold; margin-bottom: 1">CSS Combinator Examples</text>
 
   <container class="section">

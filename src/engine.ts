@@ -17,7 +17,7 @@ import { DualBuffer, EMPTY_CHAR } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
-import { Element, TextSelection, isWheelable } from './types.ts';
+import { Element, TextSelection, isWheelable, isScrollingEnabled } from './types.ts';
 import {
   EventManager,
   type MelkerEvent,
@@ -2240,7 +2240,7 @@ export class MelkerEngine {
    */
   scrollToBottom(containerId: string): void {
     const container = this._document.getElementById(containerId);
-    if (!container || !container.props.scrollable) {
+    if (!container || !isScrollingEnabled(container)) {
       return;
     }
 

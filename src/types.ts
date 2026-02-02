@@ -102,7 +102,7 @@ export interface Style extends Record<string, any> {
   // Layout properties in style section
   display?: 'block' | 'flex';
   position?: 'static' | 'relative' | 'absolute' | 'fixed';
-  overflow?: 'visible' | 'hidden' | 'scroll';
+  overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
   width?: number | 'auto' | 'fill' | PercentageString;
   height?: number | 'auto' | 'fill' | PercentageString;
   minWidth?: number;
@@ -158,7 +158,7 @@ export interface LayoutProps {
   minHeight?: number;
   maxHeight?: number;
   display?: 'block' | 'flex';
-  overflow?: 'visible' | 'hidden' | 'scroll';
+  overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
 
   // Basic positioning
   position?: 'static' | 'relative' | 'absolute' | 'fixed';
@@ -692,4 +692,14 @@ export interface ComponentRegistry {
 // Helper to check if an element type supports scrolling
 export function isScrollableType(type: string): boolean {
   return type === 'container' || type === 'tbody';
+}
+
+// Helper to check if scrolling is enabled on an element
+// Supports both legacy `scrollable` prop and CSS-like `overflow: scroll/auto` style
+export function isScrollingEnabled(element: Element): boolean {
+  // Legacy prop support
+  if (element.props.scrollable) return true;
+  // CSS-like overflow style
+  const overflow = element.props.style?.overflow;
+  return overflow === 'scroll' || overflow === 'auto';
 }

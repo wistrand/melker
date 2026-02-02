@@ -95,7 +95,7 @@ LayoutNode
 
 ### Flexbox Layout
 
-Default layout is flexbox with column direction.
+The root viewport, `container`, `dialog`, and `tab` elements all default to `display: flex` with `flexDirection: column`.
 
 **Container properties:**
 - `display`: `'flex'` | `'block'`
@@ -287,7 +287,7 @@ When an element has insufficient space for content due to border and padding con
 
 ## Tabs Component
 
-The `<tabs>` component provides a tabbed interface with clickable tab headers.
+The `<tabs>` component provides a tabbed interface with clickable tab headers. Each `<tab>` defaults to flex column layout.
 
 ### Usage
 
@@ -426,7 +426,7 @@ The `<table>` component provides data tables with optional scrollable body.
       <th>Status</th>
     </tr>
   </thead>
-  <tbody scrollable="true">
+  <tbody style="overflow: scroll">
     <tr>
       <td>Alice</td>
       <td>alice@example.com</td>
@@ -444,9 +444,9 @@ The `<table>` component provides data tables with optional scrollable body.
 ### Structure
 
 - `<table>` - Root container, handles column width calculation
-- `<thead>` - Fixed header section (not scrollable)
-- `<tbody>` - Data rows, supports `scrollable="true"` for scrolling
-- `<tfoot>` - Fixed footer section (not scrollable)
+- `<thead>` - Fixed header section (non-scrolling)
+- `<tbody>` - Data rows, supports `overflow: scroll` style for scrolling
+- `<tfoot>` - Fixed footer section (non-scrolling)
 - `<tr>` - Table row
 - `<td>` / `<th>` - Table cells (th renders bold)
 
@@ -459,8 +459,8 @@ The `<table>` component provides data tables with optional scrollable body.
 - `style.width` / `style.height` - Table dimensions
 
 **tbody:**
-- `scrollable` - Enable vertical scrolling when content exceeds height
-- `maxHeight` - Maximum visible rows when scrollable
+- `style="overflow: scroll"` - Enable vertical scrolling when content exceeds height
+- `maxHeight` - Maximum visible rows when scrolling enabled
 
 ### Behavior
 
@@ -480,7 +480,7 @@ The `<table>` component provides data tables with optional scrollable body.
 
 ## Dialog Component
 
-The `<dialog>` component provides modal overlay dialogs.
+The `<dialog>` component provides modal overlay dialogs. Defaults to flex column layout.
 
 ### Usage
 
@@ -1023,8 +1023,7 @@ The `<graph>` component renders diagrams from Mermaid syntax or JSON input. Supp
 | `type`       | string  | auto    | Parser type: 'mermaid' or 'json' (auto-detected from content) |
 | `src`        | string  | -       | Load content from URL                                     |
 | `text`       | string  | -       | Inline content (alternative to children)                  |
-| `scrollable` | boolean | true    | Enable scrolling                                          |
-| `style`      | Style   | -       | Container style overrides                                 |
+| `style`      | Style   | -       | Container styling; use `overflow: scroll` for scrolling   |
 
 ### Content Priority
 

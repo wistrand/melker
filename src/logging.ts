@@ -366,10 +366,16 @@ export interface ComponentLogger {
   close: () => void;
 }
 
+// Cache for component loggers - avoids creating new wrapper objects on each getLogger() call
+const loggerCache = new Map<string, ComponentLogger>();
+
 export function getLogger(name: string): ComponentLogger {
+  const cached = loggerCache.get(name);
+  if (cached) return cached;
+
   const baseLogger = getGlobalLogger();
 
-  return {
+  const logger: ComponentLogger = {
     trace: (message: string, context?: Record<string, unknown>) =>
       baseLogger.trace(message, context, name),
     debug: (message: string, context?: Record<string, unknown>) =>
@@ -385,6 +391,9 @@ export function getLogger(name: string): ComponentLogger {
     flush: () => baseLogger.flush(),
     close: () => baseLogger.close(),
   };
+
+  loggerCache.set(name, logger);
+  return logger;
 }
 
 // Convenience functions using global logger

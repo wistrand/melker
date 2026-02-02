@@ -1,7 +1,7 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
+import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, isScrollingEnabled, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { clipBounds } from './geometry.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
 import { ClippedDualBuffer } from './clipped-buffer.ts';
@@ -178,7 +178,7 @@ export class RenderingEngine {
     // Calculate scroll offset if this is a scrollable container
     let scrollX = parentScrollX;
     let scrollY = parentScrollY;
-    if (node.element && isScrollableType(node.element.type) && node.element.props.scrollable) {
+    if (node.element && isScrollableType(node.element.type) && isScrollingEnabled(node.element)) {
       scrollX += (node.element.props.scrollX as number) || 0;
       scrollY += (node.element.props.scrollY as number) || 0;
     }
@@ -930,7 +930,9 @@ export class RenderingEngine {
     this._renderBackground(clippedBounds, computedStyle, context.buffer);
 
     // Render border (skip collapsed borders if chrome was collapsed due to insufficient space)
-    this._renderBorder(clippedBounds, computedStyle, context.buffer, node.chromeCollapse);
+    // Pass original bounds, clipped bounds, and clip rect for proper border visibility checks
+    const clipRect = context.clipRect || context.viewport;
+    this._renderBorder(bounds, clippedBounds, clipRect, computedStyle, context.buffer, node.chromeCollapse);
 
 
 
@@ -944,7 +946,7 @@ export class RenderingEngine {
     }
 
     // Render children with scroll translation and clipping
-    const isScrollable = isScrollableType(element.type) && element.props.scrollable;
+    const isScrollable = isScrollableType(element.type) && isScrollingEnabled(element);
     const contentBounds = this._getContentBounds(clippedBounds, computedStyle, isScrollable);
 
     if (isScrollable) {
@@ -1021,7 +1023,7 @@ export class RenderingEngine {
 
   // Render scroll bars for a scrollable container (called after children are rendered)
   private _renderScrollbars(element: Element, contentBounds: Bounds, adjustedContentBounds: Bounds, style: Partial<Cell>, buffer: DualBuffer): void {
-    if (!isScrollableType(element.type) || !element.props.scrollable) {
+    if (!isScrollableType(element.type) || !isScrollingEnabled(element)) {
       return;
     }
 
@@ -1170,8 +1172,11 @@ export class RenderingEngine {
   }
 
   // Render border (supports individual sides and colors)
+  // originalBounds: the element's actual bounds before clipping
+  // clippedBounds: the bounds after clipping to the visible area
+  // clipRect: the clipping rectangle (visible viewport)
   // chromeCollapse indicates which borders were collapsed due to insufficient space
-  private _renderBorder(bounds: Bounds, style: Style, buffer: DualBuffer, chromeCollapse?: ChromeCollapseState): void {
+  private _renderBorder(originalBounds: Bounds, clippedBounds: Bounds, clipRect: Bounds, style: Style, buffer: DualBuffer, chromeCollapse?: ChromeCollapseState): void {
     const defaultColor = style.borderColor || style.color;
 
     // Check for individual border sides first, fallback to general border
@@ -1187,6 +1192,19 @@ export class RenderingEngine {
       if (chromeCollapse.borderCollapsed.left) borderLeft = undefined;
       if (chromeCollapse.borderCollapsed.right) borderRight = undefined;
     }
+
+    // Calculate actual border positions from original bounds
+    const topBorderY = originalBounds.y;
+    const bottomBorderY = originalBounds.y + originalBounds.height - 1;
+    const leftBorderX = originalBounds.x;
+    const rightBorderX = originalBounds.x + originalBounds.width - 1;
+
+    // Hide borders whose position is outside the visible clip rect
+    // Use > (not >=) because clipRect width/height may be off-by-one for scroll containers
+    if (topBorderY < clipRect.y || topBorderY > clipRect.y + clipRect.height) borderTop = undefined;
+    if (bottomBorderY < clipRect.y || bottomBorderY > clipRect.y + clipRect.height) borderBottom = undefined;
+    if (leftBorderX < clipRect.x || leftBorderX > clipRect.x + clipRect.width) borderLeft = undefined;
+    if (rightBorderX < clipRect.x || rightBorderX > clipRect.x + clipRect.width) borderRight = undefined;
 
     // If no borders defined, exit
     if (!borderTop && !borderBottom && !borderLeft && !borderRight) return;
@@ -1226,45 +1244,55 @@ export class RenderingEngine {
       : ((borderTop || borderBottom || borderLeft || borderRight || 'thin') as Exclude<BorderStyle, 'none'>);
     const chars = BORDER_CHARS[activeStyle] || BORDER_CHARS.thin;
 
+    // Calculate line extents based on which borders are visible
+    // If a border is visible, extend lines to that border position
+    // If a border is hidden (outside clip), extend lines to the clip edge
+    const lineStartX = borderLeft ? leftBorderX : clippedBounds.x;
+    const lineEndX = borderRight ? rightBorderX + 1 : clippedBounds.x + clippedBounds.width;
+    const lineWidth = lineEndX - lineStartX;
+    const lineStartY = borderTop ? topBorderY : clippedBounds.y;
+    const lineEndY = borderBottom ? bottomBorderY + 1 : clippedBounds.y + clippedBounds.height;
+    const lineHeight = lineEndY - lineStartY;
+
     // Draw individual border sides
     if (borderTop && borderTop !== 'none') {
-      this._drawHorizontalLine(bounds.x, bounds.y, bounds.width, borderTop, topStyle, buffer, chars);
+      this._drawHorizontalLine(lineStartX, topBorderY, lineWidth, borderTop, topStyle, buffer, chars);
 
       // Draw border title centered in top border
       if (style.borderTitle) {
         const title = ` ${style.borderTitle} `;
         const titleLen = title.length;
-        const availableWidth = bounds.width - 2; // Exclude corners
+        const availableWidth = lineWidth - 2; // Exclude corners
         if (titleLen <= availableWidth) {
-          const startX = bounds.x + 1 + Math.floor((availableWidth - titleLen) / 2);
+          const startX = lineStartX + 1 + Math.floor((availableWidth - titleLen) / 2);
           for (let i = 0; i < titleLen; i++) {
-            buffer.currentBuffer.setCell(startX + i, bounds.y, { char: title[i], ...topStyle });
+            buffer.currentBuffer.setCell(startX + i, topBorderY, { char: title[i], ...topStyle });
           }
         }
       }
     }
     if (borderBottom && borderBottom !== 'none') {
-      this._drawHorizontalLine(bounds.x, bounds.y + bounds.height - 1, bounds.width, borderBottom, bottomStyle, buffer, chars);
+      this._drawHorizontalLine(lineStartX, bottomBorderY, lineWidth, borderBottom, bottomStyle, buffer, chars);
     }
     if (borderLeft && borderLeft !== 'none') {
-      this._drawVerticalLine(bounds.x, bounds.y, bounds.height, borderLeft, leftStyle, buffer, chars);
+      this._drawVerticalLine(leftBorderX, lineStartY, lineHeight, borderLeft, leftStyle, buffer, chars);
     }
     if (borderRight && borderRight !== 'none') {
-      this._drawVerticalLine(bounds.x + bounds.width - 1, bounds.y, bounds.height, borderRight, rightStyle, buffer, chars);
+      this._drawVerticalLine(rightBorderX, lineStartY, lineHeight, borderRight, rightStyle, buffer, chars);
     }
 
-    // Draw corners where borders meet (use top-left color priority for corners)
+    // Draw corners where borders meet (only if both adjacent borders are visible)
     if (borderTop && borderLeft) {
-      buffer.currentBuffer.setCell(bounds.x, bounds.y, { char: chars.tl, ...topStyle });
+      buffer.currentBuffer.setCell(leftBorderX, topBorderY, { char: chars.tl, ...topStyle });
     }
     if (borderTop && borderRight) {
-      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y, { char: chars.tr, ...topStyle });
+      buffer.currentBuffer.setCell(rightBorderX, topBorderY, { char: chars.tr, ...topStyle });
     }
     if (borderBottom && borderLeft) {
-      buffer.currentBuffer.setCell(bounds.x, bounds.y + bounds.height - 1, { char: chars.bl, ...bottomStyle });
+      buffer.currentBuffer.setCell(leftBorderX, bottomBorderY, { char: chars.bl, ...bottomStyle });
     }
     if (borderBottom && borderRight) {
-      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { char: chars.br, ...bottomStyle });
+      buffer.currentBuffer.setCell(rightBorderX, bottomBorderY, { char: chars.br, ...bottomStyle });
     }
   }
 
@@ -1307,7 +1335,7 @@ export class RenderingEngine {
     let coordinateTransform: CoordinateTransform | undefined;
 
     // Phase 3: Use viewport system for enhanced clipping
-    if (context.clipRect && isScrollableType(element.type) && element.props.scrollable) {
+    if (context.clipRect && isScrollableType(element.type) && isScrollingEnabled(element)) {
       // Only use viewport system for scrollable containers
       const viewportManager = context.viewportManager || globalViewportManager;
 
@@ -1676,7 +1704,7 @@ export class RenderingEngine {
     }
 
     // For scrollable containers, return content bounds minus scrollbar space
-    if (isScrollableType(layoutNode.element.type) && layoutNode.element.props.scrollable) {
+    if (isScrollableType(layoutNode.element.type) && isScrollingEnabled(layoutNode.element)) {
       const contentBounds = layoutNode.contentBounds;
 
       // If no content bounds, fall back to element bounds
@@ -1732,7 +1760,7 @@ export class RenderingEngine {
 
   // Calculate actual scroll dimensions for a scrollable container
   calculateScrollDimensions(container: Element): { width: number; height: number } {
-    if (!isScrollableType(container.type) || !container.props.scrollable) {
+    if (!isScrollableType(container.type) || !isScrollingEnabled(container)) {
       return { width: 0, height: 0 };
     }
 

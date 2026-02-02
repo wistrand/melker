@@ -51,10 +51,11 @@ melker --watch hello.melker
 </melker>
 ```
 
-**Layout:** Flexbox via style props
+**Layout:** The root viewport, `container`, `dialog`, and `tab` all default to `display: flex` with `flex-direction: column`:
 
 ```xml
-<container style="display: flex; flex-direction: column; gap: 1;">
+<!-- display: flex is auto-inferred, so this is equivalent -->
+<container style="flex-direction: column; gap: 1;">
 ```
 
 **Interactivity:** Export functions, access via `$app.*`

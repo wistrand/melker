@@ -90,7 +90,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 7. **Use getValue/setValue for values** - For input/textarea/select content. Use `.props.*` for other props like `open`, `checked`
 8. **Avoid emojis** - They break terminal layout
 9. **Export functions for handlers** - Functions must be `export function` to use in `onClick="$app.fn()"`
-10. **Scrollable is a prop** - Use `scrollable="true"` not `style="overflow: scroll"`
+10. **Scrollable containers** - Use `style="overflow: scroll"` or `style="overflow: auto"`
 11. **Dialog show/hide** - Use `dialog.show()`, `dialog.hide()`, or `dialog.setVisible(bool)`
 12. **Avoid specifying colors** - Let the theme engine handle colors
 13. **flex-direction is a style** - Use `style="flex-direction: row"` not `direction="row"`
@@ -162,7 +162,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 
 | Component | Key Props | Notes |
 |-----------|-----------|-------|
-| `<container>` | style, scrollable | Flexbox layout |
+| `<container>` | style | Flexbox layout (use `overflow: scroll` style for scrolling) |
 | `<text>` | id, style | Text content |
 | `<input>` | placeholder, value, format, onInput | Single-line (format: 'text'\|'password') |
 | `<textarea>` | placeholder, rows, cols, wrap | Multi-line |
@@ -186,7 +186,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `<data-bars>` | series, bars, labels, showValues | Bar charts (stacked/grouped/sparkline) |
 | `<table>` | border, columnBorders, resizable | HTML-like table |
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
-| `<graph>` | type, src, text, scrollable | Mermaid/JSON diagrams (flowchart, sequence, class) |
+| `<graph>` | type, src, text, style | Mermaid/JSON diagrams (flowchart, sequence, class) |
 | `<connector>` | from, to, arrow, label, routing | Draw lines between elements |
 
 For complete component reference, see [COMPONENTS.md](references/COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md) and [melker.sh/tutorial.html](https://melker.sh/tutorial.html).

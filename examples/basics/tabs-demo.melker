@@ -1,5 +1,5 @@
 <melker>
-  <container id="root" style="display: flex; flex-direction: column; padding: 1; border: thin;">
+  <container id="root" style="display: flex; flex-direction: column; padding: 1; border: thin; height: fill">
     <text id="title" style="font-weight: bold; margin-bottom: 1;">Tabs Component Demo</text>
 
     <tabs id="demo-tabs">

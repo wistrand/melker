@@ -86,7 +86,7 @@
               <th>Status</th>
             </tr>
           </thead>
-          <tbody selectable="single" scrollable="true" maxHeight="6" onSelect="$app.onTaskSelect(event)">
+          <tbody selectable="single" style="overflow: scroll" maxHeight="6" onSelect="$app.onTaskSelect(event)">
             <tr data-id="1">
               <td>Review PR #42</td>
               <td>Today</td>

@@ -1,7 +1,7 @@
 // Hit testing for finding elements at screen coordinates
 // Handles dialogs and regular element tree traversal
 
-import { Element, isInteractive, isTextSelectable, isScrollableType, isFocusCapturable } from './types.ts';
+import { Element, isInteractive, isTextSelectable, isScrollableType, isScrollingEnabled, isFocusCapturable } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { getLogger } from './logging.ts';
@@ -326,7 +326,7 @@ export class HitTester {
     let childY = y;
     let isInsideScrollable = true;
 
-    if (bounds && isScrollableType(element.type) && element.props.scrollable) {
+    if (bounds && isScrollableType(element.type) && isScrollingEnabled(element)) {
       // If click is outside the scrollable container's bounds, don't search its children
       if (!pointInBounds(x, y, bounds)) {
         isInsideScrollable = false;

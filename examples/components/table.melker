@@ -40,7 +40,7 @@ Demonstrates the HTML-like table component with headers, body, and footer.
           <th align="right">Salary</th>
         </tr>
       </thead>
-      <tbody id="employeeTableBody" scrollable="true" maxHeight="5" selectable="single" onSelect="$app.handleSelect(event)">
+      <tbody id="employeeTableBody" style="overflow: scroll" maxHeight="5" selectable="single" onSelect="$app.handleSelect(event)">
         <tr data-id="1">
           <td>1</td>
           <td>Alice Johnson</td>

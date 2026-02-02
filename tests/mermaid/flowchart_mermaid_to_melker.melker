@@ -40,7 +40,7 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-col" scrollable="true">
+<container class="graph graph-col" style="overflow: scroll">
   <!-- Subgraph: Input -->
   <container id="graph-subgraph-Input" class="subgraph subgraph-row" style="border-title: Input">
     <container id="graph-node-MMD" class="node">

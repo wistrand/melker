@@ -44,8 +44,8 @@ Deno.test('Text with styling', () => {
   engine.render(textElement, buffer, viewport);
   const diff = buffer.swapAndGetDiff();
 
-  // Should have rendered 6 characters for "Styled"
-  assertEquals(diff.length, 6);
+  // With flex default, text element stretches to fill viewport (10x3=30 cells)
+  assertEquals(diff.length, 30);
   assertEquals(diff[0].cell.char, 'S');
   assertEquals(diff[0].cell.foreground, COLORS.red);
   assertEquals(diff[0].cell.bold, true);
@@ -208,11 +208,11 @@ Deno.test('Padding and margin', () => {
 
   const layoutTree = engine.render(textElement, buffer, viewport);
 
-  // Advanced layout system handles margin/padding differently
+  // With flex default, element stretches to fill viewport
   assertEquals(layoutTree.bounds.x, 0);
   assertEquals(layoutTree.bounds.y, 0);
-  assertEquals(layoutTree.bounds.width, 8); // Advanced layout calculates content-based width
-  assertEquals(layoutTree.bounds.height, 5); // content(1) + padding(2) + border(2)
+  assertEquals(layoutTree.bounds.width, 20); // Flex stretches to viewport width
+  assertEquals(layoutTree.bounds.height, 10); // Flex stretches to viewport height
 });
 
 Deno.test('Nested containers', () => {

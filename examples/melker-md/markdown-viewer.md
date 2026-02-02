@@ -130,8 +130,7 @@ Content area is scrollable with flex sizing:
 ```json
 {
   "@target": "#content-area",
-  "scrollable": true,
-  "style": "flex: 1 1 0; padding: 1"
+  "style": "flex: 1 1 0; padding: 1; overflow: scroll"
 }
 ```
 

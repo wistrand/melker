@@ -39,7 +39,7 @@
 
       <container style="flex: 2; border: thin; padding: 1">
         <text text="Activity Log" style="bold: true" />
-        <container scrollable="true" style="height: 6; overflow: scroll">
+        <container style="height: 6; overflow: scroll">
           <text id="activity-log" text="(no activity yet)" style="color: gray" />
         </container>
       </container>
@@ -47,7 +47,7 @@
 
     <container style="flex: 1; border: thin; padding: 1; margin-top: 1">
       <text text="File Listing" style="bold: true" />
-      <container scrollable="true" style="flex: 1; overflow: scroll">
+      <container style="flex: 1; overflow: scroll">
         <text id="file-listing" text="(use AI to list files)" style="color: gray" />
       </container>
     </container>

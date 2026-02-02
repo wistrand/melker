@@ -143,7 +143,14 @@ Scripts can run at different times during app startup:
 
 Use `onMount()` when you need to conditionally register initialization or register from within functions. Prefer `async="ready"` for simpler, declarative initialization.
 
-**Note:** Markdown format (`.md` files) does not support `async="ready"` - use `onMount()` instead.
+**Markdown format:** Use `// @melker script ready` directive in TypeScript blocks:
+
+````markdown
+```typescript
+// @melker script ready
+$app.init();
+```
+````
 
 **Important:** Primitive exports (`export let count = 0`) are copied by value to `$app`. Use setter functions to modify them from other scripts: `export function setCount(n) { count = n; }`. See `agent_docs/dx-footguns.md` #17.
 
@@ -189,18 +196,18 @@ Melker supports bash-style variable expansion for environment variables and comm
 
 | Component                       | Key Props                                                                          | Notes                                     |
 |---------------------------------|------------------------------------------------------------------------------------|-------------------------------------------|
-| `<container>`                   | style, scrollable                                                                  | Flexbox layout container                  |
+| `<container>`                   | style                                                                              | Defaults to flex column (use `overflow: scroll` for scrolling) |
 | `<text>`                        | id, style                                                                          | Inner content or `text` prop (HTML entities unescaped) |
 | `<input>`                       | id, placeholder, value, format, onKeyPress, onInput                                | Single-line text input (format: 'text'\|'password') |
 | `<textarea>`                    | id, placeholder, value, rows, cols, wrap, maxLength                                | Multi-line text input                     |
 | `<button>`                      | id, label, onClick                                                                 | `<button>Label</button>` or `label="Label"` |
-| `<dialog>`                      | id, title, open, modal, backdrop, draggable, width, height                         | Modal overlay (draggable via title bar)   |
+| `<dialog>`                      | id, title, open, modal, backdrop, draggable, width, height                         | Modal overlay, defaults to flex column    |
 | `<checkbox>`                    | id, title, checked, onChange                                                       | Toggle checkbox                           |
 | `<radio>`                       | id, title, value, checked, name, onChange                                          | Radio button                              |
 | `<list>`                        | style                                                                              | List container                            |
 | `<li>`                          | style                                                                              | List item                                 |
 | `<tabs>`                        | id, activeTab, onChange                                                            | Tabbed container                          |
-| `<tab>`                         | title, disabled                                                                    | Tab panel (child of tabs)                 |
+| `<tab>`                         | title, disabled                                                                    | Tab panel, defaults to flex column        |
 | `<canvas>`                      | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant chars)      |
 | `<img>`                         | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
 | `<markdown>`                    | src, text, onLink                                                                  | Markdown text rendering with image support |
@@ -214,12 +221,12 @@ Melker supports bash-style variable expansion for environment variables and comm
 | `<file-browser>`                | path, selectionMode, selectType, filter, showHidden, maxVisible, onSelect, onCancel | File/dir picker                          |
 | `<data-table>`                  | columns, rows, footer, selectable, sortColumn, sortDirection, onSelect, onActivate | Array-based table                        |
 | `<table>`                       | style                                                                              | HTML-like table container                 |
-| `<thead>`, `<tbody>`, `<tfoot>` | scrollable (tbody)                                                                 | Table sections                            |
+| `<thead>`, `<tbody>`, `<tfoot>` | style                                                                              | Table sections (tbody supports `overflow: scroll`) |
 | `<tr>`                          | style                                                                              | Table row                                 |
 | `<td>`, `<th>`                  | colspan, rowspan, align, valign                                                    | Table cells                               |
 | `<progress>`                    | value, max, min, width, height, showValue, indeterminate                           | Progress bar                              |
 | `<connector>`                   | from, to, fromSide, toSide, arrow, label, routing                                  | Draw lines between elements               |
-| `<graph>`                       | type, src, text, scrollable, style                                                 | Mermaid/JSON diagrams (flowchart, sequence, class) |
+| `<graph>`                       | type, src, text, style                                                             | Mermaid/JSON diagrams (flowchart, sequence, class) |
 
 **HTML Entities in Text:** Text content automatically unescapes HTML entities:
 - `&lt;` → `<`, `&gt;` → `>`, `&amp;` → `&`
@@ -343,6 +350,24 @@ CSS-like properties in `style` attribute:
 </container>
 ```
 
+**Scrollable containers:** Use `overflow: scroll` or `overflow: auto` to enable scrolling:
+
+```xml
+<!-- CSS-like style (recommended) -->
+<container style="overflow: scroll; flex: 1; width: fill">
+  <text style="text-wrap: wrap">Long scrollable content...</text>
+</container>
+
+<!-- overflow: auto shows scrollbars only when needed -->
+<container style="overflow: auto; flex: 1; width: fill">
+  <text style="text-wrap: wrap">Long scrollable content...</text>
+</container>
+```
+
+- `overflow: scroll` - Always show scrollbars when content overflows
+- `overflow: auto` - Show scrollbars only when needed
+- `overflow: hidden` - Clip content without scrollbars
+
 ## Events & Context
 
 **Events:** onClick, onKeyPress (event.key), onInput (event.value), onFocus, onBlur, onPaint (canvas)
@@ -402,7 +427,7 @@ Melker apps automatically persist UI state across restarts. The following elemen
 | `<checkbox>`  | checked          | Always                      |
 | `<radio>`     | checked          | Always                      |
 | `<tabs>`      | activeTab        | Always                      |
-| `<container>` | scrollY, scrollX | When `scrollable="true"`    |
+| `<container>` | scrollY, scrollX | When scrolling enabled (`overflow: scroll` or `overflow: auto`) |
 
 **How it works:**
 - State is saved to `~/.melker/state/<app-id>.json` (app-id is a hash of the file path)

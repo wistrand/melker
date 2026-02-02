@@ -325,7 +325,7 @@ Deno.test('BASE_STYLES_SCHEMA enum values are valid for overflow', () => {
   assert(schema, 'overflow should exist in schema');
   assert(schema.enum, 'overflow should have enum values');
 
-  const expectedValues = ['visible', 'hidden', 'scroll'];
+  const expectedValues = ['visible', 'hidden', 'scroll', 'auto'];
   assertEquals(
     schema.enum.sort(),
     expectedValues.sort(),

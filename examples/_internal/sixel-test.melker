@@ -39,7 +39,7 @@
     }
   </style>
 
-  <container id="root" scrollable="true">
+  <container id="root" style="overflow: scroll">
     <text style="text-align: center; margin-bottom: 1">sixel test</text>
 
     <!-- Rotation control -->

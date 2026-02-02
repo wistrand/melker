@@ -1,5 +1,5 @@
 <container style="display: flex; flex-direction: row; height: 15; width: 40; border: thin">
-  <container scrollable={true} style="flex: 1; border-right: thin; flex-direction: column; height: 12;">
+  <container style="flex: 1; border-right: thin; flex-direction: column; height: 12; overflow: scroll">
     <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 1: This very long text will be clipped instead of wrapped</text>
     <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 2: Another long text that gets clipped at column boundary</text>
     <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 3: Yet another long entry showing clipping behavior</text>

@@ -4,7 +4,7 @@
 
 ### container
 
-Flexbox layout container. The primary building block for layouts.
+Flexbox layout container. The primary building block for layouts. Defaults to `display: flex` with `flex-direction: column` (same as `dialog`, `tab`, and the root viewport).
 
 ```xml
 <container style="
@@ -22,8 +22,7 @@ Flexbox layout container. The primary building block for layouts.
 ```
 
 **Props:**
-- `style` - CSS-like styling
-- `scrollable` - Enable scrolling (`true`|`false`)
+- `style` - CSS-like styling (use `overflow: scroll` or `overflow: auto` for scrolling)
 
 **Style properties:**
 - `display`: `flex` | `block` (auto-inferred as `flex` when flex container properties present)
@@ -183,7 +182,7 @@ Clickable button. Supports content syntax or `label` prop.
 
 ### dialog
 
-Modal dialog overlay.
+Modal dialog overlay. Defaults to flex column layout.
 
 ```xml
 <dialog
@@ -279,7 +278,7 @@ File system browser for selecting files and directories. Auto-initializes when r
 
 ### tabs / tab
 
-Tabbed interface.
+Tabbed interface. Each `tab` defaults to flex column layout.
 
 ```xml
 <tabs id="settings" onChange="$app.onChange(event.tabId, event.index)">
@@ -776,8 +775,7 @@ Render diagrams from Mermaid syntax or JSON. Auto-detects diagram type.
 - `type`: `mermaid` | `json` (auto-detected)
 - `src` - Load from URL
 - `text` - Inline content
-- `scrollable` - Enable scrolling (default: `true`)
-- `style` - Container style overrides
+- `style` - Container styling (use `overflow: scroll` for scrolling)
 
 **Supported Mermaid:**
 - Flowcharts: `flowchart TB/LR/BT/RL`, nodes `[rect]` `{diamond}` `((circle))`, edges `-->` `-.->` `==>`, labels `-->|text|`, subgraphs

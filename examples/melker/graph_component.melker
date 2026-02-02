@@ -16,7 +16,7 @@
 
   <tabs style="width: fill; height: fill">
     <tab title="Flowchart">
-      <graph scrollable="true" class="graph-container" style="border: dotted;">
+      <graph class="graph-container" style="border: dotted; overflow: scroll">
 flowchart LR
     A[Start] --> B{Decision}
     B -->|Yes| C[Action 1]

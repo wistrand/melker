@@ -71,7 +71,7 @@ Cross-platform data sources:
 
   <dialog id="processDialog" title="Process Details" style="width: 80; height: 18;" modal="true" backdrop="false" draggable="true" resizable="true">
     <container style="display: flex; flex-direction: column; height: 100%; width: fill">
-      <container scrollable="true" style="flex: 1 1 0; width: fill">
+      <container style="overflow: scroll; flex: 1 1 0; width: fill">
         <markdown id="dialogContent" style="text-wrap: wrap; width: fill"></markdown>
       </container>
       <container style="display: flex; flex-direction: row; justify-content: center; padding-top: 1; gap: 2">

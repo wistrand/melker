@@ -373,7 +373,7 @@ export function graphToMelker(content: string, options: GraphToMelkerOptions): s
 
   // Top-level container
   const graphClass = isHorizontal ? 'graph graph-row' : 'graph graph-col';
-  const scrollableAttr = containerOpts.scrollable ? ' scrollable="true"' : '';
+  const scrollableAttr = containerOpts.scrollable ? ' style="overflow: scroll"' : '';
   lines.push(`<container class="${graphClass}"${scrollableAttr}>`);
 
   // Generate subgraph containers
@@ -513,7 +513,7 @@ export function sequenceToMelker(content: string, options: { name?: string; cont
   // Root container for the sequence diagram (table + connectors must be siblings)
   // KNOWN ISSUE: Tables inside containers may not render all rows properly
   // Using flex-direction: column to help with layout
-  const scrollableAttr = containerOpts.scrollable ? ' scrollable="true"' : '';
+  const scrollableAttr = containerOpts.scrollable ? ' style="overflow: scroll"' : '';
   lines.push(`<container style="padding: 1; flex-direction: column"${scrollableAttr}>`);
 
   // Title if present
@@ -760,7 +760,7 @@ export function classToMelker(content: string, options: { name?: string; contain
 
   // Top-level container
   const diagramClass = isHorizontal ? 'class-diagram class-diagram-row' : 'class-diagram class-diagram-col';
-  const scrollableAttr = containerOpts.scrollable ? ' scrollable="true"' : '';
+  const scrollableAttr = containerOpts.scrollable ? ' style="overflow: scroll"' : '';
   lines.push(`<container class="${diagramClass}"${scrollableAttr}>`);
 
   // Group classes by level

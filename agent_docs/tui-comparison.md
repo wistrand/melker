@@ -435,7 +435,7 @@ graph TD
     A[Start] --> B{Decision}
     B -->|Yes| C[Do something]
     B -->|No| D[Do something else]
-" scrollable="true" />
+" style="overflow: scroll" />
 
 <!-- From file -->
 <graph type="mermaid" src="./diagram.mmd" />
@@ -469,13 +469,13 @@ graph TD
 
 ### Table Examples
 
-**Melker** - Native table element (supports scrollable tbody):
+**Melker** - Native table element (supports scrolling tbody):
 ```xml
 <table style="width: fill; height: 10;">
   <thead>
     <tr><th>Name</th><th>Role</th></tr>
   </thead>
-  <tbody scrollable="true">
+  <tbody style="overflow: scroll">
     <tr><td>Alice</td><td>Admin</td></tr>
     <tr><td>Bob</td><td>User</td></tr>
   </tbody>

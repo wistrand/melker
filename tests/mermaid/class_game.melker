@@ -33,7 +33,7 @@
 }
 </style>
 
-<container class="class-diagram class-diagram-col" scrollable="true">
+<container class="class-diagram class-diagram-col" style="overflow: scroll">
   <container class="class-level class-level-row">
     <container id="class-GameObject" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
       <text class="class-annotation">«abstract»</text>

@@ -48,7 +48,7 @@
         <text text="Your Procrastination Drafts" style="color: cyan; font-weight: bold; margin-bottom: 1;" />
 
         <!-- Scrollable Drafts List -->
-        <container id="drafts-list" scrollable="true" style="flex: 1 1 0; flex-direction: column; border: thin; border-color: gray; padding: 1;">
+        <container id="drafts-list" style="overflow: scroll; flex: 1 1 0; flex-direction: column; border: thin; border-color: gray; padding: 1;">
           <!-- Dynamic content will be inserted here by JavaScript -->
         </container>
 

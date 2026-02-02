@@ -1,7 +1,7 @@
 // Scroll handling for scrollable containers
 // Handles scrollbar interaction, wheel events, and arrow key scrolling
 
-import { Element, isScrollableType } from './types.ts';
+import { Element, isScrollableType, isScrollingEnabled } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine, ScrollbarBounds } from './rendering.ts';
 import { pointInBounds } from './geometry.ts';
@@ -349,7 +349,7 @@ export class ScrollHandler {
 
     logger.debug(`ScrollHandler.handleScrollEvent: x=${event.x}, y=${event.y}, deltaY=${event.deltaY}, targetContainer=${targetContainer?.type}/${targetContainer?.id}`);
 
-    if (targetContainer && targetContainer.props.scrollable) {
+    if (targetContainer && isScrollingEnabled(targetContainer)) {
       const currentScrollY = (targetContainer.props.scrollY as number) || 0;
       const currentScrollX = (targetContainer.props.scrollX as number) || 0;
       const deltaY = event.deltaY || 0;
@@ -475,7 +475,7 @@ export class ScrollHandler {
   findScrollableContainers(element: Element): Element[] {
     const scrollableContainers: Element[] = [];
 
-    if (isScrollableType(element.type) && element.props.scrollable) {
+    if (isScrollableType(element.type) && isScrollingEnabled(element)) {
       scrollableContainers.push(element);
     }
 
@@ -493,7 +493,7 @@ export class ScrollHandler {
    */
   findScrollableParent(element: Element): Element | null {
     // First check if the element itself is a scrollable container
-    if (isScrollableType(element.type) && element.props.scrollable) {
+    if (isScrollableType(element.type) && isScrollingEnabled(element)) {
       return element;
     }
 
@@ -501,7 +501,7 @@ export class ScrollHandler {
     let current = this._findParent(element);
 
     while (current) {
-      if (isScrollableType(current.type) && current.props.scrollable) {
+      if (isScrollableType(current.type) && isScrollingEnabled(current)) {
         return current;
       }
       current = this._findParent(current);

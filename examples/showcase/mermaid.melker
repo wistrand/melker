@@ -63,7 +63,7 @@ melker --stdout diagram.mmd  # Output to stdout
   <tabs id="tabs" style="flex: 1" onChange="$app.updateInfo(event.index)">
 
     <tab title="Git Flow">
-      <graph scrollable="true" class="diagram-area">
+      <graph style="overflow: scroll" class="diagram-area">
 flowchart LR
     subgraph Local
         WD[Working Dir] -->|git add| SA[Staging Area]
@@ -83,7 +83,7 @@ flowchart LR
     </tab>
 
     <tab title="HTTP Request">
-      <graph scrollable="true" class="diagram-area">
+      <graph style="overflow: scroll" class="diagram-area">
 sequenceDiagram
     participant B as Browser
     participant S as Server
@@ -104,7 +104,7 @@ sequenceDiagram
     </tab>
 
     <tab title="Auth Flow">
-      <graph scrollable="true" class="diagram-area">
+      <graph style="overflow: scroll" class="diagram-area">
 flowchart TD
     A[User visits app] --> B{Logged in?}
     B -->|No| C[Show login form]
@@ -120,7 +120,7 @@ flowchart TD
     </tab>
 
     <tab title="MVC Pattern">
-      <graph scrollable="true" class="diagram-area">
+      <graph style="overflow: scroll" class="diagram-area">
 classDiagram
     direction LR
 
@@ -152,7 +152,7 @@ classDiagram
     </tab>
 
     <tab title="Microservices">
-      <graph scrollable="true" class="diagram-area">
+      <graph style="overflow: scroll" class="diagram-area">
 sequenceDiagram
     participant GW as API Gateway
     participant US as User Service
@@ -174,7 +174,7 @@ sequenceDiagram
     </tab>
 
     <tab title="Design Patterns">
-      <graph scrollable="true" class="diagram-area">
+      <graph style="overflow: scroll" class="diagram-area">
 classDiagram
     direction TB
 

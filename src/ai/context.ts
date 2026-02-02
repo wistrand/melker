@@ -2,7 +2,7 @@
 // Gathers information about current UI state to send to the LLM
 
 import { Document } from '../document.ts';
-import { Element } from '../types.ts';
+import { Element, isScrollingEnabled } from '../types.ts';
 
 export interface UIContext {
   screenContent: string;
@@ -119,7 +119,7 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
       case 'container': {
         // Add info about container purpose if it has an id
         if (element.id && !element.id.startsWith('doc-')) {
-          const scrollable = element.props.scrollable ? ', scrollable' : '';
+          const scrollable = isScrollingEnabled(element) ? ', scrollable' : '';
           lines.push(`${indent}[Container: ${element.id}${scrollable}]`);
         }
         break;
@@ -321,7 +321,7 @@ function getAvailableActions(document: Document): string[] {
         break;
 
       case 'container':
-        if (focused.props.scrollable) {
+        if (isScrollingEnabled(focused)) {
           actions.push('Arrow keys: Scroll content');
         }
         break;

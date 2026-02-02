@@ -68,7 +68,7 @@ flowchart LR
 | `type`       | `'mermaid'` \| `'json'`  | auto-detect | Parser type                          |
 | `src`        | string                   | -           | Load content from URL                |
 | `text`       | string                   | -           | Inline content (alternative to children) |
-| `scrollable` | boolean                  | `true`      | Enable scrolling for large diagrams  |
+| `style`      | Style                    | -           | Use `overflow: scroll` for scrolling |
 
 ### Examples
 

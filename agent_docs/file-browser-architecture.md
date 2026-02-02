@@ -187,7 +187,7 @@ private _rebuildUI(): void {
   });
 
   uiElements.push(createElement('table', { border: 'thin', columnBorders: false },
-    createElement('tbody', { selectable: 'single', scrollable: true, maxHeight: maxVisible },
+    createElement('tbody', { selectable: 'single', style: { overflow: 'scroll' }, maxHeight: maxVisible },
       ...tableRows)
   ));
 

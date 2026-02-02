@@ -150,7 +150,6 @@ function createScrollingUI(): Element {
 
       <container
         id="scrollable-list"
-        scrollable=${true}
         scrollY=${0}
         tabIndex=${1}
         style=${{

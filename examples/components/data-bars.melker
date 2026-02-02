@@ -12,7 +12,7 @@
 
     <tabs style="flex: 1;">
       <tab title="Horizontal">
-        <container style="padding: 1; height: fill" scrollable="true">
+        <container style="overflow: scroll; padding: 1; height: fill">
           <container class="section">
             <text>Simple:</text>
             <data-bars
@@ -48,7 +48,7 @@
       </tab>
 
       <tab title="Vertical">
-        <container style="padding: 1; flex-direction: row; height: fill" scrollable="true">
+        <container style="overflow: scroll; padding: 1; flex-direction: row; height: fill">
           <container class="section">
             <text>Simple:</text>
             <data-bars
@@ -103,7 +103,7 @@
       </tab>
 
       <tab title="Streaming">
-        <container style="padding: 1;" scrollable="true">
+        <container style="overflow: scroll; padding: 1;">
           <text id="streamStatus">Real-time Streaming (click to start):</text>
           <data-bars
             id="liveSparkline"
@@ -121,7 +121,7 @@
       </tab>
 
       <tab title="LED">
-        <container style="padding: 1; height: fill" scrollable="true">
+        <container style="overflow: scroll; padding: 1; height: fill">
           <container class="section">
             <text>LED width comparison (animated):</text>
             <data-bars

@@ -1,7 +1,7 @@
 // State persistence for Melker apps
 // Saves and restores element state (input values, checkbox states, etc.) across restarts
 
-import { Element } from './types.ts';
+import { Element, isScrollingEnabled } from './types.ts';
 import { Document } from './document.ts';
 import { getStateDir, ensureDir } from './xdg.ts';
 import { MelkerConfig } from './config/mod.ts';
@@ -48,8 +48,8 @@ export const DEFAULT_PERSISTENCE_MAPPINGS: PersistenceMapping[] = [
   { type: 'checkbox', prop: 'checked' },
   { type: 'radio', prop: 'checked' },
   { type: 'tabs', prop: 'activeTab' },
-  { type: 'container', prop: 'scrollY', condition: (el) => !!el.props.scrollable },
-  { type: 'container', prop: 'scrollX', condition: (el) => !!el.props.scrollable },
+  { type: 'container', prop: 'scrollY', condition: (el) => isScrollingEnabled(el) },
+  { type: 'container', prop: 'scrollX', condition: (el) => isScrollingEnabled(el) },
 ];
 
 /**

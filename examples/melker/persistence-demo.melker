@@ -110,7 +110,7 @@
           <text class="section-title">Scroll Position (persisted)</text>
           <text style="color: gray; margin-bottom: 1;">Scroll down, exit, and restart - position is restored!</text>
 
-          <container id="scrollDemo" scrollable="true" style="flex: 1; border: thin; padding: 1;">
+          <container id="scrollDemo" style="overflow: scroll; flex: 1; border: thin; padding: 1;">
             <text>Line 1 - Scroll position is automatically saved</text>
             <text>Line 2 - Try scrolling down</text>
             <text>Line 3 - Then exit with Ctrl+C</text>

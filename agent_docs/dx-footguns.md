@@ -2,6 +2,22 @@
 
 Known developer experience issues when building .melker apps.
 
+## Table of Contents
+
+1. [No Reactive Bindings](#1-no-reactive-bindings)
+2. [Button Uses `label` or Content, Not `title`](#2-button-uses-label-or-content-not-title)
+3. [Border Removes Button Brackets](#3-border-removes-button-brackets)
+4. [Functions Must Be Exported for Handlers](#4-functions-must-be-exported-for-handlers)
+5. [Scrollable Containers Need Proper Sizing](#5-scrollable-containers-need-proper-sizing)
+6. [Width/Height: Props vs Style](#6-widthheight-props-vs-style)
+7. [Avoid Specifying Colors](#7-avoid-specifying-colors)
+8. [Dialog Content Layout](#8-dialog-content-layout)
+9. [Flex Is the Default Layout](#9-flex-is-the-default-layout)
+10. [Cross-Axis Stretching in Column Containers](#10-cross-axis-stretching-in-column-containers)
+11. [Exported Variables Can't Be Modified from Ready Script](#11-exported-variables-cant-be-modified-from-ready-script)
+12. [Input Type Is 'input', Not 'text-input'](#12-input-type-is-input-not-text-input)
+13. [Emojis Break Terminal Layout](#13-emojis-break-terminal-layout)
+
 ## 1. No Reactive Bindings
 
 Melker has **no reactivity system**. All UI updates require explicit `getElementById()` and `setValue()`:
@@ -46,46 +62,26 @@ Melker has **no reactivity system**. All UI updates require explicit `getElement
 <button label="Click Me" />
 ```
 
-## 3. Don't Add Border to Buttons
+## 3. Border Removes Button Brackets
 
-**Mistake**: Adding border style to buttons.
+**Surprise**: Adding border style to buttons removes the default brackets.
 
 ```xml
-<!-- WRONG - creates [ [ Button ] ] -->
+<!-- Default - renders as [ Submit ] -->
+<button label="Submit" />
+
+<!-- With border - renders as ┌──────┐ -->
+<!--                          │Submit│ -->
+<!--                          └──────┘ -->
 <button label="Submit" style="border: thin;" />
 
-<!-- CORRECT - buttons have built-in [ ] brackets -->
-<button label="Submit" />
+<!-- Plain variant - renders as just: Submit -->
+<button label="Submit" variant="plain" />
 ```
 
-Buttons render with `[ ]` brackets by default. Adding a border creates double brackets.
+Buttons render with `[ ]` brackets by default. Adding a border switches to bordered rendering (no brackets). Use `variant="plain"` for no decoration at all.
 
-## 4. Getter/Setter Methods Standardized
-
-All value-holding components support `getValue()`/`setValue()`:
-
-| Component | Get Value | Set Value |
-|-----------|-----------|-----------|
-| input | `getValue()` | `setValue(v)` |
-| textarea | `getValue()` | `setValue(v)` |
-| slider | `getValue()` | `setValue(v)` |
-| checkbox | `getValue()` | `setValue(v)`, `toggle()` |
-| radio | `getValue()` | `setValue(v)` |
-| text | `getValue()` | `setValue(v)` |
-| markdown | `getValue()` | `setValue(v)` |
-| data-table | `getValue()` | `setValue(rows)` |
-
-**Mistake**: Using `.props.text =` or `.props.value =` directly.
-
-```javascript
-// WRONG - directly setting props
-element.props.text = "new value";
-
-// CORRECT - use setValue()
-element.setValue("new value");
-```
-
-## 5. Functions Must Be Exported for Handlers
+## 4. Functions Must Be Exported for Handlers
 
 **Mistake**: Function not accessible from handler attribute.
 
@@ -103,44 +99,33 @@ export function handleClick(event) { }
 <button label="Click" onClick="handleClick" />
 ```
 
-## 6. Dialog Visibility Methods
+## 5. Scrollable Containers Need Proper Sizing
 
-Use the convenience methods for dialog visibility:
-
-```javascript
-const dialog = $melker.getElementById('my-dialog');
-
-// Preferred - use methods
-dialog.show();              // Open dialog
-dialog.hide();              // Close dialog
-dialog.setVisible(true);    // Set visibility
-dialog.setVisible(false);
-
-// Also works - direct prop access
-dialog.props.open = true;
-dialog.props.open = false;
-
-// Check visibility
-if (dialog.isVisible()) { ... }
-```
-
-## 7. Scrollable Is a Prop, Not a Style
-
-**Mistake**: Using `overflow: scroll` in style.
+**Mistake**: Forgetting to constrain scrollable container size.
 
 ```xml
-<!-- WRONG - overflow style doesn't work -->
-<container style="overflow: scroll; flex: 1">
-  <text>Content</text>
+<!-- PROBLEM - container grows to fit content, no scrolling -->
+<container style="overflow: scroll">
+  <text>Long content...</text>
 </container>
 
-<!-- CORRECT - scrollable prop + proper flex -->
-<container scrollable="true" style="flex: 1 1 0; width: fill">
-  <text style="text-wrap: wrap; width: fill">Content</text>
+<!-- CORRECT - constrain size with flex: 1 -->
+<container style="overflow: scroll; flex: 1; width: fill">
+  <text style="text-wrap: wrap; width: fill">Long content...</text>
 </container>
 ```
 
-## 8. Width/Height: Props vs Style
+**Scrolling syntax:**
+
+```xml
+<!-- Always show scrollbars -->
+<container style="overflow: scroll; flex: 1">
+
+<!-- Show scrollbars only when content overflows -->
+<container style="overflow: auto; flex: 1">
+```
+
+## 6. Width/Height: Props vs Style
 
 Different components use different conventions. The most common footgun is using `style.width/height` on canvas-family components.
 
@@ -271,66 +256,7 @@ Container, text, and data-table ignore width/height props - use style:
 | container | `style="width: 30;"` | `style="width: fill;"` |
 | text | `style="width: 40;"` | `style="width: fill;"` |
 
-## 9. Boolean Props in XML Are Strings
-
-XML attributes are always strings, converted internally:
-
-```xml
-<checkbox checked="false" />  <!-- String "false", converted to boolean -->
-<dialog open="true" />        <!-- String "true", converted to boolean -->
-```
-
-This works correctly but may surprise developers expecting boolean literals.
-
-## 10. Use let/const, Not var
-
-**Mistake**: Using `var` in TypeScript scripts.
-
-```typescript
-// WRONG - var is JavaScript legacy
-var count = 0;
-
-// CORRECT - use let for reassigned variables
-let count = 0;
-
-// CORRECT - use const for constants
-const config = { debug: true };
-```
-
-## 11. Console Redirects to Logger (App Code Only)
-
-**Note:** This applies to **app code** (`.melker` files, examples) only. For Melker internal development (files in `src/`, `mod.ts`, `melker-*.ts`), `console.log()` is **strictly forbidden** - use the logging system instead.
-
-Console methods are automatically redirected to `$melker.logger` in melker scripts, so they won't break the TUI. However, using `$melker.logger` directly is recommended for better control:
-
-```javascript
-// Safe - redirects to $melker.logger.info()
-console.log("debug info");
-console.log("user:", { name: "John", age: 30 }); // objects formatted as JSON
-
-// Preferred - explicit log levels
-$melker.logger.debug("debug info");
-$melker.logger.info("info message");
-$melker.logger.warn("warning");
-$melker.logger.error("error");
-```
-
-**Mapping:**
-- `console.log`, `console.info` → `$melker.logger.info`
-- `console.warn` → `$melker.logger.warn`
-- `console.error` → `$melker.logger.error`
-- `console.debug`, `console.trace` → `$melker.logger.debug`
-
-**Disable redirect** (output to terminal instead):
-```bash
-./melker.ts --no-console-override app.melker
-# or
-MELKER_NO_CONSOLE_OVERRIDE=1 ./melker.ts app.melker
-```
-
-Press F12 to see log file location in Dev Tools overlay.
-
-## 12. Avoid Specifying Colors
+## 7. Avoid Specifying Colors
 
 **Mistake**: Hardcoding colors that don't work across themes.
 
@@ -344,7 +270,7 @@ Press F12 to see log file location in Dev Tools overlay.
 
 Let the theme engine handle colors for best appearance across all themes.
 
-## 13. Dialog Content Layout
+## 8. Dialog Content Layout
 
 **Mistake**: Content doesn't expand to fill dialog.
 
@@ -362,41 +288,26 @@ Let the theme engine handle colors for best appearance across all themes.
 </dialog>
 ```
 
-## 14. Flex Container vs Item Properties
+## 9. Flex Is the Default Layout
 
-`display: flex` is auto-inferred from container properties, but NOT from item properties:
+The root viewport and `container`, `dialog`, and `tab` elements all default to `display: flex` with `flexDirection: column`. This means:
 
-```xml
-<!-- Auto-infers display: flex (container props) -->
-<container style="flex-direction: column; gap: 1;">
-
-<!-- Does NOT auto-infer (item props only) -->
-<container style="flex: 1;">  <!-- Still needs display: flex on parent -->
-```
-
-Container props (trigger auto-inference): `flex-direction`, `justify-content`, `align-items`, `align-content`, `flex-wrap`, `gap`
-
-Item props (don't trigger): `flex`, `flex-grow`, `flex-shrink`, `flex-basis`
-
-## 15. flex-direction Is a Style, Not an Attribute
-
-**Mistake**: Using `direction` attribute instead of `flex-direction` style.
+- Child elements stretch to fill width (cross-axis)
+- Child elements shrink to content height unless `flex: 1` or `height: fill` is set
 
 ```xml
-<!-- WRONG - direction is not a valid attribute -->
-<container direction="row">
-  <text>Left</text>
-  <text>Right</text>
-</container>
-
-<!-- CORRECT - use style -->
-<container style="flex-direction: row; gap: 2">
-  <text>Left</text>
-  <text>Right</text>
+<!-- Root container fills viewport by default -->
+<container>  <!-- Already flex column, stretches to fill -->
+  <text>Header</text>
+  <container style="flex: 1">  <!-- Takes remaining height -->
+    <text>Content</text>
+  </container>
 </container>
 ```
 
-## 16. Cross-Axis Stretching in Column Containers
+Auto-inference from style properties triggers for flex **container** props (like `flex-direction`, `gap`) but not item props (like `flex`, `flex-grow`). Since most layout elements default to flex anyway, this rarely matters.
+
+## 10. Cross-Axis Stretching in Column Containers
 
 **Mistake**: Elements stretching to full width in column containers.
 
@@ -418,7 +329,7 @@ In flexbox column layout, children stretch horizontally (cross-axis) by default.
 
 This is standard flexbox behavior - in a column container, `align-items` defaults to `stretch`.
 
-## 17. Exported Variables Can't Be Modified from Ready Script
+## 11. Exported Variables Can't Be Modified from Ready Script
 
 **Mistake**: Trying to modify an `export let` variable from `<script async="ready">`.
 
@@ -447,6 +358,36 @@ This is standard flexbox behavior - in a column container, `align-items` default
 ```
 
 **Why this happens**: The bundler merges exports into `$app` by copying values. For primitives (numbers, strings, booleans), `$app.count` holds a copy of the value, not a reference to the original binding. Setting `$app.count = 10` modifies the copy on `$app`, but the module-internal `count` variable remains unchanged. Objects work differently - they're copied by reference, so `$app.config.debug = true` would modify the original object.
+
+## 12. Input Type Is 'input', Not 'text-input'
+
+**Mistake**: Using `'text-input'` as the element type.
+
+```xml
+<!-- WRONG - no such element type -->
+<text-input placeholder="Enter name" />
+
+<!-- CORRECT - type is 'input' -->
+<input placeholder="Enter name" />
+```
+
+The single-line text input component is called `input`, not `text-input`. Use `<textarea>` for multi-line input.
+
+## 13. Emojis Break Terminal Layout
+
+**Mistake**: Using emojis in text content.
+
+```xml
+<!-- PROBLEM - emoji width varies by terminal -->
+<text>✅ Success</text>
+<button label="🚀 Launch" />
+
+<!-- BETTER - use ASCII or text -->
+<text>[OK] Success</text>
+<button label="Launch" />
+```
+
+Emojis have inconsistent widths across terminals. Melker calculates emoji width as 2 characters, but some terminals render them wider or narrower, causing layout misalignment. Avoid emojis in UI text for reliable layouts.
 
 ## See Also
 

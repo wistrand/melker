@@ -1,7 +1,7 @@
 // Advanced Layout Engine with comprehensive layout algorithms
 // Supports block, flex, and absolute positioning
 
-import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, Renderable, isRenderable, isScrollableType } from './types.ts';
+import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, Renderable, isRenderable, isScrollableType, isScrollingEnabled } from './types.ts';
 import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
 import { getThemeColor } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
@@ -75,7 +75,7 @@ export class LayoutEngine {
   private _contentMeasurer: ContentMeasurer;
   private _viewportManager: ViewportManager;
   private _defaultLayoutProps: AdvancedLayoutProps = {
-    display: 'block',
+    display: 'flex',
     position: 'static',
     flexDirection: 'column',  // Default to column for terminal UIs
     flexWrap: 'nowrap',
@@ -137,7 +137,7 @@ export class LayoutEngine {
       computedStyle
     );
 
-    const isScrollable = isScrollableType(element.type) && element.props.scrollable;
+    const isScrollable = isScrollableType(element.type) && isScrollingEnabled(element);
     const contentBoundsResult = this._sizingModel.calculateContentBounds(bounds, computedStyle, isScrollable);
     let contentBounds = contentBoundsResult.bounds;
 
@@ -1269,7 +1269,7 @@ export class LayoutEngine {
     // Apply element-type-specific defaults (lowest priority)
     // These can be overridden by stylesheet and inline styles
     let typeDefaults: Partial<Style> = {};
-    if (element.type === 'container') {
+    if (element.type === 'container' || element.type === 'dialog' || element.type === 'tab') {
       typeDefaults = {
         display: 'flex',
         flexDirection: 'column',

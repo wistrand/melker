@@ -31,7 +31,7 @@
     <text id="status" style="flex: 0 0 auto;">Initializing...</text>
     <text id="error" style="color: red; flex: 0 0 auto;"></text>
 
-    <container scrollable="true" style="flex: 1 1 0; overflow: scroll; margin-top: 1; margin-bottom: 1; border: thin">
+    <container style="flex: 1 1 0; overflow: scroll; margin-top: 1; margin-bottom: 1; border: thin">
       <markdown id="token-info" text="*No token information available*" />
     </container>
 

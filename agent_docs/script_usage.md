@@ -175,18 +175,7 @@ apiLogger.debug('Fetching data');
 </script>
 ```
 
-**Note:** `getLogger` does **not** cache loggers. Each call creates a new wrapper object. Store loggers in variables rather than calling `getLogger` repeatedly:
-
-```html
-<!-- Good: Store logger once -->
-<script>
-const logger = $melker.getLogger('MyComponent');
-</script>
-<button onClick="logger.info('clicked')" />
-
-<!-- Avoid: Creates new wrapper on each click -->
-<button onClick="$melker.getLogger('MyComponent').info('clicked')" />
-```
+**Note:** Loggers are cached by name, so calling `getLogger('MyComponent')` multiple times returns the same logger instance.
 
 ### Log Levels
 
@@ -270,7 +259,7 @@ $melker.engine.onMount(() => {
 **When to use each:**
 - `async="ready"` - Preferred, declarative, cleaner separation
 - `onMount()` - When you need to register callbacks from within other logic
-- Markdown format (`.md` files) - Must use `onMount()` since `async="ready"` isn't supported
+- Markdown format (`.md` files) - Use `// @melker script ready` directive instead of `async="ready"` attribute
 
 ## External Scripts
 

@@ -1,5 +1,5 @@
 <container style="display: flex; flex-direction: row; height: 15; width: 120; border: thin">
-  <container scrollable="true" style="flex: 1; border-right: thin; flex-direction: column; height: 12;">
+  <container style="flex: 1; border-right: thin; flex-direction: column; height: 12; overflow: scroll">
     <text style="textWrap: wrap;">Column 1 - Wrapped Text Item 1: This is a very long text that should wrap to multiple lines when it exceeds the column width</text>
     <text style="textWrap: wrap;">Column 1 - Wrapped Text Item 2: Another long piece of text that demonstrates text wrapping behavior in the first column</text>
     <text style="textWrap: wrap;">Column 1 - Wrapped Text Item 3: Yet another long text entry to show wrapping</text>
@@ -22,7 +22,7 @@
     <text style="textWrap: wrap;">Column 1 - Item 20</text>
   </container>
 
-  <container scrollable="truex" style="flex: 1; border-right: thin; flex-direction: column; height: 12;">
+  <container style="flex: 1; border-right: thin; flex-direction: column; height: 12;">
     <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 1: This very long text will be clipped instead of wrapped</text>
     <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 2: Another long text that gets clipped at column boundary</text>
     <text style="textWrap: nowrap;">Column 2 - Clipped Text Item 3: Yet another long entry showing clipping behavior</text>
@@ -45,7 +45,7 @@
     <text style="textWrap: nowrap;">Column 2 - Item 20</text>
   </container>
 
-  <container scrollable={true} style="flex: 1; flex-direction: column; height: 12;">
+  <container style="flex: 1; flex-direction: column; height: 12; overflow: scroll">
     <text style="textWrap: nowrap;">Column 3 - Item 1</text>
     <text style="textWrap: nowrap;">Column 3 - Item 2</text>
     <text style="textWrap: nowrap;">Column 3 - Item 3</text>

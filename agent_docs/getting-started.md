@@ -110,6 +110,17 @@ melker --watch hello.melker
 | `graph`               | Mermaid diagrams     |
 | `connector`           | Lines between elements |
 
+## Runtime API (`$melker`)
+
+| Method                         | Purpose                    |
+|--------------------------------|----------------------------|
+| `getElementById(id)`           | Get element by ID          |
+| `render()`                     | Trigger re-render          |
+| `alert(message)`               | Modal dialog               |
+| `toast.show(message, options?)`| Non-modal notification     |
+| `toast.dismissAll()`           | Clear all toasts           |
+| `exit()`                       | Exit application           |
+
 ## Permissions (for file/network access)
 
 ```xml

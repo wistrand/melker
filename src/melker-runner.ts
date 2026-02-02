@@ -48,6 +48,9 @@ import { openBrowser } from './oauth/browser.ts';
 // Global types
 import type { MelkerContext } from './globals.d.ts';
 
+// Toast system
+import { getToastManager, type ToastOptions } from './toast/mod.ts';
+
 /**
  * Wire up bundler registry handlers to UI elements.
  */
@@ -633,6 +636,24 @@ export async function runMelkerFile(
       getLogger: getLogger,
       config: MelkerConfig.get(),
       cacheDir: appCacheDir,
+      // Toast notifications
+      toast: {
+        show: (message: string, options?: ToastOptions) => {
+          const toastManager = getToastManager();
+          toastManager.setRequestRender(() => engine.render());
+          return toastManager.show(message, options);
+        },
+        dismiss: (id: string) => {
+          getToastManager().dismiss(id);
+        },
+        dismissAll: () => {
+          getToastManager().dismissAll();
+        },
+        setPosition: (position: 'top' | 'bottom') => {
+          getToastManager().setConfig({ position });
+          engine.render();
+        },
+      },
     };
 
     const ui = parseResult.element;

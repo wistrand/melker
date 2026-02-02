@@ -240,7 +240,7 @@ text("Hello") | border | color(Color::Cyan)
 | **Feedback**     |        |     |         |            |       |         |         |       |
 | Progress bar     |   Y    |  Y  |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
 | Spinner          |   Y    |  Y  |    Y    |     Y      |   -   |    Y    |    -    |   -   |
-| Toast            |   -    |  -  |    -    |     -      |   -   |    Y    |    -    |   -   |
+| Toast            |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |   -   |
 | Sparkline        |   Y    |  -  |    -    |     -      |   -   |    Y    |    Y    |   -   |
 | **Navigation**   |        |     |         |            |       |         |         |       |
 | Button           |   Y    |  -  |    Y    |     -      |   Y   |    Y    |    -    |   Y   |
@@ -269,7 +269,7 @@ Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 - **Bubble Tea markdown**: Via Glamour library from Charmbracelet
 - **Ratatui shaders**: Via tachyonfx crate for shader-like effects
 - **Ratatui image**: Via ratatui-image crate with sixel/halfblock support
-- **Melker gaps (high priority)**: Tree, Spinner
+- **Melker gaps (high priority)**: Tree
 
 ## Architecture Patterns
 

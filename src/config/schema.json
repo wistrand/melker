@@ -437,6 +437,51 @@
       "type": "boolean",
       "flag": "--deny-shader",
       "description": "Deny shader execution"
+    },
+    "toast.maxVisible": {
+      "type": "integer",
+      "default": 5,
+      "minimum": 1,
+      "maximum": 20,
+      "env": "MELKER_TOAST_MAX_VISIBLE",
+      "description": "Maximum visible toasts before dismissing oldest"
+    },
+    "toast.position": {
+      "type": "string",
+      "enum": ["bottom", "top"],
+      "default": "bottom",
+      "env": "MELKER_TOAST_POSITION",
+      "description": "Toast container position"
+    },
+    "toast.defaultDuration": {
+      "type": "integer",
+      "default": 5000,
+      "minimum": 1000,
+      "maximum": 60000,
+      "env": "MELKER_TOAST_DURATION",
+      "description": "Default toast duration in ms"
+    },
+    "toast.inactivityTimeout": {
+      "type": "integer",
+      "default": 8000,
+      "minimum": 1000,
+      "maximum": 60000,
+      "env": "MELKER_TOAST_INACTIVITY",
+      "description": "Dismiss all toasts after inactivity (ms)"
+    },
+    "toast.bell": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_TOAST_BELL",
+      "description": "Play terminal bell on error toasts"
+    },
+    "toast.width": {
+      "type": "integer",
+      "default": 40,
+      "minimum": 20,
+      "maximum": 120,
+      "env": "MELKER_TOAST_WIDTH",
+      "description": "Toast container width in characters"
     }
   }
 }

@@ -155,6 +155,11 @@ import {
   detectKittyCapabilities,
   type KittyCapabilities,
 } from './kitty/mod.ts';
+import {
+  renderToastOverlay,
+  handleToastClick,
+  getToastManager,
+} from './toast/mod.ts';
 
 // Initialize config logger getter (breaks circular dependency between config.ts and logging.ts)
 setLoggerGetter(() => getLogger('Config'));
@@ -349,6 +354,18 @@ export class MelkerEngine {
     if (this._options.theme) {
       this._themeManager.setTheme(this._options.theme);
     }
+
+    // Initialize toast manager with config
+    const toastManager = getToastManager();
+    toastManager.setConfig({
+      maxVisible: config.toastMaxVisible,
+      position: config.toastPosition,
+      defaultDuration: config.toastDefaultDuration,
+      inactivityTimeout: config.toastInactivityTimeout,
+      bell: config.toastBell,
+      width: config.toastWidth,
+    });
+    toastManager.setRequestRender(() => this.render());
 
     // Apply theme-based color support if not explicitly set
     const currentTheme = this._themeManager.getCurrentTheme();
@@ -705,6 +722,12 @@ export class MelkerEngine {
 
     // Text selection handling - delegated to TextSelectionHandler
     this._eventManager.addGlobalEventListener('mousedown', (event: any) => {
+      // Check if toast overlay should handle this click
+      if (handleToastClick(event.x, event.y)) {
+        this.render();
+        return;
+      }
+
       // Check if performance dialog should handle this
       const perfDialog = getGlobalPerformanceDialog();
       if (perfDialog.isVisible()) {
@@ -1035,6 +1058,15 @@ export class MelkerEngine {
       }
     }
 
+    // Render toast overlay if there are toasts
+    if (this._buffer) {
+      try {
+        renderToastOverlay(this._buffer);
+      } catch {
+        // Silently ignore toast overlay errors
+      }
+    }
+
     // Render performance dialog if visible
     const perfDialog = getGlobalPerformanceDialog();
     if (perfDialog.isVisible() && this._buffer) {
@@ -1269,6 +1301,15 @@ export class MelkerEngine {
         getGlobalScriptErrorOverlay().render(this._buffer);
       } catch {
         // Silently ignore script error overlay errors
+      }
+    }
+
+    // Render toast overlay if there are toasts
+    if (this._buffer) {
+      try {
+        renderToastOverlay(this._buffer);
+      } catch {
+        // Silently ignore toast overlay errors
       }
     }
 

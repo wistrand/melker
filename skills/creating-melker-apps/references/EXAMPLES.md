@@ -871,6 +871,58 @@ Render flowcharts, sequence diagrams, and class diagrams using Mermaid syntax:
 - **Sequence**: `sequenceDiagram`, participants, messages `->>` `-->>`, notes
 - **Class**: `classDiagram`, classes with members, relationships `<|--` `*--` `o--`
 
+## Toast Notifications
+
+Non-modal notifications that auto-dismiss:
+
+```xml
+<melker>
+  <script>
+    export function showInfo() {
+      $melker.toast.show('This is an info message');
+    }
+
+    export function showSuccess() {
+      $melker.toast.show('Operation completed!', { type: 'success' });
+    }
+
+    export function showError() {
+      $melker.toast.show('Something went wrong', { type: 'error' });
+    }
+
+    export function showWithAction() {
+      $melker.toast.show('Update available', {
+        type: 'info',
+        action: {
+          label: 'Install',
+          onClick: () => $melker.toast.show('Installing...', { type: 'success' })
+        }
+      });
+    }
+  </script>
+
+  <container style="padding: 2; gap: 1;">
+    <text style="font-weight: bold;">Toast Demo</text>
+
+    <container style="flex-direction: row; gap: 1;">
+      <button onClick="$app.showInfo()">Info</button>
+      <button onClick="$app.showSuccess()">Success</button>
+      <button onClick="$app.showError()">Error</button>
+      <button onClick="$app.showWithAction()">With Action</button>
+    </container>
+
+    <button onClick="$melker.toast.dismissAll()">Dismiss All</button>
+  </container>
+</melker>
+```
+
+**Toast options:**
+- `type`: `'info'` | `'success'` | `'warning'` | `'error'`
+- `duration`: Auto-dismiss time in ms (default: 5000)
+- `closable`: Show close button (default: true)
+- `bell`: Ring terminal bell (default: false)
+- `action`: `{ label: string, onClick: () => void }`
+
 ## Tips & Best Practices
 
 1. **Use flexbox for layouts** - `flex-direction: column` or `row` (display: flex is auto-inferred)
@@ -895,6 +947,7 @@ For more complex patterns, see these examples in the codebase:
 |---------|----------------------|
 | `map.melker` (showcase/) | Canvas `onPaint`, async tile fetching, `decodeImageBytes()`, command line args via `${argv[N]}`, variable sharing between scripts (setter functions), delaying render until async completes, `$melker.cacheDir` |
 | `htop.melker` (showcase/) | Data table, live updates, process management |
+| `toast.melker` (basics/) | Toast notifications, all toast types, action buttons, position switching |
 | `data-bars.melker` (components/) | Bar charts, sparklines, stacked/grouped bars, streaming data |
 | `analog-clock.melker` (canvas/) | Canvas animation, aspect ratio correction |
 | `markdown-viewer.melker` (showcase/) | File loading, markdown rendering |

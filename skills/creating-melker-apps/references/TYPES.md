@@ -32,6 +32,14 @@ interface MelkerContext {
   confirm(message: string): Promise<boolean>;
   prompt(message: string, defaultValue?: string): Promise<string | null>;
 
+  // Toast notifications (non-modal)
+  toast: {
+    show(message: string, options?: ToastOptions): string;
+    dismiss(id: string): void;
+    dismissAll(): void;
+    setPosition(position: 'top' | 'bottom'): void;
+  };
+
   // System integration
   copyToClipboard(text: string): Promise<boolean>;
   openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
@@ -68,6 +76,14 @@ interface MelkerLogger {
   info(message: string, ...args: unknown[]): void;
   warn(message: string, ...args: unknown[]): void;
   error(message: string, ...args: unknown[]): void;
+}
+
+interface ToastOptions {
+  type?: 'info' | 'success' | 'warning' | 'error';
+  duration?: number;        // Auto-dismiss after ms (default: 5000)
+  closable?: boolean;       // Show close button (default: true)
+  bell?: boolean;           // Ring terminal bell (default: false, auto for errors if config.bell)
+  action?: { label: string; onClick: () => void };
 }
 ```
 

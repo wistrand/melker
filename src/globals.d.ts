@@ -54,6 +54,20 @@ export interface MelkerContext {
   confirm(message: string): Promise<boolean>;
   prompt(message: string, defaultValue?: string): Promise<string | null>;
 
+  // Toast notifications
+  toast: {
+    show(message: string, options?: {
+      type?: 'info' | 'success' | 'warning' | 'error';
+      duration?: number;
+      closable?: boolean;
+      bell?: boolean;
+      action?: { label: string; onClick: () => void };
+    }): string;
+    dismiss(id: string): void;
+    dismissAll(): void;
+    setPosition(position: 'top' | 'bottom'): void;
+  };
+
   // System integration
   copyToClipboard(text: string): Promise<boolean>;
   openBrowser(url: string): Promise<boolean>;

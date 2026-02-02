@@ -234,6 +234,15 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `audio.ts`                | Audio recording and transcription |
 | `macos-audio-record.swift` | Native macOS audio capture    |
 
+#### `toast/` - Toast Notifications
+
+| File                | Purpose                          |
+|---------------------|----------------------------------|
+| `mod.ts`            | Toast module exports             |
+| `types.ts`          | Toast interfaces and defaults    |
+| `toast-manager.ts`  | Singleton manager, timer-driven expiry |
+| `toast-renderer.ts` | Direct buffer rendering          |
+
 #### `chat/` - Chat Utilities
 
 | File                 | Purpose           |

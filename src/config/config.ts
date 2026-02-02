@@ -866,4 +866,29 @@ export class MelkerConfig {
   get stdoutColor(): 'auto' | 'always' | 'never' {
     return (this.data['stdout.color'] as 'auto' | 'always' | 'never') ?? 'auto';
   }
+
+  // Toast
+  get toastMaxVisible(): number {
+    return (this.data['toast.maxVisible'] as number) ?? 5;
+  }
+
+  get toastPosition(): 'bottom' | 'top' {
+    return (this.data['toast.position'] as 'bottom' | 'top') ?? 'bottom';
+  }
+
+  get toastDefaultDuration(): number {
+    return (this.data['toast.defaultDuration'] as number) ?? 5000;
+  }
+
+  get toastInactivityTimeout(): number {
+    return (this.data['toast.inactivityTimeout'] as number) ?? 8000;
+  }
+
+  get toastBell(): boolean {
+    return (this.data['toast.bell'] as boolean) ?? false;
+  }
+
+  get toastWidth(): number {
+    return (this.data['toast.width'] as number) ?? 40;
+  }
 }

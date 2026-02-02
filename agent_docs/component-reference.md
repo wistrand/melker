@@ -1474,3 +1474,4 @@ Layout properties (padding, margin, border widths) do NOT inherit.
 - [data-table.md](data-table.md) — Data table component
 - [data-bars.md](data-bars.md) — Bar chart components
 - [spinner-architecture.md](spinner-architecture.md) — Spinner component internals
+- [toast-architecture.md](toast-architecture.md) — Toast notification system

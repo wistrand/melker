@@ -44,6 +44,14 @@ $melker: {
   copyToClipboard(text: string): Promise<boolean>;
   openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
 
+  // Toast notifications (non-modal)
+  toast: {
+    show(message: string, options?: ToastOptions): string;  // Returns toast ID
+    dismiss(id: string): void;
+    dismissAll(): void;
+    setPosition(position: 'top' | 'bottom'): void;
+  };
+
   // Element creation
   createElement(type: string, props?: Record<string, any>, ...children: any[]): any;
 

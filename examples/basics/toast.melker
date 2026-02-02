@@ -1,0 +1,97 @@
+<melker>
+  <title>Toast Demo</title>
+
+  <script>
+    let counter = 0;
+
+    export function showInfo() {
+      $melker.toast.show('This is an info message');
+    }
+
+    export function showSuccess() {
+      $melker.toast.show('Operation completed successfully!', { type: 'success' });
+    }
+
+    export function showWarning() {
+      $melker.toast.show('Warning: Check your settings', { type: 'warning' });
+    }
+
+    export function showError() {
+      $melker.toast.show('Error: Something went wrong', { type: 'error' });
+    }
+
+    export function showWithAction() {
+      $melker.toast.show('New update available', {
+        type: 'info',
+        action: {
+          label: 'Update',
+          onClick: () => {
+            $melker.toast.show('Update started!', { type: 'success' });
+          }
+        }
+      });
+    }
+
+    export function showLongDuration() {
+      $melker.toast.show('This toast will stay for 15 seconds', {
+        type: 'info',
+        duration: 15000
+      });
+    }
+
+    export function showMultiple() {
+      for (let i = 1; i <= 6; i++) {
+        setTimeout(() => {
+          counter++;
+          $melker.toast.show(`Toast message #${counter}`, {
+            type: ['info', 'success', 'warning', 'error'][i % 4]
+          });
+        }, i * 200);
+      }
+    }
+
+    export function dismissAll() {
+      $melker.toast.dismissAll();
+    }
+
+    export function togglePosition(e) {
+      const position = e.checked ? 'top' : 'bottom';
+      $melker.toast.setPosition(position);
+    }
+  </script>
+
+  <container style="padding: 2; gap: 2;">
+    <text style="font-weight: bold;">Toast Notification Demo</text>
+    <text style="color: gray;">Click buttons to show different toast types</text>
+
+    <separator />
+
+    <container style="flex-direction: row; gap: 2; flex-wrap: wrap;">
+      <button onClick="$app.showInfo()">Info</button>
+      <button onClick="$app.showSuccess()">Success</button>
+      <button onClick="$app.showWarning()">Warning</button>
+      <button onClick="$app.showError()">Error</button>
+    </container>
+
+    <separator label="Advanced" />
+
+    <container style="flex-direction: row; gap: 2; flex-wrap: wrap;">
+      <button onClick="$app.showWithAction()">With Action</button>
+      <button onClick="$app.showLongDuration()">Long Duration</button>
+      <button onClick="$app.showMultiple()">Show 6 Toasts</button>
+      <button onClick="$app.dismissAll()">Dismiss All</button>
+    </container>
+
+    <separator />
+
+    <checkbox title="Show toasts at top" onChange="$app.togglePosition(event)" />
+
+    <separator />
+
+    <text style="color: gray;">
+      Toasts auto-dismiss after 5 seconds.
+      Click the X button to dismiss individual toasts.
+      Click "Close All" in the toast container to dismiss all.
+    </text>
+  </container>
+</melker>

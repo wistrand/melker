@@ -149,6 +149,8 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `$melker.skipRender()` | Skip auto-render after handler completes |
 | `$melker.exit()` | Exit application |
 | `$melker.alert(message)` | Show modal alert |
+| `$melker.toast.show(message, options?)` | Show non-modal toast notification |
+| `$melker.toast.dismissAll()` | Dismiss all toast notifications |
 | `$melker.copyToClipboard(text)` | Copy to clipboard |
 | `$melker.openBrowser(url)` | Open URL in system browser (requires `browser: true` in policy) |
 | `$melker.cacheDir` | App-specific cache directory path (always exists) |

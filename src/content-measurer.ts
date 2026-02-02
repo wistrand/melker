@@ -93,16 +93,53 @@ export class ContentMeasurer {
    * Measure a single element's dimensions consistently
    */
   measureElement(element: Element, availableWidth: number): Size {
+    let size: Size;
+
     // Always use intrinsicSize if available - this is the authoritative measurement
     if (isRenderable(element)) {
       const context: IntrinsicSizeContext = {
         availableSpace: { width: availableWidth, height: Infinity }
       };
-      return element.intrinsicSize(context);
+      size = element.intrinsicSize(context);
+    } else {
+      // Fallback for legacy elements without intrinsicSize
+      size = this._estimateElementSize(element, availableWidth);
     }
 
-    // Fallback for legacy elements without intrinsicSize
-    return this._estimateElementSize(element, availableWidth);
+    // For containers, intrinsicSize returns content-only dimensions.
+    // Add padding and border to get the outer box size.
+    if (element.type === 'container') {
+      const style = element.props?.style || {};
+      const padding = this._getPaddingValues(style.padding);
+      const border = style.border ? 1 : 0; // thin border = 1
+      size = {
+        width: size.width + (padding.left || 0) + (padding.right || 0) + border * 2,
+        height: size.height + (padding.top || 0) + (padding.bottom || 0) + border * 2,
+      };
+    }
+
+    return size;
+  }
+
+  /**
+   * Parse padding value into BoxSpacing
+   */
+  private _getPaddingValues(padding: any): BoxSpacing {
+    if (padding === undefined || padding === null) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+    if (typeof padding === 'number') {
+      return { top: padding, right: padding, bottom: padding, left: padding };
+    }
+    if (typeof padding === 'object') {
+      return {
+        top: this._parseNumberValue(padding.top) || 0,
+        right: this._parseNumberValue(padding.right) || 0,
+        bottom: this._parseNumberValue(padding.bottom) || 0,
+        left: this._parseNumberValue(padding.left) || 0,
+      };
+    }
+    return { top: 0, right: 0, bottom: 0, left: 0 };
   }
 
   /**
@@ -160,9 +197,11 @@ export class ContentMeasurer {
       maxWidth = Math.max(maxWidth, childSize.width + (childMargin.left || 0) + (childMargin.right || 0));
     }
 
-    // Estimate total height based on sample (include gap in average)
-    const avgRowHeight = (totalSampleHeight + (sampleSize - 1) * gap) / sampleSize;
-    const estimatedTotalHeight = Math.ceil(avgRowHeight * childCount);
+    // Estimate total height: average row height * count + gaps between rows
+    // Gap is added separately, not baked into the average, to avoid systematic underestimation
+    const avgRowHeight = totalSampleHeight / sampleSize;
+    const totalGaps = (childCount - 1) * gap;
+    const estimatedTotalHeight = Math.ceil(avgRowHeight * childCount + totalGaps);
 
     return { width: maxWidth, height: estimatedTotalHeight };
   }

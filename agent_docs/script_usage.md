@@ -18,8 +18,18 @@ $melker: {
 
   // DOM-like methods
   getElementById(id: string): any;
-  querySelector(selector: string): any;       // CSS-like: type, #id, .class, combinations, comma OR
+  querySelector(selector: string): any;       // CSS selectors (see below)
   querySelectorAll(selector: string): any[];  // Returns all matches
+
+  // Supported CSS selectors:
+  // - Type: text, button, container
+  // - ID: #myId
+  // - Class: .myClass
+  // - Universal: * (matches all)
+  // - Compound: button.primary
+  // - Descendant (space): container text (any nested)
+  // - Child (>): container > text (direct children)
+  // - Comma (OR): button, .clickable
 
   // Rendering
   render(): void;

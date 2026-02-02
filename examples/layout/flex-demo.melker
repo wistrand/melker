@@ -1,12 +1,12 @@
-<container style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column; flex-wrap: wrap;">
+<container scrollable="true" style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column;">
   <!-- Title Section -->
   <text style="color: cyan; font-weight: bold; padding: 1; text-align: center;">
     Flexbox Layout Demonstration
   </text>
 
   <!-- Section 1: Default Column Direction (NEW DEFAULT) -->
-  <container style="margin-bottom: 2;">
-    <text style="color: cyan; font-weight: bold;">1. Default Flex (Column Direction - NEW DEFAULT)</text>
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
+    <text style="color: cyan; font-weight: bold;">1. Default Flex (Column Direction - DEFAULT)</text>
     <container style="display: flex; height: 8; border: thin; border-color: cyan; padding: 1; gap: 1;">
       <button label="Item 1" style="background-color: red; color: white;" />
       <button label="Item 2" style="background-color: yellow; color: black;" />
@@ -15,7 +15,7 @@
   </container>
 
   <!-- Section 2: Row Direction (Explicit) -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">2. Row Direction (Horizontal)</text>
     <container style="display: flex; flex-direction: row; height: 3; border: thin; border-color: cyan; padding: 1; gap: 1; height: 8">
       <button label="Left" style="background-color: red; flex: 1;" />
@@ -25,7 +25,7 @@
   </container>
 
   <!-- Section 3: Flex Grow Demonstration -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">3. Flex Grow (1:2:1 ratio)</text>
     <container style="display: flex; flex-direction: row; height: 3; border: thin; border-color: cyan; padding: 1; gap: 1;">
       <text style="background-color: red; padding: 1; flex: 1;">Flex: 1</text>
@@ -35,7 +35,7 @@
   </container>
 
   <!-- Section 4: Justify Content -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">4. Justify Content Examples</text>
 
     <!-- Space Between -->
@@ -64,7 +64,7 @@
   </container>
 
   <!-- Section 5: Align Items -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">5. Align Items (Cross-Axis Alignment)</text>
     <container style="display: flex; flex-direction: row; align-items: center; height: 8; border: thin; border-color: cyan; padding: 1; gap: 1;">
       <container style="background-color: red; height: 3; width: 15; padding: 1;">
@@ -80,9 +80,9 @@
   </container>
 
   <!-- Section 6: Flex Wrap -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2; width: 80;">
     <text style="color: cyan; font-weight: bold;">6. Flex Wrap (Multiple Lines)</text>
-    <container style="display: flex; flex-direction: row; flex-wrap: wrap; height: 8; border: thin; border-color: cyan; padding: 1; gap: 1;">
+    <container style="display: flex; flex-direction: row; flex-wrap: wrap; height: 11; border: thin; border-color: cyan; padding: 1; gap: 1;">
       <button label="Item 1" style="background-color: red; width: 20; height: 3;" />
       <button label="Item 2" style="background-color: yellow; width: 20; height: 3;" />
       <button label="Item 3" style="background-color: green; width: 20; height: 3;" />
@@ -93,7 +93,7 @@
   </container>
 
   <!-- Section 7: Nested Flex -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">7. Nested Flex Containers</text>
     <container style="display: flex; flex-direction: row; height: 10; border: thin; border-color: cyan; padding: 1; gap: 1;">
       <!-- Left Column -->
@@ -113,7 +113,7 @@
   </container>
 
   <!-- Section 8: Column with Flex Grow -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">8. Column Layout with Flex Grow</text>
     <container style="display: flex; flex-direction: column; height: 12; border: thin; border-color: cyan; padding: 1; gap: 1;">
       <text style="background-color: red; color: white; padding: 1;">Fixed Height Header</text>
@@ -126,7 +126,7 @@
   </container>
 
   <!-- Section 9: Gap Property -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">9. Gap Property (Spacing Between Items)</text>
     <container style="display: flex; flex-direction: row; height: 3; border: thin; border-color: cyan; padding: 1; gap: 3;">
       <button label="Gap: 3" style="background-color: red; flex: 1;" />
@@ -136,7 +136,7 @@
   </container>
 
   <!-- Interactive Section -->
-  <container style="margin-bottom: 2;">
+  <container style="display: flex; flex-direction: column; margin-bottom: 2;">
     <text style="color: cyan; font-weight: bold;">10. Interactive Flex Layout</text>
     <container style="display: flex; flex-direction: row; height: 5; border: thin; border-color: cyan; padding: 1; gap: 1;">
       <button

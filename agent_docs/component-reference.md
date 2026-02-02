@@ -179,6 +179,20 @@ Uses **border-box** model by default (like modern CSS):
 - `'fill'`: Expand to fill *remaining* available space
 - `'NN%'`: Percentage of parent's available space (e.g., `width="50%"`)
 
+**Min/max constraints:**
+- `minWidth`, `minHeight`: Minimum size (prevents shrinking below)
+- `maxWidth`, `maxHeight`: Maximum size (prevents growing beyond)
+
+```xml
+<!-- Container that grows but caps at 80 characters -->
+<container style="width: fill; max-width: 80;">
+  <text>Content constrained to 80 chars max</text>
+</container>
+
+<!-- Flex item that won't shrink below 20 characters -->
+<button style="min-width: 20; flex-shrink: 1;">Submit</button>
+```
+
 **`fill` vs percentage:**
 - `fill` is context-aware - takes remaining space after siblings
 - `100%` always means 100% of parent, regardless of siblings

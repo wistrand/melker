@@ -1,0 +1,112 @@
+<melker>
+<policy>
+{
+  "name": "CSS Combinators Demo",
+  "description": "Demonstrates CSS selector combinators",
+  "permissions": {}
+}
+</policy>
+
+<style>
+/* Universal selector - applies to all elements */
+* {
+  color: white;
+}
+
+.section {
+  border: thin;
+  padding: 1;
+  margin-bottom: 1;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 1;
+}
+
+/* Descendant combinator (space) - matches any nested element */
+.highlight-descendants text {
+  color: blue;
+}
+
+/* Child combinator (>) - matches direct children only */
+.highlight-children > text {
+  color: green;
+}
+
+/* Combining both */
+.mixed > container text {
+  font-style: italic;
+}
+
+/* Chained child combinators */
+.strict > container > text {
+  font-weight: bold;
+  color: yellow;
+}
+</style>
+
+<container scrollable="true" style="padding: 1">
+  <text style="font-weight: bold; margin-bottom: 1">CSS Combinator Examples</text>
+
+  <container class="section">
+    <text class="section-title">Descendant Combinator (space)</text>
+    <text>".highlight-descendants text" matches ANY text inside</text>
+    <container class="highlight-descendants" style="border: thin; padding: 1">
+      <text>Direct child - blue</text>
+      <container style="padding-left: 2">
+        <text>Nested child - also blue</text>
+        <container style="padding-left: 2">
+          <text>Deeply nested - still blue</text>
+        </container>
+      </container>
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Child Combinator (&gt;)</text>
+    <text>".highlight-children &gt; text" matches ONLY direct children</text>
+    <container class="highlight-children" style="border: thin; padding: 1">
+      <text>Direct child - green</text>
+      <container style="padding-left: 2">
+        <text>Nested child - NOT green (white)</text>
+        <container style="padding-left: 2">
+          <text>Deeply nested - NOT green (white)</text>
+        </container>
+      </container>
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Mixed Combinators</text>
+    <text>".mixed &gt; container text" = direct child container, then any text</text>
+    <container class="mixed" style="border: thin; padding: 1">
+      <text>Direct text - NOT italic (not in container)</text>
+      <container style="padding-left: 2">
+        <text>In direct container - italic</text>
+        <container style="padding-left: 2">
+          <text>Nested in direct container - also italic</text>
+        </container>
+      </container>
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Chained Child Combinators</text>
+    <text>".strict &gt; container &gt; text" = very specific path</text>
+    <container class="strict" style="border: thin; padding: 1">
+      <text>Direct text - NOT matched</text>
+      <container style="padding-left: 2">
+        <text>Direct container &gt; text - yellow bold</text>
+        <container style="padding-left: 2">
+          <text>Nested container - NOT matched</text>
+        </container>
+      </container>
+    </container>
+  </container>
+
+  <container style="flex-direction: row; gap: 2; margin-top: 1">
+    <button label="Exit" onClick="$melker.exit()" />
+  </container>
+</container>
+</melker>

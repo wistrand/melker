@@ -14,6 +14,20 @@ interface TemplateContext {
   expressionIndex: number;
 }
 
+/**
+ * Unescape HTML entities in text content
+ */
+function unescapeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
 interface OAuthParseConfig {
   wellknown: string;
   clientId?: string;
@@ -722,7 +736,7 @@ function parseAttributeValue(value: string, context: TemplateContext, attributeN
  */
 function convertToElement(node: ParsedNode, context: TemplateContext): Element {
   if (node.type === 'text') {
-    return createElement('text', { text: node.content || '' });
+    return createElement('text', { text: unescapeHtmlEntities(node.content || '') });
   }
 
   if (node.type === 'element' && node.name) {
@@ -761,6 +775,7 @@ function convertToElement(node: ParsedNode, context: TemplateContext): Element {
 
     if (node.name === 'text' && children.length > 0) {
       // <text>content</text> syntax - combine text children
+      // Note: children already have unescaped text from convertToElement recursion
       const textContent = children
         .filter(child => child.type === 'text')
         .map(child => child.props.text)

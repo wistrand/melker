@@ -28,9 +28,19 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
   <policy>{"permissions": {...}}</policy>
 
   <style>
+    /* Universal selector */
+    * { color: white; }
+
+    /* Type, ID, class selectors */
     button { background-color: blue; }
     #myId { color: red; }
     .myClass { border: thin; }
+
+    /* Descendant combinator (space) - any nested element */
+    .card text { font-weight: bold; }
+
+    /* Child combinator (>) - direct children only */
+    .nav > button { padding: 1; }
   </style>
 
   <!-- UI components -->
@@ -180,7 +190,7 @@ Melker supports bash-style variable expansion for environment variables and comm
 | Component                       | Key Props                                                                          | Notes                                     |
 |---------------------------------|------------------------------------------------------------------------------------|-------------------------------------------|
 | `<container>`                   | style, scrollable                                                                  | Flexbox layout container                  |
-| `<text>`                        | id, style                                                                          | Inner content or `text` prop              |
+| `<text>`                        | id, style                                                                          | Inner content or `text` prop (HTML entities unescaped) |
 | `<input>`                       | id, placeholder, value, format, onKeyPress, onInput                                | Single-line text input (format: 'text'\|'password') |
 | `<textarea>`                    | id, placeholder, value, rows, cols, wrap, maxLength                                | Multi-line text input                     |
 | `<button>`                      | id, label, onClick                                                                 | `<button>Label</button>` or `label="Label"` |
@@ -210,6 +220,15 @@ Melker supports bash-style variable expansion for environment variables and comm
 | `<progress>`                    | value, max, min, width, height, showValue, indeterminate                           | Progress bar                              |
 | `<connector>`                   | from, to, fromSide, toSide, arrow, label, routing                                  | Draw lines between elements               |
 | `<graph>`                       | type, src, text, scrollable, style                                                 | Mermaid/JSON diagrams (flowchart, sequence, class) |
+
+**HTML Entities in Text:** Text content automatically unescapes HTML entities:
+- `&lt;` → `<`, `&gt;` → `>`, `&amp;` → `&`
+- `&quot;` → `"`, `&apos;` → `'`
+- Numeric: `&#60;` → `<`, `&#x3C;` → `<`
+
+```xml
+<text>Use &lt;button&gt; for actions</text>  <!-- Displays: Use <button> for actions -->
+```
 
 ## System Command Palette
 
@@ -248,11 +267,46 @@ System commands are **automatically injected** into all command palettes. A "Sys
 - Shortcuts are right-aligned with 1 character padding
 - Scrollbar overwrites the right border when needed
 
+## CSS Selectors
+
+The `<style>` tag and `querySelector`/`querySelectorAll` support CSS-like selectors:
+
+| Selector Type       | Syntax                    | Example                          | Matches                               |
+|---------------------|---------------------------|----------------------------------|---------------------------------------|
+| Universal           | `*`                       | `* { color: white; }`            | All elements                          |
+| Type                | `element`                 | `button { padding: 1; }`         | All buttons                           |
+| ID                  | `#id`                     | `#header { border: thin; }`      | Element with `id="header"`            |
+| Class               | `.class`                  | `.active { font-weight: bold; }` | Elements with `class="active"`        |
+| Compound            | `type.class`              | `button.primary { color: blue; }`| Buttons with class "primary"          |
+| Descendant (space)  | `ancestor descendant`     | `.card text { color: cyan; }`    | Any text inside `.card` (any depth)   |
+| Child (`>`)         | `parent > child`          | `.nav > button { margin: 1; }`   | Direct button children of `.nav`      |
+| Multiple (comma)    | `sel1, sel2`              | `button, .clickable { }`         | Buttons OR elements with `.clickable` |
+
+**Combinator examples:**
+
+```xml
+<style>
+  /* Descendant: matches text at ANY depth inside .highlight */
+  .highlight text { color: cyan; }
+
+  /* Child: matches ONLY direct children */
+  .toolbar > button { padding: 0 1; }
+
+  /* Chained: specific path */
+  .form > container > input { border: thin; }
+
+  /* Mixed: direct child container, then any nested text */
+  .card > container text { font-style: italic; }
+</style>
+```
+
+See `examples/basics/css-combinators.melker` for a complete demonstration.
+
 ## Styling
 
 CSS-like properties in `style` attribute:
 
-- **Layout:** width, height, display (flex/block), flex-direction, flex, padding, margin, overflow
+- **Layout:** width, height, min-width, max-width, min-height, max-height, display (flex/block), flex-direction, flex, padding, margin, overflow
 - **Borders:** border (none/thin/thick/double/rounded/dashed/dashed-rounded/ascii/ascii-rounded/block), border-top/right/bottom/left, border-color, border-title
 - **Colors:** color, background-color (names or hex like `#00d9ff`)
 - **Text:** font-weight (bold/normal), font-style (normal/italic), text-decoration (none/underline), dim, reverse, text-align, text-wrap
@@ -317,8 +371,18 @@ CSS-like properties in `style` attribute:
 - `$melker.dirname` - Source directory path (e.g. `/path/to`)
 - `$melker.exports` / `$app` - User exports namespace (script exports are added here)
 - `$melker.getElementById(id)` - Get element by ID
-- `$melker.querySelector(selector)` - Get first element matching CSS selector (type, #id, .class, combinations, comma OR)
+- `$melker.querySelector(selector)` - Get first element matching CSS selector
 - `$melker.querySelectorAll(selector)` - Get all elements matching CSS selector
+
+**Supported CSS selectors:**
+- Type: `text`, `button`, `container`
+- ID: `#myId`
+- Class: `.myClass`
+- Universal: `*` (matches all elements)
+- Compound: `button.primary`, `#header.active`
+- Descendant (space): `container text` (any nested text)
+- Child (`>`): `container > text` (direct children only)
+- Comma (OR): `button, .clickable` (either match)
 - `$melker.render()` - Trigger re-render (for intermediate updates in async handlers)
 - `$melker.exit()` - Exit application
 - `$melker.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)
@@ -427,6 +491,7 @@ Renders markdown content with support for images, links, and code blocks.
 - `form-demo.melker` - Input fields, checkbox, radio
 - `dialog-demo.melker` - Dialog variants
 - `tabs-demo.melker` - Tabbed interface
+- `css-combinators.melker` - CSS selector combinators (descendant, child)
 
 **Components** (`examples/components/`):
 - `input.melker` - Input fields

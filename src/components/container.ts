@@ -109,13 +109,17 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
             childHeight += 2; // Add top + bottom border
           }
 
-          // Add horizontal padding space for elements without explicit dimensions but with padding
-          // Note: Only add horizontal padding here; vertical padding is handled by layout engine
-          // to avoid double-counting (layout engine adds padding when sizing flex items)
+          // Add padding space for elements without explicit dimensions but with padding
           const childPadding = child.props?.style?.padding;
-          if (childPadding !== undefined && child.props?.style?.width === undefined) {
-            const padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
-            childWidth += padH;
+          if (childPadding !== undefined) {
+            if (child.props?.style?.width === undefined) {
+              const padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
+              childWidth += padH;
+            }
+            if (child.props?.style?.height === undefined) {
+              const padV = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.top || 0) + (childPadding.bottom || 0));
+              childHeight += padV;
+            }
           }
 
           // Add child margin to size calculations
@@ -153,12 +157,17 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
             childHeight += 2; // Add top + bottom border
           }
 
-          // Add horizontal padding space for elements without explicit dimensions but with padding
-          // Note: Only add horizontal padding here; vertical padding is handled by layout engine
+          // Add padding space for elements without explicit dimensions but with padding
           const childPadding = child.props?.style?.padding;
-          if (childPadding !== undefined && child.props?.style?.width === undefined) {
-            const padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
-            childWidth += padH;
+          if (childPadding !== undefined) {
+            if (child.props?.style?.width === undefined) {
+              const padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
+              childWidth += padH;
+            }
+            if (child.props?.style?.height === undefined) {
+              const padV = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.top || 0) + (childPadding.bottom || 0));
+              childHeight += padV;
+            }
           }
 
           // Add child margin to height calculation

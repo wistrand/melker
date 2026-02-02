@@ -35,18 +35,22 @@ Flexbox layout container. The primary building block for layouts.
 - `width`, `height`: number, percentage (`50%`), or `fill`
   - `fill` takes *remaining* space after siblings
   - `100%` takes 100% of parent (may overflow with siblings)
+- `min-width`, `max-width`, `min-height`, `max-height`: constrain sizing
 - `padding`, `margin`: spacing (single number or `padding-top`, etc.)
 - `border`: `none` | `thin` | `thick` | `double` | `rounded` | `dashed` | `dashed-rounded` | `ascii` | `ascii-rounded` | `block`
 - `overflow`: `visible` | `hidden` | `auto` | `scroll`
 
 ### text
 
-Display text content.
+Display text content. HTML entities are automatically unescaped.
 
 ```xml
 <text style="font-weight: bold;">
   Hello World
 </text>
+
+<!-- HTML entities work -->
+<text>Use &lt;button&gt; for actions</text>  <!-- Displays: Use <button> for actions -->
 ```
 
 **Props:**
@@ -58,6 +62,8 @@ Display text content.
 - `font-weight`: `normal` | `bold`
 - `text-align`: `left` | `center` | `right`
 - `text-wrap`: `wrap` | `nowrap`
+
+**HTML entities:** `&lt;` `&gt;` `&amp;` `&quot;` `&apos;` and numeric (`&#60;` `&#x3C;`)
 
 Note: Avoid setting `color` - let the theme engine handle it.
 

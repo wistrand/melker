@@ -105,6 +105,10 @@ export interface Style extends Record<string, any> {
   overflow?: 'visible' | 'hidden' | 'scroll';
   width?: number | 'auto' | 'fill' | PercentageString;
   height?: number | 'auto' | 'fill' | PercentageString;
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
   top?: number;
   right?: number;
   bottom?: number;
@@ -149,6 +153,10 @@ export interface BoxSpacing {
 export interface LayoutProps {
   width?: number | 'auto' | 'fill' | PercentageString;
   height?: number | 'auto' | 'fill' | PercentageString;
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
   display?: 'block' | 'flex';
   overflow?: 'visible' | 'hidden' | 'scroll';
 

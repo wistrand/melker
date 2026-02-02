@@ -61,9 +61,10 @@ function resetTerminalState(): void {
 /**
  * Create the default all-permissions policy used when no embedded policy is found
  */
-function createAutoPolicy(): MelkerPolicy {
+function createAutoPolicy(filepath: string): MelkerPolicy {
+  const filename = filepath.split('/').pop() || filepath;
   return {
-    name: 'Auto Policy',
+    name: `${filename} (Auto Policy)`,
     description: 'Default policy with all permissions (no embedded policy found)',
     permissions: {
       all: true,
@@ -624,7 +625,7 @@ export async function main(): Promise<void> {
           Deno.exit(0);
         }
         const policyResult = await loadPolicyFromContent(content, filepath);
-        const policy = policyResult.policy ?? createAutoPolicy();
+        const policy = policyResult.policy ?? createAutoPolicy(filepath);
 
         // Apply CLI overrides
         const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
@@ -657,7 +658,7 @@ export async function main(): Promise<void> {
           }
         }
         const policyResult = await loadPolicy(absoluteFilepath);
-        const policy = policyResult.policy ?? createAutoPolicy();
+        const policy = policyResult.policy ?? createAutoPolicy(absoluteFilepath);
 
         // Apply CLI overrides
         const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
@@ -737,7 +738,7 @@ export async function main(): Promise<void> {
     // Local file approval and policy enforcement (unless --trust)
     if (!isUrl(filepath) && !options.trust) {
       const policyResult = await loadPolicy(absoluteFilepath);
-      const policy = policyResult.policy ?? createAutoPolicy();
+      const policy = policyResult.policy ?? createAutoPolicy(absoluteFilepath);
       const urlHash = await getUrlHash(absoluteFilepath);
       const denoFlags = policyToDenoFlags(policy, dirname(absoluteFilepath), urlHash);
 
@@ -772,7 +773,7 @@ export async function main(): Promise<void> {
     }
 
     // --trust mode: run with full permissions
-    await runWithPolicy(absoluteFilepath, createAutoPolicy(), args);
+    await runWithPolicy(absoluteFilepath, createAutoPolicy(absoluteFilepath), args);
 
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {

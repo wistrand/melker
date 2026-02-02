@@ -408,7 +408,6 @@ export class LayoutEngine {
     const mainAxisSize = isRow ? context.availableSpace.width : context.availableSpace.height;
     const crossAxisSize = isRow ? context.availableSpace.height : context.availableSpace.width;
 
-
     // Filter out absolutely positioned children and invisible children
     const flexChildren = children.filter(child => {
       // Skip invisible elements - they don't participate in layout
@@ -459,12 +458,14 @@ export class LayoutEngine {
         }
       }
       const estimatedRowHeight = Math.max(1, Math.ceil(totalSampleHeight / sampleSize));
+      // Include gap in stride for positioning calculations
+      const rowStride = estimatedRowHeight + gap;
 
-      // Calculate visible range
-      const startIndex = Math.max(0, Math.floor(scrollY / estimatedRowHeight) - VIRTUAL_BUFFER);
-      const endIndex = Math.min(flexChildren.length, Math.ceil((scrollY + viewportHeight) / estimatedRowHeight) + VIRTUAL_BUFFER);
+      // Calculate visible range using row stride (height + gap)
+      const startIndex = Math.max(0, Math.floor(scrollY / rowStride) - VIRTUAL_BUFFER);
+      const endIndex = Math.min(flexChildren.length, Math.ceil((scrollY + viewportHeight) / rowStride) + VIRTUAL_BUFFER);
 
-      logger.debug(`Virtual layout: ${flexChildren.length} children, visible ${startIndex}-${endIndex}, rowHeight=${estimatedRowHeight}`);
+      logger.debug(`Virtual layout: ${flexChildren.length} children, visible ${startIndex}-${endIndex}, rowHeight=${estimatedRowHeight}, gap=${gap}`);
 
       // Create layout nodes only for visible children
       const nodes: LayoutNode[] = [];
@@ -483,7 +484,7 @@ export class LayoutEngine {
           };
           const childNode = this.calculateLayout(child, { ...context, parentBounds: childBounds }, parentNode);
           nodes.push(childNode);
-          currentY += childNode.bounds.height;
+          currentY += childNode.bounds.height + gap;
         } else {
           // Placeholder for non-visible children (minimal node, skips intrinsic calc)
           const placeholderBounds: Bounds = {
@@ -510,7 +511,7 @@ export class LayoutEngine {
             },
             zIndex: 0,
           });
-          currentY += estimatedRowHeight;
+          currentY += rowStride;
         }
       }
 
@@ -633,26 +634,46 @@ export class LayoutEngine {
       // - Canvas returns props.width/height
       const useIntrinsicSize = isRenderable(child);
 
+      // Check if renderable element intentionally returns zero size (e.g., dialogs, overlays)
+      // These elements should not participate in normal layout flow
+      const intentionallyZeroSize = useIntrinsicSize &&
+                                    intrinsicSize.width === 0 &&
+                                    intrinsicSize.height === 0;
+
       let flexBasisValue: number;
       if (childProps.flexBasis === 'auto') {
         if (isRow) {
-          if (!useIntrinsicSize && typeof childProps.width === 'number') {
-            flexBasisValue = childProps.width;
+          // If element intentionally returns zero size (dialogs, overlays), respect that
+          if (intentionallyZeroSize) {
+            flexBasisValue = 0;
           } else if (childProps.width === 'fill') {
             // For "fill" width in flex context, treat as flexible
             flexBasisValue = 0;
+          } else if (typeof childProps.width === 'number') {
+            // Explicit numeric width - use the larger of explicit and intrinsic
+            // This handles: text with style.width (intrinsic = text length, explicit = style.width)
+            // and img with percentage (intrinsic = calculated from %, explicit = placeholder)
+            const intrinsicOuter = intrinsicSize.width + paddingMain + borderMain;
+            flexBasisValue = Math.max(childProps.width, intrinsicOuter);
           } else {
-            // Use intrinsic size + padding + borders
+            // No explicit width - use intrinsic size + padding + borders
             flexBasisValue = intrinsicSize.width + paddingMain + borderMain;
           }
         } else {
-          if (!useIntrinsicSize && typeof childProps.height === 'number') {
-            flexBasisValue = childProps.height;
+          // If element intentionally returns zero size (dialogs, overlays), respect that
+          if (intentionallyZeroSize) {
+            flexBasisValue = 0;
           } else if (childProps.height === 'fill') {
             // For "fill" height in flex context, treat as flexible
             flexBasisValue = 0;
+          } else if (typeof childProps.height === 'number') {
+            // Explicit numeric height - use the larger of explicit and intrinsic
+            // This handles: text with style.height (intrinsic = line count, explicit = style.height)
+            // and img with percentage (intrinsic = calculated from %, explicit = placeholder)
+            const intrinsicOuter = intrinsicSize.height + paddingMain + borderMain;
+            flexBasisValue = Math.max(childProps.height, intrinsicOuter);
           } else {
-            // Use intrinsic size + padding + borders
+            // No explicit height - use intrinsic size + padding + borders
             flexBasisValue = intrinsicSize.height + paddingMain + borderMain;
           }
         }
@@ -660,6 +681,20 @@ export class LayoutEngine {
         flexBasisValue = typeof childProps.flexBasis === 'number' ? childProps.flexBasis : 0;
       }
 
+      // Extract min/max constraints from style
+      // These constrain how much an item can grow or shrink
+      const minMain = isRow
+        ? (typeof childStyle.minWidth === 'number' ? childStyle.minWidth : 0)
+        : (typeof childStyle.minHeight === 'number' ? childStyle.minHeight : 0);
+      const maxMain = isRow
+        ? (typeof childStyle.maxWidth === 'number' ? childStyle.maxWidth : Infinity)
+        : (typeof childStyle.maxHeight === 'number' ? childStyle.maxHeight : Infinity);
+      const minCross = isRow
+        ? (typeof childStyle.minHeight === 'number' ? childStyle.minHeight : 0)
+        : (typeof childStyle.minWidth === 'number' ? childStyle.minWidth : 0);
+      const maxCross = isRow
+        ? (typeof childStyle.maxHeight === 'number' ? childStyle.maxHeight : Infinity)
+        : (typeof childStyle.maxWidth === 'number' ? childStyle.maxWidth : Infinity);
 
       // Auto-set flexGrow for "fill" elements if not explicitly set
       let flexGrow = childProps.flexGrow || 0;
@@ -684,32 +719,51 @@ export class LayoutEngine {
         effectivePaddingCross = 0;
       }
 
-      // Check if item will be stretched (default align-items is 'stretch')
-      // When wrapping is enabled, don't stretch items to full container size during base size calculation
-      // as this would make each wrapped line too large. Items will be stretched to their line's size later.
-      const willStretch = (childProps.alignSelf === 'auto' || childProps.alignSelf === undefined || childProps.alignSelf === 'stretch') &&
-                         (flexProps.alignItems === undefined || flexProps.alignItems === 'stretch') &&
-                         !isWrap; // Don't stretch during base size calc when wrapping
+      // Determine if this item has stretch alignment (not whether to pre-stretch now)
+      // Items with explicit cross-axis size should not stretch even with align-items: stretch
+      const hasExplicitCrossSize = isRow
+        ? (typeof childProps.height === 'number')
+        : (typeof childProps.width === 'number');
+
+      const hasStretchAlignment = (childProps.alignSelf === 'auto' || childProps.alignSelf === undefined || childProps.alignSelf === 'stretch') &&
+                                  (flexProps.alignItems === undefined || flexProps.alignItems === 'stretch');
+
+      // shouldStretch: item wants stretch AND doesn't have explicit size
+      const shouldStretch = hasStretchAlignment && !hasExplicitCrossSize;
+
+      // Pre-stretch to container size only for nowrap (wrapping defers stretch to line sizing phase)
+      // With wrap, we calculate intrinsic sizes first, then stretch to line size in positioning phase
+      const willPreStretchToContainer = shouldStretch && !isWrap;
 
 
       if (isRow) {
-        if (!useIntrinsicSize && typeof childProps.height === 'number') {
-          baseCross = childProps.height;
-        } else if (willStretch) {
-          // For stretch alignment, use available space but ensure minimum intrinsic size
+        // Elements that intentionally return zero size (dialogs, overlays) should not take cross-axis space
+        if (intentionallyZeroSize) {
+          baseCross = 0;
+        } else if (typeof childProps.height === 'number') {
+          // Explicit numeric height - use the larger of explicit and intrinsic
           const intrinsicOuter = intrinsicSize.height + effectivePaddingCross + borderCross;
-          baseCross = Math.max(crossAxisSize, intrinsicOuter);
+          baseCross = Math.max(childProps.height, intrinsicOuter);
+        } else if (willPreStretchToContainer) {
+          // For nowrap + stretch: stretch to container size
+          // If content is larger, it will overflow (correct CSS behavior)
+          baseCross = crossAxisSize;
         } else {
           // Use intrinsic size + padding + borders for cross axis (outer size)
           baseCross = intrinsicSize.height + effectivePaddingCross + borderCross;
         }
       } else {
-        if (!useIntrinsicSize && typeof childProps.width === 'number') {
-          baseCross = childProps.width;
-        } else if (willStretch) {
-          // For stretch alignment, use available space but ensure minimum intrinsic size
+        // Elements that intentionally return zero size (dialogs, overlays) should not take cross-axis space
+        if (intentionallyZeroSize) {
+          baseCross = 0;
+        } else if (typeof childProps.width === 'number') {
+          // Explicit numeric width - use the larger of explicit and intrinsic
           const intrinsicOuter = intrinsicSize.width + effectivePaddingCross + borderCross;
-          baseCross = Math.max(crossAxisSize, intrinsicOuter);
+          baseCross = Math.max(childProps.width, intrinsicOuter);
+        } else if (willPreStretchToContainer) {
+          // For nowrap + stretch: stretch to container size
+          // If content is larger, it will overflow (correct CSS behavior)
+          baseCross = crossAxisSize;
         } else {
           // Use intrinsic size + padding + borders for cross axis (outer size)
           baseCross = intrinsicSize.width + effectivePaddingCross + borderCross;
@@ -737,6 +791,11 @@ export class LayoutEngine {
         marginCrossEnd,
         paddingMain,
         paddingCross,
+        shouldStretch,  // Whether this item should stretch to fill line cross-axis
+        minMain,        // Min constraint on main axis
+        maxMain,        // Max constraint on main axis
+        minCross,       // Min constraint on cross axis
+        maxCross,       // Max constraint on cross axis
       };
     });
 
@@ -799,7 +858,7 @@ export class LayoutEngine {
       lineCount: flexLines.length,
     });
 
-    // Step 3: Resolve flexible lengths per line
+    // Step 3: Resolve flexible lengths per line with min/max constraints
     const resolveLengthsStartTime = performance.now();
     flexLines.forEach(line => {
       const lineItems = line.items;
@@ -836,6 +895,12 @@ export class LayoutEngine {
           }
         });
       }
+
+      // Apply min/max constraints on main axis
+      // Items cannot shrink below minMain or grow above maxMain
+      lineItems.forEach(item => {
+        item.finalMain = Math.max(item.minMain, Math.min(item.maxMain, item.finalMain));
+      });
     });
 
     // Step 4: Calculate line cross sizes
@@ -1046,7 +1111,13 @@ export class LayoutEngine {
           case 'stretch':
           default:
             crossPos = lineCrossStart + item.marginCrossStart;
-            finalCross = lineCrossSize - item.marginCross;
+            // Only stretch if item allows stretching (no explicit cross-axis size)
+            // Items with explicit size should respect that size even with align-items: stretch
+            if (item.shouldStretch) {
+              finalCross = lineCrossSize - item.marginCross;
+            } else {
+              finalCross = item.baseCross;
+            }
             break;
         }
 
@@ -1055,9 +1126,12 @@ export class LayoutEngine {
         // Note: baseCross already includes padding+border (from explicit size or intrinsic+chrome)
         const isContainer = item.element.type === 'container';
         if (!isContainer) {
-          const minCross = item.baseCross;
-          finalCross = Math.max(finalCross, minCross);
+          const intrinsicMinCross = item.baseCross;
+          finalCross = Math.max(finalCross, intrinsicMinCross);
         }
+
+        // Apply min/max constraints on cross axis
+        finalCross = Math.max(item.minCross, Math.min(item.maxCross, finalCross));
 
         // Create bounds based on main/cross axes
         // Note: finalMain already includes padding, we want total size including padding
@@ -1417,6 +1491,19 @@ export class LayoutEngine {
         result.height = style.height;
       }
     }
+    // Parse min/max constraints - XML attributes come as strings
+    if (style.minWidth !== undefined) {
+      result.minWidth = typeof style.minWidth === 'string' ? parseFloat(style.minWidth) : style.minWidth;
+    }
+    if (style.maxWidth !== undefined) {
+      result.maxWidth = typeof style.maxWidth === 'string' ? parseFloat(style.maxWidth) : style.maxWidth;
+    }
+    if (style.minHeight !== undefined) {
+      result.minHeight = typeof style.minHeight === 'string' ? parseFloat(style.minHeight) : style.minHeight;
+    }
+    if (style.maxHeight !== undefined) {
+      result.maxHeight = typeof style.maxHeight === 'string' ? parseFloat(style.maxHeight) : style.maxHeight;
+    }
 
     // Auto-infer display: flex when flex container properties are present
     // This makes the framework more ergonomic - no need to explicitly set display: flex
@@ -1524,6 +1611,12 @@ export class LayoutEngine {
       }
       // else: keep intrinsic height for row-flex containers
     }
+
+    // Apply min/max constraints
+    if (typeof style.minWidth === 'number') width = Math.max(width, style.minWidth);
+    if (typeof style.maxWidth === 'number') width = Math.min(width, style.maxWidth);
+    if (typeof style.minHeight === 'number') height = Math.max(height, style.minHeight);
+    if (typeof style.maxHeight === 'number') height = Math.min(height, style.maxHeight);
 
     return {
       x: context.parentBounds.x,

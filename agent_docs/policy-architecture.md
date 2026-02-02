@@ -200,9 +200,14 @@ Local files without a `<policy>` tag get an auto-generated policy:
 
 ```json
 {
-  "name": "<filename>",
+  "name": "<filename> (Auto Policy)",
   "permissions": { "all": true }
 }
+```
+
+For example, running `app.melker` without an embedded policy shows:
+```
+App: app.melker (Auto Policy)
 ```
 
 This grants all permissions but still requires approval on first run.

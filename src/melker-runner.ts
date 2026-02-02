@@ -242,9 +242,10 @@ export interface RunMelkerResult {
   cleanup: () => Promise<void>;
 }
 
-function createAutoPolicy(): MelkerPolicy {
+function createAutoPolicy(filepath: string): MelkerPolicy {
+  const filename = filepath.split('/').pop() || filepath;
   return {
-    name: 'Auto Policy',
+    name: `${filename} (Auto Policy)`,
     description: 'Default policy with all permissions',
     permissions: { all: true },
   };
@@ -461,13 +462,13 @@ export async function runMelkerFile(
     if (preloadedContent) {
       // Use policy from generated content (e.g., for .mmd files)
       const policyResult = await loadPolicyFromContent(preloadedContent, filepath);
-      appPolicy = policyResult.policy ?? createAutoPolicy();
+      appPolicy = policyResult.policy ?? createAutoPolicy(filepath);
     } else if (!isUrl(filepath)) {
       const absolutePath = filepath.startsWith('/') ? filepath : resolve(Deno.cwd(), filepath);
       const policyResult = await loadPolicy(absolutePath);
-      appPolicy = policyResult.policy ?? createAutoPolicy();
+      appPolicy = policyResult.policy ?? createAutoPolicy(absolutePath);
     } else {
-      appPolicy = createAutoPolicy();
+      appPolicy = createAutoPolicy(filepath);
     }
 
     // Apply CLI permission overrides passed from launcher

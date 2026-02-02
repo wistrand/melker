@@ -141,8 +141,10 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | API | Description |
 |-----|-------------|
 | `$melker.getElementById(id)` | Get element by ID |
-| `$melker.querySelector(selector)` | Get first element matching CSS selector (type, #id, .class, combinations) |
+| `$melker.querySelector(selector)` | Get first element matching CSS selector (see below) |
 | `$melker.querySelectorAll(selector)` | Get all elements matching CSS selector |
+
+**CSS selector syntax:** `type`, `#id`, `.class`, `*` (universal), compound (`button.primary`), descendant (space: `container text`), child (`>`), comma OR (`button, .clickable`)
 | `$melker.render()` | Trigger re-render (for intermediate states) |
 | `$melker.skipRender()` | Skip auto-render after handler completes |
 | `$melker.exit()` | Exit application |
@@ -203,13 +205,14 @@ For complete component reference, see [COMPONENTS.md](references/COMPONENTS.md).
 ">
 ```
 
-**Layout:** `display`, `flex-direction`, `flex`, `width`, `height`, `padding`, `margin`, `gap`
+**Layout:** `display`, `flex-direction`, `flex`, `width`, `height`, `min-width`, `max-width`, `min-height`, `max-height`, `padding`, `margin`, `gap`
 **Borders:** `border` (none|thin|thick|double|rounded|dashed|dashed-rounded|ascii|ascii-rounded|block), `borderTitle`
 **Text:** `font-weight`, `text-align`, `text-wrap`
 **Size values:**
 - Numbers: `40` (columns/rows)
 - Percentages: `50%`, `100%` (in `style.width`/`style.height`)
 - `fill`: Expands to *remaining* available space (differs from 100%)
+- `min-width`/`max-width`/`min-height`/`max-height`: Constrain sizing
 
 **Note:** `display: flex` is auto-inferred when flex container properties are present (`flex-direction`, `justify-content`, `align-items`, `gap`, etc.), so it can be omitted.
 

@@ -50,18 +50,21 @@ export class ImgElement extends CanvasElement {
     // Check if using responsive dimensions (percentage, fill, or decimal 0-1)
     const usesResponsive = isResponsiveDimension(origWidth) || isResponsiveDimension(origHeight);
 
-    // Parse initial dimensions (responsive values will be recalculated in render)
-    // Use a placeholder size for responsive dimensions
-    const width = isResponsiveDimension(origWidth) ? 30 : (typeof origWidth === 'number' ? origWidth : 30);
-    const height = isResponsiveDimension(origHeight) ? 15 : (typeof origHeight === 'number' ? origHeight : 15);
+    // For canvas buffer initialization, use placeholder sizes for responsive dimensions
+    // The actual buffer will be resized in render() when bounds are known
+    const canvasWidth = isResponsiveDimension(origWidth) ? 30 : (typeof origWidth === 'number' ? origWidth : 30);
+    const canvasHeight = isResponsiveDimension(origHeight) ? 15 : (typeof origHeight === 'number' ? origHeight : 15);
 
     // Call parent constructor with canvas props
+    // IMPORTANT: Keep original width/height for layout (percentage strings like "100%")
+    // Only use placeholder for internal canvas buffer size
     // Don't pass src yet - we'll resolve it in render
     super(
       {
         ...props,
-        width,
-        height,
+        // Keep original width/height in props for layout engine to handle percentages
+        width: origWidth,
+        height: origHeight,
         src: undefined, // Will be set after resolution
         style: {
           // Only prevent shrinking for fixed-dimension images
@@ -72,6 +75,11 @@ export class ImgElement extends CanvasElement {
       } as CanvasProps,
       children
     );
+
+    // Initialize canvas buffer with placeholder size (will be resized in render)
+    if (usesResponsive) {
+      this.setSize(canvasWidth, canvasHeight);
+    }
 
     // Override type
     (this as { type: string }).type = 'img';

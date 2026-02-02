@@ -1,0 +1,28 @@
+<container style="width: fill; height: fill; padding: 1; display: flex; flex-direction: column;">
+
+  <container style="display: flex; flex-direction: column; margin-bottom: 2; width: 80;">
+    <text style="color: cyan; font-weight: bold;">Flex Wrap with width</text>
+    <container style="display: flex; flex-direction: row; flex-wrap: wrap; height: 11; border: thin; border-color: cyan; padding: 1; gap: 1;">
+      <button label="Item 1" style="background-color: red; width: 20; height: 3;" />
+      <button label="Item 2" style="background-color: yellow; width: 20; height: 3;" />
+      <button label="Item 3" style="background-color: green; width: 20; height: 3;" />
+      <button label="Item 4" style="background-color: blue; width: 20; height: 3;" />
+      <button label="Item 5" style="background-color: magenta; width: 20; height: 3;" />
+      <button label="Item 6" style="background-color: cyan; width: 20; height: 3;" />
+    </container>
+  </container>
+
+    <container style="display: flex; flex-direction: column; margin-bottom: 2; max-width: 80;">
+        <text style="color: cyan; font-weight: bold;">Flex Wrap with max-width</text>
+        <container style="display: flex; flex-direction: row; flex-wrap: wrap; height: 11; border: thin; border-color: cyan; padding: 1; gap: 1;">
+            <button label="Item 1" style="background-color: red; width: 20; height: 3;" />
+            <button label="Item 2" style="background-color: yellow; width: 20; height: 3;" />
+            <button label="Item 3" style="background-color: green; width: 20; height: 3;" />
+            <button label="Item 4" style="background-color: blue; width: 20; height: 3;" />
+            <button label="Item 5" style="background-color: magenta; width: 20; height: 3;" />
+            <button label="Item 6" style="background-color: cyan; width: 20; height: 3;" />
+        </container>
+    </container>
+
+
+</container>

@@ -1,5 +1,6 @@
 // Stylesheet support for Melker - CSS-like style rules
-// Simple selectors: #id, type, .class (no nesting or combinators)
+// Selectors: *, #id, type, .class, compound (e.g., *.class, type.class)
+// Combinators: descendant (space), child (>)
 
 import type { Element, Style } from './types.ts';
 import { hasClass } from './element.ts';
@@ -8,7 +9,14 @@ import { parseColor } from './components/color-utils.ts';
 /**
  * Selector types supported by the stylesheet system
  */
-export type SelectorType = 'id' | 'type' | 'class';
+export type SelectorType = 'id' | 'type' | 'class' | 'universal';
+
+/**
+ * Combinator types between selectors
+ * - descendant: matches any ancestor (space in CSS)
+ * - child: matches direct parent only (> in CSS)
+ */
+export type Combinator = 'descendant' | 'child';
 
 /**
  * A single selector part (id, type, or class)
@@ -19,11 +27,27 @@ export interface SelectorPart {
 }
 
 /**
- * Parsed selector - can be a compound selector with multiple parts
- * e.g., "#myid.class1.class2" or "button.primary"
+ * A compound selector - multiple parts that must all match the same element
+ * e.g., "button.primary" = [{ type: 'type', value: 'button' }, { type: 'class', value: 'primary' }]
+ */
+export interface CompoundSelector {
+  parts: SelectorPart[];
+}
+
+/**
+ * A segment in a selector chain - compound selector with its preceding combinator
+ */
+export interface SelectorSegment {
+  combinator: Combinator | null;  // null for the first segment
+  compound: CompoundSelector;
+}
+
+/**
+ * Parsed selector - a chain of selector segments
+ * e.g., "container > .card text" = [container, >(child).card, (descendant)text]
  */
 export interface StyleSelector {
-  parts: SelectorPart[];
+  segments: SelectorSegment[];
 }
 
 /**
@@ -35,32 +59,33 @@ export interface StyleItem {
 }
 
 /**
- * Parse a selector string into a StyleSelector
- * Supports compound selectors: #id.class1.class2, type.class1.class2, .class1.class2
+ * Parse a single compound selector (no spaces)
+ * e.g., "#id.class1.class2", "button.primary", ".class1.class2"
  */
-export function parseSelector(selector: string): StyleSelector {
-  const trimmed = selector.trim();
+function parseCompoundSelector(selector: string): CompoundSelector {
   const parts: SelectorPart[] = [];
+  let remaining = selector;
 
-  if (!trimmed) {
+  if (!remaining) {
     return { parts: [] };
   }
 
-  // Parse the selector into parts
-  // Handle: #id.class1.class2, type.class1.class2, .class1.class2
-  let remaining = trimmed;
-
   // Check for ID selector first (#id)
   if (remaining.startsWith('#')) {
-    const idMatch = remaining.match(/^#([^.]+)/);
+    const idMatch = remaining.match(/^#([^.#]+)/);
     if (idMatch) {
       parts.push({ type: 'id', value: idMatch[1] });
       remaining = remaining.slice(idMatch[0].length);
     }
   }
+  // Check for universal selector (*)
+  else if (remaining.startsWith('*')) {
+    parts.push({ type: 'universal', value: '*' });
+    remaining = remaining.slice(1);
+  }
   // Check for type selector (must be at start, before any dots)
   else if (!remaining.startsWith('.')) {
-    const typeMatch = remaining.match(/^([^.]+)/);
+    const typeMatch = remaining.match(/^([^.#]+)/);
     if (typeMatch) {
       parts.push({ type: 'type', value: typeMatch[1] });
       remaining = remaining.slice(typeMatch[0].length);
@@ -69,7 +94,7 @@ export function parseSelector(selector: string): StyleSelector {
 
   // Parse remaining class selectors (.class1.class2...)
   while (remaining.startsWith('.')) {
-    const classMatch = remaining.match(/^\.([^.]+)/);
+    const classMatch = remaining.match(/^\.([^.#]+)/);
     if (classMatch) {
       parts.push({ type: 'class', value: classMatch[1] });
       remaining = remaining.slice(classMatch[0].length);
@@ -79,6 +104,43 @@ export function parseSelector(selector: string): StyleSelector {
   }
 
   return { parts };
+}
+
+/**
+ * Parse a selector string into a StyleSelector
+ * Supports:
+ * - Compound selectors: #id.class1.class2, type.class1.class2, .class1.class2
+ * - Descendant combinator: "container .card text" (space-separated)
+ * - Child combinator: "container > .card" (> symbol)
+ */
+export function parseSelector(selector: string): StyleSelector {
+  const trimmed = selector.trim();
+
+  if (!trimmed) {
+    return { segments: [] };
+  }
+
+  const segments: SelectorSegment[] = [];
+
+  // Tokenize: split by spaces and '>' while preserving '>' as a token
+  // "container > .card text" -> ["container", ">", ".card", "text"]
+  const tokens = trimmed.split(/(\s*>\s*|\s+)/).filter(t => t.trim().length > 0).map(t => t.trim());
+
+  let currentCombinator: Combinator | null = null;
+
+  for (const token of tokens) {
+    if (token === '>') {
+      currentCombinator = 'child';
+    } else {
+      segments.push({
+        combinator: segments.length === 0 ? null : (currentCombinator || 'descendant'),
+        compound: parseCompoundSelector(token),
+      });
+      currentCombinator = null;
+    }
+  }
+
+  return { segments };
 }
 
 /**
@@ -92,34 +154,96 @@ function selectorPartMatches(part: SelectorPart, element: Element): boolean {
       return element.type === part.value;
     case 'class':
       return hasClass(element, part.value);
+    case 'universal':
+      return true; // Matches any element
     default:
       return false;
   }
 }
 
 /**
- * Check if a selector matches an element
- * All parts of a compound selector must match
+ * Check if a compound selector matches an element
+ * All parts must match the same element
  */
-export function selectorMatches(selector: StyleSelector, element: Element): boolean {
-  if (selector.parts.length === 0) {
+function compoundSelectorMatches(compound: CompoundSelector, element: Element): boolean {
+  if (compound.parts.length === 0) {
+    return false;
+  }
+  return compound.parts.every(part => selectorPartMatches(part, element));
+}
+
+/**
+ * Check if a selector matches an element, considering ancestors for combinators
+ * @param selector The parsed selector (segments with combinators)
+ * @param element The target element to match
+ * @param ancestors Optional array of ancestor elements (parent first, then grandparent, etc.)
+ */
+export function selectorMatches(selector: StyleSelector, element: Element, ancestors: Element[] = []): boolean {
+  if (selector.segments.length === 0) {
     return false;
   }
 
-  // All parts must match (compound selector)
-  return selector.parts.every(part => selectorPartMatches(part, element));
+  // The last segment must match the target element
+  const targetSegment = selector.segments[selector.segments.length - 1];
+  if (!compoundSelectorMatches(targetSegment.compound, element)) {
+    return false;
+  }
+
+  // If only one segment, we're done
+  if (selector.segments.length === 1) {
+    return true;
+  }
+
+  // Check ancestor segments, respecting combinator types
+  // Work backwards through segments, matching against ancestors
+  let ancestorIndex = 0;
+
+  for (let i = selector.segments.length - 2; i >= 0; i--) {
+    const segment = selector.segments[i];
+    // The combinator is on the NEXT segment (the one that comes after this in the chain)
+    const nextSegment = selector.segments[i + 1];
+    const combinator = nextSegment.combinator || 'descendant';
+
+    if (combinator === 'child') {
+      // Child combinator: must match the immediate ancestor (current ancestorIndex)
+      if (ancestorIndex >= ancestors.length) {
+        return false;
+      }
+      if (!compoundSelectorMatches(segment.compound, ancestors[ancestorIndex])) {
+        return false;
+      }
+      ancestorIndex++;
+    } else {
+      // Descendant combinator: search through ancestors for a match
+      let found = false;
+      while (ancestorIndex < ancestors.length) {
+        if (compoundSelectorMatches(segment.compound, ancestors[ancestorIndex])) {
+          ancestorIndex++;
+          found = true;
+          break;
+        }
+        ancestorIndex++;
+      }
+      if (!found) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 /**
  * Check if a selector string matches an element.
  * Supports comma-separated selectors (OR): "img, canvas, .media"
+ * @param ancestors Optional array of ancestor elements for descendant matching
  */
-export function selectorStringMatches(selectorString: string, element: Element): boolean {
+export function selectorStringMatches(selectorString: string, element: Element, ancestors: Element[] = []): boolean {
   // Handle comma-separated selectors (OR)
   if (selectorString.includes(',')) {
-    return selectorString.split(',').some(s => selectorStringMatches(s.trim(), element));
+    return selectorString.split(',').some(s => selectorStringMatches(s.trim(), element, ancestors));
   }
-  return selectorMatches(parseSelector(selectorString), element);
+  return selectorMatches(parseSelector(selectorString), element, ancestors);
 }
 
 /**
@@ -263,12 +387,18 @@ function normalizeBoxSpacing(style: Record<string, any>, property: 'padding' | '
 export function parseStyleBlock(css: string): StyleItem[] {
   const items: StyleItem[] = [];
 
+  // Strip CSS comments before parsing
+  // Remove block comments /* ... */ and single-line comments // ...
+  const cssWithoutComments = css
+    .replace(/\/\*[\s\S]*?\*\//g, '')  // Block comments
+    .replace(/\/\/.*$/gm, '');          // Single-line comments
+
   // Simple regex-based parsing for CSS-like rules
   // Match: selector { properties }
   const rulePattern = /([^{]+)\{([^}]*)\}/g;
 
   let match;
-  while ((match = rulePattern.exec(css)) !== null) {
+  while ((match = rulePattern.exec(cssWithoutComments)) !== null) {
     const selectorStr = match[1].trim();
     const propertiesStr = match[2].trim();
 
@@ -320,12 +450,13 @@ export class Stylesheet {
 
   /**
    * Get all styles that match an element (in order of definition)
+   * @param ancestors Optional array of ancestor elements for descendant matching
    */
-  getMatchingStyles(element: Element): Style[] {
+  getMatchingStyles(element: Element, ancestors: Element[] = []): Style[] {
     const matchingStyles: Style[] = [];
 
     for (const item of this._items) {
-      if (selectorMatches(item.selector, element)) {
+      if (selectorMatches(item.selector, element, ancestors)) {
         matchingStyles.push(item.style);
       }
     }
@@ -335,9 +466,10 @@ export class Stylesheet {
 
   /**
    * Get merged style for an element (all matching rules combined)
+   * @param ancestors Optional array of ancestor elements for descendant matching
    */
-  getMergedStyle(element: Element): Style {
-    const matchingStyles = this.getMatchingStyles(element);
+  getMergedStyle(element: Element, ancestors: Element[] = []): Style {
+    const matchingStyles = this.getMatchingStyles(element, ancestors);
     return matchingStyles.reduce((merged, style) => ({ ...merged, ...style }), {});
   }
 
@@ -383,10 +515,11 @@ export class Stylesheet {
 /**
  * Apply stylesheet styles to an element and all its children.
  * Stylesheet styles are merged under inline styles (inline takes priority).
+ * Supports descendant selectors by tracking ancestor chain.
  */
-export function applyStylesheet(element: Element, stylesheet: Stylesheet): void {
-  // Get matching stylesheet styles for this element
-  const stylesheetStyle = stylesheet.getMergedStyle(element);
+export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancestors: Element[] = []): void {
+  // Get matching stylesheet styles for this element (with ancestor context)
+  const stylesheetStyle = stylesheet.getMergedStyle(element, ancestors);
 
   if (Object.keys(stylesheetStyle).length > 0) {
     // Merge: stylesheet styles first, then inline styles on top
@@ -394,10 +527,11 @@ export function applyStylesheet(element: Element, stylesheet: Stylesheet): void 
     element.props.style = { ...stylesheetStyle, ...inlineStyle };
   }
 
-  // Recursively apply to children
+  // Recursively apply to children, adding current element to ancestors
   if (element.children) {
+    const childAncestors = [element, ...ancestors];
     for (const child of element.children) {
-      applyStylesheet(child, stylesheet);
+      applyStylesheet(child, stylesheet, childAncestors);
     }
   }
 }

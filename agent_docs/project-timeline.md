@@ -1,6 +1,6 @@
 # Melker Project Timeline
 
-Development history from December 2025 to January 2026.
+Development history from December 2025 to February 2026.
 
 ## December 2025: Foundation
 
@@ -108,6 +108,37 @@ Development history from December 2025 to January 2026.
 - Kitty graphics (detection, encoding, stable image IDs)
 - Documentation reorganization
 
+### Week 9 (Jan 30-31)
+
+**Jan 30** — Graph and Mermaid system (Build 250)
+- Graph component with Mermaid parser (`src/components/graph/`)
+- Connector component for Unicode box-drawing lines between elements
+- Flowchart, sequence diagram, and class diagram support
+- Stdout mode for piped/non-TTY output (`--stdout`, auto-detection)
+- Markdown module refactor (split into code, image, table submodules)
+- Graph architecture and Mermaid support documentation
+
+**Jan 31** — Policy system and text styling
+- Permission override system (`--allow-*`, `--deny-*` CLI flags)
+- Policy architecture documentation (`policy-architecture.md`)
+- Text decoration support (underline, strikethrough, overline, dim)
+- Mermaid showcase example
+- 825+ new policy tests
+
+## February 2026: Continued Development
+
+### Week 10 (Feb 2)
+
+**Feb 2** — Layout system, CSS selectors, and feedback components
+- CSS combinators (descendant `a b`, child `a > b`, compound `a.b`)
+- Flex-wrap support for responsive layouts
+- Major layout engine improvements with 1000+ new test lines
+- TUI comparison document overhaul (detailed feature matrices)
+- Documentation cleanup (dx-footguns rewrite, media queries plan)
+- Spinner component (8 animation styles: dots, line, arc, bounce, etc.)
+- Toast notification system (`$melker.toast.*` API)
+- PlantUML implementation plan
+
 ---
 
 ## Components
@@ -127,6 +158,10 @@ Development history from December 2025 to January 2026.
 | file-browser     | Jan 11 | Directory/file picker                  |
 | segment-display  | Jan 16 | LCD-style displays                     |
 | data-bars        | Jan 21 | Bar charts and sparklines              |
+| graph            | Jan 30 | Mermaid diagrams (flowchart, sequence, class) |
+| connector        | Jan 30 | Box-drawing lines between elements     |
+| spinner          | Feb 2  | Animated loading indicators            |
+| toast            | Feb 2  | Non-modal notifications (API-based)    |
 
 ## Architecture
 
@@ -144,6 +179,11 @@ Development history from December 2025 to January 2026.
 | Jan 16 | Segment display (`src/components/segment-display/`) |
 | Jan 22 | Engine split, canvas render modules                 |
 | Jan 25 | Sixel (`src/sixel/`), Kitty (`src/kitty/`)          |
+| Jan 30 | Graph system (`src/components/graph/`), stdout mode |
+| Jan 30 | Markdown split (code, image, table submodules)      |
+| Jan 31 | Permission overrides, policy architecture docs      |
+| Feb 2  | CSS combinators, flex-wrap, layout tests            |
+| Feb 2  | Toast system (`src/toast/`)                         |
 
 ## Milestones
 
@@ -161,3 +201,7 @@ Development history from December 2025 to January 2026.
 | 226   | Jan 20 | Dirty row tracking                       |
 | 239   | Jan 22 | Data bars, tutorial                      |
 | 242   | Jan 26 | Sixel and Kitty graphics                 |
+| 250   | Jan 30 | Graph/Mermaid, connector, stdout mode    |
+| 262   | Jan 31 | Permission overrides, text decoration    |
+| 270   | Feb 2  | CSS combinators, flex-wrap               |
+| 274   | Feb 2  | Spinner, toast notifications             |

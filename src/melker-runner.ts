@@ -10,7 +10,7 @@ import { restoreTerminal } from './terminal-lifecycle.ts';
 import { Env } from './env.ts';
 import { parseCliFlags, MelkerConfig } from './config/mod.ts';
 import { getLogger } from './logging.ts';
-import { isStdoutEnabled, isStdoutAutoEnabled, getStdoutConfig, bufferToStdout } from './stdout.ts';
+import { isStdoutEnabled, isStdoutAutoEnabled, getStdoutConfig, bufferToStdout, trimStdoutOutput } from './stdout.ts';
 
 // Import library to register components before template parsing
 import '../mod.ts';
@@ -808,10 +808,12 @@ export async function runMelkerFile(
       // Get the buffer from the engine and output it
       const buffer = (engine as any)._buffer;
       if (buffer) {
-        const output = bufferToStdout(buffer, {
+        let output = bufferToStdout(buffer, {
           colorSupport: stdoutConfig.colorSupport,
           stripAnsi: stdoutConfig.stripAnsi,
         });
+        // Apply trimming if configured
+        output = trimStdoutOutput(output, stdoutConfig.trim);
         const encoder = new TextEncoder();
         await Deno.stdout.write(encoder.encode(output + '\n'));
       }

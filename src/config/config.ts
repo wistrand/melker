@@ -867,6 +867,10 @@ export class MelkerConfig {
     return (this.data['stdout.color'] as 'auto' | 'always' | 'never') ?? 'auto';
   }
 
+  get stdoutTrim(): 'none' | 'right' | 'bottom' | 'both' {
+    return (this.data['stdout.trim'] as 'none' | 'right' | 'bottom' | 'both') ?? 'none';
+  }
+
   // Toast
   get toastMaxVisible(): number {
     return (this.data['toast.maxVisible'] as number) ?? 5;

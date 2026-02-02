@@ -173,6 +173,7 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 | `MELKER_STDOUT_HEIGHT`       | Stdout mode output height (default: terminal height)                                                                                                               |
 | `MELKER_STDOUT_TIMEOUT`      | Stdout mode wait time in ms before output (default: 500)                                                                                                           |
 | `MELKER_STDOUT_COLOR`        | ANSI color output: `auto` (strip when piped), `always` (force colors), `never` (no colors)                                                                         |
+| `MELKER_STDOUT_TRIM`         | Trim stdout output: `none` (default), `right` (trailing spaces), `bottom` (trailing newlines), `both`                                                              |
 | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`)                                                                                                                    |
 | `MELKER_DEBUG_PORT`          | Debug server port (implies `net: localhost`)                                                                                                                       |
 | `MELKER_ALLOW_REMOTE_INPUT`  | Allow browser mirror to send mouse/keyboard events (`true` or `1`)                                                                                                 |

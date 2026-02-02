@@ -282,30 +282,35 @@ MELKER_THEME=bw-std ./melker.ts --stdout --trust app.melker
 # Pipe to file or other tools
 ./melker.ts --stdout --trust app.melker > output.txt
 
+# Trim trailing spaces and newlines from output
+./melker.ts --stdout --stdout-trim=both --trust app.melker
+
 # Force ANSI colors when piping (e.g., to less -R)
 ./melker.ts --color=always --trust app.melker | less -R
 ```
 
 **CLI Flags:**
 
-| Flag               | Description                                       |
-|--------------------|---------------------------------------------------|
-| `--stdout`         | Enable stdout mode                                |
-| `--stdout-width`   | Output width in columns (default: terminal width) |
-| `--stdout-height`  | Output height in rows (default: terminal height)  |
-| `--stdout-timeout` | Wait time in ms before output (default: 500)      |
-| `--color`          | ANSI color output: `auto`, `always`, `never`      |
-| `--interactive`    | Force TUI mode even when piped                    |
+| Flag               | Description                                            |
+|--------------------|--------------------------------------------------------|
+| `--stdout`         | Enable stdout mode                                     |
+| `--stdout-width`   | Output width in columns (default: terminal width)      |
+| `--stdout-height`  | Output height in rows (default: terminal height)       |
+| `--stdout-timeout` | Wait time in ms before output (default: 500)           |
+| `--stdout-trim`    | Trim output: `none`, `right`, `bottom`, `both`         |
+| `--color`          | ANSI color output: `auto`, `always`, `never`           |
+| `--interactive`    | Force TUI mode even when piped                         |
 
 **Environment Variables:**
 
-| Variable                | Description                             |
-|-------------------------|-----------------------------------------|
-| `MELKER_STDOUT_WIDTH`   | Output width in columns                 |
-| `MELKER_STDOUT_HEIGHT`  | Output height in rows                   |
-| `MELKER_STDOUT_TIMEOUT` | Wait time in ms before output           |
-| `MELKER_STDOUT_COLOR`   | ANSI color: `auto`, `always`, `never`   |
-| `MELKER_THEME`          | Use `bw-std` for black and white output |
+| Variable                | Description                                    |
+|-------------------------|------------------------------------------------|
+| `MELKER_STDOUT_WIDTH`   | Output width in columns                        |
+| `MELKER_STDOUT_HEIGHT`  | Output height in rows                          |
+| `MELKER_STDOUT_TIMEOUT` | Wait time in ms before output                  |
+| `MELKER_STDOUT_TRIM`    | Trim output: `none`, `right`, `bottom`, `both` |
+| `MELKER_STDOUT_COLOR`   | ANSI color: `auto`, `always`, `never`          |
+| `MELKER_THEME`          | Use `bw-std` for black and white output        |
 
 **Color modes:**
 - `--color=auto` (default): Strip ANSI when piped (not a TTY), keep when TTY

@@ -294,6 +294,14 @@
       "flag": "--color",
       "description": "ANSI color output: auto (strip when piped), always (force colors), never (no colors)"
     },
+    "stdout.trim": {
+      "type": "string",
+      "enum": ["none", "right", "bottom", "both"],
+      "default": "none",
+      "env": "MELKER_STDOUT_TRIM",
+      "flag": "--stdout-trim",
+      "description": "Trim stdout output: none (default), right (trailing spaces), bottom (trailing newlines), both"
+    },
     "allow.read": {
       "type": "array",
       "items": { "type": "string" },

@@ -144,6 +144,7 @@ melker --watch app.melker      # Auto-reload on changes
 melker --show-policy app.melker # Show permissions
 melker --trust app.melker      # Bypass approval prompt (CI/scripts)
 melker --stdout app.melker     # Output single frame to stdout and exit
+melker --stdout-trim=both app.melker # Trim trailing spaces and newlines
 melker --interactive app.melker # Force TUI mode even when piped
 melker --color=always app.melker # Force ANSI colors even when piped
 

@@ -23,6 +23,7 @@ export interface StdoutOptions {
   timeout: number;
   colorSupport: 'none' | '16' | '256' | 'truecolor';
   stripAnsi: boolean;
+  trim: 'none' | 'right' | 'bottom' | 'both';
 }
 
 /**
@@ -121,6 +122,7 @@ export function getStdoutConfig(): StdoutOptions {
     timeout: config.stdoutTimeout ?? 500,
     colorSupport: stripAnsi ? 'none' : colorSupport,
     stripAnsi,
+    trim: config.stdoutTrim ?? 'none',
   };
 }
 
@@ -180,6 +182,38 @@ export function bufferToStdout(
       line += '\x1b[0m';
     }
     lines.push(line);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Trim stdout output based on trim mode
+ * - right: trim trailing spaces from each line
+ * - bottom: trim trailing empty lines
+ * - both: trim both right and bottom
+ * - none: no trimming
+ */
+export function trimStdoutOutput(
+  output: string,
+  trim: 'none' | 'right' | 'bottom' | 'both'
+): string {
+  if (trim === 'none') {
+    return output;
+  }
+
+  let lines = output.split('\n');
+
+  // Trim trailing spaces from each line (right trim)
+  if (trim === 'right' || trim === 'both') {
+    lines = lines.map(line => line.replace(/\s+$/, ''));
+  }
+
+  // Trim trailing empty lines (bottom trim)
+  if (trim === 'bottom' || trim === 'both') {
+    while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+      lines.pop();
+    }
   }
 
   return lines.join('\n');
@@ -318,10 +352,13 @@ export class StdoutManager {
       return;
     }
 
-    const output = bufferToStdout(this._buffer, {
+    let output = bufferToStdout(this._buffer, {
       colorSupport: this._config.colorSupport,
       stripAnsi: this._config.stripAnsi,
     });
+
+    // Apply trimming if configured
+    output = trimStdoutOutput(output, this._config.trim);
 
     // Write to stdout
     const encoder = new TextEncoder();

@@ -962,7 +962,7 @@ function getRelationArrow(type: ClassRelationType): 'end' | 'none' | 'start' {
  * Get arrow type for connector based on sequence arrow style
  */
 function getSequenceArrow(arrow: SequenceArrowStyle): 'end' | 'none' | 'both' {
-  return arrow === 'solidOpen' || arrow === 'dashedOpen' ? 'end' : 'end';
+  return arrow === 'solidOpen' || arrow === 'dashedOpen' ? 'none' : 'end';
 }
 
 /**

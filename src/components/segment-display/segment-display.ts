@@ -6,6 +6,7 @@ import type { DualBuffer, Cell } from '../../buffer.ts';
 import { getCharset, isSpecialChar, type SegmentMask } from './charsets.ts';
 import { getRenderer, type SegmentRenderer } from './renderers.ts';
 import type { SegmentHeight, SegmentRenderOptions } from './types.ts';
+import { getUIAnimationManager } from '../../ui-animation-manager.ts';
 
 export interface SegmentDisplayProps extends BaseProps {
   value?: string;              // Text to display
@@ -24,7 +25,8 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
   private _renderer: SegmentRenderer | null = null;
   private _charset: Record<string, SegmentMask> | null = null;
   private _scrollOffset = 0;
-  private _scrollTimer: number | null = null;
+  private _animationId: string | null = null;
+  private _unregisterFn: (() => void) | null = null;
   private _lastValue: string | null = null;
   private _renderedLines: string[] | null = null;
   private _totalWidth = 0;
@@ -146,31 +148,32 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
    * Start scrolling animation
    */
   private startScrolling(): void {
-    if (this._scrollTimer !== null) return;
+    if (this._animationId) return;
 
     const speed = this.props.scrollSpeed || 200;
-    this._scrollTimer = setInterval(() => {
+    this._animationId = `segment-display-${this.id}-${Date.now()}`;
+    const manager = getUIAnimationManager();
+
+    this._unregisterFn = manager.register(this._animationId, () => {
       this._scrollOffset++;
       const gap = this.props.scrollGap || 3;
       if (this._scrollOffset >= this._totalWidth + gap) {
         this._scrollOffset = 0;
       }
-      // Request re-render
-      const engine = globalThis.melkerEngine;
-      if (engine?.render) {
-        engine.render();
-      }
-    }, speed) as unknown as number;
+      manager.requestRender();
+    }, speed);
   }
 
   /**
    * Stop scrolling animation
    */
   private stopScrolling(): void {
-    if (this._scrollTimer !== null) {
-      clearInterval(this._scrollTimer);
-      this._scrollTimer = null;
+    if (!this._animationId) return;
+    if (this._unregisterFn) {
+      this._unregisterFn();
+      this._unregisterFn = null;
     }
+    this._animationId = null;
   }
 
   /**

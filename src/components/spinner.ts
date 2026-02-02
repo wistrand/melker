@@ -2,6 +2,7 @@
 
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
+import { getUIAnimationManager } from '../ui-animation-manager.ts';
 
 /** Spinner animation variants */
 export type SpinnerVariant = 'none' | 'line' | 'dots' | 'braille' | 'arc' | 'bounce' | 'flower' | 'pulse';
@@ -41,57 +42,8 @@ const VERB_THEMES: Record<VerbTheme, string[]> = {
   stargazing: ['Stargazing', 'Moonwatching', 'Skydreaming', 'Cloudreading', 'Stardrifting', 'Constellation', 'Celestial', 'Cosmic'],
 };
 
-/**
- * Shared animation manager for all spinners.
- * Uses a single timer to drive all spinner animations efficiently.
- */
-class SpinnerAnimationManager {
-  private static _instance: SpinnerAnimationManager | null = null;
-  private _timer: number | null = null;
-  private _spinners: Set<SpinnerElement> = new Set();
-  private _requestRender: (() => void) | null = null;
-
-  /** Base tick interval in ms - all spinners derive timing from this */
-  static readonly TICK_INTERVAL = 40;
-
-  static getInstance(): SpinnerAnimationManager {
-    if (!SpinnerAnimationManager._instance) {
-      SpinnerAnimationManager._instance = new SpinnerAnimationManager();
-    }
-    return SpinnerAnimationManager._instance;
-  }
-
-  register(spinner: SpinnerElement, requestRender: () => void): void {
-    this._spinners.add(spinner);
-    this._requestRender = requestRender;
-    this._startIfNeeded();
-  }
-
-  unregister(spinner: SpinnerElement): void {
-    this._spinners.delete(spinner);
-    this._stopIfEmpty();
-  }
-
-  private _startIfNeeded(): void {
-    if (this._timer !== null) return;
-    if (this._spinners.size === 0) return;
-
-    this._timer = setInterval(() => {
-      if (this._requestRender) {
-        this._requestRender();
-      }
-    }, SpinnerAnimationManager.TICK_INTERVAL);
-  }
-
-  private _stopIfEmpty(): void {
-    if (this._spinners.size > 0) return;
-    if (this._timer !== null) {
-      clearInterval(this._timer);
-      this._timer = null;
-      this._requestRender = null;
-    }
-  }
-}
+/** Base animation tick interval for spinners (in ms) */
+const SPINNER_TICK_INTERVAL = 50;
 
 export interface SpinnerProps extends BaseProps {
   /** Text displayed beside the spinner (ignored if verbs is set) */
@@ -120,7 +72,8 @@ export class SpinnerElement extends Element implements Renderable {
 
   // Animation state - time-based instead of frame counters
   private _startTime: number = 0;
-  private _registered: boolean = false;
+  private _animationId: string | null = null;
+  private _unregisterFn: (() => void) | null = null;
 
   constructor(props: SpinnerProps, children: Element[] = []) {
     const defaultProps: SpinnerProps = {
@@ -140,22 +93,35 @@ export class SpinnerElement extends Element implements Renderable {
   }
 
   /**
-   * Register with shared animation manager
+   * Register with UI animation manager
    */
-  private _register(requestRender: () => void): void {
-    if (this._registered) return;
+  private _register(): void {
+    if (this._animationId) return;
     this._startTime = Date.now();
-    this._registered = true;
-    SpinnerAnimationManager.getInstance().register(this, requestRender);
+    this._animationId = `spinner-${this.id}-${Date.now()}`;
+    const manager = getUIAnimationManager();
+    this._unregisterFn = manager.register(this._animationId, () => {
+      manager.requestRender();
+    }, SPINNER_TICK_INTERVAL);
   }
 
   /**
-   * Unregister from shared animation manager
+   * Unregister from UI animation manager
    */
   private _unregister(): void {
-    if (!this._registered) return;
-    this._registered = false;
-    SpinnerAnimationManager.getInstance().unregister(this);
+    if (!this._animationId) return;
+    if (this._unregisterFn) {
+      this._unregisterFn();
+      this._unregisterFn = null;
+    }
+    this._animationId = null;
+  }
+
+  /**
+   * Cleanup when element is destroyed
+   */
+  destroy(): void {
+    this._unregister();
   }
 
   /**
@@ -206,10 +172,10 @@ export class SpinnerElement extends Element implements Renderable {
   ): void {
     const spinning = this.props.spinning ?? true;
 
-    // Register/unregister with shared animation manager
-    if (spinning && !this._registered && context.requestRender) {
-      this._register(context.requestRender);
-    } else if (!spinning && this._registered) {
+    // Register/unregister with UI animation manager
+    if (spinning && !this._animationId) {
+      this._register();
+    } else if (!spinning && this._animationId) {
       this._unregister();
     }
 

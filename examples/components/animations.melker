@@ -1,0 +1,140 @@
+<melker>
+  <title>Animation Manager Demo</title>
+
+  <help>
+## Animation Manager Demo
+
+Demonstrates components using the centralized UIAnimationManager:
+
+- **Spinner** - Loading indicator with configurable style
+- **Progress** - Indeterminate progress bar
+- **Segment Display** - Scrolling text
+
+All animations use a shared 12ms timer tick for efficiency.
+Toggle animations on/off to see CPU usage only when active.
+  </help>
+
+  <container style="flex-direction: column; padding: 1; gap: 1;">
+    <text style="font-weight: bold;">UIAnimationManager Demo</text>
+    <text style="dim: true;">All animations share a single timer (12ms tick)</text>
+
+    <!-- Spinner Section -->
+    <container style="flex-direction: column; gap: 1; margin-top: 1;">
+      <text style="font-weight: bold;">Spinner</text>
+      <container style="flex-direction: row; gap: 2; align-items: center;">
+        <spinner id="spinner1" spinning={false} />
+        <text id="spinner-status">Inactive</text>
+      </container>
+      <container style="flex-direction: row; gap: 1;">
+        <button onClick="$app.toggleSpinner()">Toggle Spinner</button>
+      </container>
+    </container>
+
+    <!-- Progress Section -->
+    <container style="flex-direction: column; gap: 1; margin-top: 1;">
+      <text style="font-weight: bold;">Progress (Indeterminate)</text>
+      <container style="flex-direction: row; gap: 2; align-items: center;">
+        <progress id="progress1" width="30" indeterminate={false} />
+        <text id="progress-status">Inactive</text>
+      </container>
+      <container style="flex-direction: row; gap: 1;">
+        <button onClick="$app.toggleProgress()">Toggle Progress</button>
+      </container>
+    </container>
+
+    <!-- Segment Display Section -->
+    <container style="flex-direction: column; gap: 1; margin-top: 1;">
+      <text style="font-weight: bold;">Segment Display (Scrolling)</text>
+      <segment-display id="segment1" value="HELLO WORLD" style="height: 5; color: cyan;" />
+      <text id="segment-status">Inactive</text>
+      <container style="flex-direction: row; gap: 1;">
+        <button onClick="$app.toggleScroll()">Toggle Scroll</button>
+      </container>
+    </container>
+
+    <!-- All Controls -->
+    <container style="flex-direction: row; gap: 2; margin-top: 2; border-top: thin; padding-top: 1;">
+      <button onClick="$app.startAll()">Start All</button>
+      <button onClick="$app.stopAll()">Stop All</button>
+    </container>
+
+    <text id="animation-count" style="margin-top: 1; dim: true;">Active animations: 0</text>
+    <text style="dim: true;">Intervals: spinner=50ms, progress=50ms, scroll=24ms</text>
+    <text style="dim: true;">Adaptive tick: min(intervals)/2 = 12ms when scroll active, 25ms otherwise</text>
+  </container>
+
+  <script type="typescript">
+    let spinnerActive = false;
+    let progressActive = false;
+    let scrollActive = false;
+
+    function updateStatus() {
+      const count = (spinnerActive ? 1 : 0) + (progressActive ? 1 : 0) + (scrollActive ? 1 : 0);
+      $melker.getElementById('animation-count')?.setValue(`Active animations: ${count}`);
+      $melker.getElementById('spinner-status')?.setValue(spinnerActive ? 'Active' : 'Inactive');
+      $melker.getElementById('progress-status')?.setValue(progressActive ? 'Active' : 'Inactive');
+      $melker.getElementById('segment-status')?.setValue(scrollActive ? 'Active' : 'Inactive');
+    }
+
+    export function toggleSpinner() {
+      spinnerActive = !spinnerActive;
+      const spinner = $melker.getElementById('spinner1');
+      if (spinner) {
+        spinner.props.spinning = spinnerActive;
+      }
+      updateStatus();
+    }
+
+    export function toggleProgress() {
+      progressActive = !progressActive;
+      const progress = $melker.getElementById('progress1');
+      if (progress) {
+        progress.setIndeterminate(progressActive);
+      }
+      updateStatus();
+    }
+
+    export function toggleScroll() {
+      scrollActive = !scrollActive;
+      const segment = $melker.getElementById('segment1');
+      if (segment) {
+        segment.props.scroll = scrollActive;
+      }
+      updateStatus();
+    }
+
+    export function startAll() {
+      spinnerActive = true;
+      progressActive = true;
+      scrollActive = true;
+
+      const spinner = $melker.getElementById('spinner1');
+      if (spinner) spinner.props.spinning = true;
+
+      const progress = $melker.getElementById('progress1');
+      if (progress) progress.setIndeterminate(true);
+
+      const segment = $melker.getElementById('segment1');
+      if (segment) segment.props.scroll = true;
+
+      updateStatus();
+    }
+
+    export function stopAll() {
+      spinnerActive = false;
+      progressActive = false;
+      scrollActive = false;
+
+      const spinner = $melker.getElementById('spinner1');
+      if (spinner) spinner.props.spinning = false;
+
+      const progress = $melker.getElementById('progress1');
+      if (progress) progress.setIndeterminate(false);
+
+      const segment = $melker.getElementById('segment1');
+      if (segment) segment.props.scroll = false;
+
+      updateStatus();
+    }
+  </script>
+</melker>

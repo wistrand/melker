@@ -5,6 +5,7 @@ import { type DualBuffer, EMPTY_CHAR } from './buffer.ts';
 import { BORDER_CHARS, type Bounds } from './types.ts';
 import { getThemeColor } from './theme.ts';
 import { parseColor } from './components/color-utils.ts';
+import { getUIAnimationManager } from './ui-animation-manager.ts';
 
 export interface PerformanceStats {
   // Render stats
@@ -46,6 +47,10 @@ export interface PerformanceStats {
   shaderFrameTimeAvg: number; // Average shader frame time (ms)
   shaderFps: number;         // Shader frames per second
   shaderPixels: number;      // Total pixels being rendered by shaders
+
+  // Animation stats
+  animationCount: number;    // Number of active animations
+  animationTick: number;     // Current adaptive tick interval (ms)
 }
 
 export interface PerformanceDialogOptions {
@@ -703,6 +708,11 @@ export class PerformanceDialog {
       lines.push({ label: 'Frame time', value: formatMs(stats.shaderFrameTime), color: shaderTimeColor });
       lines.push({ label: 'Frame avg', value: formatMs(stats.shaderFrameTimeAvg) });
       lines.push({ label: 'Pixels', value: stats.shaderPixels > 1000 ? `${(stats.shaderPixels / 1000).toFixed(1)}k` : String(stats.shaderPixels) });
+    }
+
+    // Add animation stats if animations are running
+    if (stats.animationCount > 0) {
+      lines.push({ label: 'Animations', value: `${stats.animationCount} @ ${stats.animationTick}ms` });
     }
 
     lines.push({ label: 'Nodes', value: String(stats.layoutNodeCount) });

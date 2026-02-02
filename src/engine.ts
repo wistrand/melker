@@ -160,6 +160,11 @@ import {
   handleToastClick,
   getToastManager,
 } from './toast/mod.ts';
+import {
+  initUIAnimationManager,
+  shutdownUIAnimationManager,
+  getUIAnimationManager,
+} from './ui-animation-manager.ts';
 
 // Initialize config logger getter (breaks circular dependency between config.ts and logging.ts)
 setLoggerGetter(() => getLogger('Config'));
@@ -366,6 +371,9 @@ export class MelkerEngine {
       width: config.toastWidth,
     });
     toastManager.setRequestRender(() => this.render());
+
+    // Initialize UI animation manager
+    initUIAnimationManager(() => this.render());
 
     // Apply theme-based color support if not explicitly set
     const currentTheme = this._themeManager.getCurrentTheme();
@@ -1100,6 +1108,9 @@ export class MelkerEngine {
           shaderFrameTimeAvg: perfDialog.getAverageShaderFrameTime(),
           shaderFps: perfDialog.getShaderFps(),
           shaderPixels: perfDialog.getTotalShaderPixels(),
+          // Animation stats
+          animationCount: getUIAnimationManager().count,
+          animationTick: getUIAnimationManager().currentTick,
         };
         perfDialog.render(this._buffer, perfStats);
       } catch {
@@ -1346,6 +1357,9 @@ export class MelkerEngine {
           shaderFrameTimeAvg: perfDialog.getAverageShaderFrameTime(),
           shaderFps: perfDialog.getShaderFps(),
           shaderPixels: perfDialog.getTotalShaderPixels(),
+          // Animation stats
+          animationCount: getUIAnimationManager().count,
+          animationTick: getUIAnimationManager().currentTick,
         };
         perfDialog.render(this._buffer, perfStats);
       } catch {
@@ -2048,6 +2062,9 @@ export class MelkerEngine {
     if (this._textSelectionHandler) {
       this._textSelectionHandler.cleanup();
     }
+
+    // Stop UI animation manager
+    shutdownUIAnimationManager();
 
     // Stop all video elements (kills ffmpeg/ffplay processes)
     try {

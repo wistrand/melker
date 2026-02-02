@@ -7,6 +7,7 @@ import { getCurrentTheme } from '../theme.ts';
 import { lerpColor, type ColorSpace } from './color-utils.ts';
 import { getLogger } from '../logging.ts';
 import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
+import { getUIAnimationManager } from '../ui-animation-manager.ts';
 
 const logger = getLogger('progress');
 
@@ -34,10 +35,10 @@ export interface ProgressProps extends Omit<CanvasProps, 'width' | 'height'> {
 
 export class ProgressElement extends CanvasElement {
   // Indeterminate animation state
-  private _animationTimer: number | null = null;
+  private _animationId: string | null = null;
+  private _unregisterFn: (() => void) | null = null;
   private _animationPosition: number = 0;
   private _animationDirection: number = 1;
-  private _requestRender: (() => void) | null = null;
 
   // Responsive sizing state (like img)
   private _originalWidth: number | string;
@@ -257,13 +258,14 @@ export class ProgressElement extends CanvasElement {
   /**
    * Start indeterminate animation
    */
-  private _startAnimation(requestRender?: () => void): void {
-    if (this._animationTimer !== null) return;
+  private _startAnimation(): void {
+    if (this._animationId) return;
 
-    this._requestRender = requestRender ?? null;
     const speed = this.props.animationSpeed ?? 50;
+    this._animationId = `progress-${this.id}-${Date.now()}`;
+    const manager = getUIAnimationManager();
 
-    this._animationTimer = setInterval(() => {
+    this._unregisterFn = manager.register(this._animationId, () => {
       // Update position (ping-pong animation)
       this._animationPosition += 0.05 * this._animationDirection;
 
@@ -277,9 +279,7 @@ export class ProgressElement extends CanvasElement {
 
       // Mark dirty and request render
       this.markDirty();
-      if (this._requestRender) {
-        this._requestRender();
-      }
+      manager.requestRender();
     }, speed);
   }
 
@@ -287,10 +287,19 @@ export class ProgressElement extends CanvasElement {
    * Stop indeterminate animation
    */
   private _stopAnimation(): void {
-    if (this._animationTimer !== null) {
-      clearInterval(this._animationTimer);
-      this._animationTimer = null;
+    if (!this._animationId) return;
+    if (this._unregisterFn) {
+      this._unregisterFn();
+      this._unregisterFn = null;
     }
+    this._animationId = null;
+  }
+
+  /**
+   * Cleanup animation on destroy
+   */
+  destroy(): void {
+    this._stopAnimation();
   }
 
   /**
@@ -316,7 +325,7 @@ export class ProgressElement extends CanvasElement {
     this.props.indeterminate = indeterminate;
 
     if (indeterminate && !wasIndeterminate) {
-      this._startAnimation(this._requestRender ?? undefined);
+      this._startAnimation();
     } else if (!indeterminate && wasIndeterminate) {
       this._stopAnimation();
     }
@@ -352,9 +361,9 @@ export class ProgressElement extends CanvasElement {
     }
 
     // Start/stop animation based on indeterminate state
-    if (this.props.indeterminate && this._animationTimer === null) {
-      this._startAnimation(context.requestRender);
-    } else if (!this.props.indeterminate && this._animationTimer !== null) {
+    if (this.props.indeterminate && !this._animationId) {
+      this._startAnimation();
+    } else if (!this.props.indeterminate && this._animationId) {
       this._stopAnimation();
     }
 

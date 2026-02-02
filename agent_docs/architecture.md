@@ -134,6 +134,58 @@ Fast render provides ~2ms latency. See [fast-input-render.md](fast-input-render.
 
 **Dirty row tracking:** Only changed rows are scanned during diff. See [dirty-row-tracking.md](dirty-row-tracking.md).
 
+## UI Animation Manager (`src/ui-animation-manager.ts`)
+
+Centralized timer for UI animations. Components register callbacks instead of creating individual timers.
+
+**Benefits:**
+- Single timer reduces overhead
+- Batched render calls
+- Adaptive tick interval based on registered animations
+- Drift correction maintains timing accuracy
+
+**Adaptive Tick (Nyquist-based):**
+```
+tick = max(MIN_TICK, min(all intervals) / 2)
+```
+
+| Scenario                      | Min interval | Tick interval |
+|-------------------------------|--------------|---------------|
+| Fast animation (scroll 24ms)  | 24ms         | 12ms          |
+| Slow animations only (50ms+)  | 50ms         | 25ms          |
+| No animations                 | --           | Timer stopped |
+
+**Drift Correction:**
+
+Animations stay on schedule despite timing jitter:
+```
+lastTick += interval    // Advance by interval (drift correction)
+if (now - lastTick > interval)
+  lastTick = now        // Reset if >1 interval behind (avoid catch-up spam)
+```
+
+| Scenario | Behavior |
+|----------|----------|
+| Normal jitter (< interval) | Catches up to ideal schedule |
+| Major delay (> interval) | Fires once, resets, no rapid-fire |
+
+**Usage:**
+```typescript
+const manager = getUIAnimationManager();
+const unregister = manager.register('my-animation', (elapsed) => {
+  updateFrame();
+  manager.requestRender();
+}, 100); // 100ms interval
+
+// Cleanup
+unregister();
+```
+
+**Components using UIAnimationManager:**
+- `spinner` - Rotating indicator (`spinning` prop)
+- `progress` - Indeterminate mode (`indeterminate` prop)
+- `segment-display` - Scrolling text (`scroll` prop)
+
 ## Style Inheritance
 
 Only these properties inherit to children:
@@ -191,7 +243,9 @@ When `stop()` is called:
 | Table           | `table.ts`                           | Data table with sections          |
 | Data Table      | `data-table.ts`                      | High-performance array-based      |
 | Tabs/Tab        | `tabs.ts`, `tab.ts`                  | Tabbed interface                  |
-| Progress        | `progress.ts`                        | Progress bar                      |
+| Progress        | `progress.ts`                        | Progress bar, indeterminate mode  |
+| Spinner         | `spinner.ts`                         | Loading indicator                 |
+| Segment Display | `segment-display/segment-display.ts` | LCD-style digits, scrolling       |
 | Slider          | `slider.ts`                          | Range input                       |
 | Combobox        | `filterable-list/combobox.ts`        | Dropdown with filter              |
 | Select          | `filterable-list/select.ts`          | Dropdown picker                   |
@@ -216,8 +270,9 @@ When `stop()` is called:
 | `src/document.ts`  | Document class                 |
 | `src/events.ts`    | Event system                   |
 | `src/types.ts`     | Core type definitions          |
-| `src/sizing.ts`    | Box model                      |
-| `src/viewport.ts`  | Scrolling support              |
+| `src/sizing.ts`              | Box model                      |
+| `src/viewport.ts`            | Scrolling support              |
+| `src/ui-animation-manager.ts`| Centralized animation timer    |
 
 ## See Also
 

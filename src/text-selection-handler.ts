@@ -18,6 +18,7 @@ import { createThrottledAction, type ThrottledAction } from './utils/timing.ts';
 import { isStatsOverlayEnabled, getGlobalStatsOverlay } from './stats-overlay.ts';
 import { getGlobalPerformanceDialog, type PerformanceStats } from './performance-dialog.ts';
 import { getGlobalErrorHandler } from './error-boundary.ts';
+import { getUIAnimationManager } from './ui-animation-manager.ts';
 
 const logger = getLogger('text-selection');
 
@@ -866,6 +867,9 @@ export class TextSelectionHandler {
           shaderFrameTimeAvg: perfDialog.getAverageShaderFrameTime(),
           shaderFps: perfDialog.getShaderFps(),
           shaderPixels: perfDialog.getTotalShaderPixels(),
+          // Animation stats
+          animationCount: getUIAnimationManager().count,
+          animationTick: getUIAnimationManager().currentTick,
         };
         perfDialog.render(buffer, perfStats);
       } catch {

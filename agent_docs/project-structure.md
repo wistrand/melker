@@ -21,6 +21,7 @@ Detailed file layout for the Melker codebase.
 | `engine-keyboard-handler.ts` | Keyboard event handling                   |
 | `engine-system-palette.ts`  | System command palette logic               |
 | `engine-dialog-utils.ts`    | Dialog traversal and focus trap utilities  |
+| `ui-animation-manager.ts`   | Centralized timer for UI animations        |
 | `layout.ts`                 | Flexbox layout calculations                |
 | `rendering.ts`              | Render pipeline, overlays                  |
 | `buffer.ts`                 | Dual-buffer system                         |
@@ -135,6 +136,7 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `img.ts`                  | Image component (extends canvas)       |
 | `video.ts`                | Video playback                         |
 | `progress.ts`             | Progress bar (extends Canvas)          |
+| `spinner.ts`              | Loading indicator                      |
 | `separator.ts`            | Horizontal/vertical line with optional label |
 | `connector.ts`            | Draw lines between elements by ID      |
 | `connector-utils.ts`      | Line drawing utilities, box-drawing chars |
@@ -164,6 +166,16 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `file-browser.ts` | FileBrowserElement (main component) |
 | `file-entry.ts`   | Type definitions                    |
 | `file-utils.ts`   | Directory loading, formatting utilities |
+
+#### `components/segment-display/` - LCD-Style Display
+
+| File                  | Purpose                        |
+|-----------------------|--------------------------------|
+| `mod.ts`              | Module exports                 |
+| `segment-display.ts`  | SegmentDisplayElement          |
+| `charsets.ts`         | Character segment definitions  |
+| `renderers.ts`        | Renderer styles (box, rounded) |
+| `types.ts`            | Type definitions               |
 
 #### `components/graph/` - Graph/Diagram Rendering
 

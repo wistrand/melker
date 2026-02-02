@@ -1,58 +1,56 @@
 <melker>
-  <container style="border: thin; border-color: magenta; width: fill; height: fill; display: flex; flex-direction: column; background-color: blue; color: white;">
+  <container style="border: thin; width: fill; height: fill; display: flex; flex-direction: column;">
 
     <!-- Header -->
-    <container style="background-color: magenta; color: white; font-weight: bold; padding: 1; border-bottom: thin; border-color: magenta; flex: 0 0 auto; flex-direction: row">
+    <container style="font-weight: bold; padding: 1; border-bottom: thin; flex: 0 0 auto; flex-direction: row; justify-content: space-between;">
       <text text="Procrastinate Pro" style="font-weight: bold;" />
-      <text id="score" text="Score: 0" style="font-weight: bold;" />
+      <text id="score" text="Score: 0" />
     </container>
 
-    <!-- Toast Message Area -->
-    <text id="toast" text="" style="padding: 1; font-weight: bold; height: 1; background-color: brightBlack;" />
 
     <!-- Main Content Area (side by side) -->
     <container style="flex: 1 1 0; display: flex; flex-direction: row; flex-wrap: wrap">
 
       <!-- Left Side - Draft Creation (1/3 width) -->
-      <container style="flex: 1 1 0; display: flex; flex-direction: column; border-right: thin; border-color: gray; background-color: brightBlack; padding: 1;">
+      <container style="flex: 1 1 0; display: flex; flex-direction: column; border-right: thin; padding: 1;">
 
-        <text text="Create New Draft" style="color: yellow; font-weight: bold; margin-bottom: 1;" />
+        <text text="Create New Draft" style="font-weight: bold; margin-bottom: 1;" />
 
-        <text text="What to avoid:" style="color: gray; margin-bottom: 1;" />
-        <input id="draft-input" placeholder="What do you want to avoid doing today?"
-               style="background-color: blue; color: white; margin-bottom: 1;" />
+        <text text="What to avoid:" style="dim: true; margin-bottom: 1;" />
+        <input id="draft-input" placeholder="Enter task to avoid..."
+               style="margin-bottom: 1;" />
 
-        <text text="Deadline:" style="color: gray; margin-bottom: 1;" />
+        <text text="Deadline:" style="dim: true; margin-bottom: 1;" />
         <input id="deadline-input" type="time" value=""
-               style="background-color: blue; color: white; margin-bottom: 1;" />
+               style="margin-bottom: 1;" />
 
         <button id="create-draft-btn" label="Create Draft"
-                style="background-color: magenta; color: white; border: thin; border-color: brightMagenta; padding: 1; margin-bottom: 1;"
+                style="margin-bottom: 1;"
                 onClick="$app.createDraft()" />
 
-        <text text="Tip: Default deadline is 1hr from now" style="color: gray; font-size: small; margin-bottom: 1;" />
+        <text text="Tip: Default deadline is 1hr from now" style="dim: true; margin-bottom: 1;" />
 
         <!-- FAQ Section -->
-        <container style="border-top: thin; border-color: gray; padding-top: 1; margin-top: 1;">
-          <text text="FAQ" style="color: yellow; font-weight: bold; margin-bottom: 1;" />
-          <text text="Q: Why can't I finish tasks?" style="color: yellow; margin-bottom: 1;" />
-          <text text="A: This is who you are now. Embrace it." style="color: gray; margin-bottom: 1;" />
-          <text text="What if everything expires?" style="color: yellow; margin-bottom: 1;" />
-          <text text="A: Perfect! You're becoming a procrastination master." style="color: gray;" />
+        <container style="border-top: thin; padding-top: 1; margin-top: 1;">
+          <text text="FAQ" style="font-weight: bold; margin-bottom: 1;" />
+          <text text="Q: Why can't I finish tasks?" style="font-weight: bold; margin-bottom: 1;" />
+          <text text="A: This is who you are now." style="dim: true; margin-bottom: 1;" />
+          <text text="Q: What if everything expires?" style="font-weight: bold; margin-bottom: 1;" />
+          <text text="A: You're becoming a master." style="dim: true;" />
         </container>
       </container>
 
       <!-- Right Side - Drafts List (2/3 width) -->
       <container style="flex: 2 1 0; display: flex; flex-direction: column; padding: 1;">
 
-        <text text="Your Procrastination Drafts" style="color: cyan; font-weight: bold; margin-bottom: 1;" />
+        <text text="Your Procrastination Drafts" style="font-weight: bold; margin-bottom: 1;" />
 
         <!-- Scrollable Drafts List -->
-        <container id="drafts-list" style="overflow: scroll; flex: 1 1 0; flex-direction: column; border: thin; border-color: gray; padding: 1;">
+        <container id="drafts-list" style="overflow: scroll; flex: 1 1 0; flex-direction: column; border: thin; padding: 1;">
           <!-- Dynamic content will be inserted here by JavaScript -->
         </container>
 
-        <text text="Click buttons to snooze drafts or give up on expired ones" style="color: gray; font-size: small; margin-top: 1;" />
+        <text text="Click buttons to snooze drafts or give up on expired ones" style="dim: true; margin-top: 1;" />
       </container>
 
     </container>
@@ -68,99 +66,65 @@ let draftIdCounter = 0;
 function createSampleDrafts() {
   const now = new Date();
 
-  // Sample draft 1 - expires in 30 minutes
-  const draft1Deadline = new Date(now.getTime() + 30 * 60 * 1000);
   drafts.push({
     id: ++draftIdCounter,
     text: "Write that important report",
-    deadline: draft1Deadline,
+    deadline: new Date(now.getTime() + 30 * 60 * 1000),
     expired: false
   });
 
-  // Sample draft 2 - expires in 2 hours
-  const draft2Deadline = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   drafts.push({
     id: ++draftIdCounter,
     text: "Call dentist for appointment",
-    deadline: draft2Deadline,
+    deadline: new Date(now.getTime() + 2 * 60 * 60 * 1000),
     expired: false
   });
 
-  // Sample draft 3 - already expired (5 minutes ago)
-  const draft3Deadline = new Date(now.getTime() - 5 * 60 * 1000);
   drafts.push({
     id: ++draftIdCounter,
     text: "Clean up messy desk",
-    deadline: draft3Deadline,
+    deadline: new Date(now.getTime() - 5 * 60 * 1000),
     expired: true
   });
 
-  procrastinationScore = 3; // Start with some score from the samples
+  procrastinationScore = 3;
 }
 
-// Initialize default deadline to 1 hour from now
 function initializeDefaultDeadline() {
   const now = new Date();
   const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-  const timeString = oneHourLater.toTimeString().slice(0, 5); // HH:MM format
+  const timeString = oneHourLater.toTimeString().slice(0, 5);
   const deadlineInput = $melker.getElementById('deadline-input');
   if (deadlineInput && !deadlineInput.props.value) {
     deadlineInput.props.value = timeString;
   }
 }
 
-// Toast message system
-function showToast(message, color = 'green') {
-  const toastEl = $melker.getElementById('toast');
-  if (toastEl) {
-    toastEl.setValue(message);
-    toastEl.props.style = { ...toastEl.props.style, color: color };
-    $melker.render();
-
-    // Clear toast after 3 seconds
-    setTimeout(() => {
-      if (toastEl) {
-        toastEl.setValue('');
-        $melker.render();
-      }
-    }, 3000);
-  }
+function showToast(message, type = 'info') {
+  $melker.toast.show(message, { type, duration: 3000 });
 }
 
-// Create a new draft
 export function createDraft() {
-  $melker.logger?.info('User creating new procrastination draft', {
-    action: 'create_draft',
-    timestamp: new Date().toISOString()
-  }, 'ProcrastinateApp');
-
   const inputEl = $melker.getElementById('draft-input');
   const deadlineEl = $melker.getElementById('deadline-input');
 
   if (!inputEl || !inputEl.props.value.trim()) {
-    $melker.logger?.warn('Draft creation failed - no input provided', {
-      action: 'create_draft_failed',
-      reason: 'empty_input'
-    }, 'ProcrastinateApp');
-    showToast('Please enter something to avoid!', 'yellow');
+    showToast('Please enter something to avoid!', 'warning');
     return;
   }
 
   const now = new Date();
   let deadlineTime = deadlineEl && deadlineEl.props.value ? deadlineEl.props.value : '';
 
-  // If no deadline set, default to 1 hour from now
   if (!deadlineTime) {
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
     deadlineTime = oneHourLater.toTimeString().slice(0, 5);
   }
 
-  // Parse deadline time (assuming today's date)
   const [hours, minutes] = deadlineTime.split(':').map(Number);
   const deadlineDate = new Date();
   deadlineDate.setHours(hours, minutes, 0, 0);
 
-  // If the time is earlier than now, assume it's for tomorrow
   if (deadlineDate <= now) {
     deadlineDate.setDate(deadlineDate.getDate() + 1);
   }
@@ -173,111 +137,56 @@ export function createDraft() {
   };
 
   drafts.push(draft);
-
-  // Log successful draft creation
-  $melker.logger?.info('Draft created successfully', {
-    action: 'create_draft_success',
-    draftId: draft.id,
-    draftText: draft.text,
-    deadline: draft.deadline.toISOString(),
-    totalDrafts: drafts.length
-  }, 'ProcrastinateApp');
-
-  // Clear input
   inputEl.props.value = '';
 
-  showToast('Draft created! Another responsibility delayed!', 'green');
+  showToast('Draft created! Another responsibility delayed!', 'success');
   updateDraftsList();
 }
 
-// Snooze a draft
 export function snoozeDraft(draftId, minutes) {
   const draft = drafts.find(d => d.id === draftId);
-  if (!draft) {
-    $melker.logger?.warn('Snooze failed - draft not found', {
-      action: 'snooze_draft_failed',
-      draftId: draftId,
-      reason: 'draft_not_found'
-    }, 'ProcrastinateApp');
-    return;
-  }
+  if (!draft) return;
 
   const now = new Date();
-  const wasExpired = draft.expired;
-  const oldDeadline = draft.deadline.toISOString();
 
   if (draft.expired) {
-    // Revive expired draft
     draft.deadline = new Date(now.getTime() + minutes * 60 * 1000);
     draft.expired = false;
-    showToast('Crisis averted! Future you\'s problem now!', 'green');
+    showToast('Crisis averted! Future you\'s problem now!', 'success');
   } else {
-    // Add time to existing deadline
     draft.deadline = new Date(draft.deadline.getTime() + minutes * 60 * 1000);
     const messages = [
-      'Perfect! Responsibility delayed successfully!',
+      'Perfect! Responsibility delayed!',
       'Excellent procrastination technique!',
       'Why do today what you can avoid forever?',
-      'Another victory against productivity!',
-      'Your future self will understand.'
+      'Another victory against productivity!'
     ];
-    showToast(messages[Math.floor(Math.random() * messages.length)], 'green');
+    showToast(messages[Math.floor(Math.random() * messages.length)], 'success');
   }
-
-  $melker.logger?.info('Draft snoozed', {
-    action: 'snooze_draft',
-    draftId: draftId,
-    draftText: draft.text,
-    snoozeMinutes: minutes,
-    wasExpired: wasExpired,
-    oldDeadline: oldDeadline,
-    newDeadline: draft.deadline.toISOString()
-  }, 'ProcrastinateApp');
 
   procrastinationScore++;
   updateScore();
   updateDraftsList();
 }
 
-// Give up on a draft
 export function giveUpDraft(draftId) {
   const draftIndex = drafts.findIndex(d => d.id === draftId);
-  if (draftIndex === -1) {
-    $melker.logger?.warn('Give up failed - draft not found', {
-      action: 'give_up_draft_failed',
-      draftId: draftId,
-      reason: 'draft_not_found'
-    }, 'ProcrastinateApp');
-    return;
-  }
-
-  const draft = drafts[draftIndex];
-  $melker.logger?.info('User gave up on draft', {
-    action: 'give_up_draft',
-    draftId: draftId,
-    draftText: draft.text,
-    wasExpired: draft.expired,
-    deadline: draft.deadline.toISOString(),
-    remainingDrafts: drafts.length - 1
-  }, 'ProcrastinateApp');
+  if (draftIndex === -1) return;
 
   drafts.splice(draftIndex, 1);
   procrastinationScore++;
 
-  const giveUpMessages = [
+  const messages = [
     'Deadline abandoned! It never mattered anyway.',
-    'Another dream dies. Welcome to adulthood.',
-    'Task officially deceased. Press F to pay respects.',
-    'Surrendered! The deadline was probably fake news.',
-    'Another goal thrown into the void. How liberating!'
+    'Task officially deceased.',
+    'Surrendered! How liberating!'
   ];
 
-  showToast(giveUpMessages[Math.floor(Math.random() * giveUpMessages.length)], 'red');
+  showToast(messages[Math.floor(Math.random() * messages.length)], 'error');
   updateScore();
   updateDraftsList();
 }
 
-// Update procrastination score
 function updateScore() {
   const scoreEl = $melker.getElementById('score');
   if (scoreEl) {
@@ -286,172 +195,88 @@ function updateScore() {
   }
 }
 
-// Format time remaining
 function formatTimeRemaining(deadline) {
   const now = new Date();
   const diff = deadline - now;
 
-  if (diff <= 0) {
-    return 'EXPIRED!';
-  }
+  if (diff <= 0) return 'EXPIRED!';
 
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  } else {
-    return `${seconds}s`;
-  }
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
-// Update drafts list display using individual text elements for scrolling
 function updateDraftsList() {
   const listEl = $melker.getElementById('drafts-list');
-  if (!listEl) {
-    $melker.logger?.warn('Drafts list element not found', {
-      action: 'update_drafts_list_failed',
-      reason: 'element_not_found'
-    }, 'ProcrastinateApp');
-    return;
-  }
+  if (!listEl) return;
 
-  $melker.logger?.info('Updating drafts list', {
-    action: 'update_drafts_list',
-    draftCount: drafts.length
-  }, 'ProcrastinateApp');
-
-  // Clear existing children
   listEl.children = [];
 
   if (drafts.length === 0) {
-    // Add empty state using createElement
     listEl.children.push($melker.createElement('text', {
       text: 'No drafts yet. Start avoiding responsibilities!',
-      style: {
-        color: 'gray',
-        fontStyle: 'italic',
-        textWrap: 'wrap'
-      }
+      style: { dim: true, fontStyle: 'italic' }
     }));
   } else {
-    // Add each draft as a row with text and action buttons
     drafts.forEach((draft, index) => {
       const now = new Date();
       const isExpired = draft.deadline <= now;
       draft.expired = isExpired;
 
       const timeRemaining = formatTimeRemaining(draft.deadline);
-      const status = isExpired ? 'EXPIRED' : timeRemaining;
 
-      // Create row container for each draft
       const draftRow = $melker.createElement('container', {
-        id: `draft-row-${draft.id}`,
         style: {
           display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
-          marginBottom: '1',
-          padding: '1',
-          border: 'thin',
-          borderColor: isExpired ? 'red' : 'gray'
+          marginBottom: 1,
+          padding: 1,
+          border: 'thin'
         }
       });
 
-      // Left side - Draft info
       const draftInfo = $melker.createElement('container', {
-        style: {
-          flex: '1',
-          marginRight: '1'
-        }
+        style: { flex: 1, marginRight: 1 }
       });
 
-      // Draft title
       draftInfo.children.push($melker.createElement('text', {
         text: `${index + 1}. ${draft.text}`,
-        style: {
-          color: isExpired ? 'red' : 'white',
-          fontWeight: 'bold'
-        }
+        style: { fontWeight: 'bold', dim: isExpired }
       }));
 
-      // Status line
       draftInfo.children.push($melker.createElement('text', {
-        text: status,
-        style: {
-          color: isExpired ? 'red' : 'gray',
-          fontSize: 'small'
-        }
+        text: isExpired ? 'EXPIRED!' : timeRemaining,
+        style: { dim: !isExpired }
       }));
 
       draftRow.children.push(draftInfo);
 
-      // Right side - Action buttons container
       const actionsContainer = $melker.createElement('container', {
-        id: `draft-actions-${draft.id}`,
-        style: {
-          display: 'flex',
-          flexDirection: 'row',
-          gap: '1'
-        }
+        style: { display: 'flex', flexDirection: 'row', gap: 1 }
       });
 
       if (isExpired) {
-        // Give up button for expired drafts
         const giveUpBtn = $melker.createElement('button', {
-          id: 'draft-' + draft.id + '-giveup',
-          label: 'Give Up',
-          style: {
-            backgroundColor: 'red',
-            color: 'white',
-            border: 'thin',
-            borderColor: 'brightRed'
-          }
+          label: 'Give Up'
         });
         giveUpBtn.props.onClick = () => giveUpDraft(draft.id);
         actionsContainer.children.push(giveUpBtn);
       }
 
-      // Snooze buttons (available for both active and expired)
-      const btn10min = $melker.createElement('button', {
-        id: `draft-${draft.id}-10min`,
-        label: '+10min',
-        style: {
-          backgroundColor: 'green',
-          color: 'white',
-          border: 'thin',
-          borderColor: 'brightGreen'
-        }
-      });
+      const btn10min = $melker.createElement('button', { label: '+10m' });
       btn10min.props.onClick = () => snoozeDraft(draft.id, 10);
       actionsContainer.children.push(btn10min);
 
-      const btn1hr = $melker.createElement('button', {
-        id: `draft-${draft.id}-1hr`,
-        label: '+1hr',
-        style: {
-          backgroundColor: 'yellow',
-          color: 'black',
-          border: 'thin',
-          borderColor: 'brightYellow'
-        }
-      });
+      const btn1hr = $melker.createElement('button', { label: '+1h' });
       btn1hr.props.onClick = () => snoozeDraft(draft.id, 60);
       actionsContainer.children.push(btn1hr);
 
-      const btn1day = $melker.createElement('button', {
-        id: `draft-${draft.id}-1day`,
-        label: '+1day',
-        style: {
-          backgroundColor: 'magenta',
-          color: 'white',
-          border: 'thin',
-          borderColor: 'brightMagenta'
-        }
-      });
+      const btn1day = $melker.createElement('button', { label: '+1d' });
       btn1day.props.onClick = () => snoozeDraft(draft.id, 1440);
       actionsContainer.children.push(btn1day);
 
@@ -460,17 +285,9 @@ function updateDraftsList() {
     });
   }
 
-  $melker.logger?.debug('Updated drafts list structure', {
-    action: 'drafts_list_updated',
-    childrenCount: listEl.children.length,
-    draftCount: drafts.length
-  }, 'ProcrastinateApp');
-
-  // Force a re-render
   $melker.render();
 }
 
-// Update timers every second
 function startTimerUpdate() {
   setInterval(() => {
     if (drafts.length > 0) {
@@ -479,31 +296,13 @@ function startTimerUpdate() {
   }, 1000);
 }
 
-// Initialize app (called on ready)
 export function init() {
-  $melker.logger?.info('Procrastinate Pro application started', {
-    action: 'app_start',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  }, 'ProcrastinateApp');
-
-  // Create sample drafts for demonstration
   createSampleDrafts();
-
   initializeDefaultDeadline();
-  updateScore(); // Update score display with sample data
+  updateScore();
   startTimerUpdate();
-
-  // Initialize the drafts list display
   updateDraftsList();
-
-  $melker.logger?.info('Application initialization complete', {
-    action: 'app_initialized',
-    features: ['draft_creation', 'snoozing', 'giving_up', 'timer_updates'],
-    initialDrafts: drafts.length
-  }, 'ProcrastinateApp');
 }
-
   </script>
 
   <script type="typescript" async="ready">

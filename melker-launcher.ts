@@ -59,15 +59,16 @@ function resetTerminalState(): void {
 }
 
 /**
- * Create the default all-permissions policy used when no embedded policy is found
+ * Create the default policy used when no embedded policy is found.
+ * Grants read access to current working directory only.
  */
 function createAutoPolicy(filepath: string): MelkerPolicy {
   const filename = filepath.split('/').pop() || filepath;
   return {
     name: `${filename} (Auto Policy)`,
-    description: 'Default policy with all permissions (no embedded policy found)',
+    description: 'Default policy - read access to working directory',
     permissions: {
-      all: true,
+      read: ['cwd'],
     },
   };
 }

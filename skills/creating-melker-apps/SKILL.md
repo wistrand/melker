@@ -462,15 +462,17 @@ For more examples, see [EXAMPLES.md](references/EXAMPLES.md).
 **Permission types:**
 | Permission | Example | Description |
 |------------|---------|-------------|
-| `read` | `["."]` or `["*"]` | File system read access |
-| `write` | `["/data"]` | File system write access |
+| `read` | `["cwd"]` or `["."]` or `["*"]` | File system read access |
+| `write` | `["cwd"]` or `["/data"]` | File system write access |
 | `net` | `["api.example.com"]` or `["samesite"]` | Network access to hosts |
 | `run` | `["ffmpeg"]` | Execute system commands |
 | `env` | `["API_KEY"]` | Environment variable access |
 | `ffi` | `["libfoo.so"]` | FFI library access |
 | `sys` | `["hostname", "osRelease"]` | System information access |
 
-**Special net value - `"samesite"`**: For remote/URL-hosted apps, `"samesite"` expands to the host of the app's source URL. Useful for loading images and resources from the same server without hardcoding the host.
+**Special values:**
+- `"cwd"` in `read`/`write` - expands to current working directory (used by auto-policy)
+- `"samesite"` in `net` - expands to the host of the app's source URL (for remote apps)
 
 **Shortcuts** (set to `true` to enable):
 | Shortcut | Enables |
@@ -494,7 +496,7 @@ For more examples, see [EXAMPLES.md](references/EXAMPLES.md).
 </policy>
 ```
 
-**When to omit policy:** Simple local apps with no file/network needs can skip the policy tag. They'll use an auto-generated permissive policy.
+**When to omit policy:** Simple local apps with no file/network needs can skip the policy tag. They'll use an auto-generated policy with `read: ["cwd"]` (read access to current working directory only).
 
 ## State Persistence
 

@@ -84,6 +84,18 @@ $melker.getElementById('myId')?.setValue('value');
 </policy>
 ```
 
+**File read outside cwd fails:**
+Apps without a `<policy>` tag only have read access to the current working directory. For files outside cwd:
+```xml
+<policy>
+{
+  "permissions": {
+    "read": ["cwd", "/other/path"]
+  }
+}
+</policy>
+```
+
 ## Terminal Issues
 
 **Garbled output after crash:**

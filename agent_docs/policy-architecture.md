@@ -173,7 +173,7 @@ This warns users that denying these paths may break the app.
 All .melker files require first-run approval to prevent malicious code execution.
 
 ### Local Files
-- Policy tag is optional (auto-policy with `all: true` if missing)
+- Policy tag is optional (auto-policy with `read: ["cwd"]` if missing)
 - Approval is **policy-hash-based** - code changes don't require re-approval
 - Re-approval needed if: policy changes, file moved/renamed
 
@@ -201,16 +201,17 @@ Local files without a `<policy>` tag get an auto-generated policy:
 ```json
 {
   "name": "<filename> (Auto Policy)",
-  "permissions": { "all": true }
+  "permissions": { "read": ["cwd"] }
 }
 ```
 
 For example, running `app.melker` without an embedded policy shows:
 ```
 App: app.melker (Auto Policy)
+  read: cwd (/home/user/project)
 ```
 
-This grants all permissions but still requires approval on first run.
+This grants read access to the current working directory (where melker was invoked), allowing relative paths like `../../media/image.png` to work as long as they resolve to paths under cwd. Network, write, and subprocess permissions require an explicit policy.
 
 ## Deno Flag Generation
 
@@ -219,8 +220,10 @@ The `policyToDenoFlags()` function converts a policy to Deno CLI flags:
 | Policy                 | Deno Flag                    |
 |------------------------|------------------------------|
 | `all: true`            | `--allow-all`                |
+| `read: ["cwd"]`        | `--allow-read=<cwd>`         |
 | `read: ["/data"]`      | `--allow-read=/data`         |
 | `read: ["*"]`          | `--allow-read`               |
+| `write: ["cwd"]`       | `--allow-write=<cwd>`        |
 | `net: ["example.com"]` | `--allow-net=example.com`    |
 | `run: ["git"]`         | `--allow-run=git`            |
 | Active deny            | `--deny-read=/etc/passwd`    |
@@ -246,6 +249,21 @@ engine.hasPermission('ai')       // true if ai: true
 ```
 
 The `all: true` permission grants all runtime permissions.
+
+### `cwd` Special Value
+
+The special value `"cwd"` in `read` or `write` arrays expands to the current working directory at runtime. This allows relative paths in the app to work as long as they resolve within the project directory:
+
+```json
+{
+  "permissions": {
+    "read": ["cwd", "/etc/hosts"],
+    "write": ["cwd"]
+  }
+}
+```
+
+Use `--deny-read=cwd` or `--deny-write=cwd` to remove cwd access.
 
 ## Passing Overrides to Runner
 

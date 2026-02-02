@@ -272,7 +272,7 @@ File system browser for selecting files and directories. Auto-initializes when r
 - Escape - cancel
 - Type to filter
 
-**Permission:** Requires `read` permission in policy.
+**Permission:** Requires `read` permission. Apps without policy have `read: ["cwd"]` by default; use `read: ["*"]` for full filesystem access.
 
 ## Tabs
 

@@ -325,6 +325,23 @@ Deno.test('formatPolicy shows no permissions message', () => {
   assertStringIncludes(output, '(no permissions declared)');
 });
 
+Deno.test('formatPolicy displays cwd with actual path', () => {
+  const policy: MelkerPolicy = {
+    name: 'CWD App',
+    permissions: {
+      read: ['cwd'],
+      write: ['cwd'],
+    },
+  };
+
+  const output = formatPolicy(policy);
+  const cwd = Deno.cwd();
+
+  // Should show "cwd" with the actual path in parentheses
+  assertStringIncludes(output, 'cwd');
+  assertStringIncludes(output, cwd);
+});
+
 // =============================================================================
 // Policy to Deno Flags Tests
 // =============================================================================
@@ -367,6 +384,55 @@ Deno.test('policyToDenoFlags generates wildcard read flag', () => {
   const flags = policyToDenoFlags(policy, '/app');
 
   assertEquals(flags.includes('--allow-read'), true);
+});
+
+Deno.test('policyToDenoFlags expands cwd in read permissions', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      read: ['cwd'],
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+  const cwd = Deno.cwd();
+
+  const readFlag = flags.find(f => f.startsWith('--allow-read='));
+  assertExists(readFlag);
+  // Should include the actual cwd path, not the literal "cwd"
+  assertStringIncludes(readFlag, cwd);
+  assertEquals(readFlag.includes(',cwd'), false); // "cwd" should be expanded
+});
+
+Deno.test('policyToDenoFlags expands cwd in write permissions', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      write: ['cwd'],
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+  const cwd = Deno.cwd();
+
+  const writeFlag = flags.find(f => f.startsWith('--allow-write='));
+  assertExists(writeFlag);
+  // Should include the actual cwd path, not the literal "cwd"
+  assertStringIncludes(writeFlag, cwd);
+});
+
+Deno.test('policyToDenoFlags allows cwd mixed with other paths', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      read: ['cwd', '/custom/path'],
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+  const cwd = Deno.cwd();
+
+  const readFlag = flags.find(f => f.startsWith('--allow-read='));
+  assertExists(readFlag);
+  assertStringIncludes(readFlag, cwd);
+  assertStringIncludes(readFlag, '/custom/path');
 });
 
 Deno.test('policyToDenoFlags generates net flags', () => {
@@ -1304,13 +1370,13 @@ Deno.test({
 // =============================================================================
 
 Deno.test({
-  name: 'melker.ts auto-policy shows --allow-all by default',
+  name: 'melker.ts auto-policy shows read: cwd by default',
   ignore: !(await hasRunPermission()),
   fn: async () => {
     const tempDir = await Deno.makeTempDir();
     const appPath = `${tempDir}/test.melker`;
 
-    // Create app WITHOUT policy tag - will get auto-policy
+    // Create app WITHOUT policy tag - will get auto-policy with read: ["cwd"]
     await Deno.writeTextFile(appPath, `
 <melker>
   <container><text>Hello</text></container>
@@ -1329,7 +1395,10 @@ Deno.test({
 
       assertEquals(code, 0);
       assertStringIncludes(output, 'Policy source: auto');
-      assertStringIncludes(output, '--allow-all');
+      // Auto-policy now uses read: ["cwd"] instead of all: true
+      assertStringIncludes(output, '--allow-read=');
+      // Should NOT have --allow-all
+      assertEquals(output.includes('--allow-all'), false);
     } finally {
       await Deno.remove(tempDir, { recursive: true });
     }
@@ -1373,13 +1442,13 @@ Deno.test({
 });
 
 Deno.test({
-  name: 'melker.ts auto-policy --allow-read is redundant (already has all)',
+  name: 'melker.ts auto-policy --allow-read adds to existing cwd permission',
   ignore: !(await hasRunPermission()),
   fn: async () => {
     const tempDir = await Deno.makeTempDir();
     const appPath = `${tempDir}/test.melker`;
 
-    // Create app WITHOUT policy tag - will get auto-policy with all: true
+    // Create app WITHOUT policy tag - will get auto-policy with read: ["cwd"]
     await Deno.writeTextFile(appPath, `
 <melker>
   <container><text>Hello</text></container>
@@ -1397,8 +1466,9 @@ Deno.test({
       const output = new TextDecoder().decode(stdout);
 
       assertEquals(code, 0);
-      // Should still have --allow-all (adding specific paths is redundant)
-      assertStringIncludes(output, '--allow-all');
+      // Should have --allow-read with both cwd and /tmp merged
+      assertStringIncludes(output, '--allow-read=');
+      assertStringIncludes(output, '/tmp');
     } finally {
       await Deno.remove(tempDir, { recursive: true });
     }

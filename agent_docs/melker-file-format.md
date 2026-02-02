@@ -908,8 +908,8 @@ Apps declare required permissions via a `<policy>` tag. The app runs in a sandbo
 
 | Permission | Example                            | Deno Flag       |
 |------------|------------------------------------|-----------------|
-| `read`     | `["."]` or `["*"]`                 | `--allow-read`  |
-| `write`    | `["/data"]` or `["*"]`             | `--allow-write` |
+| `read`     | `["cwd"]` or `["."]` or `["*"]`    | `--allow-read`  |
+| `write`    | `["cwd"]` or `["/data"]` or `["*"]`| `--allow-write` |
 | `net`      | `["api.example.com", "samesite"]`  | `--allow-net`   |
 | `run`      | `["ffmpeg", "ffprobe"]`            | `--allow-run`   |
 | `env`      | `["MY_VAR"]` or `["*"]`            | `--allow-env`   |
@@ -927,6 +927,7 @@ Apps declare required permissions via a `<policy>` tag. The app runs in a sandbo
 | `shader`    | Allow per-pixel shaders on canvas/img elements                   |
 
 **Special values:**
+- `"cwd"` in `read`/`write` - expands to current working directory (default for auto-policy)
 - `"samesite"` in `net` - expands to the host of the source URL (for remote apps)
 - `$ENV{VAR}` or `$ENV{VAR:-default}` - environment variable substitution
 

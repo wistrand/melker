@@ -279,12 +279,32 @@ export function policyToDenoFlags(
 }
 
 /**
+ * Expand "cwd" in a deny list to the actual cwd path
+ */
+function expandCwdInDenyList(deniedPaths: string[] | undefined): string[] | undefined {
+  if (!deniedPaths?.length) return deniedPaths;
+  return deniedPaths.map(p => {
+    if (p === 'cwd') {
+      try {
+        return Deno.cwd();
+      } catch {
+        return p;
+      }
+    }
+    return p;
+  });
+}
+
+/**
  * Check if a path should be denied based on deny list
  * A path is denied if it matches or is under a denied path
  */
 function isPathDenied(path: string, deniedPaths: string[] | undefined): boolean {
   if (!deniedPaths?.length) return false;
-  for (const denied of deniedPaths) {
+  // Expand "cwd" to actual path for comparison
+  const expandedDenies = expandCwdInDenyList(deniedPaths);
+  if (!expandedDenies?.length) return false;
+  for (const denied of expandedDenies) {
     // Exact match or path is under denied directory
     if (path === denied || path.startsWith(denied + '/') || denied.startsWith(path + '/')) {
       return true;
@@ -360,6 +380,18 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHa
   // Policy paths (resolve relative to app dir)
   if (policyPaths) {
     for (const p of policyPaths) {
+      // Special "cwd" value expands to current working directory
+      if (p === 'cwd') {
+        try {
+          const cwd = Deno.cwd();
+          if (!isPathDenied(cwd, deniedPaths)) {
+            paths.push(cwd);
+          }
+        } catch {
+          // Ignore if cwd is not accessible
+        }
+        continue;
+      }
       const resolved = p.startsWith('/') ? p : resolve(appDir, p);
       if (!isPathDenied(resolved, deniedPaths)) {
         paths.push(resolved);
@@ -430,6 +462,18 @@ function buildWritePaths(policyPaths: string[] | undefined, appDir: string, urlH
   // Policy paths (resolve relative to app dir)
   if (policyPaths) {
     for (const p of policyPaths) {
+      // Special "cwd" value expands to current working directory
+      if (p === 'cwd') {
+        try {
+          const cwd = Deno.cwd();
+          if (!isPathDenied(cwd, deniedPaths)) {
+            paths.push(cwd);
+          }
+        } catch {
+          // Ignore if cwd is not accessible
+        }
+        continue;
+      }
       const resolved = p.startsWith('/') ? p : resolve(appDir, p);
       if (!isPathDenied(resolved, deniedPaths)) {
         paths.push(resolved);

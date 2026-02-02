@@ -73,6 +73,8 @@ export interface PolicyPermissions {
    * Filesystem read access
    * Paths relative to .melker file, or absolute
    * Maps to --allow-read=path1,path2
+   * Special value "cwd" expands to current working directory
+   * Example: ["cwd"] or ["cwd", "./data", "/etc/hosts"]
    */
   read?: string[];
 
@@ -80,6 +82,7 @@ export interface PolicyPermissions {
    * Filesystem write access
    * Paths relative to .melker file, or absolute
    * Maps to --allow-write=path1,path2
+   * Special value "cwd" expands to current working directory
    */
   write?: string[];
 

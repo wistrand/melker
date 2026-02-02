@@ -176,10 +176,32 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
   }
 
   if (p.read?.length) {
-    lines.push(`  read: ${p.read.join(', ')}`);
+    // Expand "cwd" to show actual path
+    const readDisplay = p.read.map(entry => {
+      if (entry === 'cwd') {
+        try {
+          return `cwd (${Deno.cwd()})`;
+        } catch {
+          return 'cwd';
+        }
+      }
+      return entry;
+    });
+    lines.push(`  read: ${readDisplay.join(', ')}`);
   }
   if (p.write?.length) {
-    lines.push(`  write: ${p.write.join(', ')}`);
+    // Expand "cwd" to show actual path
+    const writeDisplay = p.write.map(entry => {
+      if (entry === 'cwd') {
+        try {
+          return `cwd (${Deno.cwd()})`;
+        } catch {
+          return 'cwd';
+        }
+      }
+      return entry;
+    });
+    lines.push(`  write: ${writeDisplay.join(', ')}`);
   }
   if (p.net?.length) {
     // Expand "samesite" to show actual host

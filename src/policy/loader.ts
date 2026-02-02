@@ -469,7 +469,16 @@ export function formatPolicy(policy: MelkerPolicy, sourceUrl?: string): string {
   if (p.read?.length) {
     lines.push('Filesystem (read):');
     for (const path of p.read) {
-      lines.push(`  ${path}`);
+      // Expand "cwd" to show actual path
+      if (path === 'cwd') {
+        try {
+          lines.push(`  cwd (${Deno.cwd()})`);
+        } catch {
+          lines.push('  cwd');
+        }
+      } else {
+        lines.push(`  ${path}`);
+      }
     }
     lines.push('');
   }
@@ -477,7 +486,16 @@ export function formatPolicy(policy: MelkerPolicy, sourceUrl?: string): string {
   if (p.write?.length) {
     lines.push('Filesystem (write):');
     for (const path of p.write) {
-      lines.push(`  ${path}`);
+      // Expand "cwd" to show actual path
+      if (path === 'cwd') {
+        try {
+          lines.push(`  cwd (${Deno.cwd()})`);
+        } catch {
+          lines.push('  cwd');
+        }
+      } else {
+        lines.push(`  ${path}`);
+      }
     }
     lines.push('');
   }

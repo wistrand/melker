@@ -1,10 +1,13 @@
 <melker>
   <title>OAuth2 PKCE Login</title>
 
+  <!-- OAuth permissions (net, browser) are auto-added when <oauth> tag is detected -->
+  <policy>{"permissions": {}}</policy>
+
   <!-- OAuth callbacks receive unified event: { type: 'oauth', action: string, error?: Error } -->
   <oauth wellknown="$ENV{MELKER_OAUTH_WELLKNOWN}" client-id="$ENV{MELKER_OAUTH_CLIENT_ID}" audience="$ENV{MELKER_OAUTH_AUDIENCE}" auto-login="true" onLogin="$app.onLoginCallback(event)" onLogout="$app.onLogoutCallback(event)" onFail="$app.onFailCallback(event)" debugServer="$ENV{MELKER_OAUTH_DEBUG_SERVER:-true}" />
 
-  <script src="./oauth_handlers.ts" />
+  <script src="./oauth-handlers.ts" />
 
   <container id="app" style="padding: 2;; display: flex; flex-direction: column; height: 100%" height="fill">
     <text id="title" style="bold: true;; flex: 0">OAuth2 PKCE Login</text>

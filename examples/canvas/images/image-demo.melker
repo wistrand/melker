@@ -1,15 +1,4 @@
 <melker>
-  <policy>
-  {
-    "name": "Image Demo",
-    "description": "Demonstrates the img component",
-    "permissions": {
-      "read": ["*"],
-      "net" : ["samesite"]
-    }
-  }
-  </policy>
-
   <style>
     #root {
       display: flex;

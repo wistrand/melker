@@ -249,8 +249,8 @@ function createAutoPolicy(filepath: string): MelkerPolicy {
   const filename = filepath.split('/').pop() || filepath;
   return {
     name: `${filename} (Auto Policy)`,
-    description: 'Default policy with all permissions',
-    permissions: { all: true },
+    description: 'Default policy - read access to working directory',
+    permissions: { read: ['cwd'] },
   };
 }
 

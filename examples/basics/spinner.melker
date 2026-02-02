@@ -1,0 +1,116 @@
+<melker>
+  <title>Spinner Examples</title>
+
+  <container style="padding: 1; gap: 1; overflow: scroll;">
+    <container style="border: thin; padding: 1; border-title: Variants">
+      <container style="flex-direction: row; gap: 4;">
+        <container style="gap: 1; width: 20;">
+          <spinner variant="line" text="line" />
+          <spinner variant="dots" text="dots" />
+          <spinner variant="braille" text="braille" />
+        </container>
+        <container style="gap: 1; width: 20;">
+          <spinner variant="arc" text="arc" />
+          <spinner variant="bounce" text="bounce" />
+          <spinner variant="flower" text="flower" />
+          <spinner variant="pulse" text="pulse" />
+        </container>
+      </container>
+    </container>
+
+    <container style="border: thin; padding: 1; border-title: Standard Themes">
+      <container style="flex-direction: row; gap: 4;">
+        <container style="gap: 1; width: 22;">
+          <spinner variant="dots" verbs="loading" />
+          <spinner variant="braille" verbs="thinking" />
+          <spinner variant="flower" verbs="working" />
+        </container>
+        <container style="gap: 1; width: 22;">
+          <spinner variant="arc" verbs="waiting" />
+          <spinner variant="dots" verbs="fetching" />
+          <spinner variant="braille" verbs="saving" />
+        </container>
+      </container>
+    </container>
+
+    <container style="border: thin; padding: 1; border-title: Poetic Themes">
+      <container style="flex-direction: row; gap: 4;">
+        <container style="gap: 1; width: 22;">
+          <spinner variant="flower" verbs="dreaming" />
+          <spinner variant="arc" verbs="conjuring" />
+          <spinner variant="dots" verbs="brewing" />
+        </container>
+        <container style="gap: 1; width: 22;">
+          <spinner variant="braille" verbs="weaving" />
+          <spinner variant="flower" verbs="unfolding" />
+          <spinner variant="arc" verbs="stargazing" />
+        </container>
+      </container>
+    </container>
+
+    <container style="flex-direction: row; gap: 1;">
+      <container style="border: thin; padding: 1; flex: 1; border-title: Custom Verbs">
+        <spinner variant="flower" verbs="Analyzing, Optimizing, Finalizing" verbSpeed="1000" />
+        <spinner variant="dots" verbs="Step 1, Step 2, Step 3, Done!" verbSpeed="600" />
+      </container>
+
+      <container style="border: thin; padding: 1; flex: 1; border-title: Speed">
+        <spinner variant="dots" text="fast (40ms)" speed="40" />
+        <spinner variant="dots" text="normal (100ms)" speed="100" />
+        <spinner variant="dots" text="slow (200ms)" speed="200" />
+      </container>
+    </container>
+
+    <container style="flex-direction: row; gap: 1;">
+      <container style="border: thin; padding: 1; flex: 1; border-title: Shade Effect">
+        <spinner variant="dots" text="Loading resources..." shade="true" />
+        <spinner variant="braille" verbs="thinking" shade="true" />
+        <spinner variant="flower" text="Processing data" shade="true" shadeSpeed="40" />
+      </container>
+
+      <container style="border: thin; padding: 1; flex: 1; border-title: Text Only (none)">
+        <spinner variant="none" verbs="dreaming" />
+        <spinner variant="none" verbs="conjuring" shade="true" />
+        <spinner variant="none" text="Static text" />
+      </container>
+    </container>
+
+    <container style="border: thin; padding: 1; border-title: Interactive">
+      <container style="flex-direction: row; gap: 2; align-items: center;">
+        <spinner id="toggle-spinner" variant="braille" verbs="thinking" />
+        <button onClick="$app.toggle()">Toggle</button>
+        <button onClick="$app.cycleVariant()">Variant</button>
+        <button onClick="$app.cycleVerbs()">Verbs</button>
+      </container>
+    </container>
+  </container>
+
+  <script type="typescript">
+    let isSpinning = true;
+    const variants = ['none', 'line', 'dots', 'braille', 'arc', 'bounce', 'flower', 'pulse'];
+    const verbThemes = [
+      'loading', 'thinking', 'working', 'waiting', 'fetching', 'saving',
+      'dreaming', 'conjuring', 'brewing', 'weaving', 'unfolding', 'stargazing'
+    ];
+    let variantIndex = 2;
+    let verbIndex = 1;
+
+    export function toggle() {
+      isSpinning = !isSpinning;
+      const spinner = $melker.getElementById('toggle-spinner');
+      spinner.props.spinning = isSpinning;
+    }
+
+    export function cycleVariant() {
+      variantIndex = (variantIndex + 1) % variants.length;
+      const spinner = $melker.getElementById('toggle-spinner');
+      spinner.props.variant = variants[variantIndex];
+    }
+
+    export function cycleVerbs() {
+      verbIndex = (verbIndex + 1) % verbThemes.length;
+      const spinner = $melker.getElementById('toggle-spinner');
+      spinner.props.verbs = verbThemes[verbIndex];
+    }
+  </script>
+</melker>

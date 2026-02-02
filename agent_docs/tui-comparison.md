@@ -239,7 +239,7 @@ text("Hello") | border | color(Color::Cyan)
 | List             |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
 | **Feedback**     |        |     |         |            |       |         |         |       |
 | Progress bar     |   Y    |  Y  |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
-| Spinner          |   -    |  Y  |    Y    |     Y      |   -   |    Y    |    -    |   -   |
+| Spinner          |   Y    |  Y  |    Y    |     Y      |   -   |    Y    |    -    |   -   |
 | Toast            |   -    |  -  |    -    |     -      |   -   |    Y    |    -    |   -   |
 | Sparkline        |   Y    |  -  |    -    |     -      |   -   |    Y    |    Y    |   -   |
 | **Navigation**   |        |     |         |            |       |         |         |       |

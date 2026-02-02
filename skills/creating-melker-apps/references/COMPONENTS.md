@@ -986,6 +986,55 @@ Progress bar.
 />
 ```
 
+### spinner
+
+Animated loading indicator with optional text or cycling verbs.
+
+```xml
+<!-- Basic spinner -->
+<spinner text="Loading..." />
+
+<!-- Different variants -->
+<spinner variant="dots" text="Processing" />
+<spinner variant="braille" text="Computing" />
+<spinner variant="pulse" text="Waiting" />
+
+<!-- With cycling verb theme -->
+<spinner variant="dots" verbs="thinking" />
+
+<!-- With custom verbs (comma-separated) -->
+<spinner variant="line" verbs="Analyzing, Optimizing, Finalizing" />
+
+<!-- Text-only with animated shade (no spinner char) -->
+<spinner variant="none" verbs="dreaming" shade="true" />
+
+<!-- Spinner on right side of text -->
+<spinner text="Working" textPosition="right" />
+```
+
+**Props:**
+- `text` - Text displayed beside spinner
+- `variant` - Animation style: `none`, `line` (default), `dots`, `braille`, `arc`, `bounce`, `flower`, `pulse`
+- `speed` - Frame interval in ms (default: 100)
+- `textPosition` - `left` (default) or `right`
+- `spinning` - Whether animating (default: true)
+- `verbs` - Cycling text: theme name or comma-separated strings
+  - Themes: `loading`, `thinking`, `working`, `waiting`, `fetching`, `saving`, `dreaming`, `conjuring`, `brewing`, `weaving`, `unfolding`, `stargazing`
+- `verbSpeed` - Verb cycle interval in ms (default: 800)
+- `shade` - Enable animated brightness wave across text
+- `shadeSpeed` - Shade wave speed in ms per character (default: 60)
+
+**Methods:**
+- `start()` - Start animation
+- `stop()` - Stop animation
+- `getValue()` - Get text value
+- `setValue(text)` - Set text value
+
+**Notes:**
+- All spinners share a single timer for efficiency
+- `none` variant shows text/verbs only (no spinner character)
+- Shade effect creates a "spotlight" scanning across text
+
 ### slider
 
 Numeric value selection with keyboard/mouse.

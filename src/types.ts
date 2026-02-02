@@ -613,6 +613,7 @@ import type { TabProps } from './components/tab.ts';
 import type { TabsProps } from './components/tabs.ts';
 import type { ProgressProps } from './components/progress.ts';
 import type { SliderProps } from './components/slider.ts';
+import type { SpinnerProps } from './components/spinner.ts';
 
 // Type mapping for known element types to their specific props
 export interface ComponentPropsMap {
@@ -629,6 +630,7 @@ export interface ComponentPropsMap {
   'tabs': TabsProps;
   'progress': ProgressProps;
   'slider': SliderProps;
+  'spinner': SpinnerProps;
 }
 
 // Type mapping for known element types to their element classes
@@ -645,6 +647,7 @@ export type KnownElementTypeMap = {
   'tabs': Element;
   'progress': Element;
   'slider': Element;
+  'spinner': Element;
 };
 
 // Helper type to get props for a component type

@@ -14,6 +14,7 @@ export * from './img.ts';
 export * from './video.ts';
 export * from './progress.ts';
 export * from './slider.ts';
+export * from './spinner.ts';
 export * from './separator.ts';
 export * from './connector.ts';
 export * from './connector-utils.ts';

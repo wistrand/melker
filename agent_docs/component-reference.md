@@ -706,6 +706,98 @@ progress.getValue();             // Get current value
 progress.setIndeterminate(true); // Enable/disable indeterminate mode
 ```
 
+## Spinner Component
+
+The `<spinner>` component displays an animated loading indicator with optional text or cycling verbs. All spinners share a single animation timer for efficiency.
+
+### Usage
+
+```xml
+<!-- Basic spinner -->
+<spinner text="Loading..." />
+
+<!-- Different variants -->
+<spinner variant="dots" text="Processing" />
+<spinner variant="braille" text="Computing" />
+<spinner variant="pulse" text="Waiting" />
+
+<!-- With cycling verbs (theme name) -->
+<spinner variant="dots" verbs="thinking" />
+
+<!-- With custom verbs (comma-separated) -->
+<spinner variant="line" verbs="Analyzing, Optimizing, Finalizing" />
+
+<!-- Text-only with animated shade (no spinner char) -->
+<spinner variant="none" verbs="dreaming" shade="true" />
+
+<!-- Spinner on right side of text -->
+<spinner text="Working" textPosition="right" />
+```
+
+### Props
+
+| Prop           | Type                    | Default  | Description                                   |
+|----------------|-------------------------|----------|-----------------------------------------------|
+| `text`         | string                  | -        | Text displayed beside spinner                 |
+| `variant`      | SpinnerVariant          | 'line'   | Animation style                               |
+| `speed`        | number                  | 100      | Frame interval in milliseconds                |
+| `textPosition` | 'left' \| 'right'       | 'left'   | Spinner position relative to text             |
+| `spinning`     | boolean                 | true     | Whether spinner is animating                  |
+| `verbs`        | VerbTheme \| string     | -        | Cycling text: theme name or comma-separated   |
+| `verbSpeed`    | number                  | 800      | Verb cycle interval in milliseconds           |
+| `shade`        | boolean                 | false    | Enable animated brightness wave across text   |
+| `shadeSpeed`   | number                  | 60       | Shade wave speed (ms per character)           |
+
+### Variants
+
+| Variant   | Frames                         | Description           |
+|-----------|--------------------------------|-----------------------|
+| `none`    | (no spinner)                   | Text only, no spinner |
+| `line`    | `\| / - \`                     | Classic ASCII spinner |
+| `dots`    | `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`                  | Braille dots pattern  |
+| `braille` | `⣷⣯⣟⡿⢿⣻⣽⣾`                     | Rotating braille      |
+| `arc`     | `◜◠◝◞◡◟`                       | Curved arc rotation   |
+| `bounce`  | `⠁⠂⠄⠂`                         | Bouncing dot          |
+| `flower`  | `·✻✽✶✳✢`                       | Blooming flower       |
+| `pulse`   | `·•●•`                         | Pulsating dot         |
+
+### Verb Themes
+
+Standard themes cycle through contextual variations:
+- `loading`: Loading, Loading., Loading.., Loading...
+- `thinking`: Thinking, Pondering, Contemplating, Reasoning
+- `working`: Working, Processing, Computing, Calculating
+- `waiting`: Please wait, Hold on, One moment, Almost there
+- `fetching`: Fetching, Downloading, Retrieving, Receiving
+- `saving`: Saving, Writing, Storing, Committing
+
+Poetic themes have 8 words each:
+- `dreaming`, `conjuring`, `brewing`, `weaving`, `unfolding`, `stargazing`
+
+### Shade Effect
+
+When `shade="true"`, text characters animate with a brightness gradient that moves left to right:
+- Peak position: 100% brightness
+- Adjacent characters: 75%, 50%, 50%...
+- Creates a "spotlight" scanning effect
+
+### Methods
+
+```typescript
+const spinner = document.getElementById('mySpinner');
+spinner.start();           // Start animation
+spinner.stop();            // Stop animation
+spinner.getValue();        // Get text value
+spinner.setValue('text');  // Set text value
+```
+
+### Behavior
+
+- All spinners share a single 40ms timer (efficient for multiple spinners)
+- Frame timing is calculated from elapsed time, not frame counters
+- `none` variant displays text only (useful for animated verbs/shade without spinner character)
+- Intrinsic width accounts for longest verb when verbs are set
+
 ## Canvas Component
 
 The `<canvas>` component provides pixel graphics using Unicode sextant characters (2x3 pixels per cell).
@@ -1381,3 +1473,4 @@ Layout properties (padding, margin, border widths) do NOT inherit.
 - [file-browser-architecture.md](file-browser-architecture.md) — File browser internals
 - [data-table.md](data-table.md) — Data table component
 - [data-bars.md](data-bars.md) — Bar chart components
+- [spinner-architecture.md](spinner-architecture.md) — Spinner component internals

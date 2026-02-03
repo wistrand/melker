@@ -185,3 +185,19 @@ export interface PolicyArgs {
   /** Show policy and exit */
   showPolicy: boolean;
 }
+
+/**
+ * Create a default auto policy for apps without an explicit policy.
+ * Grants read access to working directory and clipboard access.
+ */
+export function createAutoPolicy(filepath: string): MelkerPolicy {
+  const filename = filepath.split('/').pop() || filepath;
+  return {
+    name: `${filename} (Auto Policy)`,
+    description: 'Default policy - read access to working directory, clipboard access',
+    permissions: {
+      read: ['cwd'],
+      clipboard: true,
+    },
+  };
+}

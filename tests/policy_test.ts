@@ -1652,3 +1652,253 @@ Deno.test({
     }
   },
 });
+
+// =============================================================================
+// Shortcut Deny Tests
+// =============================================================================
+
+Deno.test('applyPermissionOverrides --deny-clipboard removes clipboard from auto-policy', () => {
+  // Auto-policy has clipboard: true, --deny-clipboard should remove it
+  const base: PolicyPermissions = { read: ['cwd'], clipboard: true };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { clipboard: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // clipboard shortcut should not be expanded (no run commands for clipboard)
+  assertEquals(permissions.clipboard, undefined);
+  // There should be no run permissions from clipboard expansion
+  assertEquals(permissions.run, undefined);
+});
+
+Deno.test('applyPermissionOverrides --deny-clipboard with --allow-clipboard deny wins', () => {
+  // If both allow and deny clipboard, deny should win
+  const base: PolicyPermissions = {};
+  const overrides: PermissionOverrides = {
+    allow: { clipboard: true },
+    deny: { clipboard: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // Deny takes precedence - no clipboard commands should be added
+  assertEquals(permissions.clipboard, undefined);
+  assertEquals(permissions.run, undefined);
+});
+
+Deno.test('applyPermissionOverrides --deny-ai removes AI permissions', () => {
+  const base: PolicyPermissions = { ai: true };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { ai: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // AI shortcut should not be expanded
+  assertEquals(permissions.ai, undefined);
+  // No AI run commands should be added
+  assertEquals(permissions.run, undefined);
+  // No AI net hosts should be added
+  assertEquals(permissions.net, undefined);
+});
+
+Deno.test('applyPermissionOverrides --deny-browser removes browser permission', () => {
+  const base: PolicyPermissions = { browser: true };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { browser: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // Browser shortcut should not be expanded
+  assertEquals(permissions.browser, undefined);
+  // No browser run command should be added
+  assertEquals(permissions.run, undefined);
+});
+
+Deno.test('applyPermissionOverrides --deny-keyring removes keyring permission', () => {
+  const base: PolicyPermissions = { keyring: true };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { keyring: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // Keyring shortcut should not be expanded
+  assertEquals(permissions.keyring, undefined);
+  // No keyring run commands should be added
+  assertEquals(permissions.run, undefined);
+});
+
+Deno.test('applyPermissionOverrides denying one shortcut does not affect others', () => {
+  // Base has multiple shortcuts, deny only clipboard
+  const base: PolicyPermissions = { clipboard: true, browser: true };
+  const overrides: PermissionOverrides = {
+    allow: {},
+    deny: { clipboard: true },
+  };
+
+  const { permissions } = applyPermissionOverrides(base, overrides);
+
+  // Clipboard should not be expanded
+  assertEquals(permissions.clipboard, undefined);
+  // Browser SHOULD be expanded (it wasn't denied)
+  // Browser adds a run command (open, xdg-open, or cmd depending on OS)
+  assert(permissions.run !== undefined, 'browser should expand to run permission');
+  assert(permissions.run.length > 0, 'browser should add at least one run command');
+});
+
+// =============================================================================
+// policyToDenoFlags Mutation Tests
+// =============================================================================
+
+Deno.test('policyToDenoFlags does not mutate original policy', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      clipboard: true,
+      read: ['/data'],
+    },
+  };
+
+  // Deep copy to compare later
+  const originalPermissions = JSON.parse(JSON.stringify(policy.permissions));
+
+  // Call policyToDenoFlags which used to mutate the policy
+  policyToDenoFlags(policy, '/app');
+
+  // Policy should not be mutated
+  assertEquals(policy.permissions!.clipboard, originalPermissions.clipboard);
+  assertEquals(policy.permissions!.read, originalPermissions.read);
+  // run should NOT have been added to the original policy
+  assertEquals(policy.permissions!.run, undefined);
+});
+
+Deno.test('policyToDenoFlags does not mutate policy with ai shortcut', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      ai: true,
+    },
+  };
+
+  // Call policyToDenoFlags
+  policyToDenoFlags(policy, '/app');
+
+  // Policy should not be mutated - run and net should not be added
+  assertEquals(policy.permissions!.run, undefined);
+  assertEquals(policy.permissions!.net, undefined);
+});
+
+Deno.test('policyToDenoFlags can be called multiple times without accumulating changes', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      browser: true,
+    },
+  };
+
+  // Call multiple times
+  const flags1 = policyToDenoFlags(policy, '/app');
+  const flags2 = policyToDenoFlags(policy, '/app');
+  const flags3 = policyToDenoFlags(policy, '/app');
+
+  // All calls should produce the same result
+  assertEquals(flags1, flags2);
+  assertEquals(flags2, flags3);
+
+  // Policy should not have accumulated run commands
+  assertEquals(policy.permissions!.run, undefined);
+});
+
+// =============================================================================
+// CLI --deny-clipboard Integration Test
+// =============================================================================
+
+Deno.test({
+  name: 'melker.ts --deny-clipboard removes clipboard from auto-policy',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    // Create app WITHOUT policy tag - will get auto-policy with clipboard: true
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--deny-clipboard', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      // Should NOT have --allow-run with clipboard commands
+      assertEquals(output.includes('--allow-run='), false, 'should not have --allow-run when clipboard is denied');
+      // Should show CLI overrides section
+      assertStringIncludes(output, 'CLI overrides');
+      assertStringIncludes(output, '--deny-clipboard');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'melker.ts --deny-clipboard with explicit clipboard policy removes it',
+  ignore: !(await hasRunPermission()),
+  fn: async () => {
+    const tempDir = await Deno.makeTempDir();
+    const appPath = `${tempDir}/test.melker`;
+
+    // Create app WITH explicit clipboard permission
+    await Deno.writeTextFile(appPath, `
+<melker>
+  <policy>
+  {
+    "name": "Clipboard App",
+    "permissions": {
+      "clipboard": true,
+      "read": ["."]
+    }
+  }
+  </policy>
+  <container><text>Hello</text></container>
+</melker>`);
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: ['run', '--allow-all', 'melker.ts', '--deny-clipboard', '--show-policy', appPath],
+        cwd: Deno.cwd(),
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+
+      const { code, stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(code, 0);
+      // Should NOT have clipboard run commands in --allow-run
+      // Check that xclip, pbcopy, etc. are not in the output flags
+      const allowRunMatch = output.match(/--allow-run=([^\s\n]+)/);
+      if (allowRunMatch) {
+        const runValue = allowRunMatch[1];
+        assertEquals(runValue.includes('xclip'), false, 'xclip should not be in --allow-run');
+        assertEquals(runValue.includes('pbcopy'), false, 'pbcopy should not be in --allow-run');
+        assertEquals(runValue.includes('xsel'), false, 'xsel should not be in --allow-run');
+        assertEquals(runValue.includes('wl-copy'), false, 'wl-copy should not be in --allow-run');
+      }
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});

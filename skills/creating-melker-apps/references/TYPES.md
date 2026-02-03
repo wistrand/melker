@@ -42,7 +42,7 @@ interface MelkerContext {
   };
 
   // System integration
-  copyToClipboard(text: string): Promise<boolean>;
+  copyToClipboard(text: string): Promise<boolean>;  // Requires clipboard: true (auto-policy default)
   openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
 
   // Engine access

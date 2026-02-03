@@ -103,7 +103,18 @@ export function policyToDenoFlags(
   explicitDenies?: Partial<PolicyPermissions>
 ): string[] {
   const flags: string[] = [];
-  const p = policy.permissions || {};
+  // Deep clone permissions to avoid mutating the original policy
+  const orig = policy.permissions || {};
+  const p: PolicyPermissions = {
+    ...orig,
+    read: orig.read ? [...orig.read] : undefined,
+    write: orig.write ? [...orig.write] : undefined,
+    net: orig.net ? [...orig.net] : undefined,
+    run: orig.run ? [...orig.run] : undefined,
+    env: orig.env ? [...orig.env] : undefined,
+    ffi: orig.ffi ? [...orig.ffi] : undefined,
+    sys: orig.sys ? [...orig.sys] : undefined,
+  };
 
   // Handle "all" permission - no other flags needed
   if (p.all === true) {

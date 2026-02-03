@@ -139,6 +139,10 @@ export interface Style extends Record<string, any> {
   ledColorLow?: string;
   ledColorHigh?: string;
 
+  // Data-heatmap style properties
+  cellWidth?: number;
+  cellHeight?: number;
+
   // Allow any additional style properties for flexibility
   [key: string]: any;
 }

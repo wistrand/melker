@@ -12,13 +12,14 @@ import {
 } from './events.ts';
 import { HitTester } from './hit-test.ts';
 import { ScrollHandler } from './scroll-handler.ts';
-import { getLogger, type ComponentLogger } from './logging.ts';
+import { getLogger } from './logging.ts';
 import { DialogElement } from './components/dialog.ts';
 import { createThrottledAction, type ThrottledAction } from './utils/timing.ts';
 import { isStatsOverlayEnabled, getGlobalStatsOverlay } from './stats-overlay.ts';
 import { getGlobalPerformanceDialog, type PerformanceStats } from './performance-dialog.ts';
 import { getGlobalErrorHandler } from './error-boundary.ts';
 import { getUIAnimationManager } from './ui-animation-manager.ts';
+import { getToastManager } from './toast/mod.ts';
 
 const logger = getLogger('text-selection');
 
@@ -33,7 +34,6 @@ export interface TextSelectionHandlerDeps {
   document: Document;
   renderer: RenderingEngine;
   eventManager: EventManager;
-  logger?: ComponentLogger;
   onRender: () => void;
   onRenderDialogOnly: () => void;  // Fast render for dialog drag/resize
   onRenderOptimized: () => void;  // Apply buffer to terminal (optimized diff rendering)
@@ -640,7 +640,7 @@ export class TextSelectionHandler {
       if (stats.moveCount > 0) {
         const totalTime = performance.now() - stats.startTime;
         const renderCount = stats.renderTotal > 0 ? Math.round(stats.renderTotal / stats.renderMax) : 0;
-        this._deps.logger?.debug('Selection drag timing stats:', {
+        logger.debug('Selection drag timing stats:', {
           totalDragTime: `${totalTime.toFixed(1)}ms`,
           mouseMoveEvents: stats.moveCount,
           hitTest: {
@@ -921,6 +921,7 @@ export class TextSelectionHandler {
     commands: Array<{ cmd: string; args: string[] }>,
     text: string
   ): Promise<void> {
+    let permissionDenied = false;
     for (const { cmd, args } of commands) {
       try {
         const process = new Deno.Command(cmd, {
@@ -935,13 +936,28 @@ export class TextSelectionHandler {
         await writer.close();
         const status = await child.status;
         if (status.success) {
+          logger.info("copied " + text.length + " chars to clipboard using " + cmd);
+          getToastManager().show(`Copied ${text.length} chars to clipboard`, { type: 'success', duration: 2000 });
           return; // Success
         }
-      } catch {
-        // Command not found or failed, try next
+      } catch (e) {
+        // NotCapable = missing permission, warn user; other errors just debug
+        if (e instanceof Deno.errors.NotCapable) {
+          logger.warn(`Clipboard command '${cmd}' not permitted: ${e.message}`);
+          permissionDenied = true;
+        } else {
+          logger.debug(`Clipboard command '${cmd}' failed: ${e}`);
+        }
+        // Try next command
       }
     }
-    this._deps.logger?.warn('No clipboard command available (tried pbcopy, xclip, xsel, wl-copy, clip.exe)');
+    if (permissionDenied) {
+      logger.warn('Clipboard copy failed - permission denied (add clipboard: true to policy or run with --allow-clipboard)');
+      getToastManager().show('Clipboard copy failed - add clipboard: true to policy', { type: 'error', duration: 4000 });
+    } else {
+      logger.warn('No clipboard command available (tried pbcopy, xclip, xsel, wl-copy, clip.exe)');
+      getToastManager().show('Clipboard copy failed - no clipboard command available', { type: 'error', duration: 4000 });
+    }
   }
 
   /**

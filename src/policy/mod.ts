@@ -9,6 +9,8 @@ export type {
   PolicyConfigProperty,
 } from './types.ts';
 
+export { createAutoPolicy } from './types.ts';
+
 export {
   loadPolicy,
   loadPolicyFromContent,
@@ -33,4 +35,5 @@ export {
   checkLocalApproval,
   saveLocalApproval,
   getUrlHash,
+  formatOverrides,
 } from './approval.ts';

@@ -5,6 +5,14 @@ import { getCacheDir, ensureDir, getAppCacheDir } from '../xdg.ts';
 import type { MelkerPolicy } from './types.ts';
 import { extractHostFromUrl } from './url-utils.ts';
 import { isUrl } from '../utils/content-loader.ts';
+import {
+  getAvailableClipboardCommands,
+  getAvailableKeyringCommands,
+  getAvailableAICommands,
+  getBrowserCommand,
+  AI_NET_HOSTS,
+} from './flags.ts';
+import type { PermissionOverrides } from './permission-overrides.ts';
 
 /**
  * Approval record stored in cache
@@ -203,19 +211,44 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
     });
     lines.push(`  write: ${writeDisplay.join(', ')}`);
   }
+  // Collect commands/hosts derived from shortcuts (to filter from run:/net: lines)
+  const shortcutRunCommands = new Set<string>();
+  const shortcutNetHosts = new Set<string>();
+
+  // Get available commands for each shortcut
+  const clipboardCmds = p.clipboard ? getAvailableClipboardCommands() : [];
+  const keyringCmds = p.keyring ? getAvailableKeyringCommands() : [];
+  const aiCmds = p.ai ? getAvailableAICommands() : [];
+  const browserCmd = p.browser ? getBrowserCommand() : null;
+
+  clipboardCmds.forEach(cmd => shortcutRunCommands.add(cmd));
+  keyringCmds.forEach(cmd => shortcutRunCommands.add(cmd));
+  aiCmds.forEach(cmd => shortcutRunCommands.add(cmd));
+  if (browserCmd) shortcutRunCommands.add(browserCmd);
+  if (p.ai) AI_NET_HOSTS.forEach(host => shortcutNetHosts.add(host));
+
   if (p.net?.length) {
-    // Expand "samesite" to show actual host
+    // Expand "samesite" to show actual host, filter shortcut-derived hosts
     const sourceHost = sourceUrl ? extractHostFromUrl(sourceUrl) : null;
-    const netDisplay = p.net.map(entry => {
-      if (entry === 'samesite' && sourceHost) {
-        return `samesite (${sourceHost})`;
-      }
-      return entry;
-    });
-    lines.push(`  net: ${netDisplay.join(', ')}`);
+    const netDisplay = p.net
+      .filter(entry => !shortcutNetHosts.has(entry))
+      .map(entry => {
+        if (entry === 'samesite' && sourceHost) {
+          return `samesite (${sourceHost})`;
+        }
+        return entry;
+      });
+    if (netDisplay.length > 0) {
+      lines.push(`  net: ${netDisplay.join(', ')}`);
+    }
   }
+
+  // Filter run commands that come from shortcuts
   if (p.run?.length) {
-    lines.push(`  run: ${p.run.join(', ')}`);
+    const nonShortcutRun = p.run.filter(cmd => !shortcutRunCommands.has(cmd));
+    if (nonShortcutRun.length > 0) {
+      lines.push(`  run: ${nonShortcutRun.join(', ')}`);
+    }
   }
   if (p.env?.length) {
     lines.push(`  env: ${p.env.join(', ')}`);
@@ -226,20 +259,104 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
   if (p.sys?.length) {
     lines.push(`  sys: ${p.sys.join(', ')}`);
   }
+  // Show shortcuts with actual commands in parentheses
   if (p.ai) {
-    lines.push('  ai: enabled');
+    const details = [...aiCmds, ...AI_NET_HOSTS].join(', ');
+    lines.push(`  ai: enabled${details ? ` (${details})` : ''}`);
   }
   if (p.clipboard) {
-    lines.push('  clipboard: enabled');
+    const details = clipboardCmds.join(', ');
+    lines.push(`  clipboard: enabled${details ? ` (${details})` : ''}`);
   }
   if (p.keyring) {
-    lines.push('  keyring: enabled');
+    const details = keyringCmds.join(', ');
+    lines.push(`  keyring: enabled${details ? ` (${details})` : ''}`);
   }
   if (p.browser) {
-    lines.push('  browser: enabled');
+    lines.push(`  browser: enabled${browserCmd ? ` (${browserCmd})` : ''}`);
   }
   if (p.shader) {
     lines.push('  shader: enabled');
+  }
+
+  return lines;
+}
+
+/**
+ * Format CLI permission overrides for display
+ */
+export function formatOverrides(overrides: PermissionOverrides): string[] {
+  const lines: string[] = [];
+  const { allow, deny } = overrides;
+
+  // Format deny overrides
+  if (deny.all) {
+    lines.push('  --deny-all (all permissions will be removed)');
+  }
+  if (deny.read?.length) {
+    lines.push(`  --deny-read=${deny.read.join(',')}`);
+  }
+  if (deny.write?.length) {
+    lines.push(`  --deny-write=${deny.write.join(',')}`);
+  }
+  if (deny.net?.length) {
+    lines.push(`  --deny-net=${deny.net.join(',')}`);
+  }
+  if (deny.run?.length) {
+    lines.push(`  --deny-run=${deny.run.join(',')}`);
+  }
+  if (deny.env?.length) {
+    lines.push(`  --deny-env=${deny.env.join(',')}`);
+  }
+  if (deny.ai) {
+    lines.push('  --deny-ai');
+  }
+  if (deny.clipboard) {
+    lines.push('  --deny-clipboard');
+  }
+  if (deny.keyring) {
+    lines.push('  --deny-keyring');
+  }
+  if (deny.browser) {
+    lines.push('  --deny-browser');
+  }
+  if (deny.shader) {
+    lines.push('  --deny-shader');
+  }
+
+  // Format allow overrides
+  if (allow.all) {
+    lines.push('  --allow-all (all permissions will be granted)');
+  }
+  if (allow.read?.length) {
+    lines.push(`  --allow-read=${allow.read.join(',')}`);
+  }
+  if (allow.write?.length) {
+    lines.push(`  --allow-write=${allow.write.join(',')}`);
+  }
+  if (allow.net?.length) {
+    lines.push(`  --allow-net=${allow.net.join(',')}`);
+  }
+  if (allow.run?.length) {
+    lines.push(`  --allow-run=${allow.run.join(',')}`);
+  }
+  if (allow.env?.length) {
+    lines.push(`  --allow-env=${allow.env.join(',')}`);
+  }
+  if (allow.ai) {
+    lines.push('  --allow-ai');
+  }
+  if (allow.clipboard) {
+    lines.push('  --allow-clipboard');
+  }
+  if (allow.keyring) {
+    lines.push('  --allow-keyring');
+  }
+  if (allow.browser) {
+    lines.push('  --allow-browser');
+  }
+  if (allow.shader) {
+    lines.push('  --allow-shader');
   }
 
   return lines;
@@ -251,7 +368,8 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
  */
 export function showApprovalPrompt(
   url: string,
-  policy: MelkerPolicy
+  policy: MelkerPolicy,
+  overrides?: PermissionOverrides
 ): boolean {
   // Check if stdin is a TTY - if not, we can't prompt
   if (!Deno.stdin.isTerminal()) {
@@ -292,6 +410,17 @@ export function showApprovalPrompt(
   } else {
     for (const line of permLines) {
       console.log(line);
+    }
+  }
+
+  // Show CLI overrides if present
+  if (overrides) {
+    const overrideLines = formatOverrides(overrides);
+    if (overrideLines.length > 0) {
+      console.log('\nCLI overrides (will modify permissions at runtime):');
+      for (const line of overrideLines) {
+        console.log(line);
+      }
     }
   }
   console.log('');

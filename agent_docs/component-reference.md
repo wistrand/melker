@@ -22,7 +22,7 @@ Element (abstract base class)
 - `Focusable` - Can receive keyboard focus
 - `Clickable` - Handles click events with `onClick()`
 - `Interactive` - Handles keyboard events with `handleKeyPress()`
-- `TextSelectable` - Supports text selection
+- `TextSelectable` - Supports text selection (copy with Alt+C/Alt+N, requires `clipboard: true` in policy, shows toast on success/failure)
 - `Draggable` - Handles mouse drag (scrollbars, resizers, dialogs)
 - `Wheelable` - Handles mouse wheel events (scrollable tbody)
 
@@ -1473,5 +1473,6 @@ Layout properties (padding, margin, border widths) do NOT inherit.
 - [file-browser-architecture.md](file-browser-architecture.md) — File browser internals
 - [data-table.md](data-table.md) — Data table component
 - [data-bars.md](data-bars.md) — Bar chart components
+- [data-heatmap-architecture.md](data-heatmap-architecture.md) — Heatmap with isolines
 - [spinner-architecture.md](spinner-architecture.md) — Spinner component internals
 - [toast-architecture.md](toast-architecture.md) — Toast notification system

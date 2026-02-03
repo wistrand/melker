@@ -40,6 +40,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | File browser                                      | [file-browser-architecture.md](agent_docs/file-browser-architecture.md)        |
 | Data table                                        | [data-table.md](agent_docs/data-table.md)                                      |
 | Data bars (charts)                                | [data-bars.md](agent_docs/data-bars.md)                                        |
+| Data heatmap                                      | [data-heatmap-architecture.md](agent_docs/data-heatmap-architecture.md)        |
 | Spinner                                           | [spinner-architecture.md](agent_docs/spinner-architecture.md)                  |
 | Toast notifications                               | [toast-architecture.md](agent_docs/toast-architecture.md)                      |
 | Mermaid diagrams in markdown                      | [mermaid-support.md](agent_docs/mermaid-support.md)                            |
@@ -311,7 +312,7 @@ Apps declare permissions via `<policy>` tag, running in a sandboxed subprocess:
 
 **Permission shortcuts:** `ai`, `clipboard`, `keyring`, `browser`, `shader`
 
-**Approval:** All apps require first-run approval. Use `--trust` for CI/scripts.
+**Approval:** All apps require first-run approval. Use `--trust` for CI/scripts. CLI overrides (`--allow-*`/`--deny-*`) are shown in the approval prompt so users see what will be modified.
 
 **CLI Permission Overrides:** Use `--allow-*` and `--deny-*` flags to modify permissions at runtime:
 
@@ -370,6 +371,7 @@ Creates `docs/skill-creating-melker-apps.zip`, available at https://melker.sh/sk
 | Key                 | Action                                                                       |
 |---------------------|------------------------------------------------------------------------------|
 | `Ctrl+K`            | Toggle Command Palette                                                       |
+| `Alt+C` / `Alt+N`   | Copy text selection to clipboard (shows toast on success/failure)            |
 | `F6`                | Toggle Performance dialog (live stats)                                       |
 | `F7`                | Open AI assistant with voice input (or toggle recording if open)             |
 | `F8`                | Open AI accessibility assistant (text input)                                 |

@@ -529,6 +529,91 @@ $melker.render();
 - Stacked bars: use same `stack` value on series to stack them
 - Auto-detects valueFormat: `'sum'` for stacked, `'last/max'` for sparklines
 
+### data-heatmap
+
+Data-driven heatmap for 2D value grids with color scales and optional isolines (contour lines).
+
+```xml
+<!-- Simple heatmap -->
+<data-heatmap
+  grid='[[1, 2, 3], [4, 5, 6], [7, 8, 9]]'
+  rowLabels='["A", "B", "C"]'
+  colLabels='["X", "Y", "Z"]'
+/>
+
+<!-- With isolines -->
+<data-heatmap
+  grid='[[10, 20, 30], [25, 50, 35], [30, 40, 20]]'
+  isolines='[{"value": 25, "label": "25"}, {"value": 40, "label": "40"}]'
+  showIsolineLabels="true"
+  colorScale="thermal"
+/>
+
+<!-- With values displayed -->
+<data-heatmap
+  grid='[[12, 45, 78], [23, 56, 89], [34, 67, 99]]'
+  showValues="true"
+  valueFormat="d"
+  showLegend="true"
+/>
+
+<!-- Inline JSON -->
+<data-heatmap>
+{
+  "grid": [[1, 2], [3, 4]],
+  "rowLabels": ["Row1", "Row2"],
+  "colLabels": ["Col1", "Col2"]
+}
+</data-heatmap>
+
+<!-- Isolines only (no cell backgrounds) -->
+<data-heatmap
+  grid='[[10, 20, 30, 40], [20, 40, 50, 60], [30, 50, 70, 80], [40, 60, 80, 90]]'
+  isolines='[{"value": 35}, {"value": 55}, {"value": 75}]'
+  showCells="false"
+  showIsolineLabels="true"
+/>
+```
+
+**Props:**
+- `grid` - 2D array: `grid[row][col]` (null = missing data)
+- `rows`, `cols` - Initial dimensions (for sizing when grid is empty)
+- `rowLabels`, `colLabels` - Axis labels
+- `min`, `max` - Value range (auto-calculated if not specified)
+- `colorScale` - `viridis` (default), `plasma`, `inferno`, `thermal`, `grayscale`, `diverging`, `greens`, `reds`
+- `isolines` - Array of `{value, color?, label?}` for contour lines
+- `showIsolineLabels` - Show labels on isolines
+- `showCells` - Show cell backgrounds (default: true). Set to false for isolines-only display
+- `showValues` - Display numeric values in cells
+- `valueFormat` - `d`, `.1f`, `.2f`, `.0%`, `.1%`
+- `minCellWidth` - Minimum cell width in characters
+- `showLegend` - Show color scale legend
+- `showAxis` - Show axis labels (default: true)
+- `selectable` - Enable cell selection
+- `onHover`, `onSelect` - Event handlers
+
+**Style props:**
+- `cellWidth` - Cell width in characters (default: 2, auto-sizes for values)
+- `cellHeight` - Cell height in characters (default: 1)
+- `gap` - Gap between cells (default: 0, min 1 when isolines present)
+
+**API:**
+```typescript
+const hm = $melker.getElementById('heatmap');
+hm.getValue();                    // Get entire grid
+hm.setValue(grid);                // Set entire grid
+hm.getCell(row, col);             // Get single cell
+hm.setCell(row, col, value);      // Set single cell
+hm.setRow(row, values);           // Set entire row
+hm.setColumn(col, values);        // Set entire column
+```
+
+**Notes:**
+- Isolines use marching squares algorithm with box-drawing characters
+- Box-drawing characters are placed at cell centers
+- In BW mode, uses pattern characters (░▒▓█) instead of colors
+- Supports text selection - copies selected region as JSON
+
 ### table / thead / tbody / tr / th / td
 
 HTML-like table for complex cell content (buttons, inputs, etc.).

@@ -1,0 +1,132 @@
+<melker>
+  <title>Data Heatmap Demo</title>
+
+  <container style="padding: 1; gap: 1;">
+    <text style="font-weight: bold;">Data Heatmap Component</text>
+
+    <container style="flex-direction: row; gap: 2;">
+      <!-- Basic heatmap -->
+      <container style="gap: 1;">
+        <text>Basic (viridis):</text>
+        <data-heatmap
+          grid='[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]'
+          rowLabels='["A", "B", "C"]'
+          colLabels='["1", "2", "3", "4"]'
+        />
+      </container>
+
+      <!-- With values -->
+      <container style="gap: 1;">
+        <text>With values:</text>
+        <data-heatmap
+          grid='[[12, 45, 78], [23, 56, 89], [34, 67, 99]]'
+          rowLabels='["X", "Y", "Z"]'
+          colLabels='["A", "B", "C"]'
+          showValues="true"
+        />
+      </container>
+    </container>
+
+    <container style="flex-direction: row; gap: 2;">
+      <!-- Diagonal isoline pattern -->
+      <container style="gap: 1;">
+        <text>Diagonal (isoline at 50):</text>
+        <data-heatmap
+          grid='[[10, 20, 30, 40, 50, 60], [20, 30, 40, 50, 60, 70], [30, 40, 50, 60, 70, 80], [40, 50, 60, 70, 80, 90], [50, 60, 70, 80, 90, 99]]'
+          colorScale="thermal"
+          showValues="true"
+          isolines='[{"value": 50}]'
+        />
+      </container>
+
+      <!-- Concentric isolines -->
+      <container style="gap: 1;">
+        <text>Concentric (30, 60, 90):</text>
+        <data-heatmap
+          grid='[[10, 20, 30, 20, 10], [20, 50, 70, 50, 20], [30, 70, 99, 70, 30], [20, 50, 70, 50, 20], [10, 20, 30, 20, 10]]'
+          colorScale="plasma"
+          showValues="true"
+          isolines='[{"value": 30}, {"value": 60}, {"value": 90}]'
+        />
+      </container>
+    </container>
+
+    <container style="flex-direction: row; gap: 2;">
+      <!-- Diverging with zero crossing -->
+      <container style="gap: 1;">
+        <text>Diverging (zero line):</text>
+        <data-heatmap
+          grid='[[-20, -10, 0, 10, 20], [-10, -5, 5, 15, 25], [0, 5, 15, 25, 35], [10, 15, 25, 35, 45], [20, 25, 35, 45, 55]]'
+          colorScale="diverging"
+          showValues="true"
+          isolines='[{"value": 0}]'
+        />
+      </container>
+
+      <!-- Temperature gradient -->
+      <container style="gap: 1;">
+        <text>Temperature (20/35 thresholds):</text>
+        <data-heatmap
+          colorScale="thermal"
+          showValues="true"
+          isolines='[{"value": 20, "color": "cyan"}, {"value": 35, "color": "red"}]'
+        >
+          {
+            "grid": [[15, 18, 22, 26, 30], [18, 24, 30, 36, 40], [22, 30, 38, 44, 48], [26, 36, 44, 50, 52], [30, 40, 48, 52, 55]],
+            "rowLabels": ["N", "NM", "M", "MS", "S"],
+            "colLabels": ["W", "WC", "C", "CE", "E"]
+          }
+        </data-heatmap>
+      </container>
+    </container>
+
+    <container style="flex-direction: row; gap: 2;">
+      <!-- Greens -->
+      <container style="gap: 1;">
+        <text>Greens:</text>
+        <data-heatmap
+          grid='[[0.1, 0.3], [0.5, 0.9]]'
+          colorScale="greens"
+          showValues="true"
+          valueFormat=".0%"
+        />
+      </container>
+
+      <!-- Reds with threshold -->
+      <container style="gap: 1;">
+        <text>Reds (80% threshold):</text>
+        <data-heatmap
+          grid='[[0.50, 0.60, 0.70, 0.80, 0.90], [0.60, 0.70, 0.80, 0.90, 0.95], [0.70, 0.80, 0.90, 0.95, 0.98], [0.80, 0.90, 0.95, 0.98, 0.99]]'
+          colorScale="reds"
+          showValues="true"
+          valueFormat=".0%"
+          isolines='[{"value": 0.8}]'
+        />
+      </container>
+    </container>
+
+    <container style="flex-direction: row; gap: 2;">
+      <!-- Isolines only (no cells) -->
+      <container style="gap: 1;">
+        <text>Isolines only (showCells=false):</text>
+        <data-heatmap
+          grid='[[10, 20, 30, 40, 50, 60], [20, 30, 40, 50, 60, 70], [30, 40, 50, 60, 70, 80], [40, 50, 60, 70, 80, 90], [50, 60, 70, 80, 90, 99]]'
+          showCells="false"
+          isolines='[{"value": 30}, {"value": 60}, {"value": 90}]'
+          showIsolineLabels="true"
+        />
+      </container>
+
+      <!-- Multiple isolines without cells -->
+      <container style="gap: 1;">
+        <text>Contour map (isolines only):</text>
+        <data-heatmap
+          grid='[[10, 20, 30, 20, 10], [20, 50, 70, 50, 20], [30, 70, 99, 70, 30], [20, 50, 70, 50, 20], [10, 20, 30, 20, 10]]'
+          showCells="false"
+          isolines='[{"value": 25}, {"value": 50}, {"value": 75}]'
+          showIsolineLabels="true"
+        />
+      </container>
+    </container>
+  </container>
+</melker>

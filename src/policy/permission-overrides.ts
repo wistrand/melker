@@ -164,16 +164,46 @@ export function applyPermissionOverrides(
     }
   }
 
-  // Expand shortcuts before applying denies so that deny can filter expanded permissions
-  const expanded = expandShortcuts(result);
-  // Copy expanded arrays back to result
-  if (expanded.run) result.run = expanded.run;
-  if (expanded.net) result.net = expanded.net;
+  // Handle shortcut denies BEFORE expansion - if denying a shortcut, don't expand it
+  const effectiveClipboard = result.clipboard === true && !overrides.deny.clipboard;
+  const effectiveKeyring = result.keyring === true && !overrides.deny.keyring;
+  const effectiveBrowser = result.browser === true && !overrides.deny.browser;
+  const effectiveAi = result.ai === true && !overrides.deny.ai;
+
   // Clear shortcut flags so policyToDenoFlags doesn't expand them again
   delete result.ai;
   delete result.clipboard;
   delete result.keyring;
   delete result.browser;
+
+  // Expand only non-denied shortcuts
+  if (effectiveAi) {
+    if (!result.run) result.run = [];
+    for (const cmd of getAvailableAICommands()) {
+      if (!result.run.includes(cmd)) result.run.push(cmd);
+    }
+    if (!result.net) result.net = [];
+    for (const host of AI_NET_HOSTS) {
+      if (!result.net.includes(host)) result.net.push(host);
+    }
+  }
+  if (effectiveClipboard) {
+    if (!result.run) result.run = [];
+    for (const cmd of getAvailableClipboardCommands()) {
+      if (!result.run.includes(cmd)) result.run.push(cmd);
+    }
+  }
+  if (effectiveKeyring) {
+    if (!result.run) result.run = [];
+    for (const cmd of getAvailableKeyringCommands()) {
+      if (!result.run.includes(cmd)) result.run.push(cmd);
+    }
+  }
+  if (effectiveBrowser) {
+    if (!result.run) result.run = [];
+    const browserCmd = getBrowserCommand();
+    if (!result.run.includes(browserCmd)) result.run.push(browserCmd);
+  }
 
   // Apply array permission denies (filter out, or track as active denies for wildcards)
   for (const key of ARRAY_PERMISSIONS) {

@@ -151,7 +151,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `$melker.alert(message)` | Show modal alert |
 | `$melker.toast.show(message, options?)` | Show non-modal toast (duplicates show count) |
 | `$melker.toast.dismissAll()` | Dismiss all toast notifications |
-| `$melker.copyToClipboard(text)` | Copy to clipboard |
+| `$melker.copyToClipboard(text)` | Copy to clipboard (requires `clipboard: true`, auto-policy default) |
 | `$melker.openBrowser(url)` | Open URL in system browser (requires `browser: true` in policy) |
 | `$melker.cacheDir` | App-specific cache directory path (always exists) |
 | `$melker.logger.debug/info/warn/error()` | Log to file (F12 shows location) |
@@ -186,6 +186,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `<progress>` | value, max, showValue, indeterminate | Progress bar |
 | `<data-table>` | columns, rows, selectable, onSelect | Array-based table |
 | `<data-bars>` | series, bars, labels, showValues | Bar charts (stacked/grouped/sparkline) |
+| `<data-heatmap>` | grid, colorScale, isolines, showCells | Heatmap with color scales and isolines |
 | `<table>` | border, columnBorders, resizable | HTML-like table |
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
 | `<graph>` | type, src, text, style | Mermaid/JSON diagrams (flowchart, sequence, class) |
@@ -471,8 +472,10 @@ For more examples, see [EXAMPLES.md](references/EXAMPLES.md).
 | `sys` | `["hostname", "osRelease"]` | System information access |
 
 **Special values:**
-- `"cwd"` in `read`/`write` - expands to current working directory (used by auto-policy)
+- `"cwd"` in `read`/`write` - expands to current working directory
 - `"samesite"` in `net` - expands to the host of the app's source URL (for remote apps)
+
+**Auto-policy (no `<policy>` tag):** Local files without a policy get `read: ["cwd"], clipboard: true` by default, enabling file access in working directory and text selection copy (Alt+C).
 
 **Shortcuts** (set to `true` to enable):
 | Shortcut | Enables |
@@ -496,7 +499,7 @@ For more examples, see [EXAMPLES.md](references/EXAMPLES.md).
 </policy>
 ```
 
-**When to omit policy:** Simple local apps with no file/network needs can skip the policy tag. They'll use an auto-generated policy with `read: ["cwd"]` (read access to current working directory only).
+**When to omit policy:** Simple local apps with no network needs can skip the policy tag. They'll use an auto-generated policy with `read: ["cwd"], clipboard: true` (read access to working directory + clipboard for text selection copy).
 
 **Implicit permissions:** Melker adds certain paths automatically so apps don't need to declare framework internals:
 

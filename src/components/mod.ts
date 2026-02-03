@@ -32,6 +32,7 @@ export * from './table-row.ts';
 export * from './table-cell.ts';
 export * from './data-table.ts';
 export * from './data-bars.ts';
+export * from './data-heatmap.ts';
 
 // Filterable list components (combobox, select, etc.)
 export * from './filterable-list/mod.ts';

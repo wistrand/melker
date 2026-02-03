@@ -949,6 +949,8 @@ For more complex patterns, see these examples in the codebase:
 | `htop.melker` (showcase/) | Data table, live updates, process management |
 | `toast.melker` (basics/) | Toast notifications, all toast types, action buttons, position switching |
 | `data-bars.melker` (components/) | Bar charts, sparklines, stacked/grouped bars, streaming data |
+| `data-heatmap.melker` (components/) | Heatmap with color scales, isolines, value display, isolines-only mode |
+| `data-heatmap-dynamic.melker` (components/) | Dynamic heatmap, animation, interactive controls, isolines-only toggle |
 | `analog-clock.melker` (canvas/) | Canvas animation, aspect ratio correction |
 | `markdown-viewer.melker` (showcase/) | File loading, markdown rendering |
 | `noise.melker` (canvas/shaders/) | Per-pixel shaders, 3D noise animation, `simplex3d`/`perlin3d`/`fbm3d`, Inigo Quilez palettes, select controls |

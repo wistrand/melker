@@ -32,6 +32,7 @@ import {
   loadPolicyFromContent,
   formatPolicy,
   getApprovalFilePath,
+  createAutoPolicy,
   type MelkerPolicy,
 } from './policy/mod.ts';
 import {
@@ -243,15 +244,6 @@ function getBaseUrl(pathOrUrl: string): string {
 export interface RunMelkerResult {
   engine: any;
   cleanup: () => Promise<void>;
-}
-
-function createAutoPolicy(filepath: string): MelkerPolicy {
-  const filename = filepath.split('/').pop() || filepath;
-  return {
-    name: `${filename} (Auto Policy)`,
-    description: 'Default policy - read access to working directory',
-    permissions: { read: ['cwd'] },
-  };
 }
 
 function substituteEnvVars(content: string, args: string[]): string {

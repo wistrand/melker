@@ -26,6 +26,8 @@ import {
   checkLocalApproval,
   saveLocalApproval,
   getUrlHash,
+  createAutoPolicy,
+  formatOverrides,
   type MelkerPolicy,
 } from './src/policy/mod.ts';
 import {
@@ -56,21 +58,6 @@ function resetTerminalState(): void {
   } catch {
     // Ignore write errors
   }
-}
-
-/**
- * Create the default policy used when no embedded policy is found.
- * Grants read access to current working directory only.
- */
-function createAutoPolicy(filepath: string): MelkerPolicy {
-  const filename = filepath.split('/').pop() || filepath;
-  return {
-    name: `${filename} (Auto Policy)`,
-    description: 'Default policy - read access to working directory',
-    permissions: {
-      read: ['cwd'],
-    },
-  };
 }
 
 /**
@@ -636,6 +623,12 @@ export async function main(): Promise<void> {
         console.log(`\nPolicy source: ${policyResult.source}${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
         // Pass source URL for "samesite" resolution (filepath is the URL)
         console.log(formatPolicy(effectivePolicy, filepath));
+        if (hasCliOverrides) {
+          console.log('\nCLI overrides:');
+          for (const line of formatOverrides(overrides)) {
+            console.log(line);
+          }
+        }
         console.log('\nDeno permission flags:');
         const flags = policyToDenoFlags(effectivePolicy, Deno.cwd(), urlHash, filepath, activeDenies, overrides.deny);
         console.log(formatDenoFlags(flags));
@@ -652,6 +645,12 @@ export async function main(): Promise<void> {
 
             console.log(`\nPolicy source: auto (plain mermaid file)${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
             console.log(formatPolicy(effectivePolicy));
+            if (hasCliOverrides) {
+              console.log('\nCLI overrides:');
+              for (const line of formatOverrides(overrides)) {
+                console.log(line);
+              }
+            }
             console.log('\nDeno permission flags:');
             const flags = policyToDenoFlags(effectivePolicy, dirname(absoluteFilepath), urlHash, undefined, activeDenies, overrides.deny);
             console.log(formatDenoFlags(flags));
@@ -669,6 +668,12 @@ export async function main(): Promise<void> {
         const source = policyResult.policy ? policyResult.source : 'auto';
         console.log(`\nPolicy source: ${source}${policyResult.path ? ` (${policyResult.path})` : ''}${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
         console.log(formatPolicy(effectivePolicy));
+        if (hasCliOverrides) {
+          console.log('\nCLI overrides:');
+          for (const line of formatOverrides(overrides)) {
+            console.log(line);
+          }
+        }
         console.log('\nDeno permission flags:');
         const flags = policyToDenoFlags(effectivePolicy, dirname(absoluteFilepath), urlHash, undefined, activeDenies, overrides.deny);
         console.log(formatDenoFlags(flags));
@@ -712,7 +717,8 @@ export async function main(): Promise<void> {
       const isApproved = await checkApproval(filepath, content, policy, denoFlags);
 
       if (!isApproved) {
-        const approved = showApprovalPrompt(filepath, policy);
+        const promptOverrides = getPermissionOverrides(MelkerConfig.get());
+        const approved = showApprovalPrompt(filepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined);
         if (!approved) {
           console.log('\nPermission denied. Exiting.');
           Deno.exit(0);
@@ -759,7 +765,8 @@ export async function main(): Promise<void> {
       const isApproved = await checkLocalApproval(absoluteFilepath, policy);
 
       if (!isApproved) {
-        const approved = showApprovalPrompt(absoluteFilepath, policy);
+        const promptOverrides = getPermissionOverrides(MelkerConfig.get());
+        const approved = showApprovalPrompt(absoluteFilepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined);
         if (!approved) {
           console.log('\nPermission denied. Exiting.');
           Deno.exit(0);

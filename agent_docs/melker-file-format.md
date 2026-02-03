@@ -410,7 +410,7 @@ CSS-like properties in `style` attribute:
 - Comma (OR): `button, .clickable` (either match)
 - `$melker.render()` - Trigger re-render (for intermediate updates in async handlers)
 - `$melker.exit()` - Exit application
-- `$melker.copyToClipboard(text)` - Copy text to system clipboard (returns `true` on success)
+- `$melker.copyToClipboard(text)` - Copy text to system clipboard (requires `clipboard: true`, auto-policy default)
 - `$melker.alert(message)` - Show modal alert dialog
 - `$melker.toast.show(message, options?)` - Show non-modal toast (duplicates reset timer and show count)
 - `$melker.toast.dismiss(id)` - Dismiss a specific toast
@@ -927,9 +927,11 @@ Apps declare required permissions via a `<policy>` tag. The app runs in a sandbo
 | `shader`    | Allow per-pixel shaders on canvas/img elements                   |
 
 **Special values:**
-- `"cwd"` in `read`/`write` - expands to current working directory (default for auto-policy)
+- `"cwd"` in `read`/`write` - expands to current working directory
 - `"samesite"` in `net` - expands to the host of the source URL (for remote apps)
 - `$ENV{VAR}` or `$ENV{VAR:-default}` - environment variable substitution
+
+**Auto-policy (no `<policy>` tag):** Local files without a policy get `read: ["cwd"], clipboard: true` by default, enabling file access in working directory and text selection copy (Alt+C).
 
 ### CLI Options
 

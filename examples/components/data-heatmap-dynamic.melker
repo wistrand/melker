@@ -1,0 +1,211 @@
+<melker>
+  <title>Dynamic Distance Heatmap</title>
+
+  <script>
+    const SIZE = 20;
+    let centerX = SIZE / 2;
+    let centerY = SIZE / 2;
+    let time = 0;
+
+    // Generate distance field from a point
+    function generateDistanceField(cx, cy) {
+      const grid = [];
+      const maxDist = Math.sqrt(SIZE * SIZE + SIZE * SIZE);
+
+      for (let row = 0; row < SIZE; row++) {
+        const rowData = [];
+        for (let col = 0; col < SIZE; col++) {
+          const dx = col - cx;
+          const dy = row - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          // Normalize to 0-100 range
+          const value = Math.round((dist / maxDist) * 100);
+          rowData.push(value);
+        }
+        grid.push(rowData);
+      }
+      return grid;
+    }
+
+    // Initialize
+    export function init() {
+      centerX = SIZE / 2;
+      centerY = SIZE / 2;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.setValue(generateDistanceField(centerX, centerY));
+      $melker.getElementById('info').props.text =
+        `Center: (${centerX.toFixed(1)}, ${centerY.toFixed(1)}) - Click to move`;
+    }
+
+    // Animation state
+    let animationInterval = null;
+
+    // Display options
+    let showIsolines = true;
+    let showValues = true;
+    let showCells = true;
+    let showIsolineLabels = false;
+    let coloredIsolines = false;
+    let showLegend = false;
+    let colorScale = 'viridis';
+
+    // Generate isolines array based on current options
+    function getIsolines() {
+      if (!showIsolines) return [];
+      if (coloredIsolines) {
+        return [
+          { value: 20, color: 'cyan' },
+          { value: 40, color: 'yellow' },
+          { value: 60, color: 'red' },
+        ];
+      }
+      return [{ value: 20 }, { value: 40 }, { value: 60 }];
+    }
+
+
+    // Single animation step
+    function animateStep() {
+      time += 0.05;
+
+      // Move center in a circle
+      const radius = 6;
+      centerX = SIZE / 2 + Math.cos(time) * radius;
+      centerY = SIZE / 2 + Math.sin(time) * radius;
+
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.setValue(generateDistanceField(centerX, centerY));
+
+      $melker.getElementById('info').props.text =
+        `Center: (${centerX.toFixed(1)}, ${centerY.toFixed(1)})`;
+    }
+
+    // Toggle animation on/off
+    export function toggleAnimation(event) {
+      if (event.checked) {
+        // Start animation loop
+        animationInterval = setInterval(() => {
+          animateStep();
+          $melker.render();
+        }, 50);
+      } else {
+        // Stop animation
+        if (animationInterval) {
+          clearInterval(animationInterval);
+          animationInterval = null;
+        }
+      }
+    }
+
+    // Set center on click (event has row, col, value properties)
+    export function onSelect(event) {
+      centerX = event.col;
+      centerY = event.row;
+
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.setValue(generateDistanceField(centerX, centerY));
+
+      $melker.getElementById('info').props.text =
+        `Center: (${centerX}, ${centerY})`;
+    }
+
+    // Toggle isolines
+    export function toggleIsolines(event) {
+      showIsolines = event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.isolines = getIsolines();
+    }
+
+    // Toggle isoline colors
+    export function toggleIsolineColors(event) {
+      coloredIsolines = event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.isolines = getIsolines();
+    }
+
+    // Toggle cell values
+    export function toggleValues(event) {
+      showValues = event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.showValues = showValues;
+    }
+
+    // Toggle isolines only (hide cells)
+    export function toggleIsolinesOnly(event) {
+      showCells = !event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.showCells = showCells;
+    }
+
+    // Toggle isoline labels
+    export function toggleIsolineLabels(event) {
+      showIsolineLabels = event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.showIsolineLabels = showIsolineLabels;
+    }
+
+    // Toggle legend
+    export function toggleLegend(event) {
+      showLegend = event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.showLegend = showLegend;
+    }
+
+    // Change color scale
+    export function onColorSelect(event) {
+      colorScale = event.value;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.colorScale = colorScale;
+    }
+  </script>
+
+  <container style="padding: 1; gap: 1; overflow: auto;">
+    <text style="font-weight: bold;">Dynamic Distance Heatmap (20x20)</text>
+    <text id="info">Center: (10.0, 10.0)</text>
+
+    <container style="flex-direction: row; gap: 2;">
+      <container style="gap: 1;">
+        <data-heatmap
+          id="heatmap"
+          rows="20"
+          cols="20"
+          colorScale="viridis"
+          showValues="true"
+          isolines='[{"value": 20}, {"value": 40}, {"value": 60}]'
+          onSelect="$app.onSelect(event);"
+        />
+      </container>
+
+      <container style="gap: 1;">
+        <text>Controls:</text>
+        <checkbox title="Animate" onChange="$app.toggleAnimation(event);" />
+        <button label="Reset Center" onClick="$app.init();" />
+        <separator />
+        <checkbox title="Show Isolines" checked="true" onChange="$app.toggleIsolines(event);" />
+        <checkbox title="Show Values" checked="true" onChange="$app.toggleValues(event);" />
+        <checkbox title="Isolines Only" onChange="$app.toggleIsolinesOnly(event);" />
+        <checkbox title="Isoline Labels" onChange="$app.toggleIsolineLabels(event);" />
+        <checkbox title="Isoline Colors" onChange="$app.toggleIsolineColors(event);" />
+        <checkbox title="Show Legend" onChange="$app.toggleLegend(event);" />
+        <separator />
+        <text>Color Scale:</text>
+        <select id="colorSelect" selectedValue="viridis" onSelect="$app.onColorSelect(event);">
+          <option value="viridis">Viridis</option>
+          <option value="plasma">Plasma</option>
+          <option value="inferno">Inferno</option>
+          <option value="thermal">Thermal</option>
+          <option value="grayscale">Grayscale</option>
+          <option value="diverging">Diverging</option>
+          <option value="greens">Greens</option>
+          <option value="reds">Reds</option>
+        </select>
+        <separator />
+        <text style="color: dim;">Click heatmap to</text>
+        <text style="color: dim;">move center</text>
+      </container>
+    </container>
+  </container>
+
+  <script type="typescript" async="ready">
+    $app.init();
+  </script>
+</melker>

@@ -41,7 +41,7 @@ $melker: {
   // UI utilities
   setTitle(title: string): void;
   alert(message: string): void;
-  copyToClipboard(text: string): Promise<boolean>;
+  copyToClipboard(text: string): Promise<boolean>;  // Requires clipboard: true in policy (auto-policy default)
   openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
 
   // Toast notifications (non-modal)

@@ -176,15 +176,15 @@ Always allowed: `HOME`, `PATH`, `TERM`, `TMPDIR`, terminal detection vars (`KITT
 
 ### Interaction with Policies
 
-| Policy | Effective Read Permissions |
+| Policy | Effective Permissions |
 |--------|---------------------------|
-| No `<policy>` tag (local) | Auto-policy `read: ["cwd"]` + implicit paths |
+| No `<policy>` tag (local) | Auto-policy `read: ["cwd"], clipboard: true` + implicit paths |
 | `permissions: {}` | Implicit paths only (includes cwd) |
 | `read: ["cwd"]` | Same as above (cwd already implicit) |
 | `read: ["/data"]` | `/data` + implicit paths |
 | `read: ["*"]` | `--allow-read` (bypasses implicit path logic) |
 
-The `cwd` value in auto-policy is technically redundant since cwd is already implicit, but it serves as documentation—users see "read: cwd" in the approval prompt, making the permission explicit.
+The `cwd` value in auto-policy is technically redundant since cwd is already implicit, but it serves as documentation—users see "read: cwd" in the approval prompt, making the permission explicit. The `clipboard` shortcut enables text selection copy via Alt+C.
 
 ### Denying Implicit Paths
 
@@ -202,7 +202,7 @@ The warning is printed to stderr so users understand the risk.
 All .melker files require first-run approval to prevent malicious code execution.
 
 ### Local Files
-- Policy tag is optional (auto-policy with `read: ["cwd"]` if missing)
+- Policy tag is optional (auto-policy with `read: ["cwd"], clipboard: true` if missing)
 - Approval is **policy-hash-based** - code changes don't require re-approval
 - Re-approval needed if: policy changes, file moved/renamed
 
@@ -223,6 +223,22 @@ Use `--trust` for CI/scripts:
 ./melker.ts --trust app.melker
 ```
 
+### CLI Overrides in Approval Prompt
+
+When CLI permission overrides (`--allow-*`/`--deny-*`) are specified, they are shown in the approval prompt:
+
+```
+Requested permissions:
+  read: cwd (/home/user/project)
+  clipboard: enabled (xclip)
+
+CLI overrides (will modify permissions at runtime):
+  --deny-clipboard
+```
+
+- The approval is for the **base policy** - CLI overrides are applied at runtime
+- This ensures users understand what the app requests vs. what will actually be granted
+
 ## Auto-Policy
 
 Local files without a `<policy>` tag get an auto-generated policy:
@@ -230,17 +246,22 @@ Local files without a `<policy>` tag get an auto-generated policy:
 ```json
 {
   "name": "<filename> (Auto Policy)",
-  "permissions": { "read": ["cwd"] }
+  "description": "Default policy - read access to working directory, clipboard access",
+  "permissions": { "read": ["cwd"], "clipboard": true }
 }
 ```
 
 For example, running `app.melker` without an embedded policy shows:
 ```
 App: app.melker (Auto Policy)
+Description: Default policy - read access to working directory, clipboard access
+
+Requested permissions:
   read: cwd (/home/user/project)
+  clipboard: enabled (xclip)
 ```
 
-This grants read access to the current working directory (where melker was invoked), allowing relative paths like `../../media/image.png` to work as long as they resolve to paths under cwd. Network, write, and subprocess permissions require an explicit policy.
+This grants read access to the current working directory (where melker was invoked), allowing relative paths like `../../media/image.png` to work as long as they resolve to paths under cwd. Clipboard access allows text selection copy (Alt+C). Network, write, and other subprocess permissions require an explicit policy.
 
 ## Deno Flag Generation
 

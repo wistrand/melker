@@ -547,7 +547,6 @@ export class MelkerEngine {
         document: this._document,
         renderer: this._renderer,
         eventManager: this._eventManager,
-        logger: this._logger,
         onRender: () => this.render(),
         onRenderDialogOnly: () => this.renderDialogOnly(),
         onRenderOptimized: () => this._renderOptimized(),

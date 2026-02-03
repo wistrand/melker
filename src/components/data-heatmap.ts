@@ -35,6 +35,8 @@ export type HeatmapGrid = HeatmapValue[][];
 export type ColorScaleName = 'viridis' | 'plasma' | 'inferno' | 'thermal' |
                              'grayscale' | 'diverging' | 'greens' | 'reds';
 
+export type IsolineMode = 'equal' | 'quantile' | 'nice';
+
 export interface Isoline {
   value: number;           // Value at which to draw the contour
   color?: string;          // Line color (default: theme foreground)
@@ -72,7 +74,9 @@ export interface DataHeatmapProps extends BaseProps {
   colorScale?: ColorScaleName;
 
   // Isolines
-  isolines?: Isoline[];
+  isolines?: Isoline[];           // Manual isoline definitions
+  isolineCount?: number;          // Auto-generate N isolines (overrides isolines if set)
+  isolineMode?: IsolineMode;      // Algorithm: 'equal' (default), 'quantile', 'nice'
   showIsolineLabels?: boolean;
 
   showCells?: boolean;    // Show cell backgrounds (default: true). Set to false for isolines-only display
@@ -477,7 +481,116 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
   // ===== Isoline Detection (Marching Squares) =====
 
   private _hasIsolines(): boolean {
+    if (this.props.isolineCount && this.props.isolineCount > 0) return true;
     return Array.isArray(this.props.isolines) && this.props.isolines.length > 0;
+  }
+
+  // Get effective isolines (manual or auto-generated)
+  private _getEffectiveIsolines(): Isoline[] {
+    // Manual isolines take precedence unless isolineCount is set
+    if (this.props.isolineCount && this.props.isolineCount > 0) {
+      return this._generateIsolines(this.props.isolineCount, this.props.isolineMode ?? 'equal');
+    }
+    return this.props.isolines ?? [];
+  }
+
+  // Generate N isolines using the specified algorithm
+  private _generateIsolines(count: number, mode: IsolineMode): Isoline[] {
+    this._calculateScale();
+    const min = this._minValue;
+    const max = this._maxValue;
+    const range = max - min;
+
+    if (range <= 0 || count <= 0) return [];
+
+    let values: number[];
+
+    switch (mode) {
+      case 'quantile':
+        values = this._generateQuantileValues(count);
+        break;
+      case 'nice':
+        values = this._generateNiceValues(count, min, max);
+        break;
+      case 'equal':
+      default:
+        values = this._generateEqualValues(count, min, max);
+        break;
+    }
+
+    return values.map(value => ({ value }));
+  }
+
+  // Equal intervals between min and max
+  private _generateEqualValues(count: number, min: number, max: number): number[] {
+    const values: number[] = [];
+    const step = (max - min) / (count + 1);
+    for (let i = 1; i <= count; i++) {
+      values.push(min + step * i);
+    }
+    return values;
+  }
+
+  // Values at data percentiles
+  private _generateQuantileValues(count: number): number[] {
+    const { grid } = this.props;
+    if (!grid) return [];
+
+    // Collect all non-null values
+    const allValues: number[] = [];
+    for (const row of grid) {
+      if (!row) continue;
+      for (const val of row) {
+        if (val !== null && val !== undefined) {
+          allValues.push(val);
+        }
+      }
+    }
+
+    if (allValues.length === 0) return [];
+
+    // Sort values
+    allValues.sort((a, b) => a - b);
+
+    // Get percentile values
+    const values: number[] = [];
+    for (let i = 1; i <= count; i++) {
+      const percentile = i / (count + 1);
+      const index = Math.floor(percentile * (allValues.length - 1));
+      values.push(allValues[index]);
+    }
+
+    // Remove duplicates
+    return [...new Set(values)];
+  }
+
+  // "Nice" rounded values (multiples of 1, 2, 5, 10, etc.)
+  private _generateNiceValues(count: number, min: number, max: number): number[] {
+    const range = max - min;
+    if (range <= 0) return [];
+
+    // Calculate a "nice" step size
+    const roughStep = range / (count + 1);
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+    const normalized = roughStep / magnitude;
+
+    let niceStep: number;
+    if (normalized <= 1) niceStep = magnitude;
+    else if (normalized <= 2) niceStep = 2 * magnitude;
+    else if (normalized <= 5) niceStep = 5 * magnitude;
+    else niceStep = 10 * magnitude;
+
+    // Generate values starting from a nice number
+    const niceMin = Math.ceil(min / niceStep) * niceStep;
+    const values: number[] = [];
+
+    for (let v = niceMin; v < max && values.length < count; v += niceStep) {
+      if (v > min) {
+        values.push(v);
+      }
+    }
+
+    return values;
   }
 
   // Get the marching squares case for a 2x2 cell quad
@@ -821,8 +934,8 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     style: Partial<Cell>,
     buffer: DualBuffer
   ): void {
-    const { isolines } = this.props;
-    if (!isolines) return;
+    const isolines = this._getEffectiveIsolines();
+    if (isolines.length === 0) return;
 
     const numCols = this.props.grid?.[dataRow]?.length ?? 0;
     const invisibleCells = this.props.showCells === false;

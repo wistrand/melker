@@ -154,8 +154,10 @@ So constructed.
   - Isolines (contour lines) with marching squares algorithm
   - Box-drawing characters for isoline rendering (center-aligned)
   - `showCells` prop for isolines-only display mode
+  - Auto-isolines: `isolineCount` + `isolineMode` (equal, quantile, nice)
   - Value display with auto-contrast foreground colors
   - BW mode fallback with density patterns
+  - Metaballs example with animated field visualization
 - Policy system improvements
   - `configSchema` for app-defined config with env var overrides
   - Env vars in configSchema auto-added to subprocess permissions
@@ -188,7 +190,7 @@ So constructed.
 | connector        | Jan 30 | Box-drawing lines between elements     |
 | spinner          | Feb 2  | Animated loading indicators            |
 | toast            | Feb 2  | Non-modal notifications (API-based)    |
-| data-heatmap     | Feb 3  | 2D heatmaps with color scales and isolines |
+| data-heatmap     | Feb 3  | 2D heatmaps with color scales, isolines, auto-isolines |
 
 ## Architecture
 

@@ -52,7 +52,9 @@ export interface DataHeatmapProps extends BaseProps {
                'grayscale' | 'diverging' | 'greens' | 'reds';
 
   // Isolines
-  isolines?: Isoline[];           // Contour lines at specific values
+  isolines?: Isoline[];           // Contour lines at specific values (manual)
+  isolineCount?: number;          // Auto-generate N isolines (overrides isolines if set)
+  isolineMode?: 'equal' | 'quantile' | 'nice';  // Algorithm for auto-generation (default: 'equal')
   showIsolineLabels?: boolean;    // Show value labels on isolines
 
   // Display
@@ -302,6 +304,30 @@ Default: auto-detect based on data (integers if all whole numbers, else `.1f`).
   style="cellWidth: 4;"
 />
 ```
+
+### Auto-Generated Isolines
+
+Instead of specifying exact isoline values, use `isolineCount` to auto-generate isolines:
+
+```xml
+<!-- Auto-generate 4 isolines using equal intervals -->
+<data-heatmap
+  grid='[[10, 20, 30, 40], [20, 40, 60, 80], [30, 60, 90, 120]]'
+  isolineCount="4"
+  isolineMode="equal"
+  showIsolineLabels="true"
+/>
+```
+
+**Modes:**
+
+| Mode       | Description                                      | Use Case                         |
+|------------|--------------------------------------------------|----------------------------------|
+| `equal`    | Evenly spaced between min and max values         | Default, uniform data            |
+| `quantile` | Values at data percentiles (e.g., 25%, 50%, 75%) | Skewed distributions             |
+| `nice`     | Rounds to "nice" numbers (5, 10, 25, 50, 100...) | Human-readable labels            |
+
+Note: `isolineCount` overrides `isolines` if both are specified.
 
 ### Isolines-Only Display
 

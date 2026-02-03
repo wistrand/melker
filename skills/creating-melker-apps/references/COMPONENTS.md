@@ -573,6 +573,14 @@ Data-driven heatmap for 2D value grids with color scales and optional isolines (
   showCells="false"
   showIsolineLabels="true"
 />
+
+<!-- Auto-generated isolines -->
+<data-heatmap
+  grid='[[10, 20, 30], [40, 50, 60], [70, 80, 90]]'
+  isolineCount="3"
+  isolineMode="nice"
+  showIsolineLabels="true"
+/>
 ```
 
 **Props:**
@@ -581,7 +589,9 @@ Data-driven heatmap for 2D value grids with color scales and optional isolines (
 - `rowLabels`, `colLabels` - Axis labels
 - `min`, `max` - Value range (auto-calculated if not specified)
 - `colorScale` - `viridis` (default), `plasma`, `inferno`, `thermal`, `grayscale`, `diverging`, `greens`, `reds`
-- `isolines` - Array of `{value, color?, label?}` for contour lines
+- `isolines` - Array of `{value, color?, label?}` for contour lines (manual)
+- `isolineCount` - Auto-generate N isolines (overrides `isolines` if set)
+- `isolineMode` - Algorithm for auto-generation: `equal` (default), `quantile`, `nice`
 - `showIsolineLabels` - Show labels on isolines
 - `showCells` - Show cell backgrounds (default: true). Set to false for isolines-only display
 - `showValues` - Display numeric values in cells
@@ -611,6 +621,7 @@ hm.setColumn(col, values);        // Set entire column
 **Notes:**
 - Isolines use marching squares algorithm with box-drawing characters
 - Box-drawing characters are placed at cell centers
+- Auto-isolines: `isolineCount` with `isolineMode` (`equal`, `quantile`, `nice`) generates isolines automatically
 - In BW mode, uses pattern characters (░▒▓█) instead of colors
 - Supports text selection - copies selected region as JSON
 

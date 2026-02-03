@@ -1,0 +1,209 @@
+<melker>
+  <title>Metaballs Heatmap</title>
+
+  <script>
+    const WIDTH = 30;
+    const HEIGHT = 16;
+    let time = 0;
+
+    // Metaball positions
+    let ball1 = { x: WIDTH / 3, y: HEIGHT / 2 };
+    let ball2 = { x: (WIDTH * 2) / 3, y: HEIGHT / 2 };
+
+    // Metaball field: sum of radius^2 / distance^2 for each ball
+    function generateMetaballField() {
+      const grid = [];
+      const radius = 6;
+
+      for (let row = 0; row < HEIGHT; row++) {
+        const rowData = [];
+        for (let col = 0; col < WIDTH; col++) {
+          // Distance to ball 1
+          const dx1 = col - ball1.x;
+          const dy1 = row - ball1.y;
+          const dist1Sq = dx1 * dx1 + dy1 * dy1 + 0.1;
+
+          // Distance to ball 2
+          const dx2 = col - ball2.x;
+          const dy2 = row - ball2.y;
+          const dist2Sq = dx2 * dx2 + dy2 * dy2 + 0.1;
+
+          // Metaball field value (higher = closer to balls)
+          const field = (radius * radius) / dist1Sq + (radius * radius) / dist2Sq;
+
+          // Normalize to 0-100 range
+          const value = Math.min(100, Math.round(field * 10));
+          rowData.push(value);
+        }
+        grid.push(rowData);
+      }
+      return grid;
+    }
+
+    // Initialize
+    export function init() {
+      time = 0;
+      ball1 = { x: WIDTH / 3, y: HEIGHT / 2 };
+      ball2 = { x: (WIDTH * 2) / 3, y: HEIGHT / 2 };
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.setValue(generateMetaballField());
+      updateInfo();
+    }
+
+    function updateInfo() {
+      $melker.getElementById('info').props.text =
+        `Ball 1: (${ball1.x.toFixed(1)}, ${ball1.y.toFixed(1)})  Ball 2: (${ball2.x.toFixed(1)}, ${ball2.y.toFixed(1)})`;
+    }
+
+    // Animation state
+    let animationInterval = null;
+
+    // Display options
+    let showIsolines = true;
+    let showValues = false;
+    let showCells = true;
+    let showIsolineLabels = false;
+    let colorScale = 'inferno';
+
+    // Isoline count (0 = disabled)
+    let isolineCount = 4;
+    let isolineMode = 'nice';
+
+    // Single animation step
+    function animateStep() {
+      time += 0.04;
+
+      // Ball 1: circular orbit
+      const radius1 = 8;
+      ball1.x = WIDTH / 2 + Math.cos(time) * radius1;
+      ball1.y = HEIGHT / 2 + Math.sin(time * 1.3) * (HEIGHT / 3);
+
+      // Ball 2: figure-8 pattern (lissajous)
+      const radius2 = 10;
+      ball2.x = WIDTH / 2 + Math.sin(time * 0.7) * radius2;
+      ball2.y = HEIGHT / 2 + Math.sin(time * 1.4) * (HEIGHT / 3);
+
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.setValue(generateMetaballField());
+      updateInfo();
+    }
+
+    // Toggle animation
+    export function toggleAnimation(event) {
+      if (event.checked) {
+        animationInterval = setInterval(() => {
+          animateStep();
+          $melker.render();
+        }, 50);
+      } else {
+        if (animationInterval) {
+          clearInterval(animationInterval);
+          animationInterval = null;
+        }
+      }
+    }
+
+    // Toggle isolines
+    export function toggleIsolines(event) {
+      showIsolines = event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.isolineCount = showIsolines ? isolineCount : 0;
+    }
+
+    // Toggle cell values
+    export function toggleValues(event) {
+      showValues = event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.showValues = showValues;
+    }
+
+    // Toggle isolines only
+    export function toggleIsolinesOnly(event) {
+      showCells = !event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.showCells = showCells;
+    }
+
+    // Toggle isoline labels
+    export function toggleIsolineLabels(event) {
+      showIsolineLabels = event.checked;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.showIsolineLabels = showIsolineLabels;
+    }
+
+    // Change color scale
+    export function onColorSelect(event) {
+      colorScale = event.value;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.colorScale = colorScale;
+    }
+
+    // Change isoline mode
+    export function onModeSelect(event) {
+      isolineMode = event.value;
+      const heatmap = $melker.getElementById('heatmap');
+      heatmap.props.isolineMode = isolineMode;
+    }
+
+    // Change isoline count
+    export function onCountChange(event) {
+      isolineCount = event.value;
+      const heatmap = $melker.getElementById('heatmap');
+      if (showIsolines) {
+        heatmap.props.isolineCount = isolineCount;
+      }
+    }
+  </script>
+
+  <container style="padding: 1; gap: 1; overflow: auto;">
+    <text style="font-weight: bold;">Metaballs Heatmap (30x16)</text>
+    <text id="info">Ball 1: (13.3, 8.0)  Ball 2: (26.7, 8.0)</text>
+
+    <container style="flex-direction: row; gap: 2;">
+      <container style="gap: 1;">
+        <data-heatmap
+          id="heatmap"
+          rows="16"
+          cols="30"
+          colorScale="inferno"
+          showValues="false"
+          isolineCount="4"
+          isolineMode="nice"
+        />
+      </container>
+
+      <container style="gap: 1;">
+        <text>Controls:</text>
+        <checkbox id="animateCheckbox" title="Animate" checked="true" onChange="$app.toggleAnimation(event);" />
+        <button label="Reset" onClick="$app.init();" />
+        <separator />
+        <checkbox title="Show Isolines" checked="true" onChange="$app.toggleIsolines(event);" />
+        <checkbox title="Show Values" onChange="$app.toggleValues(event);" />
+        <checkbox title="Isolines Only" onChange="$app.toggleIsolinesOnly(event);" />
+        <checkbox title="Isoline Labels" onChange="$app.toggleIsolineLabels(event);" />
+        <text>Isoline Count:</text>
+        <slider id="countSlider" min="1" max="8" value="4" showValue="true" onChange="$app.onCountChange(event);" />
+        <text>Isoline Mode:</text>
+        <select id="modeSelect" selectedValue="nice" onSelect="$app.onModeSelect(event);">
+          <option value="equal">Equal</option>
+          <option value="quantile">Quantile</option>
+          <option value="nice">Nice</option>
+        </select>
+        <separator />
+        <text>Color Scale:</text>
+        <select id="colorSelect" selectedValue="inferno" onSelect="$app.onColorSelect(event);">
+          <option value="inferno">Inferno</option>
+          <option value="plasma">Plasma</option>
+          <option value="viridis">Viridis</option>
+          <option value="thermal">Thermal</option>
+          <option value="grayscale">Grayscale</option>
+        </select>
+      </container>
+    </container>
+  </container>
+
+  <script type="typescript" async="ready">
+    $app.init();
+    $app.toggleAnimation({ checked: true });
+  </script>
+</melker>

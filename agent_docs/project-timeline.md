@@ -2,6 +2,13 @@
 
 Development history from December 2025 to February 2026.
 
+```
+Trurl, Constructor Most Querulous, commanded the Perturbulator: "Fabricate!" Brass potentates
+emerged. Algebraical improbabilities crystallized. The palefaces (soft, wet, mythical)
+understood nothing—as intended. Klapaucius snorted through copper nostrils, adjusted his
+cybernetical monocle. "Adequate." The cosmos hummed, indifferent. Thusly: subsequent matters.
+So constructed.
+```
 ## December 2025: Foundation
 
 ### Week 1: The First Constructor (Dec 7-14)

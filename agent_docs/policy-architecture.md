@@ -135,38 +135,67 @@ When the base permission is wildcard (`*`), denies can't filter the allow list. 
 # Generates: --allow-read --deny-read=/etc/passwd
 ```
 
-## Implicit Paths
+## Implicit Permissions
 
-The policy system automatically adds certain paths that Melker needs to function:
+Melker adds certain permissions automatically because they're required for basic functionality. These are added regardless of policy content—even an empty `permissions: {}` gets them.
+
+### Why Implicit Permissions Exist
+
+Apps shouldn't need to declare permissions for Melker's internal operations. Users shouldn't see "read ~/.cache/melker" in approval prompts for every app. Implicit permissions keep policies focused on what the **app** needs, not what the **framework** needs.
 
 ### Implicit Read Paths
-- Temp directory (`/tmp` or `$TMPDIR`) - bundler temp files
-- App directory - loading the .melker file
-- Current working directory
-- XDG state directory (`~/.local/state/melker`) - persistence
-- App cache directory (`~/.cache/melker/app-cache/<hash>`)
+
+| Path | Why |
+|------|-----|
+| Temp dir | Bundler writes transpiled code here, app must read it |
+| App dir | App must read its own .melker file and relative imports |
+| `Deno.cwd()` | Enables relative paths like `../media/img.png` |
+| `~/.local/state/melker` | Read persisted state from previous runs |
+| `~/.cache/melker/app-cache/{hash}` | Read cached remote imports (when urlHash provided) |
 
 ### Implicit Write Paths
-- Temp directory - bundler temp files
-- XDG state directory - persistence
-- Log directory (`~/.cache/melker/logs`)
-- App cache directory
+
+| Path | Why |
+|------|-----|
+| Temp dir | Bundler writes transpiled code here |
+| `~/.local/state/melker` | Persist app state across runs |
+| `~/.cache/melker/logs` | Write log files (viewable via F12) |
+| `~/.cache/melker/app-cache/{hash}` | Cache remote imports (when urlHash provided) |
+
+**Note:** CWD is implicit for **read** but not **write**. Apps that need to write files must declare it explicitly in policy.
+
+### Implicit Net Permissions
+
+| Host | Condition |
+|------|-----------|
+| `localhost` | When `debugPort` is configured (debug server needs it) |
 
 ### Implicit Environment Variables
-- Basic: `HOME`, `PATH`, `TERM`, `TMPDIR`, etc.
-- Terminal detection: `TERM_PROGRAM`, `KITTY_WINDOW_ID`, `TMUX`, etc.
-- XDG directories: `XDG_STATE_HOME`, `XDG_CACHE_HOME`, etc.
-- Melker internal: `MELKER_RUNNER`, `MELKER_PERMISSION_OVERRIDES`, etc.
+
+Always allowed: `HOME`, `PATH`, `TERM`, `TMPDIR`, terminal detection vars (`KITTY_WINDOW_ID`, `TMUX`, etc.), XDG vars, `MELKER_*` vars.
+
+### Interaction with Policies
+
+| Policy | Effective Read Permissions |
+|--------|---------------------------|
+| No `<policy>` tag (local) | Auto-policy `read: ["cwd"]` + implicit paths |
+| `permissions: {}` | Implicit paths only (includes cwd) |
+| `read: ["cwd"]` | Same as above (cwd already implicit) |
+| `read: ["/data"]` | `/data` + implicit paths |
+| `read: ["*"]` | `--allow-read` (bypasses implicit path logic) |
+
+The `cwd` value in auto-policy is technically redundant since cwd is already implicit, but it serves as documentation—users see "read: cwd" in the approval prompt, making the permission explicit.
 
 ### Denying Implicit Paths
 
-When `--deny-read` or `--deny-write` filters an implicit path, a warning is shown:
+Implicit paths can be denied via CLI, but this may break the app:
 
-```
-Warning: Denying write access to /tmp (used for bundler temp files) may affect functionality
+```bash
+./melker.ts --deny-write=/tmp app.melker
+# Warning: Denying write access to /tmp (used for bundler temp files) may affect functionality
 ```
 
-This warns users that denying these paths may break the app.
+The warning is printed to stderr so users understand the risk.
 
 ## Approval System
 

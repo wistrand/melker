@@ -498,6 +498,15 @@ For more examples, see [EXAMPLES.md](references/EXAMPLES.md).
 
 **When to omit policy:** Simple local apps with no file/network needs can skip the policy tag. They'll use an auto-generated policy with `read: ["cwd"]` (read access to current working directory only).
 
+**Implicit permissions:** Melker adds certain paths automatically so apps don't need to declare framework internals:
+
+| Permission | Implicit Paths | Why |
+|------------|----------------|-----|
+| Read | temp dir, app dir, cwd, state dir | Bundler needs temp, app needs its own files and relative paths |
+| Write | temp dir, state dir, log dir | Bundler output, state persistence, logging |
+
+These are added regardless of policy content. CWD is implicit for **read** but not **write**—apps that write files must declare it explicitly.
+
 ## State Persistence
 
 Elements with `id` are auto-persisted. Opt-out with `persist="false"`:

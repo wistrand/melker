@@ -935,7 +935,7 @@ Non-modal notifications that auto-dismiss:
 8. **`console.log()` works in app code** - Automatically redirects to `$melker.logger.info()` (F12 shows log location)
 9. **Avoid emojis** - They break terminal character width calculations
 10. **Avoid specifying colors** - Let the theme engine handle colors; only use for canvas or intentional effects
-11. **Add `<policy>` for file/network access** - Required for remote apps; local apps without policy get `read: ["cwd"]` only
+11. **Add `<policy>` for file/network access** - Required for remote apps; local apps without policy get `read: ["cwd"]` only (write requires explicit policy)
 12. **Use `--trust` for CI/scripts** - Bypasses interactive approval prompt that would hang non-interactive environments
 13. **Use `$melker.openBrowser(url)` for links** - Requires `browser: true` in policy permissions
 

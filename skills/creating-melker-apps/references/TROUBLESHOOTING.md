@@ -96,6 +96,20 @@ Apps without a `<policy>` tag only have read access to the current working direc
 </policy>
 ```
 
+**File write fails (even to cwd):**
+CWD is implicit for **read** but not **write**. Apps that need to write files must declare it explicitly:
+```xml
+<policy>
+{
+  "permissions": {
+    "write": ["cwd"]
+  }
+}
+</policy>
+```
+
+**Note:** Some paths are always allowed (temp dir, state dir, log dir) because the framework needs them. You don't need to declare these.
+
 ## Terminal Issues
 
 **Garbled output after crash:**

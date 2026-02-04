@@ -5,6 +5,7 @@ import type { PackedRGBA } from './types.ts';
 
 // ANSI escape codes for terminal control
 export const ANSI = {
+  // Screen control
   clearScreen: '\x1b[2J',
   cursorHome: '\x1b[H',
   hideCursor: '\x1b[?25l',
@@ -14,9 +15,32 @@ export const ANSI = {
   // Synchronized output sequences for reducing flicker
   beginSync: '\x1b[?2026h',     // Begin synchronized update (DEC Private Mode 2026)
   endSync: '\x1b[?2026l',       // End synchronized update
-  // Additional anti-flicker sequences
+  // Cursor save/restore
   saveCursor: '\x1b[s',         // Save cursor position
   restoreCursor: '\x1b[u',      // Restore cursor position
+  // Text attributes
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  italic: '\x1b[3m',
+  underline: '\x1b[4m',
+  reverse: '\x1b[7m',
+  // Mouse reporting modes
+  mouseBasicOn: '\x1b[?1000h',
+  mouseBasicOff: '\x1b[?1000l',
+  mouseButtonOn: '\x1b[?1002h',
+  mouseButtonOff: '\x1b[?1002l',
+  mouseAnyOn: '\x1b[?1003h',
+  mouseAnyOff: '\x1b[?1003l',
+  mouseSgrOn: '\x1b[?1006h',
+  mouseSgrOff: '\x1b[?1006l',
+  mouseUrxvtOn: '\x1b[?1015h',
+  mouseUrxvtOff: '\x1b[?1015l',
+  // Application mode
+  appCursorOn: '\x1b[?1h',
+  appCursorOff: '\x1b[?1l',
+  appKeypadOn: '\x1b=',
+  appKeypadOff: '\x1b>',
 };
 
 export type ColorSupport = 'none' | '16' | '256' | 'truecolor';
@@ -258,7 +282,7 @@ export class AnsiOutputGenerator {
    * Generate ANSI style codes for a cell
    */
   private _generateCellStyle(cell: BufferCell): string {
-    const codes: string[] = ['\x1b[0m']; // Reset
+    const codes: string[] = [ANSI.reset];
 
     // Colors only if color support is enabled
     if (this._colorSupport !== 'none') {
@@ -274,11 +298,11 @@ export class AnsiOutputGenerator {
     }
 
     // Text attributes work regardless of color support
-    if (cell.bold) codes.push('\x1b[1m');
-    if (cell.dim) codes.push('\x1b[2m');
-    if (cell.italic) codes.push('\x1b[3m');
-    if (cell.underline) codes.push('\x1b[4m');
-    if (cell.reverse) codes.push('\x1b[7m');
+    if (cell.bold) codes.push(ANSI.bold);
+    if (cell.dim) codes.push(ANSI.dim);
+    if (cell.italic) codes.push(ANSI.italic);
+    if (cell.underline) codes.push(ANSI.underline);
+    if (cell.reverse) codes.push(ANSI.reverse);
 
     return codes.join('');
   }

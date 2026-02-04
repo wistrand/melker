@@ -3,6 +3,9 @@
 
 import { Env } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('Headless');
 
 export interface HeadlessOptions {
   width?: number;
@@ -206,8 +209,8 @@ export class HeadlessManager {
   start(): void {
     if (this._isActive) return;
 
-    console.log('[Melker Headless] Starting headless mode');
-    console.log(`[Melker Headless] Virtual terminal: ${this._terminal.width}×${this._terminal.height}`);
+    logger.info('Starting headless mode');
+    logger.info(`Virtual terminal: ${this._terminal.width}×${this._terminal.height}`);
 
     this._isActive = true;
   }

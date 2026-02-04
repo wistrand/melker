@@ -5,7 +5,9 @@ import { Document } from './document.ts';
 import { FocusManager } from './focus.ts';
 import { HitTester } from './hit-test.ts';
 import { Element, isFocusable } from './types.ts';
-import { getLogger, type ComponentLogger } from './logging.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('FocusNavigation');
 
 export interface FocusNavigationHandlerDeps {
   document: Document;
@@ -22,11 +24,9 @@ export interface FocusNavigationHandlerDeps {
  */
 export class FocusNavigationHandler {
   private _deps: FocusNavigationHandlerDeps;
-  private _logger: ComponentLogger;
 
   constructor(deps: FocusNavigationHandlerDeps) {
     this._deps = deps;
-    this._logger = getLogger('FocusNavigation');
   }
 
   /**
@@ -38,7 +38,7 @@ export class FocusNavigationHandler {
     const focusableElements = this.findFocusableElements(this._deps.document.root);
 
     // Debug logging for focus registration
-    this._logger.trace('Auto-registering focusable elements', {
+    logger.trace('Auto-registering focusable elements', {
       totalElements: focusableElements.length,
       elementTypes: focusableElements.map(el => ({ type: el.type, id: el.id || 'no-id' })),
     });
@@ -81,7 +81,7 @@ export class FocusNavigationHandler {
 
     // Debug logging for element inspection
     if (element.type === 'button') {
-      this._logger.trace('Found button element during focus detection', {
+      logger.trace('Found button element during focus detection', {
         type: element.type,
         id: element.id || 'no-id',
         hasCanReceiveFocus: isFocusable(element),
@@ -98,13 +98,13 @@ export class FocusNavigationHandler {
         }
       } catch (error) {
         // Fallback: element might not properly implement canReceiveFocus
-        console.error(`Error checking focus capability for element ${element.type}:`, error);
+        logger.warn(`Error checking focus capability for element ${element.type}`, { error: String(error) });
       }
     } else if (this._deps.hitTester.isInteractiveElement(element) && element.id) {
       // Fallback for interactive elements without canReceiveFocus method
       // Only include if element has an ID and is not disabled
       if (!element.props.disabled) {
-        this._logger.trace('Adding interactive element to focusable list', {
+        logger.trace('Adding interactive element to focusable list', {
           type: element.type,
           id: element.id,
         });

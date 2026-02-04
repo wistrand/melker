@@ -31,14 +31,9 @@ export function restoreTerminal(): void {
 
   // Then disable mouse reporting, exit alternate screen, show cursor
   try {
-    // \x1b[?1000l - Disable basic mouse reporting
-    // \x1b[?1002l - Disable button event tracking
-    // \x1b[?1003l - Disable any-event tracking (all mouse movements)
-    // \x1b[?1006l - Disable SGR extended mouse mode
-    // \x1b[?1049l - Exit alternate screen
-    // \x1b[?25h   - Show cursor
-    // \x1b[0m     - Reset all text styles
-    const resetSequence = '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1049l\x1b[?25h\x1b[0m';
+    const resetSequence =
+      ANSI.mouseBasicOff + ANSI.mouseButtonOff + ANSI.mouseAnyOff + ANSI.mouseSgrOff +
+      ANSI.normalScreen + ANSI.showCursor + ANSI.reset;
     Deno.stdout.writeSync(new TextEncoder().encode(resetSequence));
   } catch {
     // Ignore errors
@@ -75,7 +70,7 @@ export function setupTerminal(options: TerminalLifecycleOptions): void {
       codes.push(ANSI.alternateScreen);
     } else if (options.alternateScreen && noAltScreen) {
       // Clear screen instead when not using alternate screen
-      codes.push('\x1b[2J\x1b[H'); // Clear screen and move to home
+      codes.push(ANSI.clearScreen + ANSI.cursorHome);
     }
 
     if (options.hideCursor) {

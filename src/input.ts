@@ -12,6 +12,10 @@ import {
   createMouseEvent,
   createWheelEvent,
 } from './events.ts';
+import { getLogger } from './logging.ts';
+import { ANSI } from './ansi-output.ts';
+
+const logger = getLogger('Input');
 // Sixel detection integration - see src/sixel/detect.ts for architecture docs.
 // Detection writes queries to stdout, we read responses here and route them
 // via feedDetectionInput(). This avoids orphaned stdin reads that would
@@ -314,7 +318,7 @@ export class TerminalInputProcessor {
         Deno.stdin.setRaw(false);
         this._rawModeEnabled = false;
       } catch (error) {
-        console.warn('Failed to disable raw mode:', error);
+        logger.warn('Failed to disable raw mode', { error: String(error) });
       }
     }
   }
@@ -330,22 +334,22 @@ export class TerminalInputProcessor {
     switch (this._options.mouseReporting) {
       case 'basic':
         // Enable basic mouse reporting (click events)
-        mouseSequence = '\x1b[?1000h';
+        mouseSequence = ANSI.mouseBasicOn;
         break;
       case 'drag':
         // Enable drag events
-        mouseSequence = '\x1b[?1002h';
+        mouseSequence = ANSI.mouseButtonOn;
         break;
       case 'all':
         // Enable all mouse events including movement
-        mouseSequence = '\x1b[?1003h';
+        mouseSequence = ANSI.mouseAnyOn;
         break;
       default:
         return;
     }
 
     // Also enable SGR mouse mode for better coordinate reporting
-    mouseSequence += '\x1b[?1006h';
+    mouseSequence += ANSI.mouseSgrOn;
 
     try {
       await Deno.stdout.write(new TextEncoder().encode(mouseSequence));
@@ -360,7 +364,7 @@ export class TerminalInputProcessor {
   private async _disableMouseReporting(): Promise<void> {
     if (typeof Deno === 'undefined') return;
 
-    const disableSequence = '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l';
+    const disableSequence = ANSI.mouseBasicOff + ANSI.mouseButtonOff + ANSI.mouseAnyOff + ANSI.mouseSgrOff;
 
     try {
       await Deno.stdout.write(new TextEncoder().encode(disableSequence));
@@ -475,14 +479,14 @@ export class TerminalInputProcessor {
             }
           }
         } catch (error) {
-          console.error('Input reading error:', error);
+          logger.error('Input reading error', error instanceof Error ? error : new Error(String(error)));
           // Wait a bit before trying again
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
     };
 
-    readLoop().catch(console.error);
+    readLoop().catch((error) => logger.error('Read loop error', error instanceof Error ? error : new Error(String(error))));
   }
 
   /**

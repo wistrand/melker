@@ -230,7 +230,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       // Get engine instance to resolve URL
       const engine = globalThis.melkerEngine;
       if (!engine || typeof engine.resolveUrl !== 'function') {
-        console.error('Engine not available for URL resolution');
+        logger.error('Engine not available for URL resolution');
         return null;
       }
 
@@ -337,7 +337,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
             }
           }
         }).catch(error => {
-          console.error('Error fetching markdown content:', error);
+          logger.error('Error fetching markdown content', error instanceof Error ? error : new Error(String(error)));
         });
       }
 
@@ -503,7 +503,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       // This allows them to flow naturally with markdown content
       this._cacheMermaidElements();
     } catch (error) {
-      console.error('Failed to parse markdown:', error);
+      logger.error('Failed to parse markdown', error instanceof Error ? error : new Error(String(error)));
       this._parsedAst = null;
     }
   }

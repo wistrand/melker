@@ -4,6 +4,9 @@ import type { PackedRGBA } from './types.ts';
 import { Env } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { COLORS, packRGBA } from './components/color-utils.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('Theme');
 
 // Theme definitions
 export type ThemeType = 'bw' | 'gray' | 'color' | 'fullcolor';
@@ -589,14 +592,14 @@ export class ThemeManager {
       return `${normalized}-std`;
     }
 
-    console.warn(`[Melker] Invalid theme '${configTheme}'. Using default 'bw-std'`);
+    logger.warn(`Invalid theme '${configTheme}'. Using default 'bw-std'`);
     return null;
   }
 
   private _getThemeByName(name: string): Theme {
     const theme = THEMES[name];
     if (!theme) {
-      console.warn(`[Melker] Theme '${name}' not found. Using 'bw-std'`);
+      logger.warn(`Theme '${name}' not found. Using 'bw-std'`);
       return THEMES['bw-std'];
     }
     return theme;

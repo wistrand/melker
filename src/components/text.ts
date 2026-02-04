@@ -2,6 +2,9 @@
 
 import { Element, BaseProps, Renderable, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
+import { getLogger } from '../logging.ts';
+
+const logger = getLogger('Text');
 
 export interface TextProps extends BaseProps {
   text?: string;                     // Text content - optional when src is used
@@ -63,7 +66,7 @@ export class TextElement extends Element implements Renderable, TextSelectable {
 
       return content;
     } catch (error) {
-      console.error(`Failed to fetch text from ${src}:`, error instanceof Error ? error.message : String(error));
+      logger.error(`Failed to fetch text from ${src}`, error instanceof Error ? error : new Error(String(error)));
       return null;
     }
   }
@@ -73,10 +76,6 @@ export class TextElement extends Element implements Renderable, TextSelectable {
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
     let { text, src } = this.props;
-
-    // Debug: log ALL text render calls (during first few renders)
-    const logger = globalThis.logger;
-    const renderCount = globalThis.melkerRenderCount || 0;
 
     // Get textWrap from style (default to 'nowrap')
     const elementStyle = this.props.style || {};
@@ -108,7 +107,7 @@ export class TextElement extends Element implements Renderable, TextSelectable {
             }
           }
         }).catch(error => {
-          console.error('Error loading text content:', error);
+          logger.error('Error loading text content', error instanceof Error ? error : new Error(String(error)));
         });
       }
     }

@@ -7,6 +7,7 @@ import { MelkerConfig } from './config/mod.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 import { getThemeManager } from './theme.ts';
 import type { PackedRGBA } from './types.ts';
+import { ANSI } from './ansi-output.ts';
 
 // Lazy logger initialization to avoid triggering MelkerConfig.get() before CLI flags are applied
 let _logger: ComponentLogger | undefined;
@@ -179,7 +180,7 @@ export function bufferToStdout(
 
     // Reset at end of line (only if using ANSI)
     if (!stripAnsi) {
-      line += '\x1b[0m';
+      line += ANSI.reset;
     }
     lines.push(line);
   }
@@ -223,7 +224,7 @@ export function trimStdoutOutput(
  * Generate ANSI style codes for a cell (no cursor movement)
  */
 function generateCellStyle(cell: Cell, colorSupport: 'none' | '16' | '256' | 'truecolor'): string {
-  const codes: string[] = ['\x1b[0m']; // Reset
+  const codes: string[] = [ANSI.reset];
 
   // Colors only if color support is enabled
   if (colorSupport !== 'none') {
@@ -239,11 +240,11 @@ function generateCellStyle(cell: Cell, colorSupport: 'none' | '16' | '256' | 'tr
   }
 
   // Text attributes
-  if (cell.bold) codes.push('\x1b[1m');
-  if (cell.dim) codes.push('\x1b[2m');
-  if (cell.italic) codes.push('\x1b[3m');
-  if (cell.underline) codes.push('\x1b[4m');
-  if (cell.reverse) codes.push('\x1b[7m');
+  if (cell.bold) codes.push(ANSI.bold);
+  if (cell.dim) codes.push(ANSI.dim);
+  if (cell.italic) codes.push(ANSI.italic);
+  if (cell.underline) codes.push(ANSI.underline);
+  if (cell.reverse) codes.push(ANSI.reverse);
 
   return codes.join('');
 }

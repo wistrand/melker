@@ -463,7 +463,7 @@ export class ScrollHandler {
     } catch (error) {
       // Silently handle errors - scroll bounds calculation might fail
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.warn('Failed to calculate scroll bounds:', errorMessage);
+      logger.warn('Failed to calculate scroll bounds', { error: errorMessage });
     }
 
     return false;

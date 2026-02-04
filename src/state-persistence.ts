@@ -5,6 +5,9 @@ import { Element, isScrollingEnabled } from './types.ts';
 import { Document } from './document.ts';
 import { getStateDir, ensureDir } from './xdg.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('StatePersistence');
 
 /**
  * Check if persistence is enabled globally via config.
@@ -211,7 +214,7 @@ export async function loadFromFile(appId: string, skipLoad?: boolean): Promise<P
       return null;
     }
     // Log other errors but don't crash
-    console.warn(`Failed to load state file: ${error}`);
+    logger.warn('Failed to load state file', { error: String(error) });
     return null;
   }
 }

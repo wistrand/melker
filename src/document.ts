@@ -3,6 +3,9 @@
 import { Element } from './types.ts';
 import { traverseElements } from './element.ts';
 import { selectorStringMatches, Stylesheet, applyStylesheet } from './stylesheet.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('Document');
 
 export interface DocumentOptions {
   autoGenerateIds?: boolean;
@@ -240,7 +243,7 @@ export class Document {
         try {
           callback(event);
         } catch (error) {
-          console.error(`Error in event listener for ${event.type}:`, error);
+          logger.error(`Error in event listener for ${event.type}`, error instanceof Error ? error : new Error(String(error)));
         }
       });
     }
@@ -451,7 +454,7 @@ export class Document {
       try {
         handler(event);
       } catch (error) {
-        console.error(`Error in element event handler for ${event.type}:`, error);
+        logger.error(`Error in element event handler for ${event.type}`, error instanceof Error ? error : new Error(String(error)));
       }
     }
 

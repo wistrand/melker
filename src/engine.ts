@@ -917,7 +917,6 @@ export class MelkerEngine {
           errorMessage,
           error: error instanceof Error ? error.message : String(error),
         });
-        console.warn('[Melker] Failed to start debug server:', errorMessage);
       }
     }
 
@@ -1079,7 +1078,7 @@ export class MelkerEngine {
         }
       } catch (error) {
         // Silently ignore stats overlay errors to prevent breaking the main app
-        console.warn('Stats overlay warning:', error);
+        this._logger?.warn('Stats overlay warning', { error: String(error) });
       }
     }
 
@@ -1337,7 +1336,7 @@ export class MelkerEngine {
         }
       } catch (error) {
         // Silently ignore stats overlay errors to prevent breaking the main app
-        console.warn('Stats overlay warning:', error);
+        this._logger?.warn('Stats overlay warning', { error: String(error) });
       }
     }
 
@@ -1491,7 +1490,7 @@ export class MelkerEngine {
             if (typeof Deno !== 'undefined') {
               Deno.exit(0);
             }
-          }).catch(console.error);
+          }).catch((err) => this._logger?.error('Error during exit', err instanceof Error ? err : new Error(String(err))));
         },
       });
     }
@@ -2223,7 +2222,7 @@ export class MelkerEngine {
         }
       }
     } catch (error) {
-      console.warn('Error stopping video elements:', error);
+      this._logger?.warn('Error stopping video elements', { error: String(error) });
     }
 
     // Stop event system with error handling
@@ -2231,7 +2230,7 @@ export class MelkerEngine {
       try {
         await this._inputProcessor.stopListening();
       } catch (error) {
-        console.warn('Error stopping input processor:', error);
+        this._logger?.warn('Error stopping input processor', { error: String(error) });
       }
     }
 
@@ -2240,7 +2239,7 @@ export class MelkerEngine {
       try {
         this._resizeHandler.stopListening();
       } catch (error) {
-        console.warn('Error stopping resize handler:', error);
+        this._logger?.warn('Error stopping resize handler', { error: String(error) });
       }
     }
 
@@ -2251,7 +2250,7 @@ export class MelkerEngine {
         setGlobalDebugServer(undefined);
         await this._debugServer.stop();
       } catch (error) {
-        console.warn('Error stopping debug server:', error);
+        this._logger?.warn('Error stopping debug server', { error: String(error) });
       }
     }
 
@@ -2260,7 +2259,7 @@ export class MelkerEngine {
       try {
         this._headlessManager.stop();
       } catch (error) {
-        console.warn('Error stopping headless mode:', error);
+        this._logger?.warn('Error stopping headless mode', { error: String(error) });
       }
     }
 
@@ -2268,7 +2267,7 @@ export class MelkerEngine {
     try {
       this.cleanupTerminal();
     } catch (error) {
-      console.error('Critical error during terminal cleanup:', error);
+      this._logger?.error('Critical error during terminal cleanup', error instanceof Error ? error : new Error(String(error)));
       // Still try basic cleanup using emergency function
       emergencyCleanupTerminal();
     }
@@ -2291,7 +2290,7 @@ export class MelkerEngine {
         ]);
       } catch (error) {
         // Even if logger close fails, we should continue cleanup
-        console.warn('Warning: Logger close timeout - continuing with shutdown:', error);
+        // Note: can't use logger here since it's the one failing
       }
     }
 

@@ -5,6 +5,9 @@ import type { BufferStats, DualBuffer } from './buffer.ts';
 import { getThemeColor } from './theme.ts';
 import { COLORS } from './components/color-utils.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('StatsOverlay');
 
 export interface StatsOverlayOptions {
   enabled: boolean;
@@ -63,7 +66,7 @@ export class StatsOverlay {
     this._renderStatsText(buffer, x, y, lines);
     } catch (error) {
       // Silently fail if stats overlay has issues
-      console.warn('Stats overlay error:', error);
+      logger.warn('Stats overlay error', { error: String(error) });
     }
   }
 

@@ -4,6 +4,9 @@ import { DualBuffer } from './buffer.ts';
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { debounce } from './utils/timing.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('Resize');
 
 export interface TerminalSize {
   width: number;
@@ -84,7 +87,7 @@ export class ResizeHandler {
       try {
         await this._detectAndUpdateSize();
       } catch (error) {
-        console.error('Error handling resize:', error);
+        logger.error('Error handling resize', error instanceof Error ? error : new Error(String(error)));
       }
     }, this._options.debounceMs);
   }
@@ -155,7 +158,7 @@ export class ResizeHandler {
 
       } catch (error) {
         // Signal handling not available, fall back to polling
-        console.warn('Signal-based resize detection not available, using polling fallback');
+        logger.warn('Signal-based resize detection not available, using polling fallback');
         this._setupPollingFallback();
       }
     } else {
@@ -229,7 +232,7 @@ export class ResizeHandler {
           this._pollTimer = setTimeout(poll, pollInterval);
         }
       } catch (error) {
-        console.warn('Error during resize polling:', error);
+        logger.warn('Error during resize polling', { error: String(error) });
         // Continue polling despite errors
         if (this._isListening) {
           this._pollTimer = setTimeout(poll, pollInterval);
@@ -290,7 +293,7 @@ export class ResizeHandler {
           const viewport = { x: 0, y: 0, width: newSize.width, height: newSize.height };
           this._renderer.render(this._document.root, this._buffer, viewport);
         } catch (renderError) {
-          console.error('Error during auto-render after resize:', renderError);
+          logger.error('Error during auto-render after resize', renderError instanceof Error ? renderError : new Error(String(renderError)));
         }
       }
 
@@ -298,7 +301,7 @@ export class ResizeHandler {
       await this._options.onAfterResize(resizeEvent);
 
     } catch (error) {
-      console.error('Error during resize handling:', error);
+      logger.error('Error during resize handling', error instanceof Error ? error : new Error(String(error)));
     }
   }
 

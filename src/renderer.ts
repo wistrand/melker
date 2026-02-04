@@ -1,6 +1,18 @@
 // Terminal renderer using ANSI escape codes with dual-buffer optimization
 
 import { DualBuffer, BufferDiff, Cell, RenderOptions } from './buffer.ts';
+import { ANSI } from './ansi-output.ts';
+
+// Reusable TextEncoder to avoid per-write allocations
+const textEncoder = new TextEncoder();
+
+// Gray level mapping for contrast calculation (avoids object allocation per call)
+const GRAY_LEVELS: Record<number, number> = {
+  30: 0,   // black
+  90: 1,   // gray (bright black)
+  37: 2,   // white (light gray)
+  97: 3,   // bright white
+};
 
 export interface RendererOptions {
   colorSupport: 'none' | '16' | '256' | 'truecolor';
@@ -42,36 +54,36 @@ export class TerminalRenderer {
 
     // Save cursor position and attributes
     commands.push('\x1b7'); // Save cursor
-    commands.push('\x1b[s'); // Save cursor (alternate)
+    commands.push(ANSI.saveCursor);
 
     // Switch to alternate screen if enabled
     if (this._options.alternateScreen) {
-      commands.push('\x1b[?1049h'); // Enable alternate screen
+      commands.push(ANSI.alternateScreen);
     }
 
     // Hide cursor initially
-    commands.push('\x1b[?25l'); // Hide cursor
+    commands.push(ANSI.hideCursor);
 
     // Enable keypad if requested
     if (this._options.enableKeypad) {
-      commands.push('\x1b[?1h'); // Enable application cursor keys
-      commands.push('\x1b='); // Enable application keypad
+      commands.push(ANSI.appCursorOn);
+      commands.push(ANSI.appKeypadOn);
     }
 
     // Enable mouse if requested
     if (this._options.enableMouse) {
-      commands.push('\x1b[?1000h'); // Enable mouse tracking
-      commands.push('\x1b[?1002h'); // Enable button event tracking
-      commands.push('\x1b[?1015h'); // Enable urxvt mouse mode
-      commands.push('\x1b[?1006h'); // Enable SGR mouse mode
+      commands.push(ANSI.mouseBasicOn);
+      commands.push(ANSI.mouseButtonOn);
+      commands.push(ANSI.mouseUrxvtOn);
+      commands.push(ANSI.mouseSgrOn);
     }
 
     // Clear screen
-    commands.push('\x1b[2J'); // Clear entire screen
-    commands.push('\x1b[H'); // Move cursor to home
+    commands.push(ANSI.clearScreen);
+    commands.push(ANSI.cursorHome);
 
     // Write all commands
-    await this._writeToTerminal(commands.join(''));
+    this._writeToTerminal(commands.join(''));
 
     this._isInitialized = true;
   }
@@ -83,35 +95,35 @@ export class TerminalRenderer {
     const commands: string[] = [];
 
     // Show cursor
-    commands.push('\x1b[?25h'); // Show cursor
+    commands.push(ANSI.showCursor);
 
     // Disable mouse if it was enabled
     if (this._options.enableMouse) {
-      commands.push('\x1b[?1006l'); // Disable SGR mouse mode
-      commands.push('\x1b[?1015l'); // Disable urxvt mouse mode
-      commands.push('\x1b[?1002l'); // Disable button event tracking
-      commands.push('\x1b[?1000l'); // Disable mouse tracking
+      commands.push(ANSI.mouseSgrOff);
+      commands.push(ANSI.mouseUrxvtOff);
+      commands.push(ANSI.mouseButtonOff);
+      commands.push(ANSI.mouseBasicOff);
     }
 
     // Disable keypad if it was enabled
     if (this._options.enableKeypad) {
-      commands.push('\x1b>'); // Disable application keypad
-      commands.push('\x1b[?1l'); // Disable application cursor keys
+      commands.push(ANSI.appKeypadOff);
+      commands.push(ANSI.appCursorOff);
     }
 
     // Restore screen if alternate was used
     if (this._options.alternateScreen) {
-      commands.push('\x1b[?1049l'); // Disable alternate screen
+      commands.push(ANSI.normalScreen);
     }
 
     // Restore cursor
-    commands.push('\x1b[u'); // Restore cursor (alternate)
-    commands.push('\x1b8'); // Restore cursor
+    commands.push(ANSI.restoreCursor);
+    commands.push('\x1b8'); // Restore cursor (DEC)
 
     // Reset all attributes
-    commands.push('\x1b[0m'); // Reset all attributes
+    commands.push(ANSI.reset);
 
-    await this._writeToTerminal(commands.join(''));
+    this._writeToTerminal(commands.join(''));
 
     this._isInitialized = false;
   }
@@ -135,7 +147,7 @@ export class TerminalRenderer {
     }
 
     // Clear screen first
-    await this._writeToTerminal('\x1b[2J\x1b[H');
+    this._writeToTerminal(ANSI.clearScreen + ANSI.cursorHome);
 
     const differences = dualBuffer.forceRedraw();
     const renderOptions = dualBuffer.renderOptions;
@@ -145,12 +157,12 @@ export class TerminalRenderer {
 
   // Clear the terminal screen
   async clearScreen(): Promise<void> {
-    await this._writeToTerminal('\x1b[2J\x1b[H');
+    this._writeToTerminal(ANSI.clearScreen + ANSI.cursorHome);
   }
 
   // Set terminal title
   async setTitle(title: string): Promise<void> {
-    await this._writeToTerminal(`\x1b]0;${title}\x1b\\`);
+    this._writeToTerminal(`\x1b]0;${title}\x1b\\`);
   }
 
   // Get terminal size
@@ -270,7 +282,7 @@ export class TerminalRenderer {
 
     // Handle cursor positioning and visibility
     if (options.cursorVisible !== this._lastCursorVisible) {
-      output.push(options.cursorVisible ? '\x1b[?25h' : '\x1b[?25l');
+      output.push(options.cursorVisible ? ANSI.showCursor : ANSI.hideCursor);
       this._lastCursorVisible = options.cursorVisible || false;
     }
 
@@ -290,9 +302,9 @@ export class TerminalRenderer {
       output.push(`\x1b]0;${options.title}\x1b\\`);
     }
 
-    // Single optimized write operation
+    // Single optimized write operation with sync to prevent tearing
     if (output.length > 0) {
-      await this._writeToTerminal(output.join(''));
+      this._writeToTerminalSynced(output.join(''));
     }
   }
 
@@ -325,22 +337,20 @@ export class TerminalRenderer {
     );
 
     if (needsReset) {
-      codes.push('\x1b[0m'); // Reset only when necessary
+      codes.push(ANSI.reset);
     }
 
     // Apply foreground and background colors
     // For 16-color mode, ensure fg and bg have enough contrast for visibility
     if (this._options.colorSupport === '16' && newStyle.foreground && newStyle.background) {
       const fgCode = this._getColorCode16(newStyle.foreground);
-      let bgCode = this._getColorCode16(newStyle.background);
-
-      // Ensure fg and bg have enough contrast (at least 2 steps apart in gray scale)
-      bgCode = this._ensureContrast(fgCode, bgCode);
+      const originalBgCode = this._getColorCode16(newStyle.background);
+      const bgCode = this._ensureContrast(fgCode, originalBgCode);
 
       if (newStyle.foreground !== oldStyle.foreground) {
         codes.push(`\x1b[${fgCode}m`);
       }
-      if (newStyle.background !== oldStyle.background || bgCode !== this._getColorCode16(newStyle.background)) {
+      if (newStyle.background !== oldStyle.background || bgCode !== originalBgCode) {
         codes.push(`\x1b[${bgCode + 10}m`);
       }
     } else {
@@ -360,18 +370,18 @@ export class TerminalRenderer {
     }
 
     // Apply text attributes only if changed
-    if (newStyle.bold && !oldStyle.bold) codes.push('\x1b[1m');
-    if (newStyle.dim && !oldStyle.dim) codes.push('\x1b[2m');
-    if (newStyle.italic && !oldStyle.italic) codes.push('\x1b[3m');
-    if (newStyle.underline && !oldStyle.underline) codes.push('\x1b[4m');
-    if (newStyle.reverse && !oldStyle.reverse) codes.push('\x1b[7m');
+    if (newStyle.bold && !oldStyle.bold) codes.push(ANSI.bold);
+    if (newStyle.dim && !oldStyle.dim) codes.push(ANSI.dim);
+    if (newStyle.italic && !oldStyle.italic) codes.push(ANSI.italic);
+    if (newStyle.underline && !oldStyle.underline) codes.push(ANSI.underline);
+    if (newStyle.reverse && !oldStyle.reverse) codes.push(ANSI.reverse);
 
     return codes.join('');
   }
 
   // Generate ANSI style codes for a cell (legacy method, kept for compatibility)
   private _getCellStyleCode(cell: Cell): string {
-    const codes: string[] = ['\x1b[0m']; // Reset
+    const codes: string[] = [ANSI.reset];
 
     // Foreground color
     if (cell.foreground) {
@@ -384,10 +394,10 @@ export class TerminalRenderer {
     }
 
     // Text attributes
-    if (cell.bold) codes.push('\x1b[1m');
-    if (cell.dim) codes.push('\x1b[2m');
-    if (cell.italic) codes.push('\x1b[3m');
-    if (cell.underline) codes.push('\x1b[4m');
+    if (cell.bold) codes.push(ANSI.bold);
+    if (cell.dim) codes.push(ANSI.dim);
+    if (cell.italic) codes.push(ANSI.italic);
+    if (cell.underline) codes.push(ANSI.underline);
 
     return codes.join('');
   }
@@ -440,17 +450,8 @@ export class TerminalRenderer {
   // Ensure fg and bg have enough contrast for visibility
   // Returns adjusted bgCode if needed
   private _ensureContrast(fgCode: number, bgCode: number): number {
-    // Gray scale codes: 30 (black), 90 (gray), 37 (white), 97 (bright white)
-    // Map codes to grayscale "levels" for comparison
-    const grayLevels: Record<number, number> = {
-      30: 0,   // black
-      90: 1,   // gray (bright black)
-      37: 2,   // white (light gray)
-      97: 3,   // bright white
-    };
-
-    const fgLevel = grayLevels[fgCode];
-    const bgLevel = grayLevels[bgCode];
+    const fgLevel = GRAY_LEVELS[fgCode];
+    const bgLevel = GRAY_LEVELS[bgCode];
 
     // If both are grayscale colors, ensure they're at least 2 levels apart
     if (fgLevel !== undefined && bgLevel !== undefined) {
@@ -513,21 +514,13 @@ export class TerminalRenderer {
     }
   }
 
-  // Write to terminal with synchronization to prevent tearing
-  private async _writeToTerminal(data: string): Promise<void> {
-    // Begin synchronized update (prevents flicker during rendering)
-    const syncStart = '\x1b[?2026h'; // Begin synchronized update mode
-    const syncEnd = '\x1b[?2026l';   // End synchronized update mode
+  // Write to terminal
+  private _writeToTerminal(data: string): void {
+    Deno.stdout.writeSync(textEncoder.encode(data));
+  }
 
-    const output = syncStart + data + syncEnd;
-
-    if ((globalThis as any).process?.stdout?.write) {
-      // Use synchronous write for immediate output
-      (globalThis as any).process.stdout.write(output);
-    } else {
-      // Fallback for environments without process.stdout
-      // deno-lint-ignore no-control-regex
-      console.log(output.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '[ESC]'));
-    }
+  // Write to terminal with synchronization to prevent tearing (for rendering)
+  private _writeToTerminalSynced(data: string): void {
+    Deno.stdout.writeSync(textEncoder.encode(ANSI.beginSync + data + ANSI.endSync));
   }
 }

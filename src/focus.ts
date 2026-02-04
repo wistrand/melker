@@ -4,8 +4,10 @@
 import { getGlobalEventManager, createFocusEvent, type EventManager } from './events.ts';
 import { type Element } from './types.ts';
 import { type Document } from './document.ts';
-import { getLogger, type ComponentLogger } from './logging.ts';
+import { getLogger } from './logging.ts';
 import { hasElementWithId } from './utils/tree-traversal.ts';
+
+const logger = getLogger('FocusManager');
 
 export interface FocusableElement {
   id: string;
@@ -40,17 +42,10 @@ export class FocusManager {
   private _eventManager: EventManager;
   private _document: Document | null = null;
   private _boundsProvider?: (elementId: string) => { x: number; y: number; width: number; height: number } | undefined;
-  private _logger?: ComponentLogger;
 
   constructor(eventManager?: EventManager, document?: Document) {
     this._eventManager = eventManager || getGlobalEventManager();
     this._document = document || null;
-    try {
-      this._logger = getLogger('FocusManager');
-    } catch (error) {
-      // Logger might not be initialized yet
-      this._logger = undefined;
-    }
   }
 
   /**
@@ -203,7 +198,7 @@ export class FocusManager {
   focus(elementId: string, options: FocusOptions = {}): boolean {
     const element = this._getFocusableElement(elementId);
     if (!element || element.disabled || !element.visible) {
-      this._logger?.debug(`Focus failed for ${elementId}: element=${!!element}, disabled=${element?.disabled}, visible=${element?.visible}`);
+      logger.debug(`Focus failed for ${elementId}: element=${!!element}, disabled=${element?.disabled}, visible=${element?.visible}`);
       return false;
     }
 

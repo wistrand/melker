@@ -3,6 +3,9 @@
 import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
+import { getLogger } from '../logging.ts';
+
+const logger = getLogger('Button');
 
 export interface ButtonProps extends BaseProps {
   label?: string;
@@ -50,7 +53,7 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
 
     // Debug: Check for invalid bounds
     if (isNaN(bounds.x) || isNaN(bounds.y) || isNaN(bounds.width) || isNaN(bounds.height)) {
-      console.error(`Button render error: Invalid bounds for button "${label}":`, {
+      logger.error(`Button render error: Invalid bounds for button "${label}"`, undefined, {
         bounds,
         buttonId: this.id,
         props: this.props

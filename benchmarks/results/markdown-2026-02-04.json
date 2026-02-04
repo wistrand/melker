@@ -1,0 +1,217 @@
+{
+  "timestamp": "2026-02-04T00:06:48.419Z",
+  "commit": "3836030",
+  "results": [
+    {
+      "name": "markdown-simple-text",
+      "category": "markdown",
+      "iterations": 500,
+      "median": 0.20170000000001664,
+      "p95": 0.4988790000000449,
+      "p99": 0.8260369999999853,
+      "min": 0.1820109999999886,
+      "max": 0.9604340000000207,
+      "mean": 0.24612868600000185,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "markdown-headings",
+      "category": "markdown",
+      "iterations": 500,
+      "median": 0.19547699999998258,
+      "p95": 0.23791199999999435,
+      "p99": 0.7803350000000364,
+      "min": 0.18590900000003785,
+      "max": 1.2116420000000403,
+      "mean": 0.21321392600000025,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "markdown-unordered-list",
+      "category": "markdown",
+      "iterations": 500,
+      "median": 0.1952680000000555,
+      "p95": 0.22742400000004181,
+      "p99": 0.5674870000000283,
+      "min": 0.18709000000001197,
+      "max": 0.9013879999999972,
+      "mean": 0.20902128600000175,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "markdown-ordered-list",
+      "category": "markdown",
+      "iterations": 500,
+      "median": 0.19573800000000574,
+      "p95": 0.27882499999998345,
+      "p99": 0.685512000000017,
+      "min": 0.18463299999996252,
+      "max": 1.2060060000000021,
+      "mean": 0.21775597599999832,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "markdown-code-block",
+      "category": "markdown",
+      "iterations": 200,
+      "median": 0.19467100000008486,
+      "p95": 0.28604999999993197,
+      "p99": 0.8326279999999997,
+      "min": 0.18743800000004285,
+      "max": 0.8925100000000157,
+      "mean": 0.21757503000000383,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "markdown-blockquote",
+      "category": "markdown",
+      "iterations": 500,
+      "median": 0.1949210000000221,
+      "p95": 0.25842400000010457,
+      "p99": 0.7509370000000217,
+      "min": 0.18375299999991057,
+      "max": 0.845440999999937,
+      "mean": 0.21638174999999682,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "markdown-table-gfm",
+      "category": "markdown",
+      "iterations": 200,
+      "median": 0.19005400000003192,
+      "p95": 0.2407819999999674,
+      "p99": 0.7827969999999596,
+      "min": 0.18202199999996083,
+      "max": 1.0179780000000846,
+      "mean": 0.21054854000000262,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "markdown-mixed-document",
+      "category": "markdown",
+      "iterations": 100,
+      "median": 0.20057599999995546,
+      "p95": 0.43445999999994456,
+      "p99": 1.5471219999999448,
+      "min": 0.19282299999986208,
+      "max": 1.5471219999999448,
+      "mean": 0.2298878000000059,
+      "unit": "ms",
+      "target": 3
+    },
+    {
+      "name": "markdown-large-document",
+      "category": "markdown",
+      "iterations": 20,
+      "median": 0.6103970000001482,
+      "p95": 1.0377350000001115,
+      "p99": 1.0377350000001115,
+      "min": 0.5923110000001088,
+      "max": 1.0377350000001115,
+      "mean": 0.6382700999999997,
+      "unit": "ms",
+      "target": 15
+    },
+    {
+      "name": "markdown-parse-simple",
+      "category": "markdown",
+      "iterations": 1000,
+      "median": 0.05932999999981803,
+      "p95": 0.10600499999986823,
+      "p99": 0.14193900000009307,
+      "min": 0.05424799999991592,
+      "max": 4.050231000000167,
+      "mean": 0.07641286400000058,
+      "unit": "ms",
+      "target": 0.1
+    },
+    {
+      "name": "markdown-parse-mixed",
+      "category": "markdown",
+      "iterations": 500,
+      "median": 1.7869470000000547,
+      "p95": 4.367758999999751,
+      "p99": 6.0588860000000295,
+      "min": 1.6014949999998862,
+      "max": 7.14220800000021,
+      "mean": 2.0451783240000037,
+      "unit": "ms",
+      "target": 4
+    },
+    {
+      "name": "markdown-parse-large",
+      "category": "markdown",
+      "iterations": 100,
+      "median": 7.064049000000068,
+      "p95": 9.90802100000019,
+      "p99": 15.390104999999494,
+      "min": 6.5442579999999,
+      "max": 15.390104999999494,
+      "mean": 7.741909210000026,
+      "unit": "ms",
+      "target": 20
+    },
+    {
+      "name": "markdown-inline-formatting",
+      "category": "markdown",
+      "iterations": 500,
+      "median": 0.21578300000055606,
+      "p95": 0.34346199999981764,
+      "p99": 1.0302750000000742,
+      "min": 0.19185100000049715,
+      "max": 1.3585860000002867,
+      "mean": 0.24192005200000494,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "markdown-text-wrapping",
+      "category": "markdown",
+      "iterations": 500,
+      "median": 0.15780700000050274,
+      "p95": 0.19089200000053097,
+      "p99": 0.26107600000068487,
+      "min": 0.1503839999995762,
+      "max": 1.1583099999998012,
+      "mean": 0.17045534200001203,
+      "unit": "ms",
+      "target": 0.5
+    }
+  ],
+  "findings": [
+    {
+      "title": "GFM table parsing has overhead",
+      "description": "Enabling GFM (GitHub-Flavored Markdown) adds ~50% overhead for table parsing due to extension loading.",
+      "category": "info",
+      "benchmarks": [
+        "markdown-table-gfm",
+        "markdown-mixed-document"
+      ],
+      "metrics": {
+        "tableMs": 0.19005400000003192,
+        "mixedMs": 0.20057599999995546
+      }
+    },
+    {
+      "title": "Parsing vs rendering ratio",
+      "description": "Markdown parsing is fast compared to rendering. Most time is spent in layout and buffer operations.",
+      "category": "info",
+      "benchmarks": [
+        "markdown-parse-mixed",
+        "markdown-mixed-document"
+      ],
+      "metrics": {
+        "parseMs": 1.7869470000000547,
+        "renderMs": 0.20057599999995546
+      }
+    }
+  ],
+  "notes": "Markdown component benchmarks. Tests parsing, rendering of various markdown elements including headings, lists, code blocks, tables, and mixed documents."
+}

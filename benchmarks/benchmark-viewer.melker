@@ -1,0 +1,299 @@
+<melker>
+  <title>Benchmark Viewer</title>
+
+  <policy>{"permissions": {"read": ["."]}}</policy>
+
+  <script>
+    // Benchmark data storage
+    let results = [];
+    let findings = []; // Key findings from benchmark analysis
+    let notes = '';    // Free-form notes
+    let history = []; // Multiple result sets for history view
+    let categories = [];
+    let selectedCategory = 'all';
+
+    // Load results from JSON file
+    export async function loadFile(event) {
+      try {
+        const content = await Deno.readTextFile(event.path);
+        const data = JSON.parse(content);
+
+        if (data.results && Array.isArray(data.results)) {
+          results = data.results;
+          findings = data.findings || [];
+          notes = data.notes || '';
+          history.push({
+            timestamp: data.timestamp || new Date().toISOString(),
+            commit: data.commit || 'unknown',
+            results: data.results,
+            findings: data.findings,
+            notes: data.notes,
+          });
+
+          // Extract categories
+          const cats = new Set(results.map(r => r.category || 'uncategorized'));
+          categories = ['all', ...Array.from(cats).sort()];
+
+          updateViews();
+          const findingsCount = findings.length > 0 ? `, ${findings.length} findings` : '';
+          $melker.getElementById('status').props.text =
+            `Loaded ${results.length} benchmarks${findingsCount} from ${event.path.split('/').pop()}`;
+        } else {
+          $melker.getElementById('status').props.text = 'Invalid benchmark format';
+        }
+      } catch (err) {
+        $melker.getElementById('status').props.text = `Error: ${err.message}`;
+      }
+
+      // Close file dialog
+      $melker.getElementById('fileDialog').hide();
+    }
+
+    // Update all views with current data
+    function updateViews() {
+      updateSummaryTable();
+      updateCategoryBars();
+      updateHistoryHeatmap();
+      updateCategorySelect();
+      updateFindings();
+    }
+
+    // Findings table
+    function updateFindings() {
+      const rows = findings.map(f => [
+        f.title,
+        f.category || 'info',
+        f.severity || 'info',
+        f.description.slice(0, 60) + (f.description.length > 60 ? '...' : ''),
+      ]);
+
+      const table = $melker.getElementById('findingsTable');
+      if (table) {
+        table.props.rows = rows;
+      }
+
+      // Update notes
+      const notesEl = $melker.getElementById('notesText');
+      if (notesEl) {
+        notesEl.props.text = notes || 'No notes available.';
+      }
+    }
+
+    // Summary table
+    function updateSummaryTable() {
+      const filtered = selectedCategory === 'all'
+        ? results
+        : results.filter(r => r.category === selectedCategory);
+
+      const rows = filtered.map(r => {
+        const target = r.target;
+        const status = target !== undefined ? (r.median <= target ? 'PASS' : 'FAIL') : '-';
+        return [
+          r.name,
+          r.category || '-',
+          `${r.median.toFixed(2)}${r.unit || 'ms'}`,
+          `${r.p95.toFixed(2)}`,
+          `${r.p99.toFixed(2)}`,
+          target !== undefined ? `${target}${r.unit || 'ms'}` : '-',
+          status,
+        ];
+      });
+
+      const table = $melker.getElementById('summaryTable');
+      table.props.rows = rows;
+    }
+
+    // Category bars
+    function updateCategoryBars() {
+      const filtered = selectedCategory === 'all'
+        ? results
+        : results.filter(r => r.category === selectedCategory);
+
+      const labels = filtered.map(r => r.name.slice(0, 24));
+      const bars = filtered.map(r => [r.median]);
+
+      const barsComponent = $melker.getElementById('categoryBars');
+      barsComponent.props.series = [{ name: 'Median (ms)' }];
+      barsComponent.props.labels = labels;
+      barsComponent.props.bars = bars;
+    }
+
+    // Percentile heatmap - shows median/p95/p99 for each benchmark
+    function updateHistoryHeatmap() {
+      if (results.length === 0) return;
+
+      const filtered = selectedCategory === 'all'
+        ? results
+        : results.filter(r => r.category === selectedCategory);
+
+      // Build grid: rows = benchmarks, cols = [median, p95, p99]
+      const grid = filtered.map(r => [r.median, r.p95, r.p99]);
+      const rowLabels = filtered.map(r => r.name.slice(0, 24));
+      const colLabels = ['Median', 'p95', 'p99'];
+
+      const heatmap = $melker.getElementById('historyHeatmap');
+      heatmap.props.grid = grid;
+      heatmap.props.rowLabels = rowLabels;
+      heatmap.props.colLabels = colLabels;
+    }
+
+    // Category select
+    function updateCategorySelect() {
+      // Update would require recreating options, skip for now
+    }
+
+    // Filter by category
+    export function onCategoryChange(event) {
+      selectedCategory = event.value;
+      updateSummaryTable();
+      updateCategoryBars();
+    }
+
+    // Open file dialog
+    export function openFileDialog() {
+      $melker.getElementById('fileDialog').show();
+    }
+
+    // Close file dialog
+    export function closeFileDialog() {
+      $melker.getElementById('fileDialog').hide();
+    }
+
+    // Clear all data
+    export function clearData() {
+      results = [];
+      findings = [];
+      notes = '';
+      history = [];
+      categories = ['all'];
+      selectedCategory = 'all';
+
+      $melker.getElementById('summaryTable').props.rows = [];
+      $melker.getElementById('categoryBars').props.bars = [];
+      $melker.getElementById('categoryBars').props.labels = [];
+      $melker.getElementById('historyHeatmap').props.grid = [];
+      const findingsTable = $melker.getElementById('findingsTable');
+      if (findingsTable) findingsTable.props.rows = [];
+      const notesText = $melker.getElementById('notesText');
+      if (notesText) notesText.props.text = 'No notes available.';
+      $melker.getElementById('status').props.text = 'Data cleared';
+    }
+  </script>
+
+  <container style="height: fill; padding: 1; gap: 1;">
+    <container style="flex-direction: row; gap: 2; align-items: center;">
+      <text style="font-weight: bold;">Benchmark Viewer</text>
+      <button label="Load File" onClick="$app.openFileDialog();" />
+      <button label="Clear" onClick="$app.clearData();" />
+      <container style="flex: 1;" />
+      <text id="status">No data loaded</text>
+    </container>
+
+    <tabs style="flex: 1;">
+      <tab title="Summary">
+        <container style="gap: 1; flex: 1;">
+          <container style="flex-direction: row; gap: 1; align-items: center;">
+            <text>Category:</text>
+            <select id="categorySelect" selectedValue="all" onSelect="$app.onCategoryChange(event);">
+              <option value="all">All</option>
+              <option value="rendering">Rendering</option>
+              <option value="layout">Layout</option>
+              <option value="components">Components</option>
+              <option value="graphics">Graphics</option>
+              <option value="bundler">Bundler</option>
+            </select>
+          </container>
+          <data-table id="summaryTable" style="flex: 1;">
+          {
+            "columns": [
+              {"header": "Benchmark", "width": "fill"},
+              {"header": "Category", "width": 12},
+              {"header": "Median", "width": 12, "align": "right"},
+              {"header": "p95", "width": 10, "align": "right"},
+              {"header": "p99", "width": 10, "align": "right"},
+              {"header": "Target", "width": 12, "align": "right"},
+              {"header": "Status", "width": 8}
+            ],
+            "rows": []
+          }
+          </data-table>
+        </container>
+      </tab>
+
+      <tab title="Bars">
+        <container style="padding: 1; flex: 1;">
+          <text style="font-weight: bold;">Time Comparison (median ms)</text>
+          <container style="flex: 1; overflow: auto;">
+            <data-bars id="categoryBars">
+            {
+              "series": [{"name": "Median (ms)"}],
+              "bars": [],
+              "labels": [],
+              "showValues": true
+            }
+            </data-bars>
+          </container>
+        </container>
+      </tab>
+
+      <tab title="Percentiles">
+        <container style="padding: 1; gap: 1; flex: 1;">
+          <text style="font-weight: bold;">Percentile Distribution (Median / p95 / p99)</text>
+          <container style="flex: 1; overflow: auto;">
+            <data-heatmap
+              id="historyHeatmap"
+              grid='[]'
+              colorScale="thermal"
+              showValues="true"
+              valueFormat=".2f"
+              style="cellWidth: 8;"
+            />
+          </container>
+        </container>
+      </tab>
+
+      <tab title="Findings">
+        <container style="padding: 1; gap: 1; flex: 1;">
+          <text style="font-weight: bold;">Key Findings</text>
+          <container style="flex: 1; overflow: auto;">
+            <data-table id="findingsTable" style="flex: 1;">
+            {
+              "columns": [
+                {"header": "Finding", "width": "fill"},
+                {"header": "Category", "width": 14},
+                {"header": "Severity", "width": 10},
+                {"header": "Description", "width": 60}
+              ],
+              "rows": []
+            }
+            </data-table>
+          </container>
+          <container style="height: 5; border: single; padding: 1;">
+            <text style="font-weight: bold;">Notes:</text>
+            <text id="notesText" style="color: gray;">No notes available.</text>
+          </container>
+        </container>
+      </tab>
+    </tabs>
+  </container>
+
+  <dialog id="fileDialog" title="Load Benchmark Results" open="false" modal="true" width="70" height="20">
+    <file-browser
+      id="fileBrowser"
+      extensions='[".json"]'
+      onSelect="$app.loadFile(event);"
+      onCancel="$app.closeFileDialog();"
+      selectLabel="Load"
+      maxVisible="12"
+    />
+  </dialog>
+
+  <script type="typescript" async="ready">
+    // Auto-load: if file argument passed, load it
+    const fileArg = '${argv[1]:-}'.trim();
+    if (fileArg && fileArg.endsWith('.json')) {
+      await $app.loadFile({ path: fileArg });
+      $melker.render();
+    }
+  </script>
+</melker>

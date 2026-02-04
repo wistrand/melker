@@ -58,6 +58,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)  |
 | Sixel protocol      | [sixel-architecture.md](agent_docs/sixel-architecture.md)        |
 | Kitty protocol      | [kitty-architecture.md](agent_docs/kitty-architecture.md)        |
+| Benchmarks          | [benchmark-architecture.md](agent_docs/benchmark-architecture.md) |
 
 ### Deep Dives
 

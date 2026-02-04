@@ -280,3 +280,4 @@ When `stop()` is called:
 - [fast-input-render.md](fast-input-render.md) — Fast render path
 - [dirty-row-tracking.md](dirty-row-tracking.md) — Buffer optimization
 - [graphics-architecture.md](graphics-architecture.md) — Graphics pipeline
+- [benchmark-architecture.md](benchmark-architecture.md) — Performance benchmarking

@@ -1,0 +1,355 @@
+{
+  "timestamp": "2026-02-04T00:06:36.611Z",
+  "commit": "3836030",
+  "results": [
+    {
+      "name": "diff-identical-buffers",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.2897800000000075,
+      "p95": 0.44734799999997676,
+      "p99": 0.5294939999999997,
+      "min": 0.2154170000000022,
+      "max": 1.2704140000000166,
+      "mean": 0.3003991220000011,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "diff-1pct-scattered",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.23486900000000333,
+      "p95": 0.32428200000003926,
+      "p99": 0.6580519999999979,
+      "min": 0.2041770000000156,
+      "max": 1.204761000000076,
+      "mean": 0.2701235000000016,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "diff-5pct-scattered",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.4178640000000087,
+      "p95": 0.5007239999999911,
+      "p99": 0.5958380000000716,
+      "min": 0.3164610000000039,
+      "max": 1.9817990000000236,
+      "mean": 0.4198474619999997,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "diff-10pct-scattered",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.24063200000000506,
+      "p95": 0.3635150000000067,
+      "p99": 0.448814000000084,
+      "min": 0.22695999999996275,
+      "max": 0.8710419999999885,
+      "mean": 0.26078620200000024,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "diff-25pct-scattered",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.23591499999997723,
+      "p95": 0.25238999999987755,
+      "p99": 0.28799000000003616,
+      "min": 0.21327999999994063,
+      "max": 0.8095119999998133,
+      "mean": 0.23752406999999312,
+      "unit": "ms",
+      "target": 0.4
+    },
+    {
+      "name": "diff-50pct-scattered",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.2250890000000254,
+      "p95": 0.24025300000016614,
+      "p99": 0.27568600000017796,
+      "min": 0.2147229999998217,
+      "max": 0.6913219999999001,
+      "mean": 0.22878728000000365,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "diff-100pct-different",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.22519600000009632,
+      "p95": 0.23865999999998166,
+      "p99": 0.2936219999999139,
+      "min": 0.2108459999999468,
+      "max": 0.667173000000048,
+      "mean": 0.22914081000000305,
+      "unit": "ms",
+      "target": 0.8
+    },
+    {
+      "name": "diff-10pct-clustered",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.22652100000004793,
+      "p95": 0.240043999999898,
+      "p99": 0.2697259999999915,
+      "min": 0.21468000000004395,
+      "max": 0.7599569999999858,
+      "mean": 0.23043826799999761,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "diff-10pct-rows",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.22468000000003485,
+      "p95": 0.23777900000004593,
+      "p99": 0.3334679999998116,
+      "min": 0.21194199999990815,
+      "max": 0.8332090000001244,
+      "mean": 0.22925881200000095,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "diff-10pct-style-only",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.2268779999999424,
+      "p95": 0.2391130000000885,
+      "p99": 0.27612500000009277,
+      "min": 0.21610300000020288,
+      "max": 0.6008249999999862,
+      "mean": 0.22986287800000219,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "diff-small-10pct",
+      "category": "buffer-diff",
+      "iterations": 1000,
+      "median": 0.021739000000025044,
+      "p95": 0.042950999999902706,
+      "p99": 0.05317700000000514,
+      "min": 0.02009600000019418,
+      "max": 0.18673100000023624,
+      "mean": 0.02578362699999866,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "diff-medium-10pct",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.23094800000012583,
+      "p95": 0.2507719999998699,
+      "p99": 0.2691050000000814,
+      "min": 0.21937300000013238,
+      "max": 0.5992149999997309,
+      "mean": 0.23515871600000401,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "diff-large-10pct",
+      "category": "buffer-diff",
+      "iterations": 200,
+      "median": 0.7975589999996373,
+      "p95": 0.8326010000000679,
+      "p99": 1.2132279999996172,
+      "min": 0.7653809999997065,
+      "max": 1.2486509999998816,
+      "mean": 0.808452814999955,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "diff-fullhd-10pct",
+      "category": "buffer-diff",
+      "iterations": 200,
+      "median": 0.8059699999998884,
+      "p95": 0.8886339999999109,
+      "p99": 1.4523530000001301,
+      "min": 0.7669779999996535,
+      "max": 1.5856029999999919,
+      "mean": 0.8280323749999934,
+      "unit": "ms",
+      "target": 1.2
+    },
+    {
+      "name": "dualbuffer-swap-clean",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.13095100000009552,
+      "p95": 0.1455949999999575,
+      "p99": 0.4592659999998432,
+      "min": 0.12490100000013626,
+      "max": 0.9437060000000201,
+      "mean": 0.13940940200001295,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "dualbuffer-swap-10pct",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.3000130000000354,
+      "p95": 0.3309289999997418,
+      "p99": 1.0778110000001107,
+      "min": 0.2842630000000099,
+      "max": 2.100119000000177,
+      "mean": 0.321788329999993,
+      "unit": "ms",
+      "target": 0.4
+    },
+    {
+      "name": "dualbuffer-getdiff-only",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.000442000000475673,
+      "p95": 0.0005150000001776789,
+      "p99": 0.000901000000339991,
+      "min": 0.0004109999999855063,
+      "max": 0.030248000000028696,
+      "mean": 0.0005197479999969801,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "dualbuffer-force-redraw",
+      "category": "buffer-diff",
+      "iterations": 200,
+      "median": 0.43739800000003015,
+      "p95": 0.46784299999990253,
+      "p99": 1.443760999999995,
+      "min": 0.4264819999998508,
+      "max": 1.6079299999996692,
+      "mean": 0.4650409149999723,
+      "unit": "ms",
+      "target": 1.5
+    },
+    {
+      "name": "dirty-tracking-few-rows",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.17080299999997806,
+      "p95": 0.18083600000045408,
+      "p99": 0.8361390000000029,
+      "min": 0.16196399999989808,
+      "max": 1.0848949999999604,
+      "mean": 0.1792308519999915,
+      "unit": "ms",
+      "target": 0.25
+    },
+    {
+      "name": "dirty-tracking-many-rows",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.40832000000000335,
+      "p95": 0.42072200000029625,
+      "p99": 1.196422999999868,
+      "min": 0.3911929999999302,
+      "max": 1.35034799999994,
+      "mean": 0.4194591720000117,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "diff-wide-chars-10pct",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.22916200000008757,
+      "p95": 0.24050500000021202,
+      "p99": 0.2763049999998657,
+      "min": 0.21859700000004523,
+      "max": 1.6545370000003459,
+      "mean": 0.23511396000000695,
+      "unit": "ms",
+      "target": 0.4
+    },
+    {
+      "name": "diff-mixed-content-10pct",
+      "category": "buffer-diff",
+      "iterations": 500,
+      "median": 0.22759199999973134,
+      "p95": 0.24224899999990157,
+      "p99": 0.2718840000002274,
+      "min": 0.22081200000002354,
+      "max": 0.6460349999997561,
+      "mean": 0.23175165199999265,
+      "unit": "ms",
+      "target": 0.4
+    }
+  ],
+  "findings": [
+    {
+      "title": "Diff scales linearly with buffer size",
+      "description": "Buffer diff time scales approximately linearly with total cell count.",
+      "category": "info",
+      "benchmarks": [
+        "diff-small-10pct",
+        "diff-medium-10pct",
+        "diff-large-10pct"
+      ],
+      "metrics": {
+        "smallMs": 0.021739000000025044,
+        "smallCells": 400,
+        "mediumMs": 0.23094800000012583,
+        "mediumCells": 4800,
+        "largeMs": 0.7975589999996373,
+        "largeCells": 16000
+      }
+    },
+    {
+      "title": "Change percentage has minimal impact on diff time",
+      "description": "Diff time is dominated by cell comparison, not result collection. 0% vs 100% difference has similar scan time.",
+      "category": "info",
+      "benchmarks": [
+        "diff-identical-buffers",
+        "diff-50pct-scattered",
+        "diff-100pct-different"
+      ],
+      "metrics": {
+        "identicalMs": 0.2897800000000075,
+        "halfMs": 0.2250890000000254,
+        "fullMs": 0.22519600000009632
+      }
+    },
+    {
+      "title": "Dirty row tracking reduces scan overhead",
+      "description": "DualBuffer dirty tracking scans only modified rows, improving performance for localized changes.",
+      "category": "info",
+      "benchmarks": [
+        "dirty-tracking-few-rows",
+        "dirty-tracking-many-rows"
+      ],
+      "metrics": {
+        "fewRowsMs": 0.17080299999997806,
+        "manyRowsMs": 0.40832000000000335,
+        "ratio": "2.4x"
+      }
+    },
+    {
+      "title": "Wide characters add overhead to diff",
+      "description": "Wide character handling adds ~30% overhead to diff operations due to continuation cell checks.",
+      "category": "info",
+      "benchmarks": [
+        "diff-10pct-scattered",
+        "diff-wide-chars-10pct"
+      ],
+      "metrics": {
+        "normalMs": 0.24063200000000506,
+        "wideMs": 0.22916200000008757
+      }
+    }
+  ],
+  "notes": "Buffer diff benchmarks. Tests diff performance across buffer sizes (400-16000 cells), change percentages (0-100%), change patterns (scattered, clustered, row-based), DualBuffer operations, and dirty row tracking effectiveness."
+}

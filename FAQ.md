@@ -253,14 +253,16 @@ Test on multiple terminals. Accept imperfection.
 
 ### Where are the benchmarks?
 
-| Metric | Typical Value |
-|--------|---------------|
-| Keystroke-to-display latency | < 5ms (fast path) |
-| Full render cycle | < 20ms (debounced) |
-| Bundle time | < 500ms (first run, cacheable) |
-| Memory usage | 30-50MB (Deno baseline + app) |
+| Metric                       | Typical Value                 |
+|------------------------------|-------------------------------|
+| Keystroke-to-display latency | < 5ms (fast path)             |
+| Full render cycle            | < 20ms (debounced)            |
+| Bundle time                  | < 500ms (first run, cacheable) |
+| Memory usage                 | 30-50MB (Deno baseline + app) |
 
-We haven't done rigorous benchmarking against Textual/bubbletea/ratatui. Contributions welcome.
+See [benchmark-architecture.md](agent_docs/benchmark-architecture.md) for comprehensive performance benchmarks covering geometry, hit testing, layout, rendering, graphics encoding, and more (17 suites, 300+ benchmarks).
+
+Cross-framework comparisons against Textual/bubbletea/ratatui are not yet available.
  
 ---
 

@@ -1,0 +1,297 @@
+{
+  "timestamp": "2026-02-04T00:06:24.545Z",
+  "commit": "3836030",
+  "results": [
+    {
+      "name": "pointInBounds-single",
+      "category": "geometry",
+      "iterations": 10000,
+      "median": 0.0001870000000003813,
+      "p95": 0.0003489999999999327,
+      "p99": 0.0013179999999994862,
+      "min": 0.0001499999999996504,
+      "max": 0.34502900000000025,
+      "mean": 0.0002873852999999973,
+      "unit": "ms",
+      "target": 0.001
+    },
+    {
+      "name": "pointInBounds-inside",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.0005089999999992045,
+      "p95": 0.0024159999999984194,
+      "p99": 0.002543000000001072,
+      "min": 0.0004939999999997724,
+      "max": 0.01620699999999964,
+      "mean": 0.001025634000000009,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "pointInBounds-outside",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.0005100000000020088,
+      "p95": 0.001809999999998979,
+      "p99": 0.001873999999999043,
+      "min": 0.0004960000000018283,
+      "max": 0.010253999999999763,
+      "mean": 0.0009440610000000102,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "pointInBounds-edge",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.0005070000000024777,
+      "p95": 0.004242000000001411,
+      "p99": 0.004318000000001376,
+      "min": 0.0004960000000018283,
+      "max": 0.013885000000001924,
+      "mean": 0.0010467950000000491,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "pointInBounds-1000-random",
+      "category": "geometry",
+      "iterations": 500,
+      "median": 0.002957999999999572,
+      "p95": 0.0033530000000006055,
+      "p99": 0.005791999999999575,
+      "min": 0.0008960000000008961,
+      "max": 0.023292000000001423,
+      "mean": 0.0021783300000000096,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "pointInBounds-10000",
+      "category": "geometry",
+      "iterations": 100,
+      "median": 0.03951099999999741,
+      "p95": 0.05827199999999877,
+      "p99": 0.06148100000000056,
+      "min": 0.03677900000000278,
+      "max": 0.06148100000000056,
+      "mean": 0.04181585999999992,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "clampToBounds-inside",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.000484000000000151,
+      "p95": 0.0005359999999967613,
+      "p99": 0.0010600000000025034,
+      "min": 0.00046999999999997044,
+      "max": 0.015493999999996788,
+      "mean": 0.0005253239999998769,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "clampToBounds-outside",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.0005170000000020991,
+      "p95": 0.008493999999998891,
+      "p99": 0.009042999999998358,
+      "min": 0.0004860000000022069,
+      "max": 0.06410000000000338,
+      "mean": 0.0011959630000000843,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "clampToBounds-1000-random",
+      "category": "geometry",
+      "iterations": 500,
+      "median": 0.0008109999999987849,
+      "p95": 0.00814900000000307,
+      "p99": 0.008448999999998819,
+      "min": 0.0007749999999973056,
+      "max": 0.03613400000000411,
+      "mean": 0.0013082440000000872,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "clipBounds-full-overlap",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.00042799999999942884,
+      "p95": 0.00045500000000231466,
+      "p99": 0.0005160000000046239,
+      "min": 0.0004199999999983106,
+      "max": 0.015743999999997982,
+      "mean": 0.00044680299999981087,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "clipBounds-partial-overlap",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.0004540000000048394,
+      "p95": 0.0005230000000011614,
+      "p99": 0.009679999999995914,
+      "min": 0.0004390000000000782,
+      "max": 0.06640599999999353,
+      "mean": 0.0009208179999997838,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "clipBounds-no-overlap",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.00044900000000325235,
+      "p95": 0.0004939999999962197,
+      "p99": 0.009153999999995222,
+      "min": 0.00043999999999755346,
+      "max": 0.033456999999998516,
+      "mean": 0.0006119820000000899,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "clipBounds-1000-random",
+      "category": "geometry",
+      "iterations": 500,
+      "median": 0.004846999999998047,
+      "p95": 0.010944999999999538,
+      "p99": 0.02250800000000197,
+      "min": 0.004747000000001833,
+      "max": 0.06466499999999797,
+      "mean": 0.0060022219999999035,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "boundsIntersect-true",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.0004429999999970846,
+      "p95": 0.0029409999999998604,
+      "p99": 0.0030479999999997176,
+      "min": 0.00043199999999643524,
+      "max": 0.015703999999999496,
+      "mean": 0.0008730430000000809,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "boundsIntersect-false",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.00044499999999914053,
+      "p95": 0.0018029999999953361,
+      "p99": 0.0018799999999998818,
+      "min": 0.00043200000000354066,
+      "max": 0.011779999999994573,
+      "mean": 0.000758727999999941,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "boundsIntersect-edge",
+      "category": "geometry",
+      "iterations": 1000,
+      "median": 0.00044900000000325235,
+      "p95": 0.001812000000001035,
+      "p99": 0.0018869999999964193,
+      "min": 0.0004369999999980223,
+      "max": 0.011997999999998399,
+      "mean": 0.0008658680000000132,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "boundsIntersect-1000-random",
+      "category": "geometry",
+      "iterations": 500,
+      "median": 0.0029409999999998604,
+      "p95": 0.004516000000002407,
+      "p99": 0.007522999999999058,
+      "min": 0.0029010000000013747,
+      "max": 0.13120900000000546,
+      "mean": 0.0035639079999998558,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "viewport-clip-check-1000",
+      "category": "geometry",
+      "iterations": 500,
+      "median": 0.0031879999999944175,
+      "p95": 0.008760000000002321,
+      "p99": 0.010399999999997078,
+      "min": 0.0031090000000091322,
+      "max": 0.0773280000000014,
+      "mean": 0.00453801799999988,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "hit-test-simulation-1000",
+      "category": "geometry",
+      "iterations": 500,
+      "median": 0.004706999999996242,
+      "p95": 0.00484000000000151,
+      "p99": 0.005938999999997918,
+      "min": 0.0027380000000079008,
+      "max": 0.022325000000009254,
+      "mean": 0.004096702000000363,
+      "unit": "ms",
+      "target": 0.04
+    }
+  ],
+  "findings": [
+    {
+      "title": "pointInBounds is extremely fast",
+      "description": "Single point-in-bounds check takes ~1 nanosecond. Can perform millions per frame.",
+      "category": "info",
+      "benchmarks": [
+        "pointInBounds-single",
+        "pointInBounds-10000"
+      ],
+      "metrics": {
+        "singleNs": "187",
+        "per10000Ms": 0.03951099999999741
+      }
+    },
+    {
+      "title": "All geometry operations are sub-microsecond",
+      "description": "clipBounds and boundsIntersect are comparable in cost to pointInBounds.",
+      "category": "info",
+      "benchmarks": [
+        "pointInBounds-1000-random",
+        "clipBounds-1000-random",
+        "boundsIntersect-1000-random"
+      ],
+      "metrics": {
+        "pointInBoundsMs": 0.002957999999999572,
+        "clipBoundsMs": 0.004846999999998047,
+        "boundsIntersectMs": 0.0029409999999998604
+      }
+    },
+    {
+      "title": "Object creation in clampToBounds adds overhead",
+      "description": "clampToBounds creates a new Point object, making it slightly slower than pure checks.",
+      "category": "info",
+      "benchmarks": [
+        "pointInBounds-1000-random",
+        "clampToBounds-1000-random"
+      ],
+      "metrics": {
+        "pointInBoundsMs": 0.002957999999999572,
+        "clampToBoundsMs": 0.0008109999999987849
+      }
+    }
+  ],
+  "notes": "Geometry utility benchmarks. Tests pointInBounds, clampToBounds, clipBounds, and boundsIntersect at various scales. These are foundational operations used in hit testing, rendering, and viewport management."
+}

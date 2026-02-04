@@ -331,23 +331,25 @@ Automates capturing screenshots and videos of Melker apps for documentation. Use
 
 ## Other Directories
 
-| Directory              | Purpose                               |
-|------------------------|---------------------------------------|
-| `agent_docs/`          | Documentation for AI agents           |
-| `examples/`            | Example applications                  |
-| `examples/showcase/`   | Polished apps (htop, map, breakout)   |
-| `examples/basics/`     | Learning progression                  |
-| `examples/components/` | Component demos                       |
-| `examples/layout/`     | Flexbox, borders, scrolling           |
-| `examples/canvas/`     | Canvas graphics, shaders, video       |
-| `examples/typescript/` | TypeScript examples                   |
-| `examples/melker/`     | Scripts, advanced patterns            |
-| `examples/_internal/`  | Test files and variants               |
-| `tests/`               | Test files                            |
-| `docs/`                | Website content (served at melker.sh) |
-| `skills/`              | AI agent skills                       |
+| Directory              | Purpose                                                            |
+|------------------------|--------------------------------------------------------------------|
+| `agent_docs/`          | Documentation for AI agents                                        |
+| `benchmarks/`          | Performance benchmarks (see [benchmark-architecture.md](benchmark-architecture.md)) |
+| `examples/`            | Example applications                                               |
+| `examples/showcase/`   | Polished apps (htop, map, breakout)                                |
+| `examples/basics/`     | Learning progression                                               |
+| `examples/components/` | Component demos                                                    |
+| `examples/layout/`     | Flexbox, borders, scrolling                                        |
+| `examples/canvas/`     | Canvas graphics, shaders, video                                    |
+| `examples/typescript/` | TypeScript examples                                                |
+| `examples/melker/`     | Scripts, advanced patterns                                         |
+| `examples/_internal/`  | Test files and variants                                            |
+| `tests/`               | Test files                                                         |
+| `docs/`                | Website content (served at melker.sh)                              |
+| `skills/`              | AI agent skills                                                    |
 
 ## See Also
 
 - [architecture.md](architecture.md) — Core architecture concepts
 - [component-reference.md](component-reference.md) — Component documentation
+- [benchmark-architecture.md](benchmark-architecture.md) — Performance benchmarking infrastructure

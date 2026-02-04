@@ -223,11 +223,11 @@ export function encodeToITerm2(options: ITermEncodeOptions): ITermOutput {
     size: pngBytes.length,
   });
 
-  // Determine if we need multipart (> 1MB or explicitly requested)
-  const needsMultipart = useMultipart || base64Data.length > 1048576;
-
+  // Only use multipart if explicitly requested (for tmux compatibility)
+  // Most terminals (WezTerm, Rio, Konsole) don't support multipart protocol
+  // and handle large single sequences fine
   let sequences: string[];
-  if (needsMultipart) {
+  if (useMultipart) {
     sequences = encodeMultipartSequences(base64Data, params);
     logger.debug('iTerm2 multipart encoding', {
       chunks: sequences.length,
@@ -284,11 +284,9 @@ export function encodeImageToITerm2(options: ITermEncodeImageOptions): ITermOutp
     size: imageData.length,
   });
 
-  // Determine if we need multipart
-  const needsMultipart = useMultipart || base64Data.length > 1048576;
-
+  // Only use multipart if explicitly requested (for tmux compatibility)
   let sequences: string[];
-  if (needsMultipart) {
+  if (useMultipart) {
     sequences = encodeMultipartSequences(base64Data, params);
   } else {
     sequences = [encodeSingleSequence(base64Data, params)];

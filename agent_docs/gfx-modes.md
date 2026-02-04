@@ -184,10 +184,11 @@ True pixel graphics via iTerm2 Inline Images Protocol - widely supported by mode
 
 **Requirements:**
 - Terminal with iTerm2 protocol support (iTerm2, WezTerm, Konsole, Rio, Hyper)
-- Works in tmux with multipart mode (unlike Kitty)
+- Works in tmux with multipart chunking (unlike Kitty)
 
 **How it works:**
 - Detects iTerm2 support at startup via environment variables
+- Uses full terminal pixel resolution (same as sixel/kitty)
 - Renders canvas content to PNG format (uncompressed for speed)
 - Encodes as base64 in OSC 1337 escape sequence
 - Outputs iTerm2 data as overlay after buffer rendering
@@ -197,8 +198,9 @@ True pixel graphics via iTerm2 Inline Images Protocol - widely supported by mode
 
 **Advantages:**
 - Wide terminal support (more than Kitty)
-- Works in tmux with multipart chunking
+- Works in tmux (uses multipart chunking)
 - True 32-bit RGBA (no quantization)
+- Large images supported (single sequence, no size limit)
 
 **Limitations:**
 - PNG encoding overhead (~5-15ms per frame)

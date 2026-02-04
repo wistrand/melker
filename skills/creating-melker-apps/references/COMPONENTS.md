@@ -897,7 +897,7 @@ Pixel graphics using Unicode sextant characters (2x3 pixels per cell).
 - `width`, `height` - Dimensions in terminal cells
 - `dither`: `auto` | `sierra-stable` | `floyd-steinberg` | `ordered` | `none`
 - `ditherBits` - Color depth (1-8)
-- `gfxMode`: `sextant` | `block` | `pattern` | `luma` - Per-element graphics mode
+- `gfxMode`: `sextant` | `block` | `pattern` | `luma` | `sixel` | `kitty` | `iterm2` | `hires`
 - `onPaint` - Draw callback (`event.canvas`)
 - `onShader` - Per-pixel shader callback, runs every frame (see Shaders section)
 - `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)
@@ -927,10 +927,14 @@ canvas.decodeImageBytes(bytes);  // Uint8Array -> { width, height, data, bytesPe
 ```
 
 **Graphics modes** (per-element `gfxMode` prop or global `--gfx-mode` flag):
-- `sextant` - Unicode sextant chars (default, highest resolution)
+- `sextant` - Unicode sextant chars (default, 2x3 pixels per cell)
 - `block` - Colored spaces (no Unicode needed)
 - `pattern` - ASCII chars with spatial mapping
 - `luma` - ASCII chars based on brightness
+- `sixel` - True pixels via Sixel protocol (requires terminal support)
+- `kitty` - True pixels via Kitty protocol (requires terminal support)
+- `iterm2` - True pixels via iTerm2 protocol (WezTerm, Rio, Konsole, iTerm2)
+- `hires` - Auto-select best available (kitty → sixel → iterm2 → sextant)
 
 Global `MELKER_GFX_MODE` env var or `--gfx-mode` flag overrides per-element prop.
 
@@ -954,7 +958,7 @@ Image display (PNG, JPEG, GIF). Supports file paths, HTTP/HTTPS URLs, and data U
 - `width`, `height` - Dimensions (number or percentage)
 - `objectFit`: `contain` | `cover` | `fill`
 - `dither` - Dithering mode
-- `gfxMode` - Graphics mode: `sextant` (default), `block`, `pattern`, `luma` (global `MELKER_GFX_MODE` overrides)
+- `gfxMode` - Graphics mode: `sextant`, `block`, `pattern`, `luma`, `sixel`, `kitty`, `iterm2`, `hires` (global overrides)
 - `onLoad`, `onError` - Load callbacks
 - `onShader`, `shaderFps`, `shaderRunTime` - Animation (see Shaders)
 - `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)

@@ -17,18 +17,20 @@ The [iTerm2 Inline Images Protocol](https://iterm2.com/documentation-images.html
 
 ## Protocol Format
 
-**Single sequence (images < 1MB):**
+**Single sequence (default):**
 ```
 ESC ] 1337 ; File = [params] : <base64-data> BEL
 ```
 
-**Multipart sequence (large images or tmux):**
+**Multipart sequence (tmux only):**
 ```
 ESC ] 1337 ; MultipartFile = [params] BEL
 ESC ] 1337 ; FilePart = <base64-chunk> BEL
 ...
 ESC ] 1337 ; FileEnd BEL
 ```
+
+**Note:** Multipart is only used when explicitly running in tmux. Most terminals (WezTerm, Rio, Konsole) don't support multipart but handle large single sequences fine.
 
 **Key parameters:**
 

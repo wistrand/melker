@@ -180,9 +180,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       cellSize: sixelCapabilities ? `${sixelCapabilities.cellWidth}x${sixelCapabilities.cellHeight}` : 'n/a',
     });
 
-    // Sixel and Kitty both use full terminal pixel resolution
-    if (gfxMode === 'sixel' || gfxMode === 'kitty') {
-      // Use sixel capabilities for cell dimensions (kitty uses same detection)
+    // Sixel, Kitty, and iTerm2 all use full terminal pixel resolution
+    if (gfxMode === 'sixel' || gfxMode === 'kitty' || gfxMode === 'iterm2') {
+      // Use sixel capabilities for cell dimensions
       if (sixelCapabilities?.cellWidth && sixelCapabilities.cellWidth > 0 && sixelCapabilities.cellHeight > 0) {
         const result = {
           width: width * sixelCapabilities.cellWidth,
@@ -913,8 +913,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   getPixelAspectRatio(): number {
     const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
 
-    if (gfxMode === 'sixel' || gfxMode === 'kitty') {
-      // Sixel and Kitty modes render square pixels at native terminal resolution
+    if (gfxMode === 'sixel' || gfxMode === 'kitty' || gfxMode === 'iterm2') {
+      // Sixel, Kitty, and iTerm2 modes render square pixels at native terminal resolution
       return 1.0;
     }
 
@@ -1194,12 +1194,12 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Cache bounds for mouse coordinate conversion in shaders
     this._shaderState.bounds = bounds;
 
-    // Check if buffer needs resizing due to sixel/kitty capabilities becoming available
+    // Check if buffer needs resizing due to sixel/kitty/iterm2 capabilities becoming available
     // This happens when canvas was created before engine started
     const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
-    if (gfxMode === 'sixel' || gfxMode === 'kitty') {
+    if (gfxMode === 'sixel' || gfxMode === 'kitty' || gfxMode === 'iterm2') {
       const engine = globalThis.melkerEngine;
-      // Use sixel capabilities for cell dimensions (kitty uses same detection)
+      // Use sixel capabilities for cell dimensions
       const capabilities = engine?.sixelCapabilities;
       if (capabilities?.cellWidth && capabilities.cellWidth > 0 && capabilities.cellHeight > 0) {
         const expectedWidth = this.props.width * capabilities.cellWidth;
@@ -1645,7 +1645,7 @@ export const canvasSchema: ComponentSchema = {
     src: { type: 'string', description: 'Load image from file path' },
     dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'atkinson', 'atkinson-stable', 'ordered', 'blue-noise'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
     ditherBits: { type: 'number', description: 'Color depth for dithering' },
-    gfxMode: { type: 'string', enum: ['sextant', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'hires'], description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
+    gfxMode: { type: 'string', enum: ['sextant', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'iterm2', 'hires'], description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
     onPaint: { type: ['function', 'string'], description: 'Called when canvas needs repainting, receives event with {canvas, bounds}' },
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. source has getPixel(), mouse, mouseUV' },
     onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },

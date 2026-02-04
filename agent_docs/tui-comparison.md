@@ -378,7 +378,7 @@ Modern terminals support pixel-perfect image rendering via specialized protocols
 |--------------------|-------------|-------------|-------------|-------------|------------|-------|-------|
 | Sixel              | Y           | Y*          | Y*          | Y*          | -          | -     | -     |
 | Kitty protocol     | Y           | Y*          | Y*          | Y*          | -          | -     | -     |
-| iTerm2 protocol    | -           | Y*          | -           | Y*          | -          | -     | -     |
+| iTerm2 protocol    | Y           | Y*          | -           | Y*          | -          | -     | -     |
 | Auto-detection     | Y           | Y*          | Y*          | Y*          | -          | -     | -     |
 | Fallback (Unicode) | Y (sextant) | Y* (braille) | Y* (Unicode) | Y (braille) | -          | -     | -     |
 
@@ -387,7 +387,7 @@ Y = Built-in, Y* = Via extension/library, - = Not available
 **Protocol notes:**
 - **Sixel**: DEC VT340 protocol (1980s), wide terminal support, limited to 256 colors, no alpha
 - **Kitty**: Modern protocol with full RGBA, requires Kitty 0.28+, also supported by WezTerm, Ghostty
-- **iTerm2**: macOS-focused protocol, also supported by WezTerm, mintty
+- **iTerm2**: macOS-focused protocol, also supported by WezTerm, Rio, Konsole; no size limits
 
 **Extension libraries:**
 - **Ink**: [ink-picture](https://github.com/endernoke/ink-picture) - sixel, kitty, iTerm2, auto-detection
@@ -396,20 +396,23 @@ Y = Built-in, Y* = Via extension/library, - = Not available
 
 **Terminal support:**
 
-| Terminal     | Sixel | Kitty | iTerm2 |
-|--------------|:-----:|:-----:|:------:|
-| Kitty        |   -   |   Y   |   -    |
-| iTerm2       |   Y   |   -   |   Y    |
-| WezTerm      |   Y   |   Y   |   Y    |
-| Ghostty      |   -   |   Y   |   -    |
-| foot         |   Y   |   -   |   -    |
-| Konsole      |   Y   |   ~   |   -    |
-| VS Code term |   Y   |   -   |   -    |
-| xterm        |   Y   |   -   |   -    |
-| Windows Term |   ~   |   -   |   -    |
-| tmux         |  Y*   |   -   |   -    |
+| Terminal     | Sixel | Kitty | iTerm2 | Sextant |
+|--------------|:-----:|:-----:|:------:|:-------:|
+| Kitty        |   -   |   Y   |   -    |    Y    |
+| iTerm2       |   Y   |   -   |   Y    |    Y    |
+| WezTerm      |   Y   |   Y   |   Y    |    Y    |
+| Ghostty      |   -   |   Y   |   -    |    Y    |
+| foot         |   Y   |   -   |   -    |    Y    |
+| Konsole      |   Y   |   ~   |   Y    |    Y    |
+| Rio          |   -   |   -   |   Y    |    -    |
+| VS Code term |   Y   |   -   |   -    |    Y    |
+| xterm        |   Y   |   -   |   -    |    Y    |
+| Windows Term |   ~   |   -   |   -    |    Y    |
+| tmux         |  Y*   |   -   |   Y*   |    Y    |
 
 Y = Full support, ~ = Partial, Y* = Passthrough depends on underlying terminal
+
+**Sextant note:** Rio terminal does not render Unicode Sextant Block characters (U+1FB00-U+1FB3F). Use `MELKER_GFX_MODE=iterm2` or run `melker --debug-sextant` to test your terminal.
 
 ## Mermaid Diagram Support
 

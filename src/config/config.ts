@@ -751,13 +751,13 @@ export class MelkerConfig {
   }
 
   // Render
-  get gfxMode(): 'sextant' | 'block' | 'pattern' | 'luma' | undefined {
+  get gfxMode(): 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'iterm2' | 'hires' | undefined {
     // Only return gfxMode if explicitly set (env, cli, file, policy) - not schema default
     // This allows per-element gfxMode props to take effect when no global override
     if (this.sources['render.gfxMode'] === 'default') {
       return undefined;
     }
-    return this.data['render.gfxMode'] as 'sextant' | 'block' | 'pattern' | 'luma';
+    return this.data['render.gfxMode'] as 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'iterm2' | 'hires';
   }
 
   // Headless

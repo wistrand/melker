@@ -7,7 +7,7 @@ Controls how canvas/image pixels are rendered to terminal characters.
 Terminal character cells are typically taller than wide, so sextant pixels (2 wide × 3 tall per cell) are not square. The `canvas.getPixelAspectRatio()` method returns the correct ratio for aspect-correct drawing.
 
 **Calculation:**
-- Sixel/Kitty modes: 1.0 (square pixels at native resolution)
+- Sixel/Kitty/iTerm2 modes: 1.0 (square pixels at native resolution)
 - Other modes: `(3 * cellWidth) / (2 * cellHeight)` when detected, else `(2/3) * charAspectRatio` prop
 
 Cell size is detected via WindowOps query at startup and used even without sixel support.
@@ -21,6 +21,11 @@ Cell size is detected via WindowOps query at startup and used even without sixel
 Unicode sextant characters - 2x3 pixels per terminal cell, full color support.
 
 **Best for:** Everything (highest resolution)
+
+**Known limitations:**
+- **Rio terminal** does not render Unicode Sextant Block characters (U+1FB00-U+1FB3F) correctly. Use `MELKER_GFX_MODE=iterm2` as a workaround since Rio supports the iTerm2 protocol.
+
+**Testing support:** Run `melker --debug-sextant` to test if your terminal renders sextant characters correctly.
 
 ### block
 
@@ -171,6 +176,39 @@ True pixel graphics via Kitty Graphics Protocol - modern terminal graphics with 
 - Environment hints: `KITTY_WINDOW_ID`, `WEZTERM_PANE`, `GHOSTTY_RESOURCES_DIR`
 - Multiplexer detection via `$TMUX`, `$STY`
 
+### iterm2
+
+True pixel graphics via iTerm2 Inline Images Protocol - widely supported by modern terminals.
+
+**Best for:** Terminals without Kitty/sixel support but with iTerm2 protocol (Rio, Hyper)
+
+**Requirements:**
+- Terminal with iTerm2 protocol support (iTerm2, WezTerm, Konsole, Rio, Hyper)
+- Works in tmux with multipart mode (unlike Kitty)
+
+**How it works:**
+- Detects iTerm2 support at startup via environment variables
+- Renders canvas content to PNG format (uncompressed for speed)
+- Encodes as base64 in OSC 1337 escape sequence
+- Outputs iTerm2 data as overlay after buffer rendering
+- Uses pixel dimensions (`width=Npx`) for correct aspect ratio
+- Uses content hash caching to avoid re-encoding unchanged content
+- Falls back to sextant if iTerm2 not available
+
+**Advantages:**
+- Wide terminal support (more than Kitty)
+- Works in tmux with multipart chunking
+- True 32-bit RGBA (no quantization)
+
+**Limitations:**
+- PNG encoding overhead (~5-15ms per frame)
+- No partial/incremental updates
+- Slower than Kitty (PNG vs raw RGBA)
+
+**Detection:**
+- Environment hints: `ITERM_SESSION_ID`, `LC_TERMINAL`, `TERM_PROGRAM`, `WEZTERM_PANE`, `KONSOLE_VERSION`, `TERM=rio`
+- Multiplexer detection enables multipart mode
+
 ### hires
 
 Auto-select best available high-resolution graphics mode.
@@ -180,7 +218,8 @@ Auto-select best available high-resolution graphics mode.
 **Fallback order:**
 1. `kitty` - if Kitty graphics protocol supported
 2. `sixel` - if sixel supported
-3. `sextant` - universal fallback
+3. `iterm2` - if iTerm2 protocol supported
+4. `sextant` - universal fallback
 
 **How it works:**
 - Checks terminal capabilities at startup
@@ -203,7 +242,8 @@ MELKER_GFX_MODE=pattern   # ASCII spatial mapping
 MELKER_GFX_MODE=luma      # ASCII brightness-based
 MELKER_GFX_MODE=sixel     # true pixels (requires terminal support)
 MELKER_GFX_MODE=kitty     # true pixels via Kitty protocol
-MELKER_GFX_MODE=hires     # auto: kitty → sixel → sextant
+MELKER_GFX_MODE=iterm2    # true pixels via iTerm2 protocol
+MELKER_GFX_MODE=hires     # auto: kitty → sixel → iterm2 → sextant
 ```
 
 **CLI flag (overrides per-element):**
@@ -214,6 +254,7 @@ MELKER_GFX_MODE=hires     # auto: kitty → sixel → sextant
 --gfx-mode=luma
 --gfx-mode=sixel
 --gfx-mode=kitty
+--gfx-mode=iterm2
 --gfx-mode=hires
 ```
 
@@ -270,17 +311,20 @@ Video uses blue-noise for less temporal flicker between frames.
 
 ## Comparison
 
-| Mode    | Resolution   | Best for              | Unicode  | Terminal Support                               |
-|---------|--------------|---------------------- |----------|------------------------------------------------|
-| sextant | 2x3 per cell | Everything            | Required | Most modern                                    |
-| block   | 1x1 per cell | Compatibility         | No       | All                                            |
-| pattern | 2x3 per cell | UI, shapes            | No       | All                                            |
-| luma    | 2x3 per cell | Images                | No       | All                                            |
-| sixel   | True pixels  | High-quality images   | No       | xterm, mlterm, foot, WezTerm, iTerm2, Konsole* |
-| kitty   | True pixels  | High-quality images   | No       | Kitty, Ghostty, WezTerm, Konsole               |
-| hires   | True pixels  | Portable high-quality | No       | Auto-selects best available                    |
+| Mode    | Resolution   | Best for              | Unicode  | Terminal Support                                |
+|---------|--------------|---------------------- |----------|-------------------------------------------------|
+| sextant | 2x3 per cell | Everything            | Required | Most modern†                                    |
+| block   | 1x1 per cell | Compatibility         | No       | All                                             |
+| pattern | 2x3 per cell | UI, shapes            | No       | All                                             |
+| luma    | 2x3 per cell | Images                | No       | All                                             |
+| sixel   | True pixels  | High-quality images   | No       | xterm, mlterm, foot, WezTerm, iTerm2, Konsole*  |
+| kitty   | True pixels  | High-quality images   | No       | Kitty, Ghostty, WezTerm, Konsole                |
+| iterm2  | True pixels  | High-quality images   | No       | iTerm2, WezTerm, Konsole, Rio                   |
+| hires   | True pixels  | Portable high-quality | No       | Auto-selects best available                     |
 
 *Konsole has a right-edge rendering quirk. Use mlterm for best sixel quality.
+
+†Rio terminal does not render sextant characters (U+1FB00-U+1FB3F). Use `iterm2` mode instead.
 
 ## Demo
 

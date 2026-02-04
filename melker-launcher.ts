@@ -135,6 +135,7 @@ function printUsage(): void {
   console.log('  --print-tree             Display element tree structure and exit');
   console.log('  --print-json             Display JSON serialization and exit');
   console.log('  --debug                  Show system info, debug script transpilation');
+  console.log('  --debug-sextant          Print sextant character test pattern and exit');
   console.log('  --schema                 Output component schema markdown and exit');
   console.log('  --lsp                    Start Language Server Protocol server');
   console.log('  --convert                Convert markdown to .melker format (stdout)');
@@ -394,6 +395,29 @@ export async function main(): Promise<void> {
 
   if (args.includes('--help') || args.includes('-h')) {
     printUsage();
+    Deno.exit(0);
+  }
+
+  // Handle --debug-sextant option (prints sextant test pattern and exits)
+  if (args.includes('--debug-sextant')) {
+    console.log(`
+=== Sextant Character Test ===
+
+Plain (no ANSI):     🬀🬁🬂🬃🬄🬅🬆🬇🬈🬉🬊🬋🬌🬍🬎🬏
+
+With FG color:       \x1b[38;2;255;255;0m🬀🬁🬂🬃🬄🬅🬆🬇🬈🬉🬊🬋🬌🬍🬎🬏\x1b[0m
+
+With BG color:       \x1b[48;2;0;0;128m🬀🬁🬂🬃🬄🬅🬆🬇🬈🬉🬊🬋🬌🬍🬎🬏\x1b[0m
+
+With FG+BG:          \x1b[38;2;255;255;0m\x1b[48;2;0;0;128m🬀🬁🬂🬃🬄🬅🬆🬇🬈🬉🬊🬋🬌🬍🬎🬏\x1b[0m
+
+Reset before each:   \x1b[0m\x1b[38;2;255;0;0m🬀\x1b[0m\x1b[38;2;0;255;0m🬁\x1b[0m\x1b[38;2;0;0;255m🬂\x1b[0m\x1b[38;2;255;255;0m🬃\x1b[0m\x1b[38;2;255;0;255m🬄\x1b[0m\x1b[38;2;0;255;255m🬅\x1b[0m
+
+If all rows show the same sequence of sextant characters (U+1FB00-U+1FB0F),
+your terminal supports sextant mode. If any row appears scrambled, use:
+  MELKER_GFX_MODE=iterm2  (if your terminal supports iTerm2 protocol)
+  MELKER_GFX_MODE=block   (universal fallback)
+`);
     Deno.exit(0);
   }
 

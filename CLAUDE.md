@@ -59,6 +59,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)  |
 | Sixel protocol      | [sixel-architecture.md](agent_docs/sixel-architecture.md)        |
 | Kitty protocol      | [kitty-architecture.md](agent_docs/kitty-architecture.md)        |
+| iTerm2 protocol     | [iterm2-architecture.md](agent_docs/iterm2-architecture.md)      |
 | Benchmarks          | [benchmark-architecture.md](agent_docs/benchmark-architecture.md) |
 
 ### Deep Dives
@@ -242,6 +243,7 @@ See [config-architecture.md](agent_docs/config-architecture.md) for full details
 ./melker.ts --watch app.melker      # Auto-reload on changes
 ./melker.ts --trust app.melker      # CI/scripts (bypass approval prompt)
 ./melker.ts --debug app.melker      # Debug mode
+./melker.ts --debug-sextant         # Test terminal sextant character support
 ./melker.ts --stdout app.melker     # Output single frame to stdout and exit
 ./melker.ts --interactive app.melker # Force TUI mode even when piped
 ./melker.ts --color=always app.melker # Force ANSI colors even when piped

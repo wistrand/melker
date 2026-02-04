@@ -21,6 +21,11 @@ import {
   type KittyCapabilities,
 } from '../kitty/mod.ts';
 import {
+  encodeToITerm2,
+  positionedITerm2,
+  type ITermCapabilities,
+} from '../iterm2/mod.ts';
+import {
   applyFloydSteinbergDither,
   applyFloydSteinbergStableDither,
   applyAtkinsonDither,
@@ -79,6 +84,14 @@ export class CanvasRenderState {
   // Stable image ID for this canvas - reused across frames to enable in-place replacement
   // This eliminates flicker from the display+delete cycle that occurs with new IDs each frame
   private _kittyStableImageId: number = generateImageId();
+
+  // iTerm2 image cache - skip re-encoding when content unchanged
+  private _itermContentHash: number = 0;
+  private _itermCachedOutput: ITermOutputData | null = null;
+  private _itermCachedBounds: { x: number; y: number; width: number; height: number } | null = null;
+
+  // iTerm2 compositing buffer (reused across frames, grows as needed)
+  private _itermCompositedBuffer: Uint32Array | null = null;
 
   /**
    * Get or create a kitty compositing buffer of the required size.
@@ -148,6 +161,54 @@ export class CanvasRenderState {
    */
   getKittyStableImageId(): number {
     return this._kittyStableImageId;
+  }
+
+  /**
+   * Get or create an iTerm2 compositing buffer of the required size.
+   * Reuses existing buffer if large enough, otherwise allocates a new one.
+   */
+  getITermCompositedBuffer(pixelCount: number): Uint32Array {
+    if (!this._itermCompositedBuffer || this._itermCompositedBuffer.length < pixelCount) {
+      this._itermCompositedBuffer = new Uint32Array(pixelCount);
+    }
+    return this._itermCompositedBuffer;
+  }
+
+  /**
+   * Check if iTerm2 content matches cache and return cached output if so.
+   * Returns null if cache miss (content changed or bounds changed).
+   */
+  getITermCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }): ITermOutputData | null {
+    if (
+      this._itermCachedOutput &&
+      this._itermContentHash === contentHash &&
+      this._itermCachedBounds &&
+      this._itermCachedBounds.x === bounds.x &&
+      this._itermCachedBounds.y === bounds.y &&
+      this._itermCachedBounds.width === bounds.width &&
+      this._itermCachedBounds.height === bounds.height
+    ) {
+      return this._itermCachedOutput;
+    }
+    return null;
+  }
+
+  /**
+   * Store iTerm2 output in cache.
+   */
+  setITermCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }, output: ITermOutputData): void {
+    this._itermContentHash = contentHash;
+    this._itermCachedBounds = { ...bounds };
+    this._itermCachedOutput = output;
+  }
+
+  /**
+   * Invalidate iTerm2 cache (e.g., on resize).
+   */
+  invalidateITermCache(): void {
+    this._itermContentHash = 0;
+    this._itermCachedOutput = null;
+    this._itermCachedBounds = null;
   }
 }
 
@@ -334,6 +395,20 @@ export interface KittyOutputData {
   bounds: Bounds;
   /** Image ID for cleanup/deletion */
   imageId: number;
+  /** Element ID for tracking */
+  elementId?: string;
+  /** True if this output is from cache (already displayed, skip writing) */
+  fromCache?: boolean;
+}
+
+/**
+ * iTerm2 output data for a canvas element
+ */
+export interface ITermOutputData {
+  /** Positioned iTerm2 sequence (includes cursor positioning) */
+  data: string;
+  /** Canvas bounds for occlusion detection */
+  bounds: Bounds;
   /** Element ID for tracking */
   elementId?: string;
   /** True if this output is from cache (already displayed, skip writing) */
@@ -673,6 +748,162 @@ export function generateKittyOutput(
  * Similar to sixel placeholder.
  */
 export function renderKittyPlaceholder(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  terminalWidth: number,
+  terminalHeight: number,
+  data: CanvasRenderData
+): void {
+  // Use style background, props background, or transparent
+  const hasStyleBg = style.background !== undefined;
+  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+  const bgColor = hasStyleBg ? style.background : (propsBg ?? TRANSPARENT);
+
+  for (let ty = 0; ty < terminalHeight; ty++) {
+    for (let tx = 0; tx < terminalWidth; tx++) {
+      buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+        char: '.',
+        foreground: bgColor !== TRANSPARENT ? bgColor : 0x666666FF,
+        background: TRANSPARENT,
+      });
+    }
+  }
+}
+
+/**
+ * Generate iTerm2 graphics output from canvas data.
+ * Returns positioned iTerm2 sequence ready to write to terminal.
+ * Uses pixel dimensions for display size to ensure correct aspect ratio.
+ */
+export function generateITerm2Output(
+  bounds: Bounds,
+  data: CanvasRenderData,
+  capabilities: ITermCapabilities,
+  renderState?: CanvasRenderState,
+): ITermOutputData | null {
+  if (!capabilities.supported) {
+    return null;
+  }
+
+  // Composite drawing layer over image layer
+  const pixelCount = data.bufferWidth * data.bufferHeight;
+  // Reuse buffer from render state if available, otherwise allocate
+  const composited = renderState
+    ? renderState.getITermCompositedBuffer(pixelCount)
+    : new Uint32Array(pixelCount);
+  let hasContent = false;
+
+  // Parse background color once outside loop
+  const bgColor = data.backgroundColor ? (parseColor(data.backgroundColor) ?? TRANSPARENT) : TRANSPARENT;
+
+  for (let i = 0; i < pixelCount; i++) {
+    const drawColor = data.colorBuffer[i];
+    const imageColor = data.imageColorBuffer[i];
+
+    // Drawing layer takes priority over image layer
+    if (drawColor !== TRANSPARENT) {
+      composited[i] = drawColor;
+      hasContent = true;
+    } else if (imageColor !== TRANSPARENT) {
+      composited[i] = imageColor;
+      hasContent = true;
+    } else {
+      // Transparent - use background color
+      composited[i] = bgColor;
+    }
+  }
+
+  // Skip if no content (e.g., image not yet loaded)
+  if (!hasContent) {
+    return null;
+  }
+
+  // Calculate target terminal dimensions
+  let terminalWidth = Math.min(data.propsWidth, bounds.width);
+  const terminalHeight = Math.min(data.propsHeight, bounds.height);
+
+  // Workaround for terminal edge rendering glitch (same as sextant/sixel/kitty path)
+  const engine = globalThis.melkerEngine;
+  if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
+    terminalWidth = Math.max(1, terminalWidth - 1);
+  }
+
+  // Get cell dimensions from sixel capabilities (detected via terminal query)
+  // Fall back to common defaults if not available
+  const cellWidth = engine?.sixelCapabilities?.cellWidth || 8;
+  const cellHeight = engine?.sixelCapabilities?.cellHeight || 16;
+
+  // Calculate target pixel dimensions for display
+  // Use "Npx" format to tell iTerm2 exact pixel size (ensures correct aspect ratio)
+  const displayWidthPx = `${terminalWidth * cellWidth}px`;
+  const displayHeightPx = `${terminalHeight * cellHeight}px`;
+
+  // Check cache if render state available
+  if (renderState) {
+    const contentHash = renderState.computeBufferHash(composited, pixelCount);
+    const targetBounds = { x: bounds.x, y: bounds.y, width: terminalWidth, height: terminalHeight };
+
+    const cached = renderState.getITermCachedOutput(contentHash, targetBounds);
+    if (cached) {
+      // Cache hit - return existing output with fromCache flag
+      return { ...cached, fromCache: true };
+    }
+
+    // Cache miss - encode and store
+    // Pass original buffer, let iTerm2 scale to pixel dimensions
+    const itermOutput = encodeToITerm2({
+      pixels: composited,
+      width: data.bufferWidth,
+      height: data.bufferHeight,
+      displayWidth: displayWidthPx,
+      displayHeight: displayHeightPx,
+      preserveAspectRatio: false,  // We specify exact dimensions
+      useMultipart: capabilities.useMultipart,
+    });
+
+    // Position at canvas bounds (col and row are 1-based for ANSI cursor)
+    const positioned = positionedITerm2(itermOutput, bounds.x + 1, bounds.y + 1);
+
+    const output: ITermOutputData = {
+      data: positioned,
+      bounds: targetBounds,
+    };
+
+    renderState.setITermCachedOutput(contentHash, targetBounds, output);
+    return output;
+  }
+
+  // No render state - encode without caching (fallback path)
+  const itermOutput = encodeToITerm2({
+    pixels: composited,
+    width: data.bufferWidth,
+    height: data.bufferHeight,
+    displayWidth: displayWidthPx,
+    displayHeight: displayHeightPx,
+    preserveAspectRatio: false,  // We specify exact dimensions
+    useMultipart: capabilities.useMultipart,
+  });
+
+  // Position at canvas bounds (col and row are 1-based for ANSI cursor)
+  const positioned = positionedITerm2(itermOutput, bounds.x + 1, bounds.y + 1);
+
+  return {
+    data: positioned,
+    bounds: {
+      x: bounds.x,
+      y: bounds.y,
+      width: terminalWidth,
+      height: terminalHeight,
+    },
+  };
+}
+
+/**
+ * iTerm2 placeholder: fills region with dots so buffer content doesn't flash before iTerm2 overlay.
+ * Similar to sixel/kitty placeholder.
+ */
+export function renderITermPlaceholder(
   bounds: Bounds,
   style: Partial<Cell>,
   buffer: DualBuffer,
@@ -1476,6 +1707,12 @@ export function renderToTerminal(
     return;
   }
 
+  // iTerm2 mode: fill with placeholder, actual iTerm2 output is handled by engine overlay
+  if (gfxMode === 'iterm2') {
+    renderITermPlaceholder(bounds, style, buffer, terminalWidth, terminalHeight, data);
+    return;
+  }
+
   // Check for dithered rendering mode
   if (ditheredBuffer) {
     renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, gfxMode, data, state);
@@ -1499,14 +1736,14 @@ export function renderToTerminal(
 }
 
 /** Graphics rendering mode (user-facing, includes 'hires' auto-select) */
-export type GfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'hires';
+export type GfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'iterm2' | 'hires';
 
 /** Resolved graphics mode (after 'hires' is expanded to actual mode) */
-export type ResolvedGfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty';
+export type ResolvedGfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'iterm2';
 
 /**
  * Get effective graphics mode from config and props.
- * Falls back to sextant if sixel is requested but not available.
+ * Falls back to sextant if sixel/kitty/iterm2 is requested but not available.
  */
 export function getEffectiveGfxMode(
   propsGfxMode?: GfxMode
@@ -1517,14 +1754,18 @@ export function getEffectiveGfxMode(
   const engine = globalThis.melkerEngine;
   const kittySupported = engine?.kittyCapabilities?.supported ?? false;
   const sixelSupported = engine?.sixelCapabilities?.supported ?? false;
+  const itermSupported = engine?.itermCapabilities?.supported ?? false;
 
-  // hires: try kitty → sixel → sextant (best available high-resolution mode)
+  // hires: try kitty → sixel → iterm2 → sextant (best available high-resolution mode)
   if (requested === 'hires') {
     if (kittySupported) {
       return 'kitty';
     }
     if (sixelSupported) {
       return 'sixel';
+    }
+    if (itermSupported) {
+      return 'iterm2';
     }
     return 'sextant';
   }
@@ -1543,6 +1784,14 @@ export function getEffectiveGfxMode(
       return 'sextant';
     }
     return 'sixel';
+  }
+
+  // iterm2: falls back to sextant
+  if (requested === 'iterm2') {
+    if (!itermSupported) {
+      return 'sextant';
+    }
+    return 'iterm2';
   }
 
   return requested;

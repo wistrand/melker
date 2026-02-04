@@ -120,11 +120,11 @@
     },
     "render.gfxMode": {
       "type": "string",
-      "enum": ["sextant", "block", "pattern", "luma", "sixel", "kitty", "hires"],
+      "enum": ["sextant", "block", "pattern", "luma", "sixel", "kitty", "iterm2", "hires"],
       "default": "sextant",
       "env": "MELKER_GFX_MODE",
       "flag": "--gfx-mode",
-      "description": "Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness), sixel (true pixels), kitty (kitty protocol), hires (auto: kitty/sixel/sextant)"
+      "description": "Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness), sixel (true pixels), kitty (kitty protocol), iterm2 (iTerm2 protocol), hires (auto: kitty/sixel/iterm2/sextant)"
     },
     "headless.enabled": {
       "type": "boolean",

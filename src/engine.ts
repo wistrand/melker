@@ -156,6 +156,10 @@ import {
   type KittyCapabilities,
 } from './kitty/mod.ts';
 import {
+  detectITermCapabilities,
+  type ITermCapabilities,
+} from './iterm2/mod.ts';
+import {
   renderToastOverlay,
   handleToastClick,
   getToastManager,
@@ -299,6 +303,9 @@ export class MelkerEngine {
 
   // Kitty graphics capabilities (detected at startup)
   private _kittyCapabilities?: KittyCapabilities;
+
+  // iTerm2 graphics capabilities (detected at startup)
+  private _itermCapabilities?: ITermCapabilities;
 
   // Track previous sixel bounds for clearing on scroll/move
   private _previousSixelBounds: Array<{ x: number; y: number; width: number; height: number }> = [];
@@ -865,6 +872,21 @@ export class MelkerEngine {
       });
     } catch (error) {
       this._logger?.warn('Kitty detection failed', { error: String(error) });
+    }
+
+    // Detect iTerm2 capabilities (environment-based, no terminal queries)
+    try {
+      this._itermCapabilities = detectITermCapabilities();
+      this._logger?.info('iTerm2 detection', {
+        supported: this._itermCapabilities.supported,
+        method: this._itermCapabilities.detectionMethod,
+        terminal: this._itermCapabilities.terminalProgram,
+        multiplexer: this._itermCapabilities.inMultiplexer,
+        multipart: this._itermCapabilities.useMultipart,
+        remote: this._itermCapabilities.isRemote,
+      });
+    } catch (error) {
+      this._logger?.warn('iTerm2 detection failed', { error: String(error) });
     }
 
     // Re-query terminal size after setup (alternate screen switch may affect reported size)
@@ -1916,6 +1938,98 @@ export class MelkerEngine {
   }
 
   /**
+   * Collect iTerm2 outputs from all canvas elements in the document.
+   * Returns array of { data, bounds } for each iTerm2 image.
+   */
+  private _collectITermOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> {
+    if (!this._itermCapabilities?.supported) {
+      return [];
+    }
+
+    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> = [];
+
+    // Traverse document tree to find canvas elements with iTerm2 output
+    const collectFromElement = (element: Element): void => {
+      // Check if this is a canvas element with iTerm2 output
+      if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
+        const canvas = element as { getITermOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean } | null };
+        if (canvas.getITermOutput) {
+          const itermOutput = canvas.getITermOutput();
+          if (itermOutput?.data && itermOutput.bounds) {
+            outputs.push({ data: itermOutput.data, bounds: itermOutput.bounds, fromCache: itermOutput.fromCache });
+          }
+        }
+      }
+
+      // Check if this is a markdown element with embedded image canvases
+      if (element.type === 'markdown') {
+        const markdown = element as { getITermOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> };
+        if (markdown.getITermOutputs) {
+          const itermOutputs = markdown.getITermOutputs();
+          for (const output of itermOutputs) {
+            if (output?.data && output.bounds) {
+              outputs.push({ data: output.data, bounds: output.bounds, fromCache: output.fromCache });
+            }
+          }
+        }
+      }
+
+      // Recurse into children
+      if (element.children) {
+        for (const child of element.children) {
+          collectFromElement(child);
+        }
+      }
+    };
+
+    if (this._document.root) {
+      collectFromElement(this._document.root);
+    }
+
+    if (outputs.length > 0) {
+      this._logger?.debug('Collected iTerm2 outputs', { count: outputs.length });
+    }
+
+    return outputs;
+  }
+
+  /**
+   * Output iTerm2 graphics overlays after buffer rendering.
+   * iTerm2 data bypasses the buffer and is positioned directly on the terminal.
+   */
+  private _renderITermOverlays(): void {
+    if (!this._itermCapabilities?.supported) {
+      this._logger?.trace('iTerm2 overlays skipped - not supported');
+      return;
+    }
+
+    // Check if any overlays are active (dropdowns, dialogs, tooltips, etc.)
+    // iTerm2 graphics render on top of everything, so we must hide them when
+    // overlays are visible to prevent iTerm2 images from obscuring the overlay content.
+    if (this._renderer?.hasVisibleOverlays()) {
+      this._logger?.debug('iTerm2 overlays skipped - UI overlays active');
+      return;
+    }
+
+    const itermOutputs = this._collectITermOutputs();
+    this._logger?.debug('iTerm2 outputs collected', {
+      count: itermOutputs.length,
+      bounds: itermOutputs.map(o => o.bounds),
+    });
+
+    // Send all iTerm2 outputs
+    // Unlike Kitty, iTerm2 doesn't have explicit image IDs to track for deletion.
+    // Images are simply overwritten when re-rendered at the same position.
+    if (itermOutputs.length > 0) {
+      // Each iTerm2 output already includes cursor positioning
+      const combined = itermOutputs.map(o => o.data).join('');
+      this._writeAllSync(textEncoder.encode(combined));
+      const cached = itermOutputs.filter(o => o.fromCache).length;
+      this._logger?.debug('Rendered iTerm2 overlays', { count: itermOutputs.length, cached });
+    }
+  }
+
+  /**
    * Optimized rendering that only updates changed parts of the terminal
    */
   private _renderOptimized(): void {
@@ -1944,6 +2058,7 @@ export class MelkerEngine {
         // Still render graphics overlays (content may have changed even if buffer hasn't)
         this._renderSixelOverlays();
         this._renderKittyOverlays();
+        this._renderITermOverlays();
         // Notify debug clients
         this._debugServer?.notifyRenderComplete();
         return;
@@ -1981,6 +2096,7 @@ export class MelkerEngine {
       // Render graphics overlays after buffer output
       this._renderSixelOverlays();
       this._renderKittyOverlays();
+      this._renderITermOverlays();
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
@@ -2059,6 +2175,7 @@ export class MelkerEngine {
       // Render graphics overlays after buffer output
       this._renderSixelOverlays();
       this._renderKittyOverlays();
+      this._renderITermOverlays();
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
@@ -2384,6 +2501,20 @@ export class MelkerEngine {
    */
   get isKittyAvailable(): boolean {
     return this._kittyCapabilities?.supported ?? false;
+  }
+
+  /**
+   * Get iTerm2 graphics capabilities (or undefined if not detected)
+   */
+  get itermCapabilities(): ITermCapabilities | undefined {
+    return this._itermCapabilities;
+  }
+
+  /**
+   * Check if iTerm2 graphics are available
+   */
+  get isITermAvailable(): boolean {
+    return this._itermCapabilities?.supported ?? false;
   }
 
   /**

@@ -505,6 +505,8 @@ const ALWAYS_ALLOWED_ENV = [
   'TERM_PROGRAM', 'VTE_VERSION', 'WT_SESSION',
   // Kitty graphics protocol detection
   'KITTY_WINDOW_ID', 'WEZTERM_PANE', 'GHOSTTY_RESOURCES_DIR',
+  // iTerm2 graphics protocol detection
+  'LC_TERMINAL', 'ITERM_SESSION_ID', 'KONSOLE_VERSION',
   // Multiplexer detection (tmux/screen - sixel disabled in multiplexers)
   'TMUX', 'STY',
   // SSH session detection (for sixel bandwidth considerations)

@@ -14,8 +14,8 @@ import { getLogger } from '../logging.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
 import {
-  CanvasRenderState, renderToTerminal, getEffectiveGfxMode, generateSixelOutput, generateKittyOutput,
-  type CanvasRenderData, type GfxMode, type SixelOutputData, type KittyOutputData
+  CanvasRenderState, renderToTerminal, getEffectiveGfxMode, generateSixelOutput, generateKittyOutput, generateITerm2Output,
+  type CanvasRenderData, type GfxMode, type SixelOutputData, type KittyOutputData, type ITermOutputData
 } from './canvas-render.ts';
 import {
   decodeImageBytes, loadImageFromSource,
@@ -102,6 +102,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
   // Kitty output data (generated during render when gfxMode='kitty')
   private _kittyOutput: KittyOutputData | null = null;
+
+  // iTerm2 output data (generated during render when gfxMode='iterm2')
+  private _itermOutput: ITermOutputData | null = null;
 
   constructor(props: CanvasProps, children: Element[] = []) {
     const scale = Math.max(1, Math.floor(props.scale || 1));
@@ -1273,6 +1276,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         this._sixelOutput = null;
       }
       this._kittyOutput = null;
+      this._itermOutput = null;
     } else if (gfxMode === 'kitty') {
       logger.debug('Kitty visibility check', {
         id: this.id,
@@ -1292,9 +1296,31 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         this._kittyOutput = null;
       }
       this._sixelOutput = null;
+      this._itermOutput = null;
+    } else if (gfxMode === 'iterm2') {
+      logger.debug('iTerm2 visibility check', {
+        id: this.id,
+        bounds,
+        visibleArea,
+        isFullyVisible,
+      });
+
+      if (isFullyVisible) {
+        this._generateITermOutput(bounds);
+      } else {
+        logger.debug('iTerm2 skipped - element extends outside viewport', {
+          id: this.id,
+          bounds,
+          visibleArea,
+        });
+        this._itermOutput = null;
+      }
+      this._sixelOutput = null;
+      this._kittyOutput = null;
     } else {
       this._sixelOutput = null;
       this._kittyOutput = null;
+      this._itermOutput = null;
     }
 
     // Mark clean to track changes for next frame
@@ -1419,6 +1445,51 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   getKittyOutput(): KittyOutputData | null {
     return this._kittyOutput;
+  }
+
+  /**
+   * Generate iTerm2 output for this canvas when in iTerm2 mode.
+   */
+  private _generateITermOutput(bounds: Bounds): void {
+    const engine = globalThis.melkerEngine;
+    const capabilities = engine?.itermCapabilities;
+
+    if (!capabilities?.supported) {
+      this._itermOutput = null;
+      return;
+    }
+
+    // Prepare render data
+    const data: CanvasRenderData = {
+      colorBuffer: this._colorBuffer,
+      imageColorBuffer: this._imageColorBuffer,
+      bufferWidth: this._bufferWidth,
+      bufferHeight: this._bufferHeight,
+      scale: this._scale,
+      propsWidth: this.props.width,
+      propsHeight: this.props.height,
+      backgroundColor: this.props.backgroundColor,
+    };
+
+    this._itermOutput = generateITerm2Output(bounds, data, capabilities, this._renderState);
+    if (this._itermOutput) {
+      this._itermOutput.elementId = this.id;
+    }
+  }
+
+  /**
+   * Get iTerm2 output data for this canvas (if in iTerm2 mode).
+   * Used by engine to render iTerm2 overlays after buffer output.
+   */
+  getITermOutput(): ITermOutputData | null {
+    return this._itermOutput;
+  }
+
+  /**
+   * Check if this canvas is in iTerm2 mode
+   */
+  isITermMode(): boolean {
+    return getEffectiveGfxMode(this.props.gfxMode) === 'iterm2';
   }
 
   /**

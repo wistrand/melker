@@ -5,8 +5,8 @@
 // HTML parsing
 export { parse as parseHtml } from 'npm:html5parser@2.0.2';
 
-// Image decoding
-export { decode as decodePng } from 'npm:fast-png@8.0.0';
+// Image decoding and encoding
+export { decode as decodePng, encode as encodePng } from 'npm:fast-png@8.0.0';
 export { decode as decodeJpeg } from 'npm:jpeg-js@0.4.4';
 export { GifReader } from 'npm:omggif@1.0.10';
 

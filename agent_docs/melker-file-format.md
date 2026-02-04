@@ -66,15 +66,15 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 
 ## Special Tags
 
-| Tag        | Description                                           |
-|------------|-------------------------------------------------------|
-| `<melker>` | Root wrapper (optional)                               |
-| `<title>`  | Window/terminal title                                 |
-| `<help>`   | Markdown help text (shown in DevTools F12 > Help tab) |
-| `<style>`  | CSS-like stylesheet rules (selector { props })        |
-| `<script>` | TypeScript/JavaScript code block                      |
-| `<oauth>`  | OAuth2 PKCE configuration                             |
-| `<policy>` | Permission policy declaration                         |
+| Tag        | Description                                            |
+|------------|--------------------------------------------------------|
+| `<melker>` | Root wrapper (optional)                                |
+| `<title>`  | Window/terminal title                                  |
+| `<help>`   | Markdown help text (shown in DevTools F12 > Help tab)  |
+| `<style>`  | CSS-like stylesheet rules (selector { props })         |
+| `<script>` | TypeScript/JavaScript code block                       |
+| `<oauth>`  | OAuth2 PKCE configuration                              |
+| `<policy>` | Permission policy declaration                          |
 
 ## Help Tag
 
@@ -108,11 +108,11 @@ myapp.melker --foo bar
 
 Scripts can run at different times during app startup:
 
-| Script Type               | When                   | Use Case                              |
-|---------------------------|------------------------|---------------------------------------|
-| `<script>`                | Before render          | Define exports, setup state           |
-| `<script async="init">`   | Before render (async)  | Async initialization, data fetching   |
-| `<script async="ready">`  | After first render     | Access rendered elements, start timers |
+| Script Type              | When                  | Use Case                               |
+|--------------------------|-----------------------|----------------------------------------|
+| `<script>`               | Before render         | Define exports, setup state            |
+| `<script async="init">`  | Before render (async) | Async initialization, data fetching    |
+| `<script async="ready">` | After first render    | Access rendered elements, start timers |
 
 ### Initialization Pattern
 
@@ -160,21 +160,21 @@ Melker supports bash-style variable expansion for environment variables and comm
 
 ### Environment Variables
 
-| Syntax                  | Behavior                                              |
-|-------------------------|-------------------------------------------------------|
-| `$ENV{VAR}`             | Value of VAR, or empty string if unset                |
-| `$ENV{VAR:-default}`    | Value of VAR, or "default" if unset/empty             |
-| `$ENV{VAR:+alternate}`  | "alternate" if VAR is set and non-empty, else empty   |
-| `$ENV{VAR:?error msg}`  | Value of VAR, or throws error if unset/empty          |
+| Syntax                 | Behavior                                            |
+|------------------------|-----------------------------------------------------|
+| `$ENV{VAR}`            | Value of VAR, or empty string if unset              |
+| `$ENV{VAR:-default}`   | Value of VAR, or "default" if unset/empty           |
+| `$ENV{VAR:+alternate}` | "alternate" if VAR is set and non-empty, else empty |
+| `$ENV{VAR:?error msg}` | Value of VAR, or throws error if unset/empty        |
 
 ### Command-Line Arguments
 
-| Syntax                   | Behavior                                              |
-|--------------------------|-------------------------------------------------------|
-| `${argv[N]}`             | Argument at index N, or empty string                  |
-| `${argv[N]:-default}`    | Argument at index N, or "default" if missing          |
-| `${argv[N]:+alternate}`  | "alternate" if argument exists, else empty            |
-| `${argv[N]:?error msg}`  | Argument at index N, or throws error if missing       |
+| Syntax                  | Behavior                                        |
+|-------------------------|-------------------------------------------------|
+| `${argv[N]}`            | Argument at index N, or empty string            |
+| `${argv[N]:-default}`   | Argument at index N, or "default" if missing    |
+| `${argv[N]:+alternate}` | "alternate" if argument exists, else empty      |
+| `${argv[N]:?error msg}` | Argument at index N, or throws error if missing |
 
 ### Examples
 
@@ -241,12 +241,12 @@ Melker supports bash-style variable expansion for environment variables and comm
 
 System commands are **automatically injected** into all command palettes. A "System" group is appended containing:
 
-| Command            | Shortcut | Action                         |
-|--------------------|----------|--------------------------------|
-| Exit               | Ctrl+C   | Exit the application           |
-| AI Assistant       | F8       | Open AI accessibility dialog   |
-| Dev Tools          | F12      | Toggle Dev Tools overlay       |
-| Performance Dialog | F6       | Toggle Performance stats       |
+| Command            | Shortcut | Action                       |
+|--------------------|----------|------------------------------|
+| Exit               | Ctrl+C   | Exit the application         |
+| AI Assistant       | F8       | Open AI accessibility dialog |
+| Dev Tools          | F12      | Toggle Dev Tools overlay     |
+| Performance Dialog | F6       | Toggle Performance stats     |
 
 **Opt-out:** Add `system={false}` to disable system commands:
 ```xml
@@ -278,16 +278,16 @@ System commands are **automatically injected** into all command palettes. A "Sys
 
 The `<style>` tag and `querySelector`/`querySelectorAll` support CSS-like selectors:
 
-| Selector Type       | Syntax                    | Example                          | Matches                               |
-|---------------------|---------------------------|----------------------------------|---------------------------------------|
-| Universal           | `*`                       | `* { color: white; }`            | All elements                          |
-| Type                | `element`                 | `button { padding: 1; }`         | All buttons                           |
-| ID                  | `#id`                     | `#header { border: thin; }`      | Element with `id="header"`            |
-| Class               | `.class`                  | `.active { font-weight: bold; }` | Elements with `class="active"`        |
-| Compound            | `type.class`              | `button.primary { color: blue; }`| Buttons with class "primary"          |
-| Descendant (space)  | `ancestor descendant`     | `.card text { color: cyan; }`    | Any text inside `.card` (any depth)   |
-| Child (`>`)         | `parent > child`          | `.nav > button { margin: 1; }`   | Direct button children of `.nav`      |
-| Multiple (comma)    | `sel1, sel2`              | `button, .clickable { }`         | Buttons OR elements with `.clickable` |
+| Selector Type      | Syntax                | Example                           | Matches                               |
+|--------------------|-----------------------|-----------------------------------|---------------------------------------|
+| Universal          | `*`                   | `* { color: white; }`             | All elements                          |
+| Type               | `element`             | `button { padding: 1; }`          | All buttons                           |
+| ID                 | `#id`                 | `#header { border: thin; }`       | Element with `id="header"`            |
+| Class              | `.class`              | `.active { font-weight: bold; }`  | Elements with `class="active"`        |
+| Compound           | `type.class`          | `button.primary { color: blue; }` | Buttons with class "primary"          |
+| Descendant (space) | `ancestor descendant` | `.card text { color: cyan; }`     | Any text inside `.card` (any depth)   |
+| Child (`>`)        | `parent > child`      | `.nav > button { margin: 1; }`    | Direct button children of `.nav`      |
+| Multiple (comma)   | `sel1, sel2`          | `button, .clickable { }`          | Buttons OR elements with `.clickable` |
 
 **Combinator examples:**
 
@@ -424,13 +424,13 @@ CSS-like properties in `style` attribute:
 
 Melker apps automatically persist UI state across restarts. The following element types and properties are saved:
 
-| Element       | Property         | Condition                   |
-|---------------|------------------|-----------------------------|
-| `<input>`     | value            | Except password inputs      |
-| `<textarea>`  | value            | Always                      |
-| `<checkbox>`  | checked          | Always                      |
-| `<radio>`     | checked          | Always                      |
-| `<tabs>`      | activeTab        | Always                      |
+| Element       | Property         | Condition                                                       |
+|---------------|------------------|-----------------------------------------------------------------|
+| `<input>`     | value            | Except password inputs                                          |
+| `<textarea>`  | value            | Always                                                          |
+| `<checkbox>`  | checked          | Always                                                          |
+| `<radio>`     | checked          | Always                                                          |
+| `<tabs>`      | activeTab        | Always                                                          |
 | `<container>` | scrollY, scrollX | When scrolling enabled (`overflow: scroll` or `overflow: auto`) |
 
 **How it works:**
@@ -665,12 +665,12 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker
 
 Melker apps can **optionally** be written in markdown files using ASCII box diagrams. This is a **documentation-friendly layer** on top of `.melker` files, not a replacement.
 
-| Use Case             | Recommended Format                |
-|----------------------|-----------------------------------|
-| Production apps      | `.melker` - precise, easy to edit |
-| Examples & tutorials | `.md` - self-documenting, visual  |
-| Quick prototypes     | `.md` - sketch layouts visually   |
-| Generated/tooling    | `.melker` - machine-friendly      |
+| Use Case             | Recommended Format                 |
+|----------------------|------------------------------------|
+| Production apps      | `.melker` - precise, easy to edit  |
+| Examples & tutorials | `.md` - self-documenting, visual   |
+| Quick prototypes     | `.md` - sketch layouts visually    |
+| Generated/tooling    | `.melker` - machine-friendly       |
 
 The markdown format compiles to `.melker` and provides:
 - Visual ASCII layout diagrams that match the rendered output
@@ -763,14 +763,14 @@ Cycle detection prevents infinite loops (A -> B -> A).
 
 Compact hints on lines starting with `: `:
 
-| Hint            | Meaning                                          |
-|-----------------|--------------------------------------------------|
+| Hint            | Meaning                                           |
+|-----------------|---------------------------------------------------|
 | `r` / `c`       | row / column direction (optional - auto-detected) |
-| `0`-`9`         | gap value                                        |
-| `<` `=` `>` `~` | justify: start / center / end / space-between    |
-| `^` `-` `v` `+` | align: start / center / end / stretch            |
-| `*N`            | flex: N                                          |
-| `f`             | fill (width + height 100%)                       |
+| `0`-`9`         | gap value                                         |
+| `<` `=` `>` `~` | justify: start / center / end / space-between     |
+| `^` `-` `v` `+` | align: start / center / end / stretch             |
+| `*N`            | flex: N                                           |
+| `f`             | fill (width + height 100%)                        |
 
 **Auto-detection:** Flex direction is inferred from child positions - children stacked vertically → column, side by side → row.
 
@@ -892,39 +892,39 @@ Apps declare required permissions via a `<policy>` tag. The app runs in a sandbo
 
 ### Policy Fields
 
-| Field          | Type               | Description                               |
-|----------------|--------------------|-------------------------------------------|
-| `name`         | string             | App name (shown in approval prompt)       |
-| `version`      | string             | App version                               |
-| `description`  | string             | Short description                         |
-| `comment`      | string \| string[] | Detailed comment shown in approval prompt |
-| `permissions`  | object             | Permission declarations                   |
-| `config`       | object             | App-specific configuration values         |
-| `configSchema` | object             | Schema for env var overrides              |
+| Field          | Type               | Description                                |
+|----------------|--------------------|--------------------------------------------|
+| `name`         | string             | App name (shown in approval prompt)        |
+| `version`      | string             | App version                                |
+| `description`  | string             | Short description                          |
+| `comment`      | string \| string[] | Detailed comment shown in approval prompt  |
+| `permissions`  | object             | Permission declarations                    |
+| `config`       | object             | App-specific configuration values          |
+| `configSchema` | object             | Schema for env var overrides               |
 
 ### Permission Types
 
 **Array permissions** (list of allowed values, use `["*"]` for wildcard):
 
-| Permission | Example                            | Deno Flag       |
-|------------|------------------------------------|-----------------|
-| `read`     | `["cwd"]` or `["."]` or `["*"]`    | `--allow-read`  |
-| `write`    | `["cwd"]` or `["/data"]` or `["*"]`| `--allow-write` |
-| `net`      | `["api.example.com", "samesite"]`  | `--allow-net`   |
-| `run`      | `["ffmpeg", "ffprobe"]`            | `--allow-run`   |
-| `env`      | `["MY_VAR"]` or `["*"]`            | `--allow-env`   |
-| `ffi`      | `["libfoo.so"]`                    | `--allow-ffi`   |
-| `sys`      | `["hostname", "osRelease"]`        | `--allow-sys`   |
+| Permission | Example                             | Deno Flag       |
+|------------|-------------------------------------|-----------------|
+| `read`     | `["cwd"]` or `["."]` or `["*"]`     | `--allow-read`  |
+| `write`    | `["cwd"]` or `["/data"]` or `["*"]` | `--allow-write` |
+| `net`      | `["api.example.com", "samesite"]`   | `--allow-net`   |
+| `run`      | `["ffmpeg", "ffprobe"]`             | `--allow-run`   |
+| `env`      | `["MY_VAR"]` or `["*"]`             | `--allow-env`   |
+| `ffi`      | `["libfoo.so"]`                     | `--allow-ffi`   |
+| `sys`      | `["hostname", "osRelease"]`         | `--allow-sys`   |
 
 **Boolean shortcuts** (expand to multiple permissions):
 
-| Shortcut    | Description                                                      |
-|-------------|------------------------------------------------------------------|
-| `ai`        | AI/media: ffmpeg, ffprobe, swift, pactl, ffplay + openrouter.ai  |
-| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe                |
-| `keyring`   | Credentials: security, secret-tool, powershell                   |
-| `browser`   | Browser opening: open, xdg-open, cmd                             |
-| `shader`    | Allow per-pixel shaders on canvas/img elements                   |
+| Shortcut    | Description                                                     |
+|-------------|-----------------------------------------------------------------|
+| `ai`        | AI/media: ffmpeg, ffprobe, swift, pactl, ffplay + openrouter.ai |
+| `clipboard` | Clipboard: pbcopy, xclip, xsel, wl-copy, clip.exe               |
+| `keyring`   | Credentials: security, secret-tool, powershell                  |
+| `browser`   | Browser opening: open, xdg-open, cmd                            |
+| `shader`    | Allow per-pixel shaders on canvas/img elements                  |
 
 **Special values:**
 - `"cwd"` in `read`/`write` - expands to current working directory

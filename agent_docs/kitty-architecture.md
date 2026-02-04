@@ -26,15 +26,15 @@ ESC _G <control>;<payload> ESC \
 
 **Key parameters:**
 
-| Key   | Description                                                     |
-|-------|-----------------------------------------------------------------|
-| `a`   | Action: `t` transmit, `T` transmit+display, `d` delete, `q` query |
-| `f`   | Format: `24` RGB, `32` RGBA, `100` PNG                          |
-| `s,v` | Source width, height in pixels                                  |
-| `c,r` | Display columns, rows                                           |
-| `i`   | Image ID (24-bit)                                               |
-| `m`   | More data: `1` intermediate chunk, `0` final                    |
-| `q`   | Quiet: `2` suppress all responses                               |
+| Key   | Description                                                        |
+|-------|--------------------------------------------------------------------|
+| `a`   | Action: `t` transmit, `T` transmit+display, `d` delete, `q` query  |
+| `f`   | Format: `24` RGB, `32` RGBA, `100` PNG                             |
+| `s,v` | Source width, height in pixels                                     |
+| `c,r` | Display columns, rows                                              |
+| `i`   | Image ID (24-bit)                                                  |
+| `m`   | More data: `1` intermediate chunk, `0` final                       |
+| `q`   | Quiet: `2` suppress all responses                                  |
 
 **Chunking:** Data must be split into ≤4096 byte chunks.
 
@@ -114,11 +114,11 @@ Cache invalidates automatically when content, position, or size changes. Cached 
 
 ## Performance
 
-| Content Type | Notes                                |
-|--------------|--------------------------------------|
-| Static image | O(1) after first frame (cached)      |
-| Video        | ~1-2ms encoding (no quantization)    |
-| Shader       | ~1-2ms encoding (better than sixel)  |
+| Content Type | Notes                               |
+|--------------|-------------------------------------|
+| Static image | O(1) after first frame (cached)     |
+| Video        | ~1-2ms encoding (no quantization)   |
+| Shader       | ~1-2ms encoding (better than sixel) |
 
 **Advantages over sixel:**
 - No quantization step
@@ -135,12 +135,12 @@ Kitty supports direct PNG transmission via `f=100`:
 
 ## Files
 
-| File                   | Purpose              |
-|------------------------|----------------------|
-| `src/kitty/mod.ts`     | Module exports       |
-| `src/kitty/types.ts`   | Type definitions     |
-| `src/kitty/detect.ts`  | Capability detection |
-| `src/kitty/encoder.ts` | Kitty format encoder |
+| File                   | Purpose               |
+|------------------------|-----------------------|
+| `src/kitty/mod.ts`     | Module exports        |
+| `src/kitty/types.ts`   | Type definitions      |
+| `src/kitty/detect.ts`  | Capability detection  |
+| `src/kitty/encoder.ts` | Kitty format encoder  |
 
 ## See Also
 

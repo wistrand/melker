@@ -14,21 +14,21 @@ Detailed file layout for the Melker codebase.
 
 ### Core Engine
 
-| File                        | Purpose                                    |
-|-----------------------------|--------------------------------------------|
-| `melker-runner.ts`          | .melker file runner (bundling, engine, app execution) |
-| `engine.ts`                 | Main engine, lifecycle, events             |
-| `engine-keyboard-handler.ts` | Keyboard event handling                   |
-| `engine-system-palette.ts`  | System command palette logic               |
-| `engine-dialog-utils.ts`    | Dialog traversal and focus trap utilities  |
-| `ui-animation-manager.ts`   | Centralized timer for UI animations        |
-| `layout.ts`                 | Flexbox layout calculations                |
-| `rendering.ts`              | Render pipeline, overlays                  |
-| `buffer.ts`                 | Dual-buffer system                         |
-| `renderer.ts`               | ANSI terminal output                       |
-| `focus.ts`                  | Focus/tab navigation                       |
-| `theme.ts`                  | Theming system                             |
-| `template.ts`               | .melker file parsing                       |
+| File                         | Purpose                                           |
+|------------------------------|---------------------------------------------------|
+| `melker-runner.ts`           | .melker file runner (bundling, engine, app execution) |
+| `engine.ts`                  | Main engine, lifecycle, events                    |
+| `engine-keyboard-handler.ts` | Keyboard event handling                           |
+| `engine-system-palette.ts`   | System command palette logic                      |
+| `engine-dialog-utils.ts`     | Dialog traversal and focus trap utilities         |
+| `ui-animation-manager.ts`    | Centralized timer for UI animations               |
+| `layout.ts`                  | Flexbox layout calculations                       |
+| `rendering.ts`               | Render pipeline, overlays                         |
+| `buffer.ts`                  | Dual-buffer system                                |
+| `renderer.ts`                | ANSI terminal output                              |
+| `focus.ts`                   | Focus/tab navigation                              |
+| `theme.ts`                   | Theming system                                    |
+| `template.ts`                | .melker file parsing                              |
 
 ### Types and Utilities
 
@@ -54,25 +54,25 @@ Detailed file layout for the Melker codebase.
 
 ### Developer Tools
 
-| File                    | Purpose                                      |
-|-------------------------|----------------------------------------------|
-| `logging.ts`            | File-based logging system                    |
-| `debug-server.ts`       | WebSocket debug server                       |
-| `headless.ts`           | Headless mode for testing                    |
-| `dev-tools.ts`          | F12 Dev Tools overlay                        |
-| `stats-overlay.ts`      | Performance stats overlay                    |
-| `error-boundary.ts`     | Error handling, rate limiting, error overlay |
-| `performance-dialog.ts` | Live performance stats dialog (Ctrl+Shift+P) |
-| `lint.ts`               | Lint mode validation, schemas                |
-| `lsp.ts`                | Language Server Protocol for .melker files   |
+| File                    | Purpose                                        |
+|-------------------------|------------------------------------------------|
+| `logging.ts`            | File-based logging system                      |
+| `debug-server.ts`       | WebSocket debug server                         |
+| `headless.ts`           | Headless mode for testing                      |
+| `dev-tools.ts`          | F12 Dev Tools overlay                          |
+| `stats-overlay.ts`      | Performance stats overlay                      |
+| `error-boundary.ts`     | Error handling, rate limiting, error overlay   |
+| `performance-dialog.ts` | Live performance stats dialog (Ctrl+Shift+P)   |
+| `lint.ts`               | Lint mode validation, schemas                  |
+| `lsp.ts`                | Language Server Protocol for .melker files     |
 
 ### System Integration
 
-| File                    | Purpose                               |
-|-------------------------|---------------------------------------|
-| `oauth.ts`              | OAuth utilities                       |
-| `xdg.ts`                | XDG Base Directory support            |
-| `state-persistence.ts`  | State persistence for apps            |
+| File                    | Purpose                                  |
+|-------------------------|------------------------------------------|
+| `oauth.ts`              | OAuth utilities                          |
+| `xdg.ts`                | XDG Base Directory support               |
+| `state-persistence.ts`  | State persistence for apps               |
 | `terminal-lifecycle.ts` | Terminal setup, cleanup, signal handlers |
 
 ### Subdirectories
@@ -81,15 +81,15 @@ Detailed file layout for the Melker codebase.
 
 See [policy-architecture.md](policy-architecture.md) for comprehensive documentation.
 
-| File                      | Purpose                                            |
-|---------------------------|----------------------------------------------------|
-| `mod.ts`                  | Policy module exports                              |
-| `types.ts`                | Policy type definitions                            |
+| File                      | Purpose                                             |
+|---------------------------|-----------------------------------------------------|
+| `mod.ts`                  | Policy module exports                               |
+| `types.ts`                | Policy type definitions                             |
 | `loader.ts`               | Policy loading from `<policy>` tag or external file |
-| `flags.ts`                | Convert policy to Deno permission flags            |
-| `permission-overrides.ts` | CLI --allow-*/--deny-* flag handling               |
-| `approval.ts`             | Approval prompts and hash-based caching            |
-| `url-utils.ts`            | Extract hosts from URLs for net permissions        |
+| `flags.ts`                | Convert policy to Deno permission flags             |
+| `permission-overrides.ts` | CLI --allow-*/--deny-* flag handling                |
+| `approval.ts`             | Approval prompts and hash-based caching             |
+| `url-utils.ts`            | Extract hosts from URLs for net permissions         |
 
 #### `config/` - Schema-Driven Configuration
 
@@ -102,14 +102,14 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `bundler/` - Runtime Bundler
 
-| File           | Purpose                          |
-|----------------|----------------------------------|
-| `mod.ts`       | Main bundler exports             |
-| `types.ts`     | Bundler type definitions         |
-| `generator.ts` | TypeScript code generation       |
-| `bundle.ts`    | Deno.bundle() integration        |
+| File           | Purpose                           |
+|----------------|-----------------------------------|
+| `mod.ts`       | Main bundler exports              |
+| `types.ts`     | Bundler type definitions          |
+| `generator.ts` | TypeScript code generation        |
+| `bundle.ts`    | Deno.bundle() integration         |
 | `errors.ts`    | Error translation to source lines |
-| `cache.ts`     | Bundle caching                   |
+| `cache.ts`     | Bundle caching                    |
 
 #### `components/` - UI Components
 
@@ -146,25 +146,25 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `components/filterable-list/` - Filterable Components
 
-| File                 | Purpose                      |
-|----------------------|------------------------------|
-| `mod.ts`             | Module exports               |
-| `core.ts`            | FilterableListCore base class |
+| File                 | Purpose                                |
+|----------------------|----------------------------------------|
+| `mod.ts`             | Module exports                         |
+| `core.ts`            | FilterableListCore base class          |
 | `filter.ts`          | Fuzzy/prefix/contains/exact algorithms |
-| `option.ts`          | OptionElement                |
-| `group.ts`           | GroupElement                 |
-| `combobox.ts`        | ComboboxElement              |
-| `select.ts`          | SelectElement                |
-| `autocomplete.ts`    | AutocompleteElement          |
-| `command-palette.ts` | CommandPaletteElement        |
+| `option.ts`          | OptionElement                          |
+| `group.ts`           | GroupElement                           |
+| `combobox.ts`        | ComboboxElement                        |
+| `select.ts`          | SelectElement                          |
+| `autocomplete.ts`    | AutocompleteElement                    |
+| `command-palette.ts` | CommandPaletteElement                  |
 
 #### `components/file-browser/` - File Browser
 
-| File              | Purpose                             |
-|-------------------|-------------------------------------|
-| `mod.ts`          | Module exports                      |
-| `file-browser.ts` | FileBrowserElement (main component) |
-| `file-entry.ts`   | Type definitions                    |
+| File              | Purpose                                 |
+|-------------------|-----------------------------------------|
+| `mod.ts`          | Module exports                          |
+| `file-browser.ts` | FileBrowserElement (main component)     |
+| `file-entry.ts`   | Type definitions                        |
 | `file-utils.ts`   | Directory loading, formatting utilities |
 
 #### `components/segment-display/` - LCD-Style Display
@@ -179,19 +179,19 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `components/graph/` - Graph/Diagram Rendering
 
-| File                             | Purpose                                   |
-|----------------------------------|-------------------------------------------|
-| `mod.ts`                         | Module exports                            |
-| `graph.ts`                       | GraphElement component                    |
-| `graph-to-melker.ts`             | Converts parsed graph to melker elements  |
-| `layout.ts`                      | Graph layout algorithm (level-based)      |
-| `types.ts`                       | GraphDefinition, SequenceDefinition, etc. |
-| `parsers/mod.ts`                 | Parser registry and factory               |
-| `parsers/types.ts`               | Parser interfaces                         |
-| `parsers/mermaid-flowchart.ts`   | Mermaid flowchart parser                  |
-| `parsers/mermaid-sequence.ts`    | Mermaid sequence diagram parser           |
-| `parsers/mermaid-class.ts`       | Mermaid class diagram parser              |
-| `parsers/json.ts`                | JSON graph parser                         |
+| File                           | Purpose                                   |
+|--------------------------------|-------------------------------------------|
+| `mod.ts`                       | Module exports                            |
+| `graph.ts`                     | GraphElement component                    |
+| `graph-to-melker.ts`           | Converts parsed graph to melker elements  |
+| `layout.ts`                    | Graph layout algorithm (level-based)      |
+| `types.ts`                     | GraphDefinition, SequenceDefinition, etc. |
+| `parsers/mod.ts`               | Parser registry and factory               |
+| `parsers/types.ts`             | Parser interfaces                         |
+| `parsers/mermaid-flowchart.ts` | Mermaid flowchart parser                  |
+| `parsers/mermaid-sequence.ts`  | Mermaid sequence diagram parser           |
+| `parsers/mermaid-class.ts`     | Mermaid class diagram parser              |
+| `parsers/json.ts`              | JSON graph parser                         |
 
 #### `video/` - Video Processing
 
@@ -205,23 +205,23 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `video/dither/` - Dithering Algorithms
 
-| File               | Purpose                      |
-|--------------------|------------------------------|
-| `mod.ts`           | Dithering exports            |
-| `types.ts`         | DitherMode, ThresholdMatrix types |
-| `utils.ts`         | Shared buffers and helpers   |
-| `threshold.ts`     | Ordered, blue-noise dithering |
-| `floyd-steinberg.ts` | Floyd-Steinberg algorithms |
-| `sierra.ts`        | Sierra algorithms            |
-| `atkinson.ts`      | Atkinson algorithms          |
+| File                 | Purpose                           |
+|----------------------|-----------------------------------|
+| `mod.ts`             | Dithering exports                 |
+| `types.ts`           | DitherMode, ThresholdMatrix types |
+| `utils.ts`           | Shared buffers and helpers        |
+| `threshold.ts`       | Ordered, blue-noise dithering     |
+| `floyd-steinberg.ts` | Floyd-Steinberg algorithms        |
+| `sierra.ts`          | Sierra algorithms                 |
+| `atkinson.ts`        | Atkinson algorithms               |
 
 #### `sixel/` - Sixel Graphics
 
-| File         | Purpose                           |
-|--------------|-----------------------------------|
-| `mod.ts`     | Sixel module exports              |
+| File         | Purpose                             |
+|--------------|-------------------------------------|
+| `mod.ts`     | Sixel module exports                |
 | `detect.ts`  | Terminal sixel capability detection |
-| `encoder.ts` | Pure TypeScript sixel encoder     |
+| `encoder.ts` | Pure TypeScript sixel encoder       |
 | `palette.ts` | Color quantization, palette caching |
 
 #### `kitty/` - Kitty Graphics
@@ -235,25 +235,25 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `ai/` - AI Accessibility
 
-| File                      | Purpose                        |
-|---------------------------|--------------------------------|
-| `mod.ts`                  | AI module exports              |
-| `openrouter.ts`           | OpenRouter API streaming client |
-| `context.ts`              | UI context builder for AI      |
-| `cache.ts`                | Query response cache           |
-| `tools.ts`                | AI tool system (built-in + custom) |
-| `accessibility-dialog.ts` | AI assistant dialog            |
-| `audio.ts`                | Audio recording and transcription |
-| `macos-audio-record.swift` | Native macOS audio capture    |
+| File                       | Purpose                            |
+|----------------------------|------------------------------------|
+| `mod.ts`                   | AI module exports                  |
+| `openrouter.ts`            | OpenRouter API streaming client    |
+| `context.ts`               | UI context builder for AI          |
+| `cache.ts`                 | Query response cache               |
+| `tools.ts`                 | AI tool system (built-in + custom) |
+| `accessibility-dialog.ts`  | AI assistant dialog                |
+| `audio.ts`                 | Audio recording and transcription  |
+| `macos-audio-record.swift` | Native macOS audio capture         |
 
 #### `toast/` - Toast Notifications
 
-| File                | Purpose                          |
-|---------------------|----------------------------------|
-| `mod.ts`            | Toast module exports             |
-| `types.ts`          | Toast interfaces and defaults    |
+| File                | Purpose                                |
+|---------------------|----------------------------------------|
+| `mod.ts`            | Toast module exports                   |
+| `types.ts`          | Toast interfaces and defaults          |
 | `toast-manager.ts`  | Singleton manager, timer-driven expiry |
-| `toast-renderer.ts` | Direct buffer rendering          |
+| `toast-renderer.ts` | Direct buffer rendering                |
 
 #### `chat/` - Chat Utilities
 
@@ -271,11 +271,11 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 Utility scripts for development and documentation.
 
-| File                   | Purpose                                      |
-|------------------------|----------------------------------------------|
-| `capture.ts`           | Screenshot/video capture using Xvfb          |
-| `capture-config.json`  | Default capture configuration                |
-| `capture-schema.json`  | JSON schema for capture config               |
+| File                  | Purpose                              |
+|-----------------------|--------------------------------------|
+| `capture.ts`          | Screenshot/video capture using Xvfb  |
+| `capture-config.json` | Default capture configuration        |
+| `capture-schema.json` | JSON schema for capture config       |
 
 ### Capture Script
 

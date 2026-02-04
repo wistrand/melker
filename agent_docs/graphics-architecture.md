@@ -144,11 +144,11 @@ if (renderer.hasVisibleOverlays()) {
 
 Graphics modes have limited clipping support:
 
-| Mode                       | Clipping                      |
-|----------------------------|-------------------------------|
-| sextant/block/pattern/luma | Full clipping via buffer      |
+| Mode                       | Clipping                       |
+|----------------------------|--------------------------------|
+| sextant/block/pattern/luma | Full clipping via buffer       |
 | sixel                      | Placeholder shown when clipped |
-| kitty                      | Element skipped when clipped  |
+| kitty                      | Element skipped when clipped   |
 
 For sixel/kitty, full visibility is required. When an element extends outside the viewport, graphics output is suppressed and a placeholder may be shown.
 
@@ -173,11 +173,11 @@ MELKER_GFX_MODE=hires     # Best available: kitty → sixel → sextant
 
 **Fallback chain:**
 
-| Mode     | Fallback                 |
-|----------|--------------------------|
-| `sixel`  | sextant                  |
-| `kitty`  | sextant                  |
-| `hires`  | kitty → sixel → sextant  |
+| Mode    | Fallback                |
+|---------|-------------------------|
+| `sixel` | sextant                 |
+| `kitty` | sextant                 |
+| `hires` | kitty -> sixel -> sextant |
 
 Mode resolution happens in `getEffectiveGfxMode()` in `canvas-render.ts`.
 
@@ -185,20 +185,20 @@ Mode resolution happens in `getEffectiveGfxMode()` in `canvas-render.ts`.
 
 Graphics modes are automatically disabled in certain environments:
 
-| Condition    | Detection                        | Disabled          |
-|--------------|----------------------------------|-------------------|
-| tmux/screen  | `$TMUX`, `$STY`                  | sixel, kitty      |
-| SSH (remote) | `$SSH_CLIENT`, `$SSH_CONNECTION` | sixel (bandwidth) |
+| Condition    | Detection                        | Disabled           |
+|--------------|----------------------------------|--------------------|
+| tmux/screen  | `$TMUX`, `$STY`                  | sixel, kitty       |
+| SSH (remote) | `$SSH_CLIENT`, `$SSH_CONNECTION` | sixel (bandwidth)  |
 
 ## Pixel Aspect Ratio
 
 Terminal cells are typically taller than wide. Graphics modes handle this differently:
 
-| Mode    | Pixel Aspect                                                             |
-|---------|--------------------------------------------------------------------------|
-| sextant | `(3 × cellWidth) / (2 × cellHeight)` — sextant pixels are 2 wide × 3 tall |
-| sixel   | 1.0 (square pixels at native resolution)                                 |
-| kitty   | 1.0 (square pixels at native resolution)                                 |
+| Mode    | Pixel Aspect                                                              |
+|---------|---------------------------------------------------------------------------|
+| sextant | `(3 x cellWidth) / (2 x cellHeight)` - sextant pixels are 2 wide x 3 tall |
+| sixel   | 1.0 (square pixels at native resolution)                                  |
+| kitty   | 1.0 (square pixels at native resolution)                                  |
 
 The aspect ratio is exposed via `canvas.getPixelAspectRatio()` for:
 - Aspect-corrected drawing (`drawCircleCorrected()`)
@@ -223,15 +223,15 @@ Canvas maintains two pixel buffers that are composited during rendering:
 
 ## Files
 
-| File                              | Purpose                            |
-|-----------------------------------|------------------------------------|
-| `src/components/canvas.ts`        | Canvas element, buffer management  |
-| `src/components/canvas-render.ts` | Mode selection, rendering dispatch |
-| `src/sixel/`                      | Sixel detection, encoding, palette |
-| `src/kitty/`                      | Kitty detection, encoding          |
-| `src/engine.ts`                   | Graphics overlay output            |
-| `src/input.ts`                    | Detection response routing         |
-| `src/rendering.ts`                | Overlay detection                  |
+| File                              | Purpose                             |
+|-----------------------------------|-------------------------------------|
+| `src/components/canvas.ts`        | Canvas element, buffer management   |
+| `src/components/canvas-render.ts` | Mode selection, rendering dispatch  |
+| `src/sixel/`                      | Sixel detection, encoding, palette  |
+| `src/kitty/`                      | Kitty detection, encoding           |
+| `src/engine.ts`                   | Graphics overlay output             |
+| `src/input.ts`                    | Detection response routing          |
+| `src/rendering.ts`                | Overlay detection                   |
 
 ## See Also
 

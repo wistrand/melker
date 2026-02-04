@@ -4,17 +4,17 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 
 ## Overview
 
-| Library                                                      | Language        | Stars  | Paradigm            | Layout      |
-|--------------------------------------------------------------|-----------------|--------|---------------------|-------------|
-| **Melker**                                                   | TypeScript/Deno | New    | HTML-like declarative | Flexbox   |
-| [Ink](https://github.com/vadimdemedes/ink)                   | JavaScript/Node | 35k    | React components    | Flexbox (Yoga) |
-| [Blessed](https://github.com/chjj/blessed)                   | JavaScript/Node | 12k    | Imperative widgets  | CSS-like    |
-| [Bubble Tea](https://github.com/charmbracelet/bubbletea)     | Go              | 39k    | Elm architecture    | CSS-like    |
-| [tview](https://github.com/rivo/tview)                       | Go              | 13k    | Imperative widgets  | Grid/Flex   |
-| [Textual](https://github.com/Textualize/textual)             | Python          | 34k    | Async widgets       | CSS/Grid    |
-| [Ratatui](https://github.com/ratatui/ratatui)                | Rust            | 18k    | Immediate mode      | Constraints |
-| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)             | C++             | 10k    | Functional/React-like | Flexbox   |
-| [ncurses](https://invisible-island.net/ncurses/)             | C               | Legacy | Low-level           | Manual      |
+| Library                                                  | Language        | Stars  | Paradigm              | Layout         |
+|----------------------------------------------------------|-----------------|--------|-----------------------|----------------|
+| **Melker**                                               | TypeScript/Deno | New    | HTML-like declarative | Flexbox        |
+| [Ink](https://github.com/vadimdemedes/ink)               | JavaScript/Node | 35k    | React components      | Flexbox (Yoga) |
+| [Blessed](https://github.com/chjj/blessed)               | JavaScript/Node | 12k    | Imperative widgets    | CSS-like       |
+| [Bubble Tea](https://github.com/charmbracelet/bubbletea) | Go              | 39k    | Elm architecture      | CSS-like       |
+| [tview](https://github.com/rivo/tview)                   | Go              | 13k    | Imperative widgets    | Grid/Flex      |
+| [Textual](https://github.com/Textualize/textual)         | Python          | 34k    | Async widgets         | CSS/Grid       |
+| [Ratatui](https://github.com/ratatui/ratatui)            | Rust            | 18k    | Immediate mode        | Constraints    |
+| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)         | C++             | 10k    | Functional/React-like | Flexbox        |
+| [ncurses](https://invisible-island.net/ncurses/)         | C               | Legacy | Low-level             | Manual         |
 
 ## Feature Matrix
 
@@ -60,12 +60,12 @@ Y = Full support, ~ = Partial/limited support, - = Not available
 
 ## Abstraction Levels
 
-| Level            | Description              | Libraries                      |
-|------------------|--------------------------|--------------------------------|
-| **Low-level**    | Direct terminal control  | ncurses, Termbox               |
-| **Programmatic** | createElement/widget APIs | All frameworks                |
-| **Declarative**  | Markup files (HTML/JSX)  | Melker, Ink, Textual           |
-| **Literate**     | Prose + embedded UI      | Melker only                    |
+| Level            | Description               | Libraries              |
+|------------------|---------------------------|------------------------|
+| **Low-level**    | Direct terminal control   | ncurses, Termbox       |
+| **Programmatic** | createElement/widget APIs | All frameworks         |
+| **Declarative**  | Markup files (HTML/JSX)   | Melker, Ink, Textual   |
+| **Literate**     | Prose + embedded UI       | Melker only            |
 
 **Melker's three levels:**
 
@@ -95,16 +95,16 @@ Most frameworks only offer programmatic APIs. Ink adds JSX but requires a build 
 
 ## Scripting & Code Style
 
-| Library        | UI Definition              | Event Handling            | State Management     |
-|----------------|----------------------------|---------------------------|----------------------|
-| **Melker**     | HTML-like `.melker` files  | Inline `onClick="..."` handlers | Mutable element props |
-| **Ink**        | JSX components             | React event props         | useState/useReducer  |
-| **Blessed**    | JS object creation         | `.on('event', fn)`        | Direct mutation      |
-| **Bubble Tea** | Go structs + View()        | Msg -> Update()           | Immutable Model      |
-| **tview**      | Go constructors            | SetInputCapture()         | Direct mutation      |
-| **Textual**    | Python classes             | `@on` decorators          | Reactive attributes  |
-| **Ratatui**    | Rust widget structs        | Match on events           | Immutable state      |
-| **FTXUI**      | C++ function composition   | Lambdas                   | Captured refs        |
+| Library        | UI Definition             | Event Handling                  | State Management      |
+|----------------|---------------------------|---------------------------------|-----------------------|
+| **Melker**     | HTML-like `.melker` files | Inline `onClick="..."` handlers | Mutable element props |
+| **Ink**        | JSX components            | React event props               | useState/useReducer   |
+| **Blessed**    | JS object creation        | `.on('event', fn)`              | Direct mutation       |
+| **Bubble Tea** | Go structs + View()       | Msg -> Update()                 | Immutable Model       |
+| **tview**      | Go constructors           | SetInputCapture()               | Direct mutation       |
+| **Textual**    | Python classes            | `@on` decorators                | Reactive attributes   |
+| **Ratatui**    | Rust widget structs       | Match on events                 | Immutable state       |
+| **FTXUI**      | C++ function composition  | Lambdas                         | Captured refs         |
 
 ### Code Examples
 
@@ -148,16 +148,16 @@ auto button = Button("Click", [&] { count++; });
 
 ## Styling Approaches
 
-| Library       | Method               | Syntax                           | Theming                      |
-|---------------|----------------------|----------------------------------|------------------------------|
-| **Melker**    | CSS in `style=""`    | `border: thin; color: red`       | Auto-detect + 8 manual themes |
-| **Ink**       | Props on components  | `<Box borderStyle="round">`      | Via ink-ui                   |
-| **Blessed**   | Options object       | `{border: {type: 'line'}}`       | Manual                       |
-| **Lip Gloss** | Chained methods      | `.Bold(true).Padding(1)`         | Auto color degrade           |
-| **tview**     | Inline tags          | `[red]text[-]`                   | tcell.Style                  |
-| **Textual**   | External CSS files   | `.button { color: red; }`        | CSS variables                |
-| **Ratatui**   | Style struct         | `Style::new().fg(Red)`           | Manual                       |
-| **FTXUI**     | Pipe decorators      | `text \| bold \| color(Red)`     | Manual                       |
+| Library       | Method              | Syntax                       | Theming                       |
+|---------------|---------------------|------------------------------|-------------------------------|
+| **Melker**    | CSS in `style=""`   | `border: thin; color: red`   | Auto-detect + 8 manual themes |
+| **Ink**       | Props on components | `<Box borderStyle="round">`  | Via ink-ui                    |
+| **Blessed**   | Options object      | `{border: {type: 'line'}}`   | Manual                        |
+| **Lip Gloss** | Chained methods     | `.Bold(true).Padding(1)`     | Auto color degrade            |
+| **tview**     | Inline tags         | `[red]text[-]`               | tcell.Style                   |
+| **Textual**   | External CSS files  | `.button { color: red; }`    | CSS variables                 |
+| **Ratatui**   | Style struct        | `Style::new().fg(Red)`       | Manual                        |
+| **FTXUI**     | Pipe decorators     | `text \| bold \| color(Red)` | Manual                        |
 
 ### Style Examples
 
@@ -273,23 +273,23 @@ Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 
 ## Architecture Patterns
 
-| Pattern              | Libraries                       |
-|----------------------|---------------------------------|
-| **React/Component**  | Ink, FTXUI, Melker              |
-| **Elm/MVU**          | Bubble Tea, Ratatui             |
-| **Imperative**       | Blessed, tview, ncurses         |
-| **Async/Reactive**   | Textual                         |
-| **Immediate Mode**   | Ratatui                         |
+| Pattern             | Libraries                 |
+|---------------------|---------------------------|
+| **React/Component** | Ink, FTXUI, Melker        |
+| **Elm/MVU**         | Bubble Tea, Ratatui       |
+| **Imperative**      | Blessed, tview, ncurses   |
+| **Async/Reactive**  | Textual                   |
+| **Immediate Mode**  | Ratatui                   |
 
 ## Artifact Model & Permissions
 
-| Library        | Language | Paradigm      | Artifact Model         | Permissions |
-|----------------|----------|---------------|------------------------|-------------|
-| **Melker**     | TS/Deno  | Declarative   | Document + execution   | Declared    |
-| Ink            | JS       | React         | Program                | Inherited   |
-| Bubble Tea     | Go       | Elm           | Program                | Inherited   |
-| Textual        | Python   | Async widgets | Program                | Inherited   |
-| Ratatui        | Rust     | Immediate     | Program                | Inherited   |
+| Library        | Language | Paradigm      | Artifact Model       | Permissions |
+|----------------|----------|---------------|----------------------|-------------|
+| **Melker**     | TS/Deno  | Declarative   | Document + execution | Declared    |
+| Ink            | JS       | React         | Program              | Inherited   |
+| Bubble Tea     | Go       | Elm           | Program              | Inherited   |
+| Textual        | Python   | Async widgets | Program              | Inherited   |
+| Ratatui        | Rust     | Immediate     | Program              | Inherited   |
 
 **Artifact Model:**
 - **Document + execution**: UI defined as a document (`.melker` file) containing markup and behavior, executed by a runtime. Similar to HTML in a browser.
@@ -303,13 +303,13 @@ This distinction mirrors web vs native: Melker treats TUI apps like web pages (s
 
 ## Rendering Strategies
 
-| Strategy        | Libraries         | Description                                       |
-|-----------------|-------------------|---------------------------------------------------|
-| Immediate mode  | Ratatui, FTXUI    | Redraw entire UI each frame (fast in Rust/C++)    |
-| Dual buffer     | Melker, Ratatui   | Compare buffers, write diff                       |
-| Damage buffer   | Blessed           | Track changed regions                             |
-| Yoga layout     | Ink               | Facebook's flexbox engine                         |
-| Virtual DOM     | Ink               | React reconciliation                              |
+| Strategy       | Libraries       | Description                                    |
+|----------------|-----------------|------------------------------------------------|
+| Immediate mode | Ratatui, FTXUI  | Redraw entire UI each frame (fast in Rust/C++) |
+| Dual buffer    | Melker, Ratatui | Compare buffers, write diff                    |
+| Damage buffer  | Blessed         | Track changed regions                          |
+| Yoga layout    | Ink             | Facebook's flexbox engine                      |
+| Virtual DOM    | Ink             | React reconciliation                           |
 
 **Performance notes:**
 - **Immediate mode** (Ratatui, FTXUI): Raw language speed makes full redraws fast
@@ -396,18 +396,18 @@ Y = Built-in, Y* = Via extension/library, - = Not available
 
 **Terminal support:**
 
-| Terminal        | Sixel | Kitty | iTerm2 |
-|-----------------|:-----:|:-----:|:------:|
-| Kitty           |   -   |   Y   |   -    |
-| iTerm2          |   Y   |   -   |   Y    |
-| WezTerm         |   Y   |   Y   |   Y    |
-| Ghostty         |   -   |   Y   |   -    |
-| foot            |   Y   |   -   |   -    |
-| Konsole         |   Y   |   ~   |   -    |
-| VS Code term    |   Y   |   -   |   -    |
-| xterm           |   Y   |   -   |   -    |
-| Windows Term    |   ~   |   -   |   -    |
-| tmux            |  Y*   |   -   |   -    |
+| Terminal     | Sixel | Kitty | iTerm2 |
+|--------------|:-----:|:-----:|:------:|
+| Kitty        |   -   |   Y   |   -    |
+| iTerm2       |   Y   |   -   |   Y    |
+| WezTerm      |   Y   |   Y   |   Y    |
+| Ghostty      |   -   |   Y   |   -    |
+| foot         |   Y   |   -   |   -    |
+| Konsole      |   Y   |   ~   |   -    |
+| VS Code term |   Y   |   -   |   -    |
+| xterm        |   Y   |   -   |   -    |
+| Windows Term |   ~   |   -   |   -    |
+| tmux         |  Y*   |   -   |   -    |
 
 Y = Full support, ~ = Partial, Y* = Passthrough depends on underlying terminal
 
@@ -456,16 +456,16 @@ graph TD
 
 ## Table Creation
 
-| Library        | Approach                                 | Features                                         |
-|----------------|------------------------------------------|--------------------------------------------------|
-| **Melker**     | Native `<table>` + `<data-table>` + Markdown | Scrollable tbody, auto column widths, sorting, clickable |
-| **Ink**        | ink-table package                        | React component, column config                   |
-| **Blessed**    | listtable widget                         | Row selection, column widths                     |
-| **Bubble Tea** | bubbles/table                            | Styles, selection, pagination                    |
-| **tview**      | Table widget                             | Cells, selection, custom drawing                 |
-| **Textual**    | DataTable widget                         | Columns, rows, sorting, CSS styling              |
-| **Ratatui**    | Table widget                             | Headers, rows, widths, selection                 |
-| **FTXUI**      | No built-in                              | Manual grid layout                               |
+| Library        | Approach                                     | Features                                                   |
+|----------------|----------------------------------------------|------------------------------------------------------------|
+| **Melker**     | Native `<table>` + `<data-table>` + Markdown | Scrollable tbody, auto column widths, sorting, clickable   |
+| **Ink**        | ink-table package                            | React component, column config                             |
+| **Blessed**    | listtable widget                             | Row selection, column widths                               |
+| **Bubble Tea** | bubbles/table                                | Styles, selection, pagination                              |
+| **tview**      | Table widget                                 | Cells, selection, custom drawing                           |
+| **Textual**    | DataTable widget                             | Columns, rows, sorting, CSS styling                        |
+| **Ratatui**    | Table widget                                 | Headers, rows, widths, selection                           |
+| **FTXUI**      | No built-in                                  | Manual grid layout                                         |
 
 ### Table Examples
 
@@ -585,58 +585,58 @@ auto table = vbox({
 
 ## Unique Strengths
 
-| Library        | Killer Feature                                                             |
-|----------------|----------------------------------------------------------------------------|
-| **Melker**     | Run `.melker` from URL, AI assistant, permission sandbox, literate UI      |
-| **Ink**        | Full React ecosystem, DevTools, used by 10k+ projects, React 18 support    |
-| **Textual**    | Terminal + browser, CSS styling, command palette, 35+ widgets              |
-| **Ratatui**    | Rust safety, no_std support, immediate mode performance, modular crates    |
-| **Bubble Tea** | Elm architecture, 39k stars, SSH/network serving, 10k+ apps built          |
-| **tview**      | Battle-tested (K9s, gh CLI), rich widgets, backwards compatible            |
-| **FTXUI**      | Zero deps, WebAssembly, pixel canvas, pipe operator syntax                 |
+| Library        | Killer Feature                                                          |
+|----------------|-------------------------------------------------------------------------|
+| **Melker**     | Run `.melker` from URL, AI assistant, permission sandbox, literate UI   |
+| **Ink**        | Full React ecosystem, DevTools, used by 10k+ projects, React 18 support |
+| **Textual**    | Terminal + browser, CSS styling, command palette, 35+ widgets           |
+| **Ratatui**    | Rust safety, no_std support, immediate mode performance, modular crates |
+| **Bubble Tea** | Elm architecture, 39k stars, SSH/network serving, 10k+ apps built       |
+| **tview**      | Battle-tested (K9s, gh CLI), rich widgets, backwards compatible         |
+| **FTXUI**      | Zero deps, WebAssembly, pixel canvas, pipe operator syntax              |
 
 ## Corporate Adoption
 
-| Library        | Used By                                                                                              |
-|----------------|------------------------------------------------------------------------------------------------------|
+| Library        | Used By                                                                                                                              |
+|----------------|--------------------------------------------------------------------------------------------------------------------------------------|
 | **Ink**        | Claude Code (Anthropic), Gemini CLI (Google), GitHub Copilot CLI, Gatsby, Yarn, Prisma, Parcel, Shopify, New York Times, Terraform CDK |
-| **Bubble Tea** | GitHub, GitLab, NVIDIA, Sourcegraph, Charm (Glow, VHS, etc.)                                         |
-| **tview**      | K9s (Kubernetes CLI), GitHub CLI (gh), podman-tui                                                    |
-| **Textual**    | Posting (API client), Toad (AI coding frontend), Memray (Bloomberg), Toolong                         |
-| **Ratatui**    | gitui, bottom, spotify-tui, jnv, termscp                                                             |
+| **Bubble Tea** | GitHub, GitLab, NVIDIA, Sourcegraph, Charm (Glow, VHS, etc.)                                                                         |
+| **tview**      | K9s (Kubernetes CLI), GitHub CLI (gh), podman-tui                                                                                    |
+| **Textual**    | Posting (API client), Toad (AI coding frontend), Memray (Bloomberg), Toolong                                                         |
+| **Ratatui**    | gitui, bottom, spotify-tui, jnv, termscp                                                                                             |
 
 ## Choosing a Library
 
-| If you want...              | Choose                                   |
-|-----------------------------|------------------------------------------|
-| React knowledge reuse       | **Ink**                                  |
-| Python + modern async       | **Textual**                              |
-| Rust performance            | **Ratatui**                              |
-| Go + Elm architecture       | **Bubble Tea**                           |
-| Go + quick widgets          | **tview**                                |
-| C++ + no deps               | **FTXUI**                                |
-| Accessible TUI apps         | **Melker**                               |
-| Sandboxed distribution      | **Melker**                               |
-| Browser + terminal          | **Textual**, **Ratatui** (Ratzilla), **FTXUI** |
-| Auto theme detection        | All (except ncurses)                     |
-| Pixel graphics (retained)   | **Melker**                               |
-| Pixel graphics (immediate)  | **FTXUI**, **Ratatui**                   |
-| Literate programming        | **Melker**                               |
-| Embedded/no_std             | **Ratatui**                              |
-| SSH/network serving         | **Bubble Tea**, **Textual**              |
-| Most GitHub stars           | **Bubble Tea** (39k), **Ink** (35k), **Textual** (34k) |
+| If you want...             | Choose                                             |
+|----------------------------|----------------------------------------------------|
+| React knowledge reuse      | **Ink**                                            |
+| Python + modern async      | **Textual**                                        |
+| Rust performance           | **Ratatui**                                        |
+| Go + Elm architecture      | **Bubble Tea**                                     |
+| Go + quick widgets         | **tview**                                          |
+| C++ + no deps              | **FTXUI**                                          |
+| Accessible TUI apps        | **Melker**                                         |
+| Sandboxed distribution     | **Melker**                                         |
+| Browser + terminal         | **Textual**, **Ratatui** (Ratzilla), **FTXUI**     |
+| Auto theme detection       | All (except ncurses)                               |
+| Pixel graphics (retained)  | **Melker**                                         |
+| Pixel graphics (immediate) | **FTXUI**, **Ratatui**                             |
+| Literate programming       | **Melker**                                         |
+| Embedded/no_std            | **Ratatui**                                        |
+| SSH/network serving        | **Bubble Tea**, **Textual**                        |
+| Most GitHub stars          | **Bubble Tea** (39k), **Ink** (35k), **Textual** (34k) |
 
 ## Recent Updates (2025-2026)
 
-| Library        | Notable Changes                                                                  |
-|----------------|----------------------------------------------------------------------------------|
-| **Ink**        | Continued React 18 support, Ink UI component library, screen reader accessibility |
-| **Bubble Tea** | v2 beta with new View API, module moved to `charm.land/bubbletea/v2`             |
-| **Textual**    | Web serving via `textual serve`, expanded widget library to 35+                  |
+| Library        | Notable Changes                                                                       |
+|----------------|---------------------------------------------------------------------------------------|
+| **Ink**        | Continued React 18 support, Ink UI component library, screen reader accessibility     |
+| **Bubble Tea** | v2 beta with new View API, module moved to `charm.land/bubbletea/v2`                  |
+| **Textual**    | Web serving via `textual serve`, expanded widget library to 35+                       |
 | **Ratatui**    | v0.30.0 with no_std support, modular workspace architecture, ratzilla for WebAssembly |
-| **FTXUI**      | v6.1.9, continued cross-platform support including WebAssembly                   |
-| **tview**      | Stable maintenance, backwards compatible updates                                 |
-| **Blessed**    | Dormant since March 2024, use neo-blessed fork for maintenance                   |
+| **FTXUI**      | v6.1.9, continued cross-platform support including WebAssembly                        |
+| **tview**      | Stable maintenance, backwards compatible updates                                      |
+| **Blessed**    | Dormant since March 2024, use neo-blessed fork for maintenance                        |
 
 ## Links
 

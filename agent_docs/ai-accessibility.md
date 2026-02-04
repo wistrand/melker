@@ -49,31 +49,31 @@ Response streamed to dialog (debounced 50ms)
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/ai/mod.ts` | Module exports |
-| `src/ai/openrouter.ts` | OpenRouter API client with SSE streaming |
-| `src/ai/context.ts` | UI context builder, element tree serialization |
-| `src/ai/cache.ts` | Query response cache (5min TTL, exact match) |
-| `src/ai/tools.ts` | Tool definitions and execution |
-| `src/ai/accessibility-dialog.ts` | Dialog UI and conversation management |
-| `src/ai/audio.ts` | Audio recording, transcription, and silence trimming |
-| `src/ai/macos-audio-record.swift` | Native macOS audio capture using AVAudioEngine |
+| File                             | Purpose                                         |
+|----------------------------------|-------------------------------------------------|
+| `src/ai/mod.ts`                  | Module exports                                  |
+| `src/ai/openrouter.ts`           | OpenRouter API client with SSE streaming        |
+| `src/ai/context.ts`              | UI context builder, element tree serialization  |
+| `src/ai/cache.ts`                | Query response cache (5min TTL, exact match)    |
+| `src/ai/tools.ts`                | Tool definitions and execution                  |
+| `src/ai/accessibility-dialog.ts` | Dialog UI and conversation management           |
+| `src/ai/audio.ts`                | Audio recording, transcription, silence trimming |
+| `src/ai/macos-audio-record.swift`| Native macOS audio capture using AVAudioEngine  |
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENROUTER_API_KEY` | (required) | API key for OpenRouter |
-| `MELKER_AI_MODEL` | `openai/gpt-5.2-chat` | Model for chat/tools |
-| `MELKER_AUDIO_MODEL` | `openai/gpt-4o-audio-preview` | Model for audio transcription |
-| `MELKER_AI_ENDPOINT` | `https://openrouter.ai/api/v1/chat/completions` | API endpoint URL |
-| `MELKER_AI_HEADERS` | (none) | Custom headers (format: `name: value; name2: value2`) |
-| `MELKER_AI_SITE_URL` | `https://github.com/melker` | Site URL for rankings |
-| `MELKER_AI_SITE_NAME` | `Melker` | Site name for rankings |
-| `MELKER_AUDIO_GAIN` | `2.0` | Audio recording gain multiplier |
-| `MELKER_AUDIO_DEBUG` | `false` | Replay recorded audio before transcription |
-| `MELKER_FFMPEG` | `false` | Force ffmpeg on macOS instead of native Swift |
+| Variable              | Default                                          | Description                                             |
+|-----------------------|--------------------------------------------------|---------------------------------------------------------|
+| `OPENROUTER_API_KEY`  | (required)                                       | API key for OpenRouter                                  |
+| `MELKER_AI_MODEL`     | `openai/gpt-5.2-chat`                            | Model for chat/tools                                    |
+| `MELKER_AUDIO_MODEL`  | `openai/gpt-4o-audio-preview`                    | Model for audio transcription                           |
+| `MELKER_AI_ENDPOINT`  | `https://openrouter.ai/api/v1/chat/completions`  | API endpoint URL                                        |
+| `MELKER_AI_HEADERS`   | (none)                                           | Custom headers (format: `name: value; name2: value2`)   |
+| `MELKER_AI_SITE_URL`  | `https://github.com/melker`                      | Site URL for rankings                                   |
+| `MELKER_AI_SITE_NAME` | `Melker`                                         | Site name for rankings                                  |
+| `MELKER_AUDIO_GAIN`   | `2.0`                                            | Audio recording gain multiplier                         |
+| `MELKER_AUDIO_DEBUG`  | `false`                                          | Replay recorded audio before transcription              |
+| `MELKER_FFMPEG`       | `false`                                          | Force ffmpeg on macOS instead of native Swift           |
 
 All environment variables are read fresh on each API call, allowing dynamic changes without restart.
 
@@ -96,13 +96,13 @@ The AI assistant supports voice input through the Listen button or F7 key.
 
 The `audio.ts` module handles:
 
-| Function | Purpose |
-|----------|---------|
-| `AudioRecorder` | Platform-specific audio capture (Swift on macOS, ffmpeg elsewhere) |
-| `transcribeAudio()` | Send audio to OpenRouter for transcription |
-| `trimSilence()` | Remove silent portions from start/end |
-| `hasAudioContent()` | Validate audio has meaningful volume |
-| `playbackAudio()` | Debug playback via ffplay (when `MELKER_AUDIO_DEBUG=true`) |
+| Function           | Purpose                                                          |
+|--------------------|------------------------------------------------------------------|
+| `AudioRecorder`    | Platform-specific audio capture (Swift on macOS, ffmpeg elsewhere) |
+| `transcribeAudio()`| Send audio to OpenRouter for transcription                       |
+| `trimSilence()`    | Remove silent portions from start/end                            |
+| `hasAudioContent()`| Validate audio has meaningful volume                             |
+| `playbackAudio()`  | Debug playback via ffplay (when `MELKER_AUDIO_DEBUG=true`)       |
 
 Audio analysis uses RMS (root mean square) in 100ms chunks:
 - Threshold: 0.01 RMS (roughly quiet speech)
@@ -137,13 +137,13 @@ The AI can interact with the UI through tools:
 
 ### Built-in Tools
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `send_event` | Send events to UI elements | `element_id`, `event_type` (click/change/focus/keypress), `value` |
-| `click_canvas` | Click at specific coordinates on a canvas | `element_id`, `x`, `y` (pixel buffer coordinates) |
-| `read_element` | Read full text content from elements | `element_id` |
-| `close_dialog` | Close the AI assistant dialog | (none) |
-| `exit_program` | Exit the application | (none) |
+| Tool           | Description                                   | Parameters                                                         |
+|----------------|-----------------------------------------------|--------------------------------------------------------------------|
+| `send_event`   | Send events to UI elements                    | `element_id`, `event_type` (click/change/focus/keypress), `value`  |
+| `click_canvas` | Click at specific coordinates on a canvas     | `element_id`, `x`, `y` (pixel buffer coordinates)                  |
+| `read_element` | Read full text content from elements          | `element_id`                                                       |
+| `close_dialog` | Close the AI assistant dialog                 | (none)                                                             |
+| `exit_program` | Exit the application                          | (none)                                                             |
 
 ### Custom Tools (for .melker files)
 

@@ -22,13 +22,13 @@ At runtime: Env.get() handles permission errors
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `melker-launcher.ts` | Spawns subprocess with permission flags |
-| `src/policy/flags.ts` | Converts policy to Deno permission flags |
-| `src/env.ts` | Safe env var access with permission caching |
-| `src/config/config.ts` | Schema-driven config reads env vars |
-| `src/xdg.ts` | XDG directory lookups |
+| File                  | Purpose                                   |
+|-----------------------|-------------------------------------------|
+| `melker-launcher.ts`  | Spawns subprocess with permission flags   |
+| `src/policy/flags.ts` | Converts policy to Deno permission flags  |
+| `src/env.ts`          | Safe env var access with permission caching |
+| `src/config/config.ts` | Schema-driven config reads env vars      |
+| `src/xdg.ts`          | XDG directory lookups                     |
 
 ## Environment Variable Categories
 
@@ -107,11 +107,11 @@ static get(name: string): string | undefined {
 
 ### Logging Levels
 
-| Pattern | Log Level | Reason |
-|---------|-----------|--------|
-| `MELKER_*` | DEBUG | Expected internal config checks |
-| `XDG_*` | DEBUG | Expected XDG directory lookups |
-| Other | WARN | Likely app trying to access undeclared var |
+| Pattern    | Log Level | Reason                                    |
+|------------|-----------|-------------------------------------------|
+| `MELKER_*` | DEBUG     | Expected internal config checks           |
+| `XDG_*`    | DEBUG     | Expected XDG directory lookups            |
+| Other      | WARN      | Likely app trying to access undeclared var |
 
 ## Known Behaviors
 
@@ -147,40 +147,40 @@ When `policyToDenoFlags()` calls `MelkerConfig.get()`:
 
 From `src/config/schema.json`, these MELKER_* vars may be checked:
 
-| Var | Purpose |
-|-----|---------|
-| `MELKER_THEME` | Color theme |
-| `MELKER_LOG_LEVEL` | Log verbosity |
-| `MELKER_LOG_FILE` | Log file path |
-| `MELKER_LOG_BUFFER_SIZE` | DevTools log buffer |
-| `MELKER_AI_MODEL` | AI chat model |
-| `MELKER_AUDIO_MODEL` | Audio transcription model |
-| `MELKER_AI_ENDPOINT` | AI API endpoint |
-| `MELKER_AI_HEADERS` | Custom API headers |
-| `MELKER_AI_SITE_NAME` | Site name for AI API |
-| `MELKER_AI_SITE_URL` | Site URL for AI API |
-| `MELKER_AUDIO_GAIN` | Audio recording gain |
-| `MELKER_AUTO_DITHER` | Dithering algorithm |
-| `MELKER_DITHER_BITS` | Color depth for dithering |
-| `MELKER_BLUE_NOISE_PATH` | Blue noise matrix path |
-| `MELKER_NO_ALTERNATE_SCREEN` | Alternate screen toggle |
-| `MELKER_NO_SYNC` | Sync rendering toggle |
-| `MELKER_FFMPEG` | Force FFmpeg on macOS |
-| `MELKER_GFX_MODE` | Graphics rendering mode |
-| `MELKER_HEADLESS` | Headless mode |
-| `MELKER_HEADLESS_WIDTH` | Virtual terminal width |
-| `MELKER_HEADLESS_HEIGHT` | Virtual terminal height |
-| `MELKER_DEBUG_PORT` | Debug server port |
-| `MELKER_DEBUG_HOST` | Debug server bind address |
-| `MELKER_ALLOW_REMOTE_INPUT` | Allow input from debug clients |
-| `MELKER_RETAIN_BUNDLE` | Keep temp bundle files |
-| `MELKER_SHOW_STATS` | Performance stats overlay |
-| `MELKER_MARKDOWN_DEBUG` | Debug markdown rendering |
-| `MELKER_AUDIO_DEBUG` | Debug audio recording |
-| `MELKER_PERSIST` | State persistence |
-| `MELKER_LINT` | Lint validation |
-| `MELKER_NO_CONSOLE_OVERRIDE` | Console redirect toggle |
-| `MELKER_OAUTH_*` | OAuth configuration (7 vars) |
+| Var                          | Purpose                        |
+|------------------------------|--------------------------------|
+| `MELKER_THEME`               | Color theme                    |
+| `MELKER_LOG_LEVEL`           | Log verbosity                  |
+| `MELKER_LOG_FILE`            | Log file path                  |
+| `MELKER_LOG_BUFFER_SIZE`     | DevTools log buffer            |
+| `MELKER_AI_MODEL`            | AI chat model                  |
+| `MELKER_AUDIO_MODEL`         | Audio transcription model      |
+| `MELKER_AI_ENDPOINT`         | AI API endpoint                |
+| `MELKER_AI_HEADERS`          | Custom API headers             |
+| `MELKER_AI_SITE_NAME`        | Site name for AI API           |
+| `MELKER_AI_SITE_URL`         | Site URL for AI API            |
+| `MELKER_AUDIO_GAIN`          | Audio recording gain           |
+| `MELKER_AUTO_DITHER`         | Dithering algorithm            |
+| `MELKER_DITHER_BITS`         | Color depth for dithering      |
+| `MELKER_BLUE_NOISE_PATH`     | Blue noise matrix path         |
+| `MELKER_NO_ALTERNATE_SCREEN` | Alternate screen toggle        |
+| `MELKER_NO_SYNC`             | Sync rendering toggle          |
+| `MELKER_FFMPEG`              | Force FFmpeg on macOS          |
+| `MELKER_GFX_MODE`            | Graphics rendering mode        |
+| `MELKER_HEADLESS`            | Headless mode                  |
+| `MELKER_HEADLESS_WIDTH`      | Virtual terminal width         |
+| `MELKER_HEADLESS_HEIGHT`     | Virtual terminal height        |
+| `MELKER_DEBUG_PORT`          | Debug server port              |
+| `MELKER_DEBUG_HOST`          | Debug server bind address      |
+| `MELKER_ALLOW_REMOTE_INPUT`  | Allow input from debug clients |
+| `MELKER_RETAIN_BUNDLE`       | Keep temp bundle files         |
+| `MELKER_SHOW_STATS`          | Performance stats overlay      |
+| `MELKER_MARKDOWN_DEBUG`      | Debug markdown rendering       |
+| `MELKER_AUDIO_DEBUG`         | Debug audio recording          |
+| `MELKER_PERSIST`             | State persistence              |
+| `MELKER_LINT`                | Lint validation                |
+| `MELKER_NO_CONSOLE_OVERRIDE` | Console redirect toggle        |
+| `MELKER_OAUTH_*`             | OAuth configuration (7 vars)   |
 
 ## Troubleshooting
 

@@ -169,9 +169,9 @@ The `<help>` tag content is shown in DevTools (F12 > Help tab):
 app.melker [args]
 ```
 
-| Argument | Description |
-|----------|-------------|
-| foo | Does something |
+| Argument | Description      |
+|----------|------------------|
+| foo      | Does something   |
 </help>
 ```
 

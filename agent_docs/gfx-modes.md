@@ -270,15 +270,15 @@ Video uses blue-noise for less temporal flicker between frames.
 
 ## Comparison
 
-| Mode    | Resolution    | Best for              | Unicode  | Terminal Support                              |
-|---------|---------------|-----------------------|----------|-----------------------------------------------|
-| sextant | 2x3 per cell  | Everything            | Required | Most modern                                   |
-| block   | 1x1 per cell  | Compatibility         | No       | All                                           |
-| pattern | 2x3 per cell  | UI, shapes            | No       | All                                           |
-| luma    | 2x3 per cell  | Images                | No       | All                                           |
-| sixel   | True pixels   | High-quality images   | No       | xterm, mlterm, foot, WezTerm, iTerm2, Konsole* |
-| kitty   | True pixels   | High-quality images   | No       | Kitty, Ghostty, WezTerm, Konsole              |
-| hires   | True pixels   | Portable high-quality | No       | Auto-selects best available                   |
+| Mode    | Resolution   | Best for              | Unicode  | Terminal Support                               |
+|---------|--------------|---------------------- |----------|------------------------------------------------|
+| sextant | 2x3 per cell | Everything            | Required | Most modern                                    |
+| block   | 1x1 per cell | Compatibility         | No       | All                                            |
+| pattern | 2x3 per cell | UI, shapes            | No       | All                                            |
+| luma    | 2x3 per cell | Images                | No       | All                                            |
+| sixel   | True pixels  | High-quality images   | No       | xterm, mlterm, foot, WezTerm, iTerm2, Konsole* |
+| kitty   | True pixels  | High-quality images   | No       | Kitty, Ghostty, WezTerm, Konsole               |
+| hires   | True pixels  | Portable high-quality | No       | Auto-selects best available                    |
 
 *Konsole has a right-edge rendering quirk. Use mlterm for best sixel quality.
 

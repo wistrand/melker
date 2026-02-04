@@ -6,20 +6,20 @@ Programmatic non-modal notification system for Melker.
 
 ## Overview
 
-| Aspect          | Decision                                              |
-|-----------------|-------------------------------------------------------|
-| API             | `$melker.toast.show(message, options)` - programmatic |
+| Aspect          | Decision                                                   |
+|-----------------|------------------------------------------------------------|
+| API             | `$melker.toast.show(message, options)` - programmatic      |
 | Position        | `bottom` (default) or `top` - centered, runtime switchable |
-| Animation       | None (instant display)                                |
-| Stacking        | Vertical, newest at bottom                            |
+| Animation       | None (instant display)                                     |
+| Stacking        | Vertical, newest at bottom                                 |
 | Auto-close      | Per-toast timer + global inactivity timeout (timer-driven) |
-| Max toasts      | 5 default, configurable, dismiss oldest on overflow   |
-| Bell            | Optional `\x07` for error toasts                      |
-| Rendering       | Direct buffer rendering (z-index 300)                 |
-| Duplicates      | Same message+type resets timer, shows count (2), (3)  |
-| Width           | Auto-sizes to content, config.width is minimum        |
-| Width stability | Only expands during session, never shrinks            |
-| Text overflow   | Clips on word boundary with ellipsis                  |
+| Max toasts      | 5 default, configurable, dismiss oldest on overflow        |
+| Bell            | Optional `\x07` for error toasts                           |
+| Rendering       | Direct buffer rendering (z-index 300)                      |
+| Duplicates      | Same message+type resets timer, shows count (2), (3)       |
+| Width           | Auto-sizes to content, config.width is minimum             |
+| Width stability | Only expands during session, never shrinks                 |
+| Text overflow   | Clips on word boundary with ellipsis                       |
 
 ---
 

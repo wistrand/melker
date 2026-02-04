@@ -265,20 +265,20 @@ handlesOwnKeyboard(): boolean {
 
 ### Keyboard Navigation
 
-| Key | Action |
-|-----|--------|
-| Arrow Up/Down | Move focus in list |
-| Arrow Right | Navigate into directory |
-| Arrow Left / Backspace | Navigate to parent directory |
-| Enter | Open directory / Select file |
-| Escape | Cancel / Close |
-| Tab | Move to filter input (Shift+Tab) / to buttons (Tab) |
-| Home/End | First/last item |
-| PageUp/Down | Scroll by 5 items |
-| Space | Toggle selection (multiple mode) |
-| Ctrl+H | Toggle hidden files |
-| Ctrl+R | Retry failed directory load |
-| Any character | Start filtering (auto-focuses filter input) |
+| Key                    | Action                                              |
+|------------------------|-----------------------------------------------------|
+| Arrow Up/Down          | Move focus in list                                  |
+| Arrow Right            | Navigate into directory                             |
+| Arrow Left / Backspace | Navigate to parent directory                        |
+| Enter                  | Open directory / Select file                        |
+| Escape                 | Cancel / Close                                      |
+| Tab                    | Move to filter input (Shift+Tab) / to buttons (Tab) |
+| Home/End               | First/last item                                     |
+| PageUp/Down            | Scroll by 5 items                                   |
+| Space                  | Toggle selection (multiple mode)                    |
+| Ctrl+H                 | Toggle hidden files                                 |
+| Ctrl+R                 | Retry failed directory load                         |
+| Any character          | Start filtering (auto-focuses filter input)         |
 
 ### Directory Loading
 
@@ -443,14 +443,14 @@ How file browser works in dialogs:
 
 ## Related Files
 
-| File | Purpose |
-|------|---------|
-| `src/components/table.ts` | Table component used for file list |
-| `src/components/filterable-list/filter.ts` | Filtering algorithms (fuzzy, prefix, etc.) |
-| `src/components/dialog.ts` | Dialog wrapper |
-| `src/focus.ts` | Focus management, trapFocus with deferred initial focus |
-| `src/engine.ts` | findFirstFocusable checks canReceiveFocus() |
-| `agent_docs/filterable-list-architecture.md` | Filter architecture reference |
+| File                                         | Purpose                                            |
+|----------------------------------------------|----------------------------------------------------|
+| `src/components/table.ts`                    | Table component used for file list                 |
+| `src/components/filterable-list/filter.ts`  | Filtering algorithms (fuzzy, prefix, etc.)         |
+| `src/components/dialog.ts`                   | Dialog wrapper                                     |
+| `src/focus.ts`                               | Focus management, trapFocus with deferred initial focus |
+| `src/engine.ts`                              | findFirstFocusable checks canReceiveFocus()        |
+| `agent_docs/filterable-list-architecture.md` | Filter architecture reference                      |
 
 ## See Also
 

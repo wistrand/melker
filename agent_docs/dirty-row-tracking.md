@@ -85,10 +85,10 @@ private _computeDirtyDiff(): BufferDiff[] {
 
 ## Performance
 
-| Operation | Before             | After               |
-|-----------|--------------------|---------------------|
-| setCell   | O(1)               | O(1) + 1 comparison |
-| diff      | O(width × height)  | O(dirtyRows × width) |
+| Operation | Before            | After                |
+|-----------|-------------------|----------------------|
+| setCell   | O(1)              | O(1) + 1 comparison  |
+| diff      | O(width x height) | O(dirtyRows x width) |
 
 **Real-world example** (form demo, 123×47 terminal):
 - 13/47 rows contain form content
@@ -97,13 +97,13 @@ private _computeDirtyDiff(): BufferDiff[] {
 
 ## Tracking Paths
 
-| Path               | Flow                                                                      | Tracked |
-|--------------------|---------------------------------------------------------------------------|---------|
-| Direct DualBuffer  | `buffer.currentBuffer.setCell()` → TerminalBuffer                          | ✓       |
-| ClippedDualBuffer  | `clipped.currentBuffer.setCell()` → ClippedBufferProxy → TerminalBuffer    | ✓       |
-| ViewportDualBuffer | `viewport.currentBuffer.setCell()` → ViewportBufferProxy → TerminalBuffer  | ✓       |
-| Fast render        | `buffer.currentBuffer.fillRect()` → TerminalBuffer.setCell()               | ✓       |
-| setText/fillRect   | Internal loops call setCell()                                              | ✓       |
+| Path               | Flow                                                                     | Tracked |
+|--------------------|--------------------------------------------------------------------------|---------|
+| Direct DualBuffer  | `buffer.currentBuffer.setCell()` -> TerminalBuffer                       | Yes     |
+| ClippedDualBuffer  | `clipped.currentBuffer.setCell()` -> ClippedBufferProxy -> TerminalBuffer | Yes     |
+| ViewportDualBuffer | `viewport.currentBuffer.setCell()` -> ViewportBufferProxy -> TerminalBuffer | Yes     |
+| Fast render        | `buffer.currentBuffer.fillRect()` -> TerminalBuffer.setCell()            | Yes     |
+| setText/fillRect   | Internal loops call setCell()                                            | Yes     |
 
 ## Stats
 

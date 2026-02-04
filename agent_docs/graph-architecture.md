@@ -19,12 +19,12 @@ The graph system uses a pipeline architecture:
 
 ## Supported Diagram Types
 
-| Type              | Parser File                  | Definition Type              |
-|-------------------|------------------------------|------------------------------|
-| Flowchart         | `mermaid-flowchart.ts`       | `GraphDefinition`            |
-| Sequence Diagram  | `mermaid-sequence.ts`        | `SequenceDefinition`         |
-| Class Diagram     | `mermaid-class.ts`           | `ClassDiagramDefinition`     |
-| JSON Graph        | `json.ts`                    | `GraphDefinition`            |
+| Type             | Parser File            | Definition Type          |
+|------------------|------------------------|--------------------------|
+| Flowchart        | `mermaid-flowchart.ts` | `GraphDefinition`        |
+| Sequence Diagram | `mermaid-sequence.ts`  | `SequenceDefinition`     |
+| Class Diagram    | `mermaid-class.ts`     | `ClassDiagramDefinition` |
+| JSON Graph       | `json.ts`              | `GraphDefinition`        |
 
 ---
 
@@ -301,14 +301,14 @@ The `<connector>` component draws lines between elements by ID.
 
 ### Props
 
-| Prop      | Type                        | Description                      |
-|-----------|-----------------------------|----------------------------------|
-| `from`    | string                      | Source element ID                |
-| `to`      | string                      | Target element ID                |
-| `routing` | `'direct'` \| `'horizontal'`| Line routing strategy            |
-| `arrow`   | `'none'` \| `'start'` \| `'end'` \| `'both'` | Arrow placement |
-| `label`   | string                      | Text label on the line           |
-| `style`   | Style                       | Line style (`line-style: dashed`) |
+| Prop      | Type                                         | Description                       |
+|-----------|----------------------------------------------|-----------------------------------|
+| `from`    | string                                       | Source element ID                 |
+| `to`      | string                                       | Target element ID                 |
+| `routing` | `'direct'` \| `'horizontal'`                 | Line routing strategy             |
+| `arrow`   | `'none'` \| `'start'` \| `'end'` \| `'both'` | Arrow placement                   |
+| `label`   | string                                       | Text label on the line            |
+| `style`   | Style                                        | Line style (`line-style: dashed`) |
 
 ### Rendering
 
@@ -346,20 +346,20 @@ Graph elements are rendered as subtrees:
 
 ## Files
 
-| File                                              | Purpose                            |
-|---------------------------------------------------|------------------------------------|
-| `src/components/graph/graph.ts`                   | GraphElement component             |
-| `src/components/graph/types.ts`                   | Type definitions                   |
-| `src/components/graph/layout.ts`                  | Level-based layout algorithm       |
-| `src/components/graph/graph-to-melker.ts`         | Definition to Melker XML converter |
-| `src/components/graph/parsers/mod.ts`             | Parser registry and factory        |
-| `src/components/graph/parsers/types.ts`           | Parser interfaces                  |
-| `src/components/graph/parsers/mermaid-flowchart.ts` | Flowchart parser                 |
-| `src/components/graph/parsers/mermaid-sequence.ts` | Sequence diagram parser           |
-| `src/components/graph/parsers/mermaid-class.ts`   | Class diagram parser               |
-| `src/components/graph/parsers/json.ts`            | JSON graph parser                  |
-| `src/components/connector.ts`                     | Connector component                |
-| `src/components/connector-utils.ts`               | Line drawing utilities             |
+| File                                               | Purpose                            |
+|----------------------------------------------------|------------------------------------|
+| `src/components/graph/graph.ts`                    | GraphElement component             |
+| `src/components/graph/types.ts`                    | Type definitions                   |
+| `src/components/graph/layout.ts`                   | Level-based layout algorithm       |
+| `src/components/graph/graph-to-melker.ts`          | Definition to Melker XML converter |
+| `src/components/graph/parsers/mod.ts`              | Parser registry and factory        |
+| `src/components/graph/parsers/types.ts`            | Parser interfaces                  |
+| `src/components/graph/parsers/mermaid-flowchart.ts` | Flowchart parser                  |
+| `src/components/graph/parsers/mermaid-sequence.ts` | Sequence diagram parser            |
+| `src/components/graph/parsers/mermaid-class.ts`    | Class diagram parser               |
+| `src/components/graph/parsers/json.ts`             | JSON graph parser                  |
+| `src/components/connector.ts`                      | Connector component                |
+| `src/components/connector-utils.ts`                | Line drawing utilities             |
 
 ---
 

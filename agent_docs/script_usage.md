@@ -101,13 +101,13 @@ $melker: {
 
 ## Other Global Identifiers
 
-| Identifier | Description |
-|------------|-------------|
-| `$melker` | Runtime context object |
-| `$app` | Alias for `$melker.exports` (user-defined functions) |
-| `$melker.url` | Source file URL (e.g. `file:///path/to/app.melker`) |
-| `$melker.dirname` | Directory path (e.g. `/path/to`) |
-| `argv` | Command line arguments (`string[]`) |
+| Identifier        | Description                                          |
+|-------------------|------------------------------------------------------|
+| `$melker`         | Runtime context object                               |
+| `$app`            | Alias for `$melker.exports` (user-defined functions) |
+| `$melker.url`     | Source file URL (e.g. `file:///path/to/app.melker`)  |
+| `$melker.dirname` | Directory path (e.g. `/path/to`)                     |
+| `argv`            | Command line arguments (`string[]`)                  |
 
 ## Exported Script Variables
 

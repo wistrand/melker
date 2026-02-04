@@ -73,18 +73,18 @@ Priority: default < policy < file < env < cli
 
 Each property in schema.json can have:
 
-| Field | Purpose |
-|-------|---------|
-| `type` | JSON Schema type: string, boolean, integer, number, object |
-| `default` | Default value if not specified |
-| `env` | Env var name that can override |
-| `envInverted` | Env var is negative (e.g., MELKER_NO_X means X=false) |
-| `envFormat` | How to parse complex env values (e.g., "name: value; name2: value2") |
-| `flag` | CLI flag name (e.g., "--theme") |
-| `flagInverted` | Flag is negative (e.g., --no-alt-screen means alternateScreen=false) |
-| `enum` | Allowed values |
-| `minimum/maximum` | Numeric bounds |
-| `description` | Documentation |
+| Field             | Purpose                                                            |
+|-------------------|--------------------------------------------------------------------|
+| `type`            | JSON Schema type: string, boolean, integer, number, object         |
+| `default`         | Default value if not specified                                     |
+| `env`             | Env var name that can override                                     |
+| `envInverted`     | Env var is negative (e.g., MELKER_NO_X means X=false)              |
+| `envFormat`       | How to parse complex env values (e.g., "name: value; name2: value2") |
+| `flag`            | CLI flag name (e.g., "--theme")                                    |
+| `flagInverted`    | Flag is negative (e.g., --no-alt-screen means alternateScreen=false) |
+| `enum`            | Allowed values                                                     |
+| `minimum/maximum` | Numeric bounds                                                     |
+| `description`     | Documentation                                                      |
 
 ## Config Categories
 
@@ -303,16 +303,16 @@ Apps can define a schema for custom config keys to enable **environment variable
 
 ### Config Schema Properties
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `type` | string | Value type: `string`, `boolean`, `integer`, `number` |
-| `default` | any | Default value (if not in config) |
-| `min` | number | Minimum value (for number/integer, enables slider in DevTools) |
-| `max` | number | Maximum value (for number/integer, enables slider in DevTools) |
-| `step` | number | Step size for slider (auto: 1 for integer) |
-| `env` | string | Environment variable name for override |
-| `envInverted` | boolean | If true, env presence means opposite value |
-| `description` | string | Documentation |
+| Field         | Type    | Description                                                        |
+|---------------|---------|--------------------------------------------------------------------|
+| `type`        | string  | Value type: `string`, `boolean`, `integer`, `number`               |
+| `default`     | any     | Default value (if not in config)                                   |
+| `min`         | number  | Minimum value (for number/integer, enables slider in DevTools)     |
+| `max`         | number  | Maximum value (for number/integer, enables slider in DevTools)     |
+| `step`        | number  | Step size for slider (auto: 1 for integer)                         |
+| `env`         | string  | Environment variable name for override                             |
+| `envInverted` | boolean | If true, env presence means opposite value                         |
+| `description` | string  | Documentation                                                      |
 
 When `min` and `max` are both defined for a numeric type, the DevTools Edit Config tab displays a slider instead of a text input.
 

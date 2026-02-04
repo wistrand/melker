@@ -87,39 +87,39 @@ melker --watch hello.melker
 
 ## Script Types
 
-| Attribute        | When                   | Use Case                              |
-|------------------|------------------------|---------------------------------------|
-| (none)           | Before render          | Define exports, setup state           |
-| `async="init"`   | Before render (async)  | Fetch data, async setup               |
-| `async="ready"`  | After first render     | Access rendered elements, start timers |
+| Attribute      | When                  | Use Case                               |
+|----------------|-----------------------|----------------------------------------|
+| (none)         | Before render         | Define exports, setup state            |
+| `async="init"` | Before render (async) | Fetch data, async setup                |
+| `async="ready"` | After first render   | Access rendered elements, start timers |
 
 ## Common Components
 
-| Type                  | Purpose              |
-|-----------------------|----------------------|
-| `container`           | Flexbox layout       |
-| `text`                | Static text          |
-| `input`               | Single-line input    |
-| `button`              | Clickable action     |
-| `checkbox` / `radio`  | Toggle/select        |
-| `dialog`              | Modal overlay        |
-| `tabs` / `tab`        | Tabbed panels        |
-| `combobox` / `select` | Dropdowns            |
-| `data-table`          | Sortable table       |
-| `canvas`              | Pixel graphics       |
-| `graph`               | Mermaid diagrams     |
+| Type                  | Purpose                |
+|-----------------------|------------------------|
+| `container`           | Flexbox layout         |
+| `text`                | Static text            |
+| `input`               | Single-line input      |
+| `button`              | Clickable action       |
+| `checkbox` / `radio`  | Toggle/select          |
+| `dialog`              | Modal overlay          |
+| `tabs` / `tab`        | Tabbed panels          |
+| `combobox` / `select` | Dropdowns              |
+| `data-table`          | Sortable table         |
+| `canvas`              | Pixel graphics         |
+| `graph`               | Mermaid diagrams       |
 | `connector`           | Lines between elements |
 
 ## Runtime API (`$melker`)
 
-| Method                         | Purpose                    |
-|--------------------------------|----------------------------|
-| `getElementById(id)`           | Get element by ID          |
-| `render()`                     | Trigger re-render          |
-| `alert(message)`               | Modal dialog               |
-| `toast.show(message, options?)`| Non-modal notification     |
-| `toast.dismissAll()`           | Clear all toasts           |
-| `exit()`                       | Exit application           |
+| Method                          | Purpose                |
+|---------------------------------|------------------------|
+| `getElementById(id)`            | Get element by ID      |
+| `render()`                      | Trigger re-render      |
+| `alert(message)`                | Modal dialog           |
+| `toast.show(message, options?)` | Non-modal notification |
+| `toast.dismissAll()`            | Clear all toasts       |
+| `exit()`                        | Exit application       |
 
 ## Permissions (for file/network access)
 

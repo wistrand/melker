@@ -27,16 +27,16 @@ The `<spinner>` component displays animated loading indicators with optional tex
 
 ## Variants
 
-| Variant   | Frames             | Description                    |
-|-----------|--------------------|--------------------------------|
-| `none`    | (empty)            | Text only, no spinner char     |
-| `line`    | `\|/-\`            | Classic ASCII spinner          |
-| `dots`    | `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`       | Braille dots rotation          |
-| `braille` | `⣷⣯⣟⡿⢿⣻⣽⣾`         | Braille circle rotation        |
-| `arc`     | `◜◠◝◞◡◟`           | Arc segments rotation          |
-| `bounce`  | `⠁⠂⠄⠂`             | Vertical bouncing dot          |
-| `flower`  | `·✻✽✶✳✢`           | Decorative flower animation    |
-| `pulse`   | `·•●•`             | Pulsating dot (small to large) |
+| Variant   | Frames       | Description                    |
+|-----------|--------------|--------------------------------|
+| `none`    | (empty)      | Text only, no spinner char     |
+| `line`    | `\|/-\`      | Classic ASCII spinner          |
+| `dots`    | `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` | Braille dots rotation          |
+| `braille` | `⣷⣯⣟⡿⢿⣻⣽⣾`   | Braille circle rotation        |
+| `arc`     | `◜◠◝◞◡◟`     | Arc segments rotation          |
+| `bounce`  | `⠁⠂⠄⠂`       | Vertical bouncing dot          |
+| `flower`  | `·✻✽✶✳✢`     | Decorative flower animation    |
+| `pulse`   | `·•●•`       | Pulsating dot (small to large) |
 
 ## Verb Themes
 
@@ -53,13 +53,13 @@ The `<spinner>` component displays animated loading indicators with optional tex
 
 ### Poetic Themes
 
-| Theme        | Words (8 each)                                                                               |
-|--------------|----------------------------------------------------------------------------------------------|
-| `dreaming`   | Dreaming, Drifting, Wandering, Imagining, Musing, Floating, Reverie, Daydreaming             |
-| `conjuring`  | Conjuring, Summoning, Manifesting, Invoking, Channeling, Enchanting, Spellcasting, Incanting |
-| `brewing`    | Brewing, Simmering, Steeping, Distilling, Fermenting, Infusing, Concocting, Alchemizing      |
-| `weaving`    | Weaving, Spinning, Threading, Stitching, Knitting, Braiding, Intertwining, Entwining         |
-| `unfolding`  | Unfolding, Blossoming, Awakening, Emerging, Blooming, Unfurling, Revealing, Flourishing      |
+| Theme        | Words (8 each)                                                                                      |
+|--------------|-----------------------------------------------------------------------------------------------------|
+| `dreaming`   | Dreaming, Drifting, Wandering, Imagining, Musing, Floating, Reverie, Daydreaming                    |
+| `conjuring`  | Conjuring, Summoning, Manifesting, Invoking, Channeling, Enchanting, Spellcasting, Incanting        |
+| `brewing`    | Brewing, Simmering, Steeping, Distilling, Fermenting, Infusing, Concocting, Alchemizing             |
+| `weaving`    | Weaving, Spinning, Threading, Stitching, Knitting, Braiding, Intertwining, Entwining                |
+| `unfolding`  | Unfolding, Blossoming, Awakening, Emerging, Blooming, Unfurling, Revealing, Flourishing             |
 | `stargazing` | Stargazing, Moonwatching, Skydreaming, Cloudreading, Stardrifting, Constellation, Celestial, Cosmic |
 
 ---
@@ -197,9 +197,9 @@ spinner.props.verbs = 'saving';  // Change verb theme
 
 ## Files
 
-| File                               | Purpose                  |
-|------------------------------------|--------------------------|
-| `src/components/spinner.ts`        | Component implementation |
-| `src/components/mod.ts`            | Export                   |
-| `src/types.ts`                     | Type registration        |
-| `examples/basics/spinner.melker`   | Example showcase         |
+| File                             | Purpose                  |
+|----------------------------------|--------------------------|
+| `src/components/spinner.ts`      | Component implementation |
+| `src/components/mod.ts`          | Export                   |
+| `src/types.ts`                   | Type registration        |
+| `examples/basics/spinner.melker` | Example showcase         |

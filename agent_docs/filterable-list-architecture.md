@@ -85,12 +85,12 @@ abstract class FilterableListCore extends Element implements Focusable {
 
 Four matching algorithms:
 
-| Mode       | Function         | Behavior                                      |
-|------------|------------------|-----------------------------------------------|
-| `fuzzy`    | `fuzzyMatch()`   | Characters in order, scores consecutive matches |
-| `prefix`   | `prefixMatch()`  | Text starts with pattern                      |
-| `contains` | `containsMatch()` | Text includes pattern                        |
-| `exact`    | `exactMatch()`   | Text equals pattern                           |
+| Mode       | Function          | Behavior                                        |
+|------------|-------------------|-------------------------------------------------|
+| `fuzzy`    | `fuzzyMatch()`    | Characters in order, scores consecutive matches |
+| `prefix`   | `prefixMatch()`   | Text starts with pattern                        |
+| `contains` | `containsMatch()` | Text includes pattern                           |
+| `exact`    | `exactMatch()`    | Text equals pattern                             |
 
 ```typescript
 interface FuzzyMatchResult {
@@ -317,17 +317,17 @@ This prevents Enter/Space from being intercepted by Clickable handling.
 
 ### Key Bindings
 
-| Key         | Closed | Open                     |
-|-------------|--------|--------------------------|
-| ArrowDown   | Open   | Focus next               |
-| ArrowUp     | Open   | Focus prev               |
-| Enter       | Open   | Select focused           |
-| Space       | Open   | (combobox: type space)   |
-| Escape      | -      | Close                    |
-| Tab         | -      | Close, move focus        |
-| Home        | -      | Focus first              |
-| End         | -      | Focus last               |
-| PageUp/Down | -      | Scroll by page           |
+| Key         | Closed | Open                   |
+|-------------|--------|------------------------|
+| ArrowDown   | Open   | Focus next             |
+| ArrowUp     | Open   | Focus prev             |
+| Enter       | Open   | Select focused         |
+| Space       | Open   | (combobox: type space) |
+| Escape      | -      | Close                  |
+| Tab         | -      | Close, move focus      |
+| Home        | -      | Focus first            |
+| End         | -      | Focus last             |
+| PageUp/Down | -      | Scroll by page         |
 
 ## Mouse Click Handling
 
@@ -423,14 +423,14 @@ getAllOptions(): OptionData[] {
 
 ## Example Files
 
-| File                                              | Description                  |
-|---------------------------------------------------|------------------------------|
-| `examples/components/combobox.melker`             | Combobox with full features  |
-| `examples/components/select.melker`               | Select dropdown              |
-| `examples/components/autocomplete.melker`         | Async search                 |
-| `examples/components/command-palette.melker`      | Command palette              |
-| `examples/_internal/combobox-simple.melker`       | Basic combobox (minimal)     |
-| `examples/_internal/select-simple.melker`         | Basic select (minimal)       |
+| File                                               | Description                 |
+|----------------------------------------------------|-----------------------------|
+| `examples/components/combobox.melker`              | Combobox with full features |
+| `examples/components/select.melker`                | Select dropdown             |
+| `examples/components/autocomplete.melker`          | Async search                |
+| `examples/components/command-palette.melker`       | Command palette             |
+| `examples/_internal/combobox-simple.melker`        | Basic combobox (minimal)    |
+| `examples/_internal/select-simple.melker`          | Basic select (minimal)      |
 | `examples/_internal/command-palette-simple.melker` | Basic palette (minimal)     |
 
 ## See Also

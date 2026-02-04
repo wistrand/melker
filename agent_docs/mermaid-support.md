@@ -63,12 +63,12 @@ flowchart LR
 
 ### Graph Component Props
 
-| Prop         | Type                     | Default     | Description                          |
-|--------------|--------------------------|-------------|--------------------------------------|
-| `type`       | `'mermaid'` \| `'json'`  | auto-detect | Parser type                          |
-| `src`        | string                   | -           | Load content from URL                |
-| `text`       | string                   | -           | Inline content (alternative to children) |
-| `style`      | Style                    | -           | Use `overflow: scroll` for scrolling |
+| Prop    | Type                    | Default     | Description                              |
+|---------|-------------------------|-------------|------------------------------------------|
+| `type`  | `'mermaid'` \| `'json'` | auto-detect | Parser type                              |
+| `src`   | string                  | -           | Load content from URL                    |
+| `text`  | string                  | -           | Inline content (alternative to children) |
+| `style` | Style                   | -           | Use `overflow: scroll` for scrolling     |
 
 ### Examples
 
@@ -105,11 +105,11 @@ classDiagram
 
 ## Supported Diagram Types
 
-| Type              | Description                         |
-|-------------------|-------------------------------------|
-| `flowchart`       | Flow diagrams with nodes and edges  |
-| `sequenceDiagram` | Sequence/interaction diagrams       |
-| `classDiagram`    | Class/entity relationship diagrams  |
+| Type              | Description                        |
+|-------------------|------------------------------------|
+| `flowchart`       | Flow diagrams with nodes and edges |
+| `sequenceDiagram` | Sequence/interaction diagrams      |
+| `classDiagram`    | Class/entity relationship diagrams |
 
 ### Flowchart Example
 
@@ -166,12 +166,12 @@ Mermaid diagrams are rendered as **subtree elements** - they are:
 
 ### Key Components
 
-| Component                   | File                               | Purpose                           |
-|-----------------------------|------------------------------------|-----------------------------------|
-| `MarkdownElement`           | `src/components/markdown.ts`       | Parses and caches mermaid blocks  |
-| `GraphElement`              | `src/components/graph/graph.ts`    | Renders mermaid as Melker elements |
-| `renderElementSubtree()`    | `src/rendering.ts`                 | Renders nested element trees      |
-| `_hitTestSubtreeElements()` | `src/hit-test.ts`                  | Hit testing for subtree elements  |
+| Component                   | File                             | Purpose                            |
+|-----------------------------|----------------------------------|------------------------------------|
+| `MarkdownElement`           | `src/components/markdown.ts`     | Parses and caches mermaid blocks   |
+| `GraphElement`              | `src/components/graph/graph.ts`  | Renders mermaid as Melker elements |
+| `renderElementSubtree()`    | `src/rendering.ts`               | Renders nested element trees       |
+| `_hitTestSubtreeElements()` | `src/hit-test.ts`                | Hit testing for subtree elements   |
 
 ### Element Discovery
 
@@ -219,18 +219,18 @@ Subtree element bounds are registered via `registerElementBounds()` in the rende
 
 ## Files
 
-| File                                               | Purpose                               |
-|----------------------------------------------------|---------------------------------------|
-| `src/components/markdown.ts`                       | Mermaid block detection and caching   |
-| `src/components/graph/graph.ts`                    | Graph element and mermaid parser      |
-| `src/components/graph/parsers/mermaid-flowchart.ts`| Mermaid flowchart parser              |
-| `src/components/graph/parsers/mermaid-sequence.ts` | Mermaid sequence diagram parser       |
-| `src/components/graph/parsers/mermaid-class.ts`    | Mermaid class diagram parser          |
-| `src/components/graph/graph-to-melker.ts`          | Converts graph data to Melker elements |
-| `src/rendering.ts`                                 | `renderElementSubtree()` helper       |
-| `src/hit-test.ts`                                  | Subtree hit testing                   |
-| `src/focus.ts`                                     | Subtree focus management              |
-| `src/document.ts`                                  | Subtree element search                |
+| File                                                | Purpose                                |
+|-----------------------------------------------------|----------------------------------------|
+| `src/components/markdown.ts`                        | Mermaid block detection and caching    |
+| `src/components/graph/graph.ts`                     | Graph element and mermaid parser       |
+| `src/components/graph/parsers/mermaid-flowchart.ts` | Mermaid flowchart parser               |
+| `src/components/graph/parsers/mermaid-sequence.ts`  | Mermaid sequence diagram parser        |
+| `src/components/graph/parsers/mermaid-class.ts`     | Mermaid class diagram parser           |
+| `src/components/graph/graph-to-melker.ts`           | Converts graph data to Melker elements |
+| `src/rendering.ts`                                  | `renderElementSubtree()` helper        |
+| `src/hit-test.ts`                                   | Subtree hit testing                    |
+| `src/focus.ts`                                      | Subtree focus management               |
+| `src/document.ts`                                   | Subtree element search                 |
 
 ---
 

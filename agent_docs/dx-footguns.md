@@ -230,31 +230,31 @@ Container, text, and data-table ignore width/height props - use style:
 
 ### Percentage Support Varies by Component
 
-| Component | `"%"` support | `"fill"` support | Where |
-|-----------|--------------|------------------|-------|
-| img | ✓ | ✓ | props |
-| dialog | ✓ | ✓ | props |
-| container | ✓ | ✓ | style |
-| text | ✓ | ✓ | style |
-| canvas/video | ✗ | ✗ | N/A (fixed buffer) |
-| progress | ✓ | ✓ | props only |
-| slider | ✓ | ✓ | props or style |
-| select/combobox | ✓ | ✓ | props or style |
+| Component       | `"%"` support | `"fill"` support | Where              |
+|-----------------|---------------|------------------|--------------------|
+| img             | Yes           | Yes              | props              |
+| dialog          | Yes           | Yes              | props              |
+| container       | Yes           | Yes              | style              |
+| text            | Yes           | Yes              | style              |
+| canvas/video    | No            | No               | N/A (fixed buffer) |
+| progress        | Yes           | Yes              | props only         |
+| slider          | Yes           | Yes              | props or style     |
+| select/combobox | Yes           | Yes              | props or style     |
 
 ### Quick Reference: What to Use
 
-| Component | Fixed size | Responsive/fill |
-|-----------|-----------|-----------------|
-| canvas | `width={30} height={20}` | N/A (buffer must be fixed) |
-| img | `width={30} height={20}` | `width="fill"` or `width="100%"` |
-| video | `width={30} height={20}` | N/A |
-| progress | `width={20}` | `width="50%"` or `width="fill"` |
-| dialog | `width={60} height={20}` | `width="80%"` or `width="fill"` |
-| slider | `width={20}` | `width="50%"` or `width="fill"` |
-| select | `width={20}` | `width="50%"` or `width="fill"` |
-| combobox | `width={30}` | `width="50%"` or `width="fill"` |
-| container | `style="width: 30;"` | `style="width: fill;"` |
-| text | `style="width: 40;"` | `style="width: fill;"` |
+| Component | Fixed size               | Responsive/fill                    |
+|-----------|--------------------------|------------------------------------|
+| canvas    | `width={30} height={20}` | N/A (buffer must be fixed)         |
+| img       | `width={30} height={20}` | `width="fill"` or `width="100%"`   |
+| video     | `width={30} height={20}` | N/A                                |
+| progress  | `width={20}`             | `width="50%"` or `width="fill"`    |
+| dialog    | `width={60} height={20}` | `width="80%"` or `width="fill"`    |
+| slider    | `width={20}`             | `width="50%"` or `width="fill"`    |
+| select    | `width={20}`             | `width="50%"` or `width="fill"`    |
+| combobox  | `width={30}`             | `width="50%"` or `width="fill"`    |
+| container | `style="width: 30;"`     | `style="width: fill;"`             |
+| text      | `style="width: 40;"`     | `style="width: fill;"`             |
 
 ## 7. Avoid Specifying Colors
 

@@ -48,13 +48,13 @@ logger.error('Error message');
 
 ### Log Levels
 
-| Level   | Use For                                  |
-|---------|------------------------------------------|
-| `DEBUG` | Detailed debugging info, variable dumps  |
-| `INFO`  | General operational messages             |
-| `WARN`  | Potential issues, recoverable errors     |
-| `ERROR` | Errors that need attention               |
-| `FATAL` | Critical errors, application termination |
+| Level   | Use For                                   |
+|---------|-------------------------------------------|
+| `DEBUG` | Detailed debugging info, variable dumps   |
+| `INFO`  | General operational messages              |
+| `WARN`  | Potential issues, recoverable errors      |
+| `ERROR` | Errors that need attention                |
+| `FATAL` | Critical errors, application termination  |
 
 ### Configuration
 
@@ -127,22 +127,22 @@ Press `F6` to toggle visibility (also: `F10`, `F11`, `Shift+F12`).
 
 ### Displayed Metrics
 
-| Metric     | Description                                |
-|------------|--------------------------------------------|
-| Max FPS    | Theoretical max FPS (1000 / avgRenderTime) |
-| Renders/s  | Actual renders per second (activity rate)  |
-| Render     | Last render time (ms)                      |
-| Render avg | Average render time over 60 frames         |
-| Layout     | Last layout time (ms)                      |
-| Layout avg | Average layout time over 60 frames         |
-| Input lat  | Input-to-render latency (ms)               |
-| Input avg  | Average input latency over 60 samples      |
-| Breakdown  | Latency breakdown (h+w+l+b+a)              |
-| Nodes      | Number of layout nodes                     |
-| Cells      | Changed/total buffer cells                 |
-| Memory     | Estimated memory usage                     |
-| Renders    | Total render count                         |
-| Errors     | Component error count                      |
+| Metric     | Description                                 |
+|------------|---------------------------------------------|
+| Max FPS    | Theoretical max FPS (1000 / avgRenderTime)  |
+| Renders/s  | Actual renders per second (activity rate)   |
+| Render     | Last render time (ms)                       |
+| Render avg | Average render time over 60 frames          |
+| Layout     | Last layout time (ms)                       |
+| Layout avg | Average layout time over 60 frames          |
+| Input lat  | Input-to-render latency (ms)                |
+| Input avg  | Average input latency over 60 samples       |
+| Breakdown  | Latency breakdown (h+w+l+b+a)               |
+| Nodes      | Number of layout nodes                      |
+| Cells      | Changed/total buffer cells                  |
+| Memory     | Estimated memory usage                      |
+| Renders    | Total render count                          |
+| Errors     | Component error count                       |
 
 ### Input Latency Breakdown
 
@@ -201,15 +201,15 @@ Access at: `http://localhost:8080` (web UI) or `ws://localhost:8080` (WebSocket)
 
 Send JSON messages via WebSocket:
 
-| Command               | Purpose                                 |
-|-----------------------|-----------------------------------------|
-| `get-engine-state`    | Get engine status, element count, focus |
-| `get-buffer`          | Get current buffer snapshot             |
-| `get-document-tree`   | Get element tree structure              |
-| `inject-event`        | Inject keyboard/mouse events            |
-| `trigger-render`      | Force a re-render                       |
-| `get-headless-status` | Headless mode info                      |
-| `get-terminal-output` | Get captured terminal output            |
+| Command               | Purpose                                  |
+|-----------------------|------------------------------------------|
+| `get-engine-state`    | Get engine status, element count, focus  |
+| `get-buffer`          | Get current buffer snapshot              |
+| `get-document-tree`   | Get element tree structure               |
+| `inject-event`        | Inject keyboard/mouse events             |
+| `trigger-render`      | Force a re-render                        |
+| `get-headless-status` | Headless mode info                       |
+| `get-terminal-output` | Get captured terminal output             |
 
 ### Event Injection Examples
 
@@ -291,26 +291,26 @@ MELKER_THEME=bw-std ./melker.ts --stdout --trust app.melker
 
 **CLI Flags:**
 
-| Flag               | Description                                            |
-|--------------------|--------------------------------------------------------|
-| `--stdout`         | Enable stdout mode                                     |
-| `--stdout-width`   | Output width in columns (default: terminal width)      |
-| `--stdout-height`  | Output height in rows (default: terminal height)       |
-| `--stdout-timeout` | Wait time in ms before output (default: 500)           |
-| `--stdout-trim`    | Trim output: `none`, `right`, `bottom`, `both`         |
-| `--color`          | ANSI color output: `auto`, `always`, `never`           |
-| `--interactive`    | Force TUI mode even when piped                         |
+| Flag               | Description                                       |
+|--------------------|---------------------------------------------------|
+| `--stdout`         | Enable stdout mode                                |
+| `--stdout-width`   | Output width in columns (default: terminal width) |
+| `--stdout-height`  | Output height in rows (default: terminal height)  |
+| `--stdout-timeout` | Wait time in ms before output (default: 500)      |
+| `--stdout-trim`    | Trim output: `none`, `right`, `bottom`, `both`    |
+| `--color`          | ANSI color output: `auto`, `always`, `never`      |
+| `--interactive`    | Force TUI mode even when piped                    |
 
 **Environment Variables:**
 
-| Variable                | Description                                    |
-|-------------------------|------------------------------------------------|
-| `MELKER_STDOUT_WIDTH`   | Output width in columns                        |
-| `MELKER_STDOUT_HEIGHT`  | Output height in rows                          |
-| `MELKER_STDOUT_TIMEOUT` | Wait time in ms before output                  |
-| `MELKER_STDOUT_TRIM`    | Trim output: `none`, `right`, `bottom`, `both` |
-| `MELKER_STDOUT_COLOR`   | ANSI color: `auto`, `always`, `never`          |
-| `MELKER_THEME`          | Use `bw-std` for black and white output        |
+| Variable                | Description                                     |
+|-------------------------|-------------------------------------------------|
+| `MELKER_STDOUT_WIDTH`   | Output width in columns                         |
+| `MELKER_STDOUT_HEIGHT`  | Output height in rows                           |
+| `MELKER_STDOUT_TIMEOUT` | Wait time in ms before output                   |
+| `MELKER_STDOUT_TRIM`    | Trim output: `none`, `right`, `bottom`, `both`  |
+| `MELKER_STDOUT_COLOR`   | ANSI color: `auto`, `always`, `never`           |
+| `MELKER_THEME`          | Use `bw-std` for black and white output         |
 
 **Color modes:**
 - `--color=auto` (default): Strip ANSI when piped (not a TTY), keep when TTY
@@ -375,17 +375,17 @@ Press **F12** at runtime to open the Dev Tools dialog.
 
 ### Tabs
 
-| Tab      | Description                                                         |
-|----------|---------------------------------------------------------------------|
-| Help     | App help text (if provided)                                         |
-| Source   | Original `.melker` source or converted content for `.md` files      |
-| Policy   | App permissions and Deno flags                                      |
-| Markdown | Original markdown (for `.md` files only)                            |
-| System   | Build info, scripts, bundle details                                 |
-| Config   | Current configuration with sources (schema + app-defined)           |
-| Inspect  | Live document tree view with Refresh button                         |
-| Log      | Recent log entries in data-table with sorting, shows log file path  |
-| Actions  | Performance Monitor, Exit Application                               |
+| Tab      | Description                                                        |
+|----------|--------------------------------------------------------------------|
+| Help     | App help text (if provided)                                        |
+| Source   | Original `.melker` source or converted content for `.md` files     |
+| Policy   | App permissions and Deno flags                                     |
+| Markdown | Original markdown (for `.md` files only)                           |
+| System   | Build info, scripts, bundle details                                |
+| Config   | Current configuration with sources (schema + app-defined)          |
+| Inspect  | Live document tree view with Refresh button                        |
+| Log      | Recent log entries in data-table with sorting, shows log file path |
+| Actions  | Performance Monitor, Exit Application                              |
 
 ### Features
 
@@ -437,11 +437,11 @@ Then open `chrome://inspect` in Chrome and click "inspect" on the Deno target.
 
 ### Supported Flags
 
-| Flag             | Behavior                              |
-|------------------|---------------------------------------|
-| `--inspect`      | Enable inspector, execute immediately |
-| `--inspect-wait` | Enable inspector, wait for connection |
-| `--inspect-brk`  | Enable inspector, break at first line |
+| Flag             | Behavior                               |
+|------------------|----------------------------------------|
+| `--inspect`      | Enable inspector, execute immediately  |
+| `--inspect-wait` | Enable inspector, wait for connection  |
+| `--inspect-brk`  | Enable inspector, break at first line  |
 
 ### Known Issues with Profiling
 
@@ -455,13 +455,13 @@ When using Chrome DevTools Performance profiling, rendering may appear corrupted
 
 ## Key Files
 
-| File                  | Purpose                               |
-|-----------------------|---------------------------------------|
-| `src/logging.ts`      | Logger class, getLogger(), log levels |
-| `src/headless.ts`     | HeadlessTerminal, HeadlessManager     |
-| `src/stdout.ts`       | Stdout mode, bufferToStdout()         |
-| `src/debug-server.ts` | MelkerDebugServer, WebSocket API      |
-| `src/dev-tools.ts`    | DevToolsManager, F12 overlay          |
+| File                  | Purpose                                |
+|-----------------------|----------------------------------------|
+| `src/logging.ts`      | Logger class, getLogger(), log levels  |
+| `src/headless.ts`     | HeadlessTerminal, HeadlessManager      |
+| `src/stdout.ts`       | Stdout mode, bufferToStdout()          |
+| `src/debug-server.ts` | MelkerDebugServer, WebSocket API       |
+| `src/dev-tools.ts`    | DevToolsManager, F12 overlay           |
 
 ## See Also
 

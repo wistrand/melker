@@ -73,16 +73,16 @@ export interface DataBarsProps extends BaseProps {
 
 These are set via `style=""` attribute, not direct props:
 
-| Style Prop     | Type                            | Default        | Description                                        |
-|----------------|---------------------------------|----------------|----------------------------------------------------|
-| `orientation`  | `'horizontal'` \| `'vertical'`  | `'horizontal'` | Bar direction                                      |
-| `barWidth`     | `number`                        | `1`            | Bar thickness in characters                        |
-| `gap`          | `number`                        | `1`            | Gap between entries                                |
-| `barStyle`     | `'solid'` \| `'led'`            | `'solid'`      | Bar rendering style                                |
-| `ledWidth`     | `number`                        | `3` (h) / `1` (v) | LED segment width in characters                 |
-| `highValue`    | `number`                        | `80`           | Percentage threshold for warning color (LED mode)  |
-| `ledColorLow`  | `string`                        | `'yellow'`     | Color below threshold (LED mode)                   |
-| `ledColorHigh` | `string`                        | `'red'`        | Color at/above threshold (LED mode)                |
+| Style Prop     | Type                           | Default           | Description                                       |
+|----------------|--------------------------------|-------------------|---------------------------------------------------|
+| `orientation`  | `'horizontal'` \| `'vertical'` | `'horizontal'`    | Bar direction                                     |
+| `barWidth`     | `number`                       | `1`               | Bar thickness in characters                       |
+| `gap`          | `number`                       | `1`               | Gap between entries                               |
+| `barStyle`     | `'solid'` \| `'led'`           | `'solid'`         | Bar rendering style                               |
+| `ledWidth`     | `number`                       | `3` (h) / `1` (v) | LED segment width in characters                   |
+| `highValue`    | `number`                       | `80`              | Percentage threshold for warning color (LED mode) |
+| `ledColorLow`  | `string`                       | `'yellow'`        | Color below threshold (LED mode)                  |
+| `ledColorHigh` | `string`                       | `'red'`           | Color at/above threshold (LED mode)               |
 
 ```xml
 <data-bars style="orientation: vertical; height: 10; gap: 0" ... />

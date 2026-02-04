@@ -197,6 +197,10 @@ export interface BaseProps extends LayoutProps, EventHandlers, Record<string, an
   style?: Style;
   tabIndex?: number;
   disabled?: boolean;
+  /** Static tooltip text (markdown supported) */
+  tooltip?: string;
+  /** Dynamic tooltip handler - receives TooltipEvent, returns markdown string or undefined to suppress */
+  onTooltip?: (event: any) => string | undefined;
 }
 
 

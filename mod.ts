@@ -39,6 +39,9 @@ export * from './src/theme.ts';
 // Export toast notifications
 export * from './src/toast/mod.ts';
 
+// Export tooltip system
+export * from './src/tooltip/mod.ts';
+
 // Export stylesheet system
 export * from './src/stylesheet.ts';
 

@@ -1,6 +1,8 @@
 # Melker Benchmark Architecture
 
-Benchmarking infrastructure for Melker subsystems and components. Currently includes **17 benchmark suites** with **200+ individual benchmarks**.
+Benchmarking infrastructure for Melker subsystems and components. Currently includes **17 benchmark suites** with **300+ individual benchmarks**.
+
+**Latest report:** [benchmark-report-2026-02-04.md](../benchmarks/results/benchmark-report-2026-02-04.md)
 
 ---
 
@@ -29,8 +31,8 @@ View results using the benchmark-viewer app:
 
 Features:
 - Summary table with median/p95/p99, targets, pass/fail status
-- Horizontal bar chart comparing median times
 - Heatmap showing percentile distribution
+- Key findings and notes display
 - Filter by category
 - Load JSON result files via file browser dialog
 

@@ -52,10 +52,22 @@
     // Update all views with current data
     function updateViews() {
       updateSummaryTable();
-      updateCategoryBars();
       updateHistoryHeatmap();
       updateCategorySelect();
       updateFindings();
+    }
+
+    // Findings tooltip handler
+    export function findingsTooltip(event) {
+      if (!event.context || event.context.row < 0) return undefined;
+      const finding = findings[event.context.row];
+      if (!finding) return undefined;
+
+      const severity = finding.severity || 'info';
+      const category = finding.category || 'general';
+      return `**${finding.title}**\n\n` +
+        `_${severity.toUpperCase()}_ | ${category}\n\n` +
+        finding.description;
     }
 
     // Findings table
@@ -103,21 +115,6 @@
       table.props.rows = rows;
     }
 
-    // Category bars
-    function updateCategoryBars() {
-      const filtered = selectedCategory === 'all'
-        ? results
-        : results.filter(r => r.category === selectedCategory);
-
-      const labels = filtered.map(r => r.name.slice(0, 24));
-      const bars = filtered.map(r => [r.median]);
-
-      const barsComponent = $melker.getElementById('categoryBars');
-      barsComponent.props.series = [{ name: 'Median (ms)' }];
-      barsComponent.props.labels = labels;
-      barsComponent.props.bars = bars;
-    }
-
     // Percentile heatmap - shows median/p95/p99 for each benchmark
     function updateHistoryHeatmap() {
       if (results.length === 0) return;
@@ -146,7 +143,7 @@
     export function onCategoryChange(event) {
       selectedCategory = event.value;
       updateSummaryTable();
-      updateCategoryBars();
+      updateHistoryHeatmap();
     }
 
     // Open file dialog
@@ -169,8 +166,6 @@
       selectedCategory = 'all';
 
       $melker.getElementById('summaryTable').props.rows = [];
-      $melker.getElementById('categoryBars').props.bars = [];
-      $melker.getElementById('categoryBars').props.labels = [];
       $melker.getElementById('historyHeatmap').props.grid = [];
       const findingsTable = $melker.getElementById('findingsTable');
       if (findingsTable) findingsTable.props.rows = [];
@@ -220,22 +215,6 @@
         </container>
       </tab>
 
-      <tab title="Bars">
-        <container style="padding: 1; flex: 1;">
-          <text style="font-weight: bold;">Time Comparison (median ms)</text>
-          <container style="flex: 1; overflow: auto;">
-            <data-bars id="categoryBars">
-            {
-              "series": [{"name": "Median (ms)"}],
-              "bars": [],
-              "labels": [],
-              "showValues": true
-            }
-            </data-bars>
-          </container>
-        </container>
-      </tab>
-
       <tab title="Percentiles">
         <container style="padding: 1; gap: 1; flex: 1;">
           <text style="font-weight: bold;">Percentile Distribution (Median / p95 / p99)</text>
@@ -256,7 +235,7 @@
         <container style="padding: 1; gap: 1; flex: 1;">
           <text style="font-weight: bold;">Key Findings</text>
           <container style="flex: 1; overflow: auto;">
-            <data-table id="findingsTable" style="flex: 1;">
+            <data-table id="findingsTable" style="flex: 1;" onTooltip="$app.findingsTooltip(event)">
             {
               "columns": [
                 {"header": "Finding", "width": "fill"},
@@ -268,9 +247,9 @@
             }
             </data-table>
           </container>
-          <container style="height: 5; border: single; padding: 1;">
+          <container style="height: 8; border: single; padding: 1; overflow: auto;">
             <text style="font-weight: bold;">Notes:</text>
-            <text id="notesText" style="color: gray;">No notes available.</text>
+            <text id="notesText" style="color: gray; text-wrap: wrap;">No notes available.</text>
           </container>
         </container>
       </tab>

@@ -8,6 +8,7 @@ import { Element, isClickable, ClickEvent, isKeyboardElement, hasKeyPressHandler
 import { createKeyPressEvent } from './events.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
+import { getTooltipManager } from './tooltip/mod.ts';
 import type { ComponentLogger } from './logging.ts';
 import type { DualBuffer } from './buffer.ts';
 import type { RenderingEngine } from './rendering.ts';
@@ -93,6 +94,12 @@ export function handleKeyboardEvent(
     shiftKey: event.shiftKey,
     metaKey: event.metaKey,
   });
+
+  // Hide tooltip on any keyboard event
+  const tooltipManager = getTooltipManager();
+  if (tooltipManager.isVisible()) {
+    tooltipManager.hideTooltip();
+  }
 
   // Handle Ctrl+C for graceful exit
   if (event.ctrlKey && event.key?.toLowerCase() === 'c') {

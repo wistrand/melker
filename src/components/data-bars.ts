@@ -18,6 +18,7 @@ import {
   Style,
 } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
+import type { DataBarsTooltipContext, TooltipProvider } from '../tooltip/types.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
@@ -115,7 +116,7 @@ const defaultProps: Partial<DataBarsProps> = {
 
 // ===== DataBarsElement Class =====
 
-export class DataBarsElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider {
+export class DataBarsElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider, TooltipProvider {
   declare type: 'data-bars';
   declare props: DataBarsProps;
 
@@ -1090,6 +1091,47 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     this._minValue = 0;
     this._maxValue = 0;
     this._scale = 1;
+  }
+
+  /**
+   * Get tooltip context for a position within the component.
+   * Returns bar/series information for dynamic tooltips.
+   */
+  getTooltipContext(relX: number, relY: number): DataBarsTooltipContext | undefined {
+    const bounds = this.getBounds();
+    if (!bounds) return undefined;
+
+    const screenX = bounds.x + relX;
+    const screenY = bounds.y + relY;
+
+    for (const [key, b] of this._barBounds) {
+      if (screenX >= b.x && screenX < b.x + b.width && screenY >= b.y && screenY < b.y + b.height) {
+        const [entryIdx, seriesIdx] = key.split('-').map(Number);
+        const value = this.props.bars[entryIdx]?.[seriesIdx] ?? 0;
+        const label = this.props.labels?.[entryIdx] ?? `Entry ${entryIdx}`;
+        const seriesName = this.props.series[seriesIdx]?.name ?? `Series ${seriesIdx}`;
+
+        return {
+          type: 'data-bars',
+          barIndex: entryIdx,
+          seriesIndex: seriesIdx,
+          label,
+          value,
+          seriesName,
+        };
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Get default tooltip content for auto tooltips.
+   */
+  getDefaultTooltip(context: DataBarsTooltipContext): string | undefined {
+    if (context.type !== 'data-bars') return undefined;
+    const { label, value, seriesName } = context;
+    return `**${label}**\n${seriesName}: ${value.toFixed(1)}`;
   }
 }
 

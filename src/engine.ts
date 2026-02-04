@@ -161,6 +161,10 @@ import {
   getToastManager,
 } from './toast/mod.ts';
 import {
+  renderTooltipOverlay,
+  getTooltipManager,
+} from './tooltip/mod.ts';
+import {
   initUIAnimationManager,
   shutdownUIAnimationManager,
   getUIAnimationManager,
@@ -371,6 +375,10 @@ export class MelkerEngine {
       width: config.toastWidth,
     });
     toastManager.setRequestRender(() => this.render());
+
+    // Initialize tooltip manager
+    const tooltipManager = getTooltipManager();
+    tooltipManager.setRequestRender(() => this.render());
 
     // Initialize UI animation manager
     initUIAnimationManager(() => this.render());
@@ -683,6 +691,12 @@ export class MelkerEngine {
 
     // Automatic scroll handling for scrollable containers
     this._eventManager.addGlobalEventListener('wheel', (event: any) => {
+      // Hide tooltip on wheel event
+      const tooltipManager = getTooltipManager();
+      if (tooltipManager.isVisible()) {
+        tooltipManager.hideTooltip();
+      }
+
       // Check for Wheelable elements first (e.g., table with scrollable tbody)
       const target = this._hitTester.hitTest(event.x, event.y);
       this._logger?.debug(`Engine wheel: target=${target?.type}/${target?.id}, isWheelable=${target ? isWheelable(target) : false}`);
@@ -1065,6 +1079,15 @@ export class MelkerEngine {
       }
     }
 
+    // Render tooltip overlay if visible
+    if (this._buffer) {
+      try {
+        renderTooltipOverlay(this._buffer);
+      } catch (err) {
+        this._logger?.error('Tooltip overlay error', err instanceof Error ? err : new Error(String(err)));
+      }
+    }
+
     // Render toast overlay if there are toasts
     if (this._buffer) {
       try {
@@ -1311,6 +1334,15 @@ export class MelkerEngine {
         getGlobalScriptErrorOverlay().render(this._buffer);
       } catch {
         // Silently ignore script error overlay errors
+      }
+    }
+
+    // Render tooltip overlay if visible
+    if (this._buffer) {
+      try {
+        renderTooltipOverlay(this._buffer);
+      } catch (err) {
+        this._logger?.error('Tooltip overlay error', err instanceof Error ? err : new Error(String(err)));
       }
     }
 

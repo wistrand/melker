@@ -43,6 +43,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Data heatmap                                      | [data-heatmap-architecture.md](agent_docs/data-heatmap-architecture.md)        |
 | Spinner                                           | [spinner-architecture.md](agent_docs/spinner-architecture.md)                  |
 | Toast notifications                               | [toast-architecture.md](agent_docs/toast-architecture.md)                      |
+| Tooltips                                          | [tooltip-architecture.md](agent_docs/tooltip-architecture.md)                  |
 | Mermaid diagrams in markdown                      | [mermaid-support.md](agent_docs/mermaid-support.md)                            |
 
 ### For Contributors (Internals)

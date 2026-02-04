@@ -18,6 +18,7 @@ import {
 } from '../types.ts';
 import type { KeyPressEvent } from '../events.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
+import type { DataTableTooltipContext, TooltipProvider } from '../tooltip/types.ts';
 import { ClippedDualBuffer } from '../clipped-buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
@@ -115,7 +116,7 @@ function defaultComparator(a: CellValue, b: CellValue): number {
   return strA.toLowerCase().localeCompare(strB.toLowerCase());
 }
 
-export class DataTableElement extends Element implements Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable {
+export class DataTableElement extends Element implements Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, TooltipProvider {
   declare type: 'data-table';
   declare props: DataTableProps;
 
@@ -525,6 +526,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     y: number,
     rowData: CellValue[],
     style: Partial<Cell>,
+    totalWidth: number,  // Full row width for proper border placement
     scrollbarX: number = -1,  // X position where scrollbar will be drawn, -1 means no scrollbar
     borderStyleOverride?: Partial<Cell>  // Style for borders (without selection highlight)
   ): void {
@@ -573,7 +575,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       }
 
       // Draw right border at scrollbar position (will be overwritten by scrollbar)
-      // or at current position if no scrollbar
+      // or at full width position if no scrollbar
       if (scrollbarX >= 0) {
         // Fill gap between content and scrollbar position (with content style)
         const gap = scrollbarX - cellX;
@@ -583,8 +585,13 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         // Draw border at scrollbar position (will be overwritten) - use border style
         buffer.currentBuffer.setCell(scrollbarX, y + line, { char: chars.v, ...borderCellStyle });
       } else {
-        // No scrollbar - draw right border at current position (without selection highlight)
-        buffer.currentBuffer.setCell(cellX, y + line, { char: chars.v, ...borderCellStyle });
+        // No scrollbar - fill gap and draw right border at full width
+        const rightBorderX = x + totalWidth - 1;
+        const gap = rightBorderX - cellX;
+        if (gap > 0) {
+          buffer.currentBuffer.fillLine(cellX, y + line, gap, style);
+        }
+        buffer.currentBuffer.setCell(rightBorderX, y + line, { char: chars.v, ...borderCellStyle });
       }
     }
   }
@@ -798,7 +805,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       }
 
       const scrollbarX = needsScrollbar ? bounds.x + effectiveWidth - 1 : -1;
-      this._renderDataRow(clippedBuffer, bounds.x, virtualY, rowData, rowStyle, scrollbarX, borderStyle);
+      this._renderDataRow(clippedBuffer, bounds.x, virtualY, rowData, rowStyle, effectiveWidth, scrollbarX, borderStyle);
       this._rowBounds.set(sortedPos, { x: bounds.x, y: virtualY, width: effectiveWidth, height: rowHeight });
 
       virtualY += rowHeight;
@@ -1126,6 +1133,90 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     if (sortedPos >= 0) {
       this._ensureRowVisible(sortedPos);
     }
+  }
+
+  /**
+   * Get tooltip context for a position within the component.
+   * Returns row/column/cell information for dynamic tooltips.
+   */
+  getTooltipContext(relX: number, relY: number): DataTableTooltipContext | undefined {
+    const bounds = this.getBounds();
+    if (!bounds) return undefined;
+
+    const screenX = bounds.x + relX;
+    const screenY = bounds.y + relY;
+
+    // Check if over a header cell
+    for (const { colIndex, bounds: cellBounds } of this._headerCellBounds) {
+      if (
+        screenX >= cellBounds.x &&
+        screenX < cellBounds.x + cellBounds.width &&
+        screenY >= cellBounds.y &&
+        screenY < cellBounds.y + cellBounds.height
+      ) {
+        const col = this.props.columns[colIndex];
+        return {
+          type: 'data-table',
+          row: -1, // -1 indicates header row
+          column: colIndex,
+          columnHeader: col?.header || `Column ${colIndex}`,
+          cellValue: col?.header || '',
+        };
+      }
+    }
+
+    // Check if over a data row
+    for (const [sortedPos, rowBounds] of this._rowBounds) {
+      if (
+        screenX >= rowBounds.x &&
+        screenX < rowBounds.x + rowBounds.width &&
+        screenY >= rowBounds.y &&
+        screenY < rowBounds.y + rowBounds.height
+      ) {
+        const originalIndex = this._getOriginalIndex(sortedPos);
+        const row = this.props.rows[originalIndex];
+        if (!row) continue;
+
+        // Determine which column based on cumulative widths
+        let colIndex = 0;
+        let cumX = rowBounds.x;
+        for (let i = 0; i < this._columnWidths.length; i++) {
+          const colWidth = this._columnWidths[i];
+          if (screenX >= cumX && screenX < cumX + colWidth) {
+            colIndex = i;
+            break;
+          }
+          cumX += colWidth;
+        }
+
+        const col = this.props.columns[colIndex];
+        const cellValue = row[colIndex];
+        const cellStr = cellValue !== undefined && cellValue !== null ? String(cellValue) : '';
+
+        return {
+          type: 'data-table',
+          row: originalIndex,
+          column: colIndex,
+          columnHeader: col?.header || `Column ${colIndex}`,
+          cellValue: cellStr,
+        };
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Get default tooltip content for auto tooltips.
+   */
+  getDefaultTooltip(context: DataTableTooltipContext): string | undefined {
+    if (context.type !== 'data-table') return undefined;
+    const { row, columnHeader, cellValue } = context;
+    if (row === -1) {
+      // Header row
+      return `**${columnHeader}**\nClick to sort`;
+    }
+    return `**${columnHeader}**\n${cellValue}`;
   }
 
   /**

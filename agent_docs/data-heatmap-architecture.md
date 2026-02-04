@@ -456,7 +456,12 @@ Export from `src/components/mod.ts`.
 
 ---
 
+## Tooltips
+
+Supports `tooltip="auto"` for built-in formatting and `onTooltip` for custom content. See [tooltip-architecture.md](tooltip-architecture.md) for details.
+
 ## See Also
 
 - [data-bars.md](data-bars.md) — Similar data-driven component
 - [data-table.md](data-table.md) — Grid-based data display
+- [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system documentation

@@ -188,6 +188,11 @@ For dynamic data (e.g., fetched from API, generated), use a script:
 | Selection lookup  | O(1)                |
 | Click hit test    | O(visible rows)     |
 
+## Tooltips
+
+Supports `tooltip="auto"` for built-in formatting and `onTooltip` for custom content. See [tooltip-architecture.md](tooltip-architecture.md) for details.
+
 ## See Also
 
 - [component-reference.md](component-reference.md) — All component documentation (includes `<table>` for complex cells)
+- [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system documentation

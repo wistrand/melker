@@ -20,6 +20,8 @@ import { getGlobalPerformanceDialog, type PerformanceStats } from './performance
 import { getGlobalErrorHandler } from './error-boundary.ts';
 import { getUIAnimationManager } from './ui-animation-manager.ts';
 import { getToastManager } from './toast/mod.ts';
+import { getTooltipManager, TooltipManager } from './tooltip/mod.ts';
+import type { TooltipProvider } from './tooltip/mod.ts';
 
 const logger = getLogger('text-selection');
 
@@ -72,6 +74,10 @@ export class TextSelectionHandler {
   private _draggingElement: (Element & Draggable) | null = null;
   private _dragZone: string | null = null;
 
+  // Focus-based tooltip state
+  private _focusedElementId: string | null = null;
+  private _focusTooltipCleanup: (() => void) | null = null;
+
   // Selection performance timing stats
   private _selectionTimingStats = {
     moveCount: 0,
@@ -111,12 +117,118 @@ export class TextSelectionHandler {
       16,  // ~60fps
       { leading: true, trailing: true }
     );
+
+    // Set up focus event listeners for keyboard-triggered tooltips
+    this._initFocusTooltipListeners();
+  }
+
+  /**
+   * Initialize focus/blur event listeners for keyboard-accessible tooltips
+   */
+  private _initFocusTooltipListeners(): void {
+    const handleFocus = (event: any) => {
+      if (event.type === 'focus' && event.target) {
+        this._focusedElementId = event.target;
+        this._handleFocusTooltip(event.target);
+      }
+    };
+
+    const handleBlur = (event: any) => {
+      if (event.type === 'blur' && event.target === this._focusedElementId) {
+        this._focusedElementId = null;
+        // Hide tooltip if it was showing for this element
+        const tooltipManager = getTooltipManager();
+        if (tooltipManager.getTargetElementId() === event.target) {
+          tooltipManager.hideTooltip();
+        }
+      }
+    };
+
+    this._deps.eventManager.addGlobalEventListener('focus', handleFocus);
+    this._deps.eventManager.addGlobalEventListener('blur', handleBlur);
+
+    // Store cleanup function
+    this._focusTooltipCleanup = () => {
+      this._deps.eventManager.removeGlobalEventListener('focus', handleFocus);
+      this._deps.eventManager.removeGlobalEventListener('blur', handleBlur);
+    };
+  }
+
+  /**
+   * Handle tooltip for focused element (keyboard navigation)
+   */
+  private _handleFocusTooltip(elementId: string): void {
+    const element = this._deps.document.getElementById(elementId);
+    if (!element) return;
+
+    // Check if element has tooltip
+    const tooltipProp = element.props?.tooltip;
+    const hasTooltip = tooltipProp !== undefined;
+    const hasTooltipHandler = typeof element.props?.onTooltip === 'function';
+    const isAutoTooltip = tooltipProp === 'auto';
+
+    if (!hasTooltip && !hasTooltipHandler) return;
+
+    // Get element bounds for positioning
+    const bounds = element.getBounds();
+    if (!bounds) return;
+
+    // Position tooltip at center of element
+    const screenX = bounds.x + Math.floor(bounds.width / 2);
+    const screenY = bounds.y;
+
+    // Calculate relative coordinates (center)
+    const relX = Math.floor(bounds.width / 2);
+    const relY = Math.floor(bounds.height / 2);
+
+    // Get component-specific context if available
+    const tooltipProvider = element as unknown as TooltipProvider;
+    const context = tooltipProvider.getTooltipContext?.(relX, relY);
+
+    const tooltipManager = getTooltipManager();
+    const focusDelay = tooltipManager.getFocusShowDelay();
+
+    // Get tooltip content
+    if (hasTooltipHandler) {
+      const tooltipEvent = TooltipManager.buildEvent(element, screenX, screenY, bounds, context);
+      const result = element.props.onTooltip(tooltipEvent);
+      if (result instanceof Promise) {
+        result.then((content: string | undefined) => {
+          if (content && this._focusedElementId === elementId) {
+            tooltipManager.scheduleTooltip(element, content, screenX, screenY, bounds, focusDelay);
+          }
+        }).catch(() => {});
+      } else if (result) {
+        tooltipManager.scheduleTooltip(element, result as string, screenX, screenY, bounds, focusDelay);
+      }
+    } else if (isAutoTooltip) {
+      if (context && tooltipProvider.getDefaultTooltip) {
+        const content = tooltipProvider.getDefaultTooltip(context);
+        if (content) {
+          tooltipManager.scheduleTooltip(element, content, screenX, screenY, bounds, focusDelay);
+        }
+      } else if (typeof (element as any).getValue === 'function') {
+        // Fallback: use getValue() for components without TooltipProvider
+        const value = (element as any).getValue();
+        if (value !== undefined && value !== null) {
+          const content = String(value);
+          if (content) {
+            tooltipManager.scheduleTooltip(element, content, screenX, screenY, bounds, focusDelay);
+          }
+        }
+      }
+    } else if (hasTooltip && tooltipProp !== 'auto') {
+      tooltipManager.scheduleTooltip(element, tooltipProp, screenX, screenY, bounds, focusDelay);
+    }
   }
 
   /**
    * Handle mouse down events for text selection and element interaction
    */
   handleMouseDown(event: any): void {
+    // Hide tooltip on mouse down
+    getTooltipManager().hideTooltip();
+
     // Reset selection timing stats for new potential drag
     this._selectionTimingStats = {
       moveCount: 0,
@@ -529,6 +641,9 @@ export class TextSelectionHandler {
       };
       hoveredElement.props.onMouseMove(mouseEvent);
     }
+
+    // Handle tooltip
+    this._handleTooltip(hoveredElement, event.x, event.y);
 
     if (this._isSelecting) {
       logger.debug('Mouse move during selection', {
@@ -968,6 +1083,103 @@ export class TextSelectionHandler {
   }
 
   /**
+   * Handle tooltip display for hovered element
+   */
+  private _handleTooltip(hoveredElement: Element | null | undefined, screenX: number, screenY: number): void {
+    const tooltipManager = getTooltipManager();
+
+    if (!hoveredElement) {
+      tooltipManager.hideTooltip();
+      return;
+    }
+
+    // Check if element has tooltip prop or onTooltip handler
+    const tooltipProp = hoveredElement.props?.tooltip;
+    const hasTooltip = tooltipProp !== undefined;
+    const hasTooltipHandler = typeof hoveredElement.props?.onTooltip === 'function';
+    const isAutoTooltip = tooltipProp === 'auto';
+
+    if (!hasTooltip && !hasTooltipHandler) {
+      tooltipManager.hideTooltip();
+      return;
+    }
+
+    // Get element bounds
+    const bounds = hoveredElement.getBounds();
+    if (!bounds) {
+      tooltipManager.hideTooltip();
+      return;
+    }
+
+    // Calculate relative coordinates
+    const relX = screenX - bounds.x;
+    const relY = screenY - bounds.y;
+
+    // Get component-specific context if available
+    const tooltipProvider = hoveredElement as unknown as TooltipProvider;
+    const context = tooltipProvider.getTooltipContext?.(relX, relY);
+
+    // Get tooltip content
+    if (hasTooltipHandler) {
+      // Build tooltip event for handler
+      const tooltipEvent = TooltipManager.buildEvent(
+        hoveredElement,
+        screenX,
+        screenY,
+        bounds,
+        context
+      );
+      // Handlers are wrapped as async functions, so we need to handle the Promise
+      const result = hoveredElement.props.onTooltip(tooltipEvent);
+      if (result instanceof Promise) {
+        result.then((content: string | undefined) => {
+          if (content) {
+            tooltipManager.scheduleTooltip(hoveredElement, content, screenX, screenY, bounds);
+          } else {
+            tooltipManager.hideTooltip();
+          }
+        }).catch(() => {
+          tooltipManager.hideTooltip();
+        });
+      } else if (result) {
+        // Synchronous result (shouldn't happen but handle it)
+        tooltipManager.scheduleTooltip(hoveredElement, result as string, screenX, screenY, bounds);
+      } else {
+        tooltipManager.hideTooltip();
+      }
+    } else if (isAutoTooltip) {
+      // Use component's default tooltip formatter
+      if (context && tooltipProvider.getDefaultTooltip) {
+        const content = tooltipProvider.getDefaultTooltip(context);
+        if (content) {
+          tooltipManager.scheduleTooltip(hoveredElement, content, screenX, screenY, bounds);
+        } else {
+          tooltipManager.hideTooltip();
+        }
+      } else if (typeof (hoveredElement as any).getValue === 'function') {
+        // Fallback: use getValue() for components without TooltipProvider
+        const value = (hoveredElement as any).getValue();
+        if (value !== undefined && value !== null) {
+          const content = String(value);
+          if (content) {
+            tooltipManager.scheduleTooltip(hoveredElement, content, screenX, screenY, bounds);
+          } else {
+            tooltipManager.hideTooltip();
+          }
+        } else {
+          tooltipManager.hideTooltip();
+        }
+      } else {
+        tooltipManager.hideTooltip();
+      }
+    } else if (hasTooltip) {
+      tooltipManager.scheduleTooltip(hoveredElement, tooltipProp, screenX, screenY, bounds);
+    } else {
+      tooltipManager.hideTooltip();
+    }
+  }
+
+  /**
    * Get the ID of the currently hovered element
    */
   getHoveredElementId(): string | null {
@@ -1004,9 +1216,16 @@ export class TextSelectionHandler {
     // Cancel any pending throttled selection render
     this._throttledSelectionRender.cancel();
 
+    // Clean up focus tooltip listeners
+    if (this._focusTooltipCleanup) {
+      this._focusTooltipCleanup();
+      this._focusTooltipCleanup = null;
+    }
+
     // Clear selection state
     this._clearSelection();
     this._hoveredElementId = null;
+    this._focusedElementId = null;
     this._lastClickTime = 0;
     this._lastClickPos = { x: -1, y: -1 };
     this._clickCount = 0;

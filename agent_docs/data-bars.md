@@ -449,6 +449,11 @@ Output shows yellow segments up to 80%, red segments from 80-95%.
 
 Exported from `src/components/mod.ts`.
 
+## Tooltips
+
+Supports `tooltip="auto"` for built-in formatting and `onTooltip` for custom content. See [tooltip-architecture.md](tooltip-architecture.md) for details.
+
 ## See Also
 
 - [component-reference.md](component-reference.md) — All component documentation
+- [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system documentation

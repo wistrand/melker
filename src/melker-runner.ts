@@ -67,7 +67,7 @@ async function wireBundlerHandlers(
   // - onPaint/onShader: rendering is handled by the component's own loop
   // - onMouseMove/onMouseOut/onMouseOver: typically just update state, component handles display
   // - onInput: fast input rendering is handled separately
-  const noAutoRenderCallbacks = ['onPaint', 'onShader', 'onMouseMove', 'onMouseOut', 'onMouseOver', 'onInput'];
+  const noAutoRenderCallbacks = ['onPaint', 'onShader', 'onMouseMove', 'onMouseOut', 'onMouseOver', 'onInput', 'onTooltip'];
 
   if (element.props) {
     for (const [propName, propValue] of Object.entries(element.props)) {

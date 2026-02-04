@@ -18,6 +18,7 @@ import {
   Style,
 } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
+import type { DataHeatmapTooltipContext, TooltipProvider } from '../tooltip/types.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
@@ -202,7 +203,7 @@ const defaultProps: Partial<DataHeatmapProps> = {
 
 // ===== DataHeatmapElement Class =====
 
-export class DataHeatmapElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider {
+export class DataHeatmapElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider, TooltipProvider {
   declare type: 'data-heatmap';
   declare props: DataHeatmapProps;
 
@@ -1241,6 +1242,47 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
 
   setColLabels(labels: string[]): void {
     this.props.colLabels = labels;
+  }
+
+  /**
+   * Get tooltip context for a position within the component.
+   * Returns cell row/column/value information for dynamic tooltips.
+   */
+  getTooltipContext(relX: number, relY: number): DataHeatmapTooltipContext | undefined {
+    const bounds = this.getBounds();
+    if (!bounds) return undefined;
+
+    const screenX = bounds.x + relX;
+    const screenY = bounds.y + relY;
+
+    for (const [key, b] of this._cellBounds) {
+      if (screenX >= b.x && screenX < b.x + b.width && screenY >= b.y && screenY < b.y + b.height) {
+        const [row, col] = key.split('-').map(Number);
+        const value = this.props.grid?.[row]?.[col] ?? 0;
+
+        return {
+          type: 'data-heatmap',
+          row,
+          column: col,
+          rowLabel: this.props.rowLabels?.[row],
+          colLabel: this.props.colLabels?.[col],
+          value,
+        };
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Get default tooltip content for auto tooltips.
+   */
+  getDefaultTooltip(context: DataHeatmapTooltipContext): string | undefined {
+    if (context.type !== 'data-heatmap') return undefined;
+    const { row, column, value, rowLabel, colLabel } = context;
+    const rLabel = rowLabel || `Row ${row + 1}`;
+    const cLabel = colLabel || `Col ${column + 1}`;
+    return `**${rLabel} / ${cLabel}**\nValue: ${value.toFixed(2)}`;
   }
 }
 

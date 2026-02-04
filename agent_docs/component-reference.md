@@ -1476,3 +1476,4 @@ Layout properties (padding, margin, border widths) do NOT inherit.
 - [data-heatmap-architecture.md](data-heatmap-architecture.md) — Heatmap with isolines
 - [spinner-architecture.md](spinner-architecture.md) — Spinner component internals
 - [toast-architecture.md](toast-architecture.md) — Toast notification system
+- [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system

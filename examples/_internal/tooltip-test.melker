@@ -1,0 +1,101 @@
+<melker>
+  <title>Tooltip Test</title>
+
+  <script>
+    // Custom tooltip example - override the default format
+    export function customTableTooltip(event) {
+      if (!event.context) return undefined;
+      const { row, columnHeader, cellValue } = event.context;
+      if (row === -1) {
+        return `**${columnHeader}**\n_Click to sort by this column_`;
+      }
+      return `Row ${row + 1}: **${cellValue}**`;
+    }
+  </script>
+
+  <container style="padding: 1; gap: 1; overflow: auto">
+    <text style="font-weight: bold;">Tooltip Test</text>
+
+    <container style="flex-direction: row; gap: 2;">
+      <button tooltip="Simple static tooltip">Hover me</button>
+      <button tooltip="Another **tooltip** with `code`">With markdown</button>
+    </container>
+
+    <separator label="Data Table with Auto Tooltip" />
+
+    <data-table
+      style="height: 8;"
+      tooltip="auto"
+    >
+    {
+      "columns": [
+        {"header": "Name", "width": 15},
+        {"header": "Status", "width": 10},
+        {"header": "Value", "width": 10, "align": "right"}
+      ],
+      "rows": [
+        ["Alice", "Active", "100"],
+        ["Bob", "Pending", "250"],
+        ["Charlie", "Inactive", "75"],
+        ["Diana", "Active", "320"]
+      ]
+    }
+    </data-table>
+
+    <separator label="Data Bars with Auto Tooltip" />
+
+    <data-bars
+      style="height: 6;"
+      orientation="horizontal"
+      tooltip="auto"
+    >
+    {
+      "series": [{"name": "Sales"}, {"name": "Returns"}],
+      "labels": ["Q1", "Q2", "Q3", "Q4"],
+      "bars": [[100, 10], [150, 25], [200, 15], [175, 30]]
+    }
+    </data-bars>
+
+    <separator label="Heatmap with Auto Tooltip" />
+
+    <data-heatmap
+      style="height: 5;"
+      showValues="true"
+      tooltip="auto"
+    >
+    {
+      "grid": [[0.1, 0.5, 0.9], [0.3, 0.7, 0.2], [0.8, 0.4, 0.6]],
+      "rowLabels": ["Mon", "Tue", "Wed"],
+      "colLabels": ["AM", "PM", "Eve"]
+    }
+    </data-heatmap>
+
+    <separator label="Custom Tooltip Handler" />
+
+    <data-table
+      style="height: 6;"
+      onTooltip="$app.customTableTooltip(event)"
+    >
+    {
+      "columns": [
+        {"header": "Item", "width": 15},
+        {"header": "Price", "width": 10, "align": "right"}
+      ],
+      "rows": [
+        ["Widget", "$9.99"],
+        ["Gadget", "$19.99"]
+      ]
+    }
+    </data-table>
+
+    <separator label="getValue() Fallback (non-TooltipProvider)" />
+
+    <container style="flex-direction: row; gap: 2; align-items: center;">
+      <input id="input1" value="Hello World" tooltip="auto" style="width: 20;" />
+      <slider id="slider1" value="75" min="0" max="100" tooltip="auto" style="width: 20;" />
+      <checkbox id="check1" checked="true" tooltip="auto">Enabled</checkbox>
+    </container>
+
+    <text style="color: gray;">Hover or Tab to elements to see tooltips</text>
+  </container>
+</melker>

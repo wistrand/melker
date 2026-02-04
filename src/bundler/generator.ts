@@ -543,16 +543,19 @@ ${script.code.split('\n').map(l => '  ' + l).join('\n')}
           addLine(`  throw new Error('${code} is not defined');`);
         }
       } else {
-        // If it's a simple expression (no semicolons, not a statement keyword), return its value
-        const isSimpleExpression = !code.includes(';') &&
-          !code.startsWith('if ') && !code.startsWith('if(') &&
-          !code.startsWith('for ') && !code.startsWith('for(') &&
-          !code.startsWith('while ') && !code.startsWith('while(') &&
-          !code.startsWith('return ') && !code.startsWith('return;') &&
-          !code.startsWith('throw ') &&
-          !code.startsWith('let ') && !code.startsWith('const ') && !code.startsWith('var ');
+        // Strip trailing semicolons/whitespace for expression detection
+        // (handlers like `$app.fn(event);` should still return their value)
+        const codeForCheck = code.replace(/;\s*$/, '');
+        // If it's a simple expression (no semicolons in middle, not a statement keyword), return its value
+        const isSimpleExpression = !codeForCheck.includes(';') &&
+          !codeForCheck.startsWith('if ') && !codeForCheck.startsWith('if(') &&
+          !codeForCheck.startsWith('for ') && !codeForCheck.startsWith('for(') &&
+          !codeForCheck.startsWith('while ') && !codeForCheck.startsWith('while(') &&
+          !codeForCheck.startsWith('return ') && !codeForCheck.startsWith('return;') &&
+          !codeForCheck.startsWith('throw ') &&
+          !codeForCheck.startsWith('let ') && !codeForCheck.startsWith('const ') && !codeForCheck.startsWith('var ');
         if (isSimpleExpression) {
-          addLine(`  return ${code};`);
+          addLine(`  return ${codeForCheck};`);
         } else {
           addLine(`  ${code}`);
         }

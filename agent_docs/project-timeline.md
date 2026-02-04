@@ -167,6 +167,29 @@ So constructed.
   - `MELKER_STDOUT_TRIM` option (none, right, bottom, both)
   - Configurable output trimming for cleaner piped output
 
+**Feb 4** - Benchmark system, tooltip system, and LSP improvements
+- Comprehensive benchmark framework (`benchmarks/`)
+  - Benchmark harness with statistical analysis (mean, stddev, p95)
+  - 15+ benchmark suites: bundler, components, core ops, graphics, layout, rendering
+  - Benchmark viewer application (`benchmarks/benchmark-viewer.melker`)
+  - Run-all script for batch execution
+  - JSON output format with results storage
+- Tooltip system (`src/tooltip/`)
+  - TooltipManager singleton with delay timers (hover: 300ms, focus: 800ms)
+  - TooltipRenderer using `MarkdownElement` for full markdown support
+  - `tooltip="auto"` with built-in formatting for data components
+  - `getValue()` fallback for non-TooltipProvider components
+  - Dismiss on hover exit, blur, click, any key press, or mouse wheel
+  - TooltipProvider interface for custom component tooltips
+- Data component tooltip integration
+  - `getTooltipContext()` and `getDefaultTooltip()` for data-table, data-bars, data-heatmap
+  - Custom `onTooltip` handler support
+- Data table fix
+  - Fixed right border gap when no column uses `width="fill"`
+- LSP improvements
+  - Fixed style attribute autocompletion to preserve existing styles
+  - Added proper `textEdit` ranges for style property/value completions
+
 ---
 
 ## Components
@@ -191,6 +214,7 @@ So constructed.
 | spinner          | Feb 2  | Animated loading indicators            |
 | toast            | Feb 2  | Non-modal notifications (API-based)    |
 | data-heatmap     | Feb 3  | 2D heatmaps with color scales, isolines, auto-isolines |
+| tooltip          | Feb 4  | Contextual hover/focus overlays with markdown |
 
 ## Architecture
 
@@ -217,6 +241,9 @@ So constructed.
 | Feb 2  | Capture script system (`scripts/capture.ts`)        |
 | Feb 3  | Data heatmap with isolines, stdout trim options     |
 | Feb 3  | Policy configSchema, env var auto-permissions       |
+| Feb 4  | Benchmark framework (`benchmarks/`)                 |
+| Feb 4  | Tooltip system (`src/tooltip/`)                     |
+| Feb 4  | LSP style completion textEdit fixes                 |
 
 ## Milestones
 
@@ -241,3 +268,6 @@ So constructed.
 | 276   | Feb 2  | UI animation manager                     |
 | 278   | Feb 2  | Capture script, toast enhancements       |
 | 283   | Feb 3  | Data heatmap, policy configSchema        |
+| 288   | Feb 4  | Benchmark framework, viewer              |
+| 289   | Feb 4  | Tooltip system, data component tooltips  |
+| 290   | Feb 4  | LSP style completion fixes               |

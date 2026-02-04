@@ -956,16 +956,32 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
             // Completing a style value
             const styleProp = toCamelCase(styleContext[1]);
             const styleSchema = allStyles[styleProp];
+            const partialValue = styleContext[2].trim();
 
             if (styleSchema?.enum) {
               const kebabProp = toKebabCase(styleProp);
+
+              // Calculate the range of just the partial value to replace
+              const partialStartChar = position.character - partialValue.length;
+              const editRange: Range = {
+                start: { line: position.line, character: partialStartChar },
+                end: position,
+              };
+
               for (const value of styleSchema.enum) {
-                completions.push({
-                  label: String(value),
-                  kind: CompletionItemKind.EnumMember,
-                  detail: `Value for ${kebabProp}`,
-                  insertText: String(value),
-                });
+                const strValue = String(value);
+                // Only show completions that match the partial (if any)
+                if (!partialValue || strValue.toLowerCase().startsWith(partialValue.toLowerCase())) {
+                  completions.push({
+                    label: strValue,
+                    kind: CompletionItemKind.EnumMember,
+                    detail: `Value for ${kebabProp}`,
+                    textEdit: {
+                      range: editRange,
+                      newText: strValue,
+                    },
+                  });
+                }
               }
               return completions;
             }
@@ -978,16 +994,35 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
               existingProps.add(toCamelCase(match[1]));
             }
 
+            // Find the partial property name being typed and its position
+            // e.g., in "flex-direction: row; gap: 2; overf" the partial is "overf"
+            const partialMatch = attrValue.match(/(?:^|[;,])\s*([\w-]*)$/);
+            const partial = partialMatch ? partialMatch[1] : '';
+
+            // Calculate the range of just the partial text to replace
+            // Position is: current cursor - length of partial
+            const partialStartChar = position.character - partial.length;
+            const editRange: Range = {
+              start: { line: position.line, character: partialStartChar },
+              end: position,
+            };
+
             for (const [name, styleSchema] of Object.entries(allStyles)) {
               if (!existingProps.has(name)) {
                 const kebabName = toKebabCase(name);
-                completions.push({
-                  label: kebabName,
-                  kind: CompletionItemKind.Property,
-                  detail: styleSchema.description,
-                  insertText: `${kebabName}: `,
-                  sortText: `0${kebabName}`,
-                });
+                // Only show completions that match the partial (if any)
+                if (!partial || kebabName.startsWith(partial.toLowerCase())) {
+                  completions.push({
+                    label: kebabName,
+                    kind: CompletionItemKind.Property,
+                    detail: styleSchema.description,
+                    textEdit: {
+                      range: editRange,
+                      newText: `${kebabName}: `,
+                    },
+                    sortText: `0${kebabName}`,
+                  });
+                }
               }
             }
             return completions;

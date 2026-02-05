@@ -290,6 +290,15 @@ export class Logger {
     this._writeEntry({ timestamp: new Date(), level: 'FATAL', message, error, context, source });
   }
 
+  // Level check methods for guarding expensive log message construction
+  isTraceEnabled(): boolean {
+    return this._shouldLog('TRACE');
+  }
+
+  isDebugEnabled(): boolean {
+    return this._shouldLog('DEBUG');
+  }
+
   // Utility methods (kept for API compatibility)
 
   flush(): void {
@@ -362,6 +371,8 @@ export interface ComponentLogger {
   warn: (message: string, context?: Record<string, unknown>) => void;
   error: (message: string, error?: Error, context?: Record<string, unknown>) => void;
   fatal: (message: string, error?: Error, context?: Record<string, unknown>) => void;
+  isTraceEnabled: () => boolean;
+  isDebugEnabled: () => boolean;
   flush: () => void;
   close: () => void;
 }
@@ -388,6 +399,8 @@ export function getLogger(name: string): ComponentLogger {
       baseLogger.error(message, error, context, name),
     fatal: (message: string, error?: Error, context?: Record<string, unknown>) =>
       baseLogger.fatal(message, error, context, name),
+    isTraceEnabled: () => baseLogger.isTraceEnabled(),
+    isDebugEnabled: () => baseLogger.isDebugEnabled(),
     flush: () => baseLogger.flush(),
     close: () => baseLogger.close(),
   };

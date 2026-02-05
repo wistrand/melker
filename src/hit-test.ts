@@ -45,8 +45,10 @@ export class HitTester {
    * Hit testing to find the element at given coordinates
    */
   hitTest(x: number, y: number): Element | undefined {
-    // Debug logging for hit test events
-    logger.trace(`Hit test at (${x}, ${y})`);
+    const traceEnabled = logger.isTraceEnabled();
+    if (traceEnabled) {
+      logger.trace(`Hit test at (${x}, ${y})`);
+    }
 
     // First check open dialogs (they are rendered as top-most overlays)
     const dialogHit = this._hitTestOpenDialogs(x, y);
@@ -57,7 +59,9 @@ export class HitTester {
     // We need to traverse the layout tree to find which element is at the given coordinates
     // Start with no scroll offset accumulation
     const result = this._hitTestElement(this._document.root, x, y, 0, 0);
-    logger.trace(`Hit test result: ${result?.type}/${result?.id}, isClickable=${result ? 'handleClick' in result : 'N/A'}`);
+    if (traceEnabled) {
+      logger.trace(`Hit test result: ${result?.type}/${result?.id}, isClickable=${result ? 'handleClick' in result : 'N/A'}`);
+    }
     return result;
   }
 
@@ -141,28 +145,27 @@ export class HitTester {
           height: dialogBounds.height - titleHeight - 1
         };
 
-        logger.trace('Dialog hit test', {
-          dialogId: dialog.id,
-          clickPos: `${x},${y}`,
-          contentBounds: `${contentBounds.x},${contentBounds.y} ${contentBounds.width}x${contentBounds.height}`,
-          childCount: dialog.children?.length || 0
-        });
+        if (logger.isTraceEnabled()) {
+          logger.trace('Dialog hit test', {
+            dialogId: dialog.id,
+            clickPos: `${x},${y}`,
+            contentBounds: `${contentBounds.x},${contentBounds.y} ${contentBounds.width}x${contentBounds.height}`,
+            childCount: dialog.children?.length || 0
+          });
+        }
 
         // Search for interactive elements within dialog children
         const hit = this._hitTestDialogChildren(dialog, x, y, contentBounds);
         if (hit) {
-          logger.debug('Dialog hit test result', { hitId: hit.id, hitType: hit.type });
           return hit;
         }
 
         // Click is in dialog but not on an interactive element
-        logger.debug('Dialog hit test - no hit, returning dialog');
         return dialog;
       }
 
       // Click is outside dialog bounds - if modal, block interaction with elements behind
       if (dialog.props.modal) {
-        logger.debug('Modal dialog blocking click outside bounds', { dialogId: dialog.id });
         return dialog;
       }
     }
@@ -190,24 +193,12 @@ export class HitTester {
       // Try to get the rendered bounds for this child
       const childBounds = child.id ? this._renderer.getContainerBounds(child.id) : undefined;
 
-      logger.debug('Dialog hit test child', {
-        childId: child.id,
-        childType: child.type,
-        hasBounds: !!childBounds,
-        childBounds: childBounds ? `${childBounds.x},${childBounds.y} ${childBounds.width}x${childBounds.height}` : 'none',
-        clickPos: `${x},${y}`,
-        inBounds: childBounds ? pointInBounds(x, y, childBounds) : false,
-        isTextSelectable: this.isTextSelectableElement(child),
-        hasChildren: !!(child.children && child.children.length > 0)
-      });
-
       if (childBounds && pointInBounds(x, y, childBounds)) {
         // Check if this component captures focus for all its children
         // If so, return this component instead of searching children
         if (isFocusCapturable(child) &&
             child.capturesFocusForChildren() &&
             this.isInteractiveElement(child)) {
-          logger.debug('Dialog hit test found (captures focus for children)', { id: child.id, type: child.type });
           return child;
         }
 
@@ -221,14 +212,12 @@ export class HitTester {
 
         // If it's an interactive or text-selectable element, return it
         if (this.isInteractiveElement(child) || this.isTextSelectableElement(child)) {
-          logger.debug('Dialog hit test found', { id: child.id, type: child.type });
           return child;
         }
 
         // Special handling for table parts: if we're inside a table and hit a table part,
         // return the containing table instead (if it's interactive)
         if (this._isTablePart(child) && containingTable && this.isInteractiveElement(containingTable)) {
-          logger.debug(`Dialog hit test: table part ${child.type}/${child.id} -> returning table ${containingTable.id}`);
           return containingTable;
         }
       } else if (!childBounds) {
@@ -240,7 +229,6 @@ export class HitTester {
           }
         } else if ((this.isInteractiveElement(child) || this.isTextSelectableElement(child)) && pointInBounds(x, y, _contentBounds)) {
           // Interactive or text-selectable element without stored bounds - use parent content bounds
-          logger.debug('Dialog hit test found (no bounds)', { id: child.id, type: child.type });
           return child;
         }
       }
@@ -313,12 +301,6 @@ export class HitTester {
     const isTable = element.type === 'table';
     const tableForChildren = isTable ? element : containingTable;
 
-    // Log for table, container, select, combobox, and segment-display elements
-    if (isTable || element.type === 'container' || element.type === 'select' || element.type === 'combobox' || element.type === 'segment-display') {
-      const isInt = this.isInteractiveElement(element);
-      const isTextSel = this.isTextSelectableElement(element);
-      logger.debug(`Hit test ${element.type}: id=${element.id}, pos=(${x},${y}), hasBounds=${!!bounds}, bounds=${bounds ? `(${bounds.x},${bounds.y}) ${bounds.width}x${bounds.height}` : 'none'}, inBounds=${bounds ? pointInBounds(x, y, bounds) : false}, isInteractive=${isInt}, isTextSelectable=${isTextSel}`);
-    }
 
     // For scrollable containers with bounds, transform coordinates for children
     // But ONLY if the click is within the scrollable container's bounds
@@ -339,18 +321,6 @@ export class HitTester {
         childX = x + elementScrollX;
         childY = y + elementScrollY;
 
-        // Trace logging for all scrollable containers
-        logger.trace('Hit test with scrollable container', {
-          elementId: element.id || 'unknown',
-          elementScrollX,
-          elementScrollY,
-          mouseX: x,
-          mouseY: y,
-          transformedChildX: childX,
-          transformedChildY: childY,
-          hasScrollX: elementScrollX !== 0,
-          hasScrollY: elementScrollY !== 0,
-        });
       }
     }
 
@@ -360,7 +330,6 @@ export class HitTester {
         isFocusCapturable(element) &&
         element.capturesFocusForChildren() &&
         this.isInteractiveElement(element)) {
-      logger.debug('Hit test found (captures focus for children)', { id: element.id, type: element.type });
       return element;
     }
 
@@ -398,7 +367,6 @@ export class HitTester {
       // Special handling for table parts: if we're inside a table and hit a table part,
       // return the containing table instead (if it's interactive)
       if (this._isTablePart(element) && containingTable && this.isInteractiveElement(containingTable)) {
-        logger.debug(`Hit test: table part ${element.type}/${element.id} -> returning table ${containingTable.id}`);
         return containingTable;
       }
     }

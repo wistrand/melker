@@ -107,31 +107,38 @@ export class LayoutEngine {
     context: LayoutContext,
     parentNode?: LayoutNode
   ): LayoutNode {
-    const startTime = performance.now();
-    logger.trace(`Starting layout calculation for element: ${element.type}`, {
-      elementId: element.id,
-      elementType: element.type,
-      availableSpace: context.availableSpace,
-      parentBounds: context.parentBounds,
-    });
+    const traceEnabled = logger.isTraceEnabled();
+    const startTime = performance.now(); // Always track for slow layout warning
+    if (traceEnabled) {
+      logger.trace(`Starting layout calculation for element: ${element.type}`, {
+        elementId: element.id,
+        elementType: element.type,
+        availableSpace: context.availableSpace,
+        parentBounds: context.parentBounds,
+      });
+    }
     const computedStyle = this._computeStyle(element, context.parentStyle);
     const layoutProps = this._computeLayoutProps(element, context.parentLayoutProps);
 
-    logger.trace(`Layout props computed for ${element.type}`, {
-      display: layoutProps.display,
-      flexDirection: layoutProps.flexDirection,
-      position: layoutProps.position,
-      width: layoutProps.width,
-      height: layoutProps.height,
-    });
+    if (traceEnabled) {
+      logger.trace(`Layout props computed for ${element.type}`, {
+        display: layoutProps.display,
+        flexDirection: layoutProps.flexDirection,
+        position: layoutProps.position,
+        width: layoutProps.width,
+        height: layoutProps.height,
+      });
+    }
 
     // Calculate element bounds based on layout type
-    const boundsStartTime = performance.now();
+    const boundsStartTime = traceEnabled ? performance.now() : 0;
     const bounds = this._calculateElementBounds(element, computedStyle, layoutProps, context);
-    logger.trace(`Bounds calculated for ${element.type} in ${(performance.now() - boundsStartTime).toFixed(2)}ms`, {
-      bounds,
-      elementId: element.id,
-    });
+    if (traceEnabled) {
+      logger.trace(`Bounds calculated for ${element.type} in ${(performance.now() - boundsStartTime).toFixed(2)}ms`, {
+        bounds,
+        elementId: element.id,
+      });
+    }
     const boxModel = this._sizingModel.calculateBoxModel(
       { width: bounds.width, height: bounds.height },
       computedStyle
@@ -161,10 +168,12 @@ export class LayoutEngine {
       : ((element.props as any)?.children || []);
 
     if (children && children.length > 0) {
-      logger.trace(`Processing ${children.length} children for ${element.type}`, {
-        elementId: element.id,
-        childCount: children.length,
-      });
+      if (traceEnabled) {
+        logger.trace(`Processing ${children.length} children for ${element.type}`, {
+          elementId: element.id,
+          childCount: children.length,
+        });
+      }
       let childContext: LayoutContext;
 
       if (isScrollable) {
@@ -267,12 +276,14 @@ export class LayoutEngine {
         };
       }
 
-      const childrenStartTime = performance.now();
+      const childrenStartTime = traceEnabled ? performance.now() : 0;
       node.children = this._layoutChildren(children, childContext, node);
-      logger.trace(`Children layout completed in ${(performance.now() - childrenStartTime).toFixed(2)}ms`, {
-        elementId: element.id,
-        childCount: children.length,
-      });
+      if (traceEnabled) {
+        logger.trace(`Children layout completed in ${(performance.now() - childrenStartTime).toFixed(2)}ms`, {
+          elementId: element.id,
+          childCount: children.length,
+        });
+      }
     }
 
     const totalTime = performance.now() - startTime;
@@ -384,18 +395,8 @@ export class LayoutEngine {
     context: LayoutContext,
     parentNode: LayoutNode
   ): LayoutNode[] {
-    const flexStartTime = performance.now();
-    /*
-    logger.trace(`Starting flexbox layout with ${children.length} children`, {
-      parentId: parentNode.element.id,
-      childCount: children.length,
-      flexDirection: parentNode.layoutProps.flexDirection,
-      flexWrap: parentNode.layoutProps.flexWrap,
-      justifyContent: parentNode.layoutProps.justifyContent,
-      alignItems: parentNode.layoutProps.alignItems,
-    });
-
-     */
+    const traceEnabled = logger.isTraceEnabled();
+    const flexStartTime = performance.now(); // Always track for slow layout warning
 
     const flexProps = parentNode.layoutProps;
     const isRow = flexProps.flexDirection === 'row' || flexProps.flexDirection === 'row-reverse';
@@ -427,7 +428,9 @@ export class LayoutEngine {
       return childProps.position === 'absolute' || childProps.position === 'fixed';
     });
 
-    logger.trace(`Filtered to ${flexChildren.length} flex children (${absoluteChildren.length} absolute)`);
+    if (traceEnabled) {
+      logger.trace(`Filtered to ${flexChildren.length} flex children (${absoluteChildren.length} absolute)`);
+    }
 
     if (flexChildren.length === 0) {
       // Only absolutely positioned children
@@ -465,7 +468,9 @@ export class LayoutEngine {
       const startIndex = Math.max(0, Math.floor(scrollY / rowStride) - VIRTUAL_BUFFER);
       const endIndex = Math.min(flexChildren.length, Math.ceil((scrollY + viewportHeight) / rowStride) + VIRTUAL_BUFFER);
 
-      logger.debug(`Virtual layout: ${flexChildren.length} children, visible ${startIndex}-${endIndex}, rowHeight=${estimatedRowHeight}, gap=${gap}`);
+      if (logger.isDebugEnabled()) {
+        logger.debug(`Virtual layout: ${flexChildren.length} children, visible ${startIndex}-${endIndex}, rowHeight=${estimatedRowHeight}, gap=${gap}`);
+      }
 
       // Create layout nodes only for visible children
       const nodes: LayoutNode[] = [];
@@ -524,7 +529,7 @@ export class LayoutEngine {
     }
 
     // Step 1: Calculate hypothetical sizes for flex children
-    const intrinsicStartTime = performance.now();
+    const intrinsicStartTime = traceEnabled ? performance.now() : 0;
     const flexItems = flexChildren.map(child => {
       const childProps = this._computeLayoutProps(child);
       const childStyle = this._computeStyle(child, context.parentStyle);
@@ -799,11 +804,12 @@ export class LayoutEngine {
       };
     });
 
-    logger.trace(`Intrinsic sizes calculated in ${(performance.now() - intrinsicStartTime).toFixed(2)}ms`, {
-      itemCount: flexItems.length,
-    });
-
-    logger.trace(`Flex axis sizes - main: ${mainAxisSize}, cross: ${crossAxisSize}`);
+    if (traceEnabled) {
+      logger.trace(`Intrinsic sizes calculated in ${(performance.now() - intrinsicStartTime).toFixed(2)}ms`, {
+        itemCount: flexItems.length,
+      });
+      logger.trace(`Flex axis sizes - main: ${mainAxisSize}, cross: ${crossAxisSize}`);
+    }
 
     // Safeguard: If mainAxisSize is NaN, fallback to block layout
     if (isNaN(mainAxisSize) || isNaN(crossAxisSize)) {
@@ -818,7 +824,7 @@ export class LayoutEngine {
     }
 
     const flexLines: FlexLine[] = [];
-    const lineStartTime = performance.now();
+    const lineStartTime = traceEnabled ? performance.now() : 0;
 
     if (!isWrap) {
       // No wrap - all items on one line
@@ -854,12 +860,14 @@ export class LayoutEngine {
       }
     }
 
-    logger.trace(`Flex lines collected in ${(performance.now() - lineStartTime).toFixed(2)}ms`, {
-      lineCount: flexLines.length,
-    });
+    if (traceEnabled) {
+      logger.trace(`Flex lines collected in ${(performance.now() - lineStartTime).toFixed(2)}ms`, {
+        lineCount: flexLines.length,
+      });
+    }
 
     // Step 3: Resolve flexible lengths per line with min/max constraints
-    const resolveLengthsStartTime = performance.now();
+    const resolveLengthsStartTime = traceEnabled ? performance.now() : 0;
     flexLines.forEach(line => {
       const lineItems = line.items;
       const totalGaps = gap * Math.max(0, lineItems.length - 1);
@@ -997,10 +1005,12 @@ export class LayoutEngine {
       );
     }
 
-    logger.trace(`Flexible lengths resolved in ${(performance.now() - resolveLengthsStartTime).toFixed(2)}ms`);
+    if (traceEnabled) {
+      logger.trace(`Flexible lengths resolved in ${(performance.now() - resolveLengthsStartTime).toFixed(2)}ms`);
+    }
 
     // Step 6: Position items on main axis (justify-content) and cross axis (align-items)
-    const positioningStartTime = performance.now();
+    const positioningStartTime = traceEnabled ? performance.now() : 0;
     const nodes: LayoutNode[] = [];
 
     flexLines.forEach((line, lineIndex) => {
@@ -1169,14 +1179,18 @@ export class LayoutEngine {
       nodes.push(absoluteNode);
     });
 
-    logger.trace(`Items positioned in ${(performance.now() - positioningStartTime).toFixed(2)}ms`);
+    if (traceEnabled) {
+      logger.trace(`Items positioned in ${(performance.now() - positioningStartTime).toFixed(2)}ms`);
+    }
 
     const flexTotalTime = performance.now() - flexStartTime;
-    logger.trace(`Flexbox layout completed in ${flexTotalTime.toFixed(2)}ms`, {
-      parentId: parentNode.element.id,
-      nodeCount: nodes.length,
-      lineCount: flexLines.length,
-    });
+    if (traceEnabled) {
+      logger.trace(`Flexbox layout completed in ${flexTotalTime.toFixed(2)}ms`, {
+        parentId: parentNode.element.id,
+        nodeCount: nodes.length,
+        lineCount: flexLines.length,
+      });
+    }
 
     if (flexTotalTime > 20) {
       logger.warn(`Slow flexbox layout: ${flexTotalTime.toFixed(2)}ms for ${nodes.length} items in ${flexLines.length} lines`);

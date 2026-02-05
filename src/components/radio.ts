@@ -79,22 +79,6 @@ export class RadioElement extends Element implements Renderable, Focusable, Clic
   }
 
   /**
-   * Get the current checked state
-   * @deprecated Use getValue() instead
-   */
-  isChecked(): boolean {
-    return this.getValue();
-  }
-
-  /**
-   * Set the checked state
-   * @deprecated Use setValue() instead
-   */
-  setChecked(checked: boolean): void {
-    this.setValue(checked);
-  }
-
-  /**
    * Toggle the checked state
    */
   toggle(): void {

@@ -176,16 +176,16 @@ Deno.test('Radio element state management', () => {
   const element = new RadioElement({ title: 'Test', value: 'test' });
 
   // Test initial state
-  assertEquals(element.isChecked(), false);
+  assertEquals(element.getValue(), false);
 
   // Test setting checked state
-  element.setChecked(true);
-  assertEquals(element.isChecked(), true);
+  element.setValue(true);
+  assertEquals(element.getValue(), true);
   assertEquals(element.props.checked, true);
 
   // Test toggle
   element.toggle();
-  assertEquals(element.isChecked(), false);
+  assertEquals(element.getValue(), false);
 });
 
 Deno.test('Checkbox element creates valid elements', () => {
@@ -214,27 +214,27 @@ Deno.test('Checkbox element state management', () => {
   const element = new CheckboxElement({ title: 'Test' });
 
   // Test initial state
-  assertEquals(element.isChecked(), false);
+  assertEquals(element.getValue(), false);
   assertEquals(element.isIndeterminate(), false);
 
   // Test setting checked state
-  element.setChecked(true);
-  assertEquals(element.isChecked(), true);
+  element.setValue(true);
+  assertEquals(element.getValue(), true);
   assertEquals(element.isIndeterminate(), false);
 
   // Test setting indeterminate state
   element.setIndeterminate(true);
   assertEquals(element.isIndeterminate(), true);
-  assertEquals(element.isChecked(), false);
+  assertEquals(element.getValue(), false);
 
   // Test toggle from indeterminate
   element.toggle();
-  assertEquals(element.isChecked(), true);
+  assertEquals(element.getValue(), true);
   assertEquals(element.isIndeterminate(), false);
 
   // Test normal toggle
   element.toggle();
-  assertEquals(element.isChecked(), false);
+  assertEquals(element.getValue(), false);
 });
 
 Deno.test('Element constructors work with children', () => {

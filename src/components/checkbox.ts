@@ -91,26 +91,10 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
   }
 
   /**
-   * Get the current checked state
-   * @deprecated Use getValue() instead
-   */
-  isChecked(): boolean {
-    return this.getValue();
-  }
-
-  /**
    * Get the current indeterminate state
    */
   isIndeterminate(): boolean {
     return this.props.indeterminate || false;
-  }
-
-  /**
-   * Set the checked state
-   * @deprecated Use setValue() instead
-   */
-  setChecked(checked: boolean): void {
-    this.setValue(checked);
   }
 
   /**

@@ -8,29 +8,29 @@ The `isolines` and `isolines-filled` graphics modes render scalar fields as cont
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/isoline.ts` | Shared marching squares algorithm, threshold generation, color space conversions |
-| `src/components/canvas-render.ts` | `renderIsolinesToTerminal()` function |
-| `src/components/canvas.ts` | Isoline props on canvas component |
-| `src/config/schema.json` | Default configuration with env var overrides |
+| File                              | Purpose                                                                        |
+|-----------------------------------|--------------------------------------------------------------------------------|
+| `src/isoline.ts`                  | Shared marching squares algorithm, threshold generation, color space conversions |
+| `src/components/canvas-render.ts` | `renderIsolinesToTerminal()` function                                          |
+| `src/components/canvas.ts`        | Isoline props on canvas component                                              |
+| `src/config/schema.json`          | Default configuration with env var overrides                                   |
 
 ## Configuration
 
-| Config Key | Env Var | Default | Description |
-|------------|---------|---------|-------------|
-| `render.isolineCount` | `MELKER_ISOLINE_COUNT` | 2 | Number of contour lines |
-| `render.isolineMode` | `MELKER_ISOLINE_MODE` | quantile | Distribution: equal, quantile, nice |
-| `render.isolineSource` | `MELKER_ISOLINE_SOURCE` | oklab | Scalar source channel |
+| Config Key              | Env Var                  | Default  | Description                          |
+|-------------------------|--------------------------|----------|--------------------------------------|
+| `render.isolineCount`   | `MELKER_ISOLINE_COUNT`   | 2        | Number of contour lines              |
+| `render.isolineMode`    | `MELKER_ISOLINE_MODE`    | quantile | Distribution: equal, quantile, nice  |
+| `render.isolineSource`  | `MELKER_ISOLINE_SOURCE`  | oklab    | Scalar source channel                |
 
 ## Scalar Sources
 
-| Source | Description | Range |
-|--------|-------------|-------|
-| `luma` | BT.601 luminance (0.299R + 0.587G + 0.114B) | 0-255 |
-| `oklab` | Oklab perceptual lightness (default) | 0-255 |
-| `oklch-hue` | Oklch hue angle (groups by color) | 0-255 |
-| `red`, `green`, `blue`, `alpha` | Individual channels | 0-255 |
+| Source                           | Description                                 | Range |
+|----------------------------------|---------------------------------------------|-------|
+| `luma`                           | BT.601 luminance (0.299R + 0.587G + 0.114B) | 0-255 |
+| `oklab`                          | Oklab perceptual lightness (default)        | 0-255 |
+| `oklch-hue`                      | Oklch hue angle (groups by color)           | 0-255 |
+| `red`, `green`, `blue`, `alpha`  | Individual channels                         | 0-255 |
 
 ### Oklab Color Space
 
@@ -60,24 +60,24 @@ bottomLeft(1) ── bottomRight(2)
 
 ### Character Mapping
 
-| Case | Binary | Corners Above | Character |
-|------|--------|---------------|-----------|
-| 0 | 0000 | none | (none) |
-| 1 | 0001 | BL | ╮ |
-| 2 | 0010 | BR | ╭ |
-| 3 | 0011 | BL, BR | ─ |
-| 4 | 0100 | TR | ╰ |
-| 5 | 0101 | TR, BL | │ (saddle) |
-| 6 | 0110 | TR, BR | │ |
-| 7 | 0111 | TR, BR, BL | ╯ |
-| 8 | 1000 | TL | ╯ |
-| 9 | 1001 | TL, BL | │ |
-| 10 | 1010 | TL, BR | │ (saddle) |
-| 11 | 1011 | TL, BR, BL | ╰ |
-| 12 | 1100 | TL, TR | ─ |
-| 13 | 1101 | TL, TR, BL | ╭ |
-| 14 | 1110 | TL, TR, BR | ╮ |
-| 15 | 1111 | all | (none) |
+| Case | Binary | Corners Above | Character   |
+|------|--------|---------------|-------------|
+| 0    | 0000   | none          | (none)      |
+| 1    | 0001   | BL            | ╮           |
+| 2    | 0010   | BR            | ╭           |
+| 3    | 0011   | BL, BR        | ─           |
+| 4    | 0100   | TR            | ╰           |
+| 5    | 0101   | TR, BL        | │ (saddle)  |
+| 6    | 0110   | TR, BR        | │           |
+| 7    | 0111   | TR, BR, BL    | ╯           |
+| 8    | 1000   | TL            | ╯           |
+| 9    | 1001   | TL, BL        | │           |
+| 10   | 1010   | TL, BR        | │ (saddle)  |
+| 11   | 1011   | TL, BR, BL    | ╰           |
+| 12   | 1100   | TL, TR        | ─           |
+| 13   | 1101   | TL, TR, BL    | ╭           |
+| 14   | 1110   | TL, TR, BR    | ╮           |
+| 15   | 1111   | all           | (none)      |
 
 ## Threshold Generation
 
@@ -198,11 +198,11 @@ Key details:
 
 ### Why Both Techniques?
 
-| Problem | Sub-cell Sampling | Area Averaging |
-|---------|-------------------|----------------|
-| Line passes between corners | ✓ Finer grid catches it | ✗ |
-| Line is 1px, misses all samples | ✗ | ✓ Contributes ~11% to neighbors |
-| Sharp edges create aliasing | ✗ | ✓ Smooths transitions |
+| Problem                          | Sub-cell Sampling        | Area Averaging                 |
+|----------------------------------|--------------------------|--------------------------------|
+| Line passes between corners      | ✓ Finer grid catches it  | ✗                              |
+| Line is 1px, misses all samples  | ✗                        | ✓ Contributes ~11% to neighbors |
+| Sharp edges create aliasing      | ✗                        | ✓ Smooths transitions          |
 
 ### Terminal Cell Corner Selection
 
@@ -280,10 +280,10 @@ Terminal Output (3×3 cells):
 
 ## Two Modes
 
-| Mode | Fill | Description |
-|------|------|-------------|
-| `isolines` | No | Box-drawing characters only, transparent background |
-| `isolines-filled` | Yes | Box-drawing + grayscale gradient background |
+| Mode               | Fill | Description                                       |
+|--------------------|------|---------------------------------------------------|
+| `isolines`         | No   | Box-drawing characters only, transparent background |
+| `isolines-filled`  | Yes  | Box-drawing + grayscale gradient background       |
 
 ### Filled Mode Background
 
@@ -329,11 +329,11 @@ MELKER_ISOLINE_COUNT=5 MELKER_ISOLINE_SOURCE=oklab ./melker.ts --gfx-mode=isolin
 
 ## Performance
 
-| Operation | Complexity |
-|-----------|------------|
-| Build scalar grid | O(W × H × 9) for 3×3 averaging |
-| Generate thresholds | O(W × H) for quantile (unique values) |
-| Render cells | O(W × H × N) for N isolines |
+| Operation             | Complexity                           |
+|-----------------------|--------------------------------------|
+| Build scalar grid     | O(W × H × 9) for 3×3 averaging       |
+| Generate thresholds   | O(W × H) for quantile (unique values) |
+| Render cells          | O(W × H × N) for N isolines          |
 
 Isolines mode is typically faster than sextant mode because:
 - No 6-pixel sampling per cell (scalar grid pre-computed)

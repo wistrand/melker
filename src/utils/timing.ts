@@ -90,67 +90,6 @@ export function createDebouncedAction(
 }
 
 /**
- * Creates a throttled function that executes at most once per interval.
- * Unlike debounce, throttle guarantees execution at regular intervals
- * during continuous calls.
- *
- * @param fn Function to throttle
- * @param interval Minimum time between executions in milliseconds
- * @param options.leading Execute on the leading edge (default: true)
- * @param options.trailing Execute on the trailing edge (default: true)
- */
-export function throttle<T extends (...args: unknown[]) => void>(
-  fn: T,
-  interval: number,
-  options: { leading?: boolean; trailing?: boolean } = {}
-): (...args: Parameters<T>) => void {
-  const { leading = true, trailing = true } = options;
-  let lastExecuteTime = 0;
-  let timeoutId: number | null = null;
-  let lastArgs: Parameters<T> | null = null;
-
-  const execute = (args: Parameters<T>) => {
-    lastExecuteTime = performance.now();
-    fn(...args);
-  };
-
-  return (...args: Parameters<T>) => {
-    const now = performance.now();
-    const elapsed = now - lastExecuteTime;
-
-    // Store args for potential trailing call
-    lastArgs = args;
-
-    if (elapsed >= interval) {
-      // Enough time has passed, execute immediately if leading is enabled
-      if (leading) {
-        // Cancel any pending trailing call
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        execute(args);
-        lastArgs = null;
-      }
-    }
-
-    // Schedule trailing call if enabled and not already scheduled
-    if (trailing && timeoutId === null) {
-      const remaining = interval - elapsed;
-      const delay = remaining > 0 ? remaining : interval;
-
-      timeoutId = setTimeout(() => {
-        timeoutId = null;
-        if (lastArgs !== null) {
-          execute(lastArgs);
-          lastArgs = null;
-        }
-      }, delay) as unknown as number;
-    }
-  };
-}
-
-/**
  * Throttled action with cancel capability.
  * Similar to DebouncedAction but for throttle pattern.
  */

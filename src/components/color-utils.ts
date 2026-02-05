@@ -375,21 +375,6 @@ export function lerpColor(color1: string, color2: string, t: number, colorSpace:
   }
 }
 
-/**
- * Format a packed RGBA color as a hex string for debugging/logging
- * @param color - Packed RGBA color
- * @returns Hex string like "#RRGGBB" or "#RRGGBBAA" if alpha != 255
- */
-export function formatColorForDebug(color: PackedRGBA | undefined): string {
-  if (color === undefined) return 'undefined';
-  const r = (color >> 24) & 0xFF;
-  const g = (color >> 16) & 0xFF;
-  const b = (color >> 8) & 0xFF;
-  const a = color & 0xFF;
-  const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-  return a === 255 ? hex : `${hex}${a.toString(16).padStart(2, '0')}`;
-}
-
 // Color property names that should be parsed from strings to packed numbers
 const COLOR_STYLE_PROPS = new Set([
   'color',

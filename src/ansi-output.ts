@@ -389,32 +389,6 @@ export class AnsiOutputGenerator {
   }
 
   /**
-   * Parse hex color to RGB
-   */
-  private _parseHexColor(hex: string): { r: number; g: number; b: number } | null {
-    const match = hex.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-    if (!match) return null;
-
-    const color = match[1];
-    if (color.length === 3) {
-      // #RGB -> #RRGGBB
-      const [r, g, b] = color.split('').map(c => c + c);
-      return {
-        r: parseInt(r, 16),
-        g: parseInt(g, 16),
-        b: parseInt(b, 16),
-      };
-    } else {
-      // #RRGGBB
-      return {
-        r: parseInt(color.substr(0, 2), 16),
-        g: parseInt(color.substr(2, 2), 16),
-        b: parseInt(color.substr(4, 2), 16),
-      };
-    }
-  }
-
-  /**
    * Convert RGB to 256-color palette index
    */
   private _hexTo256Color(rgb: { r: number; g: number; b: number }): number {
@@ -424,42 +398,5 @@ export class AnsiOutputGenerator {
     const b = Math.round(rgb.b / 51) * 51;
 
     return 16 + (36 * Math.round(r / 51)) + (6 * Math.round(g / 51)) + Math.round(b / 51);
-  }
-
-  /**
-   * Get nearest named color for 16-color fallback
-   */
-  private _getNearestNamedColor(rgb: { r: number; g: number; b: number }, isBackground: boolean): string {
-    const offset = isBackground ? 10 : 0;
-
-    // Simple color distance calculation to nearest named color
-    const colors = [
-      { name: 'black', r: 0, g: 0, b: 0, code: 30 },
-      { name: 'red', r: 255, g: 0, b: 0, code: 31 },
-      { name: 'green', r: 0, g: 255, b: 0, code: 32 },
-      { name: 'yellow', r: 255, g: 255, b: 0, code: 33 },
-      { name: 'blue', r: 0, g: 0, b: 255, code: 34 },
-      { name: 'magenta', r: 255, g: 0, b: 255, code: 35 },
-      { name: 'cyan', r: 0, g: 255, b: 255, code: 36 },
-      { name: 'white', r: 255, g: 255, b: 255, code: 37 },
-    ];
-
-    let nearestColor = colors[0];
-    let minDistance = Infinity;
-
-    for (const color of colors) {
-      const distance = Math.sqrt(
-        Math.pow(rgb.r - color.r, 2) +
-        Math.pow(rgb.g - color.g, 2) +
-        Math.pow(rgb.b - color.b, 2)
-      );
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestColor = color;
-      }
-    }
-
-    return `\x1b[${nearestColor.code + offset}m`;
   }
 }

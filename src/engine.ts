@@ -911,6 +911,9 @@ export class MelkerEngine {
         await this._debugServer.start();
         // Set global instance for logging integration
         setGlobalDebugServer(this._debugServer);
+        this._logger?.info('Debug server started', {
+          url: this._debugServer.connectionUrl,
+        });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         this._logger?.warn('Failed to start debug server', {
@@ -1492,6 +1495,7 @@ export class MelkerEngine {
             }
           }).catch((err) => this._logger?.error('Error during exit', err instanceof Error ? err : new Error(String(err))));
         },
+        getDebugServerUrl: () => this._debugServer?.connectionUrl,
       });
     }
     this._devToolsManager.setSource(content, filePath, type, convertedContent, policy, appDir, sourceUrl, systemInfo, helpContent);
@@ -2662,6 +2666,13 @@ export class MelkerEngine {
   }
 
   /**
+   * Get debug server instance (if enabled)
+   */
+  get debugServer(): MelkerDebugServer | undefined {
+    return this._debugServer;
+  }
+
+  /**
    * Inject a key press event (for debugging/testing)
    */
   handleKeyPress(event: { key: string; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean }): void {
@@ -2694,6 +2705,64 @@ export class MelkerEngine {
         });
       }
     }
+  }
+
+  /**
+   * Dispatch a named custom event (for debugging/testing/remote control)
+   * @param name - The name of the custom event
+   * @param detail - Optional data payload for the event
+   */
+  dispatchNamedEvent(name: string, detail?: unknown): void {
+    if (this._eventManager) {
+      this._eventManager.dispatchEvent({
+        type: 'custom',
+        name,
+        detail,
+        timestamp: Date.now(),
+      });
+    }
+
+    // Also dispatch to document-level listeners
+    if (this._document) {
+      this._document.dispatchEvent({
+        type: 'custom',
+        name,
+        detail,
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Get the computed bounds of an element by ID
+   * @param elementId - The ID of the element
+   * @returns The bounds {x, y, width, height} or null if not found
+   */
+  getElementBounds(elementId: string): { x: number; y: number; width: number; height: number } | null {
+    if (!this._renderer) return null;
+    return this._renderer.findElementBounds(elementId);
+  }
+
+  /**
+   * Get the element at specific screen coordinates (hit testing)
+   * @param x - X coordinate
+   * @param y - Y coordinate
+   * @returns Element info with id, type, bounds, and props, or null if no element found
+   */
+  getElementAt(x: number, y: number): { id: string; type: string; bounds: { x: number; y: number; width: number; height: number } | null; props: Record<string, unknown> } | null {
+    if (!this._hitTester) return null;
+
+    const element = this._hitTester.hitTest(x, y);
+    if (!element || !element.id) return null;
+
+    const bounds = this.getElementBounds(element.id);
+
+    return {
+      id: element.id,
+      type: element.type,
+      bounds,
+      props: element.props || {}
+    };
   }
 
   /**

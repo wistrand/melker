@@ -796,6 +796,10 @@ export class MelkerConfig {
     return this.data['debug.host'] as string;
   }
 
+  get debugToken(): string | undefined {
+    return this.data['debug.token'] as string | undefined;
+  }
+
   get debugAllowRemoteInput(): boolean {
     return this.data['debug.allowRemoteInput'] as boolean;
   }

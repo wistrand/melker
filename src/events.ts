@@ -17,7 +17,8 @@ export type EventType =
   | 'change'
   | 'input'
   | 'submit'
-  | 'selectionchange';
+  | 'selectionchange'
+  | 'custom';
 
 export interface BaseEvent {
   type: EventType;
@@ -67,7 +68,7 @@ export interface InputEvent extends BaseEvent {
   value: string;
 }
 
-export type MelkerEvent = KeyEvent | MouseEvent | WheelEvent | FocusEvent | InputEvent | KeyPressEvent | ChangeEvent | SelectionChangeEvent;
+export type MelkerEvent = KeyEvent | MouseEvent | WheelEvent | FocusEvent | InputEvent | KeyPressEvent | ChangeEvent | SelectionChangeEvent | CustomEvent;
 
 // Specific event types for component handlers
 export interface KeyPressEvent extends BaseEvent {
@@ -92,6 +93,12 @@ export interface SelectionChangeEvent extends BaseEvent {
   selectedItems: number[];
   focusedItem?: number;
   lastSelectedItem?: number;
+}
+
+export interface CustomEvent extends BaseEvent {
+  type: 'custom';
+  name: string;
+  detail?: unknown;
 }
 
 export type EventHandler<T extends MelkerEvent = MelkerEvent> = (event: T) => void | boolean;

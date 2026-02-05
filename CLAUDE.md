@@ -48,20 +48,21 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 
 ### For Contributors (Internals)
 
-| Topic               | Doc                                                              |
-|---------------------|------------------------------------------------------------------|
-| Project structure   | [project-structure.md](agent_docs/project-structure.md)          |
-| Core architecture   | [architecture.md](agent_docs/architecture.md)                    |
-| Component reference | [component-reference.md](agent_docs/component-reference.md)      |
-| Config system       | [config-architecture.md](agent_docs/config-architecture.md)      |
-| Policy system       | [policy-architecture.md](agent_docs/policy-architecture.md)      |
-| Graph/diagrams      | [graph-architecture.md](agent_docs/graph-architecture.md)        |
-| Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)  |
-| Isolines mode       | [isolines-architecture.md](agent_docs/isolines-architecture.md)  |
-| Sixel protocol      | [sixel-architecture.md](agent_docs/sixel-architecture.md)        |
-| Kitty protocol      | [kitty-architecture.md](agent_docs/kitty-architecture.md)        |
-| iTerm2 protocol     | [iterm2-architecture.md](agent_docs/iterm2-architecture.md)      |
-| Benchmarks          | [benchmark-architecture.md](agent_docs/benchmark-architecture.md) |
+| Topic               | Doc                                                                  |
+|---------------------|----------------------------------------------------------------------|
+| Project structure   | [project-structure.md](agent_docs/project-structure.md)              |
+| Core architecture   | [architecture.md](agent_docs/architecture.md)                        |
+| Component reference | [component-reference.md](agent_docs/component-reference.md)          |
+| Config system       | [config-architecture.md](agent_docs/config-architecture.md)          |
+| Policy system       | [policy-architecture.md](agent_docs/policy-architecture.md)          |
+| Debug server        | [debug-server-architecture.md](agent_docs/debug-server-architecture.md) |
+| Graph/diagrams      | [graph-architecture.md](agent_docs/graph-architecture.md)            |
+| Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)      |
+| Isolines mode       | [isolines-architecture.md](agent_docs/isolines-architecture.md)      |
+| Sixel protocol      | [sixel-architecture.md](agent_docs/sixel-architecture.md)            |
+| Kitty protocol      | [kitty-architecture.md](agent_docs/kitty-architecture.md)            |
+| iTerm2 protocol     | [iterm2-architecture.md](agent_docs/iterm2-architecture.md)          |
+| Benchmarks          | [benchmark-architecture.md](agent_docs/benchmark-architecture.md)    |
 
 ### Deep Dives
 
@@ -181,6 +182,7 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 | `MELKER_STDOUT_TRIM`         | Trim stdout output: `none` (default), `right` (trailing spaces), `bottom` (trailing newlines), `both`                                                              |
 | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`)                                                                                                                    |
 | `MELKER_DEBUG_PORT`          | Debug server port (implies `net: localhost`)                                                                                                                       |
+| `MELKER_DEBUG_TOKEN`         | Debug server connection token (auto-generated if not specified)                                                                                                    |
 | `MELKER_ALLOW_REMOTE_INPUT`  | Allow browser mirror to send mouse/keyboard events (`true` or `1`)                                                                                                 |
 | `MELKER_LINT`                | Enable lint mode (`true` or `1`)                                                                                                                                   |
 | `MELKER_NO_CONSOLE_OVERRIDE` | Disable console.log redirect to logger (`true` or `1`)                                                                                                             |

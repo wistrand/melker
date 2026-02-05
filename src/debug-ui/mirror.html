@@ -1,0 +1,184 @@
+<!-- Melker Debug Server - Mirror UI HTML -->
+<div class="header">
+  <div class="header-left">
+    <div class="title">Melker Debug</div>
+    <div class="status">
+      <div class="status-indicator" id="statusIndicator"></div>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <div class="input-status disabled" id="inputStatus">Input: Disabled</div>
+  </div>
+</div>
+
+<div class="main-container">
+  <!-- Terminal Mirror (Primary View) -->
+  <div class="mirror-view">
+    <div class="toolbar">
+      <button onclick="refreshView()">Refresh</button>
+      <div class="coordinates" id="mouseCoords">x: - y: -</div>
+    </div>
+    <div class="terminal-scroll">
+      <div class="terminal-container" id="terminalView"
+           onmousemove="handleTerminalMouseMove(event)"
+           onmouseleave="handleTerminalMouseLeave()"
+           onclick="handleTerminalClick(event)"
+           oncontextmenu="handleTerminalRightClick(event)"
+           tabindex="0"
+           onkeydown="handleKeyDown(event)"
+           onkeyup="handleKeyUp(event)"
+           onfocus="terminalFocused()"
+           onblur="terminalBlurred()">
+        <div id="terminalContent">Connecting...</div>
+        <div class="highlight-overlay" id="highlight" style="display: none;"></div>
+        <div class="element-tooltip" id="elementTooltip" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resize Handle -->
+  <div class="resize-handle" id="resizeHandle"></div>
+
+  <!-- Tabbed Debug Panel -->
+  <div class="debug-panel" id="debugPanel">
+    <div class="tab-bar">
+      <div class="tab" data-tab="elements" onclick="switchTab('elements')">Elements</div>
+      <div class="tab" data-tab="events" onclick="switchTab('events')">Events</div>
+      <div class="tab active" data-tab="logs" onclick="switchTab('logs')">Logs</div>
+      <div class="tab" data-tab="state" onclick="switchTab('state')">State</div>
+      <div class="tab-controls">
+        <div class="tab-control" onclick="togglePanel()" id="collapseBtn" title="Collapse panel">▼</div>
+      </div>
+    </div>
+
+    <!-- Elements Tab -->
+    <div class="tab-content" id="tab-elements">
+      <div class="elements-content">
+        <div class="elements-toolbar">
+          <button class="secondary" onclick="refreshDocumentTree()">Refresh</button>
+          <button class="secondary" onclick="expandAllNodes()">Expand All</button>
+          <button class="secondary" onclick="collapseAllNodes()">Collapse All</button>
+          <button class="secondary" onclick="clearElementSelection()">Clear Selection</button>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 11px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="trackMouseToggle" onchange="toggleMouseTracking()">
+              Track Mouse
+            </label>
+            <span class="tracking-status" id="trackingStatus" style="display: none;">Tracking</span>
+          </div>
+        </div>
+        <div class="elements-main">
+          <div class="tree-panel" id="documentTree">Loading...</div>
+          <div class="details-panel" id="elementDetails">
+            <div class="detail-section">
+              <div class="detail-title">Selected Element</div>
+              <div class="detail-value" id="selectedInfo">Click an element to inspect</div>
+            </div>
+            <div class="detail-section" id="hoveredSection" style="display: none;">
+              <div class="detail-title">Hovered Element</div>
+              <div class="detail-value" id="hoveredInfo">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Events Tab -->
+    <div class="tab-content" id="tab-events">
+      <div class="events-content">
+        <div class="events-toolbar">
+          <span style="color: #808080; font-size: 11px;">Named Event:</span>
+          <input type="text" id="eventName" placeholder="event-name">
+          <input type="text" id="eventPayload" placeholder='{"key": "value"}' style="width: 150px;">
+          <button onclick="triggerNamedEvent()">Dispatch</button>
+        </div>
+        <div class="events-toolbar" style="border-top: none; padding-top: 0;">
+          <span style="color: #808080; font-size: 11px;">Modifiers:</span>
+          <label style="font-size: 11px; display: flex; align-items: center; gap: 4px;">
+            <input type="checkbox" id="modCtrl"> Ctrl
+          </label>
+          <label style="font-size: 11px; display: flex; align-items: center; gap: 4px;">
+            <input type="checkbox" id="modAlt"> Alt
+          </label>
+          <label style="font-size: 11px; display: flex; align-items: center; gap: 4px;">
+            <input type="checkbox" id="modShift"> Shift
+          </label>
+          <div style="margin-left: 12px;" class="quick-keys">
+            <button class="secondary" onclick="injectQuickKey('Tab')">Tab</button>
+            <button class="secondary" onclick="injectQuickKey('Tab', true)">Shift+Tab</button>
+            <button class="secondary" onclick="injectQuickKey('Enter')">Enter</button>
+            <button class="secondary" onclick="injectQuickKey('Escape')">Esc</button>
+            <button class="secondary" onclick="injectQuickKey('ArrowUp')">Up</button>
+            <button class="secondary" onclick="injectQuickKey('ArrowDown')">Down</button>
+            <button class="secondary" onclick="injectQuickKey('ArrowLeft')">Left</button>
+            <button class="secondary" onclick="injectQuickKey('ArrowRight')">Right</button>
+            <select id="fkeySelect" onchange="injectFKey()" style="font-size: 10px; padding: 3px;">
+              <option value="">F1-F12</option>
+              <option value="F1">F1</option>
+              <option value="F2">F2</option>
+              <option value="F3">F3</option>
+              <option value="F4">F4</option>
+              <option value="F5">F5</option>
+              <option value="F6">F6</option>
+              <option value="F7">F7</option>
+              <option value="F8">F8</option>
+              <option value="F9">F9</option>
+              <option value="F10">F10</option>
+              <option value="F11">F11</option>
+              <option value="F12">F12</option>
+            </select>
+          </div>
+          <button class="secondary" onclick="clearEventHistory()" style="margin-left: auto;">Clear History</button>
+        </div>
+        <div class="event-history" id="eventHistory">
+          <div style="color: #808080; padding: 8px;">Event history will appear here...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs Tab -->
+    <div class="tab-content active" id="tab-logs">
+      <div class="logs-content">
+        <div class="logs-toolbar">
+          <select id="logLevelFilter" onchange="filterLogs()">
+            <option value="DEBUG">DEBUG+</option>
+            <option value="INFO" selected>INFO+</option>
+            <option value="WARN">WARN+</option>
+            <option value="ERROR">ERROR+</option>
+          </select>
+          <button class="secondary" onclick="clearLogs()">Clear</button>
+          <span style="margin-left: auto; color: #808080; font-size: 11px;" id="logCount">0 entries</span>
+        </div>
+        <div class="log-list" id="logContent">
+          <div style="color: #808080; padding: 8px;">Waiting for log entries...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State Tab -->
+    <div class="tab-content" id="tab-state">
+      <div class="state-content">
+        <div class="state-card">
+          <div class="state-card-title">Engine</div>
+          <div class="state-row"><span class="state-label">Running</span><span class="state-value" id="stateRunning">-</span></div>
+          <div class="state-row"><span class="state-label">Elements</span><span class="state-value" id="stateElements">-</span></div>
+          <div class="state-row"><span class="state-label">Focused</span><span class="state-value" id="stateFocused">-</span></div>
+        </div>
+        <div class="state-card">
+          <div class="state-card-title">Terminal</div>
+          <div class="state-row"><span class="state-label">Size</span><span class="state-value" id="stateTermSize">-</span></div>
+          <div class="state-row"><span class="state-label">Headless</span><span class="state-value" id="stateHeadless">-</span></div>
+          <div class="state-row"><span class="state-label">Input</span><span class="state-value" id="stateInput">-</span></div>
+        </div>
+        <div class="state-card">
+          <div class="state-card-title">Connection</div>
+          <div class="state-row"><span class="state-label">Status</span><span class="state-value" id="stateConnStatus">-</span></div>
+          <div class="state-row"><span class="state-label">Retries</span><span class="state-value" id="stateRetries">0</span></div>
+        </div>
+        <div class="state-card">
+          <div class="state-card-title">Actions</div>
+          <button onclick="send({type:'trigger-render'})" style="margin-top: 4px; width: 100%;">Force Render</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

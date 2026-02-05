@@ -33,6 +33,7 @@ export interface DevToolsDependencies {
   autoRender: boolean;
   openAIAssistant?: () => void;
   exit?: () => void;
+  getDebugServerUrl?: () => string | undefined;
 }
 
 /** System information for the System tab */
@@ -328,6 +329,16 @@ export class DevToolsManager {
       lines.push(`  Approval:   ${info.approvalFile}`);
     }
     lines.push('');
+
+    // Debug server info (dynamically retrieved via callback)
+    const debugServerUrl = this._deps.getDebugServerUrl?.();
+    if (debugServerUrl) {
+      lines.push('DEBUG SERVER');
+      lines.push(sep);
+      lines.push(`  Status:     Running`);
+      lines.push(`  URL:        ${debugServerUrl}`);
+      lines.push('');
+    }
 
     lines.push('SCRIPT PROCESSING');
     lines.push(sep);

@@ -179,9 +179,16 @@
       "env": "MELKER_DEBUG_HOST",
       "description": "Debug server bind address"
     },
+    "debug.token": {
+      "type": "string",
+      "env": "MELKER_DEBUG_TOKEN",
+      "flag": "--debug-token",
+      "description": "Debug server connection token (auto-generated if not specified)"
+    },
     "debug.allowRemoteInput": {
       "type": "boolean",
       "default": false,
+      "flag": "--debug-allow-input",
       "env": "MELKER_ALLOW_REMOTE_INPUT",
       "description": "Allow input from debug clients"
     },

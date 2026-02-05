@@ -182,51 +182,91 @@ MELKER_HEADLESS=true ./melker.ts app.melker
 
 Combine for remote testing:
 ```bash
-MELKER_HEADLESS=true MELKER_DEBUG_PORT=8080 ./melker.ts app.melker
+MELKER_HEADLESS=true ./melker.ts --debug-port 8080 app.melker
 ```
 
 ## Debug Server (`src/debug-server.ts`)
 
-WebSocket server for remote debugging and automation.
+WebSocket server for remote debugging and automation with a full-featured web UI.
 
 ### Enable Debug Server
 
 ```bash
-MELKER_DEBUG_PORT=8080 ./melker.ts app.melker
+./melker.ts --debug-port 8080 app.melker
 ```
 
-Access at: `http://localhost:8080` (web UI) or `ws://localhost:8080` (WebSocket)
+Access at: `http://localhost:8080/?token=<token>` (web UI) or `ws://localhost:8080/?token=<token>` (WebSocket)
+
+The token is auto-generated at startup and displayed in the terminal. You can also set it explicitly:
+```bash
+./melker.ts --debug-port 8080 --debug-token mytoken app.melker
+```
+
+### Web UI Features
+
+The debug server provides a browser-based interface with:
+
+**Terminal Mirror (Primary View)**
+- Real-time terminal rendering with full ANSI color support
+- Click to inject mouse events (when input enabled)
+- Keyboard input forwarding (when terminal focused)
+- Shift-click to inspect element at coordinates
+
+**Tabbed Debug Panels**
+
+| Tab      | Features                                                    |
+|----------|-------------------------------------------------------------|
+| Elements | Document tree, expand/collapse, click to select, hover to highlight, mouse tracking mode |
+| Events   | Named event dispatch, quick keys (Tab/Enter/Esc/arrows), modifier toggles, event history |
+| Logs     | Real-time log streaming, level filtering (DEBUG/INFO/WARN/ERROR) |
+| State    | Engine state, terminal size, connection status, force render action |
+
+**Element Inspector**
+- Click element in tree to highlight bounds on terminal
+- Hover element in tree to preview highlight
+- Enable "Track Mouse" to inspect elements by hovering on terminal
+- Shift-click on terminal to reveal element in tree
+
+**Keyboard Shortcuts**
+- `Ctrl+1/2/3/4` - Switch tabs
+- Click collapse button to minimize panel
+- Drag resize handle to adjust panel height
 
 ### Available Commands
 
 Send JSON messages via WebSocket:
 
-| Command               | Purpose                                  |
-|-----------------------|------------------------------------------|
-| `get-engine-state`    | Get engine status, element count, focus  |
-| `get-buffer`          | Get current buffer snapshot              |
-| `get-document-tree`   | Get element tree structure               |
-| `inject-event`        | Inject keyboard/mouse events             |
-| `trigger-render`      | Force a re-render                        |
-| `get-headless-status` | Headless mode info                       |
-| `get-terminal-output` | Get captured terminal output             |
+| Command                | Purpose                                   |
+|------------------------|-------------------------------------------|
+| `get-engine-state`     | Get engine status, element count, focus   |
+| `get-buffer`           | Get current buffer snapshot (RLE or delta)|
+| `get-document-tree`    | Get element tree structure                |
+| `get-element-bounds`   | Get layout bounds for an element          |
+| `get-element-at`       | Get element at (x, y) coordinates         |
+| `dispatch-named-event` | Dispatch custom named event               |
+| `inject-click`         | Inject mouse click                        |
+| `inject-key`           | Inject keyboard event                     |
+| `trigger-render`       | Force a re-render                         |
+| `get-headless-status`  | Headless mode info                        |
+| `get-terminal-output`  | Get captured terminal output              |
 
-### Event Injection Examples
+### Event Injection
 
-```json
-// Inject keypress
-{"type": "inject-event", "data": {"type": "keypress", "key": "Enter"}}
+Event injection requires either headless mode or the `--debug-allow-input` flag:
 
-// Inject click at x=10, y=5
-{"type": "inject-event", "data": {"type": "click", "x": 10, "y": 5}}
+```bash
+# Enable remote input for non-headless mode
+./melker.ts --debug-port 8080 --debug-allow-input app.melker
 ```
 
 ### Subscriptions
 
 Subscribe to real-time updates:
+- `render-notifications` - Notified on each re-render (push-based, no polling)
 - `buffer-updates` - Buffer changes
 - `engine-state` - State changes
-- `render-notifications` - Re-render events
+- `terminal-resize` - Terminal size changes
+- `log-stream` - Log entries
 - `event-stream` - Input events
 
 ## Debugging Workflow
@@ -252,7 +292,7 @@ Watch mode monitors the source file and automatically reloads the application wh
 ### 4. Use Debug Server for Interaction
 ```bash
 # In another terminal
-MELKER_DEBUG_PORT=8080 MELKER_LOG_FILE=/tmp/app.log ./melker.ts app.melker
+MELKER_LOG_FILE=/tmp/app.log ./melker.ts --debug-port 8080 app.melker
 ```
 
 ### 5. Disable Alternate Screen (See Raw Output)
@@ -455,16 +495,20 @@ When using Chrome DevTools Performance profiling, rendering may appear corrupted
 
 ## Key Files
 
-| File                  | Purpose                                |
-|-----------------------|----------------------------------------|
-| `src/logging.ts`      | Logger class, getLogger(), log levels  |
-| `src/headless.ts`     | HeadlessTerminal, HeadlessManager      |
-| `src/stdout.ts`       | Stdout mode, bufferToStdout()          |
-| `src/debug-server.ts` | MelkerDebugServer, WebSocket API       |
-| `src/dev-tools.ts`    | DevToolsManager, F12 overlay           |
+| File                     | Purpose                                |
+|--------------------------|----------------------------------------|
+| `src/logging.ts`         | Logger class, getLogger(), log levels  |
+| `src/headless.ts`        | HeadlessTerminal, HeadlessManager      |
+| `src/stdout.ts`          | Stdout mode, bufferToStdout()          |
+| `src/debug-server.ts`    | MelkerDebugServer, WebSocket API       |
+| `src/debug-ui/mirror.html` | Debug web UI HTML structure          |
+| `src/debug-ui/mirror.css`  | Debug web UI styles                  |
+| `src/debug-ui/mirror.js`   | Debug web UI client logic            |
+| `src/dev-tools.ts`       | DevToolsManager, F12 overlay           |
 
 ## See Also
 
 - [architecture.md](architecture.md) — Core architecture, render pipeline
 - [script_usage.md](script_usage.md) — $melker context and logging API
 - [config-architecture.md](config-architecture.md) — Configuration system
+- [debug-server-architecture.md](debug-server-architecture.md) — Debug server architecture and protocol

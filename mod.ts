@@ -109,6 +109,7 @@ export {
   type InputEvent,
   type KeyPressEvent,
   type ChangeEvent,
+  type CustomEvent,
   type EventHandler,
   type EventRegistration,
 } from './src/events.ts';

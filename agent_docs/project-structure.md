@@ -66,6 +66,14 @@ Detailed file layout for the Melker codebase.
 | `lint.ts`               | Lint mode validation, schemas                  |
 | `lsp.ts`                | Language Server Protocol for .melker files     |
 
+#### `debug-ui/` - Debug Server Web UI
+
+| File         | Purpose                                    |
+|--------------|--------------------------------------------|
+| `mirror.html`| HTML structure for debug web UI            |
+| `mirror.css` | Styles for terminal mirror and debug panels|
+| `mirror.js`  | Client-side logic, WebSocket, rendering    |
+
 ### System Integration
 
 | File                    | Purpose                                  |

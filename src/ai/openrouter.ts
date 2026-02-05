@@ -56,10 +56,7 @@ export interface StreamCallback {
 }
 
 // Default configuration
-// const DEFAULT_MODEL = 'google/gemini-2.5-flash-lite';
-
 const DEFAULT_MODEL = 'openai/gpt-5.2-chat';
-// const DEFAULT_MODEL = 'mistralai/devstral-2512';
 const DEFAULT_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_SITE_URL = 'https://github.com/melker';
 const DEFAULT_SITE_NAME = 'Melker';

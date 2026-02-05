@@ -297,11 +297,6 @@ export class TerminalBuffer {
     }
   }
 
-  // Get the visual width that text would occupy
-  getTextWidth(text: string): number {
-    return getStringWidth(text);
-  }
-
   // Fill a horizontal line with EMPTY_CHAR (for clearing/background fill)
   fillLine(x: number, y: number, width: number, style: Partial<Cell> = {}): void {
     for (let i = 0; i < width && x + i < this._width; i++) {

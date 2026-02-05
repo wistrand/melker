@@ -4,7 +4,7 @@ import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Drag
 import type { KeyEvent } from '../events.ts';
 import type { Document } from '../document.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
-import { ClippedDualBuffer } from '../clipped-buffer.ts';
+import { ViewportDualBuffer, createClipViewport } from '../viewport-buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { TableSectionElement } from './table-section.ts';
@@ -1357,7 +1357,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       }
 
       if (isScrollable && totalContentLines > availableTbodyHeight) {
-        // Use ClippedDualBuffer for line-by-line scrolling
+        // Use ViewportDualBuffer for line-by-line scrolling
         // Create clip bounds for the tbody viewport area
         const clipBounds: Bounds = {
           x: bounds.x,
@@ -1367,7 +1367,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
         };
 
         // Create a clipped buffer that will clip all rendering to the viewport
-        const clippedBuffer = new ClippedDualBuffer(buffer, clipBounds);
+        const clippedBuffer = new ViewportDualBuffer(buffer as DualBuffer, createClipViewport(clipBounds));
 
         // Render ALL rows at their virtual positions, offset by scroll
         // The clipped buffer will automatically hide anything outside the viewport
@@ -1752,7 +1752,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
    * @param showColumnBorders - Whether to show internal column borders
    */
   private _renderRow(
-    buffer: DualBuffer | ClippedDualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     x: number,
     y: number,
     row: TableRowElement,
@@ -1898,7 +1898,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
    * Render cell children with line clipping support
    */
   private _renderCellChildrenClipped(
-    buffer: DualBuffer | ClippedDualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     x: number,
     y: number,
     width: number,
@@ -2025,7 +2025,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
    * Tracks each child component for click handling
    */
   private _renderContainerChildren(
-    buffer: DualBuffer | ClippedDualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     x: number,
     y: number,
     width: number,

@@ -1,7 +1,7 @@
 // Terminal renderer using ANSI escape codes with dual-buffer optimization
 
 import { DualBuffer, BufferDiff, Cell, RenderOptions } from './buffer.ts';
-import { ANSI } from './ansi-output.ts';
+import { ANSI, rgbTo256Color, rgbTo16Color } from './ansi-output.ts';
 
 // Reusable TextEncoder to avoid per-write allocations
 const textEncoder = new TextEncoder();
@@ -416,25 +416,16 @@ export class TerminalRenderer {
       const code = isBackground ? 48 : 38;
       return `\x1b[${code};2;${r};${g};${b}m`;
     } else if (this._options.colorSupport === '256') {
-      const color256 = this._rgbTo256Color(r, g, b);
+      const color256 = rgbTo256Color(r, g, b);
       const code = isBackground ? 48 : 38;
       return `\x1b[${code};5;${color256}m`;
     } else if (this._options.colorSupport === '16') {
-      const color16 = this._rgbTo16Color(r, g, b);
+      const color16 = rgbTo16Color(r, g, b);
       return `\x1b[${color16 + offset}m`;
     }
 
     // Fallback to default
     return '';
-  }
-
-  // Convert RGB to closest 256-color palette index
-  private _rgbTo256Color(r: number, g: number, b: number): number {
-    // Simplified 256-color conversion using the 6x6x6 color cube
-    const rIdx = Math.round(r / 51);
-    const gIdx = Math.round(g / 51);
-    const bIdx = Math.round(b / 51);
-    return 16 + (36 * rIdx) + (6 * gIdx) + bIdx;
   }
 
   // Get 16-color code for a packed RGBA color (returns foreground code 30-37 or 90-97)
@@ -444,7 +435,7 @@ export class TerminalRenderer {
     const g = (color >> 16) & 0xFF;
     const b = (color >> 8) & 0xFF;
 
-    return this._rgbTo16Color(r, g, b);
+    return rgbTo16Color(r, g, b);
   }
 
   // Ensure fg and bg have enough contrast for visibility
@@ -470,48 +461,6 @@ export class TerminalRenderer {
 
     // For non-gray colors or sufficient contrast, return original
     return bgCode;
-  }
-
-  // Convert RGB to closest 16-color ANSI code (foreground base: 30-37, 90-97)
-  private _rgbTo16Color(r: number, g: number, b: number): number {
-    // Calculate luminance (perceived brightness)
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    // Check if color is mostly grayscale (low saturation)
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const saturation = max === 0 ? 0 : (max - min) / max;
-
-    if (saturation < 0.2) {
-      // Grayscale: map to black, gray, white, or bright white based on luminance
-      // Evenly distributed thresholds (25% each)
-      if (luminance < 0.25) return 30;     // black
-      if (luminance < 0.50) return 90;     // gray (bright black)
-      if (luminance < 0.75) return 37;     // white
-      return 97;                            // bright white
-    }
-
-    // Determine the dominant color channel
-    const isBright = luminance > 0.5;
-    const base = isBright ? 90 : 30; // bright colors start at 90
-
-    // Find the primary hue
-    if (r >= g && r >= b) {
-      // Red dominant
-      if (g > b * 1.5) return base + 3;  // yellow (red + green)
-      if (b > g * 1.5) return base + 5;  // magenta (red + blue)
-      return base + 1;                     // red
-    } else if (g >= r && g >= b) {
-      // Green dominant
-      if (r > b * 1.5) return base + 3;  // yellow (green + red)
-      if (b > r * 1.5) return base + 6;  // cyan (green + blue)
-      return base + 2;                     // green
-    } else {
-      // Blue dominant
-      if (r > g * 1.5) return base + 5;  // magenta (blue + red)
-      if (g > r * 1.5) return base + 6;  // cyan (blue + green)
-      return base + 4;                     // blue
-    }
   }
 
   // Write to terminal

@@ -41,6 +41,7 @@ import {
 } from '../video/ffmpeg.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { getGlobalPaletteCache } from '../sixel/palette.ts';
+import { isStdoutEnabled } from '../stdout.ts';
 
 // Re-export types for backwards compatibility
 export type { DitherMode } from '../video/dither.ts';
@@ -419,6 +420,9 @@ export class VideoElement extends CanvasElement {
    * Start audio playback via ffplay (synchronized with video)
    */
   private _startAudioPlayback(src: string, startTime: number): void {
+    // Skip audio in stdout mode (non-interactive single-frame output)
+    if (isStdoutEnabled()) return;
+
     // Skip if audio is disabled, component is muted, or global audio is muted
     if (!this.props.audio || this.props.muted || MelkerConfig.get().audioMuted) return;
 

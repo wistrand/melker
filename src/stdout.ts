@@ -7,7 +7,7 @@ import { MelkerConfig } from './config/mod.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 import { getThemeManager } from './theme.ts';
 import type { PackedRGBA } from './types.ts';
-import { ANSI } from './ansi-output.ts';
+import { ANSI, rgbTo256Color, rgbTo16Color } from './ansi-output.ts';
 
 // Lazy logger initialization to avoid triggering MelkerConfig.get() before CLI flags are applied
 let _logger: ComponentLogger | undefined;
@@ -272,53 +272,8 @@ function getColorCode(color: PackedRGBA, isBackground: boolean, colorSupport: 'n
   }
 
   // 16-color fallback
-  return getColorCode16(r, g, b, isBackground);
-}
-
-/**
- * Convert RGB to 256-color palette index
- */
-function rgbTo256Color(r: number, g: number, b: number): number {
-  const ri = Math.round(r / 51);
-  const gi = Math.round(g / 51);
-  const bi = Math.round(b / 51);
-  return 16 + (36 * ri) + (6 * gi) + bi;
-}
-
-/**
- * Convert RGB to 16-color ANSI code
- */
-function getColorCode16(r: number, g: number, b: number, isBackground: boolean): string {
   const offset = isBackground ? 10 : 0;
-  const brightness = (r + g + b) / 3;
-  const isBright = brightness > 127;
-
-  const max = Math.max(r, g, b);
-  const threshold = max * 0.6;
-
-  const hasRed = r >= threshold;
-  const hasGreen = g >= threshold;
-  const hasBlue = b >= threshold;
-
-  let code: number;
-  if (!hasRed && !hasGreen && !hasBlue) {
-    code = isBright ? 90 : 30; // gray/black
-  } else if (hasRed && hasGreen && hasBlue) {
-    code = isBright ? 97 : 37; // white
-  } else if (hasRed && hasGreen) {
-    code = isBright ? 93 : 33; // yellow
-  } else if (hasRed && hasBlue) {
-    code = isBright ? 95 : 35; // magenta
-  } else if (hasGreen && hasBlue) {
-    code = isBright ? 96 : 36; // cyan
-  } else if (hasRed) {
-    code = isBright ? 91 : 31; // red
-  } else if (hasGreen) {
-    code = isBright ? 92 : 32; // green
-  } else {
-    code = isBright ? 94 : 34; // blue
-  }
-
+  const code = rgbTo16Color(r, g, b);
   return `\x1b[${code + offset}m`;
 }
 

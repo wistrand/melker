@@ -45,6 +45,60 @@ export const ANSI = {
 
 export type ColorSupport = 'none' | '16' | '256' | 'truecolor';
 
+/**
+ * Convert RGB to 256-color palette index (6x6x6 color cube)
+ */
+export function rgbTo256Color(r: number, g: number, b: number): number {
+  const rIdx = Math.round(r / 51);
+  const gIdx = Math.round(g / 51);
+  const bIdx = Math.round(b / 51);
+  return 16 + (36 * rIdx) + (6 * gIdx) + bIdx;
+}
+
+/**
+ * Convert RGB to nearest 16-color ANSI code (30-37, 90-97)
+ * Uses perceptual luminance for grayscale detection and hue mapping
+ */
+export function rgbTo16Color(r: number, g: number, b: number): number {
+  // Calculate luminance (perceived brightness)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // Check if color is mostly grayscale (low saturation)
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const saturation = max === 0 ? 0 : (max - min) / max;
+
+  if (saturation < 0.2) {
+    // Grayscale: map to black, gray, white, or bright white based on luminance
+    if (luminance < 0.25) return 30;     // black
+    if (luminance < 0.50) return 90;     // gray (bright black)
+    if (luminance < 0.75) return 37;     // white
+    return 97;                            // bright white
+  }
+
+  // Determine the dominant color channel
+  const isBright = luminance > 0.5;
+  const base = isBright ? 90 : 30;
+
+  // Find the primary hue
+  if (r >= g && r >= b) {
+    // Red dominant
+    if (g > b * 1.5) return base + 3;  // yellow
+    if (b > g * 1.5) return base + 5;  // magenta
+    return base + 1;                     // red
+  } else if (g >= r && g >= b) {
+    // Green dominant
+    if (r > b * 1.5) return base + 3;  // yellow
+    if (b > r * 1.5) return base + 6;  // cyan
+    return base + 2;                     // green
+  } else {
+    // Blue dominant
+    if (r > g * 1.5) return base + 5;  // magenta
+    if (g > r * 1.5) return base + 6;  // cyan
+    return base + 4;                     // blue
+  }
+}
+
 export interface AnsiOutputOptions {
   colorSupport: ColorSupport;
 }
@@ -326,7 +380,7 @@ export class AnsiOutputGenerator {
       const code = isBackground ? 48 : 38;
       return `\x1b[${code};2;${r};${g};${b}m`;
     } else if (this._colorSupport === '256') {
-      const color256 = this._hexTo256Color({ r, g, b });
+      const color256 = rgbTo256Color(r, g, b);
       const code = isBackground ? 48 : 38;
       return `\x1b[${code};5;${color256}m`;
     }
@@ -343,60 +397,7 @@ export class AnsiOutputGenerator {
     const r = (color >> 24) & 0xFF;
     const g = (color >> 16) & 0xFF;
     const b = (color >> 8) & 0xFF;
-    const code = this._rgbTo16Color(r, g, b);
+    const code = rgbTo16Color(r, g, b);
     return `\x1b[${code + offset}m`;
-  }
-
-  /**
-   * Convert RGB to nearest 16-color ANSI code
-   */
-  private _rgbTo16Color(r: number, g: number, b: number): number {
-    // Calculate brightness
-    const brightness = (r + g + b) / 3;
-    const isBright = brightness > 127;
-
-    // Determine dominant color channel(s)
-    const max = Math.max(r, g, b);
-    const threshold = max * 0.6;
-
-    const hasRed = r >= threshold;
-    const hasGreen = g >= threshold;
-    const hasBlue = b >= threshold;
-
-    // Map to ANSI color codes
-    if (!hasRed && !hasGreen && !hasBlue) {
-      return isBright ? 90 : 30; // gray/black
-    }
-    if (hasRed && hasGreen && hasBlue) {
-      return isBright ? 97 : 37; // white
-    }
-    if (hasRed && hasGreen) {
-      return isBright ? 93 : 33; // yellow
-    }
-    if (hasRed && hasBlue) {
-      return isBright ? 95 : 35; // magenta
-    }
-    if (hasGreen && hasBlue) {
-      return isBright ? 96 : 36; // cyan
-    }
-    if (hasRed) {
-      return isBright ? 91 : 31; // red
-    }
-    if (hasGreen) {
-      return isBright ? 92 : 32; // green
-    }
-    return isBright ? 94 : 34; // blue
-  }
-
-  /**
-   * Convert RGB to 256-color palette index
-   */
-  private _hexTo256Color(rgb: { r: number; g: number; b: number }): number {
-    // Simplified 256-color conversion
-    const r = Math.round(rgb.r / 51) * 51;
-    const g = Math.round(rgb.g / 51) * 51;
-    const b = Math.round(rgb.b / 51) * 51;
-
-    return 16 + (36 * Math.round(r / 51)) + (6 * Math.round(g / 51)) + Math.round(b / 51);
   }
 }

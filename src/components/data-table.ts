@@ -19,7 +19,7 @@ import {
 import type { KeyPressEvent } from '../events.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import type { DataTableTooltipContext, TooltipProvider } from '../tooltip/types.ts';
-import { ClippedDualBuffer } from '../clipped-buffer.ts';
+import { ViewportDualBuffer, createClipViewport } from '../viewport-buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getThemeColor } from '../theme.ts';
@@ -521,7 +521,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
   // Render data row
   private _renderDataRow(
-    buffer: DualBuffer | ClippedDualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     x: number,
     y: number,
     rowData: CellValue[],
@@ -699,7 +699,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   render(
     bounds: Bounds,
     style: Partial<Cell>,
-    buffer: DualBuffer | ClippedDualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     context: ComponentRenderContext
   ): void {
     const {
@@ -777,9 +777,9 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
     // Use clipped buffer if not already clipped - include scrollbar column so border can be drawn there
     const clipBounds = { x: bounds.x, y: bodyStartY, width: effectiveWidth, height: bodyHeight };
-    const clippedBuffer = buffer instanceof ClippedDualBuffer
+    const clippedBuffer = buffer instanceof ViewportDualBuffer
       ? buffer
-      : new ClippedDualBuffer(buffer as DualBuffer, clipBounds);
+      : new ViewportDualBuffer(buffer as DualBuffer, createClipViewport(clipBounds));
 
     this._rowBounds.clear();
     let virtualY = bodyStartY - this._scrollY;

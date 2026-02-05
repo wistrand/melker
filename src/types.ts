@@ -248,11 +248,10 @@ export abstract class Element {
 
 // Import buffer types for proper typing
 import type { DualBuffer, Cell } from './buffer.ts';
-import type { ClippedDualBuffer } from './clipped-buffer.ts';
 import type { ViewportDualBuffer } from './viewport-buffer.ts';
 
 export interface ComponentRenderContext {
-  buffer: DualBuffer | ClippedDualBuffer | ViewportDualBuffer;
+  buffer: DualBuffer | ViewportDualBuffer;
   style: Partial<Cell>;
   focusedElementId?: string;
   hoveredElementId?: string;
@@ -376,7 +375,7 @@ export function hasGetContent(element: Element): element is Element & ContentGet
 
 // Rendering interface for components
 export interface Renderable {
-  render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer | ClippedDualBuffer | ViewportDualBuffer, context: ComponentRenderContext): void;
+  render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer | ViewportDualBuffer, context: ComponentRenderContext): void;
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number };
 }
 
@@ -663,13 +662,6 @@ export type PropsForComponent<T extends string> = T extends keyof ComponentProps
   ? ComponentPropsMap[T]
   : Record<string, any>;
 
-export interface Node extends Element {
-  bounds: Bounds;
-  visible: boolean;
-  focused: boolean;
-  computedStyle: Style;
-}
-
 // Event types
 export interface BaseEvent {
   type: string;
@@ -685,8 +677,6 @@ export interface ClickEvent extends BaseEvent {
 export interface FocusEvent extends BaseEvent {
   type: 'focus' | 'blur';
 }
-
-export type UIEvent = ClickEvent | KeyPressEvent | FocusEvent | ChangeEvent;
 
 // Component registration for extensibility
 export interface ComponentDefinition {

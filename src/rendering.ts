@@ -4,9 +4,8 @@
 import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, isScrollingEnabled, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { clipBounds } from './geometry.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
-import { ClippedDualBuffer } from './clipped-buffer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
-import { ViewportDualBuffer } from './viewport-buffer.ts';
+import { ViewportDualBuffer, createClipViewport } from './viewport-buffer.ts';
 import { ContainerElement } from './components/container.ts';
 import { TextElement } from './components/text.ts';
 import { InputElement } from './components/input.ts';
@@ -1330,7 +1329,7 @@ export class RenderingEngine {
     };
 
     // Use viewport system only for scrollable containers
-    let renderBuffer: DualBuffer | ViewportDualBuffer | ClippedDualBuffer = buffer;
+    let renderBuffer: DualBuffer | ViewportDualBuffer = buffer;
     let elementViewport: Viewport | undefined;
     let coordinateTransform: CoordinateTransform | undefined;
 
@@ -1352,8 +1351,8 @@ export class RenderingEngine {
       coordinateTransform = new CoordinateTransform(elementViewport);
       renderBuffer = new ViewportDualBuffer(buffer as DualBuffer, elementViewport);
     } else if (context.clipRect) {
-      // Use ClippedDualBuffer for normal clipping (non-scrollable)
-      renderBuffer = new ClippedDualBuffer(buffer as DualBuffer, context.clipRect);
+      // Use ViewportDualBuffer with simple clip viewport for non-scrollable clipping
+      renderBuffer = new ViewportDualBuffer(buffer as DualBuffer, createClipViewport(context.clipRect));
     }
 
 

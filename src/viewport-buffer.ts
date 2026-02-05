@@ -1,6 +1,7 @@
-// Viewport-based buffer system that replaces ClippedDualBuffer
+// Viewport-based buffer system for clipping and scrolling
 import { TerminalBuffer, DualBuffer, Cell, RenderOptions, BufferDiff, EMPTY_CHAR } from './buffer.ts';
 import { Viewport, CoordinateTransform } from './viewport.ts';
+import type { Bounds } from './types.ts';
 import { analyzeString } from './char-width.ts';
 
 /**
@@ -51,6 +52,23 @@ export class ViewportBufferProxy {
   getCell(x: number, y: number): Cell | undefined {
     const transformed = this._transform.transformPoint({ x, y });
     return this._buffer.getCell(transformed.x, transformed.y);
+  }
+
+  fillLine(x: number, y: number, width: number, style: Partial<Cell> = {}): void {
+    // Check Y bounds
+    const clip = this._viewport.clipRect;
+    if (y < clip.y || y >= clip.y + clip.height) {
+      return;
+    }
+
+    // Clip X range
+    const startX = Math.max(x, clip.x);
+    const endX = Math.min(x + width, clip.x + clip.width);
+    const clippedWidth = endX - startX;
+
+    if (clippedWidth > 0) {
+      this._buffer.fillLine(startX, y, clippedWidth, style);
+    }
   }
 
   clear(): void {
@@ -121,7 +139,7 @@ export class ViewportBufferProxy {
 }
 
 /**
- * ViewportDualBuffer replaces ClippedDualBuffer with viewport-aware operations
+ * ViewportDualBuffer wraps a DualBuffer with viewport-aware clipping and scrolling
  */
 export class ViewportDualBuffer {
   public currentBuffer: ViewportBufferProxy;
@@ -186,4 +204,17 @@ export class ViewportDualBuffer {
   updateViewport(newViewport: Viewport): ViewportDualBuffer {
     return new ViewportDualBuffer(this._dualBuffer, newViewport);
   }
+}
+
+/**
+ * Create a simple clipping viewport from bounds (no scrolling).
+ */
+export function createClipViewport(bounds: Bounds): Viewport {
+  return {
+    bounds,
+    clipRect: bounds,
+    scrollOffset: { x: 0, y: 0 },
+    contentSize: { width: bounds.width, height: bounds.height },
+    scrollbars: {}
+  };
 }

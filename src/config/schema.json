@@ -120,11 +120,33 @@
     },
     "render.gfxMode": {
       "type": "string",
-      "enum": ["sextant", "block", "pattern", "luma", "sixel", "kitty", "iterm2", "hires"],
+      "enum": ["sextant", "block", "pattern", "luma", "sixel", "kitty", "iterm2", "hires", "isolines", "isolines-filled"],
       "default": "sextant",
       "env": "MELKER_GFX_MODE",
       "flag": "--gfx-mode",
-      "description": "Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness), sixel (true pixels), kitty (kitty protocol), iterm2 (iTerm2 protocol), hires (auto: kitty/sixel/iterm2/sextant)"
+      "description": "Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness), sixel (true pixels), kitty (kitty protocol), iterm2 (iTerm2 protocol), hires (auto: kitty/sixel/iterm2/sextant), isolines (contour lines), isolines-filled (contour lines with fill)"
+    },
+    "render.isolineCount": {
+      "type": "integer",
+      "default": 2,
+      "minimum": 1,
+      "maximum": 20,
+      "env": "MELKER_ISOLINE_COUNT",
+      "description": "Number of auto-generated isolines for isolines gfx mode"
+    },
+    "render.isolineMode": {
+      "type": "string",
+      "enum": ["equal", "quantile", "nice"],
+      "default": "quantile",
+      "env": "MELKER_ISOLINE_MODE",
+      "description": "Isoline distribution algorithm: equal (even spacing), quantile (data percentiles), nice (round numbers)"
+    },
+    "render.isolineSource": {
+      "type": "string",
+      "enum": ["luma", "red", "green", "blue", "alpha", "oklab", "oklch-hue"],
+      "default": "oklab",
+      "env": "MELKER_ISOLINE_SOURCE",
+      "description": "Color channel for isoline scalar values: oklab (perceptual lightness), oklch-hue (color hue - groups reds, blues, etc.), luma (BT.601), or individual channels"
     },
     "headless.enabled": {
       "type": "boolean",

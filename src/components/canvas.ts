@@ -14,9 +14,10 @@ import { getLogger } from '../logging.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
 import {
-  CanvasRenderState, renderToTerminal, getEffectiveGfxMode, generateSixelOutput, generateKittyOutput, generateITerm2Output,
-  type CanvasRenderData, type GfxMode, type SixelOutputData, type KittyOutputData, type ITermOutputData
+  CanvasRenderState, renderToTerminal, renderIsolinesToTerminal, getEffectiveGfxMode, generateSixelOutput, generateKittyOutput, generateITerm2Output,
+  GFX_MODES, type CanvasRenderData, type GfxMode, type SixelOutputData, type KittyOutputData, type ITermOutputData, type IsolineRenderProps
 } from './canvas-render.ts';
+import type { Isoline, IsolineMode, IsolineSource } from '../isoline.ts';
 import {
   decodeImageBytes, loadImageFromSource,
   calculateImageScaling, scaleImageToBuffer, renderScaledDataToBuffer,
@@ -60,6 +61,11 @@ export interface CanvasProps extends BaseProps {
   shaderFps?: number;                // Shader frame rate (default: 30)
   shaderRunTime?: number;            // Stop shader after this many ms, keep final frame as image
   onKeyPress?: (event: KeyPressEvent) => boolean | void;  // Called on keyboard events when focused
+  // Isoline props (for isolines/isolines-filled gfx modes)
+  isolineCount?: number;             // Number of auto-generated isolines (default: 5)
+  isolineMode?: IsolineMode;         // Distribution algorithm: equal, quantile, nice (default: equal)
+  isolines?: Isoline[];              // Manual isoline definitions (overrides isolineCount)
+  isolineSource?: IsolineSource;     // Color channel to use: luma, red, green, blue, alpha (default: luma)
 }
 
 export class CanvasElement extends Element implements Renderable, Focusable, Interactive {
@@ -1175,11 +1181,23 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       backgroundColor: this.props.backgroundColor,
     };
 
-    // Get dithered buffer if applicable
-    const ditheredBuffer = this._prepareDitheredBuffer();
-
     // Get effective graphics mode
     const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
+
+    // Handle isolines mode separately (uses different render path)
+    if (gfxMode === 'isolines' || gfxMode === 'isolines-filled') {
+      const isolineProps: IsolineRenderProps = {
+        isolineCount: this.props.isolineCount,
+        isolineMode: this.props.isolineMode,
+        isolines: this.props.isolines,
+        isolineSource: this.props.isolineSource,
+      };
+      renderIsolinesToTerminal(bounds, style, buffer, data, isolineProps, gfxMode === 'isolines-filled');
+      return;
+    }
+
+    // Get dithered buffer if applicable
+    const ditheredBuffer = this._prepareDitheredBuffer();
 
     // Delegate to extracted render function
     renderToTerminal(bounds, style, buffer, data, this._renderState, ditheredBuffer, gfxMode);
@@ -1645,12 +1663,16 @@ export const canvasSchema: ComponentSchema = {
     src: { type: 'string', description: 'Load image from file path' },
     dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'atkinson', 'atkinson-stable', 'ordered', 'blue-noise'], description: 'Dithering algorithm (auto adapts to theme, none disables)' },
     ditherBits: { type: 'number', description: 'Color depth for dithering' },
-    gfxMode: { type: 'string', enum: ['sextant', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'iterm2', 'hires'], description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
+    gfxMode: { type: 'string', enum: [...GFX_MODES], description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
     onPaint: { type: ['function', 'string'], description: 'Called when canvas needs repainting, receives event with {canvas, bounds}' },
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. source has getPixel(), mouse, mouseUV' },
     onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
     shaderRunTime: { type: 'number', description: 'Stop shader after this many ms, final frame becomes static image' },
+    isolineCount: { type: 'number', description: 'Number of auto-generated isolines for isolines gfx mode (default: 5, env: MELKER_ISOLINE_COUNT)' },
+    isolineMode: { type: 'string', enum: ['equal', 'quantile', 'nice'], description: 'Isoline distribution algorithm (default: equal, env: MELKER_ISOLINE_MODE)' },
+    isolines: { type: 'array', description: 'Manual isoline definitions: [{value, color?, label?}]' },
+    isolineSource: { type: 'string', enum: ['luma', 'red', 'green', 'blue', 'alpha'], description: 'Color channel for isoline scalar values (default: luma, env: MELKER_ISOLINE_SOURCE)' },
   },
   styleWarnings: {
     width: 'Use width prop instead of style.width for canvas buffer sizing. style.width only affects layout, not pixel resolution.',

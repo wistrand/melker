@@ -25,6 +25,16 @@ import { getLogger } from '../logging.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { packRGBA, unpackRGBA, parseColor } from './color-utils.ts';
 import type { PackedRGBA } from '../types.ts';
+import {
+  type IsolineMode as SharedIsolineMode,
+  type Isoline as SharedIsoline,
+  MARCHING_SQUARES_CHARS,
+  getMarchingSquaresCase,
+  getMarchingSquaresChar,
+  generateEqualIsolines,
+  generateQuantileIsolines,
+  generateNiceIsolines,
+} from '../isoline.ts';
 
 const logger = getLogger('DataHeatmap');
 
@@ -36,13 +46,9 @@ export type HeatmapGrid = HeatmapValue[][];
 export type ColorScaleName = 'viridis' | 'plasma' | 'inferno' | 'thermal' |
                              'grayscale' | 'diverging' | 'greens' | 'reds';
 
-export type IsolineMode = 'equal' | 'quantile' | 'nice';
-
-export interface Isoline {
-  value: number;           // Value at which to draw the contour
-  color?: string;          // Line color (default: theme foreground)
-  label?: string;          // Optional label (e.g., "100")
-}
+// Re-export from shared isoline module
+export type IsolineMode = SharedIsolineMode;
+export type Isoline = SharedIsoline;
 
 export interface HeatmapHoverEvent {
   type: 'hover';
@@ -163,32 +169,7 @@ const LEGEND_HEIGHT = 2;  // Color bar (1) + labels (1)
 const LEGEND_WIDTH = 20;  // Width of the color gradient bar
 
 // ===== Marching Squares for Isolines =====
-// Each case represents which corners are above the threshold (4-bit binary)
-// Corners: topLeft(8), topRight(4), bottomRight(2), bottomLeft(1)
-// Characters map edge crossings to box-drawing chars
-
-// Marching squares case to box-drawing character
-// Corners: topLeft(8), topRight(4), bottomRight(2), bottomLeft(1)
-// The isoline crosses edges where adjacent corners have different threshold states
-// Box-drawing: ╭(↓→) ╮(↓←) ╰(↑→) ╯(↑←) ─(←→) │(↑↓)
-const MARCHING_SQUARES_CHARS: Record<number, string | null> = {
-  0b0000: null,  // All below - no line
-  0b0001: '╮',   // BL above → crosses LEFT and BOTTOM edges
-  0b0010: '╭',   // BR above → crosses RIGHT and BOTTOM edges
-  0b0011: '─',   // BL,BR above → crosses LEFT and RIGHT edges (horizontal)
-  0b0100: '╰',   // TR above → crosses TOP and RIGHT edges
-  0b0101: '│',   // TR,BL above → saddle point (ambiguous)
-  0b0110: '│',   // TR,BR above → crosses TOP and BOTTOM edges (vertical)
-  0b0111: '╯',   // Only TL below → crosses TOP and LEFT edges
-  0b1000: '╯',   // Only TL above → crosses TOP and LEFT edges
-  0b1001: '│',   // TL,BL above → crosses TOP and BOTTOM edges (vertical)
-  0b1010: '│',   // TL,BR above → saddle point (ambiguous)
-  0b1011: '╰',   // Only TR below → crosses TOP and RIGHT edges
-  0b1100: '─',   // TL,TR above → crosses LEFT and RIGHT edges (horizontal)
-  0b1101: '╭',   // Only BR below → crosses RIGHT and BOTTOM edges
-  0b1110: '╮',   // Only BL below → crosses LEFT and BOTTOM edges
-  0b1111: null,  // All above - no line
-};
+// Shared implementation imported from ../isoline.ts
 
 // ===== Default Props =====
 
@@ -496,6 +477,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
   }
 
   // Generate N isolines using the specified algorithm
+  // Uses shared functions from ../isoline.ts
   private _generateIsolines(count: number, mode: IsolineMode): Isoline[] {
     this._calculateScale();
     const min = this._minValue;
@@ -507,113 +489,36 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     let values: number[];
 
     switch (mode) {
-      case 'quantile':
-        values = this._generateQuantileValues(count);
+      case 'quantile': {
+        // Collect all non-null values for quantile calculation
+        const { grid } = this.props;
+        if (!grid) return [];
+        const allValues: number[] = [];
+        for (const row of grid) {
+          if (!row) continue;
+          for (const val of row) {
+            if (val !== null && val !== undefined) {
+              allValues.push(val);
+            }
+          }
+        }
+        values = generateQuantileIsolines(allValues, count);
         break;
+      }
       case 'nice':
-        values = this._generateNiceValues(count, min, max);
+        values = generateNiceIsolines(min, max, count);
         break;
       case 'equal':
       default:
-        values = this._generateEqualValues(count, min, max);
+        values = generateEqualIsolines(min, max, count);
         break;
     }
 
     return values.map(value => ({ value }));
   }
 
-  // Equal intervals between min and max
-  private _generateEqualValues(count: number, min: number, max: number): number[] {
-    const values: number[] = [];
-    const step = (max - min) / (count + 1);
-    for (let i = 1; i <= count; i++) {
-      values.push(min + step * i);
-    }
-    return values;
-  }
-
-  // Values at data percentiles
-  private _generateQuantileValues(count: number): number[] {
-    const { grid } = this.props;
-    if (!grid) return [];
-
-    // Collect all non-null values
-    const allValues: number[] = [];
-    for (const row of grid) {
-      if (!row) continue;
-      for (const val of row) {
-        if (val !== null && val !== undefined) {
-          allValues.push(val);
-        }
-      }
-    }
-
-    if (allValues.length === 0) return [];
-
-    // Sort values
-    allValues.sort((a, b) => a - b);
-
-    // Get percentile values
-    const values: number[] = [];
-    for (let i = 1; i <= count; i++) {
-      const percentile = i / (count + 1);
-      const index = Math.floor(percentile * (allValues.length - 1));
-      values.push(allValues[index]);
-    }
-
-    // Remove duplicates
-    return [...new Set(values)];
-  }
-
-  // "Nice" rounded values (multiples of 1, 2, 5, 10, etc.)
-  private _generateNiceValues(count: number, min: number, max: number): number[] {
-    const range = max - min;
-    if (range <= 0) return [];
-
-    // Calculate a "nice" step size
-    const roughStep = range / (count + 1);
-    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
-    const normalized = roughStep / magnitude;
-
-    let niceStep: number;
-    if (normalized <= 1) niceStep = magnitude;
-    else if (normalized <= 2) niceStep = 2 * magnitude;
-    else if (normalized <= 5) niceStep = 5 * magnitude;
-    else niceStep = 10 * magnitude;
-
-    // Generate values starting from a nice number
-    const niceMin = Math.ceil(min / niceStep) * niceStep;
-    const values: number[] = [];
-
-    for (let v = niceMin; v < max && values.length < count; v += niceStep) {
-      if (v > min) {
-        values.push(v);
-      }
-    }
-
-    return values;
-  }
-
-  // Get the marching squares case for a 2x2 cell quad
-  // Returns the 4-bit case number based on which corners are >= threshold
-  private _getMarchingSquaresCase(
-    topLeft: HeatmapValue,
-    topRight: HeatmapValue,
-    bottomLeft: HeatmapValue,
-    bottomRight: HeatmapValue,
-    threshold: number
-  ): number {
-    // Treat null/undefined as below threshold
-    const tl = (topLeft !== null && topLeft !== undefined && topLeft >= threshold) ? 1 : 0;
-    const tr = (topRight !== null && topRight !== undefined && topRight >= threshold) ? 1 : 0;
-    const bl = (bottomLeft !== null && bottomLeft !== undefined && bottomLeft >= threshold) ? 1 : 0;
-    const br = (bottomRight !== null && bottomRight !== undefined && bottomRight >= threshold) ? 1 : 0;
-
-    // Pack into 4-bit number: topLeft(8), topRight(4), bottomRight(2), bottomLeft(1)
-    return (tl << 3) | (tr << 2) | (br << 1) | bl;
-  }
-
   // Get the box-drawing character for an isoline at a cell boundary
+  // Uses shared function from ../isoline.ts
   private _getIsolineChar(
     topLeft: HeatmapValue,
     topRight: HeatmapValue,
@@ -621,8 +526,8 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     bottomRight: HeatmapValue,
     threshold: number
   ): string | null {
-    const caseNum = this._getMarchingSquaresCase(topLeft, topRight, bottomLeft, bottomRight, threshold);
-    return MARCHING_SQUARES_CHARS[caseNum] ?? null;
+    const caseNum = getMarchingSquaresCase(topLeft, topRight, bottomLeft, bottomRight, threshold);
+    return getMarchingSquaresChar(caseNum);
   }
 
   // Build isoline segments for a row boundary (between data row `row` and `row+1`)

@@ -116,7 +116,7 @@
           },
           "gfxMode": {
             "type": "string",
-            "enum": ["sextant", "block", "sixel", "pattern", "luma"],
+            "enum": ["sextant", "block", "pattern", "luma", "sixel", "kitty", "iterm2", "hires", "isolines", "isolines-filled"],
             "description": "Graphics rendering mode (--gfx-mode flag)"
           }
         }

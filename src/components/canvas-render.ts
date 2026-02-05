@@ -8,6 +8,11 @@ import { TRANSPARENT, DEFAULT_FG, packRGBA, parseColor } from './color-utils.ts'
 import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import {
+  type Isoline, type IsolineMode, type IsolineSource,
+  getMarchingSquaresChar, getMarchingSquaresCase,
+  generateIsolines, getScalarFromColor,
+} from '../isoline.ts';
+import {
   encodeToSixel,
   positionedSixel,
   quantizePalette,
@@ -1168,6 +1173,177 @@ export function renderAsciiMode(
 }
 
 /**
+ * Isoline rendering props for renderIsolinesToTerminal
+ */
+export interface IsolineRenderProps {
+  isolineCount?: number;
+  isolineMode?: IsolineMode;
+  isolines?: Isoline[];
+  isolineSource?: IsolineSource;
+}
+
+/**
+ * Isolines mode rendering - renders contour lines using marching squares algorithm.
+ * Output is exactly propsWidth × propsHeight terminal cells with box-drawing chars.
+ */
+export function renderIsolinesToTerminal(
+  bounds: Bounds,
+  style: Partial<Cell>,
+  buffer: DualBuffer,
+  data: CanvasRenderData,
+  props: IsolineRenderProps,
+  filled: boolean
+): void {
+  const config = MelkerConfig.get();
+  let terminalWidth = Math.min(data.propsWidth, bounds.width);
+  const terminalHeight = Math.min(data.propsHeight, bounds.height);
+
+  // Workaround for terminal edge rendering glitch
+  const engine = globalThis.melkerEngine;
+  if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
+    terminalWidth = Math.max(1, terminalWidth - 1);
+  }
+
+  const pixelsPerCellX = 2 * data.scale;
+  const pixelsPerCellY = 3 * data.scale;
+
+  // Get isoline source channel (oklab perceptual lightness is default)
+  const source: IsolineSource = props.isolineSource ?? config.isolineSource ?? 'oklab';
+
+  // Sub-cell sampling: sample at higher resolution to catch thin features
+  // subSample=2 means 2×2 sub-cells per terminal cell (3×3 sample points per cell)
+  const subSample = 2;
+  const subPixelsX = pixelsPerCellX / subSample;
+  const subPixelsY = pixelsPerCellY / subSample;
+
+  // Area averaging: sample a region around each grid point instead of single pixel
+  // This helps thin lines contribute to neighboring sample points
+  const avgRadius = 1; // 3×3 area (radius 1 = 1 pixel in each direction)
+
+  // Helper to get scalar with area averaging
+  const getAveragedScalar = (centerX: number, centerY: number): number => {
+    let sum = 0;
+    let count = 0;
+
+    for (let dy = -avgRadius; dy <= avgRadius; dy++) {
+      for (let dx = -avgRadius; dx <= avgRadius; dx++) {
+        const px = Math.max(0, Math.min(centerX + dx, data.bufferWidth - 1));
+        const py = Math.max(0, Math.min(centerY + dy, data.bufferHeight - 1));
+
+        // Composite drawing layer over image layer
+        let color = data.colorBuffer[py * data.bufferWidth + px];
+        if (color === TRANSPARENT) {
+          color = data.imageColorBuffer[py * data.bufferWidth + px];
+        }
+
+        if (color !== TRANSPARENT) {
+          sum += getScalarFromColor(color, source);
+          count++;
+        }
+      }
+    }
+
+    return count > 0 ? sum / count : 0;
+  };
+
+  // Build scalar grid at sub-cell resolution
+  // Grid is (terminalWidth * subSample + 1) × (terminalHeight * subSample + 1)
+  const gridWidth = terminalWidth * subSample + 1;
+  const gridHeight = terminalHeight * subSample + 1;
+  const scalarGrid: number[][] = [];
+
+  let minVal = Infinity;
+  let maxVal = -Infinity;
+  const allValues: number[] = [];
+
+  for (let gy = 0; gy < gridHeight; gy++) {
+    const row: number[] = [];
+    for (let gx = 0; gx < gridWidth; gx++) {
+      const pixelX = Math.min(Math.floor(gx * subPixelsX), data.bufferWidth - 1);
+      const pixelY = Math.min(Math.floor(gy * subPixelsY), data.bufferHeight - 1);
+
+      const scalar = getAveragedScalar(pixelX, pixelY);
+      row.push(scalar);
+
+      if (scalar < minVal) minVal = scalar;
+      if (scalar > maxVal) maxVal = scalar;
+      allValues.push(scalar);
+    }
+    scalarGrid.push(row);
+  }
+
+  // Handle edge case: no data
+  if (minVal === Infinity) {
+    minVal = 0;
+    maxVal = 255;
+  }
+
+  // Generate isoline thresholds
+  const isolineCount = props.isolineCount ?? config.isolineCount ?? 5;
+  const isolineMode: IsolineMode = props.isolineMode ?? config.isolineMode ?? 'equal';
+  const isolines = props.isolines ?? generateIsolines(minVal, maxVal, isolineCount, isolineMode, allValues);
+
+  // Pre-compute fill colors for filled mode
+  const midThreshold = isolines.length > 0
+    ? isolines[Math.floor(isolines.length / 2)]?.value ?? ((minVal + maxVal) / 2)
+    : (minVal + maxVal) / 2;
+
+  // Get theme colors for fill
+  const hasStyleFg = style.foreground !== undefined;
+  const hasStyleBg = style.background !== undefined;
+  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+
+  // Render each terminal cell using corner values from the sub-sampled grid
+  // The finer grid + area averaging improves scalar quality; marching squares runs on cell corners
+  for (let ty = 0; ty < terminalHeight; ty++) {
+    for (let tx = 0; tx < terminalWidth; tx++) {
+      // Terminal cell corners in the sub-sampled grid
+      const baseGx = tx * subSample;
+      const baseGy = ty * subSample;
+
+      // Get corner values for this terminal cell
+      const tl = scalarGrid[baseGy][baseGx];
+      const tr = scalarGrid[baseGy][baseGx + subSample];
+      const bl = scalarGrid[baseGy + subSample][baseGx];
+      const br = scalarGrid[baseGy + subSample][baseGx + subSample];
+
+      let char: string | null = null;
+      let fgColor: number | undefined;
+      let bgColor: number | undefined;
+
+      // Check each isoline (last one wins if multiple cross the cell)
+      for (const isoline of isolines) {
+        const caseNum = getMarchingSquaresCase(tl, tr, bl, br, isoline.value);
+        const isoChar = getMarchingSquaresChar(caseNum);
+        if (isoChar) {
+          char = isoChar;
+          fgColor = isoline.color ? parseColor(isoline.color) : (hasStyleFg ? style.foreground : undefined);
+        }
+      }
+
+      // Fill mode: grayscale based on average value
+      if (filled) {
+        const avg = (tl + tr + bl + br) / 4;
+        const t = maxVal > minVal ? (avg - minVal) / (maxVal - minVal) : 0.5;
+        const gray = Math.floor(64 + t * 128); // 64-192 range
+        bgColor = packRGBA(gray, gray, gray, 255);
+      }
+
+      // Only write cell if there's content
+      if (char || (filled && bgColor)) {
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char: char ?? EMPTY_CHAR,
+          foreground: fgColor,
+          background: bgColor ?? propsBg ?? (hasStyleBg ? style.background : undefined),
+          bold: style.bold,
+          dim: style.dim,
+        });
+      }
+    }
+  }
+}
+
+/**
  * Render from dithered buffer to terminal.
  * Uses the pre-composited and dithered RGBA buffer for output.
  */
@@ -1731,15 +1907,27 @@ export function renderToTerminal(
     return;
   }
 
+  // Isolines mode: render contour lines using marching squares
+  if (gfxMode === 'isolines' || gfxMode === 'isolines-filled') {
+    renderIsolinesToTerminal(bounds, style, buffer, data, {}, gfxMode === 'isolines-filled');
+    return;
+  }
+
   // Default: sextant rendering
   renderSextantToTerminal(bounds, style, buffer, data, state);
 }
 
-/** Graphics rendering mode (user-facing, includes 'hires' auto-select) */
-export type GfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'iterm2' | 'hires';
+/** All graphics rendering modes (single source of truth) */
+export const GFX_MODES = ['sextant', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'iterm2', 'hires', 'isolines', 'isolines-filled'] as const;
 
-/** Resolved graphics mode (after 'hires' is expanded to actual mode) */
-export type ResolvedGfxMode = 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'iterm2';
+/** Graphics rendering mode (user-facing, includes 'hires' auto-select) */
+export type GfxMode = typeof GFX_MODES[number];
+
+/** Resolved graphics modes (after 'hires' is expanded to actual mode) */
+export const RESOLVED_GFX_MODES = ['sextant', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'iterm2', 'isolines', 'isolines-filled'] as const;
+
+/** Resolved graphics mode type */
+export type ResolvedGfxMode = typeof RESOLVED_GFX_MODES[number];
 
 /**
  * Get effective graphics mode from config and props.
@@ -1792,6 +1980,11 @@ export function getEffectiveGfxMode(
       return 'sextant';
     }
     return 'iterm2';
+  }
+
+  // isolines and isolines-filled: no capability check needed
+  if (requested === 'isolines' || requested === 'isolines-filled') {
+    return requested;
   }
 
   return requested;

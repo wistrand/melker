@@ -4,6 +4,7 @@
 import schema from './schema.json' with { type: 'json' };
 import { Env } from '../env.ts';
 import { getConfigDir } from '../xdg.ts';
+import type { GfxMode } from '../components/canvas-render.ts';
 
 // Lazy logger initialization to avoid circular dependency
 // (config.ts is loaded before logging.ts is fully initialized)
@@ -751,13 +752,26 @@ export class MelkerConfig {
   }
 
   // Render
-  get gfxMode(): 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'iterm2' | 'hires' | undefined {
+  get gfxMode(): GfxMode | undefined {
     // Only return gfxMode if explicitly set (env, cli, file, policy) - not schema default
     // This allows per-element gfxMode props to take effect when no global override
     if (this.sources['render.gfxMode'] === 'default') {
       return undefined;
     }
-    return this.data['render.gfxMode'] as 'sextant' | 'block' | 'pattern' | 'luma' | 'sixel' | 'kitty' | 'iterm2' | 'hires';
+    return this.data['render.gfxMode'] as GfxMode;
+  }
+
+  // Isolines
+  get isolineCount(): number {
+    return this.data['render.isolineCount'] as number;
+  }
+
+  get isolineMode(): 'equal' | 'quantile' | 'nice' {
+    return this.data['render.isolineMode'] as 'equal' | 'quantile' | 'nice';
+  }
+
+  get isolineSource(): 'luma' | 'red' | 'green' | 'blue' | 'alpha' | 'oklab' | 'oklch-hue' {
+    return this.data['render.isolineSource'] as 'luma' | 'red' | 'green' | 'blue' | 'alpha' | 'oklab' | 'oklch-hue';
   }
 
   // Headless

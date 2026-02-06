@@ -358,7 +358,7 @@ export async function runMelkerFile(
 
       if (options.debug) {
         console.log('\n' + '='.repeat(80));
-        console.log('MELKER DEBUG MODE');
+        console.log('MELKER VERBOSE MODE');
         console.log('='.repeat(80));
 
         const loggerOpts = getGlobalLoggerOptions();

@@ -1031,7 +1031,7 @@ function togglePanel() {
   }
 }
 
-// Resize handle for debug panel
+// Resize handle for panel
 (function initResizeHandle() {
   const handle = document.getElementById('resizeHandle');
   const panel = document.getElementById('debugPanel');

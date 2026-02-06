@@ -18,7 +18,7 @@ export interface ServerOptions {
   enableEventInjection?: boolean;
 }
 
-export interface DebugMessage {
+export interface ServerMessage {
   type: string;
   data?: any;
   id?: string;
@@ -120,7 +120,7 @@ export class MelkerServer {
   }
 
   /**
-   * Attach a Melker engine to debug
+   * Attach a Melker engine for inspection
    */
   attachEngine(engine: MelkerEngine): void {
     this._engine = engine;
@@ -293,7 +293,7 @@ export class MelkerServer {
   // Private methods
 
   private _sendWelcome(socket: WebSocket): void {
-    const message: DebugMessage = {
+    const message: ServerMessage = {
       type: 'welcome',
       data: {
         version: '0.1.0',
@@ -315,7 +315,7 @@ export class MelkerServer {
 
   private _handleMessage(socket: WebSocket, data: string): void {
     try {
-      const message: DebugMessage = JSON.parse(data);
+      const message: ServerMessage = JSON.parse(data);
 
       switch (message.type) {
         case 'get-buffer':
@@ -682,7 +682,7 @@ export class MelkerServer {
         terminalSize: this._engine.getTerminalSize(),
       };
 
-      const message: DebugMessage = {
+      const message: ServerMessage = {
         type: 'engine-state',
         data: state,
       };
@@ -700,7 +700,7 @@ export class MelkerServer {
       const tree = (this._engine.document as any).asStructuredTree ?
         (this._engine.document as any).asStructuredTree() :
         this._engine.document.asTree();
-      const message: DebugMessage = {
+      const message: ServerMessage = {
         type: 'document-tree',
         data: { tree },
       };
@@ -724,7 +724,7 @@ export class MelkerServer {
         return;
       }
 
-      const response: DebugMessage = {
+      const response: ServerMessage = {
         type: 'element',
         data: {
           element: {
@@ -1061,7 +1061,7 @@ export class MelkerServer {
       hasTerminalOutput: this._engine.headlessManager ? true : false,
     };
 
-    const response: DebugMessage = {
+    const response: ServerMessage = {
       type: 'headless-status',
       data: status,
       id: messageId,
@@ -1077,7 +1077,7 @@ export class MelkerServer {
 
     try {
       const output = this._engine.headlessManager.getTerminalOutput();
-      const response: DebugMessage = {
+      const response: ServerMessage = {
         type: 'terminal-output',
         data: { output },
         id: messageId,
@@ -1129,7 +1129,7 @@ export class MelkerServer {
   }
 
   private _sendResponse(socket: WebSocket, messageId?: string, data?: any): void {
-    const message: DebugMessage = {
+    const message: ServerMessage = {
       type: 'response',
       data,
       id: messageId,
@@ -1138,7 +1138,7 @@ export class MelkerServer {
   }
 
   private _sendError(socket: WebSocket, error: string, messageId?: string): void {
-    const message: DebugMessage = {
+    const message: ServerMessage = {
       type: 'error',
       data: { error },
       id: messageId,
@@ -1170,7 +1170,7 @@ export class MelkerServer {
     return `<!DOCTYPE html>
 <html>
 <head>
-  <title>Melker Debug</title>
+  <title>Melker</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>

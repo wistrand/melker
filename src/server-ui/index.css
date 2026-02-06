@@ -97,7 +97,7 @@ body {
   z-index: 50;
 }
 
-/* Debug panel with tabs */
+/* Panel with tabs */
 .debug-panel {
   display: flex;
   flex-direction: column;

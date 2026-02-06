@@ -1197,7 +1197,7 @@ export class MelkerEngine {
       if (differences.length === 0) {
         // Still render graphics overlays (content may have changed even if buffer hasn't)
         this._graphicsOverlayManager.renderOverlays();
-        // Notify debug clients
+        // Notify server clients
         this._server?.notifyRenderComplete();
         return;
       }
@@ -1226,7 +1226,7 @@ export class MelkerEngine {
       // Render graphics overlays after buffer output
       this._graphicsOverlayManager.renderOverlays();
 
-      // Notify debug clients of render completion
+      // Notify server clients of render completion
       this._server?.notifyRenderComplete();
     }
   }
@@ -1295,7 +1295,7 @@ export class MelkerEngine {
       // Render graphics overlays after buffer output
       this._graphicsOverlayManager.renderOverlays();
 
-      // Notify debug clients of render completion
+      // Notify server clients of render completion
       this._server?.notifyRenderComplete();
     }
   }

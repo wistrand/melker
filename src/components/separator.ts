@@ -9,8 +9,8 @@
 
 import {
   Element,
+  BaseProps,
   BORDER_CHARS,
-  type Style,
   type Bounds,
   type Renderable,
   type ComponentRenderContext,
@@ -20,23 +20,20 @@ import {
 import { parseColor } from './color-utils.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 
-export interface SeparatorProps {
+export interface SeparatorProps extends BaseProps {
   /** Optional text centered in the line (vertical when in row flex) */
   label?: string;
-  /** Standard style object */
-  style?: Style;
 }
 
 export class SeparatorElement extends Element implements Renderable {
   static readonly type = 'separator';
-  declare type: 'separator';
   declare props: SeparatorProps;
 
   // Cached orientation from parent flex-direction (set during layout)
-  private _isVertical: boolean = false;
+  protected _isVertical: boolean = false;
 
-  constructor(props: SeparatorProps = {}, _children: Element[] = []) {
-    super('separator', props);
+  constructor(props: SeparatorProps = {}, _children: Element[] = [], type: string = 'separator') {
+    super(type, props);
   }
 
   /**

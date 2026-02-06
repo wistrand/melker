@@ -1,11 +1,11 @@
 // Split pane component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Interactive, Draggable, Bounds, ComponentRenderContext, IntrinsicSizeContext, BORDER_CHARS, BorderStyle } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, Interactive, Draggable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ViewportDualBuffer } from '../viewport-buffer.ts';
-import { getCurrentTheme } from '../theme.ts';
+import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
-import { parseColor } from './color-utils.ts';
+import { SeparatorElement } from './separator.ts';
 
 const logger = getLogger('split-pane');
 
@@ -24,79 +24,72 @@ export interface SplitPaneProps extends BaseProps {
   onResize?: (event: SplitPaneResizeEvent) => void;
 }
 
-// Internal divider element — not registered as a component
-export class SplitPaneDivider extends Element implements Renderable, Focusable, Interactive, Draggable {
-  declare type: 'split-pane-divider';
-
+// Internal divider element — subclasses SeparatorElement for line/label rendering,
+// adds Focusable/Interactive/Draggable for split-pane resize interaction.
+export class SplitPaneDivider extends SeparatorElement implements Focusable, Interactive, Draggable {
   private _splitPane: SplitPaneElement;
   private _dividerIndex: number;
-  private _title: string | undefined;
   private _lastBounds: Bounds | null = null;
   private _dragging: boolean = false;
 
   constructor(splitPane: SplitPaneElement, dividerIndex: number, title?: string) {
-    super('split-pane-divider', { tabIndex: 0 }, []);
+    super({ label: title, tabIndex: 0 }, [], 'split-pane-divider');
     this._splitPane = splitPane;
     this._dividerIndex = dividerIndex;
-    this._title = title;
   }
 
-  render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer | ViewportDualBuffer, context: ComponentRenderContext): void {
+  // intrinsicSize inherited from SeparatorElement — detects orientation from parent flex-direction
+
+  override render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer | ViewportDualBuffer, context: ComponentRenderContext): void {
     this._lastBounds = bounds;
-    const isFocused = context.focusedElementId === this.id;
     const direction = this._splitPane.props.direction || 'horizontal';
-    const dividerStyleName = (this._splitPane.props.style?.dividerStyle || 'thin') as Exclude<BorderStyle, 'none'>;
-    const chars = BORDER_CHARS[dividerStyleName] || BORDER_CHARS.thin;
 
-    const theme = getCurrentTheme();
-    const isBW = theme.type === 'bw';
+    // Sync parent's divider styling into separator props before delegating
+    const parentStyle = this._splitPane.props.style;
+    const dividerStyleName = parentStyle?.dividerStyle || 'thin';
+    const dividerColor = parentStyle?.dividerColor;
 
-    const cellStyle: Partial<Cell> = { ...style };
-    const dividerColor = this._splitPane.props.style?.dividerColor;
-    if (dividerColor !== undefined) {
-      cellStyle.foreground = parseColor(dividerColor);
-    }
-    if (isFocused) {
-      cellStyle.reverse = true;
-    }
+    this.props.style = {
+      ...this.props.style,
+      borderStyle: dividerStyleName as any,
+      color: dividerColor,
+    };
 
-    const buf = buffer as DualBuffer;
-
-    if (direction === 'horizontal') {
-      // Vertical line divider (separates left/right panes)
-      const char = isBW ? '|' : chars.v;
-      for (let y = 0; y < bounds.height; y++) {
-        buf.currentBuffer.setText(bounds.x, bounds.y + y, char, cellStyle);
+    // Default to theme border color when no explicit dividerColor
+    if (dividerColor === undefined) {
+      const borderColor = getThemeColor('border');
+      if (borderColor !== undefined) {
+        style = { ...style, foreground: borderColor };
       }
-      // Render title vertically centered (one char per row)
-      if (this._title && bounds.height >= this._title.length) {
-        const titleStart = Math.floor((bounds.height - this._title.length) / 2);
-        const titleStyle = { ...cellStyle, bold: true };
-        for (let i = 0; i < this._title.length; i++) {
-          buf.currentBuffer.setText(bounds.x, bounds.y + titleStart + i, this._title[i], titleStyle);
-        }
+    }
+
+    // Focus highlight
+    if (context.focusedElementId === this.id) {
+      style = { ...style, reverse: true };
+    }
+
+    // Clear full bounds so inset padding cells and stale focus-inverted cells
+    // don't persist across redraws
+    const buf = buffer as DualBuffer;
+      if (direction === 'horizontal') {
+      for (let y = 0; y < bounds.height; y++) {
+        buf.currentBuffer.setText(bounds.x, bounds.y + y, ' ', style);
       }
     } else {
-      // Horizontal line divider (separates top/bottom panes)
-      const char = isBW ? '-' : chars.h;
       for (let x = 0; x < bounds.width; x++) {
-        buf.currentBuffer.setText(bounds.x + x, bounds.y, char, cellStyle);
-      }
-      // Render title horizontally centered
-      if (this._title && bounds.width >= this._title.length + 2) {
-        const titleStart = Math.floor((bounds.width - this._title.length) / 2);
-        const titleStyle = { ...cellStyle, bold: true };
-        buf.currentBuffer.setText(bounds.x + titleStart, bounds.y, this._title, titleStyle);
+        buf.currentBuffer.setText(bounds.x + x, bounds.y, ' ', style);
       }
     }
-  }
-
-  intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
-    const direction = this._splitPane.props.direction || 'horizontal';
-    if (direction === 'horizontal') {
-      return { width: 1, height: 0 };
+    // Inset divider by 1 char at each end along its length
+    const paddedBounds = { ...bounds };
+    if (direction === 'horizontal' && bounds.height > 2) {
+      paddedBounds.y += 1;
+      paddedBounds.height -= 2;
+    } else if (direction === 'vertical' && bounds.width > 2) {
+      paddedBounds.x += 1;
+      paddedBounds.width -= 2;
     }
-    return { width: 0, height: 1 };
+    super.render(paddedBounds, style, buf, context);
   }
 
   canReceiveFocus(): boolean {
@@ -289,6 +282,7 @@ export class SplitPaneElement extends Element implements Renderable {
 
     this._renormalize();
     this._updateFlexProperties();
+    this._requestForceRender();
     this._fireOnResize(index);
   }
 
@@ -325,6 +319,7 @@ export class SplitPaneElement extends Element implements Renderable {
 
     this._renormalize();
     this._updateFlexProperties();
+    this._requestForceRender();
     this._fireOnResize(index);
     return true;
   }
@@ -413,6 +408,12 @@ export class SplitPaneElement extends Element implements Renderable {
         };
       }
     }
+  }
+
+  private _requestForceRender(): void {
+    // Resizing panes changes layout for all children — request a full redraw
+    // to avoid stale content from previous positions of dividers and panes.
+    globalThis.melkerEngine?.requestForceRender();
   }
 
   private _fireOnResize(dividerIndex: number): void {

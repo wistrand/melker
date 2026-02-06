@@ -185,9 +185,9 @@ Deno.test('SplitPaneElement parses dividerTitles', () => {
   const div0 = pane.children![1] as SplitPaneDivider;
   const div1 = pane.children![3] as SplitPaneDivider;
 
-  // Access private _title via any
-  assertEquals((div0 as any)._title, 'Nav');
-  assertEquals((div1 as any)._title, 'Info');
+  // Title is stored in props.label (inherited from SeparatorElement)
+  assertEquals(div0.props.label, 'Nav');
+  assertEquals(div1.props.label, 'Info');
 });
 
 Deno.test('SplitPaneElement handles missing dividerTitles gracefully', () => {
@@ -197,7 +197,7 @@ Deno.test('SplitPaneElement handles missing dividerTitles gracefully', () => {
   );
 
   const div0 = pane.children![1] as SplitPaneDivider;
-  assertEquals((div0 as any)._title, undefined);
+  assertEquals(div0.props.label, undefined);
 });
 
 // --- Divider interface implementations ---
@@ -286,7 +286,8 @@ Deno.test('SplitPaneDivider intrinsicSize horizontal', () => {
   ]);
   const divider = pane.children![1] as SplitPaneDivider;
 
-  const size = divider.intrinsicSize({ availableSpace: { width: 100, height: 50 } });
+  // SeparatorElement.intrinsicSize reads orientation from parentStyle.flexDirection
+  const size = divider.intrinsicSize({ availableSpace: { width: 100, height: 50 }, parentStyle: { flexDirection: 'row' } });
   assertEquals(size.width, 1);
   assertEquals(size.height, 0);
 });
@@ -298,7 +299,7 @@ Deno.test('SplitPaneDivider intrinsicSize vertical', () => {
   ]);
   const divider = pane.children![1] as SplitPaneDivider;
 
-  const size = divider.intrinsicSize({ availableSpace: { width: 100, height: 50 } });
+  const size = divider.intrinsicSize({ availableSpace: { width: 100, height: 50 }, parentStyle: { flexDirection: 'column' } });
   assertEquals(size.width, 0);
   assertEquals(size.height, 1);
 });

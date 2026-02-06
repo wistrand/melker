@@ -8,7 +8,7 @@ The `<split-pane>` component splits its children horizontally (default) or verti
 |--------------|--------------------------------------------------------------|
 | Type         | `split-pane`                                                 |
 | File         | [src/components/split-pane.ts](../src/components/split-pane.ts) |
-| Internal     | `split-pane-divider` (not registered, created internally)    |
+| Internal     | `SplitPaneDivider` extends `SeparatorElement` (not registered) |
 | Layout       | Flexbox — row (horizontal) or column (vertical)              |
 | Interaction  | Mouse drag, keyboard arrows, Tab focus                       |
 
@@ -128,19 +128,20 @@ The split-pane creates internal `SplitPaneDivider` element instances interleaved
 this.children = [pane0, divider0, pane1, divider1, pane2]
 ```
 
-Dividers are real `Element` instances with `Renderable`, `Focusable`, `Draggable`, and `Interactive` interfaces. This gives them natural integration with focus navigation, hit testing, and the layout engine. No special-casing is needed outside the component.
+`SplitPaneDivider` **subclasses `SeparatorElement`** ([src/components/separator.ts](../src/components/separator.ts)) for line/label rendering and adds `Focusable`, `Draggable`, and `Interactive` interfaces. This reuses the separator's `intrinsicSize()` (orientation detection from parent flex-direction) and `render()` (line drawing with `BORDER_CHARS`, centered label). The subclass overrides `render()` to sync parent styling, apply theme border color defaults, handle focus highlighting, clear bounds, and inset the line.
 
-`SplitPaneDivider` is **not registered** as a component (no `registerComponent()` call). It is created only internally by `SplitPaneElement` and uses type string `'split-pane-divider'` for identification.
+`SplitPaneDivider` is **not registered** as a component (no `registerComponent()` call). It is created only internally by `SplitPaneElement` and uses type string `'split-pane-divider'` for identification. `SeparatorElement` accepts an optional `type` parameter in its constructor to support this.
 
 ```
-SplitPaneDivider fields:
+SplitPaneDivider extends SeparatorElement
   _splitPane     back-reference to parent SplitPaneElement
   _dividerIndex  index in the divider array
-  _title         optional title string
   _lastBounds    last rendered bounds (for drag/click)
   _dragging      drag state flag
+  props.label    optional title string (inherited from SeparatorProps)
 
-Interfaces: Renderable, Focusable, Draggable, Interactive
+Inherited from SeparatorElement: intrinsicSize(), render() (called via super)
+Added interfaces: Focusable, Draggable, Interactive
 ```
 
 ### Layout Strategy
@@ -159,7 +160,13 @@ The layout engine in [src/layout.ts](../src/layout.ts) recognizes `split-pane` a
 ### Rendering
 
 - **SplitPaneElement.render()**: Stores bounds only. Children render via normal tree traversal.
-- **SplitPaneDivider.render()**: Draws `|` or `-` line using `BORDER_CHARS[dividerStyle]`. Reads `dividerColor` and `dividerStyle` from the parent split-pane's style. Uses `reverse: true` when focused. Renders title centered on the divider (vertically for horizontal splits, horizontally for vertical splits).
+- **SplitPaneDivider.render()** (overrides `SeparatorElement.render()`):
+  1. Syncs parent's `dividerStyle` and `dividerColor` into `this.props.style` so `super.render()` uses them
+  2. Falls back to `getThemeColor('border')` when no explicit `dividerColor` is set
+  3. Applies `reverse: true` when focused
+  4. **Clears full bounds** with spaces before drawing — the rendering pipeline passes the element's full allocated bounds to `render()`, not content bounds (padding only affects child positioning), so the inset padding cells and stale focus-reversed cells must be explicitly cleared
+  5. **Insets the line** by 1 char at each end (top/bottom for horizontal splits, left/right for vertical splits) for visual breathing room
+  6. Delegates to `super.render()` with the inset bounds for actual line/label drawing
 
 ### Mouse Drag
 
@@ -168,7 +175,7 @@ Dividers implement the `Draggable` interface (same pattern as slider):
 - `getDragZone(x, y)` returns `'divider'` if within bounds
 - `handleDragStart/Move/End` delegate to `SplitPaneElement._handleDividerDrag(index, x, y)`
 
-The drag handler converts the absolute mouse position to a proportion delta between adjacent panes, enforces `minPaneSize`, updates `_normalizedSizes`, calls `_updateFlexProperties()`, and fires `onResize`.
+The drag handler converts the absolute mouse position to a proportion delta between adjacent panes, enforces `minPaneSize`, updates `_normalizedSizes`, calls `_updateFlexProperties()`, requests a force render, and fires `onResize`.
 
 ### Keyboard
 
@@ -177,6 +184,8 @@ Dividers implement `handleKeyInput(key, ctrlKey, altKey)`:
 - Horizontal: `ArrowLeft`/`ArrowRight` move divider by 1 char
 - Vertical: `ArrowUp`/`ArrowDown` move divider by 1 char
 - Delegates to `SplitPaneElement._handleDividerKeyboardMove(index, charDelta)`
+
+Both drag and keyboard handlers call `requestForceRender()` after updating flex properties. This ensures the buffer does a full diff on the next render, since dirty-row tracking may miss rows where pane content disappeared (the buffer `clear()` at frame start doesn't mark rows dirty, so rows that had content but are now empty would be skipped by the optimization).
 
 Keyboard routing is handled in [src/engine-keyboard-handler.ts](../src/engine-keyboard-handler.ts) alongside the slider routing block, matching on `focusedElement.type === 'split-pane-divider'`.
 
@@ -214,13 +223,14 @@ interface SplitPaneResizeEvent {
 | Minimum enforcement     | Drag/keyboard clamped to prevent panes < `minPaneSize` |
 | Terminal resize         | Proportions are normalized ratios, adapt automatically |
 | Nested split-panes      | Work naturally (each is a flex container)           |
-| BW theme                | Uses ASCII `|` and `-` instead of box-drawing chars |
+| BW theme                | Uses ASCII `|` and `-` instead of box-drawing chars (via `SeparatorElement`) |
 
 ## Files
 
 | File                                                                            | Role                                          |
 |---------------------------------------------------------------------------------|-----------------------------------------------|
 | [src/components/split-pane.ts](../src/components/split-pane.ts)                 | Component implementation + registration       |
+| [src/components/separator.ts](../src/components/separator.ts)                   | Base class for `SplitPaneDivider`             |
 | [src/components/mod.ts](../src/components/mod.ts)                               | Export                                        |
 | [src/types.ts](../src/types.ts)                                                 | `SplitPaneProps` in type maps, `dividerColor`/`dividerStyle` on `Style` |
 | [src/layout.ts](../src/layout.ts)                                               | Container-type recognition for flex defaults  |

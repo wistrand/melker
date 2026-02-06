@@ -185,10 +185,12 @@ export class AnsiOutputGenerator {
         commands.push(cell.char);
         currentX++;
 
-        // Handle line wrapping
+        // Handle last column: terminals use deferred wrap (cursor stays at last
+        // column until the next character), so our tracked position would be wrong
+        // for relative cursor moves. Force absolute positioning for the next span.
         if (currentX >= terminalWidth) {
-          currentX = 0;
-          currentY++;
+          currentX = -1;
+          currentY = -1;
         }
       }
     }

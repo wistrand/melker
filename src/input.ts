@@ -13,6 +13,7 @@ import {
   createWheelEvent,
 } from './events.ts';
 import { getLogger } from './logging.ts';
+import { isRunningHeadless } from './headless.ts';
 import { ANSI } from './ansi-output.ts';
 
 const logger = getLogger('Input');
@@ -295,6 +296,11 @@ export class TerminalInputProcessor {
    * Enable raw mode for better input control
    */
   private async _enableRawMode(): Promise<void> {
+    // Skip raw mode in headless mode - no real terminal to configure
+    if (isRunningHeadless()) {
+      this._rawModeEnabled = false;
+      return;
+    }
     if (typeof Deno !== 'undefined' && Deno.stdin.setRaw) {
       try {
         Deno.stdin.setRaw(true);

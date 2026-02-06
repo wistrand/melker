@@ -309,6 +309,24 @@ export class Logger {
     this._options.level = level;
   }
 
+  /**
+   * Reconfigure the logger with fresh options from config.
+   * Resets initialization state so log file and level changes take effect.
+   */
+  reconfigure(options: LoggerOptions): void {
+    this._options = {
+      logFile: options.logFile ?? getDefaultLogFile(),
+      level: options.level ?? 'INFO',
+      format: options.format ?? 'structured',
+      includeTimestamp: options.includeTimestamp ?? true,
+      includeLevel: options.includeLevel ?? true,
+      includeSource: options.includeSource ?? true,
+    };
+    this._initialized = false;
+    this._logFile = null;
+    loggingDisabled = false;
+  }
+
   close(): void {
     // No-op - no resources to clean up
   }
@@ -317,7 +335,7 @@ export class Logger {
 // Configuration from MelkerConfig
 function getLogLevelFromConfig(): LogLevel {
   const config = MelkerConfig.get();
-  return config.logLevel as LogLevel;
+  return (config.logLevel?.toUpperCase() || 'INFO') as LogLevel;
 }
 
 function getLogFileFromConfig(): string | undefined {
@@ -353,6 +371,16 @@ export function getGlobalLogger(): Logger {
 
 export function setGlobalLogger(logger: Logger): void {
   globalLogger = logger;
+}
+
+/**
+ * Reconfigure the global logger with current config values.
+ * Call after CLI flags are applied to pick up --log-level and --log-file.
+ */
+export function reconfigureGlobalLogger(): void {
+  if (globalLogger) {
+    globalLogger.reconfigure(createDefaultLoggerOptions());
+  }
 }
 
 export function getGlobalLoggerOptions(): { logFile: string; level: LogLevel } {

@@ -192,9 +192,9 @@ export function policyToDenoFlags(
   }
 
   // Network permissions ("*" means all)
-  // Implicit: localhost when debug server is enabled
-  const debugPort = MelkerConfig.get().debugPort;
-  if (debugPort !== undefined) {
+  // Implicit: localhost when debug server or headless mode is enabled
+  const config = MelkerConfig.get();
+  if (config.debugPort !== undefined || config.headlessEnabled) {
     if (!p.net) p.net = [];
     if (!p.net.includes('*') && !p.net.includes('localhost')) {
       p.net.push('localhost');

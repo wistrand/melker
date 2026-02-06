@@ -255,24 +255,37 @@ When `stop()` is called:
 
 ## Key Files
 
-| File                          | Purpose                        |
-|-------------------------------|--------------------------------|
-| `src/engine.ts`               | Main engine, lifecycle, events |
-| `src/layout.ts`               | Flexbox layout calculations    |
-| `src/rendering.ts`            | Render pipeline, overlays      |
-| `src/buffer.ts`               | Dual-buffer system             |
-| `src/renderer.ts`             | ANSI terminal output           |
-| `src/focus.ts`                | Focus management               |
-| `src/theme.ts`                | Theming system                 |
-| `src/input.ts`                | Raw terminal input, mouse      |
-| `src/template.ts`             | .melker file parsing           |
-| `src/element.ts`              | Element creation, registry     |
-| `src/document.ts`             | Document class                 |
-| `src/events.ts`               | Event system                   |
-| `src/types.ts`                | Core type definitions          |
-| `src/sizing.ts`               | Box model                      |
-| `src/viewport.ts`             | Scrolling support              |
-| `src/ui-animation-manager.ts` | Centralized animation timer    |
+| File                              | Purpose                                    |
+|-----------------------------------|--------------------------------------------|
+| `src/engine.ts`                   | Main engine, lifecycle, render orchestration |
+| `src/engine-keyboard-handler.ts`  | Keyboard event handling                    |
+| `src/engine-mouse-handler.ts`     | Mouse and wheel event handling             |
+| `src/engine-buffer-overlays.ts`   | Buffer overlay rendering pipeline          |
+| `src/engine-dialog-utils.ts`      | Dialog traversal and focus trap utilities   |
+| `src/engine-system-palette.ts`    | System command palette logic               |
+| `src/graphics-overlay-manager.ts` | Sixel/Kitty/iTerm2 graphics overlay management |
+| `src/terminal-size-manager.ts`    | Terminal size detection, tracking, resize   |
+| `src/dialog-coordinator.ts`       | Alert, confirm, prompt dialog lifecycle    |
+| `src/scroll-handler.ts`          | Scroll event handling for containers       |
+| `src/element-click-handler.ts`   | Element click routing and focus            |
+| `src/focus-navigation-handler.ts` | Tab/Shift+Tab focus navigation             |
+| `src/text-selection-handler.ts`  | Mouse text selection and hover tracking    |
+| `src/state-persistence-manager.ts`| App state auto-save/restore                |
+| `src/layout.ts`                   | Flexbox layout calculations                |
+| `src/rendering.ts`                | Render pipeline, overlays                  |
+| `src/buffer.ts`                   | Dual-buffer system                         |
+| `src/renderer.ts`                 | ANSI terminal output                       |
+| `src/focus.ts`                    | Focus management                           |
+| `src/theme.ts`                    | Theming system                             |
+| `src/input.ts`                    | Raw terminal input, mouse                  |
+| `src/template.ts`                 | .melker file parsing                       |
+| `src/element.ts`                  | Element creation, registry                 |
+| `src/document.ts`                 | Document class                             |
+| `src/events.ts`                   | Event system                               |
+| `src/types.ts`                    | Core type definitions                      |
+| `src/sizing.ts`                   | Box model                                  |
+| `src/viewport.ts`                 | Scrolling support                          |
+| `src/ui-animation-manager.ts`     | Centralized animation timer                |
 
 ## See Also
 

@@ -5,13 +5,14 @@ import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { HitTester } from './hit-test.ts';
 import { Element, isClickable, ClickEvent, hasPositionalClickHandler } from './types.ts';
-import { type ComponentLogger } from './logging.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('ElementClickHandler');
 
 export interface ElementClickHandlerDeps {
   document: Document;
   renderer: RenderingEngine;
   hitTester: HitTester;
-  logger?: ComponentLogger;
   autoRender: boolean;
   onRender: () => void;
   onRegisterFocusable: (elementId: string) => void;
@@ -32,7 +33,7 @@ export class ElementClickHandler {
    * Handle element clicks (focus, button activation, etc.)
    */
   handleElementClick(element: Element, event: any): void {
-    this._deps.logger?.debug(`_handleElementClick: element.type=${element.type}, id=${element.id}, at (${event.x}, ${event.y})`);
+    logger.debug(`_handleElementClick: element.type=${element.type}, id=${element.id}, at (${event.x}, ${event.y})`);
 
     // Set focus on clickable elements
     if (this._deps.hitTester.isInteractiveElement(element) && element.id) {
@@ -50,7 +51,7 @@ export class ElementClickHandler {
 
     // Handle clicks on Clickable elements (button, checkbox, radio, etc.)
     // Note: markdown has handleClick but with different signature (x, y) - handled separately below
-    this._deps.logger?.debug(`Checking isClickable for ${element.type}/${element.id}: ${isClickable(element)}`);
+    logger.debug(`Checking isClickable for ${element.type}/${element.id}: ${isClickable(element)}`);
     if (isClickable(element) && element.type !== 'markdown') {
       const clickEvent: ClickEvent = {
         type: 'click',
@@ -59,9 +60,9 @@ export class ElementClickHandler {
         timestamp: Date.now(),
       };
 
-      this._deps.logger?.debug(`Calling handleClick on ${element.type}/${element.id}`);
+      logger.debug(`Calling handleClick on ${element.type}/${element.id}`);
       const handled = element.handleClick(clickEvent, this._deps.document);
-      this._deps.logger?.debug(`handleClick returned: ${handled}`);
+      logger.debug(`handleClick returned: ${handled}`);
 
       if (handled && this._deps.autoRender) {
         this._deps.onRender();
@@ -70,10 +71,10 @@ export class ElementClickHandler {
 
     // Handle markdown element clicks (for link detection)
     if (element.type === 'markdown' && hasPositionalClickHandler(element)) {
-      this._deps.logger?.debug(`Engine: Markdown element clicked at (${event.x}, ${event.y}), hasHandleClick: true`);
+      logger.debug(`Engine: Markdown element clicked at (${event.x}, ${event.y}), hasHandleClick: true`);
       // Pass absolute coordinates - markdown tracks its own render bounds
       const handled = element.handleClick(event.x, event.y);
-      this._deps.logger?.debug(`Engine: Markdown handleClick returned: ${handled}`);
+      logger.debug(`Engine: Markdown handleClick returned: ${handled}`);
       if (handled && this._deps.autoRender) {
         this._deps.onRender();
       }

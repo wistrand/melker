@@ -102,10 +102,14 @@ export function parseCliFlags(args: string[]): ParsedCliFlags {
  * Parse a string value to the appropriate type based on schema
  */
 function parseValue(value: string, prop: ConfigProperty, flagName?: string): unknown {
-  // Validate enum values
-  if (prop.enum && !prop.enum.includes(value)) {
-    console.error(`Error: Invalid value '${value}' for ${flagName || 'option'}. Valid values: ${prop.enum.join(', ')}`);
-    Deno.exit(1);
+  // Validate enum values (case-insensitive match, normalize to canonical case)
+  if (prop.enum) {
+    const match = prop.enum.find(v => v.toLowerCase() === value.toLowerCase());
+    if (!match) {
+      console.error(`Error: Invalid value '${value}' for ${flagName || 'option'}. Valid values: ${prop.enum.join(', ')}`);
+      Deno.exit(1);
+    }
+    value = match;
   }
 
   switch (prop.type) {

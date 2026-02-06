@@ -14,21 +14,31 @@ Detailed file layout for the Melker codebase.
 
 ### Core Engine
 
-| File                         | Purpose                                           |
-|------------------------------|---------------------------------------------------|
-| `melker-runner.ts`           | .melker file runner (bundling, engine, app execution) |
-| `engine.ts`                  | Main engine, lifecycle, events                    |
-| `engine-keyboard-handler.ts` | Keyboard event handling                           |
-| `engine-system-palette.ts`   | System command palette logic                      |
-| `engine-dialog-utils.ts`     | Dialog traversal and focus trap utilities         |
-| `ui-animation-manager.ts`    | Centralized timer for UI animations               |
-| `layout.ts`                  | Flexbox layout calculations                       |
-| `rendering.ts`               | Render pipeline, overlays                         |
-| `buffer.ts`                  | Dual-buffer system                                |
-| `renderer.ts`                | ANSI terminal output                              |
-| `focus.ts`                   | Focus/tab navigation                              |
-| `theme.ts`                   | Theming system                                    |
-| `template.ts`                | .melker file parsing                              |
+| File                           | Purpose                                               |
+|--------------------------------|-------------------------------------------------------|
+| `melker-runner.ts`             | .melker file runner (bundling, engine, app execution) |
+| `engine.ts`                    | Main engine, lifecycle, render orchestration           |
+| `engine-keyboard-handler.ts`   | Keyboard event handling                               |
+| `engine-mouse-handler.ts`      | Mouse and wheel event handling                        |
+| `engine-buffer-overlays.ts`    | Buffer overlay rendering pipeline                     |
+| `engine-system-palette.ts`     | System command palette logic                          |
+| `engine-dialog-utils.ts`       | Dialog traversal and focus trap utilities              |
+| `graphics-overlay-manager.ts`  | Sixel/Kitty/iTerm2 graphics overlay management        |
+| `terminal-size-manager.ts`     | Terminal size detection, tracking, resize dispatch     |
+| `dialog-coordinator.ts`        | Alert, confirm, prompt, accessibility dialog lifecycle |
+| `scroll-handler.ts`            | Scroll event handling for containers                  |
+| `element-click-handler.ts`     | Element click routing and focus                       |
+| `focus-navigation-handler.ts`  | Tab/Shift+Tab focus navigation                        |
+| `text-selection-handler.ts`    | Mouse text selection and hover tracking               |
+| `state-persistence-manager.ts` | App state auto-save/restore                           |
+| `ui-animation-manager.ts`      | Centralized timer for UI animations                   |
+| `layout.ts`                    | Flexbox layout calculations                           |
+| `rendering.ts`                 | Render pipeline, overlays                             |
+| `buffer.ts`                    | Dual-buffer system                                    |
+| `renderer.ts`                  | ANSI terminal output                                  |
+| `focus.ts`                     | Focus/tab navigation                                  |
+| `theme.ts`                     | Theming system                                        |
+| `template.ts`                  | .melker file parsing                                  |
 
 ### Types and Utilities
 

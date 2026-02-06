@@ -94,7 +94,7 @@ Each property in schema.json can have:
 - `lint` - Enable lint validation (env: MELKER_LINT, flag: --lint)
 
 ### Logging
-- `log.level` - Log verbosity: TRACE, DEBUG, INFO, WARN, ERROR
+- `log.level` - Log verbosity: TRACE, DEBUG, INFO, WARN, ERROR (case-insensitive on CLI and env)
 - `log.file` - Log file path
 - `log.bufferSize` - In-memory log buffer size for DevTools Log tab (default: 500, range: 10-10000)
 

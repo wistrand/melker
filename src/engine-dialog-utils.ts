@@ -2,7 +2,9 @@
 // Extracted from engine.ts to reduce file size
 
 import type { Element } from './types.ts';
-import type { ComponentLogger } from './logging.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('DialogUtils');
 import {
   hasElement,
   collectElements,
@@ -39,7 +41,6 @@ export interface ModalFocusTrapContext {
   root: Element | undefined;
   trappedModalDialogIds: Set<string>;
   focusManager: FocusManagerOps;
-  logger?: ComponentLogger;
 }
 
 /**
@@ -144,7 +145,7 @@ export function updateModalFocusTraps(ctx: ModalFocusTrapContext): void {
   // Release traps for dialogs that closed
   for (const dialogId of ctx.trappedModalDialogIds) {
     if (!currentOpenIds.has(dialogId)) {
-      ctx.logger?.debug(`Releasing focus trap for closed modal: ${dialogId}`);
+      logger.debug(`Releasing focus trap for closed modal: ${dialogId}`);
       ctx.focusManager.releaseFocusTrap(dialogId, true);
       ctx.trappedModalDialogIds.delete(dialogId);
     }
@@ -153,7 +154,7 @@ export function updateModalFocusTraps(ctx: ModalFocusTrapContext): void {
   // Set up traps for newly opened dialogs
   for (const dialog of openModalDialogs) {
     if (dialog.id && !ctx.trappedModalDialogIds.has(dialog.id)) {
-      ctx.logger?.debug(`Setting up focus trap for modal: ${dialog.id}`);
+      logger.debug(`Setting up focus trap for modal: ${dialog.id}`);
 
       // Find the first focusable element inside the dialog
       const initialFocus = findFirstFocusable(dialog);

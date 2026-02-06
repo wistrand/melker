@@ -9,8 +9,10 @@ import { createKeyPressEvent } from './events.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { getTooltipManager } from './tooltip/mod.ts';
-import type { ComponentLogger } from './logging.ts';
+import { getLogger } from './logging.ts';
 import type { DualBuffer } from './buffer.ts';
+
+const logger = getLogger('KeyboardHandler');
 import type { RenderingEngine } from './rendering.ts';
 import type { FocusNavigationHandler } from './focus-navigation-handler.ts';
 import type { ScrollHandler } from './scroll-handler.ts';
@@ -40,7 +42,6 @@ export interface RawKeyEvent {
 export interface KeyboardHandlerContext {
   // Core components
   document: Document;
-  logger?: ComponentLogger;
   buffer?: DualBuffer;
   renderer?: RenderingEngine;
   inputProcessor?: TerminalInputProcessor;
@@ -86,7 +87,7 @@ export function handleKeyboardEvent(
   const focusedElement = ctx.document.focusedElement;
 
   // Log all key events for debugging
-  ctx.logger?.debug('Key event received', {
+  logger.debug('Key event received', {
     key: event.key,
     code: event.code,
     ctrlKey: event.ctrlKey,
@@ -151,7 +152,7 @@ export function handleKeyboardEvent(
 
   // Handle F7 specially for voice input
   if (['f7', 'F7'].includes(event.key)) {
-    ctx.logger?.info('F7 pressed - voice input mode');
+    logger.info('F7 pressed - voice input mode');
     ctx.ensureAccessibilityDialogManager();
     const accessibilityManager = ctx.getAccessibilityDialogManager()!;
     // If dialog is open, toggle listening. If closed, open and start listening.
@@ -165,7 +166,7 @@ export function handleKeyboardEvent(
 
   // Handle other function keys for AI Accessibility dialog
   if (['f8', 'F8', 'f9', 'F9'].includes(event.key)) {
-    ctx.logger?.info(event.key + ' pressed - opening accessibility dialog');
+    logger.info(event.key + ' pressed - opening accessibility dialog');
     ctx.ensureAccessibilityDialogManager();
     ctx.getAccessibilityDialogManager()!.toggle();
     return true;
@@ -173,7 +174,7 @@ export function handleKeyboardEvent(
 
   // Handle Ctrl+/ or Alt+/ or Ctrl+? or Alt+? for AI Accessibility dialog
   if ((event.ctrlKey || event.altKey) && (['/', '?', 'h', 'H'].includes(event.key))) {
-    ctx.logger?.info('Accessibility shortcut pressed', { key: event.key, ctrlKey: event.ctrlKey, altKey: event.altKey });
+    logger.info('Accessibility shortcut pressed', { key: event.key, ctrlKey: event.ctrlKey, altKey: event.altKey });
     ctx.ensureAccessibilityDialogManager();
     ctx.getAccessibilityDialogManager()!.toggle();
     return true;
@@ -418,7 +419,7 @@ function handleTextInputKeyboard(
     return false;
   }
 
-  ctx.logger?.debug('Key input routed to text input', {
+  logger.debug('Key input routed to text input', {
     elementId: textInput.id,
     key: event.key,
     ctrlKey: event.ctrlKey,

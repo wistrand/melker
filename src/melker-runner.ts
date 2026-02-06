@@ -9,7 +9,7 @@ import { ensureError } from './utils/error.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { Env } from './env.ts';
 import { parseCliFlags, MelkerConfig } from './config/mod.ts';
-import { getLogger } from './logging.ts';
+import { getLogger, reconfigureGlobalLogger } from './logging.ts';
 import { isStdoutEnabled, isStdoutAutoEnabled, getStdoutConfig, bufferToStdout, trimStdoutOutput } from './stdout.ts';
 
 // Import library to register components before template parsing
@@ -1175,6 +1175,7 @@ async function main(): Promise<void> {
 
   // Apply CLI flags to config (may already be auto-initialized via mod.ts import)
   MelkerConfig.applyCliFlags(cliFlags);
+  reconfigureGlobalLogger();
 
   // Get config values
   const config = MelkerConfig.get();

@@ -50,11 +50,14 @@ logger.error('Error message');
 
 | Level   | Use For                                   |
 |---------|-------------------------------------------|
+| `TRACE` | Very detailed tracing, performance paths  |
 | `DEBUG` | Detailed debugging info, variable dumps   |
 | `INFO`  | General operational messages              |
 | `WARN`  | Potential issues, recoverable errors      |
 | `ERROR` | Errors that need attention                |
 | `FATAL` | Critical errors, application termination  |
+
+Log level names are **case-insensitive** on the CLI (`--log-level=debug` works).
 
 ### Configuration
 

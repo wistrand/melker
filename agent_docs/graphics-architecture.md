@@ -36,9 +36,9 @@ See [gfx-modes.md](gfx-modes.md) for mode details and comparison.
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                ENGINE                                   │
-│  src/engine.ts                                                          │
+│  src/engine.ts + src/graphics-overlay-manager.ts                        │
 │  - Buffer output (sextant/block/pattern/luma)                           │
-│  - Graphics overlay output (sixel/kitty after buffer)                   │
+│  - Graphics overlay output (sixel/kitty/iterm2 after buffer)            │
 │  - Stale graphics cleanup                                               │
 │  - Overlay detection (hide graphics when dialogs visible)               │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -223,15 +223,16 @@ Canvas maintains two pixel buffers that are composited during rendering:
 
 ## Files
 
-| File                              | Purpose                             |
-|-----------------------------------|-------------------------------------|
-| `src/components/canvas.ts`        | Canvas element, buffer management   |
-| `src/components/canvas-render.ts` | Mode selection, rendering dispatch  |
-| `src/sixel/`                      | Sixel detection, encoding, palette  |
-| `src/kitty/`                      | Kitty detection, encoding           |
-| `src/engine.ts`                   | Graphics overlay output             |
-| `src/input.ts`                    | Detection response routing          |
-| `src/rendering.ts`                | Overlay detection                   |
+| File                                 | Purpose                                    |
+|--------------------------------------|--------------------------------------------|
+| `src/components/canvas.ts`           | Canvas element, buffer management          |
+| `src/components/canvas-render.ts`    | Mode selection, rendering dispatch         |
+| `src/sixel/`                         | Sixel detection, encoding, palette         |
+| `src/kitty/`                         | Kitty detection, encoding                  |
+| `src/graphics-overlay-manager.ts`    | Sixel/Kitty/iTerm2 overlay output, cleanup |
+| `src/engine.ts`                      | Render orchestration, delegates to manager |
+| `src/input.ts`                       | Detection response routing                 |
+| `src/rendering.ts`                   | Overlay detection                          |
 
 ## See Also
 

@@ -17,7 +17,7 @@ import { DualBuffer, EMPTY_CHAR } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
-import { Element, TextSelection, isWheelable, isScrollingEnabled } from './types.ts';
+import { Element, TextSelection, isScrollingEnabled } from './types.ts';
 import {
   EventManager,
   type MelkerEvent,
@@ -31,17 +31,8 @@ import {
 } from './dev-tools.ts';
 import type { MelkerPolicy } from './policy/types.ts';
 import {
-  AlertDialogManager,
-} from './alert-dialog.ts';
-import {
-  ConfirmDialogManager,
-} from './confirm-dialog.ts';
-import {
-  PromptDialogManager,
-} from './prompt-dialog.ts';
-import {
-  AccessibilityDialogManager,
-} from './ai/accessibility-dialog.ts';
+  DialogCoordinator,
+} from './dialog-coordinator.ts';
 import {
   getSystemHandlers,
   findOpenCommandPalette,
@@ -67,6 +58,15 @@ import {
   type DebugServerOptions,
 } from './debug-server.ts';
 import {
+  GraphicsOverlayManager,
+} from './graphics-overlay-manager.ts';
+import {
+  TerminalSizeManager,
+} from './terminal-size-manager.ts';
+import {
+  renderBufferOverlays,
+} from './engine-buffer-overlays.ts';
+import {
   initializeHeadlessMode,
   isHeadlessEnabled,
   isRunningHeadless,
@@ -84,25 +84,13 @@ import {
   type ThemeManager,
 } from './theme.ts';
 import {
-  getGlobalStatsOverlay,
-  isStatsOverlayEnabled,
-  type StatsOverlay,
-} from './stats-overlay.ts';
-import {
-  getGlobalErrorHandler,
-  getGlobalErrorOverlay,
-} from './error-boundary.ts';
-import {
   getGlobalPerformanceDialog,
-  type PerformanceStats,
 } from './performance-dialog.ts';
 import {
-  getGlobalErrorOverlay as getGlobalScriptErrorOverlay,
-} from './error-overlay.ts';
-import {
   getLogger,
-  type ComponentLogger,
 } from './logging.ts';
+
+const logger = getLogger('MelkerEngine');
 import {
   ANSI,
   AnsiOutputGenerator,
@@ -148,37 +136,32 @@ import {
   type RawKeyEvent,
 } from './engine-keyboard-handler.ts';
 import {
-  detectSixelCapabilities,
-  type SixelCapabilities,
-} from './sixel/mod.ts';
+  handleWheelEvent,
+  handleMouseDownEvent,
+  handleMouseMoveEvent,
+  handleMouseUpEvent,
+  type MouseHandlerContext,
+} from './engine-mouse-handler.ts';
+import type { SixelCapabilities } from './sixel/mod.ts';
+import type { KittyCapabilities } from './kitty/mod.ts';
+import type { ITermCapabilities } from './iterm2/mod.ts';
 import {
-  detectKittyCapabilities,
-  type KittyCapabilities,
-} from './kitty/mod.ts';
-import {
-  detectITermCapabilities,
-  type ITermCapabilities,
-} from './iterm2/mod.ts';
-import {
-  renderToastOverlay,
-  handleToastClick,
   getToastManager,
 } from './toast/mod.ts';
 import {
-  renderTooltipOverlay,
   getTooltipManager,
 } from './tooltip/mod.ts';
 import {
   initUIAnimationManager,
   shutdownUIAnimationManager,
-  getUIAnimationManager,
 } from './ui-animation-manager.ts';
 
 // Initialize config logger getter (breaks circular dependency between config.ts and logging.ts)
 setLoggerGetter(() => getLogger('Config'));
 
-// Reusable TextEncoder to avoid per-render allocations
+// Reusable TextEncoder/TextDecoder to avoid per-render allocations
 const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 
 export interface MelkerEngineOptions {
   // Terminal setup
@@ -250,15 +233,13 @@ export class MelkerEngine {
   private _debugServer?: MelkerDebugServer;
   private _headlessManager?: HeadlessManager;
   private _themeManager!: ThemeManager;
-  private _logger?: ComponentLogger;
   private _rootElement: Element;
   private _options: Required<MelkerEngineOptions>;
-  private _currentSize: { width: number; height: number };
+  private _terminalSizeManager!: TerminalSizeManager;
   private _isInitialized = false;
   private _isRendering = false;  // Render lock to prevent re-render during render
   private _pendingRender = false;  // Track if render was requested during _isRendering
   private _renderCount = 0;
-  private _customResizeHandlers: Array<(event: { previousSize: { width: number; height: number }, newSize: { width: number; height: number }, timestamp: number }) => void> = [];
   private _mountHandlers: Array<() => void | Promise<void>> = [];
   // Debounced action for rapid input rendering (e.g., paste operations)
   private _debouncedInputRenderAction!: DebouncedAction;
@@ -266,17 +247,8 @@ export class MelkerEngine {
   // Dev Tools feature
   private _devToolsManager?: DevToolsManager;
 
-  // Alert dialog feature
-  private _alertDialogManager?: AlertDialogManager;
-
-  // Confirm dialog feature
-  private _confirmDialogManager?: ConfirmDialogManager;
-
-  // Prompt dialog feature
-  private _promptDialogManager?: PromptDialogManager;
-
-  // AI Accessibility dialog feature
-  private _accessibilityDialogManager?: AccessibilityDialogManager;
+  // Dialog coordinator (alert, confirm, prompt, accessibility)
+  private _dialogCoordinator!: DialogCoordinator;
 
   // System command palette (injected if no command palette exists)
   private _systemCommandPalette?: Element;
@@ -298,23 +270,8 @@ export class MelkerEngine {
   // Track which dialogs were open in previous frame (for auto force-render on dialog open)
   private _previouslyOpenDialogIds = new Set<string>();
 
-  // Sixel graphics capabilities (detected at startup)
-  private _sixelCapabilities?: SixelCapabilities;
-
-  // Kitty graphics capabilities (detected at startup)
-  private _kittyCapabilities?: KittyCapabilities;
-
-  // iTerm2 graphics capabilities (detected at startup)
-  private _itermCapabilities?: ITermCapabilities;
-
-  // Track previous sixel bounds for clearing on scroll/move
-  private _previousSixelBounds: Array<{ x: number; y: number; width: number; height: number }> = [];
-
-  // Track previous kitty image IDs for cleanup
-  private _previousKittyImageIds: number[] = [];
-
-  // Track if scroll happened this frame (for Konsole sixel workaround)
-  private _scrollHappenedThisFrame = false;
+  // Graphics overlay manager for sixel, kitty, and iTerm2
+  private _graphicsOverlayManager!: GraphicsOverlayManager;
 
   constructor(rootElement: Element, options: MelkerEngineOptions = {}) {
     // Get terminal settings from config
@@ -397,7 +354,13 @@ export class MelkerEngine {
     }
 
     this._rootElement = rootElement;
-    this._currentSize = this._getTerminalSize();
+
+    // Initialize terminal size manager (must be before _initializeComponents)
+    this._terminalSizeManager = new TerminalSizeManager({
+      initialWidth: this._options.initialWidth,
+      initialHeight: this._options.initialHeight,
+      headlessManager: this._headlessManager,
+    });
 
     // Make engine globally accessible for components that need URL resolution
     globalThis.melkerEngine = this;
@@ -405,10 +368,10 @@ export class MelkerEngine {
     // Set element size to match terminal size if not specified
     const style = this._rootElement.props.style || {};
     if (!this._rootElement.props.width && !style.width) {
-      this._rootElement.props.width = this._currentSize.width;
+      this._rootElement.props.width = this._terminalSizeManager.size.width;
     }
     if (!this._rootElement.props.height && !style.height) {
-      this._rootElement.props.height = this._currentSize.height;
+      this._rootElement.props.height = this._terminalSizeManager.size.height;
     }
 
     // Initialize core components
@@ -420,58 +383,10 @@ export class MelkerEngine {
       this.render();
     }, 16);
 
-    // Initialize logger (async initialization will happen in start())
-    this._initializeLogger();
-
     // Set up global emergency cleanup in case something goes wrong
     this._setupEmergencyCleanup();
   }
 
-  private _initializeLogger(): void {
-    // Logger initialization is now fully synchronous
-    try {
-      this._logger = getLogger('MelkerEngine');
-    } catch (error) {
-      // Fallback: continue without logging if logger fails
-      console.error('Failed to initialize logger:', error);
-      this._logger = undefined;
-    }
-  }
-
-
-  private _getTerminalSize(): { width: number; height: number } {
-    // If in headless mode, use virtual terminal size
-    if (this._headlessManager) {
-      return this._headlessManager.terminal;
-    }
-
-    // If in stdout mode, use configured stdout dimensions (fallback to actual terminal size)
-    if (isStdoutEnabled()) {
-      const config = MelkerConfig.get();
-      const actualSize = this._getActualTerminalSize();
-      return {
-        width: config.stdoutWidth ?? actualSize.width,
-        height: config.stdoutHeight ?? actualSize.height,
-      };
-    }
-
-    return this._getActualTerminalSize();
-  }
-
-  private _getActualTerminalSize(): { width: number; height: number } {
-    try {
-      if (typeof Deno !== 'undefined' && Deno.consoleSize) {
-        const size = Deno.consoleSize();
-        return { width: size.columns, height: size.rows };
-      }
-    } catch {
-      // Fallback to options
-    }
-    return {
-      width: this._options.initialWidth,
-      height: this._options.initialHeight,
-    };
-  }
 
   private _initializeComponents(): void {
     // Create document with the root element
@@ -505,7 +420,7 @@ export class MelkerEngine {
       background: getThemeColor('background'),
       foreground: getThemeColor('textPrimary')
     };
-    this._buffer = new DualBuffer(this._currentSize.width, this._currentSize.height, defaultCell);
+    this._buffer = new DualBuffer(this._terminalSizeManager.size.width, this._terminalSizeManager.size.height, defaultCell);
     this._renderer = new RenderingEngine();
     this._renderer.setDocument(this._document);
     this._terminalRenderer = new TerminalRenderer({
@@ -518,7 +433,7 @@ export class MelkerEngine {
     this._hitTester = new HitTester({
       document: this._document,
       renderer: this._renderer,
-      viewportSize: this._currentSize,
+      viewportSize: this._terminalSizeManager.size,
     });
     this._scrollHandler = new ScrollHandler({
       document: this._document,
@@ -534,7 +449,6 @@ export class MelkerEngine {
       document: this._document,
       renderer: this._renderer,
       hitTester: this._hitTester,
-      logger: this._logger,
       autoRender: this._options.autoRender,
       onRender: () => this.render(),
       onRegisterFocusable: (id) => this.registerFocusableElement(id),
@@ -569,12 +483,44 @@ export class MelkerEngine {
       }
     );
 
+    // Initialize dialog coordinator
+    this._dialogCoordinator = new DialogCoordinator({
+      document: this._document,
+      focusManager: this._focusManager,
+      autoRender: this._options.autoRender,
+      registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
+      render: () => this.render(),
+      forceRender: () => this.forceRender(),
+      exitProgram: async () => { await this.stop(); },
+      scrollToBottom: (containerId) => this.scrollToBottom(containerId),
+      getSelectedText: () => this.getTextSelection().selectedText,
+    });
+
     // Set up resize handler if enabled (skip in stdout mode - fixed size output)
     if (this._options.autoResize && !isStdoutEnabled()) {
-      this._resizeHandler = new ResizeHandler(this._currentSize, {
+      this._resizeHandler = new ResizeHandler(this._terminalSizeManager.size, {
         debounceMs: this._options.debounceMs,
         autoRender: false, // Disable auto-render, we handle it manually via onResize
-        onResize: (event) => this._handleResize(event.newSize),
+        onResize: (event) => this._terminalSizeManager.handleResize(
+          event.newSize,
+          (_previousSize, newSize) => {
+            this._hitTester.updateContext({ viewportSize: newSize });
+            this._buffer.resize(newSize.width, newSize.height);
+            this._rootElement.props.width = newSize.width;
+            this._rootElement.props.height = newSize.height;
+            this._document.dispatchEvent({
+              type: 'resize' as const,
+              previousSize: _previousSize,
+              newSize,
+              timestamp: Date.now(),
+            });
+            if (this._debugServer) {
+              this._debugServer.notifyTerminalResize(newSize.width, newSize.height);
+            }
+          },
+          this._options.autoRender,
+          () => this.forceRender(),
+        ),
       });
     }
 
@@ -590,52 +536,13 @@ export class MelkerEngine {
         document: this._document,
       }
     );
-  }
 
-  private _handleResize(newSize: { width: number; height: number }): void {
-    const previousSize = { ...this._currentSize };
-    this._currentSize = newSize;
-
-    // Update hit tester viewport size
-    this._hitTester.updateContext({ viewportSize: this._currentSize });
-
-    // Resize buffer
-    this._buffer.resize(this._currentSize.width, this._currentSize.height);
-
-    // Update root element dimensions
-    this._rootElement.props.width = this._currentSize.width;
-    this._rootElement.props.height = this._currentSize.height;
-
-    // Dispatch resize event to document
-    const resizeEvent = {
-      type: 'resize' as const,
-      previousSize,
-      newSize,
-      timestamp: Date.now(),
-    };
-    this._document.dispatchEvent(resizeEvent);
-
-    // Call custom resize handlers
-    for (const handler of this._customResizeHandlers) {
-      try {
-        handler(resizeEvent);
-      } catch (error) {
-        const err = ensureError(error);
-        this._logger?.error('Error in resize handler', err);
-        // Show error visually - never fail silently
-        getGlobalScriptErrorOverlay().showError(err.message, 'resize handler');
-      }
-    }
-
-    // Notify debug server of resize if enabled
-    if (this._debugServer) {
-      this._debugServer.notifyTerminalResize(newSize.width, newSize.height);
-    }
-
-    // Auto-render if enabled - use force render after resize to ensure clean display
-    if (this._options.autoRender) {
-      this.forceRender();
-    }
+    // Initialize graphics overlay manager
+    this._graphicsOverlayManager = new GraphicsOverlayManager({
+      document: this._document,
+      renderer: this._renderer,
+      writeAllSync: (data) => this._writeAllSync(data),
+    });
   }
 
   private _setupTerminal(): void {
@@ -661,7 +568,6 @@ export class MelkerEngine {
       const ctx: KeyboardHandlerContext = {
         // Core components
         document: this._document!,
-        logger: this._logger,
         buffer: this._buffer,
         renderer: this._renderer,
         inputProcessor: this._inputProcessor,
@@ -673,10 +579,10 @@ export class MelkerEngine {
 
         // Dialog managers
         devToolsManager: this._devToolsManager,
-        alertDialogManager: this._alertDialogManager,
-        confirmDialogManager: this._confirmDialogManager,
-        promptDialogManager: this._promptDialogManager,
-        getAccessibilityDialogManager: () => this._accessibilityDialogManager,
+        alertDialogManager: this._dialogCoordinator.alertDialogManager,
+        confirmDialogManager: this._dialogCoordinator.confirmDialogManager,
+        promptDialogManager: this._dialogCoordinator.promptDialogManager,
+        getAccessibilityDialogManager: () => this._dialogCoordinator.accessibilityDialogManager,
 
         // Options
         autoRender: this._options.autoRender,
@@ -687,7 +593,7 @@ export class MelkerEngine {
         stop: () => this.stop(),
         toggleCommandPalette: () => this.toggleCommandPalette(),
         findOpenCommandPalette: () => this._findOpenCommandPalette(),
-        ensureAccessibilityDialogManager: () => this._ensureAccessibilityDialogManager(),
+        ensureAccessibilityDialogManager: () => this._dialogCoordinator.ensureAccessibilityDialogManager(),
         hasOverlayDialogFor: (element) => hasOverlayDialogFor(element, this._document?.root),
         debouncedInputRender: () => this._debouncedInputRender(),
         renderFastPath: () => this._renderFastPath(),
@@ -696,103 +602,31 @@ export class MelkerEngine {
       handleKeyboardEvent(event as RawKeyEvent, ctx);
     });
 
-    // Automatic scroll handling for scrollable containers
+    // Mouse and wheel event handling - delegated to engine-mouse-handler.ts
+    const mouseCtx: MouseHandlerContext = {
+      hitTester: this._hitTester,
+      scrollHandler: this._scrollHandler,
+      textSelectionHandler: this._textSelectionHandler,
+      graphicsOverlayManager: this._graphicsOverlayManager,
+      autoRender: this._options.autoRender,
+      render: () => this.render(),
+      getViewportSize: () => this._terminalSizeManager.size,
+    };
+
     this._eventManager.addGlobalEventListener('wheel', (event: any) => {
-      // Hide tooltip on wheel event
-      const tooltipManager = getTooltipManager();
-      if (tooltipManager.isVisible()) {
-        tooltipManager.hideTooltip();
-      }
-
-      // Check for Wheelable elements first (e.g., table with scrollable tbody)
-      const target = this._hitTester.hitTest(event.x, event.y);
-      this._logger?.debug(`Engine wheel: target=${target?.type}/${target?.id}, isWheelable=${target ? isWheelable(target) : false}`);
-
-      // Call element's onWheel handler if it exists
-      if (target && typeof target.props?.onWheel === 'function') {
-        const wheelEvent = {
-          type: 'wheel' as const,
-          x: event.x,
-          y: event.y,
-          deltaX: event.deltaX || 0,
-          deltaY: event.deltaY || 0,
-          target,
-          timestamp: Date.now(),
-        };
-        target.props.onWheel(wheelEvent);
-        // Auto-render after handler if enabled
-        if (this._options.autoRender) {
-          this.render();
-        }
-        return; // Event was handled by the onWheel handler
-      }
-
-      if (target && isWheelable(target)) {
-        const canHandle = target.canHandleWheel(event.x, event.y);
-        this._logger?.debug(`Engine wheel: canHandleWheel=${canHandle}`);
-        if (canHandle) {
-          const handled = target.handleWheel(event.deltaX || 0, event.deltaY || 0);
-          this._logger?.debug(`Engine wheel: handleWheel returned ${handled}`);
-          if (handled) {
-            this._scrollHappenedThisFrame = true;
-            if (this._options.autoRender) {
-              this.render();
-            }
-            return; // Event was handled by the Wheelable element
-          }
-        }
-      }
-      // Fall through to default scroll handler
-      this._logger?.debug(`Engine wheel: falling through to scroll-handler`);
-      this._scrollHappenedThisFrame = true;
-      this._scrollHandler.handleScrollEvent(event);
+      handleWheelEvent(event, mouseCtx);
     });
 
-    // Text selection handling - delegated to TextSelectionHandler
     this._eventManager.addGlobalEventListener('mousedown', (event: any) => {
-      // Check if toast overlay should handle this click
-      if (handleToastClick(event.x, event.y)) {
-        this.render();
-        return;
-      }
-
-      // Check if performance dialog should handle this
-      const perfDialog = getGlobalPerformanceDialog();
-      if (perfDialog.isVisible()) {
-        // Check close button first
-        if (perfDialog.isOnCloseButton(event.x, event.y)) {
-          perfDialog.hide();
-          this.render();
-          return;
-        }
-        // Then check title bar for dragging
-        if (perfDialog.isOnTitleBar(event.x, event.y)) {
-          perfDialog.startDrag(event.x, event.y);
-          return;
-        }
-      }
-      this._textSelectionHandler.handleMouseDown(event);
+      handleMouseDownEvent(event, mouseCtx);
     });
 
     this._eventManager.addGlobalEventListener('mousemove', (event: any) => {
-      // Check if performance dialog is being dragged
-      const perfDialog = getGlobalPerformanceDialog();
-      if (perfDialog.isDragging()) {
-        perfDialog.updateDrag(event.x, event.y, this._currentSize.width, this._currentSize.height);
-        this.render();
-        return;
-      }
-      this._textSelectionHandler.handleMouseMove(event);
+      handleMouseMoveEvent(event, mouseCtx);
     });
 
     this._eventManager.addGlobalEventListener('mouseup', (event: any) => {
-      // End performance dialog drag if active
-      const perfDialog = getGlobalPerformanceDialog();
-      if (perfDialog.isDragging()) {
-        perfDialog.endDrag();
-        return;
-      }
-      this._textSelectionHandler.handleMouseUp(event);
+      handleMouseUpEvent(event, mouseCtx);
     });
   }
 
@@ -823,8 +657,8 @@ export class MelkerEngine {
     // Logger is already initialized synchronously in constructor
 
     // Log terminal info at startup
-    this._logger?.info('Terminal', {
-      size: `${this._currentSize.width}x${this._currentSize.height}`,
+    logger.info('Terminal', {
+      size: `${this._terminalSizeManager.size.width}x${this._terminalSizeManager.size.height}`,
       term: Env.get('TERM') || 'unknown',
       colorterm: Env.get('COLORTERM') || 'none',
       stdin: Deno.stdin.isTerminal() ? 'tty' : 'pipe',
@@ -843,63 +677,21 @@ export class MelkerEngine {
       this._setupEventHandlers();
     }
 
-    // Detect sixel capabilities - queries are written here, responses read by input loop
-    try {
-      const skipQueries = isRunningHeadless() || isStdoutEnabled() || !Deno.stdout.isTerminal();
-      this._sixelCapabilities = await detectSixelCapabilities(false, skipQueries);
-      this._logger?.info('Sixel detection', {
-        supported: this._sixelCapabilities.supported,
-        colors: this._sixelCapabilities.colorRegisters,
-        cellSize: `${this._sixelCapabilities.cellWidth}x${this._sixelCapabilities.cellHeight}`,
-        method: this._sixelCapabilities.detectionMethod,
-        multiplexer: this._sixelCapabilities.inMultiplexer,
-        remote: this._sixelCapabilities.isRemote,
-      });
-    } catch (error) {
-      this._logger?.warn('Sixel detection failed', { error: String(error) });
-    }
-
-    // Detect kitty capabilities - only if sixel not supported (kitty is preferred)
-    try {
-      const skipQueries = isRunningHeadless() || isStdoutEnabled() || !Deno.stdout.isTerminal();
-      this._kittyCapabilities = await detectKittyCapabilities(false, skipQueries);
-      this._logger?.info('Kitty detection', {
-        supported: this._kittyCapabilities.supported,
-        method: this._kittyCapabilities.detectionMethod,
-        terminal: this._kittyCapabilities.terminalProgram,
-        multiplexer: this._kittyCapabilities.inMultiplexer,
-        remote: this._kittyCapabilities.isRemote,
-      });
-    } catch (error) {
-      this._logger?.warn('Kitty detection failed', { error: String(error) });
-    }
-
-    // Detect iTerm2 capabilities (environment-based, no terminal queries)
-    try {
-      this._itermCapabilities = detectITermCapabilities();
-      this._logger?.info('iTerm2 detection', {
-        supported: this._itermCapabilities.supported,
-        method: this._itermCapabilities.detectionMethod,
-        terminal: this._itermCapabilities.terminalProgram,
-        multiplexer: this._itermCapabilities.inMultiplexer,
-        multipart: this._itermCapabilities.useMultipart,
-        remote: this._itermCapabilities.isRemote,
-      });
-    } catch (error) {
-      this._logger?.warn('iTerm2 detection failed', { error: String(error) });
-    }
+    // Detect graphics capabilities (sixel, kitty, iTerm2)
+    const skipGraphicsQueries = isRunningHeadless() || isStdoutEnabled() || !Deno.stdout.isTerminal();
+    await this._graphicsOverlayManager.detectCapabilities(skipGraphicsQueries);
 
     // Re-query terminal size after setup (alternate screen switch may affect reported size)
-    this._currentSize = this._getTerminalSize();
+    this._terminalSizeManager.refreshSize();
 
     // Resize buffer to match current terminal size
-    this._buffer.resize(this._currentSize.width, this._currentSize.height);
+    this._buffer.resize(this._terminalSizeManager.size.width, this._terminalSizeManager.size.height);
 
     // Start resize handling BEFORE initial render to ensure size is correct
     if (this._options.autoResize && this._resizeHandler) {
       // Update resize handler's internal size to match current size before starting
       // This prevents the resize handler from thinking size changed when it hasn't
-      (this._resizeHandler as any)._currentSize = { ...this._currentSize };
+      (this._resizeHandler as any)._currentSize = { ...this._terminalSizeManager.size };
 
       await this._resizeHandler.startListening();
     }
@@ -911,12 +703,12 @@ export class MelkerEngine {
         await this._debugServer.start();
         // Set global instance for logging integration
         setGlobalDebugServer(this._debugServer);
-        this._logger?.info('Debug server started', {
+        logger.info('Debug server started', {
           url: this._debugServer.connectionUrl,
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        this._logger?.warn('Failed to start debug server', {
+        logger.warn('Failed to start debug server', {
           errorMessage,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -935,7 +727,7 @@ export class MelkerEngine {
     }
 
     // Log successful initialization
-    this._logger?.info('MelkerEngine started successfully', {
+    logger.info('MelkerEngine started successfully', {
       renderCount: this._renderCount,
       focusableElements: this._focusNavigationHandler.findFocusableElements(this._document.root).length,
     });
@@ -955,18 +747,18 @@ export class MelkerEngine {
    */
   render(): void {
     // Debug: always log render entry
-    this._logger?.trace('render() called');
+    logger.trace('render() called');
 
     // Skip render if engine is stopped/stopping - prevents writes after terminal cleanup
     if (!this._isInitialized) {
-      this._logger?.debug('Skipping render - engine not initialized');
+      logger.debug('Skipping render - engine not initialized');
       return;
     }
 
     // Render lock: prevent re-render during render (e.g., onPaint callback)
     if (this._isRendering) {
       this._pendingRender = true;  // Mark that another render is waiting
-      this._logger?.debug('Render requested during render - marking pending');
+      logger.debug('Render requested during render - marking pending');
       return;
     }
     this._isRendering = true;
@@ -984,14 +776,14 @@ export class MelkerEngine {
 
     // Always log initial renders for debugging
     if (this._renderCount <= 3) {
-      this._logger?.info(`Starting render #${this._renderCount}`, {
-        terminalSize: this._currentSize,
+      logger.info(`Starting render #${this._renderCount}`, {
+        terminalSize: this._terminalSizeManager.size,
         focusedElementId: this._document.focusedElement?.id,
       });
     } else if (this._renderCount % 10 === 1) {
-      this._logger?.debug('Render cycle triggered', {
+      logger.debug('Render cycle triggered', {
         renderCount: this._renderCount,
-        terminalSize: this._currentSize,
+        terminalSize: this._terminalSizeManager.size,
         focusedElementId: this._document.focusedElement?.id,
       });
     }
@@ -1008,7 +800,7 @@ export class MelkerEngine {
     }
     if (dialogJustOpened) {
       this._buffer.markForceNextRender();
-      this._logger?.debug('Dialog opened, marking for full diff');
+      logger.debug('Dialog opened, marking for full diff');
     }
     // Update tracking for next frame
     this._previouslyOpenDialogIds = currentOpenDialogs;
@@ -1017,15 +809,15 @@ export class MelkerEngine {
     const clearStartTime = performance.now();
     this._buffer.clear();
     if (this._renderCount <= 3) {
-      this._logger?.debug(`Buffer cleared in ${(performance.now() - clearStartTime).toFixed(2)}ms`);
+      logger.debug(`Buffer cleared in ${(performance.now() - clearStartTime).toFixed(2)}ms`);
     }
 
     // Render UI to buffer
     const viewport = {
       x: 0,
       y: 0,
-      width: this._currentSize.width,
-      height: this._currentSize.height,
+      width: this._terminalSizeManager.size.width,
+      height: this._terminalSizeManager.size.height,
     };
 
     const renderToBufferStartTime = performance.now();
@@ -1048,7 +840,7 @@ export class MelkerEngine {
       };
       checkTree(this._document.root);
 
-      this._logger?.debug(`[RENDER-DEBUG] root.type=${rootType}, children=${rootChildCount}, dateEl=${dateEl ? 'found' : 'null'}, class=${dateElClass}, hasRender=${hasRender}, hasIntrinsicSize=${hasIntrinsicSize}, inTree=${foundInTree}, dateEl.props.text=${dateEl?.props?.text || 'N/A'}`);
+      logger.debug(`[RENDER-DEBUG] root.type=${rootType}, children=${rootChildCount}, dateEl=${dateEl ? 'found' : 'null'}, class=${dateElClass}, hasRender=${hasRender}, hasIntrinsicSize=${hasIntrinsicSize}, inTree=${foundInTree}, dateEl.props.text=${dateEl?.props?.text || 'N/A'}`);
     }
 
     const layoutTree = this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
@@ -1060,116 +852,26 @@ export class MelkerEngine {
     getGlobalPerformanceDialog().recordLayoutTime(layoutAndRenderTime);
 
     if (this._renderCount <= 3) {
-      this._logger?.info(`Rendered to buffer in ${layoutAndRenderTime.toFixed(2)}ms`);
+      logger.info(`Rendered to buffer in ${layoutAndRenderTime.toFixed(2)}ms`);
     }
 
     // Automatically detect and register focusable elements
     this._focusNavigationHandler.autoRegisterFocusableElements();
 
-    // Update stats first (without swapping buffers)
-    if (this._buffer) {
-      this._buffer.updateStatsOnly();
-    }
-
-    // Render stats overlay if enabled (now with current stats)
-    if (isStatsOverlayEnabled() && this._buffer) {
-      try {
-        const statsOverlay = getGlobalStatsOverlay();
-        const stats = this._buffer.stats;
-        if (stats) {
-          statsOverlay.render(this._buffer, stats);
-        }
-      } catch (error) {
-        // Silently ignore stats overlay errors to prevent breaking the main app
-        this._logger?.warn('Stats overlay warning', { error: String(error) });
-      }
-    }
-
-    // Render error overlay if there are errors
-    if (this._buffer) {
-      try {
-        getGlobalErrorOverlay().render(this._buffer);
-      } catch {
-        // Silently ignore error overlay errors
-      }
-    }
-
-    // Render script error overlay if there are script errors
-    if (this._buffer) {
-      try {
-        getGlobalScriptErrorOverlay().render(this._buffer);
-      } catch {
-        // Silently ignore script error overlay errors
-      }
-    }
-
-    // Render tooltip overlay if visible
-    if (this._buffer) {
-      try {
-        renderTooltipOverlay(this._buffer);
-      } catch (err) {
-        this._logger?.error('Tooltip overlay error', err instanceof Error ? err : new Error(String(err)));
-      }
-    }
-
-    // Render toast overlay if there are toasts
-    if (this._buffer) {
-      try {
-        renderToastOverlay(this._buffer);
-      } catch {
-        // Silently ignore toast overlay errors
-      }
-    }
-
-    // Render performance dialog if visible
-    const perfDialog = getGlobalPerformanceDialog();
-    if (perfDialog.isVisible() && this._buffer) {
-      try {
-        const errorHandler = getGlobalErrorHandler();
-        const breakdown = perfDialog.getLatencyBreakdown();
-        const perfStats: PerformanceStats = {
-          fps: perfDialog.getFps(),
-          renderTime: this._lastRenderTime,
-          renderTimeAvg: perfDialog.getAverageRenderTime(),
-          renderCount: this._renderCount,
-          layoutTime: this._lastLayoutTime,
-          layoutTimeAvg: perfDialog.getAverageLayoutTime(),
-          layoutNodeCount: this._layoutNodeCount,
-          totalCells: this._buffer.stats?.totalCells || 0,
-          changedCells: this._buffer.stats?.changedCells || 0,
-          bufferUtilization: this._buffer.stats?.bufferUtilization || 0,
-          memoryUsage: this._buffer.stats?.memoryUsage || 0,
-          errorCount: errorHandler.errorCount(),
-          suppressedErrors: errorHandler.getTotalSuppressedCount(),
-          inputLatency: perfDialog.getLastInputLatency(),
-          inputLatencyAvg: perfDialog.getAverageInputLatency(),
-          handlerTime: breakdown.handler,
-          waitTime: breakdown.wait,
-          layoutTime2: breakdown.layout,
-          bufferTime: breakdown.buffer,
-          applyTime: breakdown.apply,
-          // Shader stats
-          shaderCount: perfDialog.getActiveShaderCount(),
-          shaderFrameTime: perfDialog.getLastShaderFrameTime(),
-          shaderFrameTimeAvg: perfDialog.getAverageShaderFrameTime(),
-          shaderFps: perfDialog.getShaderFps(),
-          shaderPixels: perfDialog.getTotalShaderPixels(),
-          // Animation stats
-          animationCount: getUIAnimationManager().count,
-          animationTick: getUIAnimationManager().currentTick,
-        };
-        perfDialog.render(this._buffer, perfStats);
-      } catch {
-        // Silently ignore performance dialog errors
-      }
-    }
+    // Render buffer overlays (stats, errors, tooltips, toasts, performance dialog)
+    renderBufferOverlays(this._buffer, {
+      lastRenderTime: this._lastRenderTime,
+      lastLayoutTime: this._lastLayoutTime,
+      layoutNodeCount: this._layoutNodeCount,
+      renderCount: this._renderCount,
+    });
 
     // Use optimized differential rendering instead of full clear+redraw
     const applyStartTime = performance.now();
     this._renderOptimized();
     getGlobalPerformanceDialog().markApplyEnd();
     if (this._renderCount <= 3) {
-      this._logger?.info(`Applied to terminal in ${(performance.now() - applyStartTime).toFixed(2)}ms`);
+      logger.info(`Applied to terminal in ${(performance.now() - applyStartTime).toFixed(2)}ms`);
     }
 
     const totalRenderTime = performance.now() - renderStartTime;
@@ -1180,11 +882,11 @@ export class MelkerEngine {
     getGlobalPerformanceDialog().recordInputLatency(); // Record input-to-render latency if input was pending
 
     if (this._renderCount <= 3 || totalRenderTime > 50) {
-      this._logger?.info(`Total render time: ${totalRenderTime.toFixed(2)}ms for render #${this._renderCount}`);
+      logger.info(`Total render time: ${totalRenderTime.toFixed(2)}ms for render #${this._renderCount}`);
     }
 
     if (totalRenderTime > 50) {
-      this._logger?.warn(`Slow render detected: ${totalRenderTime.toFixed(2)}ms for render #${this._renderCount}`);
+      logger.warn(`Slow render detected: ${totalRenderTime.toFixed(2)}ms for render #${this._renderCount}`);
     }
 
     // Trigger debounced state persistence (if enabled)
@@ -1194,7 +896,7 @@ export class MelkerEngine {
     updateModalFocusTraps(this._getModalFocusTrapContext());
     } finally {
       this._isRendering = false;
-      this._logger?.trace('render() finished, _isRendering = false');
+      logger.trace('render() finished, _isRendering = false');
 
       // If a render was requested while we were rendering, trigger it now
       if (this._pendingRender) {
@@ -1242,7 +944,7 @@ export class MelkerEngine {
       // Output to terminal
       const differences = this._buffer.swapAndGetDiff();
       if (differences.length > 0 && typeof Deno !== 'undefined') {
-        const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._currentSize.width);
+        const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
         if (output.length > 0) {
           const finalOutput = this._options.synchronizedOutput
             ? ANSI.beginSync + output + ANSI.endSync
@@ -1253,7 +955,7 @@ export class MelkerEngine {
 
       const totalTime = performance.now() - renderStartTime;
       if (totalTime > 30) {
-        this._logger?.debug(`Dialog-only render: ${totalTime.toFixed(2)}ms`);
+        logger.debug(`Dialog-only render: ${totalTime.toFixed(2)}ms`);
       }
     } finally {
       this._isRendering = false;
@@ -1280,14 +982,14 @@ export class MelkerEngine {
   forceRender(): void {
     // Skip render if engine is stopped/stopping - prevents writes after terminal cleanup
     if (!this._isInitialized) {
-      this._logger?.debug('Skipping forceRender - engine not initialized');
+      logger.debug('Skipping forceRender - engine not initialized');
       return;
     }
 
     // Render lock: prevent re-render during render
     if (this._isRendering) {
       this._pendingRender = true;  // Mark that another render is waiting
-      this._logger?.debug('ForceRender requested during render - marking pending');
+      logger.debug('ForceRender requested during render - marking pending');
       return;
     }
     this._isRendering = true;
@@ -1303,17 +1005,17 @@ export class MelkerEngine {
     const viewport = {
       x: 0,
       y: 0,
-      width: this._currentSize.width,
-      height: this._currentSize.height,
+      width: this._terminalSizeManager.size.width,
+      height: this._terminalSizeManager.size.height,
     };
 
     // Debug logging for column flexbox issues
     const root = this._document.root;
     if (root?.props?.style?.flexDirection === 'column' ||
         (root?.props?.style?.display === 'flex' && !root?.props?.style?.flexDirection)) {
-      this._logger?.debug(`[FLEX-DEBUG] forceRender with column flex root`);
-      this._logger?.debug(`[FLEX-DEBUG] Root children count: ${root.children?.length}`);
-      this._logger?.debug(`[FLEX-DEBUG] Viewport: ${JSON.stringify(viewport)}`);
+      logger.debug(`[FLEX-DEBUG] forceRender with column flex root`);
+      logger.debug(`[FLEX-DEBUG] Root children count: ${root.children?.length}`);
+      logger.debug(`[FLEX-DEBUG] Viewport: ${JSON.stringify(viewport)}`);
     }
 
     this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
@@ -1321,106 +1023,16 @@ export class MelkerEngine {
     // Debug: Check buffer content after render
     if (root?.props?.style?.flexDirection === 'column' ||
         (root?.props?.style?.display === 'flex' && !root?.props?.style?.flexDirection)) {
-      this._logger?.debug(`[FLEX-DEBUG] After render completed`);
+      logger.debug(`[FLEX-DEBUG] After render completed`);
     }
 
-    // Update stats first (without swapping buffers)
-    if (this._buffer) {
-      this._buffer.updateStatsOnly();
-    }
-
-    // Render stats overlay if enabled (now with current stats)
-    if (isStatsOverlayEnabled() && this._buffer) {
-      try {
-        const statsOverlay = getGlobalStatsOverlay();
-        const stats = this._buffer.stats;
-        if (stats) {
-          statsOverlay.render(this._buffer, stats);
-        }
-      } catch (error) {
-        // Silently ignore stats overlay errors to prevent breaking the main app
-        this._logger?.warn('Stats overlay warning', { error: String(error) });
-      }
-    }
-
-    // Render error overlay if there are errors
-    if (this._buffer) {
-      try {
-        getGlobalErrorOverlay().render(this._buffer);
-      } catch {
-        // Silently ignore error overlay errors
-      }
-    }
-
-    // Render script error overlay if there are script errors
-    if (this._buffer) {
-      try {
-        getGlobalScriptErrorOverlay().render(this._buffer);
-      } catch {
-        // Silently ignore script error overlay errors
-      }
-    }
-
-    // Render tooltip overlay if visible
-    if (this._buffer) {
-      try {
-        renderTooltipOverlay(this._buffer);
-      } catch (err) {
-        this._logger?.error('Tooltip overlay error', err instanceof Error ? err : new Error(String(err)));
-      }
-    }
-
-    // Render toast overlay if there are toasts
-    if (this._buffer) {
-      try {
-        renderToastOverlay(this._buffer);
-      } catch {
-        // Silently ignore toast overlay errors
-      }
-    }
-
-    // Render performance dialog if visible
-    const perfDialog = getGlobalPerformanceDialog();
-    if (perfDialog.isVisible() && this._buffer) {
-      try {
-        const errorHandler = getGlobalErrorHandler();
-        const breakdown = perfDialog.getLatencyBreakdown();
-        const perfStats: PerformanceStats = {
-          fps: perfDialog.getFps(),
-          renderTime: this._lastRenderTime,
-          renderTimeAvg: perfDialog.getAverageRenderTime(),
-          renderCount: this._renderCount,
-          layoutTime: this._lastLayoutTime,
-          layoutTimeAvg: perfDialog.getAverageLayoutTime(),
-          layoutNodeCount: this._layoutNodeCount,
-          totalCells: this._buffer.stats?.totalCells || 0,
-          changedCells: this._buffer.stats?.changedCells || 0,
-          bufferUtilization: this._buffer.stats?.bufferUtilization || 0,
-          memoryUsage: this._buffer.stats?.memoryUsage || 0,
-          errorCount: errorHandler.errorCount(),
-          suppressedErrors: errorHandler.getTotalSuppressedCount(),
-          inputLatency: perfDialog.getLastInputLatency(),
-          inputLatencyAvg: perfDialog.getAverageInputLatency(),
-          handlerTime: breakdown.handler,
-          waitTime: breakdown.wait,
-          layoutTime2: breakdown.layout,
-          bufferTime: breakdown.buffer,
-          applyTime: breakdown.apply,
-          // Shader stats
-          shaderCount: perfDialog.getActiveShaderCount(),
-          shaderFrameTime: perfDialog.getLastShaderFrameTime(),
-          shaderFrameTimeAvg: perfDialog.getAverageShaderFrameTime(),
-          shaderFps: perfDialog.getShaderFps(),
-          shaderPixels: perfDialog.getTotalShaderPixels(),
-          // Animation stats
-          animationCount: getUIAnimationManager().count,
-          animationTick: getUIAnimationManager().currentTick,
-        };
-        perfDialog.render(this._buffer, perfStats);
-      } catch {
-        // Silently ignore performance dialog errors
-      }
-    }
+    // Render buffer overlays (stats, errors, tooltips, toasts, performance dialog)
+    renderBufferOverlays(this._buffer, {
+      lastRenderTime: this._lastRenderTime,
+      lastLayoutTime: this._lastLayoutTime,
+      layoutNodeCount: this._layoutNodeCount,
+      renderCount: this._renderCount,
+    });
 
     // Automatically detect and register focusable elements
     // Pass true to skip the auto-render since we'll do a full screen redraw
@@ -1485,15 +1097,15 @@ export class MelkerEngine {
         forceRender: () => this.forceRender(),
         autoRender: this._options.autoRender,
         openAIAssistant: () => {
-          this._ensureAccessibilityDialogManager();
-          this._accessibilityDialogManager!.show();
+          this._dialogCoordinator.ensureAccessibilityDialogManager();
+          this._dialogCoordinator.accessibilityDialogManager!.show();
         },
         exit: () => {
           this.stop().then(() => {
             if (typeof Deno !== 'undefined') {
               Deno.exit(0);
             }
-          }).catch((err) => this._logger?.error('Error during exit', err instanceof Error ? err : new Error(String(err))));
+          }).catch((err) => logger.error('Error during exit', err instanceof Error ? err : new Error(String(err))));
         },
         getDebugServerUrl: () => this._debugServer?.connectionUrl,
       });
@@ -1506,17 +1118,7 @@ export class MelkerEngine {
    * This is the melker equivalent of window.alert()
    */
   showAlert(message: string): void {
-    if (!this._alertDialogManager) {
-      this._alertDialogManager = new AlertDialogManager({
-        document: this._document,
-        focusManager: this._focusManager,
-        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
-        render: () => this.render(),
-        forceRender: () => this.forceRender(),
-        autoRender: this._options.autoRender,
-      });
-    }
-    this._alertDialogManager.show(message);
+    this._dialogCoordinator.showAlert(message);
   }
 
   /**
@@ -1525,17 +1127,7 @@ export class MelkerEngine {
    * Returns a Promise that resolves to true (OK) or false (Cancel)
    */
   showConfirm(message: string): Promise<boolean> {
-    if (!this._confirmDialogManager) {
-      this._confirmDialogManager = new ConfirmDialogManager({
-        document: this._document,
-        focusManager: this._focusManager,
-        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
-        render: () => this.render(),
-        forceRender: () => this.forceRender(),
-        autoRender: this._options.autoRender,
-      });
-    }
-    return this._confirmDialogManager.show(message);
+    return this._dialogCoordinator.showConfirm(message);
   }
 
   /**
@@ -1544,36 +1136,7 @@ export class MelkerEngine {
    * Returns a Promise that resolves to the input value or null if cancelled
    */
   showPrompt(message: string, defaultValue?: string): Promise<string | null> {
-    if (!this._promptDialogManager) {
-      this._promptDialogManager = new PromptDialogManager({
-        document: this._document,
-        focusManager: this._focusManager,
-        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
-        render: () => this.render(),
-        forceRender: () => this.forceRender(),
-        autoRender: this._options.autoRender,
-      });
-    }
-    return this._promptDialogManager.show(message, defaultValue);
-  }
-
-  /**
-   * Ensure the accessibility dialog manager is initialized
-   */
-  private _ensureAccessibilityDialogManager(): void {
-    if (!this._accessibilityDialogManager) {
-      this._accessibilityDialogManager = new AccessibilityDialogManager({
-        document: this._document,
-        focusManager: this._focusManager,
-        registerElementTree: (element) => this._focusNavigationHandler.registerElementTree(element),
-        render: () => this.render(),
-        forceRender: () => this.forceRender(),
-        autoRender: this._options.autoRender,
-        exitProgram: async () => { await this.stop(); },
-        scrollToBottom: (containerId) => this.scrollToBottom(containerId),
-        getSelectedText: () => this.getTextSelection().selectedText,
-      });
-    }
+    return this._dialogCoordinator.showPrompt(message, defaultValue);
   }
 
   /**
@@ -1586,18 +1149,24 @@ export class MelkerEngine {
       return;
     }
 
+    // In headless mode, route output to virtual terminal instead of real stdout
+    if (this._headlessManager) {
+      this._headlessManager.terminal.writeOutput(textDecoder.decode(data));
+      return;
+    }
+
     let written = 0;
     while (written < data.length) {
       const n = Deno.stdout.writeSync(data.subarray(written));
       if (n === 0) {
         // Should not happen with sync write, but guard against infinite loop
-        this._logger?.error('writeSync returned 0 bytes', undefined, { total: data.length, written });
+        logger.error('writeSync returned 0 bytes', undefined, { total: data.length, written });
         break;
       }
       written += n;
       if (written < data.length) {
         // Partial write occurred - handled by loop, log for diagnostics
-        this._logger?.debug('Partial stdout write', {
+        logger.debug('Partial stdout write', {
           written,
           total: data.length,
           remaining: data.length - written,
@@ -1607,450 +1176,12 @@ export class MelkerEngine {
   }
 
   /**
-   * Collect sixel outputs from all canvas elements in the document.
-   * Returns array of { data, bounds } for each sixel.
-   */
-  private _collectSixelOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> {
-    if (!this._sixelCapabilities?.supported) {
-      return [];
-    }
-
-    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> = [];
-
-    // Traverse document tree to find canvas elements with sixel output
-    const collectFromElement = (element: Element): void => {
-      // Check if this is a canvas element with sixel output
-      if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
-        const canvas = element as { getSixelOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number } } | null };
-        if (canvas.getSixelOutput) {
-          const sixelOutput = canvas.getSixelOutput();
-          if (sixelOutput?.data && sixelOutput.bounds) {
-            outputs.push({ data: sixelOutput.data, bounds: sixelOutput.bounds });
-          }
-        }
-      }
-
-      // Check if this is a markdown element with embedded image canvases
-      if (element.type === 'markdown') {
-        const markdown = element as { getSixelOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> };
-        if (markdown.getSixelOutputs) {
-          const sixelOutputs = markdown.getSixelOutputs();
-          for (const output of sixelOutputs) {
-            if (output?.data && output.bounds) {
-              outputs.push({ data: output.data, bounds: output.bounds });
-            }
-          }
-        }
-      }
-
-      // Recurse into children
-      if (element.children) {
-        for (const child of element.children) {
-          collectFromElement(child);
-        }
-      }
-    };
-
-    if (this._document.root) {
-      collectFromElement(this._document.root);
-    }
-
-    if (outputs.length > 0) {
-      this._logger?.debug('Collected sixel outputs', { count: outputs.length });
-    }
-
-    return outputs;
-  }
-
-  /**
-   * Generate a blank/clear sixel to erase graphics at a specific position.
-   * This overwrites any existing sixel graphics with transparent pixels.
-   */
-  private _generateClearSixel(
-    x: number,
-    y: number,
-    widthChars: number,
-    heightChars: number
-  ): string {
-    if (!this._sixelCapabilities) return '';
-
-    const cellWidth = this._sixelCapabilities.cellWidth || 8;
-    const cellHeight = this._sixelCapabilities.cellHeight || 16;
-
-    const pixelWidth = widthChars * cellWidth;
-    const rawPixelHeight = heightChars * cellHeight;
-
-    // Round height DOWN to nearest multiple of 6 (sixel row height)
-    // This matches the content sixel dimensions and ensures we don't
-    // draw black pixels into terminal rows below the intended bounds
-    const pixelHeight = Math.floor(rawPixelHeight / 6) * 6;
-
-    // Sixel rows are 6 pixels tall
-    const sixelRows = pixelHeight / 6;
-
-    // Build a blank sixel: transparent pixels (color 0, no data = blank)
-    // DCS P1;P2;P3 q <data> ST
-    // P1=0 (normal aspect), P2=0 (no background), P3=0 (horizontal grid)
-    // Use "raster attributes" to set size: " Pan ; Pad ; Ph ; Pv
-    // Pan=1, Pad=1 (aspect ratio 1:1), Ph=width, Pv=height
-
-    let sixel = '';
-    // Position cursor
-    sixel += `\x1b[${y + 1};${x + 1}H`;
-    // Start sixel sequence with raster attributes
-    sixel += `\x1bP0;0;0q"1;1;${pixelWidth};${pixelHeight}`;
-    // Define color 0 as transparent/background (black with 0% intensity works as clear)
-    sixel += '#0;2;0;0;0';
-    // Select color 0
-    sixel += '#0';
-    // Fill each row with solid color 0 (character '~' = 0x7E = 63 = all 6 pixels ON)
-    // Using '?' (all off) might be treated as transparent, so we use solid black instead
-    // Use RLE: !<count><char>
-    const solidRow = `!${pixelWidth}~`;
-    for (let row = 0; row < sixelRows; row++) {
-      sixel += solidRow;
-      if (row < sixelRows - 1) {
-        sixel += '-'; // Move to next sixel row
-      }
-    }
-    // End sixel sequence
-    sixel += '\x1b\\';
-
-    return sixel;
-  }
-
-  /**
-   * Clear areas where sixels were previously rendered but are no longer present.
-   * This prevents "ghost" sixels when content scrolls or moves.
-   */
-  private _clearStaleSixelAreas(
-    currentBounds: Array<{ x: number; y: number; width: number; height: number }>
-  ): void {
-    if (this._previousSixelBounds.length === 0) {
-      return;
-    }
-
-    // Find areas in previous bounds that don't overlap with current bounds
-    const staleBounds: Array<{ x: number; y: number; width: number; height: number }> = [];
-
-    for (const prev of this._previousSixelBounds) {
-      let isStale = true;
-      for (const curr of currentBounds) {
-        // Check if previous bounds match current bounds (same position and size)
-        if (prev.x === curr.x && prev.y === curr.y &&
-            prev.width === curr.width && prev.height === curr.height) {
-          isStale = false;
-          break;
-        }
-      }
-      if (isStale) {
-        staleBounds.push(prev);
-      }
-    }
-
-    if (staleBounds.length === 0) {
-      return;
-    }
-
-    this._logger?.debug('Clearing stale sixel areas', {
-      count: staleBounds.length,
-      staleBounds,
-      previousCount: this._previousSixelBounds.length,
-      currentCount: currentBounds.length,
-    });
-
-    // Clear stale areas by outputting blank sixels
-    // This overwrites the old sixel graphics with transparent/blank pixels
-    let clearOutput = '';
-    for (const bounds of staleBounds) {
-      clearOutput += this._generateClearSixel(bounds.x, bounds.y, bounds.width, bounds.height);
-    }
-
-    if (clearOutput) {
-      this._writeAllSync(textEncoder.encode(clearOutput));
-    }
-  }
-
-  /**
-   * Output sixel graphics overlays after buffer rendering.
-   * Sixel data bypasses the buffer and is positioned directly on the terminal.
-   */
-  private _renderSixelOverlays(): void {
-    if (!this._sixelCapabilities?.supported) {
-      this._logger?.trace('Sixel overlays skipped - not supported');
-      return;
-    }
-
-    // Check if any overlays are active (dropdowns, dialogs, tooltips, etc.)
-    // Sixel graphics render on top of everything, so we must hide them when
-    // overlays are visible to prevent sixels from obscuring the overlay content.
-    if (this._renderer?.hasVisibleOverlays()) {
-      this._logger?.debug('Sixel overlays skipped - UI overlays active');
-      // Clear any previously rendered sixels so they don't obscure the overlay
-      this._clearStaleSixelAreas([]);
-      this._previousSixelBounds = [];
-      return;
-    }
-
-    // Note: We intentionally DO NOT skip sixel rendering when _pendingRender is true.
-    // Video playback relies on sixel rendering every frame - skipping would show only
-    // the first frame. The _pendingRender optimization applies to the main buffer
-    // rendering, not sixel overlays.
-
-    const sixelOutputs = this._collectSixelOutputs();
-    this._logger?.debug('Sixel outputs collected', {
-      count: sixelOutputs.length,
-      bounds: sixelOutputs.map(o => o.bounds),
-      previousBounds: this._previousSixelBounds,
-    });
-
-    // Extract current bounds
-    const currentBounds = sixelOutputs.map(o => o.bounds);
-
-    // Clear areas where sixels were previously rendered but moved/removed
-    this._clearStaleSixelAreas(currentBounds);
-
-    // Update previous bounds for next frame
-    this._previousSixelBounds = currentBounds;
-
-    if (sixelOutputs.length === 0) {
-      return;
-    }
-
-    // Output all sixel data
-    // Each sixel output already includes cursor positioning
-    const combined = sixelOutputs.map(o => o.data).join('');
-    this._writeAllSync(textEncoder.encode(combined));
-
-    this._logger?.debug('Rendered sixel overlays', { count: sixelOutputs.length });
-  }
-
-  /**
-   * Collect kitty outputs from all canvas elements in the document.
-   * Returns array of { data, bounds, imageId } for each kitty image.
-   */
-  private _collectKittyOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> {
-    if (!this._kittyCapabilities?.supported) {
-      return [];
-    }
-
-    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> = [];
-
-    // Traverse document tree to find canvas elements with kitty output
-    const collectFromElement = (element: Element): void => {
-      // Check if this is a canvas element with kitty output
-      if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
-        const canvas = element as { getKittyOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean } | null };
-        if (canvas.getKittyOutput) {
-          const kittyOutput = canvas.getKittyOutput();
-          if (kittyOutput?.data && kittyOutput.bounds) {
-            outputs.push({ data: kittyOutput.data, bounds: kittyOutput.bounds, imageId: kittyOutput.imageId, fromCache: kittyOutput.fromCache });
-          }
-        }
-      }
-
-      // Check if this is a markdown element with embedded image canvases
-      if (element.type === 'markdown') {
-        const markdown = element as { getKittyOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> };
-        if (markdown.getKittyOutputs) {
-          const kittyOutputs = markdown.getKittyOutputs();
-          for (const output of kittyOutputs) {
-            if (output?.data && output.bounds) {
-              outputs.push({ data: output.data, bounds: output.bounds, imageId: output.imageId, fromCache: output.fromCache });
-            }
-          }
-        }
-      }
-
-      // Recurse into children
-      if (element.children) {
-        for (const child of element.children) {
-          collectFromElement(child);
-        }
-      }
-    };
-
-    if (this._document.root) {
-      collectFromElement(this._document.root);
-    }
-
-    if (outputs.length > 0) {
-      this._logger?.debug('Collected kitty outputs', { count: outputs.length });
-    }
-
-    return outputs;
-  }
-
-  /**
-   * Output kitty graphics overlays after buffer rendering.
-   * Kitty data bypasses the buffer and is positioned directly on the terminal.
-   */
-  private _renderKittyOverlays(): void {
-    if (!this._kittyCapabilities?.supported) {
-      this._logger?.trace('Kitty overlays skipped - not supported');
-      return;
-    }
-
-    // Check if any overlays are active (dropdowns, dialogs, tooltips, etc.)
-    // Kitty graphics render on top of everything, so we must hide them when
-    // overlays are visible to prevent kitty images from obscuring the overlay content.
-    if (this._renderer?.hasVisibleOverlays()) {
-      this._logger?.debug('Kitty overlays skipped - UI overlays active');
-      // Delete any previously rendered kitty images so they don't obscure the overlay
-      if (this._previousKittyImageIds.length > 0) {
-        const deleteCommands = this._previousKittyImageIds.map(id => `\x1b_Ga=d,d=i,i=${id},q=2\x1b\\`).join('');
-        this._writeAllSync(textEncoder.encode(deleteCommands));
-        this._previousKittyImageIds = [];
-      }
-      return;
-    }
-
-    const kittyOutputs = this._collectKittyOutputs();
-    this._logger?.debug('Kitty outputs collected', {
-      count: kittyOutputs.length,
-      bounds: kittyOutputs.map(o => o.bounds),
-      previousIds: this._previousKittyImageIds,
-    });
-
-    // Extract current image IDs
-    const currentImageIds = kittyOutputs.map(o => o.imageId);
-
-    // Always send all kitty outputs (like sixel does).
-    // Buffer placeholder rendering overwrites kitty cells each frame, so we must
-    // re-send the image. The caching in generateKittyOutput() still saves encoding
-    // time (hash check + reuse encoded data), we just can't skip the terminal write.
-    if (kittyOutputs.length > 0) {
-      // Each kitty output already includes cursor positioning
-      const combined = kittyOutputs.map(o => o.data).join('');
-      this._writeAllSync(textEncoder.encode(combined));
-      const cached = kittyOutputs.filter(o => o.fromCache).length;
-      this._logger?.debug('Rendered kitty overlays', { count: kittyOutputs.length, cached });
-    }
-
-    // Delete stale images (elements that were removed, not just updated)
-    // With stable IDs, an element keeps the same ID while updating content
-    const removedIds = this._previousKittyImageIds.filter(id => !currentImageIds.includes(id));
-    if (removedIds.length > 0) {
-      const deleteCommands = removedIds.map(id => `\x1b_Ga=d,d=i,i=${id},q=2\x1b\\`).join('');
-      this._writeAllSync(textEncoder.encode(deleteCommands));
-      this._logger?.debug('Deleted stale kitty images', { ids: removedIds });
-    }
-
-    // Update previous IDs for next frame
-    this._previousKittyImageIds = currentImageIds;
-  }
-
-  /**
-   * Collect iTerm2 outputs from all canvas elements in the document.
-   * Returns array of { data, bounds } for each iTerm2 image.
-   */
-  private _collectITermOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> {
-    if (!this._itermCapabilities?.supported) {
-      return [];
-    }
-
-    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> = [];
-
-    // Traverse document tree to find canvas elements with iTerm2 output
-    const collectFromElement = (element: Element): void => {
-      // Check if this is a canvas element with iTerm2 output
-      if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
-        const canvas = element as { getITermOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean } | null };
-        if (canvas.getITermOutput) {
-          const itermOutput = canvas.getITermOutput();
-          if (itermOutput?.data && itermOutput.bounds) {
-            outputs.push({ data: itermOutput.data, bounds: itermOutput.bounds, fromCache: itermOutput.fromCache });
-          }
-        }
-      }
-
-      // Check if this is a markdown element with embedded image canvases
-      if (element.type === 'markdown') {
-        const markdown = element as { getITermOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> };
-        if (markdown.getITermOutputs) {
-          const itermOutputs = markdown.getITermOutputs();
-          for (const output of itermOutputs) {
-            if (output?.data && output.bounds) {
-              outputs.push({ data: output.data, bounds: output.bounds, fromCache: output.fromCache });
-            }
-          }
-        }
-      }
-
-      // Recurse into children
-      if (element.children) {
-        for (const child of element.children) {
-          collectFromElement(child);
-        }
-      }
-    };
-
-    if (this._document.root) {
-      collectFromElement(this._document.root);
-    }
-
-    if (outputs.length > 0) {
-      this._logger?.debug('Collected iTerm2 outputs', { count: outputs.length });
-    }
-
-    return outputs;
-  }
-
-  /**
-   * Output iTerm2 graphics overlays after buffer rendering.
-   * iTerm2 data bypasses the buffer and is positioned directly on the terminal.
-   */
-  private _renderITermOverlays(): void {
-    if (!this._itermCapabilities?.supported) {
-      this._logger?.trace('iTerm2 overlays skipped - not supported');
-      return;
-    }
-
-    // Check if any overlays are active (dropdowns, dialogs, tooltips, etc.)
-    // iTerm2 graphics render on top of everything, so we must hide them when
-    // overlays are visible to prevent iTerm2 images from obscuring the overlay content.
-    if (this._renderer?.hasVisibleOverlays()) {
-      this._logger?.debug('iTerm2 overlays skipped - UI overlays active');
-      return;
-    }
-
-    const itermOutputs = this._collectITermOutputs();
-    this._logger?.debug('iTerm2 outputs collected', {
-      count: itermOutputs.length,
-      bounds: itermOutputs.map(o => o.bounds),
-    });
-
-    // Send all iTerm2 outputs
-    // Unlike Kitty, iTerm2 doesn't have explicit image IDs to track for deletion.
-    // Images are simply overwritten when re-rendered at the same position.
-    if (itermOutputs.length > 0) {
-      // Each iTerm2 output already includes cursor positioning
-      const combined = itermOutputs.map(o => o.data).join('');
-      this._writeAllSync(textEncoder.encode(combined));
-      const cached = itermOutputs.filter(o => o.fromCache).length;
-      this._logger?.debug('Rendered iTerm2 overlays', { count: itermOutputs.length, cached });
-    }
-  }
-
-  /**
    * Optimized rendering that only updates changed parts of the terminal
    */
   private _renderOptimized(): void {
     if (typeof Deno !== 'undefined') {
       // Konsole workaround: force full redraw when scrolling with sixel visible
-      // Konsole has a right-edge rendering quirk that leaves artifacts when using diff-based updates
-      const hasKonsoleQuirk = this._sixelCapabilities?.quirks?.includes('konsole-sixel-edge');
-      const hasSixelVisible = this._previousSixelBounds.length > 0;
-      const needsForceRedraw = hasKonsoleQuirk && this._scrollHappenedThisFrame && hasSixelVisible;
-
-      // Reset scroll flag after checking
-      this._scrollHappenedThisFrame = false;
-
-      // Clear sixel areas completely before force redraw to remove all artifacts
-      if (needsForceRedraw && this._previousSixelBounds.length > 0) {
-        this._clearStaleSixelAreas([]);
-        this._previousSixelBounds = [];
-      }
+      const needsForceRedraw = this._graphicsOverlayManager.handleKonsoleWorkaround();
 
       const differences = needsForceRedraw
         ? this._buffer.forceRedraw()
@@ -2059,15 +1190,13 @@ export class MelkerEngine {
       // Only render buffer if there are actual changes
       if (differences.length === 0) {
         // Still render graphics overlays (content may have changed even if buffer hasn't)
-        this._renderSixelOverlays();
-        this._renderKittyOverlays();
-        this._renderITermOverlays();
+        this._graphicsOverlayManager.renderOverlays();
         // Notify debug clients
         this._debugServer?.notifyRenderComplete();
         return;
       }
 
-      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._currentSize.width);
+      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
       if (output.length > 0) {
         // Guard against writes after terminal cleanup (race condition with stop())
         if (!this._isInitialized) {
@@ -2077,15 +1206,7 @@ export class MelkerEngine {
         // If overlays are visible, clear graphics BEFORE outputting buffer
         // This ensures the dropdown/dialog is visible immediately without graphics interference
         if (this._renderer?.hasVisibleOverlays()) {
-          if (this._previousSixelBounds.length > 0) {
-            this._clearStaleSixelAreas([]);
-            this._previousSixelBounds = [];
-          }
-          if (this._previousKittyImageIds.length > 0) {
-            const deleteCommands = this._previousKittyImageIds.map(id => `\x1b_Ga=d,d=i,i=${id},q=2\x1b\\`).join('');
-            this._writeAllSync(textEncoder.encode(deleteCommands));
-            this._previousKittyImageIds = [];
-          }
+          this._graphicsOverlayManager.clearAllGraphics();
         }
 
         // Begin synchronized output to reduce flicker
@@ -2097,9 +1218,7 @@ export class MelkerEngine {
       }
 
       // Render graphics overlays after buffer output
-      this._renderSixelOverlays();
-      this._renderKittyOverlays();
-      this._renderITermOverlays();
+      this._graphicsOverlayManager.renderOverlays();
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
@@ -2119,7 +1238,7 @@ export class MelkerEngine {
         return;
       }
 
-      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._currentSize.width);
+      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
       if (output.length > 0) {
         if (!this._isInitialized) {
           return;
@@ -2141,15 +1260,7 @@ export class MelkerEngine {
     if (typeof Deno !== 'undefined') {
       // If overlays are visible, clear graphics BEFORE full screen redraw
       if (this._renderer?.hasVisibleOverlays()) {
-        if (this._previousSixelBounds.length > 0) {
-          this._clearStaleSixelAreas([]);
-          this._previousSixelBounds = [];
-        }
-        if (this._previousKittyImageIds.length > 0) {
-          const deleteCommands = this._previousKittyImageIds.map(id => `\x1b_Ga=d,d=i,i=${id},q=2\x1b\\`).join('');
-          this._writeAllSync(textEncoder.encode(deleteCommands));
-          this._previousKittyImageIds = [];
-        }
+        this._graphicsOverlayManager.clearAllGraphics();
       }
 
       // Begin synchronized output for full screen redraw
@@ -2157,7 +1268,7 @@ export class MelkerEngine {
 
       // Get all buffer content
       const differences = this._buffer.forceRedraw();
-      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._currentSize.width);
+      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
 
       if (output.length > 0) {
         clearAndDrawOutput += output;
@@ -2176,9 +1287,7 @@ export class MelkerEngine {
       this._writeAllSync(textEncoder.encode(finalOutput));
 
       // Render graphics overlays after buffer output
-      this._renderSixelOverlays();
-      this._renderKittyOverlays();
-      this._renderITermOverlays();
+      this._graphicsOverlayManager.renderOverlays();
 
       // Notify debug clients of render completion
       this._debugServer?.notifyRenderComplete();
@@ -2189,7 +1298,7 @@ export class MelkerEngine {
    * Stop the engine and cleanup
    */
   async stop(): Promise<void> {
-    this._logger?.info('MelkerEngine stopping', {
+    logger.info('MelkerEngine stopping', {
       renderCount: this._renderCount,
       isInitialized: this._isInitialized,
     });
@@ -2226,7 +1335,7 @@ export class MelkerEngine {
         }
       }
     } catch (error) {
-      this._logger?.warn('Error stopping video elements', { error: String(error) });
+      logger.warn('Error stopping video elements', { error: String(error) });
     }
 
     // Stop event system with error handling
@@ -2234,7 +1343,7 @@ export class MelkerEngine {
       try {
         await this._inputProcessor.stopListening();
       } catch (error) {
-        this._logger?.warn('Error stopping input processor', { error: String(error) });
+        logger.warn('Error stopping input processor', { error: String(error) });
       }
     }
 
@@ -2243,7 +1352,7 @@ export class MelkerEngine {
       try {
         this._resizeHandler.stopListening();
       } catch (error) {
-        this._logger?.warn('Error stopping resize handler', { error: String(error) });
+        logger.warn('Error stopping resize handler', { error: String(error) });
       }
     }
 
@@ -2254,7 +1363,7 @@ export class MelkerEngine {
         setGlobalDebugServer(undefined);
         await this._debugServer.stop();
       } catch (error) {
-        this._logger?.warn('Error stopping debug server', { error: String(error) });
+        logger.warn('Error stopping debug server', { error: String(error) });
       }
     }
 
@@ -2263,7 +1372,7 @@ export class MelkerEngine {
       try {
         this._headlessManager.stop();
       } catch (error) {
-        this._logger?.warn('Error stopping headless mode', { error: String(error) });
+        logger.warn('Error stopping headless mode', { error: String(error) });
       }
     }
 
@@ -2271,31 +1380,28 @@ export class MelkerEngine {
     try {
       this.cleanupTerminal();
     } catch (error) {
-      this._logger?.error('Critical error during terminal cleanup', error instanceof Error ? error : new Error(String(error)));
+      logger.error('Critical error during terminal cleanup', error instanceof Error ? error : new Error(String(error)));
       // Still try basic cleanup using emergency function
       emergencyCleanupTerminal();
     }
 
     // Log final message and close logger
-    if (this._logger) {
-      try {
-        this._logger.info('MelkerEngine stopped successfully', {
-          renderCount: this._renderCount,
-        });
+    try {
+      logger.info('MelkerEngine stopped successfully', {
+        renderCount: this._renderCount,
+      });
 
-        // Use a timeout for logger close to prevent hanging
-        const closeTimeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Logger close timeout')), 500)
-        );
+      // Use a timeout for logger close to prevent hanging
+      const closeTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Logger close timeout')), 500)
+      );
 
-        await Promise.race([
-          this._logger.close(),
-          closeTimeout
-        ]);
-      } catch (error) {
-        // Even if logger close fails, we should continue cleanup
-        // Note: can't use logger here since it's the one failing
-      }
+      await Promise.race([
+        logger.close(),
+        closeTimeout
+      ]);
+    } catch {
+      // Even if logger close fails, we should continue cleanup
     }
 
     // Remove from global tracking since cleanup is complete
@@ -2312,10 +1418,10 @@ export class MelkerEngine {
     // Set root element dimensions from terminal size (same as constructor)
     const style = this._rootElement.props.style || {};
     if (!this._rootElement.props.width && !style.width) {
-      this._rootElement.props.width = this._currentSize.width;
+      this._rootElement.props.width = this._terminalSizeManager.size.width;
     }
     if (!this._rootElement.props.height && !style.height) {
-      this._rootElement.props.height = this._currentSize.height;
+      this._rootElement.props.height = this._terminalSizeManager.size.height;
     }
 
     // Inject system commands into all command palettes (opt-out with system={false})
@@ -2344,7 +1450,7 @@ export class MelkerEngine {
    * Get current terminal size
    */
   get terminalSize(): { width: number; height: number } {
-    return { ...this._currentSize };
+    return { ...this._terminalSizeManager.size };
   }
 
   /**
@@ -2482,42 +1588,42 @@ export class MelkerEngine {
    * Get sixel graphics capabilities (or undefined if not detected)
    */
   get sixelCapabilities(): SixelCapabilities | undefined {
-    return this._sixelCapabilities;
+    return this._graphicsOverlayManager.sixelCapabilities;
   }
 
   /**
    * Check if sixel graphics are available
    */
   get isSixelAvailable(): boolean {
-    return this._sixelCapabilities?.supported ?? false;
+    return this._graphicsOverlayManager.sixelCapabilities?.supported ?? false;
   }
 
   /**
    * Get kitty graphics capabilities (or undefined if not detected)
    */
   get kittyCapabilities(): KittyCapabilities | undefined {
-    return this._kittyCapabilities;
+    return this._graphicsOverlayManager.kittyCapabilities;
   }
 
   /**
    * Check if kitty graphics are available
    */
   get isKittyAvailable(): boolean {
-    return this._kittyCapabilities?.supported ?? false;
+    return this._graphicsOverlayManager.kittyCapabilities?.supported ?? false;
   }
 
   /**
    * Get iTerm2 graphics capabilities (or undefined if not detected)
    */
   get itermCapabilities(): ITermCapabilities | undefined {
-    return this._itermCapabilities;
+    return this._graphicsOverlayManager.itermCapabilities;
   }
 
   /**
    * Check if iTerm2 graphics are available
    */
   get isITermAvailable(): boolean {
-    return this._itermCapabilities?.supported ?? false;
+    return this._graphicsOverlayManager.itermCapabilities?.supported ?? false;
   }
 
   /**
@@ -2589,14 +1695,14 @@ export class MelkerEngine {
    * Get current terminal size
    */
   getTerminalSize(): { width: number; height: number } {
-    return { ...this._currentSize };
+    return { ...this._terminalSizeManager.size };
   }
 
   /**
    * Register a custom resize handler
    */
   onResize(handler: (event: { previousSize: { width: number; height: number }, newSize: { width: number; height: number }, timestamp: number }) => void): void {
-    this._customResizeHandlers.push(handler);
+    this._terminalSizeManager.addResizeHandler(handler);
   }
 
   /**
@@ -2618,7 +1724,7 @@ export class MelkerEngine {
         if (result && typeof (result as { catch?: unknown }).catch === 'function') {
           (result as Promise<void>).catch((error) => {
             const err = ensureError(error);
-            this._logger?.error('Error in async mount handler', err);
+            logger.error('Error in async mount handler', err);
             // CRITICAL: Restore terminal and show error - never fail silently
             this.cleanupTerminal();
             console.error('\n\x1b[31mError in mount handler:\x1b[0m', err.message);
@@ -2631,7 +1737,7 @@ export class MelkerEngine {
         }
       } catch (error) {
         const err = ensureError(error);
-        this._logger?.error('Error in mount handler', err);
+        logger.error('Error in mount handler', err);
         // CRITICAL: Restore terminal and show error - never fail silently
         this.cleanupTerminal();
         console.error('\n\x1b[31mError in mount handler:\x1b[0m', err.message);
@@ -2872,10 +1978,10 @@ export class MelkerEngine {
       document: this._document,
       systemCommandPalette: this._systemCommandPalette,
       devToolsManager: this._devToolsManager,
-      getAccessibilityDialogManager: () => this._accessibilityDialogManager,
+      getAccessibilityDialogManager: () => this._dialogCoordinator.accessibilityDialogManager,
       stop: () => this.stop(),
       render: () => this.render(),
-      ensureAccessibilityDialogManager: () => this._ensureAccessibilityDialogManager(),
+      ensureAccessibilityDialogManager: () => this._dialogCoordinator.ensureAccessibilityDialogManager(),
       setSystemCommandPalette: (palette) => { this._systemCommandPalette = palette; },
     };
   }
@@ -2888,7 +1994,6 @@ export class MelkerEngine {
       root: this._document?.root,
       trappedModalDialogIds: this._trappedModalDialogIds,
       focusManager: this._focusManager,
-      logger: this._logger,
     };
   }
 

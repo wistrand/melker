@@ -156,6 +156,7 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `progress.ts`             | Progress bar (extends Canvas)          |
 | `spinner.ts`              | Loading indicator                      |
 | `separator.ts`            | Horizontal/vertical line with optional label |
+| `split-pane.ts`           | Resizable split panels with draggable dividers |
 | `connector.ts`            | Draw lines between elements by ID      |
 | `connector-utils.ts`      | Line drawing utilities, box-drawing chars |
 | `data-bars.ts`            | Bar charts (horizontal/vertical, stacked/grouped) |

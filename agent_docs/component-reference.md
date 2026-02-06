@@ -970,6 +970,62 @@ Left │ Middle │ Right
 - Label text renders vertically when separator is vertical
 - Inherits theme colors by default
 
+## Split Pane Component
+
+The `<split-pane>` component splits its children horizontally (default) or vertically with draggable, focusable divider bars. Supports N children with N-1 dividers.
+
+### Usage
+
+```xml
+<!-- Horizontal split (left/right), equal sizes -->
+<split-pane style="width: fill; height: fill;">
+  <container><text>Left</text></container>
+  <container><text>Right</text></container>
+</split-pane>
+
+<!-- Vertical split, custom proportions, styled dividers -->
+<split-pane
+  direction="vertical"
+  sizes="1,2,1"
+  dividerTitles="Header,Footer"
+  style="width: fill; height: fill; divider-style: thick; divider-color: cyan;"
+>
+  <container><text>Top (25%)</text></container>
+  <container><text>Middle (50%)</text></container>
+  <container><text>Bottom (25%)</text></container>
+</split-pane>
+```
+
+### Props
+
+| Prop            | Type     | Default        | Description                                              |
+|-----------------|----------|----------------|----------------------------------------------------------|
+| `direction`     | `string` | `'horizontal'` | `'horizontal'` (left/right) or `'vertical'` (top/bottom) |
+| `sizes`         | `string` | equal          | Comma-separated proportions, e.g. `"1,2,1"`              |
+| `minPaneSize`   | `number` | `3`            | Minimum pane size in characters                           |
+| `dividerTitles` | `string` | -              | Comma-separated divider titles, e.g. `"Nav,Info"`        |
+| `onResize`      | handler  | -              | Fired on resize: `{ sizes, dividerIndex, targetId }`     |
+
+### Styles
+
+| Style           | Type          | Default    | Description                                            |
+|-----------------|---------------|------------|--------------------------------------------------------|
+| `divider-style` | `BorderStyle` | `'thin'`   | Line style: `thin`, `thick`, `double`, `dashed`, etc.  |
+| `divider-color` | `ColorInput`  | inherited  | Divider foreground color                               |
+
+### Interaction
+
+- **Mouse drag**: Drag dividers to resize adjacent panes
+- **Keyboard**: Tab to focus a divider, then arrow keys to move it (Left/Right for horizontal, Up/Down for vertical)
+- **Focus**: Dividers show reverse video when focused
+
+### Implementation Notes
+
+- Dividers are internal `SplitPaneDivider` elements interleaved between children
+- Layout uses flexbox (`flexGrow` proportions on panes, fixed 1-char dividers)
+- Nested split-panes work naturally
+- See [split-pane-architecture.md](split-pane-architecture.md) for full details
+
 ## Connector Component
 
 The `<connector>` component draws a line between two elements identified by their IDs. Uses box-drawing characters for orthogonal routing.

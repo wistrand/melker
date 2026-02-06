@@ -109,6 +109,7 @@ melker --watch hello.melker
 | `canvas`              | Pixel graphics         |
 | `graph`               | Mermaid diagrams       |
 | `connector`           | Lines between elements |
+| `split-pane`          | Resizable split panels |
 
 ## Runtime API (`$melker`)
 

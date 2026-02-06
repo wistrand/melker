@@ -1,0 +1,126 @@
+<melker>
+  <policy>
+  {
+    "name": "Split Pane Demo",
+    "description": "Demonstrates the split-pane component with various configurations",
+    "permissions": {}
+  }
+  </policy>
+
+  <style>
+    .pane {
+      border: thin;
+      padding: 1;
+    }
+
+    .info {
+      color: gray;
+    }
+  </style>
+
+  <container style="width: fill; height: fill; display: flex; flex-direction: column; gap: 1; padding: 1; overflow: auto">
+    <text style="font-weight: bold;">Split Pane Demo</text>
+    <text class="info">Tab to focus dividers, arrow keys to resize. Mouse drag also works.</text>
+
+    <!-- Horizontal 2-pane (default) -->
+    <container style="height: 8; border: thin;">
+      <text style="font-weight: bold;">Horizontal Split (default, equal)</text>
+      <split-pane style="width: fill; height: fill;" onResize="$app.onResize1(event)">
+        <container class="pane">
+          <text>Left Pane</text>
+        </container>
+        <container class="pane">
+          <text>Right Pane</text>
+          <text id="sizes1" class="info"></text>
+        </container>
+      </split-pane>
+    </container>
+
+    <!-- Vertical 2-pane -->
+    <container style="height: 10; border: thin;">
+      <text style="font-weight: bold;">Vertical Split</text>
+      <split-pane direction="vertical" style="width: fill; height: fill;" onResize="$app.onResize2(event)">
+        <container class="pane">
+          <text>Top Pane</text>
+        </container>
+        <container class="pane">
+          <text>Bottom Pane</text>
+          <text id="sizes2" class="info"></text>
+        </container>
+      </split-pane>
+    </container>
+
+    <!-- 3-pane with custom sizes -->
+    <container style="height: 8; border: thin;">
+      <text style="font-weight: bold;">3-Pane with sizes="1,2,1"</text>
+      <split-pane sizes="1,2,1" style="width: fill; height: fill;" onResize="$app.onResize3(event)">
+        <container class="pane">
+          <text>Left (25%)</text>
+        </container>
+        <container class="pane">
+          <text>Center (50%)</text>
+          <text id="sizes3" class="info"></text>
+        </container>
+        <container class="pane">
+          <text>Right (25%)</text>
+        </container>
+      </split-pane>
+    </container>
+
+    <!-- Styled dividers with color, style and titles -->
+    <container style="height: 10; border: thin;">
+      <text style="font-weight: bold;">Styled Dividers (thick, colored, titled)</text>
+      <split-pane
+        sizes="1,2,1"
+        dividerTitles="A,B"
+        style="width: fill; height: fill; divider-style: thick; divider-color: cyan;"
+      >
+        <container class="pane">
+          <text>Left</text>
+        </container>
+        <container class="pane">
+          <text>Center</text>
+        </container>
+        <container class="pane">
+          <text>Right</text>
+        </container>
+      </split-pane>
+    </container>
+
+    <!-- Vertical with titled dividers -->
+    <container style="height: 10; border: thin;">
+      <text style="font-weight: bold;">Vertical with Titled Divider</text>
+      <split-pane
+        direction="vertical"
+        sizes="1,2"
+        dividerTitles="Content"
+        style="width: fill; height: fill; divider-style: double; divider-color: yellow;"
+      >
+        <container class="pane">
+          <text>Header Area</text>
+        </container>
+        <container class="pane">
+          <text>Main Area</text>
+        </container>
+      </split-pane>
+    </container>
+  </container>
+
+  <script type="typescript">
+    function formatSizes(sizes: number[]): string {
+      return sizes.map(s => `${Math.round(s * 100)}%`).join(' | ');
+    }
+
+    export function onResize1(event: { sizes: number[] }) {
+      $melker.getElementById('sizes1')!.setValue(formatSizes(event.sizes));
+    }
+
+    export function onResize2(event: { sizes: number[] }) {
+      $melker.getElementById('sizes2')!.setValue(formatSizes(event.sizes));
+    }
+
+    export function onResize3(event: { sizes: number[] }) {
+      $melker.getElementById('sizes3')!.setValue(formatSizes(event.sizes));
+    }
+  </script>
+</melker>

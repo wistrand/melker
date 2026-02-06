@@ -1283,7 +1283,7 @@ export class LayoutEngine {
     // Apply element-type-specific defaults (lowest priority)
     // These can be overridden by stylesheet and inline styles
     let typeDefaults: Partial<Style> = {};
-    if (element.type === 'container' || element.type === 'dialog' || element.type === 'tab') {
+    if (element.type === 'container' || element.type === 'dialog' || element.type === 'tab' || element.type === 'split-pane') {
       typeDefaults = {
         display: 'flex',
         flexDirection: 'column',

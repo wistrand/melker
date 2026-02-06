@@ -16,6 +16,7 @@ export * from './progress.ts';
 export * from './slider.ts';
 export * from './spinner.ts';
 export * from './separator.ts';
+export * from './split-pane.ts';
 export * from './connector.ts';
 export * from './connector-utils.ts';
 export * from './list.ts';

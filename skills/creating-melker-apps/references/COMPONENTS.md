@@ -1163,6 +1163,58 @@ Numeric value selection with keyboard/mouse.
 
 **Keyboard:** Arrow keys (small step), Page Up/Down (10%), Home/End (min/max)
 
+### split-pane
+
+Resizable split panels with draggable dividers. Supports N children with N-1 dividers.
+
+```xml
+<!-- Horizontal split (default), equal sizes -->
+<split-pane style="width: fill; height: fill;">
+  <container><text>Left</text></container>
+  <container><text>Right</text></container>
+</split-pane>
+
+<!-- Vertical split, custom proportions -->
+<split-pane direction="vertical" sizes="1,2,1" style="width: fill; height: fill;">
+  <container><text>Top</text></container>
+  <container><text>Middle</text></container>
+  <container><text>Bottom</text></container>
+</split-pane>
+
+<!-- Styled dividers with titles -->
+<split-pane
+  sizes="1,3"
+  dividerTitles="Nav"
+  style="width: fill; height: fill; divider-style: thick; divider-color: cyan;"
+>
+  <container><text>Sidebar</text></container>
+  <container><text>Content</text></container>
+</split-pane>
+
+<!-- Nested: IDE layout -->
+<split-pane direction="vertical" sizes="1,6,1">
+  <container><text>Header</text></container>
+  <split-pane sizes="1,3">
+    <container><text>Sidebar</text></container>
+    <container><text>Editor</text></container>
+  </split-pane>
+  <container><text>Footer</text></container>
+</split-pane>
+```
+
+**Props:**
+- `direction` - `'horizontal'` (default, left/right) or `'vertical'` (top/bottom)
+- `sizes` - Comma-separated proportions, e.g. `"1,2,1"` for 25%/50%/25%
+- `minPaneSize` - Minimum pane size in characters (default: 3)
+- `dividerTitles` - Comma-separated titles for dividers, e.g. `"Nav,Info"`
+- `onResize` - Handler: `{ sizes: number[], dividerIndex: number, targetId: string }`
+
+**Styles (on the split-pane element):**
+- `divider-style` - Line style: `thin` (default), `thick`, `double`, `dashed`
+- `divider-color` - Divider foreground color
+
+**Keyboard:** Tab to focus divider, Left/Right (horizontal) or Up/Down (vertical) to resize
+
 ### segment-display
 
 LCD/LED-style digit and text display using Unicode characters.

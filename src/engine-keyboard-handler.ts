@@ -313,6 +313,18 @@ function handleFocusedElementInput(
   focusedElement: Element,
   ctx: KeyboardHandlerContext
 ): boolean {
+  // Route to split-pane-divider element for arrow key handling
+  if (focusedElement.type === 'split-pane-divider') {
+    const divider = focusedElement as any;
+    if (divider.handleKeyInput) {
+      const handled = divider.handleKeyInput(event.key, event.ctrlKey, event.altKey);
+      if (handled && ctx.autoRender) {
+        ctx.render();
+      }
+      return true;
+    }
+  }
+
   // Route to slider element for arrow key handling
   if (focusedElement.type === 'slider') {
     const slider = focusedElement as any;

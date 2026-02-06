@@ -533,6 +533,62 @@
 </melker>
 ```
 
+## Split Pane Layout
+
+```xml
+<melker>
+  <policy>{"name": "Split Pane Layout", "permissions": {}}</policy>
+
+  <style>
+    .pane { padding: 1; }
+    .info { color: gray; }
+  </style>
+
+  <!-- Outer: vertical split (header / main / footer) -->
+  <split-pane direction="vertical" sizes="1,6,1" style="width: fill; height: fill;">
+
+    <!-- Header -->
+    <container class="pane" style="border-bottom: thin;">
+      <text style="font-weight: bold;">My IDE</text>
+    </container>
+
+    <!-- Main: horizontal split (sidebar / editor) -->
+    <split-pane
+      sizes="1,3"
+      dividerTitles="Nav"
+      style="width: fill; height: fill; divider-style: thick;"
+      onResize="$app.onMainResize(event)"
+    >
+      <container class="pane">
+        <text style="font-weight: bold;">Explorer</text>
+        <text>src/</text>
+        <text>  main.ts</text>
+        <text>  utils.ts</text>
+      </container>
+      <container class="pane">
+        <text style="font-weight: bold;">Editor</text>
+        <text>Select a file to edit.</text>
+        <text id="sizeInfo" class="info"></text>
+      </container>
+    </split-pane>
+
+    <!-- Footer -->
+    <container class="pane" style="border-top: thin; display: flex; flex-direction: row;">
+      <text>Ready</text>
+      <text style="margin-left: 4;">TypeScript</text>
+    </container>
+
+  </split-pane>
+
+  <script type="typescript">
+    export function onMainResize(event: { sizes: number[] }) {
+      const pcts = event.sizes.map(s => `${Math.round(s * 100)}%`).join(' / ');
+      $melker.getElementById('sizeInfo')!.setValue(`Split: ${pcts}`);
+    }
+  </script>
+</melker>
+```
+
 ## Canvas Drawing
 
 ```xml

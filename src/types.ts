@@ -94,6 +94,8 @@ export interface Style extends Record<string, any> {
   borderLeftColor?: ColorInput;
   borderRightColor?: ColorInput;
   borderTitle?: string;
+  dividerColor?: ColorInput;
+  dividerStyle?: BorderStyle;
   padding?: number | BoxSpacing;
   margin?: number | BoxSpacing;
   marginBottom?: number;
@@ -621,6 +623,7 @@ import type { TabsProps } from './components/tabs.ts';
 import type { ProgressProps } from './components/progress.ts';
 import type { SliderProps } from './components/slider.ts';
 import type { SpinnerProps } from './components/spinner.ts';
+import type { SplitPaneProps } from './components/split-pane.ts';
 
 // Type mapping for known element types to their specific props
 export interface ComponentPropsMap {
@@ -638,6 +641,7 @@ export interface ComponentPropsMap {
   'progress': ProgressProps;
   'slider': SliderProps;
   'spinner': SpinnerProps;
+  'split-pane': SplitPaneProps;
 }
 
 // Type mapping for known element types to their element classes
@@ -655,6 +659,7 @@ export type KnownElementTypeMap = {
   'progress': Element;
   'slider': Element;
   'spinner': Element;
+  'split-pane': Element;
 };
 
 // Helper type to get props for a component type

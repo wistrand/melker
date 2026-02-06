@@ -1,0 +1,89 @@
+<melker>
+  <policy>
+  {
+    "name": "Split Pane Nested (IDE Layout)",
+    "description": "Demonstrates nested split-panes in an IDE-style layout",
+    "permissions": {}
+  }
+  </policy>
+
+  <style>
+    .pane {
+      padding: 1;
+    }
+
+    .header {
+      font-weight: bold;
+      padding: 1;
+    }
+
+    .footer {
+      color: gray;
+      padding: 1;
+    }
+
+    .sidebar-item {
+      padding-left: 1;
+    }
+  </style>
+
+  <!-- Outer: vertical split (header / main / footer) -->
+  <split-pane direction="vertical" sizes="1,6,1" style="width: fill; height: fill;">
+
+    <!-- Header -->
+    <container class="header" style="border-bottom: thin;">
+      <text>IDE Layout - Split Pane Demo</text>
+    </container>
+
+    <!-- Main area: horizontal split (sidebar / content) -->
+    <split-pane sizes="1,3" style="width: fill; height: fill;">
+
+      <!-- Sidebar -->
+      <container class="pane">
+        <text style="font-weight: bold;">Explorer</text>
+        <text class="sidebar-item">src/</text>
+        <text class="sidebar-item">  components/</text>
+        <text class="sidebar-item">    split-pane.ts</text>
+        <text class="sidebar-item">  types.ts</text>
+        <text class="sidebar-item">  layout.ts</text>
+        <text class="sidebar-item">tests/</text>
+        <text class="sidebar-item">examples/</text>
+      </container>
+
+      <!-- Content area: vertical split (editor / terminal) -->
+      <split-pane direction="vertical" sizes="3,1" style="width: fill; height: fill;">
+
+        <!-- Editor -->
+        <container class="pane">
+          <text style="font-weight: bold;">Editor: split-pane.ts</text>
+          <text>1  // Split pane component</text>
+          <text>2  import { Element } from '../types.ts';</text>
+          <text>3</text>
+          <text>4  export class SplitPaneElement {</text>
+          <text>5    // ...</text>
+          <text>6  }</text>
+        </container>
+
+        <!-- Terminal -->
+        <container class="pane" style="border-top: thin;">
+          <text style="font-weight: bold;">Terminal</text>
+          <text>$ deno task check</text>
+          <text style="color: green;">Check passed.</text>
+        </container>
+
+      </split-pane>
+    </split-pane>
+
+    <!-- Footer / status bar -->
+    <container class="footer" style="border-top: thin; display: flex; flex-direction: row;">
+      <text>Ready</text>
+      <text style="margin-left: 4;">Ln 4, Col 1</text>
+      <text style="margin-left: 4;">TypeScript</text>
+    </container>
+
+  </split-pane>
+
+  <script type="typescript">
+    // No script needed for this static layout demo
+  </script>
+</melker>

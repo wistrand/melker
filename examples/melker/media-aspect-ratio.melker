@@ -1,0 +1,154 @@
+<melker>
+  <style>
+    .root {
+      width: fill;
+      height: fill;
+      border: thin;
+      padding: 1;
+      flex-direction: column;
+    }
+
+    .header {
+      height: 3;
+      font-weight: bold;
+      text-align: center;
+      border-bottom: thin;
+      padding: 0 1;
+    }
+
+    .body {
+      flex: 1;
+      flex-direction: row;
+    }
+
+    .sidebar {
+      width: 24;
+      border-right: thin;
+      padding: 1;
+      flex-direction: column;
+    }
+
+    .main {
+      flex: 1;
+      padding: 1;
+      flex-direction: column;
+    }
+
+    .label {
+      font-weight: bold;
+      margin-bottom: 1;
+    }
+
+    .hint {
+      dim: true;
+      text-wrap: wrap;
+    }
+
+    .indicator {
+      height: 1;
+      padding: 0 1;
+    }
+
+    .active {
+      font-weight: bold;
+      inverse: true;
+    }
+
+    /* Ultra-wide: 3-column layout with wider sidebar */
+    @media (min-aspect-ratio: 3/1) {
+      .sidebar {
+        width: 30;
+      }
+      .body {
+        flex-direction: row;
+      }
+    }
+
+    /* Standard widescreen: default 2-column */
+    @media (max-aspect-ratio: 3/1) and (min-aspect-ratio: 4/3) {
+      .sidebar {
+        width: 24;
+      }
+    }
+
+    /* Narrow/square: hide sidebar */
+    @media (max-aspect-ratio: 4/3) {
+      .sidebar {
+        display: none;
+      }
+    }
+
+    /* Very tall (portrait): stack vertically */
+    @media (orientation: portrait) {
+      .sidebar {
+        display: none;
+      }
+    }
+  </style>
+
+  <container class="root">
+    <container class="header">
+      <text>Aspect Ratio Media Query</text>
+    </container>
+
+    <container class="body">
+      <container class="sidebar">
+        <text class="label">Sidebar</text>
+        <text class="indicator" id="ultra">Ultra-wide (3:1+)</text>
+        <text class="indicator" id="wide">Widescreen (4:3 - 3:1)</text>
+        <text class="indicator" id="narrow">Narrow (< 4:3)</text>
+      </container>
+
+      <container class="main">
+        <text class="label">Main Content</text>
+        <text id="size"></text>
+        <text id="ratio"></text>
+        <text id="mode"></text>
+        <text></text>
+        <text class="hint">
+          Resize your terminal to see aspect-ratio media queries
+          in action. Ultra-wide terminals (3:1+) get a wider sidebar.
+          Standard widescreen (4:3 to 3:1) uses default layout.
+          Narrow or square terminals (below 4:3) hide the sidebar entirely.
+        </text>
+      </container>
+    </container>
+  </container>
+
+  <script>
+    function updateDisplay() {
+      const w = $melker.engine.terminalSize.width;
+      const h = $melker.engine.terminalSize.height;
+      const ratio = w / h;
+
+      const sizeEl = $melker.getElementById('size');
+      if (sizeEl) sizeEl.setValue('Terminal: ' + w + 'x' + h);
+
+      const ratioEl = $melker.getElementById('ratio');
+      if (ratioEl) ratioEl.setValue('Aspect ratio: ' + ratio.toFixed(2) + ' (' + w + ':' + h + ')');
+
+      let mode;
+      if (h > w) mode = 'portrait (sidebar hidden)';
+      else if (ratio < 4/3) mode = 'narrow (sidebar hidden)';
+      else if (ratio < 3) mode = 'widescreen';
+      else mode = 'ultra-wide';
+
+      const modeEl = $melker.getElementById('mode');
+      if (modeEl) modeEl.setValue('Layout: ' + mode);
+
+      // Highlight active indicator
+      const ultraEl = $melker.getElementById('ultra');
+      const wideEl = $melker.getElementById('wide');
+      const narrowEl = $melker.getElementById('narrow');
+      if (ultraEl) ultraEl.props.style = { ...ultraEl.props.style, inverse: ratio >= 3, dim: ratio < 3 };
+      if (wideEl) wideEl.props.style = { ...wideEl.props.style, inverse: ratio >= 4/3 && ratio < 3, dim: !(ratio >= 4/3 && ratio < 3) };
+      if (narrowEl) narrowEl.props.style = { ...narrowEl.props.style, inverse: ratio < 4/3, dim: ratio >= 4/3 };
+    }
+
+    updateDisplay();
+
+    $melker.engine.onResize(() => {
+      updateDisplay();
+    });
+  </script>
+</melker>

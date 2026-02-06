@@ -1,0 +1,104 @@
+<melker>
+  <style>
+    .root {
+      width: fill;
+      height: fill;
+      border: thin;
+      padding: 1;
+      flex-direction: column;
+    }
+
+    .header {
+      height: 3;
+      font-weight: bold;
+      text-align: center;
+      border-bottom: thin;
+      padding: 0 1;
+    }
+
+    .body {
+      flex: 1;
+      flex-direction: row;
+    }
+
+    .panel {
+      flex: 1;
+      padding: 1;
+      border: thin;
+      flex-direction: column;
+    }
+
+    .label {
+      font-weight: bold;
+      margin-bottom: 1;
+    }
+
+    .hint {
+      dim: true;
+      text-wrap: wrap;
+    }
+
+    /* Portrait: stack panels vertically */
+    @media (orientation: portrait) {
+      .body {
+        flex-direction: column;
+      }
+    }
+
+    /* Landscape: panels side by side (default) */
+    @media (orientation: landscape) {
+      .body {
+        flex-direction: row;
+      }
+    }
+  </style>
+
+  <container class="root">
+    <container class="header">
+      <text>Orientation Media Query</text>
+    </container>
+
+    <container class="body">
+      <container class="panel">
+        <text class="label">Panel A</text>
+        <text id="size"></text>
+        <text id="orientation"></text>
+        <text></text>
+        <text class="hint">
+          Resize your terminal to switch between portrait and
+          landscape orientations. Portrait mode (height > width)
+          stacks panels vertically. Landscape mode (width >= height)
+          places them side by side.
+        </text>
+      </container>
+
+      <container class="panel">
+        <text class="label">Panel B</text>
+        <text id="ratio"></text>
+      </container>
+    </container>
+  </container>
+
+  <script>
+    function updateDisplay() {
+      const w = $melker.engine.terminalSize.width;
+      const h = $melker.engine.terminalSize.height;
+      const portrait = h > w;
+
+      const sizeEl = $melker.getElementById('size');
+      if (sizeEl) sizeEl.setValue('Terminal: ' + w + 'x' + h);
+
+      const orientEl = $melker.getElementById('orientation');
+      if (orientEl) orientEl.setValue('Orientation: ' + (portrait ? 'portrait' : 'landscape'));
+
+      const ratioEl = $melker.getElementById('ratio');
+      if (ratioEl) ratioEl.setValue('Aspect ratio: ' + (w / h).toFixed(2));
+    }
+
+    updateDisplay();
+
+    $melker.engine.onResize(() => {
+      updateDisplay();
+    });
+  </script>
+</melker>

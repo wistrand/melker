@@ -130,6 +130,21 @@ Programmatic usage with two API styles.
 deno run --allow-all examples/typescript/create-element/minimal-example.ts
 ```
 
+## Responsive Design
+
+Media queries for terminal-responsive layouts.
+
+| File                                                                                    | Description                             |
+|-----------------------------------------------------------------------------------------|-----------------------------------------|
+| [media-queries.melker](melker/media-queries.melker)                                     | Width/height breakpoints dashboard      |
+| [media-orientation.melker](melker/media-orientation.melker)                              | Portrait/landscape layout switching     |
+| [media-aspect-ratio.melker](melker/media-aspect-ratio.melker)                            | Aspect ratio-based responsive design    |
+| [split-pane-responsive.melker](components/split-pane-responsive.melker)                  | Split-pane direction via media queries  |
+
+```bash
+./melker.ts examples/melker/media-orientation.melker
+```
+
 ## Scripts & Advanced
 
 Script integration and advanced patterns in `melker/`:

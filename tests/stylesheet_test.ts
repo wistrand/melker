@@ -600,6 +600,82 @@ Deno.test('mediaConditionMatches - empty condition always matches', () => {
   assert(mediaConditionMatches({}, { terminalWidth: 80, terminalHeight: 24 }));
 });
 
+Deno.test('mediaConditionMatches - orientation portrait', () => {
+  // Portrait: height > width
+  assert(mediaConditionMatches({ orientation: 'portrait' }, { terminalWidth: 60, terminalHeight: 80 }));
+  assert(!mediaConditionMatches({ orientation: 'portrait' }, { terminalWidth: 120, terminalHeight: 40 }));
+});
+
+Deno.test('mediaConditionMatches - orientation landscape', () => {
+  // Landscape: width >= height
+  assert(mediaConditionMatches({ orientation: 'landscape' }, { terminalWidth: 120, terminalHeight: 40 }));
+  assert(!mediaConditionMatches({ orientation: 'landscape' }, { terminalWidth: 40, terminalHeight: 80 }));
+});
+
+Deno.test('mediaConditionMatches - square terminal is landscape', () => {
+  // Equal dimensions: not portrait (height not > width), so landscape matches
+  assert(mediaConditionMatches({ orientation: 'landscape' }, { terminalWidth: 50, terminalHeight: 50 }));
+  assert(!mediaConditionMatches({ orientation: 'portrait' }, { terminalWidth: 50, terminalHeight: 50 }));
+});
+
+Deno.test('mediaConditionMatches - min-aspect-ratio', () => {
+  // 120/40 = 3.0, min 16/9 ≈ 1.78 → pass
+  assert(mediaConditionMatches({ minAspectRatio: 16 / 9 }, { terminalWidth: 120, terminalHeight: 40 }));
+  // 80/40 = 2.0, min 16/9 ≈ 1.78 → pass
+  assert(mediaConditionMatches({ minAspectRatio: 16 / 9 }, { terminalWidth: 80, terminalHeight: 40 }));
+  // 60/40 = 1.5, min 16/9 ≈ 1.78 → fail
+  assert(!mediaConditionMatches({ minAspectRatio: 16 / 9 }, { terminalWidth: 60, terminalHeight: 40 }));
+});
+
+Deno.test('mediaConditionMatches - max-aspect-ratio', () => {
+  // 80/40 = 2.0, max 4/3 ≈ 1.33 → fail
+  assert(!mediaConditionMatches({ maxAspectRatio: 4 / 3 }, { terminalWidth: 80, terminalHeight: 40 }));
+  // 40/40 = 1.0, max 4/3 ≈ 1.33 → pass
+  assert(mediaConditionMatches({ maxAspectRatio: 4 / 3 }, { terminalWidth: 40, terminalHeight: 40 }));
+});
+
+Deno.test('mediaConditionMatches - orientation combined with dimensions', () => {
+  const cond = { orientation: 'landscape' as const, minWidth: 80 };
+  assert(mediaConditionMatches(cond, { terminalWidth: 120, terminalHeight: 40 }));
+  assert(!mediaConditionMatches(cond, { terminalWidth: 60, terminalHeight: 40 }));   // width too small
+  assert(!mediaConditionMatches(cond, { terminalWidth: 120, terminalHeight: 200 })); // portrait
+});
+
+Deno.test('parseStyleBlock - @media orientation', () => {
+  const items = parseStyleBlock(`
+    @media (orientation: portrait) {
+      .sidebar { display: none; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].mediaCondition?.orientation, 'portrait');
+});
+
+Deno.test('parseStyleBlock - @media aspect-ratio', () => {
+  const items = parseStyleBlock(`
+    @media (min-aspect-ratio: 16/9) {
+      .wide { width: fill; }
+    }
+    @media (max-aspect-ratio: 4/3) {
+      .narrow { display: none; }
+    }
+  `);
+  assertEquals(items.length, 2);
+  assert(Math.abs(items[0].mediaCondition!.minAspectRatio! - 16 / 9) < 0.001);
+  assert(Math.abs(items[1].mediaCondition!.maxAspectRatio! - 4 / 3) < 0.001);
+});
+
+Deno.test('parseStyleBlock - @media orientation and dimensions combined', () => {
+  const items = parseStyleBlock(`
+    @media (orientation: landscape) and (min-width: 100) {
+      .wide { width: fill; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].mediaCondition?.orientation, 'landscape');
+  assertEquals(items[0].mediaCondition?.minWidth, 100);
+});
+
 Deno.test('getMergedStyle - filters by StyleContext', () => {
   const ss = Stylesheet.fromString(`
     .sidebar { width: 30; }

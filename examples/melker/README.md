@@ -27,6 +27,14 @@ For canvas, shaders, images, and video, see `examples/canvas/`.
 | `external-script-demo.melker` | External script loading via src  |
 | `npm-import-demo.melker`    | Importing npm packages             |
 
+## Responsive Design (Media Queries)
+
+| File                          | Description                                   |
+|-------------------------------|-----------------------------------------------|
+| `media-queries.melker`        | Width/height breakpoints, responsive dashboard |
+| `media-orientation.melker`    | Portrait/landscape layout switching            |
+| `media-aspect-ratio.melker`   | Aspect ratio-based responsive design           |
+
 ## Advanced Patterns
 
 | File                     | Description                           |

@@ -14,9 +14,27 @@ CSS-like `@media` queries that respond to terminal dimensions, enabling responsi
 @media (min-height: 30) and (max-width: 80) {
   .split { direction: vertical; }
 }
+@media (orientation: portrait) {
+  .layout { direction: vertical; }
+}
+@media (min-aspect-ratio: 16/9) {
+  .wide-content { width: fill; }
+}
 ```
 
-Supported conditions: `min-width`, `max-width`, `min-height`, `max-height`. Multiple conditions joined with `and` (all must match).
+### Supported Conditions
+
+| Condition          | Syntax                           | Description                      |
+|--------------------|----------------------------------|----------------------------------|
+| `min-width`        | `(min-width: 80)`               | Terminal width >= value           |
+| `max-width`        | `(max-width: 60)`               | Terminal width <= value           |
+| `min-height`       | `(min-height: 30)`              | Terminal height >= value          |
+| `max-height`       | `(max-height: 24)`              | Terminal height <= value          |
+| `orientation`      | `(orientation: portrait)`       | `portrait` (h > w) or `landscape` (w >= h) |
+| `min-aspect-ratio` | `(min-aspect-ratio: 16/9)`      | Width/height ratio >= value      |
+| `max-aspect-ratio` | `(max-aspect-ratio: 4/3)`       | Width/height ratio <= value      |
+
+Multiple conditions joined with `and` (all must match).
 
 ## Key Files
 
@@ -94,7 +112,9 @@ Inline styles **always** beat media query rules. A `style="display: block"` cann
 
 Constructor defaults set on `props.style` are captured as `_inlineStyle` and permanently win over stylesheet values. To allow media query override of a property, do NOT set it as a constructor default — use accessor methods with fallback defaults instead. Example: split-pane sets `flexDirection: 'row'` (low-level layout prop) but lets `direction` come from stylesheets.
 
-## Example
+## Examples
+
+### Width/Height Breakpoints
 
 ```xml
 <melker>
@@ -125,7 +145,59 @@ Constructor defaults set on `props.style` are captured as `_inlineStyle` and per
 </melker>
 ```
 
-See also: `examples/melker/media-queries.melker`, `examples/components/split-pane-responsive.melker`
+### Orientation
+
+Switch layout direction based on terminal shape:
+
+```xml
+<style>
+  .body {
+    flex-direction: row;
+  }
+
+  /* Portrait: stack panels vertically */
+  @media (orientation: portrait) {
+    .body {
+      flex-direction: column;
+    }
+  }
+</style>
+```
+
+### Aspect Ratio
+
+Adapt layout to ultra-wide, standard, and narrow terminals:
+
+```xml
+<style>
+  .sidebar {
+    width: 24;
+  }
+
+  /* Ultra-wide: wider sidebar */
+  @media (min-aspect-ratio: 3/1) {
+    .sidebar {
+      width: 30;
+    }
+  }
+
+  /* Narrow/square: hide sidebar */
+  @media (max-aspect-ratio: 4/3) {
+    .sidebar {
+      display: none;
+    }
+  }
+</style>
+```
+
+### Example Apps
+
+| Example                                                                        | Demonstrates                                           |
+|--------------------------------------------------------------------------------|--------------------------------------------------------|
+| [media-queries.melker](../examples/melker/media-queries.melker)                | Width/height breakpoints, responsive dashboard         |
+| [split-pane-responsive.melker](../examples/components/split-pane-responsive.melker) | Split-pane direction via `@media` + `and` combinator   |
+| [media-orientation.melker](../examples/melker/media-orientation.melker)        | `orientation: portrait \| landscape` layout switching   |
+| [media-aspect-ratio.melker](../examples/melker/media-aspect-ratio.melker)      | `min-aspect-ratio` / `max-aspect-ratio` breakpoints    |
 
 ## Limitations
 
@@ -135,7 +207,5 @@ See also: `examples/melker/media-queries.melker`, `examples/components/split-pan
 
 ## Future Enhancements
 
-- `orientation: portrait | landscape` (height > width vs width > height)
-- `aspect-ratio` queries
 - Custom properties/CSS variables with media-dependent values
 - `@container` queries (relative to parent, not viewport)

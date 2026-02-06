@@ -247,5 +247,6 @@ interface SplitPaneResizeEvent {
 | [src/types.ts](../src/types.ts)                                                 | `SplitPaneProps` in type maps, `dividerColor`/`dividerStyle` on `Style` |
 | [src/layout.ts](../src/layout.ts)                                               | Container-type recognition for flex defaults  |
 | [src/engine-keyboard-handler.ts](../src/engine-keyboard-handler.ts)             | Keyboard routing for `split-pane-divider`     |
-| [examples/components/split-pane-demo.melker](../examples/components/split-pane-demo.melker)     | Feature demo                     |
-| [examples/components/split-pane-nested.melker](../examples/components/split-pane-nested.melker) | Nested IDE-style layout demo     |
+| [examples/components/split-pane-demo.melker](../examples/components/split-pane-demo.melker)           | Feature demo                     |
+| [examples/components/split-pane-nested.melker](../examples/components/split-pane-nested.melker)       | Nested IDE-style layout demo     |
+| [examples/components/split-pane-responsive.melker](../examples/components/split-pane-responsive.melker) | Responsive direction via `@media` queries |

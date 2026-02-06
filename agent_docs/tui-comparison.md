@@ -8,7 +8,7 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 |----------------------------------------------------------|-----------------|--------|-----------------------|----------------|
 | **Melker**                                               | TypeScript/Deno | New    | HTML-like declarative | Flexbox        |
 | [Ink](https://github.com/vadimdemedes/ink)               | JavaScript/Node | 35k    | React components      | Flexbox (Yoga) |
-| [Blessed](https://github.com/chjj/blessed)               | JavaScript/Node | 12k    | Imperative widgets    | CSS-like       |
+| [Blessed](https://github.com/chjj/blessed)               | JavaScript/Node | 11k    | Imperative widgets    | CSS-like       |
 | [Bubble Tea](https://github.com/charmbracelet/bubbletea) | Go              | 39k    | Elm architecture      | CSS-like       |
 | [tview](https://github.com/rivo/tview)                   | Go              | 13k    | Imperative widgets    | Grid/Flex      |
 | [Textual](https://github.com/Textualize/textual)         | Python          | 34k    | Async widgets         | CSS/Grid       |
@@ -42,18 +42,19 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 | Mermaid diagrams     |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
 | Literate UI (.md)    |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
 | Command palette      |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |   -   |
+| Media queries        |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
 | No_std/embedded      |   -    |  -  |    -    |     -      |   -   |    -    |    Y    |   -   |
-| SSH/network serve    |   -    |  -  |    -    |     Y      |   -   |    Y    |    -    |   -   |
+| SSH/network serve    |   Y    |  -  |    -    |     Y      |   -   |    Y    |    -    |   -   |
 | Debug/remote inspect |   Y    |  Y  |    -    |     -      |   -   |    Y    |    -    |   -   |
-| Maintained (2026)    |   Y    |  Y  |    -    |     Y      |   Y   |    Y    |    Y    |   Y   |
+| Maintained (2026)    |   Y    |  Y  |    -    |     Y      |   ~   |    Y    |    Y    |   Y   |
 
 Y = Full support, ~ = Partial/limited support, - = Not available
 
 **Notes:**
-- **Ink mouse**: Requires additional package (ink-tap or similar)
+- **Ink mouse**: Requires third-party package (ink-mouse)
 - **Melker animations**: Via canvas shaders, not general UI animations
-- **Textual state**: Reactive attributes, not automatic persistence like Melker
-- **Ratatui canvas**: Uses braille characters (2x4 per cell)
+- **Textual state**: Reactive attributes, not automatic persistence like Melker. Company (Textualize) winding down; maintained by Will McGugan as open source
+- **Ratatui canvas**: Quadrant (2x2), Sextant (2x3), Octant (2x4), Braille (2x4), HalfBlock (1x2)
 - **Ratatui no_std**: Added in v0.30.0 for embedded targets
 - **Sixel/Kitty**: Ink via ink-picture, Textual via textual-image, Ratatui via ratatui-image
 - **Mermaid**: Melker has native `<graph>` component; others require external CLI tools
@@ -201,12 +202,12 @@ text("Hello") | border | color(Color::Cyan)
 |            | Melker      | Ink         | Blessed     | Bubble Tea  | tview       | Textual     | Ratatui     | FTXUI       |
 |------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|
 | Language   | TS/Deno     | JS/Node     | JS/Node     | Go          | Go          | Python      | Rust        | C++         |
-| Stars      | New         | 35k         | 12k         | 39k         | 13k         | 34k         | 18k         | 10k         |
+| Stars      | New         | 35k         | 11k         | 39k         | 13k         | 34k         | 18k         | 10k         |
 | Paradigm   | Declarative | React       | Imperative  | Elm/MVU     | Imperative  | Async       | Immediate   | Functional  |
 | Build step | None        | Required    | None        | Required    | Required    | None        | Required    | Required    |
 | Widgets    | 30+         | ~15         | 27+         | Via Bubbles | 15+         | 35+         | Via crates  | 10+         |
-| Maintained | Y           | Y           | Dormant     | Y           | Y           | Y           | Y           | Y           |
-| Used by    | -           | Gatsby, Yarn | -          | GitHub, GitLab | K9s, gh CLI | Posting   | gitui       | -           |
+| Maintained | Y           | Y           | Dead        | Y           | ~           | Y*          | Y           | Y           |
+| Used by    | -           | Claude Code, Gemini CLI | - | GitHub, GitLab | K9s, gh CLI | Posting, Toad | gitui    | -           |
 
 ## Component Comparison
 
@@ -218,7 +219,7 @@ text("Hello") | border | color(Color::Cyan)
 | Grid             |   -    |  -  |    -    |     -      |   Y   |    Y    |    -    |   Y   |
 | Tabs             |   Y    |  -  |    -    |     -      |   Y   |    Y    |    Y    |   Y   |
 | Collapsible      |   -    |  -  |    -    |     -      |   -   |    Y    |    -    |   Y   |
-| Split panes      |   -    |  -  |    -    |     -      |   -   |    -    |    -    |   Y   |
+| Split panes      |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   Y   |
 | **Text**         |        |     |         |            |       |         |         |       |
 | Text/Label       |   Y    |  Y  |    Y    |     -      |   Y   |    Y    |    Y    |   Y   |
 | Markdown         |   Y    |  -  |    -    |    Y*      |   -   |    Y    |    -    |   -   |
@@ -319,11 +320,11 @@ This distinction mirrors web vs native: Melker treats TUI apps like web pages (s
 
 ## Pixel Canvas
 
-|                  | Melker         | Ratatui        | FTXUI          | Textual     |
-|------------------|----------------|----------------|----------------|-------------|
-| Mode             | Retained       | Immediate      | Immediate      | Immediate   |
-| Encoding         | Sextant (2x3)  | Braille (2x4)  | Braille/Block  | Shapes only |
-| Resolution       | 2x3 per cell   | 2x4 per cell   | 2x4 per cell   | N/A         |
+|                  | Melker         | Ratatui            | FTXUI          | Textual     |
+|------------------|----------------|--------------------|----------------|-------------|
+| Mode             | Retained       | Immediate          | Immediate      | Immediate   |
+| Encoding         | Sextant (2x3)  | Braille/Sextant/Octant | Braille/Block  | Shapes only |
+| Resolution       | 2x3 per cell   | Up to 2x4 per cell | 2x4 per cell   | N/A         |
 | True color       | Y              | Y              | Y              | -           |
 | Auto-dither      | Y              | -              | -              | -           |
 | onPaint callback | Y              | -              | -              | -           |
@@ -591,8 +592,8 @@ auto table = vbox({
 | Library        | Killer Feature                                                          |
 |----------------|-------------------------------------------------------------------------|
 | **Melker**     | Run `.melker` from URL, AI assistant, permission sandbox, literate UI   |
-| **Ink**        | Full React ecosystem, DevTools, used by 10k+ projects, React 18 support |
-| **Textual**    | Terminal + browser, CSS styling, command palette, 35+ widgets           |
+| **Ink**        | Full React ecosystem, DevTools, used by 10k+ projects, React 19 support |
+| **Textual**    | Terminal + browser, CSS styling, command palette, 35+ widgets, rapid releases |
 | **Ratatui**    | Rust safety, no_std support, immediate mode performance, modular crates |
 | **Bubble Tea** | Elm architecture, 39k stars, SSH/network serving, 10k+ apps built       |
 | **tview**      | Battle-tested (K9s, gh CLI), rich widgets, backwards compatible         |
@@ -605,7 +606,7 @@ auto table = vbox({
 | **Ink**        | Claude Code (Anthropic), Gemini CLI (Google), GitHub Copilot CLI, Gatsby, Yarn, Prisma, Parcel, Shopify, New York Times, Terraform CDK |
 | **Bubble Tea** | GitHub, GitLab, NVIDIA, Sourcegraph, Charm (Glow, VHS, etc.)                                                                         |
 | **tview**      | K9s (Kubernetes CLI), GitHub CLI (gh), podman-tui                                                                                    |
-| **Textual**    | Posting (API client), Toad (AI coding frontend), Memray (Bloomberg), Toolong                                                         |
+| **Textual**    | Posting (API client), Toad (AI coding UI), Harlequin (SQL IDE), Elia (LLM chat), Toolong                                            |
 | **Ratatui**    | gitui, bottom, spotify-tui, jnv, termscp                                                                                             |
 
 ## Choosing a Library
@@ -626,20 +627,26 @@ auto table = vbox({
 | Pixel graphics (immediate) | **FTXUI**, **Ratatui**                             |
 | Literate programming       | **Melker**                                         |
 | Embedded/no_std            | **Ratatui**                                        |
-| SSH/network serving        | **Bubble Tea**, **Textual**                        |
+| SSH/network serving        | **Bubble Tea**, **Textual**, **Melker**             |
 | Most GitHub stars          | **Bubble Tea** (39k), **Ink** (35k), **Textual** (34k) |
 
 ## Recent Updates (2025-2026)
 
-| Library        | Notable Changes                                                                       |
-|----------------|---------------------------------------------------------------------------------------|
-| **Ink**        | Continued React 18 support, Ink UI component library, screen reader accessibility     |
-| **Bubble Tea** | v2 beta with new View API, module moved to `charm.land/bubbletea/v2`                  |
-| **Textual**    | Web serving via `textual serve`, expanded widget library to 35+                       |
-| **Ratatui**    | v0.30.0 with no_std support, modular workspace architecture, ratzilla for WebAssembly |
-| **FTXUI**      | v6.1.9, continued cross-platform support including WebAssembly                        |
-| **tview**      | Stable maintenance, backwards compatible updates                                      |
-| **Blessed**    | Dormant since March 2024, use neo-blessed fork for maintenance                        |
+| Library        | Version    | Notable Changes                                                                   |
+|----------------|------------|-----------------------------------------------------------------------------------|
+| **Ink**        | v6.6.0     | React 19 support (peerDeps >=19.0.0), concurrent rendering (PR #850, Feb 2026)    |
+| **Bubble Tea** | v2.0.0-rc.2 | v2 RC with View struct API (not string), Cursed Renderer, `charm.land` module path, clipboard via OSC52. v1.3.10 still latest stable |
+| **Textual**    | v7.5.0     | Rapid releases: 1.0 (Dec 2024) → 7.5 (Jan 2026). Textualize company winding down (May 2025); McGugan maintains as open source. Built Toad (AI coding UI) |
+| **Ratatui**    | v0.30.0    | "Biggest release ever" (Dec 2025). no_std for embedded, modular workspace (ratatui-core, ratatui-widgets), `ratatui::run()` API, Sextant/Octant canvas markers. Ratzilla v0.3.0 (WebAssembly) |
+| **FTXUI**      | v6.0.0+    | Navigation tree, Bazel build support, continued WebAssembly                       |
+| **tview**      | Stable     | No commits since Sep 2025 (4+ month gap). K9s uses a fork (`derailed/tview`). gh CLI still depends on it |
+| **Blessed**    | Dead       | Last commit January 2016. neo-blessed fork has limited maintenance                |
+
+**Notes:**
+- **Textual Y***: Textualize (the company) announced wind-down in May 2025. Will McGugan continues maintaining Textual as open source. Active development continues but corporate backing is gone.
+- **Bubble Tea v2**: Still in release candidate; production apps should use v1.3.10. Bubbles v0.21.1, Lip Gloss v2.0.0-beta.3 (v1.1.0 stable).
+- **Ink adopters**: Claude Code (Anthropic, with custom renderer rewrite) and Gemini CLI (Google) both use Ink 6 + React 19.
+- **Ratatui canvas**: Now supports Quadrant (2x2), Sextant (2x3), and Octant (2x4) markers in addition to Braille (2x4) and HalfBlock (1x2).
 
 ## Links
 
@@ -647,16 +654,18 @@ auto table = vbox({
 - [Awesome TUIs](https://github.com/rothgar/awesome-tuis) - Curated list
 - [Ink](https://github.com/vadimdemedes/ink) - React for CLI
 - [Ink UI](https://ink-ui.vadimdemedes.com/) - Component library for Ink
-- [Blessed](https://github.com/chjj/blessed) - Node.js widgets (dormant)
+- [Blessed](https://github.com/chjj/blessed) - Node.js widgets (dead since 2016)
 - [neo-blessed](https://github.com/embarklabs/neo-blessed) - Blessed fork (limited maintenance)
 - [Bubble Tea](https://github.com/charmbracelet/bubbletea) - Go Elm architecture
 - [Bubbles](https://github.com/charmbracelet/bubbles) - Components for Bubble Tea
 - [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Go styling
 - [tview](https://github.com/rivo/tview) - Go widgets
-- [Textual](https://github.com/Textualize/textual) - Python async TUI
+- [Textual](https://github.com/Textualize/textual) - Python async TUI (community-maintained since May 2025)
 - [Rich](https://github.com/Textualize/rich) - Python terminal formatting (Textual's foundation)
+- [Toad](https://github.com/willmcgugan/toad) - Universal UI for AI coding agents (built with Textual)
 - [Ratatui](https://github.com/ratatui/ratatui) - Rust immediate mode
-- [Ratzilla](https://github.com/ratatui/ratzilla) - Ratatui WebAssembly backend
+- [Ratzilla](https://github.com/ratatui/ratzilla) - Ratatui WebAssembly backend (v0.3.0, unstable)
+- [Mousefood](https://github.com/ratatui/mousefood) - Ratatui embedded-graphics backend for microcontrollers
 - [awesome-ratatui](https://github.com/ratatui/awesome-ratatui) - Ratatui ecosystem
 - [FTXUI](https://github.com/ArthurSonzogni/FTXUI) - C++ functional
 - [OSS Insight TUI Rankings](https://ossinsight.io/collections/tui-framework/) - Live star rankings

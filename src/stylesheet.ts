@@ -58,6 +58,9 @@ export interface MediaCondition {
   maxWidth?: number;
   minHeight?: number;
   maxHeight?: number;
+  orientation?: 'portrait' | 'landscape';
+  minAspectRatio?: number;
+  maxAspectRatio?: number;
 }
 
 /**
@@ -77,6 +80,16 @@ export function mediaConditionMatches(condition: MediaCondition, ctx: StyleConte
   if (condition.maxWidth !== undefined && ctx.terminalWidth > condition.maxWidth) return false;
   if (condition.minHeight !== undefined && ctx.terminalHeight < condition.minHeight) return false;
   if (condition.maxHeight !== undefined && ctx.terminalHeight > condition.maxHeight) return false;
+  if (condition.orientation !== undefined) {
+    const isPortrait = ctx.terminalHeight > ctx.terminalWidth;
+    if (condition.orientation === 'portrait' && !isPortrait) return false;
+    if (condition.orientation === 'landscape' && isPortrait) return false;
+  }
+  if (condition.minAspectRatio !== undefined || condition.maxAspectRatio !== undefined) {
+    const ratio = ctx.terminalWidth / ctx.terminalHeight;
+    if (condition.minAspectRatio !== undefined && ratio < condition.minAspectRatio) return false;
+    if (condition.maxAspectRatio !== undefined && ratio > condition.maxAspectRatio) return false;
+  }
   return true;
 }
 
@@ -408,16 +421,41 @@ function parseMediaCondition(conditionStr: string): MediaCondition | undefined {
 
   for (let part of parts) {
     part = part.replace(/^\(/, '').replace(/\)$/, '').trim();
-    const match = part.match(/^(min-width|max-width|min-height|max-height)\s*:\s*(\d+)$/);
-    if (!match) continue;
 
-    const [, prop, val] = match;
-    const num = parseInt(val, 10);
-    if (prop === 'min-width') condition.minWidth = num;
-    else if (prop === 'max-width') condition.maxWidth = num;
-    else if (prop === 'min-height') condition.minHeight = num;
-    else if (prop === 'max-height') condition.maxHeight = num;
-    hasValid = true;
+    // Match dimension conditions: (min-width: 80), (max-height: 24)
+    const dimMatch = part.match(/^(min-width|max-width|min-height|max-height)\s*:\s*(\d+)$/);
+    if (dimMatch) {
+      const [, prop, val] = dimMatch;
+      const num = parseInt(val, 10);
+      if (prop === 'min-width') condition.minWidth = num;
+      else if (prop === 'max-width') condition.maxWidth = num;
+      else if (prop === 'min-height') condition.minHeight = num;
+      else if (prop === 'max-height') condition.maxHeight = num;
+      hasValid = true;
+      continue;
+    }
+
+    // Match orientation: (orientation: portrait), (orientation: landscape)
+    const orientMatch = part.match(/^orientation\s*:\s*(portrait|landscape)$/);
+    if (orientMatch) {
+      condition.orientation = orientMatch[1] as 'portrait' | 'landscape';
+      hasValid = true;
+      continue;
+    }
+
+    // Match aspect-ratio: (min-aspect-ratio: 16/9), (max-aspect-ratio: 4/3)
+    const ratioMatch = part.match(/^(min-aspect-ratio|max-aspect-ratio)\s*:\s*(\d+)\/(\d+)$/);
+    if (ratioMatch) {
+      const [, prop, num, den] = ratioMatch;
+      const denominator = parseInt(den, 10);
+      if (denominator > 0) {
+        const ratio = parseInt(num, 10) / denominator;
+        if (prop === 'min-aspect-ratio') condition.minAspectRatio = ratio;
+        else if (prop === 'max-aspect-ratio') condition.maxAspectRatio = ratio;
+        hasValid = true;
+      }
+      continue;
+    }
   }
 
   return hasValid ? condition : undefined;

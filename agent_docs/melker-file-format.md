@@ -331,11 +331,15 @@ See `examples/basics/css-combinators.melker` for a complete demonstration.
 </style>
 ```
 
-Supported conditions: `min-width`, `max-width`, `min-height`, `max-height`. Multiple conditions joined with `and`.
+Supported conditions: `min-width`, `max-width`, `min-height`, `max-height`, `orientation` (`portrait`/`landscape`), `min-aspect-ratio`, `max-aspect-ratio` (e.g., `16/9`). Multiple conditions joined with `and`.
 
 Styles are re-applied on terminal resize. Inline styles (`style="..."`) always take precedence over media query rules.
 
-See [architecture-media-queries.md](architecture-media-queries.md) for full details and `examples/components/split-pane-responsive.melker` for a working example.
+See [architecture-media-queries.md](architecture-media-queries.md) for full details. Example apps:
+- [media-queries.melker](../examples/melker/media-queries.melker) — width/height breakpoints, responsive dashboard
+- [split-pane-responsive.melker](../examples/components/split-pane-responsive.melker) — split-pane direction via `@media` + `and`
+- [media-orientation.melker](../examples/melker/media-orientation.melker) — `orientation: portrait | landscape` layout switching
+- [media-aspect-ratio.melker](../examples/melker/media-aspect-ratio.melker) — `min-aspect-ratio` / `max-aspect-ratio` breakpoints
 
 ## Styling
 

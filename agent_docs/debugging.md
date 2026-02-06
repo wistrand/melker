@@ -215,7 +215,7 @@ The server provides a browser-based interface with:
 - Keyboard input forwarding (when terminal focused)
 - Shift-click to inspect element at coordinates
 
-**Tabbed Debug Panels**
+**Tabbed Panels**
 
 | Tab      | Features                                                    |
 |----------|-------------------------------------------------------------|
@@ -504,9 +504,9 @@ When using Chrome DevTools Performance profiling, rendering may appear corrupted
 | `src/headless.ts`        | HeadlessTerminal, HeadlessManager      |
 | `src/stdout.ts`          | Stdout mode, bufferToStdout()          |
 | `src/server.ts`            | MelkerServer, WebSocket API            |
-| `src/server-ui/index.html` | Debug web UI HTML structure            |
-| `src/server-ui/index.css`  | Debug web UI styles                    |
-| `src/server-ui/index.js`   | Debug web UI client logic              |
+| `src/server-ui/index.html` | Server web UI HTML structure           |
+| `src/server-ui/index.css`  | Server web UI styles                   |
+| `src/server-ui/index.js`   | Server web UI client logic             |
 | `src/dev-tools.ts`       | DevToolsManager, F12 overlay           |
 
 ## See Also

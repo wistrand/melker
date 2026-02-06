@@ -128,7 +128,7 @@ Each property in schema.json can have:
 ### Server
 - `server.port` - WebSocket server port (flag: --server-port)
 - `server.host` - Server bind address
-- `server.allowRemoteInput` - Allow input from server clients
+- `server.allowInput` - Allow input from server clients
 
 ### Bundler
 - `bundler.retainBundle` - Keep temp bundle files for debugging

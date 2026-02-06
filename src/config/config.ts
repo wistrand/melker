@@ -804,8 +804,8 @@ export class MelkerConfig {
     return this.data['server.token'] as string | undefined;
   }
 
-  get serverAllowRemoteInput(): boolean {
-    return this.data['server.allowRemoteInput'] as boolean;
+  get serverAllowInput(): boolean {
+    return this.data['server.allowInput'] as boolean;
   }
 
   // Bundler

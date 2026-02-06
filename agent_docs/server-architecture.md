@@ -41,7 +41,7 @@ Access at: `http://localhost:8080/?token=<token>`
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│ Header: Melker Debug | [●] Connected | Input: Enabled      │
+│ Header: Melker | [●] Connected | Input: Enabled             │
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │                    Terminal Mirror                         │

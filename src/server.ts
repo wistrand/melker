@@ -762,7 +762,7 @@ export class MelkerServer {
 
     // Allow in non-headless mode if explicitly enabled via config
     // This enables the browser mirror to send mouse/keyboard events
-    return MelkerConfig.get().serverAllowRemoteInput;
+    return MelkerConfig.get().serverAllowInput;
   }
 
   private _injectEvent(eventData: any): void {

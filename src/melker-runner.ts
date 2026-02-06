@@ -411,7 +411,7 @@ export async function runMelkerFile(
           const handlerKeys = Object.keys(registry).filter(k => k.startsWith('__h'));
           console.log(`  Handlers: ${handlerKeys.join(', ') || 'none'}`);
 
-          console.log('\nDEBUG FILES (retained)');
+          console.log('\nVERBOSE FILES (retained)');
           console.log('-'.repeat(40));
           console.log(`  Bundled JS:    ${bundleFile}`);
         } catch (error) {

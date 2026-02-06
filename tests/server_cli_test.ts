@@ -49,43 +49,6 @@ async function createTempApp(): Promise<{ appPath: string; cleanup: () => Promis
   };
 }
 
-/** Launch melker as subprocess and wait for output with timeout */
-async function launchMelker(
-  args: string[],
-  env?: Record<string, string>,
-  timeoutMs = 10000,
-): Promise<{ code: number; stdout: string; stderr: string }> {
-  const cmd = new Deno.Command(Deno.execPath(), {
-    args: ['run', '--allow-all', '--unstable-bundle', 'melker.ts', ...args],
-    cwd: Deno.cwd(),
-    stdout: 'piped',
-    stderr: 'piped',
-    env: env ? { ...Deno.env.toObject(), ...env } : undefined,
-  });
-
-  const child = cmd.spawn();
-
-  // Race between process completion and timeout
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('Process timeout')), timeoutMs)
-  );
-
-  try {
-    const status = await Promise.race([child.status, timeout]);
-    const stdoutRaw = await child.stdout.cancel().then(() => new Uint8Array(0)).catch(() => new Uint8Array(0));
-    const stderrRaw = await child.stderr.cancel().then(() => new Uint8Array(0)).catch(() => new Uint8Array(0));
-    return {
-      code: status.code,
-      stdout: decoder.decode(stdoutRaw),
-      stderr: decoder.decode(stderrRaw),
-    };
-  } catch {
-    // Timeout — kill process and collect what we have
-    try { child.kill(); } catch { /* already dead */ }
-    return { code: -1, stdout: '', stderr: '' };
-  }
-}
-
 /** Launch melker and collect output via .output() with timeout */
 async function runMelker(
   args: string[],

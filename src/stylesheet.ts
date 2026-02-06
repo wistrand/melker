@@ -51,11 +51,42 @@ export interface StyleSelector {
 }
 
 /**
+ * Media query condition — all specified fields must match.
+ */
+export interface MediaCondition {
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
+}
+
+/**
+ * Terminal dimensions for evaluating @media conditions.
+ */
+export interface StyleContext {
+  terminalWidth: number;
+  terminalHeight: number;
+}
+
+/**
+ * Evaluate whether a media condition matches the given terminal dimensions.
+ * All specified fields must match (AND logic). Empty condition always matches.
+ */
+export function mediaConditionMatches(condition: MediaCondition, ctx: StyleContext): boolean {
+  if (condition.minWidth !== undefined && ctx.terminalWidth < condition.minWidth) return false;
+  if (condition.maxWidth !== undefined && ctx.terminalWidth > condition.maxWidth) return false;
+  if (condition.minHeight !== undefined && ctx.terminalHeight < condition.minHeight) return false;
+  if (condition.maxHeight !== undefined && ctx.terminalHeight > condition.maxHeight) return false;
+  return true;
+}
+
+/**
  * A single style rule with selector and style properties
  */
 export interface StyleItem {
   selector: StyleSelector;
   style: Style;
+  mediaCondition?: MediaCondition;
 }
 
 /**
@@ -366,17 +397,82 @@ function normalizeBoxSpacing(style: Record<string, any>, property: 'padding' | '
 }
 
 /**
- * Parse a CSS-like style block into StyleItems
+ * Parse a @media condition string like "(max-width: 80)" or
+ * "(min-width: 60) and (max-width: 100)" into a MediaCondition.
+ * Returns undefined for invalid/unrecognized conditions.
+ */
+function parseMediaCondition(conditionStr: string): MediaCondition | undefined {
+  const condition: MediaCondition = {};
+  const parts = conditionStr.split(/\)\s+and\s+\(/i);
+  let hasValid = false;
+
+  for (let part of parts) {
+    part = part.replace(/^\(/, '').replace(/\)$/, '').trim();
+    const match = part.match(/^(min-width|max-width|min-height|max-height)\s*:\s*(\d+)$/);
+    if (!match) continue;
+
+    const [, prop, val] = match;
+    const num = parseInt(val, 10);
+    if (prop === 'min-width') condition.minWidth = num;
+    else if (prop === 'max-width') condition.maxWidth = num;
+    else if (prop === 'min-height') condition.minHeight = num;
+    else if (prop === 'max-height') condition.maxHeight = num;
+    hasValid = true;
+  }
+
+  return hasValid ? condition : undefined;
+}
+
+/**
+ * A top-level block extracted by the brace-balancing tokenizer.
+ */
+interface CSSBlock {
+  selector: string;
+  body: string;
+}
+
+/**
+ * Tokenize CSS into top-level blocks using brace-depth tracking.
+ * Handles nested braces (e.g., @media { .rule { } }) that regex cannot.
+ */
+function tokenizeCSS(css: string): CSSBlock[] {
+  const blocks: CSSBlock[] = [];
+  let depth = 0;
+  let selectorStart = 0;
+  let bodyStart = 0;
+
+  for (let i = 0; i < css.length; i++) {
+    if (css[i] === '{') {
+      if (depth === 0) {
+        bodyStart = i;
+      }
+      depth++;
+    } else if (css[i] === '}') {
+      depth--;
+      if (depth === 0) {
+        const selector = css.slice(selectorStart, bodyStart).trim();
+        const body = css.slice(bodyStart + 1, i).trim();
+        blocks.push({ selector, body });
+        selectorStart = i + 1;
+      }
+    }
+  }
+  return blocks;
+}
+
+/**
+ * Parse a CSS-like style block into StyleItems.
+ * Supports both regular rules and @media blocks with nested rules.
  *
  * Example input:
  * ```
  * #header {
- *   background-color: blue;
- *   color: white;
+ *   height: 3;
+ *   font-weight: bold;
  * }
  *
- * button {
- *   border: thin;
+ * @media (max-width: 80) {
+ *   .sidebar { width: 20; }
  * }
  *
  * .primary {
@@ -388,26 +484,36 @@ export function parseStyleBlock(css: string): StyleItem[] {
   const items: StyleItem[] = [];
 
   // Strip CSS comments before parsing
-  // Remove block comments /* ... */ and single-line comments // ...
   const cssWithoutComments = css
     .replace(/\/\*[\s\S]*?\*\//g, '')  // Block comments
     .replace(/\/\/.*$/gm, '');          // Single-line comments
 
-  // Simple regex-based parsing for CSS-like rules
-  // Match: selector { properties }
-  const rulePattern = /([^{]+)\{([^}]*)\}/g;
+  const blocks = tokenizeCSS(cssWithoutComments);
 
-  let match;
-  while ((match = rulePattern.exec(cssWithoutComments)) !== null) {
-    const selectorStr = match[1].trim();
-    const propertiesStr = match[2].trim();
+  for (const block of blocks) {
+    if (block.selector.startsWith('@media')) {
+      // Extract condition from "@media (condition)"
+      const condStr = block.selector.slice(6).trim();
+      const condition = parseMediaCondition(condStr);
+      if (!condition) continue;  // Skip unrecognized @media conditions
 
-    if (!selectorStr || !propertiesStr) continue;
+      // Recursively parse nested rules inside the @media block
+      const nestedItems = parseStyleBlock(block.body);
+      for (const item of nestedItems) {
+        items.push({ ...item, mediaCondition: condition });
+      }
+    } else {
+      // Regular rule: selector { properties }
+      const selectorStr = block.selector;
+      const propertiesStr = block.body;
 
-    const selector = parseSelector(selectorStr);
-    const style = parseStyleProperties(propertiesStr);
+      if (!selectorStr || !propertiesStr) continue;
 
-    items.push({ selector, style });
+      const selector = parseSelector(selectorStr);
+      const style = parseStyleProperties(propertiesStr);
+
+      items.push({ selector, style });
+    }
   }
 
   return items;
@@ -449,13 +555,17 @@ export class Stylesheet {
   }
 
   /**
-   * Get all styles that match an element (in order of definition)
-   * @param ancestors Optional array of ancestor elements for descendant matching
+   * Get all styles that match an element (in order of definition).
+   * When ctx is provided, media-conditioned rules are evaluated against it.
+   * When ctx is omitted, media-conditioned rules are excluded.
    */
-  getMatchingStyles(element: Element, ancestors: Element[] = []): Style[] {
+  getMatchingStyles(element: Element, ancestors: Element[] = [], ctx?: StyleContext): Style[] {
     const matchingStyles: Style[] = [];
 
     for (const item of this._items) {
+      if (item.mediaCondition) {
+        if (!ctx || !mediaConditionMatches(item.mediaCondition, ctx)) continue;
+      }
       if (selectorMatches(item.selector, element, ancestors)) {
         matchingStyles.push(item.style);
       }
@@ -465,12 +575,21 @@ export class Stylesheet {
   }
 
   /**
-   * Get merged style for an element (all matching rules combined)
-   * @param ancestors Optional array of ancestor elements for descendant matching
+   * Get merged style for an element (all matching rules combined).
+   * When ctx is provided, media-conditioned rules are evaluated against it.
+   * When ctx is omitted, media-conditioned rules are excluded.
    */
-  getMergedStyle(element: Element, ancestors: Element[] = []): Style {
-    const matchingStyles = this.getMatchingStyles(element, ancestors);
+  getMergedStyle(element: Element, ancestors: Element[] = [], ctx?: StyleContext): Style {
+    const matchingStyles = this.getMatchingStyles(element, ancestors, ctx);
     return matchingStyles.reduce((merged, style) => ({ ...merged, ...style }), {});
+  }
+
+  /**
+   * Whether any rules have @media conditions.
+   * Fast path: skip re-application on resize when false.
+   */
+  get hasMediaRules(): boolean {
+    return this._items.some(item => item.mediaCondition !== undefined);
   }
 
   /**
@@ -505,10 +624,10 @@ export class Stylesheet {
   /**
    * Apply stylesheet styles to an element tree.
    * Merges stylesheet styles with element's inline styles (inline takes priority).
-   * This should be called once at element creation time.
+   * Safe to call multiple times — tracks style origins for correct re-application.
    */
-  applyTo(element: Element): void {
-    applyStylesheet(element, this);
+  applyTo(element: Element, ctx?: StyleContext): void {
+    applyStylesheet(element, this, [], ctx);
   }
 }
 
@@ -516,22 +635,58 @@ export class Stylesheet {
  * Apply stylesheet styles to an element and all its children.
  * Stylesheet styles are merged under inline styles (inline takes priority).
  * Supports descendant selectors by tracking ancestor chain.
+ *
+ * Tracks style origins for safe re-application (e.g., on terminal resize):
+ * - _inlineStyle: ground truth from markup or script writes (survives re-apply)
+ * - _computedStyle: last merged result (used to diff-detect script changes)
+ *
+ * On first call: captures element.props.style as _inlineStyle.
+ * On subsequent calls: diffs props.style vs _computedStyle to detect script
+ * changes, merges those into _inlineStyle, then recomputes from scratch.
  */
-export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancestors: Element[] = []): void {
+export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancestors: Element[] = [], ctx?: StyleContext): void {
   // Get matching stylesheet styles for this element (with ancestor context)
-  const stylesheetStyle = stylesheet.getMergedStyle(element, ancestors);
+  const stylesheetStyle = stylesheet.getMergedStyle(element, ancestors, ctx);
 
-  if (Object.keys(stylesheetStyle).length > 0) {
-    // Merge: stylesheet styles first, then inline styles on top
-    const inlineStyle = element.props.style || {};
+  if (element._inlineStyle === undefined) {
+    // First application: capture current props.style as inline ground truth
+    element._inlineStyle = element.props.style ? { ...element.props.style } : {};
+  } else if (element._computedStyle !== undefined) {
+    // Re-application: detect script changes by diffing current vs last computed
+    const currentStyle = element.props.style || {};
+    const lastComputed = element._computedStyle;
+
+    // Properties added or changed by script → merge into _inlineStyle
+    for (const key of Object.keys(currentStyle)) {
+      if (currentStyle[key] !== lastComputed[key]) {
+        element._inlineStyle[key] = currentStyle[key];
+      }
+    }
+    // Properties removed by script → remove from _inlineStyle
+    for (const key of Object.keys(element._inlineStyle)) {
+      if (!(key in currentStyle)) {
+        delete element._inlineStyle[key];
+      }
+    }
+  }
+
+  // Compute merged style: stylesheet under inline (inline always wins)
+  const inlineStyle = element._inlineStyle!;
+  const hasStylesheet = Object.keys(stylesheetStyle).length > 0;
+  const hasInline = Object.keys(inlineStyle).length > 0;
+
+  if (hasStylesheet || hasInline) {
     element.props.style = { ...stylesheetStyle, ...inlineStyle };
   }
+
+  // Track what we computed for future script-change detection
+  element._computedStyle = element.props.style ? { ...element.props.style } : {};
 
   // Recursively apply to children, adding current element to ancestors
   if (element.children) {
     const childAncestors = [element, ...ancestors];
     for (const child of element.children) {
-      applyStylesheet(child, stylesheet, childAncestors);
+      applyStylesheet(child, stylesheet, childAncestors, ctx);
     }
   }
 }

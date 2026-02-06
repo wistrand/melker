@@ -1,0 +1,78 @@
+<melker>
+  <policy>
+  {
+    "name": "Split Pane Responsive",
+    "description": "Demonstrates split-pane direction controlled by @media queries",
+    "permissions": {}
+  }
+  </policy>
+
+  <style>
+    .pane {
+      padding: 1;
+    }
+
+    .info {
+      dim: true;
+      text-wrap: wrap;
+    }
+
+    .split {
+      width: fill;
+      height: fill;
+      direction: horizontal;
+    }
+
+    /* Tall + narrow terminals: switch to vertical split */
+    @media (min-height: 30) and (max-width: 80) {
+      .split {
+        direction: vertical;
+      }
+    }
+  </style>
+
+  <split-pane class="split" sizes="1,2">
+    <container class="pane" style="border: thin;">
+      <text style="font-weight: bold;">Sidebar</text>
+      <text>src/</text>
+      <text>  components/</text>
+      <text>  types.ts</text>
+      <text>  layout.ts</text>
+      <text>tests/</text>
+      <text>examples/</text>
+    </container>
+
+    <container class="pane" style="border: thin;">
+      <text style="font-weight: bold;">Content</text>
+      <text id="size"></text>
+      <text id="mode"></text>
+      <text></text>
+      <text class="info">
+        Resize your terminal to see the split-pane direction
+        change. Wide terminals use a horizontal split (side by
+        side). Narrow + tall terminals switch to vertical
+        (stacked).
+      </text>
+    </container>
+  </split-pane>
+
+  <script>
+    function updateDisplay() {
+      const w = $melker.engine.terminalSize.width;
+      const h = $melker.engine.terminalSize.height;
+      const vertical = h >= 30 && w < 80;
+
+      const sizeEl = $melker.getElementById('size');
+      if (sizeEl) sizeEl.setValue('Terminal: ' + w + 'x' + h);
+
+      const modeEl = $melker.getElementById('mode');
+      if (modeEl) modeEl.setValue('Direction: ' + (vertical ? 'vertical' : 'horizontal'));
+    }
+
+    updateDisplay();
+
+    $melker.engine.onResize(() => {
+      updateDisplay();
+    });
+  </script>
+</melker>

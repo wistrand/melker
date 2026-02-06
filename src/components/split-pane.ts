@@ -1,6 +1,6 @@
 // Split pane component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Interactive, Draggable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Style, Renderable, Focusable, Interactive, Draggable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ViewportDualBuffer } from '../viewport-buffer.ts';
 import { getThemeColor } from '../theme.ts';
@@ -17,9 +17,7 @@ export interface SplitPaneResizeEvent {
 }
 
 export interface SplitPaneProps extends BaseProps {
-  direction?: 'horizontal' | 'vertical';
   sizes?: number[] | string;
-  minPaneSize?: number;
   dividerTitles?: string[] | string;
   onResize?: (event: SplitPaneResizeEvent) => void;
 }
@@ -42,7 +40,7 @@ export class SplitPaneDivider extends SeparatorElement implements Focusable, Int
 
   override render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer | ViewportDualBuffer, context: ComponentRenderContext): void {
     this._lastBounds = bounds;
-    const direction = this._splitPane.props.direction || 'horizontal';
+    const direction = this._splitPane._getDirection();
 
     // Sync parent's divider styling into separator props before delegating
     const parentStyle = this._splitPane.props.style;
@@ -101,7 +99,7 @@ export class SplitPaneDivider extends SeparatorElement implements Focusable, Int
   }
 
   handleKeyInput(key: string, _ctrlKey: boolean = false, _altKey: boolean = false): boolean {
-    const direction = this._splitPane.props.direction || 'horizontal';
+    const direction = this._splitPane._getDirection();
 
     if (direction === 'horizontal') {
       if (key === 'ArrowLeft') {
@@ -154,18 +152,25 @@ export class SplitPaneElement extends Element implements Renderable {
   private _dividers: SplitPaneDivider[] = [];
   private _paneChildren: Element[] = [];
   private _lastBounds: Bounds | null = null;
+  private _lastDirection: 'horizontal' | 'vertical' = 'horizontal';
+
+  // Style prop accessors — read from this.props.style with fallbacks.
+  // Props flow into style at construction time; style wins over prop.
+  _getDirection(): 'horizontal' | 'vertical' {
+    return (this.props.style as Style | undefined)?.direction || 'horizontal';
+  }
+
+  _getMinPaneSize(): number {
+    const v = (this.props.style as Style | undefined)?.minPaneSize;
+    return (v !== undefined && typeof v === 'number' && v >= 1) ? v : 3;
+  }
 
   constructor(props: SplitPaneProps, children: Element[] = []) {
-    const direction = props.direction || 'horizontal';
-    const minPaneSize = props.minPaneSize !== undefined ? Number(props.minPaneSize) : 3;
-
     const defaultProps: SplitPaneProps = {
-      direction,
-      minPaneSize,
       ...props,
       style: {
         display: 'flex',
-        flexDirection: direction === 'horizontal' ? 'row' : 'column',
+        flexDirection: 'row',
         ...props.style,
       },
     };
@@ -194,17 +199,24 @@ export class SplitPaneElement extends Element implements Renderable {
 
     this.children = interleaved;
     this._dividers = dividers;
+    this._lastDirection = this._getDirection();
     this._normalizedSizes = this._parseSizes(this._paneChildren.length);
     this._updateFlexProperties();
   }
 
   render(bounds: Bounds, _style: Partial<Cell>, _buffer: DualBuffer | ViewportDualBuffer, _context: ComponentRenderContext): void {
     this._lastBounds = bounds;
+    // Sync divider flex properties when direction changes (e.g. via @media query)
+    const direction = this._getDirection();
+    if (direction !== this._lastDirection) {
+      this._lastDirection = direction;
+      this._updateFlexProperties();
+    }
   }
 
   intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
-    const direction = this.props.direction || 'horizontal';
-    const minPaneSize = this.props.minPaneSize ?? 3;
+    const direction = this._getDirection();
+    const minPaneSize = this._getMinPaneSize();
     const paneCount = this._paneChildren.length;
     const dividerCount = this._dividers.length;
 
@@ -227,8 +239,8 @@ export class SplitPaneElement extends Element implements Renderable {
   _handleDividerDrag(index: number, x: number, y: number): void {
     if (!this._lastBounds || this._paneChildren.length < 2) return;
 
-    const direction = this.props.direction || 'horizontal';
-    const minPaneSize = this.props.minPaneSize ?? 3;
+    const direction = this._getDirection();
+    const minPaneSize = this._getMinPaneSize();
 
     // Total available space minus divider space
     const totalSpace = direction === 'horizontal'
@@ -289,8 +301,8 @@ export class SplitPaneElement extends Element implements Renderable {
   _handleDividerKeyboardMove(index: number, charDelta: number): boolean {
     if (!this._lastBounds || this._paneChildren.length < 2) return false;
 
-    const direction = this.props.direction || 'horizontal';
-    const minPaneSize = this.props.minPaneSize ?? 3;
+    const direction = this._getDirection();
+    const minPaneSize = this._getMinPaneSize();
 
     const totalSpace = direction === 'horizontal'
       ? this._lastBounds.width - this._dividers.length
@@ -374,7 +386,7 @@ export class SplitPaneElement extends Element implements Renderable {
   }
 
   private _updateFlexProperties(): void {
-    const direction = this.props.direction || 'horizontal';
+    const direction = this._getDirection();
 
     for (let i = 0; i < this._paneChildren.length; i++) {
       const pane = this._paneChildren[i];
@@ -394,6 +406,7 @@ export class SplitPaneElement extends Element implements Renderable {
         divider.props.style = {
           ...divider.props.style,
           width: 1,
+          height: undefined,
           flexGrow: 0,
           flexShrink: 0,
           flexBasis: 'auto',
@@ -401,6 +414,7 @@ export class SplitPaneElement extends Element implements Renderable {
       } else {
         divider.props.style = {
           ...divider.props.style,
+          width: undefined,
           height: 1,
           flexGrow: 0,
           flexShrink: 0,
@@ -428,10 +442,12 @@ export class SplitPaneElement extends Element implements Renderable {
   }
 
   static validate(props: SplitPaneProps): boolean {
-    if (props.direction !== undefined && !['horizontal', 'vertical'].includes(props.direction)) {
+    const direction = (props.style as Style | undefined)?.direction;
+    if (direction !== undefined && !['horizontal', 'vertical'].includes(direction)) {
       return false;
     }
-    if (props.minPaneSize !== undefined && (typeof props.minPaneSize !== 'number' || props.minPaneSize < 1)) {
+    const minPaneSize = (props.style as Style | undefined)?.minPaneSize;
+    if (minPaneSize !== undefined && (typeof minPaneSize !== 'number' || minPaneSize < 1)) {
       return false;
     }
     return true;
@@ -445,9 +461,7 @@ import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 export const splitPaneSchema: ComponentSchema = {
   description: 'Resizable split pane container with draggable dividers',
   props: {
-    direction: { type: 'string', description: 'Split direction: horizontal (left/right, default) or vertical (top/bottom)' },
     sizes: { type: 'string', description: 'Comma-separated proportions, e.g. "1,2,1" for 25%/50%/25%' },
-    minPaneSize: { type: 'number', description: 'Minimum pane size in characters (default: 3)' },
     dividerTitles: { type: 'string', description: 'Comma-separated divider titles, e.g. "Nav,Info"' },
     onResize: { type: 'handler', description: 'Called when panes are resized. Event: { sizes: number[], dividerIndex, targetId }' },
   },
@@ -458,9 +472,6 @@ registerComponentSchema('split-pane', splitPaneSchema);
 registerComponent({
   type: 'split-pane',
   componentClass: SplitPaneElement,
-  defaultProps: {
-    direction: 'horizontal',
-    minPaneSize: 3,
-  },
+  defaultProps: {},
   validate: (props) => SplitPaneElement.validate(props as any),
 });

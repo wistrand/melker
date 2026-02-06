@@ -16,22 +16,22 @@ The `<split-pane>` component splits its children horizontally (default) or verti
 
 | Prop            | Type               | Default        | Description                                         |
 |-----------------|--------------------|----------------|-----------------------------------------------------|
-| `direction`     | `string`           | `'horizontal'` | `'horizontal'` (left/right) or `'vertical'` (top/bottom) |
 | `sizes`         | `string`           | equal          | Comma-separated proportions, e.g. `"1,2,1"`         |
-| `minPaneSize`   | `number`           | `3`            | Minimum pane size in characters                      |
 | `dividerTitles` | `string`           | -              | Comma-separated divider titles, e.g. `"Nav,Info"`   |
 | `onResize`      | `handler`          | -              | Fired on resize: `{ sizes, dividerIndex, targetId }` |
 
 ## Styles
 
-These style properties are set on the `<split-pane>` element and control divider appearance:
+These style properties are set on the `<split-pane>` element:
 
-| Style            | Type          | Default  | Description                                    |
-|------------------|---------------|----------|------------------------------------------------|
-| `divider-style`  | `BorderStyle` | `'thin'` | Line style: `thin`, `thick`, `double`, `dashed`, etc. |
-| `divider-color`  | `ColorInput`  | inherited | Divider foreground color                       |
+| Style            | Type          | Default        | Description                                    |
+|------------------|---------------|----------------|------------------------------------------------|
+| `direction`      | `string`      | `'horizontal'` | Split direction: `horizontal` (left/right) or `vertical` (top/bottom) |
+| `min-pane-size`  | `number`      | `3`            | Minimum pane size in characters                |
+| `divider-style`  | `BorderStyle` | `'thin'`       | Line style: `thin`, `thick`, `double`, `dashed`, etc. |
+| `divider-color`  | `ColorInput`  | inherited      | Divider foreground color                       |
 
-Both are defined on the `Style` interface in [src/types.ts](../src/types.ts), so they work in inline styles and CSS classes.
+All are defined on the `Style` interface in [src/types.ts](../src/types.ts), so they work in inline styles, CSS classes, and `@media` queries.
 
 ## Usage
 
@@ -42,22 +42,34 @@ Both are defined on the `Style` interface in [src/types.ts](../src/types.ts), so
   <container><text>Right</text></container>
 </split-pane>
 
-<!-- Vertical split (top/bottom), custom proportions -->
-<split-pane direction="vertical" sizes="1,2,1" style="width: fill; height: fill;">
+<!-- Vertical split (top/bottom) via style, custom proportions -->
+<split-pane sizes="1,2,1" style="width: fill; height: fill; direction: vertical;">
   <container><text>Top (25%)</text></container>
   <container><text>Middle (50%)</text></container>
   <container><text>Bottom (25%)</text></container>
 </split-pane>
 
-<!-- Styled dividers with color, style, and titles -->
+<!-- Styled dividers with color, style, titles, and min-pane-size -->
 <split-pane
   sizes="1,2,1"
   dividerTitles="A,B"
-  style="width: fill; height: fill; divider-style: thick; divider-color: cyan;"
+  style="width: fill; height: fill; divider-style: thick; divider-color: cyan; min-pane-size: 5;"
 >
   <container><text>Left</text></container>
   <container><text>Center</text></container>
   <container><text>Right</text></container>
+</split-pane>
+
+<!-- Media query: flip direction on narrow terminals -->
+<style>
+  .responsive-split { direction: horizontal; }
+  @media (max-width: 60) {
+    .responsive-split { direction: vertical; }
+  }
+</style>
+<split-pane class="responsive-split" style="width: fill; height: fill;">
+  <container><text>Pane A</text></container>
+  <container><text>Pane B</text></container>
 </split-pane>
 ```
 

@@ -25,8 +25,9 @@ Deno.test('SplitPaneElement can be instantiated with defaults', () => {
 
   assertExists(pane);
   assertEquals(pane.type, 'split-pane');
-  assertEquals(pane.props.direction, 'horizontal');
-  assertEquals(pane.props.minPaneSize, 3);
+  // Accessors provide defaults when style properties are absent
+  assertEquals(pane._getDirection(), 'horizontal');
+  assertEquals(pane._getMinPaneSize(), 3);
 });
 
 Deno.test('SplitPaneElement creates N-1 dividers for N children', () => {
@@ -58,18 +59,18 @@ Deno.test('SplitPaneElement with 0 children creates empty', () => {
   assertEquals(pane.children?.length, 0);
 });
 
-Deno.test('SplitPaneElement sets flex direction based on direction prop', () => {
-  const hPane = new SplitPaneElement({ direction: 'horizontal' }, [
+Deno.test('SplitPaneElement sets direction via style accessor', () => {
+  const hPane = new SplitPaneElement({ style: { direction: 'horizontal' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
-  assertEquals(hPane.props.style?.flexDirection, 'row');
+  assertEquals(hPane._getDirection(), 'horizontal');
 
-  const vPane = new SplitPaneElement({ direction: 'vertical' }, [
+  const vPane = new SplitPaneElement({ style: { direction: 'vertical' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
-  assertEquals(vPane.props.style?.flexDirection, 'column');
+  assertEquals(vPane._getDirection(), 'vertical');
 });
 
 Deno.test('SplitPaneElement defaults to display flex', () => {
@@ -78,6 +79,51 @@ Deno.test('SplitPaneElement defaults to display flex', () => {
     new ContainerElement(),
   ]);
   assertEquals(pane.props.style?.display, 'flex');
+});
+
+// --- Direction via style ---
+
+Deno.test('SplitPaneElement direction via style is readable by accessor', () => {
+  const pane = new SplitPaneElement(
+    { style: { direction: 'vertical' } },
+    [new ContainerElement(), new ContainerElement()],
+  );
+  assertEquals(pane.props.style?.direction, 'vertical');
+  assertEquals(pane._getDirection(), 'vertical');
+});
+
+Deno.test('SplitPaneElement defaults direction to horizontal when not set', () => {
+  const pane = new SplitPaneElement(
+    {},
+    [new ContainerElement(), new ContainerElement()],
+  );
+  assertEquals(pane._getDirection(), 'horizontal');
+});
+
+// --- minPaneSize via style ---
+
+Deno.test('SplitPaneElement minPaneSize via style', () => {
+  const pane = new SplitPaneElement(
+    { style: { minPaneSize: 10 } },
+    [new ContainerElement(), new ContainerElement()],
+  );
+  assertEquals(pane._getMinPaneSize(), 10);
+});
+
+Deno.test('SplitPaneElement defaults minPaneSize to 3 via accessor', () => {
+  const pane = new SplitPaneElement(
+    {},
+    [new ContainerElement(), new ContainerElement()],
+  );
+  assertEquals(pane._getMinPaneSize(), 3);
+});
+
+Deno.test('SplitPaneElement default minPaneSize is 3', () => {
+  const pane = new SplitPaneElement({}, [
+    new ContainerElement(),
+    new ContainerElement(),
+  ]);
+  assertEquals(pane._getMinPaneSize(), 3);
 });
 
 // --- Sizes parsing ---
@@ -151,7 +197,7 @@ Deno.test('SplitPaneElement accepts array sizes from programmatic API', () => {
 // --- Divider flex properties ---
 
 Deno.test('Horizontal dividers have width: 1, no flex grow', () => {
-  const pane = new SplitPaneElement({ direction: 'horizontal' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'horizontal' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -163,7 +209,7 @@ Deno.test('Horizontal dividers have width: 1, no flex grow', () => {
 });
 
 Deno.test('Vertical dividers have height: 1, no flex grow', () => {
-  const pane = new SplitPaneElement({ direction: 'vertical' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'vertical' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -247,7 +293,7 @@ Deno.test('SplitPaneDivider implements Renderable', () => {
 // --- Intrinsic size ---
 
 Deno.test('SplitPaneElement intrinsicSize for horizontal', () => {
-  const pane = new SplitPaneElement({ direction: 'horizontal', minPaneSize: 5 }, [
+  const pane = new SplitPaneElement({ style: { direction: 'horizontal', minPaneSize: 5 } }, [
     new ContainerElement(),
     new ContainerElement(),
     new ContainerElement(),
@@ -260,7 +306,7 @@ Deno.test('SplitPaneElement intrinsicSize for horizontal', () => {
 });
 
 Deno.test('SplitPaneElement intrinsicSize for vertical', () => {
-  const pane = new SplitPaneElement({ direction: 'vertical', minPaneSize: 4 }, [
+  const pane = new SplitPaneElement({ style: { direction: 'vertical', minPaneSize: 4 } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -280,7 +326,7 @@ Deno.test('SplitPaneElement intrinsicSize for 0 children', () => {
 });
 
 Deno.test('SplitPaneDivider intrinsicSize horizontal', () => {
-  const pane = new SplitPaneElement({ direction: 'horizontal' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'horizontal' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -293,7 +339,7 @@ Deno.test('SplitPaneDivider intrinsicSize horizontal', () => {
 });
 
 Deno.test('SplitPaneDivider intrinsicSize vertical', () => {
-  const pane = new SplitPaneElement({ direction: 'vertical' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'vertical' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -307,7 +353,7 @@ Deno.test('SplitPaneDivider intrinsicSize vertical', () => {
 // --- Keyboard handling ---
 
 Deno.test('SplitPaneDivider handles ArrowLeft/Right for horizontal', () => {
-  const pane = new SplitPaneElement({ direction: 'horizontal' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'horizontal' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -327,7 +373,7 @@ Deno.test('SplitPaneDivider handles ArrowLeft/Right for horizontal', () => {
 });
 
 Deno.test('SplitPaneDivider handles ArrowUp/Down for vertical', () => {
-  const pane = new SplitPaneElement({ direction: 'vertical' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'vertical' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -344,7 +390,7 @@ Deno.test('SplitPaneDivider handles ArrowUp/Down for vertical', () => {
 });
 
 Deno.test('SplitPaneDivider ignores irrelevant keys', () => {
-  const pane = new SplitPaneElement({ direction: 'horizontal' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'horizontal' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -356,7 +402,7 @@ Deno.test('SplitPaneDivider ignores irrelevant keys', () => {
 });
 
 Deno.test('Vertical divider ignores horizontal keys', () => {
-  const pane = new SplitPaneElement({ direction: 'vertical' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'vertical' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -368,8 +414,8 @@ Deno.test('Vertical divider ignores horizontal keys', () => {
 
 // --- Keyboard enforces minPaneSize ---
 
-Deno.test('Keyboard move respects minPaneSize', () => {
-  const pane = new SplitPaneElement({ direction: 'horizontal', minPaneSize: 10 }, [
+Deno.test('Keyboard move respects minPaneSize from style', () => {
+  const pane = new SplitPaneElement({ style: { direction: 'horizontal', minPaneSize: 10 } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -411,7 +457,7 @@ Deno.test('SplitPaneDivider getDragZone returns divider when in bounds', () => {
 });
 
 Deno.test('SplitPaneDivider drag updates pane sizes', () => {
-  const pane = new SplitPaneElement({ direction: 'horizontal' }, [
+  const pane = new SplitPaneElement({ style: { direction: 'horizontal' } }, [
     new ContainerElement(),
     new ContainerElement(),
   ]);
@@ -433,7 +479,7 @@ Deno.test('onResize fires on keyboard move', () => {
 
   const pane = new SplitPaneElement(
     {
-      direction: 'horizontal',
+      style: { direction: 'horizontal' },
       onResize: (event) => { resizeEvent = event; },
     },
     [new ContainerElement(), new ContainerElement()],
@@ -456,7 +502,7 @@ Deno.test('onResize fires on drag', () => {
 
   const pane = new SplitPaneElement(
     {
-      direction: 'horizontal',
+      style: { direction: 'horizontal' },
       onResize: (event) => { resizeEvent = event; },
     },
     [new ContainerElement(), new ContainerElement()],
@@ -475,15 +521,18 @@ Deno.test('onResize fires on drag', () => {
 
 Deno.test('SplitPaneElement.validate accepts valid props', () => {
   assertEquals(SplitPaneElement.validate({}), true);
-  assertEquals(SplitPaneElement.validate({ direction: 'horizontal' }), true);
-  assertEquals(SplitPaneElement.validate({ direction: 'vertical' }), true);
-  assertEquals(SplitPaneElement.validate({ minPaneSize: 5 }), true);
 });
 
-Deno.test('SplitPaneElement.validate rejects invalid props', () => {
-  assertEquals(SplitPaneElement.validate({ direction: 'diagonal' as any }), false);
-  assertEquals(SplitPaneElement.validate({ minPaneSize: 0 }), false);
-  assertEquals(SplitPaneElement.validate({ minPaneSize: -1 }), false);
+Deno.test('SplitPaneElement.validate accepts valid style values', () => {
+  assertEquals(SplitPaneElement.validate({ style: { direction: 'horizontal' } }), true);
+  assertEquals(SplitPaneElement.validate({ style: { direction: 'vertical' } }), true);
+  assertEquals(SplitPaneElement.validate({ style: { minPaneSize: 5 } }), true);
+});
+
+Deno.test('SplitPaneElement.validate rejects invalid style values', () => {
+  assertEquals(SplitPaneElement.validate({ style: { direction: 'diagonal' as any } }), false);
+  assertEquals(SplitPaneElement.validate({ style: { minPaneSize: 0 } }), false);
+  assertEquals(SplitPaneElement.validate({ style: { minPaneSize: -1 } }), false);
 });
 
 // --- Rendering ---
@@ -494,7 +543,7 @@ Deno.test('SplitPaneElement renders horizontal split with divider', () => {
   const left = new ContainerElement({}, [new TextElement({ text: 'L' })]);
   const right = new ContainerElement({}, [new TextElement({ text: 'R' })]);
   const pane = new SplitPaneElement(
-    { direction: 'horizontal', style: { width: 21, height: 3 } },
+    { style: { direction: 'horizontal', width: 21, height: 3 } },
     [left, right],
   );
 
@@ -504,7 +553,7 @@ Deno.test('SplitPaneElement renders horizontal split with divider', () => {
   // There should be a vertical divider character somewhere in the middle
   let foundDivider = false;
   for (const line of lines) {
-    if (line.includes('│') || line.includes('|')) {
+    if (line.includes('\u2502') || line.includes('|')) {
       foundDivider = true;
       break;
     }
@@ -518,7 +567,7 @@ Deno.test('SplitPaneElement renders vertical split with divider', () => {
   const top = new ContainerElement({}, [new TextElement({ text: 'T' })]);
   const bottom = new ContainerElement({}, [new TextElement({ text: 'B' })]);
   const pane = new SplitPaneElement(
-    { direction: 'vertical', style: { width: 10, height: 7 } },
+    { style: { direction: 'vertical', width: 10, height: 7 } },
     [top, bottom],
   );
 
@@ -528,7 +577,7 @@ Deno.test('SplitPaneElement renders vertical split with divider', () => {
   // There should be a horizontal divider line
   let foundDivider = false;
   for (const line of lines) {
-    if (line.includes('─') || line.includes('-')) {
+    if (line.includes('\u2500') || line.includes('-')) {
       foundDivider = true;
       break;
     }

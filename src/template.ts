@@ -779,7 +779,9 @@ function convertToElement(node: ParsedNode, context: TemplateContext): Element {
       const textContent = children
         .filter(child => child.type === 'text')
         .map(child => child.props.text)
-        .join('');
+        .join('')
+        .replace(/\s+/g, ' ')
+        .trim();
 
       return createElement('text', {
         ...props,

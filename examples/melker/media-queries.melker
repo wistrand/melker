@@ -1,0 +1,153 @@
+<melker>
+  <style>
+    .root {
+      width: fill;
+      height: fill;
+      border: thin;
+      padding: 1;
+      flex-direction: column;
+    }
+
+    .header {
+      height: 3;
+      font-weight: bold;
+      text-align: center;
+      border-bottom: thin;
+      padding: 0 1;
+    }
+
+    .body {
+      flex: 1;
+      flex-direction: row;
+    }
+
+    .sidebar {
+      width: 28;
+      border-right: thin;
+      padding: 1;
+      flex-direction: column;
+    }
+
+    .sidebar .nav-item {
+      height: 1;
+      padding: 0 1;
+    }
+
+    .main {
+      flex: 1;
+      padding: 1;
+      flex-direction: column;
+    }
+
+    .footer {
+      height: 3;
+      border-top: thin;
+      padding: 0 1;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+
+    .status {
+      dim: true;
+    }
+
+    /* Medium terminals: narrow sidebar */
+    @media (max-width: 90) {
+      .sidebar {
+        width: 20;
+      }
+    }
+
+    /* Small terminals: hide sidebar entirely */
+    @media (max-width: 60) {
+      .sidebar {
+        display: none;
+      }
+    }
+
+    /* Very short terminals: hide footer */
+    @media (max-height: 16) {
+      .footer {
+        display: none;
+      }
+    }
+
+    /* Wide terminals: add more padding */
+    @media (min-width: 120) {
+      .main {
+        padding: 2;
+      }
+      .sidebar {
+        width: 32;
+        padding: 2;
+      }
+    }
+  </style>
+
+  <container class="root">
+    <container class="header">
+      <text>Responsive Dashboard</text>
+    </container>
+
+    <container class="body">
+      <container class="sidebar">
+        <text style="font-weight: bold; margin-bottom: 1;">Navigation</text>
+        <text class="nav-item">Overview</text>
+        <text class="nav-item">Reports</text>
+        <text class="nav-item">Settings</text>
+        <text class="nav-item">Help</text>
+      </container>
+
+      <container class="main">
+        <text style="font-weight: bold; margin-bottom: 1;">Main Content</text>
+        <text style="text-wrap: wrap; dim: true; margin-bottom: 1;">
+          Resize your terminal to see media queries in action.
+          The sidebar hides below 60 columns, narrows below 90,
+          and widens above 120. The footer hides below 16 rows.
+        </text>
+        <text id="size"></text>
+        <text id="active"></text>
+      </container>
+    </container>
+
+    <container class="footer">
+      <text class="status">Tab to navigate</text>
+      <text class="status" id="footerSize"></text>
+    </container>
+  </container>
+
+  <script>
+    function describeLayout() {
+      const w = $melker.engine.terminalSize.width;
+      const h = $melker.engine.terminalSize.height;
+
+      const rules = [];
+      if (w >= 120) rules.push('wide padding');
+      else if (w > 90) rules.push('default layout');
+      else if (w > 60) rules.push('narrow sidebar');
+      else rules.push('sidebar hidden');
+      if (h <= 16) rules.push('footer hidden');
+
+      return { w, h, rules };
+    }
+
+    function updateDisplay() {
+      const { w, h, rules } = describeLayout();
+
+      const sizeEl = $melker.getElementById('size');
+      if (sizeEl) sizeEl.setValue('Terminal: ' + w + 'x' + h);
+
+      const activeEl = $melker.getElementById('active');
+      if (activeEl) activeEl.setValue('Active: ' + rules.join(', '));
+
+      const footerEl = $melker.getElementById('footerSize');
+      if (footerEl) footerEl.setValue(w + 'x' + h);
+    }
+
+    updateDisplay();
+
+    export function onResize() {
+      updateDisplay();
+    }
+  </script>
+</melker>

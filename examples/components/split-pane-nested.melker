@@ -27,8 +27,8 @@
     }
   </style>
 
-  <!-- Outer: vertical split (header / main / footer) -->
-  <split-pane direction="vertical" sizes="1,6,1" style="width: fill; height: fill;">
+  <!-- Outer: vertical split (header / main / footer) — direction via style -->
+  <split-pane sizes="1,6,1" style="width: fill; height: fill; direction: vertical;">
 
     <!-- Header -->
     <container class="header" style="border-bottom: thin;">
@@ -50,8 +50,8 @@
         <text class="sidebar-item">examples/</text>
       </container>
 
-      <!-- Content area: vertical split (editor / terminal) -->
-      <split-pane direction="vertical" sizes="3,1" style="width: fill; height: fill;">
+      <!-- Content area: vertical split (editor / terminal) — direction via style -->
+      <split-pane sizes="3,1" style="width: fill; height: fill; direction: vertical;">
 
         <!-- Editor -->
         <container class="pane">

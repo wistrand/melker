@@ -514,7 +514,11 @@ export async function runMelkerFile(
     }
 
     if (parseResult.stylesheet) {
-      parseResult.stylesheet.applyTo(parseResult.element);
+      const size = terminalSize();
+      parseResult.stylesheet.applyTo(parseResult.element, {
+        terminalWidth: size.width,
+        terminalHeight: size.height,
+      });
     }
 
     // baseUrl already calculated above when creating engine
@@ -618,7 +622,17 @@ export async function runMelkerFile(
       oauth: oauth,
       oauthConfig: oauthConfig,
       createElement: (type: string, props: Record<string, any> = {}, ...children: any[]) => {
-        return createEl(type, props, ...children);
+        const element = createEl(type, props, ...children);
+        // Apply stylesheets to dynamically created elements with current terminal size
+        const doc = engine?.document;
+        if (doc && doc.stylesheets.length > 0) {
+          const size = engine.terminalSize;
+          doc.applyStylesToElement(element, {
+            terminalWidth: size.width,
+            terminalHeight: size.height,
+          });
+        }
+        return element;
       },
       melkerImport: async (specifier: string) => {
         const resolvedUrl = new URL(specifier, baseUrl).href;
@@ -777,6 +791,10 @@ export async function runMelkerFile(
     await wireBundlerHandlers(ui, melkerRegistry, context, logger, handlerCodeMap, errorTranslator);
 
     engine.updateUI(ui);
+    // Register stylesheet on document so resize handler can re-apply media rules
+    if (parseResult.stylesheet) {
+      engine.document.addStylesheet(parseResult.stylesheet);
+    }
     (engine as any).forceRender();
     (engine as any)._triggerMountHandlers();
     await callReady(melkerRegistry);

@@ -36,10 +36,10 @@
       </split-pane>
     </container>
 
-    <!-- Vertical 2-pane -->
+    <!-- Vertical 2-pane (direction set via style) -->
     <container style="height: 10; border: thin;">
-      <text style="font-weight: bold;">Vertical Split</text>
-      <split-pane direction="vertical" style="width: fill; height: fill;" onResize="$app.onResize2(event)">
+      <text style="font-weight: bold;">Vertical Split (style-based direction)</text>
+      <split-pane style="width: fill; height: fill; direction: vertical;" onResize="$app.onResize2(event)">
         <container class="pane">
           <text>Top Pane</text>
         </container>
@@ -87,14 +87,13 @@
       </split-pane>
     </container>
 
-    <!-- Vertical with titled dividers -->
+    <!-- Vertical with titled dividers (direction + min-pane-size via style) -->
     <container style="height: 10; border: thin;">
-      <text style="font-weight: bold;">Vertical with Titled Divider</text>
+      <text style="font-weight: bold;">Vertical with Titled Divider (style-based)</text>
       <split-pane
-        direction="vertical"
         sizes="1,2"
         dividerTitles="Content"
-        style="width: fill; height: fill; divider-style: double; divider-color: yellow;"
+        style="width: fill; height: fill; direction: vertical; min-pane-size: 2; divider-style: double; divider-color: yellow;"
       >
         <container class="pane">
           <text>Header Area</text>

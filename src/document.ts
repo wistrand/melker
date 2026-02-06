@@ -2,7 +2,7 @@
 
 import { Element } from './types.ts';
 import { traverseElements } from './element.ts';
-import { selectorStringMatches, Stylesheet, applyStylesheet } from './stylesheet.ts';
+import { selectorStringMatches, Stylesheet, applyStylesheet, type StyleContext } from './stylesheet.ts';
 import { getLogger } from './logging.ts';
 
 const logger = getLogger('Document');
@@ -305,9 +305,9 @@ export class Document {
   /**
    * Apply all stylesheets to an element and its children
    */
-  applyStylesToElement(element: Element): void {
+  applyStylesToElement(element: Element, ctx?: StyleContext): void {
     for (const stylesheet of this._stylesheets) {
-      applyStylesheet(element, stylesheet);
+      applyStylesheet(element, stylesheet, [], ctx);
     }
   }
 

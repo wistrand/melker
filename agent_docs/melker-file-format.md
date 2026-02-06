@@ -71,7 +71,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<melker>` | Root wrapper (optional)                                |
 | `<title>`  | Window/terminal title                                  |
 | `<help>`   | Markdown help text (shown in DevTools F12 > Help tab)  |
-| `<style>`  | CSS-like stylesheet rules (selector { props })         |
+| `<style>`  | CSS-like stylesheet rules with `@media` query support  |
 | `<script>` | TypeScript/JavaScript code block                       |
 | `<oauth>`  | OAuth2 PKCE configuration                              |
 | `<policy>` | Permission policy declaration                          |
@@ -308,6 +308,34 @@ The `<style>` tag and `querySelector`/`querySelectorAll` support CSS-like select
 ```
 
 See `examples/basics/css-combinators.melker` for a complete demonstration.
+
+## Media Queries
+
+`@media` rules respond to terminal dimensions, enabling responsive layouts:
+
+```xml
+<style>
+  .sidebar { width: 30; }
+
+  @media (max-width: 80) {
+    .sidebar { width: 20; }
+  }
+
+  @media (max-width: 60) {
+    .sidebar { display: none; }
+  }
+
+  @media (min-height: 30) and (max-width: 80) {
+    .split { direction: vertical; }
+  }
+</style>
+```
+
+Supported conditions: `min-width`, `max-width`, `min-height`, `max-height`. Multiple conditions joined with `and`.
+
+Styles are re-applied on terminal resize. Inline styles (`style="..."`) always take precedence over media query rules.
+
+See [architecture-media-queries.md](architecture-media-queries.md) for full details and `examples/components/split-pane-responsive.melker` for a working example.
 
 ## Styling
 

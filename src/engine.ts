@@ -18,6 +18,8 @@ import { RenderingEngine } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
 import { Element, TextSelection, isScrollingEnabled } from './types.ts';
+import { applyStylesheet } from './stylesheet.ts';
+import type { StyleContext } from './stylesheet.ts';
 import {
   EventManager,
   type MelkerEvent,
@@ -508,6 +510,19 @@ export class MelkerEngine {
             this._buffer.resize(newSize.width, newSize.height);
             this._rootElement.props.width = newSize.width;
             this._rootElement.props.height = newSize.height;
+            // Re-apply stylesheets with media rules for new terminal size
+            const stylesheets = this._document.stylesheets;
+            if (stylesheets.length > 0) {
+              const ctx: StyleContext = {
+                terminalWidth: newSize.width,
+                terminalHeight: newSize.height,
+              };
+              for (const stylesheet of stylesheets) {
+                if (stylesheet.hasMediaRules) {
+                  applyStylesheet(this._rootElement, stylesheet, [], ctx);
+                }
+              }
+            }
             this._document.dispatchEvent({
               type: 'resize' as const,
               previousSize: _previousSize,

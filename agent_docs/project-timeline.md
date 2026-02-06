@@ -141,7 +141,8 @@ So constructed.
 - Flex-wrap support for responsive layouts
 - Major layout engine improvements with 1000+ new test lines
 - TUI comparison document overhaul (detailed feature matrices)
-- Documentation cleanup (dx-footguns rewrite, media queries plan)
+- Documentation cleanup (dx-footguns rewrite)
+- `@media` queries for terminal-size-responsive stylesheets
 - Spinner component (8 animation styles: dots, line, arc, bounce, etc.)
 - Toast notification system (`$melker.toast.*` API)
 - PlantUML implementation plan

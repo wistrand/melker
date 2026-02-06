@@ -1311,6 +1311,11 @@ export class LayoutEngine {
       ...(element.props && element.props.style),  // Stylesheet + inline styles
     };
 
+    // Derive flexDirection from direction style property (used by split-pane)
+    if (mergedStyle.direction) {
+      mergedStyle.flexDirection = mergedStyle.direction === 'horizontal' ? 'row' : 'column';
+    }
+
     // Normalize padding and margin: consolidate individual properties into BoxSpacing
     return this._normalizeBoxSpacing(mergedStyle);
   }
@@ -1477,6 +1482,9 @@ export class LayoutEngine {
     // Support all layout properties in style
     if (style.display !== undefined) result.display = style.display;
     if (style.flexDirection !== undefined) result.flexDirection = style.flexDirection;
+    // Derive flexDirection from direction style property (used by split-pane)
+    if (style.direction === 'horizontal') result.flexDirection = 'row';
+    else if (style.direction === 'vertical') result.flexDirection = 'column';
     if (style.justifyContent !== undefined) result.justifyContent = style.justifyContent;
     if (style.alignItems !== undefined) result.alignItems = style.alignItems;
     if (style.alignContent !== undefined) result.alignContent = style.alignContent;

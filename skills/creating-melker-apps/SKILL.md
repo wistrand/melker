@@ -191,7 +191,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
 | `<graph>` | type, src, text, style | Mermaid/JSON diagrams (flowchart, sequence, class) |
 | `<connector>` | from, to, arrow, label, routing | Draw lines between elements |
-| `<split-pane>` | direction, sizes, minPaneSize, dividerTitles, onResize | Resizable split panels with draggable dividers |
+| `<split-pane>` | sizes, dividerTitles, onResize | Resizable split panels with draggable dividers. `direction` and `min-pane-size` are style properties |
 
 For complete component reference, see [COMPONENTS.md](references/COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md) and [melker.sh/tutorial.html](https://melker.sh/tutorial.html).
 

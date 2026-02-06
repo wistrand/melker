@@ -12,7 +12,9 @@ import {
   selectorStringMatches,
   Stylesheet,
   applyStylesheet,
+  mediaConditionMatches,
 } from '../mod.ts';
+import type { StyleContext } from '../mod.ts';
 
 // ---------------------------------------------------------------------------
 // Helper: create an element with classList already set (simulates class="...")
@@ -387,6 +389,336 @@ Deno.test('parseStyleBlock - empty rule body skipped', () => {
 });
 
 // ===========================================================================
+// 5b. parseStyleBlock — @media blocks (Phase 2: brace-balancing tokenizer)
+// ===========================================================================
+
+Deno.test('parseStyleBlock - @media basic nested rule', () => {
+  const items = parseStyleBlock(`
+    @media (max-width: 80) {
+      .sidebar { width: 20; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].style.width, 20);
+  assert(items[0].mediaCondition !== undefined);
+  assertEquals(items[0].mediaCondition!.maxWidth, 80);
+});
+
+Deno.test('parseStyleBlock - @media with min-width', () => {
+  const items = parseStyleBlock(`
+    @media (min-width: 100) {
+      .sidebar { width: 30; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].mediaCondition!.minWidth, 100);
+});
+
+Deno.test('parseStyleBlock - @media with height conditions', () => {
+  const items = parseStyleBlock(`
+    @media (min-height: 20) {
+      .footer { height: 3; }
+    }
+    @media (max-height: 24) {
+      .footer { height: 1; }
+    }
+  `);
+  assertEquals(items.length, 2);
+  assertEquals(items[0].mediaCondition!.minHeight, 20);
+  assertEquals(items[1].mediaCondition!.maxHeight, 24);
+});
+
+Deno.test('parseStyleBlock - @media with multiple conditions (and)', () => {
+  const items = parseStyleBlock(`
+    @media (min-width: 60) and (max-width: 100) {
+      .sidebar { width: 25; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].mediaCondition!.minWidth, 60);
+  assertEquals(items[0].mediaCondition!.maxWidth, 100);
+});
+
+Deno.test('parseStyleBlock - @media multiple rules inside one block', () => {
+  const items = parseStyleBlock(`
+    @media (max-width: 80) {
+      .sidebar { width: 20; }
+      .footer { height: 1; }
+    }
+  `);
+  assertEquals(items.length, 2);
+  assertEquals(items[0].style.width, 20);
+  assertEquals(items[0].mediaCondition!.maxWidth, 80);
+  assertEquals(items[1].style.height, 1);
+  assertEquals(items[1].mediaCondition!.maxWidth, 80);
+});
+
+Deno.test('parseStyleBlock - mixed regular and @media rules', () => {
+  const items = parseStyleBlock(`
+    .sidebar { width: 30; border: thin; }
+    @media (max-width: 80) {
+      .sidebar { width: 20; }
+    }
+    .footer { height: 3; }
+  `);
+  assertEquals(items.length, 3);
+  // Regular rule
+  assertEquals(items[0].style.width, 30);
+  assertEquals(items[0].mediaCondition, undefined);
+  // Media rule
+  assertEquals(items[1].style.width, 20);
+  assertEquals(items[1].mediaCondition!.maxWidth, 80);
+  // Regular rule
+  assertEquals(items[2].style.height, 3);
+  assertEquals(items[2].mediaCondition, undefined);
+});
+
+Deno.test('parseStyleBlock - @media empty block', () => {
+  const items = parseStyleBlock(`
+    @media (max-width: 80) { }
+  `);
+  assertEquals(items.length, 0);
+});
+
+Deno.test('parseStyleBlock - @media with empty rule body inside', () => {
+  const items = parseStyleBlock(`
+    @media (max-width: 80) {
+      .sidebar { }
+    }
+  `);
+  assertEquals(items.length, 0);
+});
+
+Deno.test('parseStyleBlock - @media preserves selector types', () => {
+  const items = parseStyleBlock(`
+    @media (max-width: 60) {
+      container > .card text { font-weight: bold; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].selector.segments.length, 3);
+  assertEquals(items[0].selector.segments[1].combinator, 'child');
+  assertEquals(items[0].selector.segments[2].combinator, 'descendant');
+});
+
+Deno.test('parseStyleBlock - multiple @media blocks', () => {
+  const items = parseStyleBlock(`
+    @media (max-width: 80) {
+      .sidebar { width: 20; }
+    }
+    @media (max-width: 60) {
+      .sidebar { display: none; }
+    }
+  `);
+  assertEquals(items.length, 2);
+  assertEquals(items[0].mediaCondition!.maxWidth, 80);
+  assertEquals(items[0].style.width, 20);
+  assertEquals(items[1].mediaCondition!.maxWidth, 60);
+  assertEquals(items[1].style.display, 'none');
+});
+
+Deno.test('parseStyleBlock - @media with comments', () => {
+  const items = parseStyleBlock(`
+    /* hide sidebar on small terminals */
+    @media (max-width: 60) {
+      /* completely hide it */
+      .sidebar { display: none; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].style.display, 'none');
+  assertEquals(items[0].mediaCondition!.maxWidth, 60);
+});
+
+Deno.test('parseStyleBlock - @media invalid condition skipped', () => {
+  const items = parseStyleBlock(`
+    @media (invalid-thing: 80) {
+      .sidebar { width: 20; }
+    }
+    button { border: thin; }
+  `);
+  // Invalid @media rules are skipped, regular rules still parse
+  assertEquals(items.length, 1);
+  assertEquals(items[0].style.border, 'thin');
+});
+
+// ===========================================================================
+// 5c. mediaConditionMatches + StyleContext (Phase 4: conditional evaluation)
+// ===========================================================================
+
+Deno.test('mediaConditionMatches - min-width pass', () => {
+  assert(mediaConditionMatches({ minWidth: 80 }, { terminalWidth: 100, terminalHeight: 24 }));
+});
+
+Deno.test('mediaConditionMatches - min-width fail', () => {
+  assert(!mediaConditionMatches({ minWidth: 80 }, { terminalWidth: 60, terminalHeight: 24 }));
+});
+
+Deno.test('mediaConditionMatches - min-width exact boundary passes', () => {
+  assert(mediaConditionMatches({ minWidth: 80 }, { terminalWidth: 80, terminalHeight: 24 }));
+});
+
+Deno.test('mediaConditionMatches - max-width pass', () => {
+  assert(mediaConditionMatches({ maxWidth: 80 }, { terminalWidth: 60, terminalHeight: 24 }));
+});
+
+Deno.test('mediaConditionMatches - max-width fail', () => {
+  assert(!mediaConditionMatches({ maxWidth: 80 }, { terminalWidth: 100, terminalHeight: 24 }));
+});
+
+Deno.test('mediaConditionMatches - max-width exact boundary passes', () => {
+  assert(mediaConditionMatches({ maxWidth: 80 }, { terminalWidth: 80, terminalHeight: 24 }));
+});
+
+Deno.test('mediaConditionMatches - min-height / max-height', () => {
+  const ctx: StyleContext = { terminalWidth: 80, terminalHeight: 24 };
+  assert(mediaConditionMatches({ minHeight: 20 }, ctx));
+  assert(!mediaConditionMatches({ minHeight: 30 }, ctx));
+  assert(mediaConditionMatches({ maxHeight: 30 }, ctx));
+  assert(!mediaConditionMatches({ maxHeight: 20 }, ctx));
+  assert(mediaConditionMatches({ maxHeight: 24 }, ctx));  // exact boundary
+  assert(mediaConditionMatches({ minHeight: 24 }, ctx));  // exact boundary
+});
+
+Deno.test('mediaConditionMatches - combined min and max width', () => {
+  const cond = { minWidth: 60, maxWidth: 100 };
+  assert(mediaConditionMatches(cond, { terminalWidth: 80, terminalHeight: 24 }));
+  assert(!mediaConditionMatches(cond, { terminalWidth: 50, terminalHeight: 24 }));
+  assert(!mediaConditionMatches(cond, { terminalWidth: 110, terminalHeight: 24 }));
+  assert(mediaConditionMatches(cond, { terminalWidth: 60, terminalHeight: 24 }));
+  assert(mediaConditionMatches(cond, { terminalWidth: 100, terminalHeight: 24 }));
+});
+
+Deno.test('mediaConditionMatches - combined width and height', () => {
+  const cond = { minWidth: 80, maxHeight: 30 };
+  assert(mediaConditionMatches(cond, { terminalWidth: 100, terminalHeight: 24 }));
+  assert(!mediaConditionMatches(cond, { terminalWidth: 60, terminalHeight: 24 }));   // width too small
+  assert(!mediaConditionMatches(cond, { terminalWidth: 100, terminalHeight: 40 }));  // height too big
+});
+
+Deno.test('mediaConditionMatches - empty condition always matches', () => {
+  assert(mediaConditionMatches({}, { terminalWidth: 80, terminalHeight: 24 }));
+});
+
+Deno.test('getMergedStyle - filters by StyleContext', () => {
+  const ss = Stylesheet.fromString(`
+    .sidebar { width: 30; }
+    @media (max-width: 60) {
+      .sidebar { display: none; }
+    }
+  `);
+  const sidebar = el('container', { classes: ['sidebar'] });
+
+  // Wide terminal — media rule should NOT match
+  const wide = ss.getMergedStyle(sidebar, [], { terminalWidth: 100, terminalHeight: 24 });
+  assertEquals(wide.width, 30);
+  assertEquals(wide.display, undefined);
+
+  // Narrow terminal — media rule should match
+  const narrow = ss.getMergedStyle(sidebar, [], { terminalWidth: 50, terminalHeight: 24 });
+  assertEquals(narrow.width, 30);
+  assertEquals(narrow.display, 'none');
+});
+
+Deno.test('getMergedStyle - without StyleContext ignores media rules', () => {
+  const ss = Stylesheet.fromString(`
+    .sidebar { width: 30; }
+    @media (max-width: 60) {
+      .sidebar { display: none; }
+    }
+  `);
+  const sidebar = el('container', { classes: ['sidebar'] });
+  // No context — media rules excluded
+  const merged = ss.getMergedStyle(sidebar);
+  assertEquals(merged.width, 30);
+  assertEquals(merged.display, undefined);
+});
+
+Deno.test('getMergedStyle - media rule overrides regular rule (later wins)', () => {
+  const ss = Stylesheet.fromString(`
+    .sidebar { width: 30; }
+    @media (max-width: 80) {
+      .sidebar { width: 20; }
+    }
+  `);
+  const sidebar = el('container', { classes: ['sidebar'] });
+  const ctx: StyleContext = { terminalWidth: 60, terminalHeight: 24 };
+  const merged = ss.getMergedStyle(sidebar, [], ctx);
+  assertEquals(merged.width, 20);  // media rule is later, overrides
+});
+
+Deno.test('applyStylesheet - with StyleContext applies media rules', () => {
+  const ss = Stylesheet.fromString(`
+    .sidebar { width: 30; border: thin; }
+    @media (max-width: 60) {
+      .sidebar { display: none; }
+    }
+  `);
+  const sidebar = el('container', { classes: ['sidebar'] });
+  const root = el('container', {}, sidebar);
+
+  const ctx: StyleContext = { terminalWidth: 50, terminalHeight: 24 };
+  applyStylesheet(root, ss, [], ctx);
+  assertEquals(sidebar.props.style.width, 30);
+  assertEquals(sidebar.props.style.border, 'thin');
+  assertEquals(sidebar.props.style.display, 'none');
+});
+
+Deno.test('applyStylesheet - re-apply with changed StyleContext', () => {
+  const ss = Stylesheet.fromString(`
+    .sidebar { width: 30; }
+    @media (max-width: 60) {
+      .sidebar { display: none; }
+    }
+  `);
+  const sidebar = el('container', { classes: ['sidebar'], style: { border: 'single' as any } });
+
+  // First apply: wide terminal
+  applyStylesheet(sidebar, ss, [], { terminalWidth: 100, terminalHeight: 24 });
+  assertEquals(sidebar.props.style.width, 30);
+  assertEquals(sidebar.props.style.border, 'single');
+  assertEquals(sidebar.props.style.display, undefined);
+
+  // Re-apply: narrow terminal — media rule activates
+  applyStylesheet(sidebar, ss, [], { terminalWidth: 50, terminalHeight: 24 });
+  assertEquals(sidebar.props.style.width, 30);
+  assertEquals(sidebar.props.style.border, 'single');  // inline preserved
+  assertEquals(sidebar.props.style.display, 'none');    // media rule applied
+
+  // Re-apply: wide again — media rule deactivates
+  applyStylesheet(sidebar, ss, [], { terminalWidth: 100, terminalHeight: 24 });
+  assertEquals(sidebar.props.style.width, 30);
+  assertEquals(sidebar.props.style.border, 'single');   // inline preserved
+  assertEquals(sidebar.props.style.display, undefined);  // media property gone
+});
+
+Deno.test('applyStylesheet - inline beats media rule', () => {
+  const ss = Stylesheet.fromString(`
+    @media (max-width: 60) {
+      .sidebar { display: none; }
+    }
+  `);
+  const sidebar = el('container', { classes: ['sidebar'], style: { display: 'flex' as any } });
+  applyStylesheet(sidebar, ss, [], { terminalWidth: 50, terminalHeight: 24 });
+  assertEquals(sidebar.props.style.display, 'flex');  // inline wins over media rule
+});
+
+Deno.test('Stylesheet.hasMediaRules - false for no media rules', () => {
+  const ss = Stylesheet.fromString('.sidebar { width: 30; }');
+  assertEquals(ss.hasMediaRules, false);
+});
+
+Deno.test('Stylesheet.hasMediaRules - true when media rules exist', () => {
+  const ss = Stylesheet.fromString(`
+    .sidebar { width: 30; }
+    @media (max-width: 60) {
+      .sidebar { display: none; }
+    }
+  `);
+  assertEquals(ss.hasMediaRules, true);
+});
+
+// ===========================================================================
 // 6. Stylesheet class
 // ===========================================================================
 
@@ -599,6 +931,224 @@ Deno.test('compound selector .class1.class2 requires both classes', () => {
   assertEquals(ss.getMergedStyle(one).border, undefined);
   assertEquals(ss.getMergedStyle(neither).border, undefined);
 });
+
+// ===========================================================================
+// 9. Style origin tracking (_inlineStyle / _computedStyle)
+// ===========================================================================
+
+Deno.test('applyStylesheet - captures _inlineStyle on first apply', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  applyStylesheet(btn, ss);
+  assertEquals((btn as any)._inlineStyle, { border: 'single' });
+});
+
+Deno.test('applyStylesheet - _inlineStyle is empty when no inline style', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button');
+  applyStylesheet(btn, ss);
+  assertEquals((btn as any)._inlineStyle, {});
+});
+
+Deno.test('applyStylesheet - _computedStyle matches props.style after apply', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  applyStylesheet(btn, ss);
+  assertEquals((btn as any)._computedStyle, btn.props.style);
+  // Should be a copy, not the same reference
+  assert((btn as any)._computedStyle !== btn.props.style);
+});
+
+Deno.test('applyStylesheet - re-apply preserves inline styles', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.border, 'single');
+  assertEquals(btn.props.style.width, 20);
+
+  // Re-apply same stylesheet
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.border, 'single');  // inline preserved
+  assertEquals(btn.props.style.width, 20);          // stylesheet re-applied
+});
+
+Deno.test('applyStylesheet - re-apply with empty stylesheet clears stylesheet properties', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.width, 20);
+  assertEquals(btn.props.style.border, 'single');
+
+  // Re-apply with empty stylesheet (simulates media query deactivation)
+  const empty = new Stylesheet();
+  applyStylesheet(btn, empty);
+  assertEquals(btn.props.style.border, 'single');   // inline preserved
+  assertEquals(btn.props.style.width, undefined);    // stylesheet property gone
+});
+
+Deno.test('applyStylesheet - inline always beats stylesheet on re-apply', () => {
+  const ss = Stylesheet.fromString('button { width: 20; border: thin; }');
+  const btn = el('button', { style: { width: 50 } });
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.width, 50);    // inline wins
+  assertEquals(btn.props.style.border, 'thin');
+
+  // Re-apply
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.width, 50);    // still inline
+  assertEquals(btn.props.style.border, 'thin');
+});
+
+Deno.test('applyStylesheet - detects script change (spread pattern) on re-apply', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  applyStylesheet(btn, ss);
+
+  // Simulate script: element.props.style = { ...element.props.style, color: 'red' }
+  btn.props.style = { ...btn.props.style, color: 'red' };
+
+  // Re-apply — script change should be preserved
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.border, 'single');  // original inline
+  assertEquals(btn.props.style.color, 'red');       // script addition
+  assertEquals(btn.props.style.width, 20);          // stylesheet
+});
+
+Deno.test('applyStylesheet - detects script replacement (no spread) on re-apply', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  applyStylesheet(btn, ss);
+
+  // Script replaces entire style (no spread)
+  btn.props.style = { color: 'red' };
+
+  // Re-apply — only script's style survives as inline
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.color, 'red');        // script set this
+  assertEquals(btn.props.style.width, 20);           // stylesheet re-applied
+  assertEquals(btn.props.style.border, undefined);   // was inline, script removed it
+});
+
+Deno.test('applyStylesheet - script override of stylesheet property persists', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button');
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.width, 20);
+
+  // Script overrides stylesheet property
+  btn.props.style = { ...btn.props.style, width: 50 };
+
+  // Re-apply — script override should persist (becomes inline)
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.width, 50);  // script override wins
+  assertEquals((btn as any)._inlineStyle.width, 50);
+});
+
+Deno.test('applyStylesheet - multiple re-applies maintain correct state', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+
+  // Apply 1
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style, { width: 20, border: 'single' });
+
+  // Apply 2 (no changes between)
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style, { width: 20, border: 'single' });
+
+  // Script change
+  btn.props.style = { ...btn.props.style, color: 'red' };
+
+  // Apply 3
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style, { width: 20, border: 'single', color: 'red' });
+
+  // Apply 4 (no changes between)
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style, { width: 20, border: 'single', color: 'red' });
+});
+
+Deno.test('applyStylesheet - element with no matching rules preserves inline', () => {
+  const ss = Stylesheet.fromString('text { font-weight: bold; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.border, 'single');
+  assertEquals((btn as any)._inlineStyle, { border: 'single' });
+
+  // Re-apply
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.border, 'single');
+});
+
+Deno.test('applyStylesheet - deep tree re-apply with origin tracking', () => {
+  const ss = Stylesheet.fromString(`
+    .sidebar { width: 30; }
+    .sidebar button { height: 3; }
+  `);
+  const btn = el('button', { style: { border: 'thin' as any } });
+  const sidebar = el('container', { classes: ['sidebar'] }, btn);
+  const root = el('container', {}, sidebar);
+
+  // First apply
+  applyStylesheet(root, ss);
+  assertEquals(sidebar.props.style.width, 30);
+  assertEquals(btn.props.style.height, 3);
+  assertEquals(btn.props.style.border, 'thin');
+
+  // Script changes button
+  btn.props.style = { ...btn.props.style, color: 'red' };
+
+  // Re-apply
+  applyStylesheet(root, ss);
+  assertEquals(sidebar.props.style.width, 30);       // stylesheet
+  assertEquals(btn.props.style.height, 3);            // stylesheet
+  assertEquals(btn.props.style.border, 'thin');       // original inline
+  assertEquals(btn.props.style.color, 'red');         // script addition
+});
+
+Deno.test('applyStylesheet - re-apply with changed stylesheet rules', () => {
+  const ss1 = Stylesheet.fromString('button { width: 20; height: 3; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  applyStylesheet(btn, ss1);
+  assertEquals(btn.props.style, { width: 20, height: 3, border: 'single' });
+
+  // Re-apply with different stylesheet (simulates different media rules matching)
+  const ss2 = Stylesheet.fromString('button { width: 10; }');
+  applyStylesheet(btn, ss2);
+  assertEquals(btn.props.style.width, 10);            // new stylesheet value
+  assertEquals(btn.props.style.height, undefined);    // no longer in stylesheet
+  assertEquals(btn.props.style.border, 'single');     // inline preserved
+});
+
+Deno.test('applyStylesheet - Stylesheet.applyTo preserves origin tracking', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any } });
+  ss.applyTo(btn);
+  assertEquals((btn as any)._inlineStyle, { border: 'single' });
+  assertEquals(btn.props.style.width, 20);
+  assertEquals(btn.props.style.border, 'single');
+});
+
+Deno.test('applyStylesheet - script removes inline property', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { style: { border: 'single' as any, height: 5 } });
+  applyStylesheet(btn, ss);
+  assertEquals((btn as any)._inlineStyle, { border: 'single', height: 5 });
+
+  // Script removes height by not including it
+  btn.props.style = { width: btn.props.style.width, border: btn.props.style.border };
+
+  // Re-apply
+  applyStylesheet(btn, ss);
+  assertEquals(btn.props.style.height, undefined);    // script removed it
+  assertEquals(btn.props.style.border, 'single');     // kept
+  assertEquals(btn.props.style.width, 20);            // stylesheet
+  assertEquals((btn as any)._inlineStyle.height, undefined);  // removed from inline
+});
+
+// ===========================================================================
+// 10. Edge cases and combined scenarios
+// ===========================================================================
 
 Deno.test('real-world dashboard layout', () => {
   const ss = Stylesheet.fromString(`

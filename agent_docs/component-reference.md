@@ -985,10 +985,9 @@ The `<split-pane>` component splits its children horizontally (default) or verti
 
 <!-- Vertical split, custom proportions, styled dividers -->
 <split-pane
-  direction="vertical"
   sizes="1,2,1"
   dividerTitles="Header,Footer"
-  style="width: fill; height: fill; divider-style: thick; divider-color: cyan;"
+  style="width: fill; height: fill; direction: vertical; divider-style: thick; divider-color: cyan;"
 >
   <container><text>Top (25%)</text></container>
   <container><text>Middle (50%)</text></container>
@@ -1000,18 +999,18 @@ The `<split-pane>` component splits its children horizontally (default) or verti
 
 | Prop            | Type     | Default        | Description                                              |
 |-----------------|----------|----------------|----------------------------------------------------------|
-| `direction`     | `string` | `'horizontal'` | `'horizontal'` (left/right) or `'vertical'` (top/bottom) |
 | `sizes`         | `string` | equal          | Comma-separated proportions, e.g. `"1,2,1"`              |
-| `minPaneSize`   | `number` | `3`            | Minimum pane size in characters                           |
 | `dividerTitles` | `string` | -              | Comma-separated divider titles, e.g. `"Nav,Info"`        |
 | `onResize`      | handler  | -              | Fired on resize: `{ sizes, dividerIndex, targetId }`     |
 
 ### Styles
 
-| Style           | Type          | Default    | Description                                            |
-|-----------------|---------------|------------|--------------------------------------------------------|
-| `divider-style` | `BorderStyle` | `'thin'`   | Line style: `thin`, `thick`, `double`, `dashed`, etc.  |
-| `divider-color` | `ColorInput`  | inherited  | Divider foreground color                               |
+| Style            | Type          | Default        | Description                                            |
+|------------------|---------------|----------------|--------------------------------------------------------|
+| `direction`      | `string`      | `'horizontal'` | `'horizontal'` (left/right) or `'vertical'` (top/bottom) |
+| `min-pane-size`  | `number`      | `3`            | Minimum pane size in characters                        |
+| `divider-style`  | `BorderStyle` | `'thin'`       | Line style: `thin`, `thick`, `double`, `dashed`, etc.  |
+| `divider-color`  | `ColorInput`  | inherited      | Divider foreground color                               |
 
 ### Interaction
 

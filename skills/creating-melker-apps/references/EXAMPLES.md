@@ -545,7 +545,7 @@
   </style>
 
   <!-- Outer: vertical split (header / main / footer) -->
-  <split-pane direction="vertical" sizes="1,6,1" style="width: fill; height: fill;">
+  <split-pane sizes="1,6,1" style="width: fill; height: fill; direction: vertical;">
 
     <!-- Header -->
     <container class="pane" style="border-bottom: thin;">

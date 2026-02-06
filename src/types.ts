@@ -145,6 +145,10 @@ export interface Style extends Record<string, any> {
   cellWidth?: number;
   cellHeight?: number;
 
+  // Split-pane style properties
+  direction?: 'horizontal' | 'vertical';
+  minPaneSize?: number;
+
   // Allow any additional style properties for flexibility
   [key: string]: any;
 }
@@ -224,6 +228,13 @@ export abstract class Element {
   props: Record<string, any>;
   children?: Element[];
   protected _bounds: Bounds | null = null;
+
+  // Style origin tracking for media query re-application.
+  // _inlineStyle: ground truth from markup style="..." or script .props.style = {...}
+  // _computedStyle: last result of applyStylesheet merge (for diffing script changes)
+  // Both undefined until first applyStylesheet call.
+  _inlineStyle?: Record<string, any>;
+  _computedStyle?: Record<string, any>;
 
   constructor(type: string, props: Record<string, any> = {}, children?: Element[]) {
     this.type = type;

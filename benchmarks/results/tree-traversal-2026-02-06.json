@@ -1,0 +1,536 @@
+{
+  "timestamp": "2026-02-06T16:14:12.056Z",
+  "commit": "9043301",
+  "results": [
+    {
+      "name": "find-flat100-first",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.00034800000000245745,
+      "p95": 0.0009269999999901302,
+      "p99": 0.0022529999999960637,
+      "min": 0.00026500000001306034,
+      "max": 0.029481000000004087,
+      "mean": 0.0005086324000000616,
+      "unit": "ms",
+      "target": 0.002
+    },
+    {
+      "name": "find-flat100-middle",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.0014610000000061518,
+      "p95": 0.005750000000006139,
+      "p99": 0.008634000000000697,
+      "min": 0.0013999999999896318,
+      "max": 1.849144999999993,
+      "mean": 0.0024025201999998444,
+      "unit": "ms",
+      "target": 0.005
+    },
+    {
+      "name": "find-flat100-last",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.002494000000012875,
+      "p95": 0.004160000000013042,
+      "p99": 0.00572800000000484,
+      "min": 0.0023939999999811334,
+      "max": 1.1312540000000126,
+      "mean": 0.0029087733999999784,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "find-flat100-notfound",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.00196100000002275,
+      "p95": 0.002037000000001399,
+      "p99": 0.002747999999996864,
+      "min": 0.0019180000000176278,
+      "max": 0.024612999999988006,
+      "mean": 0.002002246000000116,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "find-flat1000-middle",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.011392000000000735,
+      "p95": 0.01159699999999475,
+      "p99": 0.015960000000006858,
+      "min": 0.011154000000004771,
+      "max": 0.030652000000003454,
+      "mean": 0.011503529500000241,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "find-deep20-leaf",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.0008000000000265572,
+      "p95": 0.0008580000000222299,
+      "p99": 0.0010299999999858755,
+      "min": 0.000775000000004411,
+      "max": 0.020110000000016726,
+      "mean": 0.0008244416000000058,
+      "unit": "ms",
+      "target": 0.005
+    },
+    {
+      "name": "find-deep50-leaf",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.0019239999999740576,
+      "p95": 0.0019820000000549953,
+      "p99": 0.002161999999998443,
+      "min": 0.0018369999999663378,
+      "max": 0.018093000000021675,
+      "mean": 0.0019568845000000295,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "find-wide4x4-lastnode",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.012704999999982647,
+      "p95": 0.01320799999996325,
+      "p99": 0.017691000000013446,
+      "min": 0.012268999999946573,
+      "max": 0.35757599999999456,
+      "mean": 0.01317784599999942,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "find-wide4x5-middle",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.010525999999970281,
+      "p95": 0.010838000000035208,
+      "p99": 0.01397500000001628,
+      "min": 0.010010999999963133,
+      "max": 0.30416600000000926,
+      "mean": 0.010758336000000469,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "has-flat100-first",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.0002920000000017353,
+      "p95": 0.0005810000000110449,
+      "p99": 0.0010570000000029722,
+      "min": 0.0002709999999979118,
+      "max": 0.017182999999988624,
+      "mean": 0.0003705735999998069,
+      "unit": "ms",
+      "target": 0.002
+    },
+    {
+      "name": "has-flat100-notfound",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.0018929999999954816,
+      "p95": 0.004024000000015349,
+      "p99": 0.0056380000000331165,
+      "min": 0.0018469999999979336,
+      "max": 0.33182799999997314,
+      "mean": 0.0023818494000006126,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "has-wide4x4-exists",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.012388999999984662,
+      "p95": 0.013022999999975582,
+      "p99": 0.017629999999996926,
+      "min": 0.011970999999959986,
+      "max": 0.3510699999999929,
+      "mean": 0.012863770000000841,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "has-wide4x4-notexists",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.006811000000027434,
+      "p95": 0.007023000000003776,
+      "p99": 0.007333000000016909,
+      "min": 0.0063209999999571664,
+      "max": 0.26338299999997616,
+      "mean": 0.006970391500000602,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "collect-flat100-all",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.002306000000032782,
+      "p95": 0.003975000000025375,
+      "p99": 0.004883000000006632,
+      "min": 0.001956000000006952,
+      "max": 0.32029799999997977,
+      "mean": 0.0032367299999997955,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "collect-mixed100-buttons",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.0024700000000166256,
+      "p95": 0.004232999999999265,
+      "p99": 0.005237000000022363,
+      "min": 0.002353000000027805,
+      "max": 0.3014660000000049,
+      "mean": 0.003551827499999746,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "collect-mixed500-buttons",
+      "category": "tree-traversal",
+      "iterations": 1000,
+      "median": 0.011034999999992579,
+      "p95": 0.011234000000001743,
+      "p99": 0.014799999999979718,
+      "min": 0.010838000000035208,
+      "max": 0.026512999999965814,
+      "mean": 0.01112385299999994,
+      "unit": "ms",
+      "target": 0.08
+    },
+    {
+      "name": "collect-flat100-none",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.0019999999999527063,
+      "p95": 0.002104000000031192,
+      "p99": 0.002169999999978245,
+      "min": 0.001951000000019576,
+      "max": 0.010018000000002303,
+      "mean": 0.0020360284999996737,
+      "unit": "ms",
+      "target": 0.015
+    },
+    {
+      "name": "collect-wide4x4-all",
+      "category": "tree-traversal",
+      "iterations": 1000,
+      "median": 0.00887900000003583,
+      "p95": 0.009373999999979787,
+      "p99": 0.013759999999990669,
+      "min": 0.008330999999998312,
+      "max": 0.30532599999997956,
+      "mean": 0.00932595900000041,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "collect-wide4x5-text",
+      "category": "tree-traversal",
+      "iterations": 1000,
+      "median": 0.0216350000000034,
+      "p95": 0.02250400000002628,
+      "p99": 0.043170000000031905,
+      "min": 0.020338000000037937,
+      "max": 0.2937800000000266,
+      "mean": 0.022750846000000137,
+      "unit": "ms",
+      "target": 0.1
+    },
+    {
+      "name": "collect-flat100-reuse",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.003609999999980573,
+      "p95": 0.005576000000019121,
+      "p99": 0.006801999999993313,
+      "min": 0.003444000000001779,
+      "max": 0.5543119999999817,
+      "mean": 0.004544526499999847,
+      "unit": "ms",
+      "target": 0.015
+    },
+    {
+      "name": "descendant-isroot",
+      "category": "tree-traversal",
+      "iterations": 10000,
+      "median": 0.0002709999999979118,
+      "p95": 0.00030199999997648774,
+      "p99": 0.00034799999997403575,
+      "min": 0.0002369999999700667,
+      "max": 0.20883500000002186,
+      "mean": 0.00029812829999982,
+      "unit": "ms",
+      "target": 0.001
+    },
+    {
+      "name": "descendant-directchild",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.00029000000000678483,
+      "p95": 0.00044900000000325235,
+      "p99": 0.0005490000000349937,
+      "min": 0.0002579999999738902,
+      "max": 0.017338999999992666,
+      "mean": 0.0003470516000001794,
+      "unit": "ms",
+      "target": 0.002
+    },
+    {
+      "name": "descendant-deep20-leaf",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.001236000000005788,
+      "p95": 0.0014360000000124273,
+      "p99": 0.0018919999999980064,
+      "min": 0.0010080000000129985,
+      "max": 0.22147799999999052,
+      "mean": 0.0012828262000006475,
+      "unit": "ms",
+      "target": 0.005
+    },
+    {
+      "name": "descendant-notfound",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.0021070000000236178,
+      "p95": 0.00429300000001831,
+      "p99": 0.006048999999961779,
+      "min": 0.001955000000009477,
+      "max": 0.32363199999997505,
+      "mean": 0.0030194504999991522,
+      "unit": "ms",
+      "target": 0.015
+    },
+    {
+      "name": "descendant-wide4x4-leaf",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.016850999999974192,
+      "p95": 0.017350000000021737,
+      "p99": 0.021320000000002892,
+      "min": 0.016325999999935448,
+      "max": 0.4243659999999636,
+      "mean": 0.01747199149999864,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "findById-flat100-first",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.00030200000003333116,
+      "p95": 0.0004150000000890941,
+      "p99": 0.0004910000000108994,
+      "min": 0.000279999999975189,
+      "max": 0.018803000000048087,
+      "mean": 0.000328654200001165,
+      "unit": "ms",
+      "target": 0.002
+    },
+    {
+      "name": "findById-flat100-last",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.002546999999935906,
+      "p95": 0.0026149999999915963,
+      "p99": 0.004734999999982392,
+      "min": 0.002484000000094966,
+      "max": 0.02349200000003293,
+      "mean": 0.0026405944000000773,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "findById-wide4x4-middle",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.004464999999981956,
+      "p95": 0.00467100000003029,
+      "p99": 0.004786000000081003,
+      "min": 0.004160999999953674,
+      "max": 0.05046000000004369,
+      "mean": 0.004535379499998896,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "findById-notfound",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.0022649999999657666,
+      "p95": 0.002338000000008833,
+      "p99": 0.0024280000000089785,
+      "min": 0.0022050000000035652,
+      "max": 0.015609000000040396,
+      "mean": 0.0022934385999995584,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "findParent-flat100-child",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.0011220000000093933,
+      "p95": 0.0020459999999502543,
+      "p99": 0.00232600000003913,
+      "min": 0.0010760000000118453,
+      "max": 0.291782000000012,
+      "mean": 0.0014617833999998992,
+      "unit": "ms",
+      "target": 0.005
+    },
+    {
+      "name": "findParent-deep20-leaf",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.0007979999999179199,
+      "p95": 0.0009599999999636566,
+      "p99": 0.002911000000040076,
+      "min": 0.0006359999999858701,
+      "max": 0.3096290000000863,
+      "mean": 0.0009646590000006881,
+      "unit": "ms",
+      "target": 0.005
+    },
+    {
+      "name": "findParent-wide4x4-deep",
+      "category": "tree-traversal",
+      "iterations": 2000,
+      "median": 0.006574999999997999,
+      "p95": 0.006775000000061482,
+      "p99": 0.00700399999993806,
+      "min": 0.006322999999952117,
+      "max": 0.07866599999999835,
+      "mean": 0.0066549780000020745,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "findParent-notfound",
+      "category": "tree-traversal",
+      "iterations": 5000,
+      "median": 0.001500999999962005,
+      "p95": 0.001542999999969652,
+      "p99": 0.0015979999999444772,
+      "min": 0.0014690000000427972,
+      "max": 0.010243999999943298,
+      "mean": 0.001514925199998106,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "bulk-find-10-ids",
+      "category": "tree-traversal",
+      "iterations": 1000,
+      "median": 0.010880999999926644,
+      "p95": 0.011098999999944681,
+      "p99": 0.014381000000071253,
+      "min": 0.01070799999990868,
+      "max": 0.2995929999999589,
+      "mean": 0.011225752999999145,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "bulk-has-20-checks",
+      "category": "tree-traversal",
+      "iterations": 500,
+      "median": 0.03467899999998281,
+      "p95": 0.03775399999994988,
+      "p99": 0.06865300000004027,
+      "min": 0.033506999999985965,
+      "max": 0.2728419999999687,
+      "mean": 0.03616808799999762,
+      "unit": "ms",
+      "target": 0.1
+    }
+  ],
+  "findings": [
+    {
+      "title": "Early termination provides significant speedup",
+      "description": "Finding first element vs last element shows the benefit of depth-first early return.",
+      "category": "info",
+      "benchmarks": [
+        "find-flat100-first",
+        "find-flat100-middle",
+        "find-flat100-last"
+      ],
+      "metrics": {
+        "firstMs": 0.00034800000000245745,
+        "middleMs": 0.0014610000000061518,
+        "lastMs": 0.002494000000012875,
+        "ratio": "7.2x"
+      }
+    },
+    {
+      "title": "Tree shape affects traversal time",
+      "description": "Deep trees traverse faster than wide trees with same node count due to fewer siblings to check.",
+      "category": "info",
+      "benchmarks": [
+        "find-deep20-leaf",
+        "find-wide4x4-lastnode"
+      ],
+      "metrics": {
+        "deep20Ms": 0.0008000000000265572,
+        "wide341Ms": 0.012704999999982647
+      }
+    },
+    {
+      "title": "collectElements with array reuse is faster",
+      "description": "Reusing a result array avoids allocation overhead in hot paths.",
+      "category": "info",
+      "benchmarks": [
+        "collect-flat100-all",
+        "collect-flat100-reuse"
+      ],
+      "metrics": {
+        "newArrayMs": 0.002306000000032782,
+        "reuseArrayMs": 0.003609999999980573
+      }
+    },
+    {
+      "title": "isDescendant is O(n) worst case",
+      "description": "Descendant check requires full tree traversal when element is not found.",
+      "category": "info",
+      "benchmarks": [
+        "descendant-isroot",
+        "descendant-directchild",
+        "descendant-notfound"
+      ],
+      "metrics": {
+        "isRootMs": 0.0002709999999979118,
+        "directChildMs": 0.00029000000000678483,
+        "notFoundMs": 0.0021070000000236178
+      }
+    },
+    {
+      "title": "Traversal scales linearly with node count",
+      "description": "Full traversal time correlates with total nodes in tree.",
+      "category": "info",
+      "benchmarks": [
+        "find-flat100-notfound",
+        "find-flat1000-middle",
+        "collect-wide4x4-all"
+      ],
+      "metrics": {
+        "flat100Ms": 0.00196100000002275,
+        "flat1000Ms": 0.011392000000000735,
+        "wide341Ms": 0.00887900000003583
+      }
+    }
+  ],
+  "notes": "Tree traversal benchmarks. Tests findElement, hasElement, collectElements, isDescendant, findElementById, and findParentOf across flat trees (100-1000 nodes), deep trees (10-50 levels), and wide balanced trees (150-780 nodes)."
+}

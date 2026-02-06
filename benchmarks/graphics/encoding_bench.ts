@@ -4,7 +4,7 @@
  * Split from graphics_bench.ts to keep suite under 60s.
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { encodeToSixel, quantizeMedianCut, quantizeFixed256 } from '../../src/sixel/mod.ts';
 import { encodeToKitty } from '../../src/kitty/mod.ts';
 
@@ -235,6 +235,6 @@ suite.addFindings([
 suite.setNotes('Encoding benchmarks for Sixel and Kitty protocols. Kitty is faster because it sends raw pixels; Sixel requires palette encoding. Use Kitty when terminal supports it.');
 
 // Save results
-const outputPath = new URL('../results/encoding-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/encoding-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

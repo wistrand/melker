@@ -4,7 +4,7 @@
  * Run all benchmarks and combine results
  */
 
-import { BenchmarkOutput, BenchmarkFinding } from './harness.ts';
+import { BenchmarkOutput, BenchmarkFinding, benchmarkTimestamp } from './harness.ts';
 
 const benchmarkFiles = [
   './core/geometry_bench.ts',
@@ -51,17 +51,19 @@ for (const file of benchmarkFiles) {
   }
 }
 
-// Combine all results from today (only from individual suite files, not combined)
+// Combine all results from this run (only from individual suite files, not combined)
 const resultsDir = new URL('./results/', import.meta.url).pathname;
 const today = new Date().toISOString().slice(0, 10);
+const runTimestamp = benchmarkTimestamp();
 const seenResults = new Set<string>();
 
+// Match files from today with any time suffix (suites may finish at slightly different minutes)
+// Supports both old format (suite-YYYY-MM-DD.json) and new (suite-YYYY-MM-DDTHH-MM.json)
+const todayPattern = new RegExp(`^(.+)-(${today}(?:T\\d{2}-\\d{2})?)\\.json$`);
+
 for await (const entry of Deno.readDir(resultsDir)) {
-  // Skip combined files and only process today's individual suite results
-  if (entry.isFile &&
-      entry.name.includes(today) &&
-      entry.name.endsWith('.json') &&
-      !entry.name.startsWith('combined')) {
+  const match = entry.isFile && entry.name.endsWith('.json') && todayPattern.exec(entry.name);
+  if (match && !match[1].startsWith('combined')) {
     try {
       const content = await Deno.readTextFile(resultsDir + entry.name);
       const data: BenchmarkOutput = JSON.parse(content);
@@ -82,7 +84,7 @@ for await (const entry of Deno.readDir(resultsDir)) {
 
       // Collect notes
       if (data.notes) {
-        const suiteName = entry.name.replace(`-${today}.json`, '');
+        const suiteName = match[1];
         allNotes.push(`[${suiteName}] ${data.notes}`);
       }
 
@@ -104,7 +106,7 @@ const combinedOutput: BenchmarkOutput = {
   notes: allNotes.length > 0 ? allNotes.join('\n\n') : undefined,
 };
 
-const combinedPath = `${resultsDir}combined-${today}.json`;
+const combinedPath = `${resultsDir}combined-${runTimestamp}.json`;
 await Deno.writeTextFile(combinedPath, JSON.stringify(combinedOutput, null, 2));
 
 console.log('\n' + '='.repeat(60));

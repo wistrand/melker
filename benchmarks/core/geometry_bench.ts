@@ -3,7 +3,7 @@
  * These are fundamental operations called thousands of times per frame.
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { pointInBounds, clampToBounds, clipBounds, boundsIntersect } from '../../src/geometry.ts';
 import type { Bounds } from '../../src/types.ts';
 
@@ -258,6 +258,6 @@ suite.addFindings([
 suite.setNotes('Geometry utility benchmarks. Tests pointInBounds, clampToBounds, clipBounds, and boundsIntersect at various scales. These are foundational operations used in hit testing, rendering, and viewport management.');
 
 // Save results
-const outputPath = new URL('../results/geometry-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/geometry-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

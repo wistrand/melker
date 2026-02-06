@@ -5,7 +5,7 @@
  * Median-cut quantization is expensive; this suite has reduced warmup.
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import {
   quantizeMedianCut,
   quantizeFixed256,
@@ -133,6 +133,6 @@ suite.addFindings([
 suite.setNotes('Quantization benchmarks. Median-cut is O(n*colors) and expensive. Fixed palettes are O(n). Cache quantization for static images.');
 
 // Save results
-const outputPath = new URL('../results/quantization-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/quantization-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

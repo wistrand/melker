@@ -2,7 +2,7 @@
  * Layout engine benchmarks
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { createElement, globalLayoutEngine } from '../../mod.ts';
 
 const suite = new BenchmarkSuite('layout');
@@ -164,6 +164,6 @@ suite.add('layout-grid-10x10', () => {
 const results = await suite.run();
 
 // Save results
-const outputPath = new URL('../results/layout-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/layout-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

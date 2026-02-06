@@ -246,6 +246,15 @@ export class BenchmarkSuite {
 }
 
 /**
+ * Generate a timestamp string for benchmark result filenames.
+ * Format: YYYY-MM-DDTHH-MM (e.g., 2026-02-06T17-03)
+ * Uses '-' for time separator since ':' is problematic in filenames.
+ */
+export function benchmarkTimestamp(): string {
+  return new Date().toISOString().slice(0, 16).replace(':', '-');
+}
+
+/**
  * Compare two benchmark results
  */
 export function compare(

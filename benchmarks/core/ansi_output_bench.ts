@@ -3,7 +3,7 @@
  * Final step in the rendering pipeline that generates escape sequences.
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { AnsiOutputGenerator, type BufferDifference, type BufferCell } from '../../src/ansi-output.ts';
 
 const suite = new BenchmarkSuite('ansi-output');
@@ -335,6 +335,6 @@ suite.addFindings([
 suite.setNotes('ANSI output generation benchmarks. Tests scattered vs contiguous updates, full screen rendering, style changes, color mode comparisons (truecolor/256/16/none), and span grouping optimization.');
 
 // Save results
-const outputPath = new URL('../results/ansi-output-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/ansi-output-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

@@ -2,7 +2,7 @@
  * Graph component and Mermaid parsing benchmarks
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { createElement, TerminalBuffer, globalLayoutEngine, RenderingEngine } from '../../mod.ts';
 import {
   getGraphParser,
@@ -431,6 +431,6 @@ suite.addFindings([
 suite.setNotes('Graph component and Mermaid diagram benchmarks. Tests parsing (flowchart, sequence, class), layout calculation, conversion to Melker XML, and full rendering pipeline.');
 
 // Save results
-const outputPath = new URL('../results/graph-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/graph-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

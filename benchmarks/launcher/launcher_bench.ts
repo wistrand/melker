@@ -8,7 +8,7 @@
  * - App initialization and exit
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import {
   loadPolicyFromContent,
   hasPolicyTag,
@@ -263,6 +263,6 @@ try {
 }
 
 // Save results
-const outputPath = new URL('../results/launcher-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/launcher-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

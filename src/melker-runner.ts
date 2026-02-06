@@ -1191,6 +1191,22 @@ async function main(): Promise<void> {
     watch: remainingArgs.includes('--watch'),
   };
 
+  // Warn about unrecognized flags
+  const knownRunnerFlags = new Set([
+    '--print-tree', '--print-json', '--verbose', '--no-load',
+    '--cache', '--watch', '--convert',
+    '--help', '-h', '--schema', '--lsp',
+    // Launcher-only flags that may still appear in forwarded args
+    '--show-policy', '--trust',
+  ]);
+  const unknownFlags = remainingArgs.filter(arg => arg.startsWith('--') && !knownRunnerFlags.has(arg));
+  if (unknownFlags.length > 0) {
+    const logger = getLogger('cli');
+    for (const flag of unknownFlags) {
+      logger.warn(`Unrecognized option: ${flag}`);
+    }
+  }
+
   // Enable lint mode if requested (already set via config, but explicit call registers it)
   if (options.lint) {
     const { enableLint } = await import('./lint.ts');

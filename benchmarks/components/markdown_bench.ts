@@ -2,7 +2,7 @@
  * Markdown component benchmarks
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { createElement, TerminalBuffer, globalLayoutEngine, RenderingEngine } from '../../mod.ts';
 
 const suite = new BenchmarkSuite('markdown');
@@ -286,6 +286,6 @@ suite.addFindings([
 suite.setNotes('Markdown component benchmarks. Tests parsing, rendering of various markdown elements including headings, lists, code blocks, tables, and mixed documents.');
 
 // Save results
-const outputPath = new URL('../results/markdown-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/markdown-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

@@ -2,7 +2,7 @@
  * Buffer benchmarks - core rendering operations
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { TerminalBuffer } from '../../mod.ts';
 
 const suite = new BenchmarkSuite('rendering');
@@ -93,6 +93,6 @@ setup();
 const results = await suite.run();
 
 // Save results
-const outputPath = new URL('../results/rendering-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/rendering-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

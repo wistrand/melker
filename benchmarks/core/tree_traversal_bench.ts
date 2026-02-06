@@ -3,7 +3,7 @@
  * Fundamental operations used in focus management, hit testing, and element lookup.
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import {
   findElement,
   hasElement,
@@ -394,6 +394,6 @@ suite.addFindings([
 suite.setNotes('Tree traversal benchmarks. Tests findElement, hasElement, collectElements, isDescendant, findElementById, and findParentOf across flat trees (100-1000 nodes), deep trees (10-50 levels), and wide balanced trees (150-780 nodes).');
 
 // Save results
-const outputPath = new URL('../results/tree-traversal-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/tree-traversal-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

@@ -1,0 +1,301 @@
+{
+  "timestamp": "2026-02-06T16:14:46.006Z",
+  "commit": "9043301",
+  "results": [
+    {
+      "name": "hasPolicyTag-present",
+      "category": "launcher",
+      "iterations": 5000,
+      "median": 0.0003869999999963625,
+      "p95": 0.0006790000000052032,
+      "p99": 0.0024769999999989523,
+      "min": 0.00034499999999582087,
+      "max": 0.7666700000000048,
+      "mean": 0.0008007174000000206,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "hasPolicyTag-absent",
+      "category": "launcher",
+      "iterations": 5000,
+      "median": 0.000476999999996508,
+      "p95": 0.0006440000000011992,
+      "p99": 0.0024310000000014043,
+      "min": 0.0004289999999969041,
+      "max": 0.0357309999999984,
+      "mean": 0.0005928264000000809,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "loadPolicy-simple",
+      "category": "launcher",
+      "iterations": 1000,
+      "median": 0.0017789999999990869,
+      "p95": 0.004030999999997675,
+      "p99": 0.011379000000005135,
+      "min": 0.001398999999999262,
+      "max": 0.16713700000000387,
+      "mean": 0.0025050289999999508,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "loadPolicy-medium",
+      "category": "launcher",
+      "iterations": 500,
+      "median": 0.0023680000000041446,
+      "p95": 0.002659000000001299,
+      "p99": 0.0028889999999961447,
+      "min": 0.002195000000000391,
+      "max": 0.01359599999999972,
+      "mean": 0.0024338620000002747,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "validatePolicy-simple",
+      "category": "launcher",
+      "iterations": 5000,
+      "median": 0.00048300000000267573,
+      "p95": 0.000793000000001598,
+      "p99": 0.0009769999999988954,
+      "min": 0.00041699999999877946,
+      "max": 0.15744300000000067,
+      "mean": 0.000598263400000009,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "validatePolicy-complex",
+      "category": "launcher",
+      "iterations": 2000,
+      "median": 0.0007860000000050604,
+      "p95": 0.0008700000000061436,
+      "p99": 0.0010099999999937381,
+      "min": 0.0003609999999980573,
+      "max": 0.1482210000000066,
+      "mean": 0.0007915265000000318,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "formatPolicy-simple",
+      "category": "launcher",
+      "iterations": 2000,
+      "median": 0.000996000000000663,
+      "p95": 0.0011230000000068685,
+      "p99": 0.0013529999999946085,
+      "min": 0.0004820000000052005,
+      "max": 0.25845699999999283,
+      "mean": 0.0010153754999999124,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "formatPolicy-complex",
+      "category": "launcher",
+      "iterations": 1000,
+      "median": 0.0041470000000032314,
+      "p95": 0.0043959999999998445,
+      "p99": 0.009405000000000996,
+      "min": 0.0019570000000044274,
+      "max": 0.23364200000000324,
+      "mean": 0.004400730000000081,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "policyToDenoFlags-simple",
+      "category": "launcher",
+      "iterations": 2000,
+      "median": 0.029218999999997664,
+      "p95": 0.0381229999999988,
+      "p99": 0.14501700000000994,
+      "min": 0.02751299999999901,
+      "max": 0.2624510000000271,
+      "mean": 0.03281709500000041,
+      "unit": "ms",
+      "target": 0.1
+    },
+    {
+      "name": "policyToDenoFlags-medium",
+      "category": "launcher",
+      "iterations": 1000,
+      "median": 0.032501999999993814,
+      "p95": 0.03910400000000891,
+      "p99": 0.1434720000000027,
+      "min": 0.029370999999997593,
+      "max": 0.21742900000000986,
+      "mean": 0.03432182499999951,
+      "unit": "ms",
+      "target": 0.1
+    },
+    {
+      "name": "policyToDenoFlags-complex",
+      "category": "launcher",
+      "iterations": 500,
+      "median": 0.03485700000001657,
+      "p95": 0.0423409999999933,
+      "p99": 0.1408399999999972,
+      "min": 0.03341499999999087,
+      "max": 0.2277210000000025,
+      "mean": 0.03730598000000003,
+      "unit": "ms",
+      "target": 0.15
+    },
+    {
+      "name": "getPermissionOverrides",
+      "category": "launcher",
+      "iterations": 5000,
+      "median": 0.0026990000000068903,
+      "p95": 0.0033500000000117325,
+      "p99": 0.004595999999992273,
+      "min": 0.0025929999999902975,
+      "max": 0.13640000000000896,
+      "mean": 0.0029051940000000285,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "applyPermissionOverrides-simple",
+      "category": "launcher",
+      "iterations": 2000,
+      "median": 0.0016909999999938918,
+      "p95": 0.0036009999999748743,
+      "p99": 0.005596999999994523,
+      "min": 0.0015190000000018244,
+      "max": 0.13051699999999755,
+      "mean": 0.0024694115000001913,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "applyPermissionOverrides-complex",
+      "category": "launcher",
+      "iterations": 1000,
+      "median": 0.0066319999999961965,
+      "p95": 0.007169000000004644,
+      "p99": 0.014823000000006914,
+      "min": 0.003944000000018377,
+      "max": 0.23698500000000422,
+      "mean": 0.006132672999999528,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "subprocess-minimal",
+      "category": "launcher",
+      "iterations": 5,
+      "median": 543.0582359999999,
+      "p95": 584.158703,
+      "p99": 584.158703,
+      "min": 526.9403179999999,
+      "max": 584.158703,
+      "mean": 552.3439347999999,
+      "unit": "ms",
+      "target": 800
+    },
+    {
+      "name": "subprocess-with-policy",
+      "category": "launcher",
+      "iterations": 5,
+      "median": 556.0585510000001,
+      "p95": 672.120876,
+      "p99": 672.120876,
+      "min": 497.0616259999997,
+      "max": 672.120876,
+      "mean": 567.1102779999999,
+      "unit": "ms",
+      "target": 800
+    },
+    {
+      "name": "subprocess-medium",
+      "category": "launcher",
+      "iterations": 3,
+      "median": 555.4093009999997,
+      "p95": 557.0150430000003,
+      "p99": 557.0150430000003,
+      "min": 539.9552289999992,
+      "max": 557.0150430000003,
+      "mean": 550.7931909999998,
+      "unit": "ms",
+      "target": 800
+    },
+    {
+      "name": "full-launch-minimal",
+      "category": "launcher",
+      "iterations": 3,
+      "median": 521.7386450000013,
+      "p95": 541.1842020000004,
+      "p99": 541.1842020000004,
+      "min": 519.1594960000002,
+      "max": 541.1842020000004,
+      "mean": 527.3607810000007,
+      "unit": "ms",
+      "target": 800
+    },
+    {
+      "name": "full-launch-medium",
+      "category": "launcher",
+      "iterations": 3,
+      "median": 541.3283190000002,
+      "p95": 559.4653990000006,
+      "p99": 559.4653990000006,
+      "min": 537.0523780000003,
+      "max": 559.4653990000006,
+      "mean": 545.948698666667,
+      "unit": "ms",
+      "target": 800
+    }
+  ],
+  "findings": [
+    {
+      "title": "Subprocess launch dominates total startup time",
+      "description": "Subprocess spawning (~540ms) accounts for >99% of launch time. All policy operations combined take <0.1ms, making them negligible.",
+      "category": "performance",
+      "benchmarks": ["subprocess-minimal", "full-launch-minimal"],
+      "metrics": {
+        "subprocessMs": 543,
+        "fullLaunchMs": 522,
+        "policyOverheadMs": "<0.1"
+      }
+    },
+    {
+      "title": "Policy operations are sub-millisecond",
+      "description": "All policy processing operations (parse, validate, format, convert to flags) complete in under 0.035ms even for complex policies.",
+      "category": "performance",
+      "benchmarks": ["loadPolicy-simple", "validatePolicy-complex", "formatPolicy-complex", "policyToDenoFlags-complex"],
+      "metrics": {
+        "loadPolicyMs": 0.002,
+        "validateMs": 0.001,
+        "formatMs": 0.004,
+        "toFlagsMs": 0.035
+      }
+    },
+    {
+      "title": "policyToDenoFlags is the most expensive policy operation",
+      "description": "Converting policy to Deno flags (~30-35μs) is the costliest policy operation, ~17x more expensive than validation (~0.5-0.8μs), but still trivial at 0.035ms.",
+      "category": "comparison",
+      "benchmarks": ["policyToDenoFlags-simple", "policyToDenoFlags-complex", "validatePolicy-simple"],
+      "metrics": {
+        "toFlagsSimpleMs": 0.029,
+        "toFlagsComplexMs": 0.035,
+        "validateSimpleMs": 0.0005,
+        "ratio": "~60x"
+      }
+    },
+    {
+      "title": "Policy complexity has minimal impact on launch time",
+      "description": "Full launch with a medium policy (541ms) is within noise of minimal launch (522ms). Policy complexity does not meaningfully affect startup.",
+      "category": "comparison",
+      "benchmarks": ["full-launch-minimal", "full-launch-medium"],
+      "metrics": {
+        "minimalMs": 522,
+        "mediumMs": 541,
+        "differenceMs": 19
+      }
+    }
+  ]
+}

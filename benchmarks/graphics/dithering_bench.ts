@@ -4,7 +4,7 @@
  * Split from graphics_bench.ts to keep suite under 60s.
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import {
   applyFloydSteinbergDither,
   applyFloydSteinbergStableDither,
@@ -249,6 +249,6 @@ suite.addFindings([
 suite.setNotes('Dithering benchmarks for all supported algorithms. Ordered is fastest (Bayer matrix), blue noise is highest quality, error-diffusion (Floyd-Steinberg, Sierra, Atkinson) balance speed and quality.');
 
 // Save results
-const outputPath = new URL('../results/dithering-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/dithering-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

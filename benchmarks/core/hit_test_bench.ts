@@ -3,7 +3,7 @@
  * Critical hot path that runs on every mouse move and click.
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { HitTester, type HitTestContext } from '../../src/hit-test.ts';
 import { Document } from '../../src/document.ts';
 import { RenderingEngine } from '../../src/rendering.ts';
@@ -428,6 +428,6 @@ suite.addFindings([
 suite.setNotes('Hit testing benchmarks. Tests element detection across flat trees (10-500 elements), deep trees (5-20 levels), and wide trees (150-1100 elements). Includes miss scenarios and interactive element checks.');
 
 // Save results
-const outputPath = new URL('../results/hit-test-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/hit-test-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

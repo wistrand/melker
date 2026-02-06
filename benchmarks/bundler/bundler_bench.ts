@@ -2,7 +2,7 @@
  * Bundler benchmarks - code generation and template processing
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { generate, rewriteHandlers } from '../../src/bundler/generator.ts';
 import { parseMelkerFile } from '../../src/template.ts';
 import type { ParseResult, ParsedScript, ParsedHandler } from '../../src/bundler/types.ts';
@@ -960,6 +960,6 @@ suite.add('parse-tabs-component', () => {
 const results = await suite.run();
 
 // Save results
-const outputPath = new URL('../results/bundler-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/bundler-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

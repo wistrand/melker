@@ -2,7 +2,7 @@
  * Data-heatmap component benchmarks
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { createElement, TerminalBuffer, globalLayoutEngine, RenderingEngine } from '../../mod.ts';
 
 const suite = new BenchmarkSuite('components');
@@ -150,6 +150,6 @@ suite.add('heatmap-isolines-only', () => {
 const results = await suite.run();
 
 // Save results
-const outputPath = new URL('../results/components-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/components-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

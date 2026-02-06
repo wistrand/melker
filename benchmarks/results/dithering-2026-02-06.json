@@ -1,0 +1,324 @@
+{
+  "timestamp": "2026-02-06T16:15:23.292Z",
+  "commit": "9043301",
+  "results": [
+    {
+      "name": "dither-floyd-64x64",
+      "category": "dithering",
+      "iterations": 200,
+      "median": 0.37532099999998536,
+      "p95": 0.3833879999999965,
+      "p99": 0.4461480000000222,
+      "min": 0.3677030000000059,
+      "max": 0.4590710000000229,
+      "mean": 0.37665166500000025,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "dither-floyd-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 7.203258000000005,
+      "p95": 8.004765000000134,
+      "p99": 8.004765000000134,
+      "min": 7.169110000000046,
+      "max": 8.004765000000134,
+      "mean": 7.241119699999996,
+      "unit": "ms",
+      "target": 15
+    },
+    {
+      "name": "dither-floyd-640x480",
+      "category": "dithering",
+      "iterations": 5,
+      "median": 32.23115499999949,
+      "p95": 32.67095900000004,
+      "p99": 32.67095900000004,
+      "min": 32.14872500000001,
+      "max": 32.67095900000004,
+      "mean": 32.29636979999996,
+      "unit": "ms",
+      "target": 60
+    },
+    {
+      "name": "dither-sierra-64x64",
+      "category": "dithering",
+      "iterations": 200,
+      "median": 0.3305389999995896,
+      "p95": 0.3555100000003222,
+      "p99": 0.46972400000049674,
+      "min": 0.32620200000019395,
+      "max": 0.5519340000000739,
+      "mean": 0.3351506350000045,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "dither-sierra-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 5.761669999999867,
+      "p95": 6.46223800000007,
+      "p99": 6.46223800000007,
+      "min": 5.731483999999909,
+      "max": 6.46223800000007,
+      "mean": 5.799785200000133,
+      "unit": "ms",
+      "target": 15
+    },
+    {
+      "name": "dither-atkinson-64x64",
+      "category": "dithering",
+      "iterations": 200,
+      "median": 0.2750900000000911,
+      "p95": 0.28179999999974825,
+      "p99": 0.3879400000005262,
+      "min": 0.27204900000015186,
+      "max": 0.38862000000062835,
+      "mean": 0.2778871349999827,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "dither-atkinson-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 5.763690000000679,
+      "p95": 6.092749999999796,
+      "p99": 6.092749999999796,
+      "min": 5.732291999999688,
+      "max": 6.092749999999796,
+      "mean": 5.807489150000128,
+      "unit": "ms",
+      "target": 15
+    },
+    {
+      "name": "dither-ordered-64x64",
+      "category": "dithering",
+      "iterations": 500,
+      "median": 0.19188599999961298,
+      "p95": 0.2022980000001553,
+      "p99": 0.20840099999986705,
+      "min": 0.1832800000001953,
+      "max": 0.26418199999989156,
+      "mean": 0.1930505319999538,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "dither-ordered-256x256",
+      "category": "dithering",
+      "iterations": 100,
+      "median": 4.247150999999576,
+      "p95": 4.4047249999994165,
+      "p99": 4.4904459999997925,
+      "min": 4.183520999999928,
+      "max": 4.4904459999997925,
+      "mean": 4.260237399999978,
+      "unit": "ms",
+      "target": 10
+    },
+    {
+      "name": "dither-ordered-640x480",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 17.846057000000656,
+      "p95": 20.25766400000066,
+      "p99": 20.25766400000066,
+      "min": 17.599497999999585,
+      "max": 20.25766400000066,
+      "mean": 18.048520150000332,
+      "unit": "ms",
+      "target": 40
+    },
+    {
+      "name": "dither-floyd-1bit-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 4.4664190000003146,
+      "p95": 4.6397629999992205,
+      "p99": 4.6397629999992205,
+      "min": 4.458652999999686,
+      "max": 4.6397629999992205,
+      "mean": 4.490696500000103,
+      "unit": "ms",
+      "target": 10
+    },
+    {
+      "name": "dither-floyd-4bit-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 5.544444000001022,
+      "p95": 5.908128000000943,
+      "p99": 5.908128000000943,
+      "min": 5.513119999999617,
+      "max": 5.908128000000943,
+      "mean": 5.561424150000221,
+      "unit": "ms",
+      "target": 12
+    },
+    {
+      "name": "dither-floyd-8bit-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 3.411866000000373,
+      "p95": 4.245488000000478,
+      "p99": 4.245488000000478,
+      "min": 3.3807510000006005,
+      "max": 4.245488000000478,
+      "mean": 3.4561994000000595,
+      "unit": "ms",
+      "target": 8
+    },
+    {
+      "name": "dither-floyd-stable-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 5.685253000001467,
+      "p95": 6.048221000000922,
+      "p99": 6.048221000000922,
+      "min": 5.611327000000529,
+      "max": 6.048221000000922,
+      "mean": 5.71202504999992,
+      "unit": "ms",
+      "target": 12
+    },
+    {
+      "name": "dither-sierra-stable-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 5.601044000000911,
+      "p95": 6.331939000001512,
+      "p99": 6.331939000001512,
+      "min": 5.571636000000581,
+      "max": 6.331939000001512,
+      "mean": 5.640252350000173,
+      "unit": "ms",
+      "target": 12
+    },
+    {
+      "name": "dither-atkinson-stable-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 5.504053999999087,
+      "p95": 5.754490999999689,
+      "p99": 5.754490999999689,
+      "min": 5.474850000000515,
+      "max": 5.754490999999689,
+      "mean": 5.528778099999727,
+      "unit": "ms",
+      "target": 12
+    },
+    {
+      "name": "dither-bluenoise-64x64",
+      "category": "dithering",
+      "iterations": 200,
+      "median": 0.17010899999877438,
+      "p95": 0.183510999999271,
+      "p99": 0.18859100000008766,
+      "min": 0.16137300000082178,
+      "max": 0.19274099999893224,
+      "mean": 0.1710060550000162,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "dither-bluenoise-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 4.419326000001092,
+      "p95": 5.478488000000652,
+      "p99": 5.478488000000652,
+      "min": 4.385200999999142,
+      "max": 5.478488000000652,
+      "mean": 4.4858592999999924,
+      "unit": "ms",
+      "target": 15
+    },
+    {
+      "name": "dither-bluenoise-640x480",
+      "category": "dithering",
+      "iterations": 5,
+      "median": 19.5226930000008,
+      "p95": 19.92760300000009,
+      "p99": 19.92760300000009,
+      "min": 19.397263999999268,
+      "max": 19.92760300000009,
+      "mean": 19.572614199999954,
+      "unit": "ms",
+      "target": 45
+    },
+    {
+      "name": "pipeline-dither-floyd-256x256",
+      "category": "dithering",
+      "iterations": 20,
+      "median": 5.208899000001111,
+      "p95": 6.16809000000103,
+      "p99": 6.16809000000103,
+      "min": 5.184507999998459,
+      "max": 6.16809000000103,
+      "mean": 5.273218900000302,
+      "unit": "ms",
+      "target": 12
+    }
+  ],
+  "findings": [
+    {
+      "title": "Ordered dithering is fastest",
+      "description": "Ordered (Bayer) dithering is ~2-3x faster than error-diffusion methods while maintaining temporal stability.",
+      "category": "performance",
+      "benchmarks": [
+        "dither-ordered-256x256",
+        "dither-floyd-256x256"
+      ],
+      "metrics": {
+        "orderedMs": 4.247150999999576,
+        "floydMs": 7.203258000000005,
+        "speedup": "1.7x"
+      }
+    },
+    {
+      "title": "Blue noise provides best quality",
+      "description": "Blue noise dithering produces the best visual quality with no visible patterns, at moderate speed.",
+      "category": "info",
+      "benchmarks": [
+        "dither-bluenoise-256x256",
+        "dither-ordered-256x256"
+      ],
+      "metrics": {
+        "blueNoiseMs": 4.419326000001092,
+        "orderedMs": 4.247150999999576
+      }
+    },
+    {
+      "title": "Stable variants have minimal overhead",
+      "description": "Temporally stable dithering variants (for video) have similar performance to standard versions.",
+      "category": "info",
+      "benchmarks": [
+        "dither-floyd-256x256",
+        "dither-floyd-stable-256x256"
+      ],
+      "metrics": {
+        "standardMs": 7.203258000000005,
+        "stableMs": 5.685253000001467
+      }
+    },
+    {
+      "title": "Bit depth affects quality, not speed",
+      "description": "Different bit depths (1-bit B&W to 8-bit color) have similar performance; choose based on output quality needs.",
+      "category": "info",
+      "benchmarks": [
+        "dither-floyd-1bit-256x256",
+        "dither-floyd-4bit-256x256",
+        "dither-floyd-8bit-256x256"
+      ],
+      "metrics": {
+        "oneBitMs": 4.4664190000003146,
+        "fourBitMs": 5.544444000001022,
+        "eightBitMs": 3.411866000000373
+      }
+    }
+  ],
+  "notes": "Dithering benchmarks for all supported algorithms. Ordered is fastest (Bayer matrix), blue noise is highest quality, error-diffusion (Floyd-Steinberg, Sierra, Atkinson) balance speed and quality."
+}

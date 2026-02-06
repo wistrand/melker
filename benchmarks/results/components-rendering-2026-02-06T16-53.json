@@ -1,0 +1,428 @@
+{
+  "timestamp": "2026-02-06T16:53:32.372Z",
+  "commit": "9043301",
+  "results": [
+    {
+      "name": "render-text-simple",
+      "category": "rendering",
+      "iterations": 1000,
+      "median": 0.14577900000000454,
+      "p95": 0.2018860000000018,
+      "p99": 0.44876799999997274,
+      "min": 0.1389159999999947,
+      "max": 0.8268519999999739,
+      "mean": 0.161460878,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "render-text-styled",
+      "category": "rendering",
+      "iterations": 1000,
+      "median": 0.1454119999999648,
+      "p95": 0.16062799999997424,
+      "p99": 0.4236940000000118,
+      "min": 0.14024799999992865,
+      "max": 0.47235599999999067,
+      "mean": 0.1566182879999996,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "render-text-wrapped",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.14639199999999164,
+      "p95": 0.18108199999994667,
+      "p99": 0.4652919999999767,
+      "min": 0.13880399999993642,
+      "max": 0.6977949999999282,
+      "mean": 0.1597434999999996,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "render-button",
+      "category": "rendering",
+      "iterations": 1000,
+      "median": 0.14638299999990068,
+      "p95": 0.31397100000003775,
+      "p99": 0.5847569999999678,
+      "min": 0.13867499999992106,
+      "max": 1.0932730000000674,
+      "mean": 0.1698896780000024,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "render-input",
+      "category": "rendering",
+      "iterations": 1000,
+      "median": 0.14602400000001126,
+      "p95": 0.1620349999999462,
+      "p99": 0.5121270000000777,
+      "min": 0.13934800000004088,
+      "max": 0.7149769999999762,
+      "mean": 0.15539459400000225,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "render-checkbox",
+      "category": "rendering",
+      "iterations": 1000,
+      "median": 0.1448849999999311,
+      "p95": 0.16107499999998254,
+      "p99": 0.46778299999982664,
+      "min": 0.1390569999998661,
+      "max": 0.8362789999998768,
+      "mean": 0.15351349399999914,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "render-radio",
+      "category": "rendering",
+      "iterations": 1000,
+      "median": 0.1494190000000799,
+      "p95": 0.16308299999991505,
+      "p99": 0.544926999999916,
+      "min": 0.14386999999987893,
+      "max": 0.7900460000000749,
+      "mean": 0.158561129000007,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "render-progress",
+      "category": "rendering",
+      "iterations": 1000,
+      "median": 0.14781099999981961,
+      "p95": 0.16826099999980215,
+      "p99": 0.49689599999987877,
+      "min": 0.14034000000015112,
+      "max": 0.6612740000000485,
+      "mean": 0.15725423500000146,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "render-slider",
+      "category": "rendering",
+      "iterations": 1000,
+      "median": 0.14544500000010885,
+      "p95": 0.15924600000016653,
+      "p99": 0.522609999999986,
+      "min": 0.1399829999998019,
+      "max": 0.6107580000000326,
+      "mean": 0.1543403220000039,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "render-container-bordered",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.17475899999999456,
+      "p95": 0.213767000000189,
+      "p99": 0.6277949999998782,
+      "min": 0.16305499999998574,
+      "max": 0.7477020000001176,
+      "mean": 0.18889636199999996,
+      "unit": "ms",
+      "target": 0.4
+    },
+    {
+      "name": "render-container-row",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.2433849999999893,
+      "p95": 0.2822840000001179,
+      "p99": 0.6856219999999666,
+      "min": 0.23529100000018843,
+      "max": 0.9752590000002783,
+      "mean": 0.25825246999999263,
+      "unit": "ms",
+      "target": 0.4
+    },
+    {
+      "name": "render-container-column",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.24443599999995058,
+      "p95": 0.2729509999999209,
+      "p99": 0.7021409999997559,
+      "min": 0.23367000000007465,
+      "max": 0.9950050000002193,
+      "mean": 0.25803627400000734,
+      "unit": "ms",
+      "target": 0.4
+    },
+    {
+      "name": "render-nested-3-levels",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.22020599999996193,
+      "p95": 0.24983500000007552,
+      "p99": 0.587978000000021,
+      "min": 0.21175300000004427,
+      "max": 0.9887539999999717,
+      "mean": 0.23301143000001048,
+      "unit": "ms",
+      "target": 0.4
+    },
+    {
+      "name": "render-nested-5-levels",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.2623069999999643,
+      "p95": 0.5100040000002082,
+      "p99": 0.8409520000000157,
+      "min": 0.25154299999985597,
+      "max": 1.1653989999999794,
+      "mean": 0.3142040740000084,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "render-wide-tree-20",
+      "category": "rendering",
+      "iterations": 200,
+      "median": 0.4827970000001187,
+      "p95": 0.5181079999997564,
+      "p99": 0.9918969999998808,
+      "min": 0.4684019999999691,
+      "max": 1.1736259999997856,
+      "mean": 0.4943928299999925,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "render-complex-tree",
+      "category": "rendering",
+      "iterations": 200,
+      "median": 0.5565240000000813,
+      "p95": 0.8527420000000347,
+      "p99": 1.3257099999996171,
+      "min": 0.4895809999998164,
+      "max": 1.3558240000002115,
+      "mean": 0.5839872499999956,
+      "unit": "ms",
+      "target": 0.8
+    },
+    {
+      "name": "render-list-10",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.515201000000161,
+      "p95": 0.6093479999999545,
+      "p99": 1.0197220000000016,
+      "min": 0.4895779999997103,
+      "max": 1.2557719999995243,
+      "mean": 0.5341150760000127,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "render-list-50",
+      "category": "rendering",
+      "iterations": 100,
+      "median": 1.862938000000213,
+      "p95": 2.319234999999935,
+      "p99": 3.17188299999998,
+      "min": 1.8300389999999425,
+      "max": 3.17188299999998,
+      "mean": 1.9123792599999705,
+      "unit": "ms",
+      "target": 4
+    },
+    {
+      "name": "render-table-5-rows",
+      "category": "rendering",
+      "iterations": 200,
+      "median": 1.084444000000076,
+      "p95": 1.4438089999998738,
+      "p99": 1.968123000000105,
+      "min": 1.0530549999998584,
+      "max": 2.082277000000431,
+      "mean": 1.1324558949999823,
+      "unit": "ms",
+      "target": 2
+    },
+    {
+      "name": "render-table-20-rows",
+      "category": "rendering",
+      "iterations": 100,
+      "median": 4.963628999999855,
+      "p95": 6.025118999999904,
+      "p99": 8.01177699999971,
+      "min": 4.598633000000518,
+      "max": 8.01177699999971,
+      "mean": 5.042477899999994,
+      "unit": "ms",
+      "target": 10
+    },
+    {
+      "name": "render-data-bars",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.15993500000058702,
+      "p95": 0.1715940000003684,
+      "p99": 0.7258700000002136,
+      "min": 0.15472800000043208,
+      "max": 0.9500960000004852,
+      "mean": 0.1683457619999899,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "render-scrollable",
+      "category": "rendering",
+      "iterations": 100,
+      "median": 1.2040790000000925,
+      "p95": 1.8455830000002607,
+      "p99": 2.090758999999707,
+      "min": 1.101448000000346,
+      "max": 2.090758999999707,
+      "mean": 1.2566807200000039,
+      "unit": "ms",
+      "target": 2.5
+    },
+    {
+      "name": "render-dashboard-layout",
+      "category": "rendering",
+      "iterations": 100,
+      "median": 0.8614619999998467,
+      "p95": 0.9727279999997336,
+      "p99": 1.937948000000688,
+      "min": 0.8426449999997203,
+      "max": 1.937948000000688,
+      "mean": 0.8882399300000088,
+      "unit": "ms",
+      "target": 2
+    },
+    {
+      "name": "render-form-layout",
+      "category": "rendering",
+      "iterations": 200,
+      "median": 0.49804199999925913,
+      "p95": 0.574587000000065,
+      "p99": 1.3371309999993173,
+      "min": 0.47730500000034226,
+      "max": 1.398985000000721,
+      "mean": 0.5175164449999738,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "buffer-to-string-80x24",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.014422999999624153,
+      "p95": 0.016951999999946565,
+      "p99": 0.028035000000272703,
+      "min": 0.013343000000531902,
+      "max": 0.4315440000000308,
+      "mean": 0.01587511200001427,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "buffer-to-string-120x40",
+      "category": "rendering",
+      "iterations": 200,
+      "median": 0.03407900000001973,
+      "p95": 0.03609700000015437,
+      "p99": 0.0440230000003794,
+      "min": 0.03152200000022276,
+      "max": 0.4577289999997447,
+      "mean": 0.03635345500002586,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "render-separators",
+      "category": "rendering",
+      "iterations": 500,
+      "median": 0.28754899999967165,
+      "p95": 0.32227599999987433,
+      "p99": 0.8213999999998123,
+      "min": 0.2776510000003327,
+      "max": 1.1029570000000604,
+      "mean": 0.29925970200000485,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "render-tabs",
+      "category": "rendering",
+      "iterations": 200,
+      "median": 0.32179100000030303,
+      "p95": 0.3546999999998661,
+      "p99": 0.887576000000081,
+      "min": 0.3087100000002465,
+      "max": 1.2105469999996785,
+      "mean": 0.33378894000001763,
+      "unit": "ms",
+      "target": 0.5
+    }
+  ],
+  "findings": [
+    {
+      "title": "Simple components render fast",
+      "description": "Basic components (text, button, input) render in under 0.1ms. Component overhead is minimal.",
+      "category": "info",
+      "benchmarks": [
+        "render-text-simple",
+        "render-button",
+        "render-input"
+      ],
+      "metrics": {
+        "textMs": 0.14577900000000454,
+        "buttonMs": 0.14638299999990068,
+        "inputMs": 0.14602400000001126
+      }
+    },
+    {
+      "title": "Nesting depth has moderate impact",
+      "description": "Each level of nesting adds small overhead. 5 levels is ~50% slower than 3 levels.",
+      "category": "info",
+      "benchmarks": [
+        "render-nested-3-levels",
+        "render-nested-5-levels"
+      ],
+      "metrics": {
+        "threeMs": 0.22020599999996193,
+        "fiveMs": 0.2623069999999643
+      }
+    },
+    {
+      "title": "Tables scale linearly with rows",
+      "description": "Table rendering time scales approximately linearly with row count.",
+      "category": "info",
+      "benchmarks": [
+        "render-table-5-rows",
+        "render-table-20-rows"
+      ],
+      "metrics": {
+        "fiveRowMs": 1.084444000000076,
+        "twentyRowMs": 4.963628999999855,
+        "ratio": "4.6x"
+      }
+    },
+    {
+      "title": "Buffer string output is efficient",
+      "description": "Converting rendered buffer to string representation is fast even for large buffers.",
+      "category": "info",
+      "benchmarks": [
+        "buffer-to-string-80x24",
+        "buffer-to-string-120x40"
+      ],
+      "metrics": {
+        "smallMs": 0.014422999999624153,
+        "largeMs": 0.03407900000001973
+      }
+    }
+  ],
+  "notes": "Component rendering benchmarks. Tests individual components, nested layouts, tables, lists, scrollable containers, and full page layouts. ANSI output generation is also measured."
+}

@@ -3,7 +3,7 @@
  * Tests rendering performance of various UI components and layouts
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { createElement, TerminalBuffer, globalLayoutEngine, RenderingEngine } from '../../mod.ts';
 
 const suite = new BenchmarkSuite('rendering');
@@ -581,6 +581,6 @@ suite.addFindings([
 suite.setNotes('Component rendering benchmarks. Tests individual components, nested layouts, tables, lists, scrollable containers, and full page layouts. ANSI output generation is also measured.');
 
 // Save results
-const outputPath = new URL('../results/components-rendering-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/components-rendering-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

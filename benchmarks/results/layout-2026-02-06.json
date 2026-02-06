@@ -1,0 +1,142 @@
+{
+  "timestamp": "2026-02-06T16:14:31.736Z",
+  "commit": "9043301",
+  "results": [
+    {
+      "name": "layout-50-flat",
+      "category": "layout",
+      "iterations": 1000,
+      "median": 0.16132099999998673,
+      "p95": 0.21454299999999193,
+      "p99": 0.4821279999999888,
+      "min": 0.15236900000002152,
+      "max": 1.0929820000000063,
+      "mean": 0.17800500900000052,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "layout-20-row",
+      "category": "layout",
+      "iterations": 1000,
+      "median": 0.07542699999999058,
+      "p95": 0.0860890000000154,
+      "p99": 0.3439819999999827,
+      "min": 0.06678700000003346,
+      "max": 0.4819389999999544,
+      "mean": 0.08029355400000003,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "layout-deep-10",
+      "category": "layout",
+      "iterations": 500,
+      "median": 0.06049300000006497,
+      "p95": 0.06837400000006255,
+      "p99": 0.3011510000000044,
+      "min": 0.05681600000002618,
+      "max": 0.3827090000000908,
+      "mean": 0.06477299000000221,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "layout-wide-3x5",
+      "category": "layout",
+      "iterations": 500,
+      "median": 0.7522609999999759,
+      "p95": 1.1946050000000241,
+      "p99": 1.2757739999999558,
+      "min": 0.7275840000000926,
+      "max": 1.6907959999999775,
+      "mean": 0.8053965139999968,
+      "unit": "ms",
+      "target": 3
+    },
+    {
+      "name": "layout-flex-mixed",
+      "category": "layout",
+      "iterations": 1000,
+      "median": 0.05659900000000562,
+      "p95": 0.07575300000007701,
+      "p99": 0.12127399999985755,
+      "min": 0.05396199999995588,
+      "max": 0.5177020000000994,
+      "mean": 0.061942012999993724,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "layout-dashboard",
+      "category": "layout",
+      "iterations": 500,
+      "median": 0.21867100000008577,
+      "p95": 0.2361990000001697,
+      "p99": 0.5968449999998029,
+      "min": 0.20762500000000728,
+      "max": 0.7271809999999732,
+      "mean": 0.22557592799999748,
+      "unit": "ms",
+      "target": 1
+    },
+    {
+      "name": "layout-grid-10x10",
+      "category": "layout",
+      "iterations": 200,
+      "median": 1.6683899999998175,
+      "p95": 2.1881999999998243,
+      "p99": 2.3003459999999905,
+      "min": 1.6176519999999073,
+      "max": 2.424570999999787,
+      "mean": 1.7264328300000091,
+      "unit": "ms",
+      "target": 5
+    }
+  ],
+  "findings": [
+    {
+      "title": "Grid layout is the most expensive at 1.67ms",
+      "description": "The 10x10 grid (100+ nodes) is the slowest layout at 1.67ms, but still well under its 5ms target (33% utilization). Cost scales with total node count.",
+      "category": "performance",
+      "benchmarks": ["layout-grid-10x10"],
+      "metrics": {
+        "gridMs": 1.668,
+        "targetMs": 5.0,
+        "headroom": "67%"
+      }
+    },
+    {
+      "title": "Deep nesting is cheaper than wide trees",
+      "description": "10-level deep nesting (0.060ms) is much cheaper than a 3x5 wide tree (0.752ms). Layout cost is driven by total node count, not tree depth.",
+      "category": "comparison",
+      "benchmarks": ["layout-deep-10", "layout-wide-3x5"],
+      "metrics": {
+        "deepMs": 0.060,
+        "wideMs": 0.752,
+        "ratio": "12.5x"
+      }
+    },
+    {
+      "title": "Flex mixed layout is the fastest",
+      "description": "Mixed flex properties (grow, shrink, basis) compute in 0.057ms, showing the flex algorithm handles heterogeneous sizing efficiently.",
+      "category": "performance",
+      "benchmarks": ["layout-flex-mixed"],
+      "metrics": {
+        "flexMixedMs": 0.057,
+        "targetMs": 0.3
+      }
+    },
+    {
+      "title": "Dashboard layout is practical at 0.22ms",
+      "description": "A realistic dashboard layout with multiple nested containers completes in 0.22ms (22% of target), confirming the engine handles typical app layouts comfortably.",
+      "category": "performance",
+      "benchmarks": ["layout-dashboard"],
+      "metrics": {
+        "dashboardMs": 0.219,
+        "targetMs": 1.0,
+        "headroom": "78%"
+      }
+    }
+  ]
+}

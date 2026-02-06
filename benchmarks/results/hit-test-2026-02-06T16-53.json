@@ -1,0 +1,341 @@
+{
+  "timestamp": "2026-02-06T16:53:18.333Z",
+  "commit": "9043301",
+  "results": [
+    {
+      "name": "hit-flat-10-first",
+      "category": "hit-test",
+      "iterations": 5000,
+      "median": 0.0006070000000022446,
+      "p95": 0.002149000000002843,
+      "p99": 0.004817000000002736,
+      "min": 0.0004969999999957508,
+      "max": 0.06576499999999896,
+      "mean": 0.001047232400000138,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "hit-flat-10-last",
+      "category": "hit-test",
+      "iterations": 5000,
+      "median": 0.0010529999999846495,
+      "p95": 0.0026340000000004693,
+      "p99": 0.00488800000002243,
+      "min": 0.0007019999999897664,
+      "max": 0.9366679999999974,
+      "mean": 0.001624569000000031,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "hit-flat-100-first",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.001576999999997497,
+      "p95": 0.002071000000000822,
+      "p99": 0.00233199999999556,
+      "min": 0.001452000000000453,
+      "max": 0.023206000000016047,
+      "mean": 0.001743851000000049,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "hit-flat-100-middle",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.004589999999979,
+      "p95": 0.004874999999998408,
+      "p99": 0.0074070000000006075,
+      "min": 0.002933000000012953,
+      "max": 0.22236200000000395,
+      "mean": 0.004535059000000246,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "hit-flat-100-last",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.004585000000020045,
+      "p95": 0.004701999999980444,
+      "p99": 0.0049539999999979045,
+      "min": 0.00433400000000006,
+      "max": 0.014112999999980502,
+      "mean": 0.004603077499999998,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "hit-flat-500-first",
+      "category": "hit-test",
+      "iterations": 1000,
+      "median": 0.006619999999998072,
+      "p95": 0.007294999999999163,
+      "p99": 0.01492799999999761,
+      "min": 0.002600999999998521,
+      "max": 0.20866300000000138,
+      "mean": 0.006576777999999535,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "hit-flat-500-last",
+      "category": "hit-test",
+      "iterations": 1000,
+      "median": 0.020078000000012253,
+      "p95": 0.020744000000007645,
+      "p99": 0.02341799999999239,
+      "min": 0.019383000000004813,
+      "max": 0.030646999999987656,
+      "mean": 0.02019211500000037,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "hit-deep-5",
+      "category": "hit-test",
+      "iterations": 5000,
+      "median": 0.0004199999999912052,
+      "p95": 0.0004619999999988522,
+      "p99": 0.0005130000000121981,
+      "min": 0.00039400000000000546,
+      "max": 0.010757999999981394,
+      "mean": 0.000433287799999772,
+      "unit": "ms",
+      "target": 0.01
+    },
+    {
+      "name": "hit-deep-10",
+      "category": "hit-test",
+      "iterations": 5000,
+      "median": 0.0006040000000098189,
+      "p95": 0.0006380000000092423,
+      "p99": 0.0006699999999852935,
+      "min": 0.0005669999999895481,
+      "max": 0.009456000000000131,
+      "mean": 0.0006120942000002799,
+      "unit": "ms",
+      "target": 0.015
+    },
+    {
+      "name": "hit-deep-20",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.0010609999999928732,
+      "p95": 0.0011090000000137934,
+      "p99": 0.0011570000000062919,
+      "min": 0.001010000000007949,
+      "max": 0.008988000000016427,
+      "mean": 0.0010764829999998255,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "hit-wide-3x5-leaf",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.005351000000018757,
+      "p95": 0.010829000000001088,
+      "p99": 0.017410999999981414,
+      "min": 0.005164000000007718,
+      "max": 0.33277799999999047,
+      "mean": 0.0073415339999994556,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "hit-wide-4x4-leaf",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.0022189999999966403,
+      "p95": 0.002352000000001908,
+      "p99": 0.002643000000006168,
+      "min": 0.0020580000000052223,
+      "max": 0.013752000000010867,
+      "mean": 0.002241905999999986,
+      "unit": "ms",
+      "target": 0.03
+    },
+    {
+      "name": "hit-wide-3x10-leaf",
+      "category": "hit-test",
+      "iterations": 1000,
+      "median": 0.04238000000000852,
+      "p95": 0.043983999999994694,
+      "p99": 0.04733899999996538,
+      "min": 0.040053999999997814,
+      "max": 0.2954639999999813,
+      "mean": 0.04280647100000005,
+      "unit": "ms",
+      "target": 0.08
+    },
+    {
+      "name": "hit-miss-flat-100",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.0037130000000047403,
+      "p95": 0.006486999999992804,
+      "p99": 0.00837500000000091,
+      "min": 0.003489999999999327,
+      "max": 0.14641500000004726,
+      "mean": 0.004112175000000008,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "hit-miss-wide-3x10",
+      "category": "hit-test",
+      "iterations": 1000,
+      "median": 0.044529999999952,
+      "p95": 0.04639500000001817,
+      "p99": 0.04966899999999441,
+      "min": 0.0413199999999847,
+      "max": 0.3543720000000121,
+      "mean": 0.04473312100000101,
+      "unit": "ms",
+      "target": 0.08
+    },
+    {
+      "name": "hit-mixed-interactive",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.0016740000000368127,
+      "p95": 0.0018079999999827123,
+      "p99": 0.0025150000000166983,
+      "min": 0.0015980000000013206,
+      "max": 0.029506999999966865,
+      "mean": 0.0017474589999998216,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "hit-mixed-non-interactive",
+      "category": "hit-test",
+      "iterations": 2000,
+      "median": 0.0019330000000081782,
+      "p95": 0.0028269999999679385,
+      "p99": 0.003768000000036409,
+      "min": 0.0017659999999750653,
+      "max": 0.2541329999999675,
+      "mean": 0.0022970220000000266,
+      "unit": "ms",
+      "target": 0.02
+    },
+    {
+      "name": "hit-100-random-flat100",
+      "category": "hit-test",
+      "iterations": 500,
+      "median": 0.22661499999998114,
+      "p95": 0.3278320000000008,
+      "p99": 0.4727350000000001,
+      "min": 0.19012099999997645,
+      "max": 0.6028250000000526,
+      "mean": 0.2393570600000003,
+      "unit": "ms",
+      "target": 1.5
+    },
+    {
+      "name": "hit-100-random-wide3x10",
+      "category": "hit-test",
+      "iterations": 500,
+      "median": 3.455120999999963,
+      "p95": 4.000041999999667,
+      "p99": 6.3741250000002765,
+      "min": 2.7946199999998953,
+      "max": 8.702492999999777,
+      "mean": 3.5317526279999942,
+      "unit": "ms",
+      "target": 8
+    },
+    {
+      "name": "isInteractive-button-1000",
+      "category": "hit-test",
+      "iterations": 1000,
+      "median": 0.0030440000000453438,
+      "p95": 0.009989000000132364,
+      "p99": 0.010152999999718304,
+      "min": 0.003018999999767402,
+      "max": 0.05807800000002317,
+      "mean": 0.003631265000001349,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "isInteractive-text-1000",
+      "category": "hit-test",
+      "iterations": 1000,
+      "median": 0.005040000000008149,
+      "p95": 0.005177000000003318,
+      "p99": 0.012842999999520543,
+      "min": 0.005016000000068743,
+      "max": 0.043430000000171276,
+      "mean": 0.0053739669999981745,
+      "unit": "ms",
+      "target": 0.05
+    }
+  ],
+  "findings": [
+    {
+      "title": "Hit testing scales with tree traversal depth",
+      "description": "Flat trees are fastest. Deep nesting adds overhead for each level traversed.",
+      "category": "info",
+      "benchmarks": [
+        "hit-flat-10-first",
+        "hit-deep-5",
+        "hit-deep-10",
+        "hit-deep-20"
+      ],
+      "metrics": {
+        "flat10Ms": 0.0006070000000022446,
+        "deep5Ms": 0.0004199999999912052,
+        "deep10Ms": 0.0006040000000098189,
+        "deep20Ms": 0.0010609999999928732
+      }
+    },
+    {
+      "title": "Wide trees have higher traversal cost",
+      "description": "Trees with many siblings at each level require checking more elements.",
+      "category": "info",
+      "benchmarks": [
+        "hit-wide-3x5-leaf",
+        "hit-wide-4x4-leaf",
+        "hit-wide-3x10-leaf"
+      ],
+      "metrics": {
+        "155elements": 0.005351000000018757,
+        "340elements": 0.0022189999999966403,
+        "1110elements": 0.04238000000000852
+      }
+    },
+    {
+      "title": "Element position in flat list affects hit time",
+      "description": "First-match returns quickly. Elements at the end require full traversal.",
+      "category": "info",
+      "benchmarks": [
+        "hit-flat-500-first",
+        "hit-flat-500-last"
+      ],
+      "metrics": {
+        "firstMs": 0.006619999999998072,
+        "lastMs": 0.020078000000012253,
+        "ratio": "3.0x"
+      }
+    },
+    {
+      "title": "Hit testing is fast enough for 60fps",
+      "description": "100 random hit tests on large tree takes ~2-3ms, well within 16.67ms frame budget.",
+      "category": "info",
+      "benchmarks": [
+        "hit-100-random-flat100",
+        "hit-100-random-wide3x10"
+      ],
+      "metrics": {
+        "flat100randomMs": 0.22661499999998114,
+        "wide3x10randomMs": 3.455120999999963
+      }
+    }
+  ],
+  "notes": "Hit testing benchmarks. Tests element detection across flat trees (10-500 elements), deep trees (5-20 levels), and wide trees (150-1100 elements). Includes miss scenarios and interactive element checks."
+}

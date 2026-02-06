@@ -2,7 +2,7 @@
  * Buffer diff benchmarks - comprehensive testing of buffer comparison operations
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { TerminalBuffer, DualBuffer } from '../../mod.ts';
 
 const suite = new BenchmarkSuite('buffer-diff');
@@ -428,6 +428,6 @@ suite.addFindings([
 suite.setNotes('Buffer diff benchmarks. Tests diff performance across buffer sizes (400-16000 cells), change percentages (0-100%), change patterns (scattered, clustered, row-based), DualBuffer operations, and dirty row tracking effectiveness.');
 
 // Save results
-const outputPath = new URL('../results/buffer-diff-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/buffer-diff-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

@@ -3,7 +3,7 @@
  * Runs before every layout calculation to determine intrinsic sizes.
  */
 
-import { BenchmarkSuite } from '../harness.ts';
+import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
 import { ContentMeasurer } from '../../src/content-measurer.ts';
 import { createElement } from '../../mod.ts';
 import type { Element } from '../../src/types.ts';
@@ -321,6 +321,6 @@ suite.addFindings([
 suite.setNotes('Content measurement benchmarks. Tests single element measurement, flat containers (10-500 children), nested containers (various depths), scrollable container fast-path optimization, and mixed element type containers.');
 
 // Save results
-const outputPath = new URL('../results/content-measurer-' + new Date().toISOString().slice(0, 10) + '.json', import.meta.url).pathname;
+const outputPath = new URL('../results/content-measurer-' + benchmarkTimestamp() + '.json', import.meta.url).pathname;
 await suite.saveResults(outputPath);
 console.log(`\nResults saved to: ${outputPath}`);

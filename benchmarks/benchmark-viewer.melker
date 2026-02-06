@@ -12,6 +12,12 @@
     let categories = [];
     let selectedCategory = 'all';
 
+    // Multi-suite comparison
+    let relatedFiles = [];  // [{date, commit, path, results, findings, notes}, ...]
+    let baseName = '';       // Suite base name (e.g., 'ansi-output')
+    let baselineIdx = 0;    // Index into sorted relatedFiles for baseline
+    let compareIdx = -1;    // Index into sorted relatedFiles for compare-to (-1 = last)
+
     // Load results from JSON file
     export async function loadFile(event) {
       try {
@@ -34,10 +40,18 @@
           const cats = new Set(results.map(r => r.category || 'uncategorized'));
           categories = ['all', ...Array.from(cats).sort()];
 
+          // Auto-discover related files for comparison
+          await discoverRelatedFiles(event.path);
+          baselineIdx = 0;
+          compareIdx = -1; // -1 = latest
+
           updateViews();
           const findingsCount = findings.length > 0 ? `, ${findings.length} findings` : '';
+          const suiteInfo = relatedFiles.length >= 2
+            ? ` | ${baseName} (${relatedFiles.length} dates found)`
+            : '';
           $melker.getElementById('status').props.text =
-            `Loaded ${results.length} benchmarks${findingsCount} from ${event.path.split('/').pop()}`;
+            `Loaded ${results.length} benchmarks${findingsCount} from ${event.path.split('/').pop()}${suiteInfo}`;
         } else {
           $melker.getElementById('status').props.text = 'Invalid benchmark format';
         }
@@ -49,12 +63,56 @@
       $melker.getElementById('fileDialog').hide();
     }
 
+    // Discover related benchmark files in the same directory
+    // Supports both old (suite-YYYY-MM-DD.json) and new (suite-YYYY-MM-DDTHH-MM.json) formats
+    const filePattern = /^(.+)-(\d{4}-\d{2}-\d{2}(?:T\d{2}-\d{2})?)\.json$/;
+
+    async function discoverRelatedFiles(filePath) {
+      const fileName = filePath.split('/').pop();
+      const dirPath = filePath.slice(0, filePath.length - fileName.length);
+      const match = fileName.match(filePattern);
+      if (!match) {
+        baseName = '';
+        relatedFiles = [];
+        return;
+      }
+
+      baseName = match[1];
+      relatedFiles = [];
+
+      try {
+        for await (const entry of Deno.readDir(dirPath || '.')) {
+          if (!entry.isFile) continue;
+          const m = entry.name.match(filePattern);
+          if (!m || m[1] !== baseName) continue;
+
+          const path = dirPath ? dirPath + entry.name : entry.name;
+          try {
+            const raw = await Deno.readTextFile(path);
+            const d = JSON.parse(raw);
+            if (d.results && Array.isArray(d.results)) {
+              relatedFiles.push({
+                date: m[2],
+                commit: d.commit || 'unknown',
+                path,
+                results: d.results,
+                findings: d.findings || [],
+                notes: d.notes || '',
+              });
+            }
+          } catch { /* skip unreadable files */ }
+        }
+        relatedFiles.sort((a, b) => a.date.localeCompare(b.date));
+      } catch { /* directory read failed */ }
+    }
+
     // Update all views with current data
     function updateViews() {
       updateSummaryTable();
       updateHistoryHeatmap();
       updateCategorySelect();
       updateFindings();
+      updateCompare();
     }
 
     // Findings tooltip handler
@@ -134,6 +192,144 @@
       heatmap.props.colLabels = colLabels;
     }
 
+    // Comparison tab
+    function getSortedFiles() {
+      return relatedFiles.slice().sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function computeComparison() {
+      if (relatedFiles.length < 2) return [];
+      const sorted = getSortedFiles();
+      const bi = Math.max(0, Math.min(baselineIdx, sorted.length - 1));
+      const ci = compareIdx < 0 ? sorted.length - 1 : Math.max(0, Math.min(compareIdx, sorted.length - 1));
+      const baseline = sorted[bi];
+      const current = sorted[ci];
+      const benchNames = current.results.map(r => r.name);
+
+      return benchNames.map(name => {
+        const values = sorted.map(f => {
+          const r = f.results.find(x => x.name === name);
+          return r ? r.median : null;
+        });
+        const baseResult = baseline.results.find(x => x.name === name);
+        const curResult = current.results.find(x => x.name === name);
+        const baseVal = baseResult?.median;
+        const curVal = curResult?.median;
+        let diff = null;
+        let diffPercent = null;
+        let status = '-';
+        if (baseVal != null && curVal != null && baseVal > 0) {
+          diff = curVal - baseVal;
+          diffPercent = ((curVal - baseVal) / baseVal) * 100;
+          if (diffPercent < -5) status = 'faster';
+          else if (diffPercent > 5) status = 'slower';
+          else status = 'same';
+        }
+
+        // Assess signal quality
+        let signal = '';
+        if (baseVal != null && curVal != null) {
+          if (baseVal < 0.01 && curVal < 0.01) {
+            signal = 'noise';
+          } else {
+            const baseRatio = baseResult?.p95 && baseVal > 0 ? baseResult.p95 / baseVal : 1;
+            const curRatio = curResult?.p95 && curVal > 0 ? curResult.p95 / curVal : 1;
+            if (baseRatio > 3 || curRatio > 3) signal = 'noisy';
+          }
+        }
+
+        return { name, values, diff, diffPercent, status, signal };
+      });
+    }
+
+    export function onBaselineChange(event) {
+      baselineIdx = parseInt(event.value, 10);
+      updateCompare();
+    }
+
+    export function onCompareChange(event) {
+      compareIdx = parseInt(event.value, 10);
+      updateCompare();
+    }
+
+    function updateCompareSelects(sorted) {
+      const baselineSel = $melker.getElementById('baselineSelect');
+      const compareSel = $melker.getElementById('compareSelect');
+      if (!baselineSel || !compareSel) return;
+
+      const options = sorted.map((f, i) => ({ id: String(i), label: f.date, disabled: false }));
+      baselineSel.props.options = options;
+      compareSel.props.options = options;
+
+      const bi = Math.max(0, Math.min(baselineIdx, sorted.length - 1));
+      const ci = compareIdx < 0 ? sorted.length - 1 : Math.max(0, Math.min(compareIdx, sorted.length - 1));
+      baselineSel.props.selectedValue = String(bi);
+      compareSel.props.selectedValue = String(ci);
+    }
+
+    function updateCompare() {
+      const statusEl = $melker.getElementById('compareStatus');
+      const table = $melker.getElementById('compareTable');
+      const heatmap = $melker.getElementById('compareHeatmap');
+
+      if (relatedFiles.length < 2) {
+        if (statusEl) statusEl.props.text = 'No comparison data (need 2+ dates for the same suite)';
+        if (table) { table.props.columns = []; table.props.rows = []; }
+        if (heatmap) heatmap.props.grid = [];
+        return;
+      }
+
+      const sorted = getSortedFiles();
+      const dates = sorted.map(f => f.date);
+      updateCompareSelects(sorted);
+
+      const bi = Math.max(0, Math.min(baselineIdx, sorted.length - 1));
+      const ci = compareIdx < 0 ? sorted.length - 1 : Math.max(0, Math.min(compareIdx, sorted.length - 1));
+      if (statusEl) statusEl.props.text = `${baseName}: ${sorted[bi].date} vs ${sorted[ci].date}`;
+
+      // Build comparison table
+      const comparison = computeComparison();
+      const numericSort = (a, b) => {
+        const na = parseFloat(String(a).replace('%', ''));
+        const nb = parseFloat(String(b).replace('%', ''));
+        if (isNaN(na) && isNaN(nb)) return 0;
+        if (isNaN(na)) return 1;
+        if (isNaN(nb)) return -1;
+        return na - nb;
+      };
+      const columns = [
+        { header: 'Benchmark', width: 'fill' },
+        ...dates.map(d => ({ header: d, width: 12, align: 'right', comparator: numericSort })),
+        { header: 'Diff %', width: 10, align: 'right', comparator: numericSort },
+        { header: 'Status', width: 8 },
+        { header: 'Signal', width: 8 },
+      ];
+      const rows = comparison.map(c => [
+        c.name,
+        ...c.values.map(v => v != null ? v.toFixed(2) : '-'),
+        c.diffPercent != null ? `${c.diffPercent >= 0 ? '+' : ''}${c.diffPercent.toFixed(1)}%` : '-',
+        c.status,
+        c.signal,
+      ]);
+      if (table) {
+        table.props.columns = columns;
+        table.props.rows = rows;
+      }
+
+      // Build heatmap
+      const benchNames = sorted[0].results.map(r => r.name);
+      const grid = benchNames.map(name =>
+        sorted.map(f => f.results.find(r => r.name === name)?.median ?? null)
+      );
+      const colLabels = dates;
+      const rowLabels = benchNames.map(n => n.slice(0, 24));
+      if (heatmap) {
+        heatmap.props.grid = grid;
+        heatmap.props.colLabels = colLabels;
+        heatmap.props.rowLabels = rowLabels;
+      }
+    }
+
     // Category select
     function updateCategorySelect() {
       // Update would require recreating options, skip for now
@@ -164,6 +360,10 @@
       history = [];
       categories = ['all'];
       selectedCategory = 'all';
+      relatedFiles = [];
+      baseName = '';
+      baselineIdx = 0;
+      compareIdx = -1;
 
       $melker.getElementById('summaryTable').props.rows = [];
       $melker.getElementById('historyHeatmap').props.grid = [];
@@ -171,6 +371,12 @@
       if (findingsTable) findingsTable.props.rows = [];
       const notesText = $melker.getElementById('notesText');
       if (notesText) notesText.props.text = 'No notes available.';
+      const compareTable = $melker.getElementById('compareTable');
+      if (compareTable) { compareTable.props.columns = []; compareTable.props.rows = []; }
+      const compareHeatmap = $melker.getElementById('compareHeatmap');
+      if (compareHeatmap) compareHeatmap.props.grid = [];
+      const compareStatus = $melker.getElementById('compareStatus');
+      if (compareStatus) compareStatus.props.text = 'No comparison data';
       $melker.getElementById('status').props.text = 'Data cleared';
     }
   </script>
@@ -227,6 +433,33 @@
               valueFormat=".2f"
               style="cellWidth: 8;"
             />
+          </container>
+        </container>
+      </tab>
+
+      <tab title="Compare">
+        <container style="gap: 1; flex: 1;">
+          <container style="flex-direction: row; gap: 2; align-items: center;">
+            <text>Baseline:</text>
+            <select id="baselineSelect" onSelect="$app.onBaselineChange(event);">
+              <option value="0">-</option>
+            </select>
+            <text>Compare to:</text>
+            <select id="compareSelect" onSelect="$app.onCompareChange(event);">
+              <option value="0">-</option>
+            </select>
+            <container style="flex: 1;" />
+            <text id="compareStatus" style="font-weight: bold;">No comparison data</text>
+          </container>
+          <data-table id="compareTable" style="flex: 1;">
+          {
+            "columns": [],
+            "rows": []
+          }
+          </data-table>
+          <container style="height: 12; overflow: auto;">
+            <data-heatmap id="compareHeatmap" grid='[]' colorScale="diverging"
+              showValues="true" valueFormat=".2f" style="cellWidth: 8;" />
           </container>
         </container>
       </tab>

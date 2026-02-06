@@ -1,0 +1,339 @@
+{
+  "timestamp": "2026-02-06T16:53:40.507Z",
+  "commit": "9043301",
+  "results": [
+    {
+      "name": "parse-flowchart-simple",
+      "category": "graph",
+      "iterations": 1000,
+      "median": 0.014562000000012176,
+      "p95": 0.032985999999993965,
+      "p99": 0.054158999999998514,
+      "min": 0.013361000000003287,
+      "max": 1.3114810000000148,
+      "mean": 0.020385161000000693,
+      "unit": "ms",
+      "target": 0.1
+    },
+    {
+      "name": "parse-flowchart-medium",
+      "category": "graph",
+      "iterations": 500,
+      "median": 0.048273999999992157,
+      "p95": 0.05605500000001484,
+      "p99": 0.29231300000003557,
+      "min": 0.04572000000001708,
+      "max": 0.34629699999999275,
+      "mean": 0.05241709999999966,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "parse-flowchart-complex",
+      "category": "graph",
+      "iterations": 200,
+      "median": 0.1250999999999749,
+      "p95": 0.15313900000001013,
+      "p99": 0.42256900000000996,
+      "min": 0.11479900000000498,
+      "max": 0.46508099999999786,
+      "mean": 0.13083094500000272,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "parse-sequence-simple",
+      "category": "graph",
+      "iterations": 1000,
+      "median": 0.005355000000008658,
+      "p95": 0.0065870000000245454,
+      "p99": 0.012081000000023323,
+      "min": 0.0034089999999764586,
+      "max": 0.0554960000000051,
+      "mean": 0.005114114000000768,
+      "unit": "ms",
+      "target": 0.1
+    },
+    {
+      "name": "parse-sequence-medium",
+      "category": "graph",
+      "iterations": 500,
+      "median": 0.011054999999998927,
+      "p95": 0.018394999999998163,
+      "p99": 0.03046999999997979,
+      "min": 0.010579999999947631,
+      "max": 0.4180509999999913,
+      "mean": 0.013624638000000005,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "parse-sequence-complex",
+      "category": "graph",
+      "iterations": 200,
+      "median": 0.021024000000011256,
+      "p95": 0.03018800000000965,
+      "p99": 0.0747079999999869,
+      "min": 0.020262000000002445,
+      "max": 0.08555899999998928,
+      "mean": 0.0226664050000025,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "parse-class-simple",
+      "category": "graph",
+      "iterations": 1000,
+      "median": 0.006701999999961572,
+      "p95": 0.010228000000040538,
+      "p99": 0.017837999999983367,
+      "min": 0.005494999999996253,
+      "max": 0.3793969999999831,
+      "mean": 0.007792605999999182,
+      "unit": "ms",
+      "target": 0.1
+    },
+    {
+      "name": "parse-class-medium",
+      "category": "graph",
+      "iterations": 500,
+      "median": 0.018915999999990163,
+      "p95": 0.020362000000034186,
+      "p99": 0.03878000000003112,
+      "min": 0.018128999999987627,
+      "max": 0.37707399999999325,
+      "mean": 0.02009087199999874,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "parse-class-complex",
+      "category": "graph",
+      "iterations": 200,
+      "median": 0.049193000000002485,
+      "p95": 0.05465199999997594,
+      "p99": 0.07411600000000362,
+      "min": 0.04787399999997888,
+      "max": 0.37892999999996846,
+      "mean": 0.05132366000000047,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "layout-simple",
+      "category": "graph",
+      "iterations": 2000,
+      "median": 0.009349999999983538,
+      "p95": 0.023800999999991745,
+      "p99": 0.03659599999997454,
+      "min": 0.008360999999979413,
+      "max": 0.8395490000000336,
+      "mean": 0.012701485999999847,
+      "unit": "ms",
+      "target": 0.05
+    },
+    {
+      "name": "layout-medium",
+      "category": "graph",
+      "iterations": 1000,
+      "median": 0.023260999999990872,
+      "p95": 0.047272999999961485,
+      "p99": 0.06894799999997758,
+      "min": 0.02110099999998738,
+      "max": 0.5657199999999989,
+      "mean": 0.030398384999999507,
+      "unit": "ms",
+      "target": 0.1
+    },
+    {
+      "name": "layout-complex",
+      "category": "graph",
+      "iterations": 500,
+      "median": 0.0323179999999752,
+      "p95": 0.038661999999987984,
+      "p99": 0.054331000000047425,
+      "min": 0.03087599999997792,
+      "max": 0.307215000000042,
+      "mean": 0.03470264800000086,
+      "unit": "ms",
+      "target": 0.2
+    },
+    {
+      "name": "convert-flowchart-simple",
+      "category": "graph",
+      "iterations": 500,
+      "median": 0.04638599999998405,
+      "p95": 0.05579499999998916,
+      "p99": 0.13806499999998323,
+      "min": 0.03428899999994428,
+      "max": 0.39890600000001086,
+      "mean": 0.04819678599999941,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "convert-flowchart-complex",
+      "category": "graph",
+      "iterations": 200,
+      "median": 0.2460119999999506,
+      "p95": 0.40795300000002044,
+      "p99": 0.6669789999999693,
+      "min": 0.20112300000005234,
+      "max": 0.941065999999978,
+      "mean": 0.27078165500000123,
+      "unit": "ms",
+      "target": 0.8
+    },
+    {
+      "name": "convert-sequence-medium",
+      "category": "graph",
+      "iterations": 500,
+      "median": 0.05058700000006411,
+      "p95": 0.05952899999999772,
+      "p99": 0.11082499999997708,
+      "min": 0.04152499999997872,
+      "max": 2.446258999999941,
+      "mean": 0.05676337800000079,
+      "unit": "ms",
+      "target": 0.5
+    },
+    {
+      "name": "convert-class-medium",
+      "category": "graph",
+      "iterations": 500,
+      "median": 0.05189299999995001,
+      "p95": 0.11316099999999096,
+      "p99": 0.44617399999992813,
+      "min": 0.04948100000001432,
+      "max": 0.5654469999999492,
+      "mean": 0.06781192800000076,
+      "unit": "ms",
+      "target": 0.3
+    },
+    {
+      "name": "render-flowchart-simple",
+      "category": "graph",
+      "iterations": 100,
+      "median": 0.6393540000000257,
+      "p95": 1.3407909999999674,
+      "p99": 1.6218999999999824,
+      "min": 0.6149619999999913,
+      "max": 1.6218999999999824,
+      "mean": 0.7194583,
+      "unit": "ms",
+      "target": 2
+    },
+    {
+      "name": "render-flowchart-medium",
+      "category": "graph",
+      "iterations": 50,
+      "median": 1.1923170000000027,
+      "p95": 1.7202989999999545,
+      "p99": 2.2632019999998647,
+      "min": 1.170991999999842,
+      "max": 2.2632019999998647,
+      "mean": 1.263966759999994,
+      "unit": "ms",
+      "target": 5
+    },
+    {
+      "name": "render-flowchart-complex",
+      "category": "graph",
+      "iterations": 20,
+      "median": 1.6349589999999807,
+      "p95": 3.3684729999999945,
+      "p99": 3.3684729999999945,
+      "min": 1.5820550000000821,
+      "max": 3.3684729999999945,
+      "mean": 1.954648200000031,
+      "unit": "ms",
+      "target": 10
+    },
+    {
+      "name": "render-sequence-medium",
+      "category": "graph",
+      "iterations": 50,
+      "median": 4.571641,
+      "p95": 5.698585000000094,
+      "p99": 7.901098999999931,
+      "min": 4.4293780000000424,
+      "max": 7.901098999999931,
+      "mean": 4.8065447799999905,
+      "unit": "ms",
+      "target": 5
+    },
+    {
+      "name": "render-class-medium",
+      "category": "graph",
+      "iterations": 50,
+      "median": 1.2647610000003624,
+      "p95": 1.5508740000000216,
+      "p99": 2.2905769999997574,
+      "min": 1.229812000000038,
+      "max": 2.2905769999997574,
+      "mean": 1.3137511799999537,
+      "unit": "ms",
+      "target": 5
+    },
+    {
+      "name": "render-class-complex",
+      "category": "graph",
+      "iterations": 20,
+      "median": 2.127780000000257,
+      "p95": 3.4858320000003005,
+      "p99": 3.4858320000003005,
+      "min": 2.0893479999999727,
+      "max": 3.4858320000003005,
+      "mean": 2.19684244999994,
+      "unit": "ms",
+      "target": 10
+    }
+  ],
+  "findings": [
+    {
+      "title": "Flowchart parsing is fastest",
+      "description": "Flowchart parsing is faster than sequence and class diagrams due to simpler syntax.",
+      "category": "info",
+      "benchmarks": [
+        "parse-flowchart-medium",
+        "parse-sequence-medium",
+        "parse-class-medium"
+      ],
+      "metrics": {
+        "flowchartMs": 0.048273999999992157,
+        "sequenceMs": 0.011054999999998927,
+        "classMs": 0.018915999999990163
+      }
+    },
+    {
+      "title": "Layout is O(n*e) complexity",
+      "description": "Layout calculation scales with nodes and edges. Complex graphs with subgraphs take longer.",
+      "category": "info",
+      "benchmarks": [
+        "layout-simple",
+        "layout-medium",
+        "layout-complex"
+      ],
+      "metrics": {
+        "simpleMs": 0.009349999999983538,
+        "mediumMs": 0.023260999999990872,
+        "complexMs": 0.0323179999999752
+      }
+    },
+    {
+      "title": "Rendering dominates graph processing time",
+      "description": "Full rendering (parse + layout + convert + render) is significantly slower than parsing alone.",
+      "category": "info",
+      "benchmarks": [
+        "parse-flowchart-simple",
+        "render-flowchart-simple"
+      ],
+      "metrics": {
+        "parseMs": 0.014562000000012176,
+        "renderMs": 0.6393540000000257,
+        "ratio": "44x"
+      }
+    }
+  ],
+  "notes": "Graph component and Mermaid diagram benchmarks. Tests parsing (flowchart, sequence, class), layout calculation, conversion to Melker XML, and full rendering pipeline."
+}

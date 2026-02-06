@@ -706,6 +706,12 @@ export class MelkerEngine {
         logger.info('Debug server started', {
           url: this._debugServer.connectionUrl,
         });
+        // Print connection URL to stderr in headless mode so users know where to connect
+        if (this._headlessManager) {
+          Deno.stderr.writeSync(textEncoder.encode(
+            `Debug server: ${this._debugServer.connectionUrl}\n`
+          ));
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.warn('Failed to start debug server', {

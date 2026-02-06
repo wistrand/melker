@@ -24,8 +24,8 @@ export * from './src/resize.ts';
 // Export high-level engine
 export * from './src/engine.ts';
 
-// Export debug server
-export * from './src/debug-server.ts';
+// Export server
+export * from './src/server.ts';
 
 // Export headless mode
 export * from './src/headless.ts';

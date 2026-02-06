@@ -67,7 +67,7 @@ Detailed file layout for the Melker codebase.
 | File                    | Purpose                                        |
 |-------------------------|------------------------------------------------|
 | `logging.ts`            | File-based logging system                      |
-| `debug-server.ts`       | WebSocket debug server                         |
+| `server.ts`             | WebSocket server                               |
 | `headless.ts`           | Headless mode for testing                      |
 | `dev-tools.ts`          | F12 Dev Tools overlay                          |
 | `stats-overlay.ts`      | Performance stats overlay                      |
@@ -76,13 +76,13 @@ Detailed file layout for the Melker codebase.
 | `lint.ts`               | Lint mode validation, schemas                  |
 | `lsp.ts`                | Language Server Protocol for .melker files     |
 
-#### `debug-ui/` - Debug Server Web UI
+#### `server-ui/` - Server Web UI
 
 | File         | Purpose                                    |
 |--------------|--------------------------------------------|
-| `mirror.html`| HTML structure for debug web UI            |
-| `mirror.css` | Styles for terminal mirror and debug panels|
-| `mirror.js`  | Client-side logic, WebSocket, rendering    |
+| `index.html` | HTML structure for server web UI           |
+| `index.css`  | Styles for terminal mirror and panels      |
+| `index.js`   | Client-side logic, WebSocket, rendering    |
 
 ### System Integration
 

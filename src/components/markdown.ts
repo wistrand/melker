@@ -126,7 +126,7 @@ const logger = getLogger('Markdown');
 // Debug mode check - enabled via prop or config (fallback)
 function isMarkdownDebugEnabledFromEnv(): boolean {
   try {
-    return MelkerConfig.get().debugMarkdownDebug;
+    return MelkerConfig.get().markdownDebug;
   } catch {
     return false;
   }

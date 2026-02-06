@@ -369,8 +369,8 @@ deno run --allow-all melker.ts app.melker
 # Watch mode (auto-reload on changes)
 ./melker.ts --watch app.melker
 
-# Enable debug server
-MELKER_DEBUG_PORT=8080 ./melker.ts app.melker
+# Enable server
+./melker.ts --server-port 8080 app.melker
 ```
 
 ### Deno Flags
@@ -457,16 +457,16 @@ Configuration can be set via CLI flags (highest priority), environment variables
 ./melker.ts --print-config
 ```
 
-| Option | CLI Flag | Env Variable | Purpose |
-|--------|----------|--------------|---------|
-| Theme | `--theme` | `MELKER_THEME` | Theme selection (default: `auto`) |
-| Graphics mode | `--gfx-mode` | `MELKER_GFX_MODE` | `sextant` (default), `block`, `pattern`, `luma` |
-| Debug port | `--debug-port` | `MELKER_DEBUG_PORT` | Enable debug server |
-| Headless | `--headless` | `MELKER_HEADLESS` | Headless mode for testing |
-| Alt screen | `--no-alt-screen` | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer |
-| Persist | `--persist` | `MELKER_PERSIST` | Enable state persistence |
-| Log file | `--log-file` | `MELKER_LOG_FILE` | Log file path |
-| Log level | `--log-level` | `MELKER_LOG_LEVEL` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| Option         | CLI Flag         | Env Variable                   | Purpose                                          |
+|----------------|------------------|--------------------------------|--------------------------------------------------|
+| Theme          | `--theme`        | `MELKER_THEME`                 | Theme selection (default: `auto`)                |
+| Graphics mode  | `--gfx-mode`     | `MELKER_GFX_MODE`              | `sextant` (default), `block`, `pattern`, `luma`  |
+| Server port    | `--server-port`  | `MELKER_SERVER_PORT`           | Enable server                                    |
+| Headless       | `--headless`     | `MELKER_HEADLESS`              | Headless mode for testing                        |
+| Alt screen     | `--no-alt-screen` | `MELKER_NO_ALTERNATE_SCREEN`  | Disable alternate screen buffer                  |
+| Persist        | `--persist`      | `MELKER_PERSIST`               | Enable state persistence                         |
+| Log file       | `--log-file`     | `MELKER_LOG_FILE`              | Log file path                                    |
+| Log level      | `--log-level`    | `MELKER_LOG_LEVEL`             | `DEBUG`, `INFO`, `WARN`, `ERROR`                 |
 
 ### Project Structure
 

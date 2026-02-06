@@ -787,37 +787,45 @@ export class MelkerConfig {
     return this.data['headless.height'] as number;
   }
 
-  // Debug
-  get debugPort(): number | undefined {
-    return this.data['debug.port'] as number | undefined;
+  // Server
+  get serverEnabled(): boolean {
+    return this.data['server.enabled'] as boolean;
   }
 
-  get debugHost(): string {
-    return this.data['debug.host'] as string;
+  get serverPort(): number | undefined {
+    return this.data['server.port'] as number | undefined;
   }
 
-  get debugToken(): string | undefined {
-    return this.data['debug.token'] as string | undefined;
+  get serverHost(): string {
+    return this.data['server.host'] as string;
   }
 
-  get debugAllowRemoteInput(): boolean {
-    return this.data['debug.allowRemoteInput'] as boolean;
+  get serverToken(): string | undefined {
+    return this.data['server.token'] as string | undefined;
   }
 
-  get debugRetainBundle(): boolean {
-    return this.data['debug.retainBundle'] as boolean;
+  get serverAllowRemoteInput(): boolean {
+    return this.data['server.allowRemoteInput'] as boolean;
   }
 
-  get debugShowStats(): boolean {
-    return this.data['debug.showStats'] as boolean;
+  // Bundler
+  get bundlerRetainBundle(): boolean {
+    return this.data['bundler.retainBundle'] as boolean;
   }
 
-  get debugMarkdownDebug(): boolean {
-    return this.data['debug.markdownDebug'] as boolean;
+  // Performance
+  get performanceShowStats(): boolean {
+    return this.data['performance.showStats'] as boolean;
   }
 
-  get debugAudioDebug(): boolean {
-    return this.data['debug.audioDebug'] as boolean;
+  // Markdown
+  get markdownDebug(): boolean {
+    return this.data['markdown.debug'] as boolean;
+  }
+
+  // Audio
+  get audioDebug(): boolean {
+    return this.data['audio.debug'] as boolean;
   }
 
   // Persistence

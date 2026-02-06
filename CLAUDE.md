@@ -55,7 +55,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Component reference | [component-reference.md](agent_docs/component-reference.md)          |
 | Config system       | [config-architecture.md](agent_docs/config-architecture.md)          |
 | Policy system       | [policy-architecture.md](agent_docs/policy-architecture.md)          |
-| Debug server        | [debug-server-architecture.md](agent_docs/debug-server-architecture.md) |
+| Server              | [server-architecture.md](agent_docs/server-architecture.md)          |
 | Graph/diagrams      | [graph-architecture.md](agent_docs/graph-architecture.md)            |
 | Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)      |
 | Isolines mode       | [isolines-architecture.md](agent_docs/isolines-architecture.md)      |
@@ -181,9 +181,11 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 | `MELKER_STDOUT_COLOR`        | ANSI color output: `auto` (strip when piped), `always` (force colors), `never` (no colors)                                                                         |
 | `MELKER_STDOUT_TRIM`         | Trim stdout output: `none` (default), `right` (trailing spaces), `bottom` (trailing newlines), `both`                                                              |
 | `MELKER_NO_ALTERNATE_SCREEN` | Disable alternate screen buffer (`true` or `1`)                                                                                                                    |
-| `MELKER_DEBUG_PORT`          | Debug server port (implies `net: localhost`)                                                                                                                       |
-| `MELKER_DEBUG_TOKEN`         | Debug server connection token (auto-generated if not specified)                                                                                                    |
-| `MELKER_ALLOW_REMOTE_INPUT`  | Allow browser mirror to send mouse/keyboard events (`true` or `1`)                                                                                                 |
+| `MELKER_SERVER`              | Enable the remote viewing server — prefer `--server` flag                                                                                                          |
+| `MELKER_SERVER_PORT`         | Server port — prefer `--server-port` flag                                                                                                                          |
+| `MELKER_SERVER_HOST`         | Server bind address (default: `localhost`)                                                                                                                         |
+| `MELKER_SERVER_TOKEN`        | Server connection token — prefer `--server-token` flag                                                                                                             |
+| `MELKER_ALLOW_SERVER_INPUT`  | Allow server clients to send mouse/keyboard events — prefer `--server-allow-input` flag                                                                            |
 | `MELKER_LINT`                | Enable lint mode (`true` or `1`)                                                                                                                                   |
 | `MELKER_NO_CONSOLE_OVERRIDE` | Disable console.log redirect to logger (`true` or `1`)                                                                                                             |
 | `MELKER_PERSIST`             | Enable state persistence (`true` or `1`, default: false)                                                                                                           |
@@ -245,8 +247,8 @@ See [config-architecture.md](agent_docs/config-architecture.md) for full details
 ./melker.ts diagram.mmd             # Run mermaid file directly (no approval needed)
 ./melker.ts --watch app.melker      # Auto-reload on changes
 ./melker.ts --trust app.melker      # CI/scripts (bypass approval prompt)
-./melker.ts --debug app.melker      # Debug mode
-./melker.ts --debug-sextant         # Test terminal sextant character support
+./melker.ts --verbose app.melker    # Verbose mode
+./melker.ts --test-sextant          # Test terminal sextant character support
 ./melker.ts --stdout app.melker     # Output single frame to stdout and exit
 ./melker.ts --interactive app.melker # Force TUI mode even when piped
 ./melker.ts --color=always app.melker # Force ANSI colors even when piped

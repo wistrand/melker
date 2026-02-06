@@ -1,7 +1,7 @@
 // File-based logging system for melker applications
 // Simple synchronous logging - lost lines are lost
 
-import { getGlobalDebugServer } from './debug-server.ts';
+import { getGlobalServer } from './server.ts';
 import { Env } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
 
@@ -232,10 +232,10 @@ export class Logger {
     // Add to in-memory buffer (always, regardless of file logging)
     addToLogBuffer(entry);
 
-    // Broadcast to debug server if available
-    const debugServer = getGlobalDebugServer();
-    if (debugServer?.isRunning) {
-      debugServer.broadcastLog({
+    // Broadcast to server if available
+    const server = getGlobalServer();
+    if (server?.isRunning) {
+      server.broadcastLog({
         level: entry.level,
         message: entry.message,
         source: entry.source,

@@ -168,7 +168,7 @@ Apps shouldn't need to declare permissions for Melker's internal operations. Use
 
 | Host | Condition |
 |------|-----------|
-| `localhost` | When `debugPort` is configured (debug server needs it) |
+| `localhost` | When `serverPort` is configured (server needs it) |
 
 ### Implicit Environment Variables
 

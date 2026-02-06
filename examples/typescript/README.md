@@ -24,7 +24,7 @@ Low-level API using `createElement()` function calls.
 | `simple-list-demo.ts` | Basic list component |
 | `mixed-list-demo.ts` | List with different child types |
 | `scrolling-list-demo.ts` | Scrollable list container |
-| `mirror-demo.ts` | Debug server HTML mirror |
+| `mirror-demo.ts` | Server HTML mirror |
 | `template-comparison.ts` | createElement vs melker template comparison |
 | `theme-demo.ts` | Theme system demonstration |
 

@@ -36,7 +36,7 @@ export class StatsOverlay {
   }
 
   private _checkEnvironmentVariable(): boolean {
-    return MelkerConfig.get().debugShowStats;
+    return MelkerConfig.get().performanceShowStats;
   }
 
   isEnabled(): boolean {

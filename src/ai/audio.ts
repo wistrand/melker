@@ -738,7 +738,7 @@ export async function transcribeAudio(
   }
 
   // Debug: play back the trimmed audio before sending
-  const audioDebug = MelkerConfig.get().debugAudioDebug;
+  const audioDebug = MelkerConfig.get().audioDebug;
   if (audioDebug) {
     await playbackAudio(trimmedWav);
   }

@@ -1,16 +1,16 @@
-// E2E tests for headless mode and debug server token authentication
+// E2E tests for headless mode and server token authentication
 
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { MelkerDebugServer } from '../src/debug-server.ts';
+import { MelkerServer } from '../src/server.ts';
 
 /** Get a random port in the ephemeral range to avoid clashes */
 function randomPort(): number {
   return 49152 + Math.floor(Math.random() * 16383);
 }
 
-Deno.test('Headless debug server rejects invalid token (HTTP)', async () => {
+Deno.test('Server rejects invalid token (HTTP)', async () => {
   const port = randomPort();
-  const server = new MelkerDebugServer({ port, token: 'valid-test-token' });
+  const server = new MelkerServer({ port, token: 'valid-test-token' });
 
   await server.start();
   try {
@@ -23,9 +23,9 @@ Deno.test('Headless debug server rejects invalid token (HTTP)', async () => {
   }
 });
 
-Deno.test('Headless debug server rejects missing token (HTTP)', async () => {
+Deno.test('Server rejects missing token (HTTP)', async () => {
   const port = randomPort();
-  const server = new MelkerDebugServer({ port, token: 'valid-test-token' });
+  const server = new MelkerServer({ port, token: 'valid-test-token' });
 
   await server.start();
   try {
@@ -38,10 +38,10 @@ Deno.test('Headless debug server rejects missing token (HTTP)', async () => {
   }
 });
 
-Deno.test('Headless debug server accepts valid token (HTTP)', async () => {
+Deno.test('Server accepts valid token (HTTP)', async () => {
   const port = randomPort();
   const token = 'valid-test-token';
-  const server = new MelkerDebugServer({ port, token });
+  const server = new MelkerServer({ port, token });
 
   await server.start();
   try {
@@ -55,12 +55,12 @@ Deno.test('Headless debug server accepts valid token (HTTP)', async () => {
 });
 
 Deno.test({
-  name: 'Headless debug server rejects invalid token (WebSocket)',
+  name: 'Server rejects invalid token (WebSocket)',
   sanitizeOps: false,
   sanitizeResources: false,
   fn: async () => {
     const port = randomPort();
-    const server = new MelkerDebugServer({ port, token: 'valid-test-token' });
+    const server = new MelkerServer({ port, token: 'valid-test-token' });
 
     await server.start();
     try {
@@ -80,13 +80,13 @@ Deno.test({
 });
 
 Deno.test({
-  name: 'Headless debug server accepts valid token (WebSocket)',
+  name: 'Server accepts valid token (WebSocket)',
   sanitizeOps: false,
   sanitizeResources: false,
   fn: async () => {
     const port = randomPort();
     const token = 'valid-test-token';
-    const server = new MelkerDebugServer({ port, token });
+    const server = new MelkerServer({ port, token });
 
     await server.start();
     try {
@@ -118,10 +118,10 @@ Deno.test({
   },
 });
 
-Deno.test('Headless debug server connectionUrl contains token', () => {
+Deno.test('Server connectionUrl contains token', () => {
   const port = randomPort();
   const token = 'my-test-token';
-  const server = new MelkerDebugServer({ port, token });
+  const server = new MelkerServer({ port, token });
 
   assertEquals(server.connectionUrl.includes(`${port}`), true);
   assertEquals(server.connectionUrl.includes(`token=${token}`), true);

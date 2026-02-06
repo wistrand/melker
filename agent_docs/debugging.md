@@ -178,36 +178,36 @@ MELKER_HEADLESS=true ./melker.ts app.melker
 
 - **Virtual terminal** - Default 80x24, configurable
 - **Output capture** - All terminal output stored for inspection
-- **Event injection** - Simulate keyboard/mouse via debug server
+- **Event injection** - Simulate keyboard/mouse via server
 - **Resizable** - Change virtual terminal size at runtime
 
-### Headless + Debug Server
+### Headless + Server
 
 Combine for remote testing:
 ```bash
-MELKER_HEADLESS=true ./melker.ts --debug-port 8080 app.melker
+MELKER_HEADLESS=true ./melker.ts --server-port 8080 app.melker
 ```
 
-## Debug Server (`src/debug-server.ts`)
+## Server (`src/server.ts`)
 
 WebSocket server for remote debugging and automation with a full-featured web UI.
 
-### Enable Debug Server
+### Enable Server
 
 ```bash
-./melker.ts --debug-port 8080 app.melker
+./melker.ts --server-port 8080 app.melker
 ```
 
 Access at: `http://localhost:8080/?token=<token>` (web UI) or `ws://localhost:8080/?token=<token>` (WebSocket)
 
 The token is auto-generated at startup and displayed in the terminal. You can also set it explicitly:
 ```bash
-./melker.ts --debug-port 8080 --debug-token mytoken app.melker
+./melker.ts --server-port 8080 --server-token mytoken app.melker
 ```
 
 ### Web UI Features
 
-The debug server provides a browser-based interface with:
+The server provides a browser-based interface with:
 
 **Terminal Mirror (Primary View)**
 - Real-time terminal rendering with full ANSI color support
@@ -255,11 +255,11 @@ Send JSON messages via WebSocket:
 
 ### Event Injection
 
-Event injection requires either headless mode or the `--debug-allow-input` flag:
+Event injection requires either headless mode or the `--server-allow-input` flag:
 
 ```bash
 # Enable remote input for non-headless mode
-./melker.ts --debug-port 8080 --debug-allow-input app.melker
+./melker.ts --server-port 8080 --server-allow-input app.melker
 ```
 
 ### Subscriptions
@@ -292,10 +292,10 @@ MELKER_LOG_FILE=/tmp/app.log MELKER_LOG_LEVEL=DEBUG ./melker.ts --watch app.melk
 
 Watch mode monitors the source file and automatically reloads the application when changes are detected. File change events are logged to the log file.
 
-### 4. Use Debug Server for Interaction
+### 4. Use Server for Interaction
 ```bash
 # In another terminal
-MELKER_LOG_FILE=/tmp/app.log ./melker.ts --debug-port 8080 app.melker
+MELKER_LOG_FILE=/tmp/app.log ./melker.ts --server-port 8080 app.melker
 ```
 
 ### 5. Disable Alternate Screen (See Raw Output)
@@ -394,7 +394,7 @@ Fix by either:
 - Check bounds in log: `Bounds calculated for button | bounds={"x":2,"y":7,"width":16,"height":1}`
 
 ### Event Issues
-- Use debug server to inject events
+- Use server to inject events
 - Check hit testing logs: `Hit test triggered | mouseX=10, mouseY=5`
 
 ### Focus Issues
@@ -403,7 +403,7 @@ Fix by either:
 
 ### Rendering Issues
 - Use `MELKER_NO_ALTERNATE_SCREEN=1` to see raw ANSI output
-- Use debug server's `get-buffer` to inspect buffer state
+- Use server's `get-buffer` to inspect buffer state
 
 ### Video Exit Issues (Garbage on Exit)
 If video frame data (sextant characters) appears on the terminal after exit:
@@ -503,10 +503,10 @@ When using Chrome DevTools Performance profiling, rendering may appear corrupted
 | `src/logging.ts`         | Logger class, getLogger(), log levels  |
 | `src/headless.ts`        | HeadlessTerminal, HeadlessManager      |
 | `src/stdout.ts`          | Stdout mode, bufferToStdout()          |
-| `src/debug-server.ts`    | MelkerDebugServer, WebSocket API       |
-| `src/debug-ui/mirror.html` | Debug web UI HTML structure          |
-| `src/debug-ui/mirror.css`  | Debug web UI styles                  |
-| `src/debug-ui/mirror.js`   | Debug web UI client logic            |
+| `src/server.ts`            | MelkerServer, WebSocket API            |
+| `src/server-ui/index.html` | Debug web UI HTML structure            |
+| `src/server-ui/index.css`  | Debug web UI styles                    |
+| `src/server-ui/index.js`   | Debug web UI client logic              |
 | `src/dev-tools.ts`       | DevToolsManager, F12 overlay           |
 
 ## See Also
@@ -514,4 +514,4 @@ When using Chrome DevTools Performance profiling, rendering may appear corrupted
 - [architecture.md](architecture.md) — Core architecture, render pipeline
 - [script_usage.md](script_usage.md) — $melker context and logging API
 - [config-architecture.md](config-architecture.md) — Configuration system
-- [debug-server-architecture.md](debug-server-architecture.md) — Debug server architecture and protocol
+- [server-architecture.md](server-architecture.md) — Server architecture and protocol

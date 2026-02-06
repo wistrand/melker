@@ -1,4 +1,4 @@
-// Melker Debug Server - Mirror UI JavaScript
+// Melker Server UI JavaScript
 
 let ws = null;
 let currentBuffer = null;

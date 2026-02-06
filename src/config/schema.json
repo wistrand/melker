@@ -167,50 +167,57 @@
       "env": "MELKER_HEADLESS_HEIGHT",
       "description": "Virtual terminal height"
     },
-    "debug.port": {
-      "type": "integer",
-      "env": "MELKER_DEBUG_PORT",
-      "flag": "--debug-port",
-      "description": "WebSocket debug server port"
-    },
-    "debug.host": {
-      "type": "string",
-      "default": "localhost",
-      "env": "MELKER_DEBUG_HOST",
-      "description": "Debug server bind address"
-    },
-    "debug.token": {
-      "type": "string",
-      "env": "MELKER_DEBUG_TOKEN",
-      "flag": "--debug-token",
-      "description": "Debug server connection token (auto-generated if not specified)"
-    },
-    "debug.allowRemoteInput": {
+    "server.enabled": {
       "type": "boolean",
       "default": false,
-      "flag": "--debug-allow-input",
-      "env": "MELKER_ALLOW_REMOTE_INPUT",
-      "description": "Allow input from debug clients"
+      "flag": "--server",
+      "env": "MELKER_SERVER",
+      "description": "Enable the remote viewing server"
     },
-    "debug.retainBundle": {
+    "server.port": {
+      "type": "integer",
+      "env": "MELKER_SERVER_PORT",
+      "flag": "--server-port",
+      "description": "WebSocket server port"
+    },
+    "server.host": {
+      "type": "string",
+      "default": "localhost",
+      "env": "MELKER_SERVER_HOST",
+      "description": "Server bind address"
+    },
+    "server.token": {
+      "type": "string",
+      "env": "MELKER_SERVER_TOKEN",
+      "flag": "--server-token",
+      "description": "Server connection token (auto-generated if not specified)"
+    },
+    "server.allowRemoteInput": {
+      "type": "boolean",
+      "default": false,
+      "flag": "--server-allow-input",
+      "env": "MELKER_ALLOW_SERVER_INPUT",
+      "description": "Allow input from server clients"
+    },
+    "bundler.retainBundle": {
       "type": "boolean",
       "default": false,
       "env": "MELKER_RETAIN_BUNDLE",
       "description": "Keep temp bundle files for debugging"
     },
-    "debug.showStats": {
+    "performance.showStats": {
       "type": "boolean",
       "default": false,
       "env": "MELKER_SHOW_STATS",
       "description": "Show performance stats overlay"
     },
-    "debug.markdownDebug": {
+    "markdown.debug": {
       "type": "boolean",
       "default": false,
       "env": "MELKER_MARKDOWN_DEBUG",
       "description": "Debug markdown rendering"
     },
-    "debug.audioDebug": {
+    "audio.debug": {
       "type": "boolean",
       "default": false,
       "env": "MELKER_AUDIO_DEBUG",

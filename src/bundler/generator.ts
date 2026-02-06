@@ -65,7 +65,7 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
     logFile: string | undefined;
     aiModel: string;
     headlessEnabled: boolean;
-    debugPort: number | undefined;
+    serverPort: number | undefined;
     persist: boolean;
     lint: boolean;
   };

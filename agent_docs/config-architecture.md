@@ -125,14 +125,22 @@ Each property in schema.json can have:
 - `headless.width` - Virtual terminal width
 - `headless.height` - Virtual terminal height
 
-### Debug
-- `debug.port` - WebSocket debug server port (flag: --debug-port)
-- `debug.host` - Debug server bind address
-- `debug.allowRemoteInput` - Allow input from debug clients
-- `debug.retainBundle` - Keep temp bundle files for debugging
-- `debug.showStats` - Show performance stats overlay
-- `debug.markdownDebug` - Debug markdown rendering
-- `debug.audioDebug` - Replay recorded audio before transcription
+### Server
+- `server.port` - WebSocket server port (flag: --server-port)
+- `server.host` - Server bind address
+- `server.allowRemoteInput` - Allow input from server clients
+
+### Bundler
+- `bundler.retainBundle` - Keep temp bundle files for debugging
+
+### Performance
+- `performance.showStats` - Show performance stats overlay
+
+### Markdown
+- `markdown.debug` - Debug markdown rendering
+
+### Audio
+- `audio.debug` - Replay recorded audio before transcription
 
 ### Permission Overrides
 
@@ -179,12 +187,12 @@ const config = MelkerConfig.get();
 config.theme           // string
 config.logLevel        // string
 config.headlessEnabled // boolean
-config.debugPort       // number | undefined
+config.serverPort      // number | undefined
 
 // Generic getters (any key, including custom)
 config.getString('theme', 'auto')           // string with default
 config.getBoolean('persist', false)         // boolean with default
-config.getNumber('debug.port', 8080)        // number with default
+config.getNumber('server.port', 8080)       // number with default
 config.getValue('custom.key')               // unknown (returns undefined if not set)
 config.hasKey('custom.key')                 // boolean
 
@@ -375,9 +383,9 @@ const logger = createLogger({
 // Theme
 const theme = loadTheme(config.theme);
 
-// Debug server
-if (config.debugPort) {
-  startDebugServer(config.debugPort, config.debugHost);
+// Server
+if (config.serverPort) {
+  startServer(config.serverPort, config.serverHost);
 }
 
 // Dithering

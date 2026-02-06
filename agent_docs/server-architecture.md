@@ -1,10 +1,10 @@
-# Debug Server Architecture
+# Server Architecture
 
-WebSocket-based debug server providing a browser UI for remote debugging, inspection, and automation of Melker applications.
+WebSocket-based server providing a browser UI for remote inspection and automation of Melker applications.
 
 ## Overview
 
-The debug server (`src/debug-server.ts`) exposes a web interface for:
+The server (`src/server.ts`) exposes a web interface for:
 - Real-time terminal mirroring
 - Element inspection and highlighting
 - Event injection (keyboard, mouse, custom events)
@@ -15,24 +15,24 @@ The debug server (`src/debug-server.ts`) exposes a web interface for:
 
 ```
 src/
-├── debug-server.ts      # Server implementation, WebSocket handling
-└── debug-ui/
-    ├── mirror.html      # HTML structure
-    ├── mirror.css       # Styles (dark theme, VS Code inspired)
-    └── mirror.js        # Client-side logic, WebSocket, rendering
+├── server.ts      # Server implementation, WebSocket handling
+└── server-ui/
+    ├── index.html      # HTML structure
+    ├── index.css       # Styles (dark theme, VS Code inspired)
+    └── index.js        # Client-side logic, WebSocket, rendering
 ```
 
-## Enabling the Debug Server
+## Enabling the Server
 
 ```bash
 # Basic usage
-./melker.ts --debug-port 8080 app.melker
+./melker.ts --server-port 8080 app.melker
 
 # With explicit token
-./melker.ts --debug-port 8080 --debug-token mytoken app.melker
+./melker.ts --server-port 8080 --server-token mytoken app.melker
 
 # With remote input enabled (non-headless)
-./melker.ts --debug-port 8080 --debug-allow-input app.melker
+./melker.ts --server-port 8080 --server-allow-input app.melker
 ```
 
 Access at: `http://localhost:8080/?token=<token>`
@@ -204,7 +204,7 @@ ws://localhost:8080/?token=<token>
 ```
 
 **Token sources (priority order):**
-1. `--debug-token` CLI flag or `MELKER_DEBUG_TOKEN` environment variable
+1. `--server-token` CLI flag (also settable via `MELKER_SERVER_TOKEN` env var)
 2. Auto-generated UUID (displayed at startup)
 
 Requests without valid token receive 401 Unauthorized.
@@ -212,8 +212,8 @@ Requests without valid token receive 401 Unauthorized.
 ### Event Injection
 
 Event injection (keyboard, mouse, custom events) requires one of:
-- Headless mode (`MELKER_HEADLESS=true`)
-- Explicit opt-in (`--debug-allow-input`)
+- Headless mode (`--headless`)
+- Explicit opt-in (`--server-allow-input`)
 
 The UI displays input status prominently:
 - Green "Input: Enabled" when allowed
@@ -236,7 +236,7 @@ engine.getElementAt(x: number, y: number): { id, type, bounds, props } | null
 
 ### Buffer Access
 
-The debug server accesses the display buffer via:
+The server accesses the display buffer via:
 ```typescript
 const buffer = engine.getBuffer();
 const displayBuffer = buffer.getDisplayBuffer();
@@ -273,11 +273,11 @@ Measurements are cached and invalidated on terminal re-render.
 
 ## Configuration
 
-| CLI Flag               | Env Variable                | Purpose                                      |
-|------------------------|-----------------------------|----------------------------------------------|
-| `--debug-port`         | `MELKER_DEBUG_PORT`         | Server port (enables debug server)           |
-| `--debug-token`        | `MELKER_DEBUG_TOKEN`        | Connection token (auto-generated if not set) |
-| `--debug-allow-input`  | `MELKER_ALLOW_REMOTE_INPUT` | Allow event injection in non-headless mode   |
+| CLI Flag               | Env Variable                 | Purpose                                      |
+|------------------------|------------------------------|----------------------------------------------|
+| `--server-port`        | `MELKER_SERVER_PORT`         | Server port (enables server)                 |
+| `--server-token`       | `MELKER_SERVER_TOKEN`        | Connection token (auto-generated if not set) |
+| `--server-allow-input` | `MELKER_ALLOW_SERVER_INPUT`  | Allow event injection in non-headless mode   |
 
 ## See Also
 

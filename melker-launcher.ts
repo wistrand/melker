@@ -134,8 +134,8 @@ function printUsage(): void {
   console.log('Options:');
   console.log('  --print-tree             Display element tree structure and exit');
   console.log('  --print-json             Display JSON serialization and exit');
-  console.log('  --debug                  Show system info, debug script transpilation');
-  console.log('  --debug-sextant          Print sextant character test pattern and exit');
+  console.log('  --verbose                Show system info, verbose script transpilation');
+  console.log('  --test-sextant           Print sextant character test pattern and exit');
   console.log('  --schema                 Output component schema markdown and exit');
   console.log('  --lsp                    Start Language Server Protocol server');
   console.log('  --convert                Convert markdown to .melker format (stdout)');
@@ -398,8 +398,8 @@ export async function main(): Promise<void> {
     Deno.exit(0);
   }
 
-  // Handle --debug-sextant option (prints sextant test pattern and exits)
-  if (args.includes('--debug-sextant')) {
+  // Handle --test-sextant option (prints sextant test pattern and exits)
+  if (args.includes('--test-sextant')) {
     console.log(`
 === Sextant Character Test ===
 

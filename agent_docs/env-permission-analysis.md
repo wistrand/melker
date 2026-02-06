@@ -141,7 +141,7 @@ When `policyToDenoFlags()` calls `MelkerConfig.get()`:
 - Config auto-initializes if not already initialized
 - Reads schema defaults and env vars
 - Policy config and CLI flags are NOT applied at this point
-- This is fine because env vars (like `MELKER_DEBUG_PORT`) are still read
+- This is fine because env vars (like `MELKER_SERVER_PORT`) are still read
 
 ## Schema-Defined Env Vars
 
@@ -170,9 +170,9 @@ From `src/config/schema.json`, these MELKER_* vars may be checked:
 | `MELKER_HEADLESS`            | Headless mode                  |
 | `MELKER_HEADLESS_WIDTH`      | Virtual terminal width         |
 | `MELKER_HEADLESS_HEIGHT`     | Virtual terminal height        |
-| `MELKER_DEBUG_PORT`          | Debug server port              |
-| `MELKER_DEBUG_HOST`          | Debug server bind address      |
-| `MELKER_ALLOW_REMOTE_INPUT`  | Allow input from debug clients |
+| `MELKER_SERVER_PORT`         | Server port                    |
+| `MELKER_SERVER_HOST`         | Server bind address            |
+| `MELKER_ALLOW_SERVER_INPUT`  | Allow server client input      |
 | `MELKER_RETAIN_BUNDLE`       | Keep temp bundle files         |
 | `MELKER_SHOW_STATS`          | Performance stats overlay      |
 | `MELKER_MARKDOWN_DEBUG`      | Debug markdown rendering       |

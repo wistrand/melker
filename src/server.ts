@@ -1,4 +1,4 @@
-// WebSocket debug server for Melker UI applications
+// WebSocket server for Melker UI applications
 // Provides remote access to engine state, buffer contents, and event injection
 
 import { type MelkerEngine } from './engine.ts';
@@ -7,10 +7,10 @@ import { MelkerConfig } from './config/mod.ts';
 import { rgbaToCss } from './components/color-utils.ts';
 import { dirname, fromFileUrl, join } from 'https://deno.land/std@0.224.0/path/mod.ts';
 
-// Get the directory containing this file for loading debug UI assets
-const DEBUG_UI_DIR = join(dirname(fromFileUrl(import.meta.url)), 'debug-ui');
+// Get the directory containing this file for loading server UI assets
+const SERVER_UI_DIR = join(dirname(fromFileUrl(import.meta.url)), 'server-ui');
 
-export interface DebugServerOptions {
+export interface ServerOptions {
   port?: number;
   host?: string;
   token?: string;
@@ -41,7 +41,7 @@ export interface EngineState {
 }
 
 /**
- * Available subscription types for debug server updates
+ * Available subscription types for server updates
  */
 export type SubscriptionType =
   | 'buffer-updates'      // Real-time buffer changes
@@ -64,12 +64,12 @@ interface ClientSubscription {
   lastEngineState?: any;   // For engine state change detection
 }
 
-export class MelkerDebugServer {
+export class MelkerServer {
   private _server?: Deno.HttpServer;
   private _engine?: MelkerEngine;
   private _connections = new Set<WebSocket>();
   private _clientSubscriptions = new Map<WebSocket, ClientSubscription>();
-  private _options: Required<Omit<DebugServerOptions, 'token'>>;
+  private _options: Required<Omit<ServerOptions, 'token'>>;
   private _isRunning = false;
   private _token: string;
 
@@ -81,18 +81,18 @@ export class MelkerDebugServer {
   // Delta tracking for buffer updates
   private _lastSentBuffer: BufferSnapshot | null = null;
 
-  constructor(options: DebugServerOptions = {}) {
+  constructor(options: ServerOptions = {}) {
     const config = MelkerConfig.get();
     this._options = {
-      port: config.debugPort ?? 18080,
-      host: config.debugHost,
+      port: config.serverPort ?? 18080,
+      host: config.serverHost,
       enableBufferStreaming: true,
       enableEventInjection: true,
       ...options,
     };
 
     // Token priority: option > config > auto-generate
-    this._token = options.token ?? config.debugToken ?? this._generateToken();
+    this._token = options.token ?? config.serverToken ?? this._generateToken();
   }
 
   /**
@@ -128,11 +128,11 @@ export class MelkerDebugServer {
   }
 
   /**
-   * Start the debug server
+   * Start the server
    */
   async start(): Promise<void> {
     if (this._isRunning) {
-      throw new Error('Debug server is already running');
+      throw new Error('Server is already running');
     }
 
     const handler = (req: Request): Response | Promise<Response> => {
@@ -181,7 +181,7 @@ export class MelkerDebugServer {
       }
 
       // Serve mirror UI at root (the only UI now)
-      return new Response(this._getMirrorHTML(), {
+      return new Response(this._getServerUI(), {
         headers: { 'content-type': 'text/html' },
       });
     };
@@ -198,7 +198,7 @@ export class MelkerDebugServer {
   }
 
   /**
-   * Stop the debug server
+   * Stop the server
    */
   async stop(): Promise<void> {
     if (!this._isRunning) return;
@@ -748,7 +748,7 @@ export class MelkerDebugServer {
 
   /**
    * Check if event injection is allowed
-   * Allowed in headless mode or when MELKER_ALLOW_REMOTE_INPUT is set
+   * Allowed in headless mode or when MELKER_ALLOW_SERVER_INPUT is set
    */
   private _isEventInjectionAllowed(): boolean {
     if (!this._options.enableEventInjection) {
@@ -762,7 +762,7 @@ export class MelkerDebugServer {
 
     // Allow in non-headless mode if explicitly enabled via config
     // This enables the browser mirror to send mouse/keyboard events
-    return MelkerConfig.get().debugAllowRemoteInput;
+    return MelkerConfig.get().serverAllowRemoteInput;
   }
 
   private _injectEvent(eventData: any): void {
@@ -1157,15 +1157,15 @@ export class MelkerDebugServer {
   }
 
   /**
-   * Generate HTML for the debug server web UI
+   * Generate HTML for the server web UI
    * Features: terminal mirror, element inspector, log viewer, event injection
-   * Layout: Full-width terminal mirror with tabbed debug panels at bottom
+   * Layout: Full-width terminal mirror with tabbed panels at bottom
    */
-  private _getMirrorHTML(): string {
+  private _getServerUI(): string {
     // Read the separate HTML, CSS, and JS files and combine them
-    const css = Deno.readTextFileSync(join(DEBUG_UI_DIR, 'mirror.css'));
-    const html = Deno.readTextFileSync(join(DEBUG_UI_DIR, 'mirror.html'));
-    const js = Deno.readTextFileSync(join(DEBUG_UI_DIR, 'mirror.js'));
+    const css = Deno.readTextFileSync(join(SERVER_UI_DIR, 'index.css'));
+    const html = Deno.readTextFileSync(join(SERVER_UI_DIR, 'index.html'));
+    const js = Deno.readTextFileSync(join(SERVER_UI_DIR, 'index.js'));
 
     return `<!DOCTYPE html>
 <html>
@@ -1284,29 +1284,30 @@ ${js}
 
 }
 
-// Utility function to create and start debug server
-export function createDebugServer(options?: DebugServerOptions): MelkerDebugServer {
-  return new MelkerDebugServer(options);
+// Utility function to create and start server
+export function createServer(options?: ServerOptions): MelkerServer {
+  return new MelkerServer(options);
 }
 
-// Check if debug server should be enabled
-export function isDebugEnabled(): boolean {
-  return MelkerConfig.get().debugPort !== undefined;
+// Check if server should be enabled
+export function isServerEnabled(): boolean {
+  const config = MelkerConfig.get();
+  return !!(config.serverEnabled || config.serverPort !== undefined);
 }
 
-// Global debug server instance for logging integration
-let globalDebugServer: MelkerDebugServer | undefined;
+// Global server instance for logging integration
+let globalServer: MelkerServer | undefined;
 
 /**
- * Set the global debug server instance (called by engine when starting)
+ * Set the global server instance (called by engine when starting)
  */
-export function setGlobalDebugServer(server: MelkerDebugServer | undefined): void {
-  globalDebugServer = server;
+export function setGlobalServer(server: MelkerServer | undefined): void {
+  globalServer = server;
 }
 
 /**
- * Get the global debug server instance (used by logging system)
+ * Get the global server instance (used by logging system)
  */
-export function getGlobalDebugServer(): MelkerDebugServer | undefined {
-  return globalDebugServer;
+export function getGlobalServer(): MelkerServer | undefined {
+  return globalServer;
 }

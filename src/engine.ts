@@ -51,12 +51,12 @@ import {
   TerminalInputProcessor,
 } from './input.ts';
 import {
-  MelkerDebugServer,
-  isDebugEnabled,
-  createDebugServer,
-  setGlobalDebugServer,
-  type DebugServerOptions,
-} from './debug-server.ts';
+  MelkerServer,
+  isServerEnabled,
+  createServer,
+  setGlobalServer,
+  type ServerOptions,
+} from './server.ts';
 import {
   GraphicsOverlayManager,
 } from './graphics-overlay-manager.ts';
@@ -195,9 +195,9 @@ export interface MelkerEngineOptions {
    */
   mapMetaToAlt?: boolean;
 
-  // Debug server options
-  enableDebugServer?: boolean;
-  debugServerOptions?: DebugServerOptions;
+  // Server options
+  enableServer?: boolean;
+  serverOptions?: ServerOptions;
 
   // Headless mode options
   enableHeadlessMode?: boolean;
@@ -230,7 +230,7 @@ export class MelkerEngine {
   private _eventManager!: EventManager;
   private _focusManager!: FocusManager;
   private _inputProcessor!: TerminalInputProcessor;
-  private _debugServer?: MelkerDebugServer;
+  private _server?: MelkerServer;
   private _headlessManager?: HeadlessManager;
   private _themeManager!: ThemeManager;
   private _rootElement: Element;
@@ -301,8 +301,8 @@ export class MelkerEngine {
       enableFocusEvents: true,
       mouseReporting: 'all',
       mapMetaToAlt: true, // Enabled by default for macOS Option key compatibility
-      enableDebugServer: isDebugEnabled(),
-      debugServerOptions: {},
+      enableServer: isServerEnabled(),
+      serverOptions: {},
       enableHeadlessMode: isHeadlessEnabled(),
       baseUrl: defaultBaseUrl,
       persistState: false,
@@ -316,9 +316,9 @@ export class MelkerEngine {
     // Initialize headless mode if enabled (must be done before other initialization)
     if (this._options.enableHeadlessMode) {
       this._headlessManager = initializeHeadlessMode() || undefined;
-      // Force debug server to be enabled in headless mode
-      if (this._headlessManager && !this._options.enableDebugServer) {
-        this._options.enableDebugServer = true;
+      // Force server to be enabled in headless mode
+      if (this._headlessManager && !this._options.enableServer) {
+        this._options.enableServer = true;
       }
     }
 
@@ -514,8 +514,8 @@ export class MelkerEngine {
               newSize,
               timestamp: Date.now(),
             });
-            if (this._debugServer) {
-              this._debugServer.notifyTerminalResize(newSize.width, newSize.height);
+            if (this._server) {
+              this._server.notifyTerminalResize(newSize.width, newSize.height);
             }
           },
           this._options.autoRender,
@@ -524,9 +524,9 @@ export class MelkerEngine {
       });
     }
 
-    // Initialize debug server if enabled
-    if (this._options.enableDebugServer) {
-      this._debugServer = createDebugServer(this._options.debugServerOptions);
+    // Initialize server if enabled
+    if (this._options.enableServer) {
+      this._server = createServer(this._options.serverOptions);
     }
 
     // Initialize state persistence manager
@@ -696,25 +696,25 @@ export class MelkerEngine {
       await this._resizeHandler.startListening();
     }
 
-    // Start debug server if enabled
-    if (this._debugServer) {
+    // Start server if enabled
+    if (this._server) {
       try {
-        this._debugServer.attachEngine(this);
-        await this._debugServer.start();
+        this._server.attachEngine(this);
+        await this._server.start();
         // Set global instance for logging integration
-        setGlobalDebugServer(this._debugServer);
-        logger.info('Debug server started', {
-          url: this._debugServer.connectionUrl,
+        setGlobalServer(this._server);
+        logger.info('Server started', {
+          url: this._server.connectionUrl,
         });
         // Print connection URL to stderr in headless mode so users know where to connect
         if (this._headlessManager) {
           Deno.stderr.writeSync(textEncoder.encode(
-            `Debug server: ${this._debugServer.connectionUrl}\n`
+            `Server: ${this._server.connectionUrl}\n`
           ));
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.warn('Failed to start debug server', {
+        logger.warn('Failed to start server', {
           errorMessage,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -1113,7 +1113,7 @@ export class MelkerEngine {
             }
           }).catch((err) => logger.error('Error during exit', err instanceof Error ? err : new Error(String(err))));
         },
-        getDebugServerUrl: () => this._debugServer?.connectionUrl,
+        getServerUrl: () => this._server?.connectionUrl,
       });
     }
     this._devToolsManager.setSource(content, filePath, type, convertedContent, policy, appDir, sourceUrl, systemInfo, helpContent);
@@ -1198,7 +1198,7 @@ export class MelkerEngine {
         // Still render graphics overlays (content may have changed even if buffer hasn't)
         this._graphicsOverlayManager.renderOverlays();
         // Notify debug clients
-        this._debugServer?.notifyRenderComplete();
+        this._server?.notifyRenderComplete();
         return;
       }
 
@@ -1227,7 +1227,7 @@ export class MelkerEngine {
       this._graphicsOverlayManager.renderOverlays();
 
       // Notify debug clients of render completion
-      this._debugServer?.notifyRenderComplete();
+      this._server?.notifyRenderComplete();
     }
   }
 
@@ -1296,7 +1296,7 @@ export class MelkerEngine {
       this._graphicsOverlayManager.renderOverlays();
 
       // Notify debug clients of render completion
-      this._debugServer?.notifyRenderComplete();
+      this._server?.notifyRenderComplete();
     }
   }
 
@@ -1362,14 +1362,14 @@ export class MelkerEngine {
       }
     }
 
-    // Stop debug server with error handling
-    if (this._debugServer) {
+    // Stop server with error handling
+    if (this._server) {
       try {
         // Clear global instance before stopping
-        setGlobalDebugServer(undefined);
-        await this._debugServer.stop();
+        setGlobalServer(undefined);
+        await this._server.stop();
       } catch (error) {
-        logger.warn('Error stopping debug server', { error: String(error) });
+        logger.warn('Error stopping server', { error: String(error) });
       }
     }
 
@@ -1778,10 +1778,10 @@ export class MelkerEngine {
   }
 
   /**
-   * Get debug server instance (if enabled)
+   * Get server instance (if enabled)
    */
-  get debugServer(): MelkerDebugServer | undefined {
-    return this._debugServer;
+  get server(): MelkerServer | undefined {
+    return this._server;
   }
 
   /**

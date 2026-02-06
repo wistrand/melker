@@ -83,7 +83,7 @@ $melker: {
     theme: string;
     logLevel: string;
     headlessEnabled: boolean;
-    debugPort: number | undefined;
+    serverPort: number | undefined;
     // ... other schema properties
 
     // Generic getters (any key, including custom)

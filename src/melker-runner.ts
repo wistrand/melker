@@ -372,7 +372,7 @@ export async function runMelkerFile(
         console.log(`  Deno:       ${Deno.version.deno}`);
         console.log(`  Platform:   ${Deno.build.os} ${Deno.build.arch}`);
 
-        Deno.env.set('MELKER_RETAIN_BUNDLE', 'true');
+        try { Deno.env.set('MELKER_RETAIN_BUNDLE', 'true'); } catch { /* env permission may not include this var */ }
 
         const sourceUrl = isUrl(filepath)
           ? filepath
@@ -1133,7 +1133,7 @@ function printUsage(): void {
   console.log('Options:');
   console.log('  --print-tree   Display the element tree structure and exit');
   console.log('  --print-json   Display the JSON serialization and exit');
-  console.log('  --debug        Show system info, debug script transpilation');
+  console.log('  --verbose      Show system info, verbose script transpilation');
   console.log('  --lint         Enable lint mode');
   console.log('  --schema       Output component schema documentation');
   console.log('  --lsp          Start Language Server Protocol server');
@@ -1184,7 +1184,7 @@ async function main(): Promise<void> {
   const options = {
     printTree: remainingArgs.includes('--print-tree'),
     printJson: remainingArgs.includes('--print-json'),
-    debug: remainingArgs.includes('--debug'),
+    debug: remainingArgs.includes('--verbose'),
     lint: config.lint,  // Use config (supports --lint flag and MELKER_LINT env)
     noLoad: remainingArgs.includes('--no-load'),
     useCache: remainingArgs.includes('--cache'),

@@ -1,4 +1,4 @@
-/* Melker Debug Server - Mirror UI Styles */
+/* Melker Server UI Styles */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -37,6 +37,12 @@ body {
 }
 .input-status.enabled { background: #2e7d32; color: #fff; }
 .input-status.disabled { background: #5d4037; color: #ffab91; }
+.header button { padding: 4px 10px; font-size: 11px; }
+.coordinates {
+  color: #808080;
+  font-size: 11px;
+  margin-left: auto;
+}
 
 /* Main layout */
 .main-container {
@@ -55,24 +61,6 @@ body {
   flex-direction: column;
   overflow: hidden;
   min-height: 100px;
-}
-.toolbar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 6px 10px;
-  background: #252526;
-  border-bottom: 1px solid #3e3e42;
-  flex-shrink: 0;
-}
-.toolbar button {
-  padding: 4px 10px;
-  font-size: 11px;
-}
-.coordinates {
-  color: #808080;
-  font-size: 11px;
-  margin-left: auto;
 }
 .terminal-scroll {
   flex: 1;

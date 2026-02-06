@@ -1,5 +1,5 @@
 // Headless mode support for Melker applications
-// Allows running Melker apps without a real terminal, using debug server for interaction
+// Allows running Melker apps without a real terminal, using server for interaction
 
 import { Env } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
@@ -10,8 +10,8 @@ const logger = getLogger('Headless');
 export interface HeadlessOptions {
   width?: number;
   height?: number;
-  debugPort?: number;
-  debugHost?: string;
+  serverPort?: number;
+  serverHost?: string;
   enableBufferCapture?: boolean;
 }
 
@@ -130,7 +130,7 @@ export function isHeadlessEnabled(): boolean {
 
   return !!(
     config.headlessEnabled ||
-    (config.debugPort && !Deno?.stdin?.isTerminal?.())
+    (config.serverPort && !Deno?.stdin?.isTerminal?.())
   );
 }
 
@@ -142,8 +142,8 @@ export function getHeadlessConfig(): HeadlessOptions {
   return {
     width: config.headlessWidth,
     height: config.headlessHeight,
-    debugPort: config.debugPort,
-    debugHost: config.debugHost,
+    serverPort: config.serverPort,
+    serverHost: config.serverHost,
     enableBufferCapture: true,
   };
 }

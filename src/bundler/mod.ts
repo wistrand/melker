@@ -253,7 +253,7 @@ export async function executeBundle(
 
     // Write bundled code to temp file
     await Deno.writeTextFile(bundleFile, assembled.bundledCode);
-    const retainBundle = MelkerConfig.get().debugRetainBundle;
+    const retainBundle = MelkerConfig.get().bundlerRetainBundle;
     logger.info(`Bundled code written to: ${bundleFile}${retainBundle ? ' (retainBundle=true, will be retained)' : ''}`);
 
     // Import the bundled module

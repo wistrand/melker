@@ -4,7 +4,7 @@
 import { createApp, createElement } from '../../mod.ts';
 
 console.log('🖥️ Mirror View Demo');
-console.log('This demo runs a Melker app with debug server enabled.');
+console.log('This demo runs a Melker app with server enabled.');
 console.log('Open the following URLs in your browser to view the mirror:');
 console.log('');
 console.log('• Mirror View: http://localhost:8080/mirror');
@@ -99,9 +99,9 @@ const ui = createElement('container', {
   })
 );
 
-// Enable debug server on port 8080
+// Enable server on port 8080
 const debugPort = 8080;
 
-// Note: The debug server will be automatically enabled if MELKER_DEBUG_PORT is set
+// Note: The server will be automatically enabled if MELKER_SERVER_PORT is set
 // Or can be programmatically enabled when creating the app
 await createApp(ui);

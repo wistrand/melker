@@ -22,24 +22,5 @@ export { dirname, fromFileUrl, join, resolve } from 'jsr:@std/path@^1.0.0';
 // JWT
 export { decode as decodeJwt } from 'jsr:@zaubrik/djwt@3.0.2';
 
-// LSP (Language Server Protocol)
-export {
-  createConnection,
-  TextDocuments,
-  ProposedFeatures,
-  TextDocumentSyncKind,
-  CompletionItemKind,
-  DiagnosticSeverity,
-  MarkupKind,
-  SemanticTokensBuilder,
-  type InitializeParams,
-  type InitializeResult,
-  type TextDocumentPositionParams,
-  type CompletionItem,
-  type Hover,
-  type Diagnostic,
-  type Range,
-  type Position,
-  type SemanticTokensParams,
-} from 'npm:vscode-languageserver@9.0.1/node.js';
-export { TextDocument } from 'npm:vscode-languageserver-textdocument@1.0.12';
+// LSP dependencies (vscode-languageserver, vscode-languageserver-textdocument)
+// are imported directly in src/lsp.ts to avoid downloading them for normal usage

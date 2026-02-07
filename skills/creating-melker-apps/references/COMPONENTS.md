@@ -956,12 +956,14 @@ Image display (PNG, JPEG, GIF). Supports file paths, HTTP/HTTPS URLs, and data U
 **Props:**
 - `src` - Image path, HTTP/HTTPS URL, or data URL
 - `width`, `height` - Dimensions (number or percentage)
-- `objectFit`: `contain` | `cover` | `fill`
 - `dither` - Dithering mode
 - `gfxMode` - Graphics mode: `sextant`, `block`, `pattern`, `luma`, `sixel`, `kitty`, `iterm2`, `hires` (global overrides)
 - `onLoad`, `onError` - Load callbacks
 - `onShader`, `shaderFps`, `shaderRunTime` - Animation (see Shaders)
 - `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)
+
+**Styles:**
+- `object-fit` - `contain` | `cover` | `fill` (default for img: `fill`)
 
 **Methods:**
 - `setSrc(url)` - Load image immediately (async, last call wins if called rapidly)
@@ -1150,7 +1152,7 @@ Numeric value selection with keyboard/mouse.
 <slider min="0" max="100" snaps="[0, 25, 50, 75, 100]" value="25" />
 
 <!-- Vertical -->
-<slider min="0" max="100" value="50" orientation="vertical" style="height: 8;" />
+<slider min="0" max="100" value="50" style="orientation: vertical; height: 8;" />
 ```
 
 **Props:**
@@ -1158,8 +1160,10 @@ Numeric value selection with keyboard/mouse.
 - `value` - Current value
 - `step` - Discrete increments (e.g., 5 = 0,5,10...)
 - `snaps` - Array of snap points `[0, 25, 50, 75, 100]`
-- `orientation` - `horizontal` (default) or `vertical`
 - `showValue` - Display value label
+
+**Styles:**
+- `orientation` - `horizontal` (default) or `vertical`
 
 **Keyboard:** Arrow keys (small step), Page Up/Down (10%), Home/End (min/max)
 

@@ -175,7 +175,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `<tabs>` / `<tab>` | activeTab, onChange / title | Tabbed panels |
 | `<list>` / `<li>` | style | Lists |
 | `<canvas>` | width, height, onPaint, onShader, onFilter | Pixel graphics |
-| `<img>` | src, width, height, objectFit, dither, onFilter | Images |
+| `<img>` | src, width, height, dither, onFilter | Images |
 | `<video>` | src, width, height, autoplay, loop, audio | Video (requires ffmpeg) |
 | `<combobox>` | placeholder, filter, onSelect | Filterable dropdown |
 | `<select>` | value, onSelect | Dropdown picker |

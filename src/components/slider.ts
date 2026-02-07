@@ -19,9 +19,6 @@ export interface SliderProps extends Omit<BaseProps, 'width' | 'height'> {
   step?: number;         // Discrete step size (e.g., 5 = values 0,5,10,...)
   snaps?: number[];      // Specific snap points (e.g., [0, 25, 50, 75, 100])
 
-  // Orientation
-  orientation?: 'horizontal' | 'vertical';
-
   // Display
   showValue?: boolean;   // Show value label
 
@@ -59,7 +56,6 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     };
 
     const defaultProps: SliderProps = {
-      orientation: 'horizontal',
       showValue: false,
       disabled: false,
       tabIndex: 0,
@@ -191,7 +187,8 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
     this._lastBounds = bounds;
-    const { min = 0, showValue, orientation = 'horizontal' } = this.props;
+    const { min = 0, showValue } = this.props;
+    const orientation = this.props.style?.orientation ?? 'horizontal';
     const isFocused = context.focusedElementId === this.id;
     const isDisabled = this.props.disabled ?? false;
 
@@ -328,7 +325,8 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
   handleKeyInput(key: string, _ctrlKey: boolean = false, _altKey: boolean = false): boolean {
     if (this.props.disabled) return false;
 
-    const { min = 0, max = 100, step, orientation = 'horizontal' } = this.props;
+    const { min = 0, max = 100, step } = this.props;
+    const orientation = this.props.style?.orientation ?? 'horizontal';
     const snaps = this._getSnaps();
     let newValue = this.props.value ?? min;
 
@@ -388,7 +386,8 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
    * Calculate intrinsic size for the slider
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
-    const { showValue, orientation = 'horizontal' } = this.props;
+    const { showValue } = this.props;
+    const orientation = this.props.style?.orientation ?? 'horizontal';
     const style = this.props.style || {};
 
     if (orientation === 'vertical') {
@@ -428,7 +427,8 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
   handleClick(event: ClickEvent, _document: Document): boolean {
     if (this.props.disabled || !this._lastBounds) return false;
 
-    const { orientation = 'horizontal', showValue } = this.props;
+    const orientation = this.props.style?.orientation ?? 'horizontal';
+    const { showValue } = this.props;
 
     if (orientation === 'vertical') {
       // Vertical: calculate from y position
@@ -505,7 +505,8 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
   private _handleDragPosition(x: number, y: number): void {
     if (!this._lastBounds) return;
 
-    const { orientation = 'horizontal', showValue } = this.props;
+    const orientation = this.props.style?.orientation ?? 'horizontal';
+    const { showValue } = this.props;
 
     if (orientation === 'vertical') {
       const relY = y - this._lastBounds.y;
@@ -540,9 +541,6 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     if (props.snaps !== undefined && !Array.isArray(props.snaps)) {
       return false;
     }
-    if (props.orientation !== undefined && !['horizontal', 'vertical'].includes(props.orientation)) {
-      return false;
-    }
     return true;
   }
 }
@@ -559,7 +557,6 @@ export const sliderSchema: ComponentSchema = {
     value: { type: 'number', description: 'Current value' },
     step: { type: 'number', description: 'Step size for discrete values' },
     snaps: { type: 'array', description: 'Array of snap points' },
-    orientation: { type: 'string', description: 'horizontal or vertical' },
     showValue: { type: 'boolean', description: 'Show value label' },
     width: { type: ['number', 'string'], description: 'Slider width (flows to style.width)' },
     height: { type: ['number', 'string'], description: 'Slider height (flows to style.height)' },
@@ -567,6 +564,9 @@ export const sliderSchema: ComponentSchema = {
     thumbColor: { type: 'string', description: 'Thumb color override' },
     fillColor: { type: 'string', description: 'Filled portion color override' },
     onChange: { type: 'handler', description: 'Called when value changes. Event: { value: string, target }' },
+  },
+  styles: {
+    orientation: { type: 'string', enum: ['horizontal', 'vertical'], description: 'Slider direction (default: horizontal)' },
   },
 };
 
@@ -580,7 +580,6 @@ registerComponent({
     min: 0,
     max: 100,
     value: 0,
-    orientation: 'horizontal',
     showValue: false,
     disabled: false,
     tabIndex: 0,

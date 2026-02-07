@@ -855,7 +855,7 @@ The `<slider>` component allows numeric value selection within a range using key
 <slider min="0" max="100" snaps="[0, 25, 50, 75, 100]" value="25" />
 
 <!-- Vertical orientation -->
-<slider min="0" max="100" value="50" orientation="vertical" style="height: 8;" />
+<slider min="0" max="100" value="50" style="orientation: vertical; height: 8;" />
 ```
 
 ### Props
@@ -867,9 +867,14 @@ The `<slider>` component allows numeric value selection within a range using key
 | `value`       | number   | 0            | Current value                                |
 | `step`        | number   | -            | Discrete step size (e.g., 5 = values 0,5,10...) |
 | `snaps`       | number[] | -            | Array of specific snap points                |
-| `orientation` | string   | 'horizontal' | 'horizontal' or 'vertical'                   |
 | `showValue`   | boolean  | false        | Display value label after slider             |
 | `onChange`    | function | -            | Called when value changes                    |
+
+### Styles
+
+| Style         | Type     | Default      | Description                                  |
+|---------------|----------|--------------|----------------------------------------------|
+| `orientation` | string   | 'horizontal' | 'horizontal' or 'vertical'                   |
 
 ### Keyboard Navigation
 
@@ -1328,7 +1333,7 @@ The `<img>` component displays images in the terminal using sextant characters (
 <img src="media/image.png" width="100%" height="10" />
 
 <!-- With object-fit mode -->
-<img src="media/image.png" width="40" height="20" objectFit="contain" />
+<img src="media/image.png" width="40" height="20" style="object-fit: contain;" />
 
 <!-- Data URL (inline base64-encoded image) -->
 <img src="data:image/png;base64,iVBORw0KGgo..." width="20" height="10" />
@@ -1342,7 +1347,6 @@ The `<img>` component displays images in the terminal using sextant characters (
 | `alt`            | string           | -       | Alternative text for accessibility                                       |
 | `width`          | number \| string | 30      | Width in columns or percentage (e.g., "50%")                             |
 | `height`         | number \| string | 15      | Height in rows or percentage (e.g., "50%")                               |
-| `objectFit`      | string           | 'fill'  | How image fits: 'contain' (preserve aspect), 'fill' (stretch), 'cover' (crop) |
 | `dither`         | string           | 'auto'  | Dithering mode for limited-color themes                                  |
 | `ditherBits`     | number           | -       | Color depth for dithering (1-8)                                          |
 | `onLoad`         | function         | -       | Called when image loads successfully                                     |
@@ -1350,6 +1354,12 @@ The `<img>` component displays images in the terminal using sextant characters (
 | `onShader`       | function         | -       | Per-pixel shader callback (see Shaders section)                          |
 | `shaderFps`      | number           | 30      | Shader frame rate                                                        |
 | `shaderRunTime`  | number           | -       | Stop shader after this many ms, freeze final frame as image              |
+
+### Styles
+
+| Style            | Type             | Default | Description                                                              |
+|------------------|------------------|---------|--------------------------------------------------------------------------|
+| `object-fit`     | string           | 'fill'  | How image fits: 'contain' (preserve aspect), 'fill' (stretch), 'cover' (crop) |
 
 ### Methods
 
@@ -1407,9 +1417,9 @@ const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);
 - Extends `CanvasElement` - inherits all canvas rendering capabilities
 - Supports percentage dimensions for responsive sizing (recalculates on container resize)
 - Pre-blends semi-transparent pixels with black background during image load
-- `objectFit: 'fill'` stretches to fill dimensions (default, like HTML img)
-- `objectFit: 'contain'` preserves aspect ratio within bounds
-- `objectFit: 'cover'` fills dimensions, cropping as needed
+- `object-fit: fill` stretches to fill dimensions (default, like HTML img)
+- `object-fit: contain` preserves aspect ratio within bounds
+- `object-fit: cover` fills dimensions, cropping as needed
 - `dither: 'auto'` applies appropriate dithering based on theme (sierra-stable for B&W/color, none for fullcolor)
 - Fixed-dimension images use `flexShrink: 0` to prevent layout compression
 - Percentage-dimension images are responsive and shrink with container

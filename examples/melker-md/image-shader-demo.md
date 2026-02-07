@@ -76,6 +76,9 @@ CSS-like styles applied to elements by ID or class.
 #title {
   text-align: center;
 }
+#shaderImg {
+  object-fit: contain;
+}
 ```
 
 ## Image Properties
@@ -86,7 +89,6 @@ Non-style properties for the image element. The `@target` specifies which elemen
 {
   "@target": "#shaderImg",
   "src": "../../media/melker-128.png",
-  "objectFit": "contain",
   "dither": "auto",
   "onShader": "$app.rippleShader",
   "shaderFps": 24,

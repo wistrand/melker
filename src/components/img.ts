@@ -21,8 +21,6 @@ export interface ImgProps extends Omit<CanvasProps, 'width' | 'height' | 'src'> 
   width?: number | string;
   /** Height in terminal rows, or percentage string like "50%" */
   height?: number | string;
-  /** How the image should fit: 'contain' (default, preserve aspect), 'fill' (stretch), 'cover' (crop) */
-  objectFit?: 'contain' | 'fill' | 'cover';
   /** Called when image loads successfully */
   onLoad?: () => void;
   /** Called when image fails to load */
@@ -101,8 +99,11 @@ export class ImgElement extends CanvasElement {
     this._onLoad = props.onLoad;
     this._onError = props.onError;
 
-    // Default objectFit to 'fill' (matching HTML img tag behavior)
-    this.props.objectFit = props.objectFit ?? 'fill';
+    // Default objectFit to 'fill' (matching HTML img tag behavior) via style
+    if (!this.props.style) this.props.style = {};
+    if (this.props.style.objectFit === undefined) {
+      this.props.style.objectFit = props.objectFit ?? 'fill';
+    }
 
     // Default dither to 'auto' for good results on all themes
     if (props.dither === undefined) {
@@ -245,7 +246,6 @@ export const imgSchema: ComponentSchema = {
     alt: { type: 'string', description: 'Alternative text for accessibility' },
     width: { type: ['number', 'string'], description: 'Width in columns or percentage (e.g., 30 or "50%")' },
     height: { type: ['number', 'string'], description: 'Height in rows or percentage (e.g., 15 or "50%")' },
-    objectFit: { type: 'string', enum: ['contain', 'fill', 'cover'], description: 'How image fits: contain (aspect ratio), fill (stretch), cover (crop)' },
     dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'sierra-stable', 'ordered'], description: 'Dithering algorithm for limited color themes' },
     ditherBits: { type: 'number', description: 'Color depth for dithering (1-8)' },
     onLoad: { type: ['function', 'string'], description: 'Called when image loads successfully' },
@@ -253,6 +253,9 @@ export const imgSchema: ComponentSchema = {
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source, utils) => [r,g,b]. utils: noise2d, fbm, palette, smoothstep, mix, fract' },
     onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
+  },
+  styles: {
+    objectFit: { type: 'string', enum: ['contain', 'fill', 'cover'], description: 'How image fits: contain (aspect ratio), fill (stretch, default for img), cover (crop)' },
   },
   styleWarnings: {
     width: 'Use width prop instead of style.width for image buffer sizing. style.width only affects layout, not pixel resolution. Props support "100%", "fill", or number.',

@@ -45,8 +45,7 @@
     <separator label="Data Bars with Auto Tooltip" />
 
     <data-bars
-      style="height: 6;"
-      orientation="horizontal"
+      style="height: 6; orientation: horizontal;"
       tooltip="auto"
     >
     {

@@ -209,7 +209,7 @@ Melker supports bash-style variable expansion for environment variables and comm
 | `<tabs>`                        | id, activeTab, onChange                                                            | Tabbed container                          |
 | `<tab>`                         | title, disabled                                                                    | Tab panel, defaults to flex column        |
 | `<canvas>`                      | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant chars)      |
-| `<img>`                         | src, alt, width, height, objectFit, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
+| `<img>`                         | src, alt, width, height, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
 | `<markdown>`                    | src, text, onLink                                                                  | Markdown text rendering with image support |
 | `<combobox>`                    | placeholder, filter, onSelect, maxVisible                                          | Dropdown with text filter                 |
 | `<select>`                      | value, onSelect, maxVisible                                                        | Dropdown picker (no filter)               |
@@ -217,7 +217,7 @@ Melker supports bash-style variable expansion for environment variables and comm
 | `<command-palette>`             | open, onSelect, width                                                              | Modal command picker                      |
 | `<option>`                      | value, disabled, shortcut                                                          | Child of combobox/select/autocomplete/command-palette |
 | `<group>`                       | label, system                                                                      | Groups options under a header             |
-| `<slider>`                      | min, max, value, step, snaps, orientation, showValue, onChange                     | Range input                               |
+| `<slider>`                      | min, max, value, step, snaps, showValue, onChange                                  | Range input                               |
 | `<file-browser>`                | path, selectionMode, selectType, filter, showHidden, maxVisible, onSelect, onCancel | File/dir picker                          |
 | `<data-table>`                  | columns, rows, footer, selectable, sortColumn, sortDirection, onSelect, onActivate | Array-based table                        |
 | `<table>`                       | style                                                                              | HTML-like table container                 |

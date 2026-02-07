@@ -20,9 +20,9 @@ import {
   type Range,
   type Position,
   type SemanticTokensParams,
-  TextDocument,
-  parseHtml as parse,
-} from './deps.ts';
+} from 'npm:vscode-languageserver@9.0.1/node.js';
+import { TextDocument } from 'npm:vscode-languageserver-textdocument@1.0.12';
+import { parseHtml as parse } from './deps.ts';
 
 // Import lint schemas
 import {

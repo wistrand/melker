@@ -465,6 +465,12 @@ export const splitPaneSchema: ComponentSchema = {
     dividerTitles: { type: 'string', description: 'Comma-separated divider titles, e.g. "Nav,Info"' },
     onResize: { type: 'handler', description: 'Called when panes are resized. Event: { sizes: number[], dividerIndex, targetId }' },
   },
+  styles: {
+    direction: { type: 'string', enum: ['horizontal', 'vertical'], description: 'Split direction: horizontal (left/right) or vertical (top/bottom)' },
+    minPaneSize: { type: 'number', description: 'Minimum pane size in characters (default: 3)' },
+    dividerStyle: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded', 'block', 'dotted'], description: 'Divider line style (default: thin)' },
+    dividerColor: { type: 'string', description: 'Divider foreground color (default: theme border color)' },
+  },
 };
 
 registerComponentSchema('split-pane', splitPaneSchema);

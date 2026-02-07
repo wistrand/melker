@@ -67,7 +67,7 @@
         id="qr-img"
         width="fill"
         height="fill"
-        objectFit="contain"
+        style="object-fit: contain;"
         dither="none"
       />
     </container>

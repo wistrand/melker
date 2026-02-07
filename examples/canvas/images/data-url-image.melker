@@ -7,7 +7,7 @@
 
     <container style="flex-direction: row; gap: 2; align-items: center;">
       <container style="border: thin; padding: 1;">
-        <img id="demo-image" width="20" height="10" objectFit="fill" />
+        <img id="demo-image" width="20" height="10" style="object-fit: fill;" />
       </container>
 
       <container style="flex-direction: column; gap: 1;">

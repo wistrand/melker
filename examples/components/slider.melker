@@ -130,15 +130,15 @@
       <text style="font-weight: bold;">RGB Vertical Sliders</text>
       <container style="display: flex; flex-direction: row; gap: 3;">
         <container style="display: flex; flex-direction: column; align-items: center;">
-          <slider id="redSliderV" min="0" max="255" value="128" orientation="vertical" style="height: 6;" onChange="$app.updateRed(event)" />
+          <slider id="redSliderV" min="0" max="255" value="128" style="orientation: vertical; height: 6;" onChange="$app.updateRed(event)" />
           <text>R</text>
         </container>
         <container style="display: flex; flex-direction: column; align-items: center;">
-          <slider id="greenSliderV" min="0" max="255" value="64" orientation="vertical" style="height: 6;" onChange="$app.updateGreen(event)" />
+          <slider id="greenSliderV" min="0" max="255" value="64" style="orientation: vertical; height: 6;" onChange="$app.updateGreen(event)" />
           <text>G</text>
         </container>
         <container style="display: flex; flex-direction: column; align-items: center;">
-          <slider id="blueSliderV" min="0" max="255" value="192" orientation="vertical" style="height: 6;" onChange="$app.updateBlue(event)" />
+          <slider id="blueSliderV" min="0" max="255" value="192" style="orientation: vertical; height: 6;" onChange="$app.updateBlue(event)" />
           <text>B</text>
         </container>
       </container>

@@ -92,7 +92,7 @@ map.melker paris 12 satellite           # Paris with satellite imagery
         id="map"
         width="100%"
         height="100%"
-        objectFit="fill"
+        style="object-fit: fill;"
         dither="auto"
         onPaint="$app.onPaint(event)"
         onMouseDown="$app.onMouseDown(event)"

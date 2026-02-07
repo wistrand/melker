@@ -26,7 +26,7 @@
         src="../../../media/melker-128.png"
         width="100%"
         height="100%"
-        objectFit="contain"
+        style="object-fit: contain;"
         dither="auto"
         onShader="$app.imageShader"
         shaderFps="24"

@@ -51,7 +51,7 @@ export interface CanvasProps extends BaseProps {
   backgroundColor?: ColorInput;      // Background color
   charAspectRatio?: number;          // Terminal char width/height ratio (default: 0.5)
   src?: string;                      // Image source path (loads and displays image)
-  objectFit?: 'contain' | 'fill' | 'cover';  // How image fits: contain (default), fill (stretch), cover (crop)
+  // objectFit is on Style interface, not props (set via style="object-fit: contain")
   dither?: DitherMode | boolean;     // Dithering mode for images (e.g., 'sierra-stable' for B&W themes)
   ditherBits?: number;               // Bits per channel for dithering (1-8, default: 1 for B&W)
   gfxMode?: GfxMode;  // Per-element graphics mode (global config overrides)
@@ -714,7 +714,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       bufferWidth: bufW,
       bufferHeight: bufH,
       pixelAspectRatio: this.getPixelAspectRatio(),
-      objectFit: this.props.objectFit ?? 'contain',
+      objectFit: this.props.style?.objectFit ?? 'contain',
       backgroundColor: this.props.backgroundColor,
     };
 
@@ -1673,6 +1673,9 @@ export const canvasSchema: ComponentSchema = {
     isolineMode: { type: 'string', enum: ['equal', 'quantile', 'nice'], description: 'Isoline distribution algorithm (default: equal, env: MELKER_ISOLINE_MODE)' },
     isolines: { type: 'array', description: 'Manual isoline definitions: [{value, color?, label?}]' },
     isolineSource: { type: 'string', enum: ['luma', 'red', 'green', 'blue', 'alpha'], description: 'Color channel for isoline scalar values (default: luma, env: MELKER_ISOLINE_SOURCE)' },
+  },
+  styles: {
+    objectFit: { type: 'string', enum: ['contain', 'fill', 'cover'], description: 'How image fits: contain (aspect ratio, default for canvas), fill (stretch), cover (crop)' },
   },
   styleWarnings: {
     width: 'Use width prop instead of style.width for canvas buffer sizing. style.width only affects layout, not pixel resolution.',

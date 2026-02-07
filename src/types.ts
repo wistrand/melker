@@ -145,6 +145,9 @@ export interface Style extends Record<string, any> {
   cellWidth?: number;
   cellHeight?: number;
 
+  // Image/canvas style properties
+  objectFit?: 'contain' | 'fill' | 'cover';
+
   // Split-pane style properties
   direction?: 'horizontal' | 'vertical';
   minPaneSize?: number;

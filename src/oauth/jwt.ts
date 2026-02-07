@@ -1,6 +1,6 @@
 // JWT token decoding and formatting utilities
 
-import { decode as decodeJwt } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+import { decodeJwt } from '../deps.ts';
 import type { OAuthTokens, JwtClaims, DecodedJwt, DecodedTokens } from './types.ts';
 
 /**

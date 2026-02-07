@@ -1,6 +1,6 @@
-// Centralized npm dependencies for Melker
-// This allows the codebase to avoid scattered npm: imports while still
-// supporting remote URL execution (deps.ts gets fetched along with the code)
+// Centralized external dependencies for Melker
+// All npm, jsr, and URL imports go here to avoid scattered external imports
+// and to support remote URL execution (deps.ts gets fetched along with the code)
 
 // HTML parsing
 export { parse as parseHtml } from 'npm:html5parser@2.0.2';
@@ -14,6 +14,13 @@ export { GifReader } from 'npm:omggif@1.0.10';
 export { fromMarkdown } from 'npm:mdast-util-from-markdown@2.0.2';
 export { gfm } from 'npm:micromark-extension-gfm@3.0.0';
 export { gfmFromMarkdown } from 'npm:mdast-util-gfm@3.1.0';
+
+// Deno standard library
+export { encodeBase64 } from 'jsr:@std/encoding@^1.0.0/base64';
+export { dirname, fromFileUrl, join, resolve } from 'jsr:@std/path@^1.0.0';
+
+// JWT
+export { decode as decodeJwt } from 'jsr:@zaubrik/djwt@3.0.2';
 
 // LSP (Language Server Protocol)
 export {

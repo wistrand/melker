@@ -1,7 +1,7 @@
 // Audio capture and transcription for AI accessibility
 // Based on debug_scripts/debug_audio_listen.ts and debug_scripts/debug_audio_analyze.ts
 
-import { encodeBase64 } from "jsr:@std/encoding@^1.0.0/base64";
+import { encodeBase64 } from '../deps.ts';
 import { getLogger } from '../logging.ts';
 import { getOpenRouterConfig } from './openrouter.ts';
 import { MelkerConfig } from '../config/mod.ts';

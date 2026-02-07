@@ -1,6 +1,6 @@
 // Convert policy to Deno permission flags
 
-import { resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
+import { resolve } from '../deps.ts';
 import type { MelkerPolicy } from './types.ts';
 import { getTempDir } from '../xdg.ts';
 import { Env } from '../env.ts';

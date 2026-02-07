@@ -5,7 +5,7 @@ import { type MelkerEngine } from './engine.ts';
 import { type Element } from './types.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { rgbaToCss } from './components/color-utils.ts';
-import { dirname, fromFileUrl, join } from 'https://deno.land/std@0.224.0/path/mod.ts';
+import { dirname, fromFileUrl, join } from './deps.ts';
 
 // Get the directory containing this file for loading server UI assets
 const SERVER_UI_DIR = join(dirname(fromFileUrl(import.meta.url)), 'server-ui');

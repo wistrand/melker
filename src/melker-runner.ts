@@ -2,7 +2,7 @@
 // Sandboxed app execution - handles template parsing, bundling, and engine creation.
 // This is spawned by melker-launcher.ts with restricted Deno permissions.
 
-import { resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
+import { resolve } from './deps.ts';
 import { debounce } from './utils/timing.ts';
 import { isUrl, loadContent } from './utils/content-loader.ts';
 import { ensureError } from './utils/error.ts';

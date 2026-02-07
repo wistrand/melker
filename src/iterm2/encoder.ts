@@ -24,8 +24,7 @@
  * This encoder converts to PNG format for iTerm2.
  */
 
-import { encodeBase64 } from 'jsr:@std/encoding@^1.0.0/base64';
-import { encodePng } from '../deps.ts';
+import { encodeBase64, encodePng } from '../deps.ts';
 import { getLogger } from '../logging.ts';
 import type {
   ITermEncodeOptions,

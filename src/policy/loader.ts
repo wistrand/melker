@@ -1,6 +1,6 @@
 // Policy loader - loads policy from embedded tag or external file
 
-import { dirname, resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
+import { dirname, resolve } from '../deps.ts';
 import type { MelkerPolicy, PolicyLoadResult } from './types.ts';
 import { Env } from '../env.ts';
 import { extractHostFromUrl } from './url-utils.ts';

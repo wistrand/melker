@@ -1,6 +1,6 @@
 // File Browser - Utility functions for directory loading and file operations
 
-import { join, dirname } from 'https://deno.land/std@0.224.0/path/mod.ts';
+import { join, dirname } from '../../deps.ts';
 import { getLogger } from '../../logging.ts';
 import type {
   FileEntry,

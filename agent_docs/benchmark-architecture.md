@@ -2,7 +2,7 @@
 
 Benchmarking infrastructure for Melker subsystems and components. Currently includes **17 benchmark suites** with **300+ individual benchmarks**.
 
-**Latest report:** [benchmark-report-2026-02-04.md](../benchmarks/results/benchmark-report-2026-02-04.md)
+**Latest baseline:** [baseline.json](../benchmarks/results/baseline.json)
 
 ---
 
@@ -16,7 +16,7 @@ deno run --allow-read --allow-write --allow-run --allow-env benchmarks/run-all.t
 deno run --allow-read --allow-write --allow-run --allow-env benchmarks/core/geometry_bench.ts
 ```
 
-Results are saved to `benchmarks/results/` as JSON files with the format `<suite>-<date>.json`.
+Results are saved to `benchmarks/results/` as JSON files with the format `<suite>-<date>.json`. Only `baseline.json` is committed; all other result files are gitignored.
 
 ---
 
@@ -25,8 +25,11 @@ Results are saved to `benchmarks/results/` as JSON files with the format `<suite
 View results using the benchmark-viewer app:
 
 ```bash
-# View combined results
-./melker.ts benchmarks/benchmark-viewer.melker benchmarks/results/combined-2026-02-03.json
+# View baseline results
+./melker.ts benchmarks/benchmark-viewer.melker benchmarks/results/baseline.json
+
+# View a specific run
+./melker.ts benchmarks/benchmark-viewer.melker benchmarks/results/combined-2026-02-06.json
 ```
 
 Features:
@@ -69,9 +72,10 @@ benchmarks/
     quantization_bench.ts      # Median-cut, fixed palette quantization
     encoding_bench.ts          # Sixel and Kitty encoding
     dithering_bench.ts         # Floyd-Steinberg, Sierra, Atkinson, etc.
-  results/                     # Output directory
-    combined-*.json            # Combined results from run-all.ts
-    <suite>-*.json             # Per-suite results
+  results/                     # Output directory (gitignored except baseline)
+    baseline.json              # Committed baseline for regression tracking
+    combined-*.json            # Combined results from run-all.ts (local only)
+    <suite>-*.json             # Per-suite results (local only)
 ```
 
 ---

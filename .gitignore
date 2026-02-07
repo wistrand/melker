@@ -26,6 +26,10 @@ dist/
 build/
 creating-melker-apps.zip
 
+# Benchmark results (keep baseline only)
+benchmarks/results/*
+!benchmarks/results/baseline.json
+
 # Test artifacts
 coverage/
 

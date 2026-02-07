@@ -58,5 +58,6 @@ about-magic.md
 
 # Local Netlify folder
 .netlify
+docs/deno.lock
 .mailmap
 

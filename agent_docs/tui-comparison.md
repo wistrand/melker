@@ -8,6 +8,7 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 |----------------------------------------------------------|-----------------|--------|-----------------------|----------------|
 | **Melker**                                               | TypeScript/Deno | New    | HTML-like declarative | Flexbox        |
 | [Ink](https://github.com/vadimdemedes/ink)               | JavaScript/Node | 35k    | React components      | Flexbox (Yoga) |
+| [OpenTUI](https://github.com/sst/opentui)               | TypeScript/Bun  | 8.4k   | React/SolidJS         | Flexbox (Yoga) |
 | [Blessed](https://github.com/chjj/blessed)               | JavaScript/Node | 11k    | Imperative widgets    | CSS-like       |
 | [Bubble Tea](https://github.com/charmbracelet/bubbletea) | Go              | 39k    | Elm architecture      | CSS-like       |
 | [tview](https://github.com/rivo/tview)                   | Go              | 13k    | Imperative widgets    | Grid/Flex      |
@@ -18,41 +19,42 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 
 ## Feature Matrix
 
-| Feature              | Melker | Ink | Blessed | Bubble Tea | tview | Textual | Ratatui | FTXUI |
-|----------------------|:------:|:---:|:-------:|:----------:|:-----:|:-------:|:-------:|:-----:|
-| No-build run         |   Y    |  -  |    Y    |     -      |   -   |    Y    |    -    |   -   |
-| Run from URL         |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| App approval system  |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| Permission sandbox   |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| AI accessibility     |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| OAuth built-in       |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| State persistence    |   Y    |  -  |    -    |     -      |   -   |    ~    |    -    |   -   |
-| LSP support          |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| Web browser          |   Y    |  -  |    -    |     -      |   -   |    Y    |    Y    |   Y   |
-| React ecosystem      |   -    |  Y  |    -    |     -      |   -   |    -    |    -    |   -   |
-| Single binary        |   -    |  -  |    -    |     Y      |   Y   |    -    |    Y    |   Y   |
-| Auto color degrade   |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
-| Mouse support        |   Y    |  ~  |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
-| Unicode/emoji        |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
-| Animations           |   ~    |  Y  |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
-| 16M colors           |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
-| Video playback       |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| Pixel canvas         |   Y    |  -  |    -    |     -      |   -   |    ~    |    Y    |   Y   |
-| Sixel/Kitty graphics |   Y    | Y*  |    -    |     -      |   -   |   Y*    |   Y*    |   -   |
-| Mermaid diagrams     |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| Literate UI (.md)    |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| Command palette      |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |   -   |
-| Media queries        |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| No_std/embedded      |   -    |  -  |    -    |     -      |   -   |    -    |    Y    |   -   |
-| SSH/network serve    |   Y    |  -  |    -    |     Y      |   -   |    Y    |    -    |   -   |
-| Debug/remote inspect |   Y    |  Y  |    -    |     -      |   -   |    Y    |    -    |   -   |
-| Maintained (2026)    |   Y    |  Y  |    -    |     Y      |   ~   |    Y    |    Y    |   Y   |
+| Feature              | Melker | Ink | OpenTUI | Blessed | Bubble Tea | tview | Textual | Ratatui | FTXUI |
+|----------------------|:------:|:---:|:-------:|:-------:|:----------:|:-----:|:-------:|:-------:|:-----:|
+| No-build run         |   Y    |  -  |    -    |    Y    |     -      |   -   |    Y    |    -    |   -   |
+| Run from URL         |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| App approval system  |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Permission sandbox   |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| AI accessibility     |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| OAuth built-in       |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| State persistence    |   Y    |  -  |    -    |    -    |     -      |   -   |    ~    |    -    |   -   |
+| LSP support          |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Web browser          |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    Y    |   Y   |
+| React ecosystem      |   -    |  Y  |    Y    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Single binary        |   -    |  -  |    -    |    -    |     Y      |   Y   |    -    |    Y    |   Y   |
+| Auto color degrade   |   Y    |  Y  |    Y    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
+| Mouse support        |   Y    |  ~  |    Y    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
+| Unicode/emoji        |   Y    |  Y  |    Y    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
+| Animations           |   ~    |  Y  |    Y    |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
+| 16M colors           |   Y    |  Y  |    Y    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
+| Video playback       |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Pixel canvas         |   Y    |  -  |    -    |    -    |     -      |   -   |    ~    |    Y    |   Y   |
+| Sixel/Kitty graphics |   Y    | Y*  |    -    |    -    |     -      |   -   |   Y*    |   Y*    |   -   |
+| Mermaid diagrams     |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Literate UI (.md)    |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Command palette      |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |   -   |
+| Media queries        |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| No_std/embedded      |   -    |  -  |    -    |    -    |     -      |   -   |    -    |    Y    |   -   |
+| SSH/network serve    |   Y    |  -  |    -    |    -    |     Y      |   -   |    Y    |    -    |   -   |
+| Debug/remote inspect |   Y    |  Y  |    -    |    -    |     -      |   -   |    Y    |    -    |   -   |
+| Maintained (2026)    |   Y    |  Y  |    Y    |    -    |     Y      |   ~   |    Y    |    Y    |   Y   |
 
 Y = Full support, ~ = Partial/limited support, - = Not available
 
 **Notes:**
 - **Ink mouse**: Requires third-party package (ink-mouse)
 - **Melker animations**: Via canvas shaders, not general UI animations
+- **OpenTUI animations**: Timeline-based animation API with easing functions
 - **Textual state**: Reactive attributes, not automatic persistence like Melker. Company (Textualize) winding down; maintained by Will McGugan as open source
 - **Ratatui canvas**: Quadrant (2x2), Sextant (2x3), Octant (2x4), Braille (2x4), HalfBlock (1x2)
 - **Ratatui no_std**: Added in v0.30.0 for embedded targets
@@ -65,7 +67,7 @@ Y = Full support, ~ = Partial/limited support, - = Not available
 |------------------|---------------------------|------------------------|
 | **Low-level**    | Direct terminal control   | ncurses, Termbox       |
 | **Programmatic** | createElement/widget APIs | All frameworks         |
-| **Declarative**  | Markup files (HTML/JSX)   | Melker, Ink, Textual   |
+| **Declarative**  | Markup files (HTML/JSX)   | Melker, Ink, OpenTUI, Textual |
 | **Literate**     | Prose + embedded UI       | Melker only            |
 
 **Melker's three levels:**
@@ -100,6 +102,7 @@ Most frameworks only offer programmatic APIs. Ink adds JSX but requires a build 
 |----------------|---------------------------|---------------------------------|-----------------------|
 | **Melker**     | HTML-like `.melker` files | Inline `onClick="..."` handlers | Mutable element props |
 | **Ink**        | JSX components            | React event props               | useState/useReducer   |
+| **OpenTUI**    | JSX/SolidJS components    | React/Solid event props         | useState/signals      |
 | **Blessed**    | JS object creation        | `.on('event', fn)`              | Direct mutation       |
 | **Bubble Tea** | Go structs + View()       | Msg -> Update()                 | Immutable Model       |
 | **tview**      | Go constructors           | SetInputCapture()               | Direct mutation       |
@@ -117,6 +120,12 @@ Most frameworks only offer programmatic APIs. Ink adds JSX but requires a build 
 **Ink** - React JSX:
 ```jsx
 <Box><Text onClick={() => setCount(c => c + 1)}>Click</Text></Box>
+```
+
+**OpenTUI** - React reconciler:
+```tsx
+import { Box, Text } from "@opentui/core";
+<Box><Text>Count: {count}</Text></Box>
 ```
 
 **Bubble Tea** - Elm architecture:
@@ -153,6 +162,7 @@ auto button = Button("Click", [&] { count++; });
 |---------------|---------------------|------------------------------|-------------------------------|
 | **Melker**    | CSS in `style=""`   | `border: thin; color: red`   | Auto-detect + 8 manual themes |
 | **Ink**       | Props on components | `<Box borderStyle="round">`  | Via ink-ui                    |
+| **OpenTUI**   | Props on components | `<Box border="round">`       | Manual                        |
 | **Blessed**   | Options object      | `{border: {type: 'line'}}`   | Manual                        |
 | **Lip Gloss** | Chained methods     | `.Bold(true).Padding(1)`     | Auto color degrade            |
 | **tview**     | Inline tags         | `[red]text[-]`               | tcell.Style                   |
@@ -199,70 +209,72 @@ text("Hello") | border | color(Color::Cyan)
 
 ## By Language
 
-|            | Melker      | Ink         | Blessed     | Bubble Tea  | tview       | Textual     | Ratatui     | FTXUI       |
-|------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|
-| Language   | TS/Deno     | JS/Node     | JS/Node     | Go          | Go          | Python      | Rust        | C++         |
-| Stars      | New         | 35k         | 11k         | 39k         | 13k         | 34k         | 18k         | 10k         |
-| Paradigm   | Declarative | React       | Imperative  | Elm/MVU     | Imperative  | Async       | Immediate   | Functional  |
-| Build step | None        | Required    | None        | Required    | Required    | None        | Required    | Required    |
-| Widgets    | 30+         | ~15         | 27+         | Via Bubbles | 15+         | 35+         | Via crates  | 10+         |
-| Maintained | Y           | Y           | Dead        | Y           | ~           | Y*          | Y           | Y           |
-| Used by    | -           | Claude Code, Gemini CLI | - | GitHub, GitLab | K9s, gh CLI | Posting, Toad | gitui    | -           |
+|            | Melker      | Ink         | OpenTUI     | Blessed     | Bubble Tea  | tview       | Textual     | Ratatui     | FTXUI       |
+|------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|
+| Language   | TS/Deno     | JS/Node     | TS+Zig/Bun  | JS/Node     | Go          | Go          | Python      | Rust        | C++         |
+| Stars      | New         | 35k         | 8.4k        | 11k         | 39k         | 13k         | 34k         | 18k         | 10k         |
+| Paradigm   | Declarative | React       | React/Solid | Imperative  | Elm/MVU     | Imperative  | Async       | Immediate   | Functional  |
+| Build step | None        | Required    | Required    | None        | Required    | Required    | None        | Required    | Required    |
+| Widgets    | 30+         | ~15         | ~12         | 27+         | Via Bubbles | 15+         | 35+         | Via crates  | 10+         |
+| Maintained | Y           | Y           | Y (pre-1.0) | Dead        | Y           | ~           | Y*          | Y           | Y           |
+| Used by    | -           | Claude Code, Gemini CLI | OpenCode | - | GitHub, GitLab | K9s, gh CLI | Posting, Toad | gitui    | -           |
 
 ## Component Comparison
 
-| Component        | Melker | Ink | Blessed | Bubble Tea | tview | Textual | Ratatui | FTXUI |
-|------------------|:------:|:---:|:-------:|:----------:|:-----:|:-------:|:-------:|:-----:|
-| **Layout**       |        |     |         |            |       |         |         |       |
-| Container/Box    |   Y    |  Y  |    Y    |     -      |   Y   |    Y    |    Y    |   Y   |
-| Flexbox          |   Y    |  Y  |    -    |     -      |   Y   |    -    |    -    |   Y   |
-| Grid             |   -    |  -  |    -    |     -      |   Y   |    Y    |    -    |   Y   |
-| Tabs             |   Y    |  -  |    -    |     -      |   Y   |    Y    |    Y    |   Y   |
-| Collapsible      |   -    |  -  |    -    |     -      |   -   |    Y    |    -    |   Y   |
-| Split panes      |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   Y   |
-| **Text**         |        |     |         |            |       |         |         |       |
-| Text/Label       |   Y    |  Y  |    Y    |     -      |   Y   |    Y    |    Y    |   Y   |
-| Markdown         |   Y    |  -  |    -    |    Y*      |   -   |    Y    |    -    |   -   |
-| Big text         |   -    |  -  |    Y    |     -      |   -   |    Y    |   Y*    |   -   |
-| **Input**        |        |     |         |            |       |         |         |       |
-| Text input       |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    -    |   Y   |
-| Textarea         |   Y    |  -  |    Y    |     Y      |   Y   |    Y    |   Y*    |   -   |
-| Checkbox         |   Y    |  -  |    Y    |     -      |   Y   |    Y    |   Y*    |   Y   |
-| Radio            |   Y    |  -  |    Y    |     -      |   -   |    Y    |    -    |   Y   |
-| Select/Dropdown  |   Y    |  Y  |    -    |     -      |   Y   |    Y    |    -    |   Y   |
-| Combobox         |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |   -   |
-| Autocomplete     |   Y    |  -  |    -    |     -      |   Y   |    Y    |    -    |   -   |
-| Slider           |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |   Y   |
-| Masked input     |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |   -   |
-| **Data**         |        |     |         |            |       |         |         |       |
-| Table            |   Y    | Y*  |    Y    |     Y      |   Y   |    Y    |    Y    |   -   |
-| Tree             |   Y    |  -  |    Y    |     -      |   Y   |    Y    |    -    |   -   |
-| List             |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
-| **Feedback**     |        |     |         |            |       |         |         |       |
-| Progress bar     |   Y    |  Y  |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
-| Spinner          |   Y    |  Y  |    Y    |     Y      |   -   |    Y    |    -    |   -   |
-| Toast            |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |   -   |
-| Sparkline        |   Y    |  -  |    -    |     -      |   -   |    Y    |    Y    |   -   |
-| **Navigation**   |        |     |         |            |       |         |         |       |
-| Button           |   Y    |  -  |    Y    |     -      |   Y   |    Y    |    -    |   Y   |
-| Menu             |   Y    |  -  |    Y    |     -      |   -   |    -    |    -    |   Y   |
-| Menu bar         |   Y    |  -  |    Y    |     -      |   -   |    -    |    -    |   -   |
-| Link             |   -    |  Y  |    -    |     -      |   -   |    Y    |    -    |   -   |
-| **Dialogs**      |        |     |         |            |       |         |         |       |
-| Dialog/Modal     |   Y    |  -  |    Y    |     -      |   Y   |    Y    |    -    |   -   |
-| Prompt           |   Y    |  Y  |    Y    |     -      |   -   |    -    |    -    |   -   |
-| Confirm          |   Y    |  -  |    Y    |     -      |   -   |    -    |    -    |   -   |
-| Alert            |   Y    |  -  |    Y    |     -      |   -   |    -    |    -    |   -   |
-| **Graphics**     |        |     |         |            |       |         |         |       |
-| Canvas           |   Y    |  -  |    -    |     -      |   -   |    ~    |    Y    |   Y   |
-| Shaders          |   Y    |  -  |    -    |     -      |   -   |    -    |   Y*    |   -   |
-| Image            |  Y*    |  -  |    Y    |     -      |   Y   |    -    |   Y*    |   -   |
-| Video            |   Y    |  -  |    Y    |     -      |   -   |    -    |    -    |   -   |
-| Chart            |   Y    |  -  |    -    |     -      |   -   |    -    |    Y    |   Y   |
-| **Special**      |        |     |         |            |       |         |         |       |
-| File browser     |   Y    |  -  |    Y    |     Y      |   -   |    Y    |    -    |   -   |
-| Calendar         |   -    |  -  |    -    |     -      |   -   |    -    |    Y    |   -   |
-| Scrollbar        |   Y    |  -  |    -    |     -      |   -   |    Y    |    Y    |   -   |
+| Component        | Melker | Ink | OpenTUI | Blessed | Bubble Tea | tview | Textual | Ratatui | FTXUI |
+|------------------|:------:|:---:|:-------:|:-------:|:----------:|:-----:|:-------:|:-------:|:-----:|
+| **Layout**       |        |     |         |         |            |       |         |         |       |
+| Container/Box    |   Y    |  Y  |    Y    |    Y    |     -      |   Y   |    Y    |    Y    |   Y   |
+| Flexbox          |   Y    |  Y  |    Y    |    -    |     -      |   Y   |    -    |    -    |   Y   |
+| Grid             |   -    |  -  |    -    |    -    |     -      |   Y   |    Y    |    -    |   Y   |
+| Tabs             |   Y    |  -  |    Y    |    -    |     -      |   Y   |    Y    |    Y    |   Y   |
+| Collapsible      |   -    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |   Y   |
+| Split panes      |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   Y   |
+| **Text**         |        |     |         |         |            |       |         |         |       |
+| Text/Label       |   Y    |  Y  |    Y    |    Y    |     -      |   Y   |    Y    |    Y    |   Y   |
+| Markdown         |   Y    |  -  |    -    |    -    |    Y*      |   -   |    Y    |    -    |   -   |
+| Big text         |   -    |  -  |    Y    |    Y    |     -      |   -   |    Y    |   Y*    |   -   |
+| **Input**        |        |     |         |         |            |       |         |         |       |
+| Text input       |   Y    |  Y  |    Y    |    Y    |     Y      |   Y   |    Y    |    -    |   Y   |
+| Textarea         |   Y    |  -  |    Y    |    Y    |     Y      |   Y   |    Y    |   Y*    |   -   |
+| Checkbox         |   Y    |  -  |    -    |    Y    |     -      |   Y   |    Y    |   Y*    |   Y   |
+| Radio            |   Y    |  -  |    -    |    Y    |     -      |   -   |    Y    |    -    |   Y   |
+| Select/Dropdown  |   Y    |  Y  |    Y    |    -    |     -      |   Y   |    Y    |    -    |   Y   |
+| Combobox         |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Autocomplete     |   Y    |  -  |    -    |    -    |     -      |   Y   |    Y    |    -    |   -   |
+| Slider           |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |   Y   |
+| Masked input     |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |   -   |
+| **Data**         |        |     |         |         |            |       |         |         |       |
+| Table            |   Y    | Y*  |    -    |    Y    |     Y      |   Y   |    Y    |    Y    |   -   |
+| Tree             |   Y    |  -  |    -    |    Y    |     -      |   Y   |    Y    |    -    |   -   |
+| List             |   Y    |  Y  |    -    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
+| **Feedback**     |        |     |         |         |            |       |         |         |       |
+| Progress bar     |   Y    |  Y  |    -    |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
+| Spinner          |   Y    |  Y  |    -    |    Y    |     Y      |   -   |    Y    |    -    |   -   |
+| Toast            |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |   -   |
+| Sparkline        |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    Y    |   -   |
+| **Navigation**   |        |     |         |         |            |       |         |         |       |
+| Button           |   Y    |  -  |    -    |    Y    |     -      |   Y   |    Y    |    -    |   Y   |
+| Menu             |   Y    |  -  |    -    |    Y    |     -      |   -   |    -    |    -    |   Y   |
+| Menu bar         |   Y    |  -  |    -    |    Y    |     -      |   -   |    -    |    -    |   -   |
+| Link             |   -    |  Y  |    -    |    -    |     -      |   -   |    Y    |    -    |   -   |
+| **Dialogs**      |        |     |         |         |            |       |         |         |       |
+| Dialog/Modal     |   Y    |  -  |    -    |    Y    |     -      |   Y   |    Y    |    -    |   -   |
+| Prompt           |   Y    |  Y  |    -    |    Y    |     -      |   -   |    -    |    -    |   -   |
+| Confirm          |   Y    |  -  |    -    |    Y    |     -      |   -   |    -    |    -    |   -   |
+| Alert            |   Y    |  -  |    -    |    Y    |     -      |   -   |    -    |    -    |   -   |
+| **Graphics**     |        |     |         |         |            |       |         |         |       |
+| Canvas           |   Y    |  -  |    -    |    -    |     -      |   -   |    ~    |    Y    |   Y   |
+| Shaders          |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |   Y*    |   -   |
+| Image            |  Y*    |  -  |    -    |    Y    |     -      |   Y   |    -    |   Y*    |   -   |
+| Video            |   Y    |  -  |    -    |    Y    |     -      |   -   |    -    |    -    |   -   |
+| Chart            |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    Y    |   Y   |
+| **Special**      |        |     |         |         |            |       |         |         |       |
+| File browser     |   Y    |  -  |    -    |    Y    |     Y      |   -   |    Y    |    -    |   -   |
+| Calendar         |   -    |  -  |    -    |    -    |     -      |   -   |    -    |    Y    |   -   |
+| Scrollbar        |   Y    |  -  |    Y    |    -    |     -      |   -   |    Y    |    Y    |   -   |
+| Syntax highlight |   -    |  -  |    Y    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Diff viewer      |   -    |  -  |    Y    |    -    |     -      |   -   |    -    |    -    |   -   |
 
 Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 
@@ -271,16 +283,20 @@ Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 - **Ratatui shaders**: Via tachyonfx crate for shader-like effects
 - **Ratatui image**: Via ratatui-image crate with sixel/halfblock support
 - **Melker tree**: Native `<data-tree>` component with expand/collapse, selection, multi-column, virtual scrolling
+- **OpenTUI Code**: Built-in `Code` component with tree-sitter syntax highlighting
+- **OpenTUI Diff**: Built-in `Diff` component for displaying code diffs
+- **OpenTUI AsciiFont**: Built-in large text rendering via FIGlet-style fonts
+- **OpenTUI big text**: Via AsciiFont component
 
 ## Architecture Patterns
 
-| Pattern             | Libraries                 |
-|---------------------|---------------------------|
-| **React/Component** | Ink, FTXUI, Melker        |
-| **Elm/MVU**         | Bubble Tea, Ratatui       |
-| **Imperative**      | Blessed, tview, ncurses   |
-| **Async/Reactive**  | Textual                   |
-| **Immediate Mode**  | Ratatui                   |
+| Pattern             | Libraries                      |
+|---------------------|--------------------------------|
+| **React/Component** | Ink, OpenTUI, FTXUI, Melker    |
+| **Elm/MVU**         | Bubble Tea, Ratatui            |
+| **Imperative**      | Blessed, tview, ncurses        |
+| **Async/Reactive**  | Textual                        |
+| **Immediate Mode**  | Ratatui                        |
 
 ## Artifact Model & Permissions
 
@@ -288,6 +304,7 @@ Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 |----------------|----------|---------------|----------------------|-------------|
 | **Melker**     | TS/Deno  | Declarative   | Document + execution | Declared    |
 | Ink            | JS       | React         | Program              | Inherited   |
+| OpenTUI        | TS/Bun   | React/Solid   | Program              | Inherited   |
 | Bubble Tea     | Go       | Elm           | Program              | Inherited   |
 | Textual        | Python   | Async widgets | Program              | Inherited   |
 | Ratatui        | Rust     | Immediate     | Program              | Inherited   |
@@ -304,31 +321,32 @@ This distinction mirrors web vs native: Melker treats TUI apps like web pages (s
 
 ## Rendering Strategies
 
-| Strategy       | Libraries       | Description                                    |
-|----------------|-----------------|------------------------------------------------|
-| Immediate mode | Ratatui, FTXUI  | Redraw entire UI each frame (fast in Rust/C++) |
-| Dual buffer    | Melker, Ratatui | Compare buffers, write diff                    |
-| Damage buffer  | Blessed         | Track changed regions                          |
-| Yoga layout    | Ink             | Facebook's flexbox engine                      |
-| Virtual DOM    | Ink             | React reconciliation                           |
+| Strategy       | Libraries            | Description                                    |
+|----------------|----------------------|------------------------------------------------|
+| Immediate mode | Ratatui, FTXUI       | Redraw entire UI each frame (fast in Rust/C++) |
+| Dual buffer    | Melker, Ratatui, OpenTUI | Compare buffers, write diff                |
+| Damage buffer  | Blessed              | Track changed regions                          |
+| Yoga layout    | Ink, OpenTUI         | Facebook's flexbox engine                      |
+| Virtual DOM    | Ink, OpenTUI         | React/SolidJS reconciliation                   |
 
 **Performance notes:**
 - **Immediate mode** (Ratatui, FTXUI): Raw language speed makes full redraws fast
-- **Retained mode** (Melker, Ink, Textual): Layout caching reduces work per frame
+- **Retained mode** (Melker, Ink, Textual, OpenTUI): Layout caching reduces work per frame
 - **Melker's fast input path**: Bypasses layout for text input, renders at cached bounds
 - **Ratatui**: Sub-millisecond rendering with zero-cost abstractions
+- **OpenTUI**: Frame diffing computed in Zig via FFI, sub-ms frame times claimed
 
 ## Pixel Canvas
 
-|                  | Melker         | Ratatui            | FTXUI          | Textual     |
-|------------------|----------------|--------------------|----------------|-------------|
-| Mode             | Retained       | Immediate          | Immediate      | Immediate   |
-| Encoding         | Sextant (2x3)  | Braille/Sextant/Octant | Braille/Block  | Shapes only |
-| Resolution       | 2x3 per cell   | Up to 2x4 per cell | 2x4 per cell   | N/A         |
-| True color       | Y              | Y              | Y              | -           |
-| Auto-dither      | Y              | -              | -              | -           |
-| onPaint callback | Y              | -              | -              | -           |
-| Shader support   | Y              | Y*             | -              | -           |
+|                  | Melker         | Ratatui            | FTXUI          | Textual     | OpenTUI    |
+|------------------|----------------|--------------------|----------------|-------------|------------|
+| Mode             | Retained       | Immediate          | Immediate      | Immediate   | -          |
+| Encoding         | Sextant (2x3)  | Braille/Sextant/Octant | Braille/Block  | Shapes only | -          |
+| Resolution       | 2x3 per cell   | Up to 2x4 per cell | 2x4 per cell   | N/A         | -          |
+| True color       | Y              | Y              | Y              | -           | -          |
+| Auto-dither      | Y              | -              | -              | -           | -          |
+| onPaint callback | Y              | -              | -              | -           | -          |
+| Shader support   | Y              | Y*             | -              | -           | -          |
 
 **Retained vs Immediate mode:**
 - **Retained**: Canvas maintains pixel buffer; framework handles when to redraw (`onPaint` callback)
@@ -375,13 +393,13 @@ c.DrawPointLine(x1, y1, x2, y2);
 
 Modern terminals support pixel-perfect image rendering via specialized protocols.
 
-|                    | Melker      | Ink         | Textual     | Ratatui     | Bubble Tea | tview | FTXUI |
-|--------------------|-------------|-------------|-------------|-------------|------------|-------|-------|
-| Sixel              | Y           | Y*          | Y*          | Y*          | -          | -     | -     |
-| Kitty protocol     | Y           | Y*          | Y*          | Y*          | -          | -     | -     |
-| iTerm2 protocol    | Y           | Y*          | -           | Y*          | -          | -     | -     |
-| Auto-detection     | Y           | Y*          | Y*          | Y*          | -          | -     | -     |
-| Fallback (Unicode) | Y (sextant) | Y* (braille) | Y* (Unicode) | Y (braille) | -          | -     | -     |
+|                    | Melker      | Ink         | OpenTUI     | Textual     | Ratatui     | Bubble Tea | tview | FTXUI |
+|--------------------|-------------|-------------|-------------|-------------|-------------|------------|-------|-------|
+| Sixel              | Y           | Y*          | -           | Y*          | Y*          | -          | -     | -     |
+| Kitty protocol     | Y           | Y*          | -           | Y*          | Y*          | -          | -     | -     |
+| iTerm2 protocol    | Y           | Y*          | -           | -           | Y*          | -          | -     | -     |
+| Auto-detection     | Y           | Y*          | -           | Y*          | Y*          | -          | -     | -     |
+| Fallback (Unicode) | Y (sextant) | Y* (braille) | -           | Y* (Unicode) | Y (braille) | -          | -     | -     |
 
 Y = Built-in, Y* = Via extension/library, - = Not available
 
@@ -419,17 +437,17 @@ Y = Full support, ~ = Partial, Y* = Passthrough depends on underlying terminal
 
 Mermaid is a popular diagramming language for flowcharts, sequence diagrams, class diagrams, etc.
 
-|                       | Melker | Ink | Textual | Ratatui | Bubble Tea | tview | FTXUI |
-|-----------------------|:------:|:---:|:-------:|:-------:|:----------:|:-----:|:-----:|
-| Native Mermaid        |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
-| Flowchart             |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
-| Sequence diagram      |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
-| Class diagram         |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
-| State diagram         |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
-| ER diagram            |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
-| Run .mmd files        |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
-| Unicode box-drawing   |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
-| Interactive/scrollable |   Y    |  -  |    -    |    -    |     -      |   -   |   -   |
+|                       | Melker | Ink | OpenTUI | Textual | Ratatui | Bubble Tea | tview | FTXUI |
+|-----------------------|:------:|:---:|:-------:|:-------:|:-------:|:----------:|:-----:|:-----:|
+| Native Mermaid        |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
+| Flowchart             |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
+| Sequence diagram      |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
+| Class diagram         |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
+| State diagram         |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
+| ER diagram            |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
+| Run .mmd files        |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
+| Unicode box-drawing   |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
+| Interactive/scrollable |   Y    |  -  |    -    |    -    |    -    |     -      |   -   |   -   |
 
 **Melker** - Native `<graph>` component:
 ```xml
@@ -464,6 +482,7 @@ graph TD
 |----------------|----------------------------------------------|------------------------------------------------------------|
 | **Melker**     | Native `<table>` + `<data-table>` + Markdown | Scrollable tbody, auto column widths, sorting, clickable   |
 | **Ink**        | ink-table package                            | React component, column config                             |
+| **OpenTUI**    | No built-in                                  | Manual Box/Text composition                                |
 | **Blessed**    | listtable widget                             | Row selection, column widths                               |
 | **Bubble Tea** | bubbles/table                                | Styles, selection, pagination                              |
 | **tview**      | Table widget                                 | Cells, selection, custom drawing                           |
@@ -572,20 +591,20 @@ auto table = vbox({
 
 ### Table Feature Comparison
 
-| Feature          | Melker | Ink | Blessed | Bubble Tea | tview | Textual | Ratatui |
-|------------------|:------:|:---:|:-------:|:----------:|:-----:|:-------:|:-------:|
-| Header styling   |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    Y    |
-| Row selection    |   Y    |  -  |    Y    |     Y      |   Y   |    Y    |    Y    |
-| Column widths    | Auto   | Auto | Manual |   Manual   | Manual |  Auto  | Manual  |
-| Borders          |   Y    |  -  |    Y    |     Y      |   Y   |    Y    |    Y    |
-| Scrolling        |   Y    |  -  |    Y    |     Y      |   Y   |    Y    |    Y    |
-| Sorting          |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |
-| Cell editing     |   -    |  -  |    -    |     -      |   Y   |    -    |    -    |
-| Clickable cells  |   Y    |  -  |    Y    |     -      |   Y   |    Y    |    -    |
-| Markdown source  |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |
-| HTML-like syntax |   Y    |  -  |    -    |     -      |   -   |    -    |    -    |
-| Scrollable body  |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |
-| Alignment        |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    Y    |
+| Feature          | Melker | Ink | OpenTUI | Blessed | Bubble Tea | tview | Textual | Ratatui |
+|------------------|:------:|:---:|:-------:|:-------:|:----------:|:-----:|:-------:|:-------:|
+| Header styling   |   Y    |  Y  |    -    |    Y    |     Y      |   Y   |    Y    |    Y    |
+| Row selection    |   Y    |  -  |    -    |    Y    |     Y      |   Y   |    Y    |    Y    |
+| Column widths    | Auto   | Auto |   -    | Manual  |   Manual   | Manual |  Auto  | Manual  |
+| Borders          |   Y    |  -  |    -    |    Y    |     Y      |   Y   |    Y    |    Y    |
+| Scrolling        |   Y    |  -  |    -    |    Y    |     Y      |   Y   |    Y    |    Y    |
+| Sorting          |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |
+| Cell editing     |   -    |  -  |    -    |    -    |     -      |   Y   |    -    |    -    |
+| Clickable cells  |   Y    |  -  |    -    |    Y    |     -      |   Y   |    Y    |    -    |
+| Markdown source  |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |
+| HTML-like syntax |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |
+| Scrollable body  |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |
+| Alignment        |   Y    |  Y  |    -    |    Y    |     Y      |   Y   |    Y    |    Y    |
 
 ## Unique Strengths
 
@@ -593,6 +612,7 @@ auto table = vbox({
 |----------------|-------------------------------------------------------------------------|
 | **Melker**     | Run `.melker` from URL, AI assistant, permission sandbox, literate UI   |
 | **Ink**        | Full React ecosystem, DevTools, used by 10k+ projects, React 19 support |
+| **OpenTUI**    | Zig FFI for sub-ms rendering, React+SolidJS reconcilers, timeline animations |
 | **Textual**    | Terminal + browser, CSS styling, command palette, 35+ widgets, rapid releases |
 | **Ratatui**    | Rust safety, no_std support, immediate mode performance, modular crates |
 | **Bubble Tea** | Elm architecture, 39k stars, SSH/network serving, 10k+ apps built       |
@@ -604,6 +624,7 @@ auto table = vbox({
 | Library        | Used By                                                                                                                              |
 |----------------|--------------------------------------------------------------------------------------------------------------------------------------|
 | **Ink**        | Claude Code (Anthropic), Gemini CLI (Google), GitHub Copilot CLI, Gatsby, Yarn, Prisma, Parcel, Shopify, New York Times, Terraform CDK |
+| **OpenTUI**    | OpenCode (SST AI coding agent)                                                                                                       |
 | **Bubble Tea** | GitHub, GitLab, NVIDIA, Sourcegraph, Charm (Glow, VHS, etc.)                                                                         |
 | **tview**      | K9s (Kubernetes CLI), GitHub CLI (gh), podman-tui                                                                                    |
 | **Textual**    | Posting (API client), Toad (AI coding UI), Harlequin (SQL IDE), Elia (LLM chat), Toolong                                            |
@@ -613,7 +634,7 @@ auto table = vbox({
 
 | If you want...             | Choose                                             |
 |----------------------------|----------------------------------------------------|
-| React knowledge reuse      | **Ink**                                            |
+| React knowledge reuse      | **Ink**, **OpenTUI**                               |
 | Python + modern async      | **Textual**                                        |
 | Rust performance           | **Ratatui**                                        |
 | Go + Elm architecture      | **Bubble Tea**                                     |
@@ -628,19 +649,21 @@ auto table = vbox({
 | Literate programming       | **Melker**                                         |
 | Embedded/no_std            | **Ratatui**                                        |
 | SSH/network serving        | **Bubble Tea**, **Textual**, **Melker**             |
+| Sub-ms Zig rendering       | **OpenTUI**                                        |
 | Most GitHub stars          | **Bubble Tea** (39k), **Ink** (35k), **Textual** (34k) |
 
 ## Recent Updates (2025-2026)
 
-| Library        | Version    | Notable Changes                                                                   |
-|----------------|------------|-----------------------------------------------------------------------------------|
-| **Ink**        | v6.6.0     | React 19 support (peerDeps >=19.0.0), concurrent rendering (PR #850, Feb 2026)    |
+| Library        | Version     | Notable Changes                                                                   |
+|----------------|-------------|-----------------------------------------------------------------------------------|
+| **Ink**        | v6.6.0      | React 19 support (peerDeps >=19.0.0), concurrent rendering (PR #850, Feb 2026)    |
+| **OpenTUI**    | v0.1.78     | Very active (pre-1.0). TS+Zig core, React+SolidJS reconcilers, Go bindings. Powers OpenCode (SST AI coding agent). "Not ready for production use" per README |
 | **Bubble Tea** | v2.0.0-rc.2 | v2 RC with View struct API (not string), Cursed Renderer, `charm.land` module path, clipboard via OSC52. v1.3.10 still latest stable |
-| **Textual**    | v7.5.0     | Rapid releases: 1.0 (Dec 2024) → 7.5 (Jan 2026). Textualize company winding down (May 2025); McGugan maintains as open source. Built Toad (AI coding UI) |
-| **Ratatui**    | v0.30.0    | "Biggest release ever" (Dec 2025). no_std for embedded, modular workspace (ratatui-core, ratatui-widgets), `ratatui::run()` API, Sextant/Octant canvas markers. Ratzilla v0.3.0 (WebAssembly) |
-| **FTXUI**      | v6.0.0+    | Navigation tree, Bazel build support, continued WebAssembly                       |
-| **tview**      | Stable     | No commits since Sep 2025 (4+ month gap). K9s uses a fork (`derailed/tview`). gh CLI still depends on it |
-| **Blessed**    | Dead       | Last commit January 2016. neo-blessed fork has limited maintenance                |
+| **Textual**    | v7.5.0      | Rapid releases: 1.0 (Dec 2024) → 7.5 (Jan 2026). Textualize company winding down (May 2025); McGugan maintains as open source. Built Toad (AI coding UI) |
+| **Ratatui**    | v0.30.0     | "Biggest release ever" (Dec 2025). no_std for embedded, modular workspace (ratatui-core, ratatui-widgets), `ratatui::run()` API, Sextant/Octant canvas markers. Ratzilla v0.3.0 (WebAssembly) |
+| **FTXUI**      | v6.0.0+     | Navigation tree, Bazel build support, continued WebAssembly                       |
+| **tview**      | Stable      | No commits since Sep 2025 (4+ month gap). K9s uses a fork (`derailed/tview`). gh CLI still depends on it |
+| **Blessed**    | Dead        | Last commit January 2016. neo-blessed fork has limited maintenance                |
 
 **Notes:**
 - **Textual Y***: Textualize (the company) announced wind-down in May 2025. Will McGugan continues maintaining Textual as open source. Active development continues but corporate backing is gone.
@@ -654,6 +677,8 @@ auto table = vbox({
 - [Awesome TUIs](https://github.com/rothgar/awesome-tuis) - Curated list
 - [Ink](https://github.com/vadimdemedes/ink) - React for CLI
 - [Ink UI](https://ink-ui.vadimdemedes.com/) - Component library for Ink
+- [OpenTUI](https://github.com/sst/opentui) - TypeScript+Zig TUI with React/SolidJS reconcilers (by SST team)
+- [OpenCode](https://github.com/sst/opencode) - AI coding agent built with OpenTUI
 - [Blessed](https://github.com/chjj/blessed) - Node.js widgets (dead since 2016)
 - [neo-blessed](https://github.com/embarklabs/neo-blessed) - Blessed fork (limited maintenance)
 - [Bubble Tea](https://github.com/charmbracelet/bubbletea) - Go Elm architecture

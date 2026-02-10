@@ -273,7 +273,7 @@ When `stop()` is called:
 | `src/state-persistence-manager.ts`| App state auto-save/restore                |
 | `src/layout.ts`                   | Flexbox layout calculations                |
 | `src/rendering.ts`                | Render pipeline, overlays                  |
-| `src/buffer.ts`                   | Dual-buffer system                         |
+| `src/buffer.ts`                   | Dual-buffer system, `DiffCollector`        |
 | `src/renderer.ts`                 | ANSI terminal output                       |
 | `src/focus.ts`                    | Focus management                           |
 | `src/theme.ts`                    | Theming system                             |

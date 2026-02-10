@@ -34,7 +34,7 @@ Detailed file layout for the Melker codebase.
 | `ui-animation-manager.ts`      | Centralized timer for UI animations                   |
 | `layout.ts`                    | Flexbox layout calculations                           |
 | `rendering.ts`                 | Render pipeline, overlays                             |
-| `buffer.ts`                    | Dual-buffer system                                    |
+| `buffer.ts`                    | Dual-buffer system, `DiffCollector` for fast render   |
 | `renderer.ts`                  | ANSI terminal output                                  |
 | `focus.ts`                     | Focus/tab navigation                                  |
 | `theme.ts`                     | Theming system                                        |

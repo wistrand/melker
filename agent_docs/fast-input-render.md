@@ -7,7 +7,7 @@ Input latency included a debounce delay. The debounce exists to batch rapid inpu
 ## Solution: Dual Render Path
 
 ```
-Key → Input updates state → fast render (cached bounds) → terminal (~2ms)
+Key → Input updates state → fast render (DiffCollector) → terminal (~1ms)
                           ↓
                           debounce 16ms → full layout → buffer swap → terminal
 ```
@@ -18,16 +18,15 @@ Fast render provides immediate visual feedback while the debounced full render e
 
 ## Architecture
 
-### Buffer Management
+### DiffCollector
 
-The key insight: fast render must NOT swap buffers, or the full render will diff against the wrong baseline causing flicker.
+The fast render path bypasses the buffer entirely. Instead of copying the full buffer (O(w×h)) and diffing dirty rows, components write to a lightweight `DiffCollector` that collects `BufferDiff[]` directly.
 
 ```typescript
-// Fast render path (no buffer swap)
-buffer.prepareForFastRender();  // Copy previous → current
-input.fastRender(buffer, bounds, isFocused);
-differences = buffer.getDiffOnly();  // Diff without swap
-output(differences);
+// Fast render path (no buffer involvement)
+const collector = new DiffCollector();
+input.fastRender(collector, bounds, isFocused);
+output(collector.getDiffs());
 
 // Full render path (normal swap)
 buffer.clear();
@@ -36,6 +35,15 @@ render();
 differences = buffer.swapAndGetDiff();  // Swap + clear
 output(differences);
 ```
+
+`DiffCollector` provides `setCell()`, `setText()`, `fillRect()` matching `TerminalBuffer`'s API. It handles wide characters via `analyzeString()` and gray theme conversion.
+
+### Why This Is Safe
+
+1. **previousBuffer is never modified** — DiffCollector doesn't touch any buffer
+2. **currentBuffer state doesn't matter** — full render calls `clear()` first, wiping it
+3. **No code reads currentBuffer between fast and full render** — verified by audit
+4. **Single-threaded** — render() and fastRender never interleave (both synchronous)
 
 ### Bounds Lookup
 
@@ -69,25 +77,27 @@ Inputs inside an open dialog still use fast render.
 
 ---
 
-## Files Modified
+## Files
 
-| File                         | Changes                                   |
-|------------------------------|-------------------------------------------|
-| `src/buffer.ts`              | `getDiffOnly()`, `prepareForFastRender()` |
-| `src/rendering.ts`           | `findElementBounds()`                     |
-| `src/components/input.ts`    | `fastRender()`, `canFastRender()`         |
-| `src/components/textarea.ts` | `fastRender()`, `canFastRender()`         |
-| `src/engine.ts`              | `_renderFastPath()`, dialog detection     |
+| File                              | Purpose                                      |
+|-----------------------------------|----------------------------------------------|
+| `src/buffer.ts`                   | `DiffCollector` class                        |
+| `src/rendering.ts`                | `findElementBounds()`                        |
+| `src/components/input.ts`         | `fastRender(collector, bounds, isFocused)`   |
+| `src/components/textarea.ts`      | `fastRender(collector, bounds, isFocused)`   |
+| `src/engine.ts`                   | `_renderFastPath(diffs)`                     |
+| `src/engine-keyboard-handler.ts`  | Creates DiffCollector, orchestrates fast path |
 
 ---
 
 ## Performance
 
-| Metric                | Before | After  |
-|-----------------------|--------|--------|
-| Typing latency        | ~50ms+ | ~2-5ms |
-| Debounce delay        | 50ms   | 16ms   |
-| Full render frequency | Same   | Same   |
+| Metric                | Before (buffer copy) | After (DiffCollector) |
+|-----------------------|----------------------|-----------------------|
+| Typing latency        | ~2-5ms               | ~1ms                  |
+| Buffer copy per key   | O(w×h) cells         | 0                     |
+| Diff scan per key     | O(dirty rows × w)    | 0                     |
+| Diffs generated       | ~30-80 cells         | ~30-80 cells          |
 
 ---
 

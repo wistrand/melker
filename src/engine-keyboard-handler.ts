@@ -10,7 +10,7 @@ import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { getTooltipManager } from './tooltip/mod.ts';
 import { getLogger } from './logging.ts';
-import type { DualBuffer } from './buffer.ts';
+import { type DualBuffer, DiffCollector, type BufferDiff } from './buffer.ts';
 
 const logger = getLogger('KeyboardHandler');
 import type { RenderingEngine } from './rendering.ts';
@@ -70,7 +70,7 @@ export interface KeyboardHandlerContext {
   ensureAccessibilityDialogManager: () => void;
   hasOverlayDialogFor: (element: Element) => boolean;
   debouncedInputRender: () => void;
-  renderFastPath: () => void;
+  renderFastPath: (diffs: BufferDiff[]) => void;
 }
 
 /**
@@ -458,15 +458,16 @@ function handleTextInputKeyboard(
 
     // Try fast render first (immediate visual feedback)
     // Skip if there's an overlay dialog - it would be overwritten
-    if (!hasSystemDialog && !hasOverlayDialog && textInput.canFastRender() && ctx.buffer && ctx.renderer) {
+    if (!hasSystemDialog && !hasOverlayDialog && textInput.canFastRender() && ctx.renderer) {
       const bounds = ctx.renderer.findElementBounds(textInput.id);
       if (bounds) {
-        // Prepare buffer: copy previous content so fast render only updates input cells
-        ctx.buffer.prepareForFastRender();
-        if (textInput.fastRender(ctx.buffer, bounds, true)) {
-          // Use fast path: outputs diff WITHOUT swapping buffers
-          // This preserves buffer state for the debounced full render
-          ctx.renderFastPath();
+        // Collect diffs directly — no buffer copy needed
+        const collector = new DiffCollector();
+        if (textInput.fastRender(collector, bounds, true)) {
+          const diffs = collector.getDiffs();
+          if (diffs.length > 0) {
+            ctx.renderFastPath(diffs);
+          }
         }
       }
     }

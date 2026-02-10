@@ -1,7 +1,7 @@
 // Input component implementation
 
 import { Element, BaseProps, Renderable, Focusable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
-import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
+import { type DualBuffer, type Cell, type DiffCollector, EMPTY_CHAR } from '../buffer.ts';
 import { createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
 import { COLORS, parseColor } from './color-utils.ts';
@@ -539,11 +539,11 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
   }
 
   /**
-   * Fast render - updates only the text content at cached bounds.
-   * Skips layout calculation for immediate visual feedback.
-   * Returns true if fast render was performed, false if full render needed.
+   * Fast render - generates diffs for the input content directly.
+   * Skips layout calculation and buffer copy for immediate visual feedback.
+   * Returns null if fast render not possible, otherwise BufferDiff[].
    */
-  fastRender(buffer: DualBuffer, bounds: Bounds, isFocused: boolean): boolean {
+  fastRender(collector: DiffCollector, bounds: Bounds, isFocused: boolean): boolean {
     // Don't fast render if showing completions (needs full render for dropdown)
     if (this._showingCompletions) {
       return false;
@@ -562,7 +562,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       : getThemeColor('textMuted');
 
     // Clear the input area
-    buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, 1, {
+    collector.fillRect(bounds.x, bounds.y, bounds.width, 1, {
       char: EMPTY_CHAR,
       background: bg,
       foreground: fg,
@@ -581,7 +581,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       if (textToRender.length > bounds.width) {
         visibleText = textToRender.substring(textToRender.length - bounds.width);
       }
-      buffer.currentBuffer.setText(bounds.x, bounds.y, visibleText, textStyle);
+      collector.setText(bounds.x, bounds.y, visibleText, textStyle);
     }
 
     // Render cursor if focused
@@ -596,7 +596,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
           ? (isPassword ? '*' : value[actualCursorPos])
           : ' ';
 
-        buffer.currentBuffer.setText(cursorX, bounds.y, cursorChar, {
+        collector.setText(cursorX, bounds.y, cursorChar, {
           foreground: fg,
           background: bg,
           reverse: true,

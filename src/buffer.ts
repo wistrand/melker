@@ -32,6 +32,74 @@ export interface BufferDiff {
   cell: Cell;
 }
 
+/**
+ * Lightweight collector that mimics TerminalBuffer's write API (setCell, setText, fillRect)
+ * but collects BufferDiff[] instead of writing to a 2D array.
+ * Used by the fast render path to avoid O(w×h) buffer copy.
+ */
+export class DiffCollector {
+  private _diffs: BufferDiff[] = [];
+  private _isGrayTheme: boolean;
+  private _isGrayDark: boolean;
+
+  constructor() {
+    const theme = getThemeManager().getCurrentTheme();
+    this._isGrayTheme = theme.type === 'gray';
+    this._isGrayDark = theme.mode === 'dark';
+  }
+
+  getDiffs(): BufferDiff[] {
+    return this._diffs;
+  }
+
+  setCell(x: number, y: number, cell: Cell): void {
+    if (this._isGrayTheme) {
+      if (cell.foreground) cell.foreground = colorToGray(cell.foreground, this._isGrayDark);
+      if (cell.background) cell.background = colorToGray(cell.background, this._isGrayDark);
+    }
+
+    let charWidth: number;
+    if (cell.width !== undefined) {
+      charWidth = cell.width;
+    } else {
+      const char = cell.char;
+      if (char.length === 1) {
+        const code = char.charCodeAt(0);
+        charWidth = (code >= 32 && code <= 126) ? 1 : getCharWidth(char);
+      } else {
+        charWidth = getCharWidth(char);
+      }
+      cell.width = charWidth;
+    }
+
+    if (charWidth === 2) {
+      this._diffs.push({ x, y, cell: { ...cell } });
+      this._diffs.push({ x: x + 1, y, cell: { ...cell, char: '', isWideCharContinuation: true, width: 0 } });
+    } else if (charWidth === 1) {
+      this._diffs.push({ x, y, cell: { ...cell } });
+    }
+  }
+
+  setText(x: number, y: number, text: string, style: Partial<Cell> = {}): void {
+    const chars = analyzeString(text);
+    let visualX = x;
+    for (const charInfo of chars) {
+      if (charInfo.width > 0) {
+        this.setCell(visualX, y, { char: charInfo.char, width: charInfo.width, ...style });
+        visualX += charInfo.width;
+      }
+    }
+  }
+
+  fillRect(x: number, y: number, width: number, height: number, cell: Cell): void {
+    for (let dy = 0; dy < height; dy++) {
+      for (let dx = 0; dx < width; dx++) {
+        this.setCell(x + dx, y + dy, cell);
+      }
+    }
+  }
+}
+
 
 export class TerminalBuffer {
   private _width: number;
@@ -735,25 +803,6 @@ export class DualBuffer {
       a.width === b.width &&
       a.isWideCharContinuation === b.isWideCharContinuation
     );
-  }
-
-  // Get differences without swapping or clearing (for fast render path)
-  // This allows immediate visual feedback without disrupting the buffer state
-  // for the upcoming full render
-  getDiffOnly(): BufferDiff[] {
-    return this._computeDirtyDiff();
-  }
-
-  // Prepare current buffer for fast render by copying previous buffer content
-  // This allows fast render to update only specific cells while preserving the rest
-  prepareForFastRender(): void {
-    // Temporarily disable tracking during copy
-    this._currentBuffer.clearDirtyTracking();
-
-    this._currentBuffer.copyFrom(this._previousBuffer);
-
-    // Re-enable tracking (dirty rows preserved from before copy)
-    this._currentBuffer.setDirtyTracking(this._previousBuffer, this._dirtyRows);
   }
 
   // Force complete redraw (useful for initialization or after screen clear)

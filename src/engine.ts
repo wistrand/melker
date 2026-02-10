@@ -13,7 +13,7 @@ import { Document } from './document.ts';
 import { MelkerConfig, setLoggerGetter } from './config/mod.ts';
 import { ensureError } from './utils/error.ts';
 import { Env } from './env.ts';
-import { DualBuffer, EMPTY_CHAR } from './buffer.ts';
+import { DualBuffer, EMPTY_CHAR, type BufferDiff } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
@@ -611,7 +611,7 @@ export class MelkerEngine {
         ensureAccessibilityDialogManager: () => this._dialogCoordinator.ensureAccessibilityDialogManager(),
         hasOverlayDialogFor: (element) => hasOverlayDialogFor(element, this._document?.root),
         debouncedInputRender: () => this._debouncedInputRender(),
-        renderFastPath: () => this._renderFastPath(),
+        renderFastPath: (diffs) => this._renderFastPath(diffs),
       };
 
       handleKeyboardEvent(event as RawKeyEvent, ctx);
@@ -1224,17 +1224,10 @@ export class MelkerEngine {
 
   /**
    * Fast render path for immediate visual feedback (e.g., typing in inputs)
-   * Does NOT swap buffers, allowing the debounced full render to work correctly
+   * Accepts pre-computed diffs directly — no buffer copy or diff scan needed.
    */
-  private _renderFastPath(): void {
+  private _renderFastPath(differences: BufferDiff[]): void {
     if (typeof Deno !== 'undefined') {
-      // Get diff without swapping - leaves buffer state intact for full render
-      const differences = this._buffer.getDiffOnly();
-
-      if (differences.length === 0) {
-        return;
-      }
-
       const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
       if (output.length > 0) {
         if (!this._isInitialized) {

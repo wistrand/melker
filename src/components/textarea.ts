@@ -1,7 +1,7 @@
 // Textarea component implementation - multiline text input
 
 import { Element, BaseProps, Renderable, Focusable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
-import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
+import { type DualBuffer, type Cell, type DiffCollector, EMPTY_CHAR } from '../buffer.ts';
 import { type KeyPressEvent, createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
 import { createDebouncedAction, type DebouncedAction } from '../utils/timing.ts';
@@ -423,7 +423,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
     }
 
     // For control keys (not regular chars), flush any pending batched chars first
-    const isRegularChar = key.length === 1 && !ctrlKey && !altKey && key.charCodeAt(0) >= 32 && key.charCodeAt(0) < 127;
+    const isRegularChar = key.length >= 1 && !ctrlKey && !altKey && key.charCodeAt(0) >= 32;
     if (!isRegularChar && this._pendingChars.length > 0) {
       this._flushPendingChars();
     }
@@ -638,10 +638,11 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
         cursor = cursor + 1;
         changed = true;
       }
-    } else if (key.length === 1 && !ctrlKey && !altKey) {
+    } else if (key.length >= 1 && !ctrlKey && !altKey) {
       // Regular character input - use batched queue for paste performance
+      // Accept all printable characters including Unicode (åäö, emoji, CJK, etc.)
       const charCode = key.charCodeAt(0);
-      if (charCode >= 32 && charCode < 127) {
+      if (charCode >= 32) {
         // Queue for batched insertion
         return this._queueChar(key);
       }
@@ -854,11 +855,10 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
   }
 
   /**
-   * Fast render - updates only the text content at cached bounds.
-   * Skips layout calculation for immediate visual feedback.
-   * Returns true if fast render was performed, false if full render needed.
+   * Fast render - generates diffs for the textarea content directly.
+   * Skips layout calculation and buffer copy for immediate visual feedback.
    */
-  fastRender(buffer: DualBuffer, bounds: Bounds, isFocused: boolean): boolean {
+  fastRender(collector: DiffCollector, bounds: Bounds, isFocused: boolean): boolean {
     // Flush any pending batched chars before rendering
     if (this._pendingChars.length > 0) {
       this._flushPendingChars();
@@ -875,7 +875,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       : getThemeColor('textMuted');
 
     // Clear the textarea area
-    buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, {
+    collector.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, {
       char: EMPTY_CHAR,
       background: bg,
       foreground: fg,
@@ -905,7 +905,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       const placeholderLines = placeholder.split('\n');
       for (let y = 0; y < Math.min(placeholderLines.length, linesToRender); y++) {
         const text = placeholderLines[y].substring(0, bounds.width);
-        buffer.currentBuffer.setText(bounds.x, bounds.y + y, text, {
+        collector.setText(bounds.x, bounds.y + y, text, {
           foreground: COLORS.gray,
           background: bg,
         });
@@ -917,7 +917,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
         if (lineIdx < displayLines.length) {
           const line = displayLines[lineIdx];
           const text = line.text.substring(0, bounds.width);
-          buffer.currentBuffer.setText(bounds.x, bounds.y + y, text, {
+          collector.setText(bounds.x, bounds.y + y, text, {
             foreground: fg,
             background: bg,
           });
@@ -940,7 +940,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
         const hasCharAtCursor = line && cursorDisplay.col < line.text.length;
         const cursorChar = hasCharAtCursor ? line.text[cursorDisplay.col] : ' ';
 
-        buffer.currentBuffer.setText(cursorX, cursorY, cursorChar, {
+        collector.setText(cursorX, cursorY, cursorChar, {
           foreground: fg,
           background: bg,
           reverse: true,

@@ -81,7 +81,7 @@ private _computeDirtyDiff(): BufferDiff[] {
 
 **Resize**: Marks all rows dirty (full redraw needed)
 
-**prepareForFastRender**: Temporarily disables tracking during buffer copy, preserves dirty rows
+**Fast render**: Bypasses dirty tracking entirely — uses `DiffCollector` to generate diffs directly without touching any buffer
 
 ## Performance
 

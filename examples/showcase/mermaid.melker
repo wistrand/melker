@@ -105,7 +105,7 @@ sequenceDiagram
 
     <tab title="Auth Flow">
       <graph style="overflow: scroll" class="diagram-area">
-flowchart TD
+flowchart LR
     A[User visits app] --> B{Logged in?}
     B -->|No| C[Show login form]
     C --> D[Enter credentials]

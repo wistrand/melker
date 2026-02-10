@@ -1,8 +1,0 @@
-<melker>
-<!-- Test 1: Working case - root container fills screen -->
-<container style="padding: 1; gap: 1; width: fill; height: fill">
-  <text>Test 1: Root container (should work)</text>
-  <separator />
-  <text>After separator</text>
-</container>
-</melker>

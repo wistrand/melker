@@ -79,6 +79,11 @@ export class FocusNavigationHandler {
   findFocusableElements(element: Element): Element[] {
     const focusableElements: Element[] = [];
 
+    // Skip invisible branches entirely — elements inside invisible parents
+    // are never focusable, so there's no need to recurse into them
+    if (element.props.visible === false) return focusableElements;
+    if (element.type === 'dialog' && element.props.open !== true) return focusableElements;
+
     // Debug logging for element inspection
     if (element.type === 'button') {
       logger.trace('Found button element during focus detection', {

@@ -70,7 +70,7 @@ export class FocusManager {
       return null;
     }
 
-    const element = this._findElementById(this._document.root, elementId);
+    const element = this._document.getElementById(elementId);
     if (!element) {
       // Element no longer exists, remove it from focusable IDs
       this._focusableElementIds.delete(elementId);
@@ -90,6 +90,34 @@ export class FocusManager {
       tabIndex: this._getElementTabIndex(element),
       disabled: this._isElementDisabled(element),
       visible: this._isElementVisible(element),
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  }
+
+  /**
+   * Fast variant of _getFocusableElement that skips the expensive _isElementVisible()
+   * parent-chain walk. Used when caller already verified visibility (e.g., syncFocusableElements).
+   */
+  private _getFocusableElementFast(elementId: string): FocusableElement | null {
+    if (!this._document) return null;
+
+    const element = this._document.getElementById(elementId);
+    if (!element) {
+      this._focusableElementIds.delete(elementId);
+      return null;
+    }
+
+    const bounds = this._getElementBounds(element);
+    if (!bounds) return null;
+
+    return {
+      id: elementId,
+      tabIndex: this._getElementTabIndex(element),
+      disabled: this._isElementDisabled(element),
+      visible: true, // Caller guarantees visibility
       x: bounds.x,
       y: bounds.y,
       width: bounds.width,
@@ -407,13 +435,17 @@ export class FocusManager {
 
   /**
    * Update tab order based on tabIndex values
+   * @param skipVisibilityCheck - When true, skip expensive parent-chain visibility walk
+   *   (safe when IDs came from findFocusableElements which already pruned invisible branches)
    */
-  private _updateTabOrder(): void {
+  private _updateTabOrder(skipVisibilityCheck = false): void {
     const elements: FocusableElement[] = [];
 
     // Get current state of all focusable elements on demand
     for (const elementId of this._focusableElementIds) {
-      const element = this._getFocusableElement(elementId);
+      const element = skipVisibilityCheck
+        ? this._getFocusableElementFast(elementId)
+        : this._getFocusableElement(elementId);
       if (element && element.visible && !element.disabled) {
         elements.push(element);
       }
@@ -643,7 +675,9 @@ export class FocusManager {
       this._focusableElementIds.add(id);
     }
 
-    this._updateTabOrder();
+    // Skip visibility check — currentIds came from findFocusableElements()
+    // which already pruned invisible branches (closed dialogs, visible:false, etc.)
+    this._updateTabOrder(true);
   }
 }
 

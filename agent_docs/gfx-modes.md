@@ -299,6 +299,8 @@ Video uses blue-noise for less temporal flicker between frames.
 - `src/sixel/palette.ts` - Color quantization for sixel
 - `src/kitty/detect.ts` - Terminal kitty capability detection
 - `src/kitty/encoder.ts` - Kitty format encoder
+- `src/utils/terminal-detection.ts` - Shared multiplexer/remote session detection
+- `src/utils/pixel-utils.ts` - Shared pixel encoding (Uint32 to RGB/RGBA bytes)
 - `src/engine.ts` - Sixel/Kitty overlay rendering in render pipeline
 
 ## Use Cases

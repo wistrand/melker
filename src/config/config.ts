@@ -5,6 +5,10 @@ import schema from './schema.json' with { type: 'json' };
 import { Env } from '../env.ts';
 import { getConfigDir } from '../xdg.ts';
 import type { GfxMode } from '../components/canvas-render.ts';
+import type { PolicyConfigProperty } from '../policy/types.ts';
+
+// Re-export for consumers that import from config
+export type { PolicyConfigProperty };
 
 // Lazy logger initialization to avoid circular dependency
 // (config.ts is loaded before logging.ts is fully initialized)
@@ -46,17 +50,6 @@ interface ConfigProperty {
  */
 interface ConfigSchema {
   properties: Record<string, ConfigProperty>;
-}
-
-/**
- * Policy config schema property (for env var overrides)
- */
-export interface PolicyConfigProperty {
-  type?: 'string' | 'boolean' | 'integer' | 'number';
-  default?: unknown;
-  env?: string;
-  envInverted?: boolean;
-  description?: string;
 }
 
 /**

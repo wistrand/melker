@@ -1,97 +1,25 @@
 // Convert policy to Deno permission flags
 
 import { resolve } from '../deps.ts';
-import type { MelkerPolicy } from './types.ts';
+import type { MelkerPolicy, PolicyPermissions } from './types.ts';
 import { getTempDir } from '../xdg.ts';
 import { Env } from '../env.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { extractHostFromUrl, extractHostOrValue } from './url-utils.ts';
 import { getLogger } from '../logging.ts';
+import { expandShortcutsInPlace } from './shortcut-utils.ts';
 
-/**
- * Convert a policy to Deno command-line permission flags
- *
- * @param policy The parsed policy
- * @param appDir Directory containing the .melker file (for resolving relative paths)
- * @returns Array of Deno permission flags
- */
-// AI permission shortcut - these are the commands and hosts needed for AI features
-export const AI_RUN_COMMANDS_ALL = ['swift', 'ffmpeg', 'ffprobe', 'pactl', 'ffplay'];
-export const AI_NET_HOSTS = ['openrouter.ai'];
-
-// Clipboard permission shortcut - platform-specific clipboard commands
-export const CLIPBOARD_COMMANDS_ALL = ['pbcopy', 'xclip', 'xsel', 'wl-copy', 'clip.exe'];
-
-// Keyring permission shortcut - platform-specific credential storage commands
-export const KEYRING_COMMANDS_ALL = ['security', 'secret-tool', 'powershell'];
-
-// Cache for command existence checks
-const commandExistsCache = new Map<string, boolean>();
-
-
-/**
- * Check if a command exists in PATH
- */
-function commandExists(cmd: string): boolean {
-  if (commandExistsCache.has(cmd)) {
-    return commandExistsCache.get(cmd)!;
-  }
-
-  // Check common binary locations
-  const paths = (Env.get('PATH') || '').split(':');
-  for (const dir of paths) {
-    try {
-      const stat = Deno.statSync(`${dir}/${cmd}`);
-      if (stat.isFile) {
-        commandExistsCache.set(cmd, true);
-        return true;
-      }
-    } catch {
-      // Not found in this directory
-    }
-  }
-
-  commandExistsCache.set(cmd, false);
-  return false;
-}
-
-/**
- * Get AI run commands that actually exist on this system
- */
-export function getAvailableAICommands(): string[] {
-  return AI_RUN_COMMANDS_ALL.filter(cmd => commandExists(cmd));
-}
-
-/**
- * Get clipboard commands that actually exist on this system
- */
-export function getAvailableClipboardCommands(): string[] {
-  return CLIPBOARD_COMMANDS_ALL.filter(cmd => commandExists(cmd));
-}
-
-/**
- * Get keyring commands that actually exist on this system
- */
-export function getAvailableKeyringCommands(): string[] {
-  return KEYRING_COMMANDS_ALL.filter(cmd => commandExists(cmd));
-}
-
-/**
- * Get the browser command for this platform
- * Matches src/oauth/browser.ts openBrowser()
- */
-export function getBrowserCommand(): string {
-  const os = Deno.build.os;
-  if (os === 'darwin') {
-    return 'open';
-  } else if (os === 'windows') {
-    return 'cmd';
-  } else {
-    return 'xdg-open';
-  }
-}
-
-import type { PolicyPermissions } from './types.ts';
+// Re-export shortcut constants and helpers so existing consumers don't break
+export {
+  AI_RUN_COMMANDS_ALL,
+  AI_NET_HOSTS,
+  CLIPBOARD_COMMANDS_ALL,
+  KEYRING_COMMANDS_ALL,
+  getAvailableAICommands,
+  getAvailableClipboardCommands,
+  getAvailableKeyringCommands,
+  getBrowserCommand,
+} from './shortcut-utils.ts';
 
 export function policyToDenoFlags(
   policy: MelkerPolicy,
@@ -121,55 +49,9 @@ export function policyToDenoFlags(
     return ['--allow-all'];
   }
 
-  // Expand "ai" shortcut permission
-  if (p.ai === true || (Array.isArray(p.ai) && p.ai.includes('*'))) {
-    // Add AI run commands that exist on this system (merge with existing)
-    if (!p.run) p.run = [];
-    for (const cmd of getAvailableAICommands()) {
-      if (!p.run.includes(cmd) && !p.run.includes('*')) {
-        p.run.push(cmd);
-      }
-    }
-    // Add AI net hosts (merge with existing)
-    if (!p.net) p.net = [];
-    for (const host of AI_NET_HOSTS) {
-      if (!p.net.includes(host) && !p.net.includes('*')) {
-        p.net.push(host);
-      }
-    }
-  }
-
-  // Expand "clipboard" shortcut permission
-  if (p.clipboard === true) {
-    // Add clipboard commands that exist on this system (merge with existing)
-    if (!p.run) p.run = [];
-    for (const cmd of getAvailableClipboardCommands()) {
-      if (!p.run.includes(cmd) && !p.run.includes('*')) {
-        p.run.push(cmd);
-      }
-    }
-  }
-
-  // Expand "keyring" shortcut permission
-  if (p.keyring === true) {
-    // Add keyring commands that exist on this system (merge with existing)
-    if (!p.run) p.run = [];
-    for (const cmd of getAvailableKeyringCommands()) {
-      if (!p.run.includes(cmd) && !p.run.includes('*')) {
-        p.run.push(cmd);
-      }
-    }
-  }
-
-  // Expand "browser" shortcut permission
-  if (p.browser === true) {
-    // Add platform-specific browser command (merge with existing)
-    if (!p.run) p.run = [];
-    const browserCmd = getBrowserCommand();
-    if (!p.run.includes(browserCmd) && !p.run.includes('*')) {
-      p.run.push(browserCmd);
-    }
-  }
+  // Expand shortcut permissions (ai, clipboard, keyring, browser) into run/net arrays.
+  // skipWildcard=true: don't add specific commands when run/net already has '*'
+  expandShortcutsInPlace(p, true);
 
   // Filesystem read permissions ("*" means all)
   if (p.read?.includes('*')) {
@@ -336,55 +218,24 @@ function warnImplicitPathDenied(path: string, purpose: string, permission: 'read
 }
 
 /**
- * Build read paths with implicit paths added
+ * Build permission paths from implicit paths and policy paths.
+ * Shared logic for both read and write path building.
  */
-function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHash?: string, deniedPaths?: string[]): string[] {
+function buildPermissionPaths(
+  policyPaths: string[] | undefined,
+  denyPaths: string[] | undefined,
+  appDir: string,
+  implicitPaths: Array<{ path: string; label: string }>,
+  permissionType: 'read' | 'write',
+): string[] {
   const paths: string[] = [];
 
-  // Implicit: temp dir for bundler temp files
-  const tempDir = getTempDir();
-  if (!isPathDenied(tempDir, deniedPaths)) {
-    paths.push(tempDir);
-  } else {
-    warnImplicitPathDenied(tempDir, 'bundler temp files', 'read');
-  }
-
-  // Implicit: app directory (for loading .melker file itself)
-  if (!isPathDenied(appDir, deniedPaths)) {
-    paths.push(appDir);
-  } else {
-    warnImplicitPathDenied(appDir, 'app directory', 'read');
-  }
-
-  // Implicit: current working directory
-  try {
-    const cwd = Deno.cwd();
-    if (!isPathDenied(cwd, deniedPaths)) {
-      paths.push(cwd);
+  // Add implicit paths, checking deny list and warning if denied
+  for (const { path, label } of implicitPaths) {
+    if (!isPathDenied(path, denyPaths)) {
+      paths.push(path);
     } else {
-      warnImplicitPathDenied(cwd, 'current working directory', 'read');
-    }
-  } catch {
-    // Ignore if cwd is not accessible
-  }
-
-  // Implicit: XDG state dir for persistence
-  const xdgState = Env.get('XDG_STATE_HOME') || `${Env.get('HOME')}/.local/state`;
-  const stateDir = `${xdgState}/melker`;
-  if (!isPathDenied(stateDir, deniedPaths)) {
-    paths.push(stateDir);
-  } else {
-    warnImplicitPathDenied(stateDir, 'state persistence', 'read');
-  }
-
-  // Implicit: app-specific cache dir (only if urlHash provided)
-  if (urlHash) {
-    const xdgCache = Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`;
-    const cacheDir = `${xdgCache}/melker/app-cache/${urlHash}`;
-    if (!isPathDenied(cacheDir, deniedPaths)) {
-      paths.push(cacheDir);
-    } else {
-      warnImplicitPathDenied(cacheDir, 'app cache', 'read');
+      warnImplicitPathDenied(path, label, permissionType);
     }
   }
 
@@ -395,7 +246,7 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHa
       if (p === 'cwd') {
         try {
           const cwd = Deno.cwd();
-          if (!isPathDenied(cwd, deniedPaths)) {
+          if (!isPathDenied(cwd, denyPaths)) {
             paths.push(cwd);
           }
         } catch {
@@ -404,7 +255,7 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHa
         continue;
       }
       const resolved = p.startsWith('/') ? p : resolve(appDir, p);
-      if (!isPathDenied(resolved, deniedPaths)) {
+      if (!isPathDenied(resolved, denyPaths)) {
         paths.push(resolved);
       }
     }
@@ -414,85 +265,89 @@ function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHa
 }
 
 /**
+ * Collect implicit read paths for the given app context
+ */
+function getImplicitReadPaths(appDir: string, urlHash?: string): Array<{ path: string; label: string }> {
+  const implicit: Array<{ path: string; label: string }> = [];
+
+  // Temp dir for bundler temp files
+  implicit.push({ path: getTempDir(), label: 'bundler temp files' });
+
+  // App directory (for loading .melker file itself)
+  implicit.push({ path: appDir, label: 'app directory' });
+
+  // Current working directory
+  try {
+    implicit.push({ path: Deno.cwd(), label: 'current working directory' });
+  } catch {
+    // Ignore if cwd is not accessible
+  }
+
+  // XDG state dir for persistence
+  const xdgState = Env.get('XDG_STATE_HOME') || `${Env.get('HOME')}/.local/state`;
+  implicit.push({ path: `${xdgState}/melker`, label: 'state persistence' });
+
+  // App-specific cache dir (only if urlHash provided)
+  if (urlHash) {
+    const xdgCache = Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`;
+    implicit.push({ path: `${xdgCache}/melker/app-cache/${urlHash}`, label: 'app cache' });
+  }
+
+  return implicit;
+}
+
+/**
+ * Collect implicit write paths for the given app context
+ */
+function getImplicitWritePaths(urlHash?: string): Array<{ path: string; label: string }> {
+  const implicit: Array<{ path: string; label: string }> = [];
+
+  // Temp dir for bundler temp files
+  implicit.push({ path: getTempDir(), label: 'bundler temp files' });
+
+  // XDG state dir for persistence
+  const xdgState = Env.get('XDG_STATE_HOME') || `${Env.get('HOME')}/.local/state`;
+  implicit.push({ path: `${xdgState}/melker`, label: 'state persistence' });
+
+  // Log file directory
+  const logFile = MelkerConfig.get().logFile;
+  if (logFile) {
+    const logDir = logFile.substring(0, logFile.lastIndexOf('/')) || '.';
+    implicit.push({ path: logDir, label: 'log files' });
+  } else {
+    const home = Env.get('HOME');
+    if (home) {
+      implicit.push({ path: `${home}/.cache/melker/logs`, label: 'log files' });
+    }
+  }
+
+  // App-specific cache dir (only if urlHash provided)
+  if (urlHash) {
+    const xdgCache = Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`;
+    implicit.push({ path: `${xdgCache}/melker/app-cache/${urlHash}`, label: 'app cache' });
+  }
+
+  return implicit;
+}
+
+/**
+ * Build read paths with implicit paths added
+ */
+function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHash?: string, deniedPaths?: string[]): string[] {
+  return buildPermissionPaths(
+    policyPaths, deniedPaths, appDir,
+    getImplicitReadPaths(appDir, urlHash), 'read',
+  );
+}
+
+/**
  * Build write paths with implicit paths added
  */
 function buildWritePaths(policyPaths: string[] | undefined, appDir: string, urlHash?: string, deniedPaths?: string[]): string[] {
-  const paths: string[] = [];
-
-  // Implicit: temp dir for bundler temp files
-  const tempDir = getTempDir();
-  if (!isPathDenied(tempDir, deniedPaths)) {
-    paths.push(tempDir);
-  } else {
-    warnImplicitPathDenied(tempDir, 'bundler temp files', 'write');
-  }
-
-  // Implicit: XDG state dir for persistence
-  const xdgState = Env.get('XDG_STATE_HOME') || `${Env.get('HOME')}/.local/state`;
-  const stateDir = `${xdgState}/melker`;
-  if (!isPathDenied(stateDir, deniedPaths)) {
-    paths.push(stateDir);
-  } else {
-    warnImplicitPathDenied(stateDir, 'state persistence', 'write');
-  }
-
-  // Implicit: log file directory
-  const logFile = MelkerConfig.get().logFile;
-  if (logFile) {
-    // Add the directory containing the log file
-    const logDir = logFile.substring(0, logFile.lastIndexOf('/')) || '.';
-    if (!isPathDenied(logDir, deniedPaths)) {
-      paths.push(logDir);
-    } else {
-      warnImplicitPathDenied(logDir, 'log files', 'write');
-    }
-  } else {
-    // Default log location: $HOME/.cache/melker/logs/
-    const home = Env.get('HOME');
-    if (home) {
-      const defaultLogDir = `${home}/.cache/melker/logs`;
-      if (!isPathDenied(defaultLogDir, deniedPaths)) {
-        paths.push(defaultLogDir);
-      } else {
-        warnImplicitPathDenied(defaultLogDir, 'log files', 'write');
-      }
-    }
-  }
-
-  // Implicit: app-specific cache dir (only if urlHash provided)
-  if (urlHash) {
-    const xdgCache = Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`;
-    const cacheDir = `${xdgCache}/melker/app-cache/${urlHash}`;
-    if (!isPathDenied(cacheDir, deniedPaths)) {
-      paths.push(cacheDir);
-    } else {
-      warnImplicitPathDenied(cacheDir, 'app cache', 'write');
-    }
-  }
-
-  // Policy paths (resolve relative to app dir)
-  if (policyPaths) {
-    for (const p of policyPaths) {
-      // Special "cwd" value expands to current working directory
-      if (p === 'cwd') {
-        try {
-          const cwd = Deno.cwd();
-          if (!isPathDenied(cwd, deniedPaths)) {
-            paths.push(cwd);
-          }
-        } catch {
-          // Ignore if cwd is not accessible
-        }
-        continue;
-      }
-      const resolved = p.startsWith('/') ? p : resolve(appDir, p);
-      if (!isPathDenied(resolved, deniedPaths)) {
-        paths.push(resolved);
-      }
-    }
-  }
-
-  return [...new Set(paths)]; // Deduplicate
+  return buildPermissionPaths(
+    policyPaths, deniedPaths, appDir,
+    getImplicitWritePaths(urlHash), 'write',
+  );
 }
 
 // Vars that must ALWAYS be whitelisted (even if not currently set).

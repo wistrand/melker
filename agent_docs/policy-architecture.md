@@ -338,6 +338,7 @@ applyPermissionOverrides(policy.permissions, overrides);
 | `src/policy/loader.ts`              | Parse policy from file content                   |
 | `src/policy/flags.ts`               | Convert policy to Deno flags, implicit paths     |
 | `src/policy/permission-overrides.ts` | CLI `--allow-*`/`--deny-*` handling             |
+| `src/policy/shortcut-utils.ts`      | Permission shortcut expansion (ai, clipboard, etc.) |
 | `src/policy/approval.ts`            | Approval prompts and storage                     |
 | `src/policy/url-utils.ts`           | Extract hosts from URLs for net permissions      |
 | `melker-launcher.ts`                | Orchestrates policy loading, approval, subprocess |

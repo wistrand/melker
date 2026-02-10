@@ -26,6 +26,7 @@
 
 import { encodeBase64, encodePng } from '../deps.ts';
 import { getLogger } from '../logging.ts';
+import { pixelsToBytes } from '../utils/pixel-utils.ts';
 import type {
   ITermEncodeOptions,
   ITermEncodeImageOptions,
@@ -35,37 +36,6 @@ import type {
 } from './types.ts';
 
 const logger = getLogger('ITermEncoder');
-
-// Reusable byte buffer for pixel conversion (grows as needed)
-let pixelBytesBuffer: Uint8Array | null = null;
-
-/**
- * Convert Melker's packed Uint32Array pixels to RGBA bytes for PNG encoding.
- * Melker packs colors as 0xRRGGBBAA: R in high bits, A in low bits.
- * Reuses a module-level buffer to avoid allocations.
- */
-function pixelsToRgbaBytes(pixels: Uint32Array, width: number, height: number): Uint8Array {
-  const requiredSize = width * height * 4;
-
-  // Reuse buffer if large enough, otherwise allocate new one
-  if (!pixelBytesBuffer || pixelBytesBuffer.length < requiredSize) {
-    pixelBytesBuffer = new Uint8Array(requiredSize);
-  }
-
-  for (let i = 0; i < pixels.length; i++) {
-    const pixel = pixels[i];
-    const offset = i * 4;
-
-    // Extract RGBA from packed Uint32 (0xRRGGBBAA)
-    pixelBytesBuffer[offset] = (pixel >> 24) & 0xFF;     // R
-    pixelBytesBuffer[offset + 1] = (pixel >> 16) & 0xFF; // G
-    pixelBytesBuffer[offset + 2] = (pixel >> 8) & 0xFF;  // B
-    pixelBytesBuffer[offset + 3] = pixel & 0xFF;         // A
-  }
-
-  // Return a view of only the used portion
-  return pixelBytesBuffer.subarray(0, requiredSize);
-}
 
 /**
  * Encode RGBA bytes to PNG format using fast-png.
@@ -205,7 +175,7 @@ export function encodeToITerm2(options: ITermEncodeOptions): ITermOutput {
   });
 
   // Convert pixels to RGBA bytes
-  const rgbaBytes = pixelsToRgbaBytes(pixels, width, height);
+  const rgbaBytes = pixelsToBytes(pixels, 'rgba');
 
   // Encode to PNG
   const pngBytes = encodeToPng(rgbaBytes, width, height);

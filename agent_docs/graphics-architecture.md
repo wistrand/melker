@@ -229,7 +229,10 @@ Canvas maintains two pixel buffers that are composited during rendering:
 | `src/components/canvas-render.ts`    | Mode selection, rendering dispatch         |
 | `src/sixel/`                         | Sixel detection, encoding, palette         |
 | `src/kitty/`                         | Kitty detection, encoding                  |
+| `src/iterm2/`                        | iTerm2 detection, encoding                 |
 | `src/graphics-overlay-manager.ts`    | Sixel/Kitty/iTerm2 overlay output, cleanup |
+| `src/utils/terminal-detection.ts`    | Shared multiplexer/remote session detection |
+| `src/utils/pixel-utils.ts`           | Shared pixel encoding (Uint32 to RGB/RGBA) |
 | `src/engine.ts`                      | Render orchestration, delegates to manager |
 | `src/input.ts`                       | Detection response routing                 |
 | `src/rendering.ts`                   | Overlay detection                          |

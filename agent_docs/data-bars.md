@@ -242,8 +242,7 @@ export class DataBarsElement extends Element implements
   private _getBarWidth(): number;
   private _getGap(): number;
 
-  // Theme-aware helpers
-  private _isBwMode(): boolean;
+  // Theme-aware helpers (isBwMode from component-utils.ts)
   private _getSeriesColor(seriesIndex: number): PackedRGBA | undefined;
   private _getSeriesPattern(seriesIndex: number): string;
 
@@ -445,7 +444,10 @@ Output shows yellow segments up to 80%, red segments from 80-95%.
 
 ## 10. File Location
 
-`src/components/data-bars.ts`
+| File                                      | Purpose                                             |
+|-------------------------------------------|-----------------------------------------------------|
+| `src/components/data-bars.ts`             | Component implementation                            |
+| `src/components/utils/component-utils.ts` | Shared JSON parsing, bounds, theme helpers          |
 
 Exported from `src/components/mod.ts`.
 

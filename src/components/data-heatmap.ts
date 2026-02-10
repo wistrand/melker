@@ -22,8 +22,8 @@ import type { DataHeatmapTooltipContext, TooltipProvider } from '../tooltip/type
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
-import { getCurrentTheme } from '../theme.ts';
 import { packRGBA, unpackRGBA, parseColor } from './color-utils.ts';
+import { parseJsonProps, parseInlineJsonData, boundsContain, isBwMode } from './utils/component-utils.ts';
 import type { PackedRGBA } from '../types.ts';
 import {
   type IsolineMode as SharedIsolineMode,
@@ -202,47 +202,27 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
 
   // Parse JSON strings from props (when passed as attributes in .melker files)
   private _parseProps(): void {
-    const jsonProps = ['grid', 'rowLabels', 'colLabels', 'isolines'] as const;
-    for (const key of jsonProps) {
-      if (typeof this.props[key] === 'string') {
-        try {
-          // deno-lint-ignore no-explicit-any
-          (this.props as any)[key] = JSON.parse(this.props[key] as unknown as string);
-        } catch (e) {
-          logger.error(`Failed to parse ${key} JSON`, e instanceof Error ? e : new Error(String(e)));
-        }
-      }
-    }
+    parseJsonProps(this.props as unknown as Record<string, unknown>, ['grid', 'rowLabels', 'colLabels', 'isolines'] as const);
   }
 
   private _parseInlineData(): void {
     if (!this.children || this.children.length === 0) return;
 
-    for (const child of this.children) {
-      if (child.type === 'text') {
-        const text = (child.props.text || '').trim();
-        if (text.startsWith('{')) {
-          try {
-            const data = JSON.parse(text);
-            if (data.grid && Array.isArray(data.grid)) {
-              this.props.grid = data.grid;
-            }
-            if (data.rowLabels && Array.isArray(data.rowLabels)) {
-              this.props.rowLabels = data.rowLabels;
-            }
-            if (data.colLabels && Array.isArray(data.colLabels)) {
-              this.props.colLabels = data.colLabels;
-            }
-            if (data.isolines && Array.isArray(data.isolines)) {
-              this.props.isolines = data.isolines;
-            }
-            this.children = [];
-            return;
-          } catch (e) {
-            logger.error('Failed to parse inline JSON data', e instanceof Error ? e : new Error(String(e)));
-          }
-        }
+    const data = parseInlineJsonData(this.children);
+    if (data) {
+      if (data.grid && Array.isArray(data.grid)) {
+        this.props.grid = data.grid as HeatmapGrid;
       }
+      if (data.rowLabels && Array.isArray(data.rowLabels)) {
+        this.props.rowLabels = data.rowLabels as string[];
+      }
+      if (data.colLabels && Array.isArray(data.colLabels)) {
+        this.props.colLabels = data.colLabels as string[];
+      }
+      if (data.isolines && Array.isArray(data.isolines)) {
+        this.props.isolines = data.isolines as Isoline[];
+      }
+      this.children = [];
     }
   }
 
@@ -372,10 +352,8 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
       return undefined;  // No color for missing data
     }
 
-    const theme = getCurrentTheme();
-
     // BW mode: use patterns instead of colors
-    if (theme.type === 'bw') {
+    if (isBwMode()) {
       return undefined;  // Will use pattern chars instead
     }
 
@@ -666,8 +644,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     const colGap = this._getColGap();  // Uses 1 when isolines present
     const rowLabelWidth = this._getRowLabelWidth();
     const colLabelHeight = this._getColLabelHeight();
-    const theme = getCurrentTheme();
-    const isBwMode = theme.type === 'bw';
+    const bwMode = isBwMode();
     const hasIsolines = this._hasIsolines();
 
     // Render column labels
@@ -710,7 +687,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
           continue;
         }
 
-        if (isBwMode) {
+        if (bwMode) {
           // BW mode: use pattern characters
           const pattern = this._getBwPatternForValue(value);
           for (let cy = 0; cy < cellHeight; cy++) {
@@ -772,7 +749,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
 
     // Render legend if enabled
     if (this.props.showLegend) {
-      this._renderLegend(bounds, y + 1, style, buffer, isBwMode);
+      this._renderLegend(bounds, y + 1, style, buffer, bwMode);
     }
   }
 
@@ -999,7 +976,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     const { selectable, onSelect } = this.props;
 
     for (const [key, b] of this._cellBounds) {
-      if (x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height) {
+      if (boundsContain(x, y, b)) {
         const [row, col] = key.split('-').map(Number);
 
         if (selectable) {
@@ -1161,7 +1138,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     const screenY = bounds.y + relY;
 
     for (const [key, b] of this._cellBounds) {
-      if (screenX >= b.x && screenX < b.x + b.width && screenY >= b.y && screenY < b.y + b.height) {
+      if (boundsContain(screenX, screenY, b)) {
         const [row, col] = key.split('-').map(Number);
         const value = this.props.grid?.[row]?.[col] ?? 0;
 

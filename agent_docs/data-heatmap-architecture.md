@@ -448,9 +448,10 @@ Supports copying selected region as JSON via Alt+C:
 
 ## Files
 
-| File                             | Purpose                  |
-|----------------------------------|--------------------------|
-| `src/components/data-heatmap.ts` | Component implementation |
+| File                                      | Purpose                                              |
+|-------------------------------------------|------------------------------------------------------|
+| `src/components/data-heatmap.ts`          | Component implementation                             |
+| `src/components/utils/component-utils.ts` | Shared text formatting, JSON parsing, bounds, theme  |
 
 Export from `src/components/mod.ts`.
 

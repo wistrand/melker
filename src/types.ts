@@ -339,8 +339,7 @@ export interface FocusCapturable {
 
 // Type guard for FocusCapturable interface
 export function isFocusCapturable(element: Element): element is Element & FocusCapturable {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.capturesFocusForChildren === 'function';
+  return 'capturesFocusForChildren' in element && typeof (element as unknown as FocusCapturable).capturesFocusForChildren === 'function';
 }
 
 // Toggleable interface for elements that can be toggled open/closed
@@ -354,8 +353,7 @@ export interface Toggleable {
 
 // Type guard for Toggleable interface
 export function isToggleable(element: Element): element is Element & Toggleable {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.toggle === 'function';
+  return 'toggle' in element && typeof (element as unknown as Toggleable).toggle === 'function';
 }
 
 // KeyInputHandler interface for elements that handle text input
@@ -370,8 +368,7 @@ export interface KeyInputHandler {
 
 // Type guard for KeyInputHandler interface
 export function hasKeyInputHandler(element: Element): element is Element & KeyInputHandler {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.handleKeyInput === 'function';
+  return 'handleKeyInput' in element && typeof (element as unknown as KeyInputHandler).handleKeyInput === 'function';
 }
 
 // ContentGettable interface for elements that can return their content
@@ -386,8 +383,7 @@ export interface ContentGettable {
 
 // Type guard for ContentGettable interface
 export function hasGetContent(element: Element): element is Element & ContentGettable {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.getContent === 'function';
+  return 'getContent' in element && typeof (element as unknown as ContentGettable).getContent === 'function';
 }
 
 // Rendering interface for components
@@ -411,8 +407,7 @@ export interface HasIntrinsicSize {
 
 // Type guard for HasIntrinsicSize interface
 export function hasIntrinsicSize(element: Element): element is Element & HasIntrinsicSize {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.intrinsicSize === 'function';
+  return 'intrinsicSize' in element && typeof (element as unknown as HasIntrinsicSize).intrinsicSize === 'function';
 }
 
 // Clickable interface for components that handle mouse clicks
@@ -445,8 +440,7 @@ export interface PositionalClickHandler {
 
 // Type guard for PositionalClickHandler interface
 export function hasPositionalClickHandler(element: Element): element is Element & PositionalClickHandler {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.handleClick === 'function';
+  return 'handleClick' in element && typeof (element as unknown as PositionalClickHandler).handleClick === 'function';
 }
 
 // Interactive interface for elements that can receive mouse events
@@ -570,9 +564,8 @@ export interface ShaderElement {
 
 // Type guard for ShaderElement interface
 export function hasShaderMethods(element: Element): element is Element & ShaderElement {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.updateShaderMouse === 'function' &&
-    typeof el.clearShaderMouse === 'function';
+  return 'updateShaderMouse' in element && typeof (element as unknown as ShaderElement).updateShaderMouse === 'function' &&
+    'clearShaderMouse' in element && typeof (element as unknown as ShaderElement).clearShaderMouse === 'function';
 }
 
 // KeyboardElement interface for elements that handle their own keyboard events
@@ -591,15 +584,13 @@ export interface KeyboardElement {
 
 // Type guard for KeyboardElement interface (full keyboard handling)
 export function isKeyboardElement(element: Element): element is Element & KeyboardElement {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.handlesOwnKeyboard === 'function' &&
-    typeof el.onKeyPress === 'function';
+  return 'handlesOwnKeyboard' in element && typeof (element as unknown as KeyboardElement).handlesOwnKeyboard === 'function' &&
+    'onKeyPress' in element && typeof (element as unknown as KeyboardElement).onKeyPress === 'function';
 }
 
 // Type guard for elements with just onKeyPress handler
 export function hasKeyPressHandler(element: Element): element is Element & Pick<KeyboardElement, 'onKeyPress'> {
-  const el = element as unknown as Record<string, unknown>;
-  return typeof el.onKeyPress === 'function';
+  return 'onKeyPress' in element && typeof (element as unknown as Pick<KeyboardElement, 'onKeyPress'>).onKeyPress === 'function';
 }
 
 // Wheelable interface for elements that handle mouse wheel events

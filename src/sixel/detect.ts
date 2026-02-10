@@ -78,6 +78,7 @@
 
 import { getLogger } from '../logging.ts';
 import { Env } from '../env.ts';
+import { detectMultiplexer, detectRemoteSession } from '../utils/terminal-detection.ts';
 
 const logger = getLogger('SixelDetect');
 
@@ -135,47 +136,6 @@ interface DetectionState {
 }
 
 let detectionState: DetectionState | null = null;
-
-/**
- * Check if running inside a terminal multiplexer (tmux/screen)
- */
-function detectMultiplexer(): boolean {
-  const tmux = Env.get('TMUX');
-  const sty = Env.get('STY'); // screen session
-  const termProgram = Env.get('TERM_PROGRAM');
-
-  if (tmux || sty) {
-    logger.debug('Multiplexer detected', { tmux: !!tmux, screen: !!sty });
-    return true;
-  }
-
-  if (termProgram === 'tmux') {
-    logger.debug('Multiplexer detected via TERM_PROGRAM');
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Check if running over SSH
- */
-function detectRemoteSession(): boolean {
-  const sshClient = Env.get('SSH_CLIENT');
-  const sshConnection = Env.get('SSH_CONNECTION');
-  const sshTty = Env.get('SSH_TTY');
-
-  if (sshClient || sshConnection || sshTty) {
-    logger.debug('Remote session detected', {
-      sshClient: !!sshClient,
-      sshConnection: !!sshConnection,
-      sshTty: !!sshTty,
-    });
-    return true;
-  }
-
-  return false;
-}
 
 /**
  * Check terminal type from environment for sixel hints

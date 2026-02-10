@@ -23,6 +23,7 @@
 
 import { encodeBase64 } from '../deps.ts';
 import { getLogger } from '../logging.ts';
+import { pixelsToBytes } from '../utils/pixel-utils.ts';
 import type { KittyEncodeOptions, KittyOutput } from './types.ts';
 
 const logger = getLogger('KittyEncoder');
@@ -32,9 +33,6 @@ const MAX_CHUNK_SIZE = 4096;
 
 // Image ID counter (auto-incremented)
 let nextImageId = 1;
-
-// Reusable byte buffer for pixelsToBytes (grows as needed)
-let pixelBytesBuffer: Uint8Array | null = null;
 
 /**
  * Generate a unique image ID
@@ -50,38 +48,6 @@ export function generateImageId(): number {
  */
 export function resetImageIdCounter(): void {
   nextImageId = 1;
-}
-
-/**
- * Convert RGBA Uint32Array to raw bytes
- * Melker packs colors as 0xRRGGBBAA: R in high bits, A in low bits
- * See packRGBA() in color-utils.ts
- * Reuses a module-level buffer to avoid allocations.
- */
-function pixelsToBytes(pixels: Uint32Array, format: 'rgb' | 'rgba'): Uint8Array {
-  const bytesPerPixel = format === 'rgba' ? 4 : 3;
-  const requiredSize = pixels.length * bytesPerPixel;
-
-  // Reuse buffer if large enough, otherwise allocate new one
-  if (!pixelBytesBuffer || pixelBytesBuffer.length < requiredSize) {
-    pixelBytesBuffer = new Uint8Array(requiredSize);
-  }
-
-  for (let i = 0; i < pixels.length; i++) {
-    const pixel = pixels[i];
-    const offset = i * bytesPerPixel;
-
-    // Extract RGBA from packed Uint32 (0xRRGGBBAA)
-    pixelBytesBuffer[offset] = (pixel >> 24) & 0xFF;     // R
-    pixelBytesBuffer[offset + 1] = (pixel >> 16) & 0xFF; // G
-    pixelBytesBuffer[offset + 2] = (pixel >> 8) & 0xFF;  // B
-    if (format === 'rgba') {
-      pixelBytesBuffer[offset + 3] = pixel & 0xFF;       // A
-    }
-  }
-
-  // Return a view of only the used portion
-  return pixelBytesBuffer.subarray(0, requiredSize);
 }
 
 /**

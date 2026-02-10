@@ -107,6 +107,7 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `flags.ts`                | Convert policy to Deno permission flags             |
 | `permission-overrides.ts` | CLI --allow-*/--deny-* flag handling                |
 | `approval.ts`             | Approval prompts and hash-based caching             |
+| `shortcut-utils.ts`       | Permission shortcut expansion (ai, clipboard, etc.) |
 | `url-utils.ts`            | Extract hosts from URLs for net permissions         |
 
 #### `config/` - Schema-Driven Configuration
@@ -162,6 +163,17 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `data-bars.ts`            | Bar charts (horizontal/vertical, stacked/grouped) |
 | `markdown.ts`             | Markdown rendering with image support  |
 | `color-utils.ts`          | RGBA color utilities                   |
+| `data-tree.ts`            | Hierarchical tree view                 |
+| `data-heatmap.ts`         | Heatmap grid display                   |
+| `table.ts`                | HTML-style table with thead/tbody      |
+| `scrollbar.ts`            | Scrollbar rendering utility            |
+
+#### `components/utils/` - Shared Component Utilities
+
+| File                  | Purpose                                              |
+|-----------------------|------------------------------------------------------|
+| `component-utils.ts`  | Text formatting, JSON parsing, bounds, theme helpers |
+| `scroll-manager.ts`   | `ScrollManager` class for virtual scrolling          |
 
 #### `components/filterable-list/` - Filterable Components
 
@@ -282,9 +294,11 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `utils/` - Shared Utilities
 
-| File        | Purpose                       |
-|-------------|-------------------------------|
-| `timing.ts` | Debounce and throttle functions |
+| File                      | Purpose                                         |
+|---------------------------|-------------------------------------------------|
+| `timing.ts`               | Debounce and throttle functions                 |
+| `terminal-detection.ts`   | Multiplexer and remote session detection        |
+| `pixel-utils.ts`          | Pixel encoding (Uint32 to RGB/RGBA byte arrays) |
 
 ## Scripts Directory (`scripts/`)
 

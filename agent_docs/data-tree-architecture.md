@@ -9,11 +9,11 @@ Follows the same patterns as `data-table`, `data-bars`, and `data-heatmap`:
 | Pattern                | Implementation                                                    |
 |------------------------|-------------------------------------------------------------------|
 | Data via props         | Array/object props, JSON-parsed from strings in constructor       |
-| Inline JSON            | Text children parsed via `_parseInlineData()`                     |
+| Inline JSON            | Text children parsed via shared `parseInlineJsonData()`           |
 | Interfaces             | `Renderable`, `Focusable`, `Clickable`, `Interactive`, `TooltipProvider`, `TextSelectable` |
-| Bounds tracking        | `Map<string, Bounds>` for click hit-testing                       |
-| Theme awareness        | Check `getCurrentTheme().type` for color/bw rendering             |
-| Style accessors        | `_getStyleProp(key, default)` pattern                             |
+| Bounds tracking        | `Map<string, Bounds>` for click hit-testing via `boundsContain()` |
+| Theme awareness        | Shared `isBwMode()` utility for color/bw rendering               |
+| Shared utilities       | `component-utils.ts` (formatting, JSON parsing, bounds, theme)   |
 | Text selection         | `getSelectableText()` returns indented plain text                 |
 | Schema                 | `registerComponentSchema()` + `registerComponent()`              |
 | Public API             | `getValue()`/`setValue()` + domain-specific methods               |
@@ -249,9 +249,7 @@ _selectedNodes: Set<string>;               // Which nodes are selected
 _focusedNodeId: string | null;             // Currently focused node
 _flatVisibleNodes: FlatNode[];             // Cached flattened visible list
 _nodeBounds: Map<string, Bounds>;          // For click hit-testing
-_scrollY: number;                          // Scroll offset (row index)
-_totalContentLines: number;                // flatVisibleNodes.length
-_viewportLines: number;                    // Visible rows in viewport
+_scroll: ScrollManager;                    // Scroll state (scrollY, totalLines, viewportLines)
 _columnWidths: number[];                   // Cached column widths (multi-column)
 _headerCellBounds: Array<{ colIndex: number; bounds: Bounds }>;  // Header click zones
 ```
@@ -286,13 +284,13 @@ Index-based auto-IDs (e.g., `"0.1.2"`) are not used because inserting a sibling 
 When `setValue()` or `setChildren()` is called, `_rebuildFlatList()` follows this sequence:
 
 ```
-1. Capture anchorNodeId = _flatVisibleNodes[_scrollY]?.nodeId
+1. Capture anchorNodeId = _flatVisibleNodes[_scroll.scrollY]?.nodeId
 2. Capture focusedId = _focusedNodeId
 3. Replace node data
 4. Rebuild _flatVisibleNodes using preserved _expandedNodes
-5. Restore _scrollY:
+5. Restore _scroll.scrollY:
    - Find anchorNodeId's new index in _flatVisibleNodes
-   - If found, set _scrollY to that index (view stays on same node)
+   - If found, set _scroll.scrollY to that index (view stays on same node)
    - If not found (node removed/collapsed), clamp to nearest valid position
 6. Restore _focusedIndex:
    - Find focusedId's new index in _flatVisibleNodes
@@ -433,4 +431,4 @@ Use `onTooltip` handler for custom content:
 
 ## Estimated Complexity
 
-~1000-1200 lines, comparable to data-bars (1176) and data-table (1282). Column rendering mirrors data-table's. Virtual scrolling is simpler than data-table's skip-and-render since it uses range-based indexing.
+~1500 lines, comparable to data-bars (1176) and data-table (1282). Column rendering mirrors data-table's. Virtual scrolling is simpler than data-table's skip-and-render since it uses range-based indexing. Shared utilities (`component-utils.ts`, `scroll-manager.ts`) reduce duplication with other data components.

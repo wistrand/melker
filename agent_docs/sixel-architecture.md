@@ -139,9 +139,10 @@ quantizePalette(pixels, mode, maxColors, cacheKey): PaletteResult
 | File                   | Purpose              |
 |------------------------|----------------------|
 | `src/sixel/mod.ts`     | Module exports       |
-| `src/sixel/detect.ts`  | Capability detection |
-| `src/sixel/encoder.ts` | Sixel format encoder |
-| `src/sixel/palette.ts` | Color quantization   |
+| `src/sixel/detect.ts`              | Capability detection                  |
+| `src/sixel/encoder.ts`             | Sixel format encoder                  |
+| `src/sixel/palette.ts`             | Color quantization                    |
+| `src/utils/terminal-detection.ts`  | Shared multiplexer/remote detection   |
 
 ## See Also
 

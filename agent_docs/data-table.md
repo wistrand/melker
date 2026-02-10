@@ -173,10 +173,12 @@ For dynamic data (e.g., fetched from API, generated), use a script:
 
 ## Implementation Files
 
-| File                           | Purpose                   |
-|--------------------------------|---------------------------|
-| `src/components/data-table.ts` | Component implementation  |
-| `src/components/mod.ts`        | Component export          |
+| File                                      | Purpose                                              |
+|-------------------------------------------|------------------------------------------------------|
+| `src/components/data-table.ts`            | Component implementation                             |
+| `src/components/utils/component-utils.ts` | Shared text formatting, JSON parsing, bounds         |
+| `src/components/utils/scroll-manager.ts`  | Shared scroll state management                       |
+| `src/components/mod.ts`                   | Component export                                     |
 
 ## Performance
 

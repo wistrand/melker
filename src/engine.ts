@@ -764,26 +764,43 @@ export class MelkerEngine {
   }
 
   /**
+   * Acquire the render lock. Returns true if rendering should proceed,
+   * false if it should be skipped (not initialized or already rendering).
+   */
+  private _acquireRenderLock(): boolean {
+    if (!this._isInitialized) {
+      logger.debug('Skipping render - engine not initialized');
+      return false;
+    }
+    if (this._isRendering) {
+      this._pendingRender = true;
+      logger.debug('Render requested during render - marking pending');
+      return false;
+    }
+    this._isRendering = true;
+    this._pendingRender = false;
+    return true;
+  }
+
+  /**
+   * Release the render lock and process any pending render.
+   */
+  private _releaseRenderLock(): void {
+    this._isRendering = false;
+    if (this._pendingRender) {
+      this._pendingRender = false;
+      queueMicrotask(() => this.render());
+    }
+  }
+
+  /**
    * Manually trigger a render
    */
   render(): void {
     // Debug: always log render entry
     logger.trace('render() called');
 
-    // Skip render if engine is stopped/stopping - prevents writes after terminal cleanup
-    if (!this._isInitialized) {
-      logger.debug('Skipping render - engine not initialized');
-      return;
-    }
-
-    // Render lock: prevent re-render during render (e.g., onPaint callback)
-    if (this._isRendering) {
-      this._pendingRender = true;  // Mark that another render is waiting
-      logger.debug('Render requested during render - marking pending');
-      return;
-    }
-    this._isRendering = true;
-    this._pendingRender = false;  // Clear pending flag at start of render
+    if (!this._acquireRenderLock()) return;
 
     try {
     const renderStartTime = performance.now();
@@ -916,15 +933,7 @@ export class MelkerEngine {
     // Update focus traps for modal dialogs
     updateModalFocusTraps(this._getModalFocusTrapContext());
     } finally {
-      this._isRendering = false;
-      logger.trace('render() finished, _isRendering = false');
-
-      // If a render was requested while we were rendering, trigger it now
-      if (this._pendingRender) {
-        this._pendingRender = false;
-        // Use queueMicrotask to avoid stack overflow from synchronous recursion
-        queueMicrotask(() => this.render());
-      }
+      this._releaseRenderLock();
     }
   }
 
@@ -932,16 +941,7 @@ export class MelkerEngine {
    * Fast render for dialog drag/resize - only updates dialog overlay, preserves background
    */
   renderDialogOnly(): void {
-    if (!this._isInitialized) {
-      return;
-    }
-
-    if (this._isRendering) {
-      this._pendingRender = true;
-      return;
-    }
-    this._isRendering = true;
-    this._pendingRender = false;
+    if (!this._acquireRenderLock()) return;
 
     try {
       const renderStartTime = performance.now();
@@ -979,12 +979,7 @@ export class MelkerEngine {
         logger.debug(`Dialog-only render: ${totalTime.toFixed(2)}ms`);
       }
     } finally {
-      this._isRendering = false;
-
-      if (this._pendingRender) {
-        this._pendingRender = false;
-        queueMicrotask(() => this.render());
-      }
+      this._releaseRenderLock();
     }
   }
 
@@ -1001,20 +996,7 @@ export class MelkerEngine {
    * Force a complete redraw of the terminal
    */
   forceRender(): void {
-    // Skip render if engine is stopped/stopping - prevents writes after terminal cleanup
-    if (!this._isInitialized) {
-      logger.debug('Skipping forceRender - engine not initialized');
-      return;
-    }
-
-    // Render lock: prevent re-render during render
-    if (this._isRendering) {
-      this._pendingRender = true;  // Mark that another render is waiting
-      logger.debug('ForceRender requested during render - marking pending');
-      return;
-    }
-    this._isRendering = true;
-    this._pendingRender = false;  // Clear pending flag at start of render
+    if (!this._acquireRenderLock()) return;
 
     try {
     this._renderCount++;
@@ -1065,13 +1047,7 @@ export class MelkerEngine {
     // Update focus traps for modal dialogs
     updateModalFocusTraps(this._getModalFocusTrapContext());
     } finally {
-      this._isRendering = false;
-
-      // If a render was requested while we were rendering, trigger it now
-      if (this._pendingRender) {
-        this._pendingRender = false;
-        queueMicrotask(() => this.render());
-      }
+      this._releaseRenderLock();
     }
   }
 

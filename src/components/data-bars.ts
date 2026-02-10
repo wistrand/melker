@@ -24,6 +24,7 @@ import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { packRGBA, parseColor } from './color-utils.ts';
+import { parseJsonProps, parseInlineJsonData, boundsContain, isBwMode } from './utils/component-utils.ts';
 import type { PackedRGBA } from '../types.ts';
 
 const logger = getLogger('DataBars');
@@ -135,44 +136,24 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
 
   // Parse JSON strings from props (when passed as attributes in .melker files)
   private _parseProps(): void {
-    const jsonProps = ['series', 'bars', 'labels'] as const;
-    for (const key of jsonProps) {
-      if (typeof this.props[key] === 'string') {
-        try {
-          // deno-lint-ignore no-explicit-any
-          (this.props as any)[key] = JSON.parse(this.props[key] as unknown as string);
-        } catch (e) {
-          logger.error(`Failed to parse ${key} JSON`, e instanceof Error ? e : new Error(String(e)));
-        }
-      }
-    }
+    parseJsonProps(this.props as unknown as Record<string, unknown>, ['series', 'bars', 'labels'] as const);
   }
 
   private _parseInlineData(): void {
     if (!this.children || this.children.length === 0) return;
 
-    for (const child of this.children) {
-      if (child.type === 'text') {
-        const text = (child.props.text || '').trim();
-        if (text.startsWith('{')) {
-          try {
-            const data = JSON.parse(text);
-            if (data.series && Array.isArray(data.series)) {
-              this.props.series = data.series;
-            }
-            if (data.bars && Array.isArray(data.bars)) {
-              this.props.bars = data.bars;
-            }
-            if (data.labels && Array.isArray(data.labels)) {
-              this.props.labels = data.labels;
-            }
-            this.children = [];
-            return;
-          } catch (e) {
-            logger.error('Failed to parse inline JSON data', e instanceof Error ? e : new Error(String(e)));
-          }
-        }
+    const data = parseInlineJsonData(this.children);
+    if (data) {
+      if (data.series && Array.isArray(data.series)) {
+        this.props.series = data.series as DataBarSeries[];
       }
+      if (data.bars && Array.isArray(data.bars)) {
+        this.props.bars = data.bars as DataBarsData;
+      }
+      if (data.labels && Array.isArray(data.labels)) {
+        this.props.labels = data.labels as string[];
+      }
+      this.children = [];
     }
   }
 
@@ -217,16 +198,10 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     return GRAYSCALE_PALETTE[seriesIndex % GRAYSCALE_PALETTE.length];
   }
 
-  // Check if we're in BW mode (no sub-char precision, use patterns instead)
-  private _isBwMode(): boolean {
-    const theme = getCurrentTheme();
-    return theme.type === 'bw';
-  }
-
   // Get pattern character for a series in BW mode (undefined if not applicable)
   private _getBwPattern(seriesIndex: number): string | undefined {
     const { series } = this.props;
-    if (!this._isBwMode() || series.length <= 1) return undefined;
+    if (!isBwMode() || series.length <= 1) return undefined;
     return BW_PATTERNS[seriesIndex % BW_PATTERNS.length];
   }
 
@@ -647,7 +622,7 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
         }
       } else {
         // Render grouped bars (one per series)
-        const useLedStyle = this._getBarStyle() === 'led' && !this._hasStacking() && !this._isBwMode();
+        const useLedStyle = this._getBarStyle() === 'led' && !this._hasStacking() && !isBwMode();
 
         for (let sIdx = 0; sIdx < series.length; sIdx++) {
           const value = entry[sIdx] ?? 0;
@@ -773,7 +748,7 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
         }
       } else {
         // Render grouped bars (one per series, side by side)
-        const useLedStyle = this._getBarStyle() === 'led' && !this._hasStacking() && !this._isBwMode();
+        const useLedStyle = this._getBarStyle() === 'led' && !this._hasStacking() && !isBwMode();
 
         for (let sIdx = 0; sIdx < series.length; sIdx++) {
           const value = entry[sIdx] ?? 0;
@@ -873,7 +848,7 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     const { selectable, onSelect } = this.props;
 
     for (const [key, b] of this._barBounds) {
-      if (x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height) {
+      if (boundsContain(x, y, b)) {
         const [entryIdx, seriesIdx] = key.split('-').map(Number);
 
         if (selectable) {
@@ -1105,7 +1080,7 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     const screenY = bounds.y + relY;
 
     for (const [key, b] of this._barBounds) {
-      if (screenX >= b.x && screenX < b.x + b.width && screenY >= b.y && screenY < b.y + b.height) {
+      if (boundsContain(screenX, screenY, b)) {
         const [entryIdx, seriesIdx] = key.split('-').map(Number);
         const value = this.props.bars[entryIdx]?.[seriesIdx] ?? 0;
         const label = this.props.labels?.[entryIdx] ?? `Entry ${entryIdx}`;

@@ -25,11 +25,13 @@ import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 import { renderScrollbar } from './scrollbar.ts';
+import { formatValue, truncateText, alignText, type CellValue, parseInlineJsonData, boundsContain } from './utils/component-utils.ts';
+import { ScrollManager } from './utils/scroll-manager.ts';
 
 const logger = getLogger('DataTable');
 
-// Type definitions
-export type CellValue = string | number | boolean | null | undefined;
+// Type definitions (CellValue imported from ./utils/component-utils.ts)
+export type { CellValue } from './utils/component-utils.ts';
 export type DataTableRows = CellValue[][];
 export type DataTableFooter = CellValue[][];
 export type DataTableSortDirection = 'asc' | 'desc';
@@ -121,9 +123,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   declare props: DataTableProps;
 
   // Scroll state
-  private _scrollY: number = 0;
-  private _totalContentLines: number = 0;
-  private _viewportLines: number = 0;
+  private _scroll = new ScrollManager();
 
   // Selection state (stores original row indices)
   private _selectedRows: Set<number> = new Set();
@@ -174,37 +174,20 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
   // Parse JSON data from element's text content
   private _parseInlineData(): void {
-    // Check for text content in children
     if (!this.children || this.children.length === 0) return;
 
-    // Look for text child with JSON content
-    for (const child of this.children) {
-      if (child.type === 'text') {
-        const text = (child.props.text || '').trim();
-        if (text.startsWith('{')) {
-          try {
-            const data = JSON.parse(text);
-            // Merge parsed data into props
-            if (data.columns && Array.isArray(data.columns)) {
-              this.props.columns = data.columns;
-            }
-            if (data.rows && Array.isArray(data.rows)) {
-              this.props.rows = data.rows;
-            }
-            if (data.footer && Array.isArray(data.footer)) {
-              this.props.footer = data.footer;
-            }
-            // Clear children since we consumed the JSON
-            this.children = [];
-            return;
-          } catch (e) {
-            logger.error('Failed to parse inline JSON data', e instanceof Error ? e : new Error(String(e)), {
-              id: this.id,
-              preview: text.substring(0, 100),
-            });
-          }
-        }
+    const data = parseInlineJsonData(this.children);
+    if (data) {
+      if (data.columns && Array.isArray(data.columns)) {
+        this.props.columns = data.columns as DataTableColumn[];
       }
+      if (data.rows && Array.isArray(data.rows)) {
+        this.props.rows = data.rows as DataTableRows;
+      }
+      if (data.footer && Array.isArray(data.footer)) {
+        this.props.footer = data.footer as DataTableFooter;
+      }
+      this.children = [];
     }
   }
 
@@ -311,38 +294,6 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     return widths;
   }
 
-  // Format cell value to string
-  private _formatValue(value: CellValue): string {
-    if (value == null) return '';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    return String(value);
-  }
-
-  // Truncate text with ellipsis
-  private _truncate(text: string, width: number): string {
-    if (text.length <= width) return text;
-    if (width <= 3) return text.slice(0, width);
-    return text.slice(0, width - 3) + '...';
-  }
-
-  // Align text within width
-  private _align(text: string, width: number, align: 'left' | 'center' | 'right'): string {
-    const padding = Math.max(0, width - text.length);
-    if (padding === 0) return text.slice(0, width);
-
-    switch (align) {
-      case 'right':
-        return ' '.repeat(padding) + text;
-      case 'center': {
-        const leftPad = Math.floor(padding / 2);
-        const rightPad = padding - leftPad;
-        return ' '.repeat(leftPad) + text + ' '.repeat(rightPad);
-      }
-      default:
-        return text + ' '.repeat(padding);
-    }
-  }
-
   // Word wrap text for multi-line cells
   private _wrapText(text: string, width: number): string[] {
     if (width <= 0) return [''];
@@ -442,15 +393,15 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     height: number,
     style: Partial<Cell>
   ): void {
-    if (height <= 0 || this._totalContentLines <= this._viewportLines) return;
+    if (height <= 0 || !this._scroll.needsScrollbar) return;
 
     // Store bounds for hit testing
     this._scrollbarBounds = { x, y, width: 1, height };
 
     renderScrollbar(buffer, x, y, height, {
-      scrollTop: this._scrollY,
-      totalItems: this._totalContentLines,
-      visibleItems: this._viewportLines,
+      scrollTop: this._scroll.scrollY,
+      totalItems: this._scroll.totalLines,
+      visibleItems: this._scroll.viewportLines,
       thumbStyle: style,
       trackStyle: style,
     });
@@ -484,8 +435,8 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         headerText += sortDirection === 'asc' ? ' ^' : ' v';
       }
 
-      const displayText = this._truncate(headerText, width);
-      const aligned = this._align(displayText, width, col.align || 'left');
+      const displayText = truncateText(headerText, width);
+      const aligned = alignText(displayText, width, col.align || 'left');
 
       // Store bounds for click detection
       this._headerCellBounds.push({
@@ -547,17 +498,17 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         const col = columns[colIndex];
         const width = this._columnWidths[colIndex];
         const value = rowData[colIndex];
-        const text = this._formatValue(value);
+        const text = formatValue(value);
 
         let displayText: string;
         if (rowHeight === 1) {
-          displayText = this._truncate(text, width);
+          displayText = truncateText(text, width);
         } else {
           const lines = this._wrapText(text, width);
           displayText = lines[line] || '';
         }
 
-        const aligned = this._align(displayText, width, col.align || 'left');
+        const aligned = alignText(displayText, width, col.align || 'left');
         buffer.currentBuffer.setText(cellX, y + line, aligned.substring(0, width), style);
 
         cellX += width;
@@ -617,9 +568,9 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       const col = columns[colIndex];
       const width = this._columnWidths[colIndex];
       const value = rowData[colIndex];
-      const text = this._formatValue(value);
-      const displayText = this._truncate(text, width);
-      const aligned = this._align(displayText, width, col.align || 'left');
+      const text = formatValue(value);
+      const displayText = truncateText(text, width);
+      const aligned = alignText(displayText, width, col.align || 'left');
 
       // Render with bold style for footer
       const footerStyle = { ...style, bold: true };
@@ -652,16 +603,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     const { rowHeight = 1 } = this.props;
     const rowTop = sortedIndex * rowHeight;
     const rowBottom = rowTop + rowHeight;
-
-    if (rowTop < this._scrollY) {
-      this._scrollY = rowTop;
-    } else if (rowBottom > this._scrollY + this._viewportLines) {
-      this._scrollY = rowBottom - this._viewportLines;
-    }
-
-    // Clamp scroll
-    const maxScroll = Math.max(0, this._totalContentLines - this._viewportLines);
-    this._scrollY = Math.max(0, Math.min(this._scrollY, maxScroll));
+    this._scroll.ensureVisible(rowTop, rowBottom);
   }
 
   // intrinsicSize implementation
@@ -740,17 +682,15 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     const bodyHeight = Math.max(0, bounds.height - headerHeight - footerHeight - 2); // -2 for top/bottom borders
 
     // Scroll calculations
-    this._totalContentLines = rows.length * rowHeight;
-    this._viewportLines = bodyHeight;
+    this._scroll.update(rows.length * rowHeight, bodyHeight);
 
     // Calculate column widths - account for scrollbar if needed
-    const needsScrollbar = this._totalContentLines > this._viewportLines;
+    const needsScrollbar = this._scroll.needsScrollbar;
     const availableWidth = needsScrollbar ? effectiveWidth - 1 : effectiveWidth;
     this._columnWidths = this._calculateColumnWidths(availableWidth);
     const totalWidth = effectiveWidth;
 
-    const maxScroll = Math.max(0, this._totalContentLines - this._viewportLines);
-    this._scrollY = Math.max(0, Math.min(this._scrollY, maxScroll));
+    // scrollY already clamped by _scroll.update() above
 
     // Sync selection from props if controlled
     if (this.props.selectedRows) {
@@ -782,7 +722,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       : new ViewportDualBuffer(buffer as DualBuffer, createClipViewport(clipBounds));
 
     this._rowBounds.clear();
-    let virtualY = bodyStartY - this._scrollY;
+    let virtualY = bodyStartY - this._scroll.scrollY;
 
     for (let sortedPos = 0; sortedPos < sortedIndices.length; sortedPos++) {
       // Skip if completely out of view
@@ -901,7 +841,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         return true;
 
       case 'PageUp': {
-        const pageSize = Math.max(1, Math.floor(this._viewportLines / rowHeight));
+        const pageSize = Math.max(1, Math.floor(this._scroll.viewportLines / rowHeight));
         this._focusedSortedIndex = Math.max(0, this._focusedSortedIndex - pageSize);
         if (selectable === 'single') {
           this.selectRowAtPosition(this._focusedSortedIndex, 'replace');
@@ -911,7 +851,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       }
 
       case 'PageDown': {
-        const pageSize = Math.max(1, Math.floor(this._viewportLines / rowHeight));
+        const pageSize = Math.max(1, Math.floor(this._scroll.viewportLines / rowHeight));
         this._focusedSortedIndex = Math.min(sortedIndices.length - 1, this._focusedSortedIndex + pageSize);
         if (selectable === 'single') {
           this.selectRowAtPosition(this._focusedSortedIndex, 'replace');
@@ -965,12 +905,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     // Check header clicks for sorting
     if (showHeader) {
       for (const { colIndex, bounds } of this._headerCellBounds) {
-        if (
-          x >= bounds.x &&
-          x < bounds.x + bounds.width &&
-          y >= bounds.y &&
-          y < bounds.y + bounds.height
-        ) {
+        if (boundsContain(x, y, bounds)) {
           const col = columns[colIndex];
           if (col.sortable !== false) {
             this._handleSortClick(colIndex);
@@ -983,12 +918,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     // Check row clicks for selection and double-click activation
     const currentTime = Date.now();
     for (const [sortedPos, bounds] of this._rowBounds) {
-      if (
-        x >= bounds.x &&
-        x < bounds.x + bounds.width &&
-        y >= bounds.y &&
-        y < bounds.y + bounds.height
-      ) {
+      if (boundsContain(x, y, bounds)) {
         // Check for double-click
         const timeSinceLastClick = currentTime - this._lastClickTime;
         const isDoubleClick = (
@@ -1024,11 +954,10 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     // Check scrollbar clicks
     if (this._scrollbarBounds) {
       const sb = this._scrollbarBounds;
-      if (x >= sb.x && x < sb.x + sb.width && y >= sb.y && y < sb.y + sb.height) {
+      if (boundsContain(x, y, sb)) {
         // Click on scrollbar - jump to position
         const clickRatio = (y - sb.y) / sb.height;
-        const maxScroll = this._totalContentLines - this._viewportLines;
-        this._scrollY = Math.floor(clickRatio * maxScroll);
+        this._scroll.scrollToRatio(clickRatio);
         return true;
       }
     }
@@ -1067,26 +996,17 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   // Wheel handling
   canHandleWheel(x: number, y: number): boolean {
     if (!this._bodyBounds) return false;
-    const b = this._bodyBounds;
-    return x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height;
+    return boundsContain(x, y, this._bodyBounds);
   }
 
   handleWheel(deltaX: number, deltaY: number): boolean {
-    if (this._totalContentLines <= this._viewportLines) return false;
-
-    const maxScroll = this._totalContentLines - this._viewportLines;
-    const oldScroll = this._scrollY;
-
-    this._scrollY = Math.max(0, Math.min(maxScroll, this._scrollY + deltaY));
-
-    return this._scrollY !== oldScroll;
+    return this._scroll.handleWheel(deltaY);
   }
 
   // Drag handling (for scrollbar)
   getDragZone(x: number, y: number): string | null {
     if (!this._scrollbarBounds) return null;
-    const sb = this._scrollbarBounds;
-    if (x >= sb.x && x < sb.x + sb.width && y >= sb.y && y < sb.y + sb.height) {
+    if (boundsContain(x, y, this._scrollbarBounds)) {
       return 'scrollbar';
     }
     return null;
@@ -1095,17 +1015,17 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   handleDragStart(zone: string, x: number, y: number): void {
     if (zone === 'scrollbar') {
       this._dragStartY = y;
-      this._dragStartScrollY = this._scrollY;
+      this._dragStartScrollY = this._scroll.scrollY;
     }
   }
 
   handleDragMove(zone: string, x: number, y: number): void {
     if (zone === 'scrollbar' && this._scrollbarBounds) {
       const deltaY = y - this._dragStartY;
-      const scrollRange = this._totalContentLines - this._viewportLines;
+      const scrollRange = this._scroll.maxScroll;
       const pixelRatio = scrollRange / this._scrollbarBounds.height;
 
-      this._scrollY = Math.max(
+      this._scroll.scrollY = Math.max(
         0,
         Math.min(scrollRange, this._dragStartScrollY + deltaY * pixelRatio)
       );
@@ -1148,12 +1068,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
     // Check if over a header cell
     for (const { colIndex, bounds: cellBounds } of this._headerCellBounds) {
-      if (
-        screenX >= cellBounds.x &&
-        screenX < cellBounds.x + cellBounds.width &&
-        screenY >= cellBounds.y &&
-        screenY < cellBounds.y + cellBounds.height
-      ) {
+      if (boundsContain(screenX, screenY, cellBounds)) {
         const col = this.props.columns[colIndex];
         return {
           type: 'data-table',
@@ -1167,12 +1082,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
     // Check if over a data row
     for (const [sortedPos, rowBounds] of this._rowBounds) {
-      if (
-        screenX >= rowBounds.x &&
-        screenX < rowBounds.x + rowBounds.width &&
-        screenY >= rowBounds.y &&
-        screenY < rowBounds.y + rowBounds.height
-      ) {
+      if (boundsContain(screenX, screenY, rowBounds)) {
         const originalIndex = this._getOriginalIndex(sortedPos);
         const row = this.props.rows[originalIndex];
         if (!row) continue;

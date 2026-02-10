@@ -139,8 +139,10 @@ Kitty supports direct PNG transmission via `f=100`:
 |------------------------|-----------------------|
 | `src/kitty/mod.ts`     | Module exports        |
 | `src/kitty/types.ts`   | Type definitions      |
-| `src/kitty/detect.ts`  | Capability detection  |
-| `src/kitty/encoder.ts` | Kitty format encoder  |
+| `src/kitty/detect.ts`              | Capability detection                  |
+| `src/kitty/encoder.ts`             | Kitty format encoder                  |
+| `src/utils/terminal-detection.ts`  | Shared multiplexer/remote detection   |
+| `src/utils/pixel-utils.ts`         | Shared pixel encoding (Uint32→bytes)  |
 
 ## See Also
 

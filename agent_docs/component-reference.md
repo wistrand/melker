@@ -435,9 +435,11 @@ interface DataTableColumn {
 
 ### Implementation Files
 
-| File                           | Purpose                  |
-|--------------------------------|--------------------------|
-| `src/components/data-table.ts` | Component implementation |
+| File                                      | Purpose                                              |
+|-------------------------------------------|------------------------------------------------------|
+| `src/components/data-table.ts`            | Component implementation                             |
+| `src/components/utils/component-utils.ts` | Shared text formatting, JSON parsing, bounds         |
+| `src/components/utils/scroll-manager.ts`  | Shared scroll state management                       |
 
 ## Table Component
 
@@ -632,9 +634,11 @@ tree.scrollToNode(nodeId);            // Scroll to node
 
 ### Implementation Files
 
-| File                           | Purpose                  |
-|--------------------------------|--------------------------|
-| `src/components/data-tree.ts`  | Component implementation |
+| File                                      | Purpose                                              |
+|-------------------------------------------|------------------------------------------------------|
+| `src/components/data-tree.ts`             | Component implementation                             |
+| `src/components/utils/component-utils.ts` | Shared text formatting, JSON parsing, bounds, theme  |
+| `src/components/utils/scroll-manager.ts`  | Shared scroll state management                       |
 
 ## Dialog Component
 

@@ -28,15 +28,16 @@ import { Wheelable } from '../types.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
-import { getCurrentTheme } from '../theme.ts';
 import { renderScrollbar } from './scrollbar.ts';
 import { parseColor } from './color-utils.ts';
+import { formatValue, truncateText, alignText, type CellValue, parseJsonProps, parseInlineJsonData, boundsContain, isBwMode } from './utils/component-utils.ts';
+import { ScrollManager } from './utils/scroll-manager.ts';
 
 const logger = getLogger('DataTree');
 
 // ===== Type Definitions =====
 
-type CellValue = string | number | boolean | null | undefined;
+export type { CellValue };
 
 export interface TreeNode {
   id?: string;
@@ -107,10 +108,10 @@ export interface DataTreeProps extends Omit<BaseProps, 'onChange'> {
 // ===== Connector Characters =====
 
 // Color/Unicode mode
-const CONNECTOR_PIPE = '\u2502';   // │
-const CONNECTOR_TEE = '\u251C';    // ├
-const CONNECTOR_ELBOW = '\u2514';  // └
-const CONNECTOR_DASH = '\u2500';   // ─
+const CONNECTOR_PIPE = '\u2502';   // |
+const CONNECTOR_TEE = '\u251C';    // |-
+const CONNECTOR_ELBOW = '\u2514';  // L
+const CONNECTOR_DASH = '\u2500';   // -
 const ICON_EXPANDED = 'v';
 const ICON_COLLAPSED = '>';
 
@@ -119,8 +120,15 @@ const CONNECTOR_PIPE_BW = '|';
 const CONNECTOR_TEE_BW = '+';
 const CONNECTOR_ELBOW_BW = '`';
 const CONNECTOR_DASH_BW = '-';
-const ICON_EXPANDED_BW = 'v';
-const ICON_COLLAPSED_BW = '>';
+
+// ===== Connector/Border char types =====
+
+interface ConnectorChars {
+  pipe: string;
+  tee: string;
+  elbow: string;
+  dash: string;
+}
 
 // ===== DataTreeElement Class =====
 
@@ -136,9 +144,7 @@ export class DataTreeElement extends Element
   private _focusedIndex = 0;
   private _flatVisibleNodes: FlatNode[] = [];
   private _nodeBounds = new Map<string, Bounds>();
-  private _scrollY = 0;
-  private _totalContentLines = 0;
-  private _viewportLines = 0;
+  private _scroll = new ScrollManager();
   private _columnWidths: number[] = [];
   private _headerCellBounds: Array<{ colIndex: number; bounds: Bounds }> = [];
   private _scrollbarBounds: Bounds | null = null;
@@ -179,41 +185,21 @@ export class DataTreeElement extends Element
   // ===== Data Parsing =====
 
   private _parseProps(): void {
-    const jsonProps = ['nodes', 'columns', 'selectedNodes'] as const;
-    for (const key of jsonProps) {
-      if (typeof this.props[key] === 'string') {
-        try {
-          // deno-lint-ignore no-explicit-any
-          (this.props as any)[key] = JSON.parse(this.props[key] as unknown as string);
-        } catch (e) {
-          logger.error(`Failed to parse ${key} JSON`, e instanceof Error ? e : new Error(String(e)));
-        }
-      }
-    }
+    parseJsonProps(this.props as unknown as Record<string, unknown>, ['nodes', 'columns', 'selectedNodes']);
   }
 
   private _parseInlineData(): void {
     if (!this.children || this.children.length === 0) return;
 
-    for (const child of this.children) {
-      if (child.type === 'text') {
-        const text = (child.props.text || '').trim();
-        if (text.startsWith('{')) {
-          try {
-            const data = JSON.parse(text);
-            if (data.nodes && Array.isArray(data.nodes)) {
-              this.props.nodes = data.nodes;
-            }
-            if (data.columns && Array.isArray(data.columns)) {
-              this.props.columns = data.columns;
-            }
-            this.children = [];
-            return;
-          } catch (e) {
-            logger.error('Failed to parse inline JSON data', e instanceof Error ? e : new Error(String(e)));
-          }
-        }
+    const data = parseInlineJsonData(this.children);
+    if (data) {
+      if (data.nodes && Array.isArray(data.nodes)) {
+        this.props.nodes = data.nodes as TreeNode[];
       }
+      if (data.columns && Array.isArray(data.columns)) {
+        this.props.columns = data.columns as TreeColumn[];
+      }
+      this.children = [];
     }
   }
 
@@ -263,27 +249,27 @@ export class DataTreeElement extends Element
     const nodes = this.props.nodes;
     if (!nodes || !Array.isArray(nodes)) {
       this._flatVisibleNodes = [];
-      this._totalContentLines = 0;
+      this._scroll.totalLines = 0;
       return;
     }
 
     // Capture anchor for scroll stability
-    const anchorNodeId = this._flatVisibleNodes[this._scrollY]?.nodeId;
+    const anchorNodeId = this._flatVisibleNodes[this._scroll.scrollY]?.nodeId;
     const focusedId = this._focusedNodeId;
 
     // Rebuild
     const flat: FlatNode[] = [];
     this._buildFlatRecursive(nodes, 0, '', null, [], flat);
     this._flatVisibleNodes = flat;
-    this._totalContentLines = flat.length;
+    this._scroll.totalLines = flat.length;
 
     // Restore scroll position
     if (anchorNodeId) {
       const newIndex = flat.findIndex(n => n.nodeId === anchorNodeId);
       if (newIndex >= 0) {
-        this._scrollY = newIndex;
+        this._scroll.scrollY = newIndex;
       } else {
-        this._scrollY = Math.min(this._scrollY, Math.max(0, flat.length - 1));
+        this._scroll.scrollY = Math.min(this._scroll.scrollY, Math.max(0, flat.length - 1));
       }
     }
 
@@ -391,48 +377,6 @@ export class DataTreeElement extends Element
     return false;
   }
 
-  // ===== Style helper =====
-
-  private _getStyleProp<K extends keyof Style>(key: K, defaultValue: NonNullable<Style[K]>): NonNullable<Style[K]> {
-    return ((this.props.style as Style | undefined)?.[key] ?? defaultValue) as NonNullable<Style[K]>;
-  }
-
-  private _isBwMode(): boolean {
-    const theme = getCurrentTheme();
-    return theme.type === 'bw';
-  }
-
-  // ===== Formatting =====
-
-  private _formatValue(value: CellValue): string {
-    if (value == null) return '';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    return String(value);
-  }
-
-  private _truncate(text: string, width: number): string {
-    if (text.length <= width) return text;
-    if (width <= 3) return text.slice(0, width);
-    return text.slice(0, width - 3) + '...';
-  }
-
-  private _align(text: string, width: number, align: 'left' | 'center' | 'right'): string {
-    const padding = Math.max(0, width - text.length);
-    if (padding === 0) return text.slice(0, width);
-
-    switch (align) {
-      case 'right':
-        return ' '.repeat(padding) + text;
-      case 'center': {
-        const leftPad = Math.floor(padding / 2);
-        const rightPad = padding - leftPad;
-        return ' '.repeat(leftPad) + text + ' '.repeat(rightPad);
-      }
-      default:
-        return text + ' '.repeat(padding);
-    }
-  }
-
   // ===== Column Width Calculation =====
 
   private _calculateColumnWidths(availableWidth: number): number[] {
@@ -538,6 +482,94 @@ export class DataTreeElement extends Element
     }
   }
 
+  // ===== Tree Prefix Rendering =====
+
+  /**
+   * Render the tree prefix (ancestor connectors, node connector, expand icon).
+   * Returns the new cursor X position.
+   */
+  private _renderTreePrefix(
+    buffer: DualBuffer,
+    flatNode: FlatNode,
+    startX: number,
+    y: number,
+    maxX: number,
+    style: Partial<Cell>,
+    dimStyle: Partial<Cell>,
+    chars: ConnectorChars,
+    showConnectors: boolean,
+    indent: number,
+  ): number {
+    let cx = startX;
+
+    // Ancestor connectors
+    if (showConnectors) {
+      for (let d = 0; d < flatNode.depth; d++) {
+        if (cx >= maxX) break;
+        if (d < flatNode.ancestorIsLast.length && flatNode.ancestorIsLast[d]) {
+          for (let s = 0; s < indent && cx < maxX; s++) {
+            buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
+            cx++;
+          }
+        } else {
+          buffer.currentBuffer.setCell(cx, y, { char: chars.pipe, ...dimStyle });
+          cx++;
+          for (let s = 1; s < indent && cx < maxX; s++) {
+            buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
+            cx++;
+          }
+        }
+      }
+    } else if (flatNode.depth > 0) {
+      const indentChars = flatNode.depth * indent;
+      for (let s = 0; s < indentChars && cx < maxX; s++) {
+        buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
+        cx++;
+      }
+    }
+
+    // Node connector
+    if (showConnectors && cx < maxX) {
+      buffer.currentBuffer.setCell(cx, y, { char: flatNode.isLastChild ? chars.elbow : chars.tee, ...dimStyle });
+      cx++;
+      if (cx < maxX) {
+        buffer.currentBuffer.setCell(cx, y, { char: chars.dash, ...dimStyle });
+        cx++;
+      }
+    }
+
+    // Expand/collapse icon
+    const hasChildren = flatNode.node.children && flatNode.node.children.length > 0;
+    if (hasChildren && cx < maxX) {
+      const isExpanded = this._expandedNodes.has(flatNode.nodeId);
+      const icon = isExpanded ? ICON_EXPANDED : ICON_COLLAPSED;
+      buffer.currentBuffer.setCell(cx, y, { char: icon, ...dimStyle });
+      cx++;
+      if (cx < maxX) {
+        buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
+        cx++;
+      }
+    } else {
+      for (let s = 0; s < 2 && cx < maxX; s++) {
+        buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
+        cx++;
+      }
+    }
+
+    return cx;
+  }
+
+  // ===== Navigate helper for keyboard =====
+
+  private _navigateTo(index: number): void {
+    this._focusedIndex = index;
+    this._focusedNodeId = this._flatVisibleNodes[this._focusedIndex]?.nodeId ?? null;
+    if ((this.props.selectable ?? 'none') === 'single' && this._focusedNodeId) {
+      this._selectNode(this._focusedNodeId, 'replace');
+    }
+    this._ensureFocusedVisible();
+  }
+
   // ===== Render =====
 
   render(
@@ -563,6 +595,16 @@ export class DataTreeElement extends Element
     const showHeader = this.props.showHeader ?? !!hasColumns;
     const borderStyle = this.props.border || 'thin';
 
+    // Compute border and connector chars once
+    const borderChars = BORDER_CHARS[borderStyle !== 'none' ? borderStyle : 'thin'];
+    const bw = isBwMode();
+    const connChars: ConnectorChars = {
+      pipe: bw ? CONNECTOR_PIPE_BW : CONNECTOR_PIPE,
+      tee: bw ? CONNECTOR_TEE_BW : CONNECTOR_TEE,
+      elbow: bw ? CONNECTOR_ELBOW_BW : CONNECTOR_ELBOW,
+      dash: bw ? CONNECTOR_DASH_BW : CONNECTOR_DASH,
+    };
+
     // Compute color overrides from style props
     const rawBorderColor = (this.props.style as Style | undefined)?.borderColor;
     const rawConnectorColor = (this.props.style as Style | undefined)?.connectorColor ?? 'gray';
@@ -582,10 +624,9 @@ export class DataTreeElement extends Element
     const bodyHeight = Math.max(0, bounds.height - headerHeight - 2); // -2 for top/bottom borders
 
     // Scroll calculations
-    this._totalContentLines = this._flatVisibleNodes.length;
-    this._viewportLines = bodyHeight;
+    this._scroll.update(this._flatVisibleNodes.length, bodyHeight);
 
-    const needsScrollbar = this._totalContentLines > this._viewportLines;
+    const needsScrollbar = this._scroll.needsScrollbar;
     const availableWidth = needsScrollbar ? effectiveWidth - 1 : effectiveWidth;
 
     // Calculate column widths
@@ -597,8 +638,7 @@ export class DataTreeElement extends Element
 
     const totalWidth = effectiveWidth;
 
-    const maxScroll = Math.max(0, this._totalContentLines - this._viewportLines);
-    this._scrollY = Math.max(0, Math.min(this._scrollY, maxScroll));
+    // scrollY already clamped by _scroll.update() above
 
     // Sync selection from props if controlled
     if (this.props.selectedNodes) {
@@ -609,18 +649,14 @@ export class DataTreeElement extends Element
 
     // Draw top border
     const bdrStyle = borderColorStyle ?? style;
-    if (hasColumns) {
-      this._drawHorizontalBorder(buffer, bounds.x, y, 'top', bdrStyle, totalWidth);
-    } else {
-      this._drawSimpleBorder(buffer, bounds.x, y, 'top', bdrStyle, totalWidth);
-    }
+    this._drawHorizontalBorder(buffer, bounds.x, y, 'top', bdrStyle, totalWidth, borderChars);
     y++;
 
     // Render header (multi-column mode only)
     if (showHeader && hasColumns) {
-      this._renderHeaderRow(buffer, bounds.x, y, style, totalWidth, bdrStyle);
+      this._renderHeaderRow(buffer, bounds.x, y, style, totalWidth, bdrStyle, borderChars);
       y++;
-      this._drawHorizontalBorder(buffer, bounds.x, y, 'middle', bdrStyle, totalWidth);
+      this._drawHorizontalBorder(buffer, bounds.x, y, 'middle', bdrStyle, totalWidth, borderChars);
       y++;
     }
 
@@ -628,8 +664,7 @@ export class DataTreeElement extends Element
     const bodyStartY = y;
     this._bodyBounds = { x: bounds.x, y: bodyStartY, width: effectiveWidth, height: bodyHeight };
 
-    const start = this._scrollY;
-    const end = Math.min(start + this._viewportLines, this._flatVisibleNodes.length);
+    const { start, end } = this._scroll.getVisibleRange();
 
     for (let i = start; i < end; i++) {
       const flatNode = this._flatVisibleNodes[i];
@@ -648,16 +683,15 @@ export class DataTreeElement extends Element
       const rowConnStyle = highlighted ? undefined : connectorColorStyle;
 
       if (hasColumns) {
-        this._renderMultiColumnRow(buffer, bounds.x, rowY, flatNode, rowStyle, totalWidth, needsScrollbar ? bounds.x + effectiveWidth - 1 : -1, rowBdrStyle, rowConnStyle);
+        this._renderMultiColumnRow(buffer, bounds.x, rowY, flatNode, rowStyle, totalWidth, needsScrollbar ? bounds.x + effectiveWidth - 1 : -1, rowBdrStyle, rowConnStyle, borderChars, connChars);
       } else {
-        this._renderSingleColumnRow(buffer, bounds.x, rowY, flatNode, rowStyle, totalWidth, rowBdrStyle, rowConnStyle);
+        this._renderSingleColumnRow(buffer, bounds.x, rowY, flatNode, rowStyle, totalWidth, rowBdrStyle, rowConnStyle, borderChars, connChars);
       }
 
       this._nodeBounds.set(flatNode.nodeId, { x: bounds.x, y: rowY, width: effectiveWidth, height: 1 });
     }
 
     // Draw vertical borders for empty space below data
-    const borderChars = BORDER_CHARS[borderStyle !== 'none' ? borderStyle : 'thin'];
     const rightBorderX = bounds.x + effectiveWidth - 1;
     for (let emptyY = bodyStartY + (end - start); emptyY < bodyStartY + bodyHeight; emptyY++) {
       buffer.currentBuffer.setCell(bounds.x, emptyY, { char: borderChars.v, ...bdrStyle });
@@ -678,9 +712,9 @@ export class DataTreeElement extends Element
     if (needsScrollbar) {
       this._scrollbarBounds = { x: bounds.x + effectiveWidth - 1, y: bodyStartY, width: 1, height: bodyHeight };
       renderScrollbar(buffer, bounds.x + effectiveWidth - 1, bodyStartY, bodyHeight, {
-        scrollTop: this._scrollY,
-        totalItems: this._totalContentLines,
-        visibleItems: this._viewportLines,
+        scrollTop: this._scroll.scrollY,
+        totalItems: this._scroll.totalLines,
+        visibleItems: this._scroll.viewportLines,
         thumbStyle: style,
         trackStyle: style,
       });
@@ -689,11 +723,7 @@ export class DataTreeElement extends Element
     }
 
     // Draw bottom border
-    if (hasColumns) {
-      this._drawHorizontalBorder(buffer, bounds.x, y, 'bottom', bdrStyle, totalWidth);
-    } else {
-      this._drawSimpleBorder(buffer, bounds.x, y, 'bottom', bdrStyle, totalWidth);
-    }
+    this._drawHorizontalBorder(buffer, bounds.x, y, 'bottom', bdrStyle, totalWidth, borderChars);
   }
 
   // ===== Single-column row rendering =====
@@ -706,101 +736,37 @@ export class DataTreeElement extends Element
     style: Partial<Cell>,
     totalWidth: number,
     borderCellStyle: Partial<Cell>,
-    connectorStyle?: Partial<Cell>
+    connectorStyle: Partial<Cell> | undefined,
+    borderChars: typeof BORDER_CHARS[keyof typeof BORDER_CHARS],
+    connChars: ConnectorChars,
   ): void {
-    const borderPropStyle = this.props.border || 'thin';
-    const chars = BORDER_CHARS[borderPropStyle !== 'none' ? borderPropStyle : 'thin'];
     const indent = this.props.indent ?? 2;
     const showConnectors = this.props.showConnectors ?? true;
-    const bw = this._isBwMode();
 
     // Left border
-    buffer.currentBuffer.setCell(x, y, { char: chars.v, ...borderCellStyle });
+    buffer.currentBuffer.setCell(x, y, { char: borderChars.v, ...borderCellStyle });
 
-    let cx = x + 1;
     const contentWidth = totalWidth - 2; // minus borders
+    const maxX = x + 1 + contentWidth;
     const dimStyle = connectorStyle ?? { ...style, dim: true };
 
-    // Draw ancestor connector columns
-    if (showConnectors) {
-      for (let d = 0; d < flatNode.depth; d++) {
-        if (d < flatNode.ancestorIsLast.length && flatNode.ancestorIsLast[d]) {
-          // No line from this ancestor
-          for (let s = 0; s < indent && cx < x + 1 + contentWidth; s++) {
-            buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
-            cx++;
-          }
-        } else {
-          // Continuing line from ancestor
-          const pipe = bw ? CONNECTOR_PIPE_BW : CONNECTOR_PIPE;
-          buffer.currentBuffer.setCell(cx, y, { char: pipe, ...dimStyle });
-          cx++;
-          for (let s = 1; s < indent && cx < x + 1 + contentWidth; s++) {
-            buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
-            cx++;
-          }
-        }
-      }
-    } else if (flatNode.depth > 0) {
-      // No connectors, just indent
-      const indentChars = flatNode.depth * indent;
-      for (let s = 0; s < indentChars && cx < x + 1 + contentWidth; s++) {
-        buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
-        cx++;
-      }
-    }
-
-    // Draw node connector (├── or └──)
-    if (showConnectors) {
-      const tee = bw ? CONNECTOR_TEE_BW : CONNECTOR_TEE;
-      const elbow = bw ? CONNECTOR_ELBOW_BW : CONNECTOR_ELBOW;
-      const dash = bw ? CONNECTOR_DASH_BW : CONNECTOR_DASH;
-
-      buffer.currentBuffer.setCell(cx, y, { char: flatNode.isLastChild ? elbow : tee, ...dimStyle });
-      cx++;
-      if (cx < x + 1 + contentWidth) {
-        buffer.currentBuffer.setCell(cx, y, { char: dash, ...dimStyle });
-        cx++;
-      }
-    }
-
-    // Draw expand/collapse icon for branch nodes
-    const hasChildren = flatNode.node.children && flatNode.node.children.length > 0;
-    if (hasChildren) {
-      const isExpanded = this._expandedNodes.has(flatNode.nodeId);
-      const icon = bw
-        ? (isExpanded ? ICON_EXPANDED_BW : ICON_COLLAPSED_BW)
-        : (isExpanded ? ICON_EXPANDED : ICON_COLLAPSED);
-      if (cx < x + 1 + contentWidth) {
-        buffer.currentBuffer.setCell(cx, y, { char: icon, ...dimStyle });
-        cx++;
-      }
-      if (cx < x + 1 + contentWidth) {
-        buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
-        cx++;
-      }
-    } else {
-      // Leaf - spaces for alignment with icon + space
-      for (let s = 0; s < 2 && cx < x + 1 + contentWidth; s++) {
-        buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
-        cx++;
-      }
-    }
+    // Draw tree prefix (ancestor connectors, node connector, expand icon)
+    let cx = this._renderTreePrefix(buffer, flatNode, x + 1, y, maxX, style, dimStyle, connChars, showConnectors, indent);
 
     // Draw label
-    const remainingWidth = x + 1 + contentWidth - cx;
+    const remainingWidth = maxX - cx;
     if (remainingWidth > 0) {
       let labelText = flatNode.node.label;
 
       // If showing values in single-column mode, append value
       if (this.props.showValues && flatNode.node.value !== undefined) {
-        const valueStr = this._formatValue(flatNode.node.value);
+        const valueStr = formatValue(flatNode.node.value);
         const labelArea = Math.max(1, remainingWidth - valueStr.length - 2);
-        const truncLabel = this._truncate(labelText, labelArea);
+        const truncLabel = truncateText(labelText, labelArea);
         const padded = truncLabel + ' '.repeat(Math.max(0, remainingWidth - truncLabel.length - valueStr.length));
         labelText = padded + valueStr;
       } else {
-        labelText = this._truncate(labelText, remainingWidth);
+        labelText = truncateText(labelText, remainingWidth);
       }
 
       buffer.currentBuffer.setText(cx, y, labelText, style);
@@ -814,7 +780,7 @@ export class DataTreeElement extends Element
     }
 
     // Right border
-    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: chars.v, ...borderCellStyle });
+    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: borderChars.v, ...borderCellStyle });
   }
 
   // ===== Multi-column row rendering =====
@@ -828,17 +794,16 @@ export class DataTreeElement extends Element
     totalWidth: number,
     scrollbarX: number,
     borderCellStyle: Partial<Cell>,
-    connectorStyle?: Partial<Cell>
+    connectorStyle: Partial<Cell> | undefined,
+    borderChars: typeof BORDER_CHARS[keyof typeof BORDER_CHARS],
+    connChars: ConnectorChars,
   ): void {
-    const borderPropStyle = this.props.border || 'thin';
-    const chars = BORDER_CHARS[borderPropStyle !== 'none' ? borderPropStyle : 'thin'];
     const { showColumnBorders } = this.props;
     const indent = this.props.indent ?? 2;
     const showConnectors = this.props.showConnectors ?? true;
-    const bw = this._isBwMode();
 
     // Left border
-    buffer.currentBuffer.setCell(x, y, { char: chars.v, ...borderCellStyle });
+    buffer.currentBuffer.setCell(x, y, { char: borderChars.v, ...borderCellStyle });
 
     let cx = x + 1;
 
@@ -847,75 +812,15 @@ export class DataTreeElement extends Element
     const treeColEnd = cx + treeColWidth;
 
     // Build tree cell content
-    let treeCx = cx;
     const dimStyle = connectorStyle ?? { ...style, dim: true };
 
-    // Ancestor connectors
-    if (showConnectors) {
-      for (let d = 0; d < flatNode.depth; d++) {
-        if (treeCx >= treeColEnd) break;
-        if (d < flatNode.ancestorIsLast.length && flatNode.ancestorIsLast[d]) {
-          for (let s = 0; s < indent && treeCx < treeColEnd; s++) {
-            buffer.currentBuffer.setCell(treeCx, y, { char: EMPTY_CHAR, ...style });
-            treeCx++;
-          }
-        } else {
-          const pipe = bw ? CONNECTOR_PIPE_BW : CONNECTOR_PIPE;
-          buffer.currentBuffer.setCell(treeCx, y, { char: pipe, ...dimStyle });
-          treeCx++;
-          for (let s = 1; s < indent && treeCx < treeColEnd; s++) {
-            buffer.currentBuffer.setCell(treeCx, y, { char: EMPTY_CHAR, ...style });
-            treeCx++;
-          }
-        }
-      }
-    } else if (flatNode.depth > 0) {
-      const indentChars = flatNode.depth * indent;
-      for (let s = 0; s < indentChars && treeCx < treeColEnd; s++) {
-        buffer.currentBuffer.setCell(treeCx, y, { char: EMPTY_CHAR, ...style });
-        treeCx++;
-      }
-    }
-
-    // Node connector
-    if (showConnectors && treeCx < treeColEnd) {
-      const tee = bw ? CONNECTOR_TEE_BW : CONNECTOR_TEE;
-      const elbow = bw ? CONNECTOR_ELBOW_BW : CONNECTOR_ELBOW;
-      const dash = bw ? CONNECTOR_DASH_BW : CONNECTOR_DASH;
-
-      buffer.currentBuffer.setCell(treeCx, y, { char: flatNode.isLastChild ? elbow : tee, ...dimStyle });
-      treeCx++;
-      if (treeCx < treeColEnd) {
-        buffer.currentBuffer.setCell(treeCx, y, { char: dash, ...dimStyle });
-        treeCx++;
-      }
-    }
-
-    // Expand icon
-    const hasChildren = flatNode.node.children && flatNode.node.children.length > 0;
-    if (hasChildren && treeCx < treeColEnd) {
-      const isExpanded = this._expandedNodes.has(flatNode.nodeId);
-      const icon = bw
-        ? (isExpanded ? ICON_EXPANDED_BW : ICON_COLLAPSED_BW)
-        : (isExpanded ? ICON_EXPANDED : ICON_COLLAPSED);
-      buffer.currentBuffer.setCell(treeCx, y, { char: icon, ...dimStyle });
-      treeCx++;
-      if (treeCx < treeColEnd) {
-        buffer.currentBuffer.setCell(treeCx, y, { char: EMPTY_CHAR, ...style });
-        treeCx++;
-      }
-    } else {
-      // Leaf - spaces for alignment with icon + space
-      for (let s = 0; s < 2 && treeCx < treeColEnd; s++) {
-        buffer.currentBuffer.setCell(treeCx, y, { char: EMPTY_CHAR, ...style });
-        treeCx++;
-      }
-    }
+    // Draw tree prefix (ancestor connectors, node connector, expand icon)
+    let treeCx = this._renderTreePrefix(buffer, flatNode, cx, y, treeColEnd, style, dimStyle, connChars, showConnectors, indent);
 
     // Label in remaining tree column space
     const labelSpace = treeColEnd - treeCx;
     if (labelSpace > 0) {
-      const label = this._truncate(flatNode.node.label, labelSpace);
+      const label = truncateText(flatNode.node.label, labelSpace);
       buffer.currentBuffer.setText(treeCx, y, label, style);
       treeCx += label.length;
     }
@@ -934,7 +839,7 @@ export class DataTreeElement extends Element
 
       // Column separator
       if (showColumnBorders) {
-        buffer.currentBuffer.setCell(cx, y, { char: chars.v, ...borderCellStyle });
+        buffer.currentBuffer.setCell(cx, y, { char: borderChars.v, ...borderCellStyle });
         cx++;
       } else {
         buffer.currentBuffer.setCell(cx, y, { char: EMPTY_CHAR, ...style });
@@ -943,9 +848,9 @@ export class DataTreeElement extends Element
 
       // Cell value
       const value = flatNode.node.values?.[colIdx] ?? '';
-      const text = this._formatValue(value);
-      const displayText = this._truncate(text, width);
-      const aligned = this._align(displayText, width, col.align || 'left');
+      const text = formatValue(value);
+      const displayText = truncateText(text, width);
+      const aligned = alignText(displayText, width, col.align || 'left');
       buffer.currentBuffer.setText(cx, y, aligned.substring(0, width), style);
       cx += width;
     }
@@ -956,14 +861,14 @@ export class DataTreeElement extends Element
       if (gap > 0) {
         buffer.currentBuffer.fillLine(cx, y, gap, style);
       }
-      buffer.currentBuffer.setCell(scrollbarX, y, { char: chars.v, ...borderCellStyle });
+      buffer.currentBuffer.setCell(scrollbarX, y, { char: borderChars.v, ...borderCellStyle });
     } else {
       const rightBorderX = x + totalWidth - 1;
       const gap = rightBorderX - cx;
       if (gap > 0) {
         buffer.currentBuffer.fillLine(cx, y, gap, style);
       }
-      buffer.currentBuffer.setCell(rightBorderX, y, { char: chars.v, ...borderCellStyle });
+      buffer.currentBuffer.setCell(rightBorderX, y, { char: borderChars.v, ...borderCellStyle });
     }
   }
 
@@ -975,25 +880,24 @@ export class DataTreeElement extends Element
     y: number,
     style: Partial<Cell>,
     totalWidth: number,
-    borderCellStyle?: Partial<Cell>
+    borderCellStyle: Partial<Cell>,
+    borderChars: typeof BORDER_CHARS[keyof typeof BORDER_CHARS],
   ): void {
     const { columns, showColumnBorders } = this.props;
     if (!columns) return;
 
-    const borderPropStyle = this.props.border || 'thin';
-    const chars = BORDER_CHARS[borderPropStyle !== 'none' ? borderPropStyle : 'thin'];
     const bdrStyle = borderCellStyle ?? style;
 
     this._headerCellBounds = [];
 
     // Left border
-    buffer.currentBuffer.setCell(x, y, { char: chars.v, ...bdrStyle });
+    buffer.currentBuffer.setCell(x, y, { char: borderChars.v, ...bdrStyle });
 
     let cellX = x + 1;
 
     // Tree column header (implicit "Name" header)
     const treeWidth = this._columnWidths[0] ?? 20;
-    const treeHeader = this._align('Name', treeWidth, 'left');
+    const treeHeader = alignText('Name', treeWidth, 'left');
     const headerStyle = { ...style, bold: true };
     buffer.currentBuffer.setText(cellX, y, treeHeader.substring(0, treeWidth), headerStyle);
     cellX += treeWidth;
@@ -1005,7 +909,7 @@ export class DataTreeElement extends Element
 
       // Separator
       if (showColumnBorders) {
-        buffer.currentBuffer.setCell(cellX, y, { char: chars.v, ...bdrStyle });
+        buffer.currentBuffer.setCell(cellX, y, { char: borderChars.v, ...bdrStyle });
         cellX++;
       } else {
         buffer.currentBuffer.setCell(cellX, y, { char: EMPTY_CHAR, ...style });
@@ -1017,8 +921,8 @@ export class DataTreeElement extends Element
         bounds: { x: cellX, y, width, height: 1 },
       });
 
-      const displayText = this._truncate(col.header, width);
-      const aligned = this._align(displayText, width, col.align || 'left');
+      const displayText = truncateText(col.header, width);
+      const aligned = alignText(displayText, width, col.align || 'left');
       buffer.currentBuffer.setText(cellX, y, aligned.substring(0, width), headerStyle);
       cellX += width;
     }
@@ -1028,7 +932,7 @@ export class DataTreeElement extends Element
     if (remaining > 0) {
       buffer.currentBuffer.fillLine(cellX, y, remaining, style);
     }
-    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: chars.v, ...bdrStyle });
+    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: borderChars.v, ...bdrStyle });
   }
 
   // ===== Border Drawing =====
@@ -1039,24 +943,24 @@ export class DataTreeElement extends Element
     y: number,
     position: 'top' | 'middle' | 'bottom',
     style: Partial<Cell>,
-    totalWidth: number
+    totalWidth: number,
+    borderChars: typeof BORDER_CHARS[keyof typeof BORDER_CHARS],
   ): void {
     const borderStyle = this.props.border || 'thin';
     if (borderStyle === 'none') return;
 
-    const chars = BORDER_CHARS[borderStyle];
     const { showColumnBorders } = this.props;
 
     let leftChar: string, middleChar: string, rightChar: string;
     switch (position) {
       case 'top':
-        leftChar = chars.tl; middleChar = chars.tm; rightChar = chars.tr;
+        leftChar = borderChars.tl; middleChar = borderChars.tm; rightChar = borderChars.tr;
         break;
       case 'middle':
-        leftChar = chars.lm; middleChar = chars.mm; rightChar = chars.rm;
+        leftChar = borderChars.lm; middleChar = borderChars.mm; rightChar = borderChars.rm;
         break;
       case 'bottom':
-        leftChar = chars.bl; middleChar = chars.bm; rightChar = chars.br;
+        leftChar = borderChars.bl; middleChar = borderChars.bm; rightChar = borderChars.br;
         break;
     }
 
@@ -1066,7 +970,7 @@ export class DataTreeElement extends Element
 
     // Tree column
     const treeWidth = this._columnWidths[0] ?? totalWidth - 2;
-    buffer.currentBuffer.setText(cellX, y, chars.h.repeat(treeWidth), style);
+    buffer.currentBuffer.setText(cellX, y, borderChars.h.repeat(treeWidth), style);
     cellX += treeWidth;
 
     // Value columns
@@ -1076,12 +980,12 @@ export class DataTreeElement extends Element
         const width = this._columnWidths[i + 1] ?? 10;
 
         buffer.currentBuffer.setCell(cellX, y, {
-          char: showColumnBorders ? middleChar : chars.h,
+          char: showColumnBorders ? middleChar : borderChars.h,
           ...style,
         });
         cellX++;
 
-        buffer.currentBuffer.setText(cellX, y, chars.h.repeat(width), style);
+        buffer.currentBuffer.setText(cellX, y, borderChars.h.repeat(width), style);
         cellX += width;
       }
     }
@@ -1089,33 +993,9 @@ export class DataTreeElement extends Element
     // Fill remaining
     const remainingH = x + totalWidth - 1 - cellX;
     if (remainingH > 0) {
-      buffer.currentBuffer.setText(cellX, y, chars.h.repeat(remainingH), style);
+      buffer.currentBuffer.setText(cellX, y, borderChars.h.repeat(remainingH), style);
     }
 
-    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: rightChar, ...style });
-  }
-
-  private _drawSimpleBorder(
-    buffer: DualBuffer,
-    x: number,
-    y: number,
-    position: 'top' | 'bottom',
-    style: Partial<Cell>,
-    totalWidth: number
-  ): void {
-    const borderStyle = this.props.border || 'thin';
-    if (borderStyle === 'none') return;
-
-    const chars = BORDER_CHARS[borderStyle];
-
-    const leftChar = position === 'top' ? chars.tl : chars.bl;
-    const rightChar = position === 'top' ? chars.tr : chars.br;
-
-    buffer.currentBuffer.setCell(x, y, { char: leftChar, ...style });
-    const innerWidth = totalWidth - 2;
-    if (innerWidth > 0) {
-      buffer.currentBuffer.setText(x + 1, y, chars.h.repeat(innerWidth), style);
-    }
     buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: rightChar, ...style });
   }
 
@@ -1142,23 +1022,13 @@ export class DataTreeElement extends Element
     switch (event.key) {
       case 'ArrowUp':
         if (this._focusedIndex > 0) {
-          this._focusedIndex--;
-          this._focusedNodeId = this._flatVisibleNodes[this._focusedIndex].nodeId;
-          if (selectable === 'single') {
-            this._selectNode(this._focusedNodeId, 'replace');
-          }
-          this._ensureFocusedVisible();
+          this._navigateTo(this._focusedIndex - 1);
         }
         return true;
 
       case 'ArrowDown':
         if (this._focusedIndex < this._flatVisibleNodes.length - 1) {
-          this._focusedIndex++;
-          this._focusedNodeId = this._flatVisibleNodes[this._focusedIndex].nodeId;
-          if (selectable === 'single') {
-            this._selectNode(this._focusedNodeId, 'replace');
-          }
-          this._ensureFocusedVisible();
+          this._navigateTo(this._focusedIndex + 1);
         }
         return true;
 
@@ -1172,12 +1042,7 @@ export class DataTreeElement extends Element
           } else {
             // Move to first child
             if (this._focusedIndex + 1 < this._flatVisibleNodes.length) {
-              this._focusedIndex++;
-              this._focusedNodeId = this._flatVisibleNodes[this._focusedIndex].nodeId;
-              if (selectable === 'single') {
-                this._selectNode(this._focusedNodeId, 'replace');
-              }
-              this._ensureFocusedVisible();
+              this._navigateTo(this._focusedIndex + 1);
             }
           }
         }
@@ -1194,12 +1059,7 @@ export class DataTreeElement extends Element
           // Move to parent
           const parentIdx = this._flatVisibleNodes.findIndex(n => n.nodeId === focused.parentId);
           if (parentIdx >= 0) {
-            this._focusedIndex = parentIdx;
-            this._focusedNodeId = this._flatVisibleNodes[parentIdx].nodeId;
-            if (selectable === 'single') {
-              this._selectNode(this._focusedNodeId, 'replace');
-            }
-            this._ensureFocusedVisible();
+            this._navigateTo(parentIdx);
           }
         }
         return true;
@@ -1234,42 +1094,22 @@ export class DataTreeElement extends Element
         return true;
 
       case 'Home':
-        this._focusedIndex = 0;
-        this._focusedNodeId = this._flatVisibleNodes[0]?.nodeId ?? null;
-        if (selectable === 'single' && this._focusedNodeId) {
-          this._selectNode(this._focusedNodeId, 'replace');
-        }
-        this._ensureFocusedVisible();
+        this._navigateTo(0);
         return true;
 
       case 'End':
-        this._focusedIndex = this._flatVisibleNodes.length - 1;
-        this._focusedNodeId = this._flatVisibleNodes[this._focusedIndex]?.nodeId ?? null;
-        if (selectable === 'single' && this._focusedNodeId) {
-          this._selectNode(this._focusedNodeId, 'replace');
-        }
-        this._ensureFocusedVisible();
+        this._navigateTo(this._flatVisibleNodes.length - 1);
         return true;
 
       case 'PageUp': {
-        const pageSize = Math.max(1, this._viewportLines);
-        this._focusedIndex = Math.max(0, this._focusedIndex - pageSize);
-        this._focusedNodeId = this._flatVisibleNodes[this._focusedIndex]?.nodeId ?? null;
-        if (selectable === 'single' && this._focusedNodeId) {
-          this._selectNode(this._focusedNodeId, 'replace');
-        }
-        this._ensureFocusedVisible();
+        const pageSize = Math.max(1, this._scroll.viewportLines);
+        this._navigateTo(Math.max(0, this._focusedIndex - pageSize));
         return true;
       }
 
       case 'PageDown': {
-        const pageSize = Math.max(1, this._viewportLines);
-        this._focusedIndex = Math.min(this._flatVisibleNodes.length - 1, this._focusedIndex + pageSize);
-        this._focusedNodeId = this._flatVisibleNodes[this._focusedIndex]?.nodeId ?? null;
-        if (selectable === 'single' && this._focusedNodeId) {
-          this._selectNode(this._focusedNodeId, 'replace');
-        }
-        this._ensureFocusedVisible();
+        const pageSize = Math.max(1, this._scroll.viewportLines);
+        this._navigateTo(Math.min(this._flatVisibleNodes.length - 1, this._focusedIndex + pageSize));
         return true;
       }
     }
@@ -1278,13 +1118,7 @@ export class DataTreeElement extends Element
   }
 
   private _ensureFocusedVisible(): void {
-    if (this._focusedIndex < this._scrollY) {
-      this._scrollY = this._focusedIndex;
-    } else if (this._focusedIndex >= this._scrollY + this._viewportLines) {
-      this._scrollY = this._focusedIndex - this._viewportLines + 1;
-    }
-    const maxScroll = Math.max(0, this._totalContentLines - this._viewportLines);
-    this._scrollY = Math.max(0, Math.min(this._scrollY, maxScroll));
+    this._scroll.ensureVisible(this._focusedIndex);
   }
 
   // ===== Selection =====
@@ -1391,7 +1225,7 @@ export class DataTreeElement extends Element
 
     // Check node row clicks
     for (const [nodeId, bounds] of this._nodeBounds) {
-      if (x >= bounds.x && x < bounds.x + bounds.width && y >= bounds.y && y < bounds.y + bounds.height) {
+      if (boundsContain(x, y, bounds)) {
         const flatNode = this._flatVisibleNodes.find(n => n.nodeId === nodeId);
         if (!flatNode) continue;
 
@@ -1451,10 +1285,9 @@ export class DataTreeElement extends Element
     // Check scrollbar clicks
     if (this._scrollbarBounds) {
       const sb = this._scrollbarBounds;
-      if (x >= sb.x && x < sb.x + sb.width && y >= sb.y && y < sb.y + sb.height) {
+      if (boundsContain(x, y, sb)) {
         const clickRatio = (y - sb.y) / sb.height;
-        const maxScroll = this._totalContentLines - this._viewportLines;
-        this._scrollY = Math.floor(clickRatio * maxScroll);
+        this._scroll.scrollToRatio(clickRatio);
         return true;
       }
     }
@@ -1466,19 +1299,11 @@ export class DataTreeElement extends Element
 
   canHandleWheel(x: number, y: number): boolean {
     if (!this._bodyBounds) return false;
-    const b = this._bodyBounds;
-    return x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height;
+    return boundsContain(x, y, this._bodyBounds);
   }
 
   handleWheel(deltaX: number, deltaY: number): boolean {
-    if (this._totalContentLines <= this._viewportLines) return false;
-
-    const maxScroll = this._totalContentLines - this._viewportLines;
-    const oldScroll = this._scrollY;
-
-    this._scrollY = Math.max(0, Math.min(maxScroll, this._scrollY + deltaY));
-
-    return this._scrollY !== oldScroll;
+    return this._scroll.handleWheel(deltaY);
   }
 
   // ===== Public API =====
@@ -1503,13 +1328,13 @@ export class DataTreeElement extends Element
   expandAll(): void {
     this._expandedNodes.clear();
     this._expandAllRecursive(this.props.nodes, '');
-    this._scrollY = 0;
+    this._scroll.scrollY = 0;
     this._rebuildFlatList();
   }
 
   collapseAll(): void {
     this._expandedNodes.clear();
-    this._scrollY = 0;
+    this._scroll.scrollY = 0;
     this._focusedIndex = 0;
     this._focusedNodeId = this._flatVisibleNodes[0]?.nodeId ?? null;
     this._rebuildFlatList();
@@ -1562,7 +1387,7 @@ export class DataTreeElement extends Element
     const screenY = bounds.y + relY;
 
     for (const [nodeId, b] of this._nodeBounds) {
-      if (screenX >= b.x && screenX < b.x + b.width && screenY >= b.y && screenY < b.y + b.height) {
+      if (boundsContain(screenX, screenY, b)) {
         const flatNode = this._flatVisibleNodes.find(n => n.nodeId === nodeId);
         if (!flatNode) continue;
 
@@ -1620,7 +1445,7 @@ export class DataTreeElement extends Element
       const indentStr = ' '.repeat(flatNode.depth * indent);
       let line = indentStr + flatNode.node.label;
       if (this.props.showValues && flatNode.node.value !== undefined) {
-        line += '  ' + this._formatValue(flatNode.node.value);
+        line += '  ' + formatValue(flatNode.node.value);
       }
       lines.push(line);
     }

@@ -151,6 +151,9 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `$melker.alert(message)` | Show modal alert |
 | `$melker.toast.show(message, options?)` | Show non-modal toast (duplicates show count) |
 | `$melker.toast.dismissAll()` | Dismiss all toast notifications |
+| `$melker.devtools.toggle()` | Toggle Dev Tools overlay |
+| `$melker.devtools.show()` / `hide()` | Open/close Dev Tools programmatically |
+| `$melker.devtools.isOpen()` | Check if Dev Tools is open |
 | `$melker.copyToClipboard(text)` | Copy to clipboard (requires `clipboard: true`, auto-policy default) |
 | `$melker.openBrowser(url)` | Open URL in system browser (requires `browser: true` in policy) |
 | `$melker.cacheDir` | App-specific cache directory path (always exists) |

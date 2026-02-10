@@ -37,7 +37,7 @@ export interface ContainerOptions {
   scrollable?: boolean;
   /** Container width (default: 'fill') */
   width?: string;
-  /** Container height (default: 'fill') */
+  /** Container height (default: 'auto') */
   height?: string;
 }
 
@@ -45,7 +45,7 @@ export interface ContainerOptions {
 const DEFAULT_CONTAINER_OPTIONS: Required<ContainerOptions> = {
   scrollable: true,
   width: 'fill',
-  height: 'fill',
+  height: 'auto',
 };
 
 export interface GraphToMelkerOptions {
@@ -337,15 +337,13 @@ export function graphToMelker(content: string, options: GraphToMelkerOptions): s
   lines.push('<style>');
   lines.push('.graph {');
   lines.push(`  width: ${containerOpts.width};`);
-  lines.push(`  height: ${containerOpts.height};`);
-  // lines.push('  border: thin;');
+  lines.push('  height: auto;');
   lines.push('  padding: 1;');
   lines.push('  display: flex;');
   lines.push('  flex-wrap: wrap;');
   lines.push('  gap: 5;');
   lines.push('  align-items: flex-start;');
   lines.push('  align-content: flex-start;');
-  lines.push('  flex-shrink: 0;');
   lines.push('}');
   lines.push('.graph-row { flex-direction: row; }');
   lines.push('.graph-col { flex-direction: column; }');
@@ -356,6 +354,7 @@ export function graphToMelker(content: string, options: GraphToMelkerOptions): s
   lines.push('  display: flex;');
   lines.push('  flex-wrap: wrap;');
   lines.push('  gap: 4;');
+  lines.push('  align-items: flex-start;');
   lines.push('}');
   lines.push('.subgraph-row { flex-direction: row; }');
   lines.push('.subgraph-col { flex-direction: column; }');
@@ -364,6 +363,7 @@ export function graphToMelker(content: string, options: GraphToMelkerOptions): s
   lines.push('  border: thin;');
   lines.push('  padding: 0 1;');
   lines.push('  flex-shrink: 0;');
+  lines.push('  align-self: flex-start;');
   lines.push('}');
   lines.push('.node-rounded { border: rounded; }');
   lines.push('.node-diamond { border: double; }');
@@ -373,7 +373,7 @@ export function graphToMelker(content: string, options: GraphToMelkerOptions): s
 
   // Top-level container
   const graphClass = isHorizontal ? 'graph graph-row' : 'graph graph-col';
-  const scrollableAttr = containerOpts.scrollable ? ' style="overflow: scroll"' : '';
+  const scrollableAttr = containerOpts.scrollable ? ' style="overflow: scroll; height: auto"' : ' style="height: auto"';
   lines.push(`<container class="${graphClass}"${scrollableAttr}>`);
 
   // Generate subgraph containers
@@ -513,8 +513,10 @@ export function sequenceToMelker(content: string, options: { name?: string; cont
   // Root container for the sequence diagram (table + connectors must be siblings)
   // KNOWN ISSUE: Tables inside containers may not render all rows properly
   // Using flex-direction: column to help with layout
-  const scrollableAttr = containerOpts.scrollable ? ' style="overflow: scroll"' : '';
-  lines.push(`<container style="padding: 1; flex-direction: column"${scrollableAttr}>`);
+  const seqStyle = containerOpts.scrollable
+    ? 'padding: 1; flex-direction: column; overflow: scroll; height: auto'
+    : 'padding: 1; flex-direction: column; height: auto';
+  lines.push(`<container style="${seqStyle}">`);
 
   // Title if present
   if (seq.title) {
@@ -760,7 +762,7 @@ export function classToMelker(content: string, options: { name?: string; contain
 
   // Top-level container
   const diagramClass = isHorizontal ? 'class-diagram class-diagram-row' : 'class-diagram class-diagram-col';
-  const scrollableAttr = containerOpts.scrollable ? ' style="overflow: scroll"' : '';
+  const scrollableAttr = containerOpts.scrollable ? ' style="overflow: scroll; height: auto"' : ' style="height: auto"';
   lines.push(`<container class="${diagramClass}"${scrollableAttr}>`);
 
   // Group classes by level
@@ -1101,7 +1103,7 @@ if (import.meta.main) {
 
   // Check for container options
   const width = parseFlag(args, '--width') || 'fill';
-  const height = parseFlag(args, '--height') || 'fill';
+  const height = parseFlag(args, '--height') || 'auto';
 
   const containerOpts: ContainerOptions = {
     scrollable: !noScrollable,
@@ -1118,7 +1120,7 @@ if (import.meta.main) {
     console.log('  --inputs        Batch mode: convert multiple files, output next to input files');
     console.log('  --no-scrollable Disable scrollable on top-level container (default: scrollable)');
     console.log('  --width=VALUE   Set container width (default: fill)');
-    console.log('  --height=VALUE  Set container height (default: fill)');
+    console.log('  --height=VALUE  Set container height (default: auto)');
     console.log('');
     console.log('Supported diagram types (auto-detected from content):');
     console.log('  - Mermaid flowcharts: flowchart TB, graph LR, etc.');

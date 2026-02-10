@@ -9,8 +9,9 @@
 
   <style>
     .pane {
-      border: thin;
+      border: double;
       padding: 1;
+      background-color: red;
     }
 
     .info {

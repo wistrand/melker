@@ -108,6 +108,8 @@ export class GraphElement extends Element implements Renderable {
   private _generatedElement: Element | null = null;
   private _lastContent: string | null = null;
   private _childrenGenerated: boolean = false;
+  private _registeredStylesheet: Stylesheet | null = null;
+  private _pendingStylesheet: Stylesheet | null = null;
 
   constructor(props: GraphProps, children: Element[] = []) {
     super('graph', props, children);
@@ -247,7 +249,6 @@ export class GraphElement extends Element implements Renderable {
       const containerOpts: ContainerOptions = {
         scrollable: this.props.scrollable !== false, // Default true
         width: 'fill',
-        height: 'fill',
       };
 
       // Apply style overrides if provided
@@ -286,10 +287,11 @@ export class GraphElement extends Element implements Renderable {
       this._generatedElement = parseXmlToElement(containerXml);
       this._lastContent = content;
 
-      // Apply the stylesheet to the generated element tree
-      if (stylesheet && this._generatedElement) {
-        stylesheet.applyTo(this._generatedElement);
-        logger.debug('Applied stylesheet to generated graph');
+      // Register the stylesheet on the document (prepended so document styles can override).
+      // This ensures the graph's CSS classes survive the document's applyTo pass.
+      if (stylesheet) {
+        this._pendingStylesheet = stylesheet;
+        this._tryRegisterStylesheet();
       }
 
       // Set as single child
@@ -310,10 +312,37 @@ export class GraphElement extends Element implements Renderable {
   }
 
   /**
+   * Try to register a pending stylesheet on the document.
+   * Called lazily because the engine/document may not exist during construction.
+   */
+  private _tryRegisterStylesheet(): void {
+    if (!this._pendingStylesheet) return;
+
+    const engine = globalThis.melkerEngine;
+    if (engine?.document) {
+      // Remove previously registered graph stylesheet if regenerating
+      if (this._registeredStylesheet) {
+        engine.document.removeStylesheet(this._registeredStylesheet);
+      }
+      engine.document.addStylesheet(this._pendingStylesheet, true);
+      this._registeredStylesheet = this._pendingStylesheet;
+      // Apply to generated element now so the current render cycle uses correct styles
+      // (the document's initial style pass ran before this stylesheet was registered)
+      if (this._generatedElement) {
+        this._pendingStylesheet.applyTo(this._generatedElement);
+      }
+      this._pendingStylesheet = null;
+      logger.debug('Registered graph stylesheet on document (prepended)');
+    }
+    // If engine/document not yet available, keep pending for next call
+  }
+
+  /**
    * Calculate intrinsic size - delegate to generated children
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     this._generateChildren();
+    this._tryRegisterStylesheet();
 
     if (!this._generatedElement) {
       return { width: 10, height: 3 }; // Minimum size
@@ -336,6 +365,7 @@ export class GraphElement extends Element implements Renderable {
     _context: ComponentRenderContext
   ): void {
     this._generateChildren();
+    this._tryRegisterStylesheet();
 
     // If there's a load error, show it
     if (this._loadError) {
@@ -408,8 +438,8 @@ registerComponent({
   componentClass: GraphElement,
   defaultProps: {
     type: 'mermaid',
-    // Graph elements use flex layout and fill parent to properly size their generated children
-    style: { display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' },
+    // Graph elements use flex layout; height is content-sized so graphs don't expand to fill parent
+    style: { display: 'flex', flexDirection: 'column', width: 'fill' },
   },
   validate: (props) => GraphElement.validate(props as any),
 });

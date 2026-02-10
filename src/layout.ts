@@ -1708,7 +1708,10 @@ export class LayoutEngine {
         totalHeight += childHeight + marginV;
         maxWidth = Math.max(maxWidth, childWidth + marginH);
         maxHeight = Math.max(maxHeight, childHeight + marginV);
-        childCount++;
+        // Only count children with non-zero main-axis size for gap calculation
+        // (e.g., connectors return 0x0 and shouldn't contribute to gap spacing)
+        const mainSize = isRowFlex ? childWidth : childHeight;
+        if (mainSize > 0) childCount++;
       }
 
       // Add gaps between children

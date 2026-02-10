@@ -133,7 +133,8 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
 
           totalWidth += childWidth + marginH;
           totalHeight = Math.max(totalHeight, childHeight + marginV);
-          childCount++;
+          // Only count children with non-zero width for gap calculation
+          if (childWidth > 0) childCount++;
         }
       }
       // Add gaps between children (row: horizontal gaps)
@@ -179,7 +180,9 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
 
           totalWidth = Math.max(totalWidth, childWidth);
           totalHeight += childHeight + marginV;
-          childCount++;
+          // Only count children with non-zero height for gap calculation
+          // (e.g., connectors return 0x0 and shouldn't contribute to gap spacing)
+          if (childHeight > 0) childCount++;
         }
       }
       // Add gaps between children (column: vertical gaps)

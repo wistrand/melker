@@ -1,0 +1,25 @@
+flowchart TB
+    A[melker app.melker] --> B{Local or URL?}
+    B -->|Local| C[Read file]
+    B -->|URL| D[Download]
+    D --> C
+    C --> E{Has policy?}
+    E -->|Yes| F{First run?}
+    E -->|No| G[No permissions]
+    F -->|Yes| H[Show approval prompt]
+    F -->|No| I[Cached approval]
+    H -->|Approved| J[Spawn sandbox]
+    H -->|Denied| K[Exit]
+    I --> J
+    G --> J
+    J --> L{TTY?}
+    L -->|Yes| M[Interactive TUI]
+    L -->|Piped| N[Single frame output]
+    M --> O{User input}
+    O -->|Key/Mouse| P[Event handler]
+    O -->|Resize| Q[@media re-eval]
+O -->|F12| R[Dev Tools]
+O -->|Ctrl+C| S[Exit]
+P --> T[Re-render]
+Q --> T
+T --> O

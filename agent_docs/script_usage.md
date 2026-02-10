@@ -53,6 +53,14 @@ $melker: {
     setPosition(position: 'top' | 'bottom'): void;
   };
 
+  // Dev Tools (F12 overlay)
+  devtools: {
+    show(): void;       // Open Dev Tools overlay
+    hide(): void;       // Close Dev Tools overlay
+    toggle(): void;     // Toggle Dev Tools overlay
+    isOpen(): boolean;  // Check if Dev Tools is open
+  };
+
   // Element creation
   createElement(type: string, props?: Record<string, any>, ...children: any[]): any;
 

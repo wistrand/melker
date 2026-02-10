@@ -8,14 +8,12 @@
 <style>
 .graph {
   width: fill;
-  height: fill;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 5;
   align-items: flex-start;
   align-content: flex-start;
-  flex-shrink: 0;
 }
 .graph-row { flex-direction: row; }
 .graph-col { flex-direction: column; }
@@ -26,6 +24,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4;
+  align-items: flex-start;
 }
 .subgraph-row { flex-direction: row; }
 .subgraph-col { flex-direction: column; }
@@ -34,58 +33,59 @@
   border: thin;
   padding: 0 1;
   flex-shrink: 0;
+  align-self: flex-start;
 }
 .node-rounded { border: rounded; }
 .node-diamond { border: double; }
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll">
+<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
   <!-- Subgraph: Source -->
-  <container id="graph-subgraph-Source" class="subgraph subgraph-col" style="border-title: Source">
-    <container id="graph-node-COMMIT" class="node">
+  <container id="graph-subgraph-Source" class="subgraph subgraph-col" style="border-title: Source; align-items: flex-start">
+    <container id="graph-node-COMMIT" class="node" style="align-self: flex-start">
       <text>Git Commit</text>
     </container>
-    <container id="graph-node-PR" class="node">
+    <container id="graph-node-PR" class="node" style="align-self: flex-start">
       <text>Pull Request</text>
     </container>
   </container>
 
   <!-- Subgraph: CI -->
-  <container id="graph-subgraph-CI" class="subgraph subgraph-col" style="border-title: CI">
-    <container id="graph-node-LINT" class="node">
+  <container id="graph-subgraph-CI" class="subgraph subgraph-col" style="border-title: CI; align-items: flex-start">
+    <container id="graph-node-LINT" class="node" style="align-self: flex-start">
       <text>Lint</text>
     </container>
-    <container id="graph-node-TEST" class="node">
+    <container id="graph-node-TEST" class="node" style="align-self: flex-start">
       <text>Run Tests</text>
     </container>
-    <container id="graph-node-TYPECHECK" class="node">
+    <container id="graph-node-TYPECHECK" class="node" style="align-self: flex-start">
       <text>Type Check</text>
     </container>
-    <container id="graph-node-BUILD" class="node">
+    <container id="graph-node-BUILD" class="node" style="align-self: flex-start">
       <text>Build</text>
     </container>
   </container>
 
   <!-- Subgraph: CD -->
-  <container id="graph-subgraph-CD" class="subgraph subgraph-col" style="border-title: CD">
-    <container id="graph-node-STAGE" class="node">
+  <container id="graph-subgraph-CD" class="subgraph subgraph-col" style="border-title: CD; align-items: flex-start">
+    <container id="graph-node-STAGE" class="node" style="align-self: flex-start">
       <text>Deploy Staging</text>
     </container>
-    <container id="graph-node-APPROVE" class="node node-diamond">
+    <container id="graph-node-APPROVE" class="node node-diamond" style="align-self: flex-start">
       <text>Manual Approval</text>
     </container>
-    <container id="graph-node-PROD" class="node">
+    <container id="graph-node-PROD" class="node" style="align-self: flex-start">
       <text>Deploy Production</text>
     </container>
   </container>
 
   <!-- Subgraph: Notify -->
-  <container id="graph-subgraph-Notify" class="subgraph subgraph-col" style="border-title: Notify">
-    <container id="graph-node-SLACK" class="node">
+  <container id="graph-subgraph-Notify" class="subgraph subgraph-col" style="border-title: Notify; align-items: flex-start">
+    <container id="graph-node-SLACK" class="node" style="align-self: flex-start">
       <text>Slack</text>
     </container>
-    <container id="graph-node-EMAIL" class="node">
+    <container id="graph-node-EMAIL" class="node" style="align-self: flex-start">
       <text>Email</text>
     </container>
   </container>

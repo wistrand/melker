@@ -70,6 +70,8 @@ export class TextSelectionHandler {
   private _resizingDialog: DialogElement | null = null;
   // Throttled action for dialog drag/resize renders (~60fps)
   private _throttledDialogRender!: ThrottledAction;
+  // Throttled action for generic draggable element renders (~60fps)
+  private _throttledDragRender!: ThrottledAction;
   // Generic draggable element state
   private _draggingElement: (Element & Draggable) | null = null;
   private _dragZone: string | null = null;
@@ -114,6 +116,13 @@ export class TextSelectionHandler {
     // Initialize throttled dialog drag/resize render (~60fps) using fast dialog-only path
     this._throttledDialogRender = createThrottledAction(
       () => this._deps.onRenderDialogOnly(),
+      16,  // ~60fps
+      { leading: true, trailing: true }
+    );
+
+    // Initialize throttled generic drag render (~60fps) for split-pane dividers etc.
+    this._throttledDragRender = createThrottledAction(
+      () => this._deps.onRender(),
       16,  // ~60fps
       { leading: true, trailing: true }
     );
@@ -526,10 +535,10 @@ export class TextSelectionHandler {
       return;
     }
 
-    // Handle generic draggable element
+    // Handle generic draggable element (throttled to ~60fps)
     if (this._draggingElement && this._dragZone) {
       this._draggingElement.handleDragMove(this._dragZone, event.x, event.y);
-      this._deps.onRender();
+      this._throttledDragRender.trigger();
       return;
     }
 
@@ -705,7 +714,7 @@ export class TextSelectionHandler {
       this._draggingElement.handleDragEnd(this._dragZone, event.x, event.y);
       this._draggingElement = null;
       this._dragZone = null;
-      this._deps.onRender();
+      this._throttledDragRender.flush(); // Ensure final position is rendered
       return; // Don't process other mouse up events
     }
 

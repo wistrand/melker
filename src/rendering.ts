@@ -1495,7 +1495,7 @@ export class RenderingEngine {
 
     // Check if this element is scrollable and accumulate its scroll offset
     let childScrollOffset = scrollOffset;
-    if (node.element.props?.scrollable) {
+    if (isScrollableType(node.element.type) && isScrollingEnabled(node.element)) {
       const scrollX = node.element.props.scrollX ?? 0;
       const scrollY = node.element.props.scrollY ?? 0;
       childScrollOffset = {

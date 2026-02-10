@@ -68,6 +68,14 @@ export interface MelkerContext {
     setPosition(position: 'top' | 'bottom'): void;
   };
 
+  // Dev Tools
+  devtools: {
+    show(): void;
+    hide(): void;
+    toggle(): void;
+    isOpen(): boolean;
+  };
+
   // System integration
   copyToClipboard(text: string): Promise<boolean>;
   openBrowser(url: string): Promise<boolean>;

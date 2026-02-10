@@ -451,6 +451,32 @@ engine.setSource(mdContent, '/path/to/file.md', 'md', convertedMelkerContent);
 
 The `melker-runner.ts` runner automatically enables this for `.melker` and `.md` files.
 
+### Programmatic API
+
+Dev Tools can be controlled from app code via `$melker.devtools`:
+
+```html
+<button onClick="$melker.devtools.toggle()" label="Dev Tools"/>
+
+<script>
+// Open/close programmatically
+$melker.devtools.show();
+$melker.devtools.hide();
+
+// Check state
+if ($melker.devtools.isOpen()) {
+  $melker.devtools.hide();
+}
+</script>
+```
+
+| Method                      | Description                  |
+|-----------------------------|------------------------------|
+| `$melker.devtools.show()`   | Open Dev Tools overlay       |
+| `$melker.devtools.hide()`   | Close Dev Tools overlay      |
+| `$melker.devtools.toggle()` | Toggle Dev Tools overlay     |
+| `$melker.devtools.isOpen()` | Check if Dev Tools is open   |
+
 ### Implementation
 
 Dev Tools is managed by `DevToolsManager` (`src/dev-tools.ts`):

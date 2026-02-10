@@ -296,6 +296,16 @@ export class Document {
   }
 
   /**
+   * Remove a stylesheet from the document
+   */
+  removeStylesheet(stylesheet: Stylesheet): void {
+    const idx = this._stylesheets.indexOf(stylesheet);
+    if (idx !== -1) {
+      this._stylesheets.splice(idx, 1);
+    }
+  }
+
+  /**
    * Get all stylesheets in the document
    */
   get stylesheets(): readonly Stylesheet[] {

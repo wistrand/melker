@@ -53,7 +53,10 @@ export class ContentMeasurer {
       maxWidth = Math.max(maxWidth, childWidthWithMargin);
 
       childMeasurements.push({ element: child, size: childSize, margin: childMargin });
-      visibleChildCount++;
+      // Only count children with non-zero main-axis size for gap calculation
+      // (e.g., connectors return 0x0 and shouldn't contribute to gap spacing)
+      const mainSize = isRow ? childWidthWithMargin : childHeightWithMargin;
+      if (mainSize > 0) visibleChildCount++;
     }
 
     // Add gaps between children

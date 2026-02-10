@@ -123,6 +123,16 @@ export class DevToolsManager {
     this._open();
   }
 
+  show(): void {
+    if (!this._overlay && this._state?.content) {
+      this._open();
+    }
+  }
+
+  hide(): void {
+    this.close();
+  }
+
   /**
    * Open Dev Tools overlay
    */

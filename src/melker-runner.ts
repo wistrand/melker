@@ -660,6 +660,14 @@ export async function runMelkerFile(
           engine.render();
         },
       },
+
+      // Dev Tools
+      devtools: {
+        show: () => engine._devToolsManager.show(),
+        hide: () => engine._devToolsManager.hide(),
+        toggle: () => engine._devToolsManager.toggle(),
+        isOpen: () => engine._devToolsManager.isOpen(),
+      },
     };
 
     const ui = parseResult.element;

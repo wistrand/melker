@@ -1,0 +1,97 @@
+<melker>
+<title>Melker Demo</title>
+
+<policy>
+{
+  "name": "Melker Demo",
+  "description": "Showcase: animated logo, architecture diagram, and feature overview",
+  "permissions": {
+    "read": ["."],
+    "shader": true,
+    "net": ["samesite"]
+  }
+}
+</policy>
+
+<style>
+.title {
+  font-weight: bold;
+  text-align: center;
+  padding: 1;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 1;
+}
+
+.content {
+  padding: 1;
+}
+
+.feature {
+  padding-left: 1;
+}
+
+.muted {
+  color: gray;
+}
+</style>
+  <split-pane sizes="2,3" style="width: fill; height: fill;">
+    <!-- Left: feature overview -->
+    <container class="content">
+      <text class="section-title">What is Melker?</text>
+      <text style="text-wrap: wrap;">
+        A TUI framework where you write terminal apps the way you'd write a web page. One .melker file — markup, stylesheets, scripts. No compile step, no build system.
+      </text>
+
+      <text class="section-title" style="margin-top: 1;">Features</text>
+      <text class="feature">HTML-like markup with 20+ components</text>
+      <text class="feature">CSS stylesheets with @media queries</text>
+      <text class="feature">Flexbox layout engine</text>
+      <text class="feature">Permission sandbox per app</text>
+      <text class="feature">F12 Dev Tools (inspect, logs, policy)</text>
+      <text class="feature">Piping and stdout mode</text>
+      <text class="feature">Sextant, Sixel, Kitty, iTerm2 graphics</text>
+      <text class="feature">Canvas shaders and image rendering</text>
+      <text class="feature">Mermaid diagrams</text>
+      <text class="feature">LSP for editor support</text>
+
+      <text class="muted" style="margin-top: 1;">melker.sh</text>
+    </container>
+
+    <!-- Right: architecture diagram -->
+    <container style="padding: 1">
+      <text class="section-title">Architecture</text>
+      <graph style="flex: 1;">
+flowchart TB
+    A[melker app.melker] --> B{Local or URL?}
+    B -->|Local| C[Read file]
+    B -->|URL| D[Download]
+    D --> C
+    C --> E{Has policy?}
+    E -->|Yes| F{First run?}
+    E -->|No| G[No permissions]
+    F -->|Yes| H[Show approval prompt]
+    F -->|No| I[Cached approval]
+    H -->|Approved| J[Spawn sandbox]
+    H -->|Denied| K[Exit]
+    I --> J
+    G --> J
+    J --> L{TTY?}
+    L -->|Yes| M[Interactive TUI]
+    L -->|Piped| N[Single frame output]
+    M --> O{User input}
+    O -->|Key/Mouse| P[Event handler]
+    O -->|Resize| Q[@media re-eval]
+    O -->|F12| R[Dev Tools]
+    O -->|Ctrl+C| S[Exit]
+    P --> T[Re-render]
+    Q --> T
+    T --> O
+      </graph>
+    </container>
+
+  </split-pane>
+
+</melker>

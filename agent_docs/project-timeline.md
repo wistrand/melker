@@ -312,6 +312,7 @@ So constructed.
 | data-heatmap     | Feb 3  | 2D heatmaps with color scales, isolines, auto-isolines |
 | tooltip          | Feb 4  | Contextual hover/focus overlays with markdown |
 | split-pane       | Feb 6  | Resizable N-way split panels with dividers    |
+| data-tree        | Feb 10 | Hierarchical tree with expand/collapse, selection, multi-column |
 
 ## Architecture
 

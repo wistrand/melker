@@ -131,6 +131,22 @@ interface DataHeatmapTooltipContext {
 }
 ```
 
+### data-tree
+
+```typescript
+interface DataTreeTooltipContext {
+  type: 'data-tree';
+  nodeId: string;
+  label: string;
+  value?: CellValue;
+  values?: CellValue[];
+  path: string[];
+  depth: number;
+  isExpanded?: boolean;
+  hasChildren: boolean;
+}
+```
+
 ## TooltipProvider Interface
 
 Components that support tooltips implement:
@@ -194,3 +210,4 @@ The tooltip is positioned below the anchor point, flipping above if insufficient
 | `src/components/data-table.ts`    | `getTooltipContext`, `getDefaultTooltip`    |
 | `src/components/data-bars.ts`     | `getTooltipContext`, `getDefaultTooltip`    |
 | `src/components/data-heatmap.ts`  | `getTooltipContext`, `getDefaultTooltip`    |
+| `src/components/data-tree.ts`     | `getTooltipContext`, `getDefaultTooltip`    |

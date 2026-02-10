@@ -190,6 +190,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `<data-table>` | columns, rows, selectable, onSelect | Array-based table |
 | `<data-bars>` | series, bars, labels, showValues | Bar charts (stacked/grouped/sparkline) |
 | `<data-heatmap>` | grid, colorScale, isolines/isolineCount, showCells | Heatmap with color scales and auto-isolines |
+| `<data-tree>` | nodes, columns, selectable, expandAll, showConnectors | Hierarchical tree with expand/collapse, multi-column |
 | `<table>` | border, columnBorders, resizable | HTML-like table |
 | `<file-browser>` | path, selectType, onSelect, onCancel | File/dir picker |
 | `<graph>` | type, src, text, style | Mermaid/JSON diagrams (flowchart, sequence, class) |

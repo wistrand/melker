@@ -90,6 +90,7 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
   borderBottomColor: { type: 'string', description: 'Bottom border color' },
   borderLeftColor: { type: 'string', description: 'Left border color' },
   borderRightColor: { type: 'string', description: 'Right border color' },
+  connectorColor: { type: 'string', description: 'Tree connector line color' },
 
   // Font
   fontWeight: { type: 'string', enum: ['normal', 'bold'], description: 'Text weight' },

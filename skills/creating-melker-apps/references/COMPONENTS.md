@@ -625,6 +625,96 @@ hm.setColumn(col, values);        // Set entire column
 - In BW mode, uses pattern characters (░▒▓█) instead of colors
 - Supports text selection - copies selected region as JSON
 
+### data-tree
+
+Data-driven tree view for hierarchical data with expand/collapse, selection, keyboard navigation, multi-column support, and virtual scrolling.
+
+```xml
+<!-- Single-column tree -->
+<data-tree
+  selectable="single"
+  expandAll="true"
+  tooltip="auto"
+  onChange="$app.handleSelect(event)"
+  onActivate="$app.handleActivate(event)"
+>
+{
+  "nodes": [
+    {
+      "label": "src",
+      "children": [
+        { "label": "engine.ts", "value": "12,450 B" },
+        { "label": "layout.ts", "value": "8,200 B" }
+      ]
+    },
+    { "label": "README.md", "value": "580 B" }
+  ]
+}
+</data-tree>
+
+<!-- Multi-column tree -->
+<data-tree
+  columns='[{"header": "Size", "width": 10, "align": "right"}, {"header": "Type", "width": 6}]'
+  showColumnBorders="true"
+  selectable="single"
+>
+{
+  "nodes": [
+    {
+      "label": "src",
+      "values": ["", "dir"],
+      "children": [
+        { "label": "engine.ts", "values": ["12,450 B", "ts"] }
+      ]
+    }
+  ]
+}
+</data-tree>
+```
+
+**Props:**
+- `nodes` - Array of TreeNode objects (or inline JSON with `{ "nodes": [...] }`)
+- `showConnectors` - Show branch connector lines (default: true)
+- `indent` - Characters per indent level (default: 2)
+- `expandAll` - Start fully expanded (default: false)
+- `showValues` - Show value column in single-column mode (default: false)
+- `border` - Border style (default: 'thin')
+- `columns` - Additional value columns (tree column is implicit first)
+- `showColumnBorders` - Show column separators (default: false)
+- `showHeader` - Show column headers (default: true when columns defined)
+- `selectable` - 'none', 'single', 'multi' (default: 'none')
+- `selectedNodes` - Controlled selection by node ID
+- `onChange`, `onActivate`, `onExpand`, `onCollapse` - Event handlers
+
+**Style props:**
+- `border-color` - Color for box border
+- `connector-color` - Color for tree connector lines and icons (default: gray)
+
+**TreeNode:**
+```typescript
+{ id?, label, value?, values?, children?, expanded?, disabled? }
+```
+
+**API:**
+```typescript
+const tree = $melker.getElementById('tree');
+tree.getValue();                      // Get TreeNode[]
+tree.setValue(nodes);                  // Set tree data
+tree.expandNode(nodeId);              // Expand node
+tree.collapseNode(nodeId);            // Collapse node
+tree.expandAll();                     // Expand all
+tree.collapseAll();                   // Collapse all
+tree.setChildren(nodeId, children);   // Replace children (lazy loading)
+tree.getSelectedNodes();              // Get selected IDs
+tree.scrollToNode(nodeId);            // Scroll to node
+```
+
+**Notes:**
+- Node IDs auto-generated from label path (e.g., `src/engine.ts`) if `id` omitted
+- `setChildren()` enables lazy loading — listen for `onExpand`, fetch data, call `setChildren()`
+- Keyboard: Arrow keys navigate, Left/Right expand/collapse, Enter activates, Space toggles
+- Supports tooltip with `tooltip="auto"` showing node path and values
+
 ### table / thead / tbody / tr / th / td
 
 HTML-like table for complex cell content (buttons, inputs, etc.).

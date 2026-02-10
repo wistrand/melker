@@ -74,6 +74,27 @@ export interface DataHeatmapTooltipContext extends TooltipContext {
   value: number;
 }
 
+/** data-tree specific context */
+export interface DataTreeTooltipContext extends TooltipContext {
+  type: 'data-tree';
+  /** Node ID */
+  nodeId: string;
+  /** Node label */
+  label: string;
+  /** Node value if available (single-column mode) */
+  value?: string | number | boolean | null | undefined;
+  /** Per-column values (multi-column mode) */
+  values?: (string | number | boolean | null | undefined)[];
+  /** Ancestor label path from root */
+  path: string[];
+  /** Nesting depth (0 = root) */
+  depth: number;
+  /** Whether node is expanded */
+  isExpanded?: boolean;
+  /** Whether node has children */
+  hasChildren: boolean;
+}
+
 /** list/scrollable specific context */
 export interface ListTooltipContext extends TooltipContext {
   type: 'list';

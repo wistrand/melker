@@ -506,6 +506,136 @@ The `<table>` component provides data tables with optional scrollable body.
 | `src/components/table-row.ts`     | Row container                |
 | `src/components/table-cell.ts`    | td/th cells                  |
 
+## Data Tree Component
+
+The `<data-tree>` component displays hierarchical data with expand/collapse, selection, keyboard navigation, multi-column support, and virtual scrolling.
+
+### Usage
+
+**Inline JSON:**
+
+```xml
+<data-tree
+  id="filetree"
+  style="width: fill; height: 20; border-color: cyan;"
+  selectable="single"
+  expandAll="true"
+  tooltip="auto"
+  onChange="$app.handleSelect(event)"
+  onActivate="$app.handleActivate(event)"
+>
+{
+  "nodes": [
+    {
+      "label": "src",
+      "children": [
+        { "label": "engine.ts", "value": "12,450 B" },
+        { "label": "layout.ts", "value": "8,200 B" }
+      ]
+    },
+    { "label": "README.md", "value": "580 B" }
+  ]
+}
+</data-tree>
+```
+
+**Multi-column:**
+
+```xml
+<data-tree
+  columns='[{"header": "Size", "width": 10, "align": "right"}, {"header": "Type", "width": 6}]'
+  showColumnBorders="true"
+  selectable="single"
+>
+{
+  "nodes": [
+    {
+      "label": "src",
+      "values": ["", "dir"],
+      "children": [
+        { "label": "engine.ts", "values": ["12,450 B", "ts"] }
+      ]
+    }
+  ]
+}
+</data-tree>
+```
+
+### Props
+
+| Prop                | Type                                  | Default | Description                                |
+|---------------------|---------------------------------------|---------|--------------------------------------------|
+| `nodes`             | TreeNode[]                            | []      | Tree node data (or inline JSON content)    |
+| `showConnectors`    | boolean                               | true    | Show branch connector lines                |
+| `indent`            | number                                | 2       | Characters per indent level                |
+| `expandAll`         | boolean                               | false   | Start fully expanded                       |
+| `showValues`        | boolean                               | false   | Show value column in single-column mode    |
+| `border`            | BorderStyle                           | 'thin'  | Border style                               |
+| `columns`           | TreeColumn[]                          | -       | Additional value columns (tree is implicit first) |
+| `showColumnBorders` | boolean                               | false   | Show column separators                     |
+| `showHeader`        | boolean                               | auto    | Show column headers (default: true when columns defined) |
+| `selectable`        | `'none'` \| `'single'` \| `'multi'`  | 'none'  | Selection mode                             |
+| `selectedNodes`     | string[]                              | -       | Controlled selection by node ID            |
+| `onChange`          | function                              | -       | Selection change handler                   |
+| `onActivate`        | function                              | -       | Enter/double-click handler                 |
+| `onExpand`          | function                              | -       | Node expanded handler                      |
+| `onCollapse`        | function                              | -       | Node collapsed handler                     |
+
+### Style Props
+
+| Property          | Type        | Default | Description                          |
+|-------------------|-------------|---------|--------------------------------------|
+| `border-color`    | ColorInput  | inherit | Color for box border                 |
+| `connector-color` | ColorInput  | gray    | Color for tree connector lines/icons |
+
+### TreeNode Interface
+
+```typescript
+interface TreeNode {
+  id?: string;            // Unique ID (auto-generated from label path if omitted)
+  label: string;          // Display text
+  value?: CellValue;      // Single-column mode value
+  values?: CellValue[];   // Multi-column mode values
+  children?: TreeNode[];  // Child nodes
+  expanded?: boolean;     // Initial expand state
+  disabled?: boolean;     // Not selectable
+}
+```
+
+### Keyboard
+
+| Key           | Action                                              |
+|---------------|-----------------------------------------------------|
+| Arrow Up/Down | Navigate visible nodes                              |
+| Arrow Right   | Expand branch / move to first child if expanded     |
+| Arrow Left    | Collapse branch / move to parent if leaf/collapsed  |
+| Enter         | Activate node                                       |
+| Space         | Toggle selection (multi) or expand/collapse (none)  |
+| Home/End      | First/last visible node                             |
+| PageUp/Down   | Scroll by viewport height                           |
+
+### Methods
+
+```typescript
+const tree = document.getElementById('myTree');
+tree.getValue();                      // Get TreeNode[]
+tree.setValue(nodes);                  // Set tree data
+tree.expandNode(nodeId);              // Expand node
+tree.collapseNode(nodeId);            // Collapse node
+tree.expandAll();                     // Expand all nodes
+tree.collapseAll();                   // Collapse all nodes
+tree.toggleNode(nodeId);              // Toggle expand
+tree.setChildren(nodeId, children);   // Replace children (for lazy loading)
+tree.getSelectedNodes();              // Get selected node IDs
+tree.scrollToNode(nodeId);            // Scroll to node
+```
+
+### Implementation Files
+
+| File                           | Purpose                  |
+|--------------------------------|--------------------------|
+| `src/components/data-tree.ts`  | Component implementation |
+
 ## Dialog Component
 
 The `<dialog>` component provides modal overlay dialogs. Defaults to flex column layout.
@@ -1568,6 +1698,7 @@ Layout properties (padding, margin, border widths) do NOT inherit.
 - [data-table.md](data-table.md) — Data table component
 - [data-bars.md](data-bars.md) — Bar chart components
 - [data-heatmap-architecture.md](data-heatmap-architecture.md) — Heatmap with isolines
+- [data-tree-architecture.md](data-tree-architecture.md) — Tree view component
 - [spinner-architecture.md](spinner-architecture.md) — Spinner component internals
 - [toast-architecture.md](toast-architecture.md) — Toast notification system
 - [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system

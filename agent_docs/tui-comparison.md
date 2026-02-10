@@ -236,7 +236,7 @@ text("Hello") | border | color(Color::Cyan)
 | Masked input     |   Y    |  -  |    -    |     -      |   -   |    Y    |    -    |   -   |
 | **Data**         |        |     |         |            |       |         |         |       |
 | Table            |   Y    | Y*  |    Y    |     Y      |   Y   |    Y    |    Y    |   -   |
-| Tree             |   -    |  -  |    Y    |     -      |   Y   |    Y    |    -    |   -   |
+| Tree             |   Y    |  -  |    Y    |     -      |   Y   |    Y    |    -    |   -   |
 | List             |   Y    |  Y  |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
 | **Feedback**     |        |     |         |            |       |         |         |       |
 | Progress bar     |   Y    |  Y  |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
@@ -270,7 +270,7 @@ Y = Built-in, Y* = Via extension/crate, ~ = Partial/limited, - = Not available
 - **Bubble Tea markdown**: Via Glamour library from Charmbracelet
 - **Ratatui shaders**: Via tachyonfx crate for shader-like effects
 - **Ratatui image**: Via ratatui-image crate with sixel/halfblock support
-- **Melker gaps (high priority)**: Tree
+- **Melker tree**: Native `<data-tree>` component with expand/collapse, selection, multi-column, virtual scrolling
 
 ## Architecture Patterns
 

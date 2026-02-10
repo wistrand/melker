@@ -96,6 +96,7 @@ export interface Style extends Record<string, any> {
   borderTitle?: string;
   dividerColor?: ColorInput;
   dividerStyle?: BorderStyle;
+  connectorColor?: ColorInput;
   padding?: number | BoxSpacing;
   margin?: number | BoxSpacing;
   marginBottom?: number;

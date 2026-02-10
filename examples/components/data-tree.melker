@@ -1,0 +1,140 @@
+<melker>
+  <title>Data Tree Demo</title>
+
+  <container style="flex-direction: column; width: 100%; height: 100%; gap: 1; padding: 0">
+    <container style="flex-direction: row; justify-content: space-between; padding: 0 1;">
+      <text style="font-weight: bold;">File Explorer</text>
+      <text id="status">No selection</text>
+    </container>
+
+    <container style="flex-direction: row; gap: 1; height: fill; padding: 0 1;">
+      <!-- Simple tree with selection -->
+      <data-tree
+        id="filetree"
+        style="width: 50%; height: fill; border-color: cyan;"
+        selectable="single"
+        expandAll="true"
+        tooltip="auto"
+        onChange="$app.handleSelect(event)"
+        onActivate="$app.handleActivate(event)"
+        onExpand="$app.handleExpand(event)"
+      >
+      {
+        "nodes": [
+          {
+            "label": "src",
+            "children": [
+              {
+                "label": "components",
+                "children": [
+                  { "label": "button.ts", "value": "4,200 B" },
+                  { "label": "input.ts", "value": "3,800 B" },
+                  { "label": "data-table.ts", "value": "12,450 B" },
+                  { "label": "data-tree.ts", "value": "9,100 B" }
+                ]
+              },
+              {
+                "label": "utils",
+                "children": [
+                  { "label": "color.ts", "value": "1,200 B" },
+                  { "label": "format.ts", "value": "800 B" }
+                ]
+              },
+              { "label": "engine.ts", "value": "15,300 B" },
+              { "label": "layout.ts", "value": "8,200 B" },
+              { "label": "types.ts", "value": "3,100 B" },
+              { "label": "mod.ts", "value": "1,200 B" }
+            ]
+          },
+          {
+            "label": "tests",
+            "children": [
+              { "label": "engine.test.ts", "value": "2,800 B" },
+              { "label": "layout.test.ts", "value": "1,900 B" }
+            ]
+          },
+          { "label": "README.md", "value": "580 B" },
+          { "label": "deno.json", "value": "340 B" }
+        ]
+      }
+      </data-tree>
+
+      <!-- Multi-column tree -->
+      <data-tree
+        id="multicol"
+        style="width: 50%; height: fill; border-color: cyan;"
+        selectable="single"
+        expandAll="true"
+        tooltip="auto"
+        showColumnBorders="true"
+        columns='[{"header": "Size", "width": 10, "align": "right"}, {"header": "Type", "width": 6}]'
+      >
+      {
+        "nodes": [
+          {
+            "label": "src",
+            "values": ["", "dir"],
+            "children": [
+              {
+                "label": "components",
+                "values": ["", "dir"],
+                "children": [
+                  { "label": "button.ts", "values": ["4,200 B", "ts"] },
+                  { "label": "input.ts", "values": ["3,800 B", "ts"] },
+                  { "label": "table.ts", "values": ["12,450 B", "ts"] }
+                ]
+              },
+              {
+                "label": "utils",
+                "values": ["", "dir"],
+                "children": [
+                  { "label": "color.ts", "values": ["1,200 B", "ts"] },
+                  { "label": "format.ts", "values": ["800 B", "ts"] }
+                ]
+              },
+              { "label": "engine.ts", "values": ["15,300 B", "ts"] },
+              { "label": "mod.ts", "values": ["1,200 B", "ts"] }
+            ]
+          },
+          {
+            "label": "tests",
+            "values": ["", "dir"],
+            "children": [
+              { "label": "engine.test.ts", "values": ["2,800 B", "ts"] },
+              { "label": "layout.test.ts", "values": ["1,900 B", "ts"] }
+            ]
+          },
+          { "label": "README.md", "values": ["580 B", "md"] },
+          { "label": "deno.json", "values": ["340 B", "json"] }
+        ]
+      }
+      </data-tree>
+    </container>
+
+    <container style="flex-direction: row; gap: 2; padding: 0 1;">
+      <text>Arrows: navigate</text>
+      <text>Enter: activate</text>
+      <text>Left/Right: collapse/expand</text>
+      <button label="Exit" onClick="$melker.exit()" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    export function handleSelect(event: { nodeId: string; label: string; value?: string; path: string[] }) {
+      const statusEl = $melker.getElementById('status');
+      if (statusEl) {
+        const pathStr = event.path.join(' > ');
+        statusEl.setValue('Selected: ' + pathStr);
+      }
+    }
+
+    export function handleActivate(event: { nodeId: string; label: string; value?: string; path: string[] }) {
+      const pathStr = event.path.join('/');
+      $melker.alert('Activated: ' + pathStr + (event.value ? '\nSize: ' + event.value : ''));
+    }
+
+    export function handleExpand(event: { nodeId: string; label: string; expanded: boolean }) {
+      $melker.logger.info('Expanded: ' + event.label);
+    }
+  </script>
+</melker>

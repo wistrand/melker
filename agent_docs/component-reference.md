@@ -51,6 +51,34 @@ Components are registered with `registerComponent()`. Registered components use 
 
 See `src/components/*.ts` for component implementations.
 
+### ARIA Attributes
+
+Elements support ARIA attributes as regular props (via `BaseProps extends Record<string, any>`). They are consumed exclusively by the AI context builder in `src/ai/context.ts` — they have no effect on rendering, layout, or keyboard navigation.
+
+**Supported attributes:**
+
+| Attribute          | Type    | Consumed by                                      |
+|--------------------|---------|--------------------------------------------------|
+| `role`             | string  | Replaces element type in AI output               |
+| `aria-label`       | string  | Accessible name (overrides `title`/`placeholder`) |
+| `aria-labelledby`  | string  | Space-separated IDs resolved via `document.getElementById()` — highest naming priority |
+| `aria-hidden`      | boolean | Excludes element and subtree from AI context     |
+| `aria-description` | string  | Supplementary text appended to element output    |
+| `aria-expanded`    | boolean | Shows `expanded`/`collapsed` state               |
+| `aria-controls`    | string  | Shows `controls: element-id` relationship        |
+| `aria-busy`        | boolean | Shows `loading` indicator                        |
+| `aria-required`    | boolean | Shows `required` on inputs/textareas/checkboxes  |
+| `aria-invalid`     | boolean | Shows `invalid` on inputs/textareas              |
+
+**Naming priority chain:** `aria-labelledby` > `aria-label` > native label (`title`, `placeholder`, `label`)
+
+**Implementation:** All ARIA logic is in `src/ai/context.ts`. Three helper functions handle resolution:
+- `isAriaTrue(value)` — normalizes boolean/string ARIA attribute checks
+- `getAccessibleText(el)` — extracts text from a referenced element
+- `resolveAriaLabelledBy(el, document)` — resolves space-separated ID references to concatenated text
+
+These are used across `buildScreenContent()`, `buildElementTree()`, and `describeFocusedElement()`.
+
 ## Document Model (`src/document.ts`)
 
 The `Document` class manages runtime state:

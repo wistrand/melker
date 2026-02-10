@@ -42,8 +42,8 @@
 <split-pane sizes="2,3" style="width: fill; height: fill; direction: vertical;">
 
     <!-- Top: feature overview -->
-    <container class="content" style="overflow: scroll;">
-        <container style="flex-direction: row; justify-content: center;">
+    <container class="content" style="overflow: scroll;" role="main" aria-label="Feature overview">
+        <container style="flex-direction: row; justify-content: center;" role="toolbar" aria-label="Actions">
           <button onClick="$melker.exit" label="Exit"/>
           <button onClick="$melker.devtools.toggle()" label="Dev Tools"/>
         </container>
@@ -65,8 +65,8 @@ A TUI framework where you write terminal apps the way you'd write a web page. On
   <!-- Bottom: horizontal split — logo left, diagram right -->
   <split-pane sizes="2,3" style="width: fill; height: fill;">
 
-      <!-- Top: animated logo -->
-      <container>
+      <!-- Left: animated logo -->
+      <container aria-label="Animated logo">
           <img
                   id="logo"
                   src="../../media/melker-128.png"
@@ -81,8 +81,8 @@ A TUI framework where you write terminal apps the way you'd write a web page. On
 
 
       <!-- Right: architecture diagram -->
-    <container style="padding: 1;">
-      <text class="section-title">Architecture</text>
+    <container style="padding: 1;" role="complementary" aria-label="Architecture diagram">
+      <text class="section-title" aria-hidden="true">Architecture</text>
       <graph style="flex: 1;">
 flowchart LR
     A[melker app.melker] --> B{Local or URL?}

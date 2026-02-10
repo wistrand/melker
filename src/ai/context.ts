@@ -4,6 +4,33 @@
 import { Document } from '../document.ts';
 import { Element, isScrollingEnabled } from '../types.ts';
 
+/** Check if an ARIA boolean attribute is truthy (handles both boolean and string values) */
+function isAriaTrue(value: unknown): boolean {
+  return value === true || value === 'true';
+}
+
+/** Extract accessible text from an element */
+function getAccessibleText(el: Element): string | undefined {
+  return el.props['aria-label'] || el.props.title || el.props.text || el.props.label;
+}
+
+/** Resolve aria-labelledby by looking up referenced elements' text content */
+function resolveAriaLabelledBy(element: Element, document: Document): string | undefined {
+  const labelledBy = element.props['aria-labelledby'];
+  if (!labelledBy || typeof labelledBy !== 'string') return undefined;
+
+  const ids = labelledBy.trim().split(/\s+/);
+  const texts: string[] = [];
+  for (const id of ids) {
+    const ref = document.getElementById(id);
+    if (ref) {
+      const text = getAccessibleText(ref);
+      if (text) texts.push(text);
+    }
+  }
+  return texts.length > 0 ? texts.join(' ') : undefined;
+}
+
 export interface UIContext {
   screenContent: string;
   focusedElement: string;
@@ -16,11 +43,16 @@ export interface UIContext {
  * Build a text representation of the screen content
  * Excludes elements with IDs in the excludeIds array
  */
-function buildScreenContent(root: Element, excludeIds: Set<string>): string {
+function buildScreenContent(root: Element, excludeIds: Set<string>, document: Document): string {
   const lines: string[] = [];
 
   function traverse(element: Element, depth: number): void {
     if (excludeIds.has(element.id)) {
+      return;
+    }
+
+    // Skip elements hidden from accessibility tree
+    if (isAriaTrue(element.props['aria-hidden'])) {
       return;
     }
 
@@ -34,36 +66,51 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
         }
         break;
 
-      case 'button':
-        if (element.props.title) {
-          lines.push(`${indent}[Button: ${element.props.title}]`);
+      case 'button': {
+        const buttonName = resolveAriaLabelledBy(element, document) || element.props['aria-label'] || element.props.title;
+        if (buttonName) {
+          const states: string[] = [];
+          if (isAriaTrue(element.props['aria-expanded'])) states.push('expanded');
+          else if (element.props['aria-expanded'] === false || element.props['aria-expanded'] === 'false') states.push('collapsed');
+          if (element.props['aria-controls']) states.push(`controls: ${element.props['aria-controls']}`);
+          const suffix = states.length > 0 ? ` (${states.join(', ')})` : '';
+          lines.push(`${indent}[Button: ${buttonName}${suffix}]`);
         }
         break;
+      }
 
       case 'input': {
-        const placeholder = element.props.placeholder || 'text input';
+        const inputName = resolveAriaLabelledBy(element, document) || element.props['aria-label'] || element.props.placeholder || 'text input';
         const value = element.props.value || '';
-        lines.push(`${indent}[Input: ${placeholder}${value ? ' = "' + value + '"' : ''}]`);
+        const states: string[] = [];
+        if (isAriaTrue(element.props['aria-required'])) states.push('required');
+        if (isAriaTrue(element.props['aria-invalid'])) states.push('invalid');
+        const stateStr = states.length > 0 ? ` (${states.join(', ')})` : '';
+        lines.push(`${indent}[Input: ${inputName}${stateStr}${value ? ' = "' + value + '"' : ''}]`);
         break;
       }
 
       case 'checkbox': {
-        const checked = element.props.checked ? 'checked' : 'unchecked';
-        const cbTitle = element.props.title || 'checkbox';
-        lines.push(`${indent}[Checkbox: ${cbTitle} (${checked})]`);
+        const cbStates: string[] = [element.props.checked ? 'checked' : 'unchecked'];
+        if (isAriaTrue(element.props['aria-required'])) cbStates.push('required');
+        const cbTitle = resolveAriaLabelledBy(element, document) || element.props['aria-label'] || element.props.title || 'checkbox';
+        lines.push(`${indent}[Checkbox: ${cbTitle} (${cbStates.join(', ')})]`);
         break;
       }
 
       case 'radio': {
         const selected = element.props.checked ? 'selected' : 'unselected';
-        const rbTitle = element.props.title || 'radio';
+        const rbTitle = resolveAriaLabelledBy(element, document) || element.props['aria-label'] || element.props.title || 'radio';
         lines.push(`${indent}[Radio: ${rbTitle} (${selected})]`);
         break;
       }
 
       case 'dialog':
-        if (element.props.open && element.props.title) {
-          lines.push(`${indent}[Dialog: ${element.props.title}]`);
+        if (element.props.open) {
+          const dialogName = resolveAriaLabelledBy(element, document) || element.props['aria-label'] || element.props.title;
+          if (dialogName) {
+            lines.push(`${indent}[Dialog: ${dialogName}]`);
+          }
         }
         break;
 
@@ -102,10 +149,15 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
       }
 
       case 'textarea': {
-        const placeholder = element.props.placeholder || 'text area';
+        const taName = resolveAriaLabelledBy(element, document) || element.props['aria-label'] || element.props.placeholder || 'text area';
         const value = element.props.value || '';
         const lineCount = value.split('\n').length;
-        lines.push(`${indent}[TextArea: ${placeholder}${value ? ` (${lineCount} lines)` : ''}]`);
+        const taExtras: string[] = [];
+        if (isAriaTrue(element.props['aria-required'])) taExtras.push('required');
+        if (isAriaTrue(element.props['aria-invalid'])) taExtras.push('invalid');
+        if (value) taExtras.push(`${lineCount} lines`);
+        const taSuffix = taExtras.length > 0 ? ` (${taExtras.join(', ')})` : '';
+        lines.push(`${indent}[TextArea: ${taName}${taSuffix}]`);
         break;
       }
 
@@ -117,20 +169,48 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
       }
 
       case 'container': {
-        // Add info about container purpose if it has an id
-        if (element.id && !element.id.startsWith('doc-')) {
-          const scrollable = isScrollingEnabled(element) ? ', scrollable' : '';
-          lines.push(`${indent}[Container: ${element.id}${scrollable}]`);
+        const role = element.props.role;
+        const ariaLabel = resolveAriaLabelledBy(element, document) || element.props['aria-label'];
+        const cStates: string[] = [];
+        if (isAriaTrue(element.props['aria-expanded'])) cStates.push('expanded');
+        else if (element.props['aria-expanded'] === false || element.props['aria-expanded'] === 'false') cStates.push('collapsed');
+        if (isAriaTrue(element.props['aria-busy'])) cStates.push('loading');
+        if (!role && !ariaLabel && isScrollingEnabled(element)) cStates.push('scrollable');
+        const cSuffix = cStates.length > 0 ? `, ${cStates.join(', ')}` : '';
+        if (role) {
+          const roleName = role.charAt(0).toUpperCase() + role.slice(1);
+          lines.push(`${indent}[${roleName}${ariaLabel ? ': ' + ariaLabel : ''}${cSuffix}]`);
+        } else if (ariaLabel) {
+          lines.push(`${indent}[Container: ${ariaLabel}${cSuffix}]`);
+        } else if (element.id && !element.id.startsWith('doc-')) {
+          lines.push(`${indent}[Container: ${element.id}${cSuffix}]`);
+        } else if (cStates.length > 0) {
+          lines.push(`${indent}[Container${cSuffix}]`);
         }
         break;
       }
 
-      default:
-        // Unknown element type - show it
+      default: {
         if (element.type !== 'container') {
-          lines.push(`${indent}[${element.type}]`);
+          const role = element.props.role;
+          const ariaLabel = resolveAriaLabelledBy(element, document) || element.props['aria-label'];
+          const typeName = role
+            ? role.charAt(0).toUpperCase() + role.slice(1)
+            : element.type;
+          const dStates: string[] = [];
+          if (isAriaTrue(element.props['aria-expanded'])) dStates.push('expanded');
+          else if (element.props['aria-expanded'] === false || element.props['aria-expanded'] === 'false') dStates.push('collapsed');
+          if (isAriaTrue(element.props['aria-busy'])) dStates.push('loading');
+          const dSuffix = dStates.length > 0 ? ` (${dStates.join(', ')})` : '';
+          lines.push(`${indent}[${typeName}${ariaLabel ? ': ' + ariaLabel : ''}${dSuffix}]`);
         }
         break;
+      }
+    }
+
+    // Add aria-description as supplementary context
+    if (element.props['aria-description']) {
+      lines.push(`${indent}  (${element.props['aria-description']})`);
     }
 
     // Traverse children
@@ -157,7 +237,7 @@ function buildScreenContent(root: Element, excludeIds: Set<string>): string {
 /**
  * Build a structural tree representation of the UI
  */
-function buildElementTree(root: Element, excludeIds: Set<string>): string {
+function buildElementTree(root: Element, excludeIds: Set<string>, document: Document): string {
   const lines: string[] = [];
 
   function traverse(element: Element, prefix: string, isLast: boolean): void {
@@ -165,23 +245,38 @@ function buildElementTree(root: Element, excludeIds: Set<string>): string {
       return;
     }
 
+    // Skip elements hidden from accessibility tree
+    if (isAriaTrue(element.props['aria-hidden'])) {
+      return;
+    }
+
     const connector = isLast ? '\\-- ' : '+-- ';
     const childPrefix = prefix + (isLast ? '    ' : '|   ');
 
-    // Format element node
-    let node = element.type;
+    // Format element node — use role if provided
+    let node = element.props.role || element.type;
     if (element.id && !element.id.startsWith('doc-')) {
       node += `#${element.id}`;
     }
 
-    // Add key info
+    // Add key info — aria-labelledby > aria-label > title as accessible name
     const info: string[] = [];
-    if (element.props.title) info.push(`"${element.props.title}"`);
+    const accessibleName = resolveAriaLabelledBy(element, document) || element.props['aria-label'] || element.props.title;
+    if (accessibleName) info.push(`"${accessibleName}"`);
     if (element.props.text && element.props.text.length < 30) {
       info.push(`"${element.props.text}"`);
     }
     if (element.props.disabled) info.push('disabled');
     if (element.props.focused) info.push('focused');
+    if (element.props['aria-description']) {
+      info.push(`desc: "${element.props['aria-description']}"`);
+    }
+    if (isAriaTrue(element.props['aria-expanded'])) info.push('expanded');
+    else if (element.props['aria-expanded'] === false || element.props['aria-expanded'] === 'false') info.push('collapsed');
+    if (isAriaTrue(element.props['aria-busy'])) info.push('loading');
+    if (isAriaTrue(element.props['aria-required'])) info.push('required');
+    if (isAriaTrue(element.props['aria-invalid'])) info.push('invalid');
+    if (element.props['aria-controls']) info.push(`controls: ${element.props['aria-controls']}`);
 
     // Add state info for interactive elements
     if (element.props.checked !== undefined) {
@@ -241,14 +336,15 @@ function describeFocusedElement(document: Document): string {
   }
 
   const parts: string[] = [];
-  parts.push(`Type: ${focused.type}`);
+  parts.push(`Type: ${focused.props.role || focused.type}`);
 
   if (focused.id && !focused.id.startsWith('doc-')) {
     parts.push(`ID: ${focused.id}`);
   }
 
-  if (focused.props.title) {
-    parts.push(`Title: "${focused.props.title}"`);
+  const focusedName = resolveAriaLabelledBy(focused, document) || focused.props['aria-label'] || focused.props.title;
+  if (focusedName) {
+    parts.push(`Title: "${focusedName}"`);
   }
 
   if (focused.props.text) {
@@ -271,8 +367,23 @@ function describeFocusedElement(document: Document): string {
     parts.push(`Placeholder: "${focused.props.placeholder}"`);
   }
 
+  if (focused.props['aria-description']) {
+    parts.push(`Description: "${focused.props['aria-description']}"`);
+  }
+
   if (focused.props.disabled) {
     parts.push('(disabled)');
+  }
+  if (isAriaTrue(focused.props['aria-expanded'])) {
+    parts.push('(expanded)');
+  } else if (focused.props['aria-expanded'] === false || focused.props['aria-expanded'] === 'false') {
+    parts.push('(collapsed)');
+  }
+  if (isAriaTrue(focused.props['aria-busy'])) parts.push('(loading)');
+  if (isAriaTrue(focused.props['aria-required'])) parts.push('(required)');
+  if (isAriaTrue(focused.props['aria-invalid'])) parts.push('(invalid)');
+  if (focused.props['aria-controls']) {
+    parts.push(`Controls: "${focused.props['aria-controls']}"`);
   }
 
   return parts.join(', ');
@@ -362,9 +473,9 @@ export function buildContext(document: Document, excludeIds: string[] = [], sele
   const excludeSet = new Set(excludeIds);
 
   return {
-    screenContent: buildScreenContent(document.root, excludeSet),
+    screenContent: buildScreenContent(document.root, excludeSet, document),
     focusedElement: describeFocusedElement(document),
-    elementTree: buildElementTree(document.root, excludeSet),
+    elementTree: buildElementTree(document.root, excludeSet, document),
     availableActions: getAvailableActions(document),
     selectedText: selectedText || undefined,
   };

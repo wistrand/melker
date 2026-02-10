@@ -182,12 +182,92 @@ Return `{ success: boolean, message: string, data?: any }`.
 4. Model continues with tool results in context
 5. Final response generated
 
+## ARIA Support
+
+The context builder recognizes ARIA attributes on elements, giving the AI richer semantic understanding of the UI. ARIA attributes are read-only metadata — they affect the AI context but not rendering, layout, or keyboard navigation.
+
+### Supported Attributes
+
+| Attribute          | Effect in AI context                                                                              |
+|--------------------|---------------------------------------------------------------------------------------------------|
+| `role`             | Overrides element type in output — `<container role="navigation">` shows as `[Navigation]`        |
+| `aria-label`       | Accessible name when no visible label — `<button aria-label="Close">X</button>` shows as `Close`  |
+| `aria-hidden`      | Element and its subtree excluded from AI context entirely                                         |
+| `aria-description` | Supplementary text appended after the element's line                                              |
+| `aria-labelledby`  | Resolves referenced element(s) text as accessible name (highest priority, supports multiple IDs)  |
+| `aria-expanded`    | Shows `expanded` or `collapsed` state                                                             |
+| `aria-controls`    | Shows `controls: element-id` relationship                                                         |
+| `aria-busy`        | Shows `loading` indicator                                                                         |
+| `aria-required`    | Shows `required` on inputs, textareas, checkboxes                                                 |
+| `aria-invalid`     | Shows `invalid` on inputs, textareas                                                              |
+
+### Naming Priority
+
+The accessible name for an element follows this priority chain (matching the ARIA spec):
+
+1. `aria-labelledby` — resolves referenced element text via `document.getElementById()`
+2. `aria-label` — explicit accessible name
+3. Native label — `title`, `placeholder`, `label` (varies by component)
+
+### Example
+
+```html
+<container role="navigation" aria-label="Main navigation">
+  <button>Home</button>
+  <button aria-controls="settings-panel" aria-expanded="false">Settings</button>
+  <separator aria-hidden="true" />
+</container>
+<container id="main" role="main">
+  <text id="email-label">Email address</text>
+  <input aria-labelledby="email-label" aria-required="true" placeholder="you@example.com" />
+  <container id="results" aria-busy="true">
+    <text>Loading...</text>
+  </container>
+</container>
+```
+
+The AI sees:
+
+**Screen content:**
+```
+[Navigation: Main navigation]
+  [Button: Home]
+  [Button: Settings (collapsed, controls: settings-panel)]
+[Main]
+  Email address
+  [Input: Email address (required)]
+  [Container: results, loading]
+    Loading...
+```
+
+**Element tree:**
+```
+navigation ["Main navigation"]
+  button ["Home"]
+  button ["Settings", collapsed, controls: settings-panel]
+main
+  text ["Email address"]
+  input ["Email address", required]
+  container#results [loading]
+    text ["Loading..."]
+```
+
+The separator is gone. The AI knows the sidebar is navigation, the input is required and labelled by the text element, results are loading, and the settings button controls a collapsible panel.
+
+### Where ARIA Attributes Apply
+
+| Function                 | Attributes used                                                                                     |
+|--------------------------|-----------------------------------------------------------------------------------------------------|
+| `buildScreenContent()`  | All — per-component name resolution, state annotations, `aria-hidden` skip, `aria-description` line |
+| `buildElementTree()`    | All — role in node name, name in info, states in info, `aria-hidden` skip                           |
+| `describeFocusedElement()` | All — role in type, name resolution, state annotations, controls relationship                    |
+
 ## Context Building
 
 When the user asks a question, the system gathers:
 
 ### Screen Content
-Text representation of visible UI, excluding the AI dialog itself.
+Text representation of visible UI, excluding the AI dialog itself. ARIA attributes enrich the output (see [ARIA Support](#aria-support) above).
 
 ### Element Tree
 Simplified DOM-like structure:
@@ -201,7 +281,7 @@ container#main [flex, column]
 **Privacy:** Password inputs (`format="password"`) are automatically masked as `value="****"` and not sent to the AI.
 
 ### Focused Element
-Currently focused element ID and type.
+Currently focused element with type (or role), accessible name, value, and ARIA state.
 
 ### Available Actions
 Keyboard shortcuts and navigation hints.

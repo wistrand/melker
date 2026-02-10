@@ -48,6 +48,25 @@ export const BASE_PROPS_SCHEMA: Record<string, PropSchema> = {
   tabIndex: { type: 'number', description: 'Tab navigation order (-1 to skip)' },
   disabled: { type: 'boolean', description: 'Disable interaction and focus' },
 
+  // Tooltip
+  tooltip: { type: 'string', description: 'Static tooltip text (markdown)' },
+  onTooltip: { type: ['function', 'string'], description: 'Dynamic tooltip handler' },
+
+  // Persistence
+  persist: { type: 'boolean', description: 'Enable/disable state persistence for this element (default: true)' },
+
+  // ARIA attributes (consumed by AI accessibility context builder in src/ai/context.ts)
+  role: { type: 'string', description: 'ARIA role — overrides element type in AI context (e.g., "navigation", "main", "search")' },
+  'aria-label': { type: 'string', description: 'Accessible name for AI context (overrides title/placeholder)' },
+  'aria-labelledby': { type: 'string', description: 'Space-separated IDs of elements whose text provides the accessible name' },
+  'aria-hidden': { type: 'boolean', description: 'Hide element and subtree from AI accessibility context' },
+  'aria-description': { type: 'string', description: 'Supplementary description shown in AI context' },
+  'aria-expanded': { type: 'boolean', description: 'Expanded/collapsed state shown in AI context' },
+  'aria-controls': { type: 'string', description: 'ID of the element this element controls' },
+  'aria-busy': { type: 'boolean', description: 'Loading state shown in AI context' },
+  'aria-required': { type: 'boolean', description: 'Required field indicator in AI context' },
+  'aria-invalid': { type: 'boolean', description: 'Validation error indicator in AI context' },
+
   // Event handlers (string in .melker files, function at runtime)
   onClick: { type: ['function', 'string'], description: 'Click/Enter key handler' },
   onKeyPress: { type: ['function', 'string'], description: 'Key press handler' },

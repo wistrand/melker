@@ -198,6 +198,38 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 
 For complete component reference, see [COMPONENTS.md](references/COMPONENTS.md). For tutorials, see [getting-started.md](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md) and [melker.sh/tutorial.html](https://melker.sh/tutorial.html).
 
+## ARIA Attributes
+
+ARIA attributes improve the AI accessibility assistant's understanding of your UI. They are read-only metadata — they affect the AI context but not rendering, layout, or keyboard navigation.
+
+| Attribute          | Purpose                                                      | Example                                                    |
+|--------------------|--------------------------------------------------------------|------------------------------------------------------------|
+| `role`             | Override element type for the AI                             | `<container role="navigation">`                            |
+| `aria-label`       | Accessible name when no visible label                        | `<button aria-label="Close">X</button>`                    |
+| `aria-labelledby`  | Name from another element's text (highest priority)          | `<input aria-labelledby="email-label" />`                  |
+| `aria-hidden`      | Hide element from AI context                                 | `<separator aria-hidden="true" />`                         |
+| `aria-description` | Supplementary description                                    | `<input aria-description="Used for password reset" />`     |
+| `aria-expanded`    | Collapsible state                                            | `<button aria-expanded="false" aria-controls="panel">`     |
+| `aria-controls`    | Element relationship                                         | Shows `controls: panel` in AI context                      |
+| `aria-busy`        | Loading state                                                | `<container aria-busy="true">Loading...</container>`       |
+| `aria-required`    | Required field (inputs, textareas, checkboxes)               | `<input aria-required="true" />`                           |
+| `aria-invalid`     | Validation error (inputs, textareas)                         | `<input aria-invalid="true" />`                            |
+
+**Example:**
+```xml
+<container role="navigation" aria-label="Main menu">
+  <button>Home</button>
+  <button aria-controls="settings" aria-expanded="false">Settings</button>
+  <separator aria-hidden="true" />
+</container>
+<container role="main">
+  <text id="email-lbl">Email</text>
+  <input aria-labelledby="email-lbl" aria-required="true" />
+</container>
+```
+
+The AI sees `[Navigation: Main menu]` instead of `[Container]`, knows the input is required and labelled "Email", and skips the decorative separator.
+
 ## Styling
 
 ```xml

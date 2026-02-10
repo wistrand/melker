@@ -6,3 +6,8 @@
 [[edge_functions]]
   path = "/melker*.ts"
   function = "melker"
+
+[[headers]]
+  for = "/**/*.melker"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"

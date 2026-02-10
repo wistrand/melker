@@ -7,6 +7,9 @@
   <title>Melker - Run text with meaning</title>
   <meta name="description" content="A terminal UI framework for apps you want to share safely. Document-first terminal apps with permission sandboxing.">
   <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -28,8 +31,9 @@
       --border: #30363d;
       --text: #e6edf3;
       --text-secondary: #8b949e;
-      --accent: #58a6ff;
-      --accent-secondary: #388bfd;
+      --accent: #39d353;
+      --accent-secondary: #2ea043;
+      --accent-glow: rgba(57, 211, 83, 0.15);
       --code-bg: #1c2128;
       --success: #3fb950;
     }
@@ -67,10 +71,30 @@
       padding: 0 24px;
     }
 
+    h1, h2, h3, .code-block-title {
+      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    }
+
+    .cursor {
+      animation: blink 1s step-end infinite;
+      color: var(--accent);
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
     /* Header */
     header {
       padding: 48px 0;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px dashed var(--border);
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(255,255,255,0.015) 3px,
+        rgba(255,255,255,0.015) 4px
+      );
     }
 
     .header-content {
@@ -137,10 +161,10 @@
     .btn {
       display: inline-block;
       padding: 12px 24px;
-      border-radius: 6px;
+      border-radius: 2px;
       font-weight: 500;
       font-size: 1rem;
-      transition: background 0.2s;
+      transition: background 0.2s, border-color 0.2s;
     }
 
     .btn-primary {
@@ -161,13 +185,19 @@
 
     .btn-secondary:hover {
       background: var(--border);
+      border-color: var(--accent);
       text-decoration: none;
     }
 
     /* Sections */
     section {
       padding: 64px 0;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .video-section {
+      padding: 48px 0 0;
+      border-bottom: none;
     }
 
     section:last-of-type {
@@ -191,7 +221,8 @@
     .feature {
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-top: 2px solid var(--accent);
+      border-radius: 2px;
       padding: 24px;
     }
 
@@ -215,6 +246,7 @@
 
     a.feature:hover {
       border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
       text-decoration: none;
     }
 
@@ -222,16 +254,16 @@
     pre {
       background: var(--code-bg);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 2px;
       padding: 16px;
       overflow-x: auto;
-      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-family: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
       font-size: 0.9rem;
       line-height: 1.5;
     }
 
     code {
-      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-family: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
       font-size: 0.9em;
     }
 
@@ -242,7 +274,7 @@
     .code-block-title {
       background: var(--border);
       padding: 8px 16px;
-      border-radius: 6px 6px 0 0;
+      border-radius: 2px 2px 0 0;
       font-size: 0.85rem;
       color: var(--text-secondary);
       border: 1px solid var(--border);
@@ -250,7 +282,7 @@
     }
 
     .code-block pre {
-      border-radius: 0 0 6px 6px;
+      border-radius: 0 0 2px 2px;
       margin: 0;
     }
 
@@ -265,7 +297,7 @@
     .showcase-item {
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 2px;
       overflow: hidden;
     }
 
@@ -325,7 +357,7 @@
       height: 32px;
       background: var(--accent);
       color: var(--bg);
-      border-radius: 50%;
+      border-radius: 2px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -379,6 +411,12 @@
 
       .cta-buttons {
         justify-content: center;
+        gap: 8px;
+      }
+
+      .btn {
+        padding: 8px 14px;
+        font-size: 0.85rem;
       }
 
       header h1 {
@@ -405,7 +443,7 @@
       <div class="header-content">
         <div class="header-text">
           <h1>Melker</h1>
-          <p class="tagline">Run text with meaning</p>
+          <p class="tagline">Run text with meaning<span class="cursor">_</span></p>
           <p class="description">
             A terminal UI framework for apps you want to share safely.
             Document-first terminal apps with permission sandboxing.
@@ -428,6 +466,16 @@
   </header>
 
   <main>
+    <section class="video-section">
+      <div class="container">
+        <video controls loop preload="none" poster="media/showcase-poster.jpg"
+          style="width: 100%; border: 1px solid var(--border); border-radius: 2px 2px 0 0;">
+          <source src="media/showcase-demo-melker.mp4" type="video/mp4">
+        </video>
+        <div style="background: var(--code-bg); border: 1px solid var(--border); border-top: none; border-radius: 0 0 2px 2px; padding: 8px 16px; font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace; font-size: 0.9rem; color: var(--text-secondary);">&gt; ./melker.ts <a href="examples/demo.melker">https://melker.sh/examples/demo.melker</a></div>
+      </div>
+    </section>
+
     <section>
       <div class="container">
         <h2>Key Features</h2>
@@ -477,6 +525,39 @@
 
     <section>
       <div class="container">
+        <h2>Installation</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Clone the repository</h3>
+              <p>Melker is distributed via git. No package managers required.</p>
+              <pre>git clone https://github.com/wistrand/melker.git
+cd melker</pre>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Run an example</h3>
+              <p>Requires Deno 2.5+. Node.js and Bun are not supported.</p>
+              <pre>./melker.ts examples/basics/hello.melker</pre>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Optional: Install globally</h3>
+              <p>Create a symlink to run from anywhere.</p>
+              <pre>ln -s $(pwd)/melker.ts ~/.local/bin/melker</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
         <h2><a href="https://github.com/wistrand/melker/tree/main/examples" style="color: inherit;">Examples</a></h2>
         <div class="showcase-gallery">
           <div class="showcase-item">
@@ -484,16 +565,8 @@
             <a href="https://github.com/wistrand/melker/blob/main/examples/showcase/htop.melker">htop.melker</a>
           </div>
           <div class="showcase-item">
-            <a href="markdown-viewer.png"><img src="markdown-viewer-thumb.png" alt="Melker markdown viewer"></a>
-            <a href="https://github.com/wistrand/melker/blob/main/examples/showcase/markdown-viewer.melker">markdown-viewer.melker</a>
-          </div>
-          <div class="showcase-item">
             <a href="analog-clock.png"><img src="analog-clock-thumb.png" alt="Melker analog clock"></a>
             <a href="https://github.com/wistrand/melker/blob/main/examples/canvas/analog-clock.melker">analog-clock.melker</a>
-          </div>
-          <div class="showcase-item">
-            <a href="video-demo.png"><img src="video-demo-thumb.png" alt="Melker video playback"></a>
-            <a href="https://github.com/wistrand/melker/blob/main/examples/canvas/video/video-demo.melker">video-demo.melker</a>
           </div>
           <div class="showcase-item">
             <a href="map-demo.png"><img src="map-demo-thumb.png" alt="Melker map viewer"></a>
@@ -529,39 +602,6 @@
           Run it:
         </p>
         <pre>./melker.ts hello.melker</pre>
-      </div>
-    </section>
-
-    <section>
-      <div class="container">
-        <h2>Installation</h2>
-        <div class="steps">
-          <div class="step">
-            <div class="step-number">1</div>
-            <div class="step-content">
-              <h3>Clone the repository</h3>
-              <p>Melker is distributed via git. No package managers required.</p>
-              <pre>git clone https://github.com/wistrand/melker.git
-cd melker</pre>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-number">2</div>
-            <div class="step-content">
-              <h3>Run an example</h3>
-              <p>Requires Deno 2.5+. Node.js and Bun are not supported.</p>
-              <pre>./melker.ts examples/basics/hello.melker</pre>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-number">3</div>
-            <div class="step-content">
-              <h3>Optional: Install globally</h3>
-              <p>Create a symlink to run from anywhere.</p>
-              <pre>ln -s $(pwd)/melker.ts ~/.local/bin/melker</pre>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 

@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,23 +41,23 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
+<container class="graph graph-row" style="overflow: scroll; height: auto">
   <!-- Subgraph: Client -->
-  <container id="graph-subgraph-Client" class="subgraph subgraph-col" style="border-title: Client; align-items: flex-start">
-    <container id="graph-node-A" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Client" class="subgraph subgraph-col" style="border-title: Client">
+    <container id="graph-node-A" class="node">
       <text>Browser</text>
     </container>
-    <container id="graph-node-B" class="node" style="align-self: flex-start">
+    <container id="graph-node-B" class="node">
       <text>App</text>
     </container>
   </container>
 
   <!-- Subgraph: Server -->
-  <container id="graph-subgraph-Server" class="subgraph subgraph-col" style="border-title: Server; align-items: flex-start">
-    <container id="graph-node-C" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Server" class="subgraph subgraph-col" style="border-title: Server">
+    <container id="graph-node-C" class="node">
       <text>API</text>
     </container>
-    <container id="graph-node-D" class="node" style="align-self: flex-start">
+    <container id="graph-node-D" class="node">
       <text>DB</text>
     </container>
   </container>

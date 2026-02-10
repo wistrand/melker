@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,36 +41,36 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
+<container class="graph graph-row" style="overflow: scroll; height: auto">
   <!-- Subgraph: Frontend -->
-  <container id="graph-subgraph-Frontend" class="subgraph subgraph-col" style="border-title: Frontend; align-items: flex-start">
-    <container id="graph-node-A" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Frontend" class="subgraph subgraph-col" style="border-title: Frontend">
+    <container id="graph-node-A" class="node">
       <text>React App</text>
     </container>
-    <container id="graph-node-B" class="node" style="align-self: flex-start">
+    <container id="graph-node-B" class="node">
       <text>Redux Store</text>
     </container>
   </container>
 
   <!-- Subgraph: Backend -->
-  <container id="graph-subgraph-Backend" class="subgraph subgraph-col" style="border-title: Backend; align-items: flex-start">
-    <container id="graph-node-C" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Backend" class="subgraph subgraph-col" style="border-title: Backend">
+    <container id="graph-node-C" class="node">
       <text>API Gateway</text>
     </container>
-    <container id="graph-node-D" class="node" style="align-self: flex-start">
+    <container id="graph-node-D" class="node">
       <text>Auth Service</text>
     </container>
-    <container id="graph-node-E" class="node" style="align-self: flex-start">
+    <container id="graph-node-E" class="node">
       <text>Data Service</text>
     </container>
   </container>
 
   <!-- Subgraph: Database -->
-  <container id="graph-subgraph-Database" class="subgraph subgraph-col" style="border-title: Database; align-items: flex-start">
-    <container id="graph-node-G" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Database" class="subgraph subgraph-col" style="border-title: Database">
+    <container id="graph-node-G" class="node">
       <text>Redis Cache</text>
     </container>
-    <container id="graph-node-F" class="node" style="align-self: flex-start">
+    <container id="graph-node-F" class="node">
       <text>PostgreSQL</text>
     </container>
   </container>

@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,17 +41,17 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
-  <container id="graph-node-A" class="node" style="align-self: flex-start">
+<container class="graph graph-row" style="overflow: scroll; height: auto">
+  <container id="graph-node-A" class="node">
     <text>Rectangle</text>
   </container>
-  <container id="graph-node-B" class="node node-rounded" style="align-self: flex-start">
+  <container id="graph-node-B" class="node node-rounded">
     <text>Rounded</text>
   </container>
-  <container id="graph-node-C" class="node node-diamond" style="align-self: flex-start">
+  <container id="graph-node-C" class="node node-diamond">
     <text>Diamond</text>
   </container>
-  <container id="graph-node-D" class="node node-rounded" style="align-self: flex-start">
+  <container id="graph-node-D" class="node node-rounded">
     <text>Circle</text>
   </container>
 

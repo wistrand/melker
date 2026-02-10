@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,22 +41,22 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
-  <container id="graph-node-A" class="node" style="align-self: flex-start">
+<container class="graph graph-row" style="overflow: scroll; height: auto">
+  <container id="graph-node-A" class="node">
     <text>Start</text>
   </container>
-  <container id="graph-node-B" class="node node-diamond" style="align-self: flex-start">
+  <container id="graph-node-B" class="node node-diamond">
     <text>Decision</text>
   </container>
-  <container class="subgraph subgraph-col" style="border: none; padding: 0; gap: 5; align-items: flex-start">
-    <container id="graph-node-C" class="node" style="align-self: flex-start">
+  <container class="subgraph subgraph-col" style="border: none; padding: 0; gap: 5">
+    <container id="graph-node-C" class="node">
       <text>Action 1</text>
     </container>
-    <container id="graph-node-D" class="node" style="align-self: flex-start">
+    <container id="graph-node-D" class="node">
       <text>Action 2</text>
     </container>
   </container>
-  <container id="graph-node-E" class="node" style="align-self: flex-start">
+  <container id="graph-node-E" class="node">
     <text>End</text>
   </container>
 

@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,23 +41,23 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
-  <container id="graph-node-A" class="node" style="align-self: flex-start">
+<container class="graph graph-row" style="overflow: scroll; height: auto">
+  <container id="graph-node-A" class="node">
     <text>Start</text>
   </container>
-  <container id="graph-node-B" class="node" style="align-self: flex-start">
+  <container id="graph-node-B" class="node">
     <text>Step 1</text>
   </container>
-  <container id="graph-node-C" class="node" style="align-self: flex-start">
+  <container id="graph-node-C" class="node">
     <text>Step 2</text>
   </container>
-  <container id="graph-node-D" class="node" style="align-self: flex-start">
+  <container id="graph-node-D" class="node">
     <text>Step 3</text>
   </container>
-  <container id="graph-node-E" class="node" style="align-self: flex-start">
+  <container id="graph-node-E" class="node">
     <text>Step 4</text>
   </container>
-  <container id="graph-node-F" class="node" style="align-self: flex-start">
+  <container id="graph-node-F" class="node">
     <text>End</text>
   </container>
 

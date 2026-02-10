@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,49 +41,49 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-col" style="overflow: scroll; align-items: flex-start">
+<container class="graph graph-col" style="overflow: scroll; height: auto">
   <!-- Subgraph: Ingestion -->
-  <container id="graph-subgraph-Ingestion" class="subgraph subgraph-row" style="border-title: Ingestion; align-items: flex-start">
-    <container id="graph-node-A" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Ingestion" class="subgraph subgraph-row" style="border-title: Ingestion">
+    <container id="graph-node-A" class="node">
       <text>Data Source</text>
     </container>
-    <container id="graph-node-B" class="node" style="align-self: flex-start">
+    <container id="graph-node-B" class="node">
       <text>ETL Process</text>
     </container>
   </container>
 
   <!-- Subgraph: Processing -->
-  <container id="graph-subgraph-Processing" class="subgraph subgraph-row" style="border-title: Processing; align-items: flex-start">
-    <container id="graph-node-C" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Processing" class="subgraph subgraph-row" style="border-title: Processing">
+    <container id="graph-node-C" class="node">
       <text>Transform</text>
     </container>
-    <container id="graph-node-D" class="node" style="align-self: flex-start">
+    <container id="graph-node-D" class="node">
       <text>Validate</text>
     </container>
-    <container id="graph-node-E" class="node" style="align-self: flex-start">
+    <container id="graph-node-E" class="node">
       <text>Enrich</text>
     </container>
   </container>
 
   <!-- Subgraph: Storage -->
-  <container id="graph-subgraph-Storage" class="subgraph subgraph-row" style="border-title: Storage; align-items: flex-start">
-    <container id="graph-node-F" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Storage" class="subgraph subgraph-row" style="border-title: Storage">
+    <container id="graph-node-F" class="node">
       <text>Data Lake</text>
     </container>
-    <container id="graph-node-G" class="node" style="align-self: flex-start">
+    <container id="graph-node-G" class="node">
       <text>Data Warehouse</text>
     </container>
   </container>
 
   <!-- Subgraph: Analytics -->
-  <container id="graph-subgraph-Analytics" class="subgraph subgraph-row" style="border-title: Analytics; align-items: flex-start">
-    <container id="graph-node-J" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Analytics" class="subgraph subgraph-row" style="border-title: Analytics">
+    <container id="graph-node-J" class="node">
       <text>ML Models</text>
     </container>
-    <container id="graph-node-H" class="node" style="align-self: flex-start">
+    <container id="graph-node-H" class="node">
       <text>Reports</text>
     </container>
-    <container id="graph-node-I" class="node" style="align-self: flex-start">
+    <container id="graph-node-I" class="node">
       <text>Dashboards</text>
     </container>
   </container>

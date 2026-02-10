@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,14 +41,14 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-col" style="overflow: scroll; align-items: flex-start">
-  <container id="graph-node-Logo" class="node" style="align-self: flex-start">
+<container class="graph graph-col" style="overflow: scroll; height: auto">
+  <container id="graph-node-Logo" class="node">
     <img src="../../media/melker-128.png" width="16" height="8"/>
   </container>
-  <container id="graph-node-Title" class="node" style="align-self: flex-start">
+  <container id="graph-node-Title" class="node">
     <text style="font-weight: bold; font-size: large">Melker TUI</text>
   </container>
-  <container id="graph-node-Actions" class="node" style="align-self: flex-start">
+  <container id="graph-node-Actions" class="node">
     <container style="flex-direction: column; gap: 1">
       <button label="New Project"/>
       <button label="Open File"/>

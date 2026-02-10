@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,109 +41,109 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-col" style="overflow: scroll; align-items: flex-start">
+<container class="graph graph-col" style="overflow: scroll; height: auto">
   <!-- Subgraph: Input -->
-  <container id="graph-subgraph-Input" class="subgraph subgraph-row" style="border-title: Input; align-items: flex-start">
-    <container id="graph-node-MMD" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Input" class="subgraph subgraph-row" style="border-title: Input">
+    <container id="graph-node-MMD" class="node">
       <text>.mmd Mermaid file</text>
     </container>
-    <container id="graph-node-JSON" class="node" style="align-self: flex-start">
+    <container id="graph-node-JSON" class="node">
       <text>.json Graph file</text>
     </container>
   </container>
 
   <!-- Subgraph: Detection -->
-  <container id="graph-subgraph-Detection" class="subgraph subgraph-row" style="border-title: Detection; align-items: flex-start">
-    <container id="graph-node-DETECT" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Detection" class="subgraph subgraph-row" style="border-title: Detection">
+    <container id="graph-node-DETECT" class="node">
       <text>detectParserType</text>
     </container>
-    <container id="graph-node-SEQ_MATCH" class="node" style="align-self: flex-start">
+    <container id="graph-node-SEQ_MATCH" class="node">
       <text>sequenceDiagram?</text>
     </container>
-    <container id="graph-node-CLASS_MATCH" class="node" style="align-self: flex-start">
+    <container id="graph-node-CLASS_MATCH" class="node">
       <text>classDiagram?</text>
     </container>
-    <container id="graph-node-FLOW_MATCH" class="node" style="align-self: flex-start">
+    <container id="graph-node-FLOW_MATCH" class="node">
       <text>flowchart/graph?</text>
     </container>
   </container>
 
   <!-- Subgraph: Parsers -->
-  <container id="graph-subgraph-Parsers" class="subgraph subgraph-row" style="border-title: Parsers; align-items: flex-start">
-    <container id="graph-node-JP" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Parsers" class="subgraph subgraph-row" style="border-title: Parsers">
+    <container id="graph-node-JP" class="node">
       <text>JsonParser</text>
     </container>
-    <container id="graph-node-SP" class="node" style="align-self: flex-start">
+    <container id="graph-node-SP" class="node">
       <text>SequenceParser</text>
     </container>
-    <container id="graph-node-CP" class="node" style="align-self: flex-start">
+    <container id="graph-node-CP" class="node">
       <text>ClassDiagramParser</text>
     </container>
-    <container id="graph-node-MP" class="node" style="align-self: flex-start">
+    <container id="graph-node-MP" class="node">
       <text>MermaidParser</text>
     </container>
   </container>
 
   <!-- Subgraph: IntermediateReps -->
-  <container id="graph-subgraph-IntermediateReps" class="subgraph subgraph-row" style="border-title: IntermediateReps; align-items: flex-start">
-    <container id="graph-node-SD" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-IntermediateReps" class="subgraph subgraph-row" style="border-title: IntermediateReps">
+    <container id="graph-node-SD" class="node">
       <text>SequenceDefinition</text>
     </container>
-    <container id="graph-node-CD" class="node" style="align-self: flex-start">
+    <container id="graph-node-CD" class="node">
       <text>ClassDiagramDefinition</text>
     </container>
-    <container id="graph-node-GD" class="node" style="align-self: flex-start">
+    <container id="graph-node-GD" class="node">
       <text>GraphDefinition</text>
     </container>
   </container>
 
   <!-- Subgraph: LayoutEngine -->
-  <container id="graph-subgraph-LayoutEngine" class="subgraph subgraph-row" style="border-title: LayoutEngine; align-items: flex-start">
-    <container id="graph-node-LAYOUT" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-LayoutEngine" class="subgraph subgraph-row" style="border-title: LayoutEngine">
+    <container id="graph-node-LAYOUT" class="node">
       <text>GraphLayout</text>
     </container>
-    <container id="graph-node-CALC" class="node" style="align-self: flex-start">
+    <container id="graph-node-CALC" class="node">
       <text>calculateLayout</text>
     </container>
   </container>
 
   <!-- Subgraph: Converters -->
-  <container id="graph-subgraph-Converters" class="subgraph subgraph-row" style="border-title: Converters; align-items: flex-start">
-    <container id="graph-node-S2M" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Converters" class="subgraph subgraph-row" style="border-title: Converters">
+    <container id="graph-node-S2M" class="node">
       <text>sequenceToMelker</text>
     </container>
-    <container id="graph-node-C2M" class="node" style="align-self: flex-start">
+    <container id="graph-node-C2M" class="node">
       <text>classToMelker</text>
     </container>
-    <container id="graph-node-G2M" class="node" style="align-self: flex-start">
+    <container id="graph-node-G2M" class="node">
       <text>graphToMelker</text>
     </container>
   </container>
 
   <!-- Subgraph: OutputXML -->
-  <container id="graph-subgraph-OutputXML" class="subgraph subgraph-row" style="border-title: OutputXML; align-items: flex-start">
-    <container id="graph-node-CONTAINER" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-OutputXML" class="subgraph subgraph-row" style="border-title: OutputXML">
+    <container id="graph-node-CONTAINER" class="node">
       <text>container tag</text>
     </container>
-    <container id="graph-node-TABLE" class="node" style="align-self: flex-start">
+    <container id="graph-node-TABLE" class="node">
       <text>table tag</text>
     </container>
-    <container id="graph-node-POLICY" class="node" style="align-self: flex-start">
+    <container id="graph-node-POLICY" class="node">
       <text>policy tag</text>
     </container>
-    <container id="graph-node-STYLE" class="node" style="align-self: flex-start">
+    <container id="graph-node-STYLE" class="node">
       <text>style tag</text>
     </container>
-    <container id="graph-node-CONN" class="node" style="align-self: flex-start">
+    <container id="graph-node-CONN" class="node">
       <text>connector tag</text>
     </container>
-    <container id="graph-node-SEP" class="node" style="align-self: flex-start">
+    <container id="graph-node-SEP" class="node">
       <text>separator tag</text>
     </container>
-    <container id="graph-node-TEXT" class="node" style="align-self: flex-start">
+    <container id="graph-node-TEXT" class="node">
       <text>text tag</text>
     </container>
-    <container id="graph-node-MELKER" class="node" style="align-self: flex-start">
+    <container id="graph-node-MELKER" class="node">
       <text>melker tag</text>
     </container>
   </container>

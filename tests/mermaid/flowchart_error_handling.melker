@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,52 +41,52 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-col" style="overflow: scroll; align-items: flex-start">
+<container class="graph graph-col" style="overflow: scroll; height: auto">
   <!-- Subgraph: Request -->
-  <container id="graph-subgraph-Request" class="subgraph subgraph-row" style="border-title: Request; align-items: flex-start">
-    <container id="graph-node-START" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Request" class="subgraph subgraph-row" style="border-title: Request">
+    <container id="graph-node-START" class="node">
       <text>Receive Request</text>
     </container>
-    <container id="graph-node-VALIDATE" class="node node-diamond" style="align-self: flex-start">
+    <container id="graph-node-VALIDATE" class="node node-diamond">
       <text>Valid Input?</text>
     </container>
   </container>
 
   <!-- Subgraph: Process -->
-  <container id="graph-subgraph-Process" class="subgraph subgraph-row" style="border-title: Process; align-items: flex-start">
-    <container id="graph-node-AUTH" class="node node-diamond" style="align-self: flex-start">
+  <container id="graph-subgraph-Process" class="subgraph subgraph-row" style="border-title: Process">
+    <container id="graph-node-AUTH" class="node node-diamond">
       <text>Authenticated?</text>
     </container>
-    <container id="graph-node-PERM" class="node node-diamond" style="align-self: flex-start">
+    <container id="graph-node-PERM" class="node node-diamond">
       <text>Has Permission?</text>
     </container>
-    <container id="graph-node-EXEC" class="node" style="align-self: flex-start">
+    <container id="graph-node-EXEC" class="node">
       <text>Execute Action</text>
     </container>
   </container>
 
   <!-- Subgraph: Errors -->
-  <container id="graph-subgraph-Errors" class="subgraph subgraph-row" style="border-title: Errors; align-items: flex-start">
-    <container id="graph-node-E400" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Errors" class="subgraph subgraph-row" style="border-title: Errors">
+    <container id="graph-node-E400" class="node">
       <text>400 Bad Request</text>
     </container>
-    <container id="graph-node-E401" class="node" style="align-self: flex-start">
+    <container id="graph-node-E401" class="node">
       <text>401 Unauthorized</text>
     </container>
-    <container id="graph-node-E403" class="node" style="align-self: flex-start">
+    <container id="graph-node-E403" class="node">
       <text>403 Forbidden</text>
     </container>
-    <container id="graph-node-E500" class="node" style="align-self: flex-start">
+    <container id="graph-node-E500" class="node">
       <text>500 Server Error</text>
     </container>
   </container>
 
   <!-- Subgraph: Response -->
-  <container id="graph-subgraph-Response" class="subgraph subgraph-row" style="border-title: Response; align-items: flex-start">
-    <container id="graph-node-SUCCESS" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Response" class="subgraph subgraph-row" style="border-title: Response">
+    <container id="graph-node-SUCCESS" class="node">
       <text>200 OK</text>
     </container>
-    <container id="graph-node-LOG" class="node" style="align-self: flex-start">
+    <container id="graph-node-LOG" class="node">
       <text>Log Result</text>
     </container>
   </container>

@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,55 +41,55 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
+<container class="graph graph-row" style="overflow: scroll; height: auto">
   <!-- Subgraph: Client -->
-  <container id="graph-subgraph-Client" class="subgraph subgraph-col" style="border-title: Client; align-items: flex-start">
-    <container id="graph-node-A" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Client" class="subgraph subgraph-col" style="border-title: Client">
+    <container id="graph-node-A" class="node">
       <text>Web App</text>
     </container>
-    <container id="graph-node-B" class="node" style="align-self: flex-start">
+    <container id="graph-node-B" class="node">
       <text>Mobile App</text>
     </container>
   </container>
 
   <!-- Subgraph: Gateway -->
-  <container id="graph-subgraph-Gateway" class="subgraph subgraph-col" style="border-title: Gateway; align-items: flex-start">
-    <container id="graph-node-C" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Gateway" class="subgraph subgraph-col" style="border-title: Gateway">
+    <container id="graph-node-C" class="node">
       <text>Load Balancer</text>
     </container>
-    <container id="graph-node-D" class="node" style="align-self: flex-start">
+    <container id="graph-node-D" class="node">
       <text>API Gateway</text>
     </container>
   </container>
 
   <!-- Subgraph: Services -->
-  <container id="graph-subgraph-Services" class="subgraph subgraph-col" style="border-title: Services; align-items: flex-start">
-    <container id="graph-node-E" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Services" class="subgraph subgraph-col" style="border-title: Services">
+    <container id="graph-node-E" class="node">
       <text>User Service</text>
     </container>
-    <container id="graph-node-F" class="node" style="align-self: flex-start">
+    <container id="graph-node-F" class="node">
       <text>Order Service</text>
     </container>
-    <container id="graph-node-H" class="node" style="align-self: flex-start">
+    <container id="graph-node-H" class="node">
       <text>Payment Service</text>
     </container>
-    <container id="graph-node-G" class="node" style="align-self: flex-start">
+    <container id="graph-node-G" class="node">
       <text>Product Service</text>
     </container>
   </container>
 
   <!-- Subgraph: Data -->
-  <container id="graph-subgraph-Data" class="subgraph subgraph-col" style="border-title: Data; align-items: flex-start">
-    <container id="graph-node-I" class="node" style="align-self: flex-start">
+  <container id="graph-subgraph-Data" class="subgraph subgraph-col" style="border-title: Data">
+    <container id="graph-node-I" class="node">
       <text>Users DB</text>
     </container>
-    <container id="graph-node-J" class="node" style="align-self: flex-start">
+    <container id="graph-node-J" class="node">
       <text>Orders DB</text>
     </container>
-    <container id="graph-node-L" class="node" style="align-self: flex-start">
+    <container id="graph-node-L" class="node">
       <text>Message Queue</text>
     </container>
-    <container id="graph-node-K" class="node" style="align-self: flex-start">
+    <container id="graph-node-K" class="node">
       <text>Products DB</text>
     </container>
   </container>

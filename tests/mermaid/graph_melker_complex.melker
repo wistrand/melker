@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,27 +41,27 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-col" style="overflow: scroll; align-items: flex-start">
-  <container id="graph-node-Start" class="node" style="align-self: flex-start">
+<container class="graph graph-col" style="overflow: scroll; height: auto">
+  <container id="graph-node-Start" class="node">
     <container style="flex-direction: column">
       <text style="font-weight: bold">Begin</text>
       <button label="Launch"/>
     </container>
   </container>
-  <container id="graph-node-Process" class="node" style="align-self: flex-start">
+  <container id="graph-node-Process" class="node">
     <container style="flex-direction: column">
       <input placeholder="Enter value"/>
       <progress value="50" max="100"/>
     </container>
   </container>
-  <container id="graph-node-Decision" class="node" style="align-self: flex-start">
+  <container id="graph-node-Decision" class="node">
     <text style="color: yellow">Check?</text>
   </container>
-  <container class="subgraph subgraph-row" style="border: none; padding: 0; gap: 5; align-items: flex-start">
-    <container id="graph-node-Success" class="node" style="align-self: flex-start">
+  <container class="subgraph subgraph-row" style="border: none; padding: 0; gap: 5">
+    <container id="graph-node-Success" class="node">
       <text style="color: green">OK</text>
     </container>
-    <container id="graph-node-Failure" class="node" style="align-self: flex-start">
+    <container id="graph-node-Failure" class="node">
       <text style="color: red">FAIL</text>
     </container>
   </container>

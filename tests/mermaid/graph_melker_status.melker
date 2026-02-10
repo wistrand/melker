@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,26 +41,26 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
-  <container id="graph-node-Download" class="node" style="align-self: flex-start">
+<container class="graph graph-row" style="overflow: scroll; height: auto">
+  <container id="graph-node-Download" class="node">
     <container style="flex-direction: column">
       <text>Downloading...</text>
       <progress value="100" max="100"/>
     </container>
   </container>
-  <container id="graph-node-Extract" class="node" style="align-self: flex-start">
+  <container id="graph-node-Extract" class="node">
     <container style="flex-direction: column">
       <text>Extracting...</text>
       <progress value="75" max="100"/>
     </container>
   </container>
-  <container id="graph-node-Install" class="node" style="align-self: flex-start">
+  <container id="graph-node-Install" class="node">
     <container style="flex-direction: column">
       <text>Installing...</text>
       <progress value="30" max="100"/>
     </container>
   </container>
-  <container id="graph-node-Done" class="node" style="align-self: flex-start">
+  <container id="graph-node-Done" class="node">
     <text style="color: green">Complete!</text>
   </container>
 

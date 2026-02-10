@@ -8,6 +8,7 @@
 <style>
 .graph {
   width: fill;
+  height: auto;
   padding: 1;
   display: flex;
   flex-wrap: wrap;
@@ -40,20 +41,20 @@
 .node-hexagon { border: thick; }
 </style>
 
-<container class="graph graph-row" style="overflow: scroll; align-items: flex-start">
-  <container id="graph-node-Output" class="node" style="align-self: flex-start">
+<container class="graph graph-row" style="overflow: scroll; height: auto">
+  <container id="graph-node-Output" class="node">
     <container style="flex-direction: column">
       <text>Result</text>
       <text style="border: thin; padding: 0 1">Output here</text>
     </container>
   </container>
-  <container id="graph-node-Process" class="node" style="align-self: flex-start">
+  <container id="graph-node-Process" class="node">
     <container style="flex-direction: column">
       <text style="font-weight: bold">Transform</text>
       <progress indeterminate="true"/>
     </container>
   </container>
-  <container id="graph-node-Input" class="node" style="align-self: flex-start">
+  <container id="graph-node-Input" class="node">
     <container style="flex-direction: column">
       <text>Source</text>
       <input placeholder="Enter data"/>

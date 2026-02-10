@@ -33,7 +33,7 @@
 }
 </style>
 
-<container class="class-diagram class-diagram-col" style="overflow: scroll">
+<container class="class-diagram class-diagram-col" style="overflow: scroll; height: auto">
   <container class="class-level class-level-row">
     <container id="class-Animal" style="display: flex; flex-direction: column; align-items: stretch; border: thin; padding: 0 1">
       <text class="class-name">Animal</text>

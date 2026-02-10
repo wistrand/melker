@@ -147,7 +147,7 @@ For `canvas`, `img`, `video`, and `progress`, the `width`/`height` **props** def
 <img width="60" height="30" src="photo.png" />
 ```
 
-**Why:** Canvas-family components pre-allocate pixel buffers at construction time. Style can't change the buffer after creation.
+**Why:** Canvas-family components maintain two separate size concepts: `props.width`/`props.height` (the *declarative* value — `"100%"`, `30`, `"fill"`) used by the layout engine, and internal `_terminalWidth`/`_terminalHeight` (the *resolved* numeric size) used for buffer allocation. `style.width` only affects layout positioning, not the buffer. Use width/height **props** for buffer sizing.
 
 ### img Supports Responsive Props
 

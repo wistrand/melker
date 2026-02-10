@@ -195,9 +195,9 @@ export class ImgElement extends CanvasElement {
         const newHeight = this._parseDimension(this._originalHeight, bounds.height);
 
         // Update canvas dimensions if they changed (and valid)
-        if (newWidth > 0 && newHeight > 0 && (newWidth !== this.props.width || newHeight !== this.props.height)) {
+        if (newWidth > 0 && newHeight > 0 && (newWidth !== this._terminalWidth || newHeight !== this._terminalHeight)) {
           // Resize the canvas buffer using parent's setSize method
-          logger.debug(`Calling setSize: ${this.props.width}x${this.props.height} -> ${newWidth}x${newHeight}`);
+          logger.debug(`Calling setSize: ${this._terminalWidth}x${this._terminalHeight} -> ${newWidth}x${newHeight}`);
           this.setSize(newWidth, newHeight);
         }
       }
@@ -221,8 +221,8 @@ export class ImgElement extends CanvasElement {
     const height = this._parseDimension(this._originalHeight, context.availableSpace.height);
 
     return {
-      width: width > 0 ? width : (this.props.width ?? 30),
-      height: height > 0 ? height : (this.props.height ?? 15),
+      width: width > 0 ? width : (this._terminalWidth || 30),
+      height: height > 0 ? height : (this._terminalHeight || 15),
     };
   }
 }

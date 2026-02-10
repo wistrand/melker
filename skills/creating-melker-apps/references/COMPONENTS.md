@@ -970,6 +970,7 @@ Image display (PNG, JPEG, GIF). Supports file paths, HTTP/HTTPS URLs, and data U
 - `setSource(url)` - Set props.src and clear existing image (loads during next render)
 - `clearImage()` - Clear the loaded image
 - `loadImage(url)` - Low-level async load (same as setSrc)
+- `setSize(w, h)` - Resize canvas buffer (updates internal size, not props)
 
 **Dynamic image switching:**
 ```typescript

@@ -1370,6 +1370,7 @@ The `<img>` component displays images in the terminal using sextant characters (
 | `clearImage()`    | Clear the loaded image                                               |
 | `loadImage(url)`  | Low-level async load (same as setSrc)                                |
 | `refreshImage()`  | Re-render the loaded image (e.g., after resize)                      |
+| `setSize(w, h)`   | Resize canvas buffer (updates internal size, not props)              |
 
 ```typescript
 // Preferred: setSrc loads immediately

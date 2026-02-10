@@ -354,7 +354,7 @@ export class ProgressElement extends CanvasElement {
         const newHeight = parseDimension(this._originalHeight, bounds.height, 1);
 
         // Update canvas dimensions if they changed (and valid)
-        if (newWidth > 0 && newHeight > 0 && (newWidth !== this.props.width || newHeight !== this.props.height)) {
+        if (newWidth > 0 && newHeight > 0 && (newWidth !== this._terminalWidth || newHeight !== this._terminalHeight)) {
           this.setSize(newWidth, newHeight);
         }
       }

@@ -81,6 +81,10 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   private _imageColorBuffer: Uint32Array;
   private _bufferWidth: number;
   private _bufferHeight: number;
+  // Resolved terminal-cell dimensions (numeric), separated from props.width/height
+  // which may hold responsive strings like "100%" for the layout engine.
+  protected _terminalWidth: number = 0;
+  protected _terminalHeight: number = 0;
   private _scale: number;
   private _charAspectRatio: number;
   private _isDirty: boolean = false;
@@ -145,6 +149,10 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     this._scale = scale;
     this._charAspectRatio = charAspectRatio;
+
+    // Store resolved terminal-cell dimensions
+    this._terminalWidth = typeof props.width === 'number' ? props.width : 0;
+    this._terminalHeight = typeof props.height === 'number' ? props.height : 0;
 
     // Calculate buffer dimensions based on gfx mode
     const dims = this._calculateBufferDimensions(props.width, props.height, scale);
@@ -1176,8 +1184,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       bufferWidth: this._bufferWidth,
       bufferHeight: this._bufferHeight,
       scale: this._scale,
-      propsWidth: this.props.width,
-      propsHeight: this.props.height,
+      propsWidth: this._terminalWidth,
+      propsHeight: this._terminalHeight,
       backgroundColor: this.props.backgroundColor,
     };
 
@@ -1220,15 +1228,15 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       // Use sixel capabilities for cell dimensions
       const capabilities = engine?.sixelCapabilities;
       if (capabilities?.cellWidth && capabilities.cellWidth > 0 && capabilities.cellHeight > 0) {
-        const expectedWidth = this.props.width * capabilities.cellWidth;
-        const expectedHeight = this.props.height * capabilities.cellHeight;
+        const expectedWidth = this._terminalWidth * capabilities.cellWidth;
+        const expectedHeight = this._terminalHeight * capabilities.cellHeight;
         if (this._bufferWidth !== expectedWidth || this._bufferHeight !== expectedHeight) {
           logger.debug('graphics mode resize triggered', {
             gfxMode,
             old: `${this._bufferWidth}x${this._bufferHeight}`,
             new: `${expectedWidth}x${expectedHeight}`,
           });
-          this.setSize(this.props.width, this.props.height);
+          this.setSize(this._terminalWidth, this._terminalHeight);
           // Re-render image to the new buffer (image was loaded into old smaller buffer)
           if (this._loadedImage) {
             this._renderImageToBuffer();
@@ -1370,8 +1378,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       bufferWidth: this._bufferWidth,
       bufferHeight: this._bufferHeight,
       scale: this._scale,
-      propsWidth: this.props.width,
-      propsHeight: this.props.height,
+      propsWidth: this._terminalWidth,
+      propsHeight: this._terminalHeight,
       backgroundColor: this.props.backgroundColor,
     };
 
@@ -1446,8 +1454,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       bufferWidth: this._bufferWidth,
       bufferHeight: this._bufferHeight,
       scale: this._scale,
-      propsWidth: this.props.width,
-      propsHeight: this.props.height,
+      propsWidth: this._terminalWidth,
+      propsHeight: this._terminalHeight,
       backgroundColor: this.props.backgroundColor,
     };
 
@@ -1484,8 +1492,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       bufferWidth: this._bufferWidth,
       bufferHeight: this._bufferHeight,
       scale: this._scale,
-      propsWidth: this.props.width,
-      propsHeight: this.props.height,
+      propsWidth: this._terminalWidth,
+      propsHeight: this._terminalHeight,
       backgroundColor: this.props.backgroundColor,
     };
 
@@ -1526,8 +1534,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Return 0 as fallback when width/height not explicitly set
     // This allows flexbox stretch alignment to work correctly
     return {
-      width: style.width === 'fill' ? context.availableSpace.width : (this.props.width ?? 0),
-      height: style.height === 'fill' ? context.availableSpace.height : (this.props.height ?? 0)
+      width: style.width === 'fill' ? context.availableSpace.width : (this._terminalWidth || 0),
+      height: style.height === 'fill' ? context.availableSpace.height : (this._terminalHeight || 0)
     };
   }
 
@@ -1587,9 +1595,10 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       this.stopShader();
     }
 
-    // Update props
-    this.props.width = width;
-    this.props.height = height;
+    // Update resolved terminal-cell dimensions (don't mutate props.width/height
+    // which may hold responsive strings like "100%" for the layout engine)
+    this._terminalWidth = width;
+    this._terminalHeight = height;
 
     // Recalculate buffer dimensions based on gfx mode
     const dims = this._calculateBufferDimensions(width, height, this._scale);

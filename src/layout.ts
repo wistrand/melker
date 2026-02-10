@@ -74,6 +74,10 @@ export class LayoutEngine {
   private _sizingModel: SizingModel;
   private _contentMeasurer: ContentMeasurer;
   private _viewportManager: ViewportManager;
+  // Per-frame caches cleared at the start of each layout pass
+  private _layoutPropsCache = new Map<Element, AdvancedLayoutProps>();
+  private _styleCache = new Map<Element, Style>();
+  private _intrinsicSizeCache = new Map<Element, { aw: number; ah: number; result: Size }>();
   private _defaultLayoutProps: AdvancedLayoutProps = {
     display: 'flex',
     position: 'static',
@@ -101,12 +105,66 @@ export class LayoutEngine {
     this._viewportManager = viewportManager || globalViewportManager;
   }
 
+  // Cached _computeLayoutProps (without parentProps) — used by _layoutFlex and _layoutBlock
+  // to avoid recomputing for the same child multiple times within a single frame.
+  private _getCachedLayoutProps(element: Element): AdvancedLayoutProps {
+    let props = this._layoutPropsCache.get(element);
+    if (!props) {
+      props = this._computeLayoutProps(element);
+      this._layoutPropsCache.set(element, props);
+    }
+    return props;
+  }
+
+  // Cached _computeStyle — avoids recomputing for the same element within a single frame.
+  // Safe because within a layout pass, the same element always has the same parentStyle.
+  private _getCachedStyle(element: Element, parentStyle?: Style): Style {
+    let style = this._styleCache.get(element);
+    if (!style) {
+      style = this._computeStyle(element, parentStyle);
+      this._styleCache.set(element, style);
+    }
+    return style;
+  }
+
+  // Cached intrinsicSize — avoids calling element.intrinsicSize() multiple times
+  // with the same availableSpace within a single frame. Uses "last result" pattern:
+  // if availableSpace matches the cached entry, returns cached result; otherwise
+  // recomputes and updates the cache.
+  private _cachedIntrinsicSize(element: Element & { intrinsicSize(ctx: IntrinsicSizeContext): Size }, context: IntrinsicSizeContext): Size {
+    const cache = this._intrinsicSizeCache;
+    const cached = cache.get(element);
+    const aw = context.availableSpace.width;
+    const ah = context.availableSpace.height;
+    if (cached && cached.aw === aw && cached.ah === ah) {
+      return cached.result;
+    }
+    const result = element.intrinsicSize(context);
+    cache.set(element, { aw, ah, result });
+    return result;
+  }
+
+  // Build an IntrinsicSizeContext with the shared per-frame cache
+  private _makeIntrinsicSizeContext(availableSpace: { width: number; height: number }, parentStyle?: Style): IntrinsicSizeContext {
+    return {
+      availableSpace,
+      parentStyle,
+      _sizeCache: this._intrinsicSizeCache,
+    };
+  }
+
   // Main layout calculation method
   calculateLayout(
     element: Element,
     context: LayoutContext,
     parentNode?: LayoutNode
   ): LayoutNode {
+    // Clear per-frame caches at top-level entry (no parent = root call)
+    if (!parentNode) {
+      this._layoutPropsCache.clear();
+      this._styleCache.clear();
+      this._intrinsicSizeCache.clear();
+    }
     const traceEnabled = logger.isTraceEnabled();
     const startTime = performance.now(); // Always track for slow layout warning
     if (traceEnabled) {
@@ -117,7 +175,7 @@ export class LayoutEngine {
         parentBounds: context.parentBounds,
       });
     }
-    const computedStyle = this._computeStyle(element, context.parentStyle);
+    const computedStyle = this._getCachedStyle(element, context.parentStyle);
     const layoutProps = this._computeLayoutProps(element, context.parentLayoutProps);
 
     if (traceEnabled) {
@@ -326,22 +384,22 @@ export class LayoutEngine {
     let currentY = context.parentBounds.y;
 
 
-    // First pass: handle normal flow elements
+    // Single pass: partition children into normal flow and absolute
+    const normalChildren: Element[] = [];
+    const absoluteBlockChildren: Element[] = [];
     for (const child of children) {
-      // Skip invisible elements - they don't participate in layout
       if (child.props?.visible === false) continue;
-      // Skip elements with display: none
       if (this._isDisplayNone(child)) continue;
-
-      const childLayoutProps = this._computeLayoutProps(child);
-      const childText = (child.props as any)?.text;
-
-
+      const childLayoutProps = this._getCachedLayoutProps(child);
       if (childLayoutProps.position === 'absolute' || childLayoutProps.position === 'fixed') {
-        // Skip absolute positioned elements in first pass
-        continue;
+        absoluteBlockChildren.push(child);
+      } else {
+        normalChildren.push(child);
       }
+    }
 
+    // Layout normal flow elements
+    for (const child of normalChildren) {
       const childContext: LayoutContext = {
         ...context,
         parentBounds: {
@@ -370,20 +428,10 @@ export class LayoutEngine {
       }
     }
 
-    // Second pass: handle absolute positioned elements
-    for (const child of children) {
-      // Skip invisible elements
-      if (child.props?.visible === false) continue;
-      // Skip elements with display: none
-      if (this._isDisplayNone(child)) continue;
-
-      const childLayoutProps = this._computeLayoutProps(child);
-      const childText = (child.props as any)?.text;
-
-      if (childLayoutProps.position === 'absolute' || childLayoutProps.position === 'fixed') {
-        const absoluteNode = this._layoutAbsolute(child, context, parentNode);
-        nodes.push(absoluteNode);
-      }
+    // Layout absolute positioned elements
+    for (const child of absoluteBlockChildren) {
+      const absoluteNode = this._layoutAbsolute(child, context, parentNode);
+      nodes.push(absoluteNode);
     }
 
     return nodes;
@@ -409,24 +457,19 @@ export class LayoutEngine {
     const mainAxisSize = isRow ? context.availableSpace.width : context.availableSpace.height;
     const crossAxisSize = isRow ? context.availableSpace.height : context.availableSpace.width;
 
-    // Filter out absolutely positioned children and invisible children
-    const flexChildren = children.filter(child => {
-      // Skip invisible elements - they don't participate in layout
-      if (child.props?.visible === false) return false;
-      // Skip elements with display: none
-      if (this._isDisplayNone(child)) return false;
-      const childProps = this._computeLayoutProps(child);
-      return childProps.position !== 'absolute' && childProps.position !== 'fixed';
-    });
-
-    const absoluteChildren = children.filter(child => {
-      // Skip invisible elements
-      if (child.props?.visible === false) return false;
-      // Skip elements with display: none
-      if (this._isDisplayNone(child)) return false;
-      const childProps = this._computeLayoutProps(child);
-      return childProps.position === 'absolute' || childProps.position === 'fixed';
-    });
+    // Single-pass partition: separate flex children from absolute/fixed children
+    const flexChildren: Element[] = [];
+    const absoluteChildren: Element[] = [];
+    for (const child of children) {
+      if (child.props?.visible === false) continue;
+      if (this._isDisplayNone(child)) continue;
+      const childProps = this._getCachedLayoutProps(child);
+      if (childProps.position === 'absolute' || childProps.position === 'fixed') {
+        absoluteChildren.push(child);
+      } else {
+        flexChildren.push(child);
+      }
+    }
 
     if (traceEnabled) {
       logger.trace(`Filtered to ${flexChildren.length} flex children (${absoluteChildren.length} absolute)`);
@@ -454,7 +497,7 @@ export class LayoutEngine {
       for (let i = 0; i < sampleSize; i++) {
         const child = flexChildren[i];
         if (isRenderable(child)) {
-          const size = child.intrinsicSize({ availableSpace: context.availableSpace });
+          const size = this._cachedIntrinsicSize(child, this._makeIntrinsicSizeContext(context.availableSpace, context.parentStyle));
           totalSampleHeight += size.height;
         } else {
           totalSampleHeight += 1; // Default row height
@@ -506,7 +549,7 @@ export class LayoutEngine {
             visible: false,
             children: [],
             computedStyle: {},
-            layoutProps: this._computeLayoutProps(child),
+            layoutProps: this._getCachedLayoutProps(child),
             boxModel: {
               content: { width: placeholderBounds.width, height: placeholderBounds.height },
               padding: zeroDims,
@@ -531,19 +574,15 @@ export class LayoutEngine {
     // Step 1: Calculate hypothetical sizes for flex children
     const intrinsicStartTime = traceEnabled ? performance.now() : 0;
     const flexItems = flexChildren.map(child => {
-      const childProps = this._computeLayoutProps(child);
-      const childStyle = this._computeStyle(child, context.parentStyle);
+      const childProps = this._getCachedLayoutProps(child);
+      const childStyle = this._getCachedStyle(child, context.parentStyle);
 
       // Calculate intrinsic size (content only, WITHOUT padding/borders for flex)
       // Flex algorithm handles padding separately
       let contentSize = { width: 10, height: 1 }; // Default fallback
       if (isRenderable(child)) {
-        const intrinsicSizeContext: IntrinsicSizeContext = {
-          availableSpace: context.availableSpace,
-          parentStyle: context.parentStyle,
-        };
         try {
-          contentSize = child.intrinsicSize(intrinsicSizeContext);
+          contentSize = this._cachedIntrinsicSize(child, this._makeIntrinsicSizeContext(context.availableSpace, context.parentStyle));
         } catch (error) {
           logger.error(`Error calculating intrinsic size for element ${child.type}`, error instanceof Error ? error : undefined);
         }
@@ -1207,8 +1246,8 @@ export class LayoutEngine {
     context: LayoutContext,
     parentNode: LayoutNode
   ): LayoutNode {
-    const layoutProps = this._computeLayoutProps(element);
-    const style = this._computeStyle(element, context.parentStyle);
+    const layoutProps = this._getCachedLayoutProps(element);
+    const style = this._getCachedStyle(element, context.parentStyle);
 
     // Calculate position based on top/right/bottom/left
     const containingBlock = layoutProps.position === 'fixed' ?
@@ -1653,13 +1692,8 @@ export class LayoutEngine {
 
     // Delegate to component's intrinsicSize method if available
     if (isRenderable(element)) {
-      const intrinsicSizeContext: IntrinsicSizeContext = {
-        availableSpace: context.availableSpace,
-        parentStyle: context.parentStyle,
-      };
-
       try {
-        contentSize = element.intrinsicSize(intrinsicSizeContext);
+        contentSize = this._cachedIntrinsicSize(element, this._makeIntrinsicSizeContext(context.availableSpace, context.parentStyle));
       } catch (error) {
         // Fallback if intrinsicSize method fails
         logger.error(`Error calculating intrinsic size for element ${element.type}`, error instanceof Error ? error : undefined);
@@ -1668,6 +1702,7 @@ export class LayoutEngine {
       // For containers, calculate intrinsic size based on children
       const containerStyle = style;
       const isRowFlex = containerStyle.flexDirection === 'row' || containerStyle.flexDirection === 'row-reverse';
+      const isWrap = containerStyle.flexWrap === 'wrap' || containerStyle.flexWrap === 'wrap-reverse';
       const gap = typeof containerStyle.gap === 'number' ? containerStyle.gap : 0;
 
       let totalWidth = 0;
@@ -1675,28 +1710,27 @@ export class LayoutEngine {
       let maxWidth = 0;
       let maxHeight = 0;
       let childCount = 0;
+      const childSizes: Array<{ w: number; h: number }> = [];
 
       for (const child of element.children) {
-        const childStyle = this._computeStyle(child, containerStyle);
+        const childStyle = this._getCachedStyle(child, containerStyle);
 
         // Use explicit height/width from style if available, otherwise use intrinsic
         let childWidth: number;
         let childHeight: number;
 
-        if (typeof childStyle.width === 'number') {
-          childWidth = childStyle.width;
+        const hasExplicitW = typeof childStyle.width === 'number';
+        const hasExplicitH = typeof childStyle.height === 'number';
+        if (hasExplicitW && hasExplicitH) {
+          childWidth = childStyle.width as number;
+          childHeight = childStyle.height as number;
         } else if (isRenderable(child)) {
-          childWidth = child.intrinsicSize({ availableSpace: context.availableSpace }).width;
+          const childIntrinsic = this._cachedIntrinsicSize(child, this._makeIntrinsicSizeContext(context.availableSpace, context.parentStyle));
+          childWidth = hasExplicitW ? childStyle.width as number : childIntrinsic.width;
+          childHeight = hasExplicitH ? childStyle.height as number : childIntrinsic.height;
         } else {
-          childWidth = 10; // Default
-        }
-
-        if (typeof childStyle.height === 'number') {
-          childHeight = childStyle.height;
-        } else if (isRenderable(child)) {
-          childHeight = child.intrinsicSize({ availableSpace: context.availableSpace }).height;
-        } else {
-          childHeight = 1; // Default
+          childWidth = hasExplicitW ? childStyle.width as number : 10;
+          childHeight = hasExplicitH ? childStyle.height as number : 1;
         }
 
         // Add margins
@@ -1704,12 +1738,14 @@ export class LayoutEngine {
         const marginH = typeof childMargin === 'number' ? childMargin * 2 : ((childMargin as BoxSpacing).left || 0) + ((childMargin as BoxSpacing).right || 0);
         const marginV = typeof childMargin === 'number' ? childMargin * 2 : ((childMargin as BoxSpacing).top || 0) + ((childMargin as BoxSpacing).bottom || 0);
 
-        totalWidth += childWidth + marginH;
-        totalHeight += childHeight + marginV;
-        maxWidth = Math.max(maxWidth, childWidth + marginH);
-        maxHeight = Math.max(maxHeight, childHeight + marginV);
+        const outerW = childWidth + marginH;
+        const outerH = childHeight + marginV;
+        totalWidth += outerW;
+        totalHeight += outerH;
+        maxWidth = Math.max(maxWidth, outerW);
+        maxHeight = Math.max(maxHeight, outerH);
+        if (isRowFlex && isWrap) childSizes.push({ w: outerW, h: outerH });
         // Only count children with non-zero main-axis size for gap calculation
-        // (e.g., connectors return 0x0 and shouldn't contribute to gap spacing)
         const mainSize = isRowFlex ? childWidth : childHeight;
         if (mainSize > 0) childCount++;
       }
@@ -1717,9 +1753,39 @@ export class LayoutEngine {
       // Add gaps between children
       const totalGap = childCount > 1 ? gap * (childCount - 1) : 0;
 
-      // Row flex: width is sum + gaps, height is max
-      // Column flex: width is max, height is sum + gaps
-      if (isRowFlex) {
+      if (isRowFlex && isWrap && context.availableSpace.width > 0) {
+        // Simulate line-breaking to determine wrapped height
+        const availW = context.availableSpace.width;
+        let lineWidth = 0;
+        let lineHeight = 0;
+        let lineChildCount = 0;
+        let rowCount = 0;
+        let wrappedHeight = 0;
+
+        for (const cs of childSizes) {
+          if (cs.w <= 0) continue;
+          const gapBefore = lineChildCount > 0 ? gap : 0;
+          if (lineChildCount > 0 && lineWidth + gapBefore + cs.w > availW) {
+            wrappedHeight += lineHeight;
+            rowCount++;
+            lineWidth = cs.w;
+            lineHeight = cs.h;
+            lineChildCount = 1;
+          } else {
+            lineWidth += gapBefore + cs.w;
+            lineHeight = Math.max(lineHeight, cs.h);
+            lineChildCount++;
+          }
+        }
+        if (lineChildCount > 0) {
+          wrappedHeight += lineHeight;
+          rowCount++;
+        }
+        if (rowCount > 1) {
+          wrappedHeight += gap * (rowCount - 1);
+        }
+        contentSize = { width: totalWidth + totalGap, height: wrappedHeight };
+      } else if (isRowFlex) {
         contentSize = { width: totalWidth + totalGap, height: maxHeight };
       } else {
         contentSize = { width: maxWidth, height: totalHeight + totalGap };

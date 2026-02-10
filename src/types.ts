@@ -315,6 +315,9 @@ export interface IntrinsicSizeContext {
   availableSpace: { width: number; height: number };
   /** Parent element's computed style (for orientation-aware components like separator) */
   parentStyle?: Style;
+  /** Per-frame intrinsic size cache shared across layout pass. Keyed by Element,
+   *  stores the last computed result with its availableSpace for invalidation. */
+  _sizeCache?: Map<Element, { aw: number; ah: number; result: Size }>;
 }
 
 // Focusable interface for components that can receive focus

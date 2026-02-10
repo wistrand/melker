@@ -43,10 +43,8 @@ export interface BufferOverlayContext {
  * Called by both render() and forceRender() after the main UI has been rendered to the buffer.
  */
 export function renderBufferOverlays(buffer: DualBuffer, ctx: BufferOverlayContext): void {
-  // Update stats first (without swapping buffers)
-  buffer.updateStatsOnly();
-
-  // Render stats overlay if enabled (now with current stats)
+  // Render stats overlay if enabled (stats are from previous frame's swapAndGetDiff)
+  // This avoids a redundant O(W×H) full buffer diff per frame.
   if (isStatsOverlayEnabled()) {
     try {
       const statsOverlay = getGlobalStatsOverlay();

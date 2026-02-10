@@ -92,11 +92,30 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
     let totalHeight = 0;
     let childCount = 0;
 
+    const isWrap = style.flexWrap === 'wrap' || style.flexWrap === 'wrap-reverse';
+
+    // Helper: get child intrinsicSize with per-frame cache support
+    const cache = context._sizeCache;
+    const aw = context.availableSpace.width;
+    const ah = context.availableSpace.height;
+    const getChildSize = (child: Element & { intrinsicSize(ctx: IntrinsicSizeContext): { width: number; height: number } }) => {
+      if (cache) {
+        const cached = cache.get(child);
+        if (cached && cached.aw === aw && cached.ah === ah) return cached.result;
+        const result = child.intrinsicSize(context);
+        cache.set(child, { aw, ah, result });
+        return result;
+      }
+      return child.intrinsicSize(context);
+    };
+
     if (isFlexRow) {
       // Row layout: sum widths, take max height
+      // When flex-wrap is active, simulate line-breaking to compute correct total height
+      const childSizes: Array<{ w: number; h: number }> = [];
       for (const child of this.children) {
         if (hasIntrinsicSize(child)) {
-          const intrinsicSize = child.intrinsicSize(context);
+          const intrinsicSize = getChildSize(child);
           // Use explicit numeric dimensions if available, otherwise use intrinsic size + border space
           let childWidth = typeof child.props?.style?.width === 'number' ? child.props.style.width : intrinsicSize.width;
           let childHeight = typeof child.props?.style?.height === 'number' ? child.props.style.height : intrinsicSize.height;
@@ -131,21 +150,60 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
             marginV = typeof childMargin === 'number' ? childMargin * 2 : ((childMargin.top || 0) + (childMargin.bottom || 0));
           }
 
-          totalWidth += childWidth + marginH;
-          totalHeight = Math.max(totalHeight, childHeight + marginV);
-          // Only count children with non-zero width for gap calculation
+          const outerW = childWidth + marginH;
+          const outerH = childHeight + marginV;
+          childSizes.push({ w: outerW, h: outerH });
+          totalWidth += outerW;
+          totalHeight = Math.max(totalHeight, outerH);
           if (childWidth > 0) childCount++;
         }
       }
-      // Add gaps between children (row: horizontal gaps)
-      if (childCount > 1) {
-        totalWidth += gap * (childCount - 1);
+
+      if (isWrap && context.availableSpace.width > 0) {
+        // Simulate line-breaking to determine wrapped height
+        const availW = context.availableSpace.width;
+        let lineWidth = 0;
+        let lineHeight = 0;
+        let lineChildCount = 0;
+        let rowCount = 0;
+        totalHeight = 0;
+
+        for (const cs of childSizes) {
+          if (cs.w <= 0) continue; // zero-width children don't affect wrapping
+          const gapBefore = lineChildCount > 0 ? gap : 0;
+          if (lineChildCount > 0 && lineWidth + gapBefore + cs.w > availW) {
+            // Wrap to new line
+            totalHeight += lineHeight;
+            rowCount++;
+            lineWidth = cs.w;
+            lineHeight = cs.h;
+            lineChildCount = 1;
+          } else {
+            lineWidth += gapBefore + cs.w;
+            lineHeight = Math.max(lineHeight, cs.h);
+            lineChildCount++;
+          }
+        }
+        // Add last line
+        if (lineChildCount > 0) {
+          totalHeight += lineHeight;
+          rowCount++;
+        }
+        // Add inter-row gaps
+        if (rowCount > 1) {
+          totalHeight += gap * (rowCount - 1);
+        }
+      } else {
+        // No wrap: add gaps between children (row: horizontal gaps)
+        if (childCount > 1) {
+          totalWidth += gap * (childCount - 1);
+        }
       }
     } else {
       // Column layout or block: take max width, sum heights
       for (const child of this.children) {
         if (hasIntrinsicSize(child)) {
-          const intrinsicSize = child.intrinsicSize(context);
+          const intrinsicSize = getChildSize(child);
           // Use explicit numeric dimensions if available, otherwise use intrinsic size + border space
           let childWidth = typeof child.props?.style?.width === 'number' ? child.props.style.width : intrinsicSize.width;
           let childHeight = typeof child.props?.style?.height === 'number' ? child.props.style.height : intrinsicSize.height;

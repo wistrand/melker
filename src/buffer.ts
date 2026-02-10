@@ -168,10 +168,27 @@ export class TerminalBuffer {
     return map;
   }
 
-  // Clear the entire buffer
+  // Clear the entire buffer (reuses existing objects to avoid GC pressure)
   clear(): void {
-    this._cells = this._createEmptyBuffer();
-    this._wideCharMap = this._createWideCharMap();
+    const dc = this._defaultCell;
+    for (let y = 0; y < this._height; y++) {
+      const row = this._cells[y];
+      const wideRow = this._wideCharMap[y];
+      for (let x = 0; x < this._width; x++) {
+        const cell = row[x];
+        cell.char = dc.char;
+        cell.foreground = dc.foreground;
+        cell.background = dc.background;
+        cell.bold = dc.bold;
+        cell.italic = dc.italic;
+        cell.underline = dc.underline;
+        cell.dim = dc.dim;
+        cell.reverse = dc.reverse;
+        cell.width = dc.width;
+        cell.isWideCharContinuation = dc.isWideCharContinuation;
+        wideRow[x] = false;
+      }
+    }
   }
 
   // Resize buffer (preserving content where possible)
@@ -268,21 +285,46 @@ export class TerminalBuffer {
         this._clearWideCharAt(x + 1, y);
       }
 
-      // Set the main cell
-      this._cells[y][x] = { ...cell };
+      // Set the main cell (in-place to avoid object allocation)
+      const main = this._cells[y][x];
+      main.char = cell.char;
+      main.foreground = cell.foreground;
+      main.background = cell.background;
+      main.bold = cell.bold;
+      main.italic = cell.italic;
+      main.underline = cell.underline;
+      main.dim = cell.dim;
+      main.reverse = cell.reverse;
+      main.width = cell.width;
+      main.isWideCharContinuation = cell.isWideCharContinuation;
       this._wideCharMap[y][x] = true;
 
-      // Set the continuation cell
-      this._cells[y][x + 1] = {
-        ...cell, // Copy style
-        char: '',
-        isWideCharContinuation: true,
-        width: 0,
-      };
+      // Set the continuation cell (in-place)
+      const cont = this._cells[y][x + 1];
+      cont.char = '';
+      cont.foreground = cell.foreground;
+      cont.background = cell.background;
+      cont.bold = cell.bold;
+      cont.italic = cell.italic;
+      cont.underline = cell.underline;
+      cont.dim = cell.dim;
+      cont.reverse = cell.reverse;
+      cont.width = 0;
+      cont.isWideCharContinuation = true;
       this._wideCharMap[y][x + 1] = true;
     } else if (charWidth === 1) {
-      // Normal character
-      this._cells[y][x] = { ...cell };
+      // Normal character (in-place to avoid object allocation)
+      const target = this._cells[y][x];
+      target.char = cell.char;
+      target.foreground = cell.foreground;
+      target.background = cell.background;
+      target.bold = cell.bold;
+      target.italic = cell.italic;
+      target.underline = cell.underline;
+      target.dim = cell.dim;
+      target.reverse = cell.reverse;
+      target.width = cell.width;
+      target.isWideCharContinuation = cell.isWideCharContinuation;
       this._wideCharMap[y][x] = false;
     }
     // Zero-width characters are ignored
@@ -310,25 +352,40 @@ export class TerminalBuffer {
 
     if (this._wideCharMap[y][x]) {
       const cell = this._cells[y][x];
+      const dc = this._defaultCell;
 
       if (cell.isWideCharContinuation) {
         // This is the second part of a wide char, clear the first part too
         if (x > 0 && this._wideCharMap[y][x - 1]) {
-          this._cells[y][x - 1] = { ...this._defaultCell };
+          this._resetCell(this._cells[y][x - 1], dc);
           this._wideCharMap[y][x - 1] = false;
         }
       } else if (cell.width === 2) {
         // This is the first part of a wide char, clear the second part too
         if (x + 1 < this._width && this._wideCharMap[y][x + 1]) {
-          this._cells[y][x + 1] = { ...this._defaultCell };
+          this._resetCell(this._cells[y][x + 1], dc);
           this._wideCharMap[y][x + 1] = false;
         }
       }
 
       // Clear this cell
-      this._cells[y][x] = { ...this._defaultCell };
+      this._resetCell(this._cells[y][x], dc);
       this._wideCharMap[y][x] = false;
     }
+  }
+
+  // Reset a cell to default values in-place (avoids object allocation)
+  private _resetCell(target: Cell, dc: Cell): void {
+    target.char = dc.char;
+    target.foreground = dc.foreground;
+    target.background = dc.background;
+    target.bold = dc.bold;
+    target.italic = dc.italic;
+    target.underline = dc.underline;
+    target.dim = dc.dim;
+    target.reverse = dc.reverse;
+    target.width = dc.width;
+    target.isWideCharContinuation = dc.isWideCharContinuation;
   }
 
   // Get a single cell
@@ -431,31 +488,6 @@ export class TerminalBuffer {
     this.setCell(x + width - 1, y + height - 1, { char: chars.br, ...cellStyle });
   }
 
-  // Compare with another buffer and return differences
-  // Uses direct cell access (no cloning) for comparison, only clones for output
-  diff(otherBuffer: TerminalBuffer): BufferDiff[] {
-    const differences: BufferDiff[] = [];
-    const maxHeight = Math.max(this._height, otherBuffer._height);
-    const maxWidth = Math.max(this._width, otherBuffer._width);
-
-    for (let y = 0; y < maxHeight; y++) {
-      const thisRow = this._cells[y];
-      const otherRow = otherBuffer._cells[y];
-
-      for (let x = 0; x < maxWidth; x++) {
-        // Direct access, no cloning for comparison
-        const thisCell = thisRow?.[x] ?? this._defaultCell;
-        const otherCell = otherRow?.[x] ?? otherBuffer._defaultCell;
-
-        if (!this._cellsEqualDirect(thisCell, otherCell)) {
-          differences.push({ x, y, cell: { ...thisCell } }); // Clone only for output
-        }
-      }
-    }
-
-    return differences;
-  }
-
   // Direct cell comparison (no cloning needed when accessing cells directly)
   private _cellsEqualDirect(a: Cell, b: Cell): boolean {
     return (
@@ -472,14 +504,31 @@ export class TerminalBuffer {
     );
   }
 
+  // Compare this buffer against another and return cell-level differences
+  diff(other: TerminalBuffer): BufferDiff[] {
+    const diffs: BufferDiff[] = [];
+    const minHeight = Math.min(this._height, other._height);
+    const minWidth = Math.min(this._width, other._width);
+    for (let y = 0; y < minHeight; y++) {
+      for (let x = 0; x < minWidth; x++) {
+        const a = this._cells[y][x];
+        const b = other._cells[y][x];
+        if (!this._cellsEqualDirect(a, b)) {
+          diffs.push({ x, y, cell: { ...a } });
+        }
+      }
+    }
+    return diffs;
+  }
+
   // Copy content from another buffer
   copyFrom(sourceBuffer: TerminalBuffer): void {
     this.resize(sourceBuffer._width, sourceBuffer._height);
 
-    // Copy cells and wide char map
+    // Copy cells (in-place) and wide char map
     for (let y = 0; y < this._height; y++) {
       for (let x = 0; x < this._width; x++) {
-        this._cells[y][x] = { ...sourceBuffer._cells[y][x] };
+        this._resetCell(this._cells[y][x], sourceBuffer._cells[y][x]);
         this._wideCharMap[y][x] = sourceBuffer._wideCharMap[y][x];
       }
     }
@@ -700,13 +749,6 @@ export class DualBuffer {
     this._forceNextRender = true;
   }
 
-  // Update statistics without swapping buffers (useful for real-time stats)
-  updateStatsOnly(): void {
-    const startTime = performance.now();
-    const differences = this._currentBuffer.diff(this._previousBuffer);
-    this._updateStats(differences, startTime);
-  }
-
   // Swap buffers and return differences for rendering
   swapAndGetDiff(): BufferDiff[] {
     const startTime = performance.now();
@@ -741,6 +783,11 @@ export class DualBuffer {
     this._dirtyRows.clear();
 
     return differences;
+  }
+
+  // Compute and return diff without swapping buffers (for benchmarking/inspection)
+  getDiffOnly(): BufferDiff[] {
+    return this._computeFullDiff();
   }
 
   // Compute diff using only dirty rows (optimized path)

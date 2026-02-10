@@ -942,10 +942,7 @@ export class TextSelectionHandler {
     this._renderDetailedStats.overlaysTotal += rt.overlaysTime;
     this._renderDetailedStats.modalsTotal += rt.modalsTime;
 
-    // Update stats before rendering overlays
-    buffer.updateStatsOnly();
-
-    // Render stats overlay if enabled
+    // Render stats overlay if enabled (stats are from previous frame's swapAndGetDiff)
     if (isStatsOverlayEnabled()) {
       try {
         const statsOverlay = getGlobalStatsOverlay();

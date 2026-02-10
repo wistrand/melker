@@ -33,12 +33,15 @@ export class ContentMeasurer {
     const flexDirection = containerStyle.flexDirection || containerStyle['flex-direction'] || 'column';
     const isRow = flexDirection === 'row' || flexDirection === 'row-reverse';
 
+    const flexWrap = containerStyle.flexWrap || containerStyle['flex-wrap'];
+    const isWrap = flexWrap === 'wrap' || flexWrap === 'wrap-reverse';
+
     let totalHeight = 0;
     let totalWidth = 0;
     let maxHeight = 0;
     let maxWidth = 0;
-    const childMeasurements: Array<{ element: Element; size: Size; margin: any }> = [];
     let visibleChildCount = 0;
+    const childSizes: Array<{ w: number; h: number }> = [];
 
     for (const child of container.children) {
       const childSize = this.measureElement(child, availableWidth);
@@ -52,9 +55,8 @@ export class ContentMeasurer {
       maxHeight = Math.max(maxHeight, childHeightWithMargin);
       maxWidth = Math.max(maxWidth, childWidthWithMargin);
 
-      childMeasurements.push({ element: child, size: childSize, margin: childMargin });
+      childSizes.push({ w: childWidthWithMargin, h: childHeightWithMargin });
       // Only count children with non-zero main-axis size for gap calculation
-      // (e.g., connectors return 0x0 and shouldn't contribute to gap spacing)
       const mainSize = isRow ? childWidthWithMargin : childHeightWithMargin;
       if (mainSize > 0) visibleChildCount++;
     }
@@ -68,26 +70,47 @@ export class ContentMeasurer {
       }
     }
 
-    // For row layout: width is sum, height is max
-    // For column layout: width is max, height is sum
-    const resultWidth = isRow ? totalWidth : maxWidth;
-    const resultHeight = isRow ? maxHeight : totalHeight;
+    let resultWidth: number;
+    let resultHeight: number;
 
-    // Debug: Uncomment to debug content measurement issues
-    // if (container.props?.scrollable && container.props?.id) {
-    //   console.log(`[ContentMeasurer] Container ${container.props.id}: total content size`, {
-    //     containerId: container.props.id,
-    //     childCount: container.children.length,
-    //     availableWidth,
-    //     calculatedSize: { width: maxWidth, height: totalHeight },
-    //     childMeasurements: childMeasurements.map(m => ({
-    //       type: m.element.type,
-    //       id: m.element.props?.id || 'none',
-    //       size: m.size,
-    //       margin: m.margin
-    //     }))
-    //   });
-    // }
+    if (isRow && isWrap && availableWidth > 0) {
+      // Simulate line-breaking to determine wrapped height
+      let lineWidth = 0;
+      let lineHeight = 0;
+      let lineChildCount = 0;
+      let rowCount = 0;
+      let wrappedHeight = 0;
+
+      for (const cs of childSizes) {
+        if (cs.w <= 0) continue;
+        const gapBefore = lineChildCount > 0 ? gap : 0;
+        if (lineChildCount > 0 && lineWidth + gapBefore + cs.w > availableWidth) {
+          wrappedHeight += lineHeight;
+          rowCount++;
+          lineWidth = cs.w;
+          lineHeight = cs.h;
+          lineChildCount = 1;
+        } else {
+          lineWidth += gapBefore + cs.w;
+          lineHeight = Math.max(lineHeight, cs.h);
+          lineChildCount++;
+        }
+      }
+      if (lineChildCount > 0) {
+        wrappedHeight += lineHeight;
+        rowCount++;
+      }
+      if (rowCount > 1) {
+        wrappedHeight += gap * (rowCount - 1);
+      }
+      resultWidth = totalWidth;
+      resultHeight = wrappedHeight;
+    } else {
+      // For row layout: width is sum, height is max
+      // For column layout: width is max, height is sum
+      resultWidth = isRow ? totalWidth : maxWidth;
+      resultHeight = isRow ? maxHeight : totalHeight;
+    }
 
     return { width: maxWidth, height: resultHeight };
   }

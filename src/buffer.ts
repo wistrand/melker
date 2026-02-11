@@ -21,6 +21,7 @@ export interface Cell {
   underline?: boolean;
   dim?: boolean;
   reverse?: boolean; // Swap foreground and background colors
+  link?: string; // OSC 8 hyperlink URL
   // Wide character support
   width?: number; // Character display width (1 or 2)
   isWideCharContinuation?: boolean; // True if this cell is the second part of a wide character
@@ -295,6 +296,7 @@ export class TerminalBuffer {
       main.underline = cell.underline;
       main.dim = cell.dim;
       main.reverse = cell.reverse;
+      main.link = cell.link;
       main.width = cell.width;
       main.isWideCharContinuation = cell.isWideCharContinuation;
       this._wideCharMap[y][x] = true;
@@ -309,6 +311,7 @@ export class TerminalBuffer {
       cont.underline = cell.underline;
       cont.dim = cell.dim;
       cont.reverse = cell.reverse;
+      cont.link = cell.link;
       cont.width = 0;
       cont.isWideCharContinuation = true;
       this._wideCharMap[y][x + 1] = true;
@@ -323,6 +326,7 @@ export class TerminalBuffer {
       target.underline = cell.underline;
       target.dim = cell.dim;
       target.reverse = cell.reverse;
+      target.link = cell.link;
       target.width = cell.width;
       target.isWideCharContinuation = cell.isWideCharContinuation;
       this._wideCharMap[y][x] = false;
@@ -499,6 +503,7 @@ export class TerminalBuffer {
       a.underline === b.underline &&
       a.dim === b.dim &&
       a.reverse === b.reverse &&
+      a.link === b.link &&
       a.width === b.width &&
       a.isWideCharContinuation === b.isWideCharContinuation
     );
@@ -588,6 +593,7 @@ export class TerminalBuffer {
       a.underline === b.underline &&
       a.dim === b.dim &&
       a.reverse === b.reverse &&
+      a.link === b.link &&
       a.width === b.width &&
       a.isWideCharContinuation === b.isWideCharContinuation
     );
@@ -847,6 +853,7 @@ export class DualBuffer {
       a.underline === b.underline &&
       a.dim === b.dim &&
       a.reverse === b.reverse &&
+      a.link === b.link &&
       a.width === b.width &&
       a.isWideCharContinuation === b.isWideCharContinuation
     );

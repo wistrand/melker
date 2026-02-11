@@ -149,6 +149,7 @@ export function bufferToStdout(
   for (let y = 0; y < height; y++) {
     let line = '';
     let currentStyle = '';
+    let currentLink: string | undefined;
 
     for (let x = 0; x < width; x++) {
       const cell = termBuffer.getCell(x, y);
@@ -172,6 +173,16 @@ export function bufferToStdout(
           line += cellStyle;
           currentStyle = cellStyle;
         }
+
+        // OSC 8 hyperlink: only emit on transitions
+        if (cell.link !== currentLink) {
+          if (cell.link) {
+            line += ANSI.linkOpen + cell.link + ANSI.linkEnd;
+          } else {
+            line += ANSI.linkClose;
+          }
+          currentLink = cell.link;
+        }
       }
 
       // Output the character
@@ -180,6 +191,10 @@ export function bufferToStdout(
 
     // Reset at end of line (only if using ANSI)
     if (!stripAnsi) {
+      // Close any open hyperlink before line end
+      if (currentLink) {
+        line += ANSI.linkClose;
+      }
       line += ANSI.reset;
     }
     lines.push(line);

@@ -193,7 +193,8 @@ export class TerminalRenderer {
       italic: false,
       underline: false,
       dim: false,
-      reverse: false
+      reverse: false,
+      link: undefined as string | undefined,
     };
 
     // Sort differences by position for optimal cursor movement and group consecutive cells
@@ -247,7 +248,8 @@ export class TerminalRenderer {
           italic: cellDiff.cell.italic || false,
           underline: cellDiff.cell.underline || false,
           dim: cellDiff.cell.dim || false,
-          reverse: cellDiff.cell.reverse || false
+          reverse: cellDiff.cell.reverse || false,
+          link: cellDiff.cell.link,
         };
 
         if (this._styleChanged(lastStyle, newStyle)) {
@@ -317,7 +319,8 @@ export class TerminalRenderer {
       oldStyle.italic !== newStyle.italic ||
       oldStyle.underline !== newStyle.underline ||
       oldStyle.dim !== newStyle.dim ||
-      oldStyle.reverse !== newStyle.reverse
+      oldStyle.reverse !== newStyle.reverse ||
+      oldStyle.link !== newStyle.link
     );
   }
 
@@ -375,6 +378,15 @@ export class TerminalRenderer {
     if (newStyle.italic && !oldStyle.italic) codes.push(ANSI.italic);
     if (newStyle.underline && !oldStyle.underline) codes.push(ANSI.underline);
     if (newStyle.reverse && !oldStyle.reverse) codes.push(ANSI.reverse);
+
+    // OSC 8 hyperlink (independent of SGR — reset does not close links)
+    if (newStyle.link !== oldStyle.link) {
+      if (newStyle.link) {
+        codes.push(ANSI.linkOpen + newStyle.link + ANSI.linkEnd);
+      } else {
+        codes.push(ANSI.linkClose);
+      }
+    }
 
     return codes.join('');
   }

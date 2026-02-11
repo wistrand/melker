@@ -908,7 +908,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         const mdLinkUrl = codeValue.endsWith('.md') ? codeValue : undefined;
         if (mdLinkUrl) {
           // Apply link style + code style for .md file links
-          const linkedCodeStyle = { ...codeStyle, underline: true };
+          const linkedCodeStyle = { ...codeStyle, underline: true, link: mdLinkUrl };
           spans.push({ text: codeValue, style: linkedCodeStyle, linkUrl: mdLinkUrl, linkTitle: codeValue });
         } else {
           spans.push({ text: codeValue, style: codeStyle, linkUrl, linkTitle });
@@ -918,7 +918,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
       case 'link': {
         const linkNode = node as Link;
-        const linkStyle = this._getLinkStyle(style);
+        const linkStyle = { ...this._getLinkStyle(style), link: linkNode.url };
         for (const child of linkNode.children) {
           this._collectSpans(child, linkStyle, spans, linkNode.url, linkNode.title);
         }
@@ -973,8 +973,8 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
 
       case 'link': {
         const linkNode = node as Link;
-        // Style for links: underline and use primary color
-        const inlineLinkStyle = this._getLinkStyle(ctx.style);
+        // Style for links: underline and use primary color, with OSC 8 hyperlink
+        const inlineLinkStyle = { ...this._getLinkStyle(ctx.style), link: linkNode.url };
         // Get link text from children
         let linkWidth = 0;
         for (const child of linkNode.children) {

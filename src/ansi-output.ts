@@ -25,6 +25,10 @@ export const ANSI = {
   italic: '\x1b[3m',
   underline: '\x1b[4m',
   reverse: '\x1b[7m',
+  // OSC 8 hyperlinks
+  linkOpen: '\x1b]8;;',
+  linkClose: '\x1b]8;;\x1b\\',
+  linkEnd: '\x1b\\',
   // Mouse reporting modes
   mouseBasicOn: '\x1b[?1000h',
   mouseBasicOff: '\x1b[?1000l',
@@ -112,6 +116,7 @@ export interface BufferCell {
   italic?: boolean;
   underline?: boolean;
   reverse?: boolean;
+  link?: string;
 }
 
 export interface BufferDifference {
@@ -153,6 +158,7 @@ export class AnsiOutputGenerator {
     let currentX = -1;
     let currentY = -1;
     let currentStyle = '';
+    let currentLink: string | undefined;
 
     // Sort differences by position for optimal cursor movement (row-major order)
     differences.sort((a, b) => {
@@ -164,6 +170,12 @@ export class AnsiOutputGenerator {
     const spans = this._groupContiguousSpans(differences);
 
     for (const span of spans) {
+      // Close any open hyperlink before cursor repositioning
+      if (currentLink) {
+        commands.push(ANSI.linkClose);
+        currentLink = undefined;
+      }
+
       // Optimize cursor movement to start of span
       const newCursorCommands = this._generateCursorMovement(currentX, currentY, span.x, span.y);
       if (newCursorCommands) {
@@ -181,6 +193,16 @@ export class AnsiOutputGenerator {
           currentStyle = cellStyle;
         }
 
+        // OSC 8 hyperlink: only emit on transitions
+        if (cell.link !== currentLink) {
+          if (cell.link) {
+            commands.push(ANSI.linkOpen + cell.link + ANSI.linkEnd);
+          } else {
+            commands.push(ANSI.linkClose);
+          }
+          currentLink = cell.link;
+        }
+
         // Write character
         commands.push(cell.char);
         currentX++;
@@ -193,6 +215,11 @@ export class AnsiOutputGenerator {
           currentY = -1;
         }
       }
+    }
+
+    // Close any trailing hyperlink
+    if (currentLink) {
+      commands.push(ANSI.linkClose);
     }
 
     return commands.join('');

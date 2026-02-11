@@ -148,6 +148,19 @@
       "env": "MELKER_ISOLINE_SOURCE",
       "description": "Color channel for isoline scalar values: oklab (perceptual lightness), oklch-hue (color hue - groups reds, blues, etc.), luma (BT.601), or individual channels"
     },
+    "render.isolineFill": {
+      "type": "string",
+      "enum": ["source", "color", "color-mean"],
+      "default": "source",
+      "env": "MELKER_ISOLINE_FILL",
+      "description": "Isolines fill mode: source (grayscale from scalar source), color (original image colors)"
+    },
+    "render.isolineColor": {
+      "type": "string",
+      "default": "",
+      "env": "MELKER_ISOLINE_COLOR",
+      "description": "Isoline contour color: color name/string, 'none' (hide lines), 'auto' (derive from fill mode), or empty (default)"
+    },
     "headless.enabled": {
       "type": "boolean",
       "default": false,

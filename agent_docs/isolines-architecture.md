@@ -17,11 +17,13 @@ The `isolines` and `isolines-filled` graphics modes render scalar fields as cont
 
 ## Configuration
 
-| Config Key              | Env Var                  | Default  | Description                          |
-|-------------------------|--------------------------|----------|--------------------------------------|
-| `render.isolineCount`   | `MELKER_ISOLINE_COUNT`   | 2        | Number of contour lines              |
-| `render.isolineMode`    | `MELKER_ISOLINE_MODE`    | quantile | Distribution: equal, quantile, nice  |
-| `render.isolineSource`  | `MELKER_ISOLINE_SOURCE`  | oklab    | Scalar source channel                |
+| Config Key              | Env Var                  | Default  | Description                              |
+|-------------------------|--------------------------|----------|------------------------------------------|
+| `render.isolineCount`   | `MELKER_ISOLINE_COUNT`   | 2        | Number of contour lines                  |
+| `render.isolineMode`    | `MELKER_ISOLINE_MODE`    | quantile | Distribution: equal, quantile, nice      |
+| `render.isolineSource`  | `MELKER_ISOLINE_SOURCE`  | oklab    | Scalar source channel                    |
+| `render.isolineFill`    | `MELKER_ISOLINE_FILL`    | source   | Fill mode: source, color, color-mean     |
+| `render.isolineColor`   | `MELKER_ISOLINE_COLOR`   | (empty)  | Contour color: color string, none, auto  |
 
 ## Scalar Sources
 
@@ -265,15 +267,21 @@ Terminal Output (3×3 cells):
 │    - Sample at 2× resolution                                 │
 │    - Average 3×3 pixels per sample                          │
 │    - Track min/max/all values                               │
+│    - If color-mean: also accumulate averaged RGB per point   │
 ├──────────────────────────────────────────────────────────────┤
 │ 2. Generate isoline thresholds                              │
 │    - Use configured mode (equal/quantile/nice)               │
 │    - Enforce minimum spacing                                 │
 ├──────────────────────────────────────────────────────────────┤
+│ 2b. Classify band colors (color-mean only)                  │
+│    - Iterate grid points (not raw pixels)                    │
+│    - Classify by scalar into bands, average stored RGB       │
+├──────────────────────────────────────────────────────────────┤
 │ 3. Render each terminal cell                                │
-│    - Get 4 corner values from sub-sampled grid              │
-│    - For each threshold: compute case, get character         │
-│    - If filled: compute background from average value        │
+│    - If isolineColor≠'none': run marching squares            │
+│    - Compute fill color (for bg and/or auto contour fg)      │
+│    - If filled: bgColor = fill color                         │
+│    - If isolineColor='auto': fgColor = fill color            │
 │    - Write to terminal buffer                               │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -283,9 +291,21 @@ Terminal Output (3×3 cells):
 | Mode               | Fill | Description                                       |
 |--------------------|------|---------------------------------------------------|
 | `isolines`         | No   | Box-drawing characters only, transparent background |
-| `isolines-filled`  | Yes  | Box-drawing + grayscale gradient background       |
+| `isolines-filled`  | Yes  | Box-drawing + background fill (controlled by `isolineFill`) |
 
-### Filled Mode Background
+### Fill Modes (`isolineFill`)
+
+The `isolineFill` prop (or `MELKER_ISOLINE_FILL` env var) controls how background color is computed in `isolines-filled` mode.
+
+| Value         | Description                                                        |
+|---------------|--------------------------------------------------------------------|
+| `source`      | Grayscale derived from scalar values (default)                     |
+| `color`       | Per-cell averaged color from the original pixel buffer             |
+| `color-mean`  | One mean color per isoline band from all pixels in that band       |
+
+#### `source` (default)
+
+Computes a grayscale value from the cell's average scalar:
 
 ```typescript
 avg = (tl + tr + bl + br) / 4
@@ -293,15 +313,68 @@ t = (avg - min) / (max - min)  // normalize to 0-1
 gray = 64 + t * 128            // map to 64-192 range
 ```
 
+Result: a topographic map effect where brightness tracks the scalar source.
+
+#### `color`
+
+Samples the actual 2x3 pixel block for each terminal cell and averages their RGB values. Same technique as `block` graphics mode. Each cell gets its own color — essentially block mode with isoline contour lines overlaid.
+
+#### `color-mean`
+
+Precomputes one mean color per isoline band. Bands are the regions between consecutive thresholds (plus below-first and above-last). All pixels in the visible area are classified into bands by their scalar value, and the RGB values are averaged per band.
+
+Result: flat uniform color per region, like a choropleth map with contour boundaries. Useful when you want distinct regions rather than per-cell color variation.
+
+The band classification:
+```
+Band 0: scalar < threshold[0]
+Band 1: threshold[0] <= scalar < threshold[1]
+...
+Band N: scalar >= threshold[N-1]
+```
+
+### Contour Color (`isolineColor`)
+
+The `isolineColor` prop (or `MELKER_ISOLINE_COLOR` env var) controls the foreground color of the contour line characters.
+
+| Value          | Description                                                         |
+|----------------|---------------------------------------------------------------------|
+| (empty/unset)  | Default: uses `style.foreground` or theme default                   |
+| color string   | All auto-generated contour lines use this color (e.g. `'white'`)    |
+| `none`         | Hide contour lines entirely (filled mode still renders backgrounds) |
+| `auto`         | Derive contour color from the fill mode logic                       |
+
+#### Priority chain
+
+```
+isoline.color (per-threshold) > isolineColor prop > style.foreground > theme default
+```
+
+Per-isoline colors (via manual `isolines` array with `color` field) always take priority over `isolineColor`.
+
+#### `auto` behavior
+
+When `isolineColor='auto'`, the contour line foreground uses the same color that the fill mode would produce:
+
+| Fill mode     | Auto contour color                                              |
+|---------------|-----------------------------------------------------------------|
+| `source`      | Grayscale value from the cell's scalar average                  |
+| `color`       | Per-cell averaged RGB from the original pixel buffer            |
+| `color-mean`  | The mean color of the isoline band the cell falls into          |
+
+In unfilled `isolines` mode, this gives you colored contour lines without any background fill. In filled `isolines-filled` mode, the contour lines match the background (blending in).
+
 ## Canvas Props
 
 ```typescript
 interface CanvasProps {
   gfxMode?: 'isolines' | 'isolines-filled' | ...;
-  isolineCount?: number;      // Override config default
-  isolineMode?: IsolineMode;  // 'equal' | 'quantile' | 'nice'
-  isolines?: Isoline[];       // Manual thresholds (overrides count)
-  isolineSource?: IsolineSource;
+  isolineCount?: number;        // Override config default
+  isolineMode?: IsolineMode;    // 'equal' | 'quantile' | 'nice'
+  isolines?: Isoline[];         // Manual thresholds (overrides count)
+  isolineSource?: IsolineSource; // 'luma' | 'oklab' | 'oklch-hue' | 'red' | ...
+  isolineFill?: IsolineFill;    // 'source' | 'color' | 'color-mean'
+  isolineColor?: IsolineColor;  // 'none' | 'auto' | color string
 }
 ```
 
@@ -311,29 +384,49 @@ interface CanvasProps {
 <!-- Basic isolines -->
 <canvas gfxMode="isolines" src="./image.png" />
 
-<!-- Filled with custom count -->
+<!-- Filled with grayscale (default) -->
 <canvas gfxMode="isolines-filled" isolineCount="5" />
+
+<!-- Filled with original image colors -->
+<canvas gfxMode="isolines-filled" isolineFill="color" />
+
+<!-- Filled with one mean color per isoline band -->
+<canvas gfxMode="isolines-filled" isolineFill="color-mean" />
 
 <!-- Hue-based grouping -->
 <canvas gfxMode="isolines" isolineSource="oklch-hue" />
 
 <!-- Manual thresholds -->
 <canvas gfxMode="isolines" isolines={[{value: 64}, {value: 128}, {value: 192}]} />
+
+<!-- White contour lines -->
+<canvas gfxMode="isolines-filled" isolineFill="color" isolineColor="white" />
+
+<!-- Colored contour lines derived from fill mode (no fill background) -->
+<canvas gfxMode="isolines" isolineColor="auto" isolineFill="color" />
+
+<!-- Choropleth: filled bands, no contour lines -->
+<canvas gfxMode="isolines-filled" isolineFill="color-mean" isolineColor="none" />
 ```
 
 Environment variable usage:
 
 ```bash
 MELKER_ISOLINE_COUNT=5 MELKER_ISOLINE_SOURCE=oklab ./melker.ts --gfx-mode=isolines app.melker
+MELKER_ISOLINE_FILL=color-mean ./melker.ts --gfx-mode=isolines-filled app.melker
+MELKER_ISOLINE_COLOR=white ./melker.ts --gfx-mode=isolines-filled app.melker
+MELKER_ISOLINE_COLOR=none MELKER_ISOLINE_FILL=color-mean ./melker.ts --gfx-mode=isolines-filled app.melker
 ```
 
 ## Performance
 
-| Operation             | Complexity                           |
-|-----------------------|--------------------------------------|
-| Build scalar grid     | O(W × H × 9) for 3×3 averaging       |
-| Generate thresholds   | O(W × H) for quantile (unique values) |
-| Render cells          | O(W × H × N) for N isolines          |
+| Operation              | Complexity                                    |
+|------------------------|-----------------------------------------------|
+| Build scalar grid      | O(W × H × 9) for 3×3 averaging               |
+| + color accumulation   | +3 adds per pixel when color-mean active      |
+| Generate thresholds    | O(W × H) for quantile (unique values)         |
+| Classify band colors   | O(W × H) iterates grid points (color-mean)    |
+| Render cells           | O(W × H × N) for N isolines                  |
 
 Isolines mode is typically faster than sextant mode because:
 - No 6-pixel sampling per cell (scalar grid pre-computed)

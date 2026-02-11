@@ -767,6 +767,14 @@ export class MelkerConfig {
     return this.data['render.isolineSource'] as 'luma' | 'red' | 'green' | 'blue' | 'alpha' | 'oklab' | 'oklch-hue';
   }
 
+  get isolineFill(): 'source' | 'color' | 'color-mean' {
+    return this.data['render.isolineFill'] as 'source' | 'color' | 'color-mean';
+  }
+
+  get isolineColor(): string {
+    return this.data['render.isolineColor'] as string;
+  }
+
   // Headless
   get headlessEnabled(): boolean {
     return this.data['headless.enabled'] as boolean;

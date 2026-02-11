@@ -3,6 +3,8 @@
 
 export type IsolineMode = 'equal' | 'quantile' | 'nice';
 export type IsolineSource = 'luma' | 'red' | 'green' | 'blue' | 'alpha' | 'oklab' | 'oklch-hue';
+export type IsolineFill = 'source' | 'color' | 'color-mean';
+export type IsolineColor = 'none' | 'auto' | (string & Record<never, never>);
 
 export interface Isoline {
   value: number;

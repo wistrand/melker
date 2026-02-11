@@ -17,7 +17,7 @@ import {
   CanvasRenderState, renderToTerminal, renderIsolinesToTerminal, getEffectiveGfxMode, generateSixelOutput, generateKittyOutput, generateITerm2Output,
   GFX_MODES, type CanvasRenderData, type GfxMode, type SixelOutputData, type KittyOutputData, type ITermOutputData, type IsolineRenderProps
 } from './canvas-render.ts';
-import type { Isoline, IsolineMode, IsolineSource } from '../isoline.ts';
+import type { Isoline, IsolineMode, IsolineSource, IsolineFill, IsolineColor } from '../isoline.ts';
 import {
   decodeImageBytes, loadImageFromSource,
   calculateImageScaling, scaleImageToBuffer, renderScaledDataToBuffer,
@@ -66,6 +66,8 @@ export interface CanvasProps extends BaseProps {
   isolineMode?: IsolineMode;         // Distribution algorithm: equal, quantile, nice (default: equal)
   isolines?: Isoline[];              // Manual isoline definitions (overrides isolineCount)
   isolineSource?: IsolineSource;     // Color channel to use: luma, red, green, blue, alpha (default: luma)
+  isolineFill?: IsolineFill;         // Fill mode: source (grayscale from scalar) or color (original image colors)
+  isolineColor?: IsolineColor;       // Contour line color: color string, 'none', 'auto', or undefined (theme default)
 }
 
 export class CanvasElement extends Element implements Renderable, Focusable, Interactive {
@@ -1199,6 +1201,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         isolineMode: this.props.isolineMode,
         isolines: this.props.isolines,
         isolineSource: this.props.isolineSource,
+        isolineFill: this.props.isolineFill,
+        isolineColor: this.props.isolineColor,
       };
       renderIsolinesToTerminal(bounds, style, buffer, data, isolineProps, gfxMode === 'isolines-filled');
       return;
@@ -1682,6 +1686,8 @@ export const canvasSchema: ComponentSchema = {
     isolineMode: { type: 'string', enum: ['equal', 'quantile', 'nice'], description: 'Isoline distribution algorithm (default: equal, env: MELKER_ISOLINE_MODE)' },
     isolines: { type: 'array', description: 'Manual isoline definitions: [{value, color?, label?}]' },
     isolineSource: { type: 'string', enum: ['luma', 'red', 'green', 'blue', 'alpha'], description: 'Color channel for isoline scalar values (default: luma, env: MELKER_ISOLINE_SOURCE)' },
+    isolineFill: { type: 'string', enum: ['source', 'color', 'color-mean'], description: 'Fill mode: source (grayscale from scalar), color (per-cell image colors), color-mean (one mean color per isoline band). Default: source. Env: MELKER_ISOLINE_FILL' },
+    isolineColor: { type: 'string', description: 'Contour line color: color name/string, \'none\' (hide lines), \'auto\' (derive from fill mode), or empty (theme default). Env: MELKER_ISOLINE_COLOR' },
   },
   styles: {
     objectFit: { type: 'string', enum: ['contain', 'fill', 'cover'], description: 'How image fits: contain (aspect ratio, default for canvas), fill (stretch), cover (crop)' },

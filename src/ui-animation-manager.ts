@@ -178,6 +178,14 @@ export class UIAnimationManager {
   }
 
   /**
+   * Trigger a render immediately (outside the tick loop).
+   * Use for one-shot async events like font loading.
+   */
+  renderNow(): void {
+    if (this._requestRender) this._requestRender();
+  }
+
+  /**
    * Stop all animations and cleanup.
    */
   shutdown(): void {

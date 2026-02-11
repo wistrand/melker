@@ -4,7 +4,8 @@
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext, TextSelectable, SelectableTextProvider } from '../../types.ts';
 import type { DualBuffer, Cell } from '../../buffer.ts';
 import { getCharset, isSpecialChar, type SegmentMask } from './charsets.ts';
-import { getRenderer, type SegmentRenderer } from './renderers.ts';
+import { getRenderer, PixelRenderer, type SegmentRenderer } from './renderers.ts';
+import { parsePSF2, type BitmapFont } from './bitmap-fonts.ts';
 import type { SegmentHeight, SegmentRenderOptions } from './types.ts';
 import { getUIAnimationManager } from '../../ui-animation-manager.ts';
 
@@ -61,6 +62,14 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
     if (!this._renderer) {
       const height = this.getHeight();
       this._renderer = getRenderer(this.props.renderer || 'box-drawing', height);
+      // Kick off lazy font load for pixel renderers
+      if (this._renderer instanceof PixelRenderer) {
+        this._renderer.ensureFont().then(() => {
+          this._renderedLines = null;
+          this._lastValue = null;
+          getUIAnimationManager().renderNow();
+        });
+      }
     }
     return this._renderer;
   }
@@ -101,7 +110,9 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
     const renderer = this.getRendererInstance();
     const charset = this.getCharsetInstance();
     const options: SegmentRenderOptions = {
-      showOffSegments: !!this.props.style?.['off-color'],
+      showOffSegments: !!this.props.style?.offColor || this.props.style?.['off-color'],
+      onChar: this.props.style?.['pixelChar'] as string | undefined,
+      offChar: this.props.style?.['offPixelChar'] as string | undefined,
     };
 
     // Initialize empty lines
@@ -112,6 +123,8 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
     // Track character boundaries for selection mapping
     this._charBoundaries = [0]; // First char starts at 0
 
+    const isPixel = renderer instanceof PixelRenderer;
+
     for (const char of value) {
       let rendered;
 
@@ -121,6 +134,8 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
         } else {
           rendered = renderer.renderDot(options);
         }
+      } else if (isPixel) {
+        rendered = renderer.renderGlyph(char, options);
       } else {
         const segments = charset[char] || charset[char.toUpperCase()] || charset[' '];
         if (segments) {
@@ -209,13 +224,16 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
 
     // Get colors from style
     const onColor = this.props.style?.color;
-    const offColor = this.props.style?.['off-color'];
+    const offColor = this.props.style?.offColor || this.props.style?.['off-color'];
     const bgColor = this.props.style?.['background-color'] || this.props.style?.backgroundColor;
 
     // Build cell style
     const cellStyle: Partial<Cell> = { ...style };
     if (onColor) {
       cellStyle.foreground = onColor as number;
+    }
+    if (offColor) {
+      cellStyle.background = offColor as number;
     }
     if (bgColor) {
       cellStyle.background = bgColor as number;
@@ -246,7 +264,9 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
           const charStyle = { ...cellStyle };
 
           // Check if this is an "off" segment character
-          const isOffChar = char === '·' || char === '░' || char === '▯' || char === '─';
+          const customOffChar = this.props.style?.['offPixelChar'] as string | undefined;
+          const isOffChar = char === '·' || char === '░' || char === '▯' || char === '─'
+            || (customOffChar && char === customOffChar);
           if (isOffChar) {
             charStyle.foreground = offColor as number;
           }
@@ -395,6 +415,24 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
   }
 
   /**
+   * Load a PSF2 font from binary data and apply it
+   */
+  loadPSF2Font(data: Uint8Array): void {
+    this.setFont(parsePSF2(data));
+  }
+
+  /**
+   * Set a custom bitmap font for pixel rendering
+   */
+  setFont(font: BitmapFont): void {
+    const height = this.getHeight();
+    this._renderer = new PixelRenderer(height, font);
+    this._renderedLines = null;
+    this._lastValue = null;
+    this._charBoundaries = [];
+  }
+
+  /**
    * Invalidate renderer cache (call when style changes)
    */
   invalidateRenderer(): void {
@@ -409,7 +447,7 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
       return false;
     }
     if (props.renderer !== undefined &&
-        !['box-drawing', 'block', 'rounded', 'geometric'].includes(props.renderer)) {
+        !['box-drawing', 'block', 'rounded', 'geometric', 'pixel'].includes(props.renderer)) {
       return false;
     }
     // Validate height if in style (must be 5 or 7)
@@ -429,13 +467,13 @@ import { registerComponent } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
 
 export const segmentDisplaySchema: ComponentSchema = {
-  description: 'LCD/LED-style segment display for digits and text. Styles: height (5 or 7), color (lit segments), off-color (dimmed), background-color.',
+  description: 'LCD/LED-style segment display for digits and text. Renderers: box-drawing (default), rounded, geometric, pixel (bitmap font glyphs, 3x5 at height 5, 5x7 at height 7). Styles: height (5 or 7), color (lit segments), off-color (panel background / dimmed segment color), background-color (overrides off-color), pixel-char (on character for pixel renderer), off-pixel-char (off character for pixel renderer). Supports full ASCII, symbols, and ISO 8859-1 accented characters in pixel mode.',
   props: {
     value: { type: 'string', description: 'Text to display' },
     renderer: {
       type: 'string',
       description: 'Rendering style',
-      enum: ['box-drawing', 'block', 'rounded', 'geometric'],
+      enum: ['box-drawing', 'block', 'rounded', 'geometric', 'pixel'],
     },
     scroll: { type: 'boolean', description: 'Enable horizontal scrolling' },
     scrollSpeed: { type: 'number', description: 'Scroll speed in milliseconds' },

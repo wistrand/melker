@@ -6,6 +6,8 @@ export type SegmentHeight = 5 | 7;
 
 export interface SegmentRenderOptions {
   showOffSegments: boolean;  // render "off" segments with offChar
+  onChar?: string;           // override "on" character (pixel renderer)
+  offChar?: string;          // override "off" character (pixel renderer)
 }
 
 /**

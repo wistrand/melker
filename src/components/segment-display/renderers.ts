@@ -3,6 +3,7 @@
 
 import type { SegmentMask } from './charsets.ts';
 import type { SegmentRenderer, SegmentHeight, SegmentRenderOptions, RenderedChar } from './types.ts';
+import { FONT_3x5, getFont5x7, type BitmapFont } from './bitmap-fonts.ts';
 
 // Re-export types for convenience
 export type { SegmentRenderer, SegmentHeight, SegmentRenderOptions, RenderedChar } from './types.ts';
@@ -380,6 +381,109 @@ export class GeometricRenderer implements SegmentRenderer {
 }
 
 /**
+ * Pixel Renderer - Uses bitmap font glyphs rendered as block pixels
+ * Supports full printable ASCII via bitmap fonts
+ */
+export class PixelRenderer implements SegmentRenderer {
+  readonly name = 'pixel';
+  readonly charHeight: SegmentHeight;
+  charWidth: number;
+  readonly onChar = '█';
+  readonly offChar = '░';
+  private _font: BitmapFont | null;
+  private _fontPromise: Promise<BitmapFont> | null = null;
+
+  constructor(height: SegmentHeight = 5, font?: BitmapFont) {
+    this.charHeight = height;
+    if (font) {
+      this._font = font;
+    } else if (height === 7) {
+      this._font = null; // loaded lazily via ensureFont()
+    } else {
+      this._font = FONT_3x5;
+    }
+    this.charWidth = (this._font?.width ?? 5) + 1; // +1 for inter-char gap
+  }
+
+  /**
+   * Ensure the font is loaded (fetches PSF2 on first use for height 7)
+   */
+  async ensureFont(): Promise<void> {
+    if (this._font) return;
+    if (!this._fontPromise) {
+      this._fontPromise = getFont5x7();
+    }
+    this._font = await this._fontPromise;
+    this.charWidth = this._font.width + 1;
+  }
+
+  /**
+   * Replace the bitmap font (e.g. with a parsed PSF2 font)
+   */
+  setFont(font: BitmapFont): void {
+    this._font = font;
+    this.charWidth = font.width + 1;
+  }
+
+  /**
+   * Render a character from bitmap font glyph
+   */
+  renderGlyph(char: string, options: SegmentRenderOptions): RenderedChar {
+    if (!this._font) return this._renderBlank();
+
+    const glyph = this._font.glyphs[char]
+      || this._font.glyphs[char.toUpperCase()]
+      || this._font.glyphs[' '];
+
+    if (!glyph) {
+      return this._renderBlank();
+    }
+
+    const w = this._font.width;
+    const on = options.onChar || this.onChar;
+    const off = options.offChar || (options.showOffSegments ? this.offChar : ' ');
+    const lines: string[] = [];
+
+    for (const row of glyph) {
+      let line = '';
+      for (let bit = w - 1; bit >= 0; bit--) {
+        line += (row >> bit) & 1 ? on : off;
+      }
+      line += ' '; // inter-char gap
+      lines.push(line);
+    }
+
+    return { lines, width: this.charWidth };
+  }
+
+  // SegmentRenderer interface — not used for pixel mode, but required by interface
+  renderChar(_segments: SegmentMask, options: SegmentRenderOptions): RenderedChar {
+    return this.renderGlyph(' ', options);
+  }
+
+  renderColon(options: SegmentRenderOptions): RenderedChar {
+    const on = options.onChar || this.onChar;
+    if (this.charHeight === 7) {
+      return { width: 2, lines: ['  ', '  ', `${on} `, '  ', `${on} `, '  ', '  '] };
+    }
+    return { width: 2, lines: ['  ', `${on} `, '  ', `${on} `, '  '] };
+  }
+
+  renderDot(options: SegmentRenderOptions): RenderedChar {
+    const on = options.onChar || this.onChar;
+    if (this.charHeight === 7) {
+      return { width: 2, lines: ['  ', '  ', '  ', '  ', '  ', '  ', `${on} `] };
+    }
+    return { width: 2, lines: ['  ', '  ', '  ', '  ', `${on} `] };
+  }
+
+  private _renderBlank(): RenderedChar {
+    const lines = Array(this.charHeight).fill(' '.repeat(this.charWidth));
+    return { lines, width: this.charWidth };
+  }
+}
+
+/**
  * Get renderer by name
  */
 export function getRenderer(name: string, height: SegmentHeight = 5): SegmentRenderer {
@@ -390,6 +494,8 @@ export function getRenderer(name: string, height: SegmentHeight = 5): SegmentRen
       return new RoundedRenderer(height);
     case 'geometric':
       return new GeometricRenderer(height);
+    case 'pixel':
+      return new PixelRenderer(height);
     case 'box-drawing':
     default:
       return new BoxDrawingRenderer(height);

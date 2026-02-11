@@ -200,13 +200,15 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `components/segment-display/` - LCD-Style Display
 
-| File                  | Purpose                        |
-|-----------------------|--------------------------------|
-| `mod.ts`              | Module exports                 |
-| `segment-display.ts`  | SegmentDisplayElement          |
-| `charsets.ts`         | Character segment definitions  |
-| `renderers.ts`        | Renderer styles (box, rounded) |
-| `types.ts`            | Type definitions               |
+| File                  | Purpose                                          |
+|-----------------------|--------------------------------------------------|
+| `mod.ts`              | Module exports                                   |
+| `segment-display.ts`  | SegmentDisplayElement                            |
+| `charsets.ts`         | Character segment definitions                    |
+| `renderers.ts`        | Renderer styles (box, rounded, geometric, pixel) |
+| `bitmap-fonts.ts`     | Bitmap font data (3x5 inline, 5x7 lazy-loaded)  |
+| `5x7.psf2`           | PSF2 bitmap font for 5x7 pixel renderer          |
+| `types.ts`            | Type definitions                                 |
 
 #### `components/graph/` - Graph/Diagram Rendering
 

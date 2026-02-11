@@ -1407,11 +1407,18 @@ The `<segment-display>` component renders LCD/LED-style digits and text using Un
 <segment-display value="1234567890" renderer="rounded" style="color: cyan;" />
 <segment-display value="HELLO" renderer="geometric" style="height: 7; color: yellow;" />
 
+<!-- Pixel renderer (bitmap font glyphs) -->
+<segment-display value="Hello World" renderer="pixel" style="height: 5;" />
+<segment-display value="Hello World" renderer="pixel" style="height: 7;" />
+
 <!-- With scrolling -->
 <segment-display value="HELLO WORLD" scroll="true" scrollSpeed="24" style="width: 50;" />
 
 <!-- LCD style with off-segments visible -->
 <segment-display value="88:88" style="color: #00ff00; off-color: #003300;" />
+
+<!-- Pixel renderer with custom characters and colors -->
+<segment-display value="MELKER" renderer="pixel" style="height: 7; color: cyan; off-color: #003333; pixel-char: #; off-pixel-char: .;" />
 ```
 
 ### Props
@@ -1419,28 +1426,31 @@ The `<segment-display>` component renders LCD/LED-style digits and text using Un
 | Prop          | Type    | Default       | Description                                           |
 |---------------|---------|---------------|-------------------------------------------------------|
 | `value`       | string  | -             | Text to display                                       |
-| `renderer`    | string  | 'box-drawing' | Visual style: 'box-drawing', 'rounded', 'geometric'   |
+| `renderer`    | string  | 'box-drawing' | Visual style: 'box-drawing', 'rounded', 'geometric', 'pixel' |
 | `scroll`      | boolean | false         | Enable horizontal scrolling                           |
 | `scrollSpeed` | number  | 24            | Scroll speed in milliseconds                          |
 | `scrollGap`   | number  | 3             | Gap between repeated text when scrolling              |
 
 ### Style Properties
 
-| Property           | Values    | Description                                      |
-|--------------------|-----------|--------------------------------------------------|
-| `height`           | 5, 7      | Display height in rows (only 5 or 7 supported)   |
-| `color`            | any color | Color for "on" segments                          |
-| `off-color`        | any color | Color for "off" segments (dimmed LCD effect)     |
-| `background-color` | any color | Background color                                 |
-| `width`            | number    | Width limit for scrolling                        |
+| Property           | Values    | Description                                                     |
+|--------------------|-----------|-----------------------------------------------------------------|
+| `height`           | 5, 7      | Display height in rows (only 5 or 7 supported)                  |
+| `color`            | any color | Color for "on" segments                                         |
+| `off-color`        | any color | Panel background / "off" segment color (dimmed LCD effect)      |
+| `background-color` | any color | Background color (overrides off-color if both set)              |
+| `pixel-char`       | string    | Custom "on" character for pixel renderer (default: `█`)         |
+| `off-pixel-char`   | string    | Custom "off" character for pixel renderer (default: `░`)        |
+| `width`            | number    | Width limit for scrolling                                       |
 
 ### Renderers
 
-| Renderer      | Characters       | Description                    |
-|---------------|------------------|--------------------------------|
-| `box-drawing` | ━ ┃              | Clean thin lines (default)     |
-| `rounded`     | ╭ ╮ ╰ ╯ ━ ┃     | Rounded corners, modern look   |
-| `geometric`   | ▬ ▮ ▯            | Chunky LCD aesthetic           |
+| Renderer      | Characters       | Description                                              |
+|---------------|------------------|----------------------------------------------------------|
+| `box-drawing` | ━ ┃              | Clean thin lines (default)                               |
+| `rounded`     | ╭ ╮ ╰ ╯ ━ ┃     | Rounded corners, modern look                             |
+| `geometric`   | ▬ ▮ ▯            | Chunky LCD aesthetic                                     |
+| `pixel`       | █ ░              | Bitmap font glyphs (3x5 at height 5, 5x7 at height 7)   |
 
 ### Character Support
 
@@ -1448,7 +1458,7 @@ The component supports the full ASCII character set with best-effort 7-segment a
 - **Digits**: 0-9
 - **Letters**: A-Z (uppercase and lowercase)
 - **Special**: : . , - _ = " ' [ ] ( ) / \ ? ! + * # % & @ ^ < > |
-- **Accented**: Å Ä Ö É È (and lowercase variants)
+- **Accented**: Full ISO 8859-1 (À-Ö, Ø-ß, etc.) in both 3x5 and 5x7 pixel fonts; Å Ä Ö É È in 7-segment renderers
 
 ### 7-Segment Layout
 

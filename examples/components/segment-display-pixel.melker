@@ -1,0 +1,114 @@
+<melker>
+  <title>Pixel Renderer Test</title>
+  <container style="flex-direction: column; gap: 1; padding: 1; overflow: auto;">
+    <text style="font-weight: bold;">Segment Display: Pixel Mode</text>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>3x5 digits:</text>
+      <segment-display value="0123456789" renderer="pixel" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>3x5 alpha:</text>
+      <segment-display value="HELLO WORLD" renderer="pixel" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>3x5 international:</text>
+      <segment-display value="CAFÉ STRAßE ÑOÑO NAÏVE ÆØÅ" renderer="pixel" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>3x5 clock:</text>
+      <segment-display id="clock1" value="12:34.56" renderer="pixel" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>5x7 digits:</text>
+      <segment-display value="0123456789" renderer="pixel" style="height: 7;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>5x7 mixed:</text>
+      <segment-display value="Hello World 0123456789" renderer="pixel" style="height: 7;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>5x7 symbols:</text>
+      <segment-display value="@#$%&!? {[(<>)]}" renderer="pixel" style="height: 7;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>5x7 international:</text>
+      <segment-display value="café straße ñoño naïve" renderer="pixel" style="height: 7;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>5x7 custom pixel-char:</text>
+      <segment-display value="MELKER" renderer="pixel" style="height: 7; pixel-char: #; color: cyan;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>5x7 off-color:</text>
+      <segment-display value="88:88" renderer="pixel" style="height: 7; color: green; off-color: #333333;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>5x7 scrolling:</text>
+      <segment-display id="scroller" value="HELLO PIXEL DISPLAY" renderer="pixel" style="height: 7; width: 50; color: magenta;" />
+    </container>
+
+    <container style="flex-direction: row; gap: 2;">
+      <button label="Start Clock" onClick="$app.startClock()" />
+      <button label="Stop Clock" onClick="$app.stopClock()" />
+      <button label="Start Scroll" onClick="$app.startScroll()" />
+      <button label="Stop Scroll" onClick="$app.stopScroll()" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    let clockInterval: number | null = null;
+
+    export function startClock() {
+      if (clockInterval) return;
+
+      clockInterval = setInterval(() => {
+        const now = new Date();
+        const time = [
+          now.getHours().toString().padStart(2, '0'),
+          now.getMinutes().toString().padStart(2, '0'),
+          now.getSeconds().toString().padStart(2, '0'),
+        ].join(':') + '.' + now.getMilliseconds().toString().padStart(3, '0');
+
+        const display = $melker.getElementById('clock1');
+        if (display) {
+          display.setValue(time);
+        }
+        $melker.render();
+      }, 50);
+    }
+
+    export function stopClock() {
+      if (clockInterval) {
+        clearInterval(clockInterval);
+        clockInterval = null;
+      }
+    }
+
+    export function startScroll() {
+      const scroller = $melker.getElementById('scroller');
+      if (scroller) {
+        scroller.props.scroll = true;
+        $melker.render();
+      }
+    }
+
+    export function stopScroll() {
+      const scroller = $melker.getElementById('scroller');
+      if (scroller) {
+        scroller.props.scroll = false;
+        $melker.render();
+      }
+    }
+  </script>
+</melker>

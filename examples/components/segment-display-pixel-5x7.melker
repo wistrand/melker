@@ -1,0 +1,46 @@
+<melker>
+  <title>5x7 Pixel Segment Display</title>
+  <container style="flex-direction: column; gap: 1; padding: 1; overflow: auto;">
+    <text style="font-weight: bold;">5x7 Pixel Segment Display</text>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>Default:</text>
+      <segment-display value="Hello World 0123456789" renderer="pixel" style="height: 7;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>Green on dark:</text>
+      <segment-display value="88:88" renderer="pixel" style="height: 7; color: green; off-color: #1a3a1a;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>Amber LCD:</text>
+      <segment-display value="12:59.999" renderer="pixel" style="height: 7; color: #ffaa00; off-color: #332200;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>Red LED:</text>
+      <segment-display value="ERROR 404" renderer="pixel" style="height: 7; color: red; off-color: #330000;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>Cyan dot matrix:</text>
+      <segment-display value="SYSTEM OK" renderer="pixel" style="height: 7; color: cyan; off-color: #003333; pixel-char: *;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>Hash grid:</text>
+      <segment-display value="MELKER" renderer="pixel" style="height: 7; color: yellow; off-color: #222222; pixel-char: #; off-pixel-char: .;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>Blue on gray:</text>
+      <segment-display value="cafe strasse naive" renderer="pixel" style="height: 7; color: #4488ff; off-color: #333333;" />
+    </container>
+
+    <container style="flex-direction: column; gap: 0;">
+      <text>Symbols:</text>
+      <segment-display value="@#$%&!? {[(<>)]}" renderer="pixel" style="height: 7; color: magenta;" />
+    </container>
+  </container>
+</melker>

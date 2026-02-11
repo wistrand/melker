@@ -2,9 +2,11 @@
 // Selectors: *, #id, type, .class, compound (e.g., *.class, type.class)
 // Combinators: descendant (space), child (>)
 
-import type { Element, Style } from './types.ts';
+import type { Element, Style, KeyframeDefinition, AnimationKeyframe, AnimationState } from './types.ts';
 import { hasClass } from './element.ts';
 import { parseColor } from './components/color-utils.ts';
+import { getTimingFunction } from './easing.ts';
+import { getUIAnimationManager } from './ui-animation-manager.ts';
 
 /**
  * Selector types supported by the stylesheet system
@@ -291,6 +293,102 @@ export function selectorStringMatches(selectorString: string, element: Element, 
 }
 
 /**
+ * Parse a CSS time value (e.g., "500ms", "1s", "0.5s") to milliseconds.
+ * Returns undefined if not a valid time value.
+ */
+function parseTimeValue(value: string): number | undefined {
+  const msMatch = value.match(/^(\d+(?:\.\d+)?)ms$/);
+  if (msMatch) return parseFloat(msMatch[1]);
+  const sMatch = value.match(/^(\d+(?:\.\d+)?)s$/);
+  if (sMatch) return parseFloat(sMatch[1]) * 1000;
+  return undefined;
+}
+
+/** Properties that accept time values */
+const TIME_PROPS = new Set(['animationDuration', 'animationDelay']);
+
+/** Properties that accept 'infinite' as a keyword (mapped to Infinity) */
+const INFINITE_PROPS = new Set(['animationIterationCount']);
+
+/**
+ * Parse the `animation` shorthand into individual properties.
+ * Format: [name] [duration] [timing-function] [delay] [iteration-count] [direction] [fill-mode]
+ * Only name is required. Duration/delay are disambiguated: first time value is duration, second is delay.
+ */
+function parseAnimationShorthand(value: string): Partial<Style> {
+  const parts = value.split(/\s+/);
+  const result: Partial<Style> = {};
+
+  const timingFunctions = new Set([
+    'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out',
+  ]);
+  const directions = new Set([
+    'normal', 'reverse', 'alternate', 'alternate-reverse',
+  ]);
+  const fillModes = new Set([
+    'none', 'forwards', 'backwards', 'both',
+  ]);
+
+  let timeCount = 0;
+
+  for (const part of parts) {
+    // Time value (duration first, then delay)
+    const time = parseTimeValue(part);
+    if (time !== undefined) {
+      if (timeCount === 0) {
+        result.animationDuration = time;
+      } else {
+        result.animationDelay = time;
+      }
+      timeCount++;
+      continue;
+    }
+
+    // Iteration count
+    if (part === 'infinite') {
+      result.animationIterationCount = Infinity;
+      continue;
+    }
+    if (/^\d+$/.test(part) && result.animationDuration !== undefined) {
+      // Plain number after we already have a duration — iteration count
+      result.animationIterationCount = parseInt(part, 10);
+      continue;
+    }
+
+    // steps() function
+    if (part.startsWith('steps(')) {
+      result.animationTimingFunction = part;
+      continue;
+    }
+
+    // Timing function
+    if (timingFunctions.has(part)) {
+      result.animationTimingFunction = part;
+      continue;
+    }
+
+    // Direction
+    if (directions.has(part)) {
+      result.animationDirection = part as Style['animationDirection'];
+      continue;
+    }
+
+    // Fill mode (only if not already matched as direction — 'none' is fill-mode only)
+    if (fillModes.has(part) && !directions.has(part)) {
+      result.animationFillMode = part as Style['animationFillMode'];
+      continue;
+    }
+
+    // Must be the animation name
+    if (!result.animationName) {
+      result.animationName = part;
+    }
+  }
+
+  return result;
+}
+
+/**
  * Parse a CSS-like style value string into a Style object
  * Converts "width: 40; height: 10; border: thin;" to { width: 40, height: 10, border: 'thin' }
  */
@@ -311,6 +409,13 @@ export function parseStyleProperties(cssString: string): Style {
 
     // Convert kebab-case to camelCase for properties like border-color
     const camelKey = key.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+
+    // Animation shorthand: expand into individual properties
+    if (camelKey === 'animation') {
+      const expanded = parseAnimationShorthand(value);
+      Object.assign(style, expanded);
+      continue;
+    }
 
     // Check if this is a color property
     const isColorProp = camelKey === 'color' || camelKey === 'backgroundColor' ||
@@ -334,6 +439,22 @@ export function parseStyleProperties(cssString: string): Style {
         continue;
       }
       // Fall through to single number or string handling
+    }
+
+    // Time value properties (animation-duration, animation-delay)
+    if (TIME_PROPS.has(camelKey)) {
+      const time = parseTimeValue(value);
+      if (time !== undefined) {
+        style[camelKey] = time;
+        continue;
+      }
+      // Fall through to number/string handling (bare number = ms)
+    }
+
+    // 'infinite' keyword for iteration count
+    if (INFINITE_PROPS.has(camelKey) && value === 'infinite') {
+      style[camelKey] = Infinity;
+      continue;
     }
 
     // Try to parse as number
@@ -498,28 +619,69 @@ function tokenizeCSS(css: string): CSSBlock[] {
   return blocks;
 }
 
+/** Result of parsing a CSS block — style rules and keyframe definitions */
+interface ParseResult {
+  items: StyleItem[];
+  keyframes: KeyframeDefinition[];
+}
+
 /**
- * Parse a CSS-like style block into StyleItems.
- * Supports both regular rules and @media blocks with nested rules.
+ * Parse a @keyframes block body into an AnimationKeyframe array.
+ * Supports percentage selectors (0%, 50%, 100%) and keywords (from, to).
+ */
+function parseKeyframeBlock(name: string, body: string): KeyframeDefinition {
+  const innerBlocks = tokenizeCSS(body);
+  const keyframes: AnimationKeyframe[] = [];
+
+  for (const block of innerBlocks) {
+    const sel = block.selector.trim();
+    let offset: number;
+
+    if (sel === 'from') {
+      offset = 0;
+    } else if (sel === 'to') {
+      offset = 1;
+    } else {
+      const pctMatch = sel.match(/^(\d+(?:\.\d+)?)%$/);
+      if (!pctMatch) continue;
+      offset = parseFloat(pctMatch[1]) / 100;
+    }
+
+    const style = parseStyleProperties(block.body);
+    keyframes.push({ offset, style });
+  }
+
+  // Sort by offset
+  keyframes.sort((a, b) => a.offset - b.offset);
+
+  return { name, keyframes };
+}
+
+/**
+ * Parse a CSS-like style block into StyleItems and KeyframeDefinitions.
+ * Supports regular rules, @media blocks with nested rules, and @keyframes blocks.
  *
  * Example input:
  * ```
+ * @keyframes fadeIn {
+ *   from { color: transparent; }
+ *   to   { color: white; }
+ * }
+ *
  * #header {
  *   height: 3;
  *   font-weight: bold;
+ *   animation: fadeIn 1s ease-in-out;
  * }
  *
  * @media (max-width: 80) {
  *   .sidebar { width: 20; }
  * }
- *
- * .primary {
- *   background-color: green;
- * }
  * ```
  */
-export function parseStyleBlock(css: string): StyleItem[] {
+export function parseStyleBlock(css: string): ParseResult {
   const items: StyleItem[] = [];
+  const keyframes: KeyframeDefinition[] = [];
 
   // Strip CSS comments before parsing
   const cssWithoutComments = css
@@ -529,17 +691,25 @@ export function parseStyleBlock(css: string): StyleItem[] {
   const blocks = tokenizeCSS(cssWithoutComments);
 
   for (const block of blocks) {
-    if (block.selector.startsWith('@media')) {
+    if (block.selector.startsWith('@keyframes')) {
+      // Extract name from "@keyframes name"
+      const name = block.selector.slice(10).trim();
+      if (name && block.body) {
+        keyframes.push(parseKeyframeBlock(name, block.body));
+      }
+    } else if (block.selector.startsWith('@media')) {
       // Extract condition from "@media (condition)"
       const condStr = block.selector.slice(6).trim();
       const condition = parseMediaCondition(condStr);
       if (!condition) continue;  // Skip unrecognized @media conditions
 
       // Recursively parse nested rules inside the @media block
-      const nestedItems = parseStyleBlock(block.body);
-      for (const item of nestedItems) {
+      const nested = parseStyleBlock(block.body);
+      for (const item of nested.items) {
         items.push({ ...item, mediaCondition: condition });
       }
+      // Keyframes inside @media are still global
+      keyframes.push(...nested.keyframes);
     } else {
       // Regular rule: selector { properties }
       const selectorStr = block.selector;
@@ -554,7 +724,7 @@ export function parseStyleBlock(css: string): StyleItem[] {
     }
   }
 
-  return items;
+  return { items, keyframes };
 }
 
 /**
@@ -562,6 +732,7 @@ export function parseStyleBlock(css: string): StyleItem[] {
  */
 export class Stylesheet {
   private _items: StyleItem[] = [];
+  private _keyframes: Map<string, KeyframeDefinition> = new Map();
 
   constructor(items: StyleItem[] = []) {
     this._items = [...items];
@@ -588,8 +759,11 @@ export class Stylesheet {
    * Add multiple items from a CSS-like string
    */
   addFromString(css: string): void {
-    const items = parseStyleBlock(css);
+    const { items, keyframes } = parseStyleBlock(css);
     this._items.push(...items);
+    for (const kf of keyframes) {
+      this._keyframes.set(kf.name, kf);
+    }
   }
 
   /**
@@ -645,18 +819,44 @@ export class Stylesheet {
   }
 
   /**
-   * Clear all rules
+   * Clear all rules and keyframes
    */
   clear(): void {
     this._items = [];
+    this._keyframes.clear();
+  }
+
+  /**
+   * Add a keyframe definition
+   */
+  addKeyframes(definition: KeyframeDefinition): void {
+    this._keyframes.set(definition.name, definition);
+  }
+
+  /**
+   * Get a keyframe definition by name
+   */
+  getKeyframes(name: string): KeyframeDefinition | undefined {
+    return this._keyframes.get(name);
+  }
+
+  /**
+   * Whether any keyframe definitions are registered
+   */
+  get hasKeyframes(): boolean {
+    return this._keyframes.size > 0;
   }
 
   /**
    * Create a stylesheet from a CSS-like string
    */
   static fromString(css: string): Stylesheet {
-    const items = parseStyleBlock(css);
-    return new Stylesheet(items);
+    const { items, keyframes } = parseStyleBlock(css);
+    const sheet = new Stylesheet(items);
+    for (const kf of keyframes) {
+      sheet._keyframes.set(kf.name, kf);
+    }
+    return sheet;
   }
 
   /**
@@ -720,6 +920,51 @@ export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancest
   // Track what we computed for future script-change detection
   element._computedStyle = element.props.style ? { ...element.props.style } : {};
 
+  // --- CSS Animation lifecycle ---
+  const resolvedStyle = element.props.style || {};
+  const animName = resolvedStyle.animationName;
+
+  if (animName && animName !== 'none' && stylesheet.hasKeyframes) {
+    const kfDef = stylesheet.getKeyframes(animName);
+    if (kfDef && kfDef.keyframes.length > 0) {
+      // If same animation already running, don't restart (handles resize re-apply)
+      if (!element._animationState || element._animationState.name !== animName) {
+        // Tear down previous animation if any
+        stopElementAnimation(element);
+
+        // Bootstrap new animation
+        const state: AnimationState = {
+          name: animName,
+          keyframes: kfDef.keyframes,
+          duration: resolvedStyle.animationDuration ?? 0,
+          delay: resolvedStyle.animationDelay ?? 0,
+          iterations: resolvedStyle.animationIterationCount ?? 1,
+          direction: resolvedStyle.animationDirection ?? 'normal',
+          timingFn: getTimingFunction(resolvedStyle.animationTimingFunction ?? 'linear'),
+          fillMode: resolvedStyle.animationFillMode ?? 'none',
+          startTime: performance.now(),
+          finished: false,
+        };
+        element._animationState = state;
+
+        // Register with UIAnimationManager — tick only requests render
+        const manager = getUIAnimationManager();
+        const animId = `css-anim-${element.id}-${Date.now()}`;
+        const unregister = manager.register(animId, () => {
+          if (state.finished) {
+            stopElementAnimation(element);
+            return;
+          }
+          manager.requestRender();
+        }, 16); // ~60fps
+        element._animationRegistration = unregister;
+      }
+    }
+  } else if (element._animationState) {
+    // animation-name removed or set to 'none' — tear down
+    stopElementAnimation(element);
+  }
+
   // Recursively apply to children, adding current element to ancestors
   if (element.children) {
     const childAncestors = [element, ...ancestors];
@@ -727,4 +972,15 @@ export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancest
       applyStylesheet(child, stylesheet, childAncestors, ctx);
     }
   }
+}
+
+/**
+ * Stop and clean up a CSS animation on an element.
+ */
+export function stopElementAnimation(element: Element): void {
+  if (element._animationRegistration) {
+    element._animationRegistration();
+    element._animationRegistration = undefined;
+  }
+  element._animationState = undefined;
 }

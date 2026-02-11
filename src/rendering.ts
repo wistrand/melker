@@ -1435,6 +1435,8 @@ export class RenderingEngine {
           this._dynamicBounds.set(elementId, elementBounds);
         },
       };
+      // Pass computed style so components can read layout properties (padding, etc.)
+      componentContext.computedStyle = style;
       // Pass the overlays array from context if it exists (for read access)
       if (context.overlays) {
         componentContext.overlays = context.overlays;

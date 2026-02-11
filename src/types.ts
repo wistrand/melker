@@ -153,8 +153,43 @@ export interface Style extends Record<string, any> {
   direction?: 'horizontal' | 'vertical';
   minPaneSize?: number;
 
+  // Animation properties
+  animationName?: string;
+  animationDuration?: number;          // ms
+  animationTimingFunction?: string;    // 'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'steps(N)'
+  animationDelay?: number;             // ms
+  animationIterationCount?: number;    // Infinity for infinite
+  animationDirection?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
+  animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both';
+  animation?: string;                  // shorthand
+
   // Allow any additional style properties for flexibility
   [key: string]: any;
+}
+
+// ===== CSS Animation Types =====
+
+export interface AnimationKeyframe {
+  offset: number;        // 0.0 – 1.0
+  style: Partial<Style>;
+}
+
+export interface KeyframeDefinition {
+  name: string;
+  keyframes: AnimationKeyframe[];  // sorted by offset
+}
+
+export interface AnimationState {
+  name: string;
+  keyframes: AnimationKeyframe[];
+  duration: number;        // ms
+  delay: number;           // ms
+  iterations: number;      // Infinity for infinite
+  direction: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
+  timingFn: (t: number) => number;
+  fillMode: 'none' | 'forwards' | 'backwards' | 'both';
+  startTime: number;       // performance.now()
+  finished: boolean;
 }
 
 export interface BoxSpacing {
@@ -239,6 +274,10 @@ export abstract class Element {
   // Both undefined until first applyStylesheet call.
   _inlineStyle?: Record<string, any>;
   _computedStyle?: Record<string, any>;
+
+  // CSS animation state (Option B: never written to props.style, read by _computeStyle())
+  _animationState?: AnimationState;
+  _animationRegistration?: () => void;  // UIAnimationManager unregister fn
 
   constructor(type: string, props: Record<string, any> = {}, children?: Element[]) {
     this.type = type;

@@ -1,7 +1,8 @@
 // Advanced Layout Engine with comprehensive layout algorithms
 // Supports block, flex, and absolute positioning
 
-import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, Renderable, isRenderable, isScrollableType, isScrollingEnabled } from './types.ts';
+import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, Renderable, isRenderable, isScrollableType, isScrollingEnabled, type AnimationState } from './types.ts';
+import { findKeyframePair, interpolateStyles } from './css-animation.ts';
 import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
 import { getThemeColor } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
@@ -699,6 +700,10 @@ export class LayoutEngine {
             // and img with percentage (intrinsic = calculated from %, explicit = placeholder)
             const intrinsicOuter = intrinsicSize.width + paddingMain + borderMain;
             flexBasisValue = Math.max(childProps.width, intrinsicOuter);
+          } else if (typeof childProps.width === 'string' && childProps.width.endsWith('%')) {
+            // Percentage width - resolve against available main-axis space
+            const pct = parseFloat(childProps.width) / 100;
+            flexBasisValue = Math.floor(mainAxisSize * pct);
           } else {
             // No explicit width - use intrinsic size + padding + borders
             flexBasisValue = intrinsicSize.width + paddingMain + borderMain;
@@ -716,6 +721,10 @@ export class LayoutEngine {
             // and img with percentage (intrinsic = calculated from %, explicit = placeholder)
             const intrinsicOuter = intrinsicSize.height + paddingMain + borderMain;
             flexBasisValue = Math.max(childProps.height, intrinsicOuter);
+          } else if (typeof childProps.height === 'string' && childProps.height.endsWith('%')) {
+            // Percentage height - resolve against available main-axis space
+            const pct = parseFloat(childProps.height) / 100;
+            flexBasisValue = Math.floor(mainAxisSize * pct);
           } else {
             // No explicit height - use intrinsic size + padding + borders
             flexBasisValue = intrinsicSize.height + paddingMain + borderMain;
@@ -765,9 +774,10 @@ export class LayoutEngine {
 
       // Determine if this item has stretch alignment (not whether to pre-stretch now)
       // Items with explicit cross-axis size should not stretch even with align-items: stretch
+      const _isExplicitSize = (v: unknown) => typeof v === 'number' || (typeof v === 'string' && v.endsWith('%'));
       const hasExplicitCrossSize = isRow
-        ? (typeof childProps.height === 'number')
-        : (typeof childProps.width === 'number');
+        ? _isExplicitSize(childProps.height)
+        : _isExplicitSize(childProps.width);
 
       const hasStretchAlignment = (childProps.alignSelf === 'auto' || childProps.alignSelf === undefined || childProps.alignSelf === 'stretch') &&
                                   (flexProps.alignItems === undefined || flexProps.alignItems === 'stretch');
@@ -788,6 +798,10 @@ export class LayoutEngine {
           // Explicit numeric height - use the larger of explicit and intrinsic
           const intrinsicOuter = intrinsicSize.height + effectivePaddingCross + borderCross;
           baseCross = Math.max(childProps.height, intrinsicOuter);
+        } else if (typeof childProps.height === 'string' && childProps.height.endsWith('%')) {
+          // Percentage height - resolve against cross axis container size
+          const pct = parseFloat(childProps.height) / 100;
+          baseCross = Math.floor(crossAxisSize * pct);
         } else if (willPreStretchToContainer) {
           // For nowrap + stretch: stretch to container size
           // If content is larger, it will overflow (correct CSS behavior)
@@ -804,6 +818,10 @@ export class LayoutEngine {
           // Explicit numeric width - use the larger of explicit and intrinsic
           const intrinsicOuter = intrinsicSize.width + effectivePaddingCross + borderCross;
           baseCross = Math.max(childProps.width, intrinsicOuter);
+        } else if (typeof childProps.width === 'string' && childProps.width.endsWith('%')) {
+          // Percentage width - resolve against cross axis container size
+          const pct = parseFloat(childProps.width) / 100;
+          baseCross = Math.floor(crossAxisSize * pct);
         } else if (willPreStretchToContainer) {
           // For nowrap + stretch: stretch to container size
           // If content is larger, it will overflow (correct CSS behavior)
@@ -1304,6 +1322,86 @@ export class LayoutEngine {
 
   // Helper methods
 
+  /**
+   * Compute interpolated style from a CSS animation.
+   * Returns {} if no animation is active.
+   * Ephemeral — computed fresh each frame from AnimationState + performance.now().
+   * Mirrors the canvas _terminalWidth pattern: resolved values never written to props.style.
+   */
+  private _getAnimatedStyle(element: Element): Partial<Style> {
+    const anim = element._animationState;
+    if (!anim || anim.keyframes.length === 0) return {};
+
+    const now = performance.now();
+    const elapsed = now - anim.startTime - anim.delay;
+
+    // Still in delay period
+    if (elapsed < 0) {
+      if (anim.fillMode === 'backwards' || anim.fillMode === 'both') {
+        // Show first keyframe during delay
+        const dir = anim.direction;
+        const first = (dir === 'reverse' || dir === 'alternate-reverse')
+          ? anim.keyframes[anim.keyframes.length - 1]
+          : anim.keyframes[0];
+        return { ...first.style };
+      }
+      return {};
+    }
+
+    // Calculate current iteration and progress within it
+    const iterationDuration = anim.duration;
+    if (iterationDuration <= 0) {
+      // Zero duration: jump to end
+      if (anim.fillMode === 'forwards' || anim.fillMode === 'both') {
+        return { ...anim.keyframes[anim.keyframes.length - 1].style };
+      }
+      return {};
+    }
+
+    const rawIteration = elapsed / iterationDuration;
+    const isFinite = anim.iterations !== Infinity;
+    const totalIterations = anim.iterations;
+
+    // Check if animation has finished
+    if (isFinite && rawIteration >= totalIterations) {
+      anim.finished = true;
+      if (anim.fillMode === 'forwards' || anim.fillMode === 'both') {
+        // Determine which end to show based on direction and iteration count
+        const lastIter = Math.ceil(totalIterations) - 1;
+        const reversed = anim.direction === 'reverse' ||
+          (anim.direction === 'alternate' && lastIter % 2 === 1) ||
+          (anim.direction === 'alternate-reverse' && lastIter % 2 === 0);
+        const endKf = reversed ? anim.keyframes[0] : anim.keyframes[anim.keyframes.length - 1];
+        return { ...endKf.style };
+      }
+      return {};
+    }
+
+    // Current iteration (0-based) and progress within it
+    const currentIteration = Math.floor(rawIteration);
+    let progress = rawIteration - currentIteration;
+
+    // Apply direction
+    const dir = anim.direction;
+    let reversed = false;
+    if (dir === 'reverse') {
+      reversed = true;
+    } else if (dir === 'alternate') {
+      reversed = currentIteration % 2 === 1;
+    } else if (dir === 'alternate-reverse') {
+      reversed = currentIteration % 2 === 0;
+    }
+
+    if (reversed) progress = 1 - progress;
+
+    // Apply timing function
+    progress = anim.timingFn(progress);
+
+    // Find keyframe pair and interpolate
+    const { from, to, localT } = findKeyframePair(anim.keyframes, progress);
+    return interpolateStyles(from.style, to.style, localT);
+  }
+
   private _computeStyle(element: Element, parentStyle?: Style): Style {
     // Merge parent style with element style
     const defaultStyle: Style = {
@@ -1348,6 +1446,7 @@ export class LayoutEngine {
       ...typeDefaults,  // Type-specific defaults (can be overridden by stylesheet/inline)
       ...inheritableParentStyle,
       ...(element.props && element.props.style),  // Stylesheet + inline styles
+      ...this._getAnimatedStyle(element),          // CSS animation resolved values
     };
 
     // Derive flexDirection from direction style property (used by split-pane)
@@ -1467,7 +1566,10 @@ export class LayoutEngine {
     };
 
     // Extract flex and layout properties from style section
-    const style = (element.props && element.props.style) || {};
+    // Merge animated values on top (Option B: animation overrides declarative style)
+    const baseStyle = (element.props && element.props.style) || {};
+    const animStyle = this._getAnimatedStyle(element);
+    const style = Object.keys(animStyle).length > 0 ? { ...baseStyle, ...animStyle } : baseStyle;
 
     // Support flex shorthand in style: flex: "1" or flex: "0 0 auto" etc
     if (style.flex !== undefined) {

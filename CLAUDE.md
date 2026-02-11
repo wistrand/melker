@@ -66,6 +66,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | iTerm2 protocol     | [iterm2-architecture.md](agent_docs/iterm2-architecture.md)          |
 | Benchmarks          | [benchmark-architecture.md](agent_docs/benchmark-architecture.md)    |
 | Media queries       | [architecture-media-queries.md](agent_docs/architecture-media-queries.md) |
+| CSS animations      | [css-animation-architecture.md](agent_docs/css-animation-architecture.md) |
 
 ### Deep Dives
 

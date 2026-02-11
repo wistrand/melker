@@ -313,14 +313,14 @@ Deno.test('selectorStringMatches - comma-separated OR', () => {
 // ===========================================================================
 
 Deno.test('parseStyleBlock - single rule', () => {
-  const items = parseStyleBlock('button { border: thin; }');
+  const { items } = parseStyleBlock('button { border: thin; }');
   assertEquals(items.length, 1);
   assertEquals(items[0].style.border, 'thin');
   assertEquals(items[0].selector.segments[0].compound.parts[0].value, 'button');
 });
 
 Deno.test('parseStyleBlock - multiple rules', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     .primary { border: thin; }
     #header { height: 3; }
     text { font-weight: bold; }
@@ -332,11 +332,11 @@ Deno.test('parseStyleBlock - multiple rules', () => {
 });
 
 Deno.test('parseStyleBlock - empty input', () => {
-  assertEquals(parseStyleBlock('').length, 0);
+  assertEquals(parseStyleBlock('').items.length, 0);
 });
 
 Deno.test('parseStyleBlock - block comments stripped', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     /* This is a comment */
     button { border: thin; }
     /* Another comment */
@@ -346,7 +346,7 @@ Deno.test('parseStyleBlock - block comments stripped', () => {
 });
 
 Deno.test('parseStyleBlock - single-line comments stripped', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     // This is a comment
     button { border: thin; }
   `);
@@ -354,7 +354,7 @@ Deno.test('parseStyleBlock - single-line comments stripped', () => {
 });
 
 Deno.test('parseStyleBlock - rule with multiple properties', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     .card {
       width: 30;
       height: 10;
@@ -370,21 +370,21 @@ Deno.test('parseStyleBlock - rule with multiple properties', () => {
 });
 
 Deno.test('parseStyleBlock - descendant selector in rule', () => {
-  const items = parseStyleBlock('container .card { border: thin; }');
+  const { items } = parseStyleBlock('container .card { border: thin; }');
   assertEquals(items.length, 1);
   assertEquals(items[0].selector.segments.length, 2);
   assertEquals(items[0].selector.segments[1].combinator, 'descendant');
 });
 
 Deno.test('parseStyleBlock - child selector in rule', () => {
-  const items = parseStyleBlock('container > button { border: thin; }');
+  const { items } = parseStyleBlock('container > button { border: thin; }');
   assertEquals(items.length, 1);
   assertEquals(items[0].selector.segments.length, 2);
   assertEquals(items[0].selector.segments[1].combinator, 'child');
 });
 
 Deno.test('parseStyleBlock - empty rule body skipped', () => {
-  const items = parseStyleBlock('button { }');
+  const { items } = parseStyleBlock('button { }');
   assertEquals(items.length, 0);
 });
 
@@ -393,7 +393,7 @@ Deno.test('parseStyleBlock - empty rule body skipped', () => {
 // ===========================================================================
 
 Deno.test('parseStyleBlock - @media basic nested rule', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (max-width: 80) {
       .sidebar { width: 20; }
     }
@@ -405,7 +405,7 @@ Deno.test('parseStyleBlock - @media basic nested rule', () => {
 });
 
 Deno.test('parseStyleBlock - @media with min-width', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (min-width: 100) {
       .sidebar { width: 30; }
     }
@@ -415,7 +415,7 @@ Deno.test('parseStyleBlock - @media with min-width', () => {
 });
 
 Deno.test('parseStyleBlock - @media with height conditions', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (min-height: 20) {
       .footer { height: 3; }
     }
@@ -429,7 +429,7 @@ Deno.test('parseStyleBlock - @media with height conditions', () => {
 });
 
 Deno.test('parseStyleBlock - @media with multiple conditions (and)', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (min-width: 60) and (max-width: 100) {
       .sidebar { width: 25; }
     }
@@ -440,7 +440,7 @@ Deno.test('parseStyleBlock - @media with multiple conditions (and)', () => {
 });
 
 Deno.test('parseStyleBlock - @media multiple rules inside one block', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (max-width: 80) {
       .sidebar { width: 20; }
       .footer { height: 1; }
@@ -454,7 +454,7 @@ Deno.test('parseStyleBlock - @media multiple rules inside one block', () => {
 });
 
 Deno.test('parseStyleBlock - mixed regular and @media rules', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     .sidebar { width: 30; border: thin; }
     @media (max-width: 80) {
       .sidebar { width: 20; }
@@ -474,14 +474,14 @@ Deno.test('parseStyleBlock - mixed regular and @media rules', () => {
 });
 
 Deno.test('parseStyleBlock - @media empty block', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (max-width: 80) { }
   `);
   assertEquals(items.length, 0);
 });
 
 Deno.test('parseStyleBlock - @media with empty rule body inside', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (max-width: 80) {
       .sidebar { }
     }
@@ -490,7 +490,7 @@ Deno.test('parseStyleBlock - @media with empty rule body inside', () => {
 });
 
 Deno.test('parseStyleBlock - @media preserves selector types', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (max-width: 60) {
       container > .card text { font-weight: bold; }
     }
@@ -502,7 +502,7 @@ Deno.test('parseStyleBlock - @media preserves selector types', () => {
 });
 
 Deno.test('parseStyleBlock - multiple @media blocks', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (max-width: 80) {
       .sidebar { width: 20; }
     }
@@ -518,7 +518,7 @@ Deno.test('parseStyleBlock - multiple @media blocks', () => {
 });
 
 Deno.test('parseStyleBlock - @media with comments', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     /* hide sidebar on small terminals */
     @media (max-width: 60) {
       /* completely hide it */
@@ -531,7 +531,7 @@ Deno.test('parseStyleBlock - @media with comments', () => {
 });
 
 Deno.test('parseStyleBlock - @media invalid condition skipped', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (invalid-thing: 80) {
       .sidebar { width: 20; }
     }
@@ -642,7 +642,7 @@ Deno.test('mediaConditionMatches - orientation combined with dimensions', () => 
 });
 
 Deno.test('parseStyleBlock - @media orientation', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (orientation: portrait) {
       .sidebar { display: none; }
     }
@@ -652,7 +652,7 @@ Deno.test('parseStyleBlock - @media orientation', () => {
 });
 
 Deno.test('parseStyleBlock - @media aspect-ratio', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (min-aspect-ratio: 16/9) {
       .wide { width: fill; }
     }
@@ -666,7 +666,7 @@ Deno.test('parseStyleBlock - @media aspect-ratio', () => {
 });
 
 Deno.test('parseStyleBlock - @media orientation and dimensions combined', () => {
-  const items = parseStyleBlock(`
+  const { items } = parseStyleBlock(`
     @media (orientation: landscape) and (min-width: 100) {
       .wide { width: fill; }
     }

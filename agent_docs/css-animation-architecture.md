@@ -1,0 +1,265 @@
+# CSS Animation Architecture
+
+CSS `@keyframes` and `animation` property support for Melker's style system.
+
+## Core Principle: Never Write to `props.style`
+
+Animated values are computed on the fly during each layout pass and **never persisted** to `props.style`. The animation state lives on the element; `_computeStyle()` overlays interpolated values at the end of the style merge chain.
+
+This mirrors the **canvas `_terminalWidth`/`_terminalHeight` separation**:
+
+| | Canvas | Animation |
+|---|---|---|
+| **Declarative** | `props.width` (`"100%"`, `"fill"`, `30`) | `props.style` (author + stylesheet cascade) |
+| **Resolved** | `_terminalWidth` (numeric cells) | `_animationState` → interpolated in `_computeStyle()` |
+| **Invariant** | Never written back to `props.width` | Never written back to `props.style` |
+| **Why** | Prevents layout lock-in (image-never-shrinks) | Prevents `applyStylesheet()` diff from capturing animated values into `_inlineStyle` |
+
+## File Map
+
+| File | Purpose |
+|------|---------|
+| [`src/types.ts`](../src/types.ts) | `AnimationKeyframe`, `KeyframeDefinition`, `AnimationState` types; `_animationState`/`_animationRegistration` fields on Element; animation style properties |
+| [`src/stylesheet.ts`](../src/stylesheet.ts) | `@keyframes` parsing, animation shorthand parsing, time units, lifecycle bootstrap/teardown in `applyStylesheet()` |
+| [`src/easing.ts`](../src/easing.ts) | Timing functions: cubic bezier solver, `steps(N)`, standard CSS curves |
+| [`src/css-animation.ts`](../src/css-animation.ts) | Interpolation engine: keyframe pair selection, value interpolation by type |
+| [`src/layout.ts`](../src/layout.ts) | `_getAnimatedStyle()` computes current frame; injected into both `_computeStyle()` and `_computeLayoutProps()` |
+| [`src/rendering.ts`](../src/rendering.ts) | Passes `computedStyle` through `ComponentRenderContext` so renderers can read animated layout properties |
+
+## Data Flow
+
+```
+@keyframes parsed     applyStylesheet()     UIAnimationManager tick
+    │                      │                        │
+    ▼                      ▼                        ▼
+KeyframeDefinition    AnimationState          requestRender()
+(on Stylesheet)       (on Element)                  │
+                                                    ▼
+                                              layout pass
+                                                    │
+                          ┌─────────────────────────┤
+                          ▼                         ▼
+                   _computeStyle()          _computeLayoutProps()
+                          │                         │
+                          ▼                         ▼
+                   _getAnimatedStyle()      _getAnimatedStyle()
+                   (colors, text)           (width, height, padding, gap)
+                          │                         │
+                          ▼                         ▼
+                   computedStyle              layoutProps
+                   (render pipeline)          (flex algorithm)
+```
+
+## Types (`src/types.ts`)
+
+```typescript
+interface AnimationKeyframe {
+  offset: number;        // 0.0 – 1.0
+  style: Partial<Style>;
+}
+
+interface KeyframeDefinition {
+  name: string;
+  keyframes: AnimationKeyframe[];  // sorted by offset
+}
+
+interface AnimationState {
+  name: string;
+  keyframes: AnimationKeyframe[];
+  duration: number;        // ms
+  delay: number;           // ms
+  iterations: number;      // Infinity for infinite
+  direction: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
+  timingFn: (t: number) => number;
+  fillMode: 'none' | 'forwards' | 'backwards' | 'both';
+  startTime: number;       // performance.now()
+  finished: boolean;
+}
+```
+
+Style properties on `Style` interface:
+
+| Property | Type | Notes |
+|----------|------|-------|
+| `animationName` | `string` | References `@keyframes` name |
+| `animationDuration` | `number` | Milliseconds |
+| `animationTimingFunction` | `string` | `linear`, `ease`, `ease-in-out`, `steps(N)` |
+| `animationDelay` | `number` | Milliseconds |
+| `animationIterationCount` | `number` | `Infinity` for infinite |
+| `animationDirection` | enum | `normal`, `reverse`, `alternate`, `alternate-reverse` |
+| `animationFillMode` | enum | `none`, `forwards`, `backwards`, `both` |
+| `animation` | `string` | Shorthand |
+
+Element fields: `_animationState?: AnimationState`, `_animationRegistration?: () => void`.
+
+## CSS Parsing (`src/stylesheet.ts`)
+
+### `@keyframes` blocks
+
+Detected in `parseStyleBlock()` alongside existing `@media` handling. Inner blocks use `from`/`to` keywords or percentage selectors (`0%`, `50%`, `100%`). Each keyframe's style is parsed through `parseStyleProperties()` (inheriting box-spacing normalization, color parsing, etc.). Stored on the Stylesheet as `_keyframes: Map<string, KeyframeDefinition>`.
+
+### Animation property parsing
+
+Time values (`500ms`, `1s`, `0.5s`) are recognized for `animationDuration` and `animationDelay`. The `infinite` keyword maps to `Infinity` for `animationIterationCount`.
+
+The `animation` shorthand is expanded by `parseAnimationShorthand()`:
+```css
+animation: fadeIn 2s ease-in-out 100ms infinite alternate forwards;
+/*         name   dur timing     delay iter     dir       fill */
+```
+
+Tokens are identified by type: time values (contain `s`/`ms`), known timing functions, known direction/fill keywords, numbers (`infinite` or count), and the remainder is the animation name.
+
+## Easing Functions (`src/easing.ts`)
+
+All functions map `t ∈ [0,1] → t' ∈ [0,1]`.
+
+| Function | Implementation |
+|----------|----------------|
+| `linear` | Identity |
+| `ease` | `cubic-bezier(0.25, 0.1, 0.25, 1.0)` |
+| `ease-in` | `cubic-bezier(0.42, 0, 1.0, 1.0)` |
+| `ease-out` | `cubic-bezier(0, 0, 0.58, 1.0)` |
+| `ease-in-out` | `cubic-bezier(0.42, 0, 0.58, 1.0)` |
+| `steps(N)` | Stepped (jump-end) |
+
+Cubic bezier solver uses Newton-Raphson with bisection fallback (~45 lines). Standard curves are pre-built constants. Lookup via `getTimingFunction(name)`.
+
+## Interpolation Engine (`src/css-animation.ts`)
+
+### Value type detection
+
+Each style property is interpolated based on its type:
+
+| Category | Detection | Interpolation |
+|----------|-----------|---------------|
+| **Color** | Property in `COLOR_PROPS` set, both values numeric | RGBA component-wise lerp via `unpackRGBA`/`packRGBA` |
+| **BoxSpacing** | Property in `BOX_SPACING_PROPS` (`padding`, `margin`) | Normalize both to `{top,right,bottom,left}`, lerp each component |
+| **Percentage** | Both values are `"N%"` strings | Parse numeric parts, lerp, emit as `"N%"` string |
+| **Numeric** | Property in `NUMERIC_PROPS` set, both values numeric | Linear lerp, round to integer |
+| **Discrete** | Everything else | Snap at `t >= 0.5` |
+
+Priority order matters — a `padding` value could be a number (uniform) or an object (BoxSpacing). The BoxSpacing check runs before the numeric check.
+
+### Percentage string preservation
+
+When both keyframe values are percentage strings (e.g. `"20%"` → `"80%"`), interpolation stays in the percentage domain. This preserves responsive semantics — the layout engine resolves `%` against parent size each frame. Mixed types (percentage vs number) fall through to discrete snap.
+
+### Keyframe pair selection
+
+`findKeyframePair(keyframes, progress)` finds the two bracketing keyframes for a normalized progress `t ∈ [0,1]` and computes the local interpolation factor between them. Supports multi-stop keyframes (e.g. 0% → 49% → 50% → 100% for step-like effects).
+
+## Layout Integration (`src/layout.ts`)
+
+### `_getAnimatedStyle(element)`
+
+Reads `element._animationState`, computes progress from `performance.now() - startTime`, applies direction logic (reverse, alternate), timing function, and calls `interpolateStyles()`. Returns `{}` if no active animation.
+
+Handles the full animation lifecycle per-frame:
+- **Delay period**: Returns `{}` (or first/last keyframe for `fill-mode: backwards/both`)
+- **Active**: Interpolates between bracketing keyframes
+- **Finished (finite)**: Sets `anim.finished = true`, returns final keyframe (for `fill-mode: forwards/both`) or `{}`
+
+### Two injection points
+
+Animated values must be injected into **both** style paths:
+
+1. **`_computeStyle()`** — rendering properties (colors, text decoration, border color):
+   ```typescript
+   const mergedStyle = {
+     ...defaultStyle,
+     ...typeDefaults,
+     ...inheritableParentStyle,
+     ...(element.props && element.props.style),
+     ...this._getAnimatedStyle(element),  // last wins
+   };
+   ```
+
+2. **`_computeLayoutProps()`** — layout properties (width, height, padding, gap, margin):
+   ```typescript
+   const baseStyle = (element.props && element.props.style) || {};
+   const animStyle = this._getAnimatedStyle(element);
+   const style = Object.keys(animStyle).length > 0
+     ? { ...baseStyle, ...animStyle } : baseStyle;
+   ```
+
+This dual-path injection is necessary because the layout engine has two independent merge chains — see [layout-engine-notes.md](layout-engine-notes.md) for background on `_computeStyle()` vs `_computeLayoutProps()`.
+
+### Percentage main-axis resolution
+
+The flex basis calculation resolves percentage strings against available main-axis space:
+```typescript
+} else if (typeof childProps.width === 'string' && childProps.width.endsWith('%')) {
+  flexBasisValue = Math.floor(mainAxisSize * parseFloat(childProps.width) / 100);
+}
+```
+This applies to both row (percentage width) and column (percentage height) directions.
+
+### Caching
+
+No extra cache needed. `_computeStyle()` and `_computeLayoutProps()` use per-frame caches (`_styleCache`, `_layoutPropsCache`) cleared at the start of each layout pass. Animation progress advances naturally because each frame re-computes from `performance.now()`.
+
+## Lifecycle (`src/stylesheet.ts`)
+
+### Bootstrap
+
+In `applyStylesheet()`, after the style cascade resolves, the animation lifecycle runs:
+
+1. Read `resolvedStyle.animationName`
+2. If name exists, look up `KeyframeDefinition` from stylesheet's `_keyframes` map
+3. If found and element has no animation (or different name): create `AnimationState`, register tick with `UIAnimationManager`
+4. If **same** name already running: do nothing (prevents restart on resize/re-apply)
+
+### Tick callback
+
+The UIAnimationManager tick does only one thing: `manager.requestRender()`. No style writes, no interpolation. Actual interpolation happens lazily in `_getAnimatedStyle()` during the next layout pass. This matches the spinner pattern (tick requests render, computation happens in render).
+
+### Teardown
+
+| Event | Action |
+|-------|--------|
+| Animation finishes (finite, no fill-mode) | `stopElementAnimation()`: unregister from UIAnimationManager, clear `_animationState` |
+| `animation-name` changes | Stop old, start new |
+| `animation: none` or property removed | `stopElementAnimation()` |
+| Element removed from tree | `stopElementAnimation()` |
+
+### Render-side integration
+
+`ComponentRenderContext` carries `computedStyle` so that component render methods can read animated layout properties (padding, margin) from the computed style rather than `props.style`. This is necessary because `props.style` doesn't contain animated values (by design).
+
+## Supported Animated Properties
+
+| Category | Properties |
+|----------|-----------|
+| **Color** | `color`, `backgroundColor`, `borderColor`, `borderTopColor`, `borderBottomColor`, `borderLeftColor`, `borderRightColor`, `dividerColor`, `connectorColor` |
+| **Size** | `width`, `height`, `minWidth`, `maxWidth`, `minHeight`, `maxHeight` |
+| **Spacing** | `padding`, `paddingTop/Right/Bottom/Left`, `margin`, `marginTop/Right/Bottom/Left`, `gap` |
+| **Position** | `top`, `right`, `bottom`, `left` |
+| **Flex** | `flexGrow`, `flexShrink` |
+| **Other numeric** | `zIndex`, `barWidth`, `ledWidth`, `cellWidth`, `cellHeight`, `minPaneSize` |
+| **Discrete** | `border`, `fontWeight`, `fontStyle`, `textDecoration`, `flexDirection`, `display`, `overflow` |
+
+## Limitations
+
+- **Single animation per element**: CSS supports `animation: a 1s, b 2s` (comma-separated). Only the first animation is applied.
+- **No `cubic-bezier()` in CSS**: The `cubic-bezier(x1,y1,x2,y2)` function isn't parsed from CSS text. Use named presets (`ease`, `ease-in-out`, etc.) or `steps(N)`.
+- **No relative positioning**: `position: relative` with animated `left`/`top` offsets is not supported (layout engine limitation).
+- **Mixed-unit interpolation**: Animating between `"50%"` and `30` (number) snaps discretely at 50%. Both values must be the same type for smooth interpolation.
+
+## Example
+
+```css
+@keyframes pulse {
+  0%   { border-color: #333333; }
+  50%  { border-color: #3388ff; }
+  100% { border-color: #333333; }
+}
+
+.alert-box {
+  animation: pulse 2s ease-in-out infinite;
+  border: thin;
+  padding: 0 1;
+}
+```
+
+See [`examples/basics/animation.melker`](../examples/basics/animation.melker) for a comprehensive demo covering color, size, percentage, padding, gap, border color, and nested container animations.

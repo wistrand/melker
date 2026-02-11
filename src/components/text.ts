@@ -118,8 +118,10 @@ export class TextElement extends Element implements Renderable, TextSelectable {
     }
 
     // Calculate content area within borders and padding
+    // Prefer computedStyle (includes CSS animation values) over props.style
+    const styleForPadding = context.computedStyle || elementStyle;
     const borderWidth = elementStyle.border === 'thin' ? 1 : 0;
-    const paddingValue = elementStyle.padding || 0;
+    const paddingValue = styleForPadding.padding || 0;
 
     // Handle padding as either number or BoxSpacing
     const paddingTop = typeof paddingValue === 'number' ? paddingValue : (paddingValue.top || 0);

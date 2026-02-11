@@ -213,6 +213,8 @@ export const FONT_3x5: BitmapFont = {
 let _font5x7: BitmapFont | null = null;
 let _font5x7Promise: Promise<BitmapFont> | null = null;
 
+// Load the X11 misc font 5x7 from psf2 format
+// COPYRIGHT "Public domain font.  Share and enjoy."
 export async function getFont5x7(): Promise<BitmapFont> {
   if (_font5x7) return _font5x7;
   if (!_font5x7Promise) {

@@ -855,10 +855,13 @@ export class DualBuffer {
   // Force complete redraw (useful for initialization or after screen clear)
   forceRedraw(): BufferDiff[] {
     const differences: BufferDiff[] = [];
+    const currentCells = this._currentBuffer.cells;
 
     for (let y = 0; y < this._height; y++) {
+      const row = currentCells[y];
+      if (!row) continue;
       for (let x = 0; x < this._width; x++) {
-        const cell = this._currentBuffer.getCell(x, y);
+        const cell = row[x];
         if (cell) {
           differences.push({ x, y, cell });
         }
@@ -944,10 +947,12 @@ export class DualBuffer {
   // Count non-empty cells in current buffer
   private _countNonEmptyCells(): number {
     let count = 0;
+    const currentCells = this._currentBuffer.cells;
     for (let y = 0; y < this._height; y++) {
+      const row = currentCells[y];
+      if (!row) continue;
       for (let x = 0; x < this._width; x++) {
-        const cell = this._currentBuffer.getCell(x, y);
-        if (cell && cell.char !== EMPTY_CHAR) {
+        if (row[x].char !== EMPTY_CHAR) {
           count++;
         }
       }
@@ -998,10 +1003,13 @@ export class DualBuffer {
     let wideCharCells = 0;
     const totalCells = this._width * this._height;
 
+    const currentCells = this._currentBuffer.cells;
     for (let y = 0; y < this._height; y++) {
+      const row = currentCells[y];
+      if (!row) continue;
       for (let x = 0; x < this._width; x++) {
-        const cell = this._currentBuffer.getCell(x, y);
-        if (cell && cell.char !== EMPTY_CHAR && !cell.isWideCharContinuation) {
+        const cell = row[x];
+        if (cell.char !== EMPTY_CHAR && !cell.isWideCharContinuation) {
           nonEmptyCells++;
           if (cell.width === 2) {
             wideCharCells++;

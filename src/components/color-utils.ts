@@ -110,6 +110,24 @@ export function rgbaToCss(color: PackedRGBA): string {
   return result;
 }
 
+// Named CSS colors — hoisted to module scope to avoid re-creating on every call
+const _namedColors: Record<string, PackedRGBA> = {
+  'black': packRGBA(0, 0, 0, 255),
+  'white': packRGBA(255, 255, 255, 255),
+  'red': packRGBA(255, 0, 0, 255),
+  'green': packRGBA(0, 128, 0, 255),
+  'blue': packRGBA(0, 0, 255, 255),
+  'yellow': packRGBA(255, 255, 0, 255),
+  'cyan': packRGBA(0, 255, 255, 255),
+  'magenta': packRGBA(255, 0, 255, 255),
+  'orange': packRGBA(255, 165, 0, 255),
+  'purple': packRGBA(128, 0, 128, 255),
+  'pink': packRGBA(255, 192, 203, 255),
+  'gray': packRGBA(128, 128, 128, 255),
+  'grey': packRGBA(128, 128, 128, 255),
+  'transparent': TRANSPARENT,
+};
+
 /**
  * Parse CSS color string to packed RGBA
  */
@@ -145,23 +163,7 @@ export function cssToRgba(css: string): PackedRGBA {
     return packRGBA(r, g, b, a);
   }
   // Handle named colors (basic set)
-  const namedColors: Record<string, PackedRGBA> = {
-    'black': packRGBA(0, 0, 0, 255),
-    'white': packRGBA(255, 255, 255, 255),
-    'red': packRGBA(255, 0, 0, 255),
-    'green': packRGBA(0, 128, 0, 255),
-    'blue': packRGBA(0, 0, 255, 255),
-    'yellow': packRGBA(255, 255, 0, 255),
-    'cyan': packRGBA(0, 255, 255, 255),
-    'magenta': packRGBA(255, 0, 255, 255),
-    'orange': packRGBA(255, 165, 0, 255),
-    'purple': packRGBA(128, 0, 128, 255),
-    'pink': packRGBA(255, 192, 203, 255),
-    'gray': packRGBA(128, 128, 128, 255),
-    'grey': packRGBA(128, 128, 128, 255),
-    'transparent': TRANSPARENT,
-  };
-  return namedColors[css.toLowerCase()] ?? DEFAULT_FG;
+  return _namedColors[css.toLowerCase()] ?? DEFAULT_FG;
 }
 
 // ============================================================================

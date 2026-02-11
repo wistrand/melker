@@ -1,0 +1,627 @@
+<melker>
+  <policy>
+  {
+    "name": "Mandelbrot Explorer",
+    "description": "Zoomable Mandelbrot set with BigInt arbitrary precision",
+    "permissions": {}
+  }
+  </policy>
+
+  <help>
+## Mandelbrot Explorer
+
+Infinite-zoom Mandelbrot set using BigInt arbitrary-precision arithmetic.
+Renders progressively from coarse blocks to pixel resolution.
+
+## Controls
+
+| Key                  | Action                                      |
+|----------------------|---------------------------------------------|
+| Mouse drag           | Pan the view                                |
+| Scroll wheel         | Zoom in/out at cursor                       |
+| Double-click         | Zoom in at cursor (Shift: zoom out)         |
+| Arrow keys / WASD    | Pan the view                                |
+| `+` / `-`            | Zoom in/out at center                       |
+| `p`                  | Cycle through color palettes                |
+| `1`-`6`              | Select palette by number                    |
+| `Home`               | Reset to default view                       |
+  </help>
+
+  <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+    <!-- Header -->
+    <container style="display: flex; flex-direction: row; padding-left: 1; padding-right: 1; gap: 2; align-items: center;">
+      <text>Palette:</text>
+      <select id="palette" selectedValue="electric" onChange="$app.onPaletteChange(event)">
+        <option value="electric">Electric</option>
+        <option value="fire">Fire</option>
+        <option value="ocean">Ocean</option>
+        <option value="rainbow">Rainbow</option>
+        <option value="twilight">Twilight</option>
+        <option value="monochrome">Monochrome</option>
+      </select>
+      <text>Zoom:</text>
+      <text id="zoomLabel">1x</text>
+      <text>Iter:</text>
+      <text id="iterLabel">100</text>
+    </container>
+
+    <!-- Canvas -->
+    <container style="flex: 1; display: flex;">
+      <img
+        id="fractal"
+        width="100%"
+        height="100%"
+        onMouseDown="$app.onMouseDown(event)"
+        onMouseMove="$app.onMouseMove(event)"
+        onMouseUp="$app.onMouseUp(event)"
+        onWheel="$app.onWheel(event)"
+        onKeyPress="$app.onKeyPress(event)"
+      />
+    </container>
+
+    <!-- Footer -->
+    <container style="display: flex; flex-direction: row; padding-left: 1; padding-right: 1; justify-content: space-between;">
+      <text id="coords">-0.5 + 0.0i</text>
+      <text>+/- zoom  arrows pan  p palette  Home reset</text>
+    </container>
+  </container>
+
+  <script type="typescript">
+    // ===== Helpers =====
+
+    function clamp(x: number, lo = 0, hi = 1): number {
+      return x < lo ? lo : x > hi ? hi : x;
+    }
+
+    function lerpStops(stops: number[][], t: number): [number, number, number] {
+      const n = stops.length - 1;
+      const i = Math.min(Math.floor(t * n), n - 1);
+      const f = t * n - i;
+      const s0 = stops[i], s1 = stops[i + 1];
+      return [
+        Math.floor(s0[0] + (s1[0] - s0[0]) * f),
+        Math.floor(s0[1] + (s1[1] - s0[1]) * f),
+        Math.floor(s0[2] + (s1[2] - s0[2]) * f),
+      ];
+    }
+
+    function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
+      const i = Math.floor(h * 6) % 6;
+      const f = h * 6 - Math.floor(h * 6);
+      const p = v * (1 - s);
+      const q = v * (1 - f * s);
+      const t = v * (1 - (1 - f) * s);
+      const m = [
+        [v, t, p], [q, v, p], [p, v, t],
+        [p, q, v], [t, p, v], [v, p, q],
+      ][i];
+      return [Math.floor(m[0] * 255), Math.floor(m[1] * 255), Math.floor(m[2] * 255)];
+    }
+
+    function packColor(r: number, g: number, b: number): number {
+      return ((r & 0xFF) << 24) | ((g & 0xFF) << 16) | ((b & 0xFF) << 8) | 0xFF;
+    }
+
+    // ===== BigInt Fixed-Point =====
+
+    const SCALE_BITS = 50;
+    let FRAC_BITS = 64n;
+    let ONE = 1n << FRAC_BITS;
+    let FOUR = 4n << FRAC_BITS;
+
+    function toFixed(f: number): bigint {
+      const sign = f < 0 ? -1n : 1n;
+      const abs = Math.abs(f);
+      const scaled = BigInt(Math.round(abs * (2 ** SCALE_BITS)));
+      const shift = FRAC_BITS - BigInt(SCALE_BITS);
+      return sign * (shift >= 0n ? scaled << shift : scaled >> -shift);
+    }
+
+    function fixedToFloat(v: bigint): number {
+      const sign = v < 0n ? -1 : 1;
+      const abs = v < 0n ? -v : v;
+      const shift = FRAC_BITS - BigInt(SCALE_BITS);
+      const scaled = shift >= 0n ? abs >> shift : abs << -shift;
+      return sign * Number(scaled) / (2 ** SCALE_BITS);
+    }
+
+    function ensurePrecision(bufW: number): void {
+      if (viewWidth > 0n && viewWidth / BigInt(bufW) === 0n) {
+        const grow = FRAC_BITS;
+        FRAC_BITS *= 2n;
+        ONE = 1n << FRAC_BITS;
+        FOUR = 4n << FRAC_BITS;
+        centerRe <<= grow;
+        centerIm <<= grow;
+        viewWidth <<= grow;
+      }
+    }
+
+    // ===== State =====
+
+    let centerRe = toFixed(-0.5);
+    let centerIm = toFixed(0.0);
+    let viewWidth = toFixed(4.0);
+    let zoomLevel = 0;
+    let computationId = 0;
+    let currentMaxIter = 100;
+
+    // Drag state
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragStartRe = 0n;
+    let dragStartIm = 0n;
+    let dragSnapshot: { width: number; height: number; data: Uint8ClampedArray; bytesPerPixel: number } | null = null;
+
+    // Iteration cache
+    let iterBuffer: Int32Array = new Int32Array(0);
+    let cachedBufW = 0;
+    let cachedBufH = 0;
+
+    // Double-click detection
+    let lastClickTime = 0;
+    let lastClickX = 0;
+    let lastClickY = 0;
+
+    // ===== Palettes =====
+
+    const PALETTE_STOPS: Record<string, number[][] | 'hsv'> = {
+      electric:   [[0,0,0], [0,0,180], [0,100,255], [0,220,255], [128,255,255], [255,255,255]],
+      fire:       [[0,0,0], [128,0,0], [200,30,0], [255,160,0], [255,255,0], [255,255,255]],
+      ocean:      [[0,0,20], [0,30,100], [0,80,160], [0,170,200], [80,220,220], [200,255,255]],
+      rainbow:    'hsv',
+      twilight:   [[10,0,40], [80,0,120], [180,40,100], [220,100,40], [255,180,0], [255,255,100]],
+      monochrome: [[0,0,0], [255,255,255]],
+    };
+
+    export let currentPalette = 'electric';
+    const PALETTE_KEYS = Object.keys(PALETTE_STOPS);
+    const PALETTE_LUT = new Uint32Array(256);
+
+    export function bakePalette(key: string): void {
+      const stops = PALETTE_STOPS[key];
+      for (let i = 0; i < 256; i++) {
+        const t = i / 255;
+        let r: number, g: number, b: number;
+        if (stops === 'hsv') {
+          [r, g, b] = hsvToRgb(t, 1.0, 1.0);
+        } else {
+          [r, g, b] = lerpStops(stops, t);
+        }
+        PALETTE_LUT[i] = packColor(r, g, b);
+      }
+    }
+
+    function iterToColor(iter: number): number {
+      if (iter >= currentMaxIter) return 0x000000FF; // black interior
+      return PALETTE_LUT[(iter * 7 + 3) & 255];
+    }
+
+    // ===== Mandelbrot =====
+
+    // Skip iteration for points inside the main cardioid or period-2 bulb
+    function inMainBodies(cRe: bigint, cIm: bigint): boolean {
+      const QUARTER = ONE >> 2n;
+      const SIXTEENTH = ONE >> 4n;
+
+      // Period-2 bulb: (cRe+1)^2 + cIm^2 <= 1/16
+      const re1 = cRe + ONE;
+      if (((re1 * re1) >> FRAC_BITS) + ((cIm * cIm) >> FRAC_BITS) <= SIXTEENTH) return true;
+
+      // Main cardioid: q*(q + cRe - 1/4) <= cIm^2/4
+      const reShift = cRe - QUARTER;
+      const im2 = (cIm * cIm) >> FRAC_BITS;
+      const q = ((reShift * reShift) >> FRAC_BITS) + im2;
+      if (((q * (q + reShift)) >> FRAC_BITS) <= (im2 >> 2n)) return true;
+
+      return false;
+    }
+
+    function mandelbrot(cRe: bigint, cIm: bigint, maxIter: number): number {
+      if (inMainBodies(cRe, cIm)) return maxIter;
+
+      let zr = 0n, zi = 0n;
+      let savedRe = 0n, savedIm = 0n;
+      let period = 0;
+      let checkLimit = 1;
+
+      for (let i = 0; i < maxIter; i++) {
+        const zr2 = (zr * zr) >> FRAC_BITS;
+        const zi2 = (zi * zi) >> FRAC_BITS;
+        if (zr2 + zi2 > FOUR) return i;
+
+        const newZi = ((zr * zi) >> (FRAC_BITS - 1n)) + cIm;
+        zr = zr2 - zi2 + cRe;
+        zi = newZi;
+
+        // Brent's cycle detection — exact BigInt comparison
+        if (zr === savedRe && zi === savedIm) return maxIter;
+
+        if (++period >= checkLimit) {
+          savedRe = zr;
+          savedIm = zi;
+          period = 0;
+          checkLimit <<= 1;
+        }
+      }
+      return maxIter;
+    }
+
+    function getMaxIterations(): number {
+      return Math.min(2000, 100 + zoomLevel * 40);
+    }
+
+    function getPixelSizes(canvas: any, bufW: number): { re: bigint; im: bigint } {
+      const pixelSizeRe = viewWidth / BigInt(bufW);
+      const pixelAspect = canvas.getPixelAspectRatio?.() || (2 / 3);
+      const invAspect = Math.round(100 / pixelAspect);
+      const pixelSizeIm = (pixelSizeRe * BigInt(invAspect)) / 100n;
+      return { re: pixelSizeRe, im: pixelSizeIm };
+    }
+
+    // ===== Progressive Render =====
+
+    const INITIAL_BLOCK = 32;
+
+    export async function startRender(clearCache: boolean = true): Promise<void> {
+      const myId = ++computationId;
+      const canvas = $melker.getElementById('fractal') as any;
+      if (!canvas) return;
+
+      const bufW = canvas.getBufferWidth();
+      const bufH = canvas.getBufferHeight();
+      if (!(bufW > 0) || !(bufH > 0)) return; // catches NaN too
+
+      // Handle resize or explicit cache clear
+      if (bufW !== cachedBufW || bufH !== cachedBufH) {
+        iterBuffer = new Int32Array(bufW * bufH).fill(-1);
+        cachedBufW = bufW;
+        cachedBufH = bufH;
+      } else if (clearCache) {
+        iterBuffer.fill(-1);
+      }
+
+      ensurePrecision(bufW);
+      currentMaxIter = getMaxIterations();
+
+      const { re: pxRe, im: pxIm } = getPixelSizes(canvas, bufW);
+      const halfW = BigInt(bufW >> 1);
+      const halfH = BigInt(bufH >> 1);
+
+      canvas.clear();
+      updateInfo();
+
+      // Fast path: recolor from cached iterations (palette switch)
+      if (!clearCache && iterBuffer[0] >= 0) {
+        for (let y = 0; y < bufH; y++) {
+          for (let x = 0; x < bufW; x++) {
+            const iter = iterBuffer[y * bufW + x];
+            if (iter >= 0) canvas.setPixelColor(x, y, iterToColor(iter));
+          }
+        }
+        canvas.markDirty();
+        $melker.render();
+        return;
+      }
+
+      for (let blockSize = INITIAL_BLOCK; blockSize >= 1; blockSize >>= 1) {
+        // Mariani-Silver: if all 4 corners of a previous-level block share the
+        // same iteration count, fill the interior — no per-pixel BigInt math needed.
+        if (blockSize < INITIAL_BLOCK) {
+          const prevBlock = blockSize * 2;
+          for (let by = 0; by < bufH; by += prevBlock) {
+            const byEnd = Math.min(by + prevBlock - 1, bufH - 1);
+            for (let bx = 0; bx < bufW; bx += prevBlock) {
+              const bxEnd = Math.min(bx + prevBlock - 1, bufW - 1);
+              const tl = iterBuffer[by * bufW + bx];
+              if (tl < 0) continue; // corner not yet computed
+              const tr = iterBuffer[by * bufW + bxEnd];
+              if (tr !== tl) continue;
+              const bl = iterBuffer[byEnd * bufW + bx];
+              if (bl !== tl) continue;
+              const br = iterBuffer[byEnd * bufW + bxEnd];
+              if (br !== tl) continue;
+
+              // All 4 corners match — fill interior in iterBuffer
+              for (let fy = by; fy <= byEnd; fy++) {
+                for (let fx = bx; fx <= bxEnd; fx++) {
+                  iterBuffer[fy * bufW + fx] = tl;
+                }
+              }
+              // Fill block on canvas
+              const color = iterToColor(tl);
+              canvas.fillRectColor(bx, by, bxEnd - bx + 1, byEnd - by + 1, color);
+            }
+          }
+        }
+
+        for (let by = 0; by < bufH; by += blockSize) {
+          if (computationId !== myId) return;
+
+          for (let bx = 0; bx < bufW; bx += blockSize) {
+            // Skip pixels computed at a coarser level
+            if (blockSize < INITIAL_BLOCK
+                && bx % (blockSize * 2) === 0
+                && by % (blockSize * 2) === 0) {
+              continue;
+            }
+
+            const idx = by * bufW + bx;
+            let iter = iterBuffer[idx];
+            if (iter < 0) {
+              const cRe = centerRe + (BigInt(bx) - halfW) * pxRe;
+              const cIm = centerIm - (BigInt(by) - halfH) * pxIm;
+              iter = mandelbrot(cRe, cIm, currentMaxIter);
+              iterBuffer[idx] = iter;
+            }
+
+            const color = iterToColor(iter);
+            if (blockSize > 1) {
+              const half = blockSize >> 1;
+              canvas.fillRectColor(bx - half, by - half, blockSize, blockSize, color);
+            } else {
+              canvas.setPixelColor(bx, by, color);
+            }
+          }
+
+          // Yield periodically for fine levels
+          if (blockSize <= 4 && by > 0 && by % 32 === 0) {
+            canvas.markDirty();
+            $melker.render();
+            await new Promise(r => setTimeout(r, 0));
+            if (computationId !== myId) return;
+          }
+        }
+
+        // Yield between levels
+        canvas.markDirty();
+        $melker.render();
+        await new Promise(r => setTimeout(r, 0));
+        if (computationId !== myId) return;
+      }
+    }
+
+    // ===== UI =====
+
+    function updateInfo(): void {
+      const zoomEl = $melker.getElementById('zoomLabel');
+      if (zoomEl) {
+        if (zoomLevel === 0) zoomEl.setValue('1x');
+        else if (zoomLevel < 10) zoomEl.setValue(`${1 << zoomLevel}x`);
+        else {
+          const mag = Math.floor(zoomLevel * 0.30103);
+          zoomEl.setValue(`2^${zoomLevel} (~10^${mag}x)`);
+        }
+      }
+
+      const iterEl = $melker.getElementById('iterLabel');
+      if (iterEl) iterEl.setValue(`${currentMaxIter}`);
+    }
+
+    function updateCoords(bufX: number, bufY: number): void {
+      const canvas = $melker.getElementById('fractal') as any;
+      if (!canvas) return;
+      const bufW = canvas.getBufferWidth();
+      const bufH = canvas.getBufferHeight();
+      if (!(bufW > 0) || !(bufH > 0)) return;
+
+      const { re: pxRe, im: pxIm } = getPixelSizes(canvas, bufW);
+      const halfW = BigInt(bufW >> 1);
+      const halfH = BigInt(bufH >> 1);
+
+      const re = fixedToFloat(centerRe + (BigInt(bufX) - halfW) * pxRe);
+      const im = fixedToFloat(centerIm - (BigInt(bufY) - halfH) * pxIm);
+
+      const coordsEl = $melker.getElementById('coords');
+      if (coordsEl) {
+        const imAbs = Math.abs(im);
+        coordsEl.setValue(`${re.toFixed(16)} ${im >= 0 ? '+' : '-'} ${imAbs.toFixed(16)}i`);
+      }
+    }
+
+    // ===== Zoom =====
+
+    function zoomAtPoint(bufX: number, bufY: number, doZoomIn: boolean): void {
+      if (doZoomIn && zoomLevel >= 200) return;
+      if (!doZoomIn && zoomLevel <= 0) return;
+
+      const canvas = $melker.getElementById('fractal') as any;
+      if (!canvas) return;
+      const bufW = canvas.getBufferWidth();
+      const bufH = canvas.getBufferHeight();
+      if (!(bufW > 0)) return;
+
+      const halfW = BigInt(bufW >> 1);
+      const halfH = BigInt(bufH >> 1);
+      const { re: pxRe, im: pxIm } = getPixelSizes(canvas, bufW);
+
+      // Complex coord at cursor before zoom
+      const cursorRe = centerRe + (BigInt(bufX) - halfW) * pxRe;
+      const cursorIm = centerIm - (BigInt(bufY) - halfH) * pxIm;
+
+      if (doZoomIn) {
+        viewWidth >>= 1n;
+        zoomLevel++;
+      } else {
+        viewWidth <<= 1n;
+        zoomLevel--;
+      }
+
+      ensurePrecision(bufW);
+
+      const { re: newPxRe, im: newPxIm } = getPixelSizes(canvas, bufW);
+
+      // Adjust center so cursor stays fixed
+      centerRe = cursorRe - (BigInt(bufX) - halfW) * newPxRe;
+      centerIm = cursorIm + (BigInt(bufY) - halfH) * newPxIm;
+
+      startRender();
+    }
+
+    // ===== Event Handlers =====
+
+    export function onMouseDown(event: { x: number; y: number; button: number; shiftKey?: boolean }) {
+      if (event.button !== 0) return;
+
+      const now = Date.now();
+      const timeDelta = now - lastClickTime;
+      const distX = Math.abs(event.x - lastClickX);
+      const distY = Math.abs(event.y - lastClickY);
+
+      if (timeDelta < 400 && distX <= 2 && distY <= 2) {
+        zoomAtPoint(event.x * 2, event.y * 3, !event.shiftKey);
+        lastClickTime = 0;
+        return;
+      }
+
+      lastClickTime = now;
+      lastClickX = event.x;
+      lastClickY = event.y;
+
+      isDragging = true;
+      dragStartX = event.x;
+      dragStartY = event.y;
+      dragStartRe = centerRe;
+      dragStartIm = centerIm;
+      computationId++; // cancel current render
+
+      // Snapshot current canvas pixels for drag preview
+      const canvas = $melker.getElementById('fractal') as any;
+      if (canvas) {
+        const bufW = canvas.getBufferWidth();
+        const bufH = canvas.getBufferHeight();
+        if (bufW > 0 && bufH > 0) {
+          const data = new Uint8ClampedArray(bufW * bufH * 4);
+          for (let y = 0; y < bufH; y++) {
+            for (let x = 0; x < bufW; x++) {
+              const color = canvas.getPixelColor(x, y);
+              const idx = (y * bufW + x) * 4;
+              data[idx] = (color >>> 24) & 0xFF;
+              data[idx + 1] = (color >> 16) & 0xFF;
+              data[idx + 2] = (color >> 8) & 0xFF;
+              data[idx + 3] = color & 0xFF;
+            }
+          }
+          dragSnapshot = { width: bufW, height: bufH, data, bytesPerPixel: 4 };
+        }
+      }
+    }
+
+    export function onMouseMove(event: { x: number; y: number }) {
+      updateCoords(event.x * 2, event.y * 3);
+
+      if (isDragging) {
+        const canvas = $melker.getElementById('fractal') as any;
+        if (!canvas || !dragSnapshot) return;
+        const bufW = canvas.getBufferWidth();
+        if (!(bufW > 0)) return;
+
+        // Shift existing pixels by drag delta
+        const dx = (event.x - dragStartX) * 2;
+        const dy = (event.y - dragStartY) * 3;
+        canvas.clear();
+        canvas.drawImage(dragSnapshot, dx, dy, dragSnapshot.width, dragSnapshot.height);
+        canvas.markDirty();
+        $melker.render();
+
+        // Update center for when mouseUp fires
+        const { re: pxRe, im: pxIm } = getPixelSizes(canvas, bufW);
+        centerRe = dragStartRe - BigInt(dx) * pxRe;
+        centerIm = dragStartIm + BigInt(dy) * pxIm;
+      }
+    }
+
+    export function onMouseUp(event: { button: number }) {
+      if (event.button === 0 && isDragging) {
+        isDragging = false;
+        dragSnapshot = null;
+        startRender();
+      }
+    }
+
+    export function onWheel(event: { deltaY: number; x: number; y: number }) {
+      zoomAtPoint(event.x * 2, event.y * 3, event.deltaY < 0);
+    }
+
+    export function onKeyPress(event: { key: string }) {
+      const canvas = $melker.getElementById('fractal') as any;
+      if (!canvas) return;
+      const bufW = canvas.getBufferWidth();
+      const bufH = canvas.getBufferHeight();
+
+      let panAmount = viewWidth >> 2n;
+      if (panAmount <= 0n) panAmount = 1n;
+
+      switch (event.key) {
+        case 'ArrowUp': case 'w': case 'k':
+          centerIm += panAmount;
+          startRender();
+          break;
+        case 'ArrowDown': case 's': case 'j':
+          centerIm -= panAmount;
+          startRender();
+          break;
+        case 'ArrowLeft': case 'a': case 'h':
+          centerRe -= panAmount;
+          startRender();
+          break;
+        case 'ArrowRight': case 'd': case 'l':
+          centerRe += panAmount;
+          startRender();
+          break;
+        case '+': case '=':
+          zoomAtPoint(bufW >> 1, bufH >> 1, true);
+          break;
+        case '-':
+          zoomAtPoint(bufW >> 1, bufH >> 1, false);
+          break;
+        case 'Home':
+          FRAC_BITS = 64n;
+          ONE = 1n << FRAC_BITS;
+          FOUR = 4n << FRAC_BITS;
+          centerRe = toFixed(-0.5);
+          centerIm = toFixed(0.0);
+          viewWidth = toFixed(4.0);
+          zoomLevel = 0;
+          startRender();
+          break;
+        case 'p': case 'P': {
+          const idx = PALETTE_KEYS.indexOf(currentPalette);
+          currentPalette = PALETTE_KEYS[(idx + 1) % PALETTE_KEYS.length];
+          const selectEl = $melker.getElementById('palette');
+          if (selectEl) selectEl.props.selectedValue = currentPalette;
+          bakePalette(currentPalette);
+          startRender(false);
+          break;
+        }
+        case '1': case '2': case '3': case '4': case '5': case '6': {
+          const i = parseInt(event.key) - 1;
+          if (i < PALETTE_KEYS.length) {
+            currentPalette = PALETTE_KEYS[i];
+            const sel = $melker.getElementById('palette');
+            if (sel) sel.props.selectedValue = currentPalette;
+            bakePalette(currentPalette);
+            startRender(false);
+          }
+          break;
+        }
+      }
+    }
+
+    export function onPaletteChange(event: { value: string }): void {
+      currentPalette = event.value;
+      bakePalette(currentPalette);
+      startRender(false); // keep iter cache — instant recolor
+    }
+  </script>
+
+  <script async="ready">
+    $app.bakePalette($app.currentPalette);
+    $melker.engine.focusElement('fractal');
+    // Ensure layout has resolved img dimensions before we start drawing
+    $melker.render();
+    await new Promise(r => setTimeout(r, 50));
+    $app.startRender();
+  </script>
+</melker>

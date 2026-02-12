@@ -8,7 +8,7 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 |----------------------------------------------------------|-----------------|--------|-----------------------|----------------|
 | **Melker**                                               | TypeScript/Deno | New    | HTML-like declarative | Flexbox        |
 | [Ink](https://github.com/vadimdemedes/ink)               | JavaScript/Node | 35k    | React components      | Flexbox (Yoga) |
-| [OpenTUI](https://github.com/sst/opentui)               | TypeScript/Bun  | 8.4k   | React/SolidJS         | Flexbox (Yoga) |
+| [OpenTUI](https://github.com/sst/opentui)               | TypeScript/Bun  | 8.5k   | React/SolidJS         | Flexbox (Yoga) |
 | [Blessed](https://github.com/chjj/blessed)               | JavaScript/Node | 11k    | Imperative widgets    | CSS-like       |
 | [Bubble Tea](https://github.com/charmbracelet/bubbletea) | Go              | 39k    | Elm architecture      | CSS-like       |
 | [tview](https://github.com/rivo/tview)                   | Go              | 13k    | Imperative widgets    | Grid/Flex      |
@@ -35,7 +35,7 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 | Auto color degrade   |   Y    |  Y  |    Y    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
 | Mouse support        |   Y    |  ~  |    Y    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
 | Unicode/emoji        |   Y    |  Y  |    Y    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
-| Animations           |   ~    |  Y  |    Y    |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
+| Animations           |   Y    |  Y  |    Y    |    Y    |     Y      |   -   |    Y    |    Y    |   Y   |
 | 16M colors           |   Y    |  Y  |    Y    |    Y    |     Y      |   Y   |    Y    |    Y    |   Y   |
 | Video playback       |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
 | Pixel canvas         |   Y    |  -  |    -    |    -    |     -      |   -   |    ~    |    Y    |   Y   |
@@ -44,6 +44,8 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 | Literate UI (.md)    |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
 | Command palette      |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |   -   |
 | Media queries        |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| Container queries    |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |   -   |
+| CSS animations       |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |   -   |
 | No_std/embedded      |   -    |  -  |    -    |    -    |     -      |   -   |    -    |    Y    |   -   |
 | SSH/network serve    |   Y    |  -  |    -    |    -    |     Y      |   -   |    Y    |    -    |   -   |
 | Debug/remote inspect |   Y    |  Y  |    -    |    -    |     -      |   -   |    Y    |    -    |   -   |
@@ -53,12 +55,13 @@ Y = Full support, ~ = Partial/limited support, - = Not available
 
 **Notes:**
 - **Ink mouse**: Requires third-party package (ink-mouse)
-- **Melker animations**: Via canvas shaders, not general UI animations
+- **Melker animations**: CSS `@keyframes` animations (color, numeric, spacing interpolation) plus canvas shaders
 - **OpenTUI animations**: Timeline-based animation API with easing functions
 - **Textual state**: Reactive attributes, not automatic persistence like Melker. Company (Textualize) winding down; maintained by Will McGugan as open source
 - **Ratatui canvas**: Quadrant (2x2), Sextant (2x3), Octant (2x4), Braille (2x4), HalfBlock (1x2)
 - **Ratatui no_std**: Added in v0.30.0 for embedded targets
 - **Sixel/Kitty**: Ink via ink-picture, Textual via textual-image, Ratatui via ratatui-image
+- **Textual CSS animations**: Supports `@keyframes` with `animation` shorthand in external CSS
 - **Mermaid**: Melker has native `<graph>` component; others require external CLI tools
 
 ## Abstraction Levels
@@ -160,7 +163,7 @@ auto button = Button("Click", [&] { count++; });
 
 | Library       | Method              | Syntax                       | Theming                       |
 |---------------|---------------------|------------------------------|-------------------------------|
-| **Melker**    | CSS in `style=""`   | `border: thin; color: red`   | Auto-detect + 8 manual themes |
+| **Melker**    | CSS inline + `<style>` | `border: thin; color: red`   | Auto-detect + 8 manual themes |
 | **Ink**       | Props on components | `<Box borderStyle="round">`  | Via ink-ui                    |
 | **OpenTUI**   | Props on components | `<Box border="round">`       | Manual                        |
 | **Blessed**   | Options object      | `{border: {type: 'line'}}`   | Manual                        |
@@ -212,7 +215,7 @@ text("Hello") | border | color(Color::Cyan)
 |            | Melker      | Ink         | OpenTUI     | Blessed     | Bubble Tea  | tview       | Textual     | Ratatui     | FTXUI       |
 |------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|
 | Language   | TS/Deno     | JS/Node     | TS+Zig/Bun  | JS/Node     | Go          | Go          | Python      | Rust        | C++         |
-| Stars      | New         | 35k         | 8.4k        | 11k         | 39k         | 13k         | 34k         | 18k         | 10k         |
+| Stars      | New         | 35k         | 8.5k        | 11k         | 39k         | 13k         | 34k         | 18k         | 10k         |
 | Paradigm   | Declarative | React       | React/Solid | Imperative  | Elm/MVU     | Imperative  | Async       | Immediate   | Functional  |
 | Build step | None        | Required    | Required    | None        | Required    | Required    | None        | Required    | Required    |
 | Widgets    | 30+         | ~15         | ~12         | 27+         | Via Bubbles | 15+         | 35+         | Via crates  | 10+         |
@@ -610,7 +613,7 @@ auto table = vbox({
 
 | Library        | Killer Feature                                                          |
 |----------------|-------------------------------------------------------------------------|
-| **Melker**     | Run `.melker` from URL, AI assistant, permission sandbox, literate UI   |
+| **Melker**     | Run `.melker` from URL, AI assistant, permission sandbox, literate UI, container queries |
 | **Ink**        | Full React ecosystem, DevTools, used by 10k+ projects, React 19 support |
 | **OpenTUI**    | Zig FFI for sub-ms rendering, React+SolidJS reconcilers, timeline animations |
 | **Textual**    | Terminal + browser, CSS styling, command palette, 35+ widgets, rapid releases |
@@ -647,6 +650,7 @@ auto table = vbox({
 | Pixel graphics (retained)  | **Melker**                                         |
 | Pixel graphics (immediate) | **FTXUI**, **Ratatui**                             |
 | Literate programming       | **Melker**                                         |
+| CSS animations + queries   | **Melker**, **Textual**                            |
 | Embedded/no_std            | **Ratatui**                                        |
 | SSH/network serving        | **Bubble Tea**, **Textual**, **Melker**             |
 | Sub-ms Zig rendering       | **OpenTUI**                                        |
@@ -656,19 +660,19 @@ auto table = vbox({
 
 | Library        | Version     | Notable Changes                                                                   |
 |----------------|-------------|-----------------------------------------------------------------------------------|
-| **Ink**        | v6.6.0      | React 19 support (peerDeps >=19.0.0), concurrent rendering (PR #850, Feb 2026)    |
-| **OpenTUI**    | v0.1.78     | Very active (pre-1.0). TS+Zig core, React+SolidJS reconcilers, Go bindings. Powers OpenCode (SST AI coding agent). "Not ready for production use" per README |
+| **Ink**        | v6.7.0      | React 19 support, concurrent rendering, Mode 2026 synchronized output             |
+| **OpenTUI**    | v0.1.79     | Very active (pre-1.0). TS+Zig core, React+SolidJS reconcilers, Go bindings. Powers OpenCode (SST AI coding agent). "Not ready for production use" per README |
 | **Bubble Tea** | v2.0.0-rc.2 | v2 RC with View struct API (not string), Cursed Renderer, `charm.land` module path, clipboard via OSC52. v1.3.10 still latest stable |
 | **Textual**    | v7.5.0      | Rapid releases: 1.0 (Dec 2024) → 7.5 (Jan 2026). Textualize company winding down (May 2025); McGugan maintains as open source. Built Toad (AI coding UI) |
 | **Ratatui**    | v0.30.0     | "Biggest release ever" (Dec 2025). no_std for embedded, modular workspace (ratatui-core, ratatui-widgets), `ratatui::run()` API, Sextant/Octant canvas markers. Ratzilla v0.3.0 (WebAssembly) |
-| **FTXUI**      | v6.0.0+     | Navigation tree, Bazel build support, continued WebAssembly                       |
+| **FTXUI**      | v6.1.9      | Navigation tree, Bazel build support, continued WebAssembly. No release since May 2025 |
 | **tview**      | Stable      | No commits since Sep 2025 (4+ month gap). K9s uses a fork (`derailed/tview`). gh CLI still depends on it |
 | **Blessed**    | Dead        | Last commit January 2016. neo-blessed fork has limited maintenance                |
 
 **Notes:**
 - **Textual Y***: Textualize (the company) announced wind-down in May 2025. Will McGugan continues maintaining Textual as open source. Active development continues but corporate backing is gone.
 - **Bubble Tea v2**: Still in release candidate; production apps should use v1.3.10. Bubbles v0.21.1, Lip Gloss v2.0.0-beta.3 (v1.1.0 stable).
-- **Ink adopters**: Claude Code (Anthropic, with custom renderer rewrite) and Gemini CLI (Google) both use Ink 6 + React 19.
+- **Ink adopters**: Claude Code (Anthropic, with custom React renderer) and Gemini CLI (Google) both use Ink 6 + React 19.
 - **Ratatui canvas**: Now supports Quadrant (2x2), Sextant (2x3), and Octant (2x4) markers in addition to Braille (2x4) and HalfBlock (1x2).
 
 ## Links

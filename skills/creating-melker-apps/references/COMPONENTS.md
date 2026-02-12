@@ -38,6 +38,8 @@ Flexbox layout container. The primary building block for layouts. Defaults to `d
 - `padding`, `margin`: spacing (single number or `padding-top`, etc.)
 - `border`: `none` | `thin` | `thick` | `double` | `rounded` | `dashed` | `dashed-rounded` | `ascii` | `ascii-rounded` | `block`
 - `overflow`: `visible` | `hidden` | `auto` | `scroll`
+- `position`: `relative` (offset without affecting siblings), `absolute`, `fixed`
+- `top`, `right`, `bottom`, `left`: numeric offset (used with `position: relative`)
 
 ### text
 

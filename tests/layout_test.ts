@@ -773,3 +773,281 @@ Deno.test('Flexbox stretch respects container bounds', () => {
   assert(innerNode.bounds.width <= outerNode.bounds.width,
     `Inner (${innerNode.bounds.width}) should not exceed outer (${outerNode.bounds.width})`);
 });
+
+// ===========================================================================
+// Position: relative
+// ===========================================================================
+
+Deno.test('position relative - top/left offset in flex column', () => {
+  const engine = new LayoutEngine();
+
+  const child1 = new TextElement({ text: 'A', height: 3 });
+  const child2 = new TextElement({
+    text: 'B',
+    height: 3,
+    style: { position: 'relative', top: 5, left: 10 },
+  });
+  const child3 = new TextElement({ text: 'C', height: 3 });
+
+  const root = new ContainerElement({
+    width: 40, height: 30,
+    style: { display: 'flex', flexDirection: 'column' },
+  }, [child1, child2, child3]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 30 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 30 },
+    availableSpace: { width: 40, height: 30 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  const [n1, n2, n3] = tree.children;
+
+  // child1: normal position
+  assertEquals(n1.bounds.x, 0);
+  assertEquals(n1.bounds.y, 0);
+
+  // child2: offset by top:5, left:10 from its normal flow position (y=3)
+  assertEquals(n2.bounds.x, 10);
+  assertEquals(n2.bounds.y, 8); // 3 (normal) + 5 (top offset)
+
+  // child3: should NOT be affected by child2's offset (relative preserves flow space)
+  // In flex, child3 follows after child2's normal-flow slot
+  assertEquals(n3.bounds.x, 0);
+});
+
+Deno.test('position relative - bottom/right offset in flex column', () => {
+  const engine = new LayoutEngine();
+
+  const child = new TextElement({
+    text: 'X',
+    height: 3,
+    style: { position: 'relative', bottom: 2, right: 5 },
+  });
+
+  const root = new ContainerElement({
+    width: 40, height: 20,
+    style: { display: 'flex', flexDirection: 'column' },
+  }, [child]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 20 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 20 },
+    availableSpace: { width: 40, height: 20 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  const node = tree.children[0];
+
+  // bottom:2 means y shifts by -2, right:5 means x shifts by -5
+  assertEquals(node.bounds.y, -2);
+  assertEquals(node.bounds.x, -5);
+});
+
+Deno.test('position relative - top wins over bottom', () => {
+  const engine = new LayoutEngine();
+
+  const child = new TextElement({
+    text: 'X',
+    height: 3,
+    style: { position: 'relative', top: 4, bottom: 99 },
+  });
+
+  const root = new ContainerElement({
+    width: 40, height: 20,
+    style: { display: 'flex', flexDirection: 'column' },
+  }, [child]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 20 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 20 },
+    availableSpace: { width: 40, height: 20 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  // top takes precedence over bottom
+  assertEquals(tree.children[0].bounds.y, 4);
+});
+
+Deno.test('position relative - left wins over right', () => {
+  const engine = new LayoutEngine();
+
+  const child = new TextElement({
+    text: 'X',
+    height: 3,
+    style: { position: 'relative', left: 7, right: 99 },
+  });
+
+  const root = new ContainerElement({
+    width: 40, height: 20,
+    style: { display: 'flex', flexDirection: 'column' },
+  }, [child]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 20 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 20 },
+    availableSpace: { width: 40, height: 20 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  // left takes precedence over right
+  assertEquals(tree.children[0].bounds.x, 7);
+});
+
+Deno.test('position relative - offset in flex row', () => {
+  const engine = new LayoutEngine();
+
+  const child1 = new TextElement({ text: 'A', width: 10, height: 3 });
+  const child2 = new TextElement({
+    text: 'B',
+    width: 10,
+    height: 3,
+    style: { position: 'relative', top: 3, left: 5 },
+  });
+
+  const root = new ContainerElement({
+    width: 40, height: 20,
+    style: { display: 'flex', flexDirection: 'row' },
+  }, [child1, child2]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 20 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 20 },
+    availableSpace: { width: 40, height: 20 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  const [n1, n2] = tree.children;
+
+  // child1: normal position
+  assertEquals(n1.bounds.x, 0);
+  assertEquals(n1.bounds.y, 0);
+
+  // child2: offset from normal flow position (x=10 in row)
+  assertEquals(n2.bounds.x, 15); // 10 (normal) + 5 (left offset)
+  assertEquals(n2.bounds.y, 3);  // 0 (normal) + 3 (top offset)
+});
+
+Deno.test('position relative - no offset when position is static', () => {
+  const engine = new LayoutEngine();
+
+  const child = new TextElement({
+    text: 'X',
+    height: 3,
+    style: { top: 10, left: 10 },
+  });
+
+  const root = new ContainerElement({
+    width: 40, height: 20,
+    style: { display: 'flex', flexDirection: 'column' },
+  }, [child]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 20 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 20 },
+    availableSpace: { width: 40, height: 20 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  // Without position: relative, top/left are ignored
+  assertEquals(tree.children[0].bounds.x, 0);
+  assertEquals(tree.children[0].bounds.y, 0);
+});
+
+Deno.test('position relative - children inherit offset position', () => {
+  const engine = new LayoutEngine();
+
+  const inner = new TextElement({ text: 'inner', height: 2 });
+  const outer = new ContainerElement({
+    width: 20, height: 5,
+    style: { position: 'relative', top: 10, left: 15, display: 'flex', flexDirection: 'column' },
+  }, [inner]);
+
+  const root = new ContainerElement({
+    width: 40, height: 30,
+    style: { display: 'flex', flexDirection: 'column' },
+  }, [outer]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 30 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 30 },
+    availableSpace: { width: 40, height: 30 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  const outerNode = tree.children[0];
+  const innerNode = outerNode.children[0];
+
+  // Outer container is offset
+  assertEquals(outerNode.bounds.x, 15);
+  assertEquals(outerNode.bounds.y, 10);
+
+  // Inner child inherits the offset position (laid out inside the offset parent)
+  assertEquals(innerNode.bounds.x, 15);
+  assertEquals(innerNode.bounds.y, 10);
+});
+
+Deno.test('position relative - preserves element size', () => {
+  const engine = new LayoutEngine();
+
+  const child = new TextElement({
+    text: 'sized',
+    width: 15,
+    height: 4,
+    style: { position: 'relative', top: 3, left: 7 },
+  });
+
+  const root = new ContainerElement({
+    width: 40, height: 20,
+    style: { display: 'flex', flexDirection: 'column' },
+  }, [child]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 20 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 20 },
+    availableSpace: { width: 40, height: 20 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  const node = tree.children[0];
+
+  // Size should not change due to relative offset
+  assertEquals(node.bounds.width, 15);
+  assertEquals(node.bounds.height, 4);
+  // Position is offset
+  assertEquals(node.bounds.x, 7);
+  assertEquals(node.bounds.y, 3);
+});
+
+Deno.test('position relative - in block layout', () => {
+  const engine = new LayoutEngine();
+
+  const child1 = new TextElement({ text: 'A', height: 3 });
+  const child2 = new TextElement({
+    text: 'B',
+    height: 3,
+    style: { position: 'relative', top: 4, left: 8 },
+  });
+
+  const root = new ContainerElement({
+    width: 40, height: 20,
+    style: { display: 'block' },
+  }, [child1, child2]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 20 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 20 },
+    availableSpace: { width: 40, height: 20 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  const [n1, n2] = tree.children;
+
+  // child1: normal
+  assertEquals(n1.bounds.x, 0);
+  assertEquals(n1.bounds.y, 0);
+
+  // child2: normal flow y=3, then offset by top:4, left:8
+  assertEquals(n2.bounds.x, 8);
+  assertEquals(n2.bounds.y, 7); // 3 + 4
+});

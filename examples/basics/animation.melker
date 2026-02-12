@@ -45,7 +45,7 @@
 
 @keyframes breathe-pad {
   from { padding: 0 1; }
-  to   { padding: 1 4; }
+  to   { padding: 4 4; }
 }
 
 @keyframes split-panes {
@@ -56,6 +56,25 @@
 @keyframes squeeze {
   from { width: 90%; padding: 0 1; }
   to   { width: 40%; padding: 0 6; }
+}
+
+@keyframes slide-right {
+  from { left: 0; }
+  to   { left: 30; }
+}
+
+@keyframes bounce {
+  0%   { top: 0; }
+  50%  { top: 3; }
+  100% { top: 0; }
+}
+
+@keyframes orbit {
+  0%   { left: 0;  top: 0; }
+  25%  { left: 15; top: 0; }
+  50%  { left: 15; top: 3; }
+  75%  { left: 0;  top: 3; }
+  100% { left: 0;  top: 0; }
 }
 
 @keyframes border-glow {
@@ -139,6 +158,27 @@
   padding: 0 1;
 }
 
+.slide-text {
+  position: relative;
+  animation: slide-right 2s ease-in-out infinite alternate;
+}
+
+.bounce-box {
+  position: relative;
+  animation: bounce 1.5s ease-in-out infinite;
+  border: thin;
+  padding: 0 1;
+  width: 20;
+}
+
+.orbit-box {
+  position: relative;
+  animation: orbit 3s linear infinite;
+  border: thin;
+  padding: 0 1;
+  width: 12;
+}
+
 .nested-outer {
   border: thin;
   padding: 0 1;
@@ -216,7 +256,7 @@
     </container>
   </container>
 
-  <container class="section">
+  <container class="section" style="height: 10">
     <text class="label">Breathing padding (ease-in-out, alternate)</text>
     <container class="breathe-box">
       <text>Padding grows and shrinks</text>
@@ -239,6 +279,29 @@
     <text class="label">Width + padding squeeze (ease-in-out, alternate)</text>
     <container class="squeeze-box">
       <text>Shrinking width, growing padding</text>
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="label">Relative slide (position: relative + left, alternate)</text>
+    <text class="slide-text">Sliding via position: relative</text>
+  </container>
+
+  <container class="section">
+    <text class="label">Relative bounce (position: relative + top, infinite)</text>
+    <container style="height: 6">
+      <container class="bounce-box">
+        <text>Bounce</text>
+      </container>
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="label">Relative orbit (position: relative + top/left, linear)</text>
+    <container style="height: 6">
+      <container class="orbit-box">
+        <text>Orbit</text>
+      </container>
     </container>
   </container>
 

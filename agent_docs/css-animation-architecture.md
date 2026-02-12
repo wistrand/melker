@@ -293,7 +293,6 @@ The UIAnimationManager tick does only one thing: `manager.requestRender()`. No s
 
 - **Single animation per element**: CSS supports `animation: a 1s, b 2s` (comma-separated). Only the first animation is applied.
 - **No `cubic-bezier()` in CSS**: The `cubic-bezier(x1,y1,x2,y2)` function isn't parsed from CSS text. Use named presets (`ease`, `ease-in-out`, etc.) or `steps(N)`.
-- **No relative positioning**: `position: relative` with animated `left`/`top` offsets is not supported (layout engine limitation).
 - **Mixed-unit interpolation**: Animating between `"50%"` and `30` (number) snaps discretely at 50%. Both values must be the same type for smooth interpolation.
 
 ## Example
@@ -310,6 +309,16 @@ The UIAnimationManager tick does only one thing: `manager.requestRender()`. No s
   border: thin;
   padding: 0 1;
 }
+
+@keyframes slide {
+  from { left: 0; }
+  to   { left: 30; }
+}
+
+.slider {
+  position: relative;
+  animation: slide 2s ease-in-out infinite alternate;
+}
 ```
 
-See [`examples/basics/animation.melker`](../examples/basics/animation.melker) for a comprehensive demo covering color, size, percentage, padding, gap, border color, and nested container animations.
+See [`examples/basics/animation.melker`](../examples/basics/animation.melker) for a comprehensive demo covering color, size, percentage, padding, gap, border color, position: relative, and nested container animations.

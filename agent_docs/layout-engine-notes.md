@@ -44,3 +44,45 @@ Connectors find their endpoints via `context.getElementBounds(elementId)`:
 3. Apply scroll offset adjustments if element is inside a scrollable container
 
 If an element isn't properly laid out or registered, connectors will either skip rendering or draw at incorrect positions.
+
+## Position: Relative
+
+`position: relative` offsets an element visually from its normal-flow position without affecting siblings. The element participates normally in flex/block layout (occupying its original space), then its bounds are shifted by `top`/`left`/`bottom`/`right`.
+
+### Implementation
+
+A single helper `_applyRelativeOffset(bounds, layoutProps)` is called at three sites, always **before** `calculateLayout()`:
+
+| Code path | Location in `src/layout.ts` |
+|-----------|-----------------------------|
+| Flex layout | After flex algorithm computes bounds, before `calculateLayout()` |
+| Block layout | After block flow computes child position, before `calculateLayout()` |
+| Virtual layout | After estimated bounds, before `calculateLayout()` |
+
+### Offset rules
+
+- `top` shifts `y` positively (downward); `bottom` shifts `y` negatively (upward)
+- `left` shifts `x` positively (rightward); `right` shifts `x` negatively (leftward)
+- When both `top` and `bottom` are set, `top` wins
+- When both `left` and `right` are set, `left` wins
+- Without `position: relative`, `top`/`left`/`bottom`/`right` are ignored
+
+### Why Option A (offset before `calculateLayout`)
+
+The offset is applied to `parentBounds` before the recursive `calculateLayout()` call. This means:
+
+1. The element and all its descendants render at the offset position
+2. Hit testing works automatically — renderer stores offset bounds, hit tester reads them
+3. No changes needed in `hit-test.ts` or `rendering.ts`
+4. Children are laid out relative to the offset parent (correct CSS behavior)
+
+### Animating relative position
+
+`top`, `right`, `bottom`, `left` are in the animation engine's `NUMERIC_PROPS` set, so CSS animations work directly:
+
+```css
+@keyframes slide { from { left: 0; } to { left: 30; } }
+.slider { position: relative; animation: slide 2s ease-in-out infinite alternate; }
+```
+
+See [`examples/basics/animation.melker`](../examples/basics/animation.melker) for slide, bounce, and orbit demos.

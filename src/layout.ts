@@ -401,19 +401,22 @@ export class LayoutEngine {
 
     // Layout normal flow elements
     for (const child of normalChildren) {
+      const childBounds: Bounds = {
+        x: context.parentBounds.x,
+        y: currentY,
+        width: context.parentBounds.width,
+        height: context.parentBounds.height - (currentY - context.parentBounds.y),
+      };
+      // Apply position: relative visual offset (preserves normal-flow space)
+      const offsetBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child));
       const childContext: LayoutContext = {
         ...context,
-        parentBounds: {
-          x: context.parentBounds.x,
-          y: currentY,
-          width: context.parentBounds.width,
-          height: context.parentBounds.height - (currentY - context.parentBounds.y),
-        },
+        parentBounds: offsetBounds,
         availableSpace: {
           width: context.availableSpace.width,
           height: context.parentBounds.height - (currentY - context.parentBounds.y),
         },
-        parentLayoutProps: parentNode.layoutProps, // Use the current element's layout props, not inherited from grandparent
+        parentLayoutProps: parentNode.layoutProps,
       };
 
       const childNode = this.calculateLayout(child, childContext, parentNode);
@@ -525,12 +528,14 @@ export class LayoutEngine {
 
         if (i >= startIndex && i < endIndex) {
           // Full layout for visible children
-          const childBounds: Bounds = {
+          let childBounds: Bounds = {
             x: context.parentBounds.x,
             y: currentY,
             width: context.availableSpace.width,
             height: estimatedRowHeight
           };
+          // Apply position: relative visual offset (preserves normal-flow space)
+          childBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child));
           const childNode = this.calculateLayout(child, { ...context, parentBounds: childBounds }, parentNode);
           nodes.push(childNode);
           currentY += childNode.bounds.height + gap;
@@ -1219,10 +1224,13 @@ export class LayoutEngine {
           };
         }
 
+        // Apply position: relative visual offset (preserves normal-flow space)
+        const offsetBounds = this._applyRelativeOffset(bounds, this._getCachedLayoutProps(item.element));
+
         const childContext: LayoutContext = {
           ...context,
-          parentBounds: bounds,
-          availableSpace: { width: bounds.width, height: bounds.height },
+          parentBounds: offsetBounds,
+          availableSpace: { width: offsetBounds.width, height: offsetBounds.height },
         };
 
         const childNode = this.calculateLayout(item.element, childContext, parentNode);
@@ -1928,6 +1936,20 @@ export class LayoutEngine {
   private _isDisplayNone(element: Element): boolean {
     const style = element.props?.style;
     return style?.display === 'none';
+  }
+
+  /**
+   * Apply position: relative offset to bounds.
+   * The element keeps its normal-flow space; only the visual position shifts.
+   */
+  private _applyRelativeOffset(bounds: Bounds, layoutProps: AdvancedLayoutProps): Bounds {
+    if (layoutProps.position !== 'relative') return bounds;
+    const b = { ...bounds };
+    if (layoutProps.top !== undefined) b.y += layoutProps.top;
+    else if (layoutProps.bottom !== undefined) b.y -= layoutProps.bottom;
+    if (layoutProps.left !== undefined) b.x += layoutProps.left;
+    else if (layoutProps.right !== undefined) b.x -= layoutProps.right;
+    return b;
   }
 
   private _applyFlexAlignment(

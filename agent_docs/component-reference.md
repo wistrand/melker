@@ -137,6 +137,13 @@ The root viewport, `container`, `dialog`, and `tab` elements all default to `dis
 - `flexGrow`, `flexShrink`, `flexBasis`: Individual flex properties
 - `alignSelf`: Override parent's alignItems
 
+**Positioning:**
+- `position`: `'static'` (default) | `'relative'` | `'absolute'` | `'fixed'`
+- `top`, `right`, `bottom`, `left`: Numeric offset (cells)
+- `zIndex`: Stacking order
+
+`position: relative` offsets the element visually without affecting sibling layout. `top`/`left` win over `bottom`/`right` when both are set. These properties are animatable via CSS `@keyframes`.
+
 ### Flex Layout Gotchas
 
 **1. `display: 'flex'` is auto-inferred** *(Build 142+)*

@@ -156,9 +156,10 @@ The full priority order (lowest to highest):
 3. Inherited parent style
 4. Stylesheet rules — **sorted by specificity** (definition order as tiebreaker)
 5. Inline style (`props.style`)
-6. CSS animation values (`_getAnimatedStyle()`)
+6. Container query styles (`_getContainerQueryStyles()`) — see [container-query-architecture.md](container-query-architecture.md)
+7. CSS animation values (`_getAnimatedStyle()`)
 
-Inline style always wins over all stylesheet rules regardless of specificity. Animation values overlay on top of everything (see [Core Principle](#core-principle-never-write-to-propsstyle) above).
+Inline style always wins over all stylesheet rules regardless of specificity. Container query styles override inline (context-dependent). Animation values overlay on top of everything (see [Core Principle](#core-principle-never-write-to-propsstyle) above).
 
 ## Easing Functions (`src/easing.ts`)
 
@@ -221,16 +222,17 @@ Animated values must be injected into **both** style paths:
      ...typeDefaults,
      ...inheritableParentStyle,
      ...(element.props && element.props.style),
-     ...this._getAnimatedStyle(element),  // last wins
+     ...this._getContainerQueryStyles(element, context),  // container queries
+     ...this._getAnimatedStyle(element),                   // last wins
    };
    ```
 
 2. **`_computeLayoutProps()`** — layout properties (width, height, padding, gap, margin):
    ```typescript
    const baseStyle = (element.props && element.props.style) || {};
+   const containerStyles = this._getContainerQueryStyles(element, context);
    const animStyle = this._getAnimatedStyle(element);
-   const style = Object.keys(animStyle).length > 0
-     ? { ...baseStyle, ...animStyle } : baseStyle;
+   const style = { ...baseStyle, ...containerStyles, ...animStyle };
    ```
 
 This dual-path injection is necessary because the layout engine has two independent merge chains — see [layout-engine-notes.md](layout-engine-notes.md) for background on `_computeStyle()` vs `_computeLayoutProps()`.
@@ -281,7 +283,7 @@ The UIAnimationManager tick does only one thing: `manager.requestRender()`. No s
 
 | Category | Properties |
 |----------|-----------|
-| **Color** | `color`, `backgroundColor`, `borderColor`, `borderTopColor`, `borderBottomColor`, `borderLeftColor`, `borderRightColor`, `dividerColor`, `connectorColor` |
+| **Color** | `color`, `backgroundColor`, `borderColor`, `borderTopColor`, `borderBottomColor`, `borderLeftColor`, `borderRightColor`, `dividerColor`, `connectorColor`, `ledColorLow`, `ledColorHigh` |
 | **Size** | `width`, `height`, `minWidth`, `maxWidth`, `minHeight`, `maxHeight` |
 | **Spacing** | `padding`, `paddingTop/Right/Bottom/Left`, `margin`, `marginTop/Right/Bottom/Left`, `gap` |
 | **Position** | `top`, `right`, `bottom`, `left` |

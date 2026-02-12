@@ -10,6 +10,7 @@ const COLOR_PROPS = new Set([
   'borderColor', 'borderTopColor', 'borderBottomColor',
   'borderLeftColor', 'borderRightColor',
   'dividerColor', 'connectorColor',
+  'ledColorLow', 'ledColorHigh',
 ]);
 
 /** Style properties that are always numeric (integer lerp) */

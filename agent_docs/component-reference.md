@@ -126,7 +126,7 @@ LayoutNode
 The root viewport, `container`, `dialog`, and `tab` elements all default to `display: flex` with `flexDirection: column`.
 
 **Container properties:**
-- `display`: `'flex'` | `'block'`
+- `display`: `'flex'` | `'block'` | `'none'`
 - `flexDirection`: `'row'` | `'column'` | `'row-reverse'` | `'column-reverse'`
 - `flexWrap`: `'nowrap'` | `'wrap'` | `'wrap-reverse'`
 - `justifyContent`: `'flex-start'` | `'center'` | `'flex-end'` | `'space-between'` | `'space-around'`
@@ -143,6 +143,11 @@ The root viewport, `container`, `dialog`, and `tab` elements all default to `dis
 - `zIndex`: Stacking order
 
 `position: relative` offsets the element visually without affecting sibling layout. `top`/`left` win over `bottom`/`right` when both are set. These properties are animatable via CSS `@keyframes`.
+
+**Container queries:**
+- `containerType`: `'inline-size'` (width queries) | `'size'` (width + height) | `'normal'` (default)
+
+Set on a container to enable `@container` rules for its descendants. See [container-query-architecture.md](container-query-architecture.md).
 
 ### Flex Layout Gotchas
 

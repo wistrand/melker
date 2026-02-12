@@ -1,0 +1,152 @@
+<melker>
+<policy>
+{
+  "name": "Container Queries Demo",
+  "description": "Demonstrates @container queries - style children based on container size",
+  "permissions": {}
+}
+</policy>
+
+<style>
+/* Both panels are query containers */
+.panel {
+  container-type: inline-size;
+  border: thin;
+  padding: 1;
+  flex: 1;
+}
+
+.panel-title {
+  font-weight: bold;
+  margin-bottom: 1;
+}
+
+.card {
+  border: thin;
+  padding: 0 1;
+  margin-bottom: 1;
+}
+
+.card-title {
+  font-weight: bold;
+}
+
+.card-meta {
+  dim: true;
+  background-color: red;
+}
+
+/* Wide container: cards lay out horizontally with details visible */
+@container (min-width: 40) {
+  .card {
+    flex-direction: row;
+    gap: 2;
+  }
+  .card-meta {
+    display: flex;
+  }
+}
+
+/* Narrow container: cards stack vertically, hide metadata */
+@container (max-width: 39) {
+  .card {
+    flex-direction: column;
+    gap: 0;
+  }
+  .card-meta {
+    display: none;
+    background-color: blue;
+  }
+}
+
+/* Extra wide: add more spacing */
+@container (min-width: 60) {
+  .card {
+    gap: 4;
+    padding: 1 2;
+  }
+}
+
+.nav-item {
+  padding: 0 1;
+}
+
+/* Wide sidebar: nav items display horizontally */
+@container (min-width: 30) {
+  .nav {
+    flex-direction: row;
+    gap: 2;
+  }
+  .nav-label {
+    display: flex;
+  }
+}
+
+/* Narrow sidebar: nav items stack, labels hidden */
+@container (max-width: 29) {
+  .nav {
+    flex-direction: column;
+    gap: 0;
+  }
+  .nav-label {
+    display: none;
+  }
+}
+</style>
+
+<container style="width: fill; height: fill; flex-direction: column; padding: 1;">
+  <text style="font-weight: bold; text-align: center; margin-bottom: 1;">
+    Container Queries - Resize the split pane to see cards adapt
+  </text>
+
+  <split-pane style="width: fill; height: fill; direction: horizontal;" sizes="1,2">
+    <!-- Left panel: navigation adapts to panel width -->
+    <container class="panel">
+      <text class="panel-title">Sidebar</text>
+      <container class="nav">
+        <container class="nav-item">
+          <text>Home</text>
+          <text class="nav-label">Dashboard overview</text>
+        </container>
+        <container class="nav-item">
+          <text>Files</text>
+          <text class="nav-label">Browse documents</text>
+        </container>
+        <container class="nav-item">
+          <text>Settings</text>
+          <text class="nav-label">Preferences</text>
+        </container>
+      </container>
+    </container>
+
+    <!-- Right panel: cards adapt to available width -->
+    <container class="panel">
+      <text class="panel-title">Content</text>
+
+      <container class="card">
+        <text class="card-title">layout.ts</text>
+        <text class="card-meta">Flexbox layout engine</text>
+      </container>
+
+      <container class="card">
+        <text class="card-title">stylesheet.ts</text>
+        <text class="card-meta">CSS parsing and selectors</text>
+      </container>
+
+      <container class="card">
+        <text class="card-title">rendering.ts</text>
+        <text class="card-meta">Render pipeline</text>
+      </container>
+
+      <container class="card">
+        <text class="card-title">types.ts</text>
+        <text class="card-meta">Core type definitions</text>
+      </container>
+    </container>
+  </split-pane>
+
+  <text style="dim: true; text-align: center; padding-top: 1;">
+    Drag the split-pane divider to resize panels
+  </text>
+</container>
+</melker>

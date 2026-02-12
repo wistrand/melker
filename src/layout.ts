@@ -8,6 +8,7 @@ import { getThemeColor } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { ViewportManager, globalViewportManager, ScrollbarLayout } from './viewport.ts';
 import { getLogger } from './logging.ts';
+import type { Stylesheet, StyleContext } from './stylesheet.ts';
 
 const logger = getLogger('LayoutEngine');
 
@@ -69,6 +70,11 @@ export interface LayoutContext {
   // For scrollable containers - enables virtual layout optimization
   scrollOffset?: { x: number; y: number };
   isScrollableParent?: boolean;
+  // Container query support
+  stylesheets?: readonly Stylesheet[];
+  styleContext?: StyleContext;
+  ancestors?: Element[];
+  containerBounds?: { width: number; height: number };
 }
 
 export class LayoutEngine {
@@ -108,10 +114,10 @@ export class LayoutEngine {
 
   // Cached _computeLayoutProps (without parentProps) — used by _layoutFlex and _layoutBlock
   // to avoid recomputing for the same child multiple times within a single frame.
-  private _getCachedLayoutProps(element: Element): AdvancedLayoutProps {
+  private _getCachedLayoutProps(element: Element, context?: LayoutContext): AdvancedLayoutProps {
     let props = this._layoutPropsCache.get(element);
     if (!props) {
-      props = this._computeLayoutProps(element);
+      props = this._computeLayoutProps(element, undefined, context);
       this._layoutPropsCache.set(element, props);
     }
     return props;
@@ -119,10 +125,10 @@ export class LayoutEngine {
 
   // Cached _computeStyle — avoids recomputing for the same element within a single frame.
   // Safe because within a layout pass, the same element always has the same parentStyle.
-  private _getCachedStyle(element: Element, parentStyle?: Style): Style {
+  private _getCachedStyle(element: Element, parentStyle?: Style, context?: LayoutContext): Style {
     let style = this._styleCache.get(element);
     if (!style) {
-      style = this._computeStyle(element, parentStyle);
+      style = this._computeStyle(element, parentStyle, context);
       this._styleCache.set(element, style);
     }
     return style;
@@ -176,8 +182,8 @@ export class LayoutEngine {
         parentBounds: context.parentBounds,
       });
     }
-    const computedStyle = this._getCachedStyle(element, context.parentStyle);
-    const layoutProps = this._computeLayoutProps(element, context.parentLayoutProps);
+    const computedStyle = this._getCachedStyle(element, context.parentStyle, context);
+    const layoutProps = this._computeLayoutProps(element, context.parentLayoutProps, context);
 
     if (traceEnabled) {
       logger.trace(`Layout props computed for ${element.type}`, {
@@ -211,7 +217,7 @@ export class LayoutEngine {
       element,
       bounds,
       contentBounds,
-      visible: this._isVisible(element, bounds),
+      visible: this._isVisible(element, bounds, layoutProps),
       children: [],
       computedStyle,
       layoutProps,
@@ -335,6 +341,15 @@ export class LayoutEngine {
         };
       }
 
+      // Thread container query context: update ancestors and containerBounds
+      if (context.stylesheets) {
+        childContext.ancestors = [...(context.ancestors || []), element];
+        const ct = computedStyle.containerType;
+        if (ct && ct !== 'normal') {
+          childContext.containerBounds = { width: bounds.width, height: bounds.height };
+        }
+      }
+
       const childrenStartTime = traceEnabled ? performance.now() : 0;
       node.children = this._layoutChildren(children, childContext, node);
       if (traceEnabled) {
@@ -390,8 +405,8 @@ export class LayoutEngine {
     const absoluteBlockChildren: Element[] = [];
     for (const child of children) {
       if (child.props?.visible === false) continue;
-      if (this._isDisplayNone(child)) continue;
-      const childLayoutProps = this._getCachedLayoutProps(child);
+      const childLayoutProps = this._getCachedLayoutProps(child, context);
+      if (childLayoutProps.display === 'none') continue;
       if (childLayoutProps.position === 'absolute' || childLayoutProps.position === 'fixed') {
         absoluteBlockChildren.push(child);
       } else {
@@ -408,7 +423,7 @@ export class LayoutEngine {
         height: context.parentBounds.height - (currentY - context.parentBounds.y),
       };
       // Apply position: relative visual offset (preserves normal-flow space)
-      const offsetBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child));
+      const offsetBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child, context));
       const childContext: LayoutContext = {
         ...context,
         parentBounds: offsetBounds,
@@ -466,8 +481,8 @@ export class LayoutEngine {
     const absoluteChildren: Element[] = [];
     for (const child of children) {
       if (child.props?.visible === false) continue;
-      if (this._isDisplayNone(child)) continue;
-      const childProps = this._getCachedLayoutProps(child);
+      const childProps = this._getCachedLayoutProps(child, context);
+      if (childProps.display === 'none') continue;
       if (childProps.position === 'absolute' || childProps.position === 'fixed') {
         absoluteChildren.push(child);
       } else {
@@ -535,7 +550,7 @@ export class LayoutEngine {
             height: estimatedRowHeight
           };
           // Apply position: relative visual offset (preserves normal-flow space)
-          childBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child));
+          childBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child, context));
           const childNode = this.calculateLayout(child, { ...context, parentBounds: childBounds }, parentNode);
           nodes.push(childNode);
           currentY += childNode.bounds.height + gap;
@@ -555,7 +570,7 @@ export class LayoutEngine {
             visible: false,
             children: [],
             computedStyle: {},
-            layoutProps: this._getCachedLayoutProps(child),
+            layoutProps: this._getCachedLayoutProps(child, context),
             boxModel: {
               content: { width: placeholderBounds.width, height: placeholderBounds.height },
               padding: zeroDims,
@@ -580,8 +595,8 @@ export class LayoutEngine {
     // Step 1: Calculate hypothetical sizes for flex children
     const intrinsicStartTime = traceEnabled ? performance.now() : 0;
     const flexItems = flexChildren.map(child => {
-      const childProps = this._getCachedLayoutProps(child);
-      const childStyle = this._getCachedStyle(child, context.parentStyle);
+      const childProps = this._getCachedLayoutProps(child, context);
+      const childStyle = this._getCachedStyle(child, context.parentStyle, context);
 
       // Calculate intrinsic size (content only, WITHOUT padding/borders for flex)
       // Flex algorithm handles padding separately
@@ -1225,7 +1240,7 @@ export class LayoutEngine {
         }
 
         // Apply position: relative visual offset (preserves normal-flow space)
-        const offsetBounds = this._applyRelativeOffset(bounds, this._getCachedLayoutProps(item.element));
+        const offsetBounds = this._applyRelativeOffset(bounds, this._getCachedLayoutProps(item.element, context));
 
         const childContext: LayoutContext = {
           ...context,
@@ -1272,8 +1287,8 @@ export class LayoutEngine {
     context: LayoutContext,
     parentNode: LayoutNode
   ): LayoutNode {
-    const layoutProps = this._getCachedLayoutProps(element);
-    const style = this._getCachedStyle(element, context.parentStyle);
+    const layoutProps = this._getCachedLayoutProps(element, context);
+    const style = this._getCachedStyle(element, context.parentStyle, context);
 
     // Calculate position based on top/right/bottom/left
     const containingBlock = layoutProps.position === 'fixed' ?
@@ -1410,7 +1425,24 @@ export class LayoutEngine {
     return interpolateStyles(from.style, to.style, localT);
   }
 
-  private _computeStyle(element: Element, parentStyle?: Style): Style {
+  private _getContainerQueryStyles(element: Element, context?: LayoutContext): Partial<Style> {
+    if (!context?.stylesheets || !context.containerBounds) return {};
+    const ancestors = context.ancestors || [];
+    const containerSize = context.containerBounds;
+    let merged: Partial<Style> = {};
+    let hasAny = false;
+    for (const ss of context.stylesheets) {
+      if (!ss.hasContainerRules) continue;
+      const styles = ss.getContainerMatchingStyles(element, ancestors, containerSize, context.styleContext);
+      if (Object.keys(styles).length > 0) {
+        merged = hasAny ? { ...merged, ...styles } : styles;
+        hasAny = true;
+      }
+    }
+    return merged;
+  }
+
+  private _computeStyle(element: Element, parentStyle?: Style, context?: LayoutContext): Style {
     // Merge parent style with element style
     const defaultStyle: Style = {
       color: getThemeColor('textPrimary'),
@@ -1454,6 +1486,7 @@ export class LayoutEngine {
       ...typeDefaults,  // Type-specific defaults (can be overridden by stylesheet/inline)
       ...inheritableParentStyle,
       ...(element.props && element.props.style),  // Stylesheet + inline styles
+      ...this._getContainerQueryStyles(element, context),  // Container query styles
       ...this._getAnimatedStyle(element),          // CSS animation resolved values
     };
 
@@ -1550,7 +1583,7 @@ export class LayoutEngine {
     return result;
   }
 
-  private _computeLayoutProps(element: Element, parentProps?: AdvancedLayoutProps): AdvancedLayoutProps {
+  private _computeLayoutProps(element: Element, parentProps?: AdvancedLayoutProps, context?: LayoutContext): AdvancedLayoutProps {
     // Filter out properties that should not be inherited from parent:
     // - Size and position properties are element-specific
     // - flexDirection defines how a container lays out its children, not how the container itself is laid out
@@ -1574,10 +1607,15 @@ export class LayoutEngine {
     };
 
     // Extract flex and layout properties from style section
-    // Merge animated values on top (Option B: animation overrides declarative style)
+    // Merge container query and animated values on top of base style
     const baseStyle = (element.props && element.props.style) || {};
+    const containerStyles = this._getContainerQueryStyles(element, context);
     const animStyle = this._getAnimatedStyle(element);
-    const style = Object.keys(animStyle).length > 0 ? { ...baseStyle, ...animStyle } : baseStyle;
+    const hasContainer = Object.keys(containerStyles).length > 0;
+    const hasAnim = Object.keys(animStyle).length > 0;
+    const style = (hasContainer || hasAnim)
+      ? { ...baseStyle, ...(hasContainer ? containerStyles : undefined), ...(hasAnim ? animStyle : undefined) }
+      : baseStyle;
 
     // Support flex shorthand in style: flex: "1" or flex: "0 0 auto" etc
     if (style.flex !== undefined) {
@@ -1823,7 +1861,7 @@ export class LayoutEngine {
       const childSizes: Array<{ w: number; h: number }> = [];
 
       for (const child of element.children) {
-        const childStyle = this._getCachedStyle(child, containerStyle);
+        const childStyle = this._getCachedStyle(child, containerStyle, context);
 
         // Use explicit height/width from style if available, otherwise use intrinsic
         let childWidth: number;
@@ -1911,7 +1949,7 @@ export class LayoutEngine {
     return requiredSize;
   }
 
-  private _isVisible(element: Element, bounds: Bounds): boolean {
+  private _isVisible(element: Element, bounds: Bounds, layoutProps?: AdvancedLayoutProps): boolean {
     // Connectors have 0x0 bounds but still need to be visible (they draw based on connected elements)
     if (element.type === 'connector') {
       return element.props?.visible !== false;
@@ -1921,21 +1959,16 @@ export class LayoutEngine {
     if (bounds.width <= 0 || bounds.height <= 0) return false;
     if (element.props?.visible === false) return false;
 
-    // Check for display: 'none'
-    if (this._isDisplayNone(element)) return false;
+    // Check for display: 'none' — use layoutProps when available (includes container query styles)
+    const isDisplayNone = layoutProps
+      ? layoutProps.display === 'none'
+      : element.props?.style?.display === 'none';
+    if (isDisplayNone) return false;
 
     // Dialogs are only visible when open (they render as overlays)
     if (element.type === 'dialog' && element.props?.open !== true) return false;
 
     return true;
-  }
-
-  /**
-   * Check if an element has display: 'none' set
-   */
-  private _isDisplayNone(element: Element): boolean {
-    const style = element.props?.style;
-    return style?.display === 'none';
   }
 
   /**

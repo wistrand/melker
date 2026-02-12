@@ -299,7 +299,7 @@ Deno.test('BASE_STYLES_SCHEMA enum values are valid for display', () => {
   assert(schema, 'display should exist in schema');
   assert(schema.enum, 'display should have enum values');
 
-  const expectedValues = ['block', 'flex'];
+  const expectedValues = ['block', 'flex', 'none'];
   assertEquals(
     schema.enum.sort(),
     expectedValues.sort(),

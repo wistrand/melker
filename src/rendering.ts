@@ -18,6 +18,7 @@ import { COLORS, parseColor } from './components/color-utils.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { getLogger } from './logging.ts';
 import { ensureError } from './utils/error.ts';
+import type { Stylesheet, StyleContext } from './stylesheet.ts';
 import { getGlobalErrorHandler, renderErrorPlaceholder } from './error-boundary.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { MelkerConfig } from './config/mod.ts';
@@ -114,7 +115,10 @@ export class RenderingEngine {
   // Scrollbar bounds for drag handling
   private _scrollbarBounds: Map<string, ScrollbarBounds> = new Map();
   // Document reference for element lookup
-  private _document?: { getElementById(id: string): Element | undefined };
+  private _document?: { getElementById(id: string): Element | undefined; stylesheets?: readonly Stylesheet[] };
+  // Per-render container query config (set at start of render, used by modal layout)
+  private _containerQueryStylesheets?: readonly Stylesheet[];
+  private _containerQueryStyleContext?: StyleContext;
 
   constructor(options: {
     sizingModel?: SizingModel;
@@ -127,7 +131,7 @@ export class RenderingEngine {
   }
 
   // Set document reference for element lookup (needed for tbody bounds)
-  setDocument(document: { getElementById(id: string): Element | undefined }): void {
+  setDocument(document: { getElementById(id: string): Element | undefined; stylesheets?: readonly Stylesheet[] }): void {
     this._document = document;
   }
 
@@ -219,11 +223,24 @@ export class RenderingEngine {
       overlays: this._overlays,
     };
 
-    // Use advanced layout engine
+    // Use advanced layout engine — check for container query rules
+    const stylesheets = this._document?.stylesheets;
+    const hasContainerRules = stylesheets?.some(ss => ss.hasContainerRules);
+    if (hasContainerRules) {
+      this._containerQueryStylesheets = stylesheets;
+      this._containerQueryStyleContext = { terminalWidth: viewport.width, terminalHeight: viewport.height };
+    } else {
+      this._containerQueryStylesheets = undefined;
+      this._containerQueryStyleContext = undefined;
+    }
     const layoutContext: LayoutContext = {
       viewport,
       parentBounds: viewport,
       availableSpace: { width: viewport.width, height: viewport.height },
+      ...(hasContainerRules ? {
+        stylesheets,
+        styleContext: this._containerQueryStyleContext,
+      } : undefined),
     };
     const advancedLayoutTree = this._layoutEngine.calculateLayout(element, layoutContext);
     const layoutTree = this._convertAdvancedLayoutNode(advancedLayoutTree);
@@ -329,10 +346,14 @@ export class RenderingEngine {
 
           // Render each child in the content area
           for (const child of modal.children) {
-            const childLayoutContext = {
+            const childLayoutContext: LayoutContext = {
               viewport: contentBounds,
               parentBounds: contentBounds,
-              availableSpace: { width: contentBounds.width, height: contentBounds.height }
+              availableSpace: { width: contentBounds.width, height: contentBounds.height },
+              ...(this._containerQueryStylesheets ? {
+                stylesheets: this._containerQueryStylesheets,
+                styleContext: this._containerQueryStyleContext,
+              } : undefined),
             };
 
             const childLayout = this._layoutEngine.calculateLayout(child, childLayoutContext);
@@ -1921,10 +1942,14 @@ export class RenderingEngine {
         // Calculate layout for each child
         childLayouts = [];
         for (const child of modal.children) {
-          const childLayoutContext = {
+          const childLayoutContext: LayoutContext = {
             viewport: contentBounds,
             parentBounds: contentBounds,
-            availableSpace: { width: contentBounds.width, height: contentBounds.height }
+            availableSpace: { width: contentBounds.width, height: contentBounds.height },
+            ...(this._containerQueryStylesheets ? {
+              stylesheets: this._containerQueryStylesheets,
+              styleContext: this._containerQueryStyleContext,
+            } : undefined),
           };
 
           const childLayout = this._layoutEngine.calculateLayout(child, childLayoutContext);

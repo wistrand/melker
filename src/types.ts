@@ -103,8 +103,9 @@ export interface Style extends Record<string, any> {
   boxSizing?: 'content-box' | 'border-box';
   textWrap?: 'nowrap' | 'wrap';
   // Layout properties in style section
-  display?: 'block' | 'flex';
+  display?: 'block' | 'flex' | 'none';
   position?: 'static' | 'relative' | 'absolute' | 'fixed';
+  containerType?: 'inline-size' | 'size' | 'normal';
   overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
   width?: number | 'auto' | 'fill' | PercentageString;
   height?: number | 'auto' | 'fill' | PercentageString;
@@ -206,7 +207,7 @@ export interface LayoutProps {
   maxWidth?: number;
   minHeight?: number;
   maxHeight?: number;
-  display?: 'block' | 'flex';
+  display?: 'block' | 'flex' | 'none';
   overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
 
   // Basic positioning

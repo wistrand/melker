@@ -96,6 +96,55 @@ export function mediaConditionMatches(condition: MediaCondition, ctx: StyleConte
 }
 
 /**
+ * Container query condition — all specified fields must match.
+ */
+export interface ContainerCondition {
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
+}
+
+/**
+ * Evaluate whether a container condition matches the given container size.
+ * All specified fields must match (AND logic). Empty condition always matches.
+ */
+export function containerConditionMatches(condition: ContainerCondition, size: { width: number; height: number }): boolean {
+  if (condition.minWidth !== undefined && size.width < condition.minWidth) return false;
+  if (condition.maxWidth !== undefined && size.width > condition.maxWidth) return false;
+  if (condition.minHeight !== undefined && size.height < condition.minHeight) return false;
+  if (condition.maxHeight !== undefined && size.height > condition.maxHeight) return false;
+  return true;
+}
+
+/**
+ * Parse a @container condition string like "(min-width: 40)" or
+ * "(min-width: 30) and (max-width: 80)" into a ContainerCondition.
+ * Returns undefined for invalid/unrecognized conditions.
+ */
+function parseContainerCondition(conditionStr: string): ContainerCondition | undefined {
+  const condition: ContainerCondition = {};
+  const parts = conditionStr.split(/\)\s+and\s+\(/i);
+  let hasValid = false;
+
+  for (let part of parts) {
+    part = part.replace(/^\(/, '').replace(/\)$/, '').trim();
+    const dimMatch = part.match(/^(min-width|max-width|min-height|max-height)\s*:\s*(\d+)$/);
+    if (dimMatch) {
+      const [, prop, val] = dimMatch;
+      const num = parseInt(val, 10);
+      if (prop === 'min-width') condition.minWidth = num;
+      else if (prop === 'max-width') condition.maxWidth = num;
+      else if (prop === 'min-height') condition.minHeight = num;
+      else if (prop === 'max-height') condition.maxHeight = num;
+      hasValid = true;
+    }
+  }
+
+  return hasValid ? condition : undefined;
+}
+
+/**
  * A single style rule with selector and style properties
  */
 export interface StyleItem {
@@ -103,6 +152,7 @@ export interface StyleItem {
   style: Style;
   specificity: number;
   mediaCondition?: MediaCondition;
+  containerCondition?: ContainerCondition;
 }
 
 /**
@@ -636,10 +686,11 @@ function tokenizeCSS(css: string): CSSBlock[] {
   return blocks;
 }
 
-/** Result of parsing a CSS block — style rules and keyframe definitions */
+/** Result of parsing a CSS block — style rules, keyframe definitions, and container query rules */
 interface ParseResult {
   items: StyleItem[];
   keyframes: KeyframeDefinition[];
+  containerItems: StyleItem[];
 }
 
 /**
@@ -699,6 +750,7 @@ function parseKeyframeBlock(name: string, body: string): KeyframeDefinition {
 export function parseStyleBlock(css: string): ParseResult {
   const items: StyleItem[] = [];
   const keyframes: KeyframeDefinition[] = [];
+  const containerItems: StyleItem[] = [];
 
   // Strip CSS comments before parsing
   const cssWithoutComments = css
@@ -714,6 +766,21 @@ export function parseStyleBlock(css: string): ParseResult {
       if (name && block.body) {
         keyframes.push(parseKeyframeBlock(name, block.body));
       }
+    } else if (block.selector.startsWith('@container')) {
+      // Extract condition from "@container (condition)"
+      const condStr = block.selector.slice(10).trim();
+      const condition = parseContainerCondition(condStr);
+      if (!condition) continue;  // Skip unrecognized @container conditions
+
+      // Recursively parse nested rules inside the @container block
+      const nested = parseStyleBlock(block.body);
+      for (const item of nested.items) {
+        containerItems.push({ ...item, containerCondition: condition });
+      }
+      // Nested container rules propagate up
+      containerItems.push(...nested.containerItems);
+      // Keyframes inside @container are still global
+      keyframes.push(...nested.keyframes);
     } else if (block.selector.startsWith('@media')) {
       // Extract condition from "@media (condition)"
       const condStr = block.selector.slice(6).trim();
@@ -727,6 +794,10 @@ export function parseStyleBlock(css: string): ParseResult {
       }
       // Keyframes inside @media are still global
       keyframes.push(...nested.keyframes);
+      // Container rules inside @media get both conditions
+      for (const item of nested.containerItems) {
+        containerItems.push({ ...item, mediaCondition: condition });
+      }
     } else {
       // Regular rule: selector { properties }
       const selectorStr = block.selector;
@@ -741,7 +812,7 @@ export function parseStyleBlock(css: string): ParseResult {
     }
   }
 
-  return { items, keyframes };
+  return { items, keyframes, containerItems };
 }
 
 /**
@@ -749,10 +820,12 @@ export function parseStyleBlock(css: string): ParseResult {
  */
 export class Stylesheet {
   private _items: StyleItem[] = [];
+  private _containerItems: StyleItem[] = [];
   private _keyframes: Map<string, KeyframeDefinition> = new Map();
 
-  constructor(items: StyleItem[] = []) {
+  constructor(items: StyleItem[] = [], containerItems: StyleItem[] = []) {
     this._items = [...items];
+    this._containerItems = [...containerItems];
   }
 
   /**
@@ -778,8 +851,9 @@ export class Stylesheet {
    * Add multiple items from a CSS-like string
    */
   addFromString(css: string): void {
-    const { items, keyframes } = parseStyleBlock(css);
+    const { items, keyframes, containerItems } = parseStyleBlock(css);
     this._items.push(...items);
+    this._containerItems.push(...containerItems);
     for (const kf of keyframes) {
       this._keyframes.set(kf.name, kf);
     }
@@ -827,6 +901,53 @@ export class Stylesheet {
   }
 
   /**
+   * Whether any @container rules exist.
+   * Fast path: skip container query evaluation in layout when false.
+   */
+  get hasContainerRules(): boolean {
+    return this._containerItems.length > 0;
+  }
+
+  /**
+   * Get container query rules (stored separately from regular rules).
+   */
+  get containerItems(): readonly StyleItem[] {
+    return this._containerItems;
+  }
+
+  /**
+   * Get merged container query styles for an element given a container size.
+   * Only iterates _containerItems (not regular rules). Returns {} when empty.
+   * Rules with a mediaCondition are skipped unless ctx is provided and matches.
+   */
+  getContainerMatchingStyles(
+    element: Element,
+    ancestors: Element[],
+    containerSize: { width: number; height: number },
+    ctx?: StyleContext
+  ): Style {
+    if (this._containerItems.length === 0) return {};
+
+    const matches: { style: Style; specificity: number; index: number }[] = [];
+
+    for (let i = 0; i < this._containerItems.length; i++) {
+      const item = this._containerItems[i];
+      // Skip if media condition doesn't match (for @container inside @media)
+      if (item.mediaCondition) {
+        if (!ctx || !mediaConditionMatches(item.mediaCondition, ctx)) continue;
+      }
+      if (!containerConditionMatches(item.containerCondition!, containerSize)) continue;
+      if (selectorMatches(item.selector, element, ancestors)) {
+        matches.push({ style: item.style, specificity: item.specificity, index: i });
+      }
+    }
+
+    if (matches.length === 0) return {};
+    matches.sort((a, b) => a.specificity - b.specificity || a.index - b.index);
+    return matches.reduce((merged, m) => ({ ...merged, ...m.style }), {} as Style);
+  }
+
+  /**
    * Get all items in the stylesheet
    */
   get items(): readonly StyleItem[] {
@@ -845,6 +966,7 @@ export class Stylesheet {
    */
   clear(): void {
     this._items = [];
+    this._containerItems = [];
     this._keyframes.clear();
   }
 
@@ -873,8 +995,8 @@ export class Stylesheet {
    * Create a stylesheet from a CSS-like string
    */
   static fromString(css: string): Stylesheet {
-    const { items, keyframes } = parseStyleBlock(css);
-    const sheet = new Stylesheet(items);
+    const { items, keyframes, containerItems } = parseStyleBlock(css);
+    const sheet = new Stylesheet(items, containerItems);
     for (const kf of keyframes) {
       sheet._keyframes.set(kf.name, kf);
     }

@@ -1,0 +1,106 @@
+<melker>
+<policy>
+{
+  "name": "Container Queries + Animation",
+  "description": "Container queries responding to an animated container size",
+  "permissions": {}
+}
+</policy>
+
+<style>
+@keyframes resize {
+  0%   { width: 20; }
+  50%  { width: 70; }
+  100% { width: 20; }
+}
+
+.animated-box {
+  container-type: inline-size;
+  border: single;
+  padding: 1;
+  height: 8;
+  animation: resize 6s ease-in-out infinite;
+}
+
+.status {
+  padding: 0 1;
+}
+
+/* Narrow: compact single-column layout */
+@container (max-width: 30) {
+  .status {
+    flex-direction: column;
+    gap: 0;
+  }
+  .detail {
+    display: none;
+  }
+  .badge {
+    border: none;
+    padding: 0;
+  }
+}
+
+/* Medium: show details, still stacked */
+@container (min-width: 31) {
+  .status {
+    flex-direction: column;
+    gap: 1;
+  }
+  .detail {
+    display: flex;
+    dim: true;
+  }
+  .badge {
+    border: thin;
+    padding: 0 1;
+  }
+}
+
+/* Wide: horizontal layout with all details */
+@container (min-width: 50) {
+  .status {
+    flex-direction: row;
+    gap: 3;
+  }
+  .detail {
+    display: flex;
+    dim: false;
+  }
+  .badge {
+    border: single;
+    padding: 0 2;
+  }
+}
+</style>
+
+<container style="width: fill; height: fill; flex-direction: column; padding: 1; gap: 1;">
+  <text style="font-weight: bold; text-align: center;">
+    Container Queries + CSS Animation
+  </text>
+  <text style="dim: true; text-align: center;">
+    The box animates its width. Children adapt layout via @container rules.
+  </text>
+
+  <container class="animated-box">
+    <container class="status">
+      <container class="badge">
+        <text style="font-weight: bold;">CPU</text>
+        <text class="detail">42%</text>
+      </container>
+      <container class="badge">
+        <text style="font-weight: bold;">MEM</text>
+        <text class="detail">3.2 GB</text>
+      </container>
+      <container class="badge">
+        <text style="font-weight: bold;">NET</text>
+        <text class="detail">128 Mb/s</text>
+      </container>
+    </container>
+  </container>
+
+  <text style="dim: true; text-align: center; padding-top: 1;">
+    Narrow: labels only | Medium: stacked with details | Wide: horizontal with borders
+  </text>
+</container>
+</melker>

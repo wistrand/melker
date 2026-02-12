@@ -86,3 +86,25 @@ The offset is applied to `parentBounds` before the recursive `calculateLayout()`
 ```
 
 See [`examples/basics/animation.melker`](../examples/basics/animation.melker) for slide, bounce, and orbit demos.
+
+## Container Queries
+
+Container queries style children based on their container's resolved size. The layout engine threads `containerBounds` through `LayoutContext` and evaluates `@container` conditions during `_computeStyle()` and `_computeLayoutProps()`.
+
+### How bounds propagate
+
+When `calculateLayout()` enters an element with `containerType` set (e.g., `inline-size`), it stores the element's resolved bounds on `childContext.containerBounds`. All descendants inherit these bounds until overridden by a closer container.
+
+### display: none
+
+Container query styles that set `display: none` work because the layout engine checks `layoutProps.display === 'none'` from `_getCachedLayoutProps()` (which includes container query styles) rather than reading `props.style.display` directly.
+
+### Style cascade position
+
+Container query styles sit between inline style and animation in the merge chain:
+
+```
+...inline → ...containerQueryStyles → ...animatedStyle
+```
+
+See [container-query-architecture.md](container-query-architecture.md) for full details.

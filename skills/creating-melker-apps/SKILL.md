@@ -258,6 +258,33 @@ The AI sees `[Navigation: Main menu]` instead of `[Container]`, knows the input 
 
 **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes. Only use `color`/`background-color` for canvas drawing or very intentional effects.
 
+### Advanced CSS Features
+
+**`@media` queries** — respond to terminal dimensions:
+```xml
+<style>
+  @media (max-width: 60) { .sidebar { display: none; } }
+</style>
+```
+
+**`@container` queries** — respond to container size:
+```xml
+<style>
+  .sidebar { container-type: inline-size; }
+  @container (min-width: 40) { .card { flex-direction: row; } }
+</style>
+```
+
+**`@keyframes` animations** — animate style properties:
+```xml
+<style>
+  @keyframes pulse { 0% { border-color: #333; } 50% { border-color: #38f; } 100% { border-color: #333; } }
+  .box { animation: pulse 2s ease-in-out infinite; border: thin; }
+</style>
+```
+
+**CSS specificity** — ID (#) > class (.) > type selectors, with definition order as tiebreaker.
+
 ## Event Handling
 
 Events auto-render after completion:

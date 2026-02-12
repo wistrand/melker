@@ -440,6 +440,49 @@ function validateStyleTagContent(
 
   if (!styleContent.trim()) return;
 
+  // Strip CSS comments before parsing rules
+  styleContent = styleContent.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // Unwrap at-rules so the flat regex can handle inner rules.
+  // @keyframes blocks are removed entirely (from/to/% are not element selectors).
+  // @media/@container wrappers are removed, exposing their inner rules.
+  function unwrapAtRules(css: string): string {
+    let result = '';
+    let i = 0;
+    while (i < css.length) {
+      // Check for at-rule
+      if (css[i] === '@') {
+        const braceIdx = css.indexOf('{', i);
+        if (braceIdx === -1) { result += css.substring(i); break; }
+        const atName = css.substring(i, braceIdx).trim();
+
+        // Find matching closing brace
+        let depth = 1;
+        let j = braceIdx + 1;
+        while (j < css.length && depth > 0) {
+          if (css[j] === '{') depth++;
+          else if (css[j] === '}') depth--;
+          j++;
+        }
+        const innerBody = css.substring(braceIdx + 1, j - 1);
+
+        if (atName.startsWith('@keyframes')) {
+          // Drop entirely — inner selectors (from/to/%) aren't element selectors
+        } else {
+          // @media, @container — unwrap, keep inner rules
+          result += innerBody;
+        }
+        i = j;
+      } else {
+        result += css[i];
+        i++;
+      }
+    }
+    return result;
+  }
+
+  styleContent = unwrapAtRules(styleContent);
+
   // Parse CSS-like rules: selector { properties }
   const rulePattern = /([^{]+)\{([^}]*)\}/g;
   let match;
@@ -472,6 +515,9 @@ function validateStyleSelector(
   // Parse selector parts: #id, .class, type, or compound like button.primary
   const trimmed = selector.trim();
   if (!trimmed) return;
+
+  // Skip at-rules (@media, @container, @keyframes) — not element selectors
+  if (trimmed.startsWith('@')) return;
 
   // Extract type selector if present (not starting with # or .)
   let remaining = trimmed;
@@ -1237,6 +1283,29 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       detail: 'Class selector',
       insertText: '.',
       sortText: '0.',
+    });
+
+    // Add at-rule snippets
+    completions.push({
+      label: '@media',
+      kind: CompletionItemKind.Snippet,
+      detail: 'Media query block',
+      insertText: '@media (${1:min-width: 80}) {\n  $0\n}',
+      sortText: '0@media',
+    });
+    completions.push({
+      label: '@container',
+      kind: CompletionItemKind.Snippet,
+      detail: 'Container query block',
+      insertText: '@container (${1:min-width: 40}) {\n  $0\n}',
+      sortText: '0@container',
+    });
+    completions.push({
+      label: '@keyframes',
+      kind: CompletionItemKind.Snippet,
+      detail: 'Keyframe animation',
+      insertText: '@keyframes ${1:name} {\n  from { $2 }\n  to { $0 }\n}',
+      sortText: '0@keyframes',
     });
   }
 

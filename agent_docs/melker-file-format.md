@@ -71,7 +71,7 @@ Files can use either a `<melker>` wrapper (for scripts/styles) or a direct root 
 | `<melker>` | Root wrapper (optional)                                |
 | `<title>`  | Window/terminal title                                  |
 | `<help>`   | Markdown help text (shown in DevTools F12 > Help tab)  |
-| `<style>`  | CSS-like stylesheet rules with `@media` query support  |
+| `<style>`  | CSS-like stylesheet rules with `@media`, `@container`, `@keyframes` support |
 | `<script>` | TypeScript/JavaScript code block                       |
 | `<oauth>`  | OAuth2 PKCE configuration                              |
 | `<policy>` | Permission policy declaration                          |
@@ -341,6 +341,63 @@ See [architecture-media-queries.md](architecture-media-queries.md) for full deta
 - [media-orientation.melker](../examples/melker/media-orientation.melker) — `orientation: portrait | landscape` layout switching
 - [media-aspect-ratio.melker](../examples/melker/media-aspect-ratio.melker) — `min-aspect-ratio` / `max-aspect-ratio` breakpoints
 
+## Container Queries
+
+`@container` rules style children based on their container's resolved size (not the terminal size):
+
+```xml
+<style>
+  .sidebar {
+    container-type: inline-size;
+    width: 30%;
+    border: thin;
+  }
+
+  @container (min-width: 40) {
+    .nav-item { flex-direction: row; gap: 2; }
+  }
+
+  @container (max-width: 25) {
+    .nav-item { flex-direction: column; }
+    .nav-label { display: none; }
+  }
+</style>
+```
+
+Set `container-type: inline-size` (width queries) or `container-type: size` (width + height queries) on a container element. Children inside that container can use `@container` rules with `min-width`, `max-width`, `min-height`, `max-height` conditions.
+
+Container queries are evaluated during layout using the container's actual resolved bounds — no second pass needed. They re-evaluate automatically every frame (no resize handler).
+
+See [container-query-architecture.md](container-query-architecture.md) for full details. Example apps:
+- [container-queries.melker](../examples/layout/container-queries.melker) — split-pane with sidebar cards adapting via @container
+- [container-queries-animated.melker](../examples/layout/container-queries-animated.melker) — animated container with status badges adapting through breakpoints
+
+## CSS Animations
+
+`@keyframes` rules define animations that interpolate style properties over time:
+
+```xml
+<style>
+  @keyframes pulse {
+    0%   { border-color: #333333; }
+    50%  { border-color: #3388ff; }
+    100% { border-color: #333333; }
+  }
+
+  .alert-box {
+    animation: pulse 2s ease-in-out infinite;
+    border: thin;
+  }
+</style>
+```
+
+Supported timing functions: `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`, `steps(N)`. Properties: `animation-name`, `animation-duration`, `animation-delay`, `animation-iteration-count`, `animation-direction`, `animation-fill-mode`, or the `animation` shorthand.
+
+Animated properties include colors (RGBA lerp), numbers (integer lerp), percentages (`"30%" -> "70%"`), padding/margin (BoxSpacing lerp), and discrete values (snap at 50%).
+
+See [css-animation-architecture.md](css-animation-architecture.md) for full details. Example app:
+- [animation.melker](../examples/basics/animation.melker) — color, size, percentage, padding, position: relative animations
+
 ## Styling
 
 CSS-like properties in `style` attribute:
@@ -553,6 +610,7 @@ Renders markdown content with support for images, links, and code blocks.
 - `dialog-demo.melker` - Dialog variants
 - `tabs-demo.melker` - Tabbed interface
 - `css-combinators.melker` - CSS selector combinators (descendant, child)
+- `animation.melker` - CSS @keyframes animations
 
 **Components** (`examples/components/`):
 - `input.melker` - Input fields
@@ -580,6 +638,8 @@ Renders markdown content with support for images, links, and code blocks.
 - `flex-demo.melker` - Flexbox layout examples
 - `flexbox-visualizer.melker` - Interactive flexbox demo
 - `borders.melker` - Border styles
+- `container-queries.melker` - Container query responsive layouts
+- `container-queries-animated.melker` - Animated container queries
 
 **Canvas** (`examples/canvas/`):
 - `analog-clock.melker` - Canvas-based analog clock

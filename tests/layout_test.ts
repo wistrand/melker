@@ -12,6 +12,7 @@ import {
   Element,
   Bounds,
   Size,
+  Stylesheet,
 } from '../mod.ts';
 
 Deno.test('LayoutEngine creation', () => {
@@ -1050,4 +1051,314 @@ Deno.test('position relative - in block layout', () => {
   // child2: normal flow y=3, then offset by top:4, left:8
   assertEquals(n2.bounds.x, 8);
   assertEquals(n2.bounds.y, 7); // 3 + 4
+});
+
+// ===========================================================================
+// Container queries (Phase 3: layout integration)
+// ===========================================================================
+
+Deno.test('container query - flexDirection changes based on container width', () => {
+  const engine = new LayoutEngine();
+  const ss = Stylesheet.fromString(`
+    .sidebar { container-type: inline-size; }
+    @container (min-width: 40) {
+      .card { flex-direction: row; }
+    }
+  `);
+
+  // Sidebar is wide enough (60 >= 40)
+  const card = new ContainerElement({ style: { display: 'flex' } }, [
+    new TextElement({ text: 'A', height: 1, width: 5 }),
+    new TextElement({ text: 'B', height: 1, width: 5 }),
+  ]);
+  card.props.classList = ['card'];
+  const sidebar = new ContainerElement({
+    width: 60, height: 20,
+    style: { containerType: 'inline-size' },
+  }, [card]);
+  sidebar.props.classList = ['sidebar'];
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: [ss],
+  };
+
+  const tree = engine.calculateLayout(sidebar, context);
+  const cardNode = tree.children[0];
+  // Container query should apply flex-direction: row
+  assertEquals(cardNode.layoutProps.flexDirection, 'row');
+  // Children should be laid out horizontally
+  const [a, b] = cardNode.children;
+  assertEquals(a.bounds.y, b.bounds.y); // same row
+});
+
+Deno.test('container query - does not apply when container too narrow', () => {
+  const engine = new LayoutEngine();
+  const ss = Stylesheet.fromString(`
+    .sidebar { container-type: inline-size; }
+    @container (min-width: 40) {
+      .card { flex-direction: row; }
+    }
+  `);
+
+  const card = new ContainerElement({ style: { display: 'flex' } }, [
+    new TextElement({ text: 'A', height: 1, width: 5 }),
+    new TextElement({ text: 'B', height: 1, width: 5 }),
+  ]);
+  card.props.classList = ['card'];
+  const sidebar = new ContainerElement({
+    width: 30, height: 20,
+    style: { containerType: 'inline-size' },
+  }, [card]);
+  sidebar.props.classList = ['sidebar'];
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: [ss],
+  };
+
+  const tree = engine.calculateLayout(sidebar, context);
+  const cardNode = tree.children[0];
+  // Container too narrow (30 < 40), container query should NOT apply row
+  assertNotEquals(cardNode.layoutProps.flexDirection, 'row');
+  // Children should be stacked vertically (default column layout)
+  const [a, b] = cardNode.children;
+  assertEquals(a.bounds.x, b.bounds.x); // same column
+  assert(b.bounds.y > a.bounds.y); // B below A
+});
+
+Deno.test('container query - no stylesheets means zero overhead', () => {
+  const engine = new LayoutEngine();
+
+  const child = new TextElement({ text: 'Hello', height: 1 });
+  const root = new ContainerElement({ width: 40, height: 10 }, [child]);
+
+  // No stylesheets in context — should work exactly as before
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 40, height: 10 },
+    parentBounds: { x: 0, y: 0, width: 40, height: 10 },
+    availableSpace: { width: 40, height: 10 },
+  };
+
+  const tree = engine.calculateLayout(root, context);
+  assertEquals(tree.children.length, 1);
+  assertEquals(tree.children[0].bounds.width, 40);
+});
+
+Deno.test('container query - nested container overrides outer', () => {
+  const engine = new LayoutEngine();
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 50) {
+      .item { gap: 5; }
+    }
+    @container (max-width: 20) {
+      .item { gap: 1; }
+    }
+  `);
+
+  const item = new ContainerElement({ style: { display: 'flex' } }, [
+    new TextElement({ text: 'A', height: 1 }),
+  ]);
+  item.props.classList = ['item'];
+
+  // Inner container is narrow (15), outer is wide (80)
+  const inner = new ContainerElement({
+    width: 15, height: 10,
+    style: { containerType: 'inline-size' },
+  }, [item]);
+  const outer = new ContainerElement({
+    width: 80, height: 24,
+    style: { containerType: 'inline-size' },
+  }, [inner]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: [ss],
+  };
+
+  const tree = engine.calculateLayout(outer, context);
+  const itemNode = tree.children[0].children[0];
+  // Nearest container is inner (width: 15), so max-width: 20 matches, min-width: 50 doesn't
+  assertEquals(itemNode.layoutProps.gap, 1);
+});
+
+Deno.test('container query - container-type: size matches height', () => {
+  const engine = new LayoutEngine();
+  const ss = Stylesheet.fromString(`
+    @container (min-height: 15) {
+      .content { gap: 3; }
+    }
+  `);
+
+  const content = new ContainerElement({ style: { display: 'flex' } }, [
+    new TextElement({ text: 'A', height: 1 }),
+  ]);
+  content.props.classList = ['content'];
+  const box = new ContainerElement({
+    width: 40, height: 20,
+    style: { containerType: 'size' },
+  }, [content]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: [ss],
+  };
+
+  const tree = engine.calculateLayout(box, context);
+  const contentNode = tree.children[0];
+  assertEquals(contentNode.layoutProps.gap, 3);
+});
+
+Deno.test('container query - styles apply in computedStyle (rendering path)', () => {
+  const engine = new LayoutEngine();
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      .card { border: single; }
+    }
+  `);
+
+  const card = new ContainerElement({ style: { display: 'flex' } }, [
+    new TextElement({ text: 'Hello' }),
+  ]);
+  card.props.classList = ['card'];
+  const box = new ContainerElement({
+    width: 60, height: 20,
+    style: { containerType: 'inline-size' },
+  }, [card]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: [ss],
+  };
+
+  const tree = engine.calculateLayout(box, context);
+  const cardNode = tree.children[0];
+  // Container query should inject border into computedStyle
+  assertEquals(cardNode.computedStyle.border, 'single');
+});
+
+Deno.test('container query - animation overrides container query style', () => {
+  const engine = new LayoutEngine();
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      .item { gap: 5; }
+    }
+  `);
+
+  const item = new ContainerElement({ style: { display: 'flex' } }, [
+    new TextElement({ text: 'A', height: 1 }),
+    new TextElement({ text: 'B', height: 1 }),
+  ]);
+  item.props.classList = ['item'];
+  // Simulate an active animation that sets gap: 10
+  (item as any)._animationState = {
+    name: 'test',
+    keyframes: [
+      { offset: 0, style: { gap: 10 } },
+      { offset: 1, style: { gap: 10 } },
+    ],
+    duration: 1000,
+    delay: 0,
+    iterations: Infinity,
+    direction: 'normal',
+    timingFn: (t: number) => t,
+    fillMode: 'both',
+    startTime: performance.now() - 500, // mid-animation
+    finished: false,
+  };
+
+  const box = new ContainerElement({
+    width: 60, height: 20,
+    style: { containerType: 'inline-size' },
+  }, [item]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: [ss],
+  };
+
+  const tree = engine.calculateLayout(box, context);
+  const itemNode = tree.children[0];
+  // Animation should override container query's gap: 5 with gap: 10
+  assertEquals(itemNode.layoutProps.gap, 10);
+});
+
+Deno.test('container query - grandchild inherits container bounds', () => {
+  const engine = new LayoutEngine();
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      .deep { gap: 7; }
+    }
+  `);
+
+  const deep = new ContainerElement({ style: { display: 'flex' } }, [
+    new TextElement({ text: 'A', height: 1 }),
+  ]);
+  deep.props.classList = ['deep'];
+  const middle = new ContainerElement({}, [deep]);
+  const container = new ContainerElement({
+    width: 60, height: 20,
+    style: { containerType: 'inline-size' },
+  }, [middle]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: [ss],
+  };
+
+  const tree = engine.calculateLayout(container, context);
+  const deepNode = tree.children[0].children[0];
+  // Grandchild should see container's bounds (60 >= 40)
+  assertEquals(deepNode.layoutProps.gap, 7);
+});
+
+Deno.test('container query - multiple stylesheets merged', () => {
+  const engine = new LayoutEngine();
+  const ss1 = Stylesheet.fromString(`
+    @container (min-width: 30) {
+      .card { gap: 3; }
+    }
+  `);
+  const ss2 = Stylesheet.fromString(`
+    @container (min-width: 30) {
+      .card { flex-direction: row; }
+    }
+  `);
+
+  const card = new ContainerElement({ style: { display: 'flex' } }, [
+    new TextElement({ text: 'A', height: 1, width: 5 }),
+    new TextElement({ text: 'B', height: 1, width: 5 }),
+  ]);
+  card.props.classList = ['card'];
+  const box = new ContainerElement({
+    width: 50, height: 20,
+    style: { containerType: 'inline-size' },
+  }, [card]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: [ss1, ss2],
+  };
+
+  const tree = engine.calculateLayout(box, context);
+  const cardNode = tree.children[0];
+  // Both stylesheets' container rules should apply
+  assertEquals(cardNode.layoutProps.gap, 3);
+  assertEquals(cardNode.layoutProps.flexDirection, 'row');
 });

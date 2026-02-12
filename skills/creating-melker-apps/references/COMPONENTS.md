@@ -25,7 +25,7 @@ Flexbox layout container. The primary building block for layouts. Defaults to `d
 - `style` - CSS-like styling (use `overflow: scroll` or `overflow: auto` for scrolling)
 
 **Style properties:**
-- `display`: `flex` | `block` (auto-inferred as `flex` when flex container properties present)
+- `display`: `flex` | `block` | `none` (auto-inferred as `flex` when flex container properties present)
 - `flex-direction`: `row` | `column`
 - `flex`: grow factor (e.g., `1`)
 - `justify-content`: `flex-start` | `center` | `flex-end` | `space-between` | `space-around`
@@ -40,6 +40,7 @@ Flexbox layout container. The primary building block for layouts. Defaults to `d
 - `overflow`: `visible` | `hidden` | `auto` | `scroll`
 - `position`: `relative` (offset without affecting siblings), `absolute`, `fixed`
 - `top`, `right`, `bottom`, `left`: numeric offset (used with `position: relative`)
+- `container-type`: `inline-size` (enable `@container` width queries) | `size` (width + height)
 
 ### text
 

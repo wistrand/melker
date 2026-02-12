@@ -205,7 +205,11 @@ Adapt layout to ultra-wide, standard, and narrow terminals:
 - **`getTerminalSize()` in stdout mode**: Returns actual terminal size from `Deno.consoleSize()`, not `MELKER_STDOUT_WIDTH`. Media queries use real terminal dimensions.
 - **Graph/mermaid stylesheets**: Scoped to subtrees and intentionally NOT registered on the document — the resize handler won't re-apply them.
 
+## Related
+
+- [container-query-architecture.md](container-query-architecture.md) — `@container` queries (style children based on container size, not terminal size)
+- [css-animation-architecture.md](css-animation-architecture.md) — CSS `@keyframes` animations
+
 ## Future Enhancements
 
 - Custom properties/CSS variables with media-dependent values
-- `@container` queries (relative to parent, not viewport)

@@ -13,8 +13,9 @@ import {
   Stylesheet,
   applyStylesheet,
   mediaConditionMatches,
+  containerConditionMatches,
 } from '../mod.ts';
-import type { StyleContext } from '../mod.ts';
+import type { StyleContext, ContainerCondition } from '../mod.ts';
 
 // ---------------------------------------------------------------------------
 // Helper: create an element with classList already set (simulates class="...")
@@ -1435,4 +1436,323 @@ Deno.test('specificity - universal selector loses to class even when defined lat
   `);
   const c = el('container', { classes: ['card'] });
   assertEquals(ss.getMergedStyle(c).padding, 5);
+});
+
+// ===========================================================================
+// 13. Container queries (Phase 1: parsing & condition matching)
+// ===========================================================================
+
+Deno.test('containerConditionMatches - min-width matches', () => {
+  const cond: ContainerCondition = { minWidth: 40 };
+  assertEquals(containerConditionMatches(cond, { width: 40, height: 20 }), true);
+  assertEquals(containerConditionMatches(cond, { width: 50, height: 20 }), true);
+  assertEquals(containerConditionMatches(cond, { width: 39, height: 20 }), false);
+});
+
+Deno.test('containerConditionMatches - max-width matches', () => {
+  const cond: ContainerCondition = { maxWidth: 60 };
+  assertEquals(containerConditionMatches(cond, { width: 60, height: 20 }), true);
+  assertEquals(containerConditionMatches(cond, { width: 30, height: 20 }), true);
+  assertEquals(containerConditionMatches(cond, { width: 61, height: 20 }), false);
+});
+
+Deno.test('containerConditionMatches - min-height and max-height', () => {
+  const cond: ContainerCondition = { minHeight: 10, maxHeight: 30 };
+  assertEquals(containerConditionMatches(cond, { width: 50, height: 10 }), true);
+  assertEquals(containerConditionMatches(cond, { width: 50, height: 20 }), true);
+  assertEquals(containerConditionMatches(cond, { width: 50, height: 30 }), true);
+  assertEquals(containerConditionMatches(cond, { width: 50, height: 9 }), false);
+  assertEquals(containerConditionMatches(cond, { width: 50, height: 31 }), false);
+});
+
+Deno.test('containerConditionMatches - combined width and height (AND logic)', () => {
+  const cond: ContainerCondition = { minWidth: 40, maxHeight: 20 };
+  assertEquals(containerConditionMatches(cond, { width: 50, height: 15 }), true);
+  assertEquals(containerConditionMatches(cond, { width: 30, height: 15 }), false);
+  assertEquals(containerConditionMatches(cond, { width: 50, height: 25 }), false);
+});
+
+Deno.test('containerConditionMatches - empty condition always matches', () => {
+  assertEquals(containerConditionMatches({}, { width: 50, height: 20 }), true);
+});
+
+Deno.test('parseStyleBlock - @container rules go to containerItems', () => {
+  const { items, containerItems } = parseStyleBlock(`
+    .card { width: 10; }
+    @container (min-width: 40) {
+      .item { flex-direction: row; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].style.width, 10);
+  assertEquals(containerItems.length, 1);
+  assertEquals(containerItems[0].style.flexDirection, 'row');
+  assert(containerItems[0].containerCondition !== undefined);
+  assertEquals(containerItems[0].containerCondition!.minWidth, 40);
+});
+
+Deno.test('parseStyleBlock - @container with multiple rules', () => {
+  const { containerItems } = parseStyleBlock(`
+    @container (max-width: 30) {
+      .nav-item { flex-direction: column; }
+      .nav-label { display: none; }
+    }
+  `);
+  assertEquals(containerItems.length, 2);
+  assertEquals(containerItems[0].style.flexDirection, 'column');
+  assertEquals(containerItems[1].style.display, 'none');
+  assertEquals(containerItems[0].containerCondition!.maxWidth, 30);
+  assertEquals(containerItems[1].containerCondition!.maxWidth, 30);
+});
+
+Deno.test('parseStyleBlock - @container with combined conditions', () => {
+  const { containerItems } = parseStyleBlock(`
+    @container (min-width: 30) and (max-width: 60) {
+      .item { gap: 2; }
+    }
+  `);
+  assertEquals(containerItems.length, 1);
+  assertEquals(containerItems[0].containerCondition!.minWidth, 30);
+  assertEquals(containerItems[0].containerCondition!.maxWidth, 60);
+});
+
+Deno.test('parseStyleBlock - @container with height conditions', () => {
+  const { containerItems } = parseStyleBlock(`
+    @container (min-height: 10) {
+      .tall { height: 20; }
+    }
+  `);
+  assertEquals(containerItems.length, 1);
+  assertEquals(containerItems[0].containerCondition!.minHeight, 10);
+});
+
+Deno.test('parseStyleBlock - @container rules preserve specificity', () => {
+  const { containerItems } = parseStyleBlock(`
+    @container (min-width: 40) {
+      button { width: 10; }
+      .card { width: 20; }
+      #main .card { width: 30; }
+    }
+  `);
+  assertEquals(containerItems.length, 3);
+  assertEquals(containerItems[0].specificity, 1);       // button = type
+  assertEquals(containerItems[1].specificity, 1000);    // .card = class
+  assertEquals(containerItems[2].specificity, 1001000); // #main .card = id + class
+});
+
+Deno.test('parseStyleBlock - @container inside @media gets both conditions', () => {
+  const { items, containerItems } = parseStyleBlock(`
+    @media (min-width: 80) {
+      .wide { padding: 2; }
+      @container (min-width: 40) {
+        .item { gap: 3; }
+      }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].mediaCondition!.minWidth, 80);
+  assertEquals(containerItems.length, 1);
+  assertEquals(containerItems[0].containerCondition!.minWidth, 40);
+  assertEquals(containerItems[0].mediaCondition!.minWidth, 80);
+});
+
+Deno.test('parseStyleBlock - invalid @container condition skipped', () => {
+  const { containerItems } = parseStyleBlock(`
+    @container (invalid: foo) {
+      .item { width: 10; }
+    }
+  `);
+  assertEquals(containerItems.length, 0);
+});
+
+Deno.test('Stylesheet.fromString - stores container items separately', () => {
+  const ss = Stylesheet.fromString(`
+    .card { width: 10; }
+    @container (min-width: 40) {
+      .item { width: 20; }
+    }
+  `);
+  assertEquals(ss.length, 1);  // Regular items only
+  assertEquals(ss.hasContainerRules, true);
+  assertEquals(ss.containerItems.length, 1);
+});
+
+Deno.test('Stylesheet.fromString - hasContainerRules false when no @container', () => {
+  const ss = Stylesheet.fromString('.card { width: 10; }');
+  assertEquals(ss.hasContainerRules, false);
+  assertEquals(ss.containerItems.length, 0);
+});
+
+Deno.test('Stylesheet.addFromString - accumulates container items', () => {
+  const ss = new Stylesheet();
+  ss.addFromString('@container (min-width: 20) { .a { width: 1; } }');
+  ss.addFromString('@container (min-width: 40) { .b { width: 2; } }');
+  assertEquals(ss.containerItems.length, 2);
+  assertEquals(ss.hasContainerRules, true);
+});
+
+Deno.test('Stylesheet.clear - clears container items', () => {
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) { .item { width: 20; } }
+  `);
+  assertEquals(ss.hasContainerRules, true);
+  ss.clear();
+  assertEquals(ss.hasContainerRules, false);
+  assertEquals(ss.containerItems.length, 0);
+});
+
+Deno.test('parseStyleBlock - container-type parsed as style property', () => {
+  const { items } = parseStyleBlock('.sidebar { container-type: inline-size; }');
+  assertEquals(items[0].style.containerType, 'inline-size');
+});
+
+Deno.test('parseStyleBlock - multiple @container blocks', () => {
+  const { containerItems } = parseStyleBlock(`
+    @container (min-width: 40) {
+      .item { flex-direction: row; }
+    }
+    @container (max-width: 25) {
+      .item { flex-direction: column; }
+    }
+  `);
+  assertEquals(containerItems.length, 2);
+  assertEquals(containerItems[0].containerCondition!.minWidth, 40);
+  assertEquals(containerItems[1].containerCondition!.maxWidth, 25);
+});
+
+// ===========================================================================
+// 14. Container queries (Phase 2: getContainerMatchingStyles)
+// ===========================================================================
+
+Deno.test('getContainerMatchingStyles - returns matching styles when condition met', () => {
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      .item { flex-direction: row; }
+    }
+  `);
+  const item = el('container', { classes: ['item'] });
+  const result = ss.getContainerMatchingStyles(item, [], { width: 50, height: 20 });
+  assertEquals(result.flexDirection, 'row');
+});
+
+Deno.test('getContainerMatchingStyles - returns empty when condition not met', () => {
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      .item { flex-direction: row; }
+    }
+  `);
+  const item = el('container', { classes: ['item'] });
+  const result = ss.getContainerMatchingStyles(item, [], { width: 30, height: 20 });
+  assertEquals(Object.keys(result).length, 0);
+});
+
+Deno.test('getContainerMatchingStyles - returns empty when selector does not match', () => {
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      .card { width: 20; }
+    }
+  `);
+  const item = el('container', { classes: ['item'] });
+  const result = ss.getContainerMatchingStyles(item, [], { width: 50, height: 20 });
+  assertEquals(Object.keys(result).length, 0);
+});
+
+Deno.test('getContainerMatchingStyles - returns empty when no container rules', () => {
+  const ss = Stylesheet.fromString('.card { width: 10; }');
+  const item = el('container', { classes: ['card'] });
+  const result = ss.getContainerMatchingStyles(item, [], { width: 50, height: 20 });
+  assertEquals(Object.keys(result).length, 0);
+});
+
+Deno.test('getContainerMatchingStyles - multiple conditions, only matching applied', () => {
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      .item { flex-direction: row; }
+    }
+    @container (max-width: 25) {
+      .item { flex-direction: column; }
+    }
+  `);
+  const item = el('container', { classes: ['item'] });
+
+  const wide = ss.getContainerMatchingStyles(item, [], { width: 50, height: 20 });
+  assertEquals(wide.flexDirection, 'row');
+
+  const narrow = ss.getContainerMatchingStyles(item, [], { width: 20, height: 20 });
+  assertEquals(narrow.flexDirection, 'column');
+
+  // In between — neither matches
+  const mid = ss.getContainerMatchingStyles(item, [], { width: 30, height: 20 });
+  assertEquals(mid.flexDirection, undefined);
+});
+
+Deno.test('getContainerMatchingStyles - specificity ordering', () => {
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      button { width: 10; }
+      .primary { width: 20; }
+    }
+  `);
+  const btn = el('button', { classes: ['primary'] });
+  const result = ss.getContainerMatchingStyles(btn, [], { width: 50, height: 20 });
+  // .primary (specificity 1000) beats button (specificity 1)
+  assertEquals(result.width, 20);
+});
+
+Deno.test('getContainerMatchingStyles - merges non-overlapping properties', () => {
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      button { width: 10; }
+      .primary { height: 20; }
+    }
+  `);
+  const btn = el('button', { classes: ['primary'] });
+  const result = ss.getContainerMatchingStyles(btn, [], { width: 50, height: 20 });
+  assertEquals(result.width, 10);
+  assertEquals(result.height, 20);
+});
+
+Deno.test('getContainerMatchingStyles - ancestor selector matching', () => {
+  const ss = Stylesheet.fromString(`
+    @container (min-width: 40) {
+      .sidebar .item { gap: 3; }
+    }
+  `);
+  const item = el('container', { classes: ['item'] });
+  const sidebar = el('container', { classes: ['sidebar'] }, item);
+
+  const withAncestor = ss.getContainerMatchingStyles(item, [sidebar], { width: 50, height: 20 });
+  assertEquals(withAncestor.gap, 3);
+
+  const withoutAncestor = ss.getContainerMatchingStyles(item, [], { width: 50, height: 20 });
+  assertEquals(withoutAncestor.gap, undefined);
+});
+
+Deno.test('getContainerMatchingStyles - @container inside @media skipped without ctx', () => {
+  const ss = Stylesheet.fromString(`
+    @media (min-width: 80) {
+      @container (min-width: 40) {
+        .item { gap: 3; }
+      }
+    }
+  `);
+  const item = el('container', { classes: ['item'] });
+
+  // No StyleContext — media condition can't be evaluated, rule skipped
+  const noCtx = ss.getContainerMatchingStyles(item, [], { width: 50, height: 20 });
+  assertEquals(noCtx.gap, undefined);
+
+  // With matching StyleContext
+  const withCtx = ss.getContainerMatchingStyles(
+    item, [], { width: 50, height: 20 },
+    { terminalWidth: 100, terminalHeight: 30 }
+  );
+  assertEquals(withCtx.gap, 3);
+
+  // With non-matching StyleContext
+  const noMatch = ss.getContainerMatchingStyles(
+    item, [], { width: 50, height: 20 },
+    { terminalWidth: 60, terminalHeight: 30 }
+  );
+  assertEquals(noMatch.gap, undefined);
 });

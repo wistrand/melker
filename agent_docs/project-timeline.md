@@ -265,6 +265,34 @@ So constructed.
 - Benchmark harness improvements
   - Warm-up iteration support, benchmark viewer overhaul
 
+**Feb 11** - CSS animations, specificity, container queries, position: relative (#317-#335)
+- CSS animation engine (`src/css-animation.ts`, `src/easing.ts`)
+  - `@keyframes` parsing with `from`/`to` and percentage selectors
+  - Interpolation: color (RGBA lerp), numeric, percentage, BoxSpacing, discrete
+  - Timing functions: linear, ease, ease-in, ease-out, ease-in-out, steps(N)
+  - Animation shorthand parsing
+  - Dual-path injection into `_computeStyle()` and `_computeLayoutProps()`
+  - `UIAnimationManager` tick integration
+- CSS specificity system (`src/stylesheet.ts`)
+  - Weight-based scoring (ID: 1M, class: 1K, type: 1)
+  - Pre-computed at parse time, stable sort by definition order
+- CSS container queries (`src/stylesheet.ts`, `src/layout.ts`)
+  - `@container` parsing (clones `@media` path)
+  - `containerType: inline-size | size` on elements
+  - Layout integration: ancestor tracking, bounds propagation
+  - `display: none` works correctly with container queries
+  - Two example apps (container-queries, container-queries-animated)
+- `position: relative` (`src/layout.ts`)
+  - `_applyRelativeOffset()` at three layout sites
+  - Animatable via CSS `@keyframes`
+- LSP improvements (`src/lsp.ts`)
+  - `@container`, `@media`, `@keyframes` completion snippets
+  - Nested brace handling via `unwrapAtRules()` preprocessor
+  - CSS comment stripping before validation
+- Lint schema updates (`src/lint.ts`)
+  - `containerType` property, `display: none` enum value
+- Container query architecture documentation
+
 **Feb 7** - Dependency cleanup, style property refactoring, benchmark hygiene (#313-#316, `v2026.02.3`)
 - Dependency centralization (`src/deps.ts`)
   - Centralized scattered `jsr:@std/encoding`, `jsr:@std/path`, URL imports into deps.ts
@@ -383,6 +411,13 @@ So constructed.
 | 301   | Feb 5  | Isoline module, server UI, cleanup       |
 | 312   | Feb 6  | Split pane, media queries, engine split  |
 | 316   | Feb 7  | Dep cleanup, style refactoring           |
+| Feb 7  | Style props: slider orientation, img objectFit      |
+| Feb 11 | CSS animations (`src/css-animation.ts`, `src/easing.ts`) |
+| Feb 11 | CSS specificity system in stylesheet                 |
+| Feb 11 | `@container` queries (parsing, layout integration)   |
+| Feb 11 | `position: relative` with animation support          |
+| Feb 11 | LSP: `@container`/`@keyframes` completions, nested brace handling |
+| Feb 11 | `display: none` with container queries               |
 
 ## Releases
 

@@ -121,8 +121,9 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
   // Layout
   boxSizing: { type: 'string', enum: ['border-box', 'content-box'], description: 'How width/height include padding/border' },
   textWrap: { type: 'string', enum: ['nowrap', 'wrap'], description: 'Text wrapping behavior' },
-  display: { type: 'string', enum: ['block', 'flex'], description: 'Layout mode' },
+  display: { type: 'string', enum: ['block', 'flex', 'none'], description: 'Layout mode' },
   position: { type: 'string', enum: ['static', 'relative', 'absolute', 'fixed'], description: 'Positioning mode' },
+  containerType: { type: 'string', enum: ['inline-size', 'size', 'normal'], description: 'Container query type' },
   overflow: { type: 'string', enum: ['visible', 'hidden', 'scroll', 'auto'], description: 'Content overflow behavior' },
   width: { type: ['number', 'string'], description: 'Element width' },
   height: { type: ['number', 'string'], description: 'Element height' },

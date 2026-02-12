@@ -101,7 +101,24 @@ export function mediaConditionMatches(condition: MediaCondition, ctx: StyleConte
 export interface StyleItem {
   selector: StyleSelector;
   style: Style;
+  specificity: number;
   mediaCondition?: MediaCondition;
+}
+
+/**
+ * Compute CSS specificity from a parsed selector.
+ * Returns ids * 1_000_000 + classes * 1_000 + types.
+ */
+function selectorSpecificity(selector: StyleSelector): number {
+  let ids = 0, classes = 0, types = 0;
+  for (const seg of selector.segments) {
+    for (const part of seg.compound.parts) {
+      if (part.type === 'id') ids++;
+      else if (part.type === 'class') classes++;
+      else if (part.type === 'type') types++;
+    }
+  }
+  return ids * 1_000_000 + classes * 1_000 + types;
 }
 
 /**
@@ -720,7 +737,7 @@ export function parseStyleBlock(css: string): ParseResult {
       const selector = parseSelector(selectorStr);
       const style = parseStyleProperties(propertiesStr);
 
-      items.push({ selector, style });
+      items.push({ selector, style, specificity: selectorSpecificity(selector) });
     }
   }
 
@@ -742,9 +759,11 @@ export class Stylesheet {
    * Add a rule from a selector string and style object
    */
   addRule(selector: string, style: Style): void {
+    const parsed = parseSelector(selector);
     this._items.push({
-      selector: parseSelector(selector),
+      selector: parsed,
       style,
+      specificity: selectorSpecificity(parsed),
     });
   }
 
@@ -767,23 +786,26 @@ export class Stylesheet {
   }
 
   /**
-   * Get all styles that match an element (in order of definition).
+   * Get all styles that match an element, sorted by CSS specificity.
+   * Definition order is the tiebreaker (stable sort).
    * When ctx is provided, media-conditioned rules are evaluated against it.
    * When ctx is omitted, media-conditioned rules are excluded.
    */
   getMatchingStyles(element: Element, ancestors: Element[] = [], ctx?: StyleContext): Style[] {
-    const matchingStyles: Style[] = [];
+    const matches: { style: Style; specificity: number; index: number }[] = [];
 
-    for (const item of this._items) {
+    for (let i = 0; i < this._items.length; i++) {
+      const item = this._items[i];
       if (item.mediaCondition) {
         if (!ctx || !mediaConditionMatches(item.mediaCondition, ctx)) continue;
       }
       if (selectorMatches(item.selector, element, ancestors)) {
-        matchingStyles.push(item.style);
+        matches.push({ style: item.style, specificity: item.specificity, index: i });
       }
     }
 
-    return matchingStyles;
+    matches.sort((a, b) => a.specificity - b.specificity || a.index - b.index);
+    return matches.map(m => m.style);
   }
 
   /**

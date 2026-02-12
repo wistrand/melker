@@ -987,8 +987,7 @@ Deno.test('universal selector matches all elements in tree', () => {
   assertEquals(btn.props.style.padding, 1);
 });
 
-Deno.test('id selector is more specific than type (last-wins cascade)', () => {
-  // No specificity weighting — last matching rule wins
+Deno.test('id selector is more specific than type selector', () => {
   const ss = Stylesheet.fromString(`
     button { width: 10; }
     #myBtn { width: 20; }
@@ -1257,4 +1256,183 @@ Deno.test('real-world dashboard layout', () => {
   assertEquals(header.props.style.fontWeight, 'bold');
   // body should not match .header rule
   assertEquals(body.props.style?.fontWeight, undefined);
+});
+
+// ===========================================================================
+// 12. CSS specificity
+// ===========================================================================
+
+Deno.test('specificity - class selector beats type selector regardless of order', () => {
+  const ss = Stylesheet.fromString(`
+    .primary { width: 20; }
+    button { width: 10; }
+  `);
+  const btn = el('button', { classes: ['primary'] });
+  assertEquals(ss.getMergedStyle(btn).width, 20);
+});
+
+Deno.test('specificity - type selector defined later loses to earlier class', () => {
+  // Class (1000) > type (1), even when type is defined after class
+  const ss = Stylesheet.fromString(`
+    .card { padding: 5; }
+    container { padding: 0; }
+  `);
+  const c = el('container', { classes: ['card'] });
+  assertEquals(ss.getMergedStyle(c).padding, 5);
+});
+
+Deno.test('specificity - id selector beats class selector regardless of order', () => {
+  const ss = Stylesheet.fromString(`
+    .highlight { height: 10; }
+    #hero { height: 50; }
+  `);
+  const c = el('container', { id: 'hero', classes: ['highlight'] });
+  assertEquals(ss.getMergedStyle(c).height, 50);
+});
+
+Deno.test('specificity - id selector beats class selector even when class defined later', () => {
+  const ss = Stylesheet.fromString(`
+    #hero { height: 50; }
+    .highlight { height: 10; }
+  `);
+  const c = el('container', { id: 'hero', classes: ['highlight'] });
+  assertEquals(ss.getMergedStyle(c).height, 50);
+});
+
+Deno.test('specificity - compound selector button.primary beats plain .primary', () => {
+  // button.primary = type(1) + class(1000) = 1001, .primary = 1000
+  const ss = Stylesheet.fromString(`
+    .primary { width: 10; }
+    button.primary { width: 20; }
+  `);
+  const btn = el('button', { classes: ['primary'] });
+  assertEquals(ss.getMergedStyle(btn).width, 20);
+});
+
+Deno.test('specificity - compound selector button.primary beats .primary even when defined first', () => {
+  const ss = Stylesheet.fromString(`
+    button.primary { width: 20; }
+    .primary { width: 10; }
+  `);
+  const btn = el('button', { classes: ['primary'] });
+  assertEquals(ss.getMergedStyle(btn).width, 20);
+});
+
+Deno.test('specificity - equal specificity falls back to definition order (later wins)', () => {
+  // Both are class selectors: specificity 1000 each
+  const ss = Stylesheet.fromString(`
+    .first { width: 10; }
+    .second { width: 20; }
+  `);
+  const c = el('container', { classes: ['first', 'second'] });
+  const merged = ss.getMergedStyle(c);
+  // Both match — equal specificity, so .second wins (later definition)
+  assertEquals(merged.width, 20);
+});
+
+Deno.test('specificity - equal specificity type selectors use definition order', () => {
+  // Both type selectors match 'button': specificity 1 each
+  const ss = Stylesheet.fromString(`
+    button { gap: 2; }
+    button { gap: 5; }
+  `);
+  const btn = el('button');
+  assertEquals(ss.getMergedStyle(btn).gap, 5);
+});
+
+Deno.test('specificity - descendant selector accumulates from all segments', () => {
+  // "container .card" = type(1) + class(1000) = 1001
+  // ".wrapper text"   = class(1000) + type(1) = 1001
+  // "#main text"      = id(1000000) + type(1) = 1000001
+  const ss = Stylesheet.fromString(`
+    container .card { width: 10; }
+    #main .card { width: 30; }
+  `);
+  const card = el('container', { classes: ['card'] });
+  const root = el('container', { id: 'main' }, card);
+  // Both rules match card; #main .card has higher specificity
+  assertEquals(ss.getMergedStyle(card, [root]).width, 30);
+});
+
+Deno.test('specificity - two-class selector beats single-class selector', () => {
+  // .card.active = 2000, .card = 1000
+  const ss = Stylesheet.fromString(`
+    .card { width: 10; }
+    .card.active { width: 20; }
+  `);
+  const c = el('container', { classes: ['card', 'active'] });
+  assertEquals(ss.getMergedStyle(c).width, 20);
+});
+
+Deno.test('specificity - two-class beats single-class even when defined first', () => {
+  const ss = Stylesheet.fromString(`
+    .card.active { width: 20; }
+    .card { width: 10; }
+  `);
+  const c = el('container', { classes: ['card', 'active'] });
+  assertEquals(ss.getMergedStyle(c).width, 20);
+});
+
+Deno.test('specificity - id beats multiple classes', () => {
+  // #box = 1000000, .a.b.c = 3000
+  const ss = Stylesheet.fromString(`
+    .a.b.c { width: 10; }
+    #box { width: 50; }
+  `);
+  const c = el('container', { id: 'box', classes: ['a', 'b', 'c'] });
+  assertEquals(ss.getMergedStyle(c).width, 50);
+});
+
+Deno.test('specificity - non-overlapping properties merge from all matching rules', () => {
+  // Both match; different properties, both should appear
+  const ss = Stylesheet.fromString(`
+    button { width: 10; }
+    .primary { height: 20; }
+  `);
+  const btn = el('button', { classes: ['primary'] });
+  const merged = ss.getMergedStyle(btn);
+  assertEquals(merged.width, 10);
+  assertEquals(merged.height, 20);
+});
+
+Deno.test('specificity - works through applyStylesheet tree application', () => {
+  const ss = Stylesheet.fromString(`
+    text { padding: 0; }
+    .important { padding: 5; }
+    #hero-text { padding: 10; }
+  `);
+  const t1 = el('text');                                     // type only → padding 0
+  const t2 = el('text', { classes: ['important'] });         // class wins → padding 5
+  const t3 = el('text', { id: 'hero-text', classes: ['important'] }); // id wins → padding 10
+  const root = el('container', {}, t1, t2, t3);
+  applyStylesheet(root, ss);
+  assertEquals(t1.props.style.padding, 0);
+  assertEquals(t2.props.style.padding, 5);
+  assertEquals(t3.props.style.padding, 10);
+});
+
+Deno.test('specificity - addRule respects specificity', () => {
+  const ss = new Stylesheet();
+  ss.addRule('.highlight', { width: 20 } as any);
+  ss.addRule('button', { width: 10 } as any);
+  const btn = el('button', { classes: ['highlight'] });
+  assertEquals(ss.getMergedStyle(btn).width, 20);
+});
+
+Deno.test('specificity - universal selector has lowest specificity', () => {
+  const ss = Stylesheet.fromString(`
+    * { gap: 1; }
+    button { gap: 5; }
+  `);
+  const btn = el('button');
+  assertEquals(ss.getMergedStyle(btn).gap, 5);
+});
+
+Deno.test('specificity - universal selector loses to class even when defined later', () => {
+  const ss = Stylesheet.fromString(`
+    .card { padding: 5; }
+    * { padding: 0; }
+  `);
+  const c = el('container', { classes: ['card'] });
+  assertEquals(ss.getMergedStyle(c).padding, 5);
 });

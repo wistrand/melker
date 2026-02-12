@@ -1,6 +1,6 @@
-# CSS Animation Architecture
+# CSS & Animation Architecture
 
-CSS `@keyframes` and `animation` property support for Melker's style system.
+Melker's CSS-like style system: specificity, `@keyframes`, and `animation` properties.
 
 ## Core Principle: Never Write to `props.style`
 
@@ -109,6 +109,56 @@ animation: fadeIn 2s ease-in-out 100ms infinite alternate forwards;
 ```
 
 Tokens are identified by type: time values (contain `s`/`ms`), known timing functions, known direction/fill keywords, numbers (`infinite` or count), and the remainder is the animation name.
+
+## Specificity (`src/stylesheet.ts`)
+
+Selectors are ranked by CSS specificity. When multiple rules match the same element, higher-specificity rules win. Definition order is the tiebreaker for equal specificity.
+
+### Computation
+
+`selectorSpecificity(selector)` walks all segments and counts selector parts by type:
+
+| Part type | Weight | Example |
+|-----------|--------|---------|
+| `id` | 1,000,000 | `#header` |
+| `class` | 1,000 | `.primary` |
+| `type` | 1 | `button` |
+| `universal` | 0 | `*` |
+
+Result: `ids * 1_000_000 + classes * 1_000 + types`. The wide spacing supports up to 999 of each category before overflow.
+
+Examples:
+
+| Selector | Specificity |
+|----------|-------------|
+| `button` | 1 |
+| `.card` | 1,000 |
+| `#header` | 1,000,000 |
+| `button.primary` | 1,001 |
+| `container .card text` | 2,001 |
+| `#nav .item button` | 1,001,001 |
+
+### Where it's applied
+
+Specificity is **pre-computed at parse time** and stored on `StyleItem.specificity`. This happens at two creation sites:
+
+1. `parseStyleBlock()` — when parsing CSS text into rules
+2. `addRule()` — when adding rules programmatically
+
+`getMatchingStyles()` collects all matching rules and sorts by specificity (stable sort, so definition order breaks ties). The sorted styles are then spread in order by `getMergedStyle()`, giving highest-specificity rules the final say.
+
+### Style cascade order
+
+The full priority order (lowest to highest):
+
+1. Default style (theme colors, inherited text properties)
+2. Type-specific defaults (component defaults)
+3. Inherited parent style
+4. Stylesheet rules — **sorted by specificity** (definition order as tiebreaker)
+5. Inline style (`props.style`)
+6. CSS animation values (`_getAnimatedStyle()`)
+
+Inline style always wins over all stylesheet rules regardless of specificity. Animation values overlay on top of everything (see [Core Principle](#core-principle-never-write-to-propsstyle) above).
 
 ## Easing Functions (`src/easing.ts`)
 

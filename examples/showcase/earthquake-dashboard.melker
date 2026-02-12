@@ -1,0 +1,431 @@
+<melker>
+    <title>Earthquake Dashboard</title>
+
+    <policy>
+        {
+        "name": "earthquake-dashboard",
+        "description": "Real-time USGS earthquake monitor",
+        "permissions": {
+        "net": ["earthquake.usgs.gov"]
+        }
+        }
+    </policy>
+
+    <help>
+        ## USGS Earthquake Dashboard
+
+        Live earthquake data from the United States Geological Survey.
+
+        | Key        | Action                    |
+        |------------|---------------------------|
+        | Tab        | Switch between panels     |
+        | Arrow keys | Navigate table rows       |
+        | Enter      | View earthquake details   |
+        | F12        | Dev tools                 |
+
+        Data refreshes every 60 seconds from the USGS GeoJSON feed.
+    </help>
+
+    <style>
+        .header {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+        .footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+        .panel-label {
+        font-weight: bold;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+    </style>
+
+    <container style="display: flex; flex-direction: column; height: 100%; width: 100%">
+
+        <!-- Header -->
+        <container class="header">
+            <container style="display: flex; flex-direction: row; gap: 2; align-items: center">
+                <text style="font-weight: bold;">USGS Earthquake Monitor</text>
+                <select id="feedSelect" onChange="$app.changeFeed(event)" style="width: 30" selectedValue="hour">
+                    <option value="hour">Past hour (all)</option>
+                    <option value="day">Past day (all)</option>
+                    <option value="day25">Past day (M2.5+)</option>
+                    <option value="day45">Past day (M4.5+)</option>
+                    <option value="week">Past 7 days (M2.5+)</option>
+                    <option value="week45">Past 7 days (M4.5+)</option>
+                    <option value="month">Past 30 days (M4.5+)</option>
+                    <option value="monthSig">Past 30 days (significant)</option>
+                </select>
+            </container>
+            <text id="status">Loading...</text>
+        </container>
+
+        <!-- Main content -->
+        <split-pane style="width: fill; flex: 1; direction: horizontal;" sizes="3,1">
+
+            <!-- Left: table + magnitude sparkline -->
+            <container style="display: flex; flex-direction: column; height: fill">
+
+                <!-- Earthquake table -->
+                <data-table
+                        id="quakeTable"
+                        style="width: fill; flex: 1;"
+                        selectable="single"
+                        sortColumn="0"
+                        sortDirection="desc"
+                        tooltip="auto"
+                        onActivate="$app.showDetails(event)"
+                        onChange="$app.handleSelect(event)"
+                >
+                    {
+                    "columns": [
+                    { "header": "Mag", "width": 6, "align": "right" },
+                    { "header": "Location", "width": "fill" },
+                    { "header": "Depth km", "width": 10, "align": "right" },
+                    { "header": "Time", "width": 18 }
+                    ]
+                    }
+                </data-table>
+
+                <!-- Magnitude sparkline -->
+                <container style="flex-grow: 0; flex-shrink: 0; height: 4">
+                    <text class="panel-label">Recent magnitudes</text>
+                    <data-bars
+                            id="magSparkline"
+                            series='[{"name": "Mag"}]'
+                            bars='[]'
+                            showValues="false"
+                            showLabels="false"
+                            min="0"
+                            onTooltip="$app.sparklineTooltip(event)"
+                            style="orientation: vertical; height: 3; gap: 0; padding: 0 1"
+                    />
+                </container>
+            </container>
+
+            <!-- Right: summary panels -->
+            <container style="display: flex; flex-direction: column; height: fill; padding: 0 1; gap: 1">
+
+                <!-- Summary stats -->
+                <container style="border: thin; padding: 0 1; flex-shrink: 0">
+                    <text id="summaryLabel" style="font-weight: bold;">Summary (past hour)</text>
+                    <text id="totalCount">Total: --</text>
+                    <text id="maxMag">Largest: --</text>
+                    <text id="avgMag">Average: --</text>
+                    <text id="avgDepth">Avg depth: --</text>
+                </container>
+
+                <!-- Magnitude distribution -->
+                <container style="border: thin; padding: 0 1; flex-shrink: 0">
+                    <text style="font-weight: bold;">By magnitude</text>
+                    <data-bars
+                            id="magDist"
+                            series='[{"name": "Count"}]'
+                            bars='[]'
+                            labels='[]'
+                            showValues="true"
+                            tooltip="auto"
+                            style="bar-width: 1; gap: 0"
+                    />
+                </container>
+
+                <!-- Depth distribution (heatmap-like bars) -->
+                <container style="border: thin; padding: 0 1; flex-shrink: 0">
+                    <text style="font-weight: bold;">By depth</text>
+                    <data-bars
+                            id="depthDist"
+                            series='[{"name": "Count"}]'
+                            bars='[]'
+                            labels='[]'
+                            showValues="true"
+                            tooltip="auto"
+                            style="bar-width: 1; gap: 0"
+                    />
+                </container>
+
+            </container>
+
+        </split-pane>
+
+        <!-- Footer -->
+        <container class="footer">
+            <text>Arrow keys: navigate | Enter: details | Data: USGS</text>
+            <text id="lastUpdate">--</text>
+        </container>
+    </container>
+
+    <script type="typescript">
+        // Types
+        interface Quake {
+        mag: number;
+        place: string;
+        time: number;
+        depth: number;
+        url: string;
+        id: string;
+        }
+
+        // Feed URLs
+        const FEEDS: Record<string, string> = {
+        hour: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson',
+        day: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson',
+        day25: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson',
+        day45: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson',
+        week: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson',
+        week45: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson',
+        month: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson',
+        monthSig: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson',
+        };
+
+        const FEED_LABELS: Record<string, string> = {
+        hour: 'past hour',
+        day: 'past day',
+        day25: 'past day, M2.5+',
+        day45: 'past day, M4.5+',
+        week: 'past 7 days, M2.5+',
+        week45: 'past 7 days, M4.5+',
+        month: 'past 30 days, M4.5+',
+        monthSig: 'past 30 days, significant',
+        };
+
+        let currentFeed = 'hour';
+        let quakes: Quake[] = [];
+        let sparklineQuakes: Quake[] = [];
+        let refreshTimer: number | null = null;
+        let previousCount = 0;
+
+        // Format a timestamp to a short local time string
+        function fmtTime(ms: number): string {
+        const d = new Date(ms);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        const s = d.getSeconds().toString().padStart(2, '0');
+        const mon = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        return mon + '/' + day + ' ' + h + ':' + m + ':' + s;
+        }
+
+        // Fetch earthquake data from USGS
+        async function fetchQuakes(): Promise<Quake[]> {
+        const url = FEEDS[currentFeed];
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        return json.features.map((f: any) => ({
+        mag: f.properties.mag ?? 0,
+        place: f.properties.place ?? 'Unknown',
+        time: f.properties.time ?? 0,
+        depth: f.geometry.coordinates[2] ?? 0,
+        url: f.properties.url ?? '',
+        id: f.id ?? '',
+        }));
+        }
+
+        // Compute magnitude distribution buckets
+        function magDistribution(data: Quake[]): { labels: string[]; bars: number[][] } {
+        const buckets: Record<string, number> = {
+        '<1': 0, '1-2': 0, '2-3': 0, '3-4': 0, '4-5': 0, '5+': 0,
+        };
+        for (const q of data) {
+        const m = q.mag;
+        if (m < 1) buckets['<1']++;
+        else if (m < 2) buckets['1-2']++;
+        else if (m < 3) buckets['2-3']++;
+        else if (m < 4) buckets['3-4']++;
+        else if (m < 5) buckets['4-5']++;
+        else buckets['5+']++;
+        }
+        const labels = Object.keys(buckets);
+        const bars = labels.map(k => [buckets[k]]);
+        return { labels, bars };
+        }
+
+        // Compute depth distribution buckets
+        function depthDistribution(data: Quake[]): { labels: string[]; bars: number[][] } {
+        const buckets: Record<string, number> = {
+        '0-10': 0, '10-30': 0, '30-70': 0, '70-150': 0, '150-300': 0, '300+': 0,
+        };
+        for (const q of data) {
+        const d = q.depth;
+        if (d < 10) buckets['0-10']++;
+        else if (d < 30) buckets['10-30']++;
+        else if (d < 70) buckets['30-70']++;
+        else if (d < 150) buckets['70-150']++;
+        else if (d < 300) buckets['150-300']++;
+        else buckets['300+']++;
+        }
+        const labels = Object.keys(buckets);
+        const bars = labels.map(k => [buckets[k]]);
+        return { labels, bars };
+        }
+
+        // Update all UI components with current data
+        function updateUI(): void {
+        // Summary label
+        const summaryLabel = $melker.getElementById('summaryLabel');
+        if (summaryLabel) summaryLabel.setValue('Summary (' + FEED_LABELS[currentFeed] + ')');
+
+        // Table rows: [mag, location, depth, time]
+        const table = $melker.getElementById('quakeTable');
+        if (table) {
+        const rows = quakes.map(q => [
+        q.mag.toFixed(1),
+        q.place,
+        q.depth.toFixed(1),
+        fmtTime(q.time),
+        ]);
+        table.setValue(rows);
+        table.props.footer = [['', quakes.length + ' earthquakes (' + FEED_LABELS[currentFeed] + ')', '', '']];
+        }
+
+        // Sparkline: most recent magnitudes (newest on right)
+        const sparkline = $melker.getElementById('magSparkline');
+        if (sparkline) {
+        sparklineQuakes = quakes.slice(0, 40).reverse();
+        sparkline.setValue(sparklineQuakes.map(q => [q.mag]));
+        }
+
+        // Summary stats
+        if (quakes.length > 0) {
+        const mags = quakes.map(q => q.mag);
+        const depths = quakes.map(q => q.depth);
+        const maxM = Math.max(...mags);
+        const avgM = mags.reduce((a, b) => a + b, 0) / mags.length;
+        const avgD = depths.reduce((a, b) => a + b, 0) / depths.length;
+
+        const totalEl = $melker.getElementById('totalCount');
+        if (totalEl) totalEl.setValue('Total: ' + quakes.length);
+
+        const maxEl = $melker.getElementById('maxMag');
+        if (maxEl) maxEl.setValue('Largest: M' + maxM.toFixed(1));
+
+        const avgMEl = $melker.getElementById('avgMag');
+        if (avgMEl) avgMEl.setValue('Average: M' + avgM.toFixed(1));
+
+        const avgDEl = $melker.getElementById('avgDepth');
+        if (avgDEl) avgDEl.setValue('Avg depth: ' + avgD.toFixed(1) + ' km');
+        }
+
+        // Magnitude distribution
+        const magDist = $melker.getElementById('magDist');
+        if (magDist) {
+        const dist = magDistribution(quakes);
+        magDist.setValue(dist.bars);
+        magDist.props.labels = dist.labels;
+        }
+
+        // Depth distribution
+        const depthDist = $melker.getElementById('depthDist');
+        if (depthDist) {
+        const dist = depthDistribution(quakes);
+        depthDist.setValue(dist.bars);
+        depthDist.props.labels = dist.labels;
+        }
+
+        // Last update time
+        const lastEl = $melker.getElementById('lastUpdate');
+        if (lastEl) {
+        const now = new Date();
+        const h = now.getHours().toString().padStart(2, '0');
+        const m = now.getMinutes().toString().padStart(2, '0');
+        const s = now.getSeconds().toString().padStart(2, '0');
+        lastEl.setValue('Updated ' + h + ':' + m + ':' + s);
+        }
+        }
+
+        // Main refresh cycle
+        export async function refresh(): Promise<void> {
+        const statusEl = $melker.getElementById('status');
+        try {
+        if (statusEl) statusEl.setValue('Fetching...');
+        quakes = await fetchQuakes();
+
+        // Notify on new earthquakes
+        if (previousCount > 0 && quakes.length > previousCount) {
+        const newCount = quakes.length - previousCount;
+        $melker.toast.show(newCount + ' new earthquake' + (newCount > 1 ? 's' : '') + ' detected', { type: 'warning', duration: 5000 });
+        }
+        previousCount = quakes.length;
+
+        updateUI();
+        if (statusEl) statusEl.setValue(quakes.length + ' quakes');
+        } catch (e) {
+        if (statusEl) statusEl.setValue('Error: ' + e.message);
+        $melker.toast.show('Failed to fetch data: ' + e.message, { type: 'error' });
+        }
+        }
+
+        // Show details for a selected earthquake
+        export function showDetails(event: { rowIndex: number; row: (string | number)[] }): void {
+        // Find the quake matching this row
+        // rowIndex may differ from quakes array index due to sorting, so match by time string
+        const timeStr = String(event.row[3]);
+        const quake = quakes.find(q => fmtTime(q.time) === timeStr) || quakes[event.rowIndex];
+        if (!quake) return;
+
+        $melker.alert(
+        'Earthquake Details\n\n' +
+        'Magnitude: M' + quake.mag.toFixed(1) + '\n' +
+        'Location:  ' + quake.place + '\n' +
+        'Depth:     ' + quake.depth.toFixed(1) + ' km\n' +
+        'Time:      ' + new Date(quake.time).toLocaleString() + '\n' +
+        'ID:        ' + quake.id
+        );
+        }
+
+        // Sparkline tooltip
+        export function sparklineTooltip(event: any): string | undefined {
+        if (!event.context) return undefined;
+        const q = sparklineQuakes[event.context.barIndex];
+        if (!q) return undefined;
+        return '**M' + q.mag.toFixed(1) + '** ' + q.place + '\n' +
+        'Depth: ' + q.depth.toFixed(1) + ' km\n' +
+        fmtTime(q.time);
+        }
+
+        // Handle row selection
+        export function handleSelect(event: { rowIndex: number; selectedRows: number[] }): void {
+        const statusEl = $melker.getElementById('status');
+        if (!statusEl) return;
+        if (event.selectedRows.length === 0) {
+        statusEl.setValue(quakes.length + ' quakes');
+        } else {
+        const row = quakes[event.rowIndex];
+        if (row) {
+        statusEl.setValue('M' + row.mag.toFixed(1) + ' - ' + row.place);
+        }
+        }
+        }
+
+        // Change feed
+        export async function changeFeed(event: { value: string }): Promise<void> {
+        currentFeed = event.value;
+        previousCount = 0;
+        await refresh();
+        $melker.render();
+        }
+
+        // Start auto-refresh
+        export function startAutoRefresh(): void {
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(async () => {
+        await refresh();
+        $melker.render();
+        }, 60000);
+        }
+    </script>
+
+    <script type="typescript" async="ready">
+        await $app.refresh();
+        $melker.render();
+        $app.startAutoRefresh();
+    </script>
+</melker>

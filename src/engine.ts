@@ -249,6 +249,9 @@ export class MelkerEngine {
   // Dev Tools feature
   private _devToolsManager?: DevToolsManager;
 
+  /** Public accessor for dev tools (used by melker-runner). */
+  get devToolsManager(): DevToolsManager | undefined { return this._devToolsManager; }
+
   // Dialog coordinator (alert, confirm, prompt, accessibility)
   private _dialogCoordinator!: DialogCoordinator;
 

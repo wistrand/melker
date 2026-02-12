@@ -663,10 +663,10 @@ export async function runMelkerFile(
 
       // Dev Tools
       devtools: {
-        show: () => engine._devToolsManager.show(),
-        hide: () => engine._devToolsManager.hide(),
-        toggle: () => engine._devToolsManager.toggle(),
-        isOpen: () => engine._devToolsManager.isOpen(),
+        show: () => engine.devToolsManager?.show(),
+        hide: () => engine.devToolsManager?.hide(),
+        toggle: () => engine.devToolsManager?.toggle(),
+        isOpen: () => engine.devToolsManager?.isOpen() ?? false,
       },
     };
 

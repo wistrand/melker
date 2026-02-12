@@ -1,14 +1,13 @@
 // Advanced Layout Engine with comprehensive layout algorithms
 // Supports block, flex, and absolute positioning
 
-import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, Renderable, isRenderable, isScrollableType, isScrollingEnabled, type AnimationState } from './types.ts';
-import { findKeyframePair, interpolateStyles } from './css-animation.ts';
+import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, isRenderable, isScrollableType, isScrollingEnabled } from './types.ts';
 import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
-import { getThemeColor } from './theme.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { ViewportManager, globalViewportManager, ScrollbarLayout } from './viewport.ts';
 import { getLogger } from './logging.ts';
 import type { Stylesheet, StyleContext } from './stylesheet.ts';
+import { computeStyle, computeLayoutProps, DEFAULT_LAYOUT_PROPS } from './layout-style.ts';
 
 const logger = getLogger('LayoutEngine');
 
@@ -77,6 +76,42 @@ export interface LayoutContext {
   containerBounds?: { width: number; height: number };
 }
 
+/** A flex item with computed sizing, margins, and constraints. */
+interface FlexItem {
+  element: Element;
+  flexGrow: number;
+  flexShrink: number;
+  flexBasis: number;
+  hypotheticalMain: number;
+  finalMain: number;
+  outerMain: number;
+  baseCross: number;
+  outerCross: number;
+  intrinsicSize: Size;
+  style: Style;
+  props: AdvancedLayoutProps;
+  marginMain: number;
+  marginCross: number;
+  marginStart: number;
+  marginEnd: number;
+  marginCrossStart: number;
+  marginCrossEnd: number;
+  paddingMain: number;
+  paddingCross: number;
+  shouldStretch: boolean;
+  minMain: number;
+  maxMain: number;
+  minCross: number;
+  maxCross: number;
+}
+
+/** A row or column of flex items after line-breaking. */
+interface FlexLine {
+  items: FlexItem[];
+  mainSize: number;
+  crossSize: number;
+}
+
 export class LayoutEngine {
   private _sizingModel: SizingModel;
   private _contentMeasurer: ContentMeasurer;
@@ -85,22 +120,6 @@ export class LayoutEngine {
   private _layoutPropsCache = new Map<Element, AdvancedLayoutProps>();
   private _styleCache = new Map<Element, Style>();
   private _intrinsicSizeCache = new Map<Element, { aw: number; ah: number; result: Size }>();
-  private _defaultLayoutProps: AdvancedLayoutProps = {
-    display: 'flex',
-    position: 'static',
-    flexDirection: 'column',  // Default to column for terminal UIs
-    flexWrap: 'nowrap',
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
-    alignContent: 'stretch',
-    flexGrow: 0,
-    flexShrink: 1,
-    flexBasis: 'auto',
-    alignSelf: 'auto',
-    verticalAlign: 'top',
-    textAlign: 'left',
-    zIndex: 0,
-  };
 
   constructor(
     sizingModel?: SizingModel,
@@ -112,23 +131,23 @@ export class LayoutEngine {
     this._viewportManager = viewportManager || globalViewportManager;
   }
 
-  // Cached _computeLayoutProps (without parentProps) — used by _layoutFlex and _layoutBlock
+  // Cached computeLayoutProps (without parentProps) — used by _layoutFlex and _layoutBlock
   // to avoid recomputing for the same child multiple times within a single frame.
   private _getCachedLayoutProps(element: Element, context?: LayoutContext): AdvancedLayoutProps {
     let props = this._layoutPropsCache.get(element);
     if (!props) {
-      props = this._computeLayoutProps(element, undefined, context);
+      props = computeLayoutProps(element, undefined, context);
       this._layoutPropsCache.set(element, props);
     }
     return props;
   }
 
-  // Cached _computeStyle — avoids recomputing for the same element within a single frame.
+  // Cached computeStyle — avoids recomputing for the same element within a single frame.
   // Safe because within a layout pass, the same element always has the same parentStyle.
   private _getCachedStyle(element: Element, parentStyle?: Style, context?: LayoutContext): Style {
     let style = this._styleCache.get(element);
     if (!style) {
-      style = this._computeStyle(element, parentStyle, context);
+      style = computeStyle(element, parentStyle, context);
       this._styleCache.set(element, style);
     }
     return style;
@@ -183,7 +202,7 @@ export class LayoutEngine {
       });
     }
     const computedStyle = this._getCachedStyle(element, context.parentStyle, context);
-    const layoutProps = this._computeLayoutProps(element, context.parentLayoutProps, context);
+    const layoutProps = computeLayoutProps(element, context.parentLayoutProps, context);
 
     if (traceEnabled) {
       logger.trace(`Layout props computed for ${element.type}`, {
@@ -502,384 +521,16 @@ export class LayoutEngine {
     }
 
     // Virtual layout optimization for scrollable containers with many children
-    // This avoids O(n) intrinsic size calculations for non-visible children
-    const VIRTUAL_THRESHOLD = 50; // Only virtualize if more than this many children
-    const VIRTUAL_BUFFER = 5; // Extra rows above/below visible area
-
+    const VIRTUAL_THRESHOLD = 50;
     if (context.isScrollableParent && !isRow && flexChildren.length > VIRTUAL_THRESHOLD) {
-      const scrollY = context.scrollOffset?.y || 0;
-      const viewportHeight = context.viewport.height;
-
-      // Sample first few children to estimate uniform height
-      const sampleSize = Math.min(5, flexChildren.length);
-      let totalSampleHeight = 0;
-      for (let i = 0; i < sampleSize; i++) {
-        const child = flexChildren[i];
-        if (isRenderable(child)) {
-          const size = this._cachedIntrinsicSize(child, this._makeIntrinsicSizeContext(context.availableSpace, context.parentStyle));
-          totalSampleHeight += size.height;
-        } else {
-          totalSampleHeight += 1; // Default row height
-        }
-      }
-      const estimatedRowHeight = Math.max(1, Math.ceil(totalSampleHeight / sampleSize));
-      // Include gap in stride for positioning calculations
-      const rowStride = estimatedRowHeight + gap;
-
-      // Calculate visible range using row stride (height + gap)
-      const startIndex = Math.max(0, Math.floor(scrollY / rowStride) - VIRTUAL_BUFFER);
-      const endIndex = Math.min(flexChildren.length, Math.ceil((scrollY + viewportHeight) / rowStride) + VIRTUAL_BUFFER);
-
-      if (logger.isDebugEnabled()) {
-        logger.debug(`Virtual layout: ${flexChildren.length} children, visible ${startIndex}-${endIndex}, rowHeight=${estimatedRowHeight}, gap=${gap}`);
-      }
-
-      // Create layout nodes only for visible children
-      const nodes: LayoutNode[] = [];
-      let currentY = context.parentBounds.y;
-
-      for (let i = 0; i < flexChildren.length; i++) {
-        const child = flexChildren[i];
-
-        if (i >= startIndex && i < endIndex) {
-          // Full layout for visible children
-          let childBounds: Bounds = {
-            x: context.parentBounds.x,
-            y: currentY,
-            width: context.availableSpace.width,
-            height: estimatedRowHeight
-          };
-          // Apply position: relative visual offset (preserves normal-flow space)
-          childBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child, context));
-          const childNode = this.calculateLayout(child, { ...context, parentBounds: childBounds }, parentNode);
-          nodes.push(childNode);
-          currentY += childNode.bounds.height + gap;
-        } else {
-          // Placeholder for non-visible children (minimal node, skips intrinsic calc)
-          const placeholderBounds: Bounds = {
-            x: context.parentBounds.x,
-            y: currentY,
-            width: context.availableSpace.width,
-            height: estimatedRowHeight
-          };
-          const zeroDims = { top: 0, right: 0, bottom: 0, left: 0, horizontal: 0, vertical: 0 };
-          nodes.push({
-            element: child,
-            bounds: placeholderBounds,
-            contentBounds: placeholderBounds,
-            visible: false,
-            children: [],
-            computedStyle: {},
-            layoutProps: this._getCachedLayoutProps(child, context),
-            boxModel: {
-              content: { width: placeholderBounds.width, height: placeholderBounds.height },
-              padding: zeroDims,
-              border: zeroDims,
-              margin: zeroDims,
-              total: { width: placeholderBounds.width, height: placeholderBounds.height }
-            },
-            zIndex: 0,
-          });
-          currentY += rowStride;
-        }
-      }
-
-      // Handle absolute children
-      for (const child of absoluteChildren) {
-        nodes.push(this._layoutAbsolute(child, context, parentNode));
-      }
-
-      return nodes;
+      return this._layoutFlexVirtual(flexChildren, absoluteChildren, context, parentNode, gap);
     }
 
     // Step 1: Calculate hypothetical sizes for flex children
     const intrinsicStartTime = traceEnabled ? performance.now() : 0;
-    const flexItems = flexChildren.map(child => {
-      const childProps = this._getCachedLayoutProps(child, context);
-      const childStyle = this._getCachedStyle(child, context.parentStyle, context);
-
-      // Calculate intrinsic size (content only, WITHOUT padding/borders for flex)
-      // Flex algorithm handles padding separately
-      let contentSize = { width: 10, height: 1 }; // Default fallback
-      if (isRenderable(child)) {
-        try {
-          contentSize = this._cachedIntrinsicSize(child, this._makeIntrinsicSizeContext(context.availableSpace, context.parentStyle));
-        } catch (error) {
-          logger.error(`Error calculating intrinsic size for element ${child.type}`, error instanceof Error ? error : undefined);
-        }
-      } else {
-        // For non-renderable elements (containers), calculate intrinsic size
-        contentSize = this._calculateIntrinsicSize(child, childStyle, context);
-      }
-      const intrinsicSize = contentSize; // Use content size directly, don't add padding yet
-
-      // Calculate margins
-      const margin = childStyle.margin || 0;
-      let marginMain = 0;
-      let marginCross = 0;
-      let marginStart = 0;  // For main axis positioning
-      let marginEnd = 0;
-      let marginCrossStart = 0;  // For cross axis positioning
-      let marginCrossEnd = 0;
-
-      if (typeof margin === 'number') {
-        marginMain = margin * 2;
-        marginCross = margin * 2;
-        marginStart = margin;
-        marginEnd = margin;
-        marginCrossStart = margin;
-        marginCrossEnd = margin;
-      } else if (typeof margin === 'object') {
-        const m = margin as BoxSpacing;
-        if (isRow) {
-          marginMain = (m.left || 0) + (m.right || 0);
-          marginCross = (m.top || 0) + (m.bottom || 0);
-          marginStart = m.left || 0;
-          marginEnd = m.right || 0;
-          marginCrossStart = m.top || 0;
-          marginCrossEnd = m.bottom || 0;
-        } else {
-          marginMain = (m.top || 0) + (m.bottom || 0);
-          marginCross = (m.left || 0) + (m.right || 0);
-          marginStart = m.top || 0;
-          marginEnd = m.bottom || 0;
-          marginCrossStart = m.left || 0;
-          marginCrossEnd = m.right || 0;
-        }
-      }
-
-      // Calculate padding
-      const padding = childStyle.padding || 0;
-      let paddingMain = 0;
-      let paddingCross = 0;
-
-      if (typeof padding === 'number') {
-        paddingMain = padding * 2;
-        paddingCross = padding * 2;
-      } else if (typeof padding === 'object') {
-        const p = padding as BoxSpacing;
-        if (isRow) {
-          paddingMain = (p.left || 0) + (p.right || 0);
-          paddingCross = (p.top || 0) + (p.bottom || 0);
-        } else {
-          paddingMain = (p.top || 0) + (p.bottom || 0);
-          paddingCross = (p.left || 0) + (p.right || 0);
-        }
-      }
-
-      // Calculate border dimensions
-      const borderTop = childStyle.borderTop || (childStyle.border && childStyle.border !== 'none' ? childStyle.border : undefined);
-      const borderRight = childStyle.borderRight || (childStyle.border && childStyle.border !== 'none' ? childStyle.border : undefined);
-      const borderBottom = childStyle.borderBottom || (childStyle.border && childStyle.border !== 'none' ? childStyle.border : undefined);
-      const borderLeft = childStyle.borderLeft || (childStyle.border && childStyle.border !== 'none' ? childStyle.border : undefined);
-
-      const borderTopWidth = borderTop && borderTop !== 'none' ? 1 : 0;
-      const borderRightWidth = borderRight && borderRight !== 'none' ? 1 : 0;
-      const borderBottomWidth = borderBottom && borderBottom !== 'none' ? 1 : 0;
-      const borderLeftWidth = borderLeft && borderLeft !== 'none' ? 1 : 0;
-
-      let borderMain = 0;
-      let borderCross = 0;
-
-      if (isRow) {
-        borderMain = borderLeftWidth + borderRightWidth;
-        borderCross = borderTopWidth + borderBottomWidth;
-      } else {
-        borderMain = borderTopWidth + borderBottomWidth;
-        borderCross = borderLeftWidth + borderRightWidth;
-      }
-
-      // Calculate flex basis (base size on main axis)
-      // flexBasis should be content size + padding + borders (element's full outer size)
-      //
-      // Use intrinsicSize for renderable elements (handles responsive sizing like percentage-based images)
-      // Each element's intrinsicSize() is responsible for returning the correct size:
-      // - Containers with explicit style.width/height return those values
-      // - Images with percentage dimensions calculate from available space
-      // - Canvas returns props.width/height
-      const useIntrinsicSize = isRenderable(child);
-
-      // Check if renderable element intentionally returns zero size (e.g., dialogs, overlays)
-      // These elements should not participate in normal layout flow
-      const intentionallyZeroSize = useIntrinsicSize &&
-                                    intrinsicSize.width === 0 &&
-                                    intrinsicSize.height === 0;
-
-      let flexBasisValue: number;
-      if (childProps.flexBasis === 'auto') {
-        if (isRow) {
-          // If element intentionally returns zero size (dialogs, overlays), respect that
-          if (intentionallyZeroSize) {
-            flexBasisValue = 0;
-          } else if (childProps.width === 'fill') {
-            // For "fill" width in flex context, treat as flexible
-            flexBasisValue = 0;
-          } else if (typeof childProps.width === 'number') {
-            // Explicit numeric width - use the larger of explicit and intrinsic
-            // This handles: text with style.width (intrinsic = text length, explicit = style.width)
-            // and img with percentage (intrinsic = calculated from %, explicit = placeholder)
-            const intrinsicOuter = intrinsicSize.width + paddingMain + borderMain;
-            flexBasisValue = Math.max(childProps.width, intrinsicOuter);
-          } else if (typeof childProps.width === 'string' && childProps.width.endsWith('%')) {
-            // Percentage width - resolve against available main-axis space
-            const pct = parseFloat(childProps.width) / 100;
-            flexBasisValue = Math.floor(mainAxisSize * pct);
-          } else {
-            // No explicit width - use intrinsic size + padding + borders
-            flexBasisValue = intrinsicSize.width + paddingMain + borderMain;
-          }
-        } else {
-          // If element intentionally returns zero size (dialogs, overlays), respect that
-          if (intentionallyZeroSize) {
-            flexBasisValue = 0;
-          } else if (childProps.height === 'fill') {
-            // For "fill" height in flex context, treat as flexible
-            flexBasisValue = 0;
-          } else if (typeof childProps.height === 'number') {
-            // Explicit numeric height - use the larger of explicit and intrinsic
-            // This handles: text with style.height (intrinsic = line count, explicit = style.height)
-            // and img with percentage (intrinsic = calculated from %, explicit = placeholder)
-            const intrinsicOuter = intrinsicSize.height + paddingMain + borderMain;
-            flexBasisValue = Math.max(childProps.height, intrinsicOuter);
-          } else if (typeof childProps.height === 'string' && childProps.height.endsWith('%')) {
-            // Percentage height - resolve against available main-axis space
-            const pct = parseFloat(childProps.height) / 100;
-            flexBasisValue = Math.floor(mainAxisSize * pct);
-          } else {
-            // No explicit height - use intrinsic size + padding + borders
-            flexBasisValue = intrinsicSize.height + paddingMain + borderMain;
-          }
-        }
-      } else {
-        flexBasisValue = typeof childProps.flexBasis === 'number' ? childProps.flexBasis : 0;
-      }
-
-      // Extract min/max constraints from style
-      // These constrain how much an item can grow or shrink
-      const minMain = isRow
-        ? (typeof childStyle.minWidth === 'number' ? childStyle.minWidth : 0)
-        : (typeof childStyle.minHeight === 'number' ? childStyle.minHeight : 0);
-      const maxMain = isRow
-        ? (typeof childStyle.maxWidth === 'number' ? childStyle.maxWidth : Infinity)
-        : (typeof childStyle.maxHeight === 'number' ? childStyle.maxHeight : Infinity);
-      const minCross = isRow
-        ? (typeof childStyle.minHeight === 'number' ? childStyle.minHeight : 0)
-        : (typeof childStyle.minWidth === 'number' ? childStyle.minWidth : 0);
-      const maxCross = isRow
-        ? (typeof childStyle.maxHeight === 'number' ? childStyle.maxHeight : Infinity)
-        : (typeof childStyle.maxWidth === 'number' ? childStyle.maxWidth : Infinity);
-
-      // Auto-set flexGrow for "fill" elements if not explicitly set
-      let flexGrow = childProps.flexGrow || 0;
-      if (flexGrow === 0) {
-        if ((isRow && childProps.width === 'fill') ||
-            (!isRow && childProps.height === 'fill')) {
-          flexGrow = 1; // Auto-grow for fill elements
-        }
-      }
-
-      // Calculate base cross size (also needs padding and borders added)
-      let baseCross: number;
-
-      // For single-line elements (like buttons, text, input) without border,
-      // don't add vertical padding to cross-axis - they don't expand vertically
-      // This is determined by checking if intrinsic height is 1 (for row layout)
-      // or intrinsic width is 1 (for column layout) with no border
-      let effectivePaddingCross = paddingCross;
-      if (isRow && intrinsicSize.height === 1 && borderCross === 0) {
-        effectivePaddingCross = 0;
-      } else if (!isRow && intrinsicSize.width === 1 && borderCross === 0) {
-        effectivePaddingCross = 0;
-      }
-
-      // Determine if this item has stretch alignment (not whether to pre-stretch now)
-      // Items with explicit cross-axis size should not stretch even with align-items: stretch
-      const _isExplicitSize = (v: unknown) => typeof v === 'number' || (typeof v === 'string' && v.endsWith('%'));
-      const hasExplicitCrossSize = isRow
-        ? _isExplicitSize(childProps.height)
-        : _isExplicitSize(childProps.width);
-
-      const hasStretchAlignment = (childProps.alignSelf === 'auto' || childProps.alignSelf === undefined || childProps.alignSelf === 'stretch') &&
-                                  (flexProps.alignItems === undefined || flexProps.alignItems === 'stretch');
-
-      // shouldStretch: item wants stretch AND doesn't have explicit size
-      const shouldStretch = hasStretchAlignment && !hasExplicitCrossSize;
-
-      // Pre-stretch to container size only for nowrap (wrapping defers stretch to line sizing phase)
-      // With wrap, we calculate intrinsic sizes first, then stretch to line size in positioning phase
-      const willPreStretchToContainer = shouldStretch && !isWrap;
-
-
-      if (isRow) {
-        // Elements that intentionally return zero size (dialogs, overlays) should not take cross-axis space
-        if (intentionallyZeroSize) {
-          baseCross = 0;
-        } else if (typeof childProps.height === 'number') {
-          // Explicit numeric height - use the larger of explicit and intrinsic
-          const intrinsicOuter = intrinsicSize.height + effectivePaddingCross + borderCross;
-          baseCross = Math.max(childProps.height, intrinsicOuter);
-        } else if (typeof childProps.height === 'string' && childProps.height.endsWith('%')) {
-          // Percentage height - resolve against cross axis container size
-          const pct = parseFloat(childProps.height) / 100;
-          baseCross = Math.floor(crossAxisSize * pct);
-        } else if (willPreStretchToContainer) {
-          // For nowrap + stretch: stretch to container size
-          // If content is larger, it will overflow (correct CSS behavior)
-          baseCross = crossAxisSize;
-        } else {
-          // Use intrinsic size + padding + borders for cross axis (outer size)
-          baseCross = intrinsicSize.height + effectivePaddingCross + borderCross;
-        }
-      } else {
-        // Elements that intentionally return zero size (dialogs, overlays) should not take cross-axis space
-        if (intentionallyZeroSize) {
-          baseCross = 0;
-        } else if (typeof childProps.width === 'number') {
-          // Explicit numeric width - use the larger of explicit and intrinsic
-          const intrinsicOuter = intrinsicSize.width + effectivePaddingCross + borderCross;
-          baseCross = Math.max(childProps.width, intrinsicOuter);
-        } else if (typeof childProps.width === 'string' && childProps.width.endsWith('%')) {
-          // Percentage width - resolve against cross axis container size
-          const pct = parseFloat(childProps.width) / 100;
-          baseCross = Math.floor(crossAxisSize * pct);
-        } else if (willPreStretchToContainer) {
-          // For nowrap + stretch: stretch to container size
-          // If content is larger, it will overflow (correct CSS behavior)
-          baseCross = crossAxisSize;
-        } else {
-          // Use intrinsic size + padding + borders for cross axis (outer size)
-          baseCross = intrinsicSize.width + effectivePaddingCross + borderCross;
-        }
-      }
-
-      return {
-        element: child,
-        flexGrow: flexGrow,
-        flexShrink: childProps.flexShrink ?? 1,
-        flexBasis: flexBasisValue,
-        hypotheticalMain: flexBasisValue,  // Base size including padding
-        finalMain: flexBasisValue,  // Will be adjusted during grow/shrink calculation
-        outerMain: flexBasisValue + marginMain,  // Outer size with padding + margin
-        baseCross: baseCross,
-        outerCross: baseCross + marginCross,  // Outer cross with padding + margin
-        intrinsicSize,
-        style: childStyle,
-        props: childProps,
-        marginMain,
-        marginCross,
-        marginStart,
-        marginEnd,
-        marginCrossStart,
-        marginCrossEnd,
-        paddingMain,
-        paddingCross,
-        shouldStretch,  // Whether this item should stretch to fill line cross-axis
-        minMain,        // Min constraint on main axis
-        maxMain,        // Max constraint on main axis
-        minCross,       // Min constraint on cross axis
-        maxCross,       // Max constraint on cross axis
-      };
-    });
+    const flexItems = this._calculateFlexItems(
+      flexChildren, context, flexProps, isRow, isWrap, mainAxisSize, crossAxisSize
+    );
 
     if (traceEnabled) {
       logger.trace(`Intrinsic sizes calculated in ${(performance.now() - intrinsicStartTime).toFixed(2)}ms`, {
@@ -894,12 +545,6 @@ export class LayoutEngine {
     }
 
     // Step 2: Collect items into flex lines
-    interface FlexLine {
-      items: typeof flexItems;
-      mainSize: number;
-      crossSize: number;
-    }
-
     const flexLines: FlexLine[] = [];
     const lineStartTime = traceEnabled ? performance.now() : 0;
 
@@ -1086,8 +731,476 @@ export class LayoutEngine {
       logger.trace(`Flexible lengths resolved in ${(performance.now() - resolveLengthsStartTime).toFixed(2)}ms`);
     }
 
-    // Step 6: Position items on main axis (justify-content) and cross axis (align-items)
+    // Step 6: Position items and create layout nodes
     const positioningStartTime = traceEnabled ? performance.now() : 0;
+    const nodes = this._positionFlexItems(
+      flexLines, linePositions, absoluteChildren, context, parentNode,
+      flexProps, isRow, isReverse, gap, mainAxisSize
+    );
+
+    if (traceEnabled) {
+      logger.trace(`Items positioned in ${(performance.now() - positioningStartTime).toFixed(2)}ms`);
+    }
+
+    const flexTotalTime = performance.now() - flexStartTime;
+    if (traceEnabled) {
+      logger.trace(`Flexbox layout completed in ${flexTotalTime.toFixed(2)}ms`, {
+        parentId: parentNode.element.id,
+        nodeCount: nodes.length,
+        lineCount: flexLines.length,
+      });
+    }
+
+    if (flexTotalTime > 20) {
+      logger.warn(`Slow flexbox layout: ${flexTotalTime.toFixed(2)}ms for ${nodes.length} items in ${flexLines.length} lines`);
+    }
+
+    return nodes;
+  }
+
+
+
+  // Absolute positioning
+  private _layoutAbsolute(
+    element: Element,
+    context: LayoutContext,
+    parentNode: LayoutNode
+  ): LayoutNode {
+    const layoutProps = this._getCachedLayoutProps(element, context);
+    const style = this._getCachedStyle(element, context.parentStyle, context);
+
+    // Calculate position based on top/right/bottom/left
+    const containingBlock = layoutProps.position === 'fixed' ?
+      context.viewport :
+      context.parentBounds;
+
+    let x = containingBlock.x;
+    let y = containingBlock.y;
+    let width: number | 'auto' = 'auto';
+    let height: number | 'auto' = 'auto';
+
+    // Calculate position and size
+    if (layoutProps.left !== undefined) {
+      x = containingBlock.x + layoutProps.left;
+    } else if (layoutProps.right !== undefined) {
+      x = containingBlock.x + containingBlock.width - layoutProps.right;
+    }
+
+    if (layoutProps.top !== undefined) {
+      y = containingBlock.y + layoutProps.top;
+    } else if (layoutProps.bottom !== undefined) {
+      y = containingBlock.y + containingBlock.height - layoutProps.bottom;
+    }
+
+    // Use explicit width/height if provided
+    if (layoutProps.width !== undefined && typeof layoutProps.width === 'number') {
+      width = layoutProps.width;
+    }
+    if (layoutProps.height !== undefined && typeof layoutProps.height === 'number') {
+      height = layoutProps.height;
+    }
+
+    // Calculate intrinsic size if needed
+    const intrinsicSize = this._calculateIntrinsicSize(element, style, context);
+    if (width === 'auto') width = intrinsicSize.width;
+    if (height === 'auto') height = intrinsicSize.height;
+
+
+    const bounds: Bounds = {
+      x,
+      y,
+      width: typeof width === 'number' ? width : intrinsicSize.width,
+      height: typeof height === 'number' ? height : intrinsicSize.height,
+    };
+
+    const absoluteContext: LayoutContext = {
+      ...context,
+      parentBounds: bounds,
+      availableSpace: { width: bounds.width, height: bounds.height },
+    };
+
+    return this.calculateLayout(element, absoluteContext, parentNode);
+  }
+
+  // Flex sub-methods
+
+  /** Step 1: Calculate hypothetical sizes, margins, and constraints for flex children. */
+  private _calculateFlexItems(
+    flexChildren: Element[],
+    context: LayoutContext,
+    flexProps: AdvancedLayoutProps,
+    isRow: boolean,
+    isWrap: boolean,
+    mainAxisSize: number,
+    crossAxisSize: number,
+  ): FlexItem[] {
+    return flexChildren.map(child => {
+      const childProps = this._getCachedLayoutProps(child, context);
+      const childStyle = this._getCachedStyle(child, context.parentStyle, context);
+
+      // Calculate intrinsic size (content only, WITHOUT padding/borders for flex)
+      // Flex algorithm handles padding separately
+      let contentSize = { width: 10, height: 1 }; // Default fallback
+      if (isRenderable(child)) {
+        try {
+          contentSize = this._cachedIntrinsicSize(child, this._makeIntrinsicSizeContext(context.availableSpace, context.parentStyle));
+        } catch (error) {
+          logger.error(`Error calculating intrinsic size for element ${child.type}`, error instanceof Error ? error : undefined);
+        }
+      } else {
+        // For non-renderable elements (containers), calculate intrinsic size
+        contentSize = this._calculateIntrinsicSize(child, childStyle, context);
+      }
+      const intrinsicSize = contentSize; // Use content size directly, don't add padding yet
+
+      // Calculate margins
+      const margin = childStyle.margin || 0;
+      let marginMain = 0;
+      let marginCross = 0;
+      let marginStart = 0;  // For main axis positioning
+      let marginEnd = 0;
+      let marginCrossStart = 0;  // For cross axis positioning
+      let marginCrossEnd = 0;
+
+      if (typeof margin === 'number') {
+        marginMain = margin * 2;
+        marginCross = margin * 2;
+        marginStart = margin;
+        marginEnd = margin;
+        marginCrossStart = margin;
+        marginCrossEnd = margin;
+      } else if (typeof margin === 'object') {
+        const m = margin as BoxSpacing;
+        if (isRow) {
+          marginMain = (m.left || 0) + (m.right || 0);
+          marginCross = (m.top || 0) + (m.bottom || 0);
+          marginStart = m.left || 0;
+          marginEnd = m.right || 0;
+          marginCrossStart = m.top || 0;
+          marginCrossEnd = m.bottom || 0;
+        } else {
+          marginMain = (m.top || 0) + (m.bottom || 0);
+          marginCross = (m.left || 0) + (m.right || 0);
+          marginStart = m.top || 0;
+          marginEnd = m.bottom || 0;
+          marginCrossStart = m.left || 0;
+          marginCrossEnd = m.right || 0;
+        }
+      }
+
+      // Calculate padding
+      const padding = childStyle.padding || 0;
+      let paddingMain = 0;
+      let paddingCross = 0;
+
+      if (typeof padding === 'number') {
+        paddingMain = padding * 2;
+        paddingCross = padding * 2;
+      } else if (typeof padding === 'object') {
+        const p = padding as BoxSpacing;
+        if (isRow) {
+          paddingMain = (p.left || 0) + (p.right || 0);
+          paddingCross = (p.top || 0) + (p.bottom || 0);
+        } else {
+          paddingMain = (p.top || 0) + (p.bottom || 0);
+          paddingCross = (p.left || 0) + (p.right || 0);
+        }
+      }
+
+      // Calculate border dimensions
+      const borderTop = childStyle.borderTop || (childStyle.border && childStyle.border !== 'none' ? childStyle.border : undefined);
+      const borderRight = childStyle.borderRight || (childStyle.border && childStyle.border !== 'none' ? childStyle.border : undefined);
+      const borderBottom = childStyle.borderBottom || (childStyle.border && childStyle.border !== 'none' ? childStyle.border : undefined);
+      const borderLeft = childStyle.borderLeft || (childStyle.border && childStyle.border !== 'none' ? childStyle.border : undefined);
+
+      const borderTopWidth = borderTop && borderTop !== 'none' ? 1 : 0;
+      const borderRightWidth = borderRight && borderRight !== 'none' ? 1 : 0;
+      const borderBottomWidth = borderBottom && borderBottom !== 'none' ? 1 : 0;
+      const borderLeftWidth = borderLeft && borderLeft !== 'none' ? 1 : 0;
+
+      let borderMain = 0;
+      let borderCross = 0;
+
+      if (isRow) {
+        borderMain = borderLeftWidth + borderRightWidth;
+        borderCross = borderTopWidth + borderBottomWidth;
+      } else {
+        borderMain = borderTopWidth + borderBottomWidth;
+        borderCross = borderLeftWidth + borderRightWidth;
+      }
+
+      // Calculate flex basis (base size on main axis)
+      // flexBasis should be content size + padding + borders (element's full outer size)
+      //
+      // Use intrinsicSize for renderable elements (handles responsive sizing like percentage-based images)
+      // Each element's intrinsicSize() is responsible for returning the correct size:
+      // - Containers with explicit style.width/height return those values
+      // - Images with percentage dimensions calculate from available space
+      // - Canvas returns props.width/height
+      const useIntrinsicSize = isRenderable(child);
+
+      // Check if renderable element intentionally returns zero size (e.g., dialogs, overlays)
+      // These elements should not participate in normal layout flow
+      const intentionallyZeroSize = useIntrinsicSize &&
+                                    intrinsicSize.width === 0 &&
+                                    intrinsicSize.height === 0;
+
+      let flexBasisValue: number;
+      if (childProps.flexBasis === 'auto') {
+        if (isRow) {
+          // If element intentionally returns zero size (dialogs, overlays), respect that
+          if (intentionallyZeroSize) {
+            flexBasisValue = 0;
+          } else if (childProps.width === 'fill') {
+            // For "fill" width in flex context, treat as flexible
+            flexBasisValue = 0;
+          } else if (typeof childProps.width === 'number') {
+            // Explicit numeric width - use the larger of explicit and intrinsic
+            const intrinsicOuter = intrinsicSize.width + paddingMain + borderMain;
+            flexBasisValue = Math.max(childProps.width, intrinsicOuter);
+          } else if (typeof childProps.width === 'string' && childProps.width.endsWith('%')) {
+            // Percentage width - resolve against available main-axis space
+            const pct = parseFloat(childProps.width) / 100;
+            flexBasisValue = Math.floor(mainAxisSize * pct);
+          } else {
+            // No explicit width - use intrinsic size + padding + borders
+            flexBasisValue = intrinsicSize.width + paddingMain + borderMain;
+          }
+        } else {
+          // If element intentionally returns zero size (dialogs, overlays), respect that
+          if (intentionallyZeroSize) {
+            flexBasisValue = 0;
+          } else if (childProps.height === 'fill') {
+            // For "fill" height in flex context, treat as flexible
+            flexBasisValue = 0;
+          } else if (typeof childProps.height === 'number') {
+            // Explicit numeric height - use the larger of explicit and intrinsic
+            const intrinsicOuter = intrinsicSize.height + paddingMain + borderMain;
+            flexBasisValue = Math.max(childProps.height, intrinsicOuter);
+          } else if (typeof childProps.height === 'string' && childProps.height.endsWith('%')) {
+            // Percentage height - resolve against available main-axis space
+            const pct = parseFloat(childProps.height) / 100;
+            flexBasisValue = Math.floor(mainAxisSize * pct);
+          } else {
+            // No explicit height - use intrinsic size + padding + borders
+            flexBasisValue = intrinsicSize.height + paddingMain + borderMain;
+          }
+        }
+      } else {
+        flexBasisValue = typeof childProps.flexBasis === 'number' ? childProps.flexBasis : 0;
+      }
+
+      // Extract min/max constraints from style
+      const minMain = isRow
+        ? (typeof childStyle.minWidth === 'number' ? childStyle.minWidth : 0)
+        : (typeof childStyle.minHeight === 'number' ? childStyle.minHeight : 0);
+      const maxMain = isRow
+        ? (typeof childStyle.maxWidth === 'number' ? childStyle.maxWidth : Infinity)
+        : (typeof childStyle.maxHeight === 'number' ? childStyle.maxHeight : Infinity);
+      const minCross = isRow
+        ? (typeof childStyle.minHeight === 'number' ? childStyle.minHeight : 0)
+        : (typeof childStyle.minWidth === 'number' ? childStyle.minWidth : 0);
+      const maxCross = isRow
+        ? (typeof childStyle.maxHeight === 'number' ? childStyle.maxHeight : Infinity)
+        : (typeof childStyle.maxWidth === 'number' ? childStyle.maxWidth : Infinity);
+
+      // Auto-set flexGrow for "fill" elements if not explicitly set
+      let flexGrow = childProps.flexGrow || 0;
+      if (flexGrow === 0) {
+        if ((isRow && childProps.width === 'fill') ||
+            (!isRow && childProps.height === 'fill')) {
+          flexGrow = 1; // Auto-grow for fill elements
+        }
+      }
+
+      // Calculate base cross size (also needs padding and borders added)
+      let baseCross: number;
+
+      // For single-line elements (like buttons, text, input) without border,
+      // don't add vertical padding to cross-axis
+      let effectivePaddingCross = paddingCross;
+      if (isRow && intrinsicSize.height === 1 && borderCross === 0) {
+        effectivePaddingCross = 0;
+      } else if (!isRow && intrinsicSize.width === 1 && borderCross === 0) {
+        effectivePaddingCross = 0;
+      }
+
+      // Determine if this item has stretch alignment
+      const _isExplicitSize = (v: unknown) => typeof v === 'number' || (typeof v === 'string' && v.endsWith('%'));
+      const hasExplicitCrossSize = isRow
+        ? _isExplicitSize(childProps.height)
+        : _isExplicitSize(childProps.width);
+
+      const hasStretchAlignment = (childProps.alignSelf === 'auto' || childProps.alignSelf === undefined || childProps.alignSelf === 'stretch') &&
+                                  (flexProps.alignItems === undefined || flexProps.alignItems === 'stretch');
+
+      const shouldStretch = hasStretchAlignment && !hasExplicitCrossSize;
+
+      // Pre-stretch to container size only for nowrap (wrapping defers stretch to line sizing phase)
+      const willPreStretchToContainer = shouldStretch && !isWrap;
+
+      if (isRow) {
+        if (intentionallyZeroSize) {
+          baseCross = 0;
+        } else if (typeof childProps.height === 'number') {
+          const intrinsicOuter = intrinsicSize.height + effectivePaddingCross + borderCross;
+          baseCross = Math.max(childProps.height, intrinsicOuter);
+        } else if (typeof childProps.height === 'string' && childProps.height.endsWith('%')) {
+          const pct = parseFloat(childProps.height) / 100;
+          baseCross = Math.floor(crossAxisSize * pct);
+        } else if (willPreStretchToContainer) {
+          baseCross = crossAxisSize;
+        } else {
+          baseCross = intrinsicSize.height + effectivePaddingCross + borderCross;
+        }
+      } else {
+        if (intentionallyZeroSize) {
+          baseCross = 0;
+        } else if (typeof childProps.width === 'number') {
+          const intrinsicOuter = intrinsicSize.width + effectivePaddingCross + borderCross;
+          baseCross = Math.max(childProps.width, intrinsicOuter);
+        } else if (typeof childProps.width === 'string' && childProps.width.endsWith('%')) {
+          const pct = parseFloat(childProps.width) / 100;
+          baseCross = Math.floor(crossAxisSize * pct);
+        } else if (willPreStretchToContainer) {
+          baseCross = crossAxisSize;
+        } else {
+          baseCross = intrinsicSize.width + effectivePaddingCross + borderCross;
+        }
+      }
+
+      return {
+        element: child,
+        flexGrow: flexGrow,
+        flexShrink: childProps.flexShrink ?? 1,
+        flexBasis: flexBasisValue,
+        hypotheticalMain: flexBasisValue,
+        finalMain: flexBasisValue,
+        outerMain: flexBasisValue + marginMain,
+        baseCross: baseCross,
+        outerCross: baseCross + marginCross,
+        intrinsicSize,
+        style: childStyle,
+        props: childProps,
+        marginMain,
+        marginCross,
+        marginStart,
+        marginEnd,
+        marginCrossStart,
+        marginCrossEnd,
+        paddingMain,
+        paddingCross,
+        shouldStretch,
+        minMain,
+        maxMain,
+        minCross,
+        maxCross,
+      };
+    });
+  }
+
+  /** Virtual layout optimization for scrollable column containers with 50+ children. */
+  private _layoutFlexVirtual(
+    flexChildren: Element[],
+    absoluteChildren: Element[],
+    context: LayoutContext,
+    parentNode: LayoutNode,
+    gap: number,
+  ): LayoutNode[] {
+    const VIRTUAL_BUFFER = 5;
+    const scrollY = context.scrollOffset?.y || 0;
+    const viewportHeight = context.viewport.height;
+
+    // Sample first few children to estimate uniform height
+    const sampleSize = Math.min(5, flexChildren.length);
+    let totalSampleHeight = 0;
+    for (let i = 0; i < sampleSize; i++) {
+      const child = flexChildren[i];
+      if (isRenderable(child)) {
+        const size = this._cachedIntrinsicSize(child, this._makeIntrinsicSizeContext(context.availableSpace, context.parentStyle));
+        totalSampleHeight += size.height;
+      } else {
+        totalSampleHeight += 1;
+      }
+    }
+    const estimatedRowHeight = Math.max(1, Math.ceil(totalSampleHeight / sampleSize));
+    const rowStride = estimatedRowHeight + gap;
+
+    // Calculate visible range
+    const startIndex = Math.max(0, Math.floor(scrollY / rowStride) - VIRTUAL_BUFFER);
+    const endIndex = Math.min(flexChildren.length, Math.ceil((scrollY + viewportHeight) / rowStride) + VIRTUAL_BUFFER);
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(`Virtual layout: ${flexChildren.length} children, visible ${startIndex}-${endIndex}, rowHeight=${estimatedRowHeight}, gap=${gap}`);
+    }
+
+    const nodes: LayoutNode[] = [];
+    let currentY = context.parentBounds.y;
+
+    for (let i = 0; i < flexChildren.length; i++) {
+      const child = flexChildren[i];
+
+      if (i >= startIndex && i < endIndex) {
+        let childBounds: Bounds = {
+          x: context.parentBounds.x,
+          y: currentY,
+          width: context.availableSpace.width,
+          height: estimatedRowHeight
+        };
+        childBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child, context));
+        const childNode = this.calculateLayout(child, { ...context, parentBounds: childBounds }, parentNode);
+        nodes.push(childNode);
+        currentY += childNode.bounds.height + gap;
+      } else {
+        // Placeholder for non-visible children
+        const placeholderBounds: Bounds = {
+          x: context.parentBounds.x,
+          y: currentY,
+          width: context.availableSpace.width,
+          height: estimatedRowHeight
+        };
+        const zeroDims = { top: 0, right: 0, bottom: 0, left: 0, horizontal: 0, vertical: 0 };
+        nodes.push({
+          element: child,
+          bounds: placeholderBounds,
+          contentBounds: placeholderBounds,
+          visible: false,
+          children: [],
+          computedStyle: {},
+          layoutProps: this._getCachedLayoutProps(child, context),
+          boxModel: {
+            content: { width: placeholderBounds.width, height: placeholderBounds.height },
+            padding: zeroDims,
+            border: zeroDims,
+            margin: zeroDims,
+            total: { width: placeholderBounds.width, height: placeholderBounds.height }
+          },
+          zIndex: 0,
+        });
+        currentY += rowStride;
+      }
+    }
+
+    for (const child of absoluteChildren) {
+      nodes.push(this._layoutAbsolute(child, context, parentNode));
+    }
+
+    return nodes;
+  }
+
+  /** Step 6: Position flex items on main axis (justify-content) and cross axis (align-items). */
+  private _positionFlexItems(
+    flexLines: FlexLine[],
+    linePositions: number[],
+    absoluteChildren: Element[],
+    context: LayoutContext,
+    parentNode: LayoutNode,
+    flexProps: AdvancedLayoutProps,
+    isRow: boolean,
+    isReverse: boolean,
+    gap: number,
+    mainAxisSize: number,
+  ): LayoutNode[] {
     const nodes: LayoutNode[] = [];
 
     flexLines.forEach((line, lineIndex) => {
@@ -1177,18 +1290,15 @@ export class LayoutEngine {
         switch (alignment) {
           case 'flex-start':
             crossPos = lineCrossStart + item.marginCrossStart;
-            // baseCross already includes padding+border (from explicit size or intrinsic+chrome)
             finalCross = item.baseCross;
             break;
 
           case 'flex-end':
-            // baseCross already includes padding+border (from explicit size or intrinsic+chrome)
             finalCross = item.baseCross;
             crossPos = lineCrossStart + lineCrossSize - finalCross - item.marginCrossEnd;
             break;
 
           case 'center': {
-            // baseCross already includes padding+border (from explicit size or intrinsic+chrome)
             finalCross = item.baseCross;
             const totalCross = finalCross + item.marginCross;
             crossPos = lineCrossStart + (lineCrossSize - totalCross) / 2 + item.marginCrossStart;
@@ -1198,8 +1308,6 @@ export class LayoutEngine {
           case 'stretch':
           default:
             crossPos = lineCrossStart + item.marginCrossStart;
-            // Only stretch if item allows stretching (no explicit cross-axis size)
-            // Items with explicit size should respect that size even with align-items: stretch
             if (item.shouldStretch) {
               finalCross = lineCrossSize - item.marginCross;
             } else {
@@ -1209,19 +1317,15 @@ export class LayoutEngine {
         }
 
         // Ensure non-container elements get at least their minimum size
-        // (containers can have 0 height, but buttons/text/etc need at least 1 line)
-        // Note: baseCross already includes padding+border (from explicit size or intrinsic+chrome)
         const isContainer = item.element.type === 'container';
         if (!isContainer) {
-          const intrinsicMinCross = item.baseCross;
-          finalCross = Math.max(finalCross, intrinsicMinCross);
+          finalCross = Math.max(finalCross, item.baseCross);
         }
 
         // Apply min/max constraints on cross axis
         finalCross = Math.max(item.minCross, Math.min(item.maxCross, finalCross));
 
         // Create bounds based on main/cross axes
-        // Note: finalMain already includes padding, we want total size including padding
         let bounds: Bounds;
         if (isRow) {
           bounds = {
@@ -1239,7 +1343,7 @@ export class LayoutEngine {
           };
         }
 
-        // Apply position: relative visual offset (preserves normal-flow space)
+        // Apply position: relative visual offset
         const offsetBounds = this._applyRelativeOffset(bounds, this._getCachedLayoutProps(item.element, context));
 
         const childContext: LayoutContext = {
@@ -1254,483 +1358,14 @@ export class LayoutEngine {
     });
 
     // Add absolutely positioned children
-    absoluteChildren.forEach(child => {
-      const absoluteNode = this._layoutAbsolute(child, context, parentNode);
-      nodes.push(absoluteNode);
-    });
-
-    if (traceEnabled) {
-      logger.trace(`Items positioned in ${(performance.now() - positioningStartTime).toFixed(2)}ms`);
-    }
-
-    const flexTotalTime = performance.now() - flexStartTime;
-    if (traceEnabled) {
-      logger.trace(`Flexbox layout completed in ${flexTotalTime.toFixed(2)}ms`, {
-        parentId: parentNode.element.id,
-        nodeCount: nodes.length,
-        lineCount: flexLines.length,
-      });
-    }
-
-    if (flexTotalTime > 20) {
-      logger.warn(`Slow flexbox layout: ${flexTotalTime.toFixed(2)}ms for ${nodes.length} items in ${flexLines.length} lines`);
+    for (const child of absoluteChildren) {
+      nodes.push(this._layoutAbsolute(child, context, parentNode));
     }
 
     return nodes;
   }
 
-
-
-  // Absolute positioning
-  private _layoutAbsolute(
-    element: Element,
-    context: LayoutContext,
-    parentNode: LayoutNode
-  ): LayoutNode {
-    const layoutProps = this._getCachedLayoutProps(element, context);
-    const style = this._getCachedStyle(element, context.parentStyle, context);
-
-    // Calculate position based on top/right/bottom/left
-    const containingBlock = layoutProps.position === 'fixed' ?
-      context.viewport :
-      context.parentBounds;
-
-    let x = containingBlock.x;
-    let y = containingBlock.y;
-    let width: number | 'auto' = 'auto';
-    let height: number | 'auto' = 'auto';
-
-    // Calculate position and size
-    if (layoutProps.left !== undefined) {
-      x = containingBlock.x + layoutProps.left;
-    } else if (layoutProps.right !== undefined) {
-      x = containingBlock.x + containingBlock.width - layoutProps.right;
-    }
-
-    if (layoutProps.top !== undefined) {
-      y = containingBlock.y + layoutProps.top;
-    } else if (layoutProps.bottom !== undefined) {
-      y = containingBlock.y + containingBlock.height - layoutProps.bottom;
-    }
-
-    // Use explicit width/height if provided
-    if (layoutProps.width !== undefined && typeof layoutProps.width === 'number') {
-      width = layoutProps.width;
-    }
-    if (layoutProps.height !== undefined && typeof layoutProps.height === 'number') {
-      height = layoutProps.height;
-    }
-
-    // Calculate intrinsic size if needed
-    const intrinsicSize = this._calculateIntrinsicSize(element, style, context);
-    if (width === 'auto') width = intrinsicSize.width;
-    if (height === 'auto') height = intrinsicSize.height;
-
-
-    const bounds: Bounds = {
-      x,
-      y,
-      width: typeof width === 'number' ? width : intrinsicSize.width,
-      height: typeof height === 'number' ? height : intrinsicSize.height,
-    };
-
-    const absoluteContext: LayoutContext = {
-      ...context,
-      parentBounds: bounds,
-      availableSpace: { width: bounds.width, height: bounds.height },
-    };
-
-    return this.calculateLayout(element, absoluteContext, parentNode);
-  }
-
   // Helper methods
-
-  /**
-   * Compute interpolated style from a CSS animation.
-   * Returns {} if no animation is active.
-   * Ephemeral — computed fresh each frame from AnimationState + performance.now().
-   * Mirrors the canvas _terminalWidth pattern: resolved values never written to props.style.
-   */
-  private _getAnimatedStyle(element: Element): Partial<Style> {
-    const anim = element._animationState;
-    if (!anim || anim.keyframes.length === 0) return {};
-
-    const now = performance.now();
-    const elapsed = now - anim.startTime - anim.delay;
-
-    // Still in delay period
-    if (elapsed < 0) {
-      if (anim.fillMode === 'backwards' || anim.fillMode === 'both') {
-        // Show first keyframe during delay
-        const dir = anim.direction;
-        const first = (dir === 'reverse' || dir === 'alternate-reverse')
-          ? anim.keyframes[anim.keyframes.length - 1]
-          : anim.keyframes[0];
-        return { ...first.style };
-      }
-      return {};
-    }
-
-    // Calculate current iteration and progress within it
-    const iterationDuration = anim.duration;
-    if (iterationDuration <= 0) {
-      // Zero duration: jump to end
-      if (anim.fillMode === 'forwards' || anim.fillMode === 'both') {
-        return { ...anim.keyframes[anim.keyframes.length - 1].style };
-      }
-      return {};
-    }
-
-    const rawIteration = elapsed / iterationDuration;
-    const isFinite = anim.iterations !== Infinity;
-    const totalIterations = anim.iterations;
-
-    // Check if animation has finished
-    if (isFinite && rawIteration >= totalIterations) {
-      anim.finished = true;
-      if (anim.fillMode === 'forwards' || anim.fillMode === 'both') {
-        // Determine which end to show based on direction and iteration count
-        const lastIter = Math.ceil(totalIterations) - 1;
-        const reversed = anim.direction === 'reverse' ||
-          (anim.direction === 'alternate' && lastIter % 2 === 1) ||
-          (anim.direction === 'alternate-reverse' && lastIter % 2 === 0);
-        const endKf = reversed ? anim.keyframes[0] : anim.keyframes[anim.keyframes.length - 1];
-        return { ...endKf.style };
-      }
-      return {};
-    }
-
-    // Current iteration (0-based) and progress within it
-    const currentIteration = Math.floor(rawIteration);
-    let progress = rawIteration - currentIteration;
-
-    // Apply direction
-    const dir = anim.direction;
-    let reversed = false;
-    if (dir === 'reverse') {
-      reversed = true;
-    } else if (dir === 'alternate') {
-      reversed = currentIteration % 2 === 1;
-    } else if (dir === 'alternate-reverse') {
-      reversed = currentIteration % 2 === 0;
-    }
-
-    if (reversed) progress = 1 - progress;
-
-    // Apply timing function
-    progress = anim.timingFn(progress);
-
-    // Find keyframe pair and interpolate
-    const { from, to, localT } = findKeyframePair(anim.keyframes, progress);
-    return interpolateStyles(from.style, to.style, localT);
-  }
-
-  private _getContainerQueryStyles(element: Element, context?: LayoutContext): Partial<Style> {
-    if (!context?.stylesheets || !context.containerBounds) return {};
-    const ancestors = context.ancestors || [];
-    const containerSize = context.containerBounds;
-    let merged: Partial<Style> = {};
-    let hasAny = false;
-    for (const ss of context.stylesheets) {
-      if (!ss.hasContainerRules) continue;
-      const styles = ss.getContainerMatchingStyles(element, ancestors, containerSize, context.styleContext);
-      if (Object.keys(styles).length > 0) {
-        merged = hasAny ? { ...merged, ...styles } : styles;
-        hasAny = true;
-      }
-    }
-    return merged;
-  }
-
-  private _computeStyle(element: Element, parentStyle?: Style, context?: LayoutContext): Style {
-    // Merge parent style with element style
-    const defaultStyle: Style = {
-      color: getThemeColor('textPrimary'),
-      backgroundColor: getThemeColor('background'),
-      fontWeight: 'normal',
-      fontStyle: 'normal',
-      textDecoration: 'none',
-      border: 'none',
-      borderColor: getThemeColor('border'),
-      padding: 0,
-      margin: 0,
-      boxSizing: 'border-box',
-    };
-
-    // Apply element-type-specific defaults (lowest priority)
-    // These can be overridden by stylesheet and inline styles
-    let typeDefaults: Partial<Style> = {};
-    if (element.type === 'container' || element.type === 'dialog' || element.type === 'tab' || element.type === 'split-pane') {
-      typeDefaults = {
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'visible',
-      };
-    }
-
-    // Only inherit specific properties (whitelist approach)
-    const inheritableParentStyle: Partial<Style> = parentStyle ? {
-      // Text and color properties that should inherit
-      color: parentStyle.color,
-      backgroundColor : parentStyle.backgroundColor,
-      fontWeight: parentStyle.fontWeight,
-      fontStyle: parentStyle.fontStyle,
-      textDecoration: parentStyle.textDecoration,
-      dim: parentStyle.dim,
-      reverse: parentStyle.reverse,
-      borderColor: parentStyle.borderColor, // Border color can inherit for consistency
-    } : {};
-
-    const mergedStyle = {
-      ...defaultStyle,
-      ...typeDefaults,  // Type-specific defaults (can be overridden by stylesheet/inline)
-      ...inheritableParentStyle,
-      ...(element.props && element.props.style),  // Stylesheet + inline styles
-      ...this._getContainerQueryStyles(element, context),  // Container query styles
-      ...this._getAnimatedStyle(element),          // CSS animation resolved values
-    };
-
-    // Derive flexDirection from direction style property (used by split-pane)
-    if (mergedStyle.direction) {
-      mergedStyle.flexDirection = mergedStyle.direction === 'horizontal' ? 'row' : 'column';
-    }
-
-    // Normalize padding and margin: consolidate individual properties into BoxSpacing
-    return this._normalizeBoxSpacing(mergedStyle);
-  }
-
-  /**
-   * Consolidate individual padding/margin properties (paddingLeft, marginTop, etc.)
-   * into BoxSpacing objects for consistent handling
-   */
-  private _normalizeBoxSpacing(style: Style): Style {
-    const result = { ...style };
-
-    // Normalize padding
-    const paddingTop = style.paddingTop;
-    const paddingRight = style.paddingRight;
-    const paddingBottom = style.paddingBottom;
-    const paddingLeft = style.paddingLeft;
-
-    if (paddingTop !== undefined || paddingRight !== undefined ||
-        paddingBottom !== undefined || paddingLeft !== undefined) {
-      // Get base padding value (could be number or object)
-      const basePadding = style.padding;
-      let baseTop = 0, baseRight = 0, baseBottom = 0, baseLeft = 0;
-
-      if (typeof basePadding === 'number') {
-        baseTop = baseRight = baseBottom = baseLeft = basePadding;
-      } else if (basePadding && typeof basePadding === 'object') {
-        const p = basePadding as BoxSpacing;
-        baseTop = p.top || 0;
-        baseRight = p.right || 0;
-        baseBottom = p.bottom || 0;
-        baseLeft = p.left || 0;
-      }
-
-      // Override with individual properties
-      result.padding = {
-        top: paddingTop !== undefined ? paddingTop : baseTop,
-        right: paddingRight !== undefined ? paddingRight : baseRight,
-        bottom: paddingBottom !== undefined ? paddingBottom : baseBottom,
-        left: paddingLeft !== undefined ? paddingLeft : baseLeft,
-      };
-
-      // Clean up individual properties
-      delete result.paddingTop;
-      delete result.paddingRight;
-      delete result.paddingBottom;
-      delete result.paddingLeft;
-    }
-
-    // Normalize margin
-    const marginTop = style.marginTop;
-    const marginRight = style.marginRight;
-    const marginBottom = style.marginBottom;
-    const marginLeft = style.marginLeft;
-
-    if (marginTop !== undefined || marginRight !== undefined ||
-        marginBottom !== undefined || marginLeft !== undefined) {
-      // Get base margin value (could be number or object)
-      const baseMargin = style.margin;
-      let baseTop = 0, baseRight = 0, baseBottom = 0, baseLeft = 0;
-
-      if (typeof baseMargin === 'number') {
-        baseTop = baseRight = baseBottom = baseLeft = baseMargin;
-      } else if (baseMargin && typeof baseMargin === 'object') {
-        const m = baseMargin as BoxSpacing;
-        baseTop = m.top || 0;
-        baseRight = m.right || 0;
-        baseBottom = m.bottom || 0;
-        baseLeft = m.left || 0;
-      }
-
-      // Override with individual properties
-      result.margin = {
-        top: marginTop !== undefined ? marginTop : baseTop,
-        right: marginRight !== undefined ? marginRight : baseRight,
-        bottom: marginBottom !== undefined ? marginBottom : baseBottom,
-        left: marginLeft !== undefined ? marginLeft : baseLeft,
-      };
-
-      // Clean up individual properties
-      delete result.marginTop;
-      delete result.marginRight;
-      delete result.marginBottom;
-      delete result.marginLeft;
-    }
-
-    return result;
-  }
-
-  private _computeLayoutProps(element: Element, parentProps?: AdvancedLayoutProps, context?: LayoutContext): AdvancedLayoutProps {
-    // Filter out properties that should not be inherited from parent:
-    // - Size and position properties are element-specific
-    // - flexDirection defines how a container lays out its children, not how the container itself is laid out
-    // - gap is specific to each flex container
-    const inheritableParentProps = parentProps ? {
-      ...parentProps,
-      width: undefined,
-      height: undefined,
-      left: undefined,
-      right: undefined,
-      top: undefined,
-      bottom: undefined,
-      flexDirection: undefined,  // Each container defines its own flex direction
-      gap: undefined,
-    } : undefined;
-
-    const result = {
-      ...this._defaultLayoutProps,
-      ...inheritableParentProps,
-      ...element.props,
-    };
-
-    // Extract flex and layout properties from style section
-    // Merge container query and animated values on top of base style
-    const baseStyle = (element.props && element.props.style) || {};
-    const containerStyles = this._getContainerQueryStyles(element, context);
-    const animStyle = this._getAnimatedStyle(element);
-    const hasContainer = Object.keys(containerStyles).length > 0;
-    const hasAnim = Object.keys(animStyle).length > 0;
-    const style = (hasContainer || hasAnim)
-      ? { ...baseStyle, ...(hasContainer ? containerStyles : undefined), ...(hasAnim ? animStyle : undefined) }
-      : baseStyle;
-
-    // Support flex shorthand in style: flex: "1" or flex: "0 0 auto" etc
-    if (style.flex !== undefined) {
-      const flexValue = typeof style.flex === 'string' ? style.flex : String(style.flex);
-      const flexParts = flexValue.split(' ').map((part: string) => part.trim());
-
-      if (flexParts.length === 1) {
-        // flex: "1" -> flex-grow: 1, flex-shrink: 1, flex-basis: 0
-        const grow = parseFloat(flexParts[0]);
-        if (!isNaN(grow)) {
-          result.flexGrow = grow;
-          result.flexShrink = 1;
-          result.flexBasis = grow > 0 ? 0 : 'auto';
-        }
-      } else if (flexParts.length === 3) {
-        // flex: "1 1 auto" -> flex-grow: 1, flex-shrink: 1, flex-basis: auto
-        const grow = parseFloat(flexParts[0]);
-        const shrink = parseFloat(flexParts[1]);
-        const basis = flexParts[2] === 'auto' ? 'auto' : parseFloat(flexParts[2]);
-
-        if (!isNaN(grow)) result.flexGrow = grow;
-        if (!isNaN(shrink)) result.flexShrink = shrink;
-        if (basis === 'auto') {
-          result.flexBasis = 'auto';
-        } else if (basis !== undefined && !isNaN(basis as number)) {
-          result.flexBasis = basis;
-        }
-      }
-    }
-
-    // Support individual flex properties in style
-    if (style.flexGrow !== undefined) {
-      const grow = typeof style.flexGrow === 'string' ? parseFloat(style.flexGrow) : style.flexGrow;
-      if (!isNaN(grow)) result.flexGrow = grow;
-    }
-
-    if (style.flexShrink !== undefined) {
-      const shrink = typeof style.flexShrink === 'string' ? parseFloat(style.flexShrink) : style.flexShrink;
-      if (!isNaN(shrink)) result.flexShrink = shrink;
-    }
-
-    if (style.flexBasis !== undefined) {
-      if (style.flexBasis === 'auto') {
-        result.flexBasis = 'auto';
-      } else {
-        const basis = typeof style.flexBasis === 'string' ? parseFloat(style.flexBasis) : style.flexBasis;
-        if (!isNaN(basis)) result.flexBasis = basis;
-      }
-    }
-
-    // Support all layout properties in style
-    if (style.display !== undefined) result.display = style.display;
-    if (style.flexDirection !== undefined) result.flexDirection = style.flexDirection;
-    // Derive flexDirection from direction style property (used by split-pane)
-    if (style.direction === 'horizontal') result.flexDirection = 'row';
-    else if (style.direction === 'vertical') result.flexDirection = 'column';
-    if (style.justifyContent !== undefined) result.justifyContent = style.justifyContent;
-    if (style.alignItems !== undefined) result.alignItems = style.alignItems;
-    if (style.alignContent !== undefined) result.alignContent = style.alignContent;
-    if (style.flexWrap !== undefined) result.flexWrap = style.flexWrap;
-    if (style.alignSelf !== undefined) result.alignSelf = style.alignSelf;
-    if (style.gap !== undefined) result.gap = style.gap;
-    if (style.position !== undefined) result.position = style.position;
-    if (style.top !== undefined) result.top = style.top;
-    if (style.right !== undefined) result.right = style.right;
-    if (style.bottom !== undefined) result.bottom = style.bottom;
-    if (style.left !== undefined) result.left = style.left;
-    if (style.zIndex !== undefined) result.zIndex = style.zIndex;
-    if (style.overflow !== undefined) result.overflow = style.overflow;
-    // Parse width/height - XML attributes come as strings, need to convert numeric strings to numbers
-    if (style.width !== undefined) {
-      if (typeof style.width === 'string' && !isNaN(parseFloat(style.width)) && !style.width.endsWith('%')) {
-        result.width = parseFloat(style.width);
-      } else {
-        result.width = style.width;
-      }
-    }
-    if (style.height !== undefined) {
-      if (typeof style.height === 'string' && !isNaN(parseFloat(style.height)) && !style.height.endsWith('%')) {
-        result.height = parseFloat(style.height);
-      } else {
-        result.height = style.height;
-      }
-    }
-    // Parse min/max constraints - XML attributes come as strings
-    if (style.minWidth !== undefined) {
-      result.minWidth = typeof style.minWidth === 'string' ? parseFloat(style.minWidth) : style.minWidth;
-    }
-    if (style.maxWidth !== undefined) {
-      result.maxWidth = typeof style.maxWidth === 'string' ? parseFloat(style.maxWidth) : style.maxWidth;
-    }
-    if (style.minHeight !== undefined) {
-      result.minHeight = typeof style.minHeight === 'string' ? parseFloat(style.minHeight) : style.minHeight;
-    }
-    if (style.maxHeight !== undefined) {
-      result.maxHeight = typeof style.maxHeight === 'string' ? parseFloat(style.maxHeight) : style.maxHeight;
-    }
-
-    // Auto-infer display: flex when flex container properties are present
-    // This makes the framework more ergonomic - no need to explicitly set display: flex
-    if (result.display !== 'flex') {
-      const hasFlexContainerProps =
-        style.flexDirection !== undefined ||
-        style.justifyContent !== undefined ||
-        style.alignItems !== undefined ||
-        style.alignContent !== undefined ||
-        style.flexWrap !== undefined ||
-        style.gap !== undefined;
-      if (hasFlexContainerProps) {
-        result.display = 'flex';
-      }
-    }
-
-    return result;
-  }
 
   private _calculateElementBounds(
     element: Element,
@@ -1983,51 +1618,6 @@ export class LayoutEngine {
     if (layoutProps.left !== undefined) b.x += layoutProps.left;
     else if (layoutProps.right !== undefined) b.x -= layoutProps.right;
     return b;
-  }
-
-  private _applyFlexAlignment(
-    bounds: Bounds,
-    item: any,
-    flexProps: AdvancedLayoutProps,
-    isRow: boolean,
-    context: LayoutContext
-  ): Bounds {
-    const alignItems = flexProps.alignItems || 'stretch';
-    const crossSize = isRow ? context.availableSpace.height : context.availableSpace.width;
-
-    if (isRow) {
-      switch (alignItems) {
-        case 'center':
-          bounds.y = context.parentBounds.y + (crossSize - bounds.height) / 2;
-          break;
-        case 'flex-end':
-          bounds.y = context.parentBounds.y + crossSize - bounds.height;
-          break;
-        case 'stretch':
-          // Only stretch if no explicit height is set
-          if (item.props.height === undefined) {
-            bounds.height = crossSize;
-          }
-          break;
-      }
-    } else {
-      switch (alignItems) {
-        case 'center':
-          bounds.x = context.parentBounds.x + (crossSize - bounds.width) / 2;
-          break;
-        case 'flex-end':
-          bounds.x = context.parentBounds.x + crossSize - bounds.width;
-          break;
-        case 'stretch':
-          // Only stretch if no explicit width is set
-          if (item.props.width === undefined) {
-            bounds.width = crossSize;
-          }
-          break;
-      }
-    }
-
-    return bounds;
   }
 
 }

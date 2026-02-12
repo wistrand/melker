@@ -48,6 +48,13 @@ export class AlertDialogManager {
 
     const onClose = () => this.close();
 
+    // Calculate dialog size based on message content
+    const lines = message.split('\n');
+    const maxLineWidth = Math.max(...lines.map(l => l.length));
+    const width = Math.max(Math.min(maxLineWidth + 6, 80), 30); // padding + border, clamped 30-80
+    const contentHeight = lines.length;
+    const height = contentHeight + 6; // border (2) + title + separator (2) + content padding (1) + button row (1)
+
     this._overlay = melker`
       <dialog
         id="alert-dialog"
@@ -56,8 +63,8 @@ export class AlertDialogManager {
         modal=${true}
         backdrop=${false}
         draggable=${true}
-        width=${50}
-        height=${7}
+        width=${width}
+        height=${height}
       >
         <container
           id="alert-main"

@@ -385,6 +385,21 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
+   * Draw a filled polygon using scanline fill with even-odd rule.
+   * Points are [x, y] pairs. The polygon is implicitly closed.
+   */
+  fillPoly(points: number[][]): void {
+    Draw.fillPoly(this, points);
+  }
+
+  /**
+   * Draw a polygon outline. Points are [x, y] pairs. Implicitly closed.
+   */
+  drawPoly(points: number[][]): void {
+    Draw.drawPoly(this, points);
+  }
+
+  /**
    * Draw a line using Bresenham's algorithm
    */
   drawLine(x0: number, y0: number, x1: number, y1: number): void {
@@ -428,6 +443,20 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   fillRectColor(x: number, y: number, width: number, height: number, color: number | string): void {
     Draw.fillRectColor(this, x, y, width, height, color);
+  }
+
+  /**
+   * Draw a filled polygon with a specific color
+   */
+  fillPolyColor(points: number[][], color: number | string): void {
+    Draw.fillPolyColor(this, points, color);
+  }
+
+  /**
+   * Draw a polygon outline with a specific color
+   */
+  drawPolyColor(points: number[][], color: number | string): void {
+    Draw.drawPolyColor(this, points, color);
   }
 
   /**

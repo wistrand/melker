@@ -58,6 +58,73 @@ export function fillRect(canvas: DrawableCanvas, x: number, y: number, width: nu
 }
 
 /**
+ * Draw a filled polygon using scanline fill with even-odd rule.
+ * Points are [x, y] pairs. The polygon is implicitly closed (last point connects to first).
+ */
+export function fillPoly(canvas: DrawableCanvas, points: number[][]): void {
+  if (points.length < 3) return;
+
+  // Find bounding box
+  let minY = Infinity, maxY = -Infinity;
+  for (const p of points) {
+    const y = Math.floor(p[1]);
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+
+  const bufH = canvas.getBufferHeight();
+  const bufW = canvas.getBufferWidth();
+  if (minY < 0) minY = 0;
+  if (maxY >= bufH) maxY = bufH - 1;
+
+  const n = points.length;
+  const nodeX: number[] = [];
+
+  // Scanline fill
+  for (let y = minY; y <= maxY; y++) {
+    nodeX.length = 0;
+
+    // Find intersections with all edges
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const yi = points[i][1], yj = points[j][1];
+      if ((yi < y && yj >= y) || (yj < y && yi >= y)) {
+        nodeX.push(Math.round(
+          points[i][0] + (y - yi) / (yj - yi) * (points[j][0] - points[i][0])
+        ));
+      }
+    }
+
+    // Sort intersections by x
+    nodeX.sort((a, b) => a - b);
+
+    // Fill between pairs (even-odd rule)
+    for (let i = 0; i < nodeX.length - 1; i += 2) {
+      let x0 = nodeX[i];
+      let x1 = nodeX[i + 1];
+      if (x0 < 0) x0 = 0;
+      if (x1 >= bufW) x1 = bufW - 1;
+      for (let x = x0; x <= x1; x++) {
+        canvas.setPixel(x, y, true);
+      }
+    }
+  }
+}
+
+/**
+ * Draw a polygon outline. Points are [x, y] pairs.
+ * The polygon is implicitly closed (last point connects to first).
+ */
+export function drawPoly(canvas: DrawableCanvas, points: number[][]): void {
+  if (points.length < 2) return;
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    drawLine(canvas,
+      Math.floor(points[i][0]), Math.floor(points[i][1]),
+      Math.floor(points[j][0]), Math.floor(points[j][1]));
+  }
+}
+
+/**
  * Draw a line using Bresenham's algorithm
  */
 export function drawLine(canvas: DrawableCanvas, x0: number, y0: number, x1: number, y1: number): void {
@@ -235,6 +302,26 @@ export function fillRectColor(canvas: DrawableCanvas, x: number, y: number, widt
   const savedColor = canvas.getColor();
   canvas.setColor(color);
   fillRect(canvas, x, y, width, height);
+  canvas.setColorDirect(savedColor);
+}
+
+/**
+ * Draw a filled polygon with a specific color
+ */
+export function fillPolyColor(canvas: DrawableCanvas, points: number[][], color: number | string): void {
+  const savedColor = canvas.getColor();
+  canvas.setColor(color);
+  fillPoly(canvas, points);
+  canvas.setColorDirect(savedColor);
+}
+
+/**
+ * Draw a polygon outline with a specific color
+ */
+export function drawPolyColor(canvas: DrawableCanvas, points: number[][], color: number | string): void {
+  const savedColor = canvas.getColor();
+  canvas.setColor(color);
+  drawPoly(canvas, points);
   canvas.setColorDirect(savedColor);
 }
 

@@ -1113,7 +1113,14 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       }
     }
 
-    return undefined;
+    // Not over a specific cell — return a general table context
+    return {
+      type: 'data-table',
+      row: -2,
+      column: -1,
+      columnHeader: '',
+      cellValue: '',
+    };
   }
 
   /**
@@ -1122,6 +1129,11 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   getDefaultTooltip(context: DataTableTooltipContext): string | undefined {
     if (context.type !== 'data-table') return undefined;
     const { row, columnHeader, cellValue } = context;
+    if (row === -2) {
+      // Not over a specific cell — show row count
+      const count = this.props.rows?.length ?? 0;
+      return `${count} row${count !== 1 ? 's' : ''}`;
+    }
     if (row === -1) {
       // Header row
       return `**${columnHeader}**\nClick to sort`;

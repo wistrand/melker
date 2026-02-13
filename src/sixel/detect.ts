@@ -78,16 +78,14 @@
 
 import { getLogger } from '../logging.ts';
 import { Env } from '../env.ts';
-import { detectMultiplexer, detectRemoteSession } from '../utils/terminal-detection.ts';
+import { DetectionModule, writeDetectionQuery, type BaseCapabilities } from '../graphics/detection-base.ts';
 
 const logger = getLogger('SixelDetect');
 
 /**
  * Sixel terminal capabilities
  */
-export interface SixelCapabilities {
-  /** Whether sixel is supported */
-  supported: boolean;
+export interface SixelCapabilities extends BaseCapabilities {
   /** Number of color registers (typically 256) */
   colorRegisters: number;
   /** Maximum pixel width */
@@ -98,17 +96,12 @@ export interface SixelCapabilities {
   cellWidth: number;
   /** Pixels per character cell vertically */
   cellHeight: number;
-  /** Whether running inside tmux/screen multiplexer */
-  inMultiplexer: boolean;
-  /** Whether running over SSH */
-  isRemote: boolean;
   /** Known terminal quirks */
   quirks: string[];
   /** Detection method used */
   detectionMethod: 'da1' | 'env' | 'none';
 }
 
-// Default capabilities when detection fails or sixel unsupported
 const DEFAULT_CAPABILITIES: SixelCapabilities = {
   supported: false,
   colorRegisters: 0,
@@ -122,24 +115,10 @@ const DEFAULT_CAPABILITIES: SixelCapabilities = {
   detectionMethod: 'none',
 };
 
-// Cached capabilities (detected once per session)
-let cachedCapabilities: SixelCapabilities | null = null;
+const dm = new DetectionModule<SixelCapabilities>('sixel', DEFAULT_CAPABILITIES, logger);
 
-// Detection state for async query/response pattern
-interface DetectionState {
-  phase: 'idle' | 'da1' | 'xtsmgraphics-colors' | 'xtsmgraphics-geometry' | 'cellsize' | 'complete';
-  capabilities: SixelCapabilities;
-  responseBuffer: string;
-  startTime: number;
-  timeoutMs: number;
-  resolve: ((caps: SixelCapabilities) => void) | null;
-}
+// --- Protocol-specific helpers ---
 
-let detectionState: DetectionState | null = null;
-
-/**
- * Check terminal type from environment for sixel hints
- */
 function checkTerminalEnv(): { likelySixel: boolean; quirks: string[] } {
   const term = Env.get('TERM') || '';
   const termProgram = Env.get('TERM_PROGRAM') || '';
@@ -206,14 +185,6 @@ function checkTerminalEnv(): { likelySixel: boolean; quirks: string[] } {
   }
 
   return { likelySixel: false, quirks };
-}
-
-/**
- * Write a terminal query (no read - that's done by main input loop)
- */
-function writeQuery(query: string): void {
-  const encoder = new TextEncoder();
-  Deno.stdout.writeSync(encoder.encode(query));
 }
 
 /**
@@ -286,119 +257,19 @@ function parseCellSizeResponse(response: string): { width: number; height: numbe
 
 /**
  * Check if response buffer contains a complete terminal response.
- * Uses regex patterns to avoid false positives from user input containing terminator chars.
  */
 function hasCompleteResponse(buffer: string, phase: string): boolean {
   switch (phase) {
     case 'da1':
-      // DA1 response: ESC [ ? params c
       return /\x1b\[\?[0-9;]+c/.test(buffer);
     case 'xtsmgraphics-colors':
     case 'xtsmgraphics-geometry':
-      // XTSMGRAPHICS response: ESC [ ? params S
       return /\x1b\[\?[0-9;]+S/.test(buffer);
     case 'cellsize':
-      // Cell size response: ESC [ 6 ; height ; width t
       return /\x1b\[6;\d+;\d+t/.test(buffer);
     default:
       return false;
   }
-}
-
-/**
- * Advance to next detection phase and write query
- */
-function advanceDetectionPhase(): void {
-  if (!detectionState) return;
-
-  const state = detectionState;
-  state.responseBuffer = '';
-  state.startTime = Date.now();
-
-  switch (state.phase) {
-    case 'da1':
-      // DA1 query: ESC [ c
-      writeQuery('\x1b[c');
-      logger.debug('Sent DA1 query');
-      break;
-
-    case 'xtsmgraphics-colors':
-      // XTSMGRAPHICS color registers: ESC [ ? 1 ; 1 S
-      writeQuery('\x1b[?1;1S');
-      logger.debug('Sent XTSMGRAPHICS colors query');
-      break;
-
-    case 'xtsmgraphics-geometry':
-      // XTSMGRAPHICS geometry: ESC [ ? 2 ; 1 S
-      writeQuery('\x1b[?2;1S');
-      logger.debug('Sent XTSMGRAPHICS geometry query');
-      break;
-
-    case 'cellsize':
-      // WindowOps cell size: ESC [ 16 t
-      writeQuery('\x1b[16t');
-      logger.debug('Sent cell size query');
-      break;
-
-    case 'complete':
-      completeDetection();
-      break;
-  }
-}
-
-/**
- * Complete detection and resolve promise
- */
-function completeDetection(): void {
-  if (!detectionState) return;
-
-  const state = detectionState;
-  const caps = state.capabilities;
-
-  // Calculate max dimensions if not set
-  if (caps.supported && (caps.maxWidth === 0 || caps.maxHeight === 0)) {
-    try {
-      const termSize = Deno.consoleSize();
-      caps.maxWidth = termSize.columns * caps.cellWidth;
-      caps.maxHeight = termSize.rows * caps.cellHeight;
-    } catch {
-      caps.maxWidth = 800;
-      caps.maxHeight = 600;
-    }
-  }
-
-  logger.info('Sixel detection complete', {
-    supported: caps.supported,
-    colorRegisters: caps.colorRegisters,
-    cellSize: `${caps.cellWidth}x${caps.cellHeight}`,
-    maxSize: `${caps.maxWidth}x${caps.maxHeight}`,
-    method: caps.detectionMethod,
-    quirks: caps.quirks,
-  });
-
-  cachedCapabilities = caps;
-
-  if (state.resolve) {
-    state.resolve(caps);
-  }
-
-  detectionState = null;
-}
-
-/**
- * Check if detection is in progress
- */
-export function isDetectionInProgress(): boolean {
-  return detectionState !== null && detectionState.phase !== 'complete';
-}
-
-/**
- * Get the current detection timeout (ms remaining)
- */
-export function getDetectionTimeout(): number {
-  if (!detectionState) return 0;
-  const elapsed = Date.now() - detectionState.startTime;
-  return Math.max(0, detectionState.timeoutMs - elapsed);
 }
 
 /**
@@ -409,8 +280,6 @@ export function getDetectionTimeout(): number {
  *
  * User input like arrow keys (\x1b[A) or function keys (\x1b[11~)
  * don't have these patterns and should pass through.
- *
- * @param combinedBuffer - The response buffer + new input combined
  */
 function looksLikeTerminalResponse(combinedBuffer: string): boolean {
   // CSI with private marker (DA1, XTSMGRAPHICS responses)
@@ -424,134 +293,55 @@ function looksLikeTerminalResponse(combinedBuffer: string): boolean {
     return true;
   }
 
-  // For partial sequences like bare ESC or \x1b[, we let them through
-  // as potential user input (ESC key, arrow keys). If it was actually
-  // the start of a terminal response, bytes usually arrive together
-  // or we'll catch it on the next read.
-
   return false;
 }
 
 /**
- * Feed input data to detection state machine.
- * Called by the main input loop with raw terminal data.
- * Returns true if data was consumed by detection, false if it should be processed normally.
+ * Advance to next detection phase and write query
  */
-export function feedDetectionInput(data: Uint8Array): boolean {
-  if (!detectionState || detectionState.phase === 'idle' || detectionState.phase === 'complete') {
-    return false;
-  }
+function advanceDetectionPhase(): void {
+  const state = dm.getState();
+  if (!state) return;
 
-  // Always let Ctrl+C (0x03) through - user must be able to interrupt during detection
-  if (data.length === 1 && data[0] === 0x03) {
-    logger.debug('Ctrl+C during detection - passing through');
-    return false;
-  }
+  state.responseBuffer = '';
+  state.startTime = Date.now();
 
-  const state = detectionState;
-  const text = new TextDecoder().decode(data);
-
-  // Check for timeout
-  if (Date.now() - state.startTime > state.timeoutMs) {
-    logger.debug('Detection phase timeout', { phase: state.phase });
-    handlePhaseTimeout();
-    // Don't consume the input - let it be processed as user input
-    return false;
-  }
-
-  // Only consume input that looks like a terminal response to our queries
-  // User input (regular keys, arrow keys, etc.) should pass through
-  if (!looksLikeTerminalResponse(state.responseBuffer + text)) {
-    logger.debug('User input during detection - passing through', {
-      phase: state.phase,
-      inputPreview: text.slice(0, 10).replace(/\x1b/g, 'ESC'),
-    });
-    return false;
-  }
-
-  // Accumulate response
-  state.responseBuffer += text;
-
-  // Check for complete response based on current phase
-  let complete = false;
   switch (state.phase) {
     case 'da1':
-      complete = hasCompleteResponse(state.responseBuffer, 'da1');
-      if (complete) {
-        const hasSixel = parseDA1Response(state.responseBuffer);
-        state.capabilities.supported = hasSixel;
-        state.capabilities.detectionMethod = 'da1';
-
-        if (hasSixel) {
-          logger.info('Sixel support detected via DA1');
-          state.phase = 'xtsmgraphics-colors';
-        } else {
-          // Even without sixel, query cell size for accurate aspect ratio
-          state.phase = 'cellsize';
-        }
-        advanceDetectionPhase();
-      }
+      writeDetectionQuery('\x1b[c');
+      logger.debug('Sent DA1 query');
       break;
 
     case 'xtsmgraphics-colors':
-      complete = hasCompleteResponse(state.responseBuffer, 'xtsmgraphics-colors');
-      if (complete) {
-        const parsed = parseXTSMGRAPHICSResponse(state.responseBuffer, 1);
-        if (parsed) {
-          state.capabilities.colorRegisters = parsed.value;
-          logger.debug('XTSMGRAPHICS color registers', { colorRegisters: parsed.value });
-        } else {
-          state.capabilities.colorRegisters = 256; // Default
-        }
-        state.phase = 'xtsmgraphics-geometry';
-        advanceDetectionPhase();
-      }
+      writeDetectionQuery('\x1b[?1;1S');
+      logger.debug('Sent XTSMGRAPHICS colors query');
       break;
 
     case 'xtsmgraphics-geometry':
-      complete = hasCompleteResponse(state.responseBuffer, 'xtsmgraphics-geometry');
-      if (complete) {
-        const parsed = parseXTSMGRAPHICSResponse(state.responseBuffer, 2);
-        if (parsed?.width && parsed?.height) {
-          state.capabilities.maxWidth = parsed.width;
-          state.capabilities.maxHeight = parsed.height;
-          logger.debug('XTSMGRAPHICS geometry', { maxWidth: parsed.width, maxHeight: parsed.height });
-        }
-        state.phase = 'cellsize';
-        advanceDetectionPhase();
-      }
+      writeDetectionQuery('\x1b[?2;1S');
+      logger.debug('Sent XTSMGRAPHICS geometry query');
       break;
 
     case 'cellsize':
-      complete = hasCompleteResponse(state.responseBuffer, 'cellsize');
-      if (complete) {
-        const cellSize = parseCellSizeResponse(state.responseBuffer);
-        if (cellSize) {
-          state.capabilities.cellWidth = cellSize.width;
-          state.capabilities.cellHeight = cellSize.height;
-          logger.debug('Cell size detected', cellSize);
-        } else if (state.capabilities.supported) {
-          // Cell size is critical for sixel - disable if query failed
-          logger.warn('Sixel disabled - cell size query failed');
-          state.capabilities.supported = false;
-        }
-        // Cell size is still useful for aspect ratio even without sixel
-        state.phase = 'complete';
-        advanceDetectionPhase();
-      }
+      writeDetectionQuery('\x1b[16t');
+      logger.debug('Sent cell size query');
+      break;
+
+    case 'complete':
+      completeDetection();
       break;
   }
-
-  return true; // Data was consumed by detection
 }
 
 /**
- * Handle timeout for current detection phase
+ * Handle timeout for current detection phase.
+ * Each phase can timeout independently — we skip to the next phase
+ * rather than aborting the entire detection.
  */
 function handlePhaseTimeout(): void {
-  if (!detectionState) return;
+  const state = dm.getState();
+  if (!state) return;
 
-  const state = detectionState;
   logger.debug('Detection phase timeout', { phase: state.phase });
 
   switch (state.phase) {
@@ -589,68 +379,160 @@ function handlePhaseTimeout(): void {
 }
 
 /**
- * Check and handle detection timeout (called by input loop periodically)
+ * Complete detection: calculate max dimensions, cache result, resolve promise
  */
-export function checkDetectionTimeout(): void {
-  if (!detectionState || detectionState.phase === 'idle' || detectionState.phase === 'complete') {
-    return;
+function completeDetection(): void {
+  dm.complete(caps => {
+    // Calculate max dimensions if not set
+    if (caps.supported && (caps.maxWidth === 0 || caps.maxHeight === 0)) {
+      try {
+        const termSize = Deno.consoleSize();
+        caps.maxWidth = termSize.columns * caps.cellWidth;
+        caps.maxHeight = termSize.rows * caps.cellHeight;
+      } catch {
+        caps.maxWidth = 800;
+        caps.maxHeight = 600;
+      }
+    }
+
+    logger.info('Sixel detection complete', {
+      supported: caps.supported,
+      colorRegisters: caps.colorRegisters,
+      cellSize: `${caps.cellWidth}x${caps.cellHeight}`,
+      maxSize: `${caps.maxWidth}x${caps.maxHeight}`,
+      method: caps.detectionMethod,
+      quirks: caps.quirks,
+    });
+  });
+}
+
+// --- Exported API (unchanged signatures) ---
+
+export function isDetectionInProgress(): boolean {
+  return dm.isInProgress();
+}
+
+export function getDetectionTimeout(): number {
+  return dm.getTimeout();
+}
+
+export function feedDetectionInput(data: Uint8Array): boolean {
+  const guard = dm.feedGuards(data, handlePhaseTimeout);
+  if (guard !== 'feed') return false;
+
+  const state = dm.getState()!;
+  const text = new TextDecoder().decode(data);
+
+  // Only consume input that looks like a terminal response to our queries
+  if (!looksLikeTerminalResponse(state.responseBuffer + text)) {
+    logger.debug('User input during detection - passing through', {
+      phase: state.phase,
+      inputPreview: text.slice(0, 10).replace(/\x1b/g, 'ESC'),
+    });
+    return false;
   }
 
-  if (Date.now() - detectionState.startTime > detectionState.timeoutMs) {
-    handlePhaseTimeout();
+  state.responseBuffer += text;
+
+  // Phase-specific response processing
+  switch (state.phase) {
+    case 'da1':
+      if (hasCompleteResponse(state.responseBuffer, 'da1')) {
+        const hasSixel = parseDA1Response(state.responseBuffer);
+        state.capabilities.supported = hasSixel;
+        state.capabilities.detectionMethod = 'da1';
+
+        if (hasSixel) {
+          logger.info('Sixel support detected via DA1');
+          state.phase = 'xtsmgraphics-colors';
+        } else {
+          // Even without sixel, query cell size for accurate aspect ratio
+          state.phase = 'cellsize';
+        }
+        advanceDetectionPhase();
+      }
+      break;
+
+    case 'xtsmgraphics-colors':
+      if (hasCompleteResponse(state.responseBuffer, 'xtsmgraphics-colors')) {
+        const parsed = parseXTSMGRAPHICSResponse(state.responseBuffer, 1);
+        if (parsed) {
+          state.capabilities.colorRegisters = parsed.value;
+          logger.debug('XTSMGRAPHICS color registers', { colorRegisters: parsed.value });
+        } else {
+          state.capabilities.colorRegisters = 256; // Default
+        }
+        state.phase = 'xtsmgraphics-geometry';
+        advanceDetectionPhase();
+      }
+      break;
+
+    case 'xtsmgraphics-geometry':
+      if (hasCompleteResponse(state.responseBuffer, 'xtsmgraphics-geometry')) {
+        const parsed = parseXTSMGRAPHICSResponse(state.responseBuffer, 2);
+        if (parsed?.width && parsed?.height) {
+          state.capabilities.maxWidth = parsed.width;
+          state.capabilities.maxHeight = parsed.height;
+          logger.debug('XTSMGRAPHICS geometry', { maxWidth: parsed.width, maxHeight: parsed.height });
+        }
+        state.phase = 'cellsize';
+        advanceDetectionPhase();
+      }
+      break;
+
+    case 'cellsize':
+      if (hasCompleteResponse(state.responseBuffer, 'cellsize')) {
+        const cellSize = parseCellSizeResponse(state.responseBuffer);
+        if (cellSize) {
+          state.capabilities.cellWidth = cellSize.width;
+          state.capabilities.cellHeight = cellSize.height;
+          logger.debug('Cell size detected', cellSize);
+        } else if (state.capabilities.supported) {
+          // Cell size is critical for sixel - disable if query failed
+          logger.warn('Sixel disabled - cell size query failed');
+          state.capabilities.supported = false;
+        }
+        // Cell size is still useful for aspect ratio even without sixel
+        state.phase = 'complete';
+        advanceDetectionPhase();
+      }
+      break;
   }
+
+  return true; // Data was consumed by detection
+}
+
+export function checkDetectionTimeout(): void {
+  dm.checkTimeout(handlePhaseTimeout);
 }
 
 /**
  * Start sixel capability detection.
  * Writes queries to terminal, responses are handled via feedDetectionInput().
- *
- * @param skipTerminalQueries - Skip terminal queries (for testing/CI)
- * @param timeoutMs - Timeout per query phase (default 100ms)
  */
 export function startSixelDetection(
   skipTerminalQueries: boolean = false,
   timeoutMs: number = 100
 ): Promise<SixelCapabilities> {
-  // Return cached if available
-  if (cachedCapabilities) {
-    return Promise.resolve(cachedCapabilities);
-  }
-
-  // Return existing detection promise if in progress
-  if (detectionState && detectionState.resolve) {
-    return new Promise(resolve => {
-      const oldResolve = detectionState!.resolve;
-      detectionState!.resolve = (caps) => {
-        oldResolve?.(caps);
-        resolve(caps);
-      };
-    });
-  }
+  const early = dm.tryResolveEarly();
+  if (early) return early;
 
   logger.debug('Starting sixel capability detection');
-
-  // Start with defaults
-  const capabilities: SixelCapabilities = { ...DEFAULT_CAPABILITIES };
-
-  // Detect environment
-  capabilities.inMultiplexer = detectMultiplexer();
-  capabilities.isRemote = detectRemoteSession();
+  const capabilities = dm.createCapabilities();
+  capabilities.quirks = []; // Fresh array (don't share reference with defaults)
 
   // If in multiplexer, disable sixel
   if (capabilities.inMultiplexer) {
     logger.info('Sixel disabled - running in terminal multiplexer');
     capabilities.quirks.push('multiplexer-disabled');
-    cachedCapabilities = capabilities;
-    return Promise.resolve(capabilities);
+    return dm.earlyReturn(capabilities);
   }
 
   // If over SSH, disable sixel (bandwidth concern - sixel is 10-100x larger than sextant)
   if (capabilities.isRemote) {
     logger.info('Sixel disabled - running over SSH (bandwidth optimization)');
     capabilities.quirks.push('ssh-disabled');
-    cachedCapabilities = capabilities;
-    return Promise.resolve(capabilities);
+    return dm.earlyReturn(capabilities);
   }
 
   // Check environment hints
@@ -662,70 +544,41 @@ export function startSixelDetection(
     logger.warn('Sixel disabled - terminal queries skipped');
     capabilities.supported = false;
     capabilities.detectionMethod = 'env';
-    cachedCapabilities = capabilities;
-    return Promise.resolve(capabilities);
+    return dm.earlyReturn(capabilities);
   }
 
   // Check if stdout is a terminal
   if (!Deno.stdout.isTerminal()) {
     logger.debug('Not a terminal - sixel disabled');
-    cachedCapabilities = capabilities;
-    return Promise.resolve(capabilities);
+    return dm.earlyReturn(capabilities);
   }
 
   return new Promise(resolve => {
-    detectionState = {
-      phase: 'da1',
-      capabilities,
-      responseBuffer: '',
-      startTime: Date.now(),
-      timeoutMs,
-      resolve,
-    };
-
+    dm.initState('da1', capabilities, timeoutMs, resolve);
     // Start first query
     advanceDetectionPhase();
   });
 }
 
 /**
- * Detect sixel capabilities (legacy sync-style API)
+ * Detect sixel capabilities (legacy sync-style API).
  * Now just starts detection and waits for completion.
  */
-export async function detectSixelCapabilities(
+export function detectSixelCapabilities(
   forceRedetect: boolean = false,
   skipTerminalQueries: boolean = false
 ): Promise<SixelCapabilities> {
-  if (cachedCapabilities && !forceRedetect) {
-    return cachedCapabilities;
-  }
-
-  if (forceRedetect) {
-    cachedCapabilities = null;
-    detectionState = null;
-  }
-
-  return startSixelDetection(skipTerminalQueries);
+  return dm.detectCapabilities(forceRedetect, () => startSixelDetection(skipTerminalQueries));
 }
 
-/**
- * Get cached sixel capabilities without triggering detection
- */
 export function getCachedSixelCapabilities(): SixelCapabilities | null {
-  return cachedCapabilities;
+  return dm.getCached();
 }
 
-/**
- * Clear cached capabilities (for testing)
- */
 export function clearSixelCapabilitiesCache(): void {
-  cachedCapabilities = null;
-  detectionState = null;
+  dm.clearCache();
 }
 
-/**
- * Check if sixel is available (quick check using cache)
- */
 export function isSixelAvailable(): boolean {
-  return cachedCapabilities?.supported ?? false;
+  return dm.isAvailable();
 }

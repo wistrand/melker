@@ -2,16 +2,12 @@
  * Kitty Graphics Protocol Types
  */
 
+import type { BaseCapabilities } from '../graphics/detection-base.ts';
+
 /**
  * Kitty terminal capabilities
  */
-export interface KittyCapabilities {
-  /** Whether kitty graphics protocol is supported */
-  supported: boolean;
-  /** Whether running inside tmux/screen multiplexer (kitty not supported) */
-  inMultiplexer: boolean;
-  /** Whether running over SSH */
-  isRemote: boolean;
+export interface KittyCapabilities extends BaseCapabilities {
   /** Detection method used */
   detectionMethod: 'query' | 'env' | 'none';
   /** Terminal program name if detected */

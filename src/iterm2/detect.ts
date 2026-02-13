@@ -22,12 +22,11 @@
 
 import { getLogger } from '../logging.ts';
 import { Env } from '../env.ts';
-import { detectMultiplexer, detectRemoteSession } from '../utils/terminal-detection.ts';
+import { DetectionModule } from '../graphics/detection-base.ts';
 import type { ITermCapabilities } from './types.ts';
 
 const logger = getLogger('ITermDetect');
 
-// Default capabilities when detection fails
 const DEFAULT_CAPABILITIES: ITermCapabilities = {
   supported: false,
   inMultiplexer: false,
@@ -36,12 +35,10 @@ const DEFAULT_CAPABILITIES: ITermCapabilities = {
   useMultipart: false,
 };
 
-// Cached capabilities (detected once per session)
-let cachedCapabilities: ITermCapabilities | null = null;
+const dm = new DetectionModule<ITermCapabilities>('iterm2', DEFAULT_CAPABILITIES, logger);
 
-/**
- * Check terminal type from environment for iTerm2 hints
- */
+// --- Protocol-specific helpers ---
+
 function checkTerminalEnv(): { likelyITerm: boolean; terminalProgram?: string } {
   const termProgram = Env.get('TERM_PROGRAM') || '';
   const term = Env.get('TERM') || '';
@@ -115,33 +112,24 @@ function checkTerminalEnv(): { likelyITerm: boolean; terminalProgram?: string } 
   return { likelyITerm: false };
 }
 
+// --- Exported API (unchanged signatures) ---
+
 /**
  * Detect iTerm2 capabilities.
- *
  * Uses environment-based detection (no terminal queries needed).
- *
- * @param forceRedetect - Force re-detection even if cached
  */
 export function detectITermCapabilities(
   forceRedetect: boolean = false
 ): ITermCapabilities {
-  // Return cached if available
-  if (cachedCapabilities && !forceRedetect) {
-    return cachedCapabilities;
-  }
-
-  if (forceRedetect) {
-    cachedCapabilities = null;
+  if (!forceRedetect) {
+    const cached = dm.getCached();
+    if (cached) return cached;
+  } else {
+    dm.clearCache();
   }
 
   logger.debug('Starting iTerm2 capability detection');
-
-  // Start with defaults
-  const capabilities: ITermCapabilities = { ...DEFAULT_CAPABILITIES };
-
-  // Detect environment
-  capabilities.inMultiplexer = detectMultiplexer();
-  capabilities.isRemote = detectRemoteSession();
+  const capabilities = dm.createCapabilities();
 
   // iTerm2 protocol works in tmux with multipart mode
   if (capabilities.inMultiplexer) {
@@ -152,7 +140,7 @@ export function detectITermCapabilities(
   // Check if stdout is a terminal
   if (!Deno.stdout.isTerminal()) {
     logger.debug('Not a terminal - iTerm2 disabled');
-    cachedCapabilities = capabilities;
+    dm.setCached(capabilities);
     return capabilities;
   }
 
@@ -174,15 +162,13 @@ export function detectITermCapabilities(
     logger.debug('No iTerm2 environment hints found');
   }
 
-  cachedCapabilities = capabilities;
+  dm.setCached(capabilities);
   return capabilities;
 }
 
 /**
- * Start iTerm2 capability detection (async interface for consistency with other protocols)
- *
+ * Start iTerm2 capability detection (async interface for consistency with other protocols).
  * Note: Unlike sixel/kitty, iTerm2 detection is synchronous (environment-based only).
- * This async wrapper maintains API consistency.
  */
 export function startITermDetection(
   _skipTerminalQueries: boolean = false,
@@ -191,45 +177,34 @@ export function startITermDetection(
   return Promise.resolve(detectITermCapabilities());
 }
 
-/**
- * Get cached iTerm2 capabilities without triggering detection
- */
 export function getCachedITermCapabilities(): ITermCapabilities | null {
-  return cachedCapabilities;
+  return dm.getCached();
 }
 
-/**
- * Clear cached capabilities (for testing)
- */
 export function clearITermCapabilitiesCache(): void {
-  cachedCapabilities = null;
+  dm.clearCache();
 }
 
-/**
- * Check if iTerm2 is available (quick check using cache)
- */
 export function isITermAvailable(): boolean {
-  return cachedCapabilities?.supported ?? false;
+  return dm.isAvailable();
 }
 
 /**
- * Check if iTerm2 detection is in progress
- * Note: Always false since iTerm2 detection is synchronous
+ * Always false — iTerm2 detection is synchronous (environment-based)
  */
 export function isITermDetectionInProgress(): boolean {
-  return false;
+  return dm.isInProgress();
 }
 
 /**
- * Feed input data to iTerm2 detection (no-op, for API consistency)
- * iTerm2 detection is environment-based and doesn't need terminal responses
+ * No-op — iTerm2 detection doesn't need terminal responses
  */
 export function feedITermDetectionInput(_data: Uint8Array): boolean {
   return false;
 }
 
 /**
- * Check iTerm2 detection timeout (no-op, for API consistency)
+ * No-op — iTerm2 detection is synchronous
  */
 export function checkITermDetectionTimeout(): void {
   // No-op - iTerm2 detection is synchronous

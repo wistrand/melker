@@ -8,16 +8,12 @@
  * files (PNG, JPEG, GIF, etc.) as the payload.
  */
 
+import type { BaseCapabilities } from '../graphics/detection-base.ts';
+
 /**
  * iTerm2 terminal capabilities
  */
-export interface ITermCapabilities {
-  /** Whether iTerm2 inline images protocol is supported */
-  supported: boolean;
-  /** Whether running inside tmux/screen multiplexer */
-  inMultiplexer: boolean;
-  /** Whether running over SSH */
-  isRemote: boolean;
+export interface ITermCapabilities extends BaseCapabilities {
   /** Detection method used */
   detectionMethod: 'env' | 'query' | 'none';
   /** Terminal program name if detected */

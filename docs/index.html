@@ -467,12 +467,21 @@
 
   <main>
     <section class="video-section">
-      <div class="container">
-        <video controls loop preload="none" poster="media/showcase-poster.jpg"
-          style="width: 100%; border: 1px solid var(--border); border-radius: 2px 2px 0 0;">
-          <source src="media/showcase-demo-melker.mp4" type="video/mp4">
-        </video>
-        <div style="background: var(--code-bg); border: 1px solid var(--border); border-top: none; border-radius: 0 0 2px 2px; padding: 8px 16px; font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace; font-size: 0.9rem; color: var(--text-secondary);">&gt; ./melker.ts <a href="examples/demo.melker">https://melker.sh/examples/demo.melker</a></div>
+      <div class="container" style="display: flex; gap: 24px; align-items: flex-end;">
+        <div style="flex: 1; min-width: 0;">
+          <video controls loop preload="metadata" poster="media/showcase-poster.jpg"
+            style="width: 100%; display: block; border: 1px solid var(--border); border-radius: 2px 2px 0 0;">
+            <source src="media/showcase-demo-melker.mp4" type="video/mp4">
+          </video>
+          <div style="height: 4em; background: var(--code-bg); border: 1px solid var(--border); border-top: none; border-radius: 0 0 2px 2px; padding: 8px 16px; font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace; font-size: 0.9rem; color: var(--text-secondary);">&gt; ./melker.ts <a href="examples/demo.melker">https://melker.sh/examples/demo.melker</a></div>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <video controls loop preload="metadata" poster="media/melker-earthquake-2026-02-13.jpg"
+            style="width: 100%; display: block; border: 1px solid var(--border); border-radius: 2px 2px 0 0;">
+            <source src="media/melker-earthquake-2026-02-13.mp4" type="video/mp4">
+          </video>
+          <div style="height: 4em; background: var(--code-bg); border: 1px solid var(--border); border-top: none; border-radius: 0 0 2px 2px; padding: 8px 16px; font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace; font-size: 0.9rem; color: var(--text-secondary);">&gt; ./melker.ts <a href="https://github.com/wistrand/melker/blob/main/examples/showcase/earthquake-dashboard.melker">earthquake-dashboard.melker</a></div>
+        </div>
       </div>
     </section>
 
@@ -561,19 +570,19 @@ cd melker</pre>
         <h2><a href="https://github.com/wistrand/melker/tree/main/examples" style="color: inherit;">Examples</a></h2>
         <div class="showcase-gallery">
           <div class="showcase-item">
-            <a href="htop.png"><img src="htop-thumb.png" alt="Melker htop - system monitor"></a>
+            <a href="images/htop.png"><img src="images/htop-thumb.png" alt="Melker htop - system monitor"></a>
             <a href="https://github.com/wistrand/melker/blob/main/examples/showcase/htop.melker">htop.melker</a>
           </div>
           <div class="showcase-item">
-            <a href="analog-clock.png"><img src="analog-clock-thumb.png" alt="Melker analog clock"></a>
+            <a href="images/analog-clock.png"><img src="images/analog-clock-thumb.png" alt="Melker analog clock"></a>
             <a href="https://github.com/wistrand/melker/blob/main/examples/canvas/analog-clock.melker">analog-clock.melker</a>
           </div>
           <div class="showcase-item">
-            <a href="map-demo.png"><img src="map-demo-thumb.png" alt="Melker map viewer"></a>
+            <a href="images/map-demo.png"><img src="images/map-demo-thumb.jpg" alt="Melker map viewer"></a>
             <a href="https://github.com/wistrand/melker/blob/main/examples/showcase/map.melker">map.melker</a>
           </div>
           <div class="showcase-item">
-            <a href="mermaid.png"><img src="mermaid-thumb.png" alt="Melker mermaid diagrams"></a>
+            <a href="images/mermaid.png"><img src="images/mermaid-thumb.png" alt="Melker mermaid diagrams"></a>
             <a href="https://github.com/wistrand/melker/blob/main/examples/showcase/mermaid.melker">mermaid.melker</a>
           </div>
         </div>

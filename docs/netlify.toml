@@ -11,3 +11,79 @@
   for = "/**/*.melker"
   [headers.values]
     Content-Type = "text/plain; charset=utf-8"
+
+# Redirects for images moved to /images/
+[[redirects]]
+  from = "/htop.png"
+  to = "/images/htop.png"
+  status = 301
+
+[[redirects]]
+  from = "/htop-thumb.png"
+  to = "/images/htop-thumb.png"
+  status = 301
+
+[[redirects]]
+  from = "/analog-clock.png"
+  to = "/images/analog-clock.png"
+  status = 301
+
+[[redirects]]
+  from = "/analog-clock-thumb.png"
+  to = "/images/analog-clock-thumb.png"
+  status = 301
+
+[[redirects]]
+  from = "/map-demo.png"
+  to = "/images/map-demo.png"
+  status = 301
+
+[[redirects]]
+  from = "/map-demo-thumb.png"
+  to = "/images/map-demo-thumb.jpg"
+  status = 301
+
+[[redirects]]
+  from = "/markdown-viewer.png"
+  to = "/images/markdown-viewer.png"
+  status = 301
+
+[[redirects]]
+  from = "/markdown-viewer-thumb.png"
+  to = "/images/markdown-viewer-thumb.png"
+  status = 301
+
+[[redirects]]
+  from = "/mermaid.png"
+  to = "/images/mermaid.png"
+  status = 301
+
+[[redirects]]
+  from = "/mermaid-thumb.png"
+  to = "/images/mermaid-thumb.png"
+  status = 301
+
+[[redirects]]
+  from = "/video-demo.png"
+  to = "/images/video-demo.png"
+  status = 301
+
+[[redirects]]
+  from = "/video-demo-thumb.png"
+  to = "/images/video-demo-thumb.png"
+  status = 301
+
+[[redirects]]
+  from = "/hello_screenshot.png"
+  to = "/images/hello_screenshot.png"
+  status = 301
+
+[[redirects]]
+  from = "/showcase.png"
+  to = "/images/showcase.png"
+  status = 301
+
+[[redirects]]
+  from = "/qr-demo.png"
+  to = "/images/qr-demo.png"
+  status = 301

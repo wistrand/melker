@@ -106,11 +106,13 @@ function defaultComparator(a: CellValue, b: CellValue): number {
   const strA = String(a);
   const strB = String(b);
 
-  // Try numeric comparison
-  const numA = parseFloat(strA.replace(/[,$%]/g, ''));
-  const numB = parseFloat(strB.replace(/[,$%]/g, ''));
+  // Try numeric comparison (only if the entire cleaned string is a valid number)
+  const cleanA = strA.replace(/[,$%]/g, '');
+  const cleanB = strB.replace(/[,$%]/g, '');
+  const numA = Number(cleanA);
+  const numB = Number(cleanB);
 
-  if (!isNaN(numA) && !isNaN(numB)) {
+  if (cleanA !== '' && cleanB !== '' && !isNaN(numA) && !isNaN(numB)) {
     return numA - numB;
   }
 

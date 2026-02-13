@@ -90,7 +90,7 @@
                     { "header": "Mag", "width": 6, "align": "right" },
                     { "header": "Location", "width": "fill" },
                     { "header": "Depth km", "width": 10, "align": "right" },
-                    { "header": "Time", "width": 18 }
+                    { "header": "Time (UTC)", "width": 20 }
                     ]
                     }
                 </data-table>
@@ -106,7 +106,7 @@
                             showLabels="false"
                             min="0"
                             onTooltip="$app.sparklineTooltip(event)"
-                            style="orientation: vertical; height: 3; gap: 0; padding: 0 1"
+                            style="orientation: vertical; height: 3; gap: 0; margin: 1;"
                     />
                 </container>
             </container>
@@ -219,16 +219,11 @@
       let selectedQuake: Quake | null = null;
       let refreshTimer: number | null = null;
       let previousCount = 0;
+      const notifiedBigQuakes = new Set<string>();
 
-      // Format a timestamp to a short local time string
+      // Format a timestamp to ISO 8601 UTC string
       function fmtTime(ms: number): string {
-        const d = new Date(ms);
-        const h = d.getHours().toString().padStart(2, '0');
-        const m = d.getMinutes().toString().padStart(2, '0');
-        const s = d.getSeconds().toString().padStart(2, '0');
-        const mon = (d.getMonth() + 1).toString().padStart(2, '0');
-        const day = d.getDate().toString().padStart(2, '0');
-        return mon + '/' + day + ' ' + h + ':' + m + ':' + s;
+        return new Date(ms).toISOString().replace('T', ' ').slice(0, 19);
       }
 
       // Fetch earthquake data from USGS
@@ -250,6 +245,7 @@
       }
 
       // Compute magnitude distribution buckets
+      // Labels padded to match depth label width so bars align
       function magDistribution(data: Quake[]): { labels: string[]; bars: number[][] } {
         const buckets: Record<string, number> = {
           '<1': 0, '1-2': 0, '2-3': 0, '3-4': 0, '4-5': 0, '5+': 0,
@@ -263,8 +259,8 @@
           else if (m < 5) buckets['4-5']++;
           else buckets['5+']++;
         }
-        const labels = Object.keys(buckets);
-        const bars = labels.map(k => [buckets[k]]);
+        const labels = Object.keys(buckets).map(k => k.padEnd(7));
+        const bars = Object.values(buckets).map(v => [v]);
         return { labels, bars };
       }
 
@@ -282,8 +278,8 @@
           else if (d < 300) buckets['150-300']++;
           else buckets['300+']++;
         }
-        const labels = Object.keys(buckets);
-        const bars = labels.map(k => [buckets[k]]);
+        const labels = Object.keys(buckets).map(k => k.padEnd(7));
+        const bars = Object.values(buckets).map(v => [v]);
         return { labels, bars };
       }
 
@@ -472,6 +468,14 @@
             $melker.toast.show(newCount + ' new earthquake' + (newCount > 1 ? 's' : '') + ' detected', { type: 'warning', duration: 5000 });
           }
           previousCount = quakes.length;
+
+          // Alert for significant earthquakes (M6+), once per quake
+          for (const q of quakes) {
+            if (q.mag > 7 && !notifiedBigQuakes.has(q.id)) {
+              notifiedBigQuakes.add(q.id);
+              $melker.toast.show('M' + q.mag.toFixed(1) + ' ' + q.place, { type: 'error', duration: 10000 });
+            }
+          }
 
           updateUI();
           if (statusEl) statusEl.setValue(quakes.length + ' quakes');

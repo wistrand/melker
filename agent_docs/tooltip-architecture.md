@@ -147,6 +147,34 @@ interface DataTreeTooltipContext {
 }
 ```
 
+### canvas
+
+```typescript
+interface CanvasTooltipContext {
+  type: 'canvas';
+  pixelX: number;      // Pixel X in canvas buffer coordinates
+  pixelY: number;      // Pixel Y in canvas buffer coordinates
+  color: number;       // Packed RGBA color at pixel position (0 = transparent)
+}
+```
+
+Canvas translates terminal cell coordinates to pixel buffer coordinates using `_pixelsPerCellX` / `_pixelsPerCellY` (2x3 for sextant mode, scaled by scale factor). The `color` field returns the composited draw-layer color, falling back to the image-layer color if the draw layer is transparent.
+
+**Example: Map tooltip**
+```xml
+<canvas id="map" width="fill" height="fill" onPaint="$app.drawMap(event.canvas)" onTooltip="$app.mapTooltip(event)" />
+```
+
+```javascript
+export function mapTooltip(event) {
+  if (!event.context) return undefined;
+  const { pixelX, pixelY } = event.context;
+  // Reverse-project pixel coordinates back to data coordinates
+  // and find nearest data point
+  return `**Data point** at (${pixelX}, ${pixelY})`;
+}
+```
+
 ## TooltipProvider Interface
 
 Components that support tooltips implement:
@@ -211,3 +239,5 @@ The tooltip is positioned below the anchor point, flipping above if insufficient
 | `src/components/data-bars.ts`     | `getTooltipContext`, `getDefaultTooltip`    |
 | `src/components/data-heatmap.ts`  | `getTooltipContext`, `getDefaultTooltip`    |
 | `src/components/data-tree.ts`     | `getTooltipContext`, `getDefaultTooltip`    |
+| `src/components/canvas.ts`        | `getTooltipContext` (pixel coordinate translation) |
+| `src/hit-test.ts`                 | `tooltip`/`onTooltip` checks in `isInteractiveElement()` |

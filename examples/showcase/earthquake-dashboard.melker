@@ -54,7 +54,7 @@
         <container class="header">
             <container style="display: flex; flex-direction: row; gap: 2; align-items: center">
                 <text style="font-weight: bold;">USGS Earthquake Monitor</text>
-                <select id="feedSelect" onChange="$app.changeFeed(event)" style="width: 30" selectedValue="hour">
+                <select id="feedSelect" onChange="$app.changeFeed(event)" style="width: 30" selectedValue="day">
                     <option value="hour">Past hour (all)</option>
                     <option value="day">Past day (all)</option>
                     <option value="day25">Past day (M2.5+)</option>
@@ -111,11 +111,24 @@
                 </container>
             </container>
 
-            <!-- Right: summary panels -->
-            <container style="display: flex; flex-direction: column; height: fill; padding: 0 1; gap: 1">
+            <!-- Right: map (top) + summary panels (bottom) -->
+            <split-pane style="width: fill; height: fill; direction: vertical" sizes="1,3">
+
+                <!-- World map -->
+                <canvas
+                        id="worldMap"
+                        width="100%"
+                        height="100%"
+                        scale="2"
+                        onPaint="$app.drawMap(event)"
+                        onTooltip="$app.mapTooltip(event)"
+                />
+
+                <!-- Summary panels -->
+                <container style="display: flex; flex-direction: column; height: fill; padding: 0 1; gap: 1">
 
                 <!-- Summary stats -->
-                <container style="border: thin; padding: 0 1; flex-shrink: 0">
+                <container style="padding: 0 1; flex-shrink: 0">
                     <text id="summaryLabel" style="font-weight: bold;">Summary (past hour)</text>
                     <text id="totalCount">Total: --</text>
                     <text id="maxMag">Largest: --</text>
@@ -124,7 +137,7 @@
                 </container>
 
                 <!-- Magnitude distribution -->
-                <container style="border: thin; padding: 0 1; flex-shrink: 0">
+                <container style="padding: 0 1; flex-shrink: 0">
                     <text style="font-weight: bold;">By magnitude</text>
                     <data-bars
                             id="magDist"
@@ -138,7 +151,7 @@
                 </container>
 
                 <!-- Depth distribution (heatmap-like bars) -->
-                <container style="border: thin; padding: 0 1; flex-shrink: 0">
+                <container style="padding: 0 1; flex-shrink: 0">
                     <text style="font-weight: bold;">By depth</text>
                     <data-bars
                             id="depthDist"
@@ -153,6 +166,8 @@
 
             </container>
 
+            </split-pane>
+
         </split-pane>
 
         <!-- Footer -->
@@ -163,18 +178,20 @@
     </container>
 
     <script type="typescript">
-        // Types
-        interface Quake {
+      // Types
+      interface Quake {
         mag: number;
         place: string;
         time: number;
         depth: number;
+        lat: number;
+        lon: number;
         url: string;
         id: string;
-        }
+      }
 
-        // Feed URLs
-        const FEEDS: Record<string, string> = {
+      // Feed URLs
+      const FEEDS: Record<string, string> = {
         hour: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson',
         day: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson',
         day25: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson',
@@ -183,9 +200,9 @@
         week45: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson',
         month: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson',
         monthSig: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson',
-        };
+      };
 
-        const FEED_LABELS: Record<string, string> = {
+      const FEED_LABELS: Record<string, string> = {
         hour: 'past hour',
         day: 'past day',
         day25: 'past day, M2.5+',
@@ -194,16 +211,17 @@
         week45: 'past 7 days, M4.5+',
         month: 'past 30 days, M4.5+',
         monthSig: 'past 30 days, significant',
-        };
+      };
 
-        let currentFeed = 'hour';
-        let quakes: Quake[] = [];
-        let sparklineQuakes: Quake[] = [];
-        let refreshTimer: number | null = null;
-        let previousCount = 0;
+      let currentFeed = 'day';
+      let quakes: Quake[] = [];
+      let sparklineQuakes: Quake[] = [];
+      let selectedQuake: Quake | null = null;
+      let refreshTimer: number | null = null;
+      let previousCount = 0;
 
-        // Format a timestamp to a short local time string
-        function fmtTime(ms: number): string {
+      // Format a timestamp to a short local time string
+      function fmtTime(ms: number): string {
         const d = new Date(ms);
         const h = d.getHours().toString().padStart(2, '0');
         const m = d.getMinutes().toString().padStart(2, '0');
@@ -211,64 +229,66 @@
         const mon = (d.getMonth() + 1).toString().padStart(2, '0');
         const day = d.getDate().toString().padStart(2, '0');
         return mon + '/' + day + ' ' + h + ':' + m + ':' + s;
-        }
+      }
 
-        // Fetch earthquake data from USGS
-        async function fetchQuakes(): Promise<Quake[]> {
+      // Fetch earthquake data from USGS
+      async function fetchQuakes(): Promise<Quake[]> {
         const url = FEEDS[currentFeed];
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const json = await res.json();
         return json.features.map((f: any) => ({
-        mag: f.properties.mag ?? 0,
-        place: f.properties.place ?? 'Unknown',
-        time: f.properties.time ?? 0,
-        depth: f.geometry.coordinates[2] ?? 0,
-        url: f.properties.url ?? '',
-        id: f.id ?? '',
+          mag: f.properties.mag ?? 0,
+          place: f.properties.place ?? 'Unknown',
+          time: f.properties.time ?? 0,
+          depth: f.geometry.coordinates[2] ?? 0,
+          lat: f.geometry.coordinates[1] ?? 0,
+          lon: f.geometry.coordinates[0] ?? 0,
+          url: f.properties.url ?? '',
+          id: f.id ?? '',
         }));
-        }
+      }
 
-        // Compute magnitude distribution buckets
-        function magDistribution(data: Quake[]): { labels: string[]; bars: number[][] } {
+      // Compute magnitude distribution buckets
+      function magDistribution(data: Quake[]): { labels: string[]; bars: number[][] } {
         const buckets: Record<string, number> = {
-        '<1': 0, '1-2': 0, '2-3': 0, '3-4': 0, '4-5': 0, '5+': 0,
+          '<1': 0, '1-2': 0, '2-3': 0, '3-4': 0, '4-5': 0, '5+': 0,
         };
         for (const q of data) {
-        const m = q.mag;
-        if (m < 1) buckets['<1']++;
-        else if (m < 2) buckets['1-2']++;
-        else if (m < 3) buckets['2-3']++;
-        else if (m < 4) buckets['3-4']++;
-        else if (m < 5) buckets['4-5']++;
-        else buckets['5+']++;
+          const m = q.mag;
+          if (m < 1) buckets['<1']++;
+          else if (m < 2) buckets['1-2']++;
+          else if (m < 3) buckets['2-3']++;
+          else if (m < 4) buckets['3-4']++;
+          else if (m < 5) buckets['4-5']++;
+          else buckets['5+']++;
         }
         const labels = Object.keys(buckets);
         const bars = labels.map(k => [buckets[k]]);
         return { labels, bars };
-        }
+      }
 
-        // Compute depth distribution buckets
-        function depthDistribution(data: Quake[]): { labels: string[]; bars: number[][] } {
+      // Compute depth distribution buckets
+      function depthDistribution(data: Quake[]): { labels: string[]; bars: number[][] } {
         const buckets: Record<string, number> = {
-        '0-10': 0, '10-30': 0, '30-70': 0, '70-150': 0, '150-300': 0, '300+': 0,
+          '0-10': 0, '10-30': 0, '30-70': 0, '70-150': 0, '150-300': 0, '300+': 0,
         };
         for (const q of data) {
-        const d = q.depth;
-        if (d < 10) buckets['0-10']++;
-        else if (d < 30) buckets['10-30']++;
-        else if (d < 70) buckets['30-70']++;
-        else if (d < 150) buckets['70-150']++;
-        else if (d < 300) buckets['150-300']++;
-        else buckets['300+']++;
+          const d = q.depth;
+          if (d < 10) buckets['0-10']++;
+          else if (d < 30) buckets['10-30']++;
+          else if (d < 70) buckets['30-70']++;
+          else if (d < 150) buckets['70-150']++;
+          else if (d < 300) buckets['150-300']++;
+          else buckets['300+']++;
         }
         const labels = Object.keys(buckets);
         const bars = labels.map(k => [buckets[k]]);
         return { labels, bars };
-        }
+      }
 
-        // Update all UI components with current data
-        function updateUI(): void {
+      // Update all UI components with current data
+      function updateUI(): void {
         // Summary label
         const summaryLabel = $melker.getElementById('summaryLabel');
         if (summaryLabel) summaryLabel.setValue('Summary (' + FEED_LABELS[currentFeed] + ')');
@@ -276,156 +296,299 @@
         // Table rows: [mag, location, depth, time]
         const table = $melker.getElementById('quakeTable');
         if (table) {
-        const rows = quakes.map(q => [
-        q.mag.toFixed(1),
-        q.place,
-        q.depth.toFixed(1),
-        fmtTime(q.time),
-        ]);
-        table.setValue(rows);
-        table.props.footer = [['', quakes.length + ' earthquakes (' + FEED_LABELS[currentFeed] + ')', '', '']];
+          const rows = quakes.map(q => [
+            q.mag.toFixed(1),
+            q.place,
+            q.depth.toFixed(1),
+            fmtTime(q.time),
+          ]);
+          table.setValue(rows);
+          table.props.footer = [['', quakes.length + ' earthquakes (' + FEED_LABELS[currentFeed] + ')', '', '']];
         }
 
         // Sparkline: most recent magnitudes (newest on right)
         const sparkline = $melker.getElementById('magSparkline');
         if (sparkline) {
-        sparklineQuakes = quakes.slice(0, 40).reverse();
-        sparkline.setValue(sparklineQuakes.map(q => [q.mag]));
+          sparklineQuakes = quakes.slice(0, 40).reverse();
+          sparkline.setValue(sparklineQuakes.map(q => [q.mag]));
         }
 
         // Summary stats
         if (quakes.length > 0) {
-        const mags = quakes.map(q => q.mag);
-        const depths = quakes.map(q => q.depth);
-        const maxM = Math.max(...mags);
-        const avgM = mags.reduce((a, b) => a + b, 0) / mags.length;
-        const avgD = depths.reduce((a, b) => a + b, 0) / depths.length;
+          const mags = quakes.map(q => q.mag);
+          const depths = quakes.map(q => q.depth);
+          const maxM = Math.max(...mags);
+          const avgM = mags.reduce((a, b) => a + b, 0) / mags.length;
+          const avgD = depths.reduce((a, b) => a + b, 0) / depths.length;
 
-        const totalEl = $melker.getElementById('totalCount');
-        if (totalEl) totalEl.setValue('Total: ' + quakes.length);
+          const totalEl = $melker.getElementById('totalCount');
+          if (totalEl) totalEl.setValue('Total: ' + quakes.length);
 
-        const maxEl = $melker.getElementById('maxMag');
-        if (maxEl) maxEl.setValue('Largest: M' + maxM.toFixed(1));
+          const maxEl = $melker.getElementById('maxMag');
+          if (maxEl) maxEl.setValue('Largest: M' + maxM.toFixed(1));
 
-        const avgMEl = $melker.getElementById('avgMag');
-        if (avgMEl) avgMEl.setValue('Average: M' + avgM.toFixed(1));
+          const avgMEl = $melker.getElementById('avgMag');
+          if (avgMEl) avgMEl.setValue('Average: M' + avgM.toFixed(1));
 
-        const avgDEl = $melker.getElementById('avgDepth');
-        if (avgDEl) avgDEl.setValue('Avg depth: ' + avgD.toFixed(1) + ' km');
+          const avgDEl = $melker.getElementById('avgDepth');
+          if (avgDEl) avgDEl.setValue('Avg depth: ' + avgD.toFixed(1) + ' km');
         }
 
         // Magnitude distribution
         const magDist = $melker.getElementById('magDist');
         if (magDist) {
-        const dist = magDistribution(quakes);
-        magDist.setValue(dist.bars);
-        magDist.props.labels = dist.labels;
+          const dist = magDistribution(quakes);
+          magDist.setValue(dist.bars);
+          magDist.props.labels = dist.labels;
         }
 
         // Depth distribution
         const depthDist = $melker.getElementById('depthDist');
         if (depthDist) {
-        const dist = depthDistribution(quakes);
-        depthDist.setValue(dist.bars);
-        depthDist.props.labels = dist.labels;
+          const dist = depthDistribution(quakes);
+          depthDist.setValue(dist.bars);
+          depthDist.props.labels = dist.labels;
         }
+
+        // Redraw world map
+        const mapCanvas = $melker.getElementById('worldMap');
+        if (mapCanvas) mapCanvas.markDirty();
 
         // Last update time
         const lastEl = $melker.getElementById('lastUpdate');
         if (lastEl) {
-        const now = new Date();
-        const h = now.getHours().toString().padStart(2, '0');
-        const m = now.getMinutes().toString().padStart(2, '0');
-        const s = now.getSeconds().toString().padStart(2, '0');
-        lastEl.setValue('Updated ' + h + ':' + m + ':' + s);
+          const now = new Date();
+          const h = now.getHours().toString().padStart(2, '0');
+          const m = now.getMinutes().toString().padStart(2, '0');
+          const s = now.getSeconds().toString().padStart(2, '0');
+          lastEl.setValue('Updated ' + h + ':' + m + ':' + s);
         }
+      }
+
+      // Simplified world coastline polylines [lon, lat] pairs
+      const COASTLINES: number[][][] = [
+        // North America
+        [[-130,50],[-125,50],[-124,48],[-124,42],[-120,35],[-117,33],[-115,30],[-110,25],[-105,20],[-100,18],[-97,18],[-95,20],[-90,22],[-90,28],[-85,30],[-82,25],[-81,25],[-80,27],[-80,32],[-76,35],[-74,40],[-70,42],[-67,45],[-65,47],[-60,47],[-55,50],[-58,52],[-62,54],[-66,56],[-70,58],[-75,60],[-80,62],[-85,65],[-90,68],[-100,70],[-110,72],[-120,72],[-130,68],[-135,62],[-140,60],[-148,60],[-152,58],[-158,57],[-163,55],[-168,53],[-165,60],[-162,64],[-152,60],[-148,60]],
+        // Central America / Caribbean
+        [[-105,20],[-100,18],[-95,16],[-90,14],[-85,12],[-83,10],[-80,8],[-78,8],[-77,9]],
+        // South America
+        [[-77,9],[-75,5],[-72,2],[-70,-2],[-75,-5],[-80,-5],[-82,-3],[-80,0],[-77,2],[-77,9]],
+        [[-70,-2],[-65,-5],[-60,-5],[-55,-3],[-50,0],[-45,-2],[-40,-5],[-38,-10],[-38,-15],[-40,-20],[-42,-22],[-45,-24],[-48,-28],[-50,-30],[-52,-33],[-55,-35],[-58,-38],[-65,-40],[-67,-45],[-68,-50],[-72,-52],[-75,-50],[-72,-45],[-72,-40],[-70,-35],[-70,-30],[-70,-20],[-70,-15],[-72,-10],[-70,-2]],
+        // Europe (eastern boundary extended to include Baltics/Finland)
+        [[-10,36],[-8,38],[-8,42],[-5,44],[-2,44],[0,42],[3,43],[5,44],[8,44],[10,46],[12,44],[14,46],[10,55],[12,56],[10,58],[8,58],[5,60],[5,62],[8,63],[15,68],[20,70],[25,70],[30,70],[32,68],[34,65],[32,62],[30,60],[28,58],[26,56],[24,54],[22,52],[18,52],[14,50],[12,50],[10,48],[8,48],[5,48],[3,48],[0,48],[-3,48],[-5,48],[-8,44],[-10,44],[-10,36]],
+        // Greenland
+        [[-55,60],[-50,62],[-45,64],[-40,67],[-35,70],[-28,72],[-22,72],[-18,70],[-18,68],[-22,65],[-28,62],[-35,60],[-45,60],[-55,60]],
+        // Africa
+        [[-10,36],[-15,30],[-17,22],[-17,15],[-12,10],[-8,5],[0,5],[5,4],[8,4],[10,2],[10,0],[10,-5],[12,-10],[15,-15],[20,-20],[25,-25],[30,-28],[33,-30],[35,-33],[37,-35],[38,-32],[40,-28],[42,-20],[45,-12],[50,-10],[48,-5],[45,0],[42,5],[43,10],[45,12],[40,15],[35,15],[32,18],[30,20],[33,30],[35,35],[30,35],[25,35],[20,35],[15,35],[10,36],[5,36],[0,36],[-5,36],[-10,36]],
+        // Asia mainland (southern coast incl. India, then north via Pacific, closed along Arctic)
+        [[30,35],[35,32],[40,28],[48,28],[50,25],[56,25],[60,24],[65,24],[68,20],[72,15],[76,8],[80,10],[82,15],[85,22],[90,20],[95,16],[100,14],[105,10],[100,5],[100,2],[105,0],[108,5],[110,10],[108,18],[110,22],[115,28],[120,32],[122,28],[125,30],[128,35],[130,38],[135,42],[140,42],[145,45],[145,50],[140,52],[135,55],[130,58],[128,62],[130,65],[135,68],[140,70],[150,70],[160,68],[170,65],[175,62],[180,62],[180,72],[140,72],[100,72],[60,70],[40,62],[32,50],[30,42],[30,35]],
+        // Siberia/Kamchatka continuation across date line
+        [[-180,62],[-180,72],[-168,72],[-168,65],[-170,68],[-175,65],[-180,62]],
+        // Australia
+        [[115,-35],[118,-35],[120,-33],[122,-34],[130,-32],[135,-35],[138,-36],[140,-38],[145,-38],[148,-40],[150,-38],[153,-28],[150,-24],[145,-18],[142,-14],[138,-12],[132,-12],[130,-14],[128,-16],[122,-18],[115,-22],[115,-30],[115,-35]],
+        // Japan / Korea / Philippines
+        [[128,33],[130,33],[132,34],[134,35],[136,36],[138,38],[140,40],[142,43],[145,45]],
+        [[120,15],[120,18],[122,18]],
+        // Indonesia
+        [[95,5],[100,0],[105,-5],[108,-7],[110,-8],[115,-8],[120,-8],[125,-5],[130,-3],[135,-5],[140,-8]],
+        // New Zealand
+        [[168,-45],[172,-42],[175,-40],[178,-38]],
+        [[168,-45],[167,-46],[170,-47]],
+        // UK / Ireland
+        [[-10,52],[-8,54],[-6,56],[-5,58],[-3,58],[-2,56],[0,52],[-2,50],[-5,50],[-6,52],[-10,52]],
+        // Iceland
+        [[-24,64],[-22,66],[-18,66],[-14,65],[-14,64],[-18,63],[-22,64],[-24,64]],
+      ];
+
+      // Color for magnitude
+      function magColor(mag: number): string {
+        if (mag >= 5) return '#FF0000';
+        if (mag >= 4) return '#FF6600';
+        if (mag >= 3) return '#FFAA00';
+        if (mag >= 2) return '#FFFF00';
+        return '#00FF88';
+      }
+
+      // Draw world map with earthquake locations
+      export function drawMap(event: any): void {
+        const canvas = event.canvas;
+        const bufW = canvas.getBufferWidth();
+        const bufH = canvas.getBufferHeight();
+        canvas.clear();
+
+        // Crop to useful lat range
+        const LAT_MAX = 72;
+        const LAT_MIN = -60;
+        const LON_MIN = -180;
+        const LON_MAX = 180;
+
+        // Project lon/lat to pixel coords (equirectangular, cropped)
+        const projX = (lon: number) => Math.round((lon - LON_MIN) / (LON_MAX - LON_MIN) * (bufW - 1));
+        const projY = (lat: number) => Math.round((LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * (bufH - 1));
+        const inBounds = (lat: number) => lat >= LAT_MIN && lat <= LAT_MAX;
+
+        // Helper to project and clamp a polyline
+        const clamp = (lat: number) => Math.max(LAT_MIN, Math.min(LAT_MAX, lat));
+        const project = (poly: number[][]) =>
+          poly.map(([lon, lat]) => [projX(lon), projY(clamp(lat))]);
+
+        // Fill continents
+        for (const poly of COASTLINES) {
+          canvas.fillPolyColor(project(poly), '#1a331a');
         }
 
-        // Main refresh cycle
-        export async function refresh(): Promise<void> {
+
+        // Draw earthquake dots (selected last so it's on top)
+        let selPx = 0, selPy = 0;
+        for (const q of quakes) {
+          if (!inBounds(q.lat)) continue;
+          const px = projX(q.lon);
+          const py = projY(q.lat);
+          if (selectedQuake && q.id === selectedQuake.id) {
+            selPx = px; selPy = py;
+            continue;
+          }
+          const color = magColor(q.mag);
+          const s = q.mag >= 5 ? 3 : q.mag >= 3 ? 2 : 1;
+          canvas.fillCircleCorrectedColor(px - s, py - s, s, color);
+        }
+        // Draw selected quake on top in white
+        if (selectedQuake) {
+          const s = selectedQuake.mag >= 5 ? 2 : selectedQuake.mag >= 3 ? 1 : 0;
+          canvas.fillRectColor(selPx - s - 1, selPy - s - 1, 3 + 2 * s, 3 + 2 * s, '#FFFFFF');
+        }
+      }
+
+      // Main refresh cycle
+      export async function refresh(): Promise<void> {
         const statusEl = $melker.getElementById('status');
         try {
-        if (statusEl) statusEl.setValue('Fetching...');
-        quakes = await fetchQuakes();
+          if (statusEl) statusEl.setValue('Fetching...');
+          quakes = await fetchQuakes();
 
-        // Notify on new earthquakes
-        if (previousCount > 0 && quakes.length > previousCount) {
-        const newCount = quakes.length - previousCount;
-        $melker.toast.show(newCount + ' new earthquake' + (newCount > 1 ? 's' : '') + ' detected', { type: 'warning', duration: 5000 });
-        }
-        previousCount = quakes.length;
+          // Notify on new earthquakes
+          if (previousCount > 0 && quakes.length > previousCount) {
+            const newCount = quakes.length - previousCount;
+            $melker.toast.show(newCount + ' new earthquake' + (newCount > 1 ? 's' : '') + ' detected', { type: 'warning', duration: 5000 });
+          }
+          previousCount = quakes.length;
 
-        updateUI();
-        if (statusEl) statusEl.setValue(quakes.length + ' quakes');
+          updateUI();
+          if (statusEl) statusEl.setValue(quakes.length + ' quakes');
         } catch (e) {
-        if (statusEl) statusEl.setValue('Error: ' + e.message);
-        $melker.toast.show('Failed to fetch data: ' + e.message, { type: 'error' });
+          if (statusEl) statusEl.setValue('Error: ' + e.message);
+          $melker.toast.show('Failed to fetch data: ' + e.message, { type: 'error' });
         }
-        }
+      }
 
-        // Show details for a selected earthquake
-        export function showDetails(event: { rowIndex: number; row: (string | number)[] }): void {
-        // Find the quake matching this row
-        // rowIndex may differ from quakes array index due to sorting, so match by time string
+      // Show details for a selected earthquake
+      export function showDetails(event: { rowIndex: number; row: (string | number)[] }): void {
         const timeStr = String(event.row[3]);
         const quake = quakes.find(q => fmtTime(q.time) === timeStr) || quakes[event.rowIndex];
         if (!quake) return;
 
         $melker.alert(
-        'Earthquake Details\n\n' +
-        'Magnitude: M' + quake.mag.toFixed(1) + '\n' +
-        'Location:  ' + quake.place + '\n' +
-        'Depth:     ' + quake.depth.toFixed(1) + ' km\n' +
-        'Time:      ' + new Date(quake.time).toLocaleString() + '\n' +
-        'ID:        ' + quake.id
+          'Earthquake Details\n\n' +
+          'Magnitude: M' + quake.mag.toFixed(1) + '\n' +
+          'Location:  ' + quake.place + '\n' +
+          'Coords:    ' + quake.lat.toFixed(3) + ', ' + quake.lon.toFixed(3) + '\n' +
+          'Depth:     ' + quake.depth.toFixed(1) + ' km\n' +
+          'Time:      ' + new Date(quake.time).toLocaleString() + '\n' +
+          'ID:        ' + quake.id
         );
-        }
+      }
 
-        // Sparkline tooltip
-        export function sparklineTooltip(event: any): string | undefined {
+      // Sparkline tooltip
+      export function sparklineTooltip(event: any): string | undefined {
         if (!event.context) return undefined;
         const q = sparklineQuakes[event.context.barIndex];
         if (!q) return undefined;
         return '**M' + q.mag.toFixed(1) + '** ' + q.place + '\n' +
-        'Depth: ' + q.depth.toFixed(1) + ' km\n' +
-        fmtTime(q.time);
+          q.lat.toFixed(2) + ', ' + q.lon.toFixed(2) + ' | Depth: ' + q.depth.toFixed(1) + ' km\n' +
+          fmtTime(q.time);
+      }
+
+      // Map tooltip - find nearest earthquake to mouse position
+      export function mapTooltip(event: any): string | undefined {
+        if (!event.context || quakes.length === 0) return undefined;
+        const { pixelX, pixelY } = event.context;
+
+        // Get canvas buffer dimensions
+        const canvas = $melker.getElementById('worldMap');
+        if (!canvas) return undefined;
+        const bufW = canvas.getBufferWidth();
+        const bufH = canvas.getBufferHeight();
+        if (bufW <= 0 || bufH <= 0) return undefined;
+
+        // Projection helpers (same as drawMap)
+        const LAT_MAX = 72;
+        const LAT_MIN = -60;
+        const LON_MIN = -180;
+        const LON_MAX = 180;
+        const projX = (lon: number) => Math.round((lon - LON_MIN) / (LON_MAX - LON_MIN) * (bufW - 1));
+        const projY = (lat: number) => Math.round((LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * (bufH - 1));
+
+        // Find nearest earthquake in pixel space
+        let nearest: Quake | null = null;
+        let minDist = Infinity;
+        for (const q of quakes) {
+          if (q.lat < LAT_MIN || q.lat > LAT_MAX) continue;
+          const dx = projX(q.lon) - pixelX;
+          const dy = projY(q.lat) - pixelY;
+          const dist = dx * dx + dy * dy;
+          if (dist < minDist) {
+            minDist = dist;
+            nearest = q;
+          }
         }
 
-        // Handle row selection
-        export function handleSelect(event: { rowIndex: number; selectedRows: number[] }): void {
+        // Threshold in pixels (~10px radius)
+        if (!nearest || minDist > 100) return undefined;
+
+        return '**M' + nearest.mag.toFixed(1) + '** ' + nearest.place + '\n' +
+          nearest.lat.toFixed(2) + ', ' + nearest.lon.toFixed(2) + ' | Depth: ' + nearest.depth.toFixed(1) + ' km\n' +
+          fmtTime(nearest.time);
+      }
+
+      // Handle row selection
+      export function handleSelect(event: { rowIndex: number; selectedRows: number[]; row?: (string | number)[] }): void {
         const statusEl = $melker.getElementById('status');
-        if (!statusEl) return;
         if (event.selectedRows.length === 0) {
-        statusEl.setValue(quakes.length + ' quakes');
+          selectedQuake = null;
+          if (statusEl) statusEl.setValue(quakes.length + ' quakes');
         } else {
-        const row = quakes[event.rowIndex];
-        if (row) {
-        statusEl.setValue('M' + row.mag.toFixed(1) + ' - ' + row.place);
+          const timeStr = event.row ? String(event.row[3]) : '';
+          selectedQuake = quakes.find(q => fmtTime(q.time) === timeStr) || quakes[event.rowIndex] || null;
+          if (statusEl && selectedQuake) {
+            statusEl.setValue('M' + selectedQuake.mag.toFixed(1) + ' - ' + selectedQuake.place);
+          }
         }
-        }
-        }
+        // Redraw map to show selection
+        const mapCanvas = $melker.getElementById('worldMap');
+        if (mapCanvas) mapCanvas.markDirty();
+      }
 
-        // Change feed
-        export async function changeFeed(event: { value: string }): Promise<void> {
+      // Change feed
+      export async function changeFeed(event: { value: string }): Promise<void> {
         currentFeed = event.value;
         previousCount = 0;
         await refresh();
         $melker.render();
-        }
+      }
 
-        // Start auto-refresh
-        export function startAutoRefresh(): void {
+      // Start auto-refresh
+      export function startAutoRefresh(): void {
         if (refreshTimer) clearInterval(refreshTimer);
         refreshTimer = setInterval(async () => {
-        await refresh();
-        $melker.render();
+          await refresh();
+          $melker.render();
         }, 60000);
-        }
+      }
     </script>
 
     <script type="typescript" async="ready">
-        await $app.refresh();
-        $melker.render();
-        $app.startAutoRefresh();
+      await $app.refresh();
+      $melker.render();
+      $app.startAutoRefresh();
     </script>
 </melker>

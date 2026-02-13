@@ -976,6 +976,8 @@ spinner.setValue('text');  // Set text value
 
 The `<canvas>` component provides pixel graphics using Unicode sextant characters (2x3 pixels per cell).
 
+**Important:** Use `width`/`height` **props** (not `style.width`/`style.height`) to define the pixel buffer size. Canvas-family components maintain two separate size concepts: `props.width`/`props.height` is the *declarative* value (`"100%"`, `30`, `"fill"`) used by the layout engine, while internal `_terminalWidth`/`_terminalHeight` is the *resolved* numeric terminal-cell size used for buffer allocation and rendering. `setSize()` updates the internal size, not props — this separation prevents responsive strings from being clobbered to numbers on resize. See [dx-footguns.md](dx-footguns.md) for details.
+
 ### Canvas Methods
 
 | Method                                               | Description                                                      |
@@ -1011,6 +1013,37 @@ canvas.drawImageRegion(
 ```
 
 Useful for tile-based rendering where you need to draw portions of larger images.
+
+### Polygon Drawing
+
+```typescript
+canvas.fillPoly(points);                   // Fill polygon (scanline, even-odd rule)
+canvas.drawPoly(points);                   // Draw polygon outline
+canvas.fillPolyColor(points, color);       // Fill polygon with specific color
+canvas.drawPolyColor(points, color);       // Draw polygon outline with specific color
+canvas.fillCircleCorrectedColor(x, y, r, color);  // Fill aspect-corrected circle with color
+```
+
+Where `points` is `number[][]` with each element `[x, y]`.
+
+### Canvas Tooltips
+
+Canvas supports `tooltip` and `onTooltip` for contextual hover information. The `onTooltip` handler receives a `CanvasTooltipContext` with `pixelX`, `pixelY` (buffer pixel coordinates) and `color` (packed RGBA at that pixel).
+
+```xml
+<canvas id="chart" width="60" height="20"
+  onPaint="$app.draw(event.canvas)"
+  onTooltip="$app.chartTooltip(event)"
+/>
+```
+
+```javascript
+export function chartTooltip(event) {
+  if (!event.context) return undefined;
+  const { pixelX, pixelY, color } = event.context;
+  return `**Data** at (${pixelX}, ${pixelY})`;
+}
+```
 
 ## Slider Component
 

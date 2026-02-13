@@ -986,8 +986,10 @@ Pixel graphics using Unicode sextant characters (2x3 pixels per cell).
 />
 ```
 
+**Important:** Use `width`/`height` **props** (not `style.width`/`style.height`) to set the pixel buffer size. `style.width` only affects layout positioning, not the actual buffer resolution. The `img` component supports responsive prop values like `"100%"` and `"fill"` that auto-resize on container changes.
+
 **Props:**
-- `width`, `height` - Dimensions in terminal cells
+- `width`, `height` - Dimensions in terminal cells (defines pixel buffer size)
 - `dither`: `auto` | `sierra-stable` | `floyd-steinberg` | `ordered` | `none`
 - `ditherBits` - Color depth (1-8)
 - `gfxMode`: `sextant` | `block` | `pattern` | `luma` | `sixel` | `kitty` | `iterm2` | `hires`
@@ -1017,6 +1019,29 @@ canvas.markDirty();  // Mark for re-render
 
 // Image decoding
 canvas.decodeImageBytes(bytes);  // Uint8Array -> { width, height, data, bytesPerPixel }
+
+// Polygon drawing
+canvas.fillPoly(points);                   // Fill polygon (scanline, even-odd rule)
+canvas.drawPoly(points);                   // Draw polygon outline
+canvas.fillPolyColor(points, color);       // Fill polygon with specific color
+canvas.drawPolyColor(points, color);       // Draw polygon outline with specific color
+canvas.fillCircleCorrectedColor(x, y, r, color);  // Fill aspect-corrected circle with color
+```
+
+**Tooltip support:**
+
+Canvas supports `onTooltip` for contextual hover tooltips. The handler receives `event.context` with `pixelX`, `pixelY` (buffer pixel coordinates) and `color` (packed RGBA).
+
+```xml
+<canvas id="chart" width="60" height="20" onPaint="$app.draw(event.canvas)" onTooltip="$app.chartTooltip(event)" />
+```
+
+```javascript
+export function chartTooltip(event) {
+  if (!event.context) return undefined;
+  const { pixelX, pixelY, color } = event.context;
+  return `**Pixel** (${pixelX}, ${pixelY})`;
+}
 ```
 
 **Graphics modes** (per-element `gfxMode` prop or global `--gfx-mode` flag):

@@ -95,6 +95,17 @@ export interface DataTreeTooltipContext extends TooltipContext {
   hasChildren: boolean;
 }
 
+/** canvas specific context */
+export interface CanvasTooltipContext extends TooltipContext {
+  type: 'canvas';
+  /** Pixel X in canvas buffer coordinates */
+  pixelX: number;
+  /** Pixel Y in canvas buffer coordinates */
+  pixelY: number;
+  /** Packed RGBA color at pixel position (0 = transparent) */
+  color: number;
+}
+
 /** list/scrollable specific context */
 export interface ListTooltipContext extends TooltipContext {
   type: 'list';

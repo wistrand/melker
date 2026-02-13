@@ -35,11 +35,6 @@ export class ImgElement extends CanvasElement {
   private _onError?: (error: Error) => void;
   private _originalSrc: string | undefined;
   private _srcResolved: boolean = false;
-  private _originalWidth: number | string;
-  private _originalHeight: number | string;
-  private _lastBoundsWidth: number = 0;
-  private _lastBoundsHeight: number = 0;
-
   constructor(props: ImgProps, children: Element[] = []) {
     // Store original dimensions for percentage calculation
     const origWidth = props.width ?? 30;

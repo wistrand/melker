@@ -40,12 +40,6 @@ export class ProgressElement extends CanvasElement {
   private _animationPosition: number = 0;
   private _animationDirection: number = 1;
 
-  // Responsive sizing state (like img)
-  private _originalWidth: number | string;
-  private _originalHeight: number | string;
-  private _lastBoundsWidth: number = 0;
-  private _lastBoundsHeight: number = 0;
-
   constructor(props: ProgressProps, children: Element[] = []) {
     // Store original dimensions for percentage calculation
     const origWidth = props.width ?? 20;

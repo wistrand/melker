@@ -271,6 +271,127 @@ export function drawEllipse(canvas: DrawableCanvas, centerX: number, centerY: nu
   }
 }
 
+/**
+ * Draw a filled circle using midpoint algorithm with horizontal scanlines
+ */
+export function fillCircle(canvas: DrawableCanvas, centerX: number, centerY: number, radius: number): void {
+  centerX = Math.floor(centerX);
+  centerY = Math.floor(centerY);
+  radius = Math.floor(radius);
+  if (radius <= 0) {
+    canvas.setPixel(centerX, centerY, true);
+    return;
+  }
+
+  let x = 0;
+  let y = radius;
+  let d = 3 - 2 * radius;
+
+  while (y >= x) {
+    // Fill horizontal spans for each octant pair
+    for (let i = centerX - x; i <= centerX + x; i++) {
+      canvas.setPixel(i, centerY + y, true);
+      canvas.setPixel(i, centerY - y, true);
+    }
+    for (let i = centerX - y; i <= centerX + y; i++) {
+      canvas.setPixel(i, centerY + x, true);
+      canvas.setPixel(i, centerY - x, true);
+    }
+
+    if (d < 0) {
+      d = d + 4 * x + 6;
+    } else {
+      d = d + 4 * (x - y) + 10;
+      y--;
+    }
+    x++;
+  }
+}
+
+/**
+ * Draw a filled ellipse using midpoint algorithm with horizontal scanlines
+ */
+export function fillEllipse(canvas: DrawableCanvas, centerX: number, centerY: number, radiusX: number, radiusY: number): void {
+  centerX = Math.floor(centerX);
+  centerY = Math.floor(centerY);
+  radiusX = Math.floor(radiusX);
+  radiusY = Math.floor(radiusY);
+
+  if (radiusX <= 0 || radiusY <= 0) {
+    canvas.setPixel(centerX, centerY, true);
+    return;
+  }
+  if (radiusX === radiusY) {
+    fillCircle(canvas, centerX, centerY, radiusX);
+    return;
+  }
+
+  const rx2 = radiusX * radiusX;
+  const ry2 = radiusY * radiusY;
+  const twoRx2 = 2 * rx2;
+  const twoRy2 = 2 * ry2;
+
+  let x = 0;
+  let y = radiusY;
+  let px = 0;
+  let py = twoRx2 * y;
+
+  // Fill initial center line
+  for (let i = centerX - radiusX; i <= centerX + radiusX; i++) {
+    canvas.setPixel(i, centerY, true);
+  }
+
+  // Region 1
+  let p = Math.round(ry2 - rx2 * radiusY + 0.25 * rx2);
+  let lastY = y;
+  while (px < py) {
+    x++;
+    px += twoRy2;
+    if (p < 0) {
+      p += ry2 + px;
+    } else {
+      y--;
+      py -= twoRx2;
+      p += ry2 + px - py;
+    }
+    if (y !== lastY) {
+      for (let i = centerX - x + 1; i < centerX + x; i++) {
+        canvas.setPixel(i, centerY + lastY, true);
+        canvas.setPixel(i, centerY - lastY, true);
+      }
+      lastY = y;
+    }
+  }
+
+  // Region 2
+  p = Math.round(ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2);
+  while (y > 0) {
+    y--;
+    py -= twoRx2;
+    if (p > 0) {
+      p += rx2 - py;
+    } else {
+      x++;
+      px += twoRy2;
+      p += rx2 - py + px;
+    }
+    for (let i = centerX - x; i <= centerX + x; i++) {
+      canvas.setPixel(i, centerY + y, true);
+      canvas.setPixel(i, centerY - y, true);
+    }
+  }
+}
+
+/**
+ * Draw a visually correct filled circle (appears round on screen).
+ * Internally draws a filled ellipse compensating for pixel aspect ratio.
+ */
+export function fillCircleCorrected(canvas: DrawableCanvas, centerX: number, centerY: number, radius: number): void {
+  const aspectRatio = canvas.getPixelAspectRatio();
+  const radiusX = Math.round(radius / aspectRatio);
+  fillEllipse(canvas, centerX, centerY, radiusX, radius);
+}
+
 // ============================================
 // Color Drawing Methods
 // ============================================
@@ -390,6 +511,36 @@ export function drawLineCorrected(canvas: DrawableCanvas, x0: number, y0: number
   const px0 = Math.round(x0 / aspectRatio);
   const px1 = Math.round(x1 / aspectRatio);
   drawLine(canvas, px0, y0, px1, y1);
+}
+
+/**
+ * Draw a filled circle with a specific color
+ */
+export function fillCircleColor(canvas: DrawableCanvas, centerX: number, centerY: number, radius: number, color: number | string): void {
+  const savedColor = canvas.getColor();
+  canvas.setColor(color);
+  fillCircle(canvas, centerX, centerY, radius);
+  canvas.setColorDirect(savedColor);
+}
+
+/**
+ * Draw a filled ellipse with a specific color
+ */
+export function fillEllipseColor(canvas: DrawableCanvas, centerX: number, centerY: number, radiusX: number, radiusY: number, color: number | string): void {
+  const savedColor = canvas.getColor();
+  canvas.setColor(color);
+  fillEllipse(canvas, centerX, centerY, radiusX, radiusY);
+  canvas.setColorDirect(savedColor);
+}
+
+/**
+ * Fill a visually correct circle with a specific color
+ */
+export function fillCircleCorrectedColor(canvas: DrawableCanvas, centerX: number, centerY: number, radius: number, color: number | string): void {
+  const savedColor = canvas.getColor();
+  canvas.setColor(color);
+  fillCircleCorrected(canvas, centerX, centerY, radius);
+  canvas.setColorDirect(savedColor);
 }
 
 /**

@@ -6,6 +6,7 @@ export type {
   TooltipEvent,
   TooltipState,
   TooltipProvider,
+  CanvasTooltipContext,
   DataTableTooltipContext,
   DataBarsTooltipContext,
   DataHeatmapTooltipContext,

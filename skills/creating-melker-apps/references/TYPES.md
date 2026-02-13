@@ -243,6 +243,18 @@ interface ShaderUtils {
 }
 ```
 
+## Canvas Tooltip Context
+
+```typescript
+/** Tooltip context for canvas elements (received in onTooltip handler) */
+interface CanvasTooltipContext {
+  type: 'canvas';
+  pixelX: number;      // Pixel X in canvas buffer coordinates
+  pixelY: number;      // Pixel Y in canvas buffer coordinates
+  color: number;       // Packed RGBA color at pixel position (0 = transparent)
+}
+```
+
 ## `$app` Namespace
 
 All exported functions from `<script>` blocks are available via `$app`:

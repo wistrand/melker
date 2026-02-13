@@ -386,6 +386,25 @@ function executeSendEvent(
         context.render();
         return { success: true, message: `Selected radio ${elementId}` };
       }
+      // Select/combobox/autocomplete - select option by value
+      if (element.type === 'select' || element.type === 'combobox' || element.type === 'autocomplete') {
+        const listElement = element as any;
+        if (typeof listElement.findOptionByValue === 'function' && typeof listElement.selectOption === 'function') {
+          if (!value) {
+            return { success: false, message: `value is required for ${element.type} change events` };
+          }
+          const option = listElement.findOptionByValue(value);
+          if (!option) {
+            // List available options for the AI
+            const allOptions = typeof listElement.getAllOptions === 'function' ? listElement.getAllOptions() : [];
+            const available = allOptions.map((o: any) => o.id).join(', ');
+            return { success: false, message: `Option "${value}" not found in ${elementId}. Available: ${available}` };
+          }
+          listElement.selectOption(option);
+          context.render();
+          return { success: true, message: `Selected "${option.label}" (value: ${option.id}) in ${elementId}` };
+        }
+      }
       return { success: false, message: `Element ${elementId} does not support change events` };
     }
 

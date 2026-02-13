@@ -1,6 +1,7 @@
 // Canvas component for basic graphics rendering using Unicode sextant characters
 
 import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, KeyPressEvent, ColorInput } from '../types.ts';
+import type { CanvasTooltipContext } from '../tooltip/types.ts';
 import { type DualBuffer, type Cell } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, cssToRgba } from './color-utils.ts';
 import {
@@ -28,6 +29,7 @@ import {
   updateShaderMouse, clearShaderMouse, getShaderMouse,
   type ShaderState, type ShaderContext
 } from './canvas-shader-runner.ts';
+import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
 import {
   DitherState, prepareDitheredBuffer, type DitherData
 } from './canvas-dither.ts';
@@ -87,9 +89,15 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   // which may hold responsive strings like "100%" for the layout engine.
   protected _terminalWidth: number = 0;
   protected _terminalHeight: number = 0;
+  // Original width/height for responsive sizing (may be "100%", "fill", etc.)
+  protected _originalWidth: number | string;
+  protected _originalHeight: number | string;
+  protected _lastBoundsWidth: number = 0;
+  protected _lastBoundsHeight: number = 0;
   private _scale: number;
   private _charAspectRatio: number;
   private _isDirty: boolean = false;
+  private _onPaintFailed: boolean = false;
   private _currentColor: number = DEFAULT_FG;  // Current drawing color
   // Pixel multiplier per terminal cell (2x3 for sextant, cellWidth x cellHeight for sixel)
   private _pixelsPerCellX: number = 2;
@@ -152,12 +160,25 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     this._scale = scale;
     this._charAspectRatio = charAspectRatio;
 
+    // Store original dimensions for responsive recalculation
+    this._originalWidth = props.width ?? 30;
+    this._originalHeight = props.height ?? 15;
+
+    // For responsive dimensions, use placeholder size (resized in render())
+    const usesResponsive = isResponsiveDimension(this._originalWidth) || isResponsiveDimension(this._originalHeight);
+    const initWidth = usesResponsive
+      ? (isResponsiveDimension(this._originalWidth) ? 30 : (typeof this._originalWidth === 'number' ? this._originalWidth : 30))
+      : (typeof props.width === 'number' ? props.width : 0);
+    const initHeight = usesResponsive
+      ? (isResponsiveDimension(this._originalHeight) ? 15 : (typeof this._originalHeight === 'number' ? this._originalHeight : 15))
+      : (typeof props.height === 'number' ? props.height : 0);
+
     // Store resolved terminal-cell dimensions
-    this._terminalWidth = typeof props.width === 'number' ? props.width : 0;
-    this._terminalHeight = typeof props.height === 'number' ? props.height : 0;
+    this._terminalWidth = initWidth;
+    this._terminalHeight = initHeight;
 
     // Calculate buffer dimensions based on gfx mode
-    const dims = this._calculateBufferDimensions(props.width, props.height, scale);
+    const dims = this._calculateBufferDimensions(initWidth, initHeight, scale);
     this._bufferWidth = dims.width;
     this._bufferHeight = dims.height;
     this._pixelsPerCellX = dims.pixelsPerCellX;
@@ -414,6 +435,27 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
+   * Draw a filled circle
+   */
+  fillCircle(centerX: number, centerY: number, radius: number): void {
+    Draw.fillCircle(this, centerX, centerY, radius);
+  }
+
+  /**
+   * Draw a filled ellipse
+   */
+  fillEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): void {
+    Draw.fillEllipse(this, centerX, centerY, radiusX, radiusY);
+  }
+
+  /**
+   * Draw a visually correct filled circle (appears round on screen)
+   */
+  fillCircleCorrected(centerX: number, centerY: number, radius: number): void {
+    Draw.fillCircleCorrected(this, centerX, centerY, radius);
+  }
+
+  /**
    * Draw an ellipse outline using midpoint ellipse algorithm
    */
   drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): void {
@@ -467,10 +509,31 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
+   * Draw a filled circle with a specific color
+   */
+  fillCircleColor(centerX: number, centerY: number, radius: number, color: number | string): void {
+    Draw.fillCircleColor(this, centerX, centerY, radius, color);
+  }
+
+  /**
    * Draw an ellipse outline with a specific color
    */
   drawEllipseColor(centerX: number, centerY: number, radiusX: number, radiusY: number, color: number | string): void {
     Draw.drawEllipseColor(this, centerX, centerY, radiusX, radiusY, color);
+  }
+
+  /**
+   * Draw a filled ellipse with a specific color
+   */
+  fillEllipseColor(centerX: number, centerY: number, radiusX: number, radiusY: number, color: number | string): void {
+    Draw.fillEllipseColor(this, centerX, centerY, radiusX, radiusY, color);
+  }
+
+  /**
+   * Fill a visually correct circle with a specific color
+   */
+  fillCircleCorrectedColor(centerX: number, centerY: number, radius: number, color: number | string): void {
+    Draw.fillCircleCorrectedColor(this, centerX, centerY, radius, color);
   }
 
   /**
@@ -1253,6 +1316,21 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Cache bounds for mouse coordinate conversion in shaders
     this._shaderState.bounds = bounds;
 
+    // Resize buffer for responsive dimensions (percentage, fill) only
+    if ((isResponsiveDimension(this._originalWidth) || isResponsiveDimension(this._originalHeight))
+        && bounds.width > 0 && bounds.height > 0) {
+      const boundsChanged = bounds.width !== this._lastBoundsWidth || bounds.height !== this._lastBoundsHeight;
+      if (boundsChanged) {
+        this._lastBoundsWidth = bounds.width;
+        this._lastBoundsHeight = bounds.height;
+        const newWidth = parseDimension(this._originalWidth, bounds.width, this._terminalWidth);
+        const newHeight = parseDimension(this._originalHeight, bounds.height, this._terminalHeight);
+        if (newWidth > 0 && newHeight > 0 && (newWidth !== this._terminalWidth || newHeight !== this._terminalHeight)) {
+          this.setSize(newWidth, newHeight);
+        }
+      }
+    }
+
     // Check if buffer needs resizing due to sixel/kitty/iterm2 capabilities becoming available
     // This happens when canvas was created before engine started
     const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
@@ -1298,9 +1376,15 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     }
 
     // Call onPaint handler to allow user to update canvas content before rendering
-    if (this.props.onPaint) {
-      // Pass as event object for compatibility with string handlers in .melker files
-      this.props.onPaint({ canvas: this, bounds });
+    // Catch errors to prevent crash loops (render is called every frame)
+    if (this.props.onPaint && !this._onPaintFailed) {
+      try {
+        // Pass as event object for compatibility with string handlers in .melker files
+        this.props.onPaint({ canvas: this, bounds });
+      } catch (e) {
+        this._onPaintFailed = true;
+        logger.error(`onPaint error (handler disabled to prevent crash loop): ${e}`);
+      }
     }
 
     // Render to the buffer (sextant/block/pattern/luma, or placeholder for sixel)
@@ -1564,12 +1648,14 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     const style = this.props.style || {};
-    // Return 0 as fallback when width/height not explicitly set
-    // This allows flexbox stretch alignment to work correctly
-    return {
-      width: style.width === 'fill' ? context.availableSpace.width : (this._terminalWidth || 0),
-      height: style.height === 'fill' ? context.availableSpace.height : (this._terminalHeight || 0)
-    };
+    // Parse responsive dimensions (percentage, fill) against available space
+    const w = isResponsiveDimension(this._originalWidth)
+      ? parseDimension(this._originalWidth, context.availableSpace.width, 0)
+      : style.width === 'fill' ? context.availableSpace.width : (this._terminalWidth || 0);
+    const h = isResponsiveDimension(this._originalHeight)
+      ? parseDimension(this._originalHeight, context.availableSpace.height, 0)
+      : style.height === 'fill' ? context.availableSpace.height : (this._terminalHeight || 0);
+    return { width: w, height: h };
   }
 
   /**
@@ -1608,6 +1694,40 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   isDirty(): boolean {
     return this._isDirty;
+  }
+
+  // ============================================
+  // Tooltip Support
+  // ============================================
+
+  /**
+   * Get tooltip context for a position within the canvas.
+   * Translates terminal cell coordinates to pixel buffer coordinates.
+   * relX/relY are terminal cells relative to the element's bounds.
+   */
+  getTooltipContext(relX: number, relY: number): CanvasTooltipContext | undefined {
+    if (this._bufferWidth <= 0 || this._bufferHeight <= 0) return undefined;
+
+    // Convert terminal cell coordinates to pixel buffer coordinates
+    const pixelX = Math.floor(relX * this._pixelsPerCellX);
+    const pixelY = Math.floor(relY * this._pixelsPerCellY);
+
+    // Bounds check
+    if (pixelX < 0 || pixelX >= this._bufferWidth || pixelY < 0 || pixelY >= this._bufferHeight) {
+      return undefined;
+    }
+
+    // Get color at this pixel (composited: drawing layer over image layer)
+    const index = pixelY * this._bufferWidth + pixelX;
+    const drawColor = this._colorBuffer[index];
+    const color = drawColor !== TRANSPARENT ? drawColor : this._imageColorBuffer[index];
+
+    return {
+      type: 'canvas',
+      pixelX,
+      pixelY,
+      color,
+    };
   }
 
   /**

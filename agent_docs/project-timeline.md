@@ -418,6 +418,12 @@ So constructed.
 | Feb 11 | `position: relative` with animation support          |
 | Feb 11 | LSP: `@container`/`@keyframes` completions, nested brace handling |
 | Feb 11 | `display: none` with container queries               |
+| Feb 13 | Canvas tooltip support (`getTooltipContext` with pixel coordinates) |
+| Feb 13 | Hit-test: `tooltip`/`onTooltip` props make elements interactive |
+| Feb 13 | Canvas `fillPoly`/`drawPoly`/`fillPolyColor`/`drawPolyColor` |
+| Feb 13 | Canvas `fillCircleCorrectedColor` |
+| Feb 13 | AI `send_event` change support for select/combobox/autocomplete |
+| Feb 13 | Earthquake dashboard: filled continent polygons, map tooltips |
 
 ## Releases
 

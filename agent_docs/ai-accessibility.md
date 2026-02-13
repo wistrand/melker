@@ -139,7 +139,7 @@ The AI can interact with the UI through tools:
 
 | Tool           | Description                                   | Parameters                                                         |
 |----------------|-----------------------------------------------|--------------------------------------------------------------------|
-| `send_event`   | Send events to UI elements                    | `element_id`, `event_type` (click/change/focus/keypress), `value`  |
+| `send_event`   | Send events to UI elements (incl. select/combobox/autocomplete change) | `element_id`, `event_type` (click/change/focus/keypress), `value`  |
 | `click_canvas` | Click at specific coordinates on a canvas     | `element_id`, `x`, `y` (pixel buffer coordinates)                  |
 | `read_element` | Read full text content from elements          | `element_id`                                                       |
 | `close_dialog` | Close the AI assistant dialog                 | (none)                                                             |

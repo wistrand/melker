@@ -10,6 +10,7 @@
 
 import { getLogger } from '../logging.ts';
 import { getCacheDir as getXdgCacheDir } from '../xdg.ts';
+import { sha256Hex } from '../utils/crypto.ts';
 import type { CacheEntry, AssembledMelker, LineMapping } from './types.ts';
 
 const logger = getLogger('Bundler:Cache');
@@ -25,21 +26,10 @@ function getCacheDir(): string {
 }
 
 /**
- * Compute SHA-256 hash of content.
- */
-async function hashContent(content: string): Promise<string> {
-  const data = new TextEncoder().encode(content);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-/**
  * Get the cache file path for a given source path and content.
  */
 async function getCachePath(sourcePath: string, content: string): Promise<string> {
-  const cacheKey = await hashContent(sourcePath + content);
+  const cacheKey = await sha256Hex(sourcePath + content);
   return `${getCacheDir()}/${cacheKey}.json`;
 }
 
@@ -74,7 +64,7 @@ export async function checkCache(
     }
 
     // Validate content hash
-    const currentHash = await hashContent(content);
+    const currentHash = await sha256Hex(content);
     if (cached.contentHash !== currentHash) {
       logger.debug('Cache miss: content hash mismatch');
       return null;
@@ -117,7 +107,7 @@ export async function saveToCache(
 
     // Create cache entry
     const entry: CacheEntry = {
-      contentHash: await hashContent(content),
+      contentHash: await sha256Hex(content),
       bundledCode: assembled.bundledCode,
       lineMap: Array.from(assembled.lineMap.entries()),
       template: assembled.template,

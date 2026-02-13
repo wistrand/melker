@@ -4,13 +4,7 @@ import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, Compone
 import type { CanvasTooltipContext } from '../tooltip/types.ts';
 import { type DualBuffer, type Cell } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, cssToRgba } from './color-utils.ts';
-import {
-  applySierraStableDither, applySierraDither,
-  applyFloydSteinbergDither, applyFloydSteinbergStableDither,
-  applyAtkinsonDither, applyAtkinsonStableDither,
-  applyBlueNoiseDither, applyOrderedDither,
-  type DitherMode
-} from '../video/dither.ts';
+import { applyDither, type DitherMode } from '../video/dither.ts';
 import { getLogger } from '../logging.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
@@ -861,22 +855,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Apply dithering if enabled (for static image loading path)
     const ditherMode = this.props.dither;
     const bits = this.props.ditherBits ?? 1;
-    if (ditherMode === 'sierra-stable' || ditherMode === true) {
-      applySierraStableDither(scaledData, scaledWidth, scaledHeight, bits);
-    } else if (ditherMode === 'sierra') {
-      applySierraDither(scaledData, scaledWidth, scaledHeight, bits);
-    } else if (ditherMode === 'floyd-steinberg') {
-      applyFloydSteinbergDither(scaledData, scaledWidth, scaledHeight, bits);
-    } else if (ditherMode === 'floyd-steinberg-stable') {
-      applyFloydSteinbergStableDither(scaledData, scaledWidth, scaledHeight, bits);
-    } else if (ditherMode === 'atkinson') {
-      applyAtkinsonDither(scaledData, scaledWidth, scaledHeight, bits);
-    } else if (ditherMode === 'atkinson-stable') {
-      applyAtkinsonStableDither(scaledData, scaledWidth, scaledHeight, bits);
-    } else if (ditherMode === 'ordered') {
-      applyOrderedDither(scaledData, scaledWidth, scaledHeight, bits);
-    } else if (ditherMode === 'blue-noise') {
-      applyBlueNoiseDither(scaledData, scaledWidth, scaledHeight, bits);
+    if (ditherMode) {
+      applyDither(scaledData, scaledWidth, scaledHeight, bits, ditherMode);
     }
 
     // Render scaled data to image buffer with alpha blending

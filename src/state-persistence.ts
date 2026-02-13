@@ -4,6 +4,7 @@
 import { Element, isScrollingEnabled } from './types.ts';
 import { Document } from './document.ts';
 import { getStateDir, ensureDir } from './xdg.ts';
+import { sha256Hex } from './utils/crypto.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { getLogger } from './logging.ts';
 
@@ -223,12 +224,8 @@ export async function loadFromFile(appId: string, skipLoad?: boolean): Promise<P
  * Generate an app ID from a file path
  */
 export async function hashFilePath(filepath: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(filepath);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex.substring(0, 12);
+  const fullHash = await sha256Hex(filepath);
+  return fullHash.slice(0, 12);
 }
 
 // Re-export debounce from utils for backwards compatibility

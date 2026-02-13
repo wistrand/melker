@@ -7,6 +7,7 @@ import { getCurrentTheme } from '../theme.ts';
 import { lerpColor, type ColorSpace } from './color-utils.ts';
 import { getLogger } from '../logging.ts';
 import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
+import { clamp } from '../geometry.ts';
 import { getUIAnimationManager } from '../ui-animation-manager.ts';
 
 const logger = getLogger('progress');
@@ -137,7 +138,7 @@ export class ProgressElement extends CanvasElement {
     const sorted = [...gradient].sort((a, b) => a.stop - b.stop);
 
     // Clamp position to 0-1
-    position = Math.max(0, Math.min(1, position));
+    position = clamp(position, 0, 1);
 
     // Find surrounding stops
     let lower = sorted[0];
@@ -166,7 +167,7 @@ export class ProgressElement extends CanvasElement {
   private _getPercentage(): number {
     const { value = 0, min = 0, max = 100 } = this.props;
     if (max <= min) return 0;
-    return Math.max(0, Math.min(1, (value - min) / (max - min)));
+    return clamp((value - min) / (max - min), 0, 1);
   }
 
   /**

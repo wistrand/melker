@@ -4,7 +4,8 @@
 import { Element, isScrollableType, isScrollingEnabled } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine, ScrollbarBounds } from './rendering.ts';
-import { pointInBounds } from './geometry.ts';
+import { pointInBounds, clamp } from './geometry.ts';
+import { collectElements, isDescendant, isOpenDialog } from './utils/tree-traversal.ts';
 import { getLogger } from './logging.ts';
 
 const logger = getLogger('ScrollHandler');
@@ -64,46 +65,10 @@ export class ScrollHandler {
    * Check if an element is inside a dialog by searching from root
    */
   private _isInsideDialog(element: Element): boolean {
-    // Find all open dialogs and check if any contains this element
-    const dialogs = this._findOpenDialogs(this._document.root);
+    const dialogs = collectElements(this._document.root, isOpenDialog);
     for (const dialog of dialogs) {
-      if (this._containsElement(dialog, element)) {
+      if (isDescendant(element, dialog)) {
         return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Find all open dialog elements in the tree
-   */
-  private _findOpenDialogs(root: Element): Element[] {
-    const dialogs: Element[] = [];
-    const stack: Element[] = [root];
-    while (stack.length > 0) {
-      const current = stack.pop()!;
-      if (current.type === 'dialog' && current.props.open) {
-        dialogs.push(current);
-      }
-      if (current.children) {
-        for (const child of current.children) {
-          stack.push(child);
-        }
-      }
-    }
-    return dialogs;
-  }
-
-  /**
-   * Check if a container element contains a target element
-   */
-  private _containsElement(container: Element, target: Element): boolean {
-    if (container === target) return true;
-    if (container.children) {
-      for (const child of container.children) {
-        if (this._containsElement(child, target)) {
-          return true;
-        }
       }
     }
     return false;
@@ -205,7 +170,7 @@ export class ScrollHandler {
         const clickPosInTrack = mouseY - track.y;
 
         // Center the thumb on the click position
-        const targetThumbStart = Math.max(0, Math.min(availableTrackSpace, clickPosInTrack - thumbSize / 2));
+        const targetThumbStart = clamp(clickPosInTrack - thumbSize / 2, 0, availableTrackSpace);
         const scrollProgress = availableTrackSpace > 0 ? targetThumbStart / availableTrackSpace : 0;
         const newScrollY = Math.round(scrollProgress * maxScroll);
 
@@ -255,7 +220,7 @@ export class ScrollHandler {
         const clickPosInTrack = mouseX - track.x;
 
         // Center the thumb on the click position
-        const targetThumbStart = Math.max(0, Math.min(availableTrackSpace, clickPosInTrack - thumbSize / 2));
+        const targetThumbStart = clamp(clickPosInTrack - thumbSize / 2, 0, availableTrackSpace);
         const scrollProgress = availableTrackSpace > 0 ? targetThumbStart / availableTrackSpace : 0;
         const newScrollX = Math.round(scrollProgress * maxScroll);
 
@@ -315,7 +280,7 @@ export class ScrollHandler {
     // Convert mouse delta to scroll delta
     // scrollPerPixel = maxScroll / availableTrackSpace
     const scrollDelta = availableTrackSpace > 0 ? (mouseDelta * maxScroll) / availableTrackSpace : 0;
-    const newScroll = Math.max(0, Math.min(maxScroll, Math.round(startScrollPos + scrollDelta)));
+    const newScroll = clamp(Math.round(startScrollPos + scrollDelta), 0, maxScroll);
 
     // Update scroll position
     if (axis === 'vertical') {
@@ -371,7 +336,7 @@ export class ScrollHandler {
         // Handle vertical scrolling
         if (deltaY !== 0 && containerHeight > 0) {
           const maxScrollY = Math.max(0, contentDimensions.height - containerHeight);
-          const newScrollY = Math.max(0, Math.min(maxScrollY, currentScrollY + deltaY));
+          const newScrollY = clamp(currentScrollY + deltaY, 0, maxScrollY);
 
           logger.debug(`ScrollHandler: currentScrollY=${currentScrollY}, maxScrollY=${maxScrollY}, newScrollY=${newScrollY}`);
 
@@ -384,7 +349,7 @@ export class ScrollHandler {
         // Handle horizontal scrolling
         if (deltaX !== 0 && containerWidth > 0) {
           const maxScrollX = Math.max(0, contentDimensions.width - containerWidth);
-          const newScrollX = Math.max(0, Math.min(maxScrollX, currentScrollX + deltaX));
+          const newScrollX = clamp(currentScrollX + deltaX, 0, maxScrollX);
 
           if (newScrollX !== currentScrollX) {
             targetContainer.props.scrollX = newScrollX;
@@ -444,8 +409,8 @@ export class ScrollHandler {
         const maxScrollX = Math.max(0, scrollDimensions.width - containerBounds.width);
 
         // Clamp scroll positions to valid range
-        newScrollY = Math.max(0, Math.min(maxScrollY, newScrollY));
-        newScrollX = Math.max(0, Math.min(maxScrollX, newScrollX));
+        newScrollY = clamp(newScrollY, 0, maxScrollY);
+        newScrollX = clamp(newScrollX, 0, maxScrollX);
 
         // Only update if scroll position actually changed
         if (newScrollY !== currentScrollY || newScrollX !== currentScrollX) {

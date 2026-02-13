@@ -9,14 +9,7 @@ import { getLogger } from '../logging.ts';
 import { getThemeManager } from '../theme.ts';
 import { isRemoteUrl } from '../utils/content-loader.ts';
 import {
-  applyFloydSteinbergDither,
-  applyFloydSteinbergStableDither,
-  applyAtkinsonDither,
-  applyAtkinsonStableDither,
-  applyBlueNoiseDither,
-  applyOrderedDither,
-  applySierraDither,
-  applySierraStableDither,
+  applyDither,
   colorSupportToBits,
   type DitherMode,
 } from '../video/dither.ts';
@@ -1180,24 +1173,7 @@ export class VideoElement extends CanvasElement {
 
       // Determine dither mode: true defaults to 'floyd-steinberg-stable', string specifies mode
       const mode: DitherMode = typeof dither === 'boolean' ? 'floyd-steinberg-stable' : dither;
-
-      if (mode === 'ordered') {
-        applyOrderedDither(frameData, frameWidth, frameHeight, bits);
-      } else if (mode === 'floyd-steinberg') {
-        applyFloydSteinbergDither(frameData, frameWidth, frameHeight, bits);
-      } else if (mode === 'floyd-steinberg-stable') {
-        applyFloydSteinbergStableDither(frameData, frameWidth, frameHeight, bits);
-      } else if (mode === 'sierra') {
-        applySierraDither(frameData, frameWidth, frameHeight, bits);
-      } else if (mode === 'sierra-stable') {
-        applySierraStableDither(frameData, frameWidth, frameHeight, bits);
-      } else if (mode === 'atkinson') {
-        applyAtkinsonDither(frameData, frameWidth, frameHeight, bits);
-      } else if (mode === 'atkinson-stable') {
-        applyAtkinsonStableDither(frameData, frameWidth, frameHeight, bits);
-      } else if (mode === 'blue-noise') {
-        applyBlueNoiseDither(frameData, frameWidth, frameHeight, bits);
-      }
+      applyDither(frameData, frameWidth, frameHeight, bits, mode);
     }
 
     // Calculate offset to center the frame

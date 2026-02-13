@@ -8,6 +8,7 @@ import { getCurrentTheme } from '../theme.ts';
 import { COLORS } from './color-utils.ts';
 import { getStringWidth } from '../char-width.ts';
 import { parseDimension } from '../utils/dimensions.ts';
+import { clamp } from '../geometry.ts';
 
 export interface SliderProps extends Omit<BaseProps, 'width' | 'height'> {
   // Value range
@@ -64,12 +65,12 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
       min,
       max,
       step,
-      value: Math.max(min, Math.min(max, value)),
+      value: clamp(value, min, max),
       style: styleWithDimensions,
     };
 
     // Ensure value is clamped
-    defaultProps.value = Math.max(min, Math.min(max, defaultProps.value ?? min));
+    defaultProps.value = clamp(defaultProps.value ?? min, min, max);
 
     super('slider', defaultProps, children);
   }
@@ -93,7 +94,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     if (trackWidth <= 1) return min;
 
     // Calculate raw value from position
-    const normalized = Math.max(0, Math.min(1, pos / (trackWidth - 1)));
+    const normalized = clamp(pos / (trackWidth - 1), 0, 1);
     let raw = min + normalized * (max - min);
 
     // Apply snapping
@@ -105,7 +106,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     }
 
     // Clamp to range
-    return Math.max(min, Math.min(max, raw));
+    return clamp(raw, min, max);
   }
 
   /**
@@ -150,7 +151,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     }
 
     // Clamp to range
-    newValue = Math.max(min, Math.min(max, newValue));
+    newValue = clamp(newValue, min, max);
 
     // Only trigger if value changed
     if (newValue !== this.props.value) {
@@ -511,7 +512,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     if (orientation === 'vertical') {
       const relY = y - this._lastBounds.y;
       const trackHeight = this._lastBounds.height;
-      const normalized = Math.max(0, Math.min(1, 1 - (relY / (trackHeight - 1))));
+      const normalized = clamp(1 - (relY / (trackHeight - 1)), 0, 1);
       const { min = 0, max = 100 } = this.props;
       const newValue = min + normalized * (max - min);
       this._setValue(newValue, true);  // true = isInput (continuous)

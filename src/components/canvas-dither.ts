@@ -1,13 +1,7 @@
 // Canvas dithering - buffer compositing and dithering algorithms
 // Extracted from canvas.ts to reduce file size
 
-import {
-  applySierraStableDither, applySierraDither,
-  applyFloydSteinbergDither, applyFloydSteinbergStableDither,
-  applyAtkinsonDither, applyAtkinsonStableDither,
-  applyBlueNoiseDither, applyOrderedDither,
-  type DitherMode
-} from '../video/dither.ts';
+import { applyDither, type DitherMode } from '../video/dither.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { TRANSPARENT, unpackRGBA, parseColor } from './color-utils.ts';
@@ -195,24 +189,9 @@ export function prepareDitheredBuffer(
   }
 
   // Apply dithering algorithm (effectiveBits computed earlier for cache check)
-  if (ditherMode === 'sierra-stable' || ditherMode === true) {
-    applySierraStableDither(cache, bufW, bufH, effectiveBits);
-  } else if (ditherMode === 'sierra') {
-    applySierraDither(cache, bufW, bufH, effectiveBits);
-  } else if (ditherMode === 'floyd-steinberg') {
-    applyFloydSteinbergDither(cache, bufW, bufH, effectiveBits);
-  } else if (ditherMode === 'floyd-steinberg-stable') {
-    applyFloydSteinbergStableDither(cache, bufW, bufH, effectiveBits);
-  } else if (ditherMode === 'atkinson') {
-    applyAtkinsonDither(cache, bufW, bufH, effectiveBits);
-  } else if (ditherMode === 'atkinson-stable') {
-    applyAtkinsonStableDither(cache, bufW, bufH, effectiveBits);
-  } else if (ditherMode === 'ordered') {
-    applyOrderedDither(cache, bufW, bufH, effectiveBits);
-  } else if (ditherMode === 'blue-noise') {
-    applyBlueNoiseDither(cache, bufW, bufH, effectiveBits);
+  if (ditherMode) {
+    applyDither(cache, bufW, bufH, effectiveBits, ditherMode);
   }
-  // 'none' case already handled above
 
   state.cacheValid = true;
   return cache;

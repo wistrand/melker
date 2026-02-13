@@ -8,6 +8,13 @@ export type Point = Position;
 export type { Bounds, Position };
 
 /**
+ * Clamp a number to a range [min, max]
+ */
+export function clamp(value: number, min: number, max: number): number {
+  return value < min ? min : value > max ? max : value;
+}
+
+/**
  * Check if a point is within bounds
  */
 export function pointInBounds(x: number, y: number, bounds: Bounds): boolean {
@@ -20,8 +27,8 @@ export function pointInBounds(x: number, y: number, bounds: Bounds): boolean {
  */
 export function clampToBounds(pos: Point, bounds: Bounds): Point {
   return {
-    x: Math.max(bounds.x, Math.min(bounds.x + bounds.width - 1, pos.x)),
-    y: Math.max(bounds.y, Math.min(bounds.y + bounds.height - 1, pos.y)),
+    x: clamp(pos.x, bounds.x, bounds.x + bounds.width - 1),
+    y: clamp(pos.y, bounds.y, bounds.y + bounds.height - 1),
   };
 }
 

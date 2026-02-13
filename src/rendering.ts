@@ -2,7 +2,7 @@
 // Integrates the element system with the dual-buffer rendering system
 
 import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, isScrollingEnabled, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
-import { clipBounds } from './geometry.ts';
+import { clipBounds, clamp } from './geometry.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
 import { ViewportDualBuffer, createClipViewport } from './viewport-buffer.ts';
@@ -1068,8 +1068,8 @@ export class RenderingEngine {
     const maxScrollX = Math.max(0, contentDimensions.width - contentBounds.width);
 
     // Clamp scroll values to valid ranges
-    scrollY = Math.max(0, Math.min(maxScrollY, scrollY || 0));
-    scrollX = Math.max(0, Math.min(maxScrollX, scrollX || 0));
+    scrollY = clamp(scrollY || 0, 0, maxScrollY);
+    scrollX = clamp(scrollX || 0, 0, maxScrollX);
 
     // Update the element's scroll properties if they were clamped
     if (scrollY !== element.props.scrollY) {
@@ -1094,7 +1094,7 @@ export class RenderingEngine {
 
       // Calculate thumb bounds for hit testing
       const viewportRatio = adjustedContentBounds.height / contentDimensions.height;
-      const thumbSize = Math.max(1, Math.min(trackBounds.height, Math.floor(viewportRatio * trackBounds.height)));
+      const thumbSize = clamp(Math.floor(viewportRatio * trackBounds.height), 1, trackBounds.height);
       const availableTrackSpace = Math.max(1, trackBounds.height - thumbSize);
       const scrollProgress = maxScrollY > 0 ? ((scrollY || 0) / maxScrollY) : 0;
       const thumbPosition = Math.min(availableTrackSpace, Math.floor(scrollProgress * availableTrackSpace));
@@ -1127,7 +1127,7 @@ export class RenderingEngine {
 
       // Calculate thumb bounds for hit testing
       const viewportRatio = adjustedContentBounds.width / contentDimensions.width;
-      const thumbSize = Math.max(1, Math.min(trackBounds.width, Math.floor(viewportRatio * trackBounds.width)));
+      const thumbSize = clamp(Math.floor(viewportRatio * trackBounds.width), 1, trackBounds.width);
       const availableTrackSpace = Math.max(1, trackBounds.width - thumbSize);
       const scrollProgress = maxScrollX > 0 ? ((scrollX || 0) / maxScrollX) : 0;
       const thumbPosition = Math.min(availableTrackSpace, Math.floor(scrollProgress * availableTrackSpace));
@@ -1616,13 +1616,13 @@ export class RenderingEngine {
 
     // Calculate scrollbar thumb size (minimum 1, maximum scrollbarHeight)
     const viewportRatio = bounds.height / contentHeight;
-    const thumbSize = Math.max(1, Math.min(scrollbarHeight, Math.floor(viewportRatio * scrollbarHeight)));
+    const thumbSize = clamp(Math.floor(viewportRatio * scrollbarHeight), 1, scrollbarHeight);
 
     // Calculate maximum scroll position
     const maxScrollY = Math.max(0, contentHeight - bounds.height);
 
     // Clamp scrollY to valid range
-    const clampedScrollY = Math.max(0, Math.min(scrollY, maxScrollY));
+    const clampedScrollY = clamp(scrollY, 0, maxScrollY);
 
     // Calculate thumb position (remaining space after accounting for thumb size)
     const availableTrackSpace = Math.max(1, scrollbarHeight - thumbSize);
@@ -1666,13 +1666,13 @@ export class RenderingEngine {
 
     // Calculate scrollbar thumb size (minimum 1, maximum scrollbarWidth)
     const viewportRatio = bounds.width / contentWidth;
-    const thumbSize = Math.max(1, Math.min(scrollbarWidth, Math.floor(viewportRatio * scrollbarWidth)));
+    const thumbSize = clamp(Math.floor(viewportRatio * scrollbarWidth), 1, scrollbarWidth);
 
     // Calculate maximum scroll position
     const maxScrollX = Math.max(0, contentWidth - bounds.width);
 
     // Clamp scrollX to valid range
-    const clampedScrollX = Math.max(0, Math.min(scrollX, maxScrollX));
+    const clampedScrollX = clamp(scrollX, 0, maxScrollX);
 
     // Calculate thumb position (remaining space after accounting for thumb size)
     const availableTrackSpace = scrollbarWidth - thumbSize;

@@ -8,6 +8,9 @@ export { BAYER_8X8 } from './types.ts';
 // Utility functions
 export { colorSupportToBits } from './utils.ts';
 
+// Unified dispatch
+export { applyDither } from './apply.ts';
+
 // Threshold-based dithering (ordered, blue noise, custom matrices)
 export {
   loadThresholdMatrixFromPng,

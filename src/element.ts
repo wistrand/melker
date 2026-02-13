@@ -11,6 +11,9 @@ import { Document } from './document.ts';
 import { PersistedState, PersistenceMapping } from './state-persistence.ts';
 import { normalizeStyle } from './components/color-utils.ts';
 
+// Re-export for public API (implementation in tree-traversal.ts)
+export { findElementById } from './utils/tree-traversal.ts';
+
 /**
  * Persistence context for createElement to merge saved state
  */
@@ -242,23 +245,6 @@ export function cloneElement(element: Element, newProps?: Record<string, any>): 
     { ...element.props, ...newProps },
     ...(element.children?.map(child => cloneElement(child)) || [])
   );
-}
-
-export function findElementById(root: Element, id: string): Element | null {
-  if (root.id === id) {
-    return root;
-  }
-
-  if (root.children) {
-    for (const child of root.children) {
-      const found = findElementById(child, id);
-      if (found) {
-        return found;
-      }
-    }
-  }
-
-  return null;
 }
 
 export function traverseElements(

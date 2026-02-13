@@ -2,6 +2,7 @@
 
 import { Element } from './types.ts';
 import { traverseElements } from './element.ts';
+import { findElementById as findInTree } from './utils/tree-traversal.ts';
 import { selectorStringMatches, Stylesheet, applyStylesheet, type StyleContext } from './stylesheet.ts';
 import { getLogger } from './logging.ts';
 
@@ -109,7 +110,7 @@ export class Document {
     if (typeof component.getSubtreeElements === 'function') {
       const subtreeElements = component.getSubtreeElements() as Element[];
       for (const subtreeRoot of subtreeElements) {
-        const found = this._searchElementTree(subtreeRoot, targetId);
+        const found = findInTree(subtreeRoot, targetId);
         if (found) return found;
       }
     }
@@ -118,24 +119,6 @@ export class Document {
     if (element.children) {
       for (const child of element.children) {
         const found = this._findElementInSubtrees(child, targetId);
-        if (found) return found;
-      }
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Search an element tree for an element by ID
-   */
-  private _searchElementTree(element: Element, targetId: string): Element | undefined {
-    if (element.id === targetId) {
-      return element;
-    }
-
-    if (element.children) {
-      for (const child of element.children) {
-        const found = this._searchElementTree(child, targetId);
         if (found) return found;
       }
     }

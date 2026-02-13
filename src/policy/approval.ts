@@ -2,6 +2,7 @@
 // Stores user approvals based on content + policy + deno flags hash
 
 import { getCacheDir, ensureDir, getAppCacheDir } from '../xdg.ts';
+import { sha256Hex } from '../utils/crypto.ts';
 import type { MelkerPolicy } from './types.ts';
 import { extractHostFromUrl } from './url-utils.ts';
 import { isUrl } from '../utils/content-loader.ts';
@@ -38,24 +39,11 @@ function getApprovalsDir(): string {
 }
 
 /**
- * Hash a string using SHA-256
- */
-async function hashString(input: string): Promise<string> {
-  const hash = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(input)
-  );
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-/**
  * Get the URL hash used for approval files and cache directories.
  * Returns first 12 characters of SHA-256 hash for shorter, unique identifiers.
  */
 export async function getUrlHash(url: string): Promise<string> {
-  const fullHash = await hashString(url);
+  const fullHash = await sha256Hex(url);
   return fullHash.slice(0, 12);
 }
 
@@ -113,7 +101,7 @@ export async function calculateApprovalHash(
     flagsStr
   ].join('\n');
 
-  return  await hashString(combined);
+  return  await sha256Hex(combined);
 }
 
 /**
@@ -436,7 +424,7 @@ export function showApprovalPrompt(
  * Uses first 12 characters of SHA-256 hash for shorter filenames
  */
 export async function getApprovalFilePath(url: string): Promise<string> {
-  const urlHash = await hashString(url);
+  const urlHash = await sha256Hex(url);
   return `${getApprovalsDir()}/${urlHash.slice(0, 12)}.json`;
 }
 
@@ -501,7 +489,7 @@ async function hashPolicy(policy: MelkerPolicy): Promise<string> {
   // Sort all keys recursively for consistent serialization
   const sortedPolicy = sortObjectKeys(policy);
   const policyJson = JSON.stringify(sortedPolicy);
-  return await hashString(policyJson);
+  return await sha256Hex(policyJson);
 }
 
 /**

@@ -6,6 +6,7 @@ import { type KeyPressEvent, createKeyPressEvent, createChangeEvent } from '../e
 import { getThemeColor } from '../theme.ts';
 import { createDebouncedAction, type DebouncedAction } from '../utils/timing.ts';
 import { COLORS, parseColor } from './color-utils.ts';
+import { clamp } from '../geometry.ts';
 
 export interface TextareaProps extends BaseProps {
   value?: string;
@@ -693,7 +694,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
    * Set cursor position
    */
   setCursorPosition(pos: number): void {
-    this._cursorPos = Math.max(0, Math.min(pos, this._value.length));
+    this._cursorPos = clamp(pos, 0, this._value.length);
     this._needsRender = true;
   }
 
@@ -744,11 +745,11 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
     const displayRow = relativeY + this._scrollY;
 
     // Clamp to valid row range
-    const row = Math.max(0, Math.min(displayRow, displayLines.length - 1));
+    const row = clamp(displayRow, 0, displayLines.length - 1);
 
     // Clamp column to line length
     const lineLength = displayLines[row]?.text.length || 0;
-    const col = Math.max(0, Math.min(relativeX, lineLength));
+    const col = clamp(relativeX, 0, lineLength);
 
     // Convert display position to cursor position
     const newCursorPos = this._displayPosToCursor(row, col, width);

@@ -1,6 +1,6 @@
 // Unified Viewport System for Layout and Clipping
 import { Bounds, Element, Size, isScrollableType, isScrollingEnabled } from './types.ts';
-import { clipBounds } from './geometry.ts';
+import { clipBounds, clamp } from './geometry.ts';
 
 export interface ScrollbarLayout {
   bounds: Bounds;
@@ -119,8 +119,8 @@ export class ViewportManager {
     const maxScrollY = Math.max(0, viewport.contentSize.height - viewport.clipRect.height);
 
     const clampedScrollOffset = {
-      x: Math.max(0, Math.min(maxScrollX, viewport.scrollOffset.x)),
-      y: Math.max(0, Math.min(maxScrollY, viewport.scrollOffset.y))
+      x: clamp(viewport.scrollOffset.x, 0, maxScrollX),
+      y: clamp(viewport.scrollOffset.y, 0, maxScrollY)
     };
 
     return {
@@ -179,7 +179,7 @@ export class ViewportManager {
   private _calculateVerticalScrollbar(containerBounds: Bounds, contentHeight: number, scrollY: number): ScrollbarLayout {
     const trackLength = containerBounds.height;
     const viewportRatio = containerBounds.height / contentHeight;
-    const thumbSize = Math.max(1, Math.min(trackLength, Math.floor(viewportRatio * trackLength)));
+    const thumbSize = clamp(Math.floor(viewportRatio * trackLength), 1, trackLength);
 
     const maxScrollY = Math.max(0, contentHeight - containerBounds.height);
     const scrollProgress = maxScrollY > 0 ? (scrollY / maxScrollY) : 0;
@@ -203,7 +203,7 @@ export class ViewportManager {
   private _calculateHorizontalScrollbar(containerBounds: Bounds, contentWidth: number, scrollX: number): ScrollbarLayout {
     const trackLength = containerBounds.width;
     const viewportRatio = containerBounds.width / contentWidth;
-    const thumbSize = Math.max(1, Math.min(trackLength, Math.floor(viewportRatio * trackLength)));
+    const thumbSize = clamp(Math.floor(viewportRatio * trackLength), 1, trackLength);
 
     const maxScrollX = Math.max(0, contentWidth - containerBounds.width);
     const scrollProgress = maxScrollX > 0 ? (scrollX / maxScrollX) : 0;

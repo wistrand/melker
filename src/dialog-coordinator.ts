@@ -5,6 +5,7 @@ import { AlertDialogManager } from './alert-dialog.ts';
 import { ConfirmDialogManager } from './confirm-dialog.ts';
 import { PromptDialogManager } from './prompt-dialog.ts';
 import { AccessibilityDialogManager } from './ai/accessibility-dialog.ts';
+import type { DialogDependencies } from './base-dialog.ts';
 import type { Document } from './document.ts';
 import type { Element } from './types.ts';
 import type { FocusManager } from './focus.ts';
@@ -44,14 +45,7 @@ export class DialogCoordinator {
    */
   showAlert(message: string): void {
     if (!this._alertDialogManager) {
-      this._alertDialogManager = new AlertDialogManager({
-        document: this._deps.document,
-        focusManager: this._deps.focusManager,
-        registerElementTree: this._deps.registerElementTree,
-        render: this._deps.render,
-        forceRender: this._deps.forceRender,
-        autoRender: this._deps.autoRender,
-      });
+      this._alertDialogManager = new AlertDialogManager(this._dialogDeps());
     }
     this._alertDialogManager.show(message);
   }
@@ -62,14 +56,7 @@ export class DialogCoordinator {
    */
   showConfirm(message: string): Promise<boolean> {
     if (!this._confirmDialogManager) {
-      this._confirmDialogManager = new ConfirmDialogManager({
-        document: this._deps.document,
-        focusManager: this._deps.focusManager,
-        registerElementTree: this._deps.registerElementTree,
-        render: this._deps.render,
-        forceRender: this._deps.forceRender,
-        autoRender: this._deps.autoRender,
-      });
+      this._confirmDialogManager = new ConfirmDialogManager(this._dialogDeps());
     }
     return this._confirmDialogManager.show(message);
   }
@@ -80,16 +67,20 @@ export class DialogCoordinator {
    */
   showPrompt(message: string, defaultValue?: string): Promise<string | null> {
     if (!this._promptDialogManager) {
-      this._promptDialogManager = new PromptDialogManager({
-        document: this._deps.document,
-        focusManager: this._deps.focusManager,
-        registerElementTree: this._deps.registerElementTree,
-        render: this._deps.render,
-        forceRender: this._deps.forceRender,
-        autoRender: this._deps.autoRender,
-      });
+      this._promptDialogManager = new PromptDialogManager(this._dialogDeps());
     }
     return this._promptDialogManager.show(message, defaultValue);
+  }
+
+  private _dialogDeps(): DialogDependencies {
+    return {
+      document: this._deps.document,
+      focusManager: this._deps.focusManager,
+      registerElementTree: this._deps.registerElementTree,
+      render: this._deps.render,
+      forceRender: this._deps.forceRender,
+      autoRender: this._deps.autoRender,
+    };
   }
 
   /**

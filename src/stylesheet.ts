@@ -7,6 +7,7 @@ import { hasClass } from './element.ts';
 import { parseColor } from './components/color-utils.ts';
 import { getTimingFunction } from './easing.ts';
 import { getUIAnimationManager } from './ui-animation-manager.ts';
+import { normalizeBoxSpacing } from './layout-style.ts';
 
 /**
  * Selector types supported by the stylesheet system
@@ -550,51 +551,18 @@ export function parseStyleProperties(cssString: string): Style {
     }
   }
 
-  // Normalize padding/margin: consolidate individual properties into BoxSpacing
-  normalizeBoxSpacing(style, 'padding');
-  normalizeBoxSpacing(style, 'margin');
-
-  return style;
-}
-
-/**
- * Consolidate individual padding/margin properties (paddingLeft, marginTop, etc.)
- * into BoxSpacing objects for consistent handling
- */
-function normalizeBoxSpacing(style: Record<string, any>, property: 'padding' | 'margin'): void {
-  const top = style[`${property}Top`];
-  const right = style[`${property}Right`];
-  const bottom = style[`${property}Bottom`];
-  const left = style[`${property}Left`];
-
-  if (top !== undefined || right !== undefined || bottom !== undefined || left !== undefined) {
-    // Get base value (could be number or object)
-    const base = style[property];
-    let baseTop = 0, baseRight = 0, baseBottom = 0, baseLeft = 0;
-
-    if (typeof base === 'number') {
-      baseTop = baseRight = baseBottom = baseLeft = base;
-    } else if (base && typeof base === 'object') {
-      baseTop = base.top || 0;
-      baseRight = base.right || 0;
-      baseBottom = base.bottom || 0;
-      baseLeft = base.left || 0;
-    }
-
-    // Override with individual properties
-    style[property] = {
-      top: top !== undefined ? top : baseTop,
-      right: right !== undefined ? right : baseRight,
-      bottom: bottom !== undefined ? bottom : baseBottom,
-      left: left !== undefined ? left : baseLeft,
-    };
-
-    // Clean up individual properties
-    delete style[`${property}Top`];
-    delete style[`${property}Right`];
-    delete style[`${property}Bottom`];
-    delete style[`${property}Left`];
+  // Normalize shorthand properties
+  // Convert `bold: true` to `fontWeight: 'bold'`
+  if (style.bold === true) {
+    style.fontWeight = 'bold';
+    delete style.bold;
+  } else if (style.bold === false) {
+    style.fontWeight = 'normal';
+    delete style.bold;
   }
+
+  // Normalize padding/margin: consolidate individual properties into BoxSpacing
+  return normalizeBoxSpacing(style as Style) as Style;
 }
 
 /**

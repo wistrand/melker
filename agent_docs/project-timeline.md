@@ -380,6 +380,9 @@ So constructed.
 | Feb 6  | Server rename (`debug-server` → `server`)           |
 | Feb 7  | Dependency centralization (`src/deps.ts`)           |
 | Feb 7  | Style props: slider orientation, img objectFit      |
+| Feb 13 | Unified CSS parser, fixed BoxSpacing in inline styles |
+| Feb 13 | Dialog base class (`src/base-dialog.ts`)            |
+| Feb 13 | Error-diffusion engine (`src/video/dither/error-diffusion.ts`) |
 
 ## Milestones
 
@@ -424,6 +427,10 @@ So constructed.
 | Feb 13 | Canvas `fillCircleCorrectedColor` |
 | Feb 13 | AI `send_event` change support for select/combobox/autocomplete |
 | Feb 13 | Earthquake dashboard: filled continent polygons, map tooltips |
+| Feb 13 | Code deduplication refactoring (3 phases, ~879 lines removed) |
+| Feb 13 | Unified CSS parser (`parseStyleProperties`), fixed `margin: 0 1` bug |
+| Feb 13 | Dialog base class (`src/base-dialog.ts`) |
+| Feb 13 | Generic error-diffusion dithering engine (`src/video/dither/error-diffusion.ts`) |
 
 ## Releases
 

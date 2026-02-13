@@ -26,6 +26,10 @@ Detailed file layout for the Melker codebase.
 | `graphics-overlay-manager.ts`  | Sixel/Kitty/iTerm2 graphics overlay management        |
 | `terminal-size-manager.ts`     | Terminal size detection, tracking, resize dispatch     |
 | `dialog-coordinator.ts`        | Alert, confirm, prompt, accessibility dialog lifecycle |
+| `base-dialog.ts`               | Base class for dialog managers (shared overlay lifecycle) |
+| `alert-dialog.ts`              | Alert dialog manager (extends BaseDialogManager)      |
+| `confirm-dialog.ts`            | Confirm dialog manager (extends BaseDialogManager)    |
+| `prompt-dialog.ts`             | Prompt dialog manager (extends BaseDialogManager)     |
 | `scroll-handler.ts`            | Scroll event handling for containers                  |
 | `element-click-handler.ts`     | Element click routing and focus                       |
 | `focus-navigation-handler.ts`  | Tab/Shift+Tab focus navigation                        |
@@ -240,15 +244,16 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `video/dither/` - Dithering Algorithms
 
-| File                 | Purpose                           |
-|----------------------|-----------------------------------|
-| `mod.ts`             | Dithering exports                 |
-| `types.ts`           | DitherMode, ThresholdMatrix types |
-| `utils.ts`           | Shared buffers and helpers        |
-| `threshold.ts`       | Ordered, blue-noise dithering     |
-| `floyd-steinberg.ts` | Floyd-Steinberg algorithms        |
-| `sierra.ts`          | Sierra algorithms                 |
-| `atkinson.ts`        | Atkinson algorithms               |
+| File                  | Purpose                                          |
+|-----------------------|--------------------------------------------------|
+| `mod.ts`              | Dithering exports                                |
+| `types.ts`            | DitherMode, ThresholdMatrix types                |
+| `utils.ts`            | Shared helpers (quantizeChannel, rgbToGray)      |
+| `error-diffusion.ts`  | Generic error-diffusion engine (DitherKernel)    |
+| `threshold.ts`        | Ordered, blue-noise dithering                    |
+| `floyd-steinberg.ts`  | Floyd-Steinberg kernel + wrapper                 |
+| `sierra.ts`           | Sierra 2-row kernel + wrapper                    |
+| `atkinson.ts`         | Atkinson kernel + wrapper                        |
 
 #### `sixel/` - Sixel Graphics
 

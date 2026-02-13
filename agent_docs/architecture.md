@@ -266,6 +266,7 @@ When `stop()` is called:
 | `src/graphics-overlay-manager.ts` | Sixel/Kitty/iTerm2 graphics overlay management |
 | `src/terminal-size-manager.ts`    | Terminal size detection, tracking, resize   |
 | `src/dialog-coordinator.ts`       | Alert, confirm, prompt dialog lifecycle    |
+| `src/base-dialog.ts`             | Base class for dialog managers             |
 | `src/scroll-handler.ts`          | Scroll event handling for containers       |
 | `src/element-click-handler.ts`   | Element click routing and focus            |
 | `src/focus-navigation-handler.ts` | Tab/Shift+Tab focus navigation             |

@@ -1,42 +1,11 @@
 // Confirm dialog management
 // Shows a modal confirm dialog when confirm() is called in handlers
 
-import { Document } from './document.ts';
 import { melker } from './template.ts';
-import { Element } from './types.ts';
-import { FocusManager } from './focus.ts';
+import { BaseDialogManager } from './base-dialog.ts';
 
-export interface ConfirmDialogDependencies {
-  document: Document;
-  focusManager: FocusManager | null;
-  registerElementTree: (element: Element) => void;
-  render: () => void;
-  forceRender: () => void;
-  autoRender: boolean;
-}
-
-export class ConfirmDialogManager {
-  private _overlay?: Element;
-  private _deps: ConfirmDialogDependencies;
+export class ConfirmDialogManager extends BaseDialogManager {
   private _resolvePromise?: (result: boolean) => void;
-
-  constructor(deps: ConfirmDialogDependencies) {
-    this._deps = deps;
-  }
-
-  /**
-   * Check if confirm dialog is open
-   */
-  isOpen(): boolean {
-    return this._overlay !== undefined;
-  }
-
-  /**
-   * Get the overlay element
-   */
-  getOverlay(): Element | undefined {
-    return this._overlay;
-  }
 
   /**
    * Show a confirm dialog with the given message
@@ -54,7 +23,7 @@ export class ConfirmDialogManager {
       const onOk = () => this.close(true);
       const onCancel = () => this.close(false);
 
-      this._overlay = melker`
+      const overlay = melker`
         <dialog
           id="confirm-dialog"
           title="Confirm"
@@ -86,20 +55,7 @@ export class ConfirmDialogManager {
         </dialog>
       `;
 
-      // Add to document and register all elements
-      const root = this._deps.document.root;
-      if (root.children) {
-        root.children.push(this._overlay);
-      }
-      this._deps.registerElementTree(this._overlay);
-
-      // Force complete redraw to ensure dialog borders are correctly aligned
-      this._deps.forceRender();
-
-      // Focus the OK button
-      if (this._deps.focusManager) {
-        this._deps.focusManager.focus('confirm-ok');
-      }
+      this._openOverlay(overlay, 'confirm-ok');
     });
   }
 
@@ -107,26 +63,8 @@ export class ConfirmDialogManager {
    * Close the confirm dialog with a result
    */
   close(result: boolean): void {
-    if (!this._overlay) return;
+    this._closeOverlay();
 
-    // Remove from document root's children
-    const root = this._deps.document.root;
-    if (root.children) {
-      const index = root.children.indexOf(this._overlay);
-      if (index !== -1) {
-        root.children.splice(index, 1);
-      }
-    }
-
-    // Unregister all elements from document registry
-    this._deps.document.removeElement(this._overlay);
-
-    this._overlay = undefined;
-
-    // Force complete redraw since overlay covered the screen
-    this._deps.forceRender();
-
-    // Resolve the promise with the result
     if (this._resolvePromise) {
       this._resolvePromise(result);
       this._resolvePromise = undefined;

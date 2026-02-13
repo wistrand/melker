@@ -4,9 +4,9 @@
 import { createElement } from './element.ts';
 import type { Element } from './types.ts';
 import { parseHtml as parse } from './deps.ts';
-import { Stylesheet } from './stylesheet.ts';
+import { Stylesheet, parseStyleProperties } from './stylesheet.ts';
 import { isLintEnabled, validateElementProps, addWarning, reportWarnings, clearWarnings, BASE_STYLES_SCHEMA, getComponentSchema, getRegisteredComponents } from './lint.ts';
-import { parseColor } from './components/color-utils.ts';
+
 
 // Types for template processing
 interface TemplateContext {
@@ -561,132 +561,6 @@ function convertAstNode(node: any, context: TemplateContext): ParsedNode | Parse
 }
 
 /**
- * Parse CSS-style string into style object
- * Converts "width: 40; height: 10; border: thin;" to { width: 40, height: 10, border: 'thin' }
- */
-function parseCssStyleString(cssString: string): Record<string, any> {
-  const style: Record<string, any> = {};
-
-  // Split by semicolons and process each property
-  const properties = cssString.split(';').map(prop => prop.trim()).filter(prop => prop.length > 0);
-
-  for (const property of properties) {
-    const colonIndex = property.indexOf(':');
-    if (colonIndex === -1) continue;
-
-    const key = property.substring(0, colonIndex).trim();
-    const value = property.substring(colonIndex + 1).trim();
-
-    if (!key || !value) continue;
-
-    // Convert kebab-case to camelCase for properties like border-color
-    const camelKey = key.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase());
-
-    // Check if this is a color property
-    const isColorProp = camelKey === 'color' || camelKey === 'backgroundColor' ||
-                        camelKey === 'borderColor' || camelKey.endsWith('Color');
-
-    // Check if this is padding or margin with CSS shorthand (e.g., "0 1", "1 2 3", "1 2 3 4")
-    const isBoxSpacingProp = camelKey === 'padding' || camelKey === 'margin';
-    if (isBoxSpacingProp) {
-      const parts = value.split(/\s+/).map(p => parseFloat(p));
-      if (parts.length >= 2 && parts.every(p => !isNaN(p))) {
-        if (parts.length === 2) {
-          style[camelKey] = { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] };
-        } else if (parts.length === 3) {
-          style[camelKey] = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
-        } else if (parts.length >= 4) {
-          style[camelKey] = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
-        }
-        continue;
-      }
-      // Fall through to single number or string handling
-    }
-
-    // Try to parse as number
-    if (/^\d+(\.\d+)?$/.test(value)) {
-      style[camelKey] = parseFloat(value);
-    }
-    // Try to parse as boolean
-    else if (value === 'true') {
-      style[camelKey] = true;
-    } else if (value === 'false') {
-      style[camelKey] = false;
-    }
-    // Handle quoted strings - remove quotes
-    else if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      const unquoted = value.slice(1, -1);
-      // If it's a color property, parse to packed RGBA
-      style[camelKey] = isColorProp ? parseColor(unquoted) : unquoted;
-    }
-    // Color properties - parse to packed RGBA
-    else if (isColorProp) {
-      style[camelKey] = parseColor(value);
-    }
-    // Keep as string
-    else {
-      style[camelKey] = value;
-    }
-  }
-
-  // Normalize shorthand properties
-  // Convert `bold: true` to `fontWeight: 'bold'`
-  if (style.bold === true) {
-    style.fontWeight = 'bold';
-    delete style.bold;
-  } else if (style.bold === false) {
-    style.fontWeight = 'normal';
-    delete style.bold;
-  }
-
-  // Normalize padding/margin: consolidate individual properties into BoxSpacing
-  normalizeBoxSpacing(style, 'padding');
-  normalizeBoxSpacing(style, 'margin');
-
-  return style;
-}
-
-/**
- * Consolidate individual padding/margin properties (paddingLeft, marginTop, etc.)
- * into BoxSpacing objects for consistent handling
- */
-function normalizeBoxSpacing(style: Record<string, any>, property: 'padding' | 'margin'): void {
-  const top = style[`${property}Top`];
-  const right = style[`${property}Right`];
-  const bottom = style[`${property}Bottom`];
-  const left = style[`${property}Left`];
-
-  if (top !== undefined || right !== undefined || bottom !== undefined || left !== undefined) {
-    // Get base value (could be number or object)
-    const base = style[property];
-    let baseTop = 0, baseRight = 0, baseBottom = 0, baseLeft = 0;
-
-    if (typeof base === 'number') {
-      baseTop = baseRight = baseBottom = baseLeft = base;
-    } else if (base && typeof base === 'object') {
-      baseTop = base.top || 0;
-      baseRight = base.right || 0;
-      baseBottom = base.bottom || 0;
-      baseLeft = base.left || 0;
-    }
-
-    // Override with individual properties
-    style[property] = {
-      top: top !== undefined ? top : baseTop,
-      right: right !== undefined ? right : baseRight,
-      bottom: bottom !== undefined ? bottom : baseBottom,
-      left: left !== undefined ? left : baseLeft,
-    };
-
-    // Clean up individual properties
-    delete style[`${property}Top`];
-    delete style[`${property}Right`];
-    delete style[`${property}Bottom`];
-    delete style[`${property}Left`];
-  }
-}
-
-/**
  * Parse attribute values, handling expression placeholders and CSS-style strings
  */
 function parseAttributeValue(value: string, context: TemplateContext, attributeName?: string, templateContext?: any): any {
@@ -710,7 +584,7 @@ function parseAttributeValue(value: string, context: TemplateContext, attributeN
 
   // Handle style attribute with CSS-style string parsing
   if (attributeName === 'style' && !value.startsWith('{') && value.includes(':')) {
-    return parseCssStyleString(value);
+    return parseStyleProperties(value);
   }
 
   // Handle event handler attributes (onClick, onInput, etc.) as string functions

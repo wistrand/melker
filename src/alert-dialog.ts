@@ -1,42 +1,10 @@
 // Alert dialog management
 // Shows a modal alert dialog when alert() is called in handlers
 
-import { Document } from './document.ts';
 import { melker } from './template.ts';
-import { Element } from './types.ts';
-import { FocusManager } from './focus.ts';
+import { BaseDialogManager } from './base-dialog.ts';
 
-export interface AlertDialogDependencies {
-  document: Document;
-  focusManager: FocusManager | null;
-  registerElementTree: (element: Element) => void;
-  render: () => void;
-  forceRender: () => void;
-  autoRender: boolean;
-}
-
-export class AlertDialogManager {
-  private _overlay?: Element;
-  private _deps: AlertDialogDependencies;
-
-  constructor(deps: AlertDialogDependencies) {
-    this._deps = deps;
-  }
-
-  /**
-   * Check if alert dialog is open
-   */
-  isOpen(): boolean {
-    return this._overlay !== undefined;
-  }
-
-  /**
-   * Get the overlay element
-   */
-  getOverlay(): Element | undefined {
-    return this._overlay;
-  }
-
+export class AlertDialogManager extends BaseDialogManager {
   /**
    * Show an alert dialog with the given message
    */
@@ -55,7 +23,7 @@ export class AlertDialogManager {
     const contentHeight = lines.length;
     const height = contentHeight + 6; // border (2) + title + separator (2) + content padding (1) + button row (1)
 
-    this._overlay = melker`
+    const overlay = melker`
       <dialog
         id="alert-dialog"
         title="Alert"
@@ -86,43 +54,13 @@ export class AlertDialogManager {
       </dialog>
     `;
 
-    // Add to document and register all elements
-    const root = this._deps.document.root;
-    if (root.children) {
-      root.children.push(this._overlay);
-    }
-    this._deps.registerElementTree(this._overlay);
-
-    // Force complete redraw to ensure dialog borders are correctly aligned
-    this._deps.forceRender();
-
-    // Focus the OK button
-    if (this._deps.focusManager) {
-      this._deps.focusManager.focus('alert-ok');
-    }
+    this._openOverlay(overlay, 'alert-ok');
   }
 
   /**
    * Close the alert dialog
    */
   close(): void {
-    if (!this._overlay) return;
-
-    // Remove from document root's children
-    const root = this._deps.document.root;
-    if (root.children) {
-      const index = root.children.indexOf(this._overlay);
-      if (index !== -1) {
-        root.children.splice(index, 1);
-      }
-    }
-
-    // Unregister all elements from document registry
-    this._deps.document.removeElement(this._overlay);
-
-    this._overlay = undefined;
-
-    // Force complete redraw since overlay covered the screen
-    this._deps.forceRender();
+    this._closeOverlay();
   }
 }

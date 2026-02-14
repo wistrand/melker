@@ -347,8 +347,8 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       this._scrollY = 0; // No internal scroll
     }
 
-    // Determine how many lines to render
-    const linesToRender = useInternalScroll ? cb.height : displayLines.length;
+    // Determine how many lines to render (never exceed content bounds)
+    const linesToRender = useInternalScroll ? cb.height : Math.min(displayLines.length, cb.height);
 
     // Show placeholder if empty
     if (!value && placeholder) {
@@ -376,8 +376,8 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       const cursorScreenY = cursorDisplay.row - this._scrollY;
 
       // In external scroll mode, render cursor at absolute position (parent clips)
-      // In internal scroll mode, only render if within bounds
-      const maxY = useInternalScroll ? cb.height : displayLines.length;
+      // Only render cursor if within content bounds
+      const maxY = useInternalScroll ? cb.height : Math.min(displayLines.length, cb.height);
       if (cursorScreenY >= 0 && cursorScreenY < maxY) {
         const cursorX = cb.x + Math.min(cursorDisplay.col, cb.width - 1);
         const cursorY = cb.y + cursorScreenY;
@@ -936,7 +936,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       this._scrollY = 0;
     }
 
-    const linesToRender = useInternalScroll ? cb.height : displayLines.length;
+    const linesToRender = useInternalScroll ? cb.height : Math.min(displayLines.length, cb.height);
 
     // Show placeholder if empty
     if (!value && placeholder) {
@@ -967,7 +967,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
     if (isFocused) {
       const cursorDisplay = this._cursorToDisplayPos(cb.width);
       const cursorScreenY = cursorDisplay.row - this._scrollY;
-      const maxY = useInternalScroll ? cb.height : displayLines.length;
+      const maxY = useInternalScroll ? cb.height : Math.min(displayLines.length, cb.height);
 
       if (cursorScreenY >= 0 && cursorScreenY < maxY) {
         const cursorX = cb.x + Math.min(cursorDisplay.col, cb.width - 1);
@@ -993,7 +993,11 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
    * Check if the last key input can be fast rendered.
    */
   canFastRender(): boolean {
-    return true; // Textarea can always fast render
+    // Expandable textareas (no rows prop) rely on parent container's ViewportDualBuffer
+    // for clipping. The fast render path writes directly to the terminal with no clipping,
+    // so content can overflow the visible area. Only allow fast render for fixed-height
+    // textareas that handle their own internal scrolling.
+    return this.props.rows !== undefined;
   }
 }
 

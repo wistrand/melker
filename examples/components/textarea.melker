@@ -21,7 +21,15 @@
     "
   />
 
-  <text id="stats" style="color: gray;">Lines: 1 | Chars: 0</text>
+    <textarea
+            id="editor2"
+            placeholder="Type here... (Enter for newlines, Ctrl+A/E/K/Y for emacs keys)"
+            rows="8"
+            cols="56"
+            style="border: none; margin-bottom: 1;"
+    />
+
+    <text id="stats" style="color: gray;">Lines: 1 | Chars: 0</text>
 
   <container style="display: flex; flex-direction: row; gap: 2; margin-top: 1;">
     <button

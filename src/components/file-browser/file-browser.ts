@@ -676,7 +676,7 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
         border: 'thin',
         columnBorders: false,
         cellPadding: 1,
-        style: { flex: 1, width: 'fill' },
+        style: { flex: 1, width: 'fill', overflow: 'hidden' },
       },
         createElement('tbody', {
           id: 'fb-tbody',

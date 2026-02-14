@@ -1,0 +1,256 @@
+<melker>
+<policy>
+{
+  "name": "CSS Transitions Demo",
+  "description": "Demonstrates CSS transitions with pseudo-classes for smooth interactive styling",
+  "permissions": {}
+}
+</policy>
+
+<style>
+.section {
+  border: thin;
+  padding: 1;
+  margin-bottom: 1;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 1;
+}
+
+.label {
+  dim: true;
+}
+
+/* --- Hover transitions --- */
+
+.hover-fade button {
+  background-color: gray;
+  transition: background-color 800ms ease;
+}
+
+.hover-fade button:hover {
+  background-color: blue;
+}
+
+/* Multi-property transition on hover */
+.hover-multi button {
+  background-color: gray;
+  color: white;
+  padding-left: 1;
+  padding-right: 1;
+  transition: background-color 800ms ease, padding-left 600ms ease-out, padding-right 600ms ease-out;
+}
+
+.hover-multi button:hover {
+  background-color: magenta;
+  padding-left: 4;
+  padding-right: 4;
+}
+
+/* --- Focus transitions --- */
+
+.focus-glow input {
+  border: thin;
+  transition: border-color 700ms ease, color 700ms ease;
+}
+
+.focus-glow input:focus {
+  border-color: cyan;
+  color: cyan;
+}
+
+.focus-btn button {
+  background-color: gray;
+  transition: background-color 600ms ease-in-out;
+}
+
+.focus-btn button:focus {
+  background-color: green;
+}
+
+/* --- transition: all --- */
+
+.all-transition button {
+  background-color: gray;
+  color: white;
+  transition: all 800ms ease;
+}
+
+.all-transition button:hover {
+  background-color: yellow;
+  color: black;
+}
+
+.all-transition button:focus {
+  background-color: cyan;
+  color: black;
+}
+
+/* --- Different timing functions --- */
+
+.timing-linear button {
+  background-color: gray;
+  transition: background-color 1500ms linear;
+}
+.timing-linear button:hover {
+  background-color: red;
+}
+
+.timing-ease button {
+  background-color: gray;
+  transition: background-color 1500ms ease;
+}
+.timing-ease button:hover {
+  background-color: red;
+}
+
+.timing-ease-in button {
+  background-color: gray;
+  transition: background-color 1500ms ease-in;
+}
+.timing-ease-in button:hover {
+  background-color: red;
+}
+
+.timing-ease-out button {
+  background-color: gray;
+  transition: background-color 1500ms ease-out;
+}
+.timing-ease-out button:hover {
+  background-color: red;
+}
+
+/* --- Card hover with border color transition --- */
+
+.card {
+  border: thin;
+  padding: 1;
+  width: 20;
+  transition: border-color 800ms ease;
+}
+
+.card:hover {
+  border-color: yellow;
+}
+
+/* --- Transition with delay --- */
+
+.delayed button {
+  background-color: gray;
+  transition: background-color 800ms ease 400ms;
+}
+
+.delayed button:hover {
+  background-color: blue;
+}
+</style>
+
+<container style="overflow: scroll; padding: 1; height: fill">
+  <text style="font-weight: bold; margin-bottom: 1">CSS Transitions Demo</text>
+  <text style="margin-bottom: 1; color: gray">Hover with mouse or Tab to focus - watch smooth transitions</text>
+
+  <container class="section">
+    <text class="section-title">Hover Color Fade</text>
+    <text class="label">background-color transitions smoothly on hover (800ms ease)</text>
+    <container class="hover-fade" style="flex-direction: row; gap: 2; margin-top: 1">
+      <button id="hf1" label="Hover me" />
+      <button id="hf2" label="Me too" />
+      <button id="hf3" label="And me" />
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Multi-Property Hover</text>
+    <text class="label">Background color + padding expand on hover (mixed durations)</text>
+    <container class="hover-multi" style="flex-direction: row; gap: 2; margin-top: 1">
+      <button id="hm1" label="Expand" />
+      <button id="hm2" label="on hover" />
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Focus Glow</text>
+    <text class="label">Tab to focus inputs - border and text fade to cyan (700ms ease)</text>
+    <container class="focus-glow" style="flex-direction: column; gap: 1; margin-top: 1">
+      <input id="fg1" placeholder="Focus me" />
+      <input id="fg2" placeholder="Focus me too" />
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Focus Button Color</text>
+    <text class="label">Tab to focus - background fades to green (600ms ease-in-out)</text>
+    <container class="focus-btn" style="flex-direction: row; gap: 2; margin-top: 1">
+      <button id="fb1" label="Focus me" />
+      <button id="fb2" label="Tab here" />
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">transition: all</text>
+    <text class="label">All properties animate (hover=yellow, focus=cyan, 800ms ease)</text>
+    <container class="all-transition" style="flex-direction: row; gap: 2; margin-top: 1">
+      <button id="at1" label="Hover me" />
+      <button id="at2" label="Focus me" />
+      <button id="at3" label="Try both" />
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Timing Functions</text>
+    <text class="label">Compare easing curves - hover to see the difference (1500ms each)</text>
+    <container style="flex-direction: row; gap: 2; margin-top: 1">
+      <container class="timing-linear">
+        <text class="label">linear</text>
+        <button id="tl" label="Hover" />
+      </container>
+      <container class="timing-ease">
+        <text class="label">ease</text>
+        <button id="te" label="Hover" />
+      </container>
+      <container class="timing-ease-in">
+        <text class="label">ease-in</text>
+        <button id="ti" label="Hover" />
+      </container>
+      <container class="timing-ease-out">
+        <text class="label">ease-out</text>
+        <button id="to" label="Hover" />
+      </container>
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Card Border Transition</text>
+    <text class="label">Hover over cards - border color fades to yellow (800ms ease)</text>
+    <container style="flex-direction: row; gap: 2; margin-top: 1">
+      <container class="card" id="c1">
+        <text style="font-weight: bold">Card A</text>
+        <text class="label">Hover me</text>
+      </container>
+      <container class="card" id="c2">
+        <text style="font-weight: bold">Card B</text>
+        <text class="label">Hover me</text>
+      </container>
+      <container class="card" id="c3">
+        <text style="font-weight: bold">Card C</text>
+        <text class="label">Hover me</text>
+      </container>
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Transition with Delay</text>
+    <text class="label">400ms delay before 800ms animation starts on hover</text>
+    <container class="delayed" style="flex-direction: row; gap: 2; margin-top: 1">
+      <button id="d1" label="Delayed hover" />
+      <button id="d2" label="Wait for it" />
+    </container>
+  </container>
+
+  <container style="flex-direction: row; gap: 2; margin-top: 1">
+    <button label="Exit" onClick="$melker.exit()" />
+  </container>
+</container>
+</melker>

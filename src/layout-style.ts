@@ -2,9 +2,13 @@
 // Pure functions extracted from LayoutEngine — no mutable state.
 
 import { Element, Style, BoxSpacing } from './types.ts';
-import { findKeyframePair, interpolateStyles } from './css-animation.ts';
+import type { TransitionSpec } from './types.ts';
+import { findKeyframePair, interpolateStyles, interpolateValue, getTransitionStyle } from './css-animation.ts';
 import { getThemeColor } from './theme.ts';
+import { getTimingFunction } from './easing.ts';
+import { getUIAnimationManager } from './ui-animation-manager.ts';
 import type { AdvancedLayoutProps, LayoutContext } from './layout.ts';
+import type { PseudoClassState } from './stylesheet.ts';
 
 /** Default layout properties for every element. */
 export const DEFAULT_LAYOUT_PROPS: AdvancedLayoutProps = {
@@ -120,6 +124,156 @@ export function getContainerQueryStyles(element: Element, context?: LayoutContex
     }
   }
   return merged;
+}
+
+/** Merge pseudo-class (:focus, :hover) matching styles from all stylesheets for element. */
+function getPseudoClassStyles(element: Element, context?: LayoutContext): Partial<Style> {
+  if (!context?.stylesheets || (!context.focusedElementId && !context.hoveredElementId)) return {};
+  const pseudoState: PseudoClassState = {
+    focusedElementId: context.focusedElementId,
+    hoveredElementId: context.hoveredElementId,
+  };
+  const ancestors = context.ancestors || [];
+  let merged: Partial<Style> = {};
+  let hasAny = false;
+  for (const ss of context.stylesheets) {
+    if (!ss.hasPseudoClassRules) continue;
+    const styles = ss.getPseudoMatchingStyles(element, ancestors, context.styleContext, pseudoState);
+    if (Object.keys(styles).length > 0) {
+      merged = hasAny ? { ...merged, ...styles } : styles;
+      hasAny = true;
+    }
+  }
+  return merged;
+}
+
+/**
+ * Map individual padding/margin property names to their BoxSpacing container + side.
+ * parseStyleProperties() normalizes paddingLeft/etc. into padding:{top,right,bottom,left},
+ * so transition specs referencing 'paddingLeft' need to look inside the BoxSpacing object.
+ */
+const BOX_SPACING_MAP: Record<string, [string, string]> = {
+  paddingTop: ['padding', 'top'],
+  paddingRight: ['padding', 'right'],
+  paddingBottom: ['padding', 'bottom'],
+  paddingLeft: ['padding', 'left'],
+  marginTop: ['margin', 'top'],
+  marginRight: ['margin', 'right'],
+  marginBottom: ['margin', 'bottom'],
+  marginLeft: ['margin', 'left'],
+};
+
+/** Read a style value, decomposing BoxSpacing when the direct property is absent. */
+function getStyleValue(style: Style, prop: string): any {
+  const direct = (style as any)[prop];
+  if (direct !== undefined) return direct;
+  const mapping = BOX_SPACING_MAP[prop];
+  if (mapping) {
+    const [boxProp, side] = mapping;
+    const boxValue = (style as any)[boxProp];
+    if (boxValue && typeof boxValue === 'object' && side in boxValue) {
+      return boxValue[side] ?? 0;
+    }
+    if (typeof boxValue === 'number') return boxValue;
+  }
+  return undefined;
+}
+
+/**
+ * Detect property changes and start/interrupt CSS transitions.
+ * Called from computeStyle() after the full merged style is computed.
+ */
+function processTransitions(element: Element, resolvedStyle: Style): void {
+  const specs: TransitionSpec[] | undefined = resolvedStyle._transitionSpecs;
+  if (!specs || specs.length === 0) {
+    // No transition specs — clear any state
+    if (element._transitionState) {
+      element._transitionState = undefined;
+      if (element._transitionRegistration) {
+        element._transitionRegistration();
+        element._transitionRegistration = undefined;
+      }
+    }
+    return;
+  }
+
+  // Initialize state if needed
+  if (!element._transitionState) {
+    element._transitionState = {
+      active: new Map(),
+      previousValues: new Map(),
+    };
+  }
+  const state = element._transitionState;
+
+  // Check each spec'd property for changes
+  for (const spec of specs) {
+    if (spec.duration <= 0) continue;  // Skip zero-duration transitions
+
+    const props = spec.property === 'all'
+      ? Object.keys(resolvedStyle).filter(k =>
+          !k.startsWith('_') && !k.startsWith('transition') && !k.startsWith('animation'))
+      : [spec.property];
+
+    for (const prop of props) {
+      const newValue = getStyleValue(resolvedStyle, prop);
+      const prevValue = state.previousValues.get(prop);
+
+      // Store current value for next frame comparison
+      state.previousValues.set(prop, newValue);
+
+      // Skip if no previous value (first frame) or same value
+      if (prevValue === undefined || prevValue === newValue) continue;
+      // Skip if both are equal objects (BoxSpacing)
+      if (typeof prevValue === 'object' && typeof newValue === 'object' &&
+          JSON.stringify(prevValue) === JSON.stringify(newValue)) continue;
+
+      // Value changed — start or interrupt transition
+      if (state.active.has(prop)) {
+        // Interrupt: use current interpolated value as new from
+        const currentTransition = state.active.get(prop)!;
+        const now = performance.now();
+        const elapsed = now - currentTransition.startTime - currentTransition.delay;
+        const progress = elapsed < 0 ? 0 : Math.min(elapsed / currentTransition.duration, 1);
+        const currentValue = interpolateValue(
+          prop, currentTransition.from, currentTransition.to, currentTransition.timingFn(progress));
+        state.active.set(prop, {
+          from: currentValue,
+          to: newValue,
+          startTime: performance.now(),
+          duration: spec.duration,
+          delay: spec.delay,
+          timingFn: getTimingFunction(spec.timingFn),
+        });
+      } else {
+        // New transition
+        state.active.set(prop, {
+          from: prevValue,
+          to: newValue,
+          startTime: performance.now(),
+          duration: spec.duration,
+          delay: spec.delay,
+          timingFn: getTimingFunction(spec.timingFn),
+        });
+      }
+    }
+  }
+
+  // Register with UIAnimationManager if we have active transitions and no registration
+  if (state.active.size > 0 && !element._transitionRegistration) {
+    const manager = getUIAnimationManager();
+    const transId = `css-trans-${element.id}-${Date.now()}`;
+    element._transitionRegistration = manager.register(transId, () => {
+      if (!element._transitionState?.active.size) {
+        if (element._transitionRegistration) {
+          element._transitionRegistration();
+          element._transitionRegistration = undefined;
+        }
+        return;
+      }
+      manager.requestRender();
+    }, 16);  // ~60fps
+  }
 }
 
 /**
@@ -251,9 +405,21 @@ export function computeStyle(element: Element, parentStyle?: Style, context?: La
     ...typeDefaults,  // Type-specific defaults (can be overridden by stylesheet/inline)
     ...inheritableParentStyle,
     ...(element.props && element.props.style),  // Stylesheet + inline styles
+    ...getPseudoClassStyles(element, context),   // Pseudo-class styles (:focus, :hover)
     ...getContainerQueryStyles(element, context),  // Container query styles
     ...getAnimatedStyle(element),          // CSS animation resolved values
   };
+
+  // Only process transitions for elements that have transition specs or active state.
+  // processTransitions needs to see "target" values (before transition overlay) so it
+  // detects real property changes, not interpolated mid-transition values.
+  if (mergedStyle._transitionSpecs || element._transitionState) {
+    processTransitions(element, mergedStyle);
+    const transStyle = getTransitionStyle(element);
+    if (Object.keys(transStyle).length > 0) {
+      Object.assign(mergedStyle, transStyle);
+    }
+  }
 
   // Derive flexDirection from direction style property (used by split-pane)
   if (mergedStyle.direction) {
@@ -289,14 +455,22 @@ export function computeLayoutProps(element: Element, parentProps?: AdvancedLayou
   };
 
   // Extract flex and layout properties from style section
-  // Merge container query and animated values on top of base style
+  // Merge pseudo-class, container query, animated and transition values on top of base style
   const baseStyle = (element.props && element.props.style) || {};
+  const pseudoStyles = getPseudoClassStyles(element, context);
   const containerStyles = getContainerQueryStyles(element, context);
   const animStyle = getAnimatedStyle(element);
+  const transStyle = getTransitionStyle(element);
+  const hasPseudo = Object.keys(pseudoStyles).length > 0;
   const hasContainer = Object.keys(containerStyles).length > 0;
   const hasAnim = Object.keys(animStyle).length > 0;
-  const style = (hasContainer || hasAnim)
-    ? { ...baseStyle, ...(hasContainer ? containerStyles : undefined), ...(hasAnim ? animStyle : undefined) }
+  const hasTrans = Object.keys(transStyle).length > 0;
+  const style = (hasPseudo || hasContainer || hasAnim || hasTrans)
+    ? { ...baseStyle,
+        ...(hasPseudo ? pseudoStyles : undefined),
+        ...(hasContainer ? containerStyles : undefined),
+        ...(hasAnim ? animStyle : undefined),
+        ...(hasTrans ? transStyle : undefined) }
     : baseStyle;
 
   // Support flex shorthand in style: flex: "1" or flex: "0 0 auto" etc

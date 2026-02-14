@@ -1,7 +1,7 @@
 // CSS animation interpolation engine
 // Given keyframes and progress, produces interpolated style properties.
 
-import type { Style, AnimationKeyframe } from './types.ts';
+import type { Style, AnimationKeyframe, Element } from './types.ts';
 import { lerpPackedRGBA } from './components/color-utils.ts';
 
 /** Style properties that hold packed RGBA color values */
@@ -82,7 +82,7 @@ export function findKeyframePair(
  * - Color (packed RGBA integer): OKLCH perceptually-uniform lerp
  * - Discrete (everything else): snap at t >= 0.5
  */
-function interpolateValue(key: string, from: any, to: any, t: number): any {
+export function interpolateValue(key: string, from: any, to: any, t: number): any {
   // Same value — no interpolation needed
   if (from === to) return from;
 
@@ -160,4 +160,43 @@ export function interpolateStyles(
   }
 
   return result;
+}
+
+/**
+ * Compute interpolated style from in-flight CSS transitions.
+ * Returns {} if no transitions are active.
+ * Ephemeral — computed fresh each frame from TransitionState + performance.now().
+ */
+export function getTransitionStyle(element: Element): Partial<Style> {
+  const state = element._transitionState;
+  if (!state?.active.size) return {};
+
+  const now = performance.now();
+  const result: Record<string, any> = {};
+  const completed: string[] = [];
+
+  for (const [prop, t] of state.active) {
+    const elapsed = now - t.startTime - t.delay;
+    if (elapsed < 0) {
+      result[prop] = t.from;  // still in delay
+      continue;
+    }
+    const progress = Math.min(elapsed / t.duration, 1);
+    const eased = t.timingFn(progress);
+    result[prop] = interpolateValue(prop, t.from, t.to, eased);
+    if (progress >= 1) completed.push(prop);
+  }
+
+  // Clean up completed transitions
+  for (const prop of completed) {
+    state.active.delete(prop);
+  }
+
+  // If no active transitions remain, unregister from manager
+  if (state.active.size === 0 && element._transitionRegistration) {
+    element._transitionRegistration();
+    element._transitionRegistration = undefined;
+  }
+
+  return Object.keys(result).length > 0 ? result : {};
 }

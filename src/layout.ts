@@ -69,11 +69,14 @@ export interface LayoutContext {
   // For scrollable containers - enables virtual layout optimization
   scrollOffset?: { x: number; y: number };
   isScrollableParent?: boolean;
-  // Container query support
+  // Container query and pseudo-class support
   stylesheets?: readonly Stylesheet[];
   styleContext?: StyleContext;
   ancestors?: Element[];
   containerBounds?: { width: number; height: number };
+  // Pseudo-class state (:focus, :hover)
+  focusedElementId?: string;
+  hoveredElementId?: string;
 }
 
 /** A flex item with computed sizing, margins, and constraints. */

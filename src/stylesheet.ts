@@ -2,7 +2,7 @@
 // Selectors: *, #id, type, .class, compound (e.g., *.class, type.class)
 // Combinators: descendant (space), child (>)
 
-import type { Element, Style, KeyframeDefinition, AnimationKeyframe, AnimationState } from './types.ts';
+import type { Element, Style, KeyframeDefinition, AnimationKeyframe, AnimationState, TransitionSpec } from './types.ts';
 import { hasClass } from './element.ts';
 import { parseColor } from './components/color-utils.ts';
 import { getTimingFunction } from './easing.ts';
@@ -35,6 +35,15 @@ export interface SelectorPart {
  */
 export interface CompoundSelector {
   parts: SelectorPart[];
+  pseudoClasses?: string[];
+}
+
+/**
+ * State for pseudo-class matching (:focus, :hover)
+ */
+export interface PseudoClassState {
+  focusedElementId?: string;
+  hoveredElementId?: string;
 }
 
 /**
@@ -168,6 +177,9 @@ function selectorSpecificity(selector: StyleSelector): number {
       else if (part.type === 'class') classes++;
       else if (part.type === 'type') types++;
     }
+    if (seg.compound.pseudoClasses) {
+      classes += seg.compound.pseudoClasses.length;
+    }
   }
   return ids * 1_000_000 + classes * 1_000 + types;
 }
@@ -186,7 +198,7 @@ function parseCompoundSelector(selector: string): CompoundSelector {
 
   // Check for ID selector first (#id)
   if (remaining.startsWith('#')) {
-    const idMatch = remaining.match(/^#([^.#]+)/);
+    const idMatch = remaining.match(/^#([^.#:]+)/);
     if (idMatch) {
       parts.push({ type: 'id', value: idMatch[1] });
       remaining = remaining.slice(idMatch[0].length);
@@ -198,8 +210,8 @@ function parseCompoundSelector(selector: string): CompoundSelector {
     remaining = remaining.slice(1);
   }
   // Check for type selector (must be at start, before any dots)
-  else if (!remaining.startsWith('.')) {
-    const typeMatch = remaining.match(/^([^.#]+)/);
+  else if (!remaining.startsWith('.') && !remaining.startsWith(':')) {
+    const typeMatch = remaining.match(/^([^.#:]+)/);
     if (typeMatch) {
       parts.push({ type: 'type', value: typeMatch[1] });
       remaining = remaining.slice(typeMatch[0].length);
@@ -208,7 +220,7 @@ function parseCompoundSelector(selector: string): CompoundSelector {
 
   // Parse remaining class selectors (.class1.class2...)
   while (remaining.startsWith('.')) {
-    const classMatch = remaining.match(/^\.([^.#]+)/);
+    const classMatch = remaining.match(/^\.([^.#:]+)/);
     if (classMatch) {
       parts.push({ type: 'class', value: classMatch[1] });
       remaining = remaining.slice(classMatch[0].length);
@@ -217,7 +229,19 @@ function parseCompoundSelector(selector: string): CompoundSelector {
     }
   }
 
-  return { parts };
+  // Parse pseudo-classes (:focus, :hover, etc.)
+  const pseudoClasses: string[] = [];
+  while (remaining.startsWith(':')) {
+    const pseudoMatch = remaining.match(/^:([a-z-]+)/);
+    if (pseudoMatch) {
+      pseudoClasses.push(pseudoMatch[1]);
+      remaining = remaining.slice(pseudoMatch[0].length);
+    } else {
+      break;
+    }
+  }
+
+  return { parts, ...(pseudoClasses.length > 0 ? { pseudoClasses } : undefined) };
 }
 
 /**
@@ -279,11 +303,20 @@ function selectorPartMatches(part: SelectorPart, element: Element): boolean {
  * Check if a compound selector matches an element
  * All parts must match the same element
  */
-function compoundSelectorMatches(compound: CompoundSelector, element: Element): boolean {
-  if (compound.parts.length === 0) {
+function compoundSelectorMatches(compound: CompoundSelector, element: Element, state?: PseudoClassState): boolean {
+  if (compound.parts.length === 0 && !compound.pseudoClasses?.length) {
     return false;
   }
-  return compound.parts.every(part => selectorPartMatches(part, element));
+  if (!compound.parts.every(part => selectorPartMatches(part, element))) {
+    return false;
+  }
+  if (compound.pseudoClasses) {
+    for (const pseudo of compound.pseudoClasses) {
+      if (pseudo === 'focus' && state?.focusedElementId !== element.id) return false;
+      if (pseudo === 'hover' && state?.hoveredElementId !== element.id) return false;
+    }
+  }
+  return true;
 }
 
 /**
@@ -292,14 +325,14 @@ function compoundSelectorMatches(compound: CompoundSelector, element: Element): 
  * @param element The target element to match
  * @param ancestors Optional array of ancestor elements (parent first, then grandparent, etc.)
  */
-export function selectorMatches(selector: StyleSelector, element: Element, ancestors: Element[] = []): boolean {
+export function selectorMatches(selector: StyleSelector, element: Element, ancestors: Element[] = [], state?: PseudoClassState): boolean {
   if (selector.segments.length === 0) {
     return false;
   }
 
   // The last segment must match the target element
   const targetSegment = selector.segments[selector.segments.length - 1];
-  if (!compoundSelectorMatches(targetSegment.compound, element)) {
+  if (!compoundSelectorMatches(targetSegment.compound, element, state)) {
     return false;
   }
 
@@ -323,7 +356,7 @@ export function selectorMatches(selector: StyleSelector, element: Element, ances
       if (ancestorIndex >= ancestors.length) {
         return false;
       }
-      if (!compoundSelectorMatches(segment.compound, ancestors[ancestorIndex])) {
+      if (!compoundSelectorMatches(segment.compound, ancestors[ancestorIndex], state)) {
         return false;
       }
       ancestorIndex++;
@@ -331,7 +364,7 @@ export function selectorMatches(selector: StyleSelector, element: Element, ances
       // Descendant combinator: search through ancestors for a match
       let found = false;
       while (ancestorIndex < ancestors.length) {
-        if (compoundSelectorMatches(segment.compound, ancestors[ancestorIndex])) {
+        if (compoundSelectorMatches(segment.compound, ancestors[ancestorIndex], state)) {
           ancestorIndex++;
           found = true;
           break;
@@ -373,7 +406,10 @@ function parseTimeValue(value: string): number | undefined {
 }
 
 /** Properties that accept time values */
-const TIME_PROPS = new Set(['animationDuration', 'animationDelay']);
+const TIME_PROPS = new Set([
+  'animationDuration', 'animationDelay',
+  'transitionDuration', 'transitionDelay',
+]);
 
 /** Properties that accept 'infinite' as a keyword (mapped to Infinity) */
 const INFINITE_PROPS = new Set(['animationIterationCount']);
@@ -457,6 +493,55 @@ function parseAnimationShorthand(value: string): Partial<Style> {
 }
 
 /**
+ * Convert kebab-case to camelCase.
+ */
+function kebabToCamel(str: string): string {
+  return str.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+}
+
+/**
+ * Parse the `transition` shorthand into TransitionSpec[].
+ * Format: [property] [duration] [timing-function] [delay]
+ * Comma-separated for multiple properties:
+ *   transition: background-color 300ms ease-in-out, color 200ms linear 50ms;
+ *   transition: all 200ms ease;
+ */
+function parseTransitionShorthand(value: string): Partial<Style> {
+  const timingFunctions = new Set([
+    'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out',
+  ]);
+  const specs: TransitionSpec[] = [];
+
+  for (const part of value.split(',')) {
+    const tokens = part.trim().split(/\s+/);
+    let property = 'all';
+    let duration = 0;
+    let timingFn = 'ease';
+    let delay = 0;
+    let timeCount = 0;
+
+    for (const token of tokens) {
+      const time = parseTimeValue(token);
+      if (time !== undefined) {
+        if (timeCount === 0) duration = time;
+        else delay = time;
+        timeCount++;
+        continue;
+      }
+      if (timingFunctions.has(token) || token.startsWith('steps(') || token.startsWith('cubic-bezier(')) {
+        timingFn = token;
+        continue;
+      }
+      // Must be property name
+      property = kebabToCamel(token);
+    }
+    specs.push({ property, duration, timingFn, delay });
+  }
+
+  return { _transitionSpecs: specs } as any;
+}
+
+/**
  * Parse a CSS-like style value string into a Style object
  * Converts "width: 40; height: 10; border: thin;" to { width: 40, height: 10, border: 'thin' }
  */
@@ -481,6 +566,13 @@ export function parseStyleProperties(cssString: string): Style {
     // Animation shorthand: expand into individual properties
     if (camelKey === 'animation') {
       const expanded = parseAnimationShorthand(value);
+      Object.assign(style, expanded);
+      continue;
+    }
+
+    // Transition shorthand: expand into _transitionSpecs
+    if (camelKey === 'transition') {
+      const expanded = parseTransitionShorthand(value);
       Object.assign(style, expanded);
       continue;
     }
@@ -833,7 +925,7 @@ export class Stylesheet {
    * When ctx is provided, media-conditioned rules are evaluated against it.
    * When ctx is omitted, media-conditioned rules are excluded.
    */
-  getMatchingStyles(element: Element, ancestors: Element[] = [], ctx?: StyleContext): Style[] {
+  getMatchingStyles(element: Element, ancestors: Element[] = [], ctx?: StyleContext, pseudoState?: PseudoClassState): Style[] {
     const matches: { style: Style; specificity: number; index: number }[] = [];
 
     for (let i = 0; i < this._items.length; i++) {
@@ -841,7 +933,7 @@ export class Stylesheet {
       if (item.mediaCondition) {
         if (!ctx || !mediaConditionMatches(item.mediaCondition, ctx)) continue;
       }
-      if (selectorMatches(item.selector, element, ancestors)) {
+      if (selectorMatches(item.selector, element, ancestors, pseudoState)) {
         matches.push({ style: item.style, specificity: item.specificity, index: i });
       }
     }
@@ -855,9 +947,29 @@ export class Stylesheet {
    * When ctx is provided, media-conditioned rules are evaluated against it.
    * When ctx is omitted, media-conditioned rules are excluded.
    */
-  getMergedStyle(element: Element, ancestors: Element[] = [], ctx?: StyleContext): Style {
-    const matchingStyles = this.getMatchingStyles(element, ancestors, ctx);
+  getMergedStyle(element: Element, ancestors: Element[] = [], ctx?: StyleContext, pseudoState?: PseudoClassState): Style {
+    const matchingStyles = this.getMatchingStyles(element, ancestors, ctx, pseudoState);
     return matchingStyles.reduce((merged, style) => ({ ...merged, ...style }), {});
+  }
+
+  /**
+   * Get merged styles only from rules that have pseudo-class selectors AND currently match.
+   * Used by computeStyle() to layer pseudo-class styles on top of base styles.
+   */
+  getPseudoMatchingStyles(element: Element, ancestors: Element[], ctx?: StyleContext, pseudoState?: PseudoClassState): Style {
+    const matches: { style: Style; specificity: number; index: number }[] = [];
+    for (let i = 0; i < this._items.length; i++) {
+      const item = this._items[i];
+      if (!item.selector.segments.some(seg => seg.compound.pseudoClasses?.length)) continue;
+      if (item.mediaCondition) {
+        if (!ctx || !mediaConditionMatches(item.mediaCondition, ctx)) continue;
+      }
+      if (selectorMatches(item.selector, element, ancestors, pseudoState)) {
+        matches.push({ style: item.style, specificity: item.specificity, index: i });
+      }
+    }
+    matches.sort((a, b) => a.specificity - b.specificity || a.index - b.index);
+    return matches.reduce((merged, m) => ({ ...merged, ...m.style }), {} as Style);
   }
 
   /**
@@ -866,6 +978,16 @@ export class Stylesheet {
    */
   get hasMediaRules(): boolean {
     return this._items.some(item => item.mediaCondition !== undefined);
+  }
+
+  /**
+   * Whether any rules have pseudo-class selectors (:focus, :hover).
+   * Fast path: skip pseudo-class evaluation when false.
+   */
+  get hasPseudoClassRules(): boolean {
+    return this._items.some(item =>
+      item.selector.segments.some(seg => seg.compound.pseudoClasses?.length)
+    );
   }
 
   /**
@@ -892,7 +1014,8 @@ export class Stylesheet {
     element: Element,
     ancestors: Element[],
     containerSize: { width: number; height: number },
-    ctx?: StyleContext
+    ctx?: StyleContext,
+    pseudoState?: PseudoClassState
   ): Style {
     if (this._containerItems.length === 0) return {};
 
@@ -905,7 +1028,7 @@ export class Stylesheet {
         if (!ctx || !mediaConditionMatches(item.mediaCondition, ctx)) continue;
       }
       if (!containerConditionMatches(item.containerCondition!, containerSize)) continue;
-      if (selectorMatches(item.selector, element, ancestors)) {
+      if (selectorMatches(item.selector, element, ancestors, pseudoState)) {
         matches.push({ style: item.style, specificity: item.specificity, index: i });
       }
     }
@@ -994,8 +1117,11 @@ export class Stylesheet {
  * On subsequent calls: diffs props.style vs _computedStyle to detect script
  * changes, merges those into _inlineStyle, then recomputes from scratch.
  */
-export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancestors: Element[] = [], ctx?: StyleContext): void {
+export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancestors: Element[] = [], ctx?: StyleContext, pseudoState?: PseudoClassState): void {
   // Get matching stylesheet styles for this element (with ancestor context)
+  // Note: pseudoState is not passed here — pseudo-class styles are resolved per-frame
+  // in computeStyle(), not during stylesheet application. This keeps applyStylesheet()
+  // stable across focus/hover changes (only re-runs on resize/media query changes).
   const stylesheetStyle = stylesheet.getMergedStyle(element, ancestors, ctx);
 
   if (element._inlineStyle === undefined) {
@@ -1081,7 +1207,7 @@ export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancest
   if (element.children) {
     const childAncestors = [element, ...ancestors];
     for (const child of element.children) {
-      applyStylesheet(child, stylesheet, childAncestors, ctx);
+      applyStylesheet(child, stylesheet, childAncestors, ctx, pseudoState);
     }
   }
 }

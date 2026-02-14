@@ -1,0 +1,145 @@
+<melker>
+<policy>
+{
+  "name": "Pseudo-Classes Demo",
+  "description": "Demonstrates :focus and :hover CSS pseudo-class selectors",
+  "permissions": {}
+}
+</policy>
+
+<style>
+.section {
+  border: thin;
+  padding: 1;
+  margin-bottom: 1;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 1;
+}
+
+/* :hover pseudo-class - styles apply when mouse is over the element */
+.hover-demo button {
+  transition: background-color 200ms ease;
+}
+
+.hover-demo button:hover {
+  background-color: blue;
+  color: white;
+  font-weight: bold;
+}
+
+/* :focus pseudo-class - styles apply when element has keyboard focus */
+.focus-demo input {
+  border: thin;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+
+.focus-demo input:focus {
+  border: single;
+  border-color: cyan;
+  color: cyan;
+}
+
+.focus-demo button:focus {
+  background-color: green;
+  color: white;
+}
+
+/* Both :hover and :focus on the same elements */
+.both-demo button {
+  background-color: gray;
+}
+
+.both-demo button:hover {
+  background-color: blue;
+}
+
+.both-demo button:focus {
+  background-color: green;
+}
+
+/* Compound selector with pseudo-class */
+button.danger:hover {
+  background-color: red;
+  color: white;
+}
+
+button.danger:focus {
+  background-color: magenta;
+}
+
+/* Descendant combinator with pseudo-class */
+.card-list container:hover {
+  border-color: yellow;
+}
+</style>
+
+<container style="overflow: scroll; padding: 1; height: fill">
+  <text style="font-weight: bold; margin-bottom: 1">CSS Pseudo-Class Examples</text>
+  <text style="margin-bottom: 1; color: gray">Hover with mouse or Tab to focus elements</text>
+
+  <container class="section">
+    <text class="section-title">:hover Pseudo-Class</text>
+    <text>Move the mouse over these buttons:</text>
+    <container class="hover-demo" style="flex-direction: row; gap: 2; margin-top: 1">
+      <button id="h1" label="Hover me" />
+      <button id="h2" label="Me too" />
+      <button id="h3" label="And me" />
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">:focus Pseudo-Class</text>
+    <text>Tab to focus these elements:</text>
+    <container class="focus-demo" style="flex-direction: column; gap: 1; margin-top: 1">
+      <input id="f1" placeholder="Focus me (border turns cyan)" />
+      <input id="f2" placeholder="Focus me too" />
+      <container style="flex-direction: row; gap: 2">
+        <button id="f3" label="Focus button" />
+        <button id="f4" label="Another button" />
+      </container>
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">:hover + :focus Combined</text>
+    <text>Hover turns blue, focus turns green:</text>
+    <container class="both-demo" style="flex-direction: row; gap: 2; margin-top: 1">
+      <button id="b1" label="Try both" />
+      <button id="b2" label="Hover and focus" />
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Compound Selector + Pseudo</text>
+    <text>button.danger:hover turns red, :focus turns magenta:</text>
+    <container style="flex-direction: row; gap: 2; margin-top: 1">
+      <button id="d1" class="danger" label="Danger!" />
+      <button id="d2" class="danger" label="Caution!" />
+      <button id="d3" label="Normal (no .danger class)" />
+    </container>
+  </container>
+
+  <container class="section">
+    <text class="section-title">Descendant Combinator + :hover</text>
+    <text>Hover over the cards below - border turns yellow:</text>
+    <container class="card-list" style="flex-direction: row; gap: 2; margin-top: 1">
+      <container id="c1" style="border: thin; padding: 1; width: 15">
+        <text>Card A</text>
+      </container>
+      <container id="c2" style="border: thin; padding: 1; width: 15">
+        <text>Card B</text>
+      </container>
+      <container id="c3" style="border: thin; padding: 1; width: 15">
+        <text>Card C</text>
+      </container>
+    </container>
+  </container>
+
+  <container style="flex-direction: row; gap: 2; margin-top: 1">
+    <button label="Exit" onClick="$melker.exit()" />
+  </container>
+</container>
+</melker>

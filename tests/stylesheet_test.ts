@@ -15,7 +15,11 @@ import {
   mediaConditionMatches,
   containerConditionMatches,
 } from '../mod.ts';
-import type { StyleContext, ContainerCondition } from '../mod.ts';
+import type { StyleContext, ContainerCondition, PseudoClassState, TransitionSpec } from '../mod.ts';
+import { interpolateValue, getTransitionStyle } from '../src/css-animation.ts';
+import { getTimingFunction } from '../src/easing.ts';
+import { computeStyle } from '../src/layout-style.ts';
+import type { LayoutContext } from '../src/layout.ts';
 
 // ---------------------------------------------------------------------------
 // Helper: create an element with classList already set (simulates class="...")
@@ -1755,4 +1759,913 @@ Deno.test('getContainerMatchingStyles - @container inside @media skipped without
     { terminalWidth: 60, terminalHeight: 30 }
   );
   assertEquals(noMatch.gap, undefined);
+});
+
+// ===========================================================================
+// 15. Pseudo-class selectors (:focus, :hover)
+// ===========================================================================
+
+// --- 15a. Selector parsing ---
+
+Deno.test('parseSelector - :hover pseudo-class on type', () => {
+  const sel = parseSelector('button:hover');
+  assertEquals(sel.segments.length, 1);
+  assertEquals(sel.segments[0].compound.parts[0], { type: 'type', value: 'button' });
+  assertEquals(sel.segments[0].compound.pseudoClasses, ['hover']);
+});
+
+Deno.test('parseSelector - :focus pseudo-class on type', () => {
+  const sel = parseSelector('input:focus');
+  assertEquals(sel.segments.length, 1);
+  assertEquals(sel.segments[0].compound.parts[0], { type: 'type', value: 'input' });
+  assertEquals(sel.segments[0].compound.pseudoClasses, ['focus']);
+});
+
+Deno.test('parseSelector - :hover pseudo-class on class', () => {
+  const sel = parseSelector('.card:hover');
+  assertEquals(sel.segments.length, 1);
+  assertEquals(sel.segments[0].compound.parts[0], { type: 'class', value: 'card' });
+  assertEquals(sel.segments[0].compound.pseudoClasses, ['hover']);
+});
+
+Deno.test('parseSelector - :focus pseudo-class on id', () => {
+  const sel = parseSelector('#myInput:focus');
+  assertEquals(sel.segments.length, 1);
+  assertEquals(sel.segments[0].compound.parts[0], { type: 'id', value: 'myInput' });
+  assertEquals(sel.segments[0].compound.pseudoClasses, ['focus']);
+});
+
+Deno.test('parseSelector - compound type.class:hover', () => {
+  const sel = parseSelector('button.primary:hover');
+  assertEquals(sel.segments.length, 1);
+  const parts = sel.segments[0].compound.parts;
+  assertEquals(parts.length, 2);
+  assertEquals(parts[0], { type: 'type', value: 'button' });
+  assertEquals(parts[1], { type: 'class', value: 'primary' });
+  assertEquals(sel.segments[0].compound.pseudoClasses, ['hover']);
+});
+
+Deno.test('parseSelector - multiple pseudo-classes :hover:focus', () => {
+  const sel = parseSelector('button:hover:focus');
+  assertEquals(sel.segments.length, 1);
+  assertEquals(sel.segments[0].compound.parts[0], { type: 'type', value: 'button' });
+  assertEquals(sel.segments[0].compound.pseudoClasses, ['hover', 'focus']);
+});
+
+Deno.test('parseSelector - no pseudo-class means no pseudoClasses field', () => {
+  const sel = parseSelector('button');
+  assertEquals(sel.segments[0].compound.pseudoClasses, undefined);
+});
+
+Deno.test('parseSelector - pseudo-class with descendant combinator', () => {
+  const sel = parseSelector('.app button:hover');
+  assertEquals(sel.segments.length, 2);
+  assertEquals(sel.segments[0].compound.parts[0], { type: 'class', value: 'app' });
+  assertEquals(sel.segments[0].compound.pseudoClasses, undefined);
+  assertEquals(sel.segments[1].compound.parts[0], { type: 'type', value: 'button' });
+  assertEquals(sel.segments[1].compound.pseudoClasses, ['hover']);
+});
+
+Deno.test('parseSelector - pseudo-class with child combinator', () => {
+  const sel = parseSelector('.app > input:focus');
+  assertEquals(sel.segments.length, 2);
+  assertEquals(sel.segments[1].combinator, 'child');
+  assertEquals(sel.segments[1].compound.parts[0], { type: 'type', value: 'input' });
+  assertEquals(sel.segments[1].compound.pseudoClasses, ['focus']);
+});
+
+// --- 15b. Selector matching with pseudo-class state ---
+
+Deno.test('selectorMatches - :hover matches when hoveredElementId matches', () => {
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  assert(selectorMatches(parseSelector('button:hover'), btn, [], state));
+});
+
+Deno.test('selectorMatches - :hover does not match when hoveredElementId differs', () => {
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn2' };
+  assert(!selectorMatches(parseSelector('button:hover'), btn, [], state));
+});
+
+Deno.test('selectorMatches - :hover does not match when no hover state', () => {
+  const btn = el('button', { id: 'btn1' });
+  assert(!selectorMatches(parseSelector('button:hover'), btn, [], {}));
+  assert(!selectorMatches(parseSelector('button:hover'), btn, []));
+});
+
+Deno.test('selectorMatches - :focus matches when focusedElementId matches', () => {
+  const inp = el('input', { id: 'inp1' });
+  const state: PseudoClassState = { focusedElementId: 'inp1' };
+  assert(selectorMatches(parseSelector('input:focus'), inp, [], state));
+});
+
+Deno.test('selectorMatches - :focus does not match when focusedElementId differs', () => {
+  const inp = el('input', { id: 'inp1' });
+  const state: PseudoClassState = { focusedElementId: 'inp2' };
+  assert(!selectorMatches(parseSelector('input:focus'), inp, [], state));
+});
+
+Deno.test('selectorMatches - :focus does not match when no focus state', () => {
+  const inp = el('input', { id: 'inp1' });
+  assert(!selectorMatches(parseSelector('input:focus'), inp, [], {}));
+});
+
+Deno.test('selectorMatches - :hover:focus requires both states active', () => {
+  const btn = el('button', { id: 'btn1' });
+  const bothActive: PseudoClassState = { hoveredElementId: 'btn1', focusedElementId: 'btn1' };
+  const hoverOnly: PseudoClassState = { hoveredElementId: 'btn1' };
+  const focusOnly: PseudoClassState = { focusedElementId: 'btn1' };
+  assert(selectorMatches(parseSelector('button:hover:focus'), btn, [], bothActive));
+  assert(!selectorMatches(parseSelector('button:hover:focus'), btn, [], hoverOnly));
+  assert(!selectorMatches(parseSelector('button:hover:focus'), btn, [], focusOnly));
+});
+
+Deno.test('selectorMatches - pseudo-class with descendant combinator', () => {
+  const btn = el('button', { id: 'btn1' });
+  const parent = el('container', { classes: ['app'] });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  assert(selectorMatches(parseSelector('.app button:hover'), btn, [parent], state));
+  assert(!selectorMatches(parseSelector('.app button:hover'), btn, [parent]));  // no state
+});
+
+Deno.test('selectorMatches - pseudo-class on ancestor segment', () => {
+  // .parent:hover > .child — tests pseudo-class on ancestor
+  const child = el('container', { id: 'child1', classes: ['child'] });
+  const parent = el('container', { id: 'parent1', classes: ['parent'] });
+  const state: PseudoClassState = { hoveredElementId: 'parent1' };
+  assert(selectorMatches(parseSelector('.parent:hover > .child'), child, [parent], state));
+  // Doesn't match when parent is not hovered
+  const wrongState: PseudoClassState = { hoveredElementId: 'child1' };
+  assert(!selectorMatches(parseSelector('.parent:hover > .child'), child, [parent], wrongState));
+});
+
+Deno.test('selectorMatches - non-pseudo rules still work when state provided', () => {
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  // Regular selector with state — should still match normally
+  assert(selectorMatches(parseSelector('button'), btn, [], state));
+});
+
+// --- 15c. Specificity ---
+
+Deno.test('specificity - :hover counts as class-level specificity', () => {
+  // button:hover = type(1) + pseudo-class(1000) = 1001
+  // .primary     = class(1000)
+  // button:hover and .primary have specificity 1001 vs 1000
+  const ss = Stylesheet.fromString(`
+    .primary { width: 10; }
+    button:hover { width: 20; }
+  `);
+  const btn = el('button', { id: 'btn1', classes: ['primary'] });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  const merged = ss.getMergedStyle(btn, [], undefined, state);
+  assertEquals(merged.width, 20);  // button:hover (1001) beats .primary (1000)
+});
+
+Deno.test('specificity - :hover beats plain type selector', () => {
+  const ss = Stylesheet.fromString(`
+    button { width: 10; }
+    button:hover { width: 20; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  const merged = ss.getMergedStyle(btn, [], undefined, state);
+  assertEquals(merged.width, 20);
+});
+
+Deno.test('specificity - :hover on type loses to id selector', () => {
+  // button:hover = type(1) + pseudo(1000) = 1001
+  // #myBtn = id(1000000)
+  const ss = Stylesheet.fromString(`
+    button:hover { width: 20; }
+    #myBtn { width: 50; }
+  `);
+  const btn = el('button', { id: 'myBtn' });
+  const state: PseudoClassState = { hoveredElementId: 'myBtn' };
+  const merged = ss.getMergedStyle(btn, [], undefined, state);
+  assertEquals(merged.width, 50);  // id wins
+});
+
+Deno.test('specificity - two pseudo-classes beat one pseudo-class', () => {
+  // button:hover:focus = type(1) + 2*pseudo(2000) = 2001
+  // button:hover       = type(1) + pseudo(1000)   = 1001
+  const ss = Stylesheet.fromString(`
+    button:hover:focus { width: 30; }
+    button:hover { width: 20; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1', focusedElementId: 'btn1' };
+  const merged = ss.getMergedStyle(btn, [], undefined, state);
+  assertEquals(merged.width, 30);
+});
+
+// --- 15d. parseStyleBlock with pseudo-classes ---
+
+Deno.test('parseStyleBlock - pseudo-class rule', () => {
+  const { items } = parseStyleBlock('button:hover { border: thin; }');
+  assertEquals(items.length, 1);
+  assertEquals(items[0].style.border, 'thin');
+  assertEquals(items[0].selector.segments[0].compound.pseudoClasses, ['hover']);
+});
+
+Deno.test('parseStyleBlock - mixed normal and pseudo rules', () => {
+  const { items } = parseStyleBlock(`
+    button { width: 20; }
+    button:hover { width: 30; }
+    button:focus { border: thin; }
+  `);
+  assertEquals(items.length, 3);
+  assertEquals(items[0].selector.segments[0].compound.pseudoClasses, undefined);
+  assertEquals(items[1].selector.segments[0].compound.pseudoClasses, ['hover']);
+  assertEquals(items[2].selector.segments[0].compound.pseudoClasses, ['focus']);
+});
+
+Deno.test('parseStyleBlock - pseudo-class in @media block', () => {
+  const { items } = parseStyleBlock(`
+    @media (min-width: 80) {
+      button:hover { width: 30; }
+    }
+  `);
+  assertEquals(items.length, 1);
+  assertEquals(items[0].selector.segments[0].compound.pseudoClasses, ['hover']);
+  assertEquals(items[0].mediaCondition!.minWidth, 80);
+});
+
+// --- 15e. Stylesheet.hasPseudoClassRules ---
+
+Deno.test('Stylesheet.hasPseudoClassRules - false when no pseudo rules', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  assertEquals(ss.hasPseudoClassRules, false);
+});
+
+Deno.test('Stylesheet.hasPseudoClassRules - true when pseudo rules exist', () => {
+  const ss = Stylesheet.fromString(`
+    button { width: 20; }
+    button:hover { width: 30; }
+  `);
+  assertEquals(ss.hasPseudoClassRules, true);
+});
+
+Deno.test('Stylesheet.hasPseudoClassRules - true for focus pseudo', () => {
+  const ss = Stylesheet.fromString('input:focus { border: thin; }');
+  assertEquals(ss.hasPseudoClassRules, true);
+});
+
+// --- 15f. getMergedStyle with pseudo state ---
+
+Deno.test('getMergedStyle - pseudo state applies matching pseudo rules', () => {
+  const ss = Stylesheet.fromString(`
+    button { width: 20; }
+    button:hover { width: 30; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  // Without state — only base rule matches
+  assertEquals(ss.getMergedStyle(btn).width, 20);
+  // With state — pseudo rule matches and overrides (higher specificity)
+  assertEquals(ss.getMergedStyle(btn, [], undefined, state).width, 30);
+});
+
+Deno.test('getMergedStyle - pseudo state does not affect non-matching element', () => {
+  const ss = Stylesheet.fromString(`
+    button { width: 20; }
+    button:hover { width: 30; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'other' };
+  assertEquals(ss.getMergedStyle(btn, [], undefined, state).width, 20);
+});
+
+Deno.test('getMergedStyle - focus and hover pseudo rules both apply', () => {
+  const ss = Stylesheet.fromString(`
+    button { width: 10; }
+    button:hover { height: 5; }
+    button:focus { border: thin; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1', focusedElementId: 'btn1' };
+  const merged = ss.getMergedStyle(btn, [], undefined, state);
+  assertEquals(merged.width, 10);
+  assertEquals(merged.height, 5);
+  assertEquals(merged.border, 'thin');
+});
+
+// --- 15g. getPseudoMatchingStyles ---
+
+Deno.test('getPseudoMatchingStyles - returns only pseudo-class rule styles', () => {
+  const ss = Stylesheet.fromString(`
+    button { width: 20; }
+    button:hover { height: 5; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  const pseudo = ss.getPseudoMatchingStyles(btn, [], undefined, state);
+  // Should only return the :hover rule's styles, not the base rule
+  assertEquals(pseudo.height, 5);
+  assertEquals(pseudo.width, undefined);
+});
+
+Deno.test('getPseudoMatchingStyles - returns empty when no pseudo rules match', () => {
+  const ss = Stylesheet.fromString(`
+    button { width: 20; }
+    button:hover { height: 5; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'other' };
+  const pseudo = ss.getPseudoMatchingStyles(btn, [], undefined, state);
+  assertEquals(Object.keys(pseudo).length, 0);
+});
+
+Deno.test('getPseudoMatchingStyles - returns empty when no pseudo rules exist', () => {
+  const ss = Stylesheet.fromString('button { width: 20; }');
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  const pseudo = ss.getPseudoMatchingStyles(btn, [], undefined, state);
+  assertEquals(Object.keys(pseudo).length, 0);
+});
+
+Deno.test('getPseudoMatchingStyles - merges multiple matching pseudo rules', () => {
+  const ss = Stylesheet.fromString(`
+    button:hover { height: 5; }
+    .primary:hover { width: 30; }
+  `);
+  const btn = el('button', { id: 'btn1', classes: ['primary'] });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  const pseudo = ss.getPseudoMatchingStyles(btn, [], undefined, state);
+  assertEquals(pseudo.height, 5);
+  assertEquals(pseudo.width, 30);
+});
+
+Deno.test('getPseudoMatchingStyles - respects specificity ordering', () => {
+  const ss = Stylesheet.fromString(`
+    button:hover { width: 10; }
+    .primary:hover { width: 20; }
+  `);
+  const btn = el('button', { id: 'btn1', classes: ['primary'] });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  const pseudo = ss.getPseudoMatchingStyles(btn, [], undefined, state);
+  // .primary:hover (class + pseudo = 2000) beats button:hover (type + pseudo = 1001)
+  assertEquals(pseudo.width, 20);
+});
+
+Deno.test('getPseudoMatchingStyles - with ancestor matching', () => {
+  const ss = Stylesheet.fromString(`
+    .app button:hover { height: 5; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const parent = el('container', { classes: ['app'] });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  const pseudo = ss.getPseudoMatchingStyles(btn, [parent], undefined, state);
+  assertEquals(pseudo.height, 5);
+});
+
+Deno.test('getPseudoMatchingStyles - respects media condition', () => {
+  const ss = Stylesheet.fromString(`
+    @media (min-width: 80) {
+      button:hover { width: 30; }
+    }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  const wideCtx: StyleContext = { terminalWidth: 100, terminalHeight: 24 };
+  const narrowCtx: StyleContext = { terminalWidth: 60, terminalHeight: 24 };
+
+  assertEquals(ss.getPseudoMatchingStyles(btn, [], wideCtx, state).width, 30);
+  assertEquals(Object.keys(ss.getPseudoMatchingStyles(btn, [], narrowCtx, state)).length, 0);
+});
+
+// --- 15h. applyStylesheet does NOT apply pseudo-class rules ---
+
+Deno.test('applyStylesheet - pseudo rules not applied without state', () => {
+  const ss = Stylesheet.fromString(`
+    button { width: 20; }
+    button:hover { width: 30; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  applyStylesheet(btn, ss);
+  // Without pseudo state, :hover rule should not apply
+  assertEquals(btn.props.style.width, 20);
+});
+
+// --- 15i. Edge cases ---
+
+Deno.test('selectorMatches - element without id never matches pseudo-class', () => {
+  const btn = el('button');  // no id
+  const state: PseudoClassState = { hoveredElementId: 'btn1' };
+  assert(!selectorMatches(parseSelector('button:hover'), btn, [], state));
+});
+
+Deno.test('getMergedStyle - :focus overrides :hover for same property (later rule wins at same specificity)', () => {
+  // Both button:hover and button:focus have same specificity (1001)
+  // Later one wins (source order)
+  const ss = Stylesheet.fromString(`
+    button:hover { width: 20; }
+    button:focus { width: 30; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1', focusedElementId: 'btn1' };
+  const merged = ss.getMergedStyle(btn, [], undefined, state);
+  assertEquals(merged.width, 30);  // :focus is later, wins
+});
+
+Deno.test('getMergedStyle - non-overlapping pseudo properties merge', () => {
+  const ss = Stylesheet.fromString(`
+    button:hover { height: 5; }
+    button:focus { width: 30; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  const state: PseudoClassState = { hoveredElementId: 'btn1', focusedElementId: 'btn1' };
+  const merged = ss.getMergedStyle(btn, [], undefined, state);
+  assertEquals(merged.height, 5);
+  assertEquals(merged.width, 30);
+});
+
+// ===========================================================================
+// 16. CSS Transition parsing
+// ===========================================================================
+
+Deno.test('parseStyleProperties - transition shorthand single property', () => {
+  const s = parseStyleProperties('transition: background-color 300ms ease;');
+  assert(s._transitionSpecs !== undefined);
+  const specs = s._transitionSpecs as TransitionSpec[];
+  assertEquals(specs.length, 1);
+  assertEquals(specs[0].property, 'backgroundColor');
+  assertEquals(specs[0].duration, 300);
+  assertEquals(specs[0].timingFn, 'ease');
+  assertEquals(specs[0].delay, 0);
+});
+
+Deno.test('parseStyleProperties - transition shorthand all keyword', () => {
+  const s = parseStyleProperties('transition: all 200ms ease-in-out;');
+  const specs = s._transitionSpecs as TransitionSpec[];
+  assertEquals(specs.length, 1);
+  assertEquals(specs[0].property, 'all');
+  assertEquals(specs[0].duration, 200);
+  assertEquals(specs[0].timingFn, 'ease-in-out');
+});
+
+Deno.test('parseStyleProperties - transition shorthand multiple properties', () => {
+  const s = parseStyleProperties('transition: color 200ms, background-color 300ms ease-in;');
+  const specs = s._transitionSpecs as TransitionSpec[];
+  assertEquals(specs.length, 2);
+  assertEquals(specs[0].property, 'color');
+  assertEquals(specs[0].duration, 200);
+  assertEquals(specs[0].timingFn, 'ease');  // default
+  assertEquals(specs[1].property, 'backgroundColor');
+  assertEquals(specs[1].duration, 300);
+  assertEquals(specs[1].timingFn, 'ease-in');
+});
+
+Deno.test('parseStyleProperties - transition shorthand with delay', () => {
+  const s = parseStyleProperties('transition: color 1s linear 500ms;');
+  const specs = s._transitionSpecs as TransitionSpec[];
+  assertEquals(specs.length, 1);
+  assertEquals(specs[0].property, 'color');
+  assertEquals(specs[0].duration, 1000);  // 1s = 1000ms
+  assertEquals(specs[0].timingFn, 'linear');
+  assertEquals(specs[0].delay, 500);
+});
+
+Deno.test('parseStyleProperties - transition in stylesheet block', () => {
+  const { items } = parseStyleBlock(`
+    button { transition: background-color 200ms ease; }
+  `);
+  assertEquals(items.length, 1);
+  const specs = items[0].style._transitionSpecs as TransitionSpec[];
+  assert(specs !== undefined);
+  assertEquals(specs.length, 1);
+  assertEquals(specs[0].property, 'backgroundColor');
+  assertEquals(specs[0].duration, 200);
+});
+
+Deno.test('parseStyleProperties - transitionDuration longhand', () => {
+  const s = parseStyleProperties('transition-duration: 500ms;');
+  assertEquals(s.transitionDuration, 500);
+});
+
+Deno.test('parseStyleProperties - transitionDelay longhand', () => {
+  const s = parseStyleProperties('transition-delay: 100ms;');
+  assertEquals(s.transitionDelay, 100);
+});
+
+Deno.test('parseStyleProperties - transitionDuration seconds', () => {
+  const s = parseStyleProperties('transition-duration: 1.5s;');
+  assertEquals(s.transitionDuration, 1500);
+});
+
+// ===========================================================================
+// 17. getTransitionStyle
+// ===========================================================================
+
+Deno.test('getTransitionStyle - returns empty when no _transitionState', () => {
+  const btn = el('button');
+  const result = getTransitionStyle(btn);
+  assertEquals(Object.keys(result).length, 0);
+});
+
+Deno.test('getTransitionStyle - returns from value during delay period', () => {
+  const btn = el('button');
+  btn._transitionState = {
+    active: new Map([
+      ['backgroundColor', {
+        from: 0xFF0000FF,  // red
+        to: 0x0000FFFF,    // blue
+        startTime: performance.now(),
+        duration: 200,
+        delay: 1000,       // 1 second delay — should still be in delay
+        timingFn: getTimingFunction('linear'),
+      }],
+    ]),
+    previousValues: new Map(),
+  };
+  const result = getTransitionStyle(btn);
+  assertEquals(result.backgroundColor, 0xFF0000FF);  // from value during delay
+});
+
+Deno.test('getTransitionStyle - returns to value at completion', () => {
+  const btn = el('button');
+  btn._transitionState = {
+    active: new Map([
+      ['backgroundColor', {
+        from: 0xFF0000FF,  // red
+        to: 0x0000FFFF,    // blue
+        startTime: performance.now() - 300,  // started 300ms ago
+        duration: 200,                        // 200ms duration — completed
+        delay: 0,
+        timingFn: getTimingFunction('linear'),
+      }],
+    ]),
+    previousValues: new Map(),
+  };
+  const result = getTransitionStyle(btn);
+  assertEquals(result.backgroundColor, 0x0000FFFF);  // to value at completion
+});
+
+Deno.test('getTransitionStyle - removes completed transitions from active map', () => {
+  const btn = el('button');
+  btn._transitionState = {
+    active: new Map([
+      ['backgroundColor', {
+        from: 0xFF0000FF,
+        to: 0x0000FFFF,
+        startTime: performance.now() - 300,  // completed
+        duration: 200,
+        delay: 0,
+        timingFn: getTimingFunction('linear'),
+      }],
+    ]),
+    previousValues: new Map(),
+  };
+  getTransitionStyle(btn);
+  assertEquals(btn._transitionState!.active.size, 0);
+});
+
+Deno.test('getTransitionStyle - returns interpolated value mid-transition', () => {
+  const btn = el('button');
+  // Use a gap property (numeric) for easier validation
+  btn._transitionState = {
+    active: new Map([
+      ['gap', {
+        from: 0,
+        to: 10,
+        startTime: performance.now() - 100,  // started 100ms ago
+        duration: 200,                         // 200ms total — 50% through
+        delay: 0,
+        timingFn: getTimingFunction('linear'),
+      }],
+    ]),
+    previousValues: new Map(),
+  };
+  const result = getTransitionStyle(btn);
+  // At ~50% through with linear easing, should be ~5
+  assert(typeof result.gap === 'number');
+  assert(result.gap! >= 3 && result.gap! <= 7, `Expected gap ~5, got ${result.gap}`);
+});
+
+// ===========================================================================
+// 18. interpolateValue (exported)
+// ===========================================================================
+
+Deno.test('interpolateValue - numeric property', () => {
+  assertEquals(interpolateValue('gap', 0, 10, 0.5), 5);
+  assertEquals(interpolateValue('gap', 0, 10, 0), 0);
+  assertEquals(interpolateValue('gap', 0, 10, 1), 10);
+});
+
+Deno.test('interpolateValue - same value returns from', () => {
+  assertEquals(interpolateValue('gap', 5, 5, 0.5), 5);
+});
+
+Deno.test('interpolateValue - discrete snap for strings', () => {
+  assertEquals(interpolateValue('border', 'thin', 'thick', 0.3), 'thin');
+  assertEquals(interpolateValue('border', 'thin', 'thick', 0.7), 'thick');
+});
+
+// ===========================================================================
+// 19. Phase 3 — Integration: pseudo-classes + transitions
+// ===========================================================================
+
+// Helper: create a LayoutContext with stylesheets and pseudo-class state
+function makeLayoutContext(opts: {
+  stylesheets?: Stylesheet[];
+  focusedElementId?: string;
+  hoveredElementId?: string;
+}): LayoutContext {
+  return {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+    stylesheets: opts.stylesheets || [],
+    focusedElementId: opts.focusedElementId,
+    hoveredElementId: opts.hoveredElementId,
+  };
+}
+
+// Helper: clean up transition registration (UIAnimationManager interval) to prevent leaks
+function cleanupTransition(element: ReturnType<typeof createElement>) {
+  if (element._transitionRegistration) {
+    element._transitionRegistration();
+    element._transitionRegistration = undefined;
+  }
+  element._transitionState = undefined;
+}
+
+Deno.test('integration - hover creates transition when transition spec exists', () => {
+  const ss = Stylesheet.fromString(`
+    button { background-color: gray; transition: background-color 200ms ease; }
+    button:hover { background-color: blue; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  // Verify transition spec was applied
+  assert(btn.props.style._transitionSpecs, '_transitionSpecs should be set');
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+
+  // Frame 1: no hover — establishes baseline previousValues
+  computeStyle(btn, undefined, ctx);
+  // processTransitions should have initialized state and stored previousValues
+  assert(btn._transitionState !== undefined, '_transitionState should be initialized');
+  assertEquals(btn._transitionState!.active.size, 0, 'No active transitions yet');
+
+  // Frame 2: hover activated — backgroundColor changes, transition should start
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+
+  assert(btn._transitionState!.active.size > 0, 'Should have active transitions after hover');
+  assert(btn._transitionState!.active.has('backgroundColor'), 'backgroundColor should be transitioning');
+
+  const transition = btn._transitionState!.active.get('backgroundColor')!;
+  assertEquals(transition.duration, 200);
+  cleanupTransition(btn);
+});
+
+Deno.test('integration - hover without transition spec is instant (no transition created)', () => {
+  const ss = Stylesheet.fromString(`
+    button { background-color: gray; }
+    button:hover { background-color: blue; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  // No _transitionSpecs → no _transitionState
+  assertEquals(btn._transitionState, undefined, 'No transition state without transition spec');
+
+  // Hover — still no transition
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+  assertEquals(btn._transitionState, undefined, 'Still no transition state');
+});
+
+Deno.test('integration - focus creates transition when transition spec exists', () => {
+  const ss = Stylesheet.fromString(`
+    input { border-color: gray; transition: border-color 150ms linear; }
+    input:focus { border-color: cyan; }
+  `);
+  const inp = el('input', { id: 'inp1' });
+  ss.applyTo(inp);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(inp, undefined, ctx);
+  assertEquals(inp._transitionState!.active.size, 0);
+
+  // Focus
+  const focusCtx = makeLayoutContext({ stylesheets: [ss], focusedElementId: 'inp1' });
+  computeStyle(inp, undefined, focusCtx);
+  assert(inp._transitionState!.active.has('borderColor'), 'borderColor should be transitioning');
+  assertEquals(inp._transitionState!.active.get('borderColor')!.duration, 150);
+  cleanupTransition(inp);
+});
+
+Deno.test('integration - hover leave reverses transition (interruption)', () => {
+  const ss = Stylesheet.fromString(`
+    button { gap: 0; transition: gap 200ms linear; }
+    button:hover { gap: 10; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+
+  // Frame 1: baseline
+  computeStyle(btn, undefined, ctx);
+
+  // Frame 2: hover on — starts transition from 0 to 10
+  computeStyle(btn, undefined, hoverCtx);
+  assert(btn._transitionState!.active.has('gap'));
+  const t1 = btn._transitionState!.active.get('gap')!;
+  assertEquals(t1.from, 0);
+  assertEquals(t1.to, 10);
+
+  // Frame 3: hover off — should interrupt transition, reversing to 0
+  // The current interpolated value becomes 'from', 0 becomes 'to'
+  computeStyle(btn, undefined, ctx);
+  assert(btn._transitionState!.active.has('gap'), 'gap should still be transitioning (reverse)');
+  const t2 = btn._transitionState!.active.get('gap')!;
+  assertEquals(t2.to, 0, 'Reverse target should be 0');
+  // from should be the interpolated value at interruption point (a number > 0)
+  assert(typeof t2.from === 'number', 'from should be numeric');
+  cleanupTransition(btn);
+});
+
+Deno.test('integration - transition: all applies to any changing property', () => {
+  const ss = Stylesheet.fromString(`
+    button { gap: 0; padding: 0; transition: all 100ms linear; }
+    button:hover { gap: 5; padding: 2; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+
+  assert(btn._transitionState!.active.has('gap'), 'gap should be transitioning');
+  assert(btn._transitionState!.active.has('padding'), 'padding should be transitioning');
+  cleanupTransition(btn);
+});
+
+Deno.test('integration - focus + hover simultaneously both trigger transitions', () => {
+  const ss = Stylesheet.fromString(`
+    button { gap: 0; padding: 0; transition: all 200ms ease; }
+    button:hover { gap: 5; }
+    button:focus { padding: 3; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  // Both hover and focus at once
+  const bothCtx = makeLayoutContext({
+    stylesheets: [ss],
+    hoveredElementId: 'btn1',
+    focusedElementId: 'btn1',
+  });
+  computeStyle(btn, undefined, bothCtx);
+
+  assert(btn._transitionState!.active.has('gap'), 'gap from :hover');
+  assert(btn._transitionState!.active.has('padding'), 'padding from :focus');
+  cleanupTransition(btn);
+});
+
+Deno.test('integration - transition on non-animatable property uses discrete snap', () => {
+  const ss = Stylesheet.fromString(`
+    button { border: thin; transition: border 200ms ease; }
+    button:hover { border: thick; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+
+  // Border is a string — transition still created, interpolateValue handles it as discrete
+  assert(btn._transitionState!.active.has('border'), 'border transition created');
+  const t = btn._transitionState!.active.get('border')!;
+  assertEquals(t.from, 'thin');
+  assertEquals(t.to, 'thick');
+  cleanupTransition(btn);
+});
+
+Deno.test('integration - getTransitionStyle returns interpolated value during active transition', () => {
+  const ss = Stylesheet.fromString(`
+    button { gap: 0; transition: gap 200ms linear; }
+    button:hover { gap: 10; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+
+  // Manually set startTime to 100ms ago for a predictable interpolation
+  const t = btn._transitionState!.active.get('gap')!;
+  t.startTime = performance.now() - 100;  // 50% through
+
+  const style = getTransitionStyle(btn);
+  assert(typeof style.gap === 'number');
+  assert(style.gap! >= 3 && style.gap! <= 7, `Expected gap ~5, got ${style.gap}`);
+  cleanupTransition(btn);
+});
+
+Deno.test('integration - completed transition cleans up active map', () => {
+  const ss = Stylesheet.fromString(`
+    button { gap: 0; transition: gap 200ms linear; }
+    button:hover { gap: 10; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+
+  // Set startTime far in the past so transition is complete
+  const t = btn._transitionState!.active.get('gap')!;
+  t.startTime = performance.now() - 500;  // well past 200ms duration
+
+  const style = getTransitionStyle(btn);
+  assertEquals(style.gap, 10);  // final value
+  assertEquals(btn._transitionState!.active.size, 0, 'transition should be cleaned up');
+  // getTransitionStyle already unregistered since active is empty
+});
+
+Deno.test('integration - zero-duration transition spec does not create transitions', () => {
+  const ss = Stylesheet.fromString(`
+    button { gap: 0; transition: gap 0ms ease; }
+    button:hover { gap: 10; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+
+  // Zero-duration should not create a transition — no registration to clean up
+  assertEquals(btn._transitionState!.active.size, 0, 'No transition for 0ms duration');
+});
+
+Deno.test('integration - multiple properties transition independently', () => {
+  const ss = Stylesheet.fromString(`
+    button { gap: 0; padding: 0; transition: gap 100ms linear, padding 300ms ease; }
+    button:hover { gap: 10; padding: 5; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+
+  assert(btn._transitionState!.active.has('gap'));
+  assert(btn._transitionState!.active.has('padding'));
+  assertEquals(btn._transitionState!.active.get('gap')!.duration, 100);
+  assertEquals(btn._transitionState!.active.get('padding')!.duration, 300);
+  cleanupTransition(btn);
+});
+
+Deno.test('integration - transition with delay shows from value during delay', () => {
+  const ss = Stylesheet.fromString(`
+    button { gap: 0; transition: gap 200ms linear 500ms; }
+    button:hover { gap: 10; }
+  `);
+  const btn = el('button', { id: 'btn1' });
+  ss.applyTo(btn);
+
+  const ctx = makeLayoutContext({ stylesheets: [ss] });
+  computeStyle(btn, undefined, ctx);
+
+  const hoverCtx = makeLayoutContext({ stylesheets: [ss], hoveredElementId: 'btn1' });
+  computeStyle(btn, undefined, hoverCtx);
+
+  const t = btn._transitionState!.active.get('gap')!;
+  assertEquals(t.delay, 500);
+
+  // During delay, should return 'from' value
+  const style = getTransitionStyle(btn);
+  assertEquals(style.gap, 0, 'Should show from value during delay');
+  cleanupTransition(btn);
 });

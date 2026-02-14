@@ -223,10 +223,12 @@ export class RenderingEngine {
       overlays: this._overlays,
     };
 
-    // Use advanced layout engine — check for container query rules
+    // Use advanced layout engine — check for container query and pseudo-class rules
     const stylesheets = this._document?.stylesheets;
     const hasContainerRules = stylesheets?.some(ss => ss.hasContainerRules);
-    if (hasContainerRules) {
+    const hasPseudoRules = stylesheets?.some(ss => ss.hasPseudoClassRules);
+    const needStylesheets = hasContainerRules || hasPseudoRules;
+    if (needStylesheets) {
       this._containerQueryStylesheets = stylesheets;
       this._containerQueryStyleContext = { terminalWidth: viewport.width, terminalHeight: viewport.height };
     } else {
@@ -237,7 +239,9 @@ export class RenderingEngine {
       viewport,
       parentBounds: viewport,
       availableSpace: { width: viewport.width, height: viewport.height },
-      ...(hasContainerRules ? {
+      focusedElementId,
+      hoveredElementId,
+      ...(needStylesheets ? {
         stylesheets,
         styleContext: this._containerQueryStyleContext,
       } : undefined),
@@ -350,6 +354,8 @@ export class RenderingEngine {
               viewport: contentBounds,
               parentBounds: contentBounds,
               availableSpace: { width: contentBounds.width, height: contentBounds.height },
+              focusedElementId,
+              hoveredElementId,
               ...(this._containerQueryStylesheets ? {
                 stylesheets: this._containerQueryStylesheets,
                 styleContext: this._containerQueryStyleContext,
@@ -1946,6 +1952,8 @@ export class RenderingEngine {
             viewport: contentBounds,
             parentBounds: contentBounds,
             availableSpace: { width: contentBounds.width, height: contentBounds.height },
+            focusedElementId: context.focusedElementId,
+            hoveredElementId: context.hoveredElementId,
             ...(this._containerQueryStylesheets ? {
               stylesheets: this._containerQueryStylesheets,
               styleContext: this._containerQueryStyleContext,

@@ -18,6 +18,7 @@ export type EventType =
   | 'input'
   | 'submit'
   | 'selectionchange'
+  | 'transitionend'
   | 'custom';
 
 export interface BaseEvent {

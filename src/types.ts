@@ -164,6 +164,14 @@ export interface Style extends Record<string, any> {
   animationFillMode?: 'none' | 'forwards' | 'backwards' | 'both';
   animation?: string;                  // shorthand
 
+  // Transition properties
+  transitionProperty?: string;
+  transitionDuration?: number;         // ms
+  transitionTimingFunction?: string;   // 'linear' | 'ease' | ...
+  transitionDelay?: number;            // ms
+  transition?: string;                 // shorthand (not stored, expanded)
+  _transitionSpecs?: TransitionSpec[]; // parsed transition specs (internal)
+
   // Allow any additional style properties for flexibility
   [key: string]: any;
 }
@@ -191,6 +199,29 @@ export interface AnimationState {
   fillMode: 'none' | 'forwards' | 'backwards' | 'both';
   startTime: number;       // performance.now()
   finished: boolean;
+}
+
+// ===== CSS Transition Types =====
+
+export interface TransitionSpec {
+  property: string;      // camelCase: 'backgroundColor', 'color', 'all'
+  duration: number;      // ms
+  timingFn: string;      // 'ease', 'linear', 'ease-in-out', etc.
+  delay: number;         // ms
+}
+
+export interface PropertyTransition {
+  from: any;
+  to: any;
+  startTime: number;     // performance.now()
+  duration: number;      // ms
+  delay: number;         // ms
+  timingFn: (t: number) => number;
+}
+
+export interface TransitionState {
+  active: Map<string, PropertyTransition>;    // in-flight per-property transitions
+  previousValues: Map<string, any>;           // last frame's resolved values for transition-spec'd props
 }
 
 export interface BoxSpacing {
@@ -279,6 +310,10 @@ export abstract class Element {
   // CSS animation state (Option B: never written to props.style, read by _computeStyle())
   _animationState?: AnimationState;
   _animationRegistration?: () => void;  // UIAnimationManager unregister fn
+
+  // CSS transition state
+  _transitionState?: TransitionState;
+  _transitionRegistration?: () => void;  // UIAnimationManager unregister fn
 
   constructor(type: string, props: Record<string, any> = {}, children?: Element[]) {
     this.type = type;

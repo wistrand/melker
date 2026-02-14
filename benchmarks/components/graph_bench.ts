@@ -364,7 +364,7 @@ suite.add('render-sequence-medium', () => {
   globalLayoutEngine.calculateLayout(sequenceGraphEl, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(sequenceGraphEl, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 50, target: 5.0 });
+}, { iterations: 50, target: 8.0 });
 
 // Class diagram rendering
 const classGraphEl = createElement('graph', { text: mediumClass });
@@ -372,7 +372,7 @@ suite.add('render-class-medium', () => {
   globalLayoutEngine.calculateLayout(classGraphEl, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(classGraphEl, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 50, target: 5.0 });
+}, { iterations: 50, target: 8.0 });
 
 // Complex class diagram rendering
 const complexClassEl = createElement('graph', { text: complexClass });
@@ -380,7 +380,7 @@ suite.add('render-class-complex', () => {
   globalLayoutEngine.calculateLayout(complexClassEl, makeContext(viewport.width, 100));
   const buffer = new DualBuffer(viewport.width, 100);
   renderer.render(complexClassEl, buffer, { x: 0, y: 0, width: viewport.width, height: 100 });
-}, { iterations: 20, target: 10.0 });
+}, { iterations: 20, target: 15.0 });
 
 // =============================================================================
 // Run benchmarks

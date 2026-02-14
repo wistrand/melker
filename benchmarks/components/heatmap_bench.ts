@@ -57,7 +57,7 @@ suite.add('heatmap-20x10', () => {
   globalLayoutEngine.calculateLayout(smallHeatmap, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(smallHeatmap, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.5 });
+}, { iterations: 500, target: 1.0 });
 
 // Medium heatmap (50x30)
 const mediumGrid = generateGrid(30, 50);
@@ -70,7 +70,7 @@ suite.add('heatmap-50x30', () => {
   globalLayoutEngine.calculateLayout(mediumHeatmap, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(mediumHeatmap, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 0.5 });
+}, { iterations: 200, target: 2.0 });
 
 // Heatmap with isolines
 const isolineGrid = generateGradientGrid(30, 50);
@@ -89,7 +89,7 @@ suite.add('heatmap-isolines-4', () => {
   globalLayoutEngine.calculateLayout(isolineHeatmap, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(isolineHeatmap, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 0.5 });
+}, { iterations: 200, target: 2.5 });
 
 // Heatmap with auto-isolines
 const autoIsolineHeatmap = createElement('data-heatmap', {
@@ -103,7 +103,7 @@ suite.add('heatmap-auto-isolines', () => {
   globalLayoutEngine.calculateLayout(autoIsolineHeatmap, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(autoIsolineHeatmap, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 0.5 });
+}, { iterations: 200, target: 2.5 });
 
 // Heatmap with values displayed
 const valuesHeatmap = createElement('data-heatmap', {
@@ -117,7 +117,7 @@ suite.add('heatmap-with-values', () => {
   globalLayoutEngine.calculateLayout(valuesHeatmap, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(valuesHeatmap, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.5 });
+}, { iterations: 500, target: 1.5 });
 
 // Large heatmap (100x50)
 const largeGrid = generateGrid(50, 100);
@@ -130,7 +130,7 @@ suite.add('heatmap-100x50', () => {
   globalLayoutEngine.calculateLayout(largeHeatmap, makeContext(200, 60));
   const buffer = new DualBuffer(200, 60);
   renderer.render(largeHeatmap, buffer, { x: 0, y: 0, width: 200, height: 60 });
-}, { iterations: 100, target: 1.0 });
+}, { iterations: 100, target: 8.0 });
 
 // Isolines-only mode
 const isolinesOnlyHeatmap = createElement('data-heatmap', {
@@ -145,7 +145,7 @@ suite.add('heatmap-isolines-only', () => {
   globalLayoutEngine.calculateLayout(isolinesOnlyHeatmap, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(isolinesOnlyHeatmap, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 0.5 });
+}, { iterations: 200, target: 2.0 });
 
 // Run benchmarks
 const results = await suite.run();

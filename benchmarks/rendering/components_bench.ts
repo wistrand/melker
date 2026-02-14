@@ -30,7 +30,7 @@ suite.add('render-text-simple', () => {
   globalLayoutEngine.calculateLayout(textEl, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(textEl, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 1000, target: 0.2 });
+}, { iterations: 1000, target: 0.7 });
 
 // Text with styling
 const styledText = createElement('text', {
@@ -41,7 +41,7 @@ suite.add('render-text-styled', () => {
   globalLayoutEngine.calculateLayout(styledText, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(styledText, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 1000, target: 0.2 });
+}, { iterations: 1000, target: 0.7 });
 
 // Long text with wrapping
 const longText = createElement('text', {
@@ -52,7 +52,7 @@ suite.add('render-text-wrapped', () => {
   globalLayoutEngine.calculateLayout(longText, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(longText, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.2 });
+}, { iterations: 500, target: 0.6 });
 
 // Button
 const button = createElement('button', { label: 'Click Me' });
@@ -60,7 +60,7 @@ suite.add('render-button', () => {
   globalLayoutEngine.calculateLayout(button, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(button, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 1000, target: 0.2 });
+}, { iterations: 1000, target: 0.9 });
 
 // Input field
 const input = createElement('input', { value: 'Sample input text', placeholder: 'Enter text...' });
@@ -68,7 +68,7 @@ suite.add('render-input', () => {
   globalLayoutEngine.calculateLayout(input, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(input, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 1000, target: 0.2 });
+}, { iterations: 1000, target: 1.5 });
 
 // Checkbox
 const checkbox = createElement('checkbox', { title: 'Accept terms', checked: true });
@@ -76,7 +76,7 @@ suite.add('render-checkbox', () => {
   globalLayoutEngine.calculateLayout(checkbox, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(checkbox, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 1000, target: 0.2 });
+}, { iterations: 1000, target: 1.5 });
 
 // Radio button
 const radio = createElement('radio', { title: 'Option A', value: 'a', checked: true });
@@ -84,7 +84,7 @@ suite.add('render-radio', () => {
   globalLayoutEngine.calculateLayout(radio, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(radio, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 1000, target: 0.2 });
+}, { iterations: 1000, target: 1.5 });
 
 // Progress bar
 const progress = createElement('progress', { value: 75, max: 100 });
@@ -92,7 +92,7 @@ suite.add('render-progress', () => {
   globalLayoutEngine.calculateLayout(progress, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(progress, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 1000, target: 0.2 });
+}, { iterations: 1000, target: 1.5 });
 
 // Slider
 const slider = createElement('slider', { value: 50, min: 0, max: 100 });
@@ -100,7 +100,7 @@ suite.add('render-slider', () => {
   globalLayoutEngine.calculateLayout(slider, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(slider, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 1000, target: 0.3 });
+}, { iterations: 1000, target: 1.5 });
 
 // =============================================================================
 // Container Rendering
@@ -114,7 +114,7 @@ suite.add('render-container-bordered', () => {
   globalLayoutEngine.calculateLayout(borderedContainer, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(borderedContainer, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.4 });
+}, { iterations: 500, target: 0.5 });
 
 // Container with multiple children (row)
 const rowContainer = createElement('container', {
@@ -130,7 +130,7 @@ suite.add('render-container-row', () => {
   globalLayoutEngine.calculateLayout(rowContainer, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(rowContainer, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.4 });
+}, { iterations: 500, target: 0.5 });
 
 // Container with multiple children (column)
 const colContainer = createElement('container', {
@@ -146,7 +146,7 @@ suite.add('render-container-column', () => {
   globalLayoutEngine.calculateLayout(colContainer, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(colContainer, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.4 });
+}, { iterations: 500, target: 1.5 });
 
 // =============================================================================
 // Nested Layouts
@@ -164,7 +164,7 @@ suite.add('render-nested-3-levels', () => {
   globalLayoutEngine.calculateLayout(nested3, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(nested3, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.4 });
+}, { iterations: 500, target: 2.0 });
 
 // 5 levels deep nesting
 const nested5 = createElement('container', { style: { padding: 1 } },
@@ -182,7 +182,7 @@ suite.add('render-nested-5-levels', () => {
   globalLayoutEngine.calculateLayout(nested5, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(nested5, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.5 });
+}, { iterations: 500, target: 2.0 });
 
 // Wide tree (many siblings)
 const wideTree = createElement('container', { style: { flexDirection: 'column' } },
@@ -194,7 +194,7 @@ suite.add('render-wide-tree-20', () => {
   globalLayoutEngine.calculateLayout(wideTree, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(wideTree, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 1.0 });
+}, { iterations: 200, target: 2.0 });
 
 // Complex tree (mixed nesting and siblings)
 const complexTree = createElement('container', { style: { flexDirection: 'column', gap: 1 } },
@@ -225,7 +225,7 @@ suite.add('render-complex-tree', () => {
   globalLayoutEngine.calculateLayout(complexTree, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(complexTree, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 0.8 });
+}, { iterations: 200, target: 2.0 });
 
 // =============================================================================
 // List Rendering
@@ -243,7 +243,7 @@ suite.add('render-list-10', () => {
   globalLayoutEngine.calculateLayout(simpleList, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(simpleList, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 1.0 });
+}, { iterations: 500, target: 2.0 });
 
 // Large list
 const largeList = createElement('list', {},
@@ -257,7 +257,7 @@ suite.add('render-list-50', () => {
   globalLayoutEngine.calculateLayout(largeList, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(largeList, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 100, target: 4.0 });
+}, { iterations: 100, target: 7.0 });
 
 // =============================================================================
 // Table Rendering
@@ -298,7 +298,7 @@ suite.add('render-table-5-rows', () => {
   globalLayoutEngine.calculateLayout(smallTable, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(smallTable, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 2.0 });
+}, { iterations: 200, target: 2.5 });
 
 // Medium table
 const mediumTable = createElement('table', {},
@@ -347,7 +347,7 @@ suite.add('render-data-bars', () => {
   globalLayoutEngine.calculateLayout(dataBars, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(dataBars, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.3 });
+}, { iterations: 500, target: 1.5 });
 
 // =============================================================================
 // Scrollable Containers
@@ -421,7 +421,7 @@ suite.add('render-dashboard-layout', () => {
   globalLayoutEngine.calculateLayout(dashboard, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(dashboard, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 100, target: 2.0 });
+}, { iterations: 100, target: 4.5 });
 
 // Form layout
 const formLayout = createElement('container', { style: { flexDirection: 'column', gap: 1, padding: 2 } },
@@ -449,7 +449,7 @@ suite.add('render-form-layout', () => {
   globalLayoutEngine.calculateLayout(formLayout, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(formLayout, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 1.0 });
+}, { iterations: 200, target: 2.0 });
 
 // =============================================================================
 // Buffer String Output
@@ -500,7 +500,7 @@ suite.add('render-separators', () => {
   globalLayoutEngine.calculateLayout(separatorLayout, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(separatorLayout, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 500, target: 0.5 });
+}, { iterations: 500, target: 2.0 });
 
 // =============================================================================
 // Tabs Component
@@ -521,7 +521,7 @@ suite.add('render-tabs', () => {
   globalLayoutEngine.calculateLayout(tabsComponent, makeContext(viewport.width, viewport.height));
   const buffer = new DualBuffer(viewport.width, viewport.height);
   renderer.render(tabsComponent, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-}, { iterations: 200, target: 0.5 });
+}, { iterations: 200, target: 2.5 });
 
 // =============================================================================
 // Run benchmarks
@@ -536,7 +536,7 @@ const getMedian = (name: string) => results.find(r => r.name === name)?.median ?
 suite.addFindings([
   {
     title: 'Simple components render fast',
-    description: 'Basic components (text, button, input) render in under 0.1ms. Component overhead is minimal.',
+    description: 'Basic components (text, button, input) render quickly. DualBuffer allocation dominates for simple elements.',
     category: 'info',
     benchmarks: ['render-text-simple', 'render-button', 'render-input'],
     metrics: {

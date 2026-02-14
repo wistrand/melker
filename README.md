@@ -91,7 +91,7 @@ Melker apps look and feel like apps:
 
 A system monitor: [View source](examples/showcase/htop.melker)
 
-![system monitor](docs/htop.png)
+![system monitor](docs/images/htop.png)
 
 ---
 

@@ -676,7 +676,7 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
         border: 'thin',
         columnBorders: false,
         cellPadding: 1,
-        style: { flex: 1, width: 'fill', overflow: 'hidden' },
+        style: { flex: 1, width: 'fill' },
       },
         createElement('tbody', {
           id: 'fb-tbody',
@@ -709,12 +709,12 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
       },
         createElement('button', {
           id: 'fb-cancel-btn',
-          title: this.fbProps.cancelLabel || 'Cancel',
+          label: this.fbProps.cancelLabel || 'Cancel',
           onClick: () => this._handleCancel(),
         }),
         createElement('button', {
           id: 'fb-select-btn',
-          title: this.fbProps.selectLabel || 'Open',
+          label: this.fbProps.selectLabel || 'Open',
           onClick: () => this._handleEnterFromButton(),
           disabled: !!this._error,
         }),

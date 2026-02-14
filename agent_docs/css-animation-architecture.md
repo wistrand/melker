@@ -156,10 +156,12 @@ The full priority order (lowest to highest):
 3. Inherited parent style
 4. Stylesheet rules — **sorted by specificity** (definition order as tiebreaker)
 5. Inline style (`props.style`)
-6. Container query styles (`_getContainerQueryStyles()`) — see [container-query-architecture.md](container-query-architecture.md)
-7. CSS animation values (`_getAnimatedStyle()`)
+6. Pseudo-class styles (`:hover`, `:focus`) — see [css-pseudo-classes-transitions-architecture.md](css-pseudo-classes-transitions-architecture.md)
+7. Container query styles (`_getContainerQueryStyles()`) — see [container-query-architecture.md](container-query-architecture.md)
+8. CSS animation values (`_getAnimatedStyle()`)
+9. CSS transition values (`getTransitionStyle()`) — highest priority, in-flight interpolation
 
-Inline style always wins over all stylesheet rules regardless of specificity. Container query styles override inline (context-dependent). Animation values overlay on top of everything (see [Core Principle](#core-principle-never-write-to-propsstyle) above).
+Inline style always wins over all stylesheet rules regardless of specificity. Pseudo-class styles override inline for state-dependent styling. Container query styles override pseudo-class (context-dependent). Animation values overlay on top of container queries. Transition output is highest priority because it represents in-flight interpolation toward whatever the cascade produced — once a transition completes, its values are removed and the cascade's target value takes over naturally. See [css-pseudo-classes-transitions-architecture.md](css-pseudo-classes-transitions-architecture.md) for details.
 
 ## Easing Functions (`src/easing.ts`)
 

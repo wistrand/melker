@@ -6,6 +6,7 @@ import { dirname, resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
 
 // Shared utilities
 import { isUrl, loadContent } from './src/utils/content-loader.ts';
+import { getTempDir } from './src/xdg.ts';
 
 // Policy imports for permission enforcement
 import {
@@ -294,7 +295,8 @@ async function runRemoteWithPolicy(
 
     // Convert policy to Deno permission flags
     // Pass the source URL for "samesite" net permission resolution
-    const denoFlags = policyToDenoFlags(effectivePolicy, Deno.cwd(), urlHash, url, activeDenies, overrides.deny);
+    // Use tempDir as appDir — remote apps should not get implicit cwd read access
+    const denoFlags = policyToDenoFlags(effectivePolicy, tempDir, urlHash, url, activeDenies, overrides.deny, true);
 
     // Extract forwarded Deno flags (--reload, --no-lock, etc.)
     const forwardedFlags = extractForwardedDenoFlags(originalArgs);
@@ -654,7 +656,7 @@ your terminal supports sextant mode. If any row appears scrambled, use:
           }
         }
         console.log('\nDeno permission flags:');
-        const flags = policyToDenoFlags(effectivePolicy, Deno.cwd(), urlHash, filepath, activeDenies, overrides.deny);
+        const flags = policyToDenoFlags(effectivePolicy, getTempDir(), urlHash, filepath, activeDenies, overrides.deny, true);
         console.log(formatDenoFlags(flags));
       } else {
         // For plain .mmd files, use the empty mermaid policy
@@ -737,7 +739,7 @@ your terminal supports sextant mode. If any row appears scrambled, use:
       // Generate Deno flags and check approval
       // Pass source URL for "samesite" resolution
       const urlHash = await getUrlHash(filepath);
-      const denoFlags = policyToDenoFlags(policy, Deno.cwd(), urlHash, filepath);
+      const denoFlags = policyToDenoFlags(policy, getTempDir(), urlHash, filepath, undefined, undefined, true);
       const isApproved = await checkApproval(filepath, content, policy, denoFlags);
 
       if (!isApproved) {

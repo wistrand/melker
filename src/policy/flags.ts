@@ -28,7 +28,9 @@ export function policyToDenoFlags(
   sourceUrl?: string,
   activeDenies?: Partial<PolicyPermissions>,
   /** Explicitly denied paths to filter from implicit paths (e.g., from --deny-read, --deny-write) */
-  explicitDenies?: Partial<PolicyPermissions>
+  explicitDenies?: Partial<PolicyPermissions>,
+  /** Remote apps should not get implicit cwd read access */
+  isRemote?: boolean,
 ): string[] {
   const flags: string[] = [];
   // Deep clone permissions to avoid mutating the original policy
@@ -57,7 +59,7 @@ export function policyToDenoFlags(
   if (p.read?.includes('*')) {
     flags.push('--allow-read');
   } else {
-    const readPaths = buildReadPaths(p.read, appDir, urlHash, explicitDenies?.read);
+    const readPaths = buildReadPaths(p.read, appDir, urlHash, explicitDenies?.read, isRemote);
     if (readPaths.length > 0) {
       flags.push(`--allow-read=${readPaths.join(',')}`);
     }
@@ -267,7 +269,7 @@ function buildPermissionPaths(
 /**
  * Collect implicit read paths for the given app context
  */
-function getImplicitReadPaths(appDir: string, urlHash?: string): Array<{ path: string; label: string }> {
+function getImplicitReadPaths(appDir: string, urlHash?: string, isRemote?: boolean): Array<{ path: string; label: string }> {
   const implicit: Array<{ path: string; label: string }> = [];
 
   // Temp dir for bundler temp files
@@ -276,11 +278,13 @@ function getImplicitReadPaths(appDir: string, urlHash?: string): Array<{ path: s
   // App directory (for loading .melker file itself)
   implicit.push({ path: appDir, label: 'app directory' });
 
-  // Current working directory
-  try {
-    implicit.push({ path: Deno.cwd(), label: 'current working directory' });
-  } catch {
-    // Ignore if cwd is not accessible
+  // Current working directory (local apps only — remote apps must declare "cwd" explicitly)
+  if (!isRemote) {
+    try {
+      implicit.push({ path: Deno.cwd(), label: 'current working directory' });
+    } catch {
+      // Ignore if cwd is not accessible
+    }
   }
 
   // XDG state dir for persistence
@@ -333,10 +337,10 @@ function getImplicitWritePaths(urlHash?: string): Array<{ path: string; label: s
 /**
  * Build read paths with implicit paths added
  */
-function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHash?: string, deniedPaths?: string[]): string[] {
+function buildReadPaths(policyPaths: string[] | undefined, appDir: string, urlHash?: string, deniedPaths?: string[], isRemote?: boolean): string[] {
   return buildPermissionPaths(
     policyPaths, deniedPaths, appDir,
-    getImplicitReadPaths(appDir, urlHash), 'read',
+    getImplicitReadPaths(appDir, urlHash, isRemote), 'read',
   );
 }
 

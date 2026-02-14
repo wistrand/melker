@@ -746,6 +746,69 @@ function tokenizeCSS(css: string): CSSBlock[] {
   return blocks;
 }
 
+/**
+ * Resolve a nested selector relative to its parent.
+ * - If child contains `&`, replace `&` with the parent selector string.
+ * - Otherwise, prepend the parent as a descendant combinator.
+ */
+function resolveNestedSelector(parentSelector: string, childSelector: string): string {
+  if (childSelector.includes('&')) {
+    return childSelector.replace(/&/g, parentSelector);
+  }
+  return parentSelector + ' ' + childSelector;
+}
+
+/**
+ * Split a rule body into direct property declarations and nested blocks.
+ * E.g., "color: white; .title { font-weight: bold; } padding: 2;"
+ * → { properties: "color: white;  padding: 2;", nestedBlocks: [{ selector: ".title", body: "font-weight: bold;" }] }
+ */
+function splitBody(body: string): { properties: string; nestedBlocks: CSSBlock[] } {
+  const nestedBlocks: CSSBlock[] = [];
+  let properties = '';
+  let depth = 0;
+  let selectorStart = -1;
+  let bodyStart = 0;
+  let propStart = 0;
+
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] === '{') {
+      if (depth === 0) {
+        // Everything from propStart to here is properties + the nested selector
+        const chunk = body.slice(propStart, i);
+        // Find the last semicolon — everything before it is properties,
+        // everything after is the nested selector
+        const lastSemi = chunk.lastIndexOf(';');
+        if (lastSemi !== -1) {
+          properties += chunk.slice(0, lastSemi + 1);
+          selectorStart = propStart + lastSemi + 1;
+        } else {
+          selectorStart = propStart;
+        }
+        bodyStart = i;
+      }
+      depth++;
+    } else if (body[i] === '}') {
+      depth--;
+      if (depth === 0) {
+        const selector = body.slice(selectorStart, bodyStart).trim();
+        const innerBody = body.slice(bodyStart + 1, i).trim();
+        if (selector) {
+          nestedBlocks.push({ selector, body: innerBody });
+        }
+        propStart = i + 1;
+      }
+    }
+  }
+
+  // Remaining text after last nested block is properties
+  if (propStart < body.length) {
+    properties += body.slice(propStart);
+  }
+
+  return { properties: properties.trim(), nestedBlocks };
+}
+
 /** Result of parsing a CSS block — style rules, keyframe definitions, and container query rules */
 interface ParseResult {
   items: StyleItem[];
@@ -860,15 +923,71 @@ export function parseStyleBlock(css: string): ParseResult {
       }
     } else {
       // Regular rule: selector { properties }
-      const selectorStr = block.selector;
-      const propertiesStr = block.body;
+      if (!block.selector || !block.body) continue;
 
-      if (!selectorStr || !propertiesStr) continue;
+      // Handle comma-separated selectors: ".card, .panel { ... }" → two parents
+      const parentSelectors = block.selector.split(',').map(s => s.trim()).filter(Boolean);
 
-      const selector = parseSelector(selectorStr);
-      const style = parseStyleProperties(propertiesStr);
+      // Split body into direct properties and nested blocks
+      const { properties, nestedBlocks } = splitBody(block.body);
 
-      items.push({ selector, style, specificity: selectorSpecificity(selector) });
+      // Parse direct properties
+      if (properties) {
+        const style = parseStyleProperties(properties);
+        for (const sel of parentSelectors) {
+          const selector = parseSelector(sel);
+          items.push({ selector, style, specificity: selectorSpecificity(selector) });
+        }
+      }
+
+      // Process nested blocks for each parent selector
+      for (const nested of nestedBlocks) {
+        for (const parentSel of parentSelectors) {
+          if (nested.selector.startsWith('@keyframes')) {
+            // Nested @keyframes are global regardless of nesting context
+            const name = nested.selector.slice(10).trim();
+            if (name && nested.body) {
+              keyframes.push(parseKeyframeBlock(name, nested.body));
+            }
+            continue;
+          }
+          if (nested.selector.startsWith('@media')) {
+            // Nested @media: rules inside get the parent selector + media condition
+            const condStr = nested.selector.slice(6).trim();
+            const condition = parseMediaCondition(condStr);
+            if (!condition) continue;
+            const innerResult = parseStyleBlock(`${parentSel} { ${nested.body} }`);
+            for (const item of innerResult.items) {
+              items.push({ ...item, mediaCondition: condition });
+            }
+            for (const item of innerResult.containerItems) {
+              containerItems.push({ ...item, mediaCondition: condition });
+            }
+            keyframes.push(...innerResult.keyframes);
+            continue;
+          }
+          if (nested.selector.startsWith('@container')) {
+            // Nested @container: rules inside get the parent selector + container condition
+            const condStr = nested.selector.slice(10).trim();
+            const condition = parseContainerCondition(condStr);
+            if (!condition) continue;
+            const innerResult = parseStyleBlock(`${parentSel} { ${nested.body} }`);
+            for (const item of innerResult.items) {
+              containerItems.push({ ...item, containerCondition: condition });
+            }
+            containerItems.push(...innerResult.containerItems);
+            keyframes.push(...innerResult.keyframes);
+            continue;
+          }
+          // Resolve nested selector relative to parent
+          const resolvedSel = resolveNestedSelector(parentSel, nested.selector);
+          // Recurse: wrap as a top-level rule and parse (handles deep nesting)
+          const innerResult = parseStyleBlock(`${resolvedSel} { ${nested.body} }`);
+          items.push(...innerResult.items);
+          containerItems.push(...innerResult.containerItems);
+          keyframes.push(...innerResult.keyframes);
+        }
+      }
     }
   }
 

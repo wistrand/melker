@@ -2669,3 +2669,240 @@ Deno.test('integration - transition with delay shows from value during delay', (
   assertEquals(style.gap, 0, 'Should show from value during delay');
   cleanupTransition(btn);
 });
+
+// ===========================================================================
+// Phase 0: Comma-separated selectors
+// ===========================================================================
+
+Deno.test('parseStyleBlock - comma-separated selectors produce multiple items', () => {
+  const result = parseStyleBlock('.card, .panel { color: white; }');
+  assertEquals(result.items.length, 2);
+  assertEquals(result.items[0].selector.segments[0].compound.parts[0].value, 'card');
+  assertEquals(result.items[1].selector.segments[0].compound.parts[0].value, 'panel');
+});
+
+Deno.test('parseStyleBlock - comma-separated selectors share the same style', () => {
+  const result = parseStyleBlock('.card, .panel { width: 10; }');
+  assertEquals(result.items[0].style.width, 10);
+  assertEquals(result.items[1].style.width, 10);
+});
+
+Deno.test('parseStyleBlock - comma selector matches correct elements', () => {
+  const ss = new Stylesheet();
+  ss.addFromString('.card, .panel { width: 20; }');
+  const card = el('container', { classes: ['card'] });
+  const panel = el('container', { classes: ['panel'] });
+  const other = el('container', { classes: ['other'] });
+  assertEquals(ss.getMergedStyle(card).width, 20);
+  assertEquals(ss.getMergedStyle(panel).width, 20);
+  assertEquals(ss.getMergedStyle(other).width, undefined);
+});
+
+Deno.test('parseStyleBlock - comma selector with compound selectors', () => {
+  const result = parseStyleBlock('button.primary, .card.active { height: 5; }');
+  assertEquals(result.items.length, 2);
+  // First: button.primary
+  assertEquals(result.items[0].selector.segments[0].compound.parts[0].value, 'button');
+  assertEquals(result.items[0].selector.segments[0].compound.parts[1].value, 'primary');
+  // Second: .card.active
+  assertEquals(result.items[1].selector.segments[0].compound.parts[0].value, 'card');
+  assertEquals(result.items[1].selector.segments[0].compound.parts[1].value, 'active');
+});
+
+Deno.test('parseStyleBlock - single selector still works', () => {
+  const result = parseStyleBlock('.card { width: 10; }');
+  assertEquals(result.items.length, 1);
+  assertEquals(result.items[0].style.width, 10);
+});
+
+// ===========================================================================
+// Phase 1-3: CSS Nesting
+// ===========================================================================
+
+Deno.test('nesting - basic nested rule', () => {
+  const result = parseStyleBlock('.card { width: 30; .title { font-weight: bold; } }');
+  assertEquals(result.items.length, 2);
+  // Parent: .card { width: 30 }
+  assertEquals(result.items[0].selector.segments.length, 1);
+  assertEquals(result.items[0].selector.segments[0].compound.parts[0].value, 'card');
+  assertEquals(result.items[0].style.width, 30);
+  // Child: .card .title { font-weight: bold }
+  assertEquals(result.items[1].selector.segments.length, 2);
+  assertEquals(result.items[1].selector.segments[0].compound.parts[0].value, 'card');
+  assertEquals(result.items[1].selector.segments[1].combinator, 'descendant');
+  assertEquals(result.items[1].selector.segments[1].compound.parts[0].value, 'title');
+  assertEquals(result.items[1].style.fontWeight, 'bold');
+});
+
+Deno.test('nesting - & with descendant', () => {
+  const result = parseStyleBlock('.card { & .title { width: 5; } }');
+  assertEquals(result.items.length, 1);
+  const sel = result.items[0].selector;
+  assertEquals(sel.segments.length, 2);
+  assertEquals(sel.segments[0].compound.parts[0].value, 'card');
+  assertEquals(sel.segments[1].compound.parts[0].value, 'title');
+});
+
+Deno.test('nesting - &.compound merges with parent', () => {
+  const result = parseStyleBlock('.card { &.active { width: 10; } }');
+  assertEquals(result.items.length, 1);
+  const sel = result.items[0].selector;
+  // Should be a single segment: .card.active
+  assertEquals(sel.segments.length, 1);
+  assertEquals(sel.segments[0].compound.parts.length, 2);
+  assertEquals(sel.segments[0].compound.parts[0].value, 'card');
+  assertEquals(sel.segments[0].compound.parts[1].value, 'active');
+});
+
+Deno.test('nesting - & with child combinator', () => {
+  const result = parseStyleBlock('.card { & > .footer { height: 3; } }');
+  assertEquals(result.items.length, 1);
+  const sel = result.items[0].selector;
+  assertEquals(sel.segments.length, 2);
+  assertEquals(sel.segments[0].compound.parts[0].value, 'card');
+  assertEquals(sel.segments[1].combinator, 'child');
+  assertEquals(sel.segments[1].compound.parts[0].value, 'footer');
+});
+
+Deno.test('nesting - &:hover pseudo-class', () => {
+  const result = parseStyleBlock('.card { &:hover { width: 20; } }');
+  assertEquals(result.items.length, 1);
+  const seg = result.items[0].selector.segments[0];
+  assertEquals(seg.compound.parts[0].value, 'card');
+  assertEquals(seg.compound.pseudoClasses, ['hover']);
+});
+
+Deno.test('nesting - deep nesting (3 levels)', () => {
+  const result = parseStyleBlock('.a { .b { .c { width: 1; } } }');
+  assertEquals(result.items.length, 1);
+  const sel = result.items[0].selector;
+  assertEquals(sel.segments.length, 3);
+  assertEquals(sel.segments[0].compound.parts[0].value, 'a');
+  assertEquals(sel.segments[1].compound.parts[0].value, 'b');
+  assertEquals(sel.segments[2].compound.parts[0].value, 'c');
+});
+
+Deno.test('nesting - properties before and after nested block', () => {
+  const result = parseStyleBlock('.card { width: 30; .title { height: 5; } padding: 2; }');
+  // .card gets both width and padding
+  assertEquals(result.items.length, 2);
+  assertEquals(result.items[0].style.width, 30);
+  assertEquals(result.items[0].style.padding, 2);
+  // .card .title gets height
+  assertEquals(result.items[1].style.height, 5);
+});
+
+Deno.test('nesting - multiple nested blocks', () => {
+  const result = parseStyleBlock('.card { .title { width: 10; } .body { height: 5; } }');
+  assertEquals(result.items.length, 2);
+  assertEquals(result.items[0].selector.segments[1].compound.parts[0].value, 'title');
+  assertEquals(result.items[0].style.width, 10);
+  assertEquals(result.items[1].selector.segments[1].compound.parts[0].value, 'body');
+  assertEquals(result.items[1].style.height, 5);
+});
+
+Deno.test('nesting - comma parent with nested child', () => {
+  const result = parseStyleBlock('.card, .panel { .title { width: 10; } }');
+  assertEquals(result.items.length, 2);
+  // .card .title
+  assertEquals(result.items[0].selector.segments[0].compound.parts[0].value, 'card');
+  assertEquals(result.items[0].selector.segments[1].compound.parts[0].value, 'title');
+  // .panel .title
+  assertEquals(result.items[1].selector.segments[0].compound.parts[0].value, 'panel');
+  assertEquals(result.items[1].selector.segments[1].compound.parts[0].value, 'title');
+});
+
+Deno.test('nesting - empty nested block produces no items', () => {
+  const result = parseStyleBlock('.card { .title { } }');
+  assertEquals(result.items.length, 0);
+});
+
+Deno.test('nesting - only nested blocks, no direct properties', () => {
+  const result = parseStyleBlock('.card { .title { width: 5; } }');
+  assertEquals(result.items.length, 1);
+  assertEquals(result.items[0].selector.segments.length, 2);
+  assertEquals(result.items[0].style.width, 5);
+});
+
+Deno.test('nesting - element matching with nested rules', () => {
+  const ss = new Stylesheet();
+  ss.addFromString('.card { width: 30; .title { font-weight: bold; } }');
+  const card = el('container', { classes: ['card'] });
+  const title = el('text', { classes: ['title'] });
+  assertEquals(ss.getMergedStyle(card).width, 30);
+  assertEquals(ss.getMergedStyle(title, [card]).fontWeight, 'bold');
+  // title without card ancestor should not match
+  assertEquals(ss.getMergedStyle(title).fontWeight, undefined);
+});
+
+Deno.test('nesting - type selector nested', () => {
+  const result = parseStyleBlock('.card { text { dim: true; } }');
+  assertEquals(result.items.length, 1);
+  const sel = result.items[0].selector;
+  assertEquals(sel.segments[0].compound.parts[0].value, 'card');
+  assertEquals(sel.segments[1].compound.parts[0].value, 'text');
+});
+
+Deno.test('nesting - complex parent selector preserved', () => {
+  const result = parseStyleBlock('container > .card { .title { width: 5; } }');
+  assertEquals(result.items.length, 1);
+  const sel = result.items[0].selector;
+  assertEquals(sel.segments.length, 3);
+  assertEquals(sel.segments[0].compound.parts[0].value, 'container');
+  assertEquals(sel.segments[1].combinator, 'child');
+  assertEquals(sel.segments[1].compound.parts[0].value, 'card');
+  assertEquals(sel.segments[2].combinator, 'descendant');
+  assertEquals(sel.segments[2].compound.parts[0].value, 'title');
+});
+
+// ===========================================================================
+// Phase 4: Nested at-rules
+// ===========================================================================
+
+Deno.test('nesting - @media inside rule', () => {
+  const result = parseStyleBlock('.card { width: 30; @media (max-width: 80) { padding: 1; } }');
+  // Direct property
+  assertEquals(result.items.length, 2);
+  assertEquals(result.items[0].style.width, 30);
+  assertEquals(result.items[0].mediaCondition, undefined);
+  // Nested @media rule: .card { padding: 1 } with media condition
+  assertEquals(result.items[1].style.padding, 1);
+  assertEquals(result.items[1].mediaCondition?.maxWidth, 80);
+  assertEquals(result.items[1].selector.segments[0].compound.parts[0].value, 'card');
+});
+
+Deno.test('nesting - @media with nested rule inside', () => {
+  const result = parseStyleBlock('.card { @media (max-width: 80) { .title { width: 5; } } }');
+  assertEquals(result.items.length, 1);
+  assertEquals(result.items[0].mediaCondition?.maxWidth, 80);
+  assertEquals(result.items[0].selector.segments.length, 2);
+  assertEquals(result.items[0].selector.segments[0].compound.parts[0].value, 'card');
+  assertEquals(result.items[0].selector.segments[1].compound.parts[0].value, 'title');
+});
+
+Deno.test('nesting - @container inside rule', () => {
+  const result = parseStyleBlock('.card { @container (min-width: 40) { padding: 2; } }');
+  assertEquals(result.containerItems.length, 1);
+  assertEquals(result.containerItems[0].style.padding, 2);
+  assertEquals(result.containerItems[0].containerCondition?.minWidth, 40);
+  assertEquals(result.containerItems[0].selector.segments[0].compound.parts[0].value, 'card');
+});
+
+Deno.test('nesting - @keyframes inside rule is global', () => {
+  const result = parseStyleBlock('.card { @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } }');
+  assertEquals(result.keyframes.length, 1);
+  assertEquals(result.keyframes[0].name, 'fadeIn');
+  assertEquals(result.keyframes[0].keyframes.length, 2);
+});
+
+Deno.test('nesting - @media respects parent selector in matching', () => {
+  const ss = new Stylesheet();
+  ss.addFromString('.card { @media (max-width: 80) { width: 20; } }');
+  const card = el('container', { classes: ['card'] });
+  const ctx: StyleContext = { terminalWidth: 60, terminalHeight: 24 };
+  // Should match: element is .card and terminal width <= 80
+  assertEquals(ss.getMergedStyle(card, [], ctx).width, 20);
+  // Should not match: terminal too wide
+  const wideCtx: StyleContext = { terminalWidth: 100, terminalHeight: 24 };
+  assertEquals(ss.getMergedStyle(card, [], wideCtx).width, undefined);
+});

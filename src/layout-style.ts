@@ -10,6 +10,9 @@ import { getUIAnimationManager } from './ui-animation-manager.ts';
 import type { AdvancedLayoutProps, LayoutContext } from './layout.ts';
 import type { PseudoClassState } from './stylesheet.ts';
 
+/** Shared empty style object — avoids allocating {} on every fast-path return. */
+const EMPTY_STYLE: Partial<Style> = Object.freeze({});
+
 /** Default layout properties for every element. */
 export const DEFAULT_LAYOUT_PROPS: AdvancedLayoutProps = {
   display: 'flex',
@@ -36,7 +39,7 @@ export const DEFAULT_LAYOUT_PROPS: AdvancedLayoutProps = {
  */
 export function getAnimatedStyle(element: Element): Partial<Style> {
   const anim = element._animationState;
-  if (!anim || anim.keyframes.length === 0) return {};
+  if (!anim || anim.keyframes.length === 0) return EMPTY_STYLE;
 
   const now = performance.now();
   const elapsed = now - anim.startTime - anim.delay;
@@ -110,41 +113,37 @@ export function getAnimatedStyle(element: Element): Partial<Style> {
 
 /** Merge container query matching styles from all stylesheets for element. */
 export function getContainerQueryStyles(element: Element, context?: LayoutContext): Partial<Style> {
-  if (!context?.stylesheets || !context.containerBounds) return {};
+  if (!context?.stylesheets || !context.containerBounds) return EMPTY_STYLE;
   const ancestors = context.ancestors || [];
   const containerSize = context.containerBounds;
-  let merged: Partial<Style> = {};
-  let hasAny = false;
+  let merged: Partial<Style> | undefined;
   for (const ss of context.stylesheets) {
     if (!ss.hasContainerRules) continue;
     const styles = ss.getContainerMatchingStyles(element, ancestors, containerSize, context.styleContext);
     if (Object.keys(styles).length > 0) {
-      merged = hasAny ? { ...merged, ...styles } : styles;
-      hasAny = true;
+      merged = merged ? { ...merged, ...styles } : styles;
     }
   }
-  return merged;
+  return merged ?? EMPTY_STYLE;
 }
 
 /** Merge pseudo-class (:focus, :hover) matching styles from all stylesheets for element. */
 function getPseudoClassStyles(element: Element, context?: LayoutContext): Partial<Style> {
-  if (!context?.stylesheets || (!context.focusedElementId && !context.hoveredElementId)) return {};
+  if (!context?.stylesheets || (!context.focusedElementId && !context.hoveredElementId)) return EMPTY_STYLE;
   const pseudoState: PseudoClassState = {
     focusedElementId: context.focusedElementId,
     hoveredElementId: context.hoveredElementId,
   };
   const ancestors = context.ancestors || [];
-  let merged: Partial<Style> = {};
-  let hasAny = false;
+  let merged: Partial<Style> | undefined;
   for (const ss of context.stylesheets) {
     if (!ss.hasPseudoClassRules) continue;
     const styles = ss.getPseudoMatchingStyles(element, ancestors, context.styleContext, pseudoState);
     if (Object.keys(styles).length > 0) {
-      merged = hasAny ? { ...merged, ...styles } : styles;
-      hasAny = true;
+      merged = merged ? { ...merged, ...styles } : styles;
     }
   }
-  return merged;
+  return merged ?? EMPTY_STYLE;
 }
 
 /**
@@ -400,23 +399,42 @@ export function computeStyle(element: Element, parentStyle?: Style, context?: La
     borderColor: parentStyle.borderColor, // Border color can inherit for consistency
   } : {};
 
-  const mergedStyle = {
-    ...defaultStyle,
-    ...typeDefaults,  // Type-specific defaults (can be overridden by stylesheet/inline)
-    ...inheritableParentStyle,
-    ...(element.props && element.props.style),  // Stylesheet + inline styles
-    ...getPseudoClassStyles(element, context),   // Pseudo-class styles (:focus, :hover)
-    ...getContainerQueryStyles(element, context),  // Container query styles
-    ...getAnimatedStyle(element),          // CSS animation resolved values
-  };
+  // Fast path: only call pseudo/container/anim when features might be active
+  const needsOverlay = context?.stylesheets || element._animationState;
+  let pseudoStyles: Partial<Style> | undefined;
+  let containerStyles: Partial<Style> | undefined;
+  let animStyle: Partial<Style> | undefined;
+
+  if (needsOverlay) {
+    pseudoStyles = getPseudoClassStyles(element, context);
+    containerStyles = getContainerQueryStyles(element, context);
+    animStyle = getAnimatedStyle(element);
+  }
+
+  const mergedStyle = (pseudoStyles !== undefined && pseudoStyles !== EMPTY_STYLE) ||
+    (containerStyles !== undefined && containerStyles !== EMPTY_STYLE) ||
+    (animStyle !== undefined && animStyle !== EMPTY_STYLE)
+    ? {
+        ...defaultStyle,
+        ...typeDefaults,
+        ...inheritableParentStyle,
+        ...(element.props && element.props.style),
+        ...(pseudoStyles !== EMPTY_STYLE ? pseudoStyles : undefined),
+        ...(containerStyles !== EMPTY_STYLE ? containerStyles : undefined),
+        ...(animStyle !== EMPTY_STYLE ? animStyle : undefined),
+      }
+    : {
+        ...defaultStyle,
+        ...typeDefaults,
+        ...inheritableParentStyle,
+        ...(element.props && element.props.style),
+      };
 
   // Only process transitions for elements that have transition specs or active state.
-  // processTransitions needs to see "target" values (before transition overlay) so it
-  // detects real property changes, not interpolated mid-transition values.
   if (mergedStyle._transitionSpecs || element._transitionState) {
     processTransitions(element, mergedStyle);
-    const transStyle = getTransitionStyle(element);
-    if (Object.keys(transStyle).length > 0) {
+    if (element._transitionState?.active.size) {
+      const transStyle = getTransitionStyle(element);
       Object.assign(mergedStyle, transStyle);
     }
   }
@@ -455,23 +473,24 @@ export function computeLayoutProps(element: Element, parentProps?: AdvancedLayou
   };
 
   // Extract flex and layout properties from style section
-  // Merge pseudo-class, container query, animated and transition values on top of base style
+  // Fast path: skip pseudo/container/anim/transition when no features are active
   const baseStyle = (element.props && element.props.style) || {};
-  const pseudoStyles = getPseudoClassStyles(element, context);
-  const containerStyles = getContainerQueryStyles(element, context);
-  const animStyle = getAnimatedStyle(element);
-  const transStyle = getTransitionStyle(element);
-  const hasPseudo = Object.keys(pseudoStyles).length > 0;
-  const hasContainer = Object.keys(containerStyles).length > 0;
-  const hasAnim = Object.keys(animStyle).length > 0;
-  const hasTrans = Object.keys(transStyle).length > 0;
-  const style = (hasPseudo || hasContainer || hasAnim || hasTrans)
-    ? { ...baseStyle,
-        ...(hasPseudo ? pseudoStyles : undefined),
-        ...(hasContainer ? containerStyles : undefined),
-        ...(hasAnim ? animStyle : undefined),
-        ...(hasTrans ? transStyle : undefined) }
-    : baseStyle;
+  const needsOverlay = context?.stylesheets || element._animationState || element._transitionState;
+  let style = baseStyle;
+  if (needsOverlay) {
+    const pseudoStyles = getPseudoClassStyles(element, context);
+    const containerStyles = getContainerQueryStyles(element, context);
+    const animStyle = getAnimatedStyle(element);
+    const transStyle = element._transitionState?.active?.size ? getTransitionStyle(element) : EMPTY_STYLE;
+    if (pseudoStyles !== EMPTY_STYLE || containerStyles !== EMPTY_STYLE ||
+        animStyle !== EMPTY_STYLE || transStyle !== EMPTY_STYLE) {
+      style = { ...baseStyle,
+        ...(pseudoStyles !== EMPTY_STYLE ? pseudoStyles : undefined),
+        ...(containerStyles !== EMPTY_STYLE ? containerStyles : undefined),
+        ...(animStyle !== EMPTY_STYLE ? animStyle : undefined),
+        ...(transStyle !== EMPTY_STYLE ? transStyle : undefined) };
+    }
+  }
 
   // Support flex shorthand in style: flex: "1" or flex: "0 0 auto" etc
   if (style.flex !== undefined) {

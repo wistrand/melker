@@ -1,0 +1,162 @@
+<melker>
+<policy>
+{
+  "name": "CSS Nesting Demo",
+  "description": "Demonstrates CSS Nesting Level 1 support",
+  "permissions": {}
+}
+</policy>
+
+<style>
+/* CSS Nesting: rules can be nested inside parent rules */
+
+.section {
+  border: thin;
+  padding: 1;
+  margin-bottom: 1;
+
+  /* Nested: becomes ".section .section-title" */
+  .section-title {
+    font-weight: bold;
+    margin-bottom: 1;
+  }
+}
+
+/* & reference: explicit parent substitution */
+.card {
+  border: single;
+  padding: 1;
+
+  /* &.active becomes ".card.active" (compound) */
+  &.active {
+    border: double;
+  }
+
+  /* & > .header becomes ".card > .header" (child combinator) */
+  & > .header {
+    font-weight: bold;
+  }
+
+  /* .body becomes ".card .body" (implicit descendant) */
+  .body {
+    dim: true;
+  }
+
+  /* &:hover becomes ".card:hover" (pseudo-class) */
+  &:hover {
+    border: thick;
+  }
+}
+
+/* Deep nesting: 3 levels */
+.tree {
+  padding: 1;
+  border: thin;
+
+  .branch {
+    padding-left: 2;
+
+    .leaf {
+      font-style: italic;
+    }
+  }
+}
+
+/* Comma selectors + nesting */
+.info, .warning {
+  padding: 1;
+  border: thin;
+
+  .label {
+    font-weight: bold;
+  }
+}
+
+/* Nested @media queries */
+.responsive {
+  width: 60;
+  border: single;
+  padding: 1;
+
+  .content {
+    font-weight: bold;
+  }
+
+  @media (max-width: 80) {
+    width: 40;
+  }
+}
+</style>
+
+<container style="overflow: scroll; padding: 1; height: fill">
+  <text style="font-weight: bold; margin-bottom: 1">CSS Nesting Examples</text>
+
+  <!-- Basic nesting -->
+  <container class="section">
+    <text class="section-title">Basic Nesting</text>
+    <text>Rules nested inside .section become ".section .section-title"</text>
+    <text>This title above is bold via the nested rule</text>
+  </container>
+
+  <!-- & reference -->
+  <container class="section">
+    <text class="section-title">& Reference (Parent Substitution)</text>
+    <container style="flex-direction: row; gap: 2">
+      <container class="card" style="width: 25">
+        <text class="header">Normal Card</text>
+        <container><text class="body">Thin border, dim body</text></container>
+      </container>
+      <container class="card active" style="width: 25">
+        <text class="header">.card.active</text>
+        <container><text class="body">Double border via &.active</text></container>
+      </container>
+    </container>
+  </container>
+
+  <!-- Deep nesting -->
+  <container class="section">
+    <text class="section-title">Deep Nesting (3 Levels)</text>
+    <container class="tree">
+      <text>Tree root</text>
+      <container class="branch">
+        <text>Branch (indented)</text>
+        <text class="leaf">Leaf (italic via .tree .branch .leaf)</text>
+      </container>
+      <container class="branch">
+        <text>Another branch</text>
+        <text class="leaf">Another leaf</text>
+      </container>
+    </container>
+  </container>
+
+  <!-- Comma + nesting -->
+  <container class="section">
+    <text class="section-title">Comma Selectors + Nesting</text>
+    <text>".info, .warning" both get the nested .label rule</text>
+    <container style="flex-direction: row; gap: 2">
+      <container class="info" style="width: 25">
+        <text class="label">Info Label</text>
+        <text>Info content</text>
+      </container>
+      <container class="warning" style="width: 25">
+        <text class="label">Warning Label</text>
+        <text>Warning content</text>
+      </container>
+    </container>
+  </container>
+
+  <!-- Nested @media -->
+  <container class="section">
+    <text class="section-title">Nested @media</text>
+    <text>".responsive" is 60 wide, but 40 when terminal &lt; 80 cols</text>
+    <container class="responsive">
+      <text class="content">Responsive box</text>
+      <text>Resize terminal to see width change</text>
+    </container>
+  </container>
+
+  <container style="flex-direction: row; gap: 2; margin-top: 1">
+    <button label="Exit" onClick="$melker.exit()" />
+  </container>
+</container>
+</melker>

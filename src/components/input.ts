@@ -43,6 +43,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
   private _showingCompletions: boolean = false;
   private _completions: string[] = [];
   private _selectedCompletionIndex: number = -1;
+  private _borderInset = { top: 0, right: 0, bottom: 0, left: 0 };
 
   constructor(props: InputProps = {}, children: Element[] = []) {
     const defaultProps: InputProps = {
@@ -66,9 +67,36 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
   }
 
   /**
+   * Calculate content bounds by insetting for border thickness.
+   * Borders are rendered by the pipeline; content must not overlap them.
+   */
+  private _getContentBounds(bounds: Bounds, computedStyle?: any): Bounds {
+    const s = computedStyle || {};
+    const hasBorderTop = (s.borderTop || (s.border && s.border !== 'none')) && (s.borderTop !== 'none');
+    const hasBorderBottom = (s.borderBottom || (s.border && s.border !== 'none')) && (s.borderBottom !== 'none');
+    const hasBorderLeft = (s.borderLeft || (s.border && s.border !== 'none')) && (s.borderLeft !== 'none');
+    const hasBorderRight = (s.borderRight || (s.border && s.border !== 'none')) && (s.borderRight !== 'none');
+    const top = hasBorderTop ? 1 : 0;
+    const bottom = hasBorderBottom ? 1 : 0;
+    const left = hasBorderLeft ? 1 : 0;
+    const right = hasBorderRight ? 1 : 0;
+    this._borderInset = { top, right, bottom, left };
+    return {
+      x: bounds.x + left,
+      y: bounds.y + top,
+      width: Math.max(0, bounds.width - left - right),
+      height: Math.max(0, bounds.height - top - bottom),
+    };
+  }
+
+  /**
    * Render the text input to the terminal buffer
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
+    // Compute content bounds inset by border thickness
+    const cb = this._getContentBounds(bounds, context.computedStyle);
+    if (cb.width <= 0 || cb.height <= 0) return;
+
     // Sync props.value to internal _internalValue if changed externally (e.g., by state persistence)
     if (this.props.value !== undefined && this.props.value !== this._internalValue) {
       this._internalValue = this.props.value;
@@ -83,7 +111,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     const { placeholder } = this.props;
 
     const displayText = value || placeholder || '';
-    const maxDisplayWidth = bounds.width;
+    const maxDisplayWidth = cb.width;
 
     // Use element style properties, with fallbacks for visibility
     const elementStyle = this.props.style || {};
@@ -93,8 +121,8 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       foreground: value ? (elementStyle.color || getThemeColor('inputForeground')) : getThemeColor('textMuted'), // Placeholder text is muted
     };
 
-    // Clear the input area first - make sure it's visible
-    buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, 1, {
+    // Clear the input content area first - make sure it's visible
+    buffer.currentBuffer.fillRect(cb.x, cb.y, cb.width, 1, {
       char: EMPTY_CHAR,
       background: inputCellStyle.background,
       foreground: inputCellStyle.foreground,
@@ -121,7 +149,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       if (textToRender.length > maxDisplayWidth) {
         visibleText = textToRender.substring(textToRender.length - maxDisplayWidth);
       }
-      buffer.currentBuffer.setText(bounds.x, bounds.y, visibleText, textStyle);
+      buffer.currentBuffer.setText(cb.x, cb.y, visibleText, textStyle);
     }
 
     // Show completion preview if available and focused
@@ -131,19 +159,19 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       if (completion && completion.length > value.length) {
         // Show the rest of the completion in a muted style
         const previewText = completion.substring(value.length);
-        const previewStartX = bounds.x + value.length;
-        const availableWidth = bounds.width - value.length;
+        const previewStartX = cb.x + value.length;
+        const availableWidth = cb.width - value.length;
 
-        if (previewStartX < bounds.x + bounds.width && availableWidth > 0) {
+        if (previewStartX < cb.x + cb.width && availableWidth > 0) {
           const truncatedPreview = previewText.substring(0, availableWidth);
 
           // First, clear the entire preview area to remove any leftover characters
           for (let i = 0; i < availableWidth; i++) {
-            buffer.currentBuffer.setText(previewStartX + i, bounds.y, ' ', inputCellStyle);
+            buffer.currentBuffer.setText(previewStartX + i, cb.y, ' ', inputCellStyle);
           }
 
           // Then render the new preview text
-          buffer.currentBuffer.setText(previewStartX, bounds.y, truncatedPreview, {
+          buffer.currentBuffer.setText(previewStartX, cb.y, truncatedPreview, {
             ...textStyle,
             foreground: COLORS.gray,
             // Make it visibly different from regular text
@@ -153,11 +181,11 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       } else {
         // If no valid preview (e.g., completion is same length or shorter than current value),
         // clear the preview area to remove any leftover characters
-        const clearStartX = bounds.x + value.length;
-        const clearWidth = bounds.width - value.length;
+        const clearStartX = cb.x + value.length;
+        const clearWidth = cb.width - value.length;
         if (clearWidth > 0) {
           for (let i = 0; i < clearWidth; i++) {
-            buffer.currentBuffer.setText(clearStartX + i, bounds.y, ' ', inputCellStyle);
+            buffer.currentBuffer.setText(clearStartX + i, cb.y, ' ', inputCellStyle);
           }
         }
       }
@@ -168,9 +196,9 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       // Calculate cursor position based on the actual value length, not placeholder
       const valueLength = value.length;
       const actualCursorPos = Math.min(cursorPos, valueLength);
-      const cursorX = bounds.x + actualCursorPos;
+      const cursorX = cb.x + actualCursorPos;
 
-      if (cursorX >= bounds.x && cursorX < bounds.x + bounds.width) {
+      if (cursorX >= cb.x && cursorX < cb.x + cb.width) {
         // Use reverse video for cursor - works universally across all terminals and themes
         const hasCharAtCursor = actualCursorPos < value.length;
 
@@ -178,14 +206,14 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
           // Show the character with reverse video (swaps fg/bg)
           // For password format, show * instead of the actual character
           const cursorChar = isPassword ? '*' : value[actualCursorPos];
-          buffer.currentBuffer.setText(cursorX, bounds.y, cursorChar, {
+          buffer.currentBuffer.setText(cursorX, cb.y, cursorChar, {
             foreground: inputCellStyle.foreground,
             background: inputCellStyle.background,
             reverse: true,
           });
         } else {
           // At empty position: use space with reverse video to show cursor block
-          buffer.currentBuffer.setText(cursorX, bounds.y, ' ', {
+          buffer.currentBuffer.setText(cursorX, cb.y, ' ', {
             foreground: inputCellStyle.foreground,
             background: inputCellStyle.background,
             reverse: true,
@@ -549,6 +577,16 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       return false;
     }
 
+    // Apply cached border inset from last full render
+    const bi = this._borderInset;
+    const cb: Bounds = {
+      x: bounds.x + bi.left,
+      y: bounds.y + bi.top,
+      width: Math.max(0, bounds.width - bi.left - bi.right),
+      height: Math.max(0, bounds.height - bi.top - bi.bottom),
+    };
+    if (cb.width <= 0 || cb.height <= 0) return false;
+
     const value = this._internalValue;
     const cursorPos = this._cursorPosition;
     const { placeholder } = this.props;
@@ -561,8 +599,8 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       ? (parseColor(elementStyle.color) || getThemeColor('inputForeground'))
       : getThemeColor('textMuted');
 
-    // Clear the input area
-    collector.fillRect(bounds.x, bounds.y, bounds.width, 1, {
+    // Clear the input content area
+    collector.fillRect(cb.x, cb.y, cb.width, 1, {
       char: EMPTY_CHAR,
       background: bg,
       foreground: fg,
@@ -578,25 +616,25 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     if (textToRender) {
       // Truncate if longer than available width
       let visibleText = textToRender;
-      if (textToRender.length > bounds.width) {
-        visibleText = textToRender.substring(textToRender.length - bounds.width);
+      if (textToRender.length > cb.width) {
+        visibleText = textToRender.substring(textToRender.length - cb.width);
       }
-      collector.setText(bounds.x, bounds.y, visibleText, textStyle);
+      collector.setText(cb.x, cb.y, visibleText, textStyle);
     }
 
     // Render cursor if focused
     if (isFocused) {
       const valueLength = value.length;
       const actualCursorPos = Math.min(cursorPos, valueLength);
-      const cursorX = bounds.x + actualCursorPos;
+      const cursorX = cb.x + actualCursorPos;
 
-      if (cursorX >= bounds.x && cursorX < bounds.x + bounds.width) {
+      if (cursorX >= cb.x && cursorX < cb.x + cb.width) {
         const hasCharAtCursor = actualCursorPos < value.length;
         const cursorChar = hasCharAtCursor
           ? (isPassword ? '*' : value[actualCursorPos])
           : ' ';
 
-        collector.setText(cursorX, bounds.y, cursorChar, {
+        collector.setText(cursorX, cb.y, cursorChar, {
           foreground: fg,
           background: bg,
           reverse: true,

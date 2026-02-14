@@ -45,6 +45,7 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
   private _pendingChars: string = ''; // Buffer for batching rapid character input
   // Debounced action for flushing pending chars (5ms batching)
   private _debouncedFlushCharsAction: DebouncedAction;
+  private _borderInset = { top: 0, right: 0, bottom: 0, left: 0 };
 
   constructor(props: TextareaProps = {}, children: Element[] = []) {
     const defaultProps: TextareaProps = {
@@ -265,9 +266,35 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
   }
 
   /**
+   * Calculate content bounds by insetting for border thickness.
+   */
+  private _getContentBounds(bounds: Bounds, computedStyle?: any): Bounds {
+    const s = computedStyle || {};
+    const hasBorderTop = (s.borderTop || (s.border && s.border !== 'none')) && (s.borderTop !== 'none');
+    const hasBorderBottom = (s.borderBottom || (s.border && s.border !== 'none')) && (s.borderBottom !== 'none');
+    const hasBorderLeft = (s.borderLeft || (s.border && s.border !== 'none')) && (s.borderLeft !== 'none');
+    const hasBorderRight = (s.borderRight || (s.border && s.border !== 'none')) && (s.borderRight !== 'none');
+    const top = hasBorderTop ? 1 : 0;
+    const bottom = hasBorderBottom ? 1 : 0;
+    const left = hasBorderLeft ? 1 : 0;
+    const right = hasBorderRight ? 1 : 0;
+    this._borderInset = { top, right, bottom, left };
+    return {
+      x: bounds.x + left,
+      y: bounds.y + top,
+      width: Math.max(0, bounds.width - left - right),
+      height: Math.max(0, bounds.height - top - bottom),
+    };
+  }
+
+  /**
    * Render the textarea to the terminal buffer
    */
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
+    // Compute content bounds inset by border thickness
+    const cb = this._getContentBounds(bounds, context.computedStyle);
+    if (cb.width <= 0 || cb.height <= 0) return;
+
     // Flush any pending batched chars before rendering
     if (this._pendingChars.length > 0) {
       this._flushPendingChars();
@@ -294,14 +321,14 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       foreground: value ? (elementStyle.color || getThemeColor('inputForeground')) : getThemeColor('textMuted'),
     };
 
-    // Clear the textarea area
-    buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, {
+    // Clear the textarea content area
+    buffer.currentBuffer.fillRect(cb.x, cb.y, cb.width, cb.height, {
       char: EMPTY_CHAR,
       background: textareaStyle.background,
       foreground: textareaStyle.foreground,
     });
 
-    const displayLines = this._computeDisplayLines(bounds.width);
+    const displayLines = this._computeDisplayLines(cb.width);
     const isFocused = context.focusedElementId === this.id;
 
     // Only use internal scroll if rows is set (fixed height mode)
@@ -310,26 +337,26 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
 
     // Adjust scroll to keep cursor visible (only in internal scroll mode)
     if (useInternalScroll && isFocused) {
-      const cursorDisplay = this._cursorToDisplayPos(bounds.width);
+      const cursorDisplay = this._cursorToDisplayPos(cb.width);
       if (cursorDisplay.row < this._scrollY) {
         this._scrollY = cursorDisplay.row;
-      } else if (cursorDisplay.row >= this._scrollY + bounds.height) {
-        this._scrollY = cursorDisplay.row - bounds.height + 1;
+      } else if (cursorDisplay.row >= this._scrollY + cb.height) {
+        this._scrollY = cursorDisplay.row - cb.height + 1;
       }
     } else if (!useInternalScroll) {
       this._scrollY = 0; // No internal scroll
     }
 
     // Determine how many lines to render
-    const linesToRender = useInternalScroll ? bounds.height : displayLines.length;
+    const linesToRender = useInternalScroll ? cb.height : displayLines.length;
 
     // Show placeholder if empty
     if (!value && placeholder) {
       const placeholderStyle = { ...textareaStyle, foreground: COLORS.gray };
       const placeholderLines = placeholder.split('\n');
       for (let y = 0; y < Math.min(placeholderLines.length, linesToRender); y++) {
-        const text = placeholderLines[y].substring(0, bounds.width);
-        buffer.currentBuffer.setText(bounds.x, bounds.y + y, text, placeholderStyle);
+        const text = placeholderLines[y].substring(0, cb.width);
+        buffer.currentBuffer.setText(cb.x, cb.y + y, text, placeholderStyle);
       }
     } else {
       // Render lines
@@ -337,23 +364,23 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
         const lineIdx = this._scrollY + y;
         if (lineIdx < displayLines.length) {
           const line = displayLines[lineIdx];
-          const text = line.text.substring(0, bounds.width);
-          buffer.currentBuffer.setText(bounds.x, bounds.y + y, text, textareaStyle);
+          const text = line.text.substring(0, cb.width);
+          buffer.currentBuffer.setText(cb.x, cb.y + y, text, textareaStyle);
         }
       }
     }
 
     // Render cursor when focused
     if (isFocused) {
-      const cursorDisplay = this._cursorToDisplayPos(bounds.width);
+      const cursorDisplay = this._cursorToDisplayPos(cb.width);
       const cursorScreenY = cursorDisplay.row - this._scrollY;
 
       // In external scroll mode, render cursor at absolute position (parent clips)
       // In internal scroll mode, only render if within bounds
-      const maxY = useInternalScroll ? bounds.height : displayLines.length;
+      const maxY = useInternalScroll ? cb.height : displayLines.length;
       if (cursorScreenY >= 0 && cursorScreenY < maxY) {
-        const cursorX = bounds.x + Math.min(cursorDisplay.col, bounds.width - 1);
-        const cursorY = bounds.y + cursorScreenY;
+        const cursorX = cb.x + Math.min(cursorDisplay.col, cb.width - 1);
+        const cursorY = cb.y + cursorScreenY;
 
         // Get the character at cursor position
         const lineIdx = cursorDisplay.row;
@@ -860,6 +887,16 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
    * Skips layout calculation and buffer copy for immediate visual feedback.
    */
   fastRender(collector: DiffCollector, bounds: Bounds, isFocused: boolean): boolean {
+    // Apply cached border inset from last full render
+    const bi = this._borderInset;
+    const cb: Bounds = {
+      x: bounds.x + bi.left,
+      y: bounds.y + bi.top,
+      width: Math.max(0, bounds.width - bi.left - bi.right),
+      height: Math.max(0, bounds.height - bi.top - bi.bottom),
+    };
+    if (cb.width <= 0 || cb.height <= 0) return false;
+
     // Flush any pending batched chars before rendering
     if (this._pendingChars.length > 0) {
       this._flushPendingChars();
@@ -875,38 +912,38 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       ? (parseColor(elementStyle.color) || getThemeColor('inputForeground'))
       : getThemeColor('textMuted');
 
-    // Clear the textarea area
-    collector.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, {
+    // Clear the textarea content area
+    collector.fillRect(cb.x, cb.y, cb.width, cb.height, {
       char: EMPTY_CHAR,
       background: bg,
       foreground: fg,
     });
 
-    const displayLines = this._computeDisplayLines(bounds.width);
+    const displayLines = this._computeDisplayLines(cb.width);
 
     // Only use internal scroll if rows is set (fixed height mode)
     const useInternalScroll = this.props.rows !== undefined;
 
     // Adjust scroll to keep cursor visible (only in internal scroll mode)
     if (useInternalScroll && isFocused) {
-      const cursorDisplay = this._cursorToDisplayPos(bounds.width);
+      const cursorDisplay = this._cursorToDisplayPos(cb.width);
       if (cursorDisplay.row < this._scrollY) {
         this._scrollY = cursorDisplay.row;
-      } else if (cursorDisplay.row >= this._scrollY + bounds.height) {
-        this._scrollY = cursorDisplay.row - bounds.height + 1;
+      } else if (cursorDisplay.row >= this._scrollY + cb.height) {
+        this._scrollY = cursorDisplay.row - cb.height + 1;
       }
     } else if (!useInternalScroll) {
       this._scrollY = 0;
     }
 
-    const linesToRender = useInternalScroll ? bounds.height : displayLines.length;
+    const linesToRender = useInternalScroll ? cb.height : displayLines.length;
 
     // Show placeholder if empty
     if (!value && placeholder) {
       const placeholderLines = placeholder.split('\n');
       for (let y = 0; y < Math.min(placeholderLines.length, linesToRender); y++) {
-        const text = placeholderLines[y].substring(0, bounds.width);
-        collector.setText(bounds.x, bounds.y + y, text, {
+        const text = placeholderLines[y].substring(0, cb.width);
+        collector.setText(cb.x, cb.y + y, text, {
           foreground: COLORS.gray,
           background: bg,
         });
@@ -917,8 +954,8 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
         const lineIdx = this._scrollY + y;
         if (lineIdx < displayLines.length) {
           const line = displayLines[lineIdx];
-          const text = line.text.substring(0, bounds.width);
-          collector.setText(bounds.x, bounds.y + y, text, {
+          const text = line.text.substring(0, cb.width);
+          collector.setText(cb.x, cb.y + y, text, {
             foreground: fg,
             background: bg,
           });
@@ -928,13 +965,13 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
 
     // Render cursor when focused
     if (isFocused) {
-      const cursorDisplay = this._cursorToDisplayPos(bounds.width);
+      const cursorDisplay = this._cursorToDisplayPos(cb.width);
       const cursorScreenY = cursorDisplay.row - this._scrollY;
-      const maxY = useInternalScroll ? bounds.height : displayLines.length;
+      const maxY = useInternalScroll ? cb.height : displayLines.length;
 
       if (cursorScreenY >= 0 && cursorScreenY < maxY) {
-        const cursorX = bounds.x + Math.min(cursorDisplay.col, bounds.width - 1);
-        const cursorY = bounds.y + cursorScreenY;
+        const cursorX = cb.x + Math.min(cursorDisplay.col, cb.width - 1);
+        const cursorY = cb.y + cursorScreenY;
 
         const lineIdx = cursorDisplay.row;
         const line = displayLines[lineIdx];

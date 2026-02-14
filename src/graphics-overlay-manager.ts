@@ -184,59 +184,45 @@ export class GraphicsOverlayManager {
   // --- Private methods ---
 
   /**
-   * Collect sixel outputs from all canvas elements in the document.
-   * Returns array of { data, bounds } for each sixel.
+   * Generic graphics output collection from all canvas/img/video/markdown elements.
+   * Traverses document tree, calling getOutput on single elements and getOutputs on markdown.
    */
-  private _collectSixelOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> {
-    if (!this._sixelCapabilities?.supported) {
-      return [];
-    }
-
-    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> = [];
-
-    // Traverse document tree to find canvas elements with sixel output
+  private _collectGraphicsOutputs<T extends { data: string; bounds: { x: number; y: number; width: number; height: number } }>(
+    capabilities: { supported: boolean } | undefined,
+    getOutput: string,
+    getOutputs: string,
+    label: string,
+  ): T[] {
+    if (!capabilities?.supported) return [];
+    const outputs: T[] = [];
     const collectFromElement = (element: Element): void => {
-      // Check if this is a canvas element with sixel output
       if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
-        const canvas = element as { getSixelOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number } } | null };
-        if (canvas.getSixelOutput) {
-          const sixelOutput = canvas.getSixelOutput();
-          if (sixelOutput?.data && sixelOutput.bounds) {
-            outputs.push({ data: sixelOutput.data, bounds: sixelOutput.bounds });
-          }
+        const fn = (element as unknown as Record<string, unknown>)[getOutput];
+        if (typeof fn === 'function') {
+          const o = (fn as () => T | null).call(element);
+          if (o?.data && o.bounds) outputs.push(o);
         }
       }
-
-      // Check if this is a markdown element with embedded image canvases
       if (element.type === 'markdown') {
-        const markdown = element as { getSixelOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number } }> };
-        if (markdown.getSixelOutputs) {
-          const sixelOutputs = markdown.getSixelOutputs();
-          for (const output of sixelOutputs) {
-            if (output?.data && output.bounds) {
-              outputs.push({ data: output.data, bounds: output.bounds });
-            }
+        const fn = (element as unknown as Record<string, unknown>)[getOutputs];
+        if (typeof fn === 'function') {
+          for (const o of (fn as () => T[]).call(element)) {
+            if (o?.data && o.bounds) outputs.push(o);
           }
         }
       }
-
-      // Recurse into children
       if (element.children) {
-        for (const child of element.children) {
-          collectFromElement(child);
-        }
+        for (const child of element.children) collectFromElement(child);
       }
     };
-
-    if (this._document.root) {
-      collectFromElement(this._document.root);
-    }
-
-    if (outputs.length > 0) {
-      logger.debug('Collected sixel outputs', { count: outputs.length });
-    }
-
+    if (this._document.root) collectFromElement(this._document.root);
+    if (outputs.length > 0) logger.debug(`Collected ${label} outputs`, { count: outputs.length });
     return outputs;
+  }
+
+  private _collectSixelOutputs() {
+    return this._collectGraphicsOutputs<{ data: string; bounds: { x: number; y: number; width: number; height: number } }>(
+      this._sixelCapabilities, 'getSixelOutput', 'getSixelOutputs', 'sixel');
   }
 
   /**
@@ -402,60 +388,9 @@ export class GraphicsOverlayManager {
     logger.debug('Rendered sixel overlays', { count: sixelOutputs.length });
   }
 
-  /**
-   * Collect kitty outputs from all canvas elements in the document.
-   * Returns array of { data, bounds, imageId } for each kitty image.
-   */
-  private _collectKittyOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> {
-    if (!this._kittyCapabilities?.supported) {
-      return [];
-    }
-
-    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> = [];
-
-    // Traverse document tree to find canvas elements with kitty output
-    const collectFromElement = (element: Element): void => {
-      // Check if this is a canvas element with kitty output
-      if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
-        const canvas = element as { getKittyOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean } | null };
-        if (canvas.getKittyOutput) {
-          const kittyOutput = canvas.getKittyOutput();
-          if (kittyOutput?.data && kittyOutput.bounds) {
-            outputs.push({ data: kittyOutput.data, bounds: kittyOutput.bounds, imageId: kittyOutput.imageId, fromCache: kittyOutput.fromCache });
-          }
-        }
-      }
-
-      // Check if this is a markdown element with embedded image canvases
-      if (element.type === 'markdown') {
-        const markdown = element as { getKittyOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }> };
-        if (markdown.getKittyOutputs) {
-          const kittyOutputs = markdown.getKittyOutputs();
-          for (const output of kittyOutputs) {
-            if (output?.data && output.bounds) {
-              outputs.push({ data: output.data, bounds: output.bounds, imageId: output.imageId, fromCache: output.fromCache });
-            }
-          }
-        }
-      }
-
-      // Recurse into children
-      if (element.children) {
-        for (const child of element.children) {
-          collectFromElement(child);
-        }
-      }
-    };
-
-    if (this._document.root) {
-      collectFromElement(this._document.root);
-    }
-
-    if (outputs.length > 0) {
-      logger.debug('Collected kitty outputs', { count: outputs.length });
-    }
-
-    return outputs;
+  private _collectKittyOutputs() {
+    return this._collectGraphicsOutputs<{ data: string; bounds: { x: number; y: number; width: number; height: number }; imageId: number; fromCache?: boolean }>(
+      this._kittyCapabilities, 'getKittyOutput', 'getKittyOutputs', 'kitty');
   }
 
   /**
@@ -517,60 +452,9 @@ export class GraphicsOverlayManager {
     this._previousKittyImageIds = currentImageIds;
   }
 
-  /**
-   * Collect iTerm2 outputs from all canvas elements in the document.
-   * Returns array of { data, bounds } for each iTerm2 image.
-   */
-  private _collectITermOutputs(): Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> {
-    if (!this._itermCapabilities?.supported) {
-      return [];
-    }
-
-    const outputs: Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> = [];
-
-    // Traverse document tree to find canvas elements with iTerm2 output
-    const collectFromElement = (element: Element): void => {
-      // Check if this is a canvas element with iTerm2 output
-      if (element.type === 'canvas' || element.type === 'img' || element.type === 'video') {
-        const canvas = element as { getITermOutput?: () => { data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean } | null };
-        if (canvas.getITermOutput) {
-          const itermOutput = canvas.getITermOutput();
-          if (itermOutput?.data && itermOutput.bounds) {
-            outputs.push({ data: itermOutput.data, bounds: itermOutput.bounds, fromCache: itermOutput.fromCache });
-          }
-        }
-      }
-
-      // Check if this is a markdown element with embedded image canvases
-      if (element.type === 'markdown') {
-        const markdown = element as { getITermOutputs?: () => Array<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }> };
-        if (markdown.getITermOutputs) {
-          const itermOutputs = markdown.getITermOutputs();
-          for (const output of itermOutputs) {
-            if (output?.data && output.bounds) {
-              outputs.push({ data: output.data, bounds: output.bounds, fromCache: output.fromCache });
-            }
-          }
-        }
-      }
-
-      // Recurse into children
-      if (element.children) {
-        for (const child of element.children) {
-          collectFromElement(child);
-        }
-      }
-    };
-
-    if (this._document.root) {
-      collectFromElement(this._document.root);
-    }
-
-    if (outputs.length > 0) {
-      logger.debug('Collected iTerm2 outputs', { count: outputs.length });
-    }
-
-    return outputs;
+  private _collectITermOutputs() {
+    return this._collectGraphicsOutputs<{ data: string; bounds: { x: number; y: number; width: number; height: number }; fromCache?: boolean }>(
+      this._itermCapabilities, 'getITermOutput', 'getITermOutputs', 'iTerm2');
   }
 
   /**

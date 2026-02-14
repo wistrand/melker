@@ -55,6 +55,51 @@ export interface CanvasRenderData {
 }
 
 /**
+ * Reusable cache for graphics output (kitty/iTerm2).
+ * Tracks content hash, bounds, compositing buffer, and cached output to skip re-encoding.
+ */
+export class GraphicsOutputCache<T> {
+  private _contentHash: number = 0;
+  private _cachedOutput: T | null = null;
+  private _cachedBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private _compositedBuffer: Uint32Array | null = null;
+
+  getCompositedBuffer(pixelCount: number): Uint32Array {
+    if (!this._compositedBuffer || this._compositedBuffer.length < pixelCount) {
+      this._compositedBuffer = new Uint32Array(pixelCount);
+    }
+    return this._compositedBuffer;
+  }
+
+  getCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }): T | null {
+    if (
+      this._cachedOutput &&
+      this._contentHash === contentHash &&
+      this._cachedBounds &&
+      this._cachedBounds.x === bounds.x &&
+      this._cachedBounds.y === bounds.y &&
+      this._cachedBounds.width === bounds.width &&
+      this._cachedBounds.height === bounds.height
+    ) {
+      return this._cachedOutput;
+    }
+    return null;
+  }
+
+  setCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }, output: T): void {
+    this._contentHash = contentHash;
+    this._cachedBounds = { ...bounds };
+    this._cachedOutput = output;
+  }
+
+  invalidate(): void {
+    this._contentHash = 0;
+    this._cachedOutput = null;
+    this._cachedBounds = null;
+  }
+}
+
+/**
  * Pre-allocated state for canvas rendering operations.
  * Created once per CanvasElement instance to avoid GC pressure in hot paths.
  */
@@ -78,36 +123,13 @@ export class CanvasRenderState {
   qFgColor: number = 0;
   qBgColor: number = 0;
 
-  // Kitty compositing buffer (reused across frames, grows as needed)
-  private _kittyCompositedBuffer: Uint32Array | null = null;
-
-  // Kitty image cache - skip re-encoding when content unchanged
-  private _kittyContentHash: number = 0;
-  private _kittyCachedOutput: KittyOutputData | null = null;
-  private _kittyCachedBounds: { x: number; y: number; width: number; height: number } | null = null;
+  // Kitty and iTerm2 output caches
+  readonly kittyCache = new GraphicsOutputCache<KittyOutputData>();
+  readonly itermCache = new GraphicsOutputCache<ITermOutputData>();
 
   // Stable image ID for this canvas - reused across frames to enable in-place replacement
   // This eliminates flicker from the display+delete cycle that occurs with new IDs each frame
   private _kittyStableImageId: number = generateImageId();
-
-  // iTerm2 image cache - skip re-encoding when content unchanged
-  private _itermContentHash: number = 0;
-  private _itermCachedOutput: ITermOutputData | null = null;
-  private _itermCachedBounds: { x: number; y: number; width: number; height: number } | null = null;
-
-  // iTerm2 compositing buffer (reused across frames, grows as needed)
-  private _itermCompositedBuffer: Uint32Array | null = null;
-
-  /**
-   * Get or create a kitty compositing buffer of the required size.
-   * Reuses existing buffer if large enough, otherwise allocates a new one.
-   */
-  getKittyCompositedBuffer(pixelCount: number): Uint32Array {
-    if (!this._kittyCompositedBuffer || this._kittyCompositedBuffer.length < pixelCount) {
-      this._kittyCompositedBuffer = new Uint32Array(pixelCount);
-    }
-    return this._kittyCompositedBuffer;
-  }
 
   /**
    * Compute a fast hash of a Uint32Array buffer.
@@ -123,97 +145,12 @@ export class CanvasRenderState {
   }
 
   /**
-   * Check if kitty content matches cache and return cached output if so.
-   * Returns null if cache miss (content changed or bounds changed).
-   */
-  getKittyCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }): KittyOutputData | null {
-    if (
-      this._kittyCachedOutput &&
-      this._kittyContentHash === contentHash &&
-      this._kittyCachedBounds &&
-      this._kittyCachedBounds.x === bounds.x &&
-      this._kittyCachedBounds.y === bounds.y &&
-      this._kittyCachedBounds.width === bounds.width &&
-      this._kittyCachedBounds.height === bounds.height
-    ) {
-      return this._kittyCachedOutput;
-    }
-    return null;
-  }
-
-  /**
-   * Store kitty output in cache.
-   */
-  setKittyCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }, output: KittyOutputData): void {
-    this._kittyContentHash = contentHash;
-    this._kittyCachedBounds = { ...bounds };
-    this._kittyCachedOutput = output;
-  }
-
-  /**
-   * Invalidate kitty cache (e.g., on resize).
-   */
-  invalidateKittyCache(): void {
-    this._kittyContentHash = 0;
-    this._kittyCachedOutput = null;
-    this._kittyCachedBounds = null;
-  }
-
-  /**
    * Get stable image ID for this canvas.
    * Reusing the same ID across frames allows Kitty to replace images in-place,
    * eliminating flicker from the display+delete cycle.
    */
   getKittyStableImageId(): number {
     return this._kittyStableImageId;
-  }
-
-  /**
-   * Get or create an iTerm2 compositing buffer of the required size.
-   * Reuses existing buffer if large enough, otherwise allocates a new one.
-   */
-  getITermCompositedBuffer(pixelCount: number): Uint32Array {
-    if (!this._itermCompositedBuffer || this._itermCompositedBuffer.length < pixelCount) {
-      this._itermCompositedBuffer = new Uint32Array(pixelCount);
-    }
-    return this._itermCompositedBuffer;
-  }
-
-  /**
-   * Check if iTerm2 content matches cache and return cached output if so.
-   * Returns null if cache miss (content changed or bounds changed).
-   */
-  getITermCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }): ITermOutputData | null {
-    if (
-      this._itermCachedOutput &&
-      this._itermContentHash === contentHash &&
-      this._itermCachedBounds &&
-      this._itermCachedBounds.x === bounds.x &&
-      this._itermCachedBounds.y === bounds.y &&
-      this._itermCachedBounds.width === bounds.width &&
-      this._itermCachedBounds.height === bounds.height
-    ) {
-      return this._itermCachedOutput;
-    }
-    return null;
-  }
-
-  /**
-   * Store iTerm2 output in cache.
-   */
-  setITermCachedOutput(contentHash: number, bounds: { x: number; y: number; width: number; height: number }, output: ITermOutputData): void {
-    this._itermContentHash = contentHash;
-    this._itermCachedBounds = { ...bounds };
-    this._itermCachedOutput = output;
-  }
-
-  /**
-   * Invalidate iTerm2 cache (e.g., on resize).
-   */
-  invalidateITermCache(): void {
-    this._itermContentHash = 0;
-    this._itermCachedOutput = null;
-    this._itermCachedBounds = null;
   }
 }
 
@@ -351,10 +288,10 @@ export function quantizeBlockColorsInline(
 }
 
 /**
- * Sixel placeholder: fills region with spaces so buffer content doesn't flash before sixel overlay.
- * The sixel overlay is drawn AFTER buffer output, covering whatever the buffer shows.
+ * Graphics placeholder: fills region with dots so buffer content doesn't flash before graphics overlay.
+ * The overlay (sixel/kitty/iTerm2) is drawn AFTER buffer output, covering whatever the buffer shows.
  */
-export function renderSixelPlaceholder(
+export function renderGraphicsPlaceholder(
   bounds: Bounds,
   style: Partial<Cell>,
   buffer: DualBuffer,
@@ -377,6 +314,10 @@ export function renderSixelPlaceholder(
     }
   }
 }
+
+export { renderGraphicsPlaceholder as renderSixelPlaceholder };
+export { renderGraphicsPlaceholder as renderKittyPlaceholder };
+export { renderGraphicsPlaceholder as renderITermPlaceholder };
 
 /**
  * Sixel output data for a canvas element
@@ -451,6 +392,34 @@ function scalePixelBuffer(
 }
 
 /**
+ * Composite drawing layer over image layer with background fill.
+ * Shared by sixel, kitty, and iTerm2 output generators.
+ */
+export function compositeBuffers(
+  data: CanvasRenderData,
+  target?: Uint32Array,
+): { composited: Uint32Array; hasContent: boolean } {
+  const pixelCount = data.bufferWidth * data.bufferHeight;
+  const composited = target && target.length >= pixelCount ? target : new Uint32Array(pixelCount);
+  let hasContent = false;
+  const bgColor = data.backgroundColor ? (parseColor(data.backgroundColor) ?? TRANSPARENT) : TRANSPARENT;
+  for (let i = 0; i < pixelCount; i++) {
+    const drawColor = data.colorBuffer[i];
+    const imageColor = data.imageColorBuffer[i];
+    if (drawColor !== TRANSPARENT) {
+      composited[i] = drawColor;
+      hasContent = true;
+    } else if (imageColor !== TRANSPARENT) {
+      composited[i] = imageColor;
+      hasContent = true;
+    } else {
+      composited[i] = bgColor;
+    }
+  }
+  return { composited, hasContent };
+}
+
+/**
  * Generate sixel output from canvas data.
  * Returns positioned sixel sequence ready to write to terminal.
  * Scales image to fill the terminal cell area at full pixel resolution.
@@ -473,32 +442,8 @@ export function generateSixelOutput(
   }
 
   // Composite drawing layer over image layer
-  const pixelCount = data.bufferWidth * data.bufferHeight;
-  const composited = new Uint32Array(pixelCount);
-  let hasContent = false;
-
-  for (let i = 0; i < pixelCount; i++) {
-    const drawColor = data.colorBuffer[i];
-    const imageColor = data.imageColorBuffer[i];
-
-    // Drawing layer takes priority over image layer
-    if (drawColor !== TRANSPARENT) {
-      composited[i] = drawColor;
-      hasContent = true;
-    } else if (imageColor !== TRANSPARENT) {
-      composited[i] = imageColor;
-      hasContent = true;
-    } else {
-      // Transparent - use background color or transparent
-      const bgColor = data.backgroundColor ? parseColor(data.backgroundColor) : TRANSPARENT;
-      composited[i] = bgColor ?? TRANSPARENT;
-    }
-  }
-
-  // Skip if no content (e.g., image not yet loaded)
-  if (!hasContent) {
-    return null;
-  }
+  const { composited, hasContent } = compositeBuffers(data);
+  if (!hasContent) return null;
 
   // Calculate target pixel dimensions based on terminal cell size
   // Use min(props, bounds) to match the placeholder and other render modes
@@ -645,37 +590,9 @@ export function generateKittyOutput(
   }
 
   // Composite drawing layer over image layer
-  const pixelCount = data.bufferWidth * data.bufferHeight;
-  // Reuse buffer from render state if available, otherwise allocate
-  const composited = renderState
-    ? renderState.getKittyCompositedBuffer(pixelCount)
-    : new Uint32Array(pixelCount);
-  let hasContent = false;
-
-  // Parse background color once outside loop
-  const bgColor = data.backgroundColor ? (parseColor(data.backgroundColor) ?? TRANSPARENT) : TRANSPARENT;
-
-  for (let i = 0; i < pixelCount; i++) {
-    const drawColor = data.colorBuffer[i];
-    const imageColor = data.imageColorBuffer[i];
-
-    // Drawing layer takes priority over image layer
-    if (drawColor !== TRANSPARENT) {
-      composited[i] = drawColor;
-      hasContent = true;
-    } else if (imageColor !== TRANSPARENT) {
-      composited[i] = imageColor;
-      hasContent = true;
-    } else {
-      // Transparent - use background color
-      composited[i] = bgColor;
-    }
-  }
-
-  // Skip if no content (e.g., image not yet loaded)
-  if (!hasContent) {
-    return null;
-  }
+  const target = renderState?.kittyCache.getCompositedBuffer(data.bufferWidth * data.bufferHeight);
+  const { composited, hasContent } = compositeBuffers(data, target);
+  if (!hasContent) return null;
 
   // Calculate target terminal dimensions
   let terminalWidth = Math.min(data.propsWidth, bounds.width);
@@ -689,10 +606,11 @@ export function generateKittyOutput(
 
   // Check cache if render state available
   if (renderState) {
+    const pixelCount = data.bufferWidth * data.bufferHeight;
     const contentHash = renderState.computeBufferHash(composited, pixelCount);
     const targetBounds = { x: bounds.x, y: bounds.y, width: terminalWidth, height: terminalHeight };
 
-    const cached = renderState.getKittyCachedOutput(contentHash, targetBounds);
+    const cached = renderState.kittyCache.getCachedOutput(contentHash, targetBounds);
     if (cached) {
       // Cache hit - return existing output with fromCache flag
       // Engine will skip writing to terminal (image already displayed)
@@ -719,7 +637,7 @@ export function generateKittyOutput(
       imageId: kittyOutput.imageId,
     };
 
-    renderState.setKittyCachedOutput(contentHash, targetBounds, output);
+    renderState.kittyCache.setCachedOutput(contentHash, targetBounds, output);
     return output;
   }
 
@@ -748,33 +666,6 @@ export function generateKittyOutput(
   };
 }
 
-/**
- * Kitty placeholder: fills region with dots so buffer content doesn't flash before kitty overlay.
- * Similar to sixel placeholder.
- */
-export function renderKittyPlaceholder(
-  bounds: Bounds,
-  style: Partial<Cell>,
-  buffer: DualBuffer,
-  terminalWidth: number,
-  terminalHeight: number,
-  data: CanvasRenderData
-): void {
-  // Use style background, props background, or transparent
-  const hasStyleBg = style.background !== undefined;
-  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
-  const bgColor = hasStyleBg ? style.background : (propsBg ?? TRANSPARENT);
-
-  for (let ty = 0; ty < terminalHeight; ty++) {
-    for (let tx = 0; tx < terminalWidth; tx++) {
-      buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-        char: '.',
-        foreground: bgColor !== TRANSPARENT ? bgColor : 0x666666FF,
-        background: TRANSPARENT,
-      });
-    }
-  }
-}
 
 /**
  * Generate iTerm2 graphics output from canvas data.
@@ -792,37 +683,9 @@ export function generateITerm2Output(
   }
 
   // Composite drawing layer over image layer
-  const pixelCount = data.bufferWidth * data.bufferHeight;
-  // Reuse buffer from render state if available, otherwise allocate
-  const composited = renderState
-    ? renderState.getITermCompositedBuffer(pixelCount)
-    : new Uint32Array(pixelCount);
-  let hasContent = false;
-
-  // Parse background color once outside loop
-  const bgColor = data.backgroundColor ? (parseColor(data.backgroundColor) ?? TRANSPARENT) : TRANSPARENT;
-
-  for (let i = 0; i < pixelCount; i++) {
-    const drawColor = data.colorBuffer[i];
-    const imageColor = data.imageColorBuffer[i];
-
-    // Drawing layer takes priority over image layer
-    if (drawColor !== TRANSPARENT) {
-      composited[i] = drawColor;
-      hasContent = true;
-    } else if (imageColor !== TRANSPARENT) {
-      composited[i] = imageColor;
-      hasContent = true;
-    } else {
-      // Transparent - use background color
-      composited[i] = bgColor;
-    }
-  }
-
-  // Skip if no content (e.g., image not yet loaded)
-  if (!hasContent) {
-    return null;
-  }
+  const target = renderState?.itermCache.getCompositedBuffer(data.bufferWidth * data.bufferHeight);
+  const { composited, hasContent } = compositeBuffers(data, target);
+  if (!hasContent) return null;
 
   // Calculate target terminal dimensions
   let terminalWidth = Math.min(data.propsWidth, bounds.width);
@@ -846,10 +709,11 @@ export function generateITerm2Output(
 
   // Check cache if render state available
   if (renderState) {
+    const pixelCount = data.bufferWidth * data.bufferHeight;
     const contentHash = renderState.computeBufferHash(composited, pixelCount);
     const targetBounds = { x: bounds.x, y: bounds.y, width: terminalWidth, height: terminalHeight };
 
-    const cached = renderState.getITermCachedOutput(contentHash, targetBounds);
+    const cached = renderState.itermCache.getCachedOutput(contentHash, targetBounds);
     if (cached) {
       // Cache hit - return existing output with fromCache flag
       return { ...cached, fromCache: true };
@@ -875,7 +739,7 @@ export function generateITerm2Output(
       bounds: targetBounds,
     };
 
-    renderState.setITermCachedOutput(contentHash, targetBounds, output);
+    renderState.itermCache.setCachedOutput(contentHash, targetBounds, output);
     return output;
   }
 
@@ -904,33 +768,6 @@ export function generateITerm2Output(
   };
 }
 
-/**
- * iTerm2 placeholder: fills region with dots so buffer content doesn't flash before iTerm2 overlay.
- * Similar to sixel/kitty placeholder.
- */
-export function renderITermPlaceholder(
-  bounds: Bounds,
-  style: Partial<Cell>,
-  buffer: DualBuffer,
-  terminalWidth: number,
-  terminalHeight: number,
-  data: CanvasRenderData
-): void {
-  // Use style background, props background, or transparent
-  const hasStyleBg = style.background !== undefined;
-  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
-  const bgColor = hasStyleBg ? style.background : (propsBg ?? TRANSPARENT);
-
-  for (let ty = 0; ty < terminalHeight; ty++) {
-    for (let tx = 0; tx < terminalWidth; tx++) {
-      buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-        char: '.',
-        foreground: bgColor !== TRANSPARENT ? bgColor : 0x666666FF,
-        background: TRANSPARENT,
-      });
-    }
-  }
-}
 
 /**
  * Block mode rendering: 1 colored space per terminal cell (no sextant characters)
@@ -2007,22 +1844,9 @@ export function renderToTerminal(
     terminalWidth = Math.max(1, terminalWidth - 1);
   }
 
-  // Sixel mode: fill with placeholder, actual sixel output is handled by engine overlay
-  // Use same dimensions as other modes (min of props and bounds)
-  if (gfxMode === 'sixel') {
-    renderSixelPlaceholder(bounds, style, buffer, terminalWidth, terminalHeight, data);
-    return;
-  }
-
-  // Kitty mode: fill with placeholder, actual kitty output is handled by engine overlay
-  if (gfxMode === 'kitty') {
-    renderKittyPlaceholder(bounds, style, buffer, terminalWidth, terminalHeight, data);
-    return;
-  }
-
-  // iTerm2 mode: fill with placeholder, actual iTerm2 output is handled by engine overlay
-  if (gfxMode === 'iterm2') {
-    renderITermPlaceholder(bounds, style, buffer, terminalWidth, terminalHeight, data);
+  // Graphics mode: fill with placeholder, actual overlay is handled by engine
+  if (gfxMode === 'sixel' || gfxMode === 'kitty' || gfxMode === 'iterm2') {
+    renderGraphicsPlaceholder(bounds, style, buffer, terminalWidth, terminalHeight, data);
     return;
   }
 

@@ -23,8 +23,8 @@ function setup() {
     for (let x = 0; x < WIDTH; x++) {
       buffer1.setCell(x, y, {
         char: String.fromCharCode(65 + (x + y) % 26),
-        fg: '#ffffff',
-        bg: '#000000',
+        foreground: 0xffffffff,
+        background: 0x000000ff,
       });
     }
   }
@@ -43,7 +43,7 @@ function setup() {
   for (let i = 0; i < (WIDTH * HEIGHT * 0.1); i++) {
     const x = Math.floor(Math.random() * WIDTH);
     const y = Math.floor(Math.random() * HEIGHT);
-    buffer2.setCell(x, y, { char: 'X', fg: '#ff0000', bg: '#000000' });
+    buffer2.setCell(x, y, { char: 'X', foreground: 0xff0000ff, background: 0x000000ff });
   }
 }
 
@@ -57,7 +57,7 @@ suite.add('setCell-1000', () => {
   for (let i = 0; i < 1000; i++) {
     const x = i % WIDTH;
     const y = Math.floor(i / WIDTH) % HEIGHT;
-    buffer1.setCell(x, y, { char: 'A', fg: '#fff', bg: '#000' });
+    buffer1.setCell(x, y, { char: 'A', foreground: 0xffffffff, background: 0x000000ff });
   }
 }, { iterations: 500, target: 0.2 });
 
@@ -71,16 +71,16 @@ suite.add('setText-line', () => {
 
 // FillRect operations
 suite.add('fillRect-full', () => {
-  buffer1.fillRect(0, 0, WIDTH, HEIGHT, { char: ' ', fg: '#fff', bg: '#000' });
+  buffer1.fillRect(0, 0, WIDTH, HEIGHT, { char: ' ', foreground: 0xffffffff, background: 0x000000ff });
 }, { iterations: 500, target: 0.5 });
 
 suite.add('fillRect-quarter', () => {
-  buffer1.fillRect(0, 0, WIDTH / 2, HEIGHT / 2, { char: ' ', fg: '#fff', bg: '#000' });
+  buffer1.fillRect(0, 0, WIDTH / 2, HEIGHT / 2, { char: ' ', foreground: 0xffffffff, background: 0x000000ff });
 }, { iterations: 1000, target: 0.2 });
 
 // DrawBorder
 suite.add('drawBorder', () => {
-  buffer1.drawBorder(0, 0, WIDTH, HEIGHT, 'thin', '#fff', '#000');
+  buffer1.drawBorder(0, 0, WIDTH, HEIGHT, { foreground: 0xffffffff, background: 0x000000ff }, 'thin');
 }, { iterations: 1000, target: 1.0 });
 
 // Buffer clear

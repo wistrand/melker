@@ -77,13 +77,13 @@ suite.add('layout-wide-3x5', () => {
 const flexContainer = createElement('container', {
   style: { flexDirection: 'row', height: '100%' },
 },
-  createElement('container', { style: { flex: 1, border: 'single' } },
+  createElement('container', { style: { flex: 1, border: 'thin' } },
     createElement('text', { text: 'Sidebar' })
   ),
-  createElement('container', { style: { flex: 3, border: 'single' } },
+  createElement('container', { style: { flex: 3, border: 'thin' } },
     createElement('text', { text: 'Main Content' })
   ),
-  createElement('container', { style: { width: 20, border: 'single' } },
+  createElement('container', { style: { width: 20, border: 'thin' } },
     createElement('text', { text: 'Fixed' })
   )
 );
@@ -97,44 +97,44 @@ const dashboardLayout = createElement('container', {
   style: { flexDirection: 'column', height: '100%', gap: 1 },
 },
   // Header
-  createElement('container', { style: { height: 3, border: 'single' } },
+  createElement('container', { style: { height: 3, border: 'thin' } },
     createElement('text', { text: 'Header' })
   ),
   // Main area
   createElement('container', { style: { flex: 1, flexDirection: 'row', gap: 1 } },
     // Left sidebar
     createElement('container', { style: { width: 20, flexDirection: 'column', gap: 1 } },
-      createElement('container', { style: { flex: 1, border: 'single' } },
+      createElement('container', { style: { flex: 1, border: 'thin' } },
         createElement('text', { text: 'Nav' })
       ),
-      createElement('container', { style: { height: 10, border: 'single' } },
+      createElement('container', { style: { height: 10, border: 'thin' } },
         createElement('text', { text: 'Info' })
       )
     ),
     // Content
     createElement('container', { style: { flex: 1, flexDirection: 'column', gap: 1 } },
-      createElement('container', { style: { flex: 1, border: 'single' } },
+      createElement('container', { style: { flex: 1, border: 'thin' } },
         createElement('text', { text: 'Content' })
       ),
       createElement('container', { style: { height: 8, flexDirection: 'row', gap: 1 } },
-        createElement('container', { style: { flex: 1, border: 'single' } },
+        createElement('container', { style: { flex: 1, border: 'thin' } },
           createElement('text', { text: 'Tab 1' })
         ),
-        createElement('container', { style: { flex: 1, border: 'single' } },
+        createElement('container', { style: { flex: 1, border: 'thin' } },
           createElement('text', { text: 'Tab 2' })
         ),
-        createElement('container', { style: { flex: 1, border: 'single' } },
+        createElement('container', { style: { flex: 1, border: 'thin' } },
           createElement('text', { text: 'Tab 3' })
         )
       )
     ),
     // Right sidebar
-    createElement('container', { style: { width: 25, border: 'single' } },
+    createElement('container', { style: { width: 25, border: 'thin' } },
       createElement('text', { text: 'Properties' })
     )
   ),
   // Footer
-  createElement('container', { style: { height: 2, border: 'single' } },
+  createElement('container', { style: { height: 2, border: 'thin' } },
     createElement('text', { text: 'Footer' })
   )
 );
@@ -150,7 +150,7 @@ const gridLikeLayout = createElement('container', {
   createElement('container', {
     style: { flexDirection: 'row' },
   }, ...Array.from({ length: 10 }, (_, col) =>
-    createElement('container', { style: { width: 10, height: 3, border: 'single' } },
+    createElement('container', { style: { width: 10, height: 3, border: 'thin' } },
       createElement('text', { text: `${row},${col}` })
     )
   ))

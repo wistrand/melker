@@ -7,7 +7,7 @@ import { Element, Renderable, Interactive, TextSelectable, Bounds, ComponentRend
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
-import { type SixelOutputData, type KittyOutputData } from './canvas-render.ts';
+import { type SixelOutputData, type KittyOutputData, type ITermOutputData } from './canvas-render.ts';
 import { GraphElement } from './graph/mod.ts';
 import { getLogger } from '../logging.ts';
 import { getStringWidth } from '../char-width.ts';
@@ -1734,6 +1734,14 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
    */
   getKittyOutputs(): KittyOutputData[] {
     return this._imageRenderer.getKittyOutputs();
+  }
+
+  /**
+   * Get iTerm2 outputs from embedded image canvases.
+   * Used by engine to render iTerm2 graphics for images in markdown content.
+   */
+  getITermOutputs(): ITermOutputData[] {
+    return this._imageRenderer.getITermOutputs();
   }
 }
 

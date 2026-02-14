@@ -5,7 +5,7 @@ import { type Bounds } from '../types.ts';
 import { type Cell } from '../buffer.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { CanvasElement } from './canvas.ts';
-import { type SixelOutputData, type KittyOutputData, getEffectiveGfxMode } from './canvas-render.ts';
+import { type SixelOutputData, type KittyOutputData, type ITermOutputData, getEffectiveGfxMode } from './canvas-render.ts';
 import { getLogger } from '../logging.ts';
 import type { MarkdownRenderContext, Image } from './markdown-types.ts';
 
@@ -348,6 +348,22 @@ export class MarkdownImageRenderer {
       }
     }
     logger.debug('getKittyOutputs returning', { outputCount: outputs.length });
+    return outputs;
+  }
+
+  /**
+   * Get iTerm2 outputs from embedded image canvases.
+   * Used by engine to render iTerm2 graphics for images in markdown content.
+   */
+  getITermOutputs(): ITermOutputData[] {
+    const outputs: ITermOutputData[] = [];
+    for (const [key, canvas] of this._imageCanvases.entries()) {
+      const itermOutput = canvas.getITermOutput();
+      if (itermOutput?.data && itermOutput.bounds) {
+        outputs.push(itermOutput);
+      }
+    }
+    logger.debug('getITermOutputs returning', { outputCount: outputs.length });
     return outputs;
   }
 

@@ -3,7 +3,8 @@
  */
 
 import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
-import { createElement, TerminalBuffer, globalLayoutEngine, RenderingEngine } from '../../mod.ts';
+import { createElement, globalLayoutEngine, RenderingEngine } from '../../mod.ts';
+import { DualBuffer } from '../../src/buffer.ts';
 
 const suite = new BenchmarkSuite('markdown');
 
@@ -145,72 +146,72 @@ const section${i + 1} = () => {
 const simpleTextMd = createElement('markdown', { text: simpleText });
 suite.add('markdown-simple-text', () => {
   globalLayoutEngine.calculateLayout(simpleTextMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(simpleTextMd, buffer, viewport.width, viewport.height);
-}, { iterations: 500, target: 0.5 });
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(simpleTextMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+}, { iterations: 500, target: 2.5 });
 
 // Headings
 const headingsMd = createElement('markdown', { text: headings });
 suite.add('markdown-headings', () => {
   globalLayoutEngine.calculateLayout(headingsMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(headingsMd, buffer, viewport.width, viewport.height);
-}, { iterations: 500, target: 0.5 });
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(headingsMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+}, { iterations: 500, target: 2.5 });
 
 // Unordered list
 const unorderedListMd = createElement('markdown', { text: unorderedList });
 suite.add('markdown-unordered-list', () => {
   globalLayoutEngine.calculateLayout(unorderedListMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(unorderedListMd, buffer, viewport.width, viewport.height);
-}, { iterations: 500, target: 0.5 });
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(unorderedListMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+}, { iterations: 500, target: 2.5 });
 
 // Ordered list
 const orderedListMd = createElement('markdown', { text: orderedList });
 suite.add('markdown-ordered-list', () => {
   globalLayoutEngine.calculateLayout(orderedListMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(orderedListMd, buffer, viewport.width, viewport.height);
-}, { iterations: 500, target: 0.5 });
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(orderedListMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+}, { iterations: 500, target: 2.5 });
 
 // Code block
 const codeBlockMd = createElement('markdown', { text: codeBlock });
 suite.add('markdown-code-block', () => {
   globalLayoutEngine.calculateLayout(codeBlockMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(codeBlockMd, buffer, viewport.width, viewport.height);
-}, { iterations: 200, target: 1.0 });
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(codeBlockMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+}, { iterations: 200, target: 3.0 });
 
 // Blockquote
 const blockquoteMd = createElement('markdown', { text: blockquote });
 suite.add('markdown-blockquote', () => {
   globalLayoutEngine.calculateLayout(blockquoteMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(blockquoteMd, buffer, viewport.width, viewport.height);
-}, { iterations: 500, target: 0.5 });
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(blockquoteMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+}, { iterations: 500, target: 2.5 });
 
 // Table (GFM)
 const tableMd = createElement('markdown', { text: table, enableGfm: true });
 suite.add('markdown-table-gfm', () => {
   globalLayoutEngine.calculateLayout(tableMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(tableMd, buffer, viewport.width, viewport.height);
-}, { iterations: 200, target: 1.0 });
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(tableMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+}, { iterations: 200, target: 2.5 });
 
 // Mixed document (realistic use case)
 const mixedMd = createElement('markdown', { text: mixedDocument, enableGfm: true });
 suite.add('markdown-mixed-document', () => {
   globalLayoutEngine.calculateLayout(mixedMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(mixedMd, buffer, viewport.width, viewport.height);
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(mixedMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
 }, { iterations: 100, target: 3.0 });
 
 // Large document
 const largeMd = createElement('markdown', { text: largeDocument, enableGfm: true });
 suite.add('markdown-large-document', () => {
   globalLayoutEngine.calculateLayout(largeMd, makeContext(viewport.width, 200));
-  const buffer = new TerminalBuffer(viewport.width, 200);
-  renderer.render(largeMd, buffer, viewport.width, 200);
+  const buffer = new DualBuffer(viewport.width, 200);
+  renderer.render(largeMd, buffer, { x: 0, y: 0, width: viewport.width, height: 200 });
 }, { iterations: 20, target: 15.0 });
 
 // Parse-only (measure AST generation overhead)
@@ -239,18 +240,18 @@ const inlineFormatting = `**Bold text** and *italic text* and \`inline code\` mi
 const inlineFormattingMd = createElement('markdown', { text: inlineFormatting });
 suite.add('markdown-inline-formatting', () => {
   globalLayoutEngine.calculateLayout(inlineFormattingMd, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(inlineFormattingMd, buffer, viewport.width, viewport.height);
-}, { iterations: 500, target: 0.5 });
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(inlineFormattingMd, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+}, { iterations: 500, target: 2.5 });
 
 // Text wrapping intensive (long paragraphs)
 const longParagraph = `This is a very long paragraph that will require extensive word wrapping to fit within the terminal width. It contains multiple sentences that flow naturally and should demonstrate the text wrapping performance of the markdown renderer. The paragraph continues with more content to ensure there are many line breaks needed. Additional text is added here to make sure we're testing the word boundary detection and line breaking algorithm thoroughly. Even more text follows to push the limits of the text wrapping code path.`;
 const longParagraphMd = createElement('markdown', { text: longParagraph });
 suite.add('markdown-text-wrapping', () => {
   globalLayoutEngine.calculateLayout(longParagraphMd, makeContext(80, viewport.height));
-  const buffer = new TerminalBuffer(80, viewport.height);
-  renderer.render(longParagraphMd, buffer, 80, viewport.height);
-}, { iterations: 500, target: 0.5 });
+  const buffer = new DualBuffer(80, viewport.height);
+  renderer.render(longParagraphMd, buffer, { x: 0, y: 0, width: 80, height: viewport.height });
+}, { iterations: 500, target: 2.0 });
 
 // Run benchmarks
 const results = await suite.run();

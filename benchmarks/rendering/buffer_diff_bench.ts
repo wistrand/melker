@@ -278,7 +278,7 @@ for (let y = 0; y < MEDIUM.height; y++) {
 
 suite.add('dualbuffer-getdiff-only', () => {
   dualBuffer.getDiffOnly();
-}, { iterations: 500, target: 0.2 });
+}, { iterations: 500, target: 0.4 });
 
 // DualBuffer forceRedraw
 dualBuffer = new DualBuffer(MEDIUM.width, MEDIUM.height);

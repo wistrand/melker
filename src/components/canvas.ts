@@ -1247,12 +1247,10 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
-   * Render canvas to terminal buffer.
-   * Delegates to canvas-render.ts for actual rendering logic.
+   * Create render data object for passing to canvas-render.ts functions.
    */
-  private _renderToTerminal(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer): void {
-    // Prepare render data (minimal interface for render functions)
-    const data: CanvasRenderData = {
+  private _createRenderData(): CanvasRenderData {
+    return {
       colorBuffer: this._colorBuffer,
       imageColorBuffer: this._imageColorBuffer,
       bufferWidth: this._bufferWidth,
@@ -1262,6 +1260,14 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       propsHeight: this._terminalHeight,
       backgroundColor: this.props.backgroundColor,
     };
+  }
+
+  /**
+   * Render canvas to terminal buffer.
+   * Delegates to canvas-render.ts for actual rendering logic.
+   */
+  private _renderToTerminal(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer): void {
+    const data = this._createRenderData();
 
     // Get effective graphics mode
     const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
@@ -1468,17 +1474,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       return;
     }
 
-    // Prepare render data
-    const data: CanvasRenderData = {
-      colorBuffer: this._colorBuffer,
-      imageColorBuffer: this._imageColorBuffer,
-      bufferWidth: this._bufferWidth,
-      bufferHeight: this._bufferHeight,
-      scale: this._scale,
-      propsWidth: this._terminalWidth,
-      propsHeight: this._terminalHeight,
-      backgroundColor: this.props.backgroundColor,
-    };
+    const data = this._createRenderData();
 
     // Determine palette mode based on content type.
     // See src/sixel/palette.ts for detailed documentation on palette modes.
@@ -1544,17 +1540,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       return;
     }
 
-    // Prepare render data
-    const data: CanvasRenderData = {
-      colorBuffer: this._colorBuffer,
-      imageColorBuffer: this._imageColorBuffer,
-      bufferWidth: this._bufferWidth,
-      bufferHeight: this._bufferHeight,
-      scale: this._scale,
-      propsWidth: this._terminalWidth,
-      propsHeight: this._terminalHeight,
-      backgroundColor: this.props.backgroundColor,
-    };
+    const data = this._createRenderData();
 
     this._kittyOutput = generateKittyOutput(bounds, data, capabilities, this._renderState);
     if (this._kittyOutput) {
@@ -1582,17 +1568,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       return;
     }
 
-    // Prepare render data
-    const data: CanvasRenderData = {
-      colorBuffer: this._colorBuffer,
-      imageColorBuffer: this._imageColorBuffer,
-      bufferWidth: this._bufferWidth,
-      bufferHeight: this._bufferHeight,
-      scale: this._scale,
-      propsWidth: this._terminalWidth,
-      propsHeight: this._terminalHeight,
-      backgroundColor: this.props.backgroundColor,
-    };
+    const data = this._createRenderData();
 
     this._itermOutput = generateITerm2Output(bounds, data, capabilities, this._renderState);
     if (this._itermOutput) {

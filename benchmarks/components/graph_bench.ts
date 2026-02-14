@@ -3,7 +3,8 @@
  */
 
 import { BenchmarkSuite, benchmarkTimestamp } from '../harness.ts';
-import { createElement, TerminalBuffer, globalLayoutEngine, RenderingEngine } from '../../mod.ts';
+import { createElement, globalLayoutEngine, RenderingEngine } from '../../mod.ts';
+import { DualBuffer } from '../../src/buffer.ts';
 import {
   getGraphParser,
   getSequenceParser,
@@ -337,48 +338,48 @@ suite.add('convert-class-medium', () => {
 const simpleGraphEl = createElement('graph', { text: simpleFlowchart });
 suite.add('render-flowchart-simple', () => {
   globalLayoutEngine.calculateLayout(simpleGraphEl, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(simpleGraphEl, buffer, viewport.width, viewport.height);
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(simpleGraphEl, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
 }, { iterations: 100, target: 2.0 });
 
 // Medium flowchart rendering
 const mediumGraphEl = createElement('graph', { text: mediumFlowchart });
 suite.add('render-flowchart-medium', () => {
   globalLayoutEngine.calculateLayout(mediumGraphEl, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(mediumGraphEl, buffer, viewport.width, viewport.height);
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(mediumGraphEl, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
 }, { iterations: 50, target: 5.0 });
 
 // Complex flowchart rendering
 const complexGraphEl = createElement('graph', { text: complexFlowchart });
 suite.add('render-flowchart-complex', () => {
   globalLayoutEngine.calculateLayout(complexGraphEl, makeContext(viewport.width, 80));
-  const buffer = new TerminalBuffer(viewport.width, 80);
-  renderer.render(complexGraphEl, buffer, viewport.width, 80);
+  const buffer = new DualBuffer(viewport.width, 80);
+  renderer.render(complexGraphEl, buffer, { x: 0, y: 0, width: viewport.width, height: 80 });
 }, { iterations: 20, target: 10.0 });
 
 // Sequence diagram rendering
 const sequenceGraphEl = createElement('graph', { text: mediumSequence });
 suite.add('render-sequence-medium', () => {
   globalLayoutEngine.calculateLayout(sequenceGraphEl, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(sequenceGraphEl, buffer, viewport.width, viewport.height);
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(sequenceGraphEl, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
 }, { iterations: 50, target: 5.0 });
 
 // Class diagram rendering
 const classGraphEl = createElement('graph', { text: mediumClass });
 suite.add('render-class-medium', () => {
   globalLayoutEngine.calculateLayout(classGraphEl, makeContext(viewport.width, viewport.height));
-  const buffer = new TerminalBuffer(viewport.width, viewport.height);
-  renderer.render(classGraphEl, buffer, viewport.width, viewport.height);
+  const buffer = new DualBuffer(viewport.width, viewport.height);
+  renderer.render(classGraphEl, buffer, { x: 0, y: 0, width: viewport.width, height: viewport.height });
 }, { iterations: 50, target: 5.0 });
 
 // Complex class diagram rendering
 const complexClassEl = createElement('graph', { text: complexClass });
 suite.add('render-class-complex', () => {
   globalLayoutEngine.calculateLayout(complexClassEl, makeContext(viewport.width, 100));
-  const buffer = new TerminalBuffer(viewport.width, 100);
-  renderer.render(complexClassEl, buffer, viewport.width, 100);
+  const buffer = new DualBuffer(viewport.width, 100);
+  renderer.render(complexClassEl, buffer, { x: 0, y: 0, width: viewport.width, height: 100 });
 }, { iterations: 20, target: 10.0 });
 
 // =============================================================================

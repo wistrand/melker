@@ -317,6 +317,39 @@ export function oklchToRgb(l: number, c: number, h: number): RGB {
 }
 
 /**
+ * Interpolate between two packed RGBA colors in OKLCH space.
+ * Produces perceptually uniform transitions (no muddy midpoints).
+ * Alpha is interpolated linearly.
+ */
+export function lerpPackedRGBA(from: PackedRGBA, to: PackedRGBA, t: number): PackedRGBA {
+  const a = unpackRGBA(from);
+  const b = unpackRGBA(to);
+
+  const lch1 = rgbToOklch(a.r, a.g, a.b);
+  const lch2 = rgbToOklch(b.r, b.g, b.b);
+
+  // Handle achromatic colors (near-zero chroma)
+  let h1 = lch1.h, h2 = lch2.h;
+  if (lch1.c < 0.001) h1 = h2;
+  if (lch2.c < 0.001) h2 = h1;
+
+  // Shortest-path hue interpolation
+  if (Math.abs(h2 - h1) > 180) {
+    if (h2 > h1) h1 += 360;
+    else h2 += 360;
+  }
+
+  const l = lch1.l + (lch2.l - lch1.l) * t;
+  const c = lch1.c + (lch2.c - lch1.c) * t;
+  const h = h1 + (h2 - h1) * t;
+
+  const rgb = oklchToRgb(l, c, h);
+  const alpha = Math.round(a.a + (b.a - a.a) * t);
+
+  return packRGBA(Math.round(rgb.r), Math.round(rgb.g), Math.round(rgb.b), alpha);
+}
+
+/**
  * Interpolate between two hex colors in the specified color space
  * @param color1 - Start color (hex string)
  * @param color2 - End color (hex string)

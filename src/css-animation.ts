@@ -2,7 +2,7 @@
 // Given keyframes and progress, produces interpolated style properties.
 
 import type { Style, AnimationKeyframe } from './types.ts';
-import { packRGBA, unpackRGBA } from './components/color-utils.ts';
+import { lerpPackedRGBA } from './components/color-utils.ts';
 
 /** Style properties that hold packed RGBA color values */
 const COLOR_PROPS = new Set([
@@ -79,23 +79,16 @@ export function findKeyframePair(
  *
  * - Numeric: linear lerp, rounded to integer
  * - Percentage strings ("30%" / "70%"): lerp numeric part, emit as "XX%"
- * - Color (packed RGBA integer): component-wise lerp
+ * - Color (packed RGBA integer): OKLCH perceptually-uniform lerp
  * - Discrete (everything else): snap at t >= 0.5
  */
 function interpolateValue(key: string, from: any, to: any, t: number): any {
   // Same value — no interpolation needed
   if (from === to) return from;
 
-  // Color properties (packed RGBA integers)
+  // Color properties (packed RGBA integers) — interpolated in OKLCH for perceptual uniformity
   if (COLOR_PROPS.has(key) && typeof from === 'number' && typeof to === 'number') {
-    const a = unpackRGBA(from);
-    const b = unpackRGBA(to);
-    return packRGBA(
-      Math.round(a.r + (b.r - a.r) * t),
-      Math.round(a.g + (b.g - a.g) * t),
-      Math.round(a.b + (b.b - a.b) * t),
-      Math.round(a.a + (b.a - a.a) * t),
-    );
+    return lerpPackedRGBA(from, to, t);
   }
 
   // BoxSpacing objects (padding, margin) — lerp each component

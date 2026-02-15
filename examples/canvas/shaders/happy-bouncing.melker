@@ -1,0 +1,398 @@
+<melker>
+  <policy>
+  {
+    "name": "Happy Bouncing",
+    "description": "Bouncing smiley faces - port of leon denise's Shadertoy",
+    "permissions": {
+      "shader": true,
+      "net": ["samesite"]
+    },
+    "config": {
+      "theme": "auto-dark"
+    }
+  }
+  </policy>
+
+  <container style="width: fill; height: fill; display: flex; flex-direction: column">
+    <container style="width: fill; height: fill;">
+      <img
+        id="shader"
+        src="../../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onShader="$app.bouncingShader"
+        shaderFps="24"
+      />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; justify-content: center">
+      <text style="font-weight: bold">Happy Bouncing</text>
+      <text style="color: gray">leon denise (2021) - ported from Shadertoy</text>
+      <button label="Exit" onClick="$melker.exit();" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    // Port of "happy bouncing" by leon denise
+    // https://shadertoy.com/view/flyXRh
+    // Licensed under hippie love conspiracy
+    //
+    // Uses Inigo Quilez's arc SDF and color palette technique
+
+    const BODY_SIZE = 0.3;
+    const EYE_SIZE_X = 0.1;
+    const EYE_SIZE_Y = 0.07;
+    const DIVERGENCE = 0.09;
+    const BUDDIES = 3;
+    const STAR_COUNT = 80;
+    const WARP_SPEED = 0.5;
+    const PI = Math.PI;
+    const TAU = PI * 2;
+    const BODY_SQ = BODY_SIZE * BODY_SIZE;
+    const INV255 = 1 / 255;
+
+    // --- Pre-computed star data (constant forever) ---
+    const starDirX: Float64Array = new Float64Array(STAR_COUNT);
+    const starDirY: Float64Array = new Float64Array(STAR_COUNT);
+    const starPhase: Float64Array = new Float64Array(STAR_COUNT);
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const h1 = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+      const h2 = Math.sin(i * 269.5 + 183.3) * 43758.5453;
+      const h3 = Math.sin(i * 419.2 + 371.9) * 43758.5453;
+      starDirX[i] = (h1 - Math.floor(h1)) * 2 - 1;
+      starDirY[i] = (h2 - Math.floor(h2)) * 2 - 1;
+      starPhase[i] = h3 - Math.floor(h3);
+    }
+
+    // --- Per-frame star cache (recomputed once at pixel 0,0) ---
+    const starPX: Float64Array = new Float64Array(STAR_COUNT);
+    const starPY: Float64Array = new Float64Array(STAR_COUNT);
+    const starPrevX: Float64Array = new Float64Array(STAR_COUNT);
+    const starPrevY: Float64Array = new Float64Array(STAR_COUNT);
+    const starSegX: Float64Array = new Float64Array(STAR_COUNT);
+    const starSegY: Float64Array = new Float64Array(STAR_COUNT);
+    const starSegLen2: Float64Array = new Float64Array(STAR_COUNT);
+    const starThickness: Float64Array = new Float64Array(STAR_COUNT);
+    const starNearness: Float64Array = new Float64Array(STAR_COUNT);
+
+    // --- Per-frame buddy cache ---
+    interface BuddyCache {
+      // Animation params (time-only)
+      jumpV: number; stretchV: number; bounceV: number; swingV: number;
+      animOffY: number; animScaleX: number; animBounceScale: number; animBounceOff: number;
+      // Eye rotation
+      eyeCos: number; eyeSin: number;
+      // Smile
+      smileAnim: number;
+      smileCos: number; smileSin: number;
+      smileApertureSin: number; smileApertureCos: number;
+      smileThin: number; smileMouthOff: number;
+      smileOffX: number; smileOffY: number;
+      // Buddy position offset
+      offX: number;
+    }
+    const buddyCache: BuddyCache[] = Array.from({ length: BUDDIES }, () => ({
+      jumpV: 0, stretchV: 0, bounceV: 0, swingV: 0,
+      animOffY: 0, animScaleX: 0, animBounceScale: 0, animBounceOff: 0,
+      eyeCos: 1, eyeSin: 0,
+      smileAnim: 0, smileCos: 1, smileSin: 0,
+      smileApertureSin: 0, smileApertureCos: 1,
+      smileThin: 0, smileMouthOff: 0, smileOffX: 0, smileOffY: 0,
+      offX: 0,
+    }));
+    let cachedVpx = 0, cachedVpy = 0;
+    let cachedTime = -1;
+
+    // Easing functions
+    function jump(t: number): number {
+      t = t < 0.25 ? t * 4 : 1;
+      t = Math.abs(Math.sin(t * PI));
+      return Math.pow(Math.sin(t * PI * 0.5), 1.9);
+    }
+    function swing(t: number): number {
+      return Math.sin(Math.sqrt(t) * TAU);
+    }
+    function stretch(t: number): number {
+      return Math.sin(Math.pow(t, 0.2) * 10);
+    }
+    function bounce(t: number): number {
+      return Math.cos(Math.pow(t, 0.2) * 6.38);
+    }
+
+    function precomputeFrame(time: number): void {
+      if (Math.abs(time - cachedTime) < 0.0001) return;
+      cachedTime = time;
+
+      // Vanishing point
+      cachedVpx = Math.sin(time * 0.2) * 0.15;
+      cachedVpy = Math.sin(time * 0.3) * 0.1;
+
+      // Stars
+      for (let i = 0; i < STAR_COUNT; i++) {
+        const z = (starPhase[i] + time * WARP_SPEED) % 1;
+        const nearness = z * z * z;
+        const dx = starDirX[i] * 1.2;
+        const dy = starDirY[i] * 1.2;
+        const px = dx * nearness;
+        const py = dy * nearness;
+        const zPrev = z > 0.04 ? z - 0.04 : 0;
+        const np = zPrev * zPrev * zPrev;
+        const pvx = dx * np;
+        const pvy = dy * np;
+        const sx = px - pvx;
+        const sy = py - pvy;
+        starPX[i] = px;
+        starPY[i] = py;
+        starPrevX[i] = pvx;
+        starPrevY[i] = pvy;
+        starSegX[i] = sx;
+        starSegY[i] = sy;
+        starSegLen2[i] = sx * sx + sy * sy;
+        starThickness[i] = 0.003 + 0.02 * nearness;
+        starNearness[i] = nearness;
+      }
+
+      // Buddies
+      for (let i = 0; i < BUDDIES; i++) {
+        const ii = i / (BUDDIES - 1);
+        const t = ((time * 0.5 + ii * 0.5) % 1 + 1) % 1;
+        const b = buddyCache[i];
+        b.offX = (ii * 2 - 1) * 0.5;
+
+        // Easing values (time-only)
+        b.jumpV = jump(t);
+        b.stretchV = stretch(t);
+        b.bounceV = bounce(t);
+        b.swingV = swing(t);
+
+        // Pre-compute animation transform constants
+        b.animOffY = -(BODY_SIZE - 0.5) - b.jumpV * 0.6;
+        b.animScaleX = b.stretchV * -0.2 + 1;
+        const bv = b.bounceV * 0.2;
+        b.animBounceScale = bv + 1;
+        b.animBounceOff = Math.abs(bv) * BODY_SIZE;
+
+        // Eye rotation
+        const eyeAngle = b.swingV * -0.5;
+        b.eyeCos = Math.cos(eyeAngle);
+        b.eyeSin = Math.sin(eyeAngle);
+
+        // Smile rotation
+        const smileAngle = b.swingV * 0.5;
+        b.smileCos = Math.cos(smileAngle);
+        b.smileSin = Math.sin(smileAngle);
+
+        // Smile shape
+        b.smileAnim = Math.cos(Math.pow(t, 0.5) * TAU) * 0.5 + 0.5;
+        const aperture = 0.1 + 0.9 * b.smileAnim;
+        b.smileApertureSin = Math.sin(aperture);
+        b.smileApertureCos = Math.cos(aperture);
+        b.smileThin = 0.12 * (1 - b.smileAnim) + 0.03 * b.smileAnim;
+        b.smileMouthOff = 0.01 * (1 - b.smileAnim) + 0.06 * b.smileAnim;
+        b.smileOffX = BODY_SIZE * 0.4;
+        b.smileOffY = BODY_SIZE * (1 - 1.5 * b.smileAnim);
+      }
+    }
+
+    // Inline animation transform (no allocation)
+    function animX(px: number, b: BuddyCache): number {
+      return px * b.animScaleX;
+    }
+    function animY(px: number, py: number, b: BuddyCache): number {
+      py += b.animOffY;
+      py *= b.animBounceScale;
+      py += b.animBounceOff;
+      return py;
+    }
+
+    interface ShaderUtils {
+      palette(t: number, a: [number,number,number], b: [number,number,number], c: [number,number,number], d: [number,number,number]): [number,number,number];
+    }
+
+    export const bouncingShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      _source: any,
+      utils: ShaderUtils
+    ): [number, number, number] => {
+      // Precompute all per-frame data once
+      if (x === 0 && y === 0) precomputeFrame(time);
+
+      const pw = 1.0 / resolution.height;
+      const u = x / resolution.width;
+      const v = y / resolution.height;
+      const aspect = resolution.width / resolution.height;
+      const invPA = 1 / resolution.pixelAspect;
+
+      // --- Starfield ---
+      let colorR = 0, colorG = 0, colorB = 0;
+      const scx = (u - 0.5 - cachedVpx) * aspect;
+      const scy = (0.5 - v - cachedVpy) * invPA;
+      for (let i = 0; i < STAR_COUNT; i++) {
+        const thick = starThickness[i];
+        const thick2 = thick * thick;
+        // Quick reject: bounding box around the streak
+        const px = starPX[i];
+        const py = starPY[i];
+        const pvx = starPrevX[i];
+        const pvy = starPrevY[i];
+        const minX = (px < pvx ? px : pvx) - thick;
+        const maxX = (px > pvx ? px : pvx) + thick;
+        if (scx < minX || scx > maxX) continue;
+        const minY = (py < pvy ? py : pvy) - thick;
+        const maxY = (py > pvy ? py : pvy) + thick;
+        if (scy < minY || scy > maxY) continue;
+
+        const sl2 = starSegLen2[i];
+        let dist2: number;
+        if (sl2 < 0.000001) {
+          const dx = scx - px;
+          const dy = scy - py;
+          dist2 = dx * dx + dy * dy;
+        } else {
+          const sx = starSegX[i];
+          const sy = starSegY[i];
+          const t = ((scx - pvx) * sx + (scy - pvy) * sy) / sl2;
+          const tc = t < 0 ? 0 : t > 1 ? 1 : t;
+          const dx = scx - (pvx + tc * sx);
+          const dy = scy - (pvy + tc * sy);
+          dist2 = dx * dx + dy * dy;
+        }
+        if (dist2 < thick2) {
+          const bright = starNearness[i] * (1 - dist2 / thick2);
+          colorR += bright;
+          colorG += bright;
+          colorB += bright;
+        }
+      }
+
+      // --- Buddies ---
+      for (let i = 0; i < BUDDIES; i++) {
+        const b = buddyCache[i];
+
+        // Per-pixel UV for this buddy
+        const ppx = (u - 0.5) * aspect + b.offX;
+        const ppy = (0.5 - v) * invPA - 0.05;
+
+        // Animated position
+        const ax = animX(ppx, b);
+        const ay = animY(ppx, ppy, b);
+
+        // Body SDF
+        const bodySq = ax * ax + ay * ay;
+        const bodyD = Math.sqrt(bodySq) - BODY_SIZE;
+        let shape = bodyD;
+
+        let colR = 0, colG = 0, colB = 0;
+
+        // Color tint
+        const taxY = ppy + 0.1 + b.animOffY;
+        const tay = taxY * b.animBounceScale + b.animBounceOff;
+        const tax = ppx * b.animScaleX;
+        const dist = Math.sqrt(tax * tax + tay * tay);
+        const tintRaw = utils.palette(
+          (i - dist * 3) / TAU,
+          [0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [1, 1, 1], [0, 0.3, 0.6]
+        );
+        const tR = tintRaw[0] * INV255;
+        const tG = tintRaw[1] * INV255;
+        const tB = tintRaw[2] * INV255;
+
+        // Body fill
+        const bodyFill = bodyD < -pw ? 1 : bodyD > pw ? 0 :
+          (1 - ((bodyD + pw) / (pw + pw)) ** 2 * (3 - 2 * (bodyD + pw) / (pw + pw)));
+        colR = tR * bodyFill;
+        colG = tG * bodyFill;
+        colB = tB * bodyFill;
+
+        // Eyes: rotate animated pos
+        let ex = ax * b.eyeCos - ay * b.eyeSin - 0.03;
+        let ey = ax * b.eyeSin + ay * b.eyeCos - (BODY_SIZE + EYE_SIZE_X * 0.2);
+        const eyeX = (ex < 0 ? -ex : ex) - DIVERGENCE;
+
+        // Globe
+        const globeD = Math.sqrt(eyeX * eyeX + ey * ey) - EYE_SIZE_X;
+        if (globeD < pw) {
+          const gf = globeD < -pw ? 1 : 1 - ((globeD + pw) / (pw + pw)) ** 2 * (3 - 2 * (globeD + pw) / (pw + pw));
+          colR = colR * (1 - gf) + tR * gf;
+          colG = colG * (1 - gf) + tG * gf;
+          colB = colB * (1 - gf) + tB * gf;
+          shape = globeD < shape ? globeD : shape;
+
+          // White
+          const whiteD = Math.sqrt(eyeX * eyeX + ey * ey) - EYE_SIZE_Y;
+          if (whiteD < pw) {
+            const wf = whiteD < -pw ? 1 : 1 - ((whiteD + pw) / (pw + pw)) ** 2 * (3 - 2 * (whiteD + pw) / (pw + pw));
+            colR = colR * (1 - wf) + wf;
+            colG = colG * (1 - wf) + wf;
+            colB = colB * (1 - wf) + wf;
+            shape = whiteD < shape ? whiteD : shape;
+
+            // Pupil
+            const pupilD = Math.sqrt(eyeX * eyeX + ey * ey) - 0.02;
+            if (pupilD < pw) {
+              const pf = pupilD < -pw ? 1 : 1 - ((pupilD + pw) / (pw + pw)) ** 2 * (3 - 2 * (pupilD + pw) / (pw + pw));
+              colR *= 1 - pf;
+              colG *= 1 - pf;
+              colB *= 1 - pf;
+            }
+          }
+        }
+
+        // Smile: rotate animated pos
+        let sx = ax * b.smileCos - ay * b.smileSin - b.smileOffX;
+        let sy = ax * b.smileSin + ay * b.smileCos - b.smileOffY;
+
+        // Arc SDF (inlined, angle = -PI/2, pre-rotated by +PI/2: swap and negate)
+        const rx = -sy;
+        const ry = sx;
+        const arx = rx < 0 ? -rx : rx;
+        let d: number;
+        if (b.smileApertureCos * arx > b.smileApertureSin * ry) {
+          const ddx = arx - b.smileApertureSin * 0.15;
+          const ddy = ry - b.smileApertureCos * 0.15;
+          d = Math.sqrt(ddx * ddx + ddy * ddy);
+        } else {
+          d = Math.abs(Math.sqrt(arx * arx + ry * ry) - 0.15);
+        }
+        d = d - b.smileThin - b.smileMouthOff;
+        shape = d < shape ? d : shape;
+
+        if (d < pw) {
+          const mf = d < -pw ? 1 : 1 - ((d + pw) / (pw + pw)) ** 2 * (3 - 2 * (d + pw) / (pw + pw));
+          const mtR = tR * (1 - sx);
+          const mtG = tG * (1 - sx);
+          const mtB = tB * (1 - sx);
+          colR = colR * (1 - mf) + mtR * mf;
+          colG = colG * (1 - mf) + mtG * mf;
+          colB = colB * (1 - mf) + mtB * mf;
+        }
+
+        // Inner mouth line
+        const ld = d + 0.05;
+        if (ld < pw) {
+          const lf = ld < -pw ? 1 : 1 - ((ld + pw) / (pw + pw)) ** 2 * (3 - 2 * (ld + pw) / (pw + pw));
+          colR = colR * (1 - lf) + tR * 0.5 * lf;
+          colG = colG * (1 - lf) + tG * 0.5 * lf;
+          colB = colB * (1 - lf) + tB * 0.5 * lf;
+        }
+
+        // Composite where shape < 0
+        if (shape < 0) {
+          colorR = colR;
+          colorG = colG;
+          colorB = colB;
+        }
+      }
+
+      return [
+        colorR > 1 ? 255 : colorR * 255,
+        colorG > 1 ? 255 : colorG * 255,
+        colorB > 1 ? 255 : colorB * 255,
+      ];
+    };
+  </script>
+</melker>

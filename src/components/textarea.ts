@@ -765,18 +765,22 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
       this._flushPendingChars();
     }
 
+    // Subtract border inset to get content-relative coordinates
+    const contentX = relativeX - this._borderInset.left;
+    const contentY = relativeY - this._borderInset.top;
+
     const width = this._cachedWidth || 40;
     const displayLines = this._computeDisplayLines(width);
 
     // Convert click Y to display row (accounting for internal scroll)
-    const displayRow = relativeY + this._scrollY;
+    const displayRow = contentY + this._scrollY;
 
     // Clamp to valid row range
     const row = clamp(displayRow, 0, displayLines.length - 1);
 
     // Clamp column to line length
     const lineLength = displayLines[row]?.text.length || 0;
-    const col = clamp(relativeX, 0, lineLength);
+    const col = clamp(contentX, 0, lineLength);
 
     // Convert display position to cursor position
     const newCursorPos = this._displayPosToCursor(row, col, width);

@@ -1280,19 +1280,50 @@ export class RenderingEngine {
     const lineEndY = borderBottom ? bottomBorderY + 1 : clippedBounds.y + clippedBounds.height;
     const lineHeight = lineEndY - lineStartY;
 
+    // Border top gap support (used by tabs to open the active tab into content below)
+    const gap = style._borderTopGap as { start: number; end: number } | undefined;
+    let gapStartX = -1, gapEndX = -1, junctionAfterGap = -1;
+    if (gap && borderTop) {
+      gapStartX = leftBorderX + gap.start;
+      gapEndX = leftBorderX + gap.end;
+      junctionAfterGap = gapEndX + 1;
+    }
+
     // Draw individual border sides
     if (borderTop && borderTop !== 'none') {
-      this._drawHorizontalLine(lineStartX, topBorderY, lineWidth, borderTop, topStyle, buffer, chars);
+      if (gap) {
+        // Pre-gap horizontal: lineStartX to gapStartX - 1
+        const preGapLen = gapStartX - lineStartX;
+        if (preGapLen > 0) {
+          this._drawHorizontalLine(lineStartX, topBorderY, preGapLen, borderTop, topStyle, buffer, chars);
+        }
+        // Post-gap horizontal: after junction to lineEndX
+        const postGapStart = junctionAfterGap + 1;
+        const postGapLen = lineEndX - postGapStart;
+        if (postGapLen > 0) {
+          this._drawHorizontalLine(postGapStart, topBorderY, postGapLen, borderTop, topStyle, buffer, chars);
+        }
+        // Junction ┘ at gapStartX (if not at left edge)
+        if (gapStartX > leftBorderX) {
+          buffer.currentBuffer.setCell(gapStartX, topBorderY, { char: chars.br, ...topStyle });
+        }
+        // Junction └ after gap (if within bounds)
+        if (junctionAfterGap <= rightBorderX) {
+          buffer.currentBuffer.setCell(junctionAfterGap, topBorderY, { char: chars.bl, ...topStyle });
+        }
+      } else {
+        this._drawHorizontalLine(lineStartX, topBorderY, lineWidth, borderTop, topStyle, buffer, chars);
 
-      // Draw border title centered in top border
-      if (style.borderTitle) {
-        const title = ` ${style.borderTitle} `;
-        const titleLen = title.length;
-        const availableWidth = lineWidth - 2; // Exclude corners
-        if (titleLen <= availableWidth) {
-          const startX = lineStartX + 1 + Math.floor((availableWidth - titleLen) / 2);
-          for (let i = 0; i < titleLen; i++) {
-            buffer.currentBuffer.setCell(startX + i, topBorderY, { char: title[i], ...topStyle });
+        // Draw border title centered in top border
+        if (style.borderTitle) {
+          const title = ` ${style.borderTitle} `;
+          const titleLen = title.length;
+          const availableWidth = lineWidth - 2; // Exclude corners
+          if (titleLen <= availableWidth) {
+            const startX = lineStartX + 1 + Math.floor((availableWidth - titleLen) / 2);
+            for (let i = 0; i < titleLen; i++) {
+              buffer.currentBuffer.setCell(startX + i, topBorderY, { char: title[i], ...topStyle });
+            }
           }
         }
       }
@@ -1308,11 +1339,20 @@ export class RenderingEngine {
     }
 
     // Draw corners where borders meet (only if both adjacent borders are visible)
+    // Suppress corners that fall inside a border top gap
     if (borderTop && borderLeft) {
-      buffer.currentBuffer.setCell(leftBorderX, topBorderY, { char: chars.tl, ...topStyle });
+      const inGap = gap && leftBorderX >= gapStartX && leftBorderX <= gapEndX;
+      if (!inGap) {
+        const tlChar = (style._borderCornerTL as string) || chars.tl;
+        buffer.currentBuffer.setCell(leftBorderX, topBorderY, { char: tlChar, ...topStyle });
+      }
     }
     if (borderTop && borderRight) {
-      buffer.currentBuffer.setCell(rightBorderX, topBorderY, { char: chars.tr, ...topStyle });
+      const inGap = gap && rightBorderX >= gapStartX && rightBorderX <= gapEndX;
+      if (!inGap) {
+        const trChar = (style._borderCornerTR as string) || chars.tr;
+        buffer.currentBuffer.setCell(rightBorderX, topBorderY, { char: trChar, ...topStyle });
+      }
     }
     if (borderBottom && borderLeft) {
       buffer.currentBuffer.setCell(leftBorderX, bottomBorderY, { char: chars.bl, ...bottomStyle });

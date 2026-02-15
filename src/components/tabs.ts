@@ -122,12 +122,34 @@ export class TabsElement extends Element {
   }
 
   /**
+   * Compute a tab button's layout width from its label and border/padding.
+   */
+  private _buttonWidth(index: number): number {
+    const label = this._tabElements[index].props.title;
+    const isLast = index === this._tabElements.length - 1;
+    // borderLeft(1) + paddingLeft(1) + label + paddingRight(1) + borderRight(0|1)
+    return 1 + 1 + label.length + 1 + (isLast ? 1 : 0);
+  }
+
+  /**
    * Update visibility on all tabs based on active index.
    * Active tab is visible, inactive tabs are hidden.
    * Also updates button styles to reflect active state.
+   * Sets border top gap and corner overrides for active tab merging.
    */
   private _updateTabVisibility(): void {
     const lastIndex = this._tabElements.length - 1;
+
+    // Compute gap offset = sum of button widths before active tab
+    let gapStart = 0;
+    for (let i = 0; i < this._activeIndex; i++) {
+      gapStart += this._buttonWidth(i);
+    }
+    // For non-last tabs: gap covers the full button (junction └ goes at next button's borderLeft).
+    // For last tab: gap excludes borderRight so └ aligns with the button's own borderRight vertical.
+    const gapEnd = this._activeIndex === lastIndex
+      ? gapStart + this._buttonWidth(this._activeIndex) - 2
+      : gapStart + this._buttonWidth(this._activeIndex) - 1;
 
     for (let i = 0; i < this._tabElements.length; i++) {
       const tab = this._tabElements[i];
@@ -136,13 +158,14 @@ export class TabsElement extends Element {
       // Set visibility - this is the key: all tabs exist, only active is visible
       tab.props.visible = isActive;
 
-      // Ensure tabs have flex properties when visible
+      // Ensure tabs have flex properties when visible, and set border gap
       if (isActive) {
         tab.props.style = {
           display: 'flex',
           flexDirection: 'column',
           flexGrow: 1,
           ...tab.props.style,
+          _borderTopGap: { start: gapStart, end: gapEnd },
         };
       }
 
@@ -150,13 +173,25 @@ export class TabsElement extends Element {
       const button = this._tabButtons[i];
       if (button) {
         const isLast = i === lastIndex;
+
+        // Corner overrides:
+        // - First inactive button to the RIGHT of active gets ╮ at TL
+        // - Active button gets ╭ at TL when not first tab
+        let cornerTL: string | undefined;
+        if (i === this._activeIndex + 1) {
+          cornerTL = '╮';
+        } else if (isActive && this._activeIndex > 0) {
+          cornerTL = '╭';
+        }
+
         button.props.style = {
           ...button.props.style,
           fontWeight: isActive ? 'bold' : 'normal',
           borderLeft: 'thin',
           borderTop: 'thin',
-          height : 2,
-          ...(isLast ? { borderRight: 'thin', paddingLeft: 1, paddingRight: 1  } : { paddingLeft: 1, paddingRight: 1 }),
+          height: 2,
+          _borderCornerTL: cornerTL,
+          ...(isLast ? { borderRight: 'thin', paddingLeft: 1, paddingRight: 1 } : { paddingLeft: 1, paddingRight: 1 }),
         };
       }
     }

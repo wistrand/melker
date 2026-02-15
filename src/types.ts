@@ -172,6 +172,11 @@ export interface Style extends Record<string, any> {
   transition?: string;                 // shorthand (not stored, expanded)
   _transitionSpecs?: TransitionSpec[]; // parsed transition specs (internal)
 
+  // Tab border gap (internal — set by TabsElement)
+  _borderTopGap?: { start: number; end: number };  // offsets from leftBorderX, inclusive
+  _borderCornerTL?: string;  // override top-left corner character
+  _borderCornerTR?: string;  // override top-right corner character
+
   // Allow any additional style properties for flexibility
   [key: string]: any;
 }

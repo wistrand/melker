@@ -290,6 +290,7 @@ const POLICY_PERMISSION_TYPES: Record<string, 'boolean' | 'string[]' | 'boolean 
   run: 'string[]',
   env: 'string[]',
   ffi: 'string[]',
+  sys: 'string[]',
   ai: 'boolean | string[]',
   clipboard: 'boolean',
   keyring: 'boolean',
@@ -305,7 +306,10 @@ const POLICY_KEY_TYPES: Record<string, string> = {
   name: 'string',
   version: 'string',
   description: 'string',
+  comment: 'string',
   permissions: 'object',
+  config: 'object',
+  configSchema: 'object',
 };
 
 // Valid top-level policy keys
@@ -773,11 +777,15 @@ function validateDocument(text: string): Diagnostic[] {
         scope: true,
         audience: true,
         'auto-login': true,
+        'debug-server': true,
         onLogin: true,
         onLogout: true,
         onFail: true,
       },
       'policy': {
+        src: true,
+      },
+      'help': {
         src: true,
       },
     };
@@ -1036,6 +1044,7 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
         'scope': 'OAuth scopes (alias for scopes)',
         'audience': 'OAuth audience',
         'auto-login': 'Automatically trigger login on load',
+        'debug-server': 'Enable debug server for OAuth flow',
         'onLogin': 'Handler called after successful login',
         'onLogout': 'Handler called after logout',
         'onFail': 'Handler called on authentication failure',
@@ -1045,6 +1054,12 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
       description: 'Permission policy declaration for sandboxed execution',
       attrs: {
         'src': 'External policy JSON file path',
+      },
+    },
+    'help': {
+      description: 'Help content for the application (markdown)',
+      attrs: {
+        'src': 'External help file path',
       },
     },
   };
@@ -2691,6 +2706,23 @@ function findElementsMatching(
     }
   }
 }
+
+// Exports for testing
+export const _testing = {
+  validateDocument,
+  getHover,
+  getCompletions,
+  getDocumentSymbols,
+  getFoldingRanges,
+  getCodeActions,
+  getLinkedEditingRanges,
+  getDocumentLinks,
+  extractColors,
+  getColorPresentations,
+  getDefinition,
+  levenshteinDistance,
+  findSimilarNames,
+};
 
 // Start the LSP server
 export async function startLspServer(): Promise<void> {

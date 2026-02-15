@@ -69,6 +69,8 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | CSS & animations    | [css-animation-architecture.md](agent_docs/css-animation-architecture.md) |
 | Pseudo-classes & transitions | [css-pseudo-classes-transitions-architecture.md](agent_docs/css-pseudo-classes-transitions-architecture.md) |
 | Container queries   | [container-query-architecture.md](agent_docs/container-query-architecture.md) |
+| CSS variables        | [css-variables-architecture.md](agent_docs/css-variables-architecture.md) |
+| CSS themes           | [css-themes-architecture.md](agent_docs/css-themes-architecture.md)       |
 | CSS nesting         | [css-nesting-architecture.md](agent_docs/css-nesting-architecture.md) |
 
 ### Deep Dives
@@ -178,6 +180,7 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 | Variable                     | Purpose                                                                                                                                                            |
 |------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `MELKER_THEME`               | Theme (default: `auto`): `auto-dark`, `auto-std`, `bw-std`, `fullcolor-dark`, etc.                                                                                 |
+| `MELKER_THEME_FILE`          | Path to custom theme CSS file (overrides theme selection)                                                                                                          |
 | `MELKER_LOG_FILE`            | Log file path                                                                                                                                                      |
 | `MELKER_LOG_LEVEL`           | `DEBUG`, `INFO`, `WARN`, `ERROR`                                                                                                                                   |
 | `MELKER_LOG_BUFFER_SIZE`     | In-memory log buffer size for DevTools Log tab (default: 500, range: 10-10000)                                                                                     |

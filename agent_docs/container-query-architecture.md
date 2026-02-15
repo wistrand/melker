@@ -280,3 +280,9 @@ When the sidebar is wide enough (>= 40 cells), nav items display horizontally. W
 - **No named containers**: All `@container` queries match the nearest ancestor with `container-type` set. Named container matching (`container-name`) is not supported.
 - **No nested `@container` blocks**: Inner `@container` blocks inside outer `@container` blocks won't be recognized.
 - **Container-type on root**: Setting `container-type` on the root element won't work since bounds come from the terminal, not a container.
+
+## Related Docs
+
+- [css-variables-architecture.md](css-variables-architecture.md) — CSS custom properties (`var()` works in `@container` rule bodies)
+- [css-animation-architecture.md](css-animation-architecture.md) — `@keyframes` animations, specificity
+- [architecture-media-queries.md](architecture-media-queries.md) — `@media` queries (terminal-level, vs container-level)

@@ -326,3 +326,9 @@ The UIAnimationManager tick does only one thing: `manager.requestRender()`. No s
 ```
 
 See [`examples/basics/animation.melker`](../examples/basics/animation.melker) for a comprehensive demo covering color, size, percentage, padding, gap, border color, position: relative, and nested container animations.
+
+## Related Docs
+
+- [css-variables-architecture.md](css-variables-architecture.md) — CSS custom properties (`var()` works in `@keyframes` and `animation` shorthands)
+- [css-pseudo-classes-transitions-architecture.md](css-pseudo-classes-transitions-architecture.md) — `:focus`, `:hover`, CSS transitions
+- [architecture-media-queries.md](architecture-media-queries.md) — `@media` queries

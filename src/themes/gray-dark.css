@@ -1,0 +1,42 @@
+/* Grayscale Dark — dark background with grays */
+:root {
+  --theme-type: gray;
+  --theme-mode: dark;
+  --theme-color-support: 16;
+
+  --primary: white;
+  --secondary: gray;
+  --background: black;
+  --foreground: white;
+  --surface: gray;
+  --border: gray;
+
+  --success: white;
+  --warning: gray;
+  --error: white;
+  --info: gray;
+
+  --button-primary: black;
+  --button-secondary: gray;
+  --button-background: white;
+  --input-background: gray;
+  --input-foreground: white;
+  --input-border: gray;
+
+  --focus-primary: black;
+  --focus-background: white;
+
+  --text-primary: white;
+  --text-secondary: gray;
+  --text-muted: gray;
+
+  --header-background: gray;
+  --header-foreground: white;
+  --sidebar-background: black;
+  --sidebar-foreground: gray;
+  --modal-background: gray;
+  --modal-foreground: white;
+
+  --scrollbar-thumb: white;
+  --scrollbar-track: gray;
+}

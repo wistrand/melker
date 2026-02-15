@@ -18,7 +18,6 @@ import { RenderingEngine } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
 import { Element, TextSelection, isScrollingEnabled } from './types.ts';
-import { applyStylesheet } from './stylesheet.ts';
 import type { StyleContext } from './stylesheet.ts';
 import {
   EventManager,
@@ -513,7 +512,7 @@ export class MelkerEngine {
             this._buffer.resize(newSize.width, newSize.height);
             this._rootElement.props.width = newSize.width;
             this._rootElement.props.height = newSize.height;
-            // Re-apply stylesheets with media rules for new terminal size
+            // Re-apply stylesheets with media rules/variables for new terminal size
             const stylesheets = this._document.stylesheets;
             if (stylesheets.length > 0) {
               const ctx: StyleContext = {
@@ -522,7 +521,7 @@ export class MelkerEngine {
               };
               for (const stylesheet of stylesheets) {
                 if (stylesheet.hasMediaRules) {
-                  applyStylesheet(this._rootElement, stylesheet, [], ctx);
+                  stylesheet.applyTo(this._rootElement, ctx);
                 }
               }
             }
@@ -2034,14 +2033,15 @@ export async function createApp(
   options?: MelkerEngineOptions
 ): Promise<MelkerEngine> {
   // Import theme manager to apply automatic theme defaults
-  const { getThemeManager } = await import('./theme.ts');
+  const { getThemeManager, initThemes } = await import('./theme.ts');
+  await initThemes();
   const themeManager = getThemeManager();
   const currentTheme = themeManager.getCurrentTheme();
 
   // Apply theme-based defaults if no options provided
   const finalOptions: MelkerEngineOptions = {
     colorSupport: currentTheme.colorSupport,
-    theme: `${currentTheme.type}-${currentTheme.mode}`,
+    theme: themeManager.getCurrentThemeName(),
     ...options // User options override theme defaults
   };
 

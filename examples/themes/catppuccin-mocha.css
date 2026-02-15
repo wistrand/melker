@@ -1,0 +1,48 @@
+/*
+ * Catppuccin Mocha — soothing pastel theme
+ * https://catppuccin.com/
+ *
+ * Usage:
+ *   melker --theme-file examples/themes/catppuccin-mocha.css app.melker
+ */
+:root {
+  --theme-type: fullcolor;
+  --theme-mode: dark;
+  --theme-color-support: truecolor;
+
+  --primary: #89b4fa;
+  --secondary: #94e2d5;
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --surface: #313244;
+  --border: #585b70;
+
+  --success: #a6e3a1;
+  --warning: #f9e2af;
+  --error: #f38ba8;
+  --info: #89b4fa;
+
+  --button-primary: #1e1e2e;
+  --button-secondary: #94e2d5;
+  --button-background: #89b4fa;
+  --input-background: #313244;
+  --input-foreground: #cdd6f4;
+  --input-border: #585b70;
+
+  --focus-primary: #f9e2af;
+  --focus-background: #45475a;
+
+  --text-primary: #cdd6f4;
+  --text-secondary: #bac2de;
+  --text-muted: #6c7086;
+
+  --header-background: #313244;
+  --header-foreground: #cdd6f4;
+  --sidebar-background: #181825;
+  --sidebar-foreground: #a6adc8;
+  --modal-background: #45475a;
+  --modal-foreground: #cdd6f4;
+
+  --scrollbar-thumb: #585b70;
+  --scrollbar-track: #313244;
+}

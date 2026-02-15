@@ -1,0 +1,48 @@
+/*
+ * Nord — Arctic, north-bluish color palette
+ * https://www.nordtheme.com/
+ *
+ * Usage:
+ *   melker --theme-file examples/themes/nord.css app.melker
+ */
+:root {
+  --theme-type: fullcolor;
+  --theme-mode: dark;
+  --theme-color-support: truecolor;
+
+  --primary: #88c0d0;
+  --secondary: #81a1c1;
+  --background: #2e3440;
+  --foreground: #d8dee9;
+  --surface: #3b4252;
+  --border: #4c566a;
+
+  --success: #a3be8c;
+  --warning: #ebcb8b;
+  --error: #bf616a;
+  --info: #5e81ac;
+
+  --button-primary: #eceff4;
+  --button-secondary: #81a1c1;
+  --button-background: #5e81ac;
+  --input-background: #3b4252;
+  --input-foreground: #eceff4;
+  --input-border: #4c566a;
+
+  --focus-primary: #ebcb8b;
+  --focus-background: #434c5e;
+
+  --text-primary: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-muted: #4c566a;
+
+  --header-background: #3b4252;
+  --header-foreground: #eceff4;
+  --sidebar-background: #2e3440;
+  --sidebar-foreground: #81a1c1;
+  --modal-background: #434c5e;
+  --modal-foreground: #eceff4;
+
+  --scrollbar-thumb: #4c566a;
+  --scrollbar-track: #3b4252;
+}

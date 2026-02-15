@@ -102,6 +102,26 @@ function extractForwardedDenoFlags(args: string[]): string[] {
 }
 
 /**
+ * If a custom theme file is configured (--theme-file or --theme ending in .css),
+ * add its absolute path to the --allow-read flag list so the subprocess can read it.
+ */
+function addThemeFileReadPermission(denoFlags: string[]): void {
+  const config = MelkerConfig.get();
+  const customThemePath = config.themeFile || (config.theme?.endsWith('.css') ? config.theme : undefined);
+  if (customThemePath) {
+    const absThemePath = customThemePath.startsWith('/')
+      ? customThemePath
+      : resolve(Deno.cwd(), customThemePath);
+    const readIdx = denoFlags.findIndex(f => f.startsWith('--allow-read='));
+    if (readIdx >= 0) {
+      denoFlags[readIdx] += ',' + absThemePath;
+    } else if (!denoFlags.includes('--allow-read')) {
+      denoFlags.push(`--allow-read=${absThemePath}`);
+    }
+  }
+}
+
+/**
  * Check Deno version meets minimum requirement
  */
 function checkDenoVersion(): void {
@@ -200,6 +220,8 @@ async function runWithPolicy(
 
   // Extract forwarded Deno flags (--reload, --no-lock, etc.)
   const forwardedFlags = extractForwardedDenoFlags(originalArgs);
+
+  addThemeFileReadPermission(denoFlags);
 
   // Required: --unstable-bundle for Deno.bundle() API
   denoFlags.push('--unstable-bundle');
@@ -300,6 +322,8 @@ async function runRemoteWithPolicy(
 
     // Extract forwarded Deno flags (--reload, --no-lock, etc.)
     const forwardedFlags = extractForwardedDenoFlags(originalArgs);
+
+    addThemeFileReadPermission(denoFlags);
 
     // Required: --unstable-bundle for Deno.bundle() API
     denoFlags.push('--unstable-bundle');
@@ -657,6 +681,7 @@ your terminal supports sextant mode. If any row appears scrambled, use:
         }
         console.log('\nDeno permission flags:');
         const flags = policyToDenoFlags(effectivePolicy, getTempDir(), urlHash, filepath, activeDenies, overrides.deny, true);
+        addThemeFileReadPermission(flags);
         console.log(formatDenoFlags(flags));
       } else {
         // For plain .mmd files, use the empty mermaid policy
@@ -679,6 +704,7 @@ your terminal supports sextant mode. If any row appears scrambled, use:
             }
             console.log('\nDeno permission flags:');
             const flags = policyToDenoFlags(effectivePolicy, dirname(absoluteFilepath), urlHash, undefined, activeDenies, overrides.deny);
+            addThemeFileReadPermission(flags);
             console.log(formatDenoFlags(flags));
             Deno.exit(0);
           }
@@ -702,6 +728,7 @@ your terminal supports sextant mode. If any row appears scrambled, use:
         }
         console.log('\nDeno permission flags:');
         const flags = policyToDenoFlags(effectivePolicy, dirname(absoluteFilepath), urlHash, undefined, activeDenies, overrides.deny);
+        addThemeFileReadPermission(flags);
         console.log(formatDenoFlags(flags));
       }
       Deno.exit(0);

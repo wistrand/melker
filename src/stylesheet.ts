@@ -2,9 +2,11 @@
 // Selectors: *, #id, type, .class, compound (e.g., *.class, type.class)
 // Combinators: descendant (space), child (>)
 
-import type { Element, Style, KeyframeDefinition, AnimationKeyframe, AnimationState, TransitionSpec } from './types.ts';
+import type { Element, Style, KeyframeDefinition, AnimationKeyframe, AnimationState, TransitionSpec, PackedRGBA } from './types.ts';
 import { hasClass } from './element.ts';
-import { parseColor } from './components/color-utils.ts';
+import { parseColor, unpackRGBA, rgbToHex, cssToRgba } from './components/color-utils.ts';
+import { getCurrentTheme, getThemeManager } from './theme.ts';
+import type { ColorPalette } from './theme.ts';
 import { getTimingFunction } from './easing.ts';
 import { getUIAnimationManager } from './ui-animation-manager.ts';
 import { normalizeBoxSpacing } from './layout-style.ts';
@@ -542,10 +544,159 @@ function parseTransitionShorthand(value: string): Partial<Style> {
 }
 
 /**
+ * A CSS variable declaration extracted from a :root block.
+ * When inside @media, the mediaCondition records the enclosing condition.
+ */
+export interface VariableDecl {
+  name: string;
+  value: string;
+  mediaCondition?: MediaCondition;
+  source?: string;
+}
+
+/**
+ * Extract CSS variable declarations (--* properties) from :root blocks.
+ * Handles :root at top level and inside @media. Other selectors are ignored.
+ * Returns raw values (var() references are NOT resolved here).
+ */
+export function extractVariableDeclarations(css: string): VariableDecl[] {
+  const decls: VariableDecl[] = [];
+
+  // Strip CSS comments
+  const cleaned = css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+
+  const blocks = tokenizeCSS(cleaned);
+
+  for (const block of blocks) {
+    const selector = block.selector.trim();
+
+    if (selector === ':root') {
+      extractDeclsFromBody(block.body, decls, undefined);
+    } else if (selector.startsWith('@media')) {
+      const condStr = selector.slice(6).trim();
+      const condition = parseMediaCondition(condStr);
+      if (!condition) continue;
+      // Recurse into the @media body to find :root blocks
+      const inner = extractVariableDeclarations(block.body);
+      const mediaSource = `@media ${condStr}`;
+      for (const d of inner) {
+        // Tag with this media condition (inner may already have one from deeper nesting)
+        decls.push({
+          ...d,
+          mediaCondition: d.mediaCondition ?? condition,
+          source: d.source ? `${mediaSource} > ${d.source}` : mediaSource,
+        });
+      }
+    }
+    // Other selectors: skip
+  }
+
+  return decls;
+}
+
+/** Extract --* declarations from a :root block body into decls array. */
+function extractDeclsFromBody(
+  body: string,
+  decls: VariableDecl[],
+  mediaCondition: MediaCondition | undefined,
+  source: string = ':root'
+): void {
+  const props = body.split(';');
+  for (const prop of props) {
+    const colonIdx = prop.indexOf(':');
+    if (colonIdx === -1) continue;
+    const name = prop.substring(0, colonIdx).trim();
+    const value = prop.substring(colonIdx + 1).trim();
+    if (name.startsWith('--') && value) {
+      decls.push(mediaCondition ? { name, value, mediaCondition, source } : { name, value, source });
+    }
+  }
+}
+
+/**
+ * Resolve all var(--name) and var(--name, fallback) references in a string value.
+ * Supports nested var() in fallbacks and detects cycles (direct and indirect).
+ * Returns the resolved string with all var() references replaced by their values.
+ */
+export function resolveVarReferences(
+  value: string,
+  variables: Map<string, string>,
+  seen?: Set<string>
+): string {
+  let result = '';
+  let i = 0;
+
+  while (i < value.length) {
+    // Check for var( at current position
+    if (value.startsWith('var(', i)) {
+      i += 4; // skip "var("
+
+      // Skip whitespace
+      while (i < value.length && value[i] === ' ') i++;
+
+      // Extract variable name (--xxx-yyy) up to , or ) or whitespace
+      const nameStart = i;
+      while (i < value.length && value[i] !== ',' && value[i] !== ')' && value[i] !== ' ') i++;
+      const name = value.slice(nameStart, i).trim();
+
+      // Skip whitespace after name
+      while (i < value.length && value[i] === ' ') i++;
+
+      let fallback: string | undefined;
+      if (i < value.length && value[i] === ',') {
+        i++; // skip comma
+        // Extract fallback — find matching ) using balanced-paren tracking
+        const fallbackStart = i;
+        let depth = 1;
+        while (i < value.length && depth > 0) {
+          if (value[i] === '(') depth++;
+          else if (value[i] === ')') {
+            depth--;
+            if (depth === 0) break;
+          }
+          i++;
+        }
+        fallback = value.slice(fallbackStart, i).trim();
+        i++; // skip closing )
+      } else if (i < value.length && value[i] === ')') {
+        i++; // skip closing )
+      }
+
+      // Cycle detection
+      const resolving = seen ?? new Set<string>();
+      if (resolving.has(name)) {
+        // Cycle — use fallback or empty
+        if (fallback !== undefined) {
+          result += resolveVarReferences(fallback, variables, resolving);
+        }
+        continue;
+      }
+
+      const rawValue = variables.get(name);
+      if (rawValue !== undefined) {
+        resolving.add(name);
+        result += resolveVarReferences(rawValue, variables, resolving);
+        resolving.delete(name);
+      } else if (fallback !== undefined) {
+        result += resolveVarReferences(fallback, variables, resolving);
+      }
+      // else: undefined with no fallback → nothing appended
+    } else {
+      result += value[i];
+      i++;
+    }
+  }
+
+  return result;
+}
+
+/**
  * Parse a CSS-like style value string into a Style object
  * Converts "width: 40; height: 10; border: thin;" to { width: 40, height: 10, border: 'thin' }
  */
-export function parseStyleProperties(cssString: string): Style {
+export function parseStyleProperties(cssString: string, variables?: Map<string, string>): Style {
   const style: Style = {};
 
   // Split by semicolons and process each property
@@ -556,9 +707,18 @@ export function parseStyleProperties(cssString: string): Style {
     if (colonIndex === -1) continue;
 
     const key = property.substring(0, colonIndex).trim();
-    const value = property.substring(colonIndex + 1).trim();
+    let value = property.substring(colonIndex + 1).trim();
 
     if (!key || !value) continue;
+
+    // Skip CSS custom property declarations (handled by extractVariableDeclarations)
+    if (key.startsWith('--')) continue;
+
+    // Resolve var() references before type conversion
+    if (variables && value.includes('var(')) {
+      value = resolveVarReferences(value, variables);
+      if (!value) continue;  // unresolved with no fallback → skip property
+    }
 
     // Convert kebab-case to camelCase for properties like border-color
     const camelKey = key.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
@@ -820,7 +980,7 @@ interface ParseResult {
  * Parse a @keyframes block body into an AnimationKeyframe array.
  * Supports percentage selectors (0%, 50%, 100%) and keywords (from, to).
  */
-function parseKeyframeBlock(name: string, body: string): KeyframeDefinition {
+function parseKeyframeBlock(name: string, body: string, variables?: Map<string, string>): KeyframeDefinition {
   const innerBlocks = tokenizeCSS(body);
   const keyframes: AnimationKeyframe[] = [];
 
@@ -838,7 +998,7 @@ function parseKeyframeBlock(name: string, body: string): KeyframeDefinition {
       offset = parseFloat(pctMatch[1]) / 100;
     }
 
-    const style = parseStyleProperties(block.body);
+    const style = parseStyleProperties(block.body, variables);
     keyframes.push({ offset, style });
   }
 
@@ -870,7 +1030,7 @@ function parseKeyframeBlock(name: string, body: string): KeyframeDefinition {
  * }
  * ```
  */
-export function parseStyleBlock(css: string): ParseResult {
+export function parseStyleBlock(css: string, variables?: Map<string, string>): ParseResult {
   const items: StyleItem[] = [];
   const keyframes: KeyframeDefinition[] = [];
   const containerItems: StyleItem[] = [];
@@ -887,7 +1047,7 @@ export function parseStyleBlock(css: string): ParseResult {
       // Extract name from "@keyframes name"
       const name = block.selector.slice(10).trim();
       if (name && block.body) {
-        keyframes.push(parseKeyframeBlock(name, block.body));
+        keyframes.push(parseKeyframeBlock(name, block.body, variables));
       }
     } else if (block.selector.startsWith('@container')) {
       // Extract condition from "@container (condition)"
@@ -896,7 +1056,7 @@ export function parseStyleBlock(css: string): ParseResult {
       if (!condition) continue;  // Skip unrecognized @container conditions
 
       // Recursively parse nested rules inside the @container block
-      const nested = parseStyleBlock(block.body);
+      const nested = parseStyleBlock(block.body, variables);
       for (const item of nested.items) {
         containerItems.push({ ...item, containerCondition: condition });
       }
@@ -911,7 +1071,7 @@ export function parseStyleBlock(css: string): ParseResult {
       if (!condition) continue;  // Skip unrecognized @media conditions
 
       // Recursively parse nested rules inside the @media block
-      const nested = parseStyleBlock(block.body);
+      const nested = parseStyleBlock(block.body, variables);
       for (const item of nested.items) {
         items.push({ ...item, mediaCondition: condition });
       }
@@ -933,7 +1093,7 @@ export function parseStyleBlock(css: string): ParseResult {
 
       // Parse direct properties
       if (properties) {
-        const style = parseStyleProperties(properties);
+        const style = parseStyleProperties(properties, variables);
         for (const sel of parentSelectors) {
           const selector = parseSelector(sel);
           items.push({ selector, style, specificity: selectorSpecificity(selector) });
@@ -947,7 +1107,7 @@ export function parseStyleBlock(css: string): ParseResult {
             // Nested @keyframes are global regardless of nesting context
             const name = nested.selector.slice(10).trim();
             if (name && nested.body) {
-              keyframes.push(parseKeyframeBlock(name, nested.body));
+              keyframes.push(parseKeyframeBlock(name, nested.body, variables));
             }
             continue;
           }
@@ -956,7 +1116,7 @@ export function parseStyleBlock(css: string): ParseResult {
             const condStr = nested.selector.slice(6).trim();
             const condition = parseMediaCondition(condStr);
             if (!condition) continue;
-            const innerResult = parseStyleBlock(`${parentSel} { ${nested.body} }`);
+            const innerResult = parseStyleBlock(`${parentSel} { ${nested.body} }`, variables);
             for (const item of innerResult.items) {
               items.push({ ...item, mediaCondition: condition });
             }
@@ -971,7 +1131,7 @@ export function parseStyleBlock(css: string): ParseResult {
             const condStr = nested.selector.slice(10).trim();
             const condition = parseContainerCondition(condStr);
             if (!condition) continue;
-            const innerResult = parseStyleBlock(`${parentSel} { ${nested.body} }`);
+            const innerResult = parseStyleBlock(`${parentSel} { ${nested.body} }`, variables);
             for (const item of innerResult.items) {
               containerItems.push({ ...item, containerCondition: condition });
             }
@@ -982,7 +1142,7 @@ export function parseStyleBlock(css: string): ParseResult {
           // Resolve nested selector relative to parent
           const resolvedSel = resolveNestedSelector(parentSel, nested.selector);
           // Recurse: wrap as a top-level rule and parse (handles deep nesting)
-          const innerResult = parseStyleBlock(`${resolvedSel} { ${nested.body} }`);
+          const innerResult = parseStyleBlock(`${resolvedSel} { ${nested.body} }`, variables);
           items.push(...innerResult.items);
           containerItems.push(...innerResult.containerItems);
           keyframes.push(...innerResult.keyframes);
@@ -1001,40 +1161,69 @@ export class Stylesheet {
   private _items: StyleItem[] = [];
   private _containerItems: StyleItem[] = [];
   private _keyframes: Map<string, KeyframeDefinition> = new Map();
+  private _rawCSS: string[] = [];
+  private _directItems: StyleItem[] = [];
+  private _variableDecls: VariableDecl[] = [];
+  private _variables: Map<string, string> = new Map();
+  private _variableOrigins: Map<string, string> = new Map();
+  private _themeVars: Map<string, string>;
+  private _themeVarOrigins: Map<string, string>;
+  private _hasMediaVars: boolean = false;
+  private _lastCtx?: StyleContext;
 
   constructor(items: StyleItem[] = [], containerItems: StyleItem[] = []) {
     this._items = [...items];
     this._containerItems = [...containerItems];
+    const { vars, origins } = Stylesheet._buildThemeVars();
+    this._themeVars = vars;
+    this._themeVarOrigins = origins;
+    this._variables = new Map(this._themeVars);
+    this._variableOrigins = new Map(this._themeVarOrigins);
   }
 
   /**
-   * Add a rule from a selector string and style object
+   * Add a rule from a selector string and style object.
+   * Programmatic rules survive re-parse (stored in _directItems).
    */
   addRule(selector: string, style: Style): void {
     const parsed = parseSelector(selector);
-    this._items.push({
+    const item: StyleItem = {
       selector: parsed,
       style,
       specificity: selectorSpecificity(parsed),
-    });
+    };
+    this._items.push(item);
+    this._directItems.push(item);
   }
 
   /**
-   * Add a pre-parsed StyleItem
+   * Add a pre-parsed StyleItem.
+   * Programmatic items survive re-parse (stored in _directItems).
    */
   addItem(item: StyleItem): void {
     this._items.push(item);
+    this._directItems.push(item);
   }
 
   /**
-   * Add multiple items from a CSS-like string
+   * Add multiple items from a CSS-like string.
+   * If the CSS defines new variables, triggers a full re-parse of all stored
+   * CSS so forward references resolve. Otherwise parses only the new CSS.
    */
   addFromString(css: string): void {
-    const { items, keyframes, containerItems } = parseStyleBlock(css);
-    this._items.push(...items);
-    this._containerItems.push(...containerItems);
-    for (const kf of keyframes) {
-      this._keyframes.set(kf.name, kf);
+    this._rawCSS.push(css);
+    const newDecls = extractVariableDeclarations(css);
+    if (newDecls.length > 0) {
+      this._variableDecls.push(...newDecls);
+      this._hasMediaVars ||= newDecls.some(d => d.mediaCondition !== undefined);
+      this._fullReparse();
+    } else {
+      const { items, keyframes, containerItems } = parseStyleBlock(css, this._variables);
+      this._items.push(...items);
+      this._containerItems.push(...containerItems);
+      for (const kf of keyframes) {
+        this._keyframes.set(kf.name, kf);
+      }
     }
   }
 
@@ -1092,11 +1281,11 @@ export class Stylesheet {
   }
 
   /**
-   * Whether any rules have @media conditions.
+   * Whether any rules have @media conditions or media-conditioned variables.
    * Fast path: skip re-application on resize when false.
    */
   get hasMediaRules(): boolean {
-    return this._items.some(item => item.mediaCondition !== undefined);
+    return this._hasMediaVars || this._items.some(item => item.mediaCondition !== undefined);
   }
 
   /**
@@ -1172,12 +1361,33 @@ export class Stylesheet {
   }
 
   /**
-   * Clear all rules and keyframes
+   * Get the active CSS variable set (theme vars + user-defined vars).
+   */
+  get variables(): ReadonlyMap<string, string> {
+    return this._variables;
+  }
+
+  /**
+   * Get the origin of each CSS variable (e.g., "theme", ":root", "@media (max-width: 80)").
+   */
+  get variableOrigins(): ReadonlyMap<string, string> {
+    return this._variableOrigins;
+  }
+
+  /**
+   * Clear all rules, keyframes, and variable state
    */
   clear(): void {
     this._items = [];
     this._containerItems = [];
     this._keyframes.clear();
+    this._rawCSS = [];
+    this._directItems = [];
+    this._variableDecls = [];
+    this._variables = new Map(this._themeVars);
+    this._variableOrigins = new Map(this._themeVarOrigins);
+    this._hasMediaVars = false;
+    this._lastCtx = undefined;
   }
 
   /**
@@ -1202,14 +1412,95 @@ export class Stylesheet {
   }
 
   /**
+   * Re-parse all stored CSS with the current active variable set.
+   * Called when new variable declarations are added or media context changes.
+   */
+  private _fullReparse(ctx?: StyleContext): void {
+    const { vars, origins } = this._buildActiveVariables(ctx);
+    this._items = [];
+    this._containerItems = [];
+    this._keyframes.clear();
+    for (const css of this._rawCSS) {
+      const { items, keyframes, containerItems } = parseStyleBlock(css, vars);
+      this._items.push(...items);
+      this._containerItems.push(...containerItems);
+      for (const kf of keyframes) {
+        this._keyframes.set(kf.name, kf);
+      }
+    }
+    this._items.push(...this._directItems);
+    this._variables = vars;
+    this._variableOrigins = origins;
+    this._pushThemeOverrides(vars);
+  }
+
+  /**
+   * Detect --theme-* CSS variable overrides and push them to the ThemeManager.
+   * Compares resolved vars against the original theme-generated values.
+   */
+  private _pushThemeOverrides(vars: Map<string, string>): void {
+    if (this._themeVars.size === 0) return; // No theme loaded (test environment)
+    const overrides: Partial<Record<keyof ColorPalette, PackedRGBA>> = {};
+    let hasOverrides = false;
+    for (const [name, value] of vars) {
+      if (name.startsWith('--theme-') && value !== this._themeVars.get(name)) {
+        const paletteKey = kebabToCamel(name.slice(8)) as keyof ColorPalette;
+        overrides[paletteKey] = cssToRgba(value);
+        hasOverrides = true;
+      }
+    }
+    if (hasOverrides) {
+      getThemeManager().setColorOverrides(overrides);
+    }
+  }
+
+  /**
+   * Build the active variable set by evaluating declarations against context.
+   * Theme vars form the base, then user declarations override in order.
+   * Media-conditioned declarations are skipped when ctx is absent or doesn't match.
+   */
+  private _buildActiveVariables(ctx?: StyleContext): { vars: Map<string, string>; origins: Map<string, string> } {
+    const vars = new Map(this._themeVars);
+    const origins = new Map(this._themeVarOrigins);
+    for (const decl of this._variableDecls) {
+      if (decl.mediaCondition) {
+        if (!ctx || !mediaConditionMatches(decl.mediaCondition, ctx)) continue;
+      }
+      const resolved = resolveVarReferences(decl.value, vars);
+      vars.set(decl.name, resolved);
+      origins.set(decl.name, decl.source ?? ':root');
+    }
+    return { vars, origins };
+  }
+
+  /**
+   * Build --theme-* CSS variables from the current theme's ColorPalette.
+   * Converts 30 camelCase palette keys to kebab-case hex strings.
+   * Built once per Stylesheet instance (theme is fixed at runtime).
+   */
+  static _buildThemeVars(): { vars: Map<string, string>; origins: Map<string, string> } {
+    const vars = new Map<string, string>();
+    const origins = new Map<string, string>();
+    const theme = getCurrentTheme();
+    if (!theme) return { vars, origins };
+    const origin = theme.source ? `theme (${theme.source})` : 'theme';
+    for (const key of Object.keys(theme.palette) as (keyof typeof theme.palette)[]) {
+      // camelCase → kebab-case: "inputBackground" → "input-background"
+      const kebab = key.replace(/[A-Z]/g, (ch) => '-' + ch.toLowerCase());
+      const { r, g, b } = unpackRGBA(theme.palette[key]);
+      const name = `--theme-${kebab}`;
+      vars.set(name, rgbToHex(r, g, b));
+      origins.set(name, origin);
+    }
+    return { vars, origins };
+  }
+
+  /**
    * Create a stylesheet from a CSS-like string
    */
   static fromString(css: string): Stylesheet {
-    const { items, keyframes, containerItems } = parseStyleBlock(css);
-    const sheet = new Stylesheet(items, containerItems);
-    for (const kf of keyframes) {
-      sheet._keyframes.set(kf.name, kf);
-    }
+    const sheet = new Stylesheet();
+    sheet.addFromString(css);
     return sheet;
   }
 
@@ -1217,8 +1508,16 @@ export class Stylesheet {
    * Apply stylesheet styles to an element tree.
    * Merges stylesheet styles with element's inline styles (inline takes priority).
    * Safe to call multiple times — tracks style origins for correct re-application.
+   * When media-conditioned variables exist and ctx changed, triggers a re-parse.
    */
   applyTo(element: Element, ctx?: StyleContext): void {
+    if (this._hasMediaVars && ctx &&
+        (!this._lastCtx ||
+         this._lastCtx.terminalWidth !== ctx.terminalWidth ||
+         this._lastCtx.terminalHeight !== ctx.terminalHeight)) {
+      this._fullReparse(ctx);
+      this._lastCtx = { ...ctx };
+    }
     applyStylesheet(element, this, [], ctx);
   }
 }

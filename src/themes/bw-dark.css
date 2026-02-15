@@ -1,0 +1,42 @@
+/* Black & White Dark — inverted BW for light terminals */
+:root {
+  --theme-type: bw;
+  --theme-mode: dark;
+  --theme-color-support: none;
+
+  --primary: black;
+  --secondary: black;
+  --background: white;
+  --foreground: black;
+  --surface: white;
+  --border: black;
+
+  --success: black;
+  --warning: black;
+  --error: black;
+  --info: black;
+
+  --button-primary: white;
+  --button-secondary: black;
+  --button-background: black;
+  --input-background: white;
+  --input-foreground: black;
+  --input-border: black;
+
+  --focus-primary: white;
+  --focus-background: black;
+
+  --text-primary: black;
+  --text-secondary: black;
+  --text-muted: black;
+
+  --header-background: white;
+  --header-foreground: black;
+  --sidebar-background: white;
+  --sidebar-foreground: black;
+  --modal-background: white;
+  --modal-foreground: black;
+
+  --scrollbar-thumb: black;
+  --scrollbar-track: gray;
+}

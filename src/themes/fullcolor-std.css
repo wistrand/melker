@@ -1,0 +1,47 @@
+/*
+ * Melker Theme: Full Color Standard — truecolor, light background
+ *
+ * Copy this file as a starting point for custom themes.
+ * See fullcolor-dark.css for format documentation.
+ */
+:root {
+  --theme-type: fullcolor;
+  --theme-mode: std;
+  --theme-color-support: truecolor;
+
+  --primary: #60a5fa;
+  --secondary: #22d3ee;
+  --background: white;
+  --foreground: black;
+  --surface: #f3f4f6;
+  --border: #9ca3af;
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #60a5fa;
+
+  --button-primary: black;
+  --button-secondary: #22d3ee;
+  --button-background: #60a5fa;
+  --input-background: #f9fafb;
+  --input-foreground: #111827;
+  --input-border: #d1d5db;
+
+  --focus-primary: #f59e0b;
+  --focus-background: #3b82f6;
+
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #9ca3af;
+
+  --header-background: #3b82f6;
+  --header-foreground: #f9fafb;
+  --sidebar-background: #f3f4f6;
+  --sidebar-foreground: #374151;
+  --modal-background: #2563eb;
+  --modal-foreground: #f9fafb;
+
+  --scrollbar-thumb: #60a5fa;
+  --scrollbar-track: #e5e7eb;
+}

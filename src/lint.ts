@@ -155,6 +155,32 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
   verticalAlign: { type: 'string', enum: ['top', 'center', 'bottom'], description: 'Vertical text alignment' },
   fontSize: { type: 'string', description: 'Ignored (terminals have fixed font size)' },
   fontFamily: { type: 'string', description: 'Ignored (terminals have fixed font)' },
+
+  // Color aliases
+  background: { type: 'string', description: 'Alias for background-color' },
+  foreground: { type: 'string', description: 'Alias for color' },
+
+  // Border/divider extras
+  borderTitle: { type: 'string', description: 'Text displayed inside the border' },
+  dividerColor: { type: 'string', description: 'Divider line color' },
+  dividerStyle: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'], description: 'Divider line style' },
+
+  // Animation
+  animation: { type: 'string', description: 'Animation shorthand (name duration timing-function delay iteration-count direction fill-mode)' },
+  animationName: { type: 'string', description: 'Name of @keyframes animation' },
+  animationDuration: { type: ['number', 'string'], description: 'Animation duration (ms or CSS time value)' },
+  animationTimingFunction: { type: 'string', description: 'Timing function (linear, ease, ease-in, ease-out, ease-in-out, steps(N))' },
+  animationDelay: { type: ['number', 'string'], description: 'Animation delay (ms or CSS time value)' },
+  animationIterationCount: { type: ['number', 'string'], description: 'Number of iterations (number or "infinite")' },
+  animationDirection: { type: 'string', enum: ['normal', 'reverse', 'alternate', 'alternate-reverse'], description: 'Animation playback direction' },
+  animationFillMode: { type: 'string', enum: ['none', 'forwards', 'backwards', 'both'], description: 'How styles apply before/after animation' },
+
+  // Transition
+  transition: { type: 'string', description: 'Transition shorthand (property duration timing-function delay)' },
+  transitionProperty: { type: 'string', description: 'CSS properties to transition (comma-separated)' },
+  transitionDuration: { type: ['number', 'string'], description: 'Transition duration (ms or CSS time value)' },
+  transitionTimingFunction: { type: 'string', description: 'Timing function (linear, ease, ease-in, ease-out, ease-in-out)' },
+  transitionDelay: { type: ['number', 'string'], description: 'Transition delay (ms or CSS time value)' },
 };
 
 // Enable/disable lint mode

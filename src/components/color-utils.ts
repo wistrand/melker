@@ -39,8 +39,9 @@ export const COLORS: Record<string, PackedRGBA> = {
 };
 
 /**
- * Parse any color input (string or number) to packed RGBA
- * Handles CSS strings (hex, rgb(), named) and passes through numbers
+ * Parse any color input (string or number) to packed RGBA.
+ * Passes through numeric PackedRGBA values; delegates strings to cssToRgba()
+ * which supports hex, rgb(), hsl(), oklch(), oklab(), and named colors.
  */
 export function parseColor(color: ColorInput | undefined): PackedRGBA | undefined {
   if (color === undefined) return undefined;
@@ -123,13 +124,23 @@ const _namedColors: Record<string, PackedRGBA> = {
   'orange': packRGBA(255, 165, 0, 255),
   'purple': packRGBA(128, 0, 128, 255),
   'pink': packRGBA(255, 192, 203, 255),
+  'lime': packRGBA(0, 255, 0, 255),
   'gray': packRGBA(128, 128, 128, 255),
   'grey': packRGBA(128, 128, 128, 255),
   'transparent': TRANSPARENT,
 };
 
 /**
- * Parse CSS color string to packed RGBA
+ * Parse CSS color string to packed RGBA.
+ *
+ * Supported formats:
+ *   #rgb, #rrggbb, #rrggbbaa
+ *   rgb(r, g, b), rgba(r, g, b, a)          — r/g/b: 0-255, a: 0-1
+ *   hsl(h, s%, l%), hsla(h, s%, l%, a)      — h: degrees, s/l: %, a: 0-1
+ *   oklch(L C H), oklch(L C H / a)          — L: 0-1 or %, C: 0-0.4+, H: degrees
+ *   oklab(L a b), oklab(L a b / a)          — L: 0-1 or %, a/b: -0.4 to 0.4
+ *   Named colors: black, white, red, green, blue, yellow, cyan, magenta,
+ *                 orange, purple, pink, lime, gray/grey, transparent
  */
 export function cssToRgba(css: string): PackedRGBA {
   // Handle hex colors
@@ -161,6 +172,54 @@ export function cssToRgba(css: string): PackedRGBA {
     const b = parseInt(rgbMatch[3]);
     const a = rgbMatch[4] ? Math.round(parseFloat(rgbMatch[4]) * 255) : 255;
     return packRGBA(r, g, b, a);
+  }
+  // Handle hsl/hsla — hsl(h, s%, l%) or hsla(h, s%, l%, a)
+  const hslMatch = css.match(/hsla?\s*\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+))?\s*\)/i);
+  if (hslMatch) {
+    const h = parseFloat(hslMatch[1]) % 360;
+    const s = parseFloat(hslMatch[2]) / 100;
+    const l = parseFloat(hslMatch[3]) / 100;
+    const a = hslMatch[4] ? Math.round(parseFloat(hslMatch[4]) * 255) : 255;
+    const { r, g, b } = hslToRgb(h, s, l);
+    return packRGBA(r, g, b, a);
+  }
+  // Handle oklch() — oklch(L C H) or oklch(L C H / alpha)
+  // L: 0-1 (or 0%-100%), C: 0-0.4+, H: 0-360
+  const oklchMatch = css.match(/oklch\s*\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+%?))?\s*\)/i);
+  if (oklchMatch) {
+    let l = parseFloat(oklchMatch[1]);
+    if (oklchMatch[1].endsWith('%')) l /= 100;
+    const c = parseFloat(oklchMatch[2]);
+    const h = parseFloat(oklchMatch[3]);
+    let a = 255;
+    if (oklchMatch[4]) {
+      a = oklchMatch[4].endsWith('%')
+        ? Math.round(parseFloat(oklchMatch[4]) / 100 * 255)
+        : Math.round(parseFloat(oklchMatch[4]) * 255);
+    }
+    const { r, g, b } = oklchToRgb(l, c, h);
+    return packRGBA(Math.round(r), Math.round(g), Math.round(b), a);
+  }
+  // Handle oklab() — oklab(L a b) or oklab(L a b / alpha)
+  // L: 0-1 (or 0%-100%), a: -0.4 to 0.4, b: -0.4 to 0.4
+  const oklabMatch = css.match(/oklab\s*\(\s*([\d.]+%?)\s+([-\d.]+)\s+([-\d.]+)\s*(?:\/\s*([\d.]+%?))?\s*\)/i);
+  if (oklabMatch) {
+    let l = parseFloat(oklabMatch[1]);
+    if (oklabMatch[1].endsWith('%')) l /= 100;
+    const aOk = parseFloat(oklabMatch[2]);
+    const bOk = parseFloat(oklabMatch[3]);
+    let alpha = 255;
+    if (oklabMatch[4]) {
+      alpha = oklabMatch[4].endsWith('%')
+        ? Math.round(parseFloat(oklabMatch[4]) / 100 * 255)
+        : Math.round(parseFloat(oklabMatch[4]) * 255);
+    }
+    // Convert oklab a,b to oklch c,h then use oklchToRgb
+    const c = Math.sqrt(aOk * aOk + bOk * bOk);
+    let h = Math.atan2(bOk, aOk) * 180 / Math.PI;
+    if (h < 0) h += 360;
+    const { r, g, b } = oklchToRgb(l, c, h);
+    return packRGBA(Math.round(r), Math.round(g), Math.round(b), alpha);
   }
   // Handle named colors (basic set)
   return _namedColors[css.toLowerCase()] ?? DEFAULT_FG;

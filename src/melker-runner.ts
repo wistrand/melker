@@ -322,12 +322,13 @@ export async function runMelkerFile(
     await import('../mod.ts');
 
     const { melker: melkerTemplate, parseMelkerFile } = await import('./template.ts');
-    const { getThemeColor: themeColor } = await import('./theme.ts');
+    const { getThemeColor: themeColor, initThemes } = await import('./theme.ts');
+    await initThemes();
     const { getTerminalSize: terminalSize } = await import('../mod.ts');
     const { createElement: createEl } = await import('./element.ts');
     const { createApp: createMelkerApp } = await import('./engine.ts');
     const { getLogger, getGlobalLoggerOptions } = await import('./logging.ts');
-    const { getCurrentTheme } = await import('./theme.ts');
+    const { getCurrentTheme, getThemeManager } = await import('./theme.ts');
     const oauth = await import('./oauth.ts');
     const { hashFilePath } = await import('./state-persistence.ts');
     const { registerAITool, clearCustomTools } = await import('./ai/mod.ts');
@@ -366,7 +367,7 @@ export async function runMelkerFile(
         console.log('\nSYSTEM INFO');
         console.log('-'.repeat(40));
         console.log(`  File:       ${filepath}`);
-        console.log(`  Theme:      ${theme.type}-${theme.mode} (${theme.colorSupport})`);
+        console.log(`  Theme:      ${getThemeManager().getCurrentThemeName()} (${theme.colorSupport})`);
         console.log(`  Log file:   ${loggerOpts.logFile}`);
         console.log(`  Log level:  ${loggerOpts.level}`);
         console.log(`  Deno:       ${Deno.version.deno}`);
@@ -697,7 +698,7 @@ export async function runMelkerFile(
 
     const systemInfo: SystemInfo = {
       file: remoteUrl || filepath,
-      theme: `${currentTheme.type}-${currentTheme.mode} (${currentTheme.colorSupport})`,
+      theme: `${getThemeManager().getCurrentThemeName()} (${currentTheme.colorSupport})`,
       logFile: loggerOpts.logFile,
       logLevel: loggerOpts.level,
       denoVersion: Deno.version.deno,

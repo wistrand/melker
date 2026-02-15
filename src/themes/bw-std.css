@@ -1,0 +1,42 @@
+/* Black & White Standard — maximum compatibility */
+:root {
+  --theme-type: bw;
+  --theme-mode: std;
+  --theme-color-support: none;
+
+  --primary: white;
+  --secondary: white;
+  --background: black;
+  --foreground: white;
+  --surface: black;
+  --border: white;
+
+  --success: white;
+  --warning: white;
+  --error: white;
+  --info: white;
+
+  --button-primary: black;
+  --button-secondary: white;
+  --button-background: white;
+  --input-background: black;
+  --input-foreground: white;
+  --input-border: white;
+
+  --focus-primary: black;
+  --focus-background: white;
+
+  --text-primary: white;
+  --text-secondary: white;
+  --text-muted: white;
+
+  --header-background: black;
+  --header-foreground: white;
+  --sidebar-background: black;
+  --sidebar-foreground: white;
+  --modal-background: black;
+  --modal-foreground: white;
+
+  --scrollbar-thumb: white;
+  --scrollbar-track: gray;
+}

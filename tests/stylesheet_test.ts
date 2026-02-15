@@ -14,8 +14,12 @@ import {
   applyStylesheet,
   mediaConditionMatches,
   containerConditionMatches,
+  resolveVarReferences,
+  extractVariableDeclarations,
 } from '../mod.ts';
-import type { StyleContext, ContainerCondition, PseudoClassState, TransitionSpec } from '../mod.ts';
+import type { Style, StyleContext, ContainerCondition, PseudoClassState, TransitionSpec, VariableDecl } from '../mod.ts';
+import { getCurrentTheme, initThemes } from '../mod.ts';
+import { parseColor, unpackRGBA, rgbToHex } from '../src/components/color-utils.ts';
 import { interpolateValue, getTransitionStyle } from '../src/css-animation.ts';
 import { getTimingFunction } from '../src/easing.ts';
 import { computeStyle } from '../src/layout-style.ts';
@@ -2905,4 +2909,603 @@ Deno.test('nesting - @media respects parent selector in matching', () => {
   // Should not match: terminal too wide
   const wideCtx: StyleContext = { terminalWidth: 100, terminalHeight: 24 };
   assertEquals(ss.getMergedStyle(card, [], wideCtx).width, undefined);
+});
+
+// ===========================================================================
+// CSS Variables - Phase 1: resolveVarReferences()
+// ===========================================================================
+
+Deno.test('resolveVarReferences - no var passthrough', () => {
+  const vars = new Map<string, string>();
+  assertEquals(resolveVarReferences('hello', vars), 'hello');
+});
+
+Deno.test('resolveVarReferences - simple lookup', () => {
+  const vars = new Map([['--x', 'blue']]);
+  assertEquals(resolveVarReferences('var(--x)', vars), 'blue');
+});
+
+Deno.test('resolveVarReferences - missing no fallback', () => {
+  const vars = new Map<string, string>();
+  assertEquals(resolveVarReferences('var(--x)', vars), '');
+});
+
+Deno.test('resolveVarReferences - missing with fallback', () => {
+  const vars = new Map<string, string>();
+  assertEquals(resolveVarReferences('var(--x, red)', vars), 'red');
+});
+
+Deno.test('resolveVarReferences - present ignores fallback', () => {
+  const vars = new Map([['--x', 'blue']]);
+  assertEquals(resolveVarReferences('var(--x, red)', vars), 'blue');
+});
+
+Deno.test('resolveVarReferences - nested fallback both missing', () => {
+  const vars = new Map<string, string>();
+  assertEquals(resolveVarReferences('var(--a, var(--b, red))', vars), 'red');
+});
+
+Deno.test('resolveVarReferences - nested fallback inner hit', () => {
+  const vars = new Map([['--b', 'green']]);
+  assertEquals(resolveVarReferences('var(--a, var(--b, red))', vars), 'green');
+});
+
+Deno.test('resolveVarReferences - nested fallback outer hit', () => {
+  const vars = new Map([['--a', 'blue']]);
+  assertEquals(resolveVarReferences('var(--a, var(--b, red))', vars), 'blue');
+});
+
+Deno.test('resolveVarReferences - multiple var in value', () => {
+  const vars = new Map([['--x', 'A'], ['--y', 'B']]);
+  assertEquals(resolveVarReferences('10 var(--x) var(--y) 20', vars), '10 A B 20');
+});
+
+Deno.test('resolveVarReferences - var value contains var', () => {
+  const vars = new Map([['--a', 'red'], ['--b', 'var(--a)']]);
+  assertEquals(resolveVarReferences('var(--b)', vars), 'red');
+});
+
+Deno.test('resolveVarReferences - direct cycle', () => {
+  const vars = new Map([['--a', 'var(--a)']]);
+  assertEquals(resolveVarReferences('var(--a)', vars), '');
+});
+
+Deno.test('resolveVarReferences - direct cycle with fallback', () => {
+  const vars = new Map([['--a', 'var(--a, blue)']]);
+  assertEquals(resolveVarReferences('var(--a)', vars), 'blue');
+});
+
+Deno.test('resolveVarReferences - indirect cycle', () => {
+  const vars = new Map([['--a', 'var(--b)'], ['--b', 'var(--a)']]);
+  assertEquals(resolveVarReferences('var(--a)', vars), '');
+});
+
+Deno.test('resolveVarReferences - whitespace tolerance', () => {
+  const vars = new Map<string, string>();
+  assertEquals(resolveVarReferences('var(  --x  ,  red  )', vars), 'red');
+});
+
+Deno.test('resolveVarReferences - deeply nested fallbacks', () => {
+  const vars = new Map<string, string>();
+  assertEquals(resolveVarReferences('var(--a, var(--b, var(--c, red)))', vars), 'red');
+});
+
+// ===========================================================================
+// CSS Variables - Phase 2: extractVariableDeclarations()
+// ===========================================================================
+
+Deno.test('extractVariableDeclarations - simple :root', () => {
+  const decls = extractVariableDeclarations(':root { --x: 1; --y: blue; }');
+  assertEquals(decls.length, 2);
+  assertEquals(decls[0].name, '--x');
+  assertEquals(decls[0].value, '1');
+  assertEquals(decls[0].mediaCondition, undefined);
+  assertEquals(decls[1].name, '--y');
+  assertEquals(decls[1].value, 'blue');
+});
+
+Deno.test('extractVariableDeclarations - no variables', () => {
+  const decls = extractVariableDeclarations('button { color: red; }');
+  assertEquals(decls.length, 0);
+});
+
+Deno.test('extractVariableDeclarations - non-var props skipped', () => {
+  const decls = extractVariableDeclarations(':root { --x: 1; color: white; font-weight: bold; }');
+  assertEquals(decls.length, 1);
+  assertEquals(decls[0].name, '--x');
+  assertEquals(decls[0].value, '1');
+});
+
+Deno.test('extractVariableDeclarations - inside @media', () => {
+  const decls = extractVariableDeclarations('@media (max-width: 80) { :root { --x: 1; } }');
+  assertEquals(decls.length, 1);
+  assertEquals(decls[0].name, '--x');
+  assertEquals(decls[0].value, '1');
+  assertEquals(decls[0].mediaCondition?.maxWidth, 80);
+});
+
+Deno.test('extractVariableDeclarations - mixed unconditional and media', () => {
+  const decls = extractVariableDeclarations(`
+    :root { --a: 10; }
+    @media (max-width: 60) { :root { --a: 5; } }
+  `);
+  assertEquals(decls.length, 2);
+  assertEquals(decls[0].name, '--a');
+  assertEquals(decls[0].value, '10');
+  assertEquals(decls[0].mediaCondition, undefined);
+  assertEquals(decls[1].name, '--a');
+  assertEquals(decls[1].value, '5');
+  assertEquals(decls[1].mediaCondition?.maxWidth, 60);
+});
+
+Deno.test('extractVariableDeclarations - non-:root inside @media ignored', () => {
+  const decls = extractVariableDeclarations('@media (max-width: 60) { button { --x: 1; } }');
+  assertEquals(decls.length, 0);
+});
+
+Deno.test('extractVariableDeclarations - CSS comments stripped', () => {
+  const decls = extractVariableDeclarations(':root { /* comment */ --x: 1; }');
+  assertEquals(decls.length, 1);
+  assertEquals(decls[0].name, '--x');
+  assertEquals(decls[0].value, '1');
+});
+
+Deno.test('extractVariableDeclarations - :root.compound ignored', () => {
+  const decls = extractVariableDeclarations(':root.dark { --x: 1; }');
+  assertEquals(decls.length, 0);
+});
+
+Deno.test('extractVariableDeclarations - value with var ref preserved raw', () => {
+  const decls = extractVariableDeclarations(':root { --x: var(--theme-primary); }');
+  assertEquals(decls.length, 1);
+  assertEquals(decls[0].name, '--x');
+  assertEquals(decls[0].value, 'var(--theme-primary)');
+});
+
+Deno.test('extractVariableDeclarations - multiple @media blocks', () => {
+  const decls = extractVariableDeclarations(`
+    @media (min-width: 40) { :root { --x: 1; } }
+    @media (min-width: 80) { :root { --x: 2; } }
+  `);
+  assertEquals(decls.length, 2);
+  assertEquals(decls[0].value, '1');
+  assertEquals(decls[0].mediaCondition?.minWidth, 40);
+  assertEquals(decls[1].value, '2');
+  assertEquals(decls[1].mediaCondition?.minWidth, 80);
+});
+
+// ============================================================================
+// Phase 3: Theme Variable Auto-Population
+// ============================================================================
+
+// Theme tests require initThemes() to populate the THEMES registry
+Deno.test('_buildThemeVars - init themes', async () => {
+  await initThemes();
+});
+
+Deno.test('_buildThemeVars - all 29 palette entries populated', () => {
+  const { vars } = Stylesheet._buildThemeVars();
+  // ColorPalette has exactly 29 entries
+  assertEquals(vars.size, Object.keys(getCurrentTheme().palette).length);
+});
+
+Deno.test('_buildThemeVars - kebab-case conversion for multi-word keys', () => {
+  const { vars } = Stylesheet._buildThemeVars();
+  assert(vars.has('--theme-input-background'));
+  assert(vars.has('--theme-button-primary'));
+  assert(vars.has('--theme-header-foreground'));
+  assert(vars.has('--theme-scrollbar-thumb'));
+});
+
+Deno.test('_buildThemeVars - single-word keys unchanged', () => {
+  const { vars } = Stylesheet._buildThemeVars();
+  assert(vars.has('--theme-primary'));
+  assert(vars.has('--theme-secondary'));
+  assert(vars.has('--theme-background'));
+  assert(vars.has('--theme-foreground'));
+  assert(vars.has('--theme-surface'));
+  assert(vars.has('--theme-border'));
+});
+
+Deno.test('_buildThemeVars - values are hex strings', () => {
+  const { vars } = Stylesheet._buildThemeVars();
+  const hexPattern = /^#[0-9a-f]{6}$/;
+  for (const [key, value] of vars) {
+    assert(hexPattern.test(value), `${key} value "${value}" is not a valid hex color`);
+  }
+});
+
+Deno.test('_buildThemeVars - hex matches packed RGBA', () => {
+  const { vars } = Stylesheet._buildThemeVars();
+  const palette = getCurrentTheme().palette;
+  const { r, g, b } = unpackRGBA(palette.primary);
+  const expectedHex = rgbToHex(r, g, b);
+  assertEquals(vars.get('--theme-primary'), expectedHex);
+});
+
+Deno.test('_buildThemeVars - resolveVarReferences uses theme vars', () => {
+  const { vars } = Stylesheet._buildThemeVars();
+  const result = resolveVarReferences('var(--theme-primary)', vars);
+  const palette = getCurrentTheme().palette;
+  const { r, g, b } = unpackRGBA(palette.primary);
+  assertEquals(result, rgbToHex(r, g, b));
+});
+
+Deno.test('_buildThemeVars - user can override theme var', () => {
+  const { vars } = Stylesheet._buildThemeVars();
+  // User overrides --theme-primary
+  vars.set('--theme-primary', '#FF0000');
+  const result = resolveVarReferences('var(--theme-primary)', vars);
+  assertEquals(result, '#FF0000');
+});
+
+Deno.test('_buildThemeVars - user can alias theme var', () => {
+  const { vars } = Stylesheet._buildThemeVars();
+  // User defines --accent as an alias for --theme-primary
+  const themePrimary = vars.get('--theme-primary')!;
+  vars.set('--accent', 'var(--theme-primary)');
+  // Resolve the alias — the raw value contains var(), so resolve it
+  const resolvedAlias = resolveVarReferences(vars.get('--accent')!, vars);
+  vars.set('--accent', resolvedAlias);
+  const result = resolveVarReferences('var(--accent)', vars);
+  assertEquals(result, themePrimary);
+});
+
+// ============================================================================
+// Phase 4: Wire var() Into parseStyleProperties and parseStyleBlock
+// ============================================================================
+
+Deno.test('parseStyleProperties - --* declarations are skipped', () => {
+  const style = parseStyleProperties('--x: 1; width: 10');
+  assertEquals(style.width, 10);
+  assertEquals((style as Record<string, unknown>)['--x'], undefined);
+});
+
+Deno.test('parseStyleProperties - var resolved to number', () => {
+  const vars = new Map([['--x', '10']]);
+  const style = parseStyleProperties('width: var(--x)', vars);
+  assertEquals(style.width, 10);
+});
+
+Deno.test('parseStyleProperties - var resolved to color', () => {
+  const vars = new Map([['--c', '#FF0000']]);
+  const style = parseStyleProperties('color: var(--c)', vars);
+  assertEquals(style.color, parseColor('#FF0000'));
+});
+
+Deno.test('parseStyleProperties - var resolved to string', () => {
+  const vars = new Map([['--b', 'single']]);
+  const style = parseStyleProperties('border: var(--b)', vars);
+  assertEquals(style.border, 'single');
+});
+
+Deno.test('parseStyleProperties - var in box spacing', () => {
+  const vars = new Map([['--p', '2']]);
+  const style = parseStyleProperties('padding: var(--p) var(--p)', vars);
+  assertEquals(style.padding, { top: 2, right: 2, bottom: 2, left: 2 });
+});
+
+Deno.test('parseStyleProperties - var in animation shorthand', () => {
+  const vars = new Map([['--name', 'fade'], ['--dur', '300ms']]);
+  const style = parseStyleProperties('animation: var(--name) var(--dur) ease', vars);
+  assertEquals(style.animationName, 'fade');
+  assertEquals(style.animationDuration, 300);
+  assertEquals(style.animationTimingFunction, 'ease');
+});
+
+Deno.test('parseStyleProperties - var in transition shorthand', () => {
+  const vars = new Map([['--dur', '200ms']]);
+  const style = parseStyleProperties('transition: color var(--dur) ease', vars);
+  const specs = (style as Record<string, unknown>)._transitionSpecs as TransitionSpec[];
+  assertEquals(specs[0].property, 'color');
+  assertEquals(specs[0].duration, 200);
+  assertEquals(specs[0].timingFn, 'ease');
+});
+
+Deno.test('parseStyleProperties - unresolved var skips property', () => {
+  const vars = new Map<string, string>();
+  const style = parseStyleProperties('width: var(--x)', vars);
+  assertEquals(style.width, undefined);
+});
+
+Deno.test('parseStyleProperties - no variables param unchanged behavior', () => {
+  const style = parseStyleProperties('width: 10');
+  assertEquals(style.width, 10);
+});
+
+Deno.test('parseStyleBlock - threads variables to rules', () => {
+  const vars = new Map([['--c', 'red']]);
+  const result = parseStyleBlock('button { color: var(--c) }', vars);
+  assertEquals(result.items.length, 1);
+  assertEquals(result.items[0].style.color, parseColor('red'));
+});
+
+Deno.test('parseStyleBlock - var in @keyframes', () => {
+  const vars = new Map([['--c', 'blue']]);
+  const result = parseStyleBlock('@keyframes x { to { color: var(--c) } }', vars);
+  assertEquals(result.keyframes.length, 1);
+  assertEquals(result.keyframes[0].keyframes[0].style.color, parseColor('blue'));
+});
+
+Deno.test('parseStyleBlock - var in @media rule', () => {
+  const vars = new Map([['--g', '3']]);
+  const result = parseStyleBlock('@media (max-width: 80) { .x { gap: var(--g) } }', vars);
+  assertEquals(result.items.length, 1);
+  assertEquals(result.items[0].style.gap, 3);
+  assert(result.items[0].mediaCondition !== undefined);
+});
+
+Deno.test('parseStyleBlock - var in @container rule', () => {
+  const vars = new Map([['--g', '2']]);
+  const result = parseStyleBlock('@container (min-width: 40) { .x { gap: var(--g) } }', vars);
+  assertEquals(result.containerItems.length, 1);
+  assertEquals(result.containerItems[0].style.gap, 2);
+});
+
+Deno.test('parseStyleBlock - var in nested rule', () => {
+  const vars = new Map([['--c', 'blue']]);
+  const result = parseStyleBlock('.card { .title { color: var(--c) } }', vars);
+  assertEquals(result.items.length, 1);
+  assertEquals(result.items[0].style.color, parseColor('blue'));
+});
+
+// ============================================================================
+// Phase 5: Stylesheet Class Integration
+// ============================================================================
+
+Deno.test('Stylesheet - basic end-to-end var resolution', () => {
+  const sheet = Stylesheet.fromString(':root { --x: 1; } button { width: var(--x); }');
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  assertEquals(buttonRule!.style.width, 1);
+});
+
+Deno.test('Stylesheet - color end-to-end', () => {
+  const sheet = Stylesheet.fromString(':root { --c: #3B82F6; } button { color: var(--c); }');
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  assertEquals(buttonRule!.style.color, parseColor('#3B82F6'));
+});
+
+Deno.test('Stylesheet - fallback end-to-end', () => {
+  const sheet = Stylesheet.fromString('button { color: var(--missing, red); }');
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  assertEquals(buttonRule!.style.color, parseColor('red'));
+});
+
+Deno.test('Stylesheet - nested fallback end-to-end', () => {
+  const sheet = Stylesheet.fromString('button { color: var(--a, var(--b, red)); }');
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  assertEquals(buttonRule!.style.color, parseColor('red'));
+});
+
+Deno.test('Stylesheet - --* not in style output', () => {
+  const sheet = Stylesheet.fromString(':root { --x: 1; color: white; }');
+  // :root rule should have color but no --x property
+  for (const item of sheet.items) {
+    assertEquals((item.style as Record<string, unknown>)['--x'], undefined);
+  }
+});
+
+Deno.test('Stylesheet - non-:root --* ignored as variable source', () => {
+  const sheet = Stylesheet.fromString('button { --x: 1; width: var(--x); }');
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  // --x declared in button (not :root) so not in variable set → width unresolved
+  assertEquals(buttonRule!.style.width, undefined);
+});
+
+Deno.test('Stylesheet - multiple addFromString forward reference', () => {
+  const sheet = new Stylesheet();
+  sheet.addFromString('button { color: var(--c); }');
+  sheet.addFromString(':root { --c: blue; }');
+  // After second addFromString, re-parse resolves --c in button rule
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  assertEquals(buttonRule!.style.color, parseColor('blue'));
+});
+
+Deno.test('Stylesheet - addRule survives re-parse', () => {
+  const sheet = new Stylesheet();
+  sheet.addRule('text', { width: 5 });
+  sheet.addFromString(':root { --x: 1; }');
+  // Programmatic rule should still be present after re-parse
+  const textRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'text'
+  );
+  assert(textRule !== undefined);
+  assertEquals(textRule!.style.width, 5);
+});
+
+Deno.test('Stylesheet - addItem survives re-parse', () => {
+  const sheet = new Stylesheet();
+  const item = {
+    selector: parseSelector('text'),
+    style: { width: 7 } as Style,
+    specificity: 1,
+  };
+  sheet.addItem(item);
+  sheet.addFromString(':root { --x: 1; }');
+  const textRule = sheet.items.find(it =>
+    it.selector.segments[0]?.compound.parts[0]?.value === 'text'
+  );
+  assert(textRule !== undefined);
+  assertEquals(textRule!.style.width, 7);
+});
+
+Deno.test('Stylesheet - _hasMediaVars false for unconditional vars', () => {
+  const sheet = Stylesheet.fromString(':root { --x: 1; }');
+  // deno-lint-ignore no-explicit-any
+  assertEquals((sheet as any)._hasMediaVars, false);
+});
+
+Deno.test('Stylesheet - _hasMediaVars true for media vars', () => {
+  const sheet = Stylesheet.fromString('@media (max-width: 80) { :root { --x: 1; } }');
+  // deno-lint-ignore no-explicit-any
+  assertEquals((sheet as any)._hasMediaVars, true);
+});
+
+Deno.test('Stylesheet - media var with no ctx uses fallback', () => {
+  const sheet = Stylesheet.fromString(`
+    @media (max-width: 80) { :root { --x: 1; } }
+    button { width: var(--x, 5); }
+  `);
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  // No ctx → media var skipped → fallback 5
+  assertEquals(buttonRule!.style.width, 5);
+});
+
+Deno.test('Stylesheet - media var with matching ctx resolves', () => {
+  const sheet = Stylesheet.fromString(`
+    @media (max-width: 80) { :root { --x: 1; } }
+    button { width: var(--x, 5); }
+  `);
+  const el = createElement('button');
+  sheet.applyTo(el, { terminalWidth: 60, terminalHeight: 24 });
+  // ctx width 60 ≤ 80 → media matches → --x = 1
+  assertEquals(el.props.style?.width, 1);
+});
+
+Deno.test('Stylesheet - media var with non-matching ctx uses fallback', () => {
+  const sheet = Stylesheet.fromString(`
+    @media (max-width: 80) { :root { --x: 1; } }
+    button { width: var(--x, 5); }
+  `);
+  const el = createElement('button');
+  sheet.applyTo(el, { terminalWidth: 100, terminalHeight: 24 });
+  // ctx width 100 > 80 → media doesn't match → fallback 5
+  assertEquals(el.props.style?.width, 5);
+});
+
+Deno.test('Stylesheet - resize re-parses media vars', () => {
+  const sheet = Stylesheet.fromString(`
+    @media (max-width: 80) { :root { --x: 1; } }
+    button { width: var(--x, 5); }
+  `);
+  const el = createElement('button');
+  // First apply: width 100 → media miss → fallback 5
+  sheet.applyTo(el, { terminalWidth: 100, terminalHeight: 24 });
+  assertEquals(el.props.style?.width, 5);
+  // Second apply: width 60 → media hit → 1
+  // No reset needed — origin tracking diffs correctly on re-apply
+  sheet.applyTo(el, { terminalWidth: 60, terminalHeight: 24 });
+  assertEquals(el.props.style?.width, 1);
+});
+
+Deno.test('Stylesheet - no re-parse without media vars on ctx change', () => {
+  const sheet = Stylesheet.fromString(':root { --x: 1; } button { width: var(--x); }');
+  // deno-lint-ignore no-explicit-any
+  const s = sheet as any;
+  assertEquals(s._hasMediaVars, false);
+  const el = createElement('button');
+  sheet.applyTo(el, { terminalWidth: 80, terminalHeight: 24 });
+  assertEquals(el.props.style?.width, 1);
+  // Applying with different ctx should NOT trigger re-parse (no media vars)
+  const varsBefore = s._variables;
+  el._inlineStyle = undefined;
+  el._computedStyle = undefined;
+  sheet.applyTo(el, { terminalWidth: 60, terminalHeight: 24 });
+  // _variables should be the same object (no re-parse happened)
+  assert(s._variables === varsBefore);
+});
+
+Deno.test('Stylesheet - unconditional + media override', () => {
+  const css = `
+    :root { --x: 10; }
+    @media (max-width: 60) { :root { --x: 5; } }
+    button { width: var(--x); }
+  `;
+  const sheet = Stylesheet.fromString(css);
+  const el1 = createElement('button');
+  sheet.applyTo(el1, { terminalWidth: 50, terminalHeight: 24 });
+  // width 50 ≤ 60 → media matches → --x overridden to 5
+  assertEquals(el1.props.style?.width, 5);
+
+  const el2 = createElement('button');
+  sheet.applyTo(el2, { terminalWidth: 80, terminalHeight: 24 });
+  // width 80 > 60 → media miss → --x stays 10
+  assertEquals(el2.props.style?.width, 10);
+});
+
+Deno.test('Stylesheet - clear resets all state', () => {
+  const sheet = Stylesheet.fromString(`
+    :root { --x: 1; }
+    @media (max-width: 80) { :root { --y: 2; } }
+    button { width: var(--x); }
+  `);
+  sheet.addRule('text', { width: 5 });
+  sheet.clear();
+  // deno-lint-ignore no-explicit-any
+  const s = sheet as any;
+  assertEquals(s._rawCSS.length, 0);
+  assertEquals(s._variableDecls.length, 0);
+  assertEquals(s._directItems.length, 0);
+  assertEquals(s._hasMediaVars, false);
+  assertEquals(s._lastCtx, undefined);
+  assertEquals(sheet.items.length, 0);
+  assertEquals(sheet.length, 0);
+  // _variables should be reset to theme vars
+  assertEquals(s._variables.size, s._themeVars.size);
+});
+
+Deno.test('Stylesheet - theme vars available without :root', async () => {
+  await initThemes();
+  const sheet = Stylesheet.fromString('button { color: var(--theme-primary); }');
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  const palette = getCurrentTheme().palette;
+  assertEquals(buttonRule!.style.color, palette.primary);
+});
+
+Deno.test('Stylesheet - var in @keyframes end-to-end', () => {
+  const sheet = Stylesheet.fromString(`
+    :root { --c: blue; }
+    @keyframes x { to { color: var(--c); } }
+  `);
+  const kf = sheet.getKeyframes('x');
+  assert(kf !== undefined);
+  assertEquals(kf!.keyframes[0].style.color, parseColor('blue'));
+});
+
+Deno.test('Stylesheet - var in transition shorthand end-to-end', () => {
+  const sheet = Stylesheet.fromString(`
+    :root { --dur: 300ms; }
+    button { transition: color var(--dur) ease; }
+  `);
+  const buttonRule = sheet.items.find(item =>
+    item.selector.segments[0]?.compound.parts[0]?.value === 'button'
+  );
+  assert(buttonRule !== undefined);
+  const specs = (buttonRule!.style as Record<string, unknown>)._transitionSpecs as TransitionSpec[];
+  assert(specs !== undefined);
+  assertEquals(specs[0].property, 'color');
+  assertEquals(specs[0].duration, 300);
+});
+
+Deno.test('Stylesheet - var in @container rule end-to-end', () => {
+  const sheet = Stylesheet.fromString(`
+    :root { --g: 2; }
+    @container (min-width: 40) { .x { gap: var(--g); } }
+  `);
+  assertEquals(sheet.containerItems.length, 1);
+  assertEquals(sheet.containerItems[0].style.gap, 2);
 });

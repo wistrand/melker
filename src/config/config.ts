@@ -675,6 +675,10 @@ export class MelkerConfig {
     return this.data['theme'] as string;
   }
 
+  get themeFile(): string | undefined {
+    return this.data['theme.file'] as string | undefined;
+  }
+
   // Logging
   get logLevel(): string {
     return this.data['log.level'] as string;

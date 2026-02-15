@@ -9,6 +9,7 @@ import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy, ty
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { getLogger, getRecentLogEntries, getGlobalLoggerOptions, type LogEntry } from './logging.ts';
+import { Stylesheet } from './stylesheet.ts';
 
 const logger = getLogger('DevTools');
 
@@ -261,7 +262,11 @@ export class DevToolsManager {
       tabs.push(editConfigTab);
     }
 
-    // Tab 7: Inspect (document tree view)
+    // Tab 7: CSS Variables
+    const varsTab = this._buildVarsTab();
+    tabs.push(varsTab);
+
+    // Tab 8: Inspect (document tree view)
     const inspectTab = this._buildInspectTab();
     tabs.push(inspectTab);
 
@@ -406,6 +411,76 @@ export class DevToolsManager {
 
       return line;
     }).join('\n');
+  }
+
+  /**
+   * Build the CSS Variables tab showing all active variables from stylesheets
+   */
+  private _buildVarsTab(): Element {
+    const document = this._deps.document;
+    const render = () => this._deps.render();
+
+    const columns = [
+      { header: 'Variable', width: 30 },
+      { header: 'Value' },
+      { header: 'Source', width: 20 },
+    ];
+
+    const generateRows = (): string[][] => {
+      // Start with theme vars as baseline (always visible)
+      const { vars: themeVars, origins: themeOrigins } = Stylesheet._buildThemeVars();
+      const allVars = new Map(themeVars);
+      const allOrigins = new Map(themeOrigins);
+      // Overlay stylesheet variables (user-defined override theme defaults)
+      for (const sheet of document.stylesheets) {
+        for (const [key, value] of sheet.variables) {
+          allVars.set(key, value);
+        }
+        for (const [key, origin] of sheet.variableOrigins) {
+          allOrigins.set(key, origin);
+        }
+      }
+      // Sort: user vars first alphabetically, then theme vars
+      const entries = [...allVars.entries()];
+      entries.sort((a, b) => {
+        const aIsTheme = a[0].startsWith('--theme-');
+        const bIsTheme = b[0].startsWith('--theme-');
+        if (aIsTheme !== bIsTheme) return aIsTheme ? 1 : -1;
+        return a[0].localeCompare(b[0]);
+      });
+      return entries.map(([name, value]) => [name, value, allOrigins.get(name) ?? '']);
+    };
+
+    const rows = generateRows();
+
+    const onRefresh = () => {
+      const tableEl = document.getElementById('dev-tools-vars-table');
+      if (tableEl) {
+        tableEl.props.rows = generateRows();
+        render();
+      }
+    };
+
+    const varCount = rows.length;
+    const themeCount = rows.filter(r => r[0].startsWith('--theme-')).length;
+    const userCount = varCount - themeCount;
+
+    return melker`
+      <tab id="dev-tools-tab-vars" title="Vars">
+        <container style=${{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }}>
+          <data-table
+            id="dev-tools-vars-table"
+            columns=${columns}
+            rows=${rows}
+            style=${{ flex: 1, width: 'fill', height: 'fill' }}
+          />
+          <container style=${{ display: 'flex', flexDirection: 'row', padding: 1, gap: 2, alignItems: 'center' }}>
+            <text text=${`${varCount} variables (${userCount} user, ${themeCount} theme)`} style=${{ flex: 1, color: 'gray' }} />
+            <button id="dev-tools-refresh-vars" label="Refresh" onClick=${onRefresh} />
+          </container>
+        </container>
+      </tab>
+    `;
   }
 
   /**

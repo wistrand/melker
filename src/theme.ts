@@ -3,7 +3,8 @@
 import type { PackedRGBA } from './types.ts';
 import { Env } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
-import { COLORS, packRGBA } from './components/color-utils.ts';
+import { COLORS, cssToRgba, packRGBA } from './components/color-utils.ts';
+import { extractVariableDeclarations } from './stylesheet.ts';
 import { getLogger } from './logging.ts';
 
 const logger = getLogger('Theme');
@@ -62,370 +63,154 @@ export interface Theme {
   mode: ThemeMode;
   colorSupport: 'none' | '16' | '256' | 'truecolor';
   palette: ColorPalette;
+  source?: string;  // CSS file path (e.g. 'fullcolor-dark' or 'examples/themes/nord.css')
 }
 
-// Black & White theme - maximum compatibility
-const BW_STD_PALETTE: ColorPalette = {
-  primary: COLORS.white,
-  secondary: COLORS.white,
-  background: COLORS.black,
-  foreground: COLORS.white,
-  surface: COLORS.black,
-  border: COLORS.white,
+// All 29 ColorPalette keys in definition order
+const PALETTE_KEYS: (keyof ColorPalette)[] = [
+  'primary', 'secondary', 'background', 'foreground', 'surface', 'border',
+  'success', 'warning', 'error', 'info',
+  'buttonPrimary', 'buttonSecondary', 'buttonBackground',
+  'inputBackground', 'inputForeground', 'inputBorder',
+  'focusPrimary', 'focusBackground',
+  'textPrimary', 'textSecondary', 'textMuted',
+  'headerBackground', 'headerForeground',
+  'sidebarBackground', 'sidebarForeground',
+  'modalBackground', 'modalForeground',
+  'scrollbarThumb', 'scrollbarTrack',
+];
 
-  success: COLORS.white,
-  warning: COLORS.white,
-  error: COLORS.white,
-  info: COLORS.white,
+// camelCase → kebab-case: "inputBackground" → "input-background"
+function camelToKebab(s: string): string {
+  return s.replace(/[A-Z]/g, (ch) => '-' + ch.toLowerCase());
+}
 
-  buttonPrimary: COLORS.black,
-  buttonSecondary: COLORS.white,
-  buttonBackground: COLORS.white,
-  inputBackground: COLORS.black,
-  inputForeground: COLORS.white,
-  inputBorder: COLORS.white,
+const FALLBACK_COLOR: PackedRGBA = 0xFF00FFFF; // magenta — visible mistake
 
-  focusPrimary: COLORS.black,
-  focusBackground: COLORS.white,
-
-  textPrimary: COLORS.white,
-  textSecondary: COLORS.white,
-  textMuted: COLORS.white,
-
-  headerBackground: COLORS.black,
-  headerForeground: COLORS.white,
-  sidebarBackground: COLORS.black,
-  sidebarForeground: COLORS.white,
-  modalBackground: COLORS.black,
-  modalForeground: COLORS.white,
-
-  scrollbarThumb: COLORS.white,
-  scrollbarTrack: COLORS.brightBlack,
+// Minimal BW-dark fallback for when initThemes() hasn't been called (tests, library)
+// Uses packRGBA() to match the signed 32-bit representation that cssToRgba() produces
+const FALLBACK_THEME: Theme = {
+  type: 'bw', mode: 'dark', colorSupport: 'none',
+  palette: Object.fromEntries(PALETTE_KEYS.map(k => {
+    const isDark = k.toLowerCase().includes('background') || k.toLowerCase().includes('track');
+    return [k, isDark ? packRGBA(0, 0, 0, 255) : packRGBA(255, 255, 255, 255)];
+  })) as unknown as ColorPalette,
 };
 
-const BW_DARK_PALETTE: ColorPalette = {
-  primary: COLORS.black,
-  secondary: COLORS.black,
-  background: COLORS.white,
-  foreground: COLORS.black,
-  surface: COLORS.white,
-  border: COLORS.black,
+/**
+ * Build a Theme from CSS text containing :root { --*: value } declarations.
+ * Parses metadata (--theme-type, --theme-mode, --theme-color-support) and
+ * all 29 ColorPalette fields from CSS custom properties.
+ */
+export function buildThemeFromCSS(css: string, sourcePath?: string): Theme {
+  const decls = extractVariableDeclarations(css);
+  const vars = new Map<string, string>();
+  for (const d of decls) {
+    vars.set(d.name, d.value);
+  }
 
-  success: COLORS.black,
-  warning: COLORS.black,
-  error: COLORS.black,
-  info: COLORS.black,
+  // Extract metadata
+  const type = (vars.get('--theme-type') || 'fullcolor') as ThemeType;
+  const mode = (vars.get('--theme-mode') || 'dark') as ThemeMode;
+  const colorSupport = (vars.get('--theme-color-support') || 'truecolor') as Theme['colorSupport'];
 
-  buttonPrimary: COLORS.white,
-  buttonSecondary: COLORS.black,
-  buttonBackground: COLORS.black,
-  inputBackground: COLORS.white,
-  inputForeground: COLORS.black,
-  inputBorder: COLORS.black,
+  // Build palette
+  const palette = {} as ColorPalette;
+  for (const key of PALETTE_KEYS) {
+    const cssName = `--${camelToKebab(key)}`;
+    const value = vars.get(cssName);
+    if (value === undefined) {
+      const src = sourcePath ? ` (${sourcePath})` : '';
+      logger.warn(`Theme CSS${src}: missing property ${cssName}`);
+      palette[key] = FALLBACK_COLOR;
+    } else {
+      palette[key] = cssToRgba(value.trim());
+    }
+  }
 
-  focusPrimary: COLORS.white,
-  focusBackground: COLORS.black,
+  return { type, mode, colorSupport, palette, source: sourcePath };
+}
 
-  textPrimary: COLORS.black,
-  textSecondary: COLORS.black,
-  textMuted: COLORS.black,
+// Built-in theme names
+const BUILTIN_THEME_NAMES = [
+  'bw-std', 'bw-dark', 'gray-std', 'gray-dark',
+  'color-std', 'color-dark', 'fullcolor-std', 'fullcolor-dark',
+] as const;
 
-  headerBackground: COLORS.white,
-  headerForeground: COLORS.black,
-  sidebarBackground: COLORS.white,
-  sidebarForeground: COLORS.black,
-  modalBackground: COLORS.white,
-  modalForeground: COLORS.black,
+// Theme registry — populated by initThemes() before first use
+let THEMES: Record<string, Theme> = {};
 
-  scrollbarThumb: COLORS.black,
-  scrollbarTrack: COLORS.gray,
-};
+/**
+ * Load all built-in themes from CSS files in themes/ directory.
+ * Uses fetch() with import.meta.url for portability.
+ */
+async function loadBuiltinThemes(): Promise<Record<string, Theme>> {
+  const themes: Record<string, Theme> = {};
+  for (const name of BUILTIN_THEME_NAMES) {
+    const url = new URL(`./themes/${name}.css`, import.meta.url);
+    logger.debug(`Loading theme CSS: ${url}`);
+    try {
+      const css = await (await fetch(url)).text();
+      themes[name] = buildThemeFromCSS(css, name);
+      logger.debug(`Loaded theme '${name}': type=${themes[name].type}, mode=${themes[name].mode}`);
+    } catch (e) {
+      logger.warn(`Failed to load built-in theme '${name}' from ${url}: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  return themes;
+}
 
-// Grayscale theme - uses basic terminal grays
-// Gray std is now the inverse (previously dark)
-const GRAY_STD_PALETTE: ColorPalette = {
-  primary: COLORS.black,
-  secondary: COLORS.gray,
-  background: COLORS.white,
-  foreground: COLORS.black,
-  surface: COLORS.gray,
-  border: COLORS.gray,
+/**
+ * Load a custom theme CSS file from the given path.
+ * Returns the Theme or null on failure.
+ */
+async function loadCustomTheme(path: string): Promise<Theme | null> {
+  try {
+    const resolved = path.startsWith('file://') ? path
+      : path.startsWith('/') ? `file://${path}`
+      : `file://${Deno.cwd()}/${path}`;
+    const css = await (await fetch(resolved)).text();
+    return buildThemeFromCSS(css, path);
+  } catch (e) {
+    logger.warn(`Failed to load custom theme '${path}': ${e instanceof Error ? e.message : e}`);
+    return null;
+  }
+}
 
-  success: COLORS.black,
-  warning: COLORS.gray,
-  error: COLORS.black,
-  info: COLORS.gray,
+/**
+ * Initialize the theme system by loading built-in CSS theme files
+ * and an optional custom theme from config.
+ * Must be called (and awaited) before any theme access.
+ * Safe to call multiple times — no-ops after first successful init.
+ */
+export async function initThemes(): Promise<void> {
+  if (Object.keys(THEMES).length > 0) {
+    logger.debug('initThemes: already initialized');
+    return;
+  }
+  logger.debug('initThemes: loading built-in themes...');
+  THEMES = await loadBuiltinThemes();
+  globalThemeManager = null; // Reset so next access picks up loaded themes
+  logger.info(`initThemes: loaded ${Object.keys(THEMES).length} themes`);
 
-  buttonPrimary: COLORS.white,
-  buttonSecondary: COLORS.gray,
-  buttonBackground: COLORS.black,
-  inputBackground: COLORS.gray,
-  inputForeground: COLORS.black,
-  inputBorder: COLORS.gray,
+  // Load custom theme file if configured
+  const config = MelkerConfig.get();
+  const themeFile = config.themeFile;
+  const themeValue = config.theme;
 
-  focusPrimary: COLORS.white,
-  focusBackground: COLORS.black,
+  logger.debug(`initThemes: themeFile=${themeFile}, theme=${themeValue}`);
 
-  textPrimary: COLORS.black,
-  textSecondary: COLORS.gray,
-  textMuted: COLORS.gray,
-
-  headerBackground: COLORS.gray,
-  headerForeground: COLORS.black,
-  sidebarBackground: COLORS.white,
-  sidebarForeground: COLORS.gray,
-  modalBackground: COLORS.gray,
-  modalForeground: COLORS.black,
-
-  scrollbarThumb: COLORS.black,
-  scrollbarTrack: COLORS.gray,
-};
-
-// Gray dark is now the original std palette
-const GRAY_DARK_PALETTE: ColorPalette = {
-  primary: COLORS.white,
-  secondary: COLORS.gray,
-  background: COLORS.black,
-  foreground: COLORS.white,
-  surface: COLORS.brightBlack,
-  border: COLORS.gray,
-
-  success: COLORS.white,
-  warning: COLORS.gray,
-  error: COLORS.white,
-  info: COLORS.gray,
-
-  buttonPrimary: COLORS.black,
-  buttonSecondary: COLORS.gray,
-  buttonBackground: COLORS.white,
-  inputBackground: COLORS.brightBlack,
-  inputForeground: COLORS.white,
-  inputBorder: COLORS.gray,
-
-  focusPrimary: COLORS.black,
-  focusBackground: COLORS.white,
-
-  textPrimary: COLORS.white,
-  textSecondary: COLORS.gray,
-  textMuted: COLORS.brightBlack,
-
-  headerBackground: COLORS.brightBlack,
-  headerForeground: COLORS.white,
-  sidebarBackground: COLORS.black,
-  sidebarForeground: COLORS.gray,
-  modalBackground: COLORS.brightBlack,
-  modalForeground: COLORS.white,
-
-  scrollbarThumb: COLORS.white,
-  scrollbarTrack: COLORS.brightBlack,
-};
-
-// Color theme - uses 16 basic ANSI colors
-const COLOR_STD_PALETTE: ColorPalette = {
-  primary: COLORS.brightBlue,
-  secondary: COLORS.brightCyan,
-  background: COLORS.white,
-  foreground: COLORS.black,
-  surface: COLORS.gray,
-  border: COLORS.brightBlack,
-
-  success: COLORS.brightGreen,
-  warning: COLORS.brightYellow,
-  error: COLORS.brightRed,
-  info: COLORS.brightCyan,
-
-  buttonPrimary: COLORS.black,
-  buttonSecondary: COLORS.brightCyan,
-  buttonBackground: COLORS.brightBlue,
-  inputBackground: COLORS.gray,
-  inputForeground: COLORS.black,
-  inputBorder: COLORS.brightCyan,
-
-  focusPrimary: COLORS.brightYellow,
-  focusBackground: COLORS.brightBlue,
-
-  textPrimary: COLORS.black,
-  textSecondary: COLORS.brightBlack,
-  textMuted: COLORS.gray,
-
-  headerBackground: COLORS.brightBlue,
-  headerForeground: COLORS.black,
-  sidebarBackground: COLORS.gray,
-  sidebarForeground: COLORS.brightCyan,
-  modalBackground: COLORS.brightBlue,
-  modalForeground: COLORS.black,
-
-  scrollbarThumb: COLORS.brightBlue,
-  scrollbarTrack: COLORS.gray,
-};
-
-const COLOR_DARK_PALETTE: ColorPalette = {
-  primary: COLORS.brightBlue,
-  secondary: COLORS.cyan,
-  background: COLORS.black,
-  foreground: COLORS.white,
-  surface: COLORS.brightBlack,
-  border: COLORS.white,
-
-  success: COLORS.green,
-  warning: COLORS.yellow,
-  error: COLORS.red,
-  info: COLORS.cyan,
-
-  buttonPrimary: COLORS.white,
-  buttonSecondary: COLORS.cyan,
-  buttonBackground: COLORS.blue,
-  inputBackground: COLORS.brightBlack,
-  inputForeground: COLORS.white,
-  inputBorder: COLORS.cyan,
-
-  focusPrimary: COLORS.yellow,
-  focusBackground: COLORS.blue,
-
-  textPrimary: COLORS.brightWhite,
-  textSecondary: COLORS.white,
-  textMuted: COLORS.gray,
-
-  headerBackground: COLORS.blue,
-  headerForeground: COLORS.white,
-  sidebarBackground: COLORS.brightBlack,
-  sidebarForeground: COLORS.cyan,
-  modalBackground: COLORS.blue,
-  modalForeground: COLORS.white,
-
-  scrollbarThumb: COLORS.cyan,
-  scrollbarTrack: COLORS.brightBlack,
-};
-
-// Full color theme - uses 256 colors and true color
-// Colors stored as packed RGBA (0xRRGGBBAA)
-const FULLCOLOR_STD_PALETTE: ColorPalette = {
-  primary: 0x60a5faFF,      // Blue-400
-  secondary: 0x22d3eeFF,    // Cyan-400
-  background: 0xFFFFFFFF,   // True white
-  foreground: 0x000000FF,   // True black
-  surface: 0xf3f4f6FF,      // Gray-100
-  border: 0x9ca3afFF,       // Gray-400
-
-  success: 0x34d399FF,      // Emerald-400
-  warning: 0xfbbf24FF,      // Amber-400
-  error: 0xf87171FF,        // Red-400
-  info: 0x60a5faFF,         // Blue-400
-
-  buttonPrimary: 0x000000FF,
-  buttonSecondary: 0x22d3eeFF,
-  buttonBackground: 0x60a5faFF,
-  inputBackground: 0xf9fafbFF,  // Gray-50
-  inputForeground: 0x111827FF,  // Gray-900
-  inputBorder: 0xd1d5dbFF,      // Gray-300
-
-  focusPrimary: 0xf59e0bFF,     // Amber-500
-  focusBackground: 0x3b82f6FF,  // Blue-500
-
-  textPrimary: 0x111827FF,      // Gray-900
-  textSecondary: 0x374151FF,    // Gray-700
-  textMuted: 0x9ca3afFF,        // Gray-400
-
-  headerBackground: 0x3b82f6FF, // Blue-500
-  headerForeground: 0xf9fafbFF, // Gray-50
-  sidebarBackground: 0xf3f4f6FF, // Gray-100
-  sidebarForeground: 0x374151FF, // Gray-700
-  modalBackground: 0x2563ebFF,   // Blue-600
-  modalForeground: 0xf9fafbFF,   // Gray-50
-
-  scrollbarThumb: 0x60a5faFF,    // Blue-400
-  scrollbarTrack: 0xe5e7ebFF,    // Gray-200
-};
-
-const FULLCOLOR_DARK_PALETTE: ColorPalette = {
-  primary: 0x3b82f6FF,      // Blue-500
-  secondary: 0x06b6d4FF,    // Cyan-500
-  background: 0x000000FF,   // True black
-  foreground: 0xFFFFFFFF,   // True white
-  surface: 0x1f2937FF,      // Gray-800
-  border: 0x6b7280FF,       // Gray-500
-
-  success: 0x10b981FF,      // Emerald-500
-  warning: 0xf59e0bFF,      // Amber-500
-  error: 0xef4444FF,        // Red-500
-  info: 0x3b82f6FF,         // Blue-500
-
-  buttonPrimary: 0xFFFFFFFF,
-  buttonSecondary: 0x06b6d4FF,
-  buttonBackground: 0x3b82f6FF,
-  inputBackground: 0x111827FF,  // Gray-900
-  inputForeground: 0xf9fafbFF,  // Gray-50
-  inputBorder: 0x374151FF,      // Gray-700
-
-  focusPrimary: 0xfbbf24FF,     // Amber-400
-  focusBackground: 0x1e40afFF,  // Blue-800
-
-  textPrimary: 0xf9fafbFF,      // Gray-50
-  textSecondary: 0xd1d5dbFF,    // Gray-300
-  textMuted: 0x6b7280FF,        // Gray-500
-
-  headerBackground: 0x1e40afFF, // Blue-800
-  headerForeground: 0xf9fafbFF, // Gray-50
-  sidebarBackground: 0x1f2937FF, // Gray-800
-  sidebarForeground: 0xd1d5dbFF, // Gray-300
-  modalBackground: 0x1e3a8aFF,   // Blue-900
-  modalForeground: 0xf9fafbFF,   // Gray-50
-
-  scrollbarThumb: 0x3b82f6FF,    // Blue-500
-  scrollbarTrack: 0x374151FF,    // Gray-700
-};
-
-// Theme definitions
-export const THEMES: Record<string, Theme> = {
-  'bw-std': {
-    type: 'bw',
-    mode: 'std',
-    colorSupport: 'none',
-    palette: BW_STD_PALETTE,
-  },
-  'bw-dark': {
-    type: 'bw',
-    mode: 'dark',
-    colorSupport: 'none',
-    palette: BW_DARK_PALETTE,
-  },
-  'gray-std': {
-    type: 'gray',
-    mode: 'std',
-    colorSupport: '16',
-    palette: GRAY_STD_PALETTE,
-  },
-  'gray-dark': {
-    type: 'gray',
-    mode: 'dark',
-    colorSupport: '16',
-    palette: GRAY_DARK_PALETTE,
-  },
-  'color-std': {
-    type: 'color',
-    mode: 'std',
-    colorSupport: '256',
-    palette: COLOR_STD_PALETTE,
-  },
-  'color-dark': {
-    type: 'color',
-    mode: 'dark',
-    colorSupport: '256',
-    palette: COLOR_DARK_PALETTE,
-  },
-  'fullcolor-std': {
-    type: 'fullcolor',
-    mode: 'std',
-    colorSupport: 'truecolor',
-    palette: FULLCOLOR_STD_PALETTE,
-  },
-  'fullcolor-dark': {
-    type: 'fullcolor',
-    mode: 'dark',
-    colorSupport: 'truecolor',
-    palette: FULLCOLOR_DARK_PALETTE,
-  },
-};
+  // theme.file config or theme value ending in .css
+  const customPath = themeFile || (themeValue?.endsWith('.css') ? themeValue : undefined);
+  if (customPath) {
+    logger.debug(`initThemes: loading custom theme from '${customPath}'`);
+    const custom = await loadCustomTheme(customPath);
+    if (custom) {
+      THEMES['custom'] = custom;
+      logger.info(`initThemes: loaded custom theme (type=${custom.type}, mode=${custom.mode})`);
+    }
+  }
+}
 
 // Terminal capability detection for auto theme selection
 
@@ -545,11 +330,13 @@ export function colorToLowContrast(color: PackedRGBA, isDark: boolean): PackedRG
 export class ThemeManager {
   private _currentTheme: Theme;
   private _envTheme: string | null = null;
+  private _colorOverrides: Partial<Record<keyof ColorPalette, PackedRGBA>> = {};
 
   constructor() {
     this._envTheme = this._parseThemeFromEnv();
     // Default to auto-detection when no theme is specified
     const themeName = this._envTheme || detectTheme();
+    logger.debug(`ThemeManager: selected theme '${themeName}'`);
     this._currentTheme = this._getThemeByName(themeName);
   }
 
@@ -565,8 +352,14 @@ export class ThemeManager {
     // Check theme from config (file config, policy, CLI, or env var override)
     // Format: "type-mode" (e.g., "color-dark", "bw-std", "fullcolor-dark")
     // Special values: "auto" (detect capabilities + light/dark), "auto-dark" (detect capabilities, force dark)
-    const configTheme = MelkerConfig.get().theme;
+    const config = MelkerConfig.get();
 
+    // Custom theme file takes priority
+    if (config.themeFile || config.theme?.endsWith('.css')) {
+      if (THEMES['custom']) return 'custom';
+    }
+
+    const configTheme = config.theme;
     const normalized = configTheme.toLowerCase().trim();
 
     // Handle auto-detection themes
@@ -597,16 +390,24 @@ export class ThemeManager {
   }
 
   private _getThemeByName(name: string): Theme {
+    if (Object.keys(THEMES).length === 0) {
+      logger.debug('Theme: initThemes() not yet called, using fallback');
+      return FALLBACK_THEME;
+    }
     const theme = THEMES[name];
     if (!theme) {
       logger.warn(`Theme '${name}' not found. Using 'bw-std'`);
-      return THEMES['bw-std'];
+      return THEMES['bw-std'] ?? FALLBACK_THEME;
     }
     return theme;
   }
 
   getCurrentTheme(): Theme {
     return this._currentTheme;
+  }
+
+  getCurrentThemeName(): string {
+    return this._envTheme || `${this._currentTheme.type}-${this._currentTheme.mode}`;
   }
 
   setTheme(themeName: string): void {
@@ -635,9 +436,13 @@ export class ThemeManager {
     return this._currentTheme.type;
   }
 
-  // Get themed colors
+  // Get themed colors (CSS variable overrides take priority over palette)
   getColor(colorName: keyof ColorPalette): PackedRGBA {
-    return this._currentTheme.palette[colorName];
+    return this._colorOverrides[colorName] ?? this._currentTheme.palette[colorName];
+  }
+
+  setColorOverrides(overrides: Partial<Record<keyof ColorPalette, PackedRGBA>>): void {
+    this._colorOverrides = overrides;
   }
 
   // Apply theme to style object

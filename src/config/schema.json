@@ -9,6 +9,12 @@
       "flag": "--theme",
       "description": "Color theme"
     },
+    "theme.file": {
+      "type": "string",
+      "env": "MELKER_THEME_FILE",
+      "flag": "--theme-file",
+      "description": "Path to custom theme CSS file (overrides theme selection)"
+    },
     "log.level": {
       "type": "string",
       "enum": ["TRACE", "DEBUG", "INFO", "WARN", "ERROR"],

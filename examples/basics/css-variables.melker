@@ -1,0 +1,171 @@
+<melker>
+<policy>
+{
+  "name": "CSS Variables Demo",
+  "description": "Demonstrates CSS custom properties (variables) with theme integration",
+  "permissions": {}
+}
+</policy>
+
+<style>
+/* Define design tokens in :root */
+:root {
+  --accent: #3B82F6;
+  --gap-sm: 1;
+  --gap-lg: 3;
+  --border-style: thin;
+  --card-width: 30;
+  --card-direction: row;
+}
+
+/* Responsive overrides */
+@media (max-width: 80) {
+  :root {
+    --card-width: fill;
+    --gap-lg: 1;
+    --border-style: double;
+    --card-direction: column;
+    }
+}
+
+/* Use variables in rules */
+.section {
+  padding: var(--gap-sm);
+  margin-bottom: 1;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 1;
+}
+
+.card-row {
+  flex-direction: var(--card-direction);
+  gap: var(--gap-lg);
+}
+
+.card {
+  border: var(--border-style);
+  padding: var(--gap-sm);
+  width: var(--card-width);
+}
+
+.card-title {
+  font-weight: bold;
+  color: var(--accent);
+}
+
+/* Theme color access via --theme-* variables */
+.themed {
+  border: single;
+  padding: 1;
+}
+
+.themed-header {
+  font-weight: bold;
+  color: var(--theme-header-foreground);
+  background: var(--theme-header-background);
+}
+
+.themed-success {
+  color: var(--theme-success);
+}
+
+.themed-error {
+  color: var(--theme-error);
+}
+
+.themed-warning {
+  color: var(--theme-warning);
+}
+
+/* Aliasing: map custom token to theme color */
+:root {
+  --brand: var(--theme-primary);
+  --subtle: var(--theme-text-muted);
+}
+
+.brand-text {
+  color: var(--brand);
+  font-weight: bold;
+}
+
+.subtle-text {
+  color: var(--subtle);
+}
+
+/* Fallback chains */
+.fallback-demo {
+  border: thin;
+  padding: 1;
+}
+
+.fallback-hit {
+  color: var(--missing, var(--theme-info));
+}
+</style>
+
+<container style="overflow: scroll; padding: 1; height: fill">
+  <text style="font-weight: bold; margin-bottom: 1">CSS Variables Examples</text>
+
+  <!-- Design tokens -->
+  <container class="section">
+    <text class="section-title">Design Tokens in :root</text>
+    <text>Variables defined in :root apply across all rules</text>
+    <container class="card-row">
+      <container class="card">
+        <text class="card-title">Card One</text>
+        <text>--accent colors the title</text>
+        <text>--border-style sets the border</text>
+      </container>
+      <container class="card">
+        <text class="card-title">Card Two</text>
+        <text>--card-width sets width</text>
+        <text>--gap-sm sets padding</text>
+      </container>
+    </container>
+  </container>
+
+  <!-- Theme integration -->
+  <container class="section">
+    <text class="section-title">Theme Color Access</text>
+    <text>30 --theme-* variables are auto-populated from the palette</text>
+    <container class="themed">
+      <text class="themed-header"> Header (--theme-header-*) </text>
+      <text class="themed-success">Success message (--theme-success)</text>
+      <text class="themed-error">Error message (--theme-error)</text>
+      <text class="themed-warning">Warning message (--theme-warning)</text>
+    </container>
+  </container>
+
+  <!-- Aliasing -->
+  <container class="section">
+    <text class="section-title">Aliasing Theme Colors</text>
+    <text>Map custom tokens to theme colors: --brand: var(--theme-primary)</text>
+    <container style="flex-direction: row; gap: 2">
+      <text class="brand-text">Brand text</text>
+      <text class="subtle-text">Subtle text (--theme-text-muted)</text>
+    </container>
+  </container>
+
+  <!-- Fallback chains -->
+  <container class="section">
+    <text class="section-title">Fallback Chains</text>
+    <container class="fallback-demo">
+      <text class="fallback-hit">var(--missing, var(--theme-info)) resolves to theme info color</text>
+      <text>Nested fallbacks chain until a value is found</text>
+    </container>
+  </container>
+
+  <!-- Responsive variables -->
+  <container class="section">
+    <text class="section-title">Responsive Variables</text>
+    <text>Resize terminal below 80 cols: cards become full-width, gap shrinks</text>
+    <text class="subtle-text">@media (max-width: 80) { :root { --card-width: fill; --gap-lg: 1 } }</text>
+  </container>
+
+  <container style="flex-direction: row; gap: 2; margin-top: 1">
+    <button label="Exit" onClick="$melker.exit()" />
+  </container>
+</container>
+</melker>

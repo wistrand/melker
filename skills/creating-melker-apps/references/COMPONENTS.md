@@ -1411,7 +1411,7 @@ Renders as: `┌─ Settings ─┐`
 ### Colors
 **Avoid specifying colors** - Let the theme engine handle colors for best appearance across themes.
 
-Only use colors for canvas drawing or very intentional effects. If needed, use named colors: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `gray`
+Only use colors for canvas drawing or very intentional effects. Supported formats: named colors (`black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `gray`, etc.), hex (`#rrggbb`), `rgb()`, `hsl()`, `oklch()`, `oklab()`
 
 ### Size Values
 - Numbers: `40` (columns/rows)

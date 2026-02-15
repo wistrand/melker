@@ -209,7 +209,4 @@ Adapt layout to ultra-wide, standard, and narrow terminals:
 
 - [container-query-architecture.md](container-query-architecture.md) — `@container` queries (style children based on container size, not terminal size)
 - [css-animation-architecture.md](css-animation-architecture.md) — CSS `@keyframes` animations
-
-## Future Enhancements
-
-- Custom properties/CSS variables with media-dependent values
+- [css-variables-architecture.md](css-variables-architecture.md) — CSS custom properties with media-dependent values via `:root` inside `@media`

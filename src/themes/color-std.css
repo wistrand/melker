@@ -1,0 +1,42 @@
+/* Color Standard — 16 ANSI colors, light background */
+:root {
+  --theme-type: color;
+  --theme-mode: std;
+  --theme-color-support: 256;
+
+  --primary: #5555ff;
+  --secondary: #55ffff;
+  --background: white;
+  --foreground: black;
+  --surface: gray;
+  --border: gray;
+
+  --success: #55ff55;
+  --warning: #ffff55;
+  --error: #ff5555;
+  --info: #55ffff;
+
+  --button-primary: black;
+  --button-secondary: #55ffff;
+  --button-background: #5555ff;
+  --input-background: gray;
+  --input-foreground: black;
+  --input-border: #55ffff;
+
+  --focus-primary: #ffff55;
+  --focus-background: #5555ff;
+
+  --text-primary: black;
+  --text-secondary: gray;
+  --text-muted: gray;
+
+  --header-background: #5555ff;
+  --header-foreground: black;
+  --sidebar-background: gray;
+  --sidebar-foreground: #55ffff;
+  --modal-background: #5555ff;
+  --modal-foreground: black;
+
+  --scrollbar-thumb: #5555ff;
+  --scrollbar-track: gray;
+}

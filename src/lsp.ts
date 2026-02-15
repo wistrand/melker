@@ -512,43 +512,81 @@ function validateStyleSelector(
   selectorStart: number,
   diagnostics: Diagnostic[]
 ): void {
-  // Parse selector parts: #id, .class, type, or compound like button.primary
   const trimmed = selector.trim();
   if (!trimmed) return;
 
   // Skip at-rules (@media, @container, @keyframes) — not element selectors
   if (trimmed.startsWith('@')) return;
 
-  // Extract type selector if present (not starting with # or .)
-  let remaining = trimmed;
-
-  if (remaining.startsWith('#')) {
-    // ID selector - skip validation (any ID is valid)
-    const idMatch = remaining.match(/^#([^.]+)/);
-    if (idMatch) {
-      remaining = remaining.slice(idMatch[0].length);
-    }
-  } else if (!remaining.startsWith('.')) {
-    // Type selector - validate against registered components
-    const typeMatch = remaining.match(/^([^.]+)/);
-    if (typeMatch) {
-      const typeName = typeMatch[1];
-      const schema = getComponentSchema(typeName);
-      const registeredComponents = getRegisteredComponents();
-
-      if (!schema && registeredComponents.length > 0) {
-        diagnostics.push({
-          range: createRange(text, selectorStart, selectorStart + typeName.length),
-          severity: DiagnosticSeverity.Warning,
-          message: `Unknown element type "${typeName}" in selector`,
-          source: 'melker',
-        });
+  // Handle comma-separated selectors (validate each independently)
+  if (trimmed.includes(',')) {
+    let offset = 0;
+    for (const part of trimmed.split(',')) {
+      const partTrimmed = part.trim();
+      if (partTrimmed) {
+        const partStart = trimmed.indexOf(part, offset);
+        validateStyleSelector(text, partTrimmed, selectorStart + partStart, diagnostics);
       }
-      remaining = remaining.slice(typeMatch[0].length);
+      offset += part.length + 1;
     }
+    return;
   }
 
-  // Class selectors (.class1.class2) - no validation needed, any class name is valid
+  // Split by combinators (child >, descendant space) and validate each compound selector
+  // Split on ' > ' or lone spaces (not inside pseudo-classes)
+  const parts = trimmed.split(/\s*>\s*|\s+/).filter(p => p.length > 0);
+
+  for (const part of parts) {
+    validateCompoundSelector(text, part, selectorStart + trimmed.indexOf(part), diagnostics);
+  }
+}
+
+// Validate a single compound selector (e.g., "button.primary:hover", ":root", "&.active")
+function validateCompoundSelector(
+  text: string,
+  selector: string,
+  selectorStart: number,
+  diagnostics: Diagnostic[]
+): void {
+  if (!selector) return;
+
+  // Skip & (nested selector reference)
+  if (selector.startsWith('&')) return;
+
+  // Skip * (universal selector) — may have pseudo/class appended like *:hover
+  if (selector.startsWith('*')) return;
+
+  // Strip pseudo-classes (:focus, :hover, :root) before validating
+  const pseudoStripped = selector.replace(/:(root|focus|hover|active|disabled|first-child|last-child)\b/g, '');
+  if (!pseudoStripped) return; // Was purely a pseudo-class like :root
+
+  // Extract parts: #id, .class, type
+  let remaining = pseudoStripped;
+
+  if (remaining.startsWith('#')) {
+    // ID selector — any ID is valid
+    return;
+  } else if (remaining.startsWith('.')) {
+    // Class selector — any class name is valid
+    return;
+  }
+
+  // Type selector — validate against registered components
+  const typeMatch = remaining.match(/^([a-zA-Z][\w-]*)/);
+  if (typeMatch) {
+    const typeName = typeMatch[1];
+    const schema = getComponentSchema(typeName);
+    const registeredComponents = getRegisteredComponents();
+
+    if (!schema && registeredComponents.length > 0) {
+      diagnostics.push({
+        range: createRange(text, selectorStart, selectorStart + typeName.length),
+        severity: DiagnosticSeverity.Warning,
+        message: `Unknown element type "${typeName}" in selector`,
+        source: 'melker',
+      });
+    }
+  }
 }
 
 // Validate properties in a style block
@@ -575,6 +613,12 @@ function validateStyleBlockProperties(
     const keyPart = property.substring(0, colonIndex).trim();
     const valuePart = property.substring(colonIndex + 1).trim();
 
+    // Skip CSS custom property declarations (--*)
+    if (keyPart.startsWith('--')) {
+      currentOffset = propOffset + property.length;
+      continue;
+    }
+
     // Convert kebab-case to camelCase for lookup
     const camelKey = keyPart.replace(/-([a-z])/g, (_m, letter) => letter.toUpperCase());
 
@@ -590,15 +634,17 @@ function validateStyleBlockProperties(
         source: 'melker',
       });
     } else if (schema.enum && valuePart) {
-      // Validate enum values
-      if (!schema.enum.includes(valuePart)) {
-        const valueStart = propsStart + propOffset + colonIndex + 1 + property.substring(colonIndex + 1).indexOf(valuePart);
-        diagnostics.push({
-          range: createRange(text, valueStart, valueStart + valuePart.length),
-          severity: DiagnosticSeverity.Warning,
-          message: `Invalid value "${valuePart}" for style "${keyPart}". Valid values: ${schema.enum.join(', ')}`,
-          source: 'melker',
-        });
+      // Skip enum validation for var() references (resolved at runtime)
+      if (!valuePart.startsWith('var(')) {
+        if (!schema.enum.includes(valuePart)) {
+          const valueStart = propsStart + propOffset + colonIndex + 1 + property.substring(colonIndex + 1).indexOf(valuePart);
+          diagnostics.push({
+            range: createRange(text, valueStart, valueStart + valuePart.length),
+            severity: DiagnosticSeverity.Warning,
+            message: `Invalid value "${valuePart}" for style "${keyPart}". Valid values: ${schema.enum.join(', ')}`,
+            source: 'melker',
+          });
+        }
       }
     }
 
@@ -622,6 +668,9 @@ function validateStyleAttribute(
   for (const prop of properties) {
     const schema = allStyles[prop.name];
 
+    // Skip CSS custom property declarations (--*)
+    if (prop.name.startsWith('--')) continue;
+
     if (!schema) {
       // Unknown style property
       diagnostics.push({
@@ -631,14 +680,16 @@ function validateStyleAttribute(
         source: 'melker',
       });
     } else if (schema.enum && prop.value) {
-      // Validate enum values
-      if (!schema.enum.includes(prop.value)) {
-        diagnostics.push({
-          range: createRange(text, prop.valueStart, prop.valueEnd),
-          severity: DiagnosticSeverity.Warning,
-          message: `Invalid value "${prop.value}" for style "${prop.name}". Valid values: ${schema.enum.join(', ')}`,
-          source: 'melker',
-        });
+      // Skip enum validation for var() references (resolved at runtime)
+      if (!prop.value.startsWith('var(')) {
+        if (!schema.enum.includes(prop.value)) {
+          diagnostics.push({
+            range: createRange(text, prop.valueStart, prop.valueEnd),
+            severity: DiagnosticSeverity.Warning,
+            message: `Invalid value "${prop.value}" for style "${prop.name}". Valid values: ${schema.enum.join(', ')}`,
+            source: 'melker',
+          });
+        }
       }
     }
   }
@@ -1004,6 +1055,24 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
             const styleSchema = allStyles[styleProp];
             const partialValue = styleContext[2].trim();
 
+            // Always offer var() as a value option
+            if (!partialValue || 'var('.startsWith(partialValue.toLowerCase())) {
+              const partialStartChar = position.character - partialValue.length;
+              completions.push({
+                label: 'var()',
+                kind: CompletionItemKind.Function,
+                detail: 'CSS variable reference',
+                textEdit: {
+                  range: {
+                    start: { line: position.line, character: partialStartChar },
+                    end: position,
+                  },
+                  newText: 'var(--${1:name})',
+                },
+                sortText: '1var',
+              });
+            }
+
             if (styleSchema?.enum) {
               const kebabProp = toKebabCase(styleProp);
 
@@ -1031,6 +1100,7 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
               }
               return completions;
             }
+            return completions;
           } else {
             // Completing a style property name
             // Find existing properties to avoid duplicates
@@ -1220,6 +1290,15 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       const camelProp = propName.replace(/-([a-z])/g, (_m, l) => l.toUpperCase());
       const schema = BASE_STYLES_SCHEMA[camelProp];
 
+      // Always offer var() as a value option
+      completions.push({
+        label: 'var()',
+        kind: CompletionItemKind.Function,
+        detail: 'CSS variable reference',
+        insertText: 'var(--${1:name})',
+        sortText: '0var',
+      });
+
       if (schema?.enum) {
         for (const value of schema.enum) {
           completions.push({
@@ -1231,6 +1310,7 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
         }
         return completions;
       }
+      return completions;
     }
 
     // Completing property name (after { or ;)
@@ -1253,6 +1333,15 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
         });
       }
     }
+
+    // Add custom property declaration snippet
+    completions.push({
+      label: '--',
+      kind: CompletionItemKind.Snippet,
+      detail: 'Custom property (CSS variable)',
+      insertText: '--${1:name}: ${2:value}',
+      sortText: '1--',
+    });
   } else {
     // Outside property block - completing selectors
     // Add element type selectors
@@ -1283,6 +1372,40 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       detail: 'Class selector',
       insertText: '.',
       sortText: '0.',
+    });
+
+    // Add :root selector for CSS variables
+    completions.push({
+      label: ':root',
+      kind: CompletionItemKind.Snippet,
+      detail: 'Root scope for CSS custom properties',
+      insertText: ':root {\n  --${1:name}: ${2:value};\n}',
+      sortText: '0:root',
+    });
+
+    // Add universal selector
+    completions.push({
+      label: '*',
+      kind: CompletionItemKind.Snippet,
+      detail: 'Universal selector (all elements)',
+      insertText: '* {\n  \n}',
+      sortText: '0*',
+    });
+
+    // Add pseudo-class selectors
+    completions.push({
+      label: ':focus',
+      kind: CompletionItemKind.Keyword,
+      detail: 'Matches focused element',
+      insertText: ':focus',
+      sortText: '0:focus',
+    });
+    completions.push({
+      label: ':hover',
+      kind: CompletionItemKind.Keyword,
+      detail: 'Matches hovered element',
+      insertText: ':hover',
+      sortText: '0:hover',
     });
 
     // Add at-rule snippets
@@ -1423,7 +1546,7 @@ export async function startLspServer(): Promise<void> {
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Full,
         completionProvider: {
-          triggerCharacters: ['<', ' ', '=', '"', "'"],
+          triggerCharacters: ['<', ' ', '=', '"', "'", ':', ';', '{'],
         },
         hoverProvider: true,
         semanticTokensProvider: {

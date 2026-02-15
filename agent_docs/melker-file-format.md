@@ -404,7 +404,7 @@ CSS-like properties in `style` attribute:
 
 - **Layout:** width, height, min-width, max-width, min-height, max-height, display (flex/block), flex-direction, flex, padding, margin, overflow
 - **Borders:** border (none/thin/thick/double/rounded/dashed/dashed-rounded/ascii/ascii-rounded/block), border-top/right/bottom/left, border-color, border-title
-- **Colors:** color, background-color (names or hex like `#00d9ff`)
+- **Colors:** color, background-color — supports hex (`#rgb`, `#rrggbb`, `#rrggbbaa`), `rgb()`, `rgba()`, `hsl()`, `hsla()`, `oklch()`, `oklab()`, and named colors
 - **Text:** font-weight (bold/normal), font-style (normal/italic), text-decoration (none/underline), dim, reverse, text-align, text-wrap
 
 **CSS shorthand for padding/margin:** Supports 2, 3, or 4 value shorthand like CSS:

@@ -1,0 +1,52 @@
+/*
+ * Melker Theme: Full Color Dark — truecolor, dark background
+ *
+ * Custom themes: copy this file, edit the colors, and load with:
+ *   MELKER_THEME_FILE=./my-theme.css melker app.melker
+ *   melker --theme-file ./my-theme.css app.melker
+ *
+ * Metadata (--theme-type, --theme-mode, --theme-color-support) controls
+ * color capabilities. All 30 color properties are required.
+ * Values: CSS named colors (white, red, cyan) or hex (#3b82f6).
+ */
+:root {
+  --theme-type: fullcolor;
+  --theme-mode: dark;
+  --theme-color-support: truecolor;
+
+  --primary: #3b82f6;
+  --secondary: #06b6d4;
+  --background: black;
+  --foreground: white;
+  --surface: #1f2937;
+  --border: #6b7280;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+
+  --button-primary: white;
+  --button-secondary: #06b6d4;
+  --button-background: #3b82f6;
+  --input-background: #111827;
+  --input-foreground: #f9fafb;
+  --input-border: #374151;
+
+  --focus-primary: #fbbf24;
+  --focus-background: #1e40af;
+
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #6b7280;
+
+  --header-background: #1e40af;
+  --header-foreground: #f9fafb;
+  --sidebar-background: #1f2937;
+  --sidebar-foreground: #d1d5db;
+  --modal-background: #1e3a8a;
+  --modal-foreground: #f9fafb;
+
+  --scrollbar-thumb: #3b82f6;
+  --scrollbar-track: #374151;
+}

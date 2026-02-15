@@ -1,0 +1,42 @@
+/* Grayscale Standard — light background with grays */
+:root {
+  --theme-type: gray;
+  --theme-mode: std;
+  --theme-color-support: 16;
+
+  --primary: black;
+  --secondary: gray;
+  --background: white;
+  --foreground: black;
+  --surface: gray;
+  --border: gray;
+
+  --success: black;
+  --warning: gray;
+  --error: black;
+  --info: gray;
+
+  --button-primary: white;
+  --button-secondary: gray;
+  --button-background: black;
+  --input-background: gray;
+  --input-foreground: black;
+  --input-border: gray;
+
+  --focus-primary: white;
+  --focus-background: black;
+
+  --text-primary: black;
+  --text-secondary: gray;
+  --text-muted: gray;
+
+  --header-background: gray;
+  --header-foreground: black;
+  --sidebar-background: white;
+  --sidebar-foreground: gray;
+  --modal-background: gray;
+  --modal-foreground: black;
+
+  --scrollbar-thumb: black;
+  --scrollbar-track: gray;
+}

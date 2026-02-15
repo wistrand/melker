@@ -282,3 +282,9 @@ See [`examples/basics/pseudo-classes.melker`](../examples/basics/pseudo-classes.
 - **No `transition: none`**: No reset mechanism to disable inherited transitions
 - **No `transitionend` event dispatch**: The event type is defined but not fired yet
 - **Integer rounding for layout properties**: Terminal cells are discrete, so padding/margin transitions appear stepped (e.g., padding 1-4 has only 3 visible steps)
+
+## Related Docs
+
+- [css-variables-architecture.md](css-variables-architecture.md) — CSS custom properties (`var()` works in `transition` shorthands)
+- [css-animation-architecture.md](css-animation-architecture.md) — `@keyframes` animations, specificity, style cascade
+- [architecture-media-queries.md](architecture-media-queries.md) — `@media` queries

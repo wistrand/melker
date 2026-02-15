@@ -12,6 +12,7 @@ import { isLintEnabled, validateElementProps, addWarning, reportWarnings, clearW
 interface TemplateContext {
   expressions: any[];
   expressionIndex: number;
+  cssVariables?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -298,7 +299,7 @@ export function parseMelkerFile(content: string): MelkerParseResult {
       }
 
       // Convert the UI element to Element using existing parsing logic
-      const context: TemplateContext = { expressions: [], expressionIndex: 0 };
+      const context: TemplateContext = { expressions: [], expressionIndex: 0, cssVariables: stylesheet?.variables };
       const parsedNode = convertAstNode(uiElement, context);
       const element = convertToElement(parsedNode as ParsedNode, context);
 
@@ -584,7 +585,7 @@ function parseAttributeValue(value: string, context: TemplateContext, attributeN
 
   // Handle style attribute with CSS-style string parsing
   if (attributeName === 'style' && !value.startsWith('{') && value.includes(':')) {
-    return parseStyleProperties(value);
+    return parseStyleProperties(value, context.cssVariables as Map<string, string> | undefined);
   }
 
   // Handle event handler attributes (onClick, onInput, etc.) as string functions

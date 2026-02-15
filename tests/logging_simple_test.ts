@@ -117,13 +117,15 @@ Deno.test('Log Level Filtering', async () => {
 
 Deno.test('getLogger() should automatically set source', async () => {
   await cleanupTestLogs();
+  await Deno.mkdir(testLogDir, { recursive: true });
 
-  const logger = getLogger('TestComponent');
+  const logFile = `${testLogDir}/source-test.log`;
+  const logger = createLogger({ logFile });
 
-  logger.info('Test message from component logger');
+  logger.info('Test message from component logger', undefined, 'TestComponent');
   logger.flush();
 
-  const logContent = await readLogFile(`./logs/melker.log`);
+  const logContent = await readLogFile(logFile);
 
   assertStringIncludes(logContent, 'TestComponent');
   assertStringIncludes(logContent, 'Test message from component logger');

@@ -11,6 +11,9 @@ import {
   DiagnosticSeverity,
   MarkupKind,
   SemanticTokensBuilder,
+  SymbolKind,
+  CodeActionKind,
+  InsertTextFormat,
   type InitializeParams,
   type InitializeResult,
   type TextDocumentPositionParams,
@@ -20,9 +23,23 @@ import {
   type Range,
   type Position,
   type SemanticTokensParams,
+  type DocumentSymbol,
+  type FoldingRange,
+  type CodeAction,
+  type CodeActionParams,
+  type Definition,
+  type Location,
+  type DocumentLink,
+  type LinkedEditingRanges,
+  type Color,
+  type ColorInformation,
+  type ColorPresentation,
+  type DocumentColorParams,
 } from 'npm:vscode-languageserver@9.0.1/node.js';
 import { TextDocument } from 'npm:vscode-languageserver-textdocument@1.0.12';
 import { parseHtml as parse } from './deps.ts';
+import { cssToRgba, unpackRGBA } from './components/color-utils.ts';
+import type { PackedRGBA } from './types.ts';
 
 // Import lint schemas
 import {
@@ -40,6 +57,41 @@ import { getLogger } from './logging.ts';
 import '../mod.ts';
 
 const logger = getLogger('LSP');
+
+// Theme CSS variable names available for :root overrides (29 palette keys)
+const THEME_VAR_NAMES = [
+  '--theme-primary', '--theme-secondary', '--theme-background', '--theme-foreground',
+  '--theme-surface', '--theme-border',
+  '--theme-success', '--theme-warning', '--theme-error', '--theme-info',
+  '--theme-button-primary', '--theme-button-secondary', '--theme-button-background',
+  '--theme-input-background', '--theme-input-foreground', '--theme-input-border',
+  '--theme-focus-primary', '--theme-focus-background',
+  '--theme-text-primary', '--theme-text-secondary', '--theme-text-muted',
+  '--theme-header-background', '--theme-header-foreground',
+  '--theme-sidebar-background', '--theme-sidebar-foreground',
+  '--theme-modal-background', '--theme-modal-foreground',
+  '--theme-scrollbar-thumb', '--theme-scrollbar-track',
+];
+
+// Named colors supported by Melker's cssToRgba()
+const NAMED_COLORS = [
+  'black', 'white', 'red', 'green', 'blue', 'yellow',
+  'cyan', 'magenta', 'orange', 'purple', 'pink', 'lime',
+  'gray', 'grey', 'transparent',
+];
+
+// Color format snippet completions
+const COLOR_FORMAT_SNIPPETS: Array<{ label: string; insert: string; detail: string }> = [
+  { label: '#rrggbb',          insert: '#${1:000000}',                       detail: 'Hex color' },
+  { label: '#rgb',             insert: '#${1:000}',                          detail: 'Hex color (shorthand)' },
+  { label: '#rrggbbaa',        insert: '#${1:000000}${2:ff}',                detail: 'Hex color with alpha' },
+  { label: 'rgb(r, g, b)',     insert: 'rgb(${1:0}, ${2:0}, ${3:0})',        detail: 'RGB color (0-255)' },
+  { label: 'rgba(r, g, b, a)', insert: 'rgba(${1:0}, ${2:0}, ${3:0}, ${4:1})', detail: 'RGBA color with alpha (0-1)' },
+  { label: 'hsl(h, s%, l%)',   insert: 'hsl(${1:0}, ${2:50}%, ${3:50}%)',    detail: 'HSL color' },
+  { label: 'hsla(h, s%, l%, a)', insert: 'hsla(${1:0}, ${2:50}%, ${3:50}%, ${4:1})', detail: 'HSLA color with alpha' },
+  { label: 'oklch(L C H)',     insert: 'oklch(${1:0.5} ${2:0.1} ${3:180})',  detail: 'OKLCH perceptual color' },
+  { label: 'oklab(L a b)',     insert: 'oklab(${1:0.5} ${2:0} ${3:0})',      detail: 'OKLAB perceptual color' },
+];
 
 // AST node types from html5parser
 interface AstAttribute {
@@ -632,6 +684,7 @@ function validateStyleBlockProperties(
         severity: DiagnosticSeverity.Warning,
         message: `Unknown style property "${keyPart}"`,
         source: 'melker',
+        code: 'unknown-style',
       });
     } else if (schema.enum && valuePart) {
       // Skip enum validation for var() references (resolved at runtime)
@@ -643,6 +696,7 @@ function validateStyleBlockProperties(
             severity: DiagnosticSeverity.Warning,
             message: `Invalid value "${valuePart}" for style "${keyPart}". Valid values: ${schema.enum.join(', ')}`,
             source: 'melker',
+            code: 'invalid-enum-value',
           });
         }
       }
@@ -678,6 +732,7 @@ function validateStyleAttribute(
         severity: DiagnosticSeverity.Warning,
         message: `Unknown style property "${prop.name}" on <${elementName}>`,
         source: 'melker',
+        code: 'unknown-style',
       });
     } else if (schema.enum && prop.value) {
       // Skip enum validation for var() references (resolved at runtime)
@@ -688,6 +743,7 @@ function validateStyleAttribute(
             severity: DiagnosticSeverity.Warning,
             message: `Invalid value "${prop.value}" for style "${prop.name}". Valid values: ${schema.enum.join(', ')}`,
             source: 'melker',
+            code: 'invalid-enum-value',
           });
         }
       }
@@ -809,6 +865,7 @@ function validateDocument(text: string): Diagnostic[] {
                 severity: DiagnosticSeverity.Warning,
                 message: `"${propName}" is a style property. Use style="${kebabName}: ..." instead`,
                 source: 'melker',
+                code: 'style-as-prop',
               });
               continue;
             }
@@ -818,6 +875,7 @@ function validateDocument(text: string): Diagnostic[] {
               severity: DiagnosticSeverity.Warning,
               message: `Unknown property "${propName}" on <${node.name}>`,
               source: 'melker',
+              code: 'unknown-prop',
             });
           } else {
             // Validate enum values
@@ -830,6 +888,7 @@ function validateDocument(text: string): Diagnostic[] {
                   severity: DiagnosticSeverity.Warning,
                   message: `Invalid value "${value}" for "${propName}". Valid values: ${propSchema.enum.join(', ')}`,
                   source: 'melker',
+                  code: 'invalid-enum-value',
                 });
               }
             }
@@ -1055,6 +1114,32 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
             const styleSchema = allStyles[styleProp];
             const partialValue = styleContext[2].trim();
 
+            // Check if we're inside var(-- for variable name completion
+            const inlineVarMatch = partialValue.match(/var\((--[\w-]*)$/);
+            if (inlineVarMatch) {
+              const varPartial = inlineVarMatch[1];
+              const varPartialStartChar = position.character - varPartial.length;
+              const varEditRange: Range = {
+                start: { line: position.line, character: varPartialStartChar },
+                end: position,
+              };
+              for (const varName of THEME_VAR_NAMES) {
+                if (!varPartial || varName.startsWith(varPartial)) {
+                  completions.push({
+                    label: varName,
+                    kind: CompletionItemKind.Variable,
+                    detail: 'Theme color variable',
+                    textEdit: {
+                      range: varEditRange,
+                      newText: varName,
+                    },
+                    sortText: `0${varName}`,
+                  });
+                }
+              }
+              return completions;
+            }
+
             // Always offer var() as a value option
             if (!partialValue || 'var('.startsWith(partialValue.toLowerCase())) {
               const partialStartChar = position.character - partialValue.length;
@@ -1062,6 +1147,7 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
                 label: 'var()',
                 kind: CompletionItemKind.Function,
                 detail: 'CSS variable reference',
+                insertTextFormat: InsertTextFormat.Snippet,
                 textEdit: {
                   range: {
                     start: { line: position.line, character: partialStartChar },
@@ -1098,8 +1184,41 @@ function getCompletions(text: string, position: Position): CompletionItem[] {
                   });
                 }
               }
-              return completions;
             }
+
+            // Color value completions for color properties
+            if (COLOR_PROPERTY_NAMES.has(styleProp)) {
+              const partialLower = partialValue.toLowerCase();
+              const partialStartChar = position.character - partialValue.length;
+              const editRange: Range = {
+                start: { line: position.line, character: partialStartChar },
+                end: position,
+              };
+              for (const name of NAMED_COLORS) {
+                if (!partialValue || name.startsWith(partialLower)) {
+                  completions.push({
+                    label: name,
+                    kind: CompletionItemKind.Color,
+                    detail: 'Named color',
+                    textEdit: { range: editRange, newText: name },
+                    sortText: `1${name}`,
+                  });
+                }
+              }
+              for (const fmt of COLOR_FORMAT_SNIPPETS) {
+                if (!partialValue || fmt.label.startsWith(partialLower) || fmt.insert.startsWith(partialLower)) {
+                  completions.push({
+                    label: fmt.label,
+                    kind: CompletionItemKind.Snippet,
+                    detail: fmt.detail,
+                    insertTextFormat: InsertTextFormat.Snippet,
+                    textEdit: { range: editRange, newText: fmt.insert },
+                    sortText: `2${fmt.label}`,
+                  });
+                }
+              }
+            }
+
             return completions;
           } else {
             // Completing a style property name
@@ -1290,12 +1409,31 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       const camelProp = propName.replace(/-([a-z])/g, (_m, l) => l.toUpperCase());
       const schema = BASE_STYLES_SCHEMA[camelProp];
 
+      // Check if we're inside var(-- for variable name completion
+      const varMatch = valueMatch[2].match(/var\((--[\w-]*)$/);
+      if (varMatch) {
+        const partial = varMatch[1];
+        for (const varName of THEME_VAR_NAMES) {
+          if (!partial || varName.startsWith(partial)) {
+            completions.push({
+              label: varName,
+              kind: CompletionItemKind.Variable,
+              detail: 'Theme color variable',
+              insertText: varName,
+              sortText: `0${varName}`,
+            });
+          }
+        }
+        return completions;
+      }
+
       // Always offer var() as a value option
       completions.push({
         label: 'var()',
         kind: CompletionItemKind.Function,
         detail: 'CSS variable reference',
         insertText: 'var(--${1:name})',
+        insertTextFormat: InsertTextFormat.Snippet,
         sortText: '0var',
       });
 
@@ -1308,8 +1446,36 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
             insertText: String(value),
           });
         }
-        return completions;
       }
+
+      // Color value completions for color properties
+      if (COLOR_PROPERTY_NAMES.has(camelProp)) {
+        const partialValue = valueMatch[2].trim().toLowerCase();
+        for (const name of NAMED_COLORS) {
+          if (!partialValue || name.startsWith(partialValue)) {
+            completions.push({
+              label: name,
+              kind: CompletionItemKind.Color,
+              detail: 'Named color',
+              insertText: name,
+              sortText: `1${name}`,
+            });
+          }
+        }
+        for (const fmt of COLOR_FORMAT_SNIPPETS) {
+          if (!partialValue || fmt.label.startsWith(partialValue) || fmt.insert.startsWith(partialValue)) {
+            completions.push({
+              label: fmt.label,
+              kind: CompletionItemKind.Snippet,
+              detail: fmt.detail,
+              insertText: fmt.insert,
+              insertTextFormat: InsertTextFormat.Snippet,
+              sortText: `2${fmt.label}`,
+            });
+          }
+        }
+      }
+
       return completions;
     }
 
@@ -1340,8 +1506,37 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       kind: CompletionItemKind.Snippet,
       detail: 'Custom property (CSS variable)',
       insertText: '--${1:name}: ${2:value}',
+      insertTextFormat: InsertTextFormat.Snippet,
       sortText: '1--',
     });
+
+    // In :root blocks, offer --theme-* variable overrides
+    // Extract the selector for the current block by looking at text before the last {
+    const beforeBrace = styleContent.substring(0, lastOpenBrace);
+    // Strip CSS comments
+    const stripped = beforeBrace.replace(/\/\*[\s\S]*?\*\//g, '');
+    // Find the last selector: after last } or start of content
+    const lastBlockEnd = stripped.lastIndexOf('}');
+    const currentSelector = stripped.substring(lastBlockEnd + 1).trim();
+    logger.debug('Style block selector detection', { currentSelector, lastBlockEnd });
+    if (/(?:^|,\s*):root\s*$/.test(currentSelector)) {
+      // Find the partial text being typed for filtering
+      const partialMatch = blockContent.match(/(?:^|;)\s*([\w-]*)$/);
+      const partial = partialMatch ? partialMatch[1] : '';
+      logger.debug('Root block theme var completion', { partial, blockContent: blockContent.substring(Math.max(0, blockContent.length - 40)) });
+
+      for (const varName of THEME_VAR_NAMES) {
+        if (existingProps.has(varName)) continue;
+        if (partial && !varName.startsWith(partial)) continue;
+        completions.push({
+          label: varName,
+          kind: CompletionItemKind.Variable,
+          detail: 'Theme color override',
+          insertText: `${varName}: `,
+          sortText: `0${varName}`,
+        });
+      }
+    }
   } else {
     // Outside property block - completing selectors
     // Add element type selectors
@@ -1380,6 +1575,7 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       kind: CompletionItemKind.Snippet,
       detail: 'Root scope for CSS custom properties',
       insertText: ':root {\n  --${1:name}: ${2:value};\n}',
+      insertTextFormat: InsertTextFormat.Snippet,
       sortText: '0:root',
     });
 
@@ -1414,6 +1610,7 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       kind: CompletionItemKind.Snippet,
       detail: 'Media query block',
       insertText: '@media (${1:min-width: 80}) {\n  $0\n}',
+      insertTextFormat: InsertTextFormat.Snippet,
       sortText: '0@media',
     });
     completions.push({
@@ -1421,6 +1618,7 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       kind: CompletionItemKind.Snippet,
       detail: 'Container query block',
       insertText: '@container (${1:min-width: 40}) {\n  $0\n}',
+      insertTextFormat: InsertTextFormat.Snippet,
       sortText: '0@container',
     });
     completions.push({
@@ -1428,6 +1626,7 @@ function getStyleTagCompletions(text: string, offset: number, ast: AstNode[]): C
       kind: CompletionItemKind.Snippet,
       detail: 'Keyframe animation',
       insertText: '@keyframes ${1:name} {\n  from { $2 }\n  to { $0 }\n}',
+      insertTextFormat: InsertTextFormat.Snippet,
       sortText: '0@keyframes',
     });
   }
@@ -1524,6 +1723,975 @@ function findTypeScriptRanges(text: string): Array<{ line: number; char: number;
   return ranges;
 }
 
+// Levenshtein distance for fuzzy matching
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Find similar names from candidates using Levenshtein distance
+function findSimilarNames(name: string, candidates: string[], maxResults = 3): string[] {
+  const maxDistance = Math.max(2, Math.floor(name.length / 2));
+  return candidates
+    .map(c => ({ name: c, dist: levenshteinDistance(name.toLowerCase(), c.toLowerCase()) }))
+    .filter(c => c.dist <= maxDistance && c.dist > 0)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, maxResults)
+    .map(c => c.name);
+}
+
+// Get document symbols (outline) from AST
+function getDocumentSymbols(text: string): DocumentSymbol[] {
+  const symbols: DocumentSymbol[] = [];
+
+  try {
+    const ast = parse(text) as AstNode[];
+
+    function symbolKindForTag(name: string): SymbolKind {
+      switch (name) {
+        case 'script': return SymbolKind.Function;
+        case 'style': return SymbolKind.Namespace;
+        case 'policy': return SymbolKind.Object;
+        case 'title': return SymbolKind.String;
+        default: return SymbolKind.Property;
+      }
+    }
+
+    function nodeToSymbol(node: AstNode): DocumentSymbol | null {
+      if (node.type !== 'Tag' || !node.name) return null;
+
+      const range = createRange(text, node.start, node.end);
+      const selectionRange = node.open
+        ? createRange(text, node.open.start, node.open.end)
+        : range;
+
+      // Build detail string from id/class attributes
+      let detail = '';
+      const id = node.attributes?.find(a => a.name.value === 'id');
+      const cls = node.attributes?.find(a => a.name.value === 'class');
+      if (id?.value) detail += `#${id.value.value}`;
+      if (cls?.value) detail += (detail ? ' ' : '') + `.${cls.value.value.replace(/\s+/g, '.')}`;
+
+      const children: DocumentSymbol[] = [];
+
+      // For style tags, extract CSS selectors as child symbols
+      if (node.name === 'style' && node.body) {
+        for (const child of node.body) {
+          if (child.type === 'Text' && child.value) {
+            const cssSymbols = extractStyleSymbols(child.value, child.start, text);
+            children.push(...cssSymbols);
+          }
+        }
+      }
+
+      // Recurse into child elements
+      if (node.body) {
+        for (const child of node.body) {
+          const sym = nodeToSymbol(child);
+          if (sym) children.push(sym);
+        }
+      }
+
+      return {
+        name: `<${node.name}>`,
+        detail,
+        kind: symbolKindForTag(node.name),
+        range,
+        selectionRange,
+        children: children.length > 0 ? children : undefined,
+      };
+    }
+
+    for (const node of ast) {
+      const sym = nodeToSymbol(node);
+      if (sym) symbols.push(sym);
+    }
+  } catch {
+    // Ignore parse errors
+  }
+
+  return symbols;
+}
+
+// Extract CSS selector symbols from style tag content
+function extractStyleSymbols(styleContent: string, contentStart: number, text: string): DocumentSymbol[] {
+  const symbols: DocumentSymbol[] = [];
+  let i = 0;
+  let depth = 0;
+
+  while (i < styleContent.length) {
+    // Skip whitespace
+    while (i < styleContent.length && /\s/.test(styleContent[i])) i++;
+    if (i >= styleContent.length) break;
+
+    // Skip comments
+    if (styleContent[i] === '/' && styleContent[i + 1] === '*') {
+      const end = styleContent.indexOf('*/', i + 2);
+      i = end === -1 ? styleContent.length : end + 2;
+      continue;
+    }
+
+    // At depth 0, we're looking at selectors or @-rules
+    if (depth === 0) {
+      const selectorStart = i;
+      // Find the opening brace
+      while (i < styleContent.length && styleContent[i] !== '{') i++;
+      if (i >= styleContent.length) break;
+
+      const selector = styleContent.substring(selectorStart, i).trim();
+      if (selector) {
+        const absStart = contentStart + selectorStart;
+        // Find matching close brace
+        let braceDepth = 1;
+        const blockStart = i;
+        i++; // skip opening brace
+        while (i < styleContent.length && braceDepth > 0) {
+          if (styleContent[i] === '{') braceDepth++;
+          else if (styleContent[i] === '}') braceDepth--;
+          i++;
+        }
+        const absEnd = contentStart + i;
+
+        symbols.push({
+          name: selector,
+          kind: SymbolKind.Field,
+          range: createRange(text, absStart, absEnd),
+          selectionRange: createRange(text, absStart, contentStart + blockStart),
+        });
+      }
+    } else {
+      // Inside a block, skip to matching close
+      if (styleContent[i] === '{') depth++;
+      else if (styleContent[i] === '}') depth--;
+      i++;
+    }
+  }
+
+  return symbols;
+}
+
+// Get folding ranges for the document
+function getFoldingRanges(text: string): FoldingRange[] {
+  const ranges: FoldingRange[] = [];
+
+  try {
+    const ast = parse(text) as AstNode[];
+
+    function addFoldingFromNode(node: AstNode): void {
+      if (node.type !== 'Tag') return;
+
+      // Only fold multi-line elements with a close tag
+      if (node.open && node.close) {
+        const startPos = offsetToPosition(text, node.open.end);
+        const endPos = offsetToPosition(text, node.close.start);
+        if (endPos.line > startPos.line) {
+          ranges.push({
+            startLine: startPos.line,
+            startCharacter: startPos.character,
+            endLine: endPos.line,
+            endCharacter: endPos.character,
+          });
+        }
+      }
+
+      // Add CSS folding for style tags
+      if (node.name === 'style' && node.body) {
+        for (const child of node.body) {
+          if (child.type === 'Text' && child.value) {
+            addCssFoldingRanges(child.value, child.start, text, ranges);
+          }
+        }
+      }
+
+      // Recurse
+      if (node.body) {
+        for (const child of node.body) {
+          addFoldingFromNode(child);
+        }
+      }
+    }
+
+    for (const node of ast) {
+      addFoldingFromNode(node);
+    }
+  } catch {
+    // Ignore parse errors
+  }
+
+  return ranges;
+}
+
+// Add folding ranges for CSS rule blocks inside style tags
+function addCssFoldingRanges(
+  styleContent: string,
+  contentStart: number,
+  text: string,
+  ranges: FoldingRange[]
+): void {
+  const braceStack: number[] = [];
+  for (let i = 0; i < styleContent.length; i++) {
+    // Skip comments
+    if (styleContent[i] === '/' && styleContent[i + 1] === '*') {
+      const end = styleContent.indexOf('*/', i + 2);
+      i = end === -1 ? styleContent.length - 1 : end + 1;
+      continue;
+    }
+    if (styleContent[i] === '{') {
+      braceStack.push(contentStart + i);
+    } else if (styleContent[i] === '}' && braceStack.length > 0) {
+      const openOffset = braceStack.pop()!;
+      const closeOffset = contentStart + i;
+      const startPos = offsetToPosition(text, openOffset);
+      const endPos = offsetToPosition(text, closeOffset);
+      if (endPos.line > startPos.line) {
+        ranges.push({
+          startLine: startPos.line,
+          startCharacter: startPos.character,
+          endLine: endPos.line,
+          endCharacter: endPos.character,
+        });
+      }
+    }
+  }
+}
+
+// Get code actions (quick fixes) for diagnostics
+function getCodeActions(text: string, params: CodeActionParams): CodeAction[] {
+  const actions: CodeAction[] = [];
+  const diagnostics = params.context.diagnostics;
+
+  for (const diag of diagnostics) {
+    const code = diag.code as string | undefined;
+    if (!code) continue;
+
+    const diagMessage = diag.message;
+
+    if (code === 'style-as-prop') {
+      // Extract prop name from message: '"propName" is a style property...'
+      const match = diagMessage.match(/^"([^"]+)" is a style property/);
+      if (!match) continue;
+      const propName = match[1];
+      const kebabName = toKebabCase(propName);
+
+      // Find the attribute in the source to get value
+      const startOffset = positionToOffset(text, diag.range.start);
+      const lineStart = text.lastIndexOf('\n', startOffset) + 1;
+      const lineEnd = text.indexOf('\n', startOffset);
+      const line = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+
+      // Find the attribute and its value in the line
+      const attrPattern = new RegExp(`${propName}(?:=(?:"([^"]*)"|'([^']*)'))?`);
+      const attrMatch = line.match(attrPattern);
+      if (!attrMatch) continue;
+
+      const attrValue = attrMatch[1] ?? attrMatch[2] ?? '';
+      const attrStartInLine = line.indexOf(attrMatch[0]);
+      const attrAbsStart = lineStart + attrStartInLine;
+      const attrAbsEnd = attrAbsStart + attrMatch[0].length;
+
+      const styleDecl = attrValue ? `${kebabName}: ${attrValue}` : kebabName;
+
+      // Check if there's an existing style attribute on the same element
+      // Find the tag this attribute belongs to
+      const tagStart = text.lastIndexOf('<', startOffset);
+      const tagEnd = text.indexOf('>', startOffset);
+      const tagContent = text.substring(tagStart, tagEnd === -1 ? text.length : tagEnd + 1);
+      const styleMatch = tagContent.match(/style=(?:"([^"]*)"|'([^']*)')/);
+
+      if (styleMatch) {
+        // Append to existing style attribute
+        const existingValue = styleMatch[1] ?? styleMatch[2] ?? '';
+        const styleAttrStart = tagStart + tagContent.indexOf(styleMatch[0]);
+        const quote = tagContent[tagContent.indexOf(styleMatch[0]) + 6]; // char after style=
+        const separator = existingValue.endsWith(';') || existingValue === '' ? '' : '; ';
+        const newValue = `${existingValue}${separator}${styleDecl}`;
+
+        actions.push({
+          title: `Move "${propName}" to style attribute`,
+          kind: CodeActionKind.QuickFix,
+          diagnostics: [diag],
+          edit: {
+            changes: {
+              [params.textDocument.uri]: [
+                // Remove the offending attribute (and leading space)
+                {
+                  range: createRange(text, attrAbsStart - 1, attrAbsEnd),
+                  newText: '',
+                },
+                // Replace existing style value
+                {
+                  range: createRange(text, styleAttrStart, styleAttrStart + styleMatch[0].length),
+                  newText: `style=${quote}${newValue}${quote}`,
+                },
+              ],
+            },
+          },
+        });
+      } else {
+        // No existing style attr — replace the prop with a style attribute
+        actions.push({
+          title: `Replace with style="${styleDecl}"`,
+          kind: CodeActionKind.QuickFix,
+          diagnostics: [diag],
+          edit: {
+            changes: {
+              [params.textDocument.uri]: [
+                {
+                  range: createRange(text, attrAbsStart, attrAbsEnd),
+                  newText: `style="${styleDecl}"`,
+                },
+              ],
+            },
+          },
+        });
+      }
+    } else if (code === 'invalid-enum-value') {
+      // Extract valid values from message: '... Valid values: a, b, c'
+      const valuesMatch = diagMessage.match(/Valid values: (.+)$/);
+      if (!valuesMatch) continue;
+      const validValues = valuesMatch[1].split(', ');
+
+      // Extract the current invalid value
+      const invalidMatch = diagMessage.match(/Invalid value "([^"]+)"/);
+      if (!invalidMatch) continue;
+      const invalidValue = invalidMatch[1];
+
+      // Offer each valid value as a fix, sorted by similarity
+      const sorted = [...validValues].sort(
+        (a, b) => levenshteinDistance(invalidValue, a) - levenshteinDistance(invalidValue, b)
+      );
+
+      for (const suggestion of sorted.slice(0, 5)) {
+        actions.push({
+          title: `Change to "${suggestion}"`,
+          kind: CodeActionKind.QuickFix,
+          diagnostics: [diag],
+          isPreferred: suggestion === sorted[0],
+          edit: {
+            changes: {
+              [params.textDocument.uri]: [
+                {
+                  range: diag.range,
+                  newText: suggestion,
+                },
+              ],
+            },
+          },
+        });
+      }
+    } else if (code === 'unknown-style') {
+      // Extract the unknown property name
+      const propMatch = diagMessage.match(/Unknown style property "([^"]+)"/);
+      if (!propMatch) continue;
+      const unknownProp = propMatch[1];
+
+      const candidates = Object.keys(BASE_STYLES_SCHEMA).map(k => toKebabCase(k));
+      const similar = findSimilarNames(unknownProp, candidates);
+
+      for (const suggestion of similar) {
+        actions.push({
+          title: `Change to "${suggestion}"`,
+          kind: CodeActionKind.QuickFix,
+          diagnostics: [diag],
+          isPreferred: suggestion === similar[0],
+          edit: {
+            changes: {
+              [params.textDocument.uri]: [
+                {
+                  range: diag.range,
+                  newText: suggestion,
+                },
+              ],
+            },
+          },
+        });
+      }
+    } else if (code === 'unknown-prop') {
+      // Extract the unknown property name
+      const propMatch = diagMessage.match(/Unknown property "([^"]+)" on <([^>]+)>/);
+      if (!propMatch) continue;
+      const unknownProp = propMatch[1];
+      const elementName = propMatch[2];
+
+      // Get valid props for this element
+      const schema = getComponentSchema(elementName);
+      const allProps = schema
+        ? { ...BASE_PROPS_SCHEMA, ...schema.props }
+        : { ...BASE_PROPS_SCHEMA };
+
+      const candidates = Object.keys(allProps);
+      const similar = findSimilarNames(unknownProp, candidates);
+
+      for (const suggestion of similar) {
+        actions.push({
+          title: `Change to "${suggestion}"`,
+          kind: CodeActionKind.QuickFix,
+          diagnostics: [diag],
+          isPreferred: suggestion === similar[0],
+          edit: {
+            changes: {
+              [params.textDocument.uri]: [
+                {
+                  range: diag.range,
+                  newText: suggestion,
+                },
+              ],
+            },
+          },
+        });
+      }
+    }
+  }
+
+  return actions;
+}
+
+// --- Linked Editing Ranges ---
+
+function getLinkedEditingRanges(text: string, position: Position): LinkedEditingRanges | null {
+  try {
+    const ast = parse(text) as AstNode[];
+    const offset = positionToOffset(text, position);
+    const node = findElementAtOffset(ast, offset);
+    if (!node || !node.name || !node.open || !node.close) return null;
+
+    const openNameStart = node.open.start + 1; // skip '<'
+    const openNameEnd = openNameStart + node.name.length;
+    const closeNameStart = node.close.start + 2; // skip '</'
+    const closeNameEnd = closeNameStart + node.name.length;
+
+    // Check cursor is in one of the tag names
+    const inOpen = offset >= openNameStart && offset <= openNameEnd;
+    const inClose = offset >= closeNameStart && offset <= closeNameEnd;
+    if (!inOpen && !inClose) return null;
+
+    return {
+      ranges: [
+        createRange(text, openNameStart, openNameEnd),
+        createRange(text, closeNameStart, closeNameEnd),
+      ],
+    };
+  } catch {
+    return null;
+  }
+}
+
+// --- Document Links ---
+
+function getDocumentLinks(text: string, uri: string): DocumentLink[] {
+  const links: DocumentLink[] = [];
+
+  try {
+    const ast = parse(text) as AstNode[];
+
+    function visitNode(node: AstNode): void {
+      if (node.type !== 'Tag' || !node.attributes) {
+        if (node.body) node.body.forEach(visitNode);
+        return;
+      }
+
+      for (const attr of node.attributes) {
+        const name = attr.name.value;
+        if ((name === 'src' || name === 'href') && attr.value?.value) {
+          const value = attr.value.value;
+          if (!value || value.startsWith('javascript:')) continue;
+
+          let target: string;
+          if (/^https?:\/\//.test(value)) {
+            target = value;
+          } else {
+            // Resolve relative path against document URI
+            const base = uri.replace(/\/[^/]*$/, '/');
+            target = base + value;
+          }
+
+          links.push({
+            range: createRange(text, attr.value.start, attr.value.end),
+            target,
+          });
+        }
+      }
+
+      if (node.body) node.body.forEach(visitNode);
+    }
+
+    for (const node of ast) {
+      visitNode(node);
+    }
+  } catch {
+    // Ignore parse errors
+  }
+
+  return links;
+}
+
+// --- Color Provider ---
+
+const COLOR_PROPERTY_NAMES = new Set([
+  'color', 'backgroundColor', 'borderColor',
+  'borderTopColor', 'borderBottomColor', 'borderLeftColor', 'borderRightColor',
+  'connectorColor', 'background', 'foreground', 'dividerColor',
+]);
+
+function packedToLspColor(packed: PackedRGBA): Color {
+  const { r, g, b, a } = unpackRGBA(packed);
+  return { red: r / 255, green: g / 255, blue: b / 255, alpha: a / 255 };
+}
+
+function extractColors(text: string): ColorInformation[] {
+  const colors: ColorInformation[] = [];
+
+  try {
+    const ast = parse(text) as AstNode[];
+
+    function visitNode(node: AstNode): void {
+      if (node.type !== 'Tag') {
+        if (node.body) node.body.forEach(visitNode);
+        return;
+      }
+
+      // Inline style attributes
+      if (node.attributes) {
+        for (const attr of node.attributes) {
+          if (attr.name.value === 'style' && attr.value?.value) {
+            const props = parseStyleString(attr.value.value, attr.value.start);
+            for (const prop of props) {
+              if (!COLOR_PROPERTY_NAMES.has(prop.name) || !prop.value) continue;
+              if (prop.value.startsWith('var(')) continue;
+              try {
+                const packed = cssToRgba(prop.value);
+                colors.push({
+                  range: createRange(text, prop.valueStart, prop.valueEnd),
+                  color: packedToLspColor(packed),
+                });
+              } catch { /* skip invalid */ }
+            }
+          }
+        }
+      }
+
+      // Style tag CSS blocks
+      if (node.name === 'style' && node.body) {
+        for (const child of node.body) {
+          if (child.type === 'Text' && child.value) {
+            extractColorsFromCss(child.value, child.start, text, colors);
+          }
+        }
+      }
+
+      if (node.body) node.body.forEach(visitNode);
+    }
+
+    for (const node of ast) {
+      visitNode(node);
+    }
+  } catch {
+    // Ignore parse errors
+  }
+
+  return colors;
+}
+
+function extractColorsFromCss(
+  css: string,
+  contentStart: number,
+  text: string,
+  colors: ColorInformation[]
+): void {
+  // Strip comments
+  const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // Unwrap at-rules (same pattern as validateStyleTagContent)
+  let unwrapped = '';
+  let i = 0;
+  while (i < stripped.length) {
+    if (stripped[i] === '@') {
+      const braceIdx = stripped.indexOf('{', i);
+      if (braceIdx === -1) { unwrapped += stripped.substring(i); break; }
+      const atName = stripped.substring(i, braceIdx).trim();
+      let depth = 1;
+      let j = braceIdx + 1;
+      while (j < stripped.length && depth > 0) {
+        if (stripped[j] === '{') depth++;
+        else if (stripped[j] === '}') depth--;
+        j++;
+      }
+      if (atName.startsWith('@keyframes')) {
+        // Drop entirely
+      } else {
+        unwrapped += stripped.substring(braceIdx + 1, j - 1);
+      }
+      i = j;
+    } else {
+      unwrapped += stripped[i];
+      i++;
+    }
+  }
+
+  // Parse rules: selector { properties }
+  const rulePattern = /([^{]+)\{([^}]*)\}/g;
+  let match;
+  while ((match = rulePattern.exec(unwrapped)) !== null) {
+    const propertiesStr = match[2].trim();
+    if (!propertiesStr) continue;
+
+    const propsStart = contentStart + match.index + match[1].length + 1;
+    const properties = propertiesStr.split(';');
+    let propOffset = 0;
+
+    for (const property of properties) {
+      if (!property.trim()) {
+        propOffset += property.length + 1;
+        continue;
+      }
+      const colonIndex = property.indexOf(':');
+      if (colonIndex === -1) {
+        propOffset += property.length + 1;
+        continue;
+      }
+
+      const keyPart = property.substring(0, colonIndex).trim();
+      const valuePart = property.substring(colonIndex + 1).trim();
+      const camelKey = keyPart.replace(/-([a-z])/g, (_m, letter: string) => letter.toUpperCase());
+
+      if (COLOR_PROPERTY_NAMES.has(camelKey) && valuePart && !valuePart.startsWith('var(')) {
+        try {
+          const packed = cssToRgba(valuePart);
+          const valueStartInProp = colonIndex + 1 + property.substring(colonIndex + 1).indexOf(valuePart);
+          const absStart = propsStart + propOffset + valueStartInProp;
+          colors.push({
+            range: createRange(text, absStart, absStart + valuePart.length),
+            color: packedToLspColor(packed),
+          });
+        } catch { /* skip invalid */ }
+      }
+
+      propOffset += property.length + 1;
+    }
+  }
+}
+
+function getColorPresentations(color: Color): ColorPresentation[] {
+  const r = Math.round(color.red * 255);
+  const g = Math.round(color.green * 255);
+  const b = Math.round(color.blue * 255);
+  const a = color.alpha;
+
+  const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  const presentations: ColorPresentation[] = [
+    { label: hex },
+    { label: `rgb(${r}, ${g}, ${b})` },
+  ];
+
+  if (a < 1) {
+    presentations.push(
+      { label: `${hex}${Math.round(a * 255).toString(16).padStart(2, '0')}` },
+      { label: `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})` },
+    );
+  }
+
+  return presentations;
+}
+
+// --- Go to Definition ---
+
+interface CssSelectorInfo {
+  selector: string;
+  start: number;
+  end: number;
+}
+
+function findAllStyleBlocks(ast: AstNode[]): Array<{ content: string; contentStart: number }> {
+  const blocks: Array<{ content: string; contentStart: number }> = [];
+
+  function visit(node: AstNode): void {
+    if (node.type === 'Tag' && node.name === 'style' && node.body) {
+      for (const child of node.body) {
+        if (child.type === 'Text' && child.value) {
+          blocks.push({ content: child.value, contentStart: child.start });
+        }
+      }
+    }
+    if (node.body) node.body.forEach(visit);
+  }
+
+  ast.forEach(visit);
+  return blocks;
+}
+
+function parseCssSelectors(content: string, contentStart: number): CssSelectorInfo[] {
+  const selectors: CssSelectorInfo[] = [];
+
+  // Strip comments
+  const stripped = content.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // Unwrap at-rules
+  let unwrapped = '';
+  let i = 0;
+  while (i < stripped.length) {
+    if (stripped[i] === '@') {
+      const braceIdx = stripped.indexOf('{', i);
+      if (braceIdx === -1) { unwrapped += stripped.substring(i); break; }
+      const atName = stripped.substring(i, braceIdx).trim();
+      let depth = 1;
+      let j = braceIdx + 1;
+      while (j < stripped.length && depth > 0) {
+        if (stripped[j] === '{') depth++;
+        else if (stripped[j] === '}') depth--;
+        j++;
+      }
+      if (atName.startsWith('@keyframes')) {
+        // Drop
+      } else {
+        unwrapped += stripped.substring(braceIdx + 1, j - 1);
+      }
+      i = j;
+    } else {
+      unwrapped += stripped[i];
+      i++;
+    }
+  }
+
+  const rulePattern = /([^{]+)\{[^}]*\}/g;
+  let match;
+  while ((match = rulePattern.exec(unwrapped)) !== null) {
+    const selectorStr = match[1];
+    const selectorBase = contentStart + match.index;
+
+    // Split comma-separated selectors
+    let offset = 0;
+    for (const part of selectorStr.split(',')) {
+      const trimmed = part.trim();
+      if (trimmed) {
+        const trimStart = part.indexOf(trimmed);
+        const absStart = selectorBase + offset + trimStart;
+        selectors.push({
+          selector: trimmed,
+          start: absStart,
+          end: absStart + trimmed.length,
+        });
+      }
+      offset += part.length + 1; // +1 for comma
+    }
+  }
+
+  return selectors;
+}
+
+function findSelectorPartAtOffset(
+  selector: string,
+  selectorStart: number,
+  offset: number
+): { type: 'id' | 'class' | 'type'; value: string } | null {
+  const relOffset = offset - selectorStart;
+  if (relOffset < 0 || relOffset > selector.length) return null;
+
+  // Walk the selector to find the token at the cursor position
+  let i = 0;
+  while (i < selector.length) {
+    const ch = selector[i];
+
+    // Skip whitespace and combinators
+    if (' >~+'.includes(ch)) { i++; continue; }
+
+    // Skip pseudo-elements (::before) and pseudo-classes (:hover)
+    if (ch === ':') {
+      i++;
+      if (i < selector.length && selector[i] === ':') i++; // ::
+      // Skip the pseudo name
+      while (i < selector.length && /[\w-]/.test(selector[i])) i++;
+      // Skip functional pseudo args like :nth-child(2n)
+      if (i < selector.length && selector[i] === '(') {
+        let depth = 1;
+        i++;
+        while (i < selector.length && depth > 0) {
+          if (selector[i] === '(') depth++;
+          else if (selector[i] === ')') depth--;
+          i++;
+        }
+      }
+      continue;
+    }
+
+    // ID selector
+    if (ch === '#') {
+      const start = i;
+      i++; // skip #
+      const nameStart = i;
+      while (i < selector.length && /[\w-]/.test(selector[i])) i++;
+      if (relOffset >= start && relOffset <= i) {
+        return { type: 'id', value: selector.substring(nameStart, i) };
+      }
+      continue;
+    }
+
+    // Class selector
+    if (ch === '.') {
+      const start = i;
+      i++; // skip .
+      const nameStart = i;
+      while (i < selector.length && /[\w-]/.test(selector[i])) i++;
+      if (relOffset >= start && relOffset <= i) {
+        return { type: 'class', value: selector.substring(nameStart, i) };
+      }
+      continue;
+    }
+
+    // Attribute selector [attr=val] — skip
+    if (ch === '[') {
+      const start = i;
+      while (i < selector.length && selector[i] !== ']') i++;
+      if (i < selector.length) i++; // skip ]
+      if (relOffset >= start && relOffset <= i) return null;
+      continue;
+    }
+
+    // Type selector (bare word)
+    if (/[\w-]/.test(ch)) {
+      const start = i;
+      while (i < selector.length && /[\w-]/.test(selector[i])) i++;
+      if (relOffset >= start && relOffset <= i) {
+        return { type: 'type', value: selector.substring(start, i) };
+      }
+      continue;
+    }
+
+    // Universal selector or anything else
+    i++;
+  }
+
+  return null;
+}
+
+function getDefinition(text: string, position: Position, uri: string): Definition | null {
+  try {
+    const ast = parse(text) as AstNode[];
+    const offset = positionToOffset(text, position);
+
+    // Check if cursor is on an element attribute
+    const node = findElementAtOffset(ast, offset);
+    if (node && node.type === 'Tag' && node.attributes) {
+      const attr = findAttributeAtOffset(node, offset);
+      if (attr?.value) {
+        const inValue = offset >= attr.value.start && offset <= attr.value.end;
+        if (inValue) {
+          // Case A: id="..." → find CSS #id selectors
+          if (attr.name.value === 'id') {
+            const id = attr.value.value;
+            const locations: Location[] = [];
+            for (const block of findAllStyleBlocks(ast)) {
+              for (const sel of parseCssSelectors(block.content, block.contentStart)) {
+                if (sel.selector.includes(`#${id}`)) {
+                  locations.push({ uri, range: createRange(text, sel.start, sel.end) });
+                }
+              }
+            }
+            return locations.length > 0 ? locations : null;
+          }
+
+          // Case B: class="..." → find CSS .class selectors
+          if (attr.name.value === 'class') {
+            const classValue = attr.value.value;
+            // Determine which class word cursor is on
+            const relOffset = offset - attr.value.start;
+            const classes = classValue.split(/\s+/);
+            let pos = 0;
+            let targetClass = '';
+            for (const cls of classes) {
+              const clsStart = classValue.indexOf(cls, pos);
+              const clsEnd = clsStart + cls.length;
+              if (relOffset >= clsStart && relOffset <= clsEnd) {
+                targetClass = cls;
+                break;
+              }
+              pos = clsEnd;
+            }
+            if (!targetClass) return null;
+
+            const locations: Location[] = [];
+            for (const block of findAllStyleBlocks(ast)) {
+              for (const sel of parseCssSelectors(block.content, block.contentStart)) {
+                if (sel.selector.includes(`.${targetClass}`)) {
+                  locations.push({ uri, range: createRange(text, sel.start, sel.end) });
+                }
+              }
+            }
+            return locations.length > 0 ? locations : null;
+          }
+        }
+      }
+    }
+
+    // Case C: Cursor inside <style> content → find elements
+    // Check if cursor is inside a style tag
+    for (const block of findAllStyleBlocks(ast)) {
+      const blockEnd = block.contentStart + block.content.length;
+      if (offset < block.contentStart || offset > blockEnd) continue;
+
+      // Find which selector the cursor is in
+      const allSelectors = parseCssSelectors(block.content, block.contentStart);
+      for (const sel of allSelectors) {
+        if (offset < sel.start || offset > sel.end) continue;
+
+        const part = findSelectorPartAtOffset(sel.selector, sel.start, offset);
+        if (!part) return null;
+
+        const locations: Location[] = [];
+
+        if (part.type === 'id') {
+          findElementsMatching(ast, text, uri, locations,
+            (n) => n.attributes?.some(a => a.name.value === 'id' && a.value?.value === part.value));
+        } else if (part.type === 'class') {
+          findElementsMatching(ast, text, uri, locations,
+            (n) => n.attributes?.some(a => a.name.value === 'class' &&
+              a.value?.value.split(/\s+/).includes(part.value)));
+        } else if (part.type === 'type') {
+          findElementsMatching(ast, text, uri, locations,
+            (n) => n.name === part.value);
+        }
+
+        return locations.length > 0 ? locations : null;
+      }
+
+      return null; // Cursor in style but not in a selector
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function findElementsMatching(
+  nodes: AstNode[],
+  text: string,
+  uri: string,
+  locations: Location[],
+  predicate: (node: AstNode) => boolean | undefined
+): void {
+  for (const node of nodes) {
+    if (node.type === 'Tag' && predicate(node)) {
+      const range = node.open
+        ? createRange(text, node.open.start, node.open.end)
+        : createRange(text, node.start, node.end);
+      locations.push({ uri, range });
+    }
+    if (node.body) {
+      findElementsMatching(node.body, text, uri, locations, predicate);
+    }
+  }
+}
+
 // Start the LSP server
 export async function startLspServer(): Promise<void> {
   logger.info('Starting LSP server');
@@ -1556,6 +2724,15 @@ export async function startLspServer(): Promise<void> {
           },
           full: true,
         },
+        documentSymbolProvider: true,
+        foldingRangeProvider: true,
+        codeActionProvider: {
+          codeActionKinds: [CodeActionKind.QuickFix],
+        },
+        definitionProvider: true,
+        documentLinkProvider: { resolveProvider: false },
+        linkedEditingRangeProvider: true,
+        colorProvider: true,
       },
     };
   });
@@ -1615,6 +2792,59 @@ export async function startLspServer(): Promise<void> {
 
     logger.debug('Semantic tokens', { count: ranges.length });
     return builder.build();
+  });
+
+  // Document symbols (outline)
+  connection.onDocumentSymbol((params) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+    return getDocumentSymbols(document.getText());
+  });
+
+  // Folding ranges
+  connection.onFoldingRanges((params) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+    return getFoldingRanges(document.getText());
+  });
+
+  // Code actions (quick fixes)
+  connection.onCodeAction((params: CodeActionParams) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+    return getCodeActions(document.getText(), params);
+  });
+
+  // Linked editing ranges (rename open/close tags in sync)
+  connection.languages.onLinkedEditingRange((params: TextDocumentPositionParams) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return null;
+    return getLinkedEditingRanges(document.getText(), params.position);
+  });
+
+  // Document links (clickable src/href)
+  connection.onDocumentLinks((params) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+    return getDocumentLinks(document.getText(), params.textDocument.uri);
+  });
+
+  // Color provider
+  connection.onDocumentColor((params: DocumentColorParams) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+    return extractColors(document.getText());
+  });
+
+  connection.onColorPresentation((params) => {
+    return getColorPresentations(params.color);
+  });
+
+  // Go to definition
+  connection.onDefinition((params: TextDocumentPositionParams) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return null;
+    return getDefinition(document.getText(), params.position, params.textDocument.uri);
   });
 
   documents.listen(connection);

@@ -103,7 +103,7 @@ So constructed.
 
 **Feb 15** - CSS theme files (`:root` custom properties), `--theme-*` auto-population, theme colors example, error overlay refinements
 
-**Feb 16** - Shell completions (auto-generated Bash/Zsh from config schema), documentation updates
+**Feb 16** - Shell completions (Bash/Zsh), WebP image support, animated GIF playback
 
 ## Components
 

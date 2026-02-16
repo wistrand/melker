@@ -749,6 +749,10 @@ export class MelkerConfig {
   }
 
   // Render
+  get animateGif(): boolean {
+    return this.data['render.animateGif'] as boolean;
+  }
+
   get gfxMode(): GfxMode | undefined {
     // Only return gfxMode if explicitly set (env, cli, file, policy) - not schema default
     // This allows per-element gfxMode props to take effect when no global override

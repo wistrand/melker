@@ -6,6 +6,8 @@
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/path@1": "1.1.4",
     "jsr:@zaubrik/djwt@3.0.2": "3.0.2",
+    "npm:@jsquash/webp@*": "1.5.0",
+    "npm:@jsquash/webp@1.5.0": "1.5.0",
     "npm:fast-png@*": "8.0.0",
     "npm:fast-png@8.0.0": "8.0.0",
     "npm:html5parser@*": "2.0.2",
@@ -24,7 +26,8 @@
     "npm:qr@*": "0.5.4",
     "npm:vscode-languageserver-textdocument@*": "1.0.12",
     "npm:vscode-languageserver-textdocument@1.0.12": "1.0.12",
-    "npm:vscode-languageserver@9.0.1": "9.0.1"
+    "npm:vscode-languageserver@9.0.1": "9.0.1",
+    "npm:webp-wasm@1.0.6": "1.0.6"
   },
   "jsr": {
     "@std/encoding@0.224.0": {
@@ -50,6 +53,12 @@
     }
   },
   "npm": {
+    "@jsquash/webp@1.5.0": {
+      "integrity": "sha512-KggLoj2MnRSfIqTeKe1EmbljTX2vuV7mh79k89PCL1pyqiDULcPM1L47twxXt0hkb68F70bXiL31MxsuoZtKFw==",
+      "dependencies": [
+        "wasm-feature-detect"
+      ]
+    },
     "@types/debug@4.1.12": {
       "integrity": "sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==",
       "dependencies": [
@@ -549,6 +558,12 @@
         "vscode-languageserver-protocol"
       ],
       "bin": true
+    },
+    "wasm-feature-detect@1.8.0": {
+      "integrity": "sha512-zksaLKM2fVlnB5jQQDqKXXwYHLQUVH9es+5TOOHwGOVJOCeRBCiPjwSg+3tN2AdTCzjgli4jijCH290kXb/zWQ=="
+    },
+    "webp-wasm@1.0.6": {
+      "integrity": "sha512-RqBXDs/pwLc4dCChFfOw9FvBULRW6o/XGKMSbkWaPuTVtQ0oQx12A/k0rtiKF9fSsb9dxzOFGT7kE2R3jxMszA=="
     },
     "zwitch@2.0.4": {
       "integrity": "sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A=="

@@ -234,7 +234,7 @@ When `stop()` is called:
 | Button          | `button.ts`                          | Uses `label` prop or content       |
 | Dialog          | `dialog.ts`                          | Modal overlay, draggable           |
 | Canvas          | `canvas.ts`                          | Pixel graphics, onPaint, onShader  |
-| Img             | `img.ts`                             | Image display (PNG/JPEG/GIF)       |
+| Img             | `img.ts`                             | Image display (PNG/JPEG/GIF/WebP)  |
 | Video           | `video.ts`                           | Video playback via FFmpeg          |
 | Markdown        | `markdown.ts`                        | Markdown with image support        |
 | Checkbox        | `checkbox.ts`                        | Toggle checkbox                    |

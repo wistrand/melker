@@ -999,7 +999,8 @@ The `<canvas>` component provides pixel graphics using Unicode sextant character
 | `drawSquareCorrected(x, y, size)`                    | Draw aspect-corrected square                                     |
 | `drawImage(image, dx, dy, dw, dh)`                   | Draw full image at position                                      |
 | `drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh)` | Draw portion of image                                        |
-| `decodeImageBytes(bytes)`                            | Decode PNG/JPEG/GIF bytes to `{ width, height, data, bytesPerPixel }` |
+| `decodeImageBytes(bytes)`                            | Decode PNG/JPEG/GIF bytes to `{ width, height, data, bytesPerPixel }` (sync) |
+| `decodeImageBytesAsync(bytes)`                       | Decode PNG/JPEG/GIF/WebP bytes (async, required for WebP)            |
 | `markDirty()`                                        | Mark canvas for re-render                                        |
 
 ### drawImageRegion
@@ -1650,9 +1651,10 @@ const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);
 
 - **PNG** - Full support including alpha transparency and 16-bit depth (fast-png)
 - **JPEG** - Full support (jpeg-js)
-- **GIF** - Static images, first frame only (omggif)
+- **GIF** - Full support including animated GIF playback (omggif). Disable animation with `--no-animate-gif` or `MELKER_NO_ANIMATE_GIF=1`
+- **WebP** - Full support via WASM decoder (@jsquash/webp)
 
-All decoders are pure JavaScript (centralized in `src/deps.ts`) - no native dependencies or Deno internal APIs.
+PNG, JPEG, and GIF decoders are pure JavaScript. WebP uses a WASM decoder (libwebp). All dependencies are centralized in `src/deps.ts`.
 
 ### Path Resolution
 

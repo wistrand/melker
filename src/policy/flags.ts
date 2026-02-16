@@ -311,6 +311,10 @@ function getImplicitReadPaths(appDir: string, urlHash?: string, isRemote?: boole
     implicit.push({ path: `${xdgCache}/melker/app-cache/${urlHash}`, label: 'app cache' });
   }
 
+  // Deno cache dir for npm WASM modules (e.g., @jsquash/webp loads .wasm at runtime)
+  const denoDir = Env.get('DENO_DIR') || `${Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`}/deno`;
+  implicit.push({ path: denoDir, label: 'Deno module cache' });
+
   return implicit;
 }
 

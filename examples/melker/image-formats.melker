@@ -1,0 +1,85 @@
+<melker>
+  <policy>
+  {
+    "name": "Image Formats",
+    "description": "Demonstrates all supported image formats: PNG, JPEG, GIF, WebP",
+    "permissions": {
+      "read": ["."]
+    }
+  }
+  </policy>
+
+  <style>
+    .root {
+      width: fill;
+      height: fill;
+      flex-direction: column;
+      padding: 1;
+    }
+
+    .title {
+      font-weight: bold;
+      text-align: center;
+      height: 1;
+      margin-bottom: 1;
+    }
+
+    .grid {
+      flex: 1;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 1;
+      overflow: auto;
+    }
+
+    .card {
+      width: 30;
+      height: 20;
+      flex-direction: column;
+      border: thin;
+      padding: 1;
+    }
+
+    .label {
+      font-weight: bold;
+      text-align: center;
+      height: 1;
+    }
+
+    .info {
+      text-align: center;
+      height: 1;
+      dim: true;
+    }
+  </style>
+
+  <container class="root">
+    <text class="title">Image Format Support: PNG, JPEG, GIF (animated), WebP</text>
+
+    <container class="grid">
+      <container class="card">
+        <text class="label">PNG</text>
+        <text class="info">Lossless, transparency</text>
+        <img width="100%" height="15" style="flex: 1;" src="../../media/melker-128.png" />
+      </container>
+
+      <container class="card">
+        <text class="label">JPEG</text>
+        <text class="info">Lossy, small size</text>
+        <img width="100%" height="15" style="flex: 1;" src="../../media/melker-128.jpg" />
+      </container>
+
+      <container class="card">
+        <text class="label">GIF</text>
+        <text class="info">Animated playback</text>
+        <img width="100%" height="15" style="flex: 1;" src="../../media/melker-128-anim.gif" />
+      </container>
+
+      <container class="card">
+        <text class="label">WebP</text>
+        <text class="info">Modern, smallest</text>
+        <img width="100%" height="15" style="flex: 1;" src="../../media/melker-128.webp" />
+      </container>
+    </container>
+  </container>
+</melker>

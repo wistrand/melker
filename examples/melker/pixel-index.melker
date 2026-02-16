@@ -98,7 +98,7 @@ if (argv && argv[1]) {
 }
 
 const IMAGE_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif',
+  '.jpg', '.jpeg', '.png', '.gif', '.webp'
 ]);
 const VIDEO_EXTENSIONS = new Set([
   '.mp4', '.mkv', '.webm', '.avi', '.mov',

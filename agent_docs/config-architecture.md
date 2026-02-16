@@ -118,6 +118,7 @@ Each property in schema.json can have:
 - `terminal.forceFFmpeg` - Force FFmpeg instead of native audio on macOS
 
 ### Render
+- `render.animateGif` - Animate GIF images (default: true, inverted env: MELKER_NO_ANIMATE_GIF, flag: --no-animate-gif)
 - `render.gfxMode` - Graphics rendering mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness) (env: MELKER_GFX_MODE, flag: --gfx-mode)
 
 ### Headless

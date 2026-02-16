@@ -566,12 +566,13 @@ Canvas uses Unicode sextant characters (2x3 pixel blocks per terminal character)
 - `dither` - Dithering mode: `'auto'` | `'sierra-stable'` | `'floyd-steinberg'` | `'ordered'` | `'none'`
 - `ditherBits` - Color depth (1-8, default: 1 for B&W)
 - `onPaint` - Called before render with `{ canvas, bounds }`
-- `src` - Load image from file path, HTTP/HTTPS URL, or data URL (PNG, JPEG, GIF supported)
+- `src` - Load image from file path, HTTP/HTTPS URL, or data URL (PNG, JPEG, GIF, WebP supported)
 
 **Supported image formats:**
 - PNG (including alpha, 16-bit)
 - JPEG
-- GIF (first frame only)
+- GIF (animated playback supported)
+- WebP (via WASM decoder)
 
 **Dither modes:**
 - `'auto'` - Uses sierra-stable for bw/color themes, no dither for fullcolor

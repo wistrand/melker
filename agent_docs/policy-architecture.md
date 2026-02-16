@@ -145,13 +145,14 @@ Apps shouldn't need to declare permissions for Melker's internal operations. Use
 
 ### Implicit Read Paths
 
-| Path | Why |
-|------|-----|
-| Temp dir | Bundler writes transpiled code here, app must read it |
-| App dir | App must read its own .melker file and relative imports |
-| `Deno.cwd()` | Enables relative paths like `../media/img.png` |
-| `~/.local/state/melker` | Read persisted state from previous runs |
-| `~/.cache/melker/app-cache/{hash}` | Read cached remote imports (when urlHash provided) |
+| Path                                | Why                                                               |
+|-------------------------------------|-------------------------------------------------------------------|
+| Temp dir                            | Bundler writes transpiled code here, app must read it             |
+| App dir                             | App must read its own .melker file and relative imports            |
+| `Deno.cwd()`                        | Enables relative paths like `../media/img.png`                    |
+| `~/.local/state/melker`             | Read persisted state from previous runs                           |
+| `~/.cache/melker/app-cache/{hash}`  | Read cached remote imports (when urlHash provided)                |
+| Deno module cache (`$DENO_DIR`)     | npm packages with WASM modules (e.g., WebP decoder) load at runtime |
 
 ### Implicit Write Paths
 

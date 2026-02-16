@@ -214,6 +214,7 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 | `MELKER_AUTO_DITHER`         | Dither algorithm for `dither="auto"` (e.g., `sierra-stable`, `floyd-steinberg`, `atkinson`, `blue-noise`, `ordered`)                                               |
 | `MELKER_DITHER_BITS`         | Color depth for auto dithering (1-8, default: theme-based)                                                                                                         |
 | `MELKER_BLUE_NOISE_PATH`     | Path to blue noise threshold matrix PNG (default: bundled `media/blue-noise-64.png`)                                                                               |
+| `MELKER_NO_ANIMATE_GIF`      | Disable animated GIF playback (`true` or `1`)                                                                                                                      |
 | `MELKER_GFX_MODE`            | Graphics mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness), `sixel` (true pixels, auto-disabled in tmux/SSH) |
 | `XDG_STATE_HOME`             | Override state dir (default: `~/.local/state`)                                                                                                                     |
 | `XDG_CONFIG_HOME`            | Override config dir (default: `~/.config`)                                                                                                                         |

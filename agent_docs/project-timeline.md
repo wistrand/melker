@@ -45,7 +45,7 @@ So constructed.
 
 **Jan 6** - Filterable lists (combobox, select, autocomplete, command-palette), launcher/runner architecture split, performance dialog (F6), system palette (Ctrl+K)
 
-**Jan 7** - Canvas shader system, pure-JS image decoders (PNG, JPEG, GIF)
+**Jan 7** - Canvas shader system, pure-JS image decoders (PNG, JPEG, GIF). WebP support added later via WASM (@jsquash/webp)
 
 ### Week 6: The Palace of Infinite Settings (Jan 8-12)
 

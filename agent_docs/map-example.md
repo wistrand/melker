@@ -99,14 +99,15 @@ requestRepaint();  // Show newly loaded tile
 
 ### Decoding Images Programmatically
 
-Canvas elements expose `decodeImageBytes()` for loading images from raw bytes:
+Canvas elements expose `decodeImageBytes()` (sync, PNG/JPEG/GIF) and `decodeImageBytesAsync()` (async, all formats including WebP) for loading images from raw bytes:
 
 ```typescript
 const response = await fetch(tileUrl);
 const bytes = new Uint8Array(await response.arrayBuffer());
 
 const mapEl = $melker.getElementById('map') as any;
-const decoded = mapEl.decodeImageBytes(bytes);
+const decoded = mapEl.decodeImageBytes(bytes);       // sync (PNG/JPEG/GIF)
+const decoded = await mapEl.decodeImageBytesAsync(bytes);  // async (all formats + WebP)
 // decoded: { width, height, data: Uint8ClampedArray, bytesPerPixel }
 ```
 

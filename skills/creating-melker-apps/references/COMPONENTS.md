@@ -1018,7 +1018,8 @@ canvas.drawImageRegion(image, sx, sy, sw, sh, dx, dy, dw, dh);
 canvas.markDirty();  // Mark for re-render
 
 // Image decoding
-canvas.decodeImageBytes(bytes);  // Uint8Array -> { width, height, data, bytesPerPixel }
+canvas.decodeImageBytes(bytes);            // sync: PNG/JPEG/GIF -> { width, height, data, bytesPerPixel }
+await canvas.decodeImageBytesAsync(bytes); // async: all formats including WebP
 
 // Polygon drawing
 canvas.fillPoly(points);                   // Fill polygon (scanline, even-odd rule)
@@ -1058,7 +1059,7 @@ Global `MELKER_GFX_MODE` env var or `--gfx-mode` flag overrides per-element prop
 
 ### img
 
-Image display (PNG, JPEG, GIF). Supports file paths, HTTP/HTTPS URLs, and data URLs.
+Image display (PNG, JPEG, GIF, WebP). Supports file paths, HTTP/HTTPS URLs, and data URLs.
 
 ```xml
 <!-- From file -->

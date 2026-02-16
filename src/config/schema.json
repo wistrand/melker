@@ -124,6 +124,15 @@
       "flag": "--muted",
       "description": "Mute all audio playback globally"
     },
+    "render.animateGif": {
+      "type": "boolean",
+      "default": true,
+      "env": "MELKER_NO_ANIMATE_GIF",
+      "envInverted": true,
+      "flag": "--no-animate-gif",
+      "flagInverted": true,
+      "description": "Animate GIF images (disable with MELKER_NO_ANIMATE_GIF=1 or --no-animate-gif)"
+    },
     "render.gfxMode": {
       "type": "string",
       "enum": ["sextant", "block", "pattern", "luma", "sixel", "kitty", "iterm2", "hires", "isolines", "isolines-filled"],

@@ -9,6 +9,7 @@ export { parse as parseHtml } from 'npm:html5parser@2.0.2';
 export { decode as decodePng, encode as encodePng } from 'npm:fast-png@8.0.0';
 export { decode as decodeJpeg } from 'npm:jpeg-js@0.4.4';
 export { GifReader } from 'npm:omggif@1.0.10';
+export { decode as decodeWebp } from 'npm:@jsquash/webp@1.5.0';
 
 // Markdown parsing
 export { fromMarkdown } from 'npm:mdast-util-from-markdown@2.0.2';

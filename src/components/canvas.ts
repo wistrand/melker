@@ -14,9 +14,10 @@ import {
 } from './canvas-render.ts';
 import type { Isoline, IsolineMode, IsolineSource, IsolineFill, IsolineColor } from '../isoline.ts';
 import {
-  decodeImageBytes, loadImageFromSource,
+  decodeImageBytes, decodeImageBytesAsync, loadImageFromSource,
+  tryParseGifAnimation, decodeGifFrame,
   calculateImageScaling, scaleImageToBuffer, renderScaledDataToBuffer,
-  type LoadedImage, type ImageRenderConfig
+  type LoadedImage, type ImageRenderConfig, type GifAnimationData
 } from './canvas-image.ts';
 import {
   createShaderState, startShader, stopShader, isShaderRunning,
@@ -28,6 +29,7 @@ import {
   DitherState, prepareDitheredBuffer, type DitherData
 } from './canvas-dither.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { getUIAnimationManager } from '../ui-animation-manager.ts';
 
 // Re-export for external use
 export { type LoadedImage } from './canvas-image.ts';
@@ -101,6 +103,13 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   private _loadedImage: LoadedImage | null = null;
   private _imageLoading: boolean = false;
   private _imageSrc: string | null = null;
+
+  // Animated GIF playback
+  private _gifAnim: GifAnimationData | null = null;
+  private _gifFrameIndex: number = 0;
+  private _gifCompositeBuffer: Uint8Array | null = null;
+  private _gifUnregister: (() => void) | null = null;
+  private _gifFrameStart: number = 0; // timestamp when current frame started
 
   // Shader animation state (shared object for zero-overhead access)
   private _shaderState: ShaderState = createShaderState();
@@ -556,11 +565,19 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   // ============================================
 
   /**
-   * Decode image bytes (PNG, JPEG, GIF) to pixel data
-   * Can be used to decode fetched tile data before calling drawImage()
+   * Decode image bytes (PNG, JPEG, GIF) to pixel data (sync).
+   * For WebP, use decodeImageBytesAsync().
    */
   decodeImageBytes(imageBytes: Uint8Array): LoadedImage {
     return decodeImageBytes(imageBytes);
+  }
+
+  /**
+   * Decode image bytes (PNG, JPEG, GIF, WebP) to pixel data (async).
+   * Supports all formats including WebP.
+   */
+  async decodeImageBytesAsync(imageBytes: Uint8Array): Promise<LoadedImage> {
+    return decodeImageBytesAsync(imageBytes);
   }
 
   /**
@@ -584,7 +601,10 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       }
 
       // Decode and store the image
-      this._loadedImage = decodeImageBytes(imageBytes);
+      this._loadedImage = await decodeImageBytesAsync(imageBytes);
+
+      // Check for animated GIF and start playback
+      this._startGifAnimation(imageBytes);
 
       // Render the image to the canvas
       this._renderImageToBuffer();
@@ -613,14 +633,15 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
-   * Load an image directly from raw bytes (PNG, JPEG, or GIF data)
+   * Load an image directly from raw bytes (PNG, JPEG, GIF, or WebP data)
    * Use this when you've already fetched the image data (e.g., from fetch())
    * @param bytes Raw image file bytes
    */
-  loadImageFromBytes(bytes: Uint8Array): void {
+  async loadImageFromBytes(bytes: Uint8Array): Promise<void> {
     try {
-      this._loadedImage = this.decodeImageBytes(bytes);
+      this._loadedImage = await decodeImageBytesAsync(bytes);
       this._imageSrc = '[bytes]';
+      this._startGifAnimation(bytes);
       this._renderImageToBuffer();
     } catch (error) {
       logger.error(`Failed to decode image from bytes: ${error}`);
@@ -903,6 +924,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    * Clear the loaded image
    */
   clearImage(): void {
+    this._stopGifAnimation();
     this._loadedImage = null;
     this._imageSrc = null;
     // Clear the image background buffer
@@ -917,6 +939,75 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   setSource(url: string): void {
     this.clearImage();
     this.props.src = url;
+  }
+
+  // ============================================
+  // Animated GIF Playback
+  // ============================================
+
+  /**
+   * Try to start GIF animation from raw image bytes.
+   * No-op if not an animated GIF.
+   */
+  private _startGifAnimation(imageBytes: Uint8Array): void {
+    this._stopGifAnimation();
+
+    if (!MelkerConfig.get().animateGif) return;
+
+    const anim = tryParseGifAnimation(imageBytes);
+    if (!anim) return;
+
+    this._gifAnim = anim;
+    this._gifFrameIndex = 0;
+    this._gifFrameStart = performance.now();
+    this._gifCompositeBuffer = new Uint8Array(anim.width * anim.height * 4);
+    // Blit frame 0 into composite buffer (already decoded as _loadedImage)
+    anim.reader.decodeAndBlitFrameRGBA(0, this._gifCompositeBuffer);
+
+    // Tick at the minimum frame delay to handle variable per-frame delays
+    const minDelay = Math.max(20, Math.min(...anim.delays));
+    const animId = `gif-${this.id || this.props.id || Date.now()}`;
+    const manager = getUIAnimationManager();
+    this._gifUnregister = manager.register(animId, () => {
+      if (this._gifTickFrame()) {
+        manager.requestRender();
+      }
+    }, minDelay);
+  }
+
+  /**
+   * Stop GIF animation and clean up state.
+   */
+  private _stopGifAnimation(): void {
+    if (this._gifUnregister) {
+      this._gifUnregister();
+      this._gifUnregister = null;
+    }
+    this._gifAnim = null;
+    this._gifFrameIndex = 0;
+    this._gifFrameStart = 0;
+    this._gifCompositeBuffer = null;
+  }
+
+  /**
+   * Check if current frame's delay has elapsed; if so, advance and re-render.
+   * Returns true if a frame was advanced (render needed).
+   */
+  private _gifTickFrame(): boolean {
+    const anim = this._gifAnim;
+    if (!anim || !this._gifCompositeBuffer) return false;
+
+    const now = performance.now();
+    const elapsed = now - this._gifFrameStart;
+    const delay = anim.delays[this._gifFrameIndex];
+
+    if (elapsed < delay) return false;
+
+    this._gifFrameIndex = (this._gifFrameIndex + 1) % anim.frameCount;
+    this._gifFrameStart = now;
+    this._loadedImage = decodeGifFrame(anim, this._gifFrameIndex, this._gifCompositeBuffer);
+    this._renderImageToBuffer();
+    return true;
   }
 
   // ============================================

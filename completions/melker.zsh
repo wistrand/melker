@@ -51,6 +51,7 @@ _melker() {
         '--lsp[Start Language Server Protocol server]' \
         '--muted[Mute all audio playback globally]' \
         '--no-alt-screen[Use alternate screen buffer]' \
+        '--no-animate-gif[Animate GIF images (disable with MELKER_NO_ANIMATE_GIF=1 or --no-animate-gif)]' \
         '--no-check[Skip type checking]' \
         '--no-console-override[Disable console.log redirect to logger]' \
         '--no-load[Skip loading persisted state]' \

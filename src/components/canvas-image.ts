@@ -1,7 +1,7 @@
 // Image loading, decoding, and rendering for canvas component
-// Supports PNG, JPEG, and GIF formats
+// Supports PNG, JPEG, GIF, and WebP formats
 
-import { decodePng, decodeJpeg, GifReader } from '../deps.ts';
+import { decodePng, decodeJpeg, GifReader, decodeWebp } from '../deps.ts';
 import { getLogger } from '../logging.ts';
 import { LRUCache } from '../lru-cache.ts';
 import { TRANSPARENT, packRGBA, unpackRGBA, parseColor } from './color-utils.ts';
@@ -17,12 +17,25 @@ export interface LoadedImage {
   bytesPerPixel: number;    // 3 for RGB, 4 for RGBA
 }
 
+/**
+ * Animated GIF data for frame-by-frame playback
+ */
+export interface GifAnimationData {
+  reader: InstanceType<typeof GifReader>;
+  frameCount: number;
+  width: number;
+  height: number;
+  /** Per-frame delay in ms (from centiseconds in GIF spec) */
+  delays: number[];
+  loopCount: number | null;
+}
+
 const logger = getLogger("canvas-image");
 
 /**
  * Detect image format from magic bytes
  */
-export function detectImageFormat(bytes: Uint8Array): 'png' | 'jpeg' | 'gif' | null {
+export function detectImageFormat(bytes: Uint8Array): 'png' | 'jpeg' | 'gif' | 'webp' | null {
   // PNG magic: 0x89 0x50 0x4E 0x47
   if (bytes[0] === 0x89 && bytes[1] === 0x50 &&
       bytes[2] === 0x4E && bytes[3] === 0x47) {
@@ -37,6 +50,11 @@ export function detectImageFormat(bytes: Uint8Array): 'png' | 'jpeg' | 'gif' | n
       bytes[3] === 0x38 && (bytes[4] === 0x37 || bytes[4] === 0x39) &&
       bytes[5] === 0x61) {
     return 'gif';
+  }
+  // WebP magic: RIFF....WEBP
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    return 'webp';
   }
   return null;
 }
@@ -152,8 +170,69 @@ function decodeGifImage(imageBytes: Uint8Array): LoadedImage {
 }
 
 /**
- * Decode image bytes (PNG, JPEG, or GIF) to LoadedImage format
- * Detects format automatically from magic bytes
+ * Try to parse GIF animation data from image bytes.
+ * Returns null if not a GIF or single-frame.
+ */
+export function tryParseGifAnimation(imageBytes: Uint8Array): GifAnimationData | null {
+  if (detectImageFormat(imageBytes) !== 'gif') return null;
+  const reader = new GifReader(imageBytes);
+  const frameCount = reader.numFrames();
+  if (frameCount <= 1) return null;
+
+  const delays: number[] = [];
+  for (let i = 0; i < frameCount; i++) {
+    const info = reader.frameInfo(i);
+    // GIF delay is in centiseconds; 0 means "use default" (~100ms)
+    delays.push(info.delay > 0 ? info.delay * 10 : 100);
+  }
+
+  return {
+    reader,
+    frameCount,
+    width: reader.width,
+    height: reader.height,
+    delays,
+    loopCount: reader.loopCount(),
+  };
+}
+
+/**
+ * Decode a specific GIF frame to LoadedImage.
+ * Handles disposal by compositing onto the provided previousPixels buffer.
+ */
+export function decodeGifFrame(anim: GifAnimationData, frameIndex: number, compositeBuffer: Uint8Array): LoadedImage {
+  anim.reader.decodeAndBlitFrameRGBA(frameIndex, compositeBuffer);
+  return {
+    width: anim.width,
+    height: anim.height,
+    data: new Uint8ClampedArray(compositeBuffer),
+    bytesPerPixel: 4,
+  };
+}
+
+/**
+ * Decode WebP image bytes to LoadedImage (async - WASM decoder)
+ */
+async function decodeWebpImage(imageBytes: Uint8Array): Promise<LoadedImage> {
+  const buffer = imageBytes.buffer instanceof ArrayBuffer
+    ? imageBytes.buffer
+    : new ArrayBuffer(imageBytes.byteLength);
+  if (!(imageBytes.buffer instanceof ArrayBuffer)) {
+    new Uint8Array(buffer).set(imageBytes);
+  }
+  const decoded = await decodeWebp(buffer) as unknown as { width: number; height: number; data: Uint8ClampedArray };
+  return {
+    width: decoded.width,
+    height: decoded.height,
+    data: new Uint8ClampedArray(decoded.data),
+    bytesPerPixel: 4, // @jsquash/webp outputs RGBA
+  };
+}
+
+/**
+ * Decode image bytes (PNG, JPEG, or GIF) to LoadedImage format (sync).
+ * For WebP, use decodeImageBytesAsync().
+ * Detects format automatically from magic bytes.
  */
 export function decodeImageBytes(imageBytes: Uint8Array): LoadedImage {
   const format = detectImageFormat(imageBytes);
@@ -165,8 +244,31 @@ export function decodeImageBytes(imageBytes: Uint8Array): LoadedImage {
       return decodeJpegImage(imageBytes);
     case 'gif':
       return decodeGifImage(imageBytes);
+    case 'webp':
+      throw new Error('WebP decoding is async. Use decodeImageBytesAsync() or canvas.loadImage()/loadImageFromBytes().');
     default:
-      throw new Error('Unsupported image format. Supported: PNG, JPEG, GIF');
+      throw new Error('Unsupported image format. Supported: PNG, JPEG, GIF, WebP');
+  }
+}
+
+/**
+ * Decode image bytes (PNG, JPEG, GIF, or WebP) to LoadedImage format (async).
+ * Supports all formats including WebP.
+ */
+export async function decodeImageBytesAsync(imageBytes: Uint8Array): Promise<LoadedImage> {
+  const format = detectImageFormat(imageBytes);
+
+  switch (format) {
+    case 'png':
+      return decodePngImage(imageBytes);
+    case 'jpeg':
+      return decodeJpegImage(imageBytes);
+    case 'gif':
+      return decodeGifImage(imageBytes);
+    case 'webp':
+      return decodeWebpImage(imageBytes);
+    default:
+      throw new Error('Unsupported image format. Supported: PNG, JPEG, GIF, WebP');
   }
 }
 

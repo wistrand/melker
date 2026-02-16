@@ -81,6 +81,7 @@ Detailed file layout for the Melker codebase.
 | `performance-dialog.ts` | Live performance stats dialog (Ctrl+Shift+P)   |
 | `lint.ts`               | Lint mode validation, schemas                  |
 | `lsp.ts`                | Language Server Protocol for .melker files     |
+| `string-utils.ts`       | Shared string utilities (Levenshtein distance) |
 
 #### `server-ui/` - Server Web UI
 

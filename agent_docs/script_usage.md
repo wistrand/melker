@@ -112,7 +112,7 @@ $melker: {
 | Identifier        | Description                                          |
 |-------------------|------------------------------------------------------|
 | `$melker`         | Runtime context object                               |
-| `$app`            | Alias for `$melker.exports` (user-defined functions) |
+| `$app`            | Proxy-wrapped alias for `$melker.exports` (user-defined functions, with typo/misuse warnings) |
 | `$melker.url`     | Source file URL (e.g. `file:///path/to/app.melker`)  |
 | `$melker.dirname` | Directory path (e.g. `/path/to`)                     |
 | `argv`            | Command line arguments (`string[]`)                  |
@@ -165,6 +165,27 @@ The `exports = { ... }` convenience pattern does NOT work in external files - us
 ```
 
 Objects are copied by reference, so `$app.obj.prop = value` does modify the original.
+
+### $app Proxy Diagnostics
+
+`$app` is wrapped in a Proxy that provides runtime diagnostics for common mistakes:
+
+**Missing export detection** — Accessing `$app.foo` when `foo` was never exported logs a warning with Levenshtein-based suggestions:
+
+```
+$app.hanldeClick is not a known export. Did you mean: 'handleClick'?
+```
+
+**Primitive assignment detection** — Assigning to a primitive export (`$app.count = 5`) logs a warning explaining the copy-by-value semantics:
+
+```
+Assignment to $app.count will not update the original exported variable 'count'.
+Use an exported setter function instead.
+```
+
+In lint mode (`--lint` or `MELKER_LINT=true`), both warnings become errors. Warnings are deduplicated per key to avoid log spam. Object/function assignments do not trigger the primitive warning.
+
+If a missing export causes a "not a function" TypeError, the error shown in the UI is enriched with the same suggestion text.
 
 ## Logging
 

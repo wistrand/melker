@@ -1,0 +1,28 @@
+<melker>
+  <title>Error Boundary Test</title>
+
+  <policy>
+  {
+    "permissions": {}
+  }
+  </policy>
+
+  <script>
+    export function triggerError() {
+      // Corrupt the canvas element's render method to trigger error-boundary
+      const canvas = $melker.getElementById('testCanvas');
+      if (canvas) {
+        canvas.render = () => { throw new Error('Canvas render exploded!'); };
+        $melker.render();
+      }
+    }
+  </script>
+
+  <container style="gap: 1; padding: 1">
+    <text>Error Boundary Test - click button to trigger render error</text>
+    <canvas id="testCanvas" width="60" height="10" />
+    <button onClick="$app.triggerError()">Trigger Render Error</button>
+    <button onClick="$app.doesNotExist()">Trigger Script Error</button>
+    <button onClick="$app.triggerError(); $app.doesNotExist()">Trigger Both</button>
+  </container>
+</melker>

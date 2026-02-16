@@ -5,7 +5,8 @@ import type { DualBuffer } from './buffer.ts';
 import type { Element, Bounds } from './types.ts';
 import { getThemeColor } from './theme.ts';
 import { COLORS, parseColor } from './components/color-utils.ts';
-import { getLogger } from './logging.ts';
+import { getLogger, getGlobalLoggerOptions } from './logging.ts';
+import { buildGuruBox, renderGuruBox } from './error-overlay.ts';
 
 const logger = getLogger('ErrorBoundary');
 
@@ -19,7 +20,6 @@ export interface ComponentError {
 
 export interface ErrorOverlayOptions {
   enabled: boolean;
-  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   maxErrors: number;
   autoDismissMs: number;
 }
@@ -262,7 +262,6 @@ export class ErrorOverlay {
     this._errorHandler = errorHandler;
     this._options = {
       enabled: true,
-      position: 'bottom-left',
       maxErrors: 3,
       autoDismissMs: 10000,
       ...options,
@@ -279,9 +278,10 @@ export class ErrorOverlay {
   }
 
   /**
-   * Render error overlay on the buffer
+   * Render Guru Meditation error overlay on the buffer
+   * @param atTop - render at top of screen instead of bottom (used when script error overlay occupies the bottom)
    */
-  render(buffer: DualBuffer): void {
+  render(buffer: DualBuffer, atTop = false): void {
     if (!this._enabled) return;
 
     // Clear old errors
@@ -290,77 +290,42 @@ export class ErrorOverlay {
     const errors = this._errorHandler.getErrors().slice(-this._options.maxErrors);
     if (errors.length === 0) return;
 
-    const lines = this._formatErrors(errors);
-    const maxWidth = Math.min(
-      Math.max(...lines.map(line => line.length)) + 2,
-      Math.floor(buffer.width * 0.8)
-    );
+    const contentLines = this._formatErrors(errors);
 
-    const { x, y } = this._calculatePosition(buffer, maxWidth, lines.length);
+    // Full terminal width, like the script error overlay
+    const boxWidth = buffer.width;
+    const innerWidth = boxWidth - 2;
 
-    this._renderOverlay(buffer, x, y, maxWidth, lines);
+    const lines = buildGuruBox(contentLines, innerWidth, 'Render Error');
+
+    const startY = atTop ? 0 : Math.max(0, buffer.height - lines.length);
+    renderGuruBox(buffer, 0, startY, lines, boxWidth);
   }
 
   private _formatErrors(errors: ComponentError[]): string[] {
     const lines: string[] = [];
 
-    // Check for rate limiting status
     const suppressed = this._errorHandler.getTotalSuppressedCount();
     const isRateLimited = this._errorHandler.hasRateLimitedComponents();
-
-    if (isRateLimited && suppressed > 0) {
-      lines.push(`[!] ${errors.length} error${errors.length > 1 ? 's' : ''} (+${suppressed} suppressed)`);
-    } else {
-      lines.push(`[!] ${errors.length} error${errors.length > 1 ? 's' : ''}`);
-    }
+    const countStr = `${errors.length} error${errors.length > 1 ? 's' : ''}`;
+    const suffix = isRateLimited && suppressed > 0 ? ` (+${suppressed} suppressed)` : '';
+    lines.push(`${countStr}${suffix}`);
 
     for (const err of errors) {
       const age = Math.floor((Date.now() - err.timestamp) / 1000);
       const ageStr = age < 60 ? `${age}s` : `${Math.floor(age / 60)}m`;
       const msg = err.error.message.slice(0, 40);
-      lines.push(`  ${err.elementType}: ${msg} (${ageStr})`);
+      lines.push(`${err.elementType}: ${msg} (${ageStr})`);
+    }
+
+    const loggerOpts = getGlobalLoggerOptions();
+    if (loggerOpts.logFile) {
+      lines.push(`Log: ${loggerOpts.logFile}`);
     }
 
     return lines;
   }
 
-  private _calculatePosition(buffer: DualBuffer, width: number, height: number): { x: number; y: number } {
-    switch (this._options.position) {
-      case 'top-left':
-        return { x: 1, y: 1 };
-      case 'top-right':
-        return { x: buffer.width - width - 1, y: 1 };
-      case 'bottom-right':
-        return { x: buffer.width - width - 1, y: buffer.height - height - 1 };
-      case 'bottom-left':
-      default:
-        return { x: 1, y: buffer.height - height - 1 };
-    }
-  }
-
-  private _renderOverlay(buffer: DualBuffer, x: number, y: number, width: number, lines: string[]): void {
-    const bgColor = getThemeColor('error') ?? parseColor('#8b0000')!;
-    const textColor = COLORS.white;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].padEnd(width).slice(0, width);
-      const lineY = y + i;
-
-      if (lineY < 0 || lineY >= buffer.height) continue;
-
-      for (let j = 0; j < line.length; j++) {
-        const cellX = x + j;
-        if (cellX < 0 || cellX >= buffer.width) continue;
-
-        buffer.currentBuffer.setCell(cellX, lineY, {
-          char: line[j],
-          foreground: textColor,
-          background: bgColor,
-          bold: i === 0,
-        });
-      }
-    }
-  }
 }
 
 /**

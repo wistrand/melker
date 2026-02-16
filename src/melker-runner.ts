@@ -6,6 +6,7 @@ import { resolve } from './deps.ts';
 import { debounce } from './utils/timing.ts';
 import { isUrl, loadContent } from './utils/content-loader.ts';
 import { ensureError } from './utils/error.ts';
+import { findSimilarNames } from './string-utils.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { Env } from './env.ts';
 import { parseCliFlags, MelkerConfig } from './config/mod.ts';
@@ -131,6 +132,23 @@ async function wireBundlerHandlers(
               } catch (error) {
                 const err = ensureError(error);
                 let location: string | undefined;
+
+                // Enrich "is not a function" TypeErrors with $app export suggestions
+                if (err instanceof TypeError && err.message.includes('is not a function')) {
+                  const appPropMatch = err.message.match(/\$app\d*\.(\w+)\s+is not a function/);
+                  if (appPropMatch && context?.exports) {
+                    const prop = appPropMatch[1];
+                    const known = Object.keys(context.exports);
+                    const similar = findSimilarNames(prop, known, 3);
+                    let hint = `$app.${prop} is not a known export.`;
+                    if (similar.length > 0) {
+                      hint += ` Did you mean: ${similar.map(s => `'${s}'`).join(', ')}?`;
+                    } else {
+                      hint += ` Export it from <script> to make it available.`;
+                    }
+                    err.message = hint;
+                  }
+                }
 
                 if (errorTranslator) {
                   const handlerMapping = errorTranslator.findBySourceId(capturedHandlerId);

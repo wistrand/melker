@@ -79,6 +79,8 @@ Demonstrates animated noise using 3D noise functions with time as the Z-axis.
     let scale = 3.0;
     let paletteType: 'fire' | 'ocean' | 'cloud' | 'plasma' | 'grayscale' = 'fire';
 
+    export let apa = 3;
+
     // Color palettes (Inigo Quilez style: a + b * cos(2π * (c * t + d)))
     const palettes = {
       fire: {
@@ -159,8 +161,9 @@ Demonstrates animated noise using 3D noise functions with time as the Z-axis.
       return utils.palette(t, p.a, p.b, p.c, p.d);
     }
 
-    export function onNoiseChange(event: { value: string }) {
+    export function onNoiseChangex(event: { value: string }) {
       noiseType = event.value as typeof noiseType;
+      $app.apa = 2;
     }
 
     export function onSpeedChange(event: { value: number | string }) {

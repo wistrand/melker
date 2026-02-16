@@ -58,18 +58,20 @@ export function renderBufferOverlays(buffer: DualBuffer, ctx: BufferOverlayConte
     }
   }
 
-  // Render error overlay if there are errors
+  // Render script error overlay if there are script errors (always at bottom)
+  const scriptErrorOverlay = getGlobalScriptErrorOverlay();
+  const scriptErrorVisible = scriptErrorOverlay.hasError();
   try {
-    getGlobalErrorOverlay().render(buffer);
-  } catch {
-    // Silently ignore error overlay errors
-  }
-
-  // Render script error overlay if there are script errors
-  try {
-    getGlobalScriptErrorOverlay().render(buffer);
+    scriptErrorOverlay.render(buffer);
   } catch {
     // Silently ignore script error overlay errors
+  }
+
+  // Render component error overlay — move to top if script error overlay occupies bottom
+  try {
+    getGlobalErrorOverlay().render(buffer, scriptErrorVisible);
+  } catch {
+    // Silently ignore error overlay errors
   }
 
   // Render tooltip overlay if visible

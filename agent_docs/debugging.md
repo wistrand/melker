@@ -375,6 +375,35 @@ MELKER_THEME=bw-std ./melker.ts --stdout --trust app.melker
 - Piping output to other tools for analysis
 - CI/automated testing of visual output
 
+## $app Export Diagnostics
+
+The `$app` object is wrapped in a Proxy that detects common mistakes at runtime:
+
+### Missing Export (Typos)
+
+When a handler references `$app.foo` and `foo` was never exported from any `<script>` block:
+
+```
+[WARN] Bundler: $app.foo is not a known export. Did you mean: 'foe'?
+```
+
+If this causes a TypeError (e.g., calling `$app.foo()` when `foo` doesn't exist), the error shown in the red UI error overlay includes the suggestion text instead of the generic "is not a function" message.
+
+### Primitive Assignment
+
+When assigning to a primitive (number, string, boolean) export:
+
+```
+[WARN] Bundler: Assignment to $app.count will not update the original exported variable 'count'.
+Use an exported setter function instead.
+```
+
+### Lint Mode
+
+With `--lint` or `MELKER_LINT=true`, both diagnostics become errors (thrown instead of warned). This is useful for catching issues early during development.
+
+Both warnings are deduplicated per property name — you'll see each warning at most once per app run.
+
 ## Common Debug Scenarios
 
 ### Permission Issues

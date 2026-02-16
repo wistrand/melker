@@ -1,0 +1,186 @@
+<melker>
+  <title>Theme Colors</title>
+
+  <policy>
+  {
+    "permissions": {}
+  }
+  </policy>
+
+  <style>
+    .row { flex-direction: row; gap: 1; }
+    .swatch { width: 4; height: 1; }
+    .label { padding-top: 0; }
+    .section { gap: 0; padding-bottom: 1; }
+    .section-title { font-weight: bold; padding-bottom: 0; }
+
+    .bg-primary { background-color: var(--theme-primary); }
+    .bg-secondary { background-color: var(--theme-secondary); }
+    .bg-background { background-color: var(--theme-background); }
+    .bg-foreground { background-color: var(--theme-foreground); }
+    .bg-surface { background-color: var(--theme-surface); }
+    .bg-border { background-color: var(--theme-border); }
+    .bg-success { background-color: var(--theme-success); }
+    .bg-warning { background-color: var(--theme-warning); }
+    .bg-error { background-color: var(--theme-error); }
+    .bg-info { background-color: var(--theme-info); }
+    .bg-button-primary { background-color: var(--theme-button-primary); }
+    .bg-button-secondary { background-color: var(--theme-button-secondary); }
+    .bg-button-background { background-color: var(--theme-button-background); }
+    .bg-input-background { background-color: var(--theme-input-background); }
+    .bg-input-foreground { background-color: var(--theme-input-foreground); }
+    .bg-input-border { background-color: var(--theme-input-border); }
+    .bg-focus-primary { background-color: var(--theme-focus-primary); }
+    .bg-focus-background { background-color: var(--theme-focus-background); }
+    .bg-text-primary { background-color: var(--theme-text-primary); }
+    .bg-text-secondary { background-color: var(--theme-text-secondary); }
+    .bg-text-muted { background-color: var(--theme-text-muted); }
+    .bg-header-background { background-color: var(--theme-header-background); }
+    .bg-header-foreground { background-color: var(--theme-header-foreground); }
+    .bg-sidebar-background { background-color: var(--theme-sidebar-background); }
+    .bg-sidebar-foreground { background-color: var(--theme-sidebar-foreground); }
+    .bg-modal-background { background-color: var(--theme-modal-background); }
+    .bg-modal-foreground { background-color: var(--theme-modal-foreground); }
+    .bg-scrollbar-thumb { background-color: var(--theme-scrollbar-thumb); }
+    .bg-scrollbar-track { background-color: var(--theme-scrollbar-track); }
+
+    .preview-header { background-color: var(--theme-header-background); color: var(--theme-header-foreground); padding: 1; }
+    .preview-sidebar { background-color: var(--theme-sidebar-background); color: var(--theme-sidebar-foreground); width: 24; padding: 1; gap: 0; border: single; border-color: var(--theme-border); }
+    .preview-surface { background-color: var(--theme-surface); padding: 1; border: single; border-color: var(--theme-border); }
+    .preview-input { background-color: var(--theme-input-background); border: single; border-color: var(--theme-input-border); padding: 1; color: var(--theme-input-foreground); }
+    .preview-focus { background-color: var(--theme-focus-background); border: single; border-color: var(--theme-focus-primary); padding: 1; color: var(--theme-focus-primary); }
+    .preview-modal { background-color: var(--theme-modal-background); color: var(--theme-modal-foreground); border: double; border-color: var(--theme-border); padding: 1; }
+    .status-success { background-color: var(--theme-success); padding: 1; width: 14; color: var(--theme-background); }
+    .status-warning { background-color: var(--theme-warning); padding: 1; width: 14; color: var(--theme-background); }
+    .status-error { background-color: var(--theme-error); padding: 1; width: 14; color: var(--theme-background); }
+    .status-info { background-color: var(--theme-info); padding: 1; width: 14; color: var(--theme-background); }
+    .text-primary { color: var(--theme-text-primary); }
+    .text-secondary { color: var(--theme-text-secondary); }
+    .text-muted { color: var(--theme-text-muted); }
+  </style>
+
+  <container style="padding: 1; height: fill">
+    <text style="font-weight: bold">Theme Color Palette</text>
+
+    <tabs style="flex: 1">
+      <tab title="Swatches">
+        <container style="gap: 0; overflow: scroll; height: fill; padding: 1">
+
+          <container class="section">
+            <text class="section-title">Basic UI</text>
+            <container class="row"><container class="swatch bg-primary" /><text class="label">primary</text></container>
+            <container class="row"><container class="swatch bg-secondary" /><text class="label">secondary</text></container>
+            <container class="row"><container class="swatch bg-background" /><text class="label">background</text></container>
+            <container class="row"><container class="swatch bg-foreground" /><text class="label">foreground</text></container>
+            <container class="row"><container class="swatch bg-surface" /><text class="label">surface</text></container>
+            <container class="row"><container class="swatch bg-border" /><text class="label">border</text></container>
+          </container>
+
+          <container class="section">
+            <text class="section-title">Status</text>
+            <container class="row"><container class="swatch bg-success" /><text class="label">success</text></container>
+            <container class="row"><container class="swatch bg-warning" /><text class="label">warning</text></container>
+            <container class="row"><container class="swatch bg-error" /><text class="label">error</text></container>
+            <container class="row"><container class="swatch bg-info" /><text class="label">info</text></container>
+          </container>
+
+          <container class="section">
+            <text class="section-title">Interactive</text>
+            <container class="row"><container class="swatch bg-button-primary" /><text class="label">buttonPrimary</text></container>
+            <container class="row"><container class="swatch bg-button-secondary" /><text class="label">buttonSecondary</text></container>
+            <container class="row"><container class="swatch bg-button-background" /><text class="label">buttonBackground</text></container>
+            <container class="row"><container class="swatch bg-input-background" /><text class="label">inputBackground</text></container>
+            <container class="row"><container class="swatch bg-input-foreground" /><text class="label">inputForeground</text></container>
+            <container class="row"><container class="swatch bg-input-border" /><text class="label">inputBorder</text></container>
+          </container>
+
+          <container class="section">
+            <text class="section-title">Focus</text>
+            <container class="row"><container class="swatch bg-focus-primary" /><text class="label">focusPrimary</text></container>
+            <container class="row"><container class="swatch bg-focus-background" /><text class="label">focusBackground</text></container>
+          </container>
+
+          <container class="section">
+            <text class="section-title">Text</text>
+            <container class="row"><container class="swatch bg-text-primary" /><text class="label">textPrimary</text></container>
+            <container class="row"><container class="swatch bg-text-secondary" /><text class="label">textSecondary</text></container>
+            <container class="row"><container class="swatch bg-text-muted" /><text class="label">textMuted</text></container>
+          </container>
+
+          <container class="section">
+            <text class="section-title">Component</text>
+            <container class="row"><container class="swatch bg-header-background" /><text class="label">headerBackground</text></container>
+            <container class="row"><container class="swatch bg-header-foreground" /><text class="label">headerForeground</text></container>
+            <container class="row"><container class="swatch bg-sidebar-background" /><text class="label">sidebarBackground</text></container>
+            <container class="row"><container class="swatch bg-sidebar-foreground" /><text class="label">sidebarForeground</text></container>
+            <container class="row"><container class="swatch bg-modal-background" /><text class="label">modalBackground</text></container>
+            <container class="row"><container class="swatch bg-modal-foreground" /><text class="label">modalForeground</text></container>
+          </container>
+
+          <container class="section">
+            <text class="section-title">Scrollbar</text>
+            <container class="row"><container class="swatch bg-scrollbar-thumb" /><text class="label">scrollbarThumb</text></container>
+            <container class="row"><container class="swatch bg-scrollbar-track" /><text class="label">scrollbarTrack</text></container>
+          </container>
+
+        </container>
+      </tab>
+
+      <tab title="Preview">
+        <container style="gap: 1; overflow: scroll; height: fill; padding: 1">
+
+          <container class="preview-header" style="width: fill">
+            <text style="font-weight: bold">Header Bar</text>
+            <text>headerBackground + headerForeground</text>
+          </container>
+
+          <container style="flex-direction: row; gap: 1; width: fill; flex: 1">
+
+            <container class="preview-sidebar">
+              <text style="font-weight: bold">Sidebar</text>
+              <text>Navigation</text>
+              <text>Settings</text>
+              <text class="text-muted">sidebarBackground</text>
+            </container>
+
+            <container style="flex: 1; gap: 1">
+
+              <container class="preview-surface">
+                <text class="text-primary">Primary text on surface</text>
+                <text class="text-secondary">Secondary text on surface</text>
+                <text class="text-muted">Muted text on surface</text>
+              </container>
+
+              <container style="flex-direction: row; gap: 1">
+                <container class="status-success"><text>Success</text></container>
+                <container class="status-warning"><text>Warning</text></container>
+                <container class="status-error"><text>Error</text></container>
+                <container class="status-info"><text>Info</text></container>
+              </container>
+
+              <container style="flex-direction: row; gap: 1">
+                <button>Primary Action</button>
+                <button>Secondary</button>
+              </container>
+
+              <container class="preview-input">
+                <text>Input field text</text>
+              </container>
+
+              <container class="preview-focus">
+                <text>Focused element</text>
+              </container>
+
+              <container class="preview-modal">
+                <text style="font-weight: bold">Modal Dialog</text>
+                <text>modalBackground + modalForeground</text>
+              </container>
+
+            </container>
+          </container>
+
+        </container>
+      </tab>
+    </tabs>
+  </container>
+</melker>

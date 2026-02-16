@@ -20,8 +20,6 @@
 
 import { MelkerConfig } from '../config/mod.ts';
 import { ensureError } from '../utils/error.ts';
-import { isLintEnabled } from '../lint.ts';
-import { findSimilarNames } from '../string-utils.ts';
 
 // Re-export types
 export type {
@@ -200,73 +198,6 @@ export async function processMelkerBundle(
   return assembled;
 }
 
-// Properties on $app that should never trigger missing-export warnings
-const APP_PROXY_SKIP_PROPS = new Set([
-  'then', 'toJSON', 'toString', 'valueOf', 'constructor',
-  'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable',
-  'toLocaleString', '__proto__', 'length', 'Symbol(Symbol.toPrimitive)',
-  'Symbol(Symbol.toStringTag)', 'Symbol(Symbol.iterator)',
-]);
-
-/**
- * Wrap the $app exports object in a Proxy that warns about:
- * - Accessing unknown export names (possible typos)
- * - Assigning to primitive exports (copy-by-value footgun)
- *
- * In lint mode, these become errors instead of warnings.
- */
-function createAppProxy(
-  exports: Record<string, unknown>,
-): Record<string, unknown> {
-  const warnedMissing = new Set<string>();
-  const warnedPrimitive = new Set<string>();
-
-  return new Proxy(exports, {
-    get(target, prop, receiver) {
-      if (typeof prop === 'symbol') return Reflect.get(target, prop, receiver);
-      if (APP_PROXY_SKIP_PROPS.has(prop)) return Reflect.get(target, prop, receiver);
-
-      if (!(prop in target) && !warnedMissing.has(prop)) {
-        warnedMissing.add(prop);
-        const known = Object.keys(target);
-        const similar = findSimilarNames(prop, known, 3);
-        let msg = `$app.${prop} is not a known export.`;
-        if (similar.length > 0) {
-          msg += ` Did you mean: ${similar.map(s => `'${s}'`).join(', ')}?`;
-        } else {
-          msg += ` Export it from <script> to make it available.`;
-        }
-        if (isLintEnabled()) {
-          throw new Error(msg);
-        }
-        logger.warn(msg);
-      }
-      return Reflect.get(target, prop, receiver);
-    },
-
-    set(target, prop, value) {
-      if (typeof prop === 'string' && prop in target && !warnedPrimitive.has(prop)) {
-        const current = target[prop];
-        const isPrimitive = current !== null
-          && current !== undefined
-          && typeof current !== 'object'
-          && typeof current !== 'function';
-        if (isPrimitive) {
-          warnedPrimitive.add(prop);
-          const msg = `Assignment to $app.${prop} will not update the original exported `
-            + `variable '${prop}'. Use an exported setter function instead.`;
-          if (isLintEnabled()) {
-            throw new Error(msg);
-          }
-          logger.warn(msg);
-        }
-      }
-      (target as Record<string | symbol, unknown>)[prop] = value;
-      return true;
-    },
-  });
-}
-
 /**
  * Execute an assembled .melker bundle.
  *
@@ -317,9 +248,7 @@ export async function executeBundle(
     // Set up globals that the bundled code expects
     // Use casts because context is generic Record<string, unknown> but will have the right shape at runtime
     (globalThis as any).$melker = context;
-    (globalThis as any).$app = createAppProxy(
-      context.exports as Record<string, unknown>,
-    );
+    (globalThis as any).$app = context.exports; // Alias for $melker.exports
     (globalThis as any).argv = Deno.args.slice(1);
 
     // Write bundled code to temp file
@@ -450,8 +379,3 @@ export function wrapHandler(
     }
   };
 }
-
-// Export internals for testing
-export const _testing = {
-  createAppProxy,
-};

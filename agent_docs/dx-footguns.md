@@ -99,14 +99,6 @@ export function handleClick(event) { }
 <button label="Click" onClick="handleClick" />
 ```
 
-**Runtime protection**: `$app` is wrapped in a Proxy that warns when you access a non-existent export. If you typo `$app.hanldeClick()`, you'll see:
-
-```
-$app.hanldeClick is not a known export. Did you mean: 'handleClick'?
-```
-
-In lint mode (`--lint` or `MELKER_LINT=true`), this becomes an error instead of a warning.
-
 ## 5. Scrollable Containers Need Proper Sizing
 
 **Mistake**: Forgetting to constrain scrollable container size.
@@ -366,15 +358,6 @@ This is standard flexbox behavior - in a column container, `align-items` default
 ```
 
 **Why this happens**: The bundler merges exports into `$app` by copying values. For primitives (numbers, strings, booleans), `$app.count` holds a copy of the value, not a reference to the original binding. Setting `$app.count = 10` modifies the copy on `$app`, but the module-internal `count` variable remains unchanged. Objects work differently - they're copied by reference, so `$app.config.debug = true` would modify the original object.
-
-**Runtime protection**: The `$app` Proxy detects assignments to primitive exports and warns:
-
-```
-Assignment to $app.count will not update the original exported variable 'count'.
-Use an exported setter function instead.
-```
-
-In lint mode (`--lint`), this becomes an error.
 
 ## 12. Input Type Is 'input', Not 'text-input'
 

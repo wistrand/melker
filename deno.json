@@ -12,7 +12,8 @@
     "lint-all": "deno lint src",
     "check": "deno check src/**/*.ts benchmarks/**/*.ts",
     "check-ts-examples": "deno check examples/**/*.ts",
-    "skill:zip": "cd skills/creating-melker-apps && zip -r ../../docs/skill-creating-melker-apps.zip SKILL.md references/ && echo 'Created skill-creating-melker-apps.zip'"
+    "skill:zip": "cd skills/creating-melker-apps && zip -r ../../docs/skill-creating-melker-apps.zip SKILL.md references/ && echo 'Created skill-creating-melker-apps.zip'",
+    "completions": "deno run --allow-read --allow-write scripts/generate-completions.ts"
   },
   "compilerOptions": {
     "strict": true,

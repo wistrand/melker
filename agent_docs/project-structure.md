@@ -313,11 +313,12 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 Utility scripts for development and documentation.
 
-| File                  | Purpose                              |
-|-----------------------|--------------------------------------|
-| `capture.ts`          | Screenshot/video capture using Xvfb  |
-| `capture-config.json` | Default capture configuration        |
-| `capture-schema.json` | JSON schema for capture config       |
+| File                       | Purpose                                    |
+|----------------------------|--------------------------------------------|
+| `capture.ts`               | Screenshot/video capture using Xvfb        |
+| `capture-config.json`      | Default capture configuration              |
+| `capture-schema.json`      | JSON schema for capture config             |
+| `generate-completions.ts`  | Auto-generate Bash/Zsh shell completions   |
 
 ### Capture Script
 
@@ -377,6 +378,7 @@ Automates capturing screenshots and videos of Melker apps for documentation. Use
 |------------------------|--------------------------------------------------------------------|
 | `agent_docs/`          | Documentation for AI agents                                        |
 | `benchmarks/`          | Performance benchmarks (see [benchmark-architecture.md](benchmark-architecture.md)) |
+| `completions/`         | Auto-generated Bash/Zsh shell completions                          |
 | `examples/`            | Example applications                                               |
 | `examples/showcase/`   | Polished apps (htop, map, breakout)                                |
 | `examples/basics/`     | Learning progression                                               |

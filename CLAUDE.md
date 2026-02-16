@@ -109,6 +109,7 @@ deno task dev          # Dev server with watch
 deno task test         # Run tests
 deno task check        # Type check
 deno task skill:zip    # Build AI agent skill zip
+deno task completions  # Regenerate shell completions
 ```
 
 **Capture script** (screenshots/videos for docs):
@@ -141,6 +142,7 @@ Requires: `xorg-server-xvfb`, `imagemagick`, `ffmpeg`, `kitty`
 | `src/kitty/`         | Kitty graphics support                      |
 | `src/ai/`            | AI accessibility system                     |
 | `agent_docs/`        | Documentation for AI agents                 |
+| `completions/`       | Auto-generated Bash/Zsh shell completions   |
 | `examples/`          | Example apps (showcase, basics, components, layout, canvas, melker) |
 
 See [project-structure.md](agent_docs/project-structure.md) for detailed file listing.
@@ -303,6 +305,24 @@ melker app.melker
 ```
 
 The CLI is symlink-safe - it resolves its real path before importing dependencies.
+
+## Shell Completions
+
+Tab completions are available for Bash and Zsh, auto-generated from the config schema.
+
+```bash
+# Bash (add to ~/.bashrc):
+source /path/to/melker/completions/melker.bash
+
+# Zsh (add to ~/.zshrc):
+source /path/to/melker/completions/melker.zsh
+# Or copy to fpath:
+cp completions/melker.zsh ~/.zsh/completions/_melker
+```
+
+Completions include all CLI flags with enum value completion (e.g., `--gfx-mode <TAB>` shows all modes) and file type filtering (`.melker`, `.mmd`, `.md`).
+
+Regenerate after adding new flags: `deno task completions`
 
 ## Library Usage
 

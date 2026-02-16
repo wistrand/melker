@@ -9,6 +9,13 @@ cd melker
 
 # Optional: install globally
 ln -s $(pwd)/melker.ts ~/.local/bin/melker
+
+# Optional: enable shell completions
+# Bash (add to ~/.bashrc):
+source /path/to/melker/completions/melker.bash
+# Zsh (add to ~/.zshrc):
+source /path/to/melker/completions/melker.zsh
+# Or copy to fpath: cp completions/melker.zsh ~/.zsh/completions/_melker
 ```
 
 ## Hello World

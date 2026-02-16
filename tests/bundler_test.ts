@@ -12,6 +12,8 @@ import {
 } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import { generate } from '../src/bundler/generator.ts';
 import { bundle, requiresBundling, hasNpmImports } from '../src/bundler/bundle.ts';
+import { executeBundle, processMelkerBundle } from '../src/bundler/mod.ts';
+import { parseMelkerForBundler } from '../src/template.ts';
 import { isBundleAvailable } from '../src/bundler/errors.ts';
 import type { ParseResult, ParsedScript, ParsedHandler } from '../src/bundler/types.ts';
 
@@ -372,5 +374,210 @@ Deno.test({
 
     // Should have inline sourcemap extracted
     assertEquals(result.sourceMap !== null || result.sourceMap === null, true);
+  },
+});
+
+// =============================================================================
+// executeBundle argv handling
+// =============================================================================
+
+Deno.test({
+  name: 'executeBundle: passes explicit argv to globalThis',
+  ignore: !isBundleAvailable(),
+  async fn() {
+    const melkerContent = `<melker>
+<script>
+  export function getArgv() { return argv; }
+</script>
+<text>test</text>
+</melker>`;
+    const sourceUrl = 'file:///test/argv-test.melker';
+    const parsed = await parseMelkerForBundler(melkerContent, sourceUrl);
+    const assembled = await processMelkerBundle(parsed, { debug: false, useCache: false });
+
+    const exports: Record<string, any> = {};
+    const context = {
+      engine: { onResize: () => {}, onMount: () => {}, render: () => {}, forceRender: () => {} },
+      getElementById: () => null,
+      exit: () => {},
+      logger: null,
+      getLogger: () => null,
+      config: {},
+      exports,
+    };
+
+    const testArgv = ['/path/to/app.melker', 'mydir', 'myfile.png'];
+    await executeBundle(assembled, context, testArgv);
+
+    // Runtime argv should be exactly what we passed
+    assertEquals((globalThis as any).argv, testArgv);
+  },
+});
+
+Deno.test({
+  name: 'executeBundle: argv[0] is melker path, argv[1+] are user args',
+  ignore: !isBundleAvailable(),
+  async fn() {
+    const melkerContent = `<melker>
+<script>
+  export function getArgv() { return argv; }
+</script>
+<text>test</text>
+</melker>`;
+    const sourceUrl = 'file:///test/argv-test2.melker';
+    const parsed = await parseMelkerForBundler(melkerContent, sourceUrl);
+    const assembled = await processMelkerBundle(parsed, { debug: false, useCache: false });
+
+    const exports: Record<string, any> = {};
+    const context = {
+      engine: { onResize: () => {}, onMount: () => {}, render: () => {}, forceRender: () => {} },
+      getElementById: () => null,
+      exit: () => {},
+      logger: null,
+      getLogger: () => null,
+      config: {},
+      exports,
+    };
+
+    const testArgv = ['/abs/path/app.melker', 'user-arg1', 'user-arg2'];
+    await executeBundle(assembled, context, testArgv);
+
+    const runtimeArgv = (globalThis as any).argv as string[];
+    assertEquals(runtimeArgv[0], '/abs/path/app.melker');
+    assertEquals(runtimeArgv[1], 'user-arg1');
+    assertEquals(runtimeArgv[2], 'user-arg2');
+    assertEquals(runtimeArgv.length, 3);
+  },
+});
+
+Deno.test({
+  name: 'executeBundle: falls back to Deno.args.slice(1) when no argv provided',
+  ignore: !isBundleAvailable(),
+  async fn() {
+    const melkerContent = `<melker>
+<script>
+  export function noop() {}
+</script>
+<text>test</text>
+</melker>`;
+    const sourceUrl = 'file:///test/argv-fallback.melker';
+    const parsed = await parseMelkerForBundler(melkerContent, sourceUrl);
+    const assembled = await processMelkerBundle(parsed, { debug: false, useCache: false });
+
+    const exports: Record<string, any> = {};
+    const context = {
+      engine: { onResize: () => {}, onMount: () => {}, render: () => {}, forceRender: () => {} },
+      getElementById: () => null,
+      exit: () => {},
+      logger: null,
+      getLogger: () => null,
+      config: {},
+      exports,
+    };
+
+    // No argv argument — should fall back to Deno.args.slice(1)
+    await executeBundle(assembled, context);
+
+    const runtimeArgv = (globalThis as any).argv as string[];
+    assertEquals(Array.isArray(runtimeArgv), true);
+    // Should be Deno.args.slice(1) — during tests this is test runner args
+    assertEquals(runtimeArgv, Deno.args.slice(1));
+  },
+});
+
+// =============================================================================
+// E2E subprocess argv test
+// =============================================================================
+
+Deno.test({
+  name: 'e2e: argv available in subprocess with correct indexing',
+  async fn() {
+    // Use template ${argv[N]} substitution which happens before render —
+    // avoids --stdout timing issues with async="ready" scripts
+    const tempDir = await Deno.makeTempDir({ prefix: 'melker-argv-test-' });
+    const melkerFile = `${tempDir}/argv-test.melker`;
+
+    await Deno.writeTextFile(melkerFile,
+      '<melker>\n' +
+      '<policy>{"permissions":{}}</policy>\n' +
+      '<container style="border: thin;">\n' +
+      '<text>A0=${argv[0]}|A1=${argv[1]}|A2=${argv[2]}</text>\n' +
+      '</container>\n' +
+      '</melker>\n');
+
+    try {
+      const cmd = new Deno.Command(Deno.execPath(), {
+        args: [
+          'run', '--allow-all', '--unstable-bundle',
+          'melker.ts', '--trust', '--stdout', '--stdout-width=200', '--theme=bw',
+          melkerFile, 'testdir', 'testfile.png',
+        ],
+        stdout: 'piped',
+        stderr: 'piped',
+        cwd: import.meta.dirname ? import.meta.dirname.replace('/tests', '') : undefined,
+      });
+
+      const { stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      // argv[0] is the .melker file path, argv[1+] are user args
+      assertStringIncludes(output, `A0=${melkerFile}`);
+      assertStringIncludes(output, 'A1=testdir');
+      assertStringIncludes(output, 'A2=testfile.png');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: 'e2e: argv consistent regardless of --flag=value vs --flag value syntax',
+  async fn() {
+    const tempDir = await Deno.makeTempDir({ prefix: 'melker-argv-flags-' });
+    const melkerFile = `${tempDir}/argv-flags.melker`;
+
+    await Deno.writeTextFile(melkerFile,
+      '<melker>\n' +
+      '<policy>{"permissions":{}}</policy>\n' +
+      '<container style="border: thin;">\n' +
+      '<text>argv1=${argv[1]:-MISSING}</text>\n' +
+      '</container>\n' +
+      '</melker>\n');
+
+    const cwd = import.meta.dirname ? import.meta.dirname.replace('/tests', '') : undefined;
+
+    try {
+      // Test with --theme=bw (= syntax)
+      const cmd1 = new Deno.Command(Deno.execPath(), {
+        args: [
+          'run', '--allow-all', '--unstable-bundle',
+          'melker.ts', '--trust', '--stdout', '--stdout-width=200', '--theme=bw',
+          melkerFile, 'myarg',
+        ],
+        stdout: 'piped',
+        stderr: 'piped',
+        cwd,
+      });
+      const out1 = new TextDecoder().decode((await cmd1.output()).stdout);
+
+      // Test with --theme bw (space syntax)
+      const cmd2 = new Deno.Command(Deno.execPath(), {
+        args: [
+          'run', '--allow-all', '--unstable-bundle',
+          'melker.ts', '--trust', '--stdout', '--stdout-width=200', '--theme', 'bw',
+          melkerFile, 'myarg',
+        ],
+        stdout: 'piped',
+        stderr: 'piped',
+        cwd,
+      });
+      const out2 = new TextDecoder().decode((await cmd2.output()).stdout);
+
+      // Both should produce the same argv — user arg should NOT be the flag value
+      assertStringIncludes(out1, 'argv1=myarg');
+      assertStringIncludes(out2, 'argv1=myarg');
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
+    }
   },
 });

@@ -115,7 +115,7 @@ $melker: {
 | `$app`            | Alias for `$melker.exports` (user-defined functions) |
 | `$melker.url`     | Source file URL (e.g. `file:///path/to/app.melker`)  |
 | `$melker.dirname` | Directory path (e.g. `/path/to`)                     |
-| `argv`            | Command line arguments (`string[]`)                  |
+| `argv`            | Command line arguments (`string[]`). `argv[0]` = .melker file path, `argv[1+]` = user args. Same indexing as template `${argv[N]}`. |
 
 ## Exported Script Variables
 

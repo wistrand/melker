@@ -218,7 +218,8 @@ export async function processMelkerBundle(
  */
 export async function executeBundle(
   assembled: AssembledMelker,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  argv?: string[]
 ): Promise<ExecuteBundleResult> {
   logger.debug('Executing bundled code', {
     sourceUrl: assembled.sourceUrl,
@@ -249,7 +250,7 @@ export async function executeBundle(
     // Use casts because context is generic Record<string, unknown> but will have the right shape at runtime
     (globalThis as any).$melker = context;
     (globalThis as any).$app = context.exports; // Alias for $melker.exports
-    (globalThis as any).argv = Deno.args.slice(1);
+    (globalThis as any).argv = argv ?? Deno.args.slice(1);
 
     // Write bundled code to temp file
     await Deno.writeTextFile(bundleFile, assembled.bundledCode);

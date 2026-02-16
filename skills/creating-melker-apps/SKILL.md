@@ -383,6 +383,8 @@ Melker supports bash-style variable expansion during pre-processing:
 
 ### Command-Line Arguments
 
+`argv[0]` is the absolute `.melker` file path. User arguments start at `argv[1]`. Same indexing in both templates and `<script>` runtime.
+
 | Syntax | Behavior |
 |--------|----------|
 | `${argv[N]}` | Argument at index N |
@@ -401,6 +403,11 @@ Melker supports bash-style variable expansion during pre-processing:
 
 <!-- File argument with default -->
 <markdown src="${argv[1]:-README.md}" />
+```
+
+In `<script>` blocks, `argv` is a `string[]` global with the same indexing:
+```typescript
+const userFile = argv[1]; // first user arg
 ```
 
 ## Common Patterns

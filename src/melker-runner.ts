@@ -685,7 +685,7 @@ export async function runMelkerFile(
       useCache: options.useCache,
     });
 
-    const { registry: melkerRegistry, bundleFile, tempDirs } = await executeBundle(assembled, context);
+    const { registry: melkerRegistry, bundleFile, tempDirs } = await executeBundle(assembled, context, templateArgs);
 
     // Build system info for View Source
     const loggerOpts = getGlobalLoggerOptions();

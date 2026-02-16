@@ -83,14 +83,14 @@ interface MediaItem {
 let currentPath = '/';
 try { currentPath = Deno.cwd(); } catch { /* fallback */ }
 
-// Use argv[0] if provided (bundler sets argv = Deno.args.slice(1), stripping the .melker path)
-if (argv && argv[0]) {
+// Use argv[1] if provided (argv[0] = .melker path, argv[1+] = user args)
+if (argv && argv[1]) {
   try {
-    const stat = Deno.statSync(argv[0]);
+    const stat = Deno.statSync(argv[1]);
     if (stat.isDirectory) {
-      currentPath = Deno.realPathSync(argv[0]);
+      currentPath = Deno.realPathSync(argv[1]);
     } else {
-      const parts = argv[0].split('/');
+      const parts = argv[1].split('/');
       parts.pop();
       currentPath = Deno.realPathSync(parts.join('/') || '.');
     }
@@ -342,11 +342,11 @@ export async function init() {
   loadDirectory(currentPath);
 
   // If argv points to a file, switch to photo view after grid is ready
-  if (argv && argv[0]) {
+  if (argv && argv[1]) {
     try {
-      const stat = Deno.statSync(argv[0]);
+      const stat = Deno.statSync(argv[1]);
       if (!stat.isDirectory) {
-        const fileName = argv[0].split('/').pop();
+        const fileName = argv[1].split('/').pop();
         const idx = mediaFiles.findIndex(m => m.name === fileName);
         if (idx >= 0) {
           mediaIndex = idx;

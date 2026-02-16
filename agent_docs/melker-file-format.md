@@ -169,12 +169,22 @@ Melker supports bash-style variable expansion for environment variables and comm
 
 ### Command-Line Arguments
 
+`argv[0]` is the absolute path to the `.melker` file. User arguments start at `argv[1]`. This indexing is the same in both template substitutions and runtime `<script>` code.
+
 | Syntax                  | Behavior                                        |
 |-------------------------|-------------------------------------------------|
 | `${argv[N]}`            | Argument at index N, or empty string            |
 | `${argv[N]:-default}`   | Argument at index N, or "default" if missing    |
 | `${argv[N]:+alternate}` | "alternate" if argument exists, else empty      |
 | `${argv[N]:?error msg}` | Argument at index N, or throws error if missing |
+
+In `<script>` blocks, `argv` is available as a `string[]` global with the same indexing:
+
+```typescript
+// argv[0] = "/path/to/app.melker"
+// argv[1] = first user arg, argv[2] = second, etc.
+const filePath = argv[1];
+```
 
 ### Examples
 

@@ -227,7 +227,7 @@ Deno.test('validatePolicy rejects non-array read permission', () => {
 
   const errors = validatePolicy(policy);
   assertEquals(errors.length, 1);
-  assertStringIncludes(errors[0], 'permissions.read must be an array');
+  assertStringIncludes(errors[0], 'permissions.read must be a string array');
 });
 
 Deno.test('validatePolicy rejects non-string array elements', () => {

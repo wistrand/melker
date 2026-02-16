@@ -1,0 +1,436 @@
+<melker>
+
+<help>
+  Image and video browser.
+  Based on pixel-index by semigarden: https://github.com/semigarden/pixel-index
+
+  Usage: melker pixel-index.melker [path]
+
+  Tab         Navigate between buttons
+  Enter       Activate focused button
+</help>
+
+<policy>
+{
+  "permissions": {
+    "read": ["*"],
+    "run": ["ffmpeg", "ffprobe", "ffplay"]
+  }
+}
+</policy>
+
+<style>
+  #root {
+    flex-direction: column;
+    height: fill;
+  }
+
+  #toolbar {
+    flex-direction: row;
+    flex-shrink: 0;
+    background-color: var(--theme-surface);
+    padding: 0 1;
+    gap: 1;
+    border-bottom: thin;
+  }
+
+  #grid-scroll {
+    flex: 1;
+    overflow: scroll;
+  }
+
+  #grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1;
+  }
+
+  #photo-nav {
+    flex-direction: row;
+    flex-shrink: 0;
+    background-color: var(--theme-surface);
+    padding: 0 1;
+    gap: 1;
+    padding-bottom: 1;
+  }
+
+  #photo-img {
+    flex: 1;
+    object-fit: contain;
+  }
+
+  #photo-video {
+    flex: 1;
+  }
+
+  .tile-info {
+    color: var(--theme-text-muted);
+  }
+</style>
+
+<script>
+// ============ Types ============
+
+interface MediaItem {
+  name: string;
+  path: string;
+  type: 'directory' | 'media';
+  extension: string;
+}
+
+// ============ State ============
+
+let currentPath = '/';
+try { currentPath = Deno.cwd(); } catch { /* fallback */ }
+
+// Use argv[0] if provided (bundler sets argv = Deno.args.slice(1), stripping the .melker path)
+if (argv && argv[0]) {
+  try {
+    const stat = Deno.statSync(argv[0]);
+    if (stat.isDirectory) {
+      currentPath = Deno.realPathSync(argv[0]);
+    } else {
+      const parts = argv[0].split('/');
+      parts.pop();
+      currentPath = Deno.realPathSync(parts.join('/') || '.');
+    }
+  } catch { /* ignored */ }
+}
+
+const IMAGE_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.gif',
+]);
+const VIDEO_EXTENSIONS = new Set([
+  '.mp4', '.mkv', '.webm', '.avi', '.mov',
+]);
+
+let view: 'grid' | 'photo' = 'grid';
+let items: MediaItem[] = [];
+let mediaFiles: MediaItem[] = [];
+let mediaIndex = 0;
+
+const tileWidth = 23;
+const tileHeight = 8;
+
+// ============ Directory Reading ============
+
+function readDirectory(dirPath: string): MediaItem[] {
+  const result: MediaItem[] = [];
+  try {
+    for (const entry of Deno.readDirSync(dirPath)) {
+      if (entry.name.startsWith('.')) continue;
+      const fullPath = dirPath + '/' + entry.name;
+      if (entry.isDirectory) {
+        result.push({ name: entry.name, path: fullPath, type: 'directory', extension: '' });
+      } else {
+        const ext = '.' + entry.name.split('.').pop()!.toLowerCase();
+        if (IMAGE_EXTENSIONS.has(ext) || VIDEO_EXTENSIONS.has(ext)) {
+          result.push({ name: entry.name, path: fullPath, type: 'media', extension: ext });
+        }
+      }
+    }
+  } catch { /* skip unreadable */ }
+  result.sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+  });
+  return result;
+}
+
+function countDirItems(dirPath: string): number {
+  let count = 0;
+  try {
+    for (const entry of Deno.readDirSync(dirPath)) {
+      if (!entry.name.startsWith('.')) count++;
+    }
+  } catch { /* skip */ }
+  return count;
+}
+
+function truncateName(name: string, maxLen: number): string {
+  if (name.length <= maxLen) return name;
+  const ext = name.includes('.') ? name.slice(name.lastIndexOf('.')) : '';
+  const base = name.slice(0, name.length - ext.length);
+  const avail = maxLen - 3 - ext.length;
+  if (avail <= 0) return '...' + ext.slice(0, Math.max(1, maxLen - 3));
+  return base.slice(0, avail) + '...' + ext;
+}
+
+// ============ Item actions ============
+
+async function openItem(index: number) {
+  const item = items[index];
+  if (!item) return;
+
+  if (item.type === 'directory') {
+    loadDirectory(item.path);
+  } else if (item.type === 'media') {
+    mediaIndex = mediaFiles.findIndex(m => m.path === item.path);
+    if (mediaIndex < 0) mediaIndex = 0;
+    view = 'photo';
+    await showPhoto();
+    updateStatusBar();
+    $melker.render();
+  }
+}
+
+// ============ Grid Rendering ============
+
+function makeTile(createElement: any, item: MediaItem, idx: number, labelWidth: number) {
+  if (item.type === 'directory') {
+    const dirCount = countDirItems(item.path);
+    return createElement('container', {
+      style: { flexDirection: 'column', width: tileWidth, height: tileHeight, border: 'thin' },
+    },
+      createElement('text', {
+        text: dirCount + ' items',
+        class: 'tile-info',
+        style: { textAlign: 'center', flex: 1 },
+      }),
+      createElement('button', {
+        label: truncateName(item.name, labelWidth),
+        tooltip: item.name,
+        onClick: () => openItem(idx),
+        style: { flexShrink: 0 },
+      }),
+    );
+  }
+
+  const isVideo = VIDEO_EXTENSIONS.has(item.extension);
+  if (isVideo) {
+    return createElement('container', {
+      style: { flexDirection: 'column', width: tileWidth, height: tileHeight, border: 'thin' },
+    },
+      createElement('text', {
+        text: '[VIDEO]',
+        class: 'tile-info',
+        style: { textAlign: 'center', flex: 1 },
+      }),
+      createElement('button', {
+        label: truncateName(item.name, labelWidth),
+        tooltip: item.name,
+        onClick: () => openItem(idx),
+        style: { flexShrink: 0 },
+      }),
+    );
+  }
+
+  return createElement('container', {
+    style: { flexDirection: 'column', width: tileWidth, height: tileHeight, border: 'thin' },
+  },
+    createElement('img', {
+      src: item.path,
+      tooltip: item.name,
+      onClick: () => openItem(idx),
+      width: tileWidth - 2,
+      height: tileHeight - 3,
+      style: { objectFit: 'contain', flex: 1 },
+    }),
+    createElement('button', {
+      label: truncateName(item.name, labelWidth),
+      tooltip: item.name,
+      onClick: () => openItem(idx),
+      style: { flexShrink: 0 },
+    }),
+  );
+}
+
+function buildGrid() {
+  const grid = $melker.getElementById('grid');
+  const createElement = $melker.createElement;
+  if (!grid) return;
+
+  const labelWidth = tileWidth - 6; // account for border + button brackets [ ]
+
+  // Flat list of tiles — flex-wrap handles row breaking
+  const tiles: any[] = [];
+  for (let i = 0; i < items.length; i++) {
+    tiles.push(makeTile(createElement, items[i], i, labelWidth));
+  }
+
+  grid.children = tiles;
+}
+
+function updateStatusBar() {
+  const status = $melker.getElementById('status');
+  if (!status) return;
+
+  if (view === 'grid') {
+    const dirName = currentPath.split('/').pop() || currentPath;
+    status.setValue(dirName + '  |  ' + items.length + ' items');
+  } else {
+    const item = mediaFiles[mediaIndex];
+    if (item) {
+      status.setValue(
+        item.name + '  |  ' + (mediaIndex + 1) + '/' + mediaFiles.length
+      );
+    }
+  }
+}
+
+// ============ Photo View ============
+
+async function showPhoto() {
+  const photoContainer = $melker.getElementById('photo-container');
+  const gridContainer = $melker.getElementById('grid-scroll');
+  if (!photoContainer || !gridContainer) return;
+
+  gridContainer.props.style = { ...gridContainer.props.style, display: 'none' };
+  photoContainer.props.style = { display: 'flex', flex: 1, flexDirection: 'column' };
+
+  const item = mediaFiles[mediaIndex];
+  if (!item) return;
+
+  const isVideo = VIDEO_EXTENSIONS.has(item.extension);
+  const photoEl = $melker.getElementById('photo-img');
+  const videoEl = $melker.getElementById('photo-video');
+  const audioToggle = $melker.getElementById('audio-toggle');
+
+  // Stop any playing video before switching
+  if (videoEl) {
+    try { videoEl.stop(); } catch { /* ok */ }
+  }
+
+  // Show/hide audio checkbox based on media type
+  if (audioToggle) {
+    audioToggle.props.style = { ...audioToggle.props.style, display: isVideo ? 'flex' : 'none' };
+  }
+
+  if (isVideo) {
+    if (photoEl) photoEl.props.style = { ...photoEl.props.style, display: 'none' };
+    if (videoEl) {
+      videoEl.props.style = { ...videoEl.props.style, display: 'flex', flex: '1 1 0' };
+      await videoEl.setSrc(item.path);
+    }
+  } else {
+    if (videoEl) videoEl.props.style = { ...videoEl.props.style, display: 'none' };
+    if (photoEl) {
+      photoEl.props.style = { ...photoEl.props.style, display: 'flex', flex: '1 1 0' };
+      await photoEl.setSrc(item.path);
+    }
+  }
+}
+
+function showGrid() {
+  const photoContainer = $melker.getElementById('photo-container');
+  const gridContainer = $melker.getElementById('grid-scroll');
+  if (!photoContainer || !gridContainer) return;
+
+  photoContainer.props.style = { display: 'none' };
+  gridContainer.props.style = { ...gridContainer.props.style, display: 'flex' };
+
+  const videoEl = $melker.getElementById('photo-video');
+  if (videoEl) {
+    try { videoEl.stop(); } catch { /* ok */ }
+    videoEl.props.style = { ...videoEl.props.style, display: 'none' };
+  }
+}
+
+// ============ Navigation ============
+
+function loadDirectory(dirPath: string) {
+  currentPath = dirPath;
+  items = readDirectory(currentPath);
+  mediaFiles = items.filter(it => it.type === 'media');
+  $melker.setTitle('pixel-index - ' + currentPath);
+  buildGrid();
+  updateStatusBar();
+  $melker.render();
+}
+
+export async function init() {
+  loadDirectory(currentPath);
+
+  // If argv points to a file, switch to photo view after grid is ready
+  if (argv && argv[0]) {
+    try {
+      const stat = Deno.statSync(argv[0]);
+      if (!stat.isDirectory) {
+        const fileName = argv[0].split('/').pop();
+        const idx = mediaFiles.findIndex(m => m.name === fileName);
+        if (idx >= 0) {
+          mediaIndex = idx;
+          view = 'photo';
+          await showPhoto();
+          updateStatusBar();
+          $melker.render();
+        }
+      }
+    } catch { /* ignore */ }
+  }
+}
+
+export function goBack() {
+  if (view === 'photo') {
+    view = 'grid';
+    showGrid();
+    updateStatusBar();
+    $melker.render();
+    return;
+  }
+  const parent = currentPath.replace(/\/[^/]+\/?$/, '') || '/';
+  if (parent !== currentPath) {
+    loadDirectory(parent);
+  }
+}
+
+export async function prevPhoto() {
+  if (mediaFiles.length <= 1) return;
+  mediaIndex = (mediaIndex - 1 + mediaFiles.length) % mediaFiles.length;
+  await showPhoto();
+  updateStatusBar();
+  $melker.render();
+}
+
+export async function nextPhoto() {
+  if (mediaFiles.length <= 1) return;
+  mediaIndex = (mediaIndex + 1) % mediaFiles.length;
+  await showPhoto();
+  updateStatusBar();
+  $melker.render();
+}
+
+export async function toggleAudio() {
+  const videoEl = $melker.getElementById('photo-video');
+  const checkbox = $melker.getElementById('audio-toggle');
+  if (videoEl && checkbox) {
+    videoEl.props.audio = checkbox.props.checked;
+    // Restart video to apply audio change
+    const item = mediaFiles[mediaIndex];
+    if (item && VIDEO_EXTENSIONS.has(item.extension)) {
+      await videoEl.setSrc(item.path);
+    }
+  }
+}
+</script>
+
+<container id="root">
+
+  <container id="toolbar">
+    <button label="Back" onClick="$app.goBack()" />
+    <text id="status"></text>
+  </container>
+
+  <container id="grid-scroll">
+    <container id="grid">
+    </container>
+  </container>
+
+  <container id="photo-container" style="display: none;">
+    <container id="photo-nav">
+      <button label="Prev" onClick="$app.prevPhoto()" />
+      <button label="Back" onClick="$app.goBack()" />
+      <button label="Next" onClick="$app.nextPhoto()" />
+      <checkbox id="audio-toggle" title="Audio" style="display: none;" onChange="$app.toggleAudio()" />
+    </container>
+    <img id="photo-img" width="100%" height="100%" objectFit="contain" />
+    <video id="photo-video" style="display: none;" autoplay="true" loop="true" dither="auto" />
+  </container>
+
+</container>
+
+<script async="ready">
+  $app.init();
+</script>
+
+</melker>

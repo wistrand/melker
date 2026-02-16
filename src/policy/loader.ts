@@ -420,7 +420,10 @@ export function validatePolicy(policy: MelkerPolicy): string[] {
       const value = p[field];
       if (value !== undefined) {
         if (!Array.isArray(value)) {
-          errors.push(`permissions.${field} must be an array`);
+          errors.push(
+            `permissions.${field} must be a string array, got ${typeof value} (${JSON.stringify(value)}). ` +
+            `Use "${field}": ["*"] for unrestricted access, or "${field}": ["value1", "value2"] for specific values.`
+          );
         } else if (!value.every(v => typeof v === 'string')) {
           errors.push(`permissions.${field} must contain only strings`);
         }

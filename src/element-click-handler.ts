@@ -93,8 +93,8 @@ export class ElementClickHandler {
       }
     }
 
-    // Handle canvas clicks (color picker, drawing, etc.)
-    if (element.type === 'canvas') {
+    // Handle canvas-derived element clicks (canvas, img, video, progress)
+    if (element.type === 'canvas' || element.type === 'img' || element.type === 'video' || element.type === 'progress') {
       if (typeof element.props.onClick === 'function') {
         const clickEvent: ClickEvent = {
           type: 'click',

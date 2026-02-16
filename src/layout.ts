@@ -1519,6 +1519,21 @@ export class LayoutEngine {
           childHeight = hasExplicitH ? childStyle.height as number : 1;
         }
 
+        // Add border + padding to get outer size (matching _calculateFlexItems behavior)
+        const hasBorder = childStyle.border && childStyle.border !== 'none';
+        if (hasBorder) {
+          childWidth += 2;
+          childHeight += 2;
+        }
+        const cp = childStyle.padding || 0;
+        if (typeof cp === 'number') {
+          childWidth += cp * 2;
+          childHeight += cp * 2;
+        } else if (typeof cp === 'object') {
+          childWidth += ((cp as BoxSpacing).left || 0) + ((cp as BoxSpacing).right || 0);
+          childHeight += ((cp as BoxSpacing).top || 0) + ((cp as BoxSpacing).bottom || 0);
+        }
+
         // Add margins
         const childMargin = childStyle.margin || 0;
         const marginH = typeof childMargin === 'number' ? childMargin * 2 : ((childMargin as BoxSpacing).left || 0) + ((childMargin as BoxSpacing).right || 0);

@@ -120,26 +120,20 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
           let childWidth = typeof child.props?.style?.width === 'number' ? child.props.style.width : intrinsicSize.width;
           let childHeight = typeof child.props?.style?.height === 'number' ? child.props.style.height : intrinsicSize.height;
 
-          // Add border space for elements without explicit dimensions but with borders
-          if (child.props?.style?.border && child.props?.style?.width === undefined) {
-            childWidth += 2; // Add left + right border
-          }
-          if (child.props?.style?.border && child.props?.style?.height === undefined) {
-            childHeight += 2; // Add top + bottom border
-          }
-
-          // Add padding space for elements without explicit dimensions but with padding
+          // Calculate border + padding to get outer size
+          // Uses max(declared, intrinsic + border + padding) to match _calculateFlexItems
+          // which computes flexBasis = max(explicitDim, intrinsicOuter)
+          const hasBorder = child.props?.style?.border && child.props.style.border !== 'none';
+          const borderW = hasBorder ? 2 : 0;
+          const borderH = hasBorder ? 2 : 0;
           const childPadding = child.props?.style?.padding;
+          let padW = 0, padH = 0;
           if (childPadding !== undefined) {
-            if (child.props?.style?.width === undefined) {
-              const padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
-              childWidth += padH;
-            }
-            if (child.props?.style?.height === undefined) {
-              const padV = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.top || 0) + (childPadding.bottom || 0));
-              childHeight += padV;
-            }
+            padW = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
+            padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.top || 0) + (childPadding.bottom || 0));
           }
+          childWidth = Math.max(childWidth, intrinsicSize.width + borderW + padW);
+          childHeight = Math.max(childHeight, intrinsicSize.height + borderH + padH);
 
           // Add child margin to size calculations
           const childMargin = child.props?.style?.margin;
@@ -208,26 +202,18 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
           let childWidth = typeof child.props?.style?.width === 'number' ? child.props.style.width : intrinsicSize.width;
           let childHeight = typeof child.props?.style?.height === 'number' ? child.props.style.height : intrinsicSize.height;
 
-          // Add border space for elements without explicit dimensions but with borders
-          if (child.props?.style?.border && child.props?.style?.width === undefined) {
-            childWidth += 2; // Add left + right border
-          }
-          if (child.props?.style?.border && child.props?.style?.height === undefined) {
-            childHeight += 2; // Add top + bottom border
-          }
-
-          // Add padding space for elements without explicit dimensions but with padding
+          // Calculate border + padding to get outer size (same as row path)
+          const hasBorder = child.props?.style?.border && child.props.style.border !== 'none';
+          const borderW = hasBorder ? 2 : 0;
+          const borderH = hasBorder ? 2 : 0;
           const childPadding = child.props?.style?.padding;
+          let padW = 0, padH = 0;
           if (childPadding !== undefined) {
-            if (child.props?.style?.width === undefined) {
-              const padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
-              childWidth += padH;
-            }
-            if (child.props?.style?.height === undefined) {
-              const padV = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.top || 0) + (childPadding.bottom || 0));
-              childHeight += padV;
-            }
+            padW = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.left || 0) + (childPadding.right || 0));
+            padH = typeof childPadding === 'number' ? childPadding * 2 : ((childPadding.top || 0) + (childPadding.bottom || 0));
           }
+          childWidth = Math.max(childWidth, intrinsicSize.width + borderW + padW);
+          childHeight = Math.max(childHeight, intrinsicSize.height + borderH + padH);
 
           // Add child margin to height calculation
           const childMargin = child.props?.style?.margin;

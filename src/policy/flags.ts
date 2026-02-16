@@ -35,6 +35,20 @@ export function policyToDenoFlags(
   const flags: string[] = [];
   // Deep clone permissions to avoid mutating the original policy
   const orig = policy.permissions || {};
+
+  // Validate array permission fields before cloning — catch common mistake
+  // of writing e.g. "env": true instead of "env": ["*"]
+  const arrayFields = ['read', 'write', 'net', 'run', 'env', 'ffi', 'sys'] as const;
+  for (const field of arrayFields) {
+    const value = (orig as Record<string, unknown>)[field];
+    if (value !== undefined && !Array.isArray(value)) {
+      throw new Error(
+        `Invalid policy: "permissions.${field}" must be a string array, got ${typeof value} (${JSON.stringify(value)}).\n` +
+        `  Use "${field}": ["*"] for unrestricted access, or "${field}": ["value1", "value2"] for specific values.`
+      );
+    }
+  }
+
   const p: PolicyPermissions = {
     ...orig,
     read: orig.read ? [...orig.read] : undefined,

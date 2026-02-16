@@ -44,6 +44,7 @@ For canvas, shaders, images, and video, see `examples/canvas/`.
 | `ai-tools-demo.melker`   | AI accessibility tools demo           |
 | `interactive.melker`     | Advanced event handling patterns      |
 | `qr-code.melker`         | QR code generation                    |
+| `pixel-index.melker`     | Image and video browser ([based on pixel-index](https://github.com/semigarden/pixel-index)) |
 
 ## Supporting Files
 

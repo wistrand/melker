@@ -248,7 +248,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
   // Interactive interface
   isInteractive(): boolean {
-    return !!this.props.onKeyPress;
+    return !!this.props.onKeyPress || !!this.props.onClick;
   }
 
   /**

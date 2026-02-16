@@ -591,7 +591,7 @@ export function computeLayoutProps(element: Element, parentProps?: AdvancedLayou
 
   // Auto-infer display: flex when flex container properties are present
   // This makes the framework more ergonomic - no need to explicitly set display: flex
-  if (result.display !== 'flex') {
+  if (result.display !== 'flex' && result.display !== 'none') {
     const hasFlexContainerProps =
       style.flexDirection !== undefined ||
       style.justifyContent !== undefined ||

@@ -85,6 +85,17 @@ export function applyPermissionOverrides(
   const result: PolicyPermissions = { ...base };
   const activeDenies: Partial<PolicyPermissions> = {};
 
+  // Validate array permission fields — catch e.g. "env": true instead of "env": ["*"]
+  for (const key of ARRAY_PERMISSIONS) {
+    const value = (result as Record<string, unknown>)[key];
+    if (value !== undefined && !Array.isArray(value)) {
+      throw new Error(
+        `Invalid policy: "permissions.${key}" must be a string array, got ${typeof value} (${JSON.stringify(value)}).\n` +
+        `  Use "${key}": ["*"] for unrestricted access, or "${key}": ["value1", "value2"] for specific values.`
+      );
+    }
+  }
+
   // Handle deny.all first - clears everything
   if (overrides.deny.all) {
     return { permissions: {}, activeDenies: {} };

@@ -137,13 +137,21 @@ export function emergencyCleanupTerminal(): void {
 }
 
 /**
- * Set up signal handlers for graceful shutdown
+ * Set up signal handlers for graceful shutdown.
+ *
+ * @param onAsyncCleanup - Async cleanup (engine.stop())
+ * @param onSyncCleanup - Sync cleanup (terminal restore)
+ * @param onBeforeExit - Optional hook called on first Ctrl+C. Returns true to exit, false to cancel.
+ *   Second Ctrl+C within 3s force-exits regardless.
+ * @returns Object with removeSigint() to unregister the SIGINT handler
+ *   (used by melker-runner which installs its own handler with the same logic).
  */
 export function setupCleanupHandlers(
   onAsyncCleanup: () => Promise<void>,
-  onSyncCleanup: () => void
-): void {
-  if (typeof Deno === 'undefined') return;
+  onSyncCleanup: () => void,
+  onBeforeExit?: () => Promise<boolean>,
+): { removeSigint: () => void } {
+  if (typeof Deno === 'undefined') return { removeSigint: () => {} };
 
   const cleanup = async () => {
     try {
@@ -164,8 +172,42 @@ export function setupCleanupHandlers(
     }
   };
 
-  // Handle standard signals
-  Deno.addSignalListener('SIGINT', cleanup);
+  // SIGINT handler with before-exit hook support
+  // First Ctrl+C calls onBeforeExit; if it returns false, exit is cancelled.
+  // Second Ctrl+C within 3s force-exits, bypassing all hooks.
+  let pendingExit = false;
+  let pendingExitTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const sigintHandler = async () => {
+    if (pendingExit || !onBeforeExit) {
+      // Second press (or no hook) — force exit
+      if (pendingExitTimer) clearTimeout(pendingExitTimer);
+      await cleanup();
+      return;
+    }
+
+    pendingExit = true;
+    pendingExitTimer = setTimeout(() => { pendingExit = false; }, 3000);
+
+    try {
+      const shouldExit = await onBeforeExit();
+      if (shouldExit) {
+        if (pendingExitTimer) clearTimeout(pendingExitTimer);
+        await cleanup();
+      } else {
+        // Hook cancelled exit — reset so next signal goes through the hook again
+        if (pendingExitTimer) clearTimeout(pendingExitTimer);
+        pendingExitTimer = null;
+        pendingExit = false;
+      }
+    } catch {
+      // Error in hook — exit to be safe
+      if (pendingExitTimer) clearTimeout(pendingExitTimer);
+      await cleanup();
+    }
+  };
+
+  Deno.addSignalListener('SIGINT', sigintHandler);
   Deno.addSignalListener('SIGTERM', cleanup);
 
   // Handle additional termination signals
@@ -219,6 +261,12 @@ export function setupCleanupHandlers(
   } catch {
     // beforeunload might not be available in Deno
   }
+
+  return {
+    removeSigint: () => {
+      try { Deno.removeSignalListener('SIGINT', sigintHandler); } catch { /* ignore */ }
+    },
+  };
 }
 
 // Type for instances that can be tracked for emergency cleanup

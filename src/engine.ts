@@ -242,6 +242,7 @@ export class MelkerEngine {
   private _pendingRender = false;  // Track if render was requested during _isRendering
   private _renderCount = 0;
   private _mountHandlers: Array<() => void | Promise<void>> = [];
+  private _beforeExitHandlers: Array<() => boolean | Promise<boolean>> = [];
   // Debounced action for rapid input rendering (e.g., paste operations)
   private _debouncedInputRenderAction!: DebouncedAction;
 
@@ -604,6 +605,9 @@ export class MelkerEngine {
         // Options
         autoRender: this._options.autoRender,
         onExit: this._options.onExit,
+        onBeforeExit: this._beforeExitHandlers.length > 0
+          ? () => this._callBeforeExitHandlers()
+          : undefined,
 
         // Engine methods (bound callbacks)
         render: () => this.render(),
@@ -1706,6 +1710,33 @@ export class MelkerEngine {
   }
 
   /**
+   * Register a handler called on Ctrl+C before exiting.
+   * If any handler returns false, the exit is cancelled.
+   * A second Ctrl+C within 3 seconds force-exits regardless.
+   * Returns an unsubscribe function.
+   */
+  onBeforeExit(handler: () => boolean | Promise<boolean>): () => void {
+    this._beforeExitHandlers.push(handler);
+    return () => {
+      const idx = this._beforeExitHandlers.indexOf(handler);
+      if (idx >= 0) this._beforeExitHandlers.splice(idx, 1);
+    };
+  }
+
+  /**
+   * Call all registered before-exit handlers.
+   * Returns true if exit should proceed, false if any handler cancelled it.
+   */
+  async _callBeforeExitHandlers(): Promise<boolean> {
+    if (this._beforeExitHandlers.length === 0) return true;
+    for (const handler of this._beforeExitHandlers) {
+      const result = await handler();
+      if (result === false) return false;
+    }
+    return true;
+  }
+
+  /**
    * Trigger all registered mount handlers
    */
   _triggerMountHandlers(): void {
@@ -1942,11 +1973,22 @@ export class MelkerEngine {
     return this._focusManager ? this._focusManager.getFocusedElement() : null;
   }
 
+  private _cleanupHandlersResult?: { removeSigint: () => void };
+
   private _setupCleanupHandlers(): void {
-    setupCleanupHandlers(
+    this._cleanupHandlersResult = setupCleanupHandlers(
       () => this.stop(),
-      () => this.cleanupTerminal()
+      () => this.cleanupTerminal(),
+      () => this._callBeforeExitHandlers(),
     );
+  }
+
+  /**
+   * Remove the engine's own SIGINT handler.
+   * Used by melker-runner which installs its own SIGINT handler with beforeExit support.
+   */
+  removeSigintHandler(): void {
+    this._cleanupHandlersResult?.removeSigint();
   }
 
   /**

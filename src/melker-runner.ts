@@ -842,6 +842,10 @@ export async function runMelkerFile(
     }
 
     // Set up graceful shutdown
+    // deno-lint-ignore no-explicit-any
+    let _sigintHandler: any = null;
+    // deno-lint-ignore no-explicit-any
+    let _sigTermHandler: any = null;
     let cleanupInProgress = false;
     const cleanup = async (exitAfter: boolean = true) => {
       if (cleanupInProgress) return;
@@ -901,8 +905,8 @@ export async function runMelkerFile(
       }
 
       try {
-        Deno.removeSignalListener('SIGINT', signalCleanup);
-        Deno.removeSignalListener('SIGTERM', signalCleanup);
+        if (_sigintHandler) Deno.removeSignalListener('SIGINT', _sigintHandler);
+        if (_sigTermHandler) Deno.removeSignalListener('SIGTERM', _sigTermHandler);
       } catch {
         // Ignore
       }
@@ -915,9 +919,55 @@ export async function runMelkerFile(
     exitHandler = () => cleanup(true);
     engine.setOnExit(() => cleanup(true));
 
-    const signalCleanup = () => cleanup(true);
-    Deno.addSignalListener('SIGINT', signalCleanup);
-    Deno.addSignalListener('SIGTERM', signalCleanup);
+    // Remove the engine's own SIGINT handler — the runner handles SIGINT itself
+    // with the same beforeExit logic, plus runner-specific cleanup (temp dirs, video, etc.)
+    engine.removeSigintHandler();
+
+    // SIGINT: first press calls engine's beforeExit handlers (e.g. confirm dialog).
+    // If any handler returns false, exit is cancelled.
+    // Second press within 3s force-exits, bypassing hooks.
+    let pendingExit = false;
+    let pendingExitTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const sigintHandler = async () => {
+      if (pendingExit || !engine) {
+        // Second press or no engine — force exit
+        if (pendingExitTimer) clearTimeout(pendingExitTimer);
+        await cleanup(true);
+        return;
+      }
+
+      // Check if engine has any beforeExit handlers
+      const handlers = (engine as any)._beforeExitHandlers;
+      if (!handlers || handlers.length === 0) {
+        await cleanup(true);
+        return;
+      }
+
+      pendingExit = true;
+      pendingExitTimer = setTimeout(() => { pendingExit = false; }, 3000);
+
+      try {
+        const shouldExit = await (engine as any)._callBeforeExitHandlers();
+        if (shouldExit) {
+          if (pendingExitTimer) clearTimeout(pendingExitTimer);
+          await cleanup(true);
+        } else {
+          // Hook cancelled exit — reset so next signal goes through the hook again
+          if (pendingExitTimer) clearTimeout(pendingExitTimer);
+          pendingExitTimer = null;
+          pendingExit = false;
+        }
+      } catch {
+        if (pendingExitTimer) clearTimeout(pendingExitTimer);
+        await cleanup(true);
+      }
+    };
+
+    _sigintHandler = sigintHandler;
+    _sigTermHandler = () => cleanup(true);
+    Deno.addSignalListener('SIGINT', _sigintHandler);
+    Deno.addSignalListener('SIGTERM', _sigTermHandler);
 
     return { engine, cleanup: () => cleanup(false) };
 

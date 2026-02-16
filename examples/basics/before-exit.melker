@@ -1,0 +1,37 @@
+<melker>
+  <container style="width: fill; height: fill; display: flex; flex-direction: column;">
+    <!-- Header -->
+    <container style="border-bottom: thin; padding: 1;">
+      <text style="font-weight: bold;">Before Exit Demo - Intercept Ctrl+C with a confirmation dialog</text>
+    </container>
+
+    <!-- Main content -->
+    <container style="flex: 1; padding: 2; display: flex; flex-direction: column;">
+      <text style="margin-bottom: 1;">This app intercepts Ctrl+C and shows a confirmation dialog before exiting.</text>
+      <text style="margin-bottom: 2;">Press Ctrl+C again within 3 seconds to force-exit (standard double-press convention).</text>
+
+      <!-- Simulated editor area -->
+      <container style="border: thin; border-title: Notes; flex: 1; padding: 1; display: flex; flex-direction: column;">
+        <input
+          id="editor"
+          placeholder="Type something here..."
+          style="margin-bottom: 1; border: thin;"
+        />
+        <text id="status" style="color: gray;">Press Ctrl+C to test the beforeExit hook</text>
+      </container>
+
+      <!-- Instructions -->
+      <container style="margin-top: 1;">
+        <text style="color: gray;">Ctrl+C = confirm exit | Ctrl+C twice = force exit</text>
+      </container>
+    </container>
+  </container>
+
+  <script type="typescript" async="ready">
+    $melker.engine.onBeforeExit(async () => {
+      $melker.getElementById('status').props.text = 'Confirm dialog shown...';
+      $melker.render();
+      return $melker.confirm('Are you sure you want to quit?');
+    });
+  </script>
+</melker>

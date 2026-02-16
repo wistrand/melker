@@ -61,6 +61,7 @@ export interface KeyboardHandlerContext {
   // Options
   autoRender: boolean;
   onExit?: () => void | Promise<void>;
+  onBeforeExit?: () => Promise<boolean>;
 
   // Engine methods (callbacks)
   render: () => void;
@@ -204,10 +205,53 @@ export function handleKeyboardEvent(
   return false;
 }
 
+// State for Ctrl+C double-press: second press within 3s force-exits
+let _ctrlCPending = false;
+let _ctrlCTimer: ReturnType<typeof setTimeout> | null = null;
+
 /**
- * Handle Ctrl+C for graceful exit
+ * Handle Ctrl+C for graceful exit.
+ * If beforeExit handlers are registered:
+ *   First press → call handlers; if any returns false, cancel exit.
+ *   Second press within 3s → force exit, bypass hooks.
+ * If no handlers: exit immediately (original behavior).
  */
 function handleCtrlC(ctx: KeyboardHandlerContext): void {
+  // If beforeExit hook exists and this is the first press, consult the hook
+  if (ctx.onBeforeExit && !_ctrlCPending) {
+    _ctrlCPending = true;
+    _ctrlCTimer = setTimeout(() => { _ctrlCPending = false; }, 3000);
+
+    ctx.onBeforeExit().then((shouldExit) => {
+      if (shouldExit) {
+        if (_ctrlCTimer) clearTimeout(_ctrlCTimer);
+        _ctrlCPending = false;
+        doExit(ctx);
+      } else {
+        // Hook cancelled exit — reset state so next Ctrl+C goes through the hook again
+        if (_ctrlCTimer) clearTimeout(_ctrlCTimer);
+        _ctrlCTimer = null;
+        _ctrlCPending = false;
+      }
+    }).catch(() => {
+      // Error in hook — exit to be safe
+      if (_ctrlCTimer) clearTimeout(_ctrlCTimer);
+      _ctrlCPending = false;
+      doExit(ctx);
+    });
+    return;
+  }
+
+  // Second press (force-exit) or no beforeExit hook — exit immediately
+  if (_ctrlCTimer) clearTimeout(_ctrlCTimer);
+  _ctrlCPending = false;
+  doExit(ctx);
+}
+
+/**
+ * Actually perform the exit: restore terminal, stop input, cleanup, and exit.
+ */
+function doExit(ctx: KeyboardHandlerContext): void {
   // CRITICAL: Restore terminal FIRST, synchronously, before anything else
   // This ensures the terminal is restored even if something goes wrong later
   restoreTerminal();

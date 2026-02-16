@@ -278,6 +278,31 @@ $melker.engine.onMount(() => {
 - `onMount()` - When you need to register callbacks from within other logic
 - Markdown format (`.md` files) - Use `// @melker script ready` directive instead of `async="ready"` attribute
 
+### onBeforeExit (Ctrl+C Confirmation)
+
+The `$melker.engine.onBeforeExit()` hook intercepts Ctrl+C and lets the app confirm before exiting (e.g., for unsaved changes). The standard double-press convention applies: a second Ctrl+C within 3 seconds force-exits regardless of what the hook returns.
+
+```html
+<script type="typescript" async="ready">
+$melker.engine.onBeforeExit(() => {
+  return $melker.confirm('You have unsaved changes. Quit?');
+});
+</script>
+```
+
+The handler must return `true` to allow exit, or `false` to cancel it. Multiple handlers can be registered — if any returns `false`, exit is cancelled.
+
+Returns an unsubscribe function:
+
+```html
+<script type="typescript" async="ready">
+const off = $melker.engine.onBeforeExit(() => {
+  return $melker.confirm('Discard changes?');
+});
+// Later: off() to remove the hook
+</script>
+```
+
 ## External Scripts
 
 Load scripts from external files:

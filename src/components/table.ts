@@ -1,6 +1,6 @@
 // Table component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, IntrinsicSizeContext, Bounds, ComponentRenderContext, BorderStyle, BorderChars, BORDER_CHARS, ClickEvent, isRenderable, isClickable } from '../types.ts';
+import { Element, Bounds, Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, IntrinsicSizeContext, ComponentRenderContext, BORDER_CHARS, ClickEvent, isClickable } from '../types.ts';
 import type { KeyEvent } from '../events.ts';
 import type { Document } from '../document.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
@@ -12,109 +12,29 @@ import { TableRowElement } from './table-row.ts';
 import { TableCellElement } from './table-cell.ts';
 import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
-import { renderScrollbar } from './scrollbar.ts';
+
+// Re-export sub-modules for backwards compatibility
+export * from './table-types.ts';
+export * from './table-sorting.ts';
+export * from './table-columns.ts';
+export * from './table-render.ts';
+
+// Imported functions from sub-modules
+import type { TableProps } from './table-types.ts';
+import type { TableSortContext, SortCache } from './table-sorting.ts';
+import { handleSortClick, getSortedRows, hasSortableHeaders } from './table-sorting.ts';
+import type { TableColumnContext, ColumnWidthCache } from './table-columns.ts';
+import { calculateColumnWidths } from './table-columns.ts';
+import type { TableRenderOutput } from './table-render.ts';
+import {
+  drawHorizontalBorder,
+  calculateRowHeight,
+  renderHeaderRow,
+  renderRow,
+  drawScrollbarLines,
+} from './table-render.ts';
 
 const logger = getLogger('Table');
-
-export type SortDirection = 'asc' | 'desc';
-
-export interface SortState {
-  column: number;
-  direction: SortDirection;
-}
-
-export interface SortEvent {
-  type: 'sort';
-  column: number;
-  direction: SortDirection;
-  previousColumn: number | null;
-  previousDirection: SortDirection | null;
-}
-
-/**
- * Default comparator for string values (case-insensitive)
- */
-export function defaultStringComparator(a: string, b: string): number {
-  return a.toLowerCase().localeCompare(b.toLowerCase());
-}
-
-/**
- * Default comparator for numeric values
- * Falls back to string comparison if values aren't numbers
- */
-export function defaultNumericComparator(a: string, b: string): number {
-  const numA = parseFloat(a.replace(/[,$%]/g, ''));
-  const numB = parseFloat(b.replace(/[,$%]/g, ''));
-
-  if (!isNaN(numA) && !isNaN(numB)) {
-    return numA - numB;
-  }
-  return defaultStringComparator(a, b);
-}
-
-/**
- * Default comparator for date values
- * Supports common date formats, falls back to string comparison
- */
-export function defaultDateComparator(a: string, b: string): number {
-  const dateA = new Date(a);
-  const dateB = new Date(b);
-
-  if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
-    return dateA.getTime() - dateB.getTime();
-  }
-  return defaultStringComparator(a, b);
-}
-
-/**
- * Auto-detect comparator based on column values
- * Examines sample values to determine if numeric or date comparison is appropriate
- */
-export function autoDetectComparator(values: string[]): (a: string, b: string) => number {
-  // Filter out empty values
-  const nonEmpty = values.filter(v => v.trim() !== '');
-  if (nonEmpty.length === 0) return defaultStringComparator;
-
-  // Check if all values are numeric
-  const allNumeric = nonEmpty.every(v => {
-    const cleaned = v.replace(/[,$%]/g, '');
-    return !isNaN(parseFloat(cleaned));
-  });
-  if (allNumeric) return defaultNumericComparator;
-
-  // Check if all values are valid dates
-  const allDates = nonEmpty.every(v => {
-    const d = new Date(v);
-    return !isNaN(d.getTime());
-  });
-  if (allDates) return defaultDateComparator;
-
-  return defaultStringComparator;
-}
-
-export interface ColumnResizeEvent {
-  type: 'columnResize';
-  column: number;
-  oldWidth: number;
-  newWidth: number;
-  columnWidths: number[];
-}
-
-export interface TableProps extends BaseProps {
-  border?: BorderStyle;
-  columnBorders?: boolean;  // Whether to show internal column borders (default: true)
-  cellPadding?: number;
-  cellSpacing?: number;
-  // Sorting props
-  sortColumn?: number;
-  sortDirection?: SortDirection;
-  onSort?: (event: SortEvent) => void;
-  // Column resize props
-  resizable?: boolean;
-  columnWidths?: number[];
-  minColumnWidth?: number;
-  onColumnResize?: (event: ColumnResizeEvent) => void;
-}
 
 export class TableElement extends Element implements Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable {
   declare type: 'table';
@@ -166,23 +86,26 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
   // Auto-scroll state (when table doesn't fit in available height)
   private _autoScrollEnabled: boolean = false;
-  private _autoScrollMaxVisible: number = 0;
 
   // Line-based scroll metrics (set during render for wheel/drag handlers)
   private _totalContentLines: number = 0;
   private _viewportLines: number = 0;
 
-  // Sorted rows cache - avoid re-sorting on every render
-  private _cachedSortedRows: TableRowElement[] | null = null;
-  private _sortCacheKey: string = '';
+  // Sort cache
+  private _sortCache: SortCache = {
+    cachedSortedRows: null,
+    sortCacheKey: '',
+  };
 
   // Content height cache - avoid recalculating row heights on every render
   private _cachedContentHeight: number = 0;
   private _contentHeightCacheKey: string = '';
 
-  // Column widths cache - avoid iterating all rows on every render
-  private _cachedColumnWidths: number[] = [];
-  private _columnWidthsCacheKey: string = '';
+  // Column width cache
+  private _columnWidthCache: ColumnWidthCache = {
+    cachedColumnWidths: [],
+    columnWidthsCacheKey: '',
+  };
 
   constructor(props: TableProps = {}, children: Element[] = []) {
     const defaultProps: TableProps = {
@@ -192,6 +115,38 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       ...props,
     };
     super('table', defaultProps, children);
+  }
+
+  // --- Sort context adapter (implements TableSortContext) ---
+  private _asSortContext(): TableSortContext {
+    return {
+      props: this.props,
+      getThead: () => this.getThead(),
+      getTbody: () => this.getTbody(),
+      columnComparators: this._columnComparators,
+    };
+  }
+
+  // --- Column context adapter (implements TableColumnContext) ---
+  private _asColumnContext(): TableColumnContext {
+    return {
+      props: this.props,
+      getThead: () => this.getThead(),
+      getTbody: () => this.getTbody(),
+      getTfoot: () => this.getTfoot(),
+      getColumnCount: () => this.getColumnCount(),
+      sortCacheKey: this._sortCache.sortCacheKey,
+    };
+  }
+
+  // --- Render output adapter ---
+  private _createRenderOutput(): TableRenderOutput {
+    return {
+      rowBounds: this._rowBounds,
+      cellComponentBounds: this._cellComponentBounds,
+      headerCellBounds: this._headerCellBounds,
+      columnBorderPositions: this._columnBorderPositions,
+    };
   }
 
   /**
@@ -294,139 +249,6 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   }
 
   /**
-   * Handle click on a sortable header cell
-   */
-  private _handleSortClick(columnIndex: number, cell: TableCellElement): void {
-    const currentColumn = this.props.sortColumn;
-    const currentDirection = this.props.sortDirection;
-
-    let newDirection: SortDirection;
-
-    if (currentColumn === columnIndex) {
-      // Toggle direction: asc -> desc -> asc
-      newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-      // New column: start with ascending
-      newDirection = 'asc';
-    }
-
-    // Cache comparator for this column if not already cached
-    if (!this._columnComparators.has(columnIndex)) {
-      const comparator = this._getComparatorForColumn(columnIndex, cell);
-      this._columnComparators.set(columnIndex, comparator);
-    }
-
-    // Update props
-    this.props.sortColumn = columnIndex;
-    this.props.sortDirection = newDirection;
-
-    // Fire event
-    if (this.props.onSort) {
-      this.props.onSort({
-        type: 'sort',
-        column: columnIndex,
-        direction: newDirection,
-        previousColumn: currentColumn ?? null,
-        previousDirection: currentDirection ?? null,
-      });
-    }
-  }
-
-  /**
-   * Get the comparator function for a column
-   */
-  private _getComparatorForColumn(columnIndex: number, headerCell: TableCellElement): (a: string, b: string) => number {
-    // Use custom comparator if provided
-    if (headerCell.props.onCompare) {
-      return headerCell.props.onCompare;
-    }
-
-    // Auto-detect comparator based on column values
-    const tbody = this.getTbody();
-    if (!tbody) return defaultStringComparator;
-
-    const values: string[] = [];
-    for (const row of tbody.getRows()) {
-      const cell = row.getCellAtIndex(columnIndex);
-      if (cell) {
-        values.push(cell.getTextContent());
-      }
-    }
-
-    return autoDetectComparator(values);
-  }
-
-  /**
-   * Get sorted tbody rows based on current sort state
-   * Uses caching to avoid re-sorting on every render
-   */
-  private _getSortedRows(rows: TableRowElement[]): TableRowElement[] {
-    const sortColumn = this.props.sortColumn;
-    const sortDirection = this.props.sortDirection;
-
-    if (sortColumn === undefined || sortDirection === undefined) {
-      return rows;
-    }
-
-    // Build cache key from sort params and row boundaries
-    // Uses count + first/last row IDs for fast change detection
-    const firstRowId = rows.length > 0 ? (rows[0].getDataId() || rows[0].id || '') : '';
-    const lastRowId = rows.length > 0 ? (rows[rows.length - 1].getDataId() || rows[rows.length - 1].id || '') : '';
-    const cacheKey = `${sortColumn}:${sortDirection}:${rows.length}:${firstRowId}:${lastRowId}`;
-
-    // Return cached result if still valid
-    if (this._cachedSortedRows && this._sortCacheKey === cacheKey) {
-      return this._cachedSortedRows;
-    }
-
-    // Get or create comparator for this column
-    let comparator = this._columnComparators.get(sortColumn);
-    if (!comparator) {
-      // Try to get header cell for custom comparator
-      const thead = this.getThead();
-      const headerRow = thead?.getRows()[0];
-      const headerCell = headerRow?.getCellAtIndex(sortColumn);
-      comparator = headerCell ? this._getComparatorForColumn(sortColumn, headerCell) : defaultStringComparator;
-      this._columnComparators.set(sortColumn, comparator);
-    }
-
-    // Create a sorted copy of rows
-    const sorted = [...rows].sort((rowA, rowB) => {
-      const cellA = rowA.getCellAtIndex(sortColumn);
-      const cellB = rowB.getCellAtIndex(sortColumn);
-
-      const valueA = cellA?.getTextContent() || '';
-      const valueB = cellB?.getTextContent() || '';
-
-      const result = comparator!(valueA, valueB);
-      return sortDirection === 'asc' ? result : -result;
-    });
-
-    // Cache the result
-    this._cachedSortedRows = sorted;
-    this._sortCacheKey = cacheKey;
-
-    return sorted;
-  }
-
-  /**
-   * Check if table has sortable headers
-   */
-  hasSortableHeaders(): boolean {
-    const thead = this.getThead();
-    if (!thead) return false;
-
-    for (const row of thead.getRows()) {
-      for (const cell of row.getCells()) {
-        if (cell.isHeader() && cell.props.sortable !== false) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
    * Check if this table is interactive (has cell components, selectable rows, or scrollable)
    */
   isInteractive(): boolean {
@@ -459,7 +281,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     const hasSelection = tbody?.props.selectable !== 'none' && tbody?.props.selectable !== undefined;
     const hasExplicitScrollbar = !!(tbody?.props.scrollable && (tbody.getRows().length > (tbody.props.maxHeight || 0)));
     const hasAutoScrollbar = this._autoScrollEnabled;
-    const hasSortable = this.hasSortableHeaders();
+    const hasSortable = hasSortableHeaders(this._asSortContext());
     const hasResizable = this.props.resizable === true;
     // Also check if we have stored cell component bounds from rendering
     const hasCellComponents = this._cellComponentBounds.length > 0;
@@ -495,7 +317,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       if (cell.props.sortable !== false && // sortable by default or explicitly true
           clickX >= bounds.x && clickX < bounds.x + bounds.width &&
           clickY >= bounds.y && clickY < bounds.y + bounds.height) {
-        this._handleSortClick(columnIndex, cell);
+        handleSortClick(this._asSortContext(), columnIndex, cell);
         return true;
       }
     }
@@ -692,7 +514,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   /**
    * Draggable interface - handle drag end
    */
-  handleDragEnd(zone: string, x: number, y: number): void {
+  handleDragEnd(zone: string, _x: number, _y: number): void {
     // Clear resize drag state
     if (zone.startsWith('resize:')) {
       this._resizeDragState = null;
@@ -760,9 +582,9 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     // Calculate line offset for the target row
     let rowStartLine = 0;
     for (let i = 0; i < rowIndex; i++) {
-      rowStartLine += this._calculateRowHeight(rows[i], this._columnWidths, this.props.cellPadding || 1);
+      rowStartLine += calculateRowHeight(rows[i], this._columnWidths, this.props.cellPadding || 1);
     }
-    const rowHeight = this._calculateRowHeight(rows[rowIndex], this._columnWidths, this.props.cellPadding || 1);
+    const rowHeight = calculateRowHeight(rows[rowIndex], this._columnWidths, this.props.cellPadding || 1);
     const rowEndLine = rowStartLine + rowHeight;
 
     const scrollY = tbody.props.scrollY || 0;
@@ -868,289 +690,10 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
   }
 
   /**
-   * Fast path to get cell text width without full intrinsicSize overhead
+   * Check if table has sortable headers
    */
-  private _getCellTextWidth(cell: TableCellElement): number {
-    const children = cell.children;
-    if (!children || children.length === 0) return 1;
-
-    // Fast path: single child (text or container with text)
-    if (children.length === 1) {
-      const child = children[0];
-
-      // Direct text child
-      if (child.type === 'text' && child.props.text !== undefined) {
-        const text = String(child.props.text);
-        // For wrapped text, return minimal width so column doesn't expand to fit full text
-        const textWrap = child.props.style?.textWrap;
-        if (textWrap === 'wrap') {
-          // Return length of longest word as minimum width
-          const words = text.split(/\s+/);
-          const longestWord = Math.max(1, ...words.map(w => w.length));
-          return Math.min(longestWord, 20); // Cap at 20 to avoid very long words dominating
-        }
-        if (!text.includes('\n')) {
-          return Math.max(1, text.length);
-        }
-      }
-
-      // Container child - check for wrapped text inside
-      if (child.type === 'container' && child.children) {
-        let containerWidth = 0;
-        // Account for container's border-left
-        const borderLeft = child.props.style?.borderLeft;
-        if (borderLeft && borderLeft !== 'none') {
-          containerWidth += 1;
-        }
-
-        // Check container's children for wrapped text
-        for (const containerChild of child.children) {
-          if (containerChild.type === 'text' && containerChild.props.text !== undefined) {
-            const text = String(containerChild.props.text);
-            const textWrap = containerChild.props.style?.textWrap;
-            if (textWrap === 'wrap') {
-              // Return minimal width for wrapped text
-              const words = text.split(/\s+/);
-              const longestWord = Math.max(1, ...words.map(w => w.length));
-              containerWidth += Math.min(longestWord, 20);
-            } else if (!text.includes('\n')) {
-              containerWidth += text.length;
-            }
-          }
-        }
-
-        if (containerWidth > 0) {
-          return Math.max(1, containerWidth);
-        }
-      }
-    }
-
-    // Fallback to full intrinsicSize for complex cells
-    return cell.intrinsicSize({ availableSpace: { width: 200, height: 100 } }).width;
-  }
-
-  /**
-   * Calculate column widths based on content
-   * @param availableWidth - maximum width available for the table
-   * @param expandToFill - if true, expand columns to fill available width (default: true for root tables)
-   */
-  private _calculateColumnWidths(availableWidth: number, expandToFill: boolean = true): number[] {
-    const columnCount = this.getColumnCount();
-    if (columnCount === 0) return [];
-
-    const cellPadding = this.props.cellPadding || 1;
-    const hasBorder = this.props.border !== 'none';
-    const showColumnBorders = this.props.columnBorders ?? true;
-    const borderWidth = hasBorder ? (showColumnBorders ? columnCount + 1 : 2) : 0;
-
-    // Check cache - use row count and sort cache key to detect data changes
-    // Use children.length directly (O(1)) instead of getRows().length (O(n))
-    const tbody = this.getTbody();
-    const tbodyChildCount = tbody?.children?.length ?? 0;
-    // IMPORTANT: Include showColumnBorders in cache key - it affects borderWidth which affects all width calculations
-    const cacheKey = `${availableWidth}:${expandToFill}:${columnCount}:${tbodyChildCount}:${cellPadding}:${hasBorder}:${showColumnBorders}:${this._sortCacheKey}`;
-    if (this._columnWidthsCacheKey === cacheKey && this._cachedColumnWidths.length === columnCount) {
-      return this._cachedColumnWidths;
-    }
-
-    // Fast path: Check if all headers have explicit widths
-    // This completely avoids sampling body rows
-    const thead = this.getThead();
-    if (thead) {
-      const headerRows = thead.getRows();
-      if (headerRows.length > 0) {
-        const headerCells = headerRows[0].getCells();
-        let allExplicit = true;
-        let fillIndex = -1;
-        const explicitWidths: number[] = [];
-        const percentageIndices: number[] = [];
-        const percentageValues: number[] = [];
-
-        // Available width for content (excluding borders)
-        const contentAvailable = availableWidth - borderWidth;
-
-        let colIndex = 0;
-        for (const cell of headerCells) {
-          const colWidth = cell.getColWidth();
-          if (colWidth === undefined) {
-            allExplicit = false;
-            break;
-          }
-          if (colWidth === 'fill') {
-            fillIndex = colIndex;
-            explicitWidths.push(0); // Placeholder, will calculate
-          } else if (typeof colWidth === 'string' && colWidth.endsWith('%')) {
-            // Percentage width
-            const percent = parseFloat(colWidth) / 100;
-            percentageIndices.push(colIndex);
-            percentageValues.push(percent);
-            explicitWidths.push(0); // Placeholder, will calculate
-          } else if (typeof colWidth === 'number') {
-            explicitWidths.push(colWidth + cellPadding * 2);
-          }
-          colIndex++;
-        }
-
-        if (allExplicit && explicitWidths.length === columnCount) {
-          // All headers have explicit widths - skip all sampling!
-
-          // Calculate percentage widths first
-          for (let i = 0; i < percentageIndices.length; i++) {
-            const idx = percentageIndices[i];
-            const percent = percentageValues[i];
-            explicitWidths[idx] = Math.max(cellPadding * 2 + 1, Math.floor(contentAvailable * percent));
-          }
-
-          if (fillIndex >= 0) {
-            // Calculate 'fill' column width from remaining space
-            const fixedTotal = explicitWidths.reduce((sum, w) => sum + w, 0);
-            const fillWidth = Math.max(cellPadding * 2 + 1, contentAvailable - fixedTotal);
-            explicitWidths[fillIndex] = fillWidth;
-            logger.debug(`Fast path fill column: availableWidth=${availableWidth}, borderWidth=${borderWidth}, contentAvailable=${contentAvailable}, fixedTotal=${fixedTotal}, fillWidth=${fillWidth}, total=${explicitWidths.reduce((s, w) => s + w, 0)}`);
-          } else if (expandToFill && percentageIndices.length === 0) {
-            // Distribute extra space evenly (only if no percentages used)
-            const totalNeeded = explicitWidths.reduce((sum, w) => sum + w, 0);
-            if (totalNeeded < contentAvailable) {
-              const extra = contentAvailable - totalNeeded;
-              const perColumn = Math.floor(extra / columnCount);
-              const remainder = extra % columnCount;
-              for (let i = 0; i < columnCount; i++) {
-                explicitWidths[i] += perColumn;
-                if (i < remainder) explicitWidths[i]++;
-              }
-            }
-          }
-
-          this._cachedColumnWidths = explicitWidths;
-          this._columnWidthsCacheKey = cacheKey;
-          return explicitWidths;
-        }
-      }
-    }
-
-    // Slow path: Calculate intrinsic widths for each column
-    const intrinsicWidths: number[] = new Array(columnCount).fill(0);
-
-    // Step 1: Get header widths first (headers define minimum widths and rarely change)
-    if (thead) {
-      for (const row of thead.getRows()) {
-        let colIndex = 0;
-        for (const cell of row.getCells()) {
-          const colspan = cell.getColspan();
-          if (colspan === 1) {
-            // Use explicit width if set, otherwise calculate
-            const explicitWidth = cell.getColWidth();
-            if (typeof explicitWidth === 'number') {
-              intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], explicitWidth);
-            } else {
-              const cellWidth = this._getCellTextWidth(cell);
-              intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
-            }
-          }
-          colIndex += colspan;
-        }
-      }
-    }
-
-    // Step 2: Sample body rows for large tables (optimization for 50+ rows)
-    // For smaller tables, check all rows
-    const SAMPLE_THRESHOLD = 50;
-
-    if (tbody) {
-      const rows = tbody.getRows();
-      const rowCount = rows.length;
-
-      if (rowCount <= SAMPLE_THRESHOLD) {
-        // Small table: check all rows
-        for (const row of rows) {
-          let colIndex = 0;
-          for (const cell of row.getCells()) {
-            const colspan = cell.getColspan();
-            if (colspan === 1) {
-              const cellWidth = this._getCellTextWidth(cell);
-              intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
-            }
-            colIndex += colspan;
-          }
-        }
-      } else {
-        // Large table: sample rows (first 10, last 5, 5 evenly distributed)
-        const sampleIndices = new Set<number>();
-
-        // First 10 rows
-        for (let i = 0; i < Math.min(10, rowCount); i++) {
-          sampleIndices.add(i);
-        }
-
-        // Last 5 rows
-        for (let i = Math.max(0, rowCount - 5); i < rowCount; i++) {
-          sampleIndices.add(i);
-        }
-
-        // 5 evenly distributed middle rows
-        if (rowCount > 15) {
-          const step = Math.floor((rowCount - 15) / 6);
-          for (let i = 1; i <= 5; i++) {
-            sampleIndices.add(10 + i * step);
-          }
-        }
-
-        for (const idx of sampleIndices) {
-          const row = rows[idx];
-          let colIndex = 0;
-          for (const cell of row.getCells()) {
-            const colspan = cell.getColspan();
-            if (colspan === 1) {
-              const cellWidth = this._getCellTextWidth(cell);
-              intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
-            }
-            colIndex += colspan;
-          }
-        }
-      }
-    }
-
-    // Step 3: Check tfoot if present
-    const tfoot = this.getTfoot();
-    if (tfoot) {
-      for (const row of tfoot.getRows()) {
-        let colIndex = 0;
-        for (const cell of row.getCells()) {
-          const colspan = cell.getColspan();
-          if (colspan === 1) {
-            const cellWidth = this._getCellTextWidth(cell);
-            intrinsicWidths[colIndex] = Math.max(intrinsicWidths[colIndex], cellWidth);
-          }
-          colIndex += colspan;
-        }
-      }
-    }
-
-    // Add padding to each column
-    const widths = intrinsicWidths.map(w => w + cellPadding * 2);
-
-    // Calculate total width needed
-    const totalNeeded = widths.reduce((sum, w) => sum + w, 0) + borderWidth;
-
-    // If we have more space and expansion is enabled, distribute evenly
-    if (expandToFill && totalNeeded < availableWidth) {
-      const extra = availableWidth - totalNeeded;
-      const perColumn = Math.floor(extra / columnCount);
-      const remainder = extra % columnCount;
-      for (let i = 0; i < columnCount; i++) {
-        widths[i] += perColumn;
-        // Distribute remainder to first columns (1 extra char each)
-        if (i < remainder) {
-          widths[i] += 1;
-        }
-      }
-    }
-
-    // Cache result
-    this._cachedColumnWidths = widths;
-    this._columnWidthsCacheKey = cacheKey;
-
-    return widths;
+  hasSortableHeaders(): boolean {
+    return hasSortableHeaders(this._asSortContext());
   }
 
   /**
@@ -1181,7 +724,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       // Keep using user-modified widths from resize
       this._columnWidths = this._userColumnWidths;
     } else {
-      this._columnWidths = this._calculateColumnWidths(bounds.width);
+      this._columnWidths = calculateColumnWidths(this._asColumnContext(), bounds.width, true, this._columnWidthCache);
     }
     const columnCount = this._columnWidths.length;
 
@@ -1195,20 +738,23 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
     logger.debug(`Table.render: thead=${!!thead}, tbody=${!!tbody}, tfoot=${!!tfoot}`);
 
+    // Create render output to track bounds
+    const output = this._createRenderOutput();
+
     // Calculate fixed heights (thead, tfoot, borders, separators)
     let fixedHeight = 0;
     if (hasBorder) fixedHeight += 2; // Top and bottom borders
 
     if (thead) {
       for (const row of thead.getRows()) {
-        fixedHeight += this._calculateRowHeight(row, this._columnWidths, cellPadding);
+        fixedHeight += calculateRowHeight(row, this._columnWidths, cellPadding);
       }
       if (hasBorder && (tbody || tfoot)) fixedHeight++; // Separator after thead (only with border)
     }
 
     if (tfoot) {
       for (const row of tfoot.getRows()) {
-        fixedHeight += this._calculateRowHeight(row, this._columnWidths, cellPadding);
+        fixedHeight += calculateRowHeight(row, this._columnWidths, cellPadding);
       }
       if (hasBorder && tbody) fixedHeight++; // Separator before tfoot (only with border)
     }
@@ -1218,7 +764,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     if (tbody) {
       const rows = tbody.getRows();
       for (const row of rows) {
-        tbodyTotalHeight += this._calculateRowHeight(row, this._columnWidths, cellPadding);
+        tbodyTotalHeight += calculateRowHeight(row, this._columnWidths, cellPadding);
       }
     }
 
@@ -1261,26 +807,26 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
     // Draw top border
     if (hasBorder && chars) {
-      this._drawHorizontalBorder(buffer, bounds.x, y, this._columnWidths, chars.tl, chars.tm, chars.tr, chars.h, borderCellStyle, showColumnBorders);
+      drawHorizontalBorder(buffer, bounds.x, y, this._columnWidths, chars.tl, chars.tm, chars.tr, chars.h, borderCellStyle, showColumnBorders);
       y++;
     }
 
     // Render thead with sort indicators
     if (thead) {
       for (const row of thead.getRows()) {
-        y = this._renderHeaderRow(buffer, bounds.x, y, row, this._columnWidths, headerCellStyle, borderCellStyle, chars, cellPadding, context, showColumnBorders);
+        y = renderHeaderRow(buffer, bounds.x, y, row, this._columnWidths, headerCellStyle, borderCellStyle, chars, cellPadding, this.props.sortColumn, this.props.sortDirection, this.props.resizable, context, output, showColumnBorders);
       }
 
       // Draw separator after thead
       if (hasBorder && chars && (tbody || tfoot)) {
-        this._drawHorizontalBorder(buffer, bounds.x, y, this._columnWidths, chars.lm, chars.mm, chars.rm, chars.h, borderCellStyle, showColumnBorders);
+        drawHorizontalBorder(buffer, bounds.x, y, this._columnWidths, chars.lm, chars.mm, chars.rm, chars.h, borderCellStyle, showColumnBorders);
         y++;
       }
     }
 
     // Render tbody (with sorted rows if sorting is active)
     if (tbody) {
-      const rows = this._getSortedRows(tbody.getRows());
+      const rows = getSortedRows(this._asSortContext(), tbody.getRows(), this._sortCache);
       const selectable = tbody.props.selectable || 'none';
 
       // Determine scroll parameters
@@ -1319,14 +865,14 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       }
 
       // Calculate total content height in lines (cached)
-      const heightCacheKey = `${rows.length}:${cellPadding}:${this._columnWidths.join(',')}:${this._sortCacheKey}`;
+      const heightCacheKey = `${rows.length}:${cellPadding}:${this._columnWidths.join(',')}:${this._sortCache.sortCacheKey}`;
       let totalContentLines: number;
       if (this._contentHeightCacheKey === heightCacheKey && this._cachedContentHeight > 0) {
         totalContentLines = this._cachedContentHeight;
       } else {
         totalContentLines = 0;
         for (const row of rows) {
-          totalContentLines += this._calculateRowHeight(row, this._columnWidths, cellPadding);
+          totalContentLines += calculateRowHeight(row, this._columnWidths, cellPadding);
         }
         this._cachedContentHeight = totalContentLines;
         this._contentHeightCacheKey = heightCacheKey;
@@ -1375,7 +921,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
-          const rowHeight = this._calculateRowHeight(row, this._columnWidths, cellPadding);
+          const rowHeight = calculateRowHeight(row, this._columnWidths, cellPadding);
 
           // Skip rows that are completely above the viewport
           if (virtualY + rowHeight <= tbodyStartY - availableTbodyHeight) {
@@ -1400,7 +946,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
           }
 
           // Render row into the clipped buffer - clipping handles visibility
-          this._renderRow(clippedBuffer, bounds.x, virtualY, row, this._columnWidths, rowStyle, borderCellStyle, chars, cellPadding, isSelected, isFocused, context, 0, undefined, showColumnBorders);
+          renderRow(clippedBuffer, bounds.x, virtualY, row, this._columnWidths, rowStyle, borderCellStyle, chars, cellPadding, isSelected, isFocused, context, output, 0, undefined, showColumnBorders);
           virtualY += rowHeight;
         }
 
@@ -1433,7 +979,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
           }
 
           // Draw scrollbar directly to main buffer (not clipped)
-          this._drawScrollbarLines(buffer, scrollbarX, tbodyStartY, scrollbarHeight, thumbPosition, thumbHeight, borderCellStyle);
+          drawScrollbarLines(buffer, scrollbarX, tbodyStartY, scrollbarHeight, thumbPosition, thumbHeight, borderCellStyle);
         }
 
         // Advance y past the tbody area
@@ -1453,13 +999,13 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
             rowStyle = focusedRowStyle;
           }
 
-          y = this._renderRow(buffer, bounds.x, y, row, this._columnWidths, rowStyle, borderCellStyle, chars, cellPadding, isSelected, isFocused, context, 0, undefined, showColumnBorders);
+          y = renderRow(buffer, bounds.x, y, row, this._columnWidths, rowStyle, borderCellStyle, chars, cellPadding, isSelected, isFocused, context, output, 0, undefined, showColumnBorders);
         }
       }
 
       // Draw separator after tbody
       if (hasBorder && chars && tfoot) {
-        this._drawHorizontalBorder(buffer, bounds.x, y, this._columnWidths, chars.lm, chars.mm, chars.rm, chars.h, borderCellStyle, showColumnBorders);
+        drawHorizontalBorder(buffer, bounds.x, y, this._columnWidths, chars.lm, chars.mm, chars.rm, chars.h, borderCellStyle, showColumnBorders);
         y++;
       }
     }
@@ -1467,731 +1013,14 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     // Render tfoot
     if (tfoot) {
       for (const row of tfoot.getRows()) {
-        y = this._renderRow(buffer, bounds.x, y, row, this._columnWidths, style, borderCellStyle, chars, cellPadding, false, false, context, 0, undefined, showColumnBorders);
+        y = renderRow(buffer, bounds.x, y, row, this._columnWidths, style, borderCellStyle, chars, cellPadding, false, false, context, output, 0, undefined, showColumnBorders);
       }
     }
 
     // Draw bottom border
     if (hasBorder && chars) {
-      this._drawHorizontalBorder(buffer, bounds.x, y, this._columnWidths, chars.bl, chars.bm, chars.br, chars.h, borderCellStyle, showColumnBorders);
+      drawHorizontalBorder(buffer, bounds.x, y, this._columnWidths, chars.bl, chars.bm, chars.br, chars.h, borderCellStyle, showColumnBorders);
     }
-  }
-
-  /**
-   * Calculate how many rows fit in the given height
-   */
-  private _calculateVisibleRowCount(rows: TableRowElement[], columnWidths: number[], cellPadding: number, availableHeight: number, startIndex: number = 0): number {
-    let totalHeight = 0;
-    let count = 0;
-
-    // Start from the given index to handle variable-height rows correctly when scrolled
-    for (let i = startIndex; i < rows.length; i++) {
-      const rowHeight = this._calculateRowHeight(rows[i], columnWidths, cellPadding);
-      if (totalHeight + rowHeight > availableHeight) {
-        break;
-      }
-      totalHeight += rowHeight;
-      count++;
-    }
-
-    return Math.max(1, count); // At least 1 row visible
-  }
-
-  /**
-   * Draw a horizontal border line
-   */
-  private _drawHorizontalBorder(
-    buffer: DualBuffer,
-    x: number,
-    y: number,
-    columnWidths: number[],
-    left: string,
-    middle: string,
-    right: string,
-    horizontal: string,
-    style: Partial<Cell>,
-    showColumnBorders: boolean = true
-  ): void {
-    let currentX = x;
-
-    // Left corner
-    buffer.currentBuffer.setText(currentX, y, left, style);
-    currentX++;
-
-    // Draw columns with separators
-    for (let i = 0; i < columnWidths.length; i++) {
-      // Horizontal line for column width
-      buffer.currentBuffer.setText(currentX, y, horizontal.repeat(columnWidths[i]), style);
-      currentX += columnWidths[i];
-
-      // Junction or right corner
-      if (i < columnWidths.length - 1) {
-        if (showColumnBorders) {
-          buffer.currentBuffer.setText(currentX, y, middle, style);
-          currentX++;
-        }
-      } else {
-        buffer.currentBuffer.setText(currentX, y, right, style);
-        currentX++;
-      }
-    }
-  }
-
-  /**
-   * Fast path to check if a cell is simple single-line text
-   */
-  /**
-   * Calculate total cell width for a colspan, optionally including internal borders
-   */
-  private _calculateColspanWidth(
-    colspan: number,
-    colIndex: number,
-    columnWidths: number[],
-    includeBorders: boolean = false
-  ): number {
-    let cellWidth = 0;
-    for (let i = 0; i < colspan && colIndex + i < columnWidths.length; i++) {
-      cellWidth += columnWidths[colIndex + i];
-      if (i > 0 && includeBorders) cellWidth++;
-    }
-    return cellWidth;
-  }
-
-  private _isSingleLineTextCell(cell: TableCellElement): boolean {
-    const children = cell.children;
-    if (!children || children.length === 0) return true;
-    if (children.length !== 1) return false;
-
-    const child = children[0];
-    if (child.type === 'text' && child.props.text !== undefined) {
-      const text = String(child.props.text);
-      // Check for text-wrap style - wrapped text is not single-line
-      const textWrap = child.props.style?.textWrap;
-      if (textWrap === 'wrap') return false;
-      return !text.includes('\n');
-    }
-    return false;
-  }
-
-  /**
-   * Calculate the height of a row based on its cells
-   */
-  private _calculateRowHeight(row: TableRowElement, columnWidths: number[], cellPadding: number): number {
-    const cells = row.getCells();
-
-    // Fast path: if all cells are simple single-line text, height is 1
-    let allSimple = true;
-    for (const cell of cells) {
-      if (!this._isSingleLineTextCell(cell)) {
-        allSimple = false;
-        break;
-      }
-    }
-    if (allSimple) return 1;
-
-    // Slow path: calculate actual heights
-    let maxHeight = 1;
-    let colIndex = 0;
-
-    for (const cell of cells) {
-      // Skip simple cells in the slow path too
-      if (this._isSingleLineTextCell(cell)) {
-        colIndex += cell.getColspan();
-        continue;
-      }
-
-      const colspan = cell.getColspan();
-      const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths);
-
-      const contentWidth = cellWidth - cellPadding * 2;
-      const cellHeight = cell.intrinsicSize({ availableSpace: { width: contentWidth, height: 100 } }).height;
-      maxHeight = Math.max(maxHeight, cellHeight);
-
-      colIndex += colspan;
-    }
-
-    return maxHeight;
-  }
-
-  /**
-   * Render a header row with sort indicators and track cell bounds for click detection
-   */
-  private _renderHeaderRow(
-    buffer: DualBuffer,
-    x: number,
-    y: number,
-    row: TableRowElement,
-    columnWidths: number[],
-    style: Partial<Cell>,
-    borderStyle: Partial<Cell>,
-    chars: BorderChars | null,
-    cellPadding: number,
-    context?: ComponentRenderContext,
-    showColumnBorders: boolean = true
-  ): number {
-    const cells = row.getCells();
-    const hasBorder = chars !== null;
-    const borderCount = showColumnBorders ? columnWidths.length + 1 : 2;
-    const tableWidth = columnWidths.reduce((sum, w) => sum + w, 0) + (hasBorder ? borderCount : 0);
-    const rowHeight = 1; // Headers are single line
-
-    // Sort indicators
-    const SORT_ASC = ' ^';  // Use ^ for ascending (caret up alternative)
-    const SORT_DESC = ' v'; // Use v for descending (caret down alternative)
-
-    // Track content X position for cell rendering
-    let contentX = x + (hasBorder ? 1 : 0);
-    let colIndex = 0;
-
-    for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
-      const cell = cells[cellIdx];
-      const colspan = cell.getColspan();
-      // Calculate total cell width (including spanned columns)
-      const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, hasBorder && showColumnBorders);
-
-      // Check both props.align and style.textAlign for alignment
-      const styleTextAlign = cell.props.style?.textAlign || cell.props.style?.['text-align'];
-      const align = cell.props.align || styleTextAlign || 'left';
-      const cellContentWidth = cellWidth - cellPadding * 2;
-      const cellContentX = contentX + cellPadding;
-
-      // Track cell bounds for click detection (only for th cells that can be sorted)
-      const isHeaderCell = cell.isHeader();
-      const sortable = cell.props.sortable !== false;
-      logger.debug(`_renderHeaderRow: cell=${cellIdx}, type=${cell.type}, isHeader=${isHeaderCell}, sortable=${sortable}`);
-      if (isHeaderCell && sortable) {
-        this._headerCellBounds.push({
-          cell,
-          columnIndex: colIndex,
-          bounds: { x: contentX, y, width: cellWidth, height: rowHeight }
-        });
-        logger.debug(`_renderHeaderRow: added header cell bounds for column ${colIndex}`);
-      }
-
-      // Register cell bounds if cell has an ID (for connectors to find table cells)
-      if (cell.id && context?.registerElementBounds) {
-        context.registerElementBounds(cell.id, {
-          x: contentX,
-          y,
-          width: cellWidth,
-          height: rowHeight,
-        });
-      }
-
-      // Get cell text content and add sort indicator if this column is sorted
-      let content = cell.getTextContent();
-      if (this.props.sortColumn === colIndex && this.props.sortDirection) {
-        const indicator = this.props.sortDirection === 'asc' ? SORT_ASC : SORT_DESC;
-        content = content + indicator;
-      }
-
-      // Calculate text position based on alignment
-      let textX = cellContentX;
-      const textLen = content.length;
-
-      if (align === 'center') {
-        textX += Math.floor((cellContentWidth - textLen) / 2);
-      } else if (align === 'right') {
-        textX += cellContentWidth - textLen;
-      }
-
-      // Truncate if too long
-      const truncatedContent = content.substring(0, cellContentWidth);
-      buffer.currentBuffer.setText(textX, y, truncatedContent, style);
-
-      const isLastCell = cellIdx === cells.length - 1;
-      contentX += cellWidth + (hasBorder && (showColumnBorders || isLastCell) ? 1 : 0);
-      colIndex += colspan;
-    }
-
-    // Draw borders AFTER content and track column border positions for resize
-    if (hasBorder && chars) {
-      let borderX = x;
-
-      // Left border
-      buffer.currentBuffer.setText(borderX, y, chars.v, borderStyle);
-      borderX++;
-
-      // Column separators and right border
-      colIndex = 0;
-      for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
-        const cell = cells[cellIdx];
-        const colspan = cell.getColspan();
-        const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, showColumnBorders);
-        borderX += cellWidth;
-
-        // Only draw internal borders if showColumnBorders is true, always draw right border
-        const isLastCell = cellIdx === cells.length - 1;
-        if (isLastCell || showColumnBorders) {
-          buffer.currentBuffer.setText(borderX, y, chars.v, borderStyle);
-
-          // Track column border position for resize (not for the last column's right border)
-          const lastColInSpan = colIndex + colspan - 1;
-          if (this.props.resizable && lastColInSpan < columnWidths.length - 1 && showColumnBorders) {
-            this._columnBorderPositions.push({
-              columnIndex: lastColInSpan,
-              x: borderX,
-              y: y,
-              height: rowHeight
-            });
-          }
-
-          borderX++;
-        }
-        colIndex += colspan;
-      }
-    }
-
-    return y + rowHeight;
-  }
-
-  /**
-   * Render a single row (supports multi-line rows for nested tables)
-   * @param skipLines - Number of lines to skip at top (for partial row rendering)
-   * @param maxLines - Maximum lines to render (for clipping at bottom)
-   * @param showColumnBorders - Whether to show internal column borders
-   */
-  private _renderRow(
-    buffer: DualBuffer | ViewportDualBuffer,
-    x: number,
-    y: number,
-    row: TableRowElement,
-    columnWidths: number[],
-    style: Partial<Cell>,
-    borderStyle: Partial<Cell>,
-    chars: BorderChars | null,
-    cellPadding: number,
-    isSelected: boolean,
-    isFocused: boolean = false,
-    context?: ComponentRenderContext,
-    skipLines: number = 0,
-    maxLines?: number,
-    showColumnBorders: boolean = true
-  ): number {
-    const cells = row.getCells();
-    const hasBorder = chars !== null;
-    const borderCount = showColumnBorders ? columnWidths.length + 1 : 2;
-    const tableWidth = columnWidths.reduce((sum, w) => sum + w, 0) + (hasBorder ? borderCount : 0);
-
-    // Calculate row height based on tallest cell
-    const fullRowHeight = this._calculateRowHeight(row, columnWidths, cellPadding);
-
-    // Calculate actual lines to render after clipping
-    const availableLines = fullRowHeight - skipLines;
-    const linesToRender = maxLines !== undefined ? Math.min(availableLines, maxLines) : availableLines;
-
-    if (linesToRender <= 0) return y;
-
-    // Track row bounds for click detection (use actual rendered position and height)
-    const rowId = row.getDataId();
-    if (rowId) {
-      this._rowBounds.set(rowId, { x, y, width: tableWidth, height: linesToRender });
-    }
-
-    // First pass: Fill backgrounds for selected rows
-    if (isSelected) {
-      for (let line = 0; line < linesToRender; line++) {
-        let currentX = x + (hasBorder ? 1 : 0);
-        let colIdx = 0;
-        for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
-          const cell = cells[cellIdx];
-          const colspan = cell.getColspan();
-          const cellWidth = this._calculateColspanWidth(colspan, colIdx, columnWidths, hasBorder && showColumnBorders);
-          buffer.currentBuffer.fillLine(currentX, y + line, cellWidth, style);
-          const isLastCell = cellIdx === cells.length - 1;
-          currentX += cellWidth + (hasBorder && (showColumnBorders || isLastCell) ? 1 : 0);
-          colIdx += colspan;
-        }
-      }
-    }
-
-    // Second pass: Render cell content with line clipping
-    let contentX = x + (hasBorder ? 1 : 0);
-    let colIndex = 0;
-    for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
-      const cell = cells[cellIdx];
-      const colspan = cell.getColspan();
-      // Calculate total cell width (including spanned columns)
-      const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, hasBorder && showColumnBorders);
-
-      // Check both props.align and style.textAlign for alignment
-      const styleTextAlign = cell.props.style?.textAlign || cell.props.style?.['text-align'];
-      const align = cell.props.align || styleTextAlign || 'left';
-      const cellContentWidth = cellWidth - cellPadding * 2;
-      const cellContentX = contentX + cellPadding;
-
-      // Register cell bounds if cell has an ID (for connectors to find table cells)
-      if (cell.id && context?.registerElementBounds) {
-        context.registerElementBounds(cell.id, {
-          x: contentX,
-          y,
-          width: cellWidth,
-          height: linesToRender,
-        });
-      }
-
-      // Render cell children with clipping
-      logger.debug(`_renderRow: cell.children=${cell.children?.length || 0}, context=${!!context}, hasRegister=${!!context?.registerElementBounds}`);
-      if (cell.children && cell.children.length > 0) {
-        logger.debug(`_renderRow: first child type=${cell.children[0]?.type}, id=${cell.children[0]?.id}`);
-      }
-      if (cell.children && cell.children.length > 0 && context) {
-        this._renderCellChildrenClipped(buffer, cellContentX, y, cellContentWidth, linesToRender, cell, align, style, context, skipLines);
-      } else {
-        // Fallback to text content for cells without proper children
-        // Only render if the text line is visible (not skipped)
-        logger.debug(`_renderRow: using fallback path for cell`);
-        if (skipLines === 0) {
-          const content = this._getCellContent(cell);
-          let textX = cellContentX;
-
-          // Apply alignment for text
-          const textLen = content.length;
-          if (align === 'center') {
-            textX += Math.floor((cellContentWidth - textLen) / 2);
-          } else if (align === 'right') {
-            textX += cellContentWidth - textLen;
-          }
-
-          const truncatedContent = content.substring(0, cellContentWidth);
-          buffer.currentBuffer.setText(textX, y, truncatedContent, style);
-        }
-      }
-
-      const isLastCell = cellIdx === cells.length - 1;
-      contentX += cellWidth + (hasBorder && (showColumnBorders || isLastCell) ? 1 : 0);
-      colIndex += colspan;
-    }
-
-    // Third pass: Draw borders AFTER all content (so they're not overwritten by nested tables)
-    if (hasBorder && chars) {
-      for (let line = 0; line < linesToRender; line++) {
-        let borderX = x;
-
-        // Left border
-        buffer.currentBuffer.setText(borderX, y + line, chars.v, borderStyle);
-        borderX++;
-
-        // Column separators and right border
-        colIndex = 0;
-        for (let cellIdx = 0; cellIdx < cells.length; cellIdx++) {
-          const cell = cells[cellIdx];
-          const colspan = cell.getColspan();
-          const cellWidth = this._calculateColspanWidth(colspan, colIndex, columnWidths, showColumnBorders);
-          borderX += cellWidth;
-
-          // Only draw internal borders if showColumnBorders is true, always draw right border
-          const isLastCell = cellIdx === cells.length - 1;
-          if (isLastCell || showColumnBorders) {
-            buffer.currentBuffer.setText(borderX, y + line, chars.v, borderStyle);
-            borderX++;
-          }
-          colIndex += colspan;
-        }
-      }
-    }
-
-    return y + linesToRender;
-  }
-
-  /**
-   * Render cell children with line clipping support
-   */
-  private _renderCellChildrenClipped(
-    buffer: DualBuffer | ViewportDualBuffer,
-    x: number,
-    y: number,
-    width: number,
-    maxLines: number,
-    cell: TableCellElement,
-    align: 'left' | 'center' | 'right',
-    style: Partial<Cell>,
-    context: ComponentRenderContext,
-    skipLines: number = 0
-  ): void {
-    if (!cell.children || cell.children.length === 0) return;
-
-    // Calculate total width of all children for alignment
-    let totalChildWidth = 0;
-    for (const child of cell.children) {
-      if (child.type === 'container') {
-        totalChildWidth += this._estimateContainerWidth(child, width);
-      } else if (isRenderable(child)) {
-        const size = child.intrinsicSize({ availableSpace: { width, height: maxLines + skipLines } });
-        totalChildWidth += size.width;
-      } else if (child.type === 'text' && child.props.text) {
-        totalChildWidth += String(child.props.text).length;
-      }
-    }
-
-    // Calculate starting X based on alignment
-    let currentX = x;
-    if (align === 'center') {
-      currentX = x + Math.floor((width - totalChildWidth) / 2);
-    } else if (align === 'right') {
-      currentX = x + width - totalChildWidth;
-    }
-
-    // For renderable children (like nested tables), we need to render to a virtual position
-    // and then copy only the visible lines
-    logger.debug(`_renderCellChildrenClipped: cell has ${cell.children.length} children`);
-    for (const child of cell.children) {
-      logger.debug(`_renderCellChildrenClipped: child type=${child.type}, id=${child.id}, isRenderable=${isRenderable(child)}`);
-      // Handle containers specially - render their children and track each for click handling
-      if (child.type === 'container') {
-        if (skipLines === 0) {
-          const containerWidth = this._estimateContainerWidth(child, width);
-          const containerBounds: Bounds = { x: currentX, y, width: containerWidth, height: maxLines };
-          this._renderContainerChildren(buffer, currentX, y, containerWidth, child, style, context, maxLines);
-          this._cellComponentBounds.push({ element: child, bounds: containerBounds });
-
-          // Register bounds for containers with IDs (for connectors)
-          if (child.id && context?.registerElementBounds) {
-            logger.debug(`_renderCellChildrenClipped: registering container bounds for id=${child.id}, bounds=${JSON.stringify(containerBounds)}`);
-            context.registerElementBounds(child.id, containerBounds);
-          }
-          currentX += containerWidth;
-        }
-      } else if (isRenderable(child)) {
-        const size = child.intrinsicSize({ availableSpace: { width, height: maxLines + skipLines } });
-
-        // For clipped rendering, we render the full component but offset the Y position
-        // The component will render starting from (y - skipLines) conceptually,
-        // but we only want lines [skipLines, skipLines + maxLines) to appear at y
-        if (skipLines === 0) {
-          // No clipping needed at top, just render with height limit
-          const childBounds: Bounds = { x: currentX, y, width: size.width, height: Math.min(size.height, maxLines) };
-          // Mark nested tables so they don't enable auto-scroll
-          const nestedContext = { ...context, nestedInTable: true };
-          child.render(childBounds, style, buffer, nestedContext);
-          this._cellComponentBounds.push({ element: child, bounds: childBounds });
-
-          // Register bounds for child elements with IDs (for connectors)
-          if (child.id && context?.registerElementBounds) {
-            logger.debug(`_renderCellChildrenClipped: registering bounds for id=${child.id}, bounds=${JSON.stringify(childBounds)}`);
-            context.registerElementBounds(child.id, childBounds);
-          }
-        } else {
-          // Need to clip top lines - render to a temporary offset and rely on buffer clipping
-          // For now, render at adjusted Y and let component handle partial rendering
-          // This requires components to support skipLines parameter - for now we'll skip rendering
-          // the component if it would be partially clipped at top (simplified approach)
-          if (skipLines < size.height) {
-            // Component is partially visible - render what we can
-            // For nested tables, the table itself would need to handle this recursively
-            // For now, render at y with reduced height
-            const visibleHeight = Math.min(size.height - skipLines, maxLines);
-            const childBounds: Bounds = { x: currentX, y, width: size.width, height: visibleHeight };
-            // Pass skipLines info via context or render partial
-            // Simplified: render the component but it may show wrong lines
-            // TODO: implement proper line-offset rendering for nested Renderables
-            // Mark nested tables so they don't enable auto-scroll
-            const nestedContext = { ...context, nestedInTable: true };
-            child.render(childBounds, style, buffer, nestedContext);
-            this._cellComponentBounds.push({ element: child, bounds: childBounds });
-
-            // Register bounds for child elements with IDs (for connectors)
-            if (child.id && context?.registerElementBounds) {
-              context.registerElementBounds(child.id, childBounds);
-            }
-          }
-        }
-        currentX += size.width;
-      } else if (child.type === 'text' && child.props.text) {
-        // Text is single line - only show if not skipped
-        if (skipLines === 0) {
-          const text = String(child.props.text);
-          const truncated = text.substring(0, width);
-          buffer.currentBuffer.setText(currentX, y, truncated, style);
-
-          // Register bounds for text elements with IDs (for connectors)
-          if (child.id && context?.registerElementBounds) {
-            context.registerElementBounds(child.id, {
-              x: currentX,
-              y,
-              width: text.length,
-              height: 1,
-            });
-          }
-
-          currentX += text.length;
-        }
-      }
-    }
-  }
-
-  /**
-   * Render container children within a cell
-   * Tracks each child component for click handling
-   */
-  private _renderContainerChildren(
-    buffer: DualBuffer | ViewportDualBuffer,
-    x: number,
-    y: number,
-    width: number,
-    container: Element,
-    style: Partial<Cell>,
-    context: ComponentRenderContext,
-    height: number = 1
-  ): void {
-    const gap = container.props.style?.gap || 0;
-    let currentX = x;
-
-    // Draw container's border-left if specified
-    const borderLeft = container.props.style?.borderLeft;
-    if (borderLeft && borderLeft !== 'none') {
-      const borderChars = BORDER_CHARS[borderLeft as keyof typeof BORDER_CHARS] || BORDER_CHARS['thin'];
-      for (let i = 0; i < height; i++) {
-        buffer.currentBuffer.setCell(x, y + i, { char: borderChars.v, ...style });
-      }
-      currentX = x + 1; // Offset content after border
-    }
-
-    if (!container.children || container.children.length === 0) return;
-
-    // Calculate available width after border
-    const availableWidth = width - (currentX - x);
-
-    for (const child of container.children) {
-      if (isRenderable(child)) {
-        const size = child.intrinsicSize({ availableSpace: { width: availableWidth, height } });
-        const childBounds: Bounds = { x: currentX, y, width: availableWidth, height };
-        child.render(childBounds, style, buffer, context);
-        // Track component bounds for click handling
-        this._cellComponentBounds.push({ element: child, bounds: childBounds });
-        currentX += size.width + gap;
-      } else if (child.type === 'text' && child.props.text) {
-        const text = String(child.props.text);
-        buffer.currentBuffer.setText(currentX, y, text, style);
-        currentX += text.length + gap;
-      }
-    }
-  }
-
-  /**
-   * Render the children of a table cell
-   */
-  private _renderCellChildren(
-    buffer: DualBuffer,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    cell: TableCellElement,
-    align: 'left' | 'center' | 'right',
-    style: Partial<Cell>,
-    context: ComponentRenderContext
-  ): void {
-    if (!cell.children || cell.children.length === 0) return;
-
-    // Calculate total width and heights of all children
-    let totalChildWidth = 0;
-    const childWidths: number[] = [];
-    const childHeights: number[] = [];
-
-    for (const child of cell.children) {
-      // Handle containers specially - calculate width from their children
-      if (child.type === 'container') {
-        const containerWidth = this._estimateContainerWidth(child, width);
-        childWidths.push(containerWidth);
-        childHeights.push(1);
-        totalChildWidth += containerWidth;
-      } else if (isRenderable(child)) {
-        const size = child.intrinsicSize({ availableSpace: { width, height } });
-        childWidths.push(size.width);
-        childHeights.push(size.height);
-        totalChildWidth += size.width;
-      } else if (child.type === 'text' && child.props.text) {
-        const textLen = String(child.props.text).length;
-        childWidths.push(textLen);
-        childHeights.push(1);
-        totalChildWidth += textLen;
-      }
-    }
-
-    // Calculate starting X based on alignment
-    let currentX = x;
-    if (align === 'center') {
-      currentX = x + Math.floor((width - totalChildWidth) / 2);
-    } else if (align === 'right') {
-      currentX = x + width - totalChildWidth;
-    }
-
-    // Render each child
-    for (let i = 0; i < cell.children.length; i++) {
-      const child = cell.children[i];
-      const childWidth = childWidths[i] || 0;
-      const childHeight = childHeights[i] || 1;
-
-      // Handle containers specially - render their children inline
-      if (child.type === 'container' && child.children) {
-        this._renderContainerChildren(buffer, currentX, y, childWidth, child, style, context, height);
-        currentX += childWidth;
-      } else if (isRenderable(child)) {
-        const childBounds: Bounds = { x: currentX, y, width: childWidth, height: childHeight };
-        child.render(childBounds, style, buffer, context);
-        // Track component bounds for click handling
-        this._cellComponentBounds.push({ element: child, bounds: childBounds });
-        currentX += childWidth;
-      } else if (child.type === 'text' && child.props.text) {
-        const text = String(child.props.text);
-        const truncated = text.substring(0, Math.max(0, x + width - currentX));
-        buffer.currentBuffer.setText(currentX, y, truncated, style);
-        currentX += text.length;
-      }
-    }
-  }
-
-  /**
-   * Estimate width of a container element
-   */
-  private _estimateContainerWidth(container: Element, availableWidth: number): number {
-    let totalWidth = 0;
-
-    // Account for border-left width
-    const borderLeft = container.props.style?.borderLeft;
-    if (borderLeft && borderLeft !== 'none') {
-      totalWidth += 1;
-    }
-
-    if (!container.children || container.children.length === 0) return totalWidth;
-
-    const gap = container.props.style?.gap || 0;
-
-    for (const child of container.children) {
-      if (isRenderable(child)) {
-        const size = child.intrinsicSize({ availableSpace: { width: availableWidth, height: 1 } });
-        totalWidth += size.width;
-      } else if (child.type === 'text' && child.props.text) {
-        totalWidth += String(child.props.text).length;
-      }
-    }
-
-    // Add gaps between children
-    if (container.children.length > 1) {
-      totalWidth += gap * (container.children.length - 1);
-    }
-
-    return totalWidth;
-  }
-
-
-  /**
-   * Get text content from a cell
-   */
-  private _getCellContent(cell: TableCellElement): string {
-    if (!cell.children || cell.children.length === 0) {
-      return '';
-    }
-
-    // Simple text extraction - for Phase 1, just get text content
-    const texts: string[] = [];
-    for (const child of cell.children) {
-      if (child.type === 'text' && child.props.text) {
-        texts.push(String(child.props.text));
-      }
-    }
-    return texts.join('');
   }
 
   /**
@@ -2202,7 +1031,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     const cellPadding = this.props.cellPadding || 1;
     const showColumnBorders = this.props.columnBorders ?? true;
     // Use expandToFill: false to get natural/intrinsic widths (important for nested tables)
-    const columnWidths = this._calculateColumnWidths(context.availableSpace.width, false);
+    const columnWidths = calculateColumnWidths(this._asColumnContext(), context.availableSpace.width, false, this._columnWidthCache);
 
     // Width = sum of columns only (borders are added by the layout engine separately)
     // Note: columnWidths are calculated from (availableSpace - borderWidth), so they represent content width
@@ -2217,7 +1046,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
 
     if (thead) {
       for (const row of thead.getRows()) {
-        height += this._calculateRowHeight(row, columnWidths, cellPadding);
+        height += calculateRowHeight(row, columnWidths, cellPadding);
       }
       if (hasBorder && (tbody || tfoot)) height++; // Internal separator (part of content)
     }
@@ -2227,74 +1056,18 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
       const maxHeight = tbody.props.maxHeight;
       const visibleRows = tbody.props.scrollable && maxHeight ? rows.slice(0, maxHeight) : rows;
       for (const row of visibleRows) {
-        height += this._calculateRowHeight(row, columnWidths, cellPadding);
+        height += calculateRowHeight(row, columnWidths, cellPadding);
       }
       if (hasBorder && tfoot) height++; // Internal separator (part of content)
     }
 
     if (tfoot) {
       for (const row of tfoot.getRows()) {
-        height += this._calculateRowHeight(row, columnWidths, cellPadding);
+        height += calculateRowHeight(row, columnWidths, cellPadding);
       }
     }
 
     return { width, height };
-  }
-
-  /**
-   * Draw a scrollbar indicator on the right side of the table
-   *
-   * @param buffer - The buffer to draw to
-   * @param x - X position of scrollbar
-   * @param y - Y position (top of scrollbar)
-   * @param trackHeight - Height of the scrollbar track in lines
-   * @param totalRows - Total number of rows in tbody
-   * @param scrollY - Current scroll position (row index)
-   * @param style - Cell style
-   * @param visibleRowCount - Optional: number of visible rows (for proper thumb sizing)
-   */
-  private _drawScrollbar(
-    buffer: DualBuffer,
-    x: number,
-    y: number,
-    trackHeight: number,
-    totalRows: number,
-    scrollY: number,
-    style: Partial<Cell>,
-    visibleRowCount?: number
-  ): void {
-    if (trackHeight <= 0 || totalRows <= 0) return;
-
-    renderScrollbar(buffer, x, y, trackHeight, {
-      scrollTop: scrollY,
-      totalItems: totalRows,
-      visibleItems: visibleRowCount ?? Math.floor(trackHeight / 2),
-      thumbStyle: style,
-      trackStyle: style,
-    });
-  }
-
-  /**
-   * Draw a scrollbar with pre-calculated thumb position and height
-   * Used for line-based scrolling where thumb is calculated externally
-   */
-  private _drawScrollbarLines(
-    buffer: DualBuffer,
-    x: number,
-    y: number,
-    trackHeight: number,
-    thumbPosition: number,
-    thumbHeight: number,
-    style: Partial<Cell>
-  ): void {
-    if (trackHeight <= 0) return;
-
-    renderScrollbar(buffer, x, y, trackHeight, {
-      thumbPosition,
-      thumbSize: thumbHeight,
-      thumbStyle: style,
-      trackStyle: style,
-    });
   }
 
   /**

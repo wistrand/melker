@@ -240,7 +240,7 @@ When `stop()` is called:
 | Checkbox        | `checkbox.ts`                        | Toggle checkbox                    |
 | Radio           | `radio.ts`                           | Radio button                       |
 | List/Li         | `list.ts`, `li.ts`                   | List container and items           |
-| Table           | `table.ts`                           | Data table with sections           |
+| Table           | `table.ts`, `table-*.ts`             | Data table with sections           |
 | Data Table      | `data-table.ts`                      | High-performance array-based       |
 | Tabs/Tab        | `tabs.ts`, `tab.ts`                  | Tabbed interface                   |
 | Progress        | `progress.ts`                        | Progress bar, indeterminate mode   |

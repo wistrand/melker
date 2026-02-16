@@ -171,7 +171,11 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `color-utils.ts`          | RGBA color utilities                   |
 | `data-tree.ts`            | Hierarchical tree view                 |
 | `data-heatmap.ts`         | Heatmap grid display                   |
-| `table.ts`                | HTML-style table with thead/tbody      |
+| `table.ts`                | HTML-style table class and re-exports  |
+| `table-types.ts`          | Table type definitions and events      |
+| `table-sorting.ts`        | Table sort comparators and logic       |
+| `table-columns.ts`        | Table column width calculation         |
+| `table-render.ts`         | Table render helpers (borders, rows)   |
 | `scrollbar.ts`            | Scrollbar rendering utility            |
 
 #### `components/utils/` - Shared Component Utilities

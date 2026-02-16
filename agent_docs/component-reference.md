@@ -513,12 +513,16 @@ The `<table>` component provides data tables with optional scrollable body.
 
 ### Implementation Files
 
-| File                              | Purpose                      |
-|-----------------------------------|------------------------------|
-| `src/components/table.ts`         | Table container, column calc |
-| `src/components/table-section.ts` | thead/tbody/tfoot sections   |
-| `src/components/table-row.ts`     | Row container                |
-| `src/components/table-cell.ts`    | td/th cells                  |
+| File                               | Purpose                                  |
+|------------------------------------|------------------------------------------|
+| `src/components/table.ts`          | Table class, interface impls, re-exports |
+| `src/components/table-types.ts`    | Type definitions (TableProps, events)    |
+| `src/components/table-sorting.ts`  | Comparators, sort logic, cache           |
+| `src/components/table-columns.ts`  | Column width calculation, cache          |
+| `src/components/table-render.ts`   | All render helpers (borders, rows, etc.) |
+| `src/components/table-section.ts`  | thead/tbody/tfoot sections               |
+| `src/components/table-row.ts`      | Row container                            |
+| `src/components/table-cell.ts`     | td/th cells                              |
 
 ## Data Tree Component
 

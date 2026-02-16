@@ -90,11 +90,12 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 
 ### Project
 
-| Topic          | Doc                                                    |
-|----------------|--------------------------------------------------------|
-| Timeline       | [project-timeline.md](agent_docs/project-timeline.md)  |
-| Release scheme | [calver-release.md](agent_docs/calver-release.md)      |
-| TUI comparison | [tui-comparison.md](agent_docs/tui-comparison.md)      |
+| Topic            | Doc                                                          |
+|------------------|--------------------------------------------------------------|
+| Timeline         | [project-timeline.md](agent_docs/project-timeline.md)        |
+| Release scheme   | [calver-release.md](agent_docs/calver-release.md)            |
+| TUI comparison   | [tui-comparison.md](agent_docs/tui-comparison.md)            |
+| Refactoring plan | [refactoring-plan.md](agent_docs/refactoring-plan.md)        |
 
 ## Technology Stack
 

@@ -445,7 +445,7 @@ How file browser works in dialogs:
 
 | File                                         | Purpose                                            |
 |----------------------------------------------|----------------------------------------------------|
-| `src/components/table.ts`                    | Table component used for file list                 |
+| `src/components/table.ts` (+`table-*.ts`)    | Table component used for file list                 |
 | `src/components/filterable-list/filter.ts`  | Filtering algorithms (fuzzy, prefix, etc.)         |
 | `src/components/dialog.ts`                   | Dialog wrapper                                     |
 | `src/focus.ts`                               | Focus management, trapFocus with deferred initial focus |

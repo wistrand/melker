@@ -1477,66 +1477,67 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       bounds.y + bounds.height <= visibleArea.y + visibleArea.height
     );
 
-    if (gfxMode === 'sixel') {
-      logger.debug('Sixel visibility check', {
-        id: this.id,
-        bounds,
-        visibleArea,
-        isFullyVisible,
-      });
-
+    if (gfxMode === 'sixel' || gfxMode === 'kitty' || gfxMode === 'iterm2') {
       if (isFullyVisible) {
-        this._generateSixelOutput(bounds);
+        if (gfxMode === 'sixel') {
+          this._generateSixelOutput(bounds);
+          this._kittyOutput = null;
+          this._itermOutput = null;
+        } else if (gfxMode === 'kitty') {
+          this._generateKittyOutput(bounds);
+          this._sixelOutput = null;
+          this._itermOutput = null;
+        } else {
+          this._generateITermOutput(bounds);
+          this._sixelOutput = null;
+          this._kittyOutput = null;
+        }
       } else {
-        logger.debug('Sixel skipped - element extends outside viewport', {
+        // Graphics protocols can't clip — fall back to sextant rendering
+        logger.debug('Graphics clipped - falling back to sextant', {
           id: this.id,
+          gfxMode,
           bounds,
           visibleArea,
         });
         this._sixelOutput = null;
-      }
-      this._kittyOutput = null;
-      this._itermOutput = null;
-    } else if (gfxMode === 'kitty') {
-      logger.debug('Kitty visibility check', {
-        id: this.id,
-        bounds,
-        visibleArea,
-        isFullyVisible,
-      });
-
-      if (isFullyVisible) {
-        this._generateKittyOutput(bounds);
-      } else {
-        logger.debug('Kitty skipped - element extends outside viewport', {
-          id: this.id,
-          bounds,
-          visibleArea,
-        });
         this._kittyOutput = null;
-      }
-      this._sixelOutput = null;
-      this._itermOutput = null;
-    } else if (gfxMode === 'iterm2') {
-      logger.debug('iTerm2 visibility check', {
-        id: this.id,
-        bounds,
-        visibleArea,
-        isFullyVisible,
-      });
-
-      if (isFullyVisible) {
-        this._generateITermOutput(bounds);
-      } else {
-        logger.debug('iTerm2 skipped - element extends outside viewport', {
-          id: this.id,
-          bounds,
-          visibleArea,
-        });
         this._itermOutput = null;
+        // Downsample graphics-resolution buffer to sextant resolution (2x3 per cell)
+        // then render with sextant to replace the placeholder dots
+        const tw = this._terminalWidth;
+        const th = this._terminalHeight;
+        const sextantW = tw * 2;
+        const sextantH = th * 3;
+        const sextantSize = sextantW * sextantH;
+        const ppx = this._pixelsPerCellX;
+        const ppy = this._pixelsPerCellY;
+        const srcW = this._bufferWidth;
+        const srcH = this._bufferHeight;
+        const tempColor = new Uint32Array(sextantSize);
+        const tempImage = new Uint32Array(sextantSize);
+        for (let sy = 0; sy < sextantH; sy++) {
+          const gy = Math.min(Math.floor((sy + 0.5) * ppy / 3), srcH - 1);
+          const srcRow = gy * srcW;
+          const dstRow = sy * sextantW;
+          for (let sx = 0; sx < sextantW; sx++) {
+            const gx = Math.min(Math.floor((sx + 0.5) * ppx / 2), srcW - 1);
+            tempColor[dstRow + sx] = this._colorBuffer[srcRow + gx];
+            tempImage[dstRow + sx] = this._imageColorBuffer[srcRow + gx];
+          }
+        }
+        const fallbackData: CanvasRenderData = {
+          colorBuffer: tempColor,
+          imageColorBuffer: tempImage,
+          bufferWidth: sextantW,
+          bufferHeight: sextantH,
+          scale: 1,
+          propsWidth: tw,
+          propsHeight: th,
+          backgroundColor: this.props.backgroundColor,
+        };
+        renderToTerminal(bounds, style, buffer, fallbackData, this._renderState, null, 'sextant');
       }
-      this._sixelOutput = null;
-      this._kittyOutput = null;
     } else {
       this._sixelOutput = null;
       this._kittyOutput = null;

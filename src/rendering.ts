@@ -1235,33 +1235,33 @@ export class RenderingEngine {
     // If no borders defined, exit
     if (!borderTop && !borderBottom && !borderLeft && !borderRight) return;
 
-    // Parse colors (convert ColorInput to PackedRGBA)
+    // Parse colors only for borders that exist (avoid unnecessary parseColor calls)
     const parsedDefaultColor = parseColor(defaultColor);
     const parsedBgColor = parseColor(style.backgroundColor);
-
-    // Get individual border colors (fall back to borderColor, then color)
-    const topColor = parseColor(style.borderTopColor) || parsedDefaultColor;
-    const bottomColor = parseColor(style.borderBottomColor) || parsedDefaultColor;
-    const leftColor = parseColor(style.borderLeftColor) || parsedDefaultColor;
-    const rightColor = parseColor(style.borderRightColor) || parsedDefaultColor;
-
-    // Check if block mode is enabled (use colored spaces instead of box-drawing characters)
     const useBlockBorders = MelkerConfig.get().gfxMode === 'block';
 
-    // Create cell styles for each side
+    // Only parse per-side colors and create styles for borders that exist
     // In block mode, use foreground color as background (spaces need bg color to be visible)
-    const topStyle: Partial<Cell> = useBlockBorders
-      ? { background: topColor || parsedBgColor }
-      : { foreground: topColor, background: parsedBgColor };
-    const bottomStyle: Partial<Cell> = useBlockBorders
-      ? { background: bottomColor || parsedBgColor }
-      : { foreground: bottomColor, background: parsedBgColor };
-    const leftStyle: Partial<Cell> = useBlockBorders
-      ? { background: leftColor || parsedBgColor }
-      : { foreground: leftColor, background: parsedBgColor };
-    const rightStyle: Partial<Cell> = useBlockBorders
-      ? { background: rightColor || parsedBgColor }
-      : { foreground: rightColor, background: parsedBgColor };
+    let topStyle!: Partial<Cell>;
+    if (borderTop) {
+      const c = parseColor(style.borderTopColor) || parsedDefaultColor;
+      topStyle = useBlockBorders ? { background: c || parsedBgColor } : { foreground: c, background: parsedBgColor };
+    }
+    let bottomStyle!: Partial<Cell>;
+    if (borderBottom) {
+      const c = parseColor(style.borderBottomColor) || parsedDefaultColor;
+      bottomStyle = useBlockBorders ? { background: c || parsedBgColor } : { foreground: c, background: parsedBgColor };
+    }
+    let leftStyle!: Partial<Cell>;
+    if (borderLeft) {
+      const c = parseColor(style.borderLeftColor) || parsedDefaultColor;
+      leftStyle = useBlockBorders ? { background: c || parsedBgColor } : { foreground: c, background: parsedBgColor };
+    }
+    let rightStyle!: Partial<Cell>;
+    if (borderRight) {
+      const c = parseColor(style.borderRightColor) || parsedDefaultColor;
+      rightStyle = useBlockBorders ? { background: c || parsedBgColor } : { foreground: c, background: parsedBgColor };
+    }
 
     // Get border characters (use the first available border style for consistency)
     // In block mode, always use 'block' style (spaces)
@@ -1280,18 +1280,14 @@ export class RenderingEngine {
     const lineEndY = borderBottom ? bottomBorderY + 1 : clippedBounds.y + clippedBounds.height;
     const lineHeight = lineEndY - lineStartY;
 
-    // Border top gap support (used by tabs to open the active tab into content below)
-    const gap = style._borderTopGap as { start: number; end: number } | undefined;
-    let gapStartX = -1, gapEndX = -1, junctionAfterGap = -1;
-    if (gap && borderTop) {
-      gapStartX = leftBorderX + gap.start;
-      gapEndX = leftBorderX + gap.end;
-      junctionAfterGap = gapEndX + 1;
-    }
-
     // Draw individual border sides
+    // Border top gap support (used by tabs to open the active tab into content below)
+    const gap = borderTop && borderTop !== 'none' ? style._borderTopGap as { start: number; end: number } | undefined : undefined;
     if (borderTop && borderTop !== 'none') {
       if (gap) {
+        const gapStartX = leftBorderX + gap.start;
+        const gapEndX = leftBorderX + gap.end;
+        const junctionAfterGap = gapEndX + 1;
         // Pre-gap horizontal: lineStartX to gapStartX - 1
         const preGapLen = gapStartX - lineStartX;
         if (preGapLen > 0) {
@@ -1338,20 +1334,27 @@ export class RenderingEngine {
       this._drawVerticalLine(rightBorderX, lineStartY, lineHeight, borderRight, rightStyle, buffer, chars);
     }
 
-    // Draw corners where borders meet (only if both adjacent borders are visible)
-    // Suppress corners that fall inside a border top gap
+    // Draw corners AFTER all border lines (corners overwrite line endpoints)
     if (borderTop && borderLeft) {
-      const inGap = gap && leftBorderX >= gapStartX && leftBorderX <= gapEndX;
-      if (!inGap) {
-        const tlChar = (style._borderCornerTL as string) || chars.tl;
-        buffer.currentBuffer.setCell(leftBorderX, topBorderY, { char: tlChar, ...topStyle });
+      if (gap) {
+        const gapStartX = leftBorderX + gap.start;
+        const gapEndX = leftBorderX + gap.end;
+        if (leftBorderX < gapStartX || leftBorderX > gapEndX) {
+          buffer.currentBuffer.setCell(leftBorderX, topBorderY, { char: (style._borderCornerTL as string) || chars.tl, ...topStyle });
+        }
+      } else {
+        buffer.currentBuffer.setCell(leftBorderX, topBorderY, { char: (style._borderCornerTL as string) || chars.tl, ...topStyle });
       }
     }
     if (borderTop && borderRight) {
-      const inGap = gap && rightBorderX >= gapStartX && rightBorderX <= gapEndX;
-      if (!inGap) {
-        const trChar = (style._borderCornerTR as string) || chars.tr;
-        buffer.currentBuffer.setCell(rightBorderX, topBorderY, { char: trChar, ...topStyle });
+      if (gap) {
+        const gapStartX = leftBorderX + gap.start;
+        const gapEndX = leftBorderX + gap.end;
+        if (rightBorderX < gapStartX || rightBorderX > gapEndX) {
+          buffer.currentBuffer.setCell(rightBorderX, topBorderY, { char: (style._borderCornerTR as string) || chars.tr, ...topStyle });
+        }
+      } else {
+        buffer.currentBuffer.setCell(rightBorderX, topBorderY, { char: (style._borderCornerTR as string) || chars.tr, ...topStyle });
       }
     }
     if (borderBottom && borderLeft) {

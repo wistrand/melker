@@ -102,10 +102,11 @@ Arrow keys move focus to the nearest focusable element in the pressed direction.
 
 1. **`arrow-nav` check** — walks ancestors; if any has `arrowNav: 'none'`, returns false
 2. **Bounds fallback** — if focused element has no layout bounds, falls back to `focusFirst()`
-3. **Half-plane filter** — candidate center must be in the correct direction (center-to-center)
-4. **Edge-to-edge distance** — compute nearest-edge distances (`edgeDx`, `edgeDy`) between the two element rectangles. Overlapping ranges produce distance 0.
-5. **Row/column alignment preference** — if any candidates have `edgeDy === 0` (horizontal nav) or `edgeDx === 0` (vertical nav), meaning their cross-axis ranges overlap, only those are considered
-6. **Weighted distance** — `edgeDx + 3·edgeDy` for horizontal, `3·edgeDx + edgeDy` for vertical. Lowest score wins.
+3. **Enclosure skip** — candidates whose bounds fully contain the current element are skipped (prevents scrollable parents from capturing focus with score 0)
+4. **Half-plane filter** — candidate center must be in the correct direction (center-to-center)
+5. **Edge-to-edge distance** — compute nearest-edge distances (`edgeDx`, `edgeDy`) between the two element rectangles. Overlapping ranges produce distance 0.
+6. **Row/column alignment preference** — if any candidates have `edgeDy === 0` (horizontal nav) or `edgeDx === 0` (vertical nav), meaning their cross-axis ranges overlap, only those are considered
+7. **Weighted distance** — `edgeDx + 3·edgeDy` for horizontal, `3·edgeDx + edgeDy` for vertical. Lowest score wins.
 
 Edge-to-edge distance gives better results than center-to-center for elements of different sizes — a large element adjacent to the current one scores lower than a small element far away, even if the small element's center happens to be closer.
 

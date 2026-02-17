@@ -366,6 +366,11 @@ export class FocusManager {
       const el = this._getFocusableElement(id);
       if (!el || el.disabled || !el.visible) continue;
 
+      // Skip candidates that fully enclose the current element (e.g., scrollable parent)
+      if (el.x <= current.x && el.y <= current.y &&
+          el.x + el.width >= current.x + current.width &&
+          el.y + el.height >= current.y + current.height) continue;
+
       // Half-plane filter using center-to-center direction
       const dx = (el.x + el.width / 2) - (current.x + current.width / 2);
       const dy = (el.y + el.height / 2) - (current.y + current.height / 2);

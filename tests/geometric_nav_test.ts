@@ -244,6 +244,64 @@ Deno.test('focusInDirection right - closer element wins among non-aligned', () =
   assertEquals(fm.getFocusedElement(), 'b');
 });
 
+// ── Enclosing element skip ─────────────────────────────────────────────
+
+Deno.test('focusInDirection right - skips element that fully encloses current', () => {
+  //  ┌─────────────── container ───────────────┐
+  //  │  [A]     [B]     [C]                    │
+  //  └─────────────────────────────────────────┘
+  // Navigating right from A should go to B, not the enclosing container
+  const fm = setup([
+    { id: 'a', x: 2, y: 2, width: 5, height: 1 },
+    { id: 'b', x: 12, y: 2, width: 5, height: 1 },
+    { id: 'c', x: 22, y: 2, width: 5, height: 1 },
+    { id: 'container', x: 0, y: 0, width: 40, height: 5 },
+  ]);
+  fm.focus('a');
+  assertEquals(fm.focusInDirection('right'), true);
+  assertEquals(fm.getFocusedElement(), 'b');
+});
+
+Deno.test('focusInDirection down - skips element that fully encloses current', () => {
+  //  ┌──── container ────┐
+  //  │  [A]              │
+  //  │  [B]              │
+  //  └───────────────────┘
+  const fm = setup([
+    { id: 'a', x: 2, y: 1, width: 5, height: 1 },
+    { id: 'b', x: 2, y: 3, width: 5, height: 1 },
+    { id: 'container', x: 0, y: 0, width: 20, height: 6 },
+  ]);
+  fm.focus('a');
+  assertEquals(fm.focusInDirection('down'), true);
+  assertEquals(fm.getFocusedElement(), 'b');
+});
+
+Deno.test('focusInDirection - does NOT skip partially overlapping element', () => {
+  //  [A]  [B (partial overlap)]
+  const fm = setup([
+    { id: 'a', x: 0, y: 0, width: 5, height: 3 },
+    { id: 'b', x: 3, y: 1, width: 10, height: 1 },
+  ]);
+  fm.focus('a');
+  assertEquals(fm.focusInDirection('right'), true);
+  assertEquals(fm.getFocusedElement(), 'b');
+});
+
+Deno.test('focusInDirection - can navigate FROM enclosing element TO child', () => {
+  //  Focus on container, press right to reach a child inside it
+  //  ┌────── container ──────┐
+  //  │            [B]        │
+  //  └───────────────────────┘
+  const fm = setup([
+    { id: 'container', x: 0, y: 0, width: 40, height: 5 },
+    { id: 'b', x: 25, y: 2, width: 5, height: 1 },
+  ]);
+  fm.focus('container');
+  assertEquals(fm.focusInDirection('right'), true);
+  assertEquals(fm.getFocusedElement(), 'b');
+});
+
 // ── Overlapping ranges ─────────────────────────────────────────────────
 
 Deno.test('focusInDirection right with overlapping Y ranges counts as aligned', () => {

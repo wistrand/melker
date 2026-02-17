@@ -6,28 +6,14 @@
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/path@1": "1.1.4",
     "jsr:@zaubrik/djwt@3.0.2": "3.0.2",
-    "npm:@jsquash/webp@*": "1.5.0",
     "npm:@jsquash/webp@1.5.0": "1.5.0",
-    "npm:fast-png@*": "8.0.0",
     "npm:fast-png@8.0.0": "8.0.0",
-    "npm:html5parser@*": "2.0.2",
     "npm:html5parser@2.0.2": "2.0.2",
-    "npm:is-odd@3": "3.0.1",
-    "npm:jpeg-js@*": "0.4.4",
     "npm:jpeg-js@0.4.4": "0.4.4",
-    "npm:mdast-util-from-markdown@2": "2.0.2",
     "npm:mdast-util-from-markdown@2.0.2": "2.0.2",
-    "npm:mdast-util-gfm@3": "3.1.0",
     "npm:mdast-util-gfm@3.1.0": "3.1.0",
-    "npm:micromark-extension-gfm@3": "3.0.0",
     "npm:micromark-extension-gfm@3.0.0": "3.0.0",
-    "npm:omggif@*": "1.0.10",
-    "npm:omggif@1.0.10": "1.0.10",
-    "npm:qr@*": "0.5.4",
-    "npm:vscode-languageserver-textdocument@*": "1.0.12",
-    "npm:vscode-languageserver-textdocument@1.0.12": "1.0.12",
-    "npm:vscode-languageserver@9.0.1": "9.0.1",
-    "npm:webp-wasm@1.0.6": "1.0.6"
+    "npm:omggif@1.0.10": "1.0.10"
   },
   "jsr": {
     "@std/encoding@0.224.0": {
@@ -89,8 +75,8 @@
         "ms"
       ]
     },
-    "decode-named-character-reference@1.2.0": {
-      "integrity": "sha512-c6fcElNV6ShtZXmsgNgFFV5tVX2PaV4g+MOAkb8eXHvn6sryJBrZa9r0zV6+dtTyoCKxtDy5tyQ5ZwQuidtd+Q==",
+    "decode-named-character-reference@1.3.0": {
+      "integrity": "sha512-GtpQYB283KrPp6nRw50q3U9/VfOutZOe103qlN7BPP6Ad27xYnOIWv4lPzo8HCAL+mMZofJ9KEy30fq6MfaK6Q==",
       "dependencies": [
         "character-entities"
       ]
@@ -125,15 +111,6 @@
     },
     "iobuffer@6.0.1": {
       "integrity": "sha512-SZWYkWNfjIXIBYSDpXDYIgshqtbOPsi4lviawAEceR1Kqk+sHDlcQjWrzNQsii80AyBY0q5c8HCTNjqo74ul+Q=="
-    },
-    "is-number@6.0.0": {
-      "integrity": "sha512-Wu1VHeILBK8KAWJUAiSZQX94GmOE45Rg6/538fKwiloUu21KncEkYGPqob2oSZ5mUT73vLGrHQjKw3KMPwfDzg=="
-    },
-    "is-odd@3.0.1": {
-      "integrity": "sha512-CQpnWPrDwmP1+SMHXZhtLtJv90yiyVfluGsX5iNCVkrhQtU3TQHsUWPG9wkdk9Lgd5yNpAg9jQEo90CBaXgWMA==",
-      "dependencies": [
-        "is-number"
-      ]
     },
     "jpeg-js@0.4.4": {
       "integrity": "sha512-WZzeDOEtTOBK4Mdsar0IqEU5sMr3vSV2RqkAIzUEV2BHnUfKGyswWFPFwK5EeDo93K3FohSHbLAjj0s1Wzd+dg=="
@@ -503,9 +480,6 @@
     "omggif@1.0.10": {
       "integrity": "sha512-LMJTtvgc/nugXj0Vcrrs68Mn2D1r0zf630VNtqtpI1FEO7e+O9FP4gqs9AcnBaSEeoHIPm28u6qgPR0oyEpGSw=="
     },
-    "qr@0.5.4": {
-      "integrity": "sha512-gjVMHOt7CX+BQd7JLQ9fnS4kJK4Lj4u+Conq52tcCbW7YH3mATTtBbTMA+7cQ1rKOkDo61olFHJReawe+XFxIA=="
-    },
     "tslib@2.8.1": {
       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     },
@@ -536,76 +510,16 @@
         "unist-util-visit-parents"
       ]
     },
-    "vscode-jsonrpc@8.2.0": {
-      "integrity": "sha512-C+r0eKJUIfiDIfwJhria30+TYWPtuHJXHtI7J0YlOmKAo7ogxP20T0zxB7HZQIFhIyvoBPwWskjxrvAtfjyZfA=="
-    },
-    "vscode-languageserver-protocol@3.17.5": {
-      "integrity": "sha512-mb1bvRJN8SVznADSGWM9u/b07H7Ecg0I3OgXDuLdn307rl/J3A9YD6/eYOssqhecL27hK1IPZAsaqh00i/Jljg==",
-      "dependencies": [
-        "vscode-jsonrpc",
-        "vscode-languageserver-types"
-      ]
-    },
-    "vscode-languageserver-textdocument@1.0.12": {
-      "integrity": "sha512-cxWNPesCnQCcMPeenjKKsOCKQZ/L6Tv19DTRIGuLWe32lyzWhihGVJ/rcckZXJxfdKCFvRLS3fpBIsV/ZGX4zA=="
-    },
-    "vscode-languageserver-types@3.17.5": {
-      "integrity": "sha512-Ld1VelNuX9pdF39h2Hgaeb5hEZM2Z3jUrrMgWQAu82jMtZp7p3vJT3BzToKtZI7NgQssZje5o0zryOrhQvzQAg=="
-    },
-    "vscode-languageserver@9.0.1": {
-      "integrity": "sha512-woByF3PDpkHFUreUa7Hos7+pUWdeWMXRd26+ZX2A8cFx6v/JPTtd4/uN0/jB6XQHYaOlHbio03NTHCqrgG5n7g==",
-      "dependencies": [
-        "vscode-languageserver-protocol"
-      ],
-      "bin": true
-    },
     "wasm-feature-detect@1.8.0": {
       "integrity": "sha512-zksaLKM2fVlnB5jQQDqKXXwYHLQUVH9es+5TOOHwGOVJOCeRBCiPjwSg+3tN2AdTCzjgli4jijCH290kXb/zWQ=="
-    },
-    "webp-wasm@1.0.6": {
-      "integrity": "sha512-RqBXDs/pwLc4dCChFfOw9FvBULRW6o/XGKMSbkWaPuTVtQ0oQx12A/k0rtiKF9fSsb9dxzOFGT7kE2R3jxMszA=="
     },
     "zwitch@2.0.4": {
       "integrity": "sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A=="
     }
   },
   "remote": {
-    "https://deno.land/std@0.221.0/encoding/_util.ts": "beacef316c1255da9bc8e95afb1fa56ed69baef919c88dc06ae6cb7a6103d376",
-    "https://deno.land/std@0.221.0/encoding/base64.ts": "8ccae67a1227b875340a8582ff707f37b131df435b07080d3bb58e07f5f97807",
-    "https://deno.land/std@0.221.0/encoding/base64url.ts": "9cc46cf510436be63ac00ebf97a7de1993e603ca58e1853b344bf90d80ea9945",
-    "https://deno.land/std@0.224.0/assert/_constants.ts": "a271e8ef5a573f1df8e822a6eb9d09df064ad66a4390f21b3e31f820a38e0975",
     "https://deno.land/std@0.224.0/assert/assert.ts": "09d30564c09de846855b7b071e62b5974b001bb72a4b797958fe0660e7849834",
-    "https://deno.land/std@0.224.0/assert/assert_almost_equals.ts": "9e416114322012c9a21fa68e187637ce2d7df25bcbdbfd957cd639e65d3cf293",
-    "https://deno.land/std@0.224.0/assert/assert_array_includes.ts": "14c5094471bc8e4a7895fc6aa5a184300d8a1879606574cb1cd715ef36a4a3c7",
-    "https://deno.land/std@0.224.0/assert/assert_equals.ts": "3bbca947d85b9d374a108687b1a8ba3785a7850436b5a8930d81f34a32cb8c74",
-    "https://deno.land/std@0.224.0/assert/assert_exists.ts": "43420cf7f956748ae6ed1230646567b3593cb7a36c5a5327269279c870c5ddfd",
-    "https://deno.land/std@0.224.0/assert/assert_false.ts": "3e9be8e33275db00d952e9acb0cd29481a44fa0a4af6d37239ff58d79e8edeff",
-    "https://deno.land/std@0.224.0/assert/assert_greater.ts": "5e57b201fd51b64ced36c828e3dfd773412c1a6120c1a5a99066c9b261974e46",
-    "https://deno.land/std@0.224.0/assert/assert_greater_or_equal.ts": "9870030f997a08361b6f63400273c2fb1856f5db86c0c3852aab2a002e425c5b",
-    "https://deno.land/std@0.224.0/assert/assert_instance_of.ts": "e22343c1fdcacfaea8f37784ad782683ec1cf599ae9b1b618954e9c22f376f2c",
-    "https://deno.land/std@0.224.0/assert/assert_is_error.ts": "f856b3bc978a7aa6a601f3fec6603491ab6255118afa6baa84b04426dd3cc491",
-    "https://deno.land/std@0.224.0/assert/assert_less.ts": "60b61e13a1982865a72726a5fa86c24fad7eb27c3c08b13883fb68882b307f68",
-    "https://deno.land/std@0.224.0/assert/assert_less_or_equal.ts": "d2c84e17faba4afe085e6c9123a63395accf4f9e00150db899c46e67420e0ec3",
-    "https://deno.land/std@0.224.0/assert/assert_match.ts": "ace1710dd3b2811c391946954234b5da910c5665aed817943d086d4d4871a8b7",
-    "https://deno.land/std@0.224.0/assert/assert_not_equals.ts": "78d45dd46133d76ce624b2c6c09392f6110f0df9b73f911d20208a68dee2ef29",
-    "https://deno.land/std@0.224.0/assert/assert_not_instance_of.ts": "3434a669b4d20cdcc5359779301a0588f941ffdc2ad68803c31eabdb4890cf7a",
-    "https://deno.land/std@0.224.0/assert/assert_not_match.ts": "df30417240aa2d35b1ea44df7e541991348a063d9ee823430e0b58079a72242a",
-    "https://deno.land/std@0.224.0/assert/assert_not_strict_equals.ts": "37f73880bd672709373d6dc2c5f148691119bed161f3020fff3548a0496f71b8",
-    "https://deno.land/std@0.224.0/assert/assert_object_match.ts": "411450fd194fdaabc0089ae68f916b545a49d7b7e6d0026e84a54c9e7eed2693",
-    "https://deno.land/std@0.224.0/assert/assert_rejects.ts": "4bee1d6d565a5b623146a14668da8f9eb1f026a4f338bbf92b37e43e0aa53c31",
-    "https://deno.land/std@0.224.0/assert/assert_strict_equals.ts": "b4f45f0fd2e54d9029171876bd0b42dd9ed0efd8f853ab92a3f50127acfa54f5",
-    "https://deno.land/std@0.224.0/assert/assert_string_includes.ts": "496b9ecad84deab72c8718735373feb6cdaa071eb91a98206f6f3cb4285e71b8",
-    "https://deno.land/std@0.224.0/assert/assert_throws.ts": "c6508b2879d465898dab2798009299867e67c570d7d34c90a2d235e4553906eb",
     "https://deno.land/std@0.224.0/assert/assertion_error.ts": "ba8752bd27ebc51f723702fac2f54d3e94447598f54264a6653d6413738a8917",
-    "https://deno.land/std@0.224.0/assert/equal.ts": "bddf07bb5fc718e10bb72d5dc2c36c1ce5a8bdd3b647069b6319e07af181ac47",
-    "https://deno.land/std@0.224.0/assert/fail.ts": "0eba674ffb47dff083f02ced76d5130460bff1a9a68c6514ebe0cdea4abadb68",
-    "https://deno.land/std@0.224.0/assert/mod.ts": "48b8cb8a619ea0b7958ad7ee9376500fe902284bb36f0e32c598c3dc34cbd6f3",
-    "https://deno.land/std@0.224.0/assert/unimplemented.ts": "8c55a5793e9147b4f1ef68cd66496b7d5ba7a9e7ca30c6da070c1a58da723d73",
-    "https://deno.land/std@0.224.0/assert/unreachable.ts": "5ae3dbf63ef988615b93eb08d395dda771c96546565f9e521ed86f6510c29e19",
-    "https://deno.land/std@0.224.0/fmt/colors.ts": "508563c0659dd7198ba4bbf87e97f654af3c34eb56ba790260f252ad8012e1c5",
-    "https://deno.land/std@0.224.0/internal/diff.ts": "6234a4b493ebe65dc67a18a0eb97ef683626a1166a1906232ce186ae9f65f4e6",
-    "https://deno.land/std@0.224.0/internal/format.ts": "0a98ee226fd3d43450245b1844b47003419d34d210fa989900861c79820d21c2",
-    "https://deno.land/std@0.224.0/internal/mod.ts": "534125398c8e7426183e12dc255bb635d94e06d0f93c60a297723abe69d3b22e",
     "https://deno.land/std@0.224.0/path/_common/assert_path.ts": "dbdd757a465b690b2cc72fc5fb7698c51507dec6bfafce4ca500c46b76ff7bd8",
     "https://deno.land/std@0.224.0/path/_common/basename.ts": "569744855bc8445f3a56087fd2aed56bdad39da971a8d92b138c9913aecc5fa2",
     "https://deno.land/std@0.224.0/path/_common/common.ts": "ef73c2860694775fe8ffcbcdd387f9f97c7a656febf0daa8c73b56f4d8a7bd4c",
@@ -682,137 +596,6 @@
     "https://deno.land/std@0.224.0/path/windows/relative.ts": "3e1abc7977ee6cc0db2730d1f9cb38be87b0ce4806759d271a70e4997fc638d7",
     "https://deno.land/std@0.224.0/path/windows/resolve.ts": "8dae1dadfed9d46ff46cc337c9525c0c7d959fb400a6308f34595c45bdca1972",
     "https://deno.land/std@0.224.0/path/windows/to_file_url.ts": "40e560ee4854fe5a3d4d12976cef2f4e8914125c81b11f1108e127934ced502e",
-    "https://deno.land/std@0.224.0/path/windows/to_namespaced_path.ts": "4ffa4fb6fae321448d5fe810b3ca741d84df4d7897e61ee29be961a6aac89a4c",
-    "https://deno.land/x/djwt@v3.0.2/algorithm.ts": "b1c6645f9dbd6e6c47c123a3b18c28b956f91c65ed17f5b6d5d968fc3750542b",
-    "https://deno.land/x/djwt@v3.0.2/deps.ts": "a7954fe567f2097b4f6aca11d091b6df658e485a817ac4dee47257ed5c28fd6e",
-    "https://deno.land/x/djwt@v3.0.2/mod.ts": "962d8f2c4d6a4db111f45d777b152356aec31ba7db0ca664601175a422629857",
-    "https://deno.land/x/djwt@v3.0.2/signature.ts": "16238fbf558267c85dd6c0178045f006c8b914a7301db87149f3318326569272",
-    "https://deno.land/x/djwt@v3.0.2/util.ts": "5cb264d2125c553678e11446bcfa0494025d120e3f59d0a3ab38f6800def697d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/ai/accessibility-dialog.ts": "8b52e56326f660be85f7646a9b74d4fea7939a38f71ff82becc9c272a3f4f65b",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/ai/audio.ts": "f935dbd9a389978ce3705894f6e3c00c2ccc39432afc3a9353ae84623ed1e197",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/ai/cache.ts": "1eb03ef7daea1618bba289411fe3cc837cf3dc469cd80b9ee97ba495f7b7640a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/ai/context.ts": "592ceae437ef9b75f25581f75c773fbcbda1c3d003c35d98b4980c3c6d87faf2",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/ai/openrouter.ts": "2b3401344412ab8a034831af3f626e81c9d65aae6eacb5db8f0de7fc29ccfc87",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/ai/tools.ts": "f66878f3c4f4ec8d5ac7e208901b371f997672d78ecb8d638cdc49060319f256",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/alert-dialog.ts": "ef61f48278d5c6ea16f92af9a5bf9c4e56e8612ac5d24f544644302446ee9c21",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/ansi-output.ts": "c0cc4af892b81928b87f34db72be8257ef795ac167ee2ade42f5a1a4df4f948d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/buffer.ts": "eae406f5f27181e61848ab2c3519c4d756f144b89d9fad8e78a2aabfd25e6b02",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/bundler/types.ts": "153d1bfe43ef0edd114659bb004e4c0b238360d0b23888eec14d14b58d11bf21",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/char-width.ts": "92bc28e8f5f9684dc3e5e2e3454ba04f3259a871d3fb8c5871ede0066a058f1a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/clipped-buffer.ts": "b1f44876f009b7e7a49a7738e7cfa268413b9bdaa5ee9f5cda4c28022f8c3c18",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/button.ts": "09c4d773b1cadaaa39fa41bbc47ae09e0cc1e26c16a2b17b758a641392bc2091",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/canvas-draw.ts": "bea301ea7efd2ee66a944ef37d8f35d0b309766cdc8c9b58889df2c51a33681f",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/canvas-image.ts": "d5b96d44521ed0bdfb1d747a5443e81d7c608c14284eeb0b2c6db0dd86fab466",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/canvas-shader-runner.ts": "139fcc5c918dcfc28c16ecd7544bbe34a490a968da36862c58bef028b9ab88e8",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/canvas-shader.ts": "5c34664090ace0e680cf3c581d669552d03c34956a0d4c2f679b6a469008f520",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/canvas-terminal.ts": "d53c69d6fac5849980d9a7e2634b1c1521cb92a3359e301271e9f4eaa2fd75c6",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/canvas.ts": "fc647ee6b0725e6be672bbf2efe18c24403a22240eb30a6ef45579b7bf8d9939",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/checkbox.ts": "54db68c16d40afc498633a7922b5404b71f8444b47c35566e3bd7793cd4721bd",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/color-utils.ts": "c6ade20b5cc44eb72ff628336cf7c9023fd58ac7c019a308c73cf5764fa1170b",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/container.ts": "ff6a9a9221ef90bd0a6741ad3420146d9c5289e83a4ab9f00dce8244cc2199a2",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/data-bars.ts": "1c0f7b93c5a8f868ecd1ae7d0b411be0e31f46e43b520134e266baf19094313e",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/data-table.ts": "74e6397076fa401a64130c3d7d9a38f719a54c1186e7a67ae080961508bf0d6f",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/dialog.ts": "691208af276afcb64d93658e4d75c36e2807d3fca265ffcdf67febb19724485f",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/file-browser/file-browser.ts": "56296e01113489f2420582dfb0435e825ba0c1d321605afbab26d82335b01304",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/file-browser/file-entry.ts": "12b1ef23ffe61213984769b00244f89dd3c57dc3174825d6692bd6420a3d181b",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/file-browser/file-utils.ts": "125509718ce5edabdce1cbe9bbdfcf61627f9ce8008cd125295980c0c80fc084",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/file-browser/mod.ts": "e07ecf0374a8d1af9433140b37e73ec56cdf5744ffb82d7b0b5ec4228b24cc26",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/autocomplete.ts": "7106c05d720fac328cb745e74c5d41965694f442e48e3ad007fab10639f88036",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/combobox.ts": "d77dbbedf5add1acbbe954bd7503ffcf11f94f630a47c0b095753c524b7b6568",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/command-palette.ts": "78a87c535f90a494b4dd6e37ac785cbde4b587fc972c30c3db62807baebbadb1",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/core.ts": "c1e8d1bf65ae6b694997302ef120687920ec85e40f1e80e1d7ed7cf04a849860",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/filter.ts": "23d4f713bf53392b3209ff31e1801b9c6b2fbf773c0db9ec6f66b1a24b5c344f",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/group.ts": "7f0affe24b32dc28fda4be16f09c1542b26528a1c516ab32080067ecad2da85b",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/mod.ts": "21e2847ec4d01ed673b7849e43061538bdda82c05ec0d707004fdd6b451bc469",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/option.ts": "7e34a3c4b6da4da9bcb3d4011c2eef302ba1c2ac09dccec4564d835d90b89745",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/filterable-list/select.ts": "ea0749f171732992794c6a67fbc154f3e7946568869c617e31cee06c1ae9762a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/img.ts": "f4331f7b89079f055ddad645e348a3f3057950ce4d8614a9ea8e861358b7e60a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/input.ts": "47c43035336879c76b184d0b1b55f8a22013cb0ed290924ecb2b86e7ac944735",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/li.ts": "fd466d6aba52d5165e6e03d1007e2d00d07ba5e07d49bd60d6e4d59e7f48ec69",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/list.ts": "ba05bacecbb5e4e1e14b7b93aeaa5bba6e32433e40cda30541c0933f57ee0bc9",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/markdown.ts": "506f787894b98f5b12ac3f4c078fa4571e023f9b85e11ad452aa87127bb06e14",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/mod.ts": "c72a70e7bdd995d9637a3cdd7833d0c04aedf19db33c980bd1fe24561c18db39",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/progress.ts": "5dfc5a76823f3d29437622c84434608869b0e30e6122f4d9bb006744b36e6c4d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/radio.ts": "59978457a63f07652cb1a2879c3186a069be7d38a1c006930b6d2753738110e2",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/scrollbar.ts": "8762633e5c9c2deca3376d271d36083bceb1e499389e2626ab2e2fb84d0982a3",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/segment-display/charsets.ts": "5f01fa71951da1acf55ac977f2a940a561774a8588d9316b19accd74049742df",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/segment-display/mod.ts": "9f8d210a458332812f0bfb9869f7982a5c95fa05e00ade9cbf0aab8cec4446b0",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/segment-display/renderers.ts": "dc285fbfcdaa7c77e93fb8bc91edb9229bccce1bc8f25e36a643157829af935c",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/segment-display/segment-display.ts": "9131121598e1c5944f2436956ed9972f11802119c64b47b8ad4006cd6e2e4ee7",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/segment-display/types.ts": "8ecebf4d73b988eb71918fc75d0079c65fe30d8f7885bef30863f13c19360c9a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/slider.ts": "2d4f12012cc0ed7d3b156bd9c9e2e8bd92da7d3b606a0a46fc46c7ecbfcbb182",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/tab.ts": "ce65e0cf0755bf81c099129a9f03df0cefc6b17d53830cc49d95316a20c67da7",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/table-cell.ts": "55e00471bb425694cf477aa1b8f96d220c07c050ca207ab648cdd893430aa5b7",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/table-row.ts": "7709680d701dcd7c7a39c04042642fc5dc782d175dae139efde4e06abb6875ba",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/table-section.ts": "3e2c54a83165e5c722a1686df575b55ddac6d05f7f75bb4f8ccd5485e6029b01",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/table.ts": "63766eeb675c81fa48fdd4ec3db4dc84c88bb489ed19e9a8036ea172cffe8a18",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/tabs.ts": "71cc3066367fa4a19799249e92be4d44707029e37dfab5eab6de97391ace1b84",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/text.ts": "60317d2747eafc8481614ae74248cec2c450fb40656411ebce0e8b78cd8eb89e",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/textarea.ts": "1c8073e30bdcbc1dc1e5e661bb62564e44d52c310c624bcaae6ec5bdfe1d959d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/components/video.ts": "e4d02d811a450808d16cc74a4c53f868d00813354cc9b70177a9b8aa48289ca8",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/config/cli.ts": "88afac30f6844691c8e956cf43ed8179075ad40be14e969d576ae7a8ee497233",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/config/config.ts": "e7957086687bf81a5d473ed681c46fcac61be88289b7553875e25fad79967a7d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/config/mod.ts": "068619d8ccb5aca5ba5cb3965979ac48d20cc9ec9f9d193f20a4d715ce1ce3f9",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/config/schema.json": "dc3313db3d240501a9ce0a93efacf4cdfc18c892435b20dbf236d30a2dd499df",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/confirm-dialog.ts": "8f3966e6acfd8f08d1a4fbb3c3b40fceee3f2986459400f45d7fef30201974f3",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/content-measurer.ts": "b05cecf78b7c433421887291b0cda56a01eb44a54347301c59e3a12f40081a3d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/debug-server.ts": "c06040204b4769bacc72237a140909263b42f04f321ffdee06fc7395e8fb53c0",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/deps.ts": "1867c460d0fd8adbf08265f97a7b0f5087a89be9b06d49c3cf49c98151927c16",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/dev-tools.ts": "cf520f2047ae426a3a5137dcffbd6c2eb51251c5f082c3ec4505cad2f7c247f0",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/document.ts": "423cab0377da6ff8e73dff5220e6ab44f3415f97f499b34f8f34bf4c1330721b",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/element-click-handler.ts": "6626fd8e33b23828ce2f0580bae8130586e5d147c1fafa559ff8728549bac808",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/element.ts": "e401b8fcca37d0d06447ae8f7ba36d285d8b7423e243402e0eaf6cc448344c13",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/engine.ts": "3e86c486e249b849e5e46fb369a5e2c905c3b93cb51d5d0211170d5b079183e8",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/env.ts": "8e0c0f24f845f5572003297e7457b3c0a8c9533d943592e348c1dfc70dd0ceb4",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/error-boundary.ts": "7f3f7824c33d1da5a023aecfde12b17d7ed50f91bdb83db0c58be24622996daf",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/error-overlay.ts": "bd86a6d433439ca94cad025b3e0525bd273dc332c414ce2dbb2f6ff94e3a2326",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/events.ts": "77a54fba6c910c0065841e478aad8f168e4b34d5942b191457b34590f3d66927",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/focus-navigation-handler.ts": "24c0384485213d0a53127fd132f060272ce3d9929dad1c96676ebfeeec823b42",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/focus.ts": "7663f4b194995b27b2bef3240c60715497e116f3c89f91fef532645b42b4aabf",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/geometry.ts": "dd3913829cf4d1035db7f7a37fc042dc001def480ab93957515c2c83d9e15b4a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/headless.ts": "b9ec2cf05c5e6f833a93391660dc2bfddd1f2990d999ece9d98fd585236580fd",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/hit-test.ts": "cb9571ff7776a82279b9210ca480e8352907a1630afa6522acf04482f0112cde",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/input.ts": "d83915cb67022d8a8eba06ee7709e6f76d1a5c2a0080e2b51259409e1ab9c49e",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/layout.ts": "88a027d2ceb035fa7caa938df92290ec6dfff5f72909a5bcff3ff1be6018f6fe",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/lint.ts": "e4694945836648e7771fc71518c8ac8e4f004424e7466ecafb9af91f5bf9e965",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/logging.ts": "5366a2ec14cedb6bc4613c901c749cd65101ce74c7060c13857206eab95e7ef9",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/performance-dialog.ts": "27d6a9ab67bc206fb9d57a31adc7ef827e0f7ea6cf6df7acc3c47ec1fe12c1b4",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/policy/approval.ts": "1fe5abf17587fd8f6eb9b70045c65b55edfd2c2cb2575cab1fac7b87f844e860",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/policy/flags.ts": "6d6a1175e7f9090d6a7aca2800f13311df71942a2c3d771318490cdf3eec48d5",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/policy/loader.ts": "f89eb15a51a0b1d0845aa4d87cf3ba20cd9b0bc31397c6e1b47dfe773ea1b23b",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/policy/mod.ts": "69081ef6a8699079e7ef2b653c4185debe906c1217be6dee0783ab1afd97444a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/policy/types.ts": "a08e6eb2263a28a20f1a0e282569b172677179ec8f6053789da23a4833220b76",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/prompt-dialog.ts": "e7be2003e9dc38e47f8d19a265775cc74861aa52dc356281ed5df0e07b91d288",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/renderer.ts": "c190d9e35e31afdc1a45464e4c0b7c0c13b31a1f36b518a0cfd1ef909e5732a5",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/rendering.ts": "37c6bff5f321e2b4046d2ab24a25ff7f7adf0933140fd99d0a6f223c7801229d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/resize.ts": "98f16ba3170563e2bc905ef1e8a92a88c9ddc76ab131d2fe9b78126a0be97b4a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/scroll-handler.ts": "56cdb4f033ba692c92a85c0de1cb309ec6d74c442df402e18264800db48bc541",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/sizing.ts": "b0ebc498f06d7ee41174be062d37ecea860c1cfac4ce8a72f76898669b3790f8",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/state-persistence-manager.ts": "0cb16a10361dd1c59dd7e80b61d4c5e795d10553636c0c91cd5d3a9a50d29e16",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/state-persistence.ts": "01210309f60eea3e1c5f877720f129fa12789e17cd92442b03ac32c62615ae9f",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/stats-overlay.ts": "a822f63cc7693943c388016dcdf5dd3008b7fd2b60fdda8ceac3f1a3ca1bbfb4",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/stylesheet.ts": "105fa6635ebe50b738d5655434ef1f43d09ab7e9f19ee077d94f667312458593",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/system-command-palette.ts": "7d9761317c1b6c1eb873b1e24c0216574fc5e0967eba247d148546a105fe6371",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/template.ts": "85cb24a5a4da792fe28f2f495935905d516e22dfca123b2cc3aa6beb35cf0aaa",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/terminal-lifecycle.ts": "93b8133dffa66cd9cce332571e827736100aa740c2ead166fc1ee0260708dac9",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/text-selection-handler.ts": "51411d2b3cc632eb7e52528d2ed131bde4169cb228d92e123e8a4b1235fa19b7",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/theme.ts": "2397fbdc7a3f45d0482def5d5f21dc5f3769fd23fb8402653491aac71868607f",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/types.ts": "aa4d8c446b2fac590e6cb2bf4b50ab5f5cd3527632d9bad2653dce954e4ecb7d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/utils/dimensions.ts": "1e20f1c74dcf502d05352bfb62c81a55f254279b8446cb4016efd930f5b8eeb1",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/utils/timing.ts": "ea8e7f0d022a4c404795111ab8940f78634cd910f3e4cc23744454efa7d809f5",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/dither.ts": "01c559eb19d49809c303a46b12b3e24475286be67bc926686076afe3b685f28a",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/dither/atkinson.ts": "03905d12797351ca82df7c20ebca06142e8e351b2ac8872de298c64b1b3ab9c2",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/dither/floyd-steinberg.ts": "35256ea2cdea3ce78e87d3008287bef298afbf057e9a3b15ac650496b29f57a7",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/dither/mod.ts": "224911b2f6a033abc5d6632e5b978a6541ff98447b97b353573c1e016fc46b79",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/dither/sierra.ts": "d5a538cd3e9fafe3dbd2e7263c41d7d2d22b236d397b1202b07df2cb2dfd3f92",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/dither/threshold.ts": "0bff772ff44325bb58e753dd8b6803c88503b90d1f4fe9b82e09455bde84b138",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/dither/types.ts": "2831f1ad42966629808d14384fe85137516c752881160eec65832b626bb7406d",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/dither/utils.ts": "464fd6893393263455c20a87c66e5651f474a6ef6c49daf9f9b25c3c40f6b883",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/ffmpeg.ts": "cee208d8ba0514c9cd539d663aa13bb834172739399a79ca551a193366131225",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/subtitle.ts": "2d2cbf953ff1d6bf052b24929dd822632bfa98102baa63df4f14248a4753e240",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/video/waveform.ts": "5623de709f7adef587355fb82a5a7959112b85dcbd6e25525f29cfeb9f30fee1",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/viewport-buffer.ts": "56fe34bc3dd9b9199d498083611e63cbeda7ecdc8027d22df40c88cd0832fffc",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/viewport.ts": "75c10913c635ac9f3c5b8de3c941a6c92d273689582fb22cee5edc8030a96c3b",
-    "https://raw.githubusercontent.com/wistrand/melker/main/src/xdg.ts": "a54483808cc96f509f79cf9915b73e733b8d7f3c60db6ef6a6a40cc1a17b273a"
+    "https://deno.land/std@0.224.0/path/windows/to_namespaced_path.ts": "4ffa4fb6fae321448d5fe810b3ca741d84df4d7897e61ee29be961a6aac89a4c"
   }
 }

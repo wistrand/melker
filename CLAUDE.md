@@ -126,6 +126,26 @@ Requires: `xorg-server-xvfb`, `imagemagick`, `ffmpeg`, `kitty`
 - Always use `deno task test` to run tests — never manually construct `deno test ...` commands
 - never execute git add, commit or push commands
 
+## Lockfile Hygiene
+
+`deno.lock` contains **only runtime dependencies**. Dev-only deps (LSP's `vscode-languageserver`, test helpers) are kept out to avoid downloading them when users run apps.
+
+**How it works:**
+
+| Scope      | Lockfile         | Why                                                        |
+|------------|------------------|------------------------------------------------------------|
+| App runner | `deno.lock`      | Integrity checks for runtime npm/jsr deps                  |
+| Tests      | `--no-lock`      | Prevents `tests/lsp_test.ts` from adding LSP deps to lock  |
+| LSP server | `--no-lock`      | Separate entry point (`src/lsp.ts`), heavy deps stay out   |
+| Schema     | `deno.lock`      | Uses runner, same runtime deps                             |
+
+**Regenerating the lockfile** (if it gets polluted):
+```bash
+rm deno.lock && deno cache melker.ts src/melker-runner.ts
+```
+
+**Architecture note:** The LSP server (`src/lsp.ts`) is a standalone entry point invoked directly by the launcher — it is NOT imported (statically or dynamically) by `src/melker-runner.ts`. This prevents Deno from discovering `npm:vscode-languageserver` in the runner's module graph.
+
 ## Project Structure
 
 | Path                 | Purpose                                     |

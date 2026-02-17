@@ -4,9 +4,9 @@
   },
   "description": "A Deno library for creating rich Terminal UI interfaces with flexbox-based layouts",
   "tasks": {
-    "test": "deno test --allow-read --allow-env --allow-write --allow-run --allow-net=localhost --unstable-bundle",
-    "test:watch": "deno test --allow-read --allow-env --allow-write --allow-run --allow-net=localhost --unstable-bundle --watch",
-    "test:coverage": "deno test --allow-read --allow-env --allow-write --allow-run --allow-net=localhost --unstable-bundle --coverage=coverage/",
+    "test": "deno test --no-lock --allow-read --allow-env --allow-write --allow-run --allow-net=localhost --unstable-bundle",
+    "test:watch": "deno test --no-lock --allow-read --allow-env --allow-write --allow-run --allow-net=localhost --unstable-bundle --watch",
+    "test:coverage": "deno test --no-lock --allow-read --allow-env --allow-write --allow-run --allow-net=localhost --unstable-bundle --coverage=coverage/",
     "fmt": "deno fmt",
     "lint-real" : "deno lint --rules-exclude=no-inner-declarations,prefer-const,require-await,no-explicit-any,no-unused-vars src",
     "lint-all": "deno lint src",

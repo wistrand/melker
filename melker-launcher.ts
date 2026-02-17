@@ -467,7 +467,7 @@ your terminal supports sextant mode. If any row appears scrambled, use:
     const lspUrl = new URL('./src/lsp.ts', import.meta.url);
     const lspEntry = lspUrl.protocol === 'file:' ? lspUrl.pathname : lspUrl.href;
     const process = new Deno.Command(Deno.execPath(), {
-      args: ['run', '--allow-all', '--unstable-bundle', lspEntry],
+      args: ['run', '--allow-all', '--unstable-bundle', '--no-lock', lspEntry],
       stdin: 'inherit',
       stdout: 'inherit',
       stderr: 'inherit',

@@ -84,9 +84,13 @@ export class DiffCollector {
   setText(x: number, y: number, text: string, style: Partial<Cell> = {}): void {
     const chars = analyzeString(text);
     let visualX = x;
+    // Template cell — DiffCollector.setCell clones before storing, so reuse is safe
+    const cell = { char: '', width: 1 as number | undefined, ...style } as Cell;
     for (const charInfo of chars) {
       if (charInfo.width > 0) {
-        this.setCell(visualX, y, { char: charInfo.char, width: charInfo.width, ...style });
+        cell.char = charInfo.char;
+        cell.width = charInfo.width;
+        this.setCell(visualX, y, cell);
         visualX += charInfo.width;
       }
     }
@@ -404,6 +408,8 @@ export class TerminalBuffer {
   setText(x: number, y: number, text: string, style: Partial<Cell> = {}): void {
     const chars = analyzeString(text);
     let visualX = x;
+    // Create template cell once — setCell copies fields in-place, never stores reference
+    const cell = { char: '', width: 1 as number | undefined, ...style } as Cell;
 
     for (const charInfo of chars) {
       if (visualX >= this._width) break;
@@ -414,11 +420,9 @@ export class TerminalBuffer {
           break;
         }
 
-        this.setCell(visualX, y, {
-          char: charInfo.char,
-          width: charInfo.width,
-          ...style,
-        });
+        cell.char = charInfo.char;
+        cell.width = charInfo.width;
+        this.setCell(visualX, y, cell);
 
         visualX += charInfo.width;
       }
@@ -428,8 +432,9 @@ export class TerminalBuffer {
 
   // Fill a horizontal line with EMPTY_CHAR (for clearing/background fill)
   fillLine(x: number, y: number, width: number, style: Partial<Cell> = {}): void {
+    const cell = { char: EMPTY_CHAR, ...style } as Cell;
     for (let i = 0; i < width && x + i < this._width; i++) {
-      this.setCell(x + i, y, { char: EMPTY_CHAR, ...style });
+      this.setCell(x + i, y, cell);
     }
   }
 
@@ -797,6 +802,8 @@ export class DualBuffer {
   }
 
   // Compute diff using only dirty rows (optimized path)
+  // Cells are referenced directly (not cloned) — safe because the buffer holding
+  // these cells (now _previousBuffer after swap) is not modified until the next frame.
   private _computeDirtyDiff(): BufferDiff[] {
     const differences: BufferDiff[] = [];
     const currentCells = this._currentBuffer.cells;
@@ -811,7 +818,7 @@ export class DualBuffer {
         const current = currentRow[x];
         const previous = previousRow[x];
         if (!this._cellsEqualDirect(current, previous)) {
-          differences.push({ x, y, cell: { ...current } });
+          differences.push({ x, y, cell: current });
         }
       }
     }
@@ -834,7 +841,7 @@ export class DualBuffer {
         const current = currentRow[x];
         const previous = previousRow[x];
         if (!this._cellsEqualDirect(current, previous)) {
-          differences.push({ x, y, cell: { ...current } });
+          differences.push({ x, y, cell: current });
         }
       }
     }

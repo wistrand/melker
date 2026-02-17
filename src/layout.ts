@@ -206,6 +206,7 @@ export class LayoutEngine {
     }
     const computedStyle = this._getCachedStyle(element, context.parentStyle, context);
     const layoutProps = computeLayoutProps(element, context.parentLayoutProps, context);
+    this._layoutPropsCache.set(element, layoutProps);
 
     if (traceEnabled) {
       logger.trace(`Layout props computed for ${element.type}`, {
@@ -261,7 +262,15 @@ export class LayoutEngine {
           childCount: children.length,
         });
       }
-      let childContext: LayoutContext;
+      // Save context fields that will be overridden for child layout
+      const savedParentBounds = context.parentBounds;
+      const savedAvailableSpace = context.availableSpace;
+      const savedParentStyle = context.parentStyle;
+      const savedParentLayoutProps = context.parentLayoutProps;
+      const savedScrollOffset = context.scrollOffset;
+      const savedIsScrollableParent = context.isScrollableParent;
+      const savedAncestors = context.ancestors;
+      const savedContainerBounds = context.containerBounds;
 
       if (isScrollable) {
         // For scrollable containers, calculate actual content dimensions first
@@ -334,46 +343,55 @@ export class LayoutEngine {
         const hasVerticalScrollbar = viewport.scrollbars.vertical?.visible ?? false;
         const childAvailableWidth = hasVerticalScrollbar ? contentBounds.width - 1 : contentBounds.width;
 
-        childContext = {
-          ...context,
-          parentBounds: {
-            x: contentBounds.x,
-            y: contentBounds.y,
-            width: childAvailableWidth, // Reduce width for scrollbar
-            height: actualContentHeight, // Real content height, not 10000
-          },
-          availableSpace: {
-            width: childAvailableWidth, // Reduce width for scrollbar
-            height: actualContentHeight // Real content height for proper layout
-          },
-          parentStyle: computedStyle,
-          parentLayoutProps: layoutProps,
-          // Pass scroll info for virtual layout optimization
-          scrollOffset,
-          isScrollableParent: true,
+        context.parentBounds = {
+          x: contentBounds.x,
+          y: contentBounds.y,
+          width: childAvailableWidth,
+          height: actualContentHeight,
         };
+        context.availableSpace = {
+          width: childAvailableWidth,
+          height: actualContentHeight,
+        };
+        context.parentStyle = computedStyle;
+        context.parentLayoutProps = layoutProps;
+        context.scrollOffset = scrollOffset;
+        context.isScrollableParent = true;
       } else {
         // Normal layout - constrain children to actual content bounds
-        childContext = {
-          ...context,
-          parentBounds: contentBounds,
-          availableSpace: { width: contentBounds.width, height: contentBounds.height },
-          parentStyle: computedStyle,
-          parentLayoutProps: layoutProps,
-        };
+        context.parentBounds = contentBounds;
+        context.availableSpace = { width: contentBounds.width, height: contentBounds.height };
+        context.parentStyle = computedStyle;
+        context.parentLayoutProps = layoutProps;
       }
 
       // Thread container query context: update ancestors and containerBounds
       if (context.stylesheets) {
-        childContext.ancestors = [...(context.ancestors || []), element];
+        const ancestors = context.ancestors || (context.ancestors = []);
+        ancestors.push(element);
         const ct = computedStyle.containerType;
         if (ct && ct !== 'normal') {
-          childContext.containerBounds = { width: bounds.width, height: bounds.height };
+          context.containerBounds = { width: bounds.width, height: bounds.height };
         }
       }
 
       const childrenStartTime = traceEnabled ? performance.now() : 0;
-      node.children = this._layoutChildren(children, childContext, node);
+      node.children = this._layoutChildren(children, context, node);
+
+      // Restore context after child layout
+      context.parentBounds = savedParentBounds;
+      context.availableSpace = savedAvailableSpace;
+      context.parentStyle = savedParentStyle;
+      context.parentLayoutProps = savedParentLayoutProps;
+      context.scrollOffset = savedScrollOffset;
+      context.isScrollableParent = savedIsScrollableParent;
+      if (context.stylesheets) {
+        // Pop the element we pushed (ancestors is shared array)
+        context.ancestors!.pop();
+      }
+      context.ancestors = savedAncestors;
+      context.containerBounds = savedContainerBounds;
+
       if (traceEnabled) {
         logger.trace(`Children layout completed in ${(performance.now() - childrenStartTime).toFixed(2)}ms`, {
           elementId: element.id,
@@ -446,17 +464,21 @@ export class LayoutEngine {
       };
       // Apply position: relative visual offset (preserves normal-flow space)
       const offsetBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child, context));
-      const childContext: LayoutContext = {
-        ...context,
-        parentBounds: offsetBounds,
-        availableSpace: {
-          width: context.availableSpace.width,
-          height: context.parentBounds.height - (currentY - context.parentBounds.y),
-        },
-        parentLayoutProps: parentNode.layoutProps,
+      // Mutate context in-place (calculateLayout saves/restores)
+      const savedPB = context.parentBounds;
+      const savedAS = context.availableSpace;
+      const savedPLP = context.parentLayoutProps;
+      context.parentBounds = offsetBounds;
+      context.availableSpace = {
+        width: savedAS.width,
+        height: savedPB.height - (currentY - savedPB.y),
       };
+      context.parentLayoutProps = parentNode.layoutProps;
 
-      const childNode = this.calculateLayout(child, childContext, parentNode);
+      const childNode = this.calculateLayout(child, context, parentNode);
+      context.parentBounds = savedPB;
+      context.availableSpace = savedAS;
+      context.parentLayoutProps = savedPLP;
       nodes.push(childNode);
 
       // Advance Y position for next child
@@ -816,13 +838,15 @@ export class LayoutEngine {
       height: typeof height === 'number' ? height : intrinsicSize.height,
     };
 
-    const absoluteContext: LayoutContext = {
-      ...context,
-      parentBounds: bounds,
-      availableSpace: { width: bounds.width, height: bounds.height },
-    };
-
-    return this.calculateLayout(element, absoluteContext, parentNode);
+    // Mutate context in-place (calculateLayout saves/restores)
+    const savedPB = context.parentBounds;
+    const savedAS = context.availableSpace;
+    context.parentBounds = bounds;
+    context.availableSpace = { width: bounds.width, height: bounds.height };
+    const result = this.calculateLayout(element, context, parentNode);
+    context.parentBounds = savedPB;
+    context.availableSpace = savedAS;
+    return result;
   }
 
   // Flex sub-methods
@@ -1151,7 +1175,11 @@ export class LayoutEngine {
           height: estimatedRowHeight
         };
         childBounds = this._applyRelativeOffset(childBounds, this._getCachedLayoutProps(child, context));
-        const childNode = this.calculateLayout(child, { ...context, parentBounds: childBounds }, parentNode);
+        // Mutate context in-place (calculateLayout saves/restores)
+        const savedPB = context.parentBounds;
+        context.parentBounds = childBounds;
+        const childNode = this.calculateLayout(child, context, parentNode);
+        context.parentBounds = savedPB;
         nodes.push(childNode);
         currentY += childNode.bounds.height + gap;
       } else {
@@ -1349,13 +1377,14 @@ export class LayoutEngine {
         // Apply position: relative visual offset
         const offsetBounds = this._applyRelativeOffset(bounds, this._getCachedLayoutProps(item.element, context));
 
-        const childContext: LayoutContext = {
-          ...context,
-          parentBounds: offsetBounds,
-          availableSpace: { width: offsetBounds.width, height: offsetBounds.height },
-        };
-
-        const childNode = this.calculateLayout(item.element, childContext, parentNode);
+        // Mutate context in-place (calculateLayout saves/restores)
+        const savedPB = context.parentBounds;
+        const savedAS = context.availableSpace;
+        context.parentBounds = offsetBounds;
+        context.availableSpace = { width: offsetBounds.width, height: offsetBounds.height };
+        const childNode = this.calculateLayout(item.element, context, parentNode);
+        context.parentBounds = savedPB;
+        context.availableSpace = savedAS;
         nodes.push(childNode);
       });
     });

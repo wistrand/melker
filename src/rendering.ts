@@ -12,7 +12,7 @@ import { InputElement } from './components/input.ts';
 import { ButtonElement } from './components/button.ts';
 import { DialogElement } from './components/dialog.ts';
 import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
-import { LayoutEngine, LayoutNode as AdvancedLayoutNode, LayoutContext, globalLayoutEngine } from './layout.ts';
+import { LayoutEngine, LayoutNode, LayoutContext, globalLayoutEngine } from './layout.ts';
 import { getThemeColor, getThemeManager } from './theme.ts';
 import { COLORS, parseColor } from './components/color-utils.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
@@ -25,6 +25,7 @@ import { MelkerConfig } from './config/mod.ts';
 import { parseDimension } from './utils/dimensions.ts';
 
 const renderLogger = getLogger('RenderEngine');
+const TABLE_TYPES = new Set(['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th']);
 
 export interface RenderContext {
   buffer: DualBuffer;
@@ -41,30 +42,14 @@ export interface RenderContext {
   elementViewport?: Viewport;
   // Scroll offset from parent scrollable container (for click coordinate translation)
   scrollOffset?: { x: number; y: number };
+  // Cumulative scroll offset for rendering (applied to node bounds on-the-fly)
+  renderScrollX?: number;
+  renderScrollY?: number;
   // Overlay collection for dropdown menus, tooltips, etc.
   overlays?: Overlay[];
 }
 
-export interface LayoutNode {
-  element: Element;
-  bounds: Bounds;
-  visible: boolean;
-  children: LayoutNode[];
-  computedStyle: Style;
-  // Add compatibility fields
-  contentBounds?: Bounds;
-  layoutProps?: any;
-  boxModel?: BoxModel;
-  zIndex?: number;
-  // Phase 2 additions
-  actualContentSize?: Size;
-  scrollbars?: {
-    vertical?: any; // Will match ScrollbarLayout from viewport.ts
-    horizontal?: any;
-  };
-  // Chrome collapse state (padding/border reduced due to insufficient space)
-  chromeCollapse?: ChromeCollapseState;
-}
+export type { LayoutNode } from './layout.ts';
 
 // Scrollbar bounds for hit testing and drag handling
 export interface ScrollbarBounds {
@@ -114,6 +99,8 @@ export class RenderingEngine {
   private _cachedModalLayouts: Map<Element, { bounds: Bounds; layouts: LayoutNode[] }> = new Map();
   // Scrollbar bounds for drag handling
   private _scrollbarBounds: Map<string, ScrollbarBounds> = new Map();
+  // Per-frame cache for scroll content dimensions
+  private _scrollDimensionsCache: Map<string, { width: number; height: number }> = new Map();
   // Document reference for element lookup
   private _document?: { getElementById(id: string): Element | undefined; stylesheets?: readonly Stylesheet[] };
   // Per-render container query config (set at start of render, used by modal layout)
@@ -205,8 +192,9 @@ export class RenderingEngine {
       globalThis.__melkerRequestRender = requestRender;
     }
 
-    // Clear scrollbar bounds for fresh render
+    // Clear per-frame caches
     this._scrollbarBounds.clear();
+    this._scrollDimensionsCache.clear();
 
     // Clear overlays for fresh render
     this._overlays = [];
@@ -247,7 +235,7 @@ export class RenderingEngine {
       } : undefined),
     };
     const advancedLayoutTree = this._layoutEngine.calculateLayout(element, layoutContext);
-    const layoutTree = this._convertAdvancedLayoutNode(advancedLayoutTree);
+    const layoutTree = advancedLayoutTree;
     getGlobalPerformanceDialog().markLayoutEnd();
 
     // Build layout context map for scroll calculations
@@ -363,7 +351,7 @@ export class RenderingEngine {
             };
 
             const childLayout = this._layoutEngine.calculateLayout(child, childLayoutContext);
-            const childLayoutNode = this._convertAdvancedLayoutNode(childLayout);
+            const childLayoutNode = childLayout;
 
             // Store dialog children's bounds in layout context for hit testing
             if (this._currentLayoutContext) {
@@ -919,14 +907,29 @@ export class RenderingEngine {
       this._renderNodeInternal(node, context);
     } catch (error) {
       const err = ensureError(error);
-      getGlobalErrorHandler().captureError(node.element, err, node.bounds);
-      renderErrorPlaceholder(context.buffer as DualBuffer, node.bounds, node.element.type, err);
+      const rsx = context.renderScrollX || 0;
+      const rsy = context.renderScrollY || 0;
+      const errorBounds = (rsx || rsy) ? {
+        x: node.bounds.x - rsx, y: node.bounds.y - rsy,
+        width: node.bounds.width, height: node.bounds.height,
+      } : node.bounds;
+      getGlobalErrorHandler().captureError(node.element, err, errorBounds);
+      renderErrorPlaceholder(context.buffer as DualBuffer, errorBounds, node.element.type, err);
     }
   }
 
   // Internal render implementation
   private _renderNodeInternal(node: LayoutNode, context: RenderContext): void {
-    const { element, bounds, computedStyle } = node;
+    const { element, computedStyle } = node;
+    // Apply cumulative scroll offset to translate layout bounds to screen coordinates
+    const rsx = context.renderScrollX || 0;
+    const rsy = context.renderScrollY || 0;
+    const bounds = (rsx || rsy) ? {
+      x: node.bounds.x - rsx,
+      y: node.bounds.y - rsy,
+      width: node.bounds.width,
+      height: node.bounds.height,
+    } : node.bounds;
 
     // Debug: Log ALL node renders
     const gLogger = globalThis.logger;
@@ -963,11 +966,10 @@ export class RenderingEngine {
 
 
     // Render content based on element type
-    this._renderContent(element, node.bounds, computedStyle, context.buffer, context);
+    this._renderContent(element, bounds, computedStyle, context.buffer, context);
 
     // Skip children rendering for table elements - they handle their own child rendering
-    const tableTypes = ['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th'];
-    if (tableTypes.includes(element.type)) {
+    if (TABLE_TYPES.has(element.type)) {
       return;
     }
 
@@ -1005,14 +1007,13 @@ export class RenderingEngine {
         parentBounds: adjustedContentBounds,
         parentStyle: computedStyle,
         scrollOffset: { x: scrollX, y: scrollY }, // Pass scroll offset to children
+        renderScrollX: rsx + scrollX, // Accumulate scroll offset for rendering
+        renderScrollY: rsy + scrollY,
       };
 
-      // Translate children positions by scroll offset for rendering only
+      // Render children — scroll offset is applied on-the-fly via renderScrollX/Y
       for (const child of node.children) {
-        // Create a copy with translated bounds for rendering (recursive for all descendants)
-        const translatedChild = this._translateNodeBounds(child, scrollX, scrollY);
-
-        this._renderNode(translatedChild, childContext);
+        this._renderNode(child, childContext);
       }
 
       // Render scroll bars AFTER children to ensure they appear on top
@@ -1031,20 +1032,6 @@ export class RenderingEngine {
         this._renderNode(child, childContext);
       }
     }
-  }
-
-  // Recursively translate node bounds by scroll offset
-  private _translateNodeBounds(node: LayoutNode, scrollX: number, scrollY: number): LayoutNode {
-    return {
-      ...node,
-      bounds: {
-        x: node.bounds.x - scrollX,
-        y: node.bounds.y - scrollY,
-        width: node.bounds.width,
-        height: node.bounds.height,
-      },
-      children: node.children.map(child => this._translateNodeBounds(child, scrollX, scrollY))
-    };
   }
 
   // Render scroll bars for a scrollable container (called after children are rendered)
@@ -1161,29 +1148,6 @@ export class RenderingEngine {
     }
   }
 
-  // Apply scroll translation to a layout node and its children
-  private _applyScrollTranslation(node: LayoutNode, offsetX: number, offsetY: number): LayoutNode {
-    const translatedNode: LayoutNode = {
-      ...node,
-      bounds: {
-        ...node.bounds,
-        x: node.bounds.x + offsetX,
-        y: node.bounds.y + offsetY,
-      },
-      children: node.children.map(child => this._applyScrollTranslation(child, offsetX, offsetY)),
-    };
-
-    // Also translate contentBounds if it exists
-    if (translatedNode.contentBounds) {
-      translatedNode.contentBounds = {
-        ...translatedNode.contentBounds,
-        x: translatedNode.contentBounds.x + offsetX,
-        y: translatedNode.contentBounds.y + offsetY,
-      };
-    }
-
-    return translatedNode;
-  }
 
   // Render background color
   private _renderBackground(bounds: Bounds, style: Style, buffer: DualBuffer): void {
@@ -1317,8 +1281,10 @@ export class RenderingEngine {
           const availableWidth = lineWidth - 2; // Exclude corners
           if (titleLen <= availableWidth) {
             const startX = lineStartX + 1 + Math.floor((availableWidth - titleLen) / 2);
+            const titleCell = { char: '', ...topStyle };
             for (let i = 0; i < titleLen; i++) {
-              buffer.currentBuffer.setCell(startX + i, topBorderY, { char: title[i], ...topStyle });
+              titleCell.char = title[i];
+              buffer.currentBuffer.setCell(startX + i, topBorderY, titleCell);
             }
           }
         }
@@ -1367,15 +1333,17 @@ export class RenderingEngine {
 
   // Draw horizontal line for borders
   private _drawHorizontalLine(x: number, y: number, width: number, borderStyle: string, style: Partial<Cell>, buffer: DualBuffer, chars: any): void {
+    const cell = { char: chars.h, ...style };
     for (let i = 0; i < width; i++) {
-      buffer.currentBuffer.setCell(x + i, y, { char: chars.h, ...style });
+      buffer.currentBuffer.setCell(x + i, y, cell);
     }
   }
 
   // Draw vertical line for borders
   private _drawVerticalLine(x: number, y: number, height: number, borderStyle: string, style: Partial<Cell>, buffer: DualBuffer, chars: any): void {
+    const cell = { char: chars.v, ...style };
     for (let i = 0; i < height; i++) {
-      buffer.currentBuffer.setCell(x, y + i, { char: chars.v, ...style });
+      buffer.currentBuffer.setCell(x, y + i, cell);
     }
   }
 
@@ -1829,11 +1797,17 @@ export class RenderingEngine {
     this._renderVerticalScrollbar(bounds, scrollY, contentHeight, style, buffer);
   }
 
-  // Calculate actual scroll dimensions for a scrollable container
+  // Calculate actual scroll dimensions for a scrollable container (cached per frame)
   calculateScrollDimensions(container: Element): { width: number; height: number } {
     if (!isScrollableType(container.type) || !isScrollingEnabled(container)) {
       return { width: 0, height: 0 };
     }
+
+    const cacheKey = container.id || '';
+    const cached = this._scrollDimensionsCache.get(cacheKey);
+    if (cached) return cached;
+
+    let result: { width: number; height: number };
 
     // For tbody elements, use the actual content height set by the table component
     // This is necessary because tbody row heights depend on column widths calculated by the table
@@ -1842,26 +1816,31 @@ export class RenderingEngine {
       if (typeof tbody.getActualContentHeight === 'function') {
         const actualHeight = tbody.getActualContentHeight();
         if (actualHeight > 0) {
-          return { width: 0, height: actualHeight };
+          result = { width: 0, height: actualHeight };
+          this._scrollDimensionsCache.set(cacheKey, result);
+          return result;
         }
       }
     }
 
     // Get the container's layout node which now includes pre-calculated content dimensions
-    const containerLayoutNode = this._currentLayoutContext?.get(container.id || '');
+    const containerLayoutNode = this._currentLayoutContext?.get(cacheKey);
     if (!containerLayoutNode) {
       throw new Error(`No layout context found for container ${container.id} - layout should always be available during rendering`);
     }
 
     // Phase 2: Use layout-provided content dimensions if available
     if (containerLayoutNode.actualContentSize) {
-      return containerLayoutNode.actualContentSize;
+      result = containerLayoutNode.actualContentSize;
+    } else {
+      // Fallback: Use ContentMeasurer for backward compatibility
+      const contentBounds = this._getContentBounds(containerLayoutNode.bounds, containerLayoutNode.computedStyle, true);
+      const actualWidth = contentBounds.width;
+      result = globalContentMeasurer.measureContainer(container, actualWidth);
     }
 
-    // Fallback: Use ContentMeasurer for backward compatibility
-    const contentBounds = this._getContentBounds(containerLayoutNode.bounds, containerLayoutNode.computedStyle, true);
-    const actualWidth = contentBounds.width;
-    return globalContentMeasurer.measureContainer(container, actualWidth);
+    this._scrollDimensionsCache.set(cacheKey, result);
+    return result;
   }
 
   // Utility method to render a simple element tree for testing
@@ -1879,26 +1858,6 @@ export class RenderingEngine {
     // Get the content before swapping (current buffer has the rendered content)
     const result = buffer.currentBuffer.toString();
     return result;
-  }
-
-  // Convert AdvancedLayoutNode to LayoutNode for backward compatibility
-  private _convertAdvancedLayoutNode(advanced: AdvancedLayoutNode): LayoutNode {
-    return {
-      element: advanced.element,
-      bounds: advanced.bounds,
-      visible: advanced.visible,
-      children: advanced.children.map(child => this._convertAdvancedLayoutNode(child)),
-      computedStyle: advanced.computedStyle,
-      contentBounds: advanced.contentBounds,
-      layoutProps: advanced.layoutProps,
-      boxModel: advanced.boxModel,
-      zIndex: advanced.zIndex,
-      // Phase 2 properties
-      actualContentSize: advanced.actualContentSize,
-      scrollbars: advanced.scrollbars,
-      // Chrome collapse state
-      chromeCollapse: advanced.chromeCollapse,
-    };
   }
 
   // Render a modal dialog
@@ -2004,8 +1963,7 @@ export class RenderingEngine {
           };
 
           const childLayout = this._layoutEngine.calculateLayout(child, childLayoutContext);
-          const childLayoutNode = this._convertAdvancedLayoutNode(childLayout);
-          childLayouts.push(childLayoutNode);
+          childLayouts.push(childLayout);
         }
         // Cache the layout
         this._cachedModalLayouts.set(modal, { bounds: { ...contentBounds }, layouts: childLayouts });

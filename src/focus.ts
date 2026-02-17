@@ -29,6 +29,8 @@ export interface FocusTrappingOptions {
   containerId: string;
   restoreFocus?: boolean;
   initialFocus?: string;
+  /** Saved by trapFocus() — the element that had focus before the trap was created */
+  _previousFocusId?: string | null;
 }
 
 /**
@@ -410,6 +412,7 @@ export class FocusManager {
    * Set up focus trapping within a container (e.g., for modals)
    */
   trapFocus(options: FocusTrappingOptions): void {
+    options._previousFocusId = this._focusedElementId;
     this._focusTraps.push(options);
 
     // Defer initial focus to allow render cycle to complete
@@ -444,10 +447,13 @@ export class FocusManager {
     const trap = this._focusTraps[trapIndex];
     this._focusTraps.splice(trapIndex, 1);
 
-    // Restore focus to previous element if requested
-    if (restoreFocus && trap.restoreFocus) {
-      // Implementation would restore focus to the previously focused element
-      // This would require storing the previous focus state when trap was created
+    // Restore focus to the element that was focused before the trap was created
+    if (restoreFocus && trap.restoreFocus && trap._previousFocusId) {
+      if (this._focusableElementIds.has(trap._previousFocusId)) {
+        this.focus(trap._previousFocusId);
+      } else {
+        this.focusFirst();
+      }
     }
   }
 

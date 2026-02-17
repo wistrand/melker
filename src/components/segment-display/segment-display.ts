@@ -263,9 +263,10 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
           const char = line[x];
           const charStyle = { ...cellStyle };
 
-          // Check if this is an "off" segment character
+          // Check if this is an "off" segment character (Unicode and ASCII variants)
           const customOffChar = this.props.style?.['offPixelChar'] as string | undefined;
           const isOffChar = char === '·' || char === '░' || char === '▯' || char === '─'
+            || char === '.' || char === '-'
             || (customOffChar && char === customOffChar);
           if (isOffChar) {
             charStyle.foreground = offColor as number;

@@ -27,6 +27,7 @@ import type {
 import { getParser, getGraphParser, getSequenceParser, getClassDiagramParser, detectParserType, type ParserType } from './parsers/mod.ts';
 import { calculateLayout } from './layout.ts';
 import type { Style } from '../../types.ts';
+import { isUnicodeSupported } from '../../utils/terminal-detection.ts';
 import { getLogger } from '../../logging.ts';
 
 const logger = getLogger('GraphToMelker');
@@ -794,7 +795,9 @@ export function classToMelker(content: string, options: { name?: string; contain
       // Header: annotation + name
       if (cls.annotation) {
         // Use guillemets to avoid XML parsing issues with < and >
-        const annotationText = `«${cls.annotation}»`;
+        const annotationText = isUnicodeSupported()
+          ? `«${cls.annotation}»`
+          : `<<${cls.annotation}>>`;
         lines.push(`${indent(3)}<text class="class-annotation">${annotationText}</text>`);
       }
       lines.push(`${indent(3)}<text class="class-name">${escapeXml(cls.label || cls.id)}</text>`);
@@ -920,9 +923,9 @@ function getRelationStyle(type: ClassRelationType): { lineStyle: 'thin' | 'dashe
     case 'inheritance':
       return { lineStyle: 'thin', labelPrefix: '' };
     case 'composition':
-      return { lineStyle: 'thin', labelPrefix: '◆' };
+      return { lineStyle: 'thin', labelPrefix: isUnicodeSupported() ? '◆' : '*' };
     case 'aggregation':
-      return { lineStyle: 'thin', labelPrefix: '◇' };
+      return { lineStyle: 'thin', labelPrefix: isUnicodeSupported() ? '◇' : 'o' };
     case 'association':
       return { lineStyle: 'thin', labelPrefix: '' };
     case 'dependency':

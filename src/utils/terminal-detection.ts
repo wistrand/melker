@@ -35,6 +35,23 @@ export function detectMultiplexer(): boolean {
 /**
  * Detect if running in a remote/SSH session
  */
+/**
+ * Detect if the terminal supports Unicode characters.
+ * Returns false for terminals known to lack Unicode support
+ * (Linux virtual console, VT100/VT220 hardware terminals).
+ * Result is cached — TERM never changes during a process lifetime.
+ */
+let _unicodeSupported: boolean | undefined;
+export function isUnicodeSupported(): boolean {
+  if (_unicodeSupported !== undefined) return _unicodeSupported;
+  const term = Env.get('TERM') || '';
+  _unicodeSupported = !(term === 'linux' || term === 'vt100' || term === 'vt220');
+  return _unicodeSupported;
+}
+
+/**
+ * Detect if running in a remote/SSH session
+ */
 export function detectRemoteSession(): boolean {
   const sshClient = Env.get('SSH_CLIENT');
   const sshConnection = Env.get('SSH_CONNECTION');

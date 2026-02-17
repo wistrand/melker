@@ -11,6 +11,7 @@ import {
   Element,
   BaseProps,
   BORDER_CHARS,
+  getBorderChars,
   type Bounds,
   type Renderable,
   type ComponentRenderContext,
@@ -80,7 +81,7 @@ export class SeparatorElement extends Element implements Renderable {
     const borderStyle = (propStyle.borderStyle || propStyle['border-style'] || 'thin') as BorderStyle;
     if (borderStyle === 'none') return;
 
-    const borderChars = BORDER_CHARS[borderStyle as Exclude<BorderStyle, 'none'>] || BORDER_CHARS.thin;
+    const borderChars = getBorderChars(borderStyle as Exclude<BorderStyle, 'none'>);
 
     // Get color from style
     const color = propStyle.color ? parseColor(propStyle.color) : style.foreground;

@@ -34,6 +34,12 @@ import {
   generateEqualIsolines,
   generateQuantileIsolines,
   generateNiceIsolines,
+  ISOLINE_HORZ,
+  ISOLINE_VERT,
+  isolineEntersLeft,
+  isolineExitsRight,
+  isolineConnectsTop,
+  isolineConnectsBottom,
 } from '../isoline.ts';
 
 const logger = getLogger('DataHeatmap');
@@ -853,20 +859,16 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
         const cellStyle = fgColor ? { ...style, foreground: fgColor } : style;
 
         // Determine horizontal connectivity
-        // Characters that enter from the left: ─ ╮ ╯
-        const hasHorizontalLeft = seg.char === '─' || seg.char === '╮' || seg.char === '╯';
-        // Characters that exit to the right: ─ ╭ ╰
-        const hasHorizontalRight = seg.char === '─' || seg.char === '╭' || seg.char === '╰';
+        const hasHorizontalLeft = isolineEntersLeft(seg.char);
+        const hasHorizontalRight = isolineExitsRight(seg.char);
 
         // Determine vertical connectivity
-        // Characters with top connection (coming from above): │ ╰ ╯
-        const hasVerticalTop = seg.char === '│' || seg.char === '╰' || seg.char === '╯';
-        // Characters with bottom connection (going below): │ ╮ ╭
-        const hasVerticalBottom = seg.char === '│' || seg.char === '╮' || seg.char === '╭';
+        const hasVerticalTop = isolineConnectsTop(seg.char);
+        const hasVerticalBottom = isolineConnectsBottom(seg.char);
 
         // Fill left part of cell (from x to midX-1)
         for (let cx = 0; cx < midX - x; cx++) {
-          const char = (hasHorizontalLeft || prevHasHorizontalRight) ? '─' : ' ';
+          const char = (hasHorizontalLeft || prevHasHorizontalRight) ? ISOLINE_HORZ : ' ';
           buffer.currentBuffer.setCell(x + cx, y, { char, ...cellStyle });
         }
 
@@ -875,14 +877,14 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
 
         // Fill right part of cell (from midX+1 to x+cellWidth-1)
         for (let cx = midX + 1; cx < x + cellWidth; cx++) {
-          const char = hasHorizontalRight ? '─' : ' ';
+          const char = hasHorizontalRight ? ISOLINE_HORZ : ' ';
           buffer.currentBuffer.setCell(cx, y, { char, ...cellStyle });
         }
 
         // Render horizontal continuation in the gap between cells
         if (colGap > 0 && hasHorizontalRight && col < numCols - 1) {
           for (let gx = 0; gx < colGap; gx++) {
-            buffer.currentBuffer.setCell(x + cellWidth + gx, y, { char: '─', ...cellStyle });
+            buffer.currentBuffer.setCell(x + cellWidth + gx, y, { char: ISOLINE_HORZ, ...cellStyle });
           }
         }
 
@@ -891,13 +893,13 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
           // Extend upward through the data row above (y - cellHeight to y - 1)
           if (hasVerticalTop) {
             for (let cy = 1; cy <= cellHeight; cy++) {
-              buffer.currentBuffer.setCell(midX, y - cy, { char: '│', ...cellStyle });
+              buffer.currentBuffer.setCell(midX, y - cy, { char: ISOLINE_VERT, ...cellStyle });
             }
           }
           // Extend downward through the data row below (y + 1 to y + cellHeight)
           if (hasVerticalBottom) {
             for (let cy = 1; cy <= cellHeight; cy++) {
-              buffer.currentBuffer.setCell(midX, y + cy, { char: '│', ...cellStyle });
+              buffer.currentBuffer.setCell(midX, y + cy, { char: ISOLINE_VERT, ...cellStyle });
             }
           }
         }
@@ -918,7 +920,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
         if (prevHasHorizontalRight) {
           // Check if next cell has an isoline that enters from the left
           const nextSeg = isolineChars.get(col + 1);
-          const nextHasHorizontalLeft = nextSeg && (nextSeg.char === '─' || nextSeg.char === '╮' || nextSeg.char === '╯');
+          const nextHasHorizontalLeft = nextSeg && isolineEntersLeft(nextSeg.char);
 
           // When cells are invisible, extend horizontal lines all the way through
           // When cells are visible, stop at the center
@@ -928,12 +930,12 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
           if (extendThroughCell) {
             // Extend line through the full cell width
             for (let cx = 0; cx < cellWidth; cx++) {
-              buffer.currentBuffer.setCell(x + cx, y, { char: '─', ...prevCellStyle });
+              buffer.currentBuffer.setCell(x + cx, y, { char: ISOLINE_HORZ, ...prevCellStyle });
             }
             // Continue through gap if present
             if (colGap > 0) {
               for (let gx = 0; gx < colGap; gx++) {
-                buffer.currentBuffer.setCell(x + cellWidth + gx, y, { char: '─', ...prevCellStyle });
+                buffer.currentBuffer.setCell(x + cellWidth + gx, y, { char: ISOLINE_HORZ, ...prevCellStyle });
               }
             }
             // Keep tracking horizontal continuation
@@ -941,7 +943,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
           } else {
             // Stop at the middle of this cell
             for (let cx = 0; cx <= midX - x; cx++) {
-              buffer.currentBuffer.setCell(x + cx, y, { char: '─', ...prevCellStyle });
+              buffer.currentBuffer.setCell(x + cx, y, { char: ISOLINE_HORZ, ...prevCellStyle });
             }
             for (let cx = midX - x + 1; cx < cellWidth; cx++) {
               buffer.currentBuffer.setCell(x + cx, y, { char: ' ', ...style });

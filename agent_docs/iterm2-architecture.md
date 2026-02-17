@@ -148,7 +148,7 @@ In `hires` mode, graphics protocols are tried in order:
 | `src/iterm2/types.ts`  | Type definitions     |
 | `src/iterm2/detect.ts`             | Capability detection                  |
 | `src/iterm2/encoder.ts`            | PNG/iTerm2 encoder                    |
-| `src/utils/terminal-detection.ts`  | Shared multiplexer/remote detection   |
+| `src/utils/terminal-detection.ts`  | Shared multiplexer/remote/Unicode detection |
 | `src/utils/pixel-utils.ts`         | Shared pixel encoding (Uint32→bytes)  |
 
 ## See Also

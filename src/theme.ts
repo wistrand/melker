@@ -232,7 +232,7 @@ function detectColorSupport(): ThemeType {
     return 'color';
   }
 
-  // Basic color support (xterm, linux, etc.)
+  // Basic color support (xterm, etc.)
   if (term.includes('color') || term.includes('xterm') || term.includes('screen') || term.includes('tmux')) {
     return 'gray';
   }

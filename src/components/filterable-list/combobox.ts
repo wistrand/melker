@@ -11,6 +11,7 @@ import {
   IntrinsicSizeContext,
   type Overlay,
   BORDER_CHARS,
+  getBorderChars,
 } from '../../types.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../../buffer.ts';
 import type { KeyPressEvent } from '../../events.ts';
@@ -544,7 +545,7 @@ export class ComboboxElement extends FilterableListCore implements Renderable, F
   }
 
   protected _drawDropdownBorder(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer): void {
-    const chars = BORDER_CHARS.thin;
+    const chars = getBorderChars('thin');
     const borderStyle: Partial<Cell> = {
       ...style,
       foreground: getThemeColor('border'),

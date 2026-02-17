@@ -8,6 +8,7 @@
 
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Bounds } from '../types.ts';
+import { isUnicodeSupported } from '../utils/terminal-detection.ts';
 
 /** Point in 2D space */
 export interface Point {
@@ -86,6 +87,19 @@ export const LINE_CHARS = {
     r: '┤',
     x: '┼',
   },
+  ascii: {
+    h: '-',
+    v: '|',
+    tl: '+',
+    tr: '+',
+    bl: '+',
+    br: '+',
+    t: '+',
+    b: '+',
+    l: '+',
+    r: '+',
+    x: '+',
+  },
 };
 
 /** Arrow characters */
@@ -102,6 +116,22 @@ export const ARROW_CHARS = {
 };
 
 export type LineStyle = keyof typeof LINE_CHARS;
+
+const UNICODE_LINE_STYLES: ReadonlySet<string> = new Set(['thin', 'thick', 'double', 'dashed']);
+
+/** Resolve line style, falling back to 'ascii' on non-unicode terminals */
+function resolveLineStyle(style: LineStyle): LineStyle {
+  if (!isUnicodeSupported() && UNICODE_LINE_STYLES.has(style)) return 'ascii';
+  return style;
+}
+
+/** Resolve arrow chars, using simple ASCII on non-unicode terminals */
+function resolveArrow(dir: 'right' | 'left' | 'up' | 'down'): string {
+  if (!isUnicodeSupported()) {
+    return ARROW_CHARS[`${dir}Simple` as keyof typeof ARROW_CHARS];
+  }
+  return ARROW_CHARS[dir];
+}
 
 /**
  * Get the connection point on a bounds for a given side
@@ -696,7 +726,8 @@ const BOX_DRAWING_CHARS = new Set([
   '─', '━', '│', '┃', '┌', '┐', '└', '┘', '├', '┤', '┬', '┴', '┼',
   '┏', '┓', '┗', '┛', '┣', '┫', '┳', '┻', '╋',
   '╔', '╗', '╚', '╝', '╠', '╣', '╦', '╩', '╬',
-  '═', '║', '╌', '╎', ' ', ''
+  '═', '║', '╌', '╎', ' ', '',
+  '-', '|', '+',  // ASCII border equivalents
 ]);
 
 function canDrawAt(buffer: DualBuffer, x: number, y: number): boolean {
@@ -758,7 +789,7 @@ export function drawOrthogonalPath(
 ): void {
   if (points.length < 2) return;
 
-  const chars = LINE_CHARS[lineStyle];
+  const chars = LINE_CHARS[resolveLineStyle(lineStyle)];
 
   for (let i = 0; i < points.length - 1; i++) {
     const p1 = points[i];
@@ -794,12 +825,12 @@ export function drawOrthogonalPath(
 
         // Arrow at start
         if (arrowStart && i === 0 && x === p1.x) {
-          char = dx > 0 ? ARROW_CHARS.left : ARROW_CHARS.right;
+          char = dx > 0 ? resolveArrow('left') : resolveArrow('right');
         }
 
         // Arrow at end
         if (arrowEnd && i === points.length - 2 && x === p2.x) {
-          char = dx > 0 ? ARROW_CHARS.right : ARROW_CHARS.left;
+          char = dx > 0 ? resolveArrow('right') : resolveArrow('left');
         }
 
         safeSetCell(buffer, x, p1.y, { char, ...style });
@@ -831,12 +862,12 @@ export function drawOrthogonalPath(
 
         // Arrow at start
         if (arrowStart && i === 0 && y === p1.y) {
-          char = dy > 0 ? ARROW_CHARS.up : ARROW_CHARS.down;
+          char = dy > 0 ? resolveArrow('up') : resolveArrow('down');
         }
 
         // Arrow at end
         if (arrowEnd && i === points.length - 2 && y === p2.y) {
-          char = dy > 0 ? ARROW_CHARS.down : ARROW_CHARS.up;
+          char = dy > 0 ? resolveArrow('down') : resolveArrow('up');
         }
 
         safeSetCell(buffer, p1.x, y, { char, ...style });
@@ -857,7 +888,7 @@ export function drawDirectLine(
   arrowStart: boolean = false,
   arrowEnd: boolean = false
 ): void {
-  const chars = LINE_CHARS[lineStyle];
+  const chars = LINE_CHARS[resolveLineStyle(lineStyle)];
   const dx = to.x - from.x;
   const dy = to.y - from.y;
 
@@ -878,9 +909,9 @@ export function drawDirectLine(
       let char = chars.h;
 
       if (arrowStart && x === from.x) {
-        char = dir > 0 ? ARROW_CHARS.left : ARROW_CHARS.right;
+        char = dir > 0 ? resolveArrow('left') : resolveArrow('right');
       } else if (arrowEnd && x === to.x) {
-        char = dir > 0 ? ARROW_CHARS.right : ARROW_CHARS.left;
+        char = dir > 0 ? resolveArrow('right') : resolveArrow('left');
       }
 
       safeSetCell(buffer, x, from.y, { char, ...style });
@@ -895,9 +926,9 @@ export function drawDirectLine(
       let char = chars.v;
 
       if (arrowStart && y === from.y) {
-        char = dir > 0 ? ARROW_CHARS.up : ARROW_CHARS.down;
+        char = dir > 0 ? resolveArrow('up') : resolveArrow('down');
       } else if (arrowEnd && y === to.y) {
-        char = dir > 0 ? ARROW_CHARS.down : ARROW_CHARS.up;
+        char = dir > 0 ? resolveArrow('down') : resolveArrow('up');
       }
 
       safeSetCell(buffer, from.x, y, { char, ...style });

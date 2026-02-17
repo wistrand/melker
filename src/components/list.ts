@@ -1,6 +1,7 @@
 // List component - scrollable list with selection capabilities
 // Children must be 'li' elements which can contain any other components
 import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { isUnicodeSupported } from '../utils/terminal-detection.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { type KeyPressEvent, type SelectionChangeEvent, createSelectionChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
@@ -204,8 +205,8 @@ export class ListElement extends Element implements Renderable, Focusable {
       scrollTop,
       totalItems,
       visibleItems,
-      thumbChar: '█',
-      trackChar: '│',
+      thumbChar: isUnicodeSupported() ? '█' : '#',
+      trackChar: isUnicodeSupported() ? '│' : '|',
       thumbStyle: { foreground: getThemeColor('primary'), background: getThemeColor('surface') },
       trackStyle: { foreground: getThemeColor('border'), background: getThemeColor('surface') },
     });

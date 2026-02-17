@@ -180,22 +180,25 @@ MELKER_GFX_MODE=hires     # Best available: kitty → sixel → sextant
 
 **Fallback chain:**
 
-| Mode    | Fallback                |
-|---------|-------------------------|
-| `sixel` | sextant                 |
-| `kitty` | sextant                 |
-| `hires` | kitty -> sixel -> sextant |
+| Mode      | Unicode terminal             | Non-Unicode terminal (`TERM=linux`) |
+|-----------|------------------------------|-------------------------------------|
+| `sixel`   | sextant                      | luma                                |
+| `kitty`   | sextant                      | luma                                |
+| `iterm2`  | sextant                      | luma                                |
+| `hires`   | kitty → sixel → iterm2 → sextant | kitty → sixel → iterm2 → luma  |
+| `sextant` | sextant                      | luma                                |
 
 Mode resolution happens in `getEffectiveGfxMode()` in `canvas-render.ts`.
 
 ## Auto-Disable Conditions
 
-Graphics modes are automatically disabled in certain environments:
+Graphics modes are automatically disabled or degraded in certain environments:
 
-| Condition    | Detection                        | Disabled           |
-|--------------|----------------------------------|--------------------|
-| tmux/screen  | `$TMUX`, `$STY`                  | sixel, kitty       |
-| SSH (remote) | `$SSH_CLIENT`, `$SSH_CONNECTION` | sixel (bandwidth)  |
+| Condition       | Detection                        | Effect                                      |
+|-----------------|----------------------------------|---------------------------------------------|
+| tmux/screen     | `$TMUX`, `$STY`                  | sixel, kitty disabled                       |
+| SSH (remote)    | `$SSH_CLIENT`, `$SSH_CONNECTION` | sixel disabled (bandwidth)                  |
+| Non-Unicode TTY | `$TERM=linux/vt100/vt220`        | sextant → luma, Unicode borders → ASCII     |
 
 ## Pixel Aspect Ratio
 
@@ -238,7 +241,7 @@ Canvas maintains two pixel buffers that are composited during rendering:
 | `src/kitty/`                         | Kitty detection, encoding                  |
 | `src/iterm2/`                        | iTerm2 detection, encoding                 |
 | `src/graphics-overlay-manager.ts`    | Sixel/Kitty/iTerm2 overlay output, cleanup |
-| `src/utils/terminal-detection.ts`    | Shared multiplexer/remote session detection |
+| `src/utils/terminal-detection.ts`    | Shared multiplexer/remote session/Unicode detection |
 | `src/utils/pixel-utils.ts`           | Shared pixel encoding (Uint32 to RGB/RGBA) |
 | `src/engine.ts`                      | Render orchestration, delegates to manager |
 | `src/input.ts`                       | Detection response routing                 |

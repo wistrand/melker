@@ -4,6 +4,7 @@
 import './globals.d.ts';
 
 import type { KeyPressEvent, ChangeEvent } from './events.ts';
+import { isUnicodeSupported } from './utils/terminal-detection.ts';
 
 // Re-export event types for component use
 export type { KeyPressEvent, ChangeEvent };
@@ -69,6 +70,19 @@ export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {
   block:          { h: ' ', v: ' ', tl: ' ', tr: ' ', bl: ' ', br: ' ', tm: ' ', bm: ' ', lm: ' ', rm: ' ', mm: ' ' },
   dotted:         { h: '·', v: '·', tl: '·', tr: '·', bl: '·', br: '·', tm: '·', bm: '·', lm: '·', rm: '·', mm: '·' },
 };
+
+const UNICODE_BORDER_STYLES: ReadonlySet<string> = new Set([
+  'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'dotted',
+]);
+
+/**
+ * Get border characters for a style, automatically falling back to 'ascii'
+ * on terminals that lack Unicode support (e.g. TERM=linux).
+ */
+export function getBorderChars(style: Exclude<BorderStyle, 'none'>): BorderChars {
+  const effective = (!isUnicodeSupported() && UNICODE_BORDER_STYLES.has(style)) ? 'ascii' : style;
+  return BORDER_CHARS[effective] || BORDER_CHARS.thin;
+}
 
 // Percentage string type for width/height (e.g., "50%", "100%")
 export type PercentageString = `${number}%`;

@@ -173,6 +173,19 @@ melker --allow-ai app.melker                   # Enable AI shortcut
 melker --reload http://example.com/app.melker
 ```
 
+## Terminal Compatibility
+
+Melker works on any ANSI-compatible terminal. Features degrade gracefully:
+
+| Terminal                          | Graphics         | Borders    | Colors    |
+|-----------------------------------|------------------|------------|-----------|
+| Modern (Kitty, WezTerm, iTerm2)   | True pixel       | Unicode    | Truecolor |
+| Standard (xterm, gnome-terminal)  | Sextant (2x3)   | Unicode    | 256       |
+| Linux console (`TERM=linux`, tty) | ASCII (luma)     | ASCII      | B&W       |
+| Legacy (`vt100`, `vt220`)         | ASCII (luma)     | ASCII      | B&W       |
+
+Non-Unicode terminals are detected automatically via `$TERM`. All Unicode box-drawing characters, borders, scrollbars, and sextant graphics fall back to ASCII equivalents.
+
 ## Debugging
 
 - **--watch** – Auto-reload on file changes (recommended for development)

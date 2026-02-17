@@ -5,6 +5,7 @@ import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { createChangeEvent } from '../events.ts';
 import { getCurrentTheme } from '../theme.ts';
+import { isUnicodeSupported } from '../utils/terminal-detection.ts';
 import { COLORS } from './color-utils.ts';
 import { getStringWidth } from '../char-width.ts';
 import { parseDimension } from '../utils/dimensions.ts';
@@ -195,16 +196,18 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
 
     // Get theme for character selection
     const theme = getCurrentTheme();
-    const isBW = theme.type === 'bw';
+    const isBW = theme.type === 'bw' || !isUnicodeSupported();
 
     // Character set based on theme
     const chars = isBW ? {
       trackEmpty: '-',
+      trackEmptyV: '|',
       trackFilled: '#',
       thumb: 'O',
       thumbFocused: '(O)',
     } : {
       trackEmpty: '─',
+      trackEmptyV: '│',
       trackFilled: '▓',
       thumb: '●',
       thumbFocused: '◉',
@@ -221,7 +224,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     bounds: Bounds,
     style: Partial<Cell>,
     buffer: DualBuffer,
-    chars: { trackEmpty: string; trackFilled: string; thumb: string; thumbFocused: string },
+    chars: { trackEmpty: string; trackEmptyV: string; trackFilled: string; thumb: string; thumbFocused: string },
     isFocused: boolean,
     isDisabled: boolean,
     showValue?: boolean
@@ -285,7 +288,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
     bounds: Bounds,
     style: Partial<Cell>,
     buffer: DualBuffer,
-    chars: { trackEmpty: string; trackFilled: string; thumb: string; thumbFocused: string },
+    chars: { trackEmpty: string; trackEmptyV: string; trackFilled: string; thumb: string; thumbFocused: string },
     isFocused: boolean,
     isDisabled: boolean
   ): void {
@@ -314,7 +317,7 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
         char = chars.trackFilled;
       } else {
         // Above thumb = empty
-        char = '│';  // Use vertical bar for empty track
+        char = chars.trackEmptyV;  // Use vertical bar for empty track
       }
       buffer.currentBuffer.setText(bounds.x, bounds.y + i, char, cellStyle);
     }

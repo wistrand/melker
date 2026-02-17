@@ -10,6 +10,7 @@ import {
   IntrinsicSizeContext,
   type Overlay,
   BORDER_CHARS,
+  getBorderChars,
 } from '../../types.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../../buffer.ts';
 import type { KeyPressEvent } from '../../events.ts';
@@ -352,7 +353,7 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     this._renderInput(bounds.x + 1, inputY, bounds.width - 2, paletteStyle, buffer);
 
     // Draw separator with T-junctions
-    const chars = BORDER_CHARS.thin;
+    const chars = getBorderChars('thin');
     const separatorY = bounds.y + 2;
     buffer.currentBuffer.setCell(bounds.x, separatorY, {
       char: chars.lm,
@@ -395,7 +396,7 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
   }
 
   private _drawFrame(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer): void {
-    const chars = BORDER_CHARS.thin;
+    const chars = getBorderChars('thin');
     const borderColor = getThemeColor('border');
     const borderStyle: Partial<Cell> = {
       foreground: borderColor,

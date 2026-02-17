@@ -18,6 +18,7 @@ import {
   Style,
   KeyboardElement,
   BORDER_CHARS,
+  getBorderChars,
   type BorderStyle,
 } from '../types.ts';
 import type { KeyPressEvent } from '../events.ts';
@@ -31,6 +32,7 @@ import { getLogger } from '../logging.ts';
 import { renderScrollbar } from './scrollbar.ts';
 import { parseColor } from './color-utils.ts';
 import { formatValue, truncateText, alignText, type CellValue, parseJsonProps, parseInlineJsonData, boundsContain, isBwMode } from './utils/component-utils.ts';
+import { isUnicodeSupported } from '../utils/terminal-detection.ts';
 import { ScrollManager } from './utils/scroll-manager.ts';
 
 const logger = getLogger('DataTree');
@@ -596,8 +598,8 @@ export class DataTreeElement extends Element
     const borderStyle = this.props.border || 'thin';
 
     // Compute border and connector chars once
-    const borderChars = BORDER_CHARS[borderStyle !== 'none' ? borderStyle : 'thin'];
-    const bw = isBwMode();
+    const borderChars = getBorderChars(borderStyle !== 'none' ? borderStyle : 'thin');
+    const bw = isBwMode() || !isUnicodeSupported();
     const connChars: ConnectorChars = {
       pipe: bw ? CONNECTOR_PIPE_BW : CONNECTOR_PIPE,
       tee: bw ? CONNECTOR_TEE_BW : CONNECTOR_TEE,

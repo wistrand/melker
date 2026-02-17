@@ -3,6 +3,7 @@
  */
 
 import type { DualBuffer, Cell } from '../buffer.ts';
+import { isUnicodeSupported } from '../utils/terminal-detection.ts';
 
 export interface ScrollbarOptions {
   // Calculation: provide scrollRatio OR (totalItems + visibleItems + scrollTop)
@@ -36,8 +37,9 @@ export function renderScrollbar(
 ): void {
   if (height <= 0) return;
 
-  const thumbChar = options.thumbChar ?? '█';
-  const trackChar = options.trackChar ?? '░';
+  const unicodeOk = isUnicodeSupported();
+  const thumbChar = options.thumbChar ?? (unicodeOk ? '█' : '#');
+  const trackChar = options.trackChar ?? (unicodeOk ? '░' : '.');
   const renderTrack = options.renderTrack ?? true;
 
   let thumbPos: number;

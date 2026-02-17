@@ -1,6 +1,6 @@
 // Table rendering helpers — standalone functions extracted from TableElement
 
-import { Element, Bounds, ComponentRenderContext, BorderChars, BORDER_CHARS, isRenderable } from '../types.ts';
+import { Element, Bounds, ComponentRenderContext, BorderChars, BORDER_CHARS, getBorderChars, isRenderable } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ViewportDualBuffer } from '../viewport-buffer.ts';
 import type { TableRowElement } from './table-row.ts';
@@ -387,7 +387,7 @@ export function renderContainerChildren(
   // Draw container's border-left if specified
   const borderLeft = container.props.style?.borderLeft;
   if (borderLeft && borderLeft !== 'none') {
-    const borderChars = BORDER_CHARS[borderLeft as keyof typeof BORDER_CHARS] || BORDER_CHARS['thin'];
+    const borderChars = getBorderChars(borderLeft as Exclude<import('../types.ts').BorderStyle, 'none'>);
     for (let i = 0; i < height; i++) {
       buffer.currentBuffer.setCell(x, y + i, { char: borderChars.v, ...style });
     }

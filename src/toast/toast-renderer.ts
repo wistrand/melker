@@ -2,20 +2,18 @@
 
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Bounds, Overlay } from '../types.ts';
+import { getBorderChars } from '../types.ts';
 import { getThemeColor } from '../theme.ts';
 import type { ToastEntry, ToastConfig, ToastType } from './types.ts';
 import { TOAST_ICONS } from './types.ts';
 import { getToastManager } from './toast-manager.ts';
 
-/** Border characters for toast container */
-const BORDER = {
-  topLeft: '╭',
-  topRight: '╮',
-  bottomLeft: '╰',
-  bottomRight: '╯',
-  horizontal: '─',
-  vertical: '│',
-};
+/** Border characters for toast container (rounded style, with ASCII fallback) */
+function getBorder() {
+  const c = getBorderChars('rounded');
+  return { topLeft: c.tl, topRight: c.tr, bottomLeft: c.bl, bottomRight: c.br, horizontal: c.h, vertical: c.v };
+}
+const BORDER = getBorder();
 
 /** Cached bounds for click handling */
 let _lastBounds: Bounds | null = null;

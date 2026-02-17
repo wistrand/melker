@@ -3,6 +3,7 @@
 
 import { type Cell } from '../buffer.ts';
 import { getThemeColor } from '../theme.ts';
+import { getBorderChars } from '../types.ts';
 import type { MarkdownRenderContext, Table, TableRow, ASTNode } from './markdown-types.ts';
 import { getSpacing } from './markdown-types.ts';
 
@@ -84,19 +85,20 @@ export function renderTable(
   totalHeight += spacing.before;
   localY += spacing.before;
 
-  // Box-drawing characters for table borders
+  // Box-drawing characters for table borders (with ASCII fallback)
+  const bc = getBorderChars('thin');
   const borderChars = {
-    topLeft: '\u250c',     // ┌
-    topRight: '\u2510',    // ┐
-    bottomLeft: '\u2514',  // └
-    bottomRight: '\u2518', // ┘
-    horizontal: '\u2500',  // ─
-    vertical: '\u2502',    // │
-    leftT: '\u251c',       // ├
-    rightT: '\u2524',      // ┤
-    topT: '\u252c',        // ┬
-    bottomT: '\u2534',     // ┴
-    cross: '\u253c',       // ┼
+    topLeft: bc.tl,
+    topRight: bc.tr,
+    bottomLeft: bc.bl,
+    bottomRight: bc.br,
+    horizontal: bc.h,
+    vertical: bc.v,
+    leftT: bc.lm,
+    rightT: bc.rm,
+    topT: bc.tm,
+    bottomT: bc.bm,
+    cross: bc.mm,
   };
 
   const borderStyle: Partial<Cell> = {

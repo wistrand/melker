@@ -1,7 +1,7 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
+import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, getBorderChars, type BorderStyle, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { clipBounds, clamp } from './geometry.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
@@ -23,6 +23,7 @@ import { getGlobalErrorHandler, renderErrorPlaceholder } from './error-boundary.
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { parseDimension } from './utils/dimensions.ts';
+import { isUnicodeSupported } from './utils/terminal-detection.ts';
 
 const renderLogger = getLogger('RenderEngine');
 const TABLE_TYPES = new Set(['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th']);
@@ -1241,10 +1242,11 @@ export class RenderingEngine {
 
     // Get border characters (use the first available border style for consistency)
     // In block mode, always use 'block' style (spaces)
+    // getBorderChars handles unicode fallback to 'ascii' automatically
     const activeStyle = useBlockBorders
-      ? 'block'
+      ? 'block' as Exclude<BorderStyle, 'none'>
       : ((borderTop || borderBottom || borderLeft || borderRight || 'thin') as Exclude<BorderStyle, 'none'>);
-    const chars = BORDER_CHARS[activeStyle] || BORDER_CHARS.thin;
+    const chars = getBorderChars(activeStyle);
 
     // Calculate line extents based on which borders are visible
     // If a border is visible, extend lines to that border position
@@ -1666,9 +1668,11 @@ export class RenderingEngine {
       ? (focusBorderColor ?? getThemeColor('scrollbarTrack') ?? COLORS.gray)
       : (getThemeColor('scrollbarTrack') ?? COLORS.gray);
 
+    const unicodeOk = isUnicodeSupported();
     for (let y = 0; y < scrollbarHeight; y++) {
-      const char = (y >= thumbPosition && y < thumbPosition + thumbSize) ? '█' : '░';
-      const color = (y >= thumbPosition && y < thumbPosition + thumbSize) ? thumbColor : trackColor;
+      const isThumb = y >= thumbPosition && y < thumbPosition + thumbSize;
+      const char = isThumb ? (unicodeOk ? '█' : '#') : (unicodeOk ? '░' : '.');
+      const color = isThumb ? thumbColor : trackColor;
       buffer.currentBuffer.setText(scrollbarX, bounds.y + y, char, {
         foreground: color,
         background: style.background
@@ -1720,9 +1724,11 @@ export class RenderingEngine {
       ? (focusBorderColor ?? getThemeColor('scrollbarTrack') ?? COLORS.gray)
       : (getThemeColor('scrollbarTrack') ?? COLORS.gray);
 
+    const unicodeOk = isUnicodeSupported();
     for (let x = 0; x < scrollbarWidth; x++) {
-      const char = (x >= thumbPosition && x < thumbPosition + thumbSize) ? '█' : '░';
-      const color = (x >= thumbPosition && x < thumbPosition + thumbSize) ? thumbColor : trackColor;
+      const isThumb = x >= thumbPosition && x < thumbPosition + thumbSize;
+      const char = isThumb ? (unicodeOk ? '█' : '#') : (unicodeOk ? '░' : '.');
+      const color = isThumb ? thumbColor : trackColor;
       buffer.currentBuffer.setText(bounds.x + x, scrollbarY, char, {
         foreground: color,
         background: style.background

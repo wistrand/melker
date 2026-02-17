@@ -221,12 +221,32 @@ Auto-select best available high-resolution graphics mode.
 1. `kitty` - if Kitty graphics protocol supported
 2. `sixel` - if sixel supported
 3. `iterm2` - if iTerm2 protocol supported
-4. `sextant` - universal fallback
+4. `sextant` - universal fallback (or `luma` on non-Unicode terminals)
 
 **How it works:**
 - Checks terminal capabilities at startup
 - Automatically selects the highest quality mode available
 - No manual configuration needed for cross-terminal compatibility
+
+## Non-Unicode Terminals (TERM=linux)
+
+The Linux virtual console (`TERM=linux`, tty1-tty6) and legacy terminals (`vt100`, `vt220`) lack Unicode support. Melker detects this automatically and applies the following fallbacks:
+
+| Feature          | Normal                         | TERM=linux                     |
+|------------------|--------------------------------|--------------------------------|
+| Graphics mode    | sextant (2x3 Unicode)          | luma (ASCII brightness ramp)   |
+| Border style     | thin/rounded/double (Unicode)  | ascii (`+`, `-`, `\|`)         |
+| Scrollbar chars  | `█` / `░`                      | `#` / `.`                      |
+| Tree connectors  | `├── `, `└── `, `│`            | `\|-- `, `` `-- ``, `\|`      |
+| Isoline chars    | `─ │ ╭ ╮ ╰ ╯`                 | `- \| + + + +`                 |
+| Segment display  | Box-drawing / geometric shapes | ASCII equivalents              |
+| Theme            | bw (no color)                  | bw (no color)                  |
+
+**Detection:** `isUnicodeSupported()` in `src/utils/terminal-detection.ts` checks the `TERM` environment variable. The result is cached for the process lifetime.
+
+**Fallback chain with non-Unicode:** `hires` → kitty → sixel → iterm2 → **luma** (not sextant). Explicitly requesting `sextant` also falls back to `luma`.
+
+**Border fallback:** `getBorderChars(style)` in `src/types.ts` automatically remaps Unicode border styles (`thin`, `thick`, `rounded`, `double`, `dashed`, `dotted`) to `ascii`. The `ascii`, `ascii-rounded`, and `block` styles are unchanged.
 
 ## Configuration
 
@@ -278,6 +298,7 @@ When `dither="auto"`, theme and dithering are determined from terminal capabilit
 | `COLORTERM=truecolor`    | fullcolor  | truecolor     | -           | none                | none           |
 | `TERM=*256color*`        | color      | 256           | 3           | sierra-stable       | blue-noise     |
 | `TERM=xterm/screen/tmux` | gray       | 16            | 1           | sierra-stable       | blue-noise     |
+| `TERM=linux/vt100/vt220` | bw         | none          | 1           | sierra-stable       | blue-noise     |
 | (fallback)               | bw         | none          | 1           | sierra-stable       | blue-noise     |
 
 Video uses blue-noise for less temporal flicker between frames.
@@ -299,7 +320,7 @@ Video uses blue-noise for less temporal flicker between frames.
 - `src/sixel/palette.ts` - Color quantization for sixel
 - `src/kitty/detect.ts` - Terminal kitty capability detection
 - `src/kitty/encoder.ts` - Kitty format encoder
-- `src/utils/terminal-detection.ts` - Shared multiplexer/remote session detection
+- `src/utils/terminal-detection.ts` - Shared multiplexer/remote session/Unicode detection
 - `src/utils/pixel-utils.ts` - Shared pixel encoding (Uint32 to RGB/RGBA bytes)
 - `src/engine.ts` - Sixel/Kitty overlay rendering in render pipeline
 
@@ -329,6 +350,8 @@ Video uses blue-noise for less temporal flicker between frames.
 *Konsole has a right-edge rendering quirk. Use mlterm for best sixel quality.
 
 †Rio terminal does not render sextant characters (U+1FB00-U+1FB3F). Use `iterm2` mode instead.
+
+‡On non-Unicode terminals (`TERM=linux`, `vt100`, `vt220`), sextant automatically falls back to luma, and all Unicode borders/chars fall back to ASCII equivalents.
 
 ## Demo
 

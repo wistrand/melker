@@ -2,7 +2,7 @@
 // Toggled with Ctrl+Shift+P, shows engine and layout statistics
 
 import { type DualBuffer, EMPTY_CHAR } from './buffer.ts';
-import { BORDER_CHARS, type Bounds } from './types.ts';
+import { BORDER_CHARS, getBorderChars, type Bounds } from './types.ts';
 import { getThemeColor } from './theme.ts';
 import { parseColor } from './components/color-utils.ts';
 import { getUIAnimationManager } from './ui-animation-manager.ts';
@@ -537,7 +537,7 @@ export class PerformanceDialog {
     const closeBtn = '[X]';
     const titleX = x + Math.floor((this._width - title.length) / 2);
     const closeX = x + this._width - 4; // Position for [X]
-    const borderChars = BORDER_CHARS.thin;
+    const borderChars = getBorderChars('thin');
     for (let i = 0; i < this._width; i++) {
       const px = x + i;
       if (px >= 0 && px < viewportWidth && y >= 0 && y < viewportHeight) {
@@ -624,7 +624,7 @@ export class PerformanceDialog {
     const vh = buffer.height;
 
     // Use predefined border characters
-    const chars = BORDER_CHARS.thin;
+    const chars = getBorderChars('thin');
 
     // Draw corners and edges
     for (let dy = 0; dy < h; dy++) {

@@ -4,6 +4,7 @@
 import type { SegmentMask } from './charsets.ts';
 import type { SegmentRenderer, SegmentHeight, SegmentRenderOptions, RenderedChar } from './types.ts';
 import { FONT_3x5, getFont5x7, type BitmapFont } from './bitmap-fonts.ts';
+import { isUnicodeSupported } from '../../utils/terminal-detection.ts';
 
 // Re-export types for convenience
 export type { SegmentRenderer, SegmentHeight, SegmentRenderOptions, RenderedChar } from './types.ts';
@@ -16,12 +17,12 @@ export class BoxDrawingRenderer implements SegmentRenderer {
   readonly name = 'box-drawing';
   readonly charWidth = 7; // 6 + 1 padding
   readonly charHeight: SegmentHeight;
-  readonly onChar = '━';
+  readonly onChar = isUnicodeSupported() ? '━' : '=';
   readonly offChar = '·';
 
-  readonly horzOn = '━';
+  readonly horzOn = isUnicodeSupported() ? '━' : '=';
   readonly horzOff = '·';
-  readonly vertOn = '┃';
+  readonly vertOn = isUnicodeSupported() ? '┃' : '|';
   readonly vertOff = '·';
 
   constructor(height: SegmentHeight = 5) {
@@ -74,28 +75,30 @@ export class BoxDrawingRenderer implements SegmentRenderer {
   }
 
   renderColon(options: SegmentRenderOptions): RenderedChar {
+    const c = isUnicodeSupported() ? '●' : 'o';
     if (this.charHeight === 7) {
       return {
         width: 2,
-        lines: ['  ', '  ', '● ', '  ', '● ', '  ', '  '],
+        lines: ['  ', '  ', `${c} `, '  ', `${c} `, '  ', '  '],
       };
     }
     return {
       width: 2,
-      lines: ['  ', '● ', '  ', '● ', '  '],
+      lines: ['  ', `${c} `, '  ', `${c} `, '  '],
     };
   }
 
   renderDot(options: SegmentRenderOptions): RenderedChar {
+    const c = isUnicodeSupported() ? '●' : 'o';
     if (this.charHeight === 7) {
       return {
         width: 2,
-        lines: ['  ', '  ', '  ', '  ', '  ', '  ', '● '],
+        lines: ['  ', '  ', '  ', '  ', '  ', '  ', `${c} `],
       };
     }
     return {
       width: 2,
-      lines: ['  ', '  ', '  ', '  ', '● '],
+      lines: ['  ', '  ', '  ', '  ', `${c} `],
     };
   }
 }
@@ -108,8 +111,8 @@ export class BlockRenderer implements SegmentRenderer {
   readonly name = 'block';
   readonly charWidth = 7; // 6 + 1 padding
   readonly charHeight: SegmentHeight;
-  readonly onChar = '█';
-  readonly offChar = '░';
+  readonly onChar = isUnicodeSupported() ? '█' : '#';
+  readonly offChar = isUnicodeSupported() ? '░' : '.';
 
   constructor(height: SegmentHeight = 5) {
     this.charHeight = height;
@@ -119,10 +122,11 @@ export class BlockRenderer implements SegmentRenderer {
     const [a, b, c, d, e, f, g] = segments;
     const { showOffSegments } = options;
 
-    const hOn = '█';
-    const hOff = showOffSegments ? '░' : ' ';
-    const vOn = '█';
-    const vOff = showOffSegments ? '░' : ' ';
+    const u = isUnicodeSupported();
+    const hOn = u ? '█' : '#';
+    const hOff = showOffSegments ? (u ? '░' : '.') : ' ';
+    const vOn = u ? '█' : '#';
+    const vOff = showOffSegments ? (u ? '░' : '.') : ' ';
 
     const topH = a ? hOn.repeat(4) : hOff.repeat(4);
     const midH = g ? hOn.repeat(4) : hOff.repeat(4);
@@ -160,28 +164,30 @@ export class BlockRenderer implements SegmentRenderer {
   }
 
   renderColon(options: SegmentRenderOptions): RenderedChar {
+    const c = this.onChar;
     if (this.charHeight === 7) {
       return {
         width: 2,
-        lines: ['  ', '  ', '█ ', '  ', '█ ', '  ', '  '],
+        lines: ['  ', '  ', `${c} `, '  ', `${c} `, '  ', '  '],
       };
     }
     return {
       width: 2,
-      lines: ['  ', '█ ', '  ', '█ ', '  '],
+      lines: ['  ', `${c} `, '  ', `${c} `, '  '],
     };
   }
 
   renderDot(options: SegmentRenderOptions): RenderedChar {
+    const c = this.onChar;
     if (this.charHeight === 7) {
       return {
         width: 2,
-        lines: ['  ', '  ', '  ', '  ', '  ', '  ', '█ '],
+        lines: ['  ', '  ', '  ', '  ', '  ', '  ', `${c} `],
       };
     }
     return {
       width: 2,
-      lines: ['  ', '  ', '  ', '  ', '█ '],
+      lines: ['  ', '  ', '  ', '  ', `${c} `],
     };
   }
 }
@@ -194,7 +200,7 @@ export class RoundedRenderer implements SegmentRenderer {
   readonly name = 'rounded';
   readonly charWidth = 7; // 6 + 1 padding
   readonly charHeight: SegmentHeight;
-  readonly onChar = '━';
+  readonly onChar = isUnicodeSupported() ? '━' : '=';
   readonly offChar = '·';
 
   constructor(height: SegmentHeight = 5) {
@@ -205,18 +211,19 @@ export class RoundedRenderer implements SegmentRenderer {
     const [a, b, c, d, e, f, g] = segments;
     const { showOffSegments } = options;
 
-    const hOn = '━';
+    const u = isUnicodeSupported();
+    const hOn = u ? '━' : '=';
     const hOff = showOffSegments ? '·' : ' ';
-    const vOn = '┃';
+    const vOn = u ? '┃' : '|';
     const vOff = showOffSegments ? '·' : ' ';
 
     // Corners
-    const tlOn = '╭';
-    const trOn = '╮';
-    const blOn = '╰';
-    const brOn = '╯';
-    const mlOn = '├';
-    const mrOn = '┤';
+    const tlOn = u ? '╭' : '+';
+    const trOn = u ? '╮' : '+';
+    const blOn = u ? '╰' : '+';
+    const brOn = u ? '╯' : '+';
+    const mlOn = u ? '├' : '+';
+    const mrOn = u ? '┤' : '+';
 
     const topL = f ? vOn : vOff;
     const topR = b ? vOn : vOff;
@@ -266,28 +273,30 @@ export class RoundedRenderer implements SegmentRenderer {
   }
 
   renderColon(options: SegmentRenderOptions): RenderedChar {
+    const c = isUnicodeSupported() ? '●' : 'o';
     if (this.charHeight === 7) {
       return {
         width: 2,
-        lines: ['  ', '  ', '● ', '  ', '● ', '  ', '  '],
+        lines: ['  ', '  ', `${c} `, '  ', `${c} `, '  ', '  '],
       };
     }
     return {
       width: 2,
-      lines: ['  ', '● ', '  ', '● ', '  '],
+      lines: ['  ', `${c} `, '  ', `${c} `, '  '],
     };
   }
 
   renderDot(options: SegmentRenderOptions): RenderedChar {
+    const c = isUnicodeSupported() ? '●' : 'o';
     if (this.charHeight === 7) {
       return {
         width: 2,
-        lines: ['  ', '  ', '  ', '  ', '  ', '  ', '● '],
+        lines: ['  ', '  ', '  ', '  ', '  ', '  ', `${c} `],
       };
     }
     return {
       width: 2,
-      lines: ['  ', '  ', '  ', '  ', '● '],
+      lines: ['  ', '  ', '  ', '  ', `${c} `],
     };
   }
 }
@@ -300,8 +309,8 @@ export class GeometricRenderer implements SegmentRenderer {
   readonly name = 'geometric';
   readonly charWidth = 7; // 6 + 1 padding
   readonly charHeight: SegmentHeight;
-  readonly onChar = '▬';
-  readonly offChar = '▯';
+  readonly onChar = isUnicodeSupported() ? '▬' : '=';
+  readonly offChar = isUnicodeSupported() ? '▯' : '.';
 
   constructor(height: SegmentHeight = 5) {
     this.charHeight = height;
@@ -311,12 +320,13 @@ export class GeometricRenderer implements SegmentRenderer {
     const [a, b, c, d, e, f, g] = segments;
     const { showOffSegments } = options;
 
-    // Horizontal: ▬ (on) or ▭ (off, but ▭ isn't great, use spaces or ─)
-    const hOn = '▬';
-    const hOff = showOffSegments ? '─' : ' ';
-    // Vertical: ▮ (on) or ▯ (off)
-    const vOn = '▮';
-    const vOff = showOffSegments ? '▯' : ' ';
+    const u = isUnicodeSupported();
+    // Horizontal: ▬ (on) or ─ (off dim)
+    const hOn = u ? '▬' : '=';
+    const hOff = showOffSegments ? (u ? '─' : '-') : ' ';
+    // Vertical: ▮ (on) or ▯ (off dim)
+    const vOn = u ? '▮' : '|';
+    const vOff = showOffSegments ? (u ? '▯' : '.') : ' ';
 
     const topH = a ? hOn.repeat(4) : hOff.repeat(4);
     const midH = g ? hOn.repeat(4) : hOff.repeat(4);
@@ -354,28 +364,30 @@ export class GeometricRenderer implements SegmentRenderer {
   }
 
   renderColon(options: SegmentRenderOptions): RenderedChar {
+    const c = isUnicodeSupported() ? '■' : '*';
     if (this.charHeight === 7) {
       return {
         width: 2,
-        lines: ['  ', '  ', '■ ', '  ', '■ ', '  ', '  '],
+        lines: ['  ', '  ', `${c} `, '  ', `${c} `, '  ', '  '],
       };
     }
     return {
       width: 2,
-      lines: ['  ', '■ ', '  ', '■ ', '  '],
+      lines: ['  ', `${c} `, '  ', `${c} `, '  '],
     };
   }
 
   renderDot(options: SegmentRenderOptions): RenderedChar {
+    const c = isUnicodeSupported() ? '■' : '*';
     if (this.charHeight === 7) {
       return {
         width: 2,
-        lines: ['  ', '  ', '  ', '  ', '  ', '  ', '■ '],
+        lines: ['  ', '  ', '  ', '  ', '  ', '  ', `${c} `],
       };
     }
     return {
       width: 2,
-      lines: ['  ', '  ', '  ', '  ', '■ '],
+      lines: ['  ', '  ', '  ', '  ', `${c} `],
     };
   }
 }
@@ -388,8 +400,8 @@ export class PixelRenderer implements SegmentRenderer {
   readonly name = 'pixel';
   readonly charHeight: SegmentHeight;
   charWidth: number;
-  readonly onChar = '█';
-  readonly offChar = '░';
+  readonly onChar = isUnicodeSupported() ? '█' : '#';
+  readonly offChar = isUnicodeSupported() ? '░' : '.';
   private _font: BitmapFont | null;
   private _fontPromise: Promise<BitmapFont> | null = null;
 

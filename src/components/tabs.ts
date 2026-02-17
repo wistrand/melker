@@ -1,6 +1,6 @@
 // Tabs component implementation - container for tab children
 
-import { Element, BaseProps, IntrinsicSizeContext, isRenderable, hasIntrinsicSize } from '../types.ts';
+import { Element, BaseProps, IntrinsicSizeContext, isRenderable, hasIntrinsicSize, getBorderChars } from '../types.ts';
 import { TabElement } from './tab.ts';
 import { createElement, registerComponent } from '../element.ts';
 import { getLogger } from '../logging.ts';
@@ -177,11 +177,12 @@ export class TabsElement extends Element {
         // Corner overrides:
         // - First inactive button to the RIGHT of active gets ╮ at TL
         // - Active button gets ╭ at TL when not first tab
+        const roundedChars = getBorderChars('rounded');
         let cornerTL: string | undefined;
         if (i === this._activeIndex + 1) {
-          cornerTL = '╮';
+          cornerTL = roundedChars.tr;  // ╮ or +
         } else if (isActive && this._activeIndex > 0) {
-          cornerTL = '╭';
+          cornerTL = roundedChars.tl;  // ╭ or +
         }
 
         button.props.style = {

@@ -1,6 +1,6 @@
 // Dialog component implementation
 
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext, getBorderChars } from '../types.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from '../buffer.ts';
 import { getThemeColor } from '../theme.ts';
 import { parseDimension } from '../utils/dimensions.ts';
@@ -405,37 +405,40 @@ export class DialogElement extends Element implements Renderable {
       foreground: style.foreground,
     };
 
+    const chars = getBorderChars('thin');
+    const thickChars = getBorderChars('thick');
+
     // Draw corners
-    buffer.currentBuffer.setCell(bounds.x, bounds.y, { ...borderStyle, char: '┌' });
-    buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y, { ...borderStyle, char: '┐' });
-    buffer.currentBuffer.setCell(bounds.x, bounds.y + bounds.height - 1, { ...borderStyle, char: '└' });
+    buffer.currentBuffer.setCell(bounds.x, bounds.y, { ...borderStyle, char: chars.tl });
+    buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y, { ...borderStyle, char: chars.tr });
+    buffer.currentBuffer.setCell(bounds.x, bounds.y + bounds.height - 1, { ...borderStyle, char: chars.bl });
 
     // Bottom-right corner: show resize indicator if resizable
     if (this.props.resizable) {
-      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { ...borderStyle, char: '┛' });
+      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { ...borderStyle, char: thickChars.br });
     } else {
-      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { ...borderStyle, char: '┘' });
+      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, bounds.y + bounds.height - 1, { ...borderStyle, char: chars.br });
     }
 
     // Draw horizontal borders
     for (let x = bounds.x + 1; x < bounds.x + bounds.width - 1; x++) {
-      buffer.currentBuffer.setCell(x, bounds.y, { ...borderStyle, char: '─' });
-      buffer.currentBuffer.setCell(x, bounds.y + bounds.height - 1, { ...borderStyle, char: '─' });
+      buffer.currentBuffer.setCell(x, bounds.y, { ...borderStyle, char: chars.h });
+      buffer.currentBuffer.setCell(x, bounds.y + bounds.height - 1, { ...borderStyle, char: chars.h });
     }
 
     // Draw vertical borders
     for (let y = bounds.y + 1; y < bounds.y + bounds.height - 1; y++) {
-      buffer.currentBuffer.setCell(bounds.x, y, { ...borderStyle, char: '│' });
-      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, y, { ...borderStyle, char: '│' });
+      buffer.currentBuffer.setCell(bounds.x, y, { ...borderStyle, char: chars.v });
+      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, y, { ...borderStyle, char: chars.v });
     }
 
     // Draw title separator if title exists
     if (this.props.title) {
       const separatorY = bounds.y + 2;
-      buffer.currentBuffer.setCell(bounds.x, separatorY, { ...borderStyle, char: '├' });
-      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, separatorY, { ...borderStyle, char: '┤' });
+      buffer.currentBuffer.setCell(bounds.x, separatorY, { ...borderStyle, char: chars.lm });
+      buffer.currentBuffer.setCell(bounds.x + bounds.width - 1, separatorY, { ...borderStyle, char: chars.rm });
       for (let x = bounds.x + 1; x < bounds.x + bounds.width - 1; x++) {
-        buffer.currentBuffer.setCell(x, separatorY, { ...borderStyle, char: '─' });
+        buffer.currentBuffer.setCell(x, separatorY, { ...borderStyle, char: chars.h });
       }
     }
   }

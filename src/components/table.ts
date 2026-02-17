@@ -1,6 +1,6 @@
 // Table component implementation
 
-import { Element, Bounds, Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, IntrinsicSizeContext, ComponentRenderContext, BORDER_CHARS, ClickEvent, isClickable } from '../types.ts';
+import { Element, Bounds, Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, IntrinsicSizeContext, ComponentRenderContext, BORDER_CHARS, getBorderChars, ClickEvent, isClickable } from '../types.ts';
 import type { KeyEvent } from '../events.ts';
 import type { Document } from '../document.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
@@ -713,7 +713,7 @@ export class TableElement extends Element implements Renderable, Focusable, Clic
     const borderStyle = this.props.border || 'thin';
     const hasBorder = borderStyle !== 'none';
     const showColumnBorders = this.props.columnBorders ?? true;
-    const chars = hasBorder ? BORDER_CHARS[borderStyle] : null;
+    const chars = hasBorder ? getBorderChars(borderStyle) : null;
     const cellPadding = this.props.cellPadding || 1;
 
     // Calculate column widths (use user-specified widths if provided)

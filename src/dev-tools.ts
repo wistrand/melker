@@ -4,6 +4,7 @@
 import { Document } from './document.ts';
 import { melker } from './template.ts';
 import { Element } from './types.ts';
+import { isUnicodeSupported } from './utils/terminal-detection.ts';
 import { FocusManager } from './focus.ts';
 import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy, type PolicyConfigProperty } from './policy/mod.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
@@ -770,7 +771,9 @@ export class DevToolsManager {
 
     // Add tree branch characters
     if (prefix !== '') {
-      result += isLast ? '└── ' : '├── ';
+      result += isLast
+        ? (isUnicodeSupported() ? '└── ' : '`-- ')
+        : (isUnicodeSupported() ? '├── ' : '|-- ');
     }
 
     // Format element node with alignment, marking subtree elements
@@ -788,7 +791,7 @@ export class DevToolsManager {
       : [];
 
     const allChildren = [...filteredChildren, ...subtreeElements];
-    const childPrefix = prefix + (isLast ? '    ' : '│   ');
+    const childPrefix = prefix + (isLast ? '    ' : (isUnicodeSupported() ? '│   ' : '|   '));
 
     allChildren.forEach((child, index) => {
       const isLastChild = index === allChildren.length - 1;

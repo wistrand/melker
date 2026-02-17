@@ -1,6 +1,6 @@
 // Dual-buffer system for efficient terminal rendering
 
-import { BORDER_CHARS, type PackedRGBA, type BorderStyle } from './types.ts';
+import { BORDER_CHARS, getBorderChars, type PackedRGBA, type BorderStyle } from './types.ts';
 import { getCharWidth, getStringWidth, analyzeString } from './char-width.ts';
 import { getThemeManager, colorToGray, colorToLowContrast } from './theme.ts';
 import { getLogger } from './logging.ts';
@@ -471,7 +471,7 @@ export class TerminalBuffer {
     style: Partial<Cell> = {},
     borderStyle: Exclude<BorderStyle, 'none'> = 'thin'
   ): void {
-    const chars = BORDER_CHARS[borderStyle] || BORDER_CHARS.thin;
+    const chars = getBorderChars(borderStyle);
 
     // For block style, use foreground as background (spaces need bg color to be visible)
     const cellStyle = borderStyle === 'block'

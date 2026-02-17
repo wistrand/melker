@@ -2,20 +2,18 @@
 
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Bounds } from '../types.ts';
+import { getBorderChars } from '../types.ts';
 import { getThemeColor } from '../theme.ts';
 import { getTooltipManager } from './tooltip-manager.ts';
 import { createElement } from '../element.ts';
 import { MarkdownElement } from '../components/markdown.ts';
 
-/** Border characters for tooltip */
-const BORDER = {
-  topLeft: '╭',
-  topRight: '╮',
-  bottomLeft: '╰',
-  bottomRight: '╯',
-  horizontal: '─',
-  vertical: '│',
-};
+/** Border characters for tooltip (rounded style, with ASCII fallback) */
+function getBorder() {
+  const c = getBorderChars('rounded');
+  return { topLeft: c.tl, topRight: c.tr, bottomLeft: c.bl, bottomRight: c.br, horizontal: c.h, vertical: c.v };
+}
+const BORDER = getBorder();
 
 // Cached markdown element for tooltip rendering
 let _cachedMarkdown: MarkdownElement | null = null;

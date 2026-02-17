@@ -5,6 +5,7 @@ import { traverseElements } from './element.ts';
 import { findElementById as findInTree } from './utils/tree-traversal.ts';
 import { selectorStringMatches, Stylesheet, applyStylesheet, type StyleContext } from './stylesheet.ts';
 import { getLogger } from './logging.ts';
+import { isUnicodeSupported } from './utils/terminal-detection.ts';
 
 const logger = getLogger('Document');
 
@@ -462,7 +463,9 @@ export class Document {
 
     // Add tree branch characters
     if (prefix !== '') {
-      result += isLast ? '└── ' : '├── ';
+      result += isLast
+        ? (isUnicodeSupported() ? '└── ' : '`-- ')
+        : (isUnicodeSupported() ? '├── ' : '|-- ');
     }
 
     // Add element info
@@ -471,7 +474,7 @@ export class Document {
 
     // Process children if they exist
     if (element.children && element.children.length > 0) {
-      const childPrefix = prefix + (isLast ? '    ' : '│   ');
+      const childPrefix = prefix + (isLast ? '    ' : (isUnicodeSupported() ? '│   ' : '|   '));
 
       element.children.forEach((child, index) => {
         const isLastChild = index === element.children!.length - 1;

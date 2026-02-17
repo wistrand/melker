@@ -1,6 +1,8 @@
 // Shared isoline (contour line) utilities using marching squares algorithm
 // Used by data-heatmap and canvas isolines gfx mode
 
+import { isUnicodeSupported } from './utils/terminal-detection.ts';
+
 export type IsolineMode = 'equal' | 'quantile' | 'nice';
 export type IsolineSource = 'luma' | 'red' | 'green' | 'blue' | 'alpha' | 'oklab' | 'oklch-hue';
 export type IsolineFill = 'source' | 'color' | 'color-mean';
@@ -16,7 +18,7 @@ export interface Isoline {
 // Corners: topLeft(8), topRight(4), bottomRight(2), bottomLeft(1)
 // The isoline crosses edges where adjacent corners have different threshold states
 // Box-drawing: ╭(↓→) ╮(↓←) ╰(↑→) ╯(↑←) ─(←→) │(↑↓)
-export const MARCHING_SQUARES_CHARS: Record<number, string | null> = {
+const MARCHING_SQUARES_UNICODE: Record<number, string | null> = {
   0b0000: null,  // All below - no line
   0b0001: '╮',   // BL above → crosses LEFT and BOTTOM edges
   0b0010: '╭',   // BR above → crosses RIGHT and BOTTOM edges
@@ -34,6 +36,61 @@ export const MARCHING_SQUARES_CHARS: Record<number, string | null> = {
   0b1110: '╮',   // Only BL below → crosses LEFT and BOTTOM edges
   0b1111: null,  // All above - no line
 };
+
+const MARCHING_SQUARES_ASCII: Record<number, string | null> = {
+  0b0000: null,
+  0b0001: '+',
+  0b0010: '+',
+  0b0011: '-',
+  0b0100: '+',
+  0b0101: '|',
+  0b0110: '|',
+  0b0111: '+',
+  0b1000: '+',
+  0b1001: '|',
+  0b1010: '|',
+  0b1011: '+',
+  0b1100: '-',
+  0b1101: '+',
+  0b1110: '+',
+  0b1111: null,
+};
+
+export const MARCHING_SQUARES_CHARS: Record<number, string | null> =
+  isUnicodeSupported() ? MARCHING_SQUARES_UNICODE : MARCHING_SQUARES_ASCII;
+
+/** Horizontal line char matching the active char set */
+export const ISOLINE_HORZ = isUnicodeSupported() ? '─' : '-';
+/** Vertical line char matching the active char set */
+export const ISOLINE_VERT = isUnicodeSupported() ? '│' : '|';
+
+// Connectivity sets for the active char set
+const _u = isUnicodeSupported();
+/** Characters that enter from the left: ─ ╮ ╯  (or ASCII equivalents) */
+const ENTERS_LEFT: ReadonlySet<string | null> = new Set(
+  _u ? ['─', '╮', '╯'] : ['-', '+']
+);
+/** Characters that exit to the right: ─ ╭ ╰  (or ASCII equivalents) */
+const EXITS_RIGHT: ReadonlySet<string | null> = new Set(
+  _u ? ['─', '╭', '╰'] : ['-', '+']
+);
+/** Characters with top connection: │ ╰ ╯  (or ASCII equivalents) */
+const CONNECTS_TOP: ReadonlySet<string | null> = new Set(
+  _u ? ['│', '╰', '╯'] : ['|', '+']
+);
+/** Characters with bottom connection: │ ╮ ╭  (or ASCII equivalents) */
+const CONNECTS_BOTTOM: ReadonlySet<string | null> = new Set(
+  _u ? ['│', '╮', '╭'] : ['|', '+']
+);
+
+/** Does this isoline char enter from the left? */
+export function isolineEntersLeft(char: string): boolean { return ENTERS_LEFT.has(char); }
+/** Does this isoline char exit to the right? */
+export function isolineExitsRight(char: string): boolean { return EXITS_RIGHT.has(char); }
+/** Does this isoline char connect upward? */
+export function isolineConnectsTop(char: string): boolean { return CONNECTS_TOP.has(char); }
+/** Does this isoline char connect downward? */
+export function isolineConnectsBottom(char: string): boolean { return CONNECTS_BOTTOM.has(char); }
 
 /**
  * Get the marching squares case for a 2x2 cell quad.

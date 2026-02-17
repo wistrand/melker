@@ -14,6 +14,7 @@ import {
   ComponentRenderContext,
   BorderStyle,
   BORDER_CHARS,
+  getBorderChars,
   ClickEvent,
 } from '../types.ts';
 import type { KeyPressEvent } from '../events.ts';
@@ -333,7 +334,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     const borderStyle = this.props.border || 'thin';
     if (borderStyle === 'none') return;
 
-    const chars = BORDER_CHARS[borderStyle];
+    const chars = getBorderChars(borderStyle);
     const { showColumnBorders } = this.props;
 
     // Determine corner/junction characters
@@ -419,7 +420,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   ): void {
     const { columns, showColumnBorders, sortColumn, sortDirection } = this.props;
     const borderStyle = this.props.border || 'thin';
-    const chars = BORDER_CHARS[borderStyle !== 'none' ? borderStyle : 'thin'];
+    const chars = getBorderChars(borderStyle !== 'none' ? borderStyle : 'thin');
 
     this._headerCellBounds = [];
 
@@ -485,7 +486,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   ): void {
     const { columns, rowHeight = 1, showColumnBorders } = this.props;
     const borderPropStyle = this.props.border || 'thin';
-    const chars = BORDER_CHARS[borderPropStyle !== 'none' ? borderPropStyle : 'thin'];
+    const chars = getBorderChars(borderPropStyle !== 'none' ? borderPropStyle : 'thin');
 
     // Use borderStyleOverride for borders (to avoid selection highlight on borders)
     const borderCellStyle = borderStyleOverride || style;
@@ -560,7 +561,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   ): void {
     const { columns, showColumnBorders } = this.props;
     const borderStyle = this.props.border || 'thin';
-    const chars = BORDER_CHARS[borderStyle !== 'none' ? borderStyle : 'thin'];
+    const chars = getBorderChars(borderStyle !== 'none' ? borderStyle : 'thin');
 
     // Draw left border
     buffer.currentBuffer.setCell(x, y, { char: chars.v, ...style });
@@ -755,7 +756,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
     // Draw vertical borders for empty space below data rows
     const borderPropStyle = this.props.border || 'thin';
-    const borderChars = BORDER_CHARS[borderPropStyle !== 'none' ? borderPropStyle : 'thin'];
+    const borderChars = getBorderChars(borderPropStyle !== 'none' ? borderPropStyle : 'thin');
     const rightBorderX = bounds.x + effectiveWidth - 1;
     for (let emptyY = virtualY; emptyY < bodyStartY + bodyHeight; emptyY++) {
       buffer.currentBuffer.setCell(bounds.x, emptyY, { char: borderChars.v, ...style });

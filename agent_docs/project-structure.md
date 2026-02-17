@@ -310,7 +310,7 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | File                      | Purpose                                         |
 |---------------------------|-------------------------------------------------|
 | `timing.ts`               | Debounce and throttle functions                 |
-| `terminal-detection.ts`   | Multiplexer and remote session detection        |
+| `terminal-detection.ts`   | Multiplexer, remote session, and Unicode detection |
 | `pixel-utils.ts`          | Pixel encoding (Uint32 to RGB/RGBA byte arrays) |
 
 ## Scripts Directory (`scripts/`)

@@ -1213,7 +1213,6 @@ function printUsage(): void {
   console.log('  --verbose      Show system info, verbose script transpilation');
   console.log('  --lint         Enable lint mode');
   console.log('  --schema       Output component schema documentation');
-  console.log('  --lsp          Start Language Server Protocol server');
   console.log('  --convert      Convert markdown to .melker format');
   console.log('  --no-load      Skip loading persisted state');
   console.log('  --cache        Use bundle cache');
@@ -1237,13 +1236,6 @@ async function main(): Promise<void> {
     const markdown = await generateSchemaMarkdown();
     console.log(markdown);
     Deno.exit(0);
-  }
-
-  // Handle --lsp
-  if (args.includes('--lsp')) {
-    const { startLspServer } = await import('./lsp.ts');
-    await startLspServer();
-    // Never returns
   }
 
   // Parse schema-driven CLI flags (--theme, --log-level, --lint, etc.)
@@ -1272,7 +1264,7 @@ async function main(): Promise<void> {
   const knownRunnerFlags = new Set([
     '--print-tree', '--print-json', '--verbose', '--no-load',
     '--cache', '--watch', '--convert',
-    '--help', '-h', '--schema', '--lsp',
+    '--help', '-h', '--schema',
     // Launcher-only flags that may still appear in forwarded args
     '--show-policy', '--trust',
   ]);

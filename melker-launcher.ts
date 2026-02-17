@@ -462,12 +462,12 @@ your terminal supports sextant mode. If any row appears scrambled, use:
     Deno.exit(status.code);
   }
 
-  // Handle --lsp option (delegates to runner)
+  // Handle --lsp option (runs LSP entry point directly, not via runner)
   if (args.includes('--lsp')) {
-    const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
-    const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
+    const lspUrl = new URL('./src/lsp.ts', import.meta.url);
+    const lspEntry = lspUrl.protocol === 'file:' ? lspUrl.pathname : lspUrl.href;
     const process = new Deno.Command(Deno.execPath(), {
-      args: ['run', '--allow-all', '--unstable-bundle', runnerEntry, '--lsp'],
+      args: ['run', '--allow-all', '--unstable-bundle', lspEntry],
       stdin: 'inherit',
       stdout: 'inherit',
       stderr: 'inherit',

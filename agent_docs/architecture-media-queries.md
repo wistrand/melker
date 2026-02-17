@@ -1,5 +1,11 @@
 # Media Queries Architecture
 
+## Summary
+
+- `@media (min-width: 80)` / `(max-height: 24)` — style rules that activate based on terminal size
+- Re-evaluated on terminal resize; units are character columns/rows
+- Supports `and`, comma-separated lists, and nesting with other CSS features
+
 CSS-like `@media` queries that respond to terminal dimensions, enabling responsive TUI layouts.
 
 ## Syntax

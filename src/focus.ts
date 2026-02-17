@@ -328,6 +328,85 @@ export class FocusManager {
   }
 
   /**
+   * Move focus to the nearest focusable element in a direction.
+   * Uses half-plane filter, row/column alignment preference,
+   * and weighted center-to-center distance. Respects arrow-nav: none.
+   */
+  focusInDirection(direction: 'up' | 'down' | 'left' | 'right'): boolean {
+    if (!this._focusedElementId) return false;
+
+    // Check if any ancestor has arrow-nav: none
+    if (this._isArrowNavDisabled(this._focusedElementId)) return false;
+
+    const current = this._getFocusableElement(this._focusedElementId);
+    if (!current) {
+      // Current element has no layout bounds (e.g., inactive tab) — focus first available
+      return this.focusFirst();
+    }
+
+    const isHorizontal = direction === 'left' || direction === 'right';
+
+    // Edge-to-edge distance: nearest edges between two rectangles per axis.
+    // Returns 0 when ranges overlap (e.g., same-row elements have edgeDy = 0).
+    const edgeDist = (aMin: number, aMax: number, bMin: number, bMax: number): number => {
+      if (aMax <= bMin) return bMin - aMax;  // a is fully before b
+      if (bMax <= aMin) return aMin - bMax;  // b is fully before a
+      return 0;                               // ranges overlap
+    };
+
+    // Collect candidates
+    interface Candidate { id: string; score: number; aligned: boolean; }
+    const candidates: Candidate[] = [];
+
+    const tabOrder = this._getAccessibleTabOrder();
+    for (const id of tabOrder) {
+      if (id === this._focusedElementId) continue;
+      const el = this._getFocusableElement(id);
+      if (!el || el.disabled || !el.visible) continue;
+
+      // Half-plane filter using center-to-center direction
+      const dx = (el.x + el.width / 2) - (current.x + current.width / 2);
+      const dy = (el.y + el.height / 2) - (current.y + current.height / 2);
+      if (direction === 'right' && dx <= 0) continue;
+      if (direction === 'left' && dx >= 0) continue;
+      if (direction === 'down' && dy <= 0) continue;
+      if (direction === 'up' && dy >= 0) continue;
+
+      // Edge-to-edge distances
+      const edgeDx = edgeDist(current.x, current.x + current.width, el.x, el.x + el.width);
+      const edgeDy = edgeDist(current.y, current.y + current.height, el.y, el.y + el.height);
+
+      // Cross-axis alignment: ranges overlap on the cross axis
+      const aligned = isHorizontal ? edgeDy === 0 : edgeDx === 0;
+
+      // Weighted distance using edge distances
+      const score = isHorizontal
+        ? edgeDx + 3 * edgeDy
+        : 3 * edgeDx + edgeDy;
+
+      candidates.push({ id, score, aligned });
+    }
+
+    if (candidates.length === 0) return false;
+
+    // Prefer aligned candidates (same row for horizontal, same column for vertical)
+    const hasAligned = candidates.some(c => c.aligned);
+    const pool = hasAligned ? candidates.filter(c => c.aligned) : candidates;
+
+    let bestId: string | null = null;
+    let bestScore = Infinity;
+    for (const c of pool) {
+      if (c.score < bestScore) {
+        bestScore = c.score;
+        bestId = c.id;
+      }
+    }
+
+    if (bestId) return this.focus(bestId);
+    return false;
+  }
+
+  /**
    * Set up focus trapping within a container (e.g., for modals)
    */
   trapFocus(options: FocusTrappingOptions): void {
@@ -510,6 +589,26 @@ export class FocusManager {
       activeFocusTraps: this._focusTraps.length,
       tabOrderLength: this._tabOrder.length,
     };
+  }
+
+  /**
+   * Check if geometric arrow-nav is disabled for an element by walking its ancestors.
+   * Returns true if any ancestor has arrowNav: 'none' in its style.
+   */
+  private _isArrowNavDisabled(elementId: string): boolean {
+    if (!this._document) return false;
+
+    const element = this._document.getElementById(elementId);
+    if (!element) return false;
+
+    // Walk up the tree checking for arrowNav: 'none'
+    let current = this._findParentElement(this._document.root, element.id);
+    while (current) {
+      if (current.props.style?.arrowNav === 'none') return true;
+      current = this._findParentElement(this._document.root, current.id);
+    }
+
+    return false;
   }
 
   /**

@@ -1,5 +1,11 @@
 # Isolines Graphics Mode Architecture
 
+## Summary
+
+- Renders scalar fields as contour lines using Unicode box-drawing characters (╭╮╰╯─│)
+- Marching squares algorithm in `src/isoline.ts`, shared by canvas and data-heatmap
+- Two modes: `isolines` (lines only) and `isolines-filled` (colored regions between contours)
+
 Contour line rendering for canvas using marching squares algorithm.
 
 ## Overview

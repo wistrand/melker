@@ -438,9 +438,9 @@ export class ScrollHandler {
         }
       }
     } catch (error) {
-      // Silently handle errors - scroll bounds calculation might fail
+      // Scroll bounds calculation can fail for elements not in current layout
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.warn('Failed to calculate scroll bounds', { error: errorMessage });
+      logger.trace('Failed to calculate scroll bounds', { error: errorMessage });
     }
 
     return false;
@@ -470,7 +470,7 @@ export class ScrollHandler {
    */
   findScrollableParent(element: Element): Element | null {
     // First check if the element itself is a scrollable container
-    if (isScrollableType(element.type) && isScrollingEnabled(element)) {
+    if (isScrollableType(element.type) && isScrollingEnabled(element) && this._hasLayoutBounds(element)) {
       return element;
     }
 
@@ -478,13 +478,21 @@ export class ScrollHandler {
     let current = this._findParent(element);
 
     while (current) {
-      if (isScrollableType(current.type) && isScrollingEnabled(current)) {
+      if (isScrollableType(current.type) && isScrollingEnabled(current) && this._hasLayoutBounds(current)) {
         return current;
       }
       current = this._findParent(current);
     }
 
     return null;
+  }
+
+  /**
+   * Check if an element has layout bounds (is part of the current layout).
+   * Elements in inactive tabs or collapsed sections may not have bounds.
+   */
+  private _hasLayoutBounds(element: Element): boolean {
+    return element.id ? !!this._renderer?.getContainerBounds(element) : false;
   }
 
   /**

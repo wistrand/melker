@@ -1,6 +1,6 @@
 // Container component implementation
 
-import { Element, BaseProps, Renderable, TextSelectable, IntrinsicSizeContext, Bounds, ComponentRenderContext, isRenderable, hasIntrinsicSize } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, TextSelectable, IntrinsicSizeContext, Bounds, ComponentRenderContext, isRenderable, hasIntrinsicSize, isScrollingEnabled } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 
 export interface ContainerProps extends BaseProps {
@@ -12,7 +12,7 @@ export interface ContainerProps extends BaseProps {
 // Type for container and container-like elements (used by scrolling system)
 export type ContainerLikeType = 'container' | 'thead' | 'tbody' | 'tfoot';
 
-export class ContainerElement extends Element implements Renderable, TextSelectable {
+export class ContainerElement extends Element implements Renderable, Focusable, TextSelectable {
   declare type: ContainerLikeType;
   declare props: ContainerProps;
 
@@ -46,6 +46,13 @@ export class ContainerElement extends Element implements Renderable, TextSelecta
   render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
     // Containers are typically rendered by the layout system, not directly
     // This method exists to satisfy the Renderable interface
+  }
+
+  /**
+   * Scrollable containers can receive keyboard focus for arrow-key scrolling.
+   */
+  canReceiveFocus(): boolean {
+    return isScrollingEnabled(this);
   }
 
   /**

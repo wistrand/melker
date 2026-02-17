@@ -109,6 +109,7 @@ export interface Style extends Record<string, any> {
   overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
   overflowX?: 'visible' | 'hidden' | 'scroll' | 'auto';
   overflowY?: 'visible' | 'hidden' | 'scroll' | 'auto';
+  arrowNav?: 'geometric' | 'none';
   width?: number | 'auto' | 'fill' | PercentageString;
   height?: number | 'auto' | 'fill' | PercentageString;
   minWidth?: number;
@@ -249,6 +250,7 @@ export interface LayoutProps {
   overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
   overflowX?: 'visible' | 'hidden' | 'scroll' | 'auto';
   overflowY?: 'visible' | 'hidden' | 'scroll' | 'auto';
+  arrowNav?: 'geometric' | 'none';
 
   // Basic positioning
   position?: 'static' | 'relative' | 'absolute' | 'fixed';

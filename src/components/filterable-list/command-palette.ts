@@ -70,6 +70,21 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
   /** Map of row Y position to option index */
   private _rowToOptionIndex: Map<number, number | null> = new Map();
 
+  // Drag state
+  private _isDragging = false;
+  private _dragStartX = 0;
+  private _dragStartY = 0;
+  private _dragStartOffsetX = 0;
+  private _dragStartOffsetY = 0;
+  private _dragOffsetX = 0;
+  private _dragOffsetY = 0;
+  /** Anchored top-left position set on first render after open (prevents re-centering) */
+  private _anchoredX: number | null = null;
+  private _anchoredY: number | null = null;
+  private _anchoredWidth: number | null = null;
+  /** Last calculated palette bounds (for title bar hit testing) */
+  private _lastPaletteBounds: Bounds | null = null;
+
   constructor(props: CommandPaletteProps = {}, children: Element[] = []) {
     const defaultProps: CommandPaletteProps = {
       title: 'Command Palette',
@@ -79,6 +94,76 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     };
 
     super('command-palette', defaultProps, children);
+  }
+
+  // ── Drag support ──────────────────────────────────────────────────────
+
+  /**
+   * Check if a point is on the title bar (top border row where title is rendered).
+   */
+  isOnTitleBar(x: number, y: number): boolean {
+    if (!this._lastPaletteBounds || !this.props.open) return false;
+    const b = this._lastPaletteBounds;
+    // Title is on the top border row (y === b.y), spanning between side borders
+    return y === b.y && x > b.x && x < b.x + b.width - 1;
+  }
+
+  /**
+   * Start dragging the palette.
+   */
+  startDrag(mouseX: number, mouseY: number): void {
+    this._isDragging = true;
+    this._dragStartX = mouseX;
+    this._dragStartY = mouseY;
+    this._dragStartOffsetX = this._dragOffsetX;
+    this._dragStartOffsetY = this._dragOffsetY;
+  }
+
+  /**
+   * Update drag position. Returns true if position changed.
+   */
+  updateDrag(mouseX: number, mouseY: number): boolean {
+    if (!this._isDragging || !this._viewport) return false;
+
+    const deltaX = mouseX - this._dragStartX;
+    const deltaY = mouseY - this._dragStartY;
+
+    let newOffsetX = this._dragStartOffsetX + deltaX;
+    let newOffsetY = this._dragStartOffsetY + deltaY;
+
+    // Constrain to viewport (keep title bar visible)
+    if (this._anchoredX !== null && this._anchoredY !== null && this._viewport) {
+      const vp = this._viewport;
+      const pw = this._lastPaletteBounds?.width || 60;
+
+      // Anchored position is the base; offset moves from there
+      // Keep at least 4 chars visible horizontally, title bar visible vertically
+      const minX = vp.x - this._anchoredX + 2;
+      const maxX = vp.x + vp.width - this._anchoredX - 4;
+      const minY = vp.y - this._anchoredY;
+      const maxY = vp.y + vp.height - this._anchoredY - 1;
+
+      newOffsetX = Math.max(minX, Math.min(maxX, newOffsetX));
+      newOffsetY = Math.max(minY, Math.min(maxY, newOffsetY));
+    }
+
+    this._dragOffsetX = newOffsetX;
+    this._dragOffsetY = newOffsetY;
+    return true;
+  }
+
+  /**
+   * End dragging.
+   */
+  endDrag(): void {
+    this._isDragging = false;
+  }
+
+  /**
+   * Check if currently dragging.
+   */
+  isDragging(): boolean {
+    return this._isDragging;
   }
 
   /**
@@ -175,10 +260,9 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
 
     // Register modal overlay
     if (context.registerOverlay) {
-      const paletteWidth = this.props.width || Math.min(60, Math.floor(viewport.width * 0.8));
+      const paletteWidth = this._anchoredWidth ?? (this.props.width || Math.min(60, Math.floor(viewport.width * 0.8)));
       const filtered = this.getFilteredOptions();
       const maxVisible = this.props.maxVisible || 10;
-      const visibleCount = Math.min(filtered.length, maxVisible);
 
       // Calculate height: title(1) + border(1) + input(1) + separator(1) + options + border(1)
       let optionRows = 0;
@@ -197,9 +281,16 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
       const contentHeight = Math.min(optionRows, maxVisible);
       const paletteHeight = 4 + contentHeight + 1; // title+border + input + separator + options + border
 
-      // Center the palette in the viewport
-      const paletteX = viewport.x + Math.floor((viewport.width - paletteWidth) / 2);
-      const paletteY = viewport.y + Math.max(2, Math.floor((viewport.height - paletteHeight) / 3)); // Slightly above center
+      // Anchor position on first render — subsequent renders reuse it so filtering
+      // and drag don't fight with auto-centering
+      if (this._anchoredX === null) {
+        this._anchoredX = viewport.x + Math.floor((viewport.width - paletteWidth) / 2);
+        this._anchoredY = viewport.y + Math.max(2, Math.floor((viewport.height - paletteHeight) / 3));
+        this._anchoredWidth = paletteWidth;
+      }
+
+      const paletteX = this._anchoredX + this._dragOffsetX;
+      const paletteY = this._anchoredY! + this._dragOffsetY;
 
       const paletteBounds: Bounds = {
         x: paletteX,
@@ -207,6 +298,9 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
         width: paletteWidth,
         height: paletteHeight,
       };
+
+      // Store for title bar hit testing
+      this._lastPaletteBounds = paletteBounds;
 
       const overlay: Overlay = {
         id: `${this.id}-modal`,
@@ -518,19 +612,32 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
     return true; // Consume click
   }
 
-  // Override to clear input on close
+  // Override to clear input on close and reset position state
   override close(): void {
     super.close();
     this._inputValue = '';
     this._cursorPosition = 0;
+    this._dragOffsetX = 0;
+    this._dragOffsetY = 0;
+    this._isDragging = false;
+    this._anchoredX = null;
+    this._anchoredY = null;
+    this._anchoredWidth = null;
+    this._lastPaletteBounds = null;
     this.invalidateFilterCache();
   }
 
-  // Override to reset filter on open
+  // Override to reset filter on open and reset position state
   override open(): void {
     super.open();
     this._inputValue = '';
     this._cursorPosition = 0;
+    this._dragOffsetX = 0;
+    this._dragOffsetY = 0;
+    this._anchoredX = null;
+    this._anchoredY = null;
+    this._anchoredWidth = null;
+    this._lastPaletteBounds = null;
     this.invalidateFilterCache();
   }
 

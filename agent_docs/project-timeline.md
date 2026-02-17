@@ -105,6 +105,8 @@ So constructed.
 
 **Feb 16** - Shell completions (Bash/Zsh), WebP image support, animated GIF playback
 
+**Feb 17** - Geometric focus navigation, command palette component discovery + draggable title bar, palette shortcuts
+
 ## Components
 
 | Component       | Added  | Description                           |

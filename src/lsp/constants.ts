@@ -1,13 +1,13 @@
 // Shared constants for LSP modules
 
-// Theme CSS variable names available for :root overrides (29 palette keys)
+// Theme CSS variable names available for :root overrides (30 palette keys)
 export const THEME_VAR_NAMES = [
   '--theme-primary', '--theme-secondary', '--theme-background', '--theme-foreground',
   '--theme-surface', '--theme-border',
   '--theme-success', '--theme-warning', '--theme-error', '--theme-info',
   '--theme-button-primary', '--theme-button-secondary', '--theme-button-background',
   '--theme-input-background', '--theme-input-foreground', '--theme-input-border',
-  '--theme-focus-primary', '--theme-focus-background',
+  '--theme-focus-primary', '--theme-focus-background', '--theme-focus-border',
   '--theme-text-primary', '--theme-text-secondary', '--theme-text-muted',
   '--theme-header-background', '--theme-header-foreground',
   '--theme-sidebar-background', '--theme-sidebar-foreground',

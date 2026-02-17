@@ -1,5 +1,12 @@
 # `<data-table>` Component
 
+## Summary
+
+- High-performance table taking `columns` and `rows` arrays as props — no nested elements
+- Virtual-scrolled: only visible rows are rendered, handles thousands of rows efficiently
+- Keyboard navigation, column sorting, row selection, and text selection built in
+- Use `<table>` instead when cells need interactive content (buttons, inputs)
+
 A data-driven table component optimized for performance with simple data arrays instead of nested element trees.
 
 ## Key Differences from `<table>`

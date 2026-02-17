@@ -1,5 +1,11 @@
 # Fast Path for Input Rendering
 
+## Summary
+
+- Typing in input/textarea gets ~1ms visual feedback by rendering directly to the buffer with cached bounds
+- A debounced full layout (16ms) follows to ensure correctness
+- This dual path gives instant keystroke response without sacrificing layout accuracy
+
 ## Problem
 
 Input latency included a debounce delay. The debounce exists to batch rapid inputs (paste) and avoid excessive layouts, but it made typing feel sluggish.

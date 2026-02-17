@@ -1,5 +1,11 @@
 # Tooltip Architecture
 
+## Summary
+
+- Compact overlays triggered by mouse hover or keyboard focus; auto-positioned near the target element
+- Content rendered with `MarkdownElement` — supports formatted text, lists, code
+- Singleton manager with delay timer prevents flicker on rapid mouse movement
+
 ## Overview
 
 Tooltips are compact overlays that display contextual information when hovering over or focusing on elements. They use the `MarkdownElement` component for full markdown rendering support and can be triggered by mouse hover or keyboard focus.

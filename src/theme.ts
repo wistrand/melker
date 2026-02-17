@@ -39,6 +39,7 @@ export interface ColorPalette {
   // Focus states
   focusPrimary: PackedRGBA;
   focusBackground: PackedRGBA;
+  focusBorder: PackedRGBA;
 
   // Content colors
   textPrimary: PackedRGBA;
@@ -66,13 +67,13 @@ export interface Theme {
   source?: string;  // CSS file path (e.g. 'fullcolor-dark' or 'examples/themes/nord.css')
 }
 
-// All 29 ColorPalette keys in definition order
+// All 30 ColorPalette keys in definition order
 const PALETTE_KEYS: (keyof ColorPalette)[] = [
   'primary', 'secondary', 'background', 'foreground', 'surface', 'border',
   'success', 'warning', 'error', 'info',
   'buttonPrimary', 'buttonSecondary', 'buttonBackground',
   'inputBackground', 'inputForeground', 'inputBorder',
-  'focusPrimary', 'focusBackground',
+  'focusPrimary', 'focusBackground', 'focusBorder',
   'textPrimary', 'textSecondary', 'textMuted',
   'headerBackground', 'headerForeground',
   'sidebarBackground', 'sidebarForeground',
@@ -100,7 +101,7 @@ const FALLBACK_THEME: Theme = {
 /**
  * Build a Theme from CSS text containing :root { --*: value } declarations.
  * Parses metadata (--theme-type, --theme-mode, --theme-color-support) and
- * all 29 ColorPalette fields from CSS custom properties.
+ * all 30 ColorPalette fields from CSS custom properties.
  */
 export function buildThemeFromCSS(css: string, sourcePath?: string): Theme {
   const decls = extractVariableDeclarations(css);

@@ -1,5 +1,12 @@
 # Graphics Architecture
 
+## Summary
+
+- Six graphics modes: sextant (default), block, pattern, luma, sixel, kitty, iterm2
+- Text modes (sextant/block/pattern/luma) use Unicode characters; pixel modes (sixel/kitty/iterm2) use terminal protocols for true-color images
+- Auto-detection picks the best available mode; `--gfx-mode` or `MELKER_GFX_MODE` overrides
+- Canvas, img, and video components all go through the same rendering pipeline
+
 ## Overview
 
 Melker supports multiple graphics modes for rendering pixel content in terminals. All modes share a common architecture for detection, rendering pipeline, and configuration.

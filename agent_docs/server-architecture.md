@@ -1,5 +1,11 @@
 # Server Architecture
 
+## Summary
+
+- WebSocket server (`--server`) streams terminal output to a browser UI in real-time
+- Supports element inspection, event injection (keyboard/mouse), and log streaming
+- Opt-in input forwarding with `--server-allow-input`; token-based auth with `--server-token`
+
 WebSocket-based server providing a browser UI for remote inspection and automation of Melker applications.
 
 ## Overview

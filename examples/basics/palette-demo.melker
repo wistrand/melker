@@ -1,0 +1,72 @@
+<melker>
+  <title>Command Palette Demo</title>
+
+  <script>
+    let actionLog = [];
+
+    export function logAction(msg) {
+      actionLog.unshift(msg);
+      if (actionLog.length > 8) actionLog.pop();
+      $melker.getElementById('log').props.text = actionLog.join('\n');
+    }
+
+    export function save() {
+      logAction('Saved document');
+    }
+
+    export function find() {
+      $melker.focus('search-input');
+      logAction('Focused search');
+    }
+
+    export function undo() {
+      logAction('Undo');
+    }
+  </script>
+
+  <!-- Demonstrates command palette integration: Ctrl+K shows all interactive elements -->
+  <container id="root" style="display: flex; flex-direction: column; gap: 1; padding: 1; width: 100%; height: 100%; overflow-y: auto">
+
+    <text style="font-weight: bold;">Command Palette Demo</text>
+    <text>Press Ctrl+K to open the command palette. Drag it by the title bar. All interactive elements below appear automatically.</text>
+
+    <!-- Buttons with palette shortcuts -->
+    <container style="display: flex; flex-direction: row; gap: 1; border: thin; padding: 1; borderTitle: Actions with Shortcuts;">
+      <button label="Save" palette-shortcut="Ctrl+S" onClick="$app.save()" />
+      <button label="Find" palette-shortcut="Ctrl+F" onClick="$app.find()" />
+      <button label="Undo" palette-shortcut="Ctrl+Z" palette-group="Edit" onClick="$app.undo()" />
+    </container>
+
+    <!-- Custom palette label and opt-out -->
+    <container style="display: flex; flex-direction: row; gap: 1; border: thin; padding: 1; borderTitle: Custom Labels & Opt-out;">
+      <button label="X" palette="Close Panel" onClick="$app.logAction('Close panel')" />
+      <button label="..." palette="false" onClick="$app.logAction('Secret button (hidden from palette)')" />
+    </container>
+
+    <!-- Input fields -->
+    <container style="display: flex; flex-direction: column; gap: 1; border: thin; padding: 1; borderTitle: Fields;">
+      <input id="search-input" placeholder="Search..." />
+      <input id="name-input" placeholder="Your name" />
+      <slider id="volume" aria-label="Volume" />
+    </container>
+
+    <!-- Tabs -->
+    <tabs id="demo-tabs" style="height: 8">
+      <tab title="General">
+        <checkbox title="Enable notifications" />
+        <checkbox title="Dark mode" />
+        <radio name="lang" title="English" />
+        <radio name="lang" title="Swedish" />
+      </tab>
+      <tab title="Advanced">
+        <text>Advanced settings go here.</text>
+      </tab>
+    </tabs>
+
+    <!-- Action log -->
+    <container style="border: thin; padding: 1; flex: 1; borderTitle: Action Log;">
+      <text id="log" text="(actions will appear here)" />
+    </container>
+
+  </container>
+</melker>

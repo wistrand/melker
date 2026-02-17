@@ -1,5 +1,12 @@
 # CSS Variables Architecture
 
+## Summary
+
+- Define variables in `:root { --my-color: red; }`, use with `var(--my-color, fallback)`
+- Theme colors auto-populate as `--theme-primary`, `--theme-border`, etc.
+- Variables can change per media query (`:root` inside `@media`) and re-resolve on resize
+- `var()` works in both `<style>` blocks and inline `style=""` attributes
+
 CSS custom properties (`--*`) defined in `:root`, resolved at parse time. Supports `var()` with nested fallbacks, auto-populated `--theme-*` from the theme palette, media-conditioned variables via `:root` inside `@media`, and `var()` in inline `style="..."` attributes.
 
 ## File Map
@@ -116,9 +123,9 @@ interface VariableDecl {
 
 ## Theme Variable Auto-Population
 
-Themes are defined as CSS files in `src/themes/` (e.g., `src/themes/fullcolor-dark.css`). Each file is a `:root` block with 29 color properties and 3 metadata properties. At startup, `initThemes()` loads these via `fetch()` relative to `import.meta.url` and parses them with `extractVariableDeclarations()` + `cssToRgba()` into `ColorPalette` objects. Custom themes can be loaded via `MELKER_THEME_FILE` or `--theme-file`. See [css-themes-architecture.md](css-themes-architecture.md) for details.
+Themes are defined as CSS files in `src/themes/` (e.g., `src/themes/fullcolor-dark.css`). Each file is a `:root` block with 30 color properties and 3 metadata properties. At startup, `initThemes()` loads these via `fetch()` relative to `import.meta.url` and parses them with `extractVariableDeclarations()` + `cssToRgba()` into `ColorPalette` objects. Custom themes can be loaded via `MELKER_THEME_FILE` or `--theme-file`. See [css-themes-architecture.md](css-themes-architecture.md) for details.
 
-`Stylesheet._buildThemeVars()` then pre-populates 29 `--theme-*` variables from the current `ColorPalette`. Built once per Stylesheet instance.
+`Stylesheet._buildThemeVars()` then pre-populates 30 `--theme-*` variables from the current `ColorPalette`. Built once per Stylesheet instance.
 
 Conversion: `camelCase` palette key → `kebab-case` CSS variable, `PackedRGBA` → hex string.
 
@@ -155,6 +162,7 @@ When `_fullReparse()` runs, `_pushThemeOverrides()` detects `--theme-*` variable
 | `inputBorder`       | `--theme-input-border`      |
 | `focusPrimary`      | `--theme-focus-primary`     |
 | `focusBackground`   | `--theme-focus-background`  |
+| `focusBorder`       | `--theme-focus-border`      |
 | `textPrimary`       | `--theme-text-primary`      |
 | `textSecondary`     | `--theme-text-secondary`    |
 | `textMuted`         | `--theme-text-muted`        |

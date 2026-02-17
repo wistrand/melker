@@ -1,5 +1,13 @@
 # Policy Architecture
 
+## Summary
+
+- Apps declare permissions in a `<policy>` tag (read, write, net, run, env, ffi)
+- First run shows an approval prompt; `--trust` bypasses it for CI
+- The launcher spawns each app in a sandboxed Deno subprocess with only the approved permissions
+- CLI flags (`--allow-*`/`--deny-*`) override policy permissions at runtime
+- Shortcuts like `ai`, `clipboard`, `keyring` expand to common permission sets
+
 The policy system enforces permission sandboxing for .melker applications. Apps declare required permissions, users approve them, and the launcher spawns apps in a restricted Deno subprocess.
 
 ## Overview

@@ -1,5 +1,12 @@
 # Split Pane Component Architecture
 
+## Summary
+
+- Splits N children with N-1 draggable divider bars; horizontal (default) or vertical
+- Dividers are focusable (Tab) and keyboard-resizable (arrow keys)
+- Built on flexbox layout — dividers adjust `flex-basis` of adjacent panes
+- Min/max size constraints prevent collapsing panes to zero
+
 The `<split-pane>` component splits its children horizontally (default) or vertically with draggable, focusable divider bars. Supports N children with N-1 dividers. Leverages existing flexbox layout.
 
 ## Overview

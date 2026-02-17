@@ -3083,9 +3083,9 @@ Deno.test('_buildThemeVars - init themes', async () => {
   await initThemes();
 });
 
-Deno.test('_buildThemeVars - all 29 palette entries populated', () => {
+Deno.test('_buildThemeVars - all 30 palette entries populated', () => {
   const { vars } = Stylesheet._buildThemeVars();
-  // ColorPalette has exactly 29 entries
+  // ColorPalette has exactly 30 entries
   assertEquals(vars.size, Object.keys(getCurrentTheme().palette).length);
 });
 

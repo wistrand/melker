@@ -562,6 +562,7 @@ export function computeLayoutProps(element: Element, parentProps?: AdvancedLayou
   if (style.overflow !== undefined) result.overflow = style.overflow;
   if (style.overflowX !== undefined) result.overflowX = style.overflowX;
   if (style.overflowY !== undefined) result.overflowY = style.overflowY;
+  if (style.arrowNav !== undefined) result.arrowNav = style.arrowNav;
   // Parse width/height - XML attributes come as strings, need to convert numeric strings to numbers
   if (style.width !== undefined) {
     if (typeof style.width === 'string' && !isNaN(parseFloat(style.width)) && !style.width.endsWith('%')) {

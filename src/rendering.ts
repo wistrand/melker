@@ -1029,7 +1029,7 @@ export class RenderingEngine {
 
       // Render scroll bars AFTER children to ensure they appear on top
       // Use the main buffer for scrollbars as they need direct access to the buffer
-      this._renderScrollbars(element, contentBounds, adjustedContentBounds, this._styleToCellStyle(computedStyle), context.buffer);
+      this._renderScrollbars(element, contentBounds, adjustedContentBounds, this._styleToCellStyle(computedStyle), context.buffer, context.focusedElementId);
     } else {
       // Normal container - no scroll translation
       const childContext: RenderContext = {
@@ -1046,7 +1046,7 @@ export class RenderingEngine {
   }
 
   // Render scroll bars for a scrollable container (called after children are rendered)
-  private _renderScrollbars(element: Element, contentBounds: Bounds, adjustedContentBounds: Bounds, style: Partial<Cell>, buffer: DualBuffer): void {
+  private _renderScrollbars(element: Element, contentBounds: Bounds, adjustedContentBounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, focusedElementId?: string): void {
     if (!isScrollableType(element.type) || !isScrollingEnabled(element)) {
       return;
     }
@@ -1116,7 +1116,8 @@ export class RenderingEngine {
         viewportHeight: adjustedContentBounds.height
       };
 
-      this._renderVerticalScrollbar(trackBounds, scrollY || 0, contentDimensions.height, style, buffer);
+      const focused = !!(focusedElementId && element.id === focusedElementId);
+      this._renderVerticalScrollbar(trackBounds, scrollY || 0, contentDimensions.height, style, buffer, focused);
     }
 
     // Render horizontal scrollbar in reserved space (not overlaying content)
@@ -1149,7 +1150,8 @@ export class RenderingEngine {
         viewportWidth: adjustedContentBounds.width
       };
 
-      this._renderHorizontalScrollbar(trackBounds, scrollX || 0, contentDimensions.width, style, buffer);
+      const hFocused = !!(focusedElementId && element.id === focusedElementId);
+      this._renderHorizontalScrollbar(trackBounds, scrollX || 0, contentDimensions.width, style, buffer, hFocused);
     }
 
     // Store scrollbar bounds if any scrollbars were rendered
@@ -1626,7 +1628,8 @@ export class RenderingEngine {
     scrollY: number,
     contentHeight: number,
     style: Partial<Cell>,
-    buffer: DualBuffer
+    buffer: DualBuffer,
+    focused = false
   ): void {
     const scrollbarX = bounds.x;  // Use bounds.x directly since bounds are already positioned correctly
     const scrollbarHeight = bounds.height;
@@ -1656,9 +1659,12 @@ export class RenderingEngine {
     const scrollProgress = maxScrollY > 0 ? (clampedScrollY / maxScrollY) : 0;
     const thumbPosition = Math.min(availableTrackSpace, Math.floor(scrollProgress * availableTrackSpace));
 
-    // Render scrollbar track
-    const thumbColor = getThemeColor('scrollbarThumb') ?? style.foreground ?? COLORS.white;
-    const trackColor = getThemeColor('scrollbarTrack') ?? COLORS.gray;
+    // Render scrollbar track — use focusBorder color when container is focused
+    const focusBorderColor = focused ? getThemeColor('focusBorder') : undefined;
+    const thumbColor = focusBorderColor ?? getThemeColor('scrollbarThumb') ?? style.foreground ?? COLORS.white;
+    const trackColor = focused
+      ? (focusBorderColor ?? getThemeColor('scrollbarTrack') ?? COLORS.gray)
+      : (getThemeColor('scrollbarTrack') ?? COLORS.gray);
 
     for (let y = 0; y < scrollbarHeight; y++) {
       const char = (y >= thumbPosition && y < thumbPosition + thumbSize) ? '█' : '░';
@@ -1676,7 +1682,8 @@ export class RenderingEngine {
     scrollX: number,
     contentWidth: number,
     style: Partial<Cell>,
-    buffer: DualBuffer
+    buffer: DualBuffer,
+    focused = false
   ): void {
     const scrollbarY = bounds.y;  // Use bounds.y directly since bounds are already positioned correctly
     const scrollbarWidth = bounds.width;
@@ -1706,9 +1713,12 @@ export class RenderingEngine {
     const scrollProgress = maxScrollX > 0 ? (clampedScrollX / maxScrollX) : 0;
     const thumbPosition = Math.floor(scrollProgress * availableTrackSpace);
 
-    // Render scrollbar track
-    const thumbColor = getThemeColor('scrollbarThumb') ?? style.foreground ?? COLORS.white;
-    const trackColor = getThemeColor('scrollbarTrack') ?? COLORS.gray;
+    // Render scrollbar track — use focusBorder color when container is focused
+    const focusBorderColor = focused ? getThemeColor('focusBorder') : undefined;
+    const thumbColor = focusBorderColor ?? getThemeColor('scrollbarThumb') ?? style.foreground ?? COLORS.white;
+    const trackColor = focused
+      ? (focusBorderColor ?? getThemeColor('scrollbarTrack') ?? COLORS.gray)
+      : (getThemeColor('scrollbarTrack') ?? COLORS.gray);
 
     for (let x = 0; x < scrollbarWidth; x++) {
       const char = (x >= thumbPosition && x < thumbPosition + thumbSize) ? '█' : '░';
@@ -1742,13 +1752,13 @@ export class RenderingEngine {
     // These are elements rendered via renderElementSubtree that aren't in the main layout tree
     const dynamicBounds = this._dynamicBounds?.get(containerId);
     if (dynamicBounds) {
-      renderLogger.debug(`getContainerBounds(${containerId}): found in dynamicBounds ${dynamicBounds.x},${dynamicBounds.y} ${dynamicBounds.width}x${dynamicBounds.height}`);
+      renderLogger.trace(`getContainerBounds(${containerId}): found in dynamicBounds ${dynamicBounds.x},${dynamicBounds.y} ${dynamicBounds.width}x${dynamicBounds.height}`);
       return dynamicBounds;
     }
 
     const layoutNode = this._currentLayoutContext?.get(containerId);
     if (!layoutNode) {
-      renderLogger.debug(`getContainerBounds(${containerId}): not in dynamicBounds or layoutContext`);
+      renderLogger.trace(`getContainerBounds(${containerId}): not in dynamicBounds or layoutContext`);
       return undefined;
     }
 

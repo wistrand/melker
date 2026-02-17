@@ -1473,7 +1473,7 @@ export class Stylesheet {
 
   /**
    * Build --theme-* CSS variables from the current theme's ColorPalette.
-   * Converts 29 camelCase palette keys to kebab-case hex strings.
+   * Converts 30 camelCase palette keys to kebab-case hex strings.
    * Built once per Stylesheet instance (theme is fixed at runtime).
    */
   static _buildThemeVars(): { vars: Map<string, string>; origins: Map<string, string> } {

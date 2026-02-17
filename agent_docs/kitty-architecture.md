@@ -1,5 +1,11 @@
 # Kitty Graphics Architecture
 
+## Summary
+
+- Modern protocol sending base64-encoded pixel data; 24-bit color with true alpha, no quantization
+- Best quality for images, video, and shader effects; auto-disabled in tmux/screen
+- Supports chunked transfer and placement IDs for efficient updates
+
 See [Graphics Architecture](graphics-architecture.md) for common concepts (detection pattern, rendering pipeline, configuration).
 
 ## Overview

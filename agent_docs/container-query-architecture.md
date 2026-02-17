@@ -1,5 +1,11 @@
 # Container Query Architecture
 
+## Summary
+
+- `@container (min-width: 40)` — style rules based on a parent container's resolved size, not the terminal
+- No two-pass layout needed: parent bounds are always resolved before children are styled
+- Containers opt in with `container-type: inline-size`
+
 CSS container queries: style children based on their container's resolved size, not the terminal size.
 
 ```css

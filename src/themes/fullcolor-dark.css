@@ -6,7 +6,7 @@
  *   melker --theme-file ./my-theme.css app.melker
  *
  * Metadata (--theme-type, --theme-mode, --theme-color-support) controls
- * color capabilities. All 30 color properties are required.
+ * color capabilities. All 31 color properties are required.
  * Values: CSS named colors (white, red, cyan) or hex (#3b82f6).
  */
 :root {
@@ -35,6 +35,7 @@
 
   --focus-primary: #fbbf24;
   --focus-background: #1e40af;
+  --focus-border: #60a5fa;
 
   --text-primary: #f9fafb;
   --text-secondary: #d1d5db;

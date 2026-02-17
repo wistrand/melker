@@ -1,5 +1,12 @@
 # Data Tree Component Architecture
 
+## Summary
+
+- Displays hierarchical data with expand/collapse, indented tree lines, and optional multi-column layout
+- Virtual-scrolled: only visible rows are rendered; keyboard nav with arrow keys, Enter to toggle
+- Data via `nodes` prop (nested objects) or inline JSON children
+- Follows the same data-driven pattern as data-table, data-bars, and data-heatmap
+
 A data-driven tree component for displaying hierarchical data with expand/collapse, selection, keyboard navigation, multi-column support, and virtual scrolling.
 
 ## Design Principles

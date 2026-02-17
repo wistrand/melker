@@ -1,5 +1,12 @@
 # Pseudo-Classes & Transitions Architecture
 
+## Summary
+
+- `:focus` and `:hover` pseudo-classes enable declarative styling based on element state
+- `transition` property animates changes smoothly (e.g. `transition: background-color 300ms ease`)
+- Hover tracking uses mouse position from `TextSelectionHandler`; focus state from `FocusManager`
+- Transitions interpolate between old and new computed values using the animation timer
+
 CSS `:focus`/`:hover` pseudo-class selectors and `transition` property support for smooth interactive styling.
 
 ## Overview

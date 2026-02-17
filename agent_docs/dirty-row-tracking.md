@@ -1,5 +1,11 @@
 # Dirty Row Tracking
 
+## Summary
+
+- Only rows that changed are diffed and output — avoids scanning the entire width x height buffer
+- All buffer writes funnel through `setCell()` which marks rows dirty automatically
+- Typically reduces diff work by 80-95% for partial-screen updates (cursor blinks, scroll, input)
+
 ## Overview
 
 Dirty row tracking optimizes buffer diff operations by only scanning rows that have changed, avoiding full O(width × height) scans.

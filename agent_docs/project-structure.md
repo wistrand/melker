@@ -33,7 +33,7 @@ Detailed file layout for the Melker codebase.
 | `scroll-handler.ts`            | Scroll event handling for containers                  |
 | `element-click-handler.ts`     | Element click routing and focus                       |
 | `focus-navigation-handler.ts`  | Tab/Shift+Tab focus navigation                        |
-| `text-selection-handler.ts`    | Mouse text selection and hover tracking               |
+| `text-selection-handler.ts`    | Mouse text selection, hover tracking, dialog/palette drag |
 | `state-persistence-manager.ts` | App state auto-save/restore                           |
 | `ui-animation-manager.ts`      | Centralized timer for UI animations                   |
 | `layout.ts`                    | Flexbox layout calculations                           |

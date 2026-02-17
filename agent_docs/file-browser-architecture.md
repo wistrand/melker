@@ -1,5 +1,11 @@
 # File Browser Component Architecture
 
+## Summary
+
+- Filesystem navigator with keyboard nav (arrows, Enter, Backspace, Escape), fuzzy filtering, and single/multi selection
+- Composites Table, Container, Input, and Button; works standalone or embedded in dialogs
+- File/folder mode filtering; auto-initializes on first render
+
 A reusable file browser component for navigating the filesystem, designed to work inside any container including dialogs.
 
 ## Features

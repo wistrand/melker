@@ -10,6 +10,7 @@ import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { getTooltipManager } from './tooltip/mod.ts';
 import { getLogger } from './logging.ts';
+import { getPaletteShortcutMap, eventToShortcut } from './command-palette-components.ts';
 import { type DualBuffer, DiffCollector, type BufferDiff } from './buffer.ts';
 
 const logger = getLogger('KeyboardHandler');
@@ -115,6 +116,12 @@ export function handleKeyboardEvent(
     return true;
   }
 
+  // Arrow keys with no focus: focus the first element (same as Tab)
+  if (!focusedElement && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    ctx.focusNavigationHandler.handleTabNavigation(false);
+    return true;
+  }
+
   // Handle F12 key for View Source (global)
   if (event.key === 'F12') {
     ctx.devToolsManager?.toggle();
@@ -139,6 +146,17 @@ export function handleKeyboardEvent(
   // Handle Escape to close various overlays
   if (event.key === 'Escape') {
     if (handleEscapeKey(ctx)) {
+      return true;
+    }
+  }
+
+  // Handle palette shortcuts (registered via palette-shortcut prop)
+  const shortcutMap = getPaletteShortcutMap();
+  if (shortcutMap.size > 0) {
+    const shortcutKey = eventToShortcut(event);
+    const shortcutAction = shortcutMap.get(shortcutKey);
+    if (shortcutAction) {
+      shortcutAction();
       return true;
     }
   }
@@ -187,17 +205,28 @@ export function handleKeyboardEvent(
     return true;
   }
 
+  // Handle focused element keyboard input (components get arrow keys before scroll)
+  if (focusedElement) {
+    if (handleFocusedElementInput(event, focusedElement, ctx)) {
+      return true;
+    }
+  }
+
   // Handle arrow keys for scrolling in scrollable containers
-  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key) && focusedElement) {
+  // Shift+Arrow skips scroll and goes straight to geometric focus navigation
+  if (!event.shiftKey && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key) && focusedElement) {
     const scrollableParent = ctx.scrollHandler.findScrollableParent(focusedElement);
     if (scrollableParent && ctx.scrollHandler.handleArrowKeyScroll(event.key, scrollableParent)) {
       return true; // Arrow key was handled by scrolling
     }
   }
 
-  // Handle focused element keyboard input
-  if (focusedElement) {
-    if (handleFocusedElementInput(event, focusedElement, ctx)) {
+  // Geometric focus navigation: move focus to nearest element in arrow direction
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    const dirMap: Record<string, 'up' | 'down' | 'left' | 'right'> = {
+      ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+    };
+    if (ctx.focusNavigationHandler.handleDirectionalNavigation(dirMap[event.key])) {
       return true;
     }
   }

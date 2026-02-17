@@ -1,5 +1,11 @@
 # Sixel Graphics Architecture
 
+## Summary
+
+- DEC bitmap format encoding images as 6-pixel-high strips in ASCII; limited to 256 colors per image
+- Widest terminal support of the pixel protocols; auto-disabled over SSH for bandwidth
+- Requires palette quantization (median-cut); dithering options available
+
 See [Graphics Architecture](graphics-architecture.md) for common concepts (detection pattern, rendering pipeline, configuration).
 
 ## Overview

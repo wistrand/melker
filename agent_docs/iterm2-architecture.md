@@ -1,5 +1,11 @@
 # iTerm2 Graphics Architecture
 
+## Summary
+
+- Encodes images as base64 PNG/JPEG/GIF in OSC escape sequences
+- Supported beyond iTerm2: Rio, WezTerm, Konsole, Hyper
+- Good fallback when kitty/sixel aren't available; simpler protocol but less control
+
 See [Graphics Architecture](graphics-architecture.md) for common concepts (detection pattern, rendering pipeline, configuration).
 
 ## Overview

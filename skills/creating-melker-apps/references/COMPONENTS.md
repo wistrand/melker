@@ -22,7 +22,7 @@ Flexbox layout container. The primary building block for layouts. Defaults to `d
 ```
 
 **Props:**
-- `style` - CSS-like styling (use `overflow: scroll` or `overflow: auto` for scrolling)
+- `style` - CSS-like styling (use `overflow: scroll` or `overflow: auto` for scrolling; scrollable containers are keyboard-focusable with highlighted scrollbar)
 
 **Style properties:**
 - `display`: `flex` | `block` | `none` (auto-inferred as `flex` when flex container properties present)
@@ -38,6 +38,8 @@ Flexbox layout container. The primary building block for layouts. Defaults to `d
 - `padding`, `margin`: spacing (single number or `padding-top`, etc.)
 - `border`: `none` | `thin` | `thick` | `double` | `rounded` | `dashed` | `dashed-rounded` | `ascii` | `ascii-rounded` | `block`
 - `overflow`: `visible` | `hidden` | `auto` | `scroll`
+- `overflow-x`, `overflow-y`: axis-specific overflow (overrides `overflow` shorthand)
+- `arrow-nav`: `geometric` (default) | `none` — controls arrow key focus navigation for descendants
 - `position`: `relative` (offset without affecting siblings), `absolute`, `fixed`
 - `top`, `right`, `bottom`, `left`: numeric offset (used with `position: relative`)
 - `container-type`: `inline-size` (enable `@container` width queries) | `size` (width + height)
@@ -1385,6 +1387,41 @@ LCD/LED-style digit and text display using Unicode characters.
 **Methods:**
 - `getValue()` - Get current value
 - `setValue(value)` - Set value
+
+## Command Palette Integration
+
+Interactive elements (buttons, inputs, tabs, etc.) are auto-discovered and shown in the command palette (Ctrl+K). The palette can be dragged by its title bar and resets to center when reopened. When selected, each performs its natural action (click, focus, toggle, switch tab).
+
+**Qualifying types:** `button`, `checkbox`, `radio`, `input`, `textarea`, `slider`, `select`, `combobox`, `tab`, `data-table`, `data-tree`
+
+**Props (available on all elements):**
+
+| Prop               | Type              | Default   | Description                                    |
+|--------------------|-------------------|-----------|------------------------------------------------|
+| `palette`          | `boolean\|string` | `true`*   | `false` to exclude; string to set custom label |
+| `palette-shortcut` | `string`          | undefined | Global keyboard shortcut (e.g., `"Ctrl+S"`)   |
+| `palette-group`    | `string`          | auto      | Override default group name                    |
+
+\* Default is `true` for qualifying types, `undefined` for non-qualifying types.
+
+```xml
+<!-- Auto-included with label "Submit" -->
+<button label="Submit" onClick="handleSubmit()">
+
+<!-- Excluded from palette -->
+<button label="x" palette={false} onClick="closePanel()">
+
+<!-- Custom label and shortcut -->
+<button label="Save" palette="Save Document" palette-shortcut="Ctrl+S" onClick="save()">
+
+<!-- Input with shortcut to jump to it -->
+<input placeholder="Search..." palette-shortcut="Ctrl+F">
+
+<!-- Custom group -->
+<button label="Undo" palette-group="Edit" palette-shortcut="Ctrl+Z" onClick="undo()">
+```
+
+Shortcut conflicts with system keys (Ctrl+C, Tab, F12, etc.) are logged and skipped. Duplicate shortcuts: first in tree order wins.
 
 ## Styling Reference
 

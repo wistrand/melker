@@ -1,5 +1,20 @@
 # Component Reference
 
+## Summary
+
+- **Layout**: `container` (flexbox, scrollable), `tabs`/`tab`, `split-pane`, `dialog` (modal, draggable), `separator`
+- **Text & Input**: `text`, `input`, `textarea`, `slider`, `checkbox`, `radio`, `button`
+- **Data**: `data-table` (virtual-scrolled rows), `table` (HTML-style), `data-tree` (expandable hierarchy)
+- **Dropdowns**: `combobox` (type-to-filter), `select` (picker), `autocomplete` (async search), `command-palette` (Ctrl+K, draggable)
+- **Graphics**: `canvas` (pixel drawing, shaders), `img` (PNG/JPEG/GIF/WebP), `video` (FFmpeg playback)
+- **Visualization**: `progress`, `spinner`, `segment-display` (LCD digits), `graph` (node/edge diagrams), `connector` (graph edges)
+- **Navigation**: `file-browser` (directory tree with keyboard nav)
+- All components use `createElement(type, props, ...children)` — registered types get their class, others become `BasicElement`
+- Scrollable containers are focusable and appear in tab order
+- Dropdowns render as overlays to avoid parent clipping
+
+---
+
 Detailed documentation for Melker components.
 
 ## Element System
@@ -69,7 +84,23 @@ Axis-specific properties override the shorthand. For example, `overflow: scroll;
 
 Only `container` and `tbody` elements support scrolling. Scrollbars are rendered per-axis: vertical on the right edge, horizontal on the bottom edge. Arrow keys, mouse wheel, and scrollbar drag all respect per-axis settings.
 
+**Scrollable containers are focusable.** When `overflow: scroll` (or `overflow-x`/`overflow-y: scroll`) is set, the container appears in tab order and can be targeted by geometric arrow navigation. When focused, the scrollbar gutter highlights with the theme's `focusBorder` color. Arrow keys scroll the container; Shift+Arrow bypasses scroll for geometric navigation; Tab moves to the next focusable element.
+
 See [`examples/basics/overflow.melker`](../examples/basics/overflow.melker) for a working demo.
+
+### Focus Navigation
+
+Arrow keys move focus to the nearest focusable element in the pressed direction (geometric navigation). This activates automatically for elements that don't handle their own arrow keys (buttons, checkboxes, radios). Components with internal arrow key handling (data-table, input, slider, etc.) are unaffected.
+
+| Property    | Values             | Description                                               |
+|-------------|--------------------|-----------------------------------------------------------|
+| `arrow-nav` | `geometric`, `none` | Controls geometric focus navigation for descendant elements |
+
+`arrow-nav: none` on a container disables geometric navigation for all focusable elements inside it. Arrow keys that aren't handled by components or scroll containers do nothing.
+
+Shift+Arrow bypasses scroll containers and goes directly to geometric navigation, allowing users to escape scrollable regions without scrolling to the boundary.
+
+See [keyboard-focus-navigation-architecture.md](keyboard-focus-navigation-architecture.md) for full algorithm details.
 
 ### ARIA Attributes
 
@@ -728,7 +759,7 @@ See `agent_docs/filterable-list-architecture.md` for implementation details.
 | `<combobox>`        | Inline dropdown with text filter |
 | `<select>`          | Dropdown picker without filter   |
 | `<autocomplete>`    | Combobox with async loading      |
-| `<command-palette>` | Modal command picker             |
+| `<command-palette>` | Modal command picker (draggable by title bar) |
 
 ### Child Elements
 
@@ -1760,6 +1791,47 @@ Only these properties inherit from parent:
 - `borderColor`
 
 Layout properties (padding, margin, border widths) do NOT inherit.
+
+## Command Palette Integration
+
+Interactive elements are auto-discovered and surfaced in the command palette (Ctrl+K). The palette can be dragged by its title bar and resets to center when reopened. Qualifying types: `button`, `checkbox`, `radio`, `input`, `textarea`, `slider`, `select`, `combobox`, `tab`, `data-table`, `data-tree`.
+
+When selected from the palette, each element performs its natural action: buttons/checkboxes/radios trigger `onClick`, inputs/textareas/sliders receive focus, selects/comboboxes get focus + open, tabs switch `activeTab`.
+
+### Props
+
+All elements support these props for palette customization:
+
+| Prop               | Type              | Default   | Description                                    |
+|--------------------|-------------------|-----------|------------------------------------------------|
+| `palette`          | `boolean\|string` | `true`*   | `false` to exclude; string to set custom label |
+| `palette-shortcut` | `string`          | undefined | Global keyboard shortcut (e.g., `"Ctrl+S"`)   |
+| `palette-group`    | `string`          | auto      | Override default group name                    |
+
+\* Default is `true` for qualifying element types, `undefined` (excluded) for non-qualifying types.
+
+### Examples
+
+```html
+<!-- Auto-included with label "Submit" -->
+<button label="Submit" onClick=${submit}>
+
+<!-- Excluded from palette -->
+<button label="x" palette={false} onClick=${closePanel}>
+
+<!-- Custom label and shortcut -->
+<button label="Save" palette="Save Document" palette-shortcut="Ctrl+S" onClick=${save}>
+
+<!-- Input with shortcut to jump to it -->
+<input placeholder="Search..." palette-shortcut="Ctrl+F">
+```
+
+### Implementation Files
+
+| File                                | Purpose                                       |
+|-------------------------------------|-----------------------------------------------|
+| `src/command-palette-components.ts` | Element discovery, label resolution, shortcuts |
+| `src/engine-system-palette.ts`      | Injection into command palette elements        |
 
 ## Key Files Reference
 

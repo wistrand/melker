@@ -748,7 +748,8 @@ export class TerminalInputProcessor {
     // deno-lint-ignore no-control-regex
     const modifiedMatch = sequence.match(/\x1b\[1;(\d+)([ABCD~])/);
     if (modifiedMatch) {
-      const modifierCode = parseInt(modifiedMatch[1]);
+      // xterm modifier encoding: param = 1 + bitmask, subtract 1 to get bits
+      const modBits = parseInt(modifiedMatch[1]) - 1;
       const keyCode = modifiedMatch[2];
 
       const baseKey = {
@@ -761,10 +762,10 @@ export class TerminalInputProcessor {
       return {
         sequence,
         name: baseKey,
-        shift: (modifierCode & 1) !== 0,
-        alt: (modifierCode & 2) !== 0,
-        ctrl: (modifierCode & 4) !== 0,
-        meta: (modifierCode & 8) !== 0,
+        shift: (modBits & 1) !== 0,
+        alt: (modBits & 2) !== 0,
+        ctrl: (modBits & 4) !== 0,
+        meta: (modBits & 8) !== 0,
       };
     }
 
@@ -793,7 +794,8 @@ export class TerminalInputProcessor {
     const kittyMatch = sequence.match(/\x1b\[(\d+);(\d+)u/);
     if (kittyMatch) {
       const keyCode = parseInt(kittyMatch[1]);
-      const modifierCode = parseInt(kittyMatch[2]);
+      // Kitty uses same encoding as xterm: param = 1 + bitmask
+      const modBits = parseInt(kittyMatch[2]) - 1;
       let name = String.fromCharCode(keyCode);
       if (keyCode === 13 || keyCode === 10) name = 'enter';
       else if (keyCode === 9) name = 'tab';
@@ -802,10 +804,10 @@ export class TerminalInputProcessor {
       return {
         sequence,
         name,
-        shift: (modifierCode & 1) !== 0,
-        alt: (modifierCode & 2) !== 0,
-        ctrl: (modifierCode & 4) !== 0,
-        meta: (modifierCode & 8) !== 0,
+        shift: (modBits & 1) !== 0,
+        alt: (modBits & 2) !== 0,
+        ctrl: (modBits & 4) !== 0,
+        meta: (modBits & 8) !== 0,
       };
     }
 

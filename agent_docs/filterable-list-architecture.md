@@ -1,5 +1,18 @@
 # Filterable List Architecture
 
+## Summary
+
+- **Combobox** — type-to-filter dropdown; supports freeform text entry
+- **Select** — simple dropdown picker, no text input
+- **Autocomplete** — combobox with async search (debounced `onSearch` callback)
+- **Command Palette** — modal overlay (Ctrl+K) that auto-discovers all interactive elements; draggable by title bar; supports global keyboard shortcuts via `palette-shortcut`
+- Options come from child `<option>`/`<group>` elements, a `options` prop, or both
+- Dropdowns render as overlays so they aren't clipped by parent bounds
+- Four filter modes: fuzzy (default), prefix, contains, exact
+- All variants share `FilterableListCore` base class for navigation, scrolling, and selection
+
+---
+
 Technical architecture for the filterable list component family.
 
 ## Component Hierarchy
@@ -247,6 +260,10 @@ class CommandPaletteElement extends FilterableListCore {
 ```
 
 **System Commands:** All command palettes automatically receive a "System" group with Exit, AI Assistant, Dev Tools, and Performance Dialog commands. Opt-out with `system={false}` prop.
+
+**Dragging:** The palette can be dragged by its title bar. Position is anchored on first render after opening (filtering does not re-center). Drag offset resets when the palette is closed and reopened. Mouse events are routed through `TextSelectionHandler` which walks the document tree to find open palettes (the system palette may not be in the element registry since it is injected after document initialization).
+
+**Component Auto-Discovery:** Interactive elements (buttons, inputs, tabs, etc.) are auto-discovered by `discoverPaletteItems()` in `src/command-palette-components.ts` and injected as groups/options into all command palettes. Elements can declare `palette-shortcut` for global keyboard shortcuts (priority 4.5 in the dispatch chain).
 
 ## Rendering Architecture
 

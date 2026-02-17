@@ -1,5 +1,11 @@
 # Mermaid Diagram Support
 
+## Summary
+
+- Run `.mmd` files directly (`melker diagram.mmd`), embed in markdown fenced blocks, or use `<graph type="mermaid">`
+- Diagrams render as interactive native elements with Unicode box-drawing — focusable, clickable nodes
+- No external dependencies; parsed and laid out entirely within Melker
+
 ## Overview
 
 Melker supports [Mermaid](https://mermaid.js.org/) diagrams in three ways:

@@ -67,6 +67,11 @@ export const BASE_PROPS_SCHEMA: Record<string, PropSchema> = {
   'aria-required': { type: 'boolean', description: 'Required field indicator in AI context' },
   'aria-invalid': { type: 'boolean', description: 'Validation error indicator in AI context' },
 
+  // Command palette integration
+  palette: { type: ['boolean', 'string'], description: 'false to exclude from palette; string to set custom label' },
+  'palette-shortcut': { type: 'string', description: 'Global keyboard shortcut (e.g., "Ctrl+S")' },
+  'palette-group': { type: 'string', description: 'Override default palette group name' },
+
   // Event handlers (string in .melker files, function at runtime)
   onClick: { type: ['function', 'string'], description: 'Click/Enter key handler' },
   onKeyPress: { type: ['function', 'string'], description: 'Key press handler' },
@@ -127,6 +132,7 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
   overflow: { type: 'string', enum: ['visible', 'hidden', 'scroll', 'auto'], description: 'Content overflow behavior (shorthand for both axes)' },
   overflowX: { type: 'string', enum: ['visible', 'hidden', 'scroll', 'auto'], description: 'Horizontal overflow behavior' },
   overflowY: { type: 'string', enum: ['visible', 'hidden', 'scroll', 'auto'], description: 'Vertical overflow behavior' },
+  arrowNav: { type: 'string', enum: ['geometric', 'none'], description: 'Arrow key focus navigation mode for descendants' },
   width: { type: ['number', 'string'], description: 'Element width' },
   height: { type: ['number', 'string'], description: 'Element height' },
   minWidth: { type: ['number', 'string'], description: 'Minimum width' },

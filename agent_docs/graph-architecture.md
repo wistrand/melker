@@ -1,5 +1,11 @@
 # Graph Component Architecture
 
+## Summary
+
+- Renders flowcharts and diagrams from Mermaid syntax or JSON as native Melker elements
+- Pipeline: parse → definition → level-based layout → flex containers + connectors → render
+- Nodes are interactive (focusable, clickable); connectors draw edges with Unicode box-drawing
+
 The graph component renders diagrams from Mermaid syntax or JSON input, converting them to native Melker elements.
 
 ## Overview

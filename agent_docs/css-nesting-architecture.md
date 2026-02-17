@@ -1,5 +1,11 @@
 # CSS Nesting Architecture
 
+## Summary
+
+- Nest rules inside parent rules: `.card { .title { font-weight: bold; } }` → `.card .title`
+- `&` for compound selectors: `&.active` → `.card.active`
+- Works with pseudo-classes, media queries, and container queries inside nested blocks
+
 CSS Nesting Level 1 support in the stylesheet parser, allowing rules to be nested inside parent rules.
 
 ## Syntax

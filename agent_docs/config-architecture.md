@@ -1,5 +1,12 @@
 # Configuration System Architecture
 
+## Summary
+
+- All config lives in one JSON schema (`src/config/schema.json`) — themes, graphics, logging, server, etc.
+- Five override layers (lowest→highest): schema defaults → policy → config file → env vars → CLI flags
+- Apps can define custom config keys in `<policy>` with optional env var bindings
+- `--print-config` shows the merged result with source annotations
+
 ## Overview
 
 Schema-driven configuration with layered overrides. All config is defined in `src/config/schema.json`.

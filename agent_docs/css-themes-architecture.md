@@ -1,5 +1,11 @@
 # CSS Theme Files Architecture
 
+## Summary
+
+- 8 built-in themes as CSS files with `:root` custom properties (auto-dark, auto-std, bw-std, fullcolor-dark, etc.)
+- Custom themes via `--theme-file` or `MELKER_THEME_FILE` — any CSS file with `:root` variables
+- Theme variables (`--theme-*`) auto-populate into stylesheets so apps don't need to hardcode colors
+
 Themes defined as CSS files with `:root` custom properties, loaded at startup via `fetch()`. Supports 8 built-in themes and user-provided custom themes.
 
 ## File Map
@@ -24,7 +30,7 @@ Themes defined as CSS files with `:root` custom properties, loaded at startup vi
   --theme-mode: dark;              /* std | dark */
   --theme-color-support: truecolor; /* none | 16 | 256 | truecolor */
 
-  /* 29 color properties (all required) */
+  /* 30 color properties (all required) */
   --primary: #3b82f6;
   --secondary: #06b6d4;
   --background: black;
@@ -43,6 +49,7 @@ Themes defined as CSS files with `:root` custom properties, loaded at startup vi
   --input-border: #374151;
   --focus-primary: #fbbf24;
   --focus-background: #1e40af;
+  --focus-border: #60a5fa;
   --text-primary: #f9fafb;
   --text-secondary: #d1d5db;
   --text-muted: #6b7280;

@@ -1,5 +1,16 @@
 # Architecture
 
+## Summary
+
+- Melker renders a tree of **elements** (like HTML) to the terminal using a **dual-buffer** system (character + style buffers) — only changed rows are re-output
+- Layout uses **flexbox** (column default) with border-box sizing, percentage/fill/auto widths, and flex-wrap
+- Elements are created with `createElement(type, props, ...children)` and held in a `Document`
+- The **render pipeline** runs at ~60fps: event → state change → layout → buffer render → diff → ANSI output
+- A **fast render** path gives ~2ms latency for text input (skips full layout, uses cached bounds)
+- **Theming** is CSS-based with `var()` custom properties; apps don't need to specify colors
+- **Animations** use a centralized timer (`UIAnimationManager`) with adaptive tick rates and drift correction
+- Style **inheritance** is limited: only `color`, `backgroundColor`, `fontWeight`, `fontStyle`, `textDecoration`, `dim`, `reverse`, `borderColor`
+
 ## Core Concepts
 
 - **Document Model**: HTML-inspired elements with React-like createElement pattern, JSON serializable
@@ -265,22 +276,23 @@ When `stop()` is called:
 | `src/engine-buffer-overlays.ts`   | Buffer overlay rendering pipeline          |
 | `src/engine-dialog-utils.ts`      | Dialog traversal and focus trap utilities   |
 | `src/engine-system-palette.ts`    | System command palette logic               |
+| `src/command-palette-components.ts` | Palette component discovery, shortcuts   |
 | `src/graphics-overlay-manager.ts` | Sixel/Kitty/iTerm2 graphics overlay management |
 | `src/terminal-size-manager.ts`    | Terminal size detection, tracking, resize   |
 | `src/dialog-coordinator.ts`       | Alert, confirm, prompt dialog lifecycle    |
 | `src/base-dialog.ts`             | Base class for dialog managers             |
 | `src/scroll-handler.ts`          | Scroll event handling for containers       |
 | `src/element-click-handler.ts`   | Element click routing and focus            |
-| `src/focus-navigation-handler.ts` | Tab/Shift+Tab focus navigation             |
+| `src/focus-navigation-handler.ts` | Tab, arrow key, and geometric focus navigation |
 | `src/text-selection-handler.ts`  | Mouse text selection and hover tracking    |
 | `src/state-persistence-manager.ts`| App state auto-save/restore                |
 | `src/layout.ts`                   | Flexbox layout calculations                |
 | `src/rendering.ts`                | Render pipeline, overlays                  |
 | `src/buffer.ts`                   | Dual-buffer system, `DiffCollector`        |
 | `src/renderer.ts`                 | ANSI terminal output                       |
-| `src/focus.ts`                    | Focus management                           |
+| `src/focus.ts`                    | Focus management, geometric navigation     |
 | `src/theme.ts`                    | Theming system                             |
-| `src/input.ts`                    | Raw terminal input, mouse                  |
+| `src/input.ts`                    | Raw terminal input, mouse, modifier parsing |
 | `src/template.ts`                 | .melker file parsing                       |
 | `src/element.ts`                  | Element creation, registry                 |
 | `src/document.ts`                 | Document class                             |

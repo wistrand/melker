@@ -1,5 +1,12 @@
 # `data-bars` Component Architecture
 
+## Summary
+
+- Bar charts rendered with Unicode block characters (▏▎▍▌▋▊▉█)
+- Horizontal or vertical orientation; stacked or grouped multi-series
+- Sparkline mode for compact real-time data visualization
+- Data as 2D array: `bars[entryIndex][seriesIndex] = value`
+
 ## Overview
 
 A data-driven bar chart component for terminal UIs. Renders bars using Unicode block characters with optional labels, supporting horizontal and vertical orientations, stacked or grouped bars, and sparkline mode for real-time data.

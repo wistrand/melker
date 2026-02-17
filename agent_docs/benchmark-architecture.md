@@ -1,5 +1,11 @@
 # Melker Benchmark Architecture
 
+## Summary
+
+- 17 benchmark suites with 300+ individual benchmarks covering layout, rendering, parsing, and components
+- Run all with `deno run benchmarks/run-all.ts`; results saved as JSON baseline for regression tracking
+- Each suite runs warm-up iterations, measures median/p95/p99, and reports ops/sec
+
 Benchmarking infrastructure for Melker subsystems and components. Currently includes **17 benchmark suites** with **300+ individual benchmarks**.
 
 **Latest baseline:** [baseline.json](../benchmarks/results/baseline.json)

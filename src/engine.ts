@@ -40,6 +40,7 @@ import {
   toggleCommandPalette as toggleCommandPaletteHelper,
   injectSystemCommandPalette,
   injectSystemCommands,
+  rebuildPaletteShortcuts,
   type SystemPaletteContext,
 } from './engine-system-palette.ts';
 import {
@@ -1426,6 +1427,10 @@ export class MelkerEngine {
 
     // Inject default system command palette if no custom one exists
     injectSystemCommandPalette(ctx);
+
+    // Build palette shortcut map so keyboard shortcuts work immediately
+    // (palette injection happens lazily when Ctrl+K opens the palette)
+    rebuildPaletteShortcuts(ctx);
 
     // Update focus manager document reference after UI update
     if (this._focusManager) {

@@ -151,6 +151,21 @@ export class FocusNavigationHandler {
   }
 
   /**
+   * Handle directional (arrow key) focus navigation.
+   * Moves focus to the nearest focusable element in the given direction.
+   * Returns true if focus moved.
+   */
+  handleDirectionalNavigation(direction: 'up' | 'down' | 'left' | 'right'): boolean {
+    if (!this._deps.focusManager) return false;
+
+    const success = this._deps.focusManager.focusInDirection(direction);
+    if (success && this._deps.autoRender) {
+      this._deps.onRender();
+    }
+    return success;
+  }
+
+  /**
    * Handle Tab key navigation between focusable elements
    */
   handleTabNavigation(reverse: boolean = false): void {

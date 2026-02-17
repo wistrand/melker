@@ -14,6 +14,7 @@ import { HitTester } from './hit-test.ts';
 import { ScrollHandler } from './scroll-handler.ts';
 import { getLogger } from './logging.ts';
 import { DialogElement } from './components/dialog.ts';
+import { CommandPaletteElement } from './components/filterable-list/command-palette.ts';
 import { createThrottledAction, type ThrottledAction } from './utils/timing.ts';
 import { isStatsOverlayEnabled, getGlobalStatsOverlay } from './stats-overlay.ts';
 import { getGlobalPerformanceDialog, type PerformanceStats } from './performance-dialog.ts';
@@ -68,6 +69,8 @@ export class TextSelectionHandler {
   private _draggingDialog: DialogElement | null = null;
   // Dialog resize state
   private _resizingDialog: DialogElement | null = null;
+  // Command palette drag state
+  private _draggingPalette: CommandPaletteElement | null = null;
   // Throttled action for dialog drag/resize renders (~60fps)
   private _throttledDialogRender!: ThrottledAction;
   // Throttled action for generic draggable element renders (~60fps)
@@ -129,6 +132,22 @@ export class TextSelectionHandler {
 
     // Set up focus event listeners for keyboard-triggered tooltips
     this._initFocusTooltipListeners();
+  }
+
+  /**
+   * Walk tree to find an open command palette (system palette may not be in registry).
+   */
+  private _findOpenCommandPalette(element: Element): CommandPaletteElement | null {
+    if (element.type === 'command-palette' && element.props?.open === true) {
+      return element instanceof CommandPaletteElement ? element : null;
+    }
+    if (element.children) {
+      for (const child of element.children) {
+        const found = this._findOpenCommandPalette(child);
+        if (found) return found;
+      }
+    }
+    return null;
   }
 
   /**
@@ -286,6 +305,15 @@ export class TextSelectionHandler {
             return; // Don't process text selection when dragging dialog
           }
         }
+      }
+
+      // Check for command palette title bar drag (walk tree since system palette
+      // may not be in the element registry — it's injected after initialization)
+      const openPalette = this._findOpenCommandPalette(this._deps.document.root);
+      if (openPalette && openPalette.isOnTitleBar(event.x, event.y)) {
+        openPalette.startDrag(event.x, event.y);
+        this._draggingPalette = openPalette;
+        return; // Don't process text selection when dragging palette
       }
     }
 
@@ -529,6 +557,14 @@ export class TextSelectionHandler {
       return;
     }
 
+    // Handle command palette drag (throttled to ~60fps, uses full render since palette is an overlay)
+    if (this._draggingPalette) {
+      if (this._draggingPalette.updateDrag(event.x, event.y)) {
+        this._throttledDragRender.trigger();
+      }
+      return;
+    }
+
     // Handle scrollbar drag first
     if (this._deps.scrollHandler.isScrollbarDragActive()) {
       this._deps.scrollHandler.handleScrollbarDrag(event.x, event.y);
@@ -700,6 +736,14 @@ export class TextSelectionHandler {
       this._draggingDialog.endDrag();
       this._draggingDialog = null;
       this._throttledDialogRender.flush(); // Ensure final position is rendered
+      return; // Don't process other mouse up events
+    }
+
+    // End command palette drag if active
+    if (this._draggingPalette) {
+      this._draggingPalette.endDrag();
+      this._draggingPalette = null;
+      this._throttledDragRender.flush(); // Ensure final position is rendered
       return; // Don't process other mouse up events
     }
 

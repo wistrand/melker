@@ -1,5 +1,11 @@
 # `data-heatmap` Component Architecture
 
+## Summary
+
+- Renders 2D numeric grids as colored cells with configurable color scales
+- Optional isoline overlay (contour lines) using the shared marching squares algorithm
+- Data as 2D array: `grid[row][col] = value`; null values render as gaps
+
 ## Overview
 
 A data-driven heatmap component for terminal UIs. Renders 2D value grids as colored cells with optional isolines (contour lines).

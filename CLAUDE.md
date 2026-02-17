@@ -58,6 +58,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Config system       | [config-architecture.md](agent_docs/config-architecture.md)          |
 | Policy system       | [policy-architecture.md](agent_docs/policy-architecture.md)          |
 | Server              | [server-architecture.md](agent_docs/server-architecture.md)          |
+| Keyboard & focus    | [keyboard-focus-navigation-architecture.md](agent_docs/keyboard-focus-navigation-architecture.md) |
 | Graph/diagrams      | [graph-architecture.md](agent_docs/graph-architecture.md)            |
 | Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)      |
 | Isolines mode       | [isolines-architecture.md](agent_docs/isolines-architecture.md)      |
@@ -95,7 +96,6 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Timeline         | [project-timeline.md](agent_docs/project-timeline.md)        |
 | Release scheme   | [calver-release.md](agent_docs/calver-release.md)            |
 | TUI comparison   | [tui-comparison.md](agent_docs/tui-comparison.md)            |
-| Refactoring plan | [refactoring-plan.md](agent_docs/refactoring-plan.md)        |
 
 ## Technology Stack
 
@@ -419,7 +419,9 @@ Creates `docs/skill-creating-melker-apps.zip`, available at https://melker.sh/sk
 | `F8`                | Open AI accessibility assistant (text input)                                 |
 | `F12`               | Toggle Dev Tools overlay (source, policy, config, inspect, log, system info) |
 | `Escape`            | Close overlays / Close AI dialog                                             |
-| `Tab` / `Shift+Tab` | Navigate focusable elements                                                  |
+| `Tab` / `Shift+Tab` | Navigate focusable elements (linear tab order)                               |
+| Arrow keys          | Geometric focus navigation (nearest element in direction)                    |
+| `Shift+Arrow`       | Geometric focus navigation bypassing scroll containers                       |
 
 ## Releases
 

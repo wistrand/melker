@@ -1,5 +1,11 @@
 # Toast System Architecture
 
+## Summary
+
+- `$melker.toast.show(message, options)` — programmatic non-modal notifications
+- Stacked vertically at top or bottom of screen; auto-dismiss with configurable duration
+- Supports info/success/warning/error variants with theme-appropriate colors
+
 Programmatic non-modal notification system for Melker.
 
 **Status:** Implemented

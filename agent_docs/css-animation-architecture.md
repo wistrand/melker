@@ -1,5 +1,12 @@
 # CSS & Animation Architecture
 
+## Summary
+
+- `@keyframes` + `animation` properties work like CSS — define named keyframes, apply with duration/easing/iteration
+- Animated values are interpolated on the fly during layout, never written back to `props.style`
+- Specificity follows CSS rules: inline > ID > class > type; `!important` supported
+- Animations run via the shared `UIAnimationManager` timer
+
 Melker's CSS-like style system: specificity, `@keyframes`, and `animation` properties.
 
 ## Core Principle: Never Write to `props.style`

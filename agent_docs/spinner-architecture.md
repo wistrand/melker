@@ -1,5 +1,11 @@
 # Spinner Component Architecture
 
+## Summary
+
+- Animated single-character spinner with optional text label
+- Multiple built-in styles (dots, line, arc, etc.) selected via `variant` prop
+- Runs on the shared `UIAnimationManager` timer; `spinning` prop starts/stops
+
 The `<spinner>` component displays animated loading indicators with optional text and effects.
 
 ## Overview

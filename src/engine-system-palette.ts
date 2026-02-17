@@ -8,6 +8,8 @@ import {
   SystemHandlers,
 } from './system-command-palette.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
+import { createElement } from './element.ts';
+import { discoverPaletteItems, buildShortcutMap, type PaletteItem } from './command-palette-components.ts';
 import type { Document } from './document.ts';
 import type { DevToolsManager } from './dev-tools.ts';
 import type { AccessibilityDialogManager } from './ai/accessibility-dialog.ts';
@@ -101,6 +103,9 @@ function findOpenCommandPaletteInElement(element: Element): Element | null {
  * Toggle the command palette (opens system palette if no custom one exists)
  */
 export function toggleCommandPalette(ctx: SystemPaletteContext): void {
+  // Discover and inject component commands before opening so the palette is fresh
+  injectComponentCommands(ctx);
+
   // First check for custom command palette
   const customPalette = findOpenCommandPalette(ctx) || findCommandPalette(ctx);
   if (customPalette && isToggleable(customPalette)) {
@@ -195,6 +200,172 @@ function injectSystemCommandsInElement(element: Element, ctx: SystemPaletteConte
   if (element.children) {
     for (const child of element.children) {
       injectSystemCommandsInElement(child, ctx);
+    }
+  }
+}
+
+/** Marker prop to identify injected component groups */
+const COMPONENT_GROUP_MARKER = '__melker_components_group__';
+
+/**
+ * Inject discovered component commands into all command palettes.
+ * Discovers interactive elements, groups them, creates group/option elements,
+ * and injects before the System group. Replaces previous injection on re-render.
+ */
+export function injectComponentCommands(ctx: SystemPaletteContext): void {
+  if (!ctx.document?.root) return;
+
+  const items = discoverPaletteItems(ctx.document, ctx.render);
+
+  // Build shortcut map (even if no items — clears previous map)
+  buildShortcutMap(items);
+
+  if (items.length === 0) {
+    // Remove any previously injected component groups
+    _removeComponentGroups(ctx.document.root);
+    return;
+  }
+
+  // Build group elements from discovered items
+  const groupElements = _buildGroupElements(items);
+
+  // Inject into all command palettes
+  _injectComponentGroupsInElement(ctx.document.root, groupElements);
+}
+
+/**
+ * Rebuild only the palette shortcut map (no palette injection).
+ * Called from updateUI() so shortcuts work immediately without waiting for palette open.
+ */
+export function rebuildPaletteShortcuts(ctx: SystemPaletteContext): void {
+  if (!ctx.document?.root) return;
+  const items = discoverPaletteItems(ctx.document, ctx.render);
+  buildShortcutMap(items);
+}
+
+/**
+ * Build group elements from palette items, grouped by their group name.
+ * Preserves order: Actions, Navigation, Fields, then any custom groups.
+ */
+function _buildGroupElements(items: PaletteItem[]): Element[] {
+  // Collect items by group
+  const groups = new Map<string, PaletteItem[]>();
+  for (const item of items) {
+    let list = groups.get(item.group);
+    if (!list) {
+      list = [];
+      groups.set(item.group, list);
+    }
+    list.push(item);
+  }
+
+  // Order: Actions, Navigation, Fields first, then alphabetical custom groups
+  const standardOrder = ['Actions', 'Navigation', 'Fields'];
+  const orderedKeys: string[] = [];
+  for (const key of standardOrder) {
+    if (groups.has(key)) orderedKeys.push(key);
+  }
+  for (const key of [...groups.keys()].sort()) {
+    if (!standardOrder.includes(key)) orderedKeys.push(key);
+  }
+
+  const elements: Element[] = [];
+  for (const groupName of orderedKeys) {
+    const groupItems = groups.get(groupName)!;
+    const optionChildren: Element[] = [];
+
+    for (const item of groupItems) {
+      const optionProps: Record<string, unknown> = {
+        value: item.elementId,
+        label: item.label,
+        onSelect: item.action,
+      };
+      if (item.shortcut) {
+        optionProps.shortcut = item.shortcut;
+      }
+      optionChildren.push(createElement('option', optionProps));
+    }
+
+    elements.push(createElement('group', {
+      label: groupName,
+      [COMPONENT_GROUP_MARKER]: true,
+    }, ...optionChildren));
+  }
+
+  return elements;
+}
+
+/**
+ * Remove previously injected component groups from all command palettes.
+ */
+function _removeComponentGroups(element: Element): void {
+  if (element.type === 'command-palette' && element.children) {
+    element.children = element.children.filter(
+      ch => !(ch.type === 'group' && ch.props?.[COMPONENT_GROUP_MARKER] === true)
+    );
+    if (typeof (element as any).refreshChildOptions === 'function') {
+      (element as any).refreshChildOptions();
+    }
+  }
+  if (element.children) {
+    for (const child of element.children) {
+      _removeComponentGroups(child);
+    }
+  }
+}
+
+/**
+ * Inject component groups into command palettes.
+ * Inserts before the System group (last group), replacing any previous injection.
+ */
+function _injectComponentGroupsInElement(element: Element, groupElements: Element[]): void {
+  if (element.type === 'command-palette') {
+    if (!element.children) {
+      element.children = [];
+    }
+
+    // Remove previously injected component groups
+    element.children = element.children.filter(
+      ch => !(ch.type === 'group' && ch.props?.[COMPONENT_GROUP_MARKER] === true)
+    );
+
+    // Find the System group index to insert before it
+    let systemIdx = -1;
+    for (let i = 0; i < element.children.length; i++) {
+      if (element.children[i].type === 'group' && element.children[i].props?.system === true) {
+        systemIdx = i;
+        break;
+      }
+    }
+
+    // Also check for system groups by label (the created ones don't have system=true marker)
+    if (systemIdx === -1) {
+      for (let i = element.children.length - 1; i >= 0; i--) {
+        if (element.children[i].type === 'group' && element.children[i].props?.label === 'System') {
+          systemIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (systemIdx >= 0) {
+      // Insert before System group
+      element.children.splice(systemIdx, 0, ...groupElements);
+    } else {
+      // No System group — append at end
+      element.children.push(...groupElements);
+    }
+
+    // Refresh cached options
+    if (typeof (element as any).refreshChildOptions === 'function') {
+      (element as any).refreshChildOptions();
+    }
+  }
+
+  // Recurse into children
+  if (element.children) {
+    for (const child of element.children) {
+      _injectComponentGroupsInElement(child, groupElements);
     }
   }
 }

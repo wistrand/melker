@@ -1,6 +1,6 @@
 # TUI Framework Comparison
 
-Comprehensive comparison of terminal UI libraries across languages. Last updated: February 2026.
+Comprehensive comparison of terminal UI libraries across languages. Last updated: February 17, 2026.
 
 ## Overview
 
@@ -8,12 +8,12 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 |------------------------------------------------------------|-----------------|--------|-----------------------|----------------|
 | **Melker**                                                 | TypeScript/Deno | New    | HTML-like declarative | Flexbox        |
 | [Ink](https://github.com/vadimdemedes/ink)                 | JavaScript/Node | 35k    | React components      | Flexbox (Yoga) |
-| [OpenTUI](https://github.com/sst/opentui)                 | TypeScript/Bun  | 8.5k   | React/SolidJS         | Flexbox (Yoga) |
+| [OpenTUI](https://github.com/sst/opentui)                 | TypeScript/Bun  | 8.6k   | React/SolidJS/Vue     | Flexbox (Yoga) |
 | [Blessed](https://github.com/chjj/blessed)                | JavaScript/Node | 12k    | Imperative widgets    | CSS-like       |
-| [Bubble Tea](https://github.com/charmbracelet/bubbletea)  | Go              | 39k    | Elm architecture      | CSS-like       |
+| [Bubble Tea](https://github.com/charmbracelet/bubbletea)  | Go              | 39.5k  | Elm architecture      | CSS-like       |
 | [tview](https://github.com/rivo/tview)                    | Go              | 14k    | Imperative widgets    | Grid/Flex      |
 | [Textual](https://github.com/Textualize/textual)          | Python          | 34k    | Async widgets         | CSS/Grid       |
-| [Ratatui](https://github.com/ratatui/ratatui)             | Rust            | 18k    | Immediate mode        | Constraints    |
+| [Ratatui](https://github.com/ratatui/ratatui)             | Rust            | 18.5k  | Immediate mode        | Constraints    |
 | [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui)    | C#/.NET         | 11k    | Imperative widgets    | Computed       |
 | [FTXUI](https://github.com/ArthurSonzogni/FTXUI)          | C++             | 10k    | Functional/React-like | Flexbox        |
 | [ncurses](https://invisible-island.net/ncurses/)          | C               | Legacy | Low-level             | Manual         |
@@ -50,7 +50,7 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 | No_std/embedded      |   -    |  -  |    -    |    -    |     -      |   -   |    -    |    Y    |      -       |   -   |
 | SSH/network serve    |   Y    |  -  |    -    |    -    |     Y      |   -   |    Y    |    -    |      -       |   -   |
 | Debug/remote inspect |   Y    |  Y  |    -    |    -    |     -      |   -   |    Y    |    -    |      -       |   -   |
-| Maintained (2026)    |   Y    |  Y  |    Y    |    -    |     Y      |   ~   |    Y    |    Y    |      Y       |   Y   |
+| Maintained (Feb 2026)|   Y    |  Y  |    Y    |    -    |     Y      |   ~   |    Y    |    Y    |      Y       |   Y   |
 
 Y = Full support, ~ = Partial/limited support, - = Not available
 
@@ -58,13 +58,14 @@ Y = Full support, ~ = Partial/limited support, - = Not available
 - **Ink mouse**: Requires third-party package (ink-mouse)
 - **Melker animations**: CSS `@keyframes` animations (color, numeric, spacing interpolation) plus canvas shaders
 - **OpenTUI animations**: Timeline-based animation API with easing functions
-- **Textual state**: Reactive attributes, not automatic persistence like Melker. Company (Textualize) winding down; maintained by Will McGugan as open source
+- **OpenTUI reconcilers**: React, SolidJS, and Vue reconcilers available
+- **Textual state**: Reactive attributes, not automatic persistence like Melker. Textualize (company) wound down May 2025; McGugan maintains as open source with undiminished pace
 - **Ratatui canvas**: Quadrant (2x2), Sextant (2x3), Octant (2x4), Braille (2x4), HalfBlock (1x2)
 - **Ratatui no_std**: Added in v0.30.0 for embedded targets
 - **Sixel/Kitty**: Ink via ink-picture, Textual via textual-image, Ratatui via ratatui-image
 - **Textual CSS animations**: Supports `@keyframes` with `animation` shorthand in external CSS
 - **Mermaid**: Melker has native `<graph>` component; others require external CLI tools
-- **Terminal.Gui 16M colors**: v2 (in alpha) adds true color support; v1 limited to 16 colors
+- **Terminal.Gui 16M colors**: v2 (beta due Feb 2026) adds true color support; v1 limited to 16 colors
 
 ## Abstraction Levels
 
@@ -107,7 +108,7 @@ Most frameworks only offer programmatic APIs. Ink adds JSX but requires a build 
 |--------------------|---------------------------|---------------------------------|-----------------------|
 | **Melker**         | HTML-like `.melker` files | Inline `onClick="..."` handlers | Mutable element props |
 | **Ink**            | JSX components            | React event props               | useState/useReducer   |
-| **OpenTUI**        | JSX/SolidJS components    | React/Solid event props         | useState/signals      |
+| **OpenTUI**        | JSX/SolidJS/Vue components | React/Solid/Vue event props    | useState/signals      |
 | **Blessed**        | JS object creation        | `.on('event', fn)`              | Direct mutation       |
 | **Bubble Tea**     | Go structs + View()       | Msg -> Update()                 | Immutable Model       |
 | **tview**          | Go constructors           | SetInputCapture()               | Direct mutation       |
@@ -233,12 +234,12 @@ text("Hello") | border | color(Color::Cyan)
 |            | Melker      | Ink         | OpenTUI     | Blessed     | Bubble Tea  | tview       | Textual     | Ratatui     | Terminal.Gui | FTXUI       |
 |------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|--------------|-------------|
 | Language   | TS/Deno     | JS/Node     | TS+Zig/Bun  | JS/Node     | Go          | Go          | Python      | Rust        | C#/.NET      | C++         |
-| Stars      | New         | 35k         | 8.5k        | 12k         | 39k         | 14k         | 34k         | 18k         | 11k          | 10k         |
-| Paradigm   | Declarative | React       | React/Solid | Imperative  | Elm/MVU     | Imperative  | Async       | Immediate   | Imperative   | Functional  |
+| Stars      | New         | 35k         | 8.6k        | 12k         | 39.5k       | 14k         | 34k         | 18.5k       | 11k          | 10k         |
+| Paradigm   | Declarative | React       | React/Solid/Vue | Imperative | Elm/MVU    | Imperative  | Async       | Immediate   | Imperative   | Functional  |
 | Build step | None        | Required    | Required    | None        | Required    | Required    | None        | Required    | Required     | Required    |
 | Widgets    | 30+         | ~15         | ~12         | 27+         | Via Bubbles | 15+         | 35+         | Via crates  | 40+          | 10+         |
-| Maintained | Y           | Y           | Y (pre-1.0) | Dead        | Y           | ~           | Y*          | Y           | Y            | Y           |
-| Used by    | -           | Claude Code, Gemini CLI | OpenCode | - | GitHub, GitLab | K9s, gh CLI | Posting, Toad | gitui    | .NET CLI tools | -          |
+| Maintained | Y           | Y           | Y (pre-1.0) | Dead        | Y           | ~           | Y           | Y           | Y            | Y           |
+| Used by    | -           | Claude Code, Gemini CLI | OpenCode, terminal.shop | - | GitHub, GitLab | K9s, gh CLI | Posting, Toad | gitui    | .NET CLI tools | -          |
 
 ## Component Comparison
 
@@ -351,7 +352,7 @@ This distinction mirrors web vs native: Melker treats TUI apps like web pages (s
 | Dual buffer    | Melker, Ratatui, OpenTUI   | Compare buffers, write diff                    |
 | Damage buffer  | Blessed, Terminal.Gui      | Track changed regions                          |
 | Yoga layout    | Ink, OpenTUI               | Facebook's flexbox engine                      |
-| Virtual DOM    | Ink, OpenTUI               | React/SolidJS reconciliation                   |
+| Virtual DOM    | Ink, OpenTUI               | React/SolidJS/Vue reconciliation               |
 
 **Performance notes:**
 - **Immediate mode** (Ratatui, FTXUI): Raw language speed makes full redraws fast
@@ -646,7 +647,7 @@ auto table = vbox({
 |--------------------|-------------------------------------------------------------------------|
 | **Melker**         | Run `.melker` from URL, AI assistant, permission sandbox, literate UI, container queries |
 | **Ink**            | Full React ecosystem, DevTools, used by 10k+ projects, React 19 support |
-| **OpenTUI**        | Zig FFI for sub-ms rendering, React+SolidJS reconcilers, timeline animations |
+| **OpenTUI**        | Zig FFI for sub-ms rendering, React+SolidJS+Vue reconcilers, timeline animations |
 | **Textual**        | Terminal + browser, CSS styling, command palette, 35+ widgets, rapid releases |
 | **Ratatui**        | Rust safety, no_std support, immediate mode performance, modular crates |
 | **Bubble Tea**     | Elm architecture, 39k stars, SSH/network serving, 10k+ apps built       |
@@ -659,7 +660,7 @@ auto table = vbox({
 | Library            | Used By                                                                                                                              |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------------------|
 | **Ink**            | Claude Code (Anthropic), Gemini CLI (Google), GitHub Copilot CLI, Gatsby, Yarn, Prisma, Parcel, Shopify, New York Times, Terraform CDK |
-| **OpenTUI**        | OpenCode (SST AI coding agent)                                                                                                       |
+| **OpenTUI**        | OpenCode (SST AI coding agent), terminal.shop                                                                                        |
 | **Bubble Tea**     | GitHub, GitLab, NVIDIA, Sourcegraph, Charm (Glow, VHS, etc.)                                                                         |
 | **tview**          | K9s (Kubernetes CLI), GitHub CLI (gh), podman-tui                                                                                    |
 | **Textual**        | Posting (API client), Toad (AI coding UI), Harlequin (SQL IDE), Elia (LLM chat), Toolong                                            |
@@ -688,28 +689,29 @@ auto table = vbox({
 | Embedded/no_std            | **Ratatui**                                        |
 | SSH/network serving        | **Bubble Tea**, **Textual**, **Melker**             |
 | Sub-ms Zig rendering       | **OpenTUI**                                        |
-| Most GitHub stars          | **Bubble Tea** (39k), **Ink** (35k), **Textual** (34k) |
+| Most GitHub stars          | **Bubble Tea** (39.5k), **Ink** (35k), **Textual** (34k) |
 
 ## Recent Updates (2025-2026)
 
 | Library            | Version     | Notable Changes                                                                   |
 |--------------------|-------------|-----------------------------------------------------------------------------------|
-| **Ink**            | v6.7.0      | React 19 support, concurrent rendering, Mode 2026 synchronized output             |
-| **OpenTUI**        | v0.1.79     | Very active (pre-1.0). TS+Zig core, React+SolidJS reconcilers, Go bindings. Powers OpenCode (SST AI coding agent). "Not ready for production use" per README. 8.5k stars in ~7 months since creation (Jul 2025) |
-| **Bubble Tea**     | v2.0.0-rc.2 | v2 RC with View struct API (not string), Cursed Renderer, `charm.land` module path, clipboard via OSC52. v1.3.10 still latest stable |
-| **Textual**        | v7.5.0      | Rapid releases: 1.0 (Dec 2024) through 7.5 (Jan 2026). Textualize company wound down (May 2025); McGugan maintains as open source. Built Toad (AI coding UI) |
-| **Ratatui**        | v0.30.0     | "Biggest release ever" (Dec 2025). no_std for embedded, modular workspace (ratatui-core, ratatui-widgets), `ratatui::run()` API, Sextant/Octant canvas markers. Ratzilla v0.3.0 (WebAssembly) |
-| **Terminal.Gui**   | v1.19.0     | v1.19 stable (Jun 2025). v2 in alpha with true color, overhauled theming, improved text editing, rendering pipeline rewrite. Active develop builds on NuGet |
-| **FTXUI**          | v6.1.9      | Navigation tree, Bazel build support, continued WebAssembly. No release since May 2025 |
-| **tview**          | v0.42.0     | Last release Aug 2025, no commits since Sep 2025 (5+ month gap). K9s uses a fork (`derailed/tview`). gh CLI still depends on it |
+| **Ink**            | v6.7.0      | Opt-in React concurrent rendering, Mode 2026 synchronized output (eliminates flicker), opt-in Kitty keyboard protocol, `useCursor` API for IME. Steady monthly releases throughout v6 |
+| **OpenTUI**        | v0.1.80     | Very active (pre-1.0). TS+Zig core with React, SolidJS, and Vue reconcilers. Hover cursor via OSC 22, streaming markdown, grapheme stability fixes. 8.6k stars in ~7 months since creation (Jul 2025). Powers OpenCode. "Not ready for production use" per README |
+| **Bubble Tea**     | v2.0.0-rc.2 | v2 RC (Nov 2025) with View struct API (not string), Mode 2026 sync output, framerate renderer, native clipboard (OSC52), `charm.land` module path. v1.3.10 still latest stable. Bubbles v1.0.0 (Feb 2026) |
+| **Textual**        | v8.0.0      | Rapid releases: 1.0 (Dec 2024) through 8.0 (Feb 2026). Multi-mode screen management, Catppuccin theme variants, `pointer` CSS rule, `Widget.BLANK` optimization. Textualize wound down May 2025; McGugan maintains as open source with undiminished pace |
+| **Ratatui**        | v0.30.0     | "Biggest release ever" (Dec 2025). no_std for embedded, modular workspace (ratatui-core, ratatui-widgets), `ratatui::run()` API, Sextant/Octant canvas markers, Rust 2024 edition. Ratzilla v0.3.0 (WebAssembly, ~1.2k stars) |
+| **Terminal.Gui**   | v1.19.0     | v1.19 stable (Jun 2025). v2 beta targeted Feb 20, 2026 (6 open issues remaining); v2 stable release targeted Mar 31, 2026. True color, overhauled theming, rendering pipeline rewrite |
+| **FTXUI**          | v6.1.9      | Last tagged release May 2025, but active commits through Feb 2026 (table border fixes, gridbox improvements). WebAssembly still supported |
+| **tview**          | -           | Last commit Sep 2025 (5+ month gap). No formal release tags. K9s uses a fork (`derailed/tview`). gh CLI still depends on it |
 | **Blessed**        | Dead        | Last commit January 2016. neo-blessed fork has limited maintenance                |
 
 **Notes:**
-- **Textual Y***: Textualize (the company) announced wind-down in May 2025. Will McGugan continues maintaining Textual as open source. Active development continues but corporate backing is gone.
-- **Bubble Tea v2**: Still in release candidate; production apps should use v1.3.10. Bubbles v0.21.1, Lip Gloss v2.0.0-beta.3 (v1.1.0 stable).
+- **Textual**: Textualize (the company) wound down in May 2025. Will McGugan continues maintaining Textual as open source with a rapid release cadence (v1.0 through v8.0 in 14 months).
+- **Bubble Tea v2**: Still in release candidate; production apps should use v1.3.10. Bubbles v1.0.0 (Feb 2026), Lip Gloss v2.0.0-beta.3 (v1.1.0 stable). Coordinated v2 stable launch expected.
 - **Ink adopters**: Claude Code (Anthropic, with custom React renderer) and Gemini CLI (Google) both use Ink 6 + React 19.
-- **Ratatui canvas**: Now supports Quadrant (2x2), Sextant (2x3), and Octant (2x4) markers in addition to Braille (2x4) and HalfBlock (1x2).
-- **Terminal.Gui v2**: Multi-year rewrite. v2 alpha builds on NuGet with true color, flexible theming, and 40+ views. Not yet stable.
+- **Ratatui canvas**: Supports Quadrant (2x2), Sextant (2x3), Octant (2x4), Braille (2x4), and HalfBlock (1x2) markers. Braille can now layer over Block symbols.
+- **Terminal.Gui v2**: Multi-year rewrite approaching beta (Feb 2026). True color, flexible theming, 40+ views. v2 stable targeted for Mar 31, 2026.
+- **Mode 2026**: DEC terminal synchronized output protocol adopted by both Ink v6.7 and Bubble Tea v2, making frame updates atomic to eliminate tearing.
 
 ## Emerging Frameworks
 
@@ -722,13 +724,17 @@ Notable newer TUI libraries gaining traction:
 | [iocraft](https://github.com/ccbrown/iocraft)           | Rust     | 1.1k  | React-like declarative TUI inspired by Ink and Dioxus  |
 | [Cursive](https://github.com/gyscos/cursive)            | Rust     | 4.7k  | High-level TUI with views, menus, layers, themes       |
 | [Brick](https://github.com/jtdaugherty/brick)           | Haskell  | 1.7k  | Declarative composable widgets, cross-platform (2.10)  |
+| [Rezi](https://github.com/RtlZeroMemory/Rezi)          | TS/C     | New   | Native C rendering engine ("Zireael"), 49 widgets, JSX. Alpha (Feb 2026) |
 
 **Trends (2025-2026):**
 - **Declarative paradigms everywhere**: React (Ink, OpenTUI, iocraft), Compose (Mosaic), SwiftUI (SwiftTUI), Elm (Bubbletea) - all bringing web/mobile UI patterns to the terminal
-- **v2 rewrites**: Bubble Tea, Lip Gloss, Terminal.Gui, and Brick all shipped or are shipping major v2 architecture overhauls
-- **WebAssembly targets**: FTXUI, Ratatui (Ratzilla), and Textual all support running TUI apps in web browsers
+- **Hybrid native backends**: OpenTUI (Zig core) and Rezi (C rendering engine) both delegate performance-critical rendering to a compiled language while keeping a TypeScript developer API — mirroring the "fast native core, ergonomic surface" trend seen in tools like Bun and esbuild
+- **v2 rewrites**: Bubble Tea, Lip Gloss, Terminal.Gui, and Brick all shipped or are shipping major v2 architecture overhauls. Terminal.Gui v2 beta due Feb 2026
+- **Mode 2026 adoption**: Synchronized output protocol (DEC private mode) adopted by Ink v6.7 and Bubble Tea v2, making terminal frame updates atomic
+- **`no_std` / embedded**: Ratatui v0.30.0 added `no_std` support, enabling TUI on microcontrollers (ESP32, STM32H7) and bare-metal targets
+- **WebAssembly targets**: FTXUI, Ratatui (Ratzilla ~1.2k stars), and Textual all support running TUI apps in web browsers
 - **Modular architectures**: Ratatui split into ratatui-core + ratatui-widgets; Charm ecosystem spreads across Bubbletea + Bubbles + Lip Gloss
-- **OpenTUI breakout**: 8.5k stars in ~7 months since creation (Jul 2025), driven by the SST/OpenCode ecosystem
+- **OpenTUI breakout**: 8.6k stars in ~7 months since creation (Jul 2025), driven by the SST/OpenCode ecosystem
 
 ## Links
 
@@ -736,7 +742,7 @@ Notable newer TUI libraries gaining traction:
 - [Awesome TUIs](https://github.com/rothgar/awesome-tuis) - Curated list
 - [Ink](https://github.com/vadimdemedes/ink) - React for CLI
 - [Ink UI](https://ink-ui.vadimdemedes.com/) - Component library for Ink
-- [OpenTUI](https://github.com/sst/opentui) - TypeScript+Zig TUI with React/SolidJS reconcilers (by SST team)
+- [OpenTUI](https://github.com/sst/opentui) - TypeScript+Zig TUI with React/SolidJS/Vue reconcilers (by SST team)
 - [OpenCode](https://github.com/sst/opencode) - AI coding agent built with OpenTUI
 - [Blessed](https://github.com/chjj/blessed) - Node.js widgets (dead since 2016)
 - [neo-blessed](https://github.com/embarklabs/neo-blessed) - Blessed fork (limited maintenance)
@@ -744,20 +750,21 @@ Notable newer TUI libraries gaining traction:
 - [Bubbles](https://github.com/charmbracelet/bubbles) - Components for Bubble Tea
 - [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Go styling
 - [tview](https://github.com/rivo/tview) - Go widgets
-- [Textual](https://github.com/Textualize/textual) - Python async TUI (community-maintained since May 2025)
+- [Textual](https://github.com/Textualize/textual) - Python async TUI (maintained by Will McGugan since Textualize wound down May 2025)
 - [Rich](https://github.com/Textualize/rich) - Python terminal formatting (Textual's foundation)
 - [Toad](https://github.com/willmcgugan/toad) - Universal UI for AI coding agents (built with Textual)
 - [Ratatui](https://github.com/ratatui/ratatui) - Rust immediate mode
-- [Ratzilla](https://github.com/ratatui/ratzilla) - Ratatui WebAssembly backend (v0.3.0, unstable)
+- [Ratzilla](https://github.com/ratatui/ratzilla) - Ratatui WebAssembly backend (v0.3.0, ~1.2k stars, DOM + WebGL2 backends)
 - [Mousefood](https://github.com/ratatui/mousefood) - Ratatui embedded-graphics backend for microcontrollers
 - [awesome-ratatui](https://github.com/ratatui/awesome-ratatui) - Ratatui ecosystem
-- [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) - C#/.NET cross-platform TUI (v2 in alpha)
+- [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) - C#/.NET cross-platform TUI (v2 beta due Feb 2026)
 - [FTXUI](https://github.com/ArthurSonzogni/FTXUI) - C++ functional
 - [Cursive](https://github.com/gyscos/cursive) - Rust high-level TUI with views and themes
 - [Brick](https://github.com/jtdaugherty/brick) - Haskell declarative TUI
 - [Mosaic](https://github.com/JakeWharton/mosaic) - Kotlin terminal UI via Jetpack Compose
 - [iocraft](https://github.com/ccbrown/iocraft) - Rust React-like declarative TUI
 - [libvaxis](https://github.com/rockorager/libvaxis) - Zig modern TUI with vxfw framework
+- [Rezi](https://github.com/RtlZeroMemory/Rezi) - TypeScript+C hybrid TUI with native rendering engine (alpha)
 - [Clack](https://github.com/bombshell-dev/clack) - TypeScript CLI prompts (not a full TUI framework)
 - [OSS Insight TUI Rankings](https://ossinsight.io/collections/tui-framework/) - Live star rankings
 

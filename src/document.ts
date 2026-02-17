@@ -425,6 +425,7 @@ export class Document {
     // Register in element registry
     if (element.id) {
       this._elementRegistry.set(element.id, element);
+      this._removedIds.delete(element.id);
     }
   }
 

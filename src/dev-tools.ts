@@ -3,7 +3,7 @@
 
 import { Document } from './document.ts';
 import { melker } from './template.ts';
-import { Element } from './types.ts';
+import { Element, hasSubtreeElements } from './types.ts';
 import { isUnicodeSupported } from './utils/terminal-detection.ts';
 import { FocusManager } from './focus.ts';
 import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy, type PolicyConfigProperty } from './policy/mod.ts';
@@ -744,10 +744,8 @@ export class DevToolsManager {
     }
 
     // Check subtree elements (e.g., mermaid graphs in markdown)
-    const component = element as any;
-    if (typeof component.getSubtreeElements === 'function') {
-      const subtreeElements = component.getSubtreeElements() as Element[];
-      for (const subtreeEl of subtreeElements) {
+    if (hasSubtreeElements(element)) {
+      for (const subtreeEl of element.getSubtreeElements()) {
         // Add 10 for "(subtree) " prefix
         const subtreeMax = this._calculateMaxNodeWidth(subtreeEl, depth + 1) + 10;
         if (subtreeMax > maxWidth) maxWidth = subtreeMax;
@@ -785,9 +783,8 @@ export class DevToolsManager {
     const filteredChildren = (element.children || []).filter(c => !c.id?.startsWith('dev-tools-'));
 
     // Check for subtree elements (e.g., mermaid graphs in markdown)
-    const component = element as any;
-    const subtreeElements: Element[] = typeof component.getSubtreeElements === 'function'
-      ? component.getSubtreeElements()
+    const subtreeElements: Element[] = hasSubtreeElements(element)
+      ? element.getSubtreeElements()
       : [];
 
     const allChildren = [...filteredChildren, ...subtreeElements];

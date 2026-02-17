@@ -2,7 +2,7 @@
 // Walks the document tree, collects qualifying elements, resolves labels,
 // and returns PaletteItem[] for injection into command palettes.
 
-import { Element, isToggleable, isClickable } from './types.ts';
+import { Element, isToggleable, isClickable, hasSubtreeElements } from './types.ts';
 import type { Document } from './document.ts';
 import { getLogger } from './logging.ts';
 
@@ -236,6 +236,13 @@ function _walkTree(
           _elementType: element.type,
         });
       }
+    }
+  }
+
+  // Recurse into subtree elements (e.g., mermaid graphs in markdown)
+  if (hasSubtreeElements(element)) {
+    for (const subtreeRoot of element.getSubtreeElements()) {
+      _walkTree(subtreeRoot, items, document, render);
     }
   }
 

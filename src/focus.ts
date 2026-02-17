@@ -2,7 +2,7 @@
 // Handles tab order, focus indicators, and keyboard navigation
 
 import { getGlobalEventManager, createFocusEvent, type EventManager } from './events.ts';
-import { type Element } from './types.ts';
+import { type Element, hasSubtreeElements } from './types.ts';
 import { type Document } from './document.ts';
 import { getLogger } from './logging.ts';
 import { hasElementWithId } from './utils/tree-traversal.ts';
@@ -148,10 +148,8 @@ export class FocusManager {
 
     // Check subtree elements if this component has any
     // Subtree elements are rendered inline but not as children (e.g., mermaid graphs in markdown)
-    const component = element as any;
-    if (typeof component.getSubtreeElements === 'function') {
-      const subtreeElements = component.getSubtreeElements() as Element[];
-      for (const subtreeRoot of subtreeElements) {
+    if (hasSubtreeElements(element)) {
+      for (const subtreeRoot of element.getSubtreeElements()) {
         const found = this._findElementById(subtreeRoot, targetId);
         if (found) return found;
       }
@@ -668,10 +666,8 @@ export class FocusManager {
    */
   private _findParentElement(current: Element, targetId: string): Element | null {
     // Check subtree elements if this component has any
-    const component = current as any;
-    if (typeof component.getSubtreeElements === 'function') {
-      const subtreeElements = component.getSubtreeElements() as Element[];
-      for (const subtreeRoot of subtreeElements) {
+    if (hasSubtreeElements(current)) {
+      for (const subtreeRoot of current.getSubtreeElements()) {
         // If the subtree root itself is the target, parent is the component
         if (subtreeRoot.id === targetId) {
           return current;

@@ -181,18 +181,43 @@ Mermaid diagrams are rendered as **subtree elements** - they are:
 
 ### Element Discovery
 
-Components can expose subtree elements by implementing:
+Components can expose subtree elements by implementing the `HasSubtreeElements` interface from `src/types.ts`:
 
 ```typescript
-getSubtreeElements(): Element[]
+import { HasSubtreeElements } from '../types.ts';
+
+// Interface
+export interface HasSubtreeElements {
+  getSubtreeElements(): Element[];
+}
+
+// Type guard
+export function hasSubtreeElements(element: Element): element is Element & HasSubtreeElements;
 ```
 
-This interface is used by:
+All consumers use the `hasSubtreeElements()` type guard instead of duck-typing:
+
+```typescript
+import { hasSubtreeElements } from '../types.ts';
+
+if (hasSubtreeElements(element)) {
+  for (const subtreeRoot of element.getSubtreeElements()) {
+    // element is properly narrowed — no `as any` needed
+  }
+}
+```
+
+Currently implemented by:
+- **MarkdownElement** (`src/components/markdown.ts`) - Exposes mermaid graph elements
+
+Used by:
 - **Document** - `getElementById()` searches subtrees
-- **FocusManager** - Tab navigation includes subtree elements
+- **FocusManager** - Element lookup and parent search include subtrees
+- **FocusNavigationHandler** - Tab navigation discovers focusable subtree elements
 - **HitTester** - Click detection for subtree elements
 - **DevTools** - Inspect tab shows subtree elements
-- **AI Assistant** - Context includes subtree elements
+- **AI Assistant** - Screen content and element tree include subtree elements
+- **Command Palette** - Discovers interactive subtree elements for Ctrl+K
 
 ---
 

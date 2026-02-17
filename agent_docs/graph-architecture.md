@@ -346,7 +346,7 @@ The `GraphElement` class (`graph.ts`) orchestrates the pipeline.
 Graph elements are rendered as subtrees:
 - Owned by the GraphElement, not the document
 - Rendered via `renderElementSubtree()` helper
-- Exposed via `getSubtreeElements()` for focus/hit-testing
+- Exposed via `HasSubtreeElements` interface (`getSubtreeElements()`) for focus/hit-testing — see [mermaid-support.md](mermaid-support.md#element-discovery)
 
 ---
 

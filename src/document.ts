@@ -1,6 +1,6 @@
 // Document class for managing runtime information about a root element
 
-import { Element } from './types.ts';
+import { Element, hasSubtreeElements } from './types.ts';
 import { traverseElements } from './element.ts';
 import { findElementById as findInTree } from './utils/tree-traversal.ts';
 import { selectorStringMatches, Stylesheet, applyStylesheet, type StyleContext } from './stylesheet.ts';
@@ -107,10 +107,8 @@ export class Document {
     }
 
     // Check if this component has subtree elements (e.g., markdown with mermaid graphs)
-    const component = element as any;
-    if (typeof component.getSubtreeElements === 'function') {
-      const subtreeElements = component.getSubtreeElements() as Element[];
-      for (const subtreeRoot of subtreeElements) {
+    if (hasSubtreeElements(element)) {
+      for (const subtreeRoot of element.getSubtreeElements()) {
         const found = findInTree(subtreeRoot, targetId);
         if (found) return found;
       }

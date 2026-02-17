@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { FocusManager } from './focus.ts';
 import { HitTester } from './hit-test.ts';
-import { Element, isFocusable } from './types.ts';
+import { Element, isFocusable, hasSubtreeElements } from './types.ts';
 import { getLogger } from './logging.ts';
 
 const logger = getLogger('FocusNavigation');
@@ -83,6 +83,7 @@ export class FocusNavigationHandler {
     // are never focusable, so there's no need to recurse into them
     if (element.props.visible === false) return focusableElements;
     if (element.type === 'dialog' && element.props.open !== true) return focusableElements;
+    if (element.props['aria-hidden'] === true || element.props['aria-hidden'] === 'true') return focusableElements;
 
     // Debug logging for element inspection
     if (element.type === 'button') {
@@ -117,15 +118,11 @@ export class FocusNavigationHandler {
       }
     }
 
-    // Check mermaid elements if this is a markdown component
-    // Mermaid elements are not in the document tree but contain interactive elements
-    if (element.type === 'markdown') {
-      const markdown = element as any;
-      if (typeof markdown.getMermaidElements === 'function') {
-        const mermaidElements = markdown.getMermaidElements() as Element[];
-        for (const mermaidRoot of mermaidElements) {
-          focusableElements.push(...this.findFocusableElements(mermaidRoot));
-        }
+    // Check subtree elements (e.g., mermaid graphs in markdown)
+    // Subtree elements are rendered inline but not in the document tree
+    if (hasSubtreeElements(element)) {
+      for (const subtreeRoot of element.getSubtreeElements()) {
+        focusableElements.push(...this.findFocusableElements(subtreeRoot));
       }
     }
 

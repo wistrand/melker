@@ -1,7 +1,7 @@
 // Hit testing for finding elements at screen coordinates
 // Handles dialogs and regular element tree traversal
 
-import { Element, isInteractive, isTextSelectable, isScrollableType, isScrollingEnabled, isFocusCapturable } from './types.ts';
+import { Element, isInteractive, isTextSelectable, isScrollableType, isScrollingEnabled, isFocusCapturable, hasSubtreeElements } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { getLogger } from './logging.ts';
@@ -382,13 +382,11 @@ export class HitTester {
    * Subtree elements are rendered inline but not as children, so they need special hit testing
    */
   private _hitTestSubtreeElements(element: Element, x: number, y: number): Element | undefined {
-    // Check if component has getSubtreeElements method
-    const component = element as any;
-    if (typeof component.getSubtreeElements !== 'function') {
+    if (!hasSubtreeElements(element)) {
       return undefined;
     }
 
-    const subtreeElements = component.getSubtreeElements() as Element[];
+    const subtreeElements = element.getSubtreeElements();
 
     for (const subtreeRoot of subtreeElements) {
       const hit = this._hitTestSubtreeElement(subtreeRoot, x, y);

@@ -2,7 +2,7 @@
 // Gathers information about current UI state to send to the LLM
 
 import { Document } from '../document.ts';
-import { Element, isScrollingEnabled } from '../types.ts';
+import { Element, isScrollingEnabled, hasSubtreeElements } from '../types.ts';
 
 /** Check if an ARIA boolean attribute is truthy (handles both boolean and string values) */
 function isAriaTrue(value: unknown): boolean {
@@ -221,10 +221,8 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
     }
 
     // Traverse subtree elements (e.g., mermaid graphs in markdown)
-    const component = element as any;
-    if (typeof component.getSubtreeElements === 'function') {
-      const subtreeElements = component.getSubtreeElements() as Element[];
-      for (const subtreeEl of subtreeElements) {
+    if (hasSubtreeElements(element)) {
+      for (const subtreeEl of element.getSubtreeElements()) {
         traverse(subtreeEl, depth + 1);
       }
     }
@@ -311,9 +309,8 @@ function buildElementTree(root: Element, excludeIds: Set<string>, document: Docu
     const children = (element.children || []).filter(c => !excludeIds.has(c.id));
 
     // Include subtree elements (e.g., mermaid graphs in markdown)
-    const component = element as any;
-    const subtreeElements: Element[] = typeof component.getSubtreeElements === 'function'
-      ? component.getSubtreeElements().filter((c: Element) => !excludeIds.has(c.id))
+    const subtreeElements: Element[] = hasSubtreeElements(element)
+      ? element.getSubtreeElements().filter(c => !excludeIds.has(c.id))
       : [];
 
     const allChildren = [...children, ...subtreeElements];

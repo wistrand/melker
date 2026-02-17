@@ -430,6 +430,17 @@ export function isFocusable(element: Element): element is Element & Focusable {
   return 'canReceiveFocus' in element && typeof element.canReceiveFocus === 'function';
 }
 
+// HasSubtreeElements interface for components that own elements outside the document tree
+// (e.g., mermaid graphs rendered inline by markdown)
+export interface HasSubtreeElements {
+  getSubtreeElements(): Element[];
+}
+
+// Type guard for HasSubtreeElements interface
+export function hasSubtreeElements(element: Element): element is Element & HasSubtreeElements {
+  return 'getSubtreeElements' in element && typeof (element as unknown as HasSubtreeElements).getSubtreeElements === 'function';
+}
+
 // FocusCapturable interface for elements that capture focus for all children
 // (e.g., dialogs, modals that handle focus internally)
 export interface FocusCapturable {

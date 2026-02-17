@@ -4,6 +4,8 @@ node_modules/
 # Deno
 .deno/
 
+.claude-dev/
+
 # IDE
 .idea/
 .vscode/

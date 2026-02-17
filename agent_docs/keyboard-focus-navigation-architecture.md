@@ -293,6 +293,8 @@ Shortcuts are normalized (lowercase, sorted modifiers: `alt+ctrl+s`). Conflicts 
 | `palette-shortcut` | `string`          | Global keyboard shortcut (e.g., `"Ctrl+S"`)   |
 | `palette-group`    | `string`          | Override default group name                    |
 
+See [`examples/basics/palette-demo.melker`](../examples/basics/palette-demo.melker) for a working demo.
+
 ## Future Enhancements
 
 - **Nested scroll chain** — Walk up multiple scrollable parents before falling through to geometric nav

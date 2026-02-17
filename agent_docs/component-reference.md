@@ -51,6 +51,26 @@ Components are registered with `registerComponent()`. Registered components use 
 
 See `src/components/*.ts` for component implementations.
 
+### Component Constructor Timing
+
+Component constructors run during template parsing, **before** `globalThis.melkerEngine` is set (the engine is created after parsing). This means `engine?.document` is `null` in constructors. For operations that need the engine (e.g. stylesheet registration), use lazy initialization: store a pending value and register it from `intrinsicSize()` or `render()` when the engine exists.
+
+### Scrolling
+
+Scrollable containers support axis-specific overflow control:
+
+| Property     | Values                                    | Description                          |
+|--------------|-------------------------------------------|--------------------------------------|
+| `overflow`   | `visible`, `hidden`, `scroll`, `auto`     | Shorthand for both axes              |
+| `overflow-x` | `visible`, `hidden`, `scroll`, `auto`     | Horizontal overflow (overrides shorthand) |
+| `overflow-y` | `visible`, `hidden`, `scroll`, `auto`     | Vertical overflow (overrides shorthand)   |
+
+Axis-specific properties override the shorthand. For example, `overflow: scroll; overflow-x: hidden` scrolls vertically but clips horizontally.
+
+Only `container` and `tbody` elements support scrolling. Scrollbars are rendered per-axis: vertical on the right edge, horizontal on the bottom edge. Arrow keys, mouse wheel, and scrollbar drag all respect per-axis settings.
+
+See [`examples/basics/overflow.melker`](../examples/basics/overflow.melker) for a working demo.
+
 ### ARIA Attributes
 
 Elements support ARIA attributes as regular props (via `BaseProps extends Record<string, any>`). They are consumed exclusively by the AI context builder in `src/ai/context.ts` — they have no effect on rendering, layout, or keyboard navigation.
@@ -1002,6 +1022,8 @@ The `<canvas>` component provides pixel graphics using Unicode sextant character
 | `decodeImageBytes(bytes)`                            | Decode PNG/JPEG/GIF bytes to `{ width, height, data, bytesPerPixel }` (sync) |
 | `decodeImageBytesAsync(bytes)`                       | Decode PNG/JPEG/GIF/WebP bytes (async, required for WebP)            |
 | `markDirty()`                                        | Mark canvas for re-render                                        |
+
+**Note:** There is no `fillText` method — canvas supports pixel drawing only, not text rendering.
 
 ### drawImageRegion
 

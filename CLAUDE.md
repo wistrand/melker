@@ -123,6 +123,7 @@ Requires: `xorg-server-xvfb`, `imagemagick`, `ffmpeg`, `kitty`
 
 **Note**: Don't run `deno fmt` or `deno lint` automatically (user preference).
 
+- Always use `deno task test` to run tests — never manually construct `deno test ...` commands
 - never execute git add, commit or push commands
 
 ## Project Structure

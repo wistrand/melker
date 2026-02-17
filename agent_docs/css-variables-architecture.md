@@ -274,6 +274,14 @@ User variables sort first, theme variables after. Refresh button re-reads curren
 | Theme var population                | 29 `unpackRGBA` + `rgbToHex` calls. Once per instance.      |
 | Theme override push                 | One Map scan per `_fullReparse()` to detect `--theme-*` diffs. |
 
+## Stylesheet Registration
+
+`stylesheet.applyTo(element)` applies computed styles to an element tree but does **not** register the stylesheet on the document. To persist styles through subsequent render passes, call `engine.document.addStylesheet(stylesheet)` separately. If another stylesheet's `applyTo` runs later (e.g. the document's own), it will overwrite styles from the first `applyTo` because they are tracked as "computed" not "inline". For sub-component stylesheets, use `addStylesheet(stylesheet, true)` (prepend) so they are applied in the normal pipeline.
+
+## CSS Classes
+
+Melker supports `class="foo bar"` on elements (converted to `classList` array in props). Use `.class-name` selectors in `<style>` blocks. Works for both template and `createElement`-created elements.
+
 ## Limitations
 
 - `--*` declarations only in `:root` selectors (no per-element scoping)

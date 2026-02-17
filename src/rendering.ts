@@ -1,7 +1,7 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, isScrollingEnabled, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
+import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, type BorderStyle, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { clipBounds, clamp } from './geometry.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
@@ -985,11 +985,10 @@ export class RenderingEngine {
       // Calculate content dimensions to determine if scrollbars are needed
       const contentDimensions = this.calculateScrollDimensions(element);
 
-      // Check overflow style to determine which scrollbars to show
-      // overflow: 'scroll' = both, 'scrollY' = vertical only, 'scrollX' = horizontal only
-      const overflow = element.props.style?.overflow;
-      const allowVertical = overflow !== 'scrollX'; // Allow vertical unless explicitly scrollX only
-      const allowHorizontal = overflow !== 'scrollY' && overflow !== 'scroll'; // Only allow horizontal if not scrollY or scroll
+      // Resolve per-axis overflow to determine which scrollbars to show
+      const { x: overflowX, y: overflowY } = getOverflowAxis(element);
+      const allowVertical = overflowY === 'scroll' || overflowY === 'auto';
+      const allowHorizontal = overflowX === 'scroll' || overflowX === 'auto';
 
       const needsVerticalScrollbar = allowVertical && contentDimensions.height > contentBounds.height;
       const needsHorizontalScrollbar = allowHorizontal && contentDimensions.width > contentBounds.width;
@@ -1001,14 +1000,26 @@ export class RenderingEngine {
         height: needsHorizontalScrollbar ? Math.max(1, contentBounds.height - 1) : contentBounds.height
       };
 
+      // Build clip rect: expand on axes where overflow is 'visible' so content isn't clipped
+      const clipRect = {
+        x: overflowX === 'visible' ? 0 : adjustedContentBounds.x,
+        y: overflowY === 'visible' ? 0 : adjustedContentBounds.y,
+        width: overflowX === 'visible' ? 99999 : adjustedContentBounds.width,
+        height: overflowY === 'visible' ? 99999 : adjustedContentBounds.height,
+      };
+
+      // Only apply scroll offset on axes that have scrolling enabled
+      const effectiveScrollX = allowHorizontal ? scrollX : 0;
+      const effectiveScrollY = allowVertical ? scrollY : 0;
+
       const childContext: RenderContext = {
         ...context,
-        clipRect: adjustedContentBounds, // Clip to adjusted bounds
+        clipRect,
         parentBounds: adjustedContentBounds,
         parentStyle: computedStyle,
-        scrollOffset: { x: scrollX, y: scrollY }, // Pass scroll offset to children
-        renderScrollX: rsx + scrollX, // Accumulate scroll offset for rendering
-        renderScrollY: rsy + scrollY,
+        scrollOffset: { x: effectiveScrollX, y: effectiveScrollY },
+        renderScrollX: rsx + effectiveScrollX,
+        renderScrollY: rsy + effectiveScrollY,
       };
 
       // Render children — scroll offset is applied on-the-fly via renderScrollX/Y
@@ -1045,11 +1056,10 @@ export class RenderingEngine {
     // Calculate content dimensions - need to calculate without scroll effects
     const contentDimensions = this.calculateScrollDimensions(element);
 
-    // Check overflow style to determine which scrollbars to show
-    // overflow: 'scroll' = both, 'scrollY' = vertical only, 'scrollX' = horizontal only
-    const overflow = element.props.style?.overflow;
-    const allowVertical = overflow !== 'scrollX'; // Allow vertical unless explicitly scrollX only
-    const allowHorizontal = overflow !== 'scrollY' && overflow !== 'scroll'; // Only allow horizontal if not scrollY or scroll
+    // Resolve per-axis overflow to determine which scrollbars to show
+    const { x: overflowX, y: overflowY } = getOverflowAxis(element);
+    const allowVertical = overflowY === 'scroll' || overflowY === 'auto';
+    const allowHorizontal = overflowX === 'scroll' || overflowX === 'auto';
 
     // Check if scroll bars are needed (and allowed by overflow style)
     const needsVerticalScrollbar = allowVertical && contentDimensions.height > contentBounds.height;
@@ -1751,19 +1761,18 @@ export class RenderingEngine {
         return layoutNode.bounds;
       }
 
-      // Check if vertical scrollbar is needed
+      // Check if scrollbars are needed (reduce bounds to match rendering)
       const contentDimensions = this.calculateScrollDimensions(layoutNode.element);
-      const overflow = layoutNode.element.props.style?.overflow;
-      const allowVertical = overflow !== 'scrollX';
-      const needsVerticalScrollbar = allowVertical && contentDimensions.height > contentBounds.height;
+      const { x: overflowX, y: overflowY } = getOverflowAxis(layoutNode.element);
+      const needsVerticalScrollbar = (overflowY === 'scroll' || overflowY === 'auto') && contentDimensions.height > contentBounds.height;
+      const needsHorizontalScrollbar = (overflowX === 'scroll' || overflowX === 'auto') && contentDimensions.width > contentBounds.width;
 
-      if (needsVerticalScrollbar) {
-        // Reduce width by 2 chars (scrollbar + spacing) to match rendering
+      if (needsVerticalScrollbar || needsHorizontalScrollbar) {
         return {
           x: contentBounds.x,
           y: contentBounds.y,
-          width: Math.max(1, contentBounds.width - 2),
-          height: contentBounds.height,
+          width: needsVerticalScrollbar ? Math.max(1, contentBounds.width - 2) : contentBounds.width,
+          height: needsHorizontalScrollbar ? Math.max(1, contentBounds.height - 1) : contentBounds.height,
         };
       }
 

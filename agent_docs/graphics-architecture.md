@@ -237,6 +237,17 @@ Canvas maintains two pixel buffers that are composited during rendering:
 | `src/input.ts`                       | Detection response routing                 |
 | `src/rendering.ts`                   | Overlay detection                          |
 
+## Canvas Size Model
+
+Canvas-family components (`<canvas>`, `<img>`, `<progress>`) maintain two separate size concepts:
+
+| Field                              | Purpose                                    |
+|------------------------------------|--------------------------------------------|
+| `props.width` / `props.height`     | Declarative value (`"100%"`, `30`, `"fill"`) used by the layout engine |
+| `_terminalWidth` / `_terminalHeight` | Resolved numeric terminal-cell size used for buffer allocation, render data, and sixel sizing |
+
+`setSize()` updates `_terminalWidth`/`_terminalHeight`, **not** `props.width`. This separation prevents responsive strings from being clobbered to numbers on resize — which previously caused images to never shrink (the layout engine's `Math.max(props.width, intrinsic)` locked in the stale numeric value). Subclasses should compare against `_terminalWidth` when checking if `setSize` is needed.
+
 ## See Also
 
 - [Sixel Architecture](sixel-architecture.md) — Sixel-specific details

@@ -33,6 +33,8 @@ Element (abstract base class)
 - `isRenderable(el)`, `isFocusable(el)`, `isClickable(el)`, etc.
 - Use duck-typing: check if method exists, then call it
 
+The `Element` abstract base class is defined in `src/types.ts`. The concrete `BasicElement` implementation and `createElement()` factory live in `src/element.ts`.
+
 ### Element Creation (`src/element.ts`)
 
 ```typescript

@@ -1,0 +1,110 @@
+<melker>
+<policy>
+{
+  "name": "Overflow Demo",
+  "description": "Demonstrates overflow-x and overflow-y axis-specific scrolling",
+  "permissions": {}
+}
+</policy>
+
+<style>
+.panel {
+  border: thin;
+  margin-right: 1;
+  flex: 1;
+}
+
+.panel-title {
+  font-weight: bold;
+  padding-left: 1;
+}
+</style>
+
+<container style="display: flex; flex-direction: column; width: fill; height: fill">
+  <text style="font-weight: bold; text-align: center; padding-bottom: 1">
+    Overflow Demo - arrow keys or mouse wheel to scroll
+  </text>
+
+  <container style="display: flex; flex-direction: row; flex: 1">
+
+    <!-- Vertical only -->
+    <container class="panel" style="overflow-y: scroll; overflow-x: hidden">
+      <text class="panel-title">overflow-y: scroll</text>
+      <text> Line 1 - Vertical only</text>
+      <text> Line 2</text>
+      <text> Line 3</text>
+      <text> Line 4</text>
+      <text> Line 5</text>
+      <text> Line 6</text>
+      <text> Line 7</text>
+      <text> Line 8</text>
+      <text> Line 9</text>
+      <text> Line 10</text>
+      <text> Line 11</text>
+      <text> Line 12</text>
+      <text> Line 13</text>
+      <text> Line 14</text>
+      <text> Line 15</text>
+      <text> Line 16</text>
+      <text> Line 17</text>
+      <text> Line 18</text>
+      <text> Line 19</text>
+      <text> Line 20</text>
+      <text> Line 21</text>
+      <text> Line 22</text>
+      <text> Line 23</text>
+      <text> Line 24</text>
+      <text> Line 25</text>
+      <text> Line 26</text>
+      <text> Line 27</text>
+      <text> Line 28</text>
+      <text> Line 29</text>
+      <text> Line 30</text>
+    </container>
+
+    <!-- Both axes -->
+    <container class="panel" style="overflow: scroll">
+      <text class="panel-title">overflow: scroll</text>
+      <text> Both axes - this line is intentionally long to show horizontal scrolling alongside vertical scrolling</text>
+      <text> Line 2 - Another long line extending beyond the container width to show the horizontal scrollbar in action</text>
+      <text> Line 3</text>
+      <text> Line 4</text>
+      <text> Line 5</text>
+      <text> Line 6</text>
+      <text> Line 7</text>
+      <text> Line 8</text>
+      <text> Line 9</text>
+      <text> Line 10</text>
+      <text> Line 11</text>
+      <text> Line 12</text>
+      <text> Line 13</text>
+      <text> Line 14</text>
+      <text> Line 15</text>
+      <text> Line 16</text>
+      <text> Line 17</text>
+      <text> Line 18</text>
+      <text> Line 19</text>
+      <text> Line 20</text>
+      <text> Line 21</text>
+      <text> Line 22</text>
+      <text> Line 23</text>
+      <text> Line 24</text>
+      <text> Line 25</text>
+      <text> Line 26</text>
+      <text> Line 27</text>
+      <text> Line 28</text>
+      <text> Line 29</text>
+      <text> Line 30</text>
+    </container>
+
+    <!-- Horizontal only -->
+    <container class="panel" style="overflow-x: scroll; overflow-y: hidden; margin-right: 0">
+      <text class="panel-title">overflow-x: scroll</text>
+      <text> Horizontal only - this line is long enough to require scrolling left and right to see all the content in this panel</text>
+      <text> Another wide line - vertical content is clipped, not scrollable, use left/right arrows or shift+wheel</text>
+      <text> Third wide line with extra text to demonstrate the horizontal scrollbar working independently of vertical</text>
+    </container>
+
+  </container>
+</container>
+</melker>

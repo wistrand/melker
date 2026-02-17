@@ -1,7 +1,7 @@
 // Scroll handling for scrollable containers
 // Handles scrollbar interaction, wheel events, and arrow key scrolling
 
-import { Element, isScrollableType, isScrollingEnabled } from './types.ts';
+import { Element, isScrollableType, isScrollingEnabled, getOverflowAxis } from './types.ts';
 import { Document } from './document.ts';
 import { RenderingEngine, ScrollbarBounds } from './rendering.ts';
 import { pointInBounds, clamp } from './geometry.ts';
@@ -320,6 +320,9 @@ export class ScrollHandler {
       const deltaY = event.deltaY || 0;
       const deltaX = event.deltaX || 0;
 
+      // Resolve per-axis overflow
+      const { x: overflowX, y: overflowY } = getOverflowAxis(targetContainer);
+
       // Calculate actual content dimensions - pass element directly (avoids ID lookup issues)
       const contentDimensions = this._calculateScrollDimensions(targetContainer);
 
@@ -333,8 +336,8 @@ export class ScrollHandler {
       if (contentDimensions && (containerHeight > 0 || containerWidth > 0)) {
         let updated = false;
 
-        // Handle vertical scrolling
-        if (deltaY !== 0 && containerHeight > 0) {
+        // Handle vertical scrolling (only if overflowY allows it)
+        if (deltaY !== 0 && containerHeight > 0 && (overflowY === 'scroll' || overflowY === 'auto')) {
           const maxScrollY = Math.max(0, contentDimensions.height - containerHeight);
           const newScrollY = clamp(currentScrollY + deltaY, 0, maxScrollY);
 
@@ -346,8 +349,8 @@ export class ScrollHandler {
           }
         }
 
-        // Handle horizontal scrolling
-        if (deltaX !== 0 && containerWidth > 0) {
+        // Handle horizontal scrolling (only if overflowX allows it)
+        if (deltaX !== 0 && containerWidth > 0 && (overflowX === 'scroll' || overflowX === 'auto')) {
           const maxScrollX = Math.max(0, contentDimensions.width - containerWidth);
           const newScrollX = clamp(currentScrollX + deltaX, 0, maxScrollX);
 
@@ -379,20 +382,29 @@ export class ScrollHandler {
     const currentScrollX = (container.props.scrollX as number) || 0;
     const scrollStep = 3; // Lines to scroll per arrow key press
 
+    // Resolve per-axis overflow
+    const { x: overflowX, y: overflowY } = getOverflowAxis(container);
+    const allowVertical = overflowY === 'scroll' || overflowY === 'auto';
+    const allowHorizontal = overflowX === 'scroll' || overflowX === 'auto';
+
     let newScrollY = currentScrollY;
     let newScrollX = currentScrollX;
 
     switch (key) {
       case 'ArrowUp':
+        if (!allowVertical) return false;
         newScrollY = Math.max(0, currentScrollY - scrollStep);
         break;
       case 'ArrowDown':
+        if (!allowVertical) return false;
         newScrollY = currentScrollY + scrollStep;
         break;
       case 'ArrowLeft':
+        if (!allowHorizontal) return false;
         newScrollX = Math.max(0, currentScrollX - scrollStep);
         break;
       case 'ArrowRight':
+        if (!allowHorizontal) return false;
         newScrollX = currentScrollX + scrollStep;
         break;
       default:

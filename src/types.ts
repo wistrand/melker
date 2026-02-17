@@ -107,6 +107,8 @@ export interface Style extends Record<string, any> {
   position?: 'static' | 'relative' | 'absolute' | 'fixed';
   containerType?: 'inline-size' | 'size' | 'normal';
   overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
+  overflowX?: 'visible' | 'hidden' | 'scroll' | 'auto';
+  overflowY?: 'visible' | 'hidden' | 'scroll' | 'auto';
   width?: number | 'auto' | 'fill' | PercentageString;
   height?: number | 'auto' | 'fill' | PercentageString;
   minWidth?: number;
@@ -245,6 +247,8 @@ export interface LayoutProps {
   maxHeight?: number;
   display?: 'block' | 'flex' | 'none';
   overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
+  overflowX?: 'visible' | 'hidden' | 'scroll' | 'auto';
+  overflowY?: 'visible' | 'hidden' | 'scroll' | 'auto';
 
   // Basic positioning
   position?: 'static' | 'relative' | 'absolute' | 'fixed';
@@ -789,12 +793,25 @@ export function isScrollableType(type: string): boolean {
   return type === 'container' || type === 'tbody';
 }
 
-// Helper to check if scrolling is enabled on an element
-// Supports both legacy `scrollable` prop and CSS-like `overflow: scroll/auto` style
+export type OverflowValue = 'visible' | 'hidden' | 'scroll' | 'auto';
+
+// Resolve per-axis overflow values, falling back to the shorthand `overflow` property
+export function getOverflowAxis(element: Element): { x: OverflowValue; y: OverflowValue } {
+  if (element.props.scrollable) return { x: 'scroll', y: 'scroll' };
+  const style = element.props.style;
+  const base: OverflowValue = style?.overflow || 'visible';
+  return {
+    x: style?.overflowX || base,
+    y: style?.overflowY || base,
+  };
+}
+
+function isScrollOverflow(value: OverflowValue): boolean {
+  return value === 'scroll' || value === 'auto';
+}
+
+// Helper to check if scrolling is enabled on an element (either axis)
 export function isScrollingEnabled(element: Element): boolean {
-  // Legacy prop support
-  if (element.props.scrollable) return true;
-  // CSS-like overflow style
-  const overflow = element.props.style?.overflow;
-  return overflow === 'scroll' || overflow === 'auto';
+  const { x, y } = getOverflowAxis(element);
+  return isScrollOverflow(x) || isScrollOverflow(y);
 }

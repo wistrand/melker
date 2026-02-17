@@ -108,3 +108,51 @@ Container query styles sit between inline style and animation in the merge chain
 ```
 
 See [container-query-architecture.md](container-query-architecture.md) for full details.
+
+## Two Style Paths
+
+The layout engine has two separate style computation pipelines:
+
+1. **`_computeStyle()`** → `computedStyle` — Used by the renderer for visual properties (colors, borders, etc.)
+2. **`_computeLayoutProps()`** → `layoutProps` — Used by the flex algorithm for layout properties (`flexDirection`, `gap`, `display`, etc.)
+
+Changes to flex/layout behavior must go in `_computeLayoutProps`, not `_computeStyle`.
+
+## Inline Style vs Stylesheet Precedence
+
+`applyStylesheet()` captures `props.style` as `_inlineStyle` on its first call. Inline style always wins over stylesheet rules. This means:
+
+- Don't put media-query-overridable defaults in constructor `props.style` — they'll be captured as inline and can never be overridden by stylesheets
+- Use low-level props like `flexDirection` for defaults, and let semantic props like `direction` come from stylesheets
+
+## Root Element Height Defaulting
+
+The engine sets `props.height = terminalHeight` if neither `props.height` nor `props.style.height` is set. A CSS stylesheet's `height: auto` goes to `computedStyle`, not `props.style`, so it doesn't prevent this override. To prevent it, set `height: auto` in inline style.
+
+## Three Intrinsic Size Calculators
+
+Three separate functions calculate intrinsic sizes. Changes to gap or wrap logic must be applied in all three:
+
+| Calculator                    | File                  | Used for                     |
+|-------------------------------|-----------------------|------------------------------|
+| `ContainerElement.intrinsicSize()` | `src/components/container.ts` | Renderable containers  |
+| `_calculateIntrinsicSize()`   | `src/layout.ts`       | Non-renderable containers    |
+| `measureContainer()`          | `src/content-measurer.ts` | Scroll content sizing    |
+
+All three count children for gap calculation and handle `flex-wrap: wrap` for row-direction containers by simulating line-breaking.
+
+## Per-Frame Caches
+
+Three Maps are cleared at the start of each layout pass:
+
+| Cache                  | Accessor                     | Purpose                           |
+|------------------------|------------------------------|-----------------------------------|
+| `_layoutPropsCache`    | `_getCachedLayoutProps()`    | Avoid redundant `computeLayoutProps` calls |
+| `_styleCache`          | `_getCachedStyle()`          | Avoid redundant `_computeStyle` calls     |
+| `_intrinsicSizeCache`  | `_cachedIntrinsicSize()`     | Avoid redundant `intrinsicSize` calls     |
+
+The intrinsic size cache uses a "last result" pattern — stores `{aw, ah, result}` per element and only hits when `availableSpace` matches (since the same element may be measured with different available space at different nesting levels). The cache is shared with `ContainerElement.intrinsicSize()` via `IntrinsicSizeContext._sizeCache`.
+
+## Zero-Size Children and Gap
+
+Connectors return `{0, 0}` from `intrinsicSize()` but were counted in `childCount` for gap calculation. With `gap: 5` and 24 connectors, this adds 120+ phantom rows. Fix: only count children with non-zero main-axis size.

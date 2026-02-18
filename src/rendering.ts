@@ -23,7 +23,7 @@ import { getGlobalErrorHandler, renderErrorPlaceholder } from './error-boundary.
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { parseDimension } from './utils/dimensions.ts';
-import { isUnicodeSupported } from './utils/terminal-detection.ts';
+import { getUnicodeTier } from './utils/terminal-detection.ts';
 
 const renderLogger = getLogger('RenderEngine');
 const TABLE_TYPES = new Set(['table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th']);
@@ -1668,7 +1668,7 @@ export class RenderingEngine {
       ? (focusBorderColor ?? getThemeColor('scrollbarTrack') ?? COLORS.gray)
       : (getThemeColor('scrollbarTrack') ?? COLORS.gray);
 
-    const unicodeOk = isUnicodeSupported();
+    const unicodeOk = getUnicodeTier() !== 'ascii';
     for (let y = 0; y < scrollbarHeight; y++) {
       const isThumb = y >= thumbPosition && y < thumbPosition + thumbSize;
       const char = isThumb ? (unicodeOk ? '█' : '#') : (unicodeOk ? '░' : '.');
@@ -1724,7 +1724,7 @@ export class RenderingEngine {
       ? (focusBorderColor ?? getThemeColor('scrollbarTrack') ?? COLORS.gray)
       : (getThemeColor('scrollbarTrack') ?? COLORS.gray);
 
-    const unicodeOk = isUnicodeSupported();
+    const unicodeOk = getUnicodeTier() !== 'ascii';
     for (let x = 0; x < scrollbarWidth; x++) {
       const isThumb = x >= thumbPosition && x < thumbPosition + thumbSize;
       const char = isThumb ? (unicodeOk ? '█' : '#') : (unicodeOk ? '░' : '.');

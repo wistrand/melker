@@ -3,6 +3,7 @@
 import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent, ChangeEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
+import { getThemeManager } from '../theme.ts';
 
 export interface RadioProps extends BaseProps {
   title: string;
@@ -52,6 +53,9 @@ export class RadioElement extends Element implements Renderable, Focusable, Clic
     // Apply focus styling
     if (isFocused) {
       radioStyle.bold = true;
+      if (getThemeManager().getThemeType() === 'color16') {
+        radioStyle.reverse = true;
+      }
     }
 
     // Truncate if needed

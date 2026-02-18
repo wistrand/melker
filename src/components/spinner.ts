@@ -3,6 +3,7 @@
 import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getUIAnimationManager } from '../ui-animation-manager.ts';
+import { getUnicodeTier } from '../utils/terminal-detection.ts';
 
 /** Spinner animation variants */
 export type SpinnerVariant = 'none' | 'line' | 'dots' | 'braille' | 'arc' | 'bounce' | 'flower' | 'pulse';
@@ -41,6 +42,18 @@ const VERB_THEMES: Record<VerbTheme, string[]> = {
   unfolding:  ['Unfolding', 'Blossoming', 'Awakening', 'Emerging', 'Blooming', 'Unfurling', 'Revealing', 'Flourishing'],
   stargazing: ['Stargazing', 'Moonwatching', 'Skydreaming', 'Cloudreading', 'Stardrifting', 'Constellation', 'Celestial', 'Cosmic'],
 };
+
+// Variants that need full Unicode (braille, geometric shapes, dingbats)
+const FULL_ONLY_VARIANTS: ReadonlySet<SpinnerVariant> = new Set([
+  'dots', 'braille', 'arc', 'bounce', 'flower', 'pulse',
+]);
+
+/** Resolve variant for the current Unicode tier — non-full tiers fall back to 'line' */
+function resolveVariant(variant: SpinnerVariant): SpinnerVariant {
+  if (variant === 'none' || variant === 'line') return variant;
+  if (getUnicodeTier() !== 'full' && FULL_ONLY_VARIANTS.has(variant)) return 'line';
+  return variant;
+}
 
 /** Base animation tick interval for spinners (in ms) */
 const SPINNER_TICK_INTERVAL = 50;
@@ -128,7 +141,8 @@ export class SpinnerElement extends Element implements Renderable {
    * Get the current animation frame character based on elapsed time
    */
   private _getCurrentFrame(): string {
-    const frames = SPINNER_FRAMES[this.props.variant ?? 'line'];
+    const variant = resolveVariant(this.props.variant ?? 'line');
+    const frames = SPINNER_FRAMES[variant];
     if (frames.length === 0) return ' ';
     const speed = this.props.speed ?? 100;
     const elapsed = Date.now() - this._startTime;
@@ -181,7 +195,7 @@ export class SpinnerElement extends Element implements Renderable {
 
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
-    const variant = this.props.variant ?? 'line';
+    const variant = resolveVariant(this.props.variant ?? 'line');
     const text = this._getCurrentVerb();
     const textPosition = this.props.textPosition ?? 'left';
     const shade = this.props.shade ?? false;
@@ -292,7 +306,7 @@ export class SpinnerElement extends Element implements Renderable {
    * Calculate intrinsic size for the spinner component
    */
   intrinsicSize(_context: IntrinsicSizeContext): { width: number; height: number } {
-    const variant = this.props.variant ?? 'line';
+    const variant = resolveVariant(this.props.variant ?? 'line');
     const spinnerWidth = variant === 'none' ? 0 : 1;
 
     // Calculate text width - use longest verb if verbs are set

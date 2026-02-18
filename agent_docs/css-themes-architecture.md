@@ -2,17 +2,17 @@
 
 ## Summary
 
-- 8 built-in themes as CSS files with `:root` custom properties (auto-dark, auto-std, bw-std, fullcolor-dark, etc.)
+- 10 built-in themes as CSS files with `:root` custom properties (auto-dark, auto-std, bw-std, fullcolor-dark, etc.)
 - Custom themes via `--theme-file` or `MELKER_THEME_FILE` — any CSS file with `:root` variables
 - Theme variables (`--theme-*`) auto-populate into stylesheets so apps don't need to hardcode colors
 
-Themes defined as CSS files with `:root` custom properties, loaded at startup via `fetch()`. Supports 8 built-in themes and user-provided custom themes.
+Themes defined as CSS files with `:root` custom properties, loaded at startup via `fetch()`. Supports 10 built-in themes and user-provided custom themes.
 
 ## File Map
 
 | File                                               | Purpose                                                             |
 |----------------------------------------------------|---------------------------------------------------------------------|
-| [`src/themes/*.css`](../src/themes/)               | 8 built-in theme CSS files                                         |
+| [`src/themes/*.css`](../src/themes/)               | 10 built-in theme CSS files                                        |
 | [`src/theme.ts`](../src/theme.ts)                  | `buildThemeFromCSS()`, `initThemes()`, `ThemeManager`, palette types, `FALLBACK_THEME` |
 | [`src/stylesheet.ts`](../src/stylesheet.ts)        | `extractVariableDeclarations()` (CSS `:root` parser, shared), `_pushThemeOverrides()` |
 | [`src/components/color-utils.ts`](../src/components/color-utils.ts) | `cssToRgba()` (color string to PackedRGBA)         |
@@ -26,7 +26,7 @@ Themes defined as CSS files with `:root` custom properties, loaded at startup vi
 ```css
 :root {
   /* Metadata */
-  --theme-type: fullcolor;         /* bw | gray | color | fullcolor */
+  --theme-type: fullcolor;         /* bw | gray | color16 | color | fullcolor */
   --theme-mode: dark;              /* std | dark */
   --theme-color-support: truecolor; /* none | 16 | 256 | truecolor */
 
@@ -107,7 +107,7 @@ No full `Stylesheet` instance is needed. `extractVariableDeclarations()` is a st
 
 ## Initialization
 
-`initThemes()` is async and must be called before any theme access. It loads all 8 built-in themes via `fetch()` with `import.meta.url`, then optionally loads a custom theme from config.
+`initThemes()` is async and must be called before any theme access. It loads all 10 built-in themes via `fetch()` with `import.meta.url`, then optionally loads a custom theme from config.
 
 Two startup paths call it:
 - **`.melker` runner** (`src/melker-runner.ts`): `await initThemes()` before engine creation
@@ -168,16 +168,62 @@ This is the reverse of what `_buildThemeVars()` does when generating `--theme-*`
 
 ## Built-in Themes
 
-| Theme file          | Type      | Mode | Color support | Description                          |
-|---------------------|-----------|------|---------------|--------------------------------------|
-| `bw-std.css`        | bw        | std  | none          | Black on white, maximum compatibility |
-| `bw-dark.css`       | bw        | dark | none          | White on black                        |
-| `gray-std.css`      | gray      | std  | 16            | Light background with grays           |
-| `gray-dark.css`     | gray      | dark | 16            | Dark background with grays            |
-| `color-std.css`     | color     | std  | 256           | 16 ANSI colors, light background      |
-| `color-dark.css`    | color     | dark | 256           | 16 ANSI colors, dark background       |
-| `fullcolor-std.css` | fullcolor | std  | truecolor     | Truecolor, light background           |
-| `fullcolor-dark.css`| fullcolor | dark | truecolor     | Truecolor, dark background            |
+| Theme file           | Type      | Mode | Color support | Description                          |
+|----------------------|-----------|------|---------------|--------------------------------------|
+| `bw-std.css`         | bw        | std  | none          | Black on white, maximum compatibility |
+| `bw-dark.css`        | bw        | dark | none          | White on black                        |
+| `gray-std.css`       | gray      | std  | 16            | Light background with grays           |
+| `gray-dark.css`      | gray      | dark | 16            | Dark background with grays            |
+| `color16-std.css`    | color16   | std  | 16            | 16 ANSI colors, light background      |
+| `color16-dark.css`   | color16   | dark | 16            | 16 ANSI colors, dark background       |
+| `color-std.css`      | color     | std  | 256           | 256 colors, light background          |
+| `color-dark.css`     | color     | dark | 256           | 256 colors, dark background           |
+| `fullcolor-std.css`  | fullcolor | std  | truecolor     | Truecolor, light background           |
+| `fullcolor-dark.css` | fullcolor | dark | truecolor     | Truecolor, dark background            |
+
+## Theme Type Hierarchy
+
+| ThemeType   | `colorSupport` | Grayscale? | SGR codes          | Auto-detected for          |
+|-------------|----------------|------------|--------------------|-----------------------------|
+| `fullcolor` | `truecolor`    | No         | `38;2;R;G;B`       | `COLORTERM=truecolor\|24bit`|
+| `color`     | `256`          | No         | `38;5;N`           | TERM contains `256color`    |
+| `color16`   | `16`           | No         | `30-37` / `90-97`  | `TERM=linux`                |
+| `gray`      | `16`           | **Yes**    | `30-37` / `90-97`  | TERM contains `xterm`/`color`/`screen`/`tmux` without 256color or truecolor |
+| `bw`        | `none`         | N/A        | (none)             | `TERM=vt100/vt220`, others  |
+
+### color16 vs gray
+
+Both `color16` and `gray` use `colorSupport: '16'` (same SGR output path via `rgbTo16Color()`), but they differ in color treatment:
+
+- **`gray`**: Forces all colors through `colorToGray()` in `ThemeManager.applyTheme()` and `ScreenBuffer.setCell()`, converting every fg/bg/border to one of 4 grayscale values (black, bright-black, white, bright-white). Used for intentional grayscale aesthetics.
+- **`color16`**: Colors pass through unmodified. `rgbTo16Color()` maps RGB to the nearest of 16 ANSI colors using hue and luminance. Preserves semantic colors (red for errors, green for success, etc.).
+
+`TERM=linux` auto-detects to `color16` because the Linux console can display all 16 ANSI colors. The `gray` theme remains available via `MELKER_THEME=gray` for users who prefer grayscale.
+
+### color16 focus styling
+
+On 16-color terminals, SGR bold typically only brightens text color rather than thickening the font. This makes bold-only focus indicators hard to see. Components (button, checkbox, radio) use `reverse` video for focus highlighting when the theme type is `color16`, providing strong visual contrast by swapping foreground and background colors.
+
+### color16 dithering
+
+Canvas auto-dithering defaults to `effectiveBits = 2` (4 quantization levels per channel) for `color16`, matching `gray`. With only 16 output colors, dithering helps preserve image detail in canvas rendering.
+
+### Color pipeline
+
+```
+Theme palette (named ANSI colors)
+    │
+    ▼
+Components render to buffer (PackedRGBA)
+    │
+    ▼
+AnsiOutputGenerator._getColorCode()
+    │
+    ├── colorSupport='truecolor' → 38;2;R;G;B
+    ├── colorSupport='256'       → 38;5;N (6×6×6 cube)
+    ├── colorSupport='16'        → rgbTo16Color() → SGR 30-37/90-97
+    └── colorSupport='none'      → (no color codes)
+```
 
 ## Relationship to `--theme-*` CSS Variables
 

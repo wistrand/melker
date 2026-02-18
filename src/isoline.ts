@@ -1,7 +1,7 @@
 // Shared isoline (contour line) utilities using marching squares algorithm
 // Used by data-heatmap and canvas isolines gfx mode
 
-import { isUnicodeSupported } from './utils/terminal-detection.ts';
+import { getUnicodeTier } from './utils/terminal-detection.ts';
 
 export type IsolineMode = 'equal' | 'quantile' | 'nice';
 export type IsolineSource = 'luma' | 'red' | 'green' | 'blue' | 'alpha' | 'oklab' | 'oklch-hue';
@@ -37,6 +37,26 @@ const MARCHING_SQUARES_UNICODE: Record<number, string | null> = {
   0b1111: null,  // All above - no line
 };
 
+// Basic tier: thin box-drawing corners (┌┐└┘) instead of rounded (╭╮╰╯)
+const MARCHING_SQUARES_BASIC: Record<number, string | null> = {
+  0b0000: null,
+  0b0001: '┐',
+  0b0010: '┌',
+  0b0011: '─',
+  0b0100: '└',
+  0b0101: '│',
+  0b0110: '│',
+  0b0111: '┘',
+  0b1000: '┘',
+  0b1001: '│',
+  0b1010: '│',
+  0b1011: '└',
+  0b1100: '─',
+  0b1101: '┌',
+  0b1110: '┐',
+  0b1111: null,
+};
+
 const MARCHING_SQUARES_ASCII: Record<number, string | null> = {
   0b0000: null,
   0b0001: '+',
@@ -56,31 +76,45 @@ const MARCHING_SQUARES_ASCII: Record<number, string | null> = {
   0b1111: null,
 };
 
-export const MARCHING_SQUARES_CHARS: Record<number, string | null> =
-  isUnicodeSupported() ? MARCHING_SQUARES_UNICODE : MARCHING_SQUARES_ASCII;
+function _selectMarchingSquares(): Record<number, string | null> {
+  const tier = getUnicodeTier();
+  if (tier === 'full') return MARCHING_SQUARES_UNICODE;
+  if (tier === 'basic') return MARCHING_SQUARES_BASIC;
+  return MARCHING_SQUARES_ASCII;
+}
 
+export const MARCHING_SQUARES_CHARS: Record<number, string | null> = _selectMarchingSquares();
+
+const _tier = getUnicodeTier();
 /** Horizontal line char matching the active char set */
-export const ISOLINE_HORZ = isUnicodeSupported() ? '─' : '-';
+export const ISOLINE_HORZ = _tier !== 'ascii' ? '─' : '-';
 /** Vertical line char matching the active char set */
-export const ISOLINE_VERT = isUnicodeSupported() ? '│' : '|';
+export const ISOLINE_VERT = _tier !== 'ascii' ? '│' : '|';
 
 // Connectivity sets for the active char set
-const _u = isUnicodeSupported();
-/** Characters that enter from the left: ─ ╮ ╯  (or ASCII equivalents) */
+/** Characters that enter from the left */
 const ENTERS_LEFT: ReadonlySet<string | null> = new Set(
-  _u ? ['─', '╮', '╯'] : ['-', '+']
+  _tier === 'full' ? ['─', '╮', '╯'] :
+  _tier === 'basic' ? ['─', '┐', '┘'] :
+  ['-', '+']
 );
-/** Characters that exit to the right: ─ ╭ ╰  (or ASCII equivalents) */
+/** Characters that exit to the right */
 const EXITS_RIGHT: ReadonlySet<string | null> = new Set(
-  _u ? ['─', '╭', '╰'] : ['-', '+']
+  _tier === 'full' ? ['─', '╭', '╰'] :
+  _tier === 'basic' ? ['─', '┌', '└'] :
+  ['-', '+']
 );
-/** Characters with top connection: │ ╰ ╯  (or ASCII equivalents) */
+/** Characters with top connection */
 const CONNECTS_TOP: ReadonlySet<string | null> = new Set(
-  _u ? ['│', '╰', '╯'] : ['|', '+']
+  _tier === 'full' ? ['│', '╰', '╯'] :
+  _tier === 'basic' ? ['│', '└', '┘'] :
+  ['|', '+']
 );
-/** Characters with bottom connection: │ ╮ ╭  (or ASCII equivalents) */
+/** Characters with bottom connection */
 const CONNECTS_BOTTOM: ReadonlySet<string | null> = new Set(
-  _u ? ['│', '╮', '╭'] : ['|', '+']
+  _tier === 'full' ? ['│', '╮', '╭'] :
+  _tier === 'basic' ? ['│', '┐', '┌'] :
+  ['|', '+']
 );
 
 /** Does this isoline char enter from the left? */

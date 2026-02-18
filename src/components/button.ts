@@ -4,6 +4,7 @@ import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Text
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { getLogger } from '../logging.ts';
+import { getThemeManager } from '../theme.ts';
 
 const logger = getLogger('Button');
 
@@ -78,11 +79,9 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
       // If button has a border or is plain, render without brackets
       displayText = label;
       if (isFocused) {
-        if (isPlain) {
-          // For plain buttons, show focus with background or bold
-          buttonStyle.bold = true;
-        } else {
-          buttonStyle.bold = true;
+        buttonStyle.bold = true;
+        if (getThemeManager().getThemeType() === 'color16') {
+          buttonStyle.reverse = true;
         }
       }
 
@@ -218,8 +217,9 @@ export class ButtonElement extends Element implements Renderable, Focusable, Cli
           // Button is already bold, add underline as focus indicator
           labelStyle = { ...buttonStyle, underline: true };
         } else {
-          // Button is not bold, make it bold when focused
-          labelStyle = { ...buttonStyle, bold: true };
+          // Bold when focused; add reverse on color16 where bold only brightens text
+          const isColor16 = getThemeManager().getThemeType() === 'color16';
+          labelStyle = { ...buttonStyle, bold: true, reverse: isColor16 || undefined };
         }
       } else if (isHovered) {
         // Add underline when button is hovered (but not when focused to avoid conflict)

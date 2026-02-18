@@ -8,7 +8,7 @@
 
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Bounds } from '../types.ts';
-import { isUnicodeSupported } from '../utils/terminal-detection.ts';
+import { getUnicodeTier } from '../utils/terminal-detection.ts';
 
 /** Point in 2D space */
 export interface Point {
@@ -117,17 +117,24 @@ export const ARROW_CHARS = {
 
 export type LineStyle = keyof typeof LINE_CHARS;
 
-const UNICODE_LINE_STYLES: ReadonlySet<string> = new Set(['thin', 'thick', 'double', 'dashed']);
+// Line styles requiring full Unicode (thick lines, dashed lines)
+const FULL_ONLY_LINE_STYLES: ReadonlySet<string> = new Set(['thick', 'dashed']);
 
-/** Resolve line style, falling back to 'ascii' on non-unicode terminals */
+/** Resolve line style with tiered fallback:
+ *  - full: all styles
+ *  - basic: thin/double work; thick/dashed → thin
+ *  - ascii: all → ascii
+ */
 function resolveLineStyle(style: LineStyle): LineStyle {
-  if (!isUnicodeSupported() && UNICODE_LINE_STYLES.has(style)) return 'ascii';
+  const tier = getUnicodeTier();
+  if (tier === 'ascii') return 'ascii';
+  if (tier === 'basic' && FULL_ONLY_LINE_STYLES.has(style)) return 'thin';
   return style;
 }
 
-/** Resolve arrow chars, using simple ASCII on non-unicode terminals */
+/** Resolve arrow chars — ▶◀▲▼ need full tier, basic/ascii use simple ASCII */
 function resolveArrow(dir: 'right' | 'left' | 'up' | 'down'): string {
-  if (!isUnicodeSupported()) {
+  if (getUnicodeTier() !== 'full') {
     return ARROW_CHARS[`${dir}Simple` as keyof typeof ARROW_CHARS];
   }
   return ARROW_CHARS[dir];

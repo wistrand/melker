@@ -5,7 +5,7 @@ import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { createChangeEvent } from '../events.ts';
 import { getCurrentTheme } from '../theme.ts';
-import { isUnicodeSupported } from '../utils/terminal-detection.ts';
+import { getUnicodeTier } from '../utils/terminal-detection.ts';
 import { COLORS } from './color-utils.ts';
 import { getStringWidth } from '../char-width.ts';
 import { parseDimension } from '../utils/dimensions.ts';
@@ -196,21 +196,29 @@ export class SliderElement extends Element implements Renderable, Focusable, Cli
 
     // Get theme for character selection
     const theme = getCurrentTheme();
-    const isBW = theme.type === 'bw' || !isUnicodeSupported();
+    const tier = getUnicodeTier();
+    const isBW = theme.type === 'bw' || tier === 'ascii';
 
-    // Character set based on theme
+    // Character set based on theme and unicode tier
+    // ─│▓ work in basic tier; ●◉ need full tier
     const chars = isBW ? {
       trackEmpty: '-',
       trackEmptyV: '|',
       trackFilled: '#',
       thumb: 'O',
       thumbFocused: '(O)',
-    } : {
+    } : tier === 'full' ? {
       trackEmpty: '─',
       trackEmptyV: '│',
       trackFilled: '▓',
       thumb: '●',
       thumbFocused: '◉',
+    } : {
+      trackEmpty: '─',
+      trackEmptyV: '│',
+      trackFilled: '▓',
+      thumb: '█',
+      thumbFocused: '█',
     };
 
     if (orientation === 'vertical') {

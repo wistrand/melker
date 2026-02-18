@@ -150,15 +150,17 @@ Deno.test('buildThemeFromCSS - supports oklch colors', () => {
 // initThemes — loads built-in themes from CSS files
 // ============================================================================
 
-Deno.test('initThemes - loads all 8 built-in themes', async () => {
+Deno.test('initThemes - loads all 10 built-in themes', async () => {
   await initThemes();
   const tm = getThemeManager();
   const available = tm.getAvailableThemes();
-  assertEquals(available.length >= 8, true);
+  assertEquals(available.length >= 10, true);
   assert(available.includes('bw-std'));
   assert(available.includes('bw-dark'));
   assert(available.includes('gray-std'));
   assert(available.includes('gray-dark'));
+  assert(available.includes('color16-std'));
+  assert(available.includes('color16-dark'));
   assert(available.includes('color-std'));
   assert(available.includes('color-dark'));
   assert(available.includes('fullcolor-std'));

@@ -22,6 +22,7 @@ import {
 import {
   createShaderState, startShader, stopShader, isShaderRunning,
   updateShaderMouse, clearShaderMouse, getShaderMouse,
+  runShaderPassSync,
   type ShaderState, type ShaderContext
 } from './canvas-shader-runner.ts';
 import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
@@ -1206,6 +1207,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       setLoadedImage: (img: LoadedImage) => { this._loadedImage = img; },
       previousColorBuffer: this._previousColorBuffer,
       invalidateDitherCache: () => { this._ditherState.invalidate(); },
+      hasPaintHandler: !!this.props.onPaint,
     };
   }
 
@@ -1252,6 +1254,41 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   getShaderMouse(): { x: number; y: number } {
     return getShaderMouse(this._shaderState);
+  }
+
+  /**
+   * Run shader as a synchronous post-processing pass over onPaint output.
+   * Snapshots _colorBuffer (which onPaint just wrote), then runs the shader
+   * per-pixel reading from the snapshot and writing back to _colorBuffer.
+   */
+  private _runShaderOverPaint(): void {
+    // Check shader permission
+    const engine = globalThis.melkerEngine;
+    if (!engine || typeof engine.hasPermission !== 'function' || !engine.hasPermission('shader')) {
+      return;
+    }
+
+    const state = this._shaderState;
+
+    // Initialize startTime on first call (timer may not have fired yet)
+    if (state.startTime === 0) {
+      state.startTime = performance.now();
+    }
+
+    const bufferSize = this._bufferWidth * this._bufferHeight;
+
+    // Reuse outputBuffer as the snapshot buffer (already allocated by shader state)
+    if (!state.outputBuffer || state.outputBuffer.length !== bufferSize) {
+      state.outputBuffer = new Uint32Array(bufferSize);
+    }
+    const snapshot = state.outputBuffer;
+
+    // Copy onPaint's output to snapshot
+    snapshot.set(this._colorBuffer);
+
+    // Run shader synchronously over the snapshot
+    const ctx = this._getShaderContext();
+    runShaderPassSync(state, ctx, snapshot);
   }
 
   /**
@@ -1462,6 +1499,11 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         this._onPaintFailed = true;
         logger.error(`onPaint error (handler disabled to prevent crash loop): ${e}`);
       }
+    }
+
+    // When both onPaint and onShader are present, run shader as sync post-processing
+    if (this.props.onShader && this.props.onPaint && !this._onPaintFailed) {
+      this._runShaderOverPaint();
     }
 
     // Render to the buffer (sextant/block/pattern/luma, or placeholder for sixel)

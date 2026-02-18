@@ -12,7 +12,7 @@ import { type DualBuffer, type Cell } from '../buffer.ts';
 import { type Bounds } from '../types.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import type { CanvasRenderData, CanvasRenderState, ResolvedGfxMode, GfxMode } from './canvas-render-types.ts';
-import { isUnicodeSupported } from '../utils/terminal-detection.ts';
+import { getUnicodeTier } from '../utils/terminal-detection.ts';
 import { renderGraphicsPlaceholder } from './canvas-render-graphics.ts';
 import { renderSextantToTerminal } from './canvas-render-sextant.ts';
 import { renderBlockMode } from './canvas-render-block.ts';
@@ -100,8 +100,8 @@ export function getEffectiveGfxMode(
   const sixelSupported = engine?.sixelCapabilities?.supported ?? false;
   const itermSupported = engine?.itermCapabilities?.supported ?? false;
 
-  const unicodeOk = isUnicodeSupported();
-  const sextantFallback: ResolvedGfxMode = unicodeOk ? 'sextant' : 'luma';
+  const sextantFallback: ResolvedGfxMode =
+    getUnicodeTier() === 'full' ? 'sextant' : 'block';
 
   // hires: try kitty → sixel → iterm2 → sextant (best available high-resolution mode)
   if (requested === 'hires') {
@@ -146,9 +146,9 @@ export function getEffectiveGfxMode(
     return requested;
   }
 
-  // sextant needs unicode support
-  if (requested === 'sextant' && !unicodeOk) {
-    return 'luma';
+  // sextant needs full unicode (sextant chars U+1FB00+)
+  if (requested === 'sextant' && getUnicodeTier() !== 'full') {
+    return 'block';
   }
 
   return requested;

@@ -90,6 +90,9 @@ export interface ShaderContext {
   setLoadedImage: (img: LoadedImage) => void;
   previousColorBuffer: Uint32Array;
   invalidateDitherCache: () => void;
+
+  // When true, shader runs synchronously during render() as post-processing over onPaint
+  hasPaintHandler?: boolean;
 }
 
 /**
@@ -249,6 +252,16 @@ function runShaderFrame(state: ShaderState, ctx: ShaderContext): void {
     return;
   }
 
+  // When onPaint coexists, the timer only drives animation timing.
+  // The actual shader computation runs synchronously during render().
+  if (ctx.hasPaintHandler) {
+    scheduleNextFrame(state, ctx);
+    if (state.requestRender) {
+      state.requestRender();
+    }
+    return;
+  }
+
   // Update resolution
   state.resolution.width = bufW;
   state.resolution.height = bufH;
@@ -328,6 +341,93 @@ function runShaderFrame(state: ShaderState, ctx: ShaderContext): void {
   if (state.requestRender) {
     state.requestRender();
   }
+}
+
+/**
+ * Run shader as a synchronous post-processing pass over onPaint output.
+ * Called during render() when both onPaint and onShader are present.
+ * Reads from paintSnapshot (copy of _colorBuffer after onPaint), writes to ctx.colorBuffer.
+ */
+export function runShaderPassSync(
+  state: ShaderState,
+  ctx: ShaderContext,
+  paintSnapshot: Uint32Array
+): void {
+  const shader = ctx.onShader;
+  if (!shader) return;
+
+  const bufW = ctx.bufferWidth;
+  const bufH = ctx.bufferHeight;
+  const elapsedMs = performance.now() - state.startTime;
+  const time = elapsedMs / 1000;
+
+  // Update resolution
+  state.resolution.width = bufW;
+  state.resolution.height = bufH;
+  state.resolution.pixelAspect = ctx.getPixelAspectRatio();
+
+  // Create source accessor if needed
+  if (!state.source) {
+    state.source = {
+      hasImage: false,
+      width: 0,
+      height: 0,
+      getPixel: (_x: number, _y: number) => null,
+      mouse: { x: -1, y: -1 },
+      mouseUV: { u: -1, v: -1 },
+    };
+  }
+
+  // Update source properties
+  state.source.hasImage = true;
+  state.source.width = bufW;
+  state.source.height = bufH;
+
+  // Update mouse position
+  state.source.mouse.x = state.mouseX;
+  state.source.mouse.y = state.mouseY;
+  if (state.mouseX >= 0 && state.mouseY >= 0) {
+    state.source.mouseUV.u = state.mouseX / bufW;
+    state.source.mouseUV.v = state.mouseY / bufH;
+  } else {
+    state.source.mouseUV.u = -1;
+    state.source.mouseUV.v = -1;
+  }
+
+  // getPixel reads from the paint snapshot (onPaint output), falling back to image buffer
+  const imageBuffer = ctx.imageColorBuffer;
+  const source = state.source;
+  source.getPixel = (px: number, py: number): [number, number, number, number] | null => {
+    if (px < 0 || px >= bufW || py < 0 || py >= bufH) return null;
+    const idx = py * bufW + px;
+    let color = paintSnapshot[idx];
+    if (color === TRANSPARENT) color = imageBuffer[idx];
+    if (color === TRANSPARENT) return null;
+    const rgba = unpackRGBA(color);
+    return [rgba.r, rgba.g, rgba.b, rgba.a];
+  };
+
+  // Run shader for each pixel, write directly to colorBuffer
+  const shaderExecStart = performance.now();
+  const colorBuffer = ctx.colorBuffer;
+
+  for (let y = 0; y < bufH; y++) {
+    for (let x = 0; x < bufW; x++) {
+      const rgba = shader(x, y, time, state.resolution, source, shaderUtils);
+      const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
+      const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
+      const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));
+      const a = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
+      const color = a === 0 ? TRANSPARENT : packRGBA(r, g, b, a);
+      const index = y * bufW + x;
+      colorBuffer[index] = color;
+    }
+  }
+
+  const shaderExecTime = performance.now() - shaderExecStart;
+  getGlobalPerformanceDialog().recordShaderFrameTime(shaderExecTime);
+
+  ctx.setDirty();
 }
 
 /**

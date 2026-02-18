@@ -10,7 +10,7 @@ import { getLogger } from './logging.ts';
 const logger = getLogger('Theme');
 
 // Theme definitions
-export type ThemeType = 'bw' | 'gray' | 'color' | 'fullcolor';
+export type ThemeType = 'bw' | 'gray' | 'color16' | 'color' | 'fullcolor';
 export type ThemeMode = 'std' | 'dark';
 
 export interface ColorPalette {
@@ -135,6 +135,7 @@ export function buildThemeFromCSS(css: string, sourcePath?: string): Theme {
 // Built-in theme names
 const BUILTIN_THEME_NAMES = [
   'bw-std', 'bw-dark', 'gray-std', 'gray-dark',
+  'color16-std', 'color16-dark',
   'color-std', 'color-dark', 'fullcolor-std', 'fullcolor-dark',
 ] as const;
 
@@ -235,6 +236,11 @@ function detectColorSupport(): ThemeType {
   // Basic color support (xterm, etc.)
   if (term.includes('color') || term.includes('xterm') || term.includes('screen') || term.includes('tmux')) {
     return 'gray';
+  }
+
+  // Linux virtual console: 16 ANSI colors
+  if (term === 'linux') {
+    return 'color16';
   }
 
   // Fallback to black & white
@@ -382,7 +388,7 @@ export class ThemeManager {
     }
 
     // Handle legacy format without mode (default to std)
-    if (['bw', 'gray', 'color', 'fullcolor'].includes(normalized)) {
+    if (['bw', 'gray', 'color16', 'color', 'fullcolor'].includes(normalized)) {
       return `${normalized}-std`;
     }
 

@@ -203,7 +203,7 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 
 | Variable                     | Purpose                                                                                                                                                            |
 |------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MELKER_THEME`               | Theme (default: `auto`): `auto-dark`, `auto-std`, `bw-std`, `fullcolor-dark`, etc.                                                                                 |
+| `MELKER_THEME`               | Theme (default: `auto`): `auto-dark`, `auto-std`, `bw-std`, `gray-dark`, `color16-dark`, `color-dark`, `fullcolor-dark`, etc.                                      |
 | `MELKER_THEME_FILE`          | Path to custom theme CSS file (overrides theme selection)                                                                                                          |
 | `MELKER_LOG_FILE`            | Log file path                                                                                                                                                      |
 | `MELKER_LOG_LEVEL`           | `DEBUG`, `INFO`, `WARN`, `ERROR`                                                                                                                                   |

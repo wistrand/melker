@@ -4,7 +4,7 @@
 import './globals.d.ts';
 
 import type { KeyPressEvent, ChangeEvent } from './events.ts';
-import { isUnicodeSupported } from './utils/terminal-detection.ts';
+import { getUnicodeTier } from './utils/terminal-detection.ts';
 
 // Re-export event types for component use
 export type { KeyPressEvent, ChangeEvent };
@@ -71,17 +71,31 @@ export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {
   dotted:         { h: '·', v: '·', tl: '·', tr: '·', bl: '·', br: '·', tm: '·', bm: '·', lm: '·', rm: '·', mm: '·' },
 };
 
-const UNICODE_BORDER_STYLES: ReadonlySet<string> = new Set([
+// Styles that need full Unicode (rounded corners, thick/dashed lines, braille, etc.)
+const FULL_ONLY_STYLES: ReadonlySet<string> = new Set([
+  'thick', 'rounded', 'dashed', 'dashed-rounded', 'dotted',
+]);
+
+// All Unicode border styles (basic tier still needs ascii fallback for these)
+const ALL_UNICODE_STYLES: ReadonlySet<string> = new Set([
   'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'dotted',
 ]);
 
 /**
- * Get border characters for a style, automatically falling back to 'ascii'
- * on terminals that lack Unicode support (e.g. TERM=linux).
+ * Get border characters for a style, with tiered fallback:
+ * - full:  all styles available as-is
+ * - basic: thin/double work; thick/rounded/dashed/dotted → thin
+ * - ascii: all Unicode styles → ascii
  */
 export function getBorderChars(style: Exclude<BorderStyle, 'none'>): BorderChars {
-  const effective = (!isUnicodeSupported() && UNICODE_BORDER_STYLES.has(style)) ? 'ascii' : style;
-  return BORDER_CHARS[effective] || BORDER_CHARS.thin;
+  const tier = getUnicodeTier();
+  let effective: string = style;
+  if (tier === 'ascii' && ALL_UNICODE_STYLES.has(style)) {
+    effective = 'ascii';
+  } else if (tier === 'basic' && FULL_ONLY_STYLES.has(style)) {
+    effective = 'thin';
+  }
+  return BORDER_CHARS[effective as Exclude<BorderStyle, 'none'>] || BORDER_CHARS.thin;
 }
 
 // Percentage string type for width/height (e.g., "50%", "100%")

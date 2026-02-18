@@ -113,6 +113,7 @@ export function prepareDitheredBuffer(
       switch (theme.type) {
         case 'bw': effectiveBits = 1; break;       // 2 levels (black/white)
         case 'gray': effectiveBits = 2; break;     // 4 levels of gray
+        case 'color16': effectiveBits = 2; break;  // 4 levels — 16 ANSI colors
         case 'color': effectiveBits = 3; break;    // 8 levels per channel
         case 'fullcolor': effectiveBits = 6; break; // 64 levels (subtle dithering)
         default: effectiveBits = 1;

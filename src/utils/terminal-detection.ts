@@ -33,20 +33,38 @@ export function detectMultiplexer(): boolean {
 }
 
 /**
- * Detect if running in a remote/SSH session
+ * Three-tier Unicode capability model.
+ *
+ * - **full**  — Modern terminal emulators (xterm, kitty, etc.): sextants,
+ *               braille, rounded corners, fine eighth-blocks, all of Unicode.
+ * - **basic** — Linux virtual console (TERM=linux): thin + double box-drawing,
+ *               common block elements (█ ▄ ▀ ▌ ▐ ░ ▒ ▓), Latin-1 supplement.
+ * - **ascii** — Legacy hardware terminals (vt100, vt220): ASCII only.
  */
-/**
- * Detect if the terminal supports Unicode characters.
- * Returns false for terminals known to lack Unicode support
- * (Linux virtual console, VT100/VT220 hardware terminals).
- * Result is cached — TERM never changes during a process lifetime.
- */
-let _unicodeSupported: boolean | undefined;
-export function isUnicodeSupported(): boolean {
-  if (_unicodeSupported !== undefined) return _unicodeSupported;
+export type UnicodeTier = 'full' | 'basic' | 'ascii';
+
+let _unicodeTier: UnicodeTier | undefined;
+export function getUnicodeTier(): UnicodeTier {
+  if (_unicodeTier !== undefined) return _unicodeTier;
   const term = Env.get('TERM') || '';
-  _unicodeSupported = !(term === 'linux' || term === 'vt100' || term === 'vt220');
-  return _unicodeSupported;
+  if (term === 'vt100' || term === 'vt220') {
+    _unicodeTier = 'ascii';
+  } else if (term === 'linux') {
+    _unicodeTier = 'basic';
+  } else {
+    _unicodeTier = 'full';
+  }
+  logger.debug(`Unicode tier: ${_unicodeTier} (TERM=${term})`);
+  return _unicodeTier;
+}
+
+/**
+ * Returns true when the terminal supports at least basic Unicode (box-drawing,
+ * block elements). Kept for backward compatibility — returns true for both
+ * 'full' and 'basic' tiers.
+ */
+export function isUnicodeSupported(): boolean {
+  return getUnicodeTier() !== 'ascii';
 }
 
 /**

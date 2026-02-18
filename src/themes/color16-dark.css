@@ -1,0 +1,43 @@
+/* Color16 Dark — 16 ANSI colors, dark background */
+:root {
+  --theme-type: color16;
+  --theme-mode: dark;
+  --theme-color-support: 16;
+
+  --primary: blue;
+  --secondary: cyan;
+  --background: black;
+  --foreground: white;
+  --surface: black;
+  --border: white;
+
+  --success: lime;
+  --warning: yellow;
+  --error: red;
+  --info: cyan;
+
+  --button-primary: white;
+  --button-secondary: cyan;
+  --button-background: blue;
+  --input-background: #555555;
+  --input-foreground: white;
+  --input-border: cyan;
+
+  --focus-primary: black;
+  --focus-background: cyan;
+  --focus-border: white;
+
+  --text-primary: white;
+  --text-secondary: white;
+  --text-muted: gray;
+
+  --header-background: blue;
+  --header-foreground: white;
+  --sidebar-background: gray;
+  --sidebar-foreground: cyan;
+  --modal-background: blue;
+  --modal-foreground: white;
+
+  --scrollbar-thumb: cyan;
+  --scrollbar-track: gray;
+}

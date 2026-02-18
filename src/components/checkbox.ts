@@ -4,6 +4,7 @@ import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Boun
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { getStringWidth } from '../char-width.ts';
+import { getThemeManager } from '../theme.ts';
 
 export interface CheckboxProps extends BaseProps {
   title: string;
@@ -60,6 +61,9 @@ export class CheckboxElement extends Element implements Renderable, Focusable, C
     // Apply focus styling
     if (isFocused) {
       checkboxStyle.bold = true;
+      if (getThemeManager().getThemeType() === 'color16') {
+        checkboxStyle.reverse = true;
+      }
     }
 
     // Truncate if needed

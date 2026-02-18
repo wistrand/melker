@@ -25,6 +25,7 @@ import { getLogger } from '../logging.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { packRGBA, parseColor } from './color-utils.ts';
 import { parseJsonProps, parseInlineJsonData, boundsContain, isBwMode } from './utils/component-utils.ts';
+import { getUnicodeTier } from '../utils/terminal-detection.ts';
 import type { PackedRGBA } from '../types.ts';
 
 const logger = getLogger('DataBars');
@@ -90,20 +91,34 @@ export interface DataBarsProps extends BaseProps {
 
 // ===== Unicode Bar Characters =====
 
-// Horizontal bars (fractional blocks, left to right)
-const H_BAR_CHARS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
+// Full tier: 8 sub-character levels per cell
+const H_BAR_CHARS_FULL = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
+const V_BAR_CHARS_FULL = ['', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
-// Vertical bars (fractional blocks, bottom to top)
-const V_BAR_CHARS = ['', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+// Basic tier: only ▌/█ (horizontal) and ▄/█ (vertical) available
+const H_BAR_CHARS_BASIC = ['', '▌', '█'];
+const V_BAR_CHARS_BASIC = ['', '▄', '█'];
+// Sparklines in basic tier: shade-based (4 levels) instead of height-based
+const V_BAR_CHARS_BASIC_SPARK = ['', '░', '▒', '▓', '█'];
 
-const FULL_BLOCK = '█';
+// Ascii tier
+const H_BAR_CHARS_ASCII = ['', '#'];
+const V_BAR_CHARS_ASCII = ['', '#'];
 
-// BW mode patterns for multi-series differentiation (no sub-char precision available)
-const BW_PATTERNS = ['█', '▓', '▒', '░'];
+const _barTier = getUnicodeTier();
+const H_BAR_CHARS = _barTier === 'full' ? H_BAR_CHARS_FULL : _barTier === 'basic' ? H_BAR_CHARS_BASIC : H_BAR_CHARS_ASCII;
+const V_BAR_CHARS = _barTier === 'full' ? V_BAR_CHARS_FULL : _barTier === 'basic' ? V_BAR_CHARS_BASIC : V_BAR_CHARS_ASCII;
+const SPARK_CHARS = _barTier === 'full' ? V_BAR_CHARS_FULL : _barTier === 'basic' ? V_BAR_CHARS_BASIC_SPARK : V_BAR_CHARS_ASCII;
+
+const FULL_BLOCK = _barTier !== 'ascii' ? '█' : '#';
+
+// BW mode patterns for multi-series differentiation — all available in basic tier
+const BW_PATTERNS = _barTier !== 'ascii' ? ['█', '▓', '▒', '░'] : ['#', '=', '-', '.'];
 
 // LED style characters (with visible gaps)
-const LED_H_CHAR = '▊';  // Horizontal LED segment (3/4 block, gap on right)
-const LED_V_CHAR = '▆';  // Vertical LED segment (3/4 block, gap on top)
+// ▊ (U+258A) and ▆ (U+2586) are fine eighths — not in basic tier
+const LED_H_CHAR = _barTier === 'full' ? '▊' : FULL_BLOCK;
+const LED_V_CHAR = _barTier === 'full' ? '▆' : FULL_BLOCK;
 
 // ===== Default Props =====
 
@@ -300,8 +315,11 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
       return chars;
     }
 
-    const fullChars = Math.floor(eighths / 8);
-    const remainder = eighths % 8;
+    // Map eighths (0-N*8) to char set levels (e.g. 8 for full, 2 for basic)
+    const levels = H_BAR_CHARS.length - 1; // e.g. 8 for full, 2 for basic, 1 for ascii
+    const mapped = levels === 8 ? eighths : Math.round(eighths * levels / 8);
+    const fullChars = Math.floor(mapped / levels);
+    const remainder = mapped % levels;
     let drawn = 0;
 
     for (let i = 0; i < fullChars; i++) {
@@ -334,8 +352,11 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
       return Math.max(1, chars);
     }
 
-    const fullChars = Math.floor(eighths / 8);
-    const remainder = eighths % 8;
+    // Map eighths (0-N*8) to char set levels
+    const levels = V_BAR_CHARS.length - 1;
+    const mapped = levels === 8 ? eighths : Math.round(eighths * levels / 8);
+    const fullChars = Math.floor(mapped / levels);
+    const remainder = mapped % levels;
     let drawn = 0;
 
     // Draw from bottom up
@@ -820,12 +841,14 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
         this._renderText(buffer, bounds.x, y, label ? label + ':' : '', style, labelWidth);
       }
 
-      // Draw sparkline chars
+      // Draw sparkline chars (use SPARK_CHARS for better basic-tier fidelity)
+      const sparkLevels = SPARK_CHARS.length - 1;
       let x = bounds.x + labelWidth;
       for (let entryIdx = 0; entryIdx < bars.length && x < bounds.x + labelWidth + barAreaWidth; entryIdx++) {
         const value = bars[entryIdx]?.[sIdx] ?? 0;
         const eighths = this._valueToEighths(value, 1); // 1 char height
-        const char = eighths === 0 ? ' ' : V_BAR_CHARS[Math.min(8, eighths)];
+        const idx = sparkLevels === 8 ? Math.min(sparkLevels, eighths) : Math.round(eighths * sparkLevels / 8);
+        const char = idx === 0 ? ' ' : SPARK_CHARS[Math.min(sparkLevels, idx)];
         buffer.currentBuffer.setCell(x, y, { char, ...barStyle });
 
         this._barBounds.set(`${entryIdx}-${sIdx}`, { x, y, width: 1, height: 1 });

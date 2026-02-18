@@ -81,7 +81,10 @@ export function rgbTo16Color(r: number, g: number, b: number): number {
   }
 
   // Determine the dominant color channel
-  const isBright = luminance > 0.5;
+  // Use both perceptual luminance and max channel intensity — pure blue
+  // has very low perceptual luminance (0.114 weight) so luminance alone
+  // misclassifies bright blue (85,85,255) as dark.
+  const isBright = luminance > 0.5 || max > 212;
   const base = isBright ? 90 : 30;
 
   // Find the primary hue

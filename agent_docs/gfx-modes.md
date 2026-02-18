@@ -43,11 +43,20 @@ Half-block characters (`▀▄█`) - 1x2 pixels per terminal cell with fg+bg co
 
 **Resolution:** 80×48 on 80×24 terminal (vs sextant 160×72, block 80×24)
 
+**Color16+ halftone** (16-color terminals only):
+On `colorSupport='16'` terminals, halfblock uses the color16+ expanded palette for richer color. Each pixel is mapped to the nearest `(fg, bg, shade_char)` triple via Oklab perceptual matching:
+- **Same fg+bg pair**: Both pixels share the same ANSI color pair — shade densities are blended into an intermediate shade character (`░▒▓`), giving smooth gradients within the 16-color constraint
+- **Different fg+bg pairs**: Spatial mode — `▀`/`▄` with Oklab-matched solid ANSI colors for each half, ensuring consistent color selection across cells
+- On truecolor/256-color terminals, standard rendering is used (no halftone needed)
+
 ### block
 
 Colored spaces - 1x1 pixel per terminal cell.
 
 **Best for:** ASCII-only terminals (`TERM=vt100/vt220`), universal fallback
+
+**Color16+ halftone** (16-color terminals only):
+On `colorSupport='16'` terminals, block mode uses shade characters (`░▒▓`) instead of plain colored spaces. Each cell's averaged RGB is mapped through the color16+ palette to a `(fg, bg, shade_char)` triple, expanding the effective palette from 16 solid colors to ~80+ distinguishable halftone colors.
 
 ### pattern
 
@@ -319,19 +328,33 @@ All modes apply ANSI foreground color:
 - Falls back to theme foreground if no pixel color
 - B&W themes strip colors at render time (theme-respecting)
 
+### Color16+ Expanded Palette
+
+On 16-color terminals (`colorSupport='16'`), the color16+ system pre-computes all `(fg_ansi, bg_ansi, shade_char)` triples for the 16 VGA ANSI colors with shade characters `░▒▓`, giving ~1,280 palette entries mapped in Oklab perceptual color space. A 3D lookup table (32x32x32 = 32K entries) provides O(1) nearest-neighbor mapping from any RGB input to the best terminal representation.
+
+**Key design details:**
+- **Gamma-correct mixing**: Shade character visual colors are computed by mixing fg/bg in linear light space (not sRGB), since the terminal physically interleaves fg/bg pixels and the eye integrates photons linearly. This is critical for accurate dark-region gradients.
+- **Oklab perceptual matching**: Input RGB is matched to palette entries in Oklab color space, which properly handles blue sensitivity and luminance-vs-chrominance separation.
+- **Shade penalty tie-breaking**: Solid entries (space, `█`) are slightly preferred over shade chars (`░▒▓`) at equal perceptual distance, preventing false shade matches for exact ANSI colors.
+- **Halfblock B+A strategy**: When upper and lower pixels share the same fg+bg pair, shade densities are blended (B). When they differ, spatial `▀`/`▄` uses a separate solid-color LUT for Oklab-consistent color selection (A).
+- **Dithering interaction**: `dither="auto"` resolves to `"none"` on 16-color terminals, since shade chars provide sub-cell color blending that conflicts with spatial dithering. Explicit dither modes still work if set manually.
+
+**Implementation:** `src/color16-palette.ts` (palette, LUTs, `nearestColor16Plus()`, `nearestSolid16()`, `blendShadeChars()`)
+
 ## Auto Theme Detection
 
 When `dither="auto"`, theme and dithering are determined from terminal capabilities:
 
-| TERM / COLORTERM         | Theme Type | Color Support | Dither Bits | Dither (canvas/img) | Dither (video) |
-|--------------------------|------------|---------------|-------------|---------------------|----------------|
-| `COLORTERM=truecolor`    | fullcolor  | truecolor     | -           | none                | none           |
-| `TERM=*256color*`        | color      | 256           | 3           | sierra-stable       | blue-noise     |
-| `TERM=xterm/screen/tmux` | gray       | 16            | 1           | sierra-stable       | blue-noise     |
-| `TERM=linux/vt100/vt220` | bw         | none          | 1           | sierra-stable       | blue-noise     |
-| (fallback)               | bw         | none          | 1           | sierra-stable       | blue-noise     |
+| TERM / COLORTERM         | Theme Type | Color Support | Dither Bits | Dither (canvas/img)        | Dither (video) |
+|--------------------------|------------|---------------|-------------|----------------------------|----------------|
+| `COLORTERM=truecolor`    | fullcolor  | truecolor     | 6           | none                       | none           |
+| `TERM=*256color*`        | color      | 256           | 3           | sierra-stable              | blue-noise     |
+| `TERM=xterm/screen/tmux` | gray       | 16            | 2           | sierra-stable              | blue-noise     |
+| `TERM=linux`             | color16    | 16            | -           | none (halftone instead)    | none           |
+| `TERM=vt100/vt220`       | bw         | none          | 1           | sierra-stable              | blue-noise     |
+| (fallback)               | bw         | none          | 1           | sierra-stable              | blue-noise     |
 
-Video uses blue-noise for less temporal flicker between frames.
+Video uses blue-noise for less temporal flicker between frames. On 16-color terminals, `dither="auto"` disables dithering because shade characters (`░▒▓`) already provide sub-cell color blending — using both produces washed-out results.
 
 **Override via config:**
 - `MELKER_AUTO_DITHER=<algorithm>` - forces dithering even on fullcolor
@@ -341,9 +364,15 @@ Video uses blue-noise for less temporal flicker between frames.
 
 **Files:**
 - `src/config/schema.json` - Config option definition
+- `src/color16-palette.ts` - Color16+ expanded palette (3D LUT, Oklab matching, solid-color LUT, shade blending)
 - `src/components/canvas-terminal.ts` - `PATTERN_TO_ASCII` lookup table, `LUMA_RAMP`
-- `src/components/canvas.ts` - `_renderAsciiMode()`, `_renderBlockMode()`, dithered path handling
-- `src/components/canvas-render.ts` - `renderSixelPlaceholder()`, `generateSixelOutput()`, `generateKittyOutput()`
+- `src/components/canvas.ts` - Buffer management, dithered path handling
+- `src/components/canvas-render.ts` - Mode selection, rendering dispatch
+- `src/components/canvas-render-block.ts` - Block mode renderer (color16+ halftone integration)
+- `src/components/canvas-render-halfblock.ts` - Halfblock mode renderer (color16+ adaptive shade/spatial)
+- `src/components/canvas-render-dithered.ts` - Dithered renderer (color16+ for both block and halfblock)
+- `src/components/canvas-dither.ts` - Dither state, auto-mode resolution (none for 16-color)
+- `src/components/video.ts` - Video element (dither auto→none for 16-color)
 - `src/rendering.ts` - Border rendering in block mode
 - `src/sixel/detect.ts` - Terminal sixel capability detection
 - `src/sixel/encoder.ts` - Sixel format encoder

@@ -79,6 +79,10 @@ export function prepareDitheredBuffer(
         // Fullcolor: no dithering needed, use passthrough mode
         // Still use dithered path to properly handle drawImage() content
         ditherMode = 'none';
+      } else if (theme.colorSupport === '16') {
+        // 16-color: shade chars (░▒▓) provide sub-cell color blending,
+        // which conflicts with spatial dithering — skip dithering
+        ditherMode = 'none';
       } else {
         // bw, gray, or color themes: default to sierra-stable
         ditherMode = 'sierra-stable';

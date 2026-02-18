@@ -1157,6 +1157,10 @@ export class VideoElement extends CanvasElement {
         if (theme.type === 'fullcolor') {
           // Fullcolor theme: no dithering needed
           dither = false;
+        } else if (theme.colorSupport === '16') {
+          // 16-color: shade chars (░▒▓) provide sub-cell color blending,
+          // which conflicts with spatial dithering — skip dithering
+          dither = false;
         } else {
           // bw, gray, or color themes: use blue-noise for video (less temporal flicker)
           dither = 'blue-noise';

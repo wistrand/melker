@@ -7,6 +7,8 @@ import { TRANSPARENT, packRGBA, parseColor } from './color-utils.ts';
 import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
 import type { CanvasRenderData, CanvasRenderState, ResolvedGfxMode } from './canvas-render-types.ts';
 import { quantizeBlockColorsInline } from './canvas-render-sextant.ts';
+import { getThemeManager } from '../theme.ts';
+import { nearestColor16Plus, nearestSolid16, blendShadeChars } from '../color16-palette.ts';
 
 /**
  * Render from dithered buffer to terminal.
@@ -42,6 +44,7 @@ export function renderDitheredToTerminal(
   const hasStyleFg = style.foreground !== undefined;
   const hasStyleBg = style.background !== undefined;
   const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+  const use16Plus = getThemeManager().getColorSupport() === '16';
 
   // Half-block dithered path: 1x2 pixels per cell
   if (gfxMode === 'halfblock') {
@@ -87,7 +90,26 @@ export function renderDitheredToTerminal(
         let fg: number | undefined;
         let bg: number | undefined;
 
-        if (upperOn && lowerOn) {
+        if (use16Plus && upperOn && lowerOn) {
+          // Color16+ adaptive rendering
+          const uR = (upperColor >> 24) & 0xFF, uG = (upperColor >> 16) & 0xFF, uB = (upperColor >> 8) & 0xFF;
+          const lR = (lowerColor >> 24) & 0xFF, lG = (lowerColor >> 16) & 0xFF, lB = (lowerColor >> 8) & 0xFF;
+          const upperEntry = nearestColor16Plus(uR, uG, uB);
+          const lowerEntry = nearestColor16Plus(lR, lG, lB);
+
+          if (upperEntry.fgPacked === lowerEntry.fgPacked &&
+              upperEntry.bgPacked === lowerEntry.bgPacked) {
+            // B: same fg+bg pair — blend shade densities
+            char = blendShadeChars(upperEntry.char, lowerEntry.char);
+            fg = upperEntry.fgPacked;
+            bg = upperEntry.bgPacked;
+          } else {
+            // A: different fg+bg — spatial ▀ with Oklab-matched solid colors
+            char = '\u2580';
+            fg = nearestSolid16(uR, uG, uB);
+            bg = nearestSolid16(lR, lG, lB);
+          }
+        } else if (upperOn && lowerOn) {
           if (upperColor === lowerColor) {
             char = '\u2588'; fg = upperColor;
             bg = propsBg ?? (hasStyleBg ? style.background : undefined);
@@ -154,7 +176,7 @@ export function renderDitheredToTerminal(
         }
       }
 
-      // Block mode: average colors and output colored space
+      // Block mode: average colors and output colored space (or shade char on 16-color)
       if (gfxMode === 'block') {
         if (!hasAnyPixel) continue;
 
@@ -169,18 +191,30 @@ export function renderDitheredToTerminal(
             count++;
           }
         }
-        const avgColor = count > 0
-          ? packRGBA(Math.round(totalR / count), Math.round(totalG / count), Math.round(totalB / count), 255)
-          : propsBg ?? (hasStyleBg ? style.background : undefined);
 
-        if (!avgColor) continue;
+        if (count === 0) continue;
 
-        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-          char: EMPTY_CHAR,
-          background: avgColor,
-          bold: style.bold,
-          dim: style.dim,
-        });
+        const avgR = Math.round(totalR / count);
+        const avgG = Math.round(totalG / count);
+        const avgB = Math.round(totalB / count);
+
+        if (use16Plus) {
+          const entry = nearestColor16Plus(avgR, avgG, avgB);
+          buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+            char: entry.char,
+            foreground: entry.fgPacked,
+            background: entry.bgPacked,
+            bold: style.bold,
+            dim: style.dim,
+          });
+        } else {
+          buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+            char: EMPTY_CHAR,
+            background: packRGBA(avgR, avgG, avgB, 255),
+            bold: style.bold,
+            dim: style.dim,
+          });
+        }
         continue;
       }
 

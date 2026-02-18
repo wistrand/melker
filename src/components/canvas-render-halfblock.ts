@@ -4,8 +4,10 @@
 
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { type Bounds } from '../types.ts';
-import { TRANSPARENT, packRGBA, parseColor } from './color-utils.ts';
+import { TRANSPARENT, parseColor } from './color-utils.ts';
 import type { CanvasRenderData } from './canvas-render-types.ts';
+import { getThemeManager } from '../theme.ts';
+import { nearestColor16Plus, nearestSolid16, blendShadeChars } from '../color16-palette.ts';
 
 // Half-block characters
 const UPPER_HALF = '\u2580'; // ▀
@@ -31,6 +33,7 @@ export function renderHalfBlockMode(
   const halfScale = scale >> 1;
   const hasStyleBg = style.background !== undefined;
   const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+  const use16Plus = getThemeManager().getColorSupport() === '16';
 
   for (let ty = 0; ty < terminalHeight; ty++) {
     const upperY = ty * 2 * scale + halfScale;
@@ -63,14 +66,10 @@ export function renderHalfBlockMode(
       const lowerOn = lowerColor !== TRANSPARENT;
 
       if (!upperOn && !lowerOn) {
-        // Both transparent — fill with background if available
         const bg = propsBg ?? (hasStyleBg ? style.background : undefined);
         if (bg) {
           buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-            char: EMPTY_CHAR,
-            background: bg,
-            bold: style.bold,
-            dim: style.dim,
+            char: EMPTY_CHAR, background: bg, bold: style.bold, dim: style.dim,
           });
         }
         continue;
@@ -80,36 +79,47 @@ export function renderHalfBlockMode(
       let fg: number | undefined;
       let bg: number | undefined;
 
-      if (upperOn && lowerOn) {
+      if (use16Plus && upperOn && lowerOn) {
+        // Color16+ adaptive rendering
+        const upperR = (upperColor >> 24) & 0xFF, upperG = (upperColor >> 16) & 0xFF, upperB = (upperColor >> 8) & 0xFF;
+        const lowerR = (lowerColor >> 24) & 0xFF, lowerG = (lowerColor >> 16) & 0xFF, lowerB = (lowerColor >> 8) & 0xFF;
+        const upperEntry = nearestColor16Plus(upperR, upperG, upperB);
+        const lowerEntry = nearestColor16Plus(lowerR, lowerG, lowerB);
+
+        if (upperEntry.fgPacked === lowerEntry.fgPacked &&
+            upperEntry.bgPacked === lowerEntry.bgPacked) {
+          // B: same fg+bg pair — blend shade densities
+          char = blendShadeChars(upperEntry.char, lowerEntry.char);
+          fg = upperEntry.fgPacked;
+          bg = upperEntry.bgPacked;
+        } else {
+          // A: different fg+bg — spatial ▀ with Oklab-matched solid colors
+          char = UPPER_HALF;
+          fg = nearestSolid16(upperR, upperG, upperB);
+          bg = nearestSolid16(lowerR, lowerG, lowerB);
+        }
+      } else if (upperOn && lowerOn) {
         if (upperColor === lowerColor) {
-          // Both same color — full block
           char = FULL_BLOCK;
           fg = upperColor;
           bg = propsBg ?? (hasStyleBg ? style.background : undefined);
         } else {
-          // Different colors — upper half as fg, lower half as bg
           char = UPPER_HALF;
           fg = upperColor;
           bg = lowerColor;
         }
       } else if (upperOn) {
-        // Upper only
         char = UPPER_HALF;
         fg = upperColor;
         bg = propsBg ?? (hasStyleBg ? style.background : undefined);
       } else {
-        // Lower only
         char = LOWER_HALF;
         fg = lowerColor;
         bg = propsBg ?? (hasStyleBg ? style.background : undefined);
       }
 
       buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-        char,
-        foreground: fg,
-        background: bg,
-        bold: style.bold,
-        dim: style.dim,
+        char, foreground: fg, background: bg, bold: style.bold, dim: style.dim,
       });
     }
   }

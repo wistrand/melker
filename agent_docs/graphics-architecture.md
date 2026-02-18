@@ -2,8 +2,9 @@
 
 ## Summary
 
-- Six graphics modes: sextant (default), block, pattern, luma, sixel, kitty, iterm2
-- Text modes (sextant/block/pattern/luma) use Unicode characters; pixel modes (sixel/kitty/iterm2) use terminal protocols for true-color images
+- Multiple graphics modes: sextant (default), halfblock, block, pattern, luma, sixel, kitty, iterm2
+- Text modes (sextant/halfblock/block/pattern/luma) use Unicode characters; pixel modes (sixel/kitty/iterm2) use terminal protocols for true-color images
+- On 16-color terminals, the color16+ expanded palette provides ~80+ distinguishable colors via shade characters (`░▒▓`)
 - Auto-detection picks the best available mode; `--gfx-mode` or `MELKER_GFX_MODE` overrides
 - Canvas, img, and video components all go through the same rendering pipeline
 
@@ -34,10 +35,16 @@ See [gfx-modes.md](gfx-modes.md) for mode details and comparison.
                     ▼               ▼               ▼
             ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
             │   sextant   │  │    sixel    │  │    kitty    │
-            │   block     │  │  palette.ts │  │  encoder.ts │
-            │   pattern   │  │  encoder.ts │  │             │
+            │   halfblock │  │  palette.ts │  │  encoder.ts │
+            │   block     │  │  encoder.ts │  │             │
+            │   pattern   │  │             │  │             │
             │   luma      │  │             │  │             │
             └─────────────┘  └─────────────┘  └─────────────┘
+                    │
+            ┌─────────────┐
+            │  color16+   │  ← 16-color terminals only
+            │  palette    │    (shade chars ░▒▓, Oklab LUT)
+            └─────────────┘
                     │               │               │
                     └───────────────┼───────────────┘
                                     ▼
@@ -280,6 +287,33 @@ The aspect ratio is exposed via `canvas.getPixelAspectRatio()` for:
 - Shader `resolution.pixelAspect` uniform
 - Image scaling
 
+## Color16+ Expanded Palette
+
+On 16-color terminals (`colorSupport='16'`), standard rendering maps every pixel to 1 of 16 ANSI colors — a brutal quantization that collapses gradients into 2-3 visible bands. The color16+ system expands the effective palette to ~80+ distinguishable colors using shade characters (`░▒▓`).
+
+**Architecture:**
+```
+Input RGB → 3D LUT (32³ = 32K entries) → PaletteEntry { fgPacked, bgPacked, char }
+```
+
+**Palette construction** (module load, one-time):
+1. Enumerate all `(fg, bg, density)` triples: 16 × 16 × 5 = 1,280 entries
+2. Compute visual RGB for each by mixing fg/bg in **linear light space** (gamma-correct — the terminal physically interleaves pixels, eye integrates photons linearly)
+3. Convert visual RGB to Oklab perceptual coordinates
+4. Build 32×32×32 LUT: for each quantized RGB bucket, find the closest palette entry in Oklab space
+
+**Two LUTs:**
+- `nearestColor16Plus(r, g, b)` → full palette entry (shade char + fg + bg)
+- `nearestSolid16(r, g, b)` → nearest of 16 solid ANSI colors (for spatial `▀`/`▄` cells)
+
+**Halfblock B+A strategy:**
+- **B** (same fg+bg pair): upper and lower pixels mapped to entries sharing the same ANSI color pair → blend shade densities into intermediate char
+- **A** (different fg+bg pairs): fall back to spatial `▀`/`▄` with Oklab-matched solid ANSI colors
+
+**Dithering interaction:** `dither="auto"` resolves to `"none"` on 16-color terminals. Shade chars provide sub-cell blending; spatial dithering provides cross-cell blending. Using both simultaneously produces washed-out results because dithering spreads quantization error into shade entries that already contain perceptual mixing.
+
+**Implementation:** `src/color16-palette.ts`
+
 ## Canvas Layers
 
 Canvas maintains two pixel buffers that are composited during rendering:
@@ -298,19 +332,24 @@ Canvas maintains two pixel buffers that are composited during rendering:
 
 ## Files
 
-| File                                 | Purpose                                    |
-|--------------------------------------|--------------------------------------------|
-| `src/components/canvas.ts`           | Canvas element, buffer management          |
-| `src/components/canvas-render.ts`    | Mode selection, rendering dispatch         |
-| `src/sixel/`                         | Sixel detection, encoding, palette         |
-| `src/kitty/`                         | Kitty detection, encoding                  |
-| `src/iterm2/`                        | iTerm2 detection, encoding                 |
-| `src/graphics-overlay-manager.ts`    | Sixel/Kitty/iTerm2 overlay output, cleanup |
-| `src/utils/terminal-detection.ts`    | Shared multiplexer/remote session/Unicode detection |
-| `src/utils/pixel-utils.ts`           | Shared pixel encoding (Uint32 to RGB/RGBA) |
-| `src/engine.ts`                      | Render orchestration, delegates to manager |
-| `src/input.ts`                       | Detection response routing                 |
-| `src/rendering.ts`                   | Overlay detection                          |
+| File                                      | Purpose                                              |
+|-------------------------------------------|------------------------------------------------------|
+| `src/components/canvas.ts`                | Canvas element, buffer management                    |
+| `src/components/canvas-render.ts`         | Mode selection, rendering dispatch                   |
+| `src/components/canvas-render-block.ts`   | Block mode renderer (color16+ halftone)              |
+| `src/components/canvas-render-halfblock.ts`| Halfblock mode renderer (color16+ shade/spatial)    |
+| `src/components/canvas-render-dithered.ts`| Dithered renderer (color16+ block + halfblock)       |
+| `src/components/canvas-dither.ts`         | Dither state, auto-mode resolution                   |
+| `src/color16-palette.ts`                  | Color16+ palette, 3D LUTs, Oklab matching            |
+| `src/sixel/`                              | Sixel detection, encoding, palette                   |
+| `src/kitty/`                              | Kitty detection, encoding                            |
+| `src/iterm2/`                             | iTerm2 detection, encoding                           |
+| `src/graphics-overlay-manager.ts`         | Sixel/Kitty/iTerm2 overlay output, cleanup           |
+| `src/utils/terminal-detection.ts`         | Shared multiplexer/remote session/Unicode detection  |
+| `src/utils/pixel-utils.ts`               | Shared pixel encoding (Uint32 to RGB/RGBA)           |
+| `src/engine.ts`                           | Render orchestration, delegates to manager           |
+| `src/input.ts`                            | Detection response routing                           |
+| `src/rendering.ts`                        | Overlay detection                                    |
 
 ## Canvas Size Model
 

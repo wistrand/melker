@@ -5,6 +5,8 @@ import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { type Bounds } from '../types.ts';
 import { TRANSPARENT, packRGBA, parseColor } from './color-utils.ts';
 import type { CanvasRenderData } from './canvas-render-types.ts';
+import { getThemeManager } from '../theme.ts';
+import { nearestColor16Plus } from '../color16-palette.ts';
 
 /**
  * Block mode rendering: 1 colored space per terminal cell (no sextant characters)
@@ -24,6 +26,7 @@ export function renderBlockMode(
   const halfScale = scale >> 1;
   const hasStyleBg = style.background !== undefined;
   const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+  const use16Plus = getThemeManager().getColorSupport() === '16';
 
   for (let ty = 0; ty < terminalHeight; ty++) {
     const baseBufferY = ty * 3 * scale;
@@ -59,26 +62,38 @@ export function renderBlockMode(
         }
       }
 
-      // Determine background color
-      let bgColor: number | undefined;
-      if (count > 0) {
-        const avgR = Math.round(totalR / count);
-        const avgG = Math.round(totalG / count);
-        const avgB = Math.round(totalB / count);
-        bgColor = packRGBA(avgR, avgG, avgB, 255);
-      } else {
-        bgColor = propsBg ?? (hasStyleBg ? style.background : undefined);
+      if (count === 0) {
+        const bg = propsBg ?? (hasStyleBg ? style.background : undefined);
+        if (bg) {
+          buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+            char: EMPTY_CHAR, background: bg, bold: style.bold, dim: style.dim,
+          });
+        }
+        continue;
       }
 
-      // Skip empty cells with no background
-      if (!bgColor) continue;
+      const avgR = Math.round(totalR / count);
+      const avgG = Math.round(totalG / count);
+      const avgB = Math.round(totalB / count);
 
-      buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-        char: EMPTY_CHAR,
-        background: bgColor,
-        bold: style.bold,
-        dim: style.dim,
-      });
+      if (use16Plus) {
+        // Color16+ palette: shade characters for ~80+ distinguishable colors
+        const entry = nearestColor16Plus(avgR, avgG, avgB);
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char: entry.char,
+          foreground: entry.fgPacked,
+          background: entry.bgPacked,
+          bold: style.bold,
+          dim: style.dim,
+        });
+      } else {
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char: EMPTY_CHAR,
+          background: packRGBA(avgR, avgG, avgB, 255),
+          bold: style.bold,
+          dim: style.dim,
+        });
+      }
     }
   }
 }

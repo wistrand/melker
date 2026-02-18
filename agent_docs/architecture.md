@@ -129,11 +129,16 @@ Uses **border-box** model (width/height include padding and border).
 
 ## Render Pipeline
 
-Two render paths:
+Three render paths:
 
 **Full Render** (debounced 16ms):
 ```
 Event → State change → Layout → Buffer render → Swap → Terminal
+```
+
+**Cached Layout Render** (`engine.renderCachedLayout()`):
+```
+Pixel/overlay change → Buffer render (reuse cached layout tree) → Swap → Terminal
 ```
 
 **Fast Render** (immediate, for Input/Textarea):
@@ -147,15 +152,44 @@ Fast render provides ~2ms latency. See [fast-input-render.md](fast-input-render.
 
 **Dirty row tracking:** Only changed rows are scanned during diff. See [dirty-row-tracking.md](dirty-row-tracking.md).
 
+### Cached Layout Render Path
+
+`renderer.render()` caches its `LayoutNode` tree (`_cachedLayoutTree`) at the end of every full render. The cached layout path skips `calculateLayout()` and re-renders the element tree to the buffer using the cached layout positions. This is safe when only pixel data or buffer overlays have changed — the element tree, styles, and geometry are identical.
+
+**`engine.renderCachedLayout()`** acquires the render lock, clears the buffer, calls `renderer.renderCachedLayout()`, renders buffer overlays, and runs optimized differential terminal output. Falls back to full `render()` if no cache exists.
+
+**`renderer.renderCachedLayout()`** walks the cached layout tree via `_renderNode()`, handles overlays, modals, low-contrast effects, and text selection highlighting — everything `render()` does after `calculateLayout()`.
+
+A `requestCachedRender` callback is threaded from the engine through `RenderContext` and `ComponentRenderContext`, parallel to `requestRender`. Components pick up whichever callback suits their needs.
+
+**Safety model:** The approach is explicit opt-in. Only callers that are certain they haven't changed layout call `renderCachedLayout()`. Everything else calls `render()`, which runs full layout and refreshes the cache. `_releaseRenderLock()` always dispatches pending renders as full `render()` calls.
+
+| Trigger                            | Render path            | Why                                           |
+|------------------------------------|------------------------|-----------------------------------------------|
+| Keyboard/mouse events              | `render()` (full)      | Handlers may mutate element tree/props/focus   |
+| Terminal resize                    | `forceRender()` (full) | Viewport changed                               |
+| Focus/hover changes                | `render()` (full)      | Pseudo-classes affect style                    |
+| Dialog open/close                  | `render()` (full)      | Element tree changes                           |
+| Element tree replacement           | `render()` (full)      | New root element                               |
+| Scroll events                      | `render()` (full)      | Scroll position affects content positioning    |
+| CSS transitions/animations         | `render()` (full)      | May animate layout-affecting properties        |
+| Shader frame                       | `renderCachedLayout()` | Only pixel buffer changed                      |
+| Video frame                        | `renderCachedLayout()` | Only pixel buffer changed                      |
+| Toast show/dismiss/expire          | `renderCachedLayout()` | Buffer overlay only                            |
+| Tooltip show/hide/move             | `renderCachedLayout()` | Buffer overlay only                            |
+| Spinner/progress/GIF tick          | `renderCachedLayout()` | Visual-only animation within fixed bounds      |
+| Pending render (from render lock)  | `render()` (full)      | Unknown source — must be safe                  |
+
 ## UI Animation Manager (`src/ui-animation-manager.ts`)
 
 Centralized timer for UI animations. Components register callbacks instead of creating individual timers.
 
 **Benefits:**
 - Single timer reduces overhead
-- Batched render calls
+- Batched render calls per tick
 - Adaptive tick interval based on registered animations
 - Drift correction maintains timing accuracy
+- Per-entry layout tracking — only escalates to full render when needed
 
 **Adaptive Tick (Nyquist-based):**
 ```
@@ -182,22 +216,39 @@ if (now - lastTick > interval)
 | Normal jitter (< interval) | Catches up to ideal schedule       |
 | Major delay (> interval)   | Fires once, resets, no rapid-fire  |
 
+**Layout-aware dispatch:**
+
+Each animation entry has an `affectsLayout` flag (default `false`). During `_tick()`, the flag is reset before each callback and checked after, attributing render requests to the entry that made them. After all callbacks run:
+
+- If any `affectsLayout: true` entry requested a render → full `render()` (with layout recalculation)
+- If only `affectsLayout: false` entries requested a render → `renderCachedLayout()` (skips layout)
+
 **Usage:**
 ```typescript
 const manager = getUIAnimationManager();
+// Visual-only animation (default: affectsLayout = false)
 const unregister = manager.register('my-animation', (elapsed) => {
   updateFrame();
   manager.requestRender();
-}, 100); // 100ms interval
+}, 100);
 
-// Cleanup
-unregister();
+// Layout-affecting animation
+manager.register('css-transition', (elapsed) => {
+  interpolateStyles();
+  manager.requestRender();
+}, 16, { affectsLayout: true });
 ```
 
-**Components using UIAnimationManager:**
-- `spinner` - Rotating indicator (`spinning` prop)
-- `progress` - Indeterminate mode (`indeterminate` prop)
-- `segment-display` - Scrolling text (`scroll` prop)
+**Registered consumers:**
+
+| Consumer                           | `affectsLayout` | Why                                                |
+|------------------------------------|------------------|----------------------------------------------------|
+| CSS transitions (`layout-style.ts`) | `true`          | May animate width, height, margin, padding, etc.   |
+| CSS animations (`stylesheet.ts`)    | `true`          | Keyframes can target any property                  |
+| Spinner (`spinner.ts`)              | `false`         | Cycles frame characters within fixed bounds        |
+| Progress bar (`progress.ts`)        | `false`         | Ping-pong position is internal render state        |
+| GIF animation (`canvas.ts`)         | `false`         | Advances GIF frame — pixel data only               |
+| Segment display (`segment-display.ts`) | `false`      | Scrolls text offset — internal render state        |
 
 ## Style Inheritance
 

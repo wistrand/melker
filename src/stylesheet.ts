@@ -1630,7 +1630,7 @@ export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancest
             return;
           }
           manager.requestRender();
-        }, 16); // ~60fps
+        }, 16, { affectsLayout: true }); // ~60fps
         element._animationRegistration = unregister;
       }
     }

@@ -38,6 +38,7 @@ export interface RenderContext {
   hoveredElementId?: string;
   textSelection?: TextSelection;
   requestRender?: () => void;  // Callback for components to request a re-render
+  requestCachedRender?: () => void;  // Callback for cached-layout render (skips layout recalculation)
   // New viewport-based properties
   viewportManager?: ViewportManager;
   elementViewport?: Viewport;
@@ -187,7 +188,7 @@ export class RenderingEngine {
   private _overlays: Overlay[] = [];
 
   // Main render method that takes an element tree and renders to a buffer
-  render(element: Element, buffer: DualBuffer, viewport: Bounds, focusedElementId?: string, textSelection?: TextSelection, hoveredElementId?: string, requestRender?: () => void): LayoutNode {
+  render(element: Element, buffer: DualBuffer, viewport: Bounds, focusedElementId?: string, textSelection?: TextSelection, hoveredElementId?: string, requestRender?: () => void, requestCachedRender?: () => void): LayoutNode {
     // Store requestRender globally so components can access it even if not passed through context
     if (requestRender) {
       globalThis.__melkerRequestRender = requestRender;
@@ -208,6 +209,7 @@ export class RenderingEngine {
       hoveredElementId,
       textSelection,
       requestRender,
+      requestCachedRender,
       viewportManager: this._viewportManager,
       overlays: this._overlays,
     };
@@ -459,6 +461,77 @@ export class RenderingEngine {
       this.selectionRenderTiming.highlightTime = performance.now() - highlightStart;
     }
 
+    return true;
+  }
+
+  // Canvas-only render - skips layout calculation, reuses cached layout tree.
+  // Used when only canvas pixel data changed (shader frames) and nothing layout-affecting has changed.
+  renderCachedLayout(buffer: DualBuffer, focusedElementId?: string, textSelection?: TextSelection, hoveredElementId?: string, requestRender?: () => void): boolean {
+    if (!this._cachedLayoutTree || !this._cachedElement || !this._cachedViewport) {
+      return false; // No cached layout, need full render
+    }
+
+    // Store requestRender globally so components can access it even if not passed through context
+    if (requestRender) {
+      globalThis.__melkerRequestRender = requestRender;
+    }
+
+    // Clear per-frame caches
+    this._scrollbarBounds.clear();
+    this._scrollDimensionsCache.clear();
+    this._overlays = [];
+
+    const viewport = this._cachedViewport;
+
+    const context: RenderContext = {
+      buffer,
+      viewport,
+      focusedElementId,
+      hoveredElementId,
+      textSelection,
+      requestRender,
+      viewportManager: this._viewportManager,
+      overlays: this._overlays,
+    };
+
+    // Re-render content using cached layout (no layout recalculation)
+    this._renderNode(this._cachedLayoutTree, context);
+
+    // Render overlays (dropdowns, tooltips)
+    this._renderOverlays(buffer, viewport);
+
+    // Collect modals
+    const modals: Element[] = [];
+    this._collectModals(this._cachedElement, modals);
+
+    // Apply low-contrast effect if there's a modal without backdrop (fullcolor theme only)
+    const themeManager = getThemeManager();
+    const theme = themeManager.getCurrentTheme();
+    if (theme.type === 'fullcolor') {
+      const hasModalWithoutBackdrop = modals.some(modal =>
+        modal instanceof DialogElement &&
+        modal.props.open &&
+        modal.props.modal === true &&
+        modal.props.backdrop === false
+      );
+      if (hasModalWithoutBackdrop) {
+        buffer.currentBuffer.applyLowContrastEffect(theme.mode === 'dark');
+      }
+    }
+
+    // Render modals on top
+    for (const modal of modals) {
+      if (modal instanceof DialogElement && modal.props.open) {
+        this._renderModal(modal, context);
+      }
+    }
+
+    // Apply text selection highlighting AFTER modals so it's visible in dialogs
+    if (textSelection?.isActive) {
+      this._applySelectionHighlight(textSelection, buffer);
+    }
+
+    getGlobalPerformanceDialog().markBufferEnd();
     return true;
   }
 
@@ -1419,6 +1492,7 @@ export class RenderingEngine {
         focusedElementId: context.focusedElementId,
         hoveredElementId: context.hoveredElementId,
         requestRender: context.requestRender,
+        requestCachedRender: context.requestCachedRender,
         scrollOffset: context.scrollOffset, // Pass scroll offset for click translation
         viewport: context.viewport, // Full viewport for modal overlays
         // Allow components to register their scrollbar bounds for scroll-handler integration

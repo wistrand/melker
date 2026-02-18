@@ -724,9 +724,13 @@ export class VideoElement extends CanvasElement {
 
     // Capture requestRender from context AFTER size is set
     // (setRenderCallback triggers autoplay which needs correct buffer size)
-    if (context.requestRender && !this.props.renderCallback) {
-      logger.debug('Captured requestRender from context');
-      this.setRenderCallback(context.requestRender);
+    // Prefer requestCachedRender (skips layout recalculation) since video frames only change pixel data
+    if (!this.props.renderCallback) {
+      const cb = context.requestCachedRender || context.requestRender;
+      if (cb) {
+        logger.debug('Captured render callback from context');
+        this.setRenderCallback(cb);
+      }
     }
 
     // Clear stale palette cache before first sixel render

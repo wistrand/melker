@@ -13,6 +13,14 @@ const logger = getLogger('ui-animation');
 /** Animation callback function */
 export type AnimationCallback = (elapsed: number) => void;
 
+/** Options for animation registration */
+export interface AnimationOptions {
+  /** Whether this animation affects layout (e.g. CSS transitions on width/margin).
+   *  When true, ticks from this animation trigger a full render with layout recalculation.
+   *  When false (default), ticks use the cached layout path. */
+  affectsLayout?: boolean;
+}
+
 /** Registered animation entry */
 interface AnimationEntry {
   id: string;
@@ -20,6 +28,7 @@ interface AnimationEntry {
   interval: number;  // Original requested interval
   lastTick: number;
   paused: boolean;
+  affectsLayout: boolean;
 }
 
 /**
@@ -53,15 +62,22 @@ export class UIAnimationManager {
   private _timer: number | null = null;
   private _currentTick: number = UIAnimationManager.MIN_TICK;
   private _requestRender: (() => void) | null = null;
+  private _requestCachedRender: (() => void) | null = null;
   private _startTime: number = 0;
   private _renderRequested: boolean = false;
 
   /**
-   * Set the render request function.
-   * Called once per tick if any animation requested a render.
+   * Set the full render request function (triggers layout recalculation).
    */
   setRequestRender(fn: () => void): void {
     this._requestRender = fn;
+  }
+
+  /**
+   * Set the cached-layout render request function (skips layout recalculation).
+   */
+  setRequestCachedRender(fn: () => void): void {
+    this._requestCachedRender = fn;
   }
 
   /**
@@ -70,9 +86,10 @@ export class UIAnimationManager {
    * @param id Unique identifier for this animation
    * @param callback Function called on each tick (receives elapsed ms since registration)
    * @param interval Desired interval in ms
+   * @param options Animation options (e.g. affectsLayout)
    * @returns Unregister function
    */
-  register(id: string, callback: AnimationCallback, interval: number = 100): () => void {
+  register(id: string, callback: AnimationCallback, interval: number = 100, options?: AnimationOptions): () => void {
     // Ensure minimum interval
     const effectiveInterval = Math.max(UIAnimationManager.MIN_TICK, interval);
 
@@ -82,6 +99,7 @@ export class UIAnimationManager {
       interval: effectiveInterval,
       lastTick: performance.now(),
       paused: false,
+      affectsLayout: options?.affectsLayout ?? false,
     };
 
     this._animations.set(id, entry);
@@ -192,6 +210,7 @@ export class UIAnimationManager {
     this._stopTimer();
     this._animations.clear();
     this._requestRender = null;
+    this._requestCachedRender = null;
     logger.debug('Animation manager shutdown');
   }
 
@@ -270,7 +289,8 @@ export class UIAnimationManager {
    */
   private _tick(): void {
     const now = performance.now();
-    this._renderRequested = false;
+    let needsRender = false;
+    let needsLayout = false;
 
     for (const entry of this._animations.values()) {
       if (entry.paused) continue;
@@ -278,7 +298,14 @@ export class UIAnimationManager {
       const elapsed = now - entry.lastTick;
       if (elapsed >= entry.interval) {
         try {
+          // Reset flag before each callback so we can attribute it
+          this._renderRequested = false;
           entry.callback(now - this._startTime);
+
+          if (this._renderRequested) {
+            needsRender = true;
+            if (entry.affectsLayout) needsLayout = true;
+          }
 
           // Drift correction: advance by interval to maintain schedule
           entry.lastTick += entry.interval;
@@ -293,10 +320,16 @@ export class UIAnimationManager {
       }
     }
 
-    // Batch render call
-    if (this._renderRequested && this._requestRender) {
-      this._requestRender();
+    // Batch render call — use full render only when a layout-affecting animation ticked
+    if (needsRender) {
+      if (needsLayout || !this._requestCachedRender) {
+        this._requestRender?.();
+      } else {
+        this._requestCachedRender();
+      }
     }
+
+    this._renderRequested = false;
   }
 }
 
@@ -317,9 +350,12 @@ export function getUIAnimationManager(): UIAnimationManager {
  * Initialize the animation manager with a render function.
  * Call this during engine setup.
  */
-export function initUIAnimationManager(requestRender: () => void): UIAnimationManager {
+export function initUIAnimationManager(requestRender: () => void, requestCachedRender?: () => void): UIAnimationManager {
   const manager = getUIAnimationManager();
   manager.setRequestRender(requestRender);
+  if (requestCachedRender) {
+    manager.setRequestCachedRender(requestCachedRender);
+  }
   return manager;
 }
 

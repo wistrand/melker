@@ -42,6 +42,7 @@ export interface ShaderState {
 
   // Callbacks
   requestRender: (() => void) | null;
+  requestCachedRender: (() => void) | null;
 }
 
 /**
@@ -63,6 +64,7 @@ export function createShaderState(): ShaderState {
     outputBuffer: null,
     permissionWarned: false,
     requestRender: null,
+    requestCachedRender: null,
   };
 }
 
@@ -101,7 +103,8 @@ export interface ShaderContext {
 export function startShader(
   state: ShaderState,
   ctx: ShaderContext,
-  requestRender?: () => void
+  requestRender?: () => void,
+  requestCachedRender?: () => void
 ): void {
   if (state.timer !== null) {
     return; // Already running
@@ -122,6 +125,7 @@ export function startShader(
   }
 
   state.requestRender = requestRender ?? null;
+  state.requestCachedRender = requestCachedRender ?? null;
   state.startTime = performance.now();
   state.finished = false;
   state.resolution = {
@@ -337,8 +341,10 @@ function runShaderFrame(state: ShaderState, ctx: ShaderContext): void {
   // Schedule next frame
   scheduleNextFrame(state, ctx);
 
-  // Request render
-  if (state.requestRender) {
+  // Request canvas-only render (skips layout) when available, fall back to full render
+  if (state.requestCachedRender) {
+    state.requestCachedRender();
+  } else if (state.requestRender) {
     state.requestRender();
   }
 }

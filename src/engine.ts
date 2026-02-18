@@ -344,14 +344,14 @@ export class MelkerEngine {
       bell: config.toastBell,
       width: config.toastWidth,
     });
-    toastManager.setRequestRender(() => this.render());
+    toastManager.setRequestRender(() => this.renderCachedLayout());
 
     // Initialize tooltip manager
     const tooltipManager = getTooltipManager();
-    tooltipManager.setRequestRender(() => this.render());
+    tooltipManager.setRequestRender(() => this.renderCachedLayout());
 
     // Initialize UI animation manager
-    initUIAnimationManager(() => this.render());
+    initUIAnimationManager(() => this.render(), () => this.renderCachedLayout());
 
     // Apply theme-based color support if not explicitly set
     const currentTheme = this._themeManager.getCurrentTheme();
@@ -867,7 +867,7 @@ export class MelkerEngine {
 
     const renderToBufferStartTime = performance.now();
 
-    const layoutTree = this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
+    const layoutTree = this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render(), () => this.renderCachedLayout());
     const layoutAndRenderTime = performance.now() - renderToBufferStartTime;
     this._lastLayoutTime = layoutAndRenderTime;
     this._layoutNodeCount = this._countLayoutNodes(layoutTree);
@@ -918,6 +918,66 @@ export class MelkerEngine {
 
     // Update focus traps for modal dialogs
     updateModalFocusTraps(this._getModalFocusTrapContext());
+    } finally {
+      this._releaseRenderLock();
+    }
+  }
+
+  /**
+   * Canvas-only render — skips layout calculation, reuses cached layout tree.
+   * Called by shader animation frames when only canvas pixel data has changed.
+   * Falls back to full render() if no cached layout is available.
+   */
+  renderCachedLayout(): void {
+    logger.trace('renderCachedLayout() called');
+
+    if (!this._acquireRenderLock()) return;
+
+    try {
+      const renderStartTime = performance.now();
+      getGlobalPerformanceDialog().markRenderStart();
+
+      // Update theme cache once per render
+      this._buffer?.updateThemeCache();
+
+      this._renderCount++;
+      globalThis.melkerRenderCount = this._renderCount;
+
+      // Clear buffer
+      this._buffer.clear();
+
+      // Try cached-layout render (skips calculateLayout)
+      const success = this._renderer.renderCachedLayout(
+        this._buffer,
+        this._document.focusedElement?.id,
+        this._textSelectionHandler.getTextSelection(),
+        this._textSelectionHandler.getHoveredElementId() || undefined,
+        () => this.render(),
+      );
+
+      if (!success) {
+        // No cached layout — fall back to full render
+        this._isRendering = false;
+        this.render();
+        return;
+      }
+
+      // Render buffer overlays (stats, errors, tooltips, toasts, performance dialog)
+      renderBufferOverlays(this._buffer, {
+        lastRenderTime: this._lastRenderTime,
+        lastLayoutTime: this._lastLayoutTime,
+        layoutNodeCount: this._layoutNodeCount,
+        renderCount: this._renderCount,
+      });
+
+      // Use optimized differential rendering
+      this._renderOptimized();
+      getGlobalPerformanceDialog().markApplyEnd();
+
+      const totalRenderTime = performance.now() - renderStartTime;
+      this._lastRenderTime = totalRenderTime;
+
+      getGlobalPerformanceDialog().recordRenderTime(totalRenderTime);
     } finally {
       this._releaseRenderLock();
     }
@@ -998,7 +1058,7 @@ export class MelkerEngine {
       height: this._terminalSizeManager.size.height,
     };
 
-    this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
+    this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render(), () => this.renderCachedLayout());
 
     // Render buffer overlays (stats, errors, tooltips, toasts, performance dialog)
     renderBufferOverlays(this._buffer, {

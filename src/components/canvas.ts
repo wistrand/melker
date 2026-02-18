@@ -1235,8 +1235,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    * Start the shader animation loop.
    * The onShader callback will be called for each pixel on every frame.
    */
-  startShader(requestRender?: () => void): void {
-    startShader(this._shaderState, this._getShaderContext(), requestRender);
+  startShader(requestRender?: () => void, requestCachedRender?: () => void): void {
+    startShader(this._shaderState, this._getShaderContext(), requestRender, requestCachedRender);
   }
 
   /**
@@ -1506,7 +1506,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Auto-start shader animation if onShader prop is provided
     // Don't restart if shader finished due to shaderRunTime
     if (this.props.onShader && this._shaderState.timer === null && !this._shaderState.finished) {
-      this.startShader(context.requestRender);
+      this.startShader(context.requestRender, context.requestCachedRender);
     }
 
     // Call onPaint handler to allow user to update canvas content before rendering
@@ -1852,6 +1852,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // We'll restart it after buffer reallocation so it gets a fresh context
     const shaderWasRunning = this._shaderState.timer !== null;
     const savedRequestRender = this._shaderState.requestRender;
+    const savedRequestCanvasRender = this._shaderState.requestCachedRender;
     // Preserve elapsed time so animation continues smoothly after resize
     const elapsedTime = shaderWasRunning ? performance.now() - this._shaderState.startTime : 0;
     if (shaderWasRunning) {
@@ -1894,7 +1895,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     // Restart shader if it was running, with fresh context pointing to new buffers
     if (shaderWasRunning && this.props.onShader) {
-      this.startShader(savedRequestRender ?? undefined);
+      this.startShader(savedRequestRender ?? undefined, savedRequestCanvasRender ?? undefined);
       // Restore elapsed time so animation continues from where it left off
       this._shaderState.startTime = performance.now() - elapsedTime;
     }

@@ -282,7 +282,7 @@ function processTransitions(element: Element, resolvedStyle: Style): void {
         return;
       }
       manager.requestRender();
-    }, 16);  // ~60fps
+    }, 16, { affectsLayout: true });  // ~60fps
   }
 }
 

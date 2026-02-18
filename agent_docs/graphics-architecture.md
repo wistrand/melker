@@ -180,15 +180,16 @@ MELKER_GFX_MODE=hires     # Best available: kitty → sixel → sextant
 
 **Fallback chain:**
 
-| Mode      | full (xterm, etc.)                 | basic (`TERM=linux`)               | ascii (`TERM=vt100/vt220`)  |
-|-----------|------------------------------------|------------------------------------|------------------------------|
-| `sixel`   | sextant                            | block                              | block                        |
-| `kitty`   | sextant                            | block                              | block                        |
-| `iterm2`  | sextant                            | block                              | block                        |
-| `hires`   | kitty → sixel → iterm2 → sextant  | kitty → sixel → iterm2 → block    | block                        |
-| `sextant` | sextant                            | block                              | block                        |
+| Mode        | full (xterm, etc.)                    | basic (`TERM=linux`)                     | ascii (`TERM=vt100/vt220`)  |
+|-------------|---------------------------------------|------------------------------------------|------------------------------|
+| `sixel`     | sextant                               | halfblock                                | block                        |
+| `kitty`     | sextant                               | halfblock                                | block                        |
+| `iterm2`    | sextant                               | halfblock                                | block                        |
+| `hires`     | kitty → sixel → iterm2 → sextant     | kitty → sixel → iterm2 → halfblock      | block                        |
+| `sextant`   | sextant                               | halfblock                                | block                        |
+| `halfblock` | halfblock                             | halfblock                                | block                        |
 
-Mode resolution happens in `getEffectiveGfxMode()` in `canvas-render.ts`. The `block` fallback uses colored spaces (background color only) — no special characters needed, works on all tiers.
+Mode resolution happens in `getEffectiveGfxMode()` in `canvas-render.ts`. The three-tier fallback: sextant (full) → halfblock (basic) → block (ascii). `halfblock` uses `▀▄█` characters for 1×2 pixels per cell with fg+bg colors. `block` uses colored spaces (bg only), works on all tiers.
 
 ## Unicode Tiers
 
@@ -230,7 +231,7 @@ Terminal Unicode support is detected as a three-tier enum rather than a binary f
 | Borders          | All styles (thin/thick/rounded/dashed) | thin, double (thick/rounded/dashed → thin) | ASCII (`+--+`)   |
 | Scrollbar        | `█░`                          | `█░`                                 | `#.`                 |
 | Tree connectors  | `├── └── │`                   | `├── └── │`                          | `\|-- \`-- \|`       |
-| Canvas           | Sextant (2x3 pixels)         | Block (colored spaces)               | Block (no color)     |
+| Canvas           | Sextant (2x3 pixels)         | Half-block (1x2 pixels, ▀▄█)        | Block (no color)     |
 | Data-bars        | `▏▎▍▌▋▊▉█` fine eighths      | `▌█` half-block                      | `#` whole-char       |
 | Sparklines       | `▁▂▃▄▅▆▇█` 8 levels          | `░▒▓█` 4 shade levels               | ASCII ramp           |
 | Spinner          | All variants (dots, braille…) | `line` fallback (`\| / - \`)         | `line` fallback      |
@@ -246,7 +247,7 @@ Terminal Unicode support is detected as a three-tier enum rather than a binary f
 |-----------------------------------|---------------------------------------------------------|
 | `src/utils/terminal-detection.ts` | `getUnicodeTier()`, `isUnicodeSupported()`              |
 | `src/types.ts`                    | `getBorderChars()` tiered fallback                      |
-| `src/components/canvas-render.ts` | Sextant → block fallback for basic/ascii                |
+| `src/components/canvas-render.ts` | Sextant → halfblock → block fallback chain              |
 | `src/isoline.ts`                  | Tiered marching squares tables                          |
 | `src/components/data-bars.ts`     | Tiered bar/sparkline character sets                     |
 | `src/components/spinner.ts`       | Variant fallback (braille → line)                       |
@@ -260,18 +261,19 @@ Graphics modes are automatically disabled or degraded in certain environments:
 |-----------------|----------------------------------|------------------------------------------------------|
 | tmux/screen     | `$TMUX`, `$STY`                  | sixel, kitty disabled                                |
 | SSH (remote)    | `$SSH_CLIENT`, `$SSH_CONNECTION` | sixel disabled (bandwidth)                           |
-| basic tier      | `$TERM=linux`                    | sextant → block, rounded/thick/dashed borders → thin |
-| ascii tier      | `$TERM=vt100/vt220`             | sextant → block, all Unicode borders → ASCII         |
+| basic tier      | `$TERM=linux`                    | sextant → halfblock, rounded/thick/dashed borders → thin |
+| ascii tier      | `$TERM=vt100/vt220`             | sextant → block, all Unicode borders → ASCII             |
 
 ## Pixel Aspect Ratio
 
 Terminal cells are typically taller than wide. Graphics modes handle this differently:
 
-| Mode    | Pixel Aspect                                                              |
-|---------|---------------------------------------------------------------------------|
-| sextant | `(3 x cellWidth) / (2 x cellHeight)` - sextant pixels are 2 wide x 3 tall |
-| sixel   | 1.0 (square pixels at native resolution)                                  |
-| kitty   | 1.0 (square pixels at native resolution)                                  |
+| Mode      | Pixel Aspect                                                              |
+|-----------|---------------------------------------------------------------------------|
+| sextant   | `(3 x cellWidth) / (2 x cellHeight)` - sextant pixels are 2 wide x 3 tall |
+| halfblock | `(2 x cellWidth) / cellHeight` - half-block pixels are ~1.0 (nearly square) |
+| sixel     | 1.0 (square pixels at native resolution)                                  |
+| kitty     | 1.0 (square pixels at native resolution)                                  |
 
 The aspect ratio is exposed via `canvas.getPixelAspectRatio()` for:
 - Aspect-corrected drawing (`drawCircleCorrected()`)

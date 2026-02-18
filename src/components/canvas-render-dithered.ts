@@ -43,6 +43,73 @@ export function renderDitheredToTerminal(
   const hasStyleBg = style.background !== undefined;
   const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
 
+  // Half-block dithered path: 1x2 pixels per cell
+  if (gfxMode === 'halfblock') {
+    for (let ty = 0; ty < terminalHeight; ty++) {
+      const baseBufferY = ty * 2 * scale;
+      for (let tx = 0; tx < terminalWidth; tx++) {
+        const bufferX = tx * 1 * scale + halfScale;
+        const upperY = baseBufferY + halfScale;
+        const lowerY = baseBufferY + scale + halfScale;
+
+        let upperColor = TRANSPARENT;
+        let lowerColor = TRANSPARENT;
+
+        if (bufferX >= 0 && bufferX < bufW && upperY >= 0 && upperY < bufH) {
+          const rgbaIdx = (upperY * bufW + bufferX) * 4;
+          const a = ditheredBuffer[rgbaIdx + 3];
+          if (a >= 128) {
+            upperColor = packRGBA(ditheredBuffer[rgbaIdx], ditheredBuffer[rgbaIdx + 1], ditheredBuffer[rgbaIdx + 2], a);
+          }
+        }
+        if (bufferX >= 0 && bufferX < bufW && lowerY >= 0 && lowerY < bufH) {
+          const rgbaIdx = (lowerY * bufW + bufferX) * 4;
+          const a = ditheredBuffer[rgbaIdx + 3];
+          if (a >= 128) {
+            lowerColor = packRGBA(ditheredBuffer[rgbaIdx], ditheredBuffer[rgbaIdx + 1], ditheredBuffer[rgbaIdx + 2], a);
+          }
+        }
+
+        const upperOn = upperColor !== TRANSPARENT;
+        const lowerOn = lowerColor !== TRANSPARENT;
+
+        if (!upperOn && !lowerOn) {
+          const bg = propsBg ?? (hasStyleBg ? style.background : undefined);
+          if (bg) {
+            buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+              char: EMPTY_CHAR, background: bg, bold: style.bold, dim: style.dim,
+            });
+          }
+          continue;
+        }
+
+        let char: string;
+        let fg: number | undefined;
+        let bg: number | undefined;
+
+        if (upperOn && lowerOn) {
+          if (upperColor === lowerColor) {
+            char = '\u2588'; fg = upperColor;
+            bg = propsBg ?? (hasStyleBg ? style.background : undefined);
+          } else {
+            char = '\u2580'; fg = upperColor; bg = lowerColor;
+          }
+        } else if (upperOn) {
+          char = '\u2580'; fg = upperColor;
+          bg = propsBg ?? (hasStyleBg ? style.background : undefined);
+        } else {
+          char = '\u2584'; fg = lowerColor;
+          bg = propsBg ?? (hasStyleBg ? style.background : undefined);
+        }
+
+        buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
+          char, foreground: fg, background: bg, bold: style.bold, dim: style.dim,
+        });
+      }
+    }
+    return;
+  }
+
   for (let ty = 0; ty < terminalHeight; ty++) {
     const baseBufferY = ty * 3 * scale;
 

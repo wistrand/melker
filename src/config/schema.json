@@ -135,7 +135,7 @@
     },
     "render.gfxMode": {
       "type": "string",
-      "enum": ["sextant", "block", "pattern", "luma", "sixel", "kitty", "iterm2", "hires", "isolines", "isolines-filled"],
+      "enum": ["sextant", "halfblock", "block", "pattern", "luma", "sixel", "kitty", "iterm2", "hires", "isolines", "isolines-filled"],
       "default": "sextant",
       "env": "MELKER_GFX_MODE",
       "flag": "--gfx-mode",

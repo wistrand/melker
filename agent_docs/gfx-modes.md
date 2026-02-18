@@ -4,11 +4,12 @@ Controls how canvas/image pixels are rendered to terminal characters.
 
 ## Pixel Aspect Ratio
 
-Terminal character cells are typically taller than wide, so sextant pixels (2 wide × 3 tall per cell) are not square. The `canvas.getPixelAspectRatio()` method returns the correct ratio for aspect-correct drawing.
+Terminal character cells are typically taller than wide, so pixel aspect varies by mode. The `canvas.getPixelAspectRatio()` method returns the correct ratio for aspect-correct drawing.
 
 **Calculation:**
 - Sixel/Kitty/iTerm2 modes: 1.0 (square pixels at native resolution)
-- Other modes: `(3 * cellWidth) / (2 * cellHeight)` when detected, else `(2/3) * charAspectRatio` prop
+- Half-block: `(2 * cellWidth) / cellHeight` (~1.0, nearly square)
+- Sextant/pattern/luma: `(3 * cellWidth) / (2 * cellHeight)` when detected, else `(2/3) * charAspectRatio` prop
 
 Cell size is detected via WindowOps query at startup and used even without sixel support.
 
@@ -27,11 +28,26 @@ Unicode sextant characters - 2x3 pixels per terminal cell, full color support.
 
 **Testing support:** Run `melker --debug-sextant` to test if your terminal renders sextant characters correctly.
 
+### halfblock
+
+Half-block characters (`▀▄█`) - 1x2 pixels per terminal cell with fg+bg colors.
+
+**Best for:** Basic Unicode terminals (TERM=linux) — automatic fallback when sextant is unavailable
+
+**How it works:**
+- Each cell encodes two vertical sub-pixels using upper/lower half-block characters
+- Upper pixel = foreground color, lower pixel = background color (or vice versa)
+- 4 states per cell: `▀` (upper on), `▄` (lower on), `█` (both on), space (both off)
+- 2× vertical resolution over block mode, with two independent colors per cell
+- Nearly square pixel aspect ratio (~1.0 on typical terminals)
+
+**Resolution:** 80×48 on 80×24 terminal (vs sextant 160×72, block 80×24)
+
 ### block
 
 Colored spaces - 1x1 pixel per terminal cell.
 
-**Best for:** Terminals without Unicode support, simpler rendering
+**Best for:** ASCII-only terminals (`TERM=vt100/vt220`), universal fallback
 
 ### pattern
 
@@ -221,32 +237,44 @@ Auto-select best available high-resolution graphics mode.
 1. `kitty` - if Kitty graphics protocol supported
 2. `sixel` - if sixel supported
 3. `iterm2` - if iTerm2 protocol supported
-4. `sextant` - universal fallback (or `luma` on non-Unicode terminals)
+4. `sextant` / `halfblock` / `block` - tier-based character fallback
 
 **How it works:**
 - Checks terminal capabilities at startup
 - Automatically selects the highest quality mode available
 - No manual configuration needed for cross-terminal compatibility
 
-## Non-Unicode Terminals (TERM=linux)
+## Non-Unicode Terminals
 
-The Linux virtual console (`TERM=linux`, tty1-tty6) and legacy terminals (`vt100`, `vt220`) lack Unicode support. Melker detects this automatically and applies the following fallbacks:
+Melker uses a three-tier Unicode model: `full` (xterm), `basic` (TERM=linux), `ascii` (vt100/vt220). See [graphics-architecture.md](graphics-architecture.md) for the full tier table.
 
-| Feature          | Normal                         | TERM=linux                     |
-|------------------|--------------------------------|--------------------------------|
-| Graphics mode    | sextant (2x3 Unicode)          | luma (ASCII brightness ramp)   |
-| Border style     | thin/rounded/double (Unicode)  | ascii (`+`, `-`, `\|`)         |
-| Scrollbar chars  | `█` / `░`                      | `#` / `.`                      |
-| Tree connectors  | `├── `, `└── `, `│`            | `\|-- `, `` `-- ``, `\|`      |
-| Isoline chars    | `─ │ ╭ ╮ ╰ ╯`                 | `- \| + + + +`                 |
-| Segment display  | Box-drawing / geometric shapes | ASCII equivalents              |
-| Theme            | bw (no color)                  | bw (no color)                  |
+### TERM=linux (basic tier)
 
-**Detection:** `isUnicodeSupported()` in `src/utils/terminal-detection.ts` checks the `TERM` environment variable. The result is cached for the process lifetime.
+The Linux virtual console supports box-drawing characters and block elements (`▀▄█░▒▓`) but not sextants or braille. Canvas automatically uses **halfblock** mode (1×2 pixels per cell with `▀▄█`).
 
-**Fallback chain with non-Unicode:** `hires` → kitty → sixel → iterm2 → **luma** (not sextant). Explicitly requesting `sextant` also falls back to `luma`.
+| Feature          | full (xterm)                   | basic (TERM=linux)                    |
+|------------------|--------------------------------|---------------------------------------|
+| Graphics mode    | sextant (2x3 Unicode)          | halfblock (1x2 half-block)            |
+| Border style     | thin/rounded/double (Unicode)  | thin, double (rounded/thick → thin)   |
+| Scrollbar chars  | `█` / `░`                      | `█` / `░`                             |
+| Tree connectors  | `├── `, `└── `, `│`            | `├── `, `└── `, `│`                   |
+| Theme            | color16 (16 ANSI colors)       | color16 (16 ANSI colors)              |
 
-**Border fallback:** `getBorderChars(style)` in `src/types.ts` automatically remaps Unicode border styles (`thin`, `thick`, `rounded`, `double`, `dashed`, `dotted`) to `ascii`. The `ascii`, `ascii-rounded`, and `block` styles are unchanged.
+### TERM=vt100/vt220 (ascii tier)
+
+| Feature          | ascii (vt100/vt220)            |
+|------------------|--------------------------------|
+| Graphics mode    | block (colored spaces)         |
+| Border style     | ascii (`+`, `-`, `\|`)         |
+| Scrollbar chars  | `#` / `.`                      |
+| Tree connectors  | `\|-- `, `` `-- ``, `\|`      |
+| Theme            | bw (no color)                  |
+
+**Detection:** `getUnicodeTier()` in `src/utils/terminal-detection.ts` returns `'full' | 'basic' | 'ascii'`. Cached for the process lifetime.
+
+**Fallback chain:** `sextant → halfblock (basic) → block (ascii)`. Graphics protocol fallbacks (sixel/kitty/iterm2) also follow this chain.
+
+**Border fallback:** `getBorderChars(style)` in `src/types.ts` automatically remaps Unicode border styles. Basic tier gets thin+double; ascii tier gets ASCII box characters.
 
 ## Configuration
 
@@ -258,19 +286,21 @@ The Linux virtual console (`TERM=linux`, tty1-tty6) and legacy terminals (`vt100
 
 **Environment variable (overrides per-element):**
 ```bash
-MELKER_GFX_MODE=sextant   # default, Unicode sextant chars
-MELKER_GFX_MODE=block     # colored spaces
+MELKER_GFX_MODE=sextant   # default, Unicode sextant chars (2x3 per cell)
+MELKER_GFX_MODE=halfblock # half-block chars (1x2 per cell, ▀▄█)
+MELKER_GFX_MODE=block     # colored spaces (1x1 per cell)
 MELKER_GFX_MODE=pattern   # ASCII spatial mapping
 MELKER_GFX_MODE=luma      # ASCII brightness-based
 MELKER_GFX_MODE=sixel     # true pixels (requires terminal support)
 MELKER_GFX_MODE=kitty     # true pixels via Kitty protocol
 MELKER_GFX_MODE=iterm2    # true pixels via iTerm2 protocol
-MELKER_GFX_MODE=hires     # auto: kitty → sixel → iterm2 → sextant
+MELKER_GFX_MODE=hires     # auto: kitty → sixel → iterm2 → sextant/halfblock/block
 ```
 
 **CLI flag (overrides per-element):**
 ```bash
 --gfx-mode=sextant
+--gfx-mode=halfblock
 --gfx-mode=block
 --gfx-mode=pattern
 --gfx-mode=luma
@@ -327,7 +357,8 @@ Video uses blue-noise for less temporal flicker between frames.
 ## Use Cases
 
 - **sextant**: Default, best quality for most use cases
-- **block**: Terminals without Nerd Fonts
+- **halfblock**: Basic Unicode terminals (TERM=linux), automatic sextant fallback
+- **block**: ASCII-only terminals (vt100/vt220), universal fallback
 - **pattern**: Legacy terminals, SSH to old systems, retro look
 - **luma**: Image-heavy content on legacy terminals
 - **sixel**: Photos, high-quality images on xterm/mlterm/foot
@@ -336,27 +367,28 @@ Video uses blue-noise for less temporal flicker between frames.
 
 ## Comparison
 
-| Mode    | Resolution   | Best for              | Unicode  | Terminal Support                                |
-|---------|--------------|---------------------- |----------|-------------------------------------------------|
-| sextant | 2x3 per cell | Everything            | Required | Most modern†                                    |
-| block   | 1x1 per cell | Compatibility         | No       | All                                             |
-| pattern | 2x3 per cell | UI, shapes            | No       | All                                             |
-| luma    | 2x3 per cell | Images                | No       | All                                             |
-| sixel   | True pixels  | High-quality images   | No       | xterm, mlterm, foot, WezTerm, iTerm2, Konsole*  |
-| kitty   | True pixels  | High-quality images   | No       | Kitty, Ghostty, WezTerm, Konsole                |
-| iterm2  | True pixels  | High-quality images   | No       | iTerm2, WezTerm, Konsole, Rio                   |
-| hires   | True pixels  | Portable high-quality | No       | Auto-selects best available                     |
+| Mode      | Resolution   | Best for              | Unicode tier | Terminal Support                                |
+|-----------|--------------|---------------------- |--------------|-------------------------------------------------|
+| sextant   | 2x3 per cell | Everything            | full         | Most modern†                                    |
+| halfblock | 1x2 per cell | Linux console         | basic        | TERM=linux, auto fallback from sextant          |
+| block     | 1x1 per cell | Universal fallback    | any          | All                                             |
+| pattern   | 2x3 per cell | UI, shapes            | any          | All                                             |
+| luma      | 2x3 per cell | Images                | any          | All                                             |
+| sixel     | True pixels  | High-quality images   | any          | xterm, mlterm, foot, WezTerm, iTerm2, Konsole*  |
+| kitty     | True pixels  | High-quality images   | any          | Kitty, Ghostty, WezTerm, Konsole                |
+| iterm2    | True pixels  | High-quality images   | any          | iTerm2, WezTerm, Konsole, Rio                   |
+| hires     | True pixels  | Portable high-quality | any          | Auto-selects best available                     |
 
 *Konsole has a right-edge rendering quirk. Use mlterm for best sixel quality.
 
 †Rio terminal does not render sextant characters (U+1FB00-U+1FB3F). Use `iterm2` mode instead.
 
-‡On non-Unicode terminals (`TERM=linux`, `vt100`, `vt220`), sextant automatically falls back to luma, and all Unicode borders/chars fall back to ASCII equivalents.
+Fallback chain: sextant (full) → halfblock (basic) → block (ascii). Graphics protocols (sixel/kitty/iterm2) follow this chain when protocol is unavailable.
 
 ## Demo
 
 See `examples/canvas/gfx-modes.melker` for a visual comparison of:
-- Graphics modes (sextant, block, pattern, luma)
+- Graphics modes (sextant, halfblock, block, pattern, luma)
 - Dithering algorithms (none, sierra-stable, floyd-steinberg, atkinson, atkinson-stable, ordered, blue-noise)
 - Dither bits (1-4 bit color depth)
 

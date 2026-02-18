@@ -16,6 +16,7 @@ import { getUnicodeTier } from '../utils/terminal-detection.ts';
 import { renderGraphicsPlaceholder } from './canvas-render-graphics.ts';
 import { renderSextantToTerminal } from './canvas-render-sextant.ts';
 import { renderBlockMode } from './canvas-render-block.ts';
+import { renderHalfBlockMode } from './canvas-render-halfblock.ts';
 import { renderAsciiMode } from './canvas-render-ascii.ts';
 import { renderIsolinesToTerminal } from './canvas-render-isolines.ts';
 import { renderDitheredToTerminal } from './canvas-render-dithered.ts';
@@ -24,6 +25,7 @@ import { renderDitheredToTerminal } from './canvas-render-dithered.ts';
 export * from './canvas-render-types.ts';
 export * from './canvas-render-sextant.ts';
 export * from './canvas-render-block.ts';
+export * from './canvas-render-halfblock.ts';
 export * from './canvas-render-ascii.ts';
 export * from './canvas-render-isolines.ts';
 export * from './canvas-render-dithered.ts';
@@ -60,6 +62,12 @@ export function renderToTerminal(
   // Check for dithered rendering mode
   if (ditheredBuffer) {
     renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, gfxMode, data, state);
+    return;
+  }
+
+  // Half-block mode: 1x2 pixels per cell using ▀▄█ characters
+  if (gfxMode === 'halfblock') {
+    renderHalfBlockMode(bounds, style, buffer, terminalWidth, terminalHeight, data);
     return;
   }
 
@@ -100,8 +108,9 @@ export function getEffectiveGfxMode(
   const sixelSupported = engine?.sixelCapabilities?.supported ?? false;
   const itermSupported = engine?.itermCapabilities?.supported ?? false;
 
+  const tier = getUnicodeTier();
   const sextantFallback: ResolvedGfxMode =
-    getUnicodeTier() === 'full' ? 'sextant' : 'block';
+    tier === 'full' ? 'sextant' : tier === 'basic' ? 'halfblock' : 'block';
 
   // hires: try kitty → sixel → iterm2 → sextant (best available high-resolution mode)
   if (requested === 'hires') {
@@ -147,7 +156,12 @@ export function getEffectiveGfxMode(
   }
 
   // sextant needs full unicode (sextant chars U+1FB00+)
-  if (requested === 'sextant' && getUnicodeTier() !== 'full') {
+  if (requested === 'sextant' && tier !== 'full') {
+    return tier === 'basic' ? 'halfblock' : 'block';
+  }
+
+  // halfblock needs basic unicode (▀▄ chars)
+  if (requested === 'halfblock' && tier === 'ascii') {
     return 'block';
   }
 

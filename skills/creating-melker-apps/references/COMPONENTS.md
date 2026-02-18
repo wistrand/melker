@@ -977,7 +977,7 @@ Render diagrams from Mermaid syntax or JSON. Auto-detects diagram type.
 
 ### canvas
 
-Pixel graphics using Unicode sextant characters (2x3 pixels per cell).
+Pixel graphics using Unicode characters. Sextant (2x3 per cell) on full Unicode terminals, half-block (1x2 per cell) on basic terminals (TERM=linux), block (1x1) on ASCII terminals.
 
 ```xml
 <canvas
@@ -994,7 +994,7 @@ Pixel graphics using Unicode sextant characters (2x3 pixels per cell).
 - `width`, `height` - Dimensions in terminal cells (defines pixel buffer size)
 - `dither`: `auto` | `sierra-stable` | `floyd-steinberg` | `ordered` | `none`
 - `ditherBits` - Color depth (1-8)
-- `gfxMode`: `sextant` | `block` | `pattern` | `luma` | `sixel` | `kitty` | `iterm2` | `hires`
+- `gfxMode`: `sextant` | `halfblock` | `block` | `pattern` | `luma` | `sixel` | `kitty` | `iterm2` | `hires`
 - `onPaint` - Draw callback (`event.canvas`)
 - `onShader` - Per-pixel shader callback, runs every frame (see Shaders section)
 - `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)
@@ -1006,7 +1006,7 @@ canvas.getBufferSize();      // { width, height } in pixels
 canvas.getBufferWidth();     // Buffer width in pixels
 canvas.getBufferHeight();    // Buffer height in pixels
 canvas.getVisualSize();      // Aspect-corrected size
-canvas.getPixelAspectRatio(); // ~0.67 for sextant (pixels are taller than wide)
+canvas.getPixelAspectRatio(); // ~0.67 for sextant, ~1.0 for halfblock
 
 // Drawing
 canvas.clear();
@@ -1049,13 +1049,14 @@ export function chartTooltip(event) {
 
 **Graphics modes** (per-element `gfxMode` prop or global `--gfx-mode` flag):
 - `sextant` - Unicode sextant chars (default, 2x3 pixels per cell)
-- `block` - Colored spaces (no Unicode needed)
+- `halfblock` - Half-block chars `▀▄█` (1x2 pixels per cell, auto on TERM=linux)
+- `block` - Colored spaces (1x1 pixel per cell, ASCII fallback)
 - `pattern` - ASCII chars with spatial mapping
 - `luma` - ASCII chars based on brightness
 - `sixel` - True pixels via Sixel protocol (requires terminal support)
 - `kitty` - True pixels via Kitty protocol (requires terminal support)
 - `iterm2` - True pixels via iTerm2 protocol (WezTerm, Rio, Konsole, iTerm2)
-- `hires` - Auto-select best available (kitty → sixel → iterm2 → sextant)
+- `hires` - Auto-select best available (kitty → sixel → iterm2 → sextant/halfblock/block)
 
 Global `MELKER_GFX_MODE` env var or `--gfx-mode` flag overrides per-element prop.
 
@@ -1078,7 +1079,7 @@ Image display (PNG, JPEG, GIF, WebP). Supports file paths, HTTP/HTTPS URLs, and 
 - `src` - Image path, HTTP/HTTPS URL, or data URL
 - `width`, `height` - Dimensions (number or percentage)
 - `dither` - Dithering mode
-- `gfxMode` - Graphics mode: `sextant`, `block`, `pattern`, `luma`, `sixel`, `kitty`, `iterm2`, `hires` (global overrides)
+- `gfxMode` - Graphics mode: `sextant`, `halfblock`, `block`, `pattern`, `luma`, `sixel`, `kitty`, `iterm2`, `hires` (global overrides)
 - `onLoad`, `onError` - Load callbacks
 - `onShader`, `shaderFps`, `shaderRunTime` - Animation (see Shaders)
 - `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)

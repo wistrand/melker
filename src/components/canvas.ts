@@ -242,7 +242,17 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       };
     }
 
-    // Non-sixel/kitty modes: use sextant resolution (2x3 pixels per terminal cell)
+    // Half-block mode: 1x2 pixels per terminal cell
+    if (gfxMode === 'halfblock') {
+      return {
+        width: width * 1 * scale,
+        height: height * 2 * scale,
+        pixelsPerCellX: 1 * scale,
+        pixelsPerCellY: 2 * scale,
+      };
+    }
+
+    // Default (sextant and ASCII modes): 2x3 pixels per terminal cell
     return {
       width: width * 2 * scale,
       height: height * 3 * scale,
@@ -1101,6 +1111,16 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Check for detected cell size from terminal capabilities
     const engine = globalThis.melkerEngine;
     const capabilities = engine?.sixelCapabilities;
+
+    if (gfxMode === 'halfblock') {
+      // Half-block pixel = cellWidth wide × (cellHeight/2) tall
+      // Aspect = cellWidth / (cellHeight/2) = 2 * cellWidth / cellHeight
+      if (capabilities?.cellWidth && capabilities?.cellHeight) {
+        return (2 * capabilities.cellWidth) / capabilities.cellHeight;
+      }
+      // Fallback: half-block pixels are roughly square
+      return 1.0 * this._charAspectRatio;
+    }
 
     if (capabilities?.cellWidth && capabilities?.cellHeight) {
       // Use detected cell dimensions for accurate aspect ratio

@@ -4,40 +4,40 @@
   --theme-mode: dark;
   --theme-color-support: 256;
 
-  --primary: #5555ff;
-  --secondary: cyan;
-  --background: black;
-  --foreground: white;
-  --surface: gray;
-  --border: white;
+  --theme-primary: #5555ff;
+  --theme-secondary: cyan;
+  --theme-background: black;
+  --theme-foreground: white;
+  --theme-surface: gray;
+  --theme-border: white;
 
-  --success: lime;
-  --warning: yellow;
-  --error: red;
-  --info: cyan;
+  --theme-success: lime;
+  --theme-warning: yellow;
+  --theme-error: red;
+  --theme-info: cyan;
 
-  --button-primary: white;
-  --button-secondary: cyan;
-  --button-background: blue;
-  --input-background: gray;
-  --input-foreground: white;
-  --input-border: cyan;
+  --theme-button-primary: white;
+  --theme-button-secondary: cyan;
+  --theme-button-background: blue;
+  --theme-input-background: gray;
+  --theme-input-foreground: white;
+  --theme-input-border: cyan;
 
-  --focus-primary: yellow;
-  --focus-background: blue;
-  --focus-border: cyan;
+  --theme-focus-primary: yellow;
+  --theme-focus-background: blue;
+  --theme-focus-border: cyan;
 
-  --text-primary: white;
-  --text-secondary: white;
-  --text-muted: gray;
+  --theme-text-primary: white;
+  --theme-text-secondary: white;
+  --theme-text-muted: gray;
 
-  --header-background: blue;
-  --header-foreground: white;
-  --sidebar-background: gray;
-  --sidebar-foreground: cyan;
-  --modal-background: blue;
-  --modal-foreground: white;
+  --theme-header-background: blue;
+  --theme-header-foreground: white;
+  --theme-sidebar-background: gray;
+  --theme-sidebar-foreground: cyan;
+  --theme-modal-background: blue;
+  --theme-modal-foreground: white;
 
-  --scrollbar-thumb: cyan;
-  --scrollbar-track: gray;
+  --theme-scrollbar-thumb: cyan;
+  --theme-scrollbar-track: gray;
 }

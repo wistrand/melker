@@ -22,16 +22,16 @@ Deno.test('buildThemeFromCSS - parses metadata', () => {
     --theme-type: color;
     --theme-mode: std;
     --theme-color-support: 256;
-    --primary: red; --secondary: red; --background: black; --foreground: white;
-    --surface: black; --border: white; --success: white; --warning: white;
-    --error: white; --info: white; --button-primary: white; --button-secondary: white;
-    --button-background: white; --input-background: black; --input-foreground: white;
-    --input-border: white; --focus-primary: white; --focus-background: black; --focus-border: white;
-    --text-primary: white; --text-secondary: white; --text-muted: white;
-    --header-background: black; --header-foreground: white;
-    --sidebar-background: black; --sidebar-foreground: white;
-    --modal-background: black; --modal-foreground: white;
-    --scrollbar-thumb: white; --scrollbar-track: black;
+    --theme-primary: red; --theme-secondary: red; --theme-background: black; --theme-foreground: white;
+    --theme-surface: black; --theme-border: white; --theme-success: white; --theme-warning: white;
+    --theme-error: white; --theme-info: white; --theme-button-primary: white; --theme-button-secondary: white;
+    --theme-button-background: white; --theme-input-background: black; --theme-input-foreground: white;
+    --theme-input-border: white; --theme-focus-primary: white; --theme-focus-background: black; --theme-focus-border: white;
+    --theme-text-primary: white; --theme-text-secondary: white; --theme-text-muted: white;
+    --theme-header-background: black; --theme-header-foreground: white;
+    --theme-sidebar-background: black; --theme-sidebar-foreground: white;
+    --theme-modal-background: black; --theme-modal-foreground: white;
+    --theme-scrollbar-thumb: white; --theme-scrollbar-track: black;
   }`;
   const theme = buildThemeFromCSS(css, 'test.css');
   assertEquals(theme.type, 'color');
@@ -42,16 +42,16 @@ Deno.test('buildThemeFromCSS - parses metadata', () => {
 
 Deno.test('buildThemeFromCSS - defaults metadata when missing', () => {
   const css = `:root {
-    --primary: red; --secondary: red; --background: black; --foreground: white;
-    --surface: black; --border: white; --success: white; --warning: white;
-    --error: white; --info: white; --button-primary: white; --button-secondary: white;
-    --button-background: white; --input-background: black; --input-foreground: white;
-    --input-border: white; --focus-primary: white; --focus-background: black; --focus-border: white;
-    --text-primary: white; --text-secondary: white; --text-muted: white;
-    --header-background: black; --header-foreground: white;
-    --sidebar-background: black; --sidebar-foreground: white;
-    --modal-background: black; --modal-foreground: white;
-    --scrollbar-thumb: white; --scrollbar-track: black;
+    --theme-primary: red; --theme-secondary: red; --theme-background: black; --theme-foreground: white;
+    --theme-surface: black; --theme-border: white; --theme-success: white; --theme-warning: white;
+    --theme-error: white; --theme-info: white; --theme-button-primary: white; --theme-button-secondary: white;
+    --theme-button-background: white; --theme-input-background: black; --theme-input-foreground: white;
+    --theme-input-border: white; --theme-focus-primary: white; --theme-focus-background: black; --theme-focus-border: white;
+    --theme-text-primary: white; --theme-text-secondary: white; --theme-text-muted: white;
+    --theme-header-background: black; --theme-header-foreground: white;
+    --theme-sidebar-background: black; --theme-sidebar-foreground: white;
+    --theme-modal-background: black; --theme-modal-foreground: white;
+    --theme-scrollbar-thumb: white; --theme-scrollbar-track: black;
   }`;
   const theme = buildThemeFromCSS(css);
   assertEquals(theme.type, 'fullcolor');
@@ -62,16 +62,16 @@ Deno.test('buildThemeFromCSS - defaults metadata when missing', () => {
 
 Deno.test('buildThemeFromCSS - parses palette colors', () => {
   const css = `:root {
-    --primary: #3b82f6; --secondary: #06b6d4; --background: black; --foreground: white;
-    --surface: #1f2937; --border: #6b7280; --success: #10b981; --warning: #f59e0b;
-    --error: #ef4444; --info: #3b82f6; --button-primary: white; --button-secondary: #06b6d4;
-    --button-background: #3b82f6; --input-background: #111827; --input-foreground: #f9fafb;
-    --input-border: #374151; --focus-primary: #fbbf24; --focus-background: #1e40af; --focus-border: #60a5fa;
-    --text-primary: #f9fafb; --text-secondary: #d1d5db; --text-muted: #6b7280;
-    --header-background: #1e40af; --header-foreground: #f9fafb;
-    --sidebar-background: #1f2937; --sidebar-foreground: #d1d5db;
-    --modal-background: #1e3a8a; --modal-foreground: #f9fafb;
-    --scrollbar-thumb: #3b82f6; --scrollbar-track: #374151;
+    --theme-primary: #3b82f6; --theme-secondary: #06b6d4; --theme-background: black; --theme-foreground: white;
+    --theme-surface: #1f2937; --theme-border: #6b7280; --theme-success: #10b981; --theme-warning: #f59e0b;
+    --theme-error: #ef4444; --theme-info: #3b82f6; --theme-button-primary: white; --theme-button-secondary: #06b6d4;
+    --theme-button-background: #3b82f6; --theme-input-background: #111827; --theme-input-foreground: #f9fafb;
+    --theme-input-border: #374151; --theme-focus-primary: #fbbf24; --theme-focus-background: #1e40af; --theme-focus-border: #60a5fa;
+    --theme-text-primary: #f9fafb; --theme-text-secondary: #d1d5db; --theme-text-muted: #6b7280;
+    --theme-header-background: #1e40af; --theme-header-foreground: #f9fafb;
+    --theme-sidebar-background: #1f2937; --theme-sidebar-foreground: #d1d5db;
+    --theme-modal-background: #1e3a8a; --theme-modal-foreground: #f9fafb;
+    --theme-scrollbar-thumb: #3b82f6; --theme-scrollbar-track: #374151;
   }`;
   const theme = buildThemeFromCSS(css);
   assertEquals(theme.palette.primary, cssToRgba('#3b82f6'));
@@ -82,7 +82,7 @@ Deno.test('buildThemeFromCSS - parses palette colors', () => {
 
 Deno.test('buildThemeFromCSS - missing property gets fallback magenta', () => {
   const css = `:root {
-    --primary: red;
+    --theme-primary: red;
   }`;
   const theme = buildThemeFromCSS(css);
   // Missing properties get FALLBACK_COLOR (0xFF00FFFF = magenta)
@@ -93,16 +93,16 @@ Deno.test('buildThemeFromCSS - missing property gets fallback magenta', () => {
 
 Deno.test('buildThemeFromCSS - all 30 palette keys populated', () => {
   const css = `:root {
-    --primary: #111; --secondary: #222; --background: #333; --foreground: #444;
-    --surface: #555; --border: #666; --success: #777; --warning: #888;
-    --error: #999; --info: #aaa; --button-primary: #bbb; --button-secondary: #ccc;
-    --button-background: #ddd; --input-background: #eee; --input-foreground: #fff;
-    --input-border: #123; --focus-primary: #456; --focus-background: #789; --focus-border: #9ab;
-    --text-primary: #abc; --text-secondary: #def; --text-muted: #135;
-    --header-background: #246; --header-foreground: #357;
-    --sidebar-background: #468; --sidebar-foreground: #579;
-    --modal-background: #68a; --modal-foreground: #79b;
-    --scrollbar-thumb: #8ac; --scrollbar-track: #9bd;
+    --theme-primary: #111; --theme-secondary: #222; --theme-background: #333; --theme-foreground: #444;
+    --theme-surface: #555; --theme-border: #666; --theme-success: #777; --theme-warning: #888;
+    --theme-error: #999; --theme-info: #aaa; --theme-button-primary: #bbb; --theme-button-secondary: #ccc;
+    --theme-button-background: #ddd; --theme-input-background: #eee; --theme-input-foreground: #fff;
+    --theme-input-border: #123; --theme-focus-primary: #456; --theme-focus-background: #789; --theme-focus-border: #9ab;
+    --theme-text-primary: #abc; --theme-text-secondary: #def; --theme-text-muted: #135;
+    --theme-header-background: #246; --theme-header-foreground: #357;
+    --theme-sidebar-background: #468; --theme-sidebar-foreground: #579;
+    --theme-modal-background: #68a; --theme-modal-foreground: #79b;
+    --theme-scrollbar-thumb: #8ac; --theme-scrollbar-track: #9bd;
   }`;
   const theme = buildThemeFromCSS(css);
   const keys = Object.keys(theme.palette);
@@ -111,16 +111,16 @@ Deno.test('buildThemeFromCSS - all 30 palette keys populated', () => {
 
 Deno.test('buildThemeFromCSS - supports hsl colors', () => {
   const css = `:root {
-    --primary: hsl(210, 50%, 60%); --secondary: red; --background: black; --foreground: white;
-    --surface: black; --border: white; --success: white; --warning: white;
-    --error: white; --info: white; --button-primary: white; --button-secondary: white;
-    --button-background: white; --input-background: black; --input-foreground: white;
-    --input-border: white; --focus-primary: white; --focus-background: black; --focus-border: white;
-    --text-primary: white; --text-secondary: white; --text-muted: white;
-    --header-background: black; --header-foreground: white;
-    --sidebar-background: black; --sidebar-foreground: white;
-    --modal-background: black; --modal-foreground: white;
-    --scrollbar-thumb: white; --scrollbar-track: black;
+    --theme-primary: hsl(210, 50%, 60%); --theme-secondary: red; --theme-background: black; --theme-foreground: white;
+    --theme-surface: black; --theme-border: white; --theme-success: white; --theme-warning: white;
+    --theme-error: white; --theme-info: white; --theme-button-primary: white; --theme-button-secondary: white;
+    --theme-button-background: white; --theme-input-background: black; --theme-input-foreground: white;
+    --theme-input-border: white; --theme-focus-primary: white; --theme-focus-background: black; --theme-focus-border: white;
+    --theme-text-primary: white; --theme-text-secondary: white; --theme-text-muted: white;
+    --theme-header-background: black; --theme-header-foreground: white;
+    --theme-sidebar-background: black; --theme-sidebar-foreground: white;
+    --theme-modal-background: black; --theme-modal-foreground: white;
+    --theme-scrollbar-thumb: white; --theme-scrollbar-track: black;
   }`;
   const theme = buildThemeFromCSS(css);
   assertEquals(theme.palette.primary, cssToRgba('hsl(210, 50%, 60%)'));
@@ -130,16 +130,16 @@ Deno.test('buildThemeFromCSS - supports hsl colors', () => {
 
 Deno.test('buildThemeFromCSS - supports oklch colors', () => {
   const css = `:root {
-    --primary: oklch(0.7 0.15 210); --secondary: red; --background: black; --foreground: white;
-    --surface: black; --border: white; --success: white; --warning: white;
-    --error: white; --info: white; --button-primary: white; --button-secondary: white;
-    --button-background: white; --input-background: black; --input-foreground: white;
-    --input-border: white; --focus-primary: white; --focus-background: black; --focus-border: white;
-    --text-primary: white; --text-secondary: white; --text-muted: white;
-    --header-background: black; --header-foreground: white;
-    --sidebar-background: black; --sidebar-foreground: white;
-    --modal-background: black; --modal-foreground: white;
-    --scrollbar-thumb: white; --scrollbar-track: black;
+    --theme-primary: oklch(0.7 0.15 210); --theme-secondary: red; --theme-background: black; --theme-foreground: white;
+    --theme-surface: black; --theme-border: white; --theme-success: white; --theme-warning: white;
+    --theme-error: white; --theme-info: white; --theme-button-primary: white; --theme-button-secondary: white;
+    --theme-button-background: white; --theme-input-background: black; --theme-input-foreground: white;
+    --theme-input-border: white; --theme-focus-primary: white; --theme-focus-background: black; --theme-focus-border: white;
+    --theme-text-primary: white; --theme-text-secondary: white; --theme-text-muted: white;
+    --theme-header-background: black; --theme-header-foreground: white;
+    --theme-sidebar-background: black; --theme-sidebar-foreground: white;
+    --theme-modal-background: black; --theme-modal-foreground: white;
+    --theme-scrollbar-thumb: white; --theme-scrollbar-track: black;
   }`;
   const theme = buildThemeFromCSS(css);
   assertEquals(theme.palette.primary, cssToRgba('oklch(0.7 0.15 210)'));

@@ -1473,7 +1473,8 @@ export class Stylesheet {
 
   /**
    * Build --theme-* CSS variables from the current theme's ColorPalette.
-   * Converts 30 camelCase palette keys to kebab-case hex strings.
+   * Converts 30 camelCase palette keys to --theme-kebab-case hex strings.
+   * Names match the CSS source files (e.g. --theme-primary, --theme-input-background).
    * Built once per Stylesheet instance (theme is fixed at runtime).
    */
   static _buildThemeVars(): { vars: Map<string, string>; origins: Map<string, string> } {
@@ -1483,7 +1484,6 @@ export class Stylesheet {
     if (!theme) return { vars, origins };
     const origin = theme.source ? `theme (${theme.source})` : 'theme';
     for (const key of Object.keys(theme.palette) as (keyof typeof theme.palette)[]) {
-      // camelCase → kebab-case: "inputBackground" → "input-background"
       const kebab = key.replace(/[A-Z]/g, (ch) => '-' + ch.toLowerCase());
       const { r, g, b } = unpackRGBA(theme.palette[key]);
       const name = `--theme-${kebab}`;

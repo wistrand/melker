@@ -30,37 +30,37 @@ Themes defined as CSS files with `:root` custom properties, loaded at startup vi
   --theme-mode: dark;              /* std | dark */
   --theme-color-support: truecolor; /* none | 16 | 256 | truecolor */
 
-  /* 30 color properties (all required) */
-  --primary: #3b82f6;
-  --secondary: #06b6d4;
-  --background: black;
-  --foreground: white;
-  --surface: #1f2937;
-  --border: #6b7280;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --info: #3b82f6;
-  --button-primary: white;
-  --button-secondary: #06b6d4;
-  --button-background: #3b82f6;
-  --input-background: #111827;
-  --input-foreground: #f9fafb;
-  --input-border: #374151;
-  --focus-primary: #fbbf24;
-  --focus-background: #1e40af;
-  --focus-border: #60a5fa;
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-muted: #6b7280;
-  --header-background: #1e40af;
-  --header-foreground: #f9fafb;
-  --sidebar-background: #1f2937;
-  --sidebar-foreground: #d1d5db;
-  --modal-background: #1e3a8a;
-  --modal-foreground: #f9fafb;
-  --scrollbar-thumb: #3b82f6;
-  --scrollbar-track: #374151;
+  /* 30 color properties (all required, --theme- prefix) */
+  --theme-primary: #3b82f6;
+  --theme-secondary: #06b6d4;
+  --theme-background: black;
+  --theme-foreground: white;
+  --theme-surface: #1f2937;
+  --theme-border: #6b7280;
+  --theme-success: #10b981;
+  --theme-warning: #f59e0b;
+  --theme-error: #ef4444;
+  --theme-info: #3b82f6;
+  --theme-button-primary: white;
+  --theme-button-secondary: #06b6d4;
+  --theme-button-background: #3b82f6;
+  --theme-input-background: #111827;
+  --theme-input-foreground: #f9fafb;
+  --theme-input-border: #374151;
+  --theme-focus-primary: #fbbf24;
+  --theme-focus-background: #1e40af;
+  --theme-focus-border: #60a5fa;
+  --theme-text-primary: #f9fafb;
+  --theme-text-secondary: #d1d5db;
+  --theme-text-muted: #6b7280;
+  --theme-header-background: #1e40af;
+  --theme-header-foreground: #f9fafb;
+  --theme-sidebar-background: #1f2937;
+  --theme-sidebar-foreground: #d1d5db;
+  --theme-modal-background: #1e3a8a;
+  --theme-modal-foreground: #f9fafb;
+  --theme-scrollbar-thumb: #3b82f6;
+  --theme-scrollbar-track: #374151;
 }
 ```
 
@@ -225,18 +225,9 @@ AnsiOutputGenerator._getColorCode()
     └── colorSupport='none'      → (no color codes)
 ```
 
-## Relationship to `--theme-*` CSS Variables
+## `--theme-*` CSS Variables
 
-Theme CSS files define the **source palette** (`--primary`, `--background`, etc.). At runtime, `Stylesheet._buildThemeVars()` reads the active palette and generates a parallel set of `--theme-*` CSS variables (`--theme-primary`, `--theme-background`, etc.) for use in app stylesheets. See [css-variables-architecture.md](css-variables-architecture.md) for details on `--theme-*` variables.
-
-The flow:
-
-```
-src/themes/fullcolor-dark.css        Stylesheet._buildThemeVars()
-    --primary: #3b82f6        -->       --theme-primary: #3b82f6
-    --background: black       -->       --theme-background: #000000
-    ...                                 ...
-```
+Theme CSS files and app stylesheets use the same `--theme-*` names — no renaming or prefix transformation occurs. `Stylesheet._buildThemeVars()` reads the active palette and exposes the same `--theme-*` CSS variables for use in `var()` references. See [css-variables-architecture.md](css-variables-architecture.md) for details.
 
 Theme CSS files are parsed once at startup. `--theme-*` variables are generated once per Stylesheet instance.
 

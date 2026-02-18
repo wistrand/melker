@@ -48,7 +48,7 @@ Inline styles also resolve variables:
     │                                       │
     ▼                                       ▼
 addFromString(css)                  _buildThemeVars()
-    │                                (29 --theme-* vars)
+    │                                (30 --theme-* vars)
     ├── extractVariableDeclarations()       │
     │   (find :root { --*: ... })           ▼
     │         │                        _themeVars
@@ -123,11 +123,11 @@ interface VariableDecl {
 
 ## Theme Variable Auto-Population
 
-Themes are defined as CSS files in `src/themes/` (e.g., `src/themes/fullcolor-dark.css`). Each file is a `:root` block with 30 color properties and 3 metadata properties. At startup, `initThemes()` loads these via `fetch()` relative to `import.meta.url` and parses them with `extractVariableDeclarations()` + `cssToRgba()` into `ColorPalette` objects. Custom themes can be loaded via `MELKER_THEME_FILE` or `--theme-file`. See [css-themes-architecture.md](css-themes-architecture.md) for details.
+Themes are defined as CSS files in `src/themes/` (e.g., `src/themes/fullcolor-dark.css`). Each file is a `:root` block with 33 properties: 3 metadata (`--theme-type`, `--theme-mode`, `--theme-color-support`) and 30 color properties (`--theme-primary`, `--theme-background`, etc.). Theme CSS files use the same `--theme-*` names that apps consume via `var()` — no prefix transformation occurs. At startup, `initThemes()` loads these via `fetch()` relative to `import.meta.url` and parses them with `extractVariableDeclarations()` + `cssToRgba()` into `ColorPalette` objects. Custom themes can be loaded via `MELKER_THEME_FILE` or `--theme-file`. See [css-themes-architecture.md](css-themes-architecture.md) for details.
 
 `Stylesheet._buildThemeVars()` then pre-populates 30 `--theme-*` variables from the current `ColorPalette`. Built once per Stylesheet instance.
 
-Conversion: `camelCase` palette key → `kebab-case` CSS variable, `PackedRGBA` → hex string.
+Conversion: `camelCase` palette key → `--theme-kebab-case` CSS variable, `PackedRGBA` → hex string.
 
 ### Overriding Theme Colors
 
@@ -279,7 +279,7 @@ User variables sort first, theme variables after. Refresh button re-reads curren
 | Variables, no `@media` `:root`      | One-time: string scan + Map lookups. Sub-microsecond.       |
 | Variables with `@media` `:root`     | `_fullReparse` on resize: ~0.1ms for 50-rule sheet          |
 | `var()` resolution per value        | Character scan + Map lookup + string concat. ~100ns         |
-| Theme var population                | 29 `unpackRGBA` + `rgbToHex` calls. Once per instance.      |
+| Theme var population                | 30 `unpackRGBA` + `rgbToHex` calls. Once per instance.      |
 | Theme override push                 | One Map scan per `_fullReparse()` to detect `--theme-*` diffs. |
 
 ## Stylesheet Registration

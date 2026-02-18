@@ -176,20 +176,39 @@ app.melker [args]
 </help>
 ```
 
-### File Caching with $melker.cacheDir
+### File Caching with LRU Eviction
+
+Tiles are cached on disk under `$melker.cacheDir/tiles/{provider}/{z}/{x}_{y}.png`. An in-memory index tracks file size and last-access time for LRU eviction when total size exceeds 200 MB (evicts to 80% with hysteresis).
 
 ```typescript
-export async function initCache(): Promise<void> {
-  const cacheDir = `${$melker.cacheDir}/tiles`;
-  await Deno.mkdir(cacheDir, { recursive: true });
+// Data structure
+interface FileCacheEntry {
+  path: string;
+  size: number;       // bytes on disk
+  lastAccess: number; // Date.now() on last read or write
 }
-
-// Read from cache
-const bytes = await Deno.readFile(`${cacheDir}/tile.png`);
-
-// Write to cache (fire and forget)
-Deno.writeFile(`${cacheDir}/tile.png`, bytes);
+const fileCacheIndex = new Map<string, FileCacheEntry>();
+let fileCacheTotalBytes = 0;
+const MAX_FILE_CACHE_BYTES = 200 * 1024 * 1024;
 ```
+
+**Eager initialization**: `initTileCache()` starts eagerly in the main `<script>` block (at parse time), not in `<script async="ready">`. The returned promise is stored as `fileCacheReady`, and `fetchTile()` awaits it before checking the file cache. This prevents a race where the first `onPaint` would fire before the cache directory is ready, causing tiles to bypass the file cache and always hit the network.
+
+```typescript
+// Main <script> — starts immediately at parse time
+const fileCacheReady = initTileCache();
+
+// In fetchTile() — gates on init before file cache check
+await fileCacheReady;
+```
+
+**Startup scan**: `initTileCache()` walks the cache directory, stats each `.png`, and populates the index sorted by mtime (oldest first). This seeds LRU order from filesystem timestamps.
+
+**Access tracking**: `loadTileFromFile()` updates `lastAccess` and moves the entry to the end of the Map (LRU promotion). Filesystem mtime is not reliable for reads, so tracking is in-memory only.
+
+**Eviction**: `saveTileToFile()` adds entries to the index and triggers `evictOldFiles()` when over budget. Eviction iterates the Map from oldest, deleting files until at 80% of the limit. All deletions are logged at `info` level via `$melker.logger`.
+
+A `clearFileCache()` function is available for full manual purge — it deletes all cached files and cleans up empty subdirectories.
 
 ### Loading Indicator Pattern
 

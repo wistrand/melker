@@ -118,7 +118,7 @@ export function buildThemeFromCSS(css: string, sourcePath?: string): Theme {
   // Build palette
   const palette = {} as ColorPalette;
   for (const key of PALETTE_KEYS) {
-    const cssName = `--${camelToKebab(key)}`;
+    const cssName = `--theme-${camelToKebab(key)}`;
     const value = vars.get(cssName);
     if (value === undefined) {
       const src = sourcePath ? ` (${sourcePath})` : '';

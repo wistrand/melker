@@ -216,9 +216,13 @@ A `clearFileCache()` function is available for full manual purge — it deletes 
 let loadingCount = 0;
 
 function setLoading(loading: boolean) {
-  loadingCount += loading ? 1 : -1;
+  if (loading) {
+    loadingCount++;
+  } else {
+    loadingCount = Math.max(0, loadingCount - 1);
+  }
   const el = $melker.getElementById('loading');
-  el.setValue(loadingCount > 0 ? `Loading ${loadingCount}...` : '');
+  el.setValue(loadingCount > 0 ? `${loadingCount}` : '');
 
   // Trigger render when loading finishes to clear text
   if (loadingCount === 0) {
@@ -242,7 +246,16 @@ Network permissions for tile servers and geocoding:
 ```json
 {
   "permissions": {
-    "net": ["tile.openstreetmap.org", "nominatim.openstreetmap.org"],
+    "net": [
+      "tile.openstreetmap.org",
+      "cartodb-basemaps-a.global.ssl.fastly.net",
+      "cartodb-basemaps-b.global.ssl.fastly.net",
+      "cartodb-basemaps-c.global.ssl.fastly.net",
+      "cartodb-basemaps-d.global.ssl.fastly.net",
+      "tile.opentopomap.org",
+      "server.arcgisonline.com",
+      "nominatim.openstreetmap.org"
+    ],
     "browser": true
   }
 }

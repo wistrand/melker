@@ -336,9 +336,13 @@ Canvas maintains two pixel buffers that are composited during rendering:
 |-------------------------------------------|------------------------------------------------------|
 | `src/components/canvas.ts`                | Canvas element, buffer management                    |
 | `src/components/canvas-render.ts`         | Mode selection, rendering dispatch                   |
+| `src/components/canvas-render-types.ts`   | Shared types, interfaces, constants                  |
 | `src/components/canvas-render-block.ts`   | Block mode renderer (color16+ halftone)              |
 | `src/components/canvas-render-halfblock.ts`| Halfblock mode renderer (color16+ shade/spatial)    |
 | `src/components/canvas-render-dithered.ts`| Dithered renderer (color16+ block + halfblock)       |
+| `src/components/canvas-render-ascii.ts`   | ASCII pattern/luma mode rendering                    |
+| `src/components/canvas-render-isolines.ts`| Contour line rendering (isolines/isolines-filled)    |
+| `src/components/canvas-render-graphics.ts`| Sixel/Kitty/iTerm2 protocol rendering                |
 | `src/components/canvas-dither.ts`         | Dither state, auto-mode resolution                   |
 | `src/color16-palette.ts`                  | Color16+ palette, 3D LUTs, Oklab matching            |
 | `src/sixel/`                              | Sixel detection, encoding, palette                   |

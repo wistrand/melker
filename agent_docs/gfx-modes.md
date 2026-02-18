@@ -26,7 +26,7 @@ Unicode sextant characters - 2x3 pixels per terminal cell, full color support.
 **Known limitations:**
 - **Rio terminal** does not render Unicode Sextant Block characters (U+1FB00-U+1FB3F) correctly. Use `MELKER_GFX_MODE=iterm2` as a workaround since Rio supports the iTerm2 protocol.
 
-**Testing support:** Run `melker --debug-sextant` to test if your terminal renders sextant characters correctly.
+**Testing support:** Run `melker --test-sextant` to test if your terminal renders sextant characters correctly.
 
 ### halfblock
 
@@ -253,6 +253,26 @@ Auto-select best available high-resolution graphics mode.
 - Automatically selects the highest quality mode available
 - No manual configuration needed for cross-terminal compatibility
 
+### isolines
+
+Contour line rendering using marching squares algorithm with Unicode box-drawing characters (╭╮╰╯─│).
+
+**Best for:** Scalar field visualization, topographic maps, heatmap overlays
+
+**How it works:**
+- Computes scalar field from pixel brightness (configurable: oklab, luma, red, etc.)
+- Generates threshold levels using equal, quantile, or nice distribution
+- Runs marching squares per cell to determine contour line segments
+- Maps segments to box-drawing characters for smooth curves
+
+### isolines-filled
+
+Same as `isolines` but fills regions between contour lines with background colors.
+
+**Best for:** Filled contour maps, colored elevation/density visualizations
+
+See [isolines-architecture.md](isolines-architecture.md) for algorithm details and configuration.
+
 ## Non-Unicode Terminals
 
 Melker uses a three-tier Unicode model: `full` (xterm), `basic` (TERM=linux), `ascii` (vt100/vt220). See [graphics-architecture.md](graphics-architecture.md) for the full tier table.
@@ -304,6 +324,8 @@ MELKER_GFX_MODE=sixel     # true pixels (requires terminal support)
 MELKER_GFX_MODE=kitty     # true pixels via Kitty protocol
 MELKER_GFX_MODE=iterm2    # true pixels via iTerm2 protocol
 MELKER_GFX_MODE=hires     # auto: kitty → sixel → iterm2 → sextant/halfblock/block
+MELKER_GFX_MODE=isolines  # contour lines using box-drawing chars
+MELKER_GFX_MODE=isolines-filled  # filled contour regions
 ```
 
 **CLI flag (overrides per-element):**
@@ -317,6 +339,8 @@ MELKER_GFX_MODE=hires     # auto: kitty → sixel → iterm2 → sextant/halfblo
 --gfx-mode=kitty
 --gfx-mode=iterm2
 --gfx-mode=hires
+--gfx-mode=isolines
+--gfx-mode=isolines-filled
 ```
 
 **Priority:** Global config (env/CLI) > per-element prop > default (sextant)
@@ -393,6 +417,8 @@ Video uses blue-noise for less temporal flicker between frames. On 16-color term
 - **sixel**: Photos, high-quality images on xterm/mlterm/foot
 - **kitty**: Photos, high-quality images on Kitty/Ghostty/WezTerm
 - **hires**: Portable apps that want best available graphics
+- **isolines**: Scalar field visualization, topographic contour lines
+- **isolines-filled**: Colored contour regions, elevation/density maps
 
 ## Comparison
 
@@ -407,6 +433,8 @@ Video uses blue-noise for less temporal flicker between frames. On 16-color term
 | kitty     | True pixels  | High-quality images   | any          | Kitty, Ghostty, WezTerm, Konsole                |
 | iterm2    | True pixels  | High-quality images   | any          | iTerm2, WezTerm, Konsole, Rio                   |
 | hires     | True pixels  | Portable high-quality | any          | Auto-selects best available                     |
+| isolines  | 1x1 per cell | Contour lines         | full         | Box-drawing characters (╭╮╰╯─│)                |
+| isolines-filled | 1x1 per cell | Filled contours | full         | Box-drawing + colored regions                   |
 
 *Konsole has a right-edge rendering quirk. Use mlterm for best sixel quality.
 
@@ -417,7 +445,7 @@ Fallback chain: sextant (full) → halfblock (basic) → block (ascii). Graphics
 ## Demo
 
 See `examples/canvas/gfx-modes.melker` for a visual comparison of:
-- Graphics modes (sextant, halfblock, block, pattern, luma)
+- Graphics modes (sextant, halfblock, block, pattern, luma, isolines)
 - Dithering algorithms (none, sierra-stable, floyd-steinberg, atkinson, atkinson-stable, ordered, blue-noise)
 - Dither bits (1-4 bit color depth)
 

@@ -2,7 +2,7 @@
 
 ## Summary
 
-- 10 built-in themes as CSS files with `:root` custom properties (auto-dark, auto-std, bw-std, fullcolor-dark, etc.)
+- 10 built-in themes as CSS files with `:root` custom properties (bw-std, bw-dark, gray-std, fullcolor-dark, etc.)
 - Custom themes via `--theme-file` or `MELKER_THEME_FILE` — any CSS file with `:root` variables
 - Theme variables (`--theme-*`) auto-populate into stylesheets so apps don't need to hardcode colors
 
@@ -266,7 +266,7 @@ getThemeColor('background')   ─── now returns overridden value
 
 | Scenario                   | Cost                                                                  |
 |----------------------------|-----------------------------------------------------------------------|
-| Built-in theme loading     | 8 local `file://` fetches + `extractVariableDeclarations()` each; < 5ms total |
+| Built-in theme loading     | 10 local `file://` fetches + `extractVariableDeclarations()` each; < 5ms total |
 | Custom theme loading       | 1 additional `file://` fetch; < 1ms                                   |
 | Runtime                    | Zero — themes are fully resolved to `PackedRGBA` at startup           |
 | CSS variable overrides     | One Map scan per `_fullReparse()` to detect `--theme-*` differences   |

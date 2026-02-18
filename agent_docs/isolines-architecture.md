@@ -17,7 +17,7 @@ The `isolines` and `isolines-filled` graphics modes render scalar fields as cont
 | File                              | Purpose                                                                        |
 |-----------------------------------|--------------------------------------------------------------------------------|
 | `src/isoline.ts`                  | Shared marching squares algorithm, threshold generation, color space conversions |
-| `src/components/canvas-render.ts` | `renderIsolinesToTerminal()` function                                          |
+| `src/components/canvas-render-isolines.ts` | `renderIsolinesToTerminal()` function                                 |
 | `src/components/canvas.ts`        | Isoline props on canvas component                                              |
 | `src/config/schema.json`          | Default configuration with env var overrides                                   |
 

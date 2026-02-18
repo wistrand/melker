@@ -867,27 +867,6 @@ export class MelkerEngine {
 
     const renderToBufferStartTime = performance.now();
 
-    // Debug: log root element info
-    if (this._renderCount <= 5) {
-      const rootType = this._document.root?.type;
-      const rootChildCount = this._document.root?.children?.length || 0;
-      const dateEl = this._document.getElementById('date');
-      const dateElClass = dateEl ? dateEl.constructor?.name : 'N/A';
-      const hasRender = dateEl && typeof (dateEl as any).render === 'function';
-      const hasIntrinsicSize = dateEl && typeof (dateEl as any).intrinsicSize === 'function';
-
-      // Check if dateEl is actually in the root tree
-      let foundInTree = false;
-      const checkTree = (el: any) => {
-        if (!el) return;
-        if (el === dateEl) foundInTree = true;
-        if (el.children) el.children.forEach(checkTree);
-      };
-      checkTree(this._document.root);
-
-      logger.debug(`[RENDER-DEBUG] root.type=${rootType}, children=${rootChildCount}, dateEl=${dateEl ? 'found' : 'null'}, class=${dateElClass}, hasRender=${hasRender}, hasIntrinsicSize=${hasIntrinsicSize}, inTree=${foundInTree}, dateEl.props.text=${dateEl?.props?.text || 'N/A'}`);
-    }
-
     const layoutTree = this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
     const layoutAndRenderTime = performance.now() - renderToBufferStartTime;
     this._lastLayoutTime = layoutAndRenderTime;
@@ -1019,22 +998,7 @@ export class MelkerEngine {
       height: this._terminalSizeManager.size.height,
     };
 
-    // Debug logging for column flexbox issues
-    const root = this._document.root;
-    if (root?.props?.style?.flexDirection === 'column' ||
-        (root?.props?.style?.display === 'flex' && !root?.props?.style?.flexDirection)) {
-      logger.debug(`[FLEX-DEBUG] forceRender with column flex root`);
-      logger.debug(`[FLEX-DEBUG] Root children count: ${root.children?.length}`);
-      logger.debug(`[FLEX-DEBUG] Viewport: ${JSON.stringify(viewport)}`);
-    }
-
     this._renderer.render(this._document.root, this._buffer, viewport, this._document.focusedElement?.id, this._textSelectionHandler.getTextSelection(), this._textSelectionHandler.getHoveredElementId() || undefined, () => this.render());
-
-    // Debug: Check buffer content after render
-    if (root?.props?.style?.flexDirection === 'column' ||
-        (root?.props?.style?.display === 'flex' && !root?.props?.style?.flexDirection)) {
-      logger.debug(`[FLEX-DEBUG] After render completed`);
-    }
 
     // Render buffer overlays (stats, errors, tooltips, toasts, performance dialog)
     renderBufferOverlays(this._buffer, {

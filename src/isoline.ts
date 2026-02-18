@@ -2,6 +2,7 @@
 // Used by data-heatmap and canvas isolines gfx mode
 
 import { getUnicodeTier } from './utils/terminal-detection.ts';
+import { srgbToOklab } from './color/oklab.ts';
 
 export type IsolineMode = 'equal' | 'quantile' | 'nice';
 export type IsolineSource = 'luma' | 'red' | 'green' | 'blue' | 'alpha' | 'oklab' | 'oklch-hue';
@@ -304,45 +305,10 @@ export function generateIsolines(
 }
 
 /**
- * Convert sRGB component (0-255) to linear RGB (0-1).
- */
-function srgbToLinear(c: number): number {
-  const s = c / 255;
-  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-}
-
-/**
- * Convert sRGB (0-255 each) to Oklab (L, a, b).
- * Oklab is perceptually uniform - similar colors have similar values.
- */
-function srgbToOklab(r: number, g: number, b: number): { L: number; a: number; b: number } {
-  // sRGB to linear RGB
-  const lr = srgbToLinear(r);
-  const lg = srgbToLinear(g);
-  const lb = srgbToLinear(b);
-
-  // Linear RGB to LMS (cone response)
-  const l = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb;
-  const m = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb;
-  const s = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb;
-
-  // LMS to Oklab (cube root and matrix)
-  const l_ = Math.cbrt(l);
-  const m_ = Math.cbrt(m);
-  const s_ = Math.cbrt(s);
-
-  return {
-    L: 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
-    a: 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
-    b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_,
-  };
-}
-
-/**
  * Convert sRGB (0-255 each) to Oklab L (perceptual lightness, 0-1).
  */
 function srgbToOklabL(r: number, g: number, b: number): number {
-  return srgbToOklab(r, g, b).L;
+  return srgbToOklab(r, g, b)[0];
 }
 
 /**
@@ -350,9 +316,8 @@ function srgbToOklabL(r: number, g: number, b: number): number {
  * Groups colors by their hue (red, orange, yellow, green, cyan, blue, purple, magenta).
  */
 function srgbToOklchHue(r: number, g: number, b: number): number {
-  const lab = srgbToOklab(r, g, b);
-  // atan2 returns radians in [-pi, pi], convert to [0, 360]
-  const hue = Math.atan2(lab.b, lab.a) * (180 / Math.PI);
+  const [, a, bOk] = srgbToOklab(r, g, b);
+  const hue = Math.atan2(bOk, a) * (180 / Math.PI);
   return hue < 0 ? hue + 360 : hue;
 }
 

@@ -1169,11 +1169,13 @@ export class Stylesheet {
   private _themeVars: Map<string, string>;
   private _themeVarOrigins: Map<string, string>;
   private _hasMediaVars: boolean = false;
+  private _hasPseudoClassRules: boolean = false;
   private _lastCtx?: StyleContext;
 
   constructor(items: StyleItem[] = [], containerItems: StyleItem[] = []) {
     this._items = [...items];
     this._containerItems = [...containerItems];
+    this._hasPseudoClassRules = this._items.some(Stylesheet._itemHasPseudo);
     const { vars, origins } = Stylesheet._buildThemeVars();
     this._themeVars = vars;
     this._themeVarOrigins = origins;
@@ -1194,6 +1196,7 @@ export class Stylesheet {
     };
     this._items.push(item);
     this._directItems.push(item);
+    this._hasPseudoClassRules ||= Stylesheet._itemHasPseudo(item);
   }
 
   /**
@@ -1203,6 +1206,7 @@ export class Stylesheet {
   addItem(item: StyleItem): void {
     this._items.push(item);
     this._directItems.push(item);
+    this._hasPseudoClassRules ||= Stylesheet._itemHasPseudo(item);
   }
 
   /**
@@ -1220,6 +1224,7 @@ export class Stylesheet {
     } else {
       const { items, keyframes, containerItems } = parseStyleBlock(css, this._variables);
       this._items.push(...items);
+      this._hasPseudoClassRules ||= items.some(Stylesheet._itemHasPseudo);
       this._containerItems.push(...containerItems);
       for (const kf of keyframes) {
         this._keyframes.set(kf.name, kf);
@@ -1293,9 +1298,11 @@ export class Stylesheet {
    * Fast path: skip pseudo-class evaluation when false.
    */
   get hasPseudoClassRules(): boolean {
-    return this._items.some(item =>
-      item.selector.segments.some(seg => seg.compound.pseudoClasses?.length)
-    );
+    return this._hasPseudoClassRules;
+  }
+
+  private static _itemHasPseudo(item: StyleItem): boolean {
+    return item.selector.segments.some(seg => !!seg.compound.pseudoClasses?.length);
   }
 
   /**
@@ -1387,6 +1394,7 @@ export class Stylesheet {
     this._variables = new Map(this._themeVars);
     this._variableOrigins = new Map(this._themeVarOrigins);
     this._hasMediaVars = false;
+    this._hasPseudoClassRules = false;
     this._lastCtx = undefined;
   }
 
@@ -1429,6 +1437,7 @@ export class Stylesheet {
       }
     }
     this._items.push(...this._directItems);
+    this._hasPseudoClassRules = this._items.some(Stylesheet._itemHasPseudo);
     this._variables = vars;
     this._variableOrigins = origins;
     this._pushThemeOverrides(vars);

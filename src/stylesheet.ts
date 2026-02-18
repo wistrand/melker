@@ -1169,6 +1169,7 @@ export class Stylesheet {
   private _themeVars: Map<string, string>;
   private _themeVarOrigins: Map<string, string>;
   private _hasMediaVars: boolean = false;
+  private _hasMediaItems: boolean = false;
   private _hasPseudoClassRules: boolean = false;
   private _lastCtx?: StyleContext;
 
@@ -1176,6 +1177,7 @@ export class Stylesheet {
     this._items = [...items];
     this._containerItems = [...containerItems];
     this._hasPseudoClassRules = this._items.some(Stylesheet._itemHasPseudo);
+    this._hasMediaItems = this._items.some(Stylesheet._itemHasMedia);
     const { vars, origins } = Stylesheet._buildThemeVars();
     this._themeVars = vars;
     this._themeVarOrigins = origins;
@@ -1197,6 +1199,7 @@ export class Stylesheet {
     this._items.push(item);
     this._directItems.push(item);
     this._hasPseudoClassRules ||= Stylesheet._itemHasPseudo(item);
+    this._hasMediaItems ||= Stylesheet._itemHasMedia(item);
   }
 
   /**
@@ -1207,6 +1210,7 @@ export class Stylesheet {
     this._items.push(item);
     this._directItems.push(item);
     this._hasPseudoClassRules ||= Stylesheet._itemHasPseudo(item);
+    this._hasMediaItems ||= Stylesheet._itemHasMedia(item);
   }
 
   /**
@@ -1225,6 +1229,7 @@ export class Stylesheet {
       const { items, keyframes, containerItems } = parseStyleBlock(css, this._variables);
       this._items.push(...items);
       this._hasPseudoClassRules ||= items.some(Stylesheet._itemHasPseudo);
+      this._hasMediaItems ||= items.some(Stylesheet._itemHasMedia);
       this._containerItems.push(...containerItems);
       for (const kf of keyframes) {
         this._keyframes.set(kf.name, kf);
@@ -1290,7 +1295,7 @@ export class Stylesheet {
    * Fast path: skip re-application on resize when false.
    */
   get hasMediaRules(): boolean {
-    return this._hasMediaVars || this._items.some(item => item.mediaCondition !== undefined);
+    return this._hasMediaVars || this._hasMediaItems;
   }
 
   /**
@@ -1303,6 +1308,10 @@ export class Stylesheet {
 
   private static _itemHasPseudo(item: StyleItem): boolean {
     return item.selector.segments.some(seg => !!seg.compound.pseudoClasses?.length);
+  }
+
+  private static _itemHasMedia(item: StyleItem): boolean {
+    return item.mediaCondition !== undefined;
   }
 
   /**
@@ -1394,6 +1403,7 @@ export class Stylesheet {
     this._variables = new Map(this._themeVars);
     this._variableOrigins = new Map(this._themeVarOrigins);
     this._hasMediaVars = false;
+    this._hasMediaItems = false;
     this._hasPseudoClassRules = false;
     this._lastCtx = undefined;
   }
@@ -1438,6 +1448,7 @@ export class Stylesheet {
     }
     this._items.push(...this._directItems);
     this._hasPseudoClassRules = this._items.some(Stylesheet._itemHasPseudo);
+    this._hasMediaItems = this._items.some(Stylesheet._itemHasMedia);
     this._variables = vars;
     this._variableOrigins = origins;
     this._pushThemeOverrides(vars);

@@ -7,8 +7,9 @@ import { TRANSPARENT, packRGBA, parseColor } from './color-utils.ts';
 import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
 import type { CanvasRenderData, CanvasRenderState, ResolvedGfxMode } from './canvas-render-types.ts';
 import { quantizeBlockColorsInline } from './canvas-render-sextant.ts';
+import { resolveHalfBlockCell } from './canvas-render-halfblock.ts';
 import { getThemeManager } from '../theme.ts';
-import { nearestColor16Plus, nearestSolid16, blendShadeChars } from '../color16-palette.ts';
+import { nearestColor16Plus } from '../color16-palette.ts';
 
 /**
  * Render from dithered buffer to terminal.
@@ -48,6 +49,7 @@ export function renderDitheredToTerminal(
 
   // Half-block dithered path: 1x2 pixels per cell
   if (gfxMode === 'halfblock') {
+    const fallbackBg = propsBg ?? (hasStyleBg ? style.background : undefined);
     for (let ty = 0; ty < terminalHeight; ty++) {
       const baseBufferY = ty * 2 * scale;
       for (let tx = 0; tx < terminalWidth; tx++) {
@@ -73,59 +75,11 @@ export function renderDitheredToTerminal(
           }
         }
 
-        const upperOn = upperColor !== TRANSPARENT;
-        const lowerOn = lowerColor !== TRANSPARENT;
-
-        if (!upperOn && !lowerOn) {
-          const bg = propsBg ?? (hasStyleBg ? style.background : undefined);
-          if (bg) {
-            buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-              char: EMPTY_CHAR, background: bg, bold: style.bold, dim: style.dim,
-            });
-          }
-          continue;
-        }
-
-        let char: string;
-        let fg: number | undefined;
-        let bg: number | undefined;
-
-        if (use16Plus && upperOn && lowerOn) {
-          // Color16+ adaptive rendering
-          const uR = (upperColor >> 24) & 0xFF, uG = (upperColor >> 16) & 0xFF, uB = (upperColor >> 8) & 0xFF;
-          const lR = (lowerColor >> 24) & 0xFF, lG = (lowerColor >> 16) & 0xFF, lB = (lowerColor >> 8) & 0xFF;
-          const upperEntry = nearestColor16Plus(uR, uG, uB);
-          const lowerEntry = nearestColor16Plus(lR, lG, lB);
-
-          if (upperEntry.fgPacked === lowerEntry.fgPacked &&
-              upperEntry.bgPacked === lowerEntry.bgPacked) {
-            // B: same fg+bg pair — blend shade densities
-            char = blendShadeChars(upperEntry.char, lowerEntry.char);
-            fg = upperEntry.fgPacked;
-            bg = upperEntry.bgPacked;
-          } else {
-            // A: different fg+bg — spatial ▀ with Oklab-matched solid colors
-            char = '\u2580';
-            fg = nearestSolid16(uR, uG, uB);
-            bg = nearestSolid16(lR, lG, lB);
-          }
-        } else if (upperOn && lowerOn) {
-          if (upperColor === lowerColor) {
-            char = '\u2588'; fg = upperColor;
-            bg = propsBg ?? (hasStyleBg ? style.background : undefined);
-          } else {
-            char = '\u2580'; fg = upperColor; bg = lowerColor;
-          }
-        } else if (upperOn) {
-          char = '\u2580'; fg = upperColor;
-          bg = propsBg ?? (hasStyleBg ? style.background : undefined);
-        } else {
-          char = '\u2584'; fg = lowerColor;
-          bg = propsBg ?? (hasStyleBg ? style.background : undefined);
-        }
+        const cell = resolveHalfBlockCell(upperColor, lowerColor, use16Plus, fallbackBg);
+        if (!cell) continue;
 
         buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-          char, foreground: fg, background: bg, bold: style.bold, dim: style.dim,
+          char: cell.char, foreground: cell.fg, background: cell.bg, bold: style.bold, dim: style.dim,
         });
       }
     }

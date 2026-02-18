@@ -14,6 +14,76 @@ const UPPER_HALF = '\u2580'; // ▀
 const LOWER_HALF = '\u2584'; // ▄
 const FULL_BLOCK = '\u2588'; // █
 
+// Pre-allocated result object for resolveHalfBlockCell (avoids GC pressure in render loop)
+const _hbCell = { char: '', fg: undefined as number | undefined, bg: undefined as number | undefined };
+
+/**
+ * Resolve the character, foreground, and background for a half-block cell
+ * given the upper and lower pixel colors.
+ * Returns null if both pixels are transparent and no fallback background exists.
+ * Result is a pre-allocated object — only valid until the next call.
+ */
+export function resolveHalfBlockCell(
+  upperColor: number,
+  lowerColor: number,
+  use16Plus: boolean,
+  fallbackBg: number | undefined,
+): typeof _hbCell | null {
+  const upperOn = upperColor !== TRANSPARENT;
+  const lowerOn = lowerColor !== TRANSPARENT;
+
+  if (!upperOn && !lowerOn) {
+    if (fallbackBg) {
+      _hbCell.char = EMPTY_CHAR;
+      _hbCell.fg = undefined;
+      _hbCell.bg = fallbackBg;
+      return _hbCell;
+    }
+    return null;
+  }
+
+  if (use16Plus && upperOn && lowerOn) {
+    // Color16+ adaptive rendering
+    const upperR = (upperColor >> 24) & 0xFF, upperG = (upperColor >> 16) & 0xFF, upperB = (upperColor >> 8) & 0xFF;
+    const lowerR = (lowerColor >> 24) & 0xFF, lowerG = (lowerColor >> 16) & 0xFF, lowerB = (lowerColor >> 8) & 0xFF;
+    const upperEntry = nearestColor16Plus(upperR, upperG, upperB);
+    const lowerEntry = nearestColor16Plus(lowerR, lowerG, lowerB);
+
+    if (upperEntry.fgPacked === lowerEntry.fgPacked &&
+        upperEntry.bgPacked === lowerEntry.bgPacked) {
+      // B: same fg+bg pair — blend shade densities
+      _hbCell.char = blendShadeChars(upperEntry.char, lowerEntry.char);
+      _hbCell.fg = upperEntry.fgPacked;
+      _hbCell.bg = upperEntry.bgPacked;
+    } else {
+      // A: different fg+bg — spatial ▀ with Oklab-matched solid colors
+      _hbCell.char = UPPER_HALF;
+      _hbCell.fg = nearestSolid16(upperR, upperG, upperB);
+      _hbCell.bg = nearestSolid16(lowerR, lowerG, lowerB);
+    }
+  } else if (upperOn && lowerOn) {
+    if (upperColor === lowerColor) {
+      _hbCell.char = FULL_BLOCK;
+      _hbCell.fg = upperColor;
+      _hbCell.bg = fallbackBg;
+    } else {
+      _hbCell.char = UPPER_HALF;
+      _hbCell.fg = upperColor;
+      _hbCell.bg = lowerColor;
+    }
+  } else if (upperOn) {
+    _hbCell.char = UPPER_HALF;
+    _hbCell.fg = upperColor;
+    _hbCell.bg = fallbackBg;
+  } else {
+    _hbCell.char = LOWER_HALF;
+    _hbCell.fg = lowerColor;
+    _hbCell.bg = fallbackBg;
+  }
+
+  return _hbCell;
+}
+
 /**
  * Half-block mode rendering: 1x2 pixels per terminal cell.
  * Each cell uses ▀ (upper), ▄ (lower), █ (both), or space (neither)
@@ -31,8 +101,8 @@ export function renderHalfBlockMode(
   const bufH = data.bufferHeight;
   const scale = data.scale;
   const halfScale = scale >> 1;
-  const hasStyleBg = style.background !== undefined;
-  const propsBg = data.backgroundColor ? parseColor(data.backgroundColor) : undefined;
+  const fallbackBg = (data.backgroundColor ? parseColor(data.backgroundColor) : undefined)
+    ?? (style.background !== undefined ? style.background : undefined);
   const use16Plus = getThemeManager().getColorSupport() === '16';
 
   for (let ty = 0; ty < terminalHeight; ty++) {
@@ -62,64 +132,11 @@ export function renderHalfBlockMode(
         }
       }
 
-      const upperOn = upperColor !== TRANSPARENT;
-      const lowerOn = lowerColor !== TRANSPARENT;
-
-      if (!upperOn && !lowerOn) {
-        const bg = propsBg ?? (hasStyleBg ? style.background : undefined);
-        if (bg) {
-          buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-            char: EMPTY_CHAR, background: bg, bold: style.bold, dim: style.dim,
-          });
-        }
-        continue;
-      }
-
-      let char: string;
-      let fg: number | undefined;
-      let bg: number | undefined;
-
-      if (use16Plus && upperOn && lowerOn) {
-        // Color16+ adaptive rendering
-        const upperR = (upperColor >> 24) & 0xFF, upperG = (upperColor >> 16) & 0xFF, upperB = (upperColor >> 8) & 0xFF;
-        const lowerR = (lowerColor >> 24) & 0xFF, lowerG = (lowerColor >> 16) & 0xFF, lowerB = (lowerColor >> 8) & 0xFF;
-        const upperEntry = nearestColor16Plus(upperR, upperG, upperB);
-        const lowerEntry = nearestColor16Plus(lowerR, lowerG, lowerB);
-
-        if (upperEntry.fgPacked === lowerEntry.fgPacked &&
-            upperEntry.bgPacked === lowerEntry.bgPacked) {
-          // B: same fg+bg pair — blend shade densities
-          char = blendShadeChars(upperEntry.char, lowerEntry.char);
-          fg = upperEntry.fgPacked;
-          bg = upperEntry.bgPacked;
-        } else {
-          // A: different fg+bg — spatial ▀ with Oklab-matched solid colors
-          char = UPPER_HALF;
-          fg = nearestSolid16(upperR, upperG, upperB);
-          bg = nearestSolid16(lowerR, lowerG, lowerB);
-        }
-      } else if (upperOn && lowerOn) {
-        if (upperColor === lowerColor) {
-          char = FULL_BLOCK;
-          fg = upperColor;
-          bg = propsBg ?? (hasStyleBg ? style.background : undefined);
-        } else {
-          char = UPPER_HALF;
-          fg = upperColor;
-          bg = lowerColor;
-        }
-      } else if (upperOn) {
-        char = UPPER_HALF;
-        fg = upperColor;
-        bg = propsBg ?? (hasStyleBg ? style.background : undefined);
-      } else {
-        char = LOWER_HALF;
-        fg = lowerColor;
-        bg = propsBg ?? (hasStyleBg ? style.background : undefined);
-      }
+      const cell = resolveHalfBlockCell(upperColor, lowerColor, use16Plus, fallbackBg);
+      if (!cell) continue;
 
       buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
-        char, foreground: fg, background: bg, bold: style.bold, dim: style.dim,
+        char: cell.char, foreground: cell.fg, background: cell.bg, bold: style.bold, dim: style.dim,
       });
     }
   }

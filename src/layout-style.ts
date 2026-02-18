@@ -10,6 +10,17 @@ import { getUIAnimationManager } from './ui-animation-manager.ts';
 import type { AdvancedLayoutProps, LayoutContext } from './layout.ts';
 import type { PseudoClassState } from './stylesheet.ts';
 
+/** Shallow object equality check — avoids JSON.stringify in hot path. */
+function _shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  for (const k in a) {
+    if (a[k] !== b[k]) return false;
+  }
+  for (const k in b) {
+    if (!(k in a)) return false;
+  }
+  return true;
+}
+
 /** Shared empty style object — avoids allocating {} on every fast-path return. */
 const EMPTY_STYLE: Partial<Style> = Object.freeze({});
 
@@ -225,13 +236,13 @@ function processTransitions(element: Element, resolvedStyle: Style): void {
       if (prevValue === undefined || prevValue === newValue) continue;
       // Skip if both are equal objects (BoxSpacing)
       if (typeof prevValue === 'object' && typeof newValue === 'object' &&
-          JSON.stringify(prevValue) === JSON.stringify(newValue)) continue;
+          _shallowEqual(prevValue as Record<string, unknown>, newValue as Record<string, unknown>)) continue;
 
       // Value changed — start or interrupt transition
+      const now = performance.now();
       if (state.active.has(prop)) {
         // Interrupt: use current interpolated value as new from
         const currentTransition = state.active.get(prop)!;
-        const now = performance.now();
         const elapsed = now - currentTransition.startTime - currentTransition.delay;
         const progress = elapsed < 0 ? 0 : Math.min(elapsed / currentTransition.duration, 1);
         const currentValue = interpolateValue(
@@ -239,7 +250,7 @@ function processTransitions(element: Element, resolvedStyle: Style): void {
         state.active.set(prop, {
           from: currentValue,
           to: newValue,
-          startTime: performance.now(),
+          startTime: now,
           duration: spec.duration,
           delay: spec.delay,
           timingFn: getTimingFunction(spec.timingFn),
@@ -249,7 +260,7 @@ function processTransitions(element: Element, resolvedStyle: Style): void {
         state.active.set(prop, {
           from: prevValue,
           to: newValue,
-          startTime: performance.now(),
+          startTime: now,
           duration: spec.duration,
           delay: spec.delay,
           timingFn: getTimingFunction(spec.timingFn),

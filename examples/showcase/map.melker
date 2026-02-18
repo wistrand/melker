@@ -205,6 +205,16 @@ map.melker paris 12 satellite           # Paris with satellite imagery
     const tileCache = new Map<string, DecodedTile>();
     const pendingFetches = new Set<string>();
 
+    // File cache index: tracks on-disk tiles for LRU eviction
+    interface FileCacheEntry {
+      path: string;
+      size: number;       // bytes on disk
+      lastAccess: number; // Date.now() on last read or write
+    }
+    const fileCacheIndex = new Map<string, FileCacheEntry>();
+    let fileCacheTotalBytes = 0;
+    const MAX_FILE_CACHE_BYTES = 200 * 1024 * 1024; // 200 MB
+
     // LRU cache helpers - Map maintains insertion order, so we delete+re-insert on access
     function getTileFromCache(key: string): DecodedTile | undefined {
       const tile = tileCache.get(key);
@@ -222,7 +232,7 @@ map.melker paris 12 satellite           # Paris with satellite imagery
         const oldestKey = tileCache.keys().next().value;
         if (oldestKey) {
           tileCache.delete(oldestKey);
-          $melker.logger.debug(`Evicted tile from cache: ${oldestKey}`);
+          $melker.logger.info(`Evicted tile from cache: ${oldestKey}`);
         } else {
           break;
         }
@@ -230,19 +240,62 @@ map.melker paris 12 satellite           # Paris with satellite imagery
       tileCache.set(key, tile);
     }
 
-    // File-based tile cache directory (initialized in ready script)
+    // File-based tile cache directory
     let tileCacheDir: string | null = null;
 
-    // Initialize the tile cache directory (called from ready script)
-    export async function initTileCache(): Promise<void> {
+    // Initialize the tile cache directory and scan existing files
+    async function initTileCache(): Promise<void> {
       try {
-        // Cache dir is created on approval, just need tiles subdirectory
         tileCacheDir = `${$melker.cacheDir}/tiles`;
         await Deno.mkdir(tileCacheDir, { recursive: true });
-        $melker.logger.debug(`Tile cache directory: ${tileCacheDir}`);
+
+        // Scan existing cached tiles to populate the index
+        await scanCacheDir(tileCacheDir);
+        $melker.logger.info(`Tile cache: ${fileCacheIndex.size} files, ${(fileCacheTotalBytes / 1024 / 1024).toFixed(1)} MB`);
       } catch (error) {
         $melker.logger.warn(`Failed to initialize tile cache: ${error}`);
       }
+    }
+
+    // Recursively scan cache directory and populate fileCacheIndex
+    async function scanCacheDir(dir: string): Promise<void> {
+      const entries: { key: string; entry: FileCacheEntry }[] = [];
+      await scanDirRecursive(dir, entries);
+      // Sort by mtime ascending (oldest first) so Map insertion order = LRU order
+      entries.sort((a, b) => a.entry.lastAccess - b.entry.lastAccess);
+      for (const { key, entry } of entries) {
+        fileCacheIndex.set(key, entry);
+        fileCacheTotalBytes += entry.size;
+      }
+    }
+
+    async function scanDirRecursive(dir: string, out: { key: string; entry: FileCacheEntry }[]): Promise<void> {
+      try {
+        for await (const dirEntry of Deno.readDir(dir)) {
+          const fullPath = `${dir}/${dirEntry.name}`;
+          if (dirEntry.isDirectory) {
+            await scanDirRecursive(fullPath, out);
+          } else if (dirEntry.isFile && dirEntry.name.endsWith('.png')) {
+            try {
+              const stat = await Deno.stat(fullPath);
+              // Derive cache key from path: tiles/provider/z/x_y.png -> provider/z/x/y
+              const rel = fullPath.substring(tileCacheDir!.length + 1); // provider/z/x_y.png
+              const match = rel.match(/^(.+?)\/(\d+)\/(\d+)_(\d+)\.png$/);
+              if (match) {
+                const key = `${match[1]}/${match[2]}/${match[3]}/${match[4]}`;
+                out.push({
+                  key,
+                  entry: {
+                    path: fullPath,
+                    size: stat.size,
+                    lastAccess: stat.mtime?.getTime() ?? Date.now(),
+                  }
+                });
+              }
+            } catch { /* stat failed, skip */ }
+          }
+        }
+      } catch { /* readDir failed, skip */ }
     }
 
     // Get file path for cached tile
@@ -259,9 +312,16 @@ map.melker paris 12 satellite           # Paris with satellite imagery
 
       try {
         const bytes = await Deno.readFile(filePath);
+        // Update access time in index (move to end for LRU)
+        const cacheKey = getTileCacheKey(tileX, tileY, z, providerKey);
+        const entry = fileCacheIndex.get(cacheKey);
+        if (entry) {
+          entry.lastAccess = Date.now();
+          fileCacheIndex.delete(cacheKey);
+          fileCacheIndex.set(cacheKey, entry);
+        }
         return bytes;
       } catch {
-        // File doesn't exist or can't be read
         return null;
       }
     }
@@ -271,16 +331,95 @@ map.melker paris 12 satellite           # Paris with satellite imagery
       if (!tileCacheDir) return;
 
       try {
-        // Ensure provider/zoom subdirectory exists
         const zoomDir = `${tileCacheDir}/${providerKey}/${z}`;
         await Deno.mkdir(zoomDir, { recursive: true });
 
         const filePath = `${zoomDir}/${tileX}_${tileY}.png`;
         await Deno.writeFile(filePath, bytes);
+
+        $melker.logger.info(`Saved cache tile to file: ${filePath}`);
+
+      // Track in index
+        const cacheKey = getTileCacheKey(tileX, tileY, z, providerKey);
+        const existing = fileCacheIndex.get(cacheKey);
+        if (existing) {
+          fileCacheTotalBytes -= existing.size;
+          fileCacheIndex.delete(cacheKey);
+        }
+        fileCacheIndex.set(cacheKey, { path: filePath, size: bytes.length, lastAccess: Date.now() });
+        fileCacheTotalBytes += bytes.length;
+
+        // Evict if over budget
+        if (fileCacheTotalBytes > MAX_FILE_CACHE_BYTES) {
+          evictOldFiles();
+        }
       } catch (error) {
         $melker.logger.warn(`Failed to cache tile to file: ${error}`);
       }
     }
+
+    // Evict oldest files until at 80% of budget (hysteresis)
+    async function evictOldFiles(): Promise<void> {
+      const target = MAX_FILE_CACHE_BYTES * 0.8;
+      let evicted = 0;
+      for (const [key, entry] of fileCacheIndex) {
+        if (fileCacheTotalBytes <= target) break;
+        try {
+          await Deno.remove(entry.path);
+          $melker.logger.info(`Evicted cached tile: ${entry.path}`);
+        } catch (e) {
+          $melker.logger.warn(`Failed to remove cached tile ${entry.path}: ${e}`);
+        }
+        fileCacheTotalBytes -= entry.size;
+        fileCacheIndex.delete(key);
+        evicted++;
+      }
+      if (evicted > 0) {
+        $melker.logger.info(`Evicted ${evicted} tile files, now ${(fileCacheTotalBytes / 1024 / 1024).toFixed(1)} MB`);
+      }
+    }
+
+    // Clear all cached tile files (manual purge)
+    export async function clearFileCache(): Promise<number> {
+      const freedBytes = fileCacheTotalBytes;
+      for (const [, entry] of fileCacheIndex) {
+        try {
+          await Deno.remove(entry.path);
+          $melker.logger.info(`Removed cached tile: ${entry.path}`);
+        } catch (e) {
+          $melker.logger.warn(`Failed to remove cached tile ${entry.path}: ${e}`);
+        }
+      }
+      fileCacheIndex.clear();
+      fileCacheTotalBytes = 0;
+      if (tileCacheDir) {
+        try { await cleanEmptyDirs(tileCacheDir); } catch { /* best effort */ }
+      }
+      $melker.logger.info(`Cleared tile cache (${(freedBytes / 1024 / 1024).toFixed(1)} MB freed)`);
+      return freedBytes;
+    }
+
+    async function cleanEmptyDirs(dir: string): Promise<boolean> {
+      let empty = true;
+      try {
+        for await (const entry of Deno.readDir(dir)) {
+          if (entry.isDirectory) {
+            const childEmpty = await cleanEmptyDirs(`${dir}/${entry.name}`);
+            if (!childEmpty) empty = false;
+          } else {
+            empty = false;
+          }
+        }
+        if (empty && dir !== tileCacheDir) {
+          await Deno.remove(dir);
+          $melker.logger.info(`Removed empty cache dir: ${dir}`);
+        }
+      } catch { empty = false; }
+      return empty;
+    }
+
+    // Start file cache init eagerly so it's ready before first fetchTile()
+    const fileCacheReady = initTileCache();
 
     // Mercator projection utilities
     function latToMercatorY(lat: number): number {
@@ -401,6 +540,9 @@ map.melker paris 12 satellite           # Paris with satellite imagery
         return null;
       }
 
+      // Wait for file cache to be ready before first fetch
+      await fileCacheReady;
+
       pendingFetches.add(cacheKey);
       setLoading(true);
 
@@ -412,13 +554,13 @@ map.melker paris 12 satellite           # Paris with satellite imagery
         bytes = await loadTileFromFile(tileX, tileY, z, providerKey);
         if (bytes) {
           fromFileCache = true;
-          $melker.logger.debug(`Loaded tile from file cache: ${cacheKey}`);
+          $melker.logger.info(`Loaded tile from file cache: ${cacheKey}`);
         }
 
         // Fetch from network if not in file cache
         if (!bytes) {
           const url = getTileUrl(tileX, tileY, z, providerKey);
-          $melker.logger.debug(`Fetching tile from network: ${cacheKey}`);
+          $melker.logger.info(`Fetching tile from network: ${cacheKey}`);
 
           const response = await fetch(url);
           if (!response.ok) {
@@ -1057,9 +1199,6 @@ map.melker paris 12 satellite           # Paris with satellite imagery
 
   <!-- Initialize on start -->
   <script async="ready">
-    // Initialize tile file cache
-    await $app.initTileCache();
-
     // Handle initial location from command line (provider and zoom set via template)
     const initialLocation = "${argv[1]:-}".trim();
     if (initialLocation) {

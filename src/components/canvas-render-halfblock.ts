@@ -7,7 +7,7 @@ import { type Bounds } from '../types.ts';
 import { TRANSPARENT, parseColor } from './color-utils.ts';
 import type { CanvasRenderData } from './canvas-render-types.ts';
 import { getThemeManager } from '../theme.ts';
-import { nearestColor16Plus, nearestSolid16, blendShadeChars } from '../color16-palette.ts';
+import { nearestColor16Plus, blendShadeChars, nearestSolid16, nearestSolidBg } from '../color16-palette.ts';
 
 // Half-block characters
 const UPPER_HALF = '\u2580'; // ▀
@@ -59,7 +59,7 @@ export function resolveHalfBlockCell(
       // A: different fg+bg — spatial ▀ with Oklab-matched solid colors
       _hbCell.char = UPPER_HALF;
       _hbCell.fg = nearestSolid16(upperR, upperG, upperB);
-      _hbCell.bg = nearestSolid16(lowerR, lowerG, lowerB);
+      _hbCell.bg = nearestSolidBg(lowerR, lowerG, lowerB);
     }
   } else if (upperOn && lowerOn) {
     if (upperColor === lowerColor) {

@@ -2,10 +2,15 @@
 // Pre-computes all (fg_ansi, bg_ansi, shade_char) triples and their visual RGB,
 // giving ~1,280 distinguishable entries instead of 16. A 3D lookup table maps
 // any RGB input to the best terminal output in O(1).
+//
+// On the Linux virtual console (TERM=linux), bright background colors (SGR 100-107)
+// are not reliably supported. The palette automatically restricts to 8 dark
+// background colors in that environment (~640 entries).
 
 import type { PackedRGBA } from './types.ts';
 import { packRGBA } from './components/color-utils.ts';
 import { SRGB_TO_LINEAR, linearToSrgb, srgbToOklab } from './color/oklab.ts';
+import { Env } from './env.ts';
 
 // --- VGA palette: canonical RGB for each of the 16 SGR codes ---
 
@@ -41,6 +46,18 @@ for (const c of ANSI_16) {
   c.packed = packRGBA(c.r, c.g, c.b, 255);
 }
 
+// --- Bright background support detection ---
+// Linux virtual console (TERM=linux) doesn't reliably support SGR 100-107
+// (bright background colors). Restrict bg palette to the 8 dark colors.
+
+let _brightBg: boolean | undefined;
+function hasBrightBg(): boolean {
+  if (_brightBg === undefined) {
+    _brightBg = (Env.get('TERM') || '') !== 'linux';
+  }
+  return _brightBg;
+}
+
 // --- Palette construction ---
 
 export interface PaletteEntry {
@@ -59,12 +76,12 @@ interface InternalEntry extends PaletteEntry {
   shadePenalty: number;
 }
 
-function buildPalette(): InternalEntry[] {
+function buildPalette(maxBg: number): InternalEntry[] {
   const entries: InternalEntry[] = [];
 
   for (let fi = 0; fi < 16; fi++) {
     const fg = ANSI_16[fi];
-    for (let bi = 0; bi < 16; bi++) {
+    for (let bi = 0; bi < maxBg; bi++) {
       const bg = ANSI_16[bi];
       for (let di = 0; di < 5; di++) {
         const d = SHADE_DENSITIES[di];
@@ -105,8 +122,8 @@ const LUT_SIZE = 1 << LUT_BITS;       // 32
 const LUT_SHIFT = 8 - LUT_BITS;       // 3
 const LUT_HALF = 1 << (LUT_SHIFT - 1); // 4 — offset to bucket center
 
-function buildLUT(): PaletteEntry[] {
-  const palette = buildPalette();
+function buildLUT(maxBg: number): PaletteEntry[] {
+  const palette = buildPalette(maxBg);
   const lut = new Array<PaletteEntry>(LUT_SIZE * LUT_SIZE * LUT_SIZE);
 
   for (let ri = 0; ri < LUT_SIZE; ri++) {
@@ -119,6 +136,12 @@ function buildLUT(): PaletteEntry[] {
 
         const [L, a, bOk] = srgbToOklab(r, g, b);
 
+        // Dark bias: when target is near-black, penalize shade entries.
+        // Terminal shade patterns (░▒▓) render as visible dot grids that
+        // read brighter than their mathematical coverage, so we push
+        // near-black targets toward solid black instead.
+        const darkBias = L < 0.2 ? (0.2 - L) * 0.15 : 0;
+
         let bestDist = Infinity;
         let bestEntry = palette[0];
 
@@ -127,7 +150,8 @@ function buildLUT(): PaletteEntry[] {
           const dL = L - e.okL;
           const da = a - e.okA;
           const db = bOk - e.okB;
-          const dist = dL * dL + da * da + db * db + e.shadePenalty;
+          const dist = dL * dL + da * da + db * db + e.shadePenalty
+            + (darkBias && e.okL > 0 ? darkBias : 0);
           if (dist < bestDist) {
             bestDist = dist;
             bestEntry = e;
@@ -142,21 +166,27 @@ function buildLUT(): PaletteEntry[] {
   return lut;
 }
 
-const LUT = buildLUT();
+// Lazy LUT — built on first access so TERM detection is available
+let _lut: PaletteEntry[] | null = null;
+function getLUT(): PaletteEntry[] {
+  if (!_lut) _lut = buildLUT(hasBrightBg() ? 16 : 8);
+  return _lut;
+}
 
 /**
  * Find the nearest color16+ palette entry for an RGB color.
  * O(1) lookup via pre-computed 3D table (32×32×32 = 32K entries).
  */
 export function nearestColor16Plus(r: number, g: number, b: number): PaletteEntry {
-  return LUT[(r >> LUT_SHIFT) * LUT_SIZE * LUT_SIZE + (g >> LUT_SHIFT) * LUT_SIZE + (b >> LUT_SHIFT)];
+  const lut = getLUT();
+  return lut[(r >> LUT_SHIFT) * LUT_SIZE * LUT_SIZE + (g >> LUT_SHIFT) * LUT_SIZE + (b >> LUT_SHIFT)];
 }
 
-// --- Solid color LUT: nearest of the 16 ANSI colors (no shading) ---
+// --- Solid color LUTs: nearest of N ANSI colors (no shading) ---
 
-function buildSolidLUT(): number[] {
+function buildSolidLUT(maxColors: number): number[] {
   const ansiOklab: [number, number, number][] = [];
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < maxColors; i++) {
     ansiOklab.push(srgbToOklab(ANSI_16[i].r, ANSI_16[i].g, ANSI_16[i].b));
   }
 
@@ -174,7 +204,7 @@ function buildSolidLUT(): number[] {
         let bestDist = Infinity;
         let bestPacked = ANSI_16[0].packed;
 
-        for (let i = 0; i < 16; i++) {
+        for (let i = 0; i < maxColors; i++) {
           const dL = L - ansiOklab[i][0];
           const da = a - ansiOklab[i][1];
           const db = bOk - ansiOklab[i][2];
@@ -193,14 +223,37 @@ function buildSolidLUT(): number[] {
   return lut;
 }
 
-const SOLID_LUT = buildSolidLUT();
+// Foreground: always all 16 colors
+let _solidFgLut: number[] | null = null;
+function getSolidFgLUT(): number[] {
+  if (!_solidFgLut) _solidFgLut = buildSolidLUT(16);
+  return _solidFgLut;
+}
+
+// Background: restricted to 8 dark colors on Linux VT
+let _solidBgLut: number[] | null = null;
+function getSolidBgLUT(): number[] {
+  if (!_solidBgLut) _solidBgLut = buildSolidLUT(hasBrightBg() ? 16 : 8);
+  return _solidBgLut;
+}
 
 /**
  * Find the nearest solid ANSI color (no shading) for an RGB color.
- * O(1) lookup. Used for spatial half-block cells on 16-color terminals.
+ * O(1) lookup. Used for spatial half-block foreground on 16-color terminals.
  */
 export function nearestSolid16(r: number, g: number, b: number): number {
-  return SOLID_LUT[(r >> LUT_SHIFT) * LUT_SIZE * LUT_SIZE + (g >> LUT_SHIFT) * LUT_SIZE + (b >> LUT_SHIFT)];
+  const lut = getSolidFgLUT();
+  return lut[(r >> LUT_SHIFT) * LUT_SIZE * LUT_SIZE + (g >> LUT_SHIFT) * LUT_SIZE + (b >> LUT_SHIFT)];
+}
+
+/**
+ * Find the nearest solid ANSI background color for an RGB color.
+ * On Linux VT (TERM=linux), restricted to 8 dark colors (SGR 40-47).
+ * On other terminals, uses all 16 colors.
+ */
+export function nearestSolidBg(r: number, g: number, b: number): number {
+  const lut = getSolidBgLUT();
+  return lut[(r >> LUT_SHIFT) * LUT_SIZE * LUT_SIZE + (g >> LUT_SHIFT) * LUT_SIZE + (b >> LUT_SHIFT)];
 }
 
 // --- Shade interpolation for halfblock B strategy ---

@@ -1,0 +1,115 @@
+<melker>
+
+  <title>Color Cube</title>
+
+  <style>
+    #root {
+      padding: 1;
+      flex-direction: column;
+      gap: 1;
+    }
+    .row {
+      flex-direction: row;
+      gap: 2;
+    }
+    .label {
+      color: gray;
+    }
+  </style>
+
+  <container id="root">
+    <text style="font-weight: bold;">Color Cube - RGB gradient debug</text>
+
+    <container class="row">
+      <container style="flex-direction: column;">
+        <text class="label">R-G plane (B=0)</text>
+        <canvas id="rg0" width="64" height="64" dither="auto"
+          onPaint="$app.paintPlane(event, 'rg', 0)" />
+      </container>
+      <container style="flex-direction: column;">
+        <text class="label">R-G plane (B=255)</text>
+        <canvas id="rg1" width="64" height="64" dither="auto"
+          onPaint="$app.paintPlane(event, 'rg', 255)" />
+      </container>
+    </container>
+
+    <container class="row">
+      <container style="flex-direction: column;">
+        <text class="label">R-B plane (G=0)</text>
+        <canvas id="rb0" width="64" height="64" dither="auto"
+          onPaint="$app.paintPlane(event, 'rb', 0)" />
+      </container>
+      <container style="flex-direction: column;">
+        <text class="label">R-B plane (G=255)</text>
+        <canvas id="rb1" width="64" height="64" dither="auto"
+          onPaint="$app.paintPlane(event, 'rb', 255)" />
+      </container>
+    </container>
+
+    <container class="row">
+      <container style="flex-direction: column;">
+        <text class="label">G-B plane (R=0)</text>
+        <canvas id="gb0" width="64" height="64" dither="auto"
+          onPaint="$app.paintPlane(event, 'gb', 0)" />
+      </container>
+      <container style="flex-direction: column;">
+        <text class="label">G-B plane (R=255)</text>
+        <canvas id="gb1" width="64" height="64" dither="auto"
+          onPaint="$app.paintPlane(event, 'gb', 255)" />
+      </container>
+    </container>
+
+    <container class="row">
+      <container style="flex-direction: column;">
+        <text class="label">Gray ramp (R=G=B)</text>
+        <canvas id="gray" width="128" height="8" dither="auto"
+          onPaint="$app.paintGray(event)" />
+      </container>
+    </container>
+
+    <text class="label">Use MELKER_THEME / MELKER_GFX_MODE to compare rendering modes</text>
+  </container>
+
+  <script type="typescript">
+    function toHex(n: number): string {
+      return n.toString(16).padStart(2, '0');
+    }
+
+    export function paintPlane(event: any, plane: string, fixed: number) {
+      const { canvas } = event;
+      if (!canvas) return;
+      const { width, height } = canvas.getBufferSize();
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const u = Math.round((x / (width - 1)) * 255);
+          const v = Math.round((y / (height - 1)) * 255);
+          let r: number, g: number, b: number;
+          if (plane === 'rg') {
+            r = u; g = v; b = fixed;
+          } else if (plane === 'rb') {
+            r = u; g = fixed; b = v;
+          } else {
+            r = fixed; g = u; b = v;
+          }
+          canvas.setPixelColor(x, y, '#' + toHex(r) + toHex(g) + toHex(b), true);
+        }
+      }
+    }
+
+    export function paintGray(event: any) {
+      const { canvas } = event;
+      if (!canvas) return;
+      const { width, height } = canvas.getBufferSize();
+
+      for (let x = 0; x < width; x++) {
+        const v = Math.round((x / (width - 1)) * 255);
+        const hex = '#' + toHex(v) + toHex(v) + toHex(v);
+        for (let y = 0; y < height; y++) {
+          canvas.setPixelColor(x, y, hex, true);
+        }
+      }
+    }
+  </script>
+
+</melker>

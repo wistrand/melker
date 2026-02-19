@@ -4,6 +4,8 @@
 //
 // PSF2 fonts can be loaded with parsePSF2(). Convert BDF→PSF2 with tools/bdf-to-psf2.ts.
 
+import { getAsset } from '../../assets.ts';
+
 export interface BitmapFont {
   readonly width: number;     // Pixels per glyph (horizontal)
   readonly height: number;    // Pixels per glyph (vertical)
@@ -212,17 +214,10 @@ export const FONT_3x5: BitmapFont = {
 // Lazy-loaded 5x7 font from embedded PSF2 data (converted from X11 BDF via tools/bdf-to-psf2.ts)
 // COPYRIGHT "Public domain font.  Share and enjoy."
 let _font5x7: BitmapFont | null = null;
-let _font5x7Promise: Promise<BitmapFont> | null = null;
 
-export async function getFont5x7(): Promise<BitmapFont> {
-  if (_font5x7) return _font5x7;
-  if (!_font5x7Promise) {
-    _font5x7Promise = import('./font-5x7-data.ts')
-      .then(m => m.getPSF2Bytes())
-      .then(buf => {
-        _font5x7 = parsePSF2(buf);
-        return _font5x7;
-      });
+export function getFont5x7(): BitmapFont {
+  if (!_font5x7) {
+    _font5x7 = parsePSF2(getAsset('font-5x7'));
   }
-  return _font5x7Promise;
+  return _font5x7;
 }

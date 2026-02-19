@@ -55,6 +55,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | Project structure   | [project-structure.md](agent_docs/project-structure.md)              |
 | Core architecture   | [architecture.md](agent_docs/architecture.md)                        |
 | Component reference | [component-reference.md](agent_docs/component-reference.md)          |
+| Embedded assets     | [embedded-assets-architecture.md](agent_docs/embedded-assets-architecture.md) |
 | Config system       | [config-architecture.md](agent_docs/config-architecture.md)          |
 | Policy system       | [policy-architecture.md](agent_docs/policy-architecture.md)          |
 | Server              | [server-architecture.md](agent_docs/server-architecture.md)          |
@@ -110,8 +111,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 deno task dev          # Dev server with watch
 deno task test         # Run tests
 deno task check        # Type check
-deno task skill:zip    # Build AI agent skill zip
-deno task completions  # Regenerate shell completions
+deno task build        # Build all (embedded assets, completions, skill zip, docs)
 ```
 
 **Capture script** (screenshots/videos for docs):
@@ -346,7 +346,7 @@ cp completions/melker.zsh ~/.zsh/completions/_melker
 
 Completions include all CLI flags with enum value completion (e.g., `--gfx-mode <TAB>` shows all modes) and file type filtering (`.melker`, `.mmd`, `.md`).
 
-Regenerate after adding new flags: `deno task completions`
+Regenerate after adding new flags: `deno task build:completions`
 
 ## Library Usage
 
@@ -417,7 +417,7 @@ An AI agent skill for creating .melker apps is available at `skills/creating-mel
 ### Building the Skill Zip
 
 ```bash
-deno task skill:zip
+deno task build:skill
 ```
 
 Creates `docs/skill-creating-melker-apps.zip`, available at https://melker.sh/skill-creating-melker-apps.zip

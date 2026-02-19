@@ -4,7 +4,7 @@ import { decodePng } from '../../deps.ts';
 import { MelkerConfig } from '../../config/mod.ts';
 import { BAYER_8X8, type ThresholdMatrix } from './types.ts';
 import { quantizeChannel, rgbToGray } from './utils.ts';
-import { BLUE_NOISE_64, BLUE_NOISE_SIZE } from './blue-noise-64.ts';
+import { getAsset } from '../../assets.ts';
 
 // ============================================
 // Threshold Matrix Loading
@@ -93,15 +93,18 @@ export function clearThresholdMatrixCache(): void {
 // Blue Noise Matrix Loading
 // ============================================
 
-// Embedded blue noise matrix (no runtime I/O needed for the default)
-const BUILTIN_BLUE_NOISE: ThresholdMatrix = {
-  size: BLUE_NOISE_SIZE,
-  data: BLUE_NOISE_64,
-  mask: BLUE_NOISE_SIZE - 1,
-};
-
-// Cached blue noise matrix — starts with the embedded default
+// Cached blue noise matrices
+let _builtinBlueNoise: ThresholdMatrix | null = null;
 let _blueNoiseMatrix: ThresholdMatrix | null = null;
+
+/** Build a ThresholdMatrix from the embedded blue noise asset (raw grayscale bytes). */
+function getBuiltinBlueNoise(): ThresholdMatrix {
+  if (_builtinBlueNoise) return _builtinBlueNoise;
+  const data = getAsset('blue-noise-64');
+  const size = Math.sqrt(data.length) | 0;
+  _builtinBlueNoise = { size, data, mask: size - 1 };
+  return _builtinBlueNoise;
+}
 
 /**
  * Get the blue noise threshold matrix.
@@ -115,7 +118,7 @@ function getBlueNoiseMatrixLazy(): ThresholdMatrix | null {
 
   // No custom path — use embedded matrix (zero I/O)
   if (!configPath) {
-    return BUILTIN_BLUE_NOISE;
+    return getBuiltinBlueNoise();
   }
 
   // Custom path — check cache

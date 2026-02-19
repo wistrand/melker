@@ -405,7 +405,7 @@ export class PixelRenderer implements SegmentRenderer {
   readonly onChar = _hasBlocks ? '█' : '#';
   readonly offChar = _hasBlocks ? '░' : '.';
   private _font: BitmapFont | null;
-  private _fontPromise: Promise<BitmapFont> | null = null;
+  // _fontPromise removed — getFont5x7() is now synchronous
 
   constructor(height: SegmentHeight = 5, font?: BitmapFont) {
     this.charHeight = height;
@@ -420,14 +420,11 @@ export class PixelRenderer implements SegmentRenderer {
   }
 
   /**
-   * Ensure the font is loaded (fetches PSF2 on first use for height 7)
+   * Ensure the font is loaded (decodes PSF2 on first use for height 7)
    */
-  async ensureFont(): Promise<void> {
+  ensureFont(): void {
     if (this._font) return;
-    if (!this._fontPromise) {
-      this._fontPromise = getFont5x7();
-    }
-    this._font = await this._fontPromise;
+    this._font = getFont5x7();
     this.charWidth = this._font.width + 1;
   }
 

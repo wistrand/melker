@@ -17,7 +17,7 @@ _melker() {
             return 0
             ;;
         --gfx-mode)
-            COMPREPLY=( $(compgen -W "sextant block pattern luma sixel kitty iterm2 hires isolines isolines-filled" -- "$cur") )
+            COMPREPLY=( $(compgen -W "sextant halfblock block pattern luma sixel kitty iterm2 hires isolines isolines-filled" -- "$cur") )
             return 0
             ;;
         --log-level)

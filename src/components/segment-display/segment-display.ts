@@ -62,13 +62,9 @@ export class SegmentDisplayElement extends Element implements Renderable, TextSe
     if (!this._renderer) {
       const height = this.getHeight();
       this._renderer = getRenderer(this.props.renderer || 'box-drawing', height);
-      // Kick off lazy font load for pixel renderers
+      // Ensure font is loaded for pixel renderers (synchronous)
       if (this._renderer instanceof PixelRenderer) {
-        this._renderer.ensureFont().then(() => {
-          this._renderedLines = null;
-          this._lastValue = null;
-          getUIAnimationManager().renderNow();
-        });
+        this._renderer.ensureFont();
       }
     }
     return this._renderer;

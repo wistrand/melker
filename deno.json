@@ -29,14 +29,17 @@
     "lint-all": "deno lint src",
     "check": "deno check src/**/*.ts benchmarks/**/*.ts",
     "check-ts-examples": "deno check examples/**/*.ts",
-    "skill:zip": "cd skills/creating-melker-apps && zip -r ../../docs/skill-creating-melker-apps.zip SKILL.md references/ && echo 'Created skill-creating-melker-apps.zip'",
-    "completions": "deno run --allow-read --allow-write scripts/generate-completions.ts",
+    "build": "deno task build:assets && deno task build:completions && deno task build:skill && deno task build:docs && deno task build:lock",
+    "build:assets": "deno run --allow-read --allow-write scripts/generate-embedded-assets.ts",
+    "build:completions": "deno run --allow-read --allow-write scripts/generate-completions.ts",
+    "build:skill": "cd skills/creating-melker-apps && zip -r ../../docs/skill-creating-melker-apps.zip SKILL.md references/ && echo 'Created skill-creating-melker-apps.zip'",
+    "build:docs": "rm -rf docs/examples/showcase && cp -r examples/showcase docs/examples/showcase && echo 'Copied examples/showcase → docs/examples/showcase'",
+    "build:lock": "rm -f deno.lock && deno cache melker.ts src/melker-runner.ts && echo 'Regenerated deno.lock (runtime deps only)'",
     "bench:memory": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/memory/memory_bench.ts",
     "bench:all": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/run-all.ts",
     "version:sync": "deno run --allow-read --allow-write --allow-run scripts/sync-version.ts",
     "publish:dry-run": "deno publish --dry-run --allow-dirty",
-    "serve:http": "deno run --allow-net --allow-read tools/serve.ts",
-    "docs:showcase": "rm -rf docs/examples/showcase && cp -r examples/showcase docs/examples/showcase && echo 'Copied examples/showcase → docs/examples/showcase'"
+    "serve:http": "deno run --allow-net --allow-read tools/serve.ts"
   },
   "compilerOptions": {
     "strict": true,

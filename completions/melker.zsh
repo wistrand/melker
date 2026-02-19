@@ -38,7 +38,7 @@ _melker() {
         '--deny-shader[Deny shader execution]' \
         '--deny-sys[System info to deny]:value:' \
         '--deny-write[Write paths to deny]:value:' \
-        '--gfx-mode[Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness), sixel (true pixels), kitty (kitty protocol), iterm2 (iTerm2 protocol), hires (auto: kitty/sixel/iterm2/sextant), isolines (contour lines), isolines-filled (contour lines with fill)]:value:(sextant block pattern luma sixel kitty iterm2 hires isolines isolines-filled)' \
+        '--gfx-mode[Graphics rendering: sextant (default), block (colored spaces), pattern (ASCII spatial), luma (ASCII brightness), sixel (true pixels), kitty (kitty protocol), iterm2 (iTerm2 protocol), hires (auto: kitty/sixel/iterm2/sextant), isolines (contour lines), isolines-filled (contour lines with fill)]:value:(sextant halfblock block pattern luma sixel kitty iterm2 hires isolines isolines-filled)' \
         '--headless[Run without terminal]' \
         '--help[Show help message]' \
         '--inspect[Enable V8 inspector]' \

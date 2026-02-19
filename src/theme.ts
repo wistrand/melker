@@ -6,7 +6,7 @@ import { MelkerConfig } from './config/mod.ts';
 import { COLORS, cssToRgba, packRGBA } from './components/color-utils.ts';
 import { extractVariableDeclarations } from './stylesheet.ts';
 import { getLogger } from './logging.ts';
-import { BUILTIN_THEME_CSS } from './themes/mod.ts';
+import { getAssetText } from './assets.ts';
 
 const logger = getLogger('Theme');
 
@@ -144,16 +144,15 @@ const BUILTIN_THEME_NAMES = [
 let THEMES: Record<string, Theme> = {};
 
 /**
- * Load all built-in themes from embedded CSS strings (no runtime I/O).
- * The CSS is inlined in themes/mod.ts so it's part of the module graph
- * and gets cached at `deno install` time.
+ * Load all built-in themes from embedded compressed assets (no runtime I/O).
+ * Assets are decoded synchronously on first access via decodePng().
  */
 function loadBuiltinThemes(): Record<string, Theme> {
   const themes: Record<string, Theme> = {};
   for (const name of BUILTIN_THEME_NAMES) {
-    const css = BUILTIN_THEME_CSS[name];
+    const css = getAssetText(`theme/${name}`);
     if (!css) {
-      logger.warn(`Built-in theme '${name}' not found in embedded CSS`);
+      logger.warn(`Built-in theme '${name}' not found in embedded assets`);
       continue;
     }
     themes[name] = buildThemeFromCSS(css, name);

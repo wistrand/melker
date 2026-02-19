@@ -24,6 +24,7 @@ const benchmarkFiles = [
   './graphics/quantization_bench.ts',
   './graphics/encoding_bench.ts',
   './graphics/dithering_bench.ts',
+  './memory/memory_bench.ts',
 ];
 
 console.log('Running all benchmarks...\n');
@@ -38,7 +39,7 @@ for (const file of benchmarkFiles) {
   console.log(`\n>>> ${file}\n`);
 
   const cmd = new Deno.Command('deno', {
-    args: ['run', '--allow-read', '--allow-write', '--allow-run', '--allow-env', file],
+    args: ['run', '--v8-flags=--expose-gc', '--allow-read', '--allow-write', '--allow-run', '--allow-env', file],
     cwd: new URL('.', import.meta.url).pathname,
     stdout: 'inherit',
     stderr: 'inherit',

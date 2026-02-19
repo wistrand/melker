@@ -13,7 +13,9 @@
     "check": "deno check src/**/*.ts benchmarks/**/*.ts",
     "check-ts-examples": "deno check examples/**/*.ts",
     "skill:zip": "cd skills/creating-melker-apps && zip -r ../../docs/skill-creating-melker-apps.zip SKILL.md references/ && echo 'Created skill-creating-melker-apps.zip'",
-    "completions": "deno run --allow-read --allow-write scripts/generate-completions.ts"
+    "completions": "deno run --allow-read --allow-write scripts/generate-completions.ts",
+    "bench:memory": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/memory/memory_bench.ts",
+    "bench:all": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/run-all.ts"
   },
   "compilerOptions": {
     "strict": true,

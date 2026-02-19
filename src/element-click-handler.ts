@@ -35,8 +35,8 @@ export class ElementClickHandler {
   handleElementClick(element: Element, event: any): void {
     logger.debug(`_handleElementClick: element.type=${element.type}, id=${element.id}, at (${event.x}, ${event.y})`);
 
-    // Set focus on clickable elements
-    if (this._deps.hitTester.isInteractiveElement(element) && element.id) {
+    // Set focus on interactive elements and command containers
+    if ((this._deps.hitTester.isInteractiveElement(element) || this._deps.hitTester.isCommandContainer(element)) && element.id) {
       // Register element as focusable (idempotent operation)
       this._deps.onRegisterFocusable(element.id);
 

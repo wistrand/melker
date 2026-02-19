@@ -1,0 +1,116 @@
+<melker>
+  <title>Command Element Test</title>
+  <policy>{"name": "Command Test", "description": "Test the command element", "permissions": {}}</policy>
+
+  <script>
+    let log = [];
+
+    function appendLog(msg) {
+      log.unshift(msg);
+      if (log.length > 12) log.pop();
+      $melker.getElementById('log').props.text = log.join('\n');
+    }
+
+    // Panel A commands
+    export function addItem() { appendLog('Panel A: Add Item (a/n)'); }
+    export function removeItem() { appendLog('Panel A: Remove Item (Del/Bksp)'); }
+
+    // Panel B commands
+    export function buildProject() { appendLog('Panel B: Build Project (b)'); }
+    export function clearAll() { appendLog('Panel B: Clear All (Del/Bksp)'); }
+
+    // Panel C commands
+    export function copyItem() { appendLog('Panel C: Copy (c/y)'); }
+
+    // Panel D commands (with focusable children)
+    export function panelDAction() { appendLog('Panel D: Action (d)'); }
+    export function panelDButton() { appendLog('Panel D: Button clicked'); }
+
+    // Panel E commands (click only, no border)
+    export function panelEAction() { appendLog('Panel E: Action (e)'); }
+
+    // Global commands
+    export function save() { appendLog('Global: Save (Ctrl+S)'); }
+    export function selectOne() { appendLog('Global: Select 1 (numeral key)'); }
+    export function selectTwo() { appendLog('Global: Select 2 (numeral key)'); }
+    export function selectThree() { appendLog('Global: Select 3 (numeral key)'); }
+    export function uppercaseP() { appendLog('Global: P pressed (case-insensitive)'); }
+  </script>
+
+  <style>
+    .panel { border: thin; padding: 1; flex: 1; }
+  </style>
+
+  <container style="width: fill; height: fill; display: flex; flex-direction: column; gap: 1; padding: 1;">
+    <text style="font-weight: bold;">Command Element Test</text>
+    <text>Tab/click between panels. Press shortcut keys. Ctrl+K opens the palette.</text>
+
+    <container style="display: flex; flex-direction: row; gap: 1; flex: 1;">
+
+      <!-- Panel A: focusable because it has command children -->
+      <container id="panelA" class="panel">
+        <text style="font-weight: bold;">Panel A</text>
+        <text>a/n = Add, Del/Bksp = Remove</text>
+        <command key="a,n" label="Add Item" group="Panel A" onExecute="$app.addItem()" />
+        <command key="Delete,Backspace" label="Remove Item" group="Panel A" onExecute="$app.removeItem()" />
+      </container>
+
+      <!-- Panel B: same Delete key, different scope (innermost wins) -->
+      <container id="panelB" class="panel">
+        <text style="font-weight: bold;">Panel B</text>
+        <text>b = Build, Del/Bksp = Clear</text>
+        <command key="b" label="Build Project" group="Panel B" onExecute="$app.buildProject()" />
+        <command key="Delete,Backspace" label="Clear All" group="Panel B" onExecute="$app.clearAll()" />
+      </container>
+
+      <!-- Panel C: no border, focus shows * marker -->
+      <container id="panelC" style="flex: 1;">
+        <text style="font-weight: bold;">Panel C (no border)</text>
+        <text>c/y = Copy</text>
+        <command key="c,y" label="Copy" group="Panel C" onExecute="$app.copyItem()" />
+      </container>
+
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 1;">
+
+      <!-- Panel D: click-focusable container with a focusable child (button) -->
+      <!-- Clicking the panel background focuses the panel; clicking the button focuses the button -->
+      <container id="panelD" class="panel">
+        <text style="font-weight: bold;">Panel D (has button)</text>
+        <text>d = Action, or click button</text>
+        <command key="d" label="Action" group="Panel D" onExecute="$app.panelDAction()" />
+        <button label="Click Me" onClick="$app.panelDButton()" />
+      </container>
+
+      <!-- Panel E: click-focusable, no border -->
+      <container id="panelE" style="flex: 1; padding: 1;">
+        <text style="font-weight: bold;">Panel E (click to focus)</text>
+        <text>e = Action</text>
+        <command key="e" label="Action" group="Panel E" onExecute="$app.panelEAction()" />
+      </container>
+
+    </container>
+
+    <!-- Global commands -->
+    <command key="Ctrl+s" label="Save" global onExecute="$app.save()" />
+
+    <!-- Numeral keys: schema-driven coercion keeps these as strings -->
+    <command key="1" label="Select 1" global onExecute="$app.selectOne()" />
+    <command key="2" label="Select 2" global onExecute="$app.selectTwo()" />
+    <command key="3" label="Select 3" global onExecute="$app.selectThree()" />
+
+    <!-- Case normalization: p matches both p and Shift+P across all terminals -->
+    <command key="p" label="Uppercase P test" global onExecute="$app.uppercaseP()" />
+
+    <!-- Disabled command: should never fire -->
+    <command key="x" label="Disabled Action" disabled onExecute="
+      $melker.getElementById('log').props.text = 'ERROR: disabled command fired!';
+    " />
+
+    <!-- Input: global shortcuts (1,2,3,p) should be suppressed while typing -->
+    <input id="testInput" placeholder="Type here - global shortcuts suppressed" style="width: fill;" />
+
+    <text id="log" style="border: thin; flex: 1; padding: 1; overflow: scroll;">Event log:</text>
+  </container>
+</melker>

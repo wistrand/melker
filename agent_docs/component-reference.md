@@ -4,6 +4,7 @@
 
 - **Layout**: `container` (flexbox, scrollable), `tabs`/`tab`, `split-pane`, `dialog` (modal, draggable), `separator`
 - **Text & Input**: `text`, `input`, `textarea`, `slider`, `checkbox`, `radio`, `button`
+- **Declarative**: `command` (keyboard shortcut binding — non-visual, focus-scoped or global)
 - **Data**: `data-table` (virtual-scrolled rows), `table` (HTML-style), `data-tree` (expandable hierarchy)
 - **Dropdowns**: `combobox` (type-to-filter), `select` (picker), `autocomplete` (async search), `command-palette` (Ctrl+K, draggable)
 - **Graphics**: `canvas` (pixel drawing, shaders), `img` (PNG/JPEG/GIF/WebP), `video` (FFmpeg playback)
@@ -1832,6 +1833,90 @@ All elements support these props for palette customization:
 |-------------------------------------|-----------------------------------------------|
 | `src/command-palette-components.ts` | Element discovery, label resolution, shortcuts |
 | `src/engine-system-palette.ts`      | Injection into command palette elements        |
+
+## Command Element
+
+The `<command>` element is a non-visual, declarative replacement for `onKeyPress` switch blocks. Each command binds a keyboard shortcut to an action with structured metadata (key, label, callback), making shortcuts discoverable by the command palette and AI accessibility dialog.
+
+### Usage
+
+```xml
+<!-- Focus-scoped commands (fire when parent or descendants have focus) -->
+<container id="editor" style="border: thin; padding: 1;">
+  <command key="n" label="New File" onExecute="$app.newFile()" />
+  <command key="Delete,Backspace" label="Delete" onExecute="$app.del()" />
+  <text>Editor content</text>
+</container>
+
+<!-- Global command (fires regardless of focus) -->
+<command key="Ctrl+S" label="Save" global onExecute="$app.save()" />
+
+<!-- Disabled command -->
+<command key="x" label="Danger" disabled onExecute="$app.danger()" />
+```
+
+### Props
+
+| Prop        | Type     | Default | Description                                          |
+|-------------|----------|---------|------------------------------------------------------|
+| `key`       | string   | -       | Keyboard shortcut, comma-separated for multiple keys |
+| `label`     | string   | -       | Human-readable command name (shown in palette)       |
+| `onExecute` | handler  | -       | Callback when command is triggered                   |
+| `group`     | string   | 'Commands' | Palette group name                                |
+| `global`    | boolean  | false   | Promote to global shortcut (fires regardless of focus) |
+| `disabled`  | boolean  | false   | Temporarily disable the command                      |
+
+### Key Format
+
+The `key` prop supports comma-separated values for multiple bindings:
+
+| Value                  | Meaning                                  |
+|------------------------|------------------------------------------|
+| `"n"`                  | Single key                               |
+| `"Delete,Backspace"`   | Either Delete or Backspace               |
+| `"Ctrl+S"`             | Modifier combination                     |
+| `","`                  | Literal comma key                        |
+| `"a,comma"`            | `a` key or comma key                     |
+| `"1"`                  | Numeral key                              |
+| `"Space"`              | Space key (alias for `" "`)              |
+| `"+"`                  | Plus key                                 |
+| `"plus"`               | Alias for plus (avoids modifier ambiguity) |
+
+Letter keys are **case-insensitive**: `"p"`, `"P"`, and `"Shift+P"` all match the same keystroke. Use modifiers (`Ctrl+p`, `Alt+p`) to differentiate. Shift is preserved for non-letter keys (`Shift+ArrowUp`, `Shift+Tab`).
+
+### Behavior
+
+- **Non-visual**: Default style `display: 'none'`, skipped by layout
+- **Focus-scoped**: By default, fires when the parent container (or any descendant) has focus. Innermost matching command wins when nested.
+- **Global**: With `global` prop, fires via the palette shortcut map (priority 4 in keyboard dispatch). Suppressed when an overlay is open (dialogs, command palette, dev tools) or when the focused element consumes keys (input/textarea, slider, data-table, etc.). Modifier combos (Ctrl+S) pass through focused-element suppression but not overlay suppression.
+- **Implicit focusability**: Containers with non-global, non-disabled `<command>` children automatically become focusable via both keyboard (Tab/arrow) and mouse click. Clicking a container's background focuses it; clicking a focusable child (e.g., a button) inside it focuses the child instead.
+- **Focus indicator**: Focused command containers show a `*` marker in the upper-right corner and, if bordered, a focus-colored border
+- **Palette integration**: All commands appear as a single entry in the command palette, with the original `key` string shown as a hint (e.g., `ArrowLeft, a`). Each key is registered individually in the shortcut map for keyboard dispatch.
+
+### Comparison with Other Mechanisms
+
+| Mechanism              | Scope        | Purpose                                              |
+|------------------------|--------------|------------------------------------------------------|
+| `palette-shortcut`     | Global       | Shortcut that clicks/focuses an interactive element  |
+| `<command>`            | Focus-scoped | Declarative shortcut with custom action              |
+| `<command global>`     | Global       | Like `palette-shortcut` but with custom `onExecute`  |
+| `onKeyPress`           | Focus-scoped | Opaque callback (not discoverable by palette or AI)  |
+
+### Implementation Files
+
+| File                                | Purpose                                           |
+|-------------------------------------|---------------------------------------------------|
+| `src/components/command.ts`         | CommandElement class, registration, schema         |
+| `src/command-palette-components.ts` | Discovery, key parsing, shortcut map               |
+| `src/engine-keyboard-handler.ts`    | Focus-scoped command matching (`findMatchingCommand`) |
+| `src/focus-navigation-handler.ts`   | Implicit focusability for command containers       |
+| `src/hit-test.ts`                   | `isCommandContainer()` for mouse-click focus       |
+| `src/element-click-handler.ts`      | Focuses command containers on click                |
+| `src/rendering.ts`                  | Focus indicator (`*` marker, border color)         |
+
+### Example
+
+See [`examples/basics/command-test.melker`](../examples/basics/command-test.melker) for a working demo with multiple panels, scoped and global commands.
 
 ## Key Files Reference
 

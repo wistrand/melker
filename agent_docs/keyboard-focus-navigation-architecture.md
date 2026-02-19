@@ -24,6 +24,7 @@ Melker's keyboard and focus system handles key event dispatch, focus management,
 | `src/scroll-handler.ts`              | Scroll handling for arrow keys and mouse wheel       |
 | `src/input.ts`                       | Terminal input parsing (escape sequences, modifiers)  |
 | `src/types.ts`                       | `Focusable`, `KeyboardElement`, `hasKeyPressHandler`  |
+| `src/components/command.ts`          | `<command>` element class, registration, schema          |
 | `src/command-palette-components.ts`  | Palette component discovery, shortcuts, label resolution |
 | `src/engine-system-palette.ts`       | System palette injection, component command injection |
 
@@ -35,9 +36,9 @@ Melker's keyboard and focus system handles key event dispatch, focus management,
 |----------|------------------------------------|-------------------------------|-------------------------------------------------|
 | 1        | Ctrl+C exit                        | Ctrl+C                        | Always                                          |
 | 2        | Tab navigation                     | Tab, Shift+Tab                | Always                                          |
-| 3        | Arrow with no focus                | Arrow keys                    | No element currently focused                    |
-| 4        | System keys                        | F12, F6, Ctrl+K, Escape, etc. | Various                                         |
-| 4.5      | Palette shortcuts                  | User-defined                  | Shortcut registered via `palette-shortcut` prop |
+| 3        | System keys                        | F12, F6, Ctrl+K, Escape, etc. | Various                                         |
+| 4        | Palette shortcuts                  | User-defined                  | Shortcut registered via `palette-shortcut` or `<command global>` |
+| 4.5      | Arrow with no focus                | Arrow keys                    | No element currently focused                    |
 | 5        | Command palette capture            | All keys                      | Command palette is open                         |
 | 6        | Function keys (AI/accessibility)   | F7, F8, F9, Ctrl+/            | Various                                         |
 | 7        | Clipboard copy                     | Alt+N, Alt+C                  | Always                                          |
@@ -55,7 +56,10 @@ Melker's keyboard and focus system handles key event dispatch, focus management,
 4. **KeyboardElement** — `handlesOwnKeyboard() && onKeyPress()` (data-table, filterable-list, file-browser, data-tree)
 5. **button** — Enter triggers click
 6. **Clickable** — Enter/Space triggers click (checkbox, radio)
-7. **hasKeyPressHandler** — generic `onKeyPress()` fallback
+7. **`<command>` dispatch** — `findMatchingCommand()` walks ancestors of focused element, innermost match wins
+8. **hasKeyPressHandler** — generic `onKeyPress()` fallback
+
+**Implication for `<command>` elements:** Steps 1-4 mean input-like components (input, textarea, slider, split-pane-divider, `KeyboardElement`) consume keys before command dispatch runs. A `<command>` on a parent container cannot intercept keys handled by a focused child input. Use `onKeyPress` directly on the input for input-specific key handling (e.g., Enter to submit). See [command-element-architecture.md](command-element-architecture.md#when-to-use-command-vs-onkeypress) for the full pattern guide.
 
 ## Focus Management (`src/focus.ts`)
 
@@ -181,6 +185,49 @@ Both the container and its children are separate tab stops, sorted by position. 
 - **Container focused**: arrows scroll, gutter highlighted
 - **Child focused**: arrows scroll parent container (via `findScrollableParent`), gutter NOT highlighted
 
+## Command Element Dispatch
+
+The `<command>` element provides declarative keyboard shortcut binding. Commands participate in the keyboard dispatch chain at two levels:
+
+### Global Commands (Priority 4)
+
+Commands with `global` prop are registered in the palette shortcut map via `buildShortcutMap()`. Each command produces a single palette entry with the original `key` string as a hint; the individual keys are stored in `_globalKeys` and registered separately in the shortcut map for dispatch. They fire at the same priority as `palette-shortcut` props (4), but are suppressed by `shouldSuppressGlobalShortcut()` when:
+
+- **Any overlay is open**: command palette, alert/confirm/prompt dialog, modal document `<dialog open modal>`, AI dialog, dev tools
+- **input/textarea** is focused (all unmodified keys go to text entry)
+- **slider** or **split-pane-divider** is focused (always consume keys)
+- **KeyboardElement** with `handlesOwnKeyboard()` is focused (data-table, combobox, etc.)
+
+Overlay suppression applies to all shortcuts including modifier combos. Focused-element suppression only applies to unmodified keys — modifier combos (Ctrl+S, Alt+X) pass through.
+
+### Focus-Scoped Commands (Priority 8.7)
+
+Non-global commands are matched by `findMatchingCommand()` in `handleFocusedElementInput()`, after component-specific handlers but before the generic `onKeyPress` fallback.
+
+**Algorithm:**
+1. Build the ancestor path from the document root to the focused element
+2. Walk from the deepest ancestor to the shallowest (innermost command wins)
+3. At each level, check children for `<command>` elements matching the key event
+4. If a match is found and not disabled, execute `onExecute` and stop propagation
+
+This means overlapping keys in nested containers resolve naturally — the closest ancestor's command takes precedence.
+
+### Implicit Container Focusability
+
+Containers with non-global, non-disabled `<command>` children automatically become focusable via both keyboard (Tab/arrow) and mouse click. `findFocusableElements()` checks for command children when `canReceiveFocus()` returns false (e.g., non-scrollable containers). These containers appear in tab order with `tabIndex: 0`. For mouse click, `HitTester.isCommandContainer()` returns the container from hit testing and `ElementClickHandler` focuses it. Clicking a focusable child (e.g., a button) inside the container focuses the child instead — hit testing is depth-first.
+
+### Focus Indicator
+
+Focused command containers show:
+- **Border color**: Theme `focusBorder` color applied to existing borders
+- **`*` marker**: Always drawn in the upper-right corner of the container bounds (after children render, to avoid being overwritten)
+
+### Key Parsing
+
+The `key` prop supports comma-separated values (e.g., `"Delete,Backspace"`). Special values: `","` or `"comma"` for the comma key, `" "` or `"Space"` for the space key. Numeric values like `key="1"` work naturally — the template parser uses schema-driven coercion and keeps string-typed props as strings.
+
+Matching is **case-insensitive** for letter keys: `key="p"`, `key="P"`, and `key="Shift+P"` all normalize to `"p"`. This is a terminal constraint — simple terminals don't report a shift flag for uppercase printable characters. Shift is preserved for non-printable keys (`Shift+ArrowUp`, `Shift+Tab`). See [command-element-architecture.md](command-element-architecture.md#case-sensitivity) for details.
+
 ## Scroll Interaction
 
 `ScrollHandler.findScrollableParent()` walks up the element tree to find the nearest scrollable ancestor. It verifies the container has layout bounds before returning it — containers in inactive tabs or collapsed sections are skipped.
@@ -262,6 +309,7 @@ Interactive elements (buttons, inputs, tabs, etc.) are auto-discovered and injec
 
 | Element Type                    | Action           | Group      |
 |---------------------------------|------------------|------------|
+| `command`                       | Execute callback | Commands   |
 | `button`, `checkbox`, `radio`   | Trigger onClick  | Actions    |
 | `tab`                           | Switch to tab    | Navigation |
 | `input`, `textarea`, `slider`   | Focus            | Fields     |
@@ -276,7 +324,7 @@ Interactive elements (buttons, inputs, tabs, etc.) are auto-discovered and injec
 - **`toggleCommandPalette()`**: Runs full discovery + injection. Catches dynamic elements (e.g., alert dialog buttons).
 - No discovery in the render hot path.
 
-### Palette Shortcuts (Priority 4.5)
+### Palette Shortcuts (Priority 4)
 
 Elements can declare global keyboard shortcuts via `palette-shortcut`:
 

@@ -3,6 +3,7 @@
 
 import { Document } from '../document.ts';
 import { Element, isScrollingEnabled, hasSubtreeElements } from '../types.ts';
+import { discoverPaletteItems } from '../command-palette-components.ts';
 
 /** Check if an ARIA boolean attribute is truthy (handles both boolean and string values) */
 function isAriaTrue(value: unknown): boolean {
@@ -433,6 +434,16 @@ function getAvailableActions(document: Document): string[] {
           actions.push('Arrow keys: Scroll content');
         }
         break;
+    }
+  }
+
+  // Discovered commands and palette shortcuts
+  const noop = () => {};
+  const items = discoverPaletteItems(document, noop);
+  for (const item of items) {
+    const key = item.hint || item.shortcut;
+    if (key) {
+      actions.push(`${key}: ${item.label}`);
     }
   }
 

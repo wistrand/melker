@@ -183,6 +183,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | `<combobox>` | placeholder, filter, onSelect | Filterable dropdown |
 | `<select>` | value, onSelect | Dropdown picker |
 | `<autocomplete>` | placeholder, onSearch, onSelect, debounce | Async search dropdown |
+| `<command>` | key, label, global, disabled, onExecute | Declarative keyboard shortcut |
 | `<command-palette>` | open, onSelect, width | Modal command picker |
 | `<markdown>` | src, text, onLink, enableGfm | Markdown rendering with image support |
 | `<slider>` | min, max, value, step, onChange | Range input |
@@ -321,6 +322,28 @@ Events auto-render after completion:
 - `onInput`: `event.value` - current input value
 - `onSelect`: `event.value`, `event.label` - selected option
 - `onKeyPress`: `event.key` - key pressed
+
+## Command Element (Keyboard Shortcuts)
+
+The `<command>` element is a declarative replacement for `onKeyPress` switch blocks. Commands are auto-discovered by the command palette and AI assistant.
+
+```xml
+<!-- Focus-scoped: fires when parent container has focus -->
+<container style="border: thin; padding: 1;">
+  <command key="Delete,Backspace" label="Delete Item" onExecute="$app.deleteItem()" />
+  <text>Select and press Delete</text>
+</container>
+
+<!-- Global: fires regardless of focus -->
+<command key="Ctrl+s" label="Save" global onExecute="$app.save()" />
+<command key="ArrowLeft,a" label="Move Left" global onExecute="$app.moveLeft()" />
+```
+
+**Key format:** Comma-separated for multiple bindings. Aliases: `comma` for `,`, `Space` for ` `, `plus` for `+`. Modifier combos: `Ctrl+S`, `Alt+X`. Letter keys are case-insensitive.
+
+Containers with `<command>` children are automatically focusable via both keyboard (Tab) and mouse click. Clicking a focusable child (e.g., a button) inside the container focuses the child, not the container.
+
+**When to use `<command>` vs `onKeyPress`:** Use `<command>` for container shortcuts and global app shortcuts. Use `onKeyPress` for input-specific keys (e.g., Enter to submit a form field) — input elements consume keys before command dispatch.
 
 ## Scripts
 

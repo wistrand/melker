@@ -5,7 +5,7 @@ import { createElement } from './element.ts';
 import type { Element } from './types.ts';
 import { parseHtml as parse } from './deps.ts';
 import { Stylesheet, parseStyleProperties } from './stylesheet.ts';
-import { isLintEnabled, validateElementProps, addWarning, reportWarnings, clearWarnings, BASE_STYLES_SCHEMA, getComponentSchema, getRegisteredComponents } from './lint.ts';
+import { isLintEnabled, validateElementProps, addWarning, reportWarnings, clearWarnings, BASE_STYLES_SCHEMA, BASE_PROPS_SCHEMA, getComponentSchema, getRegisteredComponents } from './lint.ts';
 
 
 // Types for template processing
@@ -520,7 +520,7 @@ function convertAstNode(node: any, context: TemplateContext): ParsedNode | Parse
           // Track location of the attribute name for boolean attrs
           attributeLocations[attrName] = { start: attr.start, end: attr.end };
         } else {
-          const value = parseAttributeValue(attr.value.value, context, attrName);
+          const value = parseAttributeValue(attr.value.value, context, attrName, node.name);
           attributes[attrName] = value;
           // Track location of the attribute value (more useful for handlers)
           attributeLocations[attrName] = { start: attr.value.start, end: attr.value.end };
@@ -564,7 +564,7 @@ function convertAstNode(node: any, context: TemplateContext): ParsedNode | Parse
 /**
  * Parse attribute values, handling expression placeholders and CSS-style strings
  */
-function parseAttributeValue(value: string, context: TemplateContext, attributeName?: string, templateContext?: any): any {
+function parseAttributeValue(value: string, context: TemplateContext, attributeName?: string, elementType?: string): any {
   if (!value) return '';
 
   // Check for expression placeholder
@@ -614,8 +614,17 @@ function parseAttributeValue(value: string, context: TemplateContext, attributeN
   if (value === 'true') return true;
   if (value === 'false') return false;
 
-  // Numeric values
+  // Numeric values — coerce only when the schema expects a number
   if (/^\d+(\.\d+)?$/.test(value)) {
+    if (attributeName && elementType) {
+      const schema = getComponentSchema(elementType);
+      const propSchema = schema?.props[attributeName] ?? BASE_PROPS_SCHEMA[attributeName];
+      if (propSchema) {
+        const propType = propSchema.type;
+        if (propType === 'string') return value;
+        if (Array.isArray(propType) && !propType.includes('number')) return value;
+      }
+    }
     return parseFloat(value);
   }
 

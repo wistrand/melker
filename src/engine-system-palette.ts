@@ -282,6 +282,8 @@ function _buildGroupElements(items: PaletteItem[]): Element[] {
       };
       if (item.shortcut) {
         optionProps.shortcut = item.shortcut;
+      } else if (item.hint) {
+        optionProps.shortcut = item.hint;
       }
       optionChildren.push(createElement('option', optionProps));
     }

@@ -1035,9 +1035,19 @@ export class RenderingEngine {
     // Render border (skip collapsed borders if chrome was collapsed due to insufficient space)
     // Pass original bounds, clipped bounds, and clip rect for proper border visibility checks
     const clipRect = context.clipRect || context.viewport;
-    this._renderBorder(bounds, clippedBounds, clipRect, computedStyle, context.buffer, node.chromeCollapse);
 
+    // Apply focus border color to containers with <command> children
+    let borderStyle = computedStyle;
+    const isCommandFocused = context.focusedElementId && element.id === context.focusedElementId
+        && element.children?.some(c => c.type === 'command' && !c.props.disabled && !c.props.global);
+    if (isCommandFocused) {
+      const focusColor = getThemeColor('focusBorder');
+      if (focusColor !== undefined && computedStyle.border && computedStyle.border !== 'none') {
+        borderStyle = { ...computedStyle, borderColor: focusColor };
+      }
+    }
 
+    this._renderBorder(bounds, clippedBounds, clipRect, borderStyle, context.buffer, node.chromeCollapse);
 
     // Render content based on element type
     this._renderContent(element, bounds, computedStyle, context.buffer, context);
@@ -1115,6 +1125,23 @@ export class RenderingEngine {
 
       for (const child of node.children) {
         this._renderNode(child, childContext);
+      }
+    }
+
+    // Draw focus marker for containers with <command> children (after all children)
+    if (isCommandFocused) {
+      const focusColor = getThemeColor('focusBorder');
+      if (focusColor !== undefined) {
+        const mx = bounds.x + bounds.width - 1;
+        const my = bounds.y;
+        context.buffer.currentBuffer.setCell(mx, my, {
+          char: '*',
+          foreground: focusColor,
+          background: parseColor(computedStyle.backgroundColor) || 0,
+          bold: false,
+          reverse: false,
+          underline: false,
+        });
       }
     }
   }

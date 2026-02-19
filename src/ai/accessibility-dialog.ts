@@ -322,9 +322,10 @@ export class AccessibilityDialogManager {
 
     this._addOverlayToDocument();
 
-    // Focus the input field
+    // Focus the input field — deferred to run after trapFocus's setTimeout
     if (this._deps.focusManager) {
-      this._deps.focusManager.focus('accessibility-query-input');
+      const fm = this._deps.focusManager;
+      setTimeout(() => fm.focus('accessibility-query-input'), 0);
     }
   }
 

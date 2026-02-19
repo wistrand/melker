@@ -263,7 +263,7 @@ class CommandPaletteElement extends FilterableListCore {
 
 **Dragging:** The palette can be dragged by its title bar. Position is anchored on first render after opening (filtering does not re-center). Drag offset resets when the palette is closed and reopened. Mouse events are routed through `TextSelectionHandler` which walks the document tree to find open palettes (the system palette may not be in the element registry since it is injected after document initialization).
 
-**Component Auto-Discovery:** Interactive elements (buttons, inputs, tabs, etc.) are auto-discovered by `discoverPaletteItems()` in `src/command-palette-components.ts` and injected as groups/options into all command palettes. Elements can declare `palette-shortcut` for global keyboard shortcuts (priority 4.5 in the dispatch chain).
+**Component Auto-Discovery:** Interactive elements (buttons, inputs, tabs, etc.) are auto-discovered by `discoverPaletteItems()` in `src/command-palette-components.ts` and injected as groups/options into all command palettes. Elements can declare `palette-shortcut` for global keyboard shortcuts (priority 4 in the dispatch chain).
 
 ## Rendering Architecture
 

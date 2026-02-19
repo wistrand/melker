@@ -3,6 +3,8 @@
 import { assertEquals, assertExists, assertThrows, assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import { parseMelkerFile } from '../src/template.ts';
 import { COLORS, cssToRgba } from '../src/components/color-utils.ts';
+// Import components to trigger schema registration (needed for schema-driven coercion tests)
+import '../src/components/mod.ts';
 
 // ============================================
 // Simple .melker files (no wrapper, no scripts)
@@ -437,6 +439,67 @@ Deno.test('parseMelkerFile parses counter.melker with inline handlers', async ()
   assertEquals(result.element.type, 'container');
   // counter.melker only has inline onClick handlers, no script tag
   assertEquals(result.scripts.length, 0);
+});
+
+// ============================================
+// Schema-driven numeric coercion
+// ============================================
+
+Deno.test('parseMelkerFile keeps numeric key prop as string for command element', () => {
+  const content = `
+    <container>
+      <command key="1" label="Select 1" onExecute="noop" />
+    </container>
+  `;
+  const result = parseMelkerFile(content);
+  const command = result.element.children![0];
+  assertEquals(command.type, 'command');
+  // command.props.key is the React-style key override; the shortcut is in props.key
+  // parseMelkerFile runs createElement which may remap — check the raw prop survived as string
+  const key = command.props.key;
+  assertEquals(key, '1', `expected key to be string "1" but got ${typeof key} ${key}`);
+});
+
+Deno.test('parseMelkerFile keeps non-numeric key prop as string for command element', () => {
+  const content = `
+    <container>
+      <command key="Delete" label="Delete" onExecute="noop" />
+    </container>
+  `;
+  const result = parseMelkerFile(content);
+  const command = result.element.children![0];
+  assertEquals(command.props.key, 'Delete');
+});
+
+Deno.test('parseMelkerFile coerces numeric props to number when schema says number', () => {
+  const content = `<slider min="5" max="100" value="50" />`;
+  const result = parseMelkerFile(content);
+  assertEquals(result.element.props.min, 5);
+  assertEquals(typeof result.element.props.min, 'number');
+  assertEquals(result.element.props.max, 100);
+  assertEquals(result.element.props.value, 50);
+});
+
+Deno.test('parseMelkerFile coerces tabIndex to number (base prop schema)', () => {
+  const content = `<button label="OK" tabIndex="3" />`;
+  const result = parseMelkerFile(content);
+  assertEquals(result.element.props.tabIndex, 3);
+  assertEquals(typeof result.element.props.tabIndex, 'number');
+});
+
+Deno.test('parseMelkerFile keeps string prop as string even when value is numeric', () => {
+  const content = `<text id="123" />`;
+  const result = parseMelkerFile(content);
+  assertEquals(result.element.props.id, '123');
+  assertEquals(typeof result.element.props.id, 'string');
+});
+
+Deno.test('parseMelkerFile coerces numeric values for unknown element types (backward compat)', () => {
+  const content = `<container foo="42" />`;
+  const result = parseMelkerFile(content);
+  // Unknown prop on known element — no schema match, falls through to parseFloat
+  assertEquals(result.element.props.foo, 42);
+  assertEquals(typeof result.element.props.foo, 'number');
 });
 
 Deno.test('parseMelkerFile parses script-demo.melker with scripts', async () => {

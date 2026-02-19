@@ -16,12 +16,14 @@ export interface PaletteItem {
   label: string;
   group: string;       // 'Actions', 'Navigation', 'Fields'
   action: () => void;
-  shortcut?: string;   // From palette-shortcut prop
+  shortcut?: string;   // From palette-shortcut prop — registered in global shortcut map
+  hint?: string;       // Display-only key hint shown in palette (not registered as shortcut)
 }
 
 /** Internal item with element type for disambiguation */
 interface InternalPaletteItem extends PaletteItem {
   _elementType: string;
+  _globalKeys?: string[];  // All keys for global commands (registered in shortcut map)
 }
 
 /** Element types that qualify for auto-discovery */
@@ -213,6 +215,43 @@ function _walkTree(
   // Skip command palettes themselves
   if (element.type === 'command-palette') return;
 
+  // Check for <command> elements (declarative shortcuts)
+  if (element.type === 'command' && element.props.label && typeof element.props.key === 'string') {
+    if (!element.props.disabled && element.props.palette !== false) {
+      const group = element.props.group || 'Commands';
+      const keys = parseCommandKeys(element.props.key);
+      const action = () => {
+        if (typeof element.props.onExecute === 'function') {
+          element.props.onExecute();
+        }
+        render();
+      };
+
+      if (element.props.global) {
+        // Global: single palette entry with hint, keys registered via _globalKeys
+        items.push({
+          elementId: element.id,
+          label: element.props.label,
+          group,
+          action,
+          hint: element.props.key,
+          _globalKeys: keys,
+          _elementType: 'command',
+        });
+      } else {
+        // Non-global: single palette entry, show original key string as hint
+        items.push({
+          elementId: element.id,
+          label: element.props.label,
+          group,
+          action,
+          hint: element.props.key,
+          _elementType: 'command',
+        });
+      }
+    }
+  }
+
   // Check if this element qualifies
   if (ALL_QUALIFYING_TYPES.has(element.type)) {
     // Opt-out check
@@ -268,13 +307,58 @@ const SYSTEM_KEYS = new Set([
 ]);
 
 /**
+ * Parse a command key prop into individual key strings.
+ * Supports comma-separated lists, literal "," as a single key,
+ * and the word "comma" as an alias for ",".
+ *
+ *   ","       → [","]
+ *   "comma"   → [","]
+ *   "a,b"     → ["a", "b"]
+ *   "a,comma" → ["a", ","]
+ */
+export function parseCommandKeys(keyProp: string): string[] {
+  // Single comma character means the comma key
+  if (keyProp.trim() === ',') return [','];
+  // Single space character means the space key
+  if (keyProp === ' ') return [' '];
+
+  const parts = keyProp.split(',');
+  const keys: string[] = [];
+  for (const p of parts) {
+    const trimmed = p.trim();
+    if (!trimmed) continue;
+    const lower = trimmed.toLowerCase();
+    if (lower === 'comma') keys.push(',');
+    else if (lower === 'space') keys.push(' ');
+    else if (lower === 'plus') keys.push('+');
+    else keys.push(trimmed);
+  }
+  return keys;
+}
+
+/**
  * Normalize a shortcut string to a canonical form.
  * 'Ctrl+S' → 'ctrl+s', 'Alt+Ctrl+S' → 'alt+ctrl+s' (sorted modifiers)
  */
 export function normalizeShortcut(shortcut: string): string {
   const parts = shortcut.toLowerCase().split('+').map(p => p.trim());
-  const key = parts.pop()!;
-  const modifiers = parts.sort(); // alphabetical: alt, ctrl, meta, shift
+  let key = parts.pop()!;
+  // Handle '+' as a literal key: "+" splits to ["",""], "Ctrl++" splits to ["ctrl","",""]
+  if (key === '' && shortcut.endsWith('+')) {
+    key = '+';
+    // Remove the extra empty part created by splitting the literal '+'
+    if (parts.length > 0 && parts[parts.length - 1] === '') parts.pop();
+  }
+  // Restore space key that was trimmed away; also accept "space" alias
+  if (key === '' && shortcut.includes(' ')) key = ' ';
+  if (key === 'space') key = ' ';
+  if (key === 'plus') key = '+';
+  let modifiers = parts.filter(m => m !== '');
+  // Strip shift for single printable characters — the case already carries shift info
+  if (key.length === 1 && key >= 'a' && key <= 'z') {
+    modifiers = modifiers.filter(m => m !== 'shift');
+  }
+  modifiers.sort(); // alphabetical: alt, ctrl, meta, shift
   return [...modifiers, key].join('+');
 }
 
@@ -286,9 +370,14 @@ export function eventToShortcut(event: { key: string; ctrlKey?: boolean; altKey?
   if (event.altKey) mods.push('alt');
   if (event.ctrlKey) mods.push('ctrl');
   if (event.metaKey) mods.push('meta');
-  if (event.shiftKey) mods.push('shift');
+  // Include shift only for non-printable keys (arrows, function keys, etc.)
+  // For single printable characters, shift is implicit in the character case
+  const key = event.key.toLowerCase();
+  if (event.shiftKey && !(key.length === 1 && key >= 'a' && key <= 'z')) {
+    mods.push('shift');
+  }
   mods.sort();
-  mods.push(event.key.toLowerCase());
+  mods.push(key);
   return mods.join('+');
 }
 
@@ -305,23 +394,29 @@ export function buildShortcutMap(items: PaletteItem[]): Map<string, () => void> 
   const conflicts: string[] = [];
 
   for (const item of items) {
-    if (!item.shortcut) continue;
+    // Global commands use _globalKeys; palette-shortcut elements use shortcut
+    const internal = item as InternalPaletteItem;
+    const keysToRegister = internal._globalKeys
+      ?? (item.shortcut ? [item.shortcut] : []);
+    if (keysToRegister.length === 0) continue;
 
-    const normalized = normalizeShortcut(item.shortcut);
+    for (const key of keysToRegister) {
+      const normalized = normalizeShortcut(key);
 
-    // Check system key conflict
-    if (SYSTEM_KEYS.has(normalized)) {
-      conflicts.push(`${item.shortcut} on '${item.label}' conflicts with system key`);
-      continue;
+      // Check system key conflict
+      if (SYSTEM_KEYS.has(normalized)) {
+        conflicts.push(`${key} on '${item.label}' conflicts with system key`);
+        continue;
+      }
+
+      // Check duplicate component shortcut (first in tree order wins)
+      if (map.has(normalized)) {
+        conflicts.push(`${key} on '${item.label}' ignored (already bound)`);
+        continue;
+      }
+
+      map.set(normalized, item.action);
     }
-
-    // Check duplicate component shortcut (first in tree order wins)
-    if (map.has(normalized)) {
-      conflicts.push(`${item.shortcut} on '${item.label}' ignored (already bound)`);
-      continue;
-    }
-
-    map.set(normalized, item.action);
   }
 
   // Emit one summary warning if there were conflicts

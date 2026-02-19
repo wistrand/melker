@@ -21,6 +21,7 @@
         | Tab        | Switch between panels     |
         | Arrow keys | Navigate table rows       |
         | Enter      | View earthquake details   |
+        | R          | Refresh data              |
         | F12        | Dev tools                 |
 
         Data refreshes every 60 seconds from the USGS GeoJSON feed.
@@ -170,9 +171,11 @@
 
         </split-pane>
 
+        <command key="r" label="Refresh Data" global onExecute="$app.refresh()" />
+
         <!-- Footer -->
         <container class="footer">
-            <text>Arrow keys: navigate | Enter: details | Data: USGS</text>
+            <text>Arrow keys: navigate | Enter: details | R: refresh | Data: USGS</text>
             <text id="lastUpdate">--</text>
         </container>
     </container>

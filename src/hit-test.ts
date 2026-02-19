@@ -90,6 +90,17 @@ export class HitTester {
   }
 
   /**
+   * Check if an element is a command container (has non-global, non-disabled
+   * command children) and can receive click focus.
+   */
+  isCommandContainer(element: Element): boolean {
+    if (!element.id || !element.children || element.props?.disabled) return false;
+    return element.children.some(c =>
+      c.type === 'command' && !c.props.disabled && !c.props.global
+    );
+  }
+
+  /**
    * Check if an element supports text selection
    */
   isTextSelectableElement(element: Element): boolean {
@@ -213,8 +224,8 @@ export class HitTester {
           }
         }
 
-        // If it's an interactive or text-selectable element, return it
-        if (this.isInteractiveElement(child) || this.isTextSelectableElement(child)) {
+        // If it's an interactive, text-selectable, or command container element, return it
+        if (this.isInteractiveElement(child) || this.isTextSelectableElement(child) || this.isCommandContainer(child)) {
           return child;
         }
 
@@ -230,7 +241,7 @@ export class HitTester {
           if (nestedHit) {
             return nestedHit;
           }
-        } else if ((this.isInteractiveElement(child) || this.isTextSelectableElement(child)) && pointInBounds(x, y, _contentBounds)) {
+        } else if ((this.isInteractiveElement(child) || this.isTextSelectableElement(child) || this.isCommandContainer(child)) && pointInBounds(x, y, _contentBounds)) {
           // Interactive or text-selectable element without stored bounds - use parent content bounds
           return child;
         }
@@ -363,7 +374,7 @@ export class HitTester {
     // If we have bounds and point is inside, check if this element should be returned
     if (bounds && pointInBounds(x, y, bounds)) {
       // If no child hit, check if this element should be returned
-      if (this.isInteractiveElement(element) || this.isTextSelectableElement(element)) {
+      if (this.isInteractiveElement(element) || this.isTextSelectableElement(element) || this.isCommandContainer(element)) {
         return element;
       }
 

@@ -101,6 +101,14 @@ export class FocusNavigationHandler {
       try {
         if (element.canReceiveFocus()) {
           focusableElements.push(element);
+        } else if (element.children?.some(c => c.type === 'command' && !c.props.disabled && !c.props.global) && element.id) {
+          // Containers with <command> children are implicitly focusable and tabbable
+          if (!element.props.disabled) {
+            if (element.props.tabIndex === undefined) {
+              element.props.tabIndex = 0;
+            }
+            focusableElements.push(element);
+          }
         }
       } catch (error) {
         // Fallback: element might not properly implement canReceiveFocus
@@ -114,6 +122,14 @@ export class FocusNavigationHandler {
           type: element.type,
           id: element.id,
         });
+        focusableElements.push(element);
+      }
+    } else if (element.children?.some(c => c.type === 'command' && !c.props.disabled && !c.props.global) && element.id) {
+      // Non-Focusable elements with <command> children are also implicitly focusable
+      if (!element.props.disabled) {
+        if (element.props.tabIndex === undefined) {
+          element.props.tabIndex = 0;
+        }
         focusableElements.push(element);
       }
     }

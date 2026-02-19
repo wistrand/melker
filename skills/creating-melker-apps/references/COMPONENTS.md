@@ -1389,6 +1389,59 @@ LCD/LED-style digit and text display using Unicode characters.
 - `getValue()` - Get current value
 - `setValue(value)` - Set value
 
+## Command Element
+
+The `<command>` element is a non-visual, declarative keyboard shortcut binding. Commands are auto-discovered by the command palette and AI assistant.
+
+```xml
+<!-- Focus-scoped: fires when parent container (or descendants) has focus -->
+<container style="border: thin; padding: 1;">
+  <command key="Delete,Backspace" label="Delete Item" onExecute="$app.deleteItem()" />
+  <command key="n" label="New File" onExecute="$app.newFile()" />
+  <text>Editor panel</text>
+</container>
+
+<!-- Global: fires regardless of focus -->
+<command key="Ctrl+s" label="Save" global onExecute="$app.save()" />
+<command key="ArrowLeft,a" label="Move Left" global onExecute="$app.moveLeft()" />
+
+<!-- Disabled command -->
+<command key="x" label="Danger" disabled onExecute="$app.danger()" />
+```
+
+**Props:**
+
+| Prop        | Type    | Default    | Description                                          |
+|-------------|---------|------------|------------------------------------------------------|
+| `key`       | string  | -          | Keyboard shortcut, comma-separated for multiple keys |
+| `label`     | string  | -          | Human-readable name (shown in palette)               |
+| `onExecute` | handler | -          | Callback when command fires                          |
+| `group`     | string  | 'Commands' | Palette group name                                   |
+| `global`    | boolean | false      | Fire regardless of focus                             |
+| `disabled`  | boolean | false      | Temporarily disable                                  |
+
+**Key format:** Comma-separated for multiple bindings. Special values and aliases:
+
+| Value     | Meaning            |
+|-----------|--------------------|
+| `","`     | Literal comma key  |
+| `"comma"` | Alias for comma    |
+| `" "`     | Space key          |
+| `"Space"` | Alias for space    |
+| `"+"`     | Plus key           |
+| `"plus"`  | Alias for plus     |
+
+Modifier combos: `Ctrl+S`, `Alt+X`, `Ctrl+Shift+Enter`. Letter keys are **case-insensitive** (`"p"`, `"P"`, `"Shift+P"` all match the same key). Shift is preserved for non-letter keys (`Shift+ArrowUp`, `Shift+Tab`).
+
+**Behavior:**
+- Non-visual (`display: none`), skipped by layout
+- Focus-scoped commands use innermost-wins: overlapping keys in nested containers resolve naturally
+- Containers with commands automatically become focusable via keyboard and mouse click (no manual `tabIndex` needed). Clicking a focusable child inside the container focuses the child, not the container.
+- All commands appear as a single entry in the command palette with the key string as a hint
+- Global commands are suppressed when overlays are open or when a focused input consumes keys
+
+**When to use `<command>` vs `onKeyPress`:** Use `<command>` for container shortcuts and global app shortcuts. Use `onKeyPress` on input-like components for input-specific keys (e.g., Enter to submit) — input elements consume keys before command dispatch.
+
 ## Command Palette Integration
 
 Interactive elements (buttons, inputs, tabs, etc.) are auto-discovered and shown in the command palette (Ctrl+K). The palette can be dragged by its title bar and resets to center when reopened. When selected, each performs its natural action (click, focus, toggle, switch tab).

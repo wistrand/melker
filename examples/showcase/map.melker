@@ -99,8 +99,21 @@ map.melker paris 12 satellite           # Paris with satellite imagery
         onMouseMove="$app.onMouseMove(event)"
         onMouseUp="$app.onMouseUp(event)"
         onWheel="$app.onWheel(event)"
-        onKeyPress="$app.onKeyPress(event)"
       />
+      <command key="ArrowUp,w,k" label="Pan Up" global onExecute="$app.panUp()" />
+      <command key="ArrowDown,s,j" label="Pan Down" global onExecute="$app.panDown()" />
+      <command key="ArrowLeft,a,h" label="Pan Left" global onExecute="$app.panLeft()" />
+      <command key="ArrowRight,d,l" label="Pan Right" global onExecute="$app.panRight()" />
+      <command key="+,=" label="Zoom In" global onExecute="$app.zoomIn()" />
+      <command key="-" label="Zoom Out" global onExecute="$app.zoomOut()" />
+      <command key="Home" label="Reset View" global onExecute="$app.resetView()" />
+      <command key="p,P" label="Cycle Provider" global onExecute="$app.cycleProvider()" />
+      <command key="1" label="Terrain" global onExecute="$app.selectProvider(0)" />
+      <command key="2" label="Streets" global onExecute="$app.selectProvider(1)" />
+      <command key="3" label="Voyager No Labels" global onExecute="$app.selectProvider(2)" />
+      <command key="4" label="Voyager" global onExecute="$app.selectProvider(3)" />
+      <command key="5" label="OpenStreetMap" global onExecute="$app.selectProvider(4)" />
+      <command key="6" label="Satellite" global onExecute="$app.selectProvider(5)" />
     </container>
 
     <!-- Footer with attribution and coordinates -->
@@ -1128,71 +1141,57 @@ map.melker paris 12 satellite           # Paris with satellite imagery
       updateUI();
     }
 
-    // Keyboard handler
-    export function onKeyPress(event: { key: string }) {
+    // Pan/navigation helpers
+    function getPanDegrees(): number {
       const panAmount = 0.1;  // Fraction of viewport to pan
       const degreesPerPixel = 360 / (TILE_SIZE * Math.pow(2, zoom));
-      const panDegrees = TILE_SIZE * panAmount * degreesPerPixel;
+      return TILE_SIZE * panAmount * degreesPerPixel;
+    }
 
-      switch (event.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'k':
-          centerLat = Math.min(85, centerLat + panDegrees);
-          updateUI();
-          break;
-        case 'ArrowDown':
-        case 's':
-        case 'j':
-          centerLat = Math.max(-85, centerLat - panDegrees);
-          updateUI();
-          break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'h':
-          centerLon -= panDegrees;
-          while (centerLon < -180) centerLon += 360;
-          updateUI();
-          break;
-        case 'ArrowRight':
-        case 'd':
-        case 'l':
-          centerLon += panDegrees;
-          while (centerLon > 180) centerLon -= 360;
-          updateUI();
-          break;
-        case '+':
-        case '=':
-          zoomIn();
-          break;
-        case '-':
-          zoomOut();
-          break;
-        case 'Home':
-          centerLat = 51.5074;
-          centerLon = -0.1278;
-          zoom = 5;
-          updateUI();
-          break;
-        case 'p':
-        case 'P':
-          const currentIndex = PROVIDER_KEYS.indexOf(currentProvider);
-          const nextIndex = (currentIndex + 1) % PROVIDER_KEYS.length;
-          currentProvider = PROVIDER_KEYS[nextIndex];
-          const selectEl = $melker.getElementById('provider');
-          if (selectEl) selectEl.props.selectedValue = currentProvider;
-          updateUI();
-          break;
-        case '1': case '2': case '3': case '4': case '5':
-        case '6': case '7': case '8': case '9':
-          const idx = parseInt(event.key) - 1;
-          if (idx < PROVIDER_KEYS.length) {
-            currentProvider = PROVIDER_KEYS[idx];
-            const sel = $melker.getElementById('provider');
-            if (sel) sel.props.selectedValue = currentProvider;
-            updateUI();
-          }
-          break;
+    export function panUp() {
+      centerLat = Math.min(85, centerLat + getPanDegrees());
+      updateUI();
+    }
+
+    export function panDown() {
+      centerLat = Math.max(-85, centerLat - getPanDegrees());
+      updateUI();
+    }
+
+    export function panLeft() {
+      centerLon -= getPanDegrees();
+      while (centerLon < -180) centerLon += 360;
+      updateUI();
+    }
+
+    export function panRight() {
+      centerLon += getPanDegrees();
+      while (centerLon > 180) centerLon -= 360;
+      updateUI();
+    }
+
+    export function resetView() {
+      centerLat = 51.5074;
+      centerLon = -0.1278;
+      zoom = 5;
+      updateUI();
+    }
+
+    export function cycleProvider() {
+      const currentIndex = PROVIDER_KEYS.indexOf(currentProvider);
+      const nextIndex = (currentIndex + 1) % PROVIDER_KEYS.length;
+      currentProvider = PROVIDER_KEYS[nextIndex];
+      const selectEl = $melker.getElementById('provider');
+      if (selectEl) selectEl.props.selectedValue = currentProvider;
+      updateUI();
+    }
+
+    export function selectProvider(idx: number) {
+      if (idx >= 0 && idx < PROVIDER_KEYS.length) {
+        currentProvider = PROVIDER_KEYS[idx];
+        const sel = $melker.getElementById('provider');
+        if (sel) sel.props.selectedValue = currentProvider;
+        updateUI();
       }
     }
   </script>

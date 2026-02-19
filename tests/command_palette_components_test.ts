@@ -14,6 +14,7 @@ import {
   normalizeShortcut,
   eventToShortcut,
   buildShortcutMap,
+  parseCommandKeys,
   type PaletteItem,
 } from '../src/command-palette-components.ts';
 import { CommandPaletteElement } from '../src/components/filterable-list/command-palette.ts';
@@ -251,19 +252,101 @@ Deno.test('palette-shortcut is captured', () => {
 Deno.test('normalizeShortcut lowercases and sorts modifiers', () => {
   assertEquals(normalizeShortcut('Ctrl+S'), 'ctrl+s');
   assertEquals(normalizeShortcut('Alt+Ctrl+S'), 'alt+ctrl+s');
-  assertEquals(normalizeShortcut('Shift+Alt+X'), 'alt+shift+x');
 });
 
 Deno.test('normalizeShortcut handles single key', () => {
   assertEquals(normalizeShortcut('F1'), 'f1');
 });
 
+Deno.test('normalizeShortcut strips shift for printable letters', () => {
+  assertEquals(normalizeShortcut('Shift+P'), 'p');
+  assertEquals(normalizeShortcut('Shift+Alt+X'), 'alt+x');
+  assertEquals(normalizeShortcut('P'), 'p');
+  assertEquals(normalizeShortcut('p'), 'p');
+});
+
+Deno.test('normalizeShortcut keeps shift for non-printable keys', () => {
+  assertEquals(normalizeShortcut('Shift+ArrowUp'), 'shift+arrowup');
+  assertEquals(normalizeShortcut('Shift+F1'), 'shift+f1');
+  assertEquals(normalizeShortcut('Shift+Tab'), 'shift+tab');
+  assertEquals(normalizeShortcut('Ctrl+Shift+Enter'), 'ctrl+shift+enter');
+});
+
 // ── eventToShortcut ────────────────────────────────────────────────────
 
 Deno.test('eventToShortcut builds correct string', () => {
   assertEquals(eventToShortcut({ key: 's', ctrlKey: true }), 'ctrl+s');
-  assertEquals(eventToShortcut({ key: 'x', altKey: true, shiftKey: true }), 'alt+shift+x');
   assertEquals(eventToShortcut({ key: 'a' }), 'a');
+});
+
+Deno.test('eventToShortcut strips shift for printable letters', () => {
+  // Simple terminal: uppercase char, no shift flag
+  assertEquals(eventToShortcut({ key: 'P' }), 'p');
+  // Kitty terminal: uppercase char with explicit shift flag
+  assertEquals(eventToShortcut({ key: 'P', shiftKey: true }), 'p');
+  // Modifier combo: Ctrl+Shift+P (Kitty reports shift)
+  assertEquals(eventToShortcut({ key: 'P', ctrlKey: true, shiftKey: true }), 'ctrl+p');
+  // Alt+Shift+X
+  assertEquals(eventToShortcut({ key: 'x', altKey: true, shiftKey: true }), 'alt+x');
+});
+
+Deno.test('eventToShortcut keeps shift for non-printable keys', () => {
+  assertEquals(eventToShortcut({ key: 'ArrowUp', shiftKey: true }), 'shift+arrowup');
+  assertEquals(eventToShortcut({ key: 'Tab', shiftKey: true }), 'shift+tab');
+  assertEquals(eventToShortcut({ key: 'F1', shiftKey: true }), 'shift+f1');
+});
+
+// ── parseCommandKeys ─────────────────────────────────────────────────
+
+Deno.test('parseCommandKeys splits comma-separated keys', () => {
+  assertEquals(parseCommandKeys('a,b,c'), ['a', 'b', 'c']);
+  assertEquals(parseCommandKeys('Delete,Backspace'), ['Delete', 'Backspace']);
+});
+
+Deno.test('parseCommandKeys handles comma alias', () => {
+  assertEquals(parseCommandKeys(','), [',']);
+  assertEquals(parseCommandKeys('a,comma'), ['a', ',']);
+});
+
+Deno.test('parseCommandKeys handles space key', () => {
+  assertEquals(parseCommandKeys(' '), [' ']);
+  assertEquals(parseCommandKeys('Space'), [' ']);
+  assertEquals(parseCommandKeys('a,Space'), ['a', ' ']);
+});
+
+// ── normalizeShortcut + space ────────────────────────────────────────
+
+Deno.test('normalizeShortcut handles space key', () => {
+  assertEquals(normalizeShortcut(' '), ' ');
+  assertEquals(normalizeShortcut('Space'), ' ');
+  assertEquals(normalizeShortcut('Ctrl+ '), 'ctrl+ ');
+});
+
+Deno.test('eventToShortcut handles space key', () => {
+  assertEquals(eventToShortcut({ key: ' ' }), ' ');
+  assertEquals(eventToShortcut({ key: ' ', ctrlKey: true }), 'ctrl+ ');
+});
+
+// ── parseCommandKeys + plus ──────────────────────────────────────────
+
+Deno.test('parseCommandKeys handles plus key', () => {
+  assertEquals(parseCommandKeys('+'), ['+']);
+  assertEquals(parseCommandKeys('plus'), ['+']);
+  assertEquals(parseCommandKeys('+,='), ['+', '=']);
+});
+
+// ── normalizeShortcut + plus ─────────────────────────────────────────
+
+Deno.test('normalizeShortcut handles plus key', () => {
+  assertEquals(normalizeShortcut('+'), '+');
+  assertEquals(normalizeShortcut('plus'), '+');
+  assertEquals(normalizeShortcut('Ctrl++'), 'ctrl++');
+  assertEquals(normalizeShortcut('Ctrl+plus'), 'ctrl++');
+});
+
+Deno.test('eventToShortcut handles plus key', () => {
+  assertEquals(eventToShortcut({ key: '+' }), '+');
+  assertEquals(eventToShortcut({ key: '+', ctrlKey: true }), 'ctrl++');
 });
 
 // ── buildShortcutMap ───────────────────────────────────────────────────
@@ -308,6 +391,21 @@ Deno.test('buildShortcutMap skips items without shortcut', () => {
   ];
   const map = buildShortcutMap(items);
   assertEquals(map.size, 0);
+});
+
+Deno.test('buildShortcutMap registers _globalKeys from single palette item', () => {
+  let called = 0;
+  const action = () => { called++; };
+  const items = [
+    { elementId: 'cmd1', label: 'Move Left', group: 'Commands', action, hint: 'ArrowLeft, a', _globalKeys: ['ArrowLeft', 'a'], _elementType: 'command' },
+  ] as unknown as PaletteItem[];
+  const map = buildShortcutMap(items);
+  assertEquals(map.size, 2);
+  assert(map.has('arrowleft'));
+  assert(map.has('a'));
+  map.get('arrowleft')!();
+  map.get('a')!();
+  assertEquals(called, 2);
 });
 
 // ── CommandPaletteElement drag ──────────────────────────────────────────

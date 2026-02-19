@@ -10,7 +10,8 @@ import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { getTooltipManager } from './tooltip/mod.ts';
 import { getLogger } from './logging.ts';
-import { getPaletteShortcutMap, eventToShortcut } from './command-palette-components.ts';
+import { getPaletteShortcutMap, eventToShortcut, normalizeShortcut, parseCommandKeys } from './command-palette-components.ts';
+import { hasElement, isOpenModalDialog } from './utils/tree-traversal.ts';
 import { type DualBuffer, DiffCollector, type BufferDiff } from './buffer.ts';
 
 const logger = getLogger('KeyboardHandler');
@@ -116,12 +117,6 @@ export function handleKeyboardEvent(
     return true;
   }
 
-  // Arrow keys with no focus: focus the first element (same as Tab)
-  if (!focusedElement && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
-    ctx.focusNavigationHandler.handleTabNavigation(false);
-    return true;
-  }
-
   // Handle F12 key for View Source (global)
   if (event.key === 'F12') {
     ctx.devToolsManager?.toggle();
@@ -150,15 +145,23 @@ export function handleKeyboardEvent(
     }
   }
 
-  // Handle palette shortcuts (registered via palette-shortcut prop)
+  // Handle palette shortcuts (registered via palette-shortcut prop or <command global>)
   const shortcutMap = getPaletteShortcutMap();
   if (shortcutMap.size > 0) {
     const shortcutKey = eventToShortcut(event);
     const shortcutAction = shortcutMap.get(shortcutKey);
-    if (shortcutAction) {
+    if (shortcutAction && !shouldSuppressGlobalShortcut(focusedElement, event, ctx)) {
       shortcutAction();
+      if (ctx.autoRender) ctx.render();
       return true;
     }
+  }
+
+  // Arrow keys with no focus: focus the first element (same as Tab)
+  // Placed after global shortcuts so global arrow-key commands aren't preempted
+  if (!focusedElement && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    ctx.focusNavigationHandler.handleTabNavigation(false);
+    return true;
   }
 
   // Handle open command palettes - they capture all keyboard input when open
@@ -378,6 +381,78 @@ function handleCommandPaletteInput(
 }
 
 /**
+ * Build the ancestor path from root to target element.
+ * Returns the path array [root, ..., target] or null if target not found.
+ */
+function findAncestorPath(root: Element, targetId: string): Element[] | null {
+  if (root.id === targetId) return [root];
+  if (!root.children) return null;
+  for (const child of root.children) {
+    const path = findAncestorPath(child, targetId);
+    if (path) { path.unshift(root); return path; }
+  }
+  return null;
+}
+
+/**
+ * Find a <command> element matching the key event, scoped to ancestors
+ * of the focused element. Walks from deepest to shallowest (innermost wins).
+ */
+function findMatchingCommand(root: Element, focusedId: string, event: RawKeyEvent): Element | null {
+  const path = findAncestorPath(root, focusedId);
+  if (!path) return null;
+
+  const eventShortcut = eventToShortcut(event);
+
+  // Walk from deepest ancestor to shallowest (innermost command wins)
+  for (let i = path.length - 1; i >= 0; i--) {
+    const el = path[i];
+    if (!el.children) continue;
+    for (const child of el.children) {
+      if (child.type === 'command' && !child.props.disabled && typeof child.props.key === 'string') {
+        for (const k of parseCommandKeys(child.props.key)) {
+          if (normalizeShortcut(k) === eventShortcut) return child;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Check if a global shortcut should be suppressed because an overlay is open
+ * or the focused element would consume the key.
+ */
+function shouldSuppressGlobalShortcut(
+  focusedElement: Element | undefined,
+  event: RawKeyEvent,
+  ctx: KeyboardHandlerContext,
+): boolean {
+  // Suppress when any overlay is open (command palette, system/document dialogs, dev tools, AI)
+  if (ctx.findOpenCommandPalette()) return true;
+  if (ctx.alertDialogManager?.isOpen()) return true;
+  if (ctx.confirmDialogManager?.isOpen()) return true;
+  if (ctx.promptDialogManager?.isOpen()) return true;
+  if (ctx.getAccessibilityDialogManager()?.isOpen()) return true;
+  if (ctx.devToolsManager?.isOpen()) return true;
+  if (ctx.document?.root && hasElement(ctx.document.root, isOpenModalDialog)) return true;
+
+  if (!focusedElement) return false;
+  // Modifier combos pass through to global shortcuts (no focused-element suppression)
+  if (event.ctrlKey || event.altKey || event.metaKey) return false;
+
+  const type = focusedElement.type;
+  // Input/textarea consume all unmodified keys
+  if (type === 'input' || type === 'textarea') return true;
+  // Slider and split-pane-divider always consume keys when focused
+  if (type === 'slider' || type === 'split-pane-divider') return true;
+  // KeyboardElements (data-table, combobox, file-browser, data-tree) consume all keys
+  if (isKeyboardElement(focusedElement) && focusedElement.handlesOwnKeyboard()) return true;
+
+  return false;
+}
+
+/**
  * Handle keyboard input for the focused element
  * Returns true if the event was handled
  */
@@ -465,6 +540,14 @@ function handleFocusedElementInput(
     if (handled) {
       ctx.render();
     }
+    return true;
+  }
+
+  // Check for <command> elements on ancestors of focused element
+  const matchedCommand = findMatchingCommand(ctx.document.root, focusedElement.id, event);
+  if (matchedCommand && typeof matchedCommand.props.onExecute === 'function') {
+    matchedCommand.props.onExecute();
+    if (ctx.autoRender) ctx.render();
     return true;
   }
 

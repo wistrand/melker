@@ -55,14 +55,27 @@ Renders progressively from coarse blocks to pixel resolution.
         onMouseMove="$app.onMouseMove(event)"
         onMouseUp="$app.onMouseUp(event)"
         onWheel="$app.onWheel(event)"
-        onKeyPress="$app.onKeyPress(event)"
       />
+      <command key="ArrowUp,w,k" label="Pan Up" group="Navigation" onExecute="$app.panUp()" />
+      <command key="ArrowDown,s,j" label="Pan Down" group="Navigation" onExecute="$app.panDown()" />
+      <command key="ArrowLeft,a,h" label="Pan Left" group="Navigation" onExecute="$app.panLeft()" />
+      <command key="ArrowRight,d,l" label="Pan Right" group="Navigation" onExecute="$app.panRight()" />
+      <command key="+,=" label="Zoom In" group="Zoom" onExecute="$app.zoomInCenter()" />
+      <command key="-" label="Zoom Out" group="Zoom" onExecute="$app.zoomOutCenter()" />
+      <command key="Home" label="Reset View" onExecute="$app.resetView()" />
+      <command key="p,P" label="Next Palette" group="Palette" onExecute="$app.cyclePalette()" />
+      <command key="1" label="Electric" group="Palette" onExecute="$app.selectPalette(0)" />
+      <command key="2" label="Fire" group="Palette" onExecute="$app.selectPalette(1)" />
+      <command key="3" label="Ocean" group="Palette" onExecute="$app.selectPalette(2)" />
+      <command key="4" label="Rainbow" group="Palette" onExecute="$app.selectPalette(3)" />
+      <command key="5" label="Twilight" group="Palette" onExecute="$app.selectPalette(4)" />
+      <command key="6" label="Monochrome" group="Palette" onExecute="$app.selectPalette(5)" />
     </container>
 
     <!-- Footer -->
     <container style="display: flex; flex-direction: row; padding-left: 1; padding-right: 1; justify-content: space-between;">
       <text id="coords">-0.5 + 0.0i</text>
-      <text>+/- zoom  arrows pan  p palette  Home reset</text>
+      <text>+/- zoom  arrows pan  p palette  Home reset  Ctrl+K commands</text>
     </container>
   </container>
 
@@ -544,68 +557,70 @@ Renders progressively from coarse blocks to pixel resolution.
       zoomAtPoint(event.x * 2, event.y * 3, event.deltaY < 0);
     }
 
-    export function onKeyPress(event: { key: string }) {
+    function getPanAmount(): bigint {
+      const amt = viewWidth >> 2n;
+      return amt <= 0n ? 1n : amt;
+    }
+
+    export function panUp(): void {
+      centerIm += getPanAmount();
+      startRender();
+    }
+
+    export function panDown(): void {
+      centerIm -= getPanAmount();
+      startRender();
+    }
+
+    export function panLeft(): void {
+      centerRe -= getPanAmount();
+      startRender();
+    }
+
+    export function panRight(): void {
+      centerRe += getPanAmount();
+      startRender();
+    }
+
+    export function zoomInCenter(): void {
       const canvas = $melker.getElementById('fractal') as any;
       if (!canvas) return;
-      const bufW = canvas.getBufferWidth();
-      const bufH = canvas.getBufferHeight();
+      zoomAtPoint(canvas.getBufferWidth() >> 1, canvas.getBufferHeight() >> 1, true);
+    }
 
-      let panAmount = viewWidth >> 2n;
-      if (panAmount <= 0n) panAmount = 1n;
+    export function zoomOutCenter(): void {
+      const canvas = $melker.getElementById('fractal') as any;
+      if (!canvas) return;
+      zoomAtPoint(canvas.getBufferWidth() >> 1, canvas.getBufferHeight() >> 1, false);
+    }
 
-      switch (event.key) {
-        case 'ArrowUp': case 'w': case 'k':
-          centerIm += panAmount;
-          startRender();
-          break;
-        case 'ArrowDown': case 's': case 'j':
-          centerIm -= panAmount;
-          startRender();
-          break;
-        case 'ArrowLeft': case 'a': case 'h':
-          centerRe -= panAmount;
-          startRender();
-          break;
-        case 'ArrowRight': case 'd': case 'l':
-          centerRe += panAmount;
-          startRender();
-          break;
-        case '+': case '=':
-          zoomAtPoint(bufW >> 1, bufH >> 1, true);
-          break;
-        case '-':
-          zoomAtPoint(bufW >> 1, bufH >> 1, false);
-          break;
-        case 'Home':
-          FRAC_BITS = 64n;
-          ONE = 1n << FRAC_BITS;
-          FOUR = 4n << FRAC_BITS;
-          centerRe = toFixed(-0.5);
-          centerIm = toFixed(0.0);
-          viewWidth = toFixed(4.0);
-          zoomLevel = 0;
-          startRender();
-          break;
-        case 'p': case 'P': {
-          const idx = PALETTE_KEYS.indexOf(currentPalette);
-          currentPalette = PALETTE_KEYS[(idx + 1) % PALETTE_KEYS.length];
-          const selectEl = $melker.getElementById('palette');
-          if (selectEl) selectEl.props.selectedValue = currentPalette;
-          bakePalette(currentPalette);
-          startRender(false);
-          break;
-        }
-        case '1': case '2': case '3': case '4': case '5': case '6': {
-          const i = parseInt(event.key) - 1;
-          if (i < PALETTE_KEYS.length) {
-            currentPalette = PALETTE_KEYS[i];
-            const sel = $melker.getElementById('palette');
-            if (sel) sel.props.selectedValue = currentPalette;
-            bakePalette(currentPalette);
-            startRender(false);
-          }
-          break;
-        }
+    export function resetView(): void {
+      FRAC_BITS = 64n;
+      ONE = 1n << FRAC_BITS;
+      FOUR = 4n << FRAC_BITS;
+      centerRe = toFixed(-0.5);
+      centerIm = toFixed(0.0);
+      viewWidth = toFixed(4.0);
+      zoomLevel = 0;
+      startRender();
+    }
+
+    export function cyclePalette(): void {
+      const idx = PALETTE_KEYS.indexOf(currentPalette);
+      currentPalette = PALETTE_KEYS[(idx + 1) % PALETTE_KEYS.length];
+      const selectEl = $melker.getElementById('palette');
+      if (selectEl) selectEl.props.selectedValue = currentPalette;
+      bakePalette(currentPalette);
+      startRender(false);
+    }
+
+    export function selectPalette(i: number): void {
+      if (i < PALETTE_KEYS.length) {
+        currentPalette = PALETTE_KEYS[i];
+        const sel = $melker.getElementById('palette');
+        if (sel) sel.props.selectedValue = currentPalette;
+        bakePalette(currentPalette);
+        startRender(false);
       }
     }
 

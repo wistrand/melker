@@ -29,9 +29,13 @@
         onShader="$app.gameShader"
         shaderFps="60"
         dither="auto"
-        onKeyPress="$app.handleKey(event)"
       />
     </container>
+
+    <command key="ArrowLeft,a" label="Move Left" global onExecute="$app.moveLeft()" />
+    <command key="ArrowRight,d" label="Move Right" global onExecute="$app.moveRight()" />
+    <command key="Space" label="Start" global onExecute="$app.startGame()" />
+    <command key="r" label="Restart" global onExecute="$app.resetGame()" />
 
     <text style="text-align: center; padding: 1;">
       Arrow keys or mouse to move | SPACE to start | R to restart
@@ -92,7 +96,7 @@
       paused = true;
     }
 
-    function resetGame() {
+    export function resetGame() {
       initBricks();
       resetBall();
       paddleX = 0.5;
@@ -121,17 +125,17 @@
     initBricks();
 
     // Keyboard input
-    export function handleKey(event: { key: string }) {
-      if (event.key === 'ArrowLeft' || event.key === 'a') {
-        paddleX = Math.max(PADDLE_WIDTH / 2, paddleX - 0.05);
-      } else if (event.key === 'ArrowRight' || event.key === 'd') {
-        paddleX = Math.min(1 - PADDLE_WIDTH / 2, paddleX + 0.05);
-      } else if (event.key === ' ') {
-        if (!gameOver && !gameWon) {
-          paused = false;
-        }
-      } else if (event.key === 'r' || event.key === 'R') {
-        resetGame();
+    export function moveLeft() {
+      paddleX = Math.max(PADDLE_WIDTH / 2, paddleX - 0.05);
+    }
+
+    export function moveRight() {
+      paddleX = Math.min(1 - PADDLE_WIDTH / 2, paddleX + 0.05);
+    }
+
+    export function startGame() {
+      if (!gameOver && !gameWon) {
+        paused = false;
       }
     }
 

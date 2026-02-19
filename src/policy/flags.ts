@@ -315,6 +315,13 @@ function getImplicitReadPaths(appDir: string, urlHash?: string, isRemote?: boole
   const denoDir = Env.get('DENO_DIR') || `${Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`}/deno`;
   implicit.push({ path: denoDir, label: 'Deno module cache' });
 
+  // Melker runtime assets — theme CSS, server-ui, bitmap fonts, dither textures
+  // Needed because fetch('file://...') requires --allow-read even for bundled assets
+  const srcDir = new URL('..', import.meta.url).pathname;
+  const mediaDir = new URL('../../media', import.meta.url).pathname;
+  implicit.push({ path: srcDir, label: 'melker runtime' });
+  implicit.push({ path: mediaDir, label: 'melker media' });
+
   return implicit;
 }
 

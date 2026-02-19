@@ -7,8 +7,8 @@ Melker has no distribution mechanism beyond `git clone` + symlink. Publishing to
 ## End-User Experience
 
 ```bash
-# Install
-deno install -g -A --name melker jsr:@wistrand/melker
+# Install (-A grants all permissions to the launcher; apps run sandboxed via <policy>)
+deno install -g -A jsr:@wistrand/melker
 
 # Use
 melker app.melker
@@ -115,11 +115,11 @@ deno task version:sync
 
 ```bash
 # Install from local file
-deno install -g -A --name melker ./melker.ts
+deno install -g -A ./melker.ts
 
 # Or serve over HTTP to test the non-file code path
 deno run --allow-net --allow-read tools/serve.ts
-deno install -g -A -f --reload --name melker http://localhost:1990/melker.ts
+deno install -g -A -f --reload http://localhost:1990/melker.ts
 
 # Uninstall
 deno uninstall -g melker
@@ -135,7 +135,7 @@ deno uninstall -g melker
 4. **Type check**: `deno task check`
 5. **Dry run**: `deno task publish:dry-run` — confirm 0 errors (2 expected dynamic import warnings)
 6. **Publish**: `deno publish`
-7. **Test install**: `deno install -g -A --name melker jsr:@wistrand/melker`
+7. **Test install**: `deno install -g -A jsr:@wistrand/melker`
 8. **Test run**: `melker examples/basics/hello.melker`
 9. **Test upgrade**: `melker upgrade`
 

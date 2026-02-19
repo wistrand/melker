@@ -41,7 +41,7 @@ export class LiElement extends Element implements Renderable {
     super('li', defaultProps, children);
   }
 
-  getIntrinsicSize(_context: IntrinsicSizeContext) {
+  getIntrinsicSize(_context: IntrinsicSizeContext): { minWidth: number; minHeight: number; maxWidth: number; maxHeight: number } {
     // Li elements should take the full width of their container
     // Height is determined by their content
     return {

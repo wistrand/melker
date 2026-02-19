@@ -1671,4 +1671,4 @@ export class LayoutEngine {
 
 
 // Export global layout engine instance
-export const globalLayoutEngine = new LayoutEngine();
+export const globalLayoutEngine: LayoutEngine = new LayoutEngine();

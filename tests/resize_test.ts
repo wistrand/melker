@@ -1,6 +1,6 @@
 // Tests for the auto-resize handling system
 
-import { assertEquals, assert, assertExists } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assert, assertExists } from 'jsr:@std/assert';
 import {
   ResizeHandler,
   TerminalSize,

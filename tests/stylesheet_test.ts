@@ -2,7 +2,7 @@
 // merging, and tree application. These must pass before any refactoring
 // (e.g., media queries) to ensure no regressions.
 
-import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assert } from 'jsr:@std/assert';
 import {
   createElement,
   parseSelector,

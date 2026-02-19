@@ -8,7 +8,9 @@ import { rgbaToCss } from './components/color-utils.ts';
 import { dirname, fromFileUrl, join } from './deps.ts';
 
 // Get the directory containing this file for loading server UI assets
-const SERVER_UI_DIR = join(dirname(fromFileUrl(import.meta.url)), 'server-ui');
+const SERVER_UI_DIR = import.meta.url.startsWith('file:')
+  ? join(dirname(fromFileUrl(import.meta.url)), 'server-ui')
+  : new URL('./server-ui', import.meta.url).href;
 
 export interface ServerOptions {
   port?: number;

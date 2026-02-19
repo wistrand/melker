@@ -6,6 +6,7 @@ import { MelkerConfig } from './config/mod.ts';
 import { COLORS, cssToRgba, packRGBA } from './components/color-utils.ts';
 import { extractVariableDeclarations } from './stylesheet.ts';
 import { getLogger } from './logging.ts';
+import { BUILTIN_THEME_CSS } from './themes/mod.ts';
 
 const logger = getLogger('Theme');
 
@@ -143,21 +144,20 @@ const BUILTIN_THEME_NAMES = [
 let THEMES: Record<string, Theme> = {};
 
 /**
- * Load all built-in themes from CSS files in themes/ directory.
- * Uses fetch() with import.meta.url for portability.
+ * Load all built-in themes from embedded CSS strings (no runtime I/O).
+ * The CSS is inlined in themes/mod.ts so it's part of the module graph
+ * and gets cached at `deno install` time.
  */
-async function loadBuiltinThemes(): Promise<Record<string, Theme>> {
+function loadBuiltinThemes(): Record<string, Theme> {
   const themes: Record<string, Theme> = {};
   for (const name of BUILTIN_THEME_NAMES) {
-    const url = new URL(`./themes/${name}.css`, import.meta.url);
-    logger.debug(`Loading theme CSS: ${url}`);
-    try {
-      const css = await (await fetch(url)).text();
-      themes[name] = buildThemeFromCSS(css, name);
-      logger.debug(`Loaded theme '${name}': type=${themes[name].type}, mode=${themes[name].mode}`);
-    } catch (e) {
-      logger.warn(`Failed to load built-in theme '${name}' from ${url}: ${e instanceof Error ? e.message : e}`);
+    const css = BUILTIN_THEME_CSS[name];
+    if (!css) {
+      logger.warn(`Built-in theme '${name}' not found in embedded CSS`);
+      continue;
     }
+    themes[name] = buildThemeFromCSS(css, name);
+    logger.debug(`Loaded theme '${name}': type=${themes[name].type}, mode=${themes[name].mode}`);
   }
   return themes;
 }
@@ -191,7 +191,7 @@ export async function initThemes(): Promise<void> {
     return;
   }
   logger.debug('initThemes: loading built-in themes...');
-  THEMES = await loadBuiltinThemes();
+  THEMES = loadBuiltinThemes();
   globalThemeManager = null; // Reset so next access picks up loaded themes
   logger.info(`initThemes: loaded ${Object.keys(THEMES).length} themes`);
 

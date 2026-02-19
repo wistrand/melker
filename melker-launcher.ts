@@ -2,11 +2,14 @@
 // Security-auditable entry point that handles policy enforcement and subprocess spawning.
 // Does NOT import framework code - only policy module and std library.
 
-import { dirname, resolve } from 'https://deno.land/std@0.224.0/path/mod.ts';
+import { dirname, join, resolve } from 'jsr:@std/path@1.1.4';
 
 // Shared utilities
 import { isUrl, loadContent } from './src/utils/content-loader.ts';
 import { getTempDir } from './src/xdg.ts';
+
+// Version from deno.json (used by upgrade subcommand)
+import denoConfig from './deno.json' with { type: 'json' };
 
 // Policy imports for permission enforcement
 import {
@@ -185,6 +188,10 @@ function printUsage(): void {
   console.log('  Apps can declare permissions via embedded <policy> tag or .policy.json file.');
   console.log('  Use --show-policy to see what permissions an app requires.');
   console.log('  Use --trust to bypass policy enforcement (runs with full permissions).');
+  console.log('');
+  console.log('Subcommands:');
+  console.log('  info                     Show installation info');
+  console.log('  upgrade                  Upgrade (git pull or JSR reinstall)');
   console.log('');
   console.log('Examples:');
   console.log('  melker.ts examples/melker/counter.melker');
@@ -517,6 +524,139 @@ your terminal supports sextant mode. If any row appears scrambled, use:
     const count = await clearAllApprovals();
     console.log(`Cleared ${count} cached approval${count !== 1 ? 's' : ''}.`);
     Deno.exit(0);
+  }
+
+  // Handle 'info' subcommand
+  if (args.includes('info')) {
+    const selfUrl = new URL(import.meta.url);
+    const isFileUrl = selfUrl.protocol === 'file:';
+    const selfDir = isFileUrl ? dirname(selfUrl.pathname) : null;
+
+    // Detect git checkout (only possible for file: URLs)
+    let isGitCheckout = false;
+    let gitBranch = '';
+    let gitCommit = '';
+    if (selfDir) {
+      try {
+        await Deno.stat(resolve(selfDir, '.git'));
+        isGitCheckout = true;
+        const branch = new Deno.Command('git', {
+          args: ['-C', selfDir, 'rev-parse', '--abbrev-ref', 'HEAD'],
+          stdout: 'piped', stderr: 'null',
+        }).outputSync();
+        gitBranch = new TextDecoder().decode(branch.stdout).trim();
+        const commit = new Deno.Command('git', {
+          args: ['-C', selfDir, 'rev-parse', '--short', 'HEAD'],
+          stdout: 'piped', stderr: 'null',
+        }).outputSync();
+        gitCommit = new TextDecoder().decode(commit.stdout).trim();
+      } catch { /* not a git checkout */ }
+    }
+
+    console.log(`Melker ${denoConfig.version}`);
+    console.log(`Deno   ${Deno.version.deno}`);
+    console.log('');
+    if (isGitCheckout) {
+      console.log('Install:  git checkout');
+      console.log(`Path:     ${selfDir}`);
+      if (gitBranch) console.log(`Branch:   ${gitBranch}`);
+      if (gitCommit) console.log(`Commit:   ${gitCommit}`);
+    } else if (!isFileUrl) {
+      console.log(`Install:  ${selfUrl.origin}`);
+      console.log(`URL:      ${import.meta.url}`);
+    } else {
+      console.log('Install:  jsr:@wistrand/melker');
+      console.log(`Path:     ${selfDir}`);
+      // Try to find the shim
+      const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+      const binDir = join(
+        Deno.env.get('DENO_INSTALL_ROOT') || join(home, '.deno'), 'bin'
+      );
+      try {
+        for await (const entry of Deno.readDir(binDir)) {
+          if (entry.isFile) {
+            const content = await Deno.readTextFile(join(binDir, entry.name));
+            if (content.includes('@wistrand/melker')) {
+              console.log(`Shim:     ${join(binDir, entry.name)}`);
+              break;
+            }
+          }
+        }
+      } catch { /* binDir not found */ }
+    }
+    console.log(`Platform: ${Deno.build.os} ${Deno.build.arch}`);
+    Deno.exit(0);
+  }
+
+  // Handle 'upgrade' subcommand
+  if (args.includes('upgrade')) {
+    // Detect if running from git checkout or JSR install
+    const selfDir = dirname(new URL(import.meta.url).pathname);
+    let isGitCheckout = false;
+    try {
+      await Deno.stat(resolve(selfDir, '.git'));
+      isGitCheckout = true;
+    } catch { /* not a git checkout */ }
+
+    if (isGitCheckout) {
+      // Git checkout: pull latest changes
+      if (!args.includes('--yes')) {
+        const ok = confirm(`Run git pull in ${selfDir}?`);
+        if (!ok) {
+          Deno.exit(0);
+        }
+      }
+      const p = new Deno.Command('git', {
+        args: ['-C', selfDir, 'pull'],
+        stdin: 'inherit', stdout: 'inherit', stderr: 'inherit',
+      }).spawn();
+      Deno.exit((await p.status).code);
+    }
+
+    // JSR install: fetch latest version and reinstall
+    try {
+      const resp = await fetch('https://jsr.io/@wistrand/melker/meta.json');
+      if (!resp.ok) {
+        console.error('Failed to fetch version info from jsr.io');
+        Deno.exit(1);
+      }
+      const meta = await resp.json();
+      const latest = meta.latest;
+      const current = denoConfig.version;
+
+      if (latest === current) {
+        console.log(`Already on latest version: ${current}`);
+        Deno.exit(0);
+      }
+
+      // Detect the shim name used at install time (might not be 'melker')
+      const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+      const binDir = join(
+        Deno.env.get('DENO_INSTALL_ROOT') || join(home, '.deno'), 'bin'
+      );
+      let shimName = 'melker';
+      try {
+        for await (const entry of Deno.readDir(binDir)) {
+          if (entry.isFile) {
+            const content = await Deno.readTextFile(join(binDir, entry.name));
+            if (content.includes('@wistrand/melker')) {
+              shimName = entry.name;
+              break;
+            }
+          }
+        }
+      } catch { /* binDir not found — use default */ }
+
+      console.log(`Upgrading ${shimName} ${current} → ${latest}...`);
+      const p = new Deno.Command('deno', {
+        args: ['install', '-g', '-f', '-A', '--name', shimName, `jsr:@wistrand/melker@${latest}`],
+        stdin: 'inherit', stdout: 'inherit', stderr: 'inherit',
+      }).spawn();
+      Deno.exit((await p.status).code);
+    } catch (error) {
+      console.error(`Upgrade failed: ${error instanceof Error ? error.message : String(error)}`);
+      Deno.exit(1);
+    }
   }
 
   // Handle --revoke-approval <path>

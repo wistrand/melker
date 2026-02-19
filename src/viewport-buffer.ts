@@ -18,11 +18,11 @@ export class ViewportBufferProxy {
     this._transform = new CoordinateTransform(_viewport);
   }
 
-  get width() {
+  get width(): number {
     return this._buffer.width;
   }
 
-  get height() {
+  get height(): number {
     return this._buffer.height;
   }
 
@@ -151,15 +151,15 @@ export class ViewportDualBuffer {
     this.currentBuffer = new ViewportBufferProxy(_dualBuffer.currentBuffer, _viewport);
   }
 
-  get width() {
+  get width(): number {
     return this._dualBuffer.width;
   }
 
-  get height() {
+  get height(): number {
     return this._dualBuffer.height;
   }
 
-  get renderOptions() {
+  get renderOptions(): RenderOptions {
     return this._dualBuffer.renderOptions;
   }
 
@@ -190,11 +190,11 @@ export class ViewportDualBuffer {
     return this._dualBuffer.forceRedraw();
   }
 
-  getStats() {
+  getStats(): { totalCells: number; nonEmptyCells: number; bufferUtilization: number; wideCharCells: number } {
     return this._dualBuffer.getStats();
   }
 
-  getDisplayBuffer() {
+  getDisplayBuffer(): TerminalBuffer {
     return this._dualBuffer.getDisplayBuffer();
   }
 

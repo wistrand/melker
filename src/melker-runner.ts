@@ -332,7 +332,7 @@ export async function runMelkerFile(
     const oauth = await import('./oauth.ts');
     const { hashFilePath } = await import('./state-persistence.ts');
     const { registerAITool, clearCustomTools } = await import('./ai/mod.ts');
-    const { dirname } = await import('https://deno.land/std@0.224.0/path/mod.ts');
+    const { dirname } = await import('jsr:@std/path@1.1.4');
 
     let templateContent = preloadedContent ?? await loadContent(filepath);
     const originalContent = templateContent;

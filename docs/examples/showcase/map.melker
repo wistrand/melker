@@ -1,0 +1,1261 @@
+<melker>
+  <policy>
+  {
+    "name": "Map Viewer",
+    "description": "Tile-based map viewer with multiple providers",
+    "permissions": {
+      "net": [
+        "tile.openstreetmap.org",
+        "cartodb-basemaps-a.global.ssl.fastly.net",
+        "cartodb-basemaps-b.global.ssl.fastly.net",
+        "cartodb-basemaps-c.global.ssl.fastly.net",
+        "cartodb-basemaps-d.global.ssl.fastly.net",
+        "tile.opentopomap.org",
+        "server.arcgisonline.com",
+        "nominatim.openstreetmap.org"
+      ],
+      "browser": true
+    }
+  }
+  </policy>
+
+  <help>
+## Usage
+
+```
+map.melker [location] [zoom] [provider]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| location | Location name (e.g., `"Tokyo"`) or coordinates (e.g., `"35.6762,139.6503"`) |
+| zoom | Zoom level 0-20 (default: 5, or 12 if location specified) |
+| provider | `terrain`, `streets`, `voyager-nolabels`, `voyager`, `openstreetmap` (default), `satellite` |
+
+## Examples
+
+```bash
+map.melker                              # Start at London, zoom 5
+map.melker "New York"                   # Search and navigate to New York
+map.melker "35.6762,139.6503" 15        # Tokyo coordinates at zoom 15
+map.melker paris 12 satellite           # Paris with satellite imagery
+```
+
+## Controls
+
+| Key | Action |
+|-----|--------|
+| Mouse drag | Pan the map |
+| Scroll wheel | Zoom in/out at cursor |
+| Double-click | Zoom in at cursor (Shift+double-click to zoom out) |
+| Arrow keys / WASD / HJKL | Pan the map |
+| `+` / `-` | Zoom in/out |
+| `p` | Cycle through providers |
+| `1`-`6` | Select provider by number |
+| Home | Reset to London at zoom 5 |
+  </help>
+
+  <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+    <!-- Header with controls -->
+    <container style="display: flex; flex-direction: row; padding-top: 1; padding-left: 1; padding-right: 1; gap: 2; align-items: center;">
+      <text>Go to:</text>
+      <autocomplete
+        id="search"
+        placeholder="Search location..."
+        style="width: 25;"
+        minChars="3"
+        onSearch="$app.onSearchInput(event.query)"
+        onSelect="$app.onLocationSelect(event)"
+      />
+
+      <text>Provider:</text>
+      <select id="provider" selectedValue="${argv[3]:-openstreetmap}" onChange="$app.onProviderChange(event)">
+        <option value="terrain">Terrain</option>
+        <option value="streets">Streets</option>
+        <option value="voyager-nolabels">Voyager No Labels</option>
+        <option value="voyager">Voyager</option>
+        <option value="openstreetmap">OpenStreetMap</option>
+        <option value="satellite">Satellite</option>
+      </select>
+
+      <text>Zoom:</text>
+      <slider id="zoomSlider" min="0" max="20" value="${argv[2]:-5}" step="1" style="width: 20;" onChange="$app.onZoomSlider(event)" />
+      <text id="zoomLabel">${argv[2]:-5}</text>
+      <text id="loading" style="color: yellow;"></text>
+    </container>
+
+    <!-- Map area -->
+    <container style="flex: 1; display: flex; border: thin">
+      <img
+        id="map"
+        width="100%"
+        height="100%"
+        style="object-fit: fill;"
+        dither="auto"
+        onPaint="$app.onPaint(event)"
+        onMouseDown="$app.onMouseDown(event)"
+        onMouseMove="$app.onMouseMove(event)"
+        onMouseUp="$app.onMouseUp(event)"
+        onWheel="$app.onWheel(event)"
+      />
+      <command key="ArrowUp,w,k" label="Pan Up" global onExecute="$app.panUp()" />
+      <command key="ArrowDown,s,j" label="Pan Down" global onExecute="$app.panDown()" />
+      <command key="ArrowLeft,a,h" label="Pan Left" global onExecute="$app.panLeft()" />
+      <command key="ArrowRight,d,l" label="Pan Right" global onExecute="$app.panRight()" />
+      <command key="+,=" label="Zoom In" global onExecute="$app.zoomIn()" />
+      <command key="-" label="Zoom Out" global onExecute="$app.zoomOut()" />
+      <command key="Home" label="Reset View" global onExecute="$app.resetView()" />
+      <command key="p,P" label="Cycle Provider" global onExecute="$app.cycleProvider()" />
+      <command key="1" label="Terrain" global onExecute="$app.selectProvider(0)" />
+      <command key="2" label="Streets" global onExecute="$app.selectProvider(1)" />
+      <command key="3" label="Voyager No Labels" global onExecute="$app.selectProvider(2)" />
+      <command key="4" label="Voyager" global onExecute="$app.selectProvider(3)" />
+      <command key="5" label="OpenStreetMap" global onExecute="$app.selectProvider(4)" />
+      <command key="6" label="Satellite" global onExecute="$app.selectProvider(5)" />
+    </container>
+
+    <!-- Footer with attribution and coordinates -->
+    <container style="display: flex; flex-direction: row; padding-left: 1; padding-right: 1; justify-content: space-between;">
+      <text id="attribution">(C) OpenStreetMap, (C) CARTO</text>
+      <container style="display: flex; flex-direction: row; gap: 1; align-items: center;">
+        <text id="coords">51.5074, -0.1278</text>
+        <button onClick="$app.openInBrowser()">Open</button>
+      </container>
+    </container>
+  </container>
+
+  <script type="typescript">
+    // Provider configurations
+    interface Provider {
+      name: string;
+      url: string;
+      attribution: string;
+      maxZoom: number;
+      subdomains?: string[];
+    }
+
+    export const MAP_PROVIDERS: Record<string, Provider> = {
+      'terrain': {
+        name: 'Terrain',
+        url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+        attribution: '(C) OpenTopoMap (CC-BY-SA)',
+        maxZoom: 15
+      },
+      'streets': {
+        name: 'Streets',
+        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+        attribution: '(C) OpenStreetMap, (C) CARTO',
+        maxZoom: 18,
+        subdomains: ['a', 'b', 'c', 'd']
+      },
+      'voyager-nolabels': {
+        name: 'Voyager No Labels',
+        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
+        attribution: '(C) OpenStreetMap, (C) CARTO',
+        maxZoom: 18,
+        subdomains: ['a', 'b', 'c', 'd']
+      },
+      'voyager': {
+        name: 'Voyager',
+        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager/{z}/{x}/{y}.png',
+        attribution: '(C) OpenStreetMap, (C) CARTO',
+        maxZoom: 18,
+        subdomains: ['a', 'b', 'c', 'd']
+      },
+      'openstreetmap': {
+        name: 'OpenStreetMap',
+        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attribution: '(C) OpenStreetMap contributors',
+        maxZoom: 19
+      },
+      'satellite': {
+        name: 'Satellite',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attribution: '(C) Esri, Maxar, Earthstar Geographics',
+        maxZoom: 17
+      }
+    };
+
+    export const PROVIDER_KEYS = Object.keys(MAP_PROVIDERS);
+    export const MAX_ZOOM = 20;  // Allow over-zooming for subpixel detail
+    const TILE_SIZE = 256;  // Standard tile size in pixels
+
+    // Decoded tile image type
+    interface DecodedTile {
+      width: number;
+      height: number;
+      data: Uint8ClampedArray;
+      bytesPerPixel: number;
+    }
+
+    // Map state - initialized from argv if provided
+    const argLocation = "${argv[1]:-}".trim();
+    const argZoom = "${argv[2]:-}".trim();
+    const argProvider = "${argv[3]:-}".trim();
+    export let currentProvider = (argProvider && Object.keys(MAP_PROVIDERS).includes(argProvider)) ? argProvider : 'openstreetmap';
+    export let centerLat = 51.5074;  // London default
+    export let centerLon = -0.1278;
+    export let zoom = argZoom ? Math.max(0, Math.min(MAX_ZOOM, parseInt(argZoom, 10) || 5)) : 5;
+    // If location arg provided, wait for geo lookup before rendering
+    let waitingForLocation = !!argLocation;
+    export function setReady() { waitingForLocation = false; }
+    export function setZoom(z: number) { zoom = z; }
+    export function setCenter(lat: number, lon: number) { centerLat = lat; centerLon = lon; }
+    let loadingCount = 0;
+
+    // Drag state
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragStartLat = 0;
+    let dragStartLon = 0;
+
+    // Tile cache: "provider/z/x/y" -> decoded tile data (in-memory)
+    // Uses LRU eviction to prevent unbounded memory growth
+    const MAX_TILE_CACHE_SIZE = 256;  // ~64MB at 256KB per decoded tile
+    const tileCache = new Map<string, DecodedTile>();
+    const pendingFetches = new Set<string>();
+
+    // File cache index: tracks on-disk tiles for LRU eviction
+    interface FileCacheEntry {
+      path: string;
+      size: number;       // bytes on disk
+      lastAccess: number; // Date.now() on last read or write
+    }
+    const fileCacheIndex = new Map<string, FileCacheEntry>();
+    let fileCacheTotalBytes = 0;
+    const MAX_FILE_CACHE_BYTES = 200 * 1024 * 1024; // 200 MB
+
+    // LRU cache helpers - Map maintains insertion order, so we delete+re-insert on access
+    function getTileFromCache(key: string): DecodedTile | undefined {
+      const tile = tileCache.get(key);
+      if (tile) {
+        // Move to end (most recently used)
+        tileCache.delete(key);
+        tileCache.set(key, tile);
+      }
+      return tile;
+    }
+
+    function setTileInCache(key: string, tile: DecodedTile): void {
+      // Evict oldest entries if at capacity
+      while (tileCache.size >= MAX_TILE_CACHE_SIZE) {
+        const oldestKey = tileCache.keys().next().value;
+        if (oldestKey) {
+          tileCache.delete(oldestKey);
+          $melker.logger.info(`Evicted tile from cache: ${oldestKey}`);
+        } else {
+          break;
+        }
+      }
+      tileCache.set(key, tile);
+    }
+
+    // File-based tile cache directory
+    let tileCacheDir: string | null = null;
+
+    // Initialize the tile cache directory and scan existing files
+    async function initTileCache(): Promise<void> {
+      try {
+        tileCacheDir = `${$melker.cacheDir}/tiles`;
+        await Deno.mkdir(tileCacheDir, { recursive: true });
+
+        // Scan existing cached tiles to populate the index
+        await scanCacheDir(tileCacheDir);
+        $melker.logger.info(`Tile cache: ${fileCacheIndex.size} files, ${(fileCacheTotalBytes / 1024 / 1024).toFixed(1)} MB`);
+      } catch (error) {
+        $melker.logger.warn(`Failed to initialize tile cache: ${error}`);
+      }
+    }
+
+    // Recursively scan cache directory and populate fileCacheIndex
+    async function scanCacheDir(dir: string): Promise<void> {
+      const entries: { key: string; entry: FileCacheEntry }[] = [];
+      await scanDirRecursive(dir, entries);
+      // Sort by mtime ascending (oldest first) so Map insertion order = LRU order
+      entries.sort((a, b) => a.entry.lastAccess - b.entry.lastAccess);
+      for (const { key, entry } of entries) {
+        fileCacheIndex.set(key, entry);
+        fileCacheTotalBytes += entry.size;
+      }
+    }
+
+    async function scanDirRecursive(dir: string, out: { key: string; entry: FileCacheEntry }[]): Promise<void> {
+      try {
+        for await (const dirEntry of Deno.readDir(dir)) {
+          const fullPath = `${dir}/${dirEntry.name}`;
+          if (dirEntry.isDirectory) {
+            await scanDirRecursive(fullPath, out);
+          } else if (dirEntry.isFile && dirEntry.name.endsWith('.png')) {
+            try {
+              const stat = await Deno.stat(fullPath);
+              // Derive cache key from path: tiles/provider/z/x_y.png -> provider/z/x/y
+              const rel = fullPath.substring(tileCacheDir!.length + 1); // provider/z/x_y.png
+              const match = rel.match(/^(.+?)\/(\d+)\/(\d+)_(\d+)\.png$/);
+              if (match) {
+                const key = `${match[1]}/${match[2]}/${match[3]}/${match[4]}`;
+                out.push({
+                  key,
+                  entry: {
+                    path: fullPath,
+                    size: stat.size,
+                    lastAccess: stat.mtime?.getTime() ?? Date.now(),
+                  }
+                });
+              }
+            } catch { /* stat failed, skip */ }
+          }
+        }
+      } catch { /* readDir failed, skip */ }
+    }
+
+    // Get file path for cached tile
+    function getTileCacheFilePath(tileX: number, tileY: number, z: number, providerKey: string): string | null {
+      if (!tileCacheDir) return null;
+      // Use provider/zoom subdirectories: provider/z/x_y.png
+      return `${tileCacheDir}/${providerKey}/${z}/${tileX}_${tileY}.png`;
+    }
+
+    // Try to load tile from file cache
+    async function loadTileFromFile(tileX: number, tileY: number, z: number, providerKey: string): Promise<Uint8Array | null> {
+      const filePath = getTileCacheFilePath(tileX, tileY, z, providerKey);
+      if (!filePath) return null;
+
+      try {
+        const bytes = await Deno.readFile(filePath);
+        // Update access time in index (move to end for LRU)
+        const cacheKey = getTileCacheKey(tileX, tileY, z, providerKey);
+        const entry = fileCacheIndex.get(cacheKey);
+        if (entry) {
+          entry.lastAccess = Date.now();
+          fileCacheIndex.delete(cacheKey);
+          fileCacheIndex.set(cacheKey, entry);
+        }
+        return bytes;
+      } catch {
+        return null;
+      }
+    }
+
+    // Save tile to file cache
+    async function saveTileToFile(tileX: number, tileY: number, z: number, providerKey: string, bytes: Uint8Array): Promise<void> {
+      if (!tileCacheDir) return;
+
+      try {
+        const zoomDir = `${tileCacheDir}/${providerKey}/${z}`;
+        await Deno.mkdir(zoomDir, { recursive: true });
+
+        const filePath = `${zoomDir}/${tileX}_${tileY}.png`;
+        await Deno.writeFile(filePath, bytes);
+
+        $melker.logger.info(`Saved cache tile to file: ${filePath}`);
+
+      // Track in index
+        const cacheKey = getTileCacheKey(tileX, tileY, z, providerKey);
+        const existing = fileCacheIndex.get(cacheKey);
+        if (existing) {
+          fileCacheTotalBytes -= existing.size;
+          fileCacheIndex.delete(cacheKey);
+        }
+        fileCacheIndex.set(cacheKey, { path: filePath, size: bytes.length, lastAccess: Date.now() });
+        fileCacheTotalBytes += bytes.length;
+
+        // Evict if over budget
+        if (fileCacheTotalBytes > MAX_FILE_CACHE_BYTES) {
+          evictOldFiles();
+        }
+      } catch (error) {
+        $melker.logger.warn(`Failed to cache tile to file: ${error}`);
+      }
+    }
+
+    // Evict oldest files until at 80% of budget (hysteresis)
+    async function evictOldFiles(): Promise<void> {
+      const target = MAX_FILE_CACHE_BYTES * 0.8;
+      let evicted = 0;
+      for (const [key, entry] of fileCacheIndex) {
+        if (fileCacheTotalBytes <= target) break;
+        try {
+          await Deno.remove(entry.path);
+          $melker.logger.info(`Evicted cached tile: ${entry.path}`);
+        } catch (e) {
+          $melker.logger.warn(`Failed to remove cached tile ${entry.path}: ${e}`);
+        }
+        fileCacheTotalBytes -= entry.size;
+        fileCacheIndex.delete(key);
+        evicted++;
+      }
+      if (evicted > 0) {
+        $melker.logger.info(`Evicted ${evicted} tile files, now ${(fileCacheTotalBytes / 1024 / 1024).toFixed(1)} MB`);
+      }
+    }
+
+    // Clear all cached tile files (manual purge)
+    export async function clearFileCache(): Promise<number> {
+      const freedBytes = fileCacheTotalBytes;
+      for (const [, entry] of fileCacheIndex) {
+        try {
+          await Deno.remove(entry.path);
+          $melker.logger.info(`Removed cached tile: ${entry.path}`);
+        } catch (e) {
+          $melker.logger.warn(`Failed to remove cached tile ${entry.path}: ${e}`);
+        }
+      }
+      fileCacheIndex.clear();
+      fileCacheTotalBytes = 0;
+      if (tileCacheDir) {
+        try { await cleanEmptyDirs(tileCacheDir); } catch { /* best effort */ }
+      }
+      $melker.logger.info(`Cleared tile cache (${(freedBytes / 1024 / 1024).toFixed(1)} MB freed)`);
+      return freedBytes;
+    }
+
+    async function cleanEmptyDirs(dir: string): Promise<boolean> {
+      let empty = true;
+      try {
+        for await (const entry of Deno.readDir(dir)) {
+          if (entry.isDirectory) {
+            const childEmpty = await cleanEmptyDirs(`${dir}/${entry.name}`);
+            if (!childEmpty) empty = false;
+          } else {
+            empty = false;
+          }
+        }
+        if (empty && dir !== tileCacheDir) {
+          await Deno.remove(dir);
+          $melker.logger.info(`Removed empty cache dir: ${dir}`);
+        }
+      } catch { empty = false; }
+      return empty;
+    }
+
+    // Start file cache init eagerly so it's ready before first fetchTile()
+    const fileCacheReady = initTileCache();
+
+    // Mercator projection utilities
+    function latToMercatorY(lat: number): number {
+      // Convert latitude to Mercator Y (0-1 range for world)
+      const latRad = lat * Math.PI / 180;
+      return (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2;
+    }
+
+    function mercatorYToLat(y: number): number {
+      // Convert Mercator Y (0-1 range) back to latitude
+      const n = Math.PI - 2 * Math.PI * y;
+      return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+    }
+
+    function lonToMercatorX(lon: number): number {
+      return (lon + 180) / 360;
+    }
+
+    function mercatorXToLon(x: number): number {
+      return x * 360 - 180;
+    }
+
+    // Tile math utilities
+    function latLonToTile(lat: number, lon: number, z: number): { x: number; y: number; offsetX: number; offsetY: number } {
+      const n = Math.pow(2, z);
+      const xFloat = lonToMercatorX(lon) * n;
+      const yFloat = latToMercatorY(lat) * n;
+
+      const x = Math.floor(xFloat);
+      const y = Math.floor(yFloat);
+      // Offset within tile (0-1)
+      const offsetX = xFloat - x;
+      const offsetY = yFloat - y;
+
+      return { x, y, offsetX, offsetY };
+    }
+
+    // Generate tile URL
+    function getTileUrl(tileX: number, tileY: number, z: number, providerKey: string): string {
+      const provider = MAP_PROVIDERS[providerKey];
+      let url = provider.url;
+
+      if (provider.subdomains) {
+        const subdomain = provider.subdomains[(tileX + tileY) % provider.subdomains.length];
+        url = url.replace('{s}', subdomain);
+      }
+
+      url = url.replace('{z}', z.toString());
+      url = url.replace('{x}', tileX.toString());
+      url = url.replace('{y}', tileY.toString());
+
+      return url;
+    }
+
+    function getTileCacheKey(tileX: number, tileY: number, z: number, providerKey: string): string {
+      return `${providerKey}/${z}/${tileX}/${tileY}`;
+    }
+
+    // Find a fallback tile from lower zoom levels
+    // Returns the tile data and info about which portion to use
+    interface FallbackTile {
+      tile: DecodedTile;
+      // Source rectangle within the fallback tile (in tile pixels)
+      srcX: number;
+      srcY: number;
+      srcW: number;
+      srcH: number;
+      zoomDiff: number;  // How many zoom levels lower
+    }
+
+    function findFallbackTile(tileX: number, tileY: number, z: number, providerKey: string): FallbackTile | null {
+      // Try up to 4 zoom levels lower
+      for (let zoomDiff = 1; zoomDiff <= 4 && z - zoomDiff >= 0; zoomDiff++) {
+        const parentZ = z - zoomDiff;
+        // Each zoom level halves the coordinates
+        const parentX = tileX >> zoomDiff;
+        const parentY = tileY >> zoomDiff;
+
+        const cacheKey = getTileCacheKey(parentX, parentY, parentZ, providerKey);
+        const parentTile = getTileFromCache(cacheKey);
+
+        if (parentTile) {
+          // Calculate which portion of the parent tile to use
+          // At zoomDiff=1, we use 1/4 (one quadrant)
+          // At zoomDiff=2, we use 1/16, etc.
+          const divisor = 1 << zoomDiff;  // 2, 4, 8, 16
+          const sectionSize = TILE_SIZE / divisor;
+
+          // Find position within the parent tile
+          const localX = tileX - (parentX << zoomDiff);  // 0 to divisor-1
+          const localY = tileY - (parentY << zoomDiff);
+
+          return {
+            tile: parentTile,
+            srcX: localX * sectionSize,
+            srcY: localY * sectionSize,
+            srcW: sectionSize,
+            srcH: sectionSize,
+            zoomDiff,
+          };
+        }
+      }
+      return null;
+    }
+
+    // Fetch and decode a tile (checks file cache, then network)
+    async function fetchTile(tileX: number, tileY: number, z: number, providerKey: string): Promise<DecodedTile | null> {
+      const cacheKey = getTileCacheKey(tileX, tileY, z, providerKey);
+
+      // Return from memory cache (updates LRU order)
+      const cached = getTileFromCache(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      // Already fetching
+      if (pendingFetches.has(cacheKey)) {
+        return null;
+      }
+
+      // Wait for file cache to be ready before first fetch
+      await fileCacheReady;
+
+      pendingFetches.add(cacheKey);
+      setLoading(true);
+
+      try {
+        let bytes: Uint8Array | null = null;
+        let fromFileCache = false;
+
+        // Try file cache first
+        bytes = await loadTileFromFile(tileX, tileY, z, providerKey);
+        if (bytes) {
+          fromFileCache = true;
+          $melker.logger.info(`Loaded tile from file cache: ${cacheKey}`);
+        }
+
+        // Fetch from network if not in file cache
+        if (!bytes) {
+          const url = getTileUrl(tileX, tileY, z, providerKey);
+          $melker.logger.info(`Fetching tile from network: ${cacheKey}`);
+
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          bytes = new Uint8Array(arrayBuffer);
+
+          // Save to file cache for next time (don't await, fire and forget)
+          saveTileToFile(tileX, tileY, z, providerKey, bytes);
+        }
+
+        // Decode the tile
+        const decoded = decodeImageBytes(bytes);
+
+        // Add to memory cache (with LRU eviction)
+        setTileInCache(cacheKey, decoded);
+        $melker.logger.debug(`Cached tile: ${cacheKey} (${tileCache.size} in memory)`);
+
+        // Trigger repaint
+        requestRepaint();
+
+        return decoded;
+      } catch (error) {
+        $melker.logger.error(`Failed to fetch tile ${cacheKey}: ${error}`);
+        return null;
+      } finally {
+        pendingFetches.delete(cacheKey);
+        setLoading(false);
+      }
+    }
+
+    // Decode image bytes using the canvas element's decoder
+    function decodeImageBytes(bytes: Uint8Array): DecodedTile {
+      const mapEl = $melker.getElementById('map') as any;
+      if (mapEl && typeof mapEl.decodeImageBytes === 'function') {
+        return mapEl.decodeImageBytes(bytes);
+      }
+      throw new Error('Cannot decode image - no decoder available');
+    }
+
+    function setLoading(loading: boolean) {
+      if (loading) {
+        loadingCount++;
+      } else {
+        loadingCount = Math.max(0, loadingCount - 1);
+      }
+      const el = $melker.getElementById('loading');
+      if (el) {
+        el.setValue(loadingCount > 0 ? `${loadingCount}` : '');
+        // Trigger render when loading finishes to clear the text
+        if (loadingCount === 0) {
+          $melker.render();
+        }
+      }
+    }
+
+    function requestRepaint() {
+      const mapEl = $melker.getElementById('map') as any;
+      if (mapEl && typeof mapEl.markDirty === 'function') {
+        mapEl.markDirty();
+      }
+      // Trigger actual re-render (markDirty only sets a flag)
+      $melker.render();
+    }
+
+    // Paint handler - draws tiles to fill the viewport
+    export function onPaint(event: { canvas: any; bounds: { width: number; height: number } }) {
+      const { canvas, bounds } = event;
+      const bufferWidth = canvas.getBufferWidth();
+      const bufferHeight = canvas.getBufferHeight();
+
+      if (bufferWidth <= 0 || bufferHeight <= 0) {
+        return;
+      }
+
+      // Clear canvas
+      canvas.clear();
+
+      // Skip rendering if waiting for initial location lookup
+      if (waitingForLocation) {
+        return;
+      }
+
+      // Get pixel aspect ratio to correct for non-square terminal pixels
+      // Value < 1 means pixels are taller than wide (sextant is 2x3)
+      const pixelAspect = canvas.getPixelAspectRatio?.() || (2/3);
+
+      // Check for over-zoom (zoom beyond provider's max tile level)
+      const providerMaxZoom = MAP_PROVIDERS[currentProvider].maxZoom;
+      const tileZoom = Math.min(zoom, providerMaxZoom);
+      const overZoom = zoom - tileZoom;  // 0 if not over-zooming
+      const overZoomScale = Math.pow(2, overZoom);  // 1, 2, 4, 8, etc.
+
+      // Get center tile at the tile zoom level (not display zoom)
+      const centerTile = latLonToTile(centerLat, centerLon, tileZoom);
+
+      // Calculate scale based on height, then apply over-zoom
+      const baseScale = bufferHeight / TILE_SIZE;
+      const scale = baseScale * overZoomScale;
+      const scaledTileH = Math.floor(TILE_SIZE * scale);
+      // Adjust width for pixel aspect ratio so tiles appear square
+      const scaledTileW = Math.floor(scaledTileH / pixelAspect);
+
+      if (scaledTileH <= 0 || scaledTileW <= 0) return;
+
+      // How many tiles needed to cover the viewport
+      const tilesX = Math.ceil(bufferWidth / scaledTileW) + 2;
+      const tilesY = Math.ceil(bufferHeight / scaledTileH) + 2;
+
+      // Calculate the center of the viewport in buffer coordinates
+      const centerBufferX = bufferWidth / 2;
+      const centerBufferY = bufferHeight / 2;
+
+      // Offset within the center tile (in scaled pixels)
+      const tileOffsetX = centerTile.offsetX * scaledTileW;
+      const tileOffsetY = centerTile.offsetY * scaledTileH;
+
+      // Draw tiles around center
+      const halfTilesX = Math.floor(tilesX / 2);
+      const halfTilesY = Math.floor(tilesY / 2);
+
+      let tilesDrawn = 0;
+      let tilesFetching = 0;
+
+      for (let dy = -halfTilesY; dy <= halfTilesY; dy++) {
+        for (let dx = -halfTilesX; dx <= halfTilesX; dx++) {
+          const tileX = centerTile.x + dx;
+          const tileY = centerTile.y + dy;
+
+          // Skip invalid tiles (Y must be in valid range at tile zoom level)
+          const maxTile = Math.pow(2, tileZoom);
+          if (tileY < 0 || tileY >= maxTile) continue;
+
+          // Wrap X coordinate for world wrapping
+          const wrappedTileX = ((tileX % maxTile) + maxTile) % maxTile;
+
+          // Calculate screen position for this tile (relative to center)
+          // Use truncation to integer to avoid floating point issues
+          const screenX = ((centerBufferX - tileOffsetX + dx * scaledTileW) | 0);
+          const screenY = ((centerBufferY - tileOffsetY + dy * scaledTileH) | 0);
+
+          // Get cached tile or start fetch (at tile zoom level)
+          const cacheKey = getTileCacheKey(wrappedTileX, tileY, tileZoom, currentProvider);
+          const tile = getTileFromCache(cacheKey);
+
+          if (tile) {
+            // Verify tile dimensions match expected size
+            if (tile.width !== TILE_SIZE || tile.height !== TILE_SIZE) {
+              $melker.logger.warn(`Tile ${cacheKey} has unexpected dimensions: ${tile.width}x${tile.height}`);
+            }
+            // Draw tile at position, scaled with aspect correction (includes over-zoom)
+            canvas.drawImage(tile, screenX, screenY, scaledTileW, scaledTileH);
+            tilesDrawn++;
+          } else {
+            // Try to use a fallback tile from lower zoom level
+            const fallback = findFallbackTile(wrappedTileX, tileY, tileZoom, currentProvider);
+            if (fallback) {
+              // Draw the relevant portion of the fallback tile, scaled up
+              canvas.drawImageRegion(
+                fallback.tile,
+                fallback.srcX, fallback.srcY, fallback.srcW, fallback.srcH,
+                screenX, screenY, scaledTileW, scaledTileH
+              );
+            }
+            // Start fetching the correct tile (async, will trigger repaint when done)
+            fetchTile(wrappedTileX, tileY, tileZoom, currentProvider);
+            tilesFetching++;
+          }
+        }
+      }
+    }
+
+    export function updateUI() {
+      const labelEl = $melker.getElementById('zoomLabel');
+      if (labelEl) {
+        const providerMaxZoom = MAP_PROVIDERS[currentProvider].maxZoom;
+        const overZoom = zoom > providerMaxZoom;
+        labelEl.setValue(overZoom ? `${zoom} (${providerMaxZoom}+)` : `${zoom}`);
+      }
+
+      const sliderEl = $melker.getElementById('zoomSlider');
+      if (sliderEl) sliderEl.props.value = zoom;
+
+      const attrEl = $melker.getElementById('attribution');
+      if (attrEl) attrEl.setValue(MAP_PROVIDERS[currentProvider].attribution);
+
+      const coordsEl = $melker.getElementById('coords');
+      if (coordsEl) coordsEl.setValue(`${centerLat.toFixed(4)}, ${centerLon.toFixed(4)}`);
+
+      requestRepaint();
+    }
+
+    // Zoom functions
+    export function onZoomSlider(event: { value: number }) {
+      zoom = Math.max(0, Math.min(MAX_ZOOM, event.value));
+      updateUI();
+    }
+
+    export function zoomIn() {
+      if (zoom < MAX_ZOOM) {
+        zoom++;
+        updateUI();
+      }
+    }
+
+    export function zoomOut() {
+      if (zoom > 0) {
+        zoom--;
+        updateUI();
+      }
+    }
+
+    // Provider change
+    export function onProviderChange(event: { value: string }) {
+      currentProvider = event.value;
+      // Don't clamp zoom - over-zoom is now supported
+      updateUI();
+    }
+
+    // Open current location in system browser
+    export async function openInBrowser() {
+      const url = `https://www.openstreetmap.org/#map=${zoom}/${centerLat.toFixed(5)}/${centerLon.toFixed(5)}`;
+      await $melker.openBrowser(url);
+    }
+
+    // Location search using Nominatim
+    interface SearchResult {
+      id: string;
+      label: string;
+      lat: number;
+      lon: number;
+    }
+
+    let searchResults: SearchResult[] = [];
+
+    // Rate limiting for Nominatim (max 1 request per second per OSM policy)
+    const NOMINATIM_MIN_INTERVAL = 1000 + 100;  // ms
+    let lastNominatimRequest = 0;
+
+    // Called when autocomplete triggers search (already debounced by component)
+    export async function onSearchInput(query: string): Promise<{ id: string; label: string; disabled: boolean }[]> {
+      try {
+        // Enforce rate limit: wait if last request was less than 1 second ago
+        const now = Date.now();
+        const elapsed = now - lastNominatimRequest;
+        if (elapsed < NOMINATIM_MIN_INTERVAL) {
+          await new Promise(resolve => setTimeout(resolve, NOMINATIM_MIN_INTERVAL - elapsed));
+        }
+        lastNominatimRequest = Date.now();
+
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8`;
+        const response = await fetch(url, {
+          headers: { 'User-Agent': 'MelkerMapViewer/1.0' }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          searchResults = data
+            .filter((item: any) => item.display_name && item.lat && item.lon)
+            .map((item: any, idx: number) => ({
+              id: `${idx}`,
+              label: (item.display_name || '').substring(0, 50),
+              lat: parseFloat(item.lat),
+              lon: parseFloat(item.lon),
+            }));
+
+          // Return options for autocomplete dropdown (OptionData uses 'id' not 'value')
+          return searchResults.map(r => ({ id: r.id, label: r.label, disabled: false }));
+        }
+      } catch (error) {
+        $melker.logger.error(`Search failed: ${error}`);
+      }
+      return [];
+    }
+
+    // Called when a location is selected
+    export function onLocationSelect(event: { value: string; label: string }) {
+      const result = searchResults.find(r => r.id === event.value);
+      if (result) {
+        centerLat = result.lat;
+        centerLon = result.lon;
+        zoom = 12; // Reasonable zoom for a location
+        $melker.logger.info(`Going to: ${result.label} (${result.lat}, ${result.lon})`);
+        updateUI();
+
+        // Clear search
+        const searchEl = $melker.getElementById('search') as any;
+        if (searchEl) {
+          searchEl.props.value = '';
+        }
+        searchResults = [];
+      }
+    }
+
+    // Double-click detection
+    let lastClickTime = 0;
+    let lastClickX = 0;
+    let lastClickY = 0;
+    const DOUBLE_CLICK_THRESHOLD = 400;  // ms
+    const DOUBLE_CLICK_DISTANCE = 2;     // terminal cells
+
+    // Mouse handlers
+    export function onMouseDown(event: { x: number; y: number; button: number; shiftKey?: boolean }) {
+      if (event.button === 0) {
+        const now = Date.now();
+        const timeDelta = now - lastClickTime;
+        const distX = Math.abs(event.x - lastClickX);
+        const distY = Math.abs(event.y - lastClickY);
+
+        // Check for double-click
+        if (timeDelta < DOUBLE_CLICK_THRESHOLD && distX <= DOUBLE_CLICK_DISTANCE && distY <= DOUBLE_CLICK_DISTANCE) {
+          // Double-click detected - zoom in (or out with shift)
+          zoomToLocation(event.x, event.y, !event.shiftKey);
+          lastClickTime = 0;  // Reset to prevent triple-click
+          return;
+        }
+
+        lastClickTime = now;
+        lastClickX = event.x;
+        lastClickY = event.y;
+
+        isDragging = true;
+        dragStartX = event.x;
+        dragStartY = event.y;
+        dragStartLat = centerLat;
+        dragStartLon = centerLon;
+      }
+    }
+
+    // Zoom to a specific screen location
+    function zoomToLocation(screenX: number, screenY: number, zoomIn: boolean) {
+      if (zoomIn && zoom >= MAX_ZOOM) return;
+      if (!zoomIn && zoom <= 0) return;
+
+      const mapEl = $melker.getElementById('map') as any;
+      if (!mapEl) {
+        zoom = zoomIn ? zoom + 1 : zoom - 1;
+        updateUI();
+        return;
+      }
+
+      const bufferWidth = mapEl.getBufferWidth?.() || 100;
+      const bufferHeight = mapEl.getBufferHeight?.() || 100;
+      const pixelAspect = mapEl.getPixelAspectRatio?.() || (2/3);
+
+      // Convert terminal position to buffer position
+      const mouseBufferX = screenX * 2;
+      const mouseBufferY = screenY * 3;
+
+      const centerBufferX = bufferWidth / 2;
+      const centerBufferY = bufferHeight / 2;
+      const offsetX = mouseBufferX - centerBufferX;
+      const offsetY = mouseBufferY - centerBufferY;
+
+      // Calculate tile sizes with aspect correction
+      const scale = bufferHeight / TILE_SIZE;
+      const scaledTileH = TILE_SIZE * scale;
+      const scaledTileW = scaledTileH / pixelAspect;
+
+      // Work in Mercator space (linear)
+      const n = Math.pow(2, zoom);
+      const mercatorPerPixelX = 1 / (scaledTileW * n);
+      const mercatorPerPixelY = 1 / (scaledTileH * n);
+
+      // Get center in Mercator coordinates
+      const centerMercX = lonToMercatorX(centerLon);
+      const centerMercY = latToMercatorY(centerLat);
+
+      // Get mouse position in Mercator coordinates
+      const mouseMercX = centerMercX + offsetX * mercatorPerPixelX;
+      const mouseMercY = centerMercY + offsetY * mercatorPerPixelY;
+
+      // Change zoom level
+      zoom = zoomIn ? zoom + 1 : zoom - 1;
+
+      // Recalculate Mercator per pixel at new zoom
+      const newN = Math.pow(2, zoom);
+      const newMercatorPerPixelX = 1 / (scaledTileW * newN);
+      const newMercatorPerPixelY = 1 / (scaledTileH * newN);
+
+      // New center keeps mouse position fixed
+      const newCenterMercX = mouseMercX - offsetX * newMercatorPerPixelX;
+      const newCenterMercY = mouseMercY - offsetY * newMercatorPerPixelY;
+
+      // Convert back to lat/lon
+      centerLon = mercatorXToLon(newCenterMercX);
+      centerLat = mercatorYToLat(newCenterMercY);
+
+      centerLat = Math.max(-85, Math.min(85, centerLat));
+      while (centerLon > 180) centerLon -= 360;
+      while (centerLon < -180) centerLon += 360;
+
+      updateUI();
+    }
+
+    // Convert screen position to lat/lon
+    function screenToLatLon(screenX: number, screenY: number): { lat: number; lon: number } {
+      const mapEl = $melker.getElementById('map') as any;
+      const bufferWidth = mapEl?.getBufferWidth?.() || 100;
+      const bufferHeight = mapEl?.getBufferHeight?.() || 100;
+      const pixelAspect = mapEl?.getPixelAspectRatio?.() || (2/3);
+
+      // Convert terminal position to buffer position
+      const mouseBufferX = screenX * 2;
+      const mouseBufferY = screenY * 3;
+
+      const centerBufferX = bufferWidth / 2;
+      const centerBufferY = bufferHeight / 2;
+      const offsetX = mouseBufferX - centerBufferX;
+      const offsetY = mouseBufferY - centerBufferY;
+
+      // Calculate tile sizes with aspect correction
+      const scale = bufferHeight / TILE_SIZE;
+      const scaledTileH = TILE_SIZE * scale;
+      const scaledTileW = scaledTileH / pixelAspect;
+
+      // Work in Mercator space
+      const n = Math.pow(2, zoom);
+      const mercatorPerPixelX = 1 / (scaledTileW * n);
+      const mercatorPerPixelY = 1 / (scaledTileH * n);
+
+      const centerMercX = lonToMercatorX(centerLon);
+      const centerMercY = latToMercatorY(centerLat);
+
+      const mercX = centerMercX + offsetX * mercatorPerPixelX;
+      const mercY = centerMercY + offsetY * mercatorPerPixelY;
+
+      let lon = mercatorXToLon(mercX);
+      const lat = mercatorYToLat(mercY);
+
+      // Wrap longitude
+      while (lon > 180) lon -= 360;
+      while (lon < -180) lon += 360;
+
+      return { lat, lon };
+    }
+
+    export function onMouseMove(event: { x: number; y: number }) {
+      // Update coord display
+      const { lat, lon } = screenToLatLon(event.x, event.y);
+      const coordsEl = $melker.getElementById('coords');
+      if (coordsEl) coordsEl.setValue(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+
+      if (isDragging) {
+        const dx = event.x - dragStartX;
+        const dy = event.y - dragStartY;
+
+        // Convert terminal cell delta to buffer pixels
+        const pixelDeltaX = dx * 2;  // sextant horizontal resolution
+        const pixelDeltaY = dy * 3;  // sextant vertical resolution
+
+        // Get pixel aspect ratio for correct movement
+        const mapEl = $melker.getElementById('map') as any;
+        const bufferHeight = mapEl?.getBufferHeight?.() || 100;
+        const pixelAspect = mapEl?.getPixelAspectRatio?.() || (2/3);
+
+        // Calculate tile sizes with aspect correction
+        const scale = bufferHeight / TILE_SIZE;
+        const scaledTileH = TILE_SIZE * scale;
+        const scaledTileW = scaledTileH / pixelAspect;
+
+        // Work in Mercator space
+        const n = Math.pow(2, zoom);
+        const mercatorPerPixelX = 1 / (scaledTileW * n);
+        const mercatorPerPixelY = 1 / (scaledTileH * n);
+
+        const startMercX = lonToMercatorX(dragStartLon);
+        const startMercY = latToMercatorY(dragStartLat);
+
+        const newMercX = startMercX - pixelDeltaX * mercatorPerPixelX;
+        const newMercY = startMercY - pixelDeltaY * mercatorPerPixelY;
+
+        centerLon = mercatorXToLon(newMercX);
+        centerLat = mercatorYToLat(newMercY);
+
+        // Clamp latitude
+        centerLat = Math.max(-85, Math.min(85, centerLat));
+        // Wrap longitude
+        while (centerLon > 180) centerLon -= 360;
+        while (centerLon < -180) centerLon += 360;
+
+        updateUI();
+      }
+    }
+
+    export function onMouseUp(event: { button: number }) {
+      if (event.button === 0) {
+        isDragging = false;
+      }
+    }
+
+    export function onWheel(event: { deltaY: number; x: number; y: number }) {
+      const zoomingIn = event.deltaY < 0;
+
+      // Check zoom limits
+      if (zoomingIn && zoom >= MAX_ZOOM) return;
+      if (!zoomingIn && zoom <= 0) return;
+
+      // Get the map element to find buffer dimensions
+      const mapEl = $melker.getElementById('map') as any;
+      if (!mapEl) {
+        // Fallback to simple zoom
+        zoom = zoomingIn ? zoom + 1 : zoom - 1;
+        updateUI();
+        return;
+      }
+
+      // Get buffer dimensions from the canvas
+      const bufferWidth = mapEl.getBufferWidth?.() || 100;
+      const bufferHeight = mapEl.getBufferHeight?.() || 100;
+      const pixelAspect = mapEl.getPixelAspectRatio?.() || (2/3);
+
+      // Convert mouse terminal position to buffer position
+      const mouseBufferX = event.x * 2;
+      const mouseBufferY = event.y * 3;
+
+      // Calculate offset from center in buffer pixels
+      const centerBufferX = bufferWidth / 2;
+      const centerBufferY = bufferHeight / 2;
+      const offsetX = mouseBufferX - centerBufferX;
+      const offsetY = mouseBufferY - centerBufferY;
+
+      // Calculate tile sizes with aspect correction
+      const scale = bufferHeight / TILE_SIZE;
+      const scaledTileH = TILE_SIZE * scale;
+      const scaledTileW = scaledTileH / pixelAspect;
+
+      // Work in Mercator space (linear)
+      const n = Math.pow(2, zoom);
+      const mercatorPerPixelX = 1 / (scaledTileW * n);
+      const mercatorPerPixelY = 1 / (scaledTileH * n);
+
+      // Get center in Mercator coordinates
+      const centerMercX = lonToMercatorX(centerLon);
+      const centerMercY = latToMercatorY(centerLat);
+
+      // Get mouse position in Mercator coordinates
+      const mouseMercX = centerMercX + offsetX * mercatorPerPixelX;
+      const mouseMercY = centerMercY + offsetY * mercatorPerPixelY;
+
+      // Change zoom level
+      zoom = zoomingIn ? zoom + 1 : zoom - 1;
+
+      // Recalculate Mercator per pixel at new zoom
+      const newN = Math.pow(2, zoom);
+      const newMercatorPerPixelX = 1 / (scaledTileW * newN);
+      const newMercatorPerPixelY = 1 / (scaledTileH * newN);
+
+      // New center keeps mouse position fixed
+      const newCenterMercX = mouseMercX - offsetX * newMercatorPerPixelX;
+      const newCenterMercY = mouseMercY - offsetY * newMercatorPerPixelY;
+
+      // Convert back to lat/lon
+      centerLon = mercatorXToLon(newCenterMercX);
+      centerLat = mercatorYToLat(newCenterMercY);
+
+      // Clamp latitude
+      centerLat = Math.max(-85, Math.min(85, centerLat));
+      // Wrap longitude
+      while (centerLon > 180) centerLon -= 360;
+      while (centerLon < -180) centerLon += 360;
+
+      updateUI();
+    }
+
+    // Pan/navigation helpers
+    function getPanDegrees(): number {
+      const panAmount = 0.1;  // Fraction of viewport to pan
+      const degreesPerPixel = 360 / (TILE_SIZE * Math.pow(2, zoom));
+      return TILE_SIZE * panAmount * degreesPerPixel;
+    }
+
+    export function panUp() {
+      centerLat = Math.min(85, centerLat + getPanDegrees());
+      updateUI();
+    }
+
+    export function panDown() {
+      centerLat = Math.max(-85, centerLat - getPanDegrees());
+      updateUI();
+    }
+
+    export function panLeft() {
+      centerLon -= getPanDegrees();
+      while (centerLon < -180) centerLon += 360;
+      updateUI();
+    }
+
+    export function panRight() {
+      centerLon += getPanDegrees();
+      while (centerLon > 180) centerLon -= 360;
+      updateUI();
+    }
+
+    export function resetView() {
+      centerLat = 51.5074;
+      centerLon = -0.1278;
+      zoom = 5;
+      updateUI();
+    }
+
+    export function cycleProvider() {
+      const currentIndex = PROVIDER_KEYS.indexOf(currentProvider);
+      const nextIndex = (currentIndex + 1) % PROVIDER_KEYS.length;
+      currentProvider = PROVIDER_KEYS[nextIndex];
+      const selectEl = $melker.getElementById('provider');
+      if (selectEl) selectEl.props.selectedValue = currentProvider;
+      updateUI();
+    }
+
+    export function selectProvider(idx: number) {
+      if (idx >= 0 && idx < PROVIDER_KEYS.length) {
+        currentProvider = PROVIDER_KEYS[idx];
+        const sel = $melker.getElementById('provider');
+        if (sel) sel.props.selectedValue = currentProvider;
+        updateUI();
+      }
+    }
+  </script>
+
+  <!-- Initialize on start -->
+  <script async="ready">
+    // Handle initial location from command line (provider and zoom set via template)
+    const initialLocation = "${argv[1]:-}".trim();
+    if (initialLocation) {
+      // Check if it's coordinates (lat,lon format)
+      const coordMatch = initialLocation.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+
+      if (coordMatch) {
+        // Direct coordinates - no geo lookup needed
+        const lat = parseFloat(coordMatch[1]);
+        const lon = parseFloat(coordMatch[2]);
+        if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+          $app.setCenter(lat, lon);
+          $app.setReady();
+          $app.updateUI();
+
+          // Show coordinates in search field
+          const searchEl = $melker.getElementById('search') as any;
+          if (searchEl) {
+            searchEl.props.value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+          }
+        } else {
+          $app.setReady();
+          $app.updateUI();
+        }
+      } else {
+        // Location name - do geolookup
+        // Save zoom (onLocationSelect would set it to 12)
+        const savedZoom = $app.zoom;
+
+        // Do geolookup and pick first result
+        const results = await $app.onSearchInput(initialLocation);
+
+        // Clear waiting flag to allow rendering
+        $app.setReady();
+
+        if (results.length > 0) {
+          $app.onLocationSelect({ value: results[0].id, label: results[0].label });
+
+          // Restore zoom if it was specified via argv
+          const argZoom = "${argv[2]:-}".trim();
+          if (argZoom) {
+            $app.setZoom(savedZoom);
+            $app.updateUI();
+          }
+
+          // Show selected location in autocomplete (onLocationSelect clears it)
+          const searchEl = $melker.getElementById('search') as any;
+          if (searchEl) {
+            searchEl.props.value = results[0].label;
+          }
+        } else {
+          // No results - render default location
+          $app.updateUI();
+        }
+      }
+    }
+
+    // Focus the map element
+    $melker.engine.focusElement('map');
+  </script>
+</melker>

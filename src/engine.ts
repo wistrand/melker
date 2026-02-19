@@ -1,14 +1,6 @@
 // High-level Melker Engine for automatic terminal UI management
 // Handles rendering, buffer management, resize handling, and terminal setup
 
-// Type augmentation for globalThis
-declare global {
-  interface GlobalThis {
-    _melkerInstances?: Set<MelkerEngine>;
-    _melkerEmergencyCleanup?: () => void;
-  }
-}
-
 import { Document } from './document.ts';
 import { MelkerConfig, setLoggerGetter } from './config/mod.ts';
 import { ensureError } from './utils/error.ts';

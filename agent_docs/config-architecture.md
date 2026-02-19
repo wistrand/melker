@@ -117,7 +117,7 @@ Each property in schema.json can have:
 ### Dithering
 - `dither.algorithm` - Dithering algorithm: sierra-stable, sierra, floyd-steinberg, atkinson, atkinson-stable, blue-noise, ordered, none
 - `dither.bits` - Color depth (1-8)
-- `dither.blueNoisePath` - Path to blue noise threshold matrix PNG (default: bundled `media/blue-noise-64.png`)
+- `dither.blueNoisePath` - Path to custom blue noise threshold matrix PNG (default: embedded 64x64 matrix)
 
 ### Terminal
 - `terminal.alternateScreen` - Use alternate screen buffer (inverted env: MELKER_NO_ALTERNATE_SCREEN)

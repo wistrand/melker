@@ -42,6 +42,7 @@ Detailed file layout for the Melker codebase.
 | `renderer.ts`                  | ANSI terminal output                                  |
 | `focus.ts`                     | Focus/tab navigation                                  |
 | `theme.ts`                     | Theming system                                        |
+| `themes/mod.ts`                | Embedded built-in theme CSS strings                   |
 | `template.ts`                  | .melker file parsing                                  |
 
 ### Types and Utilities
@@ -216,8 +217,9 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `segment-display.ts`  | SegmentDisplayElement                            |
 | `charsets.ts`         | Character segment definitions                    |
 | `renderers.ts`        | Renderer styles (box, rounded, geometric, pixel) |
-| `bitmap-fonts.ts`     | Bitmap font data (3x5 inline, 5x7 lazy-loaded)  |
-| `5x7.psf2`           | PSF2 bitmap font for 5x7 pixel renderer          |
+| `bitmap-fonts.ts`     | Bitmap font data (3x5 inline, 5x7 from embedded PSF2) |
+| `font-5x7-data.ts`   | Embedded 5x7 font (deflate-compressed base64 PSF2)    |
+| `5x7.psf2`           | Source PSF2 font file (reference — embedded in `font-5x7-data.ts`) |
 | `types.ts`            | Type definitions                                 |
 
 #### `components/graph/` - Graph/Diagram Rendering
@@ -255,6 +257,7 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `utils.ts`            | Shared helpers (quantizeChannel, rgbToGray)      |
 | `error-diffusion.ts`  | Generic error-diffusion engine (DitherKernel)    |
 | `threshold.ts`        | Ordered, blue-noise dithering                    |
+| `blue-noise-64.ts`    | Embedded 64x64 blue noise matrix (`Uint8Array`)  |
 | `floyd-steinberg.ts`  | Floyd-Steinberg kernel + wrapper                 |
 | `sierra.ts`           | Sierra 2-row kernel + wrapper                    |
 | `atkinson.ts`         | Atkinson kernel + wrapper                        |

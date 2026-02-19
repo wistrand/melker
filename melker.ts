@@ -7,10 +7,14 @@ if (import.meta.main) {
   let launcherUrl: string;
 
   if (selfUrl.protocol === 'file:') {
-    // Local file: resolve symlinks
-    const realPath = await Deno.realPath(selfUrl.pathname);
-    const realDir = realPath.replace(/\/[^/]+$/, '');
-    launcherUrl = `file://${realDir}/melker-launcher.ts`;
+    // Local file: resolve symlinks, with fallback for JSR cache
+    try {
+      const realPath = await Deno.realPath(selfUrl.pathname);
+      const realDir = realPath.replace(/\/[^/]+$/, '');
+      launcherUrl = `file://${realDir}/melker-launcher.ts`;
+    } catch {
+      launcherUrl = new URL('./melker-launcher.ts', selfUrl).href;
+    }
   } else {
     // Remote URL: use URL directly
     launcherUrl = new URL('./melker-launcher.ts', selfUrl).href;

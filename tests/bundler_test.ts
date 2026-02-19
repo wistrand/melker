@@ -9,7 +9,7 @@ import {
   assertEquals,
   assertStringIncludes,
   assertMatch,
-} from 'https://deno.land/std@0.224.0/assert/mod.ts';
+} from 'jsr:@std/assert';
 import { generate } from '../src/bundler/generator.ts';
 import { bundle, requiresBundling, hasNpmImports } from '../src/bundler/bundle.ts';
 import { executeBundle, processMelkerBundle } from '../src/bundler/mod.ts';

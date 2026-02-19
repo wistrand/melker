@@ -1,4 +1,21 @@
 {
+  "name": "@wistrand/melker",
+  "version": "2026.2.6",
+  "license": "MIT",
+  "exports": {
+    ".": "./melker.ts",
+    "./lib": "./mod.ts"
+  },
+  "publish": {
+    "include": [
+      "mod.ts",
+      "melker.ts",
+      "melker-launcher.ts",
+      "src/",
+      "media/melker-128.png",
+      "LICENSE.txt"
+    ]
+  },
   "engines": {
     "deno": ">=2.5.0"
   },
@@ -15,7 +32,11 @@
     "skill:zip": "cd skills/creating-melker-apps && zip -r ../../docs/skill-creating-melker-apps.zip SKILL.md references/ && echo 'Created skill-creating-melker-apps.zip'",
     "completions": "deno run --allow-read --allow-write scripts/generate-completions.ts",
     "bench:memory": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/memory/memory_bench.ts",
-    "bench:all": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/run-all.ts"
+    "bench:all": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/run-all.ts",
+    "version:sync": "deno run --allow-read --allow-write --allow-run scripts/sync-version.ts",
+    "publish:dry-run": "deno publish --dry-run --allow-dirty",
+    "serve:http": "deno run --allow-net --allow-read tools/serve.ts",
+    "docs:showcase": "rm -rf docs/examples/showcase && cp -r examples/showcase docs/examples/showcase && echo 'Copied examples/showcase → docs/examples/showcase'"
   },
   "compilerOptions": {
     "strict": true,

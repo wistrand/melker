@@ -1,7 +1,7 @@
 // Tests for command palette component discovery, label resolution, shortcuts,
 // and draggable palette behavior.
 
-import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assert } from 'jsr:@std/assert';
 import {
   Document,
   ContainerElement,

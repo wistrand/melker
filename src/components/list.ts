@@ -58,7 +58,7 @@ export class ListElement extends Element implements Renderable, Focusable {
     return !this.props.disabled && (this.children?.length || 0) > 0;
   }
 
-  getIntrinsicSize(_context: IntrinsicSizeContext) {
+  getIntrinsicSize(_context: IntrinsicSizeContext): { minWidth: number; minHeight: number; maxWidth: number; maxHeight: number } {
     // Minimum size to show at least one item
     return {
       minWidth: 10,

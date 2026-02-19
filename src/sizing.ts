@@ -413,7 +413,7 @@ export class SizingModel {
 }
 
 // Global sizing model instance
-export const globalSizingModel = new SizingModel('border-box');
+export const globalSizingModel: SizingModel = new SizingModel('border-box');
 
 // Utility functions for working with spacing values
 

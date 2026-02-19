@@ -861,7 +861,7 @@ export async function extractScriptsForBundler(
       try {
         const srcUrl = new URL(scriptData.src, sourceUrl).href;
         if (srcUrl.startsWith('file://')) {
-          const { fromFileUrl } = await import('https://deno.land/std@0.224.0/path/mod.ts');
+          const { fromFileUrl } = await import('jsr:@std/path@1.1.4');
           code = await Deno.readTextFile(fromFileUrl(srcUrl));
         } else {
           const response = await fetch(srcUrl);

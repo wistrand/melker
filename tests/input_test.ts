@@ -1,6 +1,6 @@
 // Tests for input processing system
 
-import { assertEquals, assertExists, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assertExists, assert } from 'jsr:@std/assert';
 import {
   TerminalInputProcessor,
   getGlobalInputProcessor,

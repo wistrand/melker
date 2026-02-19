@@ -1,6 +1,6 @@
 // Tests for Document class functionality
 
-import { assertEquals, assertExists, assertNotEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assertExists, assertNotEquals } from 'jsr:@std/assert';
 import {
   Document,
   createDocument,

@@ -1,0 +1,392 @@
+<melker>
+  <policy>
+  {
+    "name": "Breakout",
+    "description": "Classic breakout game using shader rendering",
+    "permissions": {
+      "shader": true,
+      "net": ["samesite"]
+    }
+  }
+  </policy>
+
+  <container style="width: 100%; height: 100%; display: flex; flex-direction: column; background-color: black;">
+    <text style="font-weight: bold; text-align: center; padding: 1;">
+      BREAKOUT
+    </text>
+
+    <text id="status" style="text-align: center; margin-bottom: 1;">
+      Score: 0 | Lives: 3 | Press SPACE to start
+    </text>
+
+    <container style="flex: 1; display: flex; justify-content: center; align-items: center;">
+      <img
+        id="game"
+        src="../../media/melker-128.png"
+        width="100%"
+        height="100%"
+        style="object-fit: fill;"
+        onShader="$app.gameShader"
+        shaderFps="60"
+        dither="auto"
+      />
+    </container>
+
+    <command key="ArrowLeft,a" label="Move Left" global onExecute="$app.moveLeft()" />
+    <command key="ArrowRight,d" label="Move Right" global onExecute="$app.moveRight()" />
+    <command key="Space" label="Start" global onExecute="$app.startGame()" />
+    <command key="r" label="Restart" global onExecute="$app.resetGame()" />
+
+    <text style="text-align: center; padding: 1;">
+      Arrow keys or mouse to move | SPACE to start | R to restart
+    </text>
+  </container>
+
+  <script type="typescript">
+    // Game constants
+    const PADDLE_WIDTH = 0.15;
+    const PADDLE_HEIGHT = 0.02;
+    const PADDLE_Y = 0.92;
+    const BALL_RADIUS = 0.015;
+    const BRICK_ROWS = 5;
+    const BRICK_COLS = 10;
+    const BRICK_HEIGHT = 0.04;
+    const BRICK_GAP = 0.005;
+
+    // Game state
+    let paddleX = 0.5;
+    let ballX = 0.5;
+    let ballY = 0.7;
+    let ballVX = 0.3;
+    let ballVY = -0.4;
+    let lastTime = 0;
+    let gameOver = false;
+    let gameWon = false;
+    let score = 0;
+    let lives = 3;
+    let paused = true;
+
+    // Brick colors by row (RGB)
+    const brickColors: [number, number, number][] = [
+      [255, 50, 50],   // Red
+      [255, 150, 50],  // Orange
+      [255, 255, 50],  // Yellow
+      [50, 255, 50],   // Green
+      [50, 150, 255],  // Blue
+    ];
+
+    // Bricks: true = exists, false = destroyed
+    let bricks: boolean[][] = [];
+
+    function initBricks() {
+      bricks = [];
+      for (let row = 0; row < BRICK_ROWS; row++) {
+        bricks[row] = [];
+        for (let col = 0; col < BRICK_COLS; col++) {
+          bricks[row][col] = true;
+        }
+      }
+    }
+
+    function resetBall() {
+      ballX = paddleX;  // Start on paddle
+      ballY = PADDLE_Y - BALL_RADIUS * 2;  // Just above paddle
+      ballVX = (Math.random() - 0.5) * 0.4;
+      ballVY = -0.4;
+      paused = true;
+    }
+
+    export function resetGame() {
+      initBricks();
+      resetBall();
+      paddleX = 0.5;
+      score = 0;
+      lives = 3;
+      gameOver = false;
+      gameWon = false;
+      updateStatus();
+    }
+
+    function updateStatus() {
+      const statusEl = $melker.getElementById('status');
+      if (!statusEl) return; // Guard for initialization
+      if (gameOver) {
+        statusEl.setValue(`GAME OVER - Score: ${score} - Press R to restart`);
+      } else if (gameWon) {
+        statusEl.setValue(`YOU WIN! Score: ${score} - Press R to restart`);
+      } else if (paused) {
+        statusEl.setValue(`Score: ${score} | Lives: ${lives} | Press SPACE to start`);
+      } else {
+        statusEl.setValue(`Score: ${score} | Lives: ${lives}`);
+      }
+    }
+
+    // Initialize bricks array
+    initBricks();
+
+    // Keyboard input
+    export function moveLeft() {
+      paddleX = Math.max(PADDLE_WIDTH / 2, paddleX - 0.05);
+    }
+
+    export function moveRight() {
+      paddleX = Math.min(1 - PADDLE_WIDTH / 2, paddleX + 0.05);
+    }
+
+    export function startGame() {
+      if (!gameOver && !gameWon) {
+        paused = false;
+      }
+    }
+
+    // Game shader
+    export const gameShader = (
+      x: number,
+      y: number,
+      time: number,
+      resolution: { width: number; height: number; pixelAspect: number },
+      source?: { mouse: { x: number; y: number }; mouseUV: { u: number; v: number } }
+    ): [number, number, number] => {
+      const u = x / resolution.width;
+      const v = y / resolution.height;
+      const aspect = resolution.pixelAspect;
+
+      // Ball radius in Y space (adjusted for aspect ratio)
+      const ballRadiusY = BALL_RADIUS * aspect;
+
+      // Update paddle from mouse if available
+      if (source?.mouseUV && source.mouseUV.u >= 0) {
+        paddleX = Math.max(PADDLE_WIDTH / 2, Math.min(1 - PADDLE_WIDTH / 2, source.mouseUV.u));
+      }
+
+      // Ball follows paddle while paused (before launch)
+      if (paused && !gameOver && !gameWon) {
+        ballX = paddleX;
+        ballY = PADDLE_Y - BALL_RADIUS * 2;
+      }
+
+      // Update game physics
+      const dt = lastTime === 0 ? 0 : Math.min(time - lastTime, 0.05);
+      lastTime = time;
+
+      if (!paused && !gameOver && !gameWon && dt > 0) {
+        // Move ball (Y velocity scaled by aspect for consistent visual speed)
+        ballX += ballVX * dt;
+        ballY += ballVY * dt * aspect;
+
+        // Wall collisions
+        if (ballX < BALL_RADIUS) {
+          ballX = BALL_RADIUS;
+          ballVX = Math.abs(ballVX);
+        }
+        if (ballX > 1 - BALL_RADIUS) {
+          ballX = 1 - BALL_RADIUS;
+          ballVX = -Math.abs(ballVX);
+        }
+        if (ballY < ballRadiusY) {
+          ballY = ballRadiusY;
+          ballVY = Math.abs(ballVY);
+        }
+
+        // Bottom - lose life
+        if (ballY > 1) {
+          lives--;
+          if (lives <= 0) {
+            gameOver = true;
+          } else {
+            resetBall();
+          }
+          updateStatus();
+        }
+
+        // Paddle collision
+        const paddleLeft = paddleX - PADDLE_WIDTH / 2;
+        const paddleRight = paddleX + PADDLE_WIDTH / 2;
+        if (ballY + ballRadiusY > PADDLE_Y && ballY - ballRadiusY < PADDLE_Y + PADDLE_HEIGHT) {
+          if (ballX > paddleLeft && ballX < paddleRight) {
+            ballY = PADDLE_Y - ballRadiusY;
+            ballVY = -Math.abs(ballVY);
+            // Angle based on hit position
+            const hitPos = (ballX - paddleX) / (PADDLE_WIDTH / 2);
+            ballVX = hitPos * 0.5;
+            // Speed up slightly
+            const speed = Math.sqrt(ballVX * ballVX + ballVY * ballVY);
+            const newSpeed = Math.min(speed * 1.02, 0.8);
+            const scale = newSpeed / speed;
+            ballVX *= scale;
+            ballVY *= scale;
+          }
+        }
+
+        // Brick collisions
+        const brickWidth = (1 - BRICK_GAP * (BRICK_COLS + 1)) / BRICK_COLS;
+        const brickStartY = 0.1;
+        let bricksRemaining = 0;
+
+        for (let row = 0; row < BRICK_ROWS; row++) {
+          for (let col = 0; col < BRICK_COLS; col++) {
+            if (bricks[row][col]) {
+              bricksRemaining++;
+              const brickLeft = BRICK_GAP + col * (brickWidth + BRICK_GAP);
+              const brickRight = brickLeft + brickWidth;
+              const brickTop = brickStartY + row * (BRICK_HEIGHT + BRICK_GAP);
+              const brickBottom = brickTop + BRICK_HEIGHT;
+
+              // Check collision (use aspect-corrected Y radius)
+              if (ballX + BALL_RADIUS > brickLeft && ballX - BALL_RADIUS < brickRight &&
+                  ballY + ballRadiusY > brickTop && ballY - ballRadiusY < brickBottom) {
+                bricks[row][col] = false;
+                bricksRemaining--;
+                score += (BRICK_ROWS - row) * 10;
+                updateStatus();
+
+                // Determine bounce direction (scale Y overlaps by aspect for fair comparison)
+                const overlapLeft = ballX + BALL_RADIUS - brickLeft;
+                const overlapRight = brickRight - (ballX - BALL_RADIUS);
+                const overlapTop = (ballY + ballRadiusY - brickTop) / aspect;
+                const overlapBottom = (brickBottom - (ballY - ballRadiusY)) / aspect;
+                const minOverlapX = Math.min(overlapLeft, overlapRight);
+                const minOverlapY = Math.min(overlapTop, overlapBottom);
+
+                if (minOverlapX < minOverlapY) {
+                  ballVX = -ballVX;
+                } else {
+                  ballVY = -ballVY;
+                }
+              }
+            }
+          }
+        }
+
+        if (bricksRemaining === 0) {
+          gameWon = true;
+          updateStatus();
+        }
+      }
+
+      // Background
+      let r = 10, g = 10, b = 30;
+
+      // Draw bricks
+      const brickWidth = (1 - BRICK_GAP * (BRICK_COLS + 1)) / BRICK_COLS;
+      const brickStartY = 0.1;
+      const bevelSize = 0.004;  // Size of beveled edge
+
+      for (let row = 0; row < BRICK_ROWS; row++) {
+        for (let col = 0; col < BRICK_COLS; col++) {
+          if (bricks[row][col]) {
+            const brickLeft = BRICK_GAP + col * (brickWidth + BRICK_GAP);
+            const brickRight = brickLeft + brickWidth;
+            const brickTop = brickStartY + row * (BRICK_HEIGHT + BRICK_GAP);
+            const brickBottom = brickTop + BRICK_HEIGHT;
+
+            if (u >= brickLeft && u <= brickRight && v >= brickTop && v <= brickBottom) {
+              const color = brickColors[row];
+
+              // Calculate position within brick (0-1)
+              const localU = (u - brickLeft) / brickWidth;
+              const localV = (v - brickTop) / BRICK_HEIGHT;
+
+              // Edge distances
+              const distLeft = u - brickLeft;
+              const distRight = brickRight - u;
+              const distTop = v - brickTop;
+              const distBottom = brickBottom - v;
+
+              // Start with base color + vertical gradient (darker at bottom)
+              const gradientFactor = 1.0 - localV * 0.3;
+              r = color[0] * gradientFactor;
+              g = color[1] * gradientFactor;
+              b = color[2] * gradientFactor;
+
+              // Beveled edges - highlight on top and left
+              if (distTop < bevelSize) {
+                const t = 1 - distTop / bevelSize;
+                r = Math.min(255, r + 80 * t);
+                g = Math.min(255, g + 80 * t);
+                b = Math.min(255, b + 80 * t);
+              } else if (distLeft < bevelSize) {
+                const t = 1 - distLeft / bevelSize;
+                r = Math.min(255, r + 50 * t);
+                g = Math.min(255, g + 50 * t);
+                b = Math.min(255, b + 50 * t);
+              }
+
+              // Shadow on bottom and right
+              if (distBottom < bevelSize) {
+                const t = 1 - distBottom / bevelSize;
+                r *= (1 - 0.4 * t);
+                g *= (1 - 0.4 * t);
+                b *= (1 - 0.4 * t);
+              } else if (distRight < bevelSize) {
+                const t = 1 - distRight / bevelSize;
+                r *= (1 - 0.3 * t);
+                g *= (1 - 0.3 * t);
+                b *= (1 - 0.3 * t);
+              }
+
+              // Glassy shine effect - horizontal band near top
+              if (localV > 0.15 && localV < 0.35) {
+                const shineIntensity = Math.sin((localV - 0.15) / 0.2 * Math.PI) * 0.25;
+                r = Math.min(255, r + 255 * shineIntensity);
+                g = Math.min(255, g + 255 * shineIntensity);
+                b = Math.min(255, b + 255 * shineIntensity);
+              }
+
+              // Subtle diagonal stripe pattern
+              const stripe = Math.sin((localU + localV) * 40) * 0.5 + 0.5;
+              const stripeEffect = stripe * 0.08;
+              r = Math.min(255, r * (1 + stripeEffect));
+              g = Math.min(255, g * (1 + stripeEffect));
+              b = Math.min(255, b * (1 + stripeEffect));
+            }
+          }
+        }
+      }
+
+      // Draw paddle
+      const paddleLeft = paddleX - PADDLE_WIDTH / 2;
+      const paddleRight = paddleX + PADDLE_WIDTH / 2;
+      if (u >= paddleLeft && u <= paddleRight && v >= PADDLE_Y && v <= PADDLE_Y + PADDLE_HEIGHT) {
+        // Gradient on paddle
+        const gradientPos = (u - paddleLeft) / PADDLE_WIDTH;
+        r = 100 + gradientPos * 100;
+        g = 150 + gradientPos * 50;
+        b = 255;
+      }
+
+      // Draw ball
+      const dx = u - ballX;
+      const dy = (v - ballY) / resolution.pixelAspect;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < BALL_RADIUS) {
+        // Glowing ball effect
+        const glow = 1 - dist / BALL_RADIUS;
+        r = 255;
+        g = 255 * glow;
+        b = 200 * glow;
+      } else if (dist < BALL_RADIUS * 2) {
+        // Outer glow
+        const glow = (1 - (dist - BALL_RADIUS) / BALL_RADIUS) * 0.3;
+        r = Math.min(255, r + 255 * glow);
+        g = Math.min(255, g + 200 * glow);
+        b = Math.min(255, b + 150 * glow);
+      }
+
+      // Game over / win overlay
+      if (gameOver || gameWon) {
+        const flash = Math.sin(time * 3) * 0.2 + 0.5;
+        r *= flash;
+        g *= flash;
+        b *= flash;
+      }
+
+      return [r, g, b];
+    };
+  </script>
+
+  <!-- Auto-focus game canvas on start -->
+  <script async="ready">
+    $melker.engine.focusElement('game');
+  </script>
+</melker>

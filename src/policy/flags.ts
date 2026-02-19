@@ -99,6 +99,16 @@ export function policyToDenoFlags(
     }
   }
 
+  // Implicit: melker's own origin when served over HTTP (for theme CSS, server-ui, fonts)
+  const melkerUrl = new URL(import.meta.url);
+  if (melkerUrl.protocol === 'http:' || melkerUrl.protocol === 'https:') {
+    if (!p.net) p.net = [];
+    const melkerHost = melkerUrl.host; // includes port
+    if (!p.net.includes('*') && !p.net.includes(melkerHost)) {
+      p.net.push(melkerHost);
+    }
+  }
+
   if (p.net && p.net.length > 0) {
     if (p.net.includes('*')) {
       flags.push('--allow-net');

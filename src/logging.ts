@@ -438,17 +438,24 @@ export function getLogger(name: string): ComponentLogger {
 }
 
 // Convenience functions using global logger
-export const log = {
-  trace: (message: string, context?: Record<string, unknown>, source?: string) =>
+export const log: {
+  trace: (message: string, context?: Record<string, unknown>, source?: string) => void;
+  debug: (message: string, context?: Record<string, unknown>, source?: string) => void;
+  info: (message: string, context?: Record<string, unknown>, source?: string) => void;
+  warn: (message: string, context?: Record<string, unknown>, source?: string) => void;
+  error: (message: string, error?: Error, context?: Record<string, unknown>, source?: string) => void;
+  fatal: (message: string, error?: Error, context?: Record<string, unknown>, source?: string) => void;
+} = {
+  trace: (message: string, context?: Record<string, unknown>, source?: string): void =>
     getGlobalLogger().trace(message, context, source),
-  debug: (message: string, context?: Record<string, unknown>, source?: string) =>
+  debug: (message: string, context?: Record<string, unknown>, source?: string): void =>
     getGlobalLogger().debug(message, context, source),
-  info: (message: string, context?: Record<string, unknown>, source?: string) =>
+  info: (message: string, context?: Record<string, unknown>, source?: string): void =>
     getGlobalLogger().info(message, context, source),
-  warn: (message: string, context?: Record<string, unknown>, source?: string) =>
+  warn: (message: string, context?: Record<string, unknown>, source?: string): void =>
     getGlobalLogger().warn(message, context, source),
-  error: (message: string, error?: Error, context?: Record<string, unknown>, source?: string) =>
+  error: (message: string, error?: Error, context?: Record<string, unknown>, source?: string): void =>
     getGlobalLogger().error(message, error, context, source),
-  fatal: (message: string, error?: Error, context?: Record<string, unknown>, source?: string) =>
+  fatal: (message: string, error?: Error, context?: Record<string, unknown>, source?: string): void =>
     getGlobalLogger().fatal(message, error, context, source),
 };

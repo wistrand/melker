@@ -209,19 +209,18 @@ export const FONT_3x5: BitmapFont = {
   },
 };
 
-// Lazy-loaded 5x7 font from PSF2 file (converted from X11 BDF via tools/bdf-to-psf2.ts)
+// Lazy-loaded 5x7 font from embedded PSF2 data (converted from X11 BDF via tools/bdf-to-psf2.ts)
+// COPYRIGHT "Public domain font.  Share and enjoy."
 let _font5x7: BitmapFont | null = null;
 let _font5x7Promise: Promise<BitmapFont> | null = null;
 
-// Load the X11 misc font 5x7 from psf2 format
-// COPYRIGHT "Public domain font.  Share and enjoy."
 export async function getFont5x7(): Promise<BitmapFont> {
   if (_font5x7) return _font5x7;
   if (!_font5x7Promise) {
-    _font5x7Promise = fetch(new URL('./5x7.psf2', import.meta.url))
-      .then(r => r.arrayBuffer())
+    _font5x7Promise = import('./font-5x7-data.ts')
+      .then(m => m.getPSF2Bytes())
       .then(buf => {
-        _font5x7 = parsePSF2(new Uint8Array(buf));
+        _font5x7 = parsePSF2(buf);
         return _font5x7;
       });
   }

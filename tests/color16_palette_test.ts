@@ -2,7 +2,7 @@
 // Covers: nearestColor16Plus(), nearestSolid16(), blendShadeChars(),
 // palette structure, LUT correctness, gamma-correct mixing, shade penalty.
 
-import { assertEquals, assert, assertExists } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assert, assertExists } from 'jsr:@std/assert';
 import {
   nearestColor16Plus,
   nearestSolid16,

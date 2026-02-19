@@ -1,0 +1,166 @@
+<melker>
+<title>Melker Demo</title>
+
+<policy>
+{
+  "name": "Melker Demo",
+  "description": "Showcase: animated logo, architecture diagram, and feature overview",
+  "permissions": {
+    "read": ["."],
+    "shader": true,
+    "net": ["samesite"]
+  }
+}
+</policy>
+
+<style>
+.title {
+  font-weight: bold;
+  text-align: center;
+  padding: 1;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 1;
+}
+
+.content {
+  padding: 1;
+}
+
+.feature {
+  padding-left: 1;
+}
+
+.muted {
+  color: gray;
+}
+</style>
+
+<!-- Outer: vertical split — feature top, content bottom -->
+<split-pane sizes="2,3" style="width: fill; height: fill; direction: vertical;">
+
+    <!-- Top: feature overview -->
+    <container class="content" style="overflow: scroll;" role="main" aria-label="Feature overview">
+        <container style="flex-direction: row; justify-content: center;" role="toolbar" aria-label="Actions">
+          <button onClick="$melker.exit" label="Exit"/>
+          <button onClick="$melker.devtools.toggle()" label="Dev Tools"/>
+        </container>
+        <markdown>
+## What is Melker?
+A TUI framework where you write terminal apps the way you'd write a web page. One .melker file — markup, stylesheets, scripts. No compile step, no build system.
+  - **HTML-like** markup with 20+ components, **CSS stylesheets** with @media queries, **Flexbox layout** engine
+  - **Permission** sandbox per app
+  - F12 **Dev Tools** (inspect, logs, policy), **LSP** for editor support
+  - **Piping** and stdout mode
+  - **Graphics** with Sextant, Sixel, Kitty and iTerm2 support
+  - Canvas **shaders** and **image** rendering
+  - **Markdown** and **Mermaid** diagrams
+  - Optional **AI assisted** screen reader
+        </markdown>
+    </container>
+
+
+  <!-- Bottom: horizontal split — logo left, diagram right -->
+  <split-pane sizes="2,3" style="width: fill; height: fill;">
+
+      <!-- Left: animated logo -->
+      <container aria-label="Animated logo">
+          <img
+                  id="logo"
+                  src="../../media/melker-128.png"
+                  width="100%"
+                  height="100%"
+                  style="object-fit: contain;"
+                  dither="auto"
+                  onShader="$app.logoShader"
+                  shaderFps="24"
+          />
+      </container>
+
+
+      <!-- Right: architecture diagram -->
+    <container style="padding: 1;" role="complementary" aria-label="Architecture diagram">
+      <text class="section-title" aria-hidden="true">Architecture</text>
+      <graph style="flex: 1;">
+flowchart LR
+    A[melker app.melker] --> B{Local or URL?}
+    B -->|Local| C[Read file]
+    B -->|URL| D[Download]
+    D --> C
+    C --> E{Has policy?}
+    E -->|Yes| F{First run?}
+    E -->|No| G[No permissions]
+    F -->|Yes| H[Show approval prompt]
+    F -->|No| I[Cached approval]
+    H -->|Approved| J[Spawn sandbox]
+    H -->|Denied| K[Exit]
+    I --> J
+    G --> J
+    J --> L{TTY?}
+    L -->|Yes| M[Interactive TUI]
+    L -->|Piped| N[Single frame output]
+    M --> O{User input}
+    O -->|Key/Mouse| P[Event handler]
+    O -->|Resize| Q[@media re-eval]
+    O -->|F12| R[Dev Tools]
+    O -->|Ctrl+C| S[Exit]
+    P --> T[Re-render]
+    Q --> T
+    T --> O
+      </graph>
+    </container>
+
+  </split-pane>
+</split-pane>
+
+<script type="typescript">
+  // Animated logo shader — pulsing glow with color shift over the melker logo
+
+  interface ShaderSource {
+    getPixel(x: number, y: number): [number, number, number, number] | null;
+    hasImage: boolean;
+    width: number;
+    height: number;
+    mouse: { x: number; y: number };
+    mouseUV: { u: number; v: number };
+  }
+
+  interface ShaderUtils {
+    noise2d(x: number, y: number): number;
+    fbm(x: number, y: number, octaves?: number): number;
+    palette(t: number, a: [number,number,number], b: [number,number,number], c: [number,number,number], d: [number,number,number]): [number,number,number];
+  }
+
+  export const logoShader = (
+    x: number,
+    y: number,
+    time: number,
+    resolution: { width: number; height: number; pixelAspect: number },
+    source: ShaderSource,
+    _utils: ShaderUtils
+  ): [number, number, number] => {
+    // Sine wave displacement — sample from a shifted source position
+    const u = x / resolution.width;
+    const v = y / resolution.height;
+    const waveAmp = 6;
+    const waveFreq = 4;
+    const offsetX = Math.sin(v * waveFreq + time * 2) * waveAmp;
+    const offsetY = Math.cos(u * waveFreq + time * 1.7) * waveAmp * 0.5;
+
+    const srcX = Math.floor(x + offsetX);
+    const srcY = Math.floor(y + offsetY);
+
+    const pixel = source?.getPixel(srcX, srcY);
+    if (!pixel) return [0, 0, 0];
+
+    const [r, g, b, a] = pixel;
+
+    // Transparent background — keep dark
+    if (a < 10) return [0, 0, 0];
+
+    return [r, g, b];
+  };
+</script>
+</melker>

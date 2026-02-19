@@ -2,17 +2,18 @@
 
 ## Summary
 
-- 10 built-in themes as CSS files with `:root` custom properties (bw-std, bw-dark, gray-std, fullcolor-dark, etc.)
+- 10 built-in themes as CSS strings embedded in `src/themes/mod.ts` (bw-std, bw-dark, gray-std, fullcolor-dark, etc.)
 - Custom themes via `--theme-file` or `MELKER_THEME_FILE` — any CSS file with `:root` variables
 - Theme variables (`--theme-*`) auto-populate into stylesheets so apps don't need to hardcode colors
 
-Themes defined as CSS files with `:root` custom properties, loaded at startup via `fetch()`. Supports 10 built-in themes and user-provided custom themes.
+Themes defined as CSS with `:root` custom properties. Built-in themes are embedded in the module graph (no runtime I/O). Custom themes load from the filesystem via `fetch()`.
 
 ## File Map
 
 | File                                               | Purpose                                                             |
 |----------------------------------------------------|---------------------------------------------------------------------|
-| [`src/themes/*.css`](../src/themes/)               | 10 built-in theme CSS files                                        |
+| [`src/themes/mod.ts`](../src/themes/mod.ts)        | 10 built-in theme CSS strings (embedded, no runtime I/O)           |
+| [`src/themes/*.css`](../src/themes/)               | Source CSS files (reference only — embedded in `mod.ts`)           |
 | [`src/theme.ts`](../src/theme.ts)                  | `buildThemeFromCSS()`, `initThemes()`, `ThemeManager`, palette types, `FALLBACK_THEME` |
 | [`src/stylesheet.ts`](../src/stylesheet.ts)        | `extractVariableDeclarations()` (CSS `:root` parser, shared), `_pushThemeOverrides()` |
 | [`src/components/color-utils.ts`](../src/components/color-utils.ts) | `cssToRgba()` (color string to PackedRGBA)         |
@@ -82,7 +83,7 @@ Themes defined as CSS files with `:root` custom properties, loaded at startup vi
 ## Loading Pipeline
 
 ```
-fetch(new URL('./themes/x.css', import.meta.url))
+BUILTIN_THEME_CSS[name]             <-- src/themes/mod.ts (embedded strings)
     |
     v
 CSS text (string)
@@ -107,7 +108,7 @@ No full `Stylesheet` instance is needed. `extractVariableDeclarations()` is a st
 
 ## Initialization
 
-`initThemes()` is async and must be called before any theme access. It loads all 10 built-in themes via `fetch()` with `import.meta.url`, then optionally loads a custom theme from config.
+`initThemes()` must be called before any theme access. Built-in themes load synchronously from embedded CSS strings in `src/themes/mod.ts`. Custom themes (via `--theme-file`) are loaded asynchronously via `fetch()`.
 
 Two startup paths call it:
 - **`.melker` runner** (`src/melker-runner.ts`): `await initThemes()` before engine creation

@@ -1,0 +1,222 @@
+<melker>
+
+  <help>
+# Markdown Viewer
+
+A terminal-based markdown file viewer with navigation history.
+
+## Usage
+
+```
+melker markdown_viewer.melker [file.md]
+```
+
+If no file is specified, defaults to `README.md`.
+
+## Navigation
+
+- **Back**: Navigate to previously viewed document
+- **Fwd**: Navigate forward after going back
+- **Exit**: Close the viewer
+
+## Link Handling
+
+- Click on `.md` or `.melker` links to navigate within the viewer
+- Click on `http://` or `https://` links to open in your default browser
+- The viewer maintains a history stack for back/forward navigation
+
+## Tips
+
+- Links are resolved relative to the current document's directory
+- Press **F12** to view the source code
+  </help>
+
+  <policy>
+  {
+    "name": "Markdown Viewer",
+    "description": "A simple markdown file viewer with navigation",
+    "permissions": {
+      "read": ["*"],
+      "net": ["*"],
+      "browser": true
+    }
+  }
+  </policy>
+
+  <title>Melker Markdown Viewer - ${argv[1]}</title>
+
+    <style>
+        #header {
+            display: flex;
+            flex-direction: row;
+            padding: 1;
+            border: none;
+            background-color: gray;
+        }
+        #root {
+          display: flex;
+          flex-direction: column;
+          width: fill;
+          height: fill;
+          border: none;
+        }
+    </style>
+
+    <container id="root">
+        <container id="header">
+            <button class="big" label="Back" onClick="$app.goBack()"/>
+            <button label="Fwd" onClick="$app.goForward()"/>
+            <button label="Open..." onClick="$app.openFileBrowser()"/>
+            <text id="title-text" style="font-weight: bold; flex: 1; padding-left: 1;">
+                ${argv[1]:-README.md}
+            </text>
+            <button label="Exit" onClick="$melker.exit();" />
+        </container>
+
+        <container id="content-area" style="overflow: scroll; flex: 1 1 0; padding: 1;">
+            <markdown id="markdown-content"  src="${argv[1]:-README.md}"  onLink="$app.handleLink(event)" style="text-wrap: wrap;"/>
+        </container>
+
+        <dialog
+          id="file-dialog"
+          title="Open Markdown File"
+          open="false"
+          modal="true"
+          width="70"
+          height="20"
+          onClose="$app.closeFileBrowser()"
+        >
+          <file-browser
+            id="file-browser"
+            selectionMode="single"
+            selectType="file"
+            showHidden="false"
+            onChange="$app.handleFileSelect(event)"
+            onCancel="$app.closeFileBrowser()"
+            maxVisible="12"
+          />
+        </dialog>
+    </container>
+
+
+    <script type="typescript">
+    // Navigation history
+    const backStack: string[] = [];
+    const forwardStack: string[] = [];
+
+    function updateTitle(src: string) {
+      $melker.setTitle('Melker - ' + src);
+      const titleText = $melker.getElementById('title-text');
+      if (titleText) titleText.setValue(src);
+    }
+
+    // File browser dialog
+    export function openFileBrowser() {
+      const dialog = $melker.getElementById('file-dialog');
+      if (dialog) dialog.props.open = true;
+      $melker.render();
+    }
+
+    export function closeFileBrowser() {
+      const dialog = $melker.getElementById('file-dialog');
+      if (dialog) dialog.props.open = false;
+      $melker.render();
+    }
+
+    export function handleFileSelect(event: { path: string }) {
+      const filePath = event.path;
+      closeFileBrowser();
+
+      // Only open markdown files
+      if (!filePath.endsWith('.md') && !filePath.endsWith('.melker')) {
+        return;
+      }
+
+      const markdown = $melker.getElementById('markdown-content');
+      if (markdown) {
+        const currentSrc = markdown.props.src || '';
+        // Push current page to back stack
+        if (currentSrc) {
+          backStack.push(currentSrc);
+          forwardStack.length = 0;
+        }
+        markdown.props.src = filePath;
+        updateTitle(filePath);
+        $melker.render();
+      }
+    }
+
+
+    // Navigate to a new page (called from link clicks)
+    export function handleLink(event: { url: string }) {
+      const url = event.url;
+
+      $melker?.log?.info("open " + url);
+      // Open http/https URLs in browser
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        $melker.openBrowser(url);
+        return;
+      }
+
+      // Navigate to .md or .melker files within the viewer
+      if (url.endsWith('.md') || url.endsWith('.melker')) {
+        const markdown = $melker.getElementById('markdown-content');
+        if (markdown) {
+          const currentSrc = markdown.props.src || '';
+          // Push current page to back stack
+          if (currentSrc) {
+            backStack.push(currentSrc);
+            // Clear forward stack on new navigation
+            forwardStack.length = 0;
+          }
+          const currentDir = currentSrc.substring(0, currentSrc.lastIndexOf('/') + 1);
+          const newSrc = url.startsWith('/') ? url : currentDir + url;
+          markdown.props.src = newSrc;
+          $melker.setTitle('Melker - ' + newSrc);
+          $melker.render();
+        }
+      }
+    }
+
+    // Go back in history
+    export function goBack() {
+      if (backStack.length === 0) return;
+      const markdown = $melker.getElementById('markdown-content');
+      if (markdown) {
+        const currentSrc = markdown.props.src || '';
+        // Push current to forward stack
+        if (currentSrc) {
+          forwardStack.push(currentSrc);
+        }
+        // Pop from back stack
+        const prevSrc = backStack.pop();
+        if (prevSrc) {
+          markdown.props.src = prevSrc;
+          updateTitle(prevSrc);
+          $melker.render();
+        }
+      }
+    }
+
+    // Go forward in history
+    export function goForward() {
+      if (forwardStack.length === 0) return;
+      const markdown = $melker.getElementById('markdown-content');
+      if (markdown) {
+        const currentSrc = markdown.props.src || '';
+        // Push current to back stack
+        if (currentSrc) {
+          backStack.push(currentSrc);
+        }
+        // Pop from forward stack
+        const nextSrc = forwardStack.pop();
+        if (nextSrc) {
+          markdown.props.src = nextSrc;
+          updateTitle(nextSrc);
+          $melker.render();
+        }
+      }
+    }
+  </script>
+
+</melker>

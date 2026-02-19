@@ -1,6 +1,6 @@
 // Tests for LSP server functions
 
-import { assertEquals, assert, assertExists } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assert, assertExists } from 'jsr:@std/assert';
 import { _testing } from '../src/lsp.ts';
 import { DiagnosticSeverity, CodeActionKind } from 'npm:vscode-languageserver@9.0.1/node.js';
 

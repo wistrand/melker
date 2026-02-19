@@ -1,0 +1,283 @@
+<melker>
+
+  <policy>
+    {
+      "permissions": {
+        "ai": ["*"],
+        "clipboard": true
+      }
+    }
+  </policy>
+
+  <help>
+# Color Selector
+
+An interactive HSL color picker for the terminal.
+
+## Usage
+
+- **Hue/Saturation Canvas**: Click anywhere to select hue (horizontal) and saturation (vertical)
+- **Lightness Bar**: Click to adjust lightness from dark (left) to light (right)
+- **Copy Hex**: Click the button to copy the hex color code to clipboard
+
+## Color Values
+
+The selected color is displayed in three formats:
+- **Hex**: `#rrggbb` format
+- **RGB**: `rgb(r, g, b)` format
+- **HSL**: `hsl(h, s%, l%)` format
+
+## Tips
+
+- Run with `MELKER_THEME=fullcolor-dark` for best color accuracy
+- The crosshair shows your current selection on the palette
+- Press **F12** to view this help and source code
+  </help>
+
+  <title>Color Selector</title>
+
+  <style>
+    #root {
+      padding: 1;
+      flex-direction: column;
+      gap: 1;
+    }
+    #header {
+      font-weight: bold;
+    }
+    #main {
+      flex-direction: row;
+      gap: 2;
+    }
+    #palette-container {
+      flex-direction: column;
+      gap: 1;
+    }
+    #info-panel {
+      flex-direction: column;
+      gap: 1;
+      width: 28;
+    }
+    #preview {
+      height: 3;
+      border: thin;
+      justify-content: center;
+      align-items: center;
+    }
+    #color-values {
+      flex-direction: column;
+    }
+    .label {
+      color: gray;
+    }
+  </style>
+
+  <container id="root" style="border: thin; display: flex; flex-direction: column">
+    <text id="header">Color Selector (click to pick)</text>
+
+    <container id="main">
+      <container id="palette-container" style="border: thick">
+        <text class="label">Hue / Saturation:</text>
+        <canvas
+          id="hue-sat-canvas"
+          width="72"
+          height="24"
+          dither="auto"
+          onPaint="$app.paintHueSatPalette(event)"
+          onClick="$app.handlePaletteClick(event)"
+        />
+
+        <text class="label">Lightness:</text>
+        <canvas
+          id="lightness-canvas"
+          width="72"
+          height="2"
+          dither="auto"
+          onPaint="$app.paintLightnessPalette(event)"
+          onClick="$app.handleLightnessClick(event)"
+        />
+      </container>
+
+      <container id="info-panel" style="border: thin">
+        <text class="label">Selected Color:</text>
+        <container id="preview" style="background-color: #ff0000;">
+          <text id="preview-text" style="color: white;">#ff0000</text>
+        </container>
+
+        <container id="color-values">
+          <text class="label">Hex:</text>
+          <text id="hex-value">#ff0000</text>
+
+          <text class="label">RGB:</text>
+          <text id="rgb-value">rgb(255, 0, 0)</text>
+
+          <text class="label">HSL:</text>
+          <text id="hsl-value">hsl(0, 100%, 50%)</text>
+        </container>
+
+        <button label="Copy Hex" onClick="
+          const hex = $melker.getElementById('hex-value');
+          if (hex) {
+            const success = await $melker.copyToClipboard(hex.getValue());
+            if (success) {
+              alert('Copied: ' + hex.getValue());
+            } else {
+              alert('Failed to copy (no clipboard tool available)');
+            }
+          }
+        " />
+      </container>
+    </container>
+
+    <text style="color: gray;">Run with MELKER_THEME=fullcolor-dark for best result. Press Ctrl+C to exit.</text>
+  </container>
+
+  <script type="typescript">
+    let selectedHue = 0;
+    let selectedSat = 100;
+    let selectedLight = 50;
+
+    // Convert HSL to RGB
+    function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+      s /= 100;
+      l /= 100;
+      const k = (n: number) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+    }
+
+    // Convert RGB to hex string
+    function rgbToHex(r: number, g: number, b: number): string {
+      return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+    }
+
+    export function updateColorDisplay() {
+      const [r, g, b] = hslToRgb(selectedHue, selectedSat, selectedLight);
+      const hex = rgbToHex(r, g, b);
+
+      $melker?.logger?.info("logger: updateColorDisplay " + hex);
+
+      const preview = $melker.getElementById('preview');
+      const hexValue = $melker.getElementById('hex-value');
+      const rgbValue = $melker.getElementById('rgb-value');
+      const hslValue = $melker.getElementById('hsl-value');
+
+      if (preview) {
+        preview.props.style.backgroundColor = hex;
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const textColor = luminance > 0.5 ? 'black' : 'white';
+        const previewText = $melker.getElementById('preview-text');
+        if (previewText) {
+          previewText.setValue(hex);
+          previewText.props.style.color = textColor;
+        }
+      }
+      if (hexValue) hexValue.setValue(hex);
+      if (rgbValue) rgbValue.setValue('rgb(' + r + ', ' + g + ', ' + b + ')');
+      if (hslValue) hslValue.setValue('hsl(' + selectedHue + ', ' + selectedSat + '%, ' + selectedLight + '%)');
+    }
+
+    export function paintHueSatPalette(event: any) {
+      const { canvas } = event;
+      if (!canvas) return;
+
+      const size = canvas.getBufferSize();
+      const width = size.width;
+      const height = size.height;
+
+      // Draw hue-saturation gradient at current lightness
+      for (let y = 0; y < height; y++) {
+        const sat = 100 - (y / height) * 100;
+        for (let x = 0; x < width; x++) {
+          const hue = (x / width) * 360;
+          const [r, g, b] = hslToRgb(hue, sat, selectedLight);
+          canvas.setPixelColor(x, y, rgbToHex(r, g, b), true);
+        }
+      }
+
+      // Draw crosshair at selected position
+      const crossX = Math.floor((selectedHue / 360) * width);
+      const crossY = Math.floor((1 - selectedSat / 100) * height);
+
+      const [bgR, bgG, bgB] = hslToRgb(selectedHue, selectedSat, selectedLight);
+      const lum = (0.299 * bgR + 0.587 * bgG + 0.114 * bgB) / 255;
+      const cc = '#000000';
+
+      // Horizontal line
+      for (let i = -4; i <= 4; i++) {
+        const px = crossX + i;
+        canvas.setPixelColor(px, crossY, cc, true);
+        canvas.setPixelColor(px, crossY+1, cc, true);
+      }
+      // Vertical line
+      for (let i = -4; i <= 4; i++) {
+        const py = crossY + i;
+        canvas.setPixelColor(crossX, py, cc, true);
+        canvas.setPixelColor(crossX+1, py, cc, true);
+        canvas.setPixelColor(crossX-1, py, cc, true);
+      }
+    }
+
+    export function paintLightnessPalette(event: any) {
+      const { canvas } = event;
+      if (!canvas) return;
+
+      const size = canvas.getBufferSize();
+      const width = size.width;
+      const height = size.height;
+
+      // Draw lightness gradient horizontally (dark left, light right)
+      for (let x = 0; x < width; x++) {
+        const light = (x / width) * 100;
+        const [r, g, b] = hslToRgb(selectedHue, selectedSat, light);
+        const color = rgbToHex(r, g, b);
+        for (let y = 0; y < height; y++) {
+          canvas.setPixelColor(x, y, color, true);
+        }
+      }
+
+      // Draw vertical marker at selected lightness
+      const markerX = Math.floor((selectedLight / 100) * width);
+      const cc = selectedLight > 50 ? '#000000' : '#ffffff';
+      for (let y = 0; y < height; y++) {
+        canvas.setPixelColor(markerX, y, cc, true);
+      }
+    }
+
+    export function handlePaletteClick(event: any) {
+      const canvas = $melker.getElementById('hue-sat-canvas');
+      if (!canvas) return;
+
+      const bounds = canvas.getBounds();
+      if (!bounds) return;
+
+      const relX = event.position.x - bounds.x;
+      const relY = event.position.y - bounds.y;
+
+      selectedHue = Math.round((relX / bounds.width) * 360);
+      selectedSat = Math.round((1 - relY / bounds.height) * 100);
+
+      selectedHue = Math.max(0, Math.min(359, selectedHue));
+      selectedSat = Math.max(0, Math.min(100, selectedSat));
+
+      updateColorDisplay();
+    }
+
+    export function handleLightnessClick(event: any) {
+      const canvas = $melker.getElementById('lightness-canvas');
+      if (!canvas) return;
+
+      const bounds = canvas.getBounds();
+      if (!bounds) return;
+
+      const relX = event.position.x - bounds.x;
+      selectedLight = Math.round((relX / bounds.width) * 100);
+      selectedLight = Math.max(0, Math.min(100, selectedLight));
+
+      updateColorDisplay();
+    }
+
+  </script>
+
+</melker>

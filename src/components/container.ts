@@ -32,7 +32,7 @@ export class ContainerElement extends Element implements Renderable, Focusable, 
   /**
    * Get default styles for containers (used by layout system)
    */
-  static getDefaultStyle() {
+  static getDefaultStyle(): { display: string; flexDirection: string; overflow: string } {
     return {
       display: 'flex',
       flexDirection: 'column',

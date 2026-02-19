@@ -1,6 +1,6 @@
 // Tests for the dual-buffer system
 
-import { assertEquals, assertNotEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assertNotEquals, assert } from 'jsr:@std/assert';
 import {
   TerminalBuffer,
   DualBuffer,

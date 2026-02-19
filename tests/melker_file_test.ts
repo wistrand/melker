@@ -1,6 +1,6 @@
 // Tests for .melker file parsing
 
-import { assertEquals, assertExists, assertThrows, assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assertExists, assertThrows, assertStringIncludes } from 'jsr:@std/assert';
 import { parseMelkerFile } from '../src/template.ts';
 import { COLORS, cssToRgba } from '../src/components/color-utils.ts';
 // Import components to trigger schema registration (needed for schema-driven coercion tests)

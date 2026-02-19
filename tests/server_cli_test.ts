@@ -1,8 +1,8 @@
 // E2E tests for server CLI flags, env vars, and renamed options
 // Tests launch melker.ts as a subprocess to verify external behavior
 
-import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals } from 'jsr:@std/assert';
+import { assertStringIncludes } from 'jsr:@std/assert';
 
 const decoder = new TextDecoder();
 

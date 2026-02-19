@@ -17,7 +17,7 @@
  *   - kitty or xterm
  */
 
-import { join, dirname, basename } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { join, dirname, basename } from "jsr:@std/path@1.1.4";
 
 // ============================================================================
 // Types

@@ -1,6 +1,6 @@
 // Policy system tests
 
-import { assert, assertEquals, assertExists, assertStringIncludes } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assert, assertEquals, assertExists, assertStringIncludes } from 'jsr:@std/assert';
 import {
   loadPolicy,
   loadPolicyFromContent,

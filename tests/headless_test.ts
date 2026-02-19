@@ -1,6 +1,6 @@
 // E2E tests for headless mode and server token authentication
 
-import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals } from 'jsr:@std/assert';
 import { MelkerServer } from '../src/server.ts';
 
 /** Get a random port in the ephemeral range to avoid clashes */

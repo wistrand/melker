@@ -1,7 +1,7 @@
 // Tests for the theme system: CSS theme loading, initThemes(), ThemeManager,
 // buildThemeFromCSS(), and CSS variable overrides flowing to getThemeColor().
 
-import { assertEquals, assert, assertExists } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assert, assertExists } from 'jsr:@std/assert';
 import {
   initThemes,
   getCurrentTheme,

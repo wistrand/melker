@@ -1,8 +1,8 @@
 // End-to-end layout tests using --stdout mode
 // These tests render .melker content and compare text output
 
-import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { dirname, fromFileUrl, join } from 'https://deno.land/std@0.224.0/path/mod.ts';
+import { assertEquals, assert } from 'jsr:@std/assert';
+import { dirname, fromFileUrl, join } from 'jsr:@std/path@1.1.4';
 
 const testDir = dirname(fromFileUrl(import.meta.url));
 const projectRoot = join(testDir, '..');

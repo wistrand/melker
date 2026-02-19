@@ -4,6 +4,7 @@ import { decodePng } from '../../deps.ts';
 import { MelkerConfig } from '../../config/mod.ts';
 import { BAYER_8X8, type ThresholdMatrix } from './types.ts';
 import { quantizeChannel, rgbToGray } from './utils.ts';
+import { BLUE_NOISE_64, BLUE_NOISE_SIZE } from './blue-noise-64.ts';
 
 // ============================================
 // Threshold Matrix Loading
@@ -11,6 +12,30 @@ import { quantizeChannel, rgbToGray } from './utils.ts';
 
 // Cache for loaded threshold matrices
 const matrixCache = new Map<string, ThresholdMatrix>();
+
+/**
+ * Decode PNG bytes into a ThresholdMatrix and cache it.
+ */
+function decodePngToMatrix(pngData: Uint8Array, sourcePath: string): ThresholdMatrix {
+  const decoded = decodePng(pngData);
+  if (decoded.width !== decoded.height) {
+    throw new Error(`Threshold matrix PNG must be square, got ${decoded.width}x${decoded.height}`);
+  }
+  const size = decoded.width;
+  const data = new Uint8Array(size * size);
+  const channels = decoded.channels || (decoded.data.length / (size * size));
+  for (let i = 0; i < size * size; i++) {
+    if (channels === 1) data[i] = decoded.data[i];
+    else if (channels === 2) data[i] = decoded.data[i * 2];
+    else {
+      const idx = i * (channels >= 4 ? 4 : 3);
+      data[i] = Math.round(0.299 * decoded.data[idx] + 0.587 * decoded.data[idx + 1] + 0.114 * decoded.data[idx + 2]);
+    }
+  }
+  const matrix: ThresholdMatrix = { size, data, mask: size - 1 };
+  matrixCache.set(sourcePath, matrix);
+  return matrix;
+}
 
 /**
  * Load a threshold matrix from a square grayscale PNG file (synchronous)
@@ -28,47 +53,7 @@ export function loadThresholdMatrixFromPngSync(pngPath: string): ThresholdMatrix
 
   // Load and decode PNG synchronously
   const pngData = Deno.readFileSync(pngPath);
-  const decoded = decodePng(pngData);
-
-  // Validate square dimensions
-  if (decoded.width !== decoded.height) {
-    throw new Error(`Threshold matrix PNG must be square, got ${decoded.width}x${decoded.height}`);
-  }
-
-  const size = decoded.width;
-
-  // Extract grayscale values (handle both grayscale and RGB/RGBA)
-  const data = new Uint8Array(size * size);
-  const channels = decoded.channels || (decoded.data.length / (size * size));
-
-  for (let i = 0; i < size * size; i++) {
-    if (channels === 1) {
-      // Grayscale
-      data[i] = decoded.data[i];
-    } else if (channels === 2) {
-      // Grayscale + alpha
-      data[i] = decoded.data[i * 2];
-    } else if (channels === 3) {
-      // RGB - use luminance
-      const idx = i * 3;
-      data[i] = Math.round(0.299 * decoded.data[idx] + 0.587 * decoded.data[idx + 1] + 0.114 * decoded.data[idx + 2]);
-    } else {
-      // RGBA - use luminance
-      const idx = i * 4;
-      data[i] = Math.round(0.299 * decoded.data[idx] + 0.587 * decoded.data[idx + 1] + 0.114 * decoded.data[idx + 2]);
-    }
-  }
-
-  const matrix: ThresholdMatrix = {
-    size,
-    data,
-    mask: size - 1,
-  };
-
-  // Cache for reuse
-  matrixCache.set(pngPath, matrix);
-
-  return matrix;
+  return decodePngToMatrix(pngData, pngPath);
 }
 
 /**
@@ -86,47 +71,7 @@ export async function loadThresholdMatrixFromPng(pngPath: string): Promise<Thres
 
   // Load and decode PNG
   const pngData = await Deno.readFile(pngPath);
-  const decoded = decodePng(pngData);
-
-  // Validate square dimensions
-  if (decoded.width !== decoded.height) {
-    throw new Error(`Threshold matrix PNG must be square, got ${decoded.width}x${decoded.height}`);
-  }
-
-  const size = decoded.width;
-
-  // Extract grayscale values (handle both grayscale and RGB/RGBA)
-  const data = new Uint8Array(size * size);
-  const channels = decoded.channels || (decoded.data.length / (size * size));
-
-  for (let i = 0; i < size * size; i++) {
-    if (channels === 1) {
-      // Grayscale
-      data[i] = decoded.data[i];
-    } else if (channels === 2) {
-      // Grayscale + alpha
-      data[i] = decoded.data[i * 2];
-    } else if (channels === 3) {
-      // RGB - use luminance
-      const idx = i * 3;
-      data[i] = Math.round(0.299 * decoded.data[idx] + 0.587 * decoded.data[idx + 1] + 0.114 * decoded.data[idx + 2]);
-    } else {
-      // RGBA - use luminance
-      const idx = i * 4;
-      data[i] = Math.round(0.299 * decoded.data[idx] + 0.587 * decoded.data[idx + 1] + 0.114 * decoded.data[idx + 2]);
-    }
-  }
-
-  const matrix: ThresholdMatrix = {
-    size,
-    data,
-    mask: size - 1,
-  };
-
-  // Cache for reuse
-  matrixCache.set(pngPath, matrix);
-
-  return matrix;
+  return decodePngToMatrix(pngData, pngPath);
 }
 
 /**
@@ -148,56 +93,42 @@ export function clearThresholdMatrixCache(): void {
 // Blue Noise Matrix Loading
 // ============================================
 
-// Default blue noise PNG path (relative to module location)
-// Can be overridden via config: dither.blueNoisePath or MELKER_BLUE_NOISE_PATH env var
-const BUNDLED_BLUE_NOISE_PATH = new URL('../../../media/blue-noise-64.png', import.meta.url).pathname;
+// Embedded blue noise matrix (no runtime I/O needed for the default)
+const BUILTIN_BLUE_NOISE: ThresholdMatrix = {
+  size: BLUE_NOISE_SIZE,
+  data: BLUE_NOISE_64,
+  mask: BLUE_NOISE_SIZE - 1,
+};
 
-/**
- * Get the effective blue noise path from config or use bundled default
- */
-function getBlueNoisePath(): string {
-  const configPath = MelkerConfig.get().blueNoisePath;
-  return configPath || BUNDLED_BLUE_NOISE_PATH;
-}
-
-// Cached blue noise matrix (loaded lazily on first use)
+// Cached blue noise matrix — starts with the embedded default
 let _blueNoiseMatrix: ThresholdMatrix | null = null;
-let _blueNoiseLoadedPath: string | null = null;
-let _blueNoiseLoadFailed = false;
 
 /**
- * Get the blue noise threshold matrix, loading synchronously if needed.
- * Uses config dither.blueNoisePath or falls back to bundled media/blue-noise-64.png.
- * Returns null if loading fails (caller should fall back to ordered dithering).
+ * Get the blue noise threshold matrix.
+ * Uses the embedded 64x64 matrix by default (no I/O).
+ * If config overrides the path (dither.blueNoisePath / MELKER_BLUE_NOISE_PATH),
+ * loads that file synchronously instead.
+ * Returns null if custom loading fails (caller should fall back to ordered dithering).
  */
 function getBlueNoiseMatrixLazy(): ThresholdMatrix | null {
-  const path = getBlueNoisePath();
+  const configPath = MelkerConfig.get().blueNoisePath;
 
-  // If path changed, reset cache
-  if (_blueNoiseLoadedPath !== null && _blueNoiseLoadedPath !== path) {
-    _blueNoiseMatrix = null;
-    _blueNoiseLoadFailed = false;
+  // No custom path — use embedded matrix (zero I/O)
+  if (!configPath) {
+    return BUILTIN_BLUE_NOISE;
   }
 
-  // Return cached matrix if available
-  if (_blueNoiseMatrix) {
-    return _blueNoiseMatrix;
-  }
+  // Custom path — check cache
+  const cached = matrixCache.get(configPath);
+  if (cached) return cached;
+  if (_blueNoiseMatrix) return _blueNoiseMatrix;
 
-  // Don't retry if already failed for this path
-  if (_blueNoiseLoadFailed && _blueNoiseLoadedPath === path) {
-    return null;
-  }
-
-  // Try to load synchronously
-  _blueNoiseLoadedPath = path;
+  // Try to load custom matrix synchronously
   try {
-    _blueNoiseMatrix = loadThresholdMatrixFromPngSync(path);
+    _blueNoiseMatrix = loadThresholdMatrixFromPngSync(configPath);
     return _blueNoiseMatrix;
   } catch (error) {
-    _blueNoiseLoadFailed = true;
-    // Use logger if available, otherwise console.error (for standalone usage)
-    const errorMsg = `Failed to load blue noise matrix from ${path}: ${error instanceof Error ? error.message : error}`;
+    const errorMsg = `Failed to load blue noise matrix from ${configPath}: ${error instanceof Error ? error.message : error}`;
     console.error(errorMsg);
     return null;
   }

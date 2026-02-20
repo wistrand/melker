@@ -122,7 +122,9 @@ async function wasLauncherReloaded(): Promise<boolean> {
     const denoDir = Deno.env.get('DENO_DIR')
       || (Deno.build.os === 'darwin'
         ? `${Deno.env.get('HOME')}/Library/Caches/deno`
-        : `${Deno.env.get('XDG_CACHE_HOME') || Deno.env.get('HOME') + '/.cache'}/deno`);
+        : Deno.build.os === 'windows'
+          ? `${Deno.env.get('LOCALAPPDATA')}/deno`
+          : `${Deno.env.get('XDG_CACHE_HOME') || Deno.env.get('HOME') + '/.cache'}/deno`);
 
     let hostDir = url.hostname;
     const defaultPort = url.protocol === 'https:' ? '443' : '80';

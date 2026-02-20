@@ -57,12 +57,14 @@ melker upgrade
 
 All bundled assets are encoded as grayscale PNG (base64) in `src/assets-data.ts` (generated), with the runtime API in `src/assets.ts` (hand-written). Assets are decoded synchronously on first access via `decodePng()` and cached. This keeps them in the module graph so they're cached at `deno install` time.
 
-| Asset ID prefix    | Source files                              | Count | Format                    |
-|--------------------|-------------------------------------------|-------|---------------------------|
-| `theme/*`          | `src/themes/*.css`                        | 10    | Grayscale PNG + base64    |
-| `blue-noise-64`    | `media/blue-noise-64.png`                 | 1     | Grayscale PNG + base64    |
-| `font-5x7`         | `src/components/segment-display/5x7.psf2` | 1     | Grayscale PNG + base64    |
-| `logo-128`         | `media/melker-128.png`                    | 1     | Grayscale PNG + base64    |
+| Asset ID prefix             | Source files                              | Count | Format                    |
+|-----------------------------|-------------------------------------------|-------|---------------------------|
+| `theme/*`                   | `src/themes/*.css`                        | 10    | Grayscale PNG + base64    |
+| `blue-noise-64`             | `media/blue-noise-64.png`                 | 1     | Grayscale PNG + base64    |
+| `font-5x7`                  | `src/components/segment-display/5x7.psf2` | 1     | Grayscale PNG + base64    |
+| `logo-128`                  | `media/melker-128.png`                    | 1     | Grayscale PNG + base64    |
+| `server-ui/*`               | `src/server-ui/index.{html,css,js}`       | 3     | Grayscale PNG + base64    |
+| `macos-audio-record.swift`  | `src/ai/macos-audio-record.swift`         | 1     | Grayscale PNG + base64    |
 
 Asset definitions live in [`scripts/assets.json`](../scripts/assets.json). Regenerate with `deno task build:assets`.
 
@@ -119,10 +121,10 @@ if (selfUrl.protocol === 'file:') {
 
 In `melker-launcher.ts`, placed in the early-exit chain (after `--clear-approvals`, before `parseCliFlags`).
 
-Two modes, detected by checking for `.git` in the launcher's directory:
+Two modes, detected by `detectInstallType()` (checks for `.git` directory):
 
 1. **Git checkout**: Prompts with `confirm()` (skippable with `--yes`), then runs `git pull`
-2. **JSR install**: Fetches `jsr.io/@wistrand/melker/meta.json`, compares versions, detects shim name from `$DENO_INSTALL_ROOT/bin/` (or `~/.deno/bin/`), reinstalls with `-f` preserving the name
+2. **JSR/remote install**: Fetches `jsr.io/@wistrand/melker/meta.json`, compares versions, detects shim name via `findInstalledShim()` (scans `$DENO_INSTALL_ROOT/bin/` or `~/.deno/bin/`), reinstalls with `-f` preserving the name
 
 Version source: `import denoConfig from './deno.json' with { type: 'json' }`
 

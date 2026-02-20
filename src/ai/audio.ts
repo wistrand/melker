@@ -6,6 +6,7 @@ import { getLogger } from '../logging.ts';
 import { getOpenRouterConfig } from './openrouter.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { ensureError } from '../utils/error.ts';
+import { getAssetText } from '../assets.ts';
 
 const logger = getLogger('ai:audio');
 
@@ -101,42 +102,28 @@ export class AudioRecorder {
   }
 
   /**
-   * Get the Swift script path, downloading to temp file if running from remote URL
+   * Get the Swift script path. Uses filesystem for local, embedded asset for remote/JSR.
    */
   private async _getSwiftScriptPath(): Promise<string> {
     const scriptUrl = new URL('./macos-audio-record.swift', import.meta.url);
 
-    // Check if running from a remote URL
-    if (scriptUrl.protocol === 'http:' || scriptUrl.protocol === 'https:') {
-      // Reuse existing temp file if available
-      if (this._tempSwiftScript) {
-        try {
-          await Deno.stat(this._tempSwiftScript);
-          return this._tempSwiftScript;
-        } catch {
-          // Temp file was deleted, need to re-download
-          this._tempSwiftScript = null;
-        }
+    // Local file — use directly
+    if (scriptUrl.protocol === 'file:') return scriptUrl.pathname;
+
+    // Remote/JSR — write embedded asset to temp file (swift needs a file path)
+    if (this._tempSwiftScript) {
+      try {
+        await Deno.stat(this._tempSwiftScript);
+        return this._tempSwiftScript;
+      } catch {
+        this._tempSwiftScript = null;
       }
-
-      // Fetch the Swift script from remote URL
-      logger.info('Fetching Swift script from remote URL', { url: scriptUrl.href });
-      const response = await fetch(scriptUrl.href);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch Swift script: ${response.status} ${response.statusText}`);
-      }
-      const scriptContent = await response.text();
-
-      // Write to temp file
-      this._tempSwiftScript = await Deno.makeTempFile({ suffix: '.swift' });
-      await Deno.writeTextFile(this._tempSwiftScript, scriptContent);
-      logger.info('Swift script cached to temp file', { path: this._tempSwiftScript });
-
-      return this._tempSwiftScript;
     }
 
-    // Local file - use pathname directly
-    return scriptUrl.pathname;
+    this._tempSwiftScript = await Deno.makeTempFile({ suffix: '.swift' });
+    await Deno.writeTextFile(this._tempSwiftScript, getAssetText('macos-audio-record.swift'));
+    logger.debug('Swift script written to temp file', { path: this._tempSwiftScript });
+    return this._tempSwiftScript;
   }
 
   /**

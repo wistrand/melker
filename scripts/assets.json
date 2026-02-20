@@ -16,6 +16,12 @@
 
     { "id": "font-5x7", "path": "src/components/segment-display/5x7.psf2" },
 
-    { "id": "logo-128", "path": "media/melker-128.png" }
+    { "id": "logo-128", "path": "media/melker-128.png" },
+
+    { "id": "server-ui/index.html", "path": "src/server-ui/index.html" },
+    { "id": "server-ui/index.css",  "path": "src/server-ui/index.css" },
+    { "id": "server-ui/index.js",   "path": "src/server-ui/index.js" },
+
+    { "id": "macos-audio-record.swift", "path": "src/ai/macos-audio-record.swift" }
   ]
 }

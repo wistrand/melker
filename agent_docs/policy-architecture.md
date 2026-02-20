@@ -179,6 +179,8 @@ Apps shouldn't need to declare permissions for Melker's internal operations. Use
 |------|-----------|
 | `localhost` | When `serverPort` is configured (server needs it) |
 
+**Note:** Melker's own origin is NOT implicitly added — all runtime assets (themes, server UI, fonts, dither textures, audio script) are embedded via the [asset system](embedded-assets-architecture.md), so no network access to the melker host is needed.
+
 ### Implicit Environment Variables
 
 Always allowed: `HOME`, `PATH`, `TERM`, `TMPDIR`, terminal detection vars (`KITTY_WINDOW_ID`, `TMUX`, etc.), XDG vars, `MELKER_*` vars.

@@ -99,15 +99,8 @@ export function policyToDenoFlags(
     }
   }
 
-  // Implicit: melker's own origin when served over HTTP (for theme CSS, server-ui, fonts)
-  const melkerUrl = new URL(import.meta.url);
-  if (melkerUrl.protocol === 'http:' || melkerUrl.protocol === 'https:') {
-    if (!p.net) p.net = [];
-    const melkerHost = melkerUrl.host; // includes port
-    if (!p.net.includes('*') && !p.net.includes(melkerHost)) {
-      p.net.push(melkerHost);
-    }
-  }
+  // Note: melker's own origin is NOT needed for --allow-net — all runtime assets
+  // (themes, server-ui, fonts, Swift script) are embedded via the asset system.
 
   if (p.net && p.net.length > 0) {
     if (p.net.includes('*')) {
@@ -325,12 +318,8 @@ function getImplicitReadPaths(appDir: string, urlHash?: string, isRemote?: boole
   const denoDir = Env.get('DENO_DIR') || `${Env.get('XDG_CACHE_HOME') || `${Env.get('HOME')}/.cache`}/deno`;
   implicit.push({ path: denoDir, label: 'Deno module cache' });
 
-  // Melker runtime assets — theme CSS, server-ui, bitmap fonts, dither textures
-  // Needed because fetch('file://...') requires --allow-read even for bundled assets
-  const srcDir = new URL('..', import.meta.url).pathname;
-  const mediaDir = new URL('../../media', import.meta.url).pathname;
-  implicit.push({ path: srcDir, label: 'melker runtime' });
-  implicit.push({ path: mediaDir, label: 'melker media' });
+  // Note: melker runtime assets (themes, server-ui, fonts, dither textures) are
+  // embedded via the asset system — no --allow-read needed for src/ or media/.
 
   return implicit;
 }

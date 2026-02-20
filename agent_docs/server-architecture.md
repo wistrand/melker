@@ -28,6 +28,8 @@ src/
     └── index.js        # Client-side logic, WebSocket, rendering
 ```
 
+The server UI files are embedded via the [asset system](embedded-assets-architecture.md) — `server.ts` loads them with `getAssetText('server-ui/index.html')` etc. No runtime file reads needed.
+
 ## Enabling the Server
 
 ```bash

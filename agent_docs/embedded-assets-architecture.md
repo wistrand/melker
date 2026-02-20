@@ -2,7 +2,9 @@
 
 ## Summary
 
-Static assets (theme CSS, blue noise matrix, bitmap font, logo PNG) are embedded in the module graph as base64-encoded grayscale PNGs. At runtime, `decodePng()` from `fast-png` decodes them synchronously on first access. No async initialization, no runtime I/O, no extra dependencies.
+Static assets (theme CSS, blue noise matrix, bitmap font, logo PNG, server UI, macOS audio script) are embedded in the module graph as base64-encoded grayscale PNGs. At runtime, `decodePng()` from `fast-png` decodes them synchronously on first access. No async initialization, no runtime I/O, no extra dependencies.
+
+This means Melker has **zero runtime file/network access** to its own source tree — all assets are in the module graph. The subprocess needs no `--allow-read` for `src/` or `media/`, and no `--allow-net` for the melker host when running from a remote URL.
 
 ## File Map
 
@@ -23,7 +25,7 @@ All asset definitions live in [`scripts/assets.json`](../scripts/assets.json). T
 ### Encoding (build time)
 
 ```
-source bytes (CSS, PSF2, raw pixels)
+source bytes (CSS, HTML, JS, Swift, PSF2, raw pixels)
     |
     v
 encodePng({ width: len, height: 1, channels: 1, depth: 8 })
@@ -76,12 +78,14 @@ All functions are synchronous. No initialization step required.
 
 ## Consumers
 
-| Consumer                                            | Usage                                          |
-|-----------------------------------------------------|------------------------------------------------|
-| `src/theme.ts` → `loadBuiltinThemes()`              | `getAssetText('theme/' + name)` for each theme |
-| `src/video/dither/threshold.ts` → `getBuiltinBlueNoise()` | `getAsset('blue-noise-64')` for dither matrix |
-| `src/components/segment-display/bitmap-fonts.ts` → `getFont5x7()` | `getAsset('font-5x7')` for PSF2 font |
-| `src/oauth/callback-server.ts` → logo endpoint      | `getAsset('logo-128')` for OAuth callback page |
+| Consumer                                                        | Usage                                          |
+|-----------------------------------------------------------------|------------------------------------------------|
+| `src/theme.ts` → `loadBuiltinThemes()`                          | `getAssetText('theme/' + name)` for each theme |
+| `src/video/dither/threshold.ts` → `getBuiltinBlueNoise()`       | `getAsset('blue-noise-64')` for dither matrix  |
+| `src/components/segment-display/bitmap-fonts.ts` → `getFont5x7()` | `getAsset('font-5x7')` for PSF2 font        |
+| `src/oauth/callback-server.ts` → logo endpoint                  | `getAsset('logo-128')` for OAuth callback page |
+| `src/server.ts` → `_getServerUI()`                              | `getAssetText('server-ui/*')` for web UI       |
+| `src/ai/audio.ts` → `_getSwiftScriptPath()`                     | `getAssetText('macos-audio-record.swift')` for remote/JSR |
 
 ## Why PNG
 

@@ -5,12 +5,7 @@ import { type MelkerEngine } from './engine.ts';
 import { type Element } from './types.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { rgbaToCss } from './components/color-utils.ts';
-import { dirname, fromFileUrl, join } from './deps.ts';
-
-// Get the directory containing this file for loading server UI assets
-const SERVER_UI_DIR = import.meta.url.startsWith('file:')
-  ? join(dirname(fromFileUrl(import.meta.url)), 'server-ui')
-  : new URL('./server-ui', import.meta.url).href;
+import { getAssetText } from './assets.ts';
 
 export interface ServerOptions {
   port?: number;
@@ -1164,10 +1159,9 @@ export class MelkerServer {
    * Layout: Full-width terminal mirror with tabbed panels at bottom
    */
   private _getServerUI(): string {
-    // Read the separate HTML, CSS, and JS files and combine them
-    const css = Deno.readTextFileSync(join(SERVER_UI_DIR, 'index.css'));
-    const html = Deno.readTextFileSync(join(SERVER_UI_DIR, 'index.html'));
-    const js = Deno.readTextFileSync(join(SERVER_UI_DIR, 'index.js'));
+    const css = getAssetText('server-ui/index.css');
+    const html = getAssetText('server-ui/index.html');
+    const js = getAssetText('server-ui/index.js');
 
     return `<!DOCTYPE html>
 <html>

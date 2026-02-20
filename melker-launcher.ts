@@ -190,184 +190,154 @@ function checkDenoVersion(): void {
  * Print usage information
  */
 function printUsage(): void {
-  console.log('Melker CLI - Run Melker template files');
-  console.log('');
-  console.log('Requires: Deno >= 2.5.0 (Node.js and Bun are not supported)');
-  console.log('');
-  console.log('Usage:');
-  console.log('  deno run --allow-all melker.ts <file> [options]');
-  console.log('');
-  console.log('Supported file types:');
-  console.log('  <file.melker>  Melker UI template');
-  console.log('  <file.md>      Markdown document');
-  console.log('  <file.mmd>     Mermaid diagram (rendered as graph)');
-  console.log('');
-  console.log('Options:');
-  console.log('  --print-tree             Display element tree structure and exit');
-  console.log('  --print-json             Display JSON serialization and exit');
-  console.log('  --verbose                Show system info, verbose script transpilation');
-  console.log('  --test-sextant           Print sextant character test pattern and exit');
-  console.log('  --schema                 Output component schema markdown and exit');
-  console.log('  --lsp                    Start Language Server Protocol server');
-  console.log('  --convert                Convert markdown to .melker format (stdout)');
-  console.log('  --no-load                Skip loading persisted state');
-  console.log('  --cache                  Use bundle cache (default: disabled)');
-  console.log('  --watch                  Watch file for changes and auto-reload');
-  console.log('  --show-policy            Display app policy and exit');
-  console.log('  --print-config           Print current config with sources and exit');
-  console.log('  --trust                  Run with full permissions, ignoring policy');
-  console.log('  --clear-approvals        Clear all cached remote app approvals');
-  console.log('  --revoke-approval <path> Revoke cached approval for path or URL');
-  console.log('  --show-approval <path>   Show cached approval for path or URL');
-  console.log('  --help, -h               Show this help message');
-  console.log('');
-  console.log('Deno flags (forwarded to subprocess):');
-  console.log('  --reload                 Reload remote modules');
-  console.log('  --no-lock                Disable lockfile');
-  console.log('  --no-check               Skip type checking (faster startup)');
-  console.log('  --quiet, -q              Suppress diagnostic output');
-  console.log('  --cached-only            Require remote deps already cached');
-  console.log('');
-  // Add schema-driven config flags
-  console.log(generateFlagHelp());
-  console.log('');
-  console.log('Policy system (permission sandboxing):');
-  console.log('  Apps can declare permissions via embedded <policy> tag or .policy.json file.');
-  console.log('  Use --show-policy to see what permissions an app requires.');
-  console.log('  Use --trust to bypass policy enforcement (runs with full permissions).');
-  console.log('');
-  console.log('Subcommands:');
-  console.log('  info                     Show installation info');
-  console.log('  upgrade                  Upgrade (git pull or JSR reinstall)');
-  console.log('');
-  console.log('Examples:');
-  console.log('  melker.ts examples/melker/counter.melker');
-  console.log('  melker.ts --show-policy app.melker');
-  console.log('  melker.ts --trust app.melker');
+  console.log(`Melker CLI - Run Melker template files
+
+Requires: Deno >= 2.5.0 (Node.js and Bun are not supported)
+
+Usage:
+  deno run --allow-all melker.ts <file> [options]
+
+Supported file types:
+  <file.melker>  Melker UI template
+  <file.md>      Markdown document
+  <file.mmd>     Mermaid diagram (rendered as graph)
+
+Options:
+  --print-tree             Display element tree structure and exit
+  --print-json             Display JSON serialization and exit
+  --verbose                Show system info, verbose script transpilation
+  --test-sextant           Print sextant character test pattern and exit
+  --schema                 Output component schema markdown and exit
+  --lsp                    Start Language Server Protocol server
+  --convert                Convert markdown to .melker format (stdout)
+  --no-load                Skip loading persisted state
+  --cache                  Use bundle cache (default: disabled)
+  --watch                  Watch file for changes and auto-reload
+  --show-policy            Display app policy and exit
+  --print-config           Print current config with sources and exit
+  --trust                  Run with full permissions, ignoring policy
+  --clear-approvals        Clear all cached remote app approvals
+  --revoke-approval <path> Revoke cached approval for path or URL
+  --show-approval <path>   Show cached approval for path or URL
+  --help, -h               Show this help message
+
+Deno flags (forwarded to subprocess):
+  --reload                 Reload remote modules
+  --no-lock                Disable lockfile
+  --no-check               Skip type checking (faster startup)
+  --quiet, -q              Suppress diagnostic output
+  --cached-only            Require remote deps already cached
+
+${generateFlagHelp()}
+
+Policy system (permission sandboxing):
+  Apps can declare permissions via embedded <policy> tag or .policy.json file.
+  Use --show-policy to see what permissions an app requires.
+  Use --trust to bypass policy enforcement (runs with full permissions).
+
+Subcommands:
+  info                     Show installation info
+  upgrade                  Upgrade (git pull or JSR reinstall)
+
+Examples:
+  melker.ts examples/melker/counter.melker
+  melker.ts --show-policy app.melker
+  melker.ts --trust app.melker`);
 }
 
 /**
- * Run a .melker app in a subprocess with restricted Deno permissions.
+ * Spawn a Deno subprocess with --allow-all for internal entry points (schema, LSP).
  */
-async function runWithPolicy(
-  filepath: string,
-  policy: MelkerPolicy,
-  originalArgs: string[]
-): Promise<void> {
-
-  // Get directory containing the .melker file for resolving relative paths
-  const absolutePath = filepath.startsWith('/')
-    ? filepath
-    : resolve(Deno.cwd(), filepath);
-  const appDir = dirname(absolutePath);
-
-  // Compute URL hash for app-specific cache directory
-  const urlHash = await getUrlHash(absolutePath);
-
-  // Apply CLI permission overrides (--allow-* / --deny-*)
-  const overrides = getPermissionOverrides(MelkerConfig.get());
-  const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
-  const effectivePolicy = { ...policy, permissions: effectivePermissions };
-
-  // Convert policy to Deno permission flags
-  const denoFlags = policyToDenoFlags(effectivePolicy, appDir, urlHash, undefined, activeDenies, overrides.deny);
-
-  // Extract forwarded Deno flags (--reload, --no-lock, etc.)
-  const forwardedFlags = extractForwardedDenoFlags(originalArgs);
-
-  // Auto-forward --reload when the launcher itself was reloaded (Deno flag before script URL)
-  if (!forwardedFlags.includes('--reload') && await wasLauncherReloaded()) {
-    forwardedFlags.push('--reload');
-  }
-
-  addThemeFileReadPermission(denoFlags);
-
-  // Required: --unstable-bundle for Deno.bundle() API
-  denoFlags.push('--unstable-bundle');
-
-  // Disable interactive permission prompts - fail fast instead of hanging
-  denoFlags.push('--no-prompt');
-
-  // Build the subprocess command - run melker-runner.ts
-  const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
-  // Use href for remote URLs, pathname for local files
-  const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
-
-  // Filter out policy-related flags and forwarded Deno flags that shouldn't be passed to subprocess
-  const filteredArgs = originalArgs.filter(arg =>
-    !arg.startsWith('--show-policy') &&
-    !arg.startsWith('--trust') &&
-    !FORWARDED_DENO_FLAGS.includes(arg)
-  );
-
-  const cmd = [
-    Deno.execPath(),
-    'run',
-    ...forwardedFlags,
-    ...denoFlags,
-    runnerEntry,
-    ...filteredArgs,
-  ];
-
-  // Spawn subprocess with restricted permissions
-  // Pass permission overrides to runner if any were specified
-  const envOverrides: Record<string, string> = {
-    ...Deno.env.toObject(),
-    MELKER_RUNNER: '1', // Signal that policy has been checked
-  };
-  if (hasOverrides(overrides)) {
-    envOverrides.MELKER_PERMISSION_OVERRIDES = JSON.stringify(overrides);
-  }
-
-  const process = new Deno.Command(cmd[0], {
-    args: cmd.slice(1),
-    stdin: 'inherit',
-    stdout: 'inherit',
-    stderr: 'inherit',
-    env: envOverrides,
-  });
-
-  const child = process.spawn();
-
-  // Ignore signals in parent - let the child handle them and exit gracefully
-  const ignoreSignal = () => {};
-  Deno.addSignalListener('SIGINT', ignoreSignal);
-  Deno.addSignalListener('SIGTERM', ignoreSignal);
-
-  const status = await child.status;
-
-  // Clean up signal listeners
-  Deno.removeSignalListener('SIGINT', ignoreSignal);
-  Deno.removeSignalListener('SIGTERM', ignoreSignal);
-
-  // If subprocess failed, try to restore terminal state
-  if (status.code !== 0) {
-    resetTerminalState();
-  }
-
-  // Exit with the subprocess exit code
+async function runEntryPoint(relativePath: string, extraDenoFlags: string[] = [], extraArgs: string[] = []): Promise<never> {
+  const entryUrl = new URL(relativePath, import.meta.url);
+  const entry = entryUrl.protocol === 'file:' ? entryUrl.pathname : entryUrl.href;
+  const status = await new Deno.Command(Deno.execPath(), {
+    args: ['run', '--allow-all', '--unstable-bundle', ...extraDenoFlags, entry, ...extraArgs],
+    stdin: 'inherit', stdout: 'inherit', stderr: 'inherit',
+  }).spawn().status;
+  if (status.code !== 0) resetTerminalState();
   Deno.exit(status.code);
 }
 
 /**
- * Run a remote .melker app in a subprocess with restricted Deno permissions.
+ * Detect installation type: git checkout, JSR install, or remote URL.
  */
-async function runRemoteWithPolicy(
-  url: string,
-  content: string,
+async function detectInstallType(): Promise<
+  { type: 'git'; dir: string; branch: string; commit: string }
+  | { type: 'jsr'; dir: string }
+  | { type: 'remote'; url: string }
+> {
+  const selfUrl = new URL(import.meta.url);
+  if (selfUrl.protocol !== 'file:') {
+    return { type: 'remote', url: selfUrl.origin };
+  }
+  const dir = dirname(selfUrl.pathname);
+  try {
+    await Deno.stat(resolve(dir, '.git'));
+    const branch = new TextDecoder().decode(
+      new Deno.Command('git', { args: ['-C', dir, 'rev-parse', '--abbrev-ref', 'HEAD'], stdout: 'piped', stderr: 'null' }).outputSync().stdout
+    ).trim();
+    const commit = new TextDecoder().decode(
+      new Deno.Command('git', { args: ['-C', dir, 'rev-parse', '--short', 'HEAD'], stdout: 'piped', stderr: 'null' }).outputSync().stdout
+    ).trim();
+    return { type: 'git', dir, branch, commit };
+  } catch {
+    return { type: 'jsr', dir };
+  }
+}
+
+/**
+ * Find the installed JSR shim for melker in the Deno bin directory.
+ * Returns the shim name and directory, or null if not found.
+ */
+async function findInstalledShim(): Promise<{ name: string; dir: string } | null> {
+  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+  const binDir = join(
+    Deno.env.get('DENO_INSTALL_ROOT') || join(home, '.deno'), 'bin'
+  );
+  try {
+    for await (const entry of Deno.readDir(binDir)) {
+      if (entry.isFile) {
+        const content = await Deno.readTextFile(join(binDir, entry.name));
+        if (content.includes('@wistrand/melker')) {
+          return { name: entry.name, dir: binDir };
+        }
+      }
+    }
+  } catch { /* binDir not found */ }
+  return null;
+}
+
+/**
+ * Run a .melker app in a subprocess with restricted Deno permissions.
+ * For remote apps, pass remoteContent to write to a temp file and run from there.
+ */
+async function runWithPolicy(
+  filepath: string,
   policy: MelkerPolicy,
-  originalArgs: string[]
+  originalArgs: string[],
+  remoteContent?: string,
 ): Promise<void> {
-  // Write approved content to temp file to avoid TOCTOU issues
-  // Preserve original extension so runner knows whether to parse as markdown
-  const tempDir = await Deno.makeTempDir({ prefix: 'melker-remote-' });
-  const ext = url.endsWith('.md') ? '.md' : url.endsWith('.mmd') ? '.mmd' : '.melker';
-  const tempFile = `${tempDir}/app${ext}`;
-  await Deno.writeTextFile(tempFile, content);
+  const isRemote = remoteContent !== undefined;
+  let appDir: string;
+  let appPath: string;
+  let tempDir: string | undefined;
+
+  if (isRemote) {
+    // Remote: write content to temp file to avoid TOCTOU issues
+    tempDir = await Deno.makeTempDir({ prefix: 'melker-remote-' });
+    const ext = filepath.endsWith('.md') ? '.md' : filepath.endsWith('.mmd') ? '.mmd' : '.melker';
+    appPath = `${tempDir}/app${ext}`;
+    await Deno.writeTextFile(appPath, remoteContent);
+    appDir = tempDir;
+  } else {
+    // Local: resolve to absolute path
+    appPath = filepath.startsWith('/') ? filepath : resolve(Deno.cwd(), filepath);
+    appDir = dirname(appPath);
+  }
 
   try {
-    // Compute URL hash for app-specific cache directory (use original URL, not temp file)
-    const urlHash = await getUrlHash(url);
+    const urlHash = await getUrlHash(isRemote ? filepath : appPath);
 
     // Apply CLI permission overrides (--allow-* / --deny-*)
     const overrides = getPermissionOverrides(MelkerConfig.get());
@@ -375,9 +345,11 @@ async function runRemoteWithPolicy(
     const effectivePolicy = { ...policy, permissions: effectivePermissions };
 
     // Convert policy to Deno permission flags
-    // Pass the source URL for "samesite" net permission resolution
-    // Use tempDir as appDir — remote apps should not get implicit cwd read access
-    const denoFlags = policyToDenoFlags(effectivePolicy, tempDir, urlHash, url, activeDenies, overrides.deny, true);
+    const denoFlags = policyToDenoFlags(
+      effectivePolicy, appDir, urlHash,
+      isRemote ? filepath : undefined,
+      activeDenies, overrides.deny, isRemote,
+    );
 
     // Extract forwarded Deno flags (--reload, --no-lock, etc.)
     const forwardedFlags = extractForwardedDenoFlags(originalArgs);
@@ -388,29 +360,21 @@ async function runRemoteWithPolicy(
     }
 
     addThemeFileReadPermission(denoFlags);
-
-    // Required: --unstable-bundle for Deno.bundle() API
     denoFlags.push('--unstable-bundle');
-
-    // Disable interactive permission prompts
     denoFlags.push('--no-prompt');
 
     // Build the subprocess command
     const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
     const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
 
-    // Filter out policy-related flags, forwarded Deno flags, and replace app URL with temp file
+    // Filter out policy-related flags and forwarded Deno flags
+    // For remote: replace the URL arg with the temp file path
     const filteredArgs: string[] = [];
     for (const arg of originalArgs) {
-      if (arg.startsWith('--show-policy') || arg.startsWith('--trust')) {
-        continue;
-      }
-      if (FORWARDED_DENO_FLAGS.includes(arg)) {
-        continue;
-      }
-      // Only replace the app URL with temp file path, preserve other URL arguments
-      if (arg === url) {
-        filteredArgs.push(tempFile);
+      if (arg.startsWith('--show-policy') || arg.startsWith('--trust')) continue;
+      if (FORWARDED_DENO_FLAGS.includes(arg)) continue;
+      if (isRemote && arg === filepath) {
+        filteredArgs.push(appPath);
       } else {
         filteredArgs.push(arg);
       }
@@ -426,26 +390,25 @@ async function runRemoteWithPolicy(
     ];
 
     const env: Record<string, string> = {
-        ...Deno.env.toObject(),
-        MELKER_RUNNER: '1',
-        MELKER_REMOTE_URL: url, // Pass original URL for reference
-      };
+      ...Deno.env.toObject(),
+      MELKER_RUNNER: '1',
+    };
+    if (isRemote) env.MELKER_REMOTE_URL = filepath;
     if (hasOverrides(overrides)) {
       env.MELKER_PERMISSION_OVERRIDES = JSON.stringify(overrides);
     }
 
-    // Spawn subprocess with restricted permissions
     const process = new Deno.Command(cmd[0], {
       args: cmd.slice(1),
       stdin: 'inherit',
       stdout: 'inherit',
       stderr: 'inherit',
-      env: env
+      env,
     });
 
     const child = process.spawn();
 
-    // Ignore signals in parent
+    // Ignore signals in parent - let the child handle them and exit gracefully
     const ignoreSignal = () => {};
     Deno.addSignalListener('SIGINT', ignoreSignal);
     Deno.addSignalListener('SIGTERM', ignoreSignal);
@@ -460,11 +423,10 @@ async function runRemoteWithPolicy(
     }
     Deno.exit(status.code);
   } finally {
-    // Clean up temp directory
-    try {
-      await Deno.remove(tempDir, { recursive: true });
-    } catch {
-      // Ignore cleanup errors
+    if (tempDir) {
+      try {
+        await Deno.remove(tempDir, { recursive: true });
+      } catch { /* ignore cleanup errors */ }
     }
   }
 }
@@ -513,32 +475,12 @@ your terminal supports sextant mode. If any row appears scrambled, use:
 
   // Handle --schema option (delegates to runner)
   if (args.includes('--schema')) {
-    const runnerUrl = new URL('./src/melker-runner.ts', import.meta.url);
-    const runnerEntry = runnerUrl.protocol === 'file:' ? runnerUrl.pathname : runnerUrl.href;
-    const process = new Deno.Command(Deno.execPath(), {
-      args: ['run', '--allow-all', '--unstable-bundle', runnerEntry, '--schema'],
-      stdin: 'inherit',
-      stdout: 'inherit',
-      stderr: 'inherit',
-    });
-    const status = await process.spawn().status;
-    if (status.code !== 0) resetTerminalState();
-    Deno.exit(status.code);
+    await runEntryPoint('./src/melker-runner.ts', [], ['--schema']);
   }
 
   // Handle --lsp option (runs LSP entry point directly, not via runner)
   if (args.includes('--lsp')) {
-    const lspUrl = new URL('./src/lsp.ts', import.meta.url);
-    const lspEntry = lspUrl.protocol === 'file:' ? lspUrl.pathname : lspUrl.href;
-    const process = new Deno.Command(Deno.execPath(), {
-      args: ['run', '--allow-all', '--unstable-bundle', '--no-lock', lspEntry],
-      stdin: 'inherit',
-      stdout: 'inherit',
-      stderr: 'inherit',
-    });
-    const status = await process.spawn().status;
-    if (status.code !== 0) resetTerminalState();
-    Deno.exit(status.code);
+    await runEntryPoint('./src/lsp.ts', ['--no-lock']);
   }
 
   // Handle --print-config
@@ -585,61 +527,23 @@ your terminal supports sextant mode. If any row appears scrambled, use:
 
   // Handle 'info' subcommand
   if (args.includes('info')) {
-    const selfUrl = new URL(import.meta.url);
-    const isFileUrl = selfUrl.protocol === 'file:';
-    const selfDir = isFileUrl ? dirname(selfUrl.pathname) : null;
-
-    // Detect git checkout (only possible for file: URLs)
-    let isGitCheckout = false;
-    let gitBranch = '';
-    let gitCommit = '';
-    if (selfDir) {
-      try {
-        await Deno.stat(resolve(selfDir, '.git'));
-        isGitCheckout = true;
-        const branch = new Deno.Command('git', {
-          args: ['-C', selfDir, 'rev-parse', '--abbrev-ref', 'HEAD'],
-          stdout: 'piped', stderr: 'null',
-        }).outputSync();
-        gitBranch = new TextDecoder().decode(branch.stdout).trim();
-        const commit = new Deno.Command('git', {
-          args: ['-C', selfDir, 'rev-parse', '--short', 'HEAD'],
-          stdout: 'piped', stderr: 'null',
-        }).outputSync();
-        gitCommit = new TextDecoder().decode(commit.stdout).trim();
-      } catch { /* not a git checkout */ }
-    }
-
+    const install = await detectInstallType();
     console.log(`Melker ${denoConfig.version}`);
     console.log(`Deno   ${Deno.version.deno}`);
     console.log('');
-    if (isGitCheckout) {
+    if (install.type === 'git') {
       console.log('Install:  git checkout');
-      console.log(`Path:     ${selfDir}`);
-      if (gitBranch) console.log(`Branch:   ${gitBranch}`);
-      if (gitCommit) console.log(`Commit:   ${gitCommit}`);
-    } else if (!isFileUrl) {
-      console.log(`Install:  ${selfUrl.origin}`);
+      console.log(`Path:     ${install.dir}`);
+      if (install.branch) console.log(`Branch:   ${install.branch}`);
+      if (install.commit) console.log(`Commit:   ${install.commit}`);
+    } else if (install.type === 'remote') {
+      console.log(`Install:  ${install.url}`);
       console.log(`URL:      ${import.meta.url}`);
     } else {
       console.log('Install:  jsr:@wistrand/melker');
-      console.log(`Path:     ${selfDir}`);
-      // Try to find the shim
-      const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
-      const binDir = join(
-        Deno.env.get('DENO_INSTALL_ROOT') || join(home, '.deno'), 'bin'
-      );
-      try {
-        for await (const entry of Deno.readDir(binDir)) {
-          if (entry.isFile) {
-            const content = await Deno.readTextFile(join(binDir, entry.name));
-            if (content.includes('@wistrand/melker')) {
-              console.log(`Shim:     ${join(binDir, entry.name)}`);
-              break;
-            }
-          }
-        }
-      } catch { /* binDir not found */ }
+      console.log(`Path:     ${install.dir}`);
+      const shim = await findInstalledShim();
+      if (shim) console.log(`Shim:     ${join(shim.dir, shim.name)}`);
     }
     console.log(`Platform: ${Deno.build.os} ${Deno.build.arch}`);
     Deno.exit(0);
@@ -647,30 +551,21 @@ your terminal supports sextant mode. If any row appears scrambled, use:
 
   // Handle 'upgrade' subcommand
   if (args.includes('upgrade')) {
-    // Detect if running from git checkout or JSR install
-    const selfDir = dirname(new URL(import.meta.url).pathname);
-    let isGitCheckout = false;
-    try {
-      await Deno.stat(resolve(selfDir, '.git'));
-      isGitCheckout = true;
-    } catch { /* not a git checkout */ }
+    const install = await detectInstallType();
 
-    if (isGitCheckout) {
-      // Git checkout: pull latest changes
+    if (install.type === 'git') {
       if (!args.includes('--yes')) {
-        const ok = confirm(`Run git pull in ${selfDir}?`);
-        if (!ok) {
-          Deno.exit(0);
-        }
+        const ok = confirm(`Run git pull in ${install.dir}?`);
+        if (!ok) Deno.exit(0);
       }
       const p = new Deno.Command('git', {
-        args: ['-C', selfDir, 'pull'],
+        args: ['-C', install.dir, 'pull'],
         stdin: 'inherit', stdout: 'inherit', stderr: 'inherit',
       }).spawn();
       Deno.exit((await p.status).code);
     }
 
-    // JSR install: fetch latest version and reinstall
+    // JSR or remote install: fetch latest version and reinstall
     try {
       const resp = await fetch('https://jsr.io/@wistrand/melker/meta.json');
       if (!resp.ok) {
@@ -686,23 +581,8 @@ your terminal supports sextant mode. If any row appears scrambled, use:
         Deno.exit(0);
       }
 
-      // Detect the shim name used at install time (might not be 'melker')
-      const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
-      const binDir = join(
-        Deno.env.get('DENO_INSTALL_ROOT') || join(home, '.deno'), 'bin'
-      );
-      let shimName = 'melker';
-      try {
-        for await (const entry of Deno.readDir(binDir)) {
-          if (entry.isFile) {
-            const content = await Deno.readTextFile(join(binDir, entry.name));
-            if (content.includes('@wistrand/melker')) {
-              shimName = entry.name;
-              break;
-            }
-          }
-        }
-      } catch { /* binDir not found — use default */ }
+      const shim = await findInstalledShim();
+      const shimName = shim?.name || 'melker';
 
       console.log(`Upgrading ${shimName} ${current} → ${latest}...`);
       const p = new Deno.Command('deno', {
@@ -725,8 +605,7 @@ your terminal supports sextant mode. If any row appears scrambled, use:
       Deno.exit(1);
     }
     // Resolve to absolute path for local files (approvals are stored by absolute path)
-    const isUrl = target.startsWith('http://') || target.startsWith('https://');
-    const lookupPath = isUrl ? target : resolve(Deno.cwd(), target);
+    const lookupPath = isUrl(target) ? target : resolve(Deno.cwd(), target);
     const revoked = await revokeApproval(lookupPath);
     if (revoked) {
       console.log(`Revoked approval for: ${target}`);
@@ -745,8 +624,8 @@ your terminal supports sextant mode. If any row appears scrambled, use:
       Deno.exit(1);
     }
     // Resolve to absolute path for local files (approvals are stored by absolute path)
-    const isUrl = target.startsWith('http://') || target.startsWith('https://');
-    const lookupPath = isUrl ? target : resolve(Deno.cwd(), target);
+    const targetIsUrl = isUrl(target);
+    const lookupPath = targetIsUrl ? target : resolve(Deno.cwd(), target);
     const record = await getApproval(lookupPath);
     if (record) {
       const approvalFile = await getApprovalFilePath(lookupPath);
@@ -756,16 +635,14 @@ your terminal supports sextant mode. If any row appears scrambled, use:
       console.log(`Approved: ${record.approvedAt}`);
       console.log(`Hash: ${record.hash.substring(0, 16)}...`);
       console.log('\nPolicy:');
-      console.log(formatPolicy(record.policy, isUrl ? lookupPath : undefined));
+      console.log(formatPolicy(record.policy, targetIsUrl ? lookupPath : undefined));
       console.log('\nDeno flags:');
       console.log(formatDenoFlags(record.denoFlags));
     } else {
       // No approval - check if file exists and show its policy
       console.log(`\nNo approval found for: ${target}\n`);
 
-      // Check if it's a local file that exists
-      const isUrl = target.startsWith('http://') || target.startsWith('https://');
-      if (!isUrl) {
+      if (!targetIsUrl) {
         try {
           const stat = await Deno.stat(target);
           if (stat.isFile) {
@@ -848,86 +725,55 @@ your terminal supports sextant mode. If any row appears scrambled, use:
 
     // Handle --show-policy flag
     if (options.showPolicy) {
-      // Get CLI permission overrides
-      const overrides = getPermissionOverrides(MelkerConfig.get());
-      const hasCliOverrides = hasOverrides(overrides);
+      // Load policy based on source type
+      let policy: MelkerPolicy;
+      let sourceLabel: string;
+      let appDir: string;
+      let sourceUrl: string | undefined;
+      const remote = isUrl(filepath);
 
-      if (isUrl(filepath)) {
+      if (remote) {
         const content = await loadContent(filepath);
         if (!hasPolicyTag(content)) {
           console.log('\nNo policy found in remote file.');
           console.log('Remote .melker files must contain a <policy> tag.');
           Deno.exit(0);
         }
-        const policyResult = await loadPolicyFromContent(content, filepath);
-        const policy = policyResult.policy ?? createAutoPolicy(filepath);
-
-        // Apply CLI overrides
-        const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
-        const effectivePolicy = { ...policy, permissions: effectivePermissions };
-
-        const urlHash = await getUrlHash(filepath);
-        console.log(`\nPolicy source: ${policyResult.source}${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
-        // Pass source URL for "samesite" resolution (filepath is the URL)
-        console.log(formatPolicy(effectivePolicy, filepath));
-        if (hasCliOverrides) {
-          console.log('\nCLI overrides:');
-          for (const line of formatOverrides(overrides)) {
-            console.log(line);
-          }
-        }
-        console.log('\nDeno permission flags:');
-        const flags = policyToDenoFlags(effectivePolicy, getTempDir(), urlHash, filepath, activeDenies, overrides.deny, true);
-        addThemeFileReadPermission(flags);
-        console.log(formatDenoFlags(flags));
+        const r = await loadPolicyFromContent(content, filepath);
+        policy = r.policy ?? createAutoPolicy(filepath);
+        sourceLabel = r.source;
+        appDir = getTempDir();
+        sourceUrl = filepath;
+      } else if (filepath.endsWith('.mmd') && !hasMelkerDirectives(await loadContent(filepath))) {
+        policy = createEmptyMermaidPolicy(filepath);
+        sourceLabel = 'auto (plain mermaid file)';
+        appDir = dirname(absoluteFilepath);
       } else {
-        // For plain .mmd files, use the empty mermaid policy
-        if (filepath.endsWith('.mmd')) {
-          const content = await loadContent(filepath);
-          if (!hasMelkerDirectives(content)) {
-            const policy = createEmptyMermaidPolicy(filepath);
-            // Apply CLI overrides even to empty policy
-            const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
-            const effectivePolicy = { ...policy, permissions: effectivePermissions };
-            const urlHash = await getUrlHash(absoluteFilepath);
-
-            console.log(`\nPolicy source: auto (plain mermaid file)${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
-            console.log(formatPolicy(effectivePolicy));
-            if (hasCliOverrides) {
-              console.log('\nCLI overrides:');
-              for (const line of formatOverrides(overrides)) {
-                console.log(line);
-              }
-            }
-            console.log('\nDeno permission flags:');
-            const flags = policyToDenoFlags(effectivePolicy, dirname(absoluteFilepath), urlHash, undefined, activeDenies, overrides.deny);
-            addThemeFileReadPermission(flags);
-            console.log(formatDenoFlags(flags));
-            Deno.exit(0);
-          }
-        }
-        const policyResult = await loadPolicy(absoluteFilepath);
-        const policy = policyResult.policy ?? createAutoPolicy(absoluteFilepath);
-
-        // Apply CLI overrides
-        const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
-        const effectivePolicy = { ...policy, permissions: effectivePermissions };
-
-        const urlHash = await getUrlHash(absoluteFilepath);
-        const source = policyResult.policy ? policyResult.source : 'auto';
-        console.log(`\nPolicy source: ${source}${policyResult.path ? ` (${policyResult.path})` : ''}${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
-        console.log(formatPolicy(effectivePolicy));
-        if (hasCliOverrides) {
-          console.log('\nCLI overrides:');
-          for (const line of formatOverrides(overrides)) {
-            console.log(line);
-          }
-        }
-        console.log('\nDeno permission flags:');
-        const flags = policyToDenoFlags(effectivePolicy, dirname(absoluteFilepath), urlHash, undefined, activeDenies, overrides.deny);
-        addThemeFileReadPermission(flags);
-        console.log(formatDenoFlags(flags));
+        const r = await loadPolicy(absoluteFilepath);
+        policy = r.policy ?? createAutoPolicy(absoluteFilepath);
+        sourceLabel = r.policy ? `${r.source}${r.path ? ` (${r.path})` : ''}` : 'auto';
+        appDir = dirname(absoluteFilepath);
       }
+
+      // Apply CLI overrides and print
+      const overrides = getPermissionOverrides(MelkerConfig.get());
+      const hasCliOverrides = hasOverrides(overrides);
+      const { permissions: effectivePermissions, activeDenies } = applyPermissionOverrides(policy.permissions, overrides);
+      const effectivePolicy = { ...policy, permissions: effectivePermissions };
+      const urlHash = await getUrlHash(remote ? filepath : absoluteFilepath);
+
+      console.log(`\nPolicy source: ${sourceLabel}${hasCliOverrides ? ' + CLI overrides' : ''}\n`);
+      console.log(formatPolicy(effectivePolicy, sourceUrl));
+      if (hasCliOverrides) {
+        console.log('\nCLI overrides:');
+        for (const line of formatOverrides(overrides)) {
+          console.log(line);
+        }
+      }
+      console.log('\nDeno permission flags:');
+      const flags = policyToDenoFlags(effectivePolicy, appDir, urlHash, sourceUrl, activeDenies, overrides.deny, remote);
+      addThemeFileReadPermission(flags);
+      console.log(formatDenoFlags(flags));
       Deno.exit(0);
     }
 
@@ -978,7 +824,7 @@ your terminal supports sextant mode. If any row appears scrambled, use:
         console.log(`Approval saved: ${approvalFile}\n`);
       }
 
-      await runRemoteWithPolicy(filepath, content, policy, args);
+      await runWithPolicy(filepath, policy, args, content);
       return;
     }
 

@@ -2,7 +2,7 @@
 
 ## Summary
 
-Static assets (theme CSS, blue noise matrix, bitmap font) are embedded in the module graph as base64-encoded grayscale PNGs. At runtime, `decodePng()` from `fast-png` decodes them synchronously on first access. No async initialization, no runtime I/O, no extra dependencies.
+Static assets (theme CSS, blue noise matrix, bitmap font, logo PNG) are embedded in the module graph as base64-encoded grayscale PNGs. At runtime, `decodePng()` from `fast-png` decodes them synchronously on first access. No async initialization, no runtime I/O, no extra dependencies.
 
 ## File Map
 
@@ -81,6 +81,7 @@ All functions are synchronous. No initialization step required.
 | `src/theme.ts` → `loadBuiltinThemes()`              | `getAssetText('theme/' + name)` for each theme |
 | `src/video/dither/threshold.ts` → `getBuiltinBlueNoise()` | `getAsset('blue-noise-64')` for dither matrix |
 | `src/components/segment-display/bitmap-fonts.ts` → `getFont5x7()` | `getAsset('font-5x7')` for PSF2 font |
+| `src/oauth/callback-server.ts` → logo endpoint      | `getAsset('logo-128')` for OAuth callback page |
 
 ## Why PNG
 

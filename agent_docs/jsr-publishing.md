@@ -60,6 +60,7 @@ All bundled assets are encoded as grayscale PNG (base64) in `src/assets-data.ts`
 | `theme/*`          | `src/themes/*.css`                        | 10    | Grayscale PNG + base64    |
 | `blue-noise-64`    | `media/blue-noise-64.png`                 | 1     | Grayscale PNG + base64    |
 | `font-5x7`         | `src/components/segment-display/5x7.psf2` | 1     | Grayscale PNG + base64    |
+| `logo-128`         | `media/melker-128.png`                    | 1     | Grayscale PNG + base64    |
 
 Asset definitions live in [`scripts/assets.json`](../scripts/assets.json). Regenerate with `deno task build:assets`.
 
@@ -147,7 +148,7 @@ deno uninstall -g melker
 |--------------------|------------------------------------------------------------|
 | `version:sync`       | Sync `deno.json` version from latest git tag               |
 | `build`              | Run all build steps (assets + completions + skill + docs)  |
-| `build:assets`        | Regenerate embedded assets (themes, blue noise, font)      |
+| `build:assets`        | Regenerate embedded assets (themes, blue noise, font, logo) |
 | `build:completions`  | Regenerate shell completions from config schema            |
 | `build:skill`        | Build AI agent skill zip                                   |
 | `build:docs`         | Copy `examples/showcase/` to `docs/examples/showcase/`     |

@@ -1,7 +1,7 @@
 // OAuth callback server for handling authorization redirects
 
 import type { CallbackServerOptions, CallbackResult } from './types.ts';
-import { MELKER_LOGO_PNG } from './logo-data.ts';
+import { getAsset } from '../assets.ts';
 
 // No-cache headers for all responses
 const NO_CACHE_HEADERS = {
@@ -50,7 +50,7 @@ export class OAuthCallbackServer {
 
       // Serve the logo image
       if (url.pathname === '/melker/logo.png') {
-        return new Response(MELKER_LOGO_PNG, {
+        return new Response(Uint8Array.from(getAsset('logo-128')), {
           headers: { ...NO_CACHE_HEADERS, 'content-type': 'image/png' },
         });
       }

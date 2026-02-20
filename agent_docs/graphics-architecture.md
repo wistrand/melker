@@ -296,19 +296,23 @@ On 16-color terminals (`colorSupport='16'`), standard rendering maps every pixel
 Input RGB → 3D LUT (32³ = 32K entries) → PaletteEntry { fgPacked, bgPacked, char }
 ```
 
-**Palette construction** (module load, one-time):
-1. Enumerate all `(fg, bg, density)` triples: 16 × 16 × 5 = 1,280 entries
+**Palette construction** (lazy, built on first access):
+1. Enumerate all `(fg, bg, density)` triples: 16 fg × N bg × 5 shades
+   - N = 16 on most terminals (1,280 entries)
+   - N = 8 on Linux VT (`TERM=linux`) where SGR 100-107 bright backgrounds are unreliable (640 entries)
 2. Compute visual RGB for each by mixing fg/bg in **linear light space** (gamma-correct — the terminal physically interleaves pixels, eye integrates photons linearly)
 3. Convert visual RGB to Oklab perceptual coordinates
 4. Build 32×32×32 LUT: for each quantized RGB bucket, find the closest palette entry in Oklab space
+5. **Dark bias:** near-black targets (Oklab L < 0.2) penalize non-black palette entries, preventing shade patterns from replacing pure black in dark areas
 
-**Two LUTs:**
+**Three LUTs** (all lazy):
 - `nearestColor16Plus(r, g, b)` → full palette entry (shade char + fg + bg)
-- `nearestSolid16(r, g, b)` → nearest of 16 solid ANSI colors (for spatial `▀`/`▄` cells)
+- `nearestSolid16(r, g, b)` → nearest of 16 solid ANSI colors (for spatial `▀` foreground)
+- `nearestSolidBg(r, g, b)` → nearest solid ANSI bg color (8 dark on Linux VT, 16 elsewhere)
 
 **Halfblock B+A strategy:**
 - **B** (same fg+bg pair): upper and lower pixels mapped to entries sharing the same ANSI color pair → blend shade densities into intermediate char
-- **A** (different fg+bg pairs): fall back to spatial `▀`/`▄` with Oklab-matched solid ANSI colors
+- **A** (different fg+bg pairs): fall back to spatial `▀`/`▄` with `nearestSolid16` for fg, `nearestSolidBg` for bg
 
 **Dithering interaction:** `dither="auto"` resolves to `"none"` on 16-color terminals. Shade chars provide sub-cell blending; spatial dithering provides cross-cell blending. Using both simultaneously produces washed-out results because dithering spreads quantization error into shade entries that already contain perceptual mixing.
 

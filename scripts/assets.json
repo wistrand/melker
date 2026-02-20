@@ -14,6 +14,8 @@
 
     { "id": "blue-noise-64", "path": "media/blue-noise-64.png", "transform": "png-grayscale" },
 
-    { "id": "font-5x7", "path": "src/components/segment-display/5x7.psf2" }
+    { "id": "font-5x7", "path": "src/components/segment-display/5x7.psf2" },
+
+    { "id": "logo-128", "path": "media/melker-128.png" }
   ]
 }

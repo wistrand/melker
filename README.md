@@ -385,10 +385,10 @@ These Deno flags are forwarded to the app subprocess:
 ./melker.ts --cached-only app.melker                  # Offline mode
 ```
 
-**Running melker.ts from a remote URL:** Deno flags may need to appear twice - before `melker.ts` (affects loading the launcher) and after (forwarded to the app):
+**Running melker.ts from a remote URL:** `--reload` before the URL is auto-detected and forwarded to the app subprocess — no need to pass it twice:
 
 ```bash
-deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
+deno run --allow-all --reload https://melker.sh/melker.ts app.melker
 ```
 
 **Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub. For reproducible builds, pin to a specific version:

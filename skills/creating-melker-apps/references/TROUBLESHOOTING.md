@@ -135,9 +135,9 @@ stty sane
 
 **Running melker.ts from remote URL with stale cache:**
 ```bash
-# Flags before melker.ts affect the launcher, flags after affect the app
+# --reload is auto-detected and forwarded to the app subprocess
 # melker.sh/melker.ts serves the latest commit from main on GitHub
-deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
+deno run --allow-all --reload https://melker.sh/melker.ts app.melker
 
 # For reproducible builds, pin to a specific version:
 deno run --allow-all https://melker.sh/melker-v2026.01.1.ts app.melker  # CalVer tag

@@ -8,6 +8,12 @@ A TUI framework for apps you want to share safely. Melker apps are documents you
 
 ---
 
+## Try Without Installing
+
+```bash
+deno dx jsr:@wistrand/melker app.melker
+```
+
 ## Installation
 
 ```bash

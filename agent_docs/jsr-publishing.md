@@ -85,6 +85,18 @@ JSR requires the file to be named `README.md`. The `publish` and `publish:dry-ru
 
 ---
 
+## `--reload` Auto-Forwarding
+
+When running from a remote URL (`deno run --reload https://melker.sh/melker.ts app.melker`), the `--reload` flag before the URL only affects the parent process. `Deno.args` doesn't include Deno runtime flags, so the subprocess wouldn't get `--reload` — causing it to use stale cached `src/` modules.
+
+The launcher detects `--reload` by checking its own module cache file mtime. Deno's remote module cache lives at `<DENO_DIR>/remote/<scheme>/<host[_PORT<n>]>/SHA256(pathname)`. If the cache file was written within the last 5 seconds, `--reload` was used, and it's auto-forwarded to the subprocess.
+
+This means `--reload` only needs to appear once (before the URL). No need to pass it twice.
+
+Detection only runs when `import.meta.url` is remote — zero cost for local and JSR runs.
+
+---
+
 ## JSR-Compatible Entry Point
 
 `melker.ts` wraps `Deno.realPath()` in try/catch with `import.meta.url`-based fallback for JSR cache:

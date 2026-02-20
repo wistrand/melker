@@ -105,6 +105,51 @@ function extractForwardedDenoFlags(args: string[]): string[] {
 }
 
 /**
+ * Detect if `--reload` was passed as a Deno runtime flag (before the script URL).
+ * Deno flags aren't in Deno.args, so we check the module cache file mtime instead:
+ * if it was written within the last few seconds, `--reload` caused a fresh fetch.
+ * Only meaningful for remote URLs — local files aren't cached.
+ */
+let _wasReloaded: boolean | undefined;
+async function wasLauncherReloaded(): Promise<boolean> {
+  if (_wasReloaded !== undefined) return _wasReloaded;
+  _wasReloaded = false;
+
+  const url = new URL(import.meta.url);
+  if (url.protocol === 'file:') return false;
+
+  try {
+    const denoDir = Deno.env.get('DENO_DIR')
+      || (Deno.build.os === 'darwin'
+        ? `${Deno.env.get('HOME')}/Library/Caches/deno`
+        : `${Deno.env.get('XDG_CACHE_HOME') || Deno.env.get('HOME') + '/.cache'}/deno`);
+
+    let hostDir = url.hostname;
+    const defaultPort = url.protocol === 'https:' ? '443' : '80';
+    if (url.port && url.port !== defaultPort) {
+      hostDir += `_PORT${url.port}`;
+    }
+
+    const hashBuf = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(url.pathname),
+    );
+    const hex = [...new Uint8Array(hashBuf)]
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const scheme = url.protocol.slice(0, -1);
+    const cachePath = `${denoDir}/remote/${scheme}/${hostDir}/${hex}`;
+    const stat = Deno.statSync(cachePath);
+    const ageMs = Date.now() - (stat.mtime?.getTime() || 0);
+    _wasReloaded = ageMs < 5000;
+  } catch {
+    // Cache file not found or unreadable — can't detect
+  }
+
+  return _wasReloaded;
+}
+
+/**
  * If a custom theme file is configured (--theme-file or --theme ending in .css),
  * add its absolute path to the --allow-read flag list so the subprocess can read it.
  */
@@ -228,6 +273,11 @@ async function runWithPolicy(
   // Extract forwarded Deno flags (--reload, --no-lock, etc.)
   const forwardedFlags = extractForwardedDenoFlags(originalArgs);
 
+  // Auto-forward --reload when the launcher itself was reloaded (Deno flag before script URL)
+  if (!forwardedFlags.includes('--reload') && await wasLauncherReloaded()) {
+    forwardedFlags.push('--reload');
+  }
+
   addThemeFileReadPermission(denoFlags);
 
   // Required: --unstable-bundle for Deno.bundle() API
@@ -329,6 +379,11 @@ async function runRemoteWithPolicy(
 
     // Extract forwarded Deno flags (--reload, --no-lock, etc.)
     const forwardedFlags = extractForwardedDenoFlags(originalArgs);
+
+    // Auto-forward --reload when the launcher itself was reloaded (Deno flag before script URL)
+    if (!forwardedFlags.includes('--reload') && await wasLauncherReloaded()) {
+      forwardedFlags.push('--reload');
+    }
 
     addThemeFileReadPermission(denoFlags);
 

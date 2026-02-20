@@ -37,10 +37,10 @@ export default async (request: Request) => {
 //   deno run --allow-all https://melker.sh/melker${versionSuffix}.ts app.melker
 //
 // To bypass Deno's module cache and fetch the latest:
-//   deno run --allow-all --reload --no-lock https://melker.sh/melker${versionSuffix}.ts app.melker
+//   deno run --allow-all --reload https://melker.sh/melker${versionSuffix}.ts app.melker
 //
-// Deno flags forwarded to app subprocess:
-//   --reload, --no-lock, --no-check, --quiet/-q, --cached-only
+// --reload is auto-detected and forwarded to the app subprocess.
+// Other forwarded Deno flags: --no-lock, --no-check, --quiet/-q, --cached-only
 
 if (import.meta.main) {
   try {

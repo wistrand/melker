@@ -746,12 +746,10 @@ When stdout is not a TTY (piped or redirected), Melker automatically:
 - `--color=always`: Force ANSI colors even when piped
 - `--color=never`: Strip ANSI colors even on TTY
 
-**Running melker.ts from a remote URL:** Deno flags may need to appear in two places:
+**Running melker.ts from a remote URL:** `--reload` before the URL is auto-detected and forwarded to the app subprocess — no need to pass it twice:
 
 ```bash
-# Flags BEFORE melker.ts affect loading the launcher itself
-# Flags AFTER melker.ts are forwarded to the app subprocess
-deno run --allow-all --reload --no-lock https://melker.sh/melker.ts --reload app.melker
+deno run --allow-all --reload https://melker.sh/melker.ts app.melker
 ```
 
 **Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub. For reproducible builds, pin to a specific version:

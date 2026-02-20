@@ -36,7 +36,8 @@ melker upgrade
   "publish": {
     "include": [
       "mod.ts", "melker.ts", "melker-launcher.ts",
-      "src/", "media/melker-128.png", "LICENSE.txt"
+      "src/", "media/melker-128.png", "LICENSE.txt",
+      "README.md"
     ]
   }
 }
@@ -44,6 +45,7 @@ melker upgrade
 
 - `exports."."` = CLI entry (enables `deno install -g jsr:@wistrand/melker`), `"./lib"` = library API
 - `publish.include` is an allowlist — tests, benchmarks, examples, docs, scripts, skills stay out
+- `README.md` is included — the publish tasks swap in `README-jsr.md` (JSR-specific) before publishing, then restore the GitHub README after
 - `src/` captures all runtime code including server-ui, components, engine, bundler
 - `media/` assets are included for backwards compatibility but bundled assets are embedded in the module graph (see below)
 
@@ -67,6 +69,19 @@ Asset definitions live in [`scripts/assets.json`](../scripts/assets.json). Regen
 **Access**: `getAsset(id)` and `getAssetText(id)` are fully synchronous — they decode on first call via `decodePng()`, then cache. No initialization step needed.
 
 Custom paths (`MELKER_BLUE_NOISE_PATH`, `MELKER_THEME_FILE`) still load from the filesystem at runtime.
+
+---
+
+## Dual README
+
+Two READMEs serve different audiences:
+
+| File             | Where it appears | Content focus                                    |
+|------------------|------------------|--------------------------------------------------|
+| `README.md`      | GitHub           | Git clone install, `./melker.ts` usage, relative links to repo files |
+| `docs/README-jsr.md` | JSR package page | `deno install` install, `melker` usage, JSR imports, absolute GitHub links |
+
+JSR requires the file to be named `README.md`. The `publish` and `publish:dry-run` tasks handle the swap automatically — they copy `docs/README-jsr.md` over `README.md` before publishing and restore the original after.
 
 ---
 
@@ -134,8 +149,8 @@ deno uninstall -g melker
 2. **Sync version**: `deno task version:sync`
 3. **Build**: `deno task build` (embedded assets, completions, skill zip, docs)
 4. **Type check**: `deno task check`
-5. **Dry run**: `deno task publish:dry-run` — confirm 0 errors (2 expected dynamic import warnings)
-6. **Publish**: `deno publish`
+5. **Dry run**: `deno task publish:dry-run` — swaps in JSR README, confirms 0 errors (2 expected dynamic import warnings), restores GitHub README
+6. **Publish**: `deno task publish` — swaps in JSR README, publishes, restores GitHub README
 7. **Test install**: `deno install -g -A jsr:@wistrand/melker`
 8. **Test run**: `melker examples/basics/hello.melker`
 9. **Test upgrade**: `melker upgrade`
@@ -152,4 +167,5 @@ deno uninstall -g melker
 | `build:completions`  | Regenerate shell completions from config schema            |
 | `build:skill`        | Build AI agent skill zip                                   |
 | `build:docs`         | Copy `examples/showcase/` to `docs/examples/showcase/`     |
-| `publish:dry-run`    | `deno publish --dry-run --allow-dirty`                     |
+| `publish:dry-run`    | Swap in JSR README, dry-run publish, restore GitHub README |
+| `publish`            | Swap in JSR README, publish to JSR, restore GitHub README  |

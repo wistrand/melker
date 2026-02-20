@@ -62,6 +62,9 @@ about-magic.md
 
 tests/mermaid/*.melker
 
+# Generated API docs
+docs/api/
+
 # Local Netlify folder
 .netlify
 docs/deno.lock

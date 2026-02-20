@@ -1,6 +1,17 @@
 #!/usr/bin/env -S deno run --allow-all
-// Melker CLI entry point
-// Symlink-safe for local files, URL-aware for remote
+/**
+ * # Melker CLI
+ *
+ * This is the CLI entry point. For the library API, see
+ * {@link [mod.ts](./lib/index.html)}.
+ *
+ * ```bash
+ * deno install -g -A jsr:@wistrand/melker
+ * melker app.melker
+ * ```
+ *
+ * @module
+ */
 
 if (import.meta.main) {
   const selfUrl = new URL(import.meta.url);

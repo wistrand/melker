@@ -1,5 +1,38 @@
-// Melker library entry point
-// Import this for library usage: import { ... } from './mod.ts'
+/**
+ * # Melker
+ *
+ * *Run text with meaning*
+ *
+ * **Website:** [melker.sh](https://melker.sh) |
+ * **GitHub:** [wistrand/melker](https://github.com/wistrand/melker)
+ *
+ * A TUI framework for apps you want to share safely. Melker apps are documents
+ * you can read before you run them — share via URL, declare permissions in a
+ * policy, inspect with Dev Tools.
+ *
+ * ## Installation
+ *
+ * ```bash
+ * deno install -g -A jsr:@wistrand/melker
+ * ```
+ *
+ * ## Library Usage
+ *
+ * ```typescript
+ * import { createElement, createApp } from '@wistrand/melker/lib';
+ *
+ * const ui = createElement('container', {
+ *   style: { border: 'thin', padding: 2 }
+ * },
+ *   createElement('text', { text: 'Hello!' }),
+ *   createElement('button', { label: 'OK', onClick: () => app.exit() })
+ * );
+ *
+ * const app = await createApp(ui);
+ * ```
+ *
+ * @module
+ */
 
 // Export all types
 export * from './src/types.ts';

@@ -60,7 +60,7 @@ melker upgrade
 
 ### Global Types Split
 
-**Problem:** JSR rejects packages that contain `declare global` blocks — "modifying global types is not allowed".
+**Problem:** JSR rejects packages that contain `declare global` blocks — "modifying global types is not allowed". Tracked in [denoland/deno#23427](https://github.com/denoland/deno/issues/23427) (proposed `*globals.ts` naming convention, still open).
 
 **Root cause:** `src/globals.d.ts` contained both exported interfaces (`MelkerRegistry`, `MelkerContext`, etc.) and a `declare global` block for `globalThis.*` variables. `src/types.ts` imported `globals.d.ts`, pulling the `declare global` into the published module graph.
 
@@ -101,7 +101,7 @@ export function setGlobalEngine(engine: MelkerEngine): void {
 
 ### Bundler Data URL Import
 
-**Problem:** When Melker is loaded from a remote origin (JSR registry URL), the bundler's `import(\`file://${bundleFile}\`)` fails because Deno blocks `file://` imports from HTTP/HTTPS-origin modules.
+**Problem:** When Melker is loaded from a remote origin (JSR registry URL), the bundler's `import(\`file://${bundleFile}\`)` fails because Deno blocks `file://` imports from HTTP/HTTPS-origin modules. Tracked in [denoland/deno#25360](https://github.com/denoland/deno/issues/25360).
 
 **Solution:** Import bundled code via `data:` URL instead of writing to a temp file:
 
@@ -118,13 +118,13 @@ await import(`data:application/javascript;base64,${encoded}`);
 
 ### Slow Types
 
-JSR requires explicit return type annotations on all exported functions (no inferred types). `deno publish --dry-run` reports violations. All exported functions in `mod.ts` and its transitive exports were annotated with explicit return types.
+JSR requires explicit return type annotations on all exported functions (no inferred types), aligning with TS `isolatedDeclarations` ([jsr-io/jsr#444](https://github.com/jsr-io/jsr/issues/444)). `deno publish --dry-run` reports violations. All exported functions in `mod.ts` and its transitive exports were annotated with explicit return types. `--allow-slow-types` exists as an escape hatch but penalizes the package score.
 
 ---
 
 ## Embedded Assets
 
-`deno install` only caches the static module graph (imports). Runtime `Deno.readFile()` calls against `import.meta.url` fail for JSR installs because `import.meta.url` resolves to `https://jsr.io/...` — not a local file path.
+`deno install` only caches the static module graph (imports). Runtime `Deno.readFile()` calls against `import.meta.url` fail for JSR installs because `import.meta.url` resolves to `https://jsr.io/...` — not a local file path. Import attributes ([denoland/deno#25354](https://github.com/denoland/deno/issues/25354)) help for static imports, but dynamic asset discovery (listing themes, serving a directory) has no path forward ([denoland/deno#28872](https://github.com/denoland/deno/issues/28872), open).
 
 All bundled assets are encoded as grayscale PNG (base64) in `src/assets-data.ts` (generated), with the runtime API in `src/assets.ts` (hand-written). Assets are decoded synchronously on first access via `decodePng()` and cached. This keeps them in the module graph so they're cached at `deno install` time.
 
@@ -157,7 +157,7 @@ Custom paths (`MELKER_BLUE_NOISE_PATH`, `MELKER_THEME_FILE`) still load from the
 
 ### Entry Point Fallback
 
-`melker.ts` wraps `Deno.realPath()` in try/catch with `import.meta.url`-based fallback for JSR cache:
+`melker.ts` wraps `Deno.realPath()` in try/catch with `import.meta.url`-based fallback for JSR cache. `Deno.realPath()` fails in JSR cache contexts ([denoland/deno#28217](https://github.com/denoland/deno/issues/28217), closed as "not planned"):
 
 ```typescript
 if (selfUrl.protocol === 'file:') {

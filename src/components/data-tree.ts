@@ -28,6 +28,7 @@ import type { DataTreeTooltipContext, TooltipProvider } from '../tooltip/types.t
 import { Wheelable } from '../types.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getLogger } from '../logging.ts';
 import { renderScrollbar } from './scrollbar.ts';
 import { parseColor } from './color-utils.ts';
@@ -618,7 +619,7 @@ export class DataTreeElement extends Element
       ? { ...style, foreground: connectorColorFg, dim: true } : undefined;
 
     // Terminal edge workaround
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     const atTerminalEdge = engine && bounds.x + bounds.width >= engine.terminalSize?.width;
     const effectiveWidth = atTerminalEdge ? bounds.width - 1 : bounds.width;
 

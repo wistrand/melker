@@ -2,6 +2,7 @@
 
 import { Element, BaseProps, Renderable, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getLogger } from '../logging.ts';
 
 const logger = getLogger('Text');
@@ -46,7 +47,7 @@ export class TextElement extends Element implements Renderable, TextSelectable {
 
     try {
       // Get the global engine for base URL resolution
-      const engine = globalThis.melkerEngine;
+      const engine = getGlobalEngine();
       if (!engine) {
         throw new Error('No global Melker engine available for URL resolution');
       }
@@ -101,7 +102,7 @@ export class TextElement extends Element implements Renderable, TextSelectable {
         this._fetchSrcContent().then(content => {
           if (content !== null) {
             // Try to trigger a full re-render
-            const engine = globalThis.melkerEngine;
+            const engine = getGlobalEngine();
             if (engine && engine.forceRender) {
               engine.forceRender();
             }

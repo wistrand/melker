@@ -3,6 +3,7 @@
 import { Element, BaseProps, Style, Renderable, Focusable, Interactive, Draggable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ViewportDualBuffer } from '../viewport-buffer.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 import { SeparatorElement } from './separator.ts';
@@ -427,7 +428,7 @@ export class SplitPaneElement extends Element implements Renderable {
   private _requestForceRender(): void {
     // Resizing panes changes layout for all children — request a full redraw
     // to avoid stale content from previous positions of dividers and panes.
-    globalThis.melkerEngine?.requestForceRender();
+    getGlobalEngine()?.requestForceRender();
   }
 
   private _fireOnResize(dividerIndex: number): void {

@@ -5,6 +5,7 @@ import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { type Bounds } from '../types.ts';
 import { TRANSPARENT, packRGBA, parseColor } from './color-utils.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import {
   type Isoline, type IsolineMode, type IsolineSource, type IsolineFill, type IsolineColor,
   getMarchingSquaresChar, getMarchingSquaresCase,
@@ -41,7 +42,7 @@ export function renderIsolinesToTerminal(
   const terminalHeight = Math.min(data.propsHeight, bounds.height);
 
   // Workaround for terminal edge rendering glitch
-  const engine = globalThis.melkerEngine;
+  const engine = getGlobalEngine();
   if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
     terminalWidth = Math.max(1, terminalWidth - 1);
   }

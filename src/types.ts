@@ -1,8 +1,5 @@
 // Core element types for the Melker UI library
 
-// Include global type declarations in the module graph
-import './globals.d.ts';
-
 import type { KeyPressEvent, ChangeEvent } from './events.ts';
 import { getUnicodeTier } from './utils/terminal-detection.ts';
 

@@ -8,6 +8,7 @@ import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts
 import type { CanvasRenderData, CanvasRenderState, ResolvedGfxMode } from './canvas-render-types.ts';
 import { quantizeBlockColorsInline } from './canvas-render-sextant.ts';
 import { resolveHalfBlockCell } from './canvas-render-halfblock.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getThemeManager } from '../theme.ts';
 import { nearestColor16Plus } from '../color16-palette.ts';
 
@@ -32,7 +33,7 @@ export function renderDitheredToTerminal(
   const halfScale = scale >> 1;
 
   // Workaround for terminal edge rendering glitch (same as non-dithered path)
-  const engine = globalThis.melkerEngine;
+  const engine = getGlobalEngine();
   if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
     terminalWidth = Math.max(1, terminalWidth - 1);
   }

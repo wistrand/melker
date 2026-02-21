@@ -2,6 +2,7 @@
 // Handles rendering, buffer management, resize handling, and terminal setup
 
 import { Document } from './document.ts';
+import { setGlobalEngine, setGlobalRenderCount } from './global-accessors.ts';
 import { MelkerConfig, setLoggerGetter } from './config/mod.ts';
 import { ensureError } from './utils/error.ts';
 import { Env } from './env.ts';
@@ -361,7 +362,7 @@ export class MelkerEngine {
     });
 
     // Make engine globally accessible for components that need URL resolution
-    globalThis.melkerEngine = this;
+    setGlobalEngine(this);
 
     // Set element size to match terminal size if not specified
     const style = this._rootElement.props.style || {};
@@ -809,7 +810,7 @@ export class MelkerEngine {
     this._buffer?.updateThemeCache();
 
     this._renderCount++;
-    globalThis.melkerRenderCount = this._renderCount;
+    setGlobalRenderCount(this._renderCount);
 
     // Always log initial renders for debugging
     if (this._renderCount <= 3) {
@@ -933,7 +934,7 @@ export class MelkerEngine {
       this._buffer?.updateThemeCache();
 
       this._renderCount++;
-      globalThis.melkerRenderCount = this._renderCount;
+      setGlobalRenderCount(this._renderCount);
 
       // Clear buffer
       this._buffer.clear();

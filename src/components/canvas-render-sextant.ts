@@ -5,6 +5,7 @@ import { type DualBuffer, type Cell } from '../buffer.ts';
 import { type Bounds } from '../types.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, parseColor } from './color-utils.ts';
 import { PIXEL_TO_CHAR } from './canvas-terminal.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import type { CanvasRenderData, CanvasRenderState } from './canvas-render-types.ts';
 
 /**
@@ -162,7 +163,7 @@ export function renderSextantToTerminal(
   // When canvas extends to the exact right edge of the terminal, some terminals
   // have issues with sextant characters in the last column (autowrap, width calculation).
   // Skip the last column when we're at the terminal edge to avoid visual artifacts.
-  const engine = globalThis.melkerEngine;
+  const engine = getGlobalEngine();
   if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
     terminalWidth = Math.max(1, terminalWidth - 1);
   }

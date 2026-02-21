@@ -2,6 +2,7 @@
 // Integrates the element system with the dual-buffer rendering system
 
 import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, getBorderChars, type BorderStyle, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
+import { setGlobalRequestRender, getGlobalLogger } from './global-accessors.ts';
 import { clipBounds, clamp } from './geometry.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
@@ -191,7 +192,7 @@ export class RenderingEngine {
   render(element: Element, buffer: DualBuffer, viewport: Bounds, focusedElementId?: string, textSelection?: TextSelection, hoveredElementId?: string, requestRender?: () => void, requestCachedRender?: () => void): LayoutNode {
     // Store requestRender globally so components can access it even if not passed through context
     if (requestRender) {
-      globalThis.__melkerRequestRender = requestRender;
+      setGlobalRequestRender(requestRender);
     }
 
     // Clear per-frame caches
@@ -405,7 +406,7 @@ export class RenderingEngine {
 
     // Store requestRender globally so components can access it even if not passed through context
     if (requestRender) {
-      globalThis.__melkerRequestRender = requestRender;
+      setGlobalRequestRender(requestRender);
     }
 
     // Reset timing for this render
@@ -473,7 +474,7 @@ export class RenderingEngine {
 
     // Store requestRender globally so components can access it even if not passed through context
     if (requestRender) {
-      globalThis.__melkerRequestRender = requestRender;
+      setGlobalRequestRender(requestRender);
     }
 
     // Clear per-frame caches
@@ -547,7 +548,7 @@ export class RenderingEngine {
 
     // Store requestRender globally
     if (requestRender) {
-      globalThis.__melkerRequestRender = requestRender;
+      setGlobalRequestRender(requestRender);
     }
 
     const context: RenderContext = {
@@ -973,7 +974,7 @@ export class RenderingEngine {
   // Render a layout node to the buffer
   private _renderNode(node: LayoutNode, context: RenderContext): void {
     // Debug: log visibility
-    const gLogger = globalThis.logger;
+    const gLogger = getGlobalLogger();
 
     if (!node.visible) return;
 
@@ -1006,7 +1007,7 @@ export class RenderingEngine {
     } : node.bounds;
 
     // Debug: Log ALL node renders
-    const gLogger = globalThis.logger;
+    const gLogger = getGlobalLogger();
 
     // Skip dialog elements - they are rendered separately by _renderModal
     // to ensure proper layering and avoid double rendering

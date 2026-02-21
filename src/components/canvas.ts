@@ -5,6 +5,7 @@ import type { CanvasTooltipContext } from '../tooltip/types.ts';
 import { type DualBuffer, type Cell } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, cssToRgba } from './color-utils.ts';
 import { applyDither, type DitherMode } from '../video/dither.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getLogger } from '../logging.ts';
 import * as Draw from './canvas-draw.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
@@ -209,7 +210,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     pixelsPerCellY: number;
   } {
     const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     const sixelCapabilities = engine?.sixelCapabilities;
 
     logger.debug('_calculateBufferDimensions', {
@@ -858,7 +859,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     // Apply onFilter if set (one-time per-pixel filter, same signature as onShader)
     if (this.props.onFilter) {
-      const engine = globalThis.melkerEngine;
+      const engine = getGlobalEngine();
       if (engine?.hasPermission?.('shader')) {
         const resolution: ShaderResolution = { width: scaledWidth, height: scaledHeight, pixelAspect: this.getPixelAspectRatio() };
         const srcCopy = new Uint8Array(scaledData); // Copy for source.getPixel
@@ -1109,7 +1110,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     }
 
     // Check for detected cell size from terminal capabilities
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     const capabilities = engine?.sixelCapabilities;
 
     if (gfxMode === 'halfblock') {
@@ -1283,7 +1284,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   private _runShaderOverPaint(): void {
     // Check shader permission
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     if (!engine || typeof engine.hasPermission !== 'function' || !engine.hasPermission('shader')) {
       return;
     }
@@ -1469,7 +1470,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // This happens when canvas was created before engine started
     const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
     if (gfxMode === 'sixel' || gfxMode === 'kitty' || gfxMode === 'iterm2') {
-      const engine = globalThis.melkerEngine;
+      const engine = getGlobalEngine();
       // Use sixel capabilities for cell dimensions
       const capabilities = engine?.sixelCapabilities;
       if (capabilities?.cellWidth && capabilities.cellWidth > 0 && capabilities.cellHeight > 0) {
@@ -1620,7 +1621,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   private _generateSixelOutput(bounds: Bounds): void {
     // Get sixel capabilities from engine
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     const capabilities = engine?.sixelCapabilities;
 
     if (!capabilities?.supported) {
@@ -1686,7 +1687,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   private _generateKittyOutput(bounds: Bounds): void {
     // Get kitty capabilities from engine
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     const capabilities = engine?.kittyCapabilities;
 
     if (!capabilities?.supported) {
@@ -1714,7 +1715,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    * Generate iTerm2 output for this canvas when in iTerm2 mode.
    */
   private _generateITermOutput(bounds: Bounds): void {
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     const capabilities = engine?.itermCapabilities;
 
     if (!capabilities?.supported) {

@@ -23,6 +23,7 @@ import type { DataTableTooltipContext, TooltipProvider } from '../tooltip/types.
 import { ViewportDualBuffer, createClipViewport } from '../viewport-buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 import { renderScrollbar } from './scrollbar.ts';
@@ -676,7 +677,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     // When table extends to the exact right edge of the terminal, some terminals
     // have issues with characters in the last column (autowrap, cursor positioning).
     // Reduce width by 1 when at the terminal edge to avoid visual artifacts.
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     const atTerminalEdge = engine && bounds.x + bounds.width >= engine.terminalSize?.width;
     const effectiveWidth = atTerminalEdge ? bounds.width - 1 : bounds.width;
 

@@ -2,6 +2,7 @@
 // Extracted from engine.ts for better separation of concerns
 
 import { ANSI } from './ansi-output.ts';
+import { setGlobalEmergencyCleanup } from './global-accessors.ts';
 import { isRunningHeadless } from './headless.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 import { MelkerConfig } from './config/mod.ts';
@@ -316,7 +317,7 @@ export function registerForEmergencyCleanup(instance: CleanupableInstance): void
     }
 
     // Store for potential external access
-    globalThis._melkerEmergencyCleanup = emergencyCleanup;
+    setGlobalEmergencyCleanup(emergencyCleanup);
   }
 }
 

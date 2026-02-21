@@ -252,13 +252,19 @@ export async function executeBundle(
     (globalThis as any).$app = context.exports; // Alias for $melker.exports
     (globalThis as any).argv = argv ?? Deno.args.slice(1);
 
-    // Write bundled code to temp file
-    await Deno.writeTextFile(bundleFile, assembled.bundledCode);
+    // Write bundled code to temp file (for debugging with retainBundle)
     const retainBundle = MelkerConfig.get().bundlerRetainBundle;
-    logger.info(`Bundled code written to: ${bundleFile}${retainBundle ? ' (retainBundle=true, will be retained)' : ''}`);
+    if (retainBundle) {
+      await Deno.writeTextFile(bundleFile, assembled.bundledCode);
+      logger.info(`Bundled code written to: ${bundleFile} (retainBundle=true, will be retained)`);
+    }
 
-    // Import the bundled module
-    await import(`file://${bundleFile}`);
+    // Import the bundled module via data URL — works from any origin (file://, http://, https://)
+    const bytes = new TextEncoder().encode(assembled.bundledCode);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const encoded = btoa(binary);
+    await import(`data:application/javascript;base64,${encoded}`);
 
     // Get the registry
     const registry = (globalThis as any).__melker as MelkerRegistry;

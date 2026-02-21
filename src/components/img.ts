@@ -5,6 +5,7 @@ import { Element, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '.
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { CanvasElement, type CanvasProps } from './canvas.ts';
 import { registerComponent } from '../element.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
 import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
@@ -129,7 +130,7 @@ export class ImgElement extends CanvasElement {
     }
 
     // Try to resolve using the engine
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     if (engine && typeof engine.resolveUrl === 'function') {
       const resolved = engine.resolveUrl(src);
       // Convert file:// URL to path

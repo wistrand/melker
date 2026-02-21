@@ -6,6 +6,7 @@
 import { Element, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, hasIntrinsicSize } from '../types.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { type SixelOutputData, type KittyOutputData, type ITermOutputData } from './canvas-render.ts';
 import { GraphElement } from './graph/mod.ts';
@@ -228,7 +229,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
     let resolvedUrl = '';
     try {
       // Get engine instance to resolve URL
-      const engine = globalThis.melkerEngine;
+      const engine = getGlobalEngine();
       if (!engine || typeof engine.resolveUrl !== 'function') {
         logger.error('Engine not available for URL resolution');
         return null;
@@ -319,7 +320,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
             this._imageRenderer.reset(); // Reset for new content
             this._lastRenderedHeight = 0;
             // Try to trigger a full re-render with layout recalculation
-            const engine = globalThis.melkerEngine;
+            const engine = getGlobalEngine();
             if (engine && typeof engine.forceRender === 'function') {
               engine.forceRender();
               // Force another render after a short delay to ensure layout recalculation
@@ -331,7 +332,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
             }
           } else {
             // Content is null - either error or still loading, trigger re-render to show error
-            const engine = globalThis.melkerEngine;
+            const engine = getGlobalEngine();
             if (engine && typeof engine.forceRender === 'function') {
               engine.forceRender();
             }
@@ -414,7 +415,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       this._imageRenderer.setHeightStabilized(true);
 
       // Use forceRender from engine if available for full layout recalculation
-      const engine = globalThis.melkerEngine;
+      const engine = getGlobalEngine();
       if (engine && typeof engine.forceRender === 'function') {
         // Schedule with small delay to allow current render to complete
         setTimeout(() => {

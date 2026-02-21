@@ -32,6 +32,7 @@ import {
   applySierraStableDither,
   type DitherMode,
 } from '../video/dither.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import type { CanvasRenderData, CanvasRenderState, SixelOutputData, KittyOutputData, ITermOutputData } from './canvas-render-types.ts';
 
 /**
@@ -143,7 +144,7 @@ function prepareGraphicsInput(
   const terminalHeight = Math.min(data.propsHeight, bounds.height);
 
   // Workaround for terminal edge rendering glitch
-  const engine = globalThis.melkerEngine;
+  const engine = getGlobalEngine();
   if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
     terminalWidth = Math.max(1, terminalWidth - 1);
   }
@@ -390,7 +391,7 @@ export function generateITerm2Output(
 
   // Get cell dimensions from sixel capabilities (detected via terminal query)
   // Fall back to common defaults if not available
-  const engine = globalThis.melkerEngine;
+  const engine = getGlobalEngine();
   const cellWidth = engine?.sixelCapabilities?.cellWidth || 8;
   const cellHeight = engine?.sixelCapabilities?.cellHeight || 16;
 

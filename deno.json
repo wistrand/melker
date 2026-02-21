@@ -15,6 +15,9 @@
       "media/melker-128.png",
       "LICENSE.txt",
       "README.md"
+    ],
+    "exclude": [
+      "src/globals-ambient.d.ts"
     ]
   },
   "engines": {
@@ -41,7 +44,9 @@
     "version:sync": "deno run --allow-read --allow-write --allow-run scripts/sync-version.ts",
     "build:doc": "cp README.md README.md.bak && cp docs/README-jsr.md README.md && deno doc --html --name=melker --output=docs/api melker.ts mod.ts; mv README.md.bak README.md",
     "publish:dry-run": "cp README.md README.md.bak && cp docs/README-jsr.md README.md && deno publish --dry-run --allow-dirty; mv README.md.bak README.md",
-    "publish": "cp README.md README.md.bak && cp docs/README-jsr.md README.md && deno publish; mv README.md.bak README.md",
+    "publish": "cp README.md README.md.bak && cp docs/README-jsr.md README.md && deno publish --allow-dirty; mv README.md.bak README.md",
+    "publish:test-dry-run": "rm -f deno.lock && cp README.md README.md.bak && cp docs/README-jsr.md README.md && DENO_TLS_CA_STORE=system JSR_URL=https://jsr.test  deno publish --dry-run --allow-dirty; mv README.md.bak README.md",
+    "publish:test": "rm -f deno.lock && cp README.md README.md.bak && cp docs/README-jsr.md README.md && DENO_TLS_CA_STORE=system JSR_URL=https://jsr.test deno publish --allow-dirty; mv README.md.bak README.md",
     "serve:http": "deno run --allow-net --allow-read tools/serve.ts"
   },
   "compilerOptions": {
@@ -49,7 +54,8 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "types": ["./src/globals-ambient.d.ts"]
   },
   "fmt": {
     "useTabs": false,

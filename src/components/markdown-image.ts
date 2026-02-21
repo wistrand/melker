@@ -3,6 +3,7 @@
 
 import { type Bounds } from '../types.ts';
 import { type Cell } from '../buffer.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { CanvasElement } from './canvas.ts';
 import { type SixelOutputData, type KittyOutputData, type ITermOutputData, getEffectiveGfxMode } from './canvas-render.ts';
@@ -282,7 +283,7 @@ export class MarkdownImageRenderer {
     const markdownUrl = this._resolvedSrcUrl;
     if (!markdownUrl) {
       // No resolved URL yet, fall back to engine resolution
-      const engine = globalThis.melkerEngine;
+      const engine = getGlobalEngine();
       if (engine && typeof engine.resolveUrl === 'function') {
         const resolved = engine.resolveUrl(src);
         logger.debug('Resolved via engine (no resolved markdown URL)', { resolved });

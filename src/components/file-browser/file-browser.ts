@@ -39,6 +39,7 @@ import {
   formatSize,
 } from './file-utils.ts';
 import { type FilterMode, applyFilter } from '../filterable-list/filter.ts';
+import { getGlobalRequestRender } from '../../global-accessors.ts';
 
 const logger = getLogger('file-browser');
 
@@ -285,7 +286,7 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
     }
 
     // Fallback to global requestRender (set by renderer)
-    const globalRender = globalThis.__melkerRequestRender;
+    const globalRender = getGlobalRequestRender();
     if (globalRender) {
       globalRender();
       return;
@@ -293,7 +294,7 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
 
     // Neither available - schedule a retry
     setTimeout(() => {
-      const globalRenderRetry = globalThis.__melkerRequestRender;
+      const globalRenderRetry = getGlobalRequestRender();
       if (this._requestRender) {
         this._requestRender();
       } else if (globalRenderRetry) {

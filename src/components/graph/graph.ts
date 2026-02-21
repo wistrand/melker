@@ -36,6 +36,7 @@ import { graphToMelker, type ContainerOptions } from './graph-to-melker.ts';
 import { detectParserType, type ParserType } from './parsers/mod.ts';
 import { parseXmlToElement } from '../../template.ts';
 import { Stylesheet } from '../../stylesheet.ts';
+import { getGlobalEngine } from '../../global-accessors.ts';
 import { getLogger } from '../../logging.ts';
 import { registerComponent } from '../../element.ts';
 
@@ -140,7 +141,7 @@ export class GraphElement extends Element implements Renderable {
       logger.debug('Loading graph from URL', { src });
 
       // Get the global engine for base URL resolution
-      const engine = globalThis.melkerEngine;
+      const engine = getGlobalEngine();
       if (!engine) {
         throw new Error('No global Melker engine available for URL resolution');
       }
@@ -318,7 +319,7 @@ export class GraphElement extends Element implements Renderable {
   private _tryRegisterStylesheet(): void {
     if (!this._pendingStylesheet) return;
 
-    const engine = globalThis.melkerEngine;
+    const engine = getGlobalEngine();
     if (engine?.document) {
       // Remove previously registered graph stylesheet if regenerating
       if (this._registeredStylesheet) {

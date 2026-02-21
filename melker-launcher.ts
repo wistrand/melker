@@ -567,9 +567,10 @@ your terminal supports sextant mode. If any row appears scrambled, use:
 
     // JSR or remote install: fetch latest version and reinstall
     try {
-      const resp = await fetch('https://jsr.io/@wistrand/melker/meta.json');
+      const jsrUrl = Deno.env.get('JSR_URL') || 'https://jsr.io';
+      const resp = await fetch(`${jsrUrl}/@wistrand/melker/meta.json`);
       if (!resp.ok) {
-        console.error('Failed to fetch version info from jsr.io');
+        console.error(`Failed to fetch version info from ${jsrUrl}`);
         Deno.exit(1);
       }
       const meta = await resp.json();

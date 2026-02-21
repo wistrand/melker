@@ -3,6 +3,7 @@
 
 import { packRGBA, unpackRGBA, TRANSPARENT } from './color-utils.ts';
 import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderCallback } from './canvas-shader.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import { getGlobalPerformanceDialog } from '../performance-dialog.ts';
 import { getLogger } from '../logging.ts';
 import type { Bounds } from '../types.ts';
@@ -115,7 +116,7 @@ export function startShader(
   }
 
   // Check shader permission
-  const engine = globalThis.melkerEngine;
+  const engine = getGlobalEngine();
   if (!engine || typeof engine.hasPermission !== 'function' || !engine.hasPermission('shader')) {
     if (!state.permissionWarned) {
       state.permissionWarned = true;

@@ -4,15 +4,10 @@
 
 **Website:** [melker.sh](https://melker.sh) | **GitHub:** [wistrand/melker](https://github.com/wistrand/melker)
 
-A TUI framework for apps you want to share safely. Melker apps are documents you can read before you run them — share via URL, declare permissions in a policy, inspect with Dev Tools.
-
----
-
-## Try Without Installing
-
-```bash
-deno dx jsr:@wistrand/melker app.melker
-```
+A terminal UI framework for building document-first TUI applications. Melker
+apps are readable markup files with declared permissions, shareable via URL, and
+inspectable with built-in Dev Tools. Each app runs in a sandboxed Deno
+subprocess with only the permissions it declares.
 
 ## Installation
 
@@ -20,73 +15,70 @@ deno dx jsr:@wistrand/melker app.melker
 deno install -g -A jsr:@wistrand/melker
 ```
 
-Then run from anywhere:
+Requires **Deno 2.5+** and an ANSI-compatible terminal.
+
+## Try Without Installing
+
+```bash
+deno x jsr:@wistrand/melker app.melker
+```
+[Nerd Fonts](https://www.nerdfonts.com/) recommended for graphics.
+
+## Usage
+
+Run a `.melker` file from anywhere:
 
 ```bash
 melker app.melker
-melker https://example.com/app.melker
+melker https://melker.sh/examples/demo.melker
 ```
 
-### Requirements
-
-- **Deno 2.5+**
-- ANSI-compatible terminal
-- **Nerd Fonts** (recommended for graphics)
-
-### Upgrade
+Or run directly from a URL without installing:
 
 ```bash
-melker upgrade
+deno run -A https://melker.sh/melker.ts app.melker
 ```
 
----
+## Creating Apps
 
-## Quick Start
-
-Create `hello.melker`:
+A `.melker` file is HTML-like markup with an embedded permission policy:
 
 ```html
 <melker>
   <policy>
   {
     "name": "Hello App",
-    "permissions": {
-      "env": ["TERM"]
-    }
+    "permissions": { "env": ["TERM"] }
   }
   </policy>
 
-  <container style="border: thin; padding: 1;">
-    <text style="font-weight: bold; color: cyan;">Hello, Terminal!</text>
+  <style>
+    container { border: thin; padding: 1; }
+    text { font-weight: bold; color: cyan; }
+  </style>
+
+  <container>
+    <text>Hello, Terminal!</text>
     <button label="Exit" onClick="$melker.exit()" />
   </container>
 </melker>
 ```
 
-Run it:
-
-```bash
-melker hello.melker
-```
-
-> **Why `-A`?** The launcher needs full permissions to parse, bundle, and spawn your app. But your app runs in a **subprocess** with only the permissions declared in its `<policy>`. The launcher is trusted; the app is sandboxed.
-
-Press **F12** to open Dev Tools to view source, policy, document tree, and system info.
-
----
+Press **F12** at runtime to open Dev Tools (source, policy, document tree,
+system info).
 
 ## TypeScript API
 
-Import from `@wistrand/melker/lib`:
+Import from `@wistrand/melker/lib` for programmatic use:
 
 ```typescript
-import { createElement, createApp } from '@wistrand/melker/lib';
+import { createElement, createApp } from "@wistrand/melker/lib";
 
-const ui = createElement('container', {
-  style: { border: 'thin', padding: 2 }
-},
-  createElement('text', { text: 'Hello!' }),
-  createElement('button', { label: 'OK', onClick: () => app.exit() })
+const ui = createElement(
+  "container",
+  { style: { border: "thin", padding: 2 } },
+  createElement("text", { text: "Hello!" }),
+  createElement("button", { label: "OK", onClick: () => app.exit() }),
 );
 
 const app = await createApp(ui);
@@ -95,10 +87,10 @@ const app = await createApp(ui);
 Or with template literals:
 
 ```typescript
-import { melker, createApp } from '@wistrand/melker/lib';
+import { melker, createApp } from "@wistrand/melker/lib";
 
 const ui = melker`
-  <container style=${{ border: 'thin', padding: 2 }}>
+  <container style=${{ border: "thin", padding: 2 }}>
     <text>Hello!</text>
     <button label="OK" onClick=${() => app.exit()} />
   </container>
@@ -107,68 +99,61 @@ const ui = melker`
 const app = await createApp(ui);
 ```
 
----
+## Components
 
-## Features
+| Category   | Elements                                        |
+|------------|-------------------------------------------------|
+| Layout     | container, tabs, split-pane                     |
+| Text       | text, markdown                                  |
+| Input      | input, textarea, checkbox, radio, slider        |
+| Navigation | button, command-palette                         |
+| Data       | data-table, data-tree, data-bars, data-heatmap  |
+| Dropdowns  | combobox, select, autocomplete                  |
+| Dialogs    | dialog, alert, confirm, prompt                  |
+| Files      | file-browser                                    |
+| Graphics   | canvas, img, video                              |
 
-| Feature                      | Melker | Other TUI Frameworks |
-|------------------------------|:------:|:--------------------:|
-| Run from URL                 |   Y    |          -           |
-| Permission sandbox           |   Y    |          -           |
-| App approval system          |   Y    |          -           |
-| Inspect policy before run    |   Y    |          -           |
-| Dev Tools (source, policy, inspect) |   Y    |          -           |
-| Literate UI (Markdown)       |   Y    |          -           |
-| No build step                |   Y    |         Some         |
+## Permission Sandboxing
 
-### Components
-
-| Category    | Components                                        |
-|-------------|---------------------------------------------------|
-| Layout      | container, flexbox, tabs                          |
-| Text        | text, markdown                                    |
-| Input       | input, textarea, checkbox, radio, slider          |
-| Navigation  | button, command-palette                           |
-| Data        | table, data-table, list                           |
-| Dropdowns   | combobox, select, autocomplete, command-palette   |
-| Dialogs     | dialog, alert, confirm, prompt                    |
-| Feedback    | progress                                          |
-| Files       | file-browser                                      |
-| Graphics    | canvas, img, video                                |
-| Auth        | oauth                                             |
-
-### Styling
-
-CSS-like inline styles and `<style>` tags with selectors:
+Apps declare permissions in a `<policy>` tag. The launcher parses the policy,
+shows an approval prompt on first run, then spawns the app in a restricted Deno
+subprocess with only the approved permissions:
 
 ```html
-<container style="border: rounded; padding: 1; color: cyan;">
-  <text style="font-weight: bold;">Styled text</text>
-</container>
+<policy>
+{
+  "permissions": {
+    "read": ["."],
+    "net": ["api.example.com"],
+    "run": ["ffmpeg"]
+  }
+}
+</policy>
 ```
 
-### Themes
-
-Auto-detects terminal capabilities. Override with `--theme`:
+Override permissions at runtime:
 
 ```bash
-melker --theme fullcolor-dark app.melker
+melker --allow-net=cdn.example.com app.melker
+melker --deny-read=/etc app.melker
 ```
 
----
+Use `--trust` to skip the approval prompt in CI/scripts.
+
+## Upgrade
+
+```bash
+melker upgrade
+```
 
 ## Documentation
 
-Full documentation, examples, manifesto, and FAQ are on GitHub:
-
 - [Getting Started](https://github.com/wistrand/melker/blob/main/agent_docs/getting-started.md)
+- [Step-by-step Tutorial](https://melker.sh/tutorial.html)
+- [Examples](https://github.com/wistrand/melker/tree/main/examples)
 - [Manifesto](https://github.com/wistrand/melker/blob/main/MANIFESTO.md)
 - [FAQ](https://github.com/wistrand/melker/blob/main/FAQ.md)
-- [Examples](https://github.com/wistrand/melker/tree/main/examples)
-- [Step-by-step tutorial](https://melker.sh/tutorial.html)
-
----
 
 ## License
 
-[MIT License](https://github.com/wistrand/melker/blob/main/LICENSE.txt)
+[MIT](https://github.com/wistrand/melker/blob/main/LICENSE.txt)

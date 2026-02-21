@@ -11,6 +11,7 @@
 import { type DualBuffer, type Cell } from '../buffer.ts';
 import { type Bounds } from '../types.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
 import type { CanvasRenderData, CanvasRenderState, ResolvedGfxMode, GfxMode } from './canvas-render-types.ts';
 import { getUnicodeTier } from '../utils/terminal-detection.ts';
 import { renderGraphicsPlaceholder } from './canvas-render-graphics.ts';
@@ -48,7 +49,7 @@ export function renderToTerminal(
   const terminalHeight = Math.min(data.propsHeight, bounds.height);
 
   // Workaround for terminal edge rendering glitch
-  const engine = globalThis.melkerEngine;
+  const engine = getGlobalEngine();
   if (engine && bounds.x + terminalWidth >= engine.terminalSize?.width) {
     terminalWidth = Math.max(1, terminalWidth - 1);
   }
@@ -103,7 +104,7 @@ export function getEffectiveGfxMode(
   const globalGfxMode = MelkerConfig.get().gfxMode as GfxMode | undefined;
   const requested = globalGfxMode || propsGfxMode || 'sextant';
 
-  const engine = globalThis.melkerEngine;
+  const engine = getGlobalEngine();
   const kittySupported = engine?.kittyCapabilities?.supported ?? false;
   const sixelSupported = engine?.sixelCapabilities?.supported ?? false;
   const itermSupported = engine?.itermCapabilities?.supported ?? false;

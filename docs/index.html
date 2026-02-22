@@ -535,12 +535,22 @@
     <section>
       <div class="container">
         <h2>Installation</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Requires <strong>Deno 2.5+</strong>. Node.js and Bun are not supported.</p>
+
+        <h3 style="margin-bottom: 16px;">Option A: Install from JSR</h3>
+        <pre>deno install -g -A jsr:@wistrand/melker
+melker examples</pre>
+        <p style="color: var(--text-secondary); margin: 8px 0 32px; font-size: 0.9rem;">
+          <code>-A</code> grants permissions to the launcher &mdash; your apps run sandboxed with only the permissions they declare.
+          Upgrade anytime with <code>melker upgrade</code>.
+        </p>
+
+        <h3 style="margin-bottom: 16px;">Option B: Clone from Git</h3>
         <div class="steps">
           <div class="step">
             <div class="step-number">1</div>
             <div class="step-content">
               <h3>Clone the repository</h3>
-              <p>Melker is distributed via git. No package managers required.</p>
               <pre>git clone https://github.com/wistrand/melker.git
 cd melker</pre>
             </div>
@@ -549,7 +559,6 @@ cd melker</pre>
             <div class="step-number">2</div>
             <div class="step-content">
               <h3>Run an example</h3>
-              <p>Requires Deno 2.5+. Node.js and Bun are not supported.</p>
               <pre>./melker.ts examples/basics/hello.melker</pre>
             </div>
           </div>
@@ -633,6 +642,7 @@ git checkout v2026.01.1</pre>
     <div class="container">
       <p>
         <a href="https://github.com/wistrand/melker">GitHub</a> &middot;
+        <a href="https://jsr.io/@wistrand/melker">JSR</a> &middot;
         <a href="https://github.com/wistrand/melker/blob/main/LICENSE.txt">MIT License</a> &middot;
         <a href="https://github.com/wistrand/melker/blob/main/FAQ.md">FAQ</a>
       </p>

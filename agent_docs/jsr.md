@@ -1,6 +1,6 @@
 # JSR Distribution
 
-Publishing to JSR (jsr.io) lets Deno users install melker globally with one command. The existing architecture (launcher spawns sandboxed subprocess via `import.meta.url` path resolution) works unchanged in JSR — cached modules preserve relative paths.
+Publishing to JSR (jsr.io) lets Deno users install melker globally with one command. The existing architecture (launcher spawns sandboxed subprocess via `import.meta.url` path resolution) works unchanged in JSR — cached modules preserve relative paths. See [cli-reference.md](cli-reference.md) for end-user installation instructions.
 
 ```bash
 # Install (-A grants all permissions to the launcher; apps run sandboxed via <policy>)

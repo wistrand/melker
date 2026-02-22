@@ -537,6 +537,7 @@ When using Chrome DevTools Performance profiling, rendering may appear corrupted
 
 ## See Also
 
+- [internals-reference.md](internals-reference.md) — Environment variables (`MELKER_LOG_*`, `MELKER_HEADLESS`, etc.)
 - [architecture.md](architecture.md) — Core architecture, render pipeline
 - [script_usage.md](script_usage.md) — $melker context and logging API
 - [config-architecture.md](config-architecture.md) — Configuration system

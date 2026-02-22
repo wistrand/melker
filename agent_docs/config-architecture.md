@@ -454,6 +454,8 @@ const speed = $melker.config.getNumber('plasma.speed', 1.0);  // 2.0
 
 ## See Also
 
+- [internals-reference.md](internals-reference.md) — Environment variables table, config overview
+- [cli-reference.md](cli-reference.md) — CLI flags and `--print-config`
 - [script_usage.md](script_usage.md) — Accessing config from scripts
 - [melker-file-format.md](melker-file-format.md) — Policy tag syntax
 - [policy-architecture.md](policy-architecture.md) — Permission system and CLI overrides

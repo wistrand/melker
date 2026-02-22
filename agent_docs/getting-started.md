@@ -205,4 +205,6 @@ Non-Unicode terminals are detected automatically via `$TERM`. All Unicode box-dr
 - Examples: [`examples/`](../examples/) (basics, components, layout, canvas, melker)
 - Components: [`COMPONENTS.md`](../skills/creating-melker-apps/references/COMPONENTS.md)
 - Footguns: [`dx-footguns.md`](dx-footguns.md)
+- CLI details: [`cli-reference.md`](cli-reference.md) (installation, permissions, shell completions, keyboard shortcuts)
+- Internals: [`internals-reference.md`](internals-reference.md) (env vars, config, project structure)
 - Full reference: [`CLAUDE.md`](../CLAUDE.md)

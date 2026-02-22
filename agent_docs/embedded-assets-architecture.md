@@ -132,3 +132,8 @@ deno task build:assets
 ```
 
 This reads source files, encodes each as a grayscale PNG, base64-encodes, and writes `src/assets-data.ts`. Part of the umbrella `deno task build`.
+
+## See Also
+
+- [internals-reference.md](internals-reference.md) — `MELKER_DYNAMIC_ASSETS` environment variable
+- [jsr.md](jsr.md) — Why assets are embedded (JSR/remote installs have no local source tree)

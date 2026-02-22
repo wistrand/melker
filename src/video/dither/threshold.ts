@@ -97,12 +97,11 @@ export function clearThresholdMatrixCache(): void {
 let _builtinBlueNoise: ThresholdMatrix | null = null;
 let _blueNoiseMatrix: ThresholdMatrix | null = null;
 
-/** Build a ThresholdMatrix from the embedded blue noise asset (raw grayscale bytes). */
+/** Build a ThresholdMatrix from the embedded blue noise asset (PNG file bytes). */
 function getBuiltinBlueNoise(): ThresholdMatrix {
   if (_builtinBlueNoise) return _builtinBlueNoise;
-  const data = getAsset('blue-noise-64');
-  const size = Math.sqrt(data.length) | 0;
-  _builtinBlueNoise = { size, data, mask: size - 1 };
+  const pngData = getAsset('blue-noise-64');
+  _builtinBlueNoise = decodePngToMatrix(pngData, 'embedded:blue-noise-64');
   return _builtinBlueNoise;
 }
 

@@ -12,7 +12,7 @@
     { "id": "theme/fullcolor-std", "path": "src/themes/fullcolor-std.css" },
     { "id": "theme/fullcolor-dark","path": "src/themes/fullcolor-dark.css" },
 
-    { "id": "blue-noise-64", "path": "media/blue-noise-64.png", "transform": "png-grayscale" },
+    { "id": "blue-noise-64", "path": "media/blue-noise-64.png" },
 
     { "id": "font-5x7", "path": "src/components/segment-display/5x7.psf2" },
 

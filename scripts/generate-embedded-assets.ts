@@ -9,7 +9,7 @@
 //   deno task build:assets
 //
 
-import { decodePng, encodePng } from '../src/deps.ts';
+import { encodePng } from '../src/deps.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 
@@ -20,35 +20,11 @@ const ROOT = new URL('..', import.meta.url).pathname;
 interface AssetDef {
   id: string;
   path: string;
-  /** 'png-grayscale' decodes PNG to raw grayscale bytes before encoding */
-  transform?: 'png-grayscale';
 }
 
 const ASSETS: AssetDef[] = JSON.parse(
   await Deno.readTextFile(new URL('./assets.json', import.meta.url)),
 ).assets;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function pngToGrayscale(pngData: Uint8Array): Uint8Array {
-  const decoded = decodePng(pngData);
-  const size = decoded.width * decoded.height;
-  const channels = decoded.channels || (decoded.data.length / size);
-  const data = new Uint8Array(size);
-  for (let i = 0; i < size; i++) {
-    if (channels === 1) data[i] = decoded.data[i];
-    else if (channels === 2) data[i] = decoded.data[i * 2];
-    else {
-      const idx = i * (channels >= 4 ? 4 : 3);
-      data[i] = Math.round(
-        0.299 * decoded.data[idx] + 0.587 * decoded.data[idx + 1] + 0.114 * decoded.data[idx + 2],
-      );
-    }
-  }
-  return data;
-}
 
 /** Encode raw bytes as a 1-pixel-tall grayscale PNG, then base64-encode. */
 function bytesToBase64Png(data: Uint8Array): string {
@@ -60,6 +36,15 @@ function bytesToBase64Png(data: Uint8Array): string {
     depth: 8,
   });
   return btoa(String.fromCharCode(...png));
+}
+
+/** Compute relative path from src/ (where assets-data.ts lives) to an asset source. */
+function toRelativePath(assetPath: string): string {
+  // assetPath is relative to project root, e.g. "src/themes/bw-std.css" or "media/blue-noise-64.png"
+  if (assetPath.startsWith('src/')) {
+    return './' + assetPath.slice(4);
+  }
+  return '../' + assetPath;
 }
 
 /** Split a base64 string into 100-char quoted chunks for readable TS output. */
@@ -78,20 +63,19 @@ function formatBase64(b64: string): string {
 
 console.log('Generating src/assets-data.ts...');
 
-const entries: string[] = [];
+const dataEntries: string[] = [];
+const pathEntries: string[] = [];
 let totalRaw = 0;
 let totalEncoded = 0;
 
 for (const asset of ASSETS) {
-  let raw = await Deno.readFile(`${ROOT}${asset.path}`);
-  if (asset.transform === 'png-grayscale') {
-    raw = pngToGrayscale(raw);
-  }
+  const raw = await Deno.readFile(`${ROOT}${asset.path}`);
   const b64 = bytesToBase64Png(raw);
   const encodedBytes = Math.ceil(b64.length * 3 / 4);
   totalRaw += raw.length;
   totalEncoded += encodedBytes;
-  entries.push(`  '${asset.id}':\n    ${formatBase64(b64)},`);
+  dataEntries.push(`  '${asset.id}':\n    ${formatBase64(b64)},`);
+  pathEntries.push(`  '${asset.id}': '${toRelativePath(asset.path)}',`);
   console.log(`  ${asset.id} (${raw.length} → ${encodedBytes} bytes)`);
 }
 
@@ -105,7 +89,13 @@ const output = `// Embedded asset data — bytes encoded as grayscale PNG, then 
 
 // deno-fmt-ignore
 export const ASSET_DATA: Record<string, string> = {
-${entries.join('\n')}
+${dataEntries.join('\n')}
+};
+
+/** Source file paths relative to this file (src/). Used for dynamic loading in development. */
+// deno-fmt-ignore
+export const ASSET_PATHS: Record<string, string> = {
+${pathEntries.join('\n')}
 };
 `;
 

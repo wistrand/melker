@@ -227,6 +227,12 @@
       "env": "MELKER_ALLOW_SERVER_INPUT",
       "description": "Allow input from server clients"
     },
+    "assets.dynamic": {
+      "type": "boolean",
+      "default": false,
+      "env": "MELKER_DYNAMIC_ASSETS",
+      "description": "Read assets from source files instead of embedded data (development)"
+    },
     "bundler.retainBundle": {
       "type": "boolean",
       "default": false,

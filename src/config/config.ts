@@ -817,6 +817,11 @@ export class MelkerConfig {
     return this.data['server.allowInput'] as boolean;
   }
 
+  // Assets
+  get dynamicAssets(): boolean {
+    return this.data['assets.dynamic'] as boolean;
+  }
+
   // Bundler
   get bundlerRetainBundle(): boolean {
     return this.data['bundler.retainBundle'] as boolean;

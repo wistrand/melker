@@ -139,7 +139,7 @@ All bundled assets are encoded as grayscale PNG (base64) in `src/assets-data.ts`
 
 Asset definitions live in [`scripts/assets.json`](../scripts/assets.json). Regenerate with `deno task build:assets`.
 
-**Access**: `getAsset(id)` and `getAssetText(id)` are fully synchronous — they decode on first call via `decodePng()`, then cache. No initialization step needed.
+**Access**: `getAsset(id)` and `getAssetText(id)` are fully synchronous — they decode on first call via `decodePng()`, then cache. No initialization step needed. For development, `MELKER_DYNAMIC_ASSETS=true` reads source files from disk instead (see [embedded-assets-architecture.md](embedded-assets-architecture.md)).
 
 **Files that previously used filesystem reads:**
 - `src/theme.ts` — Theme CSS files, now via `getAssetText('theme/<name>')`

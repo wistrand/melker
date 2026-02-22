@@ -225,6 +225,7 @@ See [project-structure.md](agent_docs/project-structure.md) for detailed file li
 | `MELKER_LINT`                | Enable lint mode (`true` or `1`)                                                                                                                                   |
 | `MELKER_NO_CONSOLE_OVERRIDE` | Disable console.log redirect to logger (`true` or `1`)                                                                                                             |
 | `MELKER_PERSIST`             | Enable state persistence (`true` or `1`, default: false)                                                                                                           |
+| `MELKER_DYNAMIC_ASSETS`      | Read assets from source files instead of embedded data (`true` or `1`, development)                                                                                |
 | `MELKER_RETAIN_BUNDLE`       | Keep temp bundle files for debugging (`true` or `1`)                                                                                                               |
 | `OPENROUTER_API_KEY`         | API key for AI assistant (OpenRouter)                                                                                                                              |
 | `MELKER_AI_MODEL`            | AI chat model (default: `openai/gpt-5.2-chat`)                                                                                                                     |

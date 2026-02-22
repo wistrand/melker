@@ -18,6 +18,9 @@
  * deno install -g -A jsr:@wistrand/melker
  * ```
  *
+ * `-A` grants all permissions to the launcher — your apps run sandboxed in a
+ * subprocess with only the permissions declared in their `<policy>`.
+ *
  * Requires **Deno 2.5+** and an ANSI-compatible terminal.
  * [Nerd Fonts](https://www.nerdfonts.com/) recommended for graphics.
  *
@@ -88,6 +91,20 @@
  * const app = await createApp(ui);
  * ```
  *
+ * ## Components
+ *
+ * | Category   | Elements                                        |
+ * |------------|-------------------------------------------------|
+ * | Layout     | container, tabs, split-pane                     |
+ * | Text       | text, markdown                                  |
+ * | Input      | input, textarea, checkbox, radio, slider        |
+ * | Navigation | button, command-palette                         |
+ * | Data       | data-table, data-tree, data-bars, data-heatmap  |
+ * | Dropdowns  | combobox, select, autocomplete                  |
+ * | Dialogs    | dialog, alert, confirm, prompt                  |
+ * | Files      | file-browser                                    |
+ * | Graphics   | canvas, img, video                              |
+ *
  * ## Permission Sandboxing
  *
  * Apps declare permissions in a `<policy>` tag. The launcher parses the policy,
@@ -118,6 +135,21 @@
  * ```bash
  * melker upgrade
  * ```
+ *
+ * ## Examples
+ *
+ * ```bash
+ * melker examples
+ * ```
+ *
+ * Or run a showcase example directly:
+ *
+ * ```bash
+ * melker https://melker.sh/examples/showcase/demo.melker
+ * melker https://melker.sh/examples/showcase/breakout.melker
+ * ```
+ *
+ * More examples: [examples/](https://github.com/wistrand/melker/tree/main/examples)
  *
  * ## Documentation
  *

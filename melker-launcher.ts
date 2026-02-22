@@ -236,6 +236,7 @@ Policy system (permission sandboxing):
   Use --trust to bypass policy enforcement (runs with full permissions).
 
 Subcommands:
+  examples                 Show example commands
   info                     Show installation info
   upgrade                  Upgrade (git pull or JSR reinstall)
 
@@ -522,6 +523,27 @@ your terminal supports sextant mode. If any row appears scrambled, use:
   if (args.includes('--clear-approvals')) {
     const count = await clearAllApprovals();
     console.log(`Cleared ${count} cached approval${count !== 1 ? 's' : ''}.`);
+    Deno.exit(0);
+  }
+
+  // Handle 'examples' subcommand
+  if (args.includes('examples')) {
+    console.log('Showcase examples — run with melker or deno:\n');
+    const examples = [
+      ['demo',                 'Feature overview with tabs, tables, and canvas'],
+      ['htop',                 'System monitor'],
+      ['earthquake-dashboard', 'Live earthquake data dashboard'],
+      ['markdown-viewer',      'Markdown file viewer'],
+      ['mermaid',              'Mermaid diagram renderer'],
+      ['map',                  'Interactive world map'],
+      ['mandelbrot',           'Mandelbrot fractal explorer'],
+      ['breakout',             'Breakout game'],
+    ];
+    for (const [name, desc] of examples) {
+      console.log(`  # ${desc}`);
+      console.log(`  melker https://melker.sh/examples/showcase/${name}.melker\n`);
+    }
+    console.log('More examples: https://github.com/wistrand/melker/tree/main/examples');
     Deno.exit(0);
   }
 

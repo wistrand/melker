@@ -1,6 +1,6 @@
 {
   "name": "@wistrand/melker",
-  "version": "2026.2.7",
+  "version": "2026.2.8",
   "license": "MIT",
   "exports": {
     ".": "./melker.ts",
@@ -13,8 +13,7 @@
       "melker-launcher.ts",
       "src/",
       "media/melker-128.png",
-      "LICENSE.txt",
-      "README.md"
+      "LICENSE.txt"
     ],
     "exclude": [
       "src/globals-ambient.d.ts"
@@ -42,11 +41,11 @@
     "bench:memory": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/memory/memory_bench.ts",
     "bench:all": "deno run --v8-flags=--expose-gc --allow-read --allow-write --allow-run --allow-env benchmarks/run-all.ts",
     "version:sync": "deno run --allow-read --allow-write --allow-run scripts/sync-version.ts",
-    "build:doc": "cp README.md README.md.bak && cp docs/README-jsr.md README.md && deno doc --html --name=melker --output=docs/api melker.ts mod.ts; mv README.md.bak README.md",
-    "publish:dry-run": "cp README.md README.md.bak && cp docs/README-jsr.md README.md && deno publish --dry-run --allow-dirty; mv README.md.bak README.md",
-    "publish": "cp README.md README.md.bak && cp docs/README-jsr.md README.md && deno publish --allow-dirty; mv README.md.bak README.md",
-    "publish:test-dry-run": "rm -f deno.lock && cp README.md README.md.bak && cp docs/README-jsr.md README.md && DENO_TLS_CA_STORE=system JSR_URL=https://jsr.test  deno publish --dry-run --allow-dirty; mv README.md.bak README.md",
-    "publish:test": "rm -f deno.lock && cp README.md README.md.bak && cp docs/README-jsr.md README.md && DENO_TLS_CA_STORE=system JSR_URL=https://jsr.test deno publish --allow-dirty; mv README.md.bak README.md",
+    "build:doc": "deno doc --html --name=melker --output=docs/api melker.ts mod.ts",
+    "publish:dry-run": "deno publish --dry-run --allow-dirty",
+    "publish": "deno publish --allow-dirty",
+    "publish:test-dry-run": "rm -f deno.lock && DENO_TLS_CA_STORE=system JSR_URL=https://jsr.test deno publish --dry-run --allow-dirty",
+    "publish:test": "rm -f deno.lock && DENO_TLS_CA_STORE=system JSR_URL=https://jsr.test deno publish --allow-dirty",
     "serve:http": "deno run --allow-net --allow-read tools/serve.ts"
   },
   "compilerOptions": {

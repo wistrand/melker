@@ -156,6 +156,11 @@ melker --stdout-trim=both app.melker # Trim trailing spaces and newlines
 melker --interactive app.melker # Force TUI mode even when piped
 melker --color=always app.melker # Force ANSI colors even when piped
 
+# Subcommands
+melker examples               # Show showcase example commands
+melker info                    # Show installation info
+melker upgrade                 # Upgrade (git pull or JSR reinstall)
+
 # Permission overrides
 melker --allow-net=api.example.com app.melker  # Add network permission
 melker --deny-read=/etc/passwd app.melker      # Deny specific path

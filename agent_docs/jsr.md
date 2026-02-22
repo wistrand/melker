@@ -32,8 +32,7 @@ melker upgrade
   "publish": {
     "include": [
       "mod.ts", "melker.ts", "melker-launcher.ts",
-      "src/", "media/melker-128.png", "LICENSE.txt",
-      "README.md"
+      "src/", "media/melker-128.png", "LICENSE.txt"
     ],
     "exclude": [
       "src/globals-ambient.d.ts"
@@ -49,7 +48,7 @@ melker upgrade
 - `exports."."` = CLI entry (enables `deno install -g jsr:@wistrand/melker`), `"./lib"` = library API
 - `publish.include` is an allowlist — tests, benchmarks, examples, docs, scripts, skills stay out
 - `publish.exclude` removes `src/globals-ambient.d.ts` (contains `declare global` which JSR rejects)
-- `README.md` is included — the publish tasks swap in `README-jsr.md` (JSR-specific) before publishing, then restore the GitHub README after
+- `README.md` is not published — the `@module` JSDoc in `melker.ts` serves as the JSR package page (JSR defaults to `readmeSource=jsdoc`, which prefers `@module` over README)
 - `src/` captures all runtime code including server-ui, components, engine, bundler
 - `media/` assets are included for backwards compatibility but bundled assets are embedded in the module graph
 - `engines` declares the minimum Deno version (2.5+ for `Deno.bundle()`)
@@ -186,25 +185,18 @@ Version source: `import denoConfig from './deno.json' with { type: 'json' }`
 
 ---
 
-## Module Documentation & Dual README
+## Module Documentation
 
 ### `@module` JSDoc
 
-JSR uses `@module` JSDoc from entry points for package pages, not `README.md`. Both entry points have `@module` JSDoc blocks:
+JSR defaults to `readmeSource=jsdoc`, which uses `@module` JSDoc from the main entry point (`.` export) for the package page. Both entry points have `@module` JSDoc blocks:
 
-- `melker.ts` (`.` export) — Full package documentation: installation, usage, creating apps, TypeScript API, permission sandboxing, upgrade, documentation links
+- `melker.ts` (`.` export) — Full package documentation: installation, usage, creating apps, components, TypeScript API, permission sandboxing, upgrade, documentation links
 - `mod.ts` (`./lib` export) — Library usage documentation with import examples
 
+`README.md` is not published to JSR — the `@module` JSDoc covers all JSR-facing content with absolute GitHub links. The GitHub README uses relative links and git-oriented install instructions that don't apply on JSR.
+
 The `build:doc` task generates HTML API docs: `deno doc --html --name=melker --output=docs/api melker.ts mod.ts`
-
-### Dual README
-
-| File                 | Audience | Key differences                                              |
-|----------------------|----------|--------------------------------------------------------------|
-| `README.md`          | GitHub   | Git clone install, `./melker.ts` usage, relative links       |
-| `docs/README-jsr.md` | JSR      | `deno install` install, `melker` usage, absolute GitHub links |
-
-JSR requires the file to be named `README.md`. The `publish` and `publish:dry-run` tasks handle the swap automatically.
 
 ---
 
@@ -293,8 +285,8 @@ deno task version:sync
 2. **Sync version**: `deno task version:sync`
 3. **Build**: `deno task build` (embedded assets, completions, skill zip, docs, lockfile)
 4. **Type check**: `deno task check`
-5. **Dry run**: `deno task publish:dry-run` — swaps in JSR README, confirms 0 errors (2 expected dynamic import warnings), restores GitHub README
-6. **Publish**: `deno task publish` — swaps in JSR README, publishes, restores GitHub README
+5. **Dry run**: `deno task publish:dry-run` — confirms 0 errors (2 expected dynamic import warnings)
+6. **Publish**: `deno task publish`
 7. **Test install**: `deno install -g -A jsr:@wistrand/melker`
 8. **Test run**: `melker examples/basics/hello.melker`
 9. **Test upgrade**: `melker upgrade`
@@ -327,10 +319,10 @@ deno uninstall -g melker
 | `build:completions`    | Regenerate shell completions from config schema                      |
 | `build:skill`          | Build AI agent skill zip                                             |
 | `build:docs`           | Copy `examples/showcase/` to `docs/examples/showcase/`               |
-| `build:doc`            | Generate HTML API docs from `@module` JSDoc (swaps README)           |
+| `build:doc`            | Generate HTML API docs from `@module` JSDoc                          |
 | `build:lock`           | Regenerate `deno.lock` (runtime deps only)                           |
-| `publish:dry-run`      | Swap in JSR README, dry-run publish, restore GitHub README           |
-| `publish`              | Swap in JSR README, publish to JSR, restore GitHub README            |
+| `publish:dry-run`      | Dry-run publish to JSR                                               |
+| `publish`              | Publish to JSR                                                       |
 | `publish:test-dry-run` | Dry-run publish to test JSR server (`JSR_URL=https://jsr.test`)      |
 | `publish:test`         | Publish to test JSR server (`JSR_URL=https://jsr.test`)              |
 
@@ -361,5 +353,4 @@ deno uninstall -g melker
 | `src/assets.ts`                                  | New — runtime asset decode API                    |
 | `src/assets-data.ts`                             | New (generated) — base64-encoded assets           |
 | `src/components/*.ts` (16 files)                 | Global accessors                                  |
-| `docs/README-jsr.md`                             | JSR-specific README                               |
 | `.gitignore`                                     | Added `docs/api/`                                 |

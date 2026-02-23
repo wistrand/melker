@@ -2,7 +2,7 @@
 // Gathers information about current UI state to send to the LLM
 
 import { Document } from '../document.ts';
-import { Element, isScrollingEnabled, hasSubtreeElements } from '../types.ts';
+import { Element, isScrollingEnabled, hasSubtreeElements, hasGetContent } from '../types.ts';
 import { discoverPaletteItems } from '../command-palette-components.ts';
 
 /** Check if an ARIA boolean attribute is truthy (handles both boolean and string values) */
@@ -159,6 +159,30 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
         if (value) taExtras.push(`${lineCount} lines`);
         const taSuffix = taExtras.length > 0 ? ` (${taExtras.join(', ')})` : '';
         lines.push(`${indent}[TextArea: ${taName}${taSuffix}]`);
+        break;
+      }
+
+      case 'data-table': {
+        const label = resolveAriaLabelledBy(element, document) || element.props['aria-label'] || (element.id && !element.id.startsWith('doc-') ? element.id : '');
+        if (hasGetContent(element)) {
+          const content = element.getContent() || '';
+          // Cap to avoid bloating the system prompt
+          const contentLines = content.split('\n');
+          const maxLines = 30;
+          const truncated = contentLines.length > maxLines
+            ? contentLines.slice(0, maxLines).join('\n') + `\n... (${contentLines.length - maxLines} more lines)`
+            : content;
+          lines.push(`${indent}[Data table${label ? ': ' + label : ''}]`);
+          for (const line of truncated.split('\n')) {
+            lines.push(`${indent}  ${line}`);
+          }
+        } else {
+          const cols = element.props.columns as Array<{ header: string }> | undefined;
+          const rows = element.props.rows as unknown[][] | undefined;
+          const headers = cols?.map(c => c.header).join(', ') || '';
+          const rowCount = rows?.length ?? 0;
+          lines.push(`${indent}[Data table${label ? ': ' + label : ''}: ${headers} (${rowCount} rows)]`);
+        }
         break;
       }
 
@@ -427,6 +451,12 @@ function getAvailableActions(document: Document): string[] {
       case 'list':
         actions.push('Arrow Up/Down: Navigate list items');
         actions.push('Enter: Select item');
+        break;
+
+      case 'data-table':
+        actions.push('Arrow Up/Down: Navigate table rows');
+        actions.push('Enter: Activate selected row');
+        actions.push('Use read_element to see table data, then send_event with event_type=change and value=row index to select/show a row');
         break;
 
       case 'container':

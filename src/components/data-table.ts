@@ -1258,6 +1258,52 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     this._sortCacheKey = '';
     this._sortedIndices = null;
   }
+
+  /**
+   * Get table content as formatted text (ContentGettable interface).
+   * Returns visible rows in display order with column headers, selection state,
+   * and row indices usable for send_event row selection.
+   */
+  getContent(): string {
+    const { columns, rows, selectable = 'none' } = this.props;
+    if (!rows || rows.length === 0) {
+      const headers = columns.map(c => c.header).join(' | ');
+      return headers + '\n(empty table)';
+    }
+
+    const sortedIndices = this._getSortedIndices();
+    const lines: string[] = [];
+
+    // Header
+    const headers = columns.map(c => c.header);
+    lines.push(headers.join(' | '));
+    lines.push(headers.map(h => '-'.repeat(h.length)).join('-+-'));
+
+    // Rows in sorted display order
+    for (const originalIndex of sortedIndices) {
+      const row = rows[originalIndex];
+      if (!row) continue;
+      const cells = columns.map((_, ci) => formatValue(row[ci] ?? ''));
+      const prefix = selectable !== 'none' && this._selectedRows.has(originalIndex) ? '> ' : '  ';
+      lines.push(prefix + cells.join(' | ') + `  [row:${originalIndex}]`);
+    }
+
+    // Summary
+    const selected = this.getSelectedRows();
+    if (selected.length > 0) {
+      lines.push('');
+      lines.push(`Selected: row ${selected.join(', row ')}`);
+    }
+    lines.push(`${rows.length} rows total`);
+
+    // Selection hint for AI tools
+    if (selectable !== 'none') {
+      const id = this.props.id || this.id;
+      lines.push(`To select/show a row, use send_event with element_id="${id}", event_type="change", value="<row number from [row:N]>"`);
+    }
+
+    return lines.join('\n');
+  }
 }
 
 // Component schema for lint validation

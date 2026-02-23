@@ -386,6 +386,33 @@ function executeSendEvent(
         context.render();
         return { success: true, message: `Selected radio ${elementId}` };
       }
+      // Data table - select row by index
+      if (element.type === 'data-table') {
+        const tableElement = element as any;
+        if (typeof tableElement.selectRowAtPosition !== 'function') {
+          return { success: false, message: `Data table ${elementId} does not support selection` };
+        }
+        const rowIndex = Number(value);
+        if (isNaN(rowIndex) || rowIndex < 0) {
+          return { success: false, message: `Invalid row index: ${value}. Use the row index from read_element output (e.g. row:0, row:1).` };
+        }
+        const rows = tableElement.getValue();
+        if (!rows || rowIndex >= rows.length) {
+          return { success: false, message: `Row ${rowIndex} out of range (${rows?.length ?? 0} rows)` };
+        }
+        // selectRowAtPosition expects sorted position; find it
+        const sortedIndices: number[] = tableElement._getSortedIndices();
+        const sortedPos = sortedIndices.indexOf(rowIndex);
+        if (sortedPos < 0) {
+          return { success: false, message: `Row ${rowIndex} not found in sorted view` };
+        }
+        tableElement._focusedSortedIndex = sortedPos;
+        tableElement.selectRowAtPosition(sortedPos, 'replace');
+        context.render();
+        const row = rows[rowIndex];
+        const preview = row?.map((c: unknown) => String(c ?? '')).join(', ');
+        return { success: true, message: `Selected row ${rowIndex} in ${elementId}: ${preview}` };
+      }
       // Select/combobox/autocomplete - select option by value
       if (element.type === 'select' || element.type === 'combobox' || element.type === 'autocomplete') {
         const listElement = element as any;
@@ -476,8 +503,12 @@ function executeReadElement(
       }
       break;
     default:
-      // Try common text properties
-      content = (element.props.text || element.props.value || element.props.title || element.props.label) as string | undefined;
+      // Try ContentGettable interface first, then common text properties
+      if (hasGetContent(element)) {
+        content = element.getContent();
+      } else {
+        content = (element.props.text || element.props.value || element.props.title || element.props.label) as string | undefined;
+      }
   }
 
   if (content === undefined || content === null) {

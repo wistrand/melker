@@ -1,0 +1,448 @@
+<melker>
+  <title>RSS Reader</title>
+
+  <policy>
+  {
+    "name": "RSS Reader",
+    "description": "Terminal RSS feed reader",
+    "permissions": {
+      "net": ["news.ycombinator.com", "feeds.bbci.co.uk", "feeds.arstechnica.com"],
+      "browser": true
+    }
+  }
+  </policy>
+
+  <help>
+## RSS Reader
+
+A terminal RSS feed reader.
+
+| Key        | Action              |
+|------------|---------------------|
+| Tab        | Switch panels       |
+| Arrow keys | Navigate articles   |
+| Enter      | Read article        |
+| Ctrl+R     | Refresh feeds       |
+| Ctrl+A     | Add custom feed     |
+| F12        | Dev tools           |
+
+Feeds auto-refresh every 5 minutes.
+  </help>
+
+  <style>
+    .header {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1;
+      flex-shrink: 0;
+    }
+    .footer {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      padding: 0 1;
+      flex-shrink: 0;
+    }
+    .reader {
+      padding: 1 2;
+      overflow: auto;
+    }
+  </style>
+
+  <container style="display: flex; flex-direction: column; height: 100%; width: 100%;">
+
+    <!-- Header -->
+    <container class="header">
+      <container style="flex-direction: row; gap: 2; align-items: center;">
+        <text style="font-weight: bold;">RSS Reader</text>
+        <select id="feedFilter" onChange="$app.changeFeed(event)" style="width: 20;">
+          <option value="all">All Feeds</option>
+          <option value="HN">Hacker News</option>
+          <option value="BBC">BBC News</option>
+          <option value="Ars">Ars Technica</option>
+        </select>
+      </container>
+      <container style="flex-direction: row; gap: 1; align-items: center;">
+        <spinner id="loadingSpinner" variant="dots" spinning="false" />
+        <text id="status">Loading...</text>
+      </container>
+    </container>
+
+    <!-- Main content -->
+    <split-pane sizes="2,3" style="width: fill; flex: 1; direction: horizontal;">
+
+      <!-- Left: article list -->
+      <data-table
+        id="articleTable"
+        style="width: fill; height: fill;"
+        selectable="single"
+        sortColumn="2"
+        sortDirection="desc"
+        tooltip="auto"
+        onTooltip="$app.articleTooltip(event)"
+        onChange="$app.selectArticle(event)"
+        onActivate="$app.selectArticle(event)"
+      >
+        {
+          "columns": [
+            { "header": "Title", "width": "fill" },
+            { "header": "Source", "width": 8 },
+            { "header": "Time", "width": 12, "align": "right" }
+          ]
+        }
+      </data-table>
+
+      <!-- Right: article reader -->
+      <container class="reader">
+        <markdown id="reader" text="*Select an article to read*" style="text-wrap: wrap;" enableGfm="true" onLink="$app.openLink(event)" />
+      </container>
+
+    </split-pane>
+
+    <command key="Ctrl+r" label="Refresh" global onExecute="$app.refresh()" />
+    <command key="Ctrl+a" label="Add Feed" global onExecute="$app.openAddFeed()" />
+
+    <!-- Add feed dialog -->
+    <dialog id="addFeedDialog" title="Add Feed" modal="true" backdrop="true" width="55">
+      <container style="padding: 1; gap: 1;">
+        <text>Enter RSS or Atom feed URL:</text>
+        <input id="addFeedUrl" placeholder="https://example.com/feed.xml"
+          onKeyPress="if (event.key === 'Enter') $app.confirmAddFeed()" />
+        <container style="flex-direction: row; gap: 1; justify-content: flex-end;">
+          <button label="Cancel" onClick="$app.closeAddFeed()" />
+          <button label="Add" onClick="$app.confirmAddFeed()" />
+        </container>
+      </container>
+    </dialog>
+
+    <!-- Footer -->
+    <container class="footer">
+      <text>Arrow keys: navigate | Enter: read | Ctrl+R: refresh | Ctrl+A: add feed</text>
+      <text id="lastUpdate">--</text>
+    </container>
+
+  </container>
+
+  <script type="typescript">
+    import { parseFeed } from "jsr:@mikaelporttila/rss";
+
+    // Types
+    interface FeedSource {
+      name: string;
+      url: string;
+    }
+
+    interface Article {
+      title: string;
+      source: string;
+      link: string;
+      description: string;
+      published: Date | null;
+    }
+
+    // State
+    const FEEDS: FeedSource[] = [
+      { name: 'HN', url: 'https://news.ycombinator.com/rss' },
+      { name: 'BBC', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
+      { name: 'Ars', url: 'https://feeds.arstechnica.com/arstechnica/index' },
+    ];
+
+    let articles: Article[] = [];
+    let displayedArticles: Article[] = [];
+    let selectedArticle: Article | null = null;
+    let activeFilter = 'all';
+    let previousCount = 0;
+    let refreshTimer: number | null = null;
+
+    // Sortable date format: "MM-DD HH:MM" sorts lexicographically
+    function fmtTime(date: Date | null): string {
+      if (!date) return '--';
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const h = String(date.getHours()).padStart(2, '0');
+      const m = String(date.getMinutes()).padStart(2, '0');
+      return mm + '-' + dd + ' ' + h + ':' + m;
+    }
+
+    // Relative time for tooltips
+    function timeAgo(date: Date | null): string {
+      if (!date) return '--';
+      const diff = Date.now() - date.getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return mins + ' min ago';
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return hours + 'h ago';
+      const days = Math.floor(hours / 24);
+      return days + 'd ago';
+    }
+
+    // Convert basic HTML to markdown
+    function htmlToMarkdown(html: string): string {
+      if (!html) return '';
+      let md = html;
+      // Block elements
+      md = md.replace(/<br\s*\/?>/gi, '\n');
+      md = md.replace(/<\/p>/gi, '\n\n');
+      md = md.replace(/<p[^>]*>/gi, '');
+      // Headers
+      md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n');
+      md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n');
+      md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n');
+      // Inline formatting
+      md = md.replace(/<(b|strong)[^>]*>(.*?)<\/\1>/gi, '**$2**');
+      md = md.replace(/<(i|em)[^>]*>(.*?)<\/\1>/gi, '*$2*');
+      md = md.replace(/<code>(.*?)<\/code>/gi, '`$1`');
+      // Links
+      md = md.replace(/<a[^>]+href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+      // Images
+      md = md.replace(/<img[^>]+alt="([^"]*)"[^>]+src="([^"]*)"[^>]*\/?>/gi, '![$1]($2)');
+      md = md.replace(/<img[^>]+src="([^"]*)"[^>]*\/?>/gi, '![]($1)');
+      // Lists
+      md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+      md = md.replace(/<\/?[uo]l[^>]*>/gi, '\n');
+      // Pre/code blocks
+      md = md.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, '```\n$1\n```');
+      md = md.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, '```\n$1\n```');
+      // Blockquotes
+      md = md.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, '> $1\n');
+      // Horizontal rules
+      md = md.replace(/<hr\s*\/?>/gi, '\n---\n');
+      // Strip remaining tags
+      md = md.replace(/<[^>]*>/g, '');
+      // Decode entities
+      md = md.replace(/&amp;/g, '&');
+      md = md.replace(/&lt;/g, '<');
+      md = md.replace(/&gt;/g, '>');
+      md = md.replace(/&quot;/g, '"');
+      md = md.replace(/&apos;/g, "'");
+      md = md.replace(/&#(\d+);/g, (_: string, n: string) => String.fromCharCode(parseInt(n)));
+      md = md.replace(/&#x([0-9a-f]+);/gi, (_: string, n: string) => String.fromCharCode(parseInt(n, 16)));
+      // Clean up whitespace
+      md = md.replace(/\n{3,}/g, '\n\n');
+      return md.trim();
+    }
+
+    // Update article reader panel
+    function showArticle(a: Article | null): void {
+      const reader = $melker.getElementById('reader');
+      if (!reader) return;
+      if (!a) {
+        reader.setValue('*Select an article to read*');
+        return;
+      }
+      const ago = timeAgo(a.published);
+      const date = a.published ? fmtTime(a.published) : '';
+      const content = htmlToMarkdown(a.description);
+      const parts = [
+        '## ' + a.title,
+        '',
+        a.source + (date ? ' | ' + date + ' (' + ago + ')' : ''),
+        (a.link ? '\n' + a.link : ''),
+        '',
+        '---',
+        '',
+        content || '*No content available*',
+      ];
+      reader.setValue(parts.join('\n'));
+    }
+
+    // Select article from table
+    export function selectArticle(event: any): void {
+      const idx = event.rowIndex;
+      if (idx === undefined || idx < 0 || idx >= displayedArticles.length) {
+        selectedArticle = null;
+      } else {
+        selectedArticle = displayedArticles[idx];
+      }
+      showArticle(selectedArticle);
+    }
+
+    // Open link in browser
+    export function openLink(event: any): void {
+      if (event.url) $melker.openBrowser(event.url);
+    }
+
+    // Add feed dialog
+    export function openAddFeed(): void {
+      const input = $melker.getElementById('addFeedUrl');
+      if (input) input.setValue('');
+      $melker.getElementById('addFeedDialog')?.show();
+    }
+
+    export function closeAddFeed(): void {
+      $melker.getElementById('addFeedDialog')?.hide();
+    }
+
+    export async function confirmAddFeed(): Promise<void> {
+      const urlEl = $melker.getElementById('addFeedUrl');
+      const url = urlEl?.getValue()?.trim();
+      if (!url) {
+        $melker.toast.show('Please enter a URL', { type: 'warning' });
+        return;
+      }
+
+      try {
+        const statusEl = $melker.getElementById('status');
+        if (statusEl) statusEl.setValue('Validating feed...');
+        $melker.render();
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const xml = await res.text();
+        const feed = await parseFeed(xml);
+        const name = (feed.title?.value ?? feed.title ?? new URL(url).hostname) as string;
+
+        // Check for duplicate
+        if (FEEDS.some(f => f.url === url)) {
+          $melker.toast.show('Feed already added', { type: 'warning' });
+          return;
+        }
+
+        // Add feed source
+        FEEDS.push({ name, url });
+
+        // Add option to select dropdown
+        const select = $melker.getElementById('feedFilter');
+        if (select) {
+          const opt = $melker.createElement('option', { value: name }, name);
+          select.children.push(opt);
+        }
+
+        closeAddFeed();
+        await refresh();
+        $melker.toast.show('Added: ' + name, { type: 'success' });
+      } catch (e) {
+        $melker.toast.show('Invalid feed: ' + (e as Error).message, { type: 'error' });
+      }
+    }
+
+    // Fetch and parse a single feed
+    async function fetchFeed(source: FeedSource): Promise<Article[]> {
+      const res = await fetch(source.url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const xml = await res.text();
+      const feed = await parseFeed(xml);
+      return (feed.entries ?? []).map((entry: any) => ({
+        title: entry.title?.value ?? entry.title ?? 'Untitled',
+        source: source.name,
+        link: entry.links?.[0]?.href ?? entry.id ?? '',
+        description: entry.description?.value ?? entry.content?.value ?? '',
+        published: entry.published ?? null,
+      }));
+    }
+
+    // Apply filter and update table
+    function updateUI(): void {
+      displayedArticles = activeFilter === 'all'
+        ? articles
+        : articles.filter(a => a.source === activeFilter);
+
+      const table = $melker.getElementById('articleTable');
+      if (table) {
+        const rows = displayedArticles.map(a => [
+          a.title,
+          a.source,
+          fmtTime(a.published),
+        ]);
+        table.setValue(rows);
+        const label = activeFilter === 'all'
+          ? displayedArticles.length + ' articles'
+          : displayedArticles.length + ' articles (' + activeFilter + ')';
+        table.props.footer = [['', label, '']];
+      }
+
+      const lastEl = $melker.getElementById('lastUpdate');
+      if (lastEl) {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        lastEl.setValue('Updated ' + h + ':' + m);
+      }
+    }
+
+    // Change feed filter
+    export function changeFeed(event: any): void {
+      activeFilter = event.value ?? 'all';
+      selectedArticle = null;
+      showArticle(null);
+      updateUI();
+    }
+
+    // Tooltip: show relative time and description preview
+    export function articleTooltip(event: any): string | undefined {
+      if (!event.context || event.context.row < 0) return undefined;
+      const a = displayedArticles[event.context.row];
+      if (!a) return undefined;
+      const ago = timeAgo(a.published);
+      const desc = a.description
+        ? a.description.replace(/<[^>]*>/g, '').slice(0, 120)
+        : '';
+      return '**' + a.title + '**\n' + a.source + ' | ' + ago
+        + (desc ? '\n\n' + desc + (a.description.length > 120 ? '...' : '') : '');
+    }
+
+    // Refresh feeds
+    export async function refresh(): Promise<void> {
+      const statusEl = $melker.getElementById('status');
+      const spinner = $melker.getElementById('loadingSpinner');
+      try {
+        if (spinner) spinner.props.spinning = true;
+        if (statusEl) statusEl.setValue('Fetching...');
+        $melker.render();
+
+        const results = await Promise.allSettled(
+          FEEDS.map(f => fetchFeed(f))
+        );
+
+        articles = [];
+        for (const r of results) {
+          if (r.status === 'fulfilled') {
+            articles.push(...r.value);
+          } else {
+            $melker.toast.show('Feed error: ' + r.reason?.message, { type: 'error' });
+          }
+        }
+
+        // Sort by date descending
+        articles.sort((a, b) => {
+          const ta = a.published?.getTime() ?? 0;
+          const tb = b.published?.getTime() ?? 0;
+          return tb - ta;
+        });
+
+        // Notify on new articles
+        if (previousCount > 0 && articles.length > previousCount) {
+          const newCount = articles.length - previousCount;
+          $melker.toast.show(newCount + ' new article' + (newCount > 1 ? 's' : ''), { type: 'info', duration: 4000 });
+        }
+        previousCount = articles.length;
+
+        updateUI();
+        if (statusEl) statusEl.setValue(articles.length + ' articles');
+      } catch (e) {
+        if (statusEl) statusEl.setValue('Error: ' + (e as Error).message);
+        $melker.toast.show('Failed to fetch: ' + (e as Error).message, { type: 'error' });
+      } finally {
+        if (spinner) spinner.props.spinning = false;
+      }
+    }
+
+    // Start auto-refresh timer
+    export function startAutoRefresh(): void {
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = setInterval(async () => {
+        await refresh();
+        $melker.render();
+      }, 300000); // 5 minutes
+    }
+  </script>
+
+  <script type="typescript" async="ready">
+    await $app.refresh();
+    $melker.render();
+    $app.startAutoRefresh();
+  </script>
+</melker>

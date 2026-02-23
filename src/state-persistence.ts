@@ -52,6 +52,12 @@ export const DEFAULT_PERSISTENCE_MAPPINGS: PersistenceMapping[] = [
   { type: 'checkbox', prop: 'checked' },
   { type: 'radio', prop: 'checked' },
   { type: 'tabs', prop: 'activeTab' },
+  { type: 'text', prop: 'text' },
+  { type: 'button', prop: 'text' },
+  { type: 'slider', prop: 'value' },
+  { type: 'combobox', prop: 'selectedValue' },
+  { type: 'select', prop: 'selectedValue' },
+  { type: 'autocomplete', prop: 'selectedValue' },
   { type: 'container', prop: 'scrollY', condition: (el) => isScrollingEnabled(el) },
   { type: 'container', prop: 'scrollX', condition: (el) => isScrollingEnabled(el) },
 ];
@@ -59,7 +65,7 @@ export const DEFAULT_PERSISTENCE_MAPPINGS: PersistenceMapping[] = [
 /**
  * Read current state from document tree
  */
-export function readState(document: Document, mappings: PersistenceMapping[]): PersistedState {
+export function readState(document: Document, mappings: PersistenceMapping[], stateObject?: Record<string, unknown> | null): PersistedState {
   const state: PersistedState = {};
 
   // Initialize categories
@@ -103,7 +109,30 @@ export function readState(document: Document, mappings: PersistenceMapping[]): P
   }
 
   visit(document.root);
+
+  // Serialize state object into _bound category
+  if (stateObject) {
+    state['_bound'] = { ...stateObject };
+  }
+
   return state;
+}
+
+/**
+ * Merge persisted _bound values into a state object.
+ * Only merges keys that exist in initial (the createState schema defines valid keys).
+ */
+export function mergePersistedBound(
+  initial: Record<string, unknown>,
+  persisted: PersistedState,
+): void {
+  const bound = persisted['_bound'];
+  if (!bound || typeof bound !== 'object') return;
+  for (const key in initial) {
+    if (key in bound) {
+      initial[key] = bound[key];
+    }
+  }
 }
 
 /**

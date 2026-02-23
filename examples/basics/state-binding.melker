@@ -1,0 +1,93 @@
+<melker>
+  <style>
+    .isEmpty #empty-msg { display: flex; }
+    .isEmpty #list { display: none; }
+    .isFull #add-btn { background-color: red; }
+    #empty-msg { display: none; }
+  </style>
+
+  <container style="width: fill; border: thin; padding: 2; display: flex; flex-direction: column; gap: 1;">
+    <text style="font-weight: bold; text-align: center;">Task List (State Binding Demo)</text>
+
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <text>Tasks:</text>
+      <text id="count" bind="count" style="font-weight: bold;" />
+      <text>/</text>
+      <text id="max" bind="max" />
+      <text style="flex: 1;" />
+      <text>Done:</text>
+      <text id="done" bind="done" style="font-weight: bold;" />
+    </container>
+
+    <container id="empty-msg" style="padding: 2; text-align: center;">
+      <text style="color: gray;">No tasks yet. Add one below.</text>
+    </container>
+
+    <container id="list" style="flex: 1; min-height: 5; max-height: 12; border: thin; padding: 1; overflow-y: auto">
+      <text id="task-list" bind="taskList" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <input id="task-input" placeholder="New task..." style="flex: 1;" onSubmit="$app.addTask()" />
+      <button id="add-btn" onClick="$app.addTask()">Add</button>
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <button onClick="$app.toggleLast()">Toggle Last</button>
+      <button onClick="$app.removeLast()">Remove Last</button>
+      <button onClick="$app.clear()">Clear All</button>
+    </container>
+  </container>
+
+  <script>
+    const MAX_TASKS = 1;
+    let tasks = [];
+
+    const state = $melker.createState({
+      count: 0,
+      max: MAX_TASKS,
+      done: 0,
+      taskList: '',
+      isEmpty: true,
+      isFull: false,
+    });
+
+    function sync() {
+      const doneCount = tasks.filter(t => t.done).length;
+      state.count = tasks.length;
+      state.done = doneCount;
+      state.taskList = tasks.map((t, i) =>
+        `${t.done ? '[x]' : '[ ]'} ${i + 1}. ${t.name}`
+      ).join('\n');
+      state.isEmpty = tasks.length === 0;
+      state.isFull = tasks.length >= MAX_TASKS;
+    }
+
+    export function addTask() {
+      if (tasks.length >= MAX_TASKS) return;
+      const input = $melker.getElementById('task-input');
+      const name = input.getValue().trim();
+      if (!name) return;
+      tasks.push({ name, done: false });
+      input.setValue('');
+      sync();
+    }
+
+    export function toggleLast() {
+      if (tasks.length === 0) return;
+      tasks[tasks.length - 1].done = !tasks[tasks.length - 1].done;
+      sync();
+    }
+
+    export function removeLast() {
+      if (tasks.length === 0) return;
+      tasks.pop();
+      sync();
+    }
+
+    export function clear() {
+      tasks = [];
+      sync();
+    }
+  </script>
+</melker>

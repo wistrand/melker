@@ -366,11 +366,15 @@ Containers with `<command>` children are automatically focusable via both keyboa
 
 ### Script Lifecycle
 
-| Type | Attribute | When | Use Case |
-|------|-----------|------|----------|
-| Sync | (default) | Before render | State setup, function definitions |
-| Init | `async="init"` | Before first render | Async data loading |
-| Ready | `async="ready"` | After first render | DOM initialization, timers |
+| Type  | Attribute        | When                | `export` | Use Case                            |
+|-------|------------------|---------------------|----------|-------------------------------------|
+| Sync  | (default)        | Before render       | Yes      | State setup, function definitions   |
+| Init  | `async="init"`   | Before first render | No       | Top-level `await` (fetch, read)     |
+| Ready | `async="ready"`  | After first render  | No       | Access rendered elements, timers    |
+
+`<script>` is emitted as a standalone ES module — `export function` creates `$app.*` handlers. `async="init"` and `async="ready"` wrap code inside an async function body, so `export` is a syntax error there. If you need both `await` and exports, use separate blocks.
+
+`type="typescript"` is optional — TypeScript is the default.
 
 **Preferred pattern for post-render initialization:**
 

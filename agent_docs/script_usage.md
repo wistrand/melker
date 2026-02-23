@@ -213,17 +213,18 @@ MELKER_LOG_LEVEL=DEBUG ./melker.ts app.melker
 
 ### Sync Scripts (default)
 
-Run immediately when the bundle loads, before rendering:
+Emitted as a standalone ES module. `export` works — exports become `$app.*` handlers. Runs at import time, before render:
 
 ```html
 <script>
 const state = { count: 0 };
+export function increment() { state.count++; }
 </script>
 ```
 
 ### Init Scripts
 
-Run before first render, support `await`:
+Code is wrapped inside an async function body. `export` does NOT work here. Runs before first render, supports `await`:
 
 ```html
 <script async="init">

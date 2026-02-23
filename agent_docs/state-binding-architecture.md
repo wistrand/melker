@@ -1,0 +1,249 @@
+# State Binding Architecture
+
+**Optional.** Most `.melker` apps don't need this. The standard approach — `getElementById().setValue()` and a `sync()` function — works well for typical apps (5-15 interactive elements). State bindings are a convenience for apps where multiple handlers update the same set of elements, reducing repetitive `setValue()` calls.
+
+`$melker.createState()` registers a plain object on the engine. The `bind` attribute on elements declares which state key drives their primary prop. Before each render, the engine syncs state values to bound elements automatically.
+
+If `createState()` is never called, the binding system has zero cost — `_resolveBindings()` returns immediately on the `if (!state) return` guard.
+
+## Usage
+
+```xml
+<melker>
+  <style>
+    #empty { display: none; }
+    .isEmpty #empty { display: flex; }
+    .isFull #add-btn { background-color: red; }
+  </style>
+
+  <container style="gap: 1;">
+    <text id="count" bind="count" />
+    <text id="footer" bind="summary" />
+    <container id="empty">
+      <text>No items yet</text>
+    </container>
+    <button id="add-btn" onClick="$app.addItem('New')">Add</button>
+  </container>
+
+  <script>
+    let items = [];
+
+    const state = $melker.createState({
+      count: 0,
+      summary: '0/0',
+      isEmpty: true,
+      isFull: false,
+    });
+
+    export function addItem(name) {
+      items.push({ name, done: false });
+      state.count = items.length;
+      state.summary = `${items.filter(i => i.done).length}/${items.length}`;
+      state.isEmpty = items.length === 0;
+      state.isFull = items.length >= 100;
+      // Auto-render fires after handler:
+      //   1. boolean state → CSS classes on root
+      //   2. state values → bound elements (coerced to prop type)
+      //   3. CSS rules re-applied if classes changed
+      //   4. layout + paint
+    }
+  </script>
+</melker>
+```
+
+## How It Works
+
+`$melker.createState(initial)` registers a plain object on the engine. No Proxy, no dependency graph. Assignments are normal property mutations — the existing auto-render-after-handler mechanism triggers the sync.
+
+Before each `render()` and `forceRender()`, `_resolveBindings()` runs two steps:
+
+1. **Boolean class sync** — boolean state values toggle CSS classes on the root element via `toggleClass()`. If any classes changed, all stylesheets are re-applied to the root tree so class-dependent CSS rules take effect.
+
+2. **Bind resolution** — elements with `bind="key"` receive the state value on their primary prop (e.g. `text` for `<text>`, `value` for `<input>`), coerced to the correct type via the component schema.
+
+```
+handler mutates state → auto-render → _resolveBindings() → layout (CSS applies) → paint
+```
+
+## Design: Data vs Styling
+
+| Concern              | Mechanism                          | Example                                    |
+|----------------------|------------------------------------|--------------------------------------------|
+| Text/value content   | `bind` attribute                   | `<text bind="count" />`                    |
+| Conditional display  | CSS classes from boolean state     | `.isEmpty #empty { display: flex; }`       |
+| Conditional styling  | CSS classes from boolean state     | `.isFull #add-btn { opacity: 0.5; }`       |
+| Behavioral props     | Explicit script (1-2 lines)        | `el.props.disabled = state.isFull`         |
+
+CSS handles presentation, script handles data and behavior. Boolean state becomes CSS classes; the existing stylesheet system (class selectors, specificity, cascade) handles the rest.
+
+## Binding Syntax
+
+### `bind="key"` — targets the element's primary prop
+
+```xml
+<text id="count" bind="count" />
+<input id="query" bind="searchTerm" />
+<checkbox id="opt" bind="optEnabled" />
+```
+
+No `bind:prop` variant. The primary prop is determined by `PersistenceMapping` in `src/state-persistence.ts`.
+
+### Primary prop mapping
+
+Resolution uses two existing registries — no hardcoded type switch:
+
+1. **`PersistenceMapping`** (`src/state-persistence.ts`) — maps element type → primary prop name (e.g. `text` → `text`, `input` → `value`, `checkbox` → `checked`)
+2. **`ComponentSchema`** (`src/lint.ts`) — maps prop name → prop type for coercion (`String`, `Number`, `Boolean`)
+
+New components automatically work if they register both a `ComponentSchema` and a `PersistenceMapping`.
+
+### One-way binding
+
+State pushes to elements. User input does not auto-flow back. Sync back explicitly in handlers:
+
+```xml
+<input id="query" bind="searchTerm" onSubmit="$app.search()" />
+<script>
+  const state = $melker.createState({ searchTerm: '' });
+  export function search() {
+    state.searchTerm = $melker.getElementById('query').getValue();
+  }
+</script>
+```
+
+### Coexistence with setValue()
+
+Bindings win. If an element has `bind="count"`, calling `setValue()` on it is overwritten at next render. Mixed usage is fine — some elements bound, some updated imperatively.
+
+## Implementation
+
+### Files
+
+| File                            | What                                                                           |
+|---------------------------------|--------------------------------------------------------------------------------|
+| `src/engine.ts`                 | `_stateObject`, `_bindMappingsByType`, `_boundElements` cache, `setStateObject()`, `_collectBoundElements()`, `_resolveBindings()`, `_coerceToType()` |
+| `src/melker-runner.ts`          | `createState()` on `$melker` context, persistence merge, initialization order  |
+| `src/globals.d.ts`              | `createState<T>()` on `MelkerContext` type                                     |
+| `src/state-persistence.ts`      | `DEFAULT_PERSISTENCE_MAPPINGS` entries, `_bound` category in `readState()`, `mergePersistedBound()` |
+| `src/state-persistence-manager.ts` | `setStateObject()` setter, state object passed to `readState()`             |
+| `src/dev-tools.ts`              | "State" tab in F12 DevTools (shows live key-value pairs, `[class]` annotation on booleans) |
+
+### `_resolveBindings()` — `src/engine.ts`
+
+Called in both `render()` and `forceRender()`, before layout. Early-exits if no state object. Iterates boolean state keys, toggling CSS classes on root via `toggleClass()`. If any classes changed, re-applies stylesheets. Then iterates cached bound elements, assigning coerced state values to their primary props.
+
+### `createState()` — `src/melker-runner.ts`
+
+Guards against double-call and post-render call. Merges persisted `_bound` values (if any) over the initial object, then registers it on the engine via `setStateObject()`. Returns the same object reference.
+
+### Critical: runner initialization order
+
+`addStylesheet()` must be called BEFORE `updateUI()` in the runner. `updateUI()` triggers `render()` → `_resolveBindings()`, and bindings need stylesheets already registered for class-dependent CSS rules to take effect. If reversed, `_resolveBindings` syncs classes but `applyStylesToElement` iterates zero stylesheets.
+
+## Performance
+
+The resolution runs on every render. Cost breakdown:
+
+| Step           | Operation                                  | Cost                            |
+|----------------|--------------------------------------------|---------------------------------|
+| Guard          | `if (!state) return`                       | O(1) — zero cost without state  |
+| Class sync     | `toggleClass()` per boolean key            | O(state keys), typically 3-10   |
+| Stylesheet     | `applyStylesToElement()` if classes changed | Only on change, not every frame |
+| Cache check    | `document.elementCount !== lastSize`       | O(1) — reads `Map.size`         |
+| Bind loop      | Iterate cached bound elements              | O(bound), typically 3-8         |
+| Per element    | `map.get()` + `getComponentSchema()` + assign | O(1) each                    |
+
+### Bound element caching
+
+`_collectBoundElements()` iterates `document.getAllElements()` — a flat `Map.values()` from the element registry. No tree recursion. The result is a cached array of `{ element, stateKey }` pairs, invalidated when `document.elementCount` changes (elements added/removed by dialogs, overlays, dynamic `createElement`).
+
+### Pre-indexed mappings
+
+`setStateObject()` pre-builds a `Map<string, PersistenceMapping>` once. The resolution loop does `map.get(element.type)` — O(1) per element instead of `mappings.find()`.
+
+## Persistence
+
+When `--persist` is enabled, state values are saved and restored automatically.
+
+### State file shape
+
+A `_bound` category is added to the existing persistence format:
+
+```json
+{
+  "version": 1,
+  "state": {
+    "input": { "nameInput": "John" },
+    "_bound": { "count": 42, "isEmpty": false, "summary": "3/5" }
+  }
+}
+```
+
+### Save
+
+`readState()` serializes the state object into the `_bound` category alongside the existing per-element state.
+
+### Restore
+
+Before `createState()` returns, `mergePersistedBound()` merges persisted `_bound` values over the initial values. Persisted values win over defaults. The `createState()` call defines the schema (what keys exist) — extra keys in persisted data are ignored.
+
+## CSS Class Naming
+
+Boolean state keys become classes on the root element directly. No prefix.
+
+```typescript
+const state = $melker.createState({
+  isEmpty: true,   // → root gets class "isEmpty"
+  isFull: false,   // → root does not get class "isFull"
+  count: 0,        // → number, not a class (used with bind)
+});
+```
+
+Only `typeof value === 'boolean'` triggers class sync. Numbers, strings, and objects are ignored.
+
+## DevTools
+
+When `createState()` has been called, the F12 DevTools overlay shows a "State" tab with live key-value pairs. Boolean keys are annotated with `[class]` to indicate they're synced as CSS classes:
+
+```
+  count: 5
+  summary: "2/5"
+  isEmpty: false [class]
+  isFull: false [class]
+```
+
+## Constraints
+
+- One `createState()` call per app. Second call throws.
+- Must be called before first render (see below). Calling after throws.
+- Flat keys only (no nested objects).
+- Returns the same object reference — store in a module variable.
+
+### Script type compatibility
+
+`createState()` must run before the first render. This means it works in `<script>` and `<script async="init">` (both execute before the first frame), but **throws** in `<script async="ready">` (which runs after the first render).
+
+| Script type              | `createState()` | Why                          |
+|--------------------------|-----------------|------------------------------|
+| `<script>`               | Works           | Runs before first render     |
+| `<script async="init">`  | Works           | Runs before first render     |
+| `<script async="ready">` | Throws          | Runs after first render      |
+
+## Error Handling
+
+| Condition                        | Behavior                                        |
+|----------------------------------|-------------------------------------------------|
+| `bind="nonexistent"` (not in state) | Silent skip (key not in state object)         |
+| Second `createState()` call      | Error: "createState() can only be called once"  |
+| `createState()` after first render | Error: "createState() must be called before first render" |
+| `bind` on element without mapping | Silent skip (element type not in persistence mappings) |
+
+## Example
+
+See [examples/basics/state-binding.melker](../examples/basics/state-binding.melker) — task list demo using `createState`, `bind`, and CSS class-based conditional display.
+
+## See Also
+
+- [script_usage.md](script_usage.md) — `$melker` context and runtime API
+- [css-themes-architecture.md](css-themes-architecture.md) — CSS themes and class selectors
+- [getting-started.md](getting-started.md) — Script types and critical rules

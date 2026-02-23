@@ -108,11 +108,15 @@ myapp.melker --foo bar
 
 Scripts can run at different times during app startup:
 
-| Script Type              | When                  | Use Case                               |
-|--------------------------|-----------------------|----------------------------------------|
-| `<script>`               | Before render         | Define exports, setup state            |
-| `<script async="init">`  | Before render (async) | Async initialization, data fetching    |
-| `<script async="ready">` | After first render    | Access rendered elements, start timers |
+| Script Type              | When                  | `export` | Use Case                               |
+|--------------------------|-----------------------|----------|-----------------------------------------|
+| `<script>`               | Before render         | Yes      | Define exports, setup state             |
+| `<script async="init">`  | Before render (async) | No       | Top-level `await` (fetch data, read files) |
+| `<script async="ready">` | After first render    | No       | Access rendered elements, start timers  |
+
+`<script>` is emitted as a standalone ES module — `export function` works and creates `$app.*` handlers. `async="init"` and `async="ready"` wrap your code inside an async function body, so `export` is a syntax error. If you need both `await` and `export`, put exports in `<script>` and async setup in a separate `<script async="init">` or `<script async="ready">` block.
+
+The `type="typescript"` attribute is optional on all three — TypeScript is the default.
 
 ### Initialization Pattern
 

@@ -42,10 +42,26 @@ export class StatePersistenceManager {
   private _lastPersistedHash: string = '';
   private _debouncedSaveState: (() => void) | null = null;
   private _loadedPersistedState: PersistedState | null = null;
+  private _stateObject: Record<string, unknown> | null = null;
 
   constructor(options: StatePersistenceManagerOptions, deps: StatePersistenceManagerDeps) {
     this._options = options;
     this._deps = deps;
+  }
+
+  /** Current persistence mappings (used by state binding resolution). */
+  get persistenceMappings(): PersistenceMapping[] {
+    return this._persistenceMappings;
+  }
+
+  /** Set the state object reference for _bound persistence. */
+  setStateObject(state: Record<string, unknown> | null): void {
+    this._stateObject = state;
+  }
+
+  /** Get the loaded persisted state (for merging into createState initial values). */
+  getLoadedPersistedState(): PersistedState | null {
+    return this._loadedPersistedState;
   }
 
   /**
@@ -142,7 +158,7 @@ export class StatePersistenceManager {
     }
 
     try {
-      const currentState = readState(this._deps.document, this._persistenceMappings);
+      const currentState = readState(this._deps.document, this._persistenceMappings, this._stateObject);
       const currentHash = hashState(currentState);
 
       if (currentHash !== this._lastPersistedHash) {

@@ -329,7 +329,39 @@ In flexbox column layout, children stretch horizontally (cross-axis) by default.
 
 This is standard flexbox behavior - in a column container, `align-items` defaults to `stretch`.
 
-## 11. Exported Variables Can't Be Modified from Ready Script
+## 11. Using `export` in Async Script Blocks
+
+**Mistake**: Using `export` inside `<script async="init">` or `<script async="ready">`.
+
+```xml
+<script async="init">
+  export function loadData() { ... }  // SYNTAX ERROR
+</script>
+```
+
+**Error**: `SyntaxError: export declarations may only appear at top level of a module`
+
+**Why this happens**: The bundler emits `<script>` (default) as a standalone ES module where `export` is valid top-level syntax. But `async="init"` and `async="ready"` wrap the code inside an async function body (`export async function __initFn() { ... }`). You can't use `export` inside a function — it's only valid at module top level.
+
+**Solution**: Put exports in a plain `<script>` block, and use `async="ready"` only for initialization logic that runs after render:
+
+```xml
+<script>
+  export function loadData() { ... }
+</script>
+
+<script async="ready">
+  $app.loadData();  // Call the exported function
+</script>
+```
+
+| Script type            | Emitted as          | `export` works? |
+|------------------------|---------------------|-----------------|
+| `<script>`             | ES module           | Yes             |
+| `<script async="init">`  | Async function body | No              |
+| `<script async="ready">` | Async function body | No              |
+
+## 12. Exported Variables Can't Be Modified from Ready Script
 
 **Mistake**: Trying to modify an `export let` variable from `<script async="ready">`.
 
@@ -359,7 +391,7 @@ This is standard flexbox behavior - in a column container, `align-items` default
 
 **Why this happens**: The bundler merges exports into `$app` by copying values. For primitives (numbers, strings, booleans), `$app.count` holds a copy of the value, not a reference to the original binding. Setting `$app.count = 10` modifies the copy on `$app`, but the module-internal `count` variable remains unchanged. Objects work differently - they're copied by reference, so `$app.config.debug = true` would modify the original object.
 
-## 12. Input Type Is 'input', Not 'text-input'
+## 13. Input Type Is 'input', Not 'text-input'
 
 **Mistake**: Using `'text-input'` as the element type.
 
@@ -373,7 +405,7 @@ This is standard flexbox behavior - in a column container, `align-items` default
 
 The single-line text input component is called `input`, not `text-input`. Use `<textarea>` for multi-line input.
 
-## 13. Emojis Break Terminal Layout
+## 14. Emojis Break Terminal Layout
 
 **Mistake**: Using emojis in text content.
 

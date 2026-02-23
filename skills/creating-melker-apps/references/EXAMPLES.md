@@ -732,7 +732,7 @@ Use `async="ready"` scripts for initialization that needs access to rendered ele
 </melker>
 ```
 
-**Note:** Functions called from `async="ready"` scripts must be exported to be accessible via `$app.*`.
+**Note:** Functions called from `async="ready"` scripts must be exported from a `<script>` block (not `async="ready"`) to be accessible via `$app.*`. The `async="init"` and `async="ready"` blocks wrap code in a function body where `export` is a syntax error.
 
 ## Async Data Loading
 

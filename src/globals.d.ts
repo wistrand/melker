@@ -92,6 +92,10 @@ export interface MelkerContext {
   persistenceEnabled: boolean;
   stateFilePath: string | null;
 
+  // State bindings
+  /** Register a state object for declarative bindings. One call per app. */
+  createState<T extends Record<string, unknown>>(initial: T): T;
+
   // OAuth (when configured)
   oauth: unknown;
   oauthConfig: unknown;

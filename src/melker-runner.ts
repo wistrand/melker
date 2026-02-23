@@ -426,7 +426,7 @@ export async function runMelkerFile(
     }
 
     // Normal app execution
-    const { loadFromFile, DEFAULT_PERSISTENCE_MAPPINGS, isPersistenceEnabled, getStateFilePath } = await import('./state-persistence.ts');
+    const { loadFromFile, DEFAULT_PERSISTENCE_MAPPINGS, isPersistenceEnabled, getStateFilePath, mergePersistedBound } = await import('./state-persistence.ts');
     const { setPersistenceContext } = await import('./element.ts');
     const { getAppCacheDir, ensureDir } = await import('./xdg.ts');
     const { getUrlHash } = await import('./policy/mod.ts');
@@ -551,6 +551,10 @@ export async function runMelkerFile(
     // Flag to skip auto-render after event handler
     let _skipNextRender = false;
 
+    // State bindings (createState)
+    let _stateObject: Record<string, unknown> | null = null;
+    let _firstRenderDone = false;
+
     const context : MelkerContext = {
       url: sourceUrl,
       dirname: sourceDirname,
@@ -620,6 +624,22 @@ export async function runMelkerFile(
       logging: logger,
       persistenceEnabled: persistEnabled,
       stateFilePath: persistEnabled ? getStateFilePath(appId) : null,
+      createState<T extends Record<string, unknown>>(initial: T): T {
+        if (_stateObject) {
+          throw new Error('createState() can only be called once');
+        }
+        if (_firstRenderDone) {
+          throw new Error('createState() must be called before first render');
+        }
+        // Merge persisted _bound values over initial defaults
+        const persisted = engine.getLoadedPersistedState();
+        if (persisted) {
+          mergePersistedBound(initial, persisted);
+        }
+        _stateObject = initial;
+        engine.setStateObject(_stateObject);
+        return initial;
+      },
       oauth: oauth,
       oauthConfig: oauthConfig,
       createElement: (type: string, props: Record<string, any> = {}, ...children: any[]) => {
@@ -799,12 +819,14 @@ export async function runMelkerFile(
     );
     await wireBundlerHandlers(ui, melkerRegistry, context, logger, handlerCodeMap, errorTranslator);
 
-    engine.updateUI(ui);
-    // Register stylesheet on document so resize handler can re-apply media rules
+    // Register stylesheet on document BEFORE updateUI — updateUI triggers render()
+    // which calls _resolveBindings(), and bindings need stylesheets for class-dependent rules
     if (parseResult.stylesheet) {
       engine.document.addStylesheet(parseResult.stylesheet);
     }
+    engine.updateUI(ui);
     (engine as any).forceRender();
+    _firstRenderDone = true;
     (engine as any)._triggerMountHandlers();
     await callReady(melkerRegistry);
 

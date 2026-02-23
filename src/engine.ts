@@ -110,9 +110,12 @@ import {
   FocusNavigationHandler,
 } from './focus-navigation-handler.ts';
 import {
+  type PersistedState,
   PersistenceMapping,
   DEFAULT_PERSISTENCE_MAPPINGS,
 } from './state-persistence.ts';
+import { toggleClass } from './element.ts';
+import { getComponentSchema } from './lint.ts';
 import {
   createDebouncedAction,
   type DebouncedAction,
@@ -210,6 +213,19 @@ export interface MelkerEngineOptions {
   onExit?: () => void | Promise<void>;
 }
 
+function _coerceToType(
+  value: unknown,
+  propType: string | string[] | undefined,
+): unknown {
+  const type = Array.isArray(propType) ? propType[0] : propType;
+  switch (type) {
+    case 'boolean': return Boolean(value);
+    case 'number':  return Number(value);
+    case 'string':  return String(value ?? '');
+    default:        return value;
+  }
+}
+
 export class MelkerEngine {
   private _document!: Document;
   private _buffer!: DualBuffer;
@@ -254,6 +270,12 @@ export class MelkerEngine {
 
   // State persistence
   private _persistenceManager!: StatePersistenceManager;
+
+  // State bindings (createState + bind attribute)
+  private _stateObject: Record<string, unknown> | null = null;
+  private _bindMappingsByType: Map<string, PersistenceMapping> | null = null;
+  private _boundElements: Array<{ element: Element; stateKey: string }> | null = null;
+  private _lastRegistrySize = 0;
 
   // App policy (for permission checks)
   private _policy?: MelkerPolicy;
@@ -850,6 +872,9 @@ export class MelkerEngine {
       logger.debug(`Buffer cleared in ${(performance.now() - clearStartTime).toFixed(2)}ms`);
     }
 
+    // Resolve state bindings (class sync + bind values) before layout
+    this._resolveBindings();
+
     // Render UI to buffer
     const viewport = {
       x: 0,
@@ -1043,6 +1068,9 @@ export class MelkerEngine {
     // Clear buffer
     this._buffer.clear();
 
+    // Resolve state bindings before layout
+    this._resolveBindings();
+
     // Render UI to buffer
     const viewport = {
       x: 0,
@@ -1129,6 +1157,7 @@ export class MelkerEngine {
           }).catch((err) => logger.error('Error during exit', err instanceof Error ? err : new Error(String(err))));
         },
         getServerUrl: () => this._server?.connectionUrl,
+        getStateObject: () => this._stateObject,
       });
     }
     this._devToolsManager.setSource(content, filePath, type, convertedContent, policy, appDir, sourceUrl, systemInfo, helpContent);
@@ -1487,6 +1516,102 @@ export class MelkerEngine {
    */
   async saveState(): Promise<void> {
     return this._persistenceManager.saveState();
+  }
+
+  /**
+   * Register a state object for declarative bindings (createState + bind attribute).
+   * Pre-indexes persistence mappings for O(1) lookup in the resolution loop.
+   */
+  setStateObject(state: Record<string, unknown>): void {
+    this._stateObject = state;
+    this._persistenceManager?.setStateObject(state);
+    const mappings = this._persistenceManager?.persistenceMappings
+      ?? DEFAULT_PERSISTENCE_MAPPINGS;
+    this._bindMappingsByType = new Map();
+    for (const m of mappings) {
+      if (!this._bindMappingsByType.has(m.type)) {
+        this._bindMappingsByType.set(m.type, m);
+      }
+    }
+    this._boundElements = null;
+  }
+
+  /** Get the registered state object (used by DevTools). */
+  getStateObject(): Record<string, unknown> | null {
+    return this._stateObject;
+  }
+
+  /** Get the loaded persisted state (for merging _bound values into createState). */
+  getLoadedPersistedState(): PersistedState | null {
+    return this._persistenceManager?.getLoadedPersistedState() ?? null;
+  }
+
+  /**
+   * Scan the flat element registry for elements with bind attributes.
+   * Result is cached and invalidated when registry size changes.
+   */
+  private _collectBoundElements(): void {
+    this._boundElements = [];
+    for (const element of this._document.getAllElements()) {
+      const bindKey = element.props.bind;
+      if (typeof bindKey === 'string') {
+        this._boundElements.push({ element, stateKey: bindKey });
+      }
+    }
+    this._lastRegistrySize = this._document.elementCount;
+  }
+
+  /**
+   * Resolve state bindings before each render:
+   * 1. Sync boolean state values as CSS classes on root element
+   * 2. Push bound state values to element props (schema-driven coercion)
+   */
+  private _resolveBindings(): void {
+    const state = this._stateObject;
+    if (!state) return;
+
+    const root = this._document.root;
+    if (!root) return;
+
+    // Step 1: Sync boolean state → CSS classes on root element
+    let classesChanged = false;
+    for (const key in state) {
+      if (typeof state[key] === 'boolean') {
+        const had = root.props.classList?.includes(key) ?? false;
+        const want = state[key] as boolean;
+        if (had !== want) {
+          toggleClass(root, key, want);
+          classesChanged = true;
+        }
+      }
+    }
+
+    // Re-apply stylesheets so class-dependent rules (e.g. .isEmpty #el) re-evaluate
+    if (classesChanged) {
+      this._document.applyStylesToElement(root, {
+        terminalWidth: this._terminalSizeManager.size.width,
+        terminalHeight: this._terminalSizeManager.size.height,
+      });
+    }
+
+    // Step 2: Schema-driven bind resolution — cached bound elements only
+    const byType = this._bindMappingsByType;
+    if (!byType) return;
+
+    if (!this._boundElements || this._document.elementCount !== this._lastRegistrySize) {
+      this._collectBoundElements();
+    }
+
+    for (const { element, stateKey } of this._boundElements!) {
+      if (stateKey in state) {
+        const mapping = byType.get(element.type);
+        if (mapping) {
+          const schema = getComponentSchema(element.type);
+          const propDef = schema?.props?.[mapping.prop];
+          element.props[mapping.prop] = _coerceToType(state[stateKey], propDef?.type);
+        }
+      }
+    }
   }
 
   /**

@@ -36,6 +36,7 @@ export interface DevToolsDependencies {
   openAIAssistant?: () => void;
   exit?: () => void;
   getServerUrl?: () => string | undefined;
+  getStateObject?: () => Record<string, unknown> | null;
 }
 
 /** System information for the System tab */
@@ -271,7 +272,11 @@ export class DevToolsManager {
     const inspectTab = this._buildInspectTab();
     tabs.push(inspectTab);
 
-    // Tab 8: Log (recent log entries)
+    // Tab 9: State (createState values, only if state exists)
+    const stateTab = this._buildStateTab();
+    if (stateTab) tabs.push(stateTab);
+
+    // Tab 10: Log (recent log entries)
     const logTab = this._buildLogTab();
     tabs.push(logTab);
 
@@ -478,6 +483,53 @@ export class DevToolsManager {
           <container style=${{ display: 'flex', flexDirection: 'row', padding: 1, gap: 2, alignItems: 'center' }}>
             <text text=${`${varCount} variables (${userCount} user, ${themeCount} theme)`} style=${{ flex: 1, color: 'gray' }} />
             <button id="dev-tools-refresh-vars" label="Refresh" onClick=${onRefresh} />
+          </container>
+        </container>
+      </tab>
+    `;
+  }
+
+  /**
+   * Build the State tab showing createState() values.
+   * Returns null if no state object is registered.
+   */
+  private _buildStateTab(): Element | null {
+    const stateObject = this._deps.getStateObject?.();
+    if (!stateObject) return null;
+
+    const document = this._deps.document;
+    const render = () => this._deps.render();
+
+    const generateContent = (): string => {
+      const state = this._deps.getStateObject?.();
+      if (!state) return '(no state)';
+      const lines: string[] = [];
+      for (const key in state) {
+        const value = state[key];
+        const tag = typeof value === 'boolean' ? '  [class]' : '';
+        lines.push(`  ${key}: ${JSON.stringify(value)}${tag}`);
+      }
+      return lines.join('\n');
+    };
+
+    const onRefresh = () => {
+      const el = document.getElementById('dev-tools-state-content');
+      if (el) {
+        el.props.text = generateContent();
+        render();
+      }
+    };
+
+    const scrollStyle = { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' };
+
+    return melker`
+      <tab id="dev-tools-tab-state" title="State">
+        <container style=${{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }}>
+          <container id="dev-tools-scroll-state" scrollable=${true} focusable=${true} style=${scrollStyle}>
+            <text id="dev-tools-state-content" text=${generateContent()} />
+          </container>
+          <container style=${{ padding: 1 }}>
+            <button id="dev-tools-refresh-state" label="Refresh" onClick=${onRefresh} />
           </container>
         </container>
       </tab>

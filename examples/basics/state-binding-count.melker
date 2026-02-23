@@ -1,0 +1,37 @@
+<melker>
+    <style>
+        #empty { display: none; }
+        .isZero #empty { display: flex; }
+        .isMax #add-btn { background-color: red; }
+    </style>
+
+    <container style="gap: 1;">
+        <text id="count" bind="count" />
+        <container id="empty">
+            <text>count is zero</text>
+        </container>
+        <button id="add-btn" onClick="$app.addItem('New')">Add</button>
+    </container>
+
+    <script>
+        let items = [];
+
+        const state = $melker.createState({
+          count: 0,
+          isZero: true,
+          isMax: false,
+        });
+
+        export function addItem(name) {
+        items.push({ name, done: false });
+        state.count = items.length;
+        state.isZero = items.length === 0;
+        state.isMax = items.length >= 10;
+        // Auto-render fires after handler:
+        //   1. boolean state → CSS classes on root
+        //   2. state values → bound elements (coerced to prop type)
+        //   3. CSS rules re-applied if classes changed
+        //   4. layout + paint
+        }
+    </script>
+</melker>

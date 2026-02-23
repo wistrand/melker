@@ -3,7 +3,8 @@
 import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, KeyPressEvent, ColorInput } from '../types.ts';
 import type { CanvasTooltipContext } from '../tooltip/types.ts';
 import { type DualBuffer, type Cell } from '../buffer.ts';
-import { TRANSPARENT, DEFAULT_FG, packRGBA, cssToRgba } from './color-utils.ts';
+import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, cssToRgba } from './color-utils.ts';
+import { SRGB_TO_LINEAR, linearToSrgb } from '../color/oklab.ts';
 import { applyDither, type DitherMode } from '../video/dither.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
 import { getLogger } from '../logging.ts';
@@ -43,6 +44,7 @@ export { packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from './color-utils.ts';
 
 // Re-export shader types for external use
 export { type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
+
 
 export interface CanvasProps extends BaseProps {
   width: number;                     // Canvas width in terminal columns
@@ -1412,6 +1414,72 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
+   * Blend canvas cell colors with opacity/backgroundOpacity.
+   * Mutates cells in-place using LUT-based linear-light blending.
+   * Zero allocations — all arithmetic is on primitives and pre-computed weights.
+   */
+  private _blendCellOpacity(bounds: Bounds, buffer: DualBuffer, context: ComponentRenderContext): void {
+    const computedStyle = context.computedStyle;
+    const opacity = computedStyle?.opacity;
+    const bgOpacity = computedStyle?.backgroundOpacity;
+    if ((opacity === undefined || opacity >= 1) && (bgOpacity === undefined || bgOpacity >= 1)) return;
+
+    const parentBgPacked = context.parentBgColor ?? 0x000000FF;
+    const pbR = SRGB_TO_LINEAR[(parentBgPacked >> 24) & 0xFF];
+    const pbG = SRGB_TO_LINEAR[(parentBgPacked >> 16) & 0xFF];
+    const pbB = SRGB_TO_LINEAR[(parentBgPacked >> 8) & 0xFF];
+    // Resolve the real TerminalBuffer — buffer may be a ViewportDualBuffer (proxy)
+    // whose currentBuffer is a ViewportBufferProxy without a cells getter.
+    const cur = buffer.currentBuffer;
+    const cellRows = (cur as any).cells ?? (cur as any)._buffer?.cells;
+    if (!cellRows) return;
+    const bufW = cur.width;
+    const bufH = cur.height;
+    // Clamp iteration to the intersection of canvas area and buffer bounds
+    const startX = Math.max(bounds.x, 0);
+    const startY = Math.max(bounds.y, 0);
+    const endX = Math.min(bounds.x + Math.min(this._terminalWidth, bounds.width), bufW);
+    const endY = Math.min(bounds.y + Math.min(this._terminalHeight, bounds.height), bufH);
+    if (startX >= endX || startY >= endY) return;
+    const hasBgOp = bgOpacity !== undefined && bgOpacity < 1;
+    const hasOp = opacity !== undefined && opacity < 1;
+    const bgOp = hasBgOp ? bgOpacity as number : 1;
+    const bgOpInv = 1 - bgOp;
+    const op = hasOp ? opacity as number : 1;
+    const opInv = 1 - op;
+    for (let y = startY; y < endY; y++) {
+      const row = cellRows[y];
+      for (let x = startX; x < endX; x++) {
+        const cell = row[x];
+        const cbg = cell.background;
+        if (cbg !== undefined) {
+          let lr = SRGB_TO_LINEAR[(cbg >> 24) & 0xFF];
+          let lg = SRGB_TO_LINEAR[(cbg >> 16) & 0xFF];
+          let lb = SRGB_TO_LINEAR[(cbg >> 8) & 0xFF];
+          if (hasBgOp) {
+            lr = lr * bgOp + pbR * bgOpInv;
+            lg = lg * bgOp + pbG * bgOpInv;
+            lb = lb * bgOp + pbB * bgOpInv;
+          }
+          if (hasOp) {
+            lr = lr * op + pbR * opInv;
+            lg = lg * op + pbG * opInv;
+            lb = lb * op + pbB * opInv;
+          }
+          cell.background = (linearToSrgb(lr) << 24) | (linearToSrgb(lg) << 16) | (linearToSrgb(lb) << 8) | 0xFF;
+        }
+        const cfg = cell.foreground;
+        if (hasOp && cfg !== undefined) {
+          cell.foreground =
+            (linearToSrgb(SRGB_TO_LINEAR[(cfg >> 24) & 0xFF] * op + pbR * opInv) << 24) |
+            (linearToSrgb(SRGB_TO_LINEAR[(cfg >> 16) & 0xFF] * op + pbG * opInv) << 16) |
+            (linearToSrgb(SRGB_TO_LINEAR[(cfg >> 8) & 0xFF] * op + pbB * opInv) << 8) | 0xFF;
+        }
+      }
+    }
+  }
+
+  /**
    * Render canvas to terminal buffer.
    * Delegates to canvas-render.ts for actual rendering logic.
    */
@@ -1529,6 +1597,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     // Render to the buffer (sextant/block/pattern/luma, or placeholder for sixel)
     this._renderToTerminal(bounds, style, buffer);
+
+    // Post-process: blend canvas pixel colors with opacity
+    this._blendCellOpacity(bounds, buffer, context);
 
     // Generate sixel/kitty output if in graphics mode
     // Check visibility - graphics can't be clipped, so skip if element extends outside visible area

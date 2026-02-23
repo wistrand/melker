@@ -43,6 +43,8 @@ Flexbox layout container. The primary building block for layouts. Defaults to `d
 - `position`: `relative` (offset without affecting siblings), `absolute`, `fixed`
 - `top`, `right`, `bottom`, `left`: numeric offset (used with `position: relative`)
 - `container-type`: `inline-size` (enable `@container` width queries) | `size` (width + height)
+- `opacity`: 0–1 (blends foreground and background toward parent bg; inherits and multiplies)
+- `background-opacity`: 0–1 (blends background only, text stays solid; does not inherit)
 
 ### text
 

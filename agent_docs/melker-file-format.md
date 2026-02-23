@@ -407,7 +407,7 @@ See [container-query-architecture.md](container-query-architecture.md) for full 
 
 Supported timing functions: `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`, `steps(N)`. Properties: `animation-name`, `animation-duration`, `animation-delay`, `animation-iteration-count`, `animation-direction`, `animation-fill-mode`, or the `animation` shorthand.
 
-Animated properties include colors (RGBA lerp), numbers (integer lerp), percentages (`"30%" -> "70%"`), padding/margin (BoxSpacing lerp), and discrete values (snap at 50%).
+Animated properties include colors (RGBA lerp), numbers (integer lerp), percentages (`"30%" -> "70%"`), padding/margin (BoxSpacing lerp), opacity (`opacity`, `background-opacity`), and discrete values (snap at 50%).
 
 See [css-animation-architecture.md](css-animation-architecture.md) for full details. Example app:
 - [animation.melker](../examples/basics/animation.melker) — color, size, percentage, padding, position: relative animations
@@ -420,6 +420,7 @@ CSS-like properties in `style` attribute:
 - **Borders:** border (none/thin/thick/double/rounded/dashed/dashed-rounded/ascii/ascii-rounded/block), border-top/right/bottom/left, border-color, border-title
 - **Colors:** color, background-color — supports hex (`#rgb`, `#rrggbb`, `#rrggbbaa`), `rgb()`, `rgba()`, `hsl()`, `hsla()`, `oklch()`, `oklab()`, and named colors
 - **Text:** font-weight (bold/normal), font-style (normal/italic), text-decoration (none/underline), dim, reverse, text-align, text-wrap
+- **Opacity:** opacity (0–1, blends fg+bg), background-opacity (0–1, blends bg only). Accepts numbers or percentages (`50%`). Animatable. See [opacity-support.md](opacity-support.md)
 
 **CSS shorthand for padding/margin:** Supports 2, 3, or 4 value shorthand like CSS:
 - `padding: 1 2` → top/bottom: 1, left/right: 2

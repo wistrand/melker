@@ -486,5 +486,14 @@ export function normalizeStyle<T extends Record<string, unknown>>(style: T): T {
       }
     }
   }
+  // Normalize opacity/backgroundOpacity: "50%" → 0.5, "0.5" → 0.5
+  for (const key of ['opacity', 'backgroundOpacity']) {
+    if (typeof result[key] === 'string') {
+      const s = result[key] as string;
+      (result as Record<string, unknown>)[key] = s.endsWith('%')
+        ? parseFloat(s) / 100
+        : parseFloat(s);
+    }
+  }
   return result;
 }

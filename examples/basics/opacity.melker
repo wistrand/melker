@@ -1,0 +1,109 @@
+<melker>
+  <style>
+    .demo-box {
+      width: fill;
+      height: 5;
+      padding: 1;
+      background-color: var(--theme-primary);
+      color: var(--theme-on-primary);
+    }
+    .controls {
+      display: flex;
+      flex-direction: row;
+      gap: 2;
+      align-items: center;
+      padding: 1;
+    }
+  </style>
+
+  <container style="display: flex; flex-direction: column; gap: 1; padding: 1; width: fill;">
+    <text style="font-weight: bold;">Opacity Demo</text>
+
+    <container id="demo" class="demo-box">
+      <text id="label">This box has opacity: 1.0</text>
+    </container>
+
+    <container class="controls">
+      <text>Opacity:</text>
+      <slider
+        id="opacitySlider"
+        min="0"
+        max="100"
+        value="100"
+        style="width: 40;"
+        onChange="$app.updateOpacity(event)"
+      />
+      <text id="value-label">100%</text>
+    </container>
+
+    <container class="controls">
+      <text>Background Opacity:</text>
+      <slider
+        id="bgOpacitySlider"
+        min="0"
+        max="100"
+        value="100"
+        style="width: 40;"
+        onChange="$app.updateBgOpacity(event)"
+      />
+      <text id="bg-value-label">100%</text>
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 2; padding: 1;">
+      <container id="box-a" style="width: 20; height: 3; padding: 1; background-color: var(--theme-error); opacity: 1.0;">
+        <text>100%</text>
+      </container>
+      <container style="width: 20; height: 3; padding: 1; background-color: var(--theme-error); opacity: 0.75;">
+        <text>75%</text>
+      </container>
+      <container style="width: 20; height: 3; padding: 1; background-color: var(--theme-error); opacity: 0.5;">
+        <text>50%</text>
+      </container>
+      <container style="width: 20; height: 3; padding: 1; background-color: var(--theme-error); opacity: 0.25;">
+        <text>25%</text>
+      </container>
+    </container>
+  </container>
+
+  <script type="typescript">
+    export function updateOpacity(event: { value: string }) {
+      const pct = parseFloat(event.value);
+      const opacity = pct / 100;
+
+      const demo = $melker.getElementById('demo');
+      if (demo) {
+        demo.props.style.opacity = opacity;
+      }
+
+      const label = $melker.getElementById('label');
+      if (label) {
+        label.setValue(`This box has opacity: ${opacity.toFixed(2)}, background-opacity: ${(demo?.props.style.backgroundOpacity ?? 1).toFixed(2)}`);
+      }
+
+      const valueLabel = $melker.getElementById('value-label');
+      if (valueLabel) {
+        valueLabel.setValue(`${Math.round(pct)}%`);
+      }
+    }
+
+    export function updateBgOpacity(event: { value: string }) {
+      const pct = parseFloat(event.value);
+      const bgOpacity = pct / 100;
+
+      const demo = $melker.getElementById('demo');
+      if (demo) {
+        demo.props.style.backgroundOpacity = bgOpacity;
+      }
+
+      const label = $melker.getElementById('label');
+      if (label) {
+        label.setValue(`This box has opacity: ${(demo?.props.style.opacity ?? 1).toFixed(2)}, background-opacity: ${bgOpacity.toFixed(2)}`);
+      }
+
+      const bgValueLabel = $melker.getElementById('bg-value-label');
+      if (bgValueLabel) {
+        bgValueLabel.setValue(`${Math.round(pct)}%`);
+      }
+    }
+  </script>
+</melker>

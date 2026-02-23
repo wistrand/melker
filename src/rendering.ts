@@ -1,7 +1,7 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, getBorderChars, type BorderStyle, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
+import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, getBorderChars, type BorderStyle, type PackedRGBA, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { setGlobalRequestRender, getGlobalLogger } from './global-accessors.ts';
 import { clipBounds, clamp } from './geometry.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
@@ -15,7 +15,8 @@ import { DialogElement } from './components/dialog.ts';
 import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
 import { LayoutEngine, LayoutNode, LayoutContext, globalLayoutEngine } from './layout.ts';
 import { getThemeColor, getThemeManager } from './theme.ts';
-import { COLORS, parseColor } from './components/color-utils.ts';
+import { COLORS, parseColor, unpackRGBA, packRGBA } from './components/color-utils.ts';
+import { SRGB_TO_LINEAR, linearToSrgb } from './color/oklab.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { getLogger } from './logging.ts';
 import { ensureError } from './utils/error.ts';
@@ -807,7 +808,19 @@ export class RenderingEngine {
 
   // Convert Style to Partial<Cell> format for components
   // Style colors may be strings (ColorInput) - parse them to PackedRGBA
-  private _styleToCellStyle(style: Style): Partial<Cell> {
+  /** Blend a color toward a background using opacity in linear light space. */
+  private _blendOpacity(color: PackedRGBA, opacity: number, bgColor: PackedRGBA): PackedRGBA {
+    const fg = unpackRGBA(color);
+    const bg = unpackRGBA(bgColor);
+    const invOpacity = 1 - opacity;
+    return packRGBA(
+      linearToSrgb(SRGB_TO_LINEAR[fg.r] * opacity + SRGB_TO_LINEAR[bg.r] * invOpacity),
+      linearToSrgb(SRGB_TO_LINEAR[fg.g] * opacity + SRGB_TO_LINEAR[bg.g] * invOpacity),
+      linearToSrgb(SRGB_TO_LINEAR[fg.b] * opacity + SRGB_TO_LINEAR[bg.b] * invOpacity),
+    );
+  }
+
+  private _styleToCellStyle(style: Style, parentBgColor?: PackedRGBA): Partial<Cell> {
     const cellStyle: Partial<Cell> = {};
 
     if (style.color) {
@@ -818,6 +831,25 @@ export class RenderingEngine {
     }
     if (style.fontWeight === 'bold') {
       cellStyle.bold = true;
+    }
+
+    const needsBlend = (style.opacity !== undefined && style.opacity < 1) ||
+      (style.backgroundOpacity !== undefined && style.backgroundOpacity < 1);
+    if (needsBlend) {
+      const bg = parentBgColor ?? parseColor(getThemeColor('background')) ?? 0x000000FF;
+      // Apply backgroundOpacity to bg first (before opacity applies to both)
+      if (style.backgroundOpacity !== undefined && style.backgroundOpacity < 1 && cellStyle.background !== undefined) {
+        cellStyle.background = this._blendOpacity(cellStyle.background, style.backgroundOpacity, bg);
+      }
+      // Apply opacity to both fg and bg
+      if (style.opacity !== undefined && style.opacity < 1) {
+        if (cellStyle.foreground !== undefined) {
+          cellStyle.foreground = this._blendOpacity(cellStyle.foreground, style.opacity, bg);
+        }
+        if (cellStyle.background !== undefined) {
+          cellStyle.background = this._blendOpacity(cellStyle.background, style.opacity, bg);
+        }
+      }
     }
 
     return cellStyle;
@@ -978,6 +1010,9 @@ export class RenderingEngine {
 
     if (!node.visible) return;
 
+    // Skip effectively invisible elements
+    if (node.computedStyle.opacity !== undefined && node.computedStyle.opacity < 0.05) return;
+
     try {
       this._renderNodeInternal(node, context);
     } catch (error) {
@@ -1030,8 +1065,13 @@ export class RenderingEngine {
       }
     }
 
+    // Resolve parent background color for opacity blending (shared by background, border, content)
+    const parentBg = context.parentStyle?.backgroundColor
+      ? parseColor(context.parentStyle.backgroundColor)
+      : undefined;
+
     // Render background
-    this._renderBackground(clippedBounds, computedStyle, context.buffer);
+    this._renderBackground(clippedBounds, computedStyle, context.buffer, parentBg);
 
     // Render border (skip collapsed borders if chrome was collapsed due to insufficient space)
     // Pass original bounds, clipped bounds, and clip rect for proper border visibility checks
@@ -1048,7 +1088,7 @@ export class RenderingEngine {
       }
     }
 
-    this._renderBorder(bounds, clippedBounds, clipRect, borderStyle, context.buffer, node.chromeCollapse);
+    this._renderBorder(bounds, clippedBounds, clipRect, borderStyle, context.buffer, node.chromeCollapse, parentBg);
 
     // Render content based on element type
     this._renderContent(element, bounds, computedStyle, context.buffer, context);
@@ -1264,12 +1304,28 @@ export class RenderingEngine {
 
 
   // Render background color
-  private _renderBackground(bounds: Bounds, style: Style, buffer: DualBuffer): void {
+  private _renderBackground(bounds: Bounds, style: Style, buffer: DualBuffer, parentBgColor?: PackedRGBA): void {
     if (!style.backgroundColor) return;
+
+    let bgColor = parseColor(style.backgroundColor);
+    if (bgColor === undefined) return;
+
+    // Apply opacity blending
+    const needsBlend = (style.opacity !== undefined && style.opacity < 1) ||
+      (style.backgroundOpacity !== undefined && style.backgroundOpacity < 1);
+    if (needsBlend) {
+      const bg = parentBgColor ?? parseColor(getThemeColor('background')) ?? 0x000000FF;
+      if (style.backgroundOpacity !== undefined && style.backgroundOpacity < 1) {
+        bgColor = this._blendOpacity(bgColor, style.backgroundOpacity, bg);
+      }
+      if (style.opacity !== undefined && style.opacity < 1) {
+        bgColor = this._blendOpacity(bgColor, style.opacity, bg);
+      }
+    }
 
     const cell: Cell = {
       char: EMPTY_CHAR,
-      background: parseColor(style.backgroundColor),
+      background: bgColor,
     };
 
     buffer.currentBuffer.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, cell);
@@ -1280,7 +1336,7 @@ export class RenderingEngine {
   // clippedBounds: the bounds after clipping to the visible area
   // clipRect: the clipping rectangle (visible viewport)
   // chromeCollapse indicates which borders were collapsed due to insufficient space
-  private _renderBorder(originalBounds: Bounds, clippedBounds: Bounds, clipRect: Bounds, style: Style, buffer: DualBuffer, chromeCollapse?: ChromeCollapseState): void {
+  private _renderBorder(originalBounds: Bounds, clippedBounds: Bounds, clipRect: Bounds, style: Style, buffer: DualBuffer, chromeCollapse?: ChromeCollapseState, parentBgColor?: PackedRGBA): void {
     const defaultColor = style.borderColor || style.color;
 
     // Check for individual border sides first, fallback to general border
@@ -1339,6 +1395,23 @@ export class RenderingEngine {
     if (borderRight) {
       const c = parseColor(style.borderRightColor) || parsedDefaultColor;
       rightStyle = useBlockBorders ? { background: c || parsedBgColor } : { foreground: c, background: parsedBgColor };
+    }
+
+    // Apply opacity blending to border colors
+    const needsBorderBlend = (style.opacity !== undefined && style.opacity < 1) ||
+      (style.backgroundOpacity !== undefined && style.backgroundOpacity < 1);
+    if (needsBorderBlend) {
+      const bg = parentBgColor ?? parseColor(getThemeColor('background')) ?? 0x000000FF;
+      for (const s of [topStyle, bottomStyle, leftStyle, rightStyle]) {
+        if (!s) continue;
+        if (style.backgroundOpacity !== undefined && style.backgroundOpacity < 1 && s.background !== undefined) {
+          s.background = this._blendOpacity(s.background, style.backgroundOpacity, bg);
+        }
+        if (style.opacity !== undefined && style.opacity < 1) {
+          if (s.foreground !== undefined) s.foreground = this._blendOpacity(s.foreground, style.opacity, bg);
+          if (s.background !== undefined) s.background = this._blendOpacity(s.background, style.opacity, bg);
+        }
+      }
     }
 
     // Get border characters (use the first available border style for consistency)
@@ -1471,9 +1544,29 @@ export class RenderingEngine {
     buffer: DualBuffer | ViewportDualBuffer,
     context: RenderContext
   ): void {
+    let fgColor = parseColor(style.color);
+    let bgColor = parseColor(style.backgroundColor);
+
+    // Resolve parent bg for opacity blending (also passed to components for canvas pixel blending)
+    const contentParentBg = (context.parentStyle?.backgroundColor
+      ? parseColor(context.parentStyle.backgroundColor)
+      : undefined) ?? parseColor(getThemeColor('background')) ?? 0x000000FF;
+
+    const needsBlend = (style.opacity !== undefined && style.opacity < 1) ||
+      (style.backgroundOpacity !== undefined && style.backgroundOpacity < 1);
+    if (needsBlend) {
+      if (style.backgroundOpacity !== undefined && style.backgroundOpacity < 1 && bgColor !== undefined) {
+        bgColor = this._blendOpacity(bgColor, style.backgroundOpacity, contentParentBg);
+      }
+      if (style.opacity !== undefined && style.opacity < 1) {
+        if (fgColor !== undefined) fgColor = this._blendOpacity(fgColor, style.opacity, contentParentBg);
+        if (bgColor !== undefined) bgColor = this._blendOpacity(bgColor, style.opacity, contentParentBg);
+      }
+    }
+
     const cellStyle: Partial<Cell> = {
-      foreground: parseColor(style.color),
-      background: parseColor(style.backgroundColor),
+      foreground: fgColor,
+      background: bgColor,
       bold: style.fontWeight === 'bold',
       italic: style.fontStyle === 'italic',
       underline: style.textDecoration === 'underline',
@@ -1521,6 +1614,7 @@ export class RenderingEngine {
         hoveredElementId: context.hoveredElementId,
         requestRender: context.requestRender,
         requestCachedRender: context.requestCachedRender,
+        parentBgColor: contentParentBg, // For canvas pixel opacity blending
         scrollOffset: context.scrollOffset, // Pass scroll offset for click translation
         viewport: context.viewport, // Full viewport for modal overlays
         // Allow components to register their scrollbar bounds for scroll-handler integration

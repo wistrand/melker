@@ -405,6 +405,8 @@ export function computeStyle(element: Element, parentStyle?: Style, context?: La
     fontWeight: parentStyle.fontWeight,
     fontStyle: parentStyle.fontStyle,
     textDecoration: parentStyle.textDecoration,
+    opacity: parentStyle.opacity,
+    backgroundOpacity: parentStyle.backgroundOpacity,
     dim: parentStyle.dim,
     reverse: parentStyle.reverse,
     borderColor: parentStyle.borderColor, // Border color can inherit for consistency
@@ -448,6 +450,16 @@ export function computeStyle(element: Element, parentStyle?: Style, context?: La
       const transStyle = getTransitionStyle(element);
       Object.assign(mergedStyle, transStyle);
     }
+  }
+
+  // Multiply opacity with parent (CSS semantics: nested opacity stacks)
+  if (parentStyle?.opacity !== undefined && parentStyle.opacity < 1) {
+    const elementOpacity = (element.props?.style as Style)?.opacity ?? 1;
+    mergedStyle.opacity = parentStyle.opacity * elementOpacity;
+  }
+  if (parentStyle?.backgroundOpacity !== undefined && parentStyle.backgroundOpacity < 1) {
+    const elementBgOpacity = (element.props?.style as Style)?.backgroundOpacity ?? 1;
+    mergedStyle.backgroundOpacity = parentStyle.backgroundOpacity * elementBgOpacity;
   }
 
   // Derive flexDirection from direction style property (used by split-pane)

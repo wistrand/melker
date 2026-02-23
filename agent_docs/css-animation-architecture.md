@@ -297,6 +297,7 @@ The UIAnimationManager tick does only one thing: `manager.requestRender()`. No s
 | **Spacing** | `padding`, `paddingTop/Right/Bottom/Left`, `margin`, `marginTop/Right/Bottom/Left`, `gap` |
 | **Position** | `top`, `right`, `bottom`, `left` |
 | **Flex** | `flexGrow`, `flexShrink` |
+| **Opacity** | `opacity`, `backgroundOpacity` |
 | **Other numeric** | `zIndex`, `barWidth`, `ledWidth`, `cellWidth`, `cellHeight`, `minPaneSize` |
 | **Discrete** | `border`, `fontWeight`, `fontStyle`, `textDecoration`, `flexDirection`, `display`, `overflow` |
 

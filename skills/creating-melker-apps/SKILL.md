@@ -249,6 +249,7 @@ The AI sees `[Navigation: Main menu]` instead of `[Container]`, knows the input 
 **Layout:** `display`, `flex-direction`, `flex`, `width`, `height`, `min-width`, `max-width`, `min-height`, `max-height`, `padding`, `margin`, `gap`
 **Borders:** `border` (none|thin|thick|double|rounded|dashed|dashed-rounded|ascii|ascii-rounded|block), `borderTitle`
 **Text:** `font-weight`, `text-align`, `text-wrap`
+**Opacity:** `opacity` (0–1, blends fg+bg), `background-opacity` (0–1, blends bg only). Accepts percentages (`50%`). Animatable.
 **Size values:**
 - Numbers: `40` (columns/rows)
 - Percentages: `50%`, `100%` (in `style.width`/`style.height`)

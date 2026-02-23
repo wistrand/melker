@@ -77,6 +77,7 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | CSS variables        | [css-variables-architecture.md](agent_docs/css-variables-architecture.md) |
 | CSS themes           | [css-themes-architecture.md](agent_docs/css-themes-architecture.md)       |
 | CSS nesting         | [css-nesting-architecture.md](agent_docs/css-nesting-architecture.md) |
+| CSS opacity         | [opacity-support.md](agent_docs/opacity-support.md)                   |
 | JSR distribution    | [jsr.md](agent_docs/jsr.md)                                           |
 
 ### Deep Dives

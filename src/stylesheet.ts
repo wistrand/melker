@@ -813,6 +813,16 @@ export function parseStyleProperties(cssString: string, variables?: Map<string, 
     delete style.bold;
   }
 
+  // Normalize opacity/backgroundOpacity: "50%" → 0.5, "0.5" string → 0.5 number
+  for (const opKey of ['opacity', 'backgroundOpacity'] as const) {
+    if (typeof style[opKey] === 'string') {
+      const s = style[opKey] as string;
+      (style as Record<string, unknown>)[opKey] = s.endsWith('%')
+        ? parseFloat(s) / 100
+        : parseFloat(s);
+    }
+  }
+
   // Normalize padding/margin: consolidate individual properties into BoxSpacing
   return normalizeBoxSpacing(style as Style) as Style;
 }

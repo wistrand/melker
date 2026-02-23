@@ -13,6 +13,9 @@ const COLOR_PROPS = new Set([
   'ledColorLow', 'ledColorHigh',
 ]);
 
+/** Style properties that interpolate as floats (no rounding) */
+const FLOAT_PROPS = new Set(['opacity', 'backgroundOpacity']);
+
 /** Style properties that are always numeric (integer lerp) */
 const NUMERIC_PROPS = new Set([
   'width', 'height', 'top', 'right', 'bottom', 'left',
@@ -113,6 +116,11 @@ export function interpolateValue(key: string, from: any, to: any, t: number): an
       const v = parseFloat(fromPct[1]) + (parseFloat(toPct[1]) - parseFloat(fromPct[1])) * t;
       return `${Math.round(v * 100) / 100}%`;
     }
+  }
+
+  // Float properties (opacity, etc.) — no rounding
+  if (FLOAT_PROPS.has(key) && typeof from === 'number' && typeof to === 'number') {
+    return from + (to - from) * t;
   }
 
   // Numeric properties

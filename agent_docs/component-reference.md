@@ -1783,6 +1783,25 @@ Located in `src/components/video.ts`. Uses FFmpeg (`src/video/ffmpeg.ts`) for de
 5. **Selection pass** → Apply text selection highlighting
 6. **Buffer diff** → Output ANSI sequences
 
+## Opacity
+
+All elements support `opacity` and `background-opacity` CSS properties for transparency effects.
+
+| CSS Property         | Style Key          | Range | Default | Description                                |
+|----------------------|--------------------|-------|---------|--------------------------------------------|
+| `opacity`            | `opacity`          | 0–1   | 1       | Blends both foreground and background      |
+| `background-opacity` | `backgroundOpacity`| 0–1   | 1       | Blends background only (text stays solid)  |
+
+Accepts numbers (`0.5`) or percentages (`50%`). Values below `0.05` skip rendering entirely. Opacity inherits and multiplies with parent (parent 0.5 × child 0.5 = 0.25). Works on all element types including canvas, img, text, containers, and borders.
+
+```xml
+<container style="opacity: 0.5; background-opacity: 0.3;">
+  <text>Semi-transparent background, half-opacity text</text>
+</container>
+```
+
+Animatable via `@keyframes` and CSS transitions. See [opacity-support.md](opacity-support.md) for implementation details.
+
 ## Style Inheritance
 
 Only these properties inherit from parent:
@@ -1794,6 +1813,9 @@ Only these properties inherit from parent:
 - `dim`
 - `reverse`
 - `borderColor`
+- `opacity` (multiplies with parent value)
+
+`backgroundOpacity` does **not** inherit.
 
 Layout properties (padding, margin, border widths) do NOT inherit.
 

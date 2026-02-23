@@ -106,6 +106,8 @@ export interface Style extends Record<string, any> {
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
   textDecoration?: 'none' | 'underline';
+  opacity?: number;
+  backgroundOpacity?: number;
   dim?: boolean;
   reverse?: boolean;
   border?: BorderStyle;
@@ -384,6 +386,7 @@ export interface ComponentRenderContext {
   focusedElementId?: string;
   hoveredElementId?: string;
   requestRender?: () => void;  // Callback for components to request a re-render
+  parentBgColor?: number;  // Parent background color (PackedRGBA) for canvas opacity blending
   scrollOffset?: { x: number; y: number };  // Scroll offset from parent scrollable container
   /** Register an overlay to be rendered on top of normal content */
   registerOverlay?: (overlay: Overlay) => void;

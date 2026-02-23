@@ -253,7 +253,9 @@ manager.register('css-transition', (elapsed) => {
 ## Style Inheritance
 
 Only these properties inherit to children:
-- `color`, `backgroundColor`, `fontWeight`, `fontStyle`, `textDecoration`, `dim`, `reverse`, `borderColor`
+- `color`, `backgroundColor`, `fontWeight`, `fontStyle`, `textDecoration`, `dim`, `reverse`, `borderColor`, `opacity`
+
+Note: `opacity` inherits and **multiplies** with the parent value (CSS semantics: parent 0.5 × child 0.5 = 0.25). `backgroundOpacity` does **not** inherit.
 
 Layout properties (borders, padding, margin) do NOT cascade.
 

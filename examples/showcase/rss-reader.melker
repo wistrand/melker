@@ -6,7 +6,7 @@
     "name": "RSS Reader",
     "description": "Terminal RSS feed reader",
     "permissions": {
-      "net": ["news.ycombinator.com", "feeds.bbci.co.uk", "feeds.arstechnica.com"],
+      "net": ["news.ycombinator.com", "feeds.bbci.co.uk", "feeds.arstechnica.com", "hnrss.org"],
       "browser": true
     }
   }
@@ -57,11 +57,12 @@ Feeds auto-refresh every 5 minutes.
     <container class="header">
       <container style="flex-direction: row; gap: 2; align-items: center;">
         <text style="font-weight: bold;">RSS Reader</text>
-        <select id="feedFilter" onChange="$app.changeFeed(event)" style="width: 20;">
+        <select id="feedFilter" onChange="$app.changeFeed(event)" style="width: 24;">
           <option value="all">All Feeds</option>
           <option value="HN">Hacker News</option>
           <option value="BBC">BBC News</option>
           <option value="Ars">Ars Technica</option>
+          <option value="HN Best">HN Best Comments</option>
         </select>
       </container>
       <container style="flex-direction: row; gap: 1; align-items: center;">
@@ -147,6 +148,7 @@ Feeds auto-refresh every 5 minutes.
       { name: 'HN', url: 'https://news.ycombinator.com/rss' },
       { name: 'BBC', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
       { name: 'Ars', url: 'https://feeds.arstechnica.com/arstechnica/index' },
+      { name: 'HN Best', url: 'https://hnrss.org/bestcomments' },
     ];
 
     let articles: Article[] = [];

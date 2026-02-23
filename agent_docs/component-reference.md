@@ -39,7 +39,7 @@ Element (abstract base class)
 - `Clickable` - Handles click events with `onClick()`
 - `Interactive` - Handles keyboard events with `handleKeyPress()`
 - `TextSelectable` - Supports text selection (copy with Alt+C/Alt+N, requires `clipboard: true` in policy, shows toast on success/failure)
-- `Draggable` - Handles mouse drag (scrollbars, resizers, dialogs)
+- `Draggable` - Handles mouse drag (scrollbars, resizers, dialogs). Optional `handleDragHover(x, y): boolean` for hover feedback on drag zones
 - `Wheelable` - Handles mouse wheel events (scrollable tbody)
 
 **Type Guards:**
@@ -468,6 +468,9 @@ The `<data-table>` component is a high-performance table for displaying large da
 | `onSelect`          | function                     | -        | Selection change handler             |
 | `onActivate`        | function                     | -        | Enter/double-click handler           |
 | `onSort`            | function                     | -        | Sort change notification (optional)  |
+| `resizable`         | boolean                      | true     | Enable column resize by dragging     |
+| `minColumnWidth`    | number                       | 3        | Minimum column width when resizing   |
+| `onColumnResize`    | function                     | -        | Column resize handler                |
 
 ### Column Definition
 
@@ -486,6 +489,7 @@ interface DataTableColumn {
 - **Sorting**: Click headers to sort; handled internally, no handler needed
 - **Selection**: Arrow keys navigate, Enter/double-click activates
 - **Scrolling**: Mouse wheel, scrollbar drag, keyboard (PageUp/Down, Home/End)
+- **Column resize**: Drag column borders in header; hover shows border indicator when `showColumnBorders` is off
 - **Events**: Always report original row indices (not sorted positions)
 
 ### When to Use data-table vs table

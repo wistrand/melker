@@ -667,6 +667,12 @@ export interface Draggable {
    * @param y - End y coordinate
    */
   handleDragEnd(zone: string, x: number, y: number): void;
+
+  /**
+   * Optional: handle mouse hover over drag zones (called on mousemove).
+   * @returns true if visual state changed and a re-render is needed
+   */
+  handleDragHover?(x: number, y: number): boolean;
 }
 
 // Type guard for Draggable interface

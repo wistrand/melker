@@ -37,6 +37,7 @@ export interface DevToolsDependencies {
   exit?: () => void;
   getServerUrl?: () => string | undefined;
   getStateObject?: () => Record<string, unknown> | null;
+  getBoundElements?: () => Array<{ stateKey: string; elementId: string; elementType: string }> | null;
 }
 
 /** System information for the System tab */
@@ -500,35 +501,54 @@ export class DevToolsManager {
     const document = this._deps.document;
     const render = () => this._deps.render();
 
-    const generateContent = (): string => {
+    const columns = [
+      { header: 'Name', width: 20 },
+      { header: 'Value' },
+      { header: 'Bound To', width: 16 },
+      { header: 'Role', width: 8 },
+    ];
+
+    const generateRows = (): string[][] => {
       const state = this._deps.getStateObject?.();
-      if (!state) return '(no state)';
-      const lines: string[] = [];
-      for (const key in state) {
-        const value = state[key];
-        const tag = typeof value === 'boolean' ? '  [class]' : '';
-        lines.push(`  ${key}: ${JSON.stringify(value)}${tag}`);
+      if (!state) return [];
+      const bound = this._deps.getBoundElements?.() ?? [];
+      const boundMap = new Map<string, string>();
+      for (const b of bound) {
+        boundMap.set(b.stateKey, b.elementId ? `#${b.elementId}` : b.elementType);
       }
-      return lines.join('\n');
+      return Object.keys(state).map(key => {
+        const value = state[key];
+        const boundTo = boundMap.get(key) ?? '';
+        const role = typeof value === 'boolean' ? 'class' : boundTo ? 'bind' : '';
+        return [key, JSON.stringify(value), boundTo, role];
+      });
     };
 
+    const rows = generateRows();
+
     const onRefresh = () => {
-      const el = document.getElementById('dev-tools-state-content');
-      if (el) {
-        el.props.text = generateContent();
+      const tableEl = document.getElementById('dev-tools-state-table');
+      if (tableEl) {
+        tableEl.props.rows = generateRows();
         render();
       }
     };
 
-    const scrollStyle = { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' };
+    const totalCount = rows.length;
+    const classCount = rows.filter(r => r[3] === 'class').length;
+    const bindCount = rows.filter(r => r[3] === 'bind').length;
 
     return melker`
       <tab id="dev-tools-tab-state" title="State">
         <container style=${{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }}>
-          <container id="dev-tools-scroll-state" scrollable=${true} focusable=${true} style=${scrollStyle}>
-            <text id="dev-tools-state-content" text=${generateContent()} />
-          </container>
-          <container style=${{ padding: 1 }}>
+          <data-table
+            id="dev-tools-state-table"
+            columns=${columns}
+            rows=${rows}
+            style=${{ flex: 1, width: 'fill', height: 'fill' }}
+          />
+          <container style=${{ display: 'flex', flexDirection: 'row', padding: 1, gap: 2, alignItems: 'center' }}>
+            <text text=${`${totalCount} keys (${classCount} class, ${bindCount} bind)`} style=${{ flex: 1, color: 'gray' }} />
             <button id="dev-tools-refresh-state" label="Refresh" onClick=${onRefresh} />
           </container>
         </container>

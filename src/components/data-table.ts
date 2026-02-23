@@ -93,6 +93,11 @@ export interface DataTableProps extends Omit<BaseProps, 'onChange'> {
   onChange?: (event: DataTableSelectEvent) => void;  // Preferred for selection changes
   onSelect?: (event: DataTableSelectEvent) => void;  // Deprecated: use onChange
   onActivate?: (event: DataTableActivateEvent) => void;
+
+  // Column resizing (default: true)
+  resizable?: boolean;
+  minColumnWidth?: number;
+  onColumnResize?: (event: { type: 'columnResize'; column: number; oldWidth: number; newWidth: number; columnWidths: number[] }) => void;
 }
 
 /**
@@ -152,6 +157,12 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   private _lastClickSortedPos: number = -1;
   private static readonly DOUBLE_CLICK_THRESHOLD_MS = 400;
 
+  // Column resize state
+  private _columnBorderPositions: Array<{ columnIndex: number; x: number; y: number; height: number }> = [];
+  private _userColumnWidths: number[] | null = null;
+  private _resizeDragState: { active: boolean; columnIndex: number; startX: number; startWidth: number } | null = null;
+  private _hoveredResizeColumn: number = -1;
+
   // Cached calculations
   private _columnWidths: number[] = [];
 
@@ -163,6 +174,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       showColumnBorders: false,
       border: 'thin',
       selectable: 'none',
+      resizable: true,
       ...props,
     };
     super('data-table', defaultProps, children);
@@ -258,6 +270,11 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   private _calculateColumnWidths(availableWidth: number): number[] {
     const { columns, showColumnBorders } = this.props;
     if (!columns || !Array.isArray(columns) || columns.length === 0) return [];
+
+    // Use user-resized widths if available
+    if (this._userColumnWidths && this._userColumnWidths.length === columns.length) {
+      return this._userColumnWidths;
+    }
 
     // Border/separator count: left border + separators between columns + right border
     // With column borders: | col1 | col2 | col3 | = columns.length + 1 vertical lines
@@ -424,6 +441,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     const chars = getBorderChars(borderStyle !== 'none' ? borderStyle : 'thin');
 
     this._headerCellBounds = [];
+    this._columnBorderPositions = [];
 
     // Draw left border
     buffer.currentBuffer.setCell(x, y, { char: chars.v, ...style });
@@ -457,9 +475,19 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       // Column separator
       if (showColumnBorders) {
         buffer.currentBuffer.setCell(cellX, y, { char: chars.v, ...style });
+        // Track border position for column resize (internal borders only)
+        if (this.props.resizable && i < columns.length - 1) {
+          this._columnBorderPositions.push({ columnIndex: i, x: cellX, y, height: 1 });
+        }
         cellX++;
       } else if (i < columns.length - 1) {
-        buffer.currentBuffer.setCell(cellX, y, { char: EMPTY_CHAR, ...style });
+        // Show border char when hovering over resize zone, otherwise invisible
+        const sepChar = this._hoveredResizeColumn === i ? BORDER_CHARS.thin.v : EMPTY_CHAR;
+        buffer.currentBuffer.setCell(cellX, y, { char: sepChar, ...style });
+        // Track separator position for column resize (invisible hit zone)
+        if (this.props.resizable) {
+          this._columnBorderPositions.push({ columnIndex: i, x: cellX, y, height: 1 });
+        }
         cellX++;
       }
     }
@@ -1007,19 +1035,65 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     return this._scroll.handleWheel(deltaY);
   }
 
-  // Drag handling (for scrollbar)
+  // Drag handling (for scrollbar and column resize)
   getDragZone(x: number, y: number): string | null {
-    if (!this._scrollbarBounds) return null;
-    if (boundsContain(x, y, this._scrollbarBounds)) {
+    // Check column resize borders first (higher priority)
+    if (this.props.resizable) {
+      for (const border of this._columnBorderPositions) {
+        if (x >= border.x - 1 && x <= border.x + 1 &&
+            y >= border.y && y < border.y + border.height) {
+          return `resize:${border.columnIndex}`;
+        }
+      }
+    }
+
+    // Check scrollbar
+    if (this._scrollbarBounds && boundsContain(x, y, this._scrollbarBounds)) {
       return 'scrollbar';
     }
     return null;
+  }
+
+  handleDragHover(x: number, y: number): boolean {
+    if (!this.props.resizable) {
+      if (this._hoveredResizeColumn !== -1) {
+        this._hoveredResizeColumn = -1;
+        return true;
+      }
+      return false;
+    }
+    let hovered = -1;
+    for (const border of this._columnBorderPositions) {
+      if (x >= border.x - 1 && x <= border.x + 1 &&
+          y >= border.y && y < border.y + border.height) {
+        hovered = border.columnIndex;
+        break;
+      }
+    }
+    if (hovered !== this._hoveredResizeColumn) {
+      this._hoveredResizeColumn = hovered;
+      return true;
+    }
+    return false;
   }
 
   handleDragStart(zone: string, x: number, y: number): void {
     if (zone === 'scrollbar') {
       this._dragStartY = y;
       this._dragStartScrollY = this._scroll.scrollY;
+    } else if (zone.startsWith('resize:')) {
+      const columnIndex = parseInt(zone.substring(7), 10);
+      if (!isNaN(columnIndex) && columnIndex < this._columnWidths.length) {
+        if (!this._userColumnWidths) {
+          this._userColumnWidths = [...this._columnWidths];
+        }
+        this._resizeDragState = {
+          active: true,
+          columnIndex,
+          startX: x,
+          startWidth: this._columnWidths[columnIndex],
+        };
+      }
     }
   }
 
@@ -1033,11 +1107,34 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
         0,
         Math.min(scrollRange, this._dragStartScrollY + deltaY * pixelRatio)
       );
+    } else if (zone.startsWith('resize:') && this._resizeDragState?.active) {
+      const { columnIndex, startX, startWidth } = this._resizeDragState;
+      const minWidth = this.props.minColumnWidth || 3;
+      const deltaX = x - startX;
+      const newWidth = Math.max(minWidth, startWidth + deltaX);
+
+      if (this._userColumnWidths) {
+        const oldWidth = this._userColumnWidths[columnIndex];
+        this._userColumnWidths[columnIndex] = newWidth;
+        this._columnWidths = this._userColumnWidths;
+
+        if (this.props.onColumnResize && newWidth !== oldWidth) {
+          this.props.onColumnResize({
+            type: 'columnResize',
+            column: columnIndex,
+            oldWidth,
+            newWidth,
+            columnWidths: [...this._userColumnWidths],
+          });
+        }
+      }
     }
   }
 
-  handleDragEnd(zone: string, x: number, y: number): void {
-    // Nothing to clean up
+  handleDragEnd(zone: string, _x: number, _y: number): void {
+    if (zone.startsWith('resize:')) {
+      this._resizeDragState = null;
+    }
   }
 
   // Get selected rows (original indices)
@@ -1187,6 +1284,9 @@ export const dataTableSchema: ComponentSchema = {
     onChange: { type: 'handler', description: 'Selection change handler (preferred)' },
     onSelect: { type: 'handler', description: 'Selection change handler (deprecated: use onChange)' },
     onActivate: { type: 'handler', description: 'Row activation handler (Enter/double-click)' },
+    resizable: { type: 'boolean', description: 'Enable column resizing by dragging (default: true)' },
+    minColumnWidth: { type: 'number', description: 'Minimum column width when resizing (default: 3)' },
+    onColumnResize: { type: 'handler', description: 'Column resize handler' },
   },
 };
 
@@ -1203,5 +1303,6 @@ registerComponent({
     showColumnBorders: false,
     border: 'thin',
     selectable: 'none',
+    resizable: true,
   },
 });

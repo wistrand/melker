@@ -1158,6 +1158,7 @@ export class MelkerEngine {
         },
         getServerUrl: () => this._server?.connectionUrl,
         getStateObject: () => this._stateObject,
+        getBoundElements: () => this.getBoundElements(),
       });
     }
     this._devToolsManager.setSource(content, filePath, type, convertedContent, policy, appDir, sourceUrl, systemInfo, helpContent);
@@ -1539,6 +1540,19 @@ export class MelkerEngine {
   /** Get the registered state object (used by DevTools). */
   getStateObject(): Record<string, unknown> | null {
     return this._stateObject;
+  }
+
+  /** Get bound elements info for DevTools (avoids exposing Element references). */
+  getBoundElements(): Array<{ stateKey: string; elementId: string; elementType: string }> | null {
+    if (!this._stateObject) return null;
+    if (!this._boundElements || this._document.elementCount !== this._lastRegistrySize) {
+      this._collectBoundElements();
+    }
+    return this._boundElements!.map(({ element, stateKey }) => ({
+      stateKey,
+      elementId: element.props.id ?? '',
+      elementType: element.type,
+    }));
   }
 
   /** Get the loaded persisted state (for merging _bound values into createState). */

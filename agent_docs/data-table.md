@@ -57,6 +57,11 @@ interface DataTableProps extends BaseProps {
   selectedRows?: number[];      // Original row indices (controlled)
   onSelect?: (event: SelectEvent) => void;
   onActivate?: (event: ActivateEvent) => void;  // Enter or double-click
+
+  // Column resizing
+  resizable?: boolean;          // Default: true
+  minColumnWidth?: number;      // Default: 3
+  onColumnResize?: (event: ColumnResizeEvent) => void;
 }
 ```
 
@@ -162,6 +167,13 @@ For dynamic data (e.g., fetched from API, generated), use a script:
 - Mouse wheel scrolling
 - Keyboard navigation (Arrow, PageUp/Down, Home/End)
 - Scrollbar drag support
+
+### Column Resizing
+- Drag column borders in the header to resize (enabled by default)
+- Works with or without `showColumnBorders` — invisible separators show a border character on hover
+- Set `resizable={false}` to disable
+- `minColumnWidth` sets the floor (default: 3 characters)
+- `onColumnResize` fires with column index, old/new width, and all column widths
 
 ### Index Mapping
 - Selection and events always use original row indices

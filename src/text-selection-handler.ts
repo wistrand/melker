@@ -674,6 +674,13 @@ export class TextSelectionHandler {
       hoveredElement.updateShaderMouse(event.x, event.y);
     }
 
+    // Check drag zone hover feedback (e.g. column resize indicators)
+    if (hoveredElement && isDraggable(hoveredElement) && hoveredElement.handleDragHover) {
+      if (hoveredElement.handleDragHover(event.x, event.y) && this._options.autoRender) {
+        this._deps.onRender();
+      }
+    }
+
     // Call onMouseMove handler on the hovered element (if it has one)
     if (hoveredElement && typeof hoveredElement.props?.onMouseMove === 'function') {
       const mouseEvent = {

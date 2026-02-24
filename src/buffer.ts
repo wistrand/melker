@@ -241,6 +241,8 @@ export class TerminalBuffer {
 
   // Set a single cell with wide character support
   setCell(x: number, y: number, cell: Cell): void {
+    x = x | 0;
+    y = y | 0;
     if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
       return;
     }

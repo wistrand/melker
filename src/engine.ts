@@ -291,6 +291,9 @@ export class MelkerEngine {
   // Track which dialogs were open in previous frame (for auto force-render on dialog open)
   private _previouslyOpenDialogIds = new Set<string>();
 
+  // classList snapshots for dirty detection (avoids re-applying stylesheets every render)
+  private _classListSnapshots = new WeakMap<Element, string>();
+
   // Graphics overlay manager for sixel, kitty, and iTerm2
   private _graphicsOverlayManager!: GraphicsOverlayManager;
 
@@ -1581,27 +1584,27 @@ export class MelkerEngine {
    * 2. Push bound state values to element props (schema-driven coercion)
    */
   private _resolveBindings(): void {
-    const state = this._stateObject;
-    if (!state) return;
-
     const root = this._document.root;
     if (!root) return;
 
+    const state = this._stateObject;
+
     // Step 1: Sync boolean state → CSS classes on root element
-    let classesChanged = false;
-    for (const key in state) {
-      if (typeof state[key] === 'boolean') {
-        const had = root.props.classList?.includes(key) ?? false;
-        const want = state[key] as boolean;
-        if (had !== want) {
-          toggleClass(root, key, want);
-          classesChanged = true;
+    if (state) {
+      for (const key in state) {
+        if (typeof state[key] === 'boolean') {
+          const had = root.props.classList?.includes(key) ?? false;
+          const want = state[key] as boolean;
+          if (had !== want) {
+            toggleClass(root, key, want);
+          }
         }
       }
     }
 
-    // Re-apply stylesheets so class-dependent rules (e.g. .isEmpty #el) re-evaluate
-    if (classesChanged) {
+    // Re-apply stylesheets when any element's classList changed since last render.
+    // Catches both state-binding class changes AND manual classList mutations from scripts.
+    if (this._document.stylesheets.length > 0 && this._detectClassListChanges(root)) {
       this._document.applyStylesToElement(root, {
         terminalWidth: this._terminalSizeManager.size.width,
         terminalHeight: this._terminalSizeManager.size.height,
@@ -1609,6 +1612,7 @@ export class MelkerEngine {
     }
 
     // Step 2: Schema-driven bind resolution — cached bound elements only
+    if (!state) return;
     const byType = this._bindMappingsByType;
     if (!byType) return;
 
@@ -1626,6 +1630,29 @@ export class MelkerEngine {
         }
       }
     }
+  }
+
+  /**
+   * Walk the element tree and check if any classList changed since last snapshot.
+   * Updates snapshots as it walks, returns true if any changed.
+   */
+  private _detectClassListChanges(element: Element): boolean {
+    let changed = false;
+    const classList = element.props.classList;
+    const key = classList ? classList.join('\0') : '';
+    if (this._classListSnapshots.get(element) !== key) {
+      this._classListSnapshots.set(element, key);
+      changed = true;
+    }
+    if (element.children) {
+      for (const child of element.children) {
+        if (this._detectClassListChanges(child)) {
+          changed = true;
+          // Don't break — need to update all snapshots
+        }
+      }
+    }
+    return changed;
   }
 
   /**

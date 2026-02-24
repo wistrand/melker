@@ -193,6 +193,7 @@ export class ConnectorElement extends Element implements Renderable {
       const bestRoute = this._findBestRoute(
         fromBounds, toBounds, fromSide, toSide, routingOptions
       );
+      if (!bestRoute) return;
       drawOrthogonalPath(buffer, bestRoute.points, cellStyle, lineStyle, arrowStart, arrowEnd);
       // Use first and last points for label positioning
       labelFrom = bestRoute.points[0];
@@ -235,7 +236,7 @@ export class ConnectorElement extends Element implements Renderable {
     propFromSide: Side | undefined,
     propToSide: Side | undefined,
     routingOptions: RoutingOptions
-  ): { points: { x: number; y: number }[]; fromSide: Side; toSide: Side } {
+  ): { points: { x: number; y: number }[]; fromSide: Side; toSide: Side } | null {
     // If sides are explicitly specified, use them
     if (propFromSide && propFromSide !== 'auto' && propToSide && propToSide !== 'auto') {
       const fromPoint = getConnectionPoint(fromBounds, propFromSide);
@@ -304,7 +305,7 @@ export class ConnectorElement extends Element implements Renderable {
       }
     }
 
-    return bestRoute!;
+    return bestRoute;
   }
 
   /**

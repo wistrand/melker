@@ -1,0 +1,365 @@
+<melker>
+  <title>Slideshow</title>
+
+  <policy>
+  {
+    "name": "Slideshow",
+    "description": "Terminal slideshow presenter for markdown slides",
+    "permissions": {
+      "read": ["cwd"],
+      "browser": true
+    }
+  }
+  </policy>
+
+  <help>
+## Slideshow
+
+A terminal slideshow presenter. Each slide is a `.md` file in a directory.
+
+### Usage
+
+```
+melker slideshow.melker [slides-directory]
+```
+
+If no directory is specified, defaults to `./slides/`.
+
+| Key                    | Action             |
+|------------------------|--------------------|
+| Right / Space / Enter  | Next slide         |
+| Left / Backspace       | Previous slide     |
+| Home                   | First slide        |
+| End                    | Last slide         |
+| Ctrl+G                 | Go to slide        |
+| Ctrl+F                 | Toggle fullscreen  |
+| Ctrl+O                 | Open slide deck    |
+| F12                    | Dev tools          |
+  </help>
+
+  <style>
+    .header {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1;
+      flex-shrink: 0;
+    }
+    .footer {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1;
+      flex-shrink: 0;
+    }
+    .slide {
+      flex: 1;
+      overflow: auto;
+      padding: 1 3;
+      position: relative;
+    }
+
+    @keyframes slideInNext {
+      from { left: 200; opacity: 0; }
+      to   { left: 0;   opacity: 1; }
+    }
+    @keyframes slideInPrev {
+      from { left: -200; opacity: 0; }
+      to   { left: 0;    opacity: 1; }
+    }
+    .anim-next {
+      animation: slideInNext 250ms ease-out forwards;
+    }
+    .anim-prev {
+      animation: slideInPrev 250ms ease-out forwards;
+    }
+  </style>
+
+  <container style="display: flex; flex-direction: column; height: 100%; width: 100%;">
+
+    <!-- Header -->
+    <container id="header" class="header">
+      <text id="slideTitle" style="font-weight: bold;">Slideshow</text>
+      <text id="slideCounter">--</text>
+    </container>
+
+    <!-- Slide content -->
+    <container id="slideContainer" class="slide" style="overflow-y: scroll; overflow-x: none;">
+      <markdown id="slideContent" text="*Loading slides...*" style="text-wrap: wrap;" enableGfm="true" onLink="$app.openLink(event)" />
+    </container>
+
+    <!-- Navigation commands -->
+    <command key="ArrowRight,Space,Enter" label="Next Slide" global onExecute="$app.nextSlide()" />
+    <command key="ArrowLeft,Backspace" label="Previous Slide" global onExecute="$app.prevSlide()" />
+    <command key="Home" label="First Slide" global onExecute="$app.goToSlide(0)" />
+    <command key="End" label="Last Slide" global onExecute="$app.goToSlide(-1)" />
+    <command key="Ctrl+g" label="Go to Slide" global onExecute="$app.openGoTo()" />
+    <command key="Ctrl+f" label="Toggle Fullscreen" global onExecute="$app.toggleFullscreen()" />
+    <command key="Ctrl+o" label="Open Deck" global onExecute="$app.openFileBrowser()" />
+
+    <!-- Go-to-slide dialog -->
+    <dialog id="goToDialog" title="Go to Slide" modal="true" backdrop="true" width="40">
+      <container style="padding: 1; gap: 1;">
+        <text id="goToLabel">Enter slide number (1-5):</text>
+        <input id="goToInput" placeholder="1"
+          onKeyPress="if (event.key === 'Enter') $app.confirmGoTo()" />
+        <container style="flex-direction: row; gap: 1; justify-content: flex-end;">
+          <button label="Cancel" onClick="$app.closeGoTo()" />
+          <button label="Go" onClick="$app.confirmGoTo()" />
+        </container>
+      </container>
+    </dialog>
+
+    <!-- Open deck dialog -->
+    <dialog id="openDeckDialog" title="Open Slide Deck" modal="true" backdrop="true" width="60">
+      <container style="padding: 1; gap: 1;">
+        <text>Select a directory containing .md slides:</text>
+        <file-browser id="deckBrowser" selectionMode="single" selectType="directory"
+          onChange="$app.selectDeck(event)" onCancel="$app.closeDeckBrowser()" />
+      </container>
+    </dialog>
+
+    <!-- Footer -->
+    <container id="footer" class="footer">
+      <text>Left/Right: navigate | Ctrl+G: go to | Ctrl+F: fullscreen | Ctrl+O: open</text>
+      <slider id="slideProgress" min="0" max="1" value="0" style="width: 20;" onChange="$app.goToSlide(Math.round(event.value))" />
+    </container>
+
+  </container>
+
+  <script type="typescript">
+    // State
+    let slides: string[] = [];
+    let currentIndex = 0;
+    let slideDir = '';
+
+    export function setSlideDir(dir: string): void { slideDir = dir; }
+    export function setSlides(s: string[]): void { slides = s; }
+    export function getSlideCount(): number { return slides.length; }
+    export function getSlides(): string[] { return slides; }
+
+    // Extract title from markdown content (first # heading)
+    function extractTitle(content: string): string {
+      const match = content.match(/^#\s+(.+)$/m);
+      return match ? match[1].trim() : '';
+    }
+
+    // Slide-in transition using @keyframes animation via CSS classes
+    function transitionSlide(direction: 'next' | 'prev' | 'none'): void {
+      if (direction === 'none') return;
+      const el = $melker.getElementById('slideContainer');
+      if (!el) return;
+
+      if (!el.props.classList) el.props.classList = ['slide'];
+
+      // Remove both animation classes to reset
+      el.props.classList = el.props.classList.filter(
+        (c: string) => c !== 'anim-next' && c !== 'anim-prev'
+      );
+      $melker.render();
+
+      // Add animation class on next tick — triggers fresh animation
+      setTimeout(() => {
+        const cls = direction === 'next' ? 'anim-next' : 'anim-prev';
+        el.props.classList.push(cls);
+        $melker.render();
+      }, 16);
+    }
+
+    // Update the slide display
+    export async function showSlide(index: number, direction: 'next' | 'prev' | 'none' = 'none'): Promise<void> {
+      if (slides.length === 0) return;
+
+      // Clamp index
+      if (index < 0) index = 0;
+      if (index >= slides.length) index = slides.length - 1;
+      currentIndex = index;
+
+      const filePath = slideDir + '/' + slides[currentIndex];
+
+      // Load content to extract title
+      try {
+        const content = await Deno.readTextFile(filePath);
+        const title = extractTitle(content);
+
+        const titleEl = $melker.getElementById('slideTitle');
+        if (titleEl) titleEl.setValue(title || slides[currentIndex]);
+      } catch {
+        const titleEl = $melker.getElementById('slideTitle');
+        if (titleEl) titleEl.setValue(slides[currentIndex]);
+      }
+
+      // Set markdown src
+      const md = $melker.getElementById('slideContent');
+      if (md) md.props.src = filePath;
+
+      // Reset scroll position
+      const container = $melker.getElementById('slideContainer');
+      if (container) container.props.scrollY = 0;
+
+      // Update counter
+      const counter = $melker.getElementById('slideCounter');
+      if (counter) counter.setValue((currentIndex + 1) + ' / ' + slides.length);
+
+      // Update slider
+      const slider = $melker.getElementById('slideProgress');
+      if (slider) {
+        slider.props.max = Math.max(1, slides.length - 1);
+        slider.setValue(currentIndex);
+      }
+
+      // Animate transition
+      transitionSlide(direction);
+    }
+
+    // Navigation
+    export function nextSlide(): void {
+      if (currentIndex < slides.length - 1) {
+        showSlide(currentIndex + 1, 'next');
+      } else {
+        $melker.toast.show('Last slide', { type: 'info', duration: 1500 });
+      }
+    }
+
+    export function prevSlide(): void {
+      if (currentIndex > 0) {
+        showSlide(currentIndex - 1, 'prev');
+      } else {
+        $melker.toast.show('First slide', { type: 'info', duration: 1500 });
+      }
+    }
+
+    export function goToSlide(index: number): void {
+      if (index === -1) index = slides.length - 1;
+      showSlide(index);
+    }
+
+    // Open link in browser
+    export function openLink(event: any): void {
+      if (event.url) $melker.openBrowser(event.url);
+    }
+
+    // Go-to-slide dialog
+    export function openGoTo(): void {
+      const label = $melker.getElementById('goToLabel');
+      if (label) label.setValue('Enter slide number (1-' + slides.length + '):');
+      const input = $melker.getElementById('goToInput');
+      if (input) input.setValue('');
+      $melker.getElementById('goToDialog')?.show();
+    }
+
+    export function closeGoTo(): void {
+      $melker.getElementById('goToDialog')?.hide();
+    }
+
+    export function confirmGoTo(): void {
+      const input = $melker.getElementById('goToInput');
+      const val = Number(input?.getValue());
+      if (isNaN(val) || val < 1 || val > slides.length) {
+        $melker.toast.show('Enter a number between 1 and ' + slides.length, { type: 'warning' });
+        return;
+      }
+      closeGoTo();
+      showSlide(val - 1);
+    }
+
+    // Fullscreen toggle
+    let fullscreen = false;
+
+    export function toggleFullscreen(): void {
+      fullscreen = !fullscreen;
+      const header = $melker.getElementById('header');
+      const footer = $melker.getElementById('footer');
+      if (header) header.props.style = { ...header.props.style, display: fullscreen ? 'none' : 'flex' };
+      if (footer) footer.props.style = { ...footer.props.style, display: fullscreen ? 'none' : 'flex' };
+    }
+
+    // Open deck file browser
+    export function openFileBrowser(): void {
+      $melker.getElementById('openDeckDialog')?.show();
+    }
+
+    export function closeDeckBrowser(): void {
+      $melker.getElementById('openDeckDialog')?.hide();
+    }
+
+    export async function selectDeck(event: any): Promise<void> {
+      const dir = event.path;
+      if (!dir) return;
+      closeDeckBrowser();
+
+      try {
+        const found = await discoverSlides(dir);
+        if (found.length === 0) {
+          $melker.toast.show('No .md files in ' + dir, { type: 'warning' });
+          return;
+        }
+        slideDir = dir;
+        slides = found;
+        $melker.setTitle(dir.substring(dir.lastIndexOf('/') + 1));
+        await showSlide(0);
+        $melker.toast.show('Loaded ' + found.length + ' slides', { type: 'success' });
+      } catch (e) {
+        $melker.toast.show('Cannot read: ' + (e as Error).message, { type: 'error' });
+      }
+    }
+
+    // Discover slides in directory
+    export async function discoverSlides(dir: string): Promise<string[]> {
+      const entries: string[] = [];
+      for await (const e of Deno.readDir(dir)) {
+        if (e.isFile && e.name.endsWith('.md')) {
+          entries.push(e.name);
+        }
+      }
+      return entries.sort();
+    }
+  </script>
+
+  <script type="typescript" async="ready">
+    // Determine slide directory from argv or default
+    let arg = argv[1] || ($melker.dirname + '/slides');
+    let startFile = '';
+
+    // Resolve relative paths
+    if (!arg.startsWith('/')) {
+      arg = Deno.cwd() + '/' + arg;
+    }
+
+    // If argument is a .md file, use its parent dir and jump to that slide
+    let dir: string;
+    if (arg.endsWith('.md')) {
+      const lastSlash = arg.lastIndexOf('/');
+      dir = arg.substring(0, lastSlash);
+      startFile = arg.substring(lastSlash + 1);
+    } else {
+      dir = arg;
+    }
+    $app.setSlideDir(dir);
+    $melker.setTitle(dir.substring(dir.lastIndexOf('/') + 1));
+
+    try {
+      $app.setSlides(await $app.discoverSlides(dir));
+    } catch (e) {
+      $melker.toast.show('Cannot read: ' + dir + ' - ' + (e as Error).message, { type: 'error' });
+      $app.setSlides([]);
+    }
+
+    if ($app.getSlideCount() === 0) {
+      const md = $melker.getElementById('slideContent');
+      if (md) md.setValue('*No .md files found in ' + dir + '*');
+      const titleEl = $melker.getElementById('slideTitle');
+      if (titleEl) titleEl.setValue('No slides');
+    } else {
+      let startIndex = 0;
+      if (startFile) {
+        const idx = $app.getSlides().indexOf(startFile);
+        if (idx >= 0) startIndex = idx;
+      }
+      await $app.showSlide(startIndex);
+    }
+    $melker.render();
+  </script>
+</melker>

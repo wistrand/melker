@@ -48,10 +48,11 @@ Arrow keys via `<command>` elements — no conflict since markdown doesn't handl
 └─────────────────────────────────────────┘
 ```
 
-- Header: slide title (parsed from first `# heading` in the .md) + counter
+- Header: slide title (parsed from first `# heading` in the .md) + counter, `--theme-surface` background
 - Body: single `<markdown>` component with scrollable overflow
-- Footer: slider (interactive, click to navigate) + nav hints
+- Footer: slider (interactive, click to navigate) + nav hints, `--theme-surface` background
 - Fullscreen mode (Ctrl+F) hides header/footer, gives markdown 100% height
+- All colors use CSS theme variables — adapts to any theme
 
 ## Components
 
@@ -63,6 +64,16 @@ Arrow keys via `<command>` elements — no conflict since markdown doesn't handl
 | `command`      | Global keyboard shortcuts for navigation              |
 | `dialog`       | Go-to-slide dialog with number input                  |
 | `file-browser` | Pick slide deck directory (Ctrl+O)                    |
+
+## AI Tools
+
+Three custom AI tools registered via `$melker.registerAITool()`:
+
+| Tool             | Description                                              |
+|------------------|----------------------------------------------------------|
+| `list_slides`    | List all slides with index, filename, current marker     |
+| `go_to_slide`    | Jump by number (1-based) or filename (exact/partial)     |
+| `search_slides`  | Fuzzy search slide contents (all words must match, case-insensitive), returns title + snippet |
 
 ## Slide Transitions
 
@@ -131,6 +142,7 @@ The slide directory basename is set as the terminal title via `$melker.setTitle(
 - Code blocks with syntax context
 - Images (rendered as sixel/kitty/block graphics)
 - Mermaid diagrams (rendered inline as graphs)
+- Embedded Melker components via ````melker` fenced blocks (e.g. `<segment-display>`, `<img>`)
 - Links (clickable, `onLink` handler)
 
 ## Implementation Phases
@@ -142,7 +154,7 @@ The slide directory basename is set as the terminal title via `$melker.setTitle(
 - [x] Script: slide discovery from directory, state vars (slides array, currentIndex)
 - [x] `async="ready"`: read directory, load first slide; `argv[1]` or default `./slides/`
 - [x] Display first slide with title extracted from `# heading`
-- [x] Sample slides in `examples/showcase/slides/` (5 slides)
+- [x] Sample slides in `examples/showcase/slides/` (8 slides: welcome, logo, components, layout, architecture/mermaid, styling, segment-display, thanks)
 
 ### Phase 2: Navigation
 
@@ -170,14 +182,29 @@ The slide directory basename is set as the terminal title via `$melker.setTitle(
 - [x] Edge indicators (toast at first/last slide, done in Phase 2)
 - [x] `.md` file argument support (load parent dir, jump to slide)
 - [x] Terminal title set to directory basename
+- [x] Theme-aware header/footer background (`var(--theme-surface)`)
+
+### Phase 5: Sample Slides
+
+- [x] Logo slide with `![](melker-128.png)` image
+- [x] Architecture slide with mermaid flowchart (rendering pipeline)
+- [x] Segment display slide with scrolling ````melker` block (`<segment-display>`)
+
+### Phase 6: AI Tools
+
+- [x] `list_slides` — list all slides with current marker
+- [x] `go_to_slide` — jump by number or filename
+- [x] `search_slides` — fuzzy content search across all slides
 
 ## Core Bug Fixes (Melker engine)
 
-During development, two Melker core bugs were discovered and fixed:
+During development, three Melker core bugs were discovered and fixed:
 
 1. **classList dirty tracking** (`src/engine.ts`): `_resolveBindings()` previously returned early when no state object existed, skipping stylesheet re-application entirely. Restructured to always check for classList changes via snapshot comparison (`_detectClassListChanges()`), and only re-apply stylesheets when an element's classList actually changed.
 
 2. **Fractional buffer coordinates** (`src/buffer.ts`): Animation interpolation produces fractional `left`/`top` values. `setCell()` now floors x/y with `| 0` before bounds checking to prevent crashes from non-integer array indices.
+
+3. **Connector null route crash** (`src/components/connector.ts`): `_findBestRoute()` could return null when element bounds contained NaN values (e.g. mermaid diagram elements not yet laid out). The non-null assertion `bestRoute!` crashed on `.points` access. Fixed by making the return type nullable and guarding the call site.
 
 ## Script Architecture
 

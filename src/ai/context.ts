@@ -3,6 +3,7 @@
 
 import { Document } from '../document.ts';
 import { Element, isScrollingEnabled, hasSubtreeElements, hasGetContent } from '../types.ts';
+import { getCustomTools } from './tools.ts';
 import { discoverPaletteItems } from '../command-palette-components.ts';
 
 /** Check if an ARIA boolean attribute is truthy (handles both boolean and string values) */
@@ -551,6 +552,17 @@ ${context.availableActions.map(a => '- ' + a).join('\n')}
 Answer the user's question about the UI concisely and helpfully.
 Focus on what they can do and how to navigate.
 Keep responses brief - typically 1-3 sentences.`;
+
+  // If the app registered custom tools, tell the model about them
+  const customTools = getCustomTools();
+  if (customTools.length > 0) {
+    const toolList = customTools.map(t => `- ${t.name}: ${t.description}`).join('\n');
+    prompt += `
+
+This application provides custom tools:
+${toolList}
+Use these tools proactively to find detailed information before answering questions about content.`;
+  }
 
   return prompt;
 }

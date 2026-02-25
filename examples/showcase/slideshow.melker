@@ -397,7 +397,7 @@ If no directory is specified, defaults to `./slides/`.
     });
 
     $melker.registerAITool({
-      name: 'search_slides',
+      name: 'search',
       description: 'Search slide contents for a query string (fuzzy, case-insensitive)',
       parameters: {
         query: { type: 'string', required: true, description: 'Text to search for' }

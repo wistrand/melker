@@ -7,6 +7,7 @@
     "description": "Terminal slideshow presenter for markdown slides",
     "permissions": {
       "read": ["cwd"],
+      "net": ["*"],
       "browser": true
     }
   }
@@ -137,11 +138,24 @@ If no directory is specified, defaults to `./slides/`.
     let slides: string[] = [];
     let currentIndex = 0;
     let slideDir = '';
+    let isRemote = false;
 
-    export function setSlideDir(dir: string): void { slideDir = dir; }
+    function isUrl(s: string): boolean { return s.startsWith('http://') || s.startsWith('https://'); }
+
+    export function setSlideDir(dir: string): void { slideDir = dir; isRemote = isUrl(dir); }
     export function setSlides(s: string[]): void { slides = s; }
     export function getSlideCount(): number { return slides.length; }
     export function getSlides(): string[] { return slides; }
+
+    // Read text from a local file or remote URL
+    async function readText(path: string): Promise<string> {
+      if (isUrl(path)) {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        return res.text();
+      }
+      return Deno.readTextFile(path);
+    }
 
     // Extract title from markdown content (first # heading)
     function extractTitle(content: string): string {
@@ -180,11 +194,11 @@ If no directory is specified, defaults to `./slides/`.
       if (index >= slides.length) index = slides.length - 1;
       currentIndex = index;
 
-      const filePath = slideDir + '/' + slides[currentIndex];
+      const slidePath = slideDir + '/' + slides[currentIndex];
 
       // Load content to extract title
       try {
-        const content = await Deno.readTextFile(filePath);
+        const content = await readText(slidePath);
         const title = extractTitle(content);
 
         const titleEl = $melker.getElementById('slideTitle');
@@ -196,7 +210,7 @@ If no directory is specified, defaults to `./slides/`.
 
       // Set markdown src
       const md = $melker.getElementById('slideContent');
-      if (md) md.props.src = filePath;
+      if (md) md.props.src = slidePath;
 
       // Reset scroll position
       const container = $melker.getElementById('slideContainer');
@@ -314,11 +328,32 @@ If no directory is specified, defaults to `./slides/`.
       }
     }
 
-    // Discover slides in directory
+    // Discover slides in directory or URL
+    // If index.md exists, use it as ordered list (each line = filename or - filename)
+    // For remote URLs, index.md is required (can't list a remote directory)
+    // For local dirs, falls back to alphabetical sort of all .md files
     export async function discoverSlides(dir: string): Promise<string[]> {
+      // Parse index.md content into ordered slide list
+      function parseIndex(content: string): string[] {
+        return content.split('\n')
+          .map(line => line.replace(/^[-*]\s+/, '').trim())
+          .filter(line => line.length > 0 && line.endsWith('.md') && line !== 'index.md');
+      }
+
+      try {
+        const indexContent = await readText(dir + '/index.md');
+        const ordered = parseIndex(indexContent);
+        if (ordered.length > 0) return ordered;
+      } catch { /* no index.md, fall through */ }
+
+      // Remote without index.md — can't list directory
+      if (isUrl(dir)) {
+        throw new Error('Remote slide deck requires an index.md');
+      }
+
       const entries: string[] = [];
       for await (const e of Deno.readDir(dir)) {
-        if (e.isFile && e.name.endsWith('.md')) {
+        if (e.isFile && e.name.endsWith('.md') && e.name !== 'index.md') {
           entries.push(e.name);
         }
       }
@@ -374,7 +409,7 @@ If no directory is specified, defaults to `./slides/`.
         const results: string[] = [];
         for (let i = 0; i < slides.length; i++) {
           try {
-            const content = await Deno.readTextFile(slideDir + '/' + slides[i]);
+            const content = await readText(slideDir + '/' + slides[i]);
             const lower = content.toLowerCase();
             if (words.every((w: string) => lower.includes(w))) {
               const title = extractTitle(content) || slides[i];
@@ -403,14 +438,17 @@ If no directory is specified, defaults to `./slides/`.
     let arg = argv[1] || ($melker.dirname + '/slides');
     let startFile = '';
 
-    // Resolve relative paths
-    if (!arg.startsWith('/')) {
+    // Resolve relative paths (but not URLs)
+    if (!arg.startsWith('/') && !arg.startsWith('http://') && !arg.startsWith('https://')) {
       arg = Deno.cwd() + '/' + arg;
     }
 
-    // If argument is a .md file, use its parent dir and jump to that slide
+    // If argument points to index.md, use its parent dir
+    // If argument is another .md file, use its parent dir and jump to that slide
     let dir: string;
-    if (arg.endsWith('.md')) {
+    if (arg.endsWith('/index.md')) {
+      dir = arg.substring(0, arg.length - '/index.md'.length);
+    } else if (arg.endsWith('.md')) {
       const lastSlash = arg.lastIndexOf('/');
       dir = arg.substring(0, lastSlash);
       startFile = arg.substring(lastSlash + 1);

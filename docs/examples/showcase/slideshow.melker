@@ -45,6 +45,7 @@ If no directory is specified, defaults to `./slides/`.
       align-items: center;
       padding: 0 1;
       flex-shrink: 0;
+      background-color: var(--theme-surface);
     }
     .footer {
       display: flex;
@@ -53,6 +54,7 @@ If no directory is specified, defaults to `./slides/`.
       align-items: center;
       padding: 0 1;
       flex-shrink: 0;
+      background-color: var(--theme-surface);
     }
     .slide {
       flex: 1;
@@ -98,6 +100,7 @@ If no directory is specified, defaults to `./slides/`.
     <command key="Ctrl+g" label="Go to Slide" global onExecute="$app.openGoTo()" />
     <command key="Ctrl+f" label="Toggle Fullscreen" global onExecute="$app.toggleFullscreen()" />
     <command key="Ctrl+o" label="Open Deck" global onExecute="$app.openFileBrowser()" />
+    <command key="Ctrl+r" label="Reload Slide" global onExecute="$app.reloadSlide()" />
 
     <!-- Go-to-slide dialog -->
     <dialog id="goToDialog" title="Go to Slide" modal="true" backdrop="true" width="40">
@@ -236,6 +239,11 @@ If no directory is specified, defaults to `./slides/`.
       showSlide(index);
     }
 
+    // Reload current slide
+    export function reloadSlide(): void {
+      showSlide(currentIndex, 'none');
+    }
+
     // Open link in browser
     export function openLink(event: any): void {
       if (event.url) $melker.openBrowser(event.url);
@@ -316,6 +324,78 @@ If no directory is specified, defaults to `./slides/`.
       }
       return entries.sort();
     }
+
+    // AI tools
+    $melker.registerAITool({
+      name: 'list_slides',
+      description: 'List all available slides with their index and filename',
+      parameters: {},
+      handler: () => {
+        if (slides.length === 0) return { success: false, message: 'No slides loaded' };
+        const list = slides.map((name, i) =>
+          `${i === currentIndex ? '>' : ' '} ${i + 1}. ${name}`
+        ).join('\n');
+        return { success: true, message: list };
+      }
+    });
+
+    $melker.registerAITool({
+      name: 'go_to_slide',
+      description: 'Jump to a specific slide by number (1-based) or filename',
+      parameters: {
+        slide: { type: 'string', required: true, description: 'Slide number (1-based) or filename' }
+      },
+      handler: (args: any, context: any) => {
+        if (slides.length === 0) return { success: false, message: 'No slides loaded' };
+        let index = -1;
+        const num = Number(args.slide);
+        if (!isNaN(num) && num >= 1 && num <= slides.length) {
+          index = num - 1;
+        } else {
+          index = slides.findIndex(s => s === args.slide || s.includes(args.slide));
+        }
+        if (index < 0) return { success: false, message: 'Slide not found: ' + args.slide };
+        showSlide(index);
+        context.render();
+        return { success: true, message: 'Jumped to slide ' + (index + 1) + ': ' + slides[index] };
+      }
+    });
+
+    $melker.registerAITool({
+      name: 'search_slides',
+      description: 'Search slide contents for a query string (fuzzy, case-insensitive)',
+      parameters: {
+        query: { type: 'string', required: true, description: 'Text to search for' }
+      },
+      handler: async (args: any) => {
+        if (slides.length === 0) return { success: false, message: 'No slides loaded' };
+        const q = args.query.toLowerCase();
+        const words = q.split(/\s+/).filter((w: string) => w.length > 0);
+        const results: string[] = [];
+        for (let i = 0; i < slides.length; i++) {
+          try {
+            const content = await Deno.readTextFile(slideDir + '/' + slides[i]);
+            const lower = content.toLowerCase();
+            if (words.every((w: string) => lower.includes(w))) {
+              const title = extractTitle(content) || slides[i];
+              // Find first matching line for context
+              const lines = content.split('\n');
+              let snippet = '';
+              for (const line of lines) {
+                const ll = line.toLowerCase();
+                if (words.some((w: string) => ll.includes(w))) {
+                  snippet = line.trim().substring(0, 60);
+                  break;
+                }
+              }
+              results.push(`${i + 1}. ${title}${snippet ? ' — "' + snippet + '"' : ''}`);
+            }
+          } catch { /* skip unreadable */ }
+        }
+        if (results.length === 0) return { success: true, message: 'No matches for: ' + args.query };
+        return { success: true, message: results.join('\n') };
+      }
+    });
   </script>
 
   <script type="typescript" async="ready">

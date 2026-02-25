@@ -1628,7 +1628,13 @@ export class LayoutEngine {
       style
     );
 
-    return requiredSize;
+    // Sanitize: intrinsicSize implementations or container calculations may produce NaN
+    // (e.g. division in flex distribution, percentage of NaN availableSpace).
+    // Catch it here at the single exit point so downstream layout never sees NaN.
+    return {
+      width: Number.isFinite(requiredSize.width) ? requiredSize.width : 10,
+      height: Number.isFinite(requiredSize.height) ? requiredSize.height : 1,
+    };
   }
 
   private _isVisible(element: Element, bounds: Bounds, layoutProps?: AdvancedLayoutProps): boolean {

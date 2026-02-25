@@ -100,6 +100,7 @@ If no directory is specified, defaults to `./slides/`.
     <command key="Ctrl+g" label="Go to Slide" global onExecute="$app.openGoTo()" />
     <command key="Ctrl+f" label="Toggle Fullscreen" global onExecute="$app.toggleFullscreen()" />
     <command key="Ctrl+o" label="Open Deck" global onExecute="$app.openFileBrowser()" />
+    <command key="Ctrl+r" label="Reload Slide" global onExecute="$app.reloadSlide()" />
 
     <!-- Go-to-slide dialog -->
     <dialog id="goToDialog" title="Go to Slide" modal="true" backdrop="true" width="40">
@@ -236,6 +237,11 @@ If no directory is specified, defaults to `./slides/`.
     export function goToSlide(index: number): void {
       if (index === -1) index = slides.length - 1;
       showSlide(index);
+    }
+
+    // Reload current slide
+    export function reloadSlide(): void {
+      showSlide(currentIndex, 'none');
     }
 
     // Open link in browser

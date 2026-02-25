@@ -3,7 +3,7 @@
 
 import { CanvasElement, CanvasProps } from './canvas.ts';
 import { packRGBA, COLORS } from './color-utils.ts';
-import { Element, Bounds, ComponentRenderContext } from '../types.ts';
+import { Element, Bounds, ComponentRenderContext, Disposable } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getLogger } from '../logging.ts';
 import { getThemeManager } from '../theme.ts';
@@ -75,7 +75,7 @@ export interface VideoProps extends CanvasProps {
   renderCallback?: () => void;  // Callback to trigger re-render (required for autoplay)
 }
 
-export class VideoElement extends CanvasElement {
+export class VideoElement extends CanvasElement implements Disposable {
   declare props: VideoProps;
 
   private _autoplayStarted = false;
@@ -634,6 +634,13 @@ export class VideoElement extends CanvasElement {
    * Stop video playback
    */
   async stop(): Promise<void> {
+    await this.stopVideo();
+  }
+
+  /**
+   * Dispose of all resources (Disposable interface)
+   */
+  async dispose(): Promise<void> {
     await this.stopVideo();
   }
 

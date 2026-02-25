@@ -1,7 +1,7 @@
 // Markdown code block rendering support
 // Handles code blocks, melker blocks, and mermaid diagrams
 
-import { Element, Renderable, Bounds, hasIntrinsicSize } from '../types.ts';
+import { Element, Bounds, hasIntrinsicSize, isDisposable } from '../types.ts';
 import { type Cell } from '../buffer.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { getStringWidth } from '../char-width.ts';
@@ -43,6 +43,35 @@ export class MarkdownCodeRenderer {
    */
   getMermaidElements(): Map<string, GraphElement> {
     return this._mermaidElements;
+  }
+
+  /**
+   * Get melker elements cache (for subtree access)
+   */
+  getMelkerElements(): Map<string, Element> {
+    return this._melkerElements;
+  }
+
+  /**
+   * Dispose all cached melker elements and clear caches.
+   * Recurses bottom-up so children (e.g. video inside a container) are disposed first.
+   */
+  reset(): void {
+    for (const element of this._melkerElements.values()) {
+      this._disposeRecursive(element);
+    }
+    this._melkerElements.clear();
+  }
+
+  private _disposeRecursive(element: Element): void {
+    if (element.children) {
+      for (const child of element.children) {
+        this._disposeRecursive(child);
+      }
+    }
+    if (isDisposable(element)) {
+      element.dispose();
+    }
   }
 
   /**
@@ -184,77 +213,66 @@ export class MarkdownCodeRenderer {
         const parseResult = parseMelkerFile(code);
         element = parseResult.element;
 
-        // Resolve file paths for elements that have them (canvas, video)
-        // This makes relative paths resolve from the markdown file's directory
-        if (element.props.src && typeof element.props.src === 'string') {
-          element.props.src = helpers.resolveImagePath(element.props.src);
-        }
-        // Also resolve video-specific paths (subtitle, poster)
-        if (element.props.subtitle && typeof element.props.subtitle === 'string') {
-          element.props.subtitle = helpers.resolveImagePath(element.props.subtitle);
-        }
-        if (element.props.poster && typeof element.props.poster === 'string') {
-          element.props.poster = helpers.resolveImagePath(element.props.poster);
-        }
+        // Resolve file paths for elements that have src props (img, canvas, video)
+        // Recursively walk the tree so nested children get resolved too
+        this._resolvePathsRecursive(element, helpers);
 
         // Cache the element
         this._melkerElements.set(cacheKey, element);
       }
 
-      // Check if element is Renderable (has a render method)
-      const elementAsAny = element as unknown as Record<string, unknown>;
-      if (element && typeof elementAsAny.render === 'function') {
-        const renderable = element as unknown as Renderable;
+      // Get element dimensions from props or style, falling back to intrinsicSize
+      let elementWidth = ctx.bounds.width;
+      let elementHeight = 15; // Default height
+      let hasExplicitWidth = false;
+      let hasExplicitHeight = false;
 
-        // Get element dimensions from props or intrinsicSize
-        let elementWidth = ctx.bounds.width;
-        let elementHeight = 15; // Default height
-
-        // Try to get dimensions from element props
-        if (element.props.width && typeof element.props.width === 'number') {
-          elementWidth = Math.min(element.props.width, ctx.bounds.width);
-        }
-        if (element.props.height && typeof element.props.height === 'number') {
-          elementHeight = element.props.height;
-        }
-
-        // If element has intrinsicSize, use it
-        if (hasIntrinsicSize(element)) {
-          try {
-            const intrinsic = element.intrinsicSize({
-              availableSpace: { width: ctx.bounds.width, height: 100 },
-            });
-            if (intrinsic.height) {
-              elementHeight = intrinsic.height;
-            }
-          } catch {
-            // Use defaults
-          }
-        }
-
-        // Create bounds for the element
-        const elementBounds: Bounds = {
-          x: ctx.currentX,
-          y: localY,
-          width: elementWidth,
-          height: elementHeight,
-        };
-
-        // Render the element
-        renderable.render(elementBounds, ctx.style, ctx.buffer, ctx.context);
-
-        totalHeight += elementHeight;
-        localY += elementHeight;
-      } else {
-        // Fallback: render error message
-        const errorStyle: Partial<Cell> = {
-          ...ctx.style,
-          foreground: getThemeColor('error'),
-        };
-        ctx.buffer.currentBuffer.setText(ctx.currentX, localY, '[Melker block: element not renderable]', errorStyle);
-        totalHeight += 1;
-        localY += 1;
+      const style = element.props.style as Record<string, unknown> | undefined;
+      if (element.props.width && typeof element.props.width === 'number') {
+        elementWidth = Math.min(element.props.width, ctx.bounds.width);
+        hasExplicitWidth = true;
+      } else if (style?.width && typeof style.width === 'number') {
+        elementWidth = Math.min(style.width as number, ctx.bounds.width);
+        hasExplicitWidth = true;
       }
+      if (element.props.height && typeof element.props.height === 'number') {
+        elementHeight = element.props.height;
+        hasExplicitHeight = true;
+      } else if (style?.height && typeof style.height === 'number') {
+        elementHeight = style.height as number;
+        hasExplicitHeight = true;
+      }
+
+      // Only use intrinsicSize as fallback when no explicit dimensions were set
+      if ((!hasExplicitWidth || !hasExplicitHeight) && hasIntrinsicSize(element)) {
+        try {
+          const intrinsic = element.intrinsicSize({
+            availableSpace: { width: ctx.bounds.width, height: 100 },
+          });
+          if (!hasExplicitWidth && intrinsic.width) {
+            elementWidth = Math.min(intrinsic.width, ctx.bounds.width);
+          }
+          if (!hasExplicitHeight && intrinsic.height) {
+            elementHeight = intrinsic.height;
+          }
+        } catch {
+          // Use defaults
+        }
+      }
+
+      // Create bounds for the element
+      const elementBounds: Bounds = {
+        x: ctx.currentX,
+        y: localY,
+        width: elementWidth,
+        height: elementHeight,
+      };
+
+      // Use renderElementSubtree for full layout pipeline (flexbox, gap, etc.)
+      renderElementSubtree(element, ctx.buffer, elementBounds, ctx.context);
+
+      totalHeight += elementHeight;
+      localY += elementHeight;
     } catch (error) {
       // Render error message
       const errorStyle: Partial<Cell> = {
@@ -277,6 +295,26 @@ export class MarkdownCodeRenderer {
    * Render a mermaid code block inline (similar to melker blocks)
    * Uses the graph element and renders it at the current position
    */
+  /**
+   * Recursively resolve relative file paths on elements and their children
+   */
+  private _resolvePathsRecursive(element: Element, helpers: CodeRenderHelpers): void {
+    if (element.props.src && typeof element.props.src === 'string') {
+      element.props.src = helpers.resolveImagePath(element.props.src);
+    }
+    if (element.props.subtitle && typeof element.props.subtitle === 'string') {
+      element.props.subtitle = helpers.resolveImagePath(element.props.subtitle);
+    }
+    if (element.props.poster && typeof element.props.poster === 'string') {
+      element.props.poster = helpers.resolveImagePath(element.props.poster);
+    }
+    if (element.children) {
+      for (const child of element.children) {
+        this._resolvePathsRecursive(child, helpers);
+      }
+    }
+  }
+
   renderMermaidBlock(code: string, ctx: MarkdownRenderContext): number {
     // Use local y tracking
     let localY = ctx.currentY;

@@ -2301,7 +2301,16 @@ export function renderElementSubtree(
   bounds: Bounds,
   context?: ComponentRenderContext
 ): void {
-  const renderer = new RenderingEngine();
+  // Normalize bounds to ensure all values are valid numbers (NaN/null → 0)
+  const safeBounds: Bounds = {
+    x: Number.isFinite(bounds.x) ? bounds.x : 0,
+    y: Number.isFinite(bounds.y) ? bounds.y : 0,
+    width: Number.isFinite(bounds.width) ? bounds.width : 80,
+    height: Number.isFinite(bounds.height) ? bounds.height : 24,
+  };
+
+  // Use an isolated layout engine to avoid shared state with the parent render
+  const renderer = new RenderingEngine({ layoutEngine: new LayoutEngine() });
 
   // Create a wrapper context that forwards registerElementBounds to the parent context
   // This allows elements rendered in the subtree to be found by hit testing
@@ -2323,7 +2332,7 @@ export function renderElementSubtree(
   const layoutTree = renderer.render(
     element,
     buffer,
-    bounds,
+    safeBounds,
     context?.focusedElementId,    // Pass focused element so inputs show cursor
     undefined,                     // textSelection - not needed for subtree
     context?.hoveredElementId,    // Pass hovered element for hover effects

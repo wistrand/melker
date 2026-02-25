@@ -308,8 +308,13 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
         if (this._lastSrc !== src) {
           this._loadError = null;
           this._hasLoadedContent = false;
+          this._srcContent = null; // Clear old content so it won't render during transition
+          this._parsedAst = null;
+          this._lastParsedText = null;
           this._imageRenderer.reset(); // Reset for new content
+          this._codeRenderer.reset(); // Dispose melker elements (stops video etc.)
           this._lastRenderedHeight = 0;
+          this._lastSrc = src; // Update immediately to prevent reset() on every render frame
         }
         this._fetchSrcContent().then(content => {
           if (content !== null) {
@@ -534,6 +539,9 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       if (generated) {
         elements.push(generated);
       }
+    }
+    for (const melkerElement of this._codeRenderer.getMelkerElements().values()) {
+      elements.push(melkerElement);
     }
     return elements;
   }

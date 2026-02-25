@@ -455,6 +455,17 @@ export function hasSubtreeElements(element: Element): element is Element & HasSu
   return 'getSubtreeElements' in element && typeof (element as unknown as HasSubtreeElements).getSubtreeElements === 'function';
 }
 
+// Disposable interface for elements that hold resources requiring explicit cleanup
+// (e.g., video elements with FFmpeg processes)
+export interface Disposable {
+  dispose(): void | Promise<void>;
+}
+
+// Type guard for Disposable interface
+export function isDisposable(element: Element): element is Element & Disposable {
+  return 'dispose' in element && typeof (element as unknown as Disposable).dispose === 'function';
+}
+
 // FocusCapturable interface for elements that capture focus for all children
 // (e.g., dialogs, modals that handle focus internally)
 export interface FocusCapturable {

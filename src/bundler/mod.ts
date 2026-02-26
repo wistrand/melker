@@ -174,6 +174,7 @@ export async function processMelkerBundle(
     bundleSourceMap: bundled.sourceMap,
     originalContent: parsed.originalContent,
     sourceUrl: parsed.sourceUrl,
+    scriptMeta: generated.scriptMeta,
     bundleTempDir: bundled.tempDir,
     metadata: {
       generatedLines: generated.code.split('\n').length,
@@ -231,7 +232,8 @@ export async function executeBundle(
     assembled.bundleSourceMap,
     assembled.lineMap,
     assembled.originalContent,
-    assembled.sourceUrl
+    assembled.sourceUrl,
+    assembled.scriptMeta
   );
 
   // Use the bundle temp dir for the executable bundle.js
@@ -301,14 +303,20 @@ export async function executeBundle(
 
     // Translate error to original source if possible
     const translated = errorTranslator.translate(err);
+    const hasUsefulFrames = translated.frames.some((f) => f.context !== 'unknown');
 
     // Always print the formatted error
     console.error(formatError(translated));
 
-    // Also print the raw stack trace for debugging
-    if (err.stack) {
-      console.error('\nRaw stack trace:');
-      console.error(err.stack);
+    // Only show raw stack when translation produced no useful frames
+    if (!hasUsefulFrames && err.stack) {
+      // Sanitize data: URLs from stack trace (replace base64 blob with <bundle>)
+      const sanitized = err.stack.replace(
+        /data:application\/javascript;base64,[A-Za-z0-9+/=.]+/g,
+        '<bundle>'
+      );
+      console.error('\nStack trace:');
+      console.error(sanitized);
     }
 
     Deno.exit(1);
@@ -322,7 +330,7 @@ export async function executeBundle(
  *
  * @param registry - The __melker registry
  */
-export async function callReady(registry: MelkerRegistry): Promise<void> {
+export async function callReady(registry: MelkerRegistry, errorTranslator?: ErrorTranslator): Promise<void> {
   logger.debug('callReady called', {
     hasReady: !!registry.__ready,
     registryKeys: Object.keys(registry),
@@ -339,10 +347,29 @@ export async function callReady(registry: MelkerRegistry): Promise<void> {
       const err = ensureError(error);
       logger.error('__ready failed', err);
 
-      console.error('\n\x1b[31m__ready hook failed:\x1b[0m', err.message);
-      if (err.stack) {
-        console.error('\nStack trace:');
-        console.error(err.stack);
+      if (errorTranslator) {
+        const translated = errorTranslator.translate(err);
+        const hasUsefulFrames = translated.frames.some((f) => f.context !== 'unknown');
+        console.error(formatError(translated));
+
+        if (!hasUsefulFrames && err.stack) {
+          const sanitized = err.stack.replace(
+            /data:application\/javascript;base64,[A-Za-z0-9+/=.]+/g,
+            '<bundle>'
+          );
+          console.error('\nStack trace:');
+          console.error(sanitized);
+        }
+      } else {
+        console.error(`\n\x1b[31m__ready hook failed:\x1b[0m`, err.message);
+        if (err.stack) {
+          const sanitized = err.stack.replace(
+            /data:application\/javascript;base64,[A-Za-z0-9+/=.]+/g,
+            '<bundle>'
+          );
+          console.error('\nStack trace:');
+          console.error(sanitized);
+        }
       }
 
       Deno.exit(1);

@@ -134,6 +134,8 @@ export interface GeneratedSource {
   scriptModules: ScriptModule[];
   /** Mapping from generated lines to original .melker lines */
   lineMap: Map<number, LineMapping>;
+  /** Script module metadata for error source mapping */
+  scriptMeta: ScriptMeta[];
   /** Original .melker content for error display */
   originalContent: string;
   /** Source URL for error messages */
@@ -173,6 +175,16 @@ export interface BundleResult {
 // Assembled Output
 // =============================================================================
 
+/** Script module metadata for error mapping (filename → original .melker line) */
+export interface ScriptMeta {
+  /** Filename within temp dir (e.g., "_inline_0.ts") */
+  filename: string;
+  /** Line in .melker where the <script> tag starts */
+  originalLine: number;
+  /** Number of header lines prepended to the script content in the temp file */
+  headerLines: number;
+}
+
 /** Final assembled .melker ready for execution */
 export interface AssembledMelker {
   /** Template with rewritten handlers (onClick="__melker.__h0(event)") */
@@ -187,6 +199,8 @@ export interface AssembledMelker {
   originalContent: string;
   /** Source file path/URL */
   sourceUrl: string;
+  /** Script module metadata for error source mapping */
+  scriptMeta?: ScriptMeta[];
   /** Temp directory from Deno.bundle() step (caller must clean up on exit) */
   bundleTempDir?: string;
   /** Metadata for system info (optional) */

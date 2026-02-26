@@ -156,6 +156,7 @@ export function generate(parsed: ParseResult): GeneratedSource {
   // Get config for console override
   const consoleOverride = MelkerConfig.get().consoleOverride;
   const scriptModuleHeader = getScriptModuleHeader(consoleOverride);
+  const headerLineCount = scriptModuleHeader.split('\n').length - 1; // -1 because trailing newline
 
   logger.debug('Starting TypeScript generation', {
     scripts: parsed.scripts.length,
@@ -594,10 +595,24 @@ ${script.code.split('\n').map(l => '  ' + l).join('\n')}
     scriptModules: scriptModules.length,
   });
 
+  // Build script metadata with correct header line counts per type
+  const scriptMetaList = scriptModules.map((m) => {
+    // Init/ready scripts have extra wrapper lines after the module header:
+    // "\nexport async function __initFn/__readyFn(): Promise<void> {\n"
+    const isWrapped = m.filename.startsWith('_init_') || m.filename.startsWith('_ready_');
+    const wrapperLines = isWrapped ? 2 : 0; // blank line + function declaration
+    return {
+      filename: m.filename,
+      originalLine: m.originalLine,
+      headerLines: headerLineCount + wrapperLines,
+    };
+  });
+
   return {
     code: generatedCode,
     scriptModules,
     lineMap,
+    scriptMeta: scriptMetaList,
     originalContent: parsed.originalContent,
     sourceUrl: parsed.sourceUrl,
   };

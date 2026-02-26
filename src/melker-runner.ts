@@ -815,7 +815,8 @@ export async function runMelkerFile(
       assembled.bundleSourceMap,
       assembled.lineMap,
       assembled.originalContent,
-      assembled.sourceUrl
+      assembled.sourceUrl,
+      assembled.scriptMeta
     );
     await wireBundlerHandlers(ui, melkerRegistry, context, logger, handlerCodeMap, errorTranslator);
 
@@ -828,7 +829,7 @@ export async function runMelkerFile(
     (engine as any).forceRender();
     _firstRenderDone = true;
     (engine as any)._triggerMountHandlers();
-    await callReady(melkerRegistry);
+    await callReady(melkerRegistry, errorTranslator);
 
     // Handle stdout mode - output buffer after timeout and exit
     // Auto-enabled when stdout is not a TTY (piped or redirected)

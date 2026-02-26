@@ -13,6 +13,7 @@ import type {
   ErrorContext,
   GeneratedSource,
   LineMapping,
+  ScriptMeta,
   SourceMapData,
   TranslatedError,
   TranslatedFrame,
@@ -185,11 +186,15 @@ export function getHintForError(message: string): string | undefined {
  * using both the bundle sourcemap and the generation lineMap.
  */
 export class ErrorTranslator {
+  // Lazily computed bundled-line → .melker-line mapping from sourcemap + script metadata
+  private _bundleToMelker: Map<number, number> | null = null;
+
   constructor(
     private bundleSourceMap: SourceMapData | null,
     private lineMap: Map<number, LineMapping>,
     private originalSource: string,
-    private sourceFile: string
+    private sourceFile: string,
+    private scriptMeta?: ScriptMeta[]
   ) {}
 
   /**
@@ -215,29 +220,120 @@ export class ErrorTranslator {
    * Translate a single stack frame
    */
   private translateFrame(frame: StackFrame): TranslatedFrame {
-    // First, try to use bundle sourcemap to get generated TS position
-    // Then use lineMap to get original .melker position
-
-    // For now, we'll use a simplified approach that just uses lineMap
-    // A full implementation would decode the VLQ sourcemap
-
-    const mapping = this.findMapping(frame.line);
-
-    if (!mapping) {
-      return this.unknownFrame(frame);
+    // Try direct sourcemap mapping (bundled line → .melker line via script metadata)
+    const directMapping = this.getBundleToMelkerMap().get(frame.line);
+    if (directMapping !== undefined) {
+      const sourceLine = this.getSourceLine(directMapping);
+      const context = this.getContext(frame.functionName);
+      return {
+        functionName: this.translateFunctionName(frame.functionName),
+        file: this.sourceFile,
+        line: directMapping,
+        column: frame.column,
+        sourceLine,
+        context,
+      };
     }
 
-    const sourceLine = this.getSourceLine(mapping.originalLine);
-    const context = this.getContext(frame.functionName);
+    // Fallback: try lineMap lookup (for handler code in the generated entry point)
+    const mapping = this.findMapping(frame.line);
+    if (mapping) {
+      const sourceLine = this.getSourceLine(mapping.originalLine);
+      const context = this.getContext(frame.functionName);
+      return {
+        functionName: this.translateFunctionName(frame.functionName),
+        file: this.sourceFile,
+        line: mapping.originalLine,
+        column: frame.column,
+        sourceLine,
+        context,
+      };
+    }
 
-    return {
-      functionName: this.translateFunctionName(frame.functionName),
-      file: this.sourceFile,
-      line: mapping.originalLine,
-      column: frame.column,
-      sourceLine,
-      context,
-    };
+    return this.unknownFrame(frame);
+  }
+
+  /**
+   * Build bundled-line → .melker-line map using sourcemap + script metadata.
+   *
+   * The sourcemap maps bundled JS → temp source files (_inline_0.ts, _init_0.ts, etc.).
+   * Script metadata maps those temp files → .melker lines.
+   * Combined: bundled line → source file + source line → .melker line.
+   */
+  private getBundleToMelkerMap(): Map<number, number> {
+    if (this._bundleToMelker) return this._bundleToMelker;
+
+    this._bundleToMelker = new Map();
+    if (!this.bundleSourceMap?.mappings || !this.scriptMeta?.length) {
+      return this._bundleToMelker;
+    }
+
+    try {
+      const mappings = this.bundleSourceMap.mappings;
+      const sources = this.bundleSourceMap.sources || [];
+
+      // Build lookup: source index → script metadata
+      const sourceToMeta = new Map<number, ScriptMeta>();
+      for (let si = 0; si < sources.length; si++) {
+        const sourceName = sources[si];
+        // Match by filename (sources may have full paths)
+        for (const meta of this.scriptMeta) {
+          if (sourceName.endsWith(meta.filename) || sourceName.endsWith('/' + meta.filename)) {
+            sourceToMeta.set(si, meta);
+            break;
+          }
+        }
+      }
+
+      if (sourceToMeta.size === 0) return this._bundleToMelker;
+
+      // Decode VLQ mappings
+      let sourceLineState = 0;
+      let sourceColState = 0;
+      let sourceIdxState = 0;
+
+      const groups = mappings.split(';');
+
+      for (let bundledLine = 0; bundledLine < groups.length; bundledLine++) {
+        const group = groups[bundledLine];
+        if (!group) continue;
+
+        let genCol = 0;
+        let firstMelkerLine: number | undefined;
+
+        const segments = group.split(',');
+        for (const seg of segments) {
+          if (!seg) continue;
+          const decoded = decodeVlqSegment(seg);
+          if (decoded.length < 4) continue;
+
+          genCol += decoded[0];
+          sourceIdxState += decoded[1];
+          sourceLineState += decoded[2];
+          sourceColState += decoded[3];
+
+          if (firstMelkerLine === undefined) {
+            const meta = sourceToMeta.get(sourceIdxState);
+            if (meta) {
+              // Source line in temp file (0-indexed) minus header = line within script code
+              // Add script's .melker line offset
+              const lineInScript = sourceLineState - meta.headerLines;
+              if (lineInScript >= 0) {
+                firstMelkerLine = meta.originalLine + lineInScript;
+              }
+            }
+          }
+        }
+
+        if (firstMelkerLine !== undefined) {
+          this._bundleToMelker.set(bundledLine + 1, firstMelkerLine);
+        }
+      }
+    } catch (e) {
+      logger.debug('Failed to decode sourcemap VLQ', { error: String(e) });
+    }
+
+    return this._bundleToMelker;
   }
 
   /**
@@ -286,8 +382,8 @@ export class ErrorTranslator {
     if (name.match(/^__h\d+$/)) {
       return 'event handler';
     }
-    if (name === '__init') return 'async init';
-    if (name === '__ready') return 'async ready';
+    if (name === '__init' || name.match(/^__initFn/)) return 'async init';
+    if (name === '__ready' || name.match(/^__readyFn/)) return 'async ready';
     return name;
   }
 
@@ -296,8 +392,8 @@ export class ErrorTranslator {
    */
   private getContext(name: string): TranslatedFrame['context'] {
     if (name.match(/^__h\d+$/)) return 'handler';
-    if (name === '__init') return 'init';
-    if (name === '__ready') return 'ready';
+    if (name === '__init' || name.match(/^__initFn/)) return 'init';
+    if (name === '__ready' || name.match(/^__readyFn/)) return 'ready';
     return 'script';
   }
 
@@ -317,7 +413,22 @@ export class ErrorTranslator {
     const lines = stack.split('\n');
 
     for (const line of lines) {
-      // Match patterns like:
+      // Match data: URLs first (from bundled code loaded via data: URL)
+      // Pattern: "at functionName (data:application/javascript;base64,...:line:column)"
+      const dataMatch = line.match(
+        /at\s+(?:([^\s(]+)\s+\()?data:[^:]+;base64,[^:]+:(\d+):(\d+)\)?/
+      );
+      if (dataMatch) {
+        frames.push({
+          functionName: dataMatch[1] || '<anonymous>',
+          file: '<bundle>',
+          line: parseInt(dataMatch[2], 10),
+          column: parseInt(dataMatch[3], 10),
+        });
+        continue;
+      }
+
+      // Match file:// URLs and plain paths
       // "    at functionName (file:///path:line:column)"
       // "    at file:///path:line:column"
       const match = line.match(
@@ -363,6 +474,37 @@ interface StackFrame {
 }
 
 /**
+ * Decode a single VLQ segment from a V3 sourcemap.
+ * Returns array of decoded values (typically [genCol, sourceIdx, sourceLine, sourceCol]).
+ */
+const VLQ_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function decodeVlqSegment(segment: string): number[] {
+  const values: number[] = [];
+  let shift = 0;
+  let value = 0;
+
+  for (let i = 0; i < segment.length; i++) {
+    const charIdx = VLQ_CHARS.indexOf(segment[i]);
+    if (charIdx === -1) break;
+
+    const hasContinuation = (charIdx & 32) !== 0;
+    value += (charIdx & 31) << shift;
+    shift += 5;
+
+    if (!hasContinuation) {
+      // Sign is stored in least significant bit
+      const isNegative = (value & 1) !== 0;
+      const decoded = value >> 1;
+      values.push(isNegative ? -decoded : decoded);
+      value = 0;
+      shift = 0;
+    }
+  }
+
+  return values;
+}
+
+/**
  * Format a translated error for console display.
  */
 export function formatError(error: TranslatedError): string {
@@ -371,11 +513,11 @@ export function formatError(error: TranslatedError): string {
   lines.push(`\x1b[31m${error.name}: ${error.message}\x1b[0m`);
   lines.push('');
 
-  for (const frame of error.frames) {
-    if (frame.context === 'unknown') continue;
+  const usefulFrames = error.frames.filter((f) => f.context !== 'unknown');
 
+  for (const frame of usefulFrames) {
     const location = `${frame.file}:${frame.line}`;
-    lines.push(`  at \x1b[33m${frame.functionName}\x1b[0m (${location})`);
+    lines.push(`  at \x1b[33m${frame.functionName}\x1b[0m (\x1b[36m${location}\x1b[0m)`);
 
     if (frame.sourceLine) {
       const lineNum = String(frame.line).padStart(4);
@@ -383,6 +525,12 @@ export function formatError(error: TranslatedError): string {
       lines.push(`    | \x1b[90m${lineNum}\x1b[0m | ${frame.sourceLine}`);
       lines.push('    |');
     }
+  }
+
+  const hint = getHintForError(error.message);
+  if (hint) {
+    lines.push('');
+    lines.push(`\x1b[33mHint:\x1b[0m ${hint}`);
   }
 
   return lines.join('\n');

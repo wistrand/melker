@@ -39,8 +39,14 @@ import { extractColors, getColorPresentations } from './colors.ts';
 import { getDefinition } from './definition.ts';
 import { findTypeScriptRanges, tokenTypes, tokenModifiers } from './semantic-tokens.ts';
 import { levenshteinDistance, findSimilarNames } from './fuzzy.ts';
+import { stripShebang } from '../utils/content-loader.ts';
 
 const logger = getLogger('LSP');
+
+// Get document text with shebang stripped
+function getText(doc: TextDocument): string {
+  return stripShebang(doc.getText());
+}
 
 // Exports for testing
 export const _testing = {
@@ -107,7 +113,7 @@ export async function startLspServer(): Promise<void> {
   // Validate on open and change
   documents.onDidChangeContent((change) => {
     logger.debug('Document changed', { uri: change.document.uri });
-    const diagnostics = validateDocument(change.document.getText());
+    const diagnostics = validateDocument(getText(change.document));
 
     for (const diag of diagnostics) {
       logger.debug('Diagnostic', {
@@ -129,14 +135,14 @@ export async function startLspServer(): Promise<void> {
   connection.onHover((params: TextDocumentPositionParams): Hover | null => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return null;
-    return getHover(document.getText(), params.position);
+    return getHover(getText(document), params.position);
   });
 
   // Completion
   connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
-    return getCompletions(document.getText(), params.position);
+    return getCompletions(getText(document), params.position);
   });
 
   // Semantic tokens - mark TypeScript regions (event handlers and script content)
@@ -144,7 +150,7 @@ export async function startLspServer(): Promise<void> {
     const document = documents.get(params.textDocument.uri);
     if (!document) return { data: [] };
 
-    const text = document.getText();
+    const text = getText(document);
     const ranges = findTypeScriptRanges(text);
     const builder = new SemanticTokensBuilder();
 
@@ -162,42 +168,42 @@ export async function startLspServer(): Promise<void> {
   connection.onDocumentSymbol((params) => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
-    return getDocumentSymbols(document.getText());
+    return getDocumentSymbols(getText(document));
   });
 
   // Folding ranges
   connection.onFoldingRanges((params) => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
-    return getFoldingRanges(document.getText());
+    return getFoldingRanges(getText(document));
   });
 
   // Code actions (quick fixes)
   connection.onCodeAction((params: CodeActionParams) => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
-    return getCodeActions(document.getText(), params);
+    return getCodeActions(getText(document), params);
   });
 
   // Linked editing ranges (rename open/close tags in sync)
   connection.languages.onLinkedEditingRange((params: TextDocumentPositionParams) => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return null;
-    return getLinkedEditingRanges(document.getText(), params.position);
+    return getLinkedEditingRanges(getText(document), params.position);
   });
 
   // Document links (clickable src/href)
   connection.onDocumentLinks((params) => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
-    return getDocumentLinks(document.getText(), params.textDocument.uri);
+    return getDocumentLinks(getText(document), params.textDocument.uri);
   });
 
   // Color provider
   connection.onDocumentColor((params: DocumentColorParams) => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
-    return extractColors(document.getText());
+    return extractColors(getText(document));
   });
 
   connection.onColorPresentation((params) => {
@@ -208,7 +214,7 @@ export async function startLspServer(): Promise<void> {
   connection.onDefinition((params: TextDocumentPositionParams) => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return null;
-    return getDefinition(document.getText(), params.position, params.textDocument.uri);
+    return getDefinition(getText(document), params.position, params.textDocument.uri);
   });
 
   documents.listen(connection);

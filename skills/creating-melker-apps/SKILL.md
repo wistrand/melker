@@ -25,6 +25,10 @@ cd melker
 # Optional: install globally via symlink
 ln -s $(pwd)/melker.ts ~/.local/bin/melker
 # Then run from anywhere: melker app.melker
+
+# Or make .melker files executable (add #!/usr/bin/env -S melker as first line)
+chmod +x app.melker
+./app.melker
 ```
 
 **From URL (no install):**

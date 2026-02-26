@@ -8,15 +8,37 @@ The `.melker` file format is an HTML-like declarative syntax for building Melker
 
 **Run with:**
 ```bash
-# Direct execution (melker.ts has executable shebang)
+# Via the launcher
 ./melker.ts <file>.melker
 ./melker.ts http://server/path/file.melker  # URL support
 
 # Or via deno run
 deno run --allow-all melker.ts <file>.melker
+
+# Or make the .melker file itself executable (see Shebang below)
+chmod +x app.melker
+./app.melker
 ```
 
 The launcher automatically adds `--unstable-bundle` if needed (for Deno's `Deno.bundle()` API).
+
+### Shebang Support
+
+`.melker` files can include a shebang line to make them directly executable:
+
+```xml
+#!/usr/bin/env -S melker
+<melker>
+  <text>Hello!</text>
+</melker>
+```
+
+```bash
+chmod +x app.melker
+./app.melker
+```
+
+The shebang line is automatically stripped before parsing at both runtime and in the LSP. The `-S` flag is needed for multi-argument shebang support on most systems. Requires `melker` to be in `$PATH` (see [cli-reference.md](cli-reference.md) for symlink setup).
 
 ## Structure
 

@@ -29,7 +29,8 @@ melker upgrade     # Upgrade (git pull or JSR reinstall)
 ## Running .melker Files
 
 ```bash
-./melker.ts app.melker              # Direct execution
+./melker.ts app.melker              # Via the launcher
+./app.melker                        # Direct execution (requires shebang + chmod +x)
 ./melker.ts diagram.mmd             # Run mermaid file directly (no approval needed)
 ./melker.ts --watch app.melker      # Auto-reload on changes
 ./melker.ts --trust app.melker      # CI/scripts (bypass approval prompt)
@@ -46,6 +47,8 @@ melker upgrade     # Upgrade (git pull or JSR reinstall)
 ./melker.ts --allow-ai app.melker                   # Enable AI shortcut
 ./melker.ts --allow-ai --deny-net=openrouter.ai app.melker  # AI without network
 ```
+
+**Shebang:** `.melker` files with `#!/usr/bin/env -S melker` as the first line can be run directly after `chmod +x`. The shebang is stripped before parsing. Requires `melker` in `$PATH` (see Installation above).
 
 **Mermaid files:** Plain `.mmd` files can be run directly and require no permissions or approval prompts.
 

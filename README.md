@@ -120,11 +120,15 @@ Create `hello.melker`:
 Run it:
 
 ```bash
-# Direct execution (melker.ts has executable shebang)
+# Via the launcher
 ./melker.ts hello.melker
 
 # Or via deno run
 deno run --allow-all melker.ts hello.melker
+
+# Or make the .melker file itself executable (add shebang as first line)
+chmod +x hello.melker
+./hello.melker
 ```
 
 > **Why `--allow-all`?** The launcher (`melker.ts`) needs full permissions to parse, bundle, and spawn your app. But your app runs in a **subprocess** with only the permissions declared in its `<policy>`. The launcher is trusted; the app is sandboxed.
@@ -351,11 +355,15 @@ Element state persists across runs using XDG state directory.
 ## Running Apps
 
 ```bash
-# Direct execution (melker.ts has executable shebang)
+# Via the launcher
 ./melker.ts app.melker
 
 # Or via deno run
 deno run --allow-all melker.ts app.melker
+
+# Or make the .melker file itself executable
+# (add #!/usr/bin/env -S melker as first line, then chmod +x)
+./app.melker
 
 # Run from URL
 ./melker.ts https://example.com/app.melker

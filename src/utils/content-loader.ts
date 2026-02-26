@@ -16,15 +16,30 @@ export function isRemoteUrl(path: string): boolean {
 }
 
 /**
+ * Strip shebang line (e.g. #!/usr/bin/env -S melker) from content.
+ * Allows .melker files to be directly executable.
+ */
+export function stripShebang(content: string): string {
+  if (content.startsWith('#!')) {
+    const newline = content.indexOf('\n');
+    return newline === -1 ? '' : content.substring(newline + 1);
+  }
+  return content;
+}
+
+/**
  * Load content from a file path or URL
  */
 export async function loadContent(pathOrUrl: string): Promise<string> {
+  let content: string;
   if (isUrl(pathOrUrl)) {
     const response = await fetch(pathOrUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${pathOrUrl}: ${response.status} ${response.statusText}`);
     }
-    return await response.text();
+    content = await response.text();
+  } else {
+    content = await Deno.readTextFile(pathOrUrl);
   }
-  return await Deno.readTextFile(pathOrUrl);
+  return stripShebang(content);
 }

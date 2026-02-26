@@ -33,6 +33,11 @@ melker hello.melker
 
 # Watch mode - auto-reload on file changes
 melker --watch hello.melker
+
+# Or make the file directly executable with a shebang
+# Add #!/usr/bin/env -S melker as the first line, then:
+chmod +x hello.melker
+./hello.melker
 ```
 
 ## Core Concepts

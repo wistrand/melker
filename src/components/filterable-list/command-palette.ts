@@ -239,8 +239,9 @@ export class CommandPaletteElement extends FilterableListCore implements Rendera
   }
 
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
-    // Return minimal size to ensure render is called (needed to register overlay)
-    // The actual modal content is rendered as an overlay and doesn't affect layout
+    // When closed, take no space — the overlay only needs to register when open
+    if (!this.props.open) return { width: 0, height: 0 };
+    // When open, return minimal size to ensure render is called (needed to register overlay)
     return { width: 1, height: 1 };
   }
 

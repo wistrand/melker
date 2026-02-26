@@ -35,6 +35,7 @@ If no directory is specified, defaults to `./slides/`.
 | Ctrl+G                 | Go to slide        |
 | Ctrl+F                 | Toggle fullscreen  |
 | Ctrl+O                 | Open slide deck    |
+| Ctrl+U                 | View source        |
 | F12                    | Dev tools          |
   </help>
 
@@ -65,12 +66,12 @@ If no directory is specified, defaults to `./slides/`.
     }
 
     @keyframes slideInNext {
-      from { left: 200; opacity: 0; }
-      to   { left: 0;   opacity: 1; }
+      from { left: 80; opacity: 0;}
+      to   { left: 0;   opacity: 1;}
     }
     @keyframes slideInPrev {
-      from { left: -200; opacity: 0; }
-      to   { left: 0;    opacity: 1; }
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
     .anim-next {
       animation: slideInNext 250ms ease-out forwards;
@@ -91,6 +92,7 @@ If no directory is specified, defaults to `./slides/`.
     <!-- Slide content -->
     <container id="slideContainer" class="slide" style="overflow-y: scroll; overflow-x: none;">
       <markdown id="slideContent" text="*Loading slides...*" style="text-wrap: wrap;" enableGfm="true" onLink="$app.openLink(event)" />
+      <textarea id="slideSource" readOnly="true" style="display: none; flex: 1;" />
     </container>
 
     <!-- Navigation commands -->
@@ -102,6 +104,7 @@ If no directory is specified, defaults to `./slides/`.
     <command key="Ctrl+f" label="Toggle Fullscreen" global="true" onExecute="$app.toggleFullscreen()" />
     <command key="Ctrl+o" label="Open Deck" global="true" onExecute="$app.openFileBrowser()" />
     <command key="Ctrl+r" label="Reload Slide" global="true" onExecute="$app.reloadSlide()" />
+    <command key="Ctrl+u" label="View Source" global="true" onExecute="$app.toggleSource()" />
 
     <!-- Go-to-slide dialog -->
     <dialog id="goToDialog" title="Go to Slide" modal="true" backdrop="true" width="40">
@@ -127,7 +130,7 @@ If no directory is specified, defaults to `./slides/`.
 
     <!-- Footer -->
     <container id="footer" class="footer">
-      <text>Left/Right: navigate | Ctrl+G: go to | Ctrl+F: fullscreen | Ctrl+O: open</text>
+      <text id="footerInfo">--</text><text> | Ctrl+G: go to | Ctrl+F: fullscreen | Ctrl+O: open</text>
       <slider id="slideProgress" min="0" max="1" value="0" style="width: 20;" onChange="$app.goToSlide(Math.round(event.value))" />
     </container>
 
@@ -139,6 +142,7 @@ If no directory is specified, defaults to `./slides/`.
     let currentIndex = 0;
     let slideDir = '';
     let isRemote = false;
+    let sourceMode = false;
 
     function isUrl(s: string): boolean { return s.startsWith('http://') || s.startsWith('https://'); }
 
@@ -227,6 +231,17 @@ If no directory is specified, defaults to `./slides/`.
         slider.setValue(currentIndex);
       }
 
+      // Update source view if in source mode
+      if (sourceMode) {
+        const src = $melker.getElementById('slideSource');
+        if (src) {
+          try { src.setValue(await readText(slidePath)); } catch { src.setValue('(failed to load source)'); }
+        }
+      }
+
+      // Update terminal size in footer
+      updateFooterInfo();
+
       // Animate transition
       transitionSlide(direction);
     }
@@ -256,6 +271,30 @@ If no directory is specified, defaults to `./slides/`.
     // Reload current slide
     export function reloadSlide(): void {
       showSlide(currentIndex, 'none');
+    }
+
+    // View source toggle
+    export async function toggleSource(): Promise<void> {
+      sourceMode = !sourceMode;
+      const md = $melker.getElementById('slideContent');
+      const src = $melker.getElementById('slideSource');
+      if (!md || !src) return;
+
+      if (sourceMode) {
+        // Load raw markdown into textarea
+        const slidePath = slideDir + '/' + slides[currentIndex];
+        try {
+          const content = await readText(slidePath);
+          src.setValue(content);
+        } catch {
+          src.setValue('(failed to load source)');
+        }
+        md.props.style = { ...md.props.style, display: 'none' };
+        src.props.style = { ...src.props.style, display: 'flex' };
+      } else {
+        md.props.style = { ...md.props.style, display: 'flex' };
+        src.props.style = { ...src.props.style, display: 'none' };
+      }
     }
 
     // Open link in browser
@@ -358,6 +397,18 @@ If no directory is specified, defaults to `./slides/`.
         }
       }
       return entries.sort();
+    }
+
+    // Update footer with terminal size
+    export function updateFooterInfo(): void {
+      const el = $melker.getElementById('footerInfo');
+      if (!el) return;
+      try {
+        const size = Deno.consoleSize();
+        el.setValue(size.columns + 'x' + size.rows);
+      } catch {
+        // consoleSize() unavailable in piped/stdout mode
+      }
     }
 
     // AI tools
@@ -478,6 +529,8 @@ If no directory is specified, defaults to `./slides/`.
       }
       await $app.showSlide(startIndex);
     }
+    $app.updateFooterInfo();
+    $melker.engine.onResize(() => { $app.updateFooterInfo(); });
     $melker.render();
   </script>
 </melker>

@@ -112,12 +112,12 @@ export const BASE_STYLES_SCHEMA: Record<string, PropSchema> = {
   borderRight: { type: 'string', enum: ['none', 'thin', 'thick', 'double', 'rounded', 'dashed', 'dashed-rounded', 'ascii', 'ascii-rounded'], description: 'Right border' },
 
   // Spacing
-  padding: { type: ['number', 'object'], description: 'Inner spacing (all sides or {top,right,bottom,left})' },
+  padding: { type: ['number', 'string', 'object'], description: 'Inner spacing (number, CSS shorthand "v h" or "t r b l", or {top,right,bottom,left})' },
   paddingTop: { type: 'number', description: 'Top inner spacing' },
   paddingBottom: { type: 'number', description: 'Bottom inner spacing' },
   paddingLeft: { type: 'number', description: 'Left inner spacing' },
   paddingRight: { type: 'number', description: 'Right inner spacing' },
-  margin: { type: ['number', 'object'], description: 'Outer spacing (all sides or {top,right,bottom,left})' },
+  margin: { type: ['number', 'string', 'object'], description: 'Outer spacing (number, CSS shorthand "v h" or "t r b l", or {top,right,bottom,left})' },
   marginTop: { type: 'number', description: 'Top outer spacing' },
   marginBottom: { type: 'number', description: 'Bottom outer spacing' },
   marginLeft: { type: 'number', description: 'Left outer spacing' },

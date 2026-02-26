@@ -87,7 +87,7 @@ export const COLOR_PROPERTY_NAMES = new Set([
 // Schemas for special melker tags
 export const SPECIAL_TAG_SCHEMAS: Record<string, Record<string, boolean>> = {
   'melker': {},
-  'script': { type: true, src: true },
+  'script': { type: true, src: true, async: true },
   'style': {},
   'title': {},
   'oauth': {

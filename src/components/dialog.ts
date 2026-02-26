@@ -457,6 +457,7 @@ export const dialogSchema: ComponentSchema = {
     open: { type: 'boolean', description: 'Whether dialog is visible' },
     draggable: { type: 'boolean', description: 'Enable dragging by title bar' },
     resizable: { type: 'boolean', description: 'Enable resizing from bottom-right corner' },
+    width: { type: ['number', 'string'], description: 'Dialog width (number for columns, string for percentage)' },
   },
 };
 

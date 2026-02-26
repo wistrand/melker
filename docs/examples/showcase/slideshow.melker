@@ -28,7 +28,7 @@ If no directory is specified, defaults to `./slides/`.
 
 | Key                    | Action             |
 |------------------------|--------------------|
-| Right / Space / Enter  | Next slide         |
+| Right / Space          | Next slide         |
 | Left / Backspace       | Previous slide     |
 | Home                   | First slide        |
 | End                    | Last slide         |
@@ -94,14 +94,14 @@ If no directory is specified, defaults to `./slides/`.
     </container>
 
     <!-- Navigation commands -->
-    <command key="ArrowRight,Space,Enter" label="Next Slide" global onExecute="$app.nextSlide()" />
-    <command key="ArrowLeft,Backspace" label="Previous Slide" global onExecute="$app.prevSlide()" />
-    <command key="Home" label="First Slide" global onExecute="$app.goToSlide(0)" />
-    <command key="End" label="Last Slide" global onExecute="$app.goToSlide(-1)" />
-    <command key="Ctrl+g" label="Go to Slide" global onExecute="$app.openGoTo()" />
-    <command key="Ctrl+f" label="Toggle Fullscreen" global onExecute="$app.toggleFullscreen()" />
-    <command key="Ctrl+o" label="Open Deck" global onExecute="$app.openFileBrowser()" />
-    <command key="Ctrl+r" label="Reload Slide" global onExecute="$app.reloadSlide()" />
+    <command key="ArrowRight,Space" label="Next Slide" global="true" onExecute="$app.nextSlide()" />
+    <command key="ArrowLeft,Backspace" label="Previous Slide" global="true" onExecute="$app.prevSlide()" />
+    <command key="Home" label="First Slide" global="true" onExecute="$app.goToSlide(0)" />
+    <command key="End" label="Last Slide" global="true" onExecute="$app.goToSlide(-1)" />
+    <command key="Ctrl+g" label="Go to Slide" global="true" onExecute="$app.openGoTo()" />
+    <command key="Ctrl+f" label="Toggle Fullscreen" global="true" onExecute="$app.toggleFullscreen()" />
+    <command key="Ctrl+o" label="Open Deck" global="true" onExecute="$app.openFileBrowser()" />
+    <command key="Ctrl+r" label="Reload Slide" global="true" onExecute="$app.reloadSlide()" />
 
     <!-- Go-to-slide dialog -->
     <dialog id="goToDialog" title="Go to Slide" modal="true" backdrop="true" width="40">
@@ -397,7 +397,7 @@ If no directory is specified, defaults to `./slides/`.
     });
 
     $melker.registerAITool({
-      name: 'search_slides',
+      name: 'search',
       description: 'Search slide contents for a query string (fuzzy, case-insensitive)',
       parameters: {
         query: { type: 'string', required: true, description: 'Text to search for' }

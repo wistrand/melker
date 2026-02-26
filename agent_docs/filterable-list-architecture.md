@@ -72,6 +72,11 @@ abstract class FilterableListCore extends Element implements Focusable {
   getValue(): string | undefined             // Get props.selectedValue
   setValue(value: string | undefined): void  // Set props.selectedValue, scroll to option
 
+  // Dynamic option management
+  setOptions(options: OptionData[] | (() => OptionData[])): void  // Set props.options + invalidate cache
+  refreshChildOptions(): void               // Re-extract from children + invalidate cache
+  invalidateFilterCache(): void             // Force re-filter on next access
+
   // Marker for engine keyboard routing
   handlesOwnKeyboard(): boolean { return true }
 }

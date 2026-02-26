@@ -822,13 +822,16 @@ Dropdown with text filter.
 - `placeholder` - Placeholder text
 - `filter`: `fuzzy` | `prefix` | `contains` | `exact`
 - `maxVisible` - Max visible options
+- `options` - Data-driven options array: `{ id, label, group?, disabled?, shortcut? }[]` (alternative to `<option>` children)
 - `onSelect` - Selection handler (`event.value`, `event.label`)
 - `width` or `style.width` - Explicit width (dropdown can expand to fit content)
 - `dropdownWidth` - Override dropdown width
 
 **Methods:**
 - `getValue()` - Get selected value
-- `setValue(value)` - Set selected value (also updates input display)
+- `setValue(value)` - Set selected value (also updates input display); pass `undefined` to clear
+- `setOptions(options)` - Set options dynamically (array or function); invalidates filter cache automatically
+- `open()` / `close()` / `toggle()` - Control dropdown visibility
 
 ### select
 
@@ -844,6 +847,7 @@ Simple dropdown picker (no filter).
 
 **Props:**
 - `value` - Selected value
+- `options` - Data-driven options array: `{ id, label, group?, disabled?, shortcut? }[]` (alternative to `<option>` children)
 - `onChange` - Selection handler (`event.value`)
 - `width` or `style.width` - Explicit width (dropdown can expand to fit content)
 - `dropdownWidth` - Override dropdown width
@@ -851,6 +855,8 @@ Simple dropdown picker (no filter).
 **Methods:**
 - `getValue()` - Get selected value
 - `setValue(value)` - Set selected value
+- `setOptions(options)` - Set options dynamically (array or function); invalidates filter cache automatically
+- `open()` / `close()` / `toggle()` - Control dropdown visibility
 
 ### autocomplete
 
@@ -875,6 +881,7 @@ Async search dropdown.
 **Methods:**
 - `getValue()` - Get selected value
 - `setValue(value)` - Set selected value (also updates input display)
+- `setOptions(options)` - Set options dynamically; invalidates filter cache automatically
 
 ### command-palette
 

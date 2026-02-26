@@ -377,6 +377,9 @@ export class RenderingEngine {
       }
     }
 
+    // Render overlays registered by modal children (e.g. combobox dropdowns inside dialogs)
+    this._renderOverlays(buffer, viewport);
+
     // Apply text selection highlighting AFTER modals so it's visible in dialogs
     if (context.textSelection?.isActive) {
       this._applySelectionHighlight(context.textSelection, buffer);
@@ -528,6 +531,9 @@ export class RenderingEngine {
       }
     }
 
+    // Render overlays registered by modal children (e.g. combobox dropdowns inside dialogs)
+    this._renderOverlays(buffer, viewport);
+
     // Apply text selection highlighting AFTER modals so it's visible in dialogs
     if (textSelection?.isActive) {
       this._applySelectionHighlight(textSelection, buffer);
@@ -592,6 +598,9 @@ export class RenderingEngine {
         this._renderModal(modal, context);
       }
     }
+
+    // Render overlays registered by modal children (e.g. combobox dropdowns inside dialogs)
+    this._renderOverlays(buffer, this._cachedViewport);
 
     return true;
   }

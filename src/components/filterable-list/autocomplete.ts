@@ -201,7 +201,7 @@ export class AutocompleteElement extends ComboboxElement {
   /**
    * Set dynamic options (can be called from search handler)
    */
-  setOptions(options: OptionData[]): void {
+  override setOptions(options: OptionData[]): void {
     this._dynamicOptions = options;
     this.invalidateFilterCache();
   }

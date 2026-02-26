@@ -209,6 +209,14 @@ export abstract class FilterableListCore extends Element implements Focusable {
   }
 
   /**
+   * Set options programmatically and invalidate the filter cache
+   */
+  setOptions(options: OptionData[] | (() => OptionData[])): void {
+    this.props.options = options;
+    this._filterCacheValid = false;
+  }
+
+  /**
    * Get all options (from children + options prop)
    */
   getAllOptions(): OptionData[] {

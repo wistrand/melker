@@ -814,9 +814,17 @@ See `agent_docs/filterable-list-architecture.md` for implementation details.
 | `maxVisible` | number   | Max dropdown height (default: 8)               |
 | `onSelect`   | function | Called when option selected                    |
 
+### Key Props (shared, continued)
+
+| Prop      | Type              | Description                                        |
+|-----------|-------------------|----------------------------------------------------|
+| `options` | array or function | Data-driven options (alternative to `<option>` children) |
+
+The `options` prop accepts `{ id, label, group?, disabled?, shortcut? }` objects or a function returning them.
+
 ### Methods (shared)
 
-All filterable list components provide consistent value access methods:
+All filterable list components provide consistent methods:
 
 ```typescript
 const select = document.getElementById('mySelect');
@@ -825,7 +833,20 @@ select.setValue('option1'); // Set selected value (scrolls to option)
 
 // For combobox/autocomplete, setValue also updates the input display
 const combo = document.getElementById('myCombo');
-combo.setValue('us');      // Selects option and shows its label in input
+combo.setValue('us');       // Selects option and shows its label in input
+combo.setValue(undefined);  // Clear selection and input text
+
+// Set options dynamically (invalidates filter cache automatically)
+combo.setOptions([
+  { id: 'us', label: 'United States' },
+  { id: 'uk', label: 'United Kingdom' },
+]);
+
+// Or use a function for lazy evaluation
+combo.setOptions(() => getAvailableOptions());
+
+// After modifying children directly, refresh the child options cache
+combo.refreshChildOptions();
 ```
 
 ### Implementation Files

@@ -27,9 +27,11 @@ Arrow keys via `<command>` elements — no conflict since markdown doesn't handl
 | Left / Backspace       | Previous slide                   |
 | Home                   | First slide                      |
 | End                    | Last slide                       |
-| Ctrl+G                 | Go-to dialog (number input)      |
+| Ctrl+G                 | Go-to dialog (combobox filter)   |
 | Ctrl+F                 | Toggle fullscreen (hide chrome)  |
 | Ctrl+O                 | Open file browser to pick deck   |
+| Ctrl+R                 | Reload current slide             |
+| Ctrl+U                 | Toggle view source               |
 
 ## Layout
 
@@ -49,8 +51,8 @@ Arrow keys via `<command>` elements — no conflict since markdown doesn't handl
 ```
 
 - Header: slide title (parsed from first `# heading` in the .md) + counter, `--theme-surface` background
-- Body: single `<markdown>` component with scrollable overflow
-- Footer: slider (interactive, click to navigate) + nav hints, `--theme-surface` background
+- Body: single `<markdown>` component with scrollable overflow; `<textarea>` for source view (toggled with Ctrl+U)
+- Footer: terminal dimensions display + slider (interactive, click to navigate) + nav hints, `--theme-surface` background
 - Fullscreen mode (Ctrl+F) hides header/footer, gives markdown 100% height
 - All colors use CSS theme variables — adapts to any theme
 
@@ -60,9 +62,11 @@ Arrow keys via `<command>` elements — no conflict since markdown doesn't handl
 |----------------|------------------------------------------------------|
 | `markdown`     | Slide content with `src` prop, GFM, images, mermaid  |
 | `text`         | Header title, slide counter, footer hints             |
+| `textarea`     | Read-only source view (toggled with Ctrl+U)           |
 | `slider`       | Interactive slide position (click/drag to navigate)   |
 | `command`      | Global keyboard shortcuts for navigation              |
-| `dialog`       | Go-to-slide dialog with number input                  |
+| `dialog`       | Go-to-slide dialog (draggable, no backdrop)           |
+| `combobox`     | Fuzzy-filtered slide picker inside go-to dialog       |
 | `file-browser` | Pick slide deck directory (Ctrl+O)                    |
 
 ## AI Tools
@@ -85,8 +89,8 @@ CSS `@keyframes` animations applied via classList toggling. Direction-aware slid
   to   { left: 0;   opacity: 1; }
 }
 @keyframes slideInPrev {
-  from { left: -200; opacity: 0; }
-  to   { left: 0;    opacity: 1; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 .anim-next { animation: slideInNext 250ms ease-out forwards; }
 .anim-prev { animation: slideInPrev 250ms ease-out forwards; }
@@ -116,7 +120,7 @@ function transitionSlide(direction: 'next' | 'prev' | 'none'): void {
 Minimal — just file read (auto-granted for cwd):
 
 ```json
-{ "permissions": { "read": ["cwd"], "browser": true } }
+{ "permissions": { "read": ["cwd"], "net": ["*"], "browser": true } }
 ```
 
 ## Arguments
@@ -163,12 +167,12 @@ The slide directory basename is set as the terminal title via `$melker.setTitle(
 - [x] Slide counter in header (`3 / 10`)
 - [x] Slider in footer (interactive navigation)
 - [x] Boundary guards (toast at first/last slide)
-- [x] Go-to dialog: Ctrl+G opens dialog with number input, Enter confirms
+- [x] Go-to dialog: Ctrl+G opens combobox dialog with fuzzy slide filtering
 - [x] Fullscreen toggle: Ctrl+F hides/shows header and footer
 
 ### Phase 3: Go-To + File Browser
 
-- [x] Go-to dialog: Ctrl+G opens dialog with number input, Enter confirms (done in Phase 2)
+- [x] Go-to dialog: Ctrl+G opens combobox dialog with fuzzy slide filtering (done in Phase 2)
 - [x] File browser: Ctrl+O opens file-browser for directory selection
 - [x] Update slide list when new directory selected, toast on success/error
 - [x] Terminal title updates on deck switch
@@ -217,6 +221,11 @@ During development, three Melker core bugs were discovered and fixed:
   - extractTitle(content)   -- parse first # heading
   - transitionSlide(dir)    -- classList-based @keyframes animation
   - nextSlide(), prevSlide(), goToSlide(n)
+  - openGoTo()              -- open combobox go-to dialog (setOptions + setValue + open)
+  - selectFromIndex(event)  -- combobox selection handler
+  - toggleSource()          -- toggle markdown/source view (Ctrl+U)
+  - reloadSlide()           -- reload current slide (Ctrl+R)
+  - updateFooterInfo()      -- update terminal dimensions display
 
 <script async="ready">   -- Initial load
   - Parse argv[1]: directory or .md file (extract parent dir + start file)

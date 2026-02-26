@@ -107,15 +107,10 @@ If no directory is specified, defaults to `./slides/`.
     <command key="Ctrl+u" label="View Source" global="true" onExecute="$app.toggleSource()" />
 
     <!-- Go-to-slide dialog -->
-    <dialog id="goToDialog" title="Go to Slide" modal="true" backdrop="true" width="40">
-      <container style="padding: 1; gap: 1;">
-        <text id="goToLabel">Enter slide number (1-5):</text>
-        <input id="goToInput" placeholder="1"
-          onKeyPress="if (event.key === 'Enter') $app.confirmGoTo()" />
-        <container style="flex-direction: row; gap: 1; justify-content: flex-end;">
-          <button label="Cancel" onClick="$app.closeGoTo()" />
-          <button label="Go" onClick="$app.confirmGoTo()" />
-        </container>
+    <dialog id="goToDialog" title="Go to Slide" modal="true" backdrop="false" draggable="true" width="50">
+      <container style="padding: 1;">
+        <combobox id="goToCombo" placeholder="Type to filter slides..." style="width: 46;" filter="fuzzy"
+          onSelect="$app.selectFromIndex(event)" />
       </container>
     </dialog>
 
@@ -304,26 +299,25 @@ If no directory is specified, defaults to `./slides/`.
 
     // Go-to-slide dialog
     export function openGoTo(): void {
-      const label = $melker.getElementById('goToLabel');
-      if (label) label.setValue('Enter slide number (1-' + slides.length + '):');
-      const input = $melker.getElementById('goToInput');
-      if (input) input.setValue('');
+      const combo = $melker.getElementById('goToCombo');
+      if (!combo) {
+        $melker.logger.info("no goToCombo");
+        return;
+      }
+      $melker.logger.info("slides=", slides);
+      combo.setOptions(slides.map((name: string, i: number) => ({
+        id: String(i),
+        label: (i + 1) + '. ' + name.replace('.md', ''),
+      })));
+      combo.setValue(undefined);
+      combo.open();
       $melker.getElementById('goToDialog')?.show();
     }
 
-    export function closeGoTo(): void {
+    export function selectFromIndex(event: any): void {
       $melker.getElementById('goToDialog')?.hide();
-    }
-
-    export function confirmGoTo(): void {
-      const input = $melker.getElementById('goToInput');
-      const val = Number(input?.getValue());
-      if (isNaN(val) || val < 1 || val > slides.length) {
-        $melker.toast.show('Enter a number between 1 and ' + slides.length, { type: 'warning' });
-        return;
-      }
-      closeGoTo();
-      showSlide(val - 1);
+      const index = parseInt(event.value, 10);
+      if (!isNaN(index)) showSlide(index);
     }
 
     // Fullscreen toggle

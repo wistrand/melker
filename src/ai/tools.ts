@@ -2,6 +2,7 @@
 // Defines tools that the AI assistant can use to interact with the UI
 
 import { Document } from '../document.ts';
+import { FocusManager } from '../focus.ts';
 import { getLogger } from '../logging.ts';
 import { hasKeyInputHandler, hasGetContent } from '../types.ts';
 import { ensureError } from '../utils/error.ts';
@@ -45,6 +46,7 @@ export interface ToolResult {
 // Context for tool execution
 export interface ToolContext {
   document: Document;
+  focusManager: FocusManager | null;
   closeDialog: () => void;
   exitProgram: () => void | Promise<void>;
   render: () => void;
@@ -436,8 +438,15 @@ function executeSendEvent(
     }
 
     case 'focus': {
-      // This would need focusManager integration
-      return { success: true, message: `Focused element: ${elementId}` };
+      if (context.focusManager) {
+        const focused = context.focusManager.focus(elementId);
+        if (focused) {
+          context.render();
+          return { success: true, message: `Focused element: ${elementId}` };
+        }
+        return { success: false, message: `Element ${elementId} is not focusable` };
+      }
+      return { success: false, message: `Focus management is not available` };
     }
 
     case 'keypress': {

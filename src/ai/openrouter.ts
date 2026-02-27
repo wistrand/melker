@@ -95,9 +95,10 @@ export async function streamChat(
   messages: ChatMessage[],
   config: OpenRouterConfig,
   callback: StreamCallback,
-  tools?: ApiTool[]
+  tools?: ApiTool[],
+  signal?: AbortSignal
 ): Promise<void> {
-  logger.info('Starting chat stream', {
+  logger.debug('Starting chat stream', {
     model: config.model,
     messageCount: messages.length,
     toolCount: tools?.length || 0
@@ -117,7 +118,7 @@ export async function streamChat(
     }
 
     // Log the full request for debugging
-    logger.info('Sending API request', {
+    logger.debug('Sending API request', {
       model: config.model,
       messageCount: messages.length,
       hasTools: !!tools && tools.length > 0,
@@ -150,6 +151,7 @@ export async function streamChat(
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody),
+      signal,
     });
 
     if (!response.ok) {
@@ -200,7 +202,7 @@ export async function streamChat(
           if (data === '[DONE]') {
             // Check if we have tool calls to report
             const doneToolCalls = Array.from(pendingToolCalls.values());
-            logger.info('[DONE] received', {
+            logger.debug('[DONE] received', {
               responseLength: fullResponse.length,
               response: fullResponse.substring(0, 500),
               pendingToolCallCount: pendingToolCalls.size,
@@ -208,7 +210,7 @@ export async function streamChat(
             });
 
             if (pendingToolCalls.size > 0) {
-              logger.info('Triggering onToolCall callback', {
+              logger.debug('Triggering onToolCall callback', {
                 toolCallCount: doneToolCalls.length,
                 tools: doneToolCalls.map(tc => tc.function.name)
               });
@@ -223,7 +225,7 @@ export async function streamChat(
               }
               return;
             }
-            logger.info('Triggering onComplete callback', { responseLength: fullResponse.length });
+            logger.debug('Triggering onComplete callback', { responseLength: fullResponse.length });
             callback.onComplete(fullResponse);
             return;
           }
@@ -266,7 +268,7 @@ export async function streamChat(
                     },
                   };
                   pendingToolCalls.set(index, newToolCall);
-                  logger.info('New tool call started', { index, toolCall: JSON.stringify(newToolCall) });
+                  logger.debug('New tool call started', { index, toolCall: JSON.stringify(newToolCall) });
                 } else {
                   // Append to existing tool call
                   const existing = pendingToolCalls.get(index)!;
@@ -297,7 +299,7 @@ export async function streamChat(
                       existing.function.arguments += newArgs;
                     }
                   }
-                  logger.info('Tool call updated', { index, toolCall: JSON.stringify(existing) });
+                  logger.debug('Tool call updated', { index, toolCall: JSON.stringify(existing) });
                 }
               }
             }
@@ -310,7 +312,7 @@ export async function streamChat(
 
     // If we exit the loop without [DONE], check for tool calls or complete
     const finalToolCalls = Array.from(pendingToolCalls.values());
-    logger.info('Stream ended (no [DONE] marker)', {
+    logger.debug('Stream ended (no [DONE] marker)', {
       responseLength: fullResponse.length,
       response: fullResponse.substring(0, 500),
       pendingToolCallCount: pendingToolCalls.size,
@@ -319,7 +321,7 @@ export async function streamChat(
 
     if (pendingToolCalls.size > 0) {
       const toolCalls = Array.from(pendingToolCalls.values());
-      logger.info('Chat stream completed with tool calls (no [DONE])', {
+      logger.debug('Chat stream completed with tool calls (no [DONE])', {
         toolCallCount: toolCalls.length,
         toolCalls: toolCalls.map(tc => ({ name: tc.function.name, args: tc.function.arguments }))
       });
@@ -327,7 +329,7 @@ export async function streamChat(
         callback.onToolCall(toolCalls);
       }
     } else {
-      logger.info('Chat stream completed (no [DONE])', { responseLength: fullResponse.length });
+      logger.debug('Chat stream completed (no [DONE])', { responseLength: fullResponse.length });
       callback.onComplete(fullResponse);
     }
   } catch (error) {

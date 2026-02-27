@@ -7,7 +7,7 @@ import { melker } from '../template.ts';
 import { Element } from '../types.ts';
 import { FocusManager } from '../focus.ts';
 import { getLogger } from '../logging.ts';
-import { getOpenRouterConfig, streamChat, type ChatMessage, type ToolCallRequest } from './openrouter.ts';
+import { getOpenRouterConfig, streamChat, type ChatMessage, type ToolCallRequest, type OpenRouterConfig, type ApiTool } from './openrouter.ts';
 import { ensureError } from '../utils/error.ts';
 import { buildContext, buildSystemPrompt, hashContext, type UIContext } from './context.ts';
 import { getGlobalCache } from './cache.ts';
@@ -72,6 +72,15 @@ const DEFAULT_LISTEN_DURATION = 10;
 const MAX_MESSAGES_BEFORE_COMPACT = 10;
 // Target number of messages after compaction
 const COMPACT_TARGET_MESSAGES = 4;
+// Maximum tool call rounds before forcing a text response
+const MAX_TOOL_ROUNDS = 3;
+
+/** Result of a single streaming round */
+interface StreamRoundResult {
+  type: 'complete' | 'tool_calls';
+  response: string;
+  toolCalls?: ToolCallRequest[];
+}
 
 // Default dialog dimensions
 const DEFAULT_DIALOG_WIDTH = 70;
@@ -89,6 +98,7 @@ export class AccessibilityDialogManager {
   private _overlay?: Element;
   private _deps: AccessibilityDialogDependencies;
   private _isProcessing = false;
+  private _abortController?: AbortController;
   private _currentResponse = '';
   private _conversationHistory = '';  // Accumulated Q+A history for display
   private _messageHistory: ChatMessage[] = [];  // Full conversation for API context
@@ -366,6 +376,10 @@ export class AccessibilityDialogManager {
 
     logger.info('Processing accessibility query', { query });
 
+    // Abort any previous in-flight request
+    this._abortController?.abort();
+    this._abortController = new AbortController();
+
     // Clear the input field
     inputElement.props.value = '';
 
@@ -375,7 +389,7 @@ export class AccessibilityDialogManager {
     // Build context excluding the dialog itself
     // Include any currently selected text
     const selectedText = this._deps.getSelectedText?.();
-    const context = buildContext(
+    let context = buildContext(
       this._deps.document,
       AccessibilityDialogManager.getExcludeIds(),
       selectedText
@@ -442,6 +456,7 @@ export class AccessibilityDialogManager {
     // Create tool context for execution
     const toolContext: ToolContext = {
       document: this._deps.document,
+      focusManager: this._deps.focusManager,
       closeDialog: () => this.close(),
       exitProgram: async () => {
         // Close the dialog first
@@ -454,235 +469,100 @@ export class AccessibilityDialogManager {
       render: () => this._deps.render(),
     };
 
-    // Stream the response
+    // Iterative tool loop — up to MAX_TOOL_ROUNDS of tool calls
     try {
-      await streamChat(messages, config, {
-        onToken: (token) => {
-          this._currentResponse += token;
-          responseElement.props.text = this._conversationHistory + this._currentResponse;
-          this._debouncedRender();
-        },
-        onComplete: async (fullResponse) => {
-          // Flush any pending debounced render before completing
-          this._flushRender();
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        // Build system prompt with nudge towards finishing if near limit
+        let systemPrompt = buildSystemPrompt(context);
+        if (round >= MAX_TOOL_ROUNDS - 2 && round > 0) {
+          systemPrompt += '\n\nIMPORTANT: You are running low on tool calls. '
+            + 'Finish your task now and respond to the user with what you have. '
+            + (round >= MAX_TOOL_ROUNDS - 1
+              ? 'This is your LAST chance to respond — do NOT call any more tools.'
+              : 'You have one more tool call available if absolutely necessary.');
+        }
 
-          // Update conversation history with complete response
-          this._conversationHistory += fullResponse;
-          responseElement.props.text = this._conversationHistory;
+        const roundMessages: ChatMessage[] = [
+          { role: 'system', content: systemPrompt },
+          ...this._messageHistory,
+        ];
 
-          // Add assistant response to message history
-          this._messageHistory.push({ role: 'assistant', content: fullResponse });
-
-          logger.debug('Response complete', {
-            historyLength: this._messageHistory.length,
-            responseLength: fullResponse.length
-          });
-
-          // Cache the complete response
-          cache.set(query, contextHash, fullResponse);
-
-          if (statusElement) {
-            statusElement.props.text = '';
-          }
-          this._isProcessing = false;
-          this._deps.render();
-          this._scrollToBottom();
-
-          // Check if we need to compact the history
-          if (this._messageHistory.length > MAX_MESSAGES_BEFORE_COMPACT) {
-            await this._compactHistory();
-          }
-        },
-        onToolCall: async (toolCalls: ToolCallRequest[]) => {
-          // Handle tool calls from the model
-          logger.info('Received tool calls', {
-            count: toolCalls.length,
-            tools: toolCalls.map(tc => tc.function.name)
-          });
-
-          // Add assistant message with tool calls to history
-          // Ensure arguments are valid JSON before storing
-          const sanitizedToolCalls = toolCalls.map(tc => {
-            let validArgs = '{}';
-            try {
-              // Parse and re-stringify to ensure valid JSON
-              const parsed = JSON.parse(tc.function.arguments || '{}');
-              validArgs = JSON.stringify(parsed);
-            } catch {
-              logger.warn('Invalid tool call arguments, using empty object', {
-                toolName: tc.function.name,
-                rawArgs: tc.function.arguments
-              });
-            }
-            return {
-              ...tc,
-              function: {
-                ...tc.function,
-                arguments: validArgs
-              }
-            };
-          });
-
-          this._messageHistory.push({
-            role: 'assistant',
-            content: null,
-            tool_calls: sanitizedToolCalls,
-          });
-
-          // Execute each tool and collect results
-          const toolResults: Array<{ id: string; result: string }> = [];
-          for (const toolCall of toolCalls) {
-            // Parse arguments with error handling
-            let parsedArgs: Record<string, unknown> = {};
-            const rawArgs = toolCall.function.arguments || '{}';
-            logger.info('Parsing tool call arguments', {
-              toolName: toolCall.function.name,
-              rawArgs: rawArgs,
-              rawArgsLength: rawArgs.length
-            });
-            try {
-              parsedArgs = JSON.parse(rawArgs);
-              logger.info('Parsed tool call arguments', {
-                toolName: toolCall.function.name,
-                parsedArgs: JSON.stringify(parsedArgs)
-              });
-            } catch (parseError) {
-              logger.error('Failed to parse tool call arguments', parseError instanceof Error ? parseError : new Error(String(parseError)), {
-                toolName: toolCall.function.name,
-                rawArgs: rawArgs
-              });
-              // Try to extract just the JSON object if there's extra content
-              const jsonMatch = rawArgs.match(/^\s*(\{[\s\S]*?\})\s*/);
-              if (jsonMatch) {
-                try {
-                  parsedArgs = JSON.parse(jsonMatch[1]);
-                  logger.info('Recovered JSON from malformed arguments', { recovered: jsonMatch[1] });
-                } catch {
-                  // Give up and use empty args
-                  logger.warn('Could not recover JSON, using empty args');
-                }
-              }
-            }
-
-            const toolCallParsed: ToolCall = {
-              id: toolCall.id,
-              name: toolCall.function.name,
-              arguments: parsedArgs,
-            };
-
-            const result = await executeTool(toolCallParsed, toolContext);
-
-            // Add to results
-            toolResults.push({
-              id: toolCall.id,
-              result: JSON.stringify(result),
-            });
-
-            // Update conversation display
-            const actionText = `*[Action: ${toolCall.function.name}]*\n${result.message}\n\n`;
-            this._conversationHistory += actionText;
-            responseElement.props.text = this._conversationHistory;
-            this._deps.render();
-          }
-
-          // Add tool results to message history
-          for (const result of toolResults) {
-            this._messageHistory.push({
-              role: 'tool',
-              content: result.result,
-              tool_call_id: result.id,
-            });
-          }
-
-          // Continue the conversation if tools were called
-          // The model might want to respond after seeing tool results
+        if (round > 0) {
           if (statusElement) {
             statusElement.props.text = 'Continuing...';
           }
           this._deps.render();
-
-          // Build new messages including tool results
-          const continueMessages: ChatMessage[] = [
-            { role: 'system', content: buildSystemPrompt(context) },
-            ...this._messageHistory,
-          ];
-
-          // Make another call to get the final response
           this._currentResponse = '';
           this._conversationHistory += '**Assistant:** ';
+        }
 
-          // Log message history state before continuation
-          logger.info('Message history before continuation', {
-            length: this._messageHistory.length,
-            roles: this._messageHistory.map(m => m.role)
-          });
+        logger.debug('Streaming round', {
+          round,
+          historyLength: this._messageHistory.length,
+          totalMessages: roundMessages.length,
+          roles: this._messageHistory.map(m => m.role)
+        });
 
-          // Re-read config to allow dynamic changes
-          const continueConfig = getOpenRouterConfig();
-          if (!continueConfig) {
-            logger.error('Config became unavailable during continuation');
-            return;
-          }
+        // Re-read config each round to allow dynamic changes
+        const roundConfig = round === 0 ? config : getOpenRouterConfig();
+        if (!roundConfig) {
+          logger.error('Config became unavailable during tool loop');
+          break;
+        }
 
-          await streamChat(continueMessages, continueConfig, {
-            onToken: (token) => {
-              this._currentResponse += token;
-              responseElement.props.text = this._conversationHistory + this._currentResponse;
-              this._debouncedRender();
-            },
-            onComplete: async (fullResponse) => {
-              // Flush any pending debounced render before completing
-              this._flushRender();
+        // Stream one round and get the result
+        const result = await this._streamRound(roundMessages, roundConfig, tools, responseElement);
 
-              this._conversationHistory += fullResponse;
-              responseElement.props.text = this._conversationHistory;
-              this._messageHistory.push({ role: 'assistant', content: fullResponse });
-
-              if (statusElement) {
-                statusElement.props.text = '';
-              }
-              this._isProcessing = false;
-              this._deps.render();
-              this._scrollToBottom();
-
-              if (this._messageHistory.length > MAX_MESSAGES_BEFORE_COMPACT) {
-                await this._compactHistory();
-              }
-            },
-            onError: (error) => {
-              logger.error('Continuation call failed', error);
-              const errorMsg = formatAIError(error);
-              // Add placeholder assistant message to maintain alternation
-              this._messageHistory.push({
-                role: 'assistant',
-                content: `[Error during response: ${errorMsg}]`
-              });
-              this._conversationHistory += `*Error: ${errorMsg}*`;
-              responseElement.props.text = this._conversationHistory;
-              if (statusElement) {
-                statusElement.props.text = '';
-              }
-              this._isProcessing = false;
-              this._deps.render();
-            },
-          });
-        },
-        onError: (error) => {
-          // Remove the user message that failed
-          this._messageHistory.pop();
-          const errorMsg = formatAIError(error);
-          this._conversationHistory += `*Error: ${errorMsg}*`;
+        if (result.type === 'complete') {
+          // Text response — we're done
+          this._conversationHistory += result.response;
           responseElement.props.text = this._conversationHistory;
-          if (statusElement) {
-            statusElement.props.text = '';
-          }
-          this._isProcessing = false;
-          this._deps.render();
-        },
-      }, tools);
+          this._messageHistory.push({ role: 'assistant', content: result.response });
+
+          logger.debug('Response complete', {
+            round,
+            historyLength: this._messageHistory.length,
+            responseLength: result.response.length
+          });
+
+          cache.set(query, contextHash, result.response);
+          break;
+        }
+
+        // Tool calls — execute them and loop
+        logger.debug('Received tool calls', {
+          round,
+          count: result.toolCalls!.length,
+          tools: result.toolCalls!.map(tc => tc.function.name)
+        });
+
+        await this._executeToolCalls(result.toolCalls!, toolContext, responseElement);
+
+        // Rebuild context after tools may have modified the UI
+        const selectedText = this._deps.getSelectedText?.();
+        context = buildContext(
+          this._deps.document,
+          AccessibilityDialogManager.getExcludeIds(),
+          selectedText
+        );
+      }
+
+      if (statusElement) {
+        statusElement.props.text = '';
+      }
+      this._isProcessing = false;
+      this._deps.render();
+      this._scrollToBottom();
+
+      if (this._messageHistory.length > MAX_MESSAGES_BEFORE_COMPACT) {
+        await this._compactHistory();
+      }
     } catch (error) {
-      // Remove the user message that failed
-      this._messageHistory.pop();
+      // Remove the user message that failed (only if no tool calls were processed)
+      const lastMsg = this._messageHistory[this._messageHistory.length - 1];
+      if (lastMsg?.role === 'user') {
+        this._messageHistory.pop();
+      }
       const rawMsg = error instanceof Error ? error.message : String(error);
       const errorMsg = formatAIError(rawMsg);
       this._conversationHistory += `*Error: ${errorMsg}*`;
@@ -692,6 +572,131 @@ export class AccessibilityDialogManager {
       }
       this._isProcessing = false;
       this._deps.render();
+    }
+  }
+
+  /**
+   * Stream a single round of chat, returning either a text completion or tool calls.
+   */
+  private _streamRound(
+    messages: ChatMessage[],
+    config: OpenRouterConfig,
+    tools: ApiTool[],
+    responseElement: Element,
+  ): Promise<StreamRoundResult> {
+    const signal = this._abortController?.signal;
+    return new Promise<StreamRoundResult>((resolve, reject) => {
+      streamChat(messages, config, {
+        onToken: (token) => {
+          if (!this._isProcessing) return;
+          this._currentResponse += token;
+          responseElement.props.text = this._conversationHistory + this._currentResponse;
+          this._debouncedRender();
+        },
+        onComplete: (fullResponse) => {
+          if (!this._isProcessing) return;
+          this._flushRender();
+          resolve({ type: 'complete', response: fullResponse });
+        },
+        onToolCall: async (toolCalls) => {
+          if (!this._isProcessing) return;
+          this._flushRender();
+          resolve({ type: 'tool_calls', response: '', toolCalls });
+        },
+        onError: (error) => {
+          reject(error);
+        },
+      }, tools, signal);
+    });
+  }
+
+  /**
+   * Execute tool calls and update message history and conversation display.
+   */
+  private async _executeToolCalls(
+    toolCalls: ToolCallRequest[],
+    toolContext: ToolContext,
+    responseElement: Element,
+  ): Promise<void> {
+    // Sanitize and store the assistant's tool call message
+    const sanitizedToolCalls = toolCalls.map(tc => {
+      let validArgs = '{}';
+      try {
+        const parsed = JSON.parse(tc.function.arguments || '{}');
+        validArgs = JSON.stringify(parsed);
+      } catch {
+        logger.warn('Invalid tool call arguments, using empty object', {
+          toolName: tc.function.name,
+          rawArgs: tc.function.arguments
+        });
+      }
+      return {
+        ...tc,
+        function: { ...tc.function, arguments: validArgs }
+      };
+    });
+
+    this._messageHistory.push({
+      role: 'assistant',
+      content: null,
+      tool_calls: sanitizedToolCalls,
+    });
+
+    // Execute each tool
+    for (const toolCall of toolCalls) {
+      const parsedArgs = this._parseToolArgs(toolCall);
+
+      const toolCallParsed: ToolCall = {
+        id: toolCall.id,
+        name: toolCall.function.name,
+        arguments: parsedArgs,
+      };
+
+      const result = await executeTool(toolCallParsed, toolContext);
+
+      // Add tool result to history
+      this._messageHistory.push({
+        role: 'tool',
+        content: JSON.stringify(result),
+        tool_call_id: toolCall.id,
+      });
+
+      // Update conversation display
+      const actionText = `*[Action: ${toolCall.function.name}]*\n${result.message}\n\n`;
+      this._conversationHistory += actionText;
+      responseElement.props.text = this._conversationHistory;
+      this._deps.render();
+    }
+  }
+
+  /**
+   * Parse tool call arguments with fallback recovery.
+   */
+  private _parseToolArgs(toolCall: ToolCallRequest): Record<string, unknown> {
+    const rawArgs = toolCall.function.arguments || '{}';
+    logger.debug('Parsing tool call arguments', {
+      toolName: toolCall.function.name,
+      rawArgs,
+    });
+    try {
+      return JSON.parse(rawArgs);
+    } catch (parseError) {
+      logger.error('Failed to parse tool call arguments', parseError instanceof Error ? parseError : new Error(String(parseError)), {
+        toolName: toolCall.function.name,
+        rawArgs,
+      });
+      // Try to extract just the JSON object if there's extra content
+      const jsonMatch = rawArgs.match(/^\s*(\{[\s\S]*?\})\s*/);
+      if (jsonMatch) {
+        try {
+          const recovered = JSON.parse(jsonMatch[1]);
+          logger.debug('Recovered JSON from malformed arguments', { recovered: jsonMatch[1] });
+          return recovered;
+        } catch {
+          logger.warn('Could not recover JSON, using empty args');
+        }
+      }
+      return {};
     }
   }
 
@@ -897,9 +902,15 @@ export class AccessibilityDialogManager {
       }
 
       // Format old messages for summarization
-      const oldConversation = oldMessages.map(m =>
-        `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`
-      ).join('\n\n');
+      const oldConversation = oldMessages.map(m => {
+        if (m.role === 'user') return `User: ${m.content}`;
+        if (m.role === 'assistant' && m.tool_calls) {
+          const calls = m.tool_calls.map(tc => `${tc.function.name}(${tc.function.arguments})`).join(', ');
+          return `Assistant called tools: ${calls}`;
+        }
+        if (m.role === 'tool') return `Tool result: ${m.content}`;
+        return `Assistant: ${m.content}`;
+      }).join('\n\n');
 
       // Ask the model to summarize
       const summaryMessages: ChatMessage[] = [
@@ -1023,6 +1034,8 @@ export class AccessibilityDialogManager {
 
     this._overlay = undefined;
     this._isProcessing = false;
+    this._abortController?.abort();
+    this._abortController = undefined;
     this._currentResponse = '';
 
     this._deps.forceRender();

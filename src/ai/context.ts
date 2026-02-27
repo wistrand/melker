@@ -551,7 +551,9 @@ ${context.availableActions.map(a => '- ' + a).join('\n')}
 
 Answer the user's question about the UI concisely and helpfully.
 Focus on what they can do and how to navigate.
-Keep responses brief - typically 1-3 sentences.`;
+Keep responses brief - typically 1-3 sentences.
+
+When the user asks you to DO something (click a button, check a checkbox, type text, select an option, navigate, etc.), use the send_event tool to actually perform the action — don't just describe how to do it.`;
 
   // If the app registered custom tools, tell the model about them
   const customTools = getCustomTools();

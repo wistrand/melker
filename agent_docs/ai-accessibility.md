@@ -47,6 +47,41 @@ OpenRouter API (streaming + tool calls)
 Response streamed to dialog (debounced 50ms)
 ```
 
+### Evaluation Loop Detail
+
+```
+User types query → Enter/Send
+  │
+  ├─ Abort any in-flight request (AbortController)
+  ├─ Read input, clear field
+  ├─ buildContext() — serialize UI state
+  ├─ hashContext() — djb2 cache key
+  ├─ Cache check (exact query + context hash)
+  │    └─ HIT → display cached, return
+  ├─ Push user message to _messageHistory
+  │
+  ├─ Tool loop (up to MAX_TOOL_ROUNDS = 3):
+  │    ├─ Build messages: [system prompt + nudge, ...history]
+  │    ├─ _streamRound() — SSE to OpenRouter
+  │    │    ├─ onToken: append, debounced render (50ms)
+  │    │    │    └─ guarded: if (!_isProcessing) return
+  │    │    ├─ onToolCall → { type: 'tool_calls', calls }
+  │    │    └─ onComplete → { type: 'complete', response }
+  │    ├─ If complete: cache, push assistant msg, break
+  │    └─ If tool_calls:
+  │         ├─ _executeToolCalls() — sanitize, run, push results
+  │         ├─ Rebuild context via buildContext() (fresh UI state)
+  │         └─ Continue loop
+  │
+  └─ If history > 10 → _compactHistory() (summarize via LLM)
+```
+
+As the tool loop approaches its limit, the system prompt is augmented with escalating nudges:
+- **Round 1 of 3**: soft nudge — "finish your task now, one more tool call if needed"
+- **Round 2 of 3**: hard nudge — "this is your LAST chance, do NOT call tools"
+
+This gives the model a chance to synthesize a text response rather than being cut off mid-chain.
+
 ## Files
 
 | File                             | Purpose                                         |
@@ -170,17 +205,23 @@ registerAITool({
 
 Tool handlers receive:
 - `args`: Parsed arguments from the model
-- `context`: `{ document, closeDialog, exitProgram, render }`
+- `context`: `{ document, focusManager, closeDialog, exitProgram, render }`
 
 Return `{ success: boolean, message: string, data?: any }`.
 
 ### Tool Execution Flow
 
+The tool loop runs up to `MAX_TOOL_ROUNDS` (3) iterations:
+
 1. User asks something that requires UI interaction
-2. Model decides to call a tool (e.g., `read_element` to get content)
-3. Tool is executed, result returned to model
-4. Model continues with tool results in context
-5. Final response generated
+2. Model decides to call one or more tools (e.g., `send_event` to click a button)
+3. Tools are executed, results pushed to message history
+4. UI context is rebuilt (tools may have changed the UI)
+5. Model continues with fresh context and tool results
+6. Steps 2–5 repeat if the model calls more tools (up to the round limit)
+7. Final text response generated
+
+Each round uses `_streamRound()`, a Promise wrapper around callback-based `streamChat`, returning `{ type: 'complete', response }` or `{ type: 'tool_calls', calls }`.
 
 ## ARIA Support
 
@@ -308,7 +349,18 @@ Token updates batched every 50ms to reduce rendering overhead.
 Text in the response can be selected and copied (Ctrl+C).
 
 ### Conversation History
-Multi-turn conversations supported. History compacted after 10 messages using summarization.
+Multi-turn conversations supported. History compacted after 10 messages using LLM summarization. Compaction properly formats all message roles:
+- User messages: `User: content`
+- Assistant tool calls: `Assistant called tools: name(args)`
+- Tool results: `Tool result: content`
+- Assistant text: `Assistant: content`
+
+### Cancellation
+An `AbortController` is threaded through `streamChat` to the `fetch` call. Aborting happens:
+- When the user submits a new query while one is in-flight
+- When the dialog is closed
+
+Callbacks (`onToken`, `onComplete`, `onToolCall`) are guarded with `if (!this._isProcessing) return` to prevent stale updates after the dialog closes.
 
 ## Message Handling
 
@@ -345,14 +397,16 @@ UI structure:
 Available keyboard actions:
 {availableActions}
 
-IMPORTANT: When the user asks you to summarize, translate, explain, or work with
-text content from an element, you MUST first use the read_element tool to get the
-full text content. The screen content above may be truncated.
-
 Answer the user's question about the UI concisely and helpfully.
 Focus on what they can do and how to navigate.
 Keep responses brief - typically 1-3 sentences.
+
+When the user asks you to DO something (click a button, check a checkbox, type text,
+select an option, navigate, etc.), use the send_event tool to actually perform the
+action — don't just describe how to do it.
 ```
+
+Custom tool apps get an additional paragraph listing registered tools with a nudge to use them proactively.
 
 ## Example Interactions
 
@@ -410,3 +464,12 @@ const DIALOG_ELEMENT_IDS = [
 // In context.ts
 function buildContext(document: Document, excludeIds?: string[]): UIContext
 ```
+
+## Design Decisions
+
+| Decision                         | Rationale                                                                          |
+|----------------------------------|------------------------------------------------------------------------------------|
+| djb2 hash for cache keys         | 100-entry cache with 5-min TTL; collision risk is theoretical                      |
+| FIFO eviction (not LRU)          | Irrelevant at 100 entries                                                          |
+| JSON recovery regex in arg parse | Fallback for already-invalid JSON; falls through to empty args safely              |
+| Error recovery pops last message | Only triggers if stream errors after partial tool processing; edge case of an edge case |

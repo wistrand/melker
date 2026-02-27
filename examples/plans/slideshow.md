@@ -120,7 +120,13 @@ function transitionSlide(direction: 'next' | 'prev' | 'none'): void {
 Minimal — just file read (auto-granted for cwd):
 
 ```json
-{ "permissions": { "read": ["cwd"], "net": ["*"], "browser": true } }
+{ "permissions": { "read": ["cwd"], "browser": true } }
+```
+
+If slides contain remote images or other network resources, add `--allow-net=<host>` when launching:
+
+```bash
+melker examples/showcase/slideshow.melker ./slides/ --allow-net=example.com,cdn.example.com
 ```
 
 ## Arguments

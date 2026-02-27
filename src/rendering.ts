@@ -247,6 +247,7 @@ export class RenderingEngine {
     this._currentLayoutContext = new Map();
     this._scrollOffsets = new Map();
     this._dynamicBounds = new Map();
+    this._cachedModalLayouts.clear();
     this._buildLayoutContext(layoutTree, this._currentLayoutContext);
 
     // Collect all modal dialogs for separate rendering

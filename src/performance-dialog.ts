@@ -2,10 +2,9 @@
 // Toggled with Ctrl+Shift+P, shows engine and layout statistics
 
 import { type DualBuffer, EMPTY_CHAR } from './buffer.ts';
-import { BORDER_CHARS, getBorderChars, type Bounds } from './types.ts';
+import { getBorderChars, type Bounds } from './types.ts';
 import { getThemeColor } from './theme.ts';
 import { parseColor } from './components/color-utils.ts';
-import { getUIAnimationManager } from './ui-animation-manager.ts';
 
 export interface PerformanceStats {
   // Render stats

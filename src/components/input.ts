@@ -488,7 +488,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       this._completions = allCompletions.filter(completion =>
         completion.toLowerCase().startsWith(currentValue.toLowerCase())
       );
-    } catch (error) {
+    } catch {
       // If complete function fails, clear completions
       this._completions = [];
     }

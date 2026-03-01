@@ -698,62 +698,6 @@ export class FocusManager {
     return null;
   }
 
-  private _getElementX(element: Element): number {
-    if (!this._boundsProvider) {
-      throw new Error('Bounds provider not set - layout bounds should always be available for focus management');
-    }
-    if (!element.id) {
-      throw new Error(`Element must have an ID for focus management bounds lookup`);
-    }
-    const bounds = this._boundsProvider(element.id);
-    if (!bounds) {
-      throw new Error(`No layout bounds found for element ${element.id} - layout should always be available`);
-    }
-    return bounds.x;
-  }
-
-  private _getElementY(element: Element): number {
-    if (!this._boundsProvider) {
-      throw new Error('Bounds provider not set - layout bounds should always be available for focus management');
-    }
-    if (!element.id) {
-      throw new Error(`Element must have an ID for focus management bounds lookup`);
-    }
-    const bounds = this._boundsProvider(element.id);
-    if (!bounds) {
-      throw new Error(`No layout bounds found for element ${element.id} - layout should always be available`);
-    }
-    return bounds.y;
-  }
-
-  private _getElementWidth(element: Element): number {
-    if (!this._boundsProvider) {
-      throw new Error('Bounds provider not set - layout bounds should always be available for focus management');
-    }
-    if (!element.id) {
-      throw new Error(`Element must have an ID for focus management bounds lookup`);
-    }
-    const bounds = this._boundsProvider(element.id);
-    if (!bounds) {
-      throw new Error(`No layout bounds found for element ${element.id} - layout should always be available`);
-    }
-    return bounds.width;
-  }
-
-  private _getElementHeight(element: Element): number {
-    if (!this._boundsProvider) {
-      throw new Error('Bounds provider not set - layout bounds should always be available for focus management');
-    }
-    if (!element.id) {
-      throw new Error(`Element must have an ID for focus management bounds lookup`);
-    }
-    const bounds = this._boundsProvider(element.id);
-    if (!bounds) {
-      throw new Error(`No layout bounds found for element ${element.id} - layout should always be available`);
-    }
-    return bounds.height;
-  }
-
   /**
    * Clear all focus state
    */
@@ -825,15 +769,6 @@ export class FocusNavigator {
       const keyEvent = event as any; // We know it's a KeyEvent
 
       switch (keyEvent.key) {
-        // Tab handling is now done by the engine with proper tabIndex support
-        // case 'Tab':
-        //   if (keyEvent.shiftKey) {
-        //     this._focusManager.focusPrevious();
-        //   } else {
-        //     this._focusManager.focusNext();
-        //   }
-        //   return false; // Prevent default
-
         case 'Home':
           if (keyEvent.ctrlKey) {
             this._focusManager.focusFirst();

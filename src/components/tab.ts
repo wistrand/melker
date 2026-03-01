@@ -1,6 +1,6 @@
 // Tab component implementation - child of tabs container
 
-import { Element, BaseProps, IntrinsicSizeContext, isRenderable, hasIntrinsicSize } from '../types.ts';
+import { Element, BaseProps, IntrinsicSizeContext, hasIntrinsicSize } from '../types.ts';
 
 export interface TabProps extends BaseProps {
   title: string;

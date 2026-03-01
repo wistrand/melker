@@ -810,7 +810,7 @@ export class MelkerServer {
         default:
           // Unknown event type for injection
       }
-    } catch (error) {
+    } catch {
       // Failed to inject event
     }
   }
@@ -1149,10 +1149,6 @@ export class MelkerServer {
     }
   }
 
-  private _startBufferStreaming(): void {
-    // No longer needed - we use render notifications instead
-  }
-
   /**
    * Generate HTML for the server web UI
    * Features: terminal mirror, element inspector, log viewer, event injection
@@ -1271,7 +1267,7 @@ ${js}
             timestamp: Date.now(),
             data
           }));
-        } catch (error) {
+        } catch {
           // Failed to send update to subscriber
         }
       }

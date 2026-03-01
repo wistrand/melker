@@ -582,7 +582,7 @@ function extractJsonBlock(
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(content);
-  } catch (e) {
+  } catch {
     // Not valid JSON, skip (might be intentional non-melker JSON)
     return null;
   }

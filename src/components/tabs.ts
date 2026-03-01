@@ -1,6 +1,6 @@
 // Tabs component implementation - container for tab children
 
-import { Element, BaseProps, IntrinsicSizeContext, isRenderable, hasIntrinsicSize, getBorderChars } from '../types.ts';
+import { Element, BaseProps, IntrinsicSizeContext, hasIntrinsicSize, getBorderChars } from '../types.ts';
 import { TabElement } from './tab.ts';
 import { createElement, registerComponent } from '../element.ts';
 import { getLogger } from '../logging.ts';

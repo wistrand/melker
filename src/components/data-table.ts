@@ -24,7 +24,6 @@ import { ViewportDualBuffer, createClipViewport } from '../viewport-buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
-import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 import { renderScrollbar } from './scrollbar.ts';
 import { formatValue, truncateText, alignText, type CellValue, parseInlineJsonData, boundsContain } from './utils/component-utils.ts';

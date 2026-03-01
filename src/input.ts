@@ -306,7 +306,7 @@ export class TerminalInputProcessor {
       try {
         stdin.setRaw(true);
         this._rawModeEnabled = true;
-      } catch (error) {
+      } catch {
         // Raw mode not available - mouse events will not work
         this._rawModeEnabled = false;
       }
@@ -359,7 +359,7 @@ export class TerminalInputProcessor {
 
     try {
       await stdout.write(new TextEncoder().encode(mouseSequence));
-    } catch (error) {
+    } catch {
       // Mouse reporting failed - silent fallback
     }
   }
@@ -372,7 +372,7 @@ export class TerminalInputProcessor {
 
     try {
       await stdout.write(new TextEncoder().encode(disableSequence));
-    } catch (error) {
+    } catch {
       // Silent failure on cleanup
     }
   }
@@ -475,7 +475,7 @@ export class TerminalInputProcessor {
               for (const event of events) {
                 this._eventManager.dispatchEvent(event);
               }
-            } catch (error) {
+            } catch {
               // If reading fails in non-raw mode, wait a bit and try again
               await new Promise(resolve => setTimeout(resolve, 100));
             }

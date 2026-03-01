@@ -164,18 +164,14 @@ export function setupHeadlessEnvironment(): {
   mock.install();
 
   // Set environment to indicate headless mode
-  if (typeof Deno !== 'undefined' && Deno.env) {
-    Deno.env.set('MELKER_RUNNING_HEADLESS', 'true');
-  }
+  Deno.env.set('MELKER_RUNNING_HEADLESS', 'true');
 
   return {
     terminal,
     mock,
     cleanup: () => {
       mock.restore();
-      if (typeof Deno !== 'undefined' && Deno.env) {
-        Deno.env.delete('MELKER_RUNNING_HEADLESS');
-      }
+      Deno.env.delete('MELKER_RUNNING_HEADLESS');
     },
   };
 }

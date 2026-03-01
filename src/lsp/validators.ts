@@ -6,7 +6,7 @@ import {
 } from 'npm:vscode-languageserver@9.0.1/node.js';
 import { parseHtml as parse } from '../deps.ts';
 import type { AstNode, AstAttribute } from './types.ts';
-import { createRange, toCamelCase, toKebabCase, parseStyleString, preprocessSelfClosingTags } from './utils.ts';
+import { createRange, toKebabCase, parseStyleString, preprocessSelfClosingTags } from './utils.ts';
 import { stripCssComments, unwrapAtRules } from './css-utils.ts';
 import {
   POLICY_PERMISSION_TYPES, VALID_POLICY_PERMISSIONS,

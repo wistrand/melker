@@ -7,11 +7,9 @@ import { Element, Renderable, Interactive, TextSelectable, Bounds, ComponentRend
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
-import { getThemeColor, getThemeManager } from '../theme.ts';
+import { getThemeColor } from '../theme.ts';
 import { type SixelOutputData, type KittyOutputData, type ITermOutputData } from './canvas-render.ts';
-import { GraphElement } from './graph/mod.ts';
 import { getLogger } from '../logging.ts';
-import { getStringWidth } from '../char-width.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { cwd, readTextFile, stat } from '../runtime/mod.ts';
 import { COLORS, parseColor } from './color-utils.ts';
@@ -61,15 +59,6 @@ export type { MarkdownStyleConfig, LinkEvent, MarkdownProps } from './markdown-t
 // ============================================================================
 
 /**
- * Pad a string to a target display width, accounting for wide characters
- */
-function padEndDisplayWidth(str: string, targetWidth: number, padChar: string = ' '): string {
-  const currentWidth = getStringWidth(str);
-  if (currentWidth >= targetWidth) return str;
-  return str + padChar.repeat(targetWidth - currentWidth);
-}
-
-/**
  * Find optimal break point in text for word wrapping
  * Prefers breaking at spaces or after commas within the maxWidth limit
  * @returns Break index, or maxWidth if no good break point found
@@ -92,33 +81,6 @@ function findBreakPoint(text: string, maxWidth: number): number {
   }
 
   return bestBreak > 0 ? bestBreak : maxWidth;
-}
-
-/**
- * Wrap text into lines that fit within a given width
- * Attempts to break at word boundaries (spaces or commas)
- */
-function wrapTextToLines(text: string, width: number): string[] {
-  if (text.length <= width) {
-    return [text];
-  }
-
-  const lines: string[] = [];
-  let remaining = text;
-
-  while (remaining.length > 0) {
-    if (remaining.length <= width) {
-      lines.push(remaining);
-      break;
-    }
-
-    const breakPoint = findBreakPoint(remaining, width);
-
-    lines.push(remaining.substring(0, breakPoint).trimEnd());
-    remaining = remaining.substring(breakPoint).trimStart();
-  }
-
-  return lines.length > 0 ? lines : [''];
 }
 
 // ============================================================================

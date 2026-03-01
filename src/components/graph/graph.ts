@@ -33,7 +33,7 @@ import {
 } from '../../types.ts';
 import type { DualBuffer, Cell } from '../../buffer.ts';
 import { graphToMelker, type ContainerOptions } from './graph-to-melker.ts';
-import { detectParserType, type ParserType } from './parsers/mod.ts';
+import { type ParserType } from './parsers/mod.ts';
 import { parseXmlToElement } from '../../template.ts';
 import { Stylesheet } from '../../stylesheet.ts';
 import { getGlobalEngine } from '../../global-accessors.ts';

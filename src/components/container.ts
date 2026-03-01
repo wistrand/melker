@@ -1,6 +1,6 @@
 // Container component implementation
 
-import { Element, BaseProps, Renderable, Focusable, TextSelectable, IntrinsicSizeContext, Bounds, ComponentRenderContext, isRenderable, hasIntrinsicSize, isScrollingEnabled } from '../types.ts';
+import { Element, BaseProps, Renderable, Focusable, TextSelectable, IntrinsicSizeContext, Bounds, ComponentRenderContext, hasIntrinsicSize, isScrollingEnabled } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 
 export interface ContainerProps extends BaseProps {

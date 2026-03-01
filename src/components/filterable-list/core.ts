@@ -4,7 +4,7 @@ import type { DualBuffer, Cell } from '../../buffer.ts';
 import type { KeyPressEvent } from '../../events.ts';
 import { OptionElement } from './option.ts';
 import { GroupElement } from './group.ts';
-import { filterOptions, FilteredOption, FilterMode, FuzzyMatchResult } from './filter.ts';
+import { filterOptions, FilterMode, FuzzyMatchResult } from './filter.ts';
 import { getLogger } from '../../logging.ts';
 import { getThemeColor } from '../../theme.ts';
 import { renderScrollbar } from '../scrollbar.ts';

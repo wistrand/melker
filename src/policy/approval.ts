@@ -125,7 +125,7 @@ export async function checkApproval(
 
     // Check if hash matches
     return record.hash === currentHash;
-  } catch (e) {
+  } catch {
     // File doesn't exist or is invalid - not approved
     return false;
   }

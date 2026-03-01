@@ -1,7 +1,7 @@
 // Canvas render graphics - sixel, kitty, and iTerm2 protocol handlers
 // Extracted from canvas-render.ts for modularity
 
-import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
+import { type DualBuffer, type Cell } from '../buffer.ts';
 import { type Bounds } from '../types.ts';
 import { TRANSPARENT, packRGBA, parseColor } from './color-utils.ts';
 import {

@@ -4,7 +4,7 @@
 import { type Bounds } from '../types.ts';
 import { type Cell } from '../buffer.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
-import { getThemeColor, getThemeManager } from '../theme.ts';
+import { getThemeColor } from '../theme.ts';
 import { CanvasElement } from './canvas.ts';
 import { type SixelOutputData, type KittyOutputData, type ITermOutputData, getEffectiveGfxMode } from './canvas-render.ts';
 import { getLogger } from '../logging.ts';

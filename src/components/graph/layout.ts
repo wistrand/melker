@@ -7,7 +7,7 @@
  * 2. Order nodes within levels to reduce crossings
  */
 
-import type { GraphDefinition, GraphLayout, NodePlacement, GraphDirection } from './types.ts';
+import type { GraphDefinition, GraphLayout, NodePlacement } from './types.ts';
 
 /**
  * Calculate layout for a graph

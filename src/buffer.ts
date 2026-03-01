@@ -1,7 +1,7 @@
 // Dual-buffer system for efficient terminal rendering
 
-import { BORDER_CHARS, getBorderChars, type PackedRGBA, type BorderStyle } from './types.ts';
-import { getCharWidth, getStringWidth, analyzeString } from './char-width.ts';
+import { getBorderChars, type PackedRGBA, type BorderStyle } from './types.ts';
+import { getCharWidth, analyzeString } from './char-width.ts';
 import { getThemeManager, colorToGray, colorToLowContrast } from './theme.ts';
 import { getLogger } from './logging.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
@@ -589,22 +589,6 @@ export class TerminalBuffer {
     return false;
   }
 
-  // Helper method to compare cells for equality
-  private _cellsEqual(a: Cell, b: Cell): boolean {
-    return (
-      a.char === b.char &&
-      a.foreground === b.foreground &&
-      a.background === b.background &&
-      a.bold === b.bold &&
-      a.italic === b.italic &&
-      a.underline === b.underline &&
-      a.dim === b.dim &&
-      a.reverse === b.reverse &&
-      a.link === b.link &&
-      a.width === b.width &&
-      a.isWideCharContinuation === b.isWideCharContinuation
-    );
-  }
 }
 
 

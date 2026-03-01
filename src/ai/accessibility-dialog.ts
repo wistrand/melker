@@ -2,14 +2,13 @@
 // Shows an overlay dialog for AI-powered accessibility assistance
 
 import { Document } from '../document.ts';
-import { createElement } from '../element.ts';
 import { melker } from '../template.ts';
 import { Element } from '../types.ts';
 import { FocusManager } from '../focus.ts';
 import { getLogger } from '../logging.ts';
 import { getOpenRouterConfig, streamChat, type ChatMessage, type ToolCallRequest, type OpenRouterConfig, type ApiTool } from './openrouter.ts';
 import { ensureError } from '../utils/error.ts';
-import { buildContext, buildSystemPrompt, hashContext, type UIContext } from './context.ts';
+import { buildContext, buildSystemPrompt, hashContext } from './context.ts';
 import { getGlobalCache } from './cache.ts';
 import { toolsToOpenRouterFormat, executeTool, type ToolContext, type ToolCall } from './tools.ts';
 import { createDebouncedAction, type DebouncedAction } from '../utils/timing.ts';

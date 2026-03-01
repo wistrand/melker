@@ -12,7 +12,7 @@ import {
   TabBarInfo,
   TabInfo,
 } from './types.ts';
-import { AsciiParseError, ERROR_MESSAGES } from './errors.ts';
+import { ERROR_MESSAGES } from './errors.ts';
 
 /**
  * Parse ASCII box diagram into box structure.

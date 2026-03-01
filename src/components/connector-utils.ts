@@ -194,18 +194,6 @@ export function determineBestSides(
 }
 
 /**
- * Check if a point is inside a bounds (with optional margin)
- */
-function pointInBounds(point: Point, bounds: Bounds, margin: number = 0): boolean {
-  return (
-    point.x >= bounds.x - margin &&
-    point.x < bounds.x + bounds.width + margin &&
-    point.y >= bounds.y - margin &&
-    point.y < bounds.y + bounds.height + margin
-  );
-}
-
-/**
  * Check if a horizontal line segment intersects a bounds
  */
 function horizontalSegmentIntersects(

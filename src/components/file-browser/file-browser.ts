@@ -17,7 +17,7 @@ import {
 import type { DualBuffer, Cell } from '../../buffer.ts';
 import { COLORS } from '../color-utils.ts';
 import type { Document } from '../../document.ts';
-import type { KeyPressEvent, ChangeEvent } from '../../events.ts';
+import type { KeyPressEvent } from '../../events.ts';
 import { registerComponent, createElement } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
 // Import table components to ensure they're registered before we use createElement

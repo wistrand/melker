@@ -1,18 +1,15 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Style, Size, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, BORDER_CHARS, getBorderChars, type BorderStyle, type PackedRGBA, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
+import { Element, Style, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, getBorderChars, type BorderStyle, type PackedRGBA, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { setGlobalRequestRender, getGlobalLogger } from './global-accessors.ts';
 import { clipBounds, clamp } from './geometry.ts';
 import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
 import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
 import { ViewportDualBuffer, createClipViewport } from './viewport-buffer.ts';
 import { ContainerElement } from './components/container.ts';
-import { TextElement } from './components/text.ts';
-import { InputElement } from './components/input.ts';
-import { ButtonElement } from './components/button.ts';
 import { DialogElement } from './components/dialog.ts';
-import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
+import { SizingModel, globalSizingModel, ChromeCollapseState } from './sizing.ts';
 import { LayoutEngine, LayoutNode, LayoutContext, globalLayoutEngine } from './layout.ts';
 import { getThemeColor, getThemeManager } from './theme.ts';
 import { COLORS, parseColor, unpackRGBA, packRGBA } from './components/color-utils.ts';
@@ -881,88 +878,6 @@ export class RenderingEngine {
     return cellStyle;
   }
 
-  // Calculate element bounds within parent using border-box sizing model
-  private _calculateBounds(
-    element: Element,
-    parentBounds: Bounds,
-    style: Style
-  ): Bounds {
-    const props = element.props as LayoutProps;
-
-    // Get margin for calculations
-    const margin = typeof (style.margin || 0) === 'number'
-      ? { top: style.margin as number, right: style.margin as number, bottom: style.margin as number, left: style.margin as number }
-      : style.margin as any;
-
-    const marginHorizontal = (margin.left || 0) + (margin.right || 0);
-    const marginVertical = (margin.top || 0) + (margin.bottom || 0);
-
-    // Calculate width (check both props and style section)
-    // Default to fill behavior if not specified or unrecognized value
-    let requestedWidth: number;
-    const width = style.width !== undefined ? style.width : props.width;
-    if (width === 'fill' || width === undefined) {
-      requestedWidth = parentBounds.width - marginHorizontal;
-    } else if (width === 'auto') {
-      requestedWidth = this._calculateAutoWidth(element, style);
-    } else if (typeof width === 'string' && width.endsWith('%')) {
-      const percentage = parseFloat(width) / 100;
-      requestedWidth = Math.floor((parentBounds.width - marginHorizontal) * percentage);
-    } else if (typeof width === 'number') {
-      requestedWidth = width;
-    } else {
-      // Fallback for unrecognized values
-      requestedWidth = parentBounds.width - marginHorizontal;
-    }
-
-    // Calculate height (check both props and style section)
-    // Default to auto behavior if not specified or unrecognized value
-    let requestedHeight: number;
-    const height = style.height !== undefined ? style.height : props.height;
-    if (height === 'fill') {
-      requestedHeight = parentBounds.height - marginVertical;
-    } else if (height === 'auto' || height === undefined) {
-      // Default to auto (content-based) height when not specified
-      requestedHeight = this._calculateAutoHeight(element, style);
-    } else if (typeof height === 'string' && height.endsWith('%')) {
-      const percentage = parseFloat(height) / 100;
-      requestedHeight = Math.floor((parentBounds.height - marginVertical) * percentage);
-    } else if (typeof height === 'number') {
-      requestedHeight = height;
-    } else {
-      // Fallback for unrecognized values
-      requestedHeight = this._calculateAutoHeight(element, style);
-    }
-
-    // Use sizing model to calculate the complete box model
-    const boxModel = this._sizingModel.calculateBoxModel(
-      { width: requestedWidth, height: requestedHeight },
-      style
-    );
-
-    // Constrain to fit within parent bounds
-    const maxWidth = parentBounds.width;
-    const maxHeight = parentBounds.height;
-
-    const constrainedSize = this._sizingModel.constrainSize(
-      { width: requestedWidth, height: requestedHeight },
-      style,
-      undefined, // no minimum size
-      { width: maxWidth, height: maxHeight }
-    );
-
-    // Recalculate box model with constrained size
-    const finalBoxModel = this._sizingModel.calculateBoxModel(constrainedSize, style);
-
-    // Apply margin as position offset
-    return {
-      x: parentBounds.x + finalBoxModel.margin.left,
-      y: parentBounds.y + finalBoxModel.margin.top,
-      width: requestedWidth,  // The requested size already excludes margin
-      height: requestedHeight, // The requested size already excludes margin
-    };
-  }
-
   // Calculate automatic width based on content and style
   private _calculateAutoWidth(element: Element, style: Style): number {
     let contentWidth: number;
@@ -1019,15 +934,6 @@ export class RenderingEngine {
     return this._sizingModel.calculateContentBounds(bounds, style, isScrollable).bounds;
   }
 
-
-  // Check if element should be visible
-  private _isVisible(element: Element, bounds: Bounds): boolean {
-    // Connectors have 0x0 bounds but still need to render (they draw based on connected elements)
-    if (element.type === 'connector') {
-      return element.props.visible !== false;
-    }
-    return bounds.width > 0 && bounds.height > 0 && element.props.visible !== false;
-  }
 
   // Render a layout node to the buffer
   private _renderNode(node: LayoutNode, context: RenderContext): void {
@@ -1783,67 +1689,6 @@ export class RenderingEngine {
     for (const child of node.children) {
       this._buildLayoutContext(child, context, childScrollOffset);
     }
-  }
-
-  // Calculate actual content dimensions from rendered layout tree
-  private _calculateActualContentDimensions(containerNode: LayoutNode): { width: number; height: number } {
-    if (!containerNode.children || containerNode.children.length === 0) {
-      return { width: 0, height: 0 };
-    }
-
-    // For block layout (vertical stacking), calculate dimensions properly
-    let totalHeight = 0;
-    const containerBounds = containerNode.bounds;
-
-    // Calculate total height by summing child heights
-    for (const child of containerNode.children) {
-      totalHeight += child.bounds.height;
-    }
-
-
-    // For width, content should generally fit within the container bounds
-    // unless there's explicit content overflow (like long unbreakable text)
-    const contentWidth = containerBounds.width;
-
-    return {
-      width: contentWidth,
-      height: totalHeight
-    };
-  }
-
-  // Fallback method for estimated content dimensions (legacy)
-  private _calculateEstimatedContentHeight(container: ContainerElement): number {
-    if (!container.children || container.children.length === 0) return 0;
-
-    // Calculate based on layout results - layout should always be available
-    let totalHeight = 0;
-    for (const child of container.children) {
-      // Get actual laid out height
-      const childLayoutNode = this._currentLayoutContext?.get(child.id || '');
-      if (!childLayoutNode) {
-        throw new Error(`No layout context found for child element ${child.id} - layout should always be available during rendering`);
-      }
-
-      const style = child.props.style || {};
-      const marginBottom = typeof style.marginBottom === 'number' ? style.marginBottom : 0;
-      totalHeight += childLayoutNode.bounds.height + marginBottom;
-    }
-
-    return totalHeight;
-  }
-
-  // Fallback method for estimated content width (legacy)
-  private _calculateEstimatedContentWidth(container: ContainerElement): number {
-    if (!container.children || container.children.length === 0) return 0;
-
-    // Simple estimation - find longest text content
-    let maxWidth = 0;
-    for (const child of container.children) {
-      if (child.type === 'text' && child.props.text) {
-        maxWidth = Math.max(maxWidth, child.props.text.length);
-      }
-    }
-    return maxWidth;
   }
 
   // Render vertical scrollbar

@@ -1,7 +1,7 @@
 // Mouse and wheel event handling for MelkerEngine
 // Extracted from engine.ts to reduce file size
 
-import { Element, isWheelable } from './types.ts';
+import { isWheelable } from './types.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { handleToastClick } from './toast/mod.ts';
 import { getTooltipManager } from './tooltip/mod.ts';

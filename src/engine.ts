@@ -1044,7 +1044,7 @@ export class MelkerEngine {
 
       // Output to terminal
       const differences = this._buffer.swapAndGetDiff();
-      if (differences.length > 0 && typeof Deno !== 'undefined') {
+      if (differences.length > 0) {
         const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
         if (output.length > 0) {
           const finalOutput = this._options.synchronizedOutput
@@ -1244,50 +1244,48 @@ export class MelkerEngine {
    * Optimized rendering that only updates changed parts of the terminal
    */
   private _renderOptimized(): void {
-    if (typeof Deno !== 'undefined') {
-      // Konsole workaround: force full redraw when scrolling with sixel visible
-      const needsForceRedraw = this._graphicsOverlayManager.handleKonsoleWorkaround();
+    // Konsole workaround: force full redraw when scrolling with sixel visible
+    const needsForceRedraw = this._graphicsOverlayManager.handleKonsoleWorkaround();
 
-      const differences = needsForceRedraw
-        ? this._buffer.forceRedraw()
-        : this._buffer.swapAndGetDiff();
+    const differences = needsForceRedraw
+      ? this._buffer.forceRedraw()
+      : this._buffer.swapAndGetDiff();
 
-      // Only render buffer if there are actual changes
-      if (differences.length === 0) {
-        // Still render graphics overlays (content may have changed even if buffer hasn't)
-        this._graphicsOverlayManager.renderOverlays();
-        // Notify server clients
-        this._server?.notifyRenderComplete();
+    // Only render buffer if there are actual changes
+    if (differences.length === 0) {
+      // Still render graphics overlays (content may have changed even if buffer hasn't)
+      this._graphicsOverlayManager.renderOverlays();
+      // Notify server clients
+      this._server?.notifyRenderComplete();
+      return;
+    }
+
+    const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
+    if (output.length > 0) {
+      // Guard against writes after terminal cleanup (race condition with stop())
+      if (!this._isInitialized) {
         return;
       }
 
-      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
-      if (output.length > 0) {
-        // Guard against writes after terminal cleanup (race condition with stop())
-        if (!this._isInitialized) {
-          return;
-        }
-
-        // If overlays are visible, clear graphics BEFORE outputting buffer
-        // This ensures the dropdown/dialog is visible immediately without graphics interference
-        if (this._renderer?.hasVisibleOverlays()) {
-          this._graphicsOverlayManager.clearAllGraphics();
-        }
-
-        // Begin synchronized output to reduce flicker
-        const finalOutput = this._options.synchronizedOutput
-          ? ANSI.beginSync + output + ANSI.endSync
-          : output;
-
-        this._writeAllSync(textEncoder.encode(finalOutput));
+      // If overlays are visible, clear graphics BEFORE outputting buffer
+      // This ensures the dropdown/dialog is visible immediately without graphics interference
+      if (this._renderer?.hasVisibleOverlays()) {
+        this._graphicsOverlayManager.clearAllGraphics();
       }
 
-      // Render graphics overlays after buffer output
-      this._graphicsOverlayManager.renderOverlays();
+      // Begin synchronized output to reduce flicker
+      const finalOutput = this._options.synchronizedOutput
+        ? ANSI.beginSync + output + ANSI.endSync
+        : output;
 
-      // Notify server clients of render completion
-      this._server?.notifyRenderComplete();
+      this._writeAllSync(textEncoder.encode(finalOutput));
     }
+
+    // Render graphics overlays after buffer output
+    this._graphicsOverlayManager.renderOverlays();
+
+    // Notify server clients of render completion
+    this._server?.notifyRenderComplete();
   }
 
   /**
@@ -1295,19 +1293,17 @@ export class MelkerEngine {
    * Accepts pre-computed diffs directly — no buffer copy or diff scan needed.
    */
   private _renderFastPath(differences: BufferDiff[]): void {
-    if (typeof Deno !== 'undefined') {
-      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
-      if (output.length > 0) {
-        if (!this._isInitialized) {
-          return;
-        }
-
-        const finalOutput = this._options.synchronizedOutput
-          ? ANSI.beginSync + output + ANSI.endSync
-          : output;
-
-        this._writeAllSync(textEncoder.encode(finalOutput));
+    const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
+    if (output.length > 0) {
+      if (!this._isInitialized) {
+        return;
       }
+
+      const finalOutput = this._options.synchronizedOutput
+        ? ANSI.beginSync + output + ANSI.endSync
+        : output;
+
+      this._writeAllSync(textEncoder.encode(finalOutput));
     }
   }
 
@@ -1315,41 +1311,39 @@ export class MelkerEngine {
    * Full screen rendering for initial draw or when forced
    */
   private _renderFullScreen(): void {
-    if (typeof Deno !== 'undefined') {
-      // If overlays are visible, clear graphics BEFORE full screen redraw
-      if (this._renderer?.hasVisibleOverlays()) {
-        this._graphicsOverlayManager.clearAllGraphics();
-      }
-
-      // Begin synchronized output for full screen redraw
-      let clearAndDrawOutput = ANSI.clearScreen + ANSI.cursorHome;
-
-      // Get all buffer content
-      const differences = this._buffer.forceRedraw();
-      const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
-
-      if (output.length > 0) {
-        clearAndDrawOutput += output;
-      }
-
-      // Guard against writes after terminal cleanup (race condition with stop())
-      if (!this._isInitialized) {
-        return;
-      }
-
-      // Apply synchronized output wrapper if enabled
-      const finalOutput = this._options.synchronizedOutput
-        ? ANSI.beginSync + clearAndDrawOutput + ANSI.endSync
-        : clearAndDrawOutput;
-
-      this._writeAllSync(textEncoder.encode(finalOutput));
-
-      // Render graphics overlays after buffer output
-      this._graphicsOverlayManager.renderOverlays();
-
-      // Notify server clients of render completion
-      this._server?.notifyRenderComplete();
+    // If overlays are visible, clear graphics BEFORE full screen redraw
+    if (this._renderer?.hasVisibleOverlays()) {
+      this._graphicsOverlayManager.clearAllGraphics();
     }
+
+    // Begin synchronized output for full screen redraw
+    let clearAndDrawOutput = ANSI.clearScreen + ANSI.cursorHome;
+
+    // Get all buffer content
+    const differences = this._buffer.forceRedraw();
+    const output = this._ansiOutput.generateOptimizedOutput(differences as BufferDifference[], this._terminalSizeManager.size.width);
+
+    if (output.length > 0) {
+      clearAndDrawOutput += output;
+    }
+
+    // Guard against writes after terminal cleanup (race condition with stop())
+    if (!this._isInitialized) {
+      return;
+    }
+
+    // Apply synchronized output wrapper if enabled
+    const finalOutput = this._options.synchronizedOutput
+      ? ANSI.beginSync + clearAndDrawOutput + ANSI.endSync
+      : clearAndDrawOutput;
+
+    this._writeAllSync(textEncoder.encode(finalOutput));
+
+    // Render graphics overlays after buffer output
+    this._graphicsOverlayManager.renderOverlays();
+
+    // Notify server clients of render completion
+    this._server?.notifyRenderComplete();
   }
 
   /**

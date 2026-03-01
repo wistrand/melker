@@ -24,7 +24,7 @@ import type {
   ClassRelationType,
   ArrowStyle,
 } from './types.ts';
-import { getParser, getGraphParser, getSequenceParser, getClassDiagramParser, detectParserType, type ParserType } from './parsers/mod.ts';
+import { getGraphParser, getSequenceParser, getClassDiagramParser, detectParserType, type ParserType } from './parsers/mod.ts';
 import { calculateLayout } from './layout.ts';
 import type { Style } from '../../types.ts';
 import { getUnicodeTier } from '../../utils/terminal-detection.ts';
@@ -59,49 +59,6 @@ export interface GraphToMelkerOptions {
   container?: ContainerOptions;
   /** Use inline styles instead of CSS classes (for embedding in components) */
   inlineStyles?: boolean;
-}
-
-/**
- * Convert a style object to CSS-like string for style attribute
- */
-function styleToString(style: Style): string {
-  const parts: string[] = [];
-
-  for (const [key, value] of Object.entries(style)) {
-    if (value === undefined || value === null) continue;
-
-    // Convert camelCase to kebab-case
-    const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-
-    if (typeof value === 'object') {
-      // Handle padding/margin objects
-      if ('top' in value || 'right' in value || 'bottom' in value || 'left' in value) {
-        const t = value.top ?? 0;
-        const r = value.right ?? 0;
-        const b = value.bottom ?? 0;
-        const l = value.left ?? 0;
-        parts.push(`${cssKey}: ${t} ${r} ${b} ${l}`);
-      }
-    } else {
-      parts.push(`${cssKey}: ${value}`);
-    }
-  }
-
-  return parts.join('; ');
-}
-
-/**
- * Get border style string based on node shape
- */
-function getBorderStyle(shape: NodeShape): string {
-  switch (shape) {
-    case 'diamond':
-      return 'double';
-    case 'hexagon':
-      return 'thick';
-    default:
-      return 'thin';
-  }
 }
 
 /**
@@ -149,42 +106,6 @@ function getNodeContent(node: GraphNode, indentLevel: number, indentFn: (level: 
   }
   // Default: text with label
   return `${indentFn(indentLevel)}<text>${escapeXml(node.label)}</text>`;
-}
-
-/**
- * Get inline style for node based on shape
- */
-function getNodeInlineStyle(shape: NodeShape): string {
-  switch (shape) {
-    case 'rounded':
-    case 'circle':
-      return 'border: rounded; padding: 0 1';
-    case 'diamond':
-      return 'border: double; padding: 0 1';
-    case 'hexagon':
-      return 'border: thick; padding: 0 1';
-    default:
-      return 'border: thin; padding: 0 1';
-  }
-}
-
-/**
- * Get inline style for graph container
- */
-function getGraphInlineStyle(isHorizontal: boolean, containerOpts: Required<ContainerOptions>): string {
-  const direction = isHorizontal ? 'row' : 'column';
-  return `width: ${containerOpts.width}; height: ${containerOpts.height}; border: thin; padding: 1; display: flex; flex-direction: ${direction}; flex-wrap: wrap; gap: 5; align-items: flex-start; align-content: flex-start`;
-}
-
-/**
- * Get inline style for subgraph/branch container
- */
-function getSubgraphInlineStyle(isHorizontal: boolean, noBorder: boolean = false): string {
-  const direction = isHorizontal ? 'column' : 'row';
-  if (noBorder) {
-    return `display: flex; flex-direction: ${direction}; gap: 5`;
-  }
-  return `border: thin; padding: 1; display: flex; flex-direction: ${direction}; flex-wrap: wrap; gap: 4`;
 }
 
 /**
@@ -970,19 +891,6 @@ function getRelationArrow(type: ClassRelationType): 'end' | 'none' | 'start' {
  */
 function getSequenceArrow(arrow: SequenceArrowStyle): 'end' | 'none' | 'both' {
   return arrow === 'solidOpen' || arrow === 'dashedOpen' ? 'none' : 'end';
-}
-
-/**
- * Get arrow character for text representation
- */
-function getArrowChar(arrow: SequenceArrowStyle): string {
-  switch (arrow) {
-    case 'solid': return '->>';
-    case 'dashed': return '-->>';
-    case 'solidOpen': return '->';
-    case 'dashedOpen': return '-->';
-    default: return '->>';
-  }
 }
 
 /**

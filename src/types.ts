@@ -14,9 +14,6 @@ import type {
   Renderable, SelectableTextProvider, ShaderElement, Size,
   TextSelectable, Toggleable, TransitionState, Wheelable,
 } from './core-types.ts';
-import type { KeyPressEvent } from './events.ts';
-import type { DualBuffer, Cell } from './buffer.ts';
-import type { ViewportDualBuffer } from './viewport-buffer.ts';
 import { getUnicodeTier } from './utils/terminal-detection.ts';
 
 export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none'>, BorderChars> = {

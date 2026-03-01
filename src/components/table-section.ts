@@ -1,6 +1,6 @@
 // Table section components (thead, tbody, tfoot) implementation
 
-import { Element, BaseProps, Renderable, IntrinsicSizeContext, Bounds, ComponentRenderContext } from '../types.ts';
+import { Element, Renderable, IntrinsicSizeContext, Bounds, ComponentRenderContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';

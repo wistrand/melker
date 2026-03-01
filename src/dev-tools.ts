@@ -393,34 +393,6 @@ export class DevToolsManager {
   }
 
   /**
-   * Format log entries for display
-   */
-  private _formatLogEntries(entries: LogEntry[]): string {
-    if (entries.length === 0) {
-      return '(no log entries)';
-    }
-
-    return entries.map(entry => {
-      // Format: HH:MM:SS.mmm [LEVEL] Source: message
-      const time = entry.timestamp.toISOString().slice(11, 23); // HH:MM:SS.mmm
-      const source = entry.source ? `${entry.source}: ` : '';
-      let line = `${time} [${entry.level}] ${source}${entry.message}`;
-
-      if (entry.context && Object.keys(entry.context).length > 0) {
-        line += ' | ' + Object.entries(entry.context)
-          .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-          .join(', ');
-      }
-
-      if (entry.error) {
-        line += ` | Error: ${entry.error.message}`;
-      }
-
-      return line;
-    }).join('\n');
-  }
-
-  /**
    * Build the CSS Variables tab showing all active variables from stylesheets
    */
   private _buildVarsTab(): Element {

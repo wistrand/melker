@@ -1,6 +1,6 @@
 // Table rendering helpers — standalone functions extracted from TableElement
 
-import { Element, Bounds, ComponentRenderContext, BorderChars, BORDER_CHARS, getBorderChars, isRenderable } from '../types.ts';
+import { Element, Bounds, ComponentRenderContext, BorderChars, getBorderChars, isRenderable } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ViewportDualBuffer } from '../viewport-buffer.ts';
 import type { TableRowElement } from './table-row.ts';

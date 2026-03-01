@@ -155,7 +155,7 @@ export class ResizeHandler {
       // Set up polling fallback for environments where signal handling isn't available
       this._setupPollingFallback();
 
-    } catch (error) {
+    } catch {
       // Signal handling not available, fall back to polling
       logger.warn('Signal-based resize detection not available, using polling fallback');
       this._setupPollingFallback();

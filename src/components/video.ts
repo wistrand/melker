@@ -2,7 +2,7 @@
 // Extends CanvasElement with video-specific functionality
 
 import { CanvasElement, CanvasProps } from './canvas.ts';
-import { packRGBA, COLORS } from './color-utils.ts';
+import { COLORS } from './color-utils.ts';
 import { Element, Bounds, ComponentRenderContext, Disposable } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getLogger } from '../logging.ts';

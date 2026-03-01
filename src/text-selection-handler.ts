@@ -1074,7 +1074,6 @@ export class TextSelectionHandler {
     }
 
     const text = this._textSelection.selectedText;
-    if (typeof Deno === 'undefined') return;
 
     // Platform-specific clipboard commands
     const commands = [

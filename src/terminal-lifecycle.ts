@@ -284,8 +284,6 @@ let _emergencyCleanupRegistered = false;
  * Register an instance for emergency cleanup on unexpected exit
  */
 export function registerForEmergencyCleanup(instance: CleanupableInstance): void {
-  if (typeof globalThis === 'undefined') return;
-
   if (!_instances) {
     _instances = new Set();
   }

@@ -7,7 +7,7 @@ import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
 import { ViewportManager, globalViewportManager, ScrollbarLayout } from './viewport.ts';
 import { getLogger } from './logging.ts';
 import type { Stylesheet, StyleContext } from './stylesheet.ts';
-import { computeStyle, computeLayoutProps, DEFAULT_LAYOUT_PROPS } from './layout-style.ts';
+import { computeStyle, computeLayoutProps } from './layout-style.ts';
 
 const logger = getLogger('LayoutEngine');
 

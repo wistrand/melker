@@ -536,7 +536,7 @@ export class AccessibilityDialogManager {
           tools: result.toolCalls!.map(tc => tc.function.name)
         });
 
-        await this._executeToolCalls(result.toolCalls!, toolContext, responseElement);
+        await this._executeToolCalls(result.toolCalls!, toolContext, responseElement, result.response || undefined);
 
         // Rebuild context after tools may have modified the UI
         const selectedText = this._deps.getSelectedText?.();
@@ -545,6 +545,34 @@ export class AccessibilityDialogManager {
           AccessibilityDialogManager.getExcludeIds(),
           selectedText
         );
+      }
+
+      // If the loop exhausted all rounds and history ends with tool results,
+      // do a final text-only round so the model can respond to them.
+      const lastMsg = this._messageHistory[this._messageHistory.length - 1];
+      if (lastMsg?.role === 'tool') {
+        const finalSystemPrompt = buildSystemPrompt(context)
+          + '\n\nIMPORTANT: Respond to the user now with a summary of what you did. Do NOT call any tools.';
+        const finalMessages: ChatMessage[] = [
+          { role: 'system', content: finalSystemPrompt },
+          ...this._messageHistory,
+        ];
+
+        if (statusElement) {
+          statusElement.props.text = 'Finishing...';
+        }
+        this._currentResponse = '';
+        this._conversationHistory += '**Assistant:** ';
+        this._deps.render();
+
+        const roundConfig = getOpenRouterConfig();
+        if (roundConfig) {
+          // Pass empty tools array to force text-only response
+          const result = await this._streamRound(finalMessages, roundConfig, [], responseElement);
+          this._conversationHistory += result.response;
+          responseElement.props.text = this._conversationHistory;
+          this._messageHistory.push({ role: 'assistant', content: result.response });
+        }
       }
 
       if (statusElement) {
@@ -601,7 +629,7 @@ export class AccessibilityDialogManager {
         onToolCall: async (toolCalls) => {
           if (!this._isProcessing) return;
           this._flushRender();
-          resolve({ type: 'tool_calls', response: '', toolCalls });
+          resolve({ type: 'tool_calls', response: this._currentResponse, toolCalls });
         },
         onError: (error) => {
           reject(error);
@@ -617,6 +645,7 @@ export class AccessibilityDialogManager {
     toolCalls: ToolCallRequest[],
     toolContext: ToolContext,
     responseElement: Element,
+    textContent?: string,
   ): Promise<void> {
     // Sanitize and store the assistant's tool call message
     const sanitizedToolCalls = toolCalls.map(tc => {
@@ -636,11 +665,17 @@ export class AccessibilityDialogManager {
       };
     });
 
+    // Include any text the model streamed before the tool calls
     this._messageHistory.push({
       role: 'assistant',
-      content: null,
+      content: textContent || null,
       tool_calls: sanitizedToolCalls,
     });
+
+    // Preserve streamed text in conversation display
+    if (textContent) {
+      this._conversationHistory += textContent;
+    }
 
     // Execute each tool
     for (const toolCall of toolCalls) {

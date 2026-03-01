@@ -14,6 +14,7 @@ import { HitTester } from './hit-test.ts';
 import { ScrollHandler } from './scroll-handler.ts';
 import { getLogger } from './logging.ts';
 import { DialogElement } from './components/dialog.ts';
+import { Command, isPermissionError } from './runtime/mod.ts';
 import { CommandPaletteElement } from './components/filterable-list/command-palette.ts';
 import { createThrottledAction, type ThrottledAction } from './utils/timing.ts';
 import { isStatsOverlayEnabled, getGlobalStatsOverlay } from './stats-overlay.ts';
@@ -1099,7 +1100,7 @@ export class TextSelectionHandler {
     let permissionDenied = false;
     for (const { cmd, args } of commands) {
       try {
-        const process = new Deno.Command(cmd, {
+        const process = new Command(cmd, {
           args,
           stdin: 'piped',
           stdout: 'null',
@@ -1117,8 +1118,8 @@ export class TextSelectionHandler {
         }
       } catch (e) {
         // NotCapable = missing permission, warn user; other errors just debug
-        if (e instanceof Deno.errors.NotCapable) {
-          logger.warn(`Clipboard command '${cmd}' not permitted: ${e.message}`);
+        if (isPermissionError(e)) {
+          logger.warn(`Clipboard command '${cmd}' not permitted: ${e instanceof Error ? e.message : String(e)}`);
           permissionDenied = true;
         } else {
           logger.debug(`Clipboard command '${cmd}' failed: ${e}`);

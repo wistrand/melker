@@ -3,6 +3,7 @@
 
 import { Env, setEnvLogger } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { hasWritePermission as checkWritePermission, writeTextFileSync, mkdirSync } from './runtime/mod.ts';
 
 // Flag to track if logging is disabled (e.g., no log file specified)
 let loggingDisabled = false;
@@ -77,8 +78,7 @@ function getDefaultLogFile(): string {
  */
 function hasWritePermission(path: string): boolean {
   try {
-    const status = Deno.permissions.querySync({ name: 'write', path });
-    return status.state === 'granted';
+    return checkWritePermission(path);
   } catch {
     return false;
   }
@@ -156,7 +156,7 @@ export class Logger {
     // Ensure log directory exists
     if (logDir && logDir !== '.') {
       try {
-        Deno.mkdirSync(logDir, { recursive: true });
+        mkdirSync(logDir, { recursive: true });
       } catch {
         // Directory might already exist or we can't create it - disable logging
         loggingDisabled = true;
@@ -250,7 +250,7 @@ export class Logger {
     // Write synchronously - lost lines are lost
     try {
       const content = this._formatEntry(entry);
-      Deno.writeTextFileSync(this._logFile, content, { append: true });
+      writeTextFileSync(this._logFile, content, { append: true });
     } catch {
       // Silently ignore write errors - lost lines are lost
     }

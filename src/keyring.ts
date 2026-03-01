@@ -1,6 +1,7 @@
 // keyring.ts - System keyring access for secure credential storage
 
 import { restoreTerminal } from './terminal-lifecycle.ts';
+import { platform, exit, Command } from './runtime/mod.ts';
 
 export class KeyringError extends Error {
   constructor(message: string) {
@@ -23,7 +24,7 @@ export class Keyring {
   private async ensureAvailable(): Promise<void> {
     if (Keyring._verified) return;
 
-    const os = Deno.build.os;
+    const os = platform();
     let tool: string;
     let installHint: string;
 
@@ -45,13 +46,13 @@ export class Keyring {
         console.error(`\n[FATAL] Unsupported operating system: ${os}`);
         console.error("Melker requires a system keyring for secure credential storage.");
         console.error("Supported platforms: macOS, Linux, Windows\n");
-        Deno.exit(1);
+        exit(1);
     }
 
     try {
       // Just check if the command exists by running it with minimal args
       // secret-tool with no args prints usage to stdout and exits 2, but that's fine
-      const cmd = new Deno.Command(tool, {
+      const cmd = new Command(tool, {
         args: [],
         stdout: "null",
         stderr: "null",
@@ -64,7 +65,7 @@ export class Keyring {
       console.error(`Required tool '${tool}' not found or not functional. (${e})`);
       console.error(`\nMelker requires a system keyring for secure OAuth token storage.`);
       console.error(`\n${installHint}\n`);
-      Deno.exit(1);
+      exit(1);
     }
 
     Keyring._verified = true;
@@ -73,7 +74,7 @@ export class Keyring {
   async get(key: string): Promise<string | null> {
     await this.ensureAvailable();
     try {
-      switch (Deno.build.os) {
+      switch (platform()) {
         case "darwin":
           return await this.macosGet(key);
         case "linux":
@@ -90,7 +91,7 @@ export class Keyring {
 
   async set(key: string, value: string): Promise<void> {
     await this.ensureAvailable();
-    switch (Deno.build.os) {
+    switch (platform()) {
       case "darwin":
         await this.macosSet(key, value);
         break;
@@ -101,14 +102,14 @@ export class Keyring {
         await this.windowsSet(key, value);
         break;
       default:
-        throw new KeyringError(`Unsupported OS: ${Deno.build.os}`);
+        throw new KeyringError(`Unsupported OS: ${platform()}`);
     }
   }
 
   async delete(key: string): Promise<boolean> {
     await this.ensureAvailable();
     try {
-      switch (Deno.build.os) {
+      switch (platform()) {
         case "darwin":
           await this.macosDelete(key);
           break;
@@ -129,7 +130,7 @@ export class Keyring {
 
   // macOS - uses `security` CLI (Keychain)
   private async macosGet(key: string): Promise<string> {
-    const cmd = new Deno.Command("security", {
+    const cmd = new Command("security", {
       args: ["find-generic-password", "-s", this.service, "-a", key, "-w"],
     });
     const { success, stdout } = await cmd.output();
@@ -139,7 +140,7 @@ export class Keyring {
 
   private async macosSet(key: string, value: string): Promise<void> {
     await this.macosDelete(key).catch(() => {});
-    const cmd = new Deno.Command("security", {
+    const cmd = new Command("security", {
       args: ["add-generic-password", "-s", this.service, "-a", key, "-w", value],
     });
     const { success } = await cmd.output();
@@ -147,7 +148,7 @@ export class Keyring {
   }
 
   private async macosDelete(key: string): Promise<void> {
-    const cmd = new Deno.Command("security", {
+    const cmd = new Command("security", {
       args: ["delete-generic-password", "-s", this.service, "-a", key],
     });
     await cmd.output();
@@ -155,7 +156,7 @@ export class Keyring {
 
   // Linux - uses `secret-tool` CLI (libsecret/GNOME Keyring)
   private async linuxGet(key: string): Promise<string> {
-    const cmd = new Deno.Command("secret-tool", {
+    const cmd = new Command("secret-tool", {
       args: ["lookup", "service", this.service, "key", key],
     });
     const { success, stdout } = await cmd.output();
@@ -164,7 +165,7 @@ export class Keyring {
   }
 
   private async linuxSet(key: string, value: string): Promise<void> {
-    const cmd = new Deno.Command("secret-tool", {
+    const cmd = new Command("secret-tool", {
       args: ["store", "--label", `${this.service}:${key}`, "service", this.service, "key", key],
       stdin: "piped",
     });
@@ -177,7 +178,7 @@ export class Keyring {
   }
 
   private async linuxDelete(key: string): Promise<void> {
-    const cmd = new Deno.Command("secret-tool", {
+    const cmd = new Command("secret-tool", {
       args: ["clear", "service", this.service, "key", key],
     });
     await cmd.output();
@@ -185,7 +186,7 @@ export class Keyring {
 
   // Windows - uses PowerShell with Windows Credential Manager
   private async windowsGet(key: string): Promise<string> {
-    const simpleCmd = new Deno.Command("powershell", {
+    const simpleCmd = new Command("powershell", {
       args: ["-NoProfile", "-NonInteractive", "-Command", `
         [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
         $vault = New-Object Windows.Security.Credentials.PasswordVault
@@ -202,7 +203,7 @@ export class Keyring {
   }
 
   private async windowsSet(key: string, value: string): Promise<void> {
-    const cmd = new Deno.Command("powershell", {
+    const cmd = new Command("powershell", {
       args: ["-NoProfile", "-NonInteractive", "-Command", `
         [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
         $vault = New-Object Windows.Security.Credentials.PasswordVault
@@ -216,7 +217,7 @@ export class Keyring {
   }
 
   private async windowsDelete(key: string): Promise<void> {
-    const cmd = new Deno.Command("powershell", {
+    const cmd = new Command("powershell", {
       args: ["-NoProfile", "-NonInteractive", "-Command", `
         [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
         $vault = New-Object Windows.Security.Credentials.PasswordVault

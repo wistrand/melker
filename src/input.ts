@@ -15,6 +15,7 @@ import {
 import { getLogger } from './logging.ts';
 import { isRunningHeadless } from './headless.ts';
 import { ANSI } from './ansi-output.ts';
+import { stdin, stdout } from './runtime/mod.ts';
 
 const logger = getLogger('Input');
 // Sixel detection integration - see src/sixel/detect.ts for architecture docs.
@@ -301,9 +302,9 @@ export class TerminalInputProcessor {
       this._rawModeEnabled = false;
       return;
     }
-    if (typeof Deno !== 'undefined' && Deno.stdin.setRaw) {
+    if (stdin.setRaw) {
       try {
-        Deno.stdin.setRaw(true);
+        stdin.setRaw(true);
         this._rawModeEnabled = true;
       } catch (error) {
         // Raw mode not available - mouse events will not work
@@ -319,9 +320,9 @@ export class TerminalInputProcessor {
    * Disable raw mode
    */
   private async _disableRawMode(): Promise<void> {
-    if (typeof Deno !== 'undefined' && Deno.stdin.setRaw && this._rawModeEnabled) {
+    if (stdin.setRaw && this._rawModeEnabled) {
       try {
-        Deno.stdin.setRaw(false);
+        stdin.setRaw(false);
         this._rawModeEnabled = false;
       } catch (error) {
         logger.warn('Failed to disable raw mode', { error: String(error) });
@@ -333,7 +334,6 @@ export class TerminalInputProcessor {
    * Enable mouse reporting based on configuration
    */
   private async _enableMouseReporting(): Promise<void> {
-    if (typeof Deno === 'undefined') return;
 
     let mouseSequence = '';
 
@@ -358,7 +358,7 @@ export class TerminalInputProcessor {
     mouseSequence += ANSI.mouseSgrOn;
 
     try {
-      await Deno.stdout.write(new TextEncoder().encode(mouseSequence));
+      await stdout.write(new TextEncoder().encode(mouseSequence));
     } catch (error) {
       // Mouse reporting failed - silent fallback
     }
@@ -368,12 +368,10 @@ export class TerminalInputProcessor {
    * Disable mouse reporting
    */
   private async _disableMouseReporting(): Promise<void> {
-    if (typeof Deno === 'undefined') return;
-
     const disableSequence = ANSI.mouseBasicOff + ANSI.mouseButtonOff + ANSI.mouseAnyOff + ANSI.mouseSgrOff;
 
     try {
-      await Deno.stdout.write(new TextEncoder().encode(disableSequence));
+      await stdout.write(new TextEncoder().encode(disableSequence));
     } catch (error) {
       // Silent failure on cleanup
     }
@@ -383,8 +381,6 @@ export class TerminalInputProcessor {
    * Start the input reading loop
    */
   private _startInputLoop(): void {
-    if (typeof Deno === 'undefined') return;
-
     const readLoop = async () => {
       const buffer = new Uint8Array(1024); // Buffer for reading input
 
@@ -411,7 +407,7 @@ export class TerminalInputProcessor {
               // Reuse pending read or create new one
               // This prevents orphaned reads from consuming user input
               if (!pendingRead) {
-                pendingRead = Deno.stdin.read(buffer);
+                pendingRead = stdin.read(buffer);
               }
 
               // Race stdin read against detection timeout
@@ -437,7 +433,7 @@ export class TerminalInputProcessor {
                 pendingRead = null;
               } else {
                 // Raw mode: read directly from stdin
-                bytesRead = await Deno.stdin.read(buffer);
+                bytesRead = await stdin.read(buffer);
               }
             }
 
@@ -466,7 +462,7 @@ export class TerminalInputProcessor {
             // Non-raw mode: try to read line-based input as fallback
             // This is less ideal but works in non-TTY environments
             try {
-              const bytesRead = await Deno.stdin.read(buffer);
+              const bytesRead = await stdin.read(buffer);
               if (bytesRead === null) {
                 // EOF reached or no input available
                 await new Promise(resolve => setTimeout(resolve, 50)); // Small delay

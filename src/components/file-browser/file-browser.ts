@@ -40,6 +40,7 @@ import {
 } from './file-utils.ts';
 import { type FilterMode, applyFilter } from '../filterable-list/filter.ts';
 import { getGlobalRequestRender } from '../../global-accessors.ts';
+import { cwd } from '../../runtime/mod.ts';
 
 const logger = getLogger('file-browser');
 
@@ -202,7 +203,7 @@ export class FileBrowserElement extends Element implements Focusable, Interactiv
     super('file-browser', defaultProps, children);
 
     // Initialize path
-    this._currentPath = props.path || Deno.cwd();
+    this._currentPath = props.path || cwd();
 
     // Build initial UI (will be rebuilt when initialize() loads directory contents)
     this._rebuildUI();

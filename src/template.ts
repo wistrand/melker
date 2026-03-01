@@ -6,6 +6,7 @@ import type { Element } from './types.ts';
 import { parseHtml as parse } from './deps.ts';
 import { Stylesheet, parseStyleProperties } from './stylesheet.ts';
 import { isLintEnabled, validateElementProps, addWarning, reportWarnings, clearWarnings, BASE_STYLES_SCHEMA, BASE_PROPS_SCHEMA, getComponentSchema, getRegisteredComponents } from './lint.ts';
+import { readTextFile } from './runtime/mod.ts';
 
 
 // Types for template processing
@@ -862,7 +863,7 @@ export async function extractScriptsForBundler(
         const srcUrl = new URL(scriptData.src, sourceUrl).href;
         if (srcUrl.startsWith('file://')) {
           const { fromFileUrl } = await import('jsr:@std/path@1.1.4');
-          code = await Deno.readTextFile(fromFileUrl(srcUrl));
+          code = await readTextFile(fromFileUrl(srcUrl));
         } else {
           const response = await fetch(srcUrl);
           if (response.ok) {

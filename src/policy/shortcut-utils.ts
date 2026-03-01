@@ -2,6 +2,7 @@
 // Used by both flags.ts (Deno flag generation) and permission-overrides.ts (CLI override merging)
 
 import type { PolicyPermissions } from './types.ts';
+import { platform, statSync } from '../runtime/mod.ts';
 
 // AI permission shortcut hosts
 export const AI_NET_HOSTS = ['openrouter.ai'];
@@ -31,8 +32,8 @@ function commandExists(cmd: string): boolean {
   const paths = (Env.get('PATH') || '').split(':');
   for (const dir of paths) {
     try {
-      const stat = Deno.statSync(`${dir}/${cmd}`);
-      if (stat.isFile) {
+      const info = statSync(`${dir}/${cmd}`);
+      if (info.isFile) {
         commandExistsCache.set(cmd, true);
         return true;
       }
@@ -71,7 +72,7 @@ export function getAvailableKeyringCommands(): string[] {
  * Matches src/oauth/browser.ts openBrowser()
  */
 export function getBrowserCommand(): string {
-  const os = Deno.build.os;
+  const os = platform();
   if (os === 'darwin') {
     return 'open';
   } else if (os === 'windows') {

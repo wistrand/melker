@@ -1,6 +1,7 @@
 // CLI argument parser driven by schema.json
 
 import schema from './schema.json' with { type: 'json' };
+import { exit } from '../runtime/mod.ts';
 
 interface ConfigProperty {
   type: string;
@@ -77,7 +78,7 @@ export function parseCliFlags(args: string[]): ParsedCliFlags {
           } else {
             const enumHint = prop.enum ? ` [${prop.enum.join('|')}]` : '';
             console.error(`Error: ${flagName} requires a value${enumHint}`);
-            Deno.exit(1);
+            exit(1);
           }
         }
 
@@ -107,7 +108,7 @@ function parseValue(value: string, prop: ConfigProperty, flagName?: string): unk
     const match = prop.enum.find(v => v.toLowerCase() === value.toLowerCase());
     if (!match) {
       console.error(`Error: Invalid value '${value}' for ${flagName || 'option'}. Valid values: ${prop.enum.join(', ')}`);
-      Deno.exit(1);
+      exit(1);
     }
     value = match;
   }
@@ -119,7 +120,7 @@ function parseValue(value: string, prop: ConfigProperty, flagName?: string): unk
       const intVal = parseInt(value, 10);
       if (isNaN(intVal)) {
         console.error(`Error: Invalid integer value: ${value}`);
-        Deno.exit(1);
+        exit(1);
       }
       return intVal;
     }
@@ -127,7 +128,7 @@ function parseValue(value: string, prop: ConfigProperty, flagName?: string): unk
       const numVal = parseFloat(value);
       if (isNaN(numVal)) {
         console.error(`Error: Invalid number value: ${value}`);
-        Deno.exit(1);
+        exit(1);
       }
       return numVal;
     }

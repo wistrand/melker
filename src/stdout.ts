@@ -8,6 +8,7 @@ import { getLogger, type ComponentLogger } from './logging.ts';
 import { getThemeManager } from './theme.ts';
 import type { PackedRGBA } from './types.ts';
 import { ANSI, rgbTo256Color, rgbTo16Color } from './ansi-output.ts';
+import { stdout, consoleSize } from './runtime/mod.ts';
 
 // Lazy logger initialization to avoid triggering MelkerConfig.get() before CLI flags are applied
 let _logger: ComponentLogger | undefined;
@@ -32,7 +33,7 @@ export interface StdoutOptions {
  */
 export function isStdoutTTY(): boolean {
   try {
-    return Deno.stdout.isTerminal();
+    return stdout.isTerminal();
   } catch {
     // If we can't determine, assume not a TTY (safer for piping)
     return false;
@@ -81,13 +82,9 @@ export function isStdoutAutoEnabled(): boolean {
  * Get actual terminal size (for default stdout dimensions)
  */
 function getActualTerminalSize(): { width: number; height: number } {
-  try {
-    if (typeof Deno !== 'undefined' && Deno.consoleSize) {
-      const size = Deno.consoleSize();
-      return { width: size.columns, height: size.rows };
-    }
-  } catch {
-    // Fallback
+  const size = consoleSize();
+  if (size) {
+    return { width: size.columns, height: size.rows };
   }
   return { width: 80, height: 24 };
 }
@@ -333,7 +330,7 @@ export class StdoutManager {
 
     // Write to stdout
     const encoder = new TextEncoder();
-    await Deno.stdout.write(encoder.encode(output + '\n'));
+    await stdout.write(encoder.encode(output + '\n'));
   }
 
   /**

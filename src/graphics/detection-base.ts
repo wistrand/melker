@@ -3,6 +3,7 @@
 // sixel, kitty, and iterm2 detection.
 
 import { detectMultiplexer, detectRemoteSession } from '../utils/terminal-detection.ts';
+import { stdout } from '../runtime/mod.ts';
 
 /**
  * Base interface for all graphics capabilities types.
@@ -200,5 +201,5 @@ export class DetectionModule<T extends BaseCapabilities> {
  */
 export function writeDetectionQuery(query: string): void {
   const encoder = new TextEncoder();
-  Deno.stdout.writeSync(encoder.encode(query));
+  stdout.writeSync(encoder.encode(query));
 }

@@ -1,10 +1,12 @@
 // Browser opening utility for OAuth flows
 
+import { platform, Command } from '../runtime/mod.ts';
+
 /**
  * Open URL in default browser
  */
 export async function openBrowser(url: string): Promise<void> {
-  const os = Deno.build.os;
+  const os = platform();
 
   let cmd: string[];
   if (os === 'darwin') {
@@ -15,7 +17,7 @@ export async function openBrowser(url: string): Promise<void> {
     cmd = ['xdg-open', url];
   }
 
-  const command = new Deno.Command(cmd[0], { args: cmd.slice(1) });
+  const command = new Command(cmd[0], { args: cmd.slice(1) });
   await command.output();
 }
 

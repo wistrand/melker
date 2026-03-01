@@ -24,6 +24,7 @@ import { getLogger } from '../logging.ts';
 import { Env } from '../env.ts';
 import { DetectionModule, writeDetectionQuery } from '../graphics/detection-base.ts';
 import type { KittyCapabilities } from './types.ts';
+import { stdout } from '../runtime/mod.ts';
 
 const logger = getLogger('KittyDetect');
 
@@ -173,7 +174,7 @@ export function startKittyDetection(
     return dm.earlyReturn(capabilities);
   }
 
-  if (!Deno.stdout.isTerminal()) {
+  if (!stdout.isTerminal()) {
     logger.debug('Not a terminal - kitty disabled');
     return dm.earlyReturn(capabilities);
   }

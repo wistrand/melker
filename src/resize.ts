@@ -5,6 +5,7 @@ import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { debounce } from './utils/timing.ts';
 import { getLogger } from './logging.ts';
+import { addSignalListener, removeSignalListener, consoleSize } from './runtime/mod.ts';
 
 const logger = getLogger('Resize');
 
@@ -130,39 +131,33 @@ export class ResizeHandler {
     this._resizeController = new AbortController();
     this._isListening = true;
 
-    // Check if we're in a Deno environment with stdin access
-    if (typeof Deno !== 'undefined' && Deno.stdin) {
-      try {
-        // Set up signal handler for SIGWINCH (window change)
-        const sigwinchHandler = async () => {
-          await this._handleResize();
-        };
+    try {
+      // Set up signal handler for SIGWINCH (window change)
+      const sigwinchHandler = async () => {
+        await this._handleResize();
+      };
 
-        // Listen for resize signals
-        Deno.addSignalListener('SIGWINCH', sigwinchHandler);
+      // Listen for resize signals
+      addSignalListener('SIGWINCH', sigwinchHandler);
 
-        // Store cleanup function
-        this._resizeController.signal.addEventListener('abort', () => {
-          try {
-            Deno.removeSignalListener('SIGWINCH', sigwinchHandler);
-          } catch (error) {
-            // Signal handler might not exist, ignore error
-          }
-        });
+      // Store cleanup function
+      this._resizeController.signal.addEventListener('abort', () => {
+        try {
+          removeSignalListener('SIGWINCH', sigwinchHandler);
+        } catch (error) {
+          // Signal handler might not exist, ignore error
+        }
+      });
 
-        // Perform initial size detection
-        await this._detectAndUpdateSize();
+      // Perform initial size detection
+      await this._detectAndUpdateSize();
 
-        // Set up polling fallback for environments where signal handling isn't available
-        this._setupPollingFallback();
+      // Set up polling fallback for environments where signal handling isn't available
+      this._setupPollingFallback();
 
-      } catch (error) {
-        // Signal handling not available, fall back to polling
-        logger.warn('Signal-based resize detection not available, using polling fallback');
-        this._setupPollingFallback();
-      }
-    } else {
-      // Non-Deno environment, use polling
+    } catch (error) {
+      // Signal handling not available, fall back to polling
+      logger.warn('Signal-based resize detection not available, using polling fallback');
       this._setupPollingFallback();
     }
   }
@@ -197,27 +192,11 @@ export class ResizeHandler {
    * Get current terminal size
    */
   async getCurrentTerminalSize(): Promise<TerminalSize> {
-    if (typeof Deno !== 'undefined' && Deno.consoleSize) {
-      try {
-        const size = Deno.consoleSize();
-        return { width: size.columns, height: size.rows };
-      } catch (error) {
-        // Console size not available, return current size
-        return this._currentSize;
-      }
+    const size = consoleSize();
+    if (size) {
+      return { width: size.columns, height: size.rows };
     }
-
-    // Fallback size detection for Node.js environments
-    if (typeof globalThis !== 'undefined' && (globalThis as any).process?.stdout) {
-      const process = (globalThis as any).process;
-      return {
-        width: process.stdout.columns || 80,
-        height: process.stdout.rows || 24,
-      };
-    }
-
-    // Default fallback
-    return { width: 80, height: 24 };
+    return this._currentSize;
   }
 
   private _setupPollingFallback(): void {

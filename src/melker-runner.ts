@@ -11,6 +11,26 @@ import { Env } from './env.ts';
 import { parseCliFlags, MelkerConfig } from './config/mod.ts';
 import { getLogger, reconfigureGlobalLogger } from './logging.ts';
 import { isStdoutEnabled, isStdoutAutoEnabled, getStdoutConfig, bufferToStdout, trimStdoutOutput } from './stdout.ts';
+import {
+  cwd,
+  args as getArgs,
+  exit,
+  platform,
+  arch,
+  runtimeVersion,
+  stdout,
+  readTextFile,
+  writeTextFile,
+  stat as fsStat,
+  isNotFoundError,
+  watchFs,
+  removeSync,
+  remove,
+  makeTempDir,
+  addSignalListener,
+  removeSignalListener,
+  Command,
+} from './runtime/mod.ts';
 
 // Import library to register components before template parsing
 import '../mod.ts';
@@ -237,7 +257,7 @@ function getBaseUrl(pathOrUrl: string): string {
     url.pathname = pathParts.join('/') + '/';
     return url.href;
   }
-  const absolutePath = pathOrUrl.startsWith('/') ? pathOrUrl : `${Deno.cwd()}/${pathOrUrl}`;
+  const absolutePath = pathOrUrl.startsWith('/') ? pathOrUrl : `${cwd()}/${pathOrUrl}`;
   return `file://${absolutePath.split('/').slice(0, -1).join('/')}/`;
 }
 
@@ -267,7 +287,7 @@ function substituteEnvVars(content: string, args: string[]): string {
             const msg = `argv[${index}]: ${value || 'argument is required'}`;
             logger.error(msg);
             console.error(msg);
-            Deno.exit(1);
+            exit(1);
           }
           return argValue;
         default:
@@ -293,7 +313,7 @@ function substituteEnvVars(content: string, args: string[]): string {
             const msg = `${varName}: ${value || 'environment variable is required'}`;
             logger.error(msg);
             console.error(msg);
-            Deno.exit(1);
+            exit(1);
           }
           return envValue;
         default:
@@ -370,14 +390,14 @@ export async function runMelkerFile(
         console.log(`  Theme:      ${getThemeManager().getCurrentThemeName()} (${theme.colorSupport})`);
         console.log(`  Log file:   ${loggerOpts.logFile}`);
         console.log(`  Log level:  ${loggerOpts.level}`);
-        console.log(`  Deno:       ${Deno.version.deno}`);
-        console.log(`  Platform:   ${Deno.build.os} ${Deno.build.arch}`);
+        console.log(`  Deno:       ${runtimeVersion()}`);
+        console.log(`  Platform:   ${platform()} ${arch()}`);
 
         try { Deno.env.set('MELKER_RETAIN_BUNDLE', 'true'); } catch { /* env permission may not include this var */ }
 
         const sourceUrl = isUrl(filepath)
           ? filepath
-          : `file://${filepath.startsWith('/') ? filepath : Deno.cwd() + '/' + filepath}`;
+          : `file://${filepath.startsWith('/') ? filepath : cwd() + '/' + filepath}`;
 
         try {
           const bundlerParseResult = await parseMelkerForBundler(templateContent, sourceUrl);
@@ -422,7 +442,7 @@ export async function runMelkerFile(
         console.log('\n' + '='.repeat(80));
       }
 
-      Deno.exit(0);
+      exit(0);
     }
 
     // Normal app execution
@@ -460,7 +480,7 @@ export async function runMelkerFile(
       const policyResult = await loadPolicyFromContent(preloadedContent, filepath);
       appPolicy = policyResult.policy ?? createAutoPolicy(filepath);
     } else if (!isUrl(filepath)) {
-      const absolutePath = filepath.startsWith('/') ? filepath : resolve(Deno.cwd(), filepath);
+      const absolutePath = filepath.startsWith('/') ? filepath : resolve(cwd(), filepath);
       const policyResult = await loadPolicy(absolutePath);
       appPolicy = policyResult.policy ?? createAutoPolicy(absolutePath);
     } else {
@@ -486,7 +506,7 @@ export async function runMelkerFile(
     if (appTitle && !isStdoutEnabled()) {
       originalTitle = '';
       const encoder = new TextEncoder();
-      await Deno.stdout.write(encoder.encode(`\x1b]0;${appTitle}\x07`));
+      await stdout.write(encoder.encode(`\x1b]0;${appTitle}\x07`));
     }
 
     // Apply policy config (only overrides defaults, not env/cli)
@@ -502,7 +522,7 @@ export async function runMelkerFile(
       ? remoteUrlForHash
       : isUrl(filepath)
         ? filepath
-        : resolve(Deno.cwd(), filepath);
+        : resolve(cwd(), filepath);
     const urlHash = await getUrlHash(absolutePathForHash);
     const appCacheDir = getAppCacheDir(urlHash);
     const logger = (() => { try { return getLogger(filename); } catch { return null; } })();
@@ -525,7 +545,7 @@ export async function runMelkerFile(
     // baseUrl already calculated above when creating engine
     const sourceUrl = isUrl(filepath)
       ? filepath
-      : `file://${filepath.startsWith('/') ? filepath : Deno.cwd() + '/' + filepath}`;
+      : `file://${filepath.startsWith('/') ? filepath : cwd() + '/' + filepath}`;
     const sourceDirname = (() => {
       try {
         const u = new URL(sourceUrl);
@@ -546,7 +566,7 @@ export async function runMelkerFile(
       debugServer: parseResult.oauthConfig.debugServer,
     } : undefined;
 
-    let exitHandler: () => Promise<void> = () => engine.stop().then(() => { Deno.exit(0); });
+    let exitHandler: () => Promise<void> = () => engine.stop().then(() => { exit(0); });
 
     // Flag to skip auto-render after event handler
     let _skipNextRender = false;
@@ -584,10 +604,10 @@ export async function runMelkerFile(
           { cmd: 'wl-copy', args: [] },
           { cmd: 'clip.exe', args: [] },
         ];
-        for (const { cmd, args } of commands) {
+        for (const { cmd, args: clipArgs } of commands) {
           try {
-            const process = new Deno.Command(cmd, {
-              args,
+            const process = new Command(cmd, {
+              args: clipArgs,
               stdin: 'piped',
               stdout: 'null',
               stderr: 'null',
@@ -721,8 +741,8 @@ export async function runMelkerFile(
       theme: `${getThemeManager().getCurrentThemeName()} (${currentTheme.colorSupport})`,
       logFile: loggerOpts.logFile,
       logLevel: loggerOpts.level,
-      denoVersion: Deno.version.deno,
-      platform: `${Deno.build.os} ${Deno.build.arch}`,
+      denoVersion: runtimeVersion(),
+      platform: `${platform()} ${arch()}`,
       approvalFile,
       scriptsCount: assembled.metadata?.scriptsCount ?? 0,
       handlersCount: assembled.metadata?.handlersCount ?? 0,
@@ -744,7 +764,7 @@ export async function runMelkerFile(
       try {
         const helpUrl = new URL(parseResult.helpSrc, sourceUrl);
         if (helpUrl.protocol === 'file:') {
-          helpContent = await Deno.readTextFile(helpUrl.pathname);
+          helpContent = await readTextFile(helpUrl.pathname);
         } else {
           const response = await fetch(helpUrl.href);
           if (response.ok) {
@@ -857,11 +877,11 @@ export async function runMelkerFile(
         // Apply trimming if configured
         output = trimStdoutOutput(output, stdoutConfig.trim);
         const encoder = new TextEncoder();
-        await Deno.stdout.write(encoder.encode(output + '\n'));
+        await stdout.write(encoder.encode(output + '\n'));
       }
 
       // Exit cleanly
-      Deno.exit(0);
+      exit(0);
     }
 
     // Set up graceful shutdown
@@ -884,7 +904,7 @@ export async function runMelkerFile(
       if (!retainBundle && tempDirs && tempDirs.length > 0) {
         for (const dir of tempDirs) {
           try {
-            Deno.removeSync(dir, { recursive: true });
+            removeSync(dir, { recursive: true });
           } catch {
             // Ignore cleanup errors
           }
@@ -913,7 +933,7 @@ export async function runMelkerFile(
 
       if (originalTitle !== undefined) {
         try {
-          await Deno.stdout.write(encoder.encode('\x1b]0;\x07'));
+          await stdout.write(encoder.encode('\x1b]0;\x07'));
         } catch {
           // Ignore
         }
@@ -928,14 +948,14 @@ export async function runMelkerFile(
       }
 
       try {
-        if (_sigintHandler) Deno.removeSignalListener('SIGINT', _sigintHandler);
-        if (_sigTermHandler) Deno.removeSignalListener('SIGTERM', _sigTermHandler);
+        if (_sigintHandler) removeSignalListener('SIGINT', _sigintHandler);
+        if (_sigTermHandler) removeSignalListener('SIGTERM', _sigTermHandler);
       } catch {
         // Ignore
       }
 
       if (exitAfter) {
-        Deno.exit(0);
+        exit(0);
       }
     };
 
@@ -989,8 +1009,8 @@ export async function runMelkerFile(
 
     _sigintHandler = sigintHandler;
     _sigTermHandler = () => cleanup(true);
-    Deno.addSignalListener('SIGINT', _sigintHandler);
-    Deno.addSignalListener('SIGTERM', _sigTermHandler);
+    addSignalListener('SIGINT', _sigintHandler);
+    addSignalListener('SIGTERM', _sigTermHandler);
 
     return { engine, cleanup: () => cleanup(false) };
 
@@ -998,7 +1018,7 @@ export async function runMelkerFile(
     restoreTerminal();
     try {
       const encoder = new TextEncoder();
-      await Deno.stdout.write(encoder.encode('\x1b]0;\x07\n'));
+      await stdout.write(encoder.encode('\x1b]0;\x07\n'));
     } catch {
       // Ignore
     }
@@ -1016,7 +1036,7 @@ export async function runMelkerFile(
       }
     }
 
-    Deno.exit(1);
+    exit(1);
   }
 }
 
@@ -1100,7 +1120,7 @@ export async function watchAndRun(
   }, 150);
 
   try {
-    const watcher = Deno.watchFs(watchPath);
+    const watcher = watchFs(watchPath);
 
     for await (const event of watcher) {
       if (event.kind === 'modify') {
@@ -1247,23 +1267,23 @@ function printUsage(): void {
  * Main entry point for runner
  */
 async function main(): Promise<void> {
-  const args = Deno.args;
+  const cliArgs = getArgs();
 
-  if (args.includes('--help') || args.includes('-h')) {
+  if (cliArgs.includes('--help') || cliArgs.includes('-h')) {
     printUsage();
-    Deno.exit(0);
+    exit(0);
   }
 
   // Handle --schema
-  if (args.includes('--schema')) {
+  if (cliArgs.includes('--schema')) {
     const markdown = await generateSchemaMarkdown();
     console.log(markdown);
-    Deno.exit(0);
+    exit(0);
   }
 
   // Parse schema-driven CLI flags (--theme, --log-level, --lint, etc.)
   // remaining contains non-flag args and unknown flags (--print-tree, etc.)
-  const { flags: cliFlags, remaining: remainingArgs } = parseCliFlags(args);
+  const { flags: cliFlags, remaining: remainingArgs } = parseCliFlags(cliArgs);
 
   // Apply CLI flags to config (may already be auto-initialized via mod.ts import)
   MelkerConfig.applyCliFlags(cliFlags);
@@ -1311,7 +1331,7 @@ async function main(): Promise<void> {
 
   if (!filepath) {
     console.error('Error: No .melker, .md, or .mmd file specified');
-    Deno.exit(1);
+    exit(1);
   }
 
   // Log the file path/URL at startup
@@ -1319,7 +1339,7 @@ async function main(): Promise<void> {
     const { getLogger } = await import('./logging.ts');
     const logger = getLogger('Runner');
     const remoteUrl = Env.get('MELKER_REMOTE_URL');
-    const displayPath = remoteUrl || (filepath.startsWith('/') ? filepath : resolve(Deno.cwd(), filepath));
+    const displayPath = remoteUrl || (filepath.startsWith('/') ? filepath : resolve(cwd(), filepath));
     logger.info(`Starting | file="${displayPath}"`);
   }
 
@@ -1327,7 +1347,7 @@ async function main(): Promise<void> {
   if (remainingArgs.includes('--convert')) {
     if (!filepath.endsWith('.md')) {
       console.error('Error: --convert requires a .md file');
-      Deno.exit(1);
+      exit(1);
     }
 
     try {
@@ -1335,15 +1355,15 @@ async function main(): Promise<void> {
       const { getRegisteredComponents } = await import('./lint.ts');
       const { markdownToMelker } = await import('./ascii/mod.ts');
 
-      const mdContent = await Deno.readTextFile(filepath);
+      const mdContent = await readTextFile(filepath);
       const elementTypes = new Set(getRegisteredComponents());
       const melkerContent = markdownToMelker(mdContent, filepath, { elementTypes });
 
       console.log(melkerContent);
-      Deno.exit(0);
+      exit(0);
     } catch (error) {
       console.error(`Error converting markdown: ${error instanceof Error ? error.message : String(error)}`);
-      Deno.exit(1);
+      exit(1);
     }
   }
 
@@ -1358,7 +1378,7 @@ async function main(): Promise<void> {
       const elementTypes = new Set(getRegisteredComponents());
       const melkerContent = markdownToMelker(mdContent, filepath, { elementTypes });
 
-      const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
+      const absoluteFilepath = filepath.startsWith('/') ? filepath : `${cwd()}/${filepath}`;
       const mdTemplateArgs = [absoluteFilepath, ...remainingArgs.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
 
       if (options.watch) {
@@ -1380,7 +1400,7 @@ async function main(): Promise<void> {
       return;
     } catch (error) {
       console.error(`Error running markdown: ${error instanceof Error ? error.message : String(error)}`);
-      Deno.exit(1);
+      exit(1);
     }
   }
 
@@ -1396,7 +1416,7 @@ ${mmdContent}
 </graph>
 </melker>`;
 
-      const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
+      const absoluteFilepath = filepath.startsWith('/') ? filepath : `${cwd()}/${filepath}`;
       const mmdTemplateArgs = [absoluteFilepath, ...remainingArgs.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
 
       if (options.watch) {
@@ -1418,22 +1438,22 @@ ${mmdContent}
       return;
     } catch (error) {
       console.error(`Error running mermaid file: ${error instanceof Error ? error.message : String(error)}`);
-      Deno.exit(1);
+      exit(1);
     }
   }
 
   // Validate extension
   if (!filepath.endsWith('.melker')) {
     console.error('Error: File must have .melker, .md, or .mmd extension');
-    Deno.exit(1);
+    exit(1);
   }
 
-  const absoluteFilepath = filepath.startsWith('/') ? filepath : `${Deno.cwd()}/${filepath}`;
+  const absoluteFilepath = filepath.startsWith('/') ? filepath : `${cwd()}/${filepath}`;
   const templateArgs = [absoluteFilepath, ...remainingArgs.slice(filepathIndex + 1).filter(arg => !arg.startsWith('--'))];
 
   try {
     if (!isUrl(filepath)) {
-      await Deno.stat(filepath);
+      await fsStat(filepath);
     }
 
     if (options.watch) {
@@ -1443,12 +1463,12 @@ ${mmdContent}
     }
   } catch (error) {
     restoreTerminal();
-    if (error instanceof Deno.errors.NotFound) {
+    if (isNotFoundError(error)) {
       console.error(`Error: File not found: ${filepath}`);
     } else {
       console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
     }
-    Deno.exit(1);
+    exit(1);
   }
 }
 
@@ -1457,6 +1477,6 @@ if (import.meta.main) {
   main().catch((error) => {
     restoreTerminal();
     console.error(`Fatal error: ${error instanceof Error ? error.message : String(error)}`);
-    Deno.exit(1);
+    exit(1);
   });
 }

@@ -79,6 +79,7 @@
 import { getLogger } from '../logging.ts';
 import { Env } from '../env.ts';
 import { DetectionModule, writeDetectionQuery, type BaseCapabilities } from '../graphics/detection-base.ts';
+import { stdout, consoleSize } from '../runtime/mod.ts';
 
 const logger = getLogger('SixelDetect');
 
@@ -386,7 +387,7 @@ function completeDetection(): void {
     // Calculate max dimensions if not set
     if (caps.supported && (caps.maxWidth === 0 || caps.maxHeight === 0)) {
       try {
-        const termSize = Deno.consoleSize();
+        const termSize = consoleSize()!;
         caps.maxWidth = termSize.columns * caps.cellWidth;
         caps.maxHeight = termSize.rows * caps.cellHeight;
       } catch {
@@ -548,7 +549,7 @@ export function startSixelDetection(
   }
 
   // Check if stdout is a terminal
-  if (!Deno.stdout.isTerminal()) {
+  if (!stdout.isTerminal()) {
     logger.debug('Not a terminal - sixel disabled');
     return dm.earlyReturn(capabilities);
   }

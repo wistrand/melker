@@ -2,6 +2,7 @@
 
 import { join, dirname } from '../../deps.ts';
 import { getLogger } from '../../logging.ts';
+import { readDir, stat } from '../../runtime/mod.ts';
 import type {
   FileEntry,
   LoadResult,
@@ -22,7 +23,7 @@ export async function loadDirectory(
   const entries: FileEntry[] = [];
 
   try {
-    for await (const entry of Deno.readDir(path)) {
+    for await (const entry of readDir(path)) {
       // Skip hidden files unless showHidden is true
       if (!options.showHidden && entry.name.startsWith('.')) {
         continue;
@@ -32,7 +33,7 @@ export async function loadDirectory(
 
       // Stat may fail for individual entries (permission, broken symlink)
       try {
-        const stat = await Deno.stat(fullPath);
+        const fileStat = await stat(fullPath);
 
         // Apply extension filter for files
         if (!entry.isDirectory && options.extensions && options.extensions.length > 0) {
@@ -47,8 +48,8 @@ export async function loadDirectory(
           path: fullPath,
           isDirectory: entry.isDirectory,
           isSymlink: entry.isSymlink,
-          size: stat.size,
-          modified: stat.mtime,
+          size: fileStat.size,
+          modified: fileStat.mtime,
           icon: entry.isDirectory ? '[D]' : '[F]',
         });
       } catch (statError) {

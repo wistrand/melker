@@ -7,6 +7,7 @@ import type {
   ToastType,
 } from './types.ts';
 import { DEFAULT_TOAST_CONFIG } from './types.ts';
+import { stdout } from '../runtime/mod.ts';
 
 /** Generate unique toast ID */
 function generateId(): string {
@@ -219,7 +220,7 @@ export class ToastManager {
    */
   private _ringBell(): void {
     try {
-      Deno.stdout.writeSync(new TextEncoder().encode('\x07'));
+      stdout.writeSync(new TextEncoder().encode('\x07'));
     } catch {
       // Ignore errors (e.g., in headless mode)
     }

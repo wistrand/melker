@@ -1,5 +1,7 @@
 // FFmpeg utilities for video processing
 
+import { Command } from '../runtime/mod.ts';
+
 /**
  * Video dimensions from probe
  */
@@ -22,7 +24,7 @@ export const DEFAULT_VIDEO_DIMENSIONS: VideoDimensions = {
  * @returns Video dimensions or defaults if probe fails
  */
 export async function getVideoDimensions(src: string): Promise<VideoDimensions> {
-  const probeCmd = new Deno.Command('ffprobe', {
+  const probeCmd = new Command('ffprobe', {
     args: [
       '-v', 'error',
       '-select_streams', 'v:0',

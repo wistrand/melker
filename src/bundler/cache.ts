@@ -12,6 +12,16 @@ import { getLogger } from '../logging.ts';
 import { getCacheDir as getXdgCacheDir } from '../xdg.ts';
 import { sha256Hex } from '../utils/crypto.ts';
 import type { CacheEntry, AssembledMelker, LineMapping } from './types.ts';
+import {
+  readTextFile,
+  writeTextFile,
+  mkdir,
+  readDir,
+  stat,
+  remove,
+  isNotFoundError,
+  runtimeVersion,
+} from '../runtime/mod.ts';
 
 const logger = getLogger('Bundler:Cache');
 
@@ -52,13 +62,13 @@ export async function checkCache(
   logger.debug('Checking cache', { sourcePath, cachePath });
 
   try {
-    const cached = JSON.parse(await Deno.readTextFile(cachePath)) as CacheEntry;
+    const cached = JSON.parse(await readTextFile(cachePath)) as CacheEntry;
 
     // Validate Deno version
-    if (cached.denoVersion !== Deno.version.deno) {
+    if (cached.denoVersion !== runtimeVersion()) {
       logger.debug('Cache miss: Deno version mismatch', {
         cached: cached.denoVersion,
-        current: Deno.version.deno,
+        current: runtimeVersion(),
       });
       return null;
     }
@@ -77,7 +87,7 @@ export async function checkCache(
 
     return cached;
   } catch (error) {
-    if (error instanceof Deno.errors.NotFound) {
+    if (isNotFoundError(error)) {
       logger.debug('Cache miss: file not found', { cachePath });
     } else {
       logger.debug('Cache miss: read error', {
@@ -103,7 +113,7 @@ export async function saveToCache(
 
   try {
     // Ensure cache directory exists
-    await Deno.mkdir(cacheDir, { recursive: true });
+    await mkdir(cacheDir, { recursive: true });
 
     // Create cache entry
     const entry: CacheEntry = {
@@ -111,11 +121,11 @@ export async function saveToCache(
       bundledCode: assembled.bundledCode,
       lineMap: Array.from(assembled.lineMap.entries()),
       template: assembled.template,
-      denoVersion: Deno.version.deno,
+      denoVersion: runtimeVersion(),
       timestamp: Date.now(),
     };
 
-    await Deno.writeTextFile(cachePath, JSON.stringify(entry));
+    await writeTextFile(cachePath, JSON.stringify(entry));
 
     logger.debug('Cache saved', {
       cachePath,
@@ -168,7 +178,7 @@ export async function clearCache(maxAge?: number): Promise<number> {
   try {
     const now = Date.now();
 
-    for await (const entry of Deno.readDir(cacheDir)) {
+    for await (const entry of readDir(cacheDir)) {
       if (!entry.isFile || !entry.name.endsWith('.json')) continue;
 
       const filePath = `${cacheDir}/${entry.name}`;
@@ -176,7 +186,7 @@ export async function clearCache(maxAge?: number): Promise<number> {
       if (maxAge !== undefined) {
         // Check if entry is old enough to delete
         try {
-          const content = await Deno.readTextFile(filePath);
+          const content = await readTextFile(filePath);
           const cached = JSON.parse(content) as CacheEntry;
 
           if (now - cached.timestamp < maxAge) {
@@ -188,7 +198,7 @@ export async function clearCache(maxAge?: number): Promise<number> {
       }
 
       try {
-        await Deno.remove(filePath);
+        await remove(filePath);
         cleared++;
       } catch {
         // Ignore individual file delete errors
@@ -197,7 +207,7 @@ export async function clearCache(maxAge?: number): Promise<number> {
 
     logger.info('Cache cleared', { cleared });
   } catch (error) {
-    if (!(error instanceof Deno.errors.NotFound)) {
+    if (!isNotFoundError(error)) {
       logger.warn('Error clearing cache', {
         error: error instanceof Error ? error.message : String(error),
       });
@@ -223,18 +233,18 @@ export async function getCacheStats(): Promise<{
   let newestTimestamp: number | null = null;
 
   try {
-    for await (const entry of Deno.readDir(cacheDir)) {
+    for await (const entry of readDir(cacheDir)) {
       if (!entry.isFile || !entry.name.endsWith('.json')) continue;
 
       const filePath = `${cacheDir}/${entry.name}`;
 
       try {
-        const stat = await Deno.stat(filePath);
+        const fileStat = await stat(filePath);
         entries++;
-        totalSize += stat.size;
+        totalSize += fileStat.size;
 
         // Try to read timestamp from cache entry
-        const content = await Deno.readTextFile(filePath);
+        const content = await readTextFile(filePath);
         const cached = JSON.parse(content) as CacheEntry;
 
         if (oldestTimestamp === null || cached.timestamp < oldestTimestamp) {

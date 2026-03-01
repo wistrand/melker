@@ -4,6 +4,7 @@ import { dirname, resolve } from '../deps.ts';
 import type { MelkerPolicy, PolicyLoadResult } from './types.ts';
 import { Env } from '../env.ts';
 import { extractHostFromUrl } from './url-utils.ts';
+import { readTextFile, cwd } from '../runtime/mod.ts';
 
 /**
  * Extract policy from markdown JSON block with "@melker": "policy"
@@ -53,7 +54,7 @@ interface WellKnownConfig {
  */
 export async function loadPolicy(appPath: string): Promise<PolicyLoadResult> {
   try {
-    const content = await Deno.readTextFile(appPath);
+    const content = await readTextFile(appPath);
     const appDir = dirname(appPath);
     const hasOAuth = hasOAuthTag(content);
 
@@ -85,7 +86,7 @@ export async function loadPolicy(appPath: string): Promise<PolicyLoadResult> {
         : resolve(appDir, policyTag.src);
 
       try {
-        let json = await Deno.readTextFile(policyPath);
+        let json = await readTextFile(policyPath);
         // Substitute env vars before parsing
         json = substituteEnvVars(json);
         try {
@@ -475,7 +476,7 @@ export function formatPolicy(policy: MelkerPolicy, sourceUrl?: string): string {
       // Expand "cwd" to show actual path
       if (path === 'cwd') {
         try {
-          lines.push(`  cwd (${Deno.cwd()})`);
+          lines.push(`  cwd (${cwd()})`);
         } catch {
           lines.push('  cwd');
         }
@@ -492,7 +493,7 @@ export function formatPolicy(policy: MelkerPolicy, sourceUrl?: string): string {
       // Expand "cwd" to show actual path
       if (path === 'cwd') {
         try {
-          lines.push(`  cwd (${Deno.cwd()})`);
+          lines.push(`  cwd (${cwd()})`);
         } catch {
           lines.push('  cwd');
         }

@@ -7,6 +7,7 @@ import { Env } from '../env.ts';
 import { MelkerConfigCore as MelkerConfig } from '../config/config-core.ts';
 import { extractHostFromUrl, extractHostOrValue } from './url-utils.ts';
 import { expandShortcutsInPlace } from './shortcut-utils.ts';
+import { cwd } from '../runtime/mod.ts';
 
 // Re-export shortcut constants and helpers so existing consumers don't break
 export {
@@ -197,7 +198,7 @@ function expandCwdInDenyList(deniedPaths: string[] | undefined): string[] | unde
   return deniedPaths.map(p => {
     if (p === 'cwd') {
       try {
-        return Deno.cwd();
+        return cwd();
       } catch {
         return p;
       }
@@ -259,9 +260,9 @@ function buildPermissionPaths(
       // Special "cwd" value expands to current working directory
       if (p === 'cwd') {
         try {
-          const cwd = Deno.cwd();
-          if (!isPathDenied(cwd, denyPaths)) {
-            paths.push(cwd);
+          const cwdPath = cwd();
+          if (!isPathDenied(cwdPath, denyPaths)) {
+            paths.push(cwdPath);
           }
         } catch {
           // Ignore if cwd is not accessible
@@ -293,7 +294,7 @@ function getImplicitReadPaths(appDir: string, urlHash?: string, isRemote?: boole
   // Current working directory (local apps only — remote apps must declare "cwd" explicitly)
   if (!isRemote) {
     try {
-      implicit.push({ path: Deno.cwd(), label: 'current working directory' });
+      implicit.push({ path: cwd(), label: 'current working directory' });
     } catch {
       // Ignore if cwd is not accessible
     }

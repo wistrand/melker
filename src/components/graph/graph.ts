@@ -39,6 +39,7 @@ import { Stylesheet } from '../../stylesheet.ts';
 import { getGlobalEngine } from '../../global-accessors.ts';
 import { getLogger } from '../../logging.ts';
 import { registerComponent } from '../../element.ts';
+import { readTextFile } from '../../runtime/mod.ts';
 
 const logger = getLogger('Graph');
 
@@ -152,7 +153,7 @@ export class GraphElement extends Element implements Renderable {
       let content: string;
       if (resolvedUrl.startsWith('file://')) {
         const filePath = new URL(resolvedUrl).pathname;
-        content = await Deno.readTextFile(filePath);
+        content = await readTextFile(filePath);
       } else {
         // HTTP/HTTPS URLs use fetch
         const response = await fetch(resolvedUrl);

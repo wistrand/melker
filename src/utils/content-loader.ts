@@ -1,5 +1,7 @@
 // Content loading utilities for files and URLs
 
+import { readTextFile } from '../runtime/mod.ts';
+
 /**
  * Check if a path is a URL (http:// or https://)
  */
@@ -39,7 +41,7 @@ export async function loadContent(pathOrUrl: string): Promise<string> {
     }
     content = await response.text();
   } else {
-    content = await Deno.readTextFile(pathOrUrl);
+    content = await readTextFile(pathOrUrl);
   }
   return stripShebang(content);
 }

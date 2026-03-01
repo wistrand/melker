@@ -2,6 +2,7 @@
 
 import { DualBuffer, BufferDiff, Cell, RenderOptions } from './buffer.ts';
 import { ANSI, rgbTo256Color, rgbTo16Color } from './ansi-output.ts';
+import { stdout } from './runtime/mod.ts';
 
 // Reusable TextEncoder to avoid per-write allocations
 const textEncoder = new TextEncoder();
@@ -477,11 +478,11 @@ export class TerminalRenderer {
 
   // Write to terminal
   private _writeToTerminal(data: string): void {
-    Deno.stdout.writeSync(textEncoder.encode(data));
+    stdout.writeSync(textEncoder.encode(data));
   }
 
   // Write to terminal with synchronization to prevent tearing (for rendering)
   private _writeToTerminalSynced(data: string): void {
-    Deno.stdout.writeSync(textEncoder.encode(ANSI.beginSync + data + ANSI.endSync));
+    stdout.writeSync(textEncoder.encode(ANSI.beginSync + data + ANSI.endSync));
   }
 }

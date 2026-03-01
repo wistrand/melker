@@ -7,6 +7,7 @@ import { getStateDir, ensureDir } from './xdg.ts';
 import { sha256Hex } from './utils/crypto.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { getLogger } from './logging.ts';
+import { readTextFile, writeTextFile, isNotFoundError } from './runtime/mod.ts';
 
 const logger = getLogger('StatePersistence');
 
@@ -206,7 +207,7 @@ export async function saveToFile(appId: string, state: PersistedState): Promise<
 
   const filepath = getStateFilePath(appId);
   const json = JSON.stringify(stateFile, null, 2);
-  await Deno.writeTextFile(filepath, json);
+  await writeTextFile(filepath, json);
 }
 
 /**
@@ -229,7 +230,7 @@ export async function loadFromFile(appId: string, skipLoad?: boolean): Promise<P
   const filepath = getStateFilePath(appId);
 
   try {
-    const json = await Deno.readTextFile(filepath);
+    const json = await readTextFile(filepath);
     const stateFile: StateFile = JSON.parse(json);
 
     if (stateFile.version !== STATE_VERSION) {
@@ -239,7 +240,7 @@ export async function loadFromFile(appId: string, skipLoad?: boolean): Promise<P
 
     return stateFile.state;
   } catch (error) {
-    if (error instanceof Deno.errors.NotFound) {
+    if (isNotFoundError(error)) {
       // No saved state - that's fine
       return null;
     }

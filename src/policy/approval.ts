@@ -3,6 +3,7 @@
 
 import { getCacheDir, ensureDir, getAppCacheDir } from '../xdg.ts';
 import { sha256Hex } from '../utils/crypto.ts';
+import { cwd, readTextFile, writeTextFile, readDir, remove, isNotFoundError, stdin } from '../runtime/mod.ts';
 import type { MelkerPolicy } from './types.ts';
 import { extractHostFromUrl } from './url-utils.ts';
 import { isUrl } from '../utils/content-loader.ts';
@@ -116,7 +117,7 @@ export async function checkApproval(
   try {
 
     const filePath = await getApprovalFilePath(url);
-    const json = await Deno.readTextFile(filePath);
+    const json = await readTextFile(filePath);
     const record: ApprovalRecord = JSON.parse(json);
 
     // Calculate current hash
@@ -156,7 +157,7 @@ export async function saveApproval(
   await createAppCacheDir(url);
 
   const filePath = await getApprovalFilePath(url);
-  await Deno.writeTextFile(filePath, JSON.stringify(record, null, 2));
+  await writeTextFile(filePath, JSON.stringify(record, null, 2));
 }
 
 /**
@@ -176,7 +177,7 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
     const readDisplay = p.read.map(entry => {
       if (entry === 'cwd') {
         try {
-          return `cwd (${Deno.cwd()})`;
+          return `cwd (${cwd()})`;
         } catch {
           return 'cwd';
         }
@@ -190,7 +191,7 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
     const writeDisplay = p.write.map(entry => {
       if (entry === 'cwd') {
         try {
-          return `cwd (${Deno.cwd()})`;
+          return `cwd (${cwd()})`;
         } catch {
           return 'cwd';
         }
@@ -360,7 +361,7 @@ export function showApprovalPrompt(
   overrides?: PermissionOverrides
 ): boolean {
   // Check if stdin is a TTY - if not, we can't prompt
-  if (!Deno.stdin.isTerminal()) {
+  if (!stdin.isTerminal()) {
     console.error('\x1b[31mError: Cannot prompt for approval - stdin is not a terminal.\x1b[0m');
     console.error('Use --trust to run remote apps in non-interactive mode.');
     return false;
@@ -436,14 +437,14 @@ export async function clearAllApprovals(): Promise<number> {
   let count = 0;
 
   try {
-    for await (const entry of Deno.readDir(approvalsDir)) {
+    for await (const entry of readDir(approvalsDir)) {
       if (entry.isFile && entry.name.endsWith('.json')) {
-        await Deno.remove(`${approvalsDir}/${entry.name}`);
+        await remove(`${approvalsDir}/${entry.name}`);
         count++;
       }
     }
   } catch (error) {
-    if (!(error instanceof Deno.errors.NotFound)) {
+    if (!(isNotFoundError(error))) {
       throw error;
     }
   }
@@ -457,10 +458,10 @@ export async function clearAllApprovals(): Promise<number> {
 export async function revokeApproval(url: string): Promise<boolean> {
   try {
     const filePath = await getApprovalFilePath(url);
-    await Deno.remove(filePath);
+    await remove(filePath);
     return true;
   } catch (error) {
-    if (error instanceof Deno.errors.NotFound) {
+    if (isNotFoundError(error)) {
       return false;
     }
     throw error;
@@ -473,7 +474,7 @@ export async function revokeApproval(url: string): Promise<boolean> {
 export async function getApproval(url: string): Promise<ApprovalRecord | null> {
   try {
     const filePath = await getApprovalFilePath(url);
-    const json = await Deno.readTextFile(filePath);
+    const json = await readTextFile(filePath);
     return JSON.parse(json) as ApprovalRecord;
   } catch {
     return null;
@@ -503,7 +504,7 @@ export async function checkLocalApproval(
 ): Promise<boolean> {
   try {
     const filePath = await getApprovalFilePath(filepath);
-    const json = await Deno.readTextFile(filePath);
+    const json = await readTextFile(filePath);
     const record: ApprovalRecord = JSON.parse(json);
 
     // Calculate current policy hash
@@ -547,5 +548,5 @@ export async function saveLocalApproval(
   await createAppCacheDir(filepath);
 
   const filePath = await getApprovalFilePath(filepath);
-  await Deno.writeTextFile(filePath, JSON.stringify(record, null, 2));
+  await writeTextFile(filePath, JSON.stringify(record, null, 2));
 }

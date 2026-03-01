@@ -7,6 +7,13 @@ import { isRunningHeadless } from './headless.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { isStdoutEnabled } from './stdout.ts';
+import {
+  stdin,
+  stdout,
+  exit,
+  addSignalListener,
+  removeSignalListener,
+} from './runtime/mod.ts';
 
 // Lazy logger initialization to avoid triggering MelkerConfig.get() before CLI flags are applied
 let _logger: ComponentLogger | undefined;
@@ -25,7 +32,7 @@ function getTerminalLogger(): ComponentLogger {
 export function restoreTerminal(): void {
   // First disable raw mode
   try {
-    Deno.stdin.setRaw(false);
+    stdin.setRaw(false);
   } catch {
     // Ignore errors
   }
@@ -35,7 +42,7 @@ export function restoreTerminal(): void {
     const resetSequence =
       ANSI.mouseBasicOff + ANSI.mouseButtonOff + ANSI.mouseAnyOff + ANSI.mouseSgrOff +
       ANSI.normalScreen + ANSI.showCursor + ANSI.reset;
-    Deno.stdout.writeSync(new TextEncoder().encode(resetSequence));
+    stdout.writeSync(new TextEncoder().encode(resetSequence));
   } catch {
     // Ignore errors
   }
@@ -63,24 +70,22 @@ export function setupTerminal(options: TerminalLifecycleOptions): void {
   // Check config for alternate screen setting
   const noAltScreen = !MelkerConfig.get().terminalAlternateScreen;
 
-  if (typeof Deno !== 'undefined') {
-    const codes: string[] = [];
+  const codes: string[] = [];
 
-    // Use alternate screen unless explicitly disabled
-    if (options.alternateScreen && !noAltScreen) {
-      codes.push(ANSI.alternateScreen);
-    } else if (options.alternateScreen && noAltScreen) {
-      // Clear screen instead when not using alternate screen
-      codes.push(ANSI.clearScreen + ANSI.cursorHome);
-    }
+  // Use alternate screen unless explicitly disabled
+  if (options.alternateScreen && !noAltScreen) {
+    codes.push(ANSI.alternateScreen);
+  } else if (options.alternateScreen && noAltScreen) {
+    // Clear screen instead when not using alternate screen
+    codes.push(ANSI.clearScreen + ANSI.cursorHome);
+  }
 
-    if (options.hideCursor) {
-      codes.push(ANSI.hideCursor);
-    }
+  if (options.hideCursor) {
+    codes.push(ANSI.hideCursor);
+  }
 
-    if (codes.length > 0) {
-      Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
-    }
+  if (codes.length > 0) {
+    stdout.writeSync(new TextEncoder().encode(codes.join('')));
   }
 }
 
@@ -88,44 +93,42 @@ export function setupTerminal(options: TerminalLifecycleOptions): void {
  * Clean up terminal (restore normal screen, show cursor)
  */
 export function cleanupTerminal(options: TerminalLifecycleOptions): void {
-  if (typeof Deno !== 'undefined') {
-    // In headless mode, do minimal terminal cleanup if connected to a real terminal
-    if (isRunningHeadless()) {
-      try {
-        // Check if stdout is a TTY (connected to a real terminal)
-        if (Deno.stdout.isTerminal()) {
-          // Basic cleanup: restore cursor and normal screen if needed
-          const codes: string[] = [];
-          if (options.alternateScreen) {
-            codes.push(ANSI.normalScreen);
-          }
-          if (options.hideCursor) {
-            codes.push(ANSI.showCursor);
-          }
-          if (codes.length > 0) {
-            Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
-          }
+  // In headless mode, do minimal terminal cleanup if connected to a real terminal
+  if (isRunningHeadless()) {
+    try {
+      // Check if stdout is a TTY (connected to a real terminal)
+      if (stdout.isTerminal()) {
+        // Basic cleanup: restore cursor and normal screen if needed
+        const codes: string[] = [];
+        if (options.alternateScreen) {
+          codes.push(ANSI.normalScreen);
         }
-      } catch {
-        // If isTerminal() fails, we're probably not in a real terminal, so skip cleanup
+        if (options.hideCursor) {
+          codes.push(ANSI.showCursor);
+        }
+        if (codes.length > 0) {
+          stdout.writeSync(new TextEncoder().encode(codes.join('')));
+        }
       }
-      return;
+    } catch {
+      // If isTerminal() fails, we're probably not in a real terminal, so skip cleanup
     }
+    return;
+  }
 
-    // Full cleanup for non-headless mode
-    const codes: string[] = [];
+  // Full cleanup for non-headless mode
+  const codes: string[] = [];
 
-    if (options.alternateScreen) {
-      codes.push(ANSI.normalScreen);
-    }
+  if (options.alternateScreen) {
+    codes.push(ANSI.normalScreen);
+  }
 
-    if (options.hideCursor) {
-      codes.push(ANSI.showCursor);
-    }
+  if (options.hideCursor) {
+    codes.push(ANSI.showCursor);
+  }
 
-    if (codes.length > 0) {
-      Deno.stdout.writeSync(new TextEncoder().encode(codes.join('')));
-    }
+  if (codes.length > 0) {
+    stdout.writeSync(new TextEncoder().encode(codes.join('')));
   }
 }
 
@@ -152,8 +155,6 @@ export function setupCleanupHandlers(
   onSyncCleanup: () => void,
   onBeforeExit?: () => Promise<boolean>,
 ): { removeSigint: () => void } {
-  if (typeof Deno === 'undefined') return { removeSigint: () => {} };
-
   const cleanup = async () => {
     try {
       await onAsyncCleanup();
@@ -162,7 +163,7 @@ export function setupCleanupHandlers(
       onSyncCleanup();
       console.error('Error during cleanup:', error);
     }
-    Deno.exit(0);
+    exit(0);
   };
 
   const syncCleanup = () => {
@@ -208,13 +209,13 @@ export function setupCleanupHandlers(
     }
   };
 
-  Deno.addSignalListener('SIGINT', sigintHandler);
-  Deno.addSignalListener('SIGTERM', cleanup);
+  addSignalListener('SIGINT', sigintHandler);
+  addSignalListener('SIGTERM', cleanup);
 
   // Handle additional termination signals
   try {
-    Deno.addSignalListener('SIGHUP', cleanup);
-    Deno.addSignalListener('SIGQUIT', cleanup);
+    addSignalListener('SIGHUP', cleanup);
+    addSignalListener('SIGQUIT', cleanup);
   } catch {
     // Some signals might not be available on all platforms
   }
@@ -235,7 +236,7 @@ export function setupCleanupHandlers(
       console.error('\nStack trace:');
       console.error(event.error.stack);
     }
-    Deno.exit(1);
+    exit(1);
   });
 
   globalThis.addEventListener('unhandledrejection', (event) => {
@@ -253,7 +254,7 @@ export function setupCleanupHandlers(
       console.error('\nStack trace:');
       console.error(reason.stack);
     }
-    Deno.exit(1);
+    exit(1);
   });
 
   // Handle beforeunload/exit events if available
@@ -265,7 +266,7 @@ export function setupCleanupHandlers(
 
   return {
     removeSigint: () => {
-      try { Deno.removeSignalListener('SIGINT', sigintHandler); } catch { /* ignore */ }
+      try { removeSignalListener('SIGINT', sigintHandler); } catch { /* ignore */ }
     },
   };
 }
@@ -283,7 +284,7 @@ let _emergencyCleanupRegistered = false;
  * Register an instance for emergency cleanup on unexpected exit
  */
 export function registerForEmergencyCleanup(instance: CleanupableInstance): void {
-  if (typeof globalThis === 'undefined' || typeof Deno === 'undefined') return;
+  if (typeof globalThis === 'undefined') return;
 
   if (!_instances) {
     _instances = new Set();
@@ -311,7 +312,7 @@ export function registerForEmergencyCleanup(instance: CleanupableInstance): void
 
     // Register emergency cleanup for various exit scenarios
     try {
-      Deno.addSignalListener('SIGKILL', emergencyCleanup);
+      addSignalListener('SIGKILL', emergencyCleanup);
     } catch {
       // SIGKILL might not be available
     }

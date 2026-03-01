@@ -2,6 +2,7 @@
 
 import { decodePng } from '../../deps.ts';
 import { MelkerConfig } from '../../config/mod.ts';
+import { readFileSync, readFile } from '../../runtime/mod.ts';
 import { BAYER_8X8, type ThresholdMatrix } from './types.ts';
 import { quantizeChannel, rgbToGray } from './utils.ts';
 import { getAsset } from '../../assets.ts';
@@ -52,7 +53,7 @@ export function loadThresholdMatrixFromPngSync(pngPath: string): ThresholdMatrix
   if (cached) return cached;
 
   // Load and decode PNG synchronously
-  const pngData = Deno.readFileSync(pngPath);
+  const pngData = readFileSync(pngPath);
   return decodePngToMatrix(pngData, pngPath);
 }
 
@@ -70,7 +71,7 @@ export async function loadThresholdMatrixFromPng(pngPath: string): Promise<Thres
   if (cached) return cached;
 
   // Load and decode PNG
-  const pngData = await Deno.readFile(pngPath);
+  const pngData = await readFile(pngPath);
   return decodePngToMatrix(pngData, pngPath);
 }
 

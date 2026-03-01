@@ -35,6 +35,8 @@ import {
 import { MelkerConfig } from '../config/mod.ts';
 import { getGlobalPaletteCache } from '../sixel/palette.ts';
 import { isStdoutEnabled } from '../stdout.ts';
+import { cwd, readTextFile, Command } from '../runtime/mod.ts';
+import type { ChildProcess } from '../runtime/mod.ts';
 
 // Re-export types for backwards compatibility
 export type { DitherMode } from '../video/dither.ts';
@@ -83,7 +85,7 @@ export class VideoElement extends CanvasElement implements Disposable {
   private _resizeInProgress = false;
 
   // Video playback support
-  private _videoProcess: Deno.ChildProcess | null = null;
+  private _videoProcess: ChildProcess | null = null;
   private _videoPlaying: boolean = false;
   private _videoPaused: boolean = false;
   private _videoOptions: VideoOptions | null = null;
@@ -99,7 +101,7 @@ export class VideoElement extends CanvasElement implements Disposable {
   private _videoSrc: string | null = null;
 
   // Audio waveform support
-  private _audioProcess: Deno.ChildProcess | null = null;
+  private _audioProcess: ChildProcess | null = null;
   private _audioSamples: Float32Array = new Float32Array(0);
   private _audioSampleRate: number = 44100;
   private _audioSamplesPerFrame: number = 0;
@@ -109,7 +111,7 @@ export class VideoElement extends CanvasElement implements Disposable {
   private _resampledWaveform: Float32Array = new Float32Array(0);  // Resampled for rendering
 
   // Audio playback support (via ffplay)
-  private _audioPlaybackProcess: Deno.ChildProcess | null = null;
+  private _audioPlaybackProcess: ChildProcess | null = null;
 
   constructor(props: VideoProps, children: Element[] = []) {
     // Set default video props
@@ -186,7 +188,7 @@ export class VideoElement extends CanvasElement implements Disposable {
     await this.playVideo(this.props.src, options);
 
     // Start audio stream for waveform if enabled
-    const resolvedSrc = this.props.src.startsWith('/') ? this.props.src : `${Deno.cwd()}/${this.props.src}`;
+    const resolvedSrc = this.props.src.startsWith('/') ? this.props.src : `${cwd()}/${this.props.src}`;
     await this._startAudioStream(resolvedSrc, effectiveStartTime ?? 0);
   }
 
@@ -209,7 +211,7 @@ export class VideoElement extends CanvasElement implements Disposable {
           return;
         }
 
-        const srcPath = this.props.src.startsWith('/') ? this.props.src : `${Deno.cwd()}/${this.props.src}`;
+        const srcPath = this.props.src.startsWith('/') ? this.props.src : `${cwd()}/${this.props.src}`;
         // Replace extension with .srt
         const lastDot = srcPath.lastIndexOf('.');
         if (lastDot === -1) {
@@ -220,12 +222,12 @@ export class VideoElement extends CanvasElement implements Disposable {
         logger.info('Deriving subtitle path from video source', { videoSrc: this.props.src, subtitlePath: resolvedPath });
       } else {
         // Resolve relative paths from cwd
-        resolvedPath = subtitlePath.startsWith('/') ? subtitlePath : `${Deno.cwd()}/${subtitlePath}`;
+        resolvedPath = subtitlePath.startsWith('/') ? subtitlePath : `${cwd()}/${subtitlePath}`;
         logger.info('Loading subtitles from explicit path', { subtitlePath: resolvedPath });
       }
 
       logger.info('Reading subtitle file', { path: resolvedPath });
-      const content = await Deno.readTextFile(resolvedPath);
+      const content = await readTextFile(resolvedPath);
       this._subtitleCues = parseSrt(content);
       this._currentSubtitle = null;
       logger.info('Loaded subtitles successfully', { path: resolvedPath, cueCount: this._subtitleCues.length });
@@ -281,7 +283,7 @@ export class VideoElement extends CanvasElement implements Disposable {
       channels: 1
     });
 
-    const ffmpegCmd = new Deno.Command('ffmpeg', {
+    const ffmpegCmd = new Command('ffmpeg', {
       args: ffmpegArgs,
       stdout: 'piped',
       stderr: 'piped'
@@ -442,7 +444,7 @@ export class VideoElement extends CanvasElement implements Disposable {
     }
 
     try {
-      const cmd = new Deno.Command('ffplay', {
+      const cmd = new Command('ffplay', {
         args,
         stdout: 'null',
         stderr: 'null',
@@ -880,7 +882,7 @@ export class VideoElement extends CanvasElement implements Disposable {
     // Resolve relative paths from cwd
     const resolvedSrc = isRemoteUrl(src)
       ? src
-      : (src.startsWith('/') ? src : `${Deno.cwd()}/${src}`);
+      : (src.startsWith('/') ? src : `${cwd()}/${src}`);
 
     // Reset palette cache flag so next render clears stale cache
     this._paletteCacheCleared = false;
@@ -935,7 +937,7 @@ export class VideoElement extends CanvasElement implements Disposable {
 
     logger.info('ffmpeg command', { args: ffmpegArgs.join(' ') });
 
-    const ffmpegCmd = new Deno.Command('ffmpeg', {
+    const ffmpegCmd = new Command('ffmpeg', {
       args: ffmpegArgs,
       stdout: 'piped',
       stderr: 'piped'

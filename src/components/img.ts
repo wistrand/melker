@@ -10,6 +10,7 @@ import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
 import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
 import { ensureError } from '../utils/error.ts';
+import { cwd } from '../runtime/mod.ts';
 
 const logger = getLogger('ImgElement');
 
@@ -141,7 +142,7 @@ export class ImgElement extends CanvasElement {
     }
 
     // Fallback: resolve from cwd
-    return `${Deno.cwd()}/${src}`;
+    return `${cwd()}/${src}`;
   }
 
   /**

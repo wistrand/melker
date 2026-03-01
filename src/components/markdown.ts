@@ -13,6 +13,7 @@ import { GraphElement } from './graph/mod.ts';
 import { getLogger } from '../logging.ts';
 import { getStringWidth } from '../char-width.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { cwd, readTextFile, stat } from '../runtime/mod.ts';
 import { COLORS, parseColor } from './color-utils.ts';
 import { MarkdownImageRenderer } from './markdown-image.ts';
 import { renderTable as renderTableHelper, type TableRenderHelpers } from './markdown-table.ts';
@@ -241,9 +242,9 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       // For relative paths (not starting with / or protocol), try cwd first
       // This handles command-line arguments like "examples/foo.md"
       if (!src.startsWith('/') && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('file://')) {
-        const cwdPath = `${Deno.cwd()}/${src}`;
+        const cwdPath = `${cwd()}/${src}`;
         try {
-          await Deno.stat(cwdPath);
+          await stat(cwdPath);
           // File exists at cwd-relative path, use it
           resolvedUrl = `file://${cwdPath}`;
         } catch {
@@ -254,7 +255,7 @@ export class MarkdownElement extends Element implements Renderable, Interactive,
       if (resolvedUrl.startsWith('file://')) {
         // Local file access - use URL.pathname for proper parsing
         const filePath = new URL(resolvedUrl).pathname;
-        this._srcContent = await Deno.readTextFile(filePath);
+        this._srcContent = await readTextFile(filePath);
       } else if (isUrl(resolvedUrl)) {
         // HTTP/HTTPS URL
         const response = await fetch(resolvedUrl);

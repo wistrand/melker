@@ -6,6 +6,7 @@ import schema from './schema.json' with { type: 'json' };
 import { Env } from '../env.ts';
 import { getConfigDir } from '../xdg.ts';
 import type { PolicyConfigProperty } from '../policy/types.ts';
+import { readTextFileSync, statSync } from '../runtime/mod.ts';
 
 // Re-export for consumers that import from config
 export type { PolicyConfigProperty };
@@ -415,7 +416,7 @@ export class MelkerConfigCore {
   private static loadConfigFile(): Record<string, unknown> {
     const configPath = `${getConfigDir()}/config.json`;
     try {
-      const content = Deno.readTextFileSync(configPath);
+      const content = readTextFileSync(configPath);
       return JSON.parse(content);
     } catch {
       return {};
@@ -451,7 +452,7 @@ export class MelkerConfigCore {
 
     lines.push(`Config file: ${configPath}`);
     try {
-      Deno.statSync(configPath);
+      statSync(configPath);
       lines.push('  (exists)');
     } catch {
       lines.push('  (not found)');

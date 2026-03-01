@@ -10,6 +10,7 @@
 import { decodePng } from './deps.ts';
 import { ASSET_DATA, ASSET_PATHS } from './assets-data.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { readFileSync } from './runtime/mod.ts';
 
 const _cache = new Map<string, Uint8Array>();
 const _baseUrl = new URL('.', import.meta.url);
@@ -30,7 +31,7 @@ function readLocal(id: string): Uint8Array | null {
   if (!rel) return null;
   try {
     const url = new URL(rel, _baseUrl);
-    return Deno.readFileSync(url);
+    return readFileSync(url);
   } catch {
     return null;
   }

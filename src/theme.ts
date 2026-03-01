@@ -3,6 +3,7 @@
 import type { PackedRGBA } from './types.ts';
 import { Env } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
+import { cwd } from './runtime/mod.ts';
 import { COLORS, cssToRgba, packRGBA } from './components/color-utils.ts';
 import { extractVariableDeclarations } from './stylesheet.ts';
 import { getLogger } from './logging.ts';
@@ -169,7 +170,7 @@ async function loadCustomTheme(path: string): Promise<Theme | null> {
   try {
     const resolved = path.startsWith('file://') ? path
       : path.startsWith('/') ? `file://${path}`
-      : `file://${Deno.cwd()}/${path}`;
+      : `file://${cwd()}/${path}`;
     const css = await (await fetch(resolved)).text();
     return buildThemeFromCSS(css, path);
   } catch (e) {

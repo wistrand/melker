@@ -23,6 +23,11 @@ import {
   isBundleAvailable,
   getBundleUnavailableHint,
 } from './errors.ts';
+import {
+  makeTempDir,
+  writeTextFile,
+  remove,
+} from '../runtime/mod.ts';
 
 const logger = getLogger('Bundler');
 
@@ -64,7 +69,7 @@ export async function bundle(
     throw new Error('unreachable');
   }
 
-  const tempDir = await Deno.makeTempDir({ prefix: 'melker-bundle-' });
+  const tempDir = await makeTempDir({ prefix: 'melker-bundle-' });
   const sourceFile = `${tempDir}/generated.ts`;
 
   logger.debug('Created temp directory', { tempDir, sourceFile });
@@ -73,7 +78,7 @@ export async function bundle(
     // Write script module files first (inline scripts as separate modules)
     for (const module of generated.scriptModules) {
       const modulePath = `${tempDir}/${module.filename}`;
-      await Deno.writeTextFile(modulePath, module.content);
+      await writeTextFile(modulePath, module.content);
       logger.debug('Wrote script module', {
         path: modulePath,
         filename: module.filename,
@@ -83,9 +88,9 @@ export async function bundle(
     }
 
     // Write generated TypeScript entry point
-    await Deno.writeTextFile(sourceFile, generated.code);
+    await writeTextFile(sourceFile, generated.code);
     // Also save a debug copy for inspection
-    await Deno.writeTextFile(`${getTempDir()}/melker-generated.ts`, generated.code);
+    await writeTextFile(`${getTempDir()}/melker-generated.ts`, generated.code);
     logger.debug('Wrote generated TypeScript to temp file', {
       path: sourceFile,
       bytes: generated.code.length,
@@ -151,7 +156,7 @@ export async function bundle(
 
     // Debug: save bundled JS for inspection
     const debugBundlePath = `${getTempDir()}/melker-bundled.js`;
-    await Deno.writeTextFile(debugBundlePath, code);
+    await writeTextFile(debugBundlePath, code);
     logger.debug(`Saved bundled JS to ${debugBundlePath}`);
 
     const elapsed = performance.now() - startTime;
@@ -177,7 +182,7 @@ export async function bundle(
   } catch (error) {
     // Clean up temp directory on error
     try {
-      await Deno.remove(tempDir, { recursive: true });
+      await remove(tempDir, { recursive: true });
       logger.debug('Cleaned up temp directory after error', { tempDir });
     } catch {
       // Ignore cleanup errors

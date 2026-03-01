@@ -9,6 +9,7 @@
 
 import { getLogger } from '../logging.ts';
 import { restoreTerminal } from '../terminal-lifecycle.ts';
+import { exit } from '../runtime/mod.ts';
 import type {
   ErrorContext,
   GeneratedSource,
@@ -76,7 +77,7 @@ export function displayFatalError(
   console.error(lines.join('\n'));
 
   // 4. Exit
-  Deno.exit(1);
+  exit(1);
 }
 
 /**

@@ -7,6 +7,16 @@ import { getOpenRouterConfig } from './openrouter.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { ensureError } from '../utils/error.ts';
 import { getAssetText } from '../assets.ts';
+import {
+  platform,
+  stat,
+  remove,
+  writeTextFile,
+  writeFile,
+  makeTempFile,
+  Command,
+  type ChildProcess,
+} from '../runtime/mod.ts';
 
 const logger = getLogger('ai:audio');
 
@@ -31,7 +41,7 @@ interface AudioInput {
  * Audio recorder that captures audio for a specified duration or until stopped
  */
 export class AudioRecorder {
-  private _process: Deno.ChildProcess | null = null;
+  private _process: ChildProcess | null = null;
   private _reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private _audioChunks: Uint8Array[] = [];
   private _isRecording = false;
@@ -87,7 +97,7 @@ export class AudioRecorder {
     try {
       // Use platform-specific recording
       const forceFFmpeg = config.terminalForceFFmpeg;
-      if (Deno.build.os === 'darwin' && !forceFFmpeg) {
+      if (platform() === 'darwin' && !forceFFmpeg) {
         return await this._recordMacOS(durationSeconds, gain, sampleRate, channels, bitsPerSample);
       } else {
         return await this._recordFFmpeg(durationSeconds, gain, sampleRate, channels, bitsPerSample);
@@ -113,15 +123,15 @@ export class AudioRecorder {
     // Remote/JSR — write embedded asset to temp file (swift needs a file path)
     if (this._tempSwiftScript) {
       try {
-        await Deno.stat(this._tempSwiftScript);
+        await stat(this._tempSwiftScript);
         return this._tempSwiftScript;
       } catch {
         this._tempSwiftScript = null;
       }
     }
 
-    this._tempSwiftScript = await Deno.makeTempFile({ suffix: '.swift' });
-    await Deno.writeTextFile(this._tempSwiftScript, getAssetText('macos-audio-record.swift'));
+    this._tempSwiftScript = await makeTempFile({ suffix: '.swift' });
+    await writeTextFile(this._tempSwiftScript, getAssetText('macos-audio-record.swift'));
     logger.debug('Swift script written to temp file', { path: this._tempSwiftScript });
     return this._tempSwiftScript;
   }
@@ -132,7 +142,7 @@ export class AudioRecorder {
   private async _cleanupTempSwiftScript(): Promise<void> {
     if (this._tempSwiftScript) {
       try {
-        await Deno.remove(this._tempSwiftScript);
+        await remove(this._tempSwiftScript);
         logger.debug('Cleaned up temp Swift script', { path: this._tempSwiftScript });
       } catch {
         // Ignore cleanup errors
@@ -156,13 +166,13 @@ export class AudioRecorder {
 
     logger.info('Starting macOS audio capture', { scriptPath, gain, durationSeconds });
 
-    const command = new Deno.Command('swift', {
+    const cmd = new Command('swift', {
       args: [scriptPath, String(gain)],
       stdout: 'piped',
       stderr: 'piped',
     });
 
-    this._process = command.spawn();
+    this._process = cmd.spawn();
     this._reader = this._process.stdout.getReader();
     this._currentDeviceDescription = 'macOS';
 
@@ -226,13 +236,13 @@ export class AudioRecorder {
       '-',
     ];
 
-    const command = new Deno.Command('ffmpeg', {
+    const cmd = new Command('ffmpeg', {
       args: ffmpegArgs,
       stdout: 'piped',
       stderr: 'piped',
     });
 
-    this._process = command.spawn();
+    this._process = cmd.spawn();
     this._reader = this._process.stdout.getReader();
 
     // Consume stderr in background to prevent blocking
@@ -348,7 +358,7 @@ export class AudioRecorder {
   }
 
   private async _getAudioInputArgs(): Promise<{ args: string[]; description: string }> {
-    switch (Deno.build.os) {
+    switch (platform()) {
       case 'darwin':
         // Used when MELKER_FFMPEG=true on macOS
         return {
@@ -368,21 +378,21 @@ export class AudioRecorder {
           description: 'DirectShow (Windows)',
         };
       default:
-        throw new Error(`Unsupported platform: ${Deno.build.os}`);
+        throw new Error(`Unsupported platform: ${platform()}`);
     }
   }
 
   private async _detectLinuxAudioSystem(): Promise<AudioInput> {
     // Try PulseAudio/PipeWire first
     try {
-      const command = new Deno.Command('pactl', {
+      const pactlCmd = new Command('pactl', {
         args: ['list', 'sources', 'short'],
         stdout: 'piped',
         stderr: 'piped',
       });
-      const { success, stdout } = await command.output();
+      const { success, stdout: pactlStdout } = await pactlCmd.output();
       if (success) {
-        const output = new TextDecoder().decode(stdout);
+        const output = new TextDecoder().decode(pactlStdout);
         const lines = output.trim().split('\n');
         for (const line of lines) {
           const parts = line.split('\t');
@@ -670,24 +680,24 @@ async function playbackAudio(wavData: Uint8Array): Promise<void> {
   logger.info('Playing back recorded audio for debug...');
 
   // Write to temp file
-  const tempFile = await Deno.makeTempFile({ suffix: '.wav' });
+  const tempFile = await makeTempFile({ suffix: '.wav' });
   try {
-    await Deno.writeFile(tempFile, wavData);
+    await writeFile(tempFile, wavData);
 
     // Play using ffplay (quiet mode, no display)
-    const command = new Deno.Command('ffplay', {
+    const cmd = new Command('ffplay', {
       args: ['-nodisp', '-autoexit', '-loglevel', 'quiet', tempFile],
       stdout: 'null',
       stderr: 'null',
     });
 
-    const process = command.spawn();
+    const process = cmd.spawn();
     await process.status;
     logger.info('Audio playback complete');
   } finally {
     // Clean up temp file
     try {
-      await Deno.remove(tempFile);
+      await remove(tempFile);
     } catch {
       // Ignore cleanup errors
     }

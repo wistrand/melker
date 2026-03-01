@@ -24,6 +24,7 @@ import { getLogger } from '../logging.ts';
 import { Env } from '../env.ts';
 import { DetectionModule } from '../graphics/detection-base.ts';
 import type { ITermCapabilities } from './types.ts';
+import { stdout } from '../runtime/mod.ts';
 
 const logger = getLogger('ITermDetect');
 
@@ -138,7 +139,7 @@ export function detectITermCapabilities(
   }
 
   // Check if stdout is a terminal
-  if (!Deno.stdout.isTerminal()) {
+  if (!stdout.isTerminal()) {
     logger.debug('Not a terminal - iTerm2 disabled');
     dm.setCached(capabilities);
     return capabilities;

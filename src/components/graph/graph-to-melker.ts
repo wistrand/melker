@@ -29,6 +29,7 @@ import { calculateLayout } from './layout.ts';
 import type { Style } from '../../types.ts';
 import { getUnicodeTier } from '../../utils/terminal-detection.ts';
 import { getLogger } from '../../logging.ts';
+import { readTextFile, writeTextFile, exit, args } from '../../runtime/mod.ts';
 
 const logger = getLogger('GraphToMelker');
 
@@ -1015,7 +1016,7 @@ async function processFile(
   outputParsed: boolean,
   containerOpts: ContainerOptions = {}
 ): Promise<void> {
-  const content = await Deno.readTextFile(inputFile);
+  const content = await readTextFile(inputFile);
 
   // Detect type: JSON by extension, otherwise auto-detect from content
   let type: ParserType;
@@ -1040,7 +1041,7 @@ async function processFile(
   }
 
   if (outputFile) {
-    await Deno.writeTextFile(outputFile, output);
+    await writeTextFile(outputFile, output);
     console.error(`Wrote ${outputFile}`);
   } else {
     console.log(output);
@@ -1094,20 +1095,20 @@ function parseBoolFlag(args: string[], flag: string, defaultValue: boolean = fal
 
 // CLI entry point
 if (import.meta.main) {
-  const args = [...Deno.args];
+  const cliArgs = [...args()];
 
   // Check for --parsed flag
-  const outputParsed = parseBoolFlag(args, '--parsed');
+  const outputParsed = parseBoolFlag(cliArgs, '--parsed');
 
   // Check for --inputs flag (batch mode)
-  const batchMode = parseBoolFlag(args, '--inputs');
+  const batchMode = parseBoolFlag(cliArgs, '--inputs');
 
   // Check for --no-scrollable flag (default is scrollable=true)
-  const noScrollable = parseBoolFlag(args, '--no-scrollable');
+  const noScrollable = parseBoolFlag(cliArgs, '--no-scrollable');
 
   // Check for container options
-  const width = parseFlag(args, '--width') || 'fill';
-  const height = parseFlag(args, '--height') || 'auto';
+  const width = parseFlag(cliArgs, '--width') || 'fill';
+  const height = parseFlag(cliArgs, '--height') || 'auto';
 
   const containerOpts: ContainerOptions = {
     scrollable: !noScrollable,
@@ -1115,7 +1116,7 @@ if (import.meta.main) {
     height,
   };
 
-  if (args.length < 1) {
+  if (cliArgs.length < 1) {
     console.log('Usage: graph-to-melker.ts [options] <input> [output]');
     console.log('       graph-to-melker.ts --inputs <file1> <file2> ...');
     console.log('');
@@ -1142,25 +1143,25 @@ if (import.meta.main) {
     console.log('  deno run --allow-read --allow-write graph-to-melker.ts diagram.mmd output.melker');
     console.log('  deno run --allow-read --allow-write graph-to-melker.ts --inputs tests/mermaid/*.mmd');
     console.log('  deno run --allow-read graph-to-melker.ts --no-scrollable --width=80 diagram.mmd');
-    Deno.exit(1);
+    exit(1);
   }
 
   try {
     if (batchMode) {
       // Batch mode: process all input files, output next to input
       const ext = outputParsed ? '.json' : '.melker';
-      for (const inputFile of args) {
+      for (const inputFile of cliArgs) {
         const outputFile = changeExtension(inputFile, ext);
         await processFile(inputFile, outputFile, outputParsed, containerOpts);
       }
     } else {
       // Single file mode
-      const inputFile = args[0];
-      const outputFile = args[1];
+      const inputFile = cliArgs[0];
+      const outputFile = cliArgs[1];
       await processFile(inputFile, outputFile, outputParsed, containerOpts);
     }
   } catch (error) {
     console.error('Error:', error instanceof Error ? error.message : String(error));
-    Deno.exit(1);
+    exit(1);
   }
 }

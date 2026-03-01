@@ -6,6 +6,7 @@ import { ensureError } from './utils/error.ts';
 import { isStdoutEnabled } from './stdout.ts';
 import type { HeadlessManager } from './headless.ts';
 import { getLogger } from './logging.ts';
+import { consoleSize } from './runtime/mod.ts';
 
 const logger = getLogger('TerminalSizeManager');
 import {
@@ -134,13 +135,9 @@ export class TerminalSizeManager {
    * Detect actual terminal size from Deno.consoleSize.
    */
   private _detectActualSize(): Size {
-    try {
-      if (typeof Deno !== 'undefined' && Deno.consoleSize) {
-        const size = Deno.consoleSize();
-        return { width: size.columns, height: size.rows };
-      }
-    } catch {
-      // Fallback to initial options
+    const size = consoleSize();
+    if (size) {
+      return { width: size.columns, height: size.rows };
     }
     return {
       width: this._initialWidth,

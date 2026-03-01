@@ -20,6 +20,12 @@
 
 import { MelkerConfig } from '../config/mod.ts';
 import { ensureError } from '../utils/error.ts';
+import {
+  args as getArgs,
+  exit,
+  makeTempDir,
+  writeTextFile,
+} from '../runtime/mod.ts';
 
 // Re-export types
 export type {
@@ -238,7 +244,7 @@ export async function executeBundle(
 
   // Use the bundle temp dir for the executable bundle.js
   // If no bundleTempDir (e.g., from cache), create one
-  const tempDir = assembled.bundleTempDir ?? await Deno.makeTempDir({ prefix: 'melker-bundle-' });
+  const tempDir = assembled.bundleTempDir ?? await makeTempDir({ prefix: 'melker-bundle-' });
   const bundleFile = `${tempDir}/bundle.js`;
 
   // Single temp directory for cleanup
@@ -252,12 +258,12 @@ export async function executeBundle(
     // Use casts because context is generic Record<string, unknown> but will have the right shape at runtime
     (globalThis as any).$melker = context;
     (globalThis as any).$app = context.exports; // Alias for $melker.exports
-    (globalThis as any).argv = argv ?? Deno.args.slice(1);
+    (globalThis as any).argv = argv ?? getArgs().slice(1);
 
     // Write bundled code to temp file (for debugging with retainBundle)
     const retainBundle = MelkerConfig.get().bundlerRetainBundle;
     if (retainBundle) {
-      await Deno.writeTextFile(bundleFile, assembled.bundledCode);
+      await writeTextFile(bundleFile, assembled.bundledCode);
       logger.info(`Bundled code written to: ${bundleFile} (retainBundle=true, will be retained)`);
     }
 
@@ -319,7 +325,7 @@ export async function executeBundle(
       console.error(sanitized);
     }
 
-    Deno.exit(1);
+    exit(1);
   }
 }
 
@@ -372,7 +378,7 @@ export async function callReady(registry: MelkerRegistry, errorTranslator?: Erro
         }
       }
 
-      Deno.exit(1);
+      exit(1);
     }
   }
 }

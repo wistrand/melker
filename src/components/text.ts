@@ -4,6 +4,7 @@ import { Element, BaseProps, Renderable, TextSelectable, Bounds, ComponentRender
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
 import { getLogger } from '../logging.ts';
+import { readTextFile } from '../runtime/mod.ts';
 
 const logger = getLogger('Text');
 
@@ -60,7 +61,7 @@ export class TextElement extends Element implements Renderable, TextSelectable {
         filePath = new URL(resolvedUrl).pathname;
       }
 
-      const content = await Deno.readTextFile(filePath);
+      const content = await readTextFile(filePath);
 
       this._srcContent = content;
       this._lastSrc = src;

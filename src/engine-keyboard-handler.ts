@@ -10,6 +10,7 @@ import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';
 import { getTooltipManager } from './tooltip/mod.ts';
 import { getLogger } from './logging.ts';
+import { exit } from './runtime/mod.ts';
 import { getPaletteShortcutMap, eventToShortcut, normalizeShortcut, parseCommandKeys } from './command-palette-components.ts';
 import { hasElement, isOpenModalDialog } from './utils/tree-traversal.ts';
 import { type DualBuffer, DiffCollector, type BufferDiff } from './buffer.ts';
@@ -296,11 +297,11 @@ function doExit(ctx: KeyboardHandlerContext): void {
   if (ctx.onExit) {
     // Use custom exit handler
     Promise.resolve(ctx.onExit())
-      .finally(() => Deno.exit(0));
+      .finally(() => exit(0));
   } else {
     // Default behavior - do graceful cleanup then exit
     ctx.stop()
-      .finally(() => Deno.exit(0));
+      .finally(() => exit(0));
   }
 }
 

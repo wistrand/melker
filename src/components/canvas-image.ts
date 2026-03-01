@@ -6,6 +6,7 @@ import { getLogger } from '../logging.ts';
 import { LRUCache } from '../lru-cache.ts';
 import { TRANSPARENT, packRGBA, unpackRGBA, parseColor } from './color-utils.ts';
 import { isUrl } from '../utils/content-loader.ts';
+import { cwd, readFile } from '../runtime/mod.ts';
 
 /**
  * Decoded image data in a standard format
@@ -357,13 +358,13 @@ export async function loadImageFromSource(src: string): Promise<Uint8Array> {
     resolvedSrc = src;
   } else {
     // Relative path - resolve from cwd
-    resolvedSrc = `${Deno.cwd()}/${src}`;
+    resolvedSrc = `${cwd()}/${src}`;
 
     logger.debug("relative path " + src  + " -> " + resolvedSrc);
   }
 
   // Read the image file
-  return await Deno.readFile(resolvedSrc);
+  return await readFile(resolvedSrc);
 }
 
 // ============================================

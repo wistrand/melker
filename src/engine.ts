@@ -85,6 +85,13 @@ import {
   getLogger,
   setLogBroadcast,
 } from './logging.ts';
+import {
+  cwd,
+  exit,
+  stdin,
+  stdout,
+  stderr,
+} from './runtime/mod.ts';
 
 const logger = getLogger('MelkerEngine');
 import {
@@ -304,10 +311,8 @@ export class MelkerEngine {
     const config = MelkerConfig.get();
 
     // Determine default base URL (current working directory)
-    const cwd = typeof Deno !== 'undefined' ? Deno.cwd() : '';
-    const defaultBaseUrl = typeof Deno !== 'undefined'
-      ? `file://${cwd}/`  // Add trailing slash for proper URL resolution
-      : 'file://';
+    const currentCwd = cwd();
+    const defaultBaseUrl = `file://${currentCwd}/`;
 
 
     // Set defaults
@@ -703,8 +708,8 @@ export class MelkerEngine {
       size: `${this._terminalSizeManager.size.width}x${this._terminalSizeManager.size.height}`,
       term: Env.get('TERM') || 'unknown',
       colorterm: Env.get('COLORTERM') || 'none',
-      stdin: Deno.stdin.isTerminal() ? 'tty' : 'pipe',
-      stdout: Deno.stdout.isTerminal() ? 'tty' : 'pipe',
+      stdin: stdin.isTerminal() ? 'tty' : 'pipe',
+      stdout: stdout.isTerminal() ? 'tty' : 'pipe',
     });
 
     // Setup terminal FIRST (alternate screen) before sixel detection
@@ -720,7 +725,7 @@ export class MelkerEngine {
     }
 
     // Detect graphics capabilities (sixel, kitty, iTerm2)
-    const skipGraphicsQueries = isRunningHeadless() || isStdoutEnabled() || !Deno.stdout.isTerminal();
+    const skipGraphicsQueries = isRunningHeadless() || isStdoutEnabled() || !stdout.isTerminal();
     await this._graphicsOverlayManager.detectCapabilities(skipGraphicsQueries);
 
     // Re-query terminal size after setup (alternate screen switch may affect reported size)
@@ -756,7 +761,7 @@ export class MelkerEngine {
         });
         // Print connection URL to stderr in headless mode so users know where to connect
         if (this._headlessManager) {
-          Deno.stderr.writeSync(textEncoder.encode(
+          stderr.writeSync(textEncoder.encode(
             `Server: ${this._server.connectionUrl}\n`
           ));
         }
@@ -1162,9 +1167,7 @@ export class MelkerEngine {
         },
         exit: () => {
           this.stop().then(() => {
-            if (typeof Deno !== 'undefined') {
-              Deno.exit(0);
-            }
+            exit(0);
           }).catch((err) => logger.error('Error during exit', err instanceof Error ? err : new Error(String(err))));
         },
         getServerUrl: () => this._server?.connectionUrl,
@@ -1219,7 +1222,7 @@ export class MelkerEngine {
 
     let written = 0;
     while (written < data.length) {
-      const n = Deno.stdout.writeSync(data.subarray(written));
+      const n = stdout.writeSync(data.subarray(written));
       if (n === 0) {
         // Should not happen with sync write, but guard against infinite loop
         logger.error('writeSync returned 0 bytes', undefined, { total: data.length, written });
@@ -1980,7 +1983,7 @@ export class MelkerEngine {
               console.error('\nStack trace:');
               console.error(err.stack);
             }
-            Deno.exit(1);
+            exit(1);
           });
         }
       } catch (error) {
@@ -1993,7 +1996,7 @@ export class MelkerEngine {
           console.error('\nStack trace:');
           console.error(err.stack);
         }
-        Deno.exit(1);
+        exit(1);
       }
     }
   }

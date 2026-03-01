@@ -2,6 +2,7 @@
 // https://specifications.freedesktop.org/basedir/latest/
 
 import { Env } from './env.ts';
+import { mkdir, isAlreadyExistsError } from './runtime/mod.ts';
 
 const APP_NAME = 'melker';
 
@@ -96,9 +97,9 @@ export function getTempDir(): string {
  */
 export async function ensureDir(path: string): Promise<void> {
   try {
-    await Deno.mkdir(path, { recursive: true });
+    await mkdir(path, { recursive: true });
   } catch (error) {
-    if (!(error instanceof Deno.errors.AlreadyExists)) {
+    if (!isAlreadyExistsError(error)) {
       throw error;
     }
   }

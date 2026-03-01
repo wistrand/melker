@@ -122,6 +122,9 @@ export function renderBufferOverlays(buffer: DualBuffer, ctx: BufferOverlayConte
         // Animation stats
         animationCount: getUIAnimationManager().count,
         animationTick: getUIAnimationManager().currentTick,
+        // Terminal size
+        terminalWidth: buffer.width,
+        terminalHeight: buffer.height,
       };
       perfDialog.render(buffer, perfStats);
     } catch {

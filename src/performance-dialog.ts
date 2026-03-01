@@ -51,6 +51,10 @@ export interface PerformanceStats {
   // Animation stats
   animationCount: number;    // Number of active animations
   animationTick: number;     // Current adaptive tick interval (ms)
+
+  // Terminal size
+  terminalWidth: number;
+  terminalHeight: number;
 }
 
 export interface PerformanceDialogOptions {
@@ -59,7 +63,7 @@ export interface PerformanceDialogOptions {
 }
 
 const DEFAULT_WIDTH = 32;
-const DEFAULT_HEIGHT = 23;  // Increased to fit shader stats
+const DEFAULT_HEIGHT = 24;  // Increased to fit terminal size line
 
 /**
  * Performance monitoring dialog
@@ -715,6 +719,7 @@ export class PerformanceDialog {
       lines.push({ label: 'Animations', value: `${stats.animationCount} @ ${stats.animationTick}ms` });
     }
 
+    lines.push({ label: 'Terminal', value: `${stats.terminalWidth}x${stats.terminalHeight}` });
     lines.push({ label: 'Nodes', value: String(stats.layoutNodeCount) });
     lines.push({ label: 'Cells', value: `${stats.changedCells}/${stats.totalCells}` });
     lines.push({ label: 'Memory', value: formatBytes(stats.memoryUsage) });

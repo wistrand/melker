@@ -1042,6 +1042,9 @@ export class TextSelectionHandler {
           // Animation stats
           animationCount: getUIAnimationManager().count,
           animationTick: getUIAnimationManager().currentTick,
+          // Terminal size
+          terminalWidth: buffer.width,
+          terminalHeight: buffer.height,
         };
         perfDialog.render(buffer, perfStats);
       } catch {

@@ -1,7 +1,7 @@
 // Terminal renderer using ANSI escape codes with dual-buffer optimization
 
-import { DualBuffer, BufferDiff, Cell, RenderOptions } from './buffer.ts';
-import { ANSI, rgbTo256Color, rgbTo16Color } from './ansi-output.ts';
+import { DualBuffer, BufferDiff, RenderOptions } from './buffer.ts';
+import { ANSI, rgbTo16Color, getColorCode } from './ansi-output.ts';
 import { stdout } from './runtime/mod.ts';
 
 // Reusable TextEncoder to avoid per-write allocations
@@ -347,8 +347,8 @@ export class TerminalRenderer {
     // Apply foreground and background colors
     // For 16-color mode, ensure fg and bg have enough contrast for visibility
     if (this._options.colorSupport === '16' && newStyle.foreground && newStyle.background) {
-      const fgCode = this._getColorCode16(newStyle.foreground);
-      const originalBgCode = this._getColorCode16(newStyle.background);
+      const fgCode = rgbTo16Color((newStyle.foreground >> 24) & 0xFF, (newStyle.foreground >> 16) & 0xFF, (newStyle.foreground >> 8) & 0xFF);
+      const originalBgCode = rgbTo16Color((newStyle.background >> 24) & 0xFF, (newStyle.background >> 16) & 0xFF, (newStyle.background >> 8) & 0xFF);
       const bgCode = this._ensureContrast(fgCode, originalBgCode);
 
       if (newStyle.foreground !== oldStyle.foreground) {
@@ -361,14 +361,14 @@ export class TerminalRenderer {
       // Apply foreground color only if changed
       if (newStyle.foreground !== oldStyle.foreground) {
         if (newStyle.foreground) {
-          codes.push(this._getColorCode(newStyle.foreground, false));
+          codes.push(getColorCode(newStyle.foreground, false, this._options.colorSupport));
         }
       }
 
       // Apply background color only if changed
       if (newStyle.background !== oldStyle.background) {
         if (newStyle.background) {
-          codes.push(this._getColorCode(newStyle.background, true));
+          codes.push(getColorCode(newStyle.background, true, this._options.colorSupport));
         }
       }
     }
@@ -390,65 +390,6 @@ export class TerminalRenderer {
     }
 
     return codes.join('');
-  }
-
-  // Generate ANSI style codes for a cell (legacy method, kept for compatibility)
-  private _getCellStyleCode(cell: Cell): string {
-    const codes: string[] = [ANSI.reset];
-
-    // Foreground color
-    if (cell.foreground) {
-      codes.push(this._getColorCode(cell.foreground, false));
-    }
-
-    // Background color
-    if (cell.background) {
-      codes.push(this._getColorCode(cell.background, true));
-    }
-
-    // Text attributes
-    if (cell.bold) codes.push(ANSI.bold);
-    if (cell.dim) codes.push(ANSI.dim);
-    if (cell.italic) codes.push(ANSI.italic);
-    if (cell.underline) codes.push(ANSI.underline);
-
-    return codes.join('');
-  }
-
-  // Convert packed RGBA color to ANSI escape code
-  // Color is packed as 0xRRGGBBAA
-  private _getColorCode(color: number, isBackground: boolean): string {
-    const offset = isBackground ? 10 : 0;
-
-    // Extract RGB from packed color (ignore alpha)
-    const r = (color >> 24) & 0xFF;
-    const g = (color >> 16) & 0xFF;
-    const b = (color >> 8) & 0xFF;
-
-    if (this._options.colorSupport === 'truecolor') {
-      const code = isBackground ? 48 : 38;
-      return `\x1b[${code};2;${r};${g};${b}m`;
-    } else if (this._options.colorSupport === '256') {
-      const color256 = rgbTo256Color(r, g, b);
-      const code = isBackground ? 48 : 38;
-      return `\x1b[${code};5;${color256}m`;
-    } else if (this._options.colorSupport === '16') {
-      const color16 = rgbTo16Color(r, g, b);
-      return `\x1b[${color16 + offset}m`;
-    }
-
-    // Fallback to default
-    return '';
-  }
-
-  // Get 16-color code for a packed RGBA color (returns foreground code 30-37 or 90-97)
-  private _getColorCode16(color: number): number {
-    // Extract RGB from packed color
-    const r = (color >> 24) & 0xFF;
-    const g = (color >> 16) & 0xFF;
-    const b = (color >> 8) & 0xFF;
-
-    return rgbTo16Color(r, g, b);
   }
 
   // Ensure fg and bg have enough contrast for visibility

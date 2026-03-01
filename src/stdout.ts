@@ -6,8 +6,7 @@ import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 import { getThemeManager } from './theme.ts';
-import type { PackedRGBA } from './types.ts';
-import { ANSI, rgbTo256Color, rgbTo16Color } from './ansi-output.ts';
+import { ANSI, getColorCode } from './ansi-output.ts';
 import { stdout, consoleSize } from './runtime/mod.ts';
 
 // Lazy logger initialization to avoid triggering MelkerConfig.get() before CLI flags are applied
@@ -259,34 +258,6 @@ function generateCellStyle(cell: Cell, colorSupport: 'none' | '16' | '256' | 'tr
   if (cell.reverse) codes.push(ANSI.reverse);
 
   return codes.join('');
-}
-
-/**
- * Convert packed RGBA color to ANSI escape code
- */
-function getColorCode(color: PackedRGBA, isBackground: boolean, colorSupport: 'none' | '16' | '256' | 'truecolor'): string {
-  if (colorSupport === 'none') {
-    return '';
-  }
-
-  // Extract RGB from packed color
-  const r = (color >> 24) & 0xFF;
-  const g = (color >> 16) & 0xFF;
-  const b = (color >> 8) & 0xFF;
-
-  if (colorSupport === 'truecolor') {
-    const code = isBackground ? 48 : 38;
-    return `\x1b[${code};2;${r};${g};${b}m`;
-  } else if (colorSupport === '256') {
-    const color256 = rgbTo256Color(r, g, b);
-    const code = isBackground ? 48 : 38;
-    return `\x1b[${code};5;${color256}m`;
-  }
-
-  // 16-color fallback
-  const offset = isBackground ? 10 : 0;
-  const code = rgbTo16Color(r, g, b);
-  return `\x1b[${code + offset}m`;
 }
 
 /**

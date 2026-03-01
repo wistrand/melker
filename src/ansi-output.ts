@@ -106,6 +106,30 @@ export function rgbTo16Color(r: number, g: number, b: number): number {
   }
 }
 
+/**
+ * Convert packed RGBA color to ANSI escape code.
+ * Shared conversion used by AnsiOutputGenerator, TerminalRenderer, and stdout mode.
+ */
+export function getColorCode(
+  color: number,
+  isBackground: boolean,
+  colorSupport: ColorSupport,
+): string {
+  if (colorSupport === 'none') return '';
+  const r = (color >> 24) & 0xFF;
+  const g = (color >> 16) & 0xFF;
+  const b = (color >> 8) & 0xFF;
+  if (colorSupport === 'truecolor') {
+    const code = isBackground ? 48 : 38;
+    return `\x1b[${code};2;${r};${g};${b}m`;
+  } else if (colorSupport === '256') {
+    const code = isBackground ? 48 : 38;
+    return `\x1b[${code};5;${rgbTo256Color(r, g, b)}m`;
+  }
+  const offset = isBackground ? 10 : 0;
+  return `\x1b[${rgbTo16Color(r, g, b) + offset}m`;
+}
+
 export interface AnsiOutputOptions {
   colorSupport: ColorSupport;
 }
@@ -374,12 +398,12 @@ export class AnsiOutputGenerator {
     if (this._colorSupport !== 'none') {
       // Foreground color
       if (cell.foreground) {
-        codes.push(this._getColorCode(cell.foreground, false));
+        codes.push(getColorCode(cell.foreground, false, this._colorSupport));
       }
 
       // Background color
       if (cell.background) {
-        codes.push(this._getColorCode(cell.background, true));
+        codes.push(getColorCode(cell.background, true, this._colorSupport));
       }
     }
 
@@ -393,43 +417,4 @@ export class AnsiOutputGenerator {
     return codes.join('');
   }
 
-  /**
-   * Convert packed RGBA color to ANSI escape code
-   * Colors are now stored as packed 32-bit RGBA (0xRRGGBBAA)
-   */
-  private _getColorCode(color: number, isBackground: boolean): string {
-    // If color support is disabled, don't use any colors
-    if (this._colorSupport === 'none') {
-      return '';
-    }
-
-    // Extract RGB from packed color
-    const r = (color >> 24) & 0xFF;
-    const g = (color >> 16) & 0xFF;
-    const b = (color >> 8) & 0xFF;
-
-    if (this._colorSupport === 'truecolor') {
-      const code = isBackground ? 48 : 38;
-      return `\x1b[${code};2;${r};${g};${b}m`;
-    } else if (this._colorSupport === '256') {
-      const color256 = rgbTo256Color(r, g, b);
-      const code = isBackground ? 48 : 38;
-      return `\x1b[${code};5;${color256}m`;
-    }
-
-    // For '16' color support, find nearest named color
-    return this._getColorCode16(color, isBackground);
-  }
-
-  /**
-   * Map packed RGBA to nearest 16-color ANSI code
-   */
-  private _getColorCode16(color: number, isBackground: boolean): string {
-    const offset = isBackground ? 10 : 0;
-    const r = (color >> 24) & 0xFF;
-    const g = (color >> 16) & 0xFF;
-    const b = (color >> 8) & 0xFF;
-    const code = rgbTo16Color(r, g, b);
-    return `\x1b[${code + offset}m`;
-  }
 }

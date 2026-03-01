@@ -127,7 +127,9 @@ export function handleClick(event) { }
 
 ## 6. Width/Height: Props vs Style
 
-Different components use different conventions. The most common footgun is using `style.width/height` on canvas-family components.
+**Principle:** Props define content/buffer dimensions (how big the content actually is). Style defines layout dimensions (how much space it occupies in the flex layout). Most components only need style; canvas-family components need props for buffer sizing.
+
+The most common footgun is using `style.width/height` on canvas-family components.
 
 **Mitigations:** Runtime warnings are logged when style.width/height is used on canvas-family without props. Lint mode (`--lint`) also catches these issues.
 
@@ -423,6 +425,7 @@ Emojis have inconsistent widths across terminals. Melker calculates emoji width 
 
 ## See Also
 
+- [tutorial.html](../docs/tutorial.html) — Step-by-step first app tutorial
 - [getting-started.md](getting-started.md) — Quick start guide
 - [script_usage.md](script_usage.md) — Script context and $melker API
 - [component-reference.md](component-reference.md) — Component documentation

@@ -1,12 +1,19 @@
 // File-based logging system for melker applications
 // Simple synchronous logging - lost lines are lost
 
-import { getGlobalServer } from './server.ts';
-import { Env } from './env.ts';
+import { Env, setEnvLogger } from './env.ts';
 import { MelkerConfig } from './config/mod.ts';
 
 // Flag to track if logging is disabled (e.g., no log file specified)
 let loggingDisabled = false;
+
+// Optional broadcast callback — registered by engine when server is created.
+// Decouples logging from server.ts (avoids pulling server + assets into launcher).
+let _logBroadcast: ((entry: { level: LogLevel; message: string; source?: string; context?: Record<string, unknown>; timestamp: Date }) => void) | null = null;
+
+export function setLogBroadcast(fn: typeof _logBroadcast): void {
+  _logBroadcast = fn;
+}
 
 // In-memory log buffer for DevTools Log tab
 const logBuffer: LogEntry[] = [];
@@ -232,17 +239,8 @@ export class Logger {
     // Add to in-memory buffer (always, regardless of file logging)
     addToLogBuffer(entry);
 
-    // Broadcast to server if available
-    const server = getGlobalServer();
-    if (server?.isRunning) {
-      server.broadcastLog({
-        level: entry.level,
-        message: entry.message,
-        source: entry.source,
-        context: entry.context,
-        timestamp: entry.timestamp,
-      });
-    }
+    // Broadcast to server if available (callback registered by engine)
+    _logBroadcast?.(entry);
 
     // Skip file write if logging is disabled
     if (loggingDisabled || !this._logFile) {
@@ -459,3 +457,15 @@ export const log: {
   fatal: (message: string, error?: Error, context?: Record<string, unknown>, source?: string): void =>
     getGlobalLogger().fatal(message, error, context, source),
 };
+
+// Wire up env.ts logging now that the logger is available.
+// This runs when logging.ts first loads, connecting the two without
+// env.ts needing a static import of logging.ts.
+setEnvLogger((level, message) => {
+  const logger = getLogger('Env');
+  if (level === 'debug') {
+    logger.debug(message);
+  } else {
+    logger.warn(message);
+  }
+});

@@ -1118,6 +1118,7 @@ See `examples/melker-md/` for complete examples and `examples/melker-md/README.m
 
 ## See Also
 
+- [tutorial.html](../docs/tutorial.html) — Step-by-step first app tutorial
 - [getting-started.md](getting-started.md) — Quick start guide
 - [script_usage.md](script_usage.md) — Script context and $melker API
 - [policy-architecture.md](policy-architecture.md) — Permission system details

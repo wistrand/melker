@@ -70,6 +70,9 @@ $melker: {
   // AI tools
   registerAITool(tool: any): void;
 
+  // State bindings (optional convenience — see state-binding-architecture.md)
+  createState(initial: Record<string, any>): Record<string, any>;
+
   // State persistence
   persistenceEnabled: boolean;
   stateFilePath: string | null;
@@ -401,6 +404,7 @@ Note: CLI flags only apply to Melker's built-in config, not app-defined config.
 
 ## See Also
 
+- [tutorial.html](../docs/tutorial.html) — Step-by-step first app tutorial
 - [config-architecture.md](config-architecture.md) — Full config system details
 - [debugging.md](debugging.md) — Logging and debugging tools
 - [melker-file-format.md](melker-file-format.md) — .melker file syntax

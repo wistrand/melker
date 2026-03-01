@@ -120,12 +120,13 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 
 #### `config/` - Schema-Driven Configuration
 
-| File          | Purpose                        |
-|---------------|--------------------------------|
-| `schema.json` | Config schema (source of truth) |
-| `config.ts`   | MelkerConfig singleton class   |
-| `cli.ts`      | CLI parser and help generators |
-| `mod.ts`      | Config module exports          |
+| File             | Purpose                                                    |
+|------------------|------------------------------------------------------------|
+| `schema.json`    | Config schema (source of truth)                            |
+| `config-core.ts` | MelkerConfigCore — infrastructure, generic + launcher-path typed getters |
+| `config.ts`      | MelkerConfig subclass — framework-specific typed getters   |
+| `cli.ts`         | CLI parser and help generators                             |
+| `mod.ts`         | Config module exports                                      |
 
 #### `bundler/` - Runtime Bundler
 

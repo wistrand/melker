@@ -90,7 +90,7 @@ chmod +x hello.melker
 
 ## Critical Rules
 
-1. **No reactivity** – Update UI with `getElementById().setValue()`
+1. **No reactivity** – Update UI with `getElementById().setValue()` (or use optional `$melker.createState()` for auto-sync — see [state-binding-architecture.md](state-binding-architecture.md))
 2. **Button label** – Use `<button>Label</button>` not `title="Label"`
 3. **No button borders** – Buttons have built-in `[ ]` brackets
 4. **Export functions** – Required for `$app.*` access
@@ -207,6 +207,7 @@ Non-Unicode terminals are detected automatically via `$TERM`. All Unicode box-dr
 
 ## Next Steps
 
+- Tutorial: [`tutorial.html`](../docs/tutorial.html) (step-by-step first app walkthrough)
 - Examples: [`examples/`](../examples/) (basics, components, layout, canvas, melker)
 - Components: [`COMPONENTS.md`](../skills/creating-melker-apps/references/COMPONENTS.md)
 - Footguns: [`dx-footguns.md`](dx-footguns.md)

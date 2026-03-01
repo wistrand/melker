@@ -83,6 +83,7 @@ import {
 } from './performance-dialog.ts';
 import {
   getLogger,
+  setLogBroadcast,
 } from './logging.ts';
 
 const logger = getLogger('MelkerEngine');
@@ -743,6 +744,12 @@ export class MelkerEngine {
         await this._server.start();
         // Set global instance for logging integration
         setGlobalServer(this._server);
+        const server = this._server;
+        setLogBroadcast((entry) => {
+          if (server.isRunning) {
+            server.broadcastLog(entry);
+          }
+        });
         logger.info('Server started', {
           url: this._server.connectionUrl,
         });
@@ -1407,6 +1414,7 @@ export class MelkerEngine {
     if (this._server) {
       try {
         // Clear global instance before stopping
+        setLogBroadcast(null);
         setGlobalServer(undefined);
         await this._server.stop();
       } catch (error) {

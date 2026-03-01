@@ -2,7 +2,7 @@
 // Merges --allow-* and --deny-* flags with policy permissions
 
 import type { PolicyPermissions } from './types.ts';
-import type { MelkerConfig } from '../config/config.ts';
+import type { MelkerConfigCore as MelkerConfig } from '../config/config-core.ts';
 import { expandShortcutsInPlace } from './shortcut-utils.ts';
 
 // Array permission keys

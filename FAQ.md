@@ -68,7 +68,7 @@ For untrusted code from the internet, use a VM or container. The policy system i
 
 ### What about the bundling phase? Code runs before the sandbox.
 
-The launcher (`melker-launcher.ts`) runs with full permissions, but only parses the policy and spawns a subprocess. The actual app execution happens in the restricted subprocess. The attack surface is the launcher code itself, which is ~500 lines and auditable.
+The launcher (`melker-launcher.ts`) runs with full permissions, but only parses the policy and spawns a subprocess. The actual app execution happens in the restricted subprocess. The attack surface is the launcher plus its runtime dependencies — about 19 local files / 162 KB of policy parsing, config loading, CLI handling, and approval management. No framework code (rendering, components, server, engine) is loaded in the launcher process. You can verify this yourself with `deno info --json melker-launcher.ts` and filtering to code-only (non-type) imports.
 
 ### What prevents apps from requesting all permissions?
 

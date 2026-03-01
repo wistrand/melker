@@ -1,5 +1,3 @@
-import { getLogger } from './logging.ts';
-
 /**
  * Safe environment variable access with readability caching.
  * Caches which vars are readable (have permission), not the values themselves.
@@ -7,6 +5,15 @@ import { getLogger } from './logging.ts';
  *
  * Use Env.get() instead of Deno.env.get() throughout codebase.
  */
+
+// Optional logger callback — registered by logging.ts when it loads.
+// Decouples env.ts from logging.ts (avoids pulling logging into launcher).
+let _envLog: ((level: 'debug' | 'warn', message: string) => void) | null = null;
+
+export function setEnvLogger(fn: typeof _envLog): void {
+  _envLog = fn;
+}
+
 export class Env {
   private static readable = new Map<string, boolean>();
   private static initialized = false;
@@ -56,12 +63,11 @@ export class Env {
       // Log once per denied env var
       if (!this.warnedDenied.has(name)) {
         this.warnedDenied.add(name);
-        const logger = getLogger('Env');
         // MELKER_* and XDG_* are expected internal reads - debug level only
         if (name.startsWith('MELKER_') || name.startsWith('XDG_')) {
-          logger.debug(`Env var not permitted: ${name}`);
+          _envLog?.('debug', `Env var not permitted: ${name}`);
         } else {
-          logger.warn(`Access denied for env var: ${name} (add to policy permissions or configSchema)`);
+          _envLog?.('warn', `Access denied for env var: ${name} (add to policy permissions or configSchema)`);
         }
       }
       return undefined;

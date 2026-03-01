@@ -34,6 +34,10 @@ The policy system enforces permission sandboxing for .melker applications. Apps 
 5. Launcher spawns `melker-runner.ts` with Deno permission flags
 6. Runner executes the app in a sandboxed environment
 
+**Auditability:** The launcher runs with full permissions (`-A`), but its runtime dependency graph is intentionally minimal — about 18 local files / 160 KB covering only policy parsing, config, CLI handling, and approval. No framework code (rendering, components, server, engine) loads in the launcher process. Type-only imports (`import type`) are used at module boundaries to prevent framework code from leaking into the launcher path.
+
+Note: `deno info` reports ~336 dependencies / 6.5 MB because `deps.ts` is in the launcher path — policy/loader.ts and policy/flags.ts import path utilities (`resolve`, `dirname`) from it, and `deps.ts` also re-exports npm packages (image decoders, markdown parser, etc.) that the launcher never calls. This is intentional: loading `deps.ts` in the launcher (which runs with `-A`) pre-caches all npm dependencies in the Deno module cache, so the restricted subprocess can resolve them without needing network access to npm registries. The launcher's own code — what an auditor needs to review — is the 18 local files.
+
 ## Policy Declaration
 
 Apps declare permissions via a `<policy>` tag:

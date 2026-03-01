@@ -22,17 +22,29 @@ Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-
 | CLI reference       | [cli-reference.md](agent_docs/cli-reference.md)            |
 | Internals reference | [internals-reference.md](agent_docs/internals-reference.md) |
 
+## Reading Order
+
+New to Melker? Read in this order:
+
+1. [getting-started.md](agent_docs/getting-started.md) — install, hello world, critical rules
+2. [tutorial.html](docs/tutorial.html) — build your first app step by step
+3. [melker-file-format.md](agent_docs/melker-file-format.md) — full `.melker` syntax reference
+4. [dx-footguns.md](agent_docs/dx-footguns.md) — common mistakes to avoid
+5. [script_usage.md](agent_docs/script_usage.md) — `$melker` API and script lifecycle
+6. [component-reference.md](agent_docs/component-reference.md) — all 30+ components
+
 ## Documentation Index
 
 ### For App Developers
 
 | Topic                          | Doc                                                    |
 |--------------------------------|--------------------------------------------------------|
-| Script context ($melker, $app) | [script_usage.md](agent_docs/script_usage.md)          |
-| Graphics modes                 | [gfx-modes.md](agent_docs/gfx-modes.md)                |
-| Debugging & logging            | [debugging.md](agent_docs/debugging.md)                |
-| Common mistakes                | [dx-footguns.md](agent_docs/dx-footguns.md)            |
-| AI assistant                   | [ai-accessibility.md](agent_docs/ai-accessibility.md)  |
+| Script context ($melker, $app) | [script_usage.md](agent_docs/script_usage.md)                        |
+| State bindings (optional)      | [state-binding-architecture.md](agent_docs/state-binding-architecture.md) |
+| Graphics modes                 | [gfx-modes.md](agent_docs/gfx-modes.md)                              |
+| Debugging & logging            | [debugging.md](agent_docs/debugging.md)                              |
+| Common mistakes                | [dx-footguns.md](agent_docs/dx-footguns.md)                          |
+| AI assistant                   | [ai-accessibility.md](agent_docs/ai-accessibility.md)                |
 
 ### Component Reference
 

@@ -1,6 +1,12 @@
 // Minimal Melker Launcher
 // Security-auditable entry point that handles policy enforcement and subprocess spawning.
-// Does NOT import framework code - only policy module and std library.
+// Runtime deps: ~18 local files / 160 KB (policy, config, CLI, approval).
+// Does NOT import framework code (rendering, components, server, engine).
+// Note: deps.ts is in the launcher path (via policy/loader.ts, policy/flags.ts) for path
+// utilities only, but it also re-exports npm packages (image decoders, markdown parser, etc.).
+// This is intentional: loading deps.ts in the launcher (which runs with -A) pre-caches all
+// npm dependencies so the restricted subprocess can resolve them from the Deno module cache
+// without needing network access to npm registries.
 
 import { dirname, join, resolve } from 'jsr:@std/path@1.1.4';
 
@@ -42,7 +48,7 @@ import {
 
 // CLI parsing from schema
 import { generateFlagHelp, parseCliFlags } from './src/config/cli.ts';
-import { MelkerConfig, type PolicyConfigProperty } from './src/config/config.ts';
+import { MelkerConfigCore as MelkerConfig, type PolicyConfigProperty } from './src/config/config-core.ts';
 
 /**
  * Reset terminal state after subprocess failure.

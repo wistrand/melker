@@ -4,9 +4,8 @@ import { resolve } from '../deps.ts';
 import type { MelkerPolicy, PolicyPermissions } from './types.ts';
 import { getTempDir } from '../xdg.ts';
 import { Env } from '../env.ts';
-import { MelkerConfig } from '../config/mod.ts';
+import { MelkerConfigCore as MelkerConfig } from '../config/config-core.ts';
 import { extractHostFromUrl, extractHostOrValue } from './url-utils.ts';
-import { getLogger } from '../logging.ts';
 import { expandShortcutsInPlace } from './shortcut-utils.ts';
 
 // Re-export shortcut constants and helpers so existing consumers don't break
@@ -229,10 +228,6 @@ function isPathDenied(path: string, deniedPaths: string[] | undefined): boolean 
  * Log a warning when an implicit path is denied
  */
 function warnImplicitPathDenied(path: string, purpose: string, permission: 'read' | 'write'): void {
-  // Log to file
-  const logger = getLogger('Policy');
-  logger.warn(`Implicit ${permission} path denied: ${path} (${purpose}) - this may affect functionality`);
-  // Also print to stderr so user sees it immediately
   console.error(`Warning: Denying ${permission} access to ${path} (used for ${purpose}) may affect functionality`);
 }
 

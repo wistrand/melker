@@ -245,6 +245,16 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       };
     }
 
+    // Quadrant mode: 2x2 pixels per terminal cell
+    if (gfxMode === 'quadrant') {
+      return {
+        width: width * 2 * scale,
+        height: height * 2 * scale,
+        pixelsPerCellX: 2 * scale,
+        pixelsPerCellY: 2 * scale,
+      };
+    }
+
     // Half-block mode: 1x2 pixels per terminal cell
     if (gfxMode === 'halfblock') {
       return {
@@ -1114,6 +1124,17 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Check for detected cell size from terminal capabilities
     const engine = getGlobalEngine();
     const capabilities = engine?.sixelCapabilities;
+
+    if (gfxMode === 'quadrant') {
+      // Quadrant pixel = (cellWidth/2) wide × (cellHeight/2) tall
+      // Aspect = (cellWidth/2) / (cellHeight/2) = cellWidth / cellHeight
+      if (capabilities?.cellWidth && capabilities?.cellHeight) {
+        return capabilities.cellWidth / capabilities.cellHeight;
+      }
+      // Quadrant pixels are half as wide as halfblock pixels (same height),
+      // so aspect is half of halfblock's roughly-square ratio
+      return 0.45 * this._charAspectRatio;
+    }
 
     if (gfxMode === 'halfblock') {
       // Half-block pixel = cellWidth wide × (cellHeight/2) tall

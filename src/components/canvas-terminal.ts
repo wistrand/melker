@@ -81,6 +81,28 @@ for (const [char, pattern] of BLOCKS_2X3) {
   PIXEL_TO_CHAR[pattern] = char;
 }
 
+// Unicode quadrant characters mapping (2x2 pixel blocks per character)
+// Bit layout: TL(3) TR(2) / BL(1) BR(0)
+// U+2596–U+259F (Unicode 1.0, near-universal font support)
+export const PIXEL_TO_QUAD: string[] = [
+  ' ',  // 0b0000 - empty
+  '▗',  // 0b0001 - BR
+  '▖',  // 0b0010 - BL
+  '▄',  // 0b0011 - BL+BR (bottom half)
+  '▝',  // 0b0100 - TR
+  '▐',  // 0b0101 - TR+BR (right half)
+  '▞',  // 0b0110 - TR+BL (diagonal)
+  '▟',  // 0b0111 - TR+BL+BR
+  '▘',  // 0b1000 - TL
+  '▚',  // 0b1001 - TL+BR (diagonal)
+  '▌',  // 0b1010 - TL+BL (left half)
+  '▙',  // 0b1011 - TL+BL+BR
+  '▀',  // 0b1100 - TL+TR (top half)
+  '▜',  // 0b1101 - TL+TR+BR
+  '▛',  // 0b1110 - TL+TR+BL
+  '█',  // 0b1111 - full block
+];
+
 // ASCII pattern mapping - maps 6-bit sextant patterns to ASCII characters
 // Bit layout: bit5=top-left, bit4=top-right, bit3=mid-left, bit2=mid-right, bit1=bot-left, bit0=bot-right
 // Grid visualization:

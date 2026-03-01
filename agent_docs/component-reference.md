@@ -1068,7 +1068,7 @@ The `<canvas>` component provides pixel graphics using Unicode sextant character
 | `getBufferWidth()`                                   | Get buffer width in pixels                                       |
 | `getBufferHeight()`                                  | Get buffer height in pixels                                      |
 | `getVisualSize()`                                    | Get aspect-corrected visual size                                 |
-| `getPixelAspectRatio()`                              | Get pixel aspect ratio (~0.67 for sextant)                       |
+| `getPixelAspectRatio()`                              | Get pixel aspect ratio (~0.67 sextant, ~0.5 quadrant)            |
 | `setPixel(x, y)`                                     | Set a pixel at coordinates                                       |
 | `fillRect(x, y, w, h)`                               | Fill a rectangle                                                 |
 | `drawLine(x1, y1, x2, y2)`                           | Draw a line between two points                                   |

@@ -378,7 +378,7 @@ This distinction mirrors web vs native: Melker treats TUI apps like web pages (s
 - **Retained**: Canvas maintains pixel buffer; framework handles when to redraw (`onPaint` callback)
 - **Immediate**: App redraws entire canvas each frame in render loop
 
-**Melker** - Retained mode with sextant chars:
+**Melker** - Retained mode with sextant/quadrant chars:
 ```xml
 <canvas id="c" width="60" height="30" onPaint="draw(event.canvas)" />
 ```
@@ -425,7 +425,7 @@ Modern terminals support pixel-perfect image rendering via specialized protocols
 | Kitty protocol     | Y           | Y*          | -           | Y*          | Y*          | -          | -     | -     |
 | iTerm2 protocol    | Y           | Y*          | -           | -           | Y*          | -          | -     | -     |
 | Auto-detection     | Y           | Y*          | -           | Y*          | Y*          | -          | -     | -     |
-| Fallback (Unicode) | Y (sextant) | Y* (braille) | -           | Y* (Unicode) | Y (braille) | -          | -     | -     |
+| Fallback (Unicode) | Y (sextant/quadrant) | Y* (braille) | -     | Y* (Unicode) | Y (braille) | -          | -     | -     |
 
 Y = Built-in, Y* = Via extension/library, - = Not available
 

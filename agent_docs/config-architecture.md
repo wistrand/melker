@@ -126,7 +126,7 @@ Each property in schema.json can have:
 
 ### Render
 - `render.animateGif` - Animate GIF images (default: true, inverted env: MELKER_NO_ANIMATE_GIF, flag: --no-animate-gif)
-- `render.gfxMode` - Graphics rendering mode: `sextant` (default), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness) (env: MELKER_GFX_MODE, flag: --gfx-mode)
+- `render.gfxMode` - Graphics rendering mode: `sextant` (default), `quadrant` (2x2 Unicode blocks), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness) (env: MELKER_GFX_MODE, flag: --gfx-mode)
 
 ### Headless
 - `headless.enabled` - Run without terminal (flag: --headless)

@@ -73,7 +73,7 @@ export function onPaint(event: { canvas: any; bounds: { width: number; height: n
   const { canvas, bounds } = event;
   const bufferWidth = canvas.getBufferWidth();
   const bufferHeight = canvas.getBufferHeight();
-  const pixelAspect = canvas.getPixelAspectRatio();  // ~0.67 for sextant
+  const pixelAspect = canvas.getPixelAspectRatio();  // ~0.67 sextant, ~0.5 quadrant
 
   canvas.clear();
   canvas.drawImage(tile, x, y, width, height);

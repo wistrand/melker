@@ -38,7 +38,7 @@
 | `MELKER_DITHER_BITS`         | Color depth for auto dithering (1-8, default: theme-based)                                                                                                         |
 | `MELKER_BLUE_NOISE_PATH`     | Path to custom blue noise threshold matrix PNG (default: embedded 64x64 matrix)                                                                                    |
 | `MELKER_NO_ANIMATE_GIF`      | Disable animated GIF playback (`true` or `1`)                                                                                                                      |
-| `MELKER_GFX_MODE`            | Graphics mode: `sextant` (default), `halfblock` (auto on TERM=linux), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness), `sixel` (true pixels) |
+| `MELKER_GFX_MODE`            | Graphics mode: `sextant` (default), `quadrant` (2x2 Unicode blocks), `halfblock` (auto on TERM=linux), `block` (colored spaces), `pattern` (ASCII spatial), `luma` (ASCII brightness), `sixel` (true pixels) |
 | `XDG_STATE_HOME`             | Override state dir (default: `~/.local/state`)                                                                                                                     |
 | `XDG_CONFIG_HOME`            | Override config dir (default: `~/.config`)                                                                                                                         |
 | `XDG_CACHE_HOME`             | Override cache dir (default: `~/.cache`)                                                                                                                           |

@@ -4,9 +4,10 @@
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { type Bounds } from '../types.ts';
 import { TRANSPARENT, packRGBA, parseColor } from './color-utils.ts';
-import { PIXEL_TO_CHAR, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
+import { PIXEL_TO_CHAR, PIXEL_TO_QUAD, PATTERN_TO_ASCII, LUMA_RAMP } from './canvas-terminal.ts';
 import type { CanvasRenderData, CanvasRenderState, ResolvedGfxMode } from './canvas-render-types.ts';
 import { quantizeBlockColorsInline } from './canvas-render-sextant.ts';
+import { quantizeQuadrantColorsInline } from './canvas-render-quadrant.ts';
 import { resolveHalfBlockCell } from './canvas-render-halfblock.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
 import { getThemeManager } from '../theme.ts';
@@ -82,6 +83,81 @@ export function renderDitheredToTerminal(
         buffer.currentBuffer.setCell(bounds.x + tx, bounds.y + ty, {
           char: cell.char, foreground: cell.fg, background: cell.bg, bold: style.bold, dim: style.dim,
         });
+      }
+    }
+    return;
+  }
+
+  // Quadrant dithered path: 2x2 pixels per cell
+  if (gfxMode === 'quadrant') {
+    for (let ty = 0; ty < terminalHeight; ty++) {
+      const baseBufferY = ty * 2 * scale;
+      for (let tx = 0; tx < terminalWidth; tx++) {
+        const baseBufferX = tx * 2 * scale;
+
+        // Sample 2x2 block from dithered buffer
+        const positions = [
+          { x: baseBufferX + halfScale, y: baseBufferY + halfScale },                    // TL
+          { x: baseBufferX + scale + halfScale, y: baseBufferY + halfScale },             // TR
+          { x: baseBufferX + halfScale, y: baseBufferY + scale + halfScale },             // BL
+          { x: baseBufferX + scale + halfScale, y: baseBufferY + scale + halfScale },     // BR
+        ];
+
+        let hasAnyPixel = false;
+
+        for (let i = 0; i < 4; i++) {
+          const pos = positions[i];
+          if (pos.x >= 0 && pos.x < bufW && pos.y >= 0 && pos.y < bufH) {
+            const bufIndex = pos.y * bufW + pos.x;
+            const rgbaIdx = bufIndex * 4;
+            const r = ditheredBuffer[rgbaIdx];
+            const g = ditheredBuffer[rgbaIdx + 1];
+            const b = ditheredBuffer[rgbaIdx + 2];
+            const a = ditheredBuffer[rgbaIdx + 3];
+
+            const isOn = a >= 128;
+            sextantPixels[i] = isOn;
+            sextantColors[i] = isOn ? packRGBA(r, g, b, a) : TRANSPARENT;
+            if (isOn) hasAnyPixel = true;
+          } else {
+            sextantPixels[i] = false;
+            sextantColors[i] = TRANSPARENT;
+          }
+        }
+
+        if (!hasAnyPixel) continue;
+
+        // Use quantization for color selection
+        quantizeQuadrantColorsInline(sextantColors, sextantPixels, state);
+        const fgColor = state.qFgColor !== 0 ? state.qFgColor : undefined;
+        const bgColor = state.qBgColor !== 0 ? state.qBgColor : undefined;
+
+        // Convert pixels to quadrant character
+        // Bit pattern: TL(3) TR(2) BL(1) BR(0)
+        const pattern = (sextantPixels[0] ? 0b1000 : 0) |
+                       (sextantPixels[1] ? 0b0100 : 0) |
+                       (sextantPixels[2] ? 0b0010 : 0) |
+                       (sextantPixels[3] ? 0b0001 : 0);
+        const char = PIXEL_TO_QUAD[pattern];
+
+        if (char === ' ' && bgColor === undefined && !propsBg) {
+          continue;
+        }
+
+        const cellStyle = state.cellStyle;
+        cellStyle.foreground = fgColor ?? (hasStyleFg ? style.foreground : undefined);
+        cellStyle.background = bgColor ?? propsBg ?? (hasStyleBg ? style.background : undefined);
+        cellStyle.bold = style.bold;
+        cellStyle.dim = style.dim;
+        cellStyle.italic = style.italic;
+        cellStyle.underline = style.underline;
+
+        buffer.currentBuffer.setText(
+          bounds.x + tx,
+          bounds.y + ty,
+          char,
+          cellStyle
+        );
       }
     }
     return;

@@ -96,7 +96,7 @@ export function setGlobalEngine(engine: MelkerEngine): void {
 //     setGlobalRenderCount, getGlobalLogger, setGlobalEmergencyCleanup
 ```
 
-84 usages across 19 importing files: `src/engine.ts`, `src/rendering.ts`, `src/terminal-lifecycle.ts`, and 16 component files (`canvas.ts`, `canvas-render.ts`, `canvas-render-sextant.ts`, `canvas-render-isolines.ts`, `canvas-render-dithered.ts`, `canvas-render-graphics.ts`, `canvas-shader-runner.ts`, `markdown.ts`, `markdown-image.ts`, `img.ts`, `text.ts`, `data-table.ts`, `data-tree.ts`, `split-pane.ts`, `graph/graph.ts`, `file-browser/file-browser.ts`).
+84 usages across 20 importing files: `src/engine.ts`, `src/rendering.ts`, `src/terminal-lifecycle.ts`, and 17 component files (`canvas.ts`, `canvas-render.ts`, `canvas-render-sextant.ts`, `canvas-render-quadrant.ts`, `canvas-render-isolines.ts`, `canvas-render-dithered.ts`, `canvas-render-graphics.ts`, `canvas-shader-runner.ts`, `markdown.ts`, `markdown-image.ts`, `img.ts`, `text.ts`, `data-table.ts`, `data-tree.ts`, `split-pane.ts`, `graph/graph.ts`, `file-browser/file-browser.ts`).
 
 ### Bundler Data URL Import
 

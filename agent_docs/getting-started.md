@@ -190,7 +190,7 @@ Melker works on any ANSI-compatible terminal. Features degrade gracefully:
 | Terminal                          | Graphics         | Borders    | Colors    |
 |-----------------------------------|------------------|------------|-----------|
 | Modern (Kitty, WezTerm, iTerm2)   | True pixel       | Unicode    | Truecolor |
-| Standard (xterm, gnome-terminal)  | Sextant (2x3)   | Unicode    | 256       |
+| Standard (xterm, gnome-terminal)  | Sextant (2x3) / Quadrant (2x2) | Unicode | 256 |
 | Linux console (`TERM=linux`, tty) | ASCII (luma)     | ASCII      | B&W       |
 | Legacy (`vt100`, `vt220`)         | ASCII (luma)     | ASCII      | B&W       |
 

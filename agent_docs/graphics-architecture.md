@@ -2,7 +2,7 @@
 
 ## Summary
 
-- Multiple graphics modes: sextant (default), halfblock, block, pattern, luma, sixel, kitty, iterm2
+- Multiple graphics modes: sextant (default), quadrant, halfblock, block, pattern, luma, sixel, kitty, iterm2
 - Text modes (sextant/halfblock/block/pattern/luma) use Unicode characters; pixel modes (sixel/kitty/iterm2) use terminal protocols for true-color images
 - On 16-color terminals, the color16+ expanded palette provides ~80+ distinguishable colors via shade characters (`░▒▓`)
 - Auto-detection picks the best available mode; `--gfx-mode` or `MELKER_GFX_MODE` overrides
@@ -35,7 +35,8 @@ See [gfx-modes.md](gfx-modes.md) for mode details and comparison.
                     ▼               ▼               ▼
             ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
             │   sextant   │  │    sixel    │  │    kitty    │
-            │   halfblock │  │  palette.ts │  │  encoder.ts │
+            │   quadrant  │  │  palette.ts │  │  encoder.ts │
+            │   halfblock │  │             │  │             │
             │   block     │  │  encoder.ts │  │             │
             │   pattern   │  │             │  │             │
             │   luma      │  │             │  │             │
@@ -51,7 +52,7 @@ See [gfx-modes.md](gfx-modes.md) for mode details and comparison.
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                ENGINE                                   │
 │  src/engine.ts + src/graphics-overlay-manager.ts                        │
-│  - Buffer output (sextant/block/pattern/luma)                           │
+│  - Buffer output (sextant/quadrant/block/pattern/luma)                   │
 │  - Graphics overlay output (sixel/kitty/iterm2 after buffer)            │
 │  - Stale graphics cleanup                                               │
 │  - Overlay detection (hide graphics when dialogs visible)               │
@@ -158,9 +159,9 @@ if (renderer.hasVisibleOverlays()) {
 
 Graphics modes have limited clipping support:
 
-| Mode                       | Clipping                       |
-|----------------------------|--------------------------------|
-| sextant/block/pattern/luma | Full clipping via buffer       |
+| Mode                                | Clipping                       |
+|-------------------------------------|--------------------------------|
+| sextant/quadrant/block/pattern/luma | Full clipping via buffer       |
 | sixel                      | Placeholder shown when clipped |
 | kitty                      | Element skipped when clipped   |
 
@@ -194,9 +195,10 @@ MELKER_GFX_MODE=hires     # Best available: kitty → sixel → sextant
 | `iterm2`    | sextant                               | halfblock                                | block                        |
 | `hires`     | kitty → sixel → iterm2 → sextant     | kitty → sixel → iterm2 → halfblock      | block                        |
 | `sextant`   | sextant                               | halfblock                                | block                        |
+| `quadrant`  | quadrant                              | halfblock                                | block                        |
 | `halfblock` | halfblock                             | halfblock                                | block                        |
 
-Mode resolution happens in `getEffectiveGfxMode()` in `canvas-render.ts`. The three-tier fallback: sextant (full) → halfblock (basic) → block (ascii). `halfblock` uses `▀▄█` characters for 1×2 pixels per cell with fg+bg colors. `block` uses colored spaces (bg only), works on all tiers.
+Mode resolution happens in `getEffectiveGfxMode()` in `canvas-render.ts`. The three-tier fallback: sextant/quadrant (full) → halfblock (basic) → block (ascii). `quadrant` uses U+2596–U+259F characters for 2x2 pixels per cell. `halfblock` uses `▀▄█` characters for 1x2 pixels per cell with fg+bg colors. `block` uses colored spaces (bg only), works on all tiers.
 
 ## Unicode Tiers
 
@@ -238,7 +240,7 @@ Terminal Unicode support is detected as a three-tier enum rather than a binary f
 | Borders          | All styles (thin/thick/rounded/dashed) | thin, double (thick/rounded/dashed → thin) | ASCII (`+--+`)   |
 | Scrollbar        | `█░`                          | `█░`                                 | `#.`                 |
 | Tree connectors  | `├── └── │`                   | `├── └── │`                          | `\|-- \`-- \|`       |
-| Canvas           | Sextant (2x3 pixels)         | Half-block (1x2 pixels, ▀▄█)        | Block (no color)     |
+| Canvas           | Sextant (2x3) / Quadrant (2x2) | Half-block (1x2 pixels, ▀▄█)      | Block (no color)     |
 | Data-bars        | `▏▎▍▌▋▊▉█` fine eighths      | `▌█` half-block                      | `#` whole-char       |
 | Sparklines       | `▁▂▃▄▅▆▇█` 8 levels          | `░▒▓█` 4 shade levels               | ASCII ramp           |
 | Spinner          | All variants (dots, braille…) | `line` fallback (`\| / - \`)         | `line` fallback      |
@@ -254,7 +256,7 @@ Terminal Unicode support is detected as a three-tier enum rather than a binary f
 |-----------------------------------|---------------------------------------------------------|
 | `src/utils/terminal-detection.ts` | `getUnicodeTier()`, `isUnicodeSupported()`              |
 | `src/types.ts`                    | `getBorderChars()` tiered fallback                      |
-| `src/components/canvas-render.ts` | Sextant → halfblock → block fallback chain              |
+| `src/components/canvas-render.ts` | Sextant/quadrant → halfblock → block fallback chain     |
 | `src/isoline.ts`                  | Tiered marching squares tables                          |
 | `src/components/data-bars.ts`     | Tiered bar/sparkline character sets                     |
 | `src/components/spinner.ts`       | Variant fallback (braille → line)                       |
@@ -278,6 +280,7 @@ Terminal cells are typically taller than wide. Graphics modes handle this differ
 | Mode      | Pixel Aspect                                                              |
 |-----------|---------------------------------------------------------------------------|
 | sextant   | `(3 x cellWidth) / (2 x cellHeight)` - sextant pixels are 2 wide x 3 tall |
+| quadrant  | `cellWidth / cellHeight` - quadrant pixels are 2 wide x 2 tall (~0.5)     |
 | halfblock | `(2 x cellWidth) / cellHeight` - half-block pixels are ~1.0 (nearly square) |
 | sixel     | 1.0 (square pixels at native resolution)                                  |
 | kitty     | 1.0 (square pixels at native resolution)                                  |
@@ -341,6 +344,7 @@ Canvas maintains two pixel buffers that are composited during rendering:
 | `src/components/canvas.ts`                | Canvas element, buffer management                    |
 | `src/components/canvas-render.ts`         | Mode selection, rendering dispatch                   |
 | `src/components/canvas-render-types.ts`   | Shared types, interfaces, constants                  |
+| `src/components/canvas-render-quadrant.ts`| Quadrant mode renderer (2x2 Unicode blocks)          |
 | `src/components/canvas-render-block.ts`   | Block mode renderer (color16+ halftone)              |
 | `src/components/canvas-render-halfblock.ts`| Halfblock mode renderer (color16+ shade/spatial)    |
 | `src/components/canvas-render-dithered.ts`| Dithered renderer (color16+ block + halfblock)       |

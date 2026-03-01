@@ -644,13 +644,13 @@ export type OverflowValue = 'visible' | 'hidden' | 'scroll' | 'auto';
 // ===== Graphics Mode Types (moved from canvas-render-types.ts) =====
 
 /** All graphics rendering modes (single source of truth) */
-export const GFX_MODES = ['sextant', 'halfblock', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'iterm2', 'hires', 'isolines', 'isolines-filled'] as const;
+export const GFX_MODES = ['sextant', 'quadrant', 'halfblock', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'iterm2', 'hires', 'isolines', 'isolines-filled'] as const;
 
 /** Graphics rendering mode (user-facing, includes 'hires' auto-select) */
 export type GfxMode = typeof GFX_MODES[number];
 
 /** Resolved graphics modes (after 'hires' is expanded to actual mode) */
-export const RESOLVED_GFX_MODES = ['sextant', 'halfblock', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'iterm2', 'isolines', 'isolines-filled'] as const;
+export const RESOLVED_GFX_MODES = ['sextant', 'quadrant', 'halfblock', 'block', 'pattern', 'luma', 'sixel', 'kitty', 'iterm2', 'isolines', 'isolines-filled'] as const;
 
 /** Resolved graphics mode type */
 export type ResolvedGfxMode = typeof RESOLVED_GFX_MODES[number];

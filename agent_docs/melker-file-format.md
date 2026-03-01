@@ -244,7 +244,7 @@ const filePath = argv[1];
 | `<li>`                          | style                                                                              | List item                                 |
 | `<tabs>`                        | id, activeTab, onChange                                                            | Tabbed container                          |
 | `<tab>`                         | title, disabled                                                                    | Tab panel, defaults to flex column        |
-| `<canvas>`                      | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant chars)      |
+| `<canvas>`                      | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant/quadrant chars) |
 | `<img>`                         | src, alt, width, height, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
 | `<markdown>`                    | src, text, onLink                                                                  | Markdown text rendering with image support |
 | `<combobox>`                    | placeholder, filter, onSelect, maxVisible                                          | Dropdown with text filter                 |
@@ -586,7 +586,7 @@ if (bounds) {
 
 ## Canvas Component
 
-Canvas uses Unicode sextant characters (2x3 pixel blocks per terminal character).
+Canvas uses Unicode sextant characters (2x3 pixel blocks per terminal character) by default. Quadrant mode (2x2) is available for terminals with poor sextant font support.
 
 **Props:**
 - `width`, `height` - Dimensions in terminal columns/rows

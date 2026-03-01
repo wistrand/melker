@@ -62,7 +62,7 @@ deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit
 | Basic TUI | Any terminal with ANSI support |
 | Mouse support | Terminal with mouse reporting (most modern terminals) |
 | True color | Terminal with 24-bit color support |
-| Images/video | Terminal with sextant/halfblock/block character support |
+| Images/video | Terminal with sextant/quadrant/halfblock/block character support |
 
 **Known Limitations:**
 - Windows CMD.exe has limited ANSI support; use Windows Terminal or WSL

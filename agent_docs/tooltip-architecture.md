@@ -164,7 +164,7 @@ interface CanvasTooltipContext {
 }
 ```
 
-Canvas translates terminal cell coordinates to pixel buffer coordinates using `_pixelsPerCellX` / `_pixelsPerCellY` (2x3 for sextant mode, scaled by scale factor). The `color` field returns the composited draw-layer color, falling back to the image-layer color if the draw layer is transparent.
+Canvas translates terminal cell coordinates to pixel buffer coordinates using `_pixelsPerCellX` / `_pixelsPerCellY` (2x3 for sextant, 2x2 for quadrant, scaled by scale factor). The `color` field returns the composited draw-layer color, falling back to the image-layer color if the draw layer is transparent.
 
 **Example: Map tooltip**
 ```xml

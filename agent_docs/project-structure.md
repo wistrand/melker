@@ -378,7 +378,7 @@ Automates capturing screenshots and videos of Melker apps for documentation. Use
 - `delay` - Seconds to wait before capture
 - `duration` - Video duration in seconds
 - `fps` - Video framerate
-- `gfxMode` - Graphics mode (sextant, block, sixel, etc.)
+- `gfxMode` - Graphics mode (sextant, quadrant, block, sixel, etc.)
 - `skip` - Skip this item
 - `description` - Human-readable description
 

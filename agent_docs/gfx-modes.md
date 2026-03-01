@@ -9,6 +9,7 @@ Terminal character cells are typically taller than wide, so pixel aspect varies 
 **Calculation:**
 - Sixel/Kitty/iTerm2 modes: 1.0 (square pixels at native resolution)
 - Half-block: `(2 * cellWidth) / cellHeight` (~1.0, nearly square)
+- Quadrant: `cellWidth / cellHeight` (~0.5, tall/thin pixels)
 - Sextant/pattern/luma: `(3 * cellWidth) / (2 * cellHeight)` when detected, else `(2/3) * charAspectRatio` prop
 
 Cell size is detected via WindowOps query at startup and used even without sixel support.
@@ -28,6 +29,28 @@ Unicode sextant characters - 2x3 pixels per terminal cell, full color support.
 
 **Testing support:** Run `melker --test-sextant` to test if your terminal renders sextant characters correctly.
 
+### quadrant
+
+Unicode quadrant characters (U+2596–U+259F) - 2x2 pixels per terminal cell with fg+bg colors.
+
+**Best for:** Terminals with poor sextant font support — same horizontal resolution as sextant with near-universal font compatibility
+
+**How it works:**
+- Each cell encodes a 2x2 pixel grid using 16 quadrant block characters
+- Characters: `▘▝▀▖▌▞▛▗▚▐▜▄▙▟█` (plus space for all-off)
+- Uses brightness thresholding to quantize 4 pixels into 2-color fg/bg groups
+- Unicode 1.0 (1991) — supported by virtually all fonts and terminals
+
+**Resolution:** 160x48 on 80x24 terminal (matches sextant horizontal, lower vertical)
+
+**Comparison with sextant and halfblock:**
+
+| Mode      | Pixels/cell | Resolution (80x24) | Unicode version | Font support     |
+|-----------|-------------|---------------------|-----------------|------------------|
+| sextant   | 2x3         | 160x72              | 13.0 (2020)     | Spotty           |
+| quadrant  | 2x2         | 160x48              | 1.0 (1991)      | Near-universal   |
+| halfblock | 1x2         | 80x48               | 1.0 (1991)      | Near-universal   |
+
 ### halfblock
 
 Half-block characters (`▀▄█`) - 1x2 pixels per terminal cell with fg+bg colors.
@@ -41,7 +64,7 @@ Half-block characters (`▀▄█`) - 1x2 pixels per terminal cell with fg+bg co
 - 2× vertical resolution over block mode, with two independent colors per cell
 - Nearly square pixel aspect ratio (~1.0 on typical terminals)
 
-**Resolution:** 80×48 on 80×24 terminal (vs sextant 160×72, block 80×24)
+**Resolution:** 80x48 on 80x24 terminal (vs sextant 160x72, quadrant 160x48, block 80x24)
 
 **Color16+ halftone** (16-color terminals only):
 On `colorSupport='16'` terminals, halfblock uses the color16+ expanded palette for richer color. Each pixel is mapped to the nearest `(fg, bg, shade_char)` triple via Oklab perceptual matching:
@@ -301,7 +324,7 @@ The Linux virtual console supports box-drawing characters and block elements (`�
 
 **Detection:** `getUnicodeTier()` in `src/utils/terminal-detection.ts` returns `'full' | 'basic' | 'ascii'`. Cached for the process lifetime.
 
-**Fallback chain:** `sextant → halfblock (basic) → block (ascii)`. Graphics protocol fallbacks (sixel/kitty/iterm2) also follow this chain.
+**Fallback chain:** `sextant/quadrant → halfblock (basic) → block (ascii)`. Graphics protocol fallbacks (sixel/kitty/iterm2) also follow this chain.
 
 **Border fallback:** `getBorderChars(style)` in `src/types.ts` automatically remaps Unicode border styles. Basic tier gets thin+double; ascii tier gets ASCII box characters.
 
@@ -316,6 +339,7 @@ The Linux virtual console supports box-drawing characters and block elements (`�
 **Environment variable (overrides per-element):**
 ```bash
 MELKER_GFX_MODE=sextant   # default, Unicode sextant chars (2x3 per cell)
+MELKER_GFX_MODE=quadrant  # quadrant chars (2x2 per cell, near-universal)
 MELKER_GFX_MODE=halfblock # half-block chars (1x2 per cell, ▀▄█)
 MELKER_GFX_MODE=block     # colored spaces (1x1 per cell)
 MELKER_GFX_MODE=pattern   # ASCII spatial mapping
@@ -331,6 +355,7 @@ MELKER_GFX_MODE=isolines-filled  # filled contour regions
 **CLI flag (overrides per-element):**
 ```bash
 --gfx-mode=sextant
+--gfx-mode=quadrant
 --gfx-mode=halfblock
 --gfx-mode=block
 --gfx-mode=pattern
@@ -389,7 +414,8 @@ Video uses blue-noise for less temporal flicker between frames. On 16-color term
 **Files:**
 - `src/config/schema.json` - Config option definition
 - `src/color16-palette.ts` - Color16+ expanded palette (3D LUT, Oklab matching, solid-color LUT, shade blending)
-- `src/components/canvas-terminal.ts` - `PATTERN_TO_ASCII` lookup table, `LUMA_RAMP`
+- `src/components/canvas-terminal.ts` - `PIXEL_TO_QUAD`, `PATTERN_TO_ASCII` lookup tables, `LUMA_RAMP`
+- `src/components/canvas-render-quadrant.ts` - Quadrant mode renderer
 - `src/components/canvas.ts` - Buffer management, dithered path handling
 - `src/components/canvas-render.ts` - Mode selection, rendering dispatch
 - `src/components/canvas-render-block.ts` - Block mode renderer (color16+ halftone integration)
@@ -410,6 +436,7 @@ Video uses blue-noise for less temporal flicker between frames. On 16-color term
 ## Use Cases
 
 - **sextant**: Default, best quality for most use cases
+- **quadrant**: Terminals with poor sextant font support, same horizontal resolution
 - **halfblock**: Basic Unicode terminals (TERM=linux), automatic sextant fallback
 - **block**: ASCII-only terminals (vt100/vt220), universal fallback
 - **pattern**: Legacy terminals, SSH to old systems, retro look
@@ -425,6 +452,7 @@ Video uses blue-noise for less temporal flicker between frames. On 16-color term
 | Mode      | Resolution   | Best for              | Unicode tier | Terminal Support                                |
 |-----------|--------------|---------------------- |--------------|-------------------------------------------------|
 | sextant   | 2x3 per cell | Everything            | full         | Most modern†                                    |
+| quadrant  | 2x2 per cell | Sextant-incompatible  | full         | Near-universal (Unicode 1.0)                    |
 | halfblock | 1x2 per cell | Linux console         | basic        | TERM=linux, auto fallback from sextant          |
 | block     | 1x1 per cell | Universal fallback    | any          | All                                             |
 | pattern   | 2x3 per cell | UI, shapes            | any          | All                                             |
@@ -440,12 +468,12 @@ Video uses blue-noise for less temporal flicker between frames. On 16-color term
 
 †Rio terminal does not render sextant characters (U+1FB00-U+1FB3F). Use `iterm2` mode instead.
 
-Fallback chain: sextant (full) → halfblock (basic) → block (ascii). Graphics protocols (sixel/kitty/iterm2) follow this chain when protocol is unavailable.
+Fallback chain: sextant (full) → halfblock (basic) → block (ascii). Quadrant falls back the same way: quadrant (full) → halfblock (basic) → block (ascii). Graphics protocols (sixel/kitty/iterm2) follow this chain when protocol is unavailable.
 
 ## Demo
 
 See `examples/canvas/gfx-modes.melker` for a visual comparison of:
-- Graphics modes (sextant, halfblock, block, pattern, luma, isolines)
+- Graphics modes (sextant, quadrant, halfblock, block, pattern, luma, isolines)
 - Dithering algorithms (none, sierra-stable, floyd-steinberg, atkinson, atkinson-stable, ordered, blue-noise)
 - Dither bits (1-4 bit color depth)
 

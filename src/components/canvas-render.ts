@@ -2,6 +2,7 @@
 // Split into focused sub-modules for maintainability:
 //   canvas-render-types.ts     - Shared types, classes, interfaces, constants
 //   canvas-render-sextant.ts   - Sextant render path + quantization
+//   canvas-render-quadrant.ts  - Quadrant render path (2x2 Unicode blocks)
 //   canvas-render-block.ts     - Block mode (colored spaces)
 //   canvas-render-ascii.ts     - ASCII pattern/luma modes
 //   canvas-render-isolines.ts  - Contour line rendering
@@ -16,6 +17,7 @@ import type { CanvasRenderData, CanvasRenderState, ResolvedGfxMode, GfxMode } fr
 import { getUnicodeTier } from '../utils/terminal-detection.ts';
 import { renderGraphicsPlaceholder } from './canvas-render-graphics.ts';
 import { renderSextantToTerminal } from './canvas-render-sextant.ts';
+import { renderQuadrantToTerminal } from './canvas-render-quadrant.ts';
 import { renderBlockMode } from './canvas-render-block.ts';
 import { renderHalfBlockMode } from './canvas-render-halfblock.ts';
 import { renderAsciiMode } from './canvas-render-ascii.ts';
@@ -25,6 +27,7 @@ import { renderDitheredToTerminal } from './canvas-render-dithered.ts';
 // Re-export everything from sub-modules for backwards compatibility
 export * from './canvas-render-types.ts';
 export * from './canvas-render-sextant.ts';
+export * from './canvas-render-quadrant.ts';
 export * from './canvas-render-block.ts';
 export * from './canvas-render-halfblock.ts';
 export * from './canvas-render-ascii.ts';
@@ -63,6 +66,12 @@ export function renderToTerminal(
   // Check for dithered rendering mode
   if (ditheredBuffer) {
     renderDitheredToTerminal(bounds, style, buffer, ditheredBuffer, gfxMode, data, state);
+    return;
+  }
+
+  // Quadrant mode: 2x2 pixels per cell using U+2596–U+259F characters
+  if (gfxMode === 'quadrant') {
+    renderQuadrantToTerminal(bounds, style, buffer, data, state);
     return;
   }
 
@@ -154,6 +163,11 @@ export function getEffectiveGfxMode(
   // isolines and isolines-filled: no capability check needed
   if (requested === 'isolines' || requested === 'isolines-filled') {
     return requested;
+  }
+
+  // quadrant needs basic unicode (U+2596–U+259F, Unicode 1.0)
+  if (requested === 'quadrant' && tier !== 'full') {
+    return tier === 'basic' ? 'halfblock' : 'block';
   }
 
   // sextant needs full unicode (sextant chars U+1FB00+)

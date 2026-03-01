@@ -10,6 +10,7 @@ import {
 import { Document } from './document.ts';
 import { PersistedState, PersistenceMapping } from './state-persistence.ts';
 import { normalizeStyle } from './components/color-utils.ts';
+import { getLogger } from './logging.ts';
 
 // Re-export for public API (implementation in tree-traversal.ts)
 export { findElementById } from './utils/tree-traversal.ts';
@@ -207,7 +208,33 @@ export function createElement<TType extends keyof ComponentPropsMap | string>(
     return componentInstance;
   }
 
-  // Fallback: create basic element (for built-in types or unregistered components)
+  // Fallback: unknown element type — warn with suggestion
+  const registered = Object.keys(componentRegistry);
+  if (registered.length > 0) {
+    const typeLower = type.toLowerCase();
+    let suggestion = '';
+    for (const name of registered) {
+      if (name.toLowerCase() === typeLower) { suggestion = name; break; }
+      if (name.toLowerCase().includes(typeLower) || typeLower.includes(name.toLowerCase())) {
+        suggestion = name;
+      }
+    }
+    if (!suggestion) {
+      for (const name of registered) {
+        if (Math.abs(name.length - type.length) <= 3) {
+          let diff = 0;
+          const a = name.toLowerCase(), b = typeLower;
+          for (let i = 0; i < Math.max(a.length, b.length); i++) {
+            if (a[i] !== b[i]) diff++;
+          }
+          if (diff <= 2) { suggestion = name; break; }
+        }
+      }
+    }
+    const hint = suggestion ? `. Did you mean <${suggestion}>?` : '';
+    getLogger('Element').warn(`Unknown element <${type}>${hint}`);
+  }
+
   let mergedProps: Record<string, any> = { ...props };
 
   // Normalize style colors (convert strings to packed RGBA numbers)

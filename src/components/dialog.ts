@@ -59,7 +59,8 @@ export class DialogElement extends Element implements Renderable {
       offsetY: 0,
       ...props,
       style: {
-        // Default styles would go here (none currently)
+        display: 'flex',
+        flexDirection: 'column',
         ...props.style
       },
     };

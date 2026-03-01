@@ -342,24 +342,40 @@ export class RenderingEngine {
             height: dialogHeight - titleHeight - 1  // Above bottom border
           };
 
-          // Render each child in the content area
-          for (const child of modal.children) {
-            const childLayoutContext: LayoutContext = {
-              viewport: contentBounds,
-              parentBounds: contentBounds,
-              availableSpace: { width: contentBounds.width, height: contentBounds.height },
-              focusedElementId,
-              hoveredElementId,
-              ...(this._containerQueryStylesheets ? {
-                stylesheets: this._containerQueryStylesheets,
-                styleContext: this._containerQueryStyleContext,
-              } : undefined),
-            };
+          // Lay out dialog children collectively as a flex column.
+          // Temporarily clear width/height from props and style so the layout
+          // engine uses contentBounds (the area inside borders/title) rather
+          // than the dialog's own declared dimensions.
+          const savedWidth = modal.props.width;
+          const savedHeight = modal.props.height;
+          const savedStyleWidth = modal.props.style?.width;
+          const savedStyleHeight = modal.props.style?.height;
+          modal.props.width = undefined;
+          modal.props.height = undefined;
+          if (modal.props.style) {
+            modal.props.style.width = undefined;
+            modal.props.style.height = undefined;
+          }
+          const dialogLayoutContext: LayoutContext = {
+            viewport: contentBounds,
+            parentBounds: contentBounds,
+            availableSpace: { width: contentBounds.width, height: contentBounds.height },
+            focusedElementId,
+            hoveredElementId,
+            ...(this._containerQueryStylesheets ? {
+              stylesheets: this._containerQueryStylesheets,
+              styleContext: this._containerQueryStyleContext,
+            } : undefined),
+          };
+          const dialogLayout = this._layoutEngine.calculateLayout(modal, dialogLayoutContext);
+          modal.props.width = savedWidth;
+          modal.props.height = savedHeight;
+          if (modal.props.style) {
+            modal.props.style.width = savedStyleWidth;
+            modal.props.style.height = savedStyleHeight;
+          }
 
-            const childLayout = this._layoutEngine.calculateLayout(child, childLayoutContext);
-            const childLayoutNode = childLayout;
-
-            // Store dialog children's bounds in layout context for hit testing
+          for (const childLayoutNode of dialogLayout.children) {
             if (this._currentLayoutContext) {
               this._buildLayoutContext(childLayoutNode, this._currentLayoutContext);
             }
@@ -2178,24 +2194,38 @@ export class RenderingEngine {
         // Use cached layout
         childLayouts = cached.layouts;
       } else {
-        // Calculate layout for each child
-        childLayouts = [];
-        for (const child of modal.children) {
-          const childLayoutContext: LayoutContext = {
-            viewport: contentBounds,
-            parentBounds: contentBounds,
-            availableSpace: { width: contentBounds.width, height: contentBounds.height },
-            focusedElementId: context.focusedElementId,
-            hoveredElementId: context.hoveredElementId,
-            ...(this._containerQueryStylesheets ? {
-              stylesheets: this._containerQueryStylesheets,
-              styleContext: this._containerQueryStyleContext,
-            } : undefined),
-          };
-
-          const childLayout = this._layoutEngine.calculateLayout(child, childLayoutContext);
-          childLayouts.push(childLayout);
+        // Lay out dialog children collectively as a flex column.
+        // Temporarily clear width/height from props and style so the layout
+        // engine uses contentBounds rather than the dialog's own declared dimensions.
+        const savedWidth = modal.props.width;
+        const savedHeight = modal.props.height;
+        const savedStyleWidth = modal.props.style?.width;
+        const savedStyleHeight = modal.props.style?.height;
+        modal.props.width = undefined;
+        modal.props.height = undefined;
+        if (modal.props.style) {
+          modal.props.style.width = undefined;
+          modal.props.style.height = undefined;
         }
+        const dialogLayoutContext: LayoutContext = {
+          viewport: contentBounds,
+          parentBounds: contentBounds,
+          availableSpace: { width: contentBounds.width, height: contentBounds.height },
+          focusedElementId: context.focusedElementId,
+          hoveredElementId: context.hoveredElementId,
+          ...(this._containerQueryStylesheets ? {
+            stylesheets: this._containerQueryStylesheets,
+            styleContext: this._containerQueryStyleContext,
+          } : undefined),
+        };
+        const dialogLayout = this._layoutEngine.calculateLayout(modal, dialogLayoutContext);
+        modal.props.width = savedWidth;
+        modal.props.height = savedHeight;
+        if (modal.props.style) {
+          modal.props.style.width = savedStyleWidth;
+          modal.props.style.height = savedStyleHeight;
+        }
+        childLayouts = dialogLayout.children;
         // Cache the layout
         this._cachedModalLayouts.set(modal, { bounds: { ...contentBounds }, layouts: childLayouts });
       }

@@ -276,18 +276,18 @@ Let the theme engine handle colors for best appearance across all themes.
 
 ## 8. Dialog Content Layout
 
-**Mistake**: Content doesn't expand to fill dialog.
+Dialog is a flex column container — direct children stretch to fill width and stack vertically, just like `<container>`. For most cases, children fill the dialog automatically:
 
 ```xml
-<!-- WRONG - content won't fill -->
-<dialog style="width: 80; height: 18;">
+<!-- Works - markdown fills dialog width -->
+<dialog width="80" height="18">
   <markdown>Content</markdown>
 </dialog>
 
-<!-- CORRECT - use width: fill on containers -->
-<dialog style="width: 80; height: 18;">
-  <container style="width: fill; height: 100%">
-    <markdown style="width: fill"></markdown>
+<!-- For scrollable content, use a container with overflow -->
+<dialog width="80" height="18">
+  <container style="overflow: scroll; flex: 1; width: fill">
+    <markdown style="text-wrap: wrap; width: fill">Long content...</markdown>
   </container>
 </dialog>
 ```

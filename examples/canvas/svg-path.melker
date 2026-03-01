@@ -1,0 +1,134 @@
+<melker>
+  <title>SVG Path Drawing</title>
+
+  <container style="width: fill; height: fill; border: thin; padding: 1; display: flex; flex-direction: column; align-items: center;">
+    <text style="font-weight: bold; margin-bottom: 1; text-align: center;">
+      SVG Path Drawing - Animated Shape
+    </text>
+
+    <container style="width: fill; height: fill;">
+      <canvas
+        id="pathCanvas"
+        width="fill"
+        height="fill"
+        onPaint="$app.draw(event.canvas)"
+      />
+    </container>
+
+    <text style="color: gray; margin-top: 1; text-align: center;">
+      Star orbits center with cubic Bezier trail - Ctrl+C to exit
+    </text>
+  </container>
+
+  <script type="typescript">
+    let frame = 0;
+    let timerId: number | undefined;
+
+    // 5-pointed star as SVG path string with rotation around its center
+    function starPath(cx: number, cy: number, outerR: number, innerR: number, rotation: number): string {
+      const points: string[] = [];
+      for (let i = 0; i < 5; i++) {
+        // Outer point
+        const outerAngle = (i * 2 * Math.PI / 5) - Math.PI / 2 + rotation;
+        const ox = cx + outerR * Math.cos(outerAngle);
+        const oy = cy + outerR * Math.sin(outerAngle);
+        // Inner point (between outer points)
+        const innerAngle = outerAngle + Math.PI / 5;
+        const ix = cx + innerR * Math.cos(innerAngle);
+        const iy = cy + innerR * Math.sin(innerAngle);
+
+        if (i === 0) {
+          points.push(`M ${ox} ${oy}`);
+        } else {
+          points.push(`L ${ox} ${oy}`);
+        }
+        points.push(`L ${ix} ${iy}`);
+      }
+      points.push('Z');
+      return points.join(' ');
+    }
+
+    export const draw = (canvas: any): void => {
+      canvas.clear();
+      const w = canvas.getBufferWidth();
+      const h = canvas.getBufferHeight();
+      const aspect = canvas.getPixelAspectRatio();
+
+      const centerX = Math.floor(w / 2);
+      const centerY = Math.floor(h / 2);
+
+      const t = frame * 0.03;
+      const orbitRx = Math.floor(Math.min(w * 0.35, h * 0.35) / aspect);
+      const orbitRy = Math.floor(Math.min(w * 0.35, h * 0.35));
+
+      // Draw orbit path as dashed ellipse (cubic Bezier approximation)
+      const kappa = 0.5522847498;
+      const kx = Math.floor(orbitRx * kappa);
+      const ky = Math.floor(orbitRy * kappa);
+      const orbitSVG = [
+        `M ${centerX} ${centerY - orbitRy}`,
+        `C ${centerX + kx} ${centerY - orbitRy} ${centerX + orbitRx} ${centerY - ky} ${centerX + orbitRx} ${centerY}`,
+        `C ${centerX + orbitRx} ${centerY + ky} ${centerX + kx} ${centerY + orbitRy} ${centerX} ${centerY + orbitRy}`,
+        `C ${centerX - kx} ${centerY + orbitRy} ${centerX - orbitRx} ${centerY + ky} ${centerX - orbitRx} ${centerY}`,
+        `C ${centerX - orbitRx} ${centerY - ky} ${centerX - kx} ${centerY - orbitRy} ${centerX} ${centerY - orbitRy}`,
+        'Z'
+      ].join(' ');
+      canvas.drawPathSVGColor(orbitSVG, '#333333');
+
+      // Animated star position on the orbit
+      const starX = centerX + Math.floor(orbitRx * Math.cos(t));
+      const starY = centerY + Math.floor(orbitRy * Math.sin(t));
+
+      // Draw trail (cubic Bezier curve behind the star)
+      const trailLen = 8;
+      const trailParts: string[] = [];
+      for (let i = trailLen; i >= 0; i--) {
+        const tt = t - i * 0.08;
+        const tx = centerX + Math.floor(orbitRx * Math.cos(tt));
+        const ty = centerY + Math.floor(orbitRy * Math.sin(tt));
+        if (i === trailLen) {
+          trailParts.push(`M ${tx} ${ty}`);
+        } else {
+          trailParts.push(`L ${tx} ${ty}`);
+        }
+      }
+      canvas.drawPathSVGColor(trailParts.join(' '), '#555555');
+
+      // Draw filled star at current position
+      const starSize = Math.max(6, Math.floor(Math.min(w, h) * 0.09));
+      const innerSize = Math.floor(starSize * 0.4);
+      const starD = starPath(starX, starY, starSize, innerSize, t * 3);
+      canvas.fillPathSVGColor(starD, '#FFAA00');
+      canvas.drawPathSVGColor(starD, '#FF6600');
+
+      // Draw pulsating center marker with quadratic Bezier diamond
+      const pulse = 3 + 2 * Math.sin(t * 2);
+      const dm = Math.floor(pulse);
+      const diamondSVG = `M ${centerX} ${centerY - dm} Q ${centerX + dm} ${centerY - dm} ${centerX + dm} ${centerY} Q ${centerX + dm} ${centerY + dm} ${centerX} ${centerY + dm} Q ${centerX - dm} ${centerY + dm} ${centerX - dm} ${centerY} Q ${centerX - dm} ${centerY - dm} ${centerX} ${centerY - dm} Z`;
+      canvas.fillPathSVGColor(diamondSVG, '#4488FF');
+    };
+
+    export function startAnimation(): void {
+      if (timerId !== undefined) return;
+      timerId = setInterval(() => {
+        frame++;
+        const canvas = $melker.getElementById('pathCanvas');
+        if (canvas) {
+          canvas.markDirty();
+          $melker.render();
+        }
+      }, 50);
+    }
+
+    export function stopAnimation(): void {
+      if (timerId !== undefined) {
+        clearInterval(timerId);
+        timerId = undefined;
+      }
+    }
+  </script>
+
+  <script type="typescript" async="ready">
+    $app.startAnimation();
+  </script>
+</melker>

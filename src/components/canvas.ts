@@ -448,6 +448,36 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
+   * Stroke an SVG-like path (outline only).
+   * Commands: M, L, H, V, Q, T, C, S, A, Z
+   */
+  drawPath(commands: Draw.PathCommand[], tolerance?: number): void {
+    Draw.drawPath(this, commands, tolerance);
+  }
+
+  /**
+   * Fill an SVG-like path using even-odd rule.
+   * Multiple subpaths create holes.
+   */
+  fillPath(commands: Draw.PathCommand[], tolerance?: number): void {
+    Draw.fillPath(this, commands, tolerance);
+  }
+
+  /**
+   * Stroke a path from an SVG path `d` string.
+   */
+  drawPathSVG(d: string, tolerance?: number): void {
+    Draw.drawPathSVG(this, d, tolerance);
+  }
+
+  /**
+   * Fill a path from an SVG path `d` string using even-odd rule.
+   */
+  fillPathSVG(d: string, tolerance?: number): void {
+    Draw.fillPathSVG(this, d, tolerance);
+  }
+
+  /**
    * Draw a line using Bresenham's algorithm
    */
   drawLine(x0: number, y0: number, x1: number, y1: number): void {
@@ -526,6 +556,34 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   drawPolyColor(points: number[][], color: number | string): void {
     Draw.drawPolyColor(this, points, color);
+  }
+
+  /**
+   * Stroke a path with a specific color
+   */
+  drawPathColor(commands: Draw.PathCommand[], color: number | string, tolerance?: number): void {
+    Draw.drawPathColor(this, commands, color, tolerance);
+  }
+
+  /**
+   * Fill a path with a specific color using even-odd rule
+   */
+  fillPathColor(commands: Draw.PathCommand[], color: number | string, tolerance?: number): void {
+    Draw.fillPathColor(this, commands, color, tolerance);
+  }
+
+  /**
+   * Stroke a path from an SVG string with a specific color
+   */
+  drawPathSVGColor(d: string, color: number | string, tolerance?: number): void {
+    Draw.drawPathSVGColor(this, d, color, tolerance);
+  }
+
+  /**
+   * Fill a path from an SVG string with a specific color
+   */
+  fillPathSVGColor(d: string, color: number | string, tolerance?: number): void {
+    Draw.fillPathSVGColor(this, d, color, tolerance);
   }
 
   /**
@@ -1202,6 +1260,20 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   drawLineCorrected(x0: number, y0: number, x1: number, y1: number): void {
     Draw.drawLineCorrected(this, x0, y0, x1, y1);
+  }
+
+  /**
+   * Stroke a path with aspect ratio correction
+   */
+  drawPathCorrected(commands: Draw.PathCommand[], tolerance?: number): void {
+    Draw.drawPathCorrected(this, commands, tolerance);
+  }
+
+  /**
+   * Fill a path with aspect ratio correction
+   */
+  fillPathCorrected(commands: Draw.PathCommand[], tolerance?: number): void {
+    Draw.fillPathCorrected(this, commands, tolerance);
   }
 
   /**

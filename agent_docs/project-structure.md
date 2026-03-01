@@ -158,8 +158,10 @@ See [policy-architecture.md](policy-architecture.md) for comprehensive documenta
 | `tab.ts`                  | Tab panel (child of tabs)              |
 | `canvas.ts`               | Pixel graphics, buffer management      |
 | `canvas-render.ts`        | Terminal rendering, color quantization |
+| `canvas-draw.ts`          | Drawing primitives (lines, rects, circles, polygons, path re-exports) |
 | `canvas-dither.ts`        | Buffer compositing and dithering       |
 | `canvas-image.ts`         | Image loading/decoding/rendering       |
+| `canvas-path.ts`          | SVG path parser, Bezier/arc tessellation, draw/fill |
 | `canvas-shader-runner.ts` | Shader animation runner                |
 | `img.ts`                  | Image component (extends canvas)       |
 | `video.ts`                | Video playback                         |

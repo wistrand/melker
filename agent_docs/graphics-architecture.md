@@ -351,6 +351,7 @@ Canvas maintains two pixel buffers that are composited during rendering:
 | `src/components/canvas-render-ascii.ts`   | ASCII pattern/luma mode rendering                    |
 | `src/components/canvas-render-isolines.ts`| Contour line rendering (isolines/isolines-filled)    |
 | `src/components/canvas-render-graphics.ts`| Sixel/Kitty/iTerm2 protocol rendering                |
+| `src/components/canvas-path.ts`           | SVG path parser, Bezier/arc tessellation, draw/fill  |
 | `src/components/canvas-dither.ts`         | Dither state, auto-mode resolution                   |
 | `src/color16-palette.ts`                  | Color16+ palette, 3D LUTs, Oklab matching            |
 | `src/sixel/`                              | Sixel detection, encoding, palette                   |

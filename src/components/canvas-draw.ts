@@ -1,6 +1,14 @@
 // Canvas drawing primitives - extracted from canvas.ts for modularity
 // These functions implement the actual drawing algorithms
 
+// Re-export path types and functions
+export { type PathCommand, parseSVGPath, pathToPolygons } from './canvas-path.ts';
+export { drawPath, fillPath, drawPathSVG, fillPathSVG } from './canvas-path.ts';
+export { drawPathColor, fillPathColor, drawPathSVGColor, fillPathSVGColor } from './canvas-path.ts';
+export { drawPathCorrected, fillPathCorrected } from './canvas-path.ts';
+export { tessellateQuadratic, tessellateCubic, tessellateArc } from './canvas-path.ts';
+export { fillPolySub } from './canvas-path.ts';
+
 // Minimal interface for drawing operations
 export interface DrawableCanvas {
   setPixel(x: number, y: number, on: boolean): void;

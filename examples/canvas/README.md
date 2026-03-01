@@ -17,6 +17,7 @@ Canvas and graphics examples demonstrating pixel-based rendering.
 | `dithering.melker` | Dithering algorithms comparison |
 | `gfx-modes.melker` | GFX modes (sextant, block, pattern, luma) |
 | `checkerboard.melker` | Simple checkerboard pattern |
+| `svg-path.melker` | SVG path drawing with animated star and Bezier curves |
 
 ## Clocks
 
@@ -73,6 +74,15 @@ Canvas uses sextant characters (2x3 pixel blocks per terminal character).
 const visSize = canvas.getVisualSize();
 const [px, py] = canvas.visualToPixel(visSize.width/2, visSize.height/2);
 canvas.drawCircleCorrected(px, py, radius);
+```
+
+**SVG path drawing (Bezier curves, arcs):**
+```typescript
+// Cubic Bezier curve
+canvas.drawPathSVGColor('M 10 20 C 15 5 25 5 30 20', '#FF6600');
+
+// Filled star shape
+canvas.fillPathSVGColor('M 20 0 L 25 15 L 40 15 L 28 24 L 33 40 L 20 30 L 7 40 L 12 24 L 0 15 L 15 15 Z', '#FFAA00');
 ```
 
 **Shaders (per-pixel):**

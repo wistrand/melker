@@ -14,7 +14,7 @@ Terminal character cells are typically taller than wide, so pixel aspect varies 
 
 Cell size is detected via WindowOps query at startup and used even without sixel support.
 
-**Aspect-corrected methods:** `drawCircleCorrected()`, `drawSquareCorrected()`, `drawLineCorrected()`, `visualToPixel()`, `pixelToVisual()`
+**Aspect-corrected methods:** `drawCircleCorrected()`, `drawSquareCorrected()`, `drawLineCorrected()`, `drawPathCorrected()`, `fillPathCorrected()`, `visualToPixel()`, `pixelToVisual()`
 
 ## Modes
 

@@ -618,6 +618,10 @@ canvas.drawCircleCorrected(pxCenterX, pxCenterY, radius);
 
 // Lines use visual coordinates directly
 canvas.drawLineCorrected(x1, y1, x2, y2);
+
+// SVG paths with aspect correction
+canvas.drawPathCorrected(commands);
+canvas.fillPathCorrected(commands);
 ```
 
 ## Markdown Component

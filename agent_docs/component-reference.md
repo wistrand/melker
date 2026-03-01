@@ -1079,6 +1079,14 @@ The `<canvas>` component provides pixel graphics using Unicode sextant character
 | `decodeImageBytes(bytes)`                            | Decode PNG/JPEG/GIF bytes to `{ width, height, data, bytesPerPixel }` (sync) |
 | `decodeImageBytesAsync(bytes)`                       | Decode PNG/JPEG/GIF/WebP bytes (async, required for WebP)            |
 | `markDirty()`                                        | Mark canvas for re-render                                        |
+| `drawPathSVG(d)`                                     | Stroke SVG path string                                           |
+| `fillPathSVG(d)`                                     | Fill SVG path string (even-odd rule)                             |
+| `drawPathSVGColor(d, color)`                         | Stroke SVG path with specific color                              |
+| `fillPathSVGColor(d, color)`                         | Fill SVG path with specific color                                |
+| `drawPath(commands)`                                 | Stroke from PathCommand array                                    |
+| `fillPath(commands)`                                 | Fill from PathCommand array                                      |
+| `drawPathCorrected(commands)`                        | Stroke with aspect correction                                    |
+| `fillPathCorrected(commands)`                        | Fill with aspect correction                                      |
 
 **Note:** There is no `fillText` method — canvas supports pixel drawing only, not text rendering.
 
@@ -1109,6 +1117,41 @@ canvas.fillCircleCorrectedColor(x, y, r, color);  // Fill aspect-corrected circl
 ```
 
 Where `points` is `number[][]` with each element `[x, y]`.
+
+### SVG Path Drawing
+
+Draw and fill shapes using SVG path syntax (`M`, `L`, `H`, `V`, `Q`, `T`, `C`, `S`, `A`, `Z`). Curves are tessellated to line segments using De Casteljau subdivision (Bezier) and adaptive angle stepping (arcs).
+
+```typescript
+// SVG path string API (most convenient)
+canvas.drawPathSVG(d);                     // Stroke SVG path string
+canvas.fillPathSVG(d);                     // Fill SVG path string (even-odd rule)
+canvas.drawPathSVGColor(d, color);         // Stroke with specific color
+canvas.fillPathSVGColor(d, color);         // Fill with specific color
+
+// PathCommand array API
+canvas.drawPath(commands);                 // Stroke from parsed commands
+canvas.fillPath(commands);                 // Fill from parsed commands
+canvas.drawPathColor(commands, color);     // Stroke with specific color
+canvas.fillPathColor(commands, color);     // Fill with specific color
+
+// Aspect-corrected variants
+canvas.drawPathCorrected(commands);        // Stroke with aspect correction
+canvas.fillPathCorrected(commands);        // Fill with aspect correction
+```
+
+**SVG path commands supported:** `M/m` (moveTo), `L/l` (lineTo), `H/h` (horizontal), `V/v` (vertical), `Q/q` (quadratic Bezier), `T/t` (smooth quadratic), `C/c` (cubic Bezier), `S/s` (smooth cubic), `A/a` (arc), `Z/z` (close). Both absolute (uppercase) and relative (lowercase) coordinates.
+
+**Example — draw a cubic Bezier ellipse:**
+```typescript
+const kappa = 0.5522847498;
+const cx = 80, cy = 36, rx = 30, ry = 20;
+const kx = Math.floor(rx * kappa), ky = Math.floor(ry * kappa);
+const d = `M ${cx} ${cy - ry} C ${cx + kx} ${cy - ry} ${cx + rx} ${cy - ky} ${cx + rx} ${cy} C ${cx + rx} ${cy + ky} ${cx + kx} ${cy + ry} ${cx} ${cy + ry} C ${cx - kx} ${cy + ry} ${cx - rx} ${cy + ky} ${cx - rx} ${cy} C ${cx - rx} ${cy - ky} ${cx - kx} ${cy - ry} ${cx} ${cy - ry} Z`;
+canvas.drawPathSVGColor(d, '#4488FF');
+```
+
+Multiple subpaths (separate `M` commands) create holes via even-odd fill rule.
 
 ### Canvas Tooltips
 

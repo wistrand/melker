@@ -1038,6 +1038,18 @@ canvas.drawPoly(points);                   // Draw polygon outline
 canvas.fillPolyColor(points, color);       // Fill polygon with specific color
 canvas.drawPolyColor(points, color);       // Draw polygon outline with specific color
 canvas.fillCircleCorrectedColor(x, y, r, color);  // Fill aspect-corrected circle with color
+
+// SVG path drawing (M/L/H/V/Q/T/C/S/A/Z commands, Bezier curves, arcs)
+canvas.drawPathSVG(d);                     // Stroke SVG path string
+canvas.fillPathSVG(d);                     // Fill SVG path string (even-odd rule)
+canvas.drawPathSVGColor(d, color);         // Stroke with specific color
+canvas.fillPathSVGColor(d, color);         // Fill with specific color
+canvas.drawPath(commands);                 // Stroke from PathCommand array
+canvas.fillPath(commands);                 // Fill from PathCommand array
+canvas.drawPathColor(commands, color);     // Stroke with specific color
+canvas.fillPathColor(commands, color);     // Fill with specific color
+canvas.drawPathCorrected(commands);        // Stroke with aspect correction
+canvas.fillPathCorrected(commands);        // Fill with aspect correction
 ```
 
 **Tooltip support:**

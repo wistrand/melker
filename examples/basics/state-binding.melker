@@ -40,7 +40,7 @@
   </container>
 
   <script>
-    const MAX_TASKS = 1;
+    const MAX_TASKS = 10;
     let tasks = [];
 
     const state = $melker.createState({

@@ -394,7 +394,7 @@ export class AccessibilityDialogManager {
       AccessibilityDialogManager.getExcludeIds(),
       selectedText
     );
-    const contextHash = hashContext(context);
+    const contextHash = await hashContext(context);
 
     // Add question to conversation history
     if (this._conversationHistory) {
@@ -443,8 +443,8 @@ export class AccessibilityDialogManager {
       ...this._messageHistory,
     ];
 
-    // Get tools for the API
-    const tools = toolsToOpenRouterFormat();
+    // Get tools for the API (re-read each round in case tools change)
+    let tools = toolsToOpenRouterFormat();
 
     logger.info('Sending messages to API', {
       historyLength: this._messageHistory.length,
@@ -538,13 +538,14 @@ export class AccessibilityDialogManager {
 
         await this._executeToolCalls(result.toolCalls!, toolContext, responseElement, result.response || undefined);
 
-        // Rebuild context after tools may have modified the UI
+        // Rebuild context and tools after tools may have modified the UI
         const selectedText = this._deps.getSelectedText?.();
         context = buildContext(
           this._deps.document,
           AccessibilityDialogManager.getExcludeIds(),
           selectedText
         );
+        tools = toolsToOpenRouterFormat();
       }
 
       // If the loop exhausted all rounds and history ends with tool results,
@@ -720,16 +721,34 @@ export class AccessibilityDialogManager {
         toolName: toolCall.function.name,
         rawArgs,
       });
-      // Try to extract just the JSON object if there's extra content
-      const jsonMatch = rawArgs.match(/^\s*(\{[\s\S]*?\})\s*/);
-      if (jsonMatch) {
-        try {
-          const recovered = JSON.parse(jsonMatch[1]);
-          logger.debug('Recovered JSON from malformed arguments', { recovered: jsonMatch[1] });
-          return recovered;
-        } catch {
-          logger.warn('Could not recover JSON, using empty args');
+      // Try to extract a balanced JSON object if there's extra content
+      const start = rawArgs.indexOf('{');
+      if (start !== -1) {
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+        for (let i = start; i < rawArgs.length; i++) {
+          const ch = rawArgs[i];
+          if (escape) { escape = false; continue; }
+          if (ch === '\\' && inString) { escape = true; continue; }
+          if (ch === '"') { inString = !inString; continue; }
+          if (inString) continue;
+          if (ch === '{') depth++;
+          else if (ch === '}') {
+            depth--;
+            if (depth === 0) {
+              const candidate = rawArgs.slice(start, i + 1);
+              try {
+                const recovered = JSON.parse(candidate);
+                logger.debug('Recovered JSON from malformed arguments', { recovered: candidate });
+                return recovered;
+              } catch {
+                break;
+              }
+            }
+          }
         }
+        logger.warn('Could not recover JSON, using empty args');
       }
       return {};
     }
@@ -971,7 +990,7 @@ export class AccessibilityDialogManager {
           logger.error('Failed to compact history', error);
           summary = '';
         },
-      });
+      }, undefined, this._abortController?.signal);
 
       if (summary) {
         // Replace old messages with a summary message

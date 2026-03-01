@@ -49,6 +49,10 @@ export class QueryCache {
       return null;
     }
 
+    // Promote to most-recently-used (move to end of Map insertion order)
+    this._cache.delete(key);
+    this._cache.set(key, entry);
+
     return entry.response;
   }
 
@@ -113,21 +117,12 @@ export class QueryCache {
   }
 
   /**
-   * Evict the oldest entry
+   * Evict the least-recently-used entry (first key in Map insertion order)
    */
   private _evictOldest(): void {
-    let oldestKey: string | null = null;
-    let oldestTime = Date.now();
-
-    for (const [key, entry] of this._cache.entries()) {
-      if (entry.timestamp < oldestTime) {
-        oldestTime = entry.timestamp;
-        oldestKey = key;
-      }
-    }
-
-    if (oldestKey) {
-      this._cache.delete(oldestKey);
+    const firstKey = this._cache.keys().next().value;
+    if (firstKey !== undefined) {
+      this._cache.delete(firstKey);
     }
   }
 }

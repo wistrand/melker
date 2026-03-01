@@ -484,7 +484,7 @@ function getAvailableActions(document: Document): string[] {
 /**
  * Hash the context for cache key generation
  */
-export function hashContext(context: UIContext): string {
+export async function hashContext(context: UIContext): Promise<string> {
   const content = [
     context.screenContent,
     context.focusedElement,
@@ -492,14 +492,10 @@ export function hashContext(context: UIContext): string {
     context.selectedText || '',
   ].join('|');
 
-  // Simple hash function
-  let hash = 0;
-  for (let i = 0; i < content.length; i++) {
-    const char = content.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return hash.toString(36);
+  const data = new TextEncoder().encode(content);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = new Uint8Array(hashBuffer);
+  return Array.from(hashArray.slice(0, 12), b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**

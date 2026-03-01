@@ -60,7 +60,7 @@ If `createState()` is never called, the binding system has zero cost — `_resol
 
 Before each `render()` and `forceRender()`, `_resolveBindings()` runs three steps:
 
-0. **Reverse sync (two-way)** — for elements without `bind-mode="one-way"`, the element's current prop value is pulled into state. This captures user input (typing, checkbox toggles, combobox selections) without manual handler code.
+0. **Reverse sync (two-way)** — for elements without `bind-mode="one-way"`, the element's current prop value is pulled into state, coerced to the state key's original type (captured at `createState()` time). This captures user input (typing, checkbox toggles, combobox selections) without manual handler code, and preserves type consistency — e.g., a number state key bound to a `<text>` element gets `Number("42")` → `42` back, not the string `"42"`.
 
 1. **Boolean class sync** — boolean state values toggle CSS classes on the root element via `toggleClass()`. If any classes changed, all stylesheets are re-applied to the root tree so class-dependent CSS rules take effect.
 
@@ -68,11 +68,13 @@ Before each `render()` and `forceRender()`, `_resolveBindings()` runs three step
 
 ```
 user interaction → element.props updated → render → _resolveBindings():
-  step 0: element.props → state (reverse sync, two-way only)
+  step 0: element.props → state (reverse sync, two-way only, coerced to initial state type)
   step 1: boolean state → CSS classes
-  step 2: state → element.props (forward push, now no-op for unchanged values)
+  step 2: state → element.props (forward push, coerced to prop schema type)
 → layout (CSS applies) → paint
 ```
+
+Both directions coerce types symmetrically: forward push uses the component schema (prop type), reverse sync uses the state's original type map (captured once at `createState()` time via `_stateTypeMap`).
 
 ## Design: Data vs Styling
 
@@ -144,7 +146,7 @@ Bindings win. If an element has `bind="count"`, calling `setValue()` on it is ov
 
 | File                            | What                                                                           |
 |---------------------------------|--------------------------------------------------------------------------------|
-| `src/engine.ts`                 | `_stateObject`, `_bindMappingsByType`, `_boundElements` cache, `setStateObject()`, `_collectBoundElements()`, `_resolveBindings()`, `_coerceToType()` |
+| `src/engine.ts`                 | `_stateObject`, `_stateTypeMap`, `_bindMappingsByType`, `_boundElements` cache, `setStateObject()`, `_collectBoundElements()`, `_resolveBindings()`, `_coerceToType()` |
 | `src/melker-runner.ts`          | `createState()` on `$melker` context, persistence merge, initialization order  |
 | `src/globals.d.ts`              | `createState<T>()` on `MelkerContext` type                                     |
 | `src/state-persistence.ts`      | `DEFAULT_PERSISTENCE_MAPPINGS` entries, `_bound` category in `readState()`, `mergePersistedBound()` |
@@ -153,7 +155,7 @@ Bindings win. If an element has `bind="count"`, calling `setValue()` on it is ov
 
 ### `_resolveBindings()` — `src/engine.ts`
 
-Called in both `render()` and `forceRender()`, before layout. Early-exits if no state object. First, iterates cached bound elements with `twoWay` flag, pulling element prop values into state (reverse sync). Then iterates boolean state keys, toggling CSS classes on root via `toggleClass()`. If any classes changed, re-applies stylesheets. Finally iterates all cached bound elements, assigning coerced state values to their primary props (forward push).
+Called in both `render()` and `forceRender()`, before layout. Early-exits if no state object. First, iterates cached bound elements with `twoWay` flag, pulling element prop values into state (reverse sync, coerced to the state key's original type via `_stateTypeMap`). Then iterates boolean state keys, toggling CSS classes on root via `toggleClass()`. If any classes changed, re-applies stylesheets. Finally iterates all cached bound elements, assigning coerced state values to their primary props (forward push, coerced to the component schema type).
 
 ### `createState()` — `src/melker-runner.ts`
 
@@ -173,17 +175,17 @@ The resolution runs on every render. Cost breakdown:
 | Reverse sync   | Read element prop → state (two-way only)   | O(bound), skip if `!twoWay`     |
 | Class sync     | `toggleClass()` per boolean key            | O(state keys), typically 3-10   |
 | Stylesheet     | `applyStylesToElement()` if classes changed | Only on change, not every frame |
-| Cache check    | `document.elementCount !== lastSize`       | O(1) — reads `Map.size`         |
+| Cache check    | `document.registryGeneration !== last`     | O(1) — reads generation counter |
 | Bind loop      | Iterate cached bound elements              | O(bound), typically 3-8         |
 | Per element    | `map.get()` + `getComponentSchema()` + assign | O(1) each                    |
 
 ### Bound element caching
 
-`_collectBoundElements()` iterates `document.getAllElements()` — a flat `Map.values()` from the element registry. No tree recursion. The result is a cached array of `{ element, stateKey, twoWay }` triples, invalidated when `document.elementCount` changes (elements added/removed by dialogs, overlays, dynamic `createElement`). The `twoWay` flag is computed once from the element's `bind-mode` prop during collection — no per-render overhead.
+`_collectBoundElements()` iterates `document.getAllElements()` — a flat `Map.values()` from the element registry. No tree recursion. The result is a cached array of `{ element, stateKey, twoWay }` triples, invalidated when `document.registryGeneration` changes. The generation counter is incremented on every `_registerElement()` and `removeElement()` call, so it catches add+remove pairs that leave `elementCount` unchanged (e.g., dialog close + dialog open in the same frame). The `twoWay` flag is computed once from the element's `bind-mode` prop during collection — no per-render overhead.
 
 ### Pre-indexed mappings
 
-`setStateObject()` pre-builds a `Map<string, PersistenceMapping>` once. The resolution loop does `map.get(element.type)` — O(1) per element instead of `mappings.find()`.
+`setStateObject()` pre-builds a `Map<string, PersistenceMapping>` once, and captures a `_stateTypeMap` (`Map<string, string>`) recording the initial `typeof` for each state key. The resolution loop does `map.get(element.type)` — O(1) per element instead of `mappings.find()`. Reverse sync uses `_stateTypeMap` to coerce element values back to the state's original types.
 
 ## Persistence
 

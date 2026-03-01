@@ -274,9 +274,10 @@ export class MelkerEngine {
 
   // State bindings (createState + bind attribute)
   private _stateObject: Record<string, unknown> | null = null;
+  private _stateTypeMap: Map<string, string> | null = null;  // initial typeof per key, for reverse sync coercion
   private _bindMappingsByType: Map<string, PersistenceMapping> | null = null;
   private _boundElements: Array<{ element: Element; stateKey: string; twoWay: boolean }> | null = null;
-  private _lastRegistrySize = 0;
+  private _lastRegistryGeneration = -1;
 
   // App policy (for permission checks)
   private _policy?: MelkerPolicy;
@@ -1537,6 +1538,11 @@ export class MelkerEngine {
   setStateObject(state: Record<string, unknown>): void {
     this._stateObject = state;
     this._persistenceManager?.setStateObject(state);
+    // Capture initial types for reverse sync coercion
+    this._stateTypeMap = new Map();
+    for (const key in state) {
+      this._stateTypeMap.set(key, typeof state[key]);
+    }
     const mappings = this._persistenceManager?.persistenceMappings
       ?? DEFAULT_PERSISTENCE_MAPPINGS;
     this._bindMappingsByType = new Map();
@@ -1556,7 +1562,7 @@ export class MelkerEngine {
   /** Get bound elements info for DevTools (avoids exposing Element references). */
   getBoundElements(): Array<{ stateKey: string; elementId: string; elementType: string; twoWay: boolean }> | null {
     if (!this._stateObject) return null;
-    if (!this._boundElements || this._document.elementCount !== this._lastRegistrySize) {
+    if (!this._boundElements || this._document.registryGeneration !== this._lastRegistryGeneration) {
       this._collectBoundElements();
     }
     return this._boundElements!.map(({ element, stateKey, twoWay }) => ({
@@ -1585,7 +1591,7 @@ export class MelkerEngine {
         this._boundElements.push({ element, stateKey: bindKey, twoWay });
       }
     }
-    this._lastRegistrySize = this._document.elementCount;
+    this._lastRegistryGeneration = this._document.registryGeneration;
   }
 
   /**
@@ -1603,7 +1609,7 @@ export class MelkerEngine {
 
     // Step 0: Reverse sync — pull two-way bound element values into state
     if (state && byType) {
-      if (!this._boundElements || this._document.elementCount !== this._lastRegistrySize) {
+      if (!this._boundElements || this._document.registryGeneration !== this._lastRegistryGeneration) {
         this._collectBoundElements();
       }
       for (const { element, stateKey, twoWay } of this._boundElements!) {
@@ -1613,7 +1619,8 @@ export class MelkerEngine {
           if (mapping) {
             const elementValue = element.props[mapping.prop];
             if (elementValue !== undefined) {
-              state[stateKey] = elementValue;
+              const stateType = this._stateTypeMap?.get(stateKey);
+              state[stateKey] = _coerceToType(elementValue, stateType);
             }
           }
         }
@@ -1646,7 +1653,7 @@ export class MelkerEngine {
     if (!state) return;
     if (!byType) return;
 
-    if (!this._boundElements || this._document.elementCount !== this._lastRegistrySize) {
+    if (!this._boundElements || this._document.registryGeneration !== this._lastRegistryGeneration) {
       this._collectBoundElements();
     }
 

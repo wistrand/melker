@@ -33,6 +33,9 @@ export class Document {
   // Track IDs that were explicitly removed via removeElement()
   // These should not be found by tree search even if still in the DOM
   private _removedIds: Set<string> = new Set();
+  // Generation counter incremented on every register/unregister — used by engine
+  // to invalidate caches that depend on the element set (not just its size).
+  private _registryGeneration = 0;
 
   constructor(root: Element, options: DocumentOptions = {}) {
     this._options = {
@@ -59,6 +62,11 @@ export class Document {
   // Element registry management
   get elementCount(): number {
     return this._elementRegistry.size;
+  }
+
+  /** Generation counter — incremented on every element register/unregister. */
+  get registryGeneration(): number {
+    return this._registryGeneration;
   }
 
   getAllElements(): Element[] {
@@ -248,6 +256,7 @@ export class Document {
     // Remove from registry and mark as removed
     this._elementRegistry.delete(element.id);
     this._removedIds.add(element.id);
+    this._registryGeneration++;
 
     // Clear focus if this element was focused
     if (this._focusedElement === element) {
@@ -425,6 +434,7 @@ export class Document {
     if (element.id) {
       this._elementRegistry.set(element.id, element);
       this._removedIds.delete(element.id);
+      this._registryGeneration++;
     }
   }
 

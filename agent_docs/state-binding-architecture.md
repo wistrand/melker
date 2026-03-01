@@ -2,7 +2,7 @@
 
 **Optional.** Most `.melker` apps don't need this. The standard approach — `getElementById().setValue()` and a `sync()` function — works well for typical apps (5-15 interactive elements). State bindings are a convenience for apps where multiple handlers update the same set of elements, reducing repetitive `setValue()` calls.
 
-`$melker.createState()` registers a plain object on the engine. The `bind` attribute on elements declares which state key drives their primary prop. Before each render, the engine syncs state values to bound elements automatically.
+`$melker.createState()` registers a plain object on the engine. The `bind` attribute on elements declares which state key drives their primary prop. Binding is **two-way by default**: element values flow back into state, and state values push to elements, both before each render. Use `bind-mode="one-way"` to opt out of the reverse sync.
 
 If `createState()` is never called, the binding system has zero cost — `_resolveBindings()` returns immediately on the `if (!state) return` guard.
 
@@ -17,8 +17,8 @@ If `createState()` is never called, the binding system has zero cost — `_resol
   </style>
 
   <container style="gap: 1;">
-    <text id="count" bind="count" />
-    <text id="footer" bind="summary" />
+    <text id="count" bind="count" bind-mode="one-way" />
+    <text id="footer" bind="summary" bind-mode="one-way" />
     <container id="empty">
       <text>No items yet</text>
     </container>
@@ -41,7 +41,10 @@ If `createState()` is never called, the binding system has zero cost — `_resol
       state.summary = `${items.filter(i => i.done).length}/${items.length}`;
       state.isEmpty = items.length === 0;
       state.isFull = items.length >= 100;
+      // Text elements use bind-mode="one-way" because the handler
+      // controls their state values (reverse sync would overwrite them).
       // Auto-render fires after handler:
+      //   0. reverse sync (two-way elements only, skipped for one-way)
       //   1. boolean state → CSS classes on root
       //   2. state values → bound elements (coerced to prop type)
       //   3. CSS rules re-applied if classes changed
@@ -55,14 +58,20 @@ If `createState()` is never called, the binding system has zero cost — `_resol
 
 `$melker.createState(initial)` registers a plain object on the engine. No Proxy, no dependency graph. Assignments are normal property mutations — the existing auto-render-after-handler mechanism triggers the sync.
 
-Before each `render()` and `forceRender()`, `_resolveBindings()` runs two steps:
+Before each `render()` and `forceRender()`, `_resolveBindings()` runs three steps:
+
+0. **Reverse sync (two-way)** — for elements without `bind-mode="one-way"`, the element's current prop value is pulled into state. This captures user input (typing, checkbox toggles, combobox selections) without manual handler code.
 
 1. **Boolean class sync** — boolean state values toggle CSS classes on the root element via `toggleClass()`. If any classes changed, all stylesheets are re-applied to the root tree so class-dependent CSS rules take effect.
 
 2. **Bind resolution** — elements with `bind="key"` receive the state value on their primary prop (e.g. `text` for `<text>`, `value` for `<input>`), coerced to the correct type via the component schema.
 
 ```
-handler mutates state → auto-render → _resolveBindings() → layout (CSS applies) → paint
+user interaction → element.props updated → render → _resolveBindings():
+  step 0: element.props → state (reverse sync, two-way only)
+  step 1: boolean state → CSS classes
+  step 2: state → element.props (forward push, now no-op for unchanged values)
+→ layout (CSS applies) → paint
 ```
 
 ## Design: Data vs Styling
@@ -97,19 +106,33 @@ Resolution uses two existing registries — no hardcoded type switch:
 
 New components automatically work if they register both a `ComponentSchema` and a `PersistenceMapping`.
 
-### One-way binding
+### Two-way binding (default)
 
-State pushes to elements. User input does not auto-flow back. Sync back explicitly in handlers:
+State pushes to elements, and element values flow back into state automatically. No manual sync needed for simple cases:
 
 ```xml
-<input id="query" bind="searchTerm" onSubmit="$app.search()" />
+<input id="query" bind="searchTerm" />
 <script>
   const state = $melker.createState({ searchTerm: '' });
-  export function search() {
-    state.searchTerm = $melker.getElementById('query').getValue();
+  // state.searchTerm automatically reflects what the user types
+</script>
+```
+
+### One-way binding (`bind-mode="one-way"`)
+
+Use `bind-mode="one-way"` when a handler needs to transform the value before writing to state. With one-way binding, state pushes to elements but user input does not auto-flow back:
+
+```xml
+<input id="query" bind="searchTerm" bind-mode="one-way" onInput="$app.normalize()" />
+<script>
+  const state = $melker.createState({ searchTerm: '' });
+  export function normalize() {
+    state.searchTerm = $melker.getElementById('query').getValue().trim().toLowerCase();
   }
 </script>
 ```
+
+Without `bind-mode="one-way"`, the reverse sync would overwrite the handler's normalized value with the raw input value.
 
 ### Coexistence with setValue()
 
@@ -126,11 +149,11 @@ Bindings win. If an element has `bind="count"`, calling `setValue()` on it is ov
 | `src/globals.d.ts`              | `createState<T>()` on `MelkerContext` type                                     |
 | `src/state-persistence.ts`      | `DEFAULT_PERSISTENCE_MAPPINGS` entries, `_bound` category in `readState()`, `mergePersistedBound()` |
 | `src/state-persistence-manager.ts` | `setStateObject()` setter, state object passed to `readState()`             |
-| `src/dev-tools.ts`              | "State" tab in F12 DevTools (shows live key-value pairs, `[class]` annotation on booleans) |
+| `src/dev-tools.ts`              | "State" tab in F12 DevTools (data table with Role: `class`, `bind 2w`, `bind 1w`)          |
 
 ### `_resolveBindings()` — `src/engine.ts`
 
-Called in both `render()` and `forceRender()`, before layout. Early-exits if no state object. Iterates boolean state keys, toggling CSS classes on root via `toggleClass()`. If any classes changed, re-applies stylesheets. Then iterates cached bound elements, assigning coerced state values to their primary props.
+Called in both `render()` and `forceRender()`, before layout. Early-exits if no state object. First, iterates cached bound elements with `twoWay` flag, pulling element prop values into state (reverse sync). Then iterates boolean state keys, toggling CSS classes on root via `toggleClass()`. If any classes changed, re-applies stylesheets. Finally iterates all cached bound elements, assigning coerced state values to their primary props (forward push).
 
 ### `createState()` — `src/melker-runner.ts`
 
@@ -147,6 +170,7 @@ The resolution runs on every render. Cost breakdown:
 | Step           | Operation                                  | Cost                            |
 |----------------|--------------------------------------------|---------------------------------|
 | Guard          | `if (!state) return`                       | O(1) — zero cost without state  |
+| Reverse sync   | Read element prop → state (two-way only)   | O(bound), skip if `!twoWay`     |
 | Class sync     | `toggleClass()` per boolean key            | O(state keys), typically 3-10   |
 | Stylesheet     | `applyStylesToElement()` if classes changed | Only on change, not every frame |
 | Cache check    | `document.elementCount !== lastSize`       | O(1) — reads `Map.size`         |
@@ -155,7 +179,7 @@ The resolution runs on every render. Cost breakdown:
 
 ### Bound element caching
 
-`_collectBoundElements()` iterates `document.getAllElements()` — a flat `Map.values()` from the element registry. No tree recursion. The result is a cached array of `{ element, stateKey }` pairs, invalidated when `document.elementCount` changes (elements added/removed by dialogs, overlays, dynamic `createElement`).
+`_collectBoundElements()` iterates `document.getAllElements()` — a flat `Map.values()` from the element registry. No tree recursion. The result is a cached array of `{ element, stateKey, twoWay }` triples, invalidated when `document.elementCount` changes (elements added/removed by dialogs, overlays, dynamic `createElement`). The `twoWay` flag is computed once from the element's `bind-mode` prop during collection — no per-render overhead.
 
 ### Pre-indexed mappings
 
@@ -203,14 +227,25 @@ Only `typeof value === 'boolean'` triggers class sync. Numbers, strings, and obj
 
 ## DevTools
 
-When `createState()` has been called, the F12 DevTools overlay shows a "State" tab with live key-value pairs. Boolean keys are annotated with `[class]` to indicate they're synced as CSS classes:
+When `createState()` has been called, the F12 DevTools overlay shows a "State" tab as a data table with columns: Name, Value, Bound To, and Role.
+
+The Role column shows:
+- `class` — boolean value synced as CSS class on root
+- `bind 2w` — two-way bound (element ↔ state)
+- `bind 1w` — one-way bound (state → element only)
+
+The Bound To column shows the element's `#id` (or type if no id).
 
 ```
-  count: 5
-  summary: "2/5"
-  isEmpty: false [class]
-  isFull: false [class]
+  Name      | Value   | Bound To | Role
+  count     | 5       | #count   | bind 1w
+  summary   | "2/5"   | #footer  | bind 1w
+  query     | "hello" | #search  | bind 2w
+  isEmpty   | false   |          | class
+  isFull    | false   |          | class
 ```
+
+The summary line at the bottom shows totals, e.g. `5 keys (2 class, 1 bind 2w, 2 bind 1w)`.
 
 ## Constraints
 
@@ -238,12 +273,15 @@ When `createState()` has been called, the F12 DevTools overlay shows a "State" t
 | `createState()` after first render | Error: "createState() must be called before first render" |
 | `bind` on element without mapping | Silent skip (element type not in persistence mappings) |
 
-## Example
+## Examples
 
-See [examples/basics/state-binding.melker](../examples/basics/state-binding.melker) — task list demo using `createState`, `bind`, and CSS class-based conditional display.
+- [examples/basics/two-way-binding.melker](../examples/basics/two-way-binding.melker) — two-way binding on input and checkboxes, one-way on display text, checkbox-driven CSS visibility
+- [examples/basics/state-binding.melker](../examples/basics/state-binding.melker) — task list with `sync()` function, `bind-mode="one-way"` on display elements
+- [examples/basics/state-binding-count.melker](../examples/basics/state-binding-count.melker) — minimal counter with boolean CSS classes
 
 ## See Also
 
 - [script_usage.md](script_usage.md) — `$melker` context and runtime API
 - [css-themes-architecture.md](css-themes-architecture.md) — CSS themes and class selectors
 - [getting-started.md](getting-started.md) — Script types and critical rules
+- [dx-footguns.md](dx-footguns.md) — Handler + two-way binding gotcha (#15)

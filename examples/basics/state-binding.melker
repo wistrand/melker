@@ -11,12 +11,12 @@
 
     <container style="display: flex; flex-direction: row; gap: 1;">
       <text>Tasks:</text>
-      <text id="count" bind="count" style="font-weight: bold;" />
+      <text id="count" bind="count" bind-mode="one-way" style="font-weight: bold;" />
       <text>/</text>
-      <text id="max" bind="max" />
+      <text id="max" bind="max" bind-mode="one-way" />
       <text style="flex: 1;" />
       <text>Done:</text>
-      <text id="done" bind="done" style="font-weight: bold;" />
+      <text id="done" bind="done" bind-mode="one-way" style="font-weight: bold;" />
     </container>
 
     <container id="empty-msg" style="padding: 2; text-align: center;">
@@ -24,7 +24,7 @@
     </container>
 
     <container id="list" style="flex: 1; min-height: 5; max-height: 12; border: thin; padding: 1; overflow-y: auto">
-      <text id="task-list" bind="taskList" />
+      <text id="task-list" bind="taskList" bind-mode="one-way" />
     </container>
 
     <container style="display: flex; flex-direction: row; gap: 1;">

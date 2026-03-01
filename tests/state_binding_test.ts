@@ -470,3 +470,289 @@ Deno.test('state binding - full resolution: classes, stylesheet, and bind', () =
   assertEquals(emptyMsg.props.style?.display, 'flex');
   assertEquals(list.props.style?.display, 'none');
 });
+
+// ===========================================================================
+// 11. Two-way binding: reverse sync (element → state)
+// ===========================================================================
+
+Deno.test('two-way binding - reverse sync pulls input value into state', () => {
+  const input = createElement('input', { id: 'search', bind: 'query', value: 'hello' });
+  const root = el('container', { id: 'root' }, input);
+
+  const state: Record<string, unknown> = { query: '' };
+  const byType = new Map<string, PersistenceMapping>();
+  for (const m of DEFAULT_PERSISTENCE_MAPPINGS) {
+    if (!byType.has(m.type)) byType.set(m.type, m);
+  }
+
+  // Simulate step 0 (reverse sync) for two-way bound elements
+  const doc = new Document(root);
+  for (const element of doc.getAllElements()) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const twoWay = element.props['bind-mode'] !== 'one-way';
+      if (!twoWay) continue;
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        const elementValue = element.props[mapping.prop];
+        if (elementValue !== undefined) {
+          state[bindKey] = elementValue;
+        }
+      }
+    }
+  }
+
+  assertEquals(state.query, 'hello');
+});
+
+Deno.test('two-way binding - reverse sync pulls checkbox checked into state', () => {
+  const cb = createElement('checkbox', { id: 'dark', bind: 'darkMode', checked: true, title: 'Dark Mode' });
+  const root = el('container', { id: 'root' }, cb);
+
+  const state: Record<string, unknown> = { darkMode: false };
+  const byType = new Map<string, PersistenceMapping>();
+  for (const m of DEFAULT_PERSISTENCE_MAPPINGS) {
+    if (!byType.has(m.type)) byType.set(m.type, m);
+  }
+
+  const doc = new Document(root);
+  for (const element of doc.getAllElements()) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const twoWay = element.props['bind-mode'] !== 'one-way';
+      if (!twoWay) continue;
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        const elementValue = element.props[mapping.prop];
+        if (elementValue !== undefined) {
+          state[bindKey] = elementValue;
+        }
+      }
+    }
+  }
+
+  assertEquals(state.darkMode, true);
+});
+
+Deno.test('two-way binding - reverse sync pulls slider value into state', () => {
+  const slider = createElement('slider', { id: 'vol', bind: 'volume', value: 75 });
+  const root = el('container', { id: 'root' }, slider);
+
+  const state: Record<string, unknown> = { volume: 50 };
+  const byType = new Map<string, PersistenceMapping>();
+  for (const m of DEFAULT_PERSISTENCE_MAPPINGS) {
+    if (!byType.has(m.type)) byType.set(m.type, m);
+  }
+
+  const doc = new Document(root);
+  for (const element of doc.getAllElements()) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const twoWay = element.props['bind-mode'] !== 'one-way';
+      if (!twoWay) continue;
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        const elementValue = element.props[mapping.prop];
+        if (elementValue !== undefined) {
+          state[bindKey] = elementValue;
+        }
+      }
+    }
+  }
+
+  assertEquals(state.volume, 75);
+});
+
+// ===========================================================================
+// 12. One-way opt-out via bind-mode="one-way"
+// ===========================================================================
+
+Deno.test('two-way binding - bind-mode="one-way" skips reverse sync', () => {
+  const input = createElement('input', {
+    id: 'search', bind: 'query', 'bind-mode': 'one-way', value: 'typed',
+  });
+  const root = el('container', { id: 'root' }, input);
+
+  const state: Record<string, unknown> = { query: 'original' };
+  const byType = new Map<string, PersistenceMapping>();
+  for (const m of DEFAULT_PERSISTENCE_MAPPINGS) {
+    if (!byType.has(m.type)) byType.set(m.type, m);
+  }
+
+  const doc = new Document(root);
+  for (const element of doc.getAllElements()) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const twoWay = element.props['bind-mode'] !== 'one-way';
+      if (!twoWay) continue;
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        const elementValue = element.props[mapping.prop];
+        if (elementValue !== undefined) {
+          state[bindKey] = elementValue;
+        }
+      }
+    }
+  }
+
+  // State should NOT have been updated (one-way skips reverse sync)
+  assertEquals(state.query, 'original');
+});
+
+Deno.test('two-way binding - bind-mode="one-way" still receives forward push', () => {
+  const input = createElement('input', {
+    id: 'search', bind: 'query', 'bind-mode': 'one-way', value: 'old',
+  });
+  const root = el('container', { id: 'root' }, input);
+
+  const state: Record<string, unknown> = { query: 'pushed' };
+  const byType = new Map<string, PersistenceMapping>();
+  for (const m of DEFAULT_PERSISTENCE_MAPPINGS) {
+    if (!byType.has(m.type)) byType.set(m.type, m);
+  }
+
+  // Simulate step 2 (forward push) — same as existing one-way behavior
+  const doc = new Document(root);
+  for (const element of doc.getAllElements()) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        element.props[mapping.prop] = String(state[bindKey]);
+      }
+    }
+  }
+
+  assertEquals(input.props.value, 'pushed');
+});
+
+// ===========================================================================
+// 13. Two-way binding: _collectBoundElements caches twoWay flag
+// ===========================================================================
+
+Deno.test('two-way binding - collectBoundElements includes twoWay flag', () => {
+  const t1 = createElement('text', { id: 't1', bind: 'a' } as any);
+  const t2 = createElement('text', { id: 't2', bind: 'b', 'bind-mode': 'one-way' } as any);
+  const t3 = createElement('text', { id: 't3', bind: 'c', 'bind-mode': 'two-way' } as any);
+  const root = el('container', { id: 'root' }, t1, t2, t3);
+
+  const doc = new Document(root);
+  const bound: Array<{ stateKey: string; twoWay: boolean }> = [];
+  for (const element of doc.getAllElements()) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string') {
+      const twoWay = element.props['bind-mode'] !== 'one-way';
+      bound.push({ stateKey: bindKey, twoWay });
+    }
+  }
+
+  assertEquals(bound.length, 3);
+  assertEquals(bound[0].twoWay, true);   // default = two-way
+  assertEquals(bound[1].twoWay, false);  // explicit one-way
+  assertEquals(bound[2].twoWay, true);   // explicit two-way
+});
+
+// ===========================================================================
+// 14. Two-way binding: forward push after reverse sync is no-op
+// ===========================================================================
+
+Deno.test('two-way binding - forward push after reverse sync produces consistent state', () => {
+  const input = createElement('input', { id: 'search', bind: 'query', value: 'typed' });
+  const root = el('container', { id: 'root' }, input);
+
+  const state: Record<string, unknown> = { query: 'old' };
+  const byType = new Map<string, PersistenceMapping>();
+  for (const m of DEFAULT_PERSISTENCE_MAPPINGS) {
+    if (!byType.has(m.type)) byType.set(m.type, m);
+  }
+
+  const doc = new Document(root);
+  const allElements = [...doc.getAllElements()];
+
+  // Step 0: reverse sync
+  for (const element of allElements) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const twoWay = element.props['bind-mode'] !== 'one-way';
+      if (!twoWay) continue;
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        const elementValue = element.props[mapping.prop];
+        if (elementValue !== undefined) {
+          state[bindKey] = elementValue;
+        }
+      }
+    }
+  }
+
+  // State now matches element
+  assertEquals(state.query, 'typed');
+
+  // Step 2: forward push
+  for (const element of allElements) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        element.props[mapping.prop] = String(state[bindKey]);
+      }
+    }
+  }
+
+  // Element still has the same value (no-op push)
+  assertEquals(input.props.value, 'typed');
+  assertEquals(state.query, 'typed');
+});
+
+// ===========================================================================
+// 15. Two-way binding: handler override wins when bind-mode="one-way"
+// ===========================================================================
+
+Deno.test('two-way binding - one-way mode preserves handler state modifications', () => {
+  const input = createElement('input', {
+    id: 'search', bind: 'query', 'bind-mode': 'one-way', value: '  Foo  ',
+  });
+  const root = el('container', { id: 'root' }, input);
+
+  const state: Record<string, unknown> = { query: 'foo' };
+  const byType = new Map<string, PersistenceMapping>();
+  for (const m of DEFAULT_PERSISTENCE_MAPPINGS) {
+    if (!byType.has(m.type)) byType.set(m.type, m);
+  }
+
+  const doc = new Document(root);
+  const allElements = [...doc.getAllElements()];
+
+  // Simulate: handler already set state.query = 'foo' (normalized)
+  // Step 0: reverse sync — should skip (one-way)
+  for (const element of allElements) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const twoWay = element.props['bind-mode'] !== 'one-way';
+      if (!twoWay) continue;
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        const elementValue = element.props[mapping.prop];
+        if (elementValue !== undefined) {
+          state[bindKey] = elementValue;
+        }
+      }
+    }
+  }
+
+  // Handler's normalized value preserved (not overwritten by element's raw value)
+  assertEquals(state.query, 'foo');
+
+  // Step 2: forward push — handler's value pushed to element
+  for (const element of allElements) {
+    const bindKey = element.props.bind;
+    if (typeof bindKey === 'string' && bindKey in state) {
+      const mapping = byType.get(element.type);
+      if (mapping) {
+        element.props[mapping.prop] = String(state[bindKey]);
+      }
+    }
+  }
+
+  assertEquals(input.props.value, 'foo');
+});

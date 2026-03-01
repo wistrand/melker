@@ -6,7 +6,7 @@
     </style>
 
     <container style="gap: 1;">
-        <text id="count" bind="count" />
+        <text id="count" bind="count" bind-mode="one-way" />
         <container id="empty">
             <text>count is zero</text>
         </container>
@@ -28,6 +28,7 @@
         state.isZero = items.length === 0;
         state.isMax = items.length >= 10;
         // Auto-render fires after handler:
+        //   0. reverse sync (two-way elements only, skipped for one-way)
         //   1. boolean state → CSS classes on root
         //   2. state values → bound elements (coerced to prop type)
         //   3. CSS rules re-applied if classes changed

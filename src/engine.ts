@@ -275,7 +275,7 @@ export class MelkerEngine {
   // State bindings (createState + bind attribute)
   private _stateObject: Record<string, unknown> | null = null;
   private _bindMappingsByType: Map<string, PersistenceMapping> | null = null;
-  private _boundElements: Array<{ element: Element; stateKey: string }> | null = null;
+  private _boundElements: Array<{ element: Element; stateKey: string; twoWay: boolean }> | null = null;
   private _lastRegistrySize = 0;
 
   // App policy (for permission checks)
@@ -1554,15 +1554,16 @@ export class MelkerEngine {
   }
 
   /** Get bound elements info for DevTools (avoids exposing Element references). */
-  getBoundElements(): Array<{ stateKey: string; elementId: string; elementType: string }> | null {
+  getBoundElements(): Array<{ stateKey: string; elementId: string; elementType: string; twoWay: boolean }> | null {
     if (!this._stateObject) return null;
     if (!this._boundElements || this._document.elementCount !== this._lastRegistrySize) {
       this._collectBoundElements();
     }
-    return this._boundElements!.map(({ element, stateKey }) => ({
+    return this._boundElements!.map(({ element, stateKey, twoWay }) => ({
       stateKey,
       elementId: element.props.id ?? '',
       elementType: element.type,
+      twoWay,
     }));
   }
 
@@ -1580,7 +1581,8 @@ export class MelkerEngine {
     for (const element of this._document.getAllElements()) {
       const bindKey = element.props.bind;
       if (typeof bindKey === 'string') {
-        this._boundElements.push({ element, stateKey: bindKey });
+        const twoWay = element.props['bind-mode'] !== 'one-way';
+        this._boundElements.push({ element, stateKey: bindKey, twoWay });
       }
     }
     this._lastRegistrySize = this._document.elementCount;
@@ -1588,6 +1590,7 @@ export class MelkerEngine {
 
   /**
    * Resolve state bindings before each render:
+   * 0. Reverse sync: pull two-way bound element values into state
    * 1. Sync boolean state values as CSS classes on root element
    * 2. Push bound state values to element props (schema-driven coercion)
    */
@@ -1596,6 +1599,26 @@ export class MelkerEngine {
     if (!root) return;
 
     const state = this._stateObject;
+    const byType = this._bindMappingsByType;
+
+    // Step 0: Reverse sync — pull two-way bound element values into state
+    if (state && byType) {
+      if (!this._boundElements || this._document.elementCount !== this._lastRegistrySize) {
+        this._collectBoundElements();
+      }
+      for (const { element, stateKey, twoWay } of this._boundElements!) {
+        if (!twoWay) continue;
+        if (stateKey in state) {
+          const mapping = byType.get(element.type);
+          if (mapping) {
+            const elementValue = element.props[mapping.prop];
+            if (elementValue !== undefined) {
+              state[stateKey] = elementValue;
+            }
+          }
+        }
+      }
+    }
 
     // Step 1: Sync boolean state → CSS classes on root element
     if (state) {
@@ -1621,7 +1644,6 @@ export class MelkerEngine {
 
     // Step 2: Schema-driven bind resolution — cached bound elements only
     if (!state) return;
-    const byType = this._bindMappingsByType;
     if (!byType) return;
 
     if (!this._boundElements || this._document.elementCount !== this._lastRegistrySize) {

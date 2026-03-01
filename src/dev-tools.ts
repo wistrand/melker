@@ -37,7 +37,7 @@ export interface DevToolsDependencies {
   exit?: () => void;
   getServerUrl?: () => string | undefined;
   getStateObject?: () => Record<string, unknown> | null;
-  getBoundElements?: () => Array<{ stateKey: string; elementId: string; elementType: string }> | null;
+  getBoundElements?: () => Array<{ stateKey: string; elementId: string; elementType: string; twoWay: boolean }> | null;
 }
 
 /** System information for the System tab */
@@ -512,14 +512,15 @@ export class DevToolsManager {
       const state = this._deps.getStateObject?.();
       if (!state) return [];
       const bound = this._deps.getBoundElements?.() ?? [];
-      const boundMap = new Map<string, string>();
+      const boundMap = new Map<string, { target: string; twoWay: boolean }>();
       for (const b of bound) {
-        boundMap.set(b.stateKey, b.elementId ? `#${b.elementId}` : b.elementType);
+        boundMap.set(b.stateKey, { target: b.elementId ? `#${b.elementId}` : b.elementType, twoWay: b.twoWay });
       }
       return Object.keys(state).map(key => {
         const value = state[key];
-        const boundTo = boundMap.get(key) ?? '';
-        const role = typeof value === 'boolean' ? 'class' : boundTo ? 'bind' : '';
+        const info = boundMap.get(key);
+        const boundTo = info?.target ?? '';
+        const role = typeof value === 'boolean' ? 'class' : info ? (info.twoWay ? 'bind 2w' : 'bind 1w') : '';
         return [key, JSON.stringify(value), boundTo, role];
       });
     };
@@ -536,7 +537,9 @@ export class DevToolsManager {
 
     const totalCount = rows.length;
     const classCount = rows.filter(r => r[3] === 'class').length;
-    const bindCount = rows.filter(r => r[3] === 'bind').length;
+    const bind2wCount = rows.filter(r => r[3] === 'bind 2w').length;
+    const bind1wCount = rows.filter(r => r[3] === 'bind 1w').length;
+    const bindSummary = bind1wCount > 0 ? `${bind2wCount} bind 2w, ${bind1wCount} bind 1w` : `${bind2wCount} bind`;
 
     return melker`
       <tab id="dev-tools-tab-state" title="State">
@@ -548,7 +551,7 @@ export class DevToolsManager {
             style=${{ flex: 1, width: 'fill', height: 'fill' }}
           />
           <container style=${{ display: 'flex', flexDirection: 'row', padding: 1, gap: 2, alignItems: 'center' }}>
-            <text text=${`${totalCount} keys (${classCount} class, ${bindCount} bind)`} style=${{ flex: 1, color: 'gray' }} />
+            <text text=${`${totalCount} keys (${classCount} class, ${bindSummary})`} style=${{ flex: 1, color: 'gray' }} />
             <button id="dev-tools-refresh-state" label="Refresh" onClick=${onRefresh} />
           </container>
         </container>

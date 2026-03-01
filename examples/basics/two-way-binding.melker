@@ -1,0 +1,50 @@
+<melker>
+  <style>
+    #preview { display: none; }
+    .showPreview #preview { display: flex; }
+    .highlight #name-display { font-weight: bold; }
+  </style>
+
+  <container style="width: fill; border: thin; padding: 2; gap: 1;">
+    <text style="font-weight: bold; text-align: center;">Two-Way Binding Demo</text>
+    <separator />
+
+    <!-- Two-way: state.name mirrors whatever the user types (no handler needed for sync) -->
+    <container style="flex-direction: row; gap: 1;">
+      <text>Name:</text>
+      <input id="name-input" bind="name" placeholder="Type your name..." style="flex: 1;" onChange="$app.updatePreview()" />
+    </container>
+
+    <!-- Two-way: checking/unchecking flows into boolean state → CSS class on root -->
+    <checkbox bind="showPreview" title="Show preview" />
+    <checkbox bind="highlight" title="Highlight name" />
+
+    <!-- One-way: display elements driven by handler, not user input -->
+    <container id="preview" style="border: thin; padding: 1; gap: 1;">
+      <text>Preview:</text>
+      <text id="name-display" bind="greeting" bind-mode="one-way" />
+      <text bind="charCount" bind-mode="one-way" style="color: gray;" />
+    </container>
+  </container>
+
+  <script>
+    const state = $melker.createState({
+      // Two-way: synced automatically from element ↔ state
+      name: '',
+      showPreview: true,  // boolean → CSS class "showPreview" on root
+      highlight: false,    // boolean → CSS class "highlight" on root
+
+      // One-way: derived values computed by handler
+      greeting: 'Type your name above',
+      charCount: '0 characters',
+    });
+
+    export function updatePreview() {
+      // Read from element directly — state.name is stale inside handler
+      // (reverse sync runs after the handler, not before)
+      const name = $melker.getElementById('name-input').getValue();
+      state.greeting = name ? `Hello, ${name}!` : 'Type your name above';
+      state.charCount = `${name.length} character${name.length !== 1 ? 's' : ''}`;
+    }
+  </script>
+</melker>

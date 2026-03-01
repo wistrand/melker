@@ -14,9 +14,11 @@ Known developer experience issues when building .melker apps.
 8. [Dialog Content Layout](#8-dialog-content-layout)
 9. [Flex Is the Default Layout](#9-flex-is-the-default-layout)
 10. [Cross-Axis Stretching in Column Containers](#10-cross-axis-stretching-in-column-containers)
-11. [Exported Variables Can't Be Modified from Ready Script](#11-exported-variables-cant-be-modified-from-ready-script)
-12. [Input Type Is 'input', Not 'text-input'](#12-input-type-is-input-not-text-input)
-13. [Emojis Break Terminal Layout](#13-emojis-break-terminal-layout)
+11. [Using `export` in Async Script Blocks](#11-using-export-in-async-script-blocks)
+12. [Exported Variables Can't Be Modified from Ready Script](#12-exported-variables-cant-be-modified-from-ready-script)
+13. [Input Type Is 'input', Not 'text-input'](#13-input-type-is-input-not-text-input)
+14. [Emojis Break Terminal Layout](#14-emojis-break-terminal-layout)
+15. [Two-Way Binding: Handlers That Transform Values](#15-two-way-binding-handlers-that-transform-values)
 
 ## 1. No Reactive Bindings
 
@@ -423,9 +425,43 @@ The single-line text input component is called `input`, not `text-input`. Use `<
 
 Emojis have inconsistent widths across terminals. Melker calculates emoji width as 2 characters, but some terminals render them wider or narrower, causing layout misalignment. Avoid emojis in UI text for reliable layouts.
 
+## 15. Two-Way Binding: Handlers That Transform Values
+
+**Mistake**: Using a handler that transforms a bound value without opting out of two-way sync.
+
+```xml
+<!-- PROBLEM - reverse sync overwrites the handler's normalized value -->
+<input bind="query" onInput="$app.normalize()" />
+<script>
+  const state = $melker.createState({ query: '' });
+  export function normalize() {
+    state.query = state.query.trim().toLowerCase();
+  }
+</script>
+```
+
+**Why this breaks**: Two-way binding is the default. Before each render, reverse sync reads the raw input value (`"  Foo "`) into `state.query`, overwriting the handler's normalized result (`"foo"`). The handler ran before reverse sync, so its transformation is lost.
+
+**Solution**: Use `bind-mode="one-way"` and read from the element directly:
+
+```xml
+<input bind="query" bind-mode="one-way" onInput="$app.normalize()" />
+<script>
+  const state = $melker.createState({ query: '' });
+  export function normalize() {
+    state.query = $melker.getElementById('query').getValue().trim().toLowerCase();
+  }
+</script>
+```
+
+**Rule of thumb**: If your handler modifies the same state key that the element is bound to, use `bind-mode="one-way"`.
+
+**Also note**: Inside event handlers, `state.key` has the pre-interaction value — reverse sync hasn't run yet. If you need the freshest value inside the handler, read from the element directly with `getElementById().getValue()`.
+
 ## See Also
 
 - [tutorial.html](../docs/tutorial.html) — Step-by-step first app tutorial
 - [getting-started.md](getting-started.md) — Quick start guide
 - [script_usage.md](script_usage.md) — Script context and $melker API
 - [component-reference.md](component-reference.md) — Component documentation
+- [state-binding-architecture.md](state-binding-architecture.md) — State binding details

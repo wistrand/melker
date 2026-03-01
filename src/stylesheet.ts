@@ -1599,6 +1599,9 @@ export function applyStylesheet(element: Element, stylesheet: Stylesheet, ancest
 
   if (hasStylesheet || hasInline) {
     element.props.style = { ...stylesheetStyle, ...inlineStyle };
+  } else if (element.props.style && Object.keys(element.props.style).length > 0) {
+    // All rules stopped matching and no inline styles — clear stale props
+    element.props.style = {};
   }
 
   // Track what we computed for future script-change detection

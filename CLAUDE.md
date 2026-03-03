@@ -109,11 +109,12 @@ New to Melker? Read in this order:
 
 ### Project
 
-| Topic            | Doc                                                          |
-|------------------|--------------------------------------------------------------|
-| Timeline         | [project-timeline.md](agent_docs/project-timeline.md)        |
-| Release scheme   | [calver-release.md](agent_docs/calver-release.md)            |
-| TUI comparison   | [tui-comparison.md](agent_docs/tui-comparison.md)            |
+| Topic            | Doc                                                                      |
+|------------------|--------------------------------------------------------------------------|
+| Timeline         | [project-timeline.md](agent_docs/project-timeline.md)                    |
+| Release scheme   | [calver-release.md](agent_docs/calver-release.md)                        |
+| TUI comparison   | [tui-comparison.md](agent_docs/tui-comparison.md)                        |
+| Unstable flags   | [unstable-flags-audit.md](agent_docs/unstable-flags-audit.md)            |
 
 ## Technology Stack
 

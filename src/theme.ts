@@ -8,6 +8,7 @@ import { COLORS, cssToRgba, packRGBA } from './components/color-utils.ts';
 import { extractVariableDeclarations } from './stylesheet.ts';
 import { getLogger } from './logging.ts';
 import { getAssetText } from './assets.ts';
+import { isSandboxTerminal } from './utils/terminal-detection.ts';
 
 const logger = getLogger('Theme');
 
@@ -220,6 +221,11 @@ export async function initThemes(): Promise<void> {
  * Detect terminal color support level
  */
 function detectColorSupport(): ThemeType {
+  // Sandbox/web terminals render foreground as grayscale, no background color support
+  if (isSandboxTerminal()) {
+    return 'gray';
+  }
+
   const colorterm = Env.get('COLORTERM') || '';
   const term = Env.get('TERM') || '';
 

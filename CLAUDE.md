@@ -100,6 +100,7 @@ New to Melker? Read in this order:
 | Fast input render  | [fast-input-render.md](agent_docs/fast-input-render.md)              |
 | Env permissions    | [env-permission-analysis.md](agent_docs/env-permission-analysis.md)  |
 | Layout engine      | [layout-engine-notes.md](agent_docs/layout-engine-notes.md)          |
+| Sandbox detection  | [sandbox-terminal-detection.md](agent_docs/sandbox-terminal-detection.md) |
 
 ### Examples & Patterns
 

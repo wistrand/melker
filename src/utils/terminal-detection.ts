@@ -86,3 +86,20 @@ export function detectRemoteSession(): boolean {
 
   return false;
 }
+
+/**
+ * Detect if running in a sandboxed/web-based terminal environment
+ * (e.g. Claude Code web sandbox) where background colors don't work
+ * and foreground colors render as grayscale only.
+ */
+let _isSandboxTerminal: boolean | undefined;
+export function isSandboxTerminal(): boolean {
+  if (_isSandboxTerminal !== undefined) return _isSandboxTerminal;
+  _isSandboxTerminal =
+    Env.get('IS_SANDBOX') === 'yes' ||
+    (Env.get('CLAUDECODE') === '1' && Env.get('CLAUDE_CODE_REMOTE') === 'true');
+  if (_isSandboxTerminal) {
+    logger.debug('Sandbox terminal detected');
+  }
+  return _isSandboxTerminal;
+}

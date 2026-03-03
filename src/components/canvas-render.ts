@@ -14,7 +14,7 @@ import { type Bounds } from '../types.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
 import type { CanvasRenderData, CanvasRenderState, ResolvedGfxMode, GfxMode } from './canvas-render-types.ts';
-import { getUnicodeTier } from '../utils/terminal-detection.ts';
+import { getUnicodeTier, isSandboxTerminal } from '../utils/terminal-detection.ts';
 import { renderGraphicsPlaceholder } from './canvas-render-graphics.ts';
 import { renderSextantToTerminal } from './canvas-render-sextant.ts';
 import { renderQuadrantToTerminal } from './canvas-render-quadrant.ts';
@@ -111,7 +111,9 @@ export function getEffectiveGfxMode(
   propsGfxMode?: GfxMode
 ): ResolvedGfxMode {
   const globalGfxMode = MelkerConfig.get().gfxMode as GfxMode | undefined;
-  const requested = globalGfxMode || propsGfxMode || 'sextant';
+  // Sandbox terminals lack background color support; only block mode is fully foreground-based
+  const defaultMode: GfxMode = isSandboxTerminal() ? 'block' : 'sextant';
+  const requested = globalGfxMode || propsGfxMode || defaultMode;
 
   const engine = getGlobalEngine();
   const kittySupported = engine?.kittyCapabilities?.supported ?? false;

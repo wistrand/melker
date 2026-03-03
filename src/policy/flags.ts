@@ -390,6 +390,8 @@ const ALWAYS_ALLOWED_ENV = [
   'TMUX', 'STY',
   // SSH session detection (for sixel bandwidth considerations)
   'SSH_CLIENT', 'SSH_CONNECTION', 'SSH_TTY',
+  // Sandbox/web terminal detection (grayscale-only, no background color)
+  'IS_SANDBOX', 'CLAUDECODE', 'CLAUDE_CODE_REMOTE',
   // Set by launcher after permission flags are built
   'MELKER_RUNNER',
   'MELKER_REMOTE_URL',

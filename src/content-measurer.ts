@@ -1,5 +1,5 @@
 // Content measurement utilities for layout calculations
-import { Element, Size, IntrinsicSizeContext, BoxSpacing, isRenderable } from './types.ts';
+import { Element, type Size, type IntrinsicSizeContext, type BoxSpacing, isRenderable } from './types.ts';
 
 export interface ContentMeasureContext {
   availableWidth: number;

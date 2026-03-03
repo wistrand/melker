@@ -6,8 +6,8 @@ import { getLogger } from './logging.ts';
 
 const logger = getLogger('StatePersistence');
 import {
-  PersistedState,
-  PersistenceMapping,
+  type PersistedState,
+  type PersistenceMapping,
   DEFAULT_PERSISTENCE_MAPPINGS,
   readState,
   hashState,

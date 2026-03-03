@@ -69,6 +69,7 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
     persist: boolean;
     lint: boolean;
   };
+  inspect(value: unknown, options?: { colors?: boolean; depth?: number }): string;
   exports: Record<string, any>;`;
 
 /**
@@ -94,10 +95,10 @@ const $app = (globalThis as any).$app as Record<string, any>;
  * Console override code - redirects console.log to $melker.logger.
  */
 const CONSOLE_OVERRIDE_CODE = `// Console override - redirect to $melker.logger to avoid breaking TUI
-// Use Deno.inspect for safe, smart formatting (handles circular refs, etc.)
+// Use $melker.inspect for safe, smart formatting (handles circular refs, etc.)
 const __formatArg = (arg: unknown): string => {
   if (typeof arg === 'string') return arg;
-  return Deno.inspect(arg, { colors: false, depth: 4 });
+  return $melker.inspect(arg, { colors: false, depth: 4 });
 };
 const __formatArgs = (...args: unknown[]): string => args.map(__formatArg).join(' ');
 const console = {
@@ -228,10 +229,10 @@ export function generate(parsed: ParseResult): GeneratedSource {
   // Console override (conditional based on config)
   if (consoleOverride) {
     addLine('// Console override - redirect to $melker.logger to avoid breaking TUI');
-    addLine('// Use Deno.inspect for safe, smart formatting (handles circular refs, etc.)');
+    addLine('// Use $melker.inspect for safe, smart formatting (handles circular refs, etc.)');
     addLine('const __formatArg = (arg: unknown): string => {');
     addLine('  if (typeof arg === \'string\') return arg;');
-    addLine('  return Deno.inspect(arg, { colors: false, depth: 4 });');
+    addLine('  return $melker.inspect(arg, { colors: false, depth: 4 });');
     addLine('};');
     addLine('const __formatArgs = (...args: unknown[]): string => args.map(__formatArg).join(\' \');');
     addLine('const console = {');

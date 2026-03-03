@@ -1,6 +1,6 @@
 // Folding range provider
 
-import type { FoldingRange } from 'npm:vscode-languageserver@9.0.1/node.js';
+import type { FoldingRange } from './deps.ts';
 import { parseHtml as parse } from '../deps.ts';
 import type { AstNode } from './types.ts';
 import { offsetToPosition } from './utils.ts';

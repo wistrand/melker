@@ -1,6 +1,6 @@
 // Button component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Focusable, type Clickable, type Interactive, type TextSelectable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext, type ClickEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { getLogger } from '../logging.ts';

@@ -2,20 +2,20 @@
 
 import {
   Element,
-  BaseProps,
-  Renderable,
-  Focusable,
-  Clickable,
-  Interactive,
-  Draggable,
-  Wheelable,
-  IntrinsicSizeContext,
-  Bounds,
-  ComponentRenderContext,
-  BorderStyle,
+  type BaseProps,
+  type Renderable,
+  type Focusable,
+  type Clickable,
+  type Interactive,
+  type Draggable,
+  type Wheelable,
+  type IntrinsicSizeContext,
+  type Bounds,
+  type ComponentRenderContext,
+  type BorderStyle,
   BORDER_CHARS,
   getBorderChars,
-  ClickEvent,
+  type ClickEvent,
 } from '../types.ts';
 import type { KeyPressEvent } from '../events.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';

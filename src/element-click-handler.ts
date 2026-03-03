@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { HitTester } from './hit-test.ts';
-import { Element, isClickable, ClickEvent, hasPositionalClickHandler } from './types.ts';
+import { Element, isClickable, type ClickEvent, hasPositionalClickHandler } from './types.ts';
 import { getLogger } from './logging.ts';
 
 const logger = getLogger('ElementClickHandler');

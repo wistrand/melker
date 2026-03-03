@@ -1,6 +1,6 @@
 // Viewport-based buffer system for clipping and scrolling
-import { TerminalBuffer, DualBuffer, Cell, RenderOptions, BufferDiff, EMPTY_CHAR } from './buffer.ts';
-import { Viewport, CoordinateTransform } from './viewport.ts';
+import { TerminalBuffer, DualBuffer, type Cell, type RenderOptions, type BufferDiff, EMPTY_CHAR } from './buffer.ts';
+import { type Viewport, CoordinateTransform } from './viewport.ts';
 import type { Bounds } from './types.ts';
 import { analyzeString } from './char-width.ts';
 

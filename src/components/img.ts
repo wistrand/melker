@@ -1,7 +1,7 @@
 // Image component - HTML-like img tag for displaying images in Melker
 // Subclass of CanvasElement that provides a familiar API
 
-import { Element, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { CanvasElement, type CanvasProps } from './canvas.ts';
 import { registerComponent } from '../element.ts';

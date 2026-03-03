@@ -11,10 +11,16 @@ const tag = new TextDecoder().decode(p.stdout).trim();
 const semver = tag.replace(/^v/, '').replace(/\.0(\d)/g, '.$1');
 
 // Update deno.json — replace version field in-place to preserve formatting
-const path = 'deno.json';
-const text = await Deno.readTextFile(path);
-const old = JSON.parse(text).version;
-const updated = text.replace(/"version":\s*"[^"]*"/, `"version": "${semver}"`);
-await Deno.writeTextFile(path, updated);
+const denoPath = 'deno.json';
+const denoText = await Deno.readTextFile(denoPath);
+const old = JSON.parse(denoText).version;
+const denoUpdated = denoText.replace(/"version":\s*"[^"]*"/, `"version": "${semver}"`);
+await Deno.writeTextFile(denoPath, denoUpdated);
+
+// Update package.json — keep Node package version in sync
+const pkgPath = 'package.json';
+const pkgText = await Deno.readTextFile(pkgPath);
+const pkgUpdated = pkgText.replace(/"version":\s*"[^"]*"/, `"version": "${semver}"`);
+await Deno.writeTextFile(pkgPath, pkgUpdated);
 
 console.log(`${old} → ${semver} (from ${tag})`);

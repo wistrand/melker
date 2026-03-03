@@ -5,7 +5,7 @@ import { Element, isInteractive, isTextSelectable, isScrollableType, isScrolling
 import { Document } from './document.ts';
 import { RenderingEngine } from './rendering.ts';
 import { getLogger } from './logging.ts';
-import { Point, Bounds, pointInBounds } from './geometry.ts';
+import { type Point, type Bounds, pointInBounds } from './geometry.ts';
 
 export type { Point, Bounds };
 

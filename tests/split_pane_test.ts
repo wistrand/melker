@@ -7,13 +7,13 @@ import {
   ContainerElement,
   TextElement,
   Element,
-  Bounds,
+  type Bounds,
   isFocusable,
   isDraggable,
   isInteractive,
   isRenderable,
 } from '../mod.ts';
-import { SplitPaneElement, SplitPaneDivider, SplitPaneProps } from '../src/components/split-pane.ts';
+import { SplitPaneElement, SplitPaneDivider, type SplitPaneProps } from '../src/components/split-pane.ts';
 
 // --- Construction tests ---
 

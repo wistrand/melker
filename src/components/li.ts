@@ -1,5 +1,5 @@
 // List Item component - wrapper for list item content with markers
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';

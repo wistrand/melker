@@ -6,6 +6,11 @@
     ".": "./melker.ts",
     "./lib": "./mod.ts"
   },
+  "exclude": [
+    "src/runtime/node",
+    "tests/node",
+    "package.json"
+  ],
   "publish": {
     "include": [
       "mod.ts",
@@ -16,12 +21,16 @@
       "LICENSE.txt"
     ],
     "exclude": [
-      "src/globals-ambient.d.ts"
+      "src/globals-ambient.d.ts",
+      "src/runtime/node",
+      "tsconfig.node.json",
+      "package.json"
     ]
   },
   "engines": {
     "deno": ">=2.5.0"
   },
+  "nodeModulesDir": "none",
   "description": "A Deno library for creating rich Terminal UI interfaces with flexbox-based layouts",
   "tasks": {
     "test": "deno test --no-lock --allow-read --allow-env --allow-write --allow-run --allow-net=localhost --unstable-bundle",
@@ -46,7 +55,11 @@
     "publish": "deno publish --allow-dirty",
     "publish:test-dry-run": "rm -f deno.lock && DENO_TLS_CA_STORE=system JSR_URL=https://jsr.test deno publish --dry-run --allow-dirty",
     "publish:test": "rm -f deno.lock && DENO_TLS_CA_STORE=system JSR_URL=https://jsr.test deno publish --allow-dirty",
-    "serve:http": "deno run --allow-net --allow-read tools/serve.ts"
+    "serve:http": "deno run --allow-net --allow-read tools/serve.ts",
+    "check:leaks": "deno run --allow-read scripts/check-deno-leaks.ts",
+    "check:node-runtime": "npx tsc --project tsconfig.node.json --noEmit",
+    "test:node": "node --test 'tests/node/*_test.ts' 'tests/node/e2e/*_test.ts'",
+    "test:node:e2e": "node --test 'tests/node/e2e/*_test.ts'"
   },
   "compilerOptions": {
     "strict": true,
@@ -54,7 +67,8 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "noImplicitOverride": true,
-    "types": ["./src/globals-ambient.d.ts"]
+    "types": ["./src/globals-ambient.d.ts"],
+    "verbatimModuleSyntax": true
   },
   "fmt": {
     "useTabs": false,

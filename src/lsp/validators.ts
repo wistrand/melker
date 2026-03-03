@@ -3,7 +3,7 @@
 import {
   DiagnosticSeverity,
   type Diagnostic,
-} from 'npm:vscode-languageserver@9.0.1/node.js';
+} from './deps.ts';
 import { parseHtml as parse } from '../deps.ts';
 import type { AstNode, AstAttribute } from './types.ts';
 import { createRange, toKebabCase, parseStyleString, preprocessSelfClosingTags } from './utils.ts';

@@ -1,7 +1,7 @@
 // Markdown code block rendering support
 // Handles code blocks, melker blocks, and mermaid diagrams
 
-import { Element, Bounds, hasIntrinsicSize, isDisposable } from '../types.ts';
+import { Element, type Bounds, hasIntrinsicSize, isDisposable } from '../types.ts';
 import { type Cell } from '../buffer.ts';
 import { getThemeColor, getThemeManager } from '../theme.ts';
 import { getStringWidth } from '../char-width.ts';

@@ -3,8 +3,8 @@
 import { assertEquals, assert, assertExists } from 'jsr:@std/assert';
 import {
   ResizeHandler,
-  TerminalSize,
-  ResizeEvent,
+  type TerminalSize,
+  type ResizeEvent,
   setupAutoResize,
   initializeGlobalResizeHandler,
   getGlobalResizeHandler,

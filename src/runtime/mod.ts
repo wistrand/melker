@@ -1,13 +1,11 @@
 /**
  * Runtime abstraction layer.
  *
- * Thin wrappers around Deno-specific APIs to prepare for possible Node/Bun support.
- * On Deno these are near-zero-overhead delegations. On other runtimes the
- * implementations would change while keeping the same interface.
+ * Re-exports the active runtime implementation. For Deno this delegates to
+ * ./deno/mod.ts. For Node.js it will delegate to ./node/mod.ts (future).
+ *
+ * All source files outside src/runtime/ import from this module.
+ * This is the single file that changes when selecting a different runtime.
  */
 
-export * from './process.ts';
-export * from './fs.ts';
-export * from './terminal.ts';
-export { Command } from './command.ts';
-export type { CommandOptions, CommandOutput, CommandStatus, ChildProcess } from './command.ts';
+export * from './deno/mod.ts';

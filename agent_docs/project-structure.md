@@ -6,7 +6,9 @@ Detailed file layout for the Melker codebase.
 
 | File                 | Purpose                                          |
 |----------------------|--------------------------------------------------|
-| `melker.ts`          | CLI entry point (symlink-safe, runs launcher)    |
+| `melker.ts`          | Deno CLI entry point (symlink-safe, runs launcher) |
+| `melker-node.mjs`    | Node CLI entry point for npm installs (pure JS, registers loader) |
+| `melker-node.ts`     | Node CLI entry point for dev/git checkout (needs `--experimental-transform-types`) |
 | `mod.ts`             | Library entry point (exports, component registrations) |
 | `melker-launcher.ts` | Policy enforcement and subprocess spawning       |
 

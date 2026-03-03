@@ -1,6 +1,6 @@
 // Linked editing ranges (rename open/close tags in sync)
 
-import type { Position, LinkedEditingRanges } from 'npm:vscode-languageserver@9.0.1/node.js';
+import type { Position, LinkedEditingRanges } from './deps.ts';
 import { parseHtml as parse } from '../deps.ts';
 import type { AstNode } from './types.ts';
 import { positionToOffset, createRange, findElementAtOffset } from './utils.ts';

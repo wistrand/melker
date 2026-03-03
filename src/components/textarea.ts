@@ -1,6 +1,6 @@
 // Textarea component implementation - multiline text input
 
-import { Element, BaseProps, Renderable, Focusable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Focusable, type Interactive, type TextSelectable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import { type DualBuffer, type Cell, type DiffCollector, EMPTY_CHAR } from '../buffer.ts';
 import { type KeyPressEvent, createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';

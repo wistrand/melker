@@ -1,7 +1,7 @@
 // Tests for textarea component
 
 import { assertEquals, assertExists, assert } from 'jsr:@std/assert';
-import { TextareaElement, TextareaProps } from '../src/components/textarea.ts';
+import { TextareaElement, type TextareaProps } from '../src/components/textarea.ts';
 
 Deno.test('Textarea element can be instantiated', () => {
   const textarea = new TextareaElement();

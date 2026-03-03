@@ -3,7 +3,7 @@
 
 import { Element, isScrollableType, isScrollingEnabled, getOverflowAxis } from './types.ts';
 import { Document } from './document.ts';
-import { RenderingEngine, ScrollbarBounds } from './rendering.ts';
+import { RenderingEngine, type ScrollbarBounds } from './rendering.ts';
 import { pointInBounds, clamp } from './geometry.ts';
 import { collectElements, isDescendant, isOpenDialog } from './utils/tree-traversal.ts';
 import { getLogger } from './logging.ts';

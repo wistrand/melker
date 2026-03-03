@@ -4,7 +4,7 @@ import { assertEquals, assertNotEquals, assert } from 'jsr:@std/assert';
 import {
   TerminalBuffer,
   DualBuffer,
-  Cell,
+  type Cell,
   TerminalRenderer,
 } from '../mod.ts';
 import { COLORS } from '../src/components/color-utils.ts';

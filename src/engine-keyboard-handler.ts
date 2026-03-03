@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { InputElement } from './components/input.ts';
 import { TextareaElement } from './components/textarea.ts';
-import { Element, isClickable, ClickEvent, isKeyboardElement, hasKeyPressHandler } from './types.ts';
+import { Element, isClickable, type ClickEvent, isKeyboardElement, hasKeyPressHandler } from './types.ts';
 import { createKeyPressEvent } from './events.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { restoreTerminal } from './terminal-lifecycle.ts';

@@ -1,16 +1,16 @@
 // Basic Rendering Engine for converting elements to terminal output
 // Integrates the element system with the dual-buffer rendering system
 
-import { Element, Style, Bounds, LayoutProps, ComponentRenderContext, TextSelection, isRenderable, getBorderChars, type BorderStyle, type PackedRGBA, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
+import { Element, type Style, type Bounds, type LayoutProps, type ComponentRenderContext, type TextSelection, isRenderable, getBorderChars, type BorderStyle, type PackedRGBA, isScrollableType, isScrollingEnabled, getOverflowAxis, type Overlay, hasSelectableText, hasSelectionHighlightBounds } from './types.ts';
 import { setGlobalRequestRender, getGlobalLogger } from './global-accessors.ts';
 import { clipBounds, clamp } from './geometry.ts';
-import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
-import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
+import { DualBuffer, type Cell, EMPTY_CHAR } from './buffer.ts';
+import { type Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
 import { ViewportDualBuffer, createClipViewport } from './viewport-buffer.ts';
 import { ContainerElement } from './components/container.ts';
 import { DialogElement } from './components/dialog.ts';
-import { SizingModel, globalSizingModel, ChromeCollapseState } from './sizing.ts';
-import { LayoutEngine, LayoutNode, LayoutContext, globalLayoutEngine } from './layout.ts';
+import { SizingModel, globalSizingModel, type ChromeCollapseState } from './sizing.ts';
+import { LayoutEngine, type LayoutNode, type LayoutContext, globalLayoutEngine } from './layout.ts';
 import { getThemeColor, getThemeManager } from './theme.ts';
 import { COLORS, parseColor, unpackRGBA, packRGBA } from './components/color-utils.ts';
 import { SRGB_TO_LINEAR, linearToSrgb } from './color/oklab.ts';

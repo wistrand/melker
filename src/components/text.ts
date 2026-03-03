@@ -1,6 +1,6 @@
 // Text component implementation
 
-import { Element, BaseProps, Renderable, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type TextSelectable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
 import { getLogger } from '../logging.ts';

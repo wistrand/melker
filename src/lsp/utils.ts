@@ -1,6 +1,6 @@
 // Shared utility functions for LSP modules
 
-import type { Position, Range } from 'npm:vscode-languageserver@9.0.1/node.js';
+import type { Position, Range } from './deps.ts';
 import type { AstNode, AstAttribute } from './types.ts';
 import { getLogger } from '../logging.ts';
 

@@ -4,7 +4,7 @@
  * Run all benchmarks and combine results
  */
 
-import { BenchmarkOutput, BenchmarkFinding, benchmarkTimestamp } from './harness.ts';
+import { type BenchmarkOutput, type BenchmarkFinding, benchmarkTimestamp } from './harness.ts';
 
 const benchmarkFiles = [
   './core/geometry_bench.ts',

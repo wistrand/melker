@@ -6,6 +6,7 @@ import { type Element } from './types.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { rgbaToCss } from './components/color-utils.ts';
 import { getAssetText } from './assets.ts';
+import { serve as denoServe, upgradeWebSocket, type DenoHttpServer } from './runtime/deno/server.ts';
 
 export interface ServerOptions {
   port?: number;
@@ -62,7 +63,7 @@ interface ClientSubscription {
 }
 
 export class MelkerServer {
-  private _server?: Deno.HttpServer;
+  private _server?: DenoHttpServer;
   private _engine?: MelkerEngine;
   private _connections = new Set<WebSocket>();
   private _clientSubscriptions = new Map<WebSocket, ClientSubscription>();
@@ -146,7 +147,7 @@ export class MelkerServer {
 
       // Handle WebSocket upgrade
       if (req.headers.get('upgrade') === 'websocket') {
-        const { socket, response } = Deno.upgradeWebSocket(req);
+        const { socket, response } = upgradeWebSocket(req);
 
         socket.onopen = () => {
           this._connections.add(socket);
@@ -183,15 +184,19 @@ export class MelkerServer {
       });
     };
 
-    this._server = Deno.serve({
+    this._server = denoServe({
       port: this._options.port,
       hostname: this._options.host,
       onListen: () => {}, // Suppress default "Listening on" message
     }, handler);
 
+    // On Node, server.listen() is async — wait for the port to be bound
+    // before reporting the server as running. (On Deno this is a no-op.)
+    if ('ready' in this._server) {
+      await (this._server as any).ready;
+    }
+
     this._isRunning = true;
-
-
   }
 
   /**

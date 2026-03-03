@@ -1,6 +1,6 @@
 // Error types and formatting for ASCII parser
 
-import { ParseError } from './types.ts';
+import { type ParseError } from './types.ts';
 
 export class AsciiParseError extends Error {
   constructor(

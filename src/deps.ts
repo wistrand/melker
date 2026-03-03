@@ -16,12 +16,12 @@ export { fromMarkdown } from 'npm:mdast-util-from-markdown@2.0.2';
 export { gfm } from 'npm:micromark-extension-gfm@3.0.0';
 export { gfmFromMarkdown } from 'npm:mdast-util-gfm@3.1.0';
 
-// Deno standard library
-export { encodeBase64 } from 'jsr:@std/encoding@^1.0.0/base64';
-export { dirname, fromFileUrl, join, resolve } from 'jsr:@std/path@^1.0.0';
+// Path utilities (node: builtins work in both Deno and Node)
+export { dirname, join, resolve } from 'node:path';
+export { fileURLToPath as fromFileUrl } from 'node:url';
 
-// JWT
-export { decode as decodeJwt } from 'jsr:@zaubrik/djwt@3.0.2';
+// Base64 + JWT utilities
+export { encodeBase64, decodeJwt } from './jwt-util.ts';
 
 // LSP dependencies (vscode-languageserver, vscode-languageserver-textdocument)
 // are imported directly in src/lsp.ts to avoid downloading them for normal usage

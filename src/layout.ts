@@ -1,10 +1,10 @@
 // Advanced Layout Engine with comprehensive layout algorithms
 // Supports block, flex, and absolute positioning
 
-import { Element, Style, Bounds, Size, LayoutProps, BoxSpacing, IntrinsicSizeContext, isRenderable, isScrollableType, isScrollingEnabled } from './types.ts';
-import { SizingModel, globalSizingModel, BoxModel, ChromeCollapseState } from './sizing.ts';
+import { Element, type Style, type Bounds, type Size, type LayoutProps, type BoxSpacing, type IntrinsicSizeContext, isRenderable, isScrollableType, isScrollingEnabled } from './types.ts';
+import { SizingModel, globalSizingModel, type BoxModel, type ChromeCollapseState } from './sizing.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
-import { ViewportManager, globalViewportManager, ScrollbarLayout } from './viewport.ts';
+import { ViewportManager, globalViewportManager, type ScrollbarLayout } from './viewport.ts';
 import { getLogger } from './logging.ts';
 import type { Stylesheet, StyleContext } from './stylesheet.ts';
 import { computeStyle, computeLayoutProps } from './layout-style.ts';

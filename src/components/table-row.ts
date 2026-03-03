@@ -1,6 +1,6 @@
 // Table row component (tr) implementation
 
-import { Element, BaseProps, Renderable, IntrinsicSizeContext, Bounds, ComponentRenderContext } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type IntrinsicSizeContext, type Bounds, type ComponentRenderContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';

@@ -3,7 +3,7 @@
 // Phase 2: Heading, paragraph, and basic inline formatting
 // Phase 3: Lists, code blocks, and blockquotes
 
-import { Element, Renderable, Interactive, TextSelectable, Bounds, ComponentRenderContext, IntrinsicSizeContext, hasIntrinsicSize } from '../types.ts';
+import { Element, type Renderable, type Interactive, type TextSelectable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext, hasIntrinsicSize } from '../types.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { fromMarkdown, gfm, gfmFromMarkdown } from '../deps.ts';
 import { getGlobalEngine } from '../global-accessors.ts';

@@ -3,27 +3,26 @@
  * Wraps Deno file system APIs and error classes.
  */
 
-// Re-export Deno types under runtime-agnostic names
-export type FileInfo = Deno.FileInfo;
-export type DirEntry = Deno.DirEntry;
-export type FsEvent = Deno.FsEvent;
+// Import shared types for local use, re-export for consumers
+import type {
+  FileInfo,
+  DirEntry,
+  FsEvent,
+  WriteOptions,
+  MkdirOptions,
+  RemoveOptions,
+  MakeTempOptions,
+} from '../types.ts';
 
-export interface WriteOptions {
-  append?: boolean;
-}
-
-export interface MkdirOptions {
-  recursive?: boolean;
-}
-
-export interface RemoveOptions {
-  recursive?: boolean;
-}
-
-export interface MakeTempOptions {
-  prefix?: string;
-  suffix?: string;
-}
+export type {
+  FileInfo,
+  DirEntry,
+  FsEvent,
+  WriteOptions,
+  MkdirOptions,
+  RemoveOptions,
+  MakeTempOptions,
+};
 
 // --- Async operations ---
 

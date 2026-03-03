@@ -1,6 +1,6 @@
 // List component - scrollable list with selection capabilities
 // Children must be 'li' elements which can contain any other components
-import { Element, BaseProps, Renderable, Focusable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Focusable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import { getUnicodeTier } from '../utils/terminal-detection.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { type KeyPressEvent, type SelectionChangeEvent, createSelectionChangeEvent } from '../events.ts';

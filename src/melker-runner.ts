@@ -30,6 +30,9 @@ import {
   addSignalListener,
   removeSignalListener,
   Command,
+  envSet,
+  inspect,
+  isMainModule,
 } from './runtime/mod.ts';
 
 // Import library to register components before template parsing
@@ -352,7 +355,7 @@ export async function runMelkerFile(
     const oauth = await import('./oauth.ts');
     const { hashFilePath } = await import('./state-persistence.ts');
     const { registerAITool, clearCustomTools } = await import('./ai/mod.ts');
-    const { dirname } = await import('jsr:@std/path@1.1.4');
+    const { dirname } = await import('node:path');
 
     let templateContent = preloadedContent ?? await loadContent(filepath);
     const originalContent = templateContent;
@@ -393,7 +396,7 @@ export async function runMelkerFile(
         console.log(`  Deno:       ${runtimeVersion()}`);
         console.log(`  Platform:   ${platform()} ${arch()}`);
 
-        try { Deno.env.set('MELKER_RETAIN_BUNDLE', 'true'); } catch { /* env permission may not include this var */ }
+        try { envSet('MELKER_RETAIN_BUNDLE', 'true'); } catch { /* env permission may not include this var */ }
 
         const sourceUrl = isUrl(filepath)
           ? filepath
@@ -640,6 +643,8 @@ export async function runMelkerFile(
         }
       },
       engine: engine,
+      inspect: (value: unknown, options?: { colors?: boolean; depth?: number }) =>
+        inspect(value, options),
       logger: logger,
       logging: logger,
       persistenceEnabled: persistEnabled,
@@ -1266,7 +1271,7 @@ function printUsage(): void {
 /**
  * Main entry point for runner
  */
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const cliArgs = getArgs();
 
   if (cliArgs.includes('--help') || cliArgs.includes('-h')) {
@@ -1473,7 +1478,7 @@ ${mmdContent}
 }
 
 // Run if this is the entry point
-if (import.meta.main) {
+if (isMainModule(import.meta.main)) {
   main().catch((error) => {
     restoreTerminal();
     console.error(`Fatal error: ${error instanceof Error ? error.message : String(error)}`);

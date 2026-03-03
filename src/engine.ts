@@ -10,7 +10,7 @@ import { DualBuffer, EMPTY_CHAR, type BufferDiff } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
-import { Element, TextSelection, isScrollingEnabled } from './types.ts';
+import { Element, type TextSelection, isScrollingEnabled } from './types.ts';
 import type { StyleContext } from './stylesheet.ts';
 import {
   EventManager,
@@ -119,7 +119,7 @@ import {
 } from './focus-navigation-handler.ts';
 import {
   type PersistedState,
-  PersistenceMapping,
+  type PersistenceMapping,
   DEFAULT_PERSISTENCE_MAPPINGS,
 } from './state-persistence.ts';
 import { toggleClass } from './element.ts';

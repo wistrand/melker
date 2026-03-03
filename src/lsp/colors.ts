@@ -1,6 +1,6 @@
 // Color provider (document colors and color presentations)
 
-import type { Color, ColorInformation, ColorPresentation } from 'npm:vscode-languageserver@9.0.1/node.js';
+import type { Color, ColorInformation, ColorPresentation } from './deps.ts';
 import { parseHtml as parse } from '../deps.ts';
 import { cssToRgba, unpackRGBA } from '../components/color-utils.ts';
 import type { PackedRGBA } from '../types.ts';

@@ -2,13 +2,13 @@
 
 import {
   Element,
-  ComponentRegistry,
-  ComponentDefinition,
-  PropsForComponent,
-  ComponentPropsMap,
+  type ComponentRegistry,
+  type ComponentDefinition,
+  type PropsForComponent,
+  type ComponentPropsMap,
 } from './types.ts';
 import { Document } from './document.ts';
-import { PersistedState, PersistenceMapping } from './state-persistence.ts';
+import { type PersistedState, type PersistenceMapping } from './state-persistence.ts';
 import { normalizeStyle } from './components/color-utils.ts';
 import { getLogger } from './logging.ts';
 

@@ -3,15 +3,15 @@
 import { assertEquals, assertNotEquals, assert } from 'jsr:@std/assert';
 import {
   LayoutEngine,
-  AdvancedLayoutNode as LayoutNode,
-  LayoutContext,
-  AdvancedLayoutProps,
+  type AdvancedLayoutNode as LayoutNode,
+  type LayoutContext,
+  type AdvancedLayoutProps,
   globalLayoutEngine,
   ContainerElement,
   TextElement,
   Element,
-  Bounds,
-  Size,
+  type Bounds,
+  type Size,
   Stylesheet,
 } from '../mod.ts';
 

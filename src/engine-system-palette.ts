@@ -5,7 +5,7 @@ import { Element, isToggleable } from './types.ts';
 import {
   createDefaultCommandPalette,
   createSystemGroup,
-  SystemHandlers,
+  type SystemHandlers,
 } from './system-command-palette.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { createElement } from './element.ts';

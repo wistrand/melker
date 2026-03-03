@@ -4,7 +4,7 @@ import {
   MarkupKind,
   type Hover,
   type Position,
-} from 'npm:vscode-languageserver@9.0.1/node.js';
+} from './deps.ts';
 import { parseHtml as parse } from '../deps.ts';
 import type { AstNode } from './types.ts';
 import { positionToOffset, findElementAtOffset, findAttributeAtOffset } from './utils.ts';

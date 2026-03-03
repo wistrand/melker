@@ -1,6 +1,6 @@
 // Spinner component - animated loading indicator
 
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { getUIAnimationManager } from '../ui-animation-manager.ts';
 import { getUnicodeTier } from '../utils/terminal-detection.ts';

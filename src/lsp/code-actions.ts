@@ -4,7 +4,7 @@ import {
   CodeActionKind,
   type CodeAction,
   type CodeActionParams,
-} from 'npm:vscode-languageserver@9.0.1/node.js';
+} from './deps.ts';
 import { createRange, positionToOffset, toKebabCase } from './utils.ts';
 import { levenshteinDistance, findSimilarNames } from './fuzzy.ts';
 import {

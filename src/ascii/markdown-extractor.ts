@@ -1,8 +1,8 @@
 // Markdown extractor for melker-block code blocks
 
-import { BoxStructure, ParseError, ParseResult } from './types.ts';
+import { type BoxStructure, type ParseError, type ParseResult } from './types.ts';
 import { parseAsciiBoxes, parseButtonShortcuts } from './parser.ts';
-import { renderToMelker, RenderContext } from './melker-renderer.ts';
+import { renderToMelker, type RenderContext } from './melker-renderer.ts';
 import { ERROR_MESSAGES, formatParseError } from './errors.ts';
 
 export interface ExtractedBlock {

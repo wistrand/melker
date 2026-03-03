@@ -2,7 +2,7 @@
 
 import { assertEquals, assertExists } from "jsr:@std/assert";
 import { ContentMeasurer, globalContentMeasurer } from '../src/content-measurer.ts';
-import { Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from '../src/viewport.ts';
+import { type Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from '../src/viewport.ts';
 import { ViewportDualBuffer, ViewportBufferProxy } from '../src/viewport-buffer.ts';
 import { DualBuffer } from '../src/buffer.ts';
 import { TextElement } from '../src/components/text.ts';

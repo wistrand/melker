@@ -1,6 +1,6 @@
 // Table component implementation
 
-import { Element, Bounds, Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, IntrinsicSizeContext, ComponentRenderContext, getBorderChars, ClickEvent, isClickable } from '../types.ts';
+import { Element, type Bounds, type Renderable, type Focusable, type Clickable, type Interactive, type Draggable, type Wheelable, type IntrinsicSizeContext, type ComponentRenderContext, getBorderChars, type ClickEvent, isClickable } from '../types.ts';
 import type { KeyEvent } from '../events.ts';
 import type { Document } from '../document.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';

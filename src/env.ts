@@ -6,6 +6,8 @@
  * Use Env.get() instead of Deno.env.get() throughout codebase.
  */
 
+import { envGet, envToObject } from './runtime/mod.ts';
+
 // Optional logger callback — registered by logging.ts when it loads.
 // Decouples env.ts from logging.ts (avoids pulling logging into launcher).
 let _envLog: ((level: 'debug' | 'warn', message: string) => void) | null = null;
@@ -23,7 +25,7 @@ export class Env {
   private static init(): void {
     if (this.initialized) return;
     try {
-      for (const name of Object.keys(Deno.env.toObject())) {
+      for (const name of Object.keys(envToObject())) {
         this.readable.set(name, true);
       }
     } catch {
@@ -41,7 +43,7 @@ export class Env {
 
     // Known readable - get fresh value
     if (this.readable.get(name) === true) {
-      return Deno.env.get(name);
+      return envGet(name);
     }
 
     // Known unreadable
@@ -51,7 +53,7 @@ export class Env {
 
     // Unknown - try and cache readability
     try {
-      const value = Deno.env.get(name);
+      const value = envGet(name);
       // Only mark as readable if var actually exists (has a value)
       // This prevents Env.keys() from returning vars that don't exist
       if (value !== undefined) {
@@ -99,7 +101,7 @@ export class Env {
     const result: Record<string, string> = {};
     for (const [name, ok] of this.readable) {
       if (ok) {
-        const value = Deno.env.get(name);
+        const value = envGet(name);
         if (value !== undefined) {
           result[name] = value;
         }

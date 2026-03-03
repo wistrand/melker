@@ -1,7 +1,7 @@
 // Markdown component types and interfaces
 // Extracted from markdown.ts for better organization
 
-import { BaseProps, type ColorInput } from '../types.ts';
+import { type BaseProps, type ColorInput } from '../types.ts';
 import { type DualBuffer, type Cell } from '../buffer.ts';
 import { type ComponentRenderContext, type Bounds } from '../types.ts';
 

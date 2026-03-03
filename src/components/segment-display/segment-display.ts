@@ -1,7 +1,7 @@
 // Segment Display Component
 // Renders LCD/LED-style digits using Unicode characters
 
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext, TextSelectable, SelectableTextProvider } from '../../types.ts';
+import { Element, type BaseProps, type Renderable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext, type TextSelectable, type SelectableTextProvider } from '../../types.ts';
 import type { DualBuffer, Cell } from '../../buffer.ts';
 import { getCharset, isSpecialChar, type SegmentMask } from './charsets.ts';
 import { getRenderer, PixelRenderer, type SegmentRenderer } from './renderers.ts';

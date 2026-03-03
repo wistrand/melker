@@ -1,7 +1,7 @@
 // Dialog component implementation
 
-import { Element, BaseProps, Renderable, Bounds, ComponentRenderContext, IntrinsicSizeContext, getBorderChars } from '../types.ts';
-import { DualBuffer, Cell, EMPTY_CHAR } from '../buffer.ts';
+import { Element, type BaseProps, type Renderable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext, getBorderChars } from '../types.ts';
+import { DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
 import { getThemeColor } from '../theme.ts';
 import { parseDimension } from '../utils/dimensions.ts';
 

@@ -9,13 +9,13 @@ import {
   RadioElement,
   CheckboxElement,
   DialogElement,
-  ContainerProps,
-  InputProps,
-  TextProps,
-  ButtonProps,
-  RadioProps,
-  CheckboxProps,
-  DialogProps,
+  type ContainerProps,
+  type InputProps,
+  type TextProps,
+  type ButtonProps,
+  type RadioProps,
+  type CheckboxProps,
+  type DialogProps,
 } from '../src/components/mod.ts';
 
 Deno.test('Element classes exist and can be instantiated', () => {

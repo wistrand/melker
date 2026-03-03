@@ -2,6 +2,7 @@
 
 import type { CallbackServerOptions, CallbackResult } from './types.ts';
 import { getAsset } from '../assets.ts';
+import { serve as denoServe, type DenoHttpServer } from '../runtime/deno/server.ts';
 
 // No-cache headers for all responses
 const NO_CACHE_HEADERS = {
@@ -14,7 +15,7 @@ const NO_CACHE_HEADERS = {
  * HTTP server to receive OAuth authorization callback
  */
 export class OAuthCallbackServer {
-  private _server?: Deno.HttpServer;
+  private _server?: DenoHttpServer;
   private _options: Required<CallbackServerOptions>;
   private _codeResolve?: (result: CallbackResult) => void;
   private _codeReject?: (error: Error) => void;
@@ -93,7 +94,7 @@ export class OAuthCallbackServer {
       });
     };
 
-    this._server = Deno.serve({
+    this._server = denoServe({
       port: this._options.port,
       hostname: this._options.host,
       onListen: () => {},

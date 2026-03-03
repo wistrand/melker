@@ -1,10 +1,10 @@
 // FilterableListCore - Shared logic for combobox, select, autocomplete, command-palette
-import { Element, BaseProps, Bounds, ComponentRenderContext, IntrinsicSizeContext, Focusable } from '../../types.ts';
+import { Element, type BaseProps, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext, type Focusable } from '../../types.ts';
 import type { DualBuffer, Cell } from '../../buffer.ts';
 import type { KeyPressEvent } from '../../events.ts';
 import { OptionElement } from './option.ts';
 import { GroupElement } from './group.ts';
-import { filterOptions, FilterMode, FuzzyMatchResult } from './filter.ts';
+import { filterOptions, type FilterMode, type FuzzyMatchResult } from './filter.ts';
 import { getLogger } from '../../logging.ts';
 import { getThemeColor } from '../../theme.ts';
 import { renderScrollbar } from '../scrollbar.ts';

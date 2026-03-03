@@ -10,7 +10,7 @@
  *   <command key="Ctrl+S" label="Save" onExecute={handler} global />
  */
 
-import { Element, BaseProps } from '../types.ts';
+import { Element, type BaseProps } from '../types.ts';
 
 export interface CommandProps extends BaseProps {
   /** Keyboard shortcut (e.g. 'n', 'Delete', 'Ctrl+S') */

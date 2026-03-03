@@ -1,14 +1,14 @@
 // Combobox component - Inline dropdown with text filtering
 import {
   Element,
-  BaseProps,
-  Renderable,
-  Focusable,
-  Interactive,
-  Clickable,
-  Bounds,
-  ComponentRenderContext,
-  IntrinsicSizeContext,
+  type BaseProps,
+  type Renderable,
+  type Focusable,
+  type Interactive,
+  type Clickable,
+  type Bounds,
+  type ComponentRenderContext,
+  type IntrinsicSizeContext,
   type Overlay,
   BORDER_CHARS,
   getBorderChars,
@@ -19,7 +19,7 @@ import type { ClickEvent } from '../../types.ts';
 import { getThemeColor } from '../../theme.ts';
 import { registerComponent } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
-import { FilterableListCore, FilterableListCoreProps, OptionData, FilteredOptionData, OptionSelectEvent } from './core.ts';
+import { FilterableListCore, type FilterableListCoreProps, type OptionData, type FilteredOptionData, type OptionSelectEvent } from './core.ts';
 import { getLogger } from '../../logging.ts';
 import { parseDimension } from '../../utils/dimensions.ts';
 

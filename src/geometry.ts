@@ -1,7 +1,7 @@
 // Geometry utilities for bounds, points, and clipping
 // Shared utilities used across hit-testing, scrolling, rendering, and viewport management
 
-import { Bounds, Position } from './types.ts';
+import { type Bounds, type Position } from './types.ts';
 
 // Re-export types for convenience
 export type Point = Position;

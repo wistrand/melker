@@ -3,20 +3,20 @@
 
 import {
   Element,
-  BaseProps,
-  Renderable,
-  Focusable,
-  Clickable,
-  Interactive,
-  TextSelectable,
-  SelectableTextProvider,
-  SelectionBounds,
-  IntrinsicSizeContext,
-  Bounds,
-  ComponentRenderContext,
-  ClickEvent,
-  Style,
-  KeyboardElement,
+  type BaseProps,
+  type Renderable,
+  type Focusable,
+  type Clickable,
+  type Interactive,
+  type TextSelectable,
+  type SelectableTextProvider,
+  type SelectionBounds,
+  type IntrinsicSizeContext,
+  type Bounds,
+  type ComponentRenderContext,
+  type ClickEvent,
+  type Style,
+  type KeyboardElement,
   BORDER_CHARS,
   getBorderChars,
   type BorderStyle,
@@ -25,7 +25,7 @@ import type { KeyPressEvent } from '../events.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { EMPTY_CHAR } from '../buffer.ts';
 import type { DataTreeTooltipContext, TooltipProvider } from '../tooltip/types.ts';
-import { Wheelable } from '../types.ts';
+import { type Wheelable } from '../types.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getGlobalEngine } from '../global-accessors.ts';

@@ -9,6 +9,7 @@ import {
   TextDocumentSyncKind,
   CodeActionKind,
   SemanticTokensBuilder,
+  TextDocument,
   type InitializeParams,
   type InitializeResult,
   type TextDocumentPositionParams,
@@ -17,8 +18,7 @@ import {
   type SemanticTokensParams,
   type CodeActionParams,
   type DocumentColorParams,
-} from 'npm:vscode-languageserver@9.0.1/node.js';
-import { TextDocument } from 'npm:vscode-languageserver-textdocument@1.0.12';
+} from './deps.ts';
 
 // Import logging
 import { getLogger } from '../logging.ts';

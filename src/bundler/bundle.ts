@@ -27,6 +27,7 @@ import {
   makeTempDir,
   writeTextFile,
   remove,
+  bundle as runtimeBundle,
 } from '../runtime/mod.ts';
 
 const logger = getLogger('Bundler');
@@ -103,26 +104,24 @@ export async function bundle(
       minify: options.minify ?? false,
     });
 
-    const result = await (Deno as any).bundle({
+    const result = await runtimeBundle({
       entrypoints: [sourceFile],
-      output: 'bundle',
-      platform: 'deno',
       minify: options.minify ?? false,
       sourcemap: 'inline',
-      write: false,
     });
 
     // Check for bundle errors first
-    if (!result.success && result.errors?.length > 0) {
+    const errors = result.errors ?? [];
+    if (!result.success && errors.length > 0) {
       // Format all errors for display
-      const errorMessages = result.errors
+      const errorMessages = errors
         // deno-lint-ignore no-control-regex
         .map((e: { text: string }) => e.text.replace(/\x1b\[[0-9;]*m/g, '')) // strip ANSI codes
         .join('\n\n');
 
       displayFatalError(
         'bundle',
-        new Error(`Bundle failed with ${result.errors.length} error(s):\n\n${errorMessages}`),
+        new Error(`Bundle failed with ${errors.length} error(s):\n\n${errorMessages}`),
         {
           filepath: generated.sourceUrl,
           hint: 'Check that all imported modules exist and paths are correct.',

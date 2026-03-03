@@ -1,8 +1,8 @@
 // Progress bar component using canvas pixels for smooth fill
 
-import { Element, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
-import { CanvasElement, CanvasProps } from './canvas.ts';
+import { CanvasElement, type CanvasProps } from './canvas.ts';
 import { getCurrentTheme } from '../theme.ts';
 import { lerpColor, type ColorSpace } from './color-utils.ts';
 import { getLogger } from '../logging.ts';

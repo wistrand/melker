@@ -9,7 +9,7 @@
 
 import { getLogger } from '../logging.ts';
 import { restoreTerminal } from '../terminal-lifecycle.ts';
-import { exit } from '../runtime/mod.ts';
+import { exit, isBundleAvailable } from '../runtime/mod.ts';
 import type {
   ErrorContext,
   GeneratedSource,
@@ -537,12 +537,8 @@ export function formatError(error: TranslatedError): string {
   return lines.join('\n');
 }
 
-/**
- * Check if Deno.bundle() is available.
- */
-export function isBundleAvailable(): boolean {
-  return typeof (Deno as any).bundle === 'function';
-}
+// isBundleAvailable is imported from runtime/mod.ts (above) and re-exported for backwards compat
+export { isBundleAvailable };
 
 /**
  * Get a message explaining how to enable Deno.bundle()

@@ -1,6 +1,6 @@
 // ASCII-to-Melker renderer - converts parsed ASCII boxes to melker XML
 
-import { Box, BoxStructure, ParsedButton } from './types.ts';
+import { type Box, type BoxStructure, type ParsedButton } from './types.ts';
 import { inferFlexDirection } from './parser.ts';
 
 export interface RenderOptions {

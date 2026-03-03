@@ -1,5 +1,5 @@
 // Unified Viewport System for Layout and Clipping
-import { Bounds, Element, Size, isScrollableType, isScrollingEnabled } from './types.ts';
+import { type Bounds, Element, type Size, isScrollableType, isScrollingEnabled } from './types.ts';
 import { clipBounds, clamp } from './geometry.ts';
 
 export interface ScrollbarLayout {

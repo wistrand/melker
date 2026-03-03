@@ -6,7 +6,7 @@ import {
   type CompletionItem,
   type Position,
   type Range,
-} from 'npm:vscode-languageserver@9.0.1/node.js';
+} from './deps.ts';
 import { parseHtml as parse } from '../deps.ts';
 import type { AstNode } from './types.ts';
 import {

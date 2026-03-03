@@ -1,15 +1,15 @@
 // Autocomplete component - Combobox with async data loading
 import {
   Element,
-  Bounds,
-  ComponentRenderContext,
+  type Bounds,
+  type ComponentRenderContext,
 } from '../../types.ts';
 import type { DualBuffer, Cell } from '../../buffer.ts';
 import { getThemeColor } from '../../theme.ts';
 import { registerComponent } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
-import { ComboboxElement, ComboboxProps } from './combobox.ts';
-import { OptionData } from './core.ts';
+import { ComboboxElement, type ComboboxProps } from './combobox.ts';
+import { type OptionData } from './core.ts';
 import { getLogger } from '../../logging.ts';
 
 const logger = getLogger('autocomplete');

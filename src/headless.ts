@@ -2,6 +2,7 @@
 // Allows running Melker apps without a real terminal, using server for interaction
 
 import { Env } from './env.ts';
+import { envSet, envDelete } from './runtime/mod.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { getLogger } from './logging.ts';
 
@@ -164,14 +165,14 @@ export function setupHeadlessEnvironment(): {
   mock.install();
 
   // Set environment to indicate headless mode
-  Deno.env.set('MELKER_RUNNING_HEADLESS', 'true');
+  envSet('MELKER_RUNNING_HEADLESS', 'true');
 
   return {
     terminal,
     mock,
     cleanup: () => {
       mock.restore();
-      Deno.env.delete('MELKER_RUNNING_HEADLESS');
+      envDelete('MELKER_RUNNING_HEADLESS');
     },
   };
 }

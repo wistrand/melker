@@ -3,15 +3,15 @@
 
 import {
   Element,
-  BaseProps,
-  Focusable,
-  Interactive,
-  Renderable,
-  Clickable,
-  ClickEvent,
-  Bounds,
-  ComponentRenderContext,
-  IntrinsicSizeContext,
+  type BaseProps,
+  type Focusable,
+  type Interactive,
+  type Renderable,
+  type Clickable,
+  type ClickEvent,
+  type Bounds,
+  type ComponentRenderContext,
+  type IntrinsicSizeContext,
   isClickable,
 } from '../../types.ts';
 import type { DualBuffer, Cell } from '../../buffer.ts';

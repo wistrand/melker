@@ -1,6 +1,6 @@
 // Go-to-definition provider
 
-import type { Definition, Location, Position } from 'npm:vscode-languageserver@9.0.1/node.js';
+import type { Definition, Location, Position } from './deps.ts';
 import { parseHtml as parse } from '../deps.ts';
 import type { AstNode } from './types.ts';
 import { positionToOffset, createRange, findElementAtOffset, findAttributeAtOffset } from './utils.ts';

@@ -1,6 +1,6 @@
 // Split pane component implementation
 
-import { Element, BaseProps, Style, Renderable, Focusable, Interactive, Draggable, Bounds, ComponentRenderContext, IntrinsicSizeContext } from '../types.ts';
+import { Element, type BaseProps, type Style, type Renderable, type Focusable, type Interactive, type Draggable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { ViewportDualBuffer } from '../viewport-buffer.ts';
 import { getGlobalEngine } from '../global-accessors.ts';

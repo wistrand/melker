@@ -1512,9 +1512,12 @@ Deno.test({
 // =============================================================================
 
 Deno.test({
-  name: 'melker.ts --deny-write filters implicit /tmp from write paths',
+  name: 'melker.ts --deny-write filters implicit temp dir from write paths',
   ignore: !(await hasRunPermission()),
   fn: async () => {
+    const sysTmp = Deno.env.get('TMPDIR') || Deno.env.get('TEMP') || Deno.env.get('TMP') || '/tmp';
+    // Remove trailing slash for consistent matching
+    const denyPath = sysTmp.replace(/\/+$/, '');
     const tempDir = await Deno.makeTempDir();
     const appPath = `${tempDir}/test.melker`;
 
@@ -1531,7 +1534,7 @@ Deno.test({
 
     try {
       const cmd = new Deno.Command(Deno.execPath(), {
-        args: ['run', '--allow-all', 'melker.ts', '--deny-write=/tmp', '--show-policy', appPath],
+        args: ['run', '--allow-all', 'melker.ts', `--deny-write=${denyPath}`, '--show-policy', appPath],
         cwd: Deno.cwd(),
         stdout: 'piped',
         stderr: 'piped',
@@ -1542,14 +1545,14 @@ Deno.test({
       const errOutput = new TextDecoder().decode(stderr);
 
       assertEquals(code, 0);
-      // /tmp should NOT be in the --allow-write list
+      // Temp dir should NOT be in the --allow-write list
       const writeMatch = output.match(/--allow-write=([^\s]+)/);
       if (writeMatch) {
-        assertEquals(writeMatch[1].includes('/tmp'), false, 'implicit /tmp should be filtered from write paths');
+        assertEquals(writeMatch[1].includes(denyPath), false, 'implicit temp dir should be filtered from write paths');
       }
       // Should see a warning about denying implicit path
       assertStringIncludes(errOutput, 'Warning');
-      assertStringIncludes(errOutput, '/tmp');
+      assertStringIncludes(errOutput, denyPath);
     } finally {
       await Deno.remove(tempDir, { recursive: true });
     }
@@ -1557,9 +1560,11 @@ Deno.test({
 });
 
 Deno.test({
-  name: 'melker.ts --deny-read filters implicit /tmp from read paths',
+  name: 'melker.ts --deny-read filters implicit temp dir from read paths',
   ignore: !(await hasRunPermission()),
   fn: async () => {
+    const sysTmp = Deno.env.get('TMPDIR') || Deno.env.get('TEMP') || Deno.env.get('TMP') || '/tmp';
+    const denyPath = sysTmp.replace(/\/+$/, '');
     const tempDir = await Deno.makeTempDir();
     const appPath = `${tempDir}/test.melker`;
 
@@ -1576,7 +1581,7 @@ Deno.test({
 
     try {
       const cmd = new Deno.Command(Deno.execPath(), {
-        args: ['run', '--allow-all', 'melker.ts', '--deny-read=/tmp', '--show-policy', appPath],
+        args: ['run', '--allow-all', 'melker.ts', `--deny-read=${denyPath}`, '--show-policy', appPath],
         cwd: Deno.cwd(),
         stdout: 'piped',
         stderr: 'piped',
@@ -1587,14 +1592,14 @@ Deno.test({
       const errOutput = new TextDecoder().decode(stderr);
 
       assertEquals(code, 0);
-      // /tmp should NOT be in the --allow-read list
+      // Temp dir should NOT be in the --allow-read list
       const readMatch = output.match(/--allow-read=([^\s]+)/);
       if (readMatch) {
-        assertEquals(readMatch[1].includes('/tmp'), false, 'implicit /tmp should be filtered from read paths');
+        assertEquals(readMatch[1].includes(denyPath), false, 'implicit temp dir should be filtered from read paths');
       }
       // Should see a warning about denying implicit path
       assertStringIncludes(errOutput, 'Warning');
-      assertStringIncludes(errOutput, '/tmp');
+      assertStringIncludes(errOutput, denyPath);
     } finally {
       await Deno.remove(tempDir, { recursive: true });
     }
@@ -1602,9 +1607,11 @@ Deno.test({
 });
 
 Deno.test({
-  name: 'melker.ts --deny-write and --deny-read can both filter /tmp',
+  name: 'melker.ts --deny-write and --deny-read can both filter temp dir',
   ignore: !(await hasRunPermission()),
   fn: async () => {
+    const sysTmp = Deno.env.get('TMPDIR') || Deno.env.get('TEMP') || Deno.env.get('TMP') || '/tmp';
+    const denyPath = sysTmp.replace(/\/+$/, '');
     const tempDir = await Deno.makeTempDir();
     const appPath = `${tempDir}/test.melker`;
 
@@ -1621,7 +1628,7 @@ Deno.test({
 
     try {
       const cmd = new Deno.Command(Deno.execPath(), {
-        args: ['run', '--allow-all', 'melker.ts', '--deny-read=/tmp', '--deny-write=/tmp', '--show-policy', appPath],
+        args: ['run', '--allow-all', 'melker.ts', `--deny-read=${denyPath}`, `--deny-write=${denyPath}`, '--show-policy', appPath],
         cwd: Deno.cwd(),
         stdout: 'piped',
         stderr: 'piped',
@@ -1633,15 +1640,15 @@ Deno.test({
 
       assertEquals(code, 0);
 
-      // /tmp should NOT be in either allow list
+      // Temp dir should NOT be in either allow list
       const readMatch = output.match(/--allow-read=([^\s]+)/);
       const writeMatch = output.match(/--allow-write=([^\s]+)/);
 
       if (readMatch) {
-        assertEquals(readMatch[1].includes('/tmp'), false, '/tmp should be filtered from read paths');
+        assertEquals(readMatch[1].includes(denyPath), false, 'temp dir should be filtered from read paths');
       }
       if (writeMatch) {
-        assertEquals(writeMatch[1].includes('/tmp'), false, '/tmp should be filtered from write paths');
+        assertEquals(writeMatch[1].includes(denyPath), false, 'temp dir should be filtered from write paths');
       }
 
       // Should see warnings for both read and write

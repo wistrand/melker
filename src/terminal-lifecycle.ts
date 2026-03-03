@@ -13,6 +13,9 @@ import {
   exit,
   addSignalListener,
   removeSignalListener,
+  onUncaughtError,
+  onUnhandledRejection,
+  onBeforeExit as onProcessBeforeExit,
 } from './runtime/mod.ts';
 
 // Lazy logger initialization to avoid triggering MelkerConfig.get() before CLI flags are applied
@@ -85,6 +88,12 @@ export function setupTerminal(options: TerminalLifecycleOptions): void {
   }
 
   if (codes.length > 0) {
+    getTerminalLogger().debug('setupTerminal', {
+      alternateScreen: options.alternateScreen,
+      noAltScreen,
+      codeCount: codes.length,
+      isTTY: stdout.isTerminal(),
+    });
     stdout.writeSync(new TextEncoder().encode(codes.join('')));
   }
 }
@@ -222,26 +231,22 @@ export function setupCleanupHandlers(
 
   // Handle uncaught exceptions and unhandled rejections
   // CRITICAL: Always restore terminal FIRST so error is visible
-  globalThis.addEventListener('error', (event) => {
-    // Log to file FIRST (before terminal cleanup might interfere)
-    const err = event.error instanceof Error ? event.error : new Error(String(event.error));
+  onUncaughtError((err) => {
     getTerminalLogger().fatal('Uncaught error', err);
 
     // Full terminal restore (raw mode, mouse, alternate screen)
     restoreTerminal();
     syncCleanup();  // Also call engine cleanup
 
-    console.error('\n\x1b[31mUncaught error:\x1b[0m', event.error);
-    if (event.error instanceof Error && event.error.stack) {
+    console.error('\n\x1b[31mUncaught error:\x1b[0m', err);
+    if (err.stack) {
       console.error('\nStack trace:');
-      console.error(event.error.stack);
+      console.error(err.stack);
     }
     exit(1);
   });
 
-  globalThis.addEventListener('unhandledrejection', (event) => {
-    // Log to file FIRST (before terminal cleanup might interfere)
-    const reason = event.reason;
+  onUnhandledRejection((reason) => {
     const err = reason instanceof Error ? reason : new Error(String(reason));
     getTerminalLogger().fatal('Unhandled promise rejection', err);
 
@@ -250,19 +255,14 @@ export function setupCleanupHandlers(
     syncCleanup();  // Also call engine cleanup
 
     console.error('\n\x1b[31mUnhandled promise rejection:\x1b[0m', reason);
-    if (reason instanceof Error && reason.stack) {
+    if (err.stack) {
       console.error('\nStack trace:');
-      console.error(reason.stack);
+      console.error(err.stack);
     }
     exit(1);
   });
 
-  // Handle beforeunload/exit events if available
-  try {
-    globalThis.addEventListener('beforeunload', syncCleanup);
-  } catch {
-    // beforeunload might not be available in Deno
-  }
+  onProcessBeforeExit(syncCleanup);
 
   return {
     removeSigint: () => {

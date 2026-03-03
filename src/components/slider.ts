@@ -1,6 +1,6 @@
 // Slider component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Draggable, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Focusable, type Clickable, type Interactive, type Draggable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext, type ClickEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { createChangeEvent } from '../events.ts';

@@ -9,7 +9,7 @@
 
 import {
   Element,
-  BaseProps,
+  type BaseProps,
   BORDER_CHARS,
   getBorderChars,
   type Bounds,

@@ -1,16 +1,16 @@
 // ASCII box parser adapted from tuilly, modified for melker integration
 
 import {
-  Box,
-  BoxStructure,
-  Bounds,
-  ParsedBox,
-  ParseResult,
-  ParseError,
-  LayoutHints,
-  ParsedButton,
-  TabBarInfo,
-  TabInfo,
+  type Box,
+  type BoxStructure,
+  type Bounds,
+  type ParsedBox,
+  type ParseResult,
+  type ParseError,
+  type LayoutHints,
+  type ParsedButton,
+  type TabBarInfo,
+  type TabInfo,
 } from './types.ts';
 import { ERROR_MESSAGES } from './errors.ts';
 

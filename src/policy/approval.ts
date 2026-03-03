@@ -3,7 +3,7 @@
 
 import { getCacheDir, ensureDir, getAppCacheDir } from '../xdg.ts';
 import { sha256Hex } from '../utils/crypto.ts';
-import { cwd, readTextFile, writeTextFile, readDir, remove, isNotFoundError, stdin } from '../runtime/mod.ts';
+import { cwd, readTextFile, writeTextFile, readDir, remove, isNotFoundError, stdin, confirm } from '../runtime/mod.ts';
 import type { MelkerPolicy } from './types.ts';
 import { extractHostFromUrl } from './url-utils.ts';
 import { isUrl } from '../utils/content-loader.ts';
@@ -352,14 +352,14 @@ export function formatOverrides(overrides: PermissionOverrides): string[] {
 }
 
 /**
- * Show approval prompt to user using Deno.confirm()
+ * Show approval prompt to user using confirm()
  * Returns true if user approves, false if denied
  */
-export function showApprovalPrompt(
+export async function showApprovalPrompt(
   url: string,
   policy: MelkerPolicy,
   overrides?: PermissionOverrides
-): boolean {
+): Promise<boolean> {
   // Check if stdin is a TTY - if not, we can't prompt
   if (!stdin.isTerminal()) {
     console.error('\x1b[31mError: Cannot prompt for approval - stdin is not a terminal.\x1b[0m');
@@ -415,9 +415,9 @@ export function showApprovalPrompt(
   console.log('');
 
   if (permLines.length === 0) {
-    return confirm('Allow this app to run?');
+    return await confirm('Allow this app to run?');
   }
-  return confirm('Allow this app to run with these permissions?');
+  return await confirm('Allow this app to run with these permissions?');
 }
 
 /**

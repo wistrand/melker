@@ -50,3 +50,28 @@ export function addSignalListener(signal: Signal, handler: () => void): void {
 export function removeSignalListener(signal: Signal, handler: () => void): void {
   Deno.removeSignalListener(signal, handler);
 }
+
+export function onUncaughtError(handler: (error: Error) => void): void {
+  globalThis.addEventListener('error', (event) => {
+    const err = event.error instanceof Error ? event.error : new Error(String(event.error));
+    handler(err);
+  });
+}
+
+export function onUnhandledRejection(handler: (reason: unknown) => void): void {
+  globalThis.addEventListener('unhandledrejection', (event) => {
+    handler(event.reason);
+  });
+}
+
+export function onBeforeExit(handler: () => void): void {
+  try {
+    globalThis.addEventListener('beforeunload', handler);
+  } catch {
+    // beforeunload might not be available in older Deno versions
+  }
+}
+
+export function confirm(message: string): Promise<boolean> {
+  return Promise.resolve(globalThis.confirm(message));
+}

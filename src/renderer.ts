@@ -1,6 +1,6 @@
 // Terminal renderer using ANSI escape codes with dual-buffer optimization
 
-import { DualBuffer, BufferDiff, RenderOptions } from './buffer.ts';
+import { DualBuffer, type BufferDiff, type RenderOptions } from './buffer.ts';
 import { ANSI, rgbTo16Color, getColorCode } from './ansi-output.ts';
 import { stdout } from './runtime/mod.ts';
 

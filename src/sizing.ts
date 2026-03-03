@@ -1,7 +1,7 @@
 // Border-Box Sizing Model implementation
 // Provides consistent and predictable element sizing calculations
 
-import { Style, BoxSpacing, Bounds, Size } from './types.ts';
+import { type Style, type BoxSpacing, type Bounds, type Size } from './types.ts';
 import { getLogger } from './logging.ts';
 
 const logger = getLogger('SizingModel');

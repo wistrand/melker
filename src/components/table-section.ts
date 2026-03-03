@@ -1,11 +1,11 @@
 // Table section components (thead, tbody, tfoot) implementation
 
-import { Element, Renderable, IntrinsicSizeContext, Bounds, ComponentRenderContext } from '../types.ts';
+import { Element, type Renderable, type IntrinsicSizeContext, type Bounds, type ComponentRenderContext } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { TableRowElement } from './table-row.ts';
-import { ContainerElement, ContainerProps } from './container.ts';
+import { ContainerElement, type ContainerProps } from './container.ts';
 
 export type TableSectionType = 'thead' | 'tbody' | 'tfoot';
 

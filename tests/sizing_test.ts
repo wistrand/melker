@@ -3,16 +3,16 @@
 import { assertEquals, assertNotEquals, assert } from 'jsr:@std/assert';
 import {
   SizingModel,
-  BoxModel,
-  BoxDimensions,
+  type BoxModel,
+  type BoxDimensions,
   globalSizingModel,
   normalizeSpacing,
   addSpacing,
   spacingToString,
-  Style,
-  BoxSpacing,
-  Size,
-  Bounds,
+  type Style,
+  type BoxSpacing,
+  type Size,
+  type Bounds,
 } from '../mod.ts';
 
 Deno.test('SizingModel creation with default border-box', () => {

@@ -1,17 +1,41 @@
 name: Test
 on:
   push:
-    branches: [main]
+    branches: [main, melker-node]
   pull_request:
     branches: [main]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  deno:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        deno: ['2.5.x']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: ${{ matrix.deno }}
+      - run: deno task check
+      - run: deno task check:leaks
+      - run: deno task test
+
+  node:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: ['25']
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno task check
-      - run: deno task test
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: deno task test:node
+      - run: node melker-node.ts --version
+      - run: node melker-node.mjs --version

@@ -1,6 +1,6 @@
 // Canvas component for basic graphics rendering using Unicode sextant characters
 
-import { Element, BaseProps, Renderable, Focusable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, KeyPressEvent, ColorInput } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Focusable, type Interactive, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext, type KeyPressEvent, type ColorInput } from '../types.ts';
 import type { CanvasTooltipContext } from '../tooltip/types.ts';
 import { type DualBuffer, type Cell } from '../buffer.ts';
 import { TRANSPARENT, DEFAULT_FG, packRGBA, unpackRGBA, cssToRgba } from './color-utils.ts';

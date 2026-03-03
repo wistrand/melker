@@ -44,6 +44,9 @@ tmp/
 temp/
 *.tmp
 
+# npm pack artifacts
+melker-core-*.tgz
+
 # Misc
 private/
 debug_*.ts

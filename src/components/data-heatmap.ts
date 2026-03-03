@@ -3,19 +3,19 @@
 
 import {
   Element,
-  BaseProps,
-  Renderable,
-  Focusable,
-  Clickable,
-  Interactive,
-  TextSelectable,
-  SelectableTextProvider,
-  SelectionBounds,
-  IntrinsicSizeContext,
-  Bounds,
-  ComponentRenderContext,
-  ClickEvent,
-  Style,
+  type BaseProps,
+  type Renderable,
+  type Focusable,
+  type Clickable,
+  type Interactive,
+  type TextSelectable,
+  type SelectableTextProvider,
+  type SelectionBounds,
+  type IntrinsicSizeContext,
+  type Bounds,
+  type ComponentRenderContext,
+  type ClickEvent,
+  type Style,
 } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { DataHeatmapTooltipContext, TooltipProvider } from '../tooltip/types.ts';

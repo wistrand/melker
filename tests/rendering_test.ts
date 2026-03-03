@@ -3,12 +3,12 @@
 import { assertEquals, assert } from 'jsr:@std/assert';
 import {
   RenderingEngine,
-  LayoutNode,
+  type LayoutNode,
   DualBuffer,
   ContainerElement,
   TextElement,
   Element,
-  Bounds,
+  type Bounds,
 } from '../mod.ts';
 import { COLORS } from '../src/components/color-utils.ts';
 

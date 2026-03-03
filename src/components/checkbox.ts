@@ -1,6 +1,6 @@
 // Checkbox component implementation
 
-import { Element, BaseProps, Renderable, Focusable, Clickable, Interactive, Bounds, ComponentRenderContext, IntrinsicSizeContext, ClickEvent, ChangeEvent } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Focusable, type Clickable, type Interactive, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext, type ClickEvent, type ChangeEvent } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { Document } from '../document.ts';
 import { getStringWidth } from '../char-width.ts';

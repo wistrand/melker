@@ -1,7 +1,7 @@
 // Style and layout props computation for the layout engine.
 // Pure functions extracted from LayoutEngine — no mutable state.
 
-import { Element, Style, BoxSpacing } from './types.ts';
+import { Element, type Style, type BoxSpacing } from './types.ts';
 import type { TransitionSpec } from './types.ts';
 import { findKeyframePair, interpolateStyles, interpolateValue, getTransitionStyle } from './css-animation.ts';
 import { getThemeColor } from './theme.ts';

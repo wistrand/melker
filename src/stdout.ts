@@ -2,7 +2,7 @@
 // Outputs rendered buffer to stdout without cursor movement sequences
 // Used for debugging, testing, and piping output to other tools
 
-import { DualBuffer, Cell, EMPTY_CHAR } from './buffer.ts';
+import { DualBuffer, type Cell, EMPTY_CHAR } from './buffer.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { getLogger, type ComponentLogger } from './logging.ts';
 import { getThemeManager } from './theme.ts';
@@ -53,6 +53,11 @@ export function isStdoutEnabled(): boolean {
     return explicitlyEnabled; // Only enable stdout mode if explicitly requested
   }
 
+  // Don't auto-enable stdout mode in headless mode — the server needs to keep running
+  if (config.headlessEnabled) {
+    return explicitlyEnabled;
+  }
+
   // Auto-enable if stdout is not a TTY (piped or redirected)
   if (!explicitlyEnabled && !isStdoutTTY()) {
     return true;
@@ -71,6 +76,11 @@ export function isStdoutAutoEnabled(): boolean {
 
   // --interactive flag prevents auto-enabling
   if (forceInteractive) {
+    return false;
+  }
+
+  // Headless mode prevents auto-enabling (server must stay alive)
+  if (config.headlessEnabled) {
     return false;
   }
 

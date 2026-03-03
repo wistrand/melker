@@ -1,13 +1,13 @@
 // Command Palette component - Modal command picker with keyboard shortcuts
 import {
   Element,
-  BaseProps,
-  Renderable,
-  Focusable,
-  Interactive,
-  Bounds,
-  ComponentRenderContext,
-  IntrinsicSizeContext,
+  type BaseProps,
+  type Renderable,
+  type Focusable,
+  type Interactive,
+  type Bounds,
+  type ComponentRenderContext,
+  type IntrinsicSizeContext,
   type Overlay,
   BORDER_CHARS,
   getBorderChars,
@@ -17,7 +17,7 @@ import type { KeyPressEvent } from '../../events.ts';
 import { getThemeColor } from '../../theme.ts';
 import { registerComponent } from '../../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../../lint.ts';
-import { FilterableListCore, FilterableListCoreProps, FilteredOptionData } from './core.ts';
+import { FilterableListCore, type FilterableListCoreProps, type FilteredOptionData } from './core.ts';
 import { getLogger } from '../../logging.ts';
 
 const logger = getLogger('command-palette');

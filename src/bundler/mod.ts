@@ -268,11 +268,21 @@ export async function executeBundle(
     }
 
     // Import the bundled module via data URL — works from any origin (file://, http://, https://)
-    const bytes = new TextEncoder().encode(assembled.bundledCode);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    const encoded = btoa(binary);
-    await import(`data:application/javascript;base64,${encoded}`);
+    try {
+      const bytes = new TextEncoder().encode(assembled.bundledCode);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const encoded = btoa(binary);
+      await import(`data:application/javascript;base64,${encoded}`);
+    } catch (dataUrlError) {
+      // Fallback: write to temp file and import (Node.js data: URL edge cases)
+      logger.debug('data: URL import failed, falling back to temp file', {
+        error: String(dataUrlError),
+      });
+      const tmpFile = `${tempDir}/bundle.mjs`;
+      await writeTextFile(tmpFile, assembled.bundledCode);
+      await import(tmpFile);
+    }
 
     // Get the registry
     const registry = (globalThis as any).__melker as MelkerRegistry;

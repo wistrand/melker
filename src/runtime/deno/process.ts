@@ -41,3 +41,12 @@ export function inspect(value: unknown, options?: { colors?: boolean; depth?: nu
 export function execPath(): string {
   return Deno.execPath();
 }
+
+export function isMainModule(importMetaMain?: boolean): boolean {
+  return importMetaMain === true;
+}
+
+import denoConfig from '../../../deno.json' with { type: 'json' };
+export function melkerVersion(): string {
+  return denoConfig.version;
+}

@@ -7,14 +7,14 @@ import { fileURLToPath } from 'node:url';
 
 const execFile = promisify(execFileCb);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const ENTRY = resolve(ROOT, 'melker-node.ts');
+const ENTRY = resolve(ROOT, 'melker-node.mjs');
 
 describe('e2e: CLI flags', () => {
   it('--help exits 0 and shows usage', async () => {
     const { stdout } = await execFile(
       process.execPath,
       [
-        '--experimental-transform-types', '--no-warnings',
+        '--no-warnings',
         ENTRY, '--help',
       ],
       { cwd: ROOT, timeout: 10000 },
@@ -27,7 +27,7 @@ describe('e2e: CLI flags', () => {
     const { stdout } = await execFile(
       process.execPath,
       [
-        '--experimental-transform-types', '--no-warnings',
+        '--no-warnings',
         ENTRY, '--version',
       ],
       { cwd: ROOT, timeout: 10000 },
@@ -39,7 +39,7 @@ describe('e2e: CLI flags', () => {
     const { stdout } = await execFile(
       process.execPath,
       [
-        '--experimental-transform-types', '--no-warnings',
+        '--no-warnings',
         ENTRY, 'info',
       ],
       { cwd: ROOT, timeout: 10000 },
@@ -53,7 +53,7 @@ describe('e2e: CLI flags', () => {
       await execFile(
         process.execPath,
         [
-          '--experimental-transform-types', '--no-warnings',
+          '--no-warnings',
           ENTRY, 'nonexistent.melker',
         ],
         { cwd: ROOT, timeout: 10000 },

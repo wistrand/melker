@@ -291,7 +291,7 @@ async function handleShowPolicy(
   console.log(`\n${rt.showPolicyFlagsLabel}`);
   const appDir = remote ? getTempDir() : rt.dirnamePath(absoluteFilepath);
   const urlHash = await getUrlHash(remote ? filepath : absoluteFilepath);
-  const flags = policyToDenoFlags(effectivePolicy, appDir, urlHash, sourceUrl, activeDenies, overrides.deny, remote);
+  const flags = rt.generateDenoFlags(effectivePolicy, appDir, urlHash, sourceUrl, activeDenies, overrides.deny, remote);
   rt.postProcessShowPolicyFlags?.(flags);
   console.log(formatDenoFlags(flags));
   rt.exit(0);

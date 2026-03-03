@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const execFile = promisify(execFileCb);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const ENTRY = resolve(ROOT, 'melker-node.ts');
+const ENTRY = resolve(ROOT, 'melker-node.mjs');
 
 describe('e2e: stdout mode', () => {
   it('auto-enables stdout mode when piped (non-TTY)', async () => {
@@ -16,7 +16,7 @@ describe('e2e: stdout mode', () => {
     const { stdout } = await execFile(
       process.execPath,
       [
-        '--experimental-transform-types', '--no-warnings',
+        '--no-warnings',
         ENTRY, '--trust', 'examples/basics/hello.melker',
       ],
       { cwd: ROOT, timeout: 15000 },
@@ -32,7 +32,7 @@ describe('e2e: stdout mode', () => {
     const { stdout } = await execFile(
       process.execPath,
       [
-        '--experimental-transform-types', '--no-warnings',
+        '--no-warnings',
         ENTRY, '--trust', '--print-tree', 'examples/basics/hello.melker',
       ],
       { cwd: ROOT, timeout: 15000 },
@@ -45,7 +45,7 @@ describe('e2e: stdout mode', () => {
     const { stdout } = await execFile(
       process.execPath,
       [
-        '--experimental-transform-types', '--no-warnings',
+        '--no-warnings',
         ENTRY, '--trust', '--print-json', 'examples/basics/hello.melker',
       ],
       { cwd: ROOT, timeout: 15000 },

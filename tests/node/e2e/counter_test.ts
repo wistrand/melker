@@ -7,14 +7,14 @@ import { fileURLToPath } from 'node:url';
 
 const execFile = promisify(execFileCb);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const ENTRY = resolve(ROOT, 'melker-node.ts');
+const ENTRY = resolve(ROOT, 'melker-node.mjs');
 
 describe('e2e: counter.melker', () => {
   it('renders initial state with counter at 0', async () => {
     const { stdout } = await execFile(
       process.execPath,
       [
-        '--experimental-transform-types', '--no-warnings',
+        '--no-warnings',
         ENTRY, '--trust', 'examples/basics/counter.melker',
       ],
       { cwd: ROOT, timeout: 15000 },

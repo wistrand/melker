@@ -16,7 +16,7 @@ describes the architecture that makes that work.
 | Dev server (`--server`)      | `ws` npm package                                                     | Bridges Deno's sync `upgradeWebSocket` with Node's event model   |
 | jsr: imports in .melker apps | esbuild plugin (fetch from jsr.io + transpile TS + local cache)      | Feature parity with Deno                                         |
 | JWT decode                   | Inline `decodeJwt()` in `src/jwt-util.ts`                           | Only decodes without verification; no JSR dependency needed      |
-| Permission system            | Node 25 `--permission` + `process.permission.has()` for OS-level; Melker app permissions always allowed | No policy file on Node |
+| Permission system            | Node 25 `--permission` subprocess sandbox; mirrors Deno's two-process model | Policy enforcement via `--allow-fs-read`, `--allow-fs-write`, etc. |
 | LSP dependencies             | Inline `npm:` specifiers in `src/lsp/deps.ts`                       | Lazy resolution — not in Deno's dependency graph unless `--lsp`  |
 | Embedded assets              | Kept as-is (PNG-encoded base64 in `assets-data.ts`)                  | Already runtime-agnostic, zero-IO                                |
 
@@ -24,15 +24,18 @@ describes the architecture that makes that work.
 
 ```
 melker.ts              ─── Deno entry point (launcher + sandbox subprocess model)
-melker-node.mjs        ─── Node entry point for npm installs (pure JS, registers loader)
-melker-node.ts         ─── Node entry point for dev/git checkout (needs --experimental-transform-types)
+melker-node.mjs        ─── Node entry point (pure JS, registers loader)
 
 src/
   cli-shared.ts        ─── Shared CLI logic (CliRuntime interface)
-  node-main.ts         ─── Node CLI (implements CliRuntime for Node)
+  node-main.ts         ─── Node CLI (implements CliRuntime for Node, spawns sandbox subprocess)
+  node-runner-entry.mjs ── Node subprocess entry point (registers loader, runs runner)
   melker-runner.ts     ─── Core runner (shared, runtime-agnostic)
   deps.ts              ─── External dependencies (npm: specifiers)
   jwt-util.ts          ─── encodeBase64 + decodeJwt (replaces jsr:@std/encoding + jsr:@zaubrik/djwt)
+  policy/
+    flags.ts           ─── Policy → Deno permission flags
+    flags-node.ts      ─── Policy → Node permission flags
 
   runtime/
     mod.ts             ─── Re-exports ./deno/mod.ts (loader redirects to node/ on Node)
@@ -108,8 +111,8 @@ src/runtime/
 **File:** `src/runtime/node/loader.mjs`
 
 Pure JavaScript (`.mjs`) — must be JS because it bootstraps TypeScript support
-before any `.ts` file can be loaded. Registered in both `melker-node.mjs` and
-`melker-node.ts` via `module.register()`. Exports two hooks: `resolve()` and
+before any `.ts` file can be loaded. Registered in `melker-node.mjs` (and
+`src/node-runner-entry.mjs` for the subprocess) via `module.register()`. Exports two hooks: `resolve()` and
 `load()`.
 
 ### `resolve` hook
@@ -167,25 +170,22 @@ Non-`.ts` files are delegated to `nextLoad()`.
 The Deno entry spawns a sandboxed subprocess with permission flags derived from
 the app's policy file. The subprocess runs `src/melker-runner.ts`.
 
-### Node (npm install): `melker-node.mjs` → `src/node-main.ts`
+### Node: `melker-node.mjs` → `src/node-main.ts` → subprocess
 
-Pure JS entry point — the npm `bin` target. No `--experimental-transform-types`
-flag needed. Single-process model (no subprocess sandbox):
+Pure JS entry point — the npm `bin` target. Two-process model mirroring Deno:
 
-1. Registers the custom loader via `module.register()` — the loader's `load`
-   hook strips TypeScript types from all `.ts` files (including `node_modules/`)
-2. Dynamically imports `src/node-main.ts`
-3. `node-main.ts` implements `CliRuntime` and calls `runCli()` from `cli-shared.ts`
+1. **Parent process** (`melker-node.mjs` → `node-main.ts`):
+   - Registers the custom loader via `module.register()`
+   - Dynamically imports `src/node-main.ts`
+   - `node-main.ts` implements `CliRuntime` and calls `runCli()` from `cli-shared.ts`
+   - Loads and validates app policy, handles approval prompts
+   - Converts policy to Node permission flags via `policyToNodeFlags()`
+   - Spawns a restricted subprocess with `--permission` and `--allow-*` flags
 
-### Node (dev/git checkout): `melker-node.ts` → `src/node-main.ts`
-
-TypeScript entry point for development. Uses `--experimental-transform-types`
-shebang. Single-process model:
-
-1. Re-execs with `--experimental-transform-types` if not already active
-2. Registers the custom loader via `module.register()`
-3. Dynamically imports `src/node-main.ts`
-4. `node-main.ts` implements `CliRuntime` and calls `runCli()` from `cli-shared.ts`
+2. **Child process** (`src/node-runner-entry.mjs` → `melker-runner.ts`):
+   - Runs with Node's `--permission` flag (OS-level sandbox)
+   - Registers the custom loader, imports and runs the shared runner
+   - Can only access files, network, child processes as permitted by the flags
 
 ### Shared CLI: `src/cli-shared.ts`
 
@@ -275,25 +275,38 @@ The `--server` mode requires bridging two different upgrade models:
 
 ## Permission System
 
-Two layers:
+Both Deno and Node use a two-process model: the parent (launcher) loads the
+policy, prompts for approval, then spawns a sandboxed subprocess with restricted
+permission flags.
 
-**OS-level permissions (fs, net, child_process):**
+**OS-level permission flag mapping:**
 
-| Deno                    | Node 25                      |
-|-------------------------|------------------------------|
-| `--allow-read=<path>`   | `--allow-fs-read=<path>`     |
-| `--allow-write=<path>`  | `--allow-fs-write=<path>`    |
-| `--allow-run`           | `--allow-child-process`      |
-| `--allow-net`           | `--allow-net`                |
+| Deno                    | Node 25                      | Granularity           |
+|-------------------------|------------------------------|-----------------------|
+| `--allow-read=<path>`   | `--allow-fs-read=<path>/*`   | Both per-path         |
+| `--allow-write=<path>`  | `--allow-fs-write=<path>/*`  | Both per-path         |
+| `--allow-run=<cmd>`     | `--allow-child-process`      | Node is binary        |
+| `--allow-net=<host>`    | `--allow-net`                | Node is binary        |
+| `--allow-env=<var>`     | —                            | No Node equivalent    |
+| `--allow-sys=<iface>`   | —                            | No Node equivalent    |
+| `--allow-ffi`           | `--allow-addons`             | Similar               |
+| `--deny-*`              | —                            | No Node equivalent    |
 
-On Node, these are enforced by passing `--permission` to the Node process.
+**Node-specific details:**
+- `--permission` enables the permission model (always passed unless `--trust`)
+- `--allow-child-process` is always included (esbuild spawns its Go binary)
+- `--allow-worker` is always included (esbuild uses worker threads)
+- Node directory paths require `/*` suffix for recursive access
+- `policyToNodeFlags()` in `src/policy/flags-node.ts` handles the conversion
+
+**Implicit paths (added automatically):**
+- Read: melker installation dir, app dir, cwd (local only), temp dir, XDG state/cache
+- Write: temp dir, XDG state dir, log dir, app cache dir
+
 `hasWritePermission()` in `src/runtime/node/fs.ts` queries
 `process.permission.has('fs.write', path)` when the permission model is active.
 
-**Melker app permissions (shader, clipboard, keyring, browser, ai):**
-
-On Deno, these are checked against `.melker-policy.json`. On Node, all Melker app
-permissions return `true` — no policy file, no approve/revoke CLI.
+**`--trust` mode:** Omits `--permission` entirely — subprocess runs unrestricted.
 
 ## Testing
 
@@ -330,7 +343,7 @@ Matrix build with two jobs:
 | Job  | OS                       | Runtime    | Steps                                           |
 |------|--------------------------|------------|--------------------------------------------------|
 | deno | ubuntu-latest, macos-latest | Deno 2.5.x | `check`, `check:leaks`, `test`                  |
-| node | ubuntu-latest, macos-latest | Node 25    | `npm install`, `test:node` (unit + e2e), version checks (both `.ts` and `.mjs` entry) |
+| node | ubuntu-latest, macos-latest | Node 25    | `npm install`, `test:node` (unit + e2e), version check via `.mjs` entry |
 
 ### Tasks
 
@@ -363,7 +376,6 @@ TS support. `package.json` `files` field whitelists what ships: `melker-node.mjs
 - **Node 25+ required** — native TS execution, stable permission model, ESM data: URLs
 - **No enums/namespaces** — codebase uses only erasable TS syntax (`stripTypeScriptTypes` mode: `'transform'`)
 - **Windows** — signals limited, SIGWINCH unavailable (needs polling fallback)
-- **`--permission` optional on Node** — without it, `process.permission` is undefined, all ops allowed
-- **Melker app permissions always allowed on Node** — no policy file enforcement
+- **Node sandbox is coarser than Deno** — net and child_process are binary (all or nothing), no env filtering, no deny flags
 - **jsr: cold cache** — first run with jsr imports fetches from jsr.io
 - **stdin worker needs `--allow-worker`** — when running with `--permission`

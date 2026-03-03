@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const ENTRY = resolve(ROOT, 'melker-node.ts');
+const ENTRY = resolve(ROOT, 'melker-node.mjs');
 
 let nextPort = 19100 + Math.floor(Math.random() * 900);
 
@@ -23,7 +23,7 @@ function startServer(melkerArgs: string[]): Promise<{
     const proc = spawn(
       process.execPath,
       [
-        '--experimental-transform-types', '--no-warnings',
+        '--no-warnings',
         ENTRY, '--trust', '--headless', ...melkerArgs,
       ],
       {

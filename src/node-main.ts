@@ -4,6 +4,10 @@
 
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import { writeFile, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   cwd,
@@ -13,16 +17,17 @@ import {
   arch,
   runtimeVersion,
   melkerVersion,
-  envSet,
   stat as fsStat,
   isNotFoundError,
 } from './runtime/mod.ts';
 
-import { type MelkerPolicy } from './policy/mod.ts';
+import { type MelkerPolicy, getUrlHash } from './policy/mod.ts';
 import {
   getPermissionOverrides,
+  applyPermissionOverrides,
   hasOverrides,
 } from './policy/permission-overrides.ts';
+import { policyToNodeFlags } from './policy/flags-node.ts';
 
 import { generateFlagHelp } from './config/cli.ts';
 import { MelkerConfig } from './config/config.ts';
@@ -85,31 +90,138 @@ Examples:
   melker-node --trust app.melker`);
 }
 
+/** Melker installation directory (parent of src/) */
+const MELKER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
 /**
- * Run a .melker app in the current process via the runner's main().
- * Sets env vars the runner expects, then calls main() directly.
+ * Reset terminal state after subprocess failure.
+ * Uses raw ANSI codes to avoid importing framework modules.
+ */
+function resetTerminalState(): void {
+  try {
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(false);
+    }
+  } catch {
+    // Ignore - might already be in cooked mode
+  }
+  try {
+    // Reset: normal screen, show cursor, disable mouse, reset attributes
+    const reset = '\x1b[?1049l\x1b[?25h\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[0m';
+    process.stdout.write(reset);
+  } catch {
+    // Ignore write errors
+  }
+}
+
+/**
+ * Run a .melker app in a subprocess with Node.js --permission flags.
+ * Mirrors the Deno launcher's runWithPolicy() pattern.
  */
 async function runApp(
   filepath: string,
-  _policy: MelkerPolicy,
-  _args: string[],
+  policy: MelkerPolicy,
+  originalArgs: string[],
   remoteContent?: string,
 ): Promise<void> {
   const isRemote = remoteContent !== undefined;
-  envSet('MELKER_RUNNER', '1');
+  const isTrust = originalArgs.includes('--trust');
+  let appDir: string;
+  let appPath: string;
+  let tempDir: string | undefined;
+
   if (isRemote) {
-    envSet('MELKER_REMOTE_URL', filepath);
+    // Remote: write content to temp file to avoid TOCTOU issues
+    tempDir = await mkdtemp(join(tmpdir(), 'melker-remote-'));
+    const ext = filepath.endsWith('.md') ? '.md' : filepath.endsWith('.mmd') ? '.mmd' : '.melker';
+    appPath = join(tempDir, `app${ext}`);
+    await writeFile(appPath, remoteContent!);
+    appDir = tempDir;
+  } else {
+    appPath = filepath.startsWith('/') ? filepath : resolve(cwd(), filepath);
+    appDir = dirname(appPath);
   }
 
-  // Set permission overrides env var if applicable
-  const overrides = getPermissionOverrides(MelkerConfig.get());
-  if (hasOverrides(overrides)) {
-    envSet('MELKER_PERMISSION_OVERRIDES', JSON.stringify(overrides));
-  }
+  try {
+    const urlHash = await getUrlHash(isRemote ? filepath : appPath);
 
-  // Import and call runner main
-  const { main } = await import('./melker-runner.ts');
-  await main();
+    // Apply CLI permission overrides
+    const overrides = getPermissionOverrides(MelkerConfig.get());
+    const { permissions: effectivePermissions } = applyPermissionOverrides(policy.permissions, overrides);
+    const effectivePolicy = { ...policy, permissions: effectivePermissions };
+
+    // Build Node permission flags (empty array = no restrictions for --trust/all)
+    const nodeFlags = isTrust ? [] : policyToNodeFlags(effectivePolicy, appDir, MELKER_DIR, urlHash, isRemote);
+
+    // Filter out policy-related flags; replace remote URL with temp file path
+    const filteredArgs: string[] = [];
+    for (const arg of originalArgs) {
+      if (arg === '--show-policy' || arg === '--trust') continue;
+      if (isRemote && arg === filepath) {
+        filteredArgs.push(appPath);
+      } else {
+        filteredArgs.push(arg);
+      }
+    }
+
+    // Build subprocess command
+    const runnerEntry = resolve(MELKER_DIR, 'src/node-runner-entry.mjs');
+    const cmdArgs = [
+      ...nodeFlags,
+      '--no-warnings',
+      '--experimental-transform-types',
+      runnerEntry,
+      ...filteredArgs,
+    ];
+
+    // Build environment
+    const env: Record<string, string> = {
+      ...process.env as Record<string, string>,
+      MELKER_RUNNER: '1',
+    };
+    if (isRemote) env.MELKER_REMOTE_URL = filepath;
+    if (hasOverrides(overrides)) {
+      env.MELKER_PERMISSION_OVERRIDES = JSON.stringify(overrides);
+    }
+
+    const child = spawn(process.execPath, cmdArgs, {
+      stdio: 'inherit',
+      env,
+    });
+
+    // Ignore SIGINT in parent (terminal Ctrl+C goes to process group — child handles it).
+    // Forward SIGTERM to child (explicit kill from parent only targets this process).
+    const ignoreSigint = () => {};
+    const forwardSigterm = () => { child.kill('SIGTERM'); };
+    process.on('SIGINT', ignoreSigint);
+    process.on('SIGTERM', forwardSigterm);
+
+    await new Promise<void>((resolvePromise) => {
+      child.on('close', (code) => {
+        process.removeListener('SIGINT', ignoreSigint);
+        process.removeListener('SIGTERM', forwardSigterm);
+
+        if (code !== 0) {
+          resetTerminalState();
+        }
+        process.exit(code ?? 1);
+      });
+
+      child.on('error', (err) => {
+        process.removeListener('SIGINT', ignoreSigint);
+        process.removeListener('SIGTERM', forwardSigterm);
+        console.error(`Failed to start subprocess: ${err.message}`);
+        resolvePromise();
+        process.exit(1);
+      });
+    });
+  } finally {
+    if (tempDir) {
+      try {
+        await rm(tempDir, { recursive: true });
+      } catch { /* ignore cleanup errors */ }
+    }
+  }
 }
 
 /**
@@ -134,7 +246,8 @@ export async function main(): Promise<void> {
       printConfig: () => MelkerConfig.printConfig(),
     },
 
-    generateDenoFlags: () => [],
+    generateDenoFlags: (policy, appDir, urlHash, _sourceUrl, _activeDenies, _explicitDenies, isRemote) =>
+      policyToNodeFlags(policy, appDir, MELKER_DIR, urlHash, isRemote),
 
     runApp,
 
@@ -193,8 +306,8 @@ export async function main(): Promise<void> {
       exit(0);
     },
 
-    denoFlagsLabel: 'Deno flags (informational):',
-    showPolicyFlagsLabel: 'Deno permission flags (informational \u2014 not enforced on Node):',
+    denoFlagsLabel: 'Node permission flags:',
+    showPolicyFlagsLabel: 'Node permission flags:',
 
     handleVersion: () => {
       console.log(`Melker ${melkerVersion()}`);

@@ -1,7 +1,7 @@
 /**
  * Node.js custom loader hooks for Melker.
  *
- * Registered via module.register() in melker-node.mjs / melker-node.ts.
+ * Registered via module.register() in melker-node.mjs / src/node-runner-entry.mjs.
  * Handles three things:
  *
  * 1. Strips Deno's `npm:` prefix from import specifiers so Node resolves

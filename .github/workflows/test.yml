@@ -37,5 +37,4 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm install
       - run: deno task test:node
-      - run: node melker-node.ts --version
       - run: node melker-node.mjs --version

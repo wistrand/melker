@@ -36,11 +36,11 @@ Melker is distributed via git. No package managers, no registries, no version co
 
 ### Requirements
 
-- **Deno 2.5+** (Node.js and Bun not supported)
+- **Deno 2.5+** or **Node.js 25+** (experimental)
 - ANSI-compatible terminal
 - **Nerd Fonts** (recommended for graphics) - Melker uses sextant characters for canvas/image rendering. On macOS, install a [Nerd Font](https://www.nerdfonts.com/) and configure your terminal to use it. For terminals without Unicode support, use `--gfx-mode=block` (colored spaces), `--gfx-mode=pattern` (ASCII spatial), or `--gfx-mode=luma` (ASCII brightness).
 
-### Option 1: Clone and Run
+### Option 1: Clone and Run (Deno)
 
 ```bash
 git clone https://github.com/wistrand/melker.git
@@ -48,7 +48,7 @@ cd melker
 ./melker.ts examples/basics/hello.melker
 ```
 
-### Option 2: Global Install via Symlink
+### Option 2: Global Install via Symlink (Deno)
 
 ```bash
 # Clone to a permanent location
@@ -62,6 +62,15 @@ melker app.melker
 ```
 
 The CLI is symlink-safe - it resolves its real path before importing dependencies.
+
+### Option 3: Node.js (Experimental)
+
+Requires Node.js 25+. Apps run in a sandboxed subprocess with Node's `--permission` model.
+
+```bash
+npm install -g https://github.com/wistrand/melker.git
+melker-node app.melker
+```
 
 ### Releases
 

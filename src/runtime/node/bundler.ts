@@ -74,6 +74,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
 
 // --- JSR cache ---
 
+const JSR_FETCH_TIMEOUT = 30_000; // 30s timeout for network requests
+
 function getCacheDir(): string {
   return path.join(os.homedir(), '.cache', 'melker', 'jsr');
 }
@@ -82,20 +84,56 @@ function parseJsrSpecifier(specifier: string): { scope: string; name: string; ve
   // jsr:@scope/name@version/subpath or jsr:@scope/name/subpath
   const match = specifier.match(/^jsr:(@[^/]+\/[^@/]+)(?:@([^/]+))?(\/.*)?$/);
   if (!match) return null;
+  const pkg = match[1]; // e.g. "@scope/name"
   return {
-    scope: match[1].split('/')[0],
-    name: match[1].split('/')[1],
+    scope: pkg.split('/')[0],  // e.g. "@scope"
+    name: pkg.split('/')[1],   // e.g. "name"
     version: match[2] ?? '',
     subpath: match[3] ?? '',
   };
 }
 
+/** Fetch with timeout. Throws on network errors or timeout. */
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const resp = await fetch(url, { signal: AbortSignal.timeout(JSR_FETCH_TIMEOUT) });
+  if (!resp.ok) throw new Error(`Fetch failed: ${url} (${resp.status})`);
+  return resp;
+}
+
 async function resolveJsrVersion(scope: string, name: string, versionRange: string): Promise<string> {
+  const cacheDir = getCacheDir();
+  const metaCacheFile = path.join(cacheDir, scope, name, '_meta.json');
+
+  // Check cached metadata (TTL: 1 hour)
+  try {
+    const stat = fs.statSync(metaCacheFile);
+    if (Date.now() - stat.mtimeMs < 3_600_000) {
+      const meta = JSON.parse(fs.readFileSync(metaCacheFile, 'utf-8')) as { versions: Record<string, { yanked?: boolean }> };
+      const resolved = resolveVersionFromMeta(meta, scope, name, versionRange);
+      if (resolved) return resolved;
+    }
+  } catch {
+    // Not cached or expired
+  }
+
+  // Fetch fresh metadata
   const metaUrl = `https://jsr.io/${scope}/${name}/meta.json`;
-  const resp = await fetch(metaUrl);
-  if (!resp.ok) throw new Error(`Failed to fetch JSR metadata: ${metaUrl} (${resp.status})`);
+  const resp = await fetchWithTimeout(metaUrl);
   const meta = await resp.json() as { versions: Record<string, { yanked?: boolean }> };
 
+  // Cache metadata
+  await fsp.mkdir(path.dirname(metaCacheFile), { recursive: true });
+  await fsp.writeFile(metaCacheFile, JSON.stringify(meta));
+
+  const resolved = resolveVersionFromMeta(meta, scope, name, versionRange);
+  if (!resolved) throw new Error(`No available versions for ${scope}/${name}`);
+  return resolved;
+}
+
+function resolveVersionFromMeta(
+  meta: { versions: Record<string, { yanked?: boolean }> },
+  scope: string, name: string, versionRange: string
+): string | null {
   if (versionRange && meta.versions[versionRange]) {
     return versionRange;
   }
@@ -104,7 +142,7 @@ async function resolveJsrVersion(scope: string, name: string, versionRange: stri
   const versions = Object.entries(meta.versions)
     .filter(([_, v]) => !v.yanked)
     .map(([k]) => k);
-  if (versions.length === 0) throw new Error(`No available versions for ${scope}/${name}`);
+  if (versions.length === 0) return null;
   return versions[0];
 }
 
@@ -123,15 +161,13 @@ async function fetchJsrSource(scope: string, name: string, version: string, subp
   let resolvedPath = subpath;
   if (!resolvedPath) {
     const versionMetaUrl = `https://jsr.io/${scope}/${name}/${version}_meta.json`;
-    const resp = await fetch(versionMetaUrl);
-    if (!resp.ok) throw new Error(`Failed to fetch JSR version metadata: ${versionMetaUrl}`);
+    const resp = await fetchWithTimeout(versionMetaUrl);
     const versionMeta = await resp.json() as { exports: Record<string, string> };
     resolvedPath = versionMeta.exports['.'] ?? '/mod.ts';
   }
 
   const sourceUrl = `https://jsr.io/${scope}/${name}/${version}${resolvedPath}`;
-  const resp = await fetch(sourceUrl);
-  if (!resp.ok) throw new Error(`Failed to fetch JSR source: ${sourceUrl} (${resp.status})`);
+  const resp = await fetchWithTimeout(sourceUrl);
   const source = await resp.text();
 
   // Cache it
@@ -166,9 +202,9 @@ function melkerResolvePlugin(): esbuild.Plugin {
 
         const version = parsed.version
           ? parsed.version
-          : await resolveJsrVersion(parsed.scope, `${parsed.scope}/${parsed.name}`.slice(parsed.scope.length + 1), '');
+          : await resolveJsrVersion(parsed.scope, parsed.name, '');
 
-        const source = await fetchJsrSource(parsed.scope, `${parsed.scope}/${parsed.name}`.slice(parsed.scope.length + 1), version, parsed.subpath);
+        const source = await fetchJsrSource(parsed.scope, parsed.name, version, parsed.subpath);
 
         return {
           contents: source,

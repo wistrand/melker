@@ -110,10 +110,28 @@ export function parseSVGPath(d: string): PathCommand[] {
     return tokens[i++] as number;
   }
 
+  // Arc flags are single digits 0/1 that can appear without separators.
+  // E.g. "A 25 25 0 0130 40" means largeArc=0, sweep=1, x=30, y=40.
+  // The tokenizer sees "0130" as one number, so we split it here.
   function nextFlag(): boolean {
     while (i < tokens.length && typeof tokens[i] === 'string') i++;
     if (i >= tokens.length) return false;
-    const v = tokens[i++] as number;
+    const v = tokens[i] as number;
+    // Simple case: value is just 0 or 1
+    if (v === 0 || v === 1) {
+      i++;
+      return v === 1;
+    }
+    // Compacted flags: value like 130 means flag=1, remainder=30
+    // Rewrite current token to remainder and return the flag
+    const s = String(v);
+    if (s.length >= 2 && (s[0] === '0' || s[0] === '1')) {
+      const flag = s[0] === '1';
+      tokens[i] = parseFloat(s.slice(1));
+      return flag;
+    }
+    // Fallback: consume as-is
+    i++;
     return v !== 0;
   }
 
@@ -202,9 +220,8 @@ export function parseSVGPath(d: string): PathCommand[] {
         break;
       }
       case 'A': {
-        let rx = nextNum();
-        let ry = nextNum();
-        if (isRel) { /* rx/ry are always absolute */ }
+        const rx = nextNum();
+        const ry = nextNum();
         const rotation = nextNum();
         const largeArc = nextFlag();
         const sweep = nextFlag();
@@ -578,13 +595,6 @@ export function drawPath(canvas: DrawableCanvas, commands: PathCommand[], tolera
         Math.floor(verts[i][0]), Math.floor(verts[i][1]),
         Math.floor(verts[i + 1][0]), Math.floor(verts[i + 1][1]));
     }
-    // Check if subpath is closed (first and last point coincide)
-    const first = verts[0];
-    const last = verts[verts.length - 1];
-    if (Math.abs(first[0] - last[0]) > 0.5 || Math.abs(first[1] - last[1]) > 0.5) {
-      // Not closed — don't connect back (open subpath stroke)
-    }
-    // If closed, the Z command already added start point proximity via pathToPolygons
   }
 }
 

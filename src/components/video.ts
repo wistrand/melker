@@ -188,7 +188,9 @@ export class VideoElement extends CanvasElement implements Disposable {
     await this.playVideo(this.props.src, options);
 
     // Start audio stream for waveform if enabled
-    const resolvedSrc = this.props.src.startsWith('/') ? this.props.src : `${cwd()}/${this.props.src}`;
+    const resolvedSrc = isRemoteUrl(this.props.src)
+      ? this.props.src
+      : (this.props.src.startsWith('/') ? this.props.src : `${cwd()}/${this.props.src}`);
     await this._startAudioStream(resolvedSrc, effectiveStartTime ?? 0);
   }
 
@@ -434,6 +436,12 @@ export class VideoElement extends CanvasElement implements Disposable {
     // Add seek position if needed
     if (startTime > 0) {
       args.push('-ss', String(startTime));
+    }
+
+    // Add extra input flags from config (e.g. -timeout, -analyzeduration)
+    const extraFlags = MelkerConfig.get().ffmpegInputFlags;
+    if (extraFlags) {
+      args.push(...extraFlags.split(/\s+/).filter(Boolean));
     }
 
     args.push('-i', src);
@@ -998,7 +1006,7 @@ export class VideoElement extends CanvasElement implements Disposable {
     const frameInterval = 1000 / fps;
 
     // Frame skipping: track where we should be vs where we are
-    const playbackStartTime = performance.now();
+    let playbackStartTime = performance.now();
     let framesDecoded = 0;
     let framesRendered = 0;
     let framesSkipped = 0;
@@ -1023,6 +1031,14 @@ export class VideoElement extends CanvasElement implements Disposable {
         if (done) {
           // Video ended
           logger.info('Video playback stats', { framesDecoded, framesRendered, framesSkipped });
+          if (framesDecoded === 0) {
+            // ffmpeg failed to produce any frames - don't loop, treat as error
+            logger.error('Video source produced no frames (ffmpeg likely failed to open input)');
+            if (this._videoOptions.onError) {
+              this._videoOptions.onError(new Error('Video source produced no frames'));
+            }
+            break;
+          }
           if (this._videoOptions.loop) {
             // Restart the video
             reader.releaseLock();
@@ -1049,6 +1065,10 @@ export class VideoElement extends CanvasElement implements Disposable {
 
             // Complete frame ready
             if (frameOffset >= frameSize) {
+              // Reset timing on first frame (live streams may have initial delay)
+              if (framesDecoded === 0) {
+                playbackStartTime = performance.now();
+              }
               framesDecoded++;
               frameOffset = 0;
 

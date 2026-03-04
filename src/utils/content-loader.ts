@@ -10,11 +10,11 @@ export function isUrl(path: string): boolean {
 }
 
 /**
- * Check if a path is a remote/network URL (http://, https://, or rtsp://)
- * Used for video streams that can include RTSP protocol
+ * Check if a path is a remote/network URL (http://, https://, rtsp://, or udp://)
+ * Used for video streams that can include RTSP and UDP protocols
  */
 export function isRemoteUrl(path: string): boolean {
-  return path.startsWith('http://') || path.startsWith('https://') || path.startsWith('rtsp:');
+  return path.startsWith('http://') || path.startsWith('https://') || path.startsWith('rtsp:') || path.startsWith('udp:');
 }
 
 /**

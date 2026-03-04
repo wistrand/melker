@@ -52,6 +52,11 @@ export class MelkerConfig extends MelkerConfigCore {
     return this.data['ai.audioGain'] as number;
   }
 
+  // Video
+  get ffmpegInputFlags(): string | undefined {
+    return this.data['video.ffmpegInputFlags'] as string | undefined;
+  }
+
   // Audio
   get audioMuted(): boolean {
     return this.data['audio.muted'] as boolean;

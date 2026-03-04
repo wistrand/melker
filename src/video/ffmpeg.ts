@@ -1,6 +1,17 @@
 // FFmpeg utilities for video processing
 
 import { Command } from '../runtime/mod.ts';
+import { MelkerConfig } from '../config/mod.ts';
+
+/**
+ * Parse extra ffmpeg input flags from config into an args array.
+ * Returns empty array if not configured.
+ */
+function getExtraInputFlags(): string[] {
+  const flags = MelkerConfig.get().ffmpegInputFlags;
+  if (!flags) return [];
+  return flags.split(/\s+/).filter(Boolean);
+}
 
 /**
  * Video dimensions from probe
@@ -27,6 +38,7 @@ export async function getVideoDimensions(src: string): Promise<VideoDimensions> 
   const probeCmd = new Command('ffprobe', {
     args: [
       '-v', 'error',
+      ...getExtraInputFlags(),
       '-select_streams', 'v:0',
       '-show_entries', 'stream=width,height',
       '-of', 'csv=p=0',
@@ -69,6 +81,7 @@ export function buildVideoDecoderArgs(
   }
 
   args.push(
+    ...getExtraInputFlags(),
     '-i', src,
     '-an',  // Disable audio - we only want video frames
     '-vf', `scale=${options.outputWidth}:${options.outputHeight}:force_original_aspect_ratio=disable,format=rgba`,
@@ -104,6 +117,7 @@ export function buildAudioExtractorArgs(
   }
 
   args.push(
+    ...getExtraInputFlags(),
     '-i', src,
     '-vn',           // No video
     '-acodec', 'pcm_s16le',
@@ -144,7 +158,7 @@ export function buildAudioPlayerArgs(
     args.push('-volume', String(options.volume));
   }
 
-  args.push(src);
+  args.push(...getExtraInputFlags(), src);
 
   return args;
 }

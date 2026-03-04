@@ -2,8 +2,7 @@
 
 ## Overview
 
-Melker uses Calendar Versioning (CalVer) for releases. Releases are **git tags only** - no GitHub releases, 
-changelogs, CI build steps or package publishing.
+Melker uses Calendar Versioning (CalVer) for releases. Releases are git tags plus publishing to [JSR](https://jsr.io/@melker/melker) and [npm](https://www.npmjs.com/package/@melker/melker).
 
 ## Version Format
 
@@ -75,6 +74,6 @@ Current commits use incrementing numbers (149, 148, ...). These are commit marke
 ## What a Release Means
 
 A tag marks a point-in-time snapshot. Users can:
-- Reference specific versions in imports: `https://raw.githubusercontent.com/.../v2026.01.1/mod.ts`
-- Clone at a specific version: `git checkout v2026.01.1`
-- Compare changes between releases: `git diff v2026.01.1..v2026.01.2`
+- Reference specific versions in imports: `https://raw.githubusercontent.com/.../v2026.03.1/mod.ts`
+- Clone at a specific version: `git checkout v2026.03.1`
+- Compare changes between releases: `git diff v2026.02.10..v2026.03.1`

@@ -32,16 +32,28 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 
 ## Installation
 
-Melker's preferred distributed is via [git](https://github.com/wistrand/melker). Clone it, symlink it, done. 
-However, there are [jsr](https://jsr.io/@melker/melker) and [npm](https://www.npmjs.com/package/@melker/melker) versions that you can use.
-
 ### Requirements
 
 - **Deno 2.5+** or **Node.js 25+** (experimental)
 - ANSI-compatible terminal
 - **Nerd Fonts** (recommended for graphics) - Melker uses sextant characters for canvas/image rendering. On macOS, install a [Nerd Font](https://www.nerdfonts.com/) and configure your terminal to use it. For terminals without Unicode support, use `--gfx-mode=block` (colored spaces), `--gfx-mode=pattern` (ASCII spatial), or `--gfx-mode=luma` (ASCII brightness).
 
-### Option 1: Clone and Run (Deno)
+### Option 1: JSR (Deno)
+
+```bash
+deno install -g -A jsr:@melker/melker
+melker app.melker
+```
+
+`-A` grants permissions to the launcher — apps run sandboxed with only the permissions they declare.
+
+### Option 2: Try Without Installing (Deno)
+
+```bash
+deno x jsr:@melker/melker app.melker
+```
+
+### Option 3: Clone and Run (Deno)
 
 ```bash
 git clone https://github.com/wistrand/melker.git
@@ -49,7 +61,7 @@ cd melker
 ./melker.ts examples/basics/hello.melker
 ```
 
-### Option 2: Global Install via Symlink (Deno)
+### Option 4: Global Install via Symlink (Deno)
 
 ```bash
 # Clone to a permanent location
@@ -64,12 +76,12 @@ melker app.melker
 
 The CLI is symlink-safe - it resolves its real path before importing dependencies.
 
-### Option 3: Node.js (Experimental)
+### Option 5: Node.js (Experimental)
 
-Requires Node.js 25+. Apps run in a sandboxed subprocess with Node's `--permission` model.
+Requires Node.js 25+. Apps run in a sandboxed subprocess with Node's `--permission` model. The binary is named `melker-node`.
 
 ```bash
-npm install -g https://github.com/wistrand/melker.git
+npm install -g @melker/melker
 melker-node app.melker
 ```
 
@@ -84,7 +96,7 @@ git tag --list 'v*' | sort -V
 Checkout a specific release:
 
 ```bash
-git checkout v2026.01.1
+git checkout v2026.03.1
 ```
 
 ### Not Just Trust - Real UI
@@ -409,18 +421,6 @@ These Deno flags are forwarded to the app subprocess:
 deno run --allow-all --reload https://melker.sh/melker.ts app.melker
 ```
 
-**Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub. For reproducible builds, pin to a specific version:
-
-```bash
-# Pin to CalVer release
-deno run --allow-all https://melker.sh/melker-v2026.01.1.ts app.melker
-
-# Pin to specific commit
-deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker
-```
-
-Non-existent versions show a clean error: `Version not found: v2026.01.99`
-
 ---
 
 ## TypeScript API
@@ -509,7 +509,7 @@ examples/
 docs/
   netlify/             # Netlify Edge Functions
     edge-functions/
-      melker.ts        # Versioned launcher (/melker.ts, /melker-v2026.01.1.ts, /melker-abc123f.ts)
+      melker.ts        # Dynamic launcher (/melker.ts)
 ```
 
 ---

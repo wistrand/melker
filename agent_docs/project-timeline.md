@@ -1,6 +1,6 @@
 # Melker Engine Project Timeline
 
-Development history from December 2025 to February 2026.
+Development history from December 2025 to March 2026.
 
 ```
 Trurl, Constructor Most Querulous, commanded the Perturbulator: "Fabricate!" Brass potentates
@@ -107,6 +107,28 @@ So constructed.
 
 **Feb 17** - Geometric focus navigation, command palette component discovery + draggable title bar, palette shortcuts
 
+### Week 13: The JSR Expedition (Feb 18-22)
+
+**Feb 18-20** - JSR distribution, embedded assets, showcase examples, memory benchmarks ← `v2026.02.6`
+
+**Feb 21-22** - JSR publishing pipeline, `melker upgrade`, global accessor pattern ← `v2026.02.7`
+
+### Week 14: The Opacity Gradient (Feb 24-27)
+
+**Feb 24-26** - CSS opacity, state binding (`createState`), SVG path drawing on canvas, quadrant render mode ← `v2026.02.8`
+
+**Feb 27** - AI accessibility fixes, bundler error handling, docs refresh ← `v2026.02.9`
+
+## March 2026: Node.js and Distribution
+
+### Week 15: The Node Crossing (Feb 28 - Mar 3)
+
+**Feb 28 - Mar 3** - Node.js 25+ support, runtime abstraction layer, npm publishing, two-way state binding ← `v2026.03.1`
+
+### Week 16: Polish (Mar 3-4)
+
+**Mar 3-4** - Package rename to `@melker/melker`, Node sandbox caveat, UDP video streams, ffmpeg config flags, "Melker Engine" branding
+
 ## Components
 
 | Component       | Added  | Description                           |
@@ -148,3 +170,8 @@ CalVer format: `YYYY.MM.PATCH`. Releases are git tags only.
 | `v2026.02.3` | Feb 7  | Dependency cleanup, style property refactoring       |
 | `v2026.02.4` | Feb 11 | CSS animations, specificity, container queries       |
 | `v2026.02.5` | Feb 13 | Unified CSS parser, canvas polygons, deduplication   |
+| `v2026.02.6` | Feb 20 | JSR distribution, embedded assets, showcase examples |
+| `v2026.02.7` | Feb 22 | JSR publishing pipeline, global accessors            |
+| `v2026.02.8` | Feb 26 | Opacity, state binding, SVG paths, quadrant mode     |
+| `v2026.02.9` | Feb 27 | AI accessibility, bundler fixes, docs refresh        |
+| `v2026.03.1` | Mar 3  | Node.js 25+ support, runtime abstraction, npm publish|

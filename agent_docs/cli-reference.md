@@ -2,21 +2,7 @@
 
 ## Installation
 
-### Symlink (git checkout)
-
-```bash
-ln -s /path/to/melker/melker.ts ~/.local/bin/melker
-```
-
-The CLI is symlink-safe - it resolves its real path before importing dependencies.
-
-### JSR (alternative)
-
-```bash
-deno install -g -A jsr:@melker/melker
-```
-
-`-A` grants permissions to the launcher — apps run sandboxed with only the permissions they declare.
+See [README.md Installation](../README.md#installation) for all methods (clone+symlink, JSR, npm, try without installing).
 
 ## Subcommands
 
@@ -151,3 +137,4 @@ const app = await createApp(ui);
 ```
 
 **Note:** `melker.ts` is the CLI entry point only. All library exports are in `mod.ts`.
+

@@ -2,15 +2,10 @@
 
 ## Install
 
+See [README.md Installation](../README.md#installation) for all methods (clone+symlink, JSR, npm, try without installing).
+
+**Shell completions** (optional, after install):
 ```bash
-# Requires Deno 2.5+
-git clone https://github.com/wistrand/melker.git
-cd melker
-
-# Optional: install globally
-ln -s $(pwd)/melker.ts ~/.local/bin/melker
-
-# Optional: enable shell completions
 # Bash (add to ~/.bashrc):
 source /path/to/melker/completions/melker.bash
 # Zsh (add to ~/.zshrc):

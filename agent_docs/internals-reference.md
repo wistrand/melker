@@ -138,11 +138,11 @@ The skill enforces the same guidelines as Critical Rules in [CLAUDE.md](../CLAUD
 
 ## Releases
 
-Melker uses CalVer with format `YYYY.MM.PATCH` (e.g., `v2026.01.1`). Releases are git tags only.
+Melker uses CalVer with format `YYYY.MM.PATCH` (e.g., `v2026.03.1`). Releases are git tags only.
 
 ```bash
 # For humans only—do not run as agent
-git tag -a v2026.01.1 -m "v2026.01.1"
+git tag -a v2026.03.1 -m "v2026.03.1"
 git push origin main --tags
 ```
 

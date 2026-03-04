@@ -783,15 +783,7 @@ When stdout is not a TTY (piped or redirected), Melker automatically:
 deno run --allow-all --reload https://melker.sh/melker.ts app.melker
 ```
 
-**Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub. For reproducible builds, pin to a specific version:
-
-```bash
-# Pin to CalVer release
-deno run --allow-all https://melker.sh/melker-v2026.01.1.ts app.melker
-
-# Pin to specific commit
-deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker
-```
+**Note:** `https://melker.sh/melker.ts` serves the latest commit from `main` on GitHub.
 
 ## Markdown Format (.md) - Optional
 

@@ -138,10 +138,6 @@ stty sane
 # --reload is auto-detected and forwarded to the app subprocess
 # melker.sh/melker.ts serves the latest commit from main on GitHub
 deno run --allow-all --reload https://melker.sh/melker.ts app.melker
-
-# For reproducible builds, pin to a specific version:
-deno run --allow-all https://melker.sh/melker-v2026.01.1.ts app.melker  # CalVer tag
-deno run --allow-all https://melker.sh/melker-abc123f.ts app.melker     # commit hash
 ```
 
 **"Version not found" error:**

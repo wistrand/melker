@@ -32,7 +32,7 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 
 ## Installation
 
-> **JSR name change:** The JSR package has been renamed from `@wistrand/melker` to `@melker/melker`. Update your install commands and imports accordingly.
+> **JSR name change:** The JSR package has been renamed from `@wistrand/melker` to [@melker/melker](https://jsr.io/@melker/melker). Update your install commands and imports accordingly.
 
 Melker is distributed via git. No package managers, no registries, no version conflicts. Clone it, symlink it, done.
 

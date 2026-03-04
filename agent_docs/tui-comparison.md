@@ -50,6 +50,7 @@ Comprehensive comparison of terminal UI libraries across languages. Last updated
 | No_std/embedded      |   -    |  -  |    -    |    -    |     -      |   -   |    -    |    Y    |      -       |   -   |
 | SSH/network serve    |   Y    |  -  |    -    |    -    |     Y      |   -   |    Y    |    -    |      -       |   -   |
 | Debug/remote inspect |   Y    |  Y  |    -    |    -    |     -      |   -   |    Y    |    -    |      -       |   -   |
+| Sync output (2026)   |   Y    |  Y  |    Y    |    -    |     Y      |   -   |    -    |    -    |      -       |   -   |
 | Component-aware copy |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |      -       |   Y   |
 | Maintained (Mar 2026)|   Y    |  Y  |    Y    |    -    |     Y      |   ~   |    Y    |    Y    |      Y       |   Y   |
 

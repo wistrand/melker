@@ -7,6 +7,8 @@
  * **Website:** [melker.sh](https://melker.sh) |
  * **GitHub:** [wistrand/melker](https://github.com/wistrand/melker)
  *
+ * > **JSR name change:** The JSR package has been renamed from `@wistrand/melker` to [@melker/melker](https://jsr.io/@melker/melker). Update your install commands and imports accordingly.
+ *
  * A terminal UI framework for building document-first TUI applications. Melker
  * apps are readable markup files with declared permissions, shareable via URL,
  * and inspectable with built-in Dev Tools. Each app runs in a sandboxed Deno

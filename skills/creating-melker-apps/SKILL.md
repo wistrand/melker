@@ -97,6 +97,30 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 14. **Prevent cross-axis stretching** - In column containers, wrap select/combobox/autocomplete in a row container to prevent full-width stretching
 15. **Primitive exports are copied by value** - `$app.varName = value` modifies a copy, not the original. Use setter functions to modify variables from other scripts
 
+## Layout Essentials
+
+1. **Flex column is the default** — `container`, `dialog`, `tab` all default to `display: flex; flex-direction: column`. Don't write it explicitly.
+2. **`flex: 1` takes remaining space** — Use on the main content area to fill remaining height/width.
+3. **`width: fill` vs `100%`** — `fill` expands to *remaining* available space; `100%` takes the parent's full dimension. Use `fill` for content areas beside sidebars, `100%` for full-width elements.
+4. **Scrollable containers need constrained size** — `overflow: scroll` alone does nothing if the container can grow to fit content. Add `flex: 1` or a fixed height.
+5. **Canvas/img/video buffer size uses props, not style** — `style="width: fill"` only affects layout, not the pixel buffer. Use width/height props: `img` supports `"fill"`, `"100%"`, and numbers; `canvas`/`video` accept fixed numbers only.
+6. **split-pane sizes are ratios** — `sizes="3,2"` means 60%/40%, not 3 cols / 2 cols.
+7. **Terminal space is precious** — Avoid unnecessary nesting, borders, and padding. Every border costs 2 rows + 2 cols.
+
+```xml
+<!-- WRONG: redundant flex-direction, missing flex: 1 on content -->
+<container style="display: flex; flex-direction: column; width: 100%; height: 100%;">
+  <text>Header</text>
+  <container style="overflow: scroll;">Content</container>
+  <text>Footer</text>
+</container>
+
+<!-- RIGHT: defaults handle layout, flex: 1 fills space, scroll works -->
+<text>Header</text>
+<container style="overflow: scroll; flex: 1;">Content</container>
+<text>Footer</text>
+```
+
 ## File Structure
 
 ```xml

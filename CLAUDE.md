@@ -8,7 +8,7 @@ Guidance for Claude Code when working with Melker.
 
 Website: https://melker.sh
 
-Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-inspired document model. It renders component trees to ANSI terminals using a dual-buffer system.
+Melker Engine is a Deno library for creating rich Terminal UI interfaces using an HTML-inspired document model. It renders component trees to ANSI terminals using a dual-buffer system.
 
 ## Quick Reference
 
@@ -134,6 +134,14 @@ deno task build        # Build all (embedded assets, completions, skill zip, doc
 ## Code Style
 
 2-space indent, single quotes, semicolons, 100 char width.
+
+## Branding
+
+The official name is **Melker Engine**. "Melker" alone is fine in most contexts. Use "Melker Engine" when followed by a descriptor like "framework", "library", "project", "platform", or when describing what it *is* ("Melker Engine is a Deno library for...").
+
+- Keep: "Melker apps", "Melker components", "Built with Melker", "Melker CLI"
+- Change: "Melker framework" → "Melker Engine", "Melker UI library" → "Melker Engine", "Melker is a Deno library" → "Melker Engine is a Deno library"
+- Never change: package name `@melker/melker`, import paths, file/directory names, class names, config key prefixes, URL paths
 
 ## Documentation Style
 

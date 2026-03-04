@@ -78,7 +78,7 @@ const mixedDocument = `# Melker Documentation
 
 ## Overview
 
-Melker is a **terminal UI framework** for building rich applications. It provides:
+Melker Engine is a **terminal UI framework** for building rich applications. It provides:
 
 - Component-based architecture
 - Flexbox layout engine

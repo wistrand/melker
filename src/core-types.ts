@@ -1,4 +1,4 @@
-// Pure type definitions for the Melker UI library
+// Pure type definitions for Melker Engine
 // This file contains ONLY types, interfaces, and type aliases — zero runtime code.
 // All imports must be `import type` (erased at compile time).
 

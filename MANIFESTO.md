@@ -64,7 +64,7 @@ Press F12 to open Dev Tools and see the same information.
 
 ## What Melker Is
 
-Melker is a **terminal browser engine**.
+Melker Engine is a **terminal browser engine**.
 
 Like a web browser, it:
 - Runs documents (`.melker` files)

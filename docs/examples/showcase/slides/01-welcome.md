@@ -2,7 +2,7 @@
 
 **Run text with meaning**
 
-Melker is a Deno library for creating rich Terminal UI interfaces using an HTML-inspired document model.
+Melker Engine is a Deno library for creating rich Terminal UI interfaces using an HTML-inspired document model.
 
 ---
 

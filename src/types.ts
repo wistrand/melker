@@ -1,4 +1,4 @@
-// Core element types for the Melker UI library
+// Core element types for Melker Engine
 // Runtime code: Element class, border chars, type guards, scroll helpers.
 // Pure type definitions live in ./core-types.ts and are re-exported below.
 

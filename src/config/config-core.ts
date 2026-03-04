@@ -63,7 +63,7 @@ export interface ConfigInitOptions {
 }
 
 /**
- * Unified configuration class for Melker.
+ * Unified configuration class for Melker Engine.
  *
  * Priority order (lowest to highest):
  * 1. Schema defaults
@@ -446,8 +446,8 @@ export class MelkerConfigCore {
     const configPath = `${getConfigDir()}/config.json`;
     const lines: string[] = [];
 
-    lines.push('Melker Configuration');
-    lines.push('====================');
+    lines.push('Melker Engine Configuration');
+    lines.push('===========================');
     lines.push('');
 
     lines.push(`Config file: ${configPath}`);

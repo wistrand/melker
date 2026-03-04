@@ -32,9 +32,8 @@ Melker apps are documents you can read before you run them. Share via URL, decla
 
 ## Installation
 
-> **JSR name change:** The JSR package has been renamed from `@wistrand/melker` to [@melker/melker](https://jsr.io/@melker/melker). Update your install commands and imports accordingly.
-
-Melker is distributed via git. No package managers, no registries, no version conflicts. Clone it, symlink it, done.
+Melker's preferred distributed is via [git](https://github.com/wistrand/melker). Clone it, symlink it, done. 
+However, there are [jsr](https://jsr.io/@melker/melker) and [npm](https://www.npmjs.com/package/@melker/melker) versions that you can use.
 
 ### Requirements
 

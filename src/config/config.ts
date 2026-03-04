@@ -1,4 +1,4 @@
-// Full configuration class for Melker framework consumers.
+// Full configuration class for Melker Engine consumers.
 // Extends MelkerConfigCore with ~53 typed getters for AI, audio,
 // dithering, rendering, OAuth, stdout, toast, etc.
 

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "description": "Melker configuration schema",
+  "description": "Melker Engine configuration schema",
   "properties": {
     "theme": {
       "type": "string",

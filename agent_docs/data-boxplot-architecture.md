@@ -6,7 +6,7 @@
 - Shows median, quartiles (Q1/Q3), whiskers, and outliers
 - Accepts raw values (auto-computes stats) or pre-computed statistics
 - Character-based rendering (no canvas needed)
-- Implements `Renderable`, `Focusable`, `Interactive`, `TooltipProvider`
+- Implements `Renderable`, `Focusable`, `Clickable`, `Interactive`, `TextSelectable`, `SelectableTextProvider`, `TooltipProvider`
 
 ## Overview
 
@@ -44,6 +44,8 @@ export interface DataBoxplotProps extends BaseProps {
   yAxisLabel?: string;          // Y-axis label (rendered vertically, centered)
   showOutliers?: boolean;       // Show outlier markers (default: true)
   whiskerRule?: 'iqr' | 'minmax'; // Whisker calculation (default: 'iqr')
+  selectable?: boolean;         // Enable click selection (default: false)
+  onSelect?: (event: BoxplotSelectEvent) => void; // Selection callback
 }
 ```
 
@@ -171,18 +173,73 @@ Outliers: 900.0
 
 ---
 
-## 6. Programmatic API
+## 6. Selection
+
+### Click Selection
+
+When `selectable="true"`, clicking a group toggles its selection (reverse video highlight). Clicking outside any group clears the selection. Uses `_groupBounds` for hit testing via `handleClick()`.
+
+```typescript
+export interface BoxplotSelectEvent {
+  type: 'select';
+  groupIndex: number;
+  label: string;
+  stats: BoxplotStats;
+}
+```
+
+The `onSelect` callback fires on every click regardless of `selectable` — `selectable` only controls the visual highlight state.
+
+### Visual Feedback
+
+Selected groups render all cells (box, whiskers, outliers, label) with `reverse: true`.
+
+---
+
+## 7. Text Selection & Copy
+
+Implements `TextSelectable` and `SelectableTextProvider` for clipboard support (Alt+N / Alt+C).
+
+Mouse-drag text selection over the component copies selected groups as JSON:
+
+```json
+[
+  {
+    "label": "USE",
+    "values": [12, 14, 15, ...],
+    "stats": {"min": 12, "q1": 16, "median": 20, "q3": 25, "max": 78}
+  }
+]
+```
+
+Selection highlight is clamped to the plot area (excludes title row and bottom axis labels) via `getSelectionHighlightBounds()`.
+
+### Clipboard Toast
+
+`getClipboardDescription()` provides a human-readable toast message instead of the default "N chars":
+
+```
+Copied 3 groups (USE, USW, EUW) to clipboard
+```
+
+---
+
+## 8. Programmatic API
 
 ```typescript
 // Getters/setters
 boxplot.getGroups(): BoxplotGroup[]
 boxplot.setGroups(groups: BoxplotGroup[]): void  // clears cached stats
 boxplot.getStats(): BoxplotStats[]               // computes if needed
+
+// Selection
+boxplot.getSelectedGroups(): Set<number>
+boxplot.setSelectedGroups(indices: Set<number>): void
 ```
 
 ---
 
-## 7. Example Usage
+## 9. Example Usage
 
 ### Attribute-based (in .melker)
 
@@ -190,6 +247,7 @@ boxplot.getStats(): BoxplotStats[]               // computes if needed
 <data-boxplot
   title="Response Times"
   tooltip="auto"
+  selectable="true"
   groups='[
     {"label": "API", "values": [120, 150, 200, 300, 500, 900]},
     {"label": "DB",  "values": [50, 70, 90, 120, 200]}
@@ -235,7 +293,7 @@ $melker.render();
 
 ---
 
-## 8. Files
+## 10. Files
 
 | File                                              | Role                     |
 |---------------------------------------------------|--------------------------|

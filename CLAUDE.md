@@ -54,6 +54,7 @@ New to Melker? Read in this order:
 | File browser                                      | [file-browser-architecture.md](agent_docs/file-browser-architecture.md)        |
 | Data table                                        | [data-table.md](agent_docs/data-table.md)                                      |
 | Data bars (charts)                                | [data-bars.md](agent_docs/data-bars.md)                                        |
+| Data boxplot                                      | [data-boxplot-architecture.md](agent_docs/data-boxplot-architecture.md)        |
 | Data heatmap                                      | [data-heatmap-architecture.md](agent_docs/data-heatmap-architecture.md)        |
 | Data tree                                         | [data-tree-architecture.md](agent_docs/data-tree-architecture.md)              |
 | Split pane                                        | [split-pane-architecture.md](agent_docs/split-pane-architecture.md)            |

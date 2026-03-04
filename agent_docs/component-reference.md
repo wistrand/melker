@@ -5,7 +5,7 @@
 - **Layout**: `container` (flexbox, scrollable), `tabs`/`tab`, `split-pane`, `dialog` (modal, draggable), `separator`
 - **Text & Input**: `text`, `input`, `textarea`, `slider`, `checkbox`, `radio`, `button`
 - **Declarative**: `command` (keyboard shortcut binding — non-visual, focus-scoped or global)
-- **Data**: `data-table` (virtual-scrolled rows), `table` (HTML-style), `data-tree` (expandable hierarchy)
+- **Data**: `data-table` (virtual-scrolled rows), `table` (HTML-style), `data-tree` (expandable hierarchy), `data-bars` (bar charts), `data-heatmap` (heatmap grid), `data-boxplot` (box-and-whisker plots)
 - **Dropdowns**: `combobox` (type-to-filter), `select` (picker), `autocomplete` (async search), `command-palette` (Ctrl+K, draggable)
 - **Graphics**: `canvas` (pixel drawing, shaders), `img` (PNG/JPEG/GIF/WebP), `video` (FFmpeg playback)
 - **Visualization**: `progress`, `spinner`, `segment-display` (LCD digits), `graph` (node/edge diagrams), `connector` (graph edges)
@@ -2031,6 +2031,7 @@ See [`examples/basics/command-test.melker`](../examples/basics/command-test.melk
 - [file-browser-architecture.md](file-browser-architecture.md) — File browser internals
 - [data-table.md](data-table.md) — Data table component
 - [data-bars.md](data-bars.md) — Bar chart components
+- [data-boxplot-architecture.md](data-boxplot-architecture.md) — Box-and-whisker plots
 - [data-heatmap-architecture.md](data-heatmap-architecture.md) — Heatmap with isolines
 - [data-tree-architecture.md](data-tree-architecture.md) — Tree view component
 - [spinner-architecture.md](spinner-architecture.md) — Spinner component internals

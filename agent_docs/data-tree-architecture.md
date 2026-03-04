@@ -336,7 +336,7 @@ For multi-column header clicks: could support sorting by that column (future).
 
 ## Text Selection
 
-`getSelectableText()` returns indented plain text:
+`getSelectableText()` returns indented plain text (copy via Alt+C / Alt+N):
 
 ```
 src
@@ -350,6 +350,8 @@ tests
   button.test.ts
 README.md
 ```
+
+**Clipboard toast**: `getClipboardDescription()` provides a human-readable message, e.g. `"Copied 12 nodes to clipboard"` instead of the default character count.
 
 ## Inline JSON Example
 

@@ -226,6 +226,7 @@ The `data-bars` component supports text selection. When you select bars with the
 - **Vertical bars**: Selection uses X coordinates (column-based selection)
 - Only selected entries are included in `bars` and `labels`
 - Full `series` definitions are always included
+- **Clipboard toast**: `getClipboardDescription()` provides a human-readable message, e.g. `"Copied 3 bars (Q1, Q2, Q3) to clipboard"` instead of the default character count
 
 ---
 
@@ -268,6 +269,7 @@ export class DataBarsElement extends Element implements
   isTextSelectable(): boolean;
   getSelectableText(selectionBounds?: SelectionBounds): string;
   getSelectionHighlightBounds(startX, endX, startY?, endY?): { startX, endX, startY?, endY? } | undefined;
+  getClipboardDescription(selectionBounds?: SelectionBounds): string | undefined;
 
   // Public API
   getValue(): DataBarsData;

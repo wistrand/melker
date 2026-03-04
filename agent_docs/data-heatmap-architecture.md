@@ -425,7 +425,7 @@ interface HeatmapSelectEvent {
 
 ## 9. Text Selection
 
-Supports copying selected region as JSON via Alt+C:
+Supports copying selected region as JSON via Alt+C / Alt+N:
 
 ```json
 {
@@ -434,6 +434,8 @@ Supports copying selected region as JSON via Alt+C:
   "colLabels": ["X", "Y"]
 }
 ```
+
+**Clipboard toast**: `getClipboardDescription()` provides a human-readable message, e.g. `"Copied 6x4 cells to clipboard"` instead of the default character count.
 
 ---
 

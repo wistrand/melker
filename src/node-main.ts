@@ -308,6 +308,8 @@ export async function main(): Promise<void> {
 
     denoFlagsLabel: 'Node permission flags:',
     showPolicyFlagsLabel: 'Node permission flags:',
+    sandboxCaveat: 'Note: Node.js sandbox is coarser than Deno -- net and run are\n'
+      + 'all-or-nothing, env/sys filtering unavailable, no deny flags.',
 
     handleVersion: () => {
       console.log(`Melker ${melkerVersion()}`);

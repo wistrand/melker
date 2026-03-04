@@ -358,7 +358,8 @@ export function formatOverrides(overrides: PermissionOverrides): string[] {
 export async function showApprovalPrompt(
   url: string,
   policy: MelkerPolicy,
-  overrides?: PermissionOverrides
+  overrides?: PermissionOverrides,
+  sandboxCaveat?: string,
 ): Promise<boolean> {
   // Check if stdin is a TTY - if not, we can't prompt
   if (!stdin.isTerminal()) {
@@ -400,6 +401,10 @@ export async function showApprovalPrompt(
     for (const line of permLines) {
       console.log(line);
     }
+  }
+
+  if (sandboxCaveat) {
+    console.log(`\n${sandboxCaveat}`);
   }
 
   // Show CLI overrides if present

@@ -84,8 +84,9 @@ export interface CliRuntime {
   handleUpgrade(): Promise<void>;
 
   // Display labels
-  denoFlagsLabel: string;            // "Deno flags:" vs "Deno flags (informational):"
-  showPolicyFlagsLabel: string;      // "Deno permission flags:" vs "...not enforced on Node"
+  denoFlagsLabel: string;            // "Deno flags:" vs "Node permission flags:"
+  showPolicyFlagsLabel: string;      // "Deno permission flags:" vs "Node permission flags:"
+  sandboxCaveat?: string;            // Node-only: note about coarser permission model
 
   // Optional hooks
   checkRuntimeVersion?(): void;      // Deno checks >= 2.5
@@ -208,6 +209,9 @@ async function handleShowApproval(rt: CliRuntime, args: string[]): Promise<never
     console.log(formatPolicy(record.policy, targetIsUrl ? lookupPath : undefined));
     console.log(`\n${rt.denoFlagsLabel}`);
     console.log(formatDenoFlags(record.denoFlags));
+    if (rt.sandboxCaveat) {
+      console.log(`\n${rt.sandboxCaveat}`);
+    }
   } else {
     console.log(`\nNo approval found for: ${target}\n`);
 
@@ -294,6 +298,9 @@ async function handleShowPolicy(
   const flags = rt.generateDenoFlags(effectivePolicy, appDir, urlHash, sourceUrl, activeDenies, overrides.deny, remote);
   rt.postProcessShowPolicyFlags?.(flags);
   console.log(formatDenoFlags(flags));
+  if (rt.sandboxCaveat) {
+    console.log(`\n${rt.sandboxCaveat}`);
+  }
   rt.exit(0);
 }
 
@@ -336,7 +343,7 @@ async function handleRemoteFile(
 
   if (!isApproved) {
     const promptOverrides = getPermissionOverrides(rt.config.get());
-    const approved = await showApprovalPrompt(filepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined);
+    const approved = await showApprovalPrompt(filepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined, rt.sandboxCaveat);
     if (!approved) {
       console.log('\nPermission denied. Exiting.');
       rt.exit(0);
@@ -377,7 +384,7 @@ async function handleLocalFile(
 
   if (!isApproved) {
     const promptOverrides = getPermissionOverrides(rt.config.get());
-    const approved = await showApprovalPrompt(absoluteFilepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined);
+    const approved = await showApprovalPrompt(absoluteFilepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined, rt.sandboxCaveat);
     if (!approved) {
       console.log('\nPermission denied. Exiting.');
       rt.exit(0);

@@ -4,7 +4,7 @@
 import { Document } from './document.ts';
 import { DualBuffer } from './buffer.ts';
 import { RenderingEngine } from './rendering.ts';
-import { Element, type TextSelection, type Bounds, isDraggable, type Draggable, hasShaderMethods } from './types.ts';
+import { Element, type TextSelection, type Bounds, isDraggable, type Draggable, hasShaderMethods, hasSelectableText } from './types.ts';
 import { clampToBounds } from './geometry.ts';
 import {
   EventManager,
@@ -1065,6 +1065,24 @@ export class TextSelectionHandler {
   }
 
   /**
+   * Get a custom clipboard description from the selected component, if available.
+   */
+  private _getClipboardDescription(): string | undefined {
+    const { componentId, start, end, componentBounds } = this._textSelection;
+    if (!componentId) return undefined;
+    const element = this._deps.document.getElementById(componentId);
+    if (!element || !hasSelectableText(element) || !element.getClipboardDescription) return undefined;
+    if (componentBounds) {
+      const x1 = Math.min(start.x, end.x) - componentBounds.x;
+      const x2 = Math.max(start.x, end.x) - componentBounds.x;
+      const y1 = Math.min(start.y, end.y) - componentBounds.y;
+      const y2 = Math.max(start.y, end.y) - componentBounds.y;
+      return element.getClipboardDescription({ startX: x1, endX: x2, startY: y1, endY: y2 });
+    }
+    return element.getClipboardDescription();
+  }
+
+  /**
    * Copy the current selection to system clipboard
    * Supports Linux (X11/Wayland), macOS, and WSL2
    */
@@ -1112,7 +1130,8 @@ export class TextSelectionHandler {
         const status = await child.status;
         if (status.success) {
           logger.info("copied " + text.length + " chars to clipboard using " + cmd);
-          getToastManager().show(`Copied ${text.length} chars to clipboard`, { type: 'success', duration: 2000 });
+          const description = this._getClipboardDescription() ?? `${text.length} chars`;
+          getToastManager().show(`Copied ${description} to clipboard`, { type: 'success', duration: 2000 });
           return; // Success
         }
       } catch (e) {

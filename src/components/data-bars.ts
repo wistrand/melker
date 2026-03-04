@@ -980,6 +980,45 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     return JSON.stringify(output, null, 2);
   }
 
+  getClipboardDescription(selectionBounds?: SelectionBounds): string | undefined {
+    const { bars, labels } = this.props;
+    if (!bars || bars.length === 0 || !this._elementBounds) return undefined;
+
+    const orientation = this._getOrientation();
+    const selectedEntryIndices = new Set<number>();
+
+    for (const [key, b] of this._barBounds) {
+      const [entryIdx] = key.split('-').map(Number);
+      const relStartX = b.x - this._elementBounds.x;
+      const relEndX = relStartX + b.width - 1;
+      const relStartY = b.y - this._elementBounds.y;
+      const relEndY = relStartY + b.height - 1;
+
+      let overlaps = true;
+      if (selectionBounds) {
+        const xOverlaps = relStartX <= selectionBounds.endX && relEndX >= selectionBounds.startX;
+        if (orientation === 'horizontal') {
+          const yOverlaps = selectionBounds.startY !== undefined && selectionBounds.endY !== undefined
+            ? (relStartY <= selectionBounds.endY && relEndY >= selectionBounds.startY) : true;
+          overlaps = xOverlaps && yOverlaps;
+        } else {
+          overlaps = xOverlaps;
+        }
+      }
+      if (overlaps) selectedEntryIndices.add(entryIdx);
+    }
+
+    if (selectedEntryIndices.size === 0) return undefined;
+
+    const sorted = [...selectedEntryIndices].sort((a, b) => a - b);
+    const entryLabels = labels ? sorted.map(i => labels[i]).filter(Boolean) : [];
+    const count = sorted.length;
+    if (entryLabels.length > 0) {
+      return `${count} bar${count !== 1 ? 's' : ''} (${entryLabels.join(', ')})`;
+    }
+    return `${count} bar${count !== 1 ? 's' : ''}`;
+  }
+
   /**
    * Get aligned selection highlight bounds that snap to bar boundaries
    */

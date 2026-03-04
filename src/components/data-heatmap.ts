@@ -1079,6 +1079,37 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     return JSON.stringify(output, null, 2);
   }
 
+  getClipboardDescription(selectionBounds?: SelectionBounds): string | undefined {
+    const { grid } = this.props;
+    if (!grid || grid.length === 0 || !this._elementBounds) return undefined;
+
+    const selectedRows = new Set<number>();
+    const selectedCols = new Set<number>();
+
+    for (const [key, b] of this._cellBounds) {
+      const [row, col] = key.split('-').map(Number);
+      const relStartX = b.x - this._elementBounds.x;
+      const relEndX = relStartX + b.width - 1;
+      const relStartY = b.y - this._elementBounds.y;
+      const relEndY = relStartY + b.height - 1;
+
+      let overlaps = true;
+      if (selectionBounds) {
+        const xOverlaps = relStartX <= selectionBounds.endX && relEndX >= selectionBounds.startX;
+        const yOverlaps = selectionBounds.startY !== undefined && selectionBounds.endY !== undefined
+          ? (relStartY <= selectionBounds.endY && relEndY >= selectionBounds.startY) : true;
+        overlaps = xOverlaps && yOverlaps;
+      }
+      if (overlaps) {
+        selectedRows.add(row);
+        selectedCols.add(col);
+      }
+    }
+
+    if (selectedRows.size === 0 || selectedCols.size === 0) return undefined;
+    return `${selectedRows.size}x${selectedCols.size} cells`;
+  }
+
   // ===== Getters and Setters =====
 
   getValue(): HeatmapGrid {

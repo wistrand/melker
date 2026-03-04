@@ -487,6 +487,13 @@ export interface SelectableTextProvider {
    * @returns Snapped bounds, or undefined to use default highlighting
    */
   getSelectionHighlightBounds?(startX: number, endX: number, startY?: number, endY?: number): { startX: number; endX: number; startY?: number; endY?: number } | undefined;
+
+  /**
+   * Get a human-readable description for the clipboard toast (e.g., "3 groups (USE, USW, EUW)")
+   * Falls back to "N chars" if not provided.
+   * @param selectionBounds - Optional bounds of the visual selection relative to element
+   */
+  getClipboardDescription?(selectionBounds?: SelectionBounds): string | undefined;
 }
 
 // Draggable interface for elements that handle mouse drag (scrollbars, resizers, etc.)

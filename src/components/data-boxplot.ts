@@ -242,33 +242,36 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
     return true;
   }
 
+  private _getSelectedIndices(selectionBounds?: SelectionBounds): number[] {
+    const { groups } = this.props;
+    if (!groups || groups.length === 0) return [];
+
+    const bounds = this.getBounds();
+    if (!bounds) return [];
+
+    const indices = new Set<number>();
+    for (const [gi, b] of this._groupBounds) {
+      const relStartX = b.x - bounds.x;
+      const relEndX = relStartX + b.width - 1;
+      if (selectionBounds) {
+        if (relStartX <= selectionBounds.endX && relEndX >= selectionBounds.startX) {
+          indices.add(gi);
+        }
+      } else {
+        indices.add(gi);
+      }
+    }
+    return [...indices].sort((a, b) => a - b);
+  }
+
   getSelectableText(selectionBounds?: SelectionBounds): string {
     const { groups } = this.props;
     if (!groups || groups.length === 0) return '';
 
     this._ensureStats();
-    const bounds = this.getBounds();
-    if (!bounds) return '';
+    const sorted = this._getSelectedIndices(selectionBounds);
+    if (sorted.length === 0) return '';
 
-    // Find which groups overlap the selection
-    const selectedIndices = new Set<number>();
-
-    for (const [gi, b] of this._groupBounds) {
-      const relStartX = b.x - bounds.x;
-      const relEndX = relStartX + b.width - 1;
-
-      if (selectionBounds) {
-        if (relStartX <= selectionBounds.endX && relEndX >= selectionBounds.startX) {
-          selectedIndices.add(gi);
-        }
-      } else {
-        selectedIndices.add(gi);
-      }
-    }
-
-    if (selectedIndices.size === 0) return '';
-
-    const sorted = [...selectedIndices].sort((a, b) => a - b);
     const output = sorted.map(i => {
       const g = groups[i];
       const s = this._computedStats[i];
@@ -280,6 +283,17 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
     });
 
     return JSON.stringify(output, null, 2);
+  }
+
+  getClipboardDescription(selectionBounds?: SelectionBounds): string | undefined {
+    const { groups } = this.props;
+    if (!groups || groups.length === 0) return undefined;
+
+    const sorted = this._getSelectedIndices(selectionBounds);
+    if (sorted.length === 0) return undefined;
+
+    const labels = sorted.map(i => groups[i]?.label).filter(Boolean);
+    return `${sorted.length} group${sorted.length !== 1 ? 's' : ''} (${labels.join(', ')})`;
   }
 
   getSelectionHighlightBounds(startX: number, endX: number, _startY?: number, _endY?: number): { startX: number; endX: number; startY?: number; endY?: number } | undefined {

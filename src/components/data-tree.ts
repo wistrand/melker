@@ -1455,6 +1455,12 @@ export class DataTreeElement extends Element
 
     return lines.join('\n');
   }
+
+  getClipboardDescription(_selectionBounds?: SelectionBounds): string | undefined {
+    const count = this._flatVisibleNodes.length;
+    if (count === 0) return undefined;
+    return `${count} node${count !== 1 ? 's' : ''}`;
+  }
 }
 
 // ===== Component Schema =====

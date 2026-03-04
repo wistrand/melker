@@ -120,7 +120,7 @@ New to Melker? Read in this order:
 
 ## Technology Stack
 
-- **Runtime**: Deno 2.5+ (required, Node.js/Bun not supported)
+- **Runtime**: Deno 2.5+ (primary) or Node.js 25+ (experimental, `npm install -g @melker/melker`, binary: `melker-node`)
 - **Package**: @melker/melker
 - **Target**: ANSI-compatible terminals
 

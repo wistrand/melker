@@ -2,7 +2,7 @@
 name: creating-melker-apps
 description: Creates Terminal UI applications using Melker's .melker file format. Use when the user asks to build terminal apps, TUI interfaces, create .melker files, or mentions Melker components like containers, buttons, dialogs, tabs, canvas, or forms.
 license: MIT
-compatibility: Requires Deno 2.5+, ANSI-compatible terminal
+compatibility: Requires Deno 2.5+ or Node.js 25+ (experimental), ANSI-compatible terminal
 metadata:
   author: wistrand
   website: https://melker.sh
@@ -10,7 +10,7 @@ metadata:
 
 # Creating Melker Apps
 
-Melker Engine is a Deno library for building rich Terminal UI interfaces using an HTML-inspired document model. Apps are written in `.melker` files (UTF-8 encoded) with XML-like syntax.
+Melker Engine is a Deno library for building rich Terminal UI interfaces using an HTML-inspired document model. Apps are written in `.melker` files (UTF-8 encoded) with XML-like syntax. **Requires Deno 2.5+** or **Node.js 25+** (experimental, install via `npm install -g @melker/melker`, binary is `melker-node`).
 
 ## Installation
 

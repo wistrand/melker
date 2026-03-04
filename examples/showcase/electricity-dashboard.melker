@@ -1,0 +1,475 @@
+<melker>
+    <title>Electricity Spot Prices</title>
+
+    <policy>
+        {
+        "name": "electricity-dashboard",
+        "description": "European electricity spot price dashboard",
+        "permissions": {
+        "net": ["mainnet.srcful.dev"]
+        }
+        }
+    </policy>
+
+    <help>
+        ## European Electricity Spot Prices
+
+        Live electricity spot prices from European market areas via Sourceful Energy API.
+
+        | Key        | Action                    |
+        |------------|---------------------------|
+        | Tab        | Switch between panels     |
+        | Arrow keys | Navigate table / boxplot  |
+        | Enter      | View area details         |
+        | R          | Refresh data              |
+        | F12        | Dev tools                 |
+
+        Data refreshes every 60 minutes. Prices in EUR/MWh at 15-min resolution.
+    </help>
+
+    <style>
+        .header {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+        .footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+        .panel-label {
+        font-weight: bold;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+    </style>
+
+    <container style="display: flex; flex-direction: column; height: 100%; width: 100%">
+
+        <!-- Header -->
+        <container class="header">
+            <container style="display: flex; flex-direction: row; gap: 2; align-items: center">
+                <text style="font-weight: bold;">EU Electricity Spot Prices</text>
+                <select id="presetSelect" onChange="$app.changePreset(event)" style="width: 24" selectedValue="nordic">
+                    <option value="nordic">Nordic</option>
+                    <option value="central">Central Europe</option>
+                    <option value="southern">Southern Europe</option>
+                    <option value="western">Western Europe</option>
+                    <option value="eastern">Eastern Europe</option>
+                    <option value="all">All regions</option>
+                </select>
+                <select id="periodSelect" onChange="$app.changePeriod(event)" style="width: 16" selectedValue="2">
+                    <option value="1">1 day</option>
+                    <option value="2">2 days</option>
+                    <option value="7">7 days</option>
+                    <option value="14">14 days</option>
+                    <option value="30">30 days</option>
+                </select>
+            </container>
+            <text id="status">Loading...</text>
+        </container>
+
+        <!-- Main content -->
+        <split-pane style="width: fill; flex: 1; direction: horizontal;" sizes="3,2">
+
+            <!-- Left: boxplot + sparkline -->
+            <container style="display: flex; flex-direction: column; height: fill">
+
+                <!-- Price distribution boxplot -->
+                <data-boxplot
+                        id="priceBoxplot"
+                        title="Price Distribution (EUR/MWh)"
+                        yAxisLabel="EUR"
+                        tooltip="auto"
+                        selectable="true"
+                        onSelect="$app.selectArea(event)"
+                        groups='[]'
+                        style="flex: 1; width: fill;"
+                />
+
+                <!-- 24h price curve sparkline -->
+                <container style="flex-grow: 0; flex-shrink: 0; height: 7">
+                    <text id="curveLabel" class="panel-label">24h price curve</text>
+                    <data-bars
+                            id="priceCurve"
+                            series='[{"name": "EUR/MWh"}]'
+                            bars='[]'
+                            labels='[]'
+                            showValues="false"
+                            showLabels="true"
+                            tooltip="auto"
+                            onTooltip="$app.curveTooltip(event)"
+                            style="orientation: vertical; height: 6; gap: 0; margin: 1;"
+                    />
+                </container>
+            </container>
+
+            <!-- Right: table (top) + summary (bottom) -->
+            <split-pane style="width: fill; height: fill; direction: vertical" sizes="2,1">
+
+                <!-- Stats table -->
+                <data-table
+                        id="statsTable"
+                        style="width: fill; flex: 1;"
+                        selectable="single"
+                        sortColumn="2"
+                        sortDirection="desc"
+                        tooltip="auto"
+                        onActivate="$app.showAreaDetails(event)"
+                        onChange="$app.tableSelectArea(event)"
+                >
+                    {
+                    "columns": [
+                    { "header": "Area", "width": 6 },
+                    { "header": "Current", "width": 10, "align": "right" },
+                    { "header": "Avg", "width": 10, "align": "right" },
+                    { "header": "Min", "width": 10, "align": "right" },
+                    { "header": "Max", "width": 10, "align": "right" },
+                    { "header": "Spread", "width": 10, "align": "right" }
+                    ]
+                    }
+                </data-table>
+
+                <!-- Summary + average bars -->
+                <container style="display: flex; flex-direction: column; height: fill; padding: 0 1; gap: 1; overflow-y: scroll">
+
+                    <container style="padding: 0 1; flex-shrink: 0">
+                        <text style="font-weight: bold;">Summary</text>
+                        <text id="cheapestArea">Cheapest: --</text>
+                        <text id="expensiveArea">Most expensive: --</text>
+                        <text id="avgPrice">Average: --</text>
+                        <text id="priceRange">Range: --</text>
+                        <text id="dataPoints">Data points: --</text>
+                    </container>
+
+                    <container style="padding: 0 1; flex: 1">
+                        <text style="font-weight: bold;">Average price by area</text>
+                        <data-bars
+                                id="avgBars"
+                                series='[{"name": "Avg EUR/MWh"}]'
+                                bars='[]'
+                                labels='[]'
+                                showValues="true"
+                                tooltip="auto"
+                                style="bar-width: 1; gap: 0"
+                        />
+                    </container>
+
+                </container>
+
+            </split-pane>
+
+        </split-pane>
+
+        <command key="r" label="Refresh Data" global onExecute="$app.refresh()" />
+
+        <!-- Footer -->
+        <container class="footer">
+            <text>Tab: switch panels | Enter: details | R: refresh | Data: Sourceful Energy</text>
+            <text id="lastUpdate">--</text>
+        </container>
+    </container>
+
+    <script type="typescript">
+      // Types
+      interface PricePoint {
+        datetime: string;
+        price: number;
+      }
+
+      interface AreaData {
+        area: string;
+        prices: PricePoint[];
+        current: number;
+        avg: number;
+        min: number;
+        max: number;
+        spread: number;
+        values: number[];
+      }
+
+      // Presets
+      const PRESETS: Record<string, string[]> = {
+        nordic:   ['SE1','SE2','SE3','SE4','NO1','NO2','NO5','FI','DK1','DK2'],
+        central:  ['DE','AT','CH','CZ','PL','NL','BE'],
+        southern: ['ES','FR','PT','GR','HU','HR','RO'],
+        western:  ['DE','FR','NL','BE','AT','CH','LU'],
+        eastern:  ['PL','CZ','HU','RO','BG','SK','HR'],
+        all:      ['SE1','SE2','SE3','SE4','NO1','NO2','NO5','FI','DK1','DK2',
+                   'DE','AT','CH','CZ','PL','NL','BE','FR','ES','PT',
+                   'GR','HU','HR','RO','BG','SK','LU','EE','LV','LT'],
+      };
+
+      const PRESET_LABELS: Record<string, string> = {
+        nordic: 'Nordic',
+        central: 'Central Europe',
+        southern: 'Southern Europe',
+        western: 'Western Europe',
+        eastern: 'Eastern Europe',
+        all: 'All regions',
+      };
+
+      let currentPreset = 'nordic';
+      let currentDays = 2;
+      let areaDataList: AreaData[] = [];
+      let selectedArea: string | null = null;
+      let curvePoints: PricePoint[] = [];
+      let refreshTimer: number | null = null;
+
+      // Fetch prices for a single area
+      async function fetchAreaPrices(area: string): Promise<AreaData | null> {
+        try {
+          const url = 'https://mainnet.srcful.dev/price/electricity/' + area + '?days=' + currentDays + '&currency=EUR';
+          const res = await fetch(url);
+          if (res.status === 429) {
+            const retryAfter = res.headers.get('retry-after');
+            $melker.toast.show('Rate limited' + (retryAfter ? ', retry after ' + retryAfter + 's' : ''), { type: 'warning' });
+            return null;
+          }
+          if (!res.ok) return null;
+          const json = await res.json();
+          const prices: PricePoint[] = json.prices || [];
+          if (prices.length === 0) return null;
+
+          const values = prices.map((p: PricePoint) => p.price);
+          const current = values[values.length - 1];
+          const sum = values.reduce((a: number, b: number) => a + b, 0);
+          const avg = sum / values.length;
+          const min = Math.min(...values);
+          const max = Math.max(...values);
+          const spread = max - min;
+
+          return { area, prices, current, avg, min, max, spread, values };
+        } catch {
+          return null;
+        }
+      }
+
+      // Fetch all areas in parallel
+      async function fetchAllAreas(): Promise<AreaData[]> {
+        const areas = PRESETS[currentPreset] || PRESETS.nordic;
+        const results = await Promise.all(areas.map(a => fetchAreaPrices(a)));
+        return results.filter((r): r is AreaData => r !== null);
+      }
+
+      // Update the 24h price curve for a given area
+      function updatePriceCurve(area: string): void {
+        const data = areaDataList.find(d => d.area === area);
+        if (!data) return;
+
+        // Last 96 points (24h at 15-min resolution)
+        curvePoints = data.prices.slice(-96);
+        const curve = $melker.getElementById('priceCurve');
+        if (curve) {
+          curve.setValue(curvePoints.map(p => [p.price]));
+          // Show hour labels every 4 points (hourly) but only every 3h to avoid clutter
+          const labels = curvePoints.map((p, i) => {
+            if (i % 12 === 0) return p.datetime.slice(11, 16);
+            return '';
+          });
+          curve.props.labels = labels;
+        }
+
+        const label = $melker.getElementById('curveLabel');
+        if (label) label.setValue('24h price curve - ' + area);
+      }
+
+      // Format price to fixed decimal
+      function fmtPrice(n: number): string {
+        return n.toFixed(2);
+      }
+
+      // Format datetime string to short time
+      function fmtTime(dt: string): string {
+        return dt.slice(11, 16);
+      }
+
+      // Update all UI components
+      function updateUI(): void {
+        if (areaDataList.length === 0) return;
+
+        // Boxplot groups
+        const boxplot = $melker.getElementById('priceBoxplot');
+        if (boxplot) {
+          boxplot.setGroups(areaDataList.map(a => ({ label: a.area, values: a.values })));
+        }
+
+        // Stats table
+        const table = $melker.getElementById('statsTable');
+        if (table) {
+          const rows = areaDataList.map(a => [
+            a.area,
+            fmtPrice(a.current),
+            fmtPrice(a.avg),
+            fmtPrice(a.min),
+            fmtPrice(a.max),
+            fmtPrice(a.spread),
+          ]);
+          table.setValue(rows);
+          table.props.footer = [['', '', areaDataList.length + ' areas', '', '', '']];
+        }
+
+        // Summary stats
+        const sorted = [...areaDataList].sort((a, b) => a.avg - b.avg);
+        const cheapest = sorted[0];
+        const expensive = sorted[sorted.length - 1];
+        const allAvg = areaDataList.reduce((s, a) => s + a.avg, 0) / areaDataList.length;
+        const allMin = Math.min(...areaDataList.map(a => a.min));
+        const allMax = Math.max(...areaDataList.map(a => a.max));
+        const totalPoints = areaDataList.reduce((s, a) => s + a.values.length, 0);
+
+        const cheapEl = $melker.getElementById('cheapestArea');
+        if (cheapEl) cheapEl.setValue('Cheapest: ' + cheapest.area + ' (' + fmtPrice(cheapest.avg) + ' avg)');
+
+        const expEl = $melker.getElementById('expensiveArea');
+        if (expEl) expEl.setValue('Most expensive: ' + expensive.area + ' (' + fmtPrice(expensive.avg) + ' avg)');
+
+        const avgEl = $melker.getElementById('avgPrice');
+        if (avgEl) avgEl.setValue('Average: ' + fmtPrice(allAvg) + ' EUR/MWh');
+
+        const rangeEl = $melker.getElementById('priceRange');
+        if (rangeEl) rangeEl.setValue('Range: ' + fmtPrice(allMin) + ' - ' + fmtPrice(allMax) + ' EUR/MWh');
+
+        const pointsEl = $melker.getElementById('dataPoints');
+        if (pointsEl) pointsEl.setValue('Data points: ' + totalPoints);
+
+        // Average price bars (sorted ascending)
+        const avgBars = $melker.getElementById('avgBars');
+        if (avgBars) {
+          avgBars.setValue(sorted.map(a => [a.avg]));
+          avgBars.props.labels = sorted.map(a => a.area);
+        }
+
+        // Price curve for selected or first area
+        const curveArea = selectedArea || areaDataList[0].area;
+        updatePriceCurve(curveArea);
+
+        // Last update time
+        const lastEl = $melker.getElementById('lastUpdate');
+        if (lastEl) {
+          const now = new Date();
+          const h = now.getHours().toString().padStart(2, '0');
+          const m = now.getMinutes().toString().padStart(2, '0');
+          const s = now.getSeconds().toString().padStart(2, '0');
+          lastEl.setValue('Updated ' + h + ':' + m + ':' + s);
+        }
+      }
+
+      // Main refresh
+      export async function refresh(): Promise<void> {
+        const statusEl = $melker.getElementById('status');
+        try {
+          if (statusEl) statusEl.setValue('Fetching ' + PRESET_LABELS[currentPreset] + '...');
+          areaDataList = await fetchAllAreas();
+          if (areaDataList.length === 0) {
+            if (statusEl) statusEl.setValue('No data received');
+            $melker.toast.show('No price data available for selected areas', { type: 'warning' });
+            return;
+          }
+          updateUI();
+          if (statusEl) statusEl.setValue(areaDataList.length + ' areas - ' + PRESET_LABELS[currentPreset]);
+        } catch (e) {
+          if (statusEl) statusEl.setValue('Error: ' + e.message);
+          $melker.toast.show('Failed to fetch data: ' + e.message, { type: 'error' });
+        }
+      }
+
+      // Boxplot selection handler
+      export function selectArea(event: { groupIndex: number; label: string }): void {
+        selectedArea = event.label;
+        updatePriceCurve(selectedArea);
+
+        const statusEl = $melker.getElementById('status');
+        const data = areaDataList.find(d => d.area === selectedArea);
+        if (statusEl && data) {
+          statusEl.setValue(data.area + ': ' + fmtPrice(data.current) + ' EUR/MWh (current)');
+        }
+      }
+
+      // Table selection handler
+      export function tableSelectArea(event: { rowIndex: number; selectedRows: number[]; row?: (string | number)[] }): void {
+        if (event.selectedRows.length === 0) {
+          selectedArea = null;
+          const statusEl = $melker.getElementById('status');
+          if (statusEl) statusEl.setValue(areaDataList.length + ' areas - ' + PRESET_LABELS[currentPreset]);
+          return;
+        }
+        const area = event.row ? String(event.row[0]) : '';
+        if (area) {
+          selectedArea = area;
+          updatePriceCurve(area);
+          const statusEl = $melker.getElementById('status');
+          const data = areaDataList.find(d => d.area === area);
+          if (statusEl && data) {
+            statusEl.setValue(data.area + ': ' + fmtPrice(data.current) + ' EUR/MWh (current)');
+          }
+        }
+      }
+
+      // Table activate (Enter) - show details
+      export function showAreaDetails(event: { rowIndex: number; row: (string | number)[] }): void {
+        const area = String(event.row[0]);
+        const data = areaDataList.find(d => d.area === area);
+        if (!data) return;
+
+        const recentPrices = data.prices.slice(-4).map(
+          p => '  ' + fmtTime(p.datetime) + '  ' + fmtPrice(p.price)
+        ).join('\n');
+
+        $melker.alert(
+          'Area: ' + data.area + '\n\n' +
+          'Current:  ' + fmtPrice(data.current) + ' EUR/MWh\n' +
+          'Average:  ' + fmtPrice(data.avg) + ' EUR/MWh\n' +
+          'Minimum:  ' + fmtPrice(data.min) + ' EUR/MWh\n' +
+          'Maximum:  ' + fmtPrice(data.max) + ' EUR/MWh\n' +
+          'Spread:   ' + fmtPrice(data.spread) + ' EUR/MWh\n' +
+          'Points:   ' + data.values.length + '\n\n' +
+          'Recent prices:\n' + recentPrices
+        );
+      }
+
+      // Sparkline tooltip
+      export function curveTooltip(event: any): string | undefined {
+        if (!event.context) return undefined;
+        const p = curvePoints[event.context.barIndex];
+        if (!p) return undefined;
+        return '**' + fmtPrice(p.price) + ' EUR/MWh**\n' + p.datetime.slice(0, 16).replace('T', ' ');
+      }
+
+      // Change preset
+      export async function changePreset(event: { value: string }): Promise<void> {
+        currentPreset = event.value;
+        selectedArea = null;
+        await refresh();
+        $melker.render();
+      }
+
+      // Change time period
+      export async function changePeriod(event: { value: string }): Promise<void> {
+        currentDays = parseInt(event.value, 10);
+        selectedArea = null;
+        await refresh();
+        $melker.render();
+      }
+
+      // Auto-refresh timer
+      export function startAutoRefresh(): void {
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(async () => {
+          await refresh();
+          $melker.render();
+        }, 3600000); // 60 minutes
+      }
+    </script>
+
+    <script type="typescript" async="ready">
+      await $app.refresh();
+      $melker.render();
+      $app.startAutoRefresh();
+    </script>
+</melker>

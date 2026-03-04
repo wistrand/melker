@@ -695,8 +695,21 @@ export class TextSelectionHandler {
       hoveredElement.props.onMouseMove(mouseEvent);
     }
 
-    // Handle tooltip
-    this._handleTooltip(hoveredElement, event.x, event.y);
+    // Handle tooltip — suppress if mouse is over an active overlay (e.g. open dropdown)
+    // and the hovered element is NOT part of that overlay
+    let tooltipElement: Element | null | undefined = hoveredElement;
+    const overlaysForTooltip = this._deps.renderer.getOverlays();
+    for (let i = overlaysForTooltip.length - 1; i >= 0; i--) {
+      const overlay = overlaysForTooltip[i];
+      const hitBounds = overlay.hitTestBounds || overlay.bounds;
+      if (event.x >= hitBounds.x && event.x < hitBounds.x + hitBounds.width &&
+          event.y >= hitBounds.y && event.y < hitBounds.y + hitBounds.height) {
+        // Mouse is over an overlay — suppress tooltip from elements underneath
+        tooltipElement = null;
+        break;
+      }
+    }
+    this._handleTooltip(tooltipElement, event.x, event.y);
 
     if (this._isSelecting) {
       logger.debug('Mouse move during selection', {

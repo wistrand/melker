@@ -491,6 +491,7 @@ interface DataTableColumn {
 - **Scrolling**: Mouse wheel, scrollbar drag, keyboard (PageUp/Down, Home/End)
 - **Column resize**: Drag column borders in header; hover shows border indicator when `showColumnBorders` is off
 - **Events**: Always report original row indices (not sorted positions)
+- **Border color**: All borders render in `textMuted` theme color for a faded appearance
 
 ### When to Use data-table vs table
 
@@ -659,7 +660,7 @@ The `<data-tree>` component displays hierarchical data with expand/collapse, sel
 
 | Property          | Type        | Default | Description                          |
 |-------------------|-------------|---------|--------------------------------------|
-| `border-color`    | ColorInput  | inherit | Color for box border                 |
+| `border-color`    | ColorInput  | textMuted | Color for box border               |
 | `connector-color` | ColorInput  | gray    | Color for tree connector lines/icons |
 
 ### TreeNode Interface

@@ -89,7 +89,7 @@ interface DataTreeProps {
 
 | Property         | Type         | Default | Description                                       |
 |------------------|--------------|---------|---------------------------------------------------|
-| `border-color`   | `ColorInput` | inherit | Color for the box border (`┌─┐│└─┘`)             |
+| `border-color`   | `ColorInput` | textMuted | Color for the box border (`┌─┐│└─┘`)           |
 | `connector-color`| `ColorInput` | `gray`  | Color for tree connector lines (`│├└─`) and icons |
 
 On selected/focused rows, both border and connector colors revert to the base style so they blend with the selection highlight.

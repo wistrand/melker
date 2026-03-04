@@ -22,6 +22,7 @@ import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
 import { getBorderChars } from '../types.ts';
+import { getThemeColor } from '../theme.ts';
 import { parseJsonProps, parseInlineJsonData, boundsContain, isBwMode } from './utils/component-utils.ts';
 import { getUnicodeTier } from '../utils/terminal-detection.ts';
 
@@ -370,7 +371,7 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
     // Each boxplot is 3 cells wide + 1 gap
     const plotWidth = groups.length * 4 - 1;
     const titleRow = title ? 1 : 0;
-    const labelRow = 1; // bottom axis labels
+    const labelRow = 2; // bottom axis line + labels
 
     const width = yAxisWidth + plotWidth + 1;
     const height = titleRow + 12 + labelRow; // default 12 rows for plot area
@@ -422,7 +423,7 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
 
     // Layout regions
     const titleRow = title ? 1 : 0;
-    const labelRow = 1; // bottom axis labels
+    const labelRow = 2; // bottom axis line + labels
     const yAxisWidth = this._getYAxisWidth();
 
     const plotTop = bounds.y + titleRow;
@@ -457,11 +458,12 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
       }
     }
 
-    // Draw y-axis with ticks
+    // Draw y-axis with ticks (faded)
     const tickCount = Math.min(plotHeight, 6);
     const axisX = plotLeft - 1;
+    const axisStyle = { ...style, foreground: getThemeColor('textMuted'), dim: false };
     for (let i = 0; i < plotHeight; i++) {
-      buffer.currentBuffer.setCell(axisX, plotTop + i, { char: _bc.v, ...style });
+      buffer.currentBuffer.setCell(axisX, plotTop + i, { char: _bc.v, ...axisStyle });
     }
 
     for (let t = 0; t < tickCount; t++) {
@@ -471,16 +473,16 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
       const label = String(Math.round(val));
       const labelX = axisX - label.length - 1;
       if (labelX >= bounds.x) {
-        buffer.currentBuffer.setText(Math.max(bounds.x, labelX), row, label, style);
+        buffer.currentBuffer.setText(Math.max(bounds.x, labelX), row, label, axisStyle);
       }
-      buffer.currentBuffer.setCell(axisX, row, { char: _bc.rm, ...style });
+      buffer.currentBuffer.setCell(axisX, row, { char: _bc.rm, ...axisStyle });
     }
 
-    // Draw bottom axis line
+    // Draw bottom axis line (faded)
     const axisY = plotTop + plotHeight;
-    buffer.currentBuffer.setCell(axisX, axisY, { char: _bc.bl, ...style });
+    buffer.currentBuffer.setCell(axisX, axisY, { char: _bc.bl, ...axisStyle });
     for (let x = plotLeft; x < plotLeft + plotWidth && x < bounds.x + bounds.width; x++) {
-      buffer.currentBuffer.setCell(x, axisY, { char: _bc.h, ...style });
+      buffer.currentBuffer.setCell(x, axisY, { char: _bc.h, ...axisStyle });
     }
 
     // Draw each boxplot
@@ -565,9 +567,11 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
         buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.h, ...gs, bold: !bw });
         buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.h, ...gs, bold: !bw });
       } else if (rowMedian === boxTop) {
-        // Median at top edge — keep corners, nothing connects above
+        // Median at top edge — bold the top edge, preserve junction if whisker exists
         buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.tl, ...gs, bold: !bw });
-        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.h, ...gs, bold: !bw });
+        buffer.currentBuffer.setCell(cx + 1, boxTop, {
+          char: rowMax < boxTop ? _bc.bm : _bc.h, ...gs, bold: !bw,
+        });
         buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.tr, ...gs, bold: !bw });
       }
 
@@ -585,10 +589,12 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
           buffer.currentBuffer.setCell(cx + 2, boxBot, { char: _bc.br, ...gs });
         }
 
-        // Handle median at bottom edge — keep corners, nothing connects below
+        // Handle median at bottom edge — bold the bottom edge, preserve junction if whisker exists
         if (rowMedian === boxBot) {
           buffer.currentBuffer.setCell(cx, boxBot, { char: _bc.bl, ...gs, bold: !bw });
-          buffer.currentBuffer.setCell(cx + 1, boxBot, { char: _bc.h, ...gs, bold: !bw });
+          buffer.currentBuffer.setCell(cx + 1, boxBot, {
+            char: rowMin > boxBot ? _bc.tm : _bc.h, ...gs, bold: !bw,
+          });
           buffer.currentBuffer.setCell(cx + 2, boxBot, { char: _bc.br, ...gs, bold: !bw });
         }
       }
@@ -621,7 +627,7 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
       const label = group.label || '';
       const truncated = label.length > colWidth ? label.substring(0, colWidth) : label;
       const labelX = cx + Math.max(0, Math.floor((colWidth - truncated.length) / 2));
-      buffer.currentBuffer.setText(labelX, axisY + 1, truncated, selected ? gs : style);
+      buffer.currentBuffer.setText(labelX, axisY + 1, truncated, selected ? gs : axisStyle);
     }
   }
 

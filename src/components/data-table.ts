@@ -24,6 +24,7 @@ import { ViewportDualBuffer, createClipViewport } from '../viewport-buffer.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
+import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 import { renderScrollbar } from './scrollbar.ts';
 import { formatValue, truncateText, alignText, type CellValue, parseInlineJsonData, boundsContain } from './utils/component-utils.ts';
@@ -433,17 +434,19 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     x: number,
     y: number,
     style: Partial<Cell>,
-    totalWidth: number
+    totalWidth: number,
+    borderMutedStyle?: Partial<Cell>
   ): void {
     const { columns, showColumnBorders, sortColumn, sortDirection } = this.props;
     const borderStyle = this.props.border || 'thin';
     const chars = getBorderChars(borderStyle !== 'none' ? borderStyle : 'thin');
+    const bms = borderMutedStyle || style;
 
     this._headerCellBounds = [];
     this._columnBorderPositions = [];
 
     // Draw left border
-    buffer.currentBuffer.setCell(x, y, { char: chars.v, ...style });
+    buffer.currentBuffer.setCell(x, y, { char: chars.v, ...bms });
 
     let cellX = x + 1;
     for (let i = 0; i < columns.length; i++) {
@@ -473,7 +476,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
       // Column separator
       if (showColumnBorders) {
-        buffer.currentBuffer.setCell(cellX, y, { char: chars.v, ...style });
+        buffer.currentBuffer.setCell(cellX, y, { char: chars.v, ...bms });
         // Track border position for column resize (internal borders only)
         if (this.props.resizable && i < columns.length - 1) {
           this._columnBorderPositions.push({ columnIndex: i, x: cellX, y, height: 1 });
@@ -482,7 +485,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       } else if (i < columns.length - 1) {
         // Show border char when hovering over resize zone, otherwise invisible
         const sepChar = this._hoveredResizeColumn === i ? BORDER_CHARS.thin.v : EMPTY_CHAR;
-        buffer.currentBuffer.setCell(cellX, y, { char: sepChar, ...style });
+        buffer.currentBuffer.setCell(cellX, y, { char: sepChar, ...bms });
         // Track separator position for column resize (invisible hit zone)
         if (this.props.resizable) {
           this._columnBorderPositions.push({ columnIndex: i, x: cellX, y, height: 1 });
@@ -498,7 +501,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     }
 
     // Draw right border
-    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: chars.v, ...style });
+    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: chars.v, ...bms });
   }
 
   // Render data row
@@ -585,14 +588,16 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     y: number,
     rowData: CellValue[],
     style: Partial<Cell>,
-    totalWidth: number
+    totalWidth: number,
+    borderMutedStyle?: Partial<Cell>
   ): void {
     const { columns, showColumnBorders } = this.props;
     const borderStyle = this.props.border || 'thin';
     const chars = getBorderChars(borderStyle !== 'none' ? borderStyle : 'thin');
+    const bms = borderMutedStyle || style;
 
     // Draw left border
-    buffer.currentBuffer.setCell(x, y, { char: chars.v, ...style });
+    buffer.currentBuffer.setCell(x, y, { char: chars.v, ...bms });
 
     let cellX = x + 1;
     for (let colIndex = 0; colIndex < columns.length; colIndex++) {
@@ -611,7 +616,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
       // Column separator
       if (showColumnBorders) {
-        buffer.currentBuffer.setCell(cellX, y, { char: chars.v, ...style });
+        buffer.currentBuffer.setCell(cellX, y, { char: chars.v, ...bms });
         cellX++;
       } else if (colIndex < columns.length - 1) {
         buffer.currentBuffer.setCell(cellX, y, { char: EMPTY_CHAR, ...style });
@@ -626,7 +631,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     }
 
     // Draw right border
-    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: chars.v, ...style });
+    buffer.currentBuffer.setCell(x + totalWidth - 1, y, { char: chars.v, ...bms });
   }
 
   // Ensure row is visible (scroll if needed)
@@ -729,16 +734,17 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     }
 
     let y = bounds.y;
+    const borderCellStyle = { ...style, foreground: getThemeColor('textMuted') };
 
     // Draw top border
-    this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'top', style, totalWidth);
+    this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'top', borderCellStyle, totalWidth);
     y++;
 
     // Render header
     if (showHeader) {
-      this._renderHeaderRow(buffer as DualBuffer, bounds.x, y, style, totalWidth);
+      this._renderHeaderRow(buffer as DualBuffer, bounds.x, y, style, totalWidth, borderCellStyle);
       y++;
-      this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'middle', style, totalWidth);
+      this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'middle', borderCellStyle, totalWidth);
       y++;
     }
 
@@ -769,14 +775,13 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       const isFocused = sortedPos === this._focusedSortedIndex && context.focusedElementId === this.id;
 
       let rowStyle = style;
-      let borderStyle: Partial<Cell> | undefined;
+      let rowBorderStyle = borderCellStyle;
       if (isSelected || isFocused) {
         rowStyle = { ...style, reverse: true };
-        borderStyle = style;  // Pass base style for borders (no highlight)
       }
 
       const scrollbarX = needsScrollbar ? bounds.x + effectiveWidth - 1 : -1;
-      this._renderDataRow(clippedBuffer, bounds.x, virtualY, rowData, rowStyle, effectiveWidth, scrollbarX, borderStyle);
+      this._renderDataRow(clippedBuffer, bounds.x, virtualY, rowData, rowStyle, effectiveWidth, scrollbarX, rowBorderStyle);
       this._rowBounds.set(sortedPos, { x: bounds.x, y: virtualY, width: effectiveWidth, height: rowHeight });
 
       virtualY += rowHeight;
@@ -787,8 +792,8 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     const borderChars = getBorderChars(borderPropStyle !== 'none' ? borderPropStyle : 'thin');
     const rightBorderX = bounds.x + effectiveWidth - 1;
     for (let emptyY = virtualY; emptyY < bodyStartY + bodyHeight; emptyY++) {
-      buffer.currentBuffer.setCell(bounds.x, emptyY, { char: borderChars.v, ...style });
-      buffer.currentBuffer.setCell(rightBorderX, emptyY, { char: borderChars.v, ...style });
+      buffer.currentBuffer.setCell(bounds.x, emptyY, { char: borderChars.v, ...borderCellStyle });
+      buffer.currentBuffer.setCell(rightBorderX, emptyY, { char: borderChars.v, ...borderCellStyle });
     }
 
     y = bodyStartY + bodyHeight;
@@ -800,16 +805,16 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
     // Render footer
     if (showFooter && footer?.length) {
-      this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'middle', style, totalWidth);
+      this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'middle', borderCellStyle, totalWidth);
       y++;
       for (const footerRow of footer) {
-        this._renderFooterRow(buffer as DualBuffer, bounds.x, y, footerRow, style, totalWidth);
+        this._renderFooterRow(buffer as DualBuffer, bounds.x, y, footerRow, style, totalWidth, borderCellStyle);
         y++;
       }
     }
 
     // Draw bottom border
-    this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'bottom', style, totalWidth);
+    this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'bottom', borderCellStyle, totalWidth);
   }
 
   // Selection management

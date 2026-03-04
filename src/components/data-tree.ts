@@ -29,6 +29,7 @@ import { type Wheelable } from '../types.ts';
 import { registerComponent } from '../element.ts';
 import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
+import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 import { renderScrollbar } from './scrollbar.ts';
 import { parseColor } from './color-utils.ts';
@@ -651,7 +652,7 @@ export class DataTreeElement extends Element
     let y = bounds.y;
 
     // Draw top border
-    const bdrStyle = borderColorStyle ?? style;
+    const bdrStyle = borderColorStyle ?? { ...style, foreground: getThemeColor('textMuted') };
     this._drawHorizontalBorder(buffer, bounds.x, y, 'top', bdrStyle, totalWidth, borderChars);
     y++;
 

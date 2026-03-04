@@ -152,6 +152,10 @@ For dynamic data (e.g., fetched from API, generated), use a script:
 - `onSort` event is optional for external notification
 - Sort indicator shows in header (^ for asc, v for desc)
 
+### Border Color
+- All borders (horizontal lines, vertical borders, corners, junctions) render in `textMuted` theme color for a faded appearance
+- This applies to top/bottom/middle horizontal borders, left/right vertical borders, column separators, and empty-space borders
+
 ### Selection
 - `selectable="single"` - One row at a time
 - `selectable="multi"` - Multiple rows (Space to toggle)

@@ -83,6 +83,7 @@ Return `undefined` to suppress the tooltip.
 | Mouse hover    | 300ms | Tooltip appears after hovering over element |
 | Keyboard focus | 800ms | Tooltip appears after tabbing to element    |
 | Any key        | —     | Dismisses visible tooltip                   |
+| Overlay open   | —     | Suppressed when mouse is over an active overlay (e.g. open select/combobox dropdown) |
 
 ## TooltipEvent Interface
 

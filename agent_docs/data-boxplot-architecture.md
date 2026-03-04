@@ -105,16 +105,17 @@ Uses `getBorderChars('thin')` from `src/types.ts` — handles unicode tier fallb
 
 ### Rendering Rules
 
-- **Y-axis**: auto-scaled, max 6 ticks evenly distributed. Tick labels left-aligned. Width = max label length + 2.
+- **Y-axis**: auto-scaled, max 6 ticks evenly distributed. Tick labels left-aligned. Width = max label length + 2. Rendered in `textMuted` theme color.
+- **Axis lines**: Both the Y-axis and bottom axis line render in `textMuted` theme color for a faded appearance that recedes behind the data.
 - **Value range**: 5% padding added above and below the global min/max.
 - **Box (Q1 to Q3)**: top edge `┌─┐`, sides `│ │`, bottom edge `└─┘`.
-- **Median**: `├─┤` (bold in non-BW mode) when inside a box with 3+ rows. At box edge: uses corner chars (`┌─┐` or `└─┘`) instead of junctions. Single-row box (Q1 === Q3): flat `───`.
-- **Whisker with box junction**: top edge becomes `┌┴┐`, bottom edge becomes `└┬┘` (the junction char connects to the whisker shaft).
+- **Median**: `├─┤` (bold in non-BW mode) when inside a box with 3+ rows. At box edge: bold corners/edges with whisker junction preserved if whisker exists. Single-row box (Q1 === Q3): flat `───`.
+- **Whisker with box junction**: top edge becomes `┌┴┐`, bottom edge becomes `└┬┘` (the junction char connects to the whisker shaft). When median is at a box edge, the junction character is preserved (not overwritten).
 - **Whisker (2+ rows)**: `┬` at far end, `│` shaft, connects to box edge junction.
 - **Whisker (1 row)**: `·` dot marker instead of `┬`/`┴`.
 - **Zero-length whisker** (max === Q3 or min === Q1): flat box edge `┌─┐` / `└─┘`, no junction.
 - **Outliers**: `*` rendered only outside the whisker range (skipped if they overlap box/whisker rows).
-- **Labels**: truncated to 3 chars (column width), centered under column.
+- **Labels**: truncated to 3 chars (column width), centered under column. Rendered in `textMuted` theme color.
 
 ### BW Mode
 
@@ -303,3 +304,4 @@ $melker.render();
 | [data-boxplot.melker](../examples/components/data-boxplot.melker)           | Combined demo   |
 | [data-boxplot-static.melker](../examples/components/data-boxplot-static.melker)   | Static example  |
 | [data-boxplot-dynamic.melker](../examples/components/data-boxplot-dynamic.melker) | Dynamic example |
+| [electricity-dashboard.melker](../examples/showcase/electricity-dashboard.melker) | Showcase: live EU electricity prices |

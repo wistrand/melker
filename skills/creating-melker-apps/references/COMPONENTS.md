@@ -403,6 +403,7 @@ High-performance table for large datasets with simple array-based data.
 - JSON parse errors are logged to the logging system
 - Sorting is automatic - click headers to sort, no handler needed
 - Events report original row indices (not sorted positions)
+- Borders render in `textMuted` theme color for a faded appearance
 - Use for large datasets; use `<table>` for complex cell content
 
 ### data-bars
@@ -694,7 +695,7 @@ Data-driven tree view for hierarchical data with expand/collapse, selection, key
 - `onChange`, `onActivate`, `onExpand`, `onCollapse` - Event handlers
 
 **Style props:**
-- `border-color` - Color for box border
+- `border-color` - Color for box border (default: textMuted)
 - `connector-color` - Color for tree connector lines and icons (default: gray)
 
 **TreeNode:**

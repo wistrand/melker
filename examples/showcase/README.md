@@ -10,6 +10,8 @@ Polished applications demonstrating Melker's capabilities.
 | `markdown-viewer.melker` | Markdown file viewer with navigation            |
 | `procrastinate.melker`   | Productivity timer app                          |
 | `color-selector.melker`  | HSL color picker with interactive canvas        |
+| `earthquake-dashboard.melker` | Live USGS earthquake monitor with map      |
+| `electricity-dashboard.melker` | European electricity spot price dashboard  |
 
 ## Running
 

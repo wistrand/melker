@@ -4,7 +4,7 @@ Publishing to JSR (jsr.io) lets Deno users install melker globally with one comm
 
 ```bash
 # Install (-A grants all permissions to the launcher; apps run sandboxed via <policy>)
-deno install -g -A jsr:@wistrand/melker
+deno install -g -A jsr:@melker/melker
 
 # Use
 melker app.melker
@@ -22,7 +22,7 @@ melker upgrade
 
 ```json
 {
-  "name": "@wistrand/melker",
+  "name": "@melker/melker",
   "version": "<calver>",
   "license": "MIT",
   "exports": {
@@ -45,7 +45,7 @@ melker upgrade
 ```
 
 - `version`: CalVer format `YYYY.M.PATCH` — synced from git tags via `deno task version:sync`
-- `exports."."` = CLI entry (enables `deno install -g jsr:@wistrand/melker`), `"./lib"` = library API
+- `exports."."` = CLI entry (enables `deno install -g jsr:@melker/melker`), `"./lib"` = library API
 - `publish.include` is an allowlist — tests, benchmarks, examples, docs, scripts, skills stay out
 - `publish.exclude` removes `src/globals-ambient.d.ts` (contains `declare global` which JSR rejects)
 - `README.md` is not published — the `@module` JSDoc in `melker.ts` serves as the JSR package page (JSR defaults to `readmeSource=jsdoc`, which prefers `@module` over README)
@@ -179,7 +179,7 @@ In `melker-launcher.ts`, early-exit chain (after `--clear-approvals`, before `pa
 Same early-exit chain. Two modes, detected by `detectInstallType()` (checks for `.git` directory):
 
 1. **Git checkout**: Prompts with `confirm()` (skippable with `--yes`), then runs `git pull`
-2. **JSR/remote install**: Fetches `{JSR_URL}/@wistrand/melker/meta.json` (respects `JSR_URL` env var, defaults to `https://jsr.io`), compares versions, detects shim name via `findInstalledShim()` (scans `$DENO_INSTALL_ROOT/bin/` or `~/.deno/bin/`), reinstalls with `-f` preserving the name
+2. **JSR/remote install**: Fetches `{JSR_URL}/@melker/melker/meta.json` (respects `JSR_URL` env var, defaults to `https://jsr.io`), compares versions, detects shim name via `findInstalledShim()` (scans `$DENO_INSTALL_ROOT/bin/` or `~/.deno/bin/`), reinstalls with `-f` preserving the name
 
 Version source: `import denoConfig from './deno.json' with { type: 'json' }`
 
@@ -211,7 +211,7 @@ The two distribution paths serve different roles and are complementary — neith
 
 ### How Each Path Works
 
-**JSR install** (`deno install -g -A jsr:@wistrand/melker`):
+**JSR install** (`deno install -g -A jsr:@melker/melker`):
 1. Downloads the package from JSR, creates a shim script in `~/.deno/bin/melker`
 2. The shim runs `melker.ts` → resolves via `Deno.realPath()` (with JSR cache fallback) → imports `melker-launcher.ts` from the same directory
 3. All code is colocated: policy system, config system, content loader, assets — all resolved as relative `./src/...` imports against the local JSR cache
@@ -233,12 +233,12 @@ The two distribution paths serve different roles and are complementary — neith
 | **Startup latency**              | Near-instant (local files)                                                                           | Cold start: dozens of HTTP fetches as Deno walks the import graph. Warm (cached): fast, but depends on Deno's module cache    |
 | **Offline support**              | Fully works offline after install                                                                    | Fails unless everything is in Deno's cache (`--cached-only` after first run)                                                  |
 | **Lockfile integrity**           | `deno.lock` published with package, pins dependency hashes                                           | No lockfile — Deno fetches whatever is at HEAD (or pinned tag)                                                                |
-| **Version pinning**              | `jsr:@wistrand/melker@<version>` — immutable, auditable via JSR registry                            | `melker.sh/melker-v2026.01.1.ts` pins the launcher, but transitive deps resolve to that tag's tree. No lockfile verification |
+| **Version pinning**              | `jsr:@melker/melker@<version>` — immutable, auditable via JSR registry                            | `melker.sh/melker-v2026.01.1.ts` pins the launcher, but transitive deps resolve to that tag's tree. No lockfile verification |
 | **`--reload` detection**         | N/A — `wasLauncherReloaded()` returns `false` immediately (`url.protocol === 'file:'`)               | Mtime forensic detection: checks `<DENO_DIR>/remote/https/<host>/<SHA256>` modified within 5s. Auto-forwards to subprocess   |
 | **Subprocess spawn**             | Spawns `deno run ... /path/to/src/melker-runner.ts` — clean local path                               | Spawns `deno run ... https://raw.githubusercontent.com/.../src/melker-runner.ts` — triggers another remote import chain       |
 | **Embedded assets**              | Available locally, synchronous decode, zero network I/O at runtime                                   | Same assets in fetched source, but initial fetch must traverse the full import graph remotely                                  |
 | **Permission sandbox**           | `--allow-read` needs temp dir, app dir, cwd, XDG state, Deno cache. No `--allow-net` for melker host | Same — Deno's module loading bypasses `--allow-net` restrictions (see below), and all runtime assets are embedded             |
-| **Upgrade**                      | `melker upgrade` → fetches `jsr.io/@wistrand/melker/meta.json`, runs `deno install -g -f`            | `deno run --reload https://melker.sh/melker.ts` re-fetches everything. No upgrade concept; just cache invalidation            |
+| **Upgrade**                      | `melker upgrade` → fetches `jsr.io/@melker/melker/meta.json`, runs `deno install -g -f`            | `deno run --reload https://melker.sh/melker.ts` re-fetches everything. No upgrade concept; just cache invalidation            |
 | **Edge function indirection**    | None — runs the actual code directly                                                                 | `melker.sh/melker.ts` returns a generated wrapper, not the real `melker.ts`. Extra indirection, extra failure point           |
 | **`import.meta.url` semantics**  | `file:///.../.deno/.../melker-launcher.ts` — stable filesystem URL                                   | `https://raw.githubusercontent.com/.../melker-launcher.ts` — all relative URL resolutions go back to GitHub                   |
 | **Error diagnostics**            | Stack traces point to local paths                                                                    | Stack traces point to `raw.githubusercontent.com` URLs — harder to debug                                                      |
@@ -281,13 +281,13 @@ deno task version:sync
 
 ## Publishing Checklist
 
-1. **Claim scope**: Create `@wistrand` scope at https://jsr.io (browser, one-time)
+1. **Claim scope**: Create `@melker` scope at https://jsr.io (browser, one-time)
 2. **Sync version**: `deno task version:sync`
 3. **Build**: `deno task build` (embedded assets, completions, skill zip, docs, lockfile)
 4. **Type check**: `deno task check`
 5. **Dry run**: `deno task publish:dry-run` — confirms 0 errors (2 expected dynamic import warnings)
 6. **Publish**: `deno task publish`
-7. **Test install**: `deno install -g -A jsr:@wistrand/melker`
+7. **Test install**: `deno install -g -A jsr:@melker/melker`
 8. **Test run**: `melker examples/basics/hello.melker`
 9. **Test upgrade**: `melker upgrade`
 

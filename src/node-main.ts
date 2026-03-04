@@ -302,7 +302,7 @@ export async function main(): Promise<void> {
       exit(0);
     },
     handleUpgrade: async () => {
-      console.error('To upgrade Melker on Node.js, use: npm update @melker/core');
+      console.error('To upgrade Melker on Node.js, use: npm update @melker/melker');
       exit(0);
     },
 

@@ -120,7 +120,7 @@ New to Melker? Read in this order:
 ## Technology Stack
 
 - **Runtime**: Deno 2.5+ (required, Node.js/Bun not supported)
-- **Package**: @wistrand/melker
+- **Package**: @melker/melker
 - **Target**: ANSI-compatible terminals
 
 ## Development Commands

@@ -13,13 +13,13 @@
  * ## Installation
  *
  * ```bash
- * deno install -g -A jsr:@wistrand/melker
+ * deno install -g -A jsr:@melker/melker
  * ```
  *
  * ## Library Usage
  *
  * ```typescript
- * import { createElement, createApp } from '@wistrand/melker/lib';
+ * import { createElement, createApp } from '@melker/melker/lib';
  *
  * const ui = createElement('container', {
  *   style: { border: 'thin', padding: 2 }

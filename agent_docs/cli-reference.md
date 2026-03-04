@@ -13,7 +13,7 @@ The CLI is symlink-safe - it resolves its real path before importing dependencie
 ### JSR (alternative)
 
 ```bash
-deno install -g -A jsr:@wistrand/melker
+deno install -g -A jsr:@melker/melker
 ```
 
 `-A` grants permissions to the launcher — apps run sandboxed with only the permissions they declare.

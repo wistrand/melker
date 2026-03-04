@@ -1,6 +1,6 @@
 {
-  "name": "@wistrand/melker",
-  "version": "2026.2.9",
+  "name": "@melker/melker",
+  "version": "2026.3.1",
   "license": "MIT",
   "exports": {
     ".": "./melker.ts",

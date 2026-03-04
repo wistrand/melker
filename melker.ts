@@ -15,7 +15,7 @@
  * ## Installation
  *
  * ```bash
- * deno install -g -A jsr:@wistrand/melker
+ * deno install -g -A jsr:@melker/melker
  * ```
  *
  * `-A` grants all permissions to the launcher — your apps run sandboxed in a
@@ -27,7 +27,7 @@
  * ## Try Without Installing
  *
  * ```bash
- * deno x jsr:@wistrand/melker app.melker
+ * deno x jsr:@melker/melker app.melker
  * ```
  *
  * ## Usage
@@ -76,10 +76,10 @@
  * ## TypeScript API
  *
  * For programmatic use, import from
- * [`@wistrand/melker/lib`](./lib/index.html):
+ * [`@melker/melker/lib`](./lib/index.html):
  *
  * ```typescript
- * import { createElement, createApp } from "@wistrand/melker/lib";
+ * import { createElement, createApp } from "@melker/melker/lib";
  *
  * const ui = createElement(
  *   "container",

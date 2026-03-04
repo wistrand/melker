@@ -269,7 +269,7 @@ async function findInstalledShim(): Promise<{ name: string; dir: string } | null
     for await (const entry of Deno.readDir(binDir)) {
       if (entry.isFile) {
         const content = await Deno.readTextFile(join(binDir, entry.name));
-        if (content.includes('@wistrand/melker')) {
+        if (content.includes('@melker/melker')) {
           return { name: entry.name, dir: binDir };
         }
       }
@@ -464,7 +464,7 @@ export async function main(): Promise<void> {
         console.log(`Install:  ${install.url}`);
         console.log(`URL:      ${import.meta.url}`);
       } else {
-        console.log('Install:  jsr:@wistrand/melker');
+        console.log('Install:  jsr:@melker/melker');
         console.log(`Path:     ${install.dir}`);
         const shim = await findInstalledShim();
         if (shim) console.log(`Shim:     ${join(shim.dir, shim.name)}`);
@@ -490,7 +490,7 @@ export async function main(): Promise<void> {
       // JSR or remote install: fetch latest version and reinstall
       try {
         const jsrUrl = Deno.env.get('JSR_URL') || 'https://jsr.io';
-        const resp = await fetch(`${jsrUrl}/@wistrand/melker/meta.json`);
+        const resp = await fetch(`${jsrUrl}/@melker/melker/meta.json`);
         if (!resp.ok) {
           console.error(`Failed to fetch version info from ${jsrUrl}`);
           Deno.exit(1);
@@ -509,7 +509,7 @@ export async function main(): Promise<void> {
 
         console.log(`Upgrading ${shimName} ${current} \u2192 ${latest}...`);
         const p = new Deno.Command('deno', {
-          args: ['install', '-g', '-f', '-A', '--name', shimName, `jsr:@wistrand/melker@${latest}`],
+          args: ['install', '-g', '-f', '-A', '--name', shimName, `jsr:@melker/melker@${latest}`],
           stdin: 'inherit', stdout: 'inherit', stderr: 'inherit',
         }).spawn();
         Deno.exit((await p.status).code);

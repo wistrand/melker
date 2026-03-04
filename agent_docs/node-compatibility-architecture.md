@@ -7,7 +7,7 @@ describes the architecture that makes that work.
 
 | Decision                     | Choice                                                               | Rationale                                                        |
 |------------------------------|----------------------------------------------------------------------|------------------------------------------------------------------|
-| Package name                 | `@wistrand/melker` on JSR, `@melker/core` on npm                    | JSR uses Deno scope; npm uses melker org                         |
+| Package name                 | `@melker/melker` on both JSR and npm                                | Unified name across registries                                   |
 | Runtime selection            | Build-time via custom loader (not runtime detection)                 | No `if (isDeno)` branches in shared code                         |
 | Node minimum version         | Node 25+                                                             | Native TS execution, stable permission model, ESM `data:` URLs   |
 | Build output                 | Ship TypeScript source (no compile step)                             | Custom loader strips types at load time; same files as Deno      |
@@ -360,8 +360,8 @@ deno task test:node:e2e      # Node end-to-end tests only
 
 | Registry | Install command                              | Entry point       |
 |----------|----------------------------------------------|--------------------|
-| JSR      | `deno install -g -A jsr:@wistrand/melker`    | `melker.ts`        |
-| npm      | `npm install -g @melker/core`                | `melker-node.mjs`  |
+| JSR      | `deno install -g -A jsr:@melker/melker`      | `melker.ts`        |
+| npm      | `npm install -g @melker/melker`              | `melker-node.mjs`  |
 
 Version source of truth
 is git tags via `scripts/sync-version.ts` (updates both `deno.json` and `package.json`).

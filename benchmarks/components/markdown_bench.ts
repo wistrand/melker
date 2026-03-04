@@ -88,7 +88,7 @@ Melker is a **terminal UI framework** for building rich applications. It provide
 ## Installation
 
 \`\`\`bash
-deno add @melker/core
+deno add @melker/melker
 \`\`\`
 
 ## Quick Start
@@ -98,7 +98,7 @@ deno add @melker/core
 Here's a simple example:
 
 \`\`\`typescript
-import { createElement, createApp } from '@melker/core';
+import { createElement, createApp } from '@melker/melker';
 
 const app = createElement('container', {},
   createElement('text', {}, 'Hello, World!')

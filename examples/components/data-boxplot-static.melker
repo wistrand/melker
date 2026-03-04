@@ -4,7 +4,7 @@
   <container style="display: flex; flex-direction: column; padding: 1; height: fill">
     <text style="font-weight: bold;">Server Latency by Region</text>
 
-    <data-boxplot showOutliers="true" tooltip="auto" style="height: fill">
+    <data-boxplot showOutliers="true" tooltip="auto" selectable="true" style="height: fill">
       {
         "title": "Request Latency (ms)",
         "yAxisLabel": "ms",

@@ -6,10 +6,15 @@ import {
   type BaseProps,
   type Renderable,
   type Focusable,
+  type Clickable,
   type Interactive,
+  type TextSelectable,
+  type SelectableTextProvider,
+  type SelectionBounds,
   type IntrinsicSizeContext,
   type Bounds,
   type ComponentRenderContext,
+  type ClickEvent,
 } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { TooltipProvider, TooltipContext } from '../tooltip/types.ts';
@@ -47,12 +52,21 @@ export interface DataBoxplotTooltipContext extends TooltipContext {
   outlierValue?: number;
 }
 
+export interface BoxplotSelectEvent {
+  type: 'select';
+  groupIndex: number;
+  label: string;
+  stats: BoxplotStats;
+}
+
 export interface DataBoxplotProps extends BaseProps {
   groups: BoxplotGroup[];
   title?: string;
   yAxisLabel?: string;
   showOutliers?: boolean;
   whiskerRule?: 'iqr' | 'minmax';
+  selectable?: boolean;
+  onSelect?: (event: BoxplotSelectEvent) => void;
 }
 
 // ===== Box-drawing characters =====
@@ -122,13 +136,16 @@ function percentile(sorted: number[], p: number): number {
 
 // ===== DataBoxplotElement Class =====
 
-export class DataBoxplotElement extends Element implements Renderable, Focusable, Interactive, TooltipProvider {
+export class DataBoxplotElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider, TooltipProvider {
   declare type: 'data-boxplot';
   declare props: DataBoxplotProps;
 
   private _groupBounds: Map<number, Bounds> = new Map();
   private _outlierPositions: Map<string, { groupIndex: number; value: number }> = new Map(); // "x,y" -> info
   private _computedStats: BoxplotStats[] = [];
+  private _selectedGroups: Set<number> = new Set();
+  private _plotTopRel = 0;   // plot area top relative to element bounds
+  private _plotBotRel = 0;   // plot area bottom (exclusive) relative to element bounds
 
   constructor(props: DataBoxplotProps = { groups: [] }, children: Element[] = []) {
     super('data-boxplot', { ...defaultProps, ...props }, children);
@@ -164,6 +181,128 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
 
   isInteractive(): boolean {
     return !this.props.disabled;
+  }
+
+  // ===== Selection =====
+
+  handleClick(event: ClickEvent, _document: unknown): boolean {
+    const { x, y } = event.position;
+    const { selectable, onSelect } = this.props;
+
+    for (const [gi, b] of this._groupBounds) {
+      if (boundsContain(x, y, b)) {
+        if (selectable) {
+          if (this._selectedGroups.has(gi) && this._selectedGroups.size === 1) {
+            this._selectedGroups.clear();
+          } else {
+            this._selectedGroups.clear();
+            this._selectedGroups.add(gi);
+          }
+        }
+
+        if (onSelect) {
+          this._ensureStats();
+          const s = this._computedStats[gi];
+          const group = this.props.groups[gi];
+          if (s && group) {
+            onSelect({
+              type: 'select',
+              groupIndex: gi,
+              label: group.label,
+              stats: s,
+            });
+          }
+        }
+
+        return true;
+      }
+    }
+
+    // Click outside any group — clear selection
+    if (selectable) {
+      this._selectedGroups.clear();
+    }
+
+    return false;
+  }
+
+  // ===== Drag Selection =====
+
+  getSelectedGroups(): Set<number> {
+    return this._selectedGroups;
+  }
+
+  setSelectedGroups(indices: Set<number>): void {
+    this._selectedGroups = indices;
+  }
+
+  // ===== Text Selection (copy support) =====
+
+  isTextSelectable(): boolean {
+    return true;
+  }
+
+  getSelectableText(selectionBounds?: SelectionBounds): string {
+    const { groups } = this.props;
+    if (!groups || groups.length === 0) return '';
+
+    this._ensureStats();
+    const bounds = this.getBounds();
+    if (!bounds) return '';
+
+    // Find which groups overlap the selection
+    const selectedIndices = new Set<number>();
+
+    for (const [gi, b] of this._groupBounds) {
+      const relStartX = b.x - bounds.x;
+      const relEndX = relStartX + b.width - 1;
+
+      if (selectionBounds) {
+        if (relStartX <= selectionBounds.endX && relEndX >= selectionBounds.startX) {
+          selectedIndices.add(gi);
+        }
+      } else {
+        selectedIndices.add(gi);
+      }
+    }
+
+    if (selectedIndices.size === 0) return '';
+
+    const sorted = [...selectedIndices].sort((a, b) => a - b);
+    const output = sorted.map(i => {
+      const g = groups[i];
+      const s = this._computedStats[i];
+      const entry: Record<string, unknown> = { label: g.label };
+      if (g.values) entry.values = g.values;
+      if (s) entry.stats = { min: s.min, q1: s.q1, median: s.median, q3: s.q3, max: s.max };
+      if (s?.outliers && s.outliers.length > 0) entry.outliers = s.outliers;
+      return entry;
+    });
+
+    return JSON.stringify(output, null, 2);
+  }
+
+  getSelectionHighlightBounds(startX: number, endX: number, _startY?: number, _endY?: number): { startX: number; endX: number; startY?: number; endY?: number } | undefined {
+    const bounds = this.getBounds();
+    if (!bounds || this._groupBounds.size === 0) return undefined;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let hasOverlap = false;
+
+    for (const [_gi, b] of this._groupBounds) {
+      const relStartX = b.x - bounds.x;
+      const relEndX = relStartX + b.width - 1;
+
+      if (relStartX <= endX && relEndX >= startX) {
+        hasOverlap = true;
+        minX = Math.min(minX, relStartX);
+        maxX = Math.max(maxX, relEndX);
+      }
+    }
+
+    if (!hasOverlap) return undefined;
+    return { startX: minX, endX: maxX, startY: this._plotTopRel, endY: this._plotBotRel - 1 };
   }
 
   // ===== Compute Stats =====
@@ -277,6 +416,9 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
     const plotLeft = bounds.x + yAxisWidth;
     const plotWidth = bounds.width - yAxisWidth;
 
+    this._plotTopRel = titleRow;
+    this._plotBotRel = titleRow + plotHeight; // exclusive (axis line row)
+
     if (plotHeight < 3) return; // too small to render
 
     const range = globalMax - globalMin;
@@ -354,6 +496,8 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
       });
 
       const bw = isBwMode();
+      const selected = this._selectedGroups.has(gi);
+      const gs: Partial<Cell> = selected ? { ...style, reverse: true } : style;
 
       // Draw box (Q1 to Q3)
       // Top of box (Q3 - higher value = lower row number)
@@ -365,73 +509,73 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
         const whiskerLen = boxTop - rowMax;
         if (whiskerLen === 1) {
           // Single-row whisker: dot marker
-          buffer.currentBuffer.setCell(cx + 1, rowMax, { char: _whiskerDot, ...style });
+          buffer.currentBuffer.setCell(cx + 1, rowMax, { char: _whiskerDot, ...gs });
         } else {
           // Multi-row whisker
-          buffer.currentBuffer.setCell(cx + 1, rowMax, { char: _bc.tm, ...style });
+          buffer.currentBuffer.setCell(cx + 1, rowMax, { char: _bc.tm, ...gs });
           for (let r = rowMax + 1; r < boxTop; r++) {
-            buffer.currentBuffer.setCell(cx + 1, r, { char: _bc.v, ...style });
+            buffer.currentBuffer.setCell(cx + 1, r, { char: _bc.v, ...gs });
           }
         }
         // Box top edge
-        buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.tl, ...style });
-        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.bm, ...style });
-        buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.tr, ...style });
+        buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.tl, ...gs });
+        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.bm, ...gs });
+        buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.tr, ...gs });
       } else {
         // Zero-length or no upper whisker — flat top ┌─┐
         // No upper whisker - standard top
-        buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.tl, ...style });
-        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.h, ...style });
-        buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.tr, ...style });
+        buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.tl, ...gs });
+        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.h, ...gs });
+        buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.tr, ...gs });
       }
 
       // Box body
       for (let r = boxTop + 1; r < boxBot; r++) {
         if (r === rowMedian) {
           // Median line
-          buffer.currentBuffer.setCell(cx, r, { char: _bc.lm, ...style, bold: !bw });
-          buffer.currentBuffer.setCell(cx + 1, r, { char: _bc.h, ...style, bold: !bw });
-          buffer.currentBuffer.setCell(cx + 2, r, { char: _bc.rm, ...style, bold: !bw });
+          buffer.currentBuffer.setCell(cx, r, { char: _bc.lm, ...gs, bold: !bw });
+          buffer.currentBuffer.setCell(cx + 1, r, { char: _bc.h, ...gs, bold: !bw });
+          buffer.currentBuffer.setCell(cx + 2, r, { char: _bc.rm, ...gs, bold: !bw });
         } else {
-          buffer.currentBuffer.setCell(cx, r, { char: _bc.v, ...style });
+          buffer.currentBuffer.setCell(cx, r, { char: _bc.v, ...gs });
           if (bw) {
-            buffer.currentBuffer.setCell(cx + 1, r, { char: '\u2588', ...style }); // █ fill
+            buffer.currentBuffer.setCell(cx + 1, r, { char: '\u2588', ...gs }); // █ fill
           }
-          buffer.currentBuffer.setCell(cx + 2, r, { char: _bc.v, ...style });
+          buffer.currentBuffer.setCell(cx + 2, r, { char: _bc.v, ...gs });
         }
       }
 
       // Degenerate: Q1 === Q3, single-row box — just a flat line
       if (boxTop === boxBot) {
-        buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.h, ...style, bold: !bw });
-        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.h, ...style, bold: !bw });
-        buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.h, ...style, bold: !bw });
+        buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.h, ...gs, bold: !bw });
+        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.h, ...gs, bold: !bw });
+        buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.h, ...gs, bold: !bw });
       } else if (rowMedian === boxTop) {
         // Median at top edge — keep corners, nothing connects above
-        buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.tl, ...style, bold: !bw });
-        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.h, ...style, bold: !bw });
-        buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.tr, ...style, bold: !bw });
+        buffer.currentBuffer.setCell(cx, boxTop, { char: _bc.tl, ...gs, bold: !bw });
+        buffer.currentBuffer.setCell(cx + 1, boxTop, { char: _bc.h, ...gs, bold: !bw });
+        buffer.currentBuffer.setCell(cx + 2, boxTop, { char: _bc.tr, ...gs, bold: !bw });
       }
 
       // Box bottom edge
       if (boxTop !== boxBot) {
         if (rowMin > boxBot) {
           // Lower whisker exists
-          buffer.currentBuffer.setCell(cx, boxBot, { char: _bc.bl, ...style });
-          buffer.currentBuffer.setCell(cx + 1, boxBot, { char: _bc.tm, ...style });
-          buffer.currentBuffer.setCell(cx + 2, boxBot, { char: _bc.br, ...style });
+          buffer.currentBuffer.setCell(cx, boxBot, { char: _bc.bl, ...gs });
+          buffer.currentBuffer.setCell(cx + 1, boxBot, { char: _bc.tm, ...gs });
+          buffer.currentBuffer.setCell(cx + 2, boxBot, { char: _bc.br, ...gs });
         } else {
           // Zero-length or no lower whisker — flat bottom └─┘
-          buffer.currentBuffer.setCell(cx, boxBot, { char: _bc.bl, ...style });
-          buffer.currentBuffer.setCell(cx + 1, boxBot, { char: _bc.h, ...style });
-          buffer.currentBuffer.setCell(cx + 2, boxBot, { char: _bc.br, ...style });
+          buffer.currentBuffer.setCell(cx, boxBot, { char: _bc.bl, ...gs });
+          buffer.currentBuffer.setCell(cx + 1, boxBot, { char: _bc.h, ...gs });
+          buffer.currentBuffer.setCell(cx + 2, boxBot, { char: _bc.br, ...gs });
         }
 
         // Handle median at bottom edge — keep corners, nothing connects below
         if (rowMedian === boxBot) {
-          buffer.currentBuffer.setCell(cx, boxBot, { char: _bc.bl, ...style, bold: !bw });
-          buffer.currentBuffer.setCell(cx + 1, boxBot, { char: _bc.h, ...style, bold: !bw });
-          buffer.currentBuffer.setCell(cx + 2, boxBot, { char: _bc.br, ...style, bold: !bw });
+          buffer.currentBuffer.setCell(cx, boxBot, { char: _bc.bl, ...gs, bold: !bw });
+          buffer.currentBuffer.setCell(cx + 1, boxBot, { char: _bc.h, ...gs, bold: !bw });
+          buffer.currentBuffer.setCell(cx + 2, boxBot, { char: _bc.br, ...gs, bold: !bw });
         }
       }
 
@@ -439,12 +583,12 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
       if (rowMin > boxBot) {
         const whiskerLen = rowMin - boxBot;
         if (whiskerLen === 1) {
-          buffer.currentBuffer.setCell(cx + 1, rowMin, { char: _whiskerDot, ...style });
+          buffer.currentBuffer.setCell(cx + 1, rowMin, { char: _whiskerDot, ...gs });
         } else {
           for (let r = boxBot + 1; r < rowMin; r++) {
-            buffer.currentBuffer.setCell(cx + 1, r, { char: _bc.v, ...style });
+            buffer.currentBuffer.setCell(cx + 1, r, { char: _bc.v, ...gs });
           }
-          buffer.currentBuffer.setCell(cx + 1, rowMin, { char: _bc.bm, ...style });
+          buffer.currentBuffer.setCell(cx + 1, rowMin, { char: _bc.bm, ...gs });
         }
       }
 
@@ -453,7 +597,7 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
         for (const o of s.outliers) {
           const oRow = valueToRow(o);
           if (oRow >= plotTop && oRow < plotTop + plotHeight && (oRow < rowMax || oRow > rowMin)) {
-            buffer.currentBuffer.setCell(cx + 1, oRow, { char: _outlierChar, ...style });
+            buffer.currentBuffer.setCell(cx + 1, oRow, { char: _outlierChar, ...gs });
             this._outlierPositions.set(`${cx + 1},${oRow}`, { groupIndex: gi, value: o });
           }
         }
@@ -463,7 +607,7 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
       const label = group.label || '';
       const truncated = label.length > colWidth ? label.substring(0, colWidth) : label;
       const labelX = cx + Math.max(0, Math.floor((colWidth - truncated.length) / 2));
-      buffer.currentBuffer.setText(labelX, axisY + 1, truncated, style);
+      buffer.currentBuffer.setText(labelX, axisY + 1, truncated, selected ? gs : style);
     }
   }
 
@@ -559,6 +703,8 @@ export const dataBoxplotSchema: ComponentSchema = {
     yAxisLabel: { type: 'string', description: 'Y-axis label (rendered vertically)' },
     showOutliers: { type: 'boolean', description: 'Show outlier markers (default: true)' },
     whiskerRule: { type: 'string', enum: ['iqr', 'minmax'], description: 'Whisker calculation rule (default: iqr)' },
+    selectable: { type: 'boolean', description: 'Enable group selection (default: false)' },
+    onSelect: { type: 'handler', description: 'Selection event handler' },
   },
 };
 

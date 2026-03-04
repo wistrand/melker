@@ -11,6 +11,7 @@
       yAxisLabel="C"
       showOutliers="true"
       tooltip="auto"
+      selectable="true"
       groups='[
         {"label": "CP0", "values": [62]},
         {"label": "CP1", "values": [55]},

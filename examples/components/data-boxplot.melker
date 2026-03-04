@@ -1,0 +1,99 @@
+<melker>
+  <title>Data Boxplot Demo</title>
+
+  <style>
+    .section {
+      margin-bottom: 1;
+    }
+  </style>
+
+  <container style="display: flex; flex-direction: column; padding: 1; height: fill">
+    <text style="font-weight: bold;">Box-and-Whisker Plot Demo</text>
+
+    <tabs style="flex: 1;">
+      <tab title="Basic">
+        <container style="overflow: scroll; padding: 1; height: fill">
+          <container class="section">
+            <text>API Response Times (ms):</text>
+            <data-boxplot
+              title="Response Time Distribution"
+              yAxisLabel="ms"
+              groups='[
+                {"label": "API", "values": [120, 150, 180, 200, 220, 250, 280, 300, 350, 500, 900]},
+                {"label": "Auth", "values": [200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700]},
+                {"label": "Feed", "values": [80, 100, 120, 150, 180, 200, 250, 280, 300, 320]},
+                {"label": "DB", "values": [50, 60, 70, 80, 90, 100, 110, 120, 150, 180, 200, 250, 300]},
+                {"label": "Cache", "values": [10, 15, 20, 25, 30, 35, 40, 50, 60, 80, 100, 500]}
+              ]'
+              style="height: 16"
+            />
+          </container>
+        </container>
+      </tab>
+
+      <tab title="Pre-computed">
+        <container style="overflow: scroll; padding: 1; height: fill">
+          <container class="section">
+            <text>Pre-computed Statistics:</text>
+            <data-boxplot
+              title="Build Times (seconds)"
+              groups='[
+                {"label": "Dev", "stats": {"min": 2, "q1": 5, "median": 8, "q3": 12, "max": 18}},
+                {"label": "Stage", "stats": {"min": 10, "q1": 25, "median": 35, "q3": 50, "max": 70, "outliers": [95]}},
+                {"label": "Prod", "stats": {"min": 15, "q1": 30, "median": 45, "q3": 60, "max": 80}},
+                {"label": "CI", "stats": {"min": 20, "q1": 40, "median": 55, "q3": 75, "max": 90, "outliers": [120, 140]}}
+              ]'
+              style="height: 16"
+            />
+          </container>
+        </container>
+      </tab>
+
+      <tab title="Edge Cases">
+        <container style="overflow: scroll; padding: 1; height: fill">
+          <container class="section">
+            <text>Edge cases: single value, tight distribution, wide range:</text>
+            <data-boxplot
+              groups='[
+                {"label": "One", "values": [50]},
+                {"label": "Tight", "values": [98, 99, 100, 101, 102]},
+                {"label": "Wide", "values": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]}
+              ]'
+              style="height: 14"
+            />
+          </container>
+
+          <container class="section">
+            <text>minmax whisker rule (no outliers):</text>
+            <data-boxplot
+              whiskerRule="minmax"
+              groups='[
+                {"label": "A", "values": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 500]},
+                {"label": "B", "values": [5, 15, 25, 35, 45, 55, 65, 75, 85, 95]}
+              ]'
+              style="height: 14"
+            />
+          </container>
+        </container>
+      </tab>
+
+      <tab title="Inline JSON">
+        <container style="overflow: scroll; padding: 1; height: fill">
+          <container class="section">
+            <text>Inline JSON content (data inside element):</text>
+            <data-boxplot style="height: 14">
+              {
+                "title": "Memory Usage (MB)",
+                "groups": [
+                  {"label": "Heap", "values": [128, 145, 160, 175, 190, 200, 215, 230, 250, 280, 320]},
+                  {"label": "RSS", "values": [256, 270, 285, 300, 320, 340, 360, 380, 400, 450]},
+                  {"label": "Stack", "values": [8, 10, 12, 14, 16, 18, 20, 22, 24]}
+                ]
+              }
+            </data-boxplot>
+          </container>
+        </container>
+      </tab>
+    </tabs>
+  </container>
+</melker>

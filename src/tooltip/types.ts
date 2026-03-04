@@ -59,6 +59,26 @@ export interface DataBarsTooltipContext extends TooltipContext {
   seriesName: string;
 }
 
+/** data-boxplot specific context */
+export interface DataBoxplotTooltipContext extends TooltipContext {
+  type: 'data-boxplot';
+  /** Group index (0-indexed) */
+  groupIndex: number;
+  /** Group label */
+  label: string;
+  /** Computed statistics */
+  stats: {
+    min: number;
+    q1: number;
+    median: number;
+    q3: number;
+    max: number;
+    outliers?: number[];
+  };
+  /** Set when hovering directly over an outlier marker */
+  outlierValue?: number;
+}
+
 /** data-heatmap specific context */
 export interface DataHeatmapTooltipContext extends TooltipContext {
   type: 'data-heatmap';

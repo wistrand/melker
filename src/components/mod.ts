@@ -34,6 +34,7 @@ export * from './table-row.ts';
 export * from './table-cell.ts';
 export * from './data-table.ts';
 export * from './data-bars.ts';
+export * from './data-boxplot.ts';
 export * from './data-heatmap.ts';
 export * from './data-tree.ts';
 

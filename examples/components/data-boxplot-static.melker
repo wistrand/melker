@@ -1,0 +1,28 @@
+<melker>
+  <title>Boxplot - Static</title>
+
+  <container style="display: flex; flex-direction: column; padding: 1; height: fill">
+    <text style="font-weight: bold;">Server Latency by Region</text>
+
+    <data-boxplot showOutliers="true" tooltip="auto" style="height: fill">
+      {
+        "title": "Request Latency (ms)",
+        "yAxisLabel": "ms",
+        "groups": [
+          {"label": "USE", "values": [12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 28, 32, 45, 78]},
+          {"label": "USW", "values": [18, 20, 22, 23, 24, 25, 26, 27, 28, 30, 33, 35, 40, 52]},
+          {"label": "EUW", "values": [85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 140, 155]},
+          {"label": "EUN", "values": [92, 98, 102, 108, 112, 118, 122, 128, 135, 142, 150, 168]},
+          {"label": "EUS", "values": [95, 105, 112, 118, 124, 130, 136, 142, 150, 160, 175, 195, 240]},
+          {"label": "APC", "values": [150, 160, 170, 180, 190, 200, 210, 220, 240, 260, 300, 450]},
+          {"label": "JP",  "values": [120, 125, 130, 135, 140, 145, 148, 152, 158, 165, 175]},
+          {"label": "AU",  "values": [180, 190, 200, 210, 215, 220, 230, 240, 255, 270, 310]},
+          {"label": "LAT", "values": [110, 130, 140, 150, 155, 160, 165, 170, 175, 180, 200, 220, 350]},
+          {"label": "AF",  "values": [200, 230, 250, 270, 290, 310, 330, 350, 380, 420, 480, 550, 700]},
+          {"label": "ME",  "values": [140, 155, 165, 175, 185, 195, 205, 215, 230, 250, 290]},
+          {"label": "IN",  "values": [160, 175, 185, 195, 205, 215, 225, 238, 255, 280, 320, 400]}
+        ]
+      }
+    </data-boxplot>
+  </container>
+</melker>

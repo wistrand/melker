@@ -1,0 +1,87 @@
+<melker>
+  <title>Boxplot - Dynamic</title>
+
+  <container style="display: flex; flex-direction: column; padding: 1; height: fill">
+    <text style="font-weight: bold;">Live Sensor Readings</text>
+    <text id="status">Collecting samples... (0 per sensor)</text>
+
+    <data-boxplot
+      id="plot"
+      title="Temperature Readings (C)"
+      yAxisLabel="C"
+      showOutliers="true"
+      tooltip="auto"
+      groups='[
+        {"label": "CP0", "values": [62]},
+        {"label": "CP1", "values": [55]},
+        {"label": "GPU", "values": [70]},
+        {"label": "SSD", "values": [38]},
+        {"label": "NVM", "values": [34]},
+        {"label": "Inl", "values": [24]},
+        {"label": "Exh", "values": [28]},
+        {"label": "PSU", "values": [48]},
+        {"label": "VRM", "values": [52]},
+        {"label": "RAM", "values": [42]}
+      ]'
+      style="height: fill"
+    />
+
+    <container style="flex-direction: row; gap: 1; margin-top: 1;">
+      <button label="Reset" onClick="$app.reset()" />
+    </container>
+  </container>
+
+  <script type="typescript">
+    const BASE_TEMPS = [62, 55, 70, 38, 34, 24, 28, 48, 52, 42];
+    const SPREAD     = [12, 10, 15, 6, 5, 4, 3, 8, 9, 7];
+    const LABELS     = ['CP0', 'CP1', 'GPU', 'SSD', 'NVM', 'Inl', 'Exh', 'PSU', 'VRM', 'RAM'];
+
+    let samples: number[][] = LABELS.map(() => []);
+    let sampleCount = 0;
+
+    function generateReading(base: number, spread: number): number {
+      // Normal-ish distribution via sum of uniforms
+      const u = Math.random() + Math.random() + Math.random();
+      const centered = (u / 3 - 0.5) * 2; // roughly -1..1
+      let value = base + centered * spread;
+
+      // Occasional spike (outlier)
+      if (Math.random() < 0.03) {
+        value += spread * (2 + Math.random() * 2);
+      }
+      return Math.round(value * 10) / 10;
+    }
+
+    function tick() {
+      for (let i = 0; i < LABELS.length; i++) {
+        samples[i].push(generateReading(BASE_TEMPS[i], SPREAD[i]));
+        // Keep last 60 samples per sensor
+        if (samples[i].length > 60) samples[i].shift();
+      }
+      sampleCount++;
+
+      const plot = $melker.getElementById('plot');
+      if (plot) {
+        plot.setGroups(LABELS.map((label, i) => ({
+          label,
+          values: [...samples[i]],
+        })));
+      }
+
+      const status = $melker.getElementById('status');
+      if (status) {
+        status.props.text = `Collecting samples... (${samples[0].length} per sensor)`;
+      }
+
+      $melker.render();
+    }
+
+    export function reset() {
+      samples = LABELS.map(() => []);
+      sampleCount = 0;
+      tick();
+    }
+
+    setInterval(tick, 500);
+  </script>
+</melker>

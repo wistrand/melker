@@ -504,11 +504,12 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
       const rowMin = valueToRow(s.min);
       const rowMax = valueToRow(s.max);
 
-      // Store group bounds for tooltip
+      // Store group bounds for tooltip and click selection
+      // Include label row (axisY + 1) so clicking a label selects the group
       this._groupBounds.set(gi, {
         x: cx, y: Math.min(rowMax, plotTop),
         width: colWidth,
-        height: Math.max(rowMin - rowMax + 1, plotHeight),
+        height: axisY + 2 - Math.min(rowMax, plotTop),
       });
 
       const bw = isBwMode();
@@ -554,9 +555,6 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
           buffer.currentBuffer.setCell(cx + 2, r, { char: _bc.rm, ...gs, bold: !bw });
         } else {
           buffer.currentBuffer.setCell(cx, r, { char: _bc.v, ...gs });
-          if (bw) {
-            buffer.currentBuffer.setCell(cx + 1, r, { char: '\u2588', ...gs }); // █ fill
-          }
           buffer.currentBuffer.setCell(cx + 2, r, { char: _bc.v, ...gs });
         }
       }

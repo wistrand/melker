@@ -715,12 +715,14 @@ export class DataTreeElement extends Element
     // Draw scrollbar
     if (needsScrollbar) {
       this._scrollbarBounds = { x: bounds.x + effectiveWidth - 1, y: bodyStartY, width: 1, height: bodyHeight };
+      const thumbColor = getThemeColor('scrollbarThumb') ?? style.foreground;
+      const trackColor = getThemeColor('scrollbarTrack');
       renderScrollbar(buffer, bounds.x + effectiveWidth - 1, bodyStartY, bodyHeight, {
         scrollTop: this._scroll.scrollY,
         totalItems: this._scroll.totalLines,
         visibleItems: this._scroll.viewportLines,
-        thumbStyle: style,
-        trackStyle: style,
+        thumbStyle: { ...style, foreground: thumbColor },
+        trackStyle: { ...style, foreground: trackColor },
       });
     } else {
       this._scrollbarBounds = null;

@@ -3,6 +3,7 @@
  */
 
 import type { DualBuffer, Cell } from '../buffer.ts';
+import type { ViewportDualBuffer } from '../viewport-buffer.ts';
 import { getUnicodeTier } from '../utils/terminal-detection.ts';
 
 export interface ScrollbarOptions {
@@ -29,7 +30,7 @@ export interface ScrollbarOptions {
 }
 
 export function renderScrollbar(
-  buffer: DualBuffer,
+  buffer: DualBuffer | ViewportDualBuffer,
   x: number,
   y: number,
   height: number,

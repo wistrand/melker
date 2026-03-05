@@ -271,9 +271,20 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     const { columns, showColumnBorders } = this.props;
     if (!columns || !Array.isArray(columns) || columns.length === 0) return [];
 
-    // Use user-resized widths if available
+    // Use user-resized widths if available (but still clamp to fit)
     if (this._userColumnWidths && this._userColumnWidths.length === columns.length) {
-      return this._userColumnWidths;
+      const borderWidth_ = columns.length + 1;
+      const contentWidth_ = Math.max(0, availableWidth - borderWidth_);
+      const totalUser = this._userColumnWidths.reduce((s, w) => s + w, 0);
+      if (totalUser <= contentWidth_) return this._userColumnWidths;
+      // Shrink proportionally
+      const scale = contentWidth_ / totalUser;
+      const clamped = this._userColumnWidths.map(w => Math.max(1, Math.floor(w * scale)));
+      const assigned = clamped.reduce((s, w) => s + w, 0);
+      if (assigned < contentWidth_ && clamped.length > 0) {
+        clamped[clamped.length - 1] += contentWidth_ - assigned;
+      }
+      return clamped;
     }
 
     // Border/separator count: left border + separators between columns + right border
@@ -304,12 +315,25 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
     // Pass 2: Distribute remaining to fill columns
     if (fillCount > 0) {
-      const fillWidth = Math.max(1, Math.floor(remainingWidth / fillCount));
+      const fillWidth = Math.max(1, Math.floor(Math.max(0, remainingWidth) / fillCount));
       for (let i = 0; i < widths.length; i++) {
         if (widths[i] === -1) {
           widths[i] = fillWidth;
         }
       }
+    }
+
+    // Pass 3: Shrink columns proportionally if total exceeds available content width
+    const totalColWidth = widths.reduce((sum, w) => sum + w, 0);
+    if (totalColWidth > contentWidth && contentWidth > 0) {
+      const scale = contentWidth / totalColWidth;
+      let assigned = 0;
+      for (let i = 0; i < widths.length - 1; i++) {
+        widths[i] = Math.max(1, Math.floor(widths[i] * scale));
+        assigned += widths[i];
+      }
+      // Give remainder to last column
+      widths[widths.length - 1] = Math.max(1, contentWidth - assigned);
     }
 
     return widths;
@@ -342,7 +366,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
   // Draw horizontal border
   private _drawHorizontalBorder(
-    buffer: DualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     x: number,
     y: number,
     position: 'top' | 'middle' | 'bottom',
@@ -408,7 +432,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
   // Draw scrollbar
   private _drawScrollbar(
-    buffer: DualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     x: number,
     y: number,
     height: number,
@@ -419,18 +443,20 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     // Store bounds for hit testing
     this._scrollbarBounds = { x, y, width: 1, height };
 
+    const thumbColor = getThemeColor('scrollbarThumb') ?? style.foreground;
+    const trackColor = getThemeColor('scrollbarTrack');
     renderScrollbar(buffer, x, y, height, {
       scrollTop: this._scroll.scrollY,
       totalItems: this._scroll.totalLines,
       visibleItems: this._scroll.viewportLines,
-      thumbStyle: style,
-      trackStyle: style,
+      thumbStyle: { ...style, foreground: thumbColor },
+      trackStyle: { ...style, foreground: trackColor },
     });
   }
 
   // Render header row
   private _renderHeaderRow(
-    buffer: DualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     x: number,
     y: number,
     style: Partial<Cell>,
@@ -583,7 +609,7 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
 
   // Render footer row
   private _renderFooterRow(
-    buffer: DualBuffer,
+    buffer: DualBuffer | ViewportDualBuffer,
     x: number,
     y: number,
     rowData: CellValue[],
@@ -736,15 +762,20 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     let y = bounds.y;
     const borderCellStyle = { ...style, foreground: getThemeColor('textMuted') };
 
+    // Create a clipped buffer for the entire table bounds to prevent horizontal overflow
+    const tableBuf = buffer instanceof ViewportDualBuffer
+      ? buffer
+      : new ViewportDualBuffer(buffer as DualBuffer, createClipViewport(bounds));
+
     // Draw top border
-    this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'top', borderCellStyle, totalWidth);
+    this._drawHorizontalBorder(tableBuf, bounds.x, y, 'top', borderCellStyle, totalWidth);
     y++;
 
     // Render header
     if (showHeader) {
-      this._renderHeaderRow(buffer as DualBuffer, bounds.x, y, style, totalWidth, borderCellStyle);
+      this._renderHeaderRow(tableBuf, bounds.x, y, style, totalWidth, borderCellStyle);
       y++;
-      this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'middle', borderCellStyle, totalWidth);
+      this._drawHorizontalBorder(tableBuf, bounds.x, y, 'middle', borderCellStyle, totalWidth);
       y++;
     }
 
@@ -792,29 +823,29 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     const borderChars = getBorderChars(borderPropStyle !== 'none' ? borderPropStyle : 'thin');
     const rightBorderX = bounds.x + effectiveWidth - 1;
     for (let emptyY = virtualY; emptyY < bodyStartY + bodyHeight; emptyY++) {
-      buffer.currentBuffer.setCell(bounds.x, emptyY, { char: borderChars.v, ...borderCellStyle });
-      buffer.currentBuffer.setCell(rightBorderX, emptyY, { char: borderChars.v, ...borderCellStyle });
+      tableBuf.currentBuffer.setCell(bounds.x, emptyY, { char: borderChars.v, ...borderCellStyle });
+      tableBuf.currentBuffer.setCell(rightBorderX, emptyY, { char: borderChars.v, ...borderCellStyle });
     }
 
     y = bodyStartY + bodyHeight;
 
     // Draw scrollbar if needed
     if (needsScrollbar) {
-      this._drawScrollbar(buffer as DualBuffer, bounds.x + effectiveWidth - 1, bodyStartY, bodyHeight, style);
+      this._drawScrollbar(tableBuf, bounds.x + effectiveWidth - 1, bodyStartY, bodyHeight, style);
     }
 
     // Render footer
     if (showFooter && footer?.length) {
-      this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'middle', borderCellStyle, totalWidth);
+      this._drawHorizontalBorder(tableBuf, bounds.x, y, 'middle', borderCellStyle, totalWidth);
       y++;
       for (const footerRow of footer) {
-        this._renderFooterRow(buffer as DualBuffer, bounds.x, y, footerRow, style, totalWidth, borderCellStyle);
+        this._renderFooterRow(tableBuf, bounds.x, y, footerRow, style, totalWidth, borderCellStyle);
         y++;
       }
     }
 
     // Draw bottom border
-    this._drawHorizontalBorder(buffer as DualBuffer, bounds.x, y, 'bottom', borderCellStyle, totalWidth);
+    this._drawHorizontalBorder(tableBuf, bounds.x, y, 'bottom', borderCellStyle, totalWidth);
   }
 
   // Selection management

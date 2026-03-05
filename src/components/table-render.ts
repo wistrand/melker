@@ -6,6 +6,7 @@ import type { ViewportDualBuffer } from '../viewport-buffer.ts';
 import type { TableRowElement } from './table-row.ts';
 import type { TableCellElement } from './table-cell.ts';
 import { renderScrollbar } from './scrollbar.ts';
+import { getThemeColor } from '../theme.ts';
 import { getLogger } from '../logging.ts';
 
 const logger = getLogger('Table');
@@ -222,11 +223,13 @@ export function drawScrollbarLines(
 ): void {
   if (trackHeight <= 0) return;
 
+  const thumbColor = getThemeColor('scrollbarThumb') ?? style.foreground;
+  const trackColor = getThemeColor('scrollbarTrack');
   renderScrollbar(buffer, x, y, trackHeight, {
     thumbPosition,
     thumbSize: thumbHeight,
-    thumbStyle: style,
-    trackStyle: style,
+    thumbStyle: { ...style, foreground: thumbColor },
+    trackStyle: { ...style, foreground: trackColor },
   });
 }
 

@@ -746,9 +746,9 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     // Scroll calculations
     this._scroll.update(rows.length * rowHeight, bodyHeight);
 
-    // Calculate column widths - account for scrollbar if needed
+    // Calculate column widths — scrollbar replaces the right border, no extra space needed
     const needsScrollbar = this._scroll.needsScrollbar;
-    const availableWidth = needsScrollbar ? effectiveWidth - 1 : effectiveWidth;
+    const availableWidth = effectiveWidth;
     this._columnWidths = this._calculateColumnWidths(availableWidth);
     const totalWidth = effectiveWidth;
 

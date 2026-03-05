@@ -62,6 +62,14 @@ export class SplitPaneDivider extends SeparatorElement implements Focusable, Int
       }
     }
 
+    // Hover highlight — use focusBorder color to subtly distinguish from default border
+    if (context.hoveredElementId === this.id && context.focusedElementId !== this.id) {
+      const hoverColor = getThemeColor('focusBorder');
+      if (hoverColor !== undefined) {
+        style = { ...style, foreground: hoverColor };
+      }
+    }
+
     // Focus highlight
     if (context.focusedElementId === this.id) {
       style = { ...style, reverse: true };

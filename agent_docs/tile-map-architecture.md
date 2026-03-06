@@ -185,14 +185,14 @@ export function drawMarkers(event) {
 
 ## SVG Overlay (svgOverlay)
 
-The `svgOverlay` prop provides a declarative alternative to `onOverlay` for drawing geo-anchored paths and text labels. Coordinates are **lat lon** order (matching the component's `lat`/`lon` props).
+The `svgOverlay` prop provides a declarative alternative to `onOverlay` for drawing geo-anchored paths and text labels. Path coordinates use standard SVG order: **x=lon, y=lat**. Text elements use explicit `lat`/`lon` attributes.
 
 ### Syntax
 
 ```html
 <tile-map svgOverlay='
-  <path d="M 51.5074 -0.1278 L 51.5014 -0.1419 Z" stroke="red" fill="blue"/>
-  <path d="M 51.508 -0.076 L 51.513 -0.098" stroke="#00FF00"/>
+  <path d="M -0.1278 51.5074 L -0.1419 51.5014 Z" stroke="red" fill="blue"/>
+  <path d="M -0.076 51.508 L -0.098 51.513" stroke="#00FF00"/>
   <text lat="51.5074" lon="-0.1278" fill="#fff" text-anchor="middle">London</text>
 '/>
 ```
@@ -201,7 +201,7 @@ The `svgOverlay` prop provides a declarative alternative to `onOverlay` for draw
 
 | Attribute | Description                                                                |
 |-----------|----------------------------------------------------------------------------|
-| `d`       | SVG path commands with lat/lon coordinates (M, L, H, V, Q, T, C, S, A, Z) |
+| `d`       | SVG path commands in standard SVG order: x=lon, y=lat (M, L, H, V, Q, T, C, S, A, Z) |
 | `stroke`  | CSS color string for outline                                               |
 | `fill`    | CSS color string for fill                                                  |
 
@@ -224,7 +224,7 @@ Text is rendered as terminal characters (not pixels), overlaid on the canvas aft
 ```javascript
 const map = $melker.getElementById('map');
 map.props.svgOverlay = `
-  <path d="M 40.7128 -74.0060 L 34.0522 -118.2437" stroke="red"/>
+  <path d="M -74.0060 40.7128 L -118.2437 34.0522" stroke="red"/>
   <text lat="40.7128" lon="-74.006" fill="#ff0" text-anchor="middle">NYC</text>
 `;
 ```

@@ -1186,7 +1186,7 @@ export function drawMarkers(event) {
 **SVG overlay (svgOverlay prop):**
 ```html
 <tile-map svgOverlay='
-  <path d="M 51.5 -0.1 L 48.8 2.3" stroke="red"/>
+  <path d="M -0.1 51.5 L 2.3 48.8" stroke="red"/>
   <text lat="51.5" lon="-0.1" fill="#fff" text-anchor="middle">London</text>
 '/>
 ```

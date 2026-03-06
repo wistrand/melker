@@ -906,74 +906,73 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
       TileMapElement._geoToPixel(lat, lon, centerMercX, centerMercY, mercatorPerPixelX, mercatorPerPixelY, halfW, halfH);
 
     const result: PathCommand[] = [];
+    // SVG standard order: x=lon, y=lat. toPixel takes (lat, lon).
     let curLat = 0, curLon = 0;
 
     for (const cmd of commands) {
       switch (cmd.type) {
         case 'M': {
-          const p = toPixel(cmd.x, cmd.y);
+          const p = toPixel(cmd.y, cmd.x);
           result.push({ type: 'M', x: p.px, y: p.py });
-          curLat = cmd.x; curLon = cmd.y;
+          curLon = cmd.x; curLat = cmd.y;
           break;
         }
         case 'L': {
-          const p = toPixel(cmd.x, cmd.y);
+          const p = toPixel(cmd.y, cmd.x);
           result.push({ type: 'L', x: p.px, y: p.py });
-          curLat = cmd.x; curLon = cmd.y;
+          curLon = cmd.x; curLat = cmd.y;
           break;
         }
         case 'T': {
-          const p = toPixel(cmd.x, cmd.y);
+          const p = toPixel(cmd.y, cmd.x);
           result.push({ type: 'T', x: p.px, y: p.py });
-          curLat = cmd.x; curLon = cmd.y;
+          curLon = cmd.x; curLat = cmd.y;
           break;
         }
         case 'H': {
-          // H = horizontal = change longitude, keep current latitude
+          // H = horizontal = change x = change longitude
           const p = toPixel(curLat, cmd.x);
           result.push({ type: 'L', x: p.px, y: p.py });
           curLon = cmd.x;
           break;
         }
         case 'V': {
-          // V = vertical = change latitude, keep current longitude
+          // V = vertical = change y = change latitude
           const p = toPixel(cmd.y, curLon);
           result.push({ type: 'L', x: p.px, y: p.py });
           curLat = cmd.y;
           break;
         }
         case 'Q': {
-          const ctl = toPixel(cmd.cx, cmd.cy);
-          const ep = toPixel(cmd.x, cmd.y);
+          const ctl = toPixel(cmd.cy, cmd.cx);
+          const ep = toPixel(cmd.y, cmd.x);
           result.push({ type: 'Q', cx: ctl.px, cy: ctl.py, x: ep.px, y: ep.py });
-          curLat = cmd.x; curLon = cmd.y;
+          curLon = cmd.x; curLat = cmd.y;
           break;
         }
         case 'C': {
-          const c1 = toPixel(cmd.c1x, cmd.c1y);
-          const c2 = toPixel(cmd.c2x, cmd.c2y);
-          const ep = toPixel(cmd.x, cmd.y);
+          const c1 = toPixel(cmd.c1y, cmd.c1x);
+          const c2 = toPixel(cmd.c2y, cmd.c2x);
+          const ep = toPixel(cmd.y, cmd.x);
           result.push({ type: 'C', c1x: c1.px, c1y: c1.py, c2x: c2.px, c2y: c2.py, x: ep.px, y: ep.py });
-          curLat = cmd.x; curLon = cmd.y;
+          curLon = cmd.x; curLat = cmd.y;
           break;
         }
         case 'S': {
-          const c2 = toPixel(cmd.c2x, cmd.c2y);
-          const ep = toPixel(cmd.x, cmd.y);
+          const c2 = toPixel(cmd.c2y, cmd.c2x);
+          const ep = toPixel(cmd.y, cmd.x);
           result.push({ type: 'S', c2x: c2.px, c2y: c2.py, x: ep.px, y: ep.py });
-          curLat = cmd.x; curLon = cmd.y;
+          curLon = cmd.x; curLat = cmd.y;
           break;
         }
         case 'A': {
           // Scale radii from degrees to buffer pixels.
-          // scaleLon already includes pixel aspect (via mercatorPerPixelX).
-          // scaleLat uses mercatorPerPixelY (no aspect), so we correct ry
-          // by pixelAspect so arcs aren't vertically stretched on screen.
-          const scaleLon = 1 / (mercatorPerPixelX * 360);  // pixels per degree lon
+          // rx is along x-axis (longitude), ry along y-axis (latitude).
+          const scaleLon = 1 / (mercatorPerPixelX * 360);
           const cosLat = Math.cos(curLat * Math.PI / 180);
           const scaleLat = 1 / (mercatorPerPixelY * 360 * (cosLat > 0.01 ? cosLat : 0.01));
           const pixelAspect = mercatorPerPixelX / mercatorPerPixelY;
-          const ep = toPixel(cmd.x, cmd.y);
+          const ep = toPixel(cmd.y, cmd.x);
           result.push({
             type: 'A',
             rx: Math.abs(cmd.rx * scaleLon),
@@ -984,7 +983,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
             x: ep.px,
             y: ep.py,
           });
-          curLat = cmd.x; curLon = cmd.y;
+          curLon = cmd.x; curLat = cmd.y;
           break;
         }
         case 'Z':

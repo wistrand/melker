@@ -409,7 +409,7 @@
       }
 
       // Bump when GeoJSON→svgOverlay conversion logic changes to invalidate cache
-      const PLATES_CACHE_VERSION = 1;
+      const PLATES_CACHE_VERSION = 2;
 
       // Fetch tectonic plate boundaries and convert to svgOverlay (cached)
       export async function fetchPlates(): Promise<void> {
@@ -436,13 +436,13 @@
             if (coords.length < 2) continue;
             // Simplify: skip every other point for lines with many vertices
             const step = coords.length > 100 ? 3 : coords.length > 50 ? 2 : 1;
-            let d = 'M ' + coords[0][1].toFixed(2) + ' ' + coords[0][0].toFixed(2);
+            let d = 'M ' + coords[0][0].toFixed(2) + ' ' + coords[0][1].toFixed(2);
             for (let i = step; i < coords.length - 1; i += step) {
-              d += ' L ' + coords[i][1].toFixed(2) + ' ' + coords[i][0].toFixed(2);
+              d += ' L ' + coords[i][0].toFixed(2) + ' ' + coords[i][1].toFixed(2);
             }
             // Always include last point
             const last = coords[coords.length - 1];
-            d += ' L ' + last[1].toFixed(2) + ' ' + last[0].toFixed(2);
+            d += ' L ' + last[0].toFixed(2) + ' ' + last[1].toFixed(2);
             paths.push('<path d="' + d + '" stroke="#664422"/>');
           }
           platesSvgOverlay = paths.join('\n');

@@ -141,6 +141,8 @@ export function drawLine(canvas: DrawableCanvas, x0: number, y0: number, x1: num
   x1 = Math.floor(x1);
   y1 = Math.floor(y1);
 
+  if (!isFinite(x0) || !isFinite(y0) || !isFinite(x1) || !isFinite(y1)) return;
+
   const dx = Math.abs(x1 - x0);
   const dy = Math.abs(y1 - y0);
   const sx = x0 < x1 ? 1 : -1;

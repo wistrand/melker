@@ -200,10 +200,10 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
         lines.push(`${indent}[Tile Map${id}: lat=${Number(lat).toFixed(4)}, lon=${Number(lon).toFixed(4)}, zoom=${zoom}, provider=${provider}, paths=${pathCount}, labels=${textCount}]`);
         lines.push(`${indent}  (Providers: ${providers.join(', ')})`);
         lines.push(`${indent}  (Use send_event with event_type="change" and value="lat=N,lon=N,zoom=N,provider=NAME" to change view)`);
-        lines.push(`${indent}  (Use send_event with event_type="draw" to set SVG overlay. Coordinates are lat lon order. Empty value clears. Supports:)`);
-        lines.push(`${indent}    <path d="M lat lon L lat lon" stroke="color"/> — lines`);
-        lines.push(`${indent}    <path d="M lat lon C lat lon lat lon lat lon" stroke="color"/> — cubic Bezier curves`);
-        lines.push(`${indent}    <path d="M lat lon A rx ry 0 1 1 lat lon" stroke="color"/> — arcs`);
+        lines.push(`${indent}  (Use send_event with event_type="draw" to set SVG overlay. Standard SVG coordinate order: x=lon, y=lat. Empty value clears. Supports:)`);
+        lines.push(`${indent}    <path d="M lon lat L lon lat" stroke="color"/> — lines`);
+        lines.push(`${indent}    <path d="M lon lat C lon lat lon lat lon lat" stroke="color"/> — cubic Bezier curves`);
+        lines.push(`${indent}    <path d="M lon lat A rx ry 0 1 1 lon lat" stroke="color"/> — arcs`);
         lines.push(`${indent}    <text lat="N" lon="N" fill="color" text-anchor="middle">Label</text> — text labels`);
         lines.push(`${indent}    Use A (arc) for circles, C/Q for curves. Use enough control points for smooth results when approximating with L segments.`);
         break;

@@ -66,15 +66,15 @@ Three routes are shown:
   <script type="typescript">
     // Thames walk: London Eye -> Westminster Bridge -> Big Ben -> Embankment -> Buckingham Palace
     const THAMES_WALK =
-      'M 51.5033 -0.1195 L 51.5008 -0.1187 L 51.5007 -0.1246 L 51.5010 -0.1300 L 51.5014 -0.1350 L 51.5014 -0.1419';
+      'M -0.1195 51.5033 L -0.1187 51.5008 L -0.1246 51.5007 L -0.1300 51.5010 L -0.1350 51.5014 L -0.1419 51.5014';
 
     // Triangle around St Paul's Cathedral (filled)
     const ST_PAULS_TRIANGLE =
-      'M 51.5138 -0.0984 L 51.5118 -0.1030 L 51.5118 -0.0938 Z';
+      'M -0.0984 51.5138 L -0.1030 51.5118 L -0.0938 51.5118 Z';
 
     // Tower Bridge to Tower of London
     const TOWER_ROUTE =
-      'M 51.5055 -0.0754 L 51.5081 -0.0759';
+      'M -0.0754 51.5055 L -0.0759 51.5081';
 
     export const SVG_PATHS = [
       `<path d="${THAMES_WALK}" stroke="red"/>`,

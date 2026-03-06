@@ -17,6 +17,7 @@ import {
   type ClickEvent,
   type Style,
   type KeyboardElement,
+  type IdSelectable,
   BORDER_CHARS,
   getBorderChars,
   type BorderStyle,
@@ -75,6 +76,7 @@ export interface TreeSelectEvent {
   value?: CellValue;
   path: string[];
   selectedNodes: string[];
+  id?: string;
 }
 
 export interface TreeExpandEvent {
@@ -105,6 +107,8 @@ export interface DataTreeProps extends Omit<BaseProps, 'onChange'> {
   selectedNodes?: string[];
   onChange?: (event: TreeSelectEvent) => void;
   onActivate?: (event: TreeActivateEvent) => void;
+  onGetId?: (node: TreeNode) => string | undefined;
+  selectedIds?: string[];
   onExpand?: (event: TreeExpandEvent) => void;
   onCollapse?: (event: TreeExpandEvent) => void;
 }
@@ -137,7 +141,7 @@ interface ConnectorChars {
 // ===== DataTreeElement Class =====
 
 export class DataTreeElement extends Element
-  implements Renderable, Focusable, Clickable, Interactive, KeyboardElement,
+  implements Renderable, Focusable, Clickable, Interactive, IdSelectable, KeyboardElement,
              TextSelectable, SelectableTextProvider, TooltipProvider, Wheelable {
   declare type: 'data-tree';
   declare props: DataTreeProps;
@@ -645,7 +649,14 @@ export class DataTreeElement extends Element
     // scrollY already clamped by _scroll.update() above
 
     // Sync selection from props if controlled
-    if (this.props.selectedNodes) {
+    if (this.props.selectedIds && this.props.onGetId) {
+      const idSet = new Set(this.props.selectedIds);
+      this._selectedNodes.clear();
+      for (const fn of this._flatVisibleNodes) {
+        const id = this.props.onGetId(fn.node);
+        if (id && idSet.has(id)) this._selectedNodes.add(fn.nodeId);
+      }
+    } else if (this.props.selectedNodes) {
       this._selectedNodes = new Set(this.props.selectedNodes);
     }
 
@@ -1152,12 +1163,14 @@ export class DataTreeElement extends Element
 
     const node = flatNode?.node;
     const path = this._getNodePath(nodeId);
+    const id = node ? this.props.onGetId?.(node) : undefined;
     this.props.onChange?.({
       nodeId,
       label: node?.label ?? '',
       value: node?.value,
       path,
       selectedNodes: [...this._selectedNodes],
+      id,
     });
   }
 
@@ -1298,6 +1311,18 @@ export class DataTreeElement extends Element
       }
     }
 
+    // Click outside any node — clear selection
+    if (selectable !== 'none' && this._selectedNodes.size > 0) {
+      this._selectedNodes.clear();
+      this.props.onChange?.({
+        nodeId: '',
+        label: '',
+        path: [],
+        selectedNodes: [],
+        id: undefined,
+      });
+    }
+
     return false;
   }
 
@@ -1372,6 +1397,27 @@ export class DataTreeElement extends Element
 
   getSelectedNodes(): string[] {
     return [...this._selectedNodes];
+  }
+
+  setSelectedIds(ids: Set<string>): void {
+    if (!this.props.onGetId) return;
+    this._selectedNodes.clear();
+    for (const fn of this._flatVisibleNodes) {
+      const id = this.props.onGetId(fn.node);
+      if (id && ids.has(id)) this._selectedNodes.add(fn.nodeId);
+    }
+  }
+
+  getSelectedIds(): Set<string> {
+    if (!this.props.onGetId) return new Set();
+    const ids = new Set<string>();
+    for (const fn of this._flatVisibleNodes) {
+      if (this._selectedNodes.has(fn.nodeId)) {
+        const id = this.props.onGetId(fn.node);
+        if (id) ids.add(id);
+      }
+    }
+    return ids;
   }
 
   scrollToNode(nodeId: string): void {
@@ -1490,6 +1536,8 @@ export const dataTreeSchema: ComponentSchema = {
     onActivate: { type: 'handler', description: 'Node activation handler (Enter/double-click)' },
     onExpand: { type: 'handler', description: 'Node expand handler' },
     onCollapse: { type: 'handler', description: 'Node collapse handler' },
+    onGetId: { type: 'handler', description: 'Map tree node to string ID for cross-component selection sync' },
+    selectedIds: { type: 'array', description: 'Selected IDs (controlled, requires onGetId)' },
   },
   styles: {
     borderColor: { type: 'string', description: 'Border color' },

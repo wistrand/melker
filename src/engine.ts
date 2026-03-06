@@ -11,6 +11,7 @@ import { RenderingEngine } from './rendering.ts';
 import { TerminalRenderer } from './renderer.ts';
 import { ResizeHandler } from './resize.ts';
 import { Element, type TextSelection, isScrollingEnabled } from './types.ts';
+import type { IdSelectable } from './core-types.ts';
 import type { StyleContext } from './stylesheet.ts';
 import {
   EventManager,
@@ -234,6 +235,16 @@ function _coerceToType(
   }
 }
 
+/** Compare a Set<string> (from element) against a string[] (from state). */
+function _selectionEquals(elementIds: Set<string>, stateIds: unknown): boolean {
+  if (!Array.isArray(stateIds)) return elementIds.size === 0;
+  if (elementIds.size !== stateIds.length) return false;
+  for (const id of stateIds) {
+    if (!elementIds.has(id)) return false;
+  }
+  return true;
+}
+
 export class MelkerEngine {
   private _document!: Document;
   private _buffer!: DualBuffer;
@@ -283,7 +294,7 @@ export class MelkerEngine {
   private _stateObject: Record<string, unknown> | null = null;
   private _stateTypeMap: Map<string, string> | null = null;  // initial typeof per key, for reverse sync coercion
   private _bindMappingsByType: Map<string, PersistenceMapping> | null = null;
-  private _boundElements: Array<{ element: Element; stateKey: string; twoWay: boolean }> | null = null;
+  private _boundElements: Array<{ element: Element; stateKey: string; twoWay: boolean; bindProp?: 'selection'; _lastPushed?: string[] }> | null = null;
   private _lastRegistryGeneration = -1;
 
   // App policy (for permission checks)
@@ -1587,6 +1598,11 @@ export class MelkerEngine {
         const twoWay = element.props['bind-mode'] !== 'one-way';
         this._boundElements.push({ element, stateKey: bindKey, twoWay });
       }
+      const selectionKey = element.props['bind:selection'];
+      if (typeof selectionKey === 'string') {
+        const twoWay = element.props['bind-mode'] !== 'one-way';
+        this._boundElements.push({ element, stateKey: selectionKey, twoWay, bindProp: 'selection' });
+      }
     }
     this._lastRegistryGeneration = this._document.registryGeneration;
   }
@@ -1609,9 +1625,21 @@ export class MelkerEngine {
       if (!this._boundElements || this._document.registryGeneration !== this._lastRegistryGeneration) {
         this._collectBoundElements();
       }
-      for (const { element, stateKey, twoWay } of this._boundElements!) {
-        if (!twoWay) continue;
-        if (stateKey in state) {
+      for (const binding of this._boundElements!) {
+        if (!binding.twoWay) continue;
+        if (!(binding.stateKey in state)) continue;
+        if (binding.bindProp === 'selection') {
+          const el = binding.element as unknown as IdSelectable;
+          if (typeof el.getSelectedIds === 'function') {
+            const elementIds = el.getSelectedIds();
+            // Compare against last-pushed, not current state — avoids
+            // non-clicked components overwriting state with stale selection
+            if (!_selectionEquals(elementIds, binding._lastPushed)) {
+              state[binding.stateKey] = [...elementIds];
+            }
+          }
+        } else {
+          const { element, stateKey } = binding;
           const mapping = byType.get(element.type);
           if (mapping) {
             const elementValue = element.props[mapping.prop];
@@ -1654,8 +1682,17 @@ export class MelkerEngine {
       this._collectBoundElements();
     }
 
-    for (const { element, stateKey } of this._boundElements!) {
-      if (stateKey in state) {
+    for (const binding of this._boundElements!) {
+      if (!(binding.stateKey in state)) continue;
+      if (binding.bindProp === 'selection') {
+        const el = binding.element as unknown as IdSelectable;
+        const ids = state[binding.stateKey];
+        if (typeof el.setSelectedIds === 'function' && Array.isArray(ids)) {
+          el.setSelectedIds(new Set(ids));
+          binding._lastPushed = ids as string[];
+        }
+      } else {
+        const { element, stateKey } = binding;
         const mapping = byType.get(element.type);
         if (mapping) {
           const schema = getComponentSchema(element.type);

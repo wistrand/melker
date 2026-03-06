@@ -418,6 +418,12 @@ export interface HasIntrinsicSize {
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number };
 }
 
+// IdSelectable interface for data components that support cross-component selection sync via string IDs
+export interface IdSelectable {
+  setSelectedIds(ids: Set<string>): void;
+  getSelectedIds(): Set<string>;
+}
+
 // Clickable interface for components that handle mouse clicks
 export interface Clickable {
   /**

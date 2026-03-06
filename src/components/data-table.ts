@@ -16,6 +16,7 @@ import {
   BORDER_CHARS,
   getBorderChars,
   type ClickEvent,
+  type IdSelectable,
 } from '../types.ts';
 import type { KeyPressEvent } from '../events.ts';
 import { type DualBuffer, type Cell, EMPTY_CHAR } from '../buffer.ts';
@@ -57,6 +58,7 @@ export interface DataTableSelectEvent {
   rowIndex: number;
   selectedRows: number[];
   action: 'replace' | 'add' | 'toggle';
+  id?: string;
 }
 
 export interface DataTableActivateEvent {
@@ -94,6 +96,10 @@ export interface DataTableProps extends Omit<BaseProps, 'onChange'> {
   onSelect?: (event: DataTableSelectEvent) => void;  // Deprecated: use onChange
   onActivate?: (event: DataTableActivateEvent) => void;
 
+  // ID-based selection
+  onGetId?: (row: CellValue[]) => string | undefined;
+  selectedIds?: string[];
+
   // Column resizing (default: true)
   resizable?: boolean;
   minColumnWidth?: number;
@@ -127,7 +133,7 @@ function defaultComparator(a: CellValue, b: CellValue): number {
   return strA.toLowerCase().localeCompare(strB.toLowerCase());
 }
 
-export class DataTableElement extends Element implements Renderable, Focusable, Clickable, Interactive, Draggable, Wheelable, TooltipProvider {
+export class DataTableElement extends Element implements Renderable, Focusable, Clickable, Interactive, IdSelectable, Draggable, Wheelable, TooltipProvider {
   declare type: 'data-table';
   declare props: DataTableProps;
 
@@ -755,7 +761,14 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     // scrollY already clamped by _scroll.update() above
 
     // Sync selection from props if controlled
-    if (this.props.selectedRows) {
+    if (this.props.selectedIds && this.props.onGetId) {
+      const idSet = new Set(this.props.selectedIds);
+      this._selectedRows.clear();
+      for (let i = 0; i < this.props.rows.length; i++) {
+        const id = this.props.onGetId(this.props.rows[i]);
+        if (id && idSet.has(id)) this._selectedRows.add(i);
+      }
+    } else if (this.props.selectedRows) {
       this._selectedRows = new Set(this.props.selectedRows);
     }
 
@@ -869,11 +882,13 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
     }
 
     // Fire event with original indices
+    const id = this.props.onGetId?.(this.props.rows[originalIndex]);
     const selectEvent: DataTableSelectEvent = {
       type: 'select',
       rowIndex: originalIndex,
       selectedRows: [...this._selectedRows],
       action: mode,
+      id,
     };
     this.props.onChange?.(selectEvent);
     this.props.onSelect?.(selectEvent);
@@ -1029,6 +1044,22 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
       }
     }
 
+    // Click outside any row — clear selection
+    if (selectable !== 'none' && this._selectedRows.size > 0) {
+      this._selectedRows.clear();
+      this._focusedSortedIndex = -1;
+      const selectEvent: DataTableSelectEvent = {
+        type: 'select',
+        rowIndex: -1,
+        selectedRows: [],
+        action: 'replace',
+        id: undefined,
+      };
+      this.props.onChange?.(selectEvent);
+      this.props.onSelect?.(selectEvent);
+      return true;
+    }
+
     return false;
   }
 
@@ -1180,6 +1211,25 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
   // Clear selection
   clearSelection(): void {
     this._selectedRows.clear();
+  }
+
+  setSelectedIds(ids: Set<string>): void {
+    if (!this.props.onGetId || !this.props.rows) return;
+    this._selectedRows.clear();
+    for (let i = 0; i < this.props.rows.length; i++) {
+      const id = this.props.onGetId(this.props.rows[i]);
+      if (id && ids.has(id)) this._selectedRows.add(i);
+    }
+  }
+
+  getSelectedIds(): Set<string> {
+    if (!this.props.onGetId) return new Set();
+    const ids = new Set<string>();
+    for (const ri of this._selectedRows) {
+      const id = this.props.onGetId(this.props.rows[ri]);
+      if (id) ids.add(id);
+    }
+    return ids;
   }
 
   // Scroll to row
@@ -1365,6 +1415,8 @@ export const dataTableSchema: ComponentSchema = {
     onChange: { type: 'handler', description: 'Selection change handler (preferred)' },
     onSelect: { type: 'handler', description: 'Selection change handler (deprecated: use onChange)' },
     onActivate: { type: 'handler', description: 'Row activation handler (Enter/double-click)' },
+    onGetId: { type: 'handler', description: 'Map row data to string ID for cross-component selection sync' },
+    selectedIds: { type: 'array', description: 'Selected IDs (controlled, requires onGetId)' },
     resizable: { type: 'boolean', description: 'Enable column resizing by dragging (default: true)' },
     minColumnWidth: { type: 'number', description: 'Minimum column width when resizing (default: 3)' },
     onColumnResize: { type: 'handler', description: 'Column resize handler' },

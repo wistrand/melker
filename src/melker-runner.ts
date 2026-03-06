@@ -90,7 +90,7 @@ async function wireBundlerHandlers(
   // - onPaint/onShader: rendering is handled by the component's own loop
   // - onMouseMove/onMouseOut/onMouseOver: typically just update state, component handles display
   // - onInput: fast input rendering is handled separately
-  const noAutoRenderCallbacks = ['onPaint', 'onShader', 'onMouseMove', 'onMouseOut', 'onMouseOver', 'onInput', 'onTooltip'];
+  const noAutoRenderCallbacks = ['onPaint', 'onShader', 'onMouseMove', 'onMouseOut', 'onMouseOver', 'onInput', 'onTooltip', 'onGetId'];
 
   if (element.props) {
     for (const [propName, propValue] of Object.entries(element.props)) {
@@ -124,9 +124,13 @@ async function wireBundlerHandlers(
           const capturedHandlerId = handlerId;
           const capturedHandlerFn = handlerFn;
 
+          // Synchronous callbacks: pure mapping functions called in tight loops (e.g., onGetId).
+          // Skip the async wrapper — store the raw compiled function directly.
+          if (propName === 'onGetId') {
+            element.props[propName] = capturedHandlerFn;
           // Special handling for onShader/onFilter - they return a function reference, not event handler code
           // Call the registry function once to get the actual shader/filter function
-          if (propName === 'onShader' || propName === 'onFilter') {
+          } else if (propName === 'onShader' || propName === 'onFilter') {
             try {
               const shaderFn = capturedHandlerFn();
               if (typeof shaderFn === 'function') {

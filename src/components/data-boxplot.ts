@@ -8,6 +8,7 @@ import {
   type Focusable,
   type Clickable,
   type Interactive,
+  type IdSelectable,
   type TextSelectable,
   type SelectableTextProvider,
   type SelectionBounds,
@@ -58,6 +59,7 @@ export interface BoxplotSelectEvent {
   groupIndex: number;
   label: string;
   stats: BoxplotStats;
+  id?: string;
 }
 
 export interface DataBoxplotProps extends BaseProps {
@@ -68,6 +70,8 @@ export interface DataBoxplotProps extends BaseProps {
   whiskerRule?: 'iqr' | 'minmax';
   selectable?: boolean;
   onSelect?: (event: BoxplotSelectEvent) => void;
+  onGetId?: (item: BoxplotGroup) => string | undefined;
+  selectedIds?: string[];
 }
 
 // ===== Box-drawing characters =====
@@ -137,7 +141,7 @@ function percentile(sorted: number[], p: number): number {
 
 // ===== DataBoxplotElement Class =====
 
-export class DataBoxplotElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider, TooltipProvider {
+export class DataBoxplotElement extends Element implements Renderable, Focusable, Clickable, Interactive, IdSelectable, TextSelectable, SelectableTextProvider, TooltipProvider {
   declare type: 'data-boxplot';
   declare props: DataBoxplotProps;
 
@@ -206,11 +210,13 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
           const s = this._computedStats[gi];
           const group = this.props.groups[gi];
           if (s && group) {
+            const id = this.props.onGetId?.(group);
             onSelect({
               type: 'select',
               groupIndex: gi,
               label: group.label,
               stats: s,
+              id,
             });
           }
         }
@@ -222,6 +228,7 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
     // Click outside any group — clear selection
     if (selectable) {
       this._selectedGroups.clear();
+      onSelect?.({ type: 'select', groupIndex: -1, label: '', stats: { min: 0, q1: 0, median: 0, q3: 0, max: 0 }, id: undefined });
     }
 
     return false;
@@ -235,6 +242,25 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
 
   setSelectedGroups(indices: Set<number>): void {
     this._selectedGroups = indices;
+  }
+
+  setSelectedIds(ids: Set<string>): void {
+    if (!this.props.onGetId || !this.props.groups) return;
+    this._selectedGroups.clear();
+    for (let i = 0; i < this.props.groups.length; i++) {
+      const id = this.props.onGetId(this.props.groups[i]);
+      if (id && ids.has(id)) this._selectedGroups.add(i);
+    }
+  }
+
+  getSelectedIds(): Set<string> {
+    if (!this.props.onGetId) return new Set();
+    const ids = new Set<string>();
+    for (const gi of this._selectedGroups) {
+      const id = this.props.onGetId(this.props.groups[gi]);
+      if (id) ids.add(id);
+    }
+    return ids;
   }
 
   // ===== Text Selection (copy support) =====
@@ -387,9 +413,19 @@ export class DataBoxplotElement extends Element implements Renderable, Focusable
     buffer: DualBuffer,
     _context: ComponentRenderContext
   ): void {
-    const { groups, title, yAxisLabel, showOutliers } = this.props;
+    const { groups, title, yAxisLabel, showOutliers, selectedIds, onGetId } = this.props;
 
     if (!groups || groups.length === 0) return;
+
+    // Resolve selectedIds prop to internal indices
+    if (selectedIds && onGetId) {
+      const idSet = new Set(selectedIds);
+      this._selectedGroups.clear();
+      for (let i = 0; i < groups.length; i++) {
+        const id = onGetId(groups[i]);
+        if (id && idSet.has(id)) this._selectedGroups.add(i);
+      }
+    }
 
     this._ensureStats();
     this._groupBounds.clear();
@@ -723,6 +759,8 @@ export const dataBoxplotSchema: ComponentSchema = {
     whiskerRule: { type: 'string', enum: ['iqr', 'minmax'], description: 'Whisker calculation rule (default: iqr)' },
     selectable: { type: 'boolean', description: 'Enable group selection (default: false)' },
     onSelect: { type: 'handler', description: 'Selection event handler' },
+    onGetId: { type: 'handler', description: 'Map group item to string ID for cross-component selection sync' },
+    selectedIds: { type: 'array', description: 'Selected IDs (controlled, requires onGetId)' },
   },
 };
 

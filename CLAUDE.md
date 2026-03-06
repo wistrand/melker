@@ -41,6 +41,8 @@ New to Melker? Read in this order:
 |--------------------------------|--------------------------------------------------------|
 | Script context ($melker, $app) | [script_usage.md](agent_docs/script_usage.md)                        |
 | State bindings (optional)      | [state-binding-architecture.md](agent_docs/state-binding-architecture.md) |
+| Selection binding              | [bind-selection-architecture.md](agent_docs/bind-selection-architecture.md) |
+| Selection ID system            | [selection-id-architecture.md](agent_docs/selection-id-architecture.md)     |
 | Graphics modes                 | [gfx-modes.md](agent_docs/gfx-modes.md)                              |
 | Debugging & logging            | [debugging.md](agent_docs/debugging.md)                              |
 | Common mistakes                | [dx-footguns.md](agent_docs/dx-footguns.md)                          |

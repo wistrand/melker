@@ -16,6 +16,7 @@ import {
   type ComponentRenderContext,
   type ClickEvent,
   type Style,
+  type IdSelectable,
 } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { DataBarsTooltipContext, TooltipProvider } from '../tooltip/types.ts';
@@ -66,6 +67,7 @@ export interface DataBarSelectEvent {
   seriesIndex: number;
   value: BarValue;
   label?: string;
+  id?: string;
 }
 
 export interface DataBarsProps extends BaseProps {
@@ -87,6 +89,8 @@ export interface DataBarsProps extends BaseProps {
   selectable?: boolean;
   onHover?: (event: DataBarHoverEvent) => void;
   onSelect?: (event: DataBarSelectEvent) => void;
+  onGetId?: (item: { values: BarValue[]; label?: string; index: number }) => string | undefined;
+  selectedIds?: string[];
 }
 
 // ===== Unicode Bar Characters =====
@@ -132,7 +136,7 @@ const defaultProps: Partial<DataBarsProps> = {
 
 // ===== DataBarsElement Class =====
 
-export class DataBarsElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider, TooltipProvider {
+export class DataBarsElement extends Element implements Renderable, Focusable, Clickable, Interactive, IdSelectable, TextSelectable, SelectableTextProvider, TooltipProvider {
   declare type: 'data-bars';
   declare props: DataBarsProps;
 
@@ -562,6 +566,20 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     this._elementBounds = bounds;  // Store for selection calculations
     this.setBounds(bounds);
 
+    // Resolve selectedIds prop to internal selection
+    if (this.props.selectedIds && this.props.onGetId) {
+      const idSet = new Set(this.props.selectedIds);
+      this._selectedBar = null;
+      for (let i = 0; i < bars.length; i++) {
+        const item = { values: bars[i] ?? [], label: this.props.labels?.[i], index: i };
+        const id = this.props.onGetId(item);
+        if (id && idSet.has(id)) {
+          this._selectedBar = { entry: i, series: 0 };
+          break;
+        }
+      }
+    }
+
     if (this._getOrientation() === 'vertical') {
       this._renderVertical(bounds, style, buffer);
     } else {
@@ -584,6 +602,9 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
       const entry = bars[entryIdx];
       if (!entry) continue;
 
+      const isSelected = this._selectedBar !== null && this._selectedBar.entry === entryIdx;
+      const entryStyle = isSelected ? { ...style, reverse: true } : style;
+
       // Check if we have stacking
       const stackGroups = this._buildStackGroups();
       const isStacked = [...stackGroups.values()].some(g => g.length > 1);
@@ -598,7 +619,7 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
 
           // Draw label on first row
           if (showLabels && seriesIndices[0] === 0) {
-            this._renderText(buffer, bounds.x, y, labels?.[entryIdx] ?? '', style, labelWidth - 1);
+            this._renderText(buffer, bounds.x, y, labels?.[entryIdx] ?? '', entryStyle, labelWidth - 1);
           }
 
           // Draw stacked segments with proper bg colors for seamless stacking
@@ -650,7 +671,7 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
 
           // Draw label on first series row
           if (showLabels && sIdx === 0) {
-            this._renderText(buffer, bounds.x, y, labels?.[entryIdx] ?? '', style, labelWidth - 1);
+            this._renderText(buffer, bounds.x, y, labels?.[entryIdx] ?? '', entryStyle, labelWidth - 1);
           }
 
           // Draw bar
@@ -718,6 +739,9 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     for (let entryIdx = 0; entryIdx < bars.length; entryIdx++) {
       const entry = bars[entryIdx];
       if (!entry) continue;
+
+      const isSelected = this._selectedBar !== null && this._selectedBar.entry === entryIdx;
+      const entryStyle = isSelected ? { ...style, reverse: true } : style;
 
       // Check if we have stacking
       const stackGroups = this._buildStackGroups();
@@ -811,7 +835,7 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
       if (showLabels) {
         const labelY = bounds.y + bounds.height - 1;
         const labelX = x - series.length * barWidth;
-        this._renderText(buffer, labelX, labelY, labels?.[entryIdx] ?? '', style);
+        this._renderText(buffer, labelX, labelY, labels?.[entryIdx] ?? '', entryStyle);
       }
 
       x += gap;
@@ -875,21 +899,36 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
         const [entryIdx, seriesIdx] = key.split('-').map(Number);
 
         if (selectable) {
+          // Toggle: if clicking the same bar, deselect
+          if (this._selectedBar && this._selectedBar.entry === entryIdx && this._selectedBar.series === seriesIdx) {
+            this._selectedBar = null;
+            onSelect?.({ type: 'select', entryIndex: -1, seriesIndex: -1, value: null, label: undefined, id: undefined });
+            return true;
+          }
           this._selectedBar = { entry: entryIdx, series: seriesIdx };
         }
 
         if (onSelect) {
+          const item = { values: this.props.bars[entryIdx] ?? [], label: this.props.labels?.[entryIdx], index: entryIdx };
+          const id = this.props.onGetId?.(item);
           onSelect({
             type: 'select',
             entryIndex: entryIdx,
             seriesIndex: seriesIdx,
             value: this.props.bars[entryIdx]?.[seriesIdx],
             label: this.props.labels?.[entryIdx],
+            id,
           });
         }
 
         return true;
       }
+    }
+
+    // Click outside any bar — clear selection
+    if (selectable && this._selectedBar !== null) {
+      this._selectedBar = null;
+      onSelect?.({ type: 'select', entryIndex: -1, seriesIndex: -1, value: null, label: undefined, id: undefined });
     }
 
     return false;
@@ -1124,6 +1163,39 @@ export class DataBarsElement extends Element implements Renderable, Focusable, C
     this._invalidateScale();
   }
 
+  getSelectedBar(): { entry: number; series: number } | null {
+    return this._selectedBar;
+  }
+
+  setSelectedBar(entry: number, series: number): void {
+    this._selectedBar = { entry, series };
+  }
+
+  clearSelection(): void {
+    this._selectedBar = null;
+  }
+
+  setSelectedIds(ids: Set<string>): void {
+    if (!this.props.onGetId || !this.props.bars) return;
+    this._selectedBar = null;
+    for (let i = 0; i < this.props.bars.length; i++) {
+      const item = { values: this.props.bars[i] ?? [], label: this.props.labels?.[i], index: i };
+      const id = this.props.onGetId(item);
+      if (id && ids.has(id)) {
+        this._selectedBar = { entry: i, series: 0 };
+        break;
+      }
+    }
+  }
+
+  getSelectedIds(): Set<string> {
+    if (!this.props.onGetId || !this._selectedBar) return new Set();
+    const i = this._selectedBar.entry;
+    const item = { values: this.props.bars[i] ?? [], label: this.props.labels?.[i], index: i };
+    const id = this.props.onGetId(item);
+    return id ? new Set([id]) : new Set();
+  }
+
   private _invalidateScale(): void {
     this._minValue = 0;
     this._maxValue = 0;
@@ -1190,6 +1262,8 @@ export const dataBarsSchema: ComponentSchema = {
     selectable: { type: 'boolean', description: 'Enable bar selection (default: false)' },
     onHover: { type: 'handler', description: 'Hover event handler' },
     onSelect: { type: 'handler', description: 'Selection event handler' },
+    onGetId: { type: 'handler', description: 'Map bar item to string ID for cross-component selection sync' },
+    selectedIds: { type: 'array', description: 'Selected IDs (controlled, requires onGetId)' },
   },
   styles: {
     orientation: { type: 'string', enum: ['horizontal', 'vertical'], description: 'Bar direction (default: horizontal)' },

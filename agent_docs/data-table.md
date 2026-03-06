@@ -58,6 +58,11 @@ interface DataTableProps extends BaseProps {
   onSelect?: (event: SelectEvent) => void;
   onActivate?: (event: ActivateEvent) => void;  // Enter or double-click
 
+  // ID-based selection
+  onGetId?: (row: CellValue[]) => string | undefined; // Map row → selection ID
+  selectedIds?: string[];       // Controlled selection by ID (overrides selectedRows)
+  // bind:selection="key"       // Automatic cross-component sync via createState
+
   // Column resizing
   resizable?: boolean;          // Default: true
   minColumnWidth?: number;      // Default: 3
@@ -161,6 +166,9 @@ For dynamic data (e.g., fetched from API, generated), use a script:
 - `selectable="multi"` - Multiple rows (Space to toggle)
 - Selection highlight uses reverse video
 - Borders remain unhighlighted for clean appearance
+- Clicking outside any row clears selection and fires `onSelect`/`onChange` with `{ selectedRows: [], id: undefined }`
+- Select events include an `id?: string` field when `onGetId` is configured
+- `setSelectedIds(ids)` / `getSelectedIds()` provide ID-based selection (implements `IdSelectable`)
 
 ### Activation
 - Enter key or double-click triggers `onActivate`
@@ -221,3 +229,4 @@ Supports `tooltip="auto"` for built-in formatting and `onTooltip` for custom con
 
 - [component-reference.md](component-reference.md) — All component documentation (includes `<table>` for complex cells)
 - [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system documentation
+- [selection-id-architecture.md](selection-id-architecture.md) — Cross-component selection sync via `onGetId`, `selectedIds`, `bind:selection`

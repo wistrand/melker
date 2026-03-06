@@ -97,7 +97,7 @@ CSS handles presentation, script handles data and behavior. Boolean state become
 <checkbox id="opt" bind="optEnabled" />
 ```
 
-No `bind:prop` variant. The primary prop is determined by `PersistenceMapping` in `src/state-persistence.ts`.
+For method-based bindings (e.g., selection sync), see [`bind:selection`](bind-selection-architecture.md). The primary prop is determined by `PersistenceMapping` in `src/state-persistence.ts`.
 
 ### Primary prop mapping
 
@@ -287,3 +287,4 @@ The summary line at the bottom shows totals, e.g. `5 keys (2 class, 1 bind 2w, 2
 - [css-themes-architecture.md](css-themes-architecture.md) — CSS themes and class selectors
 - [getting-started.md](getting-started.md) — Script types and critical rules
 - [dx-footguns.md](dx-footguns.md) — Handler + two-way binding gotcha (#15)
+- [bind-selection-architecture.md](bind-selection-architecture.md) — `bind:selection` for cross-component selection sync

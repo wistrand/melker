@@ -46,6 +46,9 @@ export interface DataBoxplotProps extends BaseProps {
   whiskerRule?: 'iqr' | 'minmax'; // Whisker calculation (default: 'iqr')
   selectable?: boolean;         // Enable click selection (default: false)
   onSelect?: (event: BoxplotSelectEvent) => void; // Selection callback
+  onGetId?: (group: BoxplotGroup) => string | undefined; // Map group → selection ID
+  selectedIds?: string[];       // Controlled selection by ID (overrides index-based)
+  // bind:selection="key"       // Automatic cross-component sync via createState
 }
 ```
 
@@ -186,10 +189,11 @@ export interface BoxplotSelectEvent {
   groupIndex: number;
   label: string;
   stats: BoxplotStats;
+  id?: string;              // Selection ID from onGetId (if configured)
 }
 ```
 
-The `onSelect` callback fires on every click regardless of `selectable` — `selectable` only controls the visual highlight state.
+The `onSelect` callback fires on every click regardless of `selectable` — `selectable` only controls the visual highlight state. Clicking outside any group clears selection and fires `onSelect` with `{ groupIndex: -1, id: undefined }`.
 
 ### Visual Feedback
 
@@ -233,9 +237,13 @@ boxplot.getGroups(): BoxplotGroup[]
 boxplot.setGroups(groups: BoxplotGroup[]): void  // clears cached stats
 boxplot.getStats(): BoxplotStats[]               // computes if needed
 
-// Selection
+// Selection (index-based)
 boxplot.getSelectedGroups(): Set<number>
 boxplot.setSelectedGroups(indices: Set<number>): void
+
+// Selection (ID-based — IdSelectable interface)
+boxplot.getSelectedIds(): Set<string>
+boxplot.setSelectedIds(ids: Set<string>): void
 ```
 
 ---
@@ -305,3 +313,7 @@ $melker.render();
 | [data-boxplot-static.melker](../examples/components/data-boxplot-static.melker)   | Static example  |
 | [data-boxplot-dynamic.melker](../examples/components/data-boxplot-dynamic.melker) | Dynamic example |
 | [electricity-dashboard.melker](../examples/showcase/electricity-dashboard.melker) | Showcase: live EU electricity prices |
+
+## See Also
+
+- [selection-id-architecture.md](selection-id-architecture.md) — Cross-component selection sync via `onGetId`, `selectedIds`, `bind:selection`

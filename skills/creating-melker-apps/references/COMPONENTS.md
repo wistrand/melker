@@ -385,9 +385,12 @@ High-performance table for large datasets with simple array-based data.
 - `sortColumn` - Initial sort column index
 - `sortDirection` - `asc` | `desc`
 - `selectable` - `none` | `single` | `multi`
-- `onSelect` - Selection handler (`event.rowIndex`, `event.selectedRows`)
+- `onSelect` - Selection handler (`event.rowIndex`, `event.selectedRows`, `event.id`)
 - `onActivate` - Enter/double-click handler (`event.rowIndex`)
 - `onSort` - Sort notification (optional, sorting works without it)
+- `onGetId` - Map row → string ID for cross-component sync (e.g., `onGetId="event[0]"`)
+- `selectedIds` - Controlled selection by ID (string[], overrides index-based)
+- `bind:selection` - Automatic selection sync via createState
 
 **Column definition:**
 ```typescript
@@ -469,7 +472,9 @@ Data-driven bar charts with support for horizontal/vertical orientation, stacked
 | `max` | `number` | auto | Maximum scale value |
 | `selectable` | `boolean` | `false` | Enable bar selection |
 | `onHover` | `handler` | - | Hover event |
-| `onSelect` | `handler` | - | Selection event |
+| `onSelect` | `handler` | - | Selection event (`event.id` for ID-based) |
+| `onGetId` | `handler` | - | Map bar → string ID (e.g., `onGetId="event.label"`) |
+| `selectedIds` | `string[]` | - | Controlled selection by ID |
 
 **Style props** (via `style=""`):
 
@@ -608,7 +613,9 @@ Data-driven heatmap for 2D value grids with color scales and optional isolines (
 - `showLegend` - Show color scale legend
 - `showAxis` - Show axis labels (default: true)
 - `selectable` - Enable cell selection
-- `onHover`, `onSelect` - Event handlers
+- `onHover`, `onSelect` - Event handlers (`event.id` for ID-based)
+- `onGetId` - Map cell → string ID (e.g., `onGetId="event.rowLabel"`)
+- `selectedIds` - Controlled selection by ID (string[])
 
 **Style props:**
 - `cellWidth` - Cell width in characters (default: 2, auto-sizes for values)
@@ -692,6 +699,8 @@ Data-driven tree view for hierarchical data with expand/collapse, selection, key
 - `showHeader` - Show column headers (default: true when columns defined)
 - `selectable` - 'none', 'single', 'multi' (default: 'none')
 - `selectedNodes` - Controlled selection by node ID
+- `onGetId` - Map node → string ID for cross-component sync (e.g., `onGetId="event.id"`)
+- `selectedIds` - Controlled selection by ID (overrides selectedNodes)
 - `onChange`, `onActivate`, `onExpand`, `onCollapse` - Event handlers
 
 **Style props:**

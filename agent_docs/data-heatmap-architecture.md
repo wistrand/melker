@@ -75,6 +75,11 @@ export interface DataHeatmapProps extends BaseProps {
   selectable?: boolean;
   onHover?: (event: HeatmapHoverEvent) => void;
   onSelect?: (event: HeatmapSelectEvent) => void;
+
+  // ID-based selection
+  onGetId?: (item: { row: number, col: number, value: number, rowLabel?: string, colLabel?: string }) => string | undefined;
+  selectedIds?: string[];       // Controlled selection by ID (overrides index-based)
+  // bind:selection="key"       // Automatic cross-component sync via createState
 }
 ```
 
@@ -389,6 +394,15 @@ class DataHeatmapElement extends Element {
   setRow(row: number, values: HeatmapValue[]): void;
   setColumn(col: number, values: HeatmapValue[]): void;
 
+  // Selection
+  getSelectedCell(): { row: number; col: number } | null;
+  setSelectedCell(row: number, col: number): void;
+  clearSelection(): void;
+
+  // ID-based selection (IdSelectable interface)
+  getSelectedIds(): Set<string>;
+  setSelectedIds(ids: Set<string>): void;
+
   // Labels
   getRowLabels(): string[] | undefined;
   setRowLabels(labels: string[]): void;
@@ -418,6 +432,7 @@ interface HeatmapSelectEvent {
   value: HeatmapValue;
   rowLabel?: string;
   colLabel?: string;
+  id?: string;              // Selection ID from onGetId (if configured)
 }
 ```
 
@@ -474,3 +489,6 @@ Supports `tooltip="auto"` for built-in formatting and `onTooltip` for custom con
 - [data-bars.md](data-bars.md) — Similar data-driven component
 - [data-table.md](data-table.md) — Grid-based data display
 - [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system documentation
+- [selection-id-architecture.md](selection-id-architecture.md) — Cross-component selection sync via `onGetId`, `selectedIds`, `bind:selection`
+
+Clicking outside any cell clears selection and fires `onSelect` with `{ id: undefined }`.

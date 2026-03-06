@@ -16,6 +16,7 @@ import {
   type ComponentRenderContext,
   type ClickEvent,
   type Style,
+  type IdSelectable,
 } from '../types.ts';
 import type { DualBuffer, Cell } from '../buffer.ts';
 import type { DataHeatmapTooltipContext, TooltipProvider } from '../tooltip/types.ts';
@@ -72,6 +73,7 @@ export interface HeatmapSelectEvent {
   value: HeatmapValue;
   rowLabel?: string;
   colLabel?: string;
+  id?: string;
 }
 
 export interface DataHeatmapProps extends BaseProps {
@@ -102,6 +104,8 @@ export interface DataHeatmapProps extends BaseProps {
   selectable?: boolean;
   onHover?: (event: HeatmapHoverEvent) => void;
   onSelect?: (event: HeatmapSelectEvent) => void;
+  onGetId?: (item: { row: number; col: number; value: HeatmapValue; rowLabel?: string; colLabel?: string }) => string | undefined;
+  selectedIds?: string[];
 }
 
 // ===== Color Scales =====
@@ -190,7 +194,7 @@ const defaultProps: Partial<DataHeatmapProps> = {
 
 // ===== DataHeatmapElement Class =====
 
-export class DataHeatmapElement extends Element implements Renderable, Focusable, Clickable, Interactive, TextSelectable, SelectableTextProvider, TooltipProvider {
+export class DataHeatmapElement extends Element implements Renderable, Focusable, Clickable, Interactive, IdSelectable, TextSelectable, SelectableTextProvider, TooltipProvider {
   declare type: 'data-heatmap';
   declare props: DataHeatmapProps;
 
@@ -644,6 +648,23 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     this._elementBounds = bounds;
     this.setBounds(bounds);
 
+    // Resolve selectedIds prop to internal selection
+    if (this.props.selectedIds && this.props.onGetId) {
+      const idSet = new Set(this.props.selectedIds);
+      this._selectedCell = null;
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < (grid[r]?.length ?? 0); c++) {
+          const item = { row: r, col: c, value: grid[r][c], rowLabel: this.props.rowLabels?.[r], colLabel: this.props.colLabels?.[c] };
+          const id = this.props.onGetId(item);
+          if (id && idSet.has(id)) {
+            this._selectedCell = { row: r, col: c };
+            break;
+          }
+        }
+        if (this._selectedCell) break;
+      }
+    }
+
     const cellWidth = this._getCellWidth();
     const cellHeight = this._getCellHeight();
     const rowGap = this._getGap();
@@ -680,6 +701,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
       let x = bounds.x + rowLabelWidth;
       for (let col = 0; col < rowData.length; col++) {
         const value = rowData[col];
+        const isCellSelected = this._selectedCell !== null && this._selectedCell.row === row && this._selectedCell.col === col;
 
         // Store cell bounds for click handling
         this._cellBounds.set(`${row}-${col}`, {
@@ -696,11 +718,12 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
         if (bwMode) {
           // BW mode: use pattern characters
           const pattern = this._getBwPatternForValue(value);
+          const cellStyle = isCellSelected ? { ...style, reverse: true } : style;
           for (let cy = 0; cy < cellHeight; cy++) {
             for (let cx = 0; cx < cellWidth; cx++) {
               buffer.currentBuffer.setCell(x + cx, y + cy, {
                 char: pattern,
-                ...style,
+                ...cellStyle,
               });
             }
           }
@@ -709,7 +732,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
           if (this.props.showValues && value !== null && value !== undefined) {
             const formatted = this._formatValue(value);
             const textX = x + cellWidth - formatted.length;  // Right-align
-            buffer.currentBuffer.setText(textX, y, formatted, style);
+            buffer.currentBuffer.setText(textX, y, formatted, cellStyle);
           }
         } else {
           // Color mode: use background color
@@ -718,7 +741,7 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
           for (let cy = 0; cy < cellHeight; cy++) {
             for (let cx = 0; cx < cellWidth; cx++) {
               buffer.currentBuffer.setCell(x + cx, y + cy, {
-                char: ' ',
+                char: isCellSelected ? '*' : ' ',
                 ...style,
                 background: bgColor,
               });
@@ -982,10 +1005,18 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
         const [row, col] = key.split('-').map(Number);
 
         if (selectable) {
+          // Toggle: if clicking the same cell, deselect
+          if (this._selectedCell && this._selectedCell.row === row && this._selectedCell.col === col) {
+            this._selectedCell = null;
+            onSelect?.({ type: 'select', row: -1, col: -1, value: null, id: undefined });
+            return true;
+          }
           this._selectedCell = { row, col };
         }
 
         if (onSelect) {
+          const item = { row, col, value: this.props.grid?.[row]?.[col], rowLabel: this.props.rowLabels?.[row], colLabel: this.props.colLabels?.[col] };
+          const id = this.props.onGetId?.(item as { row: number; col: number; value: HeatmapValue; rowLabel?: string; colLabel?: string });
           onSelect({
             type: 'select',
             row,
@@ -993,11 +1024,18 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
             value: this.props.grid?.[row]?.[col],
             rowLabel: this.props.rowLabels?.[row],
             colLabel: this.props.colLabels?.[col],
+            id,
           });
         }
 
         return true;
       }
+    }
+
+    // Click outside any cell — clear selection
+    if (selectable && this._selectedCell !== null) {
+      this._selectedCell = null;
+      onSelect?.({ type: 'select', row: -1, col: -1, value: null, id: undefined });
     }
 
     return false;
@@ -1159,6 +1197,42 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     this.props.colLabels = labels;
   }
 
+  getSelectedCell(): { row: number; col: number } | null {
+    return this._selectedCell;
+  }
+
+  setSelectedCell(row: number, col: number): void {
+    this._selectedCell = { row, col };
+  }
+
+  clearSelection(): void {
+    this._selectedCell = null;
+  }
+
+  setSelectedIds(ids: Set<string>): void {
+    if (!this.props.onGetId) return;
+    this._selectedCell = null;
+    const { grid, rowLabels, colLabels } = this.props;
+    for (let r = 0; r < (grid?.length ?? 0); r++) {
+      for (let c = 0; c < (grid?.[r]?.length ?? 0); c++) {
+        const item = { row: r, col: c, value: grid![r][c], rowLabel: rowLabels?.[r], colLabel: colLabels?.[c] };
+        const id = this.props.onGetId(item);
+        if (id && ids.has(id)) {
+          this._selectedCell = { row: r, col: c };
+          return;
+        }
+      }
+    }
+  }
+
+  getSelectedIds(): Set<string> {
+    if (!this.props.onGetId || !this._selectedCell) return new Set();
+    const { row, col } = this._selectedCell;
+    const item = { row, col, value: this.props.grid?.[row]?.[col], rowLabel: this.props.rowLabels?.[row], colLabel: this.props.colLabels?.[col] };
+    const id = this.props.onGetId(item as { row: number; col: number; value: HeatmapValue; rowLabel?: string; colLabel?: string });
+    return id ? new Set([id]) : new Set();
+  }
+
   /**
    * Get tooltip context for a position within the component.
    * Returns cell row/column/value information for dynamic tooltips.
@@ -1229,6 +1303,8 @@ export const dataHeatmapSchema: ComponentSchema = {
     selectable: { type: 'boolean', description: 'Enable cell selection (default: false)' },
     onHover: { type: 'handler', description: 'Hover event handler' },
     onSelect: { type: 'handler', description: 'Selection event handler' },
+    onGetId: { type: 'handler', description: 'Map cell item to string ID for cross-component selection sync' },
+    selectedIds: { type: 'array', description: 'Selected IDs (controlled, requires onGetId)' },
   },
   styles: {
     cellWidth: { type: 'number', description: 'Cell width in characters (default: 2, auto-sizes for values)' },

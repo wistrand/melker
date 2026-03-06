@@ -70,7 +70,7 @@ $melker: {
   // AI tools
   registerAITool(tool: any): void;
 
-  // State bindings (optional convenience — see state-binding-architecture.md)
+  // State bindings (optional — see state-binding-architecture.md, bind-selection-architecture.md)
   createState(initial: Record<string, any>): Record<string, any>;
 
   // State persistence

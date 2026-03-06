@@ -524,10 +524,13 @@ ${script.code.split('\n').map(l => '  ' + l).join('\n')}
         // Look up in $app first for exported functions, fall back to direct reference
         // Special case: onShader/onFilter/onPaint expect a function reference, not a call
         const isCallbackRef = handler.attributeName === 'onShader' || handler.attributeName === 'onFilter' || handler.attributeName === 'onPaint';
+        // onGetId: event property access (event.label, event[0]) returns value;
+        // anything else ($app.getId, bare name) is called as a function
+        const isEventAccess = handler.attributeName === 'onGetId' && /^event[\.\[]/.test(code);
         if (code.includes('.')) {
           // Already qualified (e.g., $app.fn)
-          if (isCallbackRef) {
-            // Return the function reference directly (runtime will call it with shader/paint args)
+          if (isCallbackRef || isEventAccess) {
+            // Return the function/value reference directly
             addLine(`  return ${code};`);
           } else {
             // Call with event param

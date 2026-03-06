@@ -468,6 +468,8 @@ The `<data-table>` component is a high-performance table for displaying large da
 | `onSelect`          | function                     | -        | Selection change handler             |
 | `onActivate`        | function                     | -        | Enter/double-click handler           |
 | `onSort`            | function                     | -        | Sort change notification (optional)  |
+| `onGetId`           | function                     | -        | Map row → string ID for cross-component sync |
+| `selectedIds`       | string[]                     | -        | Controlled selection by ID (overrides index-based) |
 | `resizable`         | boolean                      | true     | Enable column resize by dragging     |
 | `minColumnWidth`    | number                       | 3        | Minimum column width when resizing   |
 | `onColumnResize`    | function                     | -        | Column resize handler                |
@@ -651,6 +653,8 @@ The `<data-tree>` component displays hierarchical data with expand/collapse, sel
 | `showHeader`        | boolean                               | auto    | Show column headers (default: true when columns defined) |
 | `selectable`        | `'none'` \| `'single'` \| `'multi'`  | 'none'  | Selection mode                             |
 | `selectedNodes`     | string[]                              | -       | Controlled selection by node ID            |
+| `onGetId`           | function                              | -       | Map node → string ID for cross-component sync |
+| `selectedIds`       | string[]                              | -       | Controlled selection by ID (overrides selectedNodes) |
 | `onChange`          | function                              | -       | Selection change handler                   |
 | `onActivate`        | function                              | -       | Enter/double-click handler                 |
 | `onExpand`          | function                              | -       | Node expanded handler                      |
@@ -2035,6 +2039,8 @@ See [`examples/basics/command-test.melker`](../examples/basics/command-test.melk
 - [data-boxplot-architecture.md](data-boxplot-architecture.md) — Box-and-whisker plots
 - [data-heatmap-architecture.md](data-heatmap-architecture.md) — Heatmap with isolines
 - [data-tree-architecture.md](data-tree-architecture.md) — Tree view component
+- [selection-id-architecture.md](selection-id-architecture.md) — Cross-component selection sync via string IDs
+- [bind-selection-architecture.md](bind-selection-architecture.md) — Automatic selection sync via `bind:selection`
 - [spinner-architecture.md](spinner-architecture.md) — Spinner component internals
 - [toast-architecture.md](toast-architecture.md) — Toast notification system
 - [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system

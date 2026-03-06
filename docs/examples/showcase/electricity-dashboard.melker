@@ -87,6 +87,8 @@
                         yAxisLabel="EUR"
                         tooltip="auto"
                         selectable="true"
+                        onGetId="event.label"
+                        bind:selection="selectedAreas"
                         onSelect="$app.selectArea(event)"
                         groups='[]'
                         style="flex: 1; width: fill;"
@@ -119,8 +121,10 @@
                         sortColumn="2"
                         sortDirection="desc"
                         tooltip="auto"
+                        onGetId="event[0]"
+                        bind:selection="selectedAreas"
                         onActivate="$app.showAreaDetails(event)"
-                        onChange="$app.tableSelectArea(event)"
+                        onChange="$app.selectArea(event)"
                 >
                     {
                     "columns": [
@@ -155,6 +159,10 @@
                                 labels='[]'
                                 showValues="true"
                                 tooltip="auto"
+                                selectable="true"
+                                onGetId="event.label"
+                                bind:selection="selectedAreas"
+                                onSelect="$app.selectArea(event)"
                                 style="bar-width: 1; gap: 0"
                         />
                     </container>
@@ -216,6 +224,7 @@
       let currentPreset = 'nordic';
       let currentDays = 2;
       let areaDataList: AreaData[] = [];
+      const state = $melker.createState({ selectedAreas: [] as string[] });
       let selectedArea: string | null = null;
       let curvePoints: PricePoint[] = [];
       let refreshTimer: number | null = null;
@@ -378,35 +387,23 @@
         }
       }
 
-      // Boxplot selection handler
-      export function selectArea(event: { groupIndex: number; label: string }): void {
-        selectedArea = event.label;
-        updatePriceCurve(selectedArea);
+      // Selection handler — bind:selection syncs the three components automatically.
+      // No need to set state.selectedAreas — the binding layer picks up the change
+      // from the clicked component's getSelectedIds() and pushes to the others.
+      export function selectArea(event: { id?: string }): void {
+        const id = event.id;
 
         const statusEl = $melker.getElementById('status');
-        const data = areaDataList.find(d => d.area === selectedArea);
-        if (statusEl && data) {
-          statusEl.setValue(data.area + ': ' + fmtPrice(data.current) + ' EUR/MWh (current)');
-        }
-      }
-
-      // Table selection handler
-      export function tableSelectArea(event: { rowIndex: number; selectedRows: number[]; row?: (string | number)[] }): void {
-        if (event.selectedRows.length === 0) {
-          selectedArea = null;
-          const statusEl = $melker.getElementById('status');
-          if (statusEl) statusEl.setValue(areaDataList.length + ' areas - ' + PRESET_LABELS[currentPreset]);
-          return;
-        }
-        const area = event.row ? String(event.row[0]) : '';
-        if (area) {
-          selectedArea = area;
-          updatePriceCurve(area);
-          const statusEl = $melker.getElementById('status');
-          const data = areaDataList.find(d => d.area === area);
+        if (id) {
+          selectedArea = id;
+          updatePriceCurve(id);
+          const data = areaDataList.find(d => d.area === id);
           if (statusEl && data) {
             statusEl.setValue(data.area + ': ' + fmtPrice(data.current) + ' EUR/MWh (current)');
           }
+        } else {
+          selectedArea = null;
+          if (statusEl) statusEl.setValue(areaDataList.length + ' areas - ' + PRESET_LABELS[currentPreset]);
         }
       }
 
@@ -444,6 +441,7 @@
       export async function changePreset(event: { value: string }): Promise<void> {
         currentPreset = event.value;
         selectedArea = null;
+        state.selectedAreas = [];
         await refresh();
         $melker.render();
       }
@@ -452,6 +450,7 @@
       export async function changePeriod(event: { value: string }): Promise<void> {
         currentDays = parseInt(event.value, 10);
         selectedArea = null;
+        state.selectedAreas = [];
         await refresh();
         $melker.render();
       }

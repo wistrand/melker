@@ -44,6 +44,7 @@ export interface DataBarSelectEvent {
   seriesIndex: number;
   value: BarValue;
   label?: string;
+  id?: string;              // Selection ID from onGetId (if configured)
 }
 ```
 
@@ -73,6 +74,11 @@ export interface DataBarsProps extends BaseProps {
   selectable?: boolean;           // Enable bar selection (default: false)
   onHover?: (event: DataBarHoverEvent) => void;
   onSelect?: (event: DataBarSelectEvent) => void;
+
+  // ID-based selection
+  onGetId?: (item: { values: BarValue[], label?: string, index: number }) => string | undefined;
+  selectedIds?: string[];         // Controlled selection by ID (overrides index-based)
+  // bind:selection="key"         // Automatic cross-component sync via createState
 }
 ```
 
@@ -276,6 +282,15 @@ export class DataBarsElement extends Element implements
   setValue(bars: DataBarsData): void;
   appendEntry(values: BarValue[], label?: string): void;
   shiftEntry(): void;
+
+  // Selection
+  getSelectedBar(): { entry: number; series: number } | null;
+  setSelectedBar(entry: number, series: number): void;
+  clearSelection(): void;
+
+  // ID-based selection (IdSelectable interface)
+  getSelectedIds(): Set<string>;
+  setSelectedIds(ids: Set<string>): void;
 }
 ```
 
@@ -468,3 +483,6 @@ Supports `tooltip="auto"` for built-in formatting and `onTooltip` for custom con
 
 - [component-reference.md](component-reference.md) — All component documentation
 - [tooltip-architecture.md](tooltip-architecture.md) — Tooltip system documentation
+- [selection-id-architecture.md](selection-id-architecture.md) — Cross-component selection sync via `onGetId`, `selectedIds`, `bind:selection`
+
+Clicking outside any bar clears selection and fires `onSelect` with `{ id: undefined }`.

@@ -79,6 +79,11 @@ interface DataTreeProps {
   onChange?: handler;            // Selection change
   onActivate?: handler;         // Enter / double-click
 
+  // ID-based selection
+  onGetId?: (node: TreeNode) => string | undefined; // Map node → selection ID
+  selectedIds?: string[];       // Controlled selection by ID (overrides selectedNodes)
+  // bind:selection="key"       // Automatic cross-component sync via createState
+
   // Expand/collapse
   onExpand?: handler;            // Node expanded (enables lazy loading)
   onCollapse?: handler;          // Node collapsed
@@ -105,6 +110,7 @@ interface TreeSelectEvent {
   value?: CellValue;
   path: string[];            // Ancestor labels from root
   selectedNodes: string[];   // All selected IDs
+  id?: string;               // Selection ID from onGetId (if configured)
 }
 
 interface TreeExpandEvent {
@@ -274,6 +280,10 @@ toggleNode(nodeId: string): void;
 setChildren(nodeId: string, children: TreeNode[]): void;  // For lazy loading
 getSelectedNodes(): string[];
 scrollToNode(nodeId: string): void;
+
+// ID-based selection (IdSelectable interface)
+getSelectedIds(): Set<string>;
+setSelectedIds(ids: Set<string>): void;
 ```
 
 ## Dynamic Update Stability
@@ -437,6 +447,12 @@ Use `onTooltip` handler for custom content:
 - **Drag-and-drop reordering** -- moving nodes between parents
 - **Filtering** -- show matching nodes + ancestors (reuse `filterable-list/filter.ts`)
 - **Column sorting** -- sort children within each parent by a column value
+
+## See Also
+
+- [selection-id-architecture.md](selection-id-architecture.md) — Cross-component selection sync via `onGetId`, `selectedIds`, `bind:selection`
+
+Clicking outside any node clears selection and fires `onChange` with `{ selectedNodes: [], id: undefined }`.
 
 ## Estimated Complexity
 

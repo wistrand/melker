@@ -58,6 +58,7 @@ export const BASE_PROPS_SCHEMA: Record<string, PropSchema> = {
   // State binding
   bind: { type: 'string', description: 'State key to bind to this element\'s primary prop (requires createState)' },
   'bind-mode': { type: 'string', enum: ['two-way', 'one-way'], description: 'Binding direction: two-way (default) syncs element→state, one-way only pushes state→element' },
+  'bind:selection': { type: 'string', description: 'State key to bind to this element\'s selection (requires createState, IdSelectable component, and onGetId)' },
 
   // ARIA attributes (consumed by AI accessibility context builder in src/ai/context.ts)
   role: { type: 'string', description: 'ARIA role — overrides element type in AI context (e.g., "navigation", "main", "search")' },

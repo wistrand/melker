@@ -1001,7 +1001,11 @@ For more complex patterns, see these examples in the codebase:
 
 | Example | Patterns Demonstrated |
 |---------|----------------------|
-| `map.melker` (showcase/) | Canvas `onPaint`, async tile fetching, `decodeImageBytes()`, command line args via `${argv[N]}`, variable sharing between scripts (setter functions), delaying render until async completes, `$melker.cacheDir` |
+| `map.melker` (showcase/) | `<tile-map>` component, location search (Nominatim), provider switching, command line args via `${argv[N]}`, `$melker.openBrowser()` |
+| `earthquake-dashboard.melker` (showcase/) | `<tile-map>` with `onOverlay` for geo markers, `svgOverlay` for tectonic plates, fetch API, `onTooltip`, zoom-dependent thresholds |
+| `tile-map-overlay.melker` (components/) | `<tile-map>` `onOverlay` callback, `geo.latLonToPixel()`, marker drawing |
+| `tile-map-shader.melker` (components/) | `<tile-map>` with `onShader` post-processing (night vision, sepia, etc.) |
+| `tile-map-svg-paths.melker` (components/) | `<tile-map>` `svgOverlay` prop, declarative `<path>` and `<text>` elements with lat/lon |
 | `htop.melker` (showcase/) | Data table, live updates, process management |
 | `toast.melker` (basics/) | Toast notifications, all toast types, action buttons, position switching |
 | `data-bars.melker` (components/) | Bar charts, sparklines, stacked/grouped bars, streaming data |

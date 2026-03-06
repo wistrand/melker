@@ -371,6 +371,12 @@ export function fillEllipse(canvas: DrawableCanvas, centerX: number, centerY: nu
     }
   }
 
+  // Flush the last scanline from Region 1
+  for (let i = centerX - x; i <= centerX + x; i++) {
+    canvas.setPixel(i, centerY + lastY, true);
+    canvas.setPixel(i, centerY - lastY, true);
+  }
+
   // Region 2
   p = Math.round(ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2);
   while (y > 0) {

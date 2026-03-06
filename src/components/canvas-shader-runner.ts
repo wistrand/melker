@@ -324,6 +324,10 @@ function runShaderFrame(state: ShaderState, ctx: ShaderContext): void {
   for (let y = 0; y < bufH; y++) {
     for (let x = 0; x < bufW; x++) {
       const rgba = shader(x, y, time, state.resolution, source, shaderUtils);
+      if (!rgba) {
+        colorBuffer[y * bufW + x] = TRANSPARENT;
+        continue;
+      }
       const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
       const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
       const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));
@@ -421,6 +425,10 @@ export function runShaderPassSync(
   for (let y = 0; y < bufH; y++) {
     for (let x = 0; x < bufW; x++) {
       const rgba = shader(x, y, time, state.resolution, source, shaderUtils);
+      if (!rgba) {
+        colorBuffer[y * bufW + x] = TRANSPARENT;
+        continue;
+      }
       const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
       const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
       const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));

@@ -1,0 +1,122 @@
+<melker>
+  <policy>
+  {
+    "name": "Tile Map SVG Paths Demo",
+    "description": "Demonstrates the declarative svgOverlay prop for drawing geo-anchored routes on a tile-map",
+    "permissions": {
+      "map": true
+    }
+  }
+  </policy>
+
+  <help>
+## Tile Map SVG Paths Demo
+
+Demonstrates the `svgOverlay` prop for drawing geo-anchored paths declaratively.
+
+Three routes are shown:
+- **Red**: Thames walk (London Eye to Buckingham Palace)
+- **Green filled**: Triangle around St Paul's Cathedral
+- **Cyan**: Tower Bridge to Tower of London
+
+### Controls
+
+| Key | Action |
+|-----|--------|
+| Mouse drag | Pan the map |
+| Scroll wheel | Zoom in/out |
+| Arrow keys | Pan the map |
+| `+` / `-` | Zoom in/out |
+| `t` | Toggle routes on/off |
+  </help>
+
+  <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; align-items: center;">
+      <text style="font-weight: bold;">Tile Map SVG Paths Demo</text>
+      <text id="info" style="color: gray;">Declarative routes via svgOverlay prop</text>
+    </container>
+
+    <container style="flex: 1; display: flex; border: thin;">
+      <tile-map
+        id="map"
+        lat="51.5074"
+        lon="-0.1278"
+        zoom="14"
+        provider="voyager"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onMove="$app.onMapMove(event)"
+      />
+      <command key="ArrowUp,w,k" label="Pan Up" global onExecute="$app.panUp()" />
+      <command key="ArrowDown,s,j" label="Pan Down" global onExecute="$app.panDown()" />
+      <command key="ArrowLeft,a,h" label="Pan Left" global onExecute="$app.panLeft()" />
+      <command key="ArrowRight,d,l" label="Pan Right" global onExecute="$app.panRight()" />
+      <command key="+,=" label="Zoom In" global onExecute="$app.zoomIn()" />
+      <command key="-" label="Zoom Out" global onExecute="$app.zoomOut()" />
+      <command key="t" label="Toggle Routes" global onExecute="$app.toggleRoutes()" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding-left: 1; padding-right: 1; justify-content: space-between;">
+      <text id="coords">51.5074, -0.1278</text>
+      <text>Zoom: <text id="zoomLabel">14</text></text>
+    </container>
+  </container>
+
+  <script type="typescript">
+    // Thames walk: London Eye -> Westminster Bridge -> Big Ben -> Embankment -> Buckingham Palace
+    const THAMES_WALK =
+      'M 51.5033 -0.1195 L 51.5008 -0.1187 L 51.5007 -0.1246 L 51.5010 -0.1300 L 51.5014 -0.1350 L 51.5014 -0.1419';
+
+    // Triangle around St Paul's Cathedral (filled)
+    const ST_PAULS_TRIANGLE =
+      'M 51.5138 -0.0984 L 51.5118 -0.1030 L 51.5118 -0.0938 Z';
+
+    // Tower Bridge to Tower of London
+    const TOWER_ROUTE =
+      'M 51.5055 -0.0754 L 51.5081 -0.0759';
+
+    export const SVG_PATHS = [
+      `<path d="${THAMES_WALK}" stroke="red"/>`,
+      `<path d="${ST_PAULS_TRIANGLE}" stroke="#228B22" fill="#22CC2244"/>`,
+      `<path d="${TOWER_ROUTE}" stroke="cyan"/>`,
+    ].join('\n');
+
+    let routesVisible = true;
+
+    function getMap(): any {
+      return $melker.getElementById('map');
+    }
+
+    export function toggleRoutes() {
+      routesVisible = !routesVisible;
+      const map = getMap();
+      if (!map) return;
+      map.props.svgOverlay = routesVisible ? SVG_PATHS : undefined;
+      const info = $melker.getElementById('info');
+      if (info) info.setValue(routesVisible ? 'Routes visible' : 'Routes hidden (press t to show)');
+    }
+
+    // Navigation
+    export function panUp() { getMap()?.panUp(); }
+    export function panDown() { getMap()?.panDown(); }
+    export function panLeft() { getMap()?.panLeft(); }
+    export function panRight() { getMap()?.panRight(); }
+    export function zoomIn() { getMap()?.zoomIn(); }
+    export function zoomOut() { getMap()?.zoomOut(); }
+
+    export function onMapMove(event: { lat: number; lon: number; zoom: number }) {
+      const coordsEl = $melker.getElementById('coords');
+      if (coordsEl) coordsEl.setValue(`${event.lat.toFixed(4)}, ${event.lon.toFixed(4)}`);
+      const labelEl = $melker.getElementById('zoomLabel');
+      if (labelEl) labelEl.setValue(`${event.zoom}`);
+    }
+  </script>
+
+  <script async="ready">
+    // Set initial svgOverlay programmatically so the paths variable is available
+    const map = $melker.getElementById('map');
+    if (map) map.props.svgOverlay = $app.SVG_PATHS;
+    $melker.engine.focusElement('map');
+  </script>
+</melker>

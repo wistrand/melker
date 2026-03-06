@@ -1,0 +1,227 @@
+<melker>
+  <policy>
+  {
+    "name": "Tile Map Overlay + Shader Demo",
+    "description": "Demonstrates onOverlay and onShader combined on a tile-map",
+    "permissions": {
+      "map": true,
+      "shader": true
+    }
+  }
+  </policy>
+
+  <help>
+## Tile Map Overlay + Shader Demo
+
+Demonstrates `onOverlay` and `onShader` combined on a `tile-map`.
+Markers and a route are drawn via overlay, then a shader post-processes everything.
+
+### Controls
+
+| Key | Action |
+|-----|--------|
+| Mouse drag | Pan the map |
+| Scroll wheel | Zoom in/out |
+| Arrow keys | Pan the map |
+| `+` / `-` | Zoom in/out |
+| `1`-`4` | Switch shader effect |
+  </help>
+
+  <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; align-items: center;">
+      <text style="font-weight: bold;">Overlay + Shader</text>
+      <text>Effect:</text>
+      <select id="effect" selectedValue="nightvision" onChange="$app.onEffectChange(event)">
+        <option value="nightvision">Night Vision</option>
+        <option value="sepia">Sepia</option>
+        <option value="scanlines">Scanlines</option>
+        <option value="none">None</option>
+      </select>
+      <text id="info" style="color: gray;">Overlay + night vision</text>
+    </container>
+
+    <container style="flex: 1; display: flex; border: thin;">
+      <tile-map
+        id="map"
+        lat="51.5074"
+        lon="-0.1278"
+        zoom="13"
+        provider="satellite"
+        width="100%"
+        height="100%"
+        dither="auto"
+        shaderFps="0"
+        onOverlay="$app.drawOverlay(event)"
+        onShader="$app.getShader()"
+        onMove="$app.onMapMove(event)"
+      />
+      <command key="ArrowUp,w,k" label="Pan Up" global onExecute="$app.panUp()" />
+      <command key="ArrowDown,s,j" label="Pan Down" global onExecute="$app.panDown()" />
+      <command key="ArrowLeft,a,h" label="Pan Left" global onExecute="$app.panLeft()" />
+      <command key="ArrowRight,d,l" label="Pan Right" global onExecute="$app.panRight()" />
+      <command key="+,=" label="Zoom In" global onExecute="$app.zoomIn()" />
+      <command key="-" label="Zoom Out" global onExecute="$app.zoomOut()" />
+      <command key="1" label="Night Vision" global onExecute="$app.selectEffect('nightvision')" />
+      <command key="2" label="Sepia" global onExecute="$app.selectEffect('sepia')" />
+      <command key="3" label="Scanlines" global onExecute="$app.selectEffect('scanlines')" />
+      <command key="4" label="None" global onExecute="$app.selectEffect('none')" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding-left: 1; padding-right: 1; justify-content: space-between;">
+      <text id="coords">51.5074, -0.1278</text>
+      <text>Zoom: <text id="zoomLabel">13</text></text>
+    </container>
+  </container>
+
+  <script type="typescript">
+    // ===== Overlay: London landmarks + walking route =====
+
+    const MARKERS = [
+      { lat: 51.5014, lon: -0.1419, color: 0xFF0000FF, label: 'Buckingham Palace' },
+      { lat: 51.5007, lon: -0.1246, color: 0x0066FFFF, label: 'Big Ben' },
+      { lat: 51.5081, lon: -0.0759, color: 0x00CC00FF, label: 'Tower of London' },
+      { lat: 51.5138, lon: -0.0984, color: 0xFF6600FF, label: "St Paul's Cathedral" },
+      { lat: 51.5033, lon: -0.1195, color: 0xCC00CCFF, label: 'London Eye' },
+      { lat: 51.5194, lon: -0.1270, color: 0xFFCC00FF, label: 'British Museum' },
+    ];
+
+    const ROUTE = [
+      { lat: 51.5033, lon: -0.1195 },
+      { lat: 51.5008, lon: -0.1187 },
+      { lat: 51.5007, lon: -0.1246 },
+      { lat: 51.5010, lon: -0.1300 },
+      { lat: 51.5014, lon: -0.1350 },
+      { lat: 51.5014, lon: -0.1419 },
+    ];
+
+    export function drawOverlay(event: any) {
+      const { canvas, geo } = event;
+
+      // Route line
+      canvas.setColor(0x3388FFFF);
+      for (let i = 0; i < ROUTE.length - 1; i++) {
+        const p1 = geo.latLonToPixel(ROUTE[i].lat, ROUTE[i].lon);
+        const p2 = geo.latLonToPixel(ROUTE[i + 1].lat, ROUTE[i + 1].lon);
+        if (p1 && p2) {
+          canvas.drawLine(p1.x, p1.y, p2.x, p2.y);
+        }
+      }
+
+      // Markers
+      for (const marker of MARKERS) {
+        const pos = geo.latLonToPixel(marker.lat, marker.lon);
+        if (!pos) continue;
+        canvas.setColor(0x000000FF);
+        canvas.drawCircle(pos.x, pos.y, 5);
+        canvas.setColor(marker.color);
+        canvas.drawCircle(pos.x, pos.y, 4);
+        canvas.drawCircle(pos.x, pos.y, 3);
+        canvas.drawCircle(pos.x, pos.y, 2);
+      }
+    }
+
+    // ===== Shader effects =====
+
+    let currentEffect = 'nightvision';
+
+    function nightVisionShader(x: number, y: number, _time: number, _res: any, source: any): [number, number, number] | null {
+      const px = source.getPixel(x, y);
+      if (!px) return null;
+      const luma = px[0] * 0.299 + px[1] * 0.587 + px[2] * 0.114;
+      return [luma * 0.2, luma * 1.0, luma * 0.2];
+    }
+
+    function sepiaShader(x: number, y: number, _time: number, _res: any, source: any): [number, number, number] | null {
+      const px = source.getPixel(x, y);
+      if (!px) return null;
+      const [r, g, b] = px;
+      return [
+        Math.min(255, r * 0.393 + g * 0.769 + b * 0.189),
+        Math.min(255, r * 0.349 + g * 0.686 + b * 0.168),
+        Math.min(255, r * 0.272 + g * 0.534 + b * 0.131),
+      ];
+    }
+
+    function scanlinesShader(x: number, y: number, _time: number, _res: any, source: any): [number, number, number] | null {
+      const px = source.getPixel(x, y);
+      if (!px) return null;
+      const s = y % 3 === 0 ? 0.6 : 1.0;
+      return [px[0] * s, px[1] * s, px[2] * s];
+    }
+
+    function noopShader(x: number, y: number, _time: number, _res: any, source: any): [number, number, number, number] | null {
+      return source.getPixel(x, y);
+    }
+
+    const SHADERS: Record<string, any> = {
+      nightvision: nightVisionShader,
+      sepia: sepiaShader,
+      scanlines: scanlinesShader,
+      none: noopShader,
+    };
+
+    const EFFECT_LABELS: Record<string, string> = {
+      nightvision: 'Overlay + night vision',
+      sepia: 'Overlay + sepia tone',
+      scanlines: 'Overlay + CRT scanlines',
+      none: 'Overlay only (no shader)',
+    };
+
+    export function getShader() {
+      return SHADERS[currentEffect] ?? noopShader;
+    }
+
+    export function onEffectChange(event: { value: string }) {
+      currentEffect = event.value;
+      applyShader();
+    }
+
+    export function selectEffect(effect: string) {
+      currentEffect = effect;
+      const sel = $melker.getElementById('effect');
+      if (sel) sel.props.selectedValue = effect;
+      applyShader();
+    }
+
+    function applyShader() {
+      const map = getMap() as any;
+      if (map) {
+        map.props.onShader = SHADERS[currentEffect] ?? noopShader;
+        map.markDirty();
+      }
+      const infoEl = $melker.getElementById('info');
+      if (infoEl) infoEl.setValue(EFFECT_LABELS[currentEffect] ?? '');
+    }
+
+    // ===== Navigation =====
+
+    function getMap(): any {
+      return $melker.getElementById('map');
+    }
+
+    export function panUp() { getMap()?.panUp(); }
+    export function panDown() { getMap()?.panDown(); }
+    export function panLeft() { getMap()?.panLeft(); }
+    export function panRight() { getMap()?.panRight(); }
+    export function zoomIn() { getMap()?.zoomIn(); updateZoomLabel(); }
+    export function zoomOut() { getMap()?.zoomOut(); updateZoomLabel(); }
+
+    function updateZoomLabel() {
+      const map = getMap();
+      if (!map) return;
+      const labelEl = $melker.getElementById('zoomLabel');
+      if (labelEl) labelEl.setValue(`${map.getZoom()}`);
+    }
+
+    export function onMapMove(event: { lat: number; lon: number; zoom: number }) {
+      const coordsEl = $melker.getElementById('coords');
+      if (coordsEl) coordsEl.setValue(`${event.lat.toFixed(4)}, ${event.lon.toFixed(4)}`);
+      const labelEl = $melker.getElementById('zoomLabel');
+      if (labelEl) labelEl.setValue(`${event.zoom}`);
+    }
+  </script>
+
+  <script async="ready">
+    $melker.engine.focusElement('map');
+  </script>
+</melker>

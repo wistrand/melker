@@ -1,0 +1,143 @@
+<melker>
+  <policy>
+  {
+    "name": "Tile Map Overlay Demo",
+    "description": "Demonstrates onOverlay for drawing markers and routes on a tile-map",
+    "permissions": {
+      "map": true
+    }
+  }
+  </policy>
+
+  <help>
+## Tile Map Overlay Demo
+
+Demonstrates `onOverlay` for drawing markers and routes on a `tile-map`.
+
+### Controls
+
+| Key | Action |
+|-----|--------|
+| Mouse drag | Pan the map |
+| Scroll wheel | Zoom in/out |
+| Arrow keys | Pan the map |
+| `+` / `-` | Zoom in/out |
+  </help>
+
+  <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+    <container style="display: flex; flex-direction: row; padding: 1; gap: 2; align-items: center;">
+      <text style="font-weight: bold;">Tile Map Overlay Demo</text>
+      <text id="info" style="color: gray;">Markers: London landmarks / Route: walking path</text>
+    </container>
+
+    <container style="flex: 1; display: flex; border: thin;">
+      <tile-map
+        id="map"
+        lat="51.5074"
+        lon="-0.1278"
+        zoom="13"
+        provider="voyager"
+        width="100%"
+        height="100%"
+        dither="auto"
+        onOverlay="$app.drawOverlay(event)"
+        onMove="$app.onMapMove(event)"
+      />
+      <command key="ArrowUp,w,k" label="Pan Up" global onExecute="$app.panUp()" />
+      <command key="ArrowDown,s,j" label="Pan Down" global onExecute="$app.panDown()" />
+      <command key="ArrowLeft,a,h" label="Pan Left" global onExecute="$app.panLeft()" />
+      <command key="ArrowRight,d,l" label="Pan Right" global onExecute="$app.panRight()" />
+      <command key="+,=" label="Zoom In" global onExecute="$app.zoomIn()" />
+      <command key="-" label="Zoom Out" global onExecute="$app.zoomOut()" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; padding-left: 1; padding-right: 1; justify-content: space-between;">
+      <text id="coords">51.5074, -0.1278</text>
+      <text>Zoom: <text id="zoomLabel">13</text></text>
+    </container>
+  </container>
+
+  <script type="typescript">
+    // London landmarks to mark on the map
+    const MARKERS = [
+      { lat: 51.5014, lon: -0.1419, color: 0xFF0000FF, label: 'Buckingham Palace' },
+      { lat: 51.5007, lon: -0.1246, color: 0x0066FFFF, label: 'Big Ben' },
+      { lat: 51.5081, lon: -0.0759, color: 0x00CC00FF, label: 'Tower of London' },
+      { lat: 51.5138, lon: -0.0984, color: 0xFF6600FF, label: "St Paul's Cathedral" },
+      { lat: 51.5033, lon: -0.1195, color: 0xCC00CCFF, label: 'London Eye' },
+      { lat: 51.5194, lon: -0.1270, color: 0xFFCC00FF, label: 'British Museum' },
+    ];
+
+    // Walking route along the Thames (simplified)
+    const ROUTE = [
+      { lat: 51.5033, lon: -0.1195 },  // London Eye
+      { lat: 51.5008, lon: -0.1187 },  // Westminster Bridge south
+      { lat: 51.5007, lon: -0.1246 },  // Big Ben
+      { lat: 51.5010, lon: -0.1300 },  // Along Victoria Embankment
+      { lat: 51.5014, lon: -0.1350 },
+      { lat: 51.5014, lon: -0.1419 },  // Buckingham Palace
+    ];
+
+    // Draw overlay: markers + route on the map
+    export function drawOverlay(event: any) {
+      const { canvas, geo } = event;
+
+      // Draw route as connected line segments
+      canvas.setColor(0x3388FFFF);  // Blue route line
+      for (let i = 0; i < ROUTE.length - 1; i++) {
+        const p1 = geo.latLonToPixel(ROUTE[i].lat, ROUTE[i].lon);
+        const p2 = geo.latLonToPixel(ROUTE[i + 1].lat, ROUTE[i + 1].lon);
+        if (p1 && p2) {
+          canvas.drawLine(p1.x, p1.y, p2.x, p2.y);
+        }
+      }
+
+      // Draw markers as filled circles
+      for (const marker of MARKERS) {
+        const pos = geo.latLonToPixel(marker.lat, marker.lon);
+        if (!pos) continue;  // Off-screen, skip
+
+        // Outer ring (dark border)
+        canvas.setColor(0x000000FF);
+        canvas.drawCircle(pos.x, pos.y, 5);
+
+        // Filled center
+        canvas.setColor(marker.color);
+        canvas.drawCircle(pos.x, pos.y, 4);
+        canvas.drawCircle(pos.x, pos.y, 3);
+        canvas.drawCircle(pos.x, pos.y, 2);
+      }
+    }
+
+    // Helper to get the map element
+    function getMap(): any {
+      return $melker.getElementById('map');
+    }
+
+    // Navigation
+    export function panUp() { getMap()?.panUp(); }
+    export function panDown() { getMap()?.panDown(); }
+    export function panLeft() { getMap()?.panLeft(); }
+    export function panRight() { getMap()?.panRight(); }
+    export function zoomIn() { getMap()?.zoomIn(); updateZoomLabel(); }
+    export function zoomOut() { getMap()?.zoomOut(); updateZoomLabel(); }
+
+    function updateZoomLabel() {
+      const map = getMap();
+      if (!map) return;
+      const labelEl = $melker.getElementById('zoomLabel');
+      if (labelEl) labelEl.setValue(`${map.getZoom()}`);
+    }
+
+    export function onMapMove(event: { lat: number; lon: number; zoom: number }) {
+      const coordsEl = $melker.getElementById('coords');
+      if (coordsEl) coordsEl.setValue(`${event.lat.toFixed(4)}, ${event.lon.toFixed(4)}`);
+      const labelEl = $melker.getElementById('zoomLabel');
+      if (labelEl) labelEl.setValue(`${event.zoom}`);
+    }
+  </script>
+
+  <script async="ready">
+    $melker.engine.focusElement('map');
+  </script>
+</melker>

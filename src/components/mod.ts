@@ -49,3 +49,6 @@ export * from './segment-display/mod.ts';
 
 // Graph component
 export * from './graph/mod.ts';
+
+// Tile map component
+export * from './tile-map.ts';

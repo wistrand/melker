@@ -146,11 +146,11 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         type: 'string',
         description: 'The type of event to send',
         required: true,
-        enum: ['click', 'change', 'focus', 'keypress'],
+        enum: ['click', 'change', 'focus', 'keypress', 'draw'],
       },
       value: {
         type: 'string',
-        description: 'For change events, the new value. For keypress events, the key to press.',
+        description: 'For change events, the new value. For keypress events, the key to press. For draw events on tile-map, SVG path elements with lat/lon coordinates.',
         required: false,
       },
     },
@@ -415,6 +415,37 @@ function executeSendEvent(
         const preview = row?.map((c: unknown) => String(c ?? '')).join(', ');
         return { success: true, message: `Selected row ${rowIndex} in ${elementId}: ${preview}` };
       }
+      // Tile map - set view (lat, lon, zoom, provider)
+      if (element.type === 'tile-map') {
+        const mapEl = element as any;
+        if (!value) {
+          return { success: false, message: 'value is required for tile-map change events. Format: "lat=N,lon=N,zoom=N,provider=NAME" (all fields optional)' };
+        }
+        const params = new Map<string, string>();
+        for (const part of value.split(',')) {
+          const eq = part.indexOf('=');
+          if (eq > 0) {
+            params.set(part.slice(0, eq).trim(), part.slice(eq + 1).trim());
+          }
+        }
+        const lat = params.has('lat') ? Number(params.get('lat')) : undefined;
+        const lon = params.has('lon') ? Number(params.get('lon')) : undefined;
+        const zoom = params.has('zoom') ? Number(params.get('zoom')) : undefined;
+        const provider = params.get('provider');
+        if (provider) {
+          mapEl.props.provider = provider;
+        }
+        if (typeof mapEl.setView === 'function' && (lat !== undefined || lon !== undefined)) {
+          const center = typeof mapEl.getCenter === 'function' ? mapEl.getCenter() : { lat: 0, lon: 0 };
+          mapEl.setView(lat ?? center.lat, lon ?? center.lon, zoom);
+        } else if (typeof mapEl.setZoom === 'function' && zoom !== undefined) {
+          mapEl.setZoom(zoom);
+        }
+        context.render();
+        const newCenter = typeof mapEl.getCenter === 'function' ? mapEl.getCenter() : { lat: 0, lon: 0 };
+        const newZoom = typeof mapEl.getZoom === 'function' ? mapEl.getZoom() : 0;
+        return { success: true, message: `Map ${elementId}: lat=${newCenter.lat.toFixed(4)}, lon=${newCenter.lon.toFixed(4)}, zoom=${newZoom}, provider=${mapEl._currentProvider || mapEl.props.provider}` };
+      }
       // Select/combobox/autocomplete - select option by value
       if (element.type === 'select' || element.type === 'combobox' || element.type === 'autocomplete') {
         const listElement = element as any;
@@ -456,6 +487,26 @@ function executeSendEvent(
         return { success: true, message: `Sent keypress '${value}' to ${elementId}` };
       }
       return { success: false, message: `Element ${elementId} does not support keypress events` };
+    }
+
+    case 'draw': {
+      if (element.type !== 'tile-map') {
+        return { success: false, message: `draw events are only supported on tile-map elements, not ${element.type}` };
+      }
+      const mapEl = element as any;
+      if (!value || value.trim() === '') {
+        mapEl.props.svgOverlay = undefined;
+        context.render();
+        return { success: true, message: `Cleared SVG paths on map ${elementId}` };
+      }
+      mapEl.props.svgOverlay = value;
+      context.render();
+      const pathCount = (value.match(/<path\b/gi) || []).length;
+      const textCount = (value.match(/<text\b/gi) || []).length;
+      const parts: string[] = [];
+      if (pathCount > 0) parts.push(`${pathCount} path(s)`);
+      if (textCount > 0) parts.push(`${textCount} label(s)`);
+      return { success: true, message: `Drew ${parts.join(' and ') || 'overlay'} on map ${elementId}` };
     }
 
     default:
@@ -501,6 +552,17 @@ function executeReadElement(
     case 'textarea':
       content = element.props.value as string | undefined;
       break;
+    case 'tile-map': {
+      const mapEl = element as any;
+      const center = typeof mapEl.getCenter === 'function' ? mapEl.getCenter() : { lat: element.props.lat, lon: element.props.lon };
+      const zoom = typeof mapEl.getZoom === 'function' ? mapEl.getZoom() : element.props.zoom;
+      const provider = mapEl._currentProvider || element.props.provider || 'openstreetmap';
+      const pathCount = mapEl.props.svgOverlay ? (mapEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
+      const labelCount = mapEl.props.svgOverlay ? (mapEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
+      const providers = typeof mapEl._getProviders === 'function' ? Object.keys(mapEl._getProviders()) : [];
+      content = `Tile Map: lat=${Number(center.lat).toFixed(4)}, lon=${Number(center.lon).toFixed(4)}, zoom=${zoom}, provider=${provider}, paths=${pathCount}, labels=${labelCount}\nAvailable providers: ${providers.join(', ')}`;
+      break;
+    }
     case 'button':
       content = element.props.title as string | undefined;
       break;

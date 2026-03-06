@@ -114,6 +114,7 @@ chmod +x hello.melker
 | `combobox` / `select` | Dropdowns              |
 | `data-table`          | Sortable table         |
 | `canvas`              | Pixel graphics         |
+| `tile-map`            | Interactive map        |
 | `graph`               | Mermaid diagrams       |
 | `connector`           | Lines between elements |
 | `split-pane`          | Resizable split panels |

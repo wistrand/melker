@@ -558,7 +558,8 @@ export function pathToPolygons(commands: PathCommand[], tolerance: number = DEFA
       case 'Z':
         ensureCurrent();
         if (current.length > 0) {
-          // Mark closure by returning to start
+          // Close by appending start point so drawPath draws the closing edge
+          current.push([startX, startY]);
           curX = startX; curY = startY;
           subpaths.push(current);
         }

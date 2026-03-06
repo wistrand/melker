@@ -599,6 +599,7 @@ export interface ComponentPropsMap {
   'slider': SliderProps;
   'spinner': SpinnerProps;
   'split-pane': SplitPaneProps;
+  'tile-map': import('./components/tile-map.ts').TileMapProps;
 }
 
 // Type mapping for known element types to their element classes
@@ -638,6 +639,18 @@ export interface ClickEvent extends BaseEvent {
 
 export interface FocusEvent extends BaseEvent {
   type: 'focus' | 'blur';
+}
+
+// ===== Engine Cache API =====
+
+/** Cache API for persisting binary data across sessions (e.g., tile images). */
+export interface EngineCacheAPI {
+  read(namespace: string, key: string): Promise<Uint8Array | null>;
+  write(namespace: string, key: string, data: Uint8Array, options?: { maxBytes?: number }): Promise<void>;
+  delete(namespace: string, key: string): Promise<boolean>;
+  scan(namespace: string): Promise<string[]>;
+  clear(namespace: string): Promise<number>;
+  stats(namespace: string): Promise<{ entries: number; totalBytes: number }>;
 }
 
 // Component registration for extensibility

@@ -151,6 +151,13 @@ export interface PolicyPermissions {
   browser?: boolean;
 
   /**
+   * Tile map access (shortcut)
+   * Enables: net=[built-in tile provider hosts]
+   * Set to true to enable all built-in tile map providers
+   */
+  map?: boolean;
+
+  /**
    * Shader access
    * Set to true to allow running per-pixel shaders on canvas/img elements
    * Shaders execute custom code per-pixel at high frame rates

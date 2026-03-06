@@ -1060,6 +1060,11 @@ canvas.drawPathColor(commands, color);     // Stroke with specific color
 canvas.fillPathColor(commands, color);     // Fill with specific color
 canvas.drawPathCorrected(commands);        // Stroke with aspect correction
 canvas.fillPathCorrected(commands);        // Fill with aspect correction
+
+// Text labels (rendered as terminal characters, not pixels)
+canvas.drawText(x, y, text, { align, bg });           // Draw text at pixel coords using current color
+canvas.drawTextColor(x, y, text, color, { align, bg }); // Draw text with specific color
+// align: 'left' (default) | 'center' | 'right'; bg: background color
 ```
 
 **Tooltip support:**
@@ -1132,6 +1137,59 @@ Image display (PNG, JPEG, GIF, WebP). Supports file paths, HTTP/HTTPS URLs, and 
 const img = $melker.getElementById('my-image');
 await img.setSrc('https://example.com/image.png');  // or file path or data URL
 ```
+
+### tile-map
+
+Interactive slippy map with Mercator projection. Extends canvas — inherits dithering, shaders, graphics pipeline. Requires `"map": true` policy.
+
+```xml
+<tile-map id="map" lat="51.5074" lon="-0.1278" zoom="12"
+          provider="openstreetmap" width="100%" height="100%"
+          onOverlay="$app.drawMarkers(event)"
+          onTooltip="$app.onTooltip(event)"
+          onMove="$app.onMove(event)" />
+```
+
+**Props:** `lat`, `lon`, `zoom`, `provider`, `interactive` (default true), `maxZoom`, `svgOverlay`, `onOverlay`, `onTooltip`, `onMove`, `onZoom`, `onClick`, `onLoadingChange`
+
+**Built-in providers:** `openstreetmap`, `terrain`, `streets`, `voyager`, `voyager-nolabels`, `satellite`
+
+**Programmatic API:**
+```typescript
+const map = $melker.getElementById('map');
+map.setView(lat, lon, zoom?);    // Navigate
+map.getCenter();                  // { lat, lon }
+map.getZoom();                    // number
+map.getBoundsLatLon();            // { north, south, east, west }
+map.latLonToPixel(lat, lon);     // { x, y } | null
+map.pixelToLatLon(x, y);        // { lat, lon }
+map.zoomIn(); map.zoomOut();
+map.panUp(); map.panDown(); map.panLeft(); map.panRight();
+map.clearCache();
+```
+
+**Overlay drawing (onOverlay):**
+```typescript
+export function drawMarkers(event) {
+  const { canvas, geo } = event;
+  for (const m of markers) {
+    const pos = geo.latLonToPixel(m.lat, m.lon);
+    if (!pos) continue;
+    canvas.fillCircleCorrectedColor(pos.x, pos.y, 3, 'red');
+    canvas.drawTextColor(pos.x, pos.y - 10, m.name, '#fff', { align: 'center' });
+  }
+}
+```
+
+**SVG overlay (svgOverlay prop):**
+```html
+<tile-map svgOverlay='
+  <path d="M 51.5 -0.1 L 48.8 2.3" stroke="red"/>
+  <text lat="51.5" lon="-0.1" fill="#fff" text-anchor="middle">London</text>
+'/>
+```
+
+Coordinates in `d` are **lat lon** order. `<text>` supports: `lat`, `lon`, `fill`, `bg`, `text-anchor` (start/middle/end) or `align` (left/center/right).
 
 ### Shaders (canvas/img)
 

@@ -1092,8 +1092,30 @@ The `<canvas>` component provides pixel graphics using Unicode sextant character
 | `fillPath(commands)`                                 | Fill from PathCommand array                                      |
 | `drawPathCorrected(commands)`                        | Stroke with aspect correction                                    |
 | `fillPathCorrected(commands)`                        | Fill with aspect correction                                      |
+| `drawText(x, y, text, options?)`                     | Draw text label at pixel coords (terminal chars, not pixels)     |
+| `drawTextColor(x, y, text, color, options?)`         | Draw text label with specific color                              |
 
-**Note:** There is no `fillText` method — canvas supports pixel drawing only, not text rendering.
+### drawText / drawTextColor
+
+Draw text labels on the canvas as terminal characters overlaid on top of the pixel content. Unlike pixel drawing methods, text is rendered at terminal cell resolution (not pixel resolution) and appears crisp regardless of canvas mode.
+
+```typescript
+// Using current drawing color
+canvas.setColor('#ffffff');
+canvas.drawText(100, 50, 'Label');
+
+// With explicit color and options
+canvas.drawTextColor(100, 50, 'Center', '#ff0', { align: 'center', bg: '#333' });
+```
+
+**Parameters:**
+- `x`, `y` — pixel coordinates (same space as `drawLine`, `fillCircle`, etc.)
+- `text` — string to render
+- `color` — foreground color (CSS string or packed RGBA), for `drawTextColor` only
+- `options.align` — `'left'` (default), `'center'`, or `'right'` relative to x
+- `options.bg` — background color (CSS string or packed RGBA)
+
+Text labels are queued during `onPaint`/`onOverlay` and rendered after the pixel buffer is converted to terminal cells.
 
 ### drawImageRegion
 
@@ -1174,6 +1196,77 @@ export function chartTooltip(event) {
   if (!event.context) return undefined;
   const { pixelX, pixelY, color } = event.context;
   return `**Data** at (${pixelX}, ${pixelY})`;
+}
+```
+
+## Tile Map Component
+
+The `<tile-map>` component renders an interactive slippy map with Mercator projection. Extends `CanvasElement` — inherits dithering, graphics pipeline, shader support. See [tile-map-architecture.md](tile-map-architecture.md) for full architecture details.
+
+### Usage
+
+```html
+<tile-map lat="51.5074" lon="-0.1278" zoom="12" width="100%" height="100%"
+          provider="satellite" onOverlay="$app.drawMarkers(event)" />
+```
+
+Requires `"map": true` in policy permissions.
+
+### Key Props
+
+| Prop          | Type             | Default           | Description                                |
+|---------------|------------------|-------------------|--------------------------------------------|
+| `lat`         | `number`         | `51.5074`         | Center latitude                            |
+| `lon`         | `number`         | `-0.1278`         | Center longitude                           |
+| `zoom`        | `number`         | `5`               | Zoom level (0-20)                          |
+| `provider`    | `string`         | `'openstreetmap'` | Tile provider key                          |
+| `interactive` | `boolean`        | `true`            | Enable drag/scroll/double-click            |
+| `svgOverlay`  | `string`         | —                 | Declarative `<path>` and `<text>` elements |
+| `onOverlay`   | `(event) => void`| —                 | Drawing callback with geo transforms       |
+| `onTooltip`   | `(event) => void`| —                 | Tooltip callback on hover                  |
+| `onMove`      | `(event) => void`| —                 | Fires on position change                   |
+| `onZoom`      | `(event) => void`| —                 | Fires on zoom change                       |
+
+### Built-in Providers
+
+`openstreetmap`, `terrain`, `streets`, `voyager`, `voyager-nolabels`, `satellite`
+
+### Programmatic API
+
+```typescript
+const map = $melker.getElementById('map');
+map.setView(lat, lon, zoom?);    // Navigate
+map.getCenter();                  // { lat, lon }
+map.getZoom();                    // number
+map.getBoundsLatLon();            // { north, south, east, west }
+map.latLonToPixel(lat, lon);     // { x, y } | null
+map.pixelToLatLon(x, y);        // { lat, lon }
+map.zoomIn() / map.zoomOut();
+map.panUp() / panDown() / panLeft() / panRight();
+```
+
+### SVG Overlay
+
+```html
+<tile-map svgOverlay='
+  <path d="M 51.5 -0.1 L 48.8 2.3" stroke="red"/>
+  <text lat="51.5" lon="-0.1" fill="#fff" text-anchor="middle">London</text>
+'/>
+```
+
+Coordinates in `d` attributes are **lat lon** order. `<text>` elements support `lat`, `lon`, `fill`, `bg`, `text-anchor` (`start`/`middle`/`end`) or `align` (`left`/`center`/`right`).
+
+### Overlay Drawing
+
+```typescript
+export function drawMarkers(event) {
+  const { canvas, geo } = event;
+  for (const m of markers) {
+    const pos = geo.latLonToPixel(m.lat, m.lon);
+    if (!pos) continue;
+    canvas.fillCircleCorrectedColor(pos.x, pos.y, 3, 'red');
+    canvas.drawTextColor(pos.x, pos.y - 10, m.name, '#fff', { align: 'center' });
+  }
 }
 ```
 

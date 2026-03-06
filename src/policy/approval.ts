@@ -14,6 +14,7 @@ import {
   getBrowserCommand,
   AI_NET_HOSTS,
 } from './flags.ts';
+import { MAP_NET_HOSTS } from './tile-map-hosts.ts';
 import type { PermissionOverrides } from './permission-overrides.ts';
 
 /**
@@ -215,6 +216,7 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
   aiCmds.forEach(cmd => shortcutRunCommands.add(cmd));
   if (browserCmd) shortcutRunCommands.add(browserCmd);
   if (p.ai) AI_NET_HOSTS.forEach(host => shortcutNetHosts.add(host));
+  if (p.map) MAP_NET_HOSTS.forEach(host => shortcutNetHosts.add(host));
 
   if (p.net?.length) {
     // Expand "samesite" to show actual host, filter shortcut-derived hosts
@@ -267,6 +269,9 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
   if (p.shader) {
     lines.push('  shader: enabled');
   }
+  if (p.map) {
+    lines.push('  map: enabled');
+  }
 
   return lines;
 }
@@ -312,6 +317,9 @@ export function formatOverrides(overrides: PermissionOverrides): string[] {
   if (deny.shader) {
     lines.push('  --deny-shader');
   }
+  if (deny.map) {
+    lines.push('  --deny-map');
+  }
 
   // Format allow overrides
   if (allow.all) {
@@ -346,6 +354,9 @@ export function formatOverrides(overrides: PermissionOverrides): string[] {
   }
   if (allow.shader) {
     lines.push('  --allow-shader');
+  }
+  if (allow.map) {
+    lines.push('  --allow-map');
   }
 
   return lines;

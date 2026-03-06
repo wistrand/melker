@@ -87,10 +87,10 @@ async function wireBundlerHandlers(
   errorTranslator?: ErrorTranslator
 ): Promise<void> {
   // These callbacks don't need auto-render after each call:
-  // - onPaint/onShader: rendering is handled by the component's own loop
+  // - onPaint/onShader/onOverlay: called during render, auto-render would cause infinite loop
   // - onMouseMove/onMouseOut/onMouseOver: typically just update state, component handles display
   // - onInput: fast input rendering is handled separately
-  const noAutoRenderCallbacks = ['onPaint', 'onShader', 'onMouseMove', 'onMouseOut', 'onMouseOver', 'onInput', 'onTooltip', 'onGetId'];
+  const noAutoRenderCallbacks = ['onPaint', 'onShader', 'onOverlay', 'onMouseMove', 'onMouseOut', 'onMouseOver', 'onInput', 'onTooltip', 'onGetId'];
 
   if (element.props) {
     for (const [propName, propValue] of Object.entries(element.props)) {
@@ -541,6 +541,11 @@ export async function runMelkerFile(
       logger?.warn(`Failed to create cache dir: ${error}`);
     }
 
+    // Initialize engine cache (file-based, per-app)
+    const { EngineCache } = await import('./engine-cache.ts');
+    const engineCache = new EngineCache({ baseDir: appCacheDir });
+    engine.setCache(engineCache);
+
     if (parseResult.stylesheet) {
       const size = terminalSize();
       parseResult.stylesheet.applyTo(parseResult.element, {
@@ -692,6 +697,7 @@ export async function runMelkerFile(
       getLogger: getLogger,
       config: MelkerConfig.get(),
       cacheDir: appCacheDir,
+      cache: engineCache,
       // Toast notifications
       toast: {
         show: (message: string, options?: ToastOptions) => {

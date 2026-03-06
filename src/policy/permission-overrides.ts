@@ -8,7 +8,7 @@ import { expandShortcutsInPlace } from './shortcut-utils.ts';
 // Array permission keys
 const ARRAY_PERMISSIONS = ['read', 'write', 'net', 'run', 'env', 'ffi', 'sys'] as const;
 // Boolean permission keys
-const BOOLEAN_PERMISSIONS = ['all', 'ai', 'clipboard', 'keyring', 'browser', 'shader'] as const;
+const BOOLEAN_PERMISSIONS = ['all', 'ai', 'clipboard', 'keyring', 'browser', 'shader', 'map'] as const;
 
 export interface PermissionOverrides {
   allow: Partial<PolicyPermissions>;
@@ -131,12 +131,14 @@ export function applyPermissionOverrides(
   const effectiveClipboard = result.clipboard === true && !overrides.deny.clipboard;
   const effectiveKeyring = result.keyring === true && !overrides.deny.keyring;
   const effectiveBrowser = result.browser === true && !overrides.deny.browser;
+  const effectiveMap = result.map === true && !overrides.deny.map;
 
   // Set only effective shortcuts for expansion
   result.ai = effectiveAi || undefined;
   result.clipboard = effectiveClipboard || undefined;
   result.keyring = effectiveKeyring || undefined;
   result.browser = effectiveBrowser || undefined;
+  result.map = effectiveMap || undefined;
 
   // Expand non-denied shortcuts into run/net arrays.
   // skipWildcard=false: always add commands since wildcards may be filtered by deny processing
@@ -147,6 +149,7 @@ export function applyPermissionOverrides(
   delete result.clipboard;
   delete result.keyring;
   delete result.browser;
+  delete result.map;
 
   // Apply array permission denies (filter out, or track as active denies for wildcards)
   for (const key of ARRAY_PERMISSIONS) {

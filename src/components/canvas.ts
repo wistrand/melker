@@ -133,6 +133,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   // iTerm2 output data (generated during render when gfxMode='iterm2')
   private _itermOutput: ITermOutputData | null = null;
 
+  // Text labels to overlay on the canvas (rendered as terminal characters, not pixels)
+  protected _textLabels: { x: number; y: number; text: string; color: number; bg: number; align: 'left' | 'center' | 'right' }[] = [];
+
   constructor(props: CanvasProps, children: Element[] = []) {
     const scale = Math.max(1, Math.floor(props.scale || 1));
     // Default terminal char aspect ratio (width/height) - varies by font, ~1.0-1.1 for many modern terminals
@@ -640,6 +643,52 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    */
   fillSquareCorrectedColor(x: number, y: number, size: number, color: number | string): void {
     Draw.fillSquareCorrectedColor(this, x, y, size, color);
+  }
+
+  // ============================================
+  // Text Label Methods
+  // ============================================
+
+  /**
+   * Draw text at pixel coordinates as terminal characters (not pixels).
+   * Text is rendered on top of the canvas pixel content after sextant rendering.
+   * Uses the current drawing color. Call during onPaint/onOverlay.
+   * @param x Pixel x coordinate
+   * @param y Pixel y coordinate
+   * @param text The text string to render
+   * @param options Optional: align ('left' | 'center' | 'right'), bg (background color)
+   */
+  drawText(x: number, y: number, text: string, options?: { align?: 'left' | 'center' | 'right'; bg?: number | string }): void {
+    const bg = options?.bg !== undefined
+      ? (typeof options.bg === 'string' ? cssToRgba(options.bg) : options.bg)
+      : 0;
+    this._textLabels.push({
+      x, y, text,
+      color: this._currentColor,
+      bg,
+      align: options?.align ?? 'left',
+    });
+  }
+
+  /**
+   * Draw text at pixel coordinates with a specific color.
+   * @param x Pixel x coordinate
+   * @param y Pixel y coordinate
+   * @param text The text string to render
+   * @param color Foreground color (packed RGBA or CSS string)
+   * @param options Optional: align ('left' | 'center' | 'right'), bg (background color)
+   */
+  drawTextColor(x: number, y: number, text: string, color: number | string, options?: { align?: 'left' | 'center' | 'right'; bg?: number | string }): void {
+    const fg = typeof color === 'string' ? cssToRgba(color) : color;
+    const bg = options?.bg !== undefined
+      ? (typeof options.bg === 'string' ? cssToRgba(options.bg) : options.bg)
+      : 0;
+    this._textLabels.push({
+      x, y, text,
+      color: fg,
+      bg,
+      align: options?.align ?? 'left',
+    });
   }
 
   // ============================================
@@ -1603,6 +1652,48 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     renderToTerminal(bounds, style, buffer, data, this._renderState, ditheredBuffer, gfxMode);
   }
 
+  /**
+   * Render queued text labels to the terminal buffer on top of canvas pixels.
+   * Converts pixel coordinates to terminal cell positions.
+   */
+  private _renderTextLabels(bounds: Bounds, buffer: DualBuffer): void {
+    const ppcX = this._pixelsPerCellX * this._scale;
+    const ppcY = this._pixelsPerCellY * this._scale;
+
+    for (const label of this._textLabels) {
+      // Convert pixel coords to terminal cell coords
+      let cellX = Math.floor(label.x / ppcX);
+      const cellY = Math.floor(label.y / ppcY);
+
+      // Apply alignment
+      if (label.align === 'center') {
+        cellX -= Math.floor(label.text.length / 2);
+      } else if (label.align === 'right') {
+        cellX -= label.text.length;
+      }
+
+      // Skip if entirely out of bounds
+      if (cellY < 0 || cellY >= bounds.height) continue;
+      if (cellX >= bounds.width || cellX + label.text.length <= 0) continue;
+
+      // Build cell style
+      const cellStyle: Partial<Cell> = {};
+      if (label.color !== DEFAULT_FG) {
+        cellStyle.foreground = label.color;
+      }
+      if (label.bg !== 0) {
+        cellStyle.background = label.bg;
+      }
+
+      buffer.currentBuffer.setText(
+        bounds.x + cellX,
+        bounds.y + cellY,
+        label.text,
+        cellStyle,
+      );
+    }
+  }
+
   // NOTE: Render methods have been extracted to canvas-render.ts
 
   /**
@@ -1671,6 +1762,9 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       this.startShader(context.requestRender, context.requestCachedRender);
     }
 
+    // Clear text labels from previous frame (re-added during onPaint/onOverlay)
+    this._textLabels.length = 0;
+
     // Call onPaint handler to allow user to update canvas content before rendering
     // Catch errors to prevent crash loops (render is called every frame)
     if (this.props.onPaint && !this._onPaintFailed) {
@@ -1690,6 +1784,11 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
     // Render to the buffer (sextant/block/pattern/luma, or placeholder for sixel)
     this._renderToTerminal(bounds, style, buffer);
+
+    // Render text labels on top of canvas pixels
+    if (this._textLabels.length > 0) {
+      this._renderTextLabels(bounds, buffer);
+    }
 
     // Post-process: blend canvas pixel colors with opacity
     this._blendCellOpacity(bounds, buffer, context);

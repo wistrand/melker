@@ -187,6 +187,25 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
         break;
       }
 
+      case 'tile-map': {
+        const mapEl = element as any;
+        const lat = typeof mapEl.getCenter === 'function' ? mapEl.getCenter().lat : element.props.lat;
+        const lon = typeof mapEl.getCenter === 'function' ? mapEl.getCenter().lon : element.props.lon;
+        const zoom = typeof mapEl.getZoom === 'function' ? mapEl.getZoom() : element.props.zoom;
+        const provider = mapEl._currentProvider || element.props.provider || 'openstreetmap';
+        const pathCount = mapEl.props.svgOverlay ? (mapEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
+        const textCount = mapEl.props.svgOverlay ? (mapEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
+        const id = element.id && !element.id.startsWith('doc-') ? `#${element.id}` : '';
+        const providers = typeof mapEl._getProviders === 'function' ? Object.keys(mapEl._getProviders()) : [];
+        lines.push(`${indent}[Tile Map${id}: lat=${Number(lat).toFixed(4)}, lon=${Number(lon).toFixed(4)}, zoom=${zoom}, provider=${provider}, paths=${pathCount}, labels=${textCount}]`);
+        lines.push(`${indent}  (Providers: ${providers.join(', ')})`);
+        lines.push(`${indent}  (Use send_event with event_type="change" and value="lat=N,lon=N,zoom=N,provider=NAME" to change view)`);
+        lines.push(`${indent}  (Use send_event with event_type="draw" to set SVG overlay. Coordinates are lat lon order. Empty value clears. Supports:)`);
+        lines.push(`${indent}    <path d="M lat lon L lat lon" stroke="color"/> — geo-anchored paths`);
+        lines.push(`${indent}    <text lat="N" lon="N" fill="color" text-anchor="middle">Label</text> — text labels`);
+        break;
+      }
+
       case 'markdown': {
         const text = element.props.text || '';
         const preview = text.length > 50 ? text.substring(0, 47) + '...' : text;
@@ -458,6 +477,14 @@ function getAvailableActions(document: Document): string[] {
         actions.push('Arrow Up/Down: Navigate table rows');
         actions.push('Enter: Activate selected row');
         actions.push('Use read_element to see table data, then send_event with event_type=change and value=row index to select/show a row');
+        break;
+
+      case 'tile-map':
+        actions.push('Arrow keys / WASD: Pan the map');
+        actions.push('+/-: Zoom in/out');
+        actions.push('Mouse drag: Pan the map');
+        actions.push('Scroll wheel: Zoom in/out');
+        actions.push('send_event with event_type="draw" to draw SVG paths with lat/lon coordinates on the map');
         break;
 
       case 'container':

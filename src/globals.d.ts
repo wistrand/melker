@@ -110,6 +110,9 @@ export interface MelkerContext {
   config: MelkerConfig;
   cacheDir: string;
 
+  // Cache API
+  cache: import('./core-types.ts').EngineCacheAPI;
+
   // Allow additional properties
   [key: string]: unknown;
 }

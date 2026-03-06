@@ -1,0 +1,1223 @@
+// Tile map component - interactive slippy map rendered to a canvas
+// Extends CanvasElement for tile rendering with mouse drag/scroll/double-click
+
+import { Element, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
+import type { DualBuffer, Cell } from '../buffer.ts';
+import { CanvasElement, type CanvasProps } from './canvas.ts';
+import type { Draggable, Wheelable } from '../core-types.ts';
+import { registerComponent } from '../element.ts';
+import { getGlobalEngine } from '../global-accessors.ts';
+import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
+import { getLogger } from '../logging.ts';
+import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
+import { MAP_NET_HOSTS } from '../policy/tile-map-hosts.ts';
+import { parseSVGPath, type PathCommand, drawPath, drawPathColor, fillPathColor } from './canvas-path.ts';
+
+const logger = getLogger('TileMapElement');
+
+const TILE_SIZE = 256; // Standard web map tile size in pixels
+
+/** Coerce a prop value to number (handles strings from template attributes, e.g. negative numbers). */
+function toNum(v: unknown, fallback: number): number {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') { const n = Number(v); return isNaN(n) ? fallback : n; }
+  return fallback;
+}
+
+// ===== Tile Provider =====
+
+export interface TileProvider {
+  name: string;
+  url: string;
+  attribution: string;
+  maxZoom: number;
+  subdomains?: string[];
+}
+
+// Derive CARTO subdomains from the shared host list
+const CARTO_SUBDOMAINS = MAP_NET_HOSTS
+  .filter(h => h.startsWith('cartodb-basemaps-'))
+  .map(h => h.replace('cartodb-basemaps-', '').charAt(0));
+
+export const BUILT_IN_PROVIDERS: Record<string, TileProvider> = {
+  'terrain': {
+    name: 'Terrain',
+    url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution: '(C) OpenTopoMap (CC-BY-SA)',
+    maxZoom: 15,
+  },
+  'streets': {
+    name: 'Streets',
+    url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+    attribution: '(C) OpenStreetMap, (C) CARTO',
+    maxZoom: 18,
+    subdomains: CARTO_SUBDOMAINS,
+  },
+  'voyager-nolabels': {
+    name: 'Voyager No Labels',
+    url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
+    attribution: '(C) OpenStreetMap, (C) CARTO',
+    maxZoom: 18,
+    subdomains: CARTO_SUBDOMAINS,
+  },
+  'voyager': {
+    name: 'Voyager',
+    url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager/{z}/{x}/{y}.png',
+    attribution: '(C) OpenStreetMap, (C) CARTO',
+    maxZoom: 18,
+    subdomains: CARTO_SUBDOMAINS,
+  },
+  'openstreetmap': {
+    name: 'OpenStreetMap',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '(C) OpenStreetMap contributors',
+    maxZoom: 19,
+  },
+  'satellite': {
+    name: 'Satellite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '(C) Esri, Maxar, Earthstar Geographics',
+    maxZoom: 17,
+  },
+};
+
+// ===== Decoded Tile =====
+
+interface DecodedTile {
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
+  bytesPerPixel: number;
+}
+
+// ===== Fallback Tile =====
+
+interface FallbackTile {
+  tile: DecodedTile;
+  srcX: number;
+  srcY: number;
+  srcW: number;
+  srcH: number;
+  zoomDiff: number;
+}
+
+// ===== Overlay / Geo Context =====
+
+export interface TileMapGeoContext {
+  /** Convert lat/lon to buffer pixel coordinates. Returns null if off-screen. */
+  latLonToPixel(lat: number, lon: number): { x: number; y: number } | null;
+  /** Convert buffer pixel coordinates back to lat/lon. */
+  pixelToLatLon(x: number, y: number): { lat: number; lon: number };
+  /** Get visible bounds in lat/lon. */
+  getVisibleBounds(): { north: number; south: number; east: number; west: number };
+  /** Current map center (read-only). */
+  center: { lat: number; lon: number };
+  /** Current zoom level (read-only). */
+  zoom: number;
+  /** Pixel aspect ratio (read-only). */
+  pixelAspect: number;
+}
+
+export interface TileMapOverlayEvent {
+  /** Canvas drawing API (drawLine, drawRect, drawCircle, drawText, setPixel, etc.) */
+  canvas: CanvasElement;
+  /** Element bounds in terminal cells. */
+  bounds: Bounds;
+  /** Coordinate transform utilities. */
+  geo: TileMapGeoContext;
+}
+
+// ===== Parsed SVG Path =====
+
+interface ParsedSvgPath {
+  kind: 'path';
+  commands: PathCommand[];
+  stroke?: string;
+  fill?: string;
+}
+
+interface ParsedSvgText {
+  kind: 'text';
+  lat: number;
+  lon: number;
+  text: string;
+  fill?: string;
+  bg?: string;
+  align?: 'left' | 'center' | 'right';
+}
+
+type ParsedSvgElement = ParsedSvgPath | ParsedSvgText;
+
+// ===== Props =====
+
+export interface TileMapProps extends Omit<CanvasProps, 'width' | 'height' | 'onPaint'> {
+  lat?: number;
+  lon?: number;
+  zoom?: number;
+  provider?: string;
+  providers?: Record<string, TileProvider>;
+  width?: number | string;
+  height?: number | string;
+  interactive?: boolean;
+  maxZoom?: number;
+  cacheSize?: number;
+  diskCache?: boolean;
+  diskCacheMaxMB?: number;
+  svgOverlay?: string;
+  onOverlay?: (event: TileMapOverlayEvent) => void;
+  onMove?: (event: { lat: number; lon: number; zoom: number }) => void;
+  onZoom?: (event: { zoom: number }) => void;
+  onClick?: (event: { lat: number; lon: number; x: number; y: number }) => void;
+  onLoadingChange?: (event: { count: number }) => void;
+}
+
+// ===== Mercator Projection (static for testability) =====
+
+export function latToMercatorY(lat: number): number {
+  const latRad = lat * Math.PI / 180;
+  return (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2;
+}
+
+export function mercatorYToLat(y: number): number {
+  const n = Math.PI - 2 * Math.PI * y;
+  return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+}
+
+export function lonToMercatorX(lon: number): number {
+  return (lon + 180) / 360;
+}
+
+export function mercatorXToLon(x: number): number {
+  return x * 360 - 180;
+}
+
+// ===== Component =====
+
+export class TileMapElement extends CanvasElement implements Draggable, Wheelable {
+  declare props: TileMapProps & CanvasProps;
+
+  // Internal map state
+  private _centerLat: number;
+  private _centerLon: number;
+  private _zoom: number;
+  private _currentProvider: string;
+
+  // Last-seen prop values (to detect external prop changes vs internal state drift)
+  private _lastPropLat: number;
+  private _lastPropLon: number;
+  private _lastPropZoom: number;
+  private _lastPropProvider: string;
+
+  // In-memory tile cache (LRU via Map insertion order)
+  private _tileCache = new Map<string, DecodedTile>();
+  private _maxCacheSize: number;
+  private _pendingFetches = new Set<string>();
+  private _loadingCount = 0;
+
+  // Drag state
+  private _isDragging = false;
+  private _dragStartX = 0;
+  private _dragStartY = 0;
+  private _dragStartLat = 0;
+  private _dragStartLon = 0;
+
+  // Double-click detection
+  private _lastClickTime = 0;
+  private _lastClickX = 0;
+  private _lastClickY = 0;
+
+  // SVG paths overlay cache
+  private _lastSvgOverlayStr: string | undefined;
+  private _parsedSvgOverlay: ParsedSvgElement[] = [];
+
+  constructor(props: TileMapProps, children: Element[] = []) {
+    const origWidth = props.width ?? '100%';
+    const origHeight = props.height ?? '100%';
+    const usesResponsive = isResponsiveDimension(origWidth) || isResponsiveDimension(origHeight);
+    const canvasWidth = isResponsiveDimension(origWidth) ? 30 : (typeof origWidth === 'number' ? origWidth : 30);
+    const canvasHeight = isResponsiveDimension(origHeight) ? 15 : (typeof origHeight === 'number' ? origHeight : 15);
+
+    super(
+      {
+        ...props,
+        width: origWidth,
+        height: origHeight,
+        style: {
+          ...(usesResponsive ? {} : { flexShrink: 0 }),
+          ...props.style,
+        },
+      } as CanvasProps,
+      children,
+    );
+
+    if (usesResponsive) {
+      this.setSize(canvasWidth, canvasHeight);
+    }
+
+    // Override type
+    (this as { type: string }).type = 'tile-map';
+
+    // Initialize map state from props
+    // Note: schema coercion handles positive numbers but not negative ones (regex
+    // limitation in template parser), so we coerce lat/lon which are commonly negative.
+    this._centerLat = toNum(props.lat, 51.5074);
+    this._centerLon = toNum(props.lon, -0.1278);
+    this._zoom = Math.max(0, Math.min(toNum(props.maxZoom, 20), toNum(props.zoom, 5)));
+    this._currentProvider = props.provider ?? 'openstreetmap';
+    this._maxCacheSize = toNum(props.cacheSize, 256);
+
+    // Track initial prop values for change detection
+    this._lastPropLat = this._centerLat;
+    this._lastPropLon = this._centerLon;
+    this._lastPropZoom = this._zoom;
+    this._lastPropProvider = this._currentProvider;
+
+    // Store original dimensions
+    this._originalWidth = origWidth;
+    this._originalHeight = origHeight;
+
+    // Default dither to 'auto'
+    if (props.dither === undefined) {
+      this.props.dither = 'auto';
+    }
+
+    // Set internal onPaint handler
+    this.props.onPaint = (event) => this._onPaint(event);
+  }
+
+  // Skip buffer copy - we rewrite every frame
+  protected override _copyPreviousToCurrent(): void {}
+
+  // Always interactive (handles drag + wheel internally)
+  override isInteractive(): boolean {
+    return this.props.interactive !== false;
+  }
+
+  // ===== Mercator math (instance methods delegate to statics) =====
+
+  static latLonToTile(lat: number, lon: number, z: number): { x: number; y: number; offsetX: number; offsetY: number } {
+    const n = Math.pow(2, z);
+    const xFloat = lonToMercatorX(lon) * n;
+    const yFloat = latToMercatorY(lat) * n;
+    const x = Math.floor(xFloat);
+    const y = Math.floor(yFloat);
+    return { x, y, offsetX: xFloat - x, offsetY: yFloat - y };
+  }
+
+  // ===== Tile URL =====
+
+  static getTileUrl(tileX: number, tileY: number, z: number, provider: TileProvider): string {
+    let url = provider.url;
+    if (provider.subdomains) {
+      const subdomain = provider.subdomains[(tileX + tileY) % provider.subdomains.length];
+      url = url.replace('{s}', subdomain);
+    }
+    url = url.replace('{z}', z.toString());
+    url = url.replace('{x}', tileX.toString());
+    url = url.replace('{y}', tileY.toString());
+    return url;
+  }
+
+  // ===== Cache key =====
+
+  private static _tileCacheKey(tileX: number, tileY: number, z: number, providerKey: string): string {
+    return `${providerKey}/${z}/${tileX}/${tileY}`;
+  }
+
+  // ===== Provider resolution =====
+
+  private _getProviders(): Record<string, TileProvider> {
+    const custom = this.props.providers;
+    if (custom) {
+      return { ...BUILT_IN_PROVIDERS, ...custom };
+    }
+    return BUILT_IN_PROVIDERS;
+  }
+
+  private _getProvider(): TileProvider {
+    const providers = this._getProviders();
+    return providers[this._currentProvider] ?? providers['openstreetmap'] ?? BUILT_IN_PROVIDERS['openstreetmap'];
+  }
+
+  // ===== In-memory LRU cache =====
+
+  private _getTileFromCache(key: string): DecodedTile | undefined {
+    const tile = this._tileCache.get(key);
+    if (tile) {
+      this._tileCache.delete(key);
+      this._tileCache.set(key, tile);
+    }
+    return tile;
+  }
+
+  private _setTileInCache(key: string, tile: DecodedTile): void {
+    while (this._tileCache.size >= this._maxCacheSize) {
+      const oldestKey = this._tileCache.keys().next().value;
+      if (oldestKey) {
+        this._tileCache.delete(oldestKey);
+      } else {
+        break;
+      }
+    }
+    this._tileCache.set(key, tile);
+  }
+
+  // ===== Fallback tiles =====
+
+  private _findFallbackTile(tileX: number, tileY: number, z: number, providerKey: string): FallbackTile | null {
+    for (let zoomDiff = 1; zoomDiff <= 4 && z - zoomDiff >= 0; zoomDiff++) {
+      const parentZ = z - zoomDiff;
+      const parentX = tileX >> zoomDiff;
+      const parentY = tileY >> zoomDiff;
+      const cacheKey = TileMapElement._tileCacheKey(parentX, parentY, parentZ, providerKey);
+      const parentTile = this._getTileFromCache(cacheKey);
+      if (parentTile) {
+        const divisor = 1 << zoomDiff;
+        const sectionSize = TILE_SIZE / divisor;
+        const localX = tileX - (parentX << zoomDiff);
+        const localY = tileY - (parentY << zoomDiff);
+        return {
+          tile: parentTile,
+          srcX: localX * sectionSize,
+          srcY: localY * sectionSize,
+          srcW: sectionSize,
+          srcH: sectionSize,
+          zoomDiff,
+        };
+      }
+    }
+    return null;
+  }
+
+  // ===== Tile fetching =====
+
+  private _setLoading(loading: boolean): void {
+    if (loading) {
+      this._loadingCount++;
+    } else {
+      this._loadingCount = Math.max(0, this._loadingCount - 1);
+    }
+    if (this.props.onLoadingChange) {
+      this.props.onLoadingChange({ count: this._loadingCount });
+    }
+  }
+
+  private async _fetchTile(tileX: number, tileY: number, z: number, providerKey: string): Promise<DecodedTile | null> {
+    const cacheKey = TileMapElement._tileCacheKey(tileX, tileY, z, providerKey);
+
+    const cached = this._getTileFromCache(cacheKey);
+    if (cached) return cached;
+
+    if (this._pendingFetches.has(cacheKey)) return null;
+
+    this._pendingFetches.add(cacheKey);
+    this._setLoading(true);
+
+    try {
+      let bytes: Uint8Array | null = null;
+
+      // Try disk cache first
+      if (this.props.diskCache !== false) {
+        const engineCache = getGlobalEngine()?.cache;
+        if (engineCache) {
+          bytes = await engineCache.read('tiles', `${providerKey}/${z}/${tileX}_${tileY}`);
+          if (bytes) {
+            logger.debug(`Tile from disk cache: ${cacheKey}`);
+          }
+        }
+      }
+
+      // Fetch from network
+      if (!bytes) {
+        const provider = this._getProviders()[providerKey];
+        if (!provider) return null;
+        const url = TileMapElement.getTileUrl(tileX, tileY, z, provider);
+        logger.debug(`Fetching tile: ${cacheKey}`);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const arrayBuffer = await response.arrayBuffer();
+        bytes = new Uint8Array(arrayBuffer);
+
+        // Save to disk cache (fire and forget)
+        if (this.props.diskCache !== false) {
+          const engineCache = getGlobalEngine()?.cache;
+          if (engineCache) {
+            const maxBytes = (this.props.diskCacheMaxMB ?? 200) * 1024 * 1024;
+            engineCache.write('tiles', `${providerKey}/${z}/${tileX}_${tileY}`, bytes, { maxBytes });
+          }
+        }
+      }
+
+      // Decode
+      const decoded = this.decodeImageBytes(bytes);
+      this._setTileInCache(cacheKey, decoded);
+
+      // Request re-render
+      this.markDirty();
+      const engine = getGlobalEngine();
+      if (engine) engine.render();
+
+      return decoded;
+    } catch (error) {
+      logger.warn(`Failed to fetch tile ${cacheKey}: ${error}`);
+      return null;
+    } finally {
+      this._pendingFetches.delete(cacheKey);
+      this._setLoading(false);
+    }
+  }
+
+  // ===== Paint handler =====
+
+  private _onPaint(event: { canvas: CanvasElement; bounds: Bounds }): void {
+    const canvas = event.canvas as TileMapElement;
+    const bufferWidth = canvas.getBufferWidth();
+    const bufferHeight = canvas.getBufferHeight();
+
+    if (bufferWidth <= 0 || bufferHeight <= 0) return;
+
+    canvas.clear();
+
+    const pixelAspect = canvas.getPixelAspectRatio?.() || (2 / 3);
+    const provider = this._getProvider();
+    const providerMaxZoom = provider.maxZoom;
+    const tileZoom = Math.min(this._zoom, providerMaxZoom);
+    const overZoom = this._zoom - tileZoom;
+    const overZoomScale = Math.pow(2, overZoom);
+
+    const centerTile = TileMapElement.latLonToTile(this._centerLat, this._centerLon, tileZoom);
+
+    const baseScale = bufferHeight / TILE_SIZE;
+    const scale = baseScale * overZoomScale;
+    const scaledTileH = Math.floor(TILE_SIZE * scale);
+    const scaledTileW = Math.floor(scaledTileH / pixelAspect);
+
+    if (scaledTileH <= 0 || scaledTileW <= 0) return;
+
+    const tilesX = Math.ceil(bufferWidth / scaledTileW) + 2;
+    const tilesY = Math.ceil(bufferHeight / scaledTileH) + 2;
+    const centerBufferX = bufferWidth / 2;
+    const centerBufferY = bufferHeight / 2;
+    const tileOffsetX = centerTile.offsetX * scaledTileW;
+    const tileOffsetY = centerTile.offsetY * scaledTileH;
+    const halfTilesX = Math.floor(tilesX / 2);
+    const halfTilesY = Math.floor(tilesY / 2);
+
+    for (let dy = -halfTilesY; dy <= halfTilesY; dy++) {
+      for (let dx = -halfTilesX; dx <= halfTilesX; dx++) {
+        const tileX = centerTile.x + dx;
+        const tileY = centerTile.y + dy;
+
+        const maxTile = Math.pow(2, tileZoom);
+        if (tileY < 0 || tileY >= maxTile) continue;
+
+        const wrappedTileX = ((tileX % maxTile) + maxTile) % maxTile;
+        const screenX = ((centerBufferX - tileOffsetX + dx * scaledTileW) | 0);
+        const screenY = ((centerBufferY - tileOffsetY + dy * scaledTileH) | 0);
+
+        const cacheKey = TileMapElement._tileCacheKey(wrappedTileX, tileY, tileZoom, this._currentProvider);
+        const tile = this._getTileFromCache(cacheKey);
+
+        if (tile) {
+          canvas.drawImage(tile, screenX, screenY, scaledTileW, scaledTileH);
+        } else {
+          const fallback = this._findFallbackTile(wrappedTileX, tileY, tileZoom, this._currentProvider);
+          if (fallback) {
+            canvas.drawImageRegion(
+              fallback.tile,
+              fallback.srcX, fallback.srcY, fallback.srcW, fallback.srcH,
+              screenX, screenY, scaledTileW, scaledTileH,
+            );
+          }
+          // Fire-and-forget: fetch tile async, will trigger re-render on completion
+          this._fetchTile(wrappedTileX, tileY, tileZoom, this._currentProvider);
+        }
+      }
+    }
+
+    // Draw svgOverlay overlay (after tiles, before onOverlay)
+    if (this.props.svgOverlay) {
+      const scale2 = bufferHeight / TILE_SIZE;
+      const scaledTileH2 = TILE_SIZE * scale2;
+      const scaledTileW2 = scaledTileH2 / pixelAspect;
+      const n2 = Math.pow(2, this._zoom);
+      const mercPerPxX = 1 / (scaledTileW2 * n2);
+      const mercPerPxY = 1 / (scaledTileH2 * n2);
+      const cMercX = lonToMercatorX(this._centerLon);
+      const cMercY = latToMercatorY(this._centerLat);
+      this._drawSvgOverlay(canvas, cMercX, cMercY, mercPerPxX, mercPerPxY, bufferWidth / 2, bufferHeight / 2);
+    }
+
+    // Call onOverlay after tiles are rendered
+    if (this.props.onOverlay) {
+      const geo = this._createGeoContext(bufferWidth, bufferHeight, pixelAspect);
+      this.props.onOverlay({ canvas, bounds: event.bounds, geo });
+    }
+  }
+
+  // ===== Render override (prop sync + responsive sizing) =====
+
+  override render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
+    // Sync props -> internal state only when the prop itself changed externally
+    // (e.g., app sets el.props.lat = 40). Internal changes (drag/zoom) update
+    // _centerLat directly without touching props, so we compare against the
+    // last-seen prop value to avoid snapping back.
+    if (this.props.lat !== undefined) {
+      const lat = toNum(this.props.lat, this._centerLat);
+      if (lat !== this._lastPropLat) { this._centerLat = lat; this._lastPropLat = lat; }
+    }
+    if (this.props.lon !== undefined) {
+      const lon = toNum(this.props.lon, this._centerLon);
+      if (lon !== this._lastPropLon) { this._centerLon = lon; this._lastPropLon = lon; }
+    }
+    if (this.props.zoom !== undefined) {
+      const z = toNum(this.props.zoom, this._zoom);
+      if (z !== this._lastPropZoom) {
+        this._zoom = Math.max(0, Math.min(toNum(this.props.maxZoom, 20), z));
+        this._lastPropZoom = z;
+      }
+    }
+    if (this.props.provider !== undefined && this.props.provider !== this._lastPropProvider) {
+      this._currentProvider = this.props.provider;
+      this._lastPropProvider = this.props.provider;
+    }
+
+    // Responsive sizing (same pattern as ImgElement)
+    if (bounds.width > 0 && bounds.height > 0) {
+      const boundsChanged = bounds.width !== this._lastBoundsWidth || bounds.height !== this._lastBoundsHeight;
+      if (boundsChanged) {
+        this._lastBoundsWidth = bounds.width;
+        this._lastBoundsHeight = bounds.height;
+        const newWidth = parseDimension(this._originalWidth, bounds.width, 30);
+        const newHeight = parseDimension(this._originalHeight, bounds.height, 15);
+        if (newWidth > 0 && newHeight > 0 && (newWidth !== this._terminalWidth || newHeight !== this._terminalHeight)) {
+          this.setSize(newWidth, newHeight);
+        }
+      }
+    }
+
+    super.render(bounds, style, buffer, context);
+  }
+
+  override intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
+    const width = parseDimension(this._originalWidth, context.availableSpace.width, 30);
+    const height = parseDimension(this._originalHeight, context.availableSpace.height, 15);
+    return {
+      width: width > 0 ? width : (this._terminalWidth || 30),
+      height: height > 0 ? height : (this._terminalHeight || 15),
+    };
+  }
+
+  // ===== Draggable interface =====
+
+  getDragZone(_x: number, _y: number): string | null {
+    if (this.props.interactive === false) return null;
+    return 'map';
+  }
+
+  handleDragStart(zone: string, x: number, y: number): void {
+    if (zone !== 'map') return;
+
+    const now = Date.now();
+    const timeDelta = now - this._lastClickTime;
+    const distX = Math.abs(x - this._lastClickX);
+    const distY = Math.abs(y - this._lastClickY);
+
+    // Double-click detection
+    if (timeDelta < 400 && distX <= 2 && distY <= 2) {
+      this._zoomToLocation(x, y, true);
+      this._lastClickTime = 0;
+      return;
+    }
+
+    this._lastClickTime = now;
+    this._lastClickX = x;
+    this._lastClickY = y;
+
+    this._isDragging = true;
+    this._dragStartX = x;
+    this._dragStartY = y;
+    this._dragStartLat = this._centerLat;
+    this._dragStartLon = this._centerLon;
+  }
+
+  handleDragMove(zone: string, x: number, y: number): void {
+    if (zone !== 'map' || !this._isDragging) return;
+
+    const dx = x - this._dragStartX;
+    const dy = y - this._dragStartY;
+    const pixelDeltaX = dx * 2; // sextant horizontal
+    const pixelDeltaY = dy * 3; // sextant vertical
+
+    const bufferHeight = this.getBufferHeight();
+    const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
+
+    const scale = bufferHeight / TILE_SIZE;
+    const scaledTileH = TILE_SIZE * scale;
+    const scaledTileW = scaledTileH / pixelAspect;
+
+    const n = Math.pow(2, this._zoom);
+    const mercatorPerPixelX = 1 / (scaledTileW * n);
+    const mercatorPerPixelY = 1 / (scaledTileH * n);
+
+    const startMercX = lonToMercatorX(this._dragStartLon);
+    const startMercY = latToMercatorY(this._dragStartLat);
+
+    const newMercX = startMercX - pixelDeltaX * mercatorPerPixelX;
+    const newMercY = startMercY - pixelDeltaY * mercatorPerPixelY;
+
+    this._centerLon = mercatorXToLon(newMercX);
+    this._centerLat = mercatorYToLat(newMercY);
+    this._centerLat = Math.max(-85, Math.min(85, this._centerLat));
+    while (this._centerLon > 180) this._centerLon -= 360;
+    while (this._centerLon < -180) this._centerLon += 360;
+
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+  }
+
+  handleDragEnd(zone: string, _x: number, _y: number): void {
+    if (zone !== 'map') return;
+    this._isDragging = false;
+  }
+
+  // ===== Wheelable interface =====
+
+  canHandleWheel(_x: number, _y: number): boolean {
+    return this.props.interactive !== false;
+  }
+
+  handleWheel(_deltaX: number, deltaY: number): boolean {
+    const zoomingIn = deltaY < 0;
+    const maxZoom = this.props.maxZoom ?? 20;
+
+    if (zoomingIn && this._zoom >= maxZoom) return true;
+    if (!zoomingIn && this._zoom <= 0) return true;
+
+    this._zoom = zoomingIn ? this._zoom + 1 : this._zoom - 1;
+    this._fireZoom();
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+    return true;
+  }
+
+  // ===== Zoom to location (double-click) =====
+
+  private _zoomToLocation(screenX: number, screenY: number, zoomIn: boolean): void {
+    const maxZoom = this.props.maxZoom ?? 20;
+    if (zoomIn && this._zoom >= maxZoom) return;
+    if (!zoomIn && this._zoom <= 0) return;
+
+    const bufferWidth = this.getBufferWidth();
+    const bufferHeight = this.getBufferHeight();
+    const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
+
+    const mouseBufferX = screenX * 2;
+    const mouseBufferY = screenY * 3;
+    const centerBufferX = bufferWidth / 2;
+    const centerBufferY = bufferHeight / 2;
+    const offsetX = mouseBufferX - centerBufferX;
+    const offsetY = mouseBufferY - centerBufferY;
+
+    const scale = bufferHeight / TILE_SIZE;
+    const scaledTileH = TILE_SIZE * scale;
+    const scaledTileW = scaledTileH / pixelAspect;
+
+    const n = Math.pow(2, this._zoom);
+    const mercatorPerPixelX = 1 / (scaledTileW * n);
+    const mercatorPerPixelY = 1 / (scaledTileH * n);
+
+    const centerMercX = lonToMercatorX(this._centerLon);
+    const centerMercY = latToMercatorY(this._centerLat);
+    const mouseMercX = centerMercX + offsetX * mercatorPerPixelX;
+    const mouseMercY = centerMercY + offsetY * mercatorPerPixelY;
+
+    this._zoom = zoomIn ? this._zoom + 1 : this._zoom - 1;
+
+    const newN = Math.pow(2, this._zoom);
+    const newMercatorPerPixelX = 1 / (scaledTileW * newN);
+    const newMercatorPerPixelY = 1 / (scaledTileH * newN);
+
+    const newCenterMercX = mouseMercX - offsetX * newMercatorPerPixelX;
+    const newCenterMercY = mouseMercY - offsetY * newMercatorPerPixelY;
+
+    this._centerLon = mercatorXToLon(newCenterMercX);
+    this._centerLat = mercatorYToLat(newCenterMercY);
+    this._centerLat = Math.max(-85, Math.min(85, this._centerLat));
+    while (this._centerLon > 180) this._centerLon -= 360;
+    while (this._centerLon < -180) this._centerLon += 360;
+
+    this._fireZoom();
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+  }
+
+  // ===== Event firing =====
+
+  private _fireMove(): void {
+    if (this.props.onMove) {
+      this.props.onMove({ lat: this._centerLat, lon: this._centerLon, zoom: this._zoom });
+    }
+  }
+
+  private _fireZoom(): void {
+    if (this.props.onZoom) {
+      this.props.onZoom({ zoom: this._zoom });
+    }
+  }
+
+  // ===== SVG Paths =====
+
+  private _parseSvgOverlay(str: string): ParsedSvgElement[] {
+    const elements: ParsedSvgElement[] = [];
+    const attrRegex = /(\w[\w-]*)\s*=\s*"([^"]*)"/g;
+
+    // Parse <path> elements
+    const pathRegex = /<path\s+([^>]*?)\/?>/gi;
+    let match;
+    while ((match = pathRegex.exec(str)) !== null) {
+      const attrs: Record<string, string> = {};
+      let attrMatch;
+      attrRegex.lastIndex = 0;
+      while ((attrMatch = attrRegex.exec(match[1])) !== null) {
+        attrs[attrMatch[1]] = attrMatch[2];
+      }
+      if (attrs.d) {
+        elements.push({
+          kind: 'path',
+          commands: parseSVGPath(attrs.d),
+          stroke: attrs.stroke,
+          fill: attrs.fill,
+        });
+      }
+    }
+
+    // Parse <text> elements: <text lat="51.5" lon="-0.1" fill="#fff">Label</text>
+    const textRegex = /<text\s+([^>]*?)>([\s\S]*?)<\/text>/gi;
+    while ((match = textRegex.exec(str)) !== null) {
+      const attrs: Record<string, string> = {};
+      let attrMatch;
+      attrRegex.lastIndex = 0;
+      while ((attrMatch = attrRegex.exec(match[1])) !== null) {
+        attrs[attrMatch[1]] = attrMatch[2];
+      }
+      const lat = parseFloat(attrs.lat ?? attrs.y ?? '');
+      const lon = parseFloat(attrs.lon ?? attrs.x ?? '');
+      if (!isNaN(lat) && !isNaN(lon)) {
+        const align = attrs['text-anchor'] === 'middle' ? 'center'
+          : attrs['text-anchor'] === 'end' ? 'right'
+          : (attrs.align as 'left' | 'center' | 'right') || 'left';
+        elements.push({
+          kind: 'text',
+          lat, lon,
+          text: match[2].trim(),
+          fill: attrs.fill,
+          bg: attrs.bg || attrs.background,
+          align,
+        });
+      }
+    }
+
+    return elements;
+  }
+
+  private _transformToPixel(
+    commands: PathCommand[],
+    centerMercX: number, centerMercY: number,
+    mercatorPerPixelX: number, mercatorPerPixelY: number,
+    halfW: number, halfH: number,
+  ): PathCommand[] {
+    const toPixel = (lat: number, lon: number): { px: number; py: number } => {
+      const mercX = lonToMercatorX(lon);
+      const mercY = latToMercatorY(lat);
+      const px = halfW + (mercX - centerMercX) / mercatorPerPixelX;
+      const py = halfH + (mercY - centerMercY) / mercatorPerPixelY;
+      return { px, py };
+    };
+
+    const result: PathCommand[] = [];
+    let curLat = 0, curLon = 0;
+
+    for (const cmd of commands) {
+      switch (cmd.type) {
+        case 'M': {
+          const p = toPixel(cmd.x, cmd.y);
+          result.push({ type: 'M', x: p.px, y: p.py });
+          curLat = cmd.x; curLon = cmd.y;
+          break;
+        }
+        case 'L': {
+          const p = toPixel(cmd.x, cmd.y);
+          result.push({ type: 'L', x: p.px, y: p.py });
+          curLat = cmd.x; curLon = cmd.y;
+          break;
+        }
+        case 'T': {
+          const p = toPixel(cmd.x, cmd.y);
+          result.push({ type: 'T', x: p.px, y: p.py });
+          curLat = cmd.x; curLon = cmd.y;
+          break;
+        }
+        case 'H': {
+          // H has only x (lat), convert to L using tracked curLon
+          const p = toPixel(cmd.x, curLon);
+          result.push({ type: 'L', x: p.px, y: p.py });
+          curLat = cmd.x;
+          break;
+        }
+        case 'V': {
+          // V has only y (lon), convert to L using tracked curLat
+          const p = toPixel(curLat, cmd.y);
+          result.push({ type: 'L', x: p.px, y: p.py });
+          curLon = cmd.y;
+          break;
+        }
+        case 'Q': {
+          const ctl = toPixel(cmd.cx, cmd.cy);
+          const ep = toPixel(cmd.x, cmd.y);
+          result.push({ type: 'Q', cx: ctl.px, cy: ctl.py, x: ep.px, y: ep.py });
+          curLat = cmd.x; curLon = cmd.y;
+          break;
+        }
+        case 'C': {
+          const c1 = toPixel(cmd.c1x, cmd.c1y);
+          const c2 = toPixel(cmd.c2x, cmd.c2y);
+          const ep = toPixel(cmd.x, cmd.y);
+          result.push({ type: 'C', c1x: c1.px, c1y: c1.py, c2x: c2.px, c2y: c2.py, x: ep.px, y: ep.py });
+          curLat = cmd.x; curLon = cmd.y;
+          break;
+        }
+        case 'S': {
+          const c2 = toPixel(cmd.c2x, cmd.c2y);
+          const ep = toPixel(cmd.x, cmd.y);
+          result.push({ type: 'S', c2x: c2.px, c2y: c2.py, x: ep.px, y: ep.py });
+          curLat = cmd.x; curLon = cmd.y;
+          break;
+        }
+        case 'A': {
+          // Scale radii: rx is in lat-like units, ry is in lon-like units
+          // Approximate by converting a small delta to pixels
+          const scaleLon = 1 / (mercatorPerPixelX * 360);  // pixels per degree lon
+          const cosLat = Math.cos(curLat * Math.PI / 180);
+          const scaleLat = 1 / (mercatorPerPixelY * 180 / Math.PI) * (1 / (cosLat > 0.01 ? cosLat : 0.01));
+          const ep = toPixel(cmd.x, cmd.y);
+          result.push({
+            type: 'A',
+            rx: Math.abs(cmd.rx * scaleLat),
+            ry: Math.abs(cmd.ry * scaleLon),
+            rotation: cmd.rotation,
+            largeArc: cmd.largeArc,
+            sweep: cmd.sweep,
+            x: ep.px,
+            y: ep.py,
+          });
+          curLat = cmd.x; curLon = cmd.y;
+          break;
+        }
+        case 'Z':
+          result.push({ type: 'Z' });
+          break;
+      }
+    }
+    return result;
+  }
+
+  private _drawSvgOverlay(
+    canvas: CanvasElement,
+    centerMercX: number, centerMercY: number,
+    mercatorPerPixelX: number, mercatorPerPixelY: number,
+    halfW: number, halfH: number,
+  ): void {
+    // Re-parse only when the string changes
+    if (this.props.svgOverlay !== this._lastSvgOverlayStr) {
+      this._lastSvgOverlayStr = this.props.svgOverlay;
+      this._parsedSvgOverlay = this.props.svgOverlay
+        ? this._parseSvgOverlay(this.props.svgOverlay)
+        : [];
+    }
+
+    const toPixel = (lat: number, lon: number): { px: number; py: number } => {
+      const mercX = lonToMercatorX(lon);
+      const mercY = latToMercatorY(lat);
+      return {
+        px: halfW + (mercX - centerMercX) / mercatorPerPixelX,
+        py: halfH + (mercY - centerMercY) / mercatorPerPixelY,
+      };
+    };
+
+    for (const el of this._parsedSvgOverlay) {
+      if (el.kind === 'text') {
+        const p = toPixel(el.lat, el.lon);
+        const color = el.fill || '#ffffff';
+        canvas.drawTextColor(p.px, p.py, el.text, color, {
+          align: el.align,
+          bg: el.bg,
+        });
+        continue;
+      }
+
+      const transformed = this._transformToPixel(
+        el.commands,
+        centerMercX, centerMercY,
+        mercatorPerPixelX, mercatorPerPixelY,
+        halfW, halfH,
+      );
+
+      if (el.fill) {
+        fillPathColor(canvas, transformed, el.fill);
+      }
+      if (el.stroke) {
+        drawPathColor(canvas, transformed, el.stroke);
+      }
+      if (!el.fill && !el.stroke) {
+        drawPath(canvas, transformed);
+      }
+    }
+  }
+
+  // ===== Geo Context =====
+
+  private _createGeoContext(bufferWidth: number, bufferHeight: number, pixelAspect: number): TileMapGeoContext {
+    const centerLat = this._centerLat;
+    const centerLon = this._centerLon;
+    const zoom = this._zoom;
+
+    const scale = bufferHeight / TILE_SIZE;
+    const scaledTileH = TILE_SIZE * scale;
+    const scaledTileW = scaledTileH / pixelAspect;
+    const n = Math.pow(2, zoom);
+    const mercatorPerPixelX = 1 / (scaledTileW * n);
+    const mercatorPerPixelY = 1 / (scaledTileH * n);
+    const centerMercX = lonToMercatorX(centerLon);
+    const centerMercY = latToMercatorY(centerLat);
+    const halfW = bufferWidth / 2;
+    const halfH = bufferHeight / 2;
+
+    return {
+      latLonToPixel(lat: number, lon: number): { x: number; y: number } | null {
+        const mercX = lonToMercatorX(lon);
+        const mercY = latToMercatorY(lat);
+        const px = halfW + (mercX - centerMercX) / mercatorPerPixelX;
+        const py = halfH + (mercY - centerMercY) / mercatorPerPixelY;
+        // Off-screen check
+        if (px < 0 || px >= bufferWidth || py < 0 || py >= bufferHeight) return null;
+        return { x: Math.round(px), y: Math.round(py) };
+      },
+      pixelToLatLon(x: number, y: number): { lat: number; lon: number } {
+        const mercX = centerMercX + (x - halfW) * mercatorPerPixelX;
+        const mercY = centerMercY + (y - halfH) * mercatorPerPixelY;
+        let lon = mercatorXToLon(mercX);
+        while (lon > 180) lon -= 360;
+        while (lon < -180) lon += 360;
+        return { lat: mercatorYToLat(mercY), lon };
+      },
+      getVisibleBounds(): { north: number; south: number; east: number; west: number } {
+        const halfWidthMerc = halfW * mercatorPerPixelX;
+        const halfHeightMerc = halfH * mercatorPerPixelY;
+        return {
+          north: mercatorYToLat(centerMercY - halfHeightMerc),
+          south: mercatorYToLat(centerMercY + halfHeightMerc),
+          east: mercatorXToLon(centerMercX + halfWidthMerc),
+          west: mercatorXToLon(centerMercX - halfWidthMerc),
+        };
+      },
+      center: { lat: centerLat, lon: centerLon },
+      zoom,
+      pixelAspect,
+    };
+  }
+
+  /** Convert lat/lon to buffer pixel coordinates. Returns null if off-screen. */
+  latLonToPixel(lat: number, lon: number): { x: number; y: number } | null {
+    const bufferWidth = this.getBufferWidth();
+    const bufferHeight = this.getBufferHeight();
+    const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
+    const geo = this._createGeoContext(bufferWidth, bufferHeight, pixelAspect);
+    return geo.latLonToPixel(lat, lon);
+  }
+
+  /** Convert buffer pixel coordinates to lat/lon. */
+  pixelToLatLon(x: number, y: number): { lat: number; lon: number } {
+    const bufferWidth = this.getBufferWidth();
+    const bufferHeight = this.getBufferHeight();
+    const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
+    const geo = this._createGeoContext(bufferWidth, bufferHeight, pixelAspect);
+    return geo.pixelToLatLon(x, y);
+  }
+
+  // ===== Programmatic API =====
+
+  setView(lat: number, lon: number, zoom?: number): void {
+    this._centerLat = Math.max(-85, Math.min(85, lat));
+    this._centerLon = lon;
+    while (this._centerLon > 180) this._centerLon -= 360;
+    while (this._centerLon < -180) this._centerLon += 360;
+    if (zoom !== undefined) {
+      this._zoom = Math.max(0, Math.min(this.props.maxZoom ?? 20, zoom));
+    }
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+  }
+
+  setZoom(z: number): void {
+    this._zoom = Math.max(0, Math.min(this.props.maxZoom ?? 20, z));
+    this._fireZoom();
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+  }
+
+  getCenter(): { lat: number; lon: number } {
+    return { lat: this._centerLat, lon: this._centerLon };
+  }
+
+  getZoom(): number {
+    return this._zoom;
+  }
+
+  getBoundsLatLon(): { north: number; south: number; east: number; west: number } {
+    const bufferWidth = this.getBufferWidth();
+    const bufferHeight = this.getBufferHeight();
+    const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
+
+    const scale = bufferHeight / TILE_SIZE;
+    const scaledTileH = TILE_SIZE * scale;
+    const scaledTileW = scaledTileH / pixelAspect;
+
+    const n = Math.pow(2, this._zoom);
+    const halfWidthMerc = (bufferWidth / 2) / (scaledTileW * n);
+    const halfHeightMerc = (bufferHeight / 2) / (scaledTileH * n);
+
+    const centerMercX = lonToMercatorX(this._centerLon);
+    const centerMercY = latToMercatorY(this._centerLat);
+
+    return {
+      north: mercatorYToLat(centerMercY - halfHeightMerc),
+      south: mercatorYToLat(centerMercY + halfHeightMerc),
+      east: mercatorXToLon(centerMercX + halfWidthMerc),
+      west: mercatorXToLon(centerMercX - halfWidthMerc),
+    };
+  }
+
+  panUp(): void {
+    const pan = this._getPanDegrees();
+    this._centerLat = Math.min(85, this._centerLat + pan);
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+  }
+
+  panDown(): void {
+    const pan = this._getPanDegrees();
+    this._centerLat = Math.max(-85, this._centerLat - pan);
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+  }
+
+  panLeft(): void {
+    const pan = this._getPanDegrees();
+    this._centerLon -= pan;
+    while (this._centerLon < -180) this._centerLon += 360;
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+  }
+
+  panRight(): void {
+    const pan = this._getPanDegrees();
+    this._centerLon += pan;
+    while (this._centerLon > 180) this._centerLon -= 360;
+    this._fireMove();
+    this.markDirty();
+    getGlobalEngine()?.render();
+  }
+
+  zoomIn(): void {
+    const maxZoom = this.props.maxZoom ?? 20;
+    if (this._zoom < maxZoom) {
+      this._zoom++;
+      this._fireZoom();
+      this._fireMove();
+      this.markDirty();
+      getGlobalEngine()?.render();
+    }
+  }
+
+  zoomOut(): void {
+    if (this._zoom > 0) {
+      this._zoom--;
+      this._fireZoom();
+      this._fireMove();
+      this.markDirty();
+      getGlobalEngine()?.render();
+    }
+  }
+
+  async clearCache(): Promise<void> {
+    this._tileCache.clear();
+    const engineCache = getGlobalEngine()?.cache;
+    if (engineCache) {
+      await engineCache.clear('tiles');
+    }
+  }
+
+  private _getPanDegrees(): number {
+    const panAmount = 0.1;
+    const degreesPerPixel = 360 / (TILE_SIZE * Math.pow(2, this._zoom));
+    return TILE_SIZE * panAmount * degreesPerPixel;
+  }
+}
+
+// ===== Registration =====
+
+registerComponent({
+  type: 'tile-map',
+  componentClass: TileMapElement,
+  defaultProps: {
+    lat: 51.5074,
+    lon: -0.1278,
+    zoom: 5,
+    provider: 'openstreetmap',
+    interactive: true,
+    maxZoom: 20,
+    cacheSize: 256,
+    diskCache: true,
+    diskCacheMaxMB: 200,
+    disabled: false,
+  },
+});
+
+export const tileMapSchema: ComponentSchema = {
+  description: 'Interactive slippy tile map',
+  props: {
+    lat: { type: 'number', description: 'Center latitude (default: 51.5074)' },
+    lon: { type: 'number', description: 'Center longitude (default: -0.1278)' },
+    zoom: { type: 'number', description: 'Zoom level 0-20 (default: 5)' },
+    provider: { type: 'string', description: 'Tile provider key (default: openstreetmap)' },
+    providers: { type: 'object', description: 'Custom provider definitions (merged with built-ins)' },
+    width: { type: ['number', 'string'], description: 'Width in columns or percentage' },
+    height: { type: ['number', 'string'], description: 'Height in rows or percentage' },
+    interactive: { type: 'boolean', description: 'Enable mouse interaction (default: true)' },
+    maxZoom: { type: 'number', description: 'Maximum zoom level (default: 20)' },
+    cacheSize: { type: 'number', description: 'In-memory tile cache size (default: 256)' },
+    diskCache: { type: 'boolean', description: 'Enable disk caching (default: true)' },
+    diskCacheMaxMB: { type: 'number', description: 'Disk cache budget in MB (default: 200)' },
+    dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'sierra-stable', 'ordered'], description: 'Dithering algorithm' },
+    svgOverlay: { type: 'string', description: 'Declarative SVG <path> and <text> elements with lat/lon coordinates, rendered after tiles and before onOverlay' },
+    onOverlay: { type: ['function', 'string'], description: 'Overlay drawing callback (canvas + geo context)' },
+    onMove: { type: ['function', 'string'], description: 'Called when map position changes' },
+    onZoom: { type: ['function', 'string'], description: 'Called when zoom level changes' },
+    onClick: { type: ['function', 'string'], description: 'Called on map click with lat/lon' },
+    onLoadingChange: { type: ['function', 'string'], description: 'Called when loading count changes' },
+    onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. Runs per-pixel after tiles + overlay.' },
+    shaderFps: { type: 'number', description: 'Shader frame rate (default: 30). Use 0 for static filter.' },
+    shaderRunTime: { type: 'number', description: 'Stop shader after this many ms, final frame becomes static image' },
+  },
+};
+
+registerComponentSchema('tile-map', tileMapSchema);

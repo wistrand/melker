@@ -297,6 +297,9 @@ export class MelkerEngine {
   private _boundElements: Array<{ element: Element; stateKey: string; twoWay: boolean; bindProp?: 'selection'; _lastPushed?: string[] }> | null = null;
   private _lastRegistryGeneration = -1;
 
+  // Engine cache (file-based, per-app)
+  private _cache: import('./engine-cache.ts').EngineCache | null = null;
+
   // App policy (for permission checks)
   private _policy?: MelkerPolicy;
 
@@ -1837,6 +1840,17 @@ export class MelkerEngine {
    */
   get document(): Document {
     return this._document;
+  }
+
+  /**
+   * Get or set the engine cache instance.
+   */
+  get cache(): import('./engine-cache.ts').EngineCache | null {
+    return this._cache;
+  }
+
+  setCache(cache: import('./engine-cache.ts').EngineCache): void {
+    this._cache = cache;
   }
 
   /**

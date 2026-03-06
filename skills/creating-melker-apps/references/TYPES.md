@@ -189,6 +189,20 @@ interface PaintEvent {
   canvas: CanvasAPI;
 }
 
+// Tile map overlay events
+interface TileMapOverlayEvent {
+  canvas: CanvasAPI;           // drawLine, drawCircle, drawText, setPixel, setColor, etc.
+  bounds: { width: number; height: number };
+  geo: {
+    latLonToPixel(lat: number, lon: number): { x: number; y: number } | null;
+    pixelToLatLon(x: number, y: number): { lat: number; lon: number };
+    getVisibleBounds(): { north: number; south: number; east: number; west: number };
+    center: { lat: number; lon: number };
+    zoom: number;
+    pixelAspect: number;
+  };
+}
+
 // Shader function signature
 type ShaderFunction = (
   x: number,

@@ -245,6 +245,7 @@ const filePath = argv[1];
 | `<tabs>`                        | id, activeTab, onChange                                                            | Tabbed container                          |
 | `<tab>`                         | title, disabled                                                                    | Tab panel, defaults to flex column        |
 | `<canvas>`                      | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant/quadrant chars) |
+| `<tile-map>`                    | lat, lon, zoom, provider, interactive, svgOverlay, onOverlay, onTooltip, onMove, onZoom | Interactive slippy map (extends canvas, needs `map: true` policy) |
 | `<img>`                         | src, alt, width, height, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
 | `<markdown>`                    | src, text, onLink                                                                  | Markdown text rendering with image support |
 | `<combobox>`                    | placeholder, filter, onSelect, maxVisible                                          | Dropdown with text filter                 |

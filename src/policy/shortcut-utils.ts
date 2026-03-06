@@ -3,6 +3,7 @@
 
 import type { PolicyPermissions } from './types.ts';
 import { platform, statSync } from '../runtime/mod.ts';
+import { MAP_NET_HOSTS } from './tile-map-hosts.ts';
 
 // AI permission shortcut hosts
 export const AI_NET_HOSTS = ['openrouter.ai'];
@@ -94,7 +95,7 @@ function pushUnique(arr: string[], values: string[], skipWildcard: boolean): voi
 }
 
 /**
- * Expand shortcut permissions (ai, clipboard, keyring, browser) into run/net arrays.
+ * Expand shortcut permissions (ai, clipboard, keyring, browser, map) into run/net arrays.
  * Mutates the permissions object in place.
  *
  * @param p - The permissions object to expand shortcuts on (mutated in place)
@@ -131,5 +132,11 @@ export function expandShortcutsInPlace(
   if (p.browser === true) {
     if (!p.run) p.run = [];
     pushUnique(p.run, [getBrowserCommand()], skipWildcard);
+  }
+
+  // Expand "map" shortcut
+  if (p.map === true) {
+    if (!p.net) p.net = [];
+    pushUnique(p.net, MAP_NET_HOSTS, skipWildcard);
   }
 }

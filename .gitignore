@@ -3,6 +3,7 @@ node_modules/
 
 # Deno
 .deno/
+deno.lock
 
 .claude-dev/
 

@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Melker Built-in AI Assistant</title>
+  <meta name="description" content="Melker's built-in AI assistant can see, understand, and operate terminal UIs through natural language and voice.">
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://melker.sh/ai.html">
+  <meta property="og:title" content="Melker Built-in AI Assistant">
+  <meta property="og:description" content="Melker's built-in AI assistant can see, understand, and operate terminal UIs through natural language and voice.">
+  <meta property="og:image" content="https://melker.sh/melker-128.png">
+
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-secondary: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent: #58a6ff;
+      --accent-secondary: #388bfd;
+      --code-bg: #1c2128;
+      --success: #3fb950;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      padding: 32px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    header .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    /* Sections */
+    .section {
+      padding: 48px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-of-type {
+      border-bottom: none;
+    }
+
+    .section h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .section h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 32px;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .section p {
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .section ul, .section ol {
+      margin: 16px 0;
+      padding-left: 24px;
+    }
+
+    .section li {
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .section li code {
+      color: var(--text);
+    }
+
+    /* Code */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin: 16px 0;
+    }
+
+    code {
+      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.9em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    /* Conversation mockups */
+    .conversation {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 16px 0;
+      font-size: 0.95rem;
+    }
+
+    .conversation .turn {
+      margin-bottom: 16px;
+    }
+
+    .conversation .turn:last-child {
+      margin-bottom: 0;
+    }
+
+    .conversation .label {
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .conversation .label.user {
+      color: var(--accent);
+    }
+
+    .conversation .label.ai {
+      color: var(--success);
+    }
+
+    .conversation .label.tool {
+      color: #d2a8ff;
+      font-style: italic;
+    }
+
+    .conversation .body {
+      color: var(--text-secondary);
+    }
+
+    /* Callout boxes */
+    .callout {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+
+    .callout p {
+      margin-bottom: 0;
+    }
+
+    /* Key grid */
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .key-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+    }
+
+    .key-card .key {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .key-card .desc {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      font-weight: 600;
+      background: var(--bg-secondary);
+    }
+
+    td code {
+      font-size: 0.85rem;
+    }
+
+    /* Footer */
+    footer {
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a {
+      color: var(--text-secondary);
+    }
+
+    footer a:hover {
+      color: var(--text);
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      header h1 {
+        font-size: 1.75rem;
+      }
+
+      .section {
+        padding: 32px 0;
+      }
+
+      .section h2 {
+        font-size: 1.25rem;
+      }
+
+      pre {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>AI Assistant</h1>
+      <p class="subtitle">Every Melker app supports an AI assistant that can see, understand, and operate the UI &mdash; but only when you choose to enable it.</p>
+      <p style="color: var(--text-secondary); font-size: 0.95rem;">The assistant is <strong style="color: var(--text);">off by default</strong>. It activates only when you provide an API key or configure a local model endpoint. No data is sent anywhere unless you explicitly set it up. Apps must also declare <code>ai: true</code> in their policy block, or the user can override with <code>melker --allow-ai app.melker</code>. Press <code>Alt+H</code> to open it, <code>F7</code> to talk to it.</p>
+      <a href="images/ai-assistant-1.png" style="display: block; text-align: center; margin-top: 24px;"><img src="images/ai-assistant-1-thumb.png" alt="AI Assistant dialog in a Melker app" style="max-width: 100%; border: 1px solid var(--border); border-radius: 8px;"></a>
+    </div>
+  </header>
+
+  <!-- How It Works -->
+  <div class="section">
+    <div class="container">
+      <h2>How It Works</h2>
+
+      <p>
+        The AI assistant doesn't use screenshots or pixel recognition. Instead, it reads the same document tree that the rendering engine uses &mdash; the actual structure of your UI, not an image of it.
+      </p>
+      <p>
+        When you ask a question, the system gathers three things and sends them to the model:
+      </p>
+      <ol>
+        <li><strong>Screen content</strong> &mdash; a text representation of everything visible, with element types, labels, values, and ARIA annotations</li>
+        <li><strong>Element tree</strong> &mdash; the full component hierarchy with IDs, props, and focus state</li>
+        <li><strong>Available actions</strong> &mdash; keyboard shortcuts and navigation options</li>
+      </ol>
+      <p>
+        This is the same information a screen reader would use, except the model can also <em>act</em> on it. The AI has tools to click buttons, type text, change values, and draw on canvases. It operates the UI the same way a user would.
+      </p>
+
+      <div class="callout">
+        <p>The assistant excludes its own dialog from the context it sends to the model. It never describes itself.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Getting Started -->
+  <div class="section">
+    <div class="container">
+      <h2>Getting Started</h2>
+
+      <p>The assistant needs an LLM endpoint to work. Either use OpenRouter:</p>
+      <pre><code>export OPENROUTER_API_KEY=your_key_here</code></pre>
+
+      <p>Or point it at a local model (Ollama, LM Studio, etc.) with an OpenAI-compatible API:</p>
+      <pre><code>export MELKER_AI_ENDPOINT=http://localhost:11434/v1/chat/completions
+export MELKER_AI_MODEL=llama3
+export OPENROUTER_API_KEY=unused   # required but ignored by local endpoints</code></pre>
+
+      <p>Without either of these, <code>Alt+H</code> does nothing. Once configured, open the assistant in any app:</p>
+
+      <div class="key-grid">
+        <div class="key-card">
+          <div class="key">Alt+H</div>
+          <div class="desc">Open with text input</div>
+        </div>
+        <div class="key-card">
+          <div class="key">F7</div>
+          <div class="desc">Open and start voice recording</div>
+        </div>
+      </div>
+
+      <p>
+        The assistant works with any app &mdash; you don't need to do anything special. It reads the UI structure automatically. For richer context, add ARIA attributes like <code>role</code>, <code>aria-label</code>, and <code>aria-description</code>.
+      </p>
+    </div>
+  </div>
+
+  <!-- What It Can Do -->
+  <div class="section">
+    <div class="container">
+      <h2>What It Can Do</h2>
+
+      <h3>Describe what's on screen</h3>
+      <div class="conversation">
+        <div class="turn">
+          <div class="label user">You</div>
+          <div class="body">What am I looking at?</div>
+        </div>
+        <div class="turn">
+          <div class="label ai">AI</div>
+          <div class="body">You're viewing a settings panel with three tabs: General, Advanced, and About. The General tab is active, showing a theme dropdown set to "dark" and a language selector. There's a Save button at the bottom.</div>
+        </div>
+      </div>
+
+      <h3>Operate the UI</h3>
+      <p>The AI doesn't just describe &mdash; it acts. Ask it to do something and it uses tools to make it happen.</p>
+      <div class="conversation">
+        <div class="turn">
+          <div class="label user">You</div>
+          <div class="body">Switch the theme to light and save</div>
+        </div>
+        <div class="turn">
+          <div class="label tool">send_event &rarr; theme dropdown &rarr; "light"</div>
+          <div class="body"></div>
+        </div>
+        <div class="turn">
+          <div class="label tool">send_event &rarr; click save button</div>
+          <div class="body"></div>
+        </div>
+        <div class="turn">
+          <div class="label ai">AI</div>
+          <div class="body">Done. I changed the theme to light and clicked Save. The settings have been saved.</div>
+        </div>
+      </div>
+
+      <h3>Read long content</h3>
+      <p>Elements can contain more text than what's visible in the viewport. The <code>read_element</code> tool fetches the full content.</p>
+      <div class="conversation">
+        <div class="turn">
+          <div class="label user">You</div>
+          <div class="body">Summarize the markdown document</div>
+        </div>
+        <div class="turn">
+          <div class="label tool">read_element &rarr; markdown#docs</div>
+          <div class="body"></div>
+        </div>
+        <div class="turn">
+          <div class="label ai">AI</div>
+          <div class="body">The document covers three topics: installation (Deno and npm methods), configuration files (melker.json format and options), and environment variables for customizing runtime behavior. About 400 words total.</div>
+        </div>
+      </div>
+
+      <h3>Draw on maps</h3>
+      <p>For tile-map components, the AI can change the view and draw SVG overlays with paths and labels.</p>
+      <div class="conversation">
+        <div class="turn">
+          <div class="label user">You</div>
+          <div class="body">Draw a circle around London and label it</div>
+        </div>
+        <div class="turn">
+          <div class="label tool">send_event &rarr; draw &rarr; &lt;path d="M -0.1278 51.5574 A 0.05 0.05 ..." stroke="red"/&gt;&lt;text lat="51.5074" lon="-0.1278"&gt;London&lt;/text&gt;</div>
+          <div class="body"></div>
+        </div>
+        <div class="turn">
+          <div class="label ai">AI</div>
+          <div class="body">I drew a red circle around central London and added a label.</div>
+        </div>
+      </div>
+      <a href="images/ai-assistant-2.png" style="display: block; text-align: center; margin: 16px 0;"><img src="images/ai-assistant-2-thumb.png" alt="AI-drawn circle overlay on a tile map" style="max-width: 100%; border: 1px solid var(--border); border-radius: 8px;"></a>
+
+      <h3>Multi-turn conversations</h3>
+      <p>The assistant remembers context within a session. Ask follow-up questions without repeating yourself.</p>
+      <div class="conversation">
+        <div class="turn">
+          <div class="label user">You</div>
+          <div class="body">What options are in the dropdown?</div>
+        </div>
+        <div class="turn">
+          <div class="label ai">AI</div>
+          <div class="body">The provider dropdown has: OpenStreetMap, Terrain, Streets, Voyager, and Voyager No Labels.</div>
+        </div>
+        <div class="turn">
+          <div class="label user">You</div>
+          <div class="body">Switch to terrain</div>
+        </div>
+        <div class="turn">
+          <div class="label tool">send_event &rarr; change provider &rarr; "terrain"</div>
+          <div class="body"></div>
+        </div>
+        <div class="turn">
+          <div class="label ai">AI</div>
+          <div class="body">Switched to Terrain view.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voice -->
+  <div class="section">
+    <div class="container">
+      <h2>Voice Input</h2>
+      <p>
+        Press <code>F7</code> or click "Listen" to start recording. Speak your question, then press <code>F7</code> again or wait for the 5-second timeout. The audio is trimmed, transcribed, and submitted automatically.
+      </p>
+      <p>
+        During recording, a volume meter shows input level and a countdown shows remaining time.
+      </p>
+
+      <table>
+        <tr><th>Platform</th><th>Audio capture</th></tr>
+        <tr><td>macOS</td><td>Native Swift (AVAudioEngine) &mdash; no dependencies</td></tr>
+        <tr><td>Linux</td><td>ffmpeg with PulseAudio/PipeWire or ALSA</td></tr>
+        <tr><td>Windows</td><td>ffmpeg with DirectShow</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Why It Works -->
+  <div class="section">
+    <div class="container">
+      <h2>Why It Works</h2>
+
+      <p>
+        Most "AI for UI" approaches screenshot the screen and ask a vision model to interpret pixels. This is slow, expensive, and fragile &mdash; a button that moved 3 pixels might confuse the model.
+      </p>
+      <p>
+        Melker takes a different approach. Because it controls the rendering pipeline, it can give the model the <em>source of truth</em>: the document tree itself. The AI sees:
+      </p>
+
+      <pre><code>[Container: main, flex, column]
+  [Text: "Welcome to Settings"]
+  [Tabs: General | Advanced | About]  (active: General)
+    [Container: row]
+      [Text: "Theme"]
+      [Select#theme: "dark"]  (options: light, dark, system)
+    [Container: row]
+      [Text: "Language"]
+      [Select#lang: "en"]
+  [Button: "Save"]</code></pre>
+
+      <p>This is unambiguous. The model knows every element's type, ID, value, and position in the hierarchy. It can target elements by ID when using tools, so actions are precise.</p>
+
+      <p>The feedback loop is tight: after each tool call, the context is rebuilt from the <em>current</em> UI state. If clicking a button opens a dialog, the model sees the dialog in the next round. Three rounds of tool calls give enough room for multi-step operations.</p>
+
+      <div class="callout">
+        <p>ARIA attributes make this even better. A <code>&lt;container role="navigation" aria-label="Main menu"&gt;</code> shows as <code>[Navigation: Main menu]</code> instead of <code>[Container]</code>. The model understands the <em>purpose</em> of elements, not just their type.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Tools -->
+  <div class="section">
+    <div class="container">
+      <h2>Custom Tools</h2>
+
+      <p>
+        Apps can register their own tools, giving the AI domain-specific capabilities. A weather app might expose a "get forecast" tool. A database browser might expose "run query".
+      </p>
+
+<pre><code>&lt;script&gt;
+  registerAITool({
+    name: "search_products",
+    description: "Search the product catalog",
+    parameters: {
+      query: { type: "string", required: true, description: "Search terms" },
+      category: { type: "string", required: false, description: "Filter by category" }
+    },
+    handler: async (args) => {
+      const results = await searchAPI(args.query, args.category);
+      updateResultsList(results);
+      return { success: true, message: `Found ${results.length} products` };
+    }
+  });
+&lt;/script&gt;</code></pre>
+
+      <p>
+        When custom tools are registered, the system prompt tells the model about them. The model uses them alongside the built-in tools naturally.
+      </p>
+
+      <div class="conversation">
+        <div class="turn">
+          <div class="label user">You</div>
+          <div class="body">Find me wireless keyboards under $50</div>
+        </div>
+        <div class="turn">
+          <div class="label tool">search_products &rarr; query: "wireless keyboard", category: "peripherals"</div>
+          <div class="body"></div>
+        </div>
+        <div class="turn">
+          <div class="label ai">AI</div>
+          <div class="body">Found 12 wireless keyboards. The list now shows results filtered by price. The cheapest is the Logitech K380 at $29.99.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Surprising Things -->
+  <div class="section">
+    <div class="container">
+      <h2>Surprising Things</h2>
+
+      <h3>It works on apps you didn't build</h3>
+      <p>
+        The assistant is part of the engine, not the app. Open any <code>.melker</code> file and press <code>Alt+H</code>. The AI can describe the UI, read content, and click buttons &mdash; even if the app author never thought about AI assistance. It's like having a screen reader that can also operate the controls.
+      </p>
+
+      <h3>It handles forms end-to-end</h3>
+      <p>
+        "Fill in the registration form with test data" &mdash; the model iterates through inputs, selects, checkboxes, and radio buttons in sequence, using a fresh context snapshot after each action. It sees what changed and adapts.
+      </p>
+
+      <h3>It draws on maps from natural language</h3>
+      <p>
+        "Draw a route from Paris to Berlin" produces SVG path overlays on tile-map components, with the AI choosing appropriate coordinates, stroke colors, and labels. It uses arc commands for circles, Bezier curves for smooth routes, and text elements for labels.
+      </p>
+
+      <h3>Voice makes terminal apps conversational</h3>
+      <p>
+        A terminal dashboard where you press <code>F7</code> and say "zoom into the US east coast" or "what's the highest value in the heatmap" turns a display-only interface into something interactive without writing any handler code.
+      </p>
+
+      <h3>ARIA attributes compose with AI understanding</h3>
+      <p>
+        Standard web accessibility attributes gain a new dimension. <code>aria-description="Shows real-time sensor readings, updates every 5s"</code> doesn't just help screen readers &mdash; it tells the AI what the data <em>means</em>. The model can then answer "is the temperature sensor working?" by checking if values are updating.
+      </p>
+
+      <h3>It can close itself</h3>
+      <p>
+        The model has a <code>close_dialog</code> tool. "Check the current temperature and close" &mdash; it reads the value, responds, and dismisses its own dialog. It also has <code>exit_program</code>, which exits the app entirely.
+      </p>
+    </div>
+  </div>
+
+  <!-- Configuration -->
+  <div class="section">
+    <div class="container">
+      <h2>Configuration</h2>
+
+      <p>Environment variables control the model, endpoint, and audio behavior. All are read fresh on each API call &mdash; change them without restarting.</p>
+
+      <table>
+        <tr><th>Variable</th><th>Default</th><th>Purpose</th></tr>
+        <tr><td><code>OPENROUTER_API_KEY</code></td><td>(required)</td><td>OpenRouter API key</td></tr>
+        <tr><td><code>MELKER_AI_MODEL</code></td><td><code>openai/gpt-5.2-chat</code></td><td>Chat/tool model</td></tr>
+        <tr><td><code>MELKER_AUDIO_MODEL</code></td><td><code>openai/gpt-4o-audio-preview</code></td><td>Audio transcription model</td></tr>
+        <tr><td><code>MELKER_AI_ENDPOINT</code></td><td>OpenRouter</td><td>API endpoint URL</td></tr>
+        <tr><td><code>MELKER_AUDIO_GAIN</code></td><td><code>2.0</code></td><td>Recording gain multiplier</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <a href="https://melker.sh">melker.sh</a> &middot;
+      <a href="https://github.com/wistrand/melker">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

@@ -17,6 +17,11 @@ const logger = getLogger('TileMapElement');
 
 const TILE_SIZE = 256; // Standard web map tile size in pixels
 
+/** Unescape basic HTML entities in SVG text content. */
+function unescapeHtml(s: string): string {
+  return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+}
+
 /** Coerce a prop value to number (handles strings from template attributes, e.g. negative numbers). */
 function toNum(v: unknown, fallback: number): number {
   if (typeof v === 'number') return v;
@@ -98,7 +103,6 @@ interface FallbackTile {
   srcY: number;
   srcW: number;
   srcH: number;
-  zoomDiff: number;
 }
 
 // ===== Overlay / Geo Context =====
@@ -212,6 +216,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
   private _tileCache = new Map<string, DecodedTile>();
   private _maxCacheSize: number;
   private _pendingFetches = new Set<string>();
+  private _fetchAbortControllers = new Map<string, AbortController>();
   private _loadingCount = 0;
 
   // Drag state
@@ -225,6 +230,10 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
   private _lastClickTime = 0;
   private _lastClickX = 0;
   private _lastClickY = 0;
+
+  // Last rendered position (for converting absolute screen coords to element-relative)
+  private _boundsX = 0;
+  private _boundsY = 0;
 
   // SVG paths overlay cache
   private _lastSvgOverlayStr: string | undefined;
@@ -269,7 +278,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     // Track initial prop values for change detection
     this._lastPropLat = this._centerLat;
     this._lastPropLon = this._centerLon;
-    this._lastPropZoom = this._zoom;
+    this._lastPropZoom = toNum(props.zoom, 5);
     this._lastPropProvider = this._currentProvider;
 
     // Store original dimensions
@@ -295,6 +304,38 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
   // ===== Mercator math (instance methods delegate to statics) =====
 
+  /** Compute Mercator scale factors for a given buffer height, pixel aspect ratio, and zoom level. */
+  private _getMercatorScale(bufferHeight: number, pixelAspect: number, zoom?: number): {
+    scaledTileW: number; scaledTileH: number;
+    mercatorPerPixelX: number; mercatorPerPixelY: number;
+  } {
+    const z = zoom ?? this._zoom;
+    const scale = bufferHeight / TILE_SIZE;
+    const scaledTileH = TILE_SIZE * scale;
+    const scaledTileW = scaledTileH / pixelAspect;
+    const n = Math.pow(2, z);
+    return {
+      scaledTileW, scaledTileH,
+      mercatorPerPixelX: 1 / (scaledTileW * n),
+      mercatorPerPixelY: 1 / (scaledTileH * n),
+    };
+  }
+
+  /** Convert lat/lon to buffer pixel coordinates given Mercator projection parameters. */
+  private static _geoToPixel(
+    lat: number, lon: number,
+    centerMercX: number, centerMercY: number,
+    mercatorPerPixelX: number, mercatorPerPixelY: number,
+    halfW: number, halfH: number,
+  ): { px: number; py: number } {
+    const mercX = lonToMercatorX(lon);
+    const mercY = latToMercatorY(lat);
+    return {
+      px: halfW + (mercX - centerMercX) / mercatorPerPixelX,
+      py: halfH + (mercY - centerMercY) / mercatorPerPixelY,
+    };
+  }
+
   static latLonToTile(lat: number, lon: number, z: number): { x: number; y: number; offsetX: number; offsetY: number } {
     const n = Math.pow(2, z);
     const xFloat = lonToMercatorX(lon) * n;
@@ -308,7 +349,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
   static getTileUrl(tileX: number, tileY: number, z: number, provider: TileProvider): string {
     let url = provider.url;
-    if (provider.subdomains) {
+    if (provider.subdomains && provider.subdomains.length > 0) {
       const subdomain = provider.subdomains[(tileX + tileY) % provider.subdomains.length];
       url = url.replace('{s}', subdomain);
     }
@@ -382,7 +423,6 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
           srcY: localY * sectionSize,
           srcW: sectionSize,
           srcH: sectionSize,
-          zoomDiff,
         };
       }
     }
@@ -390,6 +430,12 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
   }
 
   // ===== Tile fetching =====
+
+  private _abortPendingFetches(): void {
+    for (const controller of this._fetchAbortControllers.values()) {
+      controller.abort();
+    }
+  }
 
   private _setLoading(loading: boolean): void {
     if (loading) {
@@ -411,6 +457,8 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     if (this._pendingFetches.has(cacheKey)) return null;
 
     this._pendingFetches.add(cacheKey);
+    const abortController = new AbortController();
+    this._fetchAbortControllers.set(cacheKey, abortController);
     this._setLoading(true);
 
     try {
@@ -420,7 +468,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
       if (this.props.diskCache !== false) {
         const engineCache = getGlobalEngine()?.cache;
         if (engineCache) {
-          bytes = await engineCache.read('tiles', `${providerKey}/${z}/${tileX}_${tileY}`);
+          bytes = await engineCache.read('tiles', `${providerKey}/${z}/${tileX}/${tileY}`);
           if (bytes) {
             logger.debug(`Tile from disk cache: ${cacheKey}`);
           }
@@ -433,7 +481,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
         if (!provider) return null;
         const url = TileMapElement.getTileUrl(tileX, tileY, z, provider);
         logger.debug(`Fetching tile: ${cacheKey}`);
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: abortController.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const arrayBuffer = await response.arrayBuffer();
         bytes = new Uint8Array(arrayBuffer);
@@ -443,7 +491,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
           const engineCache = getGlobalEngine()?.cache;
           if (engineCache) {
             const maxBytes = (this.props.diskCacheMaxMB ?? 200) * 1024 * 1024;
-            engineCache.write('tiles', `${providerKey}/${z}/${tileX}_${tileY}`, bytes, { maxBytes });
+            engineCache.write('tiles', `${providerKey}/${z}/${tileX}/${tileY}`, bytes, { maxBytes });
           }
         }
       }
@@ -459,10 +507,15 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
       return decoded;
     } catch (error) {
-      logger.warn(`Failed to fetch tile ${cacheKey}: ${error}`);
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        logger.debug(`Tile fetch aborted: ${cacheKey}`);
+      } else {
+        logger.warn(`Failed to fetch tile ${cacheKey}: ${error}`);
+      }
       return null;
     } finally {
       this._pendingFetches.delete(cacheKey);
+      this._fetchAbortControllers.delete(cacheKey);
       this._setLoading(false);
     }
   }
@@ -537,15 +590,10 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
     // Draw svgOverlay overlay (after tiles, before onOverlay)
     if (this.props.svgOverlay) {
-      const scale2 = bufferHeight / TILE_SIZE;
-      const scaledTileH2 = TILE_SIZE * scale2;
-      const scaledTileW2 = scaledTileH2 / pixelAspect;
-      const n2 = Math.pow(2, this._zoom);
-      const mercPerPxX = 1 / (scaledTileW2 * n2);
-      const mercPerPxY = 1 / (scaledTileH2 * n2);
+      const ms = this._getMercatorScale(bufferHeight, pixelAspect);
       const cMercX = lonToMercatorX(this._centerLon);
       const cMercY = latToMercatorY(this._centerLat);
-      this._drawSvgOverlay(canvas, cMercX, cMercY, mercPerPxX, mercPerPxY, bufferWidth / 2, bufferHeight / 2);
+      this._drawSvgOverlay(canvas, cMercX, cMercY, ms.mercatorPerPixelX, ms.mercatorPerPixelY, bufferWidth / 2, bufferHeight / 2);
     }
 
     // Call onOverlay after tiles are rendered
@@ -558,6 +606,10 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
   // ===== Render override (prop sync + responsive sizing) =====
 
   override render(bounds: Bounds, style: Partial<Cell>, buffer: DualBuffer, context: ComponentRenderContext): void {
+    // Track element position for absolute-to-relative coordinate conversion
+    this._boundsX = bounds.x;
+    this._boundsY = bounds.y;
+
     // Sync props -> internal state only when the prop itself changed externally
     // (e.g., app sets el.props.lat = 40). Internal changes (drag/zoom) update
     // _centerLat directly without touching props, so we compare against the
@@ -646,19 +698,12 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
     const dx = x - this._dragStartX;
     const dy = y - this._dragStartY;
-    const pixelDeltaX = dx * 2; // sextant horizontal
-    const pixelDeltaY = dy * 3; // sextant vertical
+    const pixelDeltaX = dx * this._pixelsPerCellX;
+    const pixelDeltaY = dy * this._pixelsPerCellY;
 
     const bufferHeight = this.getBufferHeight();
     const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
-
-    const scale = bufferHeight / TILE_SIZE;
-    const scaledTileH = TILE_SIZE * scale;
-    const scaledTileW = scaledTileH / pixelAspect;
-
-    const n = Math.pow(2, this._zoom);
-    const mercatorPerPixelX = 1 / (scaledTileW * n);
-    const mercatorPerPixelY = 1 / (scaledTileH * n);
+    const { mercatorPerPixelX, mercatorPerPixelY } = this._getMercatorScale(bufferHeight, pixelAspect);
 
     const startMercX = lonToMercatorX(this._dragStartLon);
     const startMercY = latToMercatorY(this._dragStartLat);
@@ -674,12 +719,39 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
     this._fireMove();
     this.markDirty();
-    getGlobalEngine()?.render();
   }
 
-  handleDragEnd(zone: string, _x: number, _y: number): void {
+  handleDragEnd(zone: string, x: number, y: number): void {
     if (zone !== 'map') return;
+    const wasDragging = this._isDragging;
     this._isDragging = false;
+
+    // Fire onClick if the drag distance was tiny (i.e. a click, not a pan)
+    if (wasDragging && this.props.onClick) {
+      const dx = x - this._dragStartX;
+      const dy = y - this._dragStartY;
+      if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2) {
+        const bufferWidth = this.getBufferWidth();
+        const bufferHeight = this.getBufferHeight();
+        const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
+
+        const mouseBufferX = x * this._pixelsPerCellX;
+        const mouseBufferY = y * this._pixelsPerCellY;
+        const centerBufferX = bufferWidth / 2;
+        const centerBufferY = bufferHeight / 2;
+        const offsetX = mouseBufferX - centerBufferX;
+        const offsetY = mouseBufferY - centerBufferY;
+
+        const { mercatorPerPixelX, mercatorPerPixelY } = this._getMercatorScale(bufferHeight, pixelAspect);
+
+        const centerMercX = lonToMercatorX(this._centerLon);
+        const centerMercY = latToMercatorY(this._centerLat);
+        const clickLon = mercatorXToLon(centerMercX + offsetX * mercatorPerPixelX);
+        const clickLat = mercatorYToLat(centerMercY + offsetY * mercatorPerPixelY);
+
+        this.props.onClick({ lat: clickLat, lon: clickLon, x, y });
+      }
+    }
   }
 
   // ===== Wheelable interface =====
@@ -688,25 +760,32 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     return this.props.interactive !== false;
   }
 
-  handleWheel(_deltaX: number, deltaY: number): boolean {
+  handleWheel(_deltaX: number, deltaY: number, x?: number, y?: number): boolean {
     const zoomingIn = deltaY < 0;
-    const maxZoom = this.props.maxZoom ?? 20;
-
-    if (zoomingIn && this._zoom >= maxZoom) return true;
-    if (!zoomingIn && this._zoom <= 0) return true;
-
-    this._zoom = zoomingIn ? this._zoom + 1 : this._zoom - 1;
-    this._fireZoom();
-    this._fireMove();
-    this.markDirty();
-    getGlobalEngine()?.render();
+    if (x !== undefined && y !== undefined) {
+      // Zoom towards mouse pointer (convert absolute screen coords to element-relative)
+      this._zoomToLocation(x - this._boundsX, y - this._boundsY, zoomingIn);
+    } else {
+      // Fallback: zoom around center
+      const providerMaxZoom = this._getProvider().maxZoom;
+      const maxZoom = Math.min(this.props.maxZoom ?? 20, providerMaxZoom);
+      if (zoomingIn && this._zoom >= maxZoom) return true;
+      if (!zoomingIn && this._zoom <= 0) return true;
+      this._zoom = zoomingIn ? this._zoom + 1 : this._zoom - 1;
+      this._abortPendingFetches();
+      this._fireZoom();
+      this._fireMove();
+      this.markDirty();
+      getGlobalEngine()?.render();
+    }
     return true;
   }
 
   // ===== Zoom to location (double-click) =====
 
   private _zoomToLocation(screenX: number, screenY: number, zoomIn: boolean): void {
-    const maxZoom = this.props.maxZoom ?? 20;
+    const providerMaxZoom = this._getProvider().maxZoom;
+    const maxZoom = Math.min(this.props.maxZoom ?? 20, providerMaxZoom);
     if (zoomIn && this._zoom >= maxZoom) return;
     if (!zoomIn && this._zoom <= 0) return;
 
@@ -714,34 +793,27 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     const bufferHeight = this.getBufferHeight();
     const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
 
-    const mouseBufferX = screenX * 2;
-    const mouseBufferY = screenY * 3;
+    const mouseBufferX = screenX * this._pixelsPerCellX;
+    const mouseBufferY = screenY * this._pixelsPerCellY;
     const centerBufferX = bufferWidth / 2;
     const centerBufferY = bufferHeight / 2;
     const offsetX = mouseBufferX - centerBufferX;
     const offsetY = mouseBufferY - centerBufferY;
 
-    const scale = bufferHeight / TILE_SIZE;
-    const scaledTileH = TILE_SIZE * scale;
-    const scaledTileW = scaledTileH / pixelAspect;
-
-    const n = Math.pow(2, this._zoom);
-    const mercatorPerPixelX = 1 / (scaledTileW * n);
-    const mercatorPerPixelY = 1 / (scaledTileH * n);
+    const oldScale = this._getMercatorScale(bufferHeight, pixelAspect);
 
     const centerMercX = lonToMercatorX(this._centerLon);
     const centerMercY = latToMercatorY(this._centerLat);
-    const mouseMercX = centerMercX + offsetX * mercatorPerPixelX;
-    const mouseMercY = centerMercY + offsetY * mercatorPerPixelY;
+    const mouseMercX = centerMercX + offsetX * oldScale.mercatorPerPixelX;
+    const mouseMercY = centerMercY + offsetY * oldScale.mercatorPerPixelY;
 
     this._zoom = zoomIn ? this._zoom + 1 : this._zoom - 1;
+    this._abortPendingFetches();
 
-    const newN = Math.pow(2, this._zoom);
-    const newMercatorPerPixelX = 1 / (scaledTileW * newN);
-    const newMercatorPerPixelY = 1 / (scaledTileH * newN);
+    const newScale = this._getMercatorScale(bufferHeight, pixelAspect);
 
-    const newCenterMercX = mouseMercX - offsetX * newMercatorPerPixelX;
-    const newCenterMercY = mouseMercY - offsetY * newMercatorPerPixelY;
+    const newCenterMercX = mouseMercX - offsetX * newScale.mercatorPerPixelX;
+    const newCenterMercY = mouseMercY - offsetY * newScale.mercatorPerPixelY;
 
     this._centerLon = mercatorXToLon(newCenterMercX);
     this._centerLat = mercatorYToLat(newCenterMercY);
@@ -813,7 +885,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
         elements.push({
           kind: 'text',
           lat, lon,
-          text: match[2].trim(),
+          text: unescapeHtml(match[2].trim()),
           fill: attrs.fill,
           bg: attrs.bg || attrs.background,
           align,
@@ -830,13 +902,8 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     mercatorPerPixelX: number, mercatorPerPixelY: number,
     halfW: number, halfH: number,
   ): PathCommand[] {
-    const toPixel = (lat: number, lon: number): { px: number; py: number } => {
-      const mercX = lonToMercatorX(lon);
-      const mercY = latToMercatorY(lat);
-      const px = halfW + (mercX - centerMercX) / mercatorPerPixelX;
-      const py = halfH + (mercY - centerMercY) / mercatorPerPixelY;
-      return { px, py };
-    };
+    const toPixel = (lat: number, lon: number) =>
+      TileMapElement._geoToPixel(lat, lon, centerMercX, centerMercY, mercatorPerPixelX, mercatorPerPixelY, halfW, halfH);
 
     const result: PathCommand[] = [];
     let curLat = 0, curLon = 0;
@@ -862,17 +929,17 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
           break;
         }
         case 'H': {
-          // H has only x (lat), convert to L using tracked curLon
-          const p = toPixel(cmd.x, curLon);
+          // H = horizontal = change longitude, keep current latitude
+          const p = toPixel(curLat, cmd.x);
           result.push({ type: 'L', x: p.px, y: p.py });
-          curLat = cmd.x;
+          curLon = cmd.x;
           break;
         }
         case 'V': {
-          // V has only y (lon), convert to L using tracked curLat
-          const p = toPixel(curLat, cmd.y);
+          // V = vertical = change latitude, keep current longitude
+          const p = toPixel(cmd.y, curLon);
           result.push({ type: 'L', x: p.px, y: p.py });
-          curLon = cmd.y;
+          curLat = cmd.y;
           break;
         }
         case 'Q': {
@@ -898,16 +965,19 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
           break;
         }
         case 'A': {
-          // Scale radii: rx is in lat-like units, ry is in lon-like units
-          // Approximate by converting a small delta to pixels
+          // Scale radii from degrees to buffer pixels.
+          // scaleLon already includes pixel aspect (via mercatorPerPixelX).
+          // scaleLat uses mercatorPerPixelY (no aspect), so we correct ry
+          // by pixelAspect so arcs aren't vertically stretched on screen.
           const scaleLon = 1 / (mercatorPerPixelX * 360);  // pixels per degree lon
           const cosLat = Math.cos(curLat * Math.PI / 180);
-          const scaleLat = 1 / (mercatorPerPixelY * 180 / Math.PI) * (1 / (cosLat > 0.01 ? cosLat : 0.01));
+          const scaleLat = 1 / (mercatorPerPixelY * 360 * (cosLat > 0.01 ? cosLat : 0.01));
+          const pixelAspect = mercatorPerPixelX / mercatorPerPixelY;
           const ep = toPixel(cmd.x, cmd.y);
           result.push({
             type: 'A',
-            rx: Math.abs(cmd.rx * scaleLat),
-            ry: Math.abs(cmd.ry * scaleLon),
+            rx: Math.abs(cmd.rx * scaleLon),
+            ry: Math.abs(cmd.ry * scaleLat * pixelAspect),
             rotation: cmd.rotation,
             largeArc: cmd.largeArc,
             sweep: cmd.sweep,
@@ -939,18 +1009,9 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
         : [];
     }
 
-    const toPixel = (lat: number, lon: number): { px: number; py: number } => {
-      const mercX = lonToMercatorX(lon);
-      const mercY = latToMercatorY(lat);
-      return {
-        px: halfW + (mercX - centerMercX) / mercatorPerPixelX,
-        py: halfH + (mercY - centerMercY) / mercatorPerPixelY,
-      };
-    };
-
     for (const el of this._parsedSvgOverlay) {
       if (el.kind === 'text') {
-        const p = toPixel(el.lat, el.lon);
+        const p = TileMapElement._geoToPixel(el.lat, el.lon, centerMercX, centerMercY, mercatorPerPixelX, mercatorPerPixelY, halfW, halfH);
         const color = el.fill || '#ffffff';
         canvas.drawTextColor(p.px, p.py, el.text, color, {
           align: el.align,
@@ -966,13 +1027,15 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
         halfW, halfH,
       );
 
-      if (el.fill) {
-        fillPathColor(canvas, transformed, el.fill);
+      const hasFill = el.fill && el.fill !== 'none';
+      const hasStroke = el.stroke && el.stroke !== 'none';
+      if (hasFill) {
+        fillPathColor(canvas, transformed, el.fill!);
       }
-      if (el.stroke) {
-        drawPathColor(canvas, transformed, el.stroke);
+      if (hasStroke) {
+        drawPathColor(canvas, transformed, el.stroke!);
       }
-      if (!el.fill && !el.stroke) {
+      if (!hasFill && !hasStroke) {
         drawPath(canvas, transformed);
       }
     }
@@ -985,12 +1048,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     const centerLon = this._centerLon;
     const zoom = this._zoom;
 
-    const scale = bufferHeight / TILE_SIZE;
-    const scaledTileH = TILE_SIZE * scale;
-    const scaledTileW = scaledTileH / pixelAspect;
-    const n = Math.pow(2, zoom);
-    const mercatorPerPixelX = 1 / (scaledTileW * n);
-    const mercatorPerPixelY = 1 / (scaledTileH * n);
+    const { mercatorPerPixelX, mercatorPerPixelY } = this._getMercatorScale(bufferHeight, pixelAspect);
     const centerMercX = lonToMercatorX(centerLon);
     const centerMercY = latToMercatorY(centerLat);
     const halfW = bufferWidth / 2;
@@ -1084,13 +1142,9 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     const bufferHeight = this.getBufferHeight();
     const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
 
-    const scale = bufferHeight / TILE_SIZE;
-    const scaledTileH = TILE_SIZE * scale;
-    const scaledTileW = scaledTileH / pixelAspect;
-
-    const n = Math.pow(2, this._zoom);
-    const halfWidthMerc = (bufferWidth / 2) / (scaledTileW * n);
-    const halfHeightMerc = (bufferHeight / 2) / (scaledTileH * n);
+    const { mercatorPerPixelX, mercatorPerPixelY } = this._getMercatorScale(bufferHeight, pixelAspect);
+    const halfWidthMerc = (bufferWidth / 2) * mercatorPerPixelX;
+    const halfHeightMerc = (bufferHeight / 2) * mercatorPerPixelY;
 
     const centerMercX = lonToMercatorX(this._centerLon);
     const centerMercY = latToMercatorY(this._centerLat);

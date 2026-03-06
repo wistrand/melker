@@ -185,7 +185,7 @@ The AI can interact with the UI through tools:
 The AI can interact with `<tile-map>` components via `send_event`:
 
 - **Change view**: `event_type="change"`, `value="lat=N,lon=N,zoom=N,provider=NAME"` (all fields optional)
-- **Draw overlay**: `event_type="draw"`, `value='<path d="M lat lon L lat lon" stroke="color"/><text lat="N" lon="N" fill="color">Label</text>'`
+- **Draw overlay**: `event_type="draw"`, `value='<path d="M lat lon L lat lon" stroke="color"/><text lat="N" lon="N" fill="color">Label</text>'` (supports M/L/H/V/C/S/Q/T/A/Z; use A for circles, C/Q for curves)
 - **Clear overlay**: `event_type="draw"`, `value=""`
 
 The screen content shows `[Tile Map#id: lat=N, lon=N, zoom=N, provider=NAME, paths=N, labels=N]` with available providers listed below.

@@ -4,6 +4,9 @@
 import type { PolicyPermissions } from './types.ts';
 import { platform, statSync } from '../runtime/mod.ts';
 import { MAP_NET_HOSTS } from './tile-map-hosts.ts';
+import { Env } from '../env.ts';
+
+export { MAP_NET_HOSTS };
 
 // AI permission shortcut hosts
 export const AI_NET_HOSTS = ['openrouter.ai'];
@@ -16,8 +19,6 @@ export const CLIPBOARD_COMMANDS_ALL = ['pbcopy', 'xclip', 'xsel', 'wl-copy', 'cl
 
 // All possible keyring commands (platform-wide)
 export const KEYRING_COMMANDS_ALL = ['security', 'secret-tool', 'powershell'];
-
-import { Env } from '../env.ts';
 
 // Cache for command existence checks
 const commandExistsCache = new Map<string, boolean>();

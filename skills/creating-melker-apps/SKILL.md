@@ -187,6 +187,7 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `$melker.cache.clear(ns)` | Clear all entries in a namespace |
 | `$melker.logger.debug/info/warn/error()` | Log to file (F12 shows location) |
 | `$melker.config.getString/getNumber/getBoolean(key, default)` | Read config values |
+| `$melker.createState(initial)` | Register state object for declarative bindings (one call per app) |
 | `$melker.url` | Source file URL |
 | `$melker.dirname` | Source directory path |
 | `$app.functionName()` | Call exported script functions |

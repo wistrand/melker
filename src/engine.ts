@@ -1772,7 +1772,7 @@ export class MelkerEngine {
    * @param permission - The permission to check (e.g., 'shader', 'clipboard')
    * @returns true if permission is granted, false otherwise
    */
-  hasPermission(permission: 'shader' | 'clipboard' | 'keyring' | 'browser' | 'ai' | 'all'): boolean {
+  hasPermission(permission: 'shader' | 'clipboard' | 'keyring' | 'browser' | 'ai' | 'map' | 'all'): boolean {
     // If no policy is set, deny permission
     if (!this._policy) {
       return false;
@@ -1800,6 +1800,8 @@ export class MelkerEngine {
         return perms.browser === true;
       case 'ai':
         return perms.ai === true || (Array.isArray(perms.ai) && perms.ai.length > 0);
+      case 'map':
+        return perms.map === true;
       case 'all':
         // Already handled above - if we reach here, perms.all is falsy
         return false;

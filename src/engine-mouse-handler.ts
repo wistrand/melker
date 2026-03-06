@@ -68,7 +68,7 @@ export function handleWheelEvent(event: any, ctx: MouseHandlerContext): void {
     const canHandle = target.canHandleWheel(event.x, event.y);
     logger.debug(`Engine wheel: canHandleWheel=${canHandle}`);
     if (canHandle) {
-      const handled = target.handleWheel(event.deltaX || 0, event.deltaY || 0);
+      const handled = target.handleWheel(event.deltaX || 0, event.deltaY || 0, event.x, event.y);
       logger.debug(`Engine wheel: handleWheel returned ${handled}`);
       if (handled) {
         ctx.graphicsOverlayManager.markScrollHappened();

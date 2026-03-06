@@ -100,8 +100,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   private _onPaintFailed: boolean = false;
   private _currentColor: number = DEFAULT_FG;  // Current drawing color
   // Pixel multiplier per terminal cell (2x3 for sextant, cellWidth x cellHeight for sixel)
-  private _pixelsPerCellX: number = 2;
-  private _pixelsPerCellY: number = 3;
+  protected _pixelsPerCellX: number = 2;
+  protected _pixelsPerCellY: number = 3;
 
   // Image loading support
   private _loadedImage: LoadedImage | null = null;

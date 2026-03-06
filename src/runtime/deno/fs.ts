@@ -50,6 +50,10 @@ export function stat(path: string | URL): Promise<FileInfo> {
   return Deno.stat(path);
 }
 
+export function lstat(path: string | URL): Promise<FileInfo> {
+  return Deno.lstat(path);
+}
+
 export function remove(path: string | URL, options?: RemoveOptions): Promise<void> {
   return Deno.remove(path, options);
 }

@@ -13,8 +13,8 @@ import {
   getAvailableAICommands,
   getBrowserCommand,
   AI_NET_HOSTS,
-} from './flags.ts';
-import { MAP_NET_HOSTS } from './tile-map-hosts.ts';
+  MAP_NET_HOSTS,
+} from './shortcut-utils.ts';
 import type { PermissionOverrides } from './permission-overrides.ts';
 
 /**
@@ -270,7 +270,8 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
     lines.push('  shader: enabled');
   }
   if (p.map) {
-    lines.push('  map: enabled');
+    const details = MAP_NET_HOSTS.join(', ');
+    lines.push(`  map: enabled${details ? ` (${details})` : ''}`);
   }
 
   return lines;

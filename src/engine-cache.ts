@@ -3,7 +3,7 @@
 
 import type { EngineCacheAPI } from './core-types.ts';
 import {
-  readFile, writeFile, mkdir, readDir, stat, remove, isNotFoundError,
+  readFile, writeFile, mkdir, readDir, stat, lstat, remove, isNotFoundError,
 } from './runtime/mod.ts';
 import { getLogger } from './logging.ts';
 
@@ -18,7 +18,6 @@ interface CacheEntry {
 interface NamespaceIndex {
   entries: Map<string, CacheEntry>;
   totalBytes: number;
-  scanned: boolean;
 }
 
 export interface EngineCacheOptions {
@@ -45,8 +44,13 @@ export class EngineCache implements EngineCacheAPI {
 
           logger.debug(`read [${namespace}/${key}]: ${path}`);
 
-          // Add to index
-          const fileStat = await stat(path);
+          // Add to index (only update totalBytes if not already tracked)
+          const fileStat = await lstat(path);
+          if (fileStat.isSymlink) return null; // reject symlinks
+          const existing = ns.entries.get(key);
+          if (existing) {
+            ns.totalBytes -= existing.size;
+          }
           ns.entries.delete(key);
           ns.entries.set(key, { path, size: fileStat.size, lastAccess: Date.now() });
           ns.totalBytes += fileStat.size;
@@ -178,12 +182,11 @@ export class EngineCache implements EngineCacheAPI {
     let ns = this._namespaces.get(namespace);
     if (ns) return ns;
 
-    ns = { entries: new Map(), totalBytes: 0, scanned: false };
+    ns = { entries: new Map(), totalBytes: 0 };
     this._namespaces.set(namespace, ns);
 
     // Lazy scan: populate index from existing files on disk
     await this._scanNamespace(namespace, ns);
-    ns.scanned = true;
     return ns;
   }
 
@@ -224,7 +227,9 @@ export class EngineCache implements EngineCacheAPI {
           await this._scanDir(rootDir, fullPath, out);
         } else if (dirEntry.isFile) {
           try {
-            const fileStat = await stat(fullPath);
+            const fileStat = await lstat(fullPath);
+            // Skip symlinks — only cache regular files
+            if (fileStat.isSymlink) continue;
             // Derive key from path relative to namespace dir, strip .bin extension
             let rel = fullPath.substring(rootDir.length + 1);
             if (rel.endsWith('.bin')) {
@@ -247,9 +252,16 @@ export class EngineCache implements EngineCacheAPI {
   }
 
   private _keyToPath(namespace: string, key: string): string {
-    // Sanitize to prevent path traversal
-    const safeNs = namespace.replace(/\.\./g, '_');
-    const safeKey = key.replace(/\.\./g, '_');
+    // Sanitize to prevent path traversal, absolute paths, and null bytes
+    const sanitize = (s: string): string => {
+      // Strip null bytes and URL-encoded variants
+      let safe = s.replace(/\0/g, '').replace(/%00/gi, '');
+      // Collapse each segment: strip leading dots/slashes to prevent traversal and absolute paths
+      safe = safe.split('/').map(seg => seg.replace(/^[./\\]+/, '') || '_').join('/');
+      return safe || '_';
+    };
+    const safeNs = sanitize(namespace);
+    const safeKey = sanitize(key);
     return `${this._baseDir}/${safeNs}/${safeKey}.bin`;
   }
 
@@ -259,16 +271,22 @@ export class EngineCache implements EngineCacheAPI {
     let evicted = 0;
     for (const [key, entry] of ns.entries) {
       if (ns.totalBytes <= target) break;
+      let deleted = false;
       try {
         await remove(entry.path);
+        deleted = true;
       } catch (e) {
-        if (!isNotFoundError(e)) {
+        if (isNotFoundError(e)) {
+          deleted = true;
+        } else {
           logger.warn(`eviction failed [${key}]: ${e}`);
         }
       }
-      ns.totalBytes -= entry.size;
-      ns.entries.delete(key);
-      evicted++;
+      if (deleted) {
+        ns.totalBytes -= entry.size;
+        ns.entries.delete(key);
+        evicted++;
+      }
     }
     if (evicted > 0) {
       logger.debug(`evicted ${evicted} cache entries, now ${(ns.totalBytes / 1024 / 1024).toFixed(1)} MB`);

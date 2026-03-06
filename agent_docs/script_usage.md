@@ -33,10 +33,11 @@ $melker: {
 
   // Rendering
   render(): void;
+  skipRender(): void;       // Skip auto-render after handler
 
   // App lifecycle
-  exit(): void;
-  quit(): void;
+  exit(): Promise<void>;
+  quit(): Promise<void>;    // Alias for exit()
 
   // UI utilities
   setTitle(title: string): void;
@@ -210,12 +211,10 @@ apiLogger.debug('Fetching data');
 ### Log Levels
 
 Available log methods (in order of severity):
-- `trace(message, context?)` - Most verbose
-- `debug(message, context?)`
-- `info(message, context?)`
-- `warn(message, context?)`
-- `error(message, error?, context?)`
-- `fatal(message, error?, context?)`
+- `debug(message, ...args)`
+- `info(message, ...args)`
+- `warn(message, ...args)`
+- `error(message, ...args)`
 
 Set log level via environment variable:
 ```bash

@@ -577,9 +577,11 @@ export interface Wheelable {
 
   /**
    * Handle wheel event
+   * @param x - Mouse x position (terminal column) when the wheel event occurred
+   * @param y - Mouse y position (terminal row) when the wheel event occurred
    * @returns true if the event was handled
    */
-  handleWheel(deltaX: number, deltaY: number): boolean;
+  handleWheel(deltaX: number, deltaY: number, x?: number, y?: number): boolean;
 }
 
 // Type mapping for known element types to their specific props
@@ -618,6 +620,7 @@ export type KnownElementTypeMap = {
   'slider': Element;
   'spinner': Element;
   'split-pane': Element;
+  'tile-map': Element;
 };
 
 // Helper type to get props for a component type

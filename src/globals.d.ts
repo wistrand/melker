@@ -35,6 +35,8 @@ export interface MelkerContext {
 
   // DOM-like APIs
   getElementById(id: string): Element | null;
+  querySelector(selector: string): Element | null;
+  querySelectorAll(selector: string): Element[];
   focus(id: string): void;
   createElement(type: string, props?: Record<string, unknown>, ...children: unknown[]): Element;
 

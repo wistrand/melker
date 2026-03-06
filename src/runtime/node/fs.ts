@@ -82,6 +82,11 @@ export async function stat(path: string | URL): Promise<FileInfo> {
   return toFileInfo(stats);
 }
 
+export async function lstat(path: string | URL): Promise<FileInfo> {
+  const stats = await fsp.lstat(resolvePath(path));
+  return toFileInfo(stats);
+}
+
 export async function remove(path: string | URL, options?: RemoveOptions): Promise<void> {
   await fsp.rm(resolvePath(path), { recursive: options?.recursive ?? false });
 }

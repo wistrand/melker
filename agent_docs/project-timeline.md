@@ -125,9 +125,19 @@ So constructed.
 
 **Feb 28 - Mar 3** - Node.js 25+ support, runtime abstraction layer, npm publishing, two-way state binding ← `v2026.03.1`
 
-### Week 16: Polish (Mar 3-4)
+### Week 16: Polish (Mar 3-5)
 
 **Mar 3-4** - Package rename to `@melker/melker`, Node sandbox caveat, UDP video streams, ffmpeg config flags, "Melker Engine" branding
+
+**Mar 4** - Data boxplot tooltips, data-table keyboard refinements, electricity dashboard showcase
+
+**Mar 5** - Data-table/tree scrollbar fixes, split-pane min-size enforcement
+
+### Week 17: The Cartographer's Audit (Mar 6)
+
+**Mar 6** - Tile map component (SVG overlays, disk cache, providers), bind-selection architecture, selection-id system, data component `bind-selection` support ← `v2026.03.2`
+
+**Mar 6** - Tile map audit: 15 bug/security fixes, pointer-targeted zoom, drag throttling, docs sync
 
 ## Components
 

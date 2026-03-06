@@ -56,7 +56,6 @@ Element -> CanvasElement -> TileMapElement
 | `dither`           | `string`                   | `'auto'`        | Dithering algorithm (inherited from CanvasElement)      |
 | `svgOverlay`       | `string`                   | —               | Declarative SVG `<path>` and `<text>` elements with lat/lon coords |
 | `onOverlay`        | `(event) => void`          | —               | Overlay drawing callback (after tiles, before shader)   |
-| `onTooltip`        | `(event) => void`          | —               | Tooltip callback on mouse hover                         |
 | `onMove`           | `(event) => void`          | —               | Fires when map position changes (drag, pan, setView)    |
 | `onZoom`           | `(event) => void`          | —               | Fires when zoom level changes                           |
 | `onClick`          | `(event) => void`          | —               | Fires on map click with lat/lon                         |
@@ -214,7 +213,7 @@ Drawing order: fill first, then stroke on top. If neither is set, strokes with t
 |----------------|----------------------------------------------------------------|
 | `lat`, `lon`   | Geo coordinates for label position (required)                  |
 | `fill`         | Text foreground color (CSS string, default `#ffffff`)          |
-| `bg`           | Text background color (CSS string)                             |
+| `bg`           | Text background color (CSS string). Alias: `background`        |
 | `text-anchor`  | `"start"` (default), `"middle"` (center), or `"end"` (right)  |
 | `align`        | Alternative to text-anchor: `"left"`, `"center"`, `"right"`   |
 

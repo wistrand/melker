@@ -150,7 +150,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
       value: {
         type: 'string',
-        description: 'For change events, the new value. For keypress events, the key to press. For draw events on tile-map, SVG path elements with lat/lon coordinates.',
+        description: 'For change events, the new value. For keypress events, the key to press. For draw events on tile-map, SVG path elements with lat/lon coordinates (M/L/C/Q/A/Z commands). Use A for circles, C/Q for curves, and enough points for smooth results.',
         required: false,
       },
     },

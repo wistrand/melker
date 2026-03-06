@@ -1150,7 +1150,9 @@ Interactive slippy map with Mercator projection. Extends canvas — inherits dit
           onMove="$app.onMove(event)" />
 ```
 
-**Props:** `lat`, `lon`, `zoom`, `provider`, `interactive` (default true), `maxZoom`, `svgOverlay`, `onOverlay`, `onTooltip`, `onMove`, `onZoom`, `onClick`, `onLoadingChange`
+**Props:** `lat`, `lon`, `zoom`, `provider`, `interactive` (default true), `maxZoom`, `svgOverlay`, `onOverlay`, `onMove`, `onZoom`, `onClick`, `onLoadingChange`
+
+Note: `onTooltip` is inherited from BaseProps and works on tile-map (and all other elements).
 
 **Built-in providers:** `openstreetmap`, `terrain`, `streets`, `voyager`, `voyager-nolabels`, `satellite`
 
@@ -1189,7 +1191,7 @@ export function drawMarkers(event) {
 '/>
 ```
 
-Coordinates in `d` are **lat lon** order. `<text>` supports: `lat`, `lon`, `fill`, `bg`, `text-anchor` (start/middle/end) or `align` (left/center/right).
+Coordinates in `d` are **lat lon** order. `<text>` supports: `lat`, `lon`, `fill`, `bg` (alias: `background`), `text-anchor` (start/middle/end) or `align` (left/center/right).
 
 ### Shaders (canvas/img)
 

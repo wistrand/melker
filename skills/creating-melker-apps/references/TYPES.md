@@ -15,6 +15,8 @@ interface MelkerContext {
 
   // DOM-like APIs
   getElementById(id: string): Element | null;
+  querySelector(selector: string): Element | null;
+  querySelectorAll(selector: string): Element[];
   focus(id: string): void;
   createElement(type: string, props?: Record<string, unknown>, ...children: unknown[]): Element;
 
@@ -45,6 +47,14 @@ interface MelkerContext {
   copyToClipboard(text: string): Promise<boolean>;  // Requires clipboard: true (auto-policy default)
   openBrowser(url: string): Promise<boolean>;  // Requires browser: true in policy
 
+  // Dev Tools
+  devtools: {
+    show(): void;
+    hide(): void;
+    toggle(): void;
+    isOpen(): boolean;
+  };
+
   // Engine access
   engine: MelkerEngine;     // Direct engine access (advanced)
 
@@ -56,6 +66,9 @@ interface MelkerContext {
   // State persistence
   persistenceEnabled: boolean;
   stateFilePath: string | null;
+
+  // State bindings
+  createState<T extends Record<string, unknown>>(initial: T): T;
 
   // OAuth (when configured via <oauth> tag)
   oauth: unknown;
@@ -198,12 +211,12 @@ interface FileSelectEvent {
 // Canvas paint events
 interface PaintEvent {
   type: 'paint';
-  canvas: CanvasAPI;
+  canvas: CanvasElement;
 }
 
 // Tile map overlay events
 interface TileMapOverlayEvent {
-  canvas: CanvasAPI;           // drawLine, drawCircle, drawText, setPixel, setColor, etc.
+  canvas: CanvasElement;       // drawLine, drawCircle, drawText, setPixel, etc.
   bounds: { width: number; height: number };
   geo: {
     latLonToPixel(lat: number, lon: number): { x: number; y: number } | null;

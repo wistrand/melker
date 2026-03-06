@@ -181,6 +181,10 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `$melker.copyToClipboard(text)` | Copy to clipboard (requires `clipboard: true`, auto-policy default) |
 | `$melker.openBrowser(url)` | Open URL in system browser (requires `browser: true` in policy) |
 | `$melker.cacheDir` | App-specific cache directory path (always exists) |
+| `$melker.cache.read(ns, key)` | Read cached binary data (returns `Uint8Array \| null`) |
+| `$melker.cache.write(ns, key, data, opts?)` | Write binary data to cache (`opts.maxBytes` for namespace budget) |
+| `$melker.cache.delete(ns, key)` | Delete a cache entry |
+| `$melker.cache.clear(ns)` | Clear all entries in a namespace |
 | `$melker.logger.debug/info/warn/error()` | Log to file (F12 shows location) |
 | `$melker.config.getString/getNumber/getBoolean(key, default)` | Read config values |
 | `$melker.url` | Source file URL |

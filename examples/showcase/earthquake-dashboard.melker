@@ -408,9 +408,24 @@
         }
       }
 
-      // Fetch tectonic plate boundaries and convert to svgOverlay
+      // Bump when GeoJSON→svgOverlay conversion logic changes to invalidate cache
+      const PLATES_CACHE_VERSION = 1;
+
+      // Fetch tectonic plate boundaries and convert to svgOverlay (cached)
       export async function fetchPlates(): Promise<void> {
         try {
+          // Try cache first (processed svgOverlay string)
+          const cacheKey = 'boundaries_v' + PLATES_CACHE_VERSION;
+          const cached = await $melker.cache.read('plates', cacheKey);
+          if (cached) {
+            platesSvgOverlay = new TextDecoder().decode(cached);
+            const map = $melker.getElementById('worldMap') as any;
+            if (map && platesVisible) {
+              map.props.svgOverlay = platesSvgOverlay;
+            }
+            return;
+          }
+
           const res = await fetch(PLATES_URL);
           if (!res.ok) return;
           const json = await res.json();
@@ -431,6 +446,10 @@
             paths.push('<path d="' + d + '" stroke="#664422"/>');
           }
           platesSvgOverlay = paths.join('\n');
+
+          // Cache the processed overlay string
+          await $melker.cache.write('plates', cacheKey, new TextEncoder().encode(platesSvgOverlay));
+
           const map = $melker.getElementById('worldMap') as any;
           if (map && platesVisible) {
             map.props.svgOverlay = platesSvgOverlay;

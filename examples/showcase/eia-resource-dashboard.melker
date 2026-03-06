@@ -273,74 +273,35 @@
       let selectedProduct: string | null = null;
       let apiKey = '';
 
-      // Disk cache under $melker.cacheDir/eia, JSON files with embedded timestamp
+      // Disk cache via engine cache API (eia namespace), with TTL
       const CACHE_TTL = 60 * 60 * 1000; // 1 hour
-      let cacheDir: string | null = null;
+      const CACHE_NS = 'eia';
+      const CACHE_MAX_BYTES = 50 * 1024 * 1024; // 50 MB budget
 
-      // In-memory fallback for when disk cache is unavailable
-      const memCache = new Map<string, { data: ProductData[]; ts: number }>();
-
-      // Initialize cache directory eagerly
-      const cacheReady = initCache();
-
-      async function initCache(): Promise<void> {
-        try {
-          cacheDir = $melker.cacheDir + '/eia';
-          await Deno.mkdir(cacheDir, { recursive: true });
-          $melker.logger.info('EIA cache dir: ' + cacheDir);
-        } catch (e) {
-          $melker.logger.warn('Failed to init EIA cache dir: ' + e);
-          cacheDir = null;
-        }
-      }
-
-      function cachePath(): string | null {
-        if (!cacheDir) return null;
-        return cacheDir + '/' + currentCommodity + '_' + currentPeriod + '.json';
+      function cacheKey(): string {
+        return currentCommodity + '_' + currentPeriod;
       }
 
       async function getCached(): Promise<ProductData[] | null> {
-        await cacheReady;
-
-        // Try disk
-        const path = cachePath();
-        if (path) {
-          try {
-            const raw = await Deno.readTextFile(path);
-            const envelope = JSON.parse(raw) as { ts: number; data: ProductData[] };
-            if ((Date.now() - envelope.ts) < CACHE_TTL) {
-              $melker.logger.info('EIA cache hit (disk): ' + path);
-              return envelope.data;
-            }
-          } catch { /* miss or corrupt */ }
-        }
-
-        // Try memory fallback
-        const key = currentCommodity + ':' + currentPeriod;
-        const mem = memCache.get(key);
-        if (mem && (Date.now() - mem.ts) < CACHE_TTL) {
-          $melker.logger.info('EIA cache hit (memory): ' + key);
-          return mem.data;
-        }
-
+        try {
+          const raw = await $melker.cache.read(CACHE_NS, cacheKey());
+          if (!raw) return null;
+          const envelope = JSON.parse(new TextDecoder().decode(raw)) as { ts: number; data: ProductData[] };
+          if ((Date.now() - envelope.ts) < CACHE_TTL) {
+            $melker.logger.info('EIA cache hit: ' + cacheKey());
+            return envelope.data;
+          }
+        } catch { /* miss or corrupt */ }
         return null;
       }
 
       async function setCache(data: ProductData[]): Promise<void> {
-        const now = Date.now();
-        const key = currentCommodity + ':' + currentPeriod;
-        memCache.set(key, { data, ts: now });
-
-        await cacheReady;
-        const path = cachePath();
-        if (path) {
-          try {
-            const envelope = JSON.stringify({ ts: now, data });
-            await Deno.writeTextFile(path, envelope);
-            $melker.logger.info('EIA cache saved: ' + path);
-          } catch (e) {
-            $melker.logger.warn('Failed to write EIA cache: ' + e);
-          }
+        try {
+          const envelope = JSON.stringify({ ts: Date.now(), data });
+          await $melker.cache.write(CACHE_NS, cacheKey(), new TextEncoder().encode(envelope), { maxBytes: CACHE_MAX_BYTES });
+          $melker.logger.info('EIA cache saved: ' + cacheKey());
+        } catch (e) {
+          $melker.logger.warn('Failed to write EIA cache: ' + e);
         }
       }
 

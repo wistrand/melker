@@ -1002,7 +1002,8 @@ For more complex patterns, see these examples in the codebase:
 | Example | Patterns Demonstrated |
 |---------|----------------------|
 | `map.melker` (showcase/) | `<tile-map>` component, location search (Nominatim), provider switching, command line args via `${argv[N]}`, `$melker.openBrowser()` |
-| `earthquake-dashboard.melker` (showcase/) | `<tile-map>` with `onOverlay` for geo markers, `svgOverlay` for tectonic plates, fetch API, `onTooltip`, zoom-dependent thresholds |
+| `earthquake-dashboard.melker` (showcase/) | `<tile-map>` with `onOverlay` for geo markers, `svgOverlay` for tectonic plates, fetch API, `onTooltip`, zoom-dependent thresholds, `$melker.cache` for GeoJSON caching with versioned keys |
+| `eia-resource-dashboard.melker` (showcase/) | Fetch API with `$melker.cache` for response caching (TTL-based), data bars, select/combobox, dynamic data loading |
 | `tile-map-overlay.melker` (components/) | `<tile-map>` `onOverlay` callback, `geo.latLonToPixel()`, marker drawing |
 | `tile-map-shader.melker` (components/) | `<tile-map>` with `onShader` post-processing (night vision, sepia, etc.) |
 | `tile-map-svg-paths.melker` (components/) | `<tile-map>` `svgOverlay` prop, declarative `<path>` and `<text>` elements with lat/lon |

@@ -70,6 +70,18 @@ interface MelkerContext {
   // Configuration
   config: MelkerConfig;
   cacheDir: string;         // App-specific cache directory (always exists)
+
+  // Persistent cache API (binary data, survives restarts)
+  cache: EngineCacheAPI;
+}
+
+interface EngineCacheAPI {
+  read(namespace: string, key: string): Promise<Uint8Array | null>;
+  write(namespace: string, key: string, data: Uint8Array, options?: { maxBytes?: number }): Promise<void>;
+  delete(namespace: string, key: string): Promise<boolean>;
+  scan(namespace: string): Promise<string[]>;
+  clear(namespace: string): Promise<number>;
+  stats(namespace: string): Promise<{ entries: number; totalBytes: number }>;
 }
 
 interface MelkerLogger {

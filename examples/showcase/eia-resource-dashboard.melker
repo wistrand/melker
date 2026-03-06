@@ -1,0 +1,697 @@
+<melker>
+    <title>EIA Energy Resources</title>
+
+    <policy>
+        {
+        "name": "eia-dashboard",
+        "description": "U.S. energy commodity price dashboard",
+        "permissions": {
+        "net": ["api.eia.gov"]
+        },
+        "configSchema": {
+        "eia.apiKey": {
+        "type": "string",
+        "env": "EIA_API_KEY"
+        }
+        }
+        }
+    </policy>
+
+    <help>
+        ## U.S. Energy Resource Prices
+
+        Live energy commodity prices from the EIA Open Data API v2.
+
+        | Key        | Action                    |
+        |------------|---------------------------|
+        | Tab        | Switch between panels     |
+        | Arrow keys | Navigate table / boxplot  |
+        | Enter      | View product details      |
+        | R          | Refresh data              |
+        | F12        | Dev tools                 |
+
+        Covers petroleum, natural gas, electricity, and coal prices.
+        Requires an EIA API key (set EIA_API_KEY env var or enter when prompted).
+    </help>
+
+    <style>
+        .header {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+        .footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+        .panel-label {
+        font-weight: bold;
+        padding: 0 1;
+        flex-shrink: 0;
+        }
+    </style>
+
+    <container style="display: flex; flex-direction: column; height: 100%; width: 100%">
+
+        <!-- Header -->
+        <container class="header">
+            <container style="display: flex; flex-direction: row; gap: 2; align-items: center">
+                <text style="font-weight: bold;">EIA Energy Resources</text>
+                <select id="commoditySelect" onChange="$app.changeCommodity(event)" style="width: 18" selectedValue="petroleum">
+                    <option value="petroleum">Petroleum</option>
+                    <option value="naturalgas">Natural Gas</option>
+                    <option value="electricity">Electricity</option>
+                    <option value="coal">Coal</option>
+                </select>
+                <select id="periodSelect" onChange="$app.changePeriod(event)" style="width: 16" selectedValue="1y">
+                    <option value="3m">3 months</option>
+                    <option value="6m">6 months</option>
+                    <option value="1y">1 year</option>
+                    <option value="2y">2 years</option>
+                    <option value="5y">5 years</option>
+                </select>
+            </container>
+            <spinner id="fetchSpinner" variant="dots" verbs="fetching" spinning="false" visible="false" />
+            <text id="status">Loading...</text>
+        </container>
+
+        <!-- Main content -->
+        <split-pane style="width: fill; flex: 1; direction: horizontal;" sizes="3,2">
+
+            <!-- Left: boxplot + sparkline -->
+            <container style="display: flex; flex-direction: column; height: fill">
+
+                <!-- Price distribution boxplot -->
+                <data-boxplot
+                        id="priceBoxplot"
+                        title="Price Distribution"
+                        yAxisLabel=""
+                        tooltip="auto"
+                        selectable="true"
+                        onGetId="event.label"
+                        bind:selection="selected"
+                        onSelect="$app.onProductSelect(event)"
+                        groups='[]'
+                        style="flex: 1; width: fill;"
+                />
+
+                <!-- Price trend sparkline -->
+                <container style="flex-grow: 0; flex-shrink: 0; height: 7">
+                    <text id="trendLabel" class="panel-label">Price Trend</text>
+                    <data-bars
+                            id="trendBars"
+                            series='[{"name": "Price"}]'
+                            bars='[]'
+                            labels='[]'
+                            showValues="false"
+                            showLabels="true"
+                            onTooltip="$app.trendTooltip(event)"
+                            style="orientation: vertical; height: 6; gap: 0; margin: 1;"
+                    />
+                </container>
+            </container>
+
+            <!-- Right: table (top) + summary (bottom) -->
+            <split-pane style="width: fill; height: fill; direction: vertical" sizes="2,1">
+
+                <!-- Stats table -->
+                <data-table
+                        id="statsTable"
+                        style="width: fill; flex: 1;"
+                        selectable="single"
+                        sortColumn="2"
+                        sortDirection="desc"
+                        tooltip="auto"
+                        onGetId="event[0]"
+                        bind:selection="selected"
+                        onActivate="$app.showProductDetails(event)"
+                        onChange="$app.onProductSelect(event)"
+                >
+                    {
+                    "columns": [
+                    { "header": "Product", "width": 16 },
+                    { "header": "Latest", "width": 10, "align": "right" },
+                    { "header": "Avg", "width": 10, "align": "right" },
+                    { "header": "Min", "width": 10, "align": "right" },
+                    { "header": "Max", "width": 10, "align": "right" },
+                    { "header": "Delta", "width": 10, "align": "right" }
+                    ]
+                    }
+                </data-table>
+
+                <!-- Summary + average bars -->
+                <container style="display: flex; flex-direction: column; height: fill; padding: 0 1; gap: 1; overflow-y: scroll">
+
+                    <container style="padding: 0 1; flex-shrink: 0">
+                        <text style="font-weight: bold;">Summary</text>
+                        <text id="cheapestProduct">Lowest: --</text>
+                        <text id="expensiveProduct">Highest: --</text>
+                        <text id="avgPrice">Average: --</text>
+                        <text id="priceRange">Range: --</text>
+                        <text id="dataPoints">Data points: --</text>
+                    </container>
+
+                    <container style="padding: 0 1; flex: 1">
+                        <text style="font-weight: bold;">Average price by product</text>
+                        <data-bars
+                                id="avgBars"
+                                series='[{"name": "Avg Price"}]'
+                                bars='[]'
+                                labels='[]'
+                                showValues="true"
+                                tooltip="auto"
+                                selectable="true"
+                                onGetId="event.label"
+                                bind:selection="selected"
+                                onSelect="$app.onProductSelect(event)"
+                                style="bar-width: 1; gap: 0"
+                        />
+                    </container>
+
+                </container>
+
+            </split-pane>
+
+        </split-pane>
+
+        <command key="r" label="Refresh Data" global onExecute="$app.refresh()" />
+
+        <!-- Footer -->
+        <container class="footer">
+            <text>Tab: switch panels | Enter: details | R: refresh | Data: EIA Open Data</text>
+            <text id="lastUpdate">--</text>
+        </container>
+    </container>
+
+    <script type="typescript">
+      // Types
+      interface CommodityConfig {
+        label: string;
+        endpoint: string;
+        dataField: string;
+        frequency: string;
+        params: Record<string, string>;
+        unit: string;
+        nameField: string;
+        idField: string;
+      }
+
+      interface ProductData {
+        name: string;
+        id: string;
+        values: number[];
+        periods: string[];
+        latest: number;
+        avg: number;
+        min: number;
+        max: number;
+        delta: string;
+      }
+
+      // Commodity configurations
+      const COMMODITIES: Record<string, CommodityConfig> = {
+        petroleum: {
+          label: 'Petroleum',
+          endpoint: '/v2/petroleum/pri/spt/data',
+          dataField: 'value',
+          frequency: 'weekly',
+          params: {},
+          unit: '$/barrel',
+          nameField: 'product-name',
+          idField: 'product',
+        },
+        naturalgas: {
+          label: 'Natural Gas',
+          endpoint: '/v2/natural-gas/pri/fut/data',
+          dataField: 'value',
+          frequency: 'monthly',
+          params: { 'facets[process][]': 'PS0' },
+          unit: '$/MMBTU',
+          nameField: 'series-description',
+          idField: 'series',
+        },
+        electricity: {
+          label: 'Electricity',
+          endpoint: '/v2/electricity/retail-sales/data',
+          dataField: 'price',
+          frequency: 'monthly',
+          params: { 'facets[sectorid][]': 'RES' },
+          unit: 'cents/kWh',
+          nameField: 'stateDescription',
+          idField: 'stateid',
+        },
+        coal: {
+          label: 'Coal',
+          endpoint: '/v2/coal/market-sales-price/data',
+          dataField: 'price',
+          frequency: 'annual',
+          params: {},
+          unit: '$/short ton',
+          nameField: 'stateRegionDescription',
+          idField: 'stateRegionId',
+        },
+      };
+
+      // Period to start date calculation
+      const PERIOD_MONTHS: Record<string, number> = {
+        '3m': 3,
+        '6m': 6,
+        '1y': 12,
+        '2y': 24,
+        '5y': 60,
+      };
+
+      let currentCommodity = 'petroleum';
+      let currentPeriod = '1y';
+      let productDataList: ProductData[] = [];
+      const state = $melker.createState({ selected: [] as string[] });
+      let selectedProduct: string | null = null;
+      let apiKey = '';
+
+      // Disk cache under $melker.cacheDir/eia, JSON files with embedded timestamp
+      const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+      let cacheDir: string | null = null;
+
+      // In-memory fallback for when disk cache is unavailable
+      const memCache = new Map<string, { data: ProductData[]; ts: number }>();
+
+      // Initialize cache directory eagerly
+      const cacheReady = initCache();
+
+      async function initCache(): Promise<void> {
+        try {
+          cacheDir = $melker.cacheDir + '/eia';
+          await Deno.mkdir(cacheDir, { recursive: true });
+          $melker.logger.info('EIA cache dir: ' + cacheDir);
+        } catch (e) {
+          $melker.logger.warn('Failed to init EIA cache dir: ' + e);
+          cacheDir = null;
+        }
+      }
+
+      function cachePath(): string | null {
+        if (!cacheDir) return null;
+        return cacheDir + '/' + currentCommodity + '_' + currentPeriod + '.json';
+      }
+
+      async function getCached(): Promise<ProductData[] | null> {
+        await cacheReady;
+
+        // Try disk
+        const path = cachePath();
+        if (path) {
+          try {
+            const raw = await Deno.readTextFile(path);
+            const envelope = JSON.parse(raw) as { ts: number; data: ProductData[] };
+            if ((Date.now() - envelope.ts) < CACHE_TTL) {
+              $melker.logger.info('EIA cache hit (disk): ' + path);
+              return envelope.data;
+            }
+          } catch { /* miss or corrupt */ }
+        }
+
+        // Try memory fallback
+        const key = currentCommodity + ':' + currentPeriod;
+        const mem = memCache.get(key);
+        if (mem && (Date.now() - mem.ts) < CACHE_TTL) {
+          $melker.logger.info('EIA cache hit (memory): ' + key);
+          return mem.data;
+        }
+
+        return null;
+      }
+
+      async function setCache(data: ProductData[]): Promise<void> {
+        const now = Date.now();
+        const key = currentCommodity + ':' + currentPeriod;
+        memCache.set(key, { data, ts: now });
+
+        await cacheReady;
+        const path = cachePath();
+        if (path) {
+          try {
+            const envelope = JSON.stringify({ ts: now, data });
+            await Deno.writeTextFile(path, envelope);
+            $melker.logger.info('EIA cache saved: ' + path);
+          } catch (e) {
+            $melker.logger.warn('Failed to write EIA cache: ' + e);
+          }
+        }
+      }
+
+      // Get API key from config or prompt
+      async function getApiKey(): Promise<string> {
+        if (apiKey) return apiKey;
+
+        // Try config (env var EIA_API_KEY)
+        const fromConfig = $melker.config.getString('eia.apiKey', '');
+        if (fromConfig) {
+          apiKey = fromConfig;
+          return apiKey;
+        }
+
+        // Prompt user
+        const entered = await prompt('Enter your EIA API key (get one at https://www.eia.gov/opendata/register.php):');
+        if (entered) {
+          apiKey = entered;
+          return apiKey;
+        }
+
+        return '';
+      }
+
+      // Calculate start date for period
+      function getStartDate(): string {
+        const months = PERIOD_MONTHS[currentPeriod] || 12;
+        const d = new Date();
+        d.setMonth(d.getMonth() - months);
+        return d.toISOString().slice(0, 7); // YYYY-MM
+      }
+
+      // Fetch data from EIA API
+      async function fetchData(): Promise<ProductData[]> {
+        const key = await getApiKey();
+        if (!key) {
+          $melker.toast.show('No API key provided', { type: 'error' });
+          return [];
+        }
+
+        const cfg = COMMODITIES[currentCommodity];
+        if (!cfg) return [];
+
+        const params = new URLSearchParams();
+        params.set('api_key', key);
+        params.set('data[]', cfg.dataField);
+        params.set('frequency', cfg.frequency);
+        params.set('start', getStartDate());
+        params.set('sort[0][column]', 'period');
+        params.set('sort[0][direction]', 'asc');
+        params.set('length', '5000');
+
+        // Add commodity-specific facets
+        for (const [k, v] of Object.entries(cfg.params)) {
+          params.set(k, v);
+        }
+
+        const url = 'https://api.eia.gov' + cfg.endpoint + '?' + params.toString();
+
+        const res = await fetch(url);
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error('API error ' + res.status + ': ' + text.slice(0, 200));
+        }
+
+        const json = await res.json();
+        const rows = json.response?.data || [];
+
+        if (rows.length === 0) return [];
+
+        // Group by product/area
+        const groups = new Map<string, { name: string; values: number[]; periods: string[] }>();
+
+        for (const row of rows) {
+          const id = String(row[cfg.idField] || '');
+          const name = String(row[cfg.nameField] || id);
+          const val = Number(row[cfg.dataField]);
+          const period = String(row.period || '');
+
+          if (!id || isNaN(val)) continue;
+
+          if (!groups.has(name)) {
+            groups.set(name, { name, values: [], periods: [] });
+          }
+          const g = groups.get(name)!;
+          g.values.push(val);
+          g.periods.push(period);
+        }
+
+        // Calculate stats per group
+        const products: ProductData[] = [];
+        for (const [name, g] of groups) {
+          if (g.values.length < 2) continue;
+
+          const latest = g.values[g.values.length - 1];
+          const prev = g.values[g.values.length - 2];
+          const sum = g.values.reduce((a, b) => a + b, 0);
+          const avg = sum / g.values.length;
+          const min = Math.min(...g.values);
+          const max = Math.max(...g.values);
+          const pctChange = prev !== 0 ? ((latest - prev) / prev) * 100 : 0;
+          const sign = pctChange >= 0 ? '+' : '';
+          const delta = sign + pctChange.toFixed(1) + '%';
+
+          products.push({
+            name,
+            id: name,
+            values: g.values,
+            periods: g.periods,
+            latest,
+            avg,
+            min,
+            max,
+            delta,
+          });
+        }
+
+        // Sort by average descending
+        products.sort((a, b) => b.avg - a.avg);
+
+        // Limit to top 20 for readability
+        return products.slice(0, 20);
+      }
+
+      // Format price
+      function fmtPrice(n: number): string {
+        return n.toFixed(2);
+      }
+
+      // Update all UI components
+      function updateUI(): void {
+        if (productDataList.length === 0) return;
+
+        const cfg = COMMODITIES[currentCommodity];
+        const unit = cfg.unit;
+
+        // Update boxplot title with unit
+        const boxplot = $melker.getElementById('priceBoxplot');
+        if (boxplot) {
+          boxplot.props.title = 'Price Distribution (' + unit + ')';
+          boxplot.setGroups(productDataList.map(p => ({ label: p.name, values: p.values })));
+        }
+
+        // Stats table
+        const table = $melker.getElementById('statsTable');
+        if (table) {
+          const rows = productDataList.map(p => [
+            p.name,
+            fmtPrice(p.latest),
+            fmtPrice(p.avg),
+            fmtPrice(p.min),
+            fmtPrice(p.max),
+            p.delta,
+          ]);
+          table.setValue(rows);
+          table.props.footer = [['', '', productDataList.length + ' products', '', '', '']];
+        }
+
+        // Summary stats
+        const sorted = [...productDataList].sort((a, b) => a.avg - b.avg);
+        const cheapest = sorted[0];
+        const expensive = sorted[sorted.length - 1];
+        const allAvg = productDataList.reduce((s, p) => s + p.avg, 0) / productDataList.length;
+        const allMin = Math.min(...productDataList.map(p => p.min));
+        const allMax = Math.max(...productDataList.map(p => p.max));
+        const totalPoints = productDataList.reduce((s, p) => s + p.values.length, 0);
+
+        const cheapEl = $melker.getElementById('cheapestProduct');
+        if (cheapEl) cheapEl.setValue('Lowest: ' + cheapest.name + ' (' + fmtPrice(cheapest.avg) + ' ' + unit + ')');
+
+        const expEl = $melker.getElementById('expensiveProduct');
+        if (expEl) expEl.setValue('Highest: ' + expensive.name + ' (' + fmtPrice(expensive.avg) + ' ' + unit + ')');
+
+        const avgEl = $melker.getElementById('avgPrice');
+        if (avgEl) avgEl.setValue('Average: ' + fmtPrice(allAvg) + ' ' + unit);
+
+        const rangeEl = $melker.getElementById('priceRange');
+        if (rangeEl) rangeEl.setValue('Range: ' + fmtPrice(allMin) + ' - ' + fmtPrice(allMax) + ' ' + unit);
+
+        const pointsEl = $melker.getElementById('dataPoints');
+        if (pointsEl) pointsEl.setValue('Data points: ' + totalPoints);
+
+        // Average price bars (sorted ascending)
+        const avgBars = $melker.getElementById('avgBars');
+        if (avgBars) {
+          avgBars.props.series = [{ name: 'Avg ' + unit }];
+          avgBars.setValue(sorted.map(p => [p.avg]));
+          avgBars.props.labels = sorted.map(p => p.name);
+        }
+
+        // Update trend for selected or first product
+        const trendProduct = selectedProduct || productDataList[0].name;
+        updateTrend(trendProduct);
+
+        // Last update time
+        const lastEl = $melker.getElementById('lastUpdate');
+        if (lastEl) {
+          const now = new Date();
+          const h = now.getHours().toString().padStart(2, '0');
+          const m = now.getMinutes().toString().padStart(2, '0');
+          const s = now.getSeconds().toString().padStart(2, '0');
+          lastEl.setValue('Updated ' + h + ':' + m + ':' + s);
+        }
+      }
+
+      // Update trend sparkline for a product
+      function updateTrend(productName: string): void {
+        const data = productDataList.find(p => p.name === productName);
+        if (!data) return;
+
+        const cfg = COMMODITIES[currentCommodity];
+        const trend = $melker.getElementById('trendBars');
+        if (trend) {
+          trend.setValue(data.values.map(v => [v]));
+          // Show period labels spaced out
+          const step = Math.max(1, Math.floor(data.periods.length / 8));
+          const labels = data.periods.map((p, i) => {
+            if (i % step === 0) return p.slice(0, 7);
+            return '';
+          });
+          trend.props.labels = labels;
+        }
+
+        const label = $melker.getElementById('trendLabel');
+        if (label) label.setValue('Price Trend - ' + productName + ' (' + cfg.unit + ')');
+      }
+
+      // Spinner control
+      function setSpinning(on: boolean): void {
+        const spinner = $melker.getElementById('fetchSpinner');
+        if (spinner) {
+          spinner.props.spinning = on;
+          spinner.props.visible = on;
+        }
+      }
+
+      // Main refresh (force=true bypasses cache, used by R key)
+      export async function load(force: boolean): Promise<void> {
+        const statusEl = $melker.getElementById('status');
+        const cfg = COMMODITIES[currentCommodity];
+
+        // Check cache unless forced
+        if (!force) {
+          const cached = await getCached();
+          if (cached) {
+            productDataList = cached;
+            updateUI();
+            if (statusEl) statusEl.setValue(productDataList.length + ' products - ' + cfg.label + ' (cached)');
+            return;
+          }
+        }
+
+        try {
+          setSpinning(true);
+          if (statusEl) statusEl.setValue('Fetching ' + cfg.label + '...');
+          $melker.render();
+          productDataList = await fetchData();
+          setSpinning(false);
+          if (productDataList.length === 0) {
+            if (statusEl) statusEl.setValue('No data received');
+            $melker.toast.show('No data available for ' + cfg.label, { type: 'warning' });
+            return;
+          }
+          await setCache(productDataList);
+          updateUI();
+          if (statusEl) statusEl.setValue(productDataList.length + ' products - ' + cfg.label);
+        } catch (e) {
+          setSpinning(false);
+          if (statusEl) statusEl.setValue('Error: ' + e.message);
+          $melker.toast.show('Failed to fetch data: ' + e.message, { type: 'error' });
+        }
+      }
+
+      // R key / command refresh always forces
+      export async function refresh(): Promise<void> {
+        await load(true);
+      }
+
+      // Selection handler
+      export function onProductSelect(event: { id?: string }): void {
+        const id = event.id;
+        const statusEl = $melker.getElementById('status');
+        const cfg = COMMODITIES[currentCommodity];
+
+        if (id) {
+          selectedProduct = id;
+          updateTrend(id);
+          const data = productDataList.find(p => p.name === id);
+          if (statusEl && data) {
+            statusEl.setValue(data.name + ': ' + fmtPrice(data.latest) + ' ' + cfg.unit + ' (latest)');
+          }
+        } else {
+          selectedProduct = null;
+          if (statusEl) statusEl.setValue(productDataList.length + ' products - ' + cfg.label);
+        }
+      }
+
+      // Table activate (Enter) - show details
+      export function showProductDetails(event: { rowIndex: number; row: (string | number)[] }): void {
+        const name = String(event.row[0]);
+        const data = productDataList.find(p => p.name === name);
+        if (!data) return;
+
+        const cfg = COMMODITIES[currentCommodity];
+        const recentValues = data.values.slice(-5).map(
+          (v, i) => '  ' + data.periods.slice(-5)[i] + '  ' + fmtPrice(v)
+        ).join('\n');
+
+        $melker.alert(
+          'Product: ' + data.name + '\n\n' +
+          'Latest:   ' + fmtPrice(data.latest) + ' ' + cfg.unit + '\n' +
+          'Average:  ' + fmtPrice(data.avg) + ' ' + cfg.unit + '\n' +
+          'Minimum:  ' + fmtPrice(data.min) + ' ' + cfg.unit + '\n' +
+          'Maximum:  ' + fmtPrice(data.max) + ' ' + cfg.unit + '\n' +
+          'Change:   ' + data.delta + '\n' +
+          'Points:   ' + data.values.length + '\n\n' +
+          'Recent values:\n' + recentValues
+        );
+      }
+
+      // Trend tooltip
+      export function trendTooltip(event: any): string | undefined {
+        if (!event.context) return undefined;
+        const idx = event.context.barIndex;
+        const data = productDataList.find(p => p.name === (selectedProduct || productDataList[0]?.name));
+        if (!data || idx >= data.values.length) return undefined;
+        const cfg = COMMODITIES[currentCommodity];
+        return '**' + fmtPrice(data.values[idx]) + ' ' + cfg.unit + '**\n' + data.periods[idx];
+      }
+
+      // Change commodity
+      export async function changeCommodity(event: { value: string }): Promise<void> {
+        currentCommodity = event.value;
+        selectedProduct = null;
+        state.selected = [];
+        await load(false);
+        $melker.render();
+      }
+
+      // Change period
+      export async function changePeriod(event: { value: string }): Promise<void> {
+        currentPeriod = event.value;
+        selectedProduct = null;
+        state.selected = [];
+        await load(false);
+        $melker.render();
+      }
+    </script>
+
+    <script type="typescript" async="ready">
+      await $app.load(false);
+      $melker.render();
+    </script>
+</melker>

@@ -65,7 +65,7 @@ Options:
   --headless               Run without terminal (auto-enables --server)
   --show-policy            Display app policy and exit
   --print-config           Print current config with sources and exit
-  --trust                  Run with full permissions, ignoring policy
+  --trust                  Skip approval prompt and policy (uses minimal auto-policy)
   --clear-approvals        Clear all cached remote app approvals
   --revoke-approval <path> Revoke cached approval for path or URL
   --show-approval <path>   Show cached approval for path or URL
@@ -76,7 +76,7 @@ ${generateFlagHelp()}
 Policy system (permission sandboxing):
   Apps can declare permissions via embedded <policy> tag or .policy.json file.
   Use --show-policy to see what permissions an app requires.
-  Use --trust to bypass policy enforcement (runs with full permissions).
+  Use --trust to skip approval and policy (runs with minimal auto-policy).
 
 Subcommands:
   examples                 Show example commands

@@ -17,264 +17,7 @@
   <meta property="og:description" content="A single-file terminal app with live maps, sortable tables, and charts — walked through piece by piece.">
   <meta property="og:image" content="https://melker.sh/media/melker-earthquake-2026-02-13.jpg">
 
-  <style>
-    :root {
-      --bg: #0d1117;
-      --bg-secondary: #161b22;
-      --border: #30363d;
-      --text: #e6edf3;
-      --text-secondary: #8b949e;
-      --accent: #39d353;
-      --accent-secondary: #2ea043;
-      --accent-glow: rgba(57, 211, 83, 0.15);
-      --code-bg: #1c2128;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      font-size: 16px;
-    }
-
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    h1, h2, h3, .code-title {
-      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-    }
-
-    /* Nav */
-    nav {
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    nav .container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    nav .brand {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-
-    nav .links { display: flex; gap: 24px; font-size: 0.9rem; }
-
-    /* Hero */
-    .hero {
-      padding: 64px 0 48px;
-      border-bottom: 1px dashed var(--border);
-    }
-
-    .hero h1 {
-      font-size: 2.2rem;
-      font-weight: 600;
-      margin-bottom: 16px;
-      letter-spacing: -0.02em;
-      line-height: 1.2;
-    }
-
-    .hero .subtitle {
-      font-size: 1.15rem;
-      color: var(--text-secondary);
-      max-width: 640px;
-      margin-bottom: 32px;
-    }
-
-    .hero-media {
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 12px;
-    }
-
-    .hero-media video,
-    .hero-media img {
-      width: 100%;
-      display: block;
-    }
-
-    .run-command {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 12px 16px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
-      margin-top: 16px;
-      display: inline-block;
-    }
-
-    .run-command .prompt { color: var(--accent); }
-    .run-note { font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }
-
-    /* Sections */
-    section {
-      padding: 56px 0;
-      border-bottom: 1px dashed var(--border);
-    }
-
-    section:last-of-type { border-bottom: none; }
-
-    section h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
-    }
-
-    .section-claim {
-      font-size: 1.05rem;
-      color: var(--text-secondary);
-      margin-bottom: 24px;
-      font-style: italic;
-    }
-
-    section p {
-      margin-bottom: 16px;
-      color: var(--text);
-    }
-
-    .explanation {
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-    }
-
-    /* Code blocks */
-    .code-block { margin: 20px 0; }
-
-    .code-title {
-      background: var(--border);
-      padding: 8px 16px;
-      border-radius: 4px 4px 0 0;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-      border-bottom: none;
-    }
-
-    pre {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 16px;
-      overflow-x: auto;
-      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-      font-size: 0.85rem;
-      line-height: 1.5;
-    }
-
-    .code-block pre {
-      border-radius: 0 0 4px 4px;
-      margin: 0;
-    }
-
-    /* Screenshot placeholders */
-    .screenshot {
-      background: var(--bg-secondary);
-      border: 1px dashed var(--border);
-      border-radius: 4px;
-      padding: 48px 24px;
-      text-align: center;
-      margin: 20px 0;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-    }
-
-    .screenshot .caption {
-      margin-top: 8px;
-      font-style: italic;
-      font-size: 0.85rem;
-    }
-
-    /* Callout boxes */
-    .callout {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
-      border-radius: 2px;
-      padding: 16px 20px;
-      margin: 20px 0;
-      font-size: 0.95rem;
-    }
-
-    .callout strong { color: var(--accent); }
-
-    /* Syntax highlighting (minimal) */
-    .kw { color: #ff7b72; }
-    .str { color: #a5d6ff; }
-    .tag { color: #7ee787; }
-    .attr { color: #d2a8ff; }
-    .cmt { color: #8b949e; }
-    .num { color: #79c0ff; }
-
-    /* Footer */
-    footer {
-      padding: 32px 0;
-      border-top: 1px solid var(--border);
-      text-align: center;
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-    }
-
-    /* Sidebar index */
-    .sidebar {
-      display: none;
-    }
-
-    @media (min-width: 1100px) {
-      .sidebar {
-        display: block;
-        position: fixed;
-        top: 64px;
-        left: max(0px, calc((100vw - 800px) / 2 - 220px));
-        width: 180px;
-        max-height: calc(100vh - 80px);
-        overflow-y: auto;
-        padding: 8px 0;
-        font-size: 0.78rem;
-        line-height: 1.4;
-      }
-
-      .sidebar a {
-        display: block;
-        padding: 4px 12px;
-        color: var(--text-secondary);
-        border-left: 2px solid transparent;
-        transition: color 0.15s, border-color 0.15s;
-      }
-
-      .sidebar a:hover {
-        color: var(--text);
-        text-decoration: none;
-      }
-
-      .sidebar a.active {
-        color: var(--accent);
-        border-left-color: var(--accent);
-      }
-    }
-
-    /* Responsive */
-    @media (max-width: 600px) {
-      .hero h1 { font-size: 1.6rem; }
-      section h2 { font-size: 1.3rem; }
-      pre { font-size: 0.8rem; padding: 12px; }
-    }
-  </style>
+  <link rel="stylesheet" href="shared.css">
 </head>
 <body>
 
@@ -283,6 +26,8 @@
     <a href="/" class="brand">melker</a>
     <div class="links">
       <a href="/">Home</a>
+      <a href="/how-it-works.html">How it works</a>
+      <a href="/policy.html">Policy</a>
       <a href="/tutorial.html">Tutorial</a>
       <a href="https://github.com/nicwistrand/melker">GitHub</a>
     </div>
@@ -401,7 +146,7 @@
       Press <code>F12</code> to open Dev Tools and inspect the running app's permissions, element tree, and state.
     </p>
 
-    <p class="explanation">Reference: <a href="/reference/agent_docs/policy-architecture.md">Policy system</a></p>
+    <p class="explanation">Deep dive: <a href="/policy.html">The Policy System</a></p>
   </div>
 </section>
 
@@ -783,43 +528,7 @@ melker-node https://melker.sh/examples/showcase/earthquake-dashboard.melker</pre
   </div>
 </footer>
 
-<script>
-(function() {
-  var links = document.querySelectorAll('.sidebar a');
-  var sections = [];
-  links.forEach(function(a) {
-    var id = a.getAttribute('href').slice(1);
-    var el = document.getElementById(id);
-    if (el) sections.push({ el: el, link: a });
-  });
-  if (!sections.length) return;
-
-  function update() {
-    var scrollY = window.scrollY + 100;
-    var active = sections[0];
-    for (var i = 0; i < sections.length; i++) {
-      if (sections[i].el.offsetTop <= scrollY) active = sections[i];
-    }
-    links.forEach(function(a) { a.classList.remove('active'); });
-    active.link.classList.add('active');
-  }
-
-  window.addEventListener('scroll', update, { passive: true });
-  update();
-})();
-</script>
-
-<script>
-document.addEventListener('click', function(e) {
-  var a = e.target.closest('a[href*="/reference/"]');
-  if (!a) return;
-  var href = a.getAttribute('href');
-  var match = href.match(/\/reference\/(.+?)\.md(#.*)?$/);
-  if (!match) return;
-  e.preventDefault();
-  window.location.href = '/reference/?doc=' + match[1] + (match[2] || '');
-});
-</script>
+<script src="shared.js"></script>
 
 </body>
 </html>

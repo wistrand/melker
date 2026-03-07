@@ -186,7 +186,7 @@ export interface PolicyArgs {
   /** Require policy, fail if missing */
   enforcePolicy: boolean;
 
-  /** Ignore policy, run with full permissions */
+  /** Skip approval and policy, use minimal auto-policy */
   trust: boolean;
 
   /** Show policy and exit */

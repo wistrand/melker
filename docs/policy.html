@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Policy System - Melker Engine</title>
+  <meta name="description" content="How Melker sandboxes terminal apps: permission declarations, runtime-level enforcement, approval prompts, and CLI overrides.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="brand">melker</a>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="/how-it-works.html">How it works</a>
+      <a href="/tutorial.html">Tutorial</a>
+      <a href="https://github.com/nicwistrand/melker">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<aside class="sidebar" id="sidebar">
+  <a href="#what">1. What is a policy?</a>
+  <a href="#enforcement">2. Enforcement</a>
+  <a href="#permissions">3. Permission types</a>
+  <a href="#implicit">4. What's free</a>
+  <a href="#approval">5. Approval</a>
+  <a href="#overrides">6. CLI overrides</a>
+  <a href="#examples">7. Examples</a>
+</aside>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1>The Policy System</h1>
+    <p class="subtitle">
+      Every <code>.melker</code> file declares what it needs. The engine enforces it.
+      This page explains how permissions work, how they're sandboxed, and how you stay in control.
+    </p>
+  </div>
+</div>
+
+<!-- Section 1: What is a policy? -->
+<section id="what">
+  <div class="container">
+    <h2>1. What is a policy?</h2>
+    <p class="section-claim">A JSON block that says exactly what the app can do.</p>
+
+    <p>
+      Every <code>.melker</code> file contains a <code>&lt;policy&gt;</code> block at the top.
+      It declares the app's name, description, and the permissions it requires.
+      The engine reads this block before any code runs.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">rss-reader.melker</div>
+      <pre><span class="tag">&lt;policy&gt;</span>
+{
+  <span class="str">"name"</span>: <span class="str">"RSS Reader"</span>,
+  <span class="str">"description"</span>: <span class="str">"Read news from multiple feeds"</span>,
+  <span class="str">"permissions"</span>: {
+    <span class="str">"net"</span>: [<span class="str">"news.ycombinator.com"</span>, <span class="str">"feeds.bbci.co.uk"</span>],
+    <span class="str">"browser"</span>: <span class="kw">true</span>
+  }
+}
+<span class="tag">&lt;/policy&gt;</span></pre>
+    </div>
+
+    <p>
+      This RSS reader can fetch from two specific hosts and open links in your browser.
+      It cannot read files, run commands, or contact any other server.
+      If it tries, the request fails immediately.
+    </p>
+
+    <p>
+      The policy is a contract between the app developer and you. You can read it
+      before running the app, just like you'd inspect a web page's permissions.
+      The key difference from traditional terminal programs: everything not declared is denied.
+    </p>
+
+    <div class="callout">
+      <strong>No policy?</strong> Local files without a <code>&lt;policy&gt;</code> tag get
+      a minimal auto-policy: read access to the current directory and clipboard support.
+      No network, no writes, no subprocesses. Remote files (URLs) must always include a policy.
+    </div>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/melker-file-format.md">.melker file format</a></p>
+  </div>
+</section>
+
+<!-- Section 2: How permissions are enforced -->
+<section id="enforcement">
+  <div class="container">
+    <h2>2. How permissions are enforced</h2>
+    <p class="section-claim">Runtime-level sandboxing, not application-level checks.</p>
+
+    <p>
+      When you run <code>melker app.melker</code>, three things happen in sequence:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Three-process pipeline</div>
+      <pre><span class="cmt">1. CLI</span>          parses the command, loads the file
+<span class="cmt">2. Launcher</span>     reads the policy, shows the approval prompt
+<span class="cmt">3. Runner</span>       executes the app in a sandboxed subprocess</pre>
+    </div>
+
+    <p>
+      The launcher converts the policy into Deno's <code>--allow-*</code> permission flags
+      and spawns the runner as a restricted subprocess. This is not a JavaScript-level
+      sandbox that can be bypassed with clever code. Deno enforces permissions at the
+      runtime level. If the app tries something it wasn't granted, the call
+      throws a <code>PermissionDenied</code> error.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">What the launcher actually spawns</div>
+      <pre>deno run \
+  --allow-read=/tmp/...,/home/user/project \
+  --allow-net=earthquake.usgs.gov \
+  --no-prompt \
+  melker-runner.ts app.melker</pre>
+    </div>
+
+    <p>
+      The <code>--no-prompt</code> flag is critical. It means the sandboxed app cannot
+      interactively ask for new permissions. Violations fail immediately instead of
+      presenting a "do you want to allow?" dialog.
+    </p>
+
+    <div class="callout">
+      <strong>Auditable launcher:</strong> The launcher process loads ~18 source files.
+      No framework code, no rendering engine, no components. If you want to verify
+      what happens before your app runs, the surface area is small enough to read.
+    </div>
+
+    <h3>Node.js limitations</h3>
+    <p>
+      The experimental <code>melker-node</code> binary uses Node's <code>--permission</code>
+      model, which is less granular than Deno's. The same policy syntax works, but enforcement
+      differs in several ways:
+    </p>
+
+    <table>
+      <tr><th>Capability</th><th>Deno</th><th>Node.js</th></tr>
+      <tr><td>Network filtering</td><td>Per-host (<code>--allow-net=host</code>)</td><td>Binary on/off (<code>--allow-net</code>)</td></tr>
+      <tr><td>Subprocess filtering</td><td>Per-command (<code>--allow-run=cmd</code>)</td><td>Binary on/off (<code>--allow-child-process</code>)</td></tr>
+      <tr><td>Environment variables</td><td>Per-variable (<code>--allow-env=KEY</code>)</td><td>Not restricted</td></tr>
+      <tr><td>System info</td><td>Per-interface (<code>--allow-sys=hostname</code>)</td><td>Not restricted</td></tr>
+      <tr><td>Deny overrides</td><td><code>--deny-*</code> flags</td><td>Not available</td></tr>
+      <tr><td>Filesystem</td><td>Exact paths</td><td>Directory globs (<code>path/*</code>)</td></tr>
+    </table>
+
+    <div class="callout">
+      <strong>What this means in practice:</strong> If a Node.js app declares
+      <code>"net": ["api.example.com"]</code>, the sandbox allows <em>all</em> network
+      access, not just that host. Similarly, <code>"run": ["ffmpeg"]</code> allows
+      <em>any</em> subprocess. The policy still documents intent, but Node cannot
+      enforce it at the same granularity. Deno remains the recommended runtime
+      for stronger sandboxing.
+    </div>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/policy-architecture.md">Policy architecture</a></p>
+  </div>
+</section>
+
+<!-- Section 3: Permission types -->
+<section id="permissions">
+  <div class="container">
+    <h2>3. Permission types</h2>
+    <p class="section-claim">Array permissions for granular control, boolean shortcuts for common patterns.</p>
+
+    <h3>Array permissions</h3>
+    <p>
+      These accept a list of allowed values. Each maps directly to a Deno <code>--allow-*</code> flag.
+    </p>
+
+    <table>
+      <tr><th>Permission</th><th>Controls</th><th>Example</th></tr>
+      <tr><td><code>net</code></td><td>Network access by hostname</td><td><code>["api.example.com"]</code></td></tr>
+      <tr><td><code>read</code></td><td>Filesystem read paths</td><td><code>[".", "/data"]</code></td></tr>
+      <tr><td><code>write</code></td><td>Filesystem write paths</td><td><code>["./output"]</code></td></tr>
+      <tr><td><code>run</code></td><td>Subprocess commands</td><td><code>["ffmpeg", "git"]</code></td></tr>
+      <tr><td><code>env</code></td><td>Environment variables</td><td><code>["API_KEY"]</code></td></tr>
+      <tr><td><code>ffi</code></td><td>Native library paths</td><td><code>["/lib/native.so"]</code></td></tr>
+      <tr><td><code>sys</code></td><td>System info interfaces</td><td><code>["hostname", "uid"]</code></td></tr>
+    </table>
+
+    <p>Use <code>["*"]</code> as a wildcard to allow all values for a given permission.</p>
+
+    <h3>Boolean shortcuts</h3>
+    <p>
+      Common permission patterns have shortcuts that expand into the right combination
+      of <code>net</code> and <code>run</code> permissions. The expansion is smart: it checks
+      which commands actually exist on your system.
+    </p>
+
+    <table>
+      <tr><th>Shortcut</th><th>What it grants</th></tr>
+      <tr><td><code>map</code></td><td>Network access to OpenStreetMap, CartoDB, and other tile servers</td></tr>
+      <tr><td><code>shader</code></td><td>Per-pixel shader callbacks on canvas elements (runtime-only, no Deno flag)</td></tr>
+      <tr><td><code>clipboard</code></td><td><code>run</code> access to clipboard commands (<code>xclip</code>, <code>pbcopy</code>, etc.)</td></tr>
+      <tr><td><code>browser</code></td><td><code>run</code> access to <code>open</code> / <code>xdg-open</code> for opening URLs</td></tr>
+      <tr><td><code>ai</code></td><td><code>run</code> + <code>net</code> for AI assistant tools (audio, API access)</td></tr>
+      <tr><td><code>keyring</code></td><td><code>run</code> access to OS keychain commands</td></tr>
+      <tr><td><code>all</code></td><td>Everything (equivalent to <code>--allow-all</code>)</td></tr>
+    </table>
+
+    <h3>Special values</h3>
+
+    <table>
+      <tr><th>Value</th><th>Where</th><th>Meaning</th></tr>
+      <tr><td><code>"*"</code></td><td>Any array</td><td>Wildcard: allow all</td></tr>
+      <tr><td><code>"cwd"</code></td><td><code>read</code>, <code>write</code></td><td>Expands to the current working directory at runtime</td></tr>
+      <tr><td><code>"samesite"</code></td><td><code>net</code></td><td>Expands to the host the app was loaded from (remote apps)</td></tr>
+    </table>
+
+    <div class="code-block">
+      <div class="code-title">A policy using multiple permission types</div>
+      <pre>{
+  <span class="str">"permissions"</span>: {
+    <span class="str">"net"</span>: [<span class="str">"api.example.com"</span>, <span class="str">"samesite"</span>],
+    <span class="str">"read"</span>: [<span class="str">"cwd"</span>],
+    <span class="str">"write"</span>: [<span class="str">"./output"</span>],
+    <span class="str">"run"</span>: [<span class="str">"ffmpeg"</span>],
+    <span class="str">"env"</span>: [<span class="str">"API_KEY"</span>],
+    <span class="str">"clipboard"</span>: <span class="kw">true</span>,
+    <span class="str">"browser"</span>: <span class="kw">true</span>
+  }
+}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- Section 4: Implicit permissions -->
+<section id="implicit">
+  <div class="container">
+    <h2>4. What you get for free</h2>
+    <p class="section-claim">Some permissions are granted automatically so apps don't need to declare boilerplate.</p>
+
+    <p>
+      Every app gets a baseline set of permissions regardless of its policy. These cover
+      the minimum needed for the engine itself to work.
+    </p>
+
+    <h3>Implicit read access</h3>
+    <p>
+      The app can always read its own file, the system temp directory (for bundled code),
+      the Deno module cache, and the Melker state directory. Local apps also get
+      read access to the current working directory.
+    </p>
+
+    <h3>Implicit write access</h3>
+    <p>
+      The system temp directory (for bundler output), the Melker state directory
+      (for persisting app state across runs), and the log directory.
+    </p>
+
+    <h3>Implicit environment variables</h3>
+    <p>
+      Terminal detection variables (<code>TERM</code>, <code>COLORTERM</code>,
+      <code>KITTY_WINDOW_ID</code>, etc.), path variables (<code>HOME</code>,
+      <code>PATH</code>, <code>TMPDIR</code>), and all <code>MELKER_*</code>
+      and <code>XDG_*</code> variables.
+    </p>
+
+    <div class="callout">
+      <strong>Read vs. write:</strong> The current working directory is implicit for
+      <em>read</em> but <strong>not</strong> for <em>write</em>. If your app needs to
+      write files, you must declare <code>"write": ["cwd"]</code> explicitly.
+      This prevents apps from silently modifying your files.
+    </div>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/env-permission-analysis.md">Environment permission analysis</a></p>
+  </div>
+</section>
+
+<!-- Section 5: The approval prompt -->
+<section id="approval">
+  <div class="container">
+    <h2>5. The approval prompt</h2>
+    <p class="section-claim">You approve an app once. Re-approval is only needed when permissions change.</p>
+
+    <p>
+      The first time you run a <code>.melker</code> file, Melker shows a prompt
+      listing the requested permissions. You can approve or decline.
+      Approvals are cached so you won't be asked again.
+    </p>
+
+    <h3>When does re-approval happen?</h3>
+
+    <p>
+      <strong>Local files:</strong> Approval is based on a hash of the policy JSON.
+      You can edit the app's code freely without triggering a new prompt.
+      Only changing the <code>&lt;policy&gt;</code> block requires re-approval.
+    </p>
+
+    <p>
+      <strong>Remote files (URLs):</strong> Approval is based on a hash of the
+      entire file content plus the policy. Any change to a remote app triggers
+      re-approval. This prevents a remote server from silently changing behavior.
+    </p>
+
+    <h3>Managing approvals</h3>
+
+    <div class="code-block">
+      <div class="code-title">CLI commands</div>
+      <pre><span class="cmt"># Show the policy without running the app</span>
+melker --show-policy app.melker
+
+<span class="cmt"># Revoke approval for a specific app</span>
+melker --revoke-approval app.melker
+
+<span class="cmt"># Clear all cached approvals</span>
+melker --clear-approvals
+
+<span class="cmt"># Skip the prompt (CI, scripts, trusted sources)</span>
+melker --trust app.melker</pre>
+    </div>
+
+    <div class="callout">
+      <strong>What <code>--trust</code> means:</strong> It skips the approval prompt
+      and ignores the app's declared policy. The app runs with a minimal auto-policy
+      (read access to the current directory and clipboard). It does <strong>not</strong>
+      grant full system access, but the app may not work correctly if it needs
+      permissions beyond the auto-policy baseline.
+    </div>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/cli-reference.md">CLI reference</a></p>
+  </div>
+</section>
+
+<!-- Section 6: CLI overrides -->
+<section id="overrides">
+  <div class="container">
+    <h2>6. CLI overrides</h2>
+    <p class="section-claim">Grant or revoke permissions at the command line without editing the app.</p>
+
+    <p>
+      You can modify an app's effective permissions when you run it,
+      without touching the <code>.melker</code> file.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Adding permissions</div>
+      <pre><span class="cmt"># Give an offline app network access for testing</span>
+melker --allow-net=api.example.com app.melker
+
+<span class="cmt"># Enable the AI assistant</span>
+melker --allow-ai app.melker
+
+<span class="cmt"># Enable shaders on an app that forgot to declare it</span>
+melker --allow-shader app.melker</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-title">Removing permissions</div>
+      <pre><span class="cmt"># Run an app but block clipboard access</span>
+melker --deny-clipboard app.melker
+
+<span class="cmt"># Block a specific host while keeping the rest</span>
+melker --deny-net=tracking.example.com app.melker</pre>
+    </div>
+
+    <p>
+      The precedence is: <strong>deny &gt; allow &gt; policy</strong>.
+      A <code>--deny</code> flag always wins, even if the policy or a <code>--allow</code>
+      flag grants the same permission.
+    </p>
+  </div>
+</section>
+
+<!-- Section 7: Real-world examples -->
+<section id="examples">
+  <div class="container">
+    <h2>7. Real-world examples</h2>
+    <p class="section-claim">From zero permissions to full system access, and everything in between.</p>
+
+    <div class="code-block">
+      <div class="code-title">Mandelbrot explorer - no permissions needed</div>
+      <pre>{
+  <span class="str">"name"</span>: <span class="str">"Mandelbrot"</span>,
+  <span class="str">"permissions"</span>: {}
+}</pre>
+    </div>
+    <p class="explanation">
+      Pure computation. No network, no files, no subprocesses.
+      The app runs entirely within the sandbox with only implicit permissions.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Earthquake dashboard - network + map tiles</div>
+      <pre>{
+  <span class="str">"name"</span>: <span class="str">"earthquake-dashboard"</span>,
+  <span class="str">"permissions"</span>: {
+    <span class="str">"net"</span>: [<span class="str">"earthquake.usgs.gov"</span>, <span class="str">"raw.githubusercontent.com"</span>],
+    <span class="str">"map"</span>: <span class="kw">true</span>
+  }
+}</pre>
+    </div>
+    <p class="explanation">
+      Fetches earthquake data from USGS and tectonic plate boundaries from GitHub.
+      <code>map: true</code> adds the tile server hosts needed for the interactive map.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Color selector - AI + clipboard</div>
+      <pre>{
+  <span class="str">"name"</span>: <span class="str">"Color Selector"</span>,
+  <span class="str">"permissions"</span>: {
+    <span class="str">"ai"</span>: [<span class="str">"*"</span>],
+    <span class="str">"clipboard"</span>: <span class="kw">true</span>
+  }
+}</pre>
+    </div>
+    <p class="explanation">
+      Uses the AI assistant to suggest color palettes and copies selected colors
+      to the clipboard. <code>ai</code> expands into the specific <code>run</code>
+      and <code>net</code> permissions needed for AI tools.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">htop clone - full access with a comment explaining why</div>
+      <pre>{
+  <span class="str">"name"</span>: <span class="str">"htop"</span>,
+  <span class="str">"permissions"</span>: {
+    <span class="str">"all"</span>: <span class="kw">true</span>
+  },
+  <span class="str">"comment"</span>: <span class="str">"Linux reads /proc, macOS uses sysctl/ps. Needs full access."</span>
+}</pre>
+    </div>
+    <p class="explanation">
+      A system monitor needs to read <code>/proc</code>, run system commands,
+      and access environment variables. The <code>comment</code> field appears
+      in the approval prompt so the user understands why full access is requested.
+    </p>
+
+    <p class="explanation" style="margin-top: 24px;">
+      See more examples: <a href="/how-it-works.html">How Melker Works</a>
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <a href="/">Melker Engine</a> - Run text with meaning
+  </div>
+</footer>
+
+<script src="shared.js"></script>
+
+</body>
+</html>

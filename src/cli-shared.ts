@@ -543,7 +543,7 @@ export async function runCli(rt: CliRuntime): Promise<void> {
       return;
     }
 
-    // --trust mode: run with full permissions
+    // --trust mode: skip policy, use minimal auto-policy
     await rt.runApp(absoluteFilepath, createAutoPolicy(absoluteFilepath), args);
 
   } catch (error) {

@@ -1,6 +1,6 @@
 {
   "name": "@melker/melker",
-  "version": "2026.3.5",
+  "version": "2026.3.6",
   "type": "module",
   "engines": {
     "node": ">=25.0.0"

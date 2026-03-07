@@ -293,7 +293,7 @@ permission flags.
 | `--deny-*`              | —                            | No Node equivalent    |
 
 **Node-specific details:**
-- `--permission` enables the permission model (always passed unless `--trust`)
+- `--permission` enables the permission model (always passed unless `permissions.all` is set)
 - `--allow-child-process` is always included (esbuild spawns its Go binary)
 - `--allow-worker` is always included (esbuild uses worker threads)
 - Node directory paths require `/*` suffix for recursive access
@@ -306,7 +306,7 @@ permission flags.
 `hasWritePermission()` in `src/runtime/node/fs.ts` queries
 `process.permission.has('fs.write', path)` when the permission model is active.
 
-**`--trust` mode:** Omits `--permission` entirely — subprocess runs unrestricted.
+**`--trust` mode:** Skips the approval prompt but still applies the declared policy permissions. If no policy is declared, the auto-policy is used.
 
 ## Testing
 

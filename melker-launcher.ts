@@ -184,7 +184,7 @@ Options:
   --watch                  Watch file for changes and auto-reload
   --show-policy            Display app policy and exit
   --print-config           Print current config with sources and exit
-  --trust                  Skip approval prompt and policy (uses minimal auto-policy)
+  --trust                  Skip approval prompt (run with declared policy)
   --clear-approvals        Clear all cached remote app approvals
   --revoke-approval <path> Revoke cached approval for path or URL
   --show-approval <path>   Show cached approval for path or URL
@@ -202,7 +202,7 @@ ${generateFlagHelp()}
 Policy system (permission sandboxing):
   Apps can declare permissions via embedded <policy> tag or .policy.json file.
   Use --show-policy to see what permissions an app requires.
-  Use --trust to skip approval and policy (runs with minimal auto-policy).
+  Use --trust to skip the approval prompt (runs with declared policy).
 
 Subcommands:
   examples                 Show example commands

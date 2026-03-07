@@ -67,12 +67,13 @@ export function policyToNodeFlags(
   flags.push('--permission');
 
   // ── Filesystem read ─────────────────────────────────────────────────────
+  // Node requires separate --allow-fs-read flags per path (no comma separation)
   if (p.read?.includes('*')) {
     flags.push('--allow-fs-read=*');
   } else {
     const readPaths = buildNodeReadPaths(p.read, appDir, melkerDir, urlHash, isRemote);
-    if (readPaths.length > 0) {
-      flags.push(`--allow-fs-read=${readPaths.join(',')}`);
+    for (const rp of readPaths) {
+      flags.push(`--allow-fs-read=${rp}`);
     }
   }
 
@@ -81,8 +82,8 @@ export function policyToNodeFlags(
     flags.push('--allow-fs-write=*');
   } else {
     const writePaths = buildNodeWritePaths(p.write, appDir, urlHash);
-    if (writePaths.length > 0) {
-      flags.push(`--allow-fs-write=${writePaths.join(',')}`);
+    for (const wp of writePaths) {
+      flags.push(`--allow-fs-write=${wp}`);
     }
   }
 
@@ -126,8 +127,15 @@ function buildNodeReadPaths(
 ): string[] {
   const paths: string[] = [];
 
-  // Melker installation directory (src/, loader, runner, node_modules)
+  // Melker installation directory (src/, loader, runner)
   paths.push(dirGlob(melkerDir));
+
+  // When npm-installed, melkerDir is node_modules/@melker/melker —
+  // include the parent node_modules so sibling deps (html5parser etc.) are readable
+  if (melkerDir.includes('node_modules')) {
+    const nmIdx = melkerDir.lastIndexOf('node_modules');
+    paths.push(dirGlob(melkerDir.substring(0, nmIdx + 'node_modules'.length)));
+  }
 
   // Temp dir for bundler temp files
   paths.push(dirGlob(getTempDir()));

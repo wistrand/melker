@@ -186,7 +186,7 @@ export interface PolicyArgs {
   /** Require policy, fail if missing */
   enforcePolicy: boolean;
 
-  /** Skip approval and policy, use minimal auto-policy */
+  /** Skip approval prompt, run with declared policy */
   trust: boolean;
 
   /** Show policy and exit */

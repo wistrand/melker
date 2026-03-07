@@ -327,10 +327,10 @@ melker --trust app.melker</pre>
 
     <div class="callout">
       <strong>What <code>--trust</code> means:</strong> It skips the approval prompt
-      and ignores the app's declared policy. The app runs with a minimal auto-policy
-      (read access to the current directory and clipboard). It does <strong>not</strong>
-      grant full system access, but the app may not work correctly if it needs
-      permissions beyond the auto-policy baseline.
+      but still runs the app with its declared policy permissions. If the app has a
+      <code>&lt;policy&gt;</code> tag, those permissions are applied normally. If there
+      is no declared policy, the default auto-policy is used (read access to the
+      current directory and clipboard).
     </div>
 
     <p class="explanation">Reference: <a href="/reference/agent_docs/cli-reference.md">CLI reference</a></p>

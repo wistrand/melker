@@ -308,6 +308,7 @@ async function handleRemoteFile(
   rt: CliRuntime,
   filepath: string,
   args: string[],
+  trust = false,
 ): Promise<void> {
   const content = await loadContent(filepath);
 
@@ -315,7 +316,7 @@ async function handleRemoteFile(
   if (!hasPolicyTag(content)) {
     console.error('\x1b[31mError: Remote .melker files must contain a <policy> tag.\x1b[0m');
     console.error('\nRemote files require explicit permission declarations for security.');
-    console.error('Use --trust to bypass this check (dangerous).');
+    console.error('Add a <policy> tag with permission declarations.');
     rt.exit(1);
   }
 
@@ -336,21 +337,24 @@ async function handleRemoteFile(
     rt.exit(1);
   }
 
-  // Generate Deno flags and check approval
-  const urlHash = await getUrlHash(filepath);
-  const denoFlags = rt.generateDenoFlags(policy, getTempDir(), urlHash, filepath, undefined, undefined, true);
-  const isApproved = await checkApproval(filepath, content, policy, denoFlags);
+  // --trust: skip approval prompt
+  if (!trust) {
+    // Generate Deno flags and check approval
+    const urlHash = await getUrlHash(filepath);
+    const denoFlags = rt.generateDenoFlags(policy, getTempDir(), urlHash, filepath, undefined, undefined, true);
+    const isApproved = await checkApproval(filepath, content, policy, denoFlags);
 
-  if (!isApproved) {
-    const promptOverrides = getPermissionOverrides(rt.config.get());
-    const approved = await showApprovalPrompt(filepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined, rt.sandboxCaveat);
-    if (!approved) {
-      console.log('\nPermission denied. Exiting.');
-      rt.exit(0);
+    if (!isApproved) {
+      const promptOverrides = getPermissionOverrides(rt.config.get());
+      const approved = await showApprovalPrompt(filepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined, rt.sandboxCaveat);
+      if (!approved) {
+        console.log('\nPermission denied. Exiting.');
+        rt.exit(0);
+      }
+      await saveApproval(filepath, content, policy, denoFlags);
+      const approvalFile = await getApprovalFilePath(filepath);
+      console.log(`Approval saved: ${approvalFile}\n`);
     }
-    await saveApproval(filepath, content, policy, denoFlags);
-    const approvalFile = await getApprovalFilePath(filepath);
-    console.log(`Approval saved: ${approvalFile}\n`);
   }
 
   await rt.runApp(filepath, policy, args, content);
@@ -361,11 +365,10 @@ async function handleLocalFile(
   filepath: string,
   absoluteFilepath: string,
   args: string[],
+  trust = false,
 ): Promise<void> {
   const policyResult = await loadPolicy(absoluteFilepath);
   const policy = policyResult.policy ?? createAutoPolicy(absoluteFilepath);
-  const urlHash = await getUrlHash(absoluteFilepath);
-  const denoFlags = rt.generateDenoFlags(policy, rt.dirnamePath(absoluteFilepath), urlHash);
 
   // Validate policy if present
   if (policyResult.policy) {
@@ -379,19 +382,25 @@ async function handleLocalFile(
     }
   }
 
-  // Local file approval check (compares policy hash - code changes ok, policy changes re-approve)
-  const isApproved = await checkLocalApproval(absoluteFilepath, policy);
+  // --trust: skip approval prompt
+  if (!trust) {
+    const urlHash = await getUrlHash(absoluteFilepath);
+    const denoFlags = rt.generateDenoFlags(policy, rt.dirnamePath(absoluteFilepath), urlHash);
 
-  if (!isApproved) {
-    const promptOverrides = getPermissionOverrides(rt.config.get());
-    const approved = await showApprovalPrompt(absoluteFilepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined, rt.sandboxCaveat);
-    if (!approved) {
-      console.log('\nPermission denied. Exiting.');
-      rt.exit(0);
+    // Local file approval check (compares policy hash - code changes ok, policy changes re-approve)
+    const isApproved = await checkLocalApproval(absoluteFilepath, policy);
+
+    if (!isApproved) {
+      const promptOverrides = getPermissionOverrides(rt.config.get());
+      const approved = await showApprovalPrompt(absoluteFilepath, policy, hasOverrides(promptOverrides) ? promptOverrides : undefined, rt.sandboxCaveat);
+      if (!approved) {
+        console.log('\nPermission denied. Exiting.');
+        rt.exit(0);
+      }
+      await saveLocalApproval(absoluteFilepath, policy, denoFlags);
+      const approvalFile = await getApprovalFilePath(absoluteFilepath);
+      console.log(`Approval saved: ${approvalFile}\n`);
     }
-    await saveLocalApproval(absoluteFilepath, policy, denoFlags);
-    const approvalFile = await getApprovalFilePath(absoluteFilepath);
-    console.log(`Approval saved: ${approvalFile}\n`);
   }
 
   await rt.runApp(absoluteFilepath, policy, args);
@@ -522,14 +531,14 @@ export async function runCli(rt: CliRuntime): Promise<void> {
       await handleShowPolicy(rt, filepath, absoluteFilepath);
     }
 
-    // Remote file security checks (unless --trust)
-    if (isUrl(filepath) && !options.trust) {
-      await handleRemoteFile(rt, filepath, args);
+    // Remote file handling
+    if (isUrl(filepath)) {
+      await handleRemoteFile(rt, filepath, args, options.trust);
       return;
     }
 
     // Plain .mmd files without %%melker directives - run with empty policy, no approval needed
-    if (!isUrl(filepath) && filepath.endsWith('.mmd')) {
+    if (filepath.endsWith('.mmd')) {
       const content = await loadContent(filepath);
       if (!hasMelkerDirectives(content)) {
         await rt.runApp(absoluteFilepath, createEmptyMermaidPolicy(filepath), args);
@@ -537,14 +546,8 @@ export async function runCli(rt: CliRuntime): Promise<void> {
       }
     }
 
-    // Local file approval and policy enforcement (unless --trust)
-    if (!isUrl(filepath) && !options.trust) {
-      await handleLocalFile(rt, filepath, absoluteFilepath, args);
-      return;
-    }
-
-    // --trust mode: skip policy, use minimal auto-policy
-    await rt.runApp(absoluteFilepath, createAutoPolicy(absoluteFilepath), args);
+    // Local file handling
+    await handleLocalFile(rt, filepath, absoluteFilepath, args, options.trust);
 
   } catch (error) {
     if (rt.isNotFoundError(error)) {

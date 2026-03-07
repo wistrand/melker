@@ -1,0 +1,92 @@
+# Melker Engine
+
+> A terminal app document format with built-in UI, permissions, and runtime. Melker treats terminal apps as documents you can inspect before you run. A .melker file contains markup, styles, a permission policy, and a script — all in one readable file.
+
+- [Home](https://melker.sh/)
+- [How it works](https://melker.sh/how-it-works.html)
+- [Tutorial](https://melker.sh/tutorial.html)
+- [AI Assistant](https://melker.sh/ai.html)
+- [Manifesto](https://melker.sh/reference/MANIFESTO.md)
+
+## Overview
+
+- [CLAUDE.md (project guide)](https://melker.sh/reference/CLAUDE.md)
+- [README](https://melker.sh/reference/README.md)
+- [Manifesto](https://melker.sh/reference/MANIFESTO.md)
+- [FAQ](https://melker.sh/reference/FAQ.md)
+
+## For App Developers
+
+- [Script context ($melker, $app)](https://melker.sh/reference/agent_docs/script_usage.md)
+- [State bindings (optional)](https://melker.sh/reference/agent_docs/state-binding-architecture.md)
+- [Selection binding](https://melker.sh/reference/agent_docs/bind-selection-architecture.md)
+- [Selection ID system](https://melker.sh/reference/agent_docs/selection-id-architecture.md)
+- [Graphics modes](https://melker.sh/reference/agent_docs/gfx-modes.md)
+- [Debugging & logging](https://melker.sh/reference/agent_docs/debugging.md)
+- [Common mistakes](https://melker.sh/reference/agent_docs/dx-footguns.md)
+- [AI assistant](https://melker.sh/reference/agent_docs/ai-accessibility.md)
+
+## Component Reference
+
+- [Filterable lists (combobox, select, autocomplete)](https://melker.sh/reference/agent_docs/filterable-list-architecture.md)
+- [File browser](https://melker.sh/reference/agent_docs/file-browser-architecture.md)
+- [Data table](https://melker.sh/reference/agent_docs/data-table.md)
+- [Data bars (charts)](https://melker.sh/reference/agent_docs/data-bars.md)
+- [Data boxplot](https://melker.sh/reference/agent_docs/data-boxplot-architecture.md)
+- [Data heatmap](https://melker.sh/reference/agent_docs/data-heatmap-architecture.md)
+- [Data tree](https://melker.sh/reference/agent_docs/data-tree-architecture.md)
+- [Split pane](https://melker.sh/reference/agent_docs/split-pane-architecture.md)
+- [Spinner](https://melker.sh/reference/agent_docs/spinner-architecture.md)
+- [Toast notifications](https://melker.sh/reference/agent_docs/toast-architecture.md)
+- [Tooltips](https://melker.sh/reference/agent_docs/tooltip-architecture.md)
+- [Mermaid diagrams in markdown](https://melker.sh/reference/agent_docs/mermaid-support.md)
+- [Tile map](https://melker.sh/reference/agent_docs/tile-map-architecture.md)
+- [SVG overlay (canvas/img/video/map)](https://melker.sh/reference/agent_docs/svg-overlay-architecture.md)
+
+## For Contributors (Internals)
+
+- [Project structure](https://melker.sh/reference/agent_docs/project-structure.md)
+- [Core architecture](https://melker.sh/reference/agent_docs/architecture.md)
+- [Component reference](https://melker.sh/reference/agent_docs/component-reference.md)
+- [Embedded assets](https://melker.sh/reference/agent_docs/embedded-assets-architecture.md)
+- [Config system](https://melker.sh/reference/agent_docs/config-architecture.md)
+- [Policy system](https://melker.sh/reference/agent_docs/policy-architecture.md)
+- [Server](https://melker.sh/reference/agent_docs/server-architecture.md)
+- [Keyboard & focus](https://melker.sh/reference/agent_docs/keyboard-focus-navigation-architecture.md)
+- [Command element](https://melker.sh/reference/agent_docs/command-element-architecture.md)
+- [Graph/diagrams](https://melker.sh/reference/agent_docs/graph-architecture.md)
+- [Graphics pipeline](https://melker.sh/reference/agent_docs/graphics-architecture.md)
+- [Isolines mode](https://melker.sh/reference/agent_docs/isolines-architecture.md)
+- [Sixel protocol](https://melker.sh/reference/agent_docs/sixel-architecture.md)
+- [Kitty protocol](https://melker.sh/reference/agent_docs/kitty-architecture.md)
+- [iTerm2 protocol](https://melker.sh/reference/agent_docs/iterm2-architecture.md)
+- [Benchmarks](https://melker.sh/reference/agent_docs/benchmark-architecture.md)
+- [Media queries](https://melker.sh/reference/agent_docs/architecture-media-queries.md)
+- [CSS & animations](https://melker.sh/reference/agent_docs/css-animation-architecture.md)
+- [Pseudo-classes & transitions](https://melker.sh/reference/agent_docs/css-pseudo-classes-transitions-architecture.md)
+- [Container queries](https://melker.sh/reference/agent_docs/container-query-architecture.md)
+- [CSS variables](https://melker.sh/reference/agent_docs/css-variables-architecture.md)
+- [CSS themes](https://melker.sh/reference/agent_docs/css-themes-architecture.md)
+- [CSS nesting](https://melker.sh/reference/agent_docs/css-nesting-architecture.md)
+- [CSS opacity](https://melker.sh/reference/agent_docs/opacity-support.md)
+- [JSR distribution](https://melker.sh/reference/agent_docs/jsr.md)
+- [Node compatibility](https://melker.sh/reference/agent_docs/node-compatibility-architecture.md)
+
+## Deep Dives
+
+- [Dirty row tracking](https://melker.sh/reference/agent_docs/dirty-row-tracking.md)
+- [Fast input render](https://melker.sh/reference/agent_docs/fast-input-render.md)
+- [Env permissions](https://melker.sh/reference/agent_docs/env-permission-analysis.md)
+- [Layout engine](https://melker.sh/reference/agent_docs/layout-engine-notes.md)
+- [Sandbox detection](https://melker.sh/reference/agent_docs/sandbox-terminal-detection.md)
+
+## Examples & Patterns
+
+- [Map viewer](https://melker.sh/reference/agent_docs/map-example.md)
+
+## Project
+
+- [Timeline](https://melker.sh/reference/agent_docs/project-timeline.md)
+- [Release scheme](https://melker.sh/reference/agent_docs/calver-release.md)
+- [TUI comparison](https://melker.sh/reference/agent_docs/tui-comparison.md)
+- [Unstable flags](https://melker.sh/reference/agent_docs/unstable-flags-audit.md)

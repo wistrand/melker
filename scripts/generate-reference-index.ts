@@ -1,11 +1,14 @@
 /**
- * Generates docs/reference/index.html from CLAUDE.md's Documentation Index tables.
+ * Generates docs/reference/index.html and docs/llms.txt from CLAUDE.md's Documentation Index tables.
  *
- * Parses the markdown tables under "## Documentation Index" and generates
- * a styled HTML page with categorized doc links and a client-side markdown viewer.
+ * Parses the markdown tables under "## Documentation Index" and generates:
+ * 1. A styled HTML page with categorized doc links and a client-side markdown viewer
+ * 2. An llms.txt file with absolute URLs for AI agent consumption
  *
  * Run: deno run --allow-read --allow-write scripts/generate-reference-index.ts
  */
+
+const SITE = 'https://melker.sh';
 
 const claudeMd = await Deno.readTextFile('CLAUDE.md');
 
@@ -62,9 +65,13 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function toAbsoluteUrl(path: string): string {
+  return `${SITE}/reference/${path}`;
+}
+
 function generateGroupHtml(group: DocGroup): string {
   const items = group.entries.map(e =>
-    `        <li><a href="${escapeHtml(e.path)}">${escapeHtml(e.topic)}</a></li>`
+    `        <li><a href="${escapeHtml(toAbsoluteUrl(e.path))}">${escapeHtml(e.topic)}</a></li>`
   ).join('\n');
   return `    <div class="doc-group">
       <h2>${escapeHtml(group.title)}</h2>
@@ -361,15 +368,17 @@ document.addEventListener('click', function(e) {
   var a = e.target.closest('a');
   if (!a) return;
   var href = a.getAttribute('href');
-  if (!href || href.startsWith('http') || href.startsWith('?') || href.startsWith('#')) return;
-  var m = href.match(/^(.+?\\.md)(#.*)?$/);
+  if (!href || href.startsWith('?') || href.startsWith('#')) return;
+  // Handle both absolute (https://melker.sh/reference/...) and relative (.md) links
+  var m = href.match(/(?:https:\\/\\/melker\\.sh)?\\/reference\\/(.+?)\\.md(#.*)?$/)
+       || href.match(/^(.+?\\.md)(#.*)?$/);
   if (!m) return;
   e.preventDefault();
   var currentDoc = new URLSearchParams(window.location.search).get('doc');
   var baseUrl = currentDoc
     ? new URL('/reference/' + currentDoc + '.md', window.location.origin)
     : new URL('/reference/', window.location.origin);
-  var resolved = new URL(m[1], baseUrl);
+  var resolved = new URL(m[1] + (m[1].endsWith('.md') ? '' : '.md'), baseUrl);
   var path = resolved.pathname.replace(/^\\/reference\\//, '').replace(/\\.md$/, '');
   window.location.href = '?doc=' + path + (m[2] || '');
 });
@@ -381,3 +390,32 @@ document.addEventListener('click', function(e) {
 
 await Deno.writeTextFile('docs/reference/index.html', html);
 console.log('Generated docs/reference/index.html from CLAUDE.md');
+
+// Generate llms.txt
+function generateLlmsTxt(): string {
+  const lines: string[] = [];
+  lines.push('# Melker Engine');
+  lines.push('');
+  lines.push('> A terminal app document format with built-in UI, permissions, and runtime. Melker treats terminal apps as documents you can inspect before you run. A .melker file contains markup, styles, a permission policy, and a script — all in one readable file.');
+  lines.push('');
+  lines.push(`- [Home](${SITE}/)`);
+  lines.push(`- [How it works](${SITE}/how-it-works.html)`);
+  lines.push(`- [Tutorial](${SITE}/tutorial.html)`);
+  lines.push(`- [AI Assistant](${SITE}/ai.html)`);
+  lines.push(`- [Manifesto](${SITE}/reference/MANIFESTO.md)`);
+  lines.push('');
+
+  for (const group of groups) {
+    lines.push(`## ${group.title}`);
+    lines.push('');
+    for (const entry of group.entries) {
+      lines.push(`- [${entry.topic}](${toAbsoluteUrl(entry.path)})`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+await Deno.writeTextFile('docs/llms.txt', generateLlmsTxt());
+console.log('Generated docs/llms.txt from CLAUDE.md');

@@ -778,7 +778,7 @@ export function parseStyleProperties(cssString: string, variables?: Map<string, 
     }
 
     // Try to parse as number
-    if (/^\d+(\.\d+)?$/.test(value)) {
+    if (/^-?\d+(\.\d+)?$/.test(value)) {
       style[camelKey] = parseFloat(value);
     }
     // Try to parse as boolean

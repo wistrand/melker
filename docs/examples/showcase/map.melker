@@ -51,6 +51,9 @@ map.melker paris 12 satellite           # Paris with satellite imagery
 | Home | Reset to London at zoom 5 |
   </help>
 
+  <style>
+  </style>
+
   <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
     <!-- Header with controls -->
     <container style="display: flex; flex-direction: row; padding-top: 1; padding-left: 1; padding-right: 1; gap: 2; align-items: center;">
@@ -65,7 +68,7 @@ map.melker paris 12 satellite           # Paris with satellite imagery
       />
 
       <text>Provider:</text>
-      <select id="provider" selectedValue="${argv[3]:-openstreetmap}" onChange="$app.onProviderChange(event)">
+      <select id="provider" selectedValue="${argv[3]:-voyager-nolabels}" onChange="$app.onProviderChange(event)">
         <option value="terrain">Terrain</option>
         <option value="streets">Streets</option>
         <option value="voyager-nolabels">Voyager No Labels</option>
@@ -87,7 +90,7 @@ map.melker paris 12 satellite           # Paris with satellite imagery
         lat="51.5074"
         lon="-0.1278"
         zoom="${argv[2]:-5}"
-        provider="${argv[3]:-openstreetmap}"
+        provider="${argv[3]:-voyager-nolabels}"
         width="100%"
         height="100%"
         dither="auto"

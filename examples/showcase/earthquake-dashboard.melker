@@ -31,23 +31,30 @@
 
     <style>
         .header {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        padding: 0 1;
-        flex-shrink: 0;
+          display: flex;
+          flex-direction: row;
+          justify-content: space-between;
+          padding: 0 1;
+          flex-shrink: 0;
         }
         .footer {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        padding: 0 1;
-        flex-shrink: 0;
+          display: flex;
+          flex-direction: row;
+          justify-content: space-between;
+          padding: 0 1;
+          flex-shrink: 0;
         }
         .panel-label {
-        font-weight: bold;
-        padding: 0 1;
-        flex-shrink: 0;
+          font-weight: bold;
+          padding: 0 1;
+          flex-shrink: 0;
+        }
+        tile-map {
+          tile-key-color: #abd0e0;         /* Water color on voyager maps */
+          tile-key-threshold: 0.04;
+          tile-key-match-color: #000000;
+          tile-key-other-color: #007700;
+          tile-blur: 1;
         }
     </style>
 
@@ -87,6 +94,8 @@
                         tooltip="auto"
                         onActivate="$app.showDetails(event)"
                         onChange="$app.handleSelect(event)"
+                        bind:selection="selectedQuake"
+                        onGetId="event[4]"
                 >
                     {
                     "columns": [
@@ -123,12 +132,13 @@
                         lat="20"
                         lon="0"
                         zoom="1"
-                        provider="satellite"
+                        provider="voyager-nolabels"
                         width="100%"
                         height="100%"
                         interactive="true"
                         onOverlay="$app.drawOverlay(event)"
                         onTooltip="$app.mapTooltip(event)"
+                        onClick="$app.mapClick(event)"
                 />
 
                 <!-- Summary panels -->
@@ -228,12 +238,13 @@
       let currentFeed = 'day';
       let quakes: Quake[] = [];
       let sparklineQuakes: Quake[] = [];
-      let selectedQuake: Quake | null = null;
       let refreshTimer: number | null = null;
       let previousCount = 0;
       const notifiedBigQuakes = new Set<string>();
       let platesSvgOverlay = '';
       let platesVisible = true;
+
+      const state = $melker.createState({ selectedQuake: [] as string[] });
 
       // Format a timestamp to ISO 8601 UTC string
       function fmtTime(ms: number): string {
@@ -311,6 +322,7 @@
             q.place,
             q.depth.toFixed(1),
             fmtTime(q.time),
+            q.id,
           ]);
           table.setValue(rows);
           table.props.footer = [['', quakes.length + ' earthquakes (' + FEED_LABELS[currentFeed] + ')', '', '']];
@@ -387,29 +399,33 @@
       // Draw earthquake overlay on tile map
       export function drawOverlay(event: any): void {
         const { canvas, geo } = event;
+        const selId = state.selectedQuake.length > 0 ? state.selectedQuake[0] : null;
 
         // Draw earthquake dots (selected last so it's on top)
         let selPos: { x: number; y: number } | null = null;
+        let selQuake: Quake | null = null;
         for (const q of quakes) {
           const pos = geo.latLonToPixel(q.lat, q.lon);
           if (!pos) continue;
-          if (selectedQuake && q.id === selectedQuake.id) {
+          if (selId && q.id === selId) {
             selPos = pos;
+            selQuake = q;
             continue;
           }
           const color = magColor(q.mag);
-          const s = q.mag >= 5 ? 3 : q.mag >= 3 ? 2 : 1;
+          const s = q.mag >= 5 ? 2 : q.mag >= 3 ? 1 : 1;
           canvas.fillCircleCorrectedColor(pos.x, pos.y, s, color);
         }
-        // Draw selected quake on top in white
-        if (selectedQuake && selPos) {
-          const s = selectedQuake.mag >= 5 ? 4 : selectedQuake.mag >= 3 ? 3 : 2;
+        // Draw selected quake on top with ring highlight
+        if (selQuake && selPos) {
+          const s = selQuake.mag >= 5 ? 3 : 2;
           canvas.fillCircleCorrectedColor(selPos.x, selPos.y, s, '#FFFFFF');
+          canvas.fillCircleCorrectedColor(selPos.x, selPos.y, Math.max(1, s - 1), magColor(selQuake.mag));
         }
       }
 
       // Bump when GeoJSON→svgOverlay conversion logic changes to invalidate cache
-      const PLATES_CACHE_VERSION = 2;
+      const PLATES_CACHE_VERSION = 4;
 
       // Fetch tectonic plate boundaries and convert to svgOverlay (cached)
       export async function fetchPlates(): Promise<void> {
@@ -443,7 +459,7 @@
             // Always include last point
             const last = coords[coords.length - 1];
             d += ' L ' + last[0].toFixed(2) + ' ' + last[1].toFixed(2);
-            paths.push('<path d="' + d + '" stroke="#664422"/>');
+            paths.push('<path d="' + d + '" stroke="#002200"/>');
           }
           platesSvgOverlay = paths.join('\n');
 
@@ -499,9 +515,8 @@
       }
 
       // Show details for a selected earthquake
-      export function showDetails(event: { rowIndex: number; row: (string | number)[] }): void {
-        const timeStr = String(event.row[3]);
-        const quake = quakes.find(q => fmtTime(q.time) === timeStr) || quakes[event.rowIndex];
+      export function showDetails(event: { rowIndex: number; row: (string | number)[]; id?: string }): void {
+        const quake = event.id ? quakes.find(q => q.id === event.id) : quakes[event.rowIndex];
         if (!quake) return;
 
         $melker.alert(
@@ -528,19 +543,53 @@
       // Map tooltip - find nearest earthquake to mouse position
       export function mapTooltip(event: any): string | undefined {
         if (!event.context || quakes.length === 0) return undefined;
-        const { pixelX, pixelY } = event.context;
-
         const map = $melker.getElementById('worldMap') as any;
         if (!map || typeof map.pixelToLatLon !== 'function') return undefined;
 
-        const hover = map.pixelToLatLon(pixelX, pixelY);
+        const hover = map.pixelToLatLon(event.context.pixelX, event.context.pixelY);
+        const nearest = findNearestQuake(hover.lat, hover.lon);
+        if (!nearest) return undefined;
 
-        // Find nearest earthquake by lat/lon distance
+        return '**M' + nearest.mag.toFixed(1) + '** ' + nearest.place + '\n' +
+          nearest.lat.toFixed(2) + ', ' + nearest.lon.toFixed(2) + ' | Depth: ' + nearest.depth.toFixed(1) + ' km\n' +
+          fmtTime(nearest.time);
+      }
+
+      // Handle map click - find and select nearest earthquake
+      export function mapClick(event: { lat: number; lon: number }): void {
+        if (quakes.length === 0) return;
+
+        const nearest = findNearestQuake(event.lat, event.lon);
+        if (!nearest) return;
+
+        state.selectedQuake = [nearest.id];
+        const statusEl = $melker.getElementById('status');
+        if (statusEl) statusEl.setValue('M' + nearest.mag.toFixed(1) + ' - ' + nearest.place);
+      }
+
+      // Handle row selection — update status bar and redraw map
+      export function handleSelect(event: { id?: string }): void {
+        const statusEl = $melker.getElementById('status');
+        if (!event.id) {
+          if (statusEl) statusEl.setValue(quakes.length + ' quakes');
+        } else {
+          const q = quakes.find(q => q.id === event.id);
+          if (statusEl && q) {
+            statusEl.setValue('M' + q.mag.toFixed(1) + ' - ' + q.place);
+          }
+        }
+        // Redraw map to show selection
+        const mapCanvas = $melker.getElementById('worldMap');
+        if (mapCanvas) mapCanvas.markDirty();
+      }
+
+      // Find nearest quake to a lat/lon position (for click and tooltip)
+      function findNearestQuake(lat: number, lon: number): Quake | null {
         let nearest: Quake | null = null;
         let minDist = Infinity;
         for (const q of quakes) {
-          const dlat = q.lat - hover.lat;
-          const dlon = q.lon - hover.lon;
+          const dlat = q.lat - lat;
+          const dlon = q.lon - lon;
           const dist = dlat * dlat + dlon * dlon;
           if (dist < minDist) {
             minDist = dist;
@@ -548,33 +597,12 @@
           }
         }
 
-        // Scale threshold by zoom — at zoom 1 a pixel covers ~90 deg, at zoom 10 ~0.2 deg
-        const zoom = typeof map.getZoom === 'function' ? map.getZoom() : 2;
+        const map = $melker.getElementById('worldMap') as any;
+        const zoom = typeof map?.getZoom === 'function' ? map.getZoom() : 2;
         const degreesPerPixel = 360 / Math.pow(2, zoom);
         const threshold = (degreesPerPixel * 5) * (degreesPerPixel * 5);
-        if (!nearest || minDist > threshold) return undefined;
-
-        return '**M' + nearest.mag.toFixed(1) + '** ' + nearest.place + '\n' +
-          nearest.lat.toFixed(2) + ', ' + nearest.lon.toFixed(2) + ' | Depth: ' + nearest.depth.toFixed(1) + ' km\n' +
-          fmtTime(nearest.time);
-      }
-
-      // Handle row selection
-      export function handleSelect(event: { rowIndex: number; selectedRows: number[]; row?: (string | number)[] }): void {
-        const statusEl = $melker.getElementById('status');
-        if (event.selectedRows.length === 0) {
-          selectedQuake = null;
-          if (statusEl) statusEl.setValue(quakes.length + ' quakes');
-        } else {
-          const timeStr = event.row ? String(event.row[3]) : '';
-          selectedQuake = quakes.find(q => fmtTime(q.time) === timeStr) || quakes[event.rowIndex] || null;
-          if (statusEl && selectedQuake) {
-            statusEl.setValue('M' + selectedQuake.mag.toFixed(1) + ' - ' + selectedQuake.place);
-          }
-        }
-        // Redraw map to show selection
-        const mapCanvas = $melker.getElementById('worldMap');
-        if (mapCanvas) mapCanvas.markDirty();
+        if (!nearest || minDist > threshold) return null;
+        return nearest;
       }
 
       // Change feed

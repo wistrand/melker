@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Melker Reference</title>
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-secondary: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent: #39d353;
+      --accent-secondary: #2ea043;
+      --code-bg: #1c2128;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    nav {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    nav .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    nav .brand {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    nav .links { display: flex; gap: 24px; font-size: 0.9rem; }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .doc-index {
+      padding: 48px 0;
+    }
+
+    .doc-index h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .doc-index .subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+
+    .doc-group {
+      margin-bottom: 32px;
+    }
+
+    .doc-group h2 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+
+    .doc-group ul {
+      list-style: none;
+      columns: 2;
+      column-gap: 32px;
+    }
+
+    .doc-group li {
+      padding: 4px 0;
+      break-inside: avoid;
+    }
+
+    #content {
+      padding: 48px 0 64px;
+      display: none;
+    }
+
+    #content h1, #content h2, #content h3, #content h4 {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      margin-top: 32px;
+      margin-bottom: 12px;
+    }
+
+    #content h1 { font-size: 1.8rem; margin-top: 0; }
+    #content h2 { font-size: 1.4rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    #content h3 { font-size: 1.1rem; }
+
+    #content p { margin-bottom: 16px; }
+
+    #content pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    #content code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+    }
+
+    #content p code, #content li code, #content td code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 2px 6px;
+    }
+
+    #content ul, #content ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+    }
+
+    #content li { margin-bottom: 4px; }
+
+    #content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+
+    #content th, #content td {
+      padding: 8px 12px;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+
+    #content th {
+      background: var(--bg-secondary);
+      font-weight: 600;
+    }
+
+    #content blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 8px 16px;
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+    }
+
+    #content hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 32px 0;
+    }
+
+    #content img {
+      max-width: 100%;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .back-link:hover { color: var(--accent); }
+
+    .raw-link {
+      float: right;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    #error {
+      padding: 48px 0;
+      display: none;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 600px) {
+      .doc-group ul { columns: 1; }
+      #content h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="brand">melker</a>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="/how-it-works.html">How it works</a>
+      <a href="/tutorial.html">Tutorial</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container" id="index">
+  <div class="doc-index">
+    <h1>Reference</h1>
+    <p class="subtitle">Architecture docs, component guides, and internals.</p>
+
+    <div class="doc-group">
+      <h2>Overview</h2>
+      <ul>
+        <li><a href="CLAUDE.md">CLAUDE.md (project guide)</a></li>
+        <li><a href="README.md">README</a></li>
+        <li><a href="MANIFESTO.md">Manifesto</a></li>
+        <li><a href="FAQ.md">FAQ</a></li>
+      </ul>
+    </div>
+
+    <div class="doc-group">
+      <h2>For App Developers</h2>
+      <ul>
+        <li><a href="agent_docs/script_usage.md">Script context ($melker, $app)</a></li>
+        <li><a href="agent_docs/state-binding-architecture.md">State bindings (optional)</a></li>
+        <li><a href="agent_docs/bind-selection-architecture.md">Selection binding</a></li>
+        <li><a href="agent_docs/selection-id-architecture.md">Selection ID system</a></li>
+        <li><a href="agent_docs/gfx-modes.md">Graphics modes</a></li>
+        <li><a href="agent_docs/debugging.md">Debugging &amp; logging</a></li>
+        <li><a href="agent_docs/dx-footguns.md">Common mistakes</a></li>
+        <li><a href="agent_docs/ai-accessibility.md">AI assistant</a></li>
+      </ul>
+    </div>
+
+    <div class="doc-group">
+      <h2>Component Reference</h2>
+      <ul>
+        <li><a href="agent_docs/filterable-list-architecture.md">Filterable lists (combobox, select, autocomplete)</a></li>
+        <li><a href="agent_docs/file-browser-architecture.md">File browser</a></li>
+        <li><a href="agent_docs/data-table.md">Data table</a></li>
+        <li><a href="agent_docs/data-bars.md">Data bars (charts)</a></li>
+        <li><a href="agent_docs/data-boxplot-architecture.md">Data boxplot</a></li>
+        <li><a href="agent_docs/data-heatmap-architecture.md">Data heatmap</a></li>
+        <li><a href="agent_docs/data-tree-architecture.md">Data tree</a></li>
+        <li><a href="agent_docs/split-pane-architecture.md">Split pane</a></li>
+        <li><a href="agent_docs/spinner-architecture.md">Spinner</a></li>
+        <li><a href="agent_docs/toast-architecture.md">Toast notifications</a></li>
+        <li><a href="agent_docs/tooltip-architecture.md">Tooltips</a></li>
+        <li><a href="agent_docs/mermaid-support.md">Mermaid diagrams in markdown</a></li>
+        <li><a href="agent_docs/tile-map-architecture.md">Tile map</a></li>
+        <li><a href="agent_docs/svg-overlay-architecture.md">SVG overlay (canvas/img/video/map)</a></li>
+      </ul>
+    </div>
+
+    <div class="doc-group">
+      <h2>For Contributors (Internals)</h2>
+      <ul>
+        <li><a href="agent_docs/project-structure.md">Project structure</a></li>
+        <li><a href="agent_docs/architecture.md">Core architecture</a></li>
+        <li><a href="agent_docs/component-reference.md">Component reference</a></li>
+        <li><a href="agent_docs/embedded-assets-architecture.md">Embedded assets</a></li>
+        <li><a href="agent_docs/config-architecture.md">Config system</a></li>
+        <li><a href="agent_docs/policy-architecture.md">Policy system</a></li>
+        <li><a href="agent_docs/server-architecture.md">Server</a></li>
+        <li><a href="agent_docs/keyboard-focus-navigation-architecture.md">Keyboard &amp; focus</a></li>
+        <li><a href="agent_docs/command-element-architecture.md">Command element</a></li>
+        <li><a href="agent_docs/graph-architecture.md">Graph/diagrams</a></li>
+        <li><a href="agent_docs/graphics-architecture.md">Graphics pipeline</a></li>
+        <li><a href="agent_docs/isolines-architecture.md">Isolines mode</a></li>
+        <li><a href="agent_docs/sixel-architecture.md">Sixel protocol</a></li>
+        <li><a href="agent_docs/kitty-architecture.md">Kitty protocol</a></li>
+        <li><a href="agent_docs/iterm2-architecture.md">iTerm2 protocol</a></li>
+        <li><a href="agent_docs/benchmark-architecture.md">Benchmarks</a></li>
+        <li><a href="agent_docs/architecture-media-queries.md">Media queries</a></li>
+        <li><a href="agent_docs/css-animation-architecture.md">CSS &amp; animations</a></li>
+        <li><a href="agent_docs/css-pseudo-classes-transitions-architecture.md">Pseudo-classes &amp; transitions</a></li>
+        <li><a href="agent_docs/container-query-architecture.md">Container queries</a></li>
+        <li><a href="agent_docs/css-variables-architecture.md">CSS variables</a></li>
+        <li><a href="agent_docs/css-themes-architecture.md">CSS themes</a></li>
+        <li><a href="agent_docs/css-nesting-architecture.md">CSS nesting</a></li>
+        <li><a href="agent_docs/opacity-support.md">CSS opacity</a></li>
+        <li><a href="agent_docs/jsr.md">JSR distribution</a></li>
+        <li><a href="agent_docs/node-compatibility-architecture.md">Node compatibility</a></li>
+      </ul>
+    </div>
+
+    <div class="doc-group">
+      <h2>Deep Dives</h2>
+      <ul>
+        <li><a href="agent_docs/dirty-row-tracking.md">Dirty row tracking</a></li>
+        <li><a href="agent_docs/fast-input-render.md">Fast input render</a></li>
+        <li><a href="agent_docs/env-permission-analysis.md">Env permissions</a></li>
+        <li><a href="agent_docs/layout-engine-notes.md">Layout engine</a></li>
+        <li><a href="agent_docs/sandbox-terminal-detection.md">Sandbox detection</a></li>
+      </ul>
+    </div>
+
+    <div class="doc-group">
+      <h2>Examples &amp; Patterns</h2>
+      <ul>
+        <li><a href="agent_docs/map-example.md">Map viewer</a></li>
+      </ul>
+    </div>
+
+    <div class="doc-group">
+      <h2>Project</h2>
+      <ul>
+        <li><a href="agent_docs/project-timeline.md">Timeline</a></li>
+        <li><a href="agent_docs/calver-release.md">Release scheme</a></li>
+        <li><a href="agent_docs/tui-comparison.md">TUI comparison</a></li>
+        <li><a href="agent_docs/unstable-flags-audit.md">Unstable flags</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="container" id="content"></div>
+
+<div class="container" id="error">
+  <h2>Document not found</h2>
+  <p>The requested reference doc could not be loaded.</p>
+  <p><a href="/reference/">Back to index</a></p>
+</div>
+
+<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var doc = params.get('doc');
+  if (!doc) return;
+
+  if (!/^[\w\-/]+$/.test(doc)) {
+    document.getElementById('index').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('index').style.display = 'none';
+
+  fetch(doc + '.md')
+    .then(function(res) {
+      if (!res.ok) throw new Error(res.status);
+      return res.text();
+    })
+    .then(function(md) {
+      var content = document.getElementById('content');
+      var heading = md.match(/^#\s+(.+)/m);
+      if (heading) document.title = heading[1] + ' - Melker Reference';
+
+      content.innerHTML =
+        '<a href="/reference/" class="back-link">Reference</a>' +
+        '<a href="' + doc + '.md" class="raw-link">View raw</a>' +
+        marked.parse(md);
+      content.style.display = 'block';
+    })
+    .catch(function() {
+      document.getElementById('error').style.display = 'block';
+    });
+})();
+</script>
+
+<script>
+document.addEventListener('click', function(e) {
+  var a = e.target.closest('a');
+  if (!a) return;
+  var href = a.getAttribute('href');
+  if (!href || href.startsWith('http') || href.startsWith('?') || href.startsWith('#')) return;
+  var m = href.match(/^(.+?\.md)(#.*)?$/);
+  if (!m) return;
+  e.preventDefault();
+  var currentDoc = new URLSearchParams(window.location.search).get('doc');
+  var baseUrl = currentDoc
+    ? new URL('/reference/' + currentDoc + '.md', window.location.origin)
+    : new URL('/reference/', window.location.origin);
+  var resolved = new URL(m[1], baseUrl);
+  var path = resolved.pathname.replace(/^\/reference\//, '').replace(/\.md$/, '');
+  window.location.href = '?doc=' + path + (m[2] || '');
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,494 @@
+# AI Accessibility System
+
+Melker includes an AI-powered accessibility assistant that allows users to ask questions about the UI and interact with elements through natural language. It supports both text and voice input.
+
+## Quick Start
+
+1. Set your OpenRouter API key:
+   ```bash
+   export OPENROUTER_API_KEY=your_key_here
+   ```
+
+2. Open the AI assistant:
+   - Press `Alt+H` to open with text input
+   - Press `F7` to open and immediately start voice recording
+   - Click "AI Assistant" button in the F12 Dev Tools dialog
+
+3. Ask questions like:
+   - "What's on this screen?"
+   - "How do I navigate to the submit button?"
+   - "Summarize the markdown content"
+
+## Architecture
+
+```
+User presses Alt+H or F7
+       │
+       ▼
+┌──────────────────────────────────────────────┐
+│  Accessibility Dialog (draggable)            │
+│  ┌────────────────────────────────────────┐  │
+│  │ Markdown response area                 │  │
+│  │ (auto-scrolls, text-select)            │  │
+│  ├────────────────────────────────────────┤  │
+│  │ Status: [|||||] 3s  (during recording) │  │
+│  ├────────────────────────────────────────┤  │
+│  │ [Input field]  [Listen] [Send] [Close] │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘
+       │
+       ▼
+Context gathered (screen content, focus, element tree)
+       │
+       ▼
+OpenRouter API (streaming + tool calls)
+       │
+       ▼
+Response streamed to dialog (debounced 50ms)
+```
+
+### Evaluation Loop Detail
+
+```
+User types query → Enter/Send
+  │
+  ├─ Abort any in-flight request (AbortController)
+  ├─ Read input, clear field
+  ├─ buildContext() — serialize UI state
+  ├─ hashContext() — djb2 cache key
+  ├─ Cache check (exact query + context hash)
+  │    └─ HIT → display cached, return
+  ├─ Push user message to _messageHistory
+  │
+  ├─ Tool loop (up to MAX_TOOL_ROUNDS = 3):
+  │    ├─ Build messages: [system prompt + nudge, ...history]
+  │    ├─ _streamRound() — SSE to OpenRouter
+  │    │    ├─ onToken: append, debounced render (50ms)
+  │    │    │    └─ guarded: if (!_isProcessing) return
+  │    │    ├─ onToolCall → { type: 'tool_calls', calls }
+  │    │    └─ onComplete → { type: 'complete', response }
+  │    ├─ If complete: cache, push assistant msg, break
+  │    └─ If tool_calls:
+  │         ├─ _executeToolCalls() — sanitize, run, push results
+  │         ├─ Rebuild context via buildContext() (fresh UI state)
+  │         └─ Continue loop
+  │
+  └─ If history > 10 → _compactHistory() (summarize via LLM)
+```
+
+As the tool loop approaches its limit, the system prompt is augmented with escalating nudges:
+- **Round 1 of 3**: soft nudge — "finish your task now, one more tool call if needed"
+- **Round 2 of 3**: hard nudge — "this is your LAST chance, do NOT call tools"
+
+This gives the model a chance to synthesize a text response rather than being cut off mid-chain.
+
+## Files
+
+| File                             | Purpose                                         |
+|----------------------------------|-------------------------------------------------|
+| `src/ai/mod.ts`                  | Module exports                                  |
+| `src/ai/openrouter.ts`           | OpenRouter API client with SSE streaming        |
+| `src/ai/context.ts`              | UI context builder, element tree serialization  |
+| `src/ai/cache.ts`                | Query response cache (5min TTL, exact match)    |
+| `src/ai/tools.ts`                | Tool definitions and execution                  |
+| `src/ai/accessibility-dialog.ts` | Dialog UI and conversation management           |
+| `src/ai/audio.ts`                | Audio recording, transcription, silence trimming |
+| `src/ai/macos-audio-record.swift`| Native macOS audio capture using AVAudioEngine  |
+
+## Environment Variables
+
+| Variable              | Default                                          | Description                                             |
+|-----------------------|--------------------------------------------------|---------------------------------------------------------|
+| `OPENROUTER_API_KEY`  | (required)                                       | API key for OpenRouter                                  |
+| `MELKER_AI_MODEL`     | `openai/gpt-5.2-chat`                            | Model for chat/tools                                    |
+| `MELKER_AUDIO_MODEL`  | `openai/gpt-4o-audio-preview`                    | Model for audio transcription                           |
+| `MELKER_AI_ENDPOINT`  | `https://openrouter.ai/api/v1/chat/completions`  | API endpoint URL                                        |
+| `MELKER_AI_HEADERS`   | (none)                                           | Custom headers (format: `name: value; name2: value2`)   |
+| `MELKER_AI_SITE_URL`  | `https://github.com/melker`                      | Site URL for rankings                                   |
+| `MELKER_AI_SITE_NAME` | `Melker`                                         | Site name for rankings                                  |
+| `MELKER_AUDIO_GAIN`   | `2.0`                                            | Audio recording gain multiplier                         |
+| `MELKER_AUDIO_DEBUG`  | `false`                                          | Replay recorded audio before transcription              |
+| `MELKER_FFMPEG`       | `false`                                          | Force ffmpeg on macOS instead of native Swift           |
+
+All environment variables are read fresh on each API call, allowing dynamic changes without restart.
+
+## Voice Input
+
+The AI assistant supports voice input through the Listen button or F7 key.
+
+### How it Works
+
+1. Press F7 or click "Listen" to start recording (5 seconds max)
+2. Speak your question
+3. Press F7 again or wait for timeout to stop recording
+4. Audio is processed:
+   - Silence trimmed from beginning and end (reduces API costs)
+   - Audio validated for meaningful content (skips empty/silent recordings)
+   - Sent to transcription model
+5. Transcribed text automatically submitted as a question
+
+### Audio Processing
+
+The `audio.ts` module handles:
+
+| Function           | Purpose                                                          |
+|--------------------|------------------------------------------------------------------|
+| `AudioRecorder`    | Platform-specific audio capture (Swift on macOS, ffmpeg elsewhere) |
+| `transcribeAudio()`| Send audio to OpenRouter for transcription                       |
+| `trimSilence()`    | Remove silent portions from start/end                            |
+| `hasAudioContent()`| Validate audio has meaningful volume                             |
+| `playbackAudio()`  | Debug playback via ffplay (when `MELKER_AUDIO_DEBUG=true`)       |
+
+Audio analysis uses RMS (root mean square) in 100ms chunks:
+- Threshold: 0.01 RMS (roughly quiet speech)
+- Minimum active: 5% of chunks must exceed threshold
+- Padding: 200ms kept around trimmed audio
+
+### Platform Support
+
+Audio capture auto-detects the platform:
+- **Linux**: ffmpeg with PulseAudio/PipeWire (preferred) or ALSA fallback
+- **macOS**: Native Swift script using AVAudioEngine (no ffmpeg required)
+- **Windows**: ffmpeg with DirectShow
+
+Requirements:
+- **Linux/Windows**: `ffmpeg` installed and in PATH
+- **macOS**: Swift runtime (included with Xcode or Command Line Tools)
+
+Set `MELKER_FFMPEG=true` to force ffmpeg on macOS instead of native Swift.
+
+### Visual Feedback
+
+During recording, the status row shows:
+- Volume level indicator: `[|||||]` (5 bars max)
+- Remaining time (padded): ` 3s`
+- Device name on Linux: `(PulseAudio (device_name))`
+
+Example: `[|||  ]  8s (PulseAudio (alsa_input.usb-Blue_Microphones))`
+
+## Tool System
+
+The AI can interact with the UI through tools:
+
+### Built-in Tools
+
+| Tool           | Description                                   | Parameters                                                         |
+|----------------|-----------------------------------------------|--------------------------------------------------------------------|
+| `send_event`   | Send events to UI elements (incl. select/combobox/autocomplete change) | `element_id`, `event_type` (click/change/focus/keypress/draw), `value` |
+| `click_canvas` | Click at specific coordinates on a canvas     | `element_id`, `x`, `y` (pixel buffer coordinates)                  |
+| `read_element` | Read full text content from elements          | `element_id`                                                       |
+| `close_dialog` | Close the AI assistant dialog                 | (none)                                                             |
+| `exit_program` | Exit the application                          | (none)                                                             |
+
+### Tile Map Interaction
+
+The AI can interact with `<tile-map>` components via `send_event`:
+
+- **Change view**: `event_type="change"`, `value="lat=N,lon=N,zoom=N,provider=NAME"` (all fields optional)
+- **Draw overlay**: `event_type="draw"`, `value='<path d="M lon lat L lon lat" stroke="color"/><text lat="N" lon="N" fill="color">Label</text>'` (standard SVG order: x=lon, y=lat; supports M/L/H/V/C/S/Q/T/A/Z; use A for circles, C/Q for curves)
+- **Clear overlay**: `event_type="draw"`, `value=""`
+
+The screen content shows `[Tile Map#id: lat=N, lon=N, zoom=N, provider=NAME, paths=N, labels=N]` with available providers listed below.
+
+### Canvas / Image Draw Overlay
+
+The AI can draw SVG overlays on `<canvas>` and `<img>` elements via `send_event` with `event_type="draw"`. Coordinates are in pixel buffer space (not terminal characters). Overlays rescale automatically when the element resizes.
+
+- **Draw overlay**: `event_type="draw"`, `value='<path d="M x y L x y" stroke="color"/><text x="N" y="N" fill="color">Label</text>'`
+- **Clear overlay**: `event_type="draw"`, `value=""`
+
+The screen content shows `[Canvas#id: WxHpx, paths=N, labels=N]` or `[Image#id: WxHpx, paths=N, labels=N]` with draw hints.
+
+### Custom Tools (for .melker files)
+
+Applications can register custom tools:
+
+```typescript
+// In <script> block
+registerAITool({
+  name: "increment_counter",
+  description: "Increase the counter value",
+  parameters: {
+    amount: {
+      type: "number",
+      required: false,
+      description: "Amount to add (default: 1)"
+    }
+  },
+  handler: (args, context) => {
+    state.count += args.amount || 1;
+    return { success: true, message: `Counter is now ${state.count}` };
+  }
+});
+```
+
+Tool handlers receive:
+- `args`: Parsed arguments from the model
+- `context`: `{ document, focusManager, closeDialog, exitProgram, render }`
+
+Return `{ success: boolean, message: string, data?: any }`.
+
+### Tool Execution Flow
+
+The tool loop runs up to `MAX_TOOL_ROUNDS` (3) iterations:
+
+1. User asks something that requires UI interaction
+2. Model decides to call one or more tools (e.g., `send_event` to click a button)
+3. Tools are executed, results pushed to message history
+4. UI context is rebuilt (tools may have changed the UI)
+5. Model continues with fresh context and tool results
+6. Steps 2–5 repeat if the model calls more tools (up to the round limit)
+7. Final text response generated
+
+Each round uses `_streamRound()`, a Promise wrapper around callback-based `streamChat`, returning `{ type: 'complete', response }` or `{ type: 'tool_calls', calls }`.
+
+## ARIA Support
+
+The context builder recognizes ARIA attributes on elements, giving the AI richer semantic understanding of the UI. ARIA attributes are read-only metadata — they affect the AI context but not rendering, layout, or keyboard navigation.
+
+### Supported Attributes
+
+| Attribute          | Effect in AI context                                                                              |
+|--------------------|---------------------------------------------------------------------------------------------------|
+| `role`             | Overrides element type in output — `<container role="navigation">` shows as `[Navigation]`        |
+| `aria-label`       | Accessible name when no visible label — `<button aria-label="Close">X</button>` shows as `Close`  |
+| `aria-hidden`      | Element and its subtree excluded from AI context entirely                                         |
+| `aria-description` | Supplementary text appended after the element's line                                              |
+| `aria-labelledby`  | Resolves referenced element(s) text as accessible name (highest priority, supports multiple IDs)  |
+| `aria-expanded`    | Shows `expanded` or `collapsed` state                                                             |
+| `aria-controls`    | Shows `controls: element-id` relationship                                                         |
+| `aria-busy`        | Shows `loading` indicator                                                                         |
+| `aria-required`    | Shows `required` on inputs, textareas, checkboxes                                                 |
+| `aria-invalid`     | Shows `invalid` on inputs, textareas                                                              |
+
+### Naming Priority
+
+The accessible name for an element follows this priority chain (matching the ARIA spec):
+
+1. `aria-labelledby` — resolves referenced element text via `document.getElementById()`
+2. `aria-label` — explicit accessible name
+3. Native label — `title`, `placeholder`, `label` (varies by component)
+
+### Example
+
+```html
+<container role="navigation" aria-label="Main navigation">
+  <button>Home</button>
+  <button aria-controls="settings-panel" aria-expanded="false">Settings</button>
+  <separator aria-hidden="true" />
+</container>
+<container id="main" role="main">
+  <text id="email-label">Email address</text>
+  <input aria-labelledby="email-label" aria-required="true" placeholder="you@example.com" />
+  <container id="results" aria-busy="true">
+    <text>Loading...</text>
+  </container>
+</container>
+```
+
+The AI sees:
+
+**Screen content:**
+```
+[Navigation: Main navigation]
+  [Button: Home]
+  [Button: Settings (collapsed, controls: settings-panel)]
+[Main]
+  Email address
+  [Input: Email address (required)]
+  [Container: results, loading]
+    Loading...
+```
+
+**Element tree:**
+```
+navigation ["Main navigation"]
+  button ["Home"]
+  button ["Settings", collapsed, controls: settings-panel]
+main
+  text ["Email address"]
+  input ["Email address", required]
+  container#results [loading]
+    text ["Loading..."]
+```
+
+The separator is gone. The AI knows the sidebar is navigation, the input is required and labelled by the text element, results are loading, and the settings button controls a collapsible panel.
+
+### Where ARIA Attributes Apply
+
+| Function                 | Attributes used                                                                                     |
+|--------------------------|-----------------------------------------------------------------------------------------------------|
+| `buildScreenContent()`  | All — per-component name resolution, state annotations, `aria-hidden` skip, `aria-description` line |
+| `buildElementTree()`    | All — role in node name, name in info, states in info, `aria-hidden` skip                           |
+| `describeFocusedElement()` | All — role in type, name resolution, state annotations, controls relationship                    |
+
+## Context Building
+
+When the user asks a question, the system gathers:
+
+### Screen Content
+Text representation of visible UI, excluding the AI dialog itself. ARIA attributes enrich the output (see [ARIA Support](#aria-support) above).
+
+### Element Tree
+Simplified DOM-like structure:
+```
+container#main [flex, column]
+  text#title "Welcome"
+  button#submit "Submit"
+  input#name placeholder="Enter name"
+```
+
+**Privacy:** Password inputs (`format="password"`) are automatically masked as `value="****"` and not sent to the AI.
+
+### Focused Element
+Currently focused element with type (or role), accessible name, value, and ARIA state.
+
+### Available Actions
+Keyboard shortcuts and navigation hints.
+
+## Caching
+
+Responses are cached for exact query + context matches:
+- Cache key: `query|contextHash`
+- TTL: 5 minutes
+- Same question with same UI state = instant response
+
+## Dialog Features
+
+### Draggable
+Click and drag the title bar to reposition. Uses `draggable` prop on dialog component.
+
+### Auto-scroll
+Response area scrolls to bottom as content streams in.
+
+### Debounced Rendering
+Token updates batched every 50ms to reduce rendering overhead.
+
+### Text Selection
+Text in the response can be selected and copied (Ctrl+C).
+
+### Conversation History
+Multi-turn conversations supported. History compacted after 10 messages using LLM summarization. Compaction properly formats all message roles:
+- User messages: `User: content`
+- Assistant tool calls: `Assistant called tools: name(args)`
+- Tool results: `Tool result: content`
+- Assistant text: `Assistant: content`
+
+### Cancellation
+An `AbortController` is threaded through `streamChat` to the `fetch` call. Aborting happens:
+- When the user submits a new query while one is in-flight
+- When the dialog is closed
+
+Callbacks (`onToken`, `onComplete`, `onToolCall`) are guarded with `if (!this._isProcessing) return` to prevent stale updates after the dialog closes.
+
+## Message Handling
+
+### Streaming
+Tokens stream in via Server-Sent Events (SSE):
+```
+data: {"choices":[{"delta":{"content":"Hello"}}]}
+data: {"choices":[{"delta":{"content":" world"}}]}
+data: [DONE]
+```
+
+### Role Alternation
+API requires alternating user/assistant roles. Tool results use the `tool` role, followed by assistant continuation.
+
+### Error Recovery
+- JSON parsing errors in tool args: fallback to empty object
+- API errors: displayed in dialog, logged
+- Tool execution errors: returned to model for graceful handling
+
+## System Prompt
+
+```
+You are an accessibility assistant for a terminal user interface (TUI) application.
+The user may be visually impaired or need help understanding the current screen.
+
+Current screen content:
+{screenContent}
+
+Currently focused: {focusedElement}
+
+UI structure:
+{elementTree}
+
+Available keyboard actions:
+{availableActions}
+
+Answer the user's question about the UI concisely and helpfully.
+Focus on what they can do and how to navigate.
+Keep responses brief - typically 1-3 sentences.
+
+When the user asks you to DO something (click a button, check a checkbox, type text,
+select an option, navigate, etc.), use the send_event tool to actually perform the
+action — don't just describe how to do it.
+```
+
+Custom tool apps get an additional paragraph listing registered tools with a nudge to use them proactively.
+
+## Example Interactions
+
+**User:** "What's on this screen?"
+**AI:** "You're viewing a settings panel with three tabs: General, Advanced, and About. The General tab is active, showing options for theme and language. There's a Save button at the bottom."
+
+**User:** "Summarize the markdown"
+**AI:** [Uses read_element tool first]
+"The document explains how to configure the application, covering three main topics: installation, configuration files, and environment variables."
+
+**User:** "Click the save button"
+**AI:** [Uses send_event tool]
+"Done! I clicked the Save button. The settings have been saved."
+
+## Integration with Engine
+
+The accessibility dialog is managed by `AccessibilityDialogManager` in the engine:
+
+```typescript
+// In MelkerEngine
+this._accessibilityDialog = new AccessibilityDialogManager({
+  document: this._document,
+  focusManager: this._focusManager,
+  registerElementTree: (el) => this._document.registerElementTree(el),
+  render: () => this.render(),
+  forceRender: () => this.forceRender(),
+  autoRender: this._options.autoRender ?? true,
+  exitProgram: () => this.stop(),
+  scrollToBottom: (id) => this._scrollHandler.scrollToBottom(id),
+});
+
+// Triggered by Alt+H
+if (key === 'h' && event.altKey) {
+  this._accessibilityDialog.toggle(this._rootElement);
+}
+```
+
+## Excluding Dialog from Context
+
+The dialog excludes itself from UI context to avoid the AI describing its own interface:
+
+```typescript
+const DIALOG_ELEMENT_IDS = [
+  'accessibility-dialog',
+  'accessibility-main',
+  'accessibility-input-row',
+  'accessibility-query-input',
+  'accessibility-send-btn',
+  'accessibility-response-container',
+  'accessibility-response',
+  'accessibility-close-btn',
+  'accessibility-status',
+];
+
+// In context.ts
+function buildContext(document: Document, excludeIds?: string[]): UIContext
+```
+
+## Design Decisions
+
+| Decision                         | Rationale                                                                          |
+|----------------------------------|------------------------------------------------------------------------------------|
+| djb2 hash for cache keys         | 100-entry cache with 5-min TTL; collision risk is theoretical                      |
+| FIFO eviction (not LRU)          | Irrelevant at 100 entries                                                          |
+| JSON recovery regex in arg parse | Fallback for already-invalid JSON; falls through to empty args safely              |
+| Error recovery pops last message | Only triggers if stream errors after partial tool processing; edge case of an edge case |

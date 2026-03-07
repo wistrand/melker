@@ -780,6 +780,7 @@ export class TextSelectionHandler {
       this._draggingElement = null;
       this._dragZone = null;
       this._throttledDragRender.flush(); // Ensure final position is rendered
+      this._deps.onRender(); // Render after drag end (onClick handlers may have changed state)
       return; // Don't process other mouse up events
     }
 

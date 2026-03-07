@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How Melker Works - Building a Live Earthquake Dashboard</title>
+  <meta name="description" content="How a single .melker file becomes a rich terminal application with live data, maps, charts, and permission sandboxing.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://melker.sh/how-it-works.html">
+  <meta property="og:title" content="How Melker Works - Building a Live Earthquake Dashboard">
+  <meta property="og:description" content="A single-file terminal app with live maps, sortable tables, and charts — walked through piece by piece.">
+  <meta property="og:image" content="https://melker.sh/media/melker-earthquake-2026-02-13.jpg">
+
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-secondary: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent: #39d353;
+      --accent-secondary: #2ea043;
+      --accent-glow: rgba(57, 211, 83, 0.15);
+      --code-bg: #1c2128;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    h1, h2, h3, .code-title {
+      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    }
+
+    /* Nav */
+    nav {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    nav .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    nav .brand {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    nav .links { display: flex; gap: 24px; font-size: 0.9rem; }
+
+    /* Hero */
+    .hero {
+      padding: 64px 0 48px;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .hero h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .hero .subtitle {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin-bottom: 32px;
+    }
+
+    .hero-media {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .hero-media video,
+    .hero-media img {
+      width: 100%;
+      display: block;
+    }
+
+    .run-command {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      margin-top: 16px;
+      display: inline-block;
+    }
+
+    .run-command .prompt { color: var(--accent); }
+    .run-note { font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }
+
+    /* Sections */
+    section {
+      padding: 56px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    section:last-of-type { border-bottom: none; }
+
+    section h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .section-claim {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+
+    section p {
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .explanation {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* Code blocks */
+    .code-block { margin: 20px 0; }
+
+    .code-title {
+      background: var(--border);
+      padding: 8px 16px;
+      border-radius: 4px 4px 0 0;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-bottom: none;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .code-block pre {
+      border-radius: 0 0 4px 4px;
+      margin: 0;
+    }
+
+    /* Screenshot placeholders */
+    .screenshot {
+      background: var(--bg-secondary);
+      border: 1px dashed var(--border);
+      border-radius: 4px;
+      padding: 48px 24px;
+      text-align: center;
+      margin: 20px 0;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .screenshot .caption {
+      margin-top: 8px;
+      font-style: italic;
+      font-size: 0.85rem;
+    }
+
+    /* Callout boxes */
+    .callout {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 2px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      font-size: 0.95rem;
+    }
+
+    .callout strong { color: var(--accent); }
+
+    /* Syntax highlighting (minimal) */
+    .kw { color: #ff7b72; }
+    .str { color: #a5d6ff; }
+    .tag { color: #7ee787; }
+    .attr { color: #d2a8ff; }
+    .cmt { color: #8b949e; }
+    .num { color: #79c0ff; }
+
+    /* Footer */
+    footer {
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    /* Sidebar index */
+    .sidebar {
+      display: none;
+    }
+
+    @media (min-width: 1100px) {
+      .sidebar {
+        display: block;
+        position: fixed;
+        top: 64px;
+        left: max(0px, calc((100vw - 800px) / 2 - 220px));
+        width: 180px;
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+        padding: 8px 0;
+        font-size: 0.78rem;
+        line-height: 1.4;
+      }
+
+      .sidebar a {
+        display: block;
+        padding: 4px 12px;
+        color: var(--text-secondary);
+        border-left: 2px solid transparent;
+        transition: color 0.15s, border-color 0.15s;
+      }
+
+      .sidebar a:hover {
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .sidebar a.active {
+        color: var(--accent);
+        border-left-color: var(--accent);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.6rem; }
+      section h2 { font-size: 1.3rem; }
+      pre { font-size: 0.8rem; padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="brand">melker</a>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="/tutorial.html">Tutorial</a>
+      <a href="https://github.com/nicwistrand/melker">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<aside class="sidebar" id="sidebar">
+  <a href="#document">1. Just a document</a>
+  <a href="#safe">2. Safe to run</a>
+  <a href="#why">3. Why a document?</a>
+  <a href="#rich">4. Components</a>
+  <a href="#data">5. Data and script</a>
+  <a href="#css">6. CSS layout</a>
+  <a href="#wiring">7. Wiring it up</a>
+  <a href="#map">8. Map</a>
+  <a href="#charts">9. Charts</a>
+  <a href="#run">10. Try it</a>
+  <a href="#ai">11. AI Assistant</a>
+</aside>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1>How Melker Works</h1>
+    <p class="subtitle">
+      A terminal app you can inspect before you run.
+      This page uses a live earthquake dashboard to show how a single <code>.melker</code> file
+      becomes a real application: UI, data fetching, charts, maps, and a permission sandbox,
+      all in one readable document.
+    </p>
+
+    <div class="hero-media">
+      <a href="images/earthquake-dashboard.png"><img src="images/earthquake-dashboard-thumb.jpg" alt="Melker earthquake dashboard running in a terminal"></a>
+    </div>
+
+    <div class="run-command">
+      <span class="prompt">$</span> melker https://melker.sh/examples/showcase/earthquake-dashboard.melker
+      <div class="run-note">Melker runs .melker documents from local files or URLs.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 1: It's just a document -->
+<section id="document">
+  <div class="container">
+    <h2>1. It's just a document</h2>
+    <p class="section-claim">No build step. A .melker file is a document you can read top to bottom.</p>
+
+    <p>
+      The earthquake dashboard is a single file. It opens with a <code>&lt;melker&gt;</code> root tag,
+      just like an HTML page opens with <code>&lt;html&gt;</code>. Inside: a title, a permission policy,
+      a help page, some styles, a component tree, and a script. That's the entire application.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">earthquake-dashboard.melker</div>
+      <pre><span class="tag">&lt;melker&gt;</span>
+    <span class="tag">&lt;title&gt;</span>Earthquake Dashboard<span class="tag">&lt;/title&gt;</span>
+    <span class="tag">&lt;policy&gt;</span>  <span class="cmt">/* what the app is allowed to do */</span>  <span class="tag">&lt;/policy&gt;</span>
+    <span class="tag">&lt;help&gt;</span>    <span class="cmt">/* built-in help page (markdown) */</span>  <span class="tag">&lt;/help&gt;</span>
+    <span class="tag">&lt;style&gt;</span>   <span class="cmt">/* CSS you already know */</span>           <span class="tag">&lt;/style&gt;</span>
+
+    <span class="tag">&lt;container</span> <span class="attr">style</span>=<span class="str">"display: flex; flex-direction: column; height: 100%"</span><span class="tag">&gt;</span>
+        <span class="cmt">&lt;!-- header, table, map, charts --&gt;</span>
+    <span class="tag">&lt;/container&gt;</span>
+
+    <span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span><span class="tag">&gt;</span>
+        <span class="cmt">// fetch data, update UI</span>
+    <span class="tag">&lt;/script&gt;</span>
+<span class="tag">&lt;/melker&gt;</span></pre>
+    </div>
+
+    <p class="explanation">
+      No <code>package.json</code>, no <code>tsconfig.json</code>, no <code>webpack.config.js</code>.
+      The file is the app. Send it to someone and they run it with one command.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/melker-file-format.md">.melker file format</a></p>
+  </div>
+</section>
+
+<!-- Section 2: Permissions -->
+<section id="safe">
+  <div class="container">
+    <h2>2. Safe to run</h2>
+    <p class="section-claim">The app declares what it needs. You can see it before you run it.</p>
+
+    <p>
+      Before any code runs, the <code>&lt;policy&gt;</code> block declares the app's permissions.
+      This dashboard needs network access to two hosts and map tile access. Nothing else.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Permission policy</div>
+      <pre><span class="tag">&lt;policy&gt;</span>
+  {
+    "name": "earthquake-dashboard",
+    "description": "Real-time USGS earthquake monitor",
+    "permissions": {
+      "net": ["earthquake.usgs.gov", "raw.githubusercontent.com"],
+      "map": true
+    }
+  }
+<span class="tag">&lt;/policy&gt;</span></pre>
+    </div>
+
+    <div class="callout">
+      <strong>What this means:</strong> The app can fetch data from
+      <code>earthquake.usgs.gov</code> and <code>raw.githubusercontent.com</code> (for tectonic plate
+      boundary data). It can load map tiles. It cannot read files, run commands, or access any other
+      network host. If the script tries to <code>fetch('https://evil.com')</code>, it fails.
+    </div>
+
+    <p class="explanation">
+      The policy tells you what the app can do, and the engine enforces it.
+      Press <code>F12</code> to open Dev Tools and inspect the running app's permissions, element tree, and state.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/policy-architecture.md">Policy system</a></p>
+  </div>
+</section>
+
+<!-- Section 3: Why a document? -->
+<section id="why">
+  <div class="container">
+    <h2>3. Why a document format?</h2>
+    <p class="section-claim">Terminal apps lack what browsers take for granted: view source, declared permissions, a sandbox.</p>
+
+    <p>
+      You can build terminal UIs with libraries like blessed, Ink, or Textual.
+      You can build dashboards as local web apps.
+      Both work. But neither gives the person <em>running</em> the app a way to know what it does
+      before it runs. There's no permission manifest, no sandbox, no structured inspection.
+    </p>
+
+    <p>
+      A <code>.melker</code> file is a document, not a program. You can read its policy, scan its markup,
+      and understand its scope. The engine enforces the declared permissions at runtime. The file
+      is also the distribution unit &mdash; share a URL, and the recipient runs it directly.
+      No install, no dependency tree, no build.
+    </p>
+
+    <div class="callout">
+      <strong>The trade-off:</strong> Melker apps run inside the engine. You get sandboxing, built-in
+      components, and zero-install distribution. You give up direct system access and the full
+      flexibility of a general-purpose runtime. If you need unrestricted filesystem access
+      or your own TCP server, Melker is not the right tool.
+    </div>
+
+    <p class="explanation">Read more: <a href="/reference/MANIFESTO.md">Manifesto</a></p>
+  </div>
+</section>
+
+<!-- Section 4: Components -->
+<section id="rich">
+  <div class="container">
+    <h2>4. Built-in components</h2>
+    <p class="section-claim">No dependencies to install. A sortable table and a zoomable map are each one element.</p>
+
+    <div class="hero-media" style="display: flex; gap: 8px;">
+      <img src="images/wt-table.jpg" alt="Data table showing earthquake list" style="flex: 3;">
+      <img src="images/wt-map.jpg" alt="Tile map with earthquake markers" style="flex: 1;">
+    </div>
+
+    <p>
+      With a TUI library, you'd install a table package, a map package, wire up
+      keyboard handling, and hope the pieces work together.
+      In Melker, they're built in. A data table with sorting, selection, scrolling,
+      tooltips, and keyboard navigation is one element:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Data table and tile map</div>
+      <pre><span class="tag">&lt;data-table</span> <span class="attr">id</span>=<span class="str">"quakeTable"</span> <span class="attr">selectable</span>=<span class="str">"single"</span>
+    <span class="attr">sortColumn</span>=<span class="str">"0"</span> <span class="attr">sortDirection</span>=<span class="str">"desc"</span> <span class="attr">tooltip</span>=<span class="str">"auto"</span>
+    <span class="attr">bind:selection</span>=<span class="str">"selectedQuake"</span>
+    <span class="attr">onActivate</span>=<span class="str">"$app.showDetails(event)"</span><span class="tag">&gt;</span>
+    { "columns": [
+        { "header": "Mag", "width": 6, "align": "right" },
+        { "header": "Location", "width": "fill" },
+        { "header": "Depth km", "width": 10, "align": "right" },
+        { "header": "Time (UTC)", "width": 20 }
+    ]}
+<span class="tag">&lt;/data-table&gt;</span>
+
+<span class="tag">&lt;tile-map</span> <span class="attr">id</span>=<span class="str">"worldMap"</span> <span class="attr">lat</span>=<span class="str">"20"</span> <span class="attr">lon</span>=<span class="str">"0"</span> <span class="attr">zoom</span>=<span class="str">"1"</span>
+    <span class="attr">provider</span>=<span class="str">"voyager-nolabels"</span> <span class="attr">interactive</span>=<span class="str">"true"</span>
+    <span class="attr">onOverlay</span>=<span class="str">"$app.drawOverlay(event)"</span>
+    <span class="attr">onClick</span>=<span class="str">"$app.mapClick(event)"</span><span class="tag">/&gt;</span></pre>
+    </div>
+
+    <p class="explanation">
+      The table handles sorting, selection, scrolling, and keyboard navigation.
+      The map handles tile fetching, caching, Mercator projection, drag, and zoom.
+      Over 30 components are built in: inputs, dialogs, charts, file browser, split panes, and more.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/data-table.md">Data table</a> · <a href="/reference/agent_docs/tile-map-architecture.md">Tile map</a> · <a href="/reference/agent_docs/component-reference.md">All components</a></p>
+  </div>
+</section>
+
+<!-- Section 5: Data and script -->
+<section id="data">
+  <div class="container">
+    <h2>5. Data and script</h2>
+    <p class="section-claim">The script block is TypeScript. Fetch an API, populate the UI.</p>
+
+    <p>
+      The <code>&lt;script&gt;</code> block runs in a sandboxed context with access to
+      <code>$melker</code> (the engine API) and standard web APIs like <code>fetch</code>.
+      Here the dashboard fetches USGS earthquake data and populates the table:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Fetching data and populating the table</div>
+      <pre><span class="kw">const</span> res = <span class="kw">await</span> fetch(FEEDS[currentFeed]);
+<span class="kw">const</span> json = <span class="kw">await</span> res.json();
+
+<span class="kw">const</span> table = $melker.getElementById(<span class="str">'quakeTable'</span>);
+table.setValue(json.features.map(f => [
+  f.properties.mag.toFixed(<span class="num">1</span>),
+  f.properties.place,
+  f.geometry.coordinates[<span class="num">2</span>].toFixed(<span class="num">1</span>),
+  fmtTime(f.properties.time),
+  f.id,           <span class="cmt">// hidden column for selection binding</span>
+]));</pre>
+    </div>
+
+    <p class="explanation">
+      <code>setValue</code> passes a 2D array of rows to the table. A dropdown lets users switch between
+      eight USGS feeds (past hour, past day, past week, etc.) and the data auto-refreshes every 60 seconds.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/script_usage.md">Script context ($melker, $app)</a></p>
+  </div>
+</section>
+
+<!-- Section 6: CSS layout -->
+<section id="css">
+  <div class="container">
+    <h2>6. CSS layout</h2>
+    <p class="section-claim">Layout uses the CSS you already know: flexbox, borders, padding.</p>
+
+    <p>
+      The dashboard uses flexbox and split panes. No new layout language to learn &mdash;
+      if you know CSS, you know how to lay out a Melker app:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Layout structure</div>
+      <pre><span class="cmt">&lt;!-- Outer: table+sparkline (3/4) | map+summary (1/4) --&gt;</span>
+<span class="tag">&lt;split-pane</span> <span class="attr">sizes</span>=<span class="str">"3,1"</span><span class="tag">&gt;</span>
+
+  <span class="cmt">&lt;!-- Left: table fills space, sparkline fixed at bottom --&gt;</span>
+  <span class="tag">&lt;container</span> <span class="attr">style</span>=<span class="str">"display: flex; flex-direction: column"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;data-table</span> <span class="attr">style</span>=<span class="str">"flex: 1"</span> <span class="cmt">...</span><span class="tag">/&gt;</span>
+    <span class="tag">&lt;data-bars</span> <span class="attr">style</span>=<span class="str">"height: 3; flex-shrink: 0"</span> <span class="cmt">...</span><span class="tag">/&gt;</span>
+  <span class="tag">&lt;/container&gt;</span>
+
+  <span class="cmt">&lt;!-- Right: map (1/4) | summary+charts (3/4) --&gt;</span>
+  <span class="tag">&lt;split-pane</span> <span class="attr">style</span>=<span class="str">"direction: vertical"</span> <span class="attr">sizes</span>=<span class="str">"1,3"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;tile-map</span> <span class="cmt">...</span><span class="tag">/&gt;</span>
+    <span class="tag">&lt;container&gt;</span> <span class="cmt">&lt;!-- stats, mag dist, depth dist --&gt;</span> <span class="tag">&lt;/container&gt;</span>
+  <span class="tag">&lt;/split-pane&gt;</span>
+
+<span class="tag">&lt;/split-pane&gt;</span></pre>
+    </div>
+
+    <p class="explanation">
+      Dimensions are in terminal cell units (not pixels).
+      Split panes support proportional sizing and interactive resizing by dragging the divider.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/split-pane-architecture.md">Split pane</a></p>
+  </div>
+</section>
+
+<!-- Section 7: Wiring it up -->
+<section id="wiring">
+  <div class="container">
+    <h2>7. Wiring it together</h2>
+    <p class="section-claim">State binding, keyboard shortcuts, toasts, and dialogs &mdash; with minimal glue code.</p>
+
+    <p>
+      The table and map need to stay in sync: select an earthquake in either one, and the other follows.
+      A reactive state object handles this &mdash; one line to create it,
+      one attribute to bind the table's selection to it:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Shared state and two-way binding</div>
+      <pre><span class="cmt">// Create reactive state</span>
+<span class="kw">const</span> state = $melker.createState({ selectedQuake: [] <span class="kw">as</span> string[] });
+
+<span class="cmt">// Table binds to it (in markup: bind:selection="selectedQuake")</span>
+<span class="cmt">// Map click updates it:</span>
+<span class="kw">export function</span> mapClick(event) {
+  <span class="kw">const</span> nearest = findNearestQuake(event.lat, event.lon);
+  <span class="kw">if</span> (nearest) state.selectedQuake = [nearest.id];
+}</pre>
+    </div>
+
+    <p>
+      Keyboard commands, toast notifications, and detail dialogs are similarly concise.
+      Each is declared or called in one or two lines:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Commands, toasts, and dialogs</div>
+      <pre><span class="cmt">&lt;!-- Markup: keyboard shortcuts --&gt;</span>
+<span class="tag">&lt;command</span> <span class="attr">key</span>=<span class="str">"r"</span> <span class="attr">label</span>=<span class="str">"Refresh Data"</span> <span class="attr">global</span> <span class="attr">onExecute</span>=<span class="str">"$app.refresh()"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;command</span> <span class="attr">key</span>=<span class="str">"t"</span> <span class="attr">label</span>=<span class="str">"Toggle Plates"</span> <span class="attr">global</span> <span class="attr">onExecute</span>=<span class="str">"$app.togglePlates()"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">// Script: toast on new earthquakes</span>
+$melker.toast.show(newCount + <span class="str">' new earthquake(s) detected'</span>,
+  { type: <span class="str">'warning'</span>, duration: <span class="num">5000</span> });
+
+<span class="cmt">// Script: detail dialog on Enter</span>
+$melker.alert(<span class="str">'M'</span> + q.mag.toFixed(<span class="num">1</span>) + <span class="str">' — '</span> + q.place + <span class="str">'\n'</span> + details);</pre>
+    </div>
+
+    <p class="explanation">
+      The command palette (<code>Ctrl+K</code>) lists all registered shortcuts.
+      Tooltips appear on hover over both the map and the sparkline bars.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/state-binding-architecture.md">State binding</a> · <a href="/reference/agent_docs/command-element-architecture.md">Commands</a> · <a href="/reference/agent_docs/toast-architecture.md">Toast</a></p>
+  </div>
+</section>
+
+<!-- Section 8: Map -->
+<section id="map">
+  <div class="container">
+    <h2>8. Map customization</h2>
+    <p class="section-claim">Color key filtering, canvas overlays, and SVG geo-data &mdash; all configured through CSS and callbacks.</p>
+
+    <div class="hero-media">
+      <img src="images/wt-map.jpg" alt="Color-keyed map with earthquake markers and tectonic plates">
+    </div>
+
+    <p>
+      The dashboard applies a color key filter to separate water from land, making markers easier to read.
+      The filter is declared in CSS &mdash; no code required:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Map styling with color key filter</div>
+      <pre><span class="tag">&lt;style&gt;</span>
+  tile-map {
+    tile-key-color: <span class="str">#abd0e0</span>;         <span class="cmt">/* Water color on Voyager maps */</span>
+    tile-key-threshold: <span class="num">0.04</span>;
+    tile-key-match-color: <span class="str">#2a4a6b</span>;   <span class="cmt">/* Water becomes muted blue */</span>
+    tile-key-other-color: <span class="str">#c8c8c8</span>;   <span class="cmt">/* Land becomes light gray */</span>
+    tile-blur: <span class="num">1</span>;                    <span class="cmt">/* Smooth rendering artifacts */</span>
+  }
+<span class="tag">&lt;/style&gt;</span></pre>
+    </div>
+
+    <p>
+      The <code>onOverlay</code> callback draws earthquake markers as colored dots, with a white
+      ring around the selected one. Tectonic plate boundaries are loaded as GeoJSON, converted
+      to SVG paths, and projected onto the map automatically:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Canvas overlay</div>
+      <pre><span class="kw">export function</span> drawOverlay(event) {
+  <span class="kw">const</span> { canvas, geo } = event;
+  <span class="kw">for</span> (<span class="kw">const</span> q <span class="kw">of</span> quakes) {
+    <span class="kw">const</span> pos = geo.latLonToPixel(q.lat, q.lon);
+    <span class="kw">if</span> (pos) canvas.fillCircleCorrectedColor(pos.x, pos.y, <span class="num">1</span>, magColor(q.mag));
+  }
+}
+
+<span class="cmt">// Tectonic plates as SVG overlay (cached to disk after first fetch)</span>
+map.props.svgOverlay = platePathsString;</pre>
+    </div>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/tile-map-architecture.md">Tile map</a> · <a href="/reference/agent_docs/svg-overlay-architecture.md">SVG overlays</a></p>
+  </div>
+</section>
+
+<!-- Section 9: Charts -->
+<section id="charts">
+  <div class="container">
+    <h2>9. Charts and stats</h2>
+    <p class="section-claim">Sparklines, distribution charts, and summary stats. Declare a chart, feed it data.</p>
+
+    <div class="hero-media" style="margin-bottom: 4px;">
+      <img src="images/wt-sparkline.jpg" alt="Magnitude sparkline">
+    </div>
+    <p class="explanation" style="margin-bottom: 16px; font-size: 0.85rem;">Magnitude sparkline below the table.</p>
+
+    <div class="hero-media" style="max-width: 320px;">
+      <img src="images/wt-charts.jpg" alt="Distribution charts and summary stats">
+    </div>
+    <p class="explanation" style="font-size: 0.85rem;">Summary stats and magnitude/depth distribution charts.</p>
+
+    <p>
+      Each chart is a <code>&lt;data-bars&gt;</code> element. Declare it in markup, then pass it data:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Sparkline declaration and data</div>
+      <pre><span class="cmt">&lt;!-- Markup --&gt;</span>
+<span class="tag">&lt;data-bars</span> <span class="attr">id</span>=<span class="str">"magSparkline"</span> <span class="attr">min</span>=<span class="str">"0"</span>
+    <span class="attr">showValues</span>=<span class="str">"false"</span> <span class="attr">showLabels</span>=<span class="str">"false"</span>
+    <span class="attr">onTooltip</span>=<span class="str">"$app.sparklineTooltip(event)"</span>
+    <span class="attr">style</span>=<span class="str">"orientation: vertical; height: 3; gap: 0"</span><span class="tag">/&gt;</span>
+
+<span class="cmt">// Script: feed it the 40 most recent earthquakes</span>
+sparkline.setValue(quakes.slice(<span class="num">0</span>, <span class="num">40</span>).reverse().map(q => [q.mag]));</pre>
+    </div>
+
+    <p class="explanation">
+      The same pattern applies to the distribution charts and summary stats: declare the element,
+      pass it data. Everything updates when the feed refreshes.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/data-bars.md">Data bars</a></p>
+  </div>
+</section>
+
+<!-- Section 10: Try it -->
+<section id="run">
+  <div class="container">
+    <h2>10. One file, one command</h2>
+    <p class="section-claim">Share the file or the URL. No install beyond the runtime.</p>
+
+    <p>
+      Everything on this page &mdash; the sandboxed permission policy, color-keyed map, sortable
+      table, charts, state binding, keyboard shortcuts, toast notifications, and tectonic plate
+      overlays &mdash; lives in one file. No dependencies, no build step.
+    </p>
+
+    <p>
+      <a href="/examples/showcase/earthquake-dashboard.melker">View the full source</a>
+      &nbsp;&middot;&nbsp;
+      <a href="/tutorial.html">Follow the tutorial</a>
+      &nbsp;&middot;&nbsp;
+      <a href="/">Back to home</a>
+    </p>
+
+    <h3>Installation</h3>
+
+    <div class="code-block">
+      <div class="code-title">Deno (recommended)</div>
+      <pre>deno install -g -A jsr:@melker/melker</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-title">Node.js (experimental)</div>
+      <pre>npm install -g @melker/melker</pre>
+    </div>
+
+    <p>Then run any .melker document from a file or URL:</p>
+
+    <div class="code-block">
+      <pre><span class="cmt"># Deno</span>
+melker https://melker.sh/examples/showcase/earthquake-dashboard.melker
+
+<span class="cmt"># Node.js (binary is melker-node)</span>
+melker-node https://melker.sh/examples/showcase/earthquake-dashboard.melker</pre>
+    </div>
+
+    <p>See <a href="/reference/README.md">README</a> for all installation methods.</p>
+  </div>
+</section>
+
+<!-- Section 11: AI Assistant -->
+<section id="ai">
+  <div class="container">
+    <h2>11. AI Assistant</h2>
+
+    <p class="section-claim">Optional AI assistant, fully opt-in. Nothing is sent anywhere unless you configure it.</p>
+
+    <p>
+      Press <code>F8</code> in any running app to open the assistant.
+      It requires an API key you provide and only connects when you
+      explicitly invoke it. It works with any LLM provider
+      (Anthropic, OpenAI, Ollama, etc.) and supports voice input.
+    </p>
+
+    <p>
+      This is possible because Melker apps are inspectable by design. The same structured
+      element tree and declared actions that let you read a <code>.melker</code> file before running it
+      also let an AI understand and operate the running UI. The assistant receives the visible
+      screen content, the element tree with IDs and props, and available keyboard actions.
+    </p>
+
+    <p><a href="/ai.html">Learn more about the AI assistant</a></p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <a href="/">Melker Engine</a> - Run text with meaning
+  </div>
+</footer>
+
+<script>
+(function() {
+  var links = document.querySelectorAll('.sidebar a');
+  var sections = [];
+  links.forEach(function(a) {
+    var id = a.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if (el) sections.push({ el: el, link: a });
+  });
+  if (!sections.length) return;
+
+  function update() {
+    var scrollY = window.scrollY + 100;
+    var active = sections[0];
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].el.offsetTop <= scrollY) active = sections[i];
+    }
+    links.forEach(function(a) { a.classList.remove('active'); });
+    active.link.classList.add('active');
+  }
+
+  window.addEventListener('scroll', update, { passive: true });
+  update();
+})();
+</script>
+
+<script>
+document.addEventListener('click', function(e) {
+  var a = e.target.closest('a[href*="/reference/"]');
+  if (!a) return;
+  var href = a.getAttribute('href');
+  var match = href.match(/\/reference\/(.+?)\.md(#.*)?$/);
+  if (!match) return;
+  e.preventDefault();
+  window.location.href = '/reference/?doc=' + match[1] + (match[2] || '');
+});
+</script>
+
+</body>
+</html>

@@ -13,6 +13,8 @@ import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
 import { MAP_NET_HOSTS } from '../policy/tile-map-hosts.ts';
 import { type PathCommand, drawPath, drawPathColor, fillPathColor } from './canvas-path.ts';
 import { parseSvgOverlay, type ParsedSvgElement } from '../svg-overlay.ts';
+import { srgbToOklab, oklabToSrgb } from '../color/oklab.ts';
+import { TRANSPARENT } from './color-utils.ts';
 
 const logger = getLogger('TileMapElement');
 
@@ -193,6 +195,9 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
   private _pendingFetches = new Set<string>();
   private _fetchAbortControllers = new Map<string, AbortController>();
   private _loadingCount = 0;
+
+  // Blur temp buffer (reused across frames)
+  private _blurTempBuffer: Uint32Array | null = null;
 
   // Drag state
   private _isDragging = false;
@@ -497,6 +502,190 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     }
   }
 
+  // ===== Tile blur (box blur) =====
+
+  private _applyTileBlur(bufferWidth: number, bufferHeight: number): void {
+    const radius = Number(this.props.style?.tileBlur ?? 0);
+    if (radius <= 0) return;
+
+    const buf = this._colorBuffer;
+    const len = bufferWidth * bufferHeight;
+
+    // Allocate or reallocate temp buffer
+    if (!this._blurTempBuffer || this._blurTempBuffer.length < len) {
+      this._blurTempBuffer = new Uint32Array(len);
+    }
+    const tmp = this._blurTempBuffer;
+
+    for (let y = 0; y < bufferHeight; y++) {
+      for (let x = 0; x < bufferWidth; x++) {
+        const idx = y * bufferWidth + x;
+        if (buf[idx] === TRANSPARENT) { tmp[idx] = TRANSPARENT; continue; }
+
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        const y0 = Math.max(0, y - radius);
+        const y1 = Math.min(bufferHeight - 1, y + radius);
+        const x0 = Math.max(0, x - radius);
+        const x1 = Math.min(bufferWidth - 1, x + radius);
+
+        for (let ny = y0; ny <= y1; ny++) {
+          for (let nx = x0; nx <= x1; nx++) {
+            const px = buf[ny * bufferWidth + nx];
+            if (px === TRANSPARENT) continue;
+            rSum += (px >> 24) & 0xFF;
+            gSum += (px >> 16) & 0xFF;
+            bSum += (px >> 8) & 0xFF;
+            count++;
+          }
+        }
+
+        if (count === 0) { tmp[idx] = TRANSPARENT; continue; }
+        const alpha = buf[idx] & 0xFF;
+        tmp[idx] = (((rSum / count) & 0xFF) << 24) |
+                   (((gSum / count) & 0xFF) << 16) |
+                   (((bSum / count) & 0xFF) << 8) | alpha;
+      }
+    }
+
+    // Copy result back
+    buf.set(tmp.subarray(0, len));
+  }
+
+  // ===== Tile filter (Oklab perceptual adjustments / color key) =====
+
+  private _applyTileFilter(bufferWidth: number, bufferHeight: number): void {
+    const style = this.props.style;
+    const keyColor = style?.tileKeyColor;
+
+    if (keyColor !== undefined && keyColor !== null) {
+      // Color key mode: classify pixels by Oklab chroma distance from reference
+      this._applyColorKey(bufferWidth, bufferHeight, keyColor as number);
+      return;
+    }
+
+    const contrast = Number(style?.tileContrast ?? 1);
+    const saturation = Number(style?.tileSaturation ?? 1);
+    const brightness = Number(style?.tileBrightness ?? 0);
+    const hue = Number(style?.tileHue ?? 0);
+
+    // Short-circuit if all defaults
+    if (contrast === 1 && saturation === 1 && brightness === 0 && hue === 0) return;
+
+    const buf = this._colorBuffer;
+    const len = bufferWidth * bufferHeight;
+
+    // Precompute hue rotation
+    const needsHue = hue !== 0;
+    const hueRad = hue * (Math.PI / 180);
+    const cosH = Math.cos(hueRad);
+    const sinH = Math.sin(hueRad);
+
+    for (let i = 0; i < len; i++) {
+      const px = buf[i];
+      if (px === TRANSPARENT) continue;
+
+      // Unpack RGBA (R in high byte)
+      const r = (px >> 24) & 0xFF;
+      const g = (px >> 16) & 0xFF;
+      const b = (px >> 8) & 0xFF;
+      const alpha = px & 0xFF;
+
+      // sRGB → Oklab
+      const [L0, a0, b0] = srgbToOklab(r, g, b);
+
+      // Brightness (additive) then contrast (multiply around midpoint)
+      let L = L0 + brightness;
+      L = 0.5 + (L - 0.5) * contrast;
+      if (L < 0) L = 0; else if (L > 1) L = 1;
+
+      let a1 = a0;
+      let b1 = b0;
+
+      // Saturation (chroma scaling)
+      if (saturation !== 1) {
+        a1 *= saturation;
+        b1 *= saturation;
+      }
+
+      // Hue rotation
+      if (needsHue) {
+        const a2 = a1 * cosH - b1 * sinH;
+        const b2 = a1 * sinH + b1 * cosH;
+        a1 = a2;
+        b1 = b2;
+      }
+
+      // Oklab → sRGB
+      const [rr, gg, bb] = oklabToSrgb(L, a1, b1);
+
+      // Repack
+      buf[i] = ((rr & 0xFF) << 24) | ((gg & 0xFF) << 16) | ((bb & 0xFF) << 8) | alpha;
+    }
+  }
+
+  private _applyColorKey(bufferWidth: number, bufferHeight: number, keyColorPacked: number): void {
+    const style = this.props.style;
+    const threshold = Number(style?.tileKeyThreshold ?? 0.05);
+    const matchL = Number(style?.tileKeyMatch ?? 0);
+    const otherL = Number(style?.tileKeyOther ?? 1);
+    const matchColorPacked = style?.tileKeyMatchColor;
+    const otherColorPacked = style?.tileKeyOtherColor;
+
+    // Unpack key color and convert to Oklab
+    const kr = (keyColorPacked >> 24) & 0xFF;
+    const kg = (keyColorPacked >> 16) & 0xFF;
+    const kb = (keyColorPacked >> 8) & 0xFF;
+    const [, ak, bk] = srgbToOklab(kr, kg, kb);
+
+    // Precompute match/other output colors
+    let matchR: number, matchG: number, matchB: number;
+    let otherR: number, otherG: number, otherB: number;
+
+    if (matchColorPacked !== undefined && matchColorPacked !== null) {
+      matchR = (matchColorPacked >> 24) & 0xFF;
+      matchG = (matchColorPacked >> 16) & 0xFF;
+      matchB = (matchColorPacked >> 8) & 0xFF;
+    } else {
+      [matchR, matchG, matchB] = oklabToSrgb(matchL, 0, 0);
+    }
+
+    if (otherColorPacked !== undefined && otherColorPacked !== null) {
+      otherR = (otherColorPacked >> 24) & 0xFF;
+      otherG = (otherColorPacked >> 16) & 0xFF;
+      otherB = (otherColorPacked >> 8) & 0xFF;
+    } else {
+      [otherR, otherG, otherB] = oklabToSrgb(otherL, 0, 0);
+    }
+
+    const thresholdSq = threshold * threshold;
+    const buf = this._colorBuffer;
+    const len = bufferWidth * bufferHeight;
+
+    for (let i = 0; i < len; i++) {
+      const px = buf[i];
+      if (px === TRANSPARENT) continue;
+
+      const r = (px >> 24) & 0xFF;
+      const g = (px >> 16) & 0xFF;
+      const b = (px >> 8) & 0xFF;
+      const alpha = px & 0xFF;
+
+      const [, a, ob] = srgbToOklab(r, g, b);
+
+      // Chroma distance (ignore L)
+      const da = a - ak;
+      const db = ob - bk;
+      const distSq = da * da + db * db;
+
+      const isMatch = distSq < thresholdSq;
+      const rr = isMatch ? matchR : otherR;
+      const gg = isMatch ? matchG : otherG;
+      const bb = isMatch ? matchB : otherB;
+
+      buf[i] = ((rr & 0xFF) << 24) | ((gg & 0xFF) << 16) | ((bb & 0xFF) << 8) | alpha;
+    }
+  }
+
   // ===== Paint handler =====
 
   private _onPaint(event: { canvas: CanvasElement; bounds: Bounds }): void {
@@ -564,6 +753,10 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
         }
       }
     }
+
+    // Apply blur then filter after tiles, before overlays
+    this._applyTileBlur(bufferWidth, bufferHeight);
+    this._applyTileFilter(bufferWidth, bufferHeight);
 
     // Draw svgOverlay overlay (after tiles, before onOverlay)
     if (this.props.svgOverlay) {
@@ -712,8 +905,8 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
         const bufferHeight = this.getBufferHeight();
         const pixelAspect = this.getPixelAspectRatio?.() || (2 / 3);
 
-        const mouseBufferX = x * this._pixelsPerCellX;
-        const mouseBufferY = y * this._pixelsPerCellY;
+        const mouseBufferX = (x - this._boundsX) * this._pixelsPerCellX;
+        const mouseBufferY = (y - this._boundsY) * this._pixelsPerCellY;
         const centerBufferX = bufferWidth / 2;
         const centerBufferY = bufferHeight / 2;
         const offsetX = mouseBufferX - centerBufferX;
@@ -1200,6 +1393,19 @@ export const tileMapSchema: ComponentSchema = {
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. Runs per-pixel after tiles + overlay.' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30). Use 0 for static filter.' },
     shaderRunTime: { type: 'number', description: 'Stop shader after this many ms, final frame becomes static image' },
+  },
+  styles: {
+    tileContrast: { type: 'number', description: 'Tile contrast 0-2, multiplier on Oklab L around midpoint (default: 1)' },
+    tileSaturation: { type: 'number', description: 'Tile saturation 0-2, multiplier on Oklab chroma (default: 1)' },
+    tileBrightness: { type: 'number', description: 'Tile brightness -1 to 1, additive on Oklab L (default: 0)' },
+    tileHue: { type: 'number', description: 'Tile hue rotation -180 to 180 degrees (default: 0)' },
+    tileBlur: { type: 'number', description: 'Box blur radius in pixels (0=off, 1=3x3, 2=5x5)' },
+    tileKeyColor: { type: 'string', description: 'Reference color for keying (e.g. #abd0e0 for water)' },
+    tileKeyThreshold: { type: 'number', description: 'Oklab chroma distance cutoff (default: 0.05)' },
+    tileKeyMatch: { type: 'number', description: 'L value for matching pixels (default: 0 = black)' },
+    tileKeyMatchColor: { type: 'string', description: 'Color for matching pixels (overrides tile-key-match)' },
+    tileKeyOther: { type: 'number', description: 'L value for non-matching pixels (default: 1 = white)' },
+    tileKeyOtherColor: { type: 'string', description: 'Color for non-matching pixels (overrides tile-key-other)' },
   },
 };
 

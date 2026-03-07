@@ -81,7 +81,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   // Backing color buffer (scale * width * 2) x (scale * height * 3) for sextant mode
   // Or (width * cellWidth) x (height * cellHeight) for sixel mode
   // TRANSPARENT (0) means pixel off, any other value means pixel on with that color
-  private _colorBuffer: Uint32Array;  // RGBA color per pixel (packed)
+  protected _colorBuffer: Uint32Array;  // RGBA color per pixel (packed)
   private _previousColorBuffer: Uint32Array;  // For dirty tracking
   // Image background layer buffer (separate from drawing layer)
   private _imageColorBuffer: Uint32Array;

@@ -159,6 +159,19 @@ export interface Style extends Record<string, any> {
   // Image/canvas style properties
   objectFit?: 'contain' | 'fill' | 'cover';
 
+  // Tile-map filter properties (Oklab perceptual color space)
+  tileContrast?: number;     // 0-2, multiplier on L around midpoint (default: 1)
+  tileSaturation?: number;   // 0-2, multiplier on chroma (default: 1)
+  tileBrightness?: number;   // -1 to 1, additive on L (default: 0)
+  tileHue?: number;          // -180 to 180 degrees, rotation of a,b (default: 0)
+  tileBlur?: number;         // Box blur radius in pixels (0=off, 1=3x3, 2=5x5)
+  tileKeyColor?: number;     // Reference color for keying (packed RGBA)
+  tileKeyThreshold?: number; // Oklab chroma distance cutoff (default: 0.05)
+  tileKeyMatch?: number;     // L value for matching pixels (default: 0 = black)
+  tileKeyMatchColor?: number; // Color for matching pixels (packed RGBA, overrides tileKeyMatch)
+  tileKeyOther?: number;     // L value for non-matching pixels (default: 1 = white)
+  tileKeyOtherColor?: number; // Color for non-matching pixels (packed RGBA, overrides tileKeyOther)
+
   // Split-pane style properties
   direction?: 'horizontal' | 'vertical';
   minPaneSize?: number;

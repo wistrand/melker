@@ -11,16 +11,12 @@ import { registerComponentSchema, type ComponentSchema } from '../lint.ts';
 import { getLogger } from '../logging.ts';
 import { parseDimension, isResponsiveDimension } from '../utils/dimensions.ts';
 import { MAP_NET_HOSTS } from '../policy/tile-map-hosts.ts';
-import { parseSVGPath, type PathCommand, drawPath, drawPathColor, fillPathColor } from './canvas-path.ts';
+import { type PathCommand, drawPath, drawPathColor, fillPathColor } from './canvas-path.ts';
+import { parseSvgOverlay, type ParsedSvgElement } from '../svg-overlay.ts';
 
 const logger = getLogger('TileMapElement');
 
 const TILE_SIZE = 256; // Standard web map tile size in pixels
-
-/** Unescape basic HTML entities in SVG text content. */
-function unescapeHtml(s: string): string {
-  return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-}
 
 /** Coerce a prop value to number (handles strings from template attributes, e.g. negative numbers). */
 function toNum(v: unknown, fallback: number): number {
@@ -131,27 +127,6 @@ export interface TileMapOverlayEvent {
   geo: TileMapGeoContext;
 }
 
-// ===== Parsed SVG Path =====
-
-interface ParsedSvgPath {
-  kind: 'path';
-  commands: PathCommand[];
-  stroke?: string;
-  fill?: string;
-}
-
-interface ParsedSvgText {
-  kind: 'text';
-  lat: number;
-  lon: number;
-  text: string;
-  fill?: string;
-  bg?: string;
-  align?: 'left' | 'center' | 'right';
-}
-
-type ParsedSvgElement = ParsedSvgPath | ParsedSvgText;
-
 // ===== Props =====
 
 export interface TileMapProps extends Omit<CanvasProps, 'width' | 'height' | 'onPaint'> {
@@ -235,9 +210,9 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
   private _boundsX = 0;
   private _boundsY = 0;
 
-  // SVG paths overlay cache
-  private _lastSvgOverlayStr: string | undefined;
-  private _parsedSvgOverlay: ParsedSvgElement[] = [];
+  // SVG paths overlay cache (geo-specific, separate from parent canvas overlay)
+  private _lastGeoSvgOverlayStr: string | undefined;
+  private _parsedGeoSvgOverlay: ParsedSvgElement[] = [];
 
   constructor(props: TileMapProps, children: Element[] = []) {
     const origWidth = props.width ?? '100%';
@@ -296,6 +271,8 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
   // Skip buffer copy - we rewrite every frame
   protected override _copyPreviousToCurrent(): void {}
+  // Tile-map draws its own geo-projected overlay in _onPaint; skip the base pixel-coord pass.
+  protected override _drawSvgOverlayPass(): void {}
 
   // Always interactive (handles drag + wheel internally)
   override isInteractive(): boolean {
@@ -523,7 +500,7 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
   // ===== Paint handler =====
 
   private _onPaint(event: { canvas: CanvasElement; bounds: Bounds }): void {
-    const canvas = event.canvas as TileMapElement;
+    const canvas = event.canvas as unknown as TileMapElement;
     const bufferWidth = canvas.getBufferWidth();
     const bufferHeight = canvas.getBufferHeight();
 
@@ -843,57 +820,9 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
   // ===== SVG Paths =====
 
+  // Shared parser returns x/y; tile-map interprets x as lon, y as lat.
   private _parseSvgOverlay(str: string): ParsedSvgElement[] {
-    const elements: ParsedSvgElement[] = [];
-    const attrRegex = /(\w[\w-]*)\s*=\s*"([^"]*)"/g;
-
-    // Parse <path> elements
-    const pathRegex = /<path\s+([^>]*?)\/?>/gi;
-    let match;
-    while ((match = pathRegex.exec(str)) !== null) {
-      const attrs: Record<string, string> = {};
-      let attrMatch;
-      attrRegex.lastIndex = 0;
-      while ((attrMatch = attrRegex.exec(match[1])) !== null) {
-        attrs[attrMatch[1]] = attrMatch[2];
-      }
-      if (attrs.d) {
-        elements.push({
-          kind: 'path',
-          commands: parseSVGPath(attrs.d),
-          stroke: attrs.stroke,
-          fill: attrs.fill,
-        });
-      }
-    }
-
-    // Parse <text> elements: <text lat="51.5" lon="-0.1" fill="#fff">Label</text>
-    const textRegex = /<text\s+([^>]*?)>([\s\S]*?)<\/text>/gi;
-    while ((match = textRegex.exec(str)) !== null) {
-      const attrs: Record<string, string> = {};
-      let attrMatch;
-      attrRegex.lastIndex = 0;
-      while ((attrMatch = attrRegex.exec(match[1])) !== null) {
-        attrs[attrMatch[1]] = attrMatch[2];
-      }
-      const lat = parseFloat(attrs.lat ?? attrs.y ?? '');
-      const lon = parseFloat(attrs.lon ?? attrs.x ?? '');
-      if (!isNaN(lat) && !isNaN(lon)) {
-        const align = attrs['text-anchor'] === 'middle' ? 'center'
-          : attrs['text-anchor'] === 'end' ? 'right'
-          : (attrs.align as 'left' | 'center' | 'right') || 'left';
-        elements.push({
-          kind: 'text',
-          lat, lon,
-          text: unescapeHtml(match[2].trim()),
-          fill: attrs.fill,
-          bg: attrs.bg || attrs.background,
-          align,
-        });
-      }
-    }
-
-    return elements;
+    return parseSvgOverlay(str);
   }
 
   private _transformToPixel(
@@ -1001,16 +930,17 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     halfW: number, halfH: number,
   ): void {
     // Re-parse only when the string changes
-    if (this.props.svgOverlay !== this._lastSvgOverlayStr) {
-      this._lastSvgOverlayStr = this.props.svgOverlay;
-      this._parsedSvgOverlay = this.props.svgOverlay
+    if (this.props.svgOverlay !== this._lastGeoSvgOverlayStr) {
+      this._lastGeoSvgOverlayStr = this.props.svgOverlay;
+      this._parsedGeoSvgOverlay = this.props.svgOverlay
         ? this._parseSvgOverlay(this.props.svgOverlay)
         : [];
     }
 
-    for (const el of this._parsedSvgOverlay) {
+    for (const el of this._parsedGeoSvgOverlay) {
       if (el.kind === 'text') {
-        const p = TileMapElement._geoToPixel(el.lat, el.lon, centerMercX, centerMercY, mercatorPerPixelX, mercatorPerPixelY, halfW, halfH);
+        // x=lon, y=lat in SVG coordinate convention
+        const p = TileMapElement._geoToPixel(el.y, el.x, centerMercX, centerMercY, mercatorPerPixelX, mercatorPerPixelY, halfW, halfH);
         const color = el.fill || '#ffffff';
         canvas.drawTextColor(p.px, p.py, el.text, color, {
           align: el.align,

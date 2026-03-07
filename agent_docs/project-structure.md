@@ -12,7 +12,6 @@ Detailed file layout for the Melker codebase.
 | `mod.ts`             | Library entry point (exports, component registrations) |
 | `melker-launcher.ts` | Policy enforcement and subprocess spawning       |
 
-`deno.lock` is gitignored. Tests run with `--no-lock`, JSR publish ignores it, and npm uses `package.json` — the lock file added git noise without providing value for the distribution model.
 
 ## Source Directory (`src/`)
 

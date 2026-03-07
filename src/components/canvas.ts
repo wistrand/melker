@@ -33,6 +33,7 @@ import {
 } from './canvas-dither.ts';
 import { MelkerConfig } from '../config/mod.ts';
 import { getUIAnimationManager } from '../ui-animation-manager.ts';
+import { parseSvgOverlay, drawSvgOverlay, type ParsedSvgElement } from '../svg-overlay.ts';
 
 // Re-export for external use
 export { type LoadedImage } from './canvas-image.ts';
@@ -70,6 +71,7 @@ export interface CanvasProps extends BaseProps {
   isolineSource?: IsolineSource;     // Color channel to use: luma, red, green, blue, alpha (default: luma)
   isolineFill?: IsolineFill;         // Fill mode: source (grayscale from scalar) or color (original image colors)
   isolineColor?: IsolineColor;       // Contour line color: color string, 'none', 'auto', or undefined (theme default)
+  svgOverlay?: string;               // SVG overlay string (paths and text in pixel coordinates)
 }
 
 export class CanvasElement extends Element implements Renderable, Focusable, Interactive {
@@ -120,6 +122,16 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
 
   // Pre-allocated render state (working arrays, cell styles) - see canvas-render.ts
   private _renderState: CanvasRenderState = new CanvasRenderState();
+
+  // SVG overlay cache (protected for tile-map subclass override)
+  protected _lastSvgOverlayStr: string | undefined;
+  protected _parsedSvgOverlay: ParsedSvgElement[] = [];
+  // Buffer size and gfxMode when the SVG overlay was first set (for rescaling on resize)
+  private _svgOverlayOriginW: number = 0;
+  private _svgOverlayOriginH: number = 0;
+  private _svgOverlayOriginGfxMode: GfxMode | undefined;
+  // Set when overlay content changes, cleared after first draw
+  private _svgOverlayChanged: boolean = false;
 
   // Dithering state - managed by canvas-dither.ts
   private _ditherState: DitherState = new DitherState();
@@ -1513,6 +1525,50 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
+   * Draw the SVG overlay from props.svgOverlay using pixel coordinates.
+   * Called during render after onPaint/shader. Tile-map overrides this to
+   * no-op because it handles svgOverlay in its own _onPaint with geo projection.
+   */
+  protected _drawSvgOverlayPass(): void {
+    if (this.props.svgOverlay !== undefined) {
+      if (this.props.svgOverlay !== this._lastSvgOverlayStr) {
+        this._lastSvgOverlayStr = this.props.svgOverlay;
+        this._parsedSvgOverlay = this.props.svgOverlay
+          ? parseSvgOverlay(this.props.svgOverlay)
+          : [];
+        this._svgOverlayChanged = true;
+        // Remember buffer size and gfxMode at the time the overlay was set
+        if (this._parsedSvgOverlay.length > 0) {
+          this._svgOverlayOriginW = this._bufferWidth;
+          this._svgOverlayOriginH = this._bufferHeight;
+          this._svgOverlayOriginGfxMode = getEffectiveGfxMode(this.props.gfxMode);
+        }
+      }
+      if (this._parsedSvgOverlay.length > 0) {
+        // If gfxMode changed since overlay was set, re-capture origin so
+        // scale factors use the new buffer dimensions instead of stale ones.
+        const currentGfxMode = getEffectiveGfxMode(this.props.gfxMode);
+        if (currentGfxMode !== this._svgOverlayOriginGfxMode) {
+          this._svgOverlayOriginW = this._bufferWidth;
+          this._svgOverlayOriginH = this._bufferHeight;
+          this._svgOverlayOriginGfxMode = currentGfxMode;
+        }
+        // Clear stale drawing-buffer pixels when overlay content changed and
+        // no user code (onPaint/onShader) manages the buffer.  Only on change
+        // so that other drawing-buffer content (e.g. video waveform) that is
+        // redrawn each frame is not wiped on steady-state renders.
+        if (this._svgOverlayChanged && !this.props.onPaint && !this.props.onShader) {
+          this._colorBuffer.fill(TRANSPARENT);
+        }
+        this._svgOverlayChanged = false;
+        const sx = this._svgOverlayOriginW > 0 ? this._bufferWidth / this._svgOverlayOriginW : 1;
+        const sy = this._svgOverlayOriginH > 0 ? this._bufferHeight / this._svgOverlayOriginH : 1;
+        drawSvgOverlay(this, this._parsedSvgOverlay, sx, sy, this.getPixelAspectRatio());
+      }
+    }
+  }
+
+  /**
    * Invalidate the dither cache, forcing re-computation on next render.
    */
   private _invalidateDitherCache(): void {
@@ -1781,6 +1837,11 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     if (this.props.onShader && this.props.onPaint && !this._onPaintFailed) {
       this._runShaderOverPaint();
     }
+
+    // Draw SVG overlay (paths and text in pixel coordinates, rescaled on resize).
+    // Subclasses that handle svgOverlay differently (e.g. tile-map with geo
+    // projection) override _drawSvgOverlayPass() to no-op.
+    this._drawSvgOverlayPass();
 
     // Render to the buffer (sextant/block/pattern/luma, or placeholder for sixel)
     this._renderToTerminal(bounds, style, buffer);
@@ -2212,6 +2273,7 @@ export const canvasSchema: ComponentSchema = {
     isolineSource: { type: 'string', enum: ['luma', 'red', 'green', 'blue', 'alpha'], description: 'Color channel for isoline scalar values (default: luma, env: MELKER_ISOLINE_SOURCE)' },
     isolineFill: { type: 'string', enum: ['source', 'color', 'color-mean'], description: 'Fill mode: source (grayscale from scalar), color (per-cell image colors), color-mean (one mean color per isoline band). Default: source. Env: MELKER_ISOLINE_FILL' },
     isolineColor: { type: 'string', description: 'Contour line color: color name/string, \'none\' (hide lines), \'auto\' (derive from fill mode), or empty (theme default). Env: MELKER_ISOLINE_COLOR' },
+    svgOverlay: { type: 'string', description: 'SVG overlay with <path> and <text> elements in pixel coordinates' },
   },
   styles: {
     objectFit: { type: 'string', enum: ['contain', 'fill', 'cover'], description: 'How image fits: contain (aspect ratio, default for canvas), fill (stretch), cover (crop)' },

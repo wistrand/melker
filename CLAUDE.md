@@ -65,6 +65,7 @@ New to Melker? Read in this order:
 | Tooltips                                          | [tooltip-architecture.md](agent_docs/tooltip-architecture.md)                  |
 | Mermaid diagrams in markdown                      | [mermaid-support.md](agent_docs/mermaid-support.md)                            |
 | Tile map                                          | [tile-map-architecture.md](agent_docs/tile-map-architecture.md)                |
+| SVG overlay (canvas/img/video/map)                | [svg-overlay-architecture.md](agent_docs/svg-overlay-architecture.md)          |
 
 ### For Contributors (Internals)
 

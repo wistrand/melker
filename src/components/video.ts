@@ -1513,6 +1513,8 @@ export const videoSchema: ComponentSchema = {
     scale: { type: 'number', description: 'Scaling factor' },
     backgroundColor: { type: 'string', description: 'Background color' },
     charAspectRatio: { type: 'number', description: 'Character aspect ratio' },
+    svgOverlay: { type: 'string', description: 'SVG overlay string (<path> and <text> elements)' },
+    gfxMode: { type: 'string', description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
   },
   styleWarnings: {
     width: 'Use width prop instead of style.width for video buffer sizing. style.width only affects layout, not pixel resolution.',

@@ -250,6 +250,8 @@ export const imgSchema: ComponentSchema = {
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source, utils) => [r,g,b]. utils: noise2d, fbm, palette, smoothstep, mix, fract' },
     onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
+    svgOverlay: { type: 'string', description: 'SVG overlay string (<path> and <text> elements)' },
+    gfxMode: { type: 'string', description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
   },
   styles: {
     objectFit: { type: 'string', enum: ['contain', 'fill', 'cover'], description: 'How image fits: contain (aspect ratio), fill (stretch, default for img), cover (crop)' },

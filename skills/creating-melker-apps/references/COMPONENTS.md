@@ -1017,6 +1017,7 @@ Pixel graphics using Unicode characters. Sextant (2x3 per cell) on full Unicode 
 - `onPaint` - Draw callback (`event.canvas`)
 - `onShader` - Per-pixel shader callback, runs every frame (see Shaders section)
 - `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)
+- `svgOverlay` - SVG overlay string with `<path>` and `<text>` elements in pixel coordinates
 
 **Canvas API:**
 ```typescript

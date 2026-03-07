@@ -6,6 +6,8 @@ import { FocusManager } from '../focus.ts';
 import { getLogger } from '../logging.ts';
 import { hasKeyInputHandler, hasGetContent } from '../types.ts';
 import { ensureError } from '../utils/error.ts';
+import { GFX_MODES } from '../core-types.ts';
+import { DITHER_MODES } from '../video/dither/mod.ts';
 
 const logger = getLogger('ai:tools');
 
@@ -146,11 +148,11 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         type: 'string',
         description: 'The type of event to send',
         required: true,
-        enum: ['click', 'change', 'focus', 'keypress', 'draw'],
+        enum: ['click', 'change', 'focus', 'keypress', 'draw', 'set_prop'],
       },
       value: {
         type: 'string',
-        description: 'For change events, the new value. For keypress events, the key to press. For draw events on tile-map, SVG path elements using standard SVG coordinate order (x=lon, y=lat; M/L/C/Q/A/Z commands). Use A for circles, C/Q for curves, and enough points for smooth results.',
+        description: 'For change events, the new value. For keypress events, the key to press. For draw events on tile-map, SVG path elements using SVG coordinate order (x=lon, y=lat). For draw events on canvas/img, SVG path elements using pixel coordinates (x/y). Supports M/L/C/Q/A/Z commands. Use A for circles, C/Q for curves, and enough points for smooth results. For set_prop events on canvas/img/video, comma-separated key=value pairs (e.g. "gfxMode=quadrant,dither=sierra-stable,ditherBits=3").',
         required: false,
       },
     },
@@ -490,23 +492,68 @@ function executeSendEvent(
     }
 
     case 'draw': {
-      if (element.type !== 'tile-map') {
-        return { success: false, message: `draw events are only supported on tile-map elements, not ${element.type}` };
+      const drawableTypes = new Set(['tile-map', 'canvas', 'img', 'video']);
+      if (!drawableTypes.has(element.type)) {
+        return { success: false, message: `draw events are only supported on tile-map, canvas, img, and video elements, not ${element.type}` };
       }
-      const mapEl = element as any;
+      const drawEl = element as any;
+      const targetName = element.type === 'tile-map' ? 'map' : element.type;
       if (!value || value.trim() === '') {
-        mapEl.props.svgOverlay = undefined;
+        drawEl.props.svgOverlay = undefined;
         context.render();
-        return { success: true, message: `Cleared SVG paths on map ${elementId}` };
+        return { success: true, message: `Cleared SVG overlay on ${targetName} ${elementId}` };
       }
-      mapEl.props.svgOverlay = value;
+      drawEl.props.svgOverlay = value;
       context.render();
       const pathCount = (value.match(/<path\b/gi) || []).length;
       const textCount = (value.match(/<text\b/gi) || []).length;
       const parts: string[] = [];
       if (pathCount > 0) parts.push(`${pathCount} path(s)`);
       if (textCount > 0) parts.push(`${textCount} label(s)`);
-      return { success: true, message: `Drew ${parts.join(' and ') || 'overlay'} on map ${elementId}` };
+      return { success: true, message: `Drew ${parts.join(' and ') || 'overlay'} on ${targetName} ${elementId}` };
+    }
+
+    case 'set_prop': {
+      const canvasTypes = new Set(['canvas', 'img', 'video']);
+      if (!canvasTypes.has(element.type)) {
+        return { success: false, message: `set_prop events are only supported on canvas, img, and video elements, not ${element.type}` };
+      }
+      if (!value) {
+        return { success: false, message: 'value is required for set_prop events. Format: "gfxMode=sixel,ditherBits=2"' };
+      }
+      const canvasEl = element as any;
+      const validGfxModes = new Set<string>(GFX_MODES);
+      const validDitherModes = new Set<string>(DITHER_MODES);
+      const allowedProps: Record<string, (v: string) => unknown> = {
+        gfxMode: (v) => validGfxModes.has(v) ? v : undefined,
+        dither: (v) => validDitherModes.has(v) ? v : undefined,
+        ditherBits: (v) => { const n = Number(v); return (n >= 1 && n <= 8) ? n : undefined; },
+      };
+      const changes: string[] = [];
+      for (const part of value.split(',')) {
+        const eq = part.indexOf('=');
+        if (eq <= 0) continue;
+        const key = part.slice(0, eq).trim();
+        const val = part.slice(eq + 1).trim();
+        const parser = allowedProps[key];
+        if (!parser) {
+          return { success: false, message: `Unknown property: ${key}. Allowed: ${Object.keys(allowedProps).join(', ')}` };
+        }
+        const parsed = parser(val);
+        if (parsed === undefined) {
+          return { success: false, message: `Invalid value for ${key}: ${val}` };
+        }
+        canvasEl.props[key] = parsed;
+        changes.push(`${key}=${parsed}`);
+      }
+      if (changes.length === 0) {
+        return { success: false, message: 'No valid properties found in value' };
+      }
+      if (typeof canvasEl.markDirty === 'function') {
+        canvasEl.markDirty();
+      }
+      context.render();
+      return { success: true, message: `Set ${changes.join(', ')} on ${element.type} ${elementId}` };
     }
 
     default:

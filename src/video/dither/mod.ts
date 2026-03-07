@@ -3,7 +3,7 @@
 
 // Types and constants
 export type { ColorSupport, DitherMode, ThresholdMatrix } from './types.ts';
-export { BAYER_8X8 } from './types.ts';
+export { BAYER_8X8, DITHER_MODES } from './types.ts';
 
 // Utility functions
 export { colorSupportToBits } from './utils.ts';

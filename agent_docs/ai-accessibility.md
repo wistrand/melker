@@ -190,6 +190,15 @@ The AI can interact with `<tile-map>` components via `send_event`:
 
 The screen content shows `[Tile Map#id: lat=N, lon=N, zoom=N, provider=NAME, paths=N, labels=N]` with available providers listed below.
 
+### Canvas / Image Draw Overlay
+
+The AI can draw SVG overlays on `<canvas>` and `<img>` elements via `send_event` with `event_type="draw"`. Coordinates are in pixel buffer space (not terminal characters). Overlays rescale automatically when the element resizes.
+
+- **Draw overlay**: `event_type="draw"`, `value='<path d="M x y L x y" stroke="color"/><text x="N" y="N" fill="color">Label</text>'`
+- **Clear overlay**: `event_type="draw"`, `value=""`
+
+The screen content shows `[Canvas#id: WxHpx, paths=N, labels=N]` or `[Image#id: WxHpx, paths=N, labels=N]` with draw hints.
+
 ### Custom Tools (for .melker files)
 
 Applications can register custom tools:

@@ -3,7 +3,8 @@
 export type ColorSupport = 'none' | '16' | '256' | 'truecolor';
 
 // Dither algorithm type
-export type DitherMode = 'floyd-steinberg' | 'floyd-steinberg-stable' | 'sierra' | 'sierra-stable' | 'atkinson' | 'atkinson-stable' | 'blue-noise' | 'ordered' | 'none' | 'auto';
+export const DITHER_MODES = ['floyd-steinberg', 'floyd-steinberg-stable', 'sierra', 'sierra-stable', 'atkinson', 'atkinson-stable', 'blue-noise', 'ordered', 'none', 'auto'] as const;
+export type DitherMode = typeof DITHER_MODES[number];
 
 // Threshold matrix for ordered/threshold dithering
 // Values should be normalized to 0-255 range

@@ -216,6 +216,56 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
         break;
       }
 
+      case 'canvas': {
+        const canvasEl = element as any;
+        const id = element.id && !element.id.startsWith('doc-') ? `#${element.id}` : '';
+        const bufW = canvasEl._bufferWidth ?? element.props.width ?? 0;
+        const bufH = canvasEl._bufferHeight ?? element.props.height ?? 0;
+        const aspect = typeof canvasEl.getPixelAspectRatio === 'function' ? canvasEl.getPixelAspectRatio() : 1;
+        const visW = Math.round(Number(bufW) * aspect) || bufW;
+        const pathCount = canvasEl.props.svgOverlay ? (canvasEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
+        const textCount = canvasEl.props.svgOverlay ? (canvasEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
+        lines.push(`${indent}[Canvas${id}: ${visW}x${bufH} visual coords, paths=${pathCount}, labels=${textCount}]`);
+        lines.push(`${indent}  (Use send_event with event_type="draw" to draw SVG overlay. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Equal x/y distances appear equal on screen. Supports:)`);
+        lines.push(`${indent}    <path d="M x y L x y" stroke="color"/> — lines`);
+        lines.push(`${indent}    <text x="N" y="N" fill="color">Label</text> — text labels`);
+        break;
+      }
+
+      case 'img': {
+        const imgEl = element as any;
+        const id = element.id && !element.id.startsWith('doc-') ? `#${element.id}` : '';
+        const bufW = imgEl._bufferWidth ?? element.props.width ?? 0;
+        const bufH = imgEl._bufferHeight ?? element.props.height ?? 0;
+        const aspect = typeof imgEl.getPixelAspectRatio === 'function' ? imgEl.getPixelAspectRatio() : 1;
+        const visW = Math.round(Number(bufW) * aspect) || bufW;
+        const src = element.props.src ? ` src="${element.props.src}"` : '';
+        const pathCount = imgEl.props.svgOverlay ? (imgEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
+        const textCount = imgEl.props.svgOverlay ? (imgEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
+        lines.push(`${indent}[Image${id}: ${visW}x${bufH} visual coords${src}, paths=${pathCount}, labels=${textCount}]`);
+        lines.push(`${indent}  (Use send_event with event_type="draw" to draw SVG overlay. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Supports:)`);
+        lines.push(`${indent}    <path d="M x y L x y" stroke="color"/> — lines`);
+        lines.push(`${indent}    <text x="N" y="N" fill="color">Label</text> — text labels`);
+        break;
+      }
+
+      case 'video': {
+        const vidEl = element as any;
+        const id = element.id && !element.id.startsWith('doc-') ? `#${element.id}` : '';
+        const bufW = vidEl._bufferWidth ?? element.props.width ?? 0;
+        const bufH = vidEl._bufferHeight ?? element.props.height ?? 0;
+        const aspect = typeof vidEl.getPixelAspectRatio === 'function' ? vidEl.getPixelAspectRatio() : 1;
+        const visW = Math.round(Number(bufW) * aspect) || bufW;
+        const src = element.props.src ? ` src="${element.props.src}"` : '';
+        const pathCount = vidEl.props.svgOverlay ? (vidEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
+        const textCount = vidEl.props.svgOverlay ? (vidEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
+        lines.push(`${indent}[Video${id}: ${visW}x${bufH} visual coords${src}, paths=${pathCount}, labels=${textCount}]`);
+        lines.push(`${indent}  (Use send_event with event_type="draw" to draw SVG overlay. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Supports:)`);
+        lines.push(`${indent}    <path d="M x y L x y" stroke="color"/> — lines`);
+        lines.push(`${indent}    <text x="N" y="N" fill="color">Label</text> — text labels`);
+        break;
+      }
+
       case 'container': {
         const role = element.props.role;
         const ariaLabel = resolveAriaLabelledBy(element, document) || element.props['aria-label'];
@@ -488,6 +538,21 @@ function getAvailableActions(document: Document): string[] {
         actions.push('Mouse drag: Pan the map');
         actions.push('Scroll wheel: Zoom in/out');
         actions.push('send_event with event_type="draw" to draw SVG paths with lat/lon coordinates on the map');
+        break;
+
+      case 'canvas':
+        actions.push('send_event with event_type="draw" to draw SVG overlay with pixel coordinates on the canvas');
+        actions.push('send_event with event_type="set_prop" to set gfxMode (sextant/quadrant/halfblock/sixel/kitty), dither (auto/sierra-stable/floyd-steinberg/etc), or ditherBits (1-8)');
+        break;
+
+      case 'img':
+        actions.push('send_event with event_type="draw" to draw SVG overlay with pixel coordinates on the image');
+        actions.push('send_event with event_type="set_prop" to set gfxMode, dither (auto/sierra-stable/floyd-steinberg/etc), or ditherBits (1-8)');
+        break;
+
+      case 'video':
+        actions.push('send_event with event_type="draw" to draw SVG overlay with pixel coordinates on the video');
+        actions.push('send_event with event_type="set_prop" to set gfxMode, dither (auto/sierra-stable/floyd-steinberg/etc), or ditherBits (1-8)');
         break;
 
       case 'container':

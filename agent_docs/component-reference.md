@@ -1180,6 +1180,21 @@ canvas.drawPathSVGColor(d, '#4488FF');
 
 Multiple subpaths (separate `M` commands) create holes via even-odd fill rule.
 
+### Canvas SVG Overlay
+
+The `svgOverlay` prop draws `<path>` and `<text>` elements on the canvas using pixel coordinates. Useful for annotations, labels, and AI-drawn overlays.
+
+```xml
+<canvas id="chart" width="60" height="20" svgOverlay='
+  <path d="M 10 5 L 50 15" stroke="red"/>
+  <text x="30" y="10" fill="#fff" text-anchor="middle">Label</text>
+'/>
+```
+
+Supported SVG elements:
+- `<path d="..." stroke="color" fill="color"/>` — M/L/H/V/C/S/Q/T/A/Z commands
+- `<text x="N" y="N" fill="color" bg="color" text-anchor="middle|end">Text</text>`
+
 ### Canvas Tooltips
 
 Canvas supports `tooltip` and `onTooltip` for contextual hover information. The `onTooltip` handler receives a `CanvasTooltipContext` with `pixelX`, `pixelY` (buffer pixel coordinates) and `color` (packed RGBA at that pixel).

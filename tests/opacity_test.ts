@@ -487,6 +487,9 @@ async function renderToAnsi(
   const tempFile = await Deno.makeTempFile({ suffix: '.melker' });
   try {
     await Deno.writeTextFile(tempFile, content);
+    // Build env that forces truecolor output regardless of parent environment
+    const env: Record<string, string> = { ...Deno.env.toObject(), COLORTERM: 'truecolor', MELKER_THEME: 'fullcolor-dark' };
+    delete env.NO_COLOR;
     const command = new Deno.Command('deno', {
       args: [
         'run', '--allow-all',
@@ -500,7 +503,8 @@ async function renderToAnsi(
       ],
       stdout: 'piped',
       stderr: 'piped',
-      env: { ...Deno.env.toObject(), COLORTERM: 'truecolor', MELKER_THEME: 'fullcolor-dark' },
+      env,
+      clearEnv: true,
     });
     const { stdout } = await command.output();
     return new TextDecoder().decode(stdout);

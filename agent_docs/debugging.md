@@ -426,7 +426,7 @@ Press **F12** at runtime to open the Dev Tools dialog.
 | Markdown | Original markdown (for `.md` files only)                           |
 | System   | Build info, scripts, bundle details                                |
 | Config   | Current configuration with sources (schema + app-defined)          |
-| Inspect  | Live document tree view with Refresh button                        |
+| Inspect  | Interactive element inspector with tree view, property/style editing |
 | Log      | Recent log entries in data-table with sorting, shows log file path |
 | Actions  | Performance Monitor, Exit Application                              |
 
@@ -436,6 +436,7 @@ Press **F12** at runtime to open the Dev Tools dialog.
 - Tab buttons clickable with mouse or keyboard
 - **AI Assistant button**: Opens the AI accessibility dialog
 - **Config tab**: Shows same info as `--print-config` - schema config plus app-defined config from policy (shown under `[Category (app)]` sections)
+- **Inspect tab**: Interactive element inspector (see below)
 - Close with button click, Escape key, or F12 toggle
 
 ### Enabling Dev Tools
@@ -484,6 +485,47 @@ Dev Tools is managed by `DevToolsManager` (`src/dev-tools.ts`):
 - Config tab uses `MelkerConfig.getConfigText()` for formatted display
 - Uses the `melker` template literal for clean element creation
 - Properly registers/unregisters elements from the document on open/close
+
+### Inspect Tab
+
+The Inspect tab provides an interactive element inspector with a split-pane layout:
+
+```
+┌─── Element Tree ──────────┬─── Detail Panel ────────────┐
+│ └─v container              │ container#main               │
+│   ├─v container.header     │ Position: x=0, y=1  Size: 80×20 │
+│   │ ├─> container          │                              │
+│   │ └─  text#status        │ Props                        │
+│   ├─v split-pane           │  scrollable:     true        │
+│   │ ├─> container          │  focusable:      true        │
+│   │ └─> split-pane         │                              │
+│   └─v container.footer     │ Style                        │
+│     ├─  text               │  flexDirection:  column      │
+│     └─  text#lastUpdate    │  width:          fill        │
+│                            │  property        value       │
+│                            │          [ Apply Style ]     │
+└────────────────────────────┴──────────────────────────────┘
+                                                  [ Refresh ]
+```
+
+**Left panel** — Interactive `<data-tree>` showing the document hierarchy. Click an element to inspect it. DevTools elements (`dev-tools-*`) are filtered out. First two levels auto-expand.
+
+**Right panel** — Detail view rebuilt on each selection:
+
+| Section  | Content                                                             |
+|----------|---------------------------------------------------------------------|
+| Identity | `type#id.class1.class2` with focus/visibility flags                 |
+| Bounds   | Position (x, y) and size (width x height) from layout              |
+| Props    | Editable scalar props with input fields and "Apply Props" button    |
+| Style    | Editable inline style properties with input fields and "Apply Style" button |
+
+Both Props and Style sections include "add new" input rows for adding properties that aren't currently set.
+
+**Editing workflow:**
+1. Select an element in the tree
+2. Modify values in the Props or Style input fields
+3. Click "Apply Props" or "Apply Style" to update the element
+4. The layout and rendering update immediately
 
 ## V8 Inspector Debugging
 

@@ -4,13 +4,13 @@
 import { Document } from './document.ts';
 import { melker } from './template.ts';
 import { Element, hasSubtreeElements } from './types.ts';
-import { getUnicodeTier } from './utils/terminal-detection.ts';
 import { FocusManager } from './focus.ts';
 import { formatPolicy, policyToDenoFlags, formatDenoFlags, type MelkerPolicy, type PolicyConfigProperty } from './policy/mod.ts';
 import { getGlobalPerformanceDialog } from './performance-dialog.ts';
 import { MelkerConfig } from './config/mod.ts';
 import { getLogger, getRecentLogEntries, getGlobalLoggerOptions, type LogEntry } from './logging.ts';
 import { Stylesheet } from './stylesheet.ts';
+
 
 const logger = getLogger('DevTools');
 
@@ -85,6 +85,8 @@ export class DevToolsManager {
   private _overlay?: Element;
   private _state?: DevToolsState;
   private _deps: DevToolsDependencies;
+  private _inspectElementMap: Map<string, Element> = new Map();
+  private _inspectSelectedElement?: Element;
 
   constructor(deps: DevToolsDependencies) {
     this._deps = deps;
@@ -714,44 +716,86 @@ export class DevToolsManager {
     `;
   }
 
+  /** Max number of editor rows in each pool (one text input per row) */
+  /** Props to skip in the editor (non-editable, internal, or handled elsewhere) */
+  private static _skipEditProps = new Set([
+    'style', 'classList', 'children', 'id', 'class', 'tabIndex',
+    'bind', 'bind-mode', 'bind:selection', 'persist',
+    'role', 'aria-label', 'aria-labelledby', 'aria-hidden', 'aria-description',
+    'aria-expanded', 'aria-controls', 'aria-busy', 'aria-required', 'aria-invalid',
+    'palette', 'palette-shortcut', 'palette-group',
+    'tooltip', 'onTooltip',
+  ]);
+
+  /** Current editor prop/style names, set by _updateInspectDetail */
+  private _propEditorAssignments: string[] = [];
+  private _styleEditorAssignments: string[] = [];
+
   /**
-   * Build the Inspect tab showing document tree view
+   * Build the Inspect tab showing interactive document tree with detail panel.
+   * All elements are created upfront; selection updates props only.
    */
   private _buildInspectTab(): Element {
     const document = this._deps.document;
     const render = () => this._deps.render();
 
-    // Generate tree, excluding dev-tools elements
-    const generateTree = (): string => {
+    const buildNodes = (): { nodes: Record<string, unknown>[]; map: Map<string, Element> } => {
+      const map = new Map<string, Element>();
       const root = document.root;
-      if (!root) return '(no document)';
-
-      // First pass: calculate max width for alignment
-      const maxWidth = this._calculateMaxNodeWidth(root, 0);
-
-      // Second pass: build tree with alignment
-      return this._buildFilteredTree(root, '', true, maxWidth);
+      if (!root) return { nodes: [], map };
+      const rootNode = this._buildElementNode(root, 0, root.type, map);
+      return { nodes: rootNode ? [rootNode] : [], map };
     };
 
-    const treeContent = generateTree();
-    const scrollStyle = { flex: 1, padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' };
+    const { nodes, map } = buildNodes();
+    this._inspectElementMap = map;
 
-    // Refresh button handler
+
+    const onSelect = (event: { nodeId: string; selectedNodes: string[] }) => {
+      const nodeId = event.selectedNodes?.[0] || event.nodeId;
+      const element = this._inspectElementMap.get(nodeId);
+      if (element) {
+        this._inspectSelectedElement = element;
+        this._updateInspectDetail(element);
+      }
+    };
+
     const onRefresh = () => {
-      const textEl = document.getElementById('dev-tools-inspect-content');
-      if (textEl) {
-        textEl.props.text = generateTree();
+      const { nodes: newNodes, map: newMap } = buildNodes();
+      this._inspectElementMap = newMap;
+      const treeEl = document.getElementById('dev-tools-inspect-tree');
+      if (treeEl) {
+        treeEl.props.nodes = newNodes;
+        if (this._inspectSelectedElement) {
+          const selId = this._inspectSelectedElement.id;
+          const newEl = selId ? newMap.get(selId) : undefined;
+          if (newEl) {
+            this._inspectSelectedElement = newEl;
+            this._updateInspectDetail(newEl);
+          }
+        }
         render();
       }
     };
 
+    const detailStyle = { padding: 1, overflow: 'scroll', width: 'fill', height: 'fill' };
+
     return melker`
       <tab id="dev-tools-tab-inspect" title="Inspect">
         <container style=${{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }}>
-          <container id="dev-tools-scroll-inspect" scrollable=${true} focusable=${true} style=${scrollStyle}>
-            <text id="dev-tools-inspect-content" text=${treeContent} />
-          </container>
-          <container style=${{ padding: 1 }}>
+          <split-pane id="dev-tools-inspect-split" sizes=${[2, 3]} style=${{ flex: 1, width: 'fill', height: 'fill' }}>
+            <data-tree
+              id="dev-tools-inspect-tree"
+              nodes=${nodes}
+              selectable="single"
+              onChange=${onSelect}
+              style=${{ width: 'fill', height: 'fill' }}
+            />
+            <container id="dev-tools-inspect-detail" scrollable=${true} focusable=${true} style=${detailStyle}>
+              <text text="Select an element to inspect" style=${{ color: 'gray' }} />
+            </container>
+          </split-pane>
+          <container style=${{ display: 'flex', flexDirection: 'row', padding: 1, gap: 2, justifyContent: 'flex-end' }}>
             <button id="dev-tools-refresh-inspect" label="Refresh" onClick=${onRefresh} />
           </container>
         </container>
@@ -760,192 +804,229 @@ export class DevToolsManager {
   }
 
   /**
-   * Calculate max width of node names (type#id.class) for alignment
-   * Also includes subtree elements from components that render inline subtrees
+   * Recursively build a tree node for the inspect data-tree, skipping dev-tools elements.
+   * Populates the element lookup map for O(1) access on selection.
    */
-  private _calculateMaxNodeWidth(element: Element, depth: number): number {
-    // Skip dev-tools elements
-    if (element.id?.startsWith('dev-tools-')) {
-      return 0;
-    }
+  private _buildElementNode(
+    element: Element,
+    depth: number,
+    pathKey: string,
+    map: Map<string, Element>,
+    isSubtree: boolean = false,
+  ): Record<string, unknown> | null {
+    if (element.id?.startsWith('dev-tools-')) return null;
 
-    // Calculate width: depth indent (4 chars per level) + type + #id + .classes
-    let nodeWidth = depth * 4 + element.type.length;
-    if (element.id) {
-      nodeWidth += 1 + element.id.length; // #id
+    // Build label: type#id.class1.class2
+    let label = element.type;
+    if (element.id && !element.id.startsWith('el-')) {
+      label += `#${element.id}`;
     }
-    // Add class names width (classList is an array after normalization)
     const classList = element.props?.classList as string[] | undefined;
-    if (classList && classList.length > 0) {
-      // Classes are shown as .class1.class2
-      nodeWidth += classList.reduce((sum, c) => sum + 1 + c.length, 0); // .class for each
+    if (classList?.length) {
+      label += classList.map((c: string) => `.${c}`).join('');
     }
-    let maxWidth = nodeWidth;
+    if (isSubtree) label = `(subtree) ${label}`;
 
-    // Check children
-    if (element.children && element.children.length > 0) {
-      for (const child of element.children) {
-        const childMax = this._calculateMaxNodeWidth(child, depth + 1);
-        if (childMax > maxWidth) maxWidth = childMax;
-      }
-    }
+    // Use explicit id if it's a user-set id, otherwise use the path key
+    const nodeId = (element.id && !element.id.startsWith('el-')) ? element.id : pathKey;
+    map.set(nodeId, element);
 
-    // Check subtree elements (e.g., mermaid graphs in markdown)
-    if (hasSubtreeElements(element)) {
-      for (const subtreeEl of element.getSubtreeElements()) {
-        // Add 10 for "(subtree) " prefix
-        const subtreeMax = this._calculateMaxNodeWidth(subtreeEl, depth + 1) + 10;
-        if (subtreeMax > maxWidth) maxWidth = subtreeMax;
-      }
-    }
-
-    return maxWidth;
-  }
-
-  /**
-   * Build a filtered tree string, excluding dev-tools elements
-   * Also includes subtree elements from components that render inline subtrees
-   */
-  private _buildFilteredTree(element: Element, prefix: string, isLast: boolean, alignWidth: number, isSubtree: boolean = false): string {
-    // Skip dev-tools elements
-    if (element.id?.startsWith('dev-tools-')) {
-      return '';
-    }
-
-    let result = prefix;
-
-    // Add tree branch characters
-    if (prefix !== '') {
-      const unicode = getUnicodeTier() !== 'ascii';
-      result += isLast
-        ? (unicode ? '└── ' : '`-- ')
-        : (unicode ? '├── ' : '|-- ');
-    }
-
-    // Format element node with alignment, marking subtree elements
-    const nodeText = this._formatInspectNode(element, prefix.length, alignWidth);
-    result += isSubtree ? `(subtree) ${nodeText}` : nodeText;
-    result += '\n';
-
-    // Process children, filtering out dev-tools elements
+    // Build children
     const filteredChildren = (element.children || []).filter(c => !c.id?.startsWith('dev-tools-'));
-
-    // Check for subtree elements (e.g., mermaid graphs in markdown)
     const subtreeElements: Element[] = hasSubtreeElements(element)
       ? element.getSubtreeElements()
       : [];
 
-    const allChildren = [...filteredChildren, ...subtreeElements];
-    const childPrefix = prefix + (isLast ? '    ' : (getUnicodeTier() !== 'ascii' ? '│   ' : '|   '));
-
-    allChildren.forEach((child, index) => {
-      const isLastChild = index === allChildren.length - 1;
-      const isChildSubtree = index >= filteredChildren.length; // Subtree elements come after regular children
-      result += this._buildFilteredTree(child, childPrefix, isLastChild, alignWidth, isChildSubtree);
+    const children: Record<string, unknown>[] = [];
+    filteredChildren.forEach((child, i) => {
+      const childKey = `${nodeId}/${child.type}-${i}`;
+      const node = this._buildElementNode(child, depth + 1, childKey, map);
+      if (node) children.push(node);
+    });
+    subtreeElements.forEach((child, i) => {
+      const childKey = `${nodeId}/~${child.type}-${i}`;
+      const node = this._buildElementNode(child, depth + 1, childKey, map, true);
+      if (node) children.push(node);
     });
 
+    const result: Record<string, unknown> = {
+      label,
+      id: nodeId,
+      expanded: depth < 2,
+    };
+    if (children.length > 0) result.children = children;
     return result;
   }
 
   /**
-   * Format an element node for the inspect tree
+   * Rebuild the inspect detail panel children for the selected element.
    */
-  private _formatInspectNode(element: Element, prefixLen: number, alignWidth: number): string {
-    // Build the type#id.class part
-    let nodeName = element.type;
-    if (element.id) {
-      nodeName += `#${element.id}`;
-    }
-    // Add class names (classList is an array after normalization)
+  private _updateInspectDetail(element: Element): void {
+    const document = this._deps.document;
+    const render = () => this._deps.render();
+
+    const detailContainer = document.getElementById('dev-tools-inspect-detail');
+    if (!detailContainer) return;
+
+    // --- Identity ---
+    let identity = element.type;
+    if (element.id && !element.id.startsWith('el-')) identity += `#${element.id}`;
     const classList = element.props?.classList as string[] | undefined;
-    if (classList && classList.length > 0) {
-      nodeName += classList.map(c => `.${c}`).join('');
+    if (classList?.length) identity += classList.map((c: string) => `.${c}`).join('');
+    const flags: string[] = [];
+    if (document.focusedElement === element) flags.push('focused');
+    if (element.props?.visible === false) flags.push('hidden');
+    if (flags.length) identity += `  (${flags.join(', ')})`;
+
+    // --- Bounds ---
+    const bounds = element.getBounds();
+    const boundsText = bounds
+      ? `Position: x=${bounds.x}, y=${bounds.y}  Size: ${bounds.width} x ${bounds.height}`
+      : 'Bounds: not laid out';
+
+    // --- Collect editable props ---
+    const skipEdit = DevToolsManager._skipEditProps;
+    const propNames: string[] = [];
+    for (const key of Object.keys(element.props || {})) {
+      if (skipEdit.has(key) || key.startsWith('on') || key.startsWith('__')) continue;
+      const val = element.props[key];
+      if (val === undefined || typeof val === 'object' || typeof val === 'function') continue;
+      propNames.push(key);
     }
+    this._propEditorAssignments = propNames;
 
-    // Build the props part
-    const keyProps: string[] = [];
-
-    switch (element.type) {
-      case 'button':
-        if (element.props.label) {
-          keyProps.push(`label="${element.props.label}"`);
-        }
-        break;
-      case 'dialog':
-        if (element.props.title) {
-          keyProps.push(`title="${element.props.title}"`);
-        }
-        if (element.props.open) {
-          keyProps.push('open');
-        }
-        break;
-      case 'tab':
-        if (element.props.title) {
-          keyProps.push(`title="${element.props.title}"`);
-        }
-        break;
-    }
-
-    // Try to get value from getValue() if available
-    const valueSnippet = this._getValueSnippet(element);
-    if (valueSnippet !== null) {
-      keyProps.push(valueSnippet);
-    }
-
-    // Calculate padding for alignment
-    const currentWidth = prefixLen + 4 + nodeName.length; // 4 for tree branch chars
-    const padding = Math.max(1, alignWidth - currentWidth + 2);
-
-    let result = nodeName;
-
-    if (keyProps.length > 0) {
-      result += ' '.repeat(padding) + `[${keyProps.join(', ')}]`;
-    }
-
-    // Add focus indicator
-    if (this._deps.document.focusedElement === element) {
-      result += ' *focused*';
-    }
-
-    return result;
-  }
-
-  /**
-   * Get a snippet from element's getValue() if available
-   */
-  private _getValueSnippet(element: Element): string | null {
-    // Check if element has getValue method
-    const el = element as { getValue?: () => unknown };
-    if (typeof el.getValue !== 'function') {
-      return null;
-    }
-
-    try {
-      const value = el.getValue();
-
-      if (value === undefined || value === null) {
-        return null;
+    // --- Collect style properties ---
+    const style = element.props?.style as Record<string, unknown> | undefined;
+    const styleNames: string[] = [];
+    if (style) {
+      for (const [key, val] of Object.entries(style)) {
+        if (val === undefined) continue;
+        styleNames.push(key);
       }
-
-      // Format based on type
-      if (typeof value === 'string') {
-        if (value === '') return null;
-        const displayText = value.length > 25 ? value.substring(0, 22) + '...' : value;
-        // Replace newlines for display
-        const singleLine = displayText.replace(/\n/g, '\\n');
-        return `"${singleLine}"`;
-      } else if (typeof value === 'boolean') {
-        return value ? 'checked' : 'unchecked';
-      } else if (typeof value === 'number') {
-        return `value=${value}`;
-      } else if (Array.isArray(value)) {
-        return `rows=${value.length}`;
-      }
-
-      return null;
-    } catch {
-      return null;
     }
+    this._styleEditorAssignments = styleNames;
+
+    // --- Helpers ---
+    const parseValue = (raw: unknown): unknown => {
+      if (raw === undefined || raw === null || raw === '') return undefined;
+      const s = String(raw);
+      if (s === 'true') return true;
+      if (s === 'false') return false;
+      const num = Number(s);
+      if (!isNaN(num) && s.trim() !== '' && String(num) === s.trim()) return num;
+      return s;
+    };
+
+    const onApplyProps = () => {
+      if (!this._inspectSelectedElement) return;
+      for (let i = 0; i < this._propEditorAssignments.length; i++) {
+        const prop = this._propEditorAssignments[i];
+        const el = document.getElementById(`dev-tools-inspect-editprop-input-${i}`);
+        if (!el) continue;
+        const newValue = parseValue(el.props.value);
+        if (newValue !== undefined && newValue !== this._inspectSelectedElement.props[prop]) {
+          this._inspectSelectedElement.props[prop] = newValue;
+        }
+      }
+      const nameEl = document.getElementById('dev-tools-inspect-addprop-name');
+      const valEl = document.getElementById('dev-tools-inspect-addprop-value');
+      if (nameEl && valEl) {
+        const name = String(nameEl.props.value || '').trim();
+        const newVal = parseValue(valEl.props.value);
+        if (name && newVal !== undefined) {
+          this._inspectSelectedElement.props[name] = newVal;
+        }
+      }
+      render();
+      if (this._inspectSelectedElement) this._updateInspectDetail(this._inspectSelectedElement);
+    };
+
+    const onApplyStyle = () => {
+      if (!this._inspectSelectedElement) return;
+      const currentStyle = this._inspectSelectedElement.props.style as Record<string, unknown> || {};
+      if (!this._inspectSelectedElement.props.style) {
+        this._inspectSelectedElement.props.style = currentStyle;
+      }
+      for (let i = 0; i < this._styleEditorAssignments.length; i++) {
+        const prop = this._styleEditorAssignments[i];
+        const el = document.getElementById(`dev-tools-inspect-editstyle-input-${i}`);
+        if (!el) continue;
+        const newValue = parseValue(el.props.value);
+        if (newValue !== undefined && newValue !== currentStyle[prop]) {
+          currentStyle[prop] = newValue;
+        }
+      }
+      const nameEl = document.getElementById('dev-tools-inspect-addstyle-name');
+      const valEl = document.getElementById('dev-tools-inspect-addstyle-value');
+      if (nameEl && valEl) {
+        const name = String(nameEl.props.value || '').trim();
+        const newVal = parseValue(valEl.props.value);
+        if (name && newVal !== undefined) {
+          currentStyle[name] = newVal;
+        }
+      }
+      render();
+      if (this._inspectSelectedElement) this._updateInspectDetail(this._inspectSelectedElement);
+    };
+
+    // --- Build children ---
+    const headerStyle = { fontWeight: 'bold', marginTop: 1 };
+    const newChildren: Element[] = [
+      melker`<text text=${identity} style=${{ fontWeight: 'bold' }} />`,
+      melker`<text text=${boundsText} style=${{ color: 'gray' }} />`,
+    ];
+
+    if (propNames.length > 0) {
+      const propRows = propNames.map((prop, i) => {
+        const val = element.props[prop];
+        return melker`
+          <container style=${{ flexDirection: 'row', gap: 1 }}>
+            <text id=${`dev-tools-inspect-editprop-label-${i}`} text=${prop + ':'} style=${{ width: 18 }} />
+            <input id=${`dev-tools-inspect-editprop-input-${i}`} value=${val != null ? String(val) : ''} style=${{ flex: 1 }} />
+          </container>
+        `;
+      });
+      newChildren.push(melker`
+        <container>
+          <text text="Props" style=${headerStyle} />
+          ${propRows}
+          <container style=${{ display: 'flex', flexDirection: 'row', gap: 1 }}>
+            <input id="dev-tools-inspect-addprop-name" value="" placeholder="property" style=${{ width: 18 }} />
+            <input id="dev-tools-inspect-addprop-value" value="" placeholder="value" style=${{ flex: 1 }} />
+          </container>
+          <button id="dev-tools-inspect-apply-props" label="Apply Props" onClick=${onApplyProps} />
+        </container>
+      `);
+    }
+
+    const styleRows = styleNames.map((prop, i) => {
+      const val = style?.[prop];
+      return melker`
+        <container style=${{ flexDirection: 'row', gap: 1 }}>
+          <text id=${`dev-tools-inspect-editstyle-label-${i}`} text=${prop + ':'} style=${{ width: 22 }} />
+          <input id=${`dev-tools-inspect-editstyle-input-${i}`} value=${val != null ? String(val) : ''} style=${{ flex: 1 }} />
+        </container>
+      `;
+    });
+    newChildren.push(melker`
+      <container>
+        <text text="Style" style=${headerStyle} />
+        ${styleRows}
+        <container style=${{ display: 'flex', flexDirection: 'row', gap: 1 }}>
+          <input id="dev-tools-inspect-addstyle-name" value="" placeholder="property" style=${{ width: 22 }} />
+          <input id="dev-tools-inspect-addstyle-value" value="" placeholder="value" style=${{ flex: 1 }} />
+        </container>
+        <button id="dev-tools-inspect-apply" label="Apply Style" onClick=${onApplyStyle} />
+      </container>
+    `);
+
+    // Replace children and register new elements with document
+    detailContainer.children = newChildren;
+    for (const child of newChildren) {
+      registerElementsWithDocument(document, child);
+    }
+
+    render();
   }
 
   /**

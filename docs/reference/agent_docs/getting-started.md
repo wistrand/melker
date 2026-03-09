@@ -197,7 +197,7 @@ Non-Unicode terminals are detected automatically via `$TERM`. All Unicode box-dr
 - **--watch** – Auto-reload on file changes (recommended for development)
 - **--stdout** – Output single frame to stdout (useful for layout debugging, piping)
 - **--debug-sextant** – Test terminal sextant character support (use if graphics look scrambled)
-- **F12** – Dev Tools overlay (source, policy, inspect, config, log path)
+- **F12** – Dev Tools overlay (source, policy, inspect with element editing, config, log)
 - **console.log()** – Safe in app code, writes to log file
 - **--debug** – Verbose bundler output
 

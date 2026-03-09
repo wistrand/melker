@@ -72,7 +72,7 @@ const MAX_MESSAGES_BEFORE_COMPACT = 10;
 // Target number of messages after compaction
 const COMPACT_TARGET_MESSAGES = 4;
 // Maximum tool call rounds before forcing a text response
-const MAX_TOOL_ROUNDS = 3;
+const MAX_TOOL_ROUNDS = 5;
 
 /** Result of a single streaming round */
 interface StreamRoundResult {
@@ -83,7 +83,7 @@ interface StreamRoundResult {
 
 // Default dialog dimensions
 const DEFAULT_DIALOG_WIDTH = 70;
-const DEFAULT_DIALOG_HEIGHT = 20;
+const DEFAULT_DIALOG_HEIGHT = 22;
 
 // Saved dialog position and size (persisted across open/close)
 interface DialogGeometry {
@@ -263,10 +263,12 @@ export class AccessibilityDialogManager {
     const onClose = () => this.close();
     const onSend = () => this._handleAsk();
     const onListen = () => this._handleListen();
-    const onInputKeyPress = (event: { key: string }) => {
+    const onInputKeyPress = (event: { key: string }): boolean => {
       if (event.key === 'Enter' && !this._isProcessing) {
         this._handleAsk();
+        return true; // Prevent newline insertion in textarea
       }
+      return false;
     };
 
     // Initial help text
@@ -284,6 +286,8 @@ export class AccessibilityDialogManager {
         backdrop=${false}
         draggable=${true}
         resizable=${true}
+        closable=${true}
+        onClose=${onClose}
         width=${width}
         height=${height}
         offsetX=${offsetX}
@@ -315,15 +319,16 @@ export class AccessibilityDialogManager {
             id="accessibility-input-row"
             style="display: flex; flex-direction: row; width: fill; gap: 1; padding: 1; padding-top: 0"
           >
-            <input
+            <textarea
               id="accessibility-query-input"
               placeholder="Ask a question..."
-              style="flex: 1"
+              style="flex: 1; height: 3"
               onKeyPress=${onInputKeyPress}
             />
-            <button id="accessibility-listen-btn" label="Listen" onClick=${onListen} style="" />
-            <button id="accessibility-send-btn" label="Send" onClick=${onSend} style="" />
-            <button id="accessibility-close-btn" label="Close" onClick=${onClose} style="" />
+            <container style="display: flex; flex-direction: column; gap: 0; align-items: flex-end; justify-content: flex-end">
+              <button id="accessibility-send-btn" label="Send" onClick=${onSend} />
+              <button id="accessibility-listen-btn" label="Listen" onClick=${onListen} />
+            </container>
           </container>
         </container>
       </dialog>

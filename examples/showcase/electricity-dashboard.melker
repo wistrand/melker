@@ -141,7 +141,7 @@
                 <!-- Summary + average bars -->
                 <container style="display: flex; flex-direction: column; height: fill; padding: 0 1; gap: 1; overflow-y: scroll">
 
-                    <container style="padding: 0 1; flex-shrink: 0">
+                    <container style="padding: 0 1; flex-shrink: 0;">
                         <text style="font-weight: bold;">Summary</text>
                         <text id="cheapestArea">Cheapest: --</text>
                         <text id="expensiveArea">Most expensive: --</text>

@@ -196,6 +196,17 @@ export class HitTester {
       return undefined;
     }
 
+    // For scrollable containers, transform coordinates for children by adding scroll offset
+    // (rendering subtracts scroll offset, so hit test must add to invert)
+    let childX = x;
+    let childY = y;
+    if (isScrollableType(element.type) && isScrollingEnabled(element)) {
+      const elementScrollX = (element.props.scrollX as number) || 0;
+      const elementScrollY = (element.props.scrollY as number) || 0;
+      childX = x + elementScrollX;
+      childY = y + elementScrollY;
+    }
+
     for (const child of element.children) {
       // Skip invisible elements - they don't participate in hit testing
       if (child.props?.visible === false) continue;
@@ -207,7 +218,7 @@ export class HitTester {
       // Try to get the rendered bounds for this child
       const childBounds = child.id ? this._renderer.getContainerBounds(child.id) : undefined;
 
-      if (childBounds && pointInBounds(x, y, childBounds)) {
+      if (childBounds && pointInBounds(childX, childY, childBounds)) {
         // Check if this component captures focus for all its children
         // If so, return this component instead of searching children
         if (isFocusCapturable(child) &&
@@ -218,7 +229,7 @@ export class HitTester {
 
         // If it has children, recursively search them FIRST (not just containers - also tabs, etc.)
         if (child.children && child.children.length > 0) {
-          const nestedHit = this._hitTestDialogChildren(child, x, y, childBounds, tableForChildren);
+          const nestedHit = this._hitTestDialogChildren(child, childX, childY, childBounds, tableForChildren);
           if (nestedHit) {
             return nestedHit;
           }
@@ -237,11 +248,11 @@ export class HitTester {
       } else if (!childBounds) {
         // No bounds stored - check recursively if has children, or return if interactive/text-selectable
         if (child.children && child.children.length > 0) {
-          const nestedHit = this._hitTestDialogChildren(child, x, y, _contentBounds, tableForChildren);
+          const nestedHit = this._hitTestDialogChildren(child, childX, childY, _contentBounds, tableForChildren);
           if (nestedHit) {
             return nestedHit;
           }
-        } else if ((this.isInteractiveElement(child) || this.isTextSelectableElement(child) || this.isCommandContainer(child)) && pointInBounds(x, y, _contentBounds)) {
+        } else if ((this.isInteractiveElement(child) || this.isTextSelectableElement(child) || this.isCommandContainer(child)) && pointInBounds(childX, childY, _contentBounds)) {
           // Interactive or text-selectable element without stored bounds - use parent content bounds
           return child;
         }

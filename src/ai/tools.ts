@@ -8,6 +8,8 @@ import { hasKeyInputHandler, hasGetContent } from '../types.ts';
 import { ensureError } from '../utils/error.ts';
 import { GFX_MODES } from '../core-types.ts';
 import { DITHER_MODES } from '../video/dither/mod.ts';
+import { resolveVarReferences } from '../stylesheet.ts';
+import { createElement } from '../element.ts';
 
 const logger = getLogger('ai:tools');
 
@@ -148,11 +150,11 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         type: 'string',
         description: 'The type of event to send',
         required: true,
-        enum: ['click', 'change', 'focus', 'keypress', 'draw', 'set_prop'],
+        enum: ['click', 'change', 'focus', 'keypress', 'draw', 'set_prop', 'style_element', 'add_connector', 'remove_connector'],
       },
       value: {
         type: 'string',
-        description: 'For change events, the new value. For keypress events, the key to press. For draw events on tile-map, SVG path elements using SVG coordinate order (x=lon, y=lat). For draw events on canvas/img, SVG path elements using pixel coordinates (x/y). Supports M/L/C/Q/A/Z commands. Use A for circles, C/Q for curves, and enough points for smooth results. For set_prop events on canvas/img/video, comma-separated key=value pairs (e.g. "gfxMode=quadrant,dither=sierra-stable,ditherBits=3").',
+        description: 'For change events, the new value. For keypress events, the key to press. For draw events on tile-map, SVG path elements using SVG coordinate order (x=lon, y=lat). For draw events on canvas/img, SVG path elements using pixel coordinates (x/y). Supports M/L/C/Q/A/Z commands. Use A for circles, C/Q for curves, and enough points for smooth results. For set_prop events on canvas/img/video, comma-separated key=value pairs (e.g. "gfxMode=quadrant,dither=sierra-stable,ditherBits=3"). For style_element events, comma-separated key=value pairs to set inline styles (e.g. "backgroundColor=var(--theme-primary),bold=true,border=thin"). IMPORTANT: For color and backgroundColor, always prefer theme colors using var(--theme-X) syntax for readability across themes. Available theme colors: primary, secondary, success, warning, error, info, surface, border, focus-primary, focus-background, text-primary, text-secondary, text-muted, header-background, header-foreground. Supported style props: color, backgroundColor, border, borderColor, bold, italic, underline, dim, visible, opacity, padding, margin. For add_connector events, element_id is ignored (use any valid element); value = comma-separated params: from=<id>,to=<id> and optional label=<text>,arrow=none|end|start|both,routing=direct|orthogonal,color=<color>,lineStyle=thin|thick|dashed. Creates a visual connector line between two elements. For remove_connector events, element_id = the connector ID to remove; value is ignored.',
         required: false,
       },
     },
@@ -554,6 +556,165 @@ function executeSendEvent(
       }
       context.render();
       return { success: true, message: `Set ${changes.join(', ')} on ${element.type} ${elementId}` };
+    }
+
+    case 'add_connector': {
+      if (!value) {
+        return { success: false, message: 'value is required for add_connector events. Format: "from=<id>,to=<id>[,label=<text>][,arrow=end][,routing=orthogonal][,color=<color>][,lineStyle=thin]"' };
+      }
+      const connParams = new Map<string, string>();
+      for (const part of value.split(',')) {
+        const eq = part.indexOf('=');
+        if (eq > 0) {
+          connParams.set(part.slice(0, eq).trim(), part.slice(eq + 1).trim());
+        }
+      }
+      const fromId = connParams.get('from');
+      const toId = connParams.get('to');
+      if (!fromId || !toId) {
+        return { success: false, message: 'Both "from" and "to" element IDs are required. Format: "from=element-a,to=element-b"' };
+      }
+      if (!context.document.getElementById(fromId)) {
+        return { success: false, message: `Source element not found: ${fromId}` };
+      }
+      if (!context.document.getElementById(toId)) {
+        return { success: false, message: `Target element not found: ${toId}` };
+      }
+      const connectorId = `ai-connector-${fromId}-${toId}`;
+      const existing = context.document.getElementById(connectorId);
+      if (existing) {
+        // Update existing connector props
+        existing.props.from = fromId;
+        existing.props.to = toId;
+        if (connParams.has('label')) existing.props.label = connParams.get('label');
+        if (connParams.has('arrow')) existing.props.arrow = connParams.get('arrow');
+        if (connParams.has('routing')) existing.props.routing = connParams.get('routing');
+        if (connParams.has('color') || connParams.has('lineStyle')) {
+          if (!existing.props.style) existing.props.style = {};
+          const s = existing.props.style as Record<string, unknown>;
+          if (connParams.has('color')) s.color = connParams.get('color');
+          if (connParams.has('lineStyle')) s.lineStyle = connParams.get('lineStyle');
+        }
+        context.render();
+        return { success: true, message: `Updated connector ${connectorId}` };
+      }
+      // Create new connector
+      const connProps: Record<string, unknown> = {
+        id: connectorId,
+        from: fromId,
+        to: toId,
+        style: { position: 'absolute' } as Record<string, unknown>,
+      };
+      if (connParams.has('label')) connProps.label = connParams.get('label');
+      if (connParams.has('arrow')) connProps.arrow = connParams.get('arrow');
+      if (connParams.has('routing')) connProps.routing = connParams.get('routing');
+      const connStyle = connProps.style as Record<string, unknown>;
+      if (connParams.has('color')) connStyle.color = connParams.get('color');
+      if (connParams.has('lineStyle')) connStyle.lineStyle = connParams.get('lineStyle');
+
+      const connector = createElement('connector', connProps);
+      const root = context.document.root;
+      if (root.children) {
+        root.children.push(connector);
+      } else {
+        root.children = [connector];
+      }
+      context.document.addElement(connector);
+      context.render();
+      return { success: true, message: `Created connector ${connectorId} from ${fromId} to ${toId}` };
+    }
+
+    case 'remove_connector': {
+      const connEl = context.document.getElementById(elementId);
+      if (!connEl) {
+        return { success: false, message: `Connector not found: ${elementId}` };
+      }
+      if (connEl.type !== 'connector') {
+        return { success: false, message: `Element ${elementId} is not a connector (type: ${connEl.type})` };
+      }
+      // Remove from parent's children
+      const root = context.document.root;
+      if (root.children) {
+        const idx = root.children.indexOf(connEl);
+        if (idx !== -1) root.children.splice(idx, 1);
+      }
+      context.document.removeElement(elementId);
+      context.render();
+      return { success: true, message: `Removed connector ${elementId}` };
+    }
+
+    case 'style_element': {
+      if (!value) {
+        return { success: false, message: 'value is required for style_element events. Format: "backgroundColor=var(--theme-primary),border=thin,bold=true". Prefer var(--theme-*) for colors.' };
+      }
+      // Parse comma-separated key=value pairs
+      const styleParams = new Map<string, string>();
+      for (const part of value.split(',')) {
+        const eq = part.indexOf('=');
+        if (eq > 0) {
+          styleParams.set(part.slice(0, eq).trim(), part.slice(eq + 1).trim());
+        }
+      }
+      if (styleParams.size === 0) {
+        return { success: false, message: 'No valid style properties found. Format: "backgroundColor=var(--theme-primary),border=thin"' };
+      }
+      // Allowed style properties and their parsers
+      const boolParse = (v: string): boolean | undefined => {
+        if (v === 'true') return true;
+        if (v === 'false') return false;
+        return undefined;
+      };
+      const numParse = (v: string): number | undefined => {
+        const n = Number(v);
+        return isNaN(n) ? undefined : n;
+      };
+      const allowedStyles: Record<string, (v: string) => unknown> = {
+        color: (v) => v,
+        backgroundColor: (v) => v,
+        border: (v) => v,
+        borderColor: (v) => v,
+        bold: (v) => boolParse(v),
+        italic: (v) => boolParse(v),
+        underline: (v) => boolParse(v),
+        dim: (v) => boolParse(v),
+        visible: (v) => boolParse(v),
+        opacity: (v) => { const n = numParse(v); return n !== undefined && n >= 0 && n <= 1 ? n : undefined; },
+        padding: (v) => numParse(v),
+        margin: (v) => numParse(v),
+      };
+      // Collect CSS variables from all stylesheets for var() resolution
+      const cssVars = new Map<string, string>();
+      for (const ss of context.document.stylesheets) {
+        for (const [k, v] of ss.variables) {
+          cssVars.set(k, v);
+        }
+      }
+
+      // Ensure element has a style object
+      if (!element.props.style) {
+        element.props.style = {};
+      }
+      const style = element.props.style as Record<string, unknown>;
+      const styleChanges: string[] = [];
+      for (const [key, val] of styleParams) {
+        const parser = allowedStyles[key];
+        if (!parser) {
+          return { success: false, message: `Unknown style property: ${key}. Allowed: ${Object.keys(allowedStyles).join(', ')}` };
+        }
+        // Resolve var(--theme-*) references before parsing
+        const resolvedVal = val.includes('var(') ? resolveVarReferences(val, cssVars) : val;
+        if (!resolvedVal) {
+          return { success: false, message: `Could not resolve CSS variable in value for ${key}: ${val}` };
+        }
+        const parsed = parser(resolvedVal);
+        if (parsed === undefined) {
+          return { success: false, message: `Invalid value for ${key}: ${val}` };
+        }
+        style[key] = parsed;
+        styleChanges.push(`${key}=${resolvedVal}`);
+      }
+      context.render();
+      return { success: true, message: `Styled ${elementId}: ${styleChanges.join(', ')}` };
     }
 
     default:

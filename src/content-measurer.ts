@@ -1,6 +1,5 @@
 // Content measurement utilities for layout calculations
 import { Element, type Size, type IntrinsicSizeContext, type BoxSpacing, isRenderable } from './types.ts';
-
 export interface ContentMeasureContext {
   availableWidth: number;
   parentStyle?: any;
@@ -44,6 +43,10 @@ export class ContentMeasurer {
     const childSizes: Array<{ w: number; h: number }> = [];
 
     for (const child of container.children) {
+      // Skip invisible or display:none children
+      if (child.props?.visible === false) continue;
+      if (child.props?.style?.display === 'none') continue;
+
       const childSize = this.measureElement(child, availableWidth);
       const childMargin = this._getChildMargin(child);
 
@@ -119,6 +122,10 @@ export class ContentMeasurer {
    * Measure a single element's dimensions consistently
    */
   measureElement(element: Element, availableWidth: number): Size {
+    // Skip hidden elements
+    if (element.props?.visible === false) return { width: 0, height: 0 };
+    if (element.props?.style?.display === 'none') return { width: 0, height: 0 };
+
     let size: Size;
 
     // Always use intrinsicSize if available - this is the authoritative measurement
@@ -173,10 +180,15 @@ export class ContentMeasurer {
    */
   private _getChildMargin(element: Element): BoxSpacing {
     const style = (element.props && element.props.style) || {};
-    const margin = style.margin || style.marginBottom || 0;
+    const margin = style.margin;
 
     if (typeof margin === 'number') {
-      return { top: margin, right: margin, bottom: margin, left: margin };
+      return {
+        top: style.marginTop !== undefined ? this._parseNumberValue(style.marginTop) : margin,
+        right: style.marginRight !== undefined ? this._parseNumberValue(style.marginRight) : margin,
+        bottom: style.marginBottom !== undefined ? this._parseNumberValue(style.marginBottom) : margin,
+        left: style.marginLeft !== undefined ? this._parseNumberValue(style.marginLeft) : margin,
+      };
     }
 
     if (typeof margin === 'object') {
@@ -203,7 +215,13 @@ export class ContentMeasurer {
    */
   private _measureContainerFastPath(container: Element, availableWidth: number): Size {
     const children = container.children!;
-    const childCount = children.length;
+
+    // Filter out hidden children
+    const visibleChildren = children.filter(c =>
+      c.props?.visible !== false && c.props?.style?.display !== 'none'
+    );
+    const childCount = visibleChildren.length;
+    if (childCount === 0) return { width: 0, height: 0 };
 
     // Get gap from container style
     const containerStyle = container.props?.style || {};
@@ -215,7 +233,7 @@ export class ContentMeasurer {
     let maxWidth = 0;
 
     for (let i = 0; i < sampleSize; i++) {
-      const child = children[i];
+      const child = visibleChildren[i];
       const childSize = this.measureElement(child, availableWidth);
       const childMargin = this._getChildMargin(child);
 

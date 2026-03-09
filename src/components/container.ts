@@ -121,6 +121,9 @@ export class ContainerElement extends Element implements Renderable, Focusable, 
       // When flex-wrap is active, simulate line-breaking to compute correct total height
       const childSizes: Array<{ w: number; h: number }> = [];
       for (const child of this.children) {
+        // Skip hidden children
+        if (child.props?.visible === false) continue;
+        if (child.props?.style?.display === 'none') continue;
         if (hasIntrinsicSize(child)) {
           const intrinsicSize = getChildSize(child);
           // Use explicit numeric dimensions if available, otherwise use intrinsic size + border space
@@ -203,6 +206,9 @@ export class ContainerElement extends Element implements Renderable, Focusable, 
     } else {
       // Column layout or block: take max width, sum heights
       for (const child of this.children) {
+        // Skip hidden children
+        if (child.props?.visible === false) continue;
+        if (child.props?.style?.display === 'none') continue;
         if (hasIntrinsicSize(child)) {
           const intrinsicSize = getChildSize(child);
           // Use explicit numeric dimensions if available, otherwise use intrinsic size + border space

@@ -293,6 +293,15 @@ export class TextSelectionHandler {
       const dialogs = this._deps.document.getElementsByType('dialog');
       for (const dialog of dialogs) {
         if (dialog instanceof DialogElement && dialog.props.open) {
+          // Check for close button first (takes priority over drag)
+          if (dialog.props.closable && dialog.isOnCloseButton(event.x, event.y)) {
+            if (typeof dialog.props.onClose === 'function') {
+              dialog.props.onClose();
+            } else {
+              dialog.props.open = false;
+            }
+            return;
+          }
           // Check for resize corner first (takes priority over drag)
           if (dialog.props.resizable && dialog.isOnResizeCorner(event.x, event.y)) {
             dialog.startResize(event.x, event.y);

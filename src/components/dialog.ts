@@ -18,6 +18,10 @@ export interface DialogProps extends Omit<BaseProps, 'width' | 'height'> {
   draggable?: boolean;
   /** Enable resizing from bottom-right corner */
   resizable?: boolean;
+  /** Show close button (x) in title bar */
+  closable?: boolean;
+  /** Callback when close button is clicked */
+  onClose?: () => void;
   /** X offset from center (set by dragging) */
   offsetX?: number;
   /** Y offset from center (set by dragging) */
@@ -110,6 +114,22 @@ export class DialogElement extends Element implements Renderable {
       y === bounds.y + 1 &&
       x > bounds.x &&
       x < bounds.x + bounds.width - 1
+    );
+  }
+
+  /**
+   * Check if a point is on the close button in the title bar
+   */
+  isOnCloseButton(x: number, y: number): boolean {
+    if (!this.props.closable || !this.props.title || !this._lastDialogBounds) {
+      return false;
+    }
+    const bounds = this._lastDialogBounds;
+    // Close button is "x" at the right end of the title bar (y = bounds.y + 1)
+    return (
+      y === bounds.y + 1 &&
+      x >= bounds.x + bounds.width - 4 &&
+      x <= bounds.x + bounds.width - 2
     );
   }
 
@@ -377,6 +397,11 @@ export class DialogElement extends Element implements Renderable {
       const titleX = bounds.x + Math.floor((bounds.width - titleText.length) / 2);
       buffer.currentBuffer.setText(titleX, contentY, titleText, titleStyle);
 
+      // Render close button if closable
+      if (this.props.closable) {
+        buffer.currentBuffer.setText(bounds.x + bounds.width - 3, contentY, 'x', titleStyle);
+      }
+
       contentY += 2; // Skip title and separator
     }
 
@@ -458,6 +483,7 @@ export const dialogSchema: ComponentSchema = {
     open: { type: 'boolean', description: 'Whether dialog is visible' },
     draggable: { type: 'boolean', description: 'Enable dragging by title bar' },
     resizable: { type: 'boolean', description: 'Enable resizing from bottom-right corner' },
+    closable: { type: 'boolean', description: 'Show close button (x) in title bar' },
     width: { type: ['number', 'string'], description: 'Dialog width (number for columns, string for percentage)' },
   },
 };

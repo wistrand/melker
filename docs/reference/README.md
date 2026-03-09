@@ -234,10 +234,9 @@ Documentation and UI in the same file:
 ### 5. Dev Tools
 
 Press F12 to open Dev Tools:
-- View source
-- Inspect policy
-- Inspect document tree (live element hierarchy with values)
-- See system info
+- View source, inspect policy, see system info
+- **Inspect tab**: Interactive element inspector with tree view, property/style editing, and live layout bounds
+- Config viewer, log viewer, actions panel
 
 ---
 

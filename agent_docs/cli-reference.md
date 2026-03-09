@@ -115,7 +115,7 @@ Regenerate after adding new flags: `deno task build:completions`
 | `F6`                | Toggle Performance dialog (live stats)                                       |
 | `F7`                | Open AI assistant with voice input (or toggle recording if open)             |
 | `F8`                | Open AI accessibility assistant (text input)                                 |
-| `F12`               | Toggle Dev Tools overlay (source, policy, config, inspect, log, system info) |
+| `F12`               | Toggle Dev Tools overlay (source, policy, config, inspect with editing, log, system info) |
 | `Escape`            | Close overlays / Close AI dialog                                             |
 | `Tab` / `Shift+Tab` | Navigate focusable elements (linear tab order)                               |
 | Arrow keys          | Geometric focus navigation (nearest element in direction)                    |

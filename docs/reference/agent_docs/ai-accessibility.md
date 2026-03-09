@@ -60,7 +60,7 @@ User types query → Enter/Send
   │    └─ HIT → display cached, return
   ├─ Push user message to _messageHistory
   │
-  ├─ Tool loop (up to MAX_TOOL_ROUNDS = 3):
+  ├─ Tool loop (up to MAX_TOOL_ROUNDS = 5):
   │    ├─ Build messages: [system prompt + nudge, ...history]
   │    ├─ _streamRound() — SSE to OpenRouter
   │    │    ├─ onToken: append, debounced render (50ms)
@@ -77,8 +77,8 @@ User types query → Enter/Send
 ```
 
 As the tool loop approaches its limit, the system prompt is augmented with escalating nudges:
-- **Round 1 of 3**: soft nudge — "finish your task now, one more tool call if needed"
-- **Round 2 of 3**: hard nudge — "this is your LAST chance, do NOT call tools"
+- **Round N-2 of 5**: soft nudge — "finish your task now, one more tool call if needed"
+- **Round N-1 of 5**: hard nudge — "this is your LAST chance, do NOT call tools"
 
 This gives the model a chance to synthesize a text response rather than being cut off mid-chain.
 
@@ -174,11 +174,47 @@ The AI can interact with the UI through tools:
 
 | Tool           | Description                                   | Parameters                                                         |
 |----------------|-----------------------------------------------|--------------------------------------------------------------------|
-| `send_event`   | Send events to UI elements (incl. select/combobox/autocomplete change) | `element_id`, `event_type` (click/change/focus/keypress/draw), `value` |
+| `send_event`   | Send events to UI elements                    | `element_id`, `event_type`, `value` (see event types below)        |
 | `click_canvas` | Click at specific coordinates on a canvas     | `element_id`, `x`, `y` (pixel buffer coordinates)                  |
 | `read_element` | Read full text content from elements          | `element_id`                                                       |
 | `close_dialog` | Close the AI assistant dialog                 | (none)                                                             |
 | `exit_program` | Exit the application                          | (none)                                                             |
+
+### send_event Types
+
+| Event Type         | Description                                                                 |
+|--------------------|-----------------------------------------------------------------------------|
+| `click`            | Click a button, toggle a checkbox, etc.                                     |
+| `change`           | Set input/select/combobox value                                             |
+| `focus`            | Focus an element                                                            |
+| `keypress`         | Send a key press (e.g., `Enter`, `ArrowDown`)                               |
+| `draw`             | Draw SVG overlay on canvas/img/tile-map elements                            |
+| `set_prop`         | Set key=value pairs on canvas/img/video props                               |
+| `style_element`    | Set inline styles (e.g., `backgroundColor=var(--theme-primary),bold=true`)  |
+| `add_connector`    | Create a visual connector line between two elements                         |
+| `remove_connector` | Remove a connector by ID                                                    |
+
+### Element Styling
+
+The AI can modify inline styles on any element using `style_element`:
+
+```
+event_type="style_element", value="backgroundColor=var(--theme-focus-background),bold=true"
+```
+
+Supported properties: `color`, `backgroundColor`, `border`, `borderColor`, `bold`, `italic`, `underline`, `dim`, `visible`, `opacity`, `padding`, `margin`. Theme colors (`var(--theme-*)`) are automatically resolved.
+
+### Connectors
+
+The AI can create visual connector lines between elements using `add_connector`:
+
+```
+event_type="add_connector", value="from=element-a,to=element-b,label=data flow,arrow=end"
+```
+
+Parameters: `from` (required), `to` (required), `label`, `arrow` (none/end/start/both), `routing` (direct/orthogonal), `color`, `lineStyle` (thin/thick/dashed). Connector ID is auto-generated as `ai-connector-<from>-<to>`.
+
+To remove: `event_type="remove_connector"`, `element_id="ai-connector-element-a-element-b"`.
 
 ### Tile Map Interaction
 

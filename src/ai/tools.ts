@@ -505,7 +505,19 @@ function executeSendEvent(
         context.render();
         return { success: true, message: `Cleared SVG overlay on ${targetName} ${elementId}` };
       }
-      drawEl.props.svgOverlay = value;
+      // Resolve var(--theme-*) CSS variable references in SVG color attributes
+      let resolvedValue = value;
+      if (value.includes('var(')) {
+        const cssVars = new Map<string, string>();
+        for (const ss of context.document.stylesheets) {
+          for (const [k, v] of ss.variables) {
+            cssVars.set(k, v);
+          }
+        }
+        resolvedValue = value.replace(/(?:stroke|fill|bg|background)\s*=\s*"([^"]*var\([^"]*\)[^"]*)"/g,
+          (_match, val) => _match.replace(val, resolveVarReferences(val, cssVars) || val));
+      }
+      drawEl.props.svgOverlay = resolvedValue;
       context.render();
       const pathCount = (value.match(/<path\b/gi) || []).length;
       const textCount = (value.match(/<text\b/gi) || []).length;

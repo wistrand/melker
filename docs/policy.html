@@ -54,8 +54,8 @@
     <p class="section-claim">A JSON block that says exactly what the app can do.</p>
 
     <p>
-      Every <code>.melker</code> file contains a <code>&lt;policy&gt;</code> block at the top.
-      It declares the app's name, description, and the permissions it requires.
+      A <code>.melker</code> file can contain a <code>&lt;policy&gt;</code> block that declares
+      the app's name, description, and the permissions it requires.
       The engine reads this block before any code runs.
     </p>
 
@@ -102,14 +102,13 @@
     <p class="section-claim">Runtime-level sandboxing, not application-level checks.</p>
 
     <p>
-      When you run <code>melker app.melker</code>, three things happen in sequence:
+      When you run <code>melker app.melker</code>, two phases happen in sequence:
     </p>
 
     <div class="code-block">
-      <div class="code-title">Three-process pipeline</div>
-      <pre><span class="cmt">1. CLI</span>          parses the command, loads the file
-<span class="cmt">2. Launcher</span>     reads the policy, shows the approval prompt
-<span class="cmt">3. Runner</span>       executes the app in a sandboxed subprocess</pre>
+      <div class="code-title">Two-process model</div>
+      <pre><span class="cmt">1. CLI + Launcher</span>   parses the command, loads the policy, shows the approval prompt
+<span class="cmt">2. Runner</span>           executes the app in a sandboxed subprocess</pre>
     </div>
 
     <p>

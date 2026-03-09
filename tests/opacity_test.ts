@@ -500,7 +500,7 @@ async function renderToAnsi(
       ],
       stdout: 'piped',
       stderr: 'piped',
-      env: { ...Deno.env.toObject(), COLORTERM: 'truecolor' },
+      env: { ...Deno.env.toObject(), COLORTERM: 'truecolor', MELKER_THEME: 'fullcolor-dark' },
     });
     const { stdout } = await command.output();
     return new TextDecoder().decode(stdout);

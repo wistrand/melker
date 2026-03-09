@@ -48,6 +48,11 @@ export function isStdoutEnabled(): boolean {
   const explicitlyEnabled = !!(config as any).stdoutEnabled;
   const forceInteractive = !!(config as any).stdoutInteractive;
 
+  // --ai-context / --ai-query imply stdout mode (no terminal control needed)
+  if (config.stdoutAiContext || config.stdoutAiQuery) {
+    return true;
+  }
+
   // --interactive flag overrides auto-detection
   if (forceInteractive) {
     return explicitlyEnabled; // Only enable stdout mode if explicitly requested

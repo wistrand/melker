@@ -330,6 +330,17 @@
       "flag": "--stdout",
       "description": "Output buffer to stdout after timeout (no terminal control)"
     },
+    "stdout.aiContext": {
+      "type": "boolean",
+      "default": false,
+      "flag": "--ai-context",
+      "description": "Output AI accessibility context to stdout (same text the AI assistant sees)"
+    },
+    "stdout.aiQuery": {
+      "type": "string",
+      "flag": "--ai-query",
+      "description": "Output full AI completion request as JSON (system prompt, tools, query) and exit"
+    },
     "stdout.interactive": {
       "type": "boolean",
       "default": false,

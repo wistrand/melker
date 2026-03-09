@@ -11,6 +11,8 @@ import { Env } from './env.ts';
 import { parseCliFlags, MelkerConfig } from './config/mod.ts';
 import { getLogger, reconfigureGlobalLogger } from './logging.ts';
 import { isStdoutEnabled, isStdoutAutoEnabled, getStdoutConfig, bufferToStdout, trimStdoutOutput } from './stdout.ts';
+import { buildContext, buildSystemPrompt } from './ai/context.ts';
+import { toolsToOpenRouterFormat } from './ai/tools.ts';
 import {
   cwd,
   args as getArgs,
@@ -868,12 +870,18 @@ export async function runMelkerFile(
 
     // Handle stdout mode - output buffer after timeout and exit
     // Auto-enabled when stdout is not a TTY (piped or redirected)
-    if (isStdoutEnabled()) {
+    const aiContextEnabled = MelkerConfig.get().stdoutAiContext;
+    const aiQueryText = MelkerConfig.get().stdoutAiQuery;
+    if (isStdoutEnabled() || aiContextEnabled) {
       const stdoutConfig = getStdoutConfig();
       const stdoutLogger = getLogger('stdout');
 
       // Log whether auto-enabled or explicitly requested
-      if (isStdoutAutoEnabled()) {
+      if (aiQueryText) {
+        stdoutLogger.info(`AI query mode: waiting ${stdoutConfig.timeout}ms`);
+      } else if (aiContextEnabled) {
+        stdoutLogger.info(`AI context mode: waiting ${stdoutConfig.timeout}ms`);
+      } else if (isStdoutAutoEnabled()) {
         stdoutLogger.info(`Stdout mode auto-enabled (not a TTY), waiting ${stdoutConfig.timeout}ms`);
       } else {
         stdoutLogger.info(`Stdout mode: waiting ${stdoutConfig.timeout}ms`);
@@ -882,17 +890,39 @@ export async function runMelkerFile(
       // Wait for the configured timeout
       await new Promise(resolve => setTimeout(resolve, stdoutConfig.timeout));
 
-      // Get the buffer from the engine and output it
-      const buffer = (engine as any)._buffer;
-      if (buffer) {
-        let output = bufferToStdout(buffer, {
-          colorSupport: stdoutConfig.colorSupport,
-          stripAnsi: stdoutConfig.stripAnsi,
-        });
-        // Apply trimming if configured
-        output = trimStdoutOutput(output, stdoutConfig.trim);
-        const encoder = new TextEncoder();
-        await stdout.write(encoder.encode(output + '\n'));
+      const encoder = new TextEncoder();
+
+      if (aiQueryText) {
+        // Output the full AI completion request as JSON — identical to what would be sent to the API
+        const context = buildContext(engine.document);
+        const systemPrompt = buildSystemPrompt(context);
+        const tools = toolsToOpenRouterFormat();
+        const requestBody = {
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: aiQueryText },
+          ],
+          tools,
+          tool_choice: 'auto',
+        };
+        await stdout.write(encoder.encode(JSON.stringify(requestBody, null, 2) + '\n'));
+      } else if (aiContextEnabled) {
+        // Output the AI accessibility context — identical to what the AI assistant sees
+        const context = buildContext(engine.document);
+        const systemPrompt = buildSystemPrompt(context);
+        await stdout.write(encoder.encode(systemPrompt + '\n'));
+      } else {
+        // Get the buffer from the engine and output it
+        const buffer = (engine as any)._buffer;
+        if (buffer) {
+          let output = bufferToStdout(buffer, {
+            colorSupport: stdoutConfig.colorSupport,
+            stripAnsi: stdoutConfig.stripAnsi,
+          });
+          // Apply trimming if configured
+          output = trimStdoutOutput(output, stdoutConfig.trim);
+          await stdout.write(encoder.encode(output + '\n'));
+        }
       }
 
       // Exit cleanly

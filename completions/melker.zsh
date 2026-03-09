@@ -7,6 +7,8 @@
 
 _melker() {
     _arguments -s \
+        '--ai-context[Output AI accessibility context to stdout (same text the AI assistant sees)]' \
+        '--ai-query[Output full AI completion request as JSON (system prompt, tools, query) and exit]:value:' \
         '--allow-ai[Allow AI tools (ffmpeg, openrouter.ai)]' \
         '--allow-all[Allow all permissions]' \
         '--allow-browser[Allow opening browser]' \

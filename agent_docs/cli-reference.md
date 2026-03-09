@@ -23,6 +23,8 @@ melker upgrade     # Upgrade (git pull or JSR reinstall)
 ./melker.ts --verbose app.melker    # Verbose mode
 ./melker.ts --test-sextant          # Test terminal sextant character support
 ./melker.ts --stdout app.melker     # Output single frame to stdout and exit
+./melker.ts --ai-context app.melker # Output AI accessibility context and exit
+./melker.ts --ai-query="describe the layout" app.melker  # Output full AI request JSON and exit
 ./melker.ts --interactive app.melker # Force TUI mode even when piped
 ./melker.ts --color=always app.melker # Force ANSI colors even when piped
 ./melker.ts --lsp                   # Start LSP server
@@ -50,6 +52,8 @@ melker upgrade     # Upgrade (git pull or JSR reinstall)
 ```
 
 **Stdout mode:** `--stdout` explicitly enables single-frame output. Options: `--stdout-width`, `--stdout-height`, `--stdout-timeout`, `--color`.
+
+**AI context mode:** `--ai-context` outputs the exact text the AI assistant receives (screen content, element tree, actions). `--ai-query="<text>"` outputs the full JSON API request including tools and the query. Both imply stdout mode.
 
 See [getting-started.md](getting-started.md) for full CLI options, Deno flags, and remote execution.
 

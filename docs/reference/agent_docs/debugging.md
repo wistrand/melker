@@ -375,6 +375,46 @@ MELKER_THEME=bw-std ./melker.ts --stdout --trust app.melker
 - Piping output to other tools for analysis
 - CI/automated testing of visual output
 
+### 7. AI Context Mode (What the AI Sees)
+
+Output the exact text context the AI accessibility assistant receives — useful for debugging what the AI "sees" and verifying ARIA attributes, element tree structure, and available actions:
+
+```bash
+# Output AI context (system prompt) and exit
+melker --ai-context --trust app.melker
+
+# Output full API request JSON (system prompt, tools, user query) and exit
+melker --ai-query="what buttons are on screen?" --trust app.melker
+
+# Pipe to jq for inspection
+melker --ai-query="describe the layout" --trust app.melker | jq '.messages[0].content'
+
+# Compare AI context between two app states
+melker --ai-context --trust app.melker > before.txt
+# ... modify app ...
+melker --ai-context --trust app.melker > after.txt
+diff before.txt after.txt
+```
+
+| Flag                     | Output                                                       |
+|--------------------------|--------------------------------------------------------------|
+| `--ai-context`           | System prompt text (screen content, element tree, actions)   |
+| `--ai-query="<query>"`  | Full JSON request body (messages, tools, tool_choice)        |
+
+Both flags imply stdout mode — no alternate screen, no raw mode, no colors. The app renders once, outputs the context, and exits.
+
+The `--ai-context` output includes:
+- **Screen content** — human-readable element descriptions with ARIA semantics
+- **Focused element** — type, ID, name, value, ARIA state
+- **Element tree** — ASCII tree structure with IDs, roles, states
+- **Available actions** — keyboard shortcuts and navigation hints
+
+The `--ai-query` output wraps this in a complete API request with:
+- System message containing the above context
+- User message with the provided query
+- Tool definitions (send_event, read_element, click_canvas, etc.)
+- `tool_choice: "auto"`
+
 ## Common Debug Scenarios
 
 ### Permission Issues

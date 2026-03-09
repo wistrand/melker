@@ -219,6 +219,14 @@ export class MelkerConfig extends MelkerConfigCore {
     return this.data['stdout.enabled'] as boolean;
   }
 
+  get stdoutAiContext(): boolean {
+    return this.data['stdout.aiContext'] as boolean;
+  }
+
+  get stdoutAiQuery(): string | undefined {
+    return this.data['stdout.aiQuery'] as string | undefined;
+  }
+
   get stdoutTimeout(): number {
     return this.data['stdout.timeout'] as number;
   }

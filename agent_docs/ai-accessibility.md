@@ -520,6 +520,24 @@ const DIALOG_ELEMENT_IDS = [
 function buildContext(document: Document, excludeIds?: string[]): UIContext
 ```
 
+## Debugging AI Context
+
+Inspect exactly what the AI assistant sees without opening the dialog or making API calls:
+
+```bash
+# Output the system prompt (screen content, element tree, actions)
+melker --ai-context --trust app.melker
+
+# Output full API request JSON (system prompt, tools, user query)
+melker --ai-query="what buttons are on screen?" --trust app.melker
+```
+
+Both flags imply stdout mode — the app renders once, outputs the context, and exits cleanly (no alternate screen, raw mode, or colors).
+
+`--ai-context` is useful for verifying ARIA attributes, element visibility, and accessible names. `--ai-query` includes the tool definitions, letting you inspect the exact JSON payload that would be sent to the API.
+
+See [debugging.md](debugging.md#7-ai-context-mode-what-the-ai-sees) for more examples.
+
 ## Design Decisions
 
 | Decision                         | Rationale                                                                          |

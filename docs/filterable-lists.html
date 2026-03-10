@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filterable List Components</title>
+  <meta name="description" content="Select, combobox, autocomplete, and command palette components for Melker terminal apps.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&&display=swap" rel="stylesheet">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://melker.sh/filterable-lists.html">
+  <meta property="og:title" content="Filterable List Components">
+  <meta property="og:description" content="Select, combobox, autocomplete, and command palette components for Melker terminal apps.">
+
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="brand">melker</a>
+    <div class="links">
+      <a href="/tutorial.html">Tutorial</a>
+      <a href="/how-it-works.html">How it works</a>
+      <div class="dropdown">
+        <a class="dropdown-toggle">More ▾</a>
+        <div class="dropdown-menu"><div class="dropdown-menu-inner">
+          <a href="/data-visualization.html">Data Visualization</a>
+          <a href="/filterable-lists.html">Filterable Lists</a>
+          <a href="/rich-content.html">Rich Content</a>
+          <a href="/policy.html">Policy</a>
+          <a href="/ai.html">AI Assistant</a>
+          <a href="/reference/">Reference</a>
+          <a href="https://github.com/wistrand/melker">GitHub</a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<aside class="sidebar" id="sidebar">
+  <a href="#select">1. Select</a>
+  <a href="#combobox">2. Combobox</a>
+  <a href="#autocomplete">3. Autocomplete</a>
+  <a href="#command-palette">4. Command Palette</a>
+  <a href="#options">5. Options and groups</a>
+  <a href="#filters">6. Filter modes</a>
+</aside>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1>Filterable List Components</h1>
+    <p class="subtitle">
+      Four components for selecting from lists. All share the same option/group
+      model and keyboard navigation.
+    </p>
+
+    <ul class="component-list" style="list-style: none; padding-left: 0">
+      <li><a href="#select"><code>select</code></a> &ndash; dropdown picker</li>
+      <li><a href="#combobox"><code>combobox</code></a> &ndash; dropdown with text filter</li>
+      <li><a href="#autocomplete"><code>autocomplete</code></a> &ndash; async search with debounce</li>
+      <li><a href="#command-palette"><code>command-palette</code></a> &ndash; modal command selector</li>
+    </ul>
+
+  </div>
+</div>
+
+<!-- Section 1: Select -->
+<section id="select">
+  <div class="container">
+    <h2>1. Select</h2>
+    <p class="section-claim">A dropdown picker. Tab to focus, Enter to open, arrows to navigate.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/lists/select.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251)">Order a drink</span>
+
+ <span style="color:rgb(249,250,251)">Size:</span>  <span style="color:rgb(107,114,128);background:rgb(30,64,175)"> Choose size...   v </span>
+
+ <span style="color:rgb(249,250,251)">Drink:</span>  <span style="color:rgb(107,114,128);background:rgb(17,24,39)"> Choose drink...  ^ </span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">┌──────────────────┐</span>
+ <span style="color:rgb(249,250,251)">Order: (</span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(209,213,219);background:rgb(31,41,55);font-weight:bold">Coffee</span><span style="background:rgb(31,41,55)">            </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Espresso          </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Latte             </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Cappuccino        </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(209,213,219);background:rgb(31,41,55);font-weight:bold">Tea</span><span style="background:rgb(31,41,55)">               </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Green Tea         </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Black Tea         </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Chai Latte        </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+         <span style="color:rgb(107,114,128);background:rgb(31,41,55)">└──────────────────┘</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/lists/select.melker">View source</a></p>
+
+    <p>
+      Options are declared as child elements. Use <code>&lt;group&gt;</code> to organize them
+      under headers. The <code>onChange</code> handler fires with <code>event.value</code>
+      and <code>event.label</code>.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">select.melker</div>
+      <pre><span class="tag">&lt;select</span> <span class="attr">id</span>=<span class="str">"drink"</span> <span class="attr">placeholder</span>=<span class="str">"Choose drink..."</span>
+    <span class="attr">style</span>=<span class="str">"width: 20"</span>
+    <span class="attr">onChange</span>=<span class="str">"$app.update()"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;group</span> <span class="attr">label</span>=<span class="str">"Coffee"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"espresso"</span><span class="tag">&gt;</span>Espresso<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"latte"</span><span class="tag">&gt;</span>Latte<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"cappuccino"</span><span class="tag">&gt;</span>Cappuccino<span class="tag">&lt;/option&gt;</span>
+    <span class="tag">&lt;/group&gt;</span>
+    <span class="tag">&lt;group</span> <span class="attr">label</span>=<span class="str">"Tea"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"green"</span><span class="tag">&gt;</span>Green Tea<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"black"</span><span class="tag">&gt;</span>Black Tea<span class="tag">&lt;/option&gt;</span>
+    <span class="tag">&lt;/group&gt;</span>
+<span class="tag">&lt;/select&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span><span class="tag">&gt;</span>
+    <span class="kw">export function</span> update() {
+        <span class="kw">const</span> drink = $melker.getElementById(<span class="str">'drink'</span>);
+        <span class="kw">const</span> result = $melker.getElementById(<span class="str">'result'</span>);
+        result.setValue(<span class="str">`Order: ${drink?.getValue()}`</span>);
+    }
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/filterable-list-architecture.md">Filterable list architecture</a></p>
+  </div>
+</section>
+
+<!-- Section 2: Combobox -->
+<section id="combobox">
+  <div class="container">
+    <h2>2. Combobox</h2>
+    <p class="section-claim">A select with a text input. Type to filter the options list.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/lists/combobox.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251)">Country Picker</span>
+
+ <span style="color:rgb(249,250,251)">Country:</span>  <span style="color:rgb(107,114,128);background:rgb(17,24,39)"> ype to search...            ^</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">┌────────────────────────────┐</span>
+ <span style="color:rgb(249,250,251)">Selected: </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(209,213,219);background:rgb(31,41,55);font-weight:bold">Europe</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">                     </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Sweden                     </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Norway                     </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Denmark                    </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Finland                    </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">░│</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Germany                    </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">░│</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">France                     </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">░│</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(209,213,219);background:rgb(31,41,55);font-weight:bold">Americas</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">                   </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">░│</span>
+           <span style="color:rgb(107,114,128);background:rgb(31,41,55)">└────────────────────────────┘</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/lists/combobox.melker">View source</a></p>
+
+    <p>
+      The <code>filter</code> prop controls how typed text matches options.
+      Set <code>filter="fuzzy"</code> for character-by-character matching (typing "sw"
+      matches "Sweden"), or <code>"prefix"</code>, <code>"contains"</code>, <code>"exact"</code>.
+      The <code>onSelect</code> handler fires when an option is picked.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">combobox.melker</div>
+      <pre><span class="tag">&lt;combobox</span> <span class="attr">id</span>=<span class="str">"country"</span> <span class="attr">placeholder</span>=<span class="str">"Type to search..."</span>
+    <span class="attr">style</span>=<span class="str">"width: 30"</span> <span class="attr">filter</span>=<span class="str">"fuzzy"</span>
+    <span class="attr">onSelect</span>=<span class="str">"$app.pick(event)"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;group</span> <span class="attr">label</span>=<span class="str">"Europe"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"se"</span><span class="tag">&gt;</span>Sweden<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"no"</span><span class="tag">&gt;</span>Norway<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"dk"</span><span class="tag">&gt;</span>Denmark<span class="tag">&lt;/option&gt;</span>
+    <span class="tag">&lt;/group&gt;</span>
+    <span class="tag">&lt;group</span> <span class="attr">label</span>=<span class="str">"Americas"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"us"</span><span class="tag">&gt;</span>United States<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"ca"</span><span class="tag">&gt;</span>Canada<span class="tag">&lt;/option&gt;</span>
+    <span class="tag">&lt;/group&gt;</span>
+<span class="tag">&lt;/combobox&gt;</span></pre>
+    </div>
+
+    <p>
+      Combobox also accepts freeform text entry. If the user types something that does not
+      match any option and presses Enter, <code>onSelect</code> fires with <code>event.freeform = true</code>.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/filterable-list-architecture.md">Filterable list architecture</a></p>
+  </div>
+</section>
+
+<!-- Section 3: Autocomplete -->
+<section id="autocomplete">
+  <div class="container">
+    <h2>3. Autocomplete</h2>
+    <p class="section-claim">A combobox with async search. Results load as you type.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/lists/autocomplete.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251)">User Search</span>
+
+ <span style="color:rgb(249,250,251)">Find:</span>  <span style="color:rgb(107,114,128);background:rgb(17,24,39)"> earch users...                   ^</span>
+        <span style="color:rgb(107,114,128);background:rgb(31,41,55)">┌─────────────────────────────────┐</span>
+ <span style="color:rgb(249,250,251)">Selecte</span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(209,213,219);background:rgb(31,41,55);font-weight:bold">Recent</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">                           </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+        <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Alice Anderson                   </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+        <span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Bob Brown                        </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+        <span style="color:rgb(107,114,128);background:rgb(31,41,55)">└─────────────────────────────────┘</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/lists/autocomplete.melker">View source</a></p>
+
+    <p>
+      The <code>onSearch</code> handler runs when the user types. It receives <code>event.query</code>
+      and should return an array of <code>{ value, label }</code> objects. The <code>debounce</code>
+      prop (in ms) prevents firing on every keystroke. <code>minChars</code> sets the minimum
+      input length before searching.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">autocomplete.melker</div>
+      <pre><span class="tag">&lt;autocomplete</span> <span class="attr">id</span>=<span class="str">"search"</span> <span class="attr">placeholder</span>=<span class="str">"Search users..."</span>
+    <span class="attr">onSearch</span>=<span class="str">"$app.searchUsers(event.query)"</span>
+    <span class="attr">onSelect</span>=<span class="str">"$app.selectUser(event)"</span>
+    <span class="attr">minChars</span>=<span class="str">"1"</span> <span class="attr">debounce</span>=<span class="str">"300"</span> <span class="attr">width</span>=<span class="str">"35"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;group</span> <span class="attr">label</span>=<span class="str">"Recent"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"alice"</span><span class="tag">&gt;</span>Alice Anderson<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"bob"</span><span class="tag">&gt;</span>Bob Brown<span class="tag">&lt;/option&gt;</span>
+    <span class="tag">&lt;/group&gt;</span>
+<span class="tag">&lt;/autocomplete&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span><span class="tag">&gt;</span>
+    <span class="kw">export async function</span> searchUsers(query: string) {
+        <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="kw">new</span> URL(<span class="str">'users.json'</span>, $melker.url));
+        <span class="kw">const</span> users = <span class="kw">await</span> res.json();
+        <span class="kw">return</span> users.filter(u =>
+            u.label.toLowerCase().includes(query.toLowerCase())
+        );
+    }
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      Child <code>&lt;option&gt;</code> elements show as initial suggestions before the user types.
+      Once <code>onSearch</code> returns results, they replace the dropdown contents.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/filterable-list-architecture.md">Filterable list architecture</a></p>
+  </div>
+</section>
+
+<!-- Section 4: Command Palette -->
+<section id="command-palette">
+  <div class="container">
+    <h2>4. Command Palette</h2>
+    <p class="section-claim">A modal overlay for commands. Fuzzy search, keyboard shortcuts, grouped actions.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/lists/command-palette.melker</div>
+      <pre class="terminal"><span style="color:rgb(107,114,128);background:rgb(31,41,55)"> Command Palette</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      ┌───────────────</span><span style="color:rgb(249,250,251);background:rgb(31,41,55);font-weight:bold">Command Palette</span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">────────────────┐</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)"> Press│</span><span style="color:rgb(107,114,128);background:rgb(17,24,39)">Search commands...</span><span style="background:rgb(17,24,39)">                            </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      ├──────────────────────────────────────────────┤</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="color:rgb(209,213,219);background:rgb(31,41,55);font-weight:bold">File</span><span style="background:rgb(31,41,55)">                                          </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="background:rgb(31,41,55)"> </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">New File                              Ctrl+N </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)"> Ready│</span><span style="background:rgb(31,41,55)"> </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Open File                             </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">Ctrl+O</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)"> </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="background:rgb(31,41,55)"> </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Save                                  </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">Ctrl+S</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)"> </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="color:rgb(209,213,219);background:rgb(31,41,55);font-weight:bold">Edit</span><span style="background:rgb(31,41,55)">                                          </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="background:rgb(31,41,55)"> </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Undo                                  </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">Ctrl+Z</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)"> </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="background:rgb(31,41,55)"> </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Redo                                  </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">Ctrl+Y</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)"> </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="color:rgb(209,213,219);background:rgb(31,41,55);font-weight:bold">View</span><span style="background:rgb(31,41,55)">                                          </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="background:rgb(31,41,55)"> </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Toggle Sidebar                               </span><span style="color:rgb(59,130,246);background:rgb(31,41,55)">█</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="background:rgb(31,41,55)"> </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">Zoom In                               </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">Ctrl++</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)"> </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">░</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      │</span><span style="background:rgb(31,41,55)">                                              </span><span style="color:rgb(107,114,128);background:rgb(31,41,55)">░</span>
+<span style="color:rgb(107,114,128);background:rgb(31,41,55)">      └──────────────────────────────────────────────┘</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/lists/command-palette.melker">View source</a></p>
+
+    <p>
+      The palette starts closed. Open it by setting <code>props.open = true</code>
+      or binding it to a keyboard shortcut. Each option can have a
+      <code>shortcut</code> prop that displays right-aligned, and its own
+      <code>onSelect</code> handler.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">command-palette.melker</div>
+      <pre><span class="tag">&lt;command-palette</span> <span class="attr">id</span>=<span class="str">"palette"</span> <span class="attr">placeholder</span>=<span class="str">"Search commands..."</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;group</span> <span class="attr">label</span>=<span class="str">"File"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"new"</span> <span class="attr">shortcut</span>=<span class="str">"Ctrl+N"</span>
+            <span class="attr">onSelect</span>=<span class="str">"$app.run('New file')"</span><span class="tag">&gt;</span>New File<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"save"</span> <span class="attr">shortcut</span>=<span class="str">"Ctrl+S"</span>
+            <span class="attr">onSelect</span>=<span class="str">"$app.run('Saved')"</span><span class="tag">&gt;</span>Save<span class="tag">&lt;/option&gt;</span>
+    <span class="tag">&lt;/group&gt;</span>
+    <span class="tag">&lt;group</span> <span class="attr">label</span>=<span class="str">"View"</span><span class="tag">&gt;</span>
+        <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"sidebar"</span>
+            <span class="attr">onSelect</span>=<span class="str">"$app.run('Toggled')"</span><span class="tag">&gt;</span>Toggle Sidebar<span class="tag">&lt;/option&gt;</span>
+    <span class="tag">&lt;/group&gt;</span>
+<span class="tag">&lt;/command-palette&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span><span class="tag">&gt;</span>
+    <span class="kw">export function</span> openPalette() {
+        <span class="kw">const</span> p = $melker.getElementById(<span class="str">'palette'</span>);
+        <span class="kw">if</span> (p) p.props.open = <span class="kw">true</span>;
+    }
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      The palette includes built-in system commands (Exit, AI Assistant, Dev Tools) by default.
+      Set <code>system="false"</code> to disable them.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/filterable-list-architecture.md">Filterable list architecture</a></p>
+  </div>
+</section>
+
+<!-- Section 5: Options and Groups -->
+<section id="options">
+  <div class="container">
+    <h2>5. Options and groups</h2>
+    <p class="section-claim">All four components use the same child elements.</p>
+
+    <div class="code-block">
+      <div class="code-title">Child elements</div>
+      <pre><span class="cmt">&lt;!-- Simple option --&gt;</span>
+<span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"id"</span><span class="tag">&gt;</span>Display Label<span class="tag">&lt;/option&gt;</span>
+
+<span class="cmt">&lt;!-- Option with shortcut and disabled state --&gt;</span>
+<span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"paste"</span> <span class="attr">shortcut</span>=<span class="str">"Ctrl+V"</span> <span class="attr">disabled</span>=<span class="str">"true"</span><span class="tag">&gt;</span>Paste<span class="tag">&lt;/option&gt;</span>
+
+<span class="cmt">&lt;!-- Grouped options --&gt;</span>
+<span class="tag">&lt;group</span> <span class="attr">label</span>=<span class="str">"Category"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"a"</span><span class="tag">&gt;</span>Item A<span class="tag">&lt;/option&gt;</span>
+    <span class="tag">&lt;option</span> <span class="attr">value</span>=<span class="str">"b"</span><span class="tag">&gt;</span>Item B<span class="tag">&lt;/option&gt;</span>
+<span class="tag">&lt;/group&gt;</span></pre>
+    </div>
+
+    <p>
+      Options can also be set programmatically with <code>setOptions()</code>:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Dynamic options</div>
+      <pre><span class="kw">const</span> el = $melker.getElementById(<span class="str">'mySelect'</span>);
+el.setOptions([
+    { id: <span class="str">'a'</span>, label: <span class="str">'Alpha'</span>, group: <span class="str">'Greek'</span> },
+    { id: <span class="str">'b'</span>, label: <span class="str">'Beta'</span>, group: <span class="str">'Greek'</span> },
+    { id: <span class="str">'1'</span>, label: <span class="str">'One'</span>, group: <span class="str">'Numbers'</span> },
+]);</pre>
+    </div>
+
+    <p>
+      Both child elements and <code>setOptions()</code> can be used together.
+      Child options appear first, then programmatic ones.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/component-reference.md">Component reference</a></p>
+  </div>
+</section>
+
+<!-- Section 6: Filter modes -->
+<section id="filters">
+  <div class="container">
+    <h2>6. Filter modes</h2>
+    <p class="section-claim">Four built-in filter algorithms. Set via the <code>filter</code> prop.</p>
+
+    <div class="code-block">
+      <div class="code-title">Filter modes</div>
+      <pre><span class="cmt">&lt;!-- Fuzzy: characters in order, scores consecutive matches --&gt;</span>
+<span class="tag">&lt;combobox</span> <span class="attr">filter</span>=<span class="str">"fuzzy"</span> <span class="cmt">...</span><span class="tag">/&gt;</span>     <span class="cmt">&lt;!-- "sw" matches "Sweden" --&gt;</span>
+
+<span class="cmt">&lt;!-- Prefix: text starts with pattern --&gt;</span>
+<span class="tag">&lt;combobox</span> <span class="attr">filter</span>=<span class="str">"prefix"</span> <span class="cmt">...</span><span class="tag">/&gt;</span>    <span class="cmt">&lt;!-- "sw" matches "Sweden" but not "New Sweden" --&gt;</span>
+
+<span class="cmt">&lt;!-- Contains: text includes pattern --&gt;</span>
+<span class="tag">&lt;combobox</span> <span class="attr">filter</span>=<span class="str">"contains"</span> <span class="cmt">...</span><span class="tag">/&gt;</span>  <span class="cmt">&lt;!-- "eden" matches "Sweden" --&gt;</span>
+
+<span class="cmt">&lt;!-- Exact: text equals pattern --&gt;</span>
+<span class="tag">&lt;combobox</span> <span class="attr">filter</span>=<span class="str">"exact"</span> <span class="cmt">...</span><span class="tag">/&gt;</span>    <span class="cmt">&lt;!-- only "Sweden" matches "Sweden" --&gt;</span></pre>
+    </div>
+
+    <p>
+      The default filter mode is <code>fuzzy</code> for combobox and command palette.
+      Select does not filter (it has no text input). Autocomplete delegates
+      filtering to the <code>onSearch</code> handler.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/filterable-list-architecture.md">Filterable list architecture</a></p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <a href="/">Melker Engine</a> - Run text with meaning
+  </div>
+</footer>
+
+<script src="shared.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Visualization Components - Melker Engine</title>
+  <meta name="description" content="How to connect live data sources to tables, charts, box plots, heatmaps, and trees in a permission sandbox.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&&display=swap" rel="stylesheet">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://melker.sh/data-visualization.html">
+  <meta property="og:title" content="Data Visualization Components - Melker Engine">
+  <meta property="og:description" content="From API to insight, inside a sandbox. Tables, charts, box plots, heatmaps, and trees with live data.">
+
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="brand">melker</a>
+    <div class="links">
+      <a href="/tutorial.html">Tutorial</a>
+      <a href="/how-it-works.html">How it works</a>
+      <div class="dropdown">
+        <a class="dropdown-toggle">More ▾</a>
+        <div class="dropdown-menu"><div class="dropdown-menu-inner">
+          <a href="/data-visualization.html">Data Visualization</a>
+          <a href="/filterable-lists.html">Filterable Lists</a>
+          <a href="/rich-content.html">Rich Content</a>
+          <a href="/policy.html">Policy</a>
+          <a href="/ai.html">AI Assistant</a>
+          <a href="/reference/">Reference</a>
+          <a href="https://github.com/wistrand/melker">GitHub</a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<aside class="sidebar" id="sidebar">
+  <a href="#tables">1. Tables</a>
+  <a href="#bars">2. Bar charts</a>
+  <a href="#boxplots">3. Box plots</a>
+  <a href="#heatmaps">4. Heatmaps</a>
+  <a href="#trees">5. Trees</a>
+  <a href="#connecting">6. Connecting views</a>
+  <a href="#pattern">7. The pattern</a>
+  <a href="#policy">8. Policy details</a>
+</aside>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1>Data Visualization Components</h1>
+    <p class="subtitle">
+      Build terminal-native data apps with fetch, components, and policy.
+    </p>
+
+    <p>
+      Fetch JSON with standard <code>fetch()</code>, transform it, and pass it into these components.
+      Network access is limited by the app's <a href="#policy">declared policy</a>.
+    </p>
+
+    <ul class="component-list" style="list-style: none; padding-left: 0">
+      <li><a href="#tables"><code>data-table</code></a> &ndash; sortable rows with selection</li>
+      <li><a href="#bars"><code>data-bars</code></a> &ndash; horizontal, vertical, grouped, sparkline, LED</li>
+      <li><a href="#boxplots"><code>data-boxplot</code></a> &ndash; quartiles, whiskers, outliers</li>
+      <li><a href="#heatmaps"><code>data-heatmap</code></a> &ndash; 2D color grid with contour lines</li>
+      <li><a href="#trees"><code>data-tree</code></a> &ndash; hierarchical data with expand/collapse</li>
+    </ul>
+
+  </div>
+</div>
+
+<!-- Section 1: Tables -->
+<section id="tables">
+  <div class="container">
+    <h2>1. Tables</h2>
+    <p class="section-claim">Fetch JSON, map to rows, call setValue. Sorting, scrolling, and selection are built in.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/table.melker</div>
+      <pre class="terminal"><span style="color:rgb(107,114,128)">┌─────────────────────────────────────────────────────────────────────────────┐</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);font-weight:bold">   Mag</span><span style="color:rgb(107,114,128)"> </span><span style="color:rgb(249,250,251);font-weight:bold">Location                              </span><span style="color:rgb(107,114,128)"> </span><span style="color:rgb(249,250,251);font-weight:bold">  Depth km</span><span style="color:rgb(107,114,128)"> </span><span style="color:rgb(249,250,251);font-weight:bold">Time (UTC)          </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">├─────────────────────────────────────────────────────────────────────────────┤</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   5.1 92 km SSW of Suva, Fiji                     580.3 2025-03-09 14:12:05 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   4.7 128 km NNE of Hihifo, Tonga                 210.0 2025-03-09 12:06:40 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   4.2 18 km SSE of Ridgecrest, California          10.2 2025-03-09 13:50:00 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   3.8 6 km NNE of Pahala, Hawaii                   33.7 2025-03-09 13:31:40 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   3.1 45 km S of Kaktovik, Alaska                   0.0 2025-03-09 11:33:20 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   2.7 14 km E of Guanica, Puerto Rico               8.0 2025-03-09 13:13:20 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   2.4 9 km ENE of Magna, Utah                      11.5 2025-03-09 11:16:40 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   2.1 35 km NW of Anchor Point, Alaska             62.4 2025-03-09 12:56:40 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   1.9 8 km WSW of Cobb, California                  2.1 2025-03-09 12:40:00 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   1.8 12 km W of Morton, Washington                18.3 2025-03-09 11:00:00 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   1.5 22 km SE of Stanley, Idaho                    5.0 2025-03-09 12:23:20 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   1.2 5 km N of The Geysers, California             1.8 2025-03-09 11:50:00 </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span>                                                                             <span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span>                                                                             <span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">├─────────────────────────────────────────────────────────────────────────────┤</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);font-weight:bold">      </span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(249,250,251);font-weight:bold">12 earthquakes                        </span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(249,250,251);font-weight:bold">          </span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(249,250,251);font-weight:bold">                    </span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">└─────────────────────────────────────────────────────────────────────────────┘</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/dataviz/table.melker">View source</a> · <a href="/examples/dataviz/earthquakes.json">Data</a></p>
+
+    <p>
+      The USGS earthquake feed returns GeoJSON: features with <code>mag: 4.2</code>,
+      <code>place: "18 km SSE of Ridgecrest, California"</code>, depth in km. Typically
+      150&ndash;300 per day. Declare columns, map features to rows:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">table.melker</div>
+      <pre><span class="cmt">&lt;!-- "samesite" allows fetch to the host this .melker file was loaded from --&gt;</span>
+<span class="tag">&lt;policy&gt;</span>{ <span class="str">"permissions"</span>: { <span class="str">"net"</span>: [<span class="str">"samesite"</span>] } }<span class="tag">&lt;/policy&gt;</span>
+
+<span class="tag">&lt;data-table</span> <span class="attr">id</span>=<span class="str">"quakeTable"</span> <span class="attr">selectable</span>=<span class="str">"single"</span>
+    <span class="attr">style</span>=<span class="str">"width: fill; height: fill"</span><span class="tag">&gt;</span>
+{
+    <span class="str">"columns"</span>: [
+        { <span class="str">"header"</span>: <span class="str">"Mag"</span>, <span class="str">"width"</span>: <span class="num">6</span>, <span class="str">"align"</span>: <span class="str">"right"</span> },
+        { <span class="str">"header"</span>: <span class="str">"Location"</span>, <span class="str">"width"</span>: <span class="str">"fill"</span> },
+        { <span class="str">"header"</span>: <span class="str">"Depth km"</span>, <span class="str">"width"</span>: <span class="num">10</span>, <span class="str">"align"</span>: <span class="str">"right"</span> },
+        { <span class="str">"header"</span>: <span class="str">"Time (UTC)"</span>, <span class="str">"width"</span>: <span class="num">20</span> }
+    ]
+}
+<span class="tag">&lt;/data-table&gt;</span>
+
+<span class="cmt">&lt;!-- $melker.url is the URL this file was loaded from.
+     new URL('earthquakes.json', $melker.url) resolves it relative to that location. --&gt;</span>
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span> <span class="attr">async</span>=<span class="str">"ready"</span><span class="tag">&gt;</span>
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="kw">new</span> URL(<span class="str">'earthquakes.json'</span>, $melker.url));
+    <span class="kw">const</span> json = <span class="kw">await</span> res.json();
+    <span class="kw">const</span> table = $melker.getElementById(<span class="str">'quakeTable'</span>);
+    json.features.sort((a, b) => b.properties.mag - a.properties.mag);
+    table.setValue(json.features.map(f => [
+        f.properties.mag.toFixed(<span class="num">1</span>),
+        f.properties.place,
+        f.geometry.coordinates[<span class="num">2</span>].toFixed(<span class="num">1</span>),
+        <span class="kw">new</span> Date(f.properties.time).toISOString().slice(<span class="num">0</span>, <span class="num">19</span>).replace(<span class="str">'T'</span>, <span class="str">' '</span>),
+    ]));
+    table.props.footer = [[<span class="str">''</span>, json.features.length + <span class="str">' earthquakes'</span>, <span class="str">''</span>, <span class="str">''</span>]];
+    $melker.render();
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      A table answers "what happened?" but not "what's the pattern?"
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/data-table.md">Data table</a></p>
+  </div>
+</section>
+
+<!-- Section 2: Bar charts -->
+<section id="bars">
+  <div class="container">
+    <h2>2. Bar charts</h2>
+    <p class="section-claim">Horizontal, vertical, stacked, grouped, sparkline, or LED meter. One component, many modes.</p>
+
+    <p>
+      A sparkline is <code>&lt;data-bars&gt;</code> with <code>height: 1</code> and <code>gap: 0</code>.
+      One row of block characters showing the trend:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">sparkline.melker</div>
+      <pre><span class="tag">&lt;data-bars</span> <span class="attr">id</span>=<span class="str">"spark"</span>
+    <span class="attr">series</span>=<span class="str">'[{"name": "Magnitude"}]'</span>
+    <span class="attr">style</span>=<span class="str">"orientation: vertical; height: 1; gap: 0"</span><span class="tag">/&gt;</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/sparkline.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251);font-weight:bold">Recent Earthquakes (magnitude)</span>
+<span style="color:rgb(249,250,251)">Magnitude:</span><span style="color:rgb(60,60,60)">▃▄▅▂▇▂▃▃▄▆▇█</span></pre>
+    </div>
+
+    <p>
+      Give it more height and it becomes a full bar chart. Add labels, values, and tooltips:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">bars.melker</div>
+      <pre><span class="tag">&lt;data-bars</span> <span class="attr">id</span>=<span class="str">"magSparkline"</span> <span class="attr">tooltip</span>=<span class="str">"auto"</span> <span class="attr">showValues</span>=<span class="str">"true"</span>
+    <span class="attr">series</span>=<span class="str">'[{"name": "Magnitude"}]'</span>
+    <span class="attr">style</span>=<span class="str">"orientation: vertical; height: fill; gap: 2; bar-width: 3; flex: 1"</span><span class="tag">/&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span> <span class="attr">async</span>=<span class="str">"ready"</span><span class="tag">&gt;</span>
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="kw">new</span> URL(<span class="str">'earthquakes.json'</span>, $melker.url));
+    <span class="kw">const</span> json = <span class="kw">await</span> res.json();
+    <span class="kw">const</span> sparkline = $melker.getElementById(<span class="str">'magSparkline'</span>);
+    sparkline.setValue(json.features.reverse().map(f => [f.properties.mag]));
+    sparkline.props.labels = json.features.map(f => f.properties.place.split(<span class="str">','</span>)[<span class="num">0</span>]);
+    $melker.render();
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/bars.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251);font-weight:bold">Recent Earthquakes (magnitude)</span>
+                         <span style="color:rgb(249,250,251)">2</span>    <span style="color:rgb(249,250,251)">2</span>    <span style="color:rgb(249,250,251)">3</span>    <span style="color:rgb(249,250,251)">1</span>    <span style="color:rgb(249,250,251)">5</span>    <span style="color:rgb(249,250,251)">2</span>    <span style="color:rgb(249,250,251)">2</span>    <span style="color:rgb(249,250,251)">2</span>    <span style="color:rgb(249,250,251)">3</span>    <span style="color:rgb(249,250,251)">4</span>    <span style="color:rgb(249,250,251)">4</span>
+                                             <span style="color:rgb(60,60,60)">▂▂▂</span>
+                                             <span style="color:rgb(60,60,60)">███</span>                           <span style="color:rgb(60,60,60)">▃▃▃</span>
+                                             <span style="color:rgb(60,60,60)">███</span>                      <span style="color:rgb(60,60,60)">▆▆▆</span>  <span style="color:rgb(60,60,60)">███</span>
+                                   <span style="color:rgb(60,60,60)">▄▄▄</span>       <span style="color:rgb(60,60,60)">███</span>                      <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>
+                              <span style="color:rgb(60,60,60)">▂▂▂</span>  <span style="color:rgb(60,60,60)">███</span>       <span style="color:rgb(60,60,60)">███</span>                 <span style="color:rgb(60,60,60)">▆▆▆</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>
+                         <span style="color:rgb(60,60,60)">▁▁▁</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>       <span style="color:rgb(60,60,60)">███</span>       <span style="color:rgb(60,60,60)">▃▃▃</span>  <span style="color:rgb(60,60,60)">▆▆▆</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>
+                         <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">▁▁▁</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">▅▅▅</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>
+                         <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>
+                         <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>  <span style="color:rgb(60,60,60)">███</span>
+                         <span style="color:rgb(249,250,251)">12 km9 km 45 km5 km 128 k22 km8 km 35 km14 km6 km 18 km</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/dataviz/bars.melker">View source</a> · <a href="/examples/dataviz/earthquakes.json">Data</a></p>
+
+    <p>
+      For multi-series comparisons, define multiple series:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Grouped bars: side-by-side comparison</div>
+      <pre><span class="tag">&lt;data-bars</span>
+    <span class="attr">series</span>=<span class="str">'[{"name": "2024"}, {"name": "2025"}]'</span>
+    <span class="attr">bars</span>=<span class="str">'[[50, 65], [60, 80], [45, 70]]'</span>
+    <span class="attr">labels</span>=<span class="str">'["Q1", "Q2", "Q3"]'</span>
+    <span class="attr">showValues</span>=<span class="str">"true"</span><span class="tag">/&gt;</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/grouped-bars.melker</div>
+      <pre class="terminal"><span style="color:rgb(249,250,251)">Q1</span> <span style="color:rgb(60,60,60)">█████████████████████████████████████████████▋</span>                            <span style="color:rgb(249,250,251)">50</span>
+   <span style="color:rgb(120,120,120)">███████████████████████████████████████████████████████████▍</span>              <span style="color:rgb(249,250,251)">65</span>
+
+<span style="color:rgb(249,250,251)">Q2</span> <span style="color:rgb(60,60,60)">██████████████████████████████████████████████████████▊</span>                   <span style="color:rgb(249,250,251)">60</span>
+   <span style="color:rgb(120,120,120)">█████████████████████████████████████████████████████████████████████████</span> <span style="color:rgb(249,250,251)">80</span>
+
+<span style="color:rgb(249,250,251)">Q3</span> <span style="color:rgb(60,60,60)">█████████████████████████████████████████▏</span>                                <span style="color:rgb(249,250,251)">45</span>
+   <span style="color:rgb(120,120,120)">███████████████████████████████████████████████████████████████▉</span>          <span style="color:rgb(249,250,251)">70</span></pre>
+    </div>
+
+    <p>
+      For streaming data, <code>appendEntry()</code>/<code>shiftEntry()</code> give you a sliding window:
+    </p>
+
+    <pre>bars.appendEntry([newValue], label);  <span class="cmt">// add to the right</span>
+bars.shiftEntry();                     <span class="cmt">// remove from the left</span></pre>
+
+    <p>
+      Bars show shape. For understanding spread (median, range, outliers)
+      you need a different view.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/data-bars.md">Data bars</a></p>
+  </div>
+</section>
+
+<!-- Section 3: Box plots -->
+<section id="boxplots">
+  <div class="container">
+    <h2>3. Box plots</h2>
+    <p class="section-claim">Pass raw values. The component computes the statistics.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/boxplot.melker</div>
+      <pre class="terminal">                          <span style="color:rgb(249,250,251);font-weight:bold">Price Distribution (EUR/MWh)</span>
+<span style="color:rgb(107,114,128)">107</span> <span style="color:rgb(107,114,128)">┤</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">┬</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">│</span>
+ <span style="color:rgb(107,114,128)">88</span> <span style="color:rgb(107,114,128)">┤</span>             <span style="color:rgb(249,250,251)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">│</span>
+ <span style="color:rgb(107,114,128)">70</span> <span style="color:rgb(107,114,128)">┤</span>            <span style="color:rgb(249,250,251)">┌┴┐</span>
+<span style="color:rgb(249,250,251)">E</span>   <span style="color:rgb(107,114,128)">│</span>            <span style="color:rgb(249,250,251)">│</span> <span style="color:rgb(249,250,251)">│</span>
+<span style="color:rgb(249,250,251)">U</span>   <span style="color:rgb(107,114,128)">│</span>         <span style="color:rgb(249,250,251)">┬</span>  <span style="color:rgb(249,250,251)">│</span> <span style="color:rgb(249,250,251)">│</span>
+<span style="color:rgb(249,250,251)">R</span>   <span style="color:rgb(107,114,128)">│</span>         <span style="color:rgb(249,250,251)">│</span>  <span style="color:rgb(249,250,251);font-weight:bold">├─┤</span>
+ <span style="color:rgb(107,114,128)">51</span> <span style="color:rgb(107,114,128)">┤</span>         <span style="color:rgb(249,250,251)">│</span>  <span style="color:rgb(249,250,251)">│</span> <span style="color:rgb(249,250,251)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251)">┌┴┐</span> <span style="color:rgb(249,250,251)">└┬┘</span>
+    <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251);font-weight:bold">├─┤</span>  <span style="color:rgb(249,250,251)">│</span>
+ <span style="color:rgb(107,114,128)">33</span> <span style="color:rgb(107,114,128)">┤</span>     <span style="color:rgb(249,250,251)">·</span>  <span style="color:rgb(249,250,251)">└┬┘</span>  <span style="color:rgb(249,250,251)">│</span>
+    <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">·</span>  <span style="color:rgb(249,250,251);font-weight:bold">┌┴┐</span>  <span style="color:rgb(249,250,251)">·</span>   <span style="color:rgb(249,250,251)">┴</span>
+    <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);font-weight:bold">───</span> <span style="color:rgb(249,250,251)">└┬┘</span>
+    <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">·</span>   <span style="color:rgb(249,250,251)">·</span>
+ <span style="color:rgb(107,114,128)">14</span> <span style="color:rgb(107,114,128)">┤</span>
+    <span style="color:rgb(107,114,128)">└───────────────────────────────────────────────────────────────────────────</span>
+     <span style="color:rgb(107,114,128)">SE1</span> <span style="color:rgb(107,114,128)">SE2</span> <span style="color:rgb(107,114,128)">SE3</span> <span style="color:rgb(107,114,128)">SE4</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/dataviz/boxplot.melker">View source</a> · <a href="/examples/dataviz/electricity-prices.json">Data</a></p>
+
+    <p>
+      Sweden's four electricity bidding areas: SE1 (north, stable, narrow range) to SE4 (south,
+      volatile, price spikes above 100 EUR/MWh). Pass raw price arrays and the component
+      computes Q1, median, Q3, whiskers, and outliers:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">boxplot.melker</div>
+      <pre><span class="tag">&lt;data-boxplot</span> <span class="attr">id</span>=<span class="str">"priceBoxplot"</span>
+    <span class="attr">title</span>=<span class="str">"Price Distribution (EUR/MWh)"</span>
+    <span class="attr">yAxisLabel</span>=<span class="str">"EUR"</span>
+    <span class="attr">selectable</span>=<span class="str">"true"</span>
+    <span class="attr">tooltip</span>=<span class="str">"auto"</span>
+    <span class="attr">style</span>=<span class="str">"width: fill; height: fill"</span><span class="tag">/&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span> <span class="attr">async</span>=<span class="str">"ready"</span><span class="tag">&gt;</span>
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="kw">new</span> URL(<span class="str">'electricity-prices.json'</span>, $melker.url));
+    <span class="kw">const</span> json = <span class="kw">await</span> res.json();
+    <span class="kw">const</span> boxplot = $melker.getElementById(<span class="str">'priceBoxplot'</span>);
+    boxplot.setGroups(json.areas.map(a => ({
+        label: a.area,
+        values: a.prices,
+    })));
+    $melker.render();
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      Pre-computed statistics work too. Pass <code>stats</code> instead of <code>values</code>:
+    </p>
+
+    <pre>boxplot.setGroups([{
+  label: <span class="str">'SE4'</span>,
+  stats: { min: <span class="num">20</span>, q1: <span class="num">38</span>, median: <span class="num">55</span>, q3: <span class="num">82</span>, max: <span class="num">120</span>, outliers: [<span class="num">195</span>, <span class="num">210</span>] }
+}]);</pre>
+
+    <p>
+      Some data is two-dimensional: values that vary across rows and columns,
+      where color carries meaning.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/data-boxplot-architecture.md">Data boxplot</a></p>
+  </div>
+</section>
+
+<!-- Section 4: Heatmaps -->
+<section id="heatmaps">
+  <div class="container">
+    <h2>4. Heatmaps</h2>
+    <p class="section-claim">A 2D grid of values, rendered as colored cells with optional contour lines.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/heatmap.melker</div>
+      <pre class="terminal">    <span style="color:rgb(249,250,251)">9am10a11a12p1pm2pm3pm4pm</span>
+<span style="color:rgb(249,250,251)">Mon</span> <span style="color:rgb(249,250,251);background:rgb(0,26,139)"> </span><span style="color:rgb(255,255,255);background:rgb(0,26,139)">12</span><span style="color:rgb(249,250,251);background:rgb(179,220,42)"> </span><span style="color:rgb(0,0,0);background:rgb(179,220,42)">45</span><span style="color:rgb(249,250,251);background:rgb(238,117,7)"> </span><span style="color:rgb(0,0,0);background:rgb(238,117,7)">78</span><span style="color:rgb(249,250,251);background:rgb(196,58,26)"> </span><span style="color:rgb(255,255,255);background:rgb(196,58,26)">90</span><span style="color:rgb(249,250,251);background:rgb(213,83,18)"> </span><span style="color:rgb(255,255,255);background:rgb(213,83,18)">85</span><span style="color:rgb(249,250,251);background:rgb(255,210,0)"> </span><span style="color:rgb(0,0,0);background:rgb(255,210,0)">60</span><span style="color:rgb(249,250,251);background:rgb(120,194,73)"> </span><span style="color:rgb(0,0,0);background:rgb(120,194,73)">40</span><span style="color:rgb(249,250,251);background:rgb(0,77,139)"> </span><span style="color:rgb(255,255,255);background:rgb(0,77,139)">20</span>
+<span style="color:rgb(249,250,251)">Tue</span> <span style="color:rgb(249,250,251);background:rgb(0,45,139)"> </span><span style="color:rgb(255,255,255);background:rgb(0,45,139)">15</span><span style="color:rgb(249,250,251);background:rgb(237,247,10)"> </span><span style="color:rgb(0,0,0);background:rgb(237,247,10)">50</span><span style="color:rgb(249,250,251);background:rgb(224,97,14)"> </span><span style="color:rgb(255,255,255);background:rgb(224,97,14)">82</span><span style="color:rgb(249,250,251);background:rgb(178,34,34)"> </span><span style="color:rgb(255,255,255);background:rgb(178,34,34)">95</span><span style="color:rgb(249,250,251);background:rgb(203,68,23)"> </span><span style="color:rgb(255,255,255);background:rgb(203,68,23)">88</span><span style="color:rgb(249,250,251);background:rgb(255,184,0)"> </span><span style="color:rgb(0,0,0);background:rgb(255,184,0)">65</span><span style="color:rgb(249,250,251);background:rgb(179,220,42)"> </span><span style="color:rgb(0,0,0);background:rgb(179,220,42)">45</span><span style="color:rgb(249,250,251);background:rgb(0,109,139)"> </span><span style="color:rgb(255,255,255);background:rgb(0,109,139)">25</span>
+<span style="color:rgb(249,250,251)">Wed</span> <span style="color:rgb(249,250,251);background:rgb(0,13,139)"> </span><span style="color:rgb(255,255,255);background:rgb(0,13,139)">10</span><span style="color:rgb(249,250,251);background:rgb(120,194,73)"> </span><span style="color:rgb(0,0,0);background:rgb(120,194,73)">40</span><span style="color:rgb(249,250,251);background:rgb(255,157,0)"> </span><span style="color:rgb(0,0,0);background:rgb(255,157,0)">70</span><span style="color:rgb(249,250,251);background:rgb(231,107,11)"> </span><span style="color:rgb(255,255,255);background:rgb(231,107,11)">80</span><span style="color:rgb(249,250,251);background:rgb(249,131,3)"> </span><span style="color:rgb(0,0,0);background:rgb(249,131,3)">75</span><span style="color:rgb(249,250,251);background:rgb(255,236,0)"> </span><span style="color:rgb(0,0,0);background:rgb(255,236,0)">55</span><span style="color:rgb(249,250,251);background:rgb(62,167,105)"> </span><span style="color:rgb(0,0,0);background:rgb(62,167,105)">35</span><span style="color:rgb(249,250,251);background:rgb(0,45,139)"> </span><span style="color:rgb(255,255,255);background:rgb(0,45,139)">15</span>
+<span style="color:rgb(249,250,251)">Thu</span> <span style="color:rgb(249,250,251);background:rgb(0,64,139)"> </span><span style="color:rgb(255,255,255);background:rgb(0,64,139)">18</span><span style="color:rgb(249,250,251);background:rgb(255,236,0)"> </span><span style="color:rgb(0,0,0);background:rgb(255,236,0)">55</span><span style="color:rgb(249,250,251);background:rgb(213,83,18)"> </span><span style="color:rgb(255,255,255);background:rgb(213,83,18)">85</span><span style="color:rgb(249,250,251);background:rgb(189,49,29)"> </span><span style="color:rgb(255,255,255);background:rgb(189,49,29)">92</span><span style="color:rgb(249,250,251);background:rgb(196,58,26)"> </span><span style="color:rgb(255,255,255);background:rgb(196,58,26)">90</span><span style="color:rgb(249,250,251);background:rgb(255,157,0)"> </span><span style="color:rgb(0,0,0);background:rgb(255,157,0)">70</span><span style="color:rgb(249,250,251);background:rgb(237,247,10)"> </span><span style="color:rgb(0,0,0);background:rgb(237,247,10)">50</span><span style="color:rgb(249,250,251);background:rgb(3,140,137)"> </span><span style="color:rgb(255,255,255);background:rgb(3,140,137)">30</span>
+<span style="color:rgb(249,250,251)">Fri</span> <span style="color:rgb(249,250,251);background:rgb(0,0,139)">  </span><span style="color:rgb(255,255,255);background:rgb(0,0,139)">8</span><span style="color:rgb(249,250,251);background:rgb(62,167,105)"> </span><span style="color:rgb(0,0,0);background:rgb(62,167,105)">35</span><span style="color:rgb(249,250,251);background:rgb(255,184,0)"> </span><span style="color:rgb(0,0,0);background:rgb(255,184,0)">65</span><span style="color:rgb(249,250,251);background:rgb(249,131,3)"> </span><span style="color:rgb(0,0,0);background:rgb(249,131,3)">75</span><span style="color:rgb(249,250,251);background:rgb(255,157,0)"> </span><span style="color:rgb(0,0,0);background:rgb(255,157,0)">70</span><span style="color:rgb(249,250,251);background:rgb(237,247,10)"> </span><span style="color:rgb(0,0,0);background:rgb(237,247,10)">50</span><span style="color:rgb(249,250,251);background:rgb(3,140,137)"> </span><span style="color:rgb(255,255,255);background:rgb(3,140,137)">30</span><span style="color:rgb(249,250,251);background:rgb(0,26,139)"> </span><span style="color:rgb(255,255,255);background:rgb(0,26,139)">12</span>
+
+<span style="color:rgb(249,250,251);background:rgb(0,0,139)"> </span><span style="color:rgb(249,250,251);background:rgb(0,29,139)"> </span><span style="color:rgb(249,250,251);background:rgb(0,59,139)"> </span><span style="color:rgb(249,250,251);background:rgb(0,88,139)"> </span><span style="color:rgb(249,250,251);background:rgb(0,117,139)"> </span><span style="color:rgb(249,250,251);background:rgb(13,145,132)"> </span><span style="color:rgb(249,250,251);background:rgb(67,170,102)"> </span><span style="color:rgb(249,250,251);background:rgb(121,194,73)"> </span><span style="color:rgb(249,250,251);background:rgb(174,218,44)"> </span><span style="color:rgb(249,250,251);background:rgb(228,243,15)"> </span><span style="color:rgb(249,250,251);background:rgb(255,243,0)"> </span><span style="color:rgb(249,250,251);background:rgb(255,219,0)"> </span><span style="color:rgb(249,250,251);background:rgb(255,194,0)"> </span><span style="color:rgb(249,250,251);background:rgb(255,170,0)"> </span><span style="color:rgb(249,250,251);background:rgb(255,146,0)"> </span><span style="color:rgb(249,250,251);background:rgb(243,123,5)"> </span><span style="color:rgb(249,250,251);background:rgb(227,101,13)"> </span><span style="color:rgb(249,250,251);background:rgb(210,79,20)"> </span><span style="color:rgb(249,250,251);background:rgb(194,56,27)"> </span><span style="color:rgb(249,250,251);background:rgb(178,34,34)"> </span>
+<span style="color:rgb(249,250,251)">8</span>                 <span style="color:rgb(249,250,251)">95</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/dataviz/heatmap.melker">View source</a> · <a href="/examples/dataviz/activity.json">Data</a></p>
+
+    <p>
+      Office activity through the week: Monday 9 AM reads 12 (quiet), Thursday noon reads 92
+      (everyone's in meetings). Eight built-in color scales: <code>viridis</code>,
+      <code>thermal</code>, <code>redblue</code>, and more:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">heatmap.melker</div>
+      <pre><span class="tag">&lt;data-heatmap</span> <span class="attr">id</span>=<span class="str">"activity"</span>
+    <span class="attr">colorScale</span>=<span class="str">"thermal"</span>
+    <span class="attr">showValues</span>=<span class="str">"true"</span>
+    <span class="attr">valueFormat</span>=<span class="str">"d"</span>
+    <span class="attr">showLegend</span>=<span class="str">"true"</span>
+    <span class="attr">style</span>=<span class="str">"width: fill; height: fill"</span><span class="tag">/&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span> <span class="attr">async</span>=<span class="str">"ready"</span><span class="tag">&gt;</span>
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="kw">new</span> URL(<span class="str">'activity.json'</span>, $melker.url));
+    <span class="kw">const</span> json = <span class="kw">await</span> res.json();
+    <span class="kw">const</span> hm = $melker.getElementById(<span class="str">'activity'</span>);
+    hm.props.rowLabels = json.rowLabels;
+    hm.props.colLabels = json.colLabels;
+    hm.props.grid = json.grid;
+    $melker.render();
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      The grid tells the story at a glance: Tuesday and Thursday noon are hot (95, 92),
+      Friday morning and afternoon are cool (8, 12). For real-time monitoring, you don't have to
+      replace the entire grid when one sensor updates. Write a single cell or a whole row:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Partial updates</div>
+      <pre><span class="kw">const</span> hm = $melker.getElementById(<span class="str">'activity'</span>);
+
+<span class="cmt">// A single sensor reading changed</span>
+hm.setCell(<span class="num">2</span>, <span class="num">5</span>, <span class="num">73</span>);
+
+<span class="cmt">// Monday's full row just came in from the API</span>
+hm.setRow(<span class="num">0</span>, [<span class="num">14</span>, <span class="num">48</span>, <span class="num">80</span>, <span class="num">93</span>, <span class="num">87</span>, <span class="num">62</span>, <span class="num">42</span>, <span class="num">22</span>]);
+
+$melker.render();</pre>
+    </div>
+
+    <p>
+      For scientific data where the boundaries matter more than the cells, add contour lines.
+      Set <code>isolineCount="5"</code> and the component runs marching squares to find the
+      boundaries between value ranges, drawing them as lines over the color grid. Set
+      <code>showCells="false"</code> for a pure contour map:
+    </p>
+
+    <pre><span class="tag">&lt;data-heatmap</span> <span class="attr">grid</span>=<span class="str">"..."</span>
+    <span class="attr">isolineCount</span>=<span class="str">"5"</span> <span class="attr">isolineMode</span>=<span class="str">"nice"</span>
+    <span class="attr">showIsolineLabels</span>=<span class="str">"true"</span>
+    <span class="attr">colorScale</span>=<span class="str">"viridis"</span><span class="tag">/&gt;</span></pre>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/isolines.melker</div>
+      <pre class="terminal"><span style="color:rgb(249,250,251);background:rgb(67,11,91)">  </span> <span style="color:rgb(249,250,251);background:rgb(65,28,102)">  </span> <span style="color:rgb(249,250,251);background:rgb(61,62,125)">  </span> <span style="color:rgb(249,250,251);background:rgb(49,106,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(38,132,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(44,119,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(55,93,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(62,55,121)">  </span> <span style="color:rgb(249,250,251);background:rgb(65,28,102)">  </span> <span style="color:rgb(249,250,251);background:rgb(67,11,91)">  </span> <span style="color:rgb(249,250,251);background:rgb(68,4,86)">  </span> <span style="color:rgb(249,250,251);background:rgb(68,1,84)">  </span>
+<span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> ╭──╭─────╮</span> <span style="color:rgb(249,250,251)">─╮</span> <span style="color:rgb(249,250,251)">─╮</span> <span style="color:rgb(249,250,251)">20</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span>
+<span style="color:rgb(249,250,251);background:rgb(66,21,98)">  </span> <span style="color:rgb(249,250,251);background:rgb(62,55,121)">  </span> <span style="color:rgb(249,250,251);background:rgb(46,114,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(53,164,126)">  </span> <span style="color:rgb(249,250,251);background:rgb(84,192,105)">  </span> <span style="color:rgb(249,250,251);background:rgb(71,180,114)">  </span> <span style="color:rgb(249,250,251);background:rgb(35,140,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(55,93,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(63,45,114)">  </span> <span style="color:rgb(249,250,251);background:rgb(66,21,98)">  </span> <span style="color:rgb(249,250,251);background:rgb(67,11,91)">  </span> <span style="color:rgb(249,250,251);background:rgb(68,4,86)">  </span>
+<span style="color:rgb(249,250,251)"> ╭──╭──╭──╭─────╮</span> <span style="color:rgb(249,250,251)">─╮</span> <span style="color:rgb(249,250,251)">─╮</span> <span style="color:rgb(249,250,251)">─╮</span> <span style="color:rgb(249,250,251)">20</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span>
+<span style="color:rgb(249,250,251);background:rgb(64,35,107)">  </span> <span style="color:rgb(249,250,251);background:rgb(55,93,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(46,157,131)">  </span> <span style="color:rgb(249,250,251);background:rgb(120,206,88)">  </span> <span style="color:rgb(249,250,251);background:rgb(200,221,57)">  </span> <span style="color:rgb(249,250,251);background:rgb(167,215,70)">  </span> <span style="color:rgb(249,250,251);background:rgb(79,187,109)">  </span> <span style="color:rgb(249,250,251);background:rgb(38,132,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(59,79,137)">  </span> <span style="color:rgb(249,250,251);background:rgb(64,35,107)">  </span> <span style="color:rgb(249,250,251);background:rgb(66,18,95)">  </span> <span style="color:rgb(249,250,251);background:rgb(67,8,89)">  </span>
+<span style="color:rgb(249,250,251)"> ╭──╭──╭──╯</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)"> ╰──╮</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)">40</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span>
+<span style="color:rgb(249,250,251);background:rgb(63,45,114)">  </span> <span style="color:rgb(249,250,251);background:rgb(44,119,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(79,187,109)">  </span> <span style="color:rgb(249,250,251);background:rgb(187,219,62)">  </span> <span style="color:rgb(249,250,251);background:rgb(253,231,37)">  </span> <span style="color:rgb(249,250,251);background:rgb(233,227,45)">  </span> <span style="color:rgb(249,250,251);background:rgb(134,209,83)">  </span> <span style="color:rgb(249,250,251);background:rgb(53,164,126)">  </span> <span style="color:rgb(249,250,251);background:rgb(49,106,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(62,55,121)">  </span> <span style="color:rgb(249,250,251);background:rgb(65,28,102)">  </span> <span style="color:rgb(249,250,251);background:rgb(67,15,93)">  </span>
+<span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)"> ╭──╯</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)">40</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span>
+<span style="color:rgb(249,250,251);background:rgb(62,55,121)">  </span> <span style="color:rgb(249,250,251);background:rgb(38,132,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(89,196,102)">  </span> <span style="color:rgb(249,250,251);background:rgb(200,221,57)">  </span> <span style="color:rgb(249,250,251);background:rgb(233,227,45)">  </span> <span style="color:rgb(249,250,251);background:rgb(213,224,52)">  </span> <span style="color:rgb(249,250,251);background:rgb(120,206,88)">  </span> <span style="color:rgb(249,250,251);background:rgb(46,157,131)">  </span> <span style="color:rgb(249,250,251);background:rgb(53,98,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(63,48,116)">  </span> <span style="color:rgb(249,250,251);background:rgb(65,25,100)">  </span> <span style="color:rgb(249,250,251);background:rgb(67,11,91)">  </span>
+<span style="color:rgb(249,250,251)"> ╰──│</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)">40</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span>
+<span style="color:rgb(249,250,251);background:rgb(64,42,112)">  </span> <span style="color:rgb(249,250,251);background:rgb(49,106,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(58,168,123)">  </span> <span style="color:rgb(249,250,251);background:rgb(134,209,83)">  </span> <span style="color:rgb(249,250,251);background:rgb(187,219,62)">  </span> <span style="color:rgb(249,250,251);background:rgb(167,215,70)">  </span> <span style="color:rgb(249,250,251);background:rgb(84,192,105)">  </span> <span style="color:rgb(249,250,251);background:rgb(35,140,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(57,87,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(64,42,112)">  </span> <span style="color:rgb(249,250,251);background:rgb(66,21,98)">  </span> <span style="color:rgb(249,250,251);background:rgb(67,8,89)">  </span>
+<span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> ╰──╰────────╯</span> <span style="color:rgb(249,250,251)">─╯</span> <span style="color:rgb(249,250,251)">─╯</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)">20</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span>
+<span style="color:rgb(249,250,251);background:rgb(65,28,102)">  </span> <span style="color:rgb(249,250,251);background:rgb(59,79,137)">  </span> <span style="color:rgb(249,250,251);background:rgb(38,132,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(71,180,114)">  </span> <span style="color:rgb(249,250,251);background:rgb(101,202,95)">  </span> <span style="color:rgb(249,250,251);background:rgb(89,196,102)">  </span> <span style="color:rgb(249,250,251);background:rgb(53,164,126)">  </span> <span style="color:rgb(249,250,251);background:rgb(46,114,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(61,62,125)">  </span> <span style="color:rgb(249,250,251);background:rgb(65,28,102)">  </span> <span style="color:rgb(249,250,251);background:rgb(67,15,93)">  </span> <span style="color:rgb(249,250,251);background:rgb(68,4,86)">  </span>
+<span style="color:rgb(249,250,251)"> ╰──╰──╰────────╯</span> <span style="color:rgb(249,250,251)"> │</span> <span style="color:rgb(249,250,251)"> ╭──╯</span> <span style="color:rgb(249,250,251)">20</span> <span style="color:rgb(249,250,251)">  </span> <span style="color:rgb(249,250,251)">  </span>
+<span style="color:rgb(249,250,251);background:rgb(67,15,93)">  </span> <span style="color:rgb(249,250,251);background:rgb(63,45,114)">  </span> <span style="color:rgb(249,250,251);background:rgb(55,93,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(35,140,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(53,164,126)">  </span> <span style="color:rgb(249,250,251);background:rgb(46,157,131)">  </span> <span style="color:rgb(249,250,251);background:rgb(42,124,140)">  </span> <span style="color:rgb(249,250,251);background:rgb(57,87,139)">  </span> <span style="color:rgb(249,250,251);background:rgb(64,42,112)">  </span> <span style="color:rgb(249,250,251);background:rgb(66,18,95)">  </span> <span style="color:rgb(249,250,251);background:rgb(67,8,89)">  </span> <span style="color:rgb(249,250,251);background:rgb(68,1,84)">  </span></pre>
+    </div>
+
+    <p>
+      Grids are flat. But some data is naturally hierarchical.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/data-heatmap-architecture.md">Data heatmap</a></p>
+  </div>
+</section>
+
+<!-- Section 5: Trees -->
+<section id="trees">
+  <div class="container">
+    <h2>5. Trees</h2>
+    <p class="section-claim">Hierarchical data with expand/collapse, virtual scrolling, and lazy loading.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/tree.melker</div>
+      <pre class="terminal"><span style="color:rgb(107,114,128)">┌───────────────────────────────────────────────────────────┬──────────┬──────┐┐</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);font-weight:bold">Name                                                       </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);font-weight:bold">      Size</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);font-weight:bold">Type  </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">├───────────────────────────────────────────────────────────┼──────────┼──────┤│</span>
+<span style="color:rgb(249,250,251)">│├─v src                                                    │          │      │</span><span style="color:rgb(107,114,128)">│</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">├─v</span><span style="color:rgb(249,250,251)"> components                                           </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">          </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">      </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">├─</span><span style="color:rgb(249,250,251)">  button.ts                                          </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">    4.2 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">├─</span><span style="color:rgb(249,250,251)">  input.ts                                           </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">    6.8 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">└─</span><span style="color:rgb(249,250,251)">  table.ts                                           </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   12.1 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">├─v</span><span style="color:rgb(249,250,251)"> engine                                               </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">          </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">      </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">├─</span><span style="color:rgb(249,250,251)">  layout.ts                                          </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">    8.4 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">├─</span><span style="color:rgb(249,250,251)">  render.ts                                          </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">   15.3 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">└─</span><span style="color:rgb(249,250,251)">  buffer.ts                                          </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">    5.7 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">└─</span><span style="color:rgb(249,250,251)">  mod.ts                                               </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">    1.2 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">├─v</span><span style="color:rgb(249,250,251)"> tests                                                  </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">          </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">      </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">├─</span><span style="color:rgb(249,250,251)">  layout.test.ts                                       </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">    3.1 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">│</span><span style="color:rgb(249,250,251)"> </span><span style="color:rgb(128,128,128)">└─</span><span style="color:rgb(249,250,251)">  render.test.ts                                       </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">    4.5 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">ts    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">├─</span><span style="color:rgb(249,250,251)">  README.md                                              </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">    2.8 KB</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">md    </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span><span style="color:rgb(128,128,128)">└─</span><span style="color:rgb(249,250,251)">  deno.json                                              </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">     580 B</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">json  </span><span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">│</span>                                                           <span style="color:rgb(107,114,128)">│</span>          <span style="color:rgb(107,114,128)">│</span>      <span style="color:rgb(107,114,128)">││</span>
+<span style="color:rgb(107,114,128)">└───────────────────────────────────────────────────────────┴──────────┴──────┘┘</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/dataviz/tree.melker">View source</a> · <a href="/examples/dataviz/files.json">Data</a></p>
+
+    <p>
+      Processes, files, org charts. Anything with parent-child relationships.
+      Extra columns attach metadata to each node:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">tree.melker</div>
+      <pre><span class="tag">&lt;data-tree</span> <span class="attr">id</span>=<span class="str">"files"</span> <span class="attr">selectable</span>=<span class="str">"single"</span>
+    <span class="attr">expandAll</span>=<span class="str">"true"</span>
+    <span class="attr">showColumnBorders</span>=<span class="str">"true"</span>
+    <span class="attr">columns</span>=<span class="str">'[{"header": "Size", "width": 10, "align": "right"}, {"header": "Type", "width": 6}]'</span>
+    <span class="attr">style</span>=<span class="str">"width: fill; height: fill; border: thin"</span><span class="tag">/&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span> <span class="attr">async</span>=<span class="str">"ready"</span><span class="tag">&gt;</span>
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="kw">new</span> URL(<span class="str">'files.json'</span>, $melker.url));
+    <span class="kw">const</span> json = <span class="kw">await</span> res.json();
+    <span class="kw">const</span> tree = $melker.getElementById(<span class="str">'files'</span>);
+    tree.props.nodes = json.nodes;
+    tree.expandAll();
+    $melker.render();
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      Only visible nodes are rendered, so large trees scroll without slowdown.
+      Each component so far shows one slice. Combining them is where it gets useful.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/data-tree-architecture.md">Data tree</a></p>
+  </div>
+</section>
+
+<!-- Section 6: Connecting views -->
+<section id="connecting">
+  <div class="container">
+    <h2>6. Connecting views</h2>
+    <p class="section-claim">One attribute syncs selection across table, bars, and boxplot. Click one, all follow.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/dataviz/connected.melker</div>
+      <pre class="terminal">              <span style="color:rgb(249,250,251);font-weight:bold">Distribution</span>              <span style="color:rgb(107,114,128)">┌─────────────────────────────────────┐</span>
+<span style="color:rgb(107,114,128)">107</span> <span style="color:rgb(107,114,128)">┤</span>                                   <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);font-weight:bold">Area  </span><span style="color:rgb(107,114,128)"> </span><span style="color:rgb(249,250,251);font-weight:bold">     Min</span><span style="color:rgb(107,114,128)"> </span><span style="color:rgb(249,250,251);font-weight:bold">  Median</span><span style="color:rgb(107,114,128)"> </span><span style="color:rgb(249,250,251);font-weight:bold">     Max</span><span style="color:rgb(249,250,251)">    </span><span style="color:rgb(107,114,128)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">┬</span>                     <span style="color:rgb(107,114,128)">├─────────────────────────────────────┤</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">│</span>                     <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">SE1        18.5     24.4     30.2    </span><span style="color:rgb(107,114,128)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">│</span>                     <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">SE2        21.9     28.3     35.4    </span><span style="color:rgb(107,114,128)">│</span>
+ <span style="color:rgb(107,114,128)">88</span> <span style="color:rgb(107,114,128)">┤</span>             <span style="color:rgb(249,250,251)">│</span>                     <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">SE3        27.5     39.0     58.1    </span><span style="color:rgb(107,114,128)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">│</span>                     <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">SE4        32.1     53.0    102.5    </span><span style="color:rgb(107,114,128)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>             <span style="color:rgb(249,250,251)">│</span>                     <span style="color:rgb(107,114,128)">│</span>                                     <span style="color:rgb(107,114,128)">│</span>
+ <span style="color:rgb(107,114,128)">70</span> <span style="color:rgb(107,114,128)">┤</span>            <span style="color:rgb(249,250,251)">┌┴┐</span>                    <span style="color:rgb(107,114,128)">│</span>                                     <span style="color:rgb(107,114,128)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>            <span style="color:rgb(249,250,251)">│</span> <span style="color:rgb(249,250,251)">│</span>                    <span style="color:rgb(107,114,128)">│</span>                                     <span style="color:rgb(107,114,128)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>         <span style="color:rgb(249,250,251)">┬</span>  <span style="color:rgb(249,250,251)">│</span> <span style="color:rgb(249,250,251)">│</span>                    <span style="color:rgb(107,114,128)">└─────────────────────────────────────┘</span>
+    <span style="color:rgb(107,114,128)">│</span>         <span style="color:rgb(249,250,251)">│</span>  <span style="color:rgb(249,250,251);font-weight:bold">├─┤</span>                    <span style="color:rgb(249,250,251)">SE1</span> <span style="color:rgb(60,60,60)">█████████████▍</span>                   <span style="color:rgb(249,250,251)">24</span>
+ <span style="color:rgb(107,114,128)">51</span> <span style="color:rgb(107,114,128)">┤</span>         <span style="color:rgb(249,250,251)">│</span>  <span style="color:rgb(249,250,251)">│</span> <span style="color:rgb(249,250,251)">│</span>
+    <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251)">┌┴┐</span> <span style="color:rgb(249,250,251)">└┬┘</span>                    <span style="color:rgb(249,250,251)">SE2</span> <span style="color:rgb(60,60,60)">███████████████▋</span>                 <span style="color:rgb(249,250,251)">29</span>
+    <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251);font-weight:bold">├─┤</span>  <span style="color:rgb(249,250,251)">│</span>
+ <span style="color:rgb(107,114,128)">33</span> <span style="color:rgb(107,114,128)">┤</span>     <span style="color:rgb(249,250,251)">·</span>  <span style="color:rgb(249,250,251)">└┬┘</span>  <span style="color:rgb(249,250,251)">│</span>                     <span style="color:rgb(249,250,251)">SE3</span> <span style="color:rgb(60,60,60)">██████████████████████▍</span>          <span style="color:rgb(249,250,251)">41</span>
+    <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">·</span>  <span style="color:rgb(249,250,251);font-weight:bold">┌┴┐</span>  <span style="color:rgb(249,250,251)">·</span>   <span style="color:rgb(249,250,251)">┴</span>
+    <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);font-weight:bold">───</span> <span style="color:rgb(249,250,251)">└┬┘</span>                            <span style="color:rgb(249,250,251)">SE4</span> <span style="color:rgb(60,60,60)">████████████████████████████████</span> <span style="color:rgb(249,250,251)">58</span>
+    <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">·</span>   <span style="color:rgb(249,250,251)">·</span>
+ <span style="color:rgb(107,114,128)">14</span> <span style="color:rgb(107,114,128)">┤</span>
+    <span style="color:rgb(107,114,128)">└───────────────────────────────────</span>
+     <span style="color:rgb(107,114,128)">SE1</span> <span style="color:rgb(107,114,128)">SE2</span> <span style="color:rgb(107,114,128)">SE3</span> <span style="color:rgb(107,114,128)">SE4</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/dataviz/connected.melker">View source</a> · <a href="/examples/dataviz/electricity-prices.json">Data</a></p>
+
+    <p>
+      Three views of the same data: box plot, table, bar chart. Click SE3 in the box plot
+      and the table row and bar highlight. One attribute makes it work:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">connected.melker</div>
+      <pre><span class="tag">&lt;data-boxplot</span> <span class="attr">id</span>=<span class="str">"priceBoxplot"</span>
+    <span class="attr">title</span>=<span class="str">"Distribution"</span>
+    <span class="attr">selectable</span>=<span class="str">"true"</span>
+    <span class="attr">onGetId</span>=<span class="str">"event.label"</span>
+    <span class="attr">bind:selection</span>=<span class="str">"selectedAreas"</span>
+    <span class="attr">style</span>=<span class="str">"flex: 1; height: fill"</span><span class="tag">/&gt;</span>
+
+<span class="tag">&lt;data-table</span> <span class="attr">id</span>=<span class="str">"statsTable"</span>
+    <span class="attr">selectable</span>=<span class="str">"single"</span>
+    <span class="attr">onGetId</span>=<span class="str">"event[0]"</span>
+    <span class="attr">bind:selection</span>=<span class="str">"selectedAreas"</span>
+    <span class="attr">style</span>=<span class="str">"width: fill; flex: 1"</span><span class="tag">&gt;</span>
+  { <span class="str">"columns"</span>: [...] }
+<span class="tag">&lt;/data-table&gt;</span>
+
+<span class="tag">&lt;data-bars</span> <span class="attr">id</span>=<span class="str">"avgBars"</span>
+    <span class="attr">selectable</span>=<span class="str">"true"</span>
+    <span class="attr">onGetId</span>=<span class="str">"event.label"</span>
+    <span class="attr">showValues</span>=<span class="str">"true"</span>
+    <span class="attr">bind:selection</span>=<span class="str">"selectedAreas"</span>
+    <span class="attr">style</span>=<span class="str">"flex: 1; height: fill"</span><span class="tag">/&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span><span class="tag">&gt;</span>
+    $melker.createState({ selectedAreas: [] });
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      <code>bind:selection="selectedAreas"</code> creates shared state.
+      <code>onGetId</code> extracts a comparable identity from each component's data shape:
+      <code>event.label</code> for boxplot/bars, <code>event[0]</code> for the table's first column.
+      No event wiring. No manual sync.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/bind-selection-architecture.md">Selection binding</a> · <a href="/reference/agent_docs/state-binding-architecture.md">State binding</a></p>
+  </div>
+</section>
+
+<!-- Section 7: The pattern -->
+<section id="pattern">
+  <div class="container">
+    <h2>7. The pattern</h2>
+    <p class="section-claim">Declare permissions. Fetch data. Transform. setValue. Refresh.</p>
+
+    <p>
+      Every example on this page follows the same shape:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">The recurring shape</div>
+      <pre><span class="cmt">&lt;!-- 1. Declare what you need --&gt;</span>
+<span class="tag">&lt;policy&gt;</span>{ <span class="str">"permissions"</span>: { <span class="str">"net"</span>: [<span class="str">"api.example.com"</span>] } }<span class="tag">&lt;/policy&gt;</span>
+
+<span class="cmt">&lt;!-- 2. Lay out the views --&gt;</span>
+<span class="tag">&lt;data-table</span> <span class="attr">id</span>=<span class="str">"table"</span> <span class="attr">bind:selection</span>=<span class="str">"selected"</span> <span class="cmt">...</span><span class="tag">/&gt;</span>
+<span class="tag">&lt;data-bars</span>  <span class="attr">id</span>=<span class="str">"chart"</span> <span class="attr">bind:selection</span>=<span class="str">"selected"</span> <span class="cmt">...</span><span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- 3. Fetch, transform, push --&gt;</span>
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span> <span class="attr">async</span>=<span class="str">"ready"</span><span class="tag">&gt;</span>
+  <span class="kw">async function</span> refresh() {
+    <span class="kw">const</span> data = <span class="kw">await</span> fetch(<span class="str">'https://api.example.com/data'</span>).then(r => r.json());
+
+    $melker.getElementById(<span class="str">'table'</span>).setValue(
+      data.items.map(d => [d.name, d.value, d.status])
+    );
+    $melker.getElementById(<span class="str">'chart'</span>).setValue(
+      data.items.map(d => [d.value])
+    );
+  }
+  <span class="kw">await</span> refresh();
+  setInterval(refresh, <span class="num">60000</span>);
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      Policy sets the boundary. Components are the vocabulary. The script is 20&ndash;50 lines
+      of fetch-and-map. One file, readable before you run it.
+    </p>
+
+    <pre><span class="cmt">$</span> melker https://melker.sh/examples/showcase/earthquake-dashboard.melker
+<span class="cmt">$</span> melker https://melker.sh/examples/showcase/electricity-dashboard.melker</pre>
+
+    <p class="explanation">
+      Reference: <a href="/reference/agent_docs/component-reference.md">All components</a> ·
+      <a href="/reference/agent_docs/script_usage.md">Script context</a> ·
+      <a href="/how-it-works.html">How it works</a>
+    </p>
+  </div>
+</section>
+
+<!-- Section 8: Policy details -->
+<section id="policy">
+  <div class="container">
+    <h2>8. Policy details</h2>
+    <p class="section-claim">Every app declares what it can access. Nothing more.</p>
+
+    <p>
+      Open the <a href="/examples/showcase/earthquake-dashboard.melker">earthquake dashboard</a>
+      and the first thing you see is the policy:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title"><a href="/examples/showcase/earthquake-dashboard.melker">earthquake-dashboard.melker</a></div>
+      <pre><span class="tag">&lt;policy&gt;</span>
+{
+  <span class="str">"name"</span>: <span class="str">"earthquake-dashboard"</span>,
+  <span class="str">"permissions"</span>: {
+    <span class="str">"net"</span>: [<span class="str">"earthquake.usgs.gov"</span>, <span class="str">"raw.githubusercontent.com"</span>],
+    <span class="str">"map"</span>: <span class="kw">true</span>
+  }
+}
+<span class="tag">&lt;/policy&gt;</span></pre>
+    </div>
+
+    <p>
+      Two hosts. Map tiles. Nothing else. Any other network request fails.
+      When an API requires a key, the policy declares it as configuration, not hardcoded:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title"><a href="/examples/showcase/eia-resource-dashboard.melker">eia-resource-dashboard.melker</a></div>
+      <pre><span class="tag">&lt;policy&gt;</span>
+{
+  <span class="str">"permissions"</span>: { <span class="str">"net"</span>: [<span class="str">"api.eia.gov"</span>] },
+  <span class="str">"configSchema"</span>: {
+    <span class="str">"eia.apiKey"</span>: { <span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"env"</span>: <span class="str">"EIA_API_KEY"</span> }
+  }
+}
+<span class="tag">&lt;/policy&gt;</span></pre>
+    </div>
+
+    <p class="explanation">Deep dive: <a href="/policy.html">The Policy System</a> · <a href="/reference/MANIFESTO.md">Manifesto</a></p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <a href="/">Melker Engine</a> - Run text with meaning
+  </div>
+</footer>
+
+<script src="shared.js"></script>
+
+</body>
+</html>

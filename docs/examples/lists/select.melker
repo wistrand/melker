@@ -1,0 +1,53 @@
+<melker>
+    <title>Select Demo</title>
+    <policy>{"permissions": {}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Order a drink</text>
+
+        <container style="flex-direction: row; gap: 2">
+            <text>Size:</text>
+            <select id="size" placeholder="Choose size..." style="width: 20"
+                onChange="$app.update()">
+                <option value="s">Small</option>
+                <option value="m">Medium</option>
+                <option value="l">Large</option>
+            </select>
+        </container>
+
+        <container style="flex-direction: row; gap: 2">
+            <text>Drink:</text>
+            <select id="drink" placeholder="Choose drink..." style="width: 20"
+                onChange="$app.update()">
+                <group label="Coffee">
+                    <option value="espresso">Espresso</option>
+                    <option value="latte">Latte</option>
+                    <option value="cappuccino">Cappuccino</option>
+                </group>
+                <group label="Tea">
+                    <option value="green">Green Tea</option>
+                    <option value="black">Black Tea</option>
+                    <option value="chai">Chai Latte</option>
+                </group>
+            </select>
+        </container>
+
+        <text id="result">Order: (pick size and drink)</text>
+    </container>
+
+    <script type="typescript">
+        export function update() {
+            const size = $melker.getElementById('size');
+            const drink = $melker.getElementById('drink');
+            const result = $melker.getElementById('result');
+            const s = size?.getValue() || '?';
+            const d = drink?.getValue() || '?';
+            result.setValue(`Order: ${s} ${d}`);
+        }
+    </script>
+
+    <script type="typescript" async="ready">
+        $melker.getElementById('drink').props.open = true;
+        $melker.render();
+    </script>
+</melker>

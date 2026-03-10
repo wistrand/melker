@@ -1,0 +1,12 @@
+<melker>
+    <title>Segment Display Demo</title>
+    <policy>{"permissions": {}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">7-Segment Display</text>
+        <segment-display value="12:45:30" style="height: 5; color: green" />
+
+        <text bold="true">Pixel Font</text>
+        <segment-display value="HELLO" renderer="pixel" style="height: 7; color: cyan" />
+    </container>
+</melker>

@@ -1,0 +1,47 @@
+<melker>
+    <title>Command Palette Demo</title>
+    <policy>{"permissions": {}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Command Palette</text>
+        <text>Press the button or Ctrl+K to open</text>
+
+        <button label="Open Commands (Ctrl+K)" onClick="$app.openPalette()" />
+
+        <text id="status">Ready</text>
+
+        <command-palette id="palette" placeholder="Search commands...">
+            <group label="File">
+                <option value="new" shortcut="Ctrl+N" onSelect="$app.run('New file created')">New File</option>
+                <option value="open" shortcut="Ctrl+O" onSelect="$app.run('Opening...')">Open File</option>
+                <option value="save" shortcut="Ctrl+S" onSelect="$app.run('Saved')">Save</option>
+            </group>
+            <group label="Edit">
+                <option value="undo" shortcut="Ctrl+Z" onSelect="$app.run('Undo')">Undo</option>
+                <option value="redo" shortcut="Ctrl+Y" onSelect="$app.run('Redo')">Redo</option>
+            </group>
+            <group label="View">
+                <option value="sidebar" onSelect="$app.run('Sidebar toggled')">Toggle Sidebar</option>
+                <option value="zoom-in" shortcut="Ctrl++" onSelect="$app.run('Zoomed in')">Zoom In</option>
+                <option value="zoom-out" shortcut="Ctrl+-" onSelect="$app.run('Zoomed out')">Zoom Out</option>
+            </group>
+        </command-palette>
+    </container>
+
+    <script type="typescript">
+        export function openPalette() {
+            const p = $melker.getElementById('palette');
+            if (p) p.props.open = true;
+        }
+
+        export function run(msg: string) {
+            const s = $melker.getElementById('status');
+            if (s) s.setValue(msg);
+        }
+    </script>
+
+    <script type="typescript" async="ready">
+        $melker.getElementById('palette').props.open = true;
+        $melker.render();
+    </script>
+</melker>

@@ -1,0 +1,29 @@
+<melker>
+    <title>Canvas Demo</title>
+    <policy>{"permissions": {}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Canvas Drawing</text>
+        <canvas id="c" width="40" height="12" onPaint="$app.draw(event.canvas)" />
+    </container>
+
+    <script type="typescript">
+        export function draw(canvas: any) {
+            canvas.clear();
+            canvas.setColor('#3b82f6');
+            canvas.fillRect(2, 2, 30, 5);
+            canvas.setColor('#f59e0b');
+            canvas.fillRect(36, 2, 25, 5);
+            canvas.setColor('#10b981');
+            canvas.fillRect(65, 2, 20, 5);
+            canvas.setColor('#ffffff');
+            canvas.drawText(10, 4, '40%');
+            canvas.drawText(43, 4, '30%');
+            canvas.drawText(72, 4, '20%');
+            canvas.setColor('#6366f1');
+            canvas.drawCircleCorrected(45, 18, 12);
+            canvas.setColor('#ec4899');
+            canvas.drawLine(0, 28, 119, 28);
+        }
+    </script>
+</melker>

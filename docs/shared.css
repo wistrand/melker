@@ -44,7 +44,7 @@ nav {
 nav .container {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
 }
 
 nav .brand {
@@ -53,7 +53,41 @@ nav .brand {
   font-size: 1.1rem;
 }
 
-nav .links { display: flex; gap: 24px; font-size: 0.9rem; }
+nav .links { display: flex; gap: 24px; font-size: 0.9rem; align-items: center; }
+
+/* Dropdown */
+.dropdown { position: relative; }
+.dropdown-toggle { cursor: pointer; }
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  padding-top: 8px;
+  z-index: 100;
+}
+.dropdown-menu-inner {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 0;
+  min-width: 180px;
+}
+.dropdown-menu a {
+  display: block;
+  padding: 6px 16px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.dropdown-menu a:hover {
+  color: var(--text);
+  background: var(--bg);
+  text-decoration: none;
+}
+.dropdown:hover .dropdown-menu,
+.dropdown:focus-within .dropdown-menu {
+  display: block;
+}
 
 /* Hero */
 .hero {
@@ -169,6 +203,13 @@ pre {
 .code-block pre {
   border-radius: 0 0 4px 4px;
   margin: 0;
+}
+
+pre.terminal {
+  background: #000;
+  color: #f9fafb;
+  border-color: #333;
+  font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 }
 
 /* Screenshot placeholders */

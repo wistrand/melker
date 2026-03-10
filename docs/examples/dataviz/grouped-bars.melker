@@ -1,0 +1,11 @@
+<melker>
+    <title>Grouped Bars</title>
+    <policy>{"permissions": {}}</policy>
+
+    <data-bars id="grouped"
+        series='[{"name": "2024"}, {"name": "2025"}]'
+        bars='[[50, 65], [60, 80], [45, 70]]'
+        labels='["Q1", "Q2", "Q3"]'
+        showValues="true"
+        style="width: fill; height: fill" />
+</melker>

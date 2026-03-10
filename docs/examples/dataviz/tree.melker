@@ -1,0 +1,19 @@
+<melker>
+    <title>Project File Tree</title>
+    <policy>{"permissions": {"net": ["samesite"]}}</policy>
+
+    <data-tree id="files" selectable="single"
+        expandAll="true"
+        showColumnBorders="true"
+        columns='[{"header": "Size", "width": 10, "align": "right"}, {"header": "Type", "width": 6}]'
+        style="width: fill; height: fill; border: thin" />
+
+    <script type="typescript" async="ready">
+        const res = await fetch(new URL('files.json', $melker.url));
+        const json = await res.json();
+        const tree = $melker.getElementById('files');
+        tree.props.nodes = json.nodes;
+        tree.expandAll();
+        $melker.render();
+    </script>
+</melker>

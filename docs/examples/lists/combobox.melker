@@ -1,0 +1,49 @@
+<melker>
+    <title>Combobox Demo</title>
+    <policy>{"permissions": {}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Country Picker</text>
+
+        <container style="flex-direction: row; gap: 2">
+            <text>Country:</text>
+            <combobox id="country" placeholder="Type to search..."
+                style="width: 30" filter="fuzzy"
+                onSelect="$app.pick(event)">
+                <group label="Europe">
+                    <option value="se">Sweden</option>
+                    <option value="no">Norway</option>
+                    <option value="dk">Denmark</option>
+                    <option value="fi">Finland</option>
+                    <option value="de">Germany</option>
+                    <option value="fr">France</option>
+                </group>
+                <group label="Americas">
+                    <option value="us">United States</option>
+                    <option value="ca">Canada</option>
+                    <option value="mx">Mexico</option>
+                    <option value="br">Brazil</option>
+                </group>
+                <group label="Asia">
+                    <option value="jp">Japan</option>
+                    <option value="kr">South Korea</option>
+                    <option value="in">India</option>
+                </group>
+            </combobox>
+        </container>
+
+        <text id="result">Selected: (none)</text>
+    </container>
+
+    <script type="typescript">
+        export function pick(event: { value: string; label: string }) {
+            const result = $melker.getElementById('result');
+            result.setValue(`Selected: ${event.label} (${event.value})`);
+        }
+    </script>
+
+    <script type="typescript" async="ready">
+        $melker.getElementById('country').props.open = true;
+        $melker.render();
+    </script>
+</melker>

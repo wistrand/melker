@@ -1,0 +1,18 @@
+{
+  "type": "FeatureCollection",
+  "metadata": { "title": "USGS All Earthquakes, Past Day", "count": 12 },
+  "features": [
+    { "properties": { "mag": 5.1, "place": "92 km SSW of Suva, Fiji", "time": 1741529525000 }, "geometry": { "coordinates": [177.42, -18.92, 580.3] }, "id": "us7000q1a1" },
+    { "properties": { "mag": 4.2, "place": "18 km SSE of Ridgecrest, California", "time": 1741528200000 }, "geometry": { "coordinates": [-117.58, 35.53, 10.2] }, "id": "ci40871432" },
+    { "properties": { "mag": 3.8, "place": "6 km NNE of Pahala, Hawaii", "time": 1741527100000 }, "geometry": { "coordinates": [-155.45, 19.24, 33.7] }, "id": "hv74123456" },
+    { "properties": { "mag": 2.7, "place": "14 km E of Guanica, Puerto Rico", "time": 1741526000000 }, "geometry": { "coordinates": [-66.75, 17.97, 8.0] }, "id": "pr2025068001" },
+    { "properties": { "mag": 2.1, "place": "35 km NW of Anchor Point, Alaska", "time": 1741525000000 }, "geometry": { "coordinates": [-150.22, 59.95, 62.4] }, "id": "ak025a1b2c" },
+    { "properties": { "mag": 1.9, "place": "8 km WSW of Cobb, California", "time": 1741524000000 }, "geometry": { "coordinates": [-122.81, 38.80, 2.1] }, "id": "nc75001234" },
+    { "properties": { "mag": 1.5, "place": "22 km SE of Stanley, Idaho", "time": 1741523000000 }, "geometry": { "coordinates": [-114.78, 44.02, 5.0] }, "id": "mb80501234" },
+    { "properties": { "mag": 4.7, "place": "128 km NNE of Hihifo, Tonga", "time": 1741522000000 }, "geometry": { "coordinates": [-173.55, -14.58, 210.0] }, "id": "us7000q1b2" },
+    { "properties": { "mag": 1.2, "place": "5 km N of The Geysers, California", "time": 1741521000000 }, "geometry": { "coordinates": [-122.75, 38.82, 1.8] }, "id": "nc75001235" },
+    { "properties": { "mag": 3.1, "place": "45 km S of Kaktovik, Alaska", "time": 1741520000000 }, "geometry": { "coordinates": [-143.62, 69.39, 0.0] }, "id": "ak025a1b2d" },
+    { "properties": { "mag": 2.4, "place": "9 km ENE of Magna, Utah", "time": 1741519000000 }, "geometry": { "coordinates": [-112.01, 40.72, 11.5] }, "id": "uu60501234" },
+    { "properties": { "mag": 1.8, "place": "12 km W of Morton, Washington", "time": 1741518000000 }, "geometry": { "coordinates": [-122.41, 46.56, 18.3] }, "id": "uw62001234" }
+  ]
+}

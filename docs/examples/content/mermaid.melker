@@ -1,0 +1,21 @@
+<melker>
+    <title>Mermaid Demo</title>
+    <policy>{"permissions": {}}</policy>
+
+    <container style="flex-direction: column; padding: 1; height: fill">
+        <text bold="true">Git Workflow</text>
+
+        <graph style="overflow: scroll; flex: 1">
+flowchart LR
+    subgraph Local
+        WD[Working Dir] -->|git add| SA[Staging]
+        SA -->|git commit| LR[Local Repo]
+    end
+    subgraph Remote
+        RR[Remote Repo]
+    end
+    LR -->|git push| RR
+    RR -->|git pull| LR
+        </graph>
+    </container>
+</melker>

@@ -8,6 +8,7 @@ import type {
 } from './types.ts';
 import { DEFAULT_TOOLTIP_CONFIG } from './types.ts';
 import type { Element, Bounds } from '../types.ts';
+import { isStdoutEnabled } from '../stdout.ts';
 
 /**
  * Tooltip Manager singleton.
@@ -60,6 +61,8 @@ export class TooltipManager {
     elementBounds: Bounds,
     delayOverride?: number
   ): void {
+    if (isStdoutEnabled()) return;
+
     const elementId = element.id;
 
     // Same element, same content - do nothing

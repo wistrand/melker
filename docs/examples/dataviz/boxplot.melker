@@ -1,0 +1,22 @@
+<melker>
+    <title>Electricity Price Distribution</title>
+    <policy>{"permissions": {"net": ["samesite"]}}</policy>
+
+    <data-boxplot id="priceBoxplot"
+        title="Price Distribution (EUR/MWh)"
+        yAxisLabel="EUR"
+        selectable="true"
+        tooltip="auto"
+        style="width: fill; height: fill" />
+
+    <script type="typescript" async="ready">
+        const res = await fetch(new URL('electricity-prices.json', $melker.url));
+        const json = await res.json();
+        const boxplot = $melker.getElementById('priceBoxplot');
+        boxplot.setGroups(json.areas.map(a => ({
+            label: a.area,
+            values: a.prices,
+        })));
+        $melker.render();
+    </script>
+</melker>

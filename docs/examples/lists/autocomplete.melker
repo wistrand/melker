@@ -1,0 +1,54 @@
+<melker>
+    <title>Autocomplete Demo</title>
+    <policy>{"permissions": {}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">User Search</text>
+
+        <container style="flex-direction: row; gap: 2">
+            <text>Find:</text>
+            <autocomplete id="search" placeholder="Search users..."
+                onSearch="$app.searchUsers(event.query)"
+                onSelect="$app.selectUser(event)"
+                minChars="1" debounce="300" width="35">
+                <group label="Recent">
+                    <option value="alice">Alice Anderson</option>
+                    <option value="bob">Bob Brown</option>
+                </group>
+            </autocomplete>
+        </container>
+
+        <text id="result">Selected: (none)</text>
+    </container>
+
+    <script type="typescript">
+        const allUsers = [
+            { value: 'alice', label: 'Alice Anderson' },
+            { value: 'bob', label: 'Bob Brown' },
+            { value: 'charlie', label: 'Charlie Chen' },
+            { value: 'diana', label: 'Diana Davis' },
+            { value: 'edward', label: 'Edward Evans' },
+            { value: 'fiona', label: 'Fiona Fisher' },
+        ];
+
+        export async function searchUsers(query: string) {
+            await new Promise(r => setTimeout(r, 50));
+            const q = query.toLowerCase();
+            return allUsers.filter(u => u.label.toLowerCase().includes(q));
+        }
+
+        export function selectUser(event: { value: string; label: string; freeform?: boolean }) {
+            const result = $melker.getElementById('result');
+            if (event.freeform) {
+                result.setValue(`Selected: ${event.value} (custom)`);
+            } else {
+                result.setValue(`Selected: ${event.label}`);
+            }
+        }
+    </script>
+
+    <script type="typescript" async="ready">
+        $melker.getElementById('search').props.open = true;
+        $melker.render();
+    </script>
+</melker>

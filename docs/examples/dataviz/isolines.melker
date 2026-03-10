@@ -1,0 +1,19 @@
+<melker>
+    <title>Heatmap with Isolines</title>
+    <policy>{"permissions": {}}</policy>
+
+    <data-heatmap id="iso"
+        colorScale="viridis"
+        isolineCount="5"
+        isolineMode="nice"
+        showIsolineLabels="true"
+        style="width: fill; height: fill"
+        grid='[[5,  10, 20, 35, 45, 40, 30, 18, 10, 5,  3,  2],
+              [8,  18, 38, 58, 70, 65, 48, 30, 15, 8,  5,  3],
+              [12, 30, 55, 78, 90, 85, 68, 45, 25, 12, 7,  4],
+              [15, 40, 68, 88, 98, 95, 80, 58, 35, 18, 10, 6],
+              [18, 45, 72, 90, 95, 92, 78, 55, 32, 16, 9,  5],
+              [14, 35, 60, 80, 88, 85, 70, 48, 28, 14, 8,  4],
+              [10, 25, 45, 65, 75, 72, 58, 38, 20, 10, 6,  3],
+              [6,  15, 30, 48, 58, 55, 42, 28, 14, 7,  4,  2]]' />
+</melker>

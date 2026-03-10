@@ -1,0 +1,39 @@
+<melker>
+    <title>File Browser Demo</title>
+    <policy>{"permissions": {"read": ["*"]}}</policy>
+
+    <container style="flex-direction: column; padding: 1; height: fill">
+        <text bold="true">File Browser</text>
+
+        <button label="Open..." onClick="$app.openDialog()" />
+
+        <text id="result">Selected: (none)</text>
+
+        <dialog id="dlg" title="Open File" open="false" modal="true"
+            width="60" height="18" onClose="$app.closeDialog()">
+            <file-browser id="fb" selectionMode="single" selectType="file"
+                onChange="$app.pick(event)" onCancel="$app.closeDialog()"
+                maxVisible="10" />
+        </dialog>
+    </container>
+
+    <script type="typescript">
+        export function openDialog() {
+            $melker.getElementById('dlg').props.open = true;
+        }
+
+        export function closeDialog() {
+            $melker.getElementById('dlg').props.open = false;
+        }
+
+        export function pick(event: { path: string }) {
+            closeDialog();
+            $melker.getElementById('result').setValue('Selected: ' + event.path);
+        }
+    </script>
+
+    <script type="typescript" async="ready">
+        $melker.getElementById('dlg').props.open = true;
+        $melker.render();
+    </script>
+</melker>

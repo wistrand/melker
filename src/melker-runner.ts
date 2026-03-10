@@ -557,9 +557,13 @@ export async function runMelkerFile(
     }
 
     // baseUrl already calculated above when creating engine
-    const sourceUrl = isUrl(filepath)
-      ? filepath
-      : `file://${filepath.startsWith('/') ? filepath : cwd() + '/' + filepath}`;
+    // For remote apps, use the original remote URL rather than the temp file path
+    const remoteSourceUrl = Env.get('MELKER_REMOTE_URL');
+    const sourceUrl = remoteSourceUrl
+      ? remoteSourceUrl
+      : isUrl(filepath)
+        ? filepath
+        : `file://${filepath.startsWith('/') ? filepath : cwd() + '/' + filepath}`;
     const sourceDirname = (() => {
       try {
         const u = new URL(sourceUrl);

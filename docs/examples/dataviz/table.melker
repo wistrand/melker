@@ -1,0 +1,31 @@
+<melker>
+    <title>Earthquake Table</title>
+    <policy>{"permissions": {"net": ["samesite"]}}</policy>
+
+    <data-table id="quakeTable" selectable="single"
+        style="width: fill; height: fill">
+    {
+        "columns": [
+            { "header": "Mag", "width": 6, "align": "right" },
+            { "header": "Location", "width": "fill" },
+            { "header": "Depth km", "width": 10, "align": "right" },
+            { "header": "Time (UTC)", "width": 20 }
+        ]
+    }
+    </data-table>
+
+    <script type="typescript" async="ready">
+        const res = await fetch(new URL('earthquakes.json', $melker.url));
+        const json = await res.json();
+        const table = $melker.getElementById('quakeTable');
+        json.features.sort((a, b) => b.properties.mag - a.properties.mag);
+        table.setValue(json.features.map(f => [
+            f.properties.mag.toFixed(1),
+            f.properties.place,
+            f.geometry.coordinates[2].toFixed(1),
+            new Date(f.properties.time).toISOString().slice(0, 19).replace('T', ' '),
+        ]));
+        table.props.footer = [['', json.features.length + ' earthquakes', '', '']];
+        $melker.render();
+    </script>
+</melker>

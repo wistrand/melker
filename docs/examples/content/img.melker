@@ -1,0 +1,17 @@
+<melker>
+    <title>Image Demo</title>
+    <policy>{"permissions": {"read": ["*"]}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Image Component</text>
+
+        <container style="flex-direction: row; gap: 2">
+            <img src="../../melker-128.png" width="20" height="10" style="object-fit: contain" />
+            <container style="flex-direction: column">
+                <text>Format: PNG</text>
+                <text>Mode: sextant (2x3 pixels/cell)</text>
+                <text>Fit: contain (preserves aspect)</text>
+            </container>
+        </container>
+    </container>
+</melker>

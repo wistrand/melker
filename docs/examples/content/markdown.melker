@@ -1,0 +1,22 @@
+<melker>
+    <title>Markdown Demo</title>
+    <policy>{"permissions": {"read": ["*"]}}</policy>
+
+    <container style="flex-direction: column; padding: 1; height: fill; overflow: scroll">
+        <markdown id="md" src="${argv[1]:-README.md}" onLink="$app.handleLink(event)" style="text-wrap: wrap" />
+    </container>
+
+    <script type="typescript">
+        export function handleLink(event: { url: string }) {
+            if (event.url.startsWith('http')) {
+                $melker.openBrowser(event.url);
+                return;
+            }
+            const md = $melker.getElementById('md');
+            if (md) {
+                md.props.src = event.url;
+                $melker.render();
+            }
+        }
+    </script>
+</melker>

@@ -1,0 +1,35 @@
+{
+  "nodes": [
+    {
+      "label": "src",
+      "children": [
+        {
+          "label": "components",
+          "children": [
+            { "label": "button.ts", "values": ["4.2 KB", "ts"] },
+            { "label": "input.ts", "values": ["6.8 KB", "ts"] },
+            { "label": "table.ts", "values": ["12.1 KB", "ts"] }
+          ]
+        },
+        {
+          "label": "engine",
+          "children": [
+            { "label": "layout.ts", "values": ["8.4 KB", "ts"] },
+            { "label": "render.ts", "values": ["15.3 KB", "ts"] },
+            { "label": "buffer.ts", "values": ["5.7 KB", "ts"] }
+          ]
+        },
+        { "label": "mod.ts", "values": ["1.2 KB", "ts"] }
+      ]
+    },
+    {
+      "label": "tests",
+      "children": [
+        { "label": "layout.test.ts", "values": ["3.1 KB", "ts"] },
+        { "label": "render.test.ts", "values": ["4.5 KB", "ts"] }
+      ]
+    },
+    { "label": "README.md", "values": ["2.8 KB", "md"] },
+    { "label": "deno.json", "values": ["580 B", "json"] }
+  ]
+}

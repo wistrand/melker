@@ -1,0 +1,20 @@
+<melker>
+    <title>Magnitude Sparkline</title>
+    <policy>{"permissions": {"net": ["samesite"]}}</policy>
+
+    <container style="display: flex; flex-direction: column; height: 100%">
+        <text style="font-weight: bold; padding: 0 1; flex-shrink: 0">Recent Earthquakes (magnitude)</text>
+        <data-bars id="magSparkline" tooltip="auto" showValues="true"
+            series='[{"name": "Magnitude"}]'
+            style="orientation: vertical; height: fill; gap: 2; bar-width: 3; flex: 1" />
+    </container>
+
+    <script type="typescript" async="ready">
+        const res = await fetch(new URL('earthquakes.json', $melker.url));
+        const json = await res.json();
+        const sparkline = $melker.getElementById('magSparkline');
+        sparkline.setValue(json.features.reverse().map(f => [f.properties.mag]));
+        sparkline.props.labels = json.features.map(f => f.properties.place.split(',')[0]);
+        $melker.render();
+    </script>
+</melker>

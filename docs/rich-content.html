@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rich Content Components</title>
+  <meta name="description" content="Markdown rendering, mermaid diagrams, and file browser components for Melker terminal apps.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&&display=swap" rel="stylesheet">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://melker.sh/rich-content.html">
+  <meta property="og:title" content="Rich Content Components">
+  <meta property="og:description" content="Markdown rendering, mermaid diagrams, and file browser components for Melker terminal apps.">
+
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="brand">melker</a>
+    <div class="links">
+      <a href="/tutorial.html">Tutorial</a>
+      <a href="/how-it-works.html">How it works</a>
+      <div class="dropdown">
+        <a class="dropdown-toggle">More ▾</a>
+        <div class="dropdown-menu"><div class="dropdown-menu-inner">
+          <a href="/data-visualization.html">Data Visualization</a>
+          <a href="/filterable-lists.html">Filterable Lists</a>
+          <a href="/rich-content.html">Rich Content</a>
+          <a href="/policy.html">Policy</a>
+          <a href="/ai.html">AI Assistant</a>
+          <a href="/reference/">Reference</a>
+          <a href="https://github.com/wistrand/melker">GitHub</a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<aside class="sidebar" id="sidebar">
+  <a href="#markdown">1. Markdown</a>
+  <a href="#mermaid">2. Mermaid diagrams</a>
+  <a href="#img">3. Images</a>
+  <a href="#canvas">4. Canvas</a>
+  <a href="#segment">5. Segment display</a>
+  <a href="#file-browser">6. File browser</a>
+  <a href="#markdown-props">7. Markdown props</a>
+  <a href="#graph-types">8. Diagram types</a>
+  <a href="#file-browser-props">9. File browser props</a>
+</aside>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1>Rich Content Components</h1>
+    <p class="subtitle">
+      Render markdown, images, diagrams, and pixel graphics in the terminal.
+      Browse the filesystem with keyboard navigation.
+    </p>
+
+    <ul class="component-list" style="list-style: none; padding-left: 0">
+      <li><a href="#markdown"><code>markdown</code></a> &ndash; render .md files with headings, lists, code blocks, images</li>
+      <li><a href="#mermaid"><code>graph</code></a> &ndash; flowcharts, sequence diagrams, class diagrams</li>
+      <li><a href="#img"><code>img</code></a> &ndash; PNG, JPEG, GIF (animated), WebP with aspect-correct scaling</li>
+      <li><a href="#canvas"><code>canvas</code></a> &ndash; pixel drawing, shapes, SVG paths, text overlays</li>
+      <li><a href="#segment"><code>segment-display</code></a> &ndash; 7-segment digits and pixel font text</li>
+      <li><a href="#file-browser"><code>file-browser</code></a> &ndash; directory listing with filter, selection, keyboard nav</li>
+    </ul>
+
+  </div>
+</div>
+
+<!-- Section 1: Markdown -->
+<section id="markdown">
+  <div class="container">
+    <h2>1. Markdown</h2>
+    <p class="section-claim">Render markdown files in the terminal. Headings, lists, code blocks, tables, links, and images.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/content/markdown.melker -- sample.md</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251);font-weight:bold">Welcome to Melker                                       </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">                                                        </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">Melker Engine renders </span><span style="color:rgb(249,250,251);font-weight:bold">rich terminal UIs</span><span style="color:rgb(249,250,251)"> from an         </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">HTML-inspired document model.                           </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">                                                        </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251);font-weight:bold">Features</span><span style="color:rgb(249,250,251)">                                                </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">                                                        </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">  </span><span style="color:rgb(209,213,219)">•</span><span style="color:rgb(249,250,251)"> Tables, charts, and heatmaps                        </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">  </span><span style="color:rgb(209,213,219)">•</span><span style="color:rgb(249,250,251)"> Markdown with syntax highlighting                   </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">  </span><span style="color:rgb(209,213,219)">•</span><span style="color:rgb(249,250,251)"> Mermaid diagrams                                    </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">  </span><span style="color:rgb(209,213,219)">•</span><span style="color:rgb(249,250,251)"> File browser with fuzzy search                      </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251)">                                                        </span> <span style="color:rgb(96,165,250)">█</span>
+ <span style="color:rgb(249,250,251);font-weight:bold">Quick Start</span><span style="color:rgb(249,250,251)">                                             </span> <span style="color:rgb(96,165,250)">░</span>
+ <span style="color:rgb(249,250,251)">                                                        </span> <span style="color:rgb(96,165,250)">░</span>
+ <span style="color:rgb(249,250,251)">                                                   </span><span style="color:rgb(107,114,128)">bash</span><span style="color:rgb(249,250,251)"> </span> <span style="color:rgb(96,165,250)">░</span>
+ <span style="color:rgb(209,213,219);background:rgb(31,41,55)">  melker hello.melker                                   </span> <span style="color:rgb(96,165,250)">░</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/content/markdown.melker">View source</a></p>
+
+    <p>
+      Load a file with the <code>src</code> prop, or pass inline content with <code>text</code>.
+      The <code>onLink</code> handler fires when a user clicks a link, letting you
+      navigate between documents or open URLs in the browser.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">markdown.melker</div>
+      <pre><span class="tag">&lt;markdown</span> <span class="attr">id</span>=<span class="str">"md"</span> <span class="attr">src</span>=<span class="str">"README.md"</span>
+    <span class="attr">onLink</span>=<span class="str">"$app.handleLink(event)"</span>
+    <span class="attr">style</span>=<span class="str">"text-wrap: wrap"</span> <span class="tag">/&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span><span class="tag">&gt;</span>
+    <span class="kw">export function</span> handleLink(event: { url: string }) {
+        <span class="kw">if</span> (event.url.startsWith(<span class="str">'http'</span>)) {
+            $melker.openBrowser(event.url);
+            <span class="kw">return</span>;
+        }
+        <span class="cmt">// Navigate to another .md file within the app</span>
+        <span class="kw">const</span> md = $melker.getElementById(<span class="str">'md'</span>);
+        md.props.src = event.url;
+    }
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      Markdown supports GFM extensions (tables, strikethrough), syntax-highlighted code blocks,
+      blockquotes, and images. Images referenced in markdown (<code>![alt](path.png)</code>)
+      are rendered inline using the same pixel graphics as the
+      <a href="#img"><code>&lt;img&gt;</code> component</a>. Code blocks with <code>```mermaid</code>
+      are rendered as interactive diagrams (see next section).
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/component-reference.md">Component reference</a></p>
+  </div>
+</section>
+
+<!-- Section 2: Mermaid diagrams -->
+<section id="mermaid">
+  <div class="container">
+    <h2>2. Mermaid diagrams</h2>
+    <p class="section-claim">Flowcharts, sequence diagrams, and class diagrams rendered with Unicode box drawing.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/content/mermaid.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251)">Git Workflow</span>
+
+  <span style="color:rgb(107,114,128)">┌───── Local ─────┐</span>     <span style="color:rgb(107,114,128)">┌──── Remote ─────┐</span>
+  <span style="color:rgb(107,114,128)">│</span>                 <span style="color:rgb(107,114,128)">│</span>     <span style="color:rgb(107,114,128)">│</span>                 <span style="color:rgb(107,114,128)">│</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">┌─────────────┐</span> <span style="color:rgb(107,114,128)">│</span>     <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">┌─────────────┐</span> <span style="color:rgb(107,114,128)">│</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">Working Dir</span> <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">│</span>     <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">Remote Repo</span> <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">│</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">└─────────────┘</span> <span style="color:rgb(107,114,128)">│</span>     <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">└─────────────┘</span> <span style="color:rgb(107,114,128)">│</span>
+  <span style="color:rgb(107,114,128)">│</span>      <span style="color:rgb(249,250,251)">│</span>          <span style="color:rgb(107,114,128)">│</span>     <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251)">▲</span>        <span style="color:rgb(107,114,128)">│</span>
+  <span style="color:rgb(107,114,128)">│</span>      <span style="color:rgb(249,250,251)">│git add</span>   <span style="color:rgb(107,114,128)">│</span>     <span style="color:rgb(107,114,128)">└────────</span><span style="color:rgb(249,250,251)">│</span><span style="color:rgb(107,114,128)">────────┘</span>
+  <span style="color:rgb(107,114,128)">│</span>      <span style="color:rgb(249,250,251)">│</span>          <span style="color:rgb(107,114,128)">│</span>              <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span>      <span style="color:rgb(249,250,251)">▼</span>          <span style="color:rgb(107,114,128)">│</span>              <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">┌─────────┐</span>     <span style="color:rgb(107,114,128)">│</span>              <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">Staging</span> <span style="color:rgb(107,114,128)">│</span>     <span style="color:rgb(107,114,128)">│</span>              <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">└─────────┘</span>     <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)"> git pull </span>    <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251)">│</span>        <span style="color:rgb(107,114,128)">│</span>              <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251)">│git commit</span>             <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251)">│</span>        <span style="color:rgb(107,114,128)">│</span>              <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span>        <span style="color:rgb(249,250,251)">▼</span>        <span style="color:rgb(107,114,128)">│</span>              <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">┌────────────┐</span>  <span style="color:rgb(107,114,128)">│</span>              <span style="color:rgb(249,250,251)">│</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">Local Repo</span> <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">◀────────────────┘</span>
+  <span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(107,114,128)">└────────────┘</span>  <span style="color:rgb(107,114,128)">│</span>
+  <span style="color:rgb(107,114,128)">│</span>                 <span style="color:rgb(107,114,128)">│</span>
+  <span style="color:rgb(107,114,128)">└─────────────────┘</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/content/mermaid.melker">View source</a></p>
+
+    <p>
+      The <code>&lt;graph&gt;</code> component parses Mermaid syntax and renders it
+      using Unicode box-drawing characters. Place the Mermaid definition directly
+      as the element's text content. Melker can also render <code>.mmd</code> files directly
+      from the command line: <code>melker diagram.mmd</code>.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">mermaid.melker</div>
+      <pre><span class="tag">&lt;graph</span> <span class="attr">style</span>=<span class="str">"overflow: scroll; flex: 1"</span><span class="tag">&gt;</span>
+flowchart LR
+    subgraph Local
+        WD[Working Dir] -->|git add| SA[Staging]
+        SA -->|git commit| LR[Local Repo]
+    end
+    subgraph Remote
+        RR[Remote Repo]
+    end
+    LR -->|git push| RR
+    RR -->|git pull| LR
+<span class="tag">&lt;/graph&gt;</span></pre>
+    </div>
+
+    <p>
+      Mermaid blocks inside markdown code fences (<code>```mermaid</code>) are also
+      rendered as diagrams automatically. Nodes in the diagram are focusable and
+      keyboard-navigable.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">In a markdown file</div>
+      <pre><span class="cmt">```mermaid</span>
+sequenceDiagram
+    Client->>Server: GET /api/data
+    Server->>DB: Query
+    DB-->>Server: Results
+    Server-->>Client: JSON response
+<span class="cmt">```</span></pre>
+    </div>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/mermaid-support.md">Mermaid support</a> · <a href="/reference/agent_docs/graph-architecture.md">Graph architecture</a></p>
+  </div>
+</section>
+
+<!-- Section 3: Images -->
+<section id="img">
+  <div class="container">
+    <h2>3. Images</h2>
+    <p class="section-claim">Display PNG, JPEG, GIF, and WebP images using Unicode block characters (2x2 pixels per cell).</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/content/img.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251)">Image Component</span>
+
+     <span style="color:rgb(0,11,5);background:rgb(0,7,3)">▗</span><span style="color:rgb(0,16,7);background:rgb(0,16,7)">▄</span><span style="color:rgb(0,17,7);background:rgb(0,17,7)">▄▄▄</span><span style="color:rgb(0,17,8);background:rgb(0,17,8)">▄</span><span style="color:rgb(0,18,7);background:rgb(0,18,7)">▄</span><span style="color:rgb(0,19,8);background:rgb(0,19,8)">▄▄▄</span><span style="color:rgb(0,18,8);background:rgb(0,18,8)">▄</span><span style="color:rgb(0,15,6);background:rgb(0,10,5)">▖</span><span style="color:rgb(0,8,4);background:rgb(0,8,4)">▖</span>     <span style="color:rgb(249,250,251)">Format: PNG</span>
+  <span style="color:rgb(0,9,5);background:rgb(0,9,5)">▄</span><span style="color:rgb(0,18,7);background:rgb(0,12,5)">▝</span><span style="color:rgb(0,25,10);background:rgb(0,14,7)">▀</span><span style="color:rgb(0,28,10);background:rgb(0,16,7)">▀</span><span style="color:rgb(0,32,11);background:rgb(0,17,7)">▀</span><span style="color:rgb(0,34,12);background:rgb(0,19,8)">▀</span><span style="color:rgb(0,35,12);background:rgb(0,19,8)">▀</span><span style="color:rgb(0,35,12);background:rgb(0,20,8)">▀</span><span style="color:rgb(0,36,13);background:rgb(0,20,8)">▀</span><span style="color:rgb(0,35,12);background:rgb(0,20,8)">▀</span><span style="color:rgb(0,37,13);background:rgb(0,20,8)">▀</span><span style="color:rgb(0,39,14);background:rgb(0,21,9)">▀</span><span style="color:rgb(0,38,14);background:rgb(0,23,8)">▀</span><span style="color:rgb(0,40,14);background:rgb(0,20,8)">▀</span><span style="color:rgb(0,35,12);background:rgb(0,19,8)">▀</span><span style="color:rgb(0,28,10);background:rgb(0,17,8)">▀</span><span style="color:rgb(0,22,8);background:rgb(0,15,7)">▀</span><span style="color:rgb(0,13,6);background:rgb(0,13,6)">▙</span><span style="color:rgb(0,9,5);background:rgb(0,9,5)">▖</span>  <span style="color:rgb(249,250,251)">Mode: sextant (2x3 pixels/cell)</span>
+ <span style="color:rgb(0,15,7);background:rgb(0,8,5)">▄</span><span style="color:rgb(0,22,9);background:rgb(0,11,6)">▄</span><span style="color:rgb(0,28,10);background:rgb(0,13,6)">▄</span><span style="color:rgb(0,38,12);background:rgb(0,15,7)">▄</span><span style="color:rgb(0,61,18);background:rgb(0,21,8)">▄</span><span style="color:rgb(0,106,30);background:rgb(0,26,9)">▄</span><span style="color:rgb(0,111,31);background:rgb(0,28,10)">▄</span><span style="color:rgb(0,90,26);background:rgb(0,28,10)">▄</span><span style="color:rgb(0,61,19);background:rgb(0,23,8)">▄</span><span style="color:rgb(0,53,17);background:rgb(0,21,8)">▄</span><span style="color:rgb(0,53,17);background:rgb(0,22,8)">▄</span><span style="color:rgb(0,59,18);background:rgb(0,25,8)">▄</span><span style="color:rgb(0,82,24);background:rgb(0,27,9)">▄</span><span style="color:rgb(0,113,33);background:rgb(0,32,11)">▄</span><span style="color:rgb(0,119,35);background:rgb(0,30,10)">▄</span><span style="color:rgb(0,90,26);background:rgb(0,23,8)">▄</span><span style="color:rgb(0,51,16);background:rgb(0,18,7)">▄</span><span style="color:rgb(0,35,12);background:rgb(0,13,7)">▄</span><span style="color:rgb(0,27,9);background:rgb(0,11,6)">▄</span><span style="color:rgb(0,21,9);background:rgb(0,10,5)">▄</span>  <span style="color:rgb(249,250,251)">Fit: contain (preserves aspect)</span>
+ <span style="color:rgb(0,18,8);background:rgb(0,11,7)">▀</span><span style="color:rgb(0,23,9);background:rgb(0,14,7)">▀</span><span style="color:rgb(0,31,11);background:rgb(0,18,7)">▀</span><span style="color:rgb(0,46,14);background:rgb(0,30,9)">▀</span><span style="color:rgb(0,122,32);background:rgb(0,58,16)">▐</span><span style="color:rgb(69,255,133);background:rgb(31,249,103)">▀</span><span style="color:rgb(76,255,136);background:rgb(34,250,104)">▀</span><span style="color:rgb(47,253,116);background:rgb(0,166,49)">▙</span><span style="color:rgb(9,189,60);background:rgb(0,97,28)">▄</span><span style="color:rgb(0,68,19);background:rgb(0,54,14)">▛</span><span style="color:rgb(0,64,19);background:rgb(0,53,14)">▀</span><span style="color:rgb(0,154,40);background:rgb(0,77,21)">▗</span><span style="color:rgb(23,230,86);background:rgb(0,150,43)">▄</span><span style="color:rgb(70,255,133);background:rgb(38,252,108)">▀</span><span style="color:rgb(79,255,136);background:rgb(36,251,106)">▀</span><span style="color:rgb(44,251,113);background:rgb(0,135,36)">▌</span><span style="color:rgb(0,68,21);background:rgb(0,47,12)">▀</span><span style="color:rgb(0,41,14);background:rgb(0,25,8)">▀</span><span style="color:rgb(0,32,11);background:rgb(0,18,7)">▀</span><span style="color:rgb(0,25,10);background:rgb(0,14,7)">▀</span>
+ <span style="color:rgb(0,24,10);background:rgb(0,16,7)">▄</span><span style="color:rgb(0,31,11);background:rgb(0,21,8)">▄</span><span style="color:rgb(0,43,14);background:rgb(0,27,10)">▄</span><span style="color:rgb(0,63,19);background:rgb(0,43,13)">▄</span><span style="color:rgb(0,148,43);background:rgb(0,85,24)">▐</span><span style="color:rgb(92,254,138);background:rgb(64,250,114)">▄</span><span style="color:rgb(89,254,137);background:rgb(55,246,110)">▖</span><span style="color:rgb(47,250,109);background:rgb(0,160,47)">▀</span><span style="color:rgb(88,255,137);background:rgb(55,247,112)">▗</span><span style="color:rgb(70,238,116);background:rgb(0,149,44)">▌</span><span style="color:rgb(0,164,50);background:rgb(0,103,27)">▄</span><span style="color:rgb(69,251,124);background:rgb(24,219,84)">▟</span><span style="color:rgb(58,247,113);background:rgb(0,162,49)">▛</span><span style="color:rgb(58,249,114);background:rgb(0,150,45)">▜</span><span style="color:rgb(93,254,139);background:rgb(57,251,112)">▄</span><span style="color:rgb(72,251,123);background:rgb(0,149,43)">▌</span><span style="color:rgb(0,99,30);background:rgb(0,62,18)">▖</span><span style="color:rgb(0,51,17);background:rgb(0,35,11)">▄</span><span style="color:rgb(0,39,13);background:rgb(0,26,10)">▄</span><span style="color:rgb(0,32,12);background:rgb(0,20,8)">▄</span>
+ <span style="color:rgb(0,20,9);background:rgb(0,12,7)">▄</span><span style="color:rgb(0,25,10);background:rgb(0,14,7)">▄</span><span style="color:rgb(0,34,12);background:rgb(0,21,8)">▄</span><span style="color:rgb(0,55,17);background:rgb(0,37,10)">▄</span><span style="color:rgb(0,141,38);background:rgb(0,73,20)">▐</span><span style="color:rgb(78,253,126);background:rgb(26,247,96)">▄</span><span style="color:rgb(80,252,127);background:rgb(37,235,95)">▖</span><span style="color:rgb(0,115,33);background:rgb(0,85,21)">▖</span><span style="color:rgb(0,132,35);background:rgb(0,92,24)">▐</span><span style="color:rgb(41,248,104);background:rgb(0,169,48)">▜</span><span style="color:rgb(65,250,118);background:rgb(21,244,91)">▄</span><span style="color:rgb(20,242,89);background:rgb(0,147,40)">▘</span><span style="color:rgb(0,94,25);background:rgb(0,85,21)">▙</span><span style="color:rgb(45,243,102);background:rgb(0,113,30)">▐</span><span style="color:rgb(90,253,130);background:rgb(26,247,94)">▄</span><span style="color:rgb(50,249,109);background:rgb(0,141,38)">▌</span><span style="color:rgb(0,86,25);background:rgb(0,57,15)">▖</span><span style="color:rgb(0,44,14);background:rgb(0,29,9)">▄</span><span style="color:rgb(0,32,12);background:rgb(0,20,8)">▄</span><span style="color:rgb(0,26,10);background:rgb(0,16,7)">▄</span>
+ <span style="color:rgb(0,23,10);background:rgb(0,14,7)">▀</span><span style="color:rgb(0,30,11);background:rgb(0,17,7)">▀</span><span style="color:rgb(0,38,13);background:rgb(0,24,8)">▀</span><span style="color:rgb(0,60,18);background:rgb(0,39,11)">▀</span><span style="color:rgb(0,141,38);background:rgb(0,76,21)">▐</span><span style="color:rgb(61,255,130);background:rgb(48,252,115)">▀</span><span style="color:rgb(55,253,120);background:rgb(30,234,97)">▌</span><span style="color:rgb(0,115,33);background:rgb(0,73,19)">▘</span><span style="color:rgb(0,79,22);background:rgb(0,46,12)">▀</span><span style="color:rgb(0,99,28);background:rgb(0,42,11)">▀</span><span style="color:rgb(0,109,31);background:rgb(0,40,11)">▀</span><span style="color:rgb(0,85,25);background:rgb(0,45,12)">▀</span><span style="color:rgb(0,90,26);background:rgb(0,60,15)">▀</span><span style="color:rgb(42,251,112);background:rgb(0,112,30)">▐</span><span style="color:rgb(64,254,128);background:rgb(45,253,115)">▜</span><span style="color:rgb(51,254,121);background:rgb(0,143,40)">▌</span><span style="color:rgb(0,81,23);background:rgb(0,53,14)">▀</span><span style="color:rgb(0,48,15);background:rgb(0,28,8)">▀</span><span style="color:rgb(0,37,12);background:rgb(0,21,8)">▀</span><span style="color:rgb(0,31,12);background:rgb(0,18,7)">▀</span>
+ <span style="color:rgb(0,18,8);background:rgb(0,12,6)">▗</span><span style="color:rgb(0,22,8);background:rgb(0,14,7)">▄</span><span style="color:rgb(0,24,9);background:rgb(0,18,8)">▟</span><span style="color:rgb(0,36,11);background:rgb(0,26,9)">▟</span><span style="color:rgb(0,122,31);background:rgb(0,64,18)">▝</span><span style="color:rgb(39,246,99);background:rgb(0,115,32)">▀</span><span style="color:rgb(34,233,92);background:rgb(0,109,30)">▀</span><span style="color:rgb(0,74,20);background:rgb(0,50,14)">▌</span><span style="color:rgb(0,46,14);background:rgb(0,37,10)">▄</span><span style="color:rgb(0,41,13);background:rgb(0,30,9)">▄</span><span style="color:rgb(0,41,13);background:rgb(0,30,8)">▄</span><span style="color:rgb(0,44,14);background:rgb(0,34,9)">▄</span><span style="color:rgb(0,65,18);background:rgb(0,47,14)">▐</span><span style="color:rgb(25,239,88);background:rgb(0,98,26)">▝</span><span style="color:rgb(39,246,100);background:rgb(0,132,37)">▀</span><span style="color:rgb(31,247,98);background:rgb(0,107,29)">▘</span><span style="color:rgb(0,55,15);background:rgb(0,39,12)">▌</span><span style="color:rgb(0,32,11);background:rgb(0,24,8)">▄</span><span style="color:rgb(0,26,9);background:rgb(0,18,7)">▄</span><span style="color:rgb(0,21,9);background:rgb(0,15,7)">▄</span>
+ <span style="color:rgb(0,14,6);background:rgb(0,14,6)">▝</span><span style="color:rgb(0,19,7);background:rgb(0,7,4)">▀</span><span style="color:rgb(0,22,9);background:rgb(0,10,6)">▀</span><span style="color:rgb(0,27,10);background:rgb(0,11,6)">▀</span><span style="color:rgb(0,34,11);background:rgb(0,13,6)">▀</span><span style="color:rgb(0,40,13);background:rgb(0,15,7)">▀</span><span style="color:rgb(0,41,14);background:rgb(0,15,7)">▀</span><span style="color:rgb(0,40,14);background:rgb(0,15,7)">▀</span><span style="color:rgb(0,36,12);background:rgb(0,15,7)">▀▀</span><span style="color:rgb(0,35,11);background:rgb(0,15,6)">▀</span><span style="color:rgb(0,36,12);background:rgb(0,15,7)">▀</span><span style="color:rgb(0,39,13);background:rgb(0,15,7)">▀</span><span style="color:rgb(0,41,13);background:rgb(0,16,7)">▀</span><span style="color:rgb(0,46,15);background:rgb(0,16,7)">▀</span><span style="color:rgb(0,41,14);background:rgb(0,15,7)">▀</span><span style="color:rgb(0,33,11);background:rgb(0,13,7)">▀</span><span style="color:rgb(0,25,9);background:rgb(0,11,6)">▀</span><span style="color:rgb(0,22,9);background:rgb(0,11,6)">▀</span><span style="color:rgb(0,17,7);background:rgb(0,8,4)">▀</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/content/img.melker">View source</a></p>
+
+    <p>
+      The <code>&lt;img&gt;</code> component renders images using Unicode block characters.
+      The default sextant mode gives 2x3 pixels per cell, and quadrant mode gives 2x2
+      pixels per cell with near-universal font support. Supports PNG, JPEG, WebP, and animated GIFs.
+      GIF animation plays automatically and can be disabled with <code>--no-animate-gif</code>.
+      A separate <code>&lt;video&gt;</code> component exists for MP4, RTSP streams, and other
+      video formats (requires FFmpeg).
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">img.melker</div>
+      <pre><span class="cmt">&lt;!-- Fixed size with aspect-correct scaling --&gt;</span>
+<span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"logo.png"</span> <span class="attr">width</span>=<span class="str">"20"</span> <span class="attr">height</span>=<span class="str">"10"</span>
+    <span class="attr">style</span>=<span class="str">"object-fit: contain"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Responsive: fills container width --&gt;</span>
+<span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"photo.jpg"</span> <span class="attr">width</span>=<span class="str">"100%"</span> <span class="attr">height</span>=<span class="str">"20"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Animated GIF --&gt;</span>
+<span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"animation.gif"</span> <span class="attr">width</span>=<span class="str">"40"</span> <span class="attr">height</span>=<span class="str">"20"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Load and error callbacks --&gt;</span>
+<span class="tag">&lt;img</span> <span class="attr">src</span>=<span class="str">"image.png"</span> <span class="attr">width</span>=<span class="str">"30"</span> <span class="attr">height</span>=<span class="str">"15"</span>
+    <span class="attr">onLoad</span>=<span class="str">"$app.loaded()"</span>
+    <span class="attr">onError</span>=<span class="str">"$app.failed()"</span> <span class="tag">/&gt;</span></pre>
+    </div>
+
+    <p>
+      The <code>object-fit</code> style controls scaling: <code>"contain"</code> preserves
+      aspect ratio, <code>"fill"</code> stretches to fill (default), <code>"cover"</code>
+      fills and crops. Use <code>setSrc(url)</code> to change the image at runtime.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/component-reference.md">Component reference</a></p>
+  </div>
+</section>
+
+<!-- Section 4: Canvas -->
+<section id="canvas">
+  <div class="container">
+    <h2>4. Canvas</h2>
+    <p class="section-claim">Pixel-level drawing with shapes, lines, text labels, and SVG paths.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/content/canvas.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251)">Canvas Drawing</span>
+
+
+  <span style="color:rgb(59,130,246)">███████████████</span>  <span style="color:rgb(245,158,11)">████████████▌</span> <span style="color:rgb(16,185,129)">▐███████</span>
+  <span style="color:rgb(59,130,246)">████</span><span style="color:rgb(255,255,255)">40%</span><span style="color:rgb(59,130,246)">████████</span>  <span style="color:rgb(245,158,11)">███</span><span style="color:rgb(255,255,255)">30%</span><span style="color:rgb(245,158,11)">██████▌</span> <span style="color:rgb(16,185,129)">▐███</span><span style="color:rgb(255,255,255)">20%</span><span style="color:rgb(16,185,129)">█</span>
+  <span style="color:rgb(59,130,246)">▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀</span><span style="color:rgb(99,102,241)">▗▄</span><span style="color:rgb(245,158,11)">█</span><span style="color:rgb(99,102,241)">▀▀▀▀▀▀▀▜</span><span style="color:rgb(245,158,11)">██▀▘</span> <span style="color:rgb(16,185,129)">▝▀▀▀▀▀▀▀</span>
+               <span style="color:rgb(99,102,241)">▄▀▘</span>            <span style="color:rgb(99,102,241)">▀▚▖</span>
+             <span style="color:rgb(99,102,241)">▄▀</span>                 <span style="color:rgb(99,102,241)">▝▚▖</span>
+            <span style="color:rgb(99,102,241)">▞</span>                     <span style="color:rgb(99,102,241)">▝▖</span>
+           <span style="color:rgb(99,102,241)">▐</span>                       <span style="color:rgb(99,102,241)">▐</span>
+           <span style="color:rgb(99,102,241)">▌</span>                        <span style="color:rgb(99,102,241)">▌</span>
+           <span style="color:rgb(99,102,241)">▌</span>                        <span style="color:rgb(99,102,241)">▌</span>
+           <span style="color:rgb(99,102,241)">▚</span>                       <span style="color:rgb(99,102,241)">▗▘</span>
+           <span style="color:rgb(99,102,241)">▝▖</span>                      <span style="color:rgb(99,102,241)">▞</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/content/canvas.melker">View source</a></p>
+
+    <p>
+      The <code>onPaint</code> handler provides a canvas object with drawing methods.
+      Use <code>fillRect</code>, <code>drawLine</code>, <code>drawCircleCorrected</code>,
+      and <code>drawText</code> for basic shapes. SVG path strings are also supported
+      for curves and complex shapes.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">canvas.melker</div>
+      <pre><span class="tag">&lt;canvas</span> <span class="attr">id</span>=<span class="str">"c"</span> <span class="attr">width</span>=<span class="str">"40"</span> <span class="attr">height</span>=<span class="str">"12"</span>
+    <span class="attr">onPaint</span>=<span class="str">"$app.draw(event.canvas)"</span> <span class="tag">/&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span><span class="tag">&gt;</span>
+    <span class="kw">export function</span> draw(canvas: any) {
+        canvas.clear();
+        canvas.setColor(<span class="str">'#3b82f6'</span>);
+        canvas.fillRect(<span class="num">2</span>, <span class="num">2</span>, <span class="num">30</span>, <span class="num">5</span>);
+        canvas.setColor(<span class="str">'#ffffff'</span>);
+        canvas.drawText(<span class="num">10</span>, <span class="num">4</span>, <span class="str">'Label'</span>);
+        canvas.setColor(<span class="str">'#6366f1'</span>);
+        canvas.drawCircleCorrected(<span class="num">45</span>, <span class="num">18</span>, <span class="num">12</span>);
+    }
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      Canvas also supports per-pixel shaders via the <code>onShader</code> prop for
+      animated effects (requires <code>"shader": true</code> in the policy), SVG overlays
+      via the <code>svgOverlay</code> prop, and tooltips via <code>onTooltip</code>.
+      The <code>&lt;img&gt;</code> component extends canvas, so all canvas methods
+      are available on images too.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/component-reference.md">Component reference</a></p>
+  </div>
+</section>
+
+<!-- Section 5: Segment Display -->
+<section id="segment">
+  <div class="container">
+    <h2>5. Segment display</h2>
+    <p class="section-claim">LCD/LED-style digits and pixel font text using Unicode characters.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/content/segment.melker</div>
+      <pre class="terminal"> <span style="color:rgb(249,250,251)">7-Segment Display</span>
+
+ <span style="color:rgb(0,128,0)">        ━━━━            ━━━━     ━━━━   ━━━━  </span>
+ <span style="color:rgb(0,128,0)">     ┃      ┃ ● ┃    ┃ ┃      ●      ┃ ┃    ┃ </span>
+ <span style="color:rgb(0,128,0)">        ━━━━     ━━━━   ━━━━     ━━━━         </span>
+ <span style="color:rgb(0,128,0)">     ┃ ┃      ●      ┃      ┃ ●      ┃ ┃    ┃ </span>
+ <span style="color:rgb(0,128,0)">        ━━━━            ━━━━     ━━━━   ━━━━  </span>
+
+ <span style="color:rgb(249,250,251)">Pixel Font</span>
+
+ <span style="color:rgb(0,255,255)">█  █  ████  █     █      ██   </span>
+ <span style="color:rgb(0,255,255)">█  █  █     █     █     █  █  </span>
+ <span style="color:rgb(0,255,255)">████  ███   █     █     █  █  </span>
+ <span style="color:rgb(0,255,255)">█  █  █     █     █     █  █  </span>
+ <span style="color:rgb(0,255,255)">█  █  █     █     █     █  █  </span>
+ <span style="color:rgb(0,255,255)">█  █  ████  ████  ████   ██   </span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/content/segment.melker">View source</a></p>
+
+    <p>
+      Four renderers are available. The <code>box-drawing</code> renderer (default) draws
+      clean 7-segment digits with thin lines. <code>rounded</code> adds rounded corners.
+      <code>geometric</code> uses chunky block characters for an LCD look. The
+      <code>pixel</code> renderer uses bitmap font glyphs and supports the full ASCII
+      character set, including accented characters.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">segment-display.melker</div>
+      <pre><span class="cmt">&lt;!-- 7-segment clock --&gt;</span>
+<span class="tag">&lt;segment-display</span> <span class="attr">value</span>=<span class="str">"12:45:30"</span>
+    <span class="attr">style</span>=<span class="str">"height: 5; color: green"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Pixel font with custom characters --&gt;</span>
+<span class="tag">&lt;segment-display</span> <span class="attr">value</span>=<span class="str">"HELLO"</span> <span class="attr">renderer</span>=<span class="str">"pixel"</span>
+    <span class="attr">style</span>=<span class="str">"height: 7; color: cyan"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- LCD effect with visible off-segments --&gt;</span>
+<span class="tag">&lt;segment-display</span> <span class="attr">value</span>=<span class="str">"88:88"</span>
+    <span class="attr">style</span>=<span class="str">"color: #00ff00; off-color: #003300"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Scrolling marquee --&gt;</span>
+<span class="tag">&lt;segment-display</span> <span class="attr">value</span>=<span class="str">"HELLO WORLD"</span>
+    <span class="attr">scroll</span>=<span class="str">"true"</span> <span class="attr">scrollSpeed</span>=<span class="str">"24"</span>
+    <span class="attr">style</span>=<span class="str">"width: 50"</span> <span class="tag">/&gt;</span></pre>
+    </div>
+
+    <p>
+      Height can be <code>5</code> or <code>7</code> rows. The pixel renderer uses
+      3x5 glyphs at height 5 and 5x7 glyphs at height 7. Set <code>off-color</code>
+      to make inactive segments visible (classic LCD panel look). Use
+      <code>pixel-char</code> and <code>off-pixel-char</code> styles to change the
+      fill characters.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/component-reference.md">Component reference</a></p>
+  </div>
+</section>
+
+<!-- Section 6: File Browser -->
+<section id="file-browser">
+  <div class="container">
+    <h2>6. File browser</h2>
+    <p class="section-claim">A filesystem navigator with fuzzy filtering, keyboard navigation, and single or multiple selection.</p>
+
+    <div class="code-block">
+      <div class="code-title">melker --stdout examples/content/file-browser.melker</div>
+      <pre class="terminal"><span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">┌──────────────────────────────────────────────────────┐</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(249,250,251);background:rgb(30,64,175);font-weight:bold">                      Open File                       </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">├──────────────────────────────────────────────────────┤</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">┌────────────────────────────────────────────────────┐</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">Path: /home/wistrand/melker</span>                        <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">│</span> <span style="color:rgb(249,250,251)">Filter: </span><span style="color:rgb(128,128,128);background:rgb(17,24,39)">type to filter...</span><span style="color:rgb(107,114,128);background:rgb(17,24,39)">                          </span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">┌──────────────────────────────────────────────────┐</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">│</span><span style="color:rgb(249,250,251);background:rgb(30,64,175)"> [^] ..                                           </span><span style="color:rgb(59,130,246)">█</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">│</span> <span style="color:rgb(249,250,251)">[D] agent_docs/</span>                                  <span style="color:rgb(55,65,81)">░</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">│</span> <span style="color:rgb(249,250,251)">[D] apps/</span>                                        <span style="color:rgb(55,65,81)">░</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251)">└──────────────────────────────────────────────────┘</span><span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">│</span>                                <span style="color:rgb(249,250,251)">[ Cancel ]</span> <span style="color:rgb(249,250,251)">[ Open ]</span> <span style="color:rgb(107,114,128)">│</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span><span style="color:rgb(107,114,128)">└────────────────────────────────────────────────────┘</span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">│</span>
+<span style="color:rgb(249,250,251);background:rgb(30,58,138)">  </span><span style="color:rgb(249,250,251);background:rgb(31,41,55)">└──────────────────────────────────────────────────────┘</span></pre>
+    </div>
+    <p class="explanation"><a href="/examples/content/file-browser.melker">View source</a></p>
+
+    <p>
+      The file browser is typically placed inside a <code>&lt;dialog&gt;</code>. It shows
+      a breadcrumb path, a filter input, a scrollable file list, and action buttons.
+      The <code>onChange</code> handler fires with the selected file path. Requires
+      <code>"read"</code> permission in the policy.
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">file-browser.melker</div>
+      <pre><span class="tag">&lt;policy&gt;</span>{ <span class="str">"permissions"</span>: { <span class="str">"read"</span>: [<span class="str">"*"</span>] } }<span class="tag">&lt;/policy&gt;</span>
+
+<span class="tag">&lt;dialog</span> <span class="attr">id</span>=<span class="str">"dlg"</span> <span class="attr">title</span>=<span class="str">"Open File"</span> <span class="attr">open</span>=<span class="str">"false"</span>
+    <span class="attr">modal</span>=<span class="str">"true"</span> <span class="attr">width</span>=<span class="str">"60"</span> <span class="attr">height</span>=<span class="str">"18"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;file-browser</span> <span class="attr">id</span>=<span class="str">"fb"</span>
+        <span class="attr">selectionMode</span>=<span class="str">"single"</span>
+        <span class="attr">selectType</span>=<span class="str">"file"</span>
+        <span class="attr">onChange</span>=<span class="str">"$app.pick(event)"</span>
+        <span class="attr">onCancel</span>=<span class="str">"$app.closeDialog()"</span>
+        <span class="attr">maxVisible</span>=<span class="str">"10"</span> <span class="tag">/&gt;</span>
+<span class="tag">&lt;/dialog&gt;</span>
+
+<span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"typescript"</span><span class="tag">&gt;</span>
+    <span class="kw">export function</span> openDialog() {
+        $melker.getElementById(<span class="str">'dlg'</span>).props.open = <span class="kw">true</span>;
+    }
+
+    <span class="kw">export function</span> pick(event: { path: string }) {
+        $melker.getElementById(<span class="str">'dlg'</span>).props.open = <span class="kw">false</span>;
+        $melker.getElementById(<span class="str">'result'</span>).setValue(event.path);
+    }
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+
+    <p>
+      Keyboard: arrows to navigate, Enter to open directory or select file,
+      Backspace to go up, Escape to cancel, any character to start filtering.
+      Space toggles selection in multiple mode.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/file-browser-architecture.md">File browser architecture</a></p>
+  </div>
+</section>
+
+<!-- Section 4: Markdown props -->
+<section id="markdown-props">
+  <div class="container">
+    <h2>7. Markdown props</h2>
+    <p class="section-claim">Configuration options for the markdown component.</p>
+
+    <div class="code-block">
+      <div class="code-title">Markdown props</div>
+      <pre><span class="cmt">&lt;!-- Load from file --&gt;</span>
+<span class="tag">&lt;markdown</span> <span class="attr">src</span>=<span class="str">"docs/README.md"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Inline content --&gt;</span>
+<span class="tag">&lt;markdown</span> <span class="attr">text</span>=<span class="str">"# Hello\n\nThis is **bold**."</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- GFM tables, text wrapping, link handler --&gt;</span>
+<span class="tag">&lt;markdown</span> <span class="attr">src</span>=<span class="str">"file.md"</span>
+    <span class="attr">enableGfm</span>=<span class="str">"true"</span>
+    <span class="attr">style</span>=<span class="str">"text-wrap: wrap"</span>
+    <span class="attr">onLink</span>=<span class="str">"$app.handleLink(event)"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Light theme for code blocks --&gt;</span>
+<span class="tag">&lt;markdown</span> <span class="attr">src</span>=<span class="str">"file.md"</span> <span class="attr">codeTheme</span>=<span class="str">"light"</span> <span class="tag">/&gt;</span></pre>
+    </div>
+
+    <p>
+      The <code>src</code> prop loads from a file path or URL. Use <code>text</code> for inline markdown.
+      <code>enableGfm</code> (default <code>true</code>) enables GitHub Flavored Markdown
+      extensions like tables and strikethrough. The <code>onLink</code> event provides
+      <code>event.url</code> and optional <code>event.title</code>.
+    </p>
+
+    <p>
+      Change the source at runtime by updating the prop:
+    </p>
+
+    <div class="code-block">
+      <div class="code-title">Navigate between documents</div>
+      <pre><span class="kw">const</span> md = $melker.getElementById(<span class="str">'md'</span>);
+md.props.src = <span class="str">'other-file.md'</span>;</pre>
+    </div>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/component-reference.md">Component reference</a></p>
+  </div>
+</section>
+
+<!-- Section 5: Diagram types -->
+<section id="graph-types">
+  <div class="container">
+    <h2>8. Diagram types</h2>
+    <p class="section-claim">Three Mermaid diagram types are supported.</p>
+
+    <div class="code-block">
+      <div class="code-title">Flowchart</div>
+      <pre><span class="tag">&lt;graph&gt;</span>
+flowchart TD
+    A[Input] --> B{Valid?}
+    B -->|Yes| C[Process]
+    B -->|No| D[Error]
+    D --> A
+<span class="tag">&lt;/graph&gt;</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-title">Sequence diagram</div>
+      <pre><span class="tag">&lt;graph&gt;</span>
+sequenceDiagram
+    Client->>Server: Request
+    Server->>DB: Query
+    DB-->>Server: Results
+    Server-->>Client: Response
+<span class="tag">&lt;/graph&gt;</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-title">Class diagram</div>
+      <pre><span class="tag">&lt;graph&gt;</span>
+classDiagram
+    class Animal {
+        +name: string
+        +speak()
+    }
+    class Dog {
+        +fetch()
+    }
+    Animal <|-- Dog
+<span class="tag">&lt;/graph&gt;</span></pre>
+    </div>
+
+    <p>
+      Flowcharts support subgraphs, decision nodes (<code>{}</code>), and edge labels.
+      The <code>graph</code> component can also load content from a URL with <code>src</code>,
+      or you can run <code>.mmd</code> files directly: <code>melker diagram.mmd</code>.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/mermaid-support.md">Mermaid support</a></p>
+  </div>
+</section>
+
+<!-- Section 6: File browser props -->
+<section id="file-browser-props">
+  <div class="container">
+    <h2>9. File browser props</h2>
+    <p class="section-claim">Configuration for selection mode, file type filtering, and display.</p>
+
+    <div class="code-block">
+      <div class="code-title">File browser variants</div>
+      <pre><span class="cmt">&lt;!-- Directory picker --&gt;</span>
+<span class="tag">&lt;file-browser</span> <span class="attr">selectType</span>=<span class="str">"directory"</span>
+    <span class="attr">selectLabel</span>=<span class="str">"Choose Folder"</span>
+    <span class="attr">onChange</span>=<span class="str">"$app.setWorkspace(event.path)"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Multiple file selection --&gt;</span>
+<span class="tag">&lt;file-browser</span> <span class="attr">selectionMode</span>=<span class="str">"multiple"</span>
+    <span class="attr">selectType</span>=<span class="str">"file"</span>
+    <span class="attr">onChange</span>=<span class="str">"$app.handleFiles(event.paths)"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Filter by extension --&gt;</span>
+<span class="tag">&lt;file-browser</span> <span class="attr">extensions</span>=<span class="str">"['.ts', '.js']"</span>
+    <span class="attr">showHidden</span>=<span class="str">"true"</span>
+    <span class="attr">onChange</span>=<span class="str">"$app.openFile(event.path)"</span> <span class="tag">/&gt;</span>
+
+<span class="cmt">&lt;!-- Standalone without buttons --&gt;</span>
+<span class="tag">&lt;file-browser</span> <span class="attr">path</span>=<span class="str">"/home/user/docs"</span>
+    <span class="attr">showButtons</span>=<span class="str">"false"</span>
+    <span class="attr">maxVisible</span>=<span class="str">"15"</span>
+    <span class="attr">onChange</span>=<span class="str">"$app.openFile(event.path)"</span> <span class="tag">/&gt;</span></pre>
+    </div>
+
+    <p>
+      The <code>selectType</code> prop controls what can be selected: <code>"file"</code>,
+      <code>"directory"</code>, or <code>"both"</code>. The <code>filter</code> prop accepts
+      the same modes as combobox: <code>"fuzzy"</code> (default), <code>"prefix"</code>,
+      <code>"contains"</code>, <code>"exact"</code>, or <code>"none"</code>.
+    </p>
+
+    <p>
+      The <code>onChange</code> event provides <code>event.path</code> (full path),
+      <code>event.name</code> (filename), <code>event.isDirectory</code>, and
+      <code>event.paths</code> (array, for multiple selection).
+      The <code>onError</code> event fires with <code>event.code</code> (<code>PERMISSION_DENIED</code>,
+      <code>NOT_FOUND</code>) and <code>event.message</code>.
+    </p>
+
+    <p class="explanation">Reference: <a href="/reference/agent_docs/file-browser-architecture.md">File browser architecture</a></p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <a href="/">Melker Engine</a> - Run text with meaning
+  </div>
+</footer>
+
+<script src="shared.js"></script>
+
+</body>
+</html>

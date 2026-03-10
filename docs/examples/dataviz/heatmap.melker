@@ -1,0 +1,21 @@
+<melker>
+    <title>Weekly Activity Heatmap</title>
+    <policy>{"permissions": {"net": ["samesite"]}}</policy>
+
+    <data-heatmap id="activity"
+        colorScale="thermal"
+        showValues="true"
+        valueFormat="d"
+        showLegend="true"
+        style="width: fill; height: fill" />
+
+    <script type="typescript" async="ready">
+        const res = await fetch(new URL('activity.json', $melker.url));
+        const json = await res.json();
+        const hm = $melker.getElementById('activity');
+        hm.props.rowLabels = json.rowLabels;
+        hm.props.colLabels = json.colLabels;
+        hm.props.grid = json.grid;
+        $melker.render();
+    </script>
+</melker>

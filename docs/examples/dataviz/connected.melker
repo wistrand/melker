@@ -1,0 +1,66 @@
+<melker>
+    <title>Connected Views</title>
+    <policy>{"permissions": {"net": ["samesite"]}}</policy>
+
+    <container style="display: flex; flex-direction: row; height: 100%">
+        <data-boxplot id="priceBoxplot"
+            title="Distribution"
+            selectable="true"
+            onGetId="event.label"
+            bind:selection="selectedAreas"
+            style="flex: 1; height: fill" />
+
+        <container style="display: flex; flex-direction: column; flex: 1">
+            <data-table id="statsTable"
+                selectable="single"
+                onGetId="event[0]"
+                bind:selection="selectedAreas"
+                style="width: fill; flex: 1">
+            {
+                "columns": [
+                    { "header": "Area", "width": 6 },
+                    { "header": "Min", "width": 8, "align": "right" },
+                    { "header": "Median", "width": 8, "align": "right" },
+                    { "header": "Max", "width": 8, "align": "right" }
+                ]
+            }
+            </data-table>
+
+            <data-bars id="avgBars"
+                selectable="true"
+                onGetId="event.label"
+                showValues="true"
+                bind:selection="selectedAreas"
+                series='[{"name": "Avg EUR/MWh"}]'
+                style="flex: 1; height: fill" />
+        </container>
+    </container>
+
+    <script type="typescript">
+        $melker.createState({ selectedAreas: [] });
+    </script>
+
+    <script type="typescript" async="ready">
+        const res = await fetch(new URL('electricity-prices.json', $melker.url));
+        const json = await res.json();
+
+        const boxplot = $melker.getElementById('priceBoxplot');
+        boxplot.setGroups(json.areas.map(a => ({
+            label: a.area,
+            values: a.prices,
+        })));
+
+        const table = $melker.getElementById('statsTable');
+        table.setValue(json.areas.map(a => {
+            const sorted = [...a.prices].sort((x, y) => x - y);
+            const mid = Math.floor(sorted.length / 2);
+            const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+            return [a.area, sorted[0].toFixed(1), median.toFixed(1), sorted[sorted.length - 1].toFixed(1)];
+        }));
+
+        const bars = $melker.getElementById('avgBars');
+        bars.setValue(json.areas.map(a => [a.prices.reduce((s, p) => s + p, 0) / a.prices.length]));
+        bars.props.labels = json.areas.map(a => a.area);
+        $melker.render();
+    </script>
+</melker>

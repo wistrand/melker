@@ -1,0 +1,19 @@
+<melker>
+    <title>Sparkline</title>
+    <policy>{"permissions": {"net": ["samesite"]}}</policy>
+
+    <container style="display: flex; flex-direction: column; height: 100%">
+        <text style="font-weight: bold; padding: 0 1; flex-shrink: 0">Recent Earthquakes (magnitude)</text>
+        <data-bars id="spark"
+            series='[{"name": "Magnitude"}]'
+            style="orientation: vertical; height: 1; gap: 0; flex: 1" />
+    </container>
+
+    <script type="typescript" async="ready">
+        const res = await fetch(new URL('earthquakes.json', $melker.url));
+        const json = await res.json();
+        const spark = $melker.getElementById('spark');
+        spark.setValue(json.features.reverse().map(f => [f.properties.mag]));
+        $melker.render();
+    </script>
+</melker>

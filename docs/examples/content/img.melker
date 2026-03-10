@@ -6,7 +6,7 @@
         <text bold="true">Image Component</text>
 
         <container style="flex-direction: row; gap: 2">
-            <img src="../../melker-128.png" width="20" height="10" style="object-fit: contain" />
+            <img src="../../melker-128.png" width="20" height="12" gfxMode="sextant" style="object-fit: contain" />
             <container style="flex-direction: column">
                 <text>Format: PNG</text>
                 <text>Mode: sextant (2x3 pixels/cell)</text>

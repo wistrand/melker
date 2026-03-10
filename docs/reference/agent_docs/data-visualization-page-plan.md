@@ -1,3 +1,4 @@
+<!-- Generated: docs/data-visualization.html -->
 # Plan: docs/data-visualization.html
 
 ## Narrative Arc
@@ -155,3 +156,7 @@ Same HTML template as `how-it-works.html`, `tutorial.html`, `policy.html`:
 | Heatmap via props    | `hm.props.grid = json.grid; hm.props.rowLabels = json.rowLabels`          |
 | Shared selection     | `bind:selection="key"` on each component + `onGetId` + `createState`       |
 | Auto-refresh         | `setInterval(refresh, interval)` in `<script async="ready">`              |
+
+## Font for Terminal Blocks
+
+All doc pages load Cascadia Code from Google Fonts. `shared.css` sets `pre.terminal` to use `'Cascadia Code', 'JetBrains Mono', 'SF Mono', Consolas, monospace`. Pages with sextant chars need a special `text=` parameter (see graphics-pipeline-page-plan.md).

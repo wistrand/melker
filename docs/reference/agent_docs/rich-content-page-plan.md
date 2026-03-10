@@ -1,3 +1,4 @@
+<!-- Generated: docs/rich-content.html -->
 # Plan: Rich Content Components Doc Page
 
 ## Context
@@ -42,10 +43,10 @@ Loads a markdown file via `src` prop (defaults to `argv[1]` or `README.md`). Sho
 Git workflow flowchart using `<graph>` component with `overflow: scroll`. Shows subgraphs (Local, Remote), nodes, and edge labels. No permissions needed.
 
 ### img.melker
-Displays `melker-128.png` at 20x10 with `object-fit: contain`. Laid out in a row with text describing the format, mode, and fit. Policy needs `read`.
+Displays `melker-128.png` at 20x12 with `gfxMode="sextant"` and `object-fit: contain`. Laid out in a row with text describing the format, mode, and fit. Policy needs `read`.
 
 ### canvas.melker
-Three colored bars with text labels (40%, 30%, 20%), a circle, and a line. Uses `onPaint` handler with `fillRect`, `drawText`, `drawCircleCorrected`, `drawLine`. No permissions needed.
+Three colored bars with text labels (40%, 30%, 20%), a circle, and a line. Uses `gfxMode="sextant"` for higher resolution rendering. Uses `onPaint` handler with `fillRect`, `drawText`, `drawCircleCorrected`, `drawLine`. No permissions needed.
 
 ### file-browser.melker
 File browser inside a `<dialog>` opened programmatically via `async="ready"` script. Shows breadcrumb path, filter input, file list with scrollbar, Cancel/Open buttons. Policy needs `read`.
@@ -99,6 +100,10 @@ Added to all doc pages' dropdown menus, after "Filterable Lists":
 ```html
 <a href="/rich-content.html">Rich Content</a>
 ```
+
+## Font for Terminal Blocks
+
+All doc pages load Cascadia Code from Google Fonts. `shared.css` sets `pre.terminal` to use `'Cascadia Code', 'JetBrains Mono', 'SF Mono', Consolas, monospace`. The img and canvas sections use sextant mode, so this page needs the Cascadia Code `text=` parameter to force sextant glyph inclusion on Android (see graphics-pipeline-page-plan.md for the full font link).
 
 ## Writing Style
 

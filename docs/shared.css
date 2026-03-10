@@ -209,7 +209,7 @@ pre.terminal {
   background: #000;
   color: #f9fafb;
   border-color: #333;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+  font-family: 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 }
 
 /* Screenshot placeholders */

@@ -1,0 +1,50 @@
+<melker>
+    <title>Image Filter</title>
+    <policy>{"permissions": {"read": ["*"]}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Image Filters</text>
+        <container style="flex-direction: row; gap: 2">
+            <container style="flex-direction: column; align-items: center">
+                <text>original</text>
+                <img src="../../melker-128.png" width="12" height="8" gfxMode="quadrant" style="object-fit: contain" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>grayscale</text>
+                <img src="../../melker-128.png" width="12" height="8" gfxMode="quadrant" style="object-fit: contain" onFilter="$app.grayscale" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>invert</text>
+                <img src="../../melker-128.png" width="12" height="8" gfxMode="quadrant" style="object-fit: contain" onFilter="$app.invert" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>sepia</text>
+                <img src="../../melker-128.png" width="12" height="8" gfxMode="quadrant" style="object-fit: contain" onFilter="$app.sepia" />
+            </container>
+        </container>
+    </container>
+
+    <script type="typescript">
+        export function grayscale(x: number, y: number, _t: number, _r: any, src: any) {
+            const p = src.getPixel(x, y);
+            if (!p) return [0, 0, 0, 0];
+            const l = 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+            return [l, l, l, p[3]];
+        }
+        export function invert(x: number, y: number, _t: number, _r: any, src: any) {
+            const p = src.getPixel(x, y);
+            if (!p) return [0, 0, 0, 0];
+            return [255 - p[0], 255 - p[1], 255 - p[2], p[3]];
+        }
+        export function sepia(x: number, y: number, _t: number, _r: any, src: any) {
+            const p = src.getPixel(x, y);
+            if (!p) return [0, 0, 0, 0];
+            return [
+                Math.min(255, p[0] * 0.393 + p[1] * 0.769 + p[2] * 0.189),
+                Math.min(255, p[0] * 0.349 + p[1] * 0.686 + p[2] * 0.168),
+                Math.min(255, p[0] * 0.272 + p[1] * 0.534 + p[2] * 0.131),
+                p[3]
+            ];
+        }
+    </script>
+</melker>

@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<!-- Plan: agent_docs/limits-page-plan.md -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limits & Compatibility - Melker Engine</title>
+  <meta name="description" content="Where Melker stops working well, what degrades gracefully, what breaks, and how to diagnose it.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Cascadia Code with text= to force glyph inclusion for ASCII, box drawing
+       (U+2500-U+257F), block elements (U+2580-U+259F), and sextant chars
+       (U+1FB00-U+1FB3B). Google Fonts otherwise serves unicode-range subsets
+       that omit these blocks on Android. -->
+  <link href="https://fonts.googleapis.com/css2?family=Cascadia+Code&text=%20%21%22%23%24%25%26%27%28%29%2A%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz%7B%7C%7D~%E2%94%80%E2%94%81%E2%94%82%E2%94%83%E2%94%84%E2%94%85%E2%94%86%E2%94%87%E2%94%88%E2%94%89%E2%94%8A%E2%94%8B%E2%94%8C%E2%94%8D%E2%94%8E%E2%94%8F%E2%94%90%E2%94%91%E2%94%92%E2%94%93%E2%94%94%E2%94%95%E2%94%96%E2%94%97%E2%94%98%E2%94%99%E2%94%9A%E2%94%9B%E2%94%9C%E2%94%9D%E2%94%9E%E2%94%9F%E2%94%A0%E2%94%A1%E2%94%A2%E2%94%A3%E2%94%A4%E2%94%A5%E2%94%A6%E2%94%A7%E2%94%A8%E2%94%A9%E2%94%AA%E2%94%AB%E2%94%AC%E2%94%AD%E2%94%AE%E2%94%AF%E2%94%B0%E2%94%B1%E2%94%B2%E2%94%B3%E2%94%B4%E2%94%B5%E2%94%B6%E2%94%B7%E2%94%B8%E2%94%B9%E2%94%BA%E2%94%BB%E2%94%BC%E2%94%BD%E2%94%BE%E2%94%BF%E2%95%80%E2%95%81%E2%95%82%E2%95%83%E2%95%84%E2%95%85%E2%95%86%E2%95%87%E2%95%88%E2%95%89%E2%95%8A%E2%95%8B%E2%95%8C%E2%95%8D%E2%95%8E%E2%95%8F%E2%95%90%E2%95%91%E2%95%92%E2%95%93%E2%95%94%E2%95%95%E2%95%96%E2%95%97%E2%95%98%E2%95%99%E2%95%9A%E2%95%9B%E2%95%9C%E2%95%9D%E2%95%9E%E2%95%9F%E2%95%A0%E2%95%A1%E2%95%A2%E2%95%A3%E2%95%A4%E2%95%A5%E2%95%A6%E2%95%A7%E2%95%A8%E2%95%A9%E2%95%AA%E2%95%AB%E2%95%AC%E2%95%AD%E2%95%AE%E2%95%AF%E2%95%B0%E2%95%B1%E2%95%B2%E2%95%B3%E2%95%B4%E2%95%B5%E2%95%B6%E2%95%B7%E2%95%B8%E2%95%B9%E2%95%BA%E2%95%BB%E2%95%BC%E2%95%BD%E2%95%BE%E2%95%BF%E2%96%80%E2%96%81%E2%96%82%E2%96%83%E2%96%84%E2%96%85%E2%96%86%E2%96%87%E2%96%88%E2%96%89%E2%96%8A%E2%96%8B%E2%96%8C%E2%96%8D%E2%96%8E%E2%96%8F%E2%96%90%E2%96%91%E2%96%92%E2%96%93%E2%96%94%E2%96%95%E2%96%96%E2%96%97%E2%96%98%E2%96%99%E2%96%9A%E2%96%9B%E2%96%9C%E2%96%9D%E2%96%9E%E2%96%9F%F0%9F%AC%80%F0%9F%AC%81%F0%9F%AC%82%F0%9F%AC%83%F0%9F%AC%84%F0%9F%AC%85%F0%9F%AC%86%F0%9F%AC%87%F0%9F%AC%88%F0%9F%AC%89%F0%9F%AC%8A%F0%9F%AC%8B%F0%9F%AC%8C%F0%9F%AC%8D%F0%9F%AC%8E%F0%9F%AC%8F%F0%9F%AC%90%F0%9F%AC%91%F0%9F%AC%92%F0%9F%AC%93%F0%9F%AC%94%F0%9F%AC%95%F0%9F%AC%96%F0%9F%AC%97%F0%9F%AC%98%F0%9F%AC%99%F0%9F%AC%9A%F0%9F%AC%9B%F0%9F%AC%9C%F0%9F%AC%9D%F0%9F%AC%9E%F0%9F%AC%9F%F0%9F%AC%A0%F0%9F%AC%A1%F0%9F%AC%A2%F0%9F%AC%A3%F0%9F%AC%A4%F0%9F%AC%A5%F0%9F%AC%A6%F0%9F%AC%A7%F0%9F%AC%A8%F0%9F%AC%A9%F0%9F%AC%AA%F0%9F%AC%AB%F0%9F%AC%AC%F0%9F%AC%AD%F0%9F%AC%AE%F0%9F%AC%AF%F0%9F%AC%B0%F0%9F%AC%B1%F0%9F%AC%B2%F0%9F%AC%B3%F0%9F%AC%B4%F0%9F%AC%B5%F0%9F%AC%B6%F0%9F%AC%B7%F0%9F%AC%B8%F0%9F%AC%B9%F0%9F%AC%BA%F0%9F%AC%BB&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://melker.sh/limits.html">
+  <meta property="og:title" content="Limits & Compatibility - Melker Engine">
+  <meta property="og:description" content="Where Melker stops working well, what degrades gracefully, what breaks, and how to diagnose it.">
+
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .degraded-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .degraded-grid .code-block {
+      margin: 0;
+    }
+    @media (max-width: 900px) {
+      .degraded-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    .compare-table th,
+    .compare-table td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+    .compare-table th {
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    .compare-table td {
+      color: #9ca3af;
+    }
+    .debug-block {
+      margin: 1.5rem 0;
+    }
+    .debug-block h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    .symptom {
+      color: #f59e0b;
+      font-style: italic;
+      margin-bottom: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="brand">melker</a>
+    <div class="links">
+      <a href="/tutorial.html">Tutorial</a>
+      <a href="/how-it-works.html">How it works</a>
+      <div class="dropdown">
+        <a class="dropdown-toggle">More &#x25BE;</a>
+        <div class="dropdown-menu"><div class="dropdown-menu-inner">
+          <a href="/data-visualization.html">Data Visualization</a>
+          <a href="/filterable-lists.html">Filterable Lists</a>
+          <a href="/rich-content.html">Rich Content</a>
+          <a href="/graphics-pipeline.html">Graphics Pipeline</a>
+          <a href="/limits.html">Limits &amp; Compatibility</a>
+          <a href="/policy.html">Policy</a>
+          <a href="/ai.html">AI Assistant</a>
+          <a href="/reference/">Reference</a>
+          <a href="https://github.com/wistrand/melker">GitHub</a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<aside class="sidebar" id="sidebar">
+  <a href="#wrong">1. When Melker is wrong</a>
+  <a href="#missing">2. What's missing</a>
+  <a href="#terminals">3. Terminal compatibility</a>
+  <a href="#degraded">4. Degraded rendering</a>
+  <a href="#debug-layout">5. Debugging layout</a>
+  <a href="#debug-state">6. Debugging state</a>
+  <a href="#debug-permissions">7. Debugging permissions</a>
+  <a href="#debug-terminal">8. Debugging terminal</a>
+  <a href="#postmortem">9. Limits in practice</a>
+</aside>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1>Limits &amp; Compatibility</h1>
+    <p class="subtitle">
+      Every tool has edges. This page shows where Melker's are,
+      what degrades gracefully, what breaks, and how to diagnose it.
+    </p>
+    <p class="subtitle" style="font-size: 0.95rem; opacity: 0.7; margin-top: 0.5rem;">
+      Sections 1-2 cover when not to use Melker. Section 3-4 cover terminal compatibility.
+      Sections 5-8 are debugging guides. Section 9 is a real-world case study.
+    </p>
+  </div>
+</div>
+
+<!-- Section 1: When Melker is wrong -->
+<section id="wrong">
+  <div class="container">
+    <h2>1. When Melker is wrong</h2>
+    <p class="section-claim">Cases where another tool is the better choice.</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>Scenario</th><th>Why Melker is wrong</th><th>Use instead</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Pixel-perfect design with brand guidelines</td><td>Terminal cells are coarse. Colors are theme-dependent.</td><td>Web app</td></tr>
+        <tr><td>Long-running daemon or background service</td><td>Melker owns the terminal. No detach/re-attach.</td><td>systemd + plain CLI</td></tr>
+        <tr><td>Heavy form input (file upload, drag-drop)</td><td>No native file picker, no drag-drop.</td><td>Web app or native GUI</td></tr>
+        <tr><td>Team has no terminal culture</td><td>Onboarding cost is real. Don't force it.</td><td>Whatever they use now</td></tr>
+        <tr><td>App needs to run on Windows cmd.exe</td><td>Relies on ANSI escape codes and Unix TTY.</td><td>PowerShell or web app</td></tr>
+        <tr><td>Sub-millisecond rendering (games, video)</td><td>30 fps ceiling, character-grid resolution.</td><td>Native GPU app</td></tr>
+        <tr><td>Go team, Elm architecture preferred</td><td>Melker is TypeScript/Deno only.</td><td><a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a></td></tr>
+        <tr><td>Python team, CSS styling wanted</td><td>Deno dependency, different ecosystem.</td><td><a href="https://github.com/Textualize/textual">Textual</a></td></tr>
+        <tr><td>Rust, no_std, or embedded target</td><td>Deno runtime too heavy.</td><td><a href="https://github.com/ratatui/ratatui">Ratatui</a></td></tr>
+        <tr><td>Need React ecosystem and component library</td><td>Melker has its own component model, not React.</td><td><a href="https://github.com/vadimdemedes/ink">Ink</a></td></tr>
+        <tr><td>Must ship a single static binary</td><td>No <code>deno compile</code> support.</td><td><a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a>, <a href="https://github.com/ratatui/ratatui">Ratatui</a></td></tr>
+        <tr><td>Need a mature ecosystem</td><td>Melker is new. Smaller community, fewer examples.</td><td><a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a>, <a href="https://github.com/vadimdemedes/ink">Ink</a>, <a href="https://github.com/Textualize/textual">Textual</a></td></tr>
+      </tbody>
+    </table>
+
+    <p>If your use case isn't in this list, Melker is probably fine. The rest of this page is about what happens at the edges.</p>
+    <p class="explanation">For a detailed feature-by-feature comparison with other TUI frameworks, see the <a href="/reference/agent_docs/tui-comparison.md">TUI Comparison</a>.</p>
+  </div>
+</section>
+
+<!-- Section 2: What Melker doesn't have -->
+<section id="missing">
+  <div class="container">
+    <h2>2. What Melker doesn't have</h2>
+    <p class="section-claim">Feature gaps visible in the ecosystem. Stated plainly.</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>Missing feature</th><th>Impact</th><th>Workaround</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Grid layout</td><td>Flexbox only. No CSS Grid.</td><td>Nested row/column containers</td></tr>
+        <tr><td>Collapsible sections</td><td>No built-in accordion/collapsible.</td><td>Toggle visibility with <code>display: none</code></td></tr>
+        <tr><td>Syntax highlighting</td><td>Code blocks in markdown are plain text.</td><td>Use a <code>&lt;canvas&gt;</code> with custom rendering</td></tr>
+        <tr><td>Single binary dist</td><td>Can't <code>deno compile</code> yet.</td><td>Distribute as <code>.melker</code> file, user installs Deno</td></tr>
+        <tr><td>i18n/RTL</td><td>No built-in internationalization or RTL support.</td><td>Manual text direction in app code</td></tr>
+        <tr><td>Dependency graph</td><td>No fine-grained reactivity (Solid signals, React hooks).</td><td><code>createState()</code> + <code>bind</code> for most cases. Explicit <code>setValue()</code> for the rest.</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      These are design choices, not bugs. Melker trades fine-grained reactivity for a simpler model
+      (<code>createState</code> + <code>bind</code> handles most cases without a dependency graph),
+      and trades grid layout for a smaller layout engine. If any of these are dealbreakers, the
+      table in Section 1 points to frameworks that have them.
+    </p>
+  </div>
+</section>
+
+<!-- Section 3: Terminal compatibility -->
+<section id="terminals">
+  <div class="container">
+    <h2>3. Terminal compatibility</h2>
+    <p class="section-claim">What works where. Graphics modes, color depth, and resolution.</p>
+
+    <h3>Graphics mode support</h3>
+    <div style="overflow-x: auto">
+    <table class="compare-table">
+      <thead>
+        <tr><th>Terminal</th><th>sextant</th><th>quadrant</th><th>halfblock</th><th>sixel</th><th>kitty</th><th>iterm2</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Ghostty</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>yes</td><td>no</td><td></td></tr>
+        <tr><td>Kitty</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>yes</td><td>no</td><td></td></tr>
+        <tr><td>iTerm2</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>yes</td><td></td></tr>
+        <tr><td>WezTerm</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td></td></tr>
+        <tr><td>Alacritty</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>no</td><td></td></tr>
+        <tr><td>foot</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td></td></tr>
+        <tr><td>xterm</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td></td></tr>
+        <tr><td>Konsole</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>Sixel right-edge quirk</td></tr>
+        <tr><td>Windows Terminal</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>no</td><td></td></tr>
+        <tr><td>VS Code terminal</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td></td></tr>
+        <tr><td>Rio</td><td>no</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>yes</td><td>Use <code>MELKER_GFX_MODE=iterm2</code></td></tr>
+        <tr><td>TERM=linux</td><td>no</td><td>no</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>Console, no Unicode 13</td></tr>
+        <tr><td>tmux/screen</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>Protocols auto-disabled</td></tr>
+        <tr><td>SSH</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>no</td><td>Protocols auto-disabled</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Color depth</h3>
+    <table class="compare-table">
+      <thead>
+        <tr><th>Terminal</th><th>Truecolor</th><th>256-color</th><th>16-color</th><th>Detection method</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Most modern</td><td>yes</td><td>yes</td><td>yes</td><td><code>COLORTERM=truecolor</code></td></tr>
+        <tr><td>TERM=linux</td><td>no</td><td>no</td><td>yes</td><td><code>TERM</code> value</td></tr>
+        <tr><td>Claude sandbox</td><td>no</td><td>no</td><td>grayscale</td><td><code>IS_SANDBOX=yes</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Mode resolution comparison</h3>
+    <table class="compare-table">
+      <thead>
+        <tr><th>Mode</th><th>Pixels/cell</th><th>Resolution (80x24)</th><th>Unicode</th><th>Font support</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>sextant</td><td>2x3</td><td>160x72</td><td>13.0</td><td>Most modern mono</td></tr>
+        <tr><td>quadrant</td><td>2x2</td><td>160x48</td><td>1.0</td><td>Near-universal</td></tr>
+        <tr><td>halfblock</td><td>1x2</td><td>80x48</td><td>1.0</td><td>Near-universal</td></tr>
+        <tr><td>block</td><td>1x1</td><td>80x24</td><td>N/A</td><td>Universal</td></tr>
+        <tr><td>pattern</td><td>2x3</td><td>160x72</td><td>N/A</td><td>Universal (ASCII)</td></tr>
+        <tr><td>sixel</td><td>native</td><td>native</td><td>N/A</td><td>Terminal-specific</td></tr>
+        <tr><td>kitty</td><td>native</td><td>native</td><td>N/A</td><td>Kitty, Ghostty</td></tr>
+        <tr><td>iterm2</td><td>native</td><td>native</td><td>N/A</td><td>iTerm2, WezTerm</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Section 4: Degraded rendering -->
+<section id="degraded">
+  <div class="container">
+    <h2>4. Degraded rendering</h2>
+    <p class="section-claim">Same app rendered under different graphics modes and color depths. The image degrades. The text stays sharp.</p>
+
+    <h3>Graphics mode degradation</h3>
+
+    <div class="degraded-grid">
+      <div class="code-block">
+        <div class="code-title">sextant (2x3, default)</div>
+        <pre class="terminal">
+                  <span style="color:rgb(107,114,128)">&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;</span>
+   <span style="color:rgb(0,10,6);background:rgb(0,7,4)">&#x1FB1E;</span><span style="color:rgb(0,11,5);background:rgb(0,11,5)">&#x1FB35;</span><span style="color:rgb(0,14,6);background:rgb(0,12,6)">&#x1FB1A;</span><span style="color:rgb(0,17,7);background:rgb(0,13,6)">&#x1FB0B;&#x1FB0B;&#x1FB0B;</span><span style="color:rgb(0,17,7);background:rgb(0,14,7)">&#x1FB29;</span><span style="color:rgb(0,19,8);background:rgb(0,14,6)">&#x1FB0B;</span><span style="color:rgb(0,20,8);background:rgb(0,14,6)">&#x1FB0B;</span><span style="color:rgb(0,17,7);background:rgb(0,15,7)">&#x1FB29;</span><span style="color:rgb(0,14,6);background:rgb(0,9,5)">&#x1FB31;</span><span style="color:rgb(0,12,5);background:rgb(0,12,5)">&#x1FB2D;</span><span style="color:rgb(0,8,4);background:rgb(0,8,4)">&#x1FB0F;</span>  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,13,7);background:rgb(0,8,4)">&#x1FB1E;</span><span style="color:rgb(0,14,6);background:rgb(0,6,4)">&#x1FB3B;</span><span style="color:rgb(0,19,7);background:rgb(0,12,5)">&#x1FB39;</span><span style="color:rgb(0,32,11);background:rgb(0,17,7)">&#x1FB2D;</span><span style="color:rgb(0,40,13);background:rgb(0,20,8)">&#x1FB2D;</span><span style="color:rgb(0,40,13);background:rgb(0,21,8)">&#x1FB2D;&#x1FB2D;</span><span style="color:rgb(0,33,11);background:rgb(0,19,7)">&#x1FB31;</span><span style="color:rgb(0,30,10);background:rgb(0,17,7)">&#x1FB39;</span><span style="color:rgb(0,40,13);background:rgb(0,21,8)">&#x1FB2D;</span><span style="color:rgb(0,46,15);background:rgb(0,23,9)">&#x1FB2D;</span><span style="color:rgb(0,45,14);background:rgb(0,22,8)">&#x1FB2D;</span><span style="color:rgb(0,38,12);background:rgb(0,19,8)">&#x1FB2D;</span><span style="color:rgb(0,25,8);background:rgb(0,15,6)">&#x1FB31;</span><span style="color:rgb(0,19,8);background:rgb(0,11,6)">&#x1FB39;</span><span style="color:rgb(0,18,7);background:rgb(0,15,6)">&#x1FB0F;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">System Status</span>              <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,17,7);background:rgb(0,13,5)">&#x1FB3B;</span><span style="color:rgb(0,24,9);background:rgb(0,20,8)">&#x1FB3B;</span><span style="color:rgb(0,41,13);background:rgb(0,31,10)">&#x1FB26;</span><span style="color:rgb(0,127,35);background:rgb(0,59,17)">&#x1FB26;</span><span style="color:rgb(90,253,133);background:rgb(0,132,36)">&#x1FB39;</span><span style="color:rgb(95,253,134);background:rgb(0,134,37)">&#x1FB39;</span><span style="color:rgb(96,253,133);background:rgb(0,103,29)">&#x1FB0F;</span><span style="color:rgb(0,86,24);background:rgb(0,57,17)">&#x1FB0F;</span><span style="color:rgb(0,68,20);background:rgb(0,53,17)">&#x1FB2D;</span><span style="color:rgb(0,181,54);background:rgb(0,84,24)">&#x1FB1E;</span><span style="color:rgb(91,253,132);background:rgb(0,132,38)">&#x1FB35;</span><span style="color:rgb(92,253,134);background:rgb(0,145,41)">&#x1FB39;</span><span style="color:rgb(86,253,130);background:rgb(0,101,28)">&#x1FB13;</span><span style="color:rgb(0,60,18);background:rgb(0,40,13)">&#x1FB13;</span><span style="color:rgb(0,32,11);background:rgb(0,27,10)">&#x258C;</span><span style="color:rgb(0,22,9);background:rgb(0,20,8)">&#x1FB34;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">CPU: 42% Mem: 3.1 GB</span>       <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,15,7);background:rgb(0,12,7)">&#x1FB2C;</span><span style="color:rgb(0,22,8);background:rgb(0,17,7)">&#x1FB28;</span><span style="color:rgb(0,38,11);background:rgb(0,29,10)">&#x2590;</span><span style="color:rgb(0,133,36);background:rgb(0,57,15)">&#x2590;</span><span style="color:rgb(69,250,116);background:rgb(38,249,102)">&#x1FB0A;</span><span style="color:rgb(58,247,110);background:rgb(0,126,33)">&#x1FB15;</span><span style="color:rgb(52,248,108);background:rgb(0,109,26)">&#x1FB2C;</span><span style="color:rgb(24,237,89);background:rgb(0,118,32)">&#x1FB31;</span><span style="color:rgb(17,221,79);background:rgb(0,88,24)">&#x1FB35;</span><span style="color:rgb(55,248,108);background:rgb(32,229,91)">&#x1FB0D;</span><span style="color:rgb(71,249,116);background:rgb(0,129,33)">&#x1FB06;</span><span style="color:rgb(78,251,120);background:rgb(38,249,101)">&#x1FB02;</span><span style="color:rgb(47,247,104);background:rgb(0,102,27)">&#x258C;</span><span style="color:rgb(0,53,14);background:rgb(0,36,11)">&#x258C;</span><span style="color:rgb(0,28,9);background:rgb(0,22,8)">&#x1FB15;</span><span style="color:rgb(0,20,8);background:rgb(0,16,7)">&#x1FB15;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">Uptime: 14d 6h</span>             <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,23,9);background:rgb(0,12,7)">&#x1FB39;</span><span style="color:rgb(0,31,11);background:rgb(0,17,7)">&#x1FB39;</span><span style="color:rgb(0,48,15);background:rgb(0,29,9)">&#x1FB39;</span><span style="color:rgb(0,147,41);background:rgb(0,73,20)">&#x2590;</span><span style="color:rgb(70,255,133);background:rgb(28,247,97)">&#x1FB39;</span><span style="color:rgb(32,250,105);background:rgb(0,111,30)">&#x258C;</span><span style="color:rgb(0,101,27);background:rgb(0,84,22)">&#x1FB0D;</span><span style="color:rgb(37,249,109);background:rgb(0,108,31)">&#x1FB2C;</span><span style="color:rgb(40,250,111);background:rgb(20,191,75)">&#x1FB1D;</span><span style="color:rgb(25,221,86);background:rgb(0,95,26)">&#x1FB04;</span><span style="color:rgb(0,136,37);background:rgb(0,95,26)">&#x2590;</span><span style="color:rgb(68,255,133);background:rgb(27,247,95)">&#x1FB39;</span><span style="color:rgb(45,252,116);background:rgb(0,115,32)">&#x258C;</span><span style="color:rgb(0,74,21);background:rgb(0,47,13)">&#x1FB13;</span><span style="color:rgb(0,39,13);background:rgb(0,23,8)">&#x1FB39;</span><span style="color:rgb(0,30,11);background:rgb(0,16,7)">&#x1FB39;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">Load: 1.2 0.8 0.5</span>          <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,24,9);background:rgb(0,22,9)">&#x1FB28;</span><span style="color:rgb(0,34,12);background:rgb(0,29,11)">&#x1FB0A;</span><span style="color:rgb(0,52,16);background:rgb(0,41,14)">&#x2590;</span><span style="color:rgb(0,154,45);background:rgb(0,78,22)">&#x2590;</span><span style="color:rgb(78,255,135);background:rgb(62,255,131)">&#x1FB3B;</span><span style="color:rgb(48,254,117);background:rgb(0,110,32)">&#x258C;</span><span style="color:rgb(0,78,23);background:rgb(0,65,20)">&#x1FB06;</span><span style="color:rgb(0,75,22);background:rgb(0,55,17)">&#x1FB02;</span><span style="color:rgb(0,77,22);background:rgb(0,56,16)">&#x1FB02;</span><span style="color:rgb(0,77,23);background:rgb(0,62,18)">&#x1FB0A;</span><span style="color:rgb(0,146,43);background:rgb(0,94,27)">&#x2590;</span><span style="color:rgb(91,255,138);background:rgb(71,255,132)">&#x1FB35;</span><span style="color:rgb(63,255,130);background:rgb(0,123,36)">&#x258C;</span><span style="color:rgb(0,71,21);background:rgb(0,50,15)">&#x258C;</span><span style="color:rgb(0,43,14);background:rgb(0,36,12)">&#x1FB04;</span><span style="color:rgb(0,31,11);background:rgb(0,27,10)">&#x1FB0E;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,9,5);background:rgb(0,7,4)">&#x1FB0A;</span><span style="color:rgb(0,12,6);background:rgb(0,10,5)">&#x1FB2C;</span><span style="color:rgb(0,18,7);background:rgb(0,12,6)">&#x1FB02;</span><span style="color:rgb(0,71,16);background:rgb(0,20,7)">&#x1FB01;</span><span style="color:rgb(0,142,36);background:rgb(0,21,7)">&#x1FB02;</span><span style="color:rgb(0,132,32);background:rgb(0,27,9)">&#x1FB00;</span><span style="color:rgb(0,30,9);background:rgb(0,19,7)">&#x1FB02;</span><span style="color:rgb(0,24,7);background:rgb(0,17,7)">&#x1FB02;</span><span style="color:rgb(0,24,8);background:rgb(0,17,7)">&#x1FB02;</span><span style="color:rgb(0,29,8);background:rgb(0,18,7)">&#x1FB02;</span><span style="color:rgb(0,79,18);background:rgb(0,26,8)">&#x1FB01;</span><span style="color:rgb(0,152,37);background:rgb(0,24,8)">&#x1FB02;</span><span style="color:rgb(0,146,37);background:rgb(0,27,8)">&#x1FB00;</span><span style="color:rgb(0,24,8);background:rgb(0,14,6)">&#x1FB02;</span><span style="color:rgb(0,14,7);background:rgb(0,11,6)">&#x1FB06;</span><span style="color:rgb(0,12,6);background:rgb(0,10,5)">&#x1FB06;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+  <span style="color:rgb(0,10,5);background:rgb(0,6,4)">&#x1FB01;</span><span style="color:rgb(0,10,6);background:rgb(0,6,4)">&#x1FB0A;</span><span style="color:rgb(0,11,6);background:rgb(0,11,6)">&#x1FB0E;</span><span style="color:rgb(0,12,6);background:rgb(0,12,6)">&#x1FB0E;</span><span style="color:rgb(0,14,7);background:rgb(0,12,6)">&#x1FB0A;&#x1FB02;</span><span style="color:rgb(0,13,6);background:rgb(0,13,6)">&#x1FB0E;&#x1FB0E;&#x1FB0E;</span><span style="color:rgb(0,14,7);background:rgb(0,12,6)">&#x1FB0A;</span><span style="color:rgb(0,14,6);background:rgb(0,12,7)">&#x1FB06;</span><span style="color:rgb(0,12,6);background:rgb(0,12,6)">&#x1FB0E;</span><span style="color:rgb(0,11,6);background:rgb(0,11,6)">&#x1FB0E;</span><span style="color:rgb(0,10,6);background:rgb(0,6,4)">&#x1FB02;</span>  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">quadrant (2x2, Unicode 1.0)</div>
+        <pre class="terminal">
+                  <span style="color:rgb(107,114,128)">&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;</span>
+  <span style="color:rgb(0,9,4);background:rgb(0,9,4)">&#x2597;</span><span style="color:rgb(0,11,6);background:rgb(0,11,6)">&#x2584;</span><span style="color:rgb(0,11,5);background:rgb(0,11,5)">&#x259F;</span><span style="color:rgb(0,15,7);background:rgb(0,14,6)">&#x2580;</span><span style="color:rgb(0,17,7);background:rgb(0,14,6)">&#x2580;</span><span style="color:rgb(0,16,7);background:rgb(0,14,6)">&#x259B;</span><span style="color:rgb(0,17,7);background:rgb(0,15,7)">&#x2580;</span><span style="color:rgb(0,17,7);background:rgb(0,14,7)">&#x259B;</span><span style="color:rgb(0,18,7);background:rgb(0,15,7)">&#x259C;</span><span style="color:rgb(0,20,8);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,18,8);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,14,6);background:rgb(0,9,5)">&#x2599;</span><span style="color:rgb(0,13,6);background:rgb(0,13,6)">&#x2584;</span><span style="color:rgb(0,13,6);background:rgb(0,8,4)">&#x2596;</span>  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,19,8);background:rgb(0,8,4)">&#x2597;</span><span style="color:rgb(0,24,9);background:rgb(0,13,6)">&#x2584;</span><span style="color:rgb(0,32,11);background:rgb(0,17,7)">&#x2584;</span><span style="color:rgb(0,48,15);background:rgb(0,21,8)">&#x2584;</span><span style="color:rgb(0,67,21);background:rgb(0,25,9)">&#x2584;</span><span style="color:rgb(0,68,21);background:rgb(0,26,10)">&#x2584;</span><span style="color:rgb(0,60,19);background:rgb(0,26,9)">&#x2584;</span><span style="color:rgb(0,49,16);background:rgb(0,26,9)">&#x2584;</span><span style="color:rgb(0,50,16);background:rgb(0,26,9)">&#x2584;</span><span style="color:rgb(0,58,19);background:rgb(0,26,10)">&#x2584;</span><span style="color:rgb(0,72,23);background:rgb(0,29,11)">&#x2584;</span><span style="color:rgb(0,82,26);background:rgb(0,27,10)">&#x2584;</span><span style="color:rgb(0,65,20);background:rgb(0,23,9)">&#x2584;</span><span style="color:rgb(0,41,14);background:rgb(0,20,8)">&#x2584;</span><span style="color:rgb(0,29,11);background:rgb(0,17,7)">&#x2584;</span><span style="color:rgb(0,21,8);background:rgb(0,15,7)">&#x2584;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">System Status</span>              <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,17,7);background:rgb(0,11,7)">&#x2580;</span><span style="color:rgb(0,24,9);background:rgb(0,15,7)">&#x2580;</span><span style="color:rgb(0,36,12);background:rgb(0,24,8)">&#x2580;</span><span style="color:rgb(0,119,31);background:rgb(0,51,14)">&#x2590;</span><span style="color:rgb(94,254,136);background:rgb(35,250,105)">&#x2580;</span><span style="color:rgb(94,253,134);background:rgb(40,251,109)">&#x2580;</span><span style="color:rgb(20,220,81);background:rgb(0,112,32)">&#x2584;</span><span style="color:rgb(0,87,20);background:rgb(0,58,16)">&#x2596;</span><span style="color:rgb(0,58,17);background:rgb(0,50,13)">&#x259C;</span><span style="color:rgb(3,208,63);background:rgb(0,104,28)">&#x2597;</span><span style="color:rgb(54,252,115);background:rgb(0,165,49)">&#x259F;</span><span style="color:rgb(92,254,135);background:rgb(34,251,105)">&#x2580;</span><span style="color:rgb(57,251,116);background:rgb(0,95,25)">&#x258C;</span><span style="color:rgb(0,52,15);background:rgb(0,35,11)">&#x258C;</span><span style="color:rgb(0,31,11);background:rgb(0,20,8)">&#x2580;</span><span style="color:rgb(0,22,8);background:rgb(0,14,7)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">CPU: 42% Mem: 3.1 GB</span>       <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,25,10);background:rgb(0,15,7)">&#x2584;</span><span style="color:rgb(0,34,12);background:rgb(0,21,8)">&#x2584;</span><span style="color:rgb(0,50,16);background:rgb(0,33,10)">&#x2584;</span><span style="color:rgb(0,149,42);background:rgb(0,70,19)">&#x2590;</span><span style="color:rgb(91,255,138);background:rgb(62,254,122)">&#x2584;</span><span style="color:rgb(58,252,119);background:rgb(0,151,44)">&#x258C;</span><span style="color:rgb(67,253,126);background:rgb(0,132,38)">&#x259C;</span><span style="color:rgb(76,254,130);background:rgb(0,130,32)">&#x2599;</span><span style="color:rgb(64,247,120);background:rgb(0,91,22)">&#x259F;</span><span style="color:rgb(73,253,128);background:rgb(54,244,113)">&#x258C;</span><span style="color:rgb(57,251,116);background:rgb(0,153,45)">&#x2598;</span><span style="color:rgb(93,255,139);background:rgb(58,253,120)">&#x2584;</span><span style="color:rgb(61,254,122);background:rgb(0,113,31)">&#x258C;</span><span style="color:rgb(0,66,20);background:rgb(0,42,11)">&#x2584;</span><span style="color:rgb(0,43,14);background:rgb(0,26,9)">&#x2584;</span><span style="color:rgb(0,31,12);background:rgb(0,20,8)">&#x2584;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">Uptime: 14d 6h</span>             <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,22,9);background:rgb(0,12,7)">&#x2580;</span><span style="color:rgb(0,30,11);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,46,14);background:rgb(0,29,8)">&#x2580;</span><span style="color:rgb(0,141,38);background:rgb(0,68,19)">&#x2590;</span><span style="color:rgb(90,254,133);background:rgb(30,249,101)">&#x2580;</span><span style="color:rgb(42,246,104);background:rgb(0,103,27)">&#x258C;</span><span style="color:rgb(0,103,29);background:rgb(0,59,14)">&#x2580;</span><span style="color:rgb(73,251,123);background:rgb(0,120,32)">&#x2580;</span><span style="color:rgb(76,252,125);background:rgb(1,157,44)">&#x2580;</span><span style="color:rgb(41,222,96);background:rgb(0,76,20)">&#x2598;</span><span style="color:rgb(0,129,34);background:rgb(0,87,23)">&#x2590;</span><span style="color:rgb(87,253,131);background:rgb(31,249,101)">&#x2580;</span><span style="color:rgb(50,251,112);background:rgb(0,109,30)">&#x258C;</span><span style="color:rgb(0,62,18);background:rgb(0,41,10)">&#x2580;</span><span style="color:rgb(0,37,12);background:rgb(0,22,8)">&#x2580;</span><span style="color:rgb(0,29,10);background:rgb(0,16,7)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">Load: 1.2 0.8 0.5</span>          <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,22,9);background:rgb(0,15,7)">&#x2584;</span><span style="color:rgb(0,30,11);background:rgb(0,20,7)">&#x2584;</span><span style="color:rgb(0,42,14);background:rgb(0,31,9)">&#x2584;</span><span style="color:rgb(0,140,38);background:rgb(0,63,17)">&#x2590;</span><span style="color:rgb(81,255,135);background:rgb(51,252,116)">&#x2584;</span><span style="color:rgb(42,251,108);background:rgb(0,94,26)">&#x258C;</span><span style="color:rgb(0,63,19);background:rgb(0,51,13)">&#x2584;</span><span style="color:rgb(0,51,16);background:rgb(0,43,12)">&#x2584;</span><span style="color:rgb(0,51,15);background:rgb(0,40,11)">&#x2584;</span><span style="color:rgb(0,61,18);background:rgb(0,48,12)">&#x2584;</span><span style="color:rgb(0,134,37);background:rgb(0,77,21)">&#x2590;</span><span style="color:rgb(91,255,137);background:rgb(57,253,119)">&#x2584;</span><span style="color:rgb(59,254,122);background:rgb(0,106,29)">&#x258C;</span><span style="color:rgb(0,54,16);background:rgb(0,32,9)">&#x2599;</span><span style="color:rgb(0,36,12);background:rgb(0,22,8)">&#x2584;</span><span style="color:rgb(0,27,10);background:rgb(0,18,7)">&#x2584;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,17,8);background:rgb(0,8,4)">&#x259D;</span><span style="color:rgb(0,21,9);background:rgb(0,10,5)">&#x2580;</span><span style="color:rgb(0,27,10);background:rgb(0,12,6)">&#x2580;</span><span style="color:rgb(0,44,14);background:rgb(0,14,6)">&#x2580;</span><span style="color:rgb(0,61,19);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,57,17);background:rgb(0,17,7)">&#x2580;</span><span style="color:rgb(0,42,13);background:rgb(0,17,7)">&#x2580;</span><span style="color:rgb(0,38,12);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,38,12);background:rgb(0,15,7)">&#x2580;</span><span style="color:rgb(0,42,14);background:rgb(0,17,7)">&#x2580;</span><span style="color:rgb(0,55,16);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,69,21);background:rgb(0,18,7)">&#x2580;</span><span style="color:rgb(0,57,18);background:rgb(0,15,7)">&#x2580;</span><span style="color:rgb(0,32,10);background:rgb(0,13,7)">&#x2580;</span><span style="color:rgb(0,25,10);background:rgb(0,11,6)">&#x2580;</span><span style="color:rgb(0,20,8);background:rgb(0,10,6)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+  <span style="color:rgb(0,7,4);background:rgb(0,7,4)">&#x259D;</span><span style="color:rgb(0,10,5);background:rgb(0,10,5)">&#x2580;</span><span style="color:rgb(0,11,6);background:rgb(0,11,6)">&#x2580;</span><span style="color:rgb(0,13,6);background:rgb(0,13,6)">&#x2580;</span><span style="color:rgb(0,13,7);background:rgb(0,13,7)">&#x2580;</span><span style="color:rgb(0,14,6);background:rgb(0,14,6)">&#x2580;</span><span style="color:rgb(0,13,6);background:rgb(0,13,6)">&#x2580;&#x2580;</span><span style="color:rgb(0,13,7);background:rgb(0,13,7)">&#x2580;&#x2580;&#x2580;&#x2580;</span><span style="color:rgb(0,11,6);background:rgb(0,11,6)">&#x2580;</span><span style="color:rgb(0,10,6);background:rgb(0,7,4)">&#x2598;</span>  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">halfblock (1x2, TERM=linux)</div>
+        <pre class="terminal">
+                  <span style="color:rgb(107,114,128)">&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;</span>
+   <span style="color:rgb(0,11,6)">&#x2584;</span><span style="color:rgb(0,12,6)">&#x2584;</span><span style="color:rgb(0,15,7);background:rgb(0,14,6)">&#x2580;</span><span style="color:rgb(0,18,8);background:rgb(0,14,6)">&#x2580;</span><span style="color:rgb(0,18,7);background:rgb(0,15,7)">&#x2580;&#x2580;&#x2580;</span><span style="color:rgb(0,20,8);background:rgb(0,15,7)">&#x2580;</span><span style="color:rgb(0,20,8);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,19,8);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,15,6);background:rgb(0,14,7)">&#x2580;</span><span style="color:rgb(0,14,6)">&#x2584;</span><span style="color:rgb(0,13,6)">&#x2584;</span>  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+  <span style="color:rgb(0,20,8);background:rgb(0,12,6)">&#x2580;</span><span style="color:rgb(0,27,10);background:rgb(0,14,7)">&#x2580;</span><span style="color:rgb(0,34,12);background:rgb(0,21,8)">&#x2580;</span><span style="color:rgb(0,43,15);background:rgb(0,31,10)">&#x2580;</span><span style="color:rgb(0,46,16);background:rgb(0,34,10)">&#x2580;</span><span style="color:rgb(0,46,16);background:rgb(0,32,10)">&#x2580;</span><span style="color:rgb(0,43,15);background:rgb(0,25,9)">&#x2580;</span><span style="color:rgb(0,45,15);background:rgb(0,23,8)">&#x2580;</span><span style="color:rgb(0,47,16);background:rgb(0,27,9)">&#x2580;</span><span style="color:rgb(0,48,17);background:rgb(0,34,10)">&#x2580;</span><span style="color:rgb(0,50,17);background:rgb(0,37,11)">&#x2580;</span><span style="color:rgb(0,45,16);background:rgb(0,34,11)">&#x2580;</span><span style="color:rgb(0,37,13);background:rgb(0,21,8)">&#x2580;</span><span style="color:rgb(0,28,10);background:rgb(0,14,7)">&#x2580;</span><span style="color:rgb(0,19,7);background:rgb(0,12,6)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">System Status</span>              <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,18,8);background:rgb(0,17,8)">&#x2580;</span><span style="color:rgb(0,23,9)">&#x2588;</span><span style="color:rgb(0,32,11)">&#x2588;</span><span style="color:rgb(0,55,16);background:rgb(0,58,17)">&#x2580;</span><span style="color:rgb(61,255,129);background:rgb(81,253,128)">&#x2580;</span><span style="color:rgb(70,255,132);background:rgb(99,254,135)">&#x2580;</span><span style="color:rgb(0,114,32);background:rgb(96,253,133)">&#x2580;</span><span style="color:rgb(0,60,19);background:rgb(0,86,24)">&#x2580;</span><span style="color:rgb(0,56,18);background:rgb(0,63,19)">&#x2580;</span><span style="color:rgb(0,70,22);background:rgb(0,113,32)">&#x2580;</span><span style="color:rgb(0,145,41);background:rgb(103,253,136)">&#x2580;</span><span style="color:rgb(67,255,130);background:rgb(91,254,132)">&#x2580;</span><span style="color:rgb(55,255,124);background:rgb(86,253,129)">&#x2580;</span><span style="color:rgb(0,55,17);background:rgb(0,60,18)">&#x2580;</span><span style="color:rgb(0,36,12);background:rgb(0,34,12)">&#x2580;</span><span style="color:rgb(0,26,10);background:rgb(0,23,9)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">CPU: 42% Mem: 3.1 GB</span>       <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,14,7);background:rgb(0,23,10)">&#x2580;</span><span style="color:rgb(0,17,7);background:rgb(0,32,12)">&#x2580;</span><span style="color:rgb(0,27,9);background:rgb(0,47,15)">&#x2580;</span><span style="color:rgb(0,52,13);background:rgb(0,85,25)">&#x2580;</span><span style="color:rgb(43,252,113);background:rgb(86,255,137)">&#x2580;</span><span style="color:rgb(50,252,114);background:rgb(78,254,128)">&#x2580;</span><span style="color:rgb(59,253,120);background:rgb(0,168,49)">&#x2580;</span><span style="color:rgb(0,167,46);background:rgb(87,255,137)">&#x2580;</span><span style="color:rgb(0,72,17);background:rgb(0,149,45)">&#x2580;</span><span style="color:rgb(38,225,92);background:rgb(86,254,135)">&#x2580;</span><span style="color:rgb(61,253,120);background:rgb(0,162,49)">&#x2580;</span><span style="color:rgb(57,253,118);background:rgb(90,254,137)">&#x2580;</span><span style="color:rgb(43,251,110);background:rgb(85,255,136)">&#x2580;</span><span style="color:rgb(0,47,12);background:rgb(0,77,23)">&#x2580;</span><span style="color:rgb(0,25,8);background:rgb(0,46,16)">&#x2580;</span><span style="color:rgb(0,19,8);background:rgb(0,34,12)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">Uptime: 14d 6h</span>             <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,12,7);background:rgb(0,22,9)">&#x2580;</span><span style="color:rgb(0,16,7);background:rgb(0,29,10)">&#x2580;</span><span style="color:rgb(0,24,8);background:rgb(0,43,14)">&#x2580;</span><span style="color:rgb(0,57,14);background:rgb(0,82,24)">&#x2580;</span><span style="color:rgb(27,247,97);background:rgb(66,255,132)">&#x2580;</span><span style="color:rgb(22,241,88);background:rgb(41,254,115)">&#x2580;</span><span style="color:rgb(0,76,17);background:rgb(0,93,26)">&#x2580;</span><span style="color:rgb(21,242,89);background:rgb(0,144,42)">&#x2580;</span><span style="color:rgb(22,245,93);background:rgb(61,255,129)">&#x2580;</span><span style="color:rgb(24,218,78);background:rgb(0,124,35)">&#x2580;</span><span style="color:rgb(0,85,21);background:rgb(1,100,29)">&#x2580;</span><span style="color:rgb(26,246,94);background:rgb(70,255,131)">&#x2580;</span><span style="color:rgb(23,246,92);background:rgb(56,255,128)">&#x2580;</span><span style="color:rgb(0,49,12);background:rgb(0,75,22)">&#x2580;</span><span style="color:rgb(0,26,9);background:rgb(0,42,14)">&#x2580;</span><span style="color:rgb(0,18,8);background:rgb(0,33,12)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">Load: 1.2 0.8 0.5</span>          <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,18,8);background:rgb(0,16,8)">&#x2580;</span><span style="color:rgb(0,23,9);background:rgb(0,21,9)">&#x2580;</span><span style="color:rgb(0,34,12);background:rgb(0,29,10)">&#x2580;</span><span style="color:rgb(0,67,19);background:rgb(0,59,16)">&#x2580;</span><span style="color:rgb(72,250,118);background:rgb(60,253,122)">&#x2580;</span><span style="color:rgb(64,247,110);background:rgb(29,249,102)">&#x2580;</span><span style="color:rgb(0,70,20);background:rgb(0,57,15)">&#x2580;</span><span style="color:rgb(0,63,18);background:rgb(0,46,14)">&#x2580;</span><span style="color:rgb(0,72,21);background:rgb(0,43,12)">&#x2580;</span><span style="color:rgb(0,65,19);background:rgb(0,47,14)">&#x2580;</span><span style="color:rgb(0,84,23);background:rgb(0,73,20)">&#x2580;</span><span style="color:rgb(78,250,120);background:rgb(52,252,116)">&#x2580;</span><span style="color:rgb(66,249,116);background:rgb(45,251,113)">&#x2580;</span><span style="color:rgb(0,62,18);background:rgb(0,51,15)">&#x2580;</span><span style="color:rgb(0,34,11);background:rgb(0,29,10)">&#x2580;</span><span style="color:rgb(0,26,10);background:rgb(0,23,8)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,18,8)">&#x2580;</span><span style="color:rgb(0,26,10);background:rgb(0,11,6)">&#x2580;</span><span style="color:rgb(0,33,12);background:rgb(0,13,6)">&#x2580;</span><span style="color:rgb(0,62,19);background:rgb(0,18,7)">&#x2580;</span><span style="color:rgb(85,254,136);background:rgb(0,27,9)">&#x2580;</span><span style="color:rgb(60,254,122);background:rgb(0,27,9)">&#x2580;</span><span style="color:rgb(0,62,19);background:rgb(0,23,8)">&#x2580;</span><span style="color:rgb(0,49,15);background:rgb(0,19,7)">&#x2580;</span><span style="color:rgb(0,45,14);background:rgb(0,19,7)">&#x2580;</span><span style="color:rgb(0,50,15);background:rgb(0,20,7)">&#x2580;</span><span style="color:rgb(0,76,22);background:rgb(0,25,8)">&#x2580;</span><span style="color:rgb(82,254,133);background:rgb(0,29,9)">&#x2580;</span><span style="color:rgb(76,254,131);background:rgb(0,29,9)">&#x2580;</span><span style="color:rgb(0,53,16);background:rgb(0,18,7)">&#x2580;</span><span style="color:rgb(0,33,11);background:rgb(0,13,7)">&#x2580;</span><span style="color:rgb(0,27,10);background:rgb(0,11,6)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+  <span style="color:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,21,9);background:rgb(0,14,6)">&#x2580;</span><span style="color:rgb(0,25,9);background:rgb(0,18,8)">&#x2580;</span><span style="color:rgb(0,29,11);background:rgb(0,20,8)">&#x2580;</span><span style="color:rgb(0,31,11);background:rgb(0,21,9)">&#x2580;</span><span style="color:rgb(0,32,11);background:rgb(0,23,9)">&#x2580;</span><span style="color:rgb(0,32,11);background:rgb(0,22,9)">&#x2580;</span><span style="color:rgb(0,33,12);background:rgb(0,22,9)">&#x2580;</span><span style="color:rgb(0,31,12);background:rgb(0,22,9)">&#x2580;</span><span style="color:rgb(0,32,11);background:rgb(0,25,10)">&#x2580;</span><span style="color:rgb(0,33,12);background:rgb(0,24,10)">&#x2580;</span><span style="color:rgb(0,31,11);background:rgb(0,22,9)">&#x2580;</span><span style="color:rgb(0,26,10);background:rgb(0,19,8)">&#x2580;</span><span style="color:rgb(0,21,8);background:rgb(0,16,7)">&#x2580;</span><span style="color:rgb(0,17,7)">&#x2580;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">block (1x1, universal)</div>
+        <pre class="terminal">
+                  <span style="background:rgb(107,114,128)">                              </span>
+   <span style="background:rgb(0,9,5)"> </span><span style="background:rgb(0,12,6)"> </span><span style="background:rgb(0,14,7)"> </span><span style="background:rgb(0,15,7)">  </span><span style="background:rgb(0,16,7)">  </span><span style="background:rgb(0,17,7)"> </span><span style="background:rgb(0,17,8)">  </span><span style="background:rgb(0,13,6)"> </span><span style="background:rgb(0,12,6)"> </span><span style="background:rgb(0,8,4)"> </span>  <span style="background:rgb(107,114,128)"> </span>                            <span style="background:rgb(107,114,128)"> </span>
+ <span style="background:rgb(0,11,6)"> </span><span style="background:rgb(0,13,6)"> </span><span style="background:rgb(0,17,7)"> </span><span style="background:rgb(0,23,9)"> </span><span style="background:rgb(0,27,10)">   </span><span style="background:rgb(0,26,10)"> </span><span style="background:rgb(0,26,9)"> </span><span style="background:rgb(0,28,10)"> </span><span style="background:rgb(0,31,11)"> </span><span style="background:rgb(0,30,11)"> </span><span style="background:rgb(0,26,10)"> </span><span style="background:rgb(0,20,8)"> </span><span style="background:rgb(0,17,7)"> </span><span style="background:rgb(0,16,7)"> </span> <span style="background:rgb(107,114,128)"> </span> <span style="color:rgb(249,250,251)">System Status</span>              <span style="background:rgb(107,114,128)"> </span>
+ <span style="background:rgb(0,17,7)"> </span><span style="background:rgb(0,24,9)"> </span><span style="background:rgb(0,35,12)"> </span><span style="background:rgb(0,82,23)"> </span><span style="background:rgb(60,213,101)"> </span><span style="background:rgb(64,214,102)"> </span><span style="background:rgb(16,128,47)"> </span><span style="background:rgb(0,63,19)"> </span><span style="background:rgb(0,59,18)"> </span><span style="background:rgb(0,100,30)"> </span><span style="background:rgb(46,193,85)"> </span><span style="background:rgb(62,218,103)"> </span><span style="background:rgb(29,152,63)"> </span><span style="background:rgb(0,47,15)"> </span><span style="background:rgb(0,30,11)"> </span><span style="background:rgb(0,22,9)"> </span> <span style="background:rgb(107,114,128)"> </span> <span style="color:rgb(249,250,251)">CPU: 42% Mem: 3.1 GB</span>       <span style="background:rgb(107,114,128)"> </span>
+ <span style="background:rgb(0,15,7)"> </span><span style="background:rgb(0,21,8)"> </span><span style="background:rgb(0,34,11)"> </span><span style="background:rgb(0,95,26)"> </span><span style="background:rgb(54,250,110)"> </span><span style="background:rgb(39,207,84)"> </span><span style="background:rgb(44,225,94)"> </span><span style="background:rgb(12,178,61)"> </span><span style="background:rgb(9,155,52)"> </span><span style="background:rgb(44,239,100)"> </span><span style="background:rgb(36,189,75)"> </span><span style="background:rgb(52,250,108)"> </span><span style="background:rgb(24,175,66)"> </span><span style="background:rgb(0,45,13)"> </span><span style="background:rgb(0,26,9)"> </span><span style="background:rgb(0,19,8)"> </span> <span style="background:rgb(107,114,128)"> </span> <span style="color:rgb(249,250,251)">Uptime: 14d 6h</span>             <span style="background:rgb(107,114,128)"> </span>
+ <span style="background:rgb(0,20,9)"> </span><span style="background:rgb(0,27,10)"> </span><span style="background:rgb(0,42,13)"> </span><span style="background:rgb(0,111,31)"> </span><span style="background:rgb(56,253,121)"> </span><span style="background:rgb(16,181,68)"> </span><span style="background:rgb(0,93,25)"> </span><span style="background:rgb(31,226,96)"> </span><span style="background:rgb(37,240,105)"> </span><span style="background:rgb(9,137,46)"> </span><span style="background:rgb(0,116,32)"> </span><span style="background:rgb(55,252,121)"> </span><span style="background:rgb(23,184,74)"> </span><span style="background:rgb(0,56,16)"> </span><span style="background:rgb(0,34,12)"> </span><span style="background:rgb(0,26,10)"> </span> <span style="background:rgb(107,114,128)"> </span> <span style="color:rgb(249,250,251)">Load: 1.2 0.8 0.5</span>          <span style="background:rgb(107,114,128)"> </span>
+ <span style="background:rgb(0,24,10)"> </span><span style="background:rgb(0,32,12)"> </span><span style="background:rgb(0,47,15)"> </span><span style="background:rgb(0,116,34)"> </span><span style="background:rgb(75,255,134)"> </span><span style="background:rgb(24,182,75)"> </span><span style="background:rgb(0,72,22)"> </span><span style="background:rgb(0,62,19)"> </span><span style="background:rgb(0,63,19)"> </span><span style="background:rgb(0,70,21)"> </span><span style="background:rgb(0,121,35)"> </span><span style="background:rgb(81,255,135)"> </span><span style="background:rgb(32,189,83)"> </span><span style="background:rgb(0,61,19)"> </span><span style="background:rgb(0,39,13)"> </span><span style="background:rgb(0,30,11)"> </span> <span style="background:rgb(107,114,128)"> </span>                            <span style="background:rgb(107,114,128)"> </span>
+ <span style="background:rgb(0,9,5)"> </span><span style="background:rgb(0,12,6)"> </span><span style="background:rgb(0,15,7)"> </span><span style="background:rgb(0,29,9)"> </span><span style="background:rgb(0,62,17)"> </span><span style="background:rgb(0,45,13)"> </span><span style="background:rgb(0,23,8)"> </span><span style="background:rgb(0,20,7)">  </span><span style="background:rgb(0,22,8)"> </span><span style="background:rgb(0,35,10)"> </span><span style="background:rgb(0,67,18)"> </span><span style="background:rgb(0,47,13)"> </span><span style="background:rgb(0,18,7)"> </span><span style="background:rgb(0,13,7)"> </span><span style="background:rgb(0,11,6)"> </span> <span style="background:rgb(107,114,128)"> </span>                            <span style="background:rgb(107,114,128)"> </span>
+  <span style="background:rgb(0,8,5)"> </span><span style="background:rgb(0,9,6)"> </span><span style="background:rgb(0,11,6)"> </span><span style="background:rgb(0,13,6)"> </span><span style="background:rgb(0,14,7)"> </span><span style="background:rgb(0,13,7)">   </span><span style="background:rgb(0,14,7)">   </span><span style="background:rgb(0,13,7)"> </span><span style="background:rgb(0,11,6)"> </span><span style="background:rgb(0,9,5)"> </span>  <span style="background:rgb(107,114,128)"> </span>                            <span style="background:rgb(107,114,128)"> </span>
+                  <span style="background:rgb(107,114,128)"> </span>                            <span style="background:rgb(107,114,128)"> </span>
+                  <span style="background:rgb(107,114,128)"> </span>                            <span style="background:rgb(107,114,128)"> </span>
+                  <span style="background:rgb(107,114,128)">                              </span></pre>
+      </div>
+    </div>
+
+    <p>
+      All four are the same app. Melker picks the best mode your terminal supports, or you
+      override with <code>MELKER_GFX_MODE</code> or the <code>gfxMode</code> prop. The image
+      degrades. The box-drawing and text stay sharp in all modes.
+    </p>
+
+    <h3>Color depth degradation</h3>
+    <p>Same app, same sextant mode, three color depths. This is the constraint that catches people
+      off guard: you think the limit is character-grid resolution, but it's actually color depth.</p>
+
+    <div class="degraded-grid" style="grid-template-columns: 1fr 1fr 1fr">
+      <div class="code-block">
+        <div class="code-title">truecolor (24-bit, default)</div>
+        <pre class="terminal">
+                  <span style="color:rgb(107,114,128)">&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;</span>
+   <span style="color:rgb(0,10,6);background:rgb(0,7,4)">&#x1FB1E;</span><span style="color:rgb(0,11,5);background:rgb(0,11,5)">&#x1FB35;</span><span style="color:rgb(0,14,6);background:rgb(0,12,6)">&#x1FB1A;</span><span style="color:rgb(0,17,7);background:rgb(0,13,6)">&#x1FB0B;&#x1FB0B;&#x1FB0B;</span><span style="color:rgb(0,17,7);background:rgb(0,14,7)">&#x1FB29;</span><span style="color:rgb(0,19,8);background:rgb(0,14,6)">&#x1FB0B;</span><span style="color:rgb(0,20,8);background:rgb(0,14,6)">&#x1FB0B;</span><span style="color:rgb(0,17,7);background:rgb(0,15,7)">&#x1FB29;</span><span style="color:rgb(0,14,6);background:rgb(0,9,5)">&#x1FB31;</span><span style="color:rgb(0,12,5);background:rgb(0,12,5)">&#x1FB2D;</span><span style="color:rgb(0,8,4);background:rgb(0,8,4)">&#x1FB0F;</span>  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,13,7);background:rgb(0,8,4)">&#x1FB1E;</span><span style="color:rgb(0,14,6);background:rgb(0,6,4)">&#x1FB3B;</span><span style="color:rgb(0,19,7);background:rgb(0,12,5)">&#x1FB39;</span><span style="color:rgb(0,32,11);background:rgb(0,17,7)">&#x1FB2D;</span><span style="color:rgb(0,40,13);background:rgb(0,20,8)">&#x1FB2D;</span><span style="color:rgb(0,40,13);background:rgb(0,21,8)">&#x1FB2D;&#x1FB2D;</span><span style="color:rgb(0,33,11);background:rgb(0,19,7)">&#x1FB31;</span><span style="color:rgb(0,30,10);background:rgb(0,17,7)">&#x1FB39;</span><span style="color:rgb(0,40,13);background:rgb(0,21,8)">&#x1FB2D;</span><span style="color:rgb(0,46,15);background:rgb(0,23,9)">&#x1FB2D;</span><span style="color:rgb(0,45,14);background:rgb(0,22,8)">&#x1FB2D;</span><span style="color:rgb(0,38,12);background:rgb(0,19,8)">&#x1FB2D;</span><span style="color:rgb(0,25,8);background:rgb(0,15,6)">&#x1FB31;</span><span style="color:rgb(0,19,8);background:rgb(0,11,6)">&#x1FB39;</span><span style="color:rgb(0,18,7);background:rgb(0,15,6)">&#x1FB0F;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">System Status</span>              <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,17,7);background:rgb(0,13,5)">&#x1FB3B;</span><span style="color:rgb(0,24,9);background:rgb(0,20,8)">&#x1FB3B;</span><span style="color:rgb(0,41,13);background:rgb(0,31,10)">&#x1FB26;</span><span style="color:rgb(0,127,35);background:rgb(0,59,17)">&#x1FB26;</span><span style="color:rgb(90,253,133);background:rgb(0,132,36)">&#x1FB39;</span><span style="color:rgb(95,253,134);background:rgb(0,134,37)">&#x1FB39;</span><span style="color:rgb(96,253,133);background:rgb(0,103,29)">&#x1FB0F;</span><span style="color:rgb(0,86,24);background:rgb(0,57,17)">&#x1FB0F;</span><span style="color:rgb(0,68,20);background:rgb(0,53,17)">&#x1FB2D;</span><span style="color:rgb(0,181,54);background:rgb(0,84,24)">&#x1FB1E;</span><span style="color:rgb(91,253,132);background:rgb(0,132,38)">&#x1FB35;</span><span style="color:rgb(92,253,134);background:rgb(0,145,41)">&#x1FB39;</span><span style="color:rgb(86,253,130);background:rgb(0,101,28)">&#x1FB13;</span><span style="color:rgb(0,60,18);background:rgb(0,40,13)">&#x1FB13;</span><span style="color:rgb(0,32,11);background:rgb(0,27,10)">&#x258C;</span><span style="color:rgb(0,22,9);background:rgb(0,20,8)">&#x1FB34;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">CPU: 42% Mem: 3.1 GB</span>       <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,15,7);background:rgb(0,12,7)">&#x1FB2C;</span><span style="color:rgb(0,22,8);background:rgb(0,17,7)">&#x1FB28;</span><span style="color:rgb(0,38,11);background:rgb(0,29,10)">&#x2590;</span><span style="color:rgb(0,133,36);background:rgb(0,57,15)">&#x2590;</span><span style="color:rgb(69,250,116);background:rgb(38,249,102)">&#x1FB0A;</span><span style="color:rgb(58,247,110);background:rgb(0,126,33)">&#x1FB15;</span><span style="color:rgb(52,248,108);background:rgb(0,109,26)">&#x1FB2C;</span><span style="color:rgb(24,237,89);background:rgb(0,118,32)">&#x1FB31;</span><span style="color:rgb(17,221,79);background:rgb(0,88,24)">&#x1FB35;</span><span style="color:rgb(55,248,108);background:rgb(32,229,91)">&#x1FB0D;</span><span style="color:rgb(71,249,116);background:rgb(0,129,33)">&#x1FB06;</span><span style="color:rgb(78,251,120);background:rgb(38,249,101)">&#x1FB02;</span><span style="color:rgb(47,247,104);background:rgb(0,102,27)">&#x258C;</span><span style="color:rgb(0,53,14);background:rgb(0,36,11)">&#x258C;</span><span style="color:rgb(0,28,9);background:rgb(0,22,8)">&#x1FB15;</span><span style="color:rgb(0,20,8);background:rgb(0,16,7)">&#x1FB15;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">Uptime: 14d 6h</span>             <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,23,9);background:rgb(0,12,7)">&#x1FB39;</span><span style="color:rgb(0,31,11);background:rgb(0,17,7)">&#x1FB39;</span><span style="color:rgb(0,48,15);background:rgb(0,29,9)">&#x1FB39;</span><span style="color:rgb(0,147,41);background:rgb(0,73,20)">&#x2590;</span><span style="color:rgb(70,255,133);background:rgb(28,247,97)">&#x1FB39;</span><span style="color:rgb(32,250,105);background:rgb(0,111,30)">&#x258C;</span><span style="color:rgb(0,101,27);background:rgb(0,84,22)">&#x1FB0D;</span><span style="color:rgb(37,249,109);background:rgb(0,108,31)">&#x1FB2C;</span><span style="color:rgb(40,250,111);background:rgb(20,191,75)">&#x1FB1D;</span><span style="color:rgb(25,221,86);background:rgb(0,95,26)">&#x1FB04;</span><span style="color:rgb(0,136,37);background:rgb(0,95,26)">&#x2590;</span><span style="color:rgb(68,255,133);background:rgb(27,247,95)">&#x1FB39;</span><span style="color:rgb(45,252,116);background:rgb(0,115,32)">&#x258C;</span><span style="color:rgb(0,74,21);background:rgb(0,47,13)">&#x1FB13;</span><span style="color:rgb(0,39,13);background:rgb(0,23,8)">&#x1FB39;</span><span style="color:rgb(0,30,11);background:rgb(0,16,7)">&#x1FB39;</span> <span style="color:rgb(107,114,128)">&#x2502;</span> <span style="color:rgb(249,250,251)">Load: 1.2 0.8 0.5</span>          <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,24,9);background:rgb(0,22,9)">&#x1FB28;</span><span style="color:rgb(0,34,12);background:rgb(0,29,11)">&#x1FB0A;</span><span style="color:rgb(0,52,16);background:rgb(0,41,14)">&#x2590;</span><span style="color:rgb(0,154,45);background:rgb(0,78,22)">&#x2590;</span><span style="color:rgb(78,255,135);background:rgb(62,255,131)">&#x1FB3B;</span><span style="color:rgb(48,254,117);background:rgb(0,110,32)">&#x258C;</span><span style="color:rgb(0,78,23);background:rgb(0,65,20)">&#x1FB06;</span><span style="color:rgb(0,75,22);background:rgb(0,55,17)">&#x1FB02;</span><span style="color:rgb(0,77,22);background:rgb(0,56,16)">&#x1FB02;</span><span style="color:rgb(0,77,23);background:rgb(0,62,18)">&#x1FB0A;</span><span style="color:rgb(0,146,43);background:rgb(0,94,27)">&#x2590;</span><span style="color:rgb(91,255,138);background:rgb(71,255,132)">&#x1FB35;</span><span style="color:rgb(63,255,130);background:rgb(0,123,36)">&#x258C;</span><span style="color:rgb(0,71,21);background:rgb(0,50,15)">&#x258C;</span><span style="color:rgb(0,43,14);background:rgb(0,36,12)">&#x1FB04;</span><span style="color:rgb(0,31,11);background:rgb(0,27,10)">&#x1FB0E;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+ <span style="color:rgb(0,9,5);background:rgb(0,7,4)">&#x1FB0A;</span><span style="color:rgb(0,12,6);background:rgb(0,10,5)">&#x1FB2C;</span><span style="color:rgb(0,18,7);background:rgb(0,12,6)">&#x1FB02;</span><span style="color:rgb(0,71,16);background:rgb(0,20,7)">&#x1FB01;</span><span style="color:rgb(0,142,36);background:rgb(0,21,7)">&#x1FB02;</span><span style="color:rgb(0,132,32);background:rgb(0,27,9)">&#x1FB00;</span><span style="color:rgb(0,30,9);background:rgb(0,19,7)">&#x1FB02;</span><span style="color:rgb(0,24,7);background:rgb(0,17,7)">&#x1FB02;</span><span style="color:rgb(0,24,8);background:rgb(0,17,7)">&#x1FB02;</span><span style="color:rgb(0,29,8);background:rgb(0,18,7)">&#x1FB02;</span><span style="color:rgb(0,79,18);background:rgb(0,26,8)">&#x1FB01;</span><span style="color:rgb(0,152,37);background:rgb(0,24,8)">&#x1FB02;</span><span style="color:rgb(0,146,37);background:rgb(0,27,8)">&#x1FB00;</span><span style="color:rgb(0,24,8);background:rgb(0,14,6)">&#x1FB02;</span><span style="color:rgb(0,14,7);background:rgb(0,11,6)">&#x1FB06;</span><span style="color:rgb(0,12,6);background:rgb(0,10,5)">&#x1FB06;</span> <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+  <span style="color:rgb(0,10,5);background:rgb(0,6,4)">&#x1FB01;</span><span style="color:rgb(0,10,6);background:rgb(0,6,4)">&#x1FB0A;</span><span style="color:rgb(0,11,6);background:rgb(0,11,6)">&#x1FB0E;</span><span style="color:rgb(0,12,6);background:rgb(0,12,6)">&#x1FB0E;</span><span style="color:rgb(0,14,7);background:rgb(0,12,6)">&#x1FB0A;&#x1FB02;</span><span style="color:rgb(0,13,6);background:rgb(0,13,6)">&#x1FB0E;&#x1FB0E;&#x1FB0E;</span><span style="color:rgb(0,14,7);background:rgb(0,12,6)">&#x1FB0A;</span><span style="color:rgb(0,14,6);background:rgb(0,12,7)">&#x1FB06;</span><span style="color:rgb(0,12,6);background:rgb(0,12,6)">&#x1FB0E;</span><span style="color:rgb(0,11,6);background:rgb(0,11,6)">&#x1FB0E;</span><span style="color:rgb(0,10,6);background:rgb(0,6,4)">&#x1FB02;</span>  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2502;</span>                            <span style="color:rgb(107,114,128)">&#x2502;</span>
+                  <span style="color:rgb(107,114,128)">&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">256-color (dithered)</div>
+        <pre class="terminal">
+                  <span style="color:rgb(255,255,255)">&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;</span>
+   <span style="color:rgb(0,0,0)">&#x1FB2D;</span><span style="color:rgb(0,51,0)">&#x1FB1E;&#x1FB07;&#x1FB16;&#x1FB1E;&#x1FB03;&#x1FB13;&#x1FB0B;&#x1FB16;&#x1FB26;</span><span style="color:rgb(0,0,0)">&#x1FB39;</span><span style="color:rgb(0,51,0)">&#x1FB0F;</span><span style="color:rgb(0,0,0)">&#x1FB0F;</span>  <span style="color:rgb(255,255,255)">&#x2502;</span>                            <span style="color:rgb(255,255,255)">&#x2502;</span>
+ <span style="color:rgb(0,0,0)">&#x1FB26;</span><span style="color:rgb(0,51,0)">&#x1FB16;&#x1FB37;&#x1FB39;&#x1FB36;&#x1FB3A;&#x1FB3B;&#x1FB3B;&#x1FB3B;&#x1FB3B;&#x1FB3B;&#x1FB3A;&#x1FB37;&#x1FB31;&#x258C;&#x1FB0F;</span> <span style="color:rgb(255,255,255)">&#x2502;</span> <span style="color:rgb(255,255,255)">System Status</span>              <span style="color:rgb(255,255,255)">&#x2502;</span>
+ <span style="color:rgb(0,51,0)">&#x2590;&#x1FB32;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB04;</span><span style="color:rgb(0,102,51);background:rgb(0,51,0)">&#x1FB3B;</span><span style="color:rgb(102,255,153);background:rgb(0,153,51)">&#x1FB39;</span><span style="color:rgb(102,255,153);background:rgb(0,102,51)">&#x1FB39;&#x1FB0F;</span><span style="color:rgb(0,51,0);background:rgb(0,51,0)">&#x1FB39;&#x1FB37;</span><span style="color:rgb(0,204,51);background:rgb(0,102,51)">&#x1FB1E;</span><span style="color:rgb(102,255,153);background:rgb(0,102,51)">&#x1FB35;</span><span style="color:rgb(102,255,153);background:rgb(0,153,51)">&#x1FB39;</span><span style="color:rgb(51,255,102);background:rgb(0,102,51)">&#x1FB13;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB13;&#x1FB1F;</span><span style="color:rgb(0,51,0)">&#x1FB24;</span> <span style="color:rgb(255,255,255)">&#x2502;</span> <span style="color:rgb(255,255,255)">CPU: 42% Mem: 3.1 GB</span>       <span style="color:rgb(255,255,255)">&#x2502;</span>
+ <span style="color:rgb(0,51,0)">&#x1FB09;&#x1FB37;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB17;</span><span style="color:rgb(0,153,51);background:rgb(0,51,0)">&#x2590;</span><span style="color:rgb(51,255,102);background:rgb(51,255,102)">&#x1FB0A;</span><span style="color:rgb(51,255,102);background:rgb(0,102,51)">&#x1FB15;&#x1FB2C;</span><span style="color:rgb(0,255,102);background:rgb(0,102,51)">&#x1FB31;</span><span style="color:rgb(0,204,51);background:rgb(0,102,0)">&#x1FB35;</span><span style="color:rgb(51,255,102);background:rgb(51,204,51)">&#x1FB1C;</span><span style="color:rgb(51,255,102);background:rgb(0,102,51)">&#x1FB06;</span><span style="color:rgb(51,255,102);background:rgb(51,255,102)">&#x1FB02;</span><span style="color:rgb(51,255,102);background:rgb(0,102,51)">&#x258C;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB00;</span><span style="color:rgb(0,51,0)">&#x1FB1D;&#x1FB10;</span> <span style="color:rgb(255,255,255)">&#x2502;</span> <span style="color:rgb(255,255,255)">Uptime: 14d 6h</span>             <span style="color:rgb(255,255,255)">&#x2502;</span>
+ <span style="color:rgb(0,51,0)">&#x1FB39;&#x1FB3A;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB1E;</span><span style="color:rgb(0,153,51);background:rgb(0,51,0)">&#x2590;</span><span style="color:rgb(51,255,153);background:rgb(51,255,102)">&#x1FB39;</span><span style="color:rgb(0,255,102);background:rgb(0,102,0)">&#x258C;</span><span style="color:rgb(0,102,51);background:rgb(0,51,51)">&#x1FB2B;</span><span style="color:rgb(51,255,102);background:rgb(0,102,51)">&#x1FB2C;</span><span style="color:rgb(51,255,102);background:rgb(51,204,51)">&#x1FB1D;</span><span style="color:rgb(51,204,102);background:rgb(0,102,51)">&#x1FB04;</span><span style="color:rgb(0,102,51);background:rgb(0,51,0)">&#x1FB3B;</span><span style="color:rgb(51,255,153);background:rgb(51,255,102)">&#x1FB39;</span><span style="color:rgb(51,255,102);background:rgb(0,102,51)">&#x258C;</span><span style="color:rgb(0,51,0);background:rgb(0,51,0)">&#x1FB1A;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB09;</span><span style="color:rgb(0,51,0)">&#x1FB39;</span> <span style="color:rgb(255,255,255)">&#x2502;</span> <span style="color:rgb(255,255,255)">Load: 1.2 0.8 0.5</span>          <span style="color:rgb(255,255,255)">&#x2502;</span>
+ <span style="color:rgb(0,51,0)">&#x1FB34;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB17;</span><span style="color:rgb(0,51,0);background:rgb(0,51,0)">&#x1FB07;</span><span style="color:rgb(0,153,51);background:rgb(0,51,51)">&#x2590;</span><span style="color:rgb(51,255,153);background:rgb(51,255,153)">&#x2588;</span><span style="color:rgb(51,255,102);background:rgb(0,102,51)">&#x258C;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB23;&#x1FB0E;</span><span style="color:rgb(0,51,0);background:rgb(0,51,0)">&#x1FB25;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB17;</span><span style="color:rgb(0,153,51);background:rgb(0,51,51)">&#x1FB2C;</span><span style="color:rgb(102,255,153);background:rgb(51,255,153)">&#x1FB26;</span><span style="color:rgb(51,255,102);background:rgb(0,102,51)">&#x258C;</span><span style="color:rgb(0,51,0);background:rgb(0,51,0)">&#x1FB1B;</span><span style="color:rgb(0,51,51);background:rgb(0,51,0)">&#x1FB09;&#x1FB1E;</span> <span style="color:rgb(255,255,255)">&#x2502;</span>                            <span style="color:rgb(255,255,255)">&#x2502;</span>
+ <span style="color:rgb(0,0,0)">&#x1FB28;</span><span style="color:rgb(0,51,0)">&#x1FB07;&#x1FB12;</span><span style="color:rgb(0,51,51)">&#x1FB01;</span><span style="color:rgb(0,153,51)">&#x1FB02;&#x1FB00;</span><span style="color:rgb(0,51,0)">&#x1FB15;&#x1FB25;&#x1FB05;&#x1FB15;&#x1FB2C;</span><span style="color:rgb(0,153,51)">&#x1FB02;</span><span style="color:rgb(0,153,51);background:rgb(0,51,0)">&#x1FB00;</span><span style="color:rgb(0,51,0)">&#x1FB23;&#x1FB09;</span><span style="color:rgb(0,0,0)">&#x1FB1D;</span> <span style="color:rgb(255,255,255)">&#x2502;</span>                            <span style="color:rgb(255,255,255)">&#x2502;</span>
+  <span style="color:rgb(0,0,0)">&#x1FB02;</span><span style="color:rgb(0,51,0)">&#x1FB01;</span><span style="color:rgb(0,0,0)">&#x1FB0E;</span><span style="color:rgb(0,51,0)">&#x1FB04;&#x1FB09;</span><span style="color:rgb(0,0,0)">&#x1FB0E;</span><span style="color:rgb(0,51,0)">&#x1FB04;&#x1FB09;&#x1FB01;&#x1FB03;&#x1FB08;&#x1FB01;</span><span style="color:rgb(0,0,0)">&#x1FB0E;</span><span style="color:rgb(0,51,0)">&#x1FB00;</span>  <span style="color:rgb(255,255,255)">&#x2502;</span>                            <span style="color:rgb(255,255,255)">&#x2502;</span>
+                  <span style="color:rgb(255,255,255)">&#x2502;</span>                            <span style="color:rgb(255,255,255)">&#x2502;</span>
+                  <span style="color:rgb(255,255,255)">&#x2502;</span>                            <span style="color:rgb(255,255,255)">&#x2502;</span>
+                  <span style="color:rgb(255,255,255)">&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">16-color (TERM=linux)</div>
+        <pre class="terminal">
+<span style="background:#000">                  </span><span style="color:#fff;background:#000">&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;</span>
+<span style="background:#000">   </span><span style="color:#0aa;background:#000">&#x2584;&#x2584;</span><span style="color:#000;background:#000"> &#x2580;&#x2580;&#x2580;&#x2580;&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;</span><span style="color:#000;background:#000"> </span><span style="color:#0aa;background:#000">&#x2584;&#x2584;</span><span style="background:#000">  </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000">                            </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000">  </span><span style="color:#000;background:#000">&#x2580;&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;</span><span style="color:#000;background:#000">&#x2580;&#x2580;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">System Status</span><span style="background:#000">              </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000"> </span><span style="color:#555;background:#000">&#x2591;&#x2591;&#x2591;&#x2591;</span><span style="color:#5f5;background:#0a0">&#x2580;&#x2580;</span><span style="color:#555;background:#0a0">&#x2580;</span><span style="color:#555;background:#a50">&#x2580;</span><span style="color:#555;background:#000">&#x2591;</span><span style="color:#000;background:#0a0">&#x2593;</span><span style="color:#0a0;background:#0a0">&#x2580;</span><span style="color:#5f5;background:#0a0">&#x2580;&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;&#x2591;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">CPU: 42% Mem: 3.1 GB</span><span style="background:#000">       </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000"> </span><span style="color:#000;background:#000">&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;</span><span style="color:#555;background:#a50">&#x2580;</span><span style="color:#5f5;background:#0a0">&#x2580;&#x2580;&#x2580;</span><span style="color:#0a0;background:#0a0">&#x2580;</span><span style="color:#000;background:#0a0">&#x2592;</span><span style="color:#5f5;background:#0a0">&#x2580;&#x2580;&#x2580;&#x2580;</span><span style="color:#555;background:#a50">&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">Uptime: 14d 6h</span><span style="background:#000">             </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000"> </span><span style="color:#000;background:#000">&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;</span><span style="color:#555;background:#a50">&#x2580;</span><span style="color:#5f5;background:#0a0">&#x2580;&#x2580;</span><span style="color:#000;background:#0a0">&#x2593;</span><span style="color:#5f5;background:#0a0">&#x2580;&#x2580;&#x2580;</span><span style="color:#000;background:#0a0">&#x2593;</span><span style="color:#5f5;background:#0a0">&#x2580;&#x2580;</span><span style="color:#555;background:#a50">&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">Load: 1.2 0.8 0.5</span><span style="background:#000">          </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000"> </span><span style="color:#555;background:#000">&#x2591;&#x2591;&#x2591;</span><span style="color:#555;background:#00a">&#x2580;</span><span style="color:#5f5;background:#000">&#x2588;</span><span style="color:#5f5;background:#0a0">&#x2580;</span><span style="color:#555;background:#a50">&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2580;&#x2580;</span><span style="color:#000;background:#0a0">&#x2593;</span><span style="color:#5f5;background:#000">&#x2588;&#x2588;</span><span style="color:#555;background:#000">&#x2591;&#x2591;&#x2591;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000">                            </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000"> </span><span style="color:#0aa;background:#000">&#x2580;</span><span style="color:#000;background:#000">&#x2580;</span><span style="color:#555;background:#000">&#x2580;&#x2591;</span><span style="color:#5f5;background:#000">&#x2580;&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;&#x2591;&#x2591;&#x2580;</span><span style="color:#5f5;background:#000">&#x2580;&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2580;</span><span style="color:#000;background:#000">&#x2580;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000">                            </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000">  </span><span style="color:#0aa;background:#000">&#x2580;</span><span style="color:#000;background:#000">&#x2580;</span><span style="color:#555;background:#000">&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;&#x2591;</span><span style="color:#0aa;background:#000">&#x2580;</span><span style="background:#000"> </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000">                            </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000">                  </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000">                            </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000">                  </span><span style="color:#fff;background:#000">&#x2502;</span><span style="background:#000">                            </span><span style="color:#fff;background:#000">&#x2502;</span>
+<span style="background:#000">                  </span><span style="color:#fff;background:#000">&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;</span></pre>
+      </div>
+    </div>
+
+    <p>
+      Same sextant mode, same resolution. The 256-color version uses dithering to approximate
+      truecolor gradients. The 16-color version (what you get on <code>TERM=linux</code>) uses
+      shade characters (<code>&#x2591;&#x2592;&#x2593;</code>) to simulate tonal range with only 16 colors.
+      Override with <code>COLORTERM=truecolor</code> if your terminal actually supports it.
+    </p>
+
+    <p class="explanation"><a href="/examples/limits/degraded.melker">View source</a></p>
+  </div>
+</section>
+
+<!-- Section 5: Debugging layout -->
+<section id="debug-layout">
+  <div class="container">
+    <h2>5. Debugging layout</h2>
+    <p class="section-claim">Common layout problems, what causes them, and how to fix them.</p>
+
+    <div class="debug-block">
+      <h3>5a. "My component is 0x0"</h3>
+      <p class="symptom">Symptom: nothing visible, no error.</p>
+      <p>
+        <code>&lt;img&gt;</code> and <code>&lt;canvas&gt;</code> need <code>width</code>/<code>height</code>
+        as props, not style. Props define the pixel buffer. Style defines layout positioning. They are separate concepts.
+      </p>
+      <div class="code-block">
+        <div class="code-title">Wrong</div>
+        <pre><code>&lt;img src="photo.png" style="width: fill; height: fill" /&gt;</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-title">Right</div>
+        <pre><code>&lt;img src="photo.png" width="fill" height="fill" /&gt;</code></pre>
+      </div>
+      <p>Melker logs a runtime warning for this. The <code>--lint</code> flag also catches it.</p>
+    </div>
+
+    <div class="debug-block">
+      <h3>5b. "Text is clipped"</h3>
+      <p class="symptom">Symptom: text cuts off at container edge.</p>
+      <p>
+        Parent container has no <code>overflow: scroll</code> and content exceeds fixed height.
+        Scrollable containers also need a size constraint (<code>flex: 1</code> or fixed height),
+        otherwise they grow to fit content and never scroll.
+      </p>
+      <div class="code-block">
+        <div class="code-title">Wrong</div>
+        <pre><code>&lt;container style="overflow: scroll"&gt;
+  &lt;text&gt;Long content...&lt;/text&gt;
+&lt;/container&gt;</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-title">Right</div>
+        <pre><code>&lt;container style="overflow: scroll; flex: 1; width: fill"&gt;
+  &lt;text style="text-wrap: wrap; width: fill"&gt;Long content...&lt;/text&gt;
+&lt;/container&gt;</code></pre>
+      </div>
+    </div>
+
+    <div class="debug-block">
+      <h3>5c. "Select stretches to full width"</h3>
+      <p class="symptom">Symptom: <code>&lt;select&gt;</code> or <code>&lt;combobox&gt;</code> fills the entire row.</p>
+      <p>
+        Default cross-axis stretch in column flex layout. Standard flexbox behavior: in a column container,
+        <code>align-items</code> defaults to <code>stretch</code>.
+      </p>
+      <p>Fix: wrap in a row container or add <code>style="align-items: flex-start"</code> to the parent.</p>
+    </div>
+
+    <div class="debug-block">
+      <h3>5d. "Emojis break my layout"</h3>
+      <p class="symptom">Symptom: columns misaligned, text wraps at wrong position.</p>
+      <p>
+        Emojis have inconsistent widths across terminals. Melker calculates emoji width as 2 characters,
+        but some terminals render them wider or narrower.
+      </p>
+      <p>Fix: use ASCII text instead. <code>[OK] Success</code> instead of emoji checkmark.</p>
+    </div>
+
+    <div class="debug-block">
+      <h3>5e. Props vs style by component</h3>
+      <table class="compare-table">
+        <thead>
+          <tr><th>Component</th><th>Fixed size</th><th>Responsive/fill</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>canvas</td><td><code>width={30} height={20}</code></td><td>N/A (buffer must be fixed)</td></tr>
+          <tr><td>img</td><td><code>width={30} height={20}</code></td><td><code>width="fill"</code> or <code>width="100%"</code></td></tr>
+          <tr><td>container</td><td><code>style="width: 30;"</code></td><td><code>style="width: fill;"</code></td></tr>
+          <tr><td>text</td><td><code>style="width: 40;"</code></td><td><code>style="width: fill;"</code></td></tr>
+          <tr><td>select</td><td><code>width={20}</code></td><td><code>width="50%"</code> or <code>width="fill"</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Section 6: Debugging state -->
+<section id="debug-state">
+  <div class="container">
+    <h2>6. Debugging state</h2>
+    <p class="section-claim">State binding, exported value copies, and two-way binding traps.</p>
+
+    <div class="debug-block">
+      <h3>6a. How state binding works (and where it stops)</h3>
+      <p>
+        Melker has an optional state binding system via <code>$melker.createState()</code>. Bind an
+        element to a state key with <code>bind="key"</code>, and state values push to elements
+        automatically on every render. Two-way binding (the default) also syncs user input back to
+        state without manual handler code:
+      </p>
+      <div class="code-block">
+        <div class="code-title">State binding</div>
+        <pre><code>&lt;input id="query" bind="searchTerm" /&gt;
+&lt;text bind="count" bind-mode="one-way" /&gt;
+
+&lt;script&gt;
+  const state = $melker.createState({ searchTerm: '', count: 0 });
+  // state.searchTerm auto-updates as the user types (two-way)
+  // state.count pushes to the text element (one-way)
+&lt;/script&gt;</code></pre>
+      </div>
+      <p>
+        Boolean state keys also toggle CSS classes on the root element, so conditional styling works
+        without script:
+      </p>
+      <div class="code-block">
+        <div class="code-title">Boolean class toggle</div>
+        <pre><code>.isEmpty #empty-message { display: flex; }</code></pre>
+      </div>
+      <p>
+        What it doesn't have: no dependency graph, no computed properties, no fine-grained reactivity
+        (Solid signals, React hooks). If element A's value depends on a computation involving state
+        keys X and Y, you write that computation in a handler. For most apps (5-15 interactive
+        elements), <code>createState()</code> + <code>bind</code> covers most cases. For apps
+        that don't use it, the system is skipped (early-exit guard).
+      </p>
+    </div>
+
+    <div class="debug-block">
+      <h3>6b. "I set $app.count but nothing changed"</h3>
+      <p class="symptom">Symptom: <code>$app.count = 10</code> in a ready script, but the original variable stays at 0.</p>
+      <p>
+        Exported primitive variables are copied by value onto <code>$app</code>. Setting
+        <code>$app.count</code> modifies the copy, not the module binding.
+      </p>
+      <div class="code-block">
+        <div class="code-title">Fix: use setter functions</div>
+        <pre><code>&lt;script&gt;
+  export let count = 0;
+  export function setCount(n) { count = n; }
+&lt;/script&gt;
+
+&lt;script async="ready"&gt;
+  $app.setCount(10);  // modifies the original
+&lt;/script&gt;</code></pre>
+      </div>
+      <p>
+        Objects are copied by reference, so <code>$app.config.debug = true</code> does modify
+        the original. Only primitives (numbers, strings, booleans) have this problem.
+      </p>
+    </div>
+
+    <div class="debug-block">
+      <h3>6c. "Two-way binding loses my transformation"</h3>
+      <p class="symptom">Symptom: handler normalizes input (e.g., <code>trim().toLowerCase()</code>), but the value reverts on next render.</p>
+      <p>
+        Two-way binding is the default. Before each render, reverse sync reads the raw input value
+        back into state, overwriting the handler's normalized result.
+      </p>
+      <div class="code-block">
+        <div class="code-title">Fix: use one-way binding</div>
+        <pre><code>&lt;input bind="query" bind-mode="one-way" onInput="$app.normalize()" /&gt;
+&lt;script&gt;
+  const state = $melker.createState({ query: '' });
+  export function normalize() {
+    state.query = $melker.getElementById('query').getValue().trim().toLowerCase();
+  }
+&lt;/script&gt;</code></pre>
+      </div>
+      <p>
+        Rule of thumb: if your handler modifies the same state key that the element is bound to,
+        use <code>bind-mode="one-way"</code>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 7: Debugging permissions -->
+<section id="debug-permissions">
+  <div class="container">
+    <h2>7. Debugging permissions</h2>
+    <p class="section-claim">Silent failures from missing policy entries.</p>
+
+    <div class="debug-block">
+      <h3>7a. "Fetch silently fails"</h3>
+      <p class="symptom">Symptom: <code>$melker.fetch()</code> returns an error or hangs. No obvious message.</p>
+      <p>
+        The policy is missing a <code>"net"</code> permission for the host.
+      </p>
+      <p>Diagnosis: run with <code>--log-level DEBUG --log-file /tmp/app.log</code>, look for <code>Access denied</code>.</p>
+      <div class="code-block">
+        <div class="code-title">Fix: add net permission</div>
+        <pre><code>&lt;policy&gt;{"permissions": {"net": ["api.example.com"]}}&lt;/policy&gt;</code></pre>
+      </div>
+      <p>Or use <code>--trust</code> for quick testing (bypasses all policy checks).</p>
+    </div>
+
+    <div class="debug-block">
+      <h3>7b. "Environment variable is undefined"</h3>
+      <p class="symptom">Symptom: <code>$ENV{MY_VAR}</code> is empty, or <code>Deno.env.get('MY_VAR')</code> returns undefined.</p>
+      <p>
+        Env vars are sandboxed. Only <code>MELKER_*</code>, <code>HOME</code>, <code>PATH</code>,
+        <code>TERM</code>, and XDG vars are auto-allowed.
+      </p>
+      <p>Fix: add to policy <code>"env": ["MY_VAR"]</code> or use configSchema's env key for user-configurable values.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 8: Debugging terminal -->
+<section id="debug-terminal">
+  <div class="container">
+    <h2>8. Debugging terminal</h2>
+    <p class="section-claim">Font issues, protocol fallback, and sandbox detection.</p>
+
+    <div class="debug-block">
+      <h3>8a. "Sextant characters show as boxes"</h3>
+      <p class="symptom">Symptom: rectangles or tofu instead of smooth 2x3 block patterns.</p>
+      <p>
+        Terminal font lacks Unicode 13.0 Symbols for Legacy Computing (U+1FB00-U+1FB3F).
+      </p>
+      <div class="code-block">
+        <div class="code-title">Diagnosis</div>
+        <pre><code>melker --test-sextant</code></pre>
+      </div>
+      <p>
+        Fix: switch to a font with sextant support (Cascadia Code, Iosevka, JetBrains Mono), or override:
+      </p>
+      <div class="code-block">
+        <div class="code-title">Override graphics mode</div>
+        <pre><code>MELKER_GFX_MODE=quadrant melker app.melker</code></pre>
+      </div>
+    </div>
+
+    <div class="debug-block">
+      <h3>8b. "Sixel images don't appear"</h3>
+      <p class="symptom">Symptom: blank area where image should be.</p>
+      <p>
+        Running inside tmux/screen (protocol auto-disabled), or terminal doesn't support sixel.
+      </p>
+      <p>Diagnosis: check <code>--log-level DEBUG</code> for <code>sixel disabled</code> messages.</p>
+      <p>Fix: run outside multiplexer, or use character-based modes instead.</p>
+    </div>
+
+    <div class="debug-block">
+      <h3>8c. "Colors look wrong in Claude Code sandbox"</h3>
+      <p class="symptom">Symptom: everything is grayscale, backgrounds invisible.</p>
+      <p>
+        The sandbox terminal reports <code>TERM=linux</code> but only renders brightness, not hue.
+        Background colors are ignored.
+      </p>
+      <p>
+        What the engine does: detects <code>IS_SANDBOX=yes</code> and switches to
+        grayscale-compatible rendering.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 9: Under the hood -->
+<section id="postmortem">
+  <div class="container">
+    <h2>9. Limits in practice: earthquake dashboard</h2>
+    <p class="section-claim">A real app that hit several limits from sections 1-8. What happened, what worked around it.</p>
+
+    <p>
+      The <a href="/examples/showcase/earthquake-dashboard.melker">earthquake dashboard</a> is
+      a 431-line single-file app that fetches live USGS earthquake data, renders it in a sortable
+      table with sparklines and distribution bars, and plots quakes on a world map. It was built
+      across 8 commits over three weeks (Feb 12 to Mar 7 2026). This section traces which limits
+      from the rest of this page showed up during development, and how they were handled.
+    </p>
+
+    <h3>What was easy</h3>
+    <ul>
+      <li>
+        <strong>Layout.</strong> The initial 431-line dashboard was a single session. Getting the
+        flex layout correct (split panes, table + sparkline + distribution bars) was surprisingly
+        straightforward.
+      </li>
+      <li>
+        <strong>Data binding.</strong> <code>data-table.setValue()</code> with fetched JSON, one
+        line per component.
+      </li>
+      <li>
+        <strong>Policy.</strong> Declaring <code>net: ["earthquake.usgs.gov"]</code> and getting
+        sandboxed fetch with no extra code.
+      </li>
+      <li>
+        <strong>Incremental polish.</strong> UTC timestamps, toast alerts for M7+ quakes, bar
+        label alignment. Small targeted commits.
+      </li>
+    </ul>
+
+    <h3>What was awkward</h3>
+    <ul>
+      <li>
+        <strong>The hand-drawn canvas map.</strong> Intended as a quick "get something on screen"
+        approach, the hardcoded COASTLINES polyline array bloated the <code>.melker</code> file
+        and took more time than expected. This directly drove the creation of the
+        <code>&lt;tile-map&gt;</code> component (commit 476), which replaced ~35 lines of
+        coordinate data with a single element.
+      </li>
+      <li>
+        <strong>Engine primitives that didn't exist.</strong> The canvas map required building
+        <code>fillPolyColor</code>, <code>drawCircleCorrected</code>, the tooltip system, and
+        canvas hit-testing. The dashboard was driving engine development, not using existing
+        features.
+      </li>
+      <li>
+        <strong>The coordinate swap bug.</strong> SVG path coordinates for tectonic plate boundaries
+        were in lat/lon order instead of lon/lat. Discovered because the AI assistant (via an
+        OpenRouter model) insisted on the coordinate order it was trained on, not what was
+        specified. A reminder that AI-assisted code still needs visual verification.
+      </li>
+      <li>
+        <strong>The cache API.</strong> Tectonic plate boundaries were the third feature that needed
+        caching. One too many for a framework without a cache primitive. This pushed the creation
+        of <code>$melker.cache.read/write</code> in the engine.
+      </li>
+      <li>
+        <strong>Permissions grew.</strong> Started with just <code>"net": ["earthquake.usgs.gov"]</code>,
+        then needed <code>"map": true</code> and <code>"raw.githubusercontent.com"</code> for tile
+        maps and plate data. Each new data source is a policy change discovered at runtime.
+      </li>
+    </ul>
+
+    <h3>What surprised</h3>
+    <p>
+      Color resolution matters more than spatial resolution. The dashboard looks good in truecolor
+      terminals, but under <code>TERM=linux</code> (16 colors) the map and magnitude coloring
+      lose most of their information density. You think the limit is character-grid resolution,
+      but it's actually color depth.
+    </p>
+
+    <p class="explanation">
+      Deep dive: <a href="/how-it-works.html">How It Works</a> &middot;
+      <a href="/examples/showcase/earthquake-dashboard.melker">Dashboard source</a>
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <a href="/">Melker Engine</a> - Run text with meaning
+  </div>
+</footer>
+
+<script src="shared.js"></script>
+
+</body>
+</html>

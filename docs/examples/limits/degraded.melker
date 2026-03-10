@@ -1,0 +1,18 @@
+<melker>
+    <title>Degraded Rendering</title>
+    <policy>{"permissions": {"read": ["*"]}}</policy>
+
+    <container style="flex-direction: row; gap: 1; padding: 1">
+        <img src="../../melker-128.png" width="16" height="10" style="object-fit: contain" />
+        <container style="flex-direction: column; border: single; padding: 1; flex: 1">
+            <text bold="true">System Status</text>
+            <text>CPU: 42%  Mem: 3.1 GB</text>
+            <text>Uptime: 14d 6h</text>
+            <text>Load: 1.2 0.8 0.5</text>
+        </container>
+    </container>
+
+    <script async="ready">
+        $melker.render();
+    </script>
+</melker>

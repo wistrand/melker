@@ -84,6 +84,14 @@
 
 - [Map viewer](https://melker.sh/reference/agent_docs/map-example.md)
 
+## Doc Page Plans
+
+- [Data Visualization](https://melker.sh/reference/agent_docs/data-visualization-page-plan.md)
+- [Filterable Lists](https://melker.sh/reference/agent_docs/filterable-lists-page-plan.md)
+- [Rich Content](https://melker.sh/reference/agent_docs/rich-content-page-plan.md)
+- [Graphics Pipeline](https://melker.sh/reference/agent_docs/graphics-pipeline-page-plan.md)
+- [Limits & Compatibility](https://melker.sh/reference/agent_docs/limits-page-plan.md)
+
 ## Project
 
 - [Timeline](https://melker.sh/reference/agent_docs/project-timeline.md)

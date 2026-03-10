@@ -114,6 +114,16 @@ New to Melker? Read in this order:
 |------------|--------------------------------------------|
 | Map viewer | [map-example.md](agent_docs/map-example.md) |
 
+### Doc Page Plans
+
+| Page                  | Plan                                                                                    |
+|-----------------------|-----------------------------------------------------------------------------------------|
+| Data Visualization    | [data-visualization-page-plan.md](agent_docs/data-visualization-page-plan.md)           |
+| Filterable Lists      | [filterable-lists-page-plan.md](agent_docs/filterable-lists-page-plan.md)               |
+| Rich Content          | [rich-content-page-plan.md](agent_docs/rich-content-page-plan.md)                       |
+| Graphics Pipeline     | [graphics-pipeline-page-plan.md](agent_docs/graphics-pipeline-page-plan.md)             |
+| Limits & Compatibility | [limits-page-plan.md](agent_docs/limits-page-plan.md)                                  |
+
 ### Project
 
 | Topic            | Doc                                                                      |

@@ -4,7 +4,7 @@
 
     <container style="flex-direction: column; padding: 1; gap: 1">
         <text bold="true">Canvas Drawing</text>
-        <canvas id="c" width="40" height="12" onPaint="$app.draw(event.canvas)" />
+        <canvas id="c" width="40" height="12" gfxMode="sextant" onPaint="$app.draw(event.canvas)" />
     </container>
 
     <script type="typescript">

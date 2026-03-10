@@ -1,3 +1,4 @@
+#!/usr/bin/env -S deno run -A
 // Converts ANSI-colored terminal output to HTML spans with merged runs.
 // Usage: deno run -A melker.ts <app> --stdout --color=always | deno run docs/tools/ansi2html.ts
 //
@@ -34,6 +35,25 @@ function spanFor(style: Style, text: string): string {
   return `<span style="${parts.join(';')}">${escaped}</span>`;
 }
 
+function color256toRgb(n: number): string {
+  if (n < 8) {
+    const c = [[0,0,0],[170,0,0],[0,170,0],[170,85,0],[0,0,170],[170,0,170],[0,170,170],[170,170,170]];
+    return `rgb(${c[n][0]},${c[n][1]},${c[n][2]})`;
+  } else if (n < 16) {
+    const c = [[85,85,85],[255,85,85],[85,255,85],[255,255,85],[85,85,255],[255,85,255],[85,255,255],[255,255,255]];
+    return `rgb(${c[n - 8][0]},${c[n - 8][1]},${c[n - 8][2]})`;
+  } else if (n < 232) {
+    const idx = n - 16;
+    const r = Math.floor(idx / 36) * 51;
+    const g = Math.floor((idx % 36) / 6) * 51;
+    const b = (idx % 6) * 51;
+    return `rgb(${r},${g},${b})`;
+  } else {
+    const v = (n - 232) * 10 + 8;
+    return `rgb(${v},${v},${v})`;
+  }
+}
+
 function applySgr(params: number[], style: Style): Style {
   const s = { ...style };
   let i = 0;
@@ -42,7 +62,13 @@ function applySgr(params: number[], style: Style): Style {
     if (p === 0) { s.fg = null; s.bg = null; s.bold = false; }
     else if (p === 1) s.bold = true;
     else if (p === 22) s.bold = false;
-    else if (p === 38 && params[i + 1] === 2) {
+    else if (p === 38 && params[i + 1] === 5) {
+      s.fg = color256toRgb(params[i + 2]);
+      i += 2;
+    } else if (p === 48 && params[i + 1] === 5) {
+      s.bg = color256toRgb(params[i + 2]);
+      i += 2;
+    } else if (p === 38 && params[i + 1] === 2) {
       s.fg = `rgb(${params[i + 2]},${params[i + 3]},${params[i + 4]})`;
       i += 4;
     } else if (p === 48 && params[i + 1] === 2) {

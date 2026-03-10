@@ -1,3 +1,4 @@
+<!-- Generated: docs/filterable-lists.html -->
 # Plan: Filterable List Components Doc Page
 
 ## Context
@@ -59,6 +60,10 @@ run_example combobox.melker 7
 run_example autocomplete.melker 7
 run_example command-palette.melker 8
 ```
+
+## Font for Terminal Blocks
+
+All doc pages load Cascadia Code from Google Fonts. `shared.css` sets `pre.terminal` to use `'Cascadia Code', 'JetBrains Mono', 'SF Mono', Consolas, monospace`. Pages with sextant chars need a special `text=` parameter (see graphics-pipeline-page-plan.md).
 
 ## Writing Style
 

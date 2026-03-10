@@ -1,0 +1,26 @@
+<melker>
+    <title>GFX Modes</title>
+    <policy>{"permissions": {"read": ["*"]}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Graphics Modes</text>
+        <container style="flex-direction: row; gap: 2">
+            <container style="flex-direction: column; align-items: center">
+                <text>sextant</text>
+                <img src="../../melker-128.png" width="16" height="12" gfxMode="sextant" style="object-fit: contain" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>quadrant</text>
+                <img src="../../melker-128.png" width="16" height="12" gfxMode="quadrant" style="object-fit: contain" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>halfblock</text>
+                <img src="../../melker-128.png" width="16" height="12" gfxMode="halfblock" style="object-fit: contain" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>pattern</text>
+                <img src="../../melker-128.png" width="16" height="12" gfxMode="pattern" style="object-fit: contain" />
+            </container>
+        </container>
+    </container>
+</melker>

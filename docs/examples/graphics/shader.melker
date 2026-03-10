@@ -1,0 +1,19 @@
+<melker>
+    <title>Shader Demo</title>
+    <policy>{"permissions": {"shader": true}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Per-pixel Shader</text>
+        <canvas id="c" width="50" height="12" gfxMode="sextant"
+            onShader="$app.plasma" shaderFps="30" shaderRunTime="500" />
+    </container>
+
+    <script type="typescript">
+        export function plasma(x: number, y: number, time: number, resolution: any, _source: any, utils: any) {
+            const u = x / resolution.width;
+            const v = y / resolution.height / resolution.pixelAspect;
+            const n = utils.fbm(u * 2 + time * 0.5, v * 2 + time * 0.3, time * 0.2);
+            return utils.palette(n, [0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [1, 1, 1], [0, 0.33, 0.67]);
+        }
+    </script>
+</melker>

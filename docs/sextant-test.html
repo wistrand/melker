@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sextant Font Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<!-- Google Fonts with explicit text= to force sextant glyph inclusion -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono&text=%F0%9F%AC%80%F0%9F%AC%81%F0%9F%AC%82%F0%9F%AC%83%F0%9F%AC%8F%F0%9F%AC%B9%F0%9F%AC%BB&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cascadia+Code&text=%F0%9F%AC%80%F0%9F%AC%81%F0%9F%AC%82%F0%9F%AC%83%F0%9F%AC%8F%F0%9F%AC%B9%F0%9F%AC%BB&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code&text=%F0%9F%AC%80%F0%9F%AC%81%F0%9F%AC%82%F0%9F%AC%83%F0%9F%AC%8F%F0%9F%AC%B9%F0%9F%AC%BB&display=swap" rel="stylesheet">
+
+<!-- Direct CDN fonts (bypass Google Fonts UA-based subsetting) -->
+<style>
+@font-face {
+  font-family: 'Noto-Direct';
+  src: url('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosansmono/NotoSansMono%5Bwdth%2Cwght%5D.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cascadia-Direct';
+  src: url('https://cdn.jsdelivr.net/gh/microsoft/cascadia-code@main/build/ttf/static/CascadiaCode-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Unifont-Direct';
+  src: url('https://cdn.jsdelivr.net/gh/codingteam/unifont-rs@master/unifont.otf') format('opentype');
+  font-display: swap;
+}
+
+body { background: #111; color: #eee; padding: 1em; font-family: sans-serif; font-size: 14px; }
+h2 { margin-top: 1.5em; font-size: 1.1em; color: #8f8; }
+h3 { margin-top: 1em; font-size: 0.95em; color: #aaa; }
+pre {
+  background: #000;
+  padding: 0.8em;
+  font-size: 16px;
+  line-height: 1.2;
+  border: 1px solid #333;
+  margin: 0.3em 0;
+  overflow-x: auto;
+}
+.status { font-size: 12px; color: #888; margin: 0.2em 0; }
+.ok { color: #4f4; }
+.fail { color: #f44; }
+</style>
+</head>
+<body>
+
+<h1>Sextant Character Test</h1>
+<p>U+1FB00-U+1FB3F (Unicode 13.0). Should show 2x3 sub-cell block patterns.</p>
+
+<h2>Reference: Quadrant (U+2596-U+259F, should always work)</h2>
+<pre style="font-family: monospace">▖▗▘▙▚▛▜▝▞▟ ← if these look like block patterns, your browser handles block chars</pre>
+
+<h2>1. Google Fonts (UA-dependent subsetting)</h2>
+
+<h3>Noto Sans Mono (Google Fonts)</h3>
+<pre style="font-family: 'Noto Sans Mono', monospace">🬀🬁🬂🬃🬏🬹🬻 sextant</pre>
+
+<h3>Cascadia Code (Google Fonts)</h3>
+<pre style="font-family: 'Cascadia Code', monospace">🬀🬁🬂🬃🬏🬹🬻 sextant</pre>
+
+<h3>Fira Code (Google Fonts)</h3>
+<pre style="font-family: 'Fira Code', monospace">🬀🬁🬂🬃🬏🬹🬻 sextant</pre>
+
+<h2>2. Direct CDN fonts (bypass UA subsetting)</h2>
+
+<h3>Noto Sans Mono (jsDelivr TTF)</h3>
+<pre style="font-family: 'Noto-Direct', monospace">🬀🬁🬂🬃🬏🬹🬻 sextant</pre>
+
+<h3>Cascadia Code (jsDelivr TTF)</h3>
+<pre style="font-family: 'Cascadia-Direct', monospace">🬀🬁🬂🬃🬏🬹🬻 sextant</pre>
+
+<h3>GNU Unifont (jsDelivr OTF)</h3>
+<pre style="font-family: 'Unifont-Direct', monospace">🬀🬁🬂🬃🬏🬹🬻 sextant</pre>
+
+<h2>3. System monospace (no web font)</h2>
+<pre style="font-family: monospace">🬀🬁🬂🬃🬏🬹🬻 sextant</pre>
+
+<h2>4. HTML entities (same chars, different encoding)</h2>
+<pre style="font-family: 'Noto Sans Mono', 'Noto-Direct', monospace">&#x1FB00;&#x1FB01;&#x1FB02;&#x1FB03;&#x1FB0F;&#x1FB39;&#x1FB3B; sextant via HTML entities</pre>
+
+<h2>5. Canvas rendering test</h2>
+<canvas id="c" width="400" height="40" style="border: 1px solid #333; background: #000;"></canvas>
+<p class="status" id="canvas-status">Testing...</p>
+
+<h2>Font load status</h2>
+<div id="font-status">Checking...</div>
+
+<script>
+// Check which fonts actually loaded
+async function checkFonts() {
+  const el = document.getElementById('font-status');
+  const fonts = [
+    'Noto Sans Mono', 'Cascadia Code', 'Fira Code',
+    'Noto-Direct', 'Cascadia-Direct', 'Unifont-Direct'
+  ];
+  await document.fonts.ready;
+  let html = '';
+  for (const f of fonts) {
+    const loaded = document.fonts.check(`16px "${f}"`);
+    html += `<p class="status ${loaded ? 'ok' : 'fail'}">${loaded ? '✓' : '✗'} ${f}</p>`;
+  }
+  el.innerHTML = html;
+}
+
+// Canvas test: draw sextant chars to see if they render
+function canvasTest() {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const fonts = ['Noto Sans Mono', 'Cascadia Code', 'Noto-Direct', 'Cascadia-Direct', 'monospace'];
+  const chars = '🬀🬁🬂🬃🬏🬹🬻';
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, 400, 40);
+
+  let y = 20;
+  let found = false;
+  for (const font of fonts) {
+    ctx.font = `16px "${font}"`;
+    const m = ctx.measureText('🬀');
+    if (m.width > 0 && m.width < 30) {
+      ctx.fillStyle = '#0f0';
+      ctx.fillText(`${font}: ${chars}`, 5, y);
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    ctx.fillStyle = '#f00';
+    ctx.fillText('No font rendered sextant chars', 5, y);
+  }
+  document.getElementById('canvas-status').textContent =
+    found ? 'Canvas rendering succeeded' : 'Canvas rendering failed';
+}
+
+setTimeout(() => { checkFonts(); canvasTest(); }, 2000);
+</script>
+
+</body>
+</html>

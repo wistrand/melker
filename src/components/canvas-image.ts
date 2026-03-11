@@ -94,8 +94,26 @@ function decodePngImage(imageBytes: Uint8Array): LoadedImage {
     const palette = decoded.palette;
     bytesPerPixel = 4;
     pixelData = new Uint8Array(width * height * 4);
+
+    // Unpack sub-byte palette indices (depth 1, 2, or 4).
+    // fast-png returns packed bits — multiple pixels per byte — but does NOT
+    // unpack them for indexed color.  Depth 8 has one index per byte already.
+    let indices: Uint8Array;
+    if (decoded.depth < 8) {
+      const pixelsPerByte = 8 / decoded.depth;
+      const mask = (1 << decoded.depth) - 1;
+      indices = new Uint8Array(width * height);
+      for (let i = 0; i < width * height; i++) {
+        const byteIdx = Math.floor(i / pixelsPerByte);
+        const bitOffset = (pixelsPerByte - 1 - (i % pixelsPerByte)) * decoded.depth;
+        indices[i] = (rawData[byteIdx] >> bitOffset) & mask;
+      }
+    } else {
+      indices = rawData;
+    }
+
     for (let i = 0; i < width * height; i++) {
-      const colorIndex = rawData[i];
+      const colorIndex = indices[i];
       const color = palette[colorIndex] || [0, 0, 0];
       pixelData[i * 4] = color[0];
       pixelData[i * 4 + 1] = color[1];
@@ -106,8 +124,25 @@ function decodePngImage(imageBytes: Uint8Array): LoadedImage {
     // Grayscale -> RGBA
     bytesPerPixel = 4;
     pixelData = new Uint8Array(width * height * 4);
+
+    // Unpack sub-byte grayscale (depth 1, 2, or 4) and scale to 0-255
+    let grays: Uint8Array;
+    if (decoded.depth < 8) {
+      const pixelsPerByte = 8 / decoded.depth;
+      const mask = (1 << decoded.depth) - 1;
+      const scale = 255 / mask; // e.g. depth 1: 0→0, 1→255
+      grays = new Uint8Array(width * height);
+      for (let i = 0; i < width * height; i++) {
+        const byteIdx = Math.floor(i / pixelsPerByte);
+        const bitOffset = (pixelsPerByte - 1 - (i % pixelsPerByte)) * decoded.depth;
+        grays[i] = Math.round(((rawData[byteIdx] >> bitOffset) & mask) * scale);
+      }
+    } else {
+      grays = rawData;
+    }
+
     for (let i = 0; i < width * height; i++) {
-      const gray = rawData[i];
+      const gray = grays[i];
       pixelData[i * 4] = gray;
       pixelData[i * 4 + 1] = gray;
       pixelData[i * 4 + 2] = gray;

@@ -340,11 +340,13 @@ The fetch pipeline runs per-tile, fire-and-forget:
 1. Check in-memory LRU cache -> hit: return immediately
 2. Already fetching this tile? -> skip (deduplicated via _pendingFetches Set)
 3. Check disk cache (engine.cache.read) -> hit: decode + cache in memory
-4. Fetch from network -> decode -> cache in memory + write to disk cache
-5. markDirty() + engine.render() to trigger re-paint with new tile
+   - If decode fails on disk-cached bytes: evict entry, retry from network
+4. Fetch from network -> decode -> cache in memory
+5. Write to disk cache only after successful decode (fire-and-forget)
+6. markDirty() + engine.render() to trigger re-paint with new tile
 ```
 
-Tiles are decoded via `CanvasElement.decodeImageBytes()` (PNG -> RGBA pixel data).
+Tiles are decoded via `CanvasElement.decodeImageBytes()` (PNG → RGBA pixel data). The disk cache write happens after decode to prevent persisting corrupt bytes. If a disk-cached tile fails to decode (e.g., truncated data from a previous interrupted write), the entry is evicted and the tile is re-fetched from network.
 
 ### In-Memory Cache
 

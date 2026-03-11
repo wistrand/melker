@@ -1884,12 +1884,12 @@ const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);
 
 ### Supported Formats
 
-- **PNG** - Full support including alpha transparency and 16-bit depth (fast-png)
+- **PNG** - Full support including alpha transparency, 16-bit depth, sub-byte indexed color (1/2/4-bit palette), and sub-byte grayscale (fast-png)
 - **JPEG** - Full support (jpeg-js)
 - **GIF** - Full support including animated GIF playback (omggif). Disable animation with `--no-animate-gif` or `MELKER_NO_ANIMATE_GIF=1`
 - **WebP** - Full support via WASM decoder (@jsquash/webp)
 
-PNG, JPEG, and GIF decoders are pure JavaScript. WebP uses a WASM decoder (libwebp). All dependencies are centralized in `src/deps.ts`.
+PNG, JPEG, and GIF decoders are pure JavaScript. WebP uses a WASM decoder (libwebp). All dependencies are centralized in `src/deps.ts`. For indexed PNGs with bit depth < 8 (common in map tiles), `decodePngImage` unpacks the packed bit data before palette expansion.
 
 ### Path Resolution
 

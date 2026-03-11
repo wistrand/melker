@@ -53,11 +53,11 @@ Not a disclaimer wall. Short, specific scenarios with what to use instead. Where
 | Team has no terminal culture                | Onboarding cost is real; don't force it                 | Whatever they use now                 |
 | App needs to run on Windows cmd.exe         | Relies on ANSI escape codes and Unix TTY               | PowerShell or web app                 |
 | Sub-millisecond rendering (games, video)    | 30 fps ceiling, character-grid resolution               | Native GPU app                        |
-| Go team, Elm architecture preferred         | Melker is TypeScript/Deno only                          | Bubble Tea                            |
-| Python team, CSS styling wanted             | Deno dependency, different ecosystem                    | Textual                               |
-| Rust, no_std, or embedded target            | Deno runtime too heavy                                  | Ratatui                               |
+| Go team, Elm architecture preferred         | Melker is TypeScript (Deno or Node.js)                  | Bubble Tea                            |
+| Python team, CSS styling wanted             | Different ecosystem                                     | Textual                               |
+| Rust, no_std, or embedded target            | JS runtime too heavy                                    | Ratatui                               |
 | Need React ecosystem and component library  | Melker has its own component model, not React           | Ink or OpenTUI                        |
-| Must ship a single static binary            | Deno compiles but Melker doesn't yet support `deno compile` | Bubble Tea, Ratatui, FTXUI       |
+| Must ship a single static binary            | No `deno compile` support. Node.js requires runtime install | Bubble Tea, Ratatui, FTXUI       |
 | Need maximum GitHub ecosystem maturity      | Melker is new; Bubble Tea has 40k stars                 | Bubble Tea, Ink, Textual              |
 
 End with: "If your use case isn't in this list, Melker is probably fine. The rest of this page is about what happens at the edges."
@@ -74,7 +74,7 @@ Feature gaps visible in the tui-comparison component matrix. State them plainly 
 | Collapsible sections    | No built-in accordion/collapsible                  | Toggle visibility with `display: none`             |
 | Syntax highlighting     | Code blocks in markdown are plain text             | Use a `<canvas>` with custom rendering             |
 | Single binary dist      | Can't `deno compile` yet                           | Distribute as `.melker` file, user installs Deno   |
-| i18n/RTL                | No built-in internationalization or RTL support    | Manual text direction in app code                  |
+| RTL text                | No right-to-left text layout support               | Manual text direction in app code                  |
 | Dependency graph        | No fine-grained reactivity (Solid signals, React hooks) | `createState()` + `bind` for most cases; explicit `setValue()` for the rest |
 
 Note: "These are design choices, not bugs. Melker trades fine-grained reactivity for a simpler model (`createState` + `bind` handles most cases without a dependency graph), and trades grid layout for a smaller layout engine. If any of these are dealbreakers, the table in Section 1 points to frameworks that have them."

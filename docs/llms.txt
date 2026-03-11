@@ -93,6 +93,10 @@
 - [Graphics Pipeline](https://melker.sh/reference/agent_docs/graphics-pipeline-page-plan.md)
 - [Limits & Compatibility](https://melker.sh/reference/agent_docs/limits-page-plan.md)
 
+## Plans
+
+- [Inline (partial-screen)](https://melker.sh/reference/agent_docs/inline-mode-plan.md)
+
 ## Project
 
 - [Timeline](https://melker.sh/reference/agent_docs/project-timeline.md)

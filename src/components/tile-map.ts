@@ -445,13 +445,16 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
 
     try {
       let bytes: Uint8Array | null = null;
+      let fromDiskCache = false;
+      const diskCacheKey = `${providerKey}/${z}/${tileX}/${tileY}`;
 
       // Try disk cache first
       if (this.props.diskCache !== false) {
         const engineCache = getGlobalEngine()?.cache;
         if (engineCache) {
-          bytes = await engineCache.read('tiles', `${providerKey}/${z}/${tileX}/${tileY}`);
+          bytes = await engineCache.read('tiles', diskCacheKey);
           if (bytes) {
+            fromDiskCache = true;
             logger.debug(`Tile from disk cache: ${cacheKey}`);
           }
         }
@@ -467,19 +470,41 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const arrayBuffer = await response.arrayBuffer();
         bytes = new Uint8Array(arrayBuffer);
+      }
 
-        // Save to disk cache (fire and forget)
-        if (this.props.diskCache !== false) {
+      // Decode — if this throws on disk-cached bytes, evict and retry from network
+      let decoded: ReturnType<typeof this.decodeImageBytes>;
+      try {
+        decoded = this.decodeImageBytes(bytes);
+      } catch (decodeError) {
+        if (fromDiskCache) {
+          // Evict corrupt disk cache entry and retry from network
+          logger.warn(`Corrupt disk cache tile ${cacheKey}, evicting and retrying: ${decodeError}`);
           const engineCache = getGlobalEngine()?.cache;
-          if (engineCache) {
-            const maxBytes = (this.props.diskCacheMaxMB ?? 200) * 1024 * 1024;
-            engineCache.write('tiles', `${providerKey}/${z}/${tileX}/${tileY}`, bytes, { maxBytes });
-          }
+          if (engineCache) engineCache.delete('tiles', diskCacheKey);
+          const provider = this._getProviders()[providerKey];
+          if (!provider) return null;
+          const url = TileMapElement.getTileUrl(tileX, tileY, z, provider);
+          const response = await fetch(url, { signal: abortController.signal });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const arrayBuffer = await response.arrayBuffer();
+          bytes = new Uint8Array(arrayBuffer);
+          fromDiskCache = false;
+          decoded = this.decodeImageBytes(bytes); // Let this throw if network data is also bad
+        } else {
+          throw decodeError;
         }
       }
 
-      // Decode
-      const decoded = this.decodeImageBytes(bytes);
+      // Save to disk cache only after successful decode (fire and forget)
+      if (!fromDiskCache && this.props.diskCache !== false) {
+        const engineCache = getGlobalEngine()?.cache;
+        if (engineCache) {
+          const maxBytes = (this.props.diskCacheMaxMB ?? 200) * 1024 * 1024;
+          engineCache.write('tiles', diskCacheKey, bytes, { maxBytes });
+        }
+      }
+
       this._setTileInCache(cacheKey, decoded);
 
       // Request re-render

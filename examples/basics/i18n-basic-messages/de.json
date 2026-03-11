@@ -1,0 +1,13 @@
+{
+  "_lang": "Deutsch",
+  "title": "Sprachdemo",
+  "greeting": "Hallo, Welt!",
+  "description": "Sprache mit den Knöpfen unten wechseln.",
+  "color": "Deine Lieblingsfarbe:",
+  "colors": {
+    "red": "Rot",
+    "green": "Grün",
+    "blue": "Blau"
+  },
+  "selected": "Du hast gewählt: {color}"
+}

@@ -204,6 +204,13 @@ config.getNumber('server.port', 8080)       // number with default
 config.getValue('custom.key')               // unknown (returns undefined if not set)
 config.hasKey('custom.key')                 // boolean
 
+// Source tracking — where a config value came from
+config.getSource('theme')                   // ConfigSource | undefined
+// ConfigSource = 'default' | 'file' | 'policy' | 'cli' | 'env' | 'runtime'
+// Used internally for path resolution (e.g. i18n.messagesDir resolves
+// relative to CWD when source is 'env' or 'cli', relative to source
+// file when source is 'policy' or 'file')
+
 // Late initialization (when config auto-inits before flags are parsed)
 MelkerConfig.applyCliFlags(parsedArgs);
 MelkerConfig.applyPolicyConfig(policy.config);

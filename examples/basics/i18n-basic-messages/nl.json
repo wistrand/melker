@@ -1,0 +1,13 @@
+{
+  "_lang": "Nederlands",
+  "title": "Taaldemo",
+  "greeting": "Hallo, wereld!",
+  "description": "Wissel van taal met de knoppen hieronder.",
+  "color": "Je favoriete kleur:",
+  "colors": {
+    "red": "Rood",
+    "green": "Groen",
+    "blue": "Blauw"
+  },
+  "selected": "Je koos: {color}"
+}

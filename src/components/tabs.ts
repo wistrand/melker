@@ -140,17 +140,6 @@ export class TabsElement extends Element {
   private _updateTabVisibility(): void {
     const lastIndex = this._tabElements.length - 1;
 
-    // Compute gap offset = sum of button widths before active tab
-    let gapStart = 0;
-    for (let i = 0; i < this._activeIndex; i++) {
-      gapStart += this._buttonWidth(i);
-    }
-    // For non-last tabs: gap covers the full button (junction └ goes at next button's borderLeft).
-    // For last tab: gap excludes borderRight so └ aligns with the button's own borderRight vertical.
-    const gapEnd = this._activeIndex === lastIndex
-      ? gapStart + this._buttonWidth(this._activeIndex) - 2
-      : gapStart + this._buttonWidth(this._activeIndex) - 1;
-
     for (let i = 0; i < this._tabElements.length; i++) {
       const tab = this._tabElements[i];
       const isActive = i === this._activeIndex;
@@ -158,15 +147,45 @@ export class TabsElement extends Element {
       // Set visibility - this is the key: all tabs exist, only active is visible
       tab.props.visible = isActive;
 
-      // Ensure tabs have flex properties when visible, and set border gap
+      // Ensure tabs have flex properties when visible, and set border gap.
+      // Gap is computed lazily at paint time so it uses actual button bounds
+      // (buttons may be clipped by flex layout when the tab bar overflows).
       if (isActive) {
-        tab.props.style = {
+        const tabsRef = this;
+        const activeIdx = this._activeIndex;
+
+        const style: Record<string, unknown> = {
           display: 'flex',
           flexDirection: 'column',
           flexGrow: 1,
           ...tab.props.style,
-          _borderTopGap: { start: gapStart, end: gapEnd },
         };
+        Object.defineProperty(style, '_borderTopGap', {
+          get() {
+            const activeBtn = tabsRef._tabButtons[activeIdx];
+            const tabBar = tabsRef._tabBar;
+            const aBounds = activeBtn?.getBounds();
+            const tBounds = tabBar?.getBounds();
+            if (aBounds && tBounds) {
+              const s = aBounds.x - tBounds.x;
+              const isLast = activeIdx === tabsRef._tabElements.length - 1;
+              // Non-last buttons only have borderLeft (no borderRight), so -1.
+              // Last button has both borderLeft and borderRight, so -2.
+              return { start: s, end: s + aBounds.width - (isLast ? 2 : 1) };
+            }
+            // Fallback: ideal widths (before first layout)
+            let s = 0;
+            for (let j = 0; j < activeIdx; j++) {
+              s += tabsRef._buttonWidth(j);
+            }
+            const w = tabsRef._buttonWidth(activeIdx);
+            const isLast = activeIdx === tabsRef._tabElements.length - 1;
+            return { start: s, end: isLast ? s + w - 2 : s + w - 1 };
+          },
+          enumerable: true,
+          configurable: true,
+        });
+        tab.props.style = style;
       }
 
       // Update button style to show active state
@@ -225,6 +244,13 @@ export class TabsElement extends Element {
       // Update visibility - no children array changes needed
       this._updateTabVisibility();
     }
+  }
+
+  /**
+   * Recalculate tab border gap using actual button bounds (call after layout).
+   */
+  refreshTabLayout(): void {
+    this._updateTabVisibility();
   }
 
   /**

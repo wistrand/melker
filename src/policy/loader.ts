@@ -7,6 +7,14 @@ import { extractHostFromUrl } from './url-utils.ts';
 import { readTextFile, cwd } from '../runtime/mod.ts';
 
 /**
+ * Strip HTML comments from content so that regex-based tag extraction
+ * doesn't match tags inside <!-- ... --> blocks.
+ */
+function stripHtmlComments(content: string): string {
+  return content.replace(/<!--[\s\S]*?-->/g, '');
+}
+
+/**
  * Extract policy from markdown JSON block with "@melker": "policy"
  */
 function extractPolicyFromMarkdown(content: string): MelkerPolicy | null {
@@ -144,7 +152,7 @@ export async function loadPolicy(appPath: string): Promise<PolicyLoadResult> {
  * Check if content has an <oauth> tag
  */
 function hasOAuthTag(content: string): boolean {
-  return /<oauth[\s>]/i.test(content);
+  return /<oauth[\s>]/i.test(stripHtmlComments(content));
 }
 
 /**
@@ -171,8 +179,8 @@ function addOAuthPermissions(policy: MelkerPolicy): void {
  * Extract wellknown URL from oauth tag attributes
  */
 function extractOAuthWellknownUrl(content: string): string | null {
-  // Match <oauth ...> and extract wellknown attribute
-  const match = content.match(/<oauth\s+([^>]*)>/i);
+  // Match <oauth ...> and extract wellknown attribute, ignoring tags inside HTML comments
+  const match = stripHtmlComments(content).match(/<oauth\s+([^>]*)>/i);
   if (!match) return null;
 
   const attributes = match[1];
@@ -384,8 +392,8 @@ interface PolicyTagResult {
  * Extract policy tag info (src attribute or inline content)
  */
 function extractPolicyTag(content: string): PolicyTagResult | null {
-  // Match <policy ...>...</policy>
-  const match = content.match(/<policy([^>]*)>([\s\S]*?)<\/policy>/i);
+  // Match <policy ...>...</policy>, ignoring tags inside HTML comments
+  const match = stripHtmlComments(content).match(/<policy([^>]*)>([\s\S]*?)<\/policy>/i);
   if (!match) return null;
 
   const attributes = match[1];

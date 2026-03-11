@@ -591,6 +591,13 @@ export class MelkerConfigCore {
   // ============================================================================
 
   /**
+   * Get the source of a config value (e.g., 'env', 'policy', 'cli', 'file', 'default', 'runtime')
+   */
+  getSource(key: string): ConfigSource | undefined {
+    return this.sources[key];
+  }
+
+  /**
    * Get a string config value by key path (e.g., 'theme', 'ai.model')
    */
   getString(key: string, defaultValue: string): string {

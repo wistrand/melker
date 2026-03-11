@@ -4,6 +4,7 @@
 import type { MelkerEngine } from './engine.ts';
 import type { Element } from './types.ts';
 import type { MelkerConfig } from './config/config.ts';
+import type { I18n } from './i18n/i18n-engine.ts';
 
 /**
  * Handler function registry for .melker file event handlers
@@ -114,6 +115,9 @@ export interface MelkerContext {
 
   // Cache API
   cache: import('./core-types.ts').EngineCacheAPI;
+
+  // I18n (when <messages> elements or i18n config present)
+  i18n?: I18n;
 
   // Allow additional properties
   [key: string]: unknown;

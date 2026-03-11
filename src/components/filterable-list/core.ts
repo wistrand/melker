@@ -224,6 +224,13 @@ export abstract class FilterableListCore extends Element implements Focusable {
       ? this.props.options()
       : (this.props.options || []);
 
+    // Re-read labels from option elements (may have changed via i18n or scripting)
+    for (const opt of this._childOptions) {
+      if (opt.element) {
+        opt.label = (opt.element as OptionElement).getLabel();
+      }
+    }
+
     // Children first, then prop options
     return [...this._childOptions, ...propOptions];
   }

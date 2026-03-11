@@ -1,0 +1,13 @@
+{
+  "_lang": "Suomi",
+  "title": "Kielidemo",
+  "greeting": "Hei, maailma!",
+  "description": "Vaihda kieltä alla olevilla painikkeilla.",
+  "color": "Suosikkivärisi:",
+  "colors": {
+    "red": "Punainen",
+    "green": "Vihreä",
+    "blue": "Sininen"
+  },
+  "selected": "Valitsit: {color}"
+}

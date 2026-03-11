@@ -1,18 +1,38 @@
-# DevTools Inspect Tab Architecture
+# DevTools Architecture
 
 ## Summary
 
-- Interactive element inspector inside the F12 Dev Tools dialog
-- Split-pane layout: element tree (left) + detail panel with property/style editing (right)
+- F12 opens the Dev Tools dialog with tabbed panels for debugging and introspection
+- Tabs are conditionally included based on app state (e.g. I18n tab only when i18n is active)
+- Split-pane Inspect tab with element tree + detail panel with property/style editing
 - Detail panel rebuilt on demand per selection — no pre-allocated element pools
-- Supports editing props and inline styles at runtime with immediate visual feedback
 
-## Overview
+## Tab Overview
+
+All tabs are defined in `DevToolsManager._buildDevToolsUI()` in [src/dev-tools.ts](../src/dev-tools.ts).
+
+| Tab         | Title      | Condition                  | Description                                            |
+|-------------|------------|----------------------------|--------------------------------------------------------|
+| Source      | Source     | Always (for .melker files) | Raw source content of the app file                     |
+| Help        | Help       | `<help>` element present   | Rendered help markdown                                 |
+| Policy      | Policy     | Policy present             | Formatted policy + Deno permission flags               |
+| Markdown    | Markdown   | `.md` file type            | Rendered markdown content                              |
+| Mermaid     | Mermaid    | `.mmd` file type           | Raw mermaid source                                     |
+| System      | System     | System info available      | System info (terminal, runtime, etc.)                  |
+| Config      | Config     | Always                     | Formatted config values with sources                   |
+| Edit Config | Edit       | Policy has `configSchema`  | Interactive config editing                             |
+| CSS Vars    | Vars       | Always                     | CSS variables data-table with current values           |
+| Inspect     | Inspect    | Always                     | Element tree + detail panel (see below)                |
+| I18n        | I18n       | i18n engine active         | Locale picker + message keys data-table (see below)    |
+| State       | State      | `createState()` used       | State values data-table                                |
+| Log         | Log        | Always                     | Recent log entries                                     |
+| Actions     | Actions    | Always                     | Performance monitor, exit app buttons                  |
+
+## Inspect Tab
 
 | Property    | Value                                                          |
 |-------------|----------------------------------------------------------------|
 | Location    | F12 Dev Tools > Inspect tab                                    |
-| File        | [src/dev-tools.ts](../src/dev-tools.ts)                        |
 | Components  | `<split-pane>`, `<data-tree>`, `<input>`, `<button>`, `<text>` |
 | Entry point | `DevToolsManager._buildInspectTab()`                           |
 
@@ -98,7 +118,7 @@ Input values are parsed with type inference:
 | `"hello"` | `"hello"` |
 | `""`      | skipped   |
 
-## Key Methods
+## Inspect Key Methods
 
 | Method                               | Purpose                                                   |
 |--------------------------------------|-----------------------------------------------------------|
@@ -123,3 +143,23 @@ No auto-refresh per frame — manual refresh keeps it simple and avoids performa
 - Pool size limited the number of visible properties
 - Show/hide logic was complex and error-prone
 - Rebuilding is cheap — it only happens on user-initiated tree clicks
+
+## I18n Tab
+
+Only appears when `getI18nEngine()` returns a non-null engine (i.e., the app uses `<messages>` elements or has `i18n.messagesDir` configured).
+
+| Property    | Value                                    |
+|-------------|------------------------------------------|
+| Entry point | `DevToolsManager._buildI18nTab()`        |
+| Components  | `<select>`, `<data-table>`, `<text>`     |
+| Dependency  | `DevToolsDependencies.getI18nEngine`     |
+
+### Layout
+
+- **Locale picker** — `<select>` populated with `availableLocales`, using `getLanguageName()` for display labels. Switching locale triggers `setLocale()` + re-render.
+- **Message keys table** — `<data-table>` with two columns: Key and Value. Shows all flattened message keys for the current locale, resolved via `t()`.
+- **Footer** — locale count and key count summary.
+
+### Refresh
+
+Rebuild on tab entry and after locale switch. The Refresh button rebuilds the data-table with current locale's resolved values.

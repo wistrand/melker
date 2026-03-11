@@ -1,0 +1,13 @@
+{
+  "_lang": "Français",
+  "title": "Démo linguistique",
+  "greeting": "Bonjour, le monde !",
+  "description": "Changez la langue avec les boutons ci-dessous.",
+  "color": "Votre couleur préférée :",
+  "colors": {
+    "red": "Rouge",
+    "green": "Vert",
+    "blue": "Bleu"
+  },
+  "selected": "Vous avez choisi : {color}"
+}

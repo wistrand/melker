@@ -57,6 +57,8 @@ interface MelkerParseResult {
   sourceContent?: string;  // Original source for error reporting
   helpContent?: string;    // Help text content (markdown)
   helpSrc?: string;        // External help file path
+  /** Inline i18n messages from <messages lang="..."> elements, keyed by locale */
+  i18nMessages?: Map<string, Record<string, unknown>>;
 }
 
 // Source location info from parser
@@ -210,6 +212,7 @@ export function parseMelkerFile(content: string): MelkerParseResult {
       let oauthConfig: OAuthParseConfig | undefined = undefined;
       let helpContent: string | undefined = undefined;
       let helpSrc: string | undefined = undefined;
+      let i18nMessages: Map<string, Record<string, unknown>> | undefined = undefined;
 
       if (rootNode.body) {
         for (const child of rootNode.body) {
@@ -268,6 +271,25 @@ export function parseMelkerFile(content: string): MelkerParseResult {
               // Extract inline help content (markdown)
               helpContent = child.body?.map((node: any) => node.type === 'Text' ? node.value : '').join('') || undefined;
             }
+          } else if (child.type === 'Tag' && child.name === 'messages') {
+            // Extract i18n messages: <messages lang="en">{ JSON }</messages>
+            const lang = child.attributes?.find((attr: any) => attr.name.value === 'lang')?.value?.value;
+            if (lang) {
+              const jsonContent = child.body?.map((node: any) => node.type === 'Text' ? node.value : '').join('') || '';
+              if (jsonContent.trim()) {
+                try {
+                  const parsed = JSON.parse(jsonContent);
+                  if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                    if (!i18nMessages) {
+                      i18nMessages = new Map();
+                    }
+                    i18nMessages.set(lang, parsed as Record<string, unknown>);
+                  }
+                } catch {
+                  // Invalid JSON in <messages> -- silently skip
+                }
+              }
+            }
           } else if (child.type === 'Tag' && !child.name.startsWith('!')) {
             // Collect UI elements (skip comments which start with !)
             uiElements.push(child);
@@ -310,7 +332,7 @@ export function parseMelkerFile(content: string): MelkerParseResult {
         clearWarnings();
       }
 
-      return { element, scripts, title, stylesheet, oauthConfig, sourceContent: content, helpContent, helpSrc };
+      return { element, scripts, title, stylesheet, oauthConfig, sourceContent: content, helpContent, helpSrc, i18nMessages };
     } else {
       // No melker wrapper, treat as direct UI element (existing behavior)
       const context: TemplateContext = { expressions: [], expressionIndex: 0 };

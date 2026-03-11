@@ -1,0 +1,13 @@
+{
+  "_lang": "Svenska",
+  "title": "Språkdemo",
+  "greeting": "Hej, världen!",
+  "description": "Byt språk med knapparna nedan.",
+  "color": "Din favoritfärg:",
+  "colors": {
+    "red": "Röd",
+    "green": "Grön",
+    "blue": "Blå"
+  },
+  "selected": "Du valde: {color}"
+}

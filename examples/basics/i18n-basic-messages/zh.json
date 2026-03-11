@@ -1,0 +1,13 @@
+{
+  "_lang": "中文",
+  "title": "语言演示",
+  "greeting": "你好，世界！",
+  "description": "用下面的按钮切换语言。",
+  "color": "你最喜欢的颜色：",
+  "colors": {
+    "red": "红色",
+    "green": "绿色",
+    "blue": "蓝色"
+  },
+  "selected": "你选了：{color}"
+}

@@ -38,6 +38,7 @@ export interface DevToolsDependencies {
   getServerUrl?: () => string | undefined;
   getStateObject?: () => Record<string, unknown> | null;
   getBoundElements?: () => Array<{ stateKey: string; elementId: string; elementType: string; twoWay: boolean }> | null;
+  getI18nEngine?: () => import('./i18n/i18n-engine.ts').I18nEngine | null;
 }
 
 /** System information for the System tab */
@@ -275,11 +276,15 @@ export class DevToolsManager {
     const inspectTab = this._buildInspectTab();
     tabs.push(inspectTab);
 
-    // Tab 9: State (createState values, only if state exists)
+    // Tab 9: I18n (locale picker + message keys, only if i18n is active)
+    const i18nTab = this._buildI18nTab();
+    if (i18nTab) tabs.push(i18nTab);
+
+    // Tab 10: State (createState values, only if state exists)
     const stateTab = this._buildStateTab();
     if (stateTab) tabs.push(stateTab);
 
-    // Tab 10: Log (recent log entries)
+    // Tab 11: Log (recent log entries)
     const logTab = this._buildLogTab();
     tabs.push(logTab);
 
@@ -458,6 +463,84 @@ export class DevToolsManager {
           <container style=${{ display: 'flex', flexDirection: 'row', padding: 1, gap: 2, alignItems: 'center' }}>
             <text text=${`${varCount} variables (${userCount} user, ${themeCount} theme)`} style=${{ flex: 1, color: 'gray' }} />
             <button id="dev-tools-refresh-vars" label="Refresh" onClick=${onRefresh} />
+          </container>
+        </container>
+      </tab>
+    `;
+  }
+
+  /**
+   * Build the I18n tab showing locale picker and flattened message keys.
+   * Returns null if no i18n engine is active.
+   */
+  private _buildI18nTab(): Element | null {
+    const i18n = this._deps.getI18nEngine?.();
+    if (!i18n) return null;
+
+    const document = this._deps.document;
+    const render = () => this._deps.render();
+
+    const columns = [
+      { header: 'Key', width: 30 },
+      { header: 'Value' },
+    ];
+
+    const generateRows = (): string[][] => {
+      const catalog = (i18n as any)._catalogs.get(i18n.locale) as Map<string, string> | undefined;
+      if (!catalog) return [];
+      return [...catalog.entries()]
+        .filter(([key]) => !key.startsWith('_'))
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([key, value]) => [key, value]);
+    };
+
+    const rows = generateRows();
+
+    const generateLocaleOptions = () => {
+      return i18n.availableLocales.map(l => ({
+        id: l,
+        label: `${i18n.getLanguageName(l)} (${l})`,
+      }));
+    };
+
+    const onLocaleChange = async (event: { value: string }) => {
+      await i18n.setLocale(event.value);
+      // Update table with new locale's messages
+      const tableEl = document.getElementById('dev-tools-i18n-table');
+      if (tableEl) {
+        const newRows = generateRows();
+        tableEl.props.rows = newRows;
+        // Update footer count
+        const countEl = document.getElementById('dev-tools-i18n-count');
+        if (countEl) countEl.props.text = `${newRows.length} keys - locale: ${i18n.locale}`;
+      }
+      render();
+    };
+
+    const onRefresh = () => {
+      const tableEl = document.getElementById('dev-tools-i18n-table');
+      if (tableEl) {
+        const newRows = generateRows();
+        tableEl.props.rows = newRows;
+        const countEl = document.getElementById('dev-tools-i18n-count');
+        if (countEl) countEl.props.text = `${newRows.length} keys - locale: ${i18n.locale}`;
+        render();
+      }
+    };
+
+    return melker`
+      <tab id="dev-tools-tab-i18n" title="I18n">
+        <container style=${{ display: 'flex', flexDirection: 'column', width: 'fill', height: 'fill' }}>
+          <data-table
+            id="dev-tools-i18n-table"
+            columns=${columns}
+            rows=${rows}
+            style=${{ flex: 1, width: 'fill', height: 'fill' }}
+          />
+          <container style=${{ display: 'flex', flexDirection: 'row', padding: 1, gap: 2, alignItems: 'center' }}>
+            <select id="dev-tools-i18n-locale" onChange=${onLocaleChange} style=${{ width: 24 }} options=${generateLocaleOptions()} selectedValue=${i18n.locale} />
+            <text id="dev-tools-i18n-count" text=${`${rows.length} keys - locale: ${i18n.locale}`} style=${{ flex: 1, color: 'gray' }} />
+            <button id="dev-tools-refresh-i18n" label="Refresh" onClick=${onRefresh} />
           </container>
         </container>
       </tab>

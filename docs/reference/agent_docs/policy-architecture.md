@@ -40,6 +40,14 @@ Note: `deno info` reports ~336 dependencies / 6.5 MB because `deps.ts` is in the
 
 ## Policy Declaration
 
+The policy loader uses regex on raw file content (not the AST parser) to extract `<policy>`, `<oauth>`, and related tags. HTML comments (`<!-- ... -->`) are stripped before regex matching via `stripHtmlComments()` in `src/policy/loader.ts`. This prevents tags inside comments from being accidentally parsed:
+
+```xml
+<!-- This policy is commented out and will NOT be parsed:
+<policy>{ "permissions": { "net": ["*"] } }</policy>
+-->
+```
+
 Apps declare permissions via a `<policy>` tag:
 
 ```xml

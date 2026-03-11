@@ -1,0 +1,13 @@
+{
+  "_lang": "Polski",
+  "title": "Demo językowe",
+  "greeting": "Witaj, świecie!",
+  "description": "Zmień język przyciskami poniżej.",
+  "color": "Twój ulubiony kolor:",
+  "colors": {
+    "red": "Czerwony",
+    "green": "Zielony",
+    "blue": "Niebieski"
+  },
+  "selected": "Wybrałeś: {color}"
+}

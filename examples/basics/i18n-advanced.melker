@@ -1,0 +1,180 @@
+<melker>
+  <messages lang="en">
+  {
+    "app.title": "Task Manager",
+    "tasks.empty": "No tasks. Add one below.",
+    "tasks.count": {
+      "zero": "No tasks",
+      "one": "{count} task",
+      "other": "{count} tasks"
+    },
+    "tasks.done": {
+      "zero": "none done",
+      "one": "{count} done",
+      "other": "{count} done"
+    },
+    "input.placeholder": "New task...",
+    "btn.add": "Add",
+    "btn.toggle": "Toggle",
+    "btn.remove": "Remove",
+    "btn.clear": "Clear",
+    "status.added": "Added: {name}",
+    "status.cleared": "All tasks cleared",
+    "status.toggled": "Toggled: {name}",
+    "status.removed": "Removed: {name}",
+    "lang": "Language",
+    "footer.date": "Today: {date}",
+    "footer.number": "Pi: {value}"
+  }
+  </messages>
+
+  <messages lang="sv">
+  {
+    "app.title": "Uppgiftshanterare",
+    "tasks.empty": "Inga uppgifter. Lägg till en nedan.",
+    "tasks.count": {
+      "zero": "Inga uppgifter",
+      "one": "{count} uppgift",
+      "other": "{count} uppgifter"
+    },
+    "tasks.done": {
+      "zero": "ingen klar",
+      "one": "{count} klar",
+      "other": "{count} klara"
+    },
+    "input.placeholder": "Ny uppgift...",
+    "btn.add": "Lägg till",
+    "btn.toggle": "Växla",
+    "btn.remove": "Ta bort",
+    "btn.clear": "Rensa",
+    "status.added": "Tillagd: {name}",
+    "status.cleared": "Alla uppgifter rensade",
+    "status.toggled": "Växlad: {name}",
+    "status.removed": "Borttagen: {name}",
+    "lang": "Språk",
+    "footer.date": "Idag: {date}",
+    "footer.number": "Pi: {value}"
+  }
+  </messages>
+
+  <style>
+    .isEmpty #empty-msg { display: flex; }
+    .isEmpty #task-list { display: none; }
+    #empty-msg { display: none; }
+  </style>
+
+  <container style="width: fill; border: thin; padding: 2; display: flex; flex-direction: column; gap: 1;">
+    <container style="display: flex; flex-direction: row;">
+      <text style="font-weight: bold; flex: 1;">@app.title</text>
+      <text id="summary" />
+    </container>
+
+    <container id="empty-msg" style="padding: 1; text-align: center;">
+      <text style="color: gray;">@tasks.empty</text>
+    </container>
+
+    <container id="task-list" style="min-height: 3; max-height: 10; border: thin; padding: 1; overflow-y: auto;">
+      <text id="tasks" />
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <input id="task-input" placeholder="@input.placeholder" style="flex: 1;" onSubmit="$app.addTask()" />
+      <button onClick="$app.addTask()">@btn.add</button>
+    </container>
+
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <button onClick="$app.toggleLast()">@btn.toggle</button>
+      <button onClick="$app.removeLast()">@btn.remove</button>
+      <button onClick="$app.clearAll()">@btn.clear</button>
+      <text style="flex: 1;" />
+      <text style="color: gray;">@lang</text>
+      <select id="lang" onChange="$app.switchLang" style="width: 12;">
+        <option value="en">EN</option>
+        <option value="sv">SV</option>
+      </select>
+    </container>
+
+    <text id="status" style="color: gray;" />
+
+    <container style="display: flex; flex-direction: row; gap: 2;">
+      <text id="date-display" style="color: gray;" />
+      <text id="number-display" style="color: gray;" />
+    </container>
+  </container>
+
+  <script>
+    const tasks = [];
+
+    const state = $melker.createState({
+      isEmpty: true,
+    });
+
+    export function sync(statusKey, statusParams) {
+      const { i18n } = $melker;
+      const doneCount = tasks.filter(t => t.done).length;
+
+      // Pluralized summary using t() -- combines count + done
+      const countText = i18n.t('tasks.count', { count: tasks.length });
+      const doneText = i18n.t('tasks.done', { count: doneCount });
+      $melker.getElementById('summary').props.text = tasks.length > 0
+        ? `${countText}, ${doneText}`
+        : '';
+
+      // Task list
+      $melker.getElementById('tasks').props.text = tasks.map((t, i) =>
+        `${t.done ? '[x]' : '[ ]'} ${i + 1}. ${t.name}`
+      ).join('\n');
+
+      // Status message
+      if (statusKey) {
+        $melker.getElementById('status').props.text = i18n.t(statusKey, statusParams);
+      }
+
+      // Formatted date and number
+      $melker.getElementById('date-display').props.text =
+        i18n.t('footer.date', { date: i18n.formatDate(new Date(), { dateStyle: 'medium' }) });
+      $melker.getElementById('number-display').props.text =
+        i18n.t('footer.number', { value: i18n.formatNumber(3.14159, { maximumFractionDigits: 4 }) });
+
+      state.isEmpty = tasks.length === 0;
+    }
+
+    export function addTask() {
+      const input = $melker.getElementById('task-input');
+      const name = input.getValue().trim();
+      if (!name) return;
+      tasks.push({ name, done: false });
+      input.setValue('');
+      sync('status.added', { name });
+    }
+
+    export function toggleLast() {
+      if (tasks.length === 0) return;
+      const task = tasks[tasks.length - 1];
+      task.done = !task.done;
+      sync('status.toggled', { name: task.name });
+    }
+
+    export function removeLast() {
+      if (tasks.length === 0) return;
+      const task = tasks.pop();
+      sync('status.removed', { name: task.name });
+    }
+
+    export function clearAll() {
+      tasks.length = 0;
+      sync('status.cleared');
+    }
+
+    export async function switchLang(event) {
+      await $melker.i18n.setLocale(event.value);
+      // @key references auto-resolve on re-render; update programmatic text too
+      sync();
+    }
+  </script>
+
+  <script async="ready">
+    $app.sync();
+    $melker.render();
+  </script>
+</melker>

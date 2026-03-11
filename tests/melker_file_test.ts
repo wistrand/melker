@@ -513,3 +513,86 @@ Deno.test('parseMelkerFile parses script-demo.melker with scripts', async () => 
   assertStringIncludes(result.scripts[0].content, 'getCurrentTime');
   assertStringIncludes(result.scripts[0].content, 'validateName');
 });
+
+// ============================================
+// <messages> element parsing (i18n)
+// ============================================
+
+Deno.test('parseMelkerFile extracts inline <messages> elements', () => {
+  const content = `
+    <melker>
+      <messages lang="en">
+      { "save": "Save", "cancel": "Cancel" }
+      </messages>
+      <messages lang="sv">
+      { "save": "Spara", "cancel": "Avbryt" }
+      </messages>
+      <text>Hello</text>
+    </melker>
+  `;
+  const result = parseMelkerFile(content);
+  assertExists(result.i18nMessages);
+  assertEquals(result.i18nMessages!.size, 2);
+  assertEquals((result.i18nMessages!.get('en') as any).save, 'Save');
+  assertEquals((result.i18nMessages!.get('sv') as any).save, 'Spara');
+});
+
+Deno.test('parseMelkerFile: <messages> not in element tree', () => {
+  const content = `
+    <melker>
+      <messages lang="en">{ "ok": "OK" }</messages>
+      <text>Hello</text>
+    </melker>
+  `;
+  const result = parseMelkerFile(content);
+  assertEquals(result.element.type, 'text');
+  // messages element should not appear as a child
+  assertEquals(result.element.children?.length ?? 0, 0);
+});
+
+Deno.test('parseMelkerFile: <messages> with nested keys', () => {
+  const content = `
+    <melker>
+      <messages lang="en">
+      { "menu": { "file": "File", "edit": "Edit" } }
+      </messages>
+      <text>Hello</text>
+    </melker>
+  `;
+  const result = parseMelkerFile(content);
+  assertExists(result.i18nMessages);
+  const en = result.i18nMessages!.get('en') as any;
+  assertEquals(en.menu.file, 'File');
+});
+
+Deno.test('parseMelkerFile: <messages> without lang is skipped', () => {
+  const content = `
+    <melker>
+      <messages>{ "ok": "OK" }</messages>
+      <text>Hello</text>
+    </melker>
+  `;
+  const result = parseMelkerFile(content);
+  assertEquals(result.i18nMessages, undefined);
+});
+
+Deno.test('parseMelkerFile: <messages> with invalid JSON is skipped', () => {
+  const content = `
+    <melker>
+      <messages lang="en">not valid json</messages>
+      <text>Hello</text>
+    </melker>
+  `;
+  const result = parseMelkerFile(content);
+  assertEquals(result.i18nMessages, undefined);
+});
+
+Deno.test('parseMelkerFile: no <messages> returns undefined i18nMessages', () => {
+  const content = `
+    <melker>
+      <text>Hello</text>
+    </melker>
+  `;
+  const result = parseMelkerFile(content);
+  assertEquals(result.i18nMessages, undefined);
+});

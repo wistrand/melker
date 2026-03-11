@@ -576,6 +576,21 @@
       "maximum": 120,
       "env": "MELKER_TOAST_WIDTH",
       "description": "Toast container width in characters"
+    },
+    "i18n.locale": {
+      "type": "string",
+      "env": "MELKER_LOCALE",
+      "description": "Override locale for i18n message resolution"
+    },
+    "i18n.defaultLocale": {
+      "type": "string",
+      "env": "MELKER_DEFAULT_LOCALE",
+      "description": "Default/fallback locale for i18n"
+    },
+    "i18n.messagesDir": {
+      "type": "string",
+      "env": "MELKER_MESSAGES_DIR",
+      "description": "Directory containing external message JSON files"
     }
   }
 }

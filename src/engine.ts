@@ -300,6 +300,13 @@ export class MelkerEngine {
   // Engine cache (file-based, per-app)
   private _cache: import('./engine-cache.ts').EngineCache | null = null;
 
+  // I18n engine (set by melker-runner when <messages> elements are present)
+  private _i18nEngine: import('./i18n/i18n-engine.ts').I18nEngine | null = null;
+  // Tracks original @key values: Map<elementId, Map<propName, originalValue>>
+  private _i18nOriginals: Map<string, Map<string, string>> = new Map();
+  // Registry generation when we last did a full i18n scan
+  private _i18nLastFullScanGeneration = -1;
+
   // App policy (for permission checks)
   private _policy?: MelkerPolicy;
 
@@ -905,6 +912,9 @@ export class MelkerEngine {
     // Resolve state bindings (class sync + bind values) before layout
     this._resolveBindings();
 
+    // Resolve @key i18n references in element props
+    this._resolveI18n();
+
     // Render UI to buffer
     const viewport = {
       x: 0,
@@ -1101,6 +1111,9 @@ export class MelkerEngine {
     // Resolve state bindings before layout
     this._resolveBindings();
 
+    // Resolve @key i18n references in element props
+    this._resolveI18n();
+
     // Render UI to buffer
     const viewport = {
       x: 0,
@@ -1187,6 +1200,7 @@ export class MelkerEngine {
         getServerUrl: () => this._server?.connectionUrl,
         getStateObject: () => this._stateObject,
         getBoundElements: () => this.getBoundElements(),
+        getI18nEngine: () => this._i18nEngine,
       });
     }
     this._devToolsManager.setSource(content, filePath, type, convertedContent, policy, appDir, sourceUrl, systemInfo, helpContent);
@@ -1608,6 +1622,94 @@ export class MelkerEngine {
       }
     }
     this._lastRegistryGeneration = this._document.registryGeneration;
+  }
+
+  /** Set the i18n engine for @key resolution during render. */
+  setI18nEngine(engine: import('./i18n/i18n-engine.ts').I18nEngine): void {
+    this._i18nEngine = engine;
+  }
+
+  /**
+   * Resolve @key sigils in element props before rendering.
+   *
+   * Performance: on first render (or when elements are added/removed), does a full
+   * scan of all elements to discover @key props. On subsequent renders with no
+   * element changes, only re-resolves already-tracked elements — O(tracked) not O(all).
+   */
+  private _resolveI18n(): void {
+    if (!this._i18nEngine) return;
+
+    const i18n = this._i18nEngine;
+    const currentGeneration = this._document.registryGeneration;
+    const needsFullScan = currentGeneration !== this._i18nLastFullScanGeneration;
+
+    if (needsFullScan) {
+      // Full scan: check all elements for new @key props
+      for (const element of this._document.getAllElements()) {
+        this._resolveI18nElement(element, i18n);
+      }
+      this._i18nLastFullScanGeneration = currentGeneration;
+    } else {
+      // Fast path: only re-resolve tracked elements
+      for (const [elId, originals] of this._i18nOriginals) {
+        const element = this._document.getElementById(elId);
+        if (!element) {
+          this._i18nOriginals.delete(elId);
+          continue;
+        }
+        for (const [prop, source] of originals) {
+          if (source.startsWith('@@')) {
+            element.props[prop] = source.substring(1);
+          } else {
+            const msgKey = source.substring(1);
+            const params = element.props['i18n-params'];
+            const parsedParams = typeof params === 'string' ? JSON.parse(params) : (typeof params === 'object' && params !== null ? params : undefined);
+            element.props[prop] = i18n.t(msgKey, parsedParams as Record<string, string | number> | undefined);
+          }
+        }
+      }
+    }
+  }
+
+  /** Scan a single element's props for @key references. */
+  private _resolveI18nElement(element: Element, i18n: import('./i18n/i18n-engine.ts').I18nEngine): void {
+    const elId = element.id;
+    if (!elId) return;
+
+    let originals = this._i18nOriginals.get(elId);
+
+    for (const [key, value] of Object.entries(element.props)) {
+      if (key === 'style' || key === 'id' || key === 'bind' || key === 'bind-mode' || key === 'bind:selection') continue;
+      if (typeof value !== 'string') continue;
+
+      const savedOriginal = originals?.get(key);
+      const source = savedOriginal ?? value;
+
+      if (source.startsWith('@@')) {
+        element.props[key] = source.substring(1);
+        if (!originals) {
+          originals = new Map();
+          this._i18nOriginals.set(elId, originals);
+        }
+        originals.set(key, source);
+      } else if (source.startsWith('@')) {
+        const msgKey = source.substring(1);
+        const params = element.props['i18n-params'];
+        const parsedParams = typeof params === 'string' ? JSON.parse(params) : (typeof params === 'object' && params !== null ? params : undefined);
+        element.props[key] = i18n.t(msgKey, parsedParams as Record<string, string | number> | undefined);
+        if (!originals) {
+          originals = new Map();
+          this._i18nOriginals.set(elId, originals);
+        }
+        originals.set(key, source);
+      } else if (savedOriginal && originals) {
+        originals.delete(key);
+        if (originals.size === 0) {
+          this._i18nOriginals.delete(elId);
+          originals = undefined;
+        }
+      }
+    }
   }
 
   /**

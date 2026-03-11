@@ -358,6 +358,9 @@ When `stop()` is called:
 ## See Also
 
 - [component-reference.md](component-reference.md) — Component details, layout gotchas
+- [i18n-architecture.md](i18n-architecture.md) — Internationalization (`@key` sigils, message catalogs, locale switching)
+- [devtools-inspect-architecture.md](devtools-inspect-architecture.md) — DevTools tabs (Inspect, I18n, Config, State, etc.)
+- [config-architecture.md](config-architecture.md) — Config system (schema, sources, resolution)
 - [fast-input-render.md](fast-input-render.md) — Fast render path
 - [dirty-row-tracking.md](dirty-row-tracking.md) — Buffer optimization
 - [graphics-architecture.md](graphics-architecture.md) — Graphics pipeline

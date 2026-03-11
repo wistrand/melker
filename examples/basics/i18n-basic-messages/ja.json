@@ -1,0 +1,13 @@
+{
+  "_lang": "日本語",
+  "title": "言語デモ",
+  "greeting": "こんにちは、世界！",
+  "description": "下のボタンで言語を切り替えてください。",
+  "color": "好きな色：",
+  "colors": {
+    "red": "赤",
+    "green": "緑",
+    "blue": "青"
+  },
+  "selected": "選んだ色：{color}"
+}

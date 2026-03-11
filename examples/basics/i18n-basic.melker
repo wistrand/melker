@@ -1,0 +1,99 @@
+<melker>
+  <messages lang="en">
+  {
+    "_lang": "English",
+    "title": "Language Demo",
+    "greeting": "Hello, World!",
+    "description": "Switch language with the buttons below.",
+    "color": "Your favorite color:",
+    "colors": {
+      "red": "Red",
+      "green": "Green",
+      "blue": "Blue"
+    },
+    "selected": "You picked: {color}"
+  }
+  </messages>
+
+  <messages lang="sv">
+  {
+    "_lang": "Svenska",
+    "title": "Språkdemo",
+    "greeting": "Hej, världen!",
+    "description": "Byt språk med knapparna nedan.",
+    "color": "Din favoritfärg:",
+    "colors": {
+      "red": "Röd",
+      "green": "Grön",
+      "blue": "Blå"
+    },
+    "selected": "Du valde: {color}"
+  }
+  </messages>
+
+  <messages lang="de">
+  {
+    "_lang": "Deutsch",
+    "title": "Sprachdemo",
+    "greeting": "Hallo, Welt!",
+    "description": "Sprache mit den Knöpfen unten wechseln.",
+    "color": "Deine Lieblingsfarbe:",
+    "colors": {
+      "red": "Rot",
+      "green": "Grün",
+      "blue": "Blau"
+    },
+    "selected": "Du hast gewählt: {color}"
+  }
+  </messages>
+
+  <!-- This example has 3 inline languages (en, sv, de).
+       Start in German instead of English:
+       MELKER_LOCALE=de ./melker.ts examples/basics/i18n-basic.melker
+
+       Additional languages (fr, es, it, pt, nl, da, no, fi, pl, ja, ko, zh)
+       are available as external files in i18n-basic-messages/.
+       To load them, use MELKER_MESSAGES_DIR:
+       MELKER_MESSAGES_DIR=examples/basics/i18n-basic-messages ./melker.ts examples/basics/i18n-basic.melker
+       MELKER_MESSAGES_DIR=examples/basics/i18n-basic-messages MELKER_LOCALE=ja ./melker.ts examples/basics/i18n-basic.melker
+  -->
+
+  <container style="width: fill; border: thin; padding: 1; display: flex; flex-direction: column; gap: 1;">
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <select id="lang-picker" onChange="$app.switchLang" style="width: 20;" />
+      <text style="font-weight: bold; flex: 1; text-align: center;">@title</text>
+    </container>
+    <text style="text-align: center;">@greeting</text>
+
+    <container style="display: flex; flex-direction: row; gap: 1;">
+      <text>@color</text>
+      <select id="color-picker" onChange="$app.pickColor" selectedValue="red" style="width: 12;">
+        <option value="red">@colors.red</option>
+        <option value="green">@colors.green</option>
+        <option value="blue">@colors.blue</option>
+      </select>
+      <text id="result" style="flex: 1;" />
+    </container>
+  </container>
+
+  <script>
+    export async function switchLang(event) {
+      await $melker.i18n.setLocale(event.value);
+      // Update lang picker selection to match
+      $melker.getElementById('lang-picker').setValue(event.value);
+    }
+
+    export function pickColor(event) {
+      const colorName = $melker.i18n.t('colors.' + event.value);
+      $melker.getElementById('result').props.text = $melker.i18n.t('selected', { color: colorName });
+    }
+  </script>
+
+  <script async="ready">
+    const langPicker = $melker.getElementById('lang-picker');
+    const locales = $melker.i18n.availableLocales;
+    langPicker.setOptions(locales.map(l => ({ id: l, label: $melker.i18n.getLanguageName(l) })));
+    langPicker.setValue($melker.i18n.locale);
+    $melker.render();
+  </script>
+</melker>

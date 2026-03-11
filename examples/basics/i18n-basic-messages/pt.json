@@ -1,0 +1,13 @@
+{
+  "_lang": "Português",
+  "title": "Demo de idiomas",
+  "greeting": "Olá, mundo!",
+  "description": "Mude o idioma com os botões abaixo.",
+  "color": "Sua cor favorita:",
+  "colors": {
+    "red": "Vermelho",
+    "green": "Verde",
+    "blue": "Azul"
+  },
+  "selected": "Você escolheu: {color}"
+}

@@ -25,6 +25,7 @@
 - [Debugging & logging](https://melker.sh/reference/agent_docs/debugging.md)
 - [Common mistakes](https://melker.sh/reference/agent_docs/dx-footguns.md)
 - [AI assistant](https://melker.sh/reference/agent_docs/ai-accessibility.md)
+- [I18n (internationalization)](https://melker.sh/reference/agent_docs/i18n-architecture.md)
 
 ## Component Reference
 

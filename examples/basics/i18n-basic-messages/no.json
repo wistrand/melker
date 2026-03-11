@@ -1,0 +1,13 @@
+{
+  "_lang": "Norsk",
+  "title": "Språkdemo",
+  "greeting": "Hei, verden!",
+  "description": "Bytt språk med knappene nedenfor.",
+  "color": "Din favorittfarge:",
+  "colors": {
+    "red": "Rød",
+    "green": "Grønn",
+    "blue": "Blå"
+  },
+  "selected": "Du valgte: {color}"
+}

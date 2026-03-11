@@ -1,0 +1,13 @@
+{
+  "_lang": "Dansk",
+  "title": "Sprogdemo",
+  "greeting": "Hej, verden!",
+  "description": "Skift sprog med knapperne nedenfor.",
+  "color": "Din yndlingsfarve:",
+  "colors": {
+    "red": "Rød",
+    "green": "Grøn",
+    "blue": "Blå"
+  },
+  "selected": "Du valgte: {color}"
+}

@@ -73,6 +73,8 @@ import { openBrowser } from './oauth/browser.ts';
 
 // Global types
 import type { MelkerContext } from './globals.d.ts';
+import { I18nEngine, type I18n } from './i18n/mod.ts';
+import { flattenMessages } from './i18n/mod.ts';
 
 // Toast system
 import { getToastManager, type ToastOptions } from './toast/mod.ts';
@@ -584,6 +586,56 @@ export async function runMelkerFile(
       debugServer: parseResult.oauthConfig.debugServer,
     } : undefined;
 
+    // Initialize i18n if <messages> elements or i18n config present
+    const appConfig = MelkerConfig.get();
+    const i18nMessagesDir = appConfig.getString('i18n.messagesDir', '');
+    const i18nConfigDefaultLocale = appConfig.getString('i18n.defaultLocale', '');
+    const i18nConfigLocale = appConfig.getString('i18n.locale', '');
+    const hasInlineMessages = parseResult.i18nMessages && parseResult.i18nMessages.size > 0;
+    const hasExternalMessages = !!i18nMessagesDir;
+
+    let i18nEngine: I18nEngine | undefined;
+    if (hasInlineMessages || hasExternalMessages) {
+      // Default locale priority: config > first <messages> lang > 'en'
+      const defaultLocale = i18nConfigDefaultLocale
+        || (hasInlineMessages ? (parseResult.i18nMessages!.keys().next().value as string) : 'en');
+
+      // Resolve messagesDir: env/cli values are relative to CWD, policy config is relative to source file
+      const messagesDirSource = appConfig.getSource('i18n.messagesDir');
+      const resolveRelativeTo = (messagesDirSource === 'env' || messagesDirSource === 'cli') ? '' : sourceDirname;
+      const resolvedMessagesDir = hasExternalMessages
+        ? (i18nMessagesDir.startsWith('/') ? i18nMessagesDir : (resolveRelativeTo ? `${resolveRelativeTo}/${i18nMessagesDir}` : i18nMessagesDir))
+        : undefined;
+
+      i18nEngine = new I18nEngine({
+        defaultLocale,
+        messagesDir: resolvedMessagesDir,
+      });
+
+      // Load inline messages first
+      if (hasInlineMessages) {
+        for (const [lang, messages] of parseResult.i18nMessages!) {
+          i18nEngine.addMessages(lang, flattenMessages(messages));
+        }
+      }
+
+      // Active locale priority: CLI flag/env var > config default > defaultLocale
+      // (config system already resolves CLI > env > config file > schema default)
+      const activeLocale = i18nConfigLocale || defaultLocale;
+      if (activeLocale !== defaultLocale) {
+        // Set locale before loading so loadInitialMessages loads the right files
+        i18nEngine.locale = activeLocale;
+      }
+
+      // Load external message files (merges on top of inline)
+      await i18nEngine.loadInitialMessages();
+
+      i18nEngine.onLocaleChange(() => {
+        engine.render();
+      });
+      engine.setI18nEngine(i18nEngine);
+    }
+
     let exitHandler: () => Promise<void> = () => engine.stop().then(() => { exit(0); });
 
     // Flag to skip auto-render after event handler
@@ -704,6 +756,7 @@ export async function runMelkerFile(
       config: MelkerConfig.get(),
       cacheDir: appCacheDir,
       cache: engineCache,
+      i18n: i18nEngine,
       // Toast notifications
       toast: {
         show: (message: string, options?: ToastOptions) => {

@@ -47,6 +47,7 @@ New to Melker? Read in this order:
 | Debugging & logging            | [debugging.md](agent_docs/debugging.md)                              |
 | Common mistakes                | [dx-footguns.md](agent_docs/dx-footguns.md)                          |
 | AI assistant                   | [ai-accessibility.md](agent_docs/ai-accessibility.md)                |
+| I18n (internationalization)    | [i18n-architecture.md](agent_docs/i18n-architecture.md)              |
 
 ### Component Reference
 

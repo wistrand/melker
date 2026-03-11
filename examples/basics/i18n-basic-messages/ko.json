@@ -1,0 +1,13 @@
+{
+  "_lang": "한국어",
+  "title": "언어 데모",
+  "greeting": "안녕하세요, 세계!",
+  "description": "아래 버튼으로 언어를 변경하세요.",
+  "color": "좋아하는 색상:",
+  "colors": {
+    "red": "빨간색",
+    "green": "초록색",
+    "blue": "파란색"
+  },
+  "selected": "선택한 색상: {color}"
+}

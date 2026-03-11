@@ -1,0 +1,13 @@
+{
+  "_lang": "English",
+  "title": "Language Demo",
+  "greeting": "Hello, World!",
+  "description": "Switch language with the buttons below.",
+  "color": "Your favorite color:",
+  "colors": {
+    "red": "Red",
+    "green": "Green",
+    "blue": "Blue"
+  },
+  "selected": "You picked: {color}"
+}

@@ -19,48 +19,8 @@
   <meta property="og:image" content="https://melker.sh/melker-128.png">
 
   <style>
-    :root {
-      --bg: #0d1117;
-      --bg-secondary: #161b22;
-      --border: #30363d;
-      --text: #e6edf3;
-      --text-secondary: #8b949e;
-      --accent: #58a6ff;
-      --accent-secondary: #388bfd;
-      --code-bg: #1c2128;
-      --success: #3fb950;
-    }
+    /* Page-specific styles (base styles from shared.css) */
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      font-size: 16px;
-    }
-
-    a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    /* Header */
     header {
       padding: 32px 0;
       border-bottom: 1px solid var(--border);
@@ -123,32 +83,6 @@
       color: var(--text);
     }
 
-    /* Code */
-    pre {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 16px;
-      overflow-x: auto;
-      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
-      font-size: 0.85rem;
-      line-height: 1.5;
-      margin: 16px 0;
-    }
-
-    code {
-      font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
-      font-size: 0.9em;
-      background: var(--code-bg);
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
-    pre code {
-      background: none;
-      padding: 0;
-    }
-
     /* Conversation mockups */
     .conversation {
       background: var(--bg-secondary);
@@ -192,20 +126,6 @@
       color: var(--text-secondary);
     }
 
-    /* Callout boxes */
-    .callout {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
-      border-radius: 6px;
-      padding: 16px;
-      margin: 16px 0;
-    }
-
-    .callout p {
-      margin-bottom: 0;
-    }
-
     /* Key grid */
     .key-grid {
       display: grid;
@@ -233,62 +153,14 @@
       color: var(--text-secondary);
     }
 
-    /* Table */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 24px 0;
-      font-size: 0.9rem;
-    }
-
-    th, td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-
-    th {
-      font-weight: 600;
-      background: var(--bg-secondary);
-    }
-
-    td code {
-      font-size: 0.85rem;
-    }
-
-    /* Footer */
-    footer {
-      padding: 32px 0;
-      text-align: center;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      border-top: 1px solid var(--border);
-    }
-
-    footer a {
-      color: var(--text-secondary);
-    }
-
-    footer a:hover {
-      color: var(--text);
-    }
-
     /* Responsive */
     @media (max-width: 640px) {
-      header h1 {
-        font-size: 1.75rem;
-      }
-
       .section {
         padding: 32px 0;
       }
 
       .section h2 {
         font-size: 1.25rem;
-      }
-
-      pre {
-        font-size: 0.8rem;
       }
     }
   </style>
@@ -319,6 +191,17 @@
   </div>
 </nav>
 
+<aside class="sidebar" id="sidebar">
+  <a href="#how">1. How It Works</a>
+  <a href="#getting-started">2. Getting Started</a>
+  <a href="#what">3. What It Can Do</a>
+  <a href="#voice">4. Voice Input</a>
+  <a href="#why">5. Why It Works</a>
+  <a href="#tools">6. Custom Tools</a>
+  <a href="#surprising">7. Surprising Things</a>
+  <a href="#config">8. Configuration</a>
+</aside>
+
   <header>
     <div class="container">
       <h1>AI Assistant</h1>
@@ -329,7 +212,7 @@
   </header>
 
   <!-- How It Works -->
-  <div class="section">
+  <div class="section" id="how">
     <div class="container">
       <h2>How It Works</h2>
 
@@ -355,7 +238,7 @@
   </div>
 
   <!-- Getting Started -->
-  <div class="section">
+  <div class="section" id="getting-started">
     <div class="container">
       <h2>Getting Started</h2>
 
@@ -387,7 +270,7 @@ export OPENROUTER_API_KEY=unused   # required but ignored by local endpoints</co
   </div>
 
   <!-- What It Can Do -->
-  <div class="section">
+  <div class="section" id="what">
     <div class="container">
       <h2>What It Can Do</h2>
 
@@ -487,7 +370,7 @@ export OPENROUTER_API_KEY=unused   # required but ignored by local endpoints</co
   </div>
 
   <!-- Voice -->
-  <div class="section">
+  <div class="section" id="voice">
     <div class="container">
       <h2>Voice Input</h2>
       <p>
@@ -507,7 +390,7 @@ export OPENROUTER_API_KEY=unused   # required but ignored by local endpoints</co
   </div>
 
   <!-- Why It Works -->
-  <div class="section">
+  <div class="section" id="why">
     <div class="container">
       <h2>Why It Works</h2>
 
@@ -540,7 +423,7 @@ export OPENROUTER_API_KEY=unused   # required but ignored by local endpoints</co
   </div>
 
   <!-- Custom Tools -->
-  <div class="section">
+  <div class="section" id="tools">
     <div class="container">
       <h2>Custom Tools</h2>
 
@@ -586,7 +469,7 @@ export OPENROUTER_API_KEY=unused   # required but ignored by local endpoints</co
   </div>
 
   <!-- Surprising Things -->
-  <div class="section">
+  <div class="section" id="surprising">
     <div class="container">
       <h2>Surprising Things</h2>
 
@@ -623,7 +506,7 @@ export OPENROUTER_API_KEY=unused   # required but ignored by local endpoints</co
   </div>
 
   <!-- Configuration -->
-  <div class="section">
+  <div class="section" id="config">
     <div class="container">
       <h2>Configuration</h2>
 
@@ -646,5 +529,22 @@ export OPENROUTER_API_KEY=unused   # required but ignored by local endpoints</co
       <a href="https://github.com/wistrand/melker">GitHub</a>
     </div>
   </footer>
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  const links = sidebar.querySelectorAll('a[href^="#"]');
+  const sections = Array.from(links).map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  if (!sections.length) return;
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const link = sidebar.querySelector('a[href="#' + entry.target.id + '"]');
+      if (link) link.classList.toggle('active', entry.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  sections.forEach(s => observer.observe(s));
+})();
+</script>
 </body>
 </html>

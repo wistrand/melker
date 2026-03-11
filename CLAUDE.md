@@ -125,6 +125,12 @@ New to Melker? Read in this order:
 | Graphics Pipeline     | [graphics-pipeline-page-plan.md](agent_docs/graphics-pipeline-page-plan.md)             |
 | Limits & Compatibility | [limits-page-plan.md](agent_docs/limits-page-plan.md)                                  |
 
+### Plans
+
+| Topic                  | Plan                                                                          |
+|------------------------|-------------------------------------------------------------------------------|
+| Inline (partial-screen) | [inline-mode-plan.md](agent_docs/inline-mode-plan.md)                        |
+
 ### Project
 
 | Topic            | Doc                                                                      |

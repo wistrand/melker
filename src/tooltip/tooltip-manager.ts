@@ -18,6 +18,7 @@ export class TooltipManager {
   private _config: TooltipConfig;
   private _state: TooltipState | null = null;
   private _pendingTimer?: number;
+  private _contentUpdateTimer?: number;
   private _requestRender?: () => void;
   private _lastContent: string | null = null;
   private _lastElementId: string | null = null;
@@ -75,14 +76,21 @@ export class TooltipManager {
       return;
     }
 
-    // Same element, different content - update immediately if visible
+    // Same element, different content - debounce update if visible
+    // Without this, sweeping across a data-table causes rapid tooltip flicker
     if (elementId === this._lastElementId && this._state?.visible) {
-      this._state.content = content;
+      this._lastContent = content;
       this._state.anchorX = screenX;
       this._state.anchorY = screenY;
       this._state.elementBounds = elementBounds;
-      this._lastContent = content;
-      this._requestRender?.();
+      this._clearContentUpdateTimer();
+      this._contentUpdateTimer = setTimeout(() => {
+        this._contentUpdateTimer = undefined;
+        if (this._state && this._state.visible && this._lastContent !== null) {
+          this._state.content = this._lastContent;
+          this._requestRender?.();
+        }
+      }, 150) as unknown as number;
       return;
     }
 
@@ -137,6 +145,7 @@ export class TooltipManager {
    */
   hideTooltip(): void {
     this._clearPendingTimer();
+    this._clearContentUpdateTimer();
     if (this._state) {
       this._state = null;
       this._lastElementId = null;
@@ -194,12 +203,22 @@ export class TooltipManager {
   }
 
   /**
-   * Clear pending timer
+   * Clear pending show timer
    */
   private _clearPendingTimer(): void {
     if (this._pendingTimer !== undefined) {
       clearTimeout(this._pendingTimer);
       this._pendingTimer = undefined;
+    }
+  }
+
+  /**
+   * Clear pending content update timer
+   */
+  private _clearContentUpdateTimer(): void {
+    if (this._contentUpdateTimer !== undefined) {
+      clearTimeout(this._contentUpdateTimer);
+      this._contentUpdateTimer = undefined;
     }
   }
 }

@@ -1513,7 +1513,7 @@ export const videoSchema: ComponentSchema = {
     scale: { type: 'number', description: 'Scaling factor' },
     backgroundColor: { type: 'string', description: 'Background color' },
     charAspectRatio: { type: 'number', description: 'Character aspect ratio' },
-    svgOverlay: { type: 'string', description: 'SVG overlay string (<path> and <text> elements)' },
+    // svgOverlay layers are managed via setSvgOverlay/removeSvgOverlay methods
     gfxMode: { type: 'string', description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
   },
   styleWarnings: {

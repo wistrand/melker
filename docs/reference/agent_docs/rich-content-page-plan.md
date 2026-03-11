@@ -66,7 +66,7 @@ File browser inside a `<dialog>` opened programmatically via `async="ready"` scr
 - Drawing methods: `fillRect`, `drawLine`, `drawCircleCorrected`, `drawText`
 - SVG path support for curves and complex shapes
 - Per-pixel shaders via `onShader` (requires `"shader": true` policy)
-- SVG overlays via `svgOverlay` prop
+- Named SVG overlay layers via `setSvgOverlay()` / `removeSvgOverlay()`
 - `<img>` extends canvas, so all canvas methods available on images
 
 ### Markdown section

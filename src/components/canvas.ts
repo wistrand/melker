@@ -71,7 +71,7 @@ export interface CanvasProps extends BaseProps {
   isolineSource?: IsolineSource;     // Color channel to use: luma, red, green, blue, alpha (default: luma)
   isolineFill?: IsolineFill;         // Fill mode: source (grayscale from scalar) or color (original image colors)
   isolineColor?: IsolineColor;       // Contour line color: color string, 'none', 'auto', or undefined (theme default)
-  svgOverlay?: string;               // SVG overlay string (paths and text in pixel coordinates)
+  // svgOverlay is managed via setSvgOverlay/removeSvgOverlay methods, not as a prop
 }
 
 export class CanvasElement extends Element implements Renderable, Focusable, Interactive {
@@ -123,10 +123,12 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   // Pre-allocated render state (working arrays, cell styles) - see canvas-render.ts
   private _renderState: CanvasRenderState = new CanvasRenderState();
 
-  // SVG overlay cache (protected for tile-map subclass override)
-  protected _lastSvgOverlayStr: string | undefined;
-  protected _parsedSvgOverlay: ParsedSvgElement[] = [];
-  // Buffer size and gfxMode when the SVG overlay was first set (for rescaling on resize)
+  // SVG overlay layers: named layers with order and per-layer parse cache
+  protected _svgOverlayLayers: Map<string, { svg: string; order: number }> = new Map();
+  protected _svgOverlayDirty: boolean = false;
+  private _svgOverlayParsedCache: Map<string, { svg: string; parsed: ParsedSvgElement[] }> = new Map();
+  private _svgOverlaySorted: { name: string; order: number; parsed: ParsedSvgElement[] }[] = [];
+  // Buffer size and gfxMode when overlays were first set (for rescaling on resize)
   private _svgOverlayOriginW: number = 0;
   private _svgOverlayOriginH: number = 0;
   private _svgOverlayOriginGfxMode: GfxMode | undefined;
@@ -1276,6 +1278,106 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     return (2 / 3) * this._charAspectRatio;
   }
 
+  // ===== SVG Overlay Layer API =====
+
+  /**
+   * Set or update a named SVG overlay layer.
+   * @param name Unique layer identifier. Use prefix:suffix convention for grouping (e.g. "ai:highlights").
+   * @param svg SVG string containing <path> and <text> elements.
+   * @param order Draw order (default: 0). Lower draws first (behind). Equal order: alphabetical by name.
+   */
+  setSvgOverlay(name: string, svg: string, order = 0): void {
+    this._svgOverlayLayers.set(name, { svg, order });
+    this._svgOverlayDirty = true;
+    this._svgOverlayChanged = true;
+  }
+
+  /**
+   * Remove a named SVG overlay layer.
+   */
+  removeSvgOverlay(name: string): void {
+    if (this._svgOverlayLayers.delete(name)) {
+      this._svgOverlayParsedCache.delete(name);
+      this._svgOverlayDirty = true;
+      this._svgOverlayChanged = true;
+    }
+  }
+
+  /**
+   * Remove all SVG overlay layers whose name starts with the given prefix.
+   */
+  removeSvgOverlaysByPrefix(prefix: string): void {
+    let changed = false;
+    for (const name of this._svgOverlayLayers.keys()) {
+      if (name.startsWith(prefix)) {
+        this._svgOverlayLayers.delete(name);
+        this._svgOverlayParsedCache.delete(name);
+        changed = true;
+      }
+    }
+    if (changed) {
+      this._svgOverlayDirty = true;
+      this._svgOverlayChanged = true;
+    }
+  }
+
+  /**
+   * Remove all SVG overlay layers.
+   */
+  clearSvgOverlays(): void {
+    if (this._svgOverlayLayers.size > 0) {
+      this._svgOverlayLayers.clear();
+      this._svgOverlayParsedCache.clear();
+      this._svgOverlaySorted = [];
+      this._svgOverlayDirty = false;
+      this._svgOverlayChanged = true;
+    }
+  }
+
+  /**
+   * Get all SVG overlay layers (name → { svg, order }).
+   */
+  getSvgOverlays(): Map<string, { svg: string; order: number }> {
+    return new Map(this._svgOverlayLayers);
+  }
+
+  /**
+   * Rebuild the sorted parsed overlay list from the layer map.
+   * Called lazily when dirty flag is set.
+   */
+  protected _rebuildSvgOverlays(): void {
+    this._svgOverlayDirty = false;
+
+    // Update parse cache: parse only changed layers
+    for (const [name, layer] of this._svgOverlayLayers) {
+      const cached = this._svgOverlayParsedCache.get(name);
+      if (!cached || cached.svg !== layer.svg) {
+        this._svgOverlayParsedCache.set(name, {
+          svg: layer.svg,
+          parsed: parseSvgOverlay(layer.svg),
+        });
+      }
+    }
+
+    // Remove stale cache entries
+    for (const name of this._svgOverlayParsedCache.keys()) {
+      if (!this._svgOverlayLayers.has(name)) {
+        this._svgOverlayParsedCache.delete(name);
+      }
+    }
+
+    // Build sorted list: by order, then alphabetical
+    const entries: { name: string; order: number; parsed: ParsedSvgElement[] }[] = [];
+    for (const [name, layer] of this._svgOverlayLayers) {
+      const cached = this._svgOverlayParsedCache.get(name)!;
+      if (cached.parsed.length > 0) {
+        entries.push({ name, order: layer.order, parsed: cached.parsed });
+      }
+    }
+    entries.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+    this._svgOverlaySorted = entries;
+  }
+
   /**
    * Set the terminal character aspect ratio (width/height).
    * Typical values: 0.5 for most terminals, 0.6 for some fonts.
@@ -1525,46 +1627,45 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   }
 
   /**
-   * Draw the SVG overlay from props.svgOverlay using pixel coordinates.
+   * Draw SVG overlay layers using pixel coordinates.
    * Called during render after onPaint/shader. Tile-map overrides this to
-   * no-op because it handles svgOverlay in its own _onPaint with geo projection.
+   * no-op because it handles overlays in its own _onPaint with geo projection.
    */
   protected _drawSvgOverlayPass(): void {
-    if (this.props.svgOverlay !== undefined) {
-      if (this.props.svgOverlay !== this._lastSvgOverlayStr) {
-        this._lastSvgOverlayStr = this.props.svgOverlay;
-        this._parsedSvgOverlay = this.props.svgOverlay
-          ? parseSvgOverlay(this.props.svgOverlay)
-          : [];
-        this._svgOverlayChanged = true;
-        // Remember buffer size and gfxMode at the time the overlay was set
-        if (this._parsedSvgOverlay.length > 0) {
-          this._svgOverlayOriginW = this._bufferWidth;
-          this._svgOverlayOriginH = this._bufferHeight;
-          this._svgOverlayOriginGfxMode = getEffectiveGfxMode(this.props.gfxMode);
-        }
-      }
-      if (this._parsedSvgOverlay.length > 0) {
-        // If gfxMode changed since overlay was set, re-capture origin so
-        // scale factors use the new buffer dimensions instead of stale ones.
-        const currentGfxMode = getEffectiveGfxMode(this.props.gfxMode);
-        if (currentGfxMode !== this._svgOverlayOriginGfxMode) {
-          this._svgOverlayOriginW = this._bufferWidth;
-          this._svgOverlayOriginH = this._bufferHeight;
-          this._svgOverlayOriginGfxMode = currentGfxMode;
-        }
-        // Clear stale drawing-buffer pixels when overlay content changed and
-        // no user code (onPaint/onShader) manages the buffer.  Only on change
-        // so that other drawing-buffer content (e.g. video waveform) that is
-        // redrawn each frame is not wiped on steady-state renders.
-        if (this._svgOverlayChanged && !this.props.onPaint && !this.props.onShader) {
-          this._colorBuffer.fill(TRANSPARENT);
-        }
-        this._svgOverlayChanged = false;
-        const sx = this._svgOverlayOriginW > 0 ? this._bufferWidth / this._svgOverlayOriginW : 1;
-        const sy = this._svgOverlayOriginH > 0 ? this._bufferHeight / this._svgOverlayOriginH : 1;
-        drawSvgOverlay(this, this._parsedSvgOverlay, sx, sy, this.getPixelAspectRatio());
-      }
+    if (this._svgOverlayLayers.size === 0) return;
+
+    // Rebuild sorted/parsed list if layers changed
+    if (this._svgOverlayDirty) {
+      this._rebuildSvgOverlays();
+    }
+    if (this._svgOverlaySorted.length === 0) return;
+
+    // Track origin buffer size for rescaling on resize
+    const currentGfxMode = getEffectiveGfxMode(this.props.gfxMode);
+    if (this._svgOverlayChanged) {
+      this._svgOverlayOriginW = this._bufferWidth;
+      this._svgOverlayOriginH = this._bufferHeight;
+      this._svgOverlayOriginGfxMode = currentGfxMode;
+    } else if (currentGfxMode !== this._svgOverlayOriginGfxMode) {
+      // gfxMode changed — re-capture origin so scale factors use new buffer dims
+      this._svgOverlayOriginW = this._bufferWidth;
+      this._svgOverlayOriginH = this._bufferHeight;
+      this._svgOverlayOriginGfxMode = currentGfxMode;
+    }
+
+    // Clear stale drawing-buffer pixels when overlay content changed and
+    // no user code (onPaint/onShader) manages the buffer.
+    if (this._svgOverlayChanged && !this.props.onPaint && !this.props.onShader) {
+      this._colorBuffer.fill(TRANSPARENT);
+    }
+    this._svgOverlayChanged = false;
+
+    const sx = this._svgOverlayOriginW > 0 ? this._bufferWidth / this._svgOverlayOriginW : 1;
+    const sy = this._svgOverlayOriginH > 0 ? this._bufferHeight / this._svgOverlayOriginH : 1;
+    const pixelAspect = this.getPixelAspectRatio();
+
+    for (const layer of this._svgOverlaySorted) {
+      drawSvgOverlay(this, layer.parsed, sx, sy, pixelAspect);
     }
   }
 
@@ -1838,9 +1939,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       this._runShaderOverPaint();
     }
 
-    // Draw SVG overlay (paths and text in pixel coordinates, rescaled on resize).
-    // Subclasses that handle svgOverlay differently (e.g. tile-map with geo
-    // projection) override _drawSvgOverlayPass() to no-op.
+    // Draw SVG overlay layers (paths and text in pixel coordinates, rescaled on resize).
+    // Subclasses like tile-map override _drawSvgOverlayPass() for geo projection.
     this._drawSvgOverlayPass();
 
     // Render to the buffer (sextant/block/pattern/luma, or placeholder for sixel)
@@ -2273,7 +2373,7 @@ export const canvasSchema: ComponentSchema = {
     isolineSource: { type: 'string', enum: ['luma', 'red', 'green', 'blue', 'alpha'], description: 'Color channel for isoline scalar values (default: luma, env: MELKER_ISOLINE_SOURCE)' },
     isolineFill: { type: 'string', enum: ['source', 'color', 'color-mean'], description: 'Fill mode: source (grayscale from scalar), color (per-cell image colors), color-mean (one mean color per isoline band). Default: source. Env: MELKER_ISOLINE_FILL' },
     isolineColor: { type: 'string', description: 'Contour line color: color name/string, \'none\' (hide lines), \'auto\' (derive from fill mode), or empty (theme default). Env: MELKER_ISOLINE_COLOR' },
-    svgOverlay: { type: 'string', description: 'SVG overlay with <path> and <text> elements in pixel coordinates' },
+    // svgOverlay layers are managed via setSvgOverlay/removeSvgOverlay methods
   },
   styles: {
     objectFit: { type: 'string', enum: ['contain', 'fill', 'cover'], description: 'How image fits: contain (aspect ratio, default for canvas), fill (stretch), cover (crop)' },

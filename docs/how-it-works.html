@@ -413,8 +413,8 @@ $melker.alert(<span class="str">'M'</span> + q.mag.toFixed(<span class="num">1</
   }
 }
 
-<span class="cmt">// Tectonic plates as SVG overlay (cached to disk after first fetch)</span>
-map.props.svgOverlay = platePathsString;</pre>
+<span class="cmt">// Tectonic plates as SVG overlay layer (cached to disk after first fetch)</span>
+map.setSvgOverlay(<span class="str">'plates'</span>, platePathsString);</pre>
     </div>
 
     <p class="explanation">Reference: <a href="/reference/agent_docs/tile-map-architecture.md">Tile map</a> · <a href="/reference/agent_docs/svg-overlay-architecture.md">SVG overlays</a></p>

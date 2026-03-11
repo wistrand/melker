@@ -54,7 +54,7 @@ Element -> CanvasElement -> TileMapElement
 | `diskCache`        | `boolean`                  | `true`          | Enable disk caching via engine cache API                |
 | `diskCacheMaxMB`   | `number`                   | `200`           | Disk cache budget in MB                                 |
 | `dither`           | `string`                   | `'auto'`        | Dithering algorithm (inherited from CanvasElement)      |
-| `svgOverlay`       | `string`                   | —               | Declarative SVG `<path>` and `<text>` elements with lat/lon coords |
+| *(SVG overlay)*    | *via layer API*            | —               | Named overlay layers via `setSvgOverlay()` / `removeSvgOverlay()` |
 | `onOverlay`        | `(event) => void`          | —               | Overlay drawing callback (after tiles, before shader)   |
 | `onMove`           | `(event) => void`          | —               | Fires when map position changes (drag, pan, setView)    |
 | `onZoom`           | `(event) => void`          | —               | Fires when zoom level changes                           |
@@ -183,18 +183,22 @@ export function drawMarkers(event) {
 }
 ```
 
-## SVG Overlay (svgOverlay)
+## SVG Overlay Layers
 
-The `svgOverlay` prop provides a declarative alternative to `onOverlay` for drawing geo-anchored paths and text labels. Path coordinates use standard SVG order: **x=lon, y=lat**. Text elements use explicit `lat`/`lon` attributes.
+Named SVG overlay layers provide a declarative alternative to `onOverlay` for drawing geo-anchored paths and text labels. Path coordinates use standard SVG order: **x=lon, y=lat**. Text elements use explicit `lat`/`lon` attributes.
 
-### Syntax
+### Layer API
 
-```html
-<tile-map svgOverlay='
+```typescript
+const map = $melker.getElementById('map');
+map.setSvgOverlay('routes', `
   <path d="M -0.1278 51.5074 L -0.1419 51.5014 Z" stroke="red" fill="blue"/>
-  <path d="M -0.076 51.508 L -0.098 51.513" stroke="#00FF00"/>
   <text lat="51.5074" lon="-0.1278" fill="#fff" text-anchor="middle">London</text>
-'/>
+`, 0);  // order=0 (default)
+map.removeSvgOverlay('routes');
+map.removeSvgOverlaysByPrefix('ai:');   // Remove all AI layers
+map.clearSvgOverlays();                 // Remove all layers
+map.getSvgOverlays();                   // Map<string, { svg, order }>
 ```
 
 ### `<path>` attributes
@@ -221,15 +225,15 @@ Text is rendered as terminal characters (not pixels), overlaid on the canvas aft
 
 ### Dynamic updates
 
-```javascript
+```typescript
 const map = $melker.getElementById('map');
-map.props.svgOverlay = `
+map.setSvgOverlay('routes', `
   <path d="M -74.0060 40.7128 L -118.2437 34.0522" stroke="red"/>
   <text lat="40.7128" lon="-74.006" fill="#ff0" text-anchor="middle">NYC</text>
-`;
+`);
 ```
 
-The component caches parsed elements and only re-parses when the string value changes.
+Each layer is parsed independently and cached. Only changed layers are re-parsed. Layers draw in order (lower first), then alphabetically for equal order.
 
 ## Render Pipeline
 
@@ -241,11 +245,11 @@ The component caches parsed elements and only re-parses when the string value ch
      - Fallback tiles from parent zoom levels while loading
 2. Tile blur (box blur, optional) — smooths sextant rendering artifacts
 3. Tile filter — Oklab adjustments OR color key classification
-4. svgOverlay <path> elements — geo-anchored vector paths drawn to pixel buffer
+4. SVG overlay layers (sorted by order) — geo-anchored vector paths drawn to pixel buffer
 5. onOverlay(canvas, bounds, geo) — app draws markers, routes, etc. to pixel buffer
 6. onShader runs per-pixel over combined buffer — post-processing
 7. Buffer rendered to terminal (sextant/sixel/kitty/halfblock/etc.)
-8. svgOverlay <text> elements — rendered as terminal characters on top of canvas
+8. SVG overlay <text> elements — rendered as terminal characters on top of canvas
 9. Text labels from drawText/drawTextColor calls — rendered on top of canvas
 ```
 
@@ -368,7 +372,7 @@ When a tile is not yet loaded, the component searches up to 4 parent zoom levels
 
 ### SVG Overlay Parsing
 
-The `_parseSvgOverlay` method uses regex-based extraction (not a full XML parser) to parse `<path>` and `<text>` elements from the `svgOverlay` string. Results are cached and only re-parsed when the string value changes.
+The `_parseSvgOverlay` method uses regex-based extraction (not a full XML parser) to parse `<path>` and `<text>` elements from each overlay layer's SVG string. Results are cached per layer and only re-parsed when a layer's SVG content changes.
 
 For `<path>` elements, the `d` attribute is parsed by `parseSVGPath()` from [canvas-path.ts](../src/components/canvas-path.ts), which tokenizes and converts all commands to absolute coordinates. The `_transformToPixel` method then converts lat/lon coordinates to pixel space via Mercator projection for each path command type.
 
@@ -409,7 +413,7 @@ The tile-map component integrates with the AI accessibility system ([src/ai/cont
 
 **Changing view**: `send_event` with `event_type="change"` and `value="lat=N,lon=N,zoom=N,provider=NAME"` (all fields optional). Calls `setView()` / `setZoom()` and updates the provider.
 
-**Drawing overlay**: `send_event` with `event_type="draw"` and value containing `<path>` and/or `<text>` elements. Sets `svgOverlay` prop. Empty value clears the overlay.
+**Drawing overlay**: `send_event` with `event_type="draw"` and value `"layername: <svg...>"`. Creates/updates layer `ai:layername` (order 1000). No prefix defaults to `ai:draw`. Empty value clears all `ai:` prefixed layers.
 
 ## Keyboard Navigation
 

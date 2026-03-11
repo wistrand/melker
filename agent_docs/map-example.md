@@ -72,16 +72,17 @@ export function drawOverlay(event) {
 }
 ```
 
-### SVG Overlay
+### SVG Overlay Layers
 
-Declarative paths and text labels with geo coordinates:
+Declarative paths and text labels with geo coordinates, managed as named layers:
 
 ```typescript
 const map = $melker.getElementById('map');
-map.props.svgOverlay = `
+map.setSvgOverlay('routes', `
   <path d="M -0.1 51.5 L 2.3 48.8" stroke="red"/>
   <text lat="51.5" lon="-0.1" fill="#fff" text-anchor="middle">London</text>
-`;
+`);
+map.removeSvgOverlay('routes');  // Remove the layer
 ```
 
 ### Autocomplete with Async Search

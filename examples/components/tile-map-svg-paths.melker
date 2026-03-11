@@ -2,7 +2,7 @@
   <policy>
   {
     "name": "Tile Map SVG Paths Demo",
-    "description": "Demonstrates the declarative svgOverlay prop for drawing geo-anchored routes on a tile-map",
+    "description": "Demonstrates named SVG overlay layers for drawing geo-anchored routes on a tile-map",
     "permissions": {
       "map": true
     }
@@ -12,7 +12,7 @@
   <help>
 ## Tile Map SVG Paths Demo
 
-Demonstrates the `svgOverlay` prop for drawing geo-anchored paths declaratively.
+Demonstrates named SVG overlay layers for drawing geo-anchored paths declaratively.
 
 Three routes are shown:
 - **Red**: Thames walk (London Eye to Buckingham Palace)
@@ -33,7 +33,7 @@ Three routes are shown:
   <container style="width: 100%; height: 100%; display: flex; flex-direction: column;">
     <container style="display: flex; flex-direction: row; padding: 1; gap: 2; align-items: center;">
       <text style="font-weight: bold;">Tile Map SVG Paths Demo</text>
-      <text id="info" style="color: gray;">Declarative routes via svgOverlay prop</text>
+      <text id="info" style="color: gray;">Declarative routes via SVG overlay layers</text>
     </container>
 
     <container style="flex: 1; display: flex; border: thin;">
@@ -92,7 +92,11 @@ Three routes are shown:
       routesVisible = !routesVisible;
       const map = getMap();
       if (!map) return;
-      map.props.svgOverlay = routesVisible ? SVG_PATHS : undefined;
+      if (routesVisible) {
+        map.setSvgOverlay('routes', SVG_PATHS);
+      } else {
+        map.removeSvgOverlay('routes');
+      }
       const info = $melker.getElementById('info');
       if (info) info.setValue(routesVisible ? 'Routes visible' : 'Routes hidden (press t to show)');
     }
@@ -114,9 +118,9 @@ Three routes are shown:
   </script>
 
   <script async="ready">
-    // Set initial svgOverlay programmatically so the paths variable is available
+    // Set initial SVG overlay layer
     const map = $melker.getElementById('map');
-    if (map) map.props.svgOverlay = $app.SVG_PATHS;
+    if (map) map.setSvgOverlay('routes', $app.SVG_PATHS);
     $melker.engine.focusElement('map');
   </script>
 </melker>

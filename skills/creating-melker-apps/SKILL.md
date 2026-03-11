@@ -207,7 +207,7 @@ deno run --allow-all https://melker.sh/melker.ts app.melker
 | `<tabs>` / `<tab>` | activeTab, onChange / title | Tabbed panels |
 | `<list>` / `<li>` | style | Lists |
 | `<canvas>` | width, height, onPaint, onShader, onFilter | Pixel graphics |
-| `<tile-map>` | lat, lon, zoom, provider, svgOverlay, onOverlay | Interactive map (needs `map: true` policy) |
+| `<tile-map>` | lat, lon, zoom, provider, onOverlay | Interactive map (needs `map: true` policy) |
 | `<img>` | src, width, height, dither, onFilter | Images |
 | `<video>` | src, width, height, autoplay, loop, audio | Video (requires ffmpeg) |
 | `<combobox>` | placeholder, filter, onSelect | Filterable dropdown |

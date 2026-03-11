@@ -250,7 +250,7 @@ export const imgSchema: ComponentSchema = {
     onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source, utils) => [r,g,b]. utils: noise2d, fbm, palette, smoothstep, mix, fract' },
     onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
-    svgOverlay: { type: 'string', description: 'SVG overlay string (<path> and <text> elements)' },
+    // svgOverlay layers are managed via setSvgOverlay/removeSvgOverlay methods
     gfxMode: { type: 'string', description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
   },
   styles: {

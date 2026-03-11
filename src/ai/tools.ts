@@ -501,30 +501,45 @@ function executeSendEvent(
       const drawEl = element as any;
       const targetName = element.type === 'tile-map' ? 'map' : element.type;
       if (!value || value.trim() === '') {
-        drawEl.props.svgOverlay = undefined;
+        if (typeof drawEl.removeSvgOverlaysByPrefix === 'function') {
+          drawEl.removeSvgOverlaysByPrefix('ai:');
+        }
         context.render();
-        return { success: true, message: `Cleared SVG overlay on ${targetName} ${elementId}` };
+        return { success: true, message: `Cleared AI SVG overlays on ${targetName} ${elementId}` };
       }
+      // Parse optional layer name prefix: "layername: <svg...>" → ai:layername
+      // No prefix or just SVG content → ai:draw
+      let layerName = 'draw';
+      let svgContent = value;
+      const layerMatch = value.match(/^([a-z][a-z0-9_-]*):\s*/i);
+      if (layerMatch && value.indexOf('<') > layerMatch[0].length - 1) {
+        layerName = layerMatch[1];
+        svgContent = value.slice(layerMatch[0].length);
+      }
+      const fullLayerName = `ai:${layerName}`;
+
       // Resolve var(--theme-*) CSS variable references in SVG color attributes
-      let resolvedValue = value;
-      if (value.includes('var(')) {
+      let resolvedValue = svgContent;
+      if (svgContent.includes('var(')) {
         const cssVars = new Map<string, string>();
         for (const ss of context.document.stylesheets) {
           for (const [k, v] of ss.variables) {
             cssVars.set(k, v);
           }
         }
-        resolvedValue = value.replace(/(?:stroke|fill|bg|background)\s*=\s*"([^"]*var\([^"]*\)[^"]*)"/g,
+        resolvedValue = svgContent.replace(/(?:stroke|fill|bg|background)\s*=\s*"([^"]*var\([^"]*\)[^"]*)"/g,
           (_match, val) => _match.replace(val, resolveVarReferences(val, cssVars) || val));
       }
-      drawEl.props.svgOverlay = resolvedValue;
+      if (typeof drawEl.setSvgOverlay === 'function') {
+        drawEl.setSvgOverlay(fullLayerName, resolvedValue, 1000);
+      }
       context.render();
-      const pathCount = (value.match(/<path\b/gi) || []).length;
-      const textCount = (value.match(/<text\b/gi) || []).length;
+      const pathCount = (svgContent.match(/<path\b/gi) || []).length;
+      const textCount = (svgContent.match(/<text\b/gi) || []).length;
       const parts: string[] = [];
       if (pathCount > 0) parts.push(`${pathCount} path(s)`);
       if (textCount > 0) parts.push(`${textCount} label(s)`);
-      return { success: true, message: `Drew ${parts.join(' and ') || 'overlay'} on ${targetName} ${elementId}` };
+      return { success: true, message: `Drew ${parts.join(' and ') || 'overlay'} on ${targetName} ${elementId} (layer: ${fullLayerName})` };
     }
 
     case 'set_prop': {
@@ -777,10 +792,15 @@ function executeReadElement(
       const center = typeof mapEl.getCenter === 'function' ? mapEl.getCenter() : { lat: element.props.lat, lon: element.props.lon };
       const zoom = typeof mapEl.getZoom === 'function' ? mapEl.getZoom() : element.props.zoom;
       const provider = mapEl._currentProvider || element.props.provider || 'openstreetmap';
-      const pathCount = mapEl.props.svgOverlay ? (mapEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
-      const labelCount = mapEl.props.svgOverlay ? (mapEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
+      const overlays = typeof mapEl.getSvgOverlays === 'function' ? mapEl.getSvgOverlays() as Map<string, { svg: string; order: number }> : new Map();
+      let pathCount = 0, labelCount = 0;
+      for (const layer of overlays.values()) {
+        pathCount += (layer.svg.match(/<path\b/gi) || []).length;
+        labelCount += (layer.svg.match(/<text\b/gi) || []).length;
+      }
       const providers = typeof mapEl._getProviders === 'function' ? Object.keys(mapEl._getProviders()) : [];
-      content = `Tile Map: lat=${Number(center.lat).toFixed(4)}, lon=${Number(center.lon).toFixed(4)}, zoom=${zoom}, provider=${provider}, paths=${pathCount}, labels=${labelCount}\nAvailable providers: ${providers.join(', ')}`;
+      const layerNames = overlays.size > 0 ? `, layers=[${[...overlays.keys()].join(',')}]` : '';
+      content = `Tile Map: lat=${Number(center.lat).toFixed(4)}, lon=${Number(center.lon).toFixed(4)}, zoom=${zoom}, provider=${provider}, paths=${pathCount}, labels=${labelCount}${layerNames}\nAvailable providers: ${providers.join(', ')}`;
       break;
     }
     case 'button':

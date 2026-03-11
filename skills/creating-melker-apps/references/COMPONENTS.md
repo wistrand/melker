@@ -1017,7 +1017,7 @@ Pixel graphics using Unicode characters. Sextant (2x3 per cell) on full Unicode 
 - `onPaint` - Draw callback (`event.canvas`)
 - `onShader` - Per-pixel shader callback, runs every frame (see Shaders section)
 - `onFilter` - One-time filter callback, runs once when image loads (same signature as onShader, time=0)
-- `svgOverlay` - SVG overlay string with `<path>` and `<text>` elements in pixel coordinates
+- SVG overlay layers via `setSvgOverlay(name, svg, order?)` / `removeSvgOverlay(name)` / `removeSvgOverlaysByPrefix(prefix)` / `clearSvgOverlays()`
 
 **Canvas API:**
 ```typescript
@@ -1151,7 +1151,7 @@ Interactive slippy map with Mercator projection. Extends canvas — inherits dit
           onMove="$app.onMove(event)" />
 ```
 
-**Props:** `lat`, `lon`, `zoom`, `provider`, `interactive` (default true), `maxZoom`, `svgOverlay`, `onOverlay`, `onMove`, `onZoom`, `onClick`, `onLoadingChange`
+**Props:** `lat`, `lon`, `zoom`, `provider`, `interactive` (default true), `maxZoom`, `onOverlay`, `onMove`, `onZoom`, `onClick`, `onLoadingChange`
 
 Note: `onTooltip` is inherited from BaseProps and works on tile-map (and all other elements).
 
@@ -1184,12 +1184,14 @@ export function drawMarkers(event) {
 }
 ```
 
-**SVG overlay (svgOverlay prop):**
-```html
-<tile-map svgOverlay='
+**SVG overlay layers:**
+```typescript
+const map = $melker.getElementById('map');
+map.setSvgOverlay('routes', `
   <path d="M -0.1 51.5 L 2.3 48.8" stroke="red"/>
   <text lat="51.5" lon="-0.1" fill="#fff" text-anchor="middle">London</text>
-'/>
+`);
+map.removeSvgOverlay('routes');
 ```
 
 Coordinates in `d` are **lat lon** order. `<text>` supports: `lat`, `lon`, `fill`, `bg` (alias: `background`), `text-anchor` (start/middle/end) or `align` (left/center/right).

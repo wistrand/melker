@@ -193,14 +193,19 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
         const lon = typeof mapEl.getCenter === 'function' ? mapEl.getCenter().lon : element.props.lon;
         const zoom = typeof mapEl.getZoom === 'function' ? mapEl.getZoom() : element.props.zoom;
         const provider = mapEl._currentProvider || element.props.provider || 'openstreetmap';
-        const pathCount = mapEl.props.svgOverlay ? (mapEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
-        const textCount = mapEl.props.svgOverlay ? (mapEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
+        const overlays = typeof mapEl.getSvgOverlays === 'function' ? mapEl.getSvgOverlays() as Map<string, { svg: string; order: number }> : new Map();
+        let pathCount = 0, textCount = 0;
+        for (const layer of overlays.values()) {
+          pathCount += (layer.svg.match(/<path\b/gi) || []).length;
+          textCount += (layer.svg.match(/<text\b/gi) || []).length;
+        }
         const id = element.id && !element.id.startsWith('doc-') ? `#${element.id}` : '';
         const providers = typeof mapEl._getProviders === 'function' ? Object.keys(mapEl._getProviders()) : [];
-        lines.push(`${indent}[Tile Map${id}: lat=${Number(lat).toFixed(4)}, lon=${Number(lon).toFixed(4)}, zoom=${zoom}, provider=${provider}, paths=${pathCount}, labels=${textCount}]`);
+        const layerInfo = overlays.size > 0 ? `, layers=[${[...overlays.keys()].join(',')}]` : '';
+        lines.push(`${indent}[Tile Map${id}: lat=${Number(lat).toFixed(4)}, lon=${Number(lon).toFixed(4)}, zoom=${zoom}, provider=${provider}, paths=${pathCount}, labels=${textCount}${layerInfo}]`);
         lines.push(`${indent}  (Providers: ${providers.join(', ')})`);
         lines.push(`${indent}  (Use send_event with event_type="change" and value="lat=N,lon=N,zoom=N,provider=NAME" to change view)`);
-        lines.push(`${indent}  (Use send_event with event_type="draw" to set SVG overlay. Standard SVG coordinate order: x=lon, y=lat. Empty value clears. Supports:)`);
+        lines.push(`${indent}  (Use send_event with event_type="draw". Value format: "layername: <svg...>" — each named layer is independent (add/update/replace). Empty value clears all AI overlays. Standard SVG coordinate order: x=lon, y=lat. Supports:)`);
         lines.push(`${indent}    <path d="M lon lat L lon lat" stroke="color"/> — lines`);
         lines.push(`${indent}    <path d="M lon lat C lon lat lon lat lon lat" stroke="color"/> — cubic Bezier curves`);
         lines.push(`${indent}    <path d="M lon lat A rx ry 0 1 1 lon lat" stroke="color"/> — arcs`);
@@ -223,10 +228,15 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
         const bufH = canvasEl._bufferHeight ?? element.props.height ?? 0;
         const aspect = typeof canvasEl.getPixelAspectRatio === 'function' ? canvasEl.getPixelAspectRatio() : 1;
         const visW = Math.round(Number(bufW) * aspect) || bufW;
-        const pathCount = canvasEl.props.svgOverlay ? (canvasEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
-        const textCount = canvasEl.props.svgOverlay ? (canvasEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
-        lines.push(`${indent}[Canvas${id}: ${visW}x${bufH} visual coords, paths=${pathCount}, labels=${textCount}]`);
-        lines.push(`${indent}  (Use send_event with event_type="draw" to draw SVG overlay. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Equal x/y distances appear equal on screen. Supports:)`);
+        const canvasOverlays = typeof canvasEl.getSvgOverlays === 'function' ? canvasEl.getSvgOverlays() as Map<string, { svg: string; order: number }> : new Map();
+        let canvasPathCount = 0, canvasTextCount = 0;
+        for (const layer of canvasOverlays.values()) {
+          canvasPathCount += (layer.svg.match(/<path\b/gi) || []).length;
+          canvasTextCount += (layer.svg.match(/<text\b/gi) || []).length;
+        }
+        const canvasLayerInfo = canvasOverlays.size > 0 ? `, layers=[${[...canvasOverlays.keys()].join(',')}]` : '';
+        lines.push(`${indent}[Canvas${id}: ${visW}x${bufH} visual coords, paths=${canvasPathCount}, labels=${canvasTextCount}${canvasLayerInfo}]`);
+        lines.push(`${indent}  (Use send_event with event_type="draw". Value format: "layername: <svg...>" — each named layer is independent (add/update/replace). Empty value clears all AI overlays. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Equal x/y distances appear equal on screen. Supports:)`);
         lines.push(`${indent}    <path d="M x y L x y" stroke="color"/> — lines`);
         lines.push(`${indent}    <text x="N" y="N" fill="color">Label</text> — text labels`);
         break;
@@ -240,10 +250,15 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
         const aspect = typeof imgEl.getPixelAspectRatio === 'function' ? imgEl.getPixelAspectRatio() : 1;
         const visW = Math.round(Number(bufW) * aspect) || bufW;
         const src = element.props.src ? ` src="${element.props.src}"` : '';
-        const pathCount = imgEl.props.svgOverlay ? (imgEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
-        const textCount = imgEl.props.svgOverlay ? (imgEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
-        lines.push(`${indent}[Image${id}: ${visW}x${bufH} visual coords${src}, paths=${pathCount}, labels=${textCount}]`);
-        lines.push(`${indent}  (Use send_event with event_type="draw" to draw SVG overlay. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Supports:)`);
+        const imgOverlays = typeof imgEl.getSvgOverlays === 'function' ? imgEl.getSvgOverlays() as Map<string, { svg: string; order: number }> : new Map();
+        let imgPathCount = 0, imgTextCount = 0;
+        for (const layer of imgOverlays.values()) {
+          imgPathCount += (layer.svg.match(/<path\b/gi) || []).length;
+          imgTextCount += (layer.svg.match(/<text\b/gi) || []).length;
+        }
+        const imgLayerInfo = imgOverlays.size > 0 ? `, layers=[${[...imgOverlays.keys()].join(',')}]` : '';
+        lines.push(`${indent}[Image${id}: ${visW}x${bufH} visual coords${src}, paths=${imgPathCount}, labels=${imgTextCount}${imgLayerInfo}]`);
+        lines.push(`${indent}  (Use send_event with event_type="draw" to draw SVG overlay. Value format: "layername: <svg...>" — each named layer is independent (add/update/replace). Empty value clears all AI overlays. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Supports:)`);
         lines.push(`${indent}    <path d="M x y L x y" stroke="color"/> — lines`);
         lines.push(`${indent}    <text x="N" y="N" fill="color">Label</text> — text labels`);
         break;
@@ -257,10 +272,15 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
         const aspect = typeof vidEl.getPixelAspectRatio === 'function' ? vidEl.getPixelAspectRatio() : 1;
         const visW = Math.round(Number(bufW) * aspect) || bufW;
         const src = element.props.src ? ` src="${element.props.src}"` : '';
-        const pathCount = vidEl.props.svgOverlay ? (vidEl.props.svgOverlay.match(/<path\b/gi) || []).length : 0;
-        const textCount = vidEl.props.svgOverlay ? (vidEl.props.svgOverlay.match(/<text\b/gi) || []).length : 0;
-        lines.push(`${indent}[Video${id}: ${visW}x${bufH} visual coords${src}, paths=${pathCount}, labels=${textCount}]`);
-        lines.push(`${indent}  (Use send_event with event_type="draw" to draw SVG overlay. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Supports:)`);
+        const vidOverlays = typeof vidEl.getSvgOverlays === 'function' ? vidEl.getSvgOverlays() as Map<string, { svg: string; order: number }> : new Map();
+        let vidPathCount = 0, vidTextCount = 0;
+        for (const layer of vidOverlays.values()) {
+          vidPathCount += (layer.svg.match(/<path\b/gi) || []).length;
+          vidTextCount += (layer.svg.match(/<text\b/gi) || []).length;
+        }
+        const vidLayerInfo = vidOverlays.size > 0 ? `, layers=[${[...vidOverlays.keys()].join(',')}]` : '';
+        lines.push(`${indent}[Video${id}: ${visW}x${bufH} visual coords${src}, paths=${vidPathCount}, labels=${vidTextCount}${vidLayerInfo}]`);
+        lines.push(`${indent}  (Use send_event with event_type="draw" to draw SVG overlay. Value format: "layername: <svg...>" — each named layer is independent (add/update/replace). Empty value clears all AI overlays. Coordinates are aspect-corrected: x=0..${visW}, y=0..${bufH}. Supports:)`);
         lines.push(`${indent}    <path d="M x y L x y" stroke="color"/> — lines`);
         lines.push(`${indent}    <text x="N" y="N" fill="color">Label</text> — text labels`);
         break;

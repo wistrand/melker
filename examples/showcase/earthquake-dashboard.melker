@@ -424,20 +424,20 @@
         }
       }
 
-      // Bump when GeoJSON→svgOverlay conversion logic changes to invalidate cache
+      // Bump when GeoJSON→SVG conversion logic changes to invalidate cache
       const PLATES_CACHE_VERSION = 4;
 
-      // Fetch tectonic plate boundaries and convert to svgOverlay (cached)
+      // Fetch tectonic plate boundaries and set as SVG overlay layer (cached)
       export async function fetchPlates(): Promise<void> {
         try {
-          // Try cache first (processed svgOverlay string)
+          // Try cache first (processed SVG overlay string)
           const cacheKey = 'boundaries_v' + PLATES_CACHE_VERSION;
           const cached = await $melker.cache.read('plates', cacheKey);
           if (cached) {
             platesSvgOverlay = new TextDecoder().decode(cached);
             const map = $melker.getElementById('worldMap') as any;
             if (map && platesVisible) {
-              map.props.svgOverlay = platesSvgOverlay;
+              map.setSvgOverlay('plates', platesSvgOverlay);
             }
             return;
           }
@@ -468,7 +468,7 @@
 
           const map = $melker.getElementById('worldMap') as any;
           if (map && platesVisible) {
-            map.props.svgOverlay = platesSvgOverlay;
+            map.setSvgOverlay('plates', platesSvgOverlay);
           }
         } catch (_e) {
           // Non-critical, silently ignore
@@ -480,7 +480,11 @@
         platesVisible = !platesVisible;
         const map = $melker.getElementById('worldMap') as any;
         if (map) {
-          map.props.svgOverlay = platesVisible ? platesSvgOverlay : undefined;
+          if (platesVisible && platesSvgOverlay) {
+            map.setSvgOverlay('plates', platesSvgOverlay);
+          } else {
+            map.removeSvgOverlay('plates');
+          }
         }
       }
 

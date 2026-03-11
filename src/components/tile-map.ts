@@ -144,7 +144,7 @@ export interface TileMapProps extends Omit<CanvasProps, 'width' | 'height' | 'on
   cacheSize?: number;
   diskCache?: boolean;
   diskCacheMaxMB?: number;
-  svgOverlay?: string;
+  // svgOverlay layers are managed via setSvgOverlay/removeSvgOverlay methods (inherited from canvas)
   onOverlay?: (event: TileMapOverlayEvent) => void;
   onMove?: (event: { lat: number; lon: number; zoom: number }) => void;
   onZoom?: (event: { zoom: number }) => void;
@@ -215,9 +215,9 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
   private _boundsX = 0;
   private _boundsY = 0;
 
-  // SVG paths overlay cache (geo-specific, separate from parent canvas overlay)
-  private _lastGeoSvgOverlayStr: string | undefined;
-  private _parsedGeoSvgOverlay: ParsedSvgElement[] = [];
+  // Geo SVG overlay: per-layer parse cache (reuses parent's _svgOverlayLayers map)
+  private _geoOverlayParsedCache: Map<string, { svg: string; parsed: ParsedSvgElement[] }> = new Map();
+  private _geoOverlaySorted: { name: string; order: number; parsed: ParsedSvgElement[] }[] = [];
 
   constructor(props: TileMapProps, children: Element[] = []) {
     const origWidth = props.width ?? '100%';
@@ -783,12 +783,12 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     this._applyTileBlur(bufferWidth, bufferHeight);
     this._applyTileFilter(bufferWidth, bufferHeight);
 
-    // Draw svgOverlay overlay (after tiles, before onOverlay)
-    if (this.props.svgOverlay) {
+    // Draw SVG overlay layers (after tiles, before onOverlay)
+    if (this._svgOverlayLayers.size > 0) {
       const ms = this._getMercatorScale(bufferHeight, pixelAspect);
       const cMercX = lonToMercatorX(this._centerLon);
       const cMercY = latToMercatorY(this._centerLat);
-      this._drawSvgOverlay(canvas, cMercX, cMercY, ms.mercatorPerPixelX, ms.mercatorPerPixelY, bufferWidth / 2, bufferHeight / 2);
+      this._drawGeoSvgOverlays(canvas, cMercX, cMercY, ms.mercatorPerPixelX, ms.mercatorPerPixelY, bufferWidth / 2, bufferHeight / 2);
     }
 
     // Call onOverlay after tiles are rendered
@@ -1141,51 +1141,86 @@ export class TileMapElement extends CanvasElement implements Draggable, Wheelabl
     return result;
   }
 
-  private _drawSvgOverlay(
+  private _drawGeoSvgOverlays(
     canvas: CanvasElement,
     centerMercX: number, centerMercY: number,
     mercatorPerPixelX: number, mercatorPerPixelY: number,
     halfW: number, halfH: number,
   ): void {
-    // Re-parse only when the string changes
-    if (this.props.svgOverlay !== this._lastGeoSvgOverlayStr) {
-      this._lastGeoSvgOverlayStr = this.props.svgOverlay;
-      this._parsedGeoSvgOverlay = this.props.svgOverlay
-        ? this._parseSvgOverlay(this.props.svgOverlay)
-        : [];
+    // Rebuild sorted/parsed list if layers changed
+    if (this._svgOverlayDirty) {
+      this._rebuildGeoSvgOverlays();
     }
 
-    for (const el of this._parsedGeoSvgOverlay) {
-      if (el.kind === 'text') {
-        // x=lon, y=lat in SVG coordinate convention
-        const p = TileMapElement._geoToPixel(el.y, el.x, centerMercX, centerMercY, mercatorPerPixelX, mercatorPerPixelY, halfW, halfH);
-        const color = el.fill || '#ffffff';
-        canvas.drawTextColor(p.px, p.py, el.text, color, {
-          align: el.align,
-          bg: el.bg,
+    for (const layer of this._geoOverlaySorted) {
+      for (const el of layer.parsed) {
+        if (el.kind === 'text') {
+          const p = TileMapElement._geoToPixel(el.y, el.x, centerMercX, centerMercY, mercatorPerPixelX, mercatorPerPixelY, halfW, halfH);
+          const color = el.fill || '#ffffff';
+          canvas.drawTextColor(p.px, p.py, el.text, color, {
+            align: el.align,
+            bg: el.bg,
+          });
+          continue;
+        }
+
+        const transformed = this._transformToPixel(
+          el.commands,
+          centerMercX, centerMercY,
+          mercatorPerPixelX, mercatorPerPixelY,
+          halfW, halfH,
+        );
+
+        const hasFill = el.fill && el.fill !== 'none';
+        const hasStroke = el.stroke && el.stroke !== 'none';
+        if (hasFill) {
+          fillPathColor(canvas, transformed, el.fill!);
+        }
+        if (hasStroke) {
+          drawPathColor(canvas, transformed, el.stroke!);
+        }
+        if (!hasFill && !hasStroke) {
+          drawPath(canvas, transformed);
+        }
+      }
+    }
+  }
+
+  /**
+   * Rebuild geo-projected sorted overlay list from the layer map.
+   * Uses tile-map's _parseSvgOverlay for lat/lon coordinate extraction.
+   */
+  private _rebuildGeoSvgOverlays(): void {
+    this._svgOverlayDirty = false;
+
+    // Update parse cache: parse only changed layers
+    for (const [name, layer] of this._svgOverlayLayers) {
+      const cached = this._geoOverlayParsedCache.get(name);
+      if (!cached || cached.svg !== layer.svg) {
+        this._geoOverlayParsedCache.set(name, {
+          svg: layer.svg,
+          parsed: this._parseSvgOverlay(layer.svg),
         });
-        continue;
-      }
-
-      const transformed = this._transformToPixel(
-        el.commands,
-        centerMercX, centerMercY,
-        mercatorPerPixelX, mercatorPerPixelY,
-        halfW, halfH,
-      );
-
-      const hasFill = el.fill && el.fill !== 'none';
-      const hasStroke = el.stroke && el.stroke !== 'none';
-      if (hasFill) {
-        fillPathColor(canvas, transformed, el.fill!);
-      }
-      if (hasStroke) {
-        drawPathColor(canvas, transformed, el.stroke!);
-      }
-      if (!hasFill && !hasStroke) {
-        drawPath(canvas, transformed);
       }
     }
+
+    // Remove stale cache entries
+    for (const name of this._geoOverlayParsedCache.keys()) {
+      if (!this._svgOverlayLayers.has(name)) {
+        this._geoOverlayParsedCache.delete(name);
+      }
+    }
+
+    // Build sorted list: by order, then alphabetical
+    const entries: { name: string; order: number; parsed: ParsedSvgElement[] }[] = [];
+    for (const [name, layer] of this._svgOverlayLayers) {
+      const cached = this._geoOverlayParsedCache.get(name)!;
+      if (cached.parsed.length > 0) {
+        entries.push({ name, order: layer.order, parsed: cached.parsed });
+      }
+    }
+    entries.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+    this._geoOverlaySorted = entries;
   }
 
   // ===== Geo Context =====
@@ -1409,7 +1444,7 @@ export const tileMapSchema: ComponentSchema = {
     diskCache: { type: 'boolean', description: 'Enable disk caching (default: true)' },
     diskCacheMaxMB: { type: 'number', description: 'Disk cache budget in MB (default: 200)' },
     dither: { type: ['string', 'boolean'], enum: ['auto', 'none', 'floyd-steinberg', 'sierra-stable', 'ordered'], description: 'Dithering algorithm' },
-    svgOverlay: { type: 'string', description: 'Declarative SVG <path> and <text> elements with lat/lon coordinates, rendered after tiles and before onOverlay' },
+    // svgOverlay layers are managed via setSvgOverlay/removeSvgOverlay methods (inherited from canvas)
     onOverlay: { type: ['function', 'string'], description: 'Overlay drawing callback (canvas + geo context)' },
     onMove: { type: ['function', 'string'], description: 'Called when map position changes' },
     onZoom: { type: ['function', 'string'], description: 'Called when zoom level changes' },

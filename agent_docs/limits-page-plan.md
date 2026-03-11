@@ -394,7 +394,7 @@ This section asks the reader real questions. We provide the commit-level facts, 
 **Commit 476 (Mar 6): Tile map migration**
 - Replaced hand-drawn canvas map with new `<tile-map>` component
 - Deleted hardcoded COASTLINES polyline array
-- Added tectonic plate boundaries from GitHub GeoJSON, converted to svgOverlay paths
+- Added tectonic plate boundaries from GitHub GeoJSON, converted to SVG overlay layer
 - Policy grew: added `"map": true` and `"raw.githubusercontent.com"` to net permissions
 - Required building the entire tile-map component in the engine (365-line architecture doc)
 

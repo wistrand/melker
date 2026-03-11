@@ -1180,15 +1180,19 @@ canvas.drawPathSVGColor(d, '#4488FF');
 
 Multiple subpaths (separate `M` commands) create holes via even-odd fill rule.
 
-### Canvas SVG Overlay
+### Canvas SVG Overlay Layers
 
-The `svgOverlay` prop draws `<path>` and `<text>` elements on the canvas using pixel coordinates. Useful for annotations, labels, and AI-drawn overlays.
+Named SVG overlay layers draw `<path>` and `<text>` elements on the canvas using pixel coordinates. Useful for annotations, labels, and AI-drawn overlays. Multiple layers can coexist without interfering.
 
-```xml
-<canvas id="chart" width="60" height="20" svgOverlay='
+```typescript
+const canvas = $melker.getElementById('chart');
+canvas.setSvgOverlay('annotations', `
   <path d="M 10 5 L 50 15" stroke="red"/>
   <text x="30" y="10" fill="#fff" text-anchor="middle">Label</text>
-'/>
+`);
+canvas.removeSvgOverlay('annotations');       // Remove one layer
+canvas.removeSvgOverlaysByPrefix('ai:');      // Remove all AI layers
+canvas.clearSvgOverlays();                    // Remove all layers
 ```
 
 Supported SVG elements:
@@ -1236,7 +1240,6 @@ Requires `"map": true` in policy permissions.
 | `zoom`        | `number`         | `5`               | Zoom level (0-20)                          |
 | `provider`    | `string`         | `'openstreetmap'` | Tile provider key                          |
 | `interactive` | `boolean`        | `true`            | Enable drag/scroll/double-click            |
-| `svgOverlay`  | `string`         | —                 | Declarative `<path>` and `<text>` elements |
 | `onOverlay`   | `(event) => void`| —                 | Drawing callback with geo transforms       |
 | `onTooltip`   | `(event) => void`| —                 | Tooltip callback on hover                  |
 | `onMove`      | `(event) => void`| —                 | Fires on position change                   |
@@ -1260,13 +1263,15 @@ map.zoomIn() / map.zoomOut();
 map.panUp() / panDown() / panLeft() / panRight();
 ```
 
-### SVG Overlay
+### SVG Overlay Layers
 
-```html
-<tile-map svgOverlay='
+```typescript
+const map = $melker.getElementById('map');
+map.setSvgOverlay('routes', `
   <path d="M -0.1 51.5 L 2.3 48.8" stroke="red"/>
   <text lat="51.5" lon="-0.1" fill="#fff" text-anchor="middle">London</text>
-'/>
+`);
+map.removeSvgOverlay('routes');
 ```
 
 Coordinates in `d` attributes are **lat lon** order. `<text>` elements support `lat`, `lon`, `fill`, `bg`, `text-anchor` (`start`/`middle`/`end`) or `align` (`left`/`center`/`right`).

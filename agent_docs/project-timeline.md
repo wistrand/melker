@@ -1,6 +1,6 @@
 # Melker Engine Project Timeline
 
-Development history from December 2025 to March 2026.
+Development history from December 2025 to present (March 2026).
 
 ```
 Trurl, Constructor Most Querulous, commanded the Perturbulator: "Fabricate!" Brass potentates
@@ -139,6 +139,16 @@ So constructed.
 
 **Mar 6** - Tile map audit: 15 bug/security fixes, pointer-targeted zoom, drag throttling, docs sync
 
+### Week 18: The Overlay Spectrum (Mar 7-11)
+
+**Mar 7** - SVG overlay module, tile map chroma-key filter + blur, OkLab color, CLI Node.js flag fixes ← `v2026.03.5`, `v2026.03.6`
+
+**Mar 9** - DevTools overhaul (14 conditional tabs), AI tool framework expansion, hit-test refinements
+
+**Mar 10** - Data visualization doc page, AI doc page, doc examples ← `v2026.03.7`
+
+**Mar 11** - I18n subsystem (`<messages>`, `@key` sigils, locale switching), sub-byte PNG decode fix, tile map disk cache resilience, tab border gap fix, tooltip content debounce
+
 ## Components
 
 | Component       | Added  | Description                           |
@@ -185,3 +195,9 @@ CalVer format: `YYYY.MM.PATCH`. Releases are git tags only.
 | `v2026.02.8` | Feb 26 | Opacity, state binding, SVG paths, quadrant mode     |
 | `v2026.02.9` | Feb 27 | AI accessibility, bundler fixes, docs refresh        |
 | `v2026.03.1` | Mar 3  | Node.js 25+ support, runtime abstraction, npm publish|
+| `v2026.03.2` | Mar 6  | Tile map SVG overlays, disk cache, bind-selection    |
+| `v2026.03.3` | Mar 6  | Tile map audit, AI tools, policy shortcuts           |
+| `v2026.03.4` | Mar 6  | Engine cache improvements                            |
+| `v2026.03.5` | Mar 7  | SVG overlay module, chroma-key filter, OkLab color   |
+| `v2026.03.6` | Mar 7  | CLI Node.js flag fixes                               |
+| `v2026.03.7` | Mar 10 | DevTools overhaul, data-viz docs, AI doc page         |

@@ -141,11 +141,11 @@
         <tr><td>Team has no terminal culture</td><td>Onboarding cost is real. Don't force it.</td><td>Whatever they use now</td></tr>
         <tr><td>App needs to run on Windows cmd.exe</td><td>Relies on ANSI escape codes and Unix TTY.</td><td>PowerShell or web app</td></tr>
         <tr><td>Sub-millisecond rendering (games, video)</td><td>30 fps ceiling, character-grid resolution.</td><td>Native GPU app</td></tr>
-        <tr><td>Go team, Elm architecture preferred</td><td>Melker is TypeScript/Deno only.</td><td><a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a></td></tr>
-        <tr><td>Python team, CSS styling wanted</td><td>Deno dependency, different ecosystem.</td><td><a href="https://github.com/Textualize/textual">Textual</a></td></tr>
-        <tr><td>Rust, no_std, or embedded target</td><td>Deno runtime too heavy.</td><td><a href="https://github.com/ratatui/ratatui">Ratatui</a></td></tr>
+        <tr><td>Go team, Elm architecture preferred</td><td>Melker is TypeScript (Deno or Node.js).</td><td><a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a></td></tr>
+        <tr><td>Python team, CSS styling wanted</td><td>Different ecosystem.</td><td><a href="https://github.com/Textualize/textual">Textual</a></td></tr>
+        <tr><td>Rust, no_std, or embedded target</td><td>JS runtime too heavy.</td><td><a href="https://github.com/ratatui/ratatui">Ratatui</a></td></tr>
         <tr><td>Need React ecosystem and component library</td><td>Melker has its own component model, not React.</td><td><a href="https://github.com/vadimdemedes/ink">Ink</a></td></tr>
-        <tr><td>Must ship a single static binary</td><td>No <code>deno compile</code> support.</td><td><a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a>, <a href="https://github.com/ratatui/ratatui">Ratatui</a></td></tr>
+        <tr><td>Must ship a single static binary</td><td>No <code>deno compile</code> support. Node.js requires runtime install.</td><td><a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a>, <a href="https://github.com/ratatui/ratatui">Ratatui</a></td></tr>
         <tr><td>Need a mature ecosystem</td><td>Melker is new. Smaller community, fewer examples.</td><td><a href="https://github.com/charmbracelet/bubbletea">Bubble Tea</a>, <a href="https://github.com/vadimdemedes/ink">Ink</a>, <a href="https://github.com/Textualize/textual">Textual</a></td></tr>
       </tbody>
     </table>
@@ -169,8 +169,8 @@
         <tr><td>Grid layout</td><td>Flexbox only. No CSS Grid.</td><td>Nested row/column containers</td></tr>
         <tr><td>Collapsible sections</td><td>No built-in accordion/collapsible.</td><td>Toggle visibility with <code>display: none</code></td></tr>
         <tr><td>Syntax highlighting</td><td>Code blocks in markdown are plain text.</td><td>Use a <code>&lt;canvas&gt;</code> with custom rendering</td></tr>
-        <tr><td>Single binary dist</td><td>Can't <code>deno compile</code> yet.</td><td>Distribute as <code>.melker</code> file, user installs Deno</td></tr>
-        <tr><td>i18n/RTL</td><td>No built-in internationalization or RTL support.</td><td>Manual text direction in app code</td></tr>
+        <tr><td>Single binary dist</td><td>Can't <code>deno compile</code> yet.</td><td>Distribute as <code>.melker</code> file, user installs Deno or Node.js</td></tr>
+        <tr><td>RTL text</td><td>No right-to-left text layout support.</td><td>Manual text direction in app code</td></tr>
         <tr><td>Dependency graph</td><td>No fine-grained reactivity (Solid signals, React hooks).</td><td><code>createState()</code> + <code>bind</code> for most cases. Explicit <code>setValue()</code> for the rest.</td></tr>
       </tbody>
     </table>

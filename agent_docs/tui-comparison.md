@@ -1,12 +1,12 @@
 # TUI Framework Comparison
 
-Comparison of terminal UI libraries across languages. Last updated: March 6, 2026.
+Comparison of terminal UI libraries across languages. Last updated: March 11, 2026.
 
 ## Overview
 
 | Library                                                    | Language        | Stars  | Paradigm              | Layout         |
 |------------------------------------------------------------|-----------------|--------|-----------------------|----------------|
-| **Melker**                                                 | TypeScript/Deno | New    | HTML-like declarative | Flexbox        |
+| **Melker**                                                 | TypeScript/Deno+Node | New    | HTML-like declarative | Flexbox        |
 | [Ink](https://github.com/vadimdemedes/ink)                 | JavaScript/Node | 35.4k  | React components      | Flexbox (Yoga) |
 | [OpenTUI](https://github.com/sst/opentui)                 | TypeScript+Zig/Bun | 9.1k | React/SolidJS/Vue     | Flexbox (Yoga) |
 | [Blessed](https://github.com/chjj/blessed)                | JavaScript/Node | 11.8k  | Imperative widgets    | CSS-like       |
@@ -36,6 +36,8 @@ Comparison of terminal UI libraries across languages. Last updated: March 6, 202
 | Command palette      |   Y    |  -  |    -    |    -    |     -      |   -   |    Y    |    -    |      -       |   -   |
 | No_std/embedded      |   -    |  -  |    -    |    -    |     -      |   -   |    -    |    Y    |      -       |   -   |
 | SSH/network serve    |   Y    |  -  |    -    |    -    |     Y      |   -   |    Y    |    -    |      -       |   -   |
+| i18n (built-in)      |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |      -       |   -   |
+| Node.js compat       |   Y    |  -  |    -    |    Y    |     -      |   -   |    -    |    -    |      -       |   -   |
 | Sync output (2026)   |   Y    |  Y  |    Y    |    -    |     Y      |   -   |    -    |    -    |      -       |   -   |
 | Maintained (Mar 2026)|   Y    |  Y  |    Y    |    -    |     Y      |   ~   |    Y    |    Y    |      Y       |   Y   |
 
@@ -134,7 +136,7 @@ auto button = Button("Click", [&] { count++; });
 
 |            | Melker      | Ink         | OpenTUI     | Blessed     | Bubble Tea  | tview       | Textual     | Ratatui     | Terminal.Gui | FTXUI       |
 |------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|--------------|-------------|
-| Language   | TS/Deno     | JS/Node     | TS+Zig/Bun  | JS/Node     | Go          | Go          | Python      | Rust        | C#/.NET      | C++          |
+| Language   | TS/Deno+Node| JS/Node     | TS+Zig/Bun  | JS/Node     | Go          | Go          | Python      | Rust        | C#/.NET      | C++          |
 | Stars      | New         | 35.4k       | 9.1k        | 11.8k       | 40.2k       | 13.6k       | 34.6k       | 18.8k       | 10.8k        | 9.7k        |
 | Paradigm   | Declarative | React       | React/Solid/Vue | Imperative | Elm/MVU    | Imperative  | Async       | Immediate   | Imperative   | Functional  |
 | Build step | None        | Required    | Required    | None        | Required    | Required    | None        | Required    | Required     | Required    |
@@ -267,7 +269,7 @@ Y = Built-in, Y* = Via extension library
 
 | Library            | Killer Feature                                                          |
 |--------------------|-------------------------------------------------------------------------|
-| **Melker**         | HTML-like markup files, permission sandbox, no build step               |
+| **Melker**         | HTML-like markup files, permission sandbox, no build step, built-in i18n |
 | **Ink**            | Full React ecosystem, used by Claude Code/Gemini CLI, 35k stars        |
 | **OpenTUI**        | Zig FFI for sub-ms rendering, React+SolidJS+Vue reconcilers            |
 | **Textual**        | Terminal + browser target, CSS styling, 35+ widgets, rapid releases     |
@@ -301,6 +303,7 @@ Y = Built-in, Y* = Via extension library
 | C++ + no deps              | **FTXUI**                                          |
 | .NET / C# ecosystem        | **Terminal.Gui**                                   |
 | HTML-like markup           | **Melker**                                         |
+| Built-in i18n              | **Melker**                                         |
 | CSS styling                | **Textual**, **Melker**                            |
 | Browser + terminal         | **Textual**, **Ratatui** (Ratzilla), **FTXUI**     |
 | Pixel graphics             | **FTXUI**, **Ratatui**, **Melker**                 |
@@ -312,7 +315,7 @@ Y = Built-in, Y* = Via extension library
 
 | Library            | Version     | Notable Changes                                                                   |
 |--------------------|-------------|-----------------------------------------------------------------------------------|
-| **Melker**         | v2026.03.2  | Tile map component (SVG overlays, disk cache), bind-selection system, data boxplot |
+| **Melker**         | v2026.3.7   | i18n subsystem (@key sigils, message catalogs, plural/number/date), Node.js 25+ support, tile map (SVG overlays, disk cache), bind-selection, data boxplot, DevTools I18n tab |
 | **Ink**            | v6.8.0      | `renderToString()`, Mode 2026 sync output, Kitty keyboard, `useCursor` API for IME |
 | **OpenTUI**        | v0.1.86     | Very active pre-1.0. TS+Zig core, React/SolidJS/Vue reconcilers. 9.1k stars in ~8 months. Powers OpenCode. "Not ready for production use" per README |
 | **Bubble Tea**     | v2.0.1      | v2.0.0 (Feb 2026): View struct API, declarative views, "Cursed Renderer" (ncurses), Mode 2027 wide Unicode, Kitty keyboard, native clipboard. Bubbles v1.0.0, Lip Gloss v2.0.0-beta.3 |

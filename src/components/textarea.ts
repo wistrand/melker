@@ -726,6 +726,21 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
   }
 
   /**
+   * Convert display row/col to cursor position (public API for selection handling)
+   */
+  displayPosToCursor(row: number, col: number): number {
+    const width = this._cachedWidth || 40;
+    return this._displayPosToCursor(row, col, width);
+  }
+
+  /**
+   * Get current scroll Y offset
+   */
+  getScrollY(): number {
+    return this._scrollY;
+  }
+
+  /**
    * Get logical line count (newline-delimited)
    */
   getLineCount(): number {

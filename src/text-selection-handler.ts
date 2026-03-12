@@ -1185,6 +1185,13 @@ export class TextSelectionHandler {
   }
 
   /**
+   * Clear the current text selection (public API)
+   */
+  clearSelection(): void {
+    this._clearSelection();
+  }
+
+  /**
    * Handle tooltip display for hovered element
    */
   private _handleTooltip(hoveredElement: Element | null | undefined, screenX: number, screenY: number): void {

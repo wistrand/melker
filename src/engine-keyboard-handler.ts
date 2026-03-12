@@ -576,6 +576,95 @@ function handleFocusedElementInput(
 }
 
 /**
+ * Check if a key event is a backspace or delete action
+ */
+function isDeleteKey(key: string, ctrlKey: boolean): boolean {
+  return key === 'Backspace' ||
+    key === 'Delete' ||
+    (key.length === 1 && key.charCodeAt(0) === 8) ||
+    (key.length === 1 && key.charCodeAt(0) === 127) ||
+    (ctrlKey && key.toLowerCase() === 'h') ||
+    (ctrlKey && key.toLowerCase() === 'd');
+}
+
+/**
+ * Check if a key event is a regular character input (would replace selection)
+ */
+function isCharacterInput(key: string, ctrlKey: boolean, altKey: boolean): boolean {
+  return key.length === 1 && !ctrlKey && !altKey && key.charCodeAt(0) >= 32;
+}
+
+/**
+ * Try to delete the active text selection from an input/textarea.
+ * Returns true if selection was deleted, false if no active selection on this element.
+ */
+function tryDeleteSelection(
+  textInput: InputElement | TextareaElement,
+  ctx: KeyboardHandlerContext,
+  replacementChar?: string,
+): boolean {
+  const selection = ctx.textSelectionHandler.getTextSelection();
+  if (!selection.isActive || !selection.selectedText || selection.componentId !== textInput.id) {
+    return false;
+  }
+
+  // Get element bounds to convert screen coords to character positions
+  const bounds = ctx.renderer?.findElementBounds(textInput.id);
+  if (!bounds) return false;
+
+  const value = textInput.getValue();
+
+  // Normalize selection direction (start may be after end)
+  const startX = Math.min(selection.start.x, selection.end.x);
+  const endX = Math.max(selection.start.x, selection.end.x);
+  const startY = Math.min(selection.start.y, selection.end.y);
+  const endY = Math.max(selection.start.y, selection.end.y);
+
+  let selStart: number;
+  let selEnd: number;
+
+  if (textInput.type === 'input') {
+    // Input is single line — compute border inset
+    const style = (textInput as any).props?.style || {};
+    const hasBorder = style.border && style.border !== 'none';
+    const borderInset = hasBorder ? 1 : 0;
+    const contentX = bounds.x + borderInset;
+
+    selStart = Math.max(0, startX - contentX);
+    selEnd = Math.min(value.length, endX - contentX + 1);
+  } else {
+    // Textarea — use screenToCharIndex for multiline
+    const textarea = textInput as TextareaElement;
+    const style = (textarea as any).props?.style || {};
+    const hasBorder = style.border && style.border !== 'none';
+    const borderInset = hasBorder ? 1 : 0;
+    const contentX = bounds.x + borderInset;
+    const contentY = bounds.y + borderInset;
+
+    if (startY === endY) {
+      // Single-line selection in textarea
+      const row = startY - contentY + (textarea.getScrollY?.() || 0);
+      selStart = textarea.displayPosToCursor(row, startX - contentX);
+      selEnd = textarea.displayPosToCursor(row, endX - contentX + 1);
+    } else {
+      // Multi-line selection
+      const scrollY = textarea.getScrollY?.() || 0;
+      selStart = textarea.displayPosToCursor(startY - contentY + scrollY, startX - contentX);
+      selEnd = textarea.displayPosToCursor(endY - contentY + scrollY, endX - contentX + 1);
+    }
+  }
+
+  if (selStart >= selEnd || selStart < 0 || selEnd > value.length) return false;
+
+  const newValue = value.slice(0, selStart) + (replacementChar || '') + value.slice(selEnd);
+  const newCursor = selStart + (replacementChar?.length || 0);
+  textInput.setValue(newValue, newCursor);
+  ctx.textSelectionHandler.clearSelection();
+
+  return true;
+}
+
+/**
  * Handle keyboard input for text input/textarea elements
  * Returns true (always handles text input events)
  */
@@ -595,10 +684,29 @@ function handleTextInputKeyboard(
     altKey: event.altKey,
   });
 
+  // Handle delete/backspace with active selection: delete all selected chars
+  const ctrlKey = event.ctrlKey ?? false;
+  const altKey = event.altKey ?? false;
+  if (isDeleteKey(event.key, ctrlKey)) {
+    if (tryDeleteSelection(textInput, ctx)) {
+      // Selection was deleted — skip normal key handling, trigger render
+      ctx.debouncedInputRender();
+      return true;
+    }
+  }
+
+  // Handle character input with active selection: replace selection with typed char
+  if (isCharacterInput(event.key, ctrlKey, altKey)) {
+    if (tryDeleteSelection(textInput, ctx, event.key)) {
+      ctx.debouncedInputRender();
+      return true;
+    }
+  }
+
   const handled = textInput.handleKeyInput(
     event.key,
-    event.ctrlKey ?? false,
-    event.altKey ?? false,
+    ctrlKey,
+    altKey,
     event.shiftKey ?? false
   );
 

@@ -99,6 +99,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
   private _scale: number;
   private _charAspectRatio: number;
   private _isDirty: boolean = false;
+  private _lastGfxMode: string | undefined = undefined;
   private _onPaintFailed: boolean = false;
   private _currentColor: number = DEFAULT_FG;  // Current drawing color
   // Pixel multiplier per terminal cell (2x3 for sextant, cellWidth x cellHeight for sixel)
@@ -1875,9 +1876,19 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       }
     }
 
+    // Check if gfxMode changed — different modes have different pixel-per-cell ratios
+    const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
+    if (gfxMode !== this._lastGfxMode && this._lastGfxMode !== undefined) {
+      this._lastGfxMode = gfxMode;
+      this.setSize(this._terminalWidth, this._terminalHeight);
+      if (this._loadedImage) {
+        this._renderImageToBuffer();
+      }
+    }
+    this._lastGfxMode = gfxMode;
+
     // Check if buffer needs resizing due to sixel/kitty/iterm2 capabilities becoming available
     // This happens when canvas was created before engine started
-    const gfxMode = getEffectiveGfxMode(this.props.gfxMode);
     if (gfxMode === 'sixel' || gfxMode === 'kitty' || gfxMode === 'iterm2') {
       const engine = getGlobalEngine();
       // Use sixel capabilities for cell dimensions

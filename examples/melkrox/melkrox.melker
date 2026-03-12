@@ -7,8 +7,8 @@
     "permissions": {
       "net": ["openrouter.ai"],
       "env": ["OPENROUTER_API_KEY"],
-      "read": ["*"],
-      "write": ["*"],
+      "read": [],
+      "write": [],
       "run": [],
       "shader": true,
       "browser": true
@@ -752,7 +752,7 @@ export async function handleInput() {
         const ext = mimeMatch ? mimeMatch[1].split('/')[1] : 'png';
         const b64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
         const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-        const tmpPath = '/tmp/melkrox-scene.' + ext;
+        const tmpPath = $melker.cacheDir + '/scene.' + ext;
         await Deno.writeFile(tmpPath, bytes);
         $melker.openBrowser(tmpPath);
         log(logId, 'Opened image in browser: ' + tmpPath);

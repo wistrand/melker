@@ -112,8 +112,7 @@
   }
   #games-list {
     gap: 1;
-    padding: 1;
-    overflow: auto;
+    overflow-y: auto;
     flex-grow: 1;
     flex-shrink: 1;
   }
@@ -125,10 +124,13 @@
   }
   .game-entry-info {
     flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
   }
   .game-entry-actions {
     flex-direction: row;
     gap: 1;
+    flex-shrink: 0;
   }
 </style>
 

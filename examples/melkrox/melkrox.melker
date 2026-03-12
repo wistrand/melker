@@ -253,6 +253,7 @@ let currentGameId = null;
 let gamesIndex = []; // [{id, title, turnCount, location, lastPlayed}]
 let imageAbort = null; // AbortController for in-flight image request
 let skipImages = false;
+let turnBusy = false;
 
 // --- Game Index ---
 
@@ -729,7 +730,8 @@ export async function handleInput() {
         gameState.currentScene = '*Back to the beginning...*';
         gameState.choices = [];
       }
-      // Restore cached image for this turn
+      // Restore cached image for this turn (clear first to avoid stale image)
+      gameState.currentImage = null;
       const imgKey = currentGameId ? 'image:' + currentGameId + ':' + gameState.turnCount : 'image:' + gameState.turnCount;
       const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
       if (cachedImg) {
@@ -839,6 +841,12 @@ export async function handleInput() {
     return;
   }
 
+  // Prevent concurrent AI turns
+  if (turnBusy) {
+    $melker.toast.show('Wait for the current turn to finish', { type: 'warning' });
+    return;
+  }
+
   // Cancel any in-flight image generation
   if (imageAbort) {
     imageAbort.abort();
@@ -846,6 +854,7 @@ export async function handleInput() {
   }
 
   // AI turn
+  turnBusy = true;
   clearLog(logId);
   setSpinner('game-spinner', true);
 
@@ -904,6 +913,7 @@ export async function handleInput() {
     renderScene();
   }
 
+  turnBusy = false;
   setSpinner('game-spinner', false);
   $melker.render();
   focusInput();
@@ -1699,6 +1709,11 @@ function showScreen(id) {
     const el = $melker.getElementById(s);
     el.props.style = { ...el.props.style, display: s === id ? 'flex' : 'none' };
   }
+  // Stop all spinners to prevent hidden animations
+  for (const spinnerId of ['loading-spinner', 'setup-spinner', 'game-spinner']) {
+    $melker.getElementById(spinnerId).stop();
+  }
+  setImageLoading(false);
 }
 
 function showGameScreen() { showScreen('game-screen'); }

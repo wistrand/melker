@@ -575,23 +575,25 @@ export class TerminalInputProcessor {
 
   /**
    * Check if a string starting with \x1b is an incomplete escape sequence
-   * (i.e. a CSI that hasn't received its terminator byte yet).
+   * (i.e. a CSI that has parameter bytes but hasn't received its terminator yet).
+   * Bare \x1b (Escape key) and \x1b[ (without params) are NOT buffered —
+   * they're valid standalone inputs handled by the existing parser.
    */
   private _isIncompleteEscape(s: string): boolean {
-    if (s.length === 1) return true; // bare \x1b
+    if (s.length <= 2) return false; // bare \x1b or \x1b+char — valid as-is
     if (s[1] === '[') {
-      // CSI sequence — check for X10 mouse (\x1b[M + 3 bytes)
-      if (s.length >= 3 && s[2] === 'M') {
+      // CSI sequence with parameter bytes — check for X10 mouse (\x1b[M + 3 bytes)
+      if (s[2] === 'M') {
         return s.length < 6; // need 3 more bytes after M
       }
-      // Regular CSI — need a terminator byte (0x40-0x7E)
+      // Regular CSI with params — need a terminator byte (0x40-0x7E)
       for (let i = 2; i < s.length; i++) {
         const code = s.charCodeAt(i);
         if (code >= 0x40 && code <= 0x7E) return false; // terminator found
       }
-      return true; // no terminator yet
+      return true; // has params but no terminator yet
     }
-    return false; // \x1b + non-[ is a complete 2-byte sequence
+    return false;
   }
 
   /**

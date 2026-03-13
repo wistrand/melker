@@ -412,9 +412,9 @@ Deno.test('Textarea getDisplayLineCount with wrapping', () => {
   });
 
   const displayLines = textarea.getDisplayLineCount(10);
-  // 'This is a long line that should wrap' is 36 chars
-  // At width 10, should wrap to 4 lines (36/10 = 3.6, ceil = 4)
-  assertEquals(displayLines, 4);
+  // 'This is a long line that should wrap' with word-wrap at width 10:
+  // 'This is a ' | 'long line ' | 'that ' | 'should ' | 'wrap' = 5 lines
+  assertEquals(displayLines, 5);
 });
 
 Deno.test('Textarea getDisplayLineCount without wrapping', () => {

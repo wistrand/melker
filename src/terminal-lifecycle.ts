@@ -43,6 +43,7 @@ export function restoreTerminal(): void {
   // Then disable mouse reporting, exit alternate screen, show cursor
   try {
     const resetSequence =
+      ANSI.bracketedPasteOff +
       ANSI.mouseBasicOff + ANSI.mouseButtonOff + ANSI.mouseAnyOff + ANSI.mouseSgrOff +
       ANSI.normalScreen + ANSI.showCursor + ANSI.reset;
     stdout.writeSync(new TextEncoder().encode(resetSequence));

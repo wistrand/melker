@@ -19,6 +19,7 @@ export type EventType =
   | 'submit'
   | 'selectionchange'
   | 'transitionend'
+  | 'paste'
   | 'custom';
 
 export interface BaseEvent {
@@ -69,7 +70,12 @@ export interface InputEvent extends BaseEvent {
   value: string;
 }
 
-export type MelkerEvent = KeyEvent | MouseEvent | WheelEvent | FocusEvent | InputEvent | KeyPressEvent | ChangeEvent | SelectionChangeEvent | CustomEvent;
+export interface PasteEvent extends BaseEvent {
+  type: 'paste';
+  text: string;
+}
+
+export type MelkerEvent = KeyEvent | MouseEvent | WheelEvent | FocusEvent | InputEvent | KeyPressEvent | ChangeEvent | SelectionChangeEvent | PasteEvent | CustomEvent;
 
 // Specific event types for component handlers
 export interface KeyPressEvent extends BaseEvent {

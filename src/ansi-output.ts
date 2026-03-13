@@ -40,6 +40,9 @@ export const ANSI = {
   mouseSgrOff: '\x1b[?1006l',
   mouseUrxvtOn: '\x1b[?1015h',
   mouseUrxvtOff: '\x1b[?1015l',
+  // Bracketed paste mode
+  bracketedPasteOn: '\x1b[?2004h',
+  bracketedPasteOff: '\x1b[?2004l',
   // Application mode
   appCursorOn: '\x1b[?1h',
   appCursorOff: '\x1b[?1l',

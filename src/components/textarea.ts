@@ -832,6 +832,11 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
   insertText(text: string): void {
     if (this.props.readOnly || this.props.disabled) return;
 
+    // Flush any pending batched chars first so cursor position is current
+    if (this._pendingChars.length > 0) {
+      this._flushPendingChars();
+    }
+
     let newValue = this._value.slice(0, this._cursorPos) + text + this._value.slice(this._cursorPos);
     if (this.props.maxLength && newValue.length > this.props.maxLength) {
       newValue = newValue.slice(0, this.props.maxLength);

@@ -120,6 +120,7 @@ export class TerminalInputProcessor {
   private _isListening = false;
   private _rawModeEnabled = false;
   private _pendingEscape = ''; // Buffered incomplete escape sequence from previous read
+  private _inBracketedPaste = false; // True when between \x1b[200~ and \x1b[201~
 
   constructor(
     options: TerminalInputOptions = {},
@@ -155,6 +156,11 @@ export class TerminalInputProcessor {
       await this._enableMouseReporting();
     }
 
+    // Enable bracketed paste mode (raw mode only)
+    if (this._rawModeEnabled) {
+      await this._enableBracketedPaste();
+    }
+
     // Only start input loop if raw mode is enabled
     // In stdout mode, raw mode is disabled and we don't want to read stdin
     if (this._rawModeEnabled) {
@@ -176,6 +182,11 @@ export class TerminalInputProcessor {
    */
   async stopListening(): Promise<void> {
     this._isListening = false;
+
+    // Disable bracketed paste mode
+    if (this._rawModeEnabled) {
+      await this._disableBracketedPaste();
+    }
 
     // Disable mouse reporting
     if (this._options.enableMouse) {
@@ -267,44 +278,64 @@ export class TerminalInputProcessor {
       this._pendingEscape = '';
     }
 
-    // Check if text ends with an incomplete escape sequence.
-    // If the last sequence starts with \x1b but the CSI has no terminator,
-    // buffer it for the next read to avoid leaking raw bytes as text input.
-    const lastEsc = text.lastIndexOf('\x1b');
-    if (lastEsc >= 0) {
-      const tail = text.substring(lastEsc);
-      if (this._isIncompleteEscape(tail)) {
-        this._pendingEscape = tail;
-        text = text.substring(0, lastEsc);
-        if (text.length === 0) return events;
+    // Handle bracketed paste: extract paste text as separate segments.
+    // Terminals wrap pasted text in \x1b[200~ ... \x1b[201~ markers.
+    const segments = this._extractBracketedPaste(text);
+
+    for (const segment of segments) {
+      if (segment.isPaste) {
+        // Emit paste event with normalized newlines — bypass character-by-character processing
+        const pasteText = segment.text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        if (pasteText.length > 0) {
+          events.push({
+            type: 'paste' as const,
+            text: pasteText,
+            timestamp: Date.now(),
+          });
+        }
+        continue;
       }
-    }
 
-    // Parse input sequences
-    const sequences = this._parseInputSequences(text);
+      // Non-paste text: process as normal key/mouse events
+      let normalText = segment.text;
 
-    for (const sequence of sequences) {
-      if (this._isMouseSequence(sequence)) {
-        const result = this._parseMouseSequence(sequence);
-        if (result) {
-          if (result.type === 'wheel') {
-            const wheelEvent = this.processWheelInput(result as RawWheelInput);
-            if (wheelEvent) {
-              events.push(wheelEvent);
-            }
-          } else {
-            const mouseEvent = this.processMouseInput(result as RawMouseInput);
-            if (mouseEvent) {
-              events.push(mouseEvent);
+      // Check if text ends with an incomplete escape sequence.
+      const lastEsc = normalText.lastIndexOf('\x1b');
+      if (lastEsc >= 0) {
+        const tail = normalText.substring(lastEsc);
+        if (this._isIncompleteEscape(tail)) {
+          this._pendingEscape = tail;
+          normalText = normalText.substring(0, lastEsc);
+          if (normalText.length === 0) continue;
+        }
+      }
+
+      // Parse input sequences
+      const sequences = this._parseInputSequences(normalText);
+
+      for (const sequence of sequences) {
+        if (this._isMouseSequence(sequence)) {
+          const result = this._parseMouseSequence(sequence);
+          if (result) {
+            if (result.type === 'wheel') {
+              const wheelEvent = this.processWheelInput(result as RawWheelInput);
+              if (wheelEvent) {
+                events.push(wheelEvent);
+              }
+            } else {
+              const mouseEvent = this.processMouseInput(result as RawMouseInput);
+              if (mouseEvent) {
+                events.push(mouseEvent);
+              }
             }
           }
-        }
-      } else {
-        const keyInput = this._parseKeySequence(sequence);
-        if (keyInput) {
-          const keyEvent = this.processKeyInput(keyInput);
-          if (keyEvent) {
-            events.push(keyEvent);
+        } else {
+          const keyInput = this._parseKeySequence(sequence);
+          if (keyInput) {
+            const keyEvent = this.processKeyInput(keyInput);
+            if (keyEvent) {
+              events.push(keyEvent);
+            }
           }
         }
       }
@@ -394,6 +425,28 @@ export class TerminalInputProcessor {
       await stdout.write(new TextEncoder().encode(disableSequence));
     } catch {
       // Silent failure on cleanup
+    }
+  }
+
+  /**
+   * Enable bracketed paste mode
+   */
+  private async _enableBracketedPaste(): Promise<void> {
+    try {
+      await stdout.write(new TextEncoder().encode(ANSI.bracketedPasteOn));
+    } catch {
+      // Silent failure
+    }
+  }
+
+  /**
+   * Disable bracketed paste mode
+   */
+  private async _disableBracketedPaste(): Promise<void> {
+    try {
+      await stdout.write(new TextEncoder().encode(ANSI.bracketedPasteOff));
+    } catch {
+      // Silent failure
     }
   }
 
@@ -526,8 +579,15 @@ export class TerminalInputProcessor {
         i += sequence.length;
       } else {
         // Regular character
-        sequences.push(text[i]);
-        i++;
+        // Collapse \r\n into a single \r (both map to Enter — avoid double newlines
+        // when pasting text with Windows-style line endings)
+        if (text[i] === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
+          sequences.push('\r');
+          i += 2;
+        } else {
+          sequences.push(text[i]);
+          i++;
+        }
       }
     }
 
@@ -594,6 +654,46 @@ export class TerminalInputProcessor {
       return true; // has params but no terminator yet
     }
     return false;
+  }
+
+  /**
+   * Extract bracketed paste segments from raw input text.
+   * Returns an array of segments, each marked as paste or normal text.
+   * Paste segments have markers stripped; normal segments are passed through.
+   * Handles paste spanning multiple reads via _inBracketedPaste flag.
+   */
+  private _extractBracketedPaste(text: string): Array<{ text: string; isPaste: boolean }> {
+    const PASTE_START = '\x1b[200~';
+    const PASTE_END = '\x1b[201~';
+    const segments: Array<{ text: string; isPaste: boolean }> = [];
+    let i = 0;
+
+    while (i < text.length) {
+      if (!this._inBracketedPaste) {
+        const startIdx = text.indexOf(PASTE_START, i);
+        if (startIdx === -1) {
+          segments.push({ text: text.substring(i), isPaste: false });
+          break;
+        }
+        if (startIdx > i) {
+          segments.push({ text: text.substring(i, startIdx), isPaste: false });
+        }
+        this._inBracketedPaste = true;
+        i = startIdx + PASTE_START.length;
+      } else {
+        const endIdx = text.indexOf(PASTE_END, i);
+        if (endIdx === -1) {
+          // End marker not in this read — emit what we have, continue in next read
+          segments.push({ text: text.substring(i), isPaste: true });
+          break;
+        }
+        segments.push({ text: text.substring(i, endIdx), isPaste: true });
+        this._inBracketedPaste = false;
+        i = endIdx + PASTE_END.length;
+      }
+    }
+
+    return segments;
   }
 
   /**

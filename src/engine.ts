@@ -670,6 +670,21 @@ export class MelkerEngine {
       handleKeyboardEvent(event as RawKeyEvent, ctx);
     });
 
+    // Paste event handling — bracketed paste inserts text directly into focused textarea/input
+    this._eventManager.addGlobalEventListener('paste', (event: any) => {
+      const focusedElement = this._document?.focusedElement;
+      if (!focusedElement) return;
+      if (focusedElement.type === 'textarea' || focusedElement.type === 'input') {
+        const textInput = focusedElement as any;
+        if (textInput.insertText) {
+          textInput.insertText(event.text);
+          if (this._options.autoRender) {
+            this._debouncedInputRender();
+          }
+        }
+      }
+    });
+
     // Mouse and wheel event handling - delegated to engine-mouse-handler.ts
     const mouseCtx: MouseHandlerContext = {
       hitTester: this._hitTester,

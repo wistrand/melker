@@ -474,6 +474,35 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
   }
 
   /**
+   * Insert text at cursor position (used for paste operations).
+   * For single-line input, newlines are stripped.
+   */
+  insertText(text: string): void {
+    if (this.props.readOnly || this.props.disabled) return;
+
+    // Strip newlines for single-line input
+    const toInsert = text.replace(/[\r\n]/g, '');
+    if (toInsert.length === 0) return;
+
+    let value = this._internalValue;
+    let cursor = this._cursorPosition;
+
+    value = value.slice(0, cursor) + toInsert + value.slice(cursor);
+    cursor += toInsert.length;
+
+    if (this.props.maxLength && value.length > this.props.maxLength) {
+      value = value.slice(0, this.props.maxLength);
+      cursor = Math.min(cursor, value.length);
+    }
+
+    this._internalValue = value;
+    this._cursorPosition = cursor;
+    this.props.value = value;
+    this.props.cursorPosition = cursor;
+    this._needsRender = true;
+  }
+
+  /**
    * Update completions based on current input value
    */
   private _updateCompletions(currentValue: string): void {

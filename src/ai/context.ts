@@ -11,6 +11,14 @@ function isAriaTrue(value: unknown): boolean {
   return value === true || value === 'true';
 }
 
+/** Check if an element is effectively hidden (display:none, visible:false, or closed dialog) */
+function isHiddenElement(element: Element): boolean {
+  if (element.props?.style?.display === 'none') return true;
+  if (element.props?.visible === false) return true;
+  if (element.type === 'dialog' && element.props?.open !== true) return true;
+  return false;
+}
+
 /** Extract accessible text from an element */
 function getAccessibleText(el: Element): string | undefined {
   return el.props['aria-label'] || el.props.title || el.props.text || el.props.label;
@@ -53,8 +61,8 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
       return;
     }
 
-    // Skip elements hidden from accessibility tree
-    if (isAriaTrue(element.props['aria-hidden'])) {
+    // Skip elements hidden from accessibility tree or visually hidden
+    if (isAriaTrue(element.props['aria-hidden']) || isHiddenElement(element)) {
       return;
     }
 
@@ -361,8 +369,8 @@ function buildElementTree(root: Element, excludeIds: Set<string>, document: Docu
       return;
     }
 
-    // Skip elements hidden from accessibility tree
-    if (isAriaTrue(element.props['aria-hidden'])) {
+    // Skip elements hidden from accessibility tree or visually hidden
+    if (isAriaTrue(element.props['aria-hidden']) || isHiddenElement(element)) {
       return;
     }
 

@@ -104,17 +104,34 @@ export class TextareaElement extends Element implements Renderable, Focusable, I
           absoluteStart: absolutePos,
         });
       } else {
-        // Wrap line at width boundary
+        // Word-wrap: break at word boundaries when possible
         let offset = 0;
         while (offset < line.length) {
-          const chunk = line.substring(offset, offset + width);
-          displayLines.push({
-            text: chunk,
-            logicalLineIndex: lineIdx,
-            offsetInLogical: offset,
-            absoluteStart: absolutePos + offset,
-          });
-          offset += width;
+          if (offset + width >= line.length) {
+            // Rest of line fits
+            displayLines.push({
+              text: line.substring(offset),
+              logicalLineIndex: lineIdx,
+              offsetInLogical: offset,
+              absoluteStart: absolutePos + offset,
+            });
+            offset = line.length;
+          } else {
+            // Find last space within width to break at word boundary
+            let breakAt = width;
+            const segment = line.substring(offset, offset + width);
+            const lastSpace = segment.lastIndexOf(' ');
+            if (lastSpace > 0) {
+              breakAt = lastSpace + 1; // Include the space at end of this line
+            }
+            displayLines.push({
+              text: line.substring(offset, offset + breakAt),
+              logicalLineIndex: lineIdx,
+              offsetInLogical: offset,
+              absoluteStart: absolutePos + offset,
+            });
+            offset += breakAt;
+          }
         }
         // Handle empty line case
         if (line.length === 0) {

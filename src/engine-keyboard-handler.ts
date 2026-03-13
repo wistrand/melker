@@ -16,6 +16,11 @@ import { hasElement, isOpenModalDialog } from './utils/tree-traversal.ts';
 import { type DualBuffer, DiffCollector, type BufferDiff } from './buffer.ts';
 
 const logger = getLogger('KeyboardHandler');
+
+// Paste burst detection: skip fast-render when characters arrive rapidly
+let _lastCharTime = 0;
+let _pasteBurstActive = false;
+const PASTE_BURST_THRESHOLD_MS = 3; // chars arriving faster than this = paste
 import type { RenderingEngine } from './rendering.ts';
 import type { FocusNavigationHandler } from './focus-navigation-handler.ts';
 import type { ScrollHandler } from './scroll-handler.ts';
@@ -703,6 +708,18 @@ function handleTextInputKeyboard(
     }
   }
 
+  // Detect paste bursts: characters arriving < 3ms apart
+  const now = Date.now();
+  const timeSinceLast = now - _lastCharTime;
+  _lastCharTime = now;
+
+  const isPrintable = event.key.length === 1 && (event.key.charCodeAt(0) >= 32) && !ctrlKey && !altKey;
+  if (isPrintable && timeSinceLast < PASTE_BURST_THRESHOLD_MS) {
+    _pasteBurstActive = true;
+  } else if (timeSinceLast >= PASTE_BURST_THRESHOLD_MS) {
+    _pasteBurstActive = false;
+  }
+
   const handled = textInput.handleKeyInput(
     event.key,
     ctrlKey,
@@ -712,6 +729,13 @@ function handleTextInputKeyboard(
 
   // Auto-render if the input changed
   if (handled && ctx.autoRender) {
+    // During paste bursts, skip fast-render entirely — let the textarea's
+    // char queue batch all chars (5ms debounce) and only do one debounced render
+    if (_pasteBurstActive) {
+      ctx.debouncedInputRender();
+      return true;
+    }
+
     // Check if any system dialogs are open (these are always overlays)
     const hasSystemDialog = ctx.alertDialogManager?.isOpen() ||
                            ctx.confirmDialogManager?.isOpen() ||

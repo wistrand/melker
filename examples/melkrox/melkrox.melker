@@ -161,9 +161,10 @@
       <button id="g5" label="Slice of Life" onClick="$app.generateGenre('cozy slice of life')" />
       <button id="g6" label="Road Trip" onClick="$app.generateGenre('feel-good road trip comedy')" />
       <button id="g7" label="Comedy" onClick="$app.generateGenre('absurdist comedy')" />
-      <button id="g8" label="Mystery" onClick="$app.generateGenre('cozy mystery')" />
+      <button id="g8" label="Mystery" onClick="$app.generateGenre('mystery')" />
       <button id="g9" label="Romance" onClick="$app.generateGenre('romantic comedy')" />
       <button id="g10" label="Pirate" onClick="$app.generateGenre('swashbuckling pirate adventure')" />
+      <button id="g11" label="Toy Adventure" onClick="$app.generateGenre('toys animals on candy search')" />
     </container>
     <container id="setup-row" style="padding-top: 1;">
       <textarea id="setup-prompt" placeholder="Or type your own story prompt..." rows="5" onChange="$app.onPromptChange()" />
@@ -174,6 +175,7 @@
       <button label="Grittier" variant="plain" onClick="$app.restylePrompt('grittier and more realistic')" />
       <button label="Weirder" variant="plain" onClick="$app.restylePrompt('stranger and more surreal')" />
       <button label="Cozier" variant="plain" onClick="$app.restylePrompt('cozier and more intimate')" />
+      <button label="Enrich" variant="plain" onClick="$app.restylePrompt('more vivid and evocative — use richer words but keep the same length')" />
     </container>
     <button label="Start Adventure" onClick="$app.startGame()" />
     <container style="flex-direction: row; gap: 2; justify-content: center;">
@@ -207,11 +209,12 @@
 - `/games` — Switch between saved games
 - `/history` — Show recent turns
 - `/undo` — Go back one turn
+- `/redo` — Go forward one turn
 - `/image` — Open scene image in browser
-- `/reimage` — Regenerate scene image
+- `/reimage [style]` — Regenerate scene image (optional custom style)
 - `/images` — Toggle image generation on/off
 - `/gfx [mode]` — Set gfx mode (sextant/halfblock/quadrant/pattern/luma/reset)
-- `/dither [bits]` — Set dither bits (1/2/8/reset)
+- `/dither [bits]` — Set dither bits (1/2/4/8/reset)
 - `/help` — Show this help" style="padding: 1;" />
 </dialog>
 
@@ -240,7 +243,7 @@
 
 const CACHE_NS = 'melkrox';
 const MAX_HISTORY = 20;
-const MAX_CACHED_IMAGES = 5;
+const MAX_CACHED_IMAGES = 20;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -250,10 +253,12 @@ let setupModel = '';
 let imageModel = '';
 let gameState = null;
 let currentGameId = null;
+let currentImage = null; // Scene image data URL (not saved in game state)
 let gamesIndex = []; // [{id, title, turnCount, location, lastPlayed}]
 let imageAbort = null; // AbortController for in-flight image request
 let skipImages = false;
 let turnBusy = false;
+let redoStack = []; // [{user, assistant}] for redo after undo
 
 // --- Game Index ---
 
@@ -282,7 +287,7 @@ async function loadGamesIndex() {
         await $melker.cache.write(CACHE_NS, 'game:' + id, oldState);
         await saveGamesIndex();
         await $melker.cache.delete(CACHE_NS, 'state');
-        logger.info('melkrox: Migrated old save to multi-game format, id=' + id);
+        logger.info('Migrated old save to multi-game format, id=' + id);
       } catch (_) {
         gamesIndex = [];
       }
@@ -351,19 +356,26 @@ function renderGamesList() {
 export async function loadGame(id) {
   const data = await $melker.cache.read(CACHE_NS, 'game:' + id);
   if (!data) {
-    logger.warn('melkrox: Game not found: ' + id);
+    logger.warn('Game not found: ' + id);
     return;
   }
   try {
     gameState = JSON.parse(decoder.decode(data));
     currentGameId = id;
-    logger.info('melkrox: Loaded game "' + (gameState.worldConfig?.title || id) + '" turn=' + gameState.turnCount);
+    // Load current image from cache
+    currentImage = null;
+    const imgKey = 'image:' + id + ':' + gameState.turnCount;
+    const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
+    if (cachedImg) currentImage = decoder.decode(cachedImg);
+    // Migrate: remove currentImage from old game state if present
+    if (gameState.currentImage) { delete gameState.currentImage; }
+    logger.info('Loaded game "' + (gameState.worldConfig?.title || id) + '" turn=' + gameState.turnCount);
     showGameScreen();
     renderScene();
     focusInput();
     $melker.render();
   } catch (e) {
-    logger.error('melkrox: Failed to load game ' + id + ': ' + e.message);
+    logger.error('Failed to load game ' + id + ': ' + e.message);
   }
 }
 
@@ -379,7 +391,7 @@ export async function deleteGame(id) {
       await $melker.cache.delete(CACHE_NS, k);
     }
   }
-  logger.info('melkrox: Deleted game ' + id);
+  logger.info('Deleted game ' + id);
   renderGamesList();
   $melker.render();
 }
@@ -387,7 +399,7 @@ export async function deleteGame(id) {
 export async function cloneGame(id) {
   const data = await $melker.cache.read(CACHE_NS, 'game:' + id);
   if (!data) {
-    logger.warn('melkrox: Game not found for cloning: ' + id);
+    logger.warn('Game not found for cloning: ' + id);
     return;
   }
   try {
@@ -404,7 +416,7 @@ export async function cloneGame(id) {
     // Auto-start the game creation
     await startGame();
   } catch (e) {
-    logger.error('melkrox: Failed to clone game ' + id + ': ' + e.message);
+    logger.error('Failed to clone game ' + id + ': ' + e.message);
   }
 }
 
@@ -425,7 +437,7 @@ export function showSavedGames() {
 const logger = $melker.logger;
 
 function log(containerId, msg, noTimestamp) {
-  logger.info('melkrox: ' + msg);
+  logger.info('' + msg);
   const container = $melker.getElementById(containerId);
   container.props.style = { ...container.props.style, display: 'flex' };
   const prefix = noTimestamp ? '' : '[' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '] ';
@@ -451,9 +463,9 @@ export async function generateGenre(genre) {
   prompt.props.value = 'Generating ' + genre + ' concept...';
   $melker.render();
   try {
-    const seed = Math.random().toString(36).slice(2, 6);
+    const seed = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
     const result = await callOpenRouter(
-      'Given a genre, generate a one-sentence text adventure concept in this exact style: "A [adjective] [genre] adventure in [specific setting]. Tone: [tone descriptor]." The tone MUST match the genre — comedies are funny, romances are warm, horror is creepy, slice-of-life is cozy. Do NOT default to dark or gritty. Be creative, surprising, and specific with the setting. Each response must be completely different. Variation seed: ' + seed + '. Respond with ONLY the single sentence.',
+      'Given a genre, generate a one-sentence text adventure concept in this exact style: "A [adjective] [genre] adventure in [specific setting]. Tone: [tone descriptor]." The tone MUST match the genre. Do NOT default to dark or gritty. NEVER use these overused words: witty, charming, whimsical, playful, quirky, delightful. NEVER use these overused settings: laundromat, bookshop, bakery, coffee shop, library. Find more specific, evocative descriptors and unexpected locations. Be creative, surprising, and specific with the setting. Each response must be completely different. Variation seed: ' + seed + '. Respond with ONLY the single sentence.',
       [{ role: 'user', content: genre }],
       'openai/gpt-4.1-mini'
     );
@@ -473,22 +485,22 @@ export function clearPrompt() {
 
 export function onPromptChange() {
   const val = $melker.getElementById('setup-prompt').props.value || '';
-  const show = val.trim().length > 10;
+  const show = val.trim().length >= 3;
   $melker.getElementById('restyle-row').props.style = { display: show ? 'flex' : 'none', flexDirection: 'row', gap: 2, justifyContent: 'center' };
 }
 
 export async function restylePrompt(direction) {
   const prompt = $melker.getElementById('setup-prompt');
   const text = prompt.props.value;
-  if (!text || text.trim().length <= 10) return;
+  if (!text || text.trim().length < 3) return;
   prompt.props.value = 'Restyling...';
   $melker.render();
   try {
-    const seed = Math.random().toString(36).slice(2, 6);
+    const seed = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
     const result = await callOpenRouter(
       'You are given a text adventure story prompt. Restyle it to be ' + direction + '. Keep the core storyline and characters but change the tone and atmosphere. Output ONLY the restyled prompt, nothing else. Keep it the same length as the original. Variation seed: ' + seed + '.',
       [{ role: 'user', content: text }],
-      'openai/gpt-4.1-mini'
+      model
     );
     prompt.props.value = result.trim();
   } catch (e) {
@@ -513,7 +525,7 @@ export async function handleFileSelect(event) {
   try {
     const content = await Deno.readTextFile(filePath);
     $melker.getElementById('setup-prompt').props.value = content.trim();
-    logger.info('melkrox: Loaded story from ' + filePath + ' (' + content.length + ' chars)');
+    logger.info('Loaded story from ' + filePath + ' (' + content.length + ' chars)');
   } catch (e) {
     showError('setup-error', 'Failed to read file: ' + e.message);
   }
@@ -610,7 +622,9 @@ export async function startGame() {
 
     log(logId, 'World: "' + config.title + '"');
     log(logId, (config.locations?.length || 0) + ' locations, ' + (config.characters?.length || 0) + ' characters, ' + (config.threads?.length || 0) + ' threads');
-    if (config.imageStyle) logger.info('melkrox: Image style: ' + config.imageStyle);
+    if (config.imageConstraints) log(logId, 'Custom image constraints: ' + config.imageConstraints);
+    logger.info('World config: ' + JSON.stringify(config));
+    logger.info('System prompt: ' + config.systemPrompt);
 
     currentGameId = generateGameId();
     gameState = {
@@ -618,12 +632,12 @@ export async function startGame() {
       storyPrompt: storyPrompt.trim(),
       history: [],
       currentScene: '',
-      currentImage: null,
       turnCount: 0,
       inventory: [],
       location: config.locations?.[0] || 'Unknown',
       choices: []
     };
+    currentImage = null;
 
     // Add to games index
     gamesIndex.push({
@@ -635,18 +649,17 @@ export async function startGame() {
     });
     await saveGamesIndex();
 
-    // Get opening scene (use streaming so narrative appears progressively)
-    log(logId, 'Generating opening scene...');
     // Clear previous game's image and text before showing game screen
     const imgEl = $melker.getElementById('scene-image');
     imgEl.setSrc(PLACEHOLDER_IMG);
     setImageLoading(true);
-    $melker.getElementById('narrative').props.text = '';
+    $melker.getElementById('narrative').props.text = '*Generating opening scene...*';
     $melker.getElementById('choices-bar').children = [];
     renderScene();
     showGameScreen();
     focusInput();
     $melker.render();
+    log('log-area', 'Generating opening scene via ' + model + '...');
     const t1 = Date.now();
     const opening = await callOpenRouterStreaming(
       config.systemPrompt,
@@ -698,12 +711,14 @@ export async function handleInput() {
   if (cmd === '/new') {
     gameState = null;
     currentGameId = null;
+    currentImage = null;
     showSetupScreen();
     return;
   }
   if (cmd === '/games') {
     gameState = null;
     currentGameId = null;
+    currentImage = null;
     showSelectScreen();
     $melker.render();
     return;
@@ -714,9 +729,10 @@ export async function handleInput() {
   }
   if (cmd === '/undo') {
     if (gameState.history.length >= 2) {
-      // Remove last user + assistant pair
-      gameState.history.pop();
-      gameState.history.pop();
+      // Save undone pair to redo stack
+      const assistant = gameState.history.pop();
+      const user = gameState.history.pop();
+      redoStack.push({ user, assistant });
       gameState.turnCount = Math.max(0, gameState.turnCount - 1);
       // Replay last assistant response to restore scene
       const lastAssistant = gameState.history.length > 0
@@ -731,25 +747,48 @@ export async function handleInput() {
         gameState.choices = [];
       }
       // Restore cached image for this turn (clear first to avoid stale image)
-      gameState.currentImage = null;
+      currentImage = null;
       const imgKey = currentGameId ? 'image:' + currentGameId + ':' + gameState.turnCount : 'image:' + gameState.turnCount;
       const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
       if (cachedImg) {
-        gameState.currentImage = decoder.decode(cachedImg);
+        currentImage = decoder.decode(cachedImg);
       }
       await saveState();
       renderScene();
-      log(logId, 'Undid last turn. Now at turn ' + gameState.turnCount);
+      log(logId, 'Undid last turn. Now at turn ' + gameState.turnCount + (redoStack.length ? ' (/redo available)' : ''));
     } else {
       $melker.toast.show('Nothing to undo', { type: 'warning' });
     }
     return;
   }
+  if (cmd === '/redo') {
+    if (redoStack.length > 0) {
+      const { user, assistant } = redoStack.pop();
+      gameState.history.push(user, assistant);
+      gameState.turnCount++;
+      const scene = parseJSON(assistant.content);
+      if (scene) applyScene(scene);
+      else gameState.currentScene = assistant.content;
+      // Restore cached image for this turn
+      currentImage = null;
+      const imgKey = currentGameId ? 'image:' + currentGameId + ':' + gameState.turnCount : 'image:' + gameState.turnCount;
+      const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
+      if (cachedImg) {
+        currentImage = decoder.decode(cachedImg);
+      }
+      await saveState();
+      renderScene();
+      log(logId, 'Redid turn ' + gameState.turnCount);
+    } else {
+      $melker.toast.show('Nothing to redo', { type: 'warning' });
+    }
+    return;
+  }
   if (cmd === '/image') {
-    if (gameState.currentImage) {
+    if (currentImage) {
       try {
         // Extract image data and write to temp file
-        const dataUrl = gameState.currentImage;
+        const dataUrl = currentImage;
         const mimeMatch = dataUrl.match(/^data:(image\/\w+);base64,/);
         const ext = mimeMatch ? mimeMatch[1].split('/')[1] : 'png';
         const b64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
@@ -771,9 +810,10 @@ export async function handleInput() {
     $melker.toast.show('Image generation ' + (skipImages ? 'OFF' : 'ON'));
     return;
   }
-  if (cmd === '/reimage') {
+  if (cmd === '/reimage' || cmd.startsWith('/reimage ')) {
     clearLog(logId);
-    await generateSceneImage(logId);
+    const customStyle = cmd.slice(8).trim() || null;
+    await generateSceneImage(logId, customStyle);
     setSpinner('game-spinner', false);
     renderScene();
     $melker.render();
@@ -853,7 +893,8 @@ export async function handleInput() {
     imageAbort = null;
   }
 
-  // AI turn
+  // AI turn — new action invalidates redo history
+  redoStack = [];
   turnBusy = true;
   clearLog(logId);
   setSpinner('game-spinner', true);
@@ -886,6 +927,7 @@ export async function handleInput() {
 
     gameState.history.push({ role: 'assistant', content: response });
     gameState.turnCount++;
+    logger.info('Turn response: ' + response);
 
     const scene = parseJSON(response);
     if (scene) {
@@ -900,17 +942,25 @@ export async function handleInput() {
       log(logId, 'Raw text response (no structured JSON)');
     }
 
-    // Generate scene image
+    // Release turn lock — player can input next turn while image generates
+    turnBusy = false;
+    focusInput();
+
+    // Generate scene image in background (abortable by next turn)
     await generateSceneImage(logId);
 
-    await saveState();
-    log(logId, 'Turn ' + gameState.turnCount + ' complete. State saved.');
-    renderScene();
+    if (gameState) {
+      await saveState();
+      log(logId, 'Turn ' + gameState.turnCount + ' complete. State saved.');
+      renderScene();
+    }
   } catch (e) {
-    gameState.currentScene += '\n\n*Error: ' + e.message + '*';
-    gameState.history.pop();
+    if (gameState) {
+      gameState.currentScene += '\n\n*Error: ' + e.message + '*';
+      gameState.history.pop();
+      renderScene();
+    }
     log(logId, 'ERROR: ' + e.message);
-    renderScene();
   }
 
   turnBusy = false;
@@ -926,25 +976,41 @@ function applyScene(scene) {
   if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
   // Per-scene image style override (cleared each turn, only set if model provides one)
   gameState._lastSceneImageStyle = scene.imageStyle || null;
-  if (scene.imageStyle) logger.info('melkrox: Scene image style override: ' + scene.imageStyle);
-  logger.debug('melkrox: Scene applied | location=' + gameState.location + ' inventory=[' + gameState.inventory.join(', ') + '] choices=' + (gameState.choices?.length || 0) + ' narrative=' + (gameState.currentScene?.length || 0) + ' chars');
+  if (scene.imageStyle) logger.info('Scene image style override: ' + scene.imageStyle);
+  logger.debug('Scene applied | location=' + gameState.location + ' inventory=[' + gameState.inventory.join(', ') + '] choices=' + (gameState.choices?.length || 0) + ' narrative=' + (gameState.currentScene?.length || 0) + ' chars');
   // Log story thread progress
   if (scene.threadProgress && Array.isArray(scene.threadProgress) && scene.threadProgress.length > 0) {
     for (const tp of scene.threadProgress) {
       if (tp.thread && tp.status) {
-        logger.info('melkrox: Thread [' + tp.thread + '] ' + tp.status);
         log('log-area', 'Thread [' + tp.thread + '] ' + tp.status, true);
       }
     }
   } else {
-    logger.debug('melkrox: No threadProgress in response');
+    logger.debug('No threadProgress in response');
+  }
+  // Apply appearance changes
+  if (scene.appearanceChanges && Array.isArray(scene.appearanceChanges)) {
+    for (const ac of scene.appearanceChanges) {
+      if (!ac.name || !ac.appearance) continue;
+      const protName = gameState.worldConfig?.protagonist?.name?.toLowerCase();
+      if ((ac.name.toLowerCase() === 'protagonist' || ac.name.toLowerCase() === protName) && gameState.worldConfig?.protagonist) {
+        gameState.worldConfig.protagonist.appearance = ac.appearance;
+        log('log-area', (gameState.worldConfig.protagonist.name || 'Protagonist') + ' appearance changed', true);
+      } else if (gameState.worldConfig?.characters) {
+        const char = gameState.worldConfig.characters.find(c => c.name && c.name.toLowerCase() === ac.name.toLowerCase());
+        if (char) {
+          char.appearance = ac.appearance;
+          log('log-area', char.name + ' appearance changed', true);
+        }
+      }
+    }
   }
 }
 
 // --- Image GFX Controls ---
 
 const GFX_MODES = ['sextant', 'halfblock', 'quadrant', 'pattern', 'luma'];
-const DITHER_BITS = [1, 2, 8];
+const DITHER_BITS = [1, 2, 4, 8];
 let gfxModeIndex = 0;
 let ditherBitsIndex = 2; // default 8
 
@@ -1030,9 +1096,9 @@ function setImageLoading(on) {
 
 // --- Scene Image Generation ---
 
-async function generateSceneImage(logId) {
+async function generateSceneImage(logId, customStyle) {
   if (!imageModel) {
-    logger.debug('melkrox: No image model configured, skipping image generation');
+    logger.debug('No image model configured, skipping image generation');
     return;
   }
 
@@ -1043,11 +1109,15 @@ async function generateSceneImage(logId) {
     const tone = gameState.worldConfig?.tone || 'atmospheric';
     const setting = gameState.worldConfig?.setting || '';
 
-    // Build character description for image continuity
+    // Build character description for image continuity (first sentence only — low res)
+    const briefAppearance = (text) => {
+      const dot = text.indexOf('. ');
+      return dot !== -1 ? text.slice(0, dot) : text;
+    };
     let charDesc = '';
     const protagonist = gameState.worldConfig?.protagonist;
     if (protagonist?.appearance) {
-      charDesc += 'Protagonist (' + (protagonist.name || 'player') + '): ' + protagonist.appearance + '. ';
+      charDesc += (protagonist.name || 'player') + ': ' + protagonist.appearance + '. ';
     }
     const characters = gameState.worldConfig?.characters;
     if (characters && Array.isArray(characters)) {
@@ -1055,7 +1125,7 @@ async function generateSceneImage(logId) {
       for (const c of characters) {
         const name = c.name || (typeof c === 'string' ? c : '');
         if (name && c.appearance && sceneText.toLowerCase().includes(name.toLowerCase())) {
-          charDesc += name + ': ' + c.appearance + '. ';
+          charDesc += name + ': ' + briefAppearance(c.appearance) + '. ';
         }
       }
     }
@@ -1063,18 +1133,21 @@ async function generateSceneImage(logId) {
     const sceneStyle = gameState._lastSceneImageStyle;
     const baseStyle = gameState.worldConfig?.imageStyle || '';
     const activeStyle = sceneStyle || baseStyle;
+    const defaultConstraints = 'Wide 3:1 format. Minimal elements, large color fields, no fine detail. '
+      + 'NO thin lines, NO text, NO crowds, NO intricate patterns. ';
+    const constraints = customStyle
+      ? customStyle
+      : (gameState.worldConfig?.imageConstraints || defaultConstraints);
+    const styleBlock = constraints + '\n' + (activeStyle ? activeStyle + '\n' : '');
     const imagePrompt = 'Generate a scene illustration.\n'
       + '<STYLE>\n'
-      + 'Low resolution, wide 3:1 format. Simple compositions with few elements. '
-      + 'No fine detail, thin lines, text, crowds, or busy backgrounds. '
-      + (activeStyle ? activeStyle + '\n' : '')
+      + styleBlock
       + '</STYLE>\n'
-      + '<GENRE>' + tone + '</GENRE>\n'
       + '<SETTING>' + setting + '</SETTING>\n'
       + (charDesc ? '<CHARACTERS>' + charDesc + '</CHARACTERS>\n' : '')
       + '<SCENE>' + sceneSnippet + '</SCENE>';
 
-    logger.info('melkrox: Image prompt: ' + imagePrompt);
+    logger.info('Image prompt: ' + imagePrompt);
 
     if (skipImages) {
       log(logId, 'Image generation skipped (skipImages=true)');
@@ -1092,13 +1165,13 @@ async function generateSceneImage(logId) {
 
     setSpinner('game-spinner', true, 'thinking');
 
-    if (imageData) {
-      gameState.currentImage = imageData;
+    if (imageData && gameState) {
+      currentImage = imageData;
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
       log(logId, 'Scene image generated (' + elapsed + 's)');
 
       // Cache image
-      logger.debug('melkrox: Caching image for turn ' + gameState.turnCount + ' | size=' + imageData.length + ' chars');
+      logger.debug('Caching image for turn ' + gameState.turnCount + ' | size=' + imageData.length + ' chars');
       const imgKey = currentGameId ? 'image:' + currentGameId + ':' + gameState.turnCount : 'image:' + gameState.turnCount;
       await $melker.cache.write(CACHE_NS, imgKey, encoder.encode(imageData));
       await pruneImageCache();
@@ -1112,7 +1185,7 @@ async function generateSceneImage(logId) {
 }
 
 async function callImageGeneration(prompt, signal) {
-  logger.debug('melkrox: Image request to ' + imageModel + ' | promptLength=' + prompt.length + ' chars');
+  logger.debug('Image request to ' + imageModel + ' | promptLength=' + prompt.length + ' chars');
 
   const body = {
     model: imageModel,
@@ -1124,7 +1197,7 @@ async function callImageGeneration(prompt, signal) {
   };
 
   const bodyJson = JSON.stringify(body);
-  logger.info('melkrox: Image request to ' + imageModel + ' | prompt: ' + prompt);
+  logger.info('Image request to ' + imageModel + ' | prompt: ' + prompt);
   const t0 = Date.now();
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -1140,11 +1213,11 @@ async function callImageGeneration(prompt, signal) {
   });
 
   const elapsed = Date.now() - t0;
-  logger.debug('melkrox: Image API response status=' + res.status + ' elapsed=' + elapsed + 'ms');
+  logger.debug('Image API response status=' + res.status + ' elapsed=' + elapsed + 'ms');
 
   if (!res.ok) {
     const text = await res.text();
-    logger.error('melkrox: Image API error ' + res.status + ': ' + text.slice(0, 300));
+    logger.error('Image API error ' + res.status + ': ' + text.slice(0, 300));
     throw new Error('Image API ' + res.status + ': ' + text.slice(0, 100));
   }
 
@@ -1152,33 +1225,33 @@ async function callImageGeneration(prompt, signal) {
   const choice = json.choices?.[0]?.message;
   const usage = json.usage;
   if (usage) {
-    logger.info('melkrox: Image API usage | prompt=' + usage.prompt_tokens + ' completion=' + usage.completion_tokens + ' total=' + usage.total_tokens + ' tokens, elapsed=' + elapsed + 'ms');
+    logger.info('Image API usage | prompt=' + usage.prompt_tokens + ' completion=' + usage.completion_tokens + ' total=' + usage.total_tokens + ' tokens, elapsed=' + elapsed + 'ms');
   }
 
-  logger.info('melkrox: Image response keys: ' + Object.keys(json).join(', '));
+  logger.info('Image response keys: ' + Object.keys(json).join(', '));
   if (choice) {
-    logger.info('melkrox: Message keys: ' + Object.keys(choice).join(', ') + ' | contentType=' + (Array.isArray(choice.content) ? 'array[' + choice.content.length + ']' : typeof choice.content));
+    logger.info('Message keys: ' + Object.keys(choice).join(', ') + ' | contentType=' + (Array.isArray(choice.content) ? 'array[' + choice.content.length + ']' : typeof choice.content));
   }
   // Log full response structure (truncated) for debugging
   if (json.data) {
-    logger.info('melkrox: Response has data[] with ' + json.data.length + ' entries, keys=' + (json.data[0] ? Object.keys(json.data[0]).join(', ') : 'empty'));
+    logger.info('Response has data[] with ' + json.data.length + ' entries, keys=' + (json.data[0] ? Object.keys(json.data[0]).join(', ') : 'empty'));
   }
 
   // OpenRouter image models return base64 in content array
   if (choice?.content && Array.isArray(choice.content)) {
     for (const part of choice.content) {
-      logger.debug('melkrox: Content part type=' + part.type);
+      logger.debug('Content part type=' + part.type);
       // image_url format
       if (part.type === 'image_url' && part.image_url?.url) {
         const url = part.image_url.url;
-        logger.info('melkrox: Image received via image_url | size=' + url.length + ' chars');
+        logger.info('Image received via image_url | size=' + url.length + ' chars');
         return url;
       }
       // inline_data format (Gemini)
       if (part.type === 'inline_data' && part.data) {
         const mime = part.mime_type || 'image/png';
         const dataUrl = 'data:' + mime + ';base64,' + part.data;
-        logger.info('melkrox: Image received via inline_data | mime=' + mime + ' size=' + dataUrl.length + ' chars');
+        logger.info('Image received via inline_data | mime=' + mime + ' size=' + dataUrl.length + ' chars');
         return dataUrl;
       }
     }
@@ -1187,34 +1260,34 @@ async function callImageGeneration(prompt, signal) {
   // OpenRouter returns images in message.images[] as {type: "image_url", image_url: {url: "data:..."}}
   if (choice?.images && choice.images.length > 0) {
     const img = choice.images[0];
-    logger.debug('melkrox: images[0] type=' + typeof img + ' keys=' + (typeof img === 'object' ? Object.keys(img).join(', ') : 'n/a'));
+    logger.debug('images[0] type=' + typeof img + ' keys=' + (typeof img === 'object' ? Object.keys(img).join(', ') : 'n/a'));
     if (typeof img === 'object') {
       // Standard OpenRouter format: {type: "image_url", image_url: {url: "data:..."}}
       if (img.image_url?.url) {
-        logger.info('melkrox: Image received via images[].image_url.url | size=' + img.image_url.url.length + ' chars');
+        logger.info('Image received via images[].image_url.url | size=' + img.image_url.url.length + ' chars');
         return img.image_url.url;
       }
       // Fallback object formats
       const url = img.url || img.data || img.b64_json;
       if (url && typeof url === 'string') {
         if (url.startsWith('data:')) {
-          logger.info('melkrox: Image received via images[] object | size=' + url.length + ' chars');
+          logger.info('Image received via images[] object | size=' + url.length + ' chars');
           return url;
         }
         const mime = img.mime_type || img.content_type || 'image/png';
         const dataUrl = 'data:' + mime + ';base64,' + url;
-        logger.info('melkrox: Image received via images[] object (base64) | size=' + dataUrl.length + ' chars');
+        logger.info('Image received via images[] object (base64) | size=' + dataUrl.length + ' chars');
         return dataUrl;
       }
     }
     // Plain string
     if (typeof img === 'string') {
       if (img.startsWith('data:')) {
-        logger.info('melkrox: Image received via images[] string | size=' + img.length + ' chars');
+        logger.info('Image received via images[] string | size=' + img.length + ' chars');
         return img;
       }
       const dataUrl = 'data:image/png;base64,' + img;
-      logger.info('melkrox: Image received via images[] (raw base64) | size=' + dataUrl.length + ' chars');
+      logger.info('Image received via images[] (raw base64) | size=' + dataUrl.length + ' chars');
       return dataUrl;
     }
   }
@@ -1222,24 +1295,24 @@ async function callImageGeneration(prompt, signal) {
   // String content fallback
   if (typeof choice?.content === 'string') {
     const content = choice.content.trim();
-    logger.debug('melkrox: Image response is string | length=' + content.length + ' chars');
+    logger.debug('Image response is string | length=' + content.length + ' chars');
     if (content.startsWith('data:image/')) {
-      logger.info('melkrox: Image received as inline data URL | size=' + content.length + ' chars');
+      logger.info('Image received as inline data URL | size=' + content.length + ' chars');
       return content;
     }
     // Try to extract a URL from markdown
     const urlMatch = content.match(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/);
     if (urlMatch) {
-      logger.info('melkrox: Image URL found in response, fetching: ' + urlMatch[1].slice(0, 100));
+      logger.info('Image URL found in response, fetching: ' + urlMatch[1].slice(0, 100));
       const imgRes = await fetch(urlMatch[1]);
       if (imgRes.ok) {
         const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
         const contentType = imgRes.headers.get('content-type') || 'image/png';
-        logger.info('melkrox: Image fetched | type=' + contentType + ' size=' + imgBytes.length + ' bytes');
+        logger.info('Image fetched | type=' + contentType + ' size=' + imgBytes.length + ' bytes');
         const b64 = btoa(String.fromCharCode(...imgBytes));
         return 'data:' + contentType + ';base64,' + b64;
       }
-      logger.warn('melkrox: Image fetch failed | status=' + imgRes.status);
+      logger.warn('Image fetch failed | status=' + imgRes.status);
     }
   }
 
@@ -1248,23 +1321,23 @@ async function callImageGeneration(prompt, signal) {
     const d = json.data[0];
     if (d.b64_json) {
       const dataUrl = 'data:image/png;base64,' + d.b64_json;
-      logger.info('melkrox: Image received via data[].b64_json | size=' + dataUrl.length + ' chars');
+      logger.info('Image received via data[].b64_json | size=' + dataUrl.length + ' chars');
       return dataUrl;
     }
     if (d.url) {
-      logger.info('melkrox: Image URL in data[].url, fetching: ' + d.url.slice(0, 100));
+      logger.info('Image URL in data[].url, fetching: ' + d.url.slice(0, 100));
       const imgRes = await fetch(d.url);
       if (imgRes.ok) {
         const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
         const contentType = imgRes.headers.get('content-type') || 'image/png';
         const b64 = btoa(String.fromCharCode(...imgBytes));
-        logger.info('melkrox: Image fetched | type=' + contentType + ' size=' + imgBytes.length + ' bytes');
+        logger.info('Image fetched | type=' + contentType + ' size=' + imgBytes.length + ' bytes');
         return 'data:' + contentType + ';base64,' + b64;
       }
     }
   }
 
-  logger.warn('melkrox: No image data found in response | raw=' + JSON.stringify(json).slice(0, 500));
+  logger.warn('No image data found in response | raw=' + JSON.stringify(json).slice(0, 500));
   throw new Error('No image data in response');
 }
 
@@ -1272,7 +1345,7 @@ async function pruneImageCache() {
   const prefix = currentGameId ? 'image:' + currentGameId + ':' : 'image:';
   const allKeys = await $melker.cache.scan(CACHE_NS);
   const keys = allKeys.filter(k => k.startsWith(prefix));
-  logger.debug('melkrox: Image cache has ' + keys.length + ' entries (max ' + MAX_CACHED_IMAGES + ')');
+  logger.debug('Image cache has ' + keys.length + ' entries (max ' + MAX_CACHED_IMAGES + ')');
   if (keys.length > MAX_CACHED_IMAGES) {
     const sorted = keys.sort((a, b) => {
       const na = parseInt(a.split(':').pop()) || 0;
@@ -1280,7 +1353,7 @@ async function pruneImageCache() {
       return na - nb;
     });
     const toDelete = sorted.length - MAX_CACHED_IMAGES;
-    logger.debug('melkrox: Pruning ' + toDelete + ' old cached images');
+    logger.debug('Pruning ' + toDelete + ' old cached images');
     for (let i = 0; i < toDelete; i++) {
       await $melker.cache.delete(CACHE_NS, sorted[i]);
     }
@@ -1305,6 +1378,7 @@ Respond with ONLY a JSON object (no markdown fences) with these fields:
 - protagonist: object with name, appearance (2-3 sentences describing the player character's physical appearance, clothing, distinctive features)
 - threads: array of 3-5 story thread objects, each with: name (short label), description (1-2 sentences describing the driving force — could be tension, mystery, romance, humor, rivalry, friendship, ambition, or any narrative engine appropriate to the tone). NOT explicit goals — underlying narrative currents woven organically. Mix scales: one overarching thread, a few local/personal ones.
 - imageStyle: one sentence describing ONLY the visual palette, lighting, and mood for scene illustrations. NO scene-specific objects, props, or details — those come from the scene text. Examples: "Warm golden palette, soft diffused lighting, cozy mood" for slice-of-life, "Deep shadows, desaturated blues, oppressive atmosphere" for horror, "Bright saturated colors, dynamic contrast, playful energy" for comedy.
+- imageConstraints: technical rendering constraints for image generation. If the player's prompt explicitly requests a specific art style (photorealistic, comic, watercolor, oil painting, pixel art, etc.), generate constraints matching that style. Otherwise set to null and defaults will be used. Always include "Wide 3:1 format" and "NO text". Examples: null (default — minimal detail for terminal rendering), "Wide 3:1 format. Photorealistic with cinematic depth of field. Strong shadows, sharp subject, soft background. NO text, NO crowds." for photorealistic, "Wide 3:1 format. Bold outlines, flat color fills, comic panel style. NO fine hatching, NO text." for comic.
 - systemPrompt: the full system prompt to use for gameplay turns
 </OUTPUT_FORMAT>
 
@@ -1316,11 +1390,13 @@ The systemPrompt you generate MUST instruct the AI to always respond in this exa
   "inventory": ["item1", "item2"],
   "choices": ["short action 1", "short action 2", "short action 3"],
   "threadProgress": [{"thread": "thread name", "status": "brief status update"}],
-  "imageStyle": "optional override"
+  "imageStyle": "optional override",
+  "appearanceChanges": [{"name": "character name", "appearance": "new first-sentence appearance"}]
 }
 Keep narratives SHORT (2-4 sentences). Choice labels under 6 words. Small terminal window — brevity is essential.
 threadProgress is REQUIRED — always include at least one entry. Track which story threads were touched, hinted at, or shifted by this turn's events. Status should be 3-8 words (e.g. "tension rising", "first clue discovered", "unchanged but looming").
 imageStyle is OPTIONAL — only include if this scene's mood deviates significantly from the game's default visual style (e.g. a sudden dream sequence in a comedy, a flashback, a tonal shift). Omit for normal scenes.
+appearanceChanges is OPTIONAL — only include when a character's appearance meaningfully changes during the scene (e.g. disguise, transformation, injury, new outfit). One sentence per character. Use the character's name exactly as defined in the world config, or "protagonist" for the player character.
 </TURN_FORMAT>
 
 <INPUT_FORMAT>
@@ -1352,7 +1428,7 @@ The systemPrompt MUST instruct the AI that actions have outcomes that matter. Ch
 </CONSEQUENCES>
 
 <CHARACTER_CONTINUITY>
-The systemPrompt MUST instruct the AI to always describe characters consistently using their established appearances. When a character appears, reference their distinctive physical features. Never change appearance between turns.
+The systemPrompt MUST instruct the AI to always describe characters consistently using their established appearances. When a character appears, reference their distinctive physical features. Keep appearances stable unless the story causes a meaningful change (disguise, transformation, injury, new outfit). When appearance changes, include "appearanceChanges" in the response JSON with a COMPLETE updated appearance description — merge the original physical identity (face, hair, build) with the new change into one coherent sentence. Do NOT send only the delta.
 </CHARACTER_CONTINUITY>
 
 <LANGUAGE>
@@ -1364,10 +1440,10 @@ async function callOpenRouter(systemPrompt, messages, useModel) {
   const msgCount = messages.length;
   const sysLen = systemPrompt.length;
   const totalChars = messages.reduce((sum, m) => sum + m.content.length, sysLen);
-  logger.info('melkrox: API request to ' + m + ' | messages=' + msgCount + ' systemPrompt=' + sysLen + ' chars, totalInput=' + totalChars + ' chars');
-  logger.info('melkrox: System prompt: ' + systemPrompt);
+  logger.info('API request to ' + m + ' | messages=' + msgCount + ' systemPrompt=' + sysLen + ' chars, totalInput=' + totalChars + ' chars');
+  logger.info('System prompt: ' + systemPrompt);
   for (const msg of messages) {
-    logger.info('melkrox: [' + msg.role + '] ' + msg.content);
+    logger.info('[' + msg.role + '] ' + msg.content);
   }
 
   const body = {
@@ -1381,7 +1457,7 @@ async function callOpenRouter(systemPrompt, messages, useModel) {
   };
 
   const bodyJson = JSON.stringify(body);
-  logger.debug('melkrox: POST openrouter.ai/api/v1/chat/completions | bodySize=' + bodyJson.length + ' bytes');
+  logger.debug('POST openrouter.ai/api/v1/chat/completions | bodySize=' + bodyJson.length + ' bytes');
   const t0 = Date.now();
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -1396,11 +1472,11 @@ async function callOpenRouter(systemPrompt, messages, useModel) {
   });
 
   const elapsed = Date.now() - t0;
-  logger.debug('melkrox: API response status=' + res.status + ' elapsed=' + elapsed + 'ms');
+  logger.debug('API response status=' + res.status + ' elapsed=' + elapsed + 'ms');
 
   if (!res.ok) {
     const text = await res.text();
-    logger.error('melkrox: API error ' + res.status + ': ' + text.slice(0, 300));
+    logger.error('API error ' + res.status + ': ' + text.slice(0, 300));
     throw new Error('API error ' + res.status + ': ' + text.slice(0, 200));
   }
 
@@ -1408,21 +1484,21 @@ async function callOpenRouter(systemPrompt, messages, useModel) {
   const content = json.choices?.[0]?.message?.content;
   const usage = json.usage;
   if (usage) {
-    logger.info('melkrox: API usage | prompt=' + usage.prompt_tokens + ' completion=' + usage.completion_tokens + ' total=' + usage.total_tokens + ' tokens, elapsed=' + elapsed + 'ms');
+    logger.info('API usage | prompt=' + usage.prompt_tokens + ' completion=' + usage.completion_tokens + ' total=' + usage.total_tokens + ' tokens, elapsed=' + elapsed + 'ms');
   }
   if (!content) {
-    logger.error('melkrox: Empty API response | raw=' + JSON.stringify(json).slice(0, 300));
+    logger.error('Empty API response | raw=' + JSON.stringify(json).slice(0, 300));
     throw new Error('Empty API response');
   }
-  logger.debug('melkrox: API response content length=' + content.length + ' chars');
+  logger.debug('API response content length=' + content.length + ' chars');
   return content;
 }
 
 async function callOpenRouterStreaming(systemPrompt, messages) {
-  logger.info('melkrox: Streaming request to ' + model + ' | messages=' + messages.length);
-  logger.info('melkrox: System prompt: ' + systemPrompt);
+  logger.info('Streaming request to ' + model + ' | messages=' + messages.length);
+  logger.info('System prompt: ' + systemPrompt);
   const lastMsg = messages[messages.length - 1];
-  if (lastMsg) logger.info('melkrox: Latest [' + lastMsg.role + '] ' + lastMsg.content);
+  if (lastMsg) logger.info('Latest [' + lastMsg.role + '] ' + lastMsg.content);
 
   const body = {
     model: model,
@@ -1448,7 +1524,7 @@ async function callOpenRouterStreaming(systemPrompt, messages) {
 
   if (!res.ok) {
     const errText = await res.text();
-    logger.error('melkrox: Streaming error ' + res.status + ': ' + errText.slice(0, 300));
+    logger.error('Streaming error ' + res.status + ': ' + errText.slice(0, 300));
     throw new Error('API error ' + res.status + ': ' + errText.slice(0, 200));
   }
 
@@ -1513,14 +1589,14 @@ async function callOpenRouterStreaming(systemPrompt, messages) {
     }
   }
 
-  logger.debug('melkrox: Stream complete | length=' + fullContent.length + ' chars');
+  logger.debug('Stream complete | length=' + fullContent.length + ' chars');
   if (!fullContent) throw new Error('Empty streaming response');
   return fullContent;
 }
 
 async function callOpenRouterStreamingWithModel(systemPrompt, messages, useModel, onChunk) {
   const m = useModel || model;
-  logger.info('melkrox: Streaming request to ' + m + ' | messages=' + messages.length);
+  logger.info('Streaming request to ' + m + ' | messages=' + messages.length);
 
   const body = {
     model: m,
@@ -1636,7 +1712,7 @@ function extractPartialJSON(text) {
     if (items.length > 0) result.choices = items;
   }
 
-  logger.debug('melkrox: Extracted partial JSON | narrative=' + narrative.length + ' chars, location=' + (location || 'none'));
+  logger.debug('Extracted partial JSON | narrative=' + narrative.length + ' chars, location=' + (location || 'none'));
   return result;
 }
 
@@ -1661,7 +1737,7 @@ function extractJsonString(text, key) {
 async function saveState() {
   if (!gameState || !currentGameId) return;
   const data = JSON.stringify(gameState);
-  logger.debug('melkrox: Saving state | game=' + currentGameId + ' turn=' + gameState.turnCount + ' history=' + gameState.history.length + ' messages, size=' + data.length + ' chars');
+  logger.debug('Saving state | game=' + currentGameId + ' turn=' + gameState.turnCount + ' history=' + gameState.history.length + ' messages, size=' + data.length + ' chars');
   await $melker.cache.write(CACHE_NS, 'game:' + currentGameId, encoder.encode(data));
 
   // Update index entry
@@ -1714,6 +1790,10 @@ function showScreen(id) {
     $melker.getElementById(spinnerId).stop();
   }
   setImageLoading(false);
+  // Clear scene image to prevent old image flicker on next game screen show
+  if (id !== 'game-screen') {
+    $melker.getElementById('scene-image').setSrc(PLACEHOLDER_IMG);
+  }
 }
 
 function showGameScreen() { showScreen('game-screen'); }
@@ -1732,8 +1812,8 @@ function renderScene() {
 
   // Scene image — always visible
   const imgEl = $melker.getElementById('scene-image');
-  if (gameState.currentImage) {
-    imgEl.setSrc(gameState.currentImage);
+  if (currentImage) {
+    imgEl.setSrc(currentImage);
     // Stop shader after setting new src — avoids flash of unshaded old image
     if (imgEl.props.onShader) setImageLoading(false);
   } else if (!imgEl.props.onShader) {
@@ -1766,6 +1846,47 @@ function renderScene() {
     }
   }
 }
+
+// --- AI Assistant Tools ---
+
+$melker.registerAITool({
+  name: 'get_game_context',
+  description: 'Get current game state including world, location, inventory, characters, story threads, and available commands',
+  parameters: {},
+  handler: () => {
+    if (!gameState) return { status: 'no_game', message: 'No game is currently active' };
+    const wc = gameState.worldConfig || {};
+    return {
+      title: wc.title,
+      setting: wc.setting,
+      tone: wc.tone,
+      location: gameState.location,
+      inventory: gameState.inventory,
+      turn: gameState.turnCount,
+      scene: gameState.currentScene,
+      choices: gameState.choices,
+      characters: (wc.characters || []).map(c => ({ name: c.name, description: c.description, appearance: c.appearance })),
+      protagonist: wc.protagonist,
+      threads: wc.threads,
+      commands: '/new, /games, /undo, /image, /reimage [style], /images, /gfx [mode], /dither [bits], /history, /help',
+    };
+  }
+});
+
+$melker.registerAITool({
+  name: 'play_action',
+  description: 'Send a game action or command as if the player typed it. Use for gameplay actions like "look around", "pick up key", or commands like "/undo", "/reimage"',
+  parameters: {
+    action: { type: 'string', required: true, description: 'The action text or command to send' }
+  },
+  handler: (args) => {
+    if (!args.action) return { success: false, message: 'No action provided' };
+    const input = $melker.getElementById('cmd-input');
+    input.props.value = args.action;
+    $app.handleInput();
+    return { success: true, message: 'Action sent: ' + args.action };
+  }
+});
 
 // --- Init on mount ---
 

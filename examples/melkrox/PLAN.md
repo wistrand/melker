@@ -24,9 +24,9 @@ Startup logic: if saved games exist, show the most recent one directly. If launc
 | Role              | Model                                    | Config key              |
 |-------------------|------------------------------------------|-------------------------|
 | World creation    | `anthropic/claude-sonnet-4`              | (hardcoded as setupModel) |
-| Turn generation   | `google/gemini-2.5-flash`                | `openrouter.model`      |
+| Turn generation   | `anthropic/claude-haiku-4-5`             | `openrouter.model`      |
 | Genre description | `openai/gpt-4.1-mini`                   | (hardcoded)             |
-| Scene images      | `google/gemini-3.1-flash-image-preview`  | `openrouter.imageModel` |
+| Scene images      | `openai/gpt-image-1`                    | `openrouter.imageModel` |
 
 ## Data Model
 
@@ -50,18 +50,20 @@ interface WorldConfig {
     description: string;    // Underlying tension, mystery, or conflict
   }>;
   systemPrompt: string;
+  imageConstraints?: string; // Technical rendering rules for image gen (overrides defaults)
+  imageStyle?: string;       // Visual palette/mood for scene images
 }
 
 interface GameState {
   worldConfig: WorldConfig;
   history: TurnEntry[];      // Conversation history (pruned to last 20 pairs)
   currentScene: string;      // Current narrative (markdown)
-  currentImage?: string;     // Scene image (data URL)
   turnCount: number;
   inventory: string[];
   location: string;
   choices: string[];
 }
+// Note: currentImage is a runtime variable loaded from cache, not stored in game state
 ```
 
 ## Cache Layout
@@ -72,7 +74,7 @@ Namespace: `melkrox`
 |------------------------------|--------------------------------------|
 | `games`                      | JSON array of game index entries     |
 | `game:{id}`                  | Full GameState JSON per game         |
-| `image:{gameId}:{turnCount}` | Scene image data URL (pruned to last 5) |
+| `image:{gameId}:{turnCount}` | Scene image data URL (pruned to last 20) |
 
 Automatic migration from legacy single-game format (`state` key) on first load.
 
@@ -81,8 +83,8 @@ Automatic migration from legacy single-game format (`state` key) on first load.
 | Config key              | Env var              | Default                              |
 |-------------------------|----------------------|--------------------------------------|
 | `openrouter.key`        | `OPENROUTER_API_KEY` | (required)                           |
-| `openrouter.model`      | —                    | `google/gemini-2.5-flash`            |
-| `openrouter.imageModel` | —                    | `google/gemini-3.1-flash-image-preview` |
+| `openrouter.model`      | —                    | `anthropic/claude-haiku-4-5`         |
+| `openrouter.imageModel` | —                    | `openai/gpt-image-1`                 |
 | `openrouter.skipImages` | `MELKROX_SKIP_IMAGES`| `false`                              |
 
 When `skipImages` is true, image prompts are still generated and logged but the API call is skipped.
@@ -93,8 +95,8 @@ When `skipImages` is true, image prompts are still generated and logged but the 
 |------------|--------------------|---------------------------------|
 | `net`      | `["openrouter.ai"]`| API calls                      |
 | `env`      | `["OPENROUTER_API_KEY"]` | API key                  |
-| `read`     | `["*"]`            | File picker for story files    |
-| `write`    | `["*"]`            | Temp file for `/image` command |
+| `read`     | `[]`               | cwd implicitly readable        |
+| `write`    | `[]`               | `/image` writes to `$melker.cacheDir` |
 | `shader`   | `true`             | Loading shader effect on image |
 | `browser`  | `true`             | `/image` opens in browser      |
 
@@ -122,7 +124,7 @@ All prompts are logged at `info` level (complete, not clipped).
 
 Prompts use XML tag segmentation for clean structure:
 
-- **Image prompts**: `<STYLE>`, `<GENRE>`, `<SETTING>`, `<CHARACTERS>`, `<SCENE>`
+- **Image prompts**: `<STYLE>`, `<SETTING>`, `<CHARACTERS>`, `<SCENE>`
 - **Turn history**: `<STATE>` (with `<LOCATION>`, `<INVENTORY>`, `<TURN>`), `<ACTION>`
 - **Setup system prompt**: `<OUTPUT_FORMAT>`, `<TURN_FORMAT>`, `<INPUT_FORMAT>`, `<WORLD_RULES>`, `<STORY_THREADS>`, `<NPC_AGENCY>`, `<CONSEQUENCES>`, `<CHARACTER_CONTINUITY>`, `<LANGUAGE>`
 
@@ -139,6 +141,10 @@ During image generation, the prompt includes appearance descriptions for:
 - Any NPC whose name appears in the current scene narrative (matched case-insensitively)
 
 The gameplay system prompt also instructs the turn model to describe characters consistently using their established appearances.
+
+### Appearance Changes
+
+Character appearances can evolve during gameplay. The turn model may include `appearanceChanges` in its response when a character's look meaningfully changes (disguise, transformation, injury, new outfit). Each entry specifies a character name and the new complete appearance description. The model is instructed to send full merged descriptions (not deltas) so the stored appearance always reflects the complete current look. Changes match by character name or "protagonist" for the player character.
 
 ## Language Detection
 
@@ -157,19 +163,20 @@ Shader lifecycle: `setSpinner('game-spinner', true)` → `setImageLoading(true)`
 
 ## Player Commands
 
-| Command     | Action                                |
-|-------------|---------------------------------------|
-| (any text)  | Send to AI as freeform input          |
-| `/new`      | Start new game (go to setup screen)   |
-| `/games`    | Switch between saved games            |
-| `/undo`     | Go back one turn (restores cached image) |
-| `/image`    | Open scene image in system browser    |
-| `/reimage`  | Regenerate scene image for current turn |
-| `/images`   | Toggle image generation on/off        |
-| `/gfx`      | Set gfx mode (sextant/halfblock/quadrant/pattern/luma/reset) |
-| `/dither`   | Set dither bits (1/2/8/reset)         |
-| `/history`  | Show last 10 turns inline             |
-| `/help`     | Show command list                     |
+| Command            | Action                                |
+|--------------------|---------------------------------------|
+| (any text)         | Send to AI as freeform input          |
+| `/new`             | Start new game (go to setup screen)   |
+| `/games`           | Switch between saved games            |
+| `/undo`            | Go back one turn (restores cached image) |
+| `/redo`            | Go forward one turn (after undo)      |
+| `/image`           | Open scene image in system browser    |
+| `/reimage [style]` | Regenerate scene image (optional custom style overrides constraints) |
+| `/images`          | Toggle image generation on/off        |
+| `/gfx`             | Set gfx mode (sextant/halfblock/quadrant/pattern/luma/reset) |
+| `/dither`          | Set dither bits (1/2/8/reset)         |
+| `/history`         | Show last 10 turns inline             |
+| `/help`            | Show command list                     |
 
 ## Image GFX Controls
 
@@ -225,10 +232,10 @@ The image and narrative are in a vertical `<split-pane>` with a draggable divide
 
 ## Setup Screen
 
-- Genre buttons: Dark Fantasy, Sci-Fi Noir, Horror, Heist, Office, Road Trip, Comedy, Mystery, Romance, Desert Adventure
-- Genre buttons call `gpt-4.1-mini` to generate a unique one-sentence concept (with random seed in system prompt)
-- 5-row textarea for custom prompts
-- Restyle buttons appear when prompt has 10+ characters (Grittier, Funnier, Weirder, Scarier, More Epic)
+- Genre buttons: Dark Fantasy, Sci-Fi, Horror, Heist, Slice of Life, Road Trip, Comedy, Mystery, Romance, Pirate, Toy Adventure
+- Genre buttons call `gpt-4.1-mini` to generate a unique one-sentence concept (with random seed, banned words/settings to prevent repetition)
+- 5-row textarea for custom prompts (word-wrapping)
+- Restyle buttons appear when prompt has 3+ characters (Darker, Lighter, Grittier, Weirder, Cozier, Enrich)
 - "Load from file..." opens a file picker dialog
 - "Saved Games" button (shown if games exist)
 - Fixed-height progress area (height 8) prevents layout jumps during world creation
@@ -249,6 +256,26 @@ examples/melkrox/
   melkrox.melker    — the game (single file)
 ```
 
+## AI Assistant Tools
+
+Two tools are registered via `$melker.registerAITool()` for the Melker AI assistant:
+
+- **`get_game_context`** — Returns current game state: world config, location, inventory, characters, story threads, available commands
+- **`play_action`** — Sends a game action or command as if the player typed it (e.g. "look around", "/undo", "/reimage")
+
+## Image Generation
+
+### Image Constraints vs Image Style
+
+- **`imageConstraints`** — Technical rendering rules (resolution, detail level, composition). Generated by the world-creation model based on the story prompt, or uses defaults: "Wide 3:1 format. Minimal elements, large color fields, no fine detail. NO thin lines, NO text, NO crowds, NO intricate patterns."
+- **`imageStyle`** — Visual palette, lighting, and mood (e.g. "Warm golden palette, soft diffused lighting, cozy mood"). Generated per-world, can be overridden per-scene by the turn model via `scene.imageStyle`.
+
+`/reimage [style]` allows the player to override constraints with a custom style for a single regeneration.
+
+### Image Storage
+
+Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `currentImage` is a runtime variable loaded from cache on game load. This keeps game state small and serializable. Up to 20 images are cached per game.
+
 ## Key Design Decisions
 
 - **Single file**: everything in one `.melker` file, no external JS
@@ -257,6 +284,7 @@ examples/melkrox/
 - **Streaming narrative**: only the narrative field streams to screen, not raw JSON
 - **Streaming world creation**: progressive field extraction with real-time feedback
 - **Character continuity**: appearance descriptions stored in world config, included in image prompts
+- **Appearance evolution**: turn model can update character appearances mid-game via `appearanceChanges`
 - **Language-aware**: all content generated in the player's language
 - **Split-pane layout**: image and narrative in a resizable vertical split-pane
 - **Image fills pane**: `height: fill` on image so it resizes with split-pane divider
@@ -264,6 +292,9 @@ examples/melkrox/
 - **Log area always visible**: 5-row reserved space at bottom, no display toggle
 - **Configurable image skip**: set `MELKROX_SKIP_IMAGES=true` to skip image API calls (prompts still logged)
 - **AbortController**: new player input cancels in-flight image generation
+- **Turn lock**: `turnBusy` flag prevents concurrent AI turns; released after narrative renders but before image generation (player can type during image gen)
+- **Undo/redo**: `/undo` pops last turn onto redo stack, `/redo` replays it. Redo stack is cleared on new AI turns (branching)
+- **Image not in state**: `currentImage` is runtime-only, loaded from cache on game load
 - **History pruning**: keep last 20 turn pairs in context
 - **Story threads**: world config includes narrative tensions woven organically into scenes, not explicit goals
 - **NPC agency & consequences**: NPCs act independently, player actions have lasting effects
@@ -273,3 +304,6 @@ examples/melkrox/
 - **Session-only GFX settings**: gfx mode and dither bits not saved with game state
 - **Toast notifications**: user feedback via `$melker.toast` instead of log entries
 - **Screen switching preserves styles**: `showScreen()` spreads existing style to avoid overwriting `height: fill`
+- **Screen switching stops spinners**: `showScreen()` calls `.stop()` on all spinners and stops shader to prevent hidden animations
+- **Null guards for async**: background image gen checks `gameState` is still valid before applying results
+- **Minimal permissions**: `read: []`, `write: []` — cwd is implicitly readable, `/image` writes to app cache dir

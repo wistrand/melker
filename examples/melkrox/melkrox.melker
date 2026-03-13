@@ -1939,20 +1939,14 @@ $melker.engine.onMount(async () => {
   const sorted = [...gamesIndex].sort((a, b) => (b.lastPlayed || '').localeCompare(a.lastPlayed || ''));
   const lastGame = sorted[0];
   log(logId, 'Resuming "' + lastGame.title + '"...');
-  const data = await $melker.cache.read(CACHE_NS, 'game:' + lastGame.id);
-  if (data) {
-    try {
-      gameState = JSON.parse(decoder.decode(data));
-      currentGameId = lastGame.id;
-      log(logId, 'Turn: ' + gameState.turnCount + ', Location: ' + gameState.location);
-      showGameScreen();
-      renderScene();
-      focusInput();
-      $melker.render();
-      return;
-    } catch (_) {
-      log(logId, 'Save corrupted, showing game list');
-    }
+  await loadGame(lastGame.id);
+  if (gameState) {
+    log(logId, 'Turn: ' + gameState.turnCount + ', Location: ' + gameState.location);
+    showGameScreen();
+    renderScene();
+    focusInput();
+    $melker.render();
+    return;
   }
 
   log(logId, gamesIndex.length + ' saved games found');

@@ -119,6 +119,7 @@ export class TerminalInputProcessor {
   private _options: Required<TerminalInputOptions>;
   private _isListening = false;
   private _rawModeEnabled = false;
+  private _pendingEscape = ''; // Buffered incomplete escape sequence from previous read
 
   constructor(
     options: TerminalInputOptions = {},
@@ -258,7 +259,26 @@ export class TerminalInputProcessor {
    */
   processRawInput(data: Uint8Array): MelkerEvent[] {
     const events: MelkerEvent[] = [];
-    const text = new TextDecoder().decode(data);
+    let text = new TextDecoder().decode(data);
+
+    // Prepend any incomplete escape sequence from the previous read
+    if (this._pendingEscape) {
+      text = this._pendingEscape + text;
+      this._pendingEscape = '';
+    }
+
+    // Check if text ends with an incomplete escape sequence.
+    // If the last sequence starts with \x1b but the CSI has no terminator,
+    // buffer it for the next read to avoid leaking raw bytes as text input.
+    const lastEsc = text.lastIndexOf('\x1b');
+    if (lastEsc >= 0) {
+      const tail = text.substring(lastEsc);
+      if (this._isIncompleteEscape(tail)) {
+        this._pendingEscape = tail;
+        text = text.substring(0, lastEsc);
+        if (text.length === 0) return events;
+      }
+    }
 
     // Parse input sequences
     const sequences = this._parseInputSequences(text);
@@ -551,6 +571,27 @@ export class TerminalInputProcessor {
     }
 
     return text.slice(start, end);
+  }
+
+  /**
+   * Check if a string starting with \x1b is an incomplete escape sequence
+   * (i.e. a CSI that hasn't received its terminator byte yet).
+   */
+  private _isIncompleteEscape(s: string): boolean {
+    if (s.length === 1) return true; // bare \x1b
+    if (s[1] === '[') {
+      // CSI sequence — check for X10 mouse (\x1b[M + 3 bytes)
+      if (s.length >= 3 && s[2] === 'M') {
+        return s.length < 6; // need 3 more bytes after M
+      }
+      // Regular CSI — need a terminator byte (0x40-0x7E)
+      for (let i = 2; i < s.length; i++) {
+        const code = s.charCodeAt(i);
+        if (code >= 0x40 && code <= 0x7E) return false; // terminator found
+      }
+      return true; // no terminator yet
+    }
+    return false; // \x1b + non-[ is a complete 2-byte sequence
   }
 
   /**

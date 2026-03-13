@@ -75,7 +75,7 @@
   }
   #narrative-wrap {
     flex-grow: 1;
-    overflow: scroll;
+    overflow-y: auto;
     min-height: 4;
     padding: 2;
   }
@@ -207,6 +207,7 @@
   <markdown text="- Type anything to interact with the world
 - `/new` — Start a new game
 - `/games` — Switch between saved games
+- `/state` — Show world facts (AI's long-term memory)
 - `/history` — Show recent turns
 - `/undo` — Go back one turn
 - `/redo` — Go forward one turn
@@ -222,7 +223,7 @@
 <container id="game-screen" style="display: none; height: fill; flex-grow: 1;">
   <text id="title-bar">MELKROX</text>
   <split-pane sizes="2,1" style="width: fill; flex-grow: 1; direction: vertical;">
-    <img id="scene-image" width="100%" height="fill" style="object-fit: contain;" dither="sierra-stable" ditherBits="8" onClick="$app.handleImageClick(event)" />
+    <img id="scene-image" width="100%" height="fill" style="object-fit: contain;" dither="sierra-stable" ditherBits="8" onClick="$app.handleImageClick(event)" onMouseOver="$app.handleImageMouseOver()" onMouseOut="$app.handleImageMouseOut()" />
     <container id="narrative-wrap">
       <markdown id="narrative" text="" />
     </container>
@@ -369,6 +370,11 @@ export async function loadGame(id) {
     if (cachedImg) currentImage = decoder.decode(cachedImg);
     // Migrate: remove currentImage from old game state if present
     if (gameState.currentImage) { delete gameState.currentImage; }
+    // Migrate: rebuild facts from worldConfig + history if missing
+    if (!gameState.facts) {
+      gameState.facts = rebuildFacts(gameState);
+      logger.info('Migrated game: rebuilt ' + Object.keys(gameState.facts).length + ' facts from worldConfig');
+    }
     logger.info('Loaded game "' + (gameState.worldConfig?.title || id) + '" turn=' + gameState.turnCount);
     showGameScreen();
     renderScene();
@@ -627,6 +633,22 @@ export async function startGame() {
     logger.info('System prompt: ' + config.systemPrompt);
 
     currentGameId = generateGameId();
+    // Seed initial facts from world config
+    const initialFacts = {};
+    if (config.protagonist?.appearance) {
+      initialFacts['appearance:' + (config.protagonist.name || 'protagonist').toLowerCase()] = config.protagonist.appearance;
+    }
+    if (config.characters) {
+      for (const c of config.characters) {
+        if (c.name && c.appearance) initialFacts['appearance:' + c.name.toLowerCase()] = c.appearance;
+        if (c.name && c.motivation) initialFacts['npc:' + c.name.toLowerCase() + ':motivation'] = c.motivation;
+      }
+    }
+    if (config.threads) {
+      for (const t of config.threads) {
+        if (t.name) initialFacts['thread:' + t.name.toLowerCase()] = t.description || 'introduced';
+      }
+    }
     gameState = {
       worldConfig: config,
       storyPrompt: storyPrompt.trim(),
@@ -635,7 +657,8 @@ export async function startGame() {
       turnCount: 0,
       inventory: [],
       location: config.locations?.[0] || 'Unknown',
-      choices: []
+      choices: [],
+      facts: initialFacts
     };
     currentImage = null;
 
@@ -729,19 +752,30 @@ export async function handleInput() {
   }
   if (cmd === '/undo') {
     if (gameState.history.length >= 2) {
-      // Save undone pair to redo stack
+      // Save undone pair + current facts snapshot to redo stack
       const assistant = gameState.history.pop();
       const user = gameState.history.pop();
-      redoStack.push({ user, assistant });
+      const factsSnapshot = JSON.parse(JSON.stringify(gameState.facts || {}));
+      redoStack.push({ user, assistant, facts: factsSnapshot });
       gameState.turnCount = Math.max(0, gameState.turnCount - 1);
-      // Replay last assistant response to restore scene
+      // Replay last assistant response to restore scene (and its stateUpdates)
+      // First reset facts to what they were before the undone turn by re-applying all history
+      gameState.facts = rebuildFacts(gameState);
       const lastAssistant = gameState.history.length > 0
         ? gameState.history[gameState.history.length - 1]
         : null;
       if (lastAssistant && lastAssistant.role === 'assistant') {
         const scene = parseJSON(lastAssistant.content);
-        if (scene) applyScene(scene);
-        else gameState.currentScene = lastAssistant.content;
+        if (scene) {
+          // Apply scene without stateUpdates (facts already rebuilt)
+          if (scene.narrative) gameState.currentScene = scene.narrative;
+          if (scene.location) gameState.location = scene.location;
+          if (scene.inventory) gameState.inventory = scene.inventory;
+          if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
+          gameState._lastSceneImageStyle = scene.imageStyle || null;
+        } else {
+          gameState.currentScene = lastAssistant.content;
+        }
       } else {
         gameState.currentScene = '*Back to the beginning...*';
         gameState.choices = [];
@@ -763,12 +797,22 @@ export async function handleInput() {
   }
   if (cmd === '/redo') {
     if (redoStack.length > 0) {
-      const { user, assistant } = redoStack.pop();
-      gameState.history.push(user, assistant);
+      const entry = redoStack.pop();
+      gameState.history.push(entry.user, entry.assistant);
       gameState.turnCount++;
-      const scene = parseJSON(assistant.content);
-      if (scene) applyScene(scene);
-      else gameState.currentScene = assistant.content;
+      // Restore the facts snapshot from when this turn was active
+      if (entry.facts) gameState.facts = entry.facts;
+      const scene = parseJSON(entry.assistant.content);
+      if (scene) {
+        // Apply scene without stateUpdates (facts already restored from snapshot)
+        if (scene.narrative) gameState.currentScene = scene.narrative;
+        if (scene.location) gameState.location = scene.location;
+        if (scene.inventory) gameState.inventory = scene.inventory;
+        if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
+        gameState._lastSceneImageStyle = scene.imageStyle || null;
+      } else {
+        gameState.currentScene = entry.assistant.content;
+      }
       // Restore cached image for this turn
       currentImage = null;
       const imgKey = currentGameId ? 'image:' + currentGameId + ':' + gameState.turnCount : 'image:' + gameState.turnCount;
@@ -857,6 +901,22 @@ export async function handleInput() {
     $melker.engine.requestForceRender();
     return;
   }
+  if (cmd === '/state') {
+    const facts = gameState.facts || {};
+    const entries = Object.entries(facts);
+    if (entries.length === 0) {
+      $melker.toast.show('No world facts recorded yet', { type: 'info' });
+      return;
+    }
+    const lines = ['## World State (' + entries.length + ' facts)', ''];
+    for (const [k, v] of entries.sort((a, b) => a[0].localeCompare(b[0]))) {
+      lines.push('- **' + k + '**: ' + v);
+    }
+    lines.push('', '---', '', gameState.currentScene);
+    gameState.currentScene = lines.join('\n');
+    renderScene();
+    return;
+  }
   if (cmd === '/history') {
     const lines = ['## Recent History', ''];
     const recent = gameState.history.slice(-10);
@@ -901,10 +961,24 @@ export async function handleInput() {
 
   try {
     // Wrap user input with game state context
+    // Cap facts sent to LLM: prioritize appearance/thread/npc, then freeform up to MAX_FACTS
+    const MAX_FACTS = 100;
+    const allFacts = Object.entries(gameState.facts || {});
+    let factsForPrompt = allFacts;
+    if (allFacts.length > MAX_FACTS) {
+      const priority = allFacts.filter(([k]) => k.startsWith('appearance:') || k.startsWith('thread:') || k.startsWith('npc:'));
+      const rest = allFacts.filter(([k]) => !k.startsWith('appearance:') && !k.startsWith('thread:') && !k.startsWith('npc:'));
+      factsForPrompt = [...priority, ...rest.slice(-(MAX_FACTS - priority.length))];
+      logger.warn('Facts capped: ' + allFacts.length + ' total, sending ' + factsForPrompt.length + ' (dropped ' + (allFacts.length - factsForPrompt.length) + ' low-priority)');
+    }
+    const factsBlock = factsForPrompt.length > 0
+      ? '<FACTS>\n' + factsForPrompt.map(([k, v]) => k + '=' + v).join('\n') + '\n</FACTS>\n'
+      : '';
     const userMsg = '<STATE>\n'
       + '<LOCATION>' + gameState.location + '</LOCATION>\n'
       + '<INVENTORY>' + (gameState.inventory.length ? gameState.inventory.join(', ') : 'empty') + '</INVENTORY>\n'
       + '<TURN>' + gameState.turnCount + '</TURN>\n'
+      + factsBlock
       + '</STATE>\n'
       + '<ACTION>' + cmd + '</ACTION>';
     gameState.history.push({ role: 'user', content: userMsg });
@@ -946,6 +1020,9 @@ export async function handleInput() {
     turnBusy = false;
     focusInput();
 
+    // Delay image generation 1s so player can quickly send next action to skip it
+    await new Promise(r => setTimeout(r, 1000));
+    if (turnBusy) return; // player already started next turn
     // Generate scene image in background (abortable by next turn)
     await generateSceneImage(logId);
 
@@ -969,6 +1046,38 @@ export async function handleInput() {
   focusInput();
 }
 
+// Rebuild facts by seeding from worldConfig and replaying all stateUpdates in history
+function rebuildFacts(state) {
+  const facts = {};
+  // Seed from worldConfig
+  const wc = state.worldConfig || {};
+  if (wc.protagonist?.appearance) {
+    facts['appearance:' + (wc.protagonist.name || 'protagonist').toLowerCase()] = wc.protagonist.appearance;
+  }
+  if (wc.characters) {
+    for (const c of wc.characters) {
+      if (c.name && c.appearance) facts['appearance:' + c.name.toLowerCase()] = c.appearance;
+      if (c.name && c.motivation) facts['npc:' + c.name.toLowerCase() + ':motivation'] = c.motivation;
+    }
+  }
+  if (wc.threads) {
+    for (const t of wc.threads) {
+      if (t.name) facts['thread:' + t.name.toLowerCase()] = t.description || 'introduced';
+    }
+  }
+  // Replay stateUpdates from all assistant messages
+  for (const entry of (state.history || [])) {
+    if (entry.role !== 'assistant') continue;
+    const scene = parseJSON(entry.content);
+    if (!scene?.stateUpdates) continue;
+    for (const su of scene.stateUpdates) {
+      if (su.delete) delete facts[su.delete];
+      else if (su.set && su.value !== undefined) facts[su.set] = String(su.value);
+    }
+  }
+  return facts;
+}
+
 function applyScene(scene) {
   if (scene.narrative) gameState.currentScene = scene.narrative;
   if (scene.location) gameState.location = scene.location;
@@ -978,31 +1087,31 @@ function applyScene(scene) {
   gameState._lastSceneImageStyle = scene.imageStyle || null;
   if (scene.imageStyle) logger.info('Scene image style override: ' + scene.imageStyle);
   logger.debug('Scene applied | location=' + gameState.location + ' inventory=[' + gameState.inventory.join(', ') + '] choices=' + (gameState.choices?.length || 0) + ' narrative=' + (gameState.currentScene?.length || 0) + ' chars');
-  // Log story thread progress
-  if (scene.threadProgress && Array.isArray(scene.threadProgress) && scene.threadProgress.length > 0) {
-    for (const tp of scene.threadProgress) {
-      if (tp.thread && tp.status) {
-        log('log-area', 'Thread [' + tp.thread + '] ' + tp.status, true);
-      }
-    }
-  } else {
-    logger.debug('No threadProgress in response');
-  }
-  // Apply appearance changes
-  if (scene.appearanceChanges && Array.isArray(scene.appearanceChanges)) {
-    for (const ac of scene.appearanceChanges) {
-      if (!ac.name || !ac.appearance) continue;
-      const protName = gameState.worldConfig?.protagonist?.name?.toLowerCase();
-      if ((ac.name.toLowerCase() === 'protagonist' || ac.name.toLowerCase() === protName) && gameState.worldConfig?.protagonist) {
-        gameState.worldConfig.protagonist.appearance = ac.appearance;
-        log('log-area', (gameState.worldConfig.protagonist.name || 'Protagonist') + ' appearance changed', true);
-      } else if (gameState.worldConfig?.characters) {
-        const char = gameState.worldConfig.characters.find(c => c.name && c.name.toLowerCase() === ac.name.toLowerCase());
-        if (char) {
-          char.appearance = ac.appearance;
-          log('log-area', char.name + ' appearance changed', true);
+  // Apply state updates (facts) — all keys normalized to lowercase
+  if (scene.stateUpdates && Array.isArray(scene.stateUpdates)) {
+    if (!gameState.facts) gameState.facts = {};
+    for (const su of scene.stateUpdates) {
+      if (su.delete) {
+        const key = String(su.delete).toLowerCase();
+        delete gameState.facts[key];
+        logger.debug('Fact deleted: ' + key);
+      } else if (su.set && su.value !== undefined) {
+        const key = String(su.set).toLowerCase();
+        gameState.facts[key] = String(su.value);
+        logger.debug('Fact set: ' + key + ' = ' + su.value);
+        // Log notable fact changes to the player
+        if (key.startsWith('thread:')) {
+          log('log-area', 'Thread [' + key.slice(7) + '] ' + su.value, true);
+        } else if (key.startsWith('appearance:')) {
+          log('log-area', key.slice(11) + ' appearance changed', true);
         }
       }
+    }
+    logger.info('State updates applied: ' + JSON.stringify(scene.stateUpdates));
+    // Warn if facts are getting large
+    const factCount = Object.keys(gameState.facts).length;
+    if (factCount > 80) {
+      logger.warn('Facts store has ' + factCount + ' entries — consider pruning');
     }
   }
 }
@@ -1080,8 +1189,62 @@ export function loadingShader(x, y, time, resolution, source, utils) {
   return [Math.min(255, pr), Math.min(255, pg), Math.min(255, pb)];
 }
 
+// Fisheye zoom shader — activates on mouseover, samples from original hi-res image
+export function fisheyeShader(x, y, time, resolution, source, utils) {
+  const mx = source.mouse?.x ?? -1;
+  const my = source.mouse?.y ?? -1;
+  if (mx < 0 || my < 0) {
+    return source?.getPixel(x, y);
+  }
+  const radius = Math.min(resolution.width, resolution.height) * 0.72;
+  const dx = x - mx;
+  const dy = (y - my) / (resolution.pixelAspect || 0.5); // aspect-correct
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > radius) {
+    return source?.getPixel(x, y);
+  }
+  // Fisheye: zoom controls magnification, exponent controls falloff curve near edge
+  const norm = dist / radius;
+  const zoom = 2.3;
+  const exponent = 1.18;
+  const distorted = Math.pow(norm, exponent) * radius / zoom;
+  const angle = Math.atan2(dy, dx);
+  const sx = mx + Math.cos(angle) * distorted;
+  const sy = my + Math.sin(angle) * distorted * (resolution.pixelAspect || 0.5);
+  // Sample from original hi-res image via normalized UV coords
+  if (source.originalWidth > 0) {
+    const u = sx / resolution.width;
+    const v = sy / resolution.height;
+    return source.getOriginalPixel(u, v);
+  }
+  return source?.getPixel(Math.round(sx), Math.round(sy));
+}
+
+let fisheyeActive = false;
+
+export function handleImageMouseOver() {
+  if (fisheyeActive) return;
+  const imgEl = $melker.getElementById('scene-image');
+  if (imgEl.props.onShader === $app.loadingShader) return; // don't override loading shader
+  if (!currentImage) return; // no image to zoom
+  fisheyeActive = true;
+  imgEl.props.onShader = $app.fisheyeShader;
+  imgEl.props.shaderFps = 24;
+}
+
+export function handleImageMouseOut() {
+  if (!fisheyeActive) return;
+  fisheyeActive = false;
+  const imgEl = $melker.getElementById('scene-image');
+  imgEl.stopShader();
+  imgEl.props.onShader = undefined;
+  imgEl.clear();
+  imgEl.refreshImage();
+}
+
 function setImageLoading(on) {
   shaderTint = null; // reset so next activation re-samples
+  fisheyeActive = false; // clear fisheye state
   const imgEl = $melker.getElementById('scene-image');
   if (on) {
     imgEl.props.onShader = $app.loadingShader;
@@ -1109,24 +1272,25 @@ async function generateSceneImage(logId, customStyle) {
     const tone = gameState.worldConfig?.tone || 'atmospheric';
     const setting = gameState.worldConfig?.setting || '';
 
-    // Build character description for image continuity (first sentence only — low res)
+    // Build character description for image continuity from facts
     const briefAppearance = (text) => {
       const dot = text.indexOf('. ');
       return dot !== -1 ? text.slice(0, dot) : text;
     };
     let charDesc = '';
-    const protagonist = gameState.worldConfig?.protagonist;
-    if (protagonist?.appearance) {
-      charDesc += (protagonist.name || 'player') + ': ' + protagonist.appearance + '. ';
+    const facts = gameState.facts || {};
+    const protName = gameState.worldConfig?.protagonist?.name || 'player';
+    const protKey = 'appearance:' + protName.toLowerCase();
+    if (facts[protKey]) {
+      charDesc += protName + ': ' + facts[protKey] + '. ';
     }
-    const characters = gameState.worldConfig?.characters;
-    if (characters && Array.isArray(characters)) {
-      // Include appearances of characters mentioned in the current scene
-      for (const c of characters) {
-        const name = c.name || (typeof c === 'string' ? c : '');
-        if (name && c.appearance && sceneText.toLowerCase().includes(name.toLowerCase())) {
-          charDesc += name + ': ' + briefAppearance(c.appearance) + '. ';
-        }
+    // Include appearances of characters mentioned in the current scene
+    for (const [key, value] of Object.entries(facts)) {
+      if (!key.startsWith('appearance:')) continue;
+      const name = key.slice(11); // strip 'appearance:'
+      if (name === protName.toLowerCase()) continue; // already included
+      if (sceneText.toLowerCase().includes(name)) {
+        charDesc += name + ': ' + briefAppearance(value) + '. ';
       }
     }
 
@@ -1389,14 +1553,19 @@ The systemPrompt you generate MUST instruct the AI to always respond in this exa
   "location": "current location name",
   "inventory": ["item1", "item2"],
   "choices": ["short action 1", "short action 2", "short action 3"],
-  "threadProgress": [{"thread": "thread name", "status": "brief status update"}],
   "imageStyle": "optional override",
-  "appearanceChanges": [{"name": "character name", "appearance": "new first-sentence appearance"}]
+  "stateUpdates": [{"set": "key", "value": "value"}, {"delete": "key"}]
 }
 Keep narratives SHORT (2-4 sentences). Choice labels under 6 words. Small terminal window — brevity is essential.
-threadProgress is REQUIRED — always include at least one entry. Track which story threads were touched, hinted at, or shifted by this turn's events. Status should be 3-8 words (e.g. "tension rising", "first clue discovered", "unchanged but looming").
 imageStyle is OPTIONAL — only include if this scene's mood deviates significantly from the game's default visual style (e.g. a sudden dream sequence in a comedy, a flashback, a tonal shift). Omit for normal scenes.
-appearanceChanges is OPTIONAL — only include when a character's appearance meaningfully changes during the scene (e.g. disguise, transformation, injury, new outfit). One sentence per character. Use the character's name exactly as defined in the world config, or "protagonist" for the player character.
+stateUpdates is REQUIRED — use it to track ALL persistent world state changes. The client stores these as key/value facts and sends them back each turn in a FACTS block. This is the AI's long-term memory — anything not in stateUpdates will be forgotten when conversation history is pruned.
+Key naming conventions:
+- thread:name — story thread status (e.g. "thread:crystal mystery" = "first shard found, tension rising")
+- appearance:name — character appearance (e.g. "appearance:elena" = "tall, dark-haired, wearing stolen guard uniform"). Use lowercase names. Use full merged descriptions, not deltas.
+- npc:name:key — NPC state (e.g. "npc:elena:mood" = "suspicious", "npc:bartender:location" = "left heading north")
+- quest:name — quest/goal progress
+- Any other freeform keys for world state (e.g. "bridge_destroyed" = "true", "time_of_day" = "night")
+Always include at least one thread update. Update appearance keys when characters' looks meaningfully change (disguise, transformation, injury). Update NPC mood/location when relevant. The more state you track, the more consistent the world becomes across turns.
 </TURN_FORMAT>
 
 <INPUT_FORMAT>
@@ -1405,10 +1574,16 @@ The systemPrompt MUST tell the AI that user messages arrive in this tagged forma
 <LOCATION>current location</LOCATION>
 <INVENTORY>item1, item2</INVENTORY>
 <TURN>turn number</TURN>
+<FACTS>
+thread:crystal mystery=first shard found
+appearance:elena=tall, dark-haired, wearing guard uniform
+npc:bartender:mood=friendly
+bridge_destroyed=true
+</FACTS>
 </STATE>
 <ACTION>player's action text</ACTION>
 
-The AI should use the STATE tags to maintain consistency and the ACTION tag as the player's input.
+The AI should use the STATE tags to maintain consistency and the ACTION tag as the player's input. The FACTS block contains all accumulated world state from previous stateUpdates — the AI's long-term memory. Use facts to stay consistent even when old conversation history has been pruned. Update facts via stateUpdates in the response.
 </INPUT_FORMAT>
 
 <WORLD_RULES>
@@ -1428,7 +1603,7 @@ The systemPrompt MUST instruct the AI that actions have outcomes that matter. Ch
 </CONSEQUENCES>
 
 <CHARACTER_CONTINUITY>
-The systemPrompt MUST instruct the AI to always describe characters consistently using their established appearances. When a character appears, reference their distinctive physical features. Keep appearances stable unless the story causes a meaningful change (disguise, transformation, injury, new outfit). When appearance changes, include "appearanceChanges" in the response JSON with a COMPLETE updated appearance description — merge the original physical identity (face, hair, build) with the new change into one coherent sentence. Do NOT send only the delta.
+The systemPrompt MUST instruct the AI to always describe characters consistently using their appearance facts (appearance:name keys in FACTS). When a character appears, reference their distinctive physical features. Keep appearances stable unless the story causes a meaningful change (disguise, transformation, injury, new outfit). When appearance changes, include a stateUpdate setting the appearance:name key to a COMPLETE updated description — merge the original physical identity (face, hair, build) with the new change into one coherent sentence. Do NOT send only the delta.
 </CHARACTER_CONTINUITY>
 
 <LANGUAGE>
@@ -1865,10 +2040,11 @@ $melker.registerAITool({
       turn: gameState.turnCount,
       scene: gameState.currentScene,
       choices: gameState.choices,
-      characters: (wc.characters || []).map(c => ({ name: c.name, description: c.description, appearance: c.appearance })),
-      protagonist: wc.protagonist,
+      facts: gameState.facts || {},
+      characters: (wc.characters || []).map(c => ({ name: c.name, description: c.description })),
+      protagonist: wc.protagonist ? { name: wc.protagonist.name } : null,
       threads: wc.threads,
-      commands: '/new, /games, /undo, /image, /reimage [style], /images, /gfx [mode], /dither [bits], /history, /help',
+      commands: '/new, /games, /undo, /redo, /state, /image, /reimage [style], /images, /gfx [mode], /dither [bits], /history, /help',
     };
   }
 });

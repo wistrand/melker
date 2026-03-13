@@ -999,12 +999,14 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
         const srcCopy = new Uint8Array(scaledData); // Copy for source.getPixel
         const source: ShaderSource = {
           hasImage: true, width: scaledWidth, height: scaledHeight,
+          originalWidth: 0, originalHeight: 0,
           mouse: { x: -1, y: -1 }, mouseUV: { u: -1, v: -1 },
           getPixel: (px, py) => {
             if (px < 0 || px >= scaledWidth || py < 0 || py >= scaledHeight) return null;
             const i = (py * scaledWidth + px) * 4;
             return [srcCopy[i], srcCopy[i + 1], srcCopy[i + 2], srcCopy[i + 3]];
           },
+          getOriginalPixel: () => null,
         };
         for (let y = 0; y < scaledHeight; y++) {
           for (let x = 0; x < scaledWidth; x++) {
@@ -1487,6 +1489,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       setLoadedImage: (img: LoadedImage) => { this._loadedImage = img; },
       previousColorBuffer: this._previousColorBuffer,
       invalidateDitherCache: () => { this._ditherState.invalidate(); },
+      loadedImage: this._loadedImage,
       hasPaintHandler: !!this.props.onPaint,
     };
   }

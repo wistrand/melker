@@ -62,6 +62,7 @@ interface GameState {
   inventory: string[];
   location: string;
   choices: string[];
+  facts: Record<string, string>; // Persistent world state (AI's long-term memory)
 }
 // Note: currentImage is a runtime variable loaded from cache, not stored in game state
 ```
@@ -125,26 +126,49 @@ All prompts are logged at `info` level (complete, not clipped).
 Prompts use XML tag segmentation for clean structure:
 
 - **Image prompts**: `<STYLE>`, `<SETTING>`, `<CHARACTERS>`, `<SCENE>`
-- **Turn history**: `<STATE>` (with `<LOCATION>`, `<INVENTORY>`, `<TURN>`), `<ACTION>`
+- **Turn history**: `<STATE>` (with `<LOCATION>`, `<INVENTORY>`, `<TURN>`, `<FACTS>`), `<ACTION>`
 - **Setup system prompt**: `<OUTPUT_FORMAT>`, `<TURN_FORMAT>`, `<INPUT_FORMAT>`, `<WORLD_RULES>`, `<STORY_THREADS>`, `<NPC_AGENCY>`, `<CONSEQUENCES>`, `<CHARACTER_CONTINUITY>`, `<LANGUAGE>`
 
-## Character Continuity
+## World State Facts
 
-The setup prompt instructs the world-creation model to generate detailed physical appearance descriptions for:
-- The protagonist (player character)
-- All NPCs (3-5 characters)
+The game maintains a persistent key/value store (`gameState.facts`) that serves as the AI's long-term memory. Facts survive conversation history pruning, ensuring consistency across the entire game.
 
-These appearances are stored in `worldConfig.characters[].appearance` and `worldConfig.protagonist.appearance`.
+### worldConfig vs facts
 
-During image generation, the prompt includes appearance descriptions for:
-- The protagonist (always)
-- Any NPC whose name appears in the current scene narrative (matched case-insensitively)
+`worldConfig` is **immutable initial state** — the world as created by the setup model. It never changes after game creation. `facts` are **mutable current state** — the world as it evolves during gameplay. On game creation, key worldConfig data (appearances, motivations, threads) is seeded into facts. From that point, facts are the canonical source for all mutable state. worldConfig remains useful only for static reference data (title, setting, tone, systemPrompt, imageStyle, imageConstraints).
 
-The gameplay system prompt also instructs the turn model to describe characters consistently using their established appearances.
+### Fact Lifecycle
 
-### Appearance Changes
+1. **Seeded on game creation** — appearances, NPC motivations, and story threads from the world config are converted to initial facts
+2. **Updated each turn** — the AI includes `stateUpdates` in its JSON response to set or delete facts
+3. **Sent back each turn** — facts are included in a `<FACTS>` block inside the `<STATE>` tags (capped at 100 entries)
+4. **Migrated on load** — old saves without facts are migrated by rebuilding from worldConfig + replaying stateUpdates in history
 
-Character appearances can evolve during gameplay. The turn model may include `appearanceChanges` in its response when a character's look meaningfully changes (disguise, transformation, injury, new outfit). Each entry specifies a character name and the new complete appearance description. The model is instructed to send full merged descriptions (not deltas) so the stored appearance always reflects the complete current look. Changes match by character name or "protagonist" for the player character.
+### Key Normalization
+
+All fact keys are normalized to lowercase on write. This prevents collisions like `appearance:Elena` vs `appearance:elena`. The system prompt instructs the model to use lowercase, and the client enforces it.
+
+### Facts Cap
+
+When facts exceed 100 entries, the prompt includes only the most important ones: `appearance:`, `thread:`, and `npc:` keys are always included; freeform keys are trimmed from the oldest first. A warning is logged when facts exceed 80 entries.
+
+### Naming Conventions
+
+| Prefix           | Example                                    | Purpose                          |
+|------------------|--------------------------------------------|----------------------------------|
+| `appearance:`    | `appearance:elena = tall, dark-haired...`  | Character appearance (images)    |
+| `thread:`        | `thread:crystal mystery = shard found`     | Story thread progress            |
+| `npc:name:key`   | `npc:elena:mood = suspicious`              | NPC state (mood, location, etc.) |
+| `quest:`         | `quest:find key = complete`                | Quest/goal progress              |
+| (freeform)       | `bridge_destroyed = true`                  | World state flags                |
+
+### Image Continuity
+
+During image generation, character appearances are read from `appearance:*` facts (not from worldConfig directly). The protagonist's appearance is always included; NPC appearances are included when their name appears in the current scene narrative.
+
+### Undo/Redo
+
+Undo snapshots the current facts before reverting, then rebuilds facts by replaying all stateUpdates in the remaining history. Redo restores the snapshot. This ensures facts stay consistent with the game timeline.
 
 ## Language Detection
 
@@ -168,7 +192,8 @@ Shader lifecycle: `setSpinner('game-spinner', true)` → `setImageLoading(true)`
 | (any text)         | Send to AI as freeform input          |
 | `/new`             | Start new game (go to setup screen)   |
 | `/games`           | Switch between saved games            |
-| `/undo`            | Go back one turn (restores cached image) |
+| `/state`           | Show all world facts (AI's long-term memory) |
+| `/undo`            | Go back one turn (restores cached image + facts) |
 | `/redo`            | Go forward one turn (after undo)      |
 | `/image`           | Open scene image in system browser    |
 | `/reimage [style]` | Regenerate scene image (optional custom style overrides constraints) |
@@ -185,6 +210,10 @@ Click on the scene image to cycle rendering modes:
 - **Right half**: cycle dither bits (1 → 2 → 8)
 
 Also available via `/gfx [mode]` and `/dither [bits]` commands. GFX settings are session-only (not saved with game state).
+
+### Fisheye Zoom
+
+Hovering the mouse over the scene image activates a fisheye zoom shader that magnifies the area around the cursor. Samples from the original full-resolution source image via `source.getOriginalPixel(u, v)` for sharper detail. Deactivates on mouse leave; suppressed during loading shader.
 
 ## UI Layout
 
@@ -284,7 +313,7 @@ Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `c
 - **Streaming narrative**: only the narrative field streams to screen, not raw JSON
 - **Streaming world creation**: progressive field extraction with real-time feedback
 - **Character continuity**: appearance descriptions stored in world config, included in image prompts
-- **Appearance evolution**: turn model can update character appearances mid-game via `appearanceChanges`
+- **Facts as long-term memory**: generic key/value store survives history pruning, replaces separate `threadProgress` and `appearanceChanges` with unified `stateUpdates`
 - **Language-aware**: all content generated in the player's language
 - **Split-pane layout**: image and narrative in a resizable vertical split-pane
 - **Image fills pane**: `height: fill` on image so it resizes with split-pane divider
@@ -302,6 +331,8 @@ Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `c
 - **XML tag prompts**: structured prompt segmentation for image, turn, and setup prompts
 - **GFX mode cycling**: click image or use `/gfx` to switch between sextant, halfblock, quadrant, pattern, luma
 - **Session-only GFX settings**: gfx mode and dither bits not saved with game state
+- **Fisheye zoom on hover**: mouse over scene image activates fisheye shader sampling from hi-res source image
+- **Delayed image generation**: 1-second delay before image API call lets player skip it by acting quickly
 - **Toast notifications**: user feedback via `$melker.toast` instead of log entries
 - **Screen switching preserves styles**: `showScreen()` spreads existing style to avoid overwriting `height: fill`
 - **Screen switching stops spinners**: `showScreen()` calls `.stop()` on all spinners and stops shader to prevent hidden animations

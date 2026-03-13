@@ -94,6 +94,9 @@ export interface ShaderContext {
   previousColorBuffer: Uint32Array;
   invalidateDitherCache: () => void;
 
+  // Original source image (full resolution)
+  loadedImage: LoadedImage | null;
+
   // When true, shader runs synchronously during render() as post-processing over onPaint
   hasPaintHandler?: boolean;
 }
@@ -284,7 +287,10 @@ function runShaderFrame(state: ShaderState, ctx: ShaderContext): void {
       hasImage: false,
       width: 0,
       height: 0,
+      originalWidth: 0,
+      originalHeight: 0,
       getPixel: (_x: number, _y: number) => null,
+      getOriginalPixel: (_u: number, _v: number) => null,
       mouse: { x: -1, y: -1 },
       mouseUV: { u: -1, v: -1 },
     };
@@ -316,6 +322,9 @@ function runShaderFrame(state: ShaderState, ctx: ShaderContext): void {
     const rgba = unpackRGBA(color);
     return [rgba.r, rgba.g, rgba.b, rgba.a];
   };
+
+  // Original image pixel accessor
+  _setupOriginalPixelAccessor(source, ctx.loadedImage);
 
   // Run shader for each pixel
   const shaderExecStart = performance.now();
@@ -383,7 +392,10 @@ export function runShaderPassSync(
       hasImage: false,
       width: 0,
       height: 0,
+      originalWidth: 0,
+      originalHeight: 0,
       getPixel: (_x: number, _y: number) => null,
+      getOriginalPixel: (_u: number, _v: number) => null,
       mouse: { x: -1, y: -1 },
       mouseUV: { u: -1, v: -1 },
     };
@@ -417,6 +429,9 @@ export function runShaderPassSync(
     const rgba = unpackRGBA(color);
     return [rgba.r, rgba.g, rgba.b, rgba.a];
   };
+
+  // Original image pixel accessor
+  _setupOriginalPixelAccessor(source, ctx.loadedImage);
 
   // Run shader for each pixel, write directly to colorBuffer
   const shaderExecStart = performance.now();
@@ -490,4 +505,33 @@ export function clearShaderMouse(state: ShaderState): void {
  */
 export function getShaderMouse(state: ShaderState): { x: number; y: number } {
   return { x: state.mouseX, y: state.mouseY };
+}
+
+/**
+ * Set up getOriginalPixel accessor on source from the loaded image
+ */
+function _setupOriginalPixelAccessor(source: ShaderSource, loadedImage: LoadedImage | null): void {
+  if (loadedImage) {
+    const img = loadedImage;
+    const bpp = img.bytesPerPixel;
+    const imgW = img.width;
+    const imgH = img.height;
+    source.originalWidth = imgW;
+    source.originalHeight = imgH;
+    source.getOriginalPixel = (u: number, v: number): [number, number, number, number] | null => {
+      const px = Math.floor(u * imgW);
+      const py = Math.floor(v * imgH);
+      if (px < 0 || px >= imgW || py < 0 || py >= imgH) return null;
+      const idx = (py * imgW + px) * bpp;
+      const r = img.data[idx];
+      const g = img.data[idx + 1];
+      const b = img.data[idx + 2];
+      const a = bpp === 4 ? img.data[idx + 3] : 255;
+      return [r, g, b, a];
+    };
+  } else {
+    source.originalWidth = 0;
+    source.originalHeight = 0;
+    source.getOriginalPixel = () => null;
+  }
 }

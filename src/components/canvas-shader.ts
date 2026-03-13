@@ -14,6 +14,12 @@ export interface ShaderResolution {
 export interface ShaderSource {
   // Get pixel at (x, y) from source image - returns [r, g, b, a] or null if out of bounds/no image
   getPixel(x: number, y: number): [number, number, number, number] | null;
+  // Get pixel from original full-resolution source image using normalized UV coords (0-1)
+  // Returns [r, g, b, a] or null if no image loaded
+  getOriginalPixel(u: number, v: number): [number, number, number, number] | null;
+  // Original source image dimensions (0 if no image)
+  originalWidth: number;
+  originalHeight: number;
   // Check if source image is loaded
   hasImage: boolean;
   // Source image dimensions (0 if no image)

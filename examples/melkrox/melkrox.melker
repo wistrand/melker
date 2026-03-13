@@ -11,7 +11,8 @@
       "write": [],
       "run": [],
       "shader": true,
-      "browser": true
+      "browser": true,
+      "clipboard": true
     },
     "configSchema": {
       "openrouter.key": {
@@ -185,7 +186,7 @@
     </container>
     <text id="setup-error" style="display: none;"></text>
     <container id="setup-progress" style="height: 8; align-items: center; gap: 1; padding-top: 1;">
-      <spinner id="setup-spinner" variant="braille" verbs="Creating world" spinning="false" shade="true" style="display: none;" />
+      <spinner id="setup-spinner" variant="braille" verbs="Creating world" spinning="false" shade="true" style="visibility: hidden;" />
       <container id="setup-log" style="display: none; max-height: 6; overflow: scroll; width: 100%; color: var(--theme-text-muted);"></container>
     </container>
   </container>
@@ -236,7 +237,7 @@
     <input id="cmd-input" placeholder="> What do you do?" onKeyPress="$app.handleInput()" />
     <button label="Send" onClick="$app.handleInput()" />
   </container>
-    <container style="padding-left: 2"><spinner id="game-spinner" variant="dots" verbs="thinking" spinning="false" shade="true" style="display: none; padding-left: 2;" /></container>
+    <container style="padding-left: 2"><spinner id="game-spinner" variant="dots" verbs="thinking" spinning="false" shade="true" style="visibility: hidden; padding-left: 2;" /></container>
   <container id="log-area"></container>
 </container>
 
@@ -376,6 +377,12 @@ export async function loadGame(id) {
       logger.info('Migrated game: rebuilt ' + Object.keys(gameState.facts).length + ' facts from worldConfig');
     }
     logger.info('Loaded game "' + (gameState.worldConfig?.title || id) + '" turn=' + gameState.turnCount);
+    // Update lastPlayed so auto-resume picks the right game
+    const entry = gamesIndex.find(g => g.id === id);
+    if (entry) {
+      entry.lastPlayed = new Date().toISOString();
+      await saveGamesIndex();
+    }
     showGameScreen();
     renderScene();
     focusInput();
@@ -486,13 +493,13 @@ export async function generateGenre(genre) {
 
 export function clearPrompt() {
   $melker.getElementById('setup-prompt').props.value = '';
-  $melker.getElementById('restyle-row').props.style = { display: 'none', flexDirection: 'row', gap: 2, justifyContent: 'center' };
+  $melker.getElementById('restyle-row').props.style = { visibility: 'hidden', flexDirection: 'row', gap: 2, justifyContent: 'center' };
 }
 
 export function onPromptChange() {
   const val = $melker.getElementById('setup-prompt').props.value || '';
   const show = val.trim().length >= 3;
-  $melker.getElementById('restyle-row').props.style = { display: show ? 'flex' : 'none', flexDirection: 'row', gap: 2, justifyContent: 'center' };
+  $melker.getElementById('restyle-row').props.style = { visibility: show ? 'visible' : 'hidden', flexDirection: 'row', gap: 2, justifyContent: 'center' };
 }
 
 export async function restylePrompt(direction) {
@@ -597,7 +604,7 @@ export async function startGame() {
         }
         // Extract thread names from threads section only
         if (threadIdx !== -1) {
-          const sysIdx = partial.indexOf('"systemPrompt"');
+          const sysIdx = partial.indexOf('"narratorPrompt"');
           const threadSection = sysIdx !== -1 ? partial.slice(threadIdx, sysIdx) : partial.slice(threadIdx);
           const threadMatches = threadSection.match(/"name"\s*:\s*"([^"]+)"/g);
           if (threadMatches) {
@@ -610,21 +617,24 @@ export async function startGame() {
             }
           }
         }
-        // Detect systemPrompt generation started
-        if (!logged.sysPrompt && partial.includes('"systemPrompt"')) {
+        // Detect narratorPrompt generation started
+        if (!logged.sysPrompt && partial.includes('"narratorPrompt"')) {
           logged.sysPrompt = true;
-          L('Generating gameplay rules...');
+          L('Generating narrator voice...');
         }
       }
     );
     log(logId, 'World config received (' + ((Date.now() - t0) / 1000).toFixed(1) + 's)');
 
     const config = parseJSON(worldConfig);
-    if (!config || !config.title || !config.systemPrompt) {
+    if (!config || !config.title || !config.narratorPrompt) {
       showError('setup-error', 'Failed to generate world. Try again with a different prompt.');
       setSpinner('setup-spinner', false);
       return;
     }
+
+    // Assemble final systemPrompt: creative narrator voice + structural rules
+    config.systemPrompt = config.narratorPrompt + '\n\n' + TURN_RULES;
 
     log(logId, 'World: "' + config.title + '"');
     log(logId, (config.locations?.length || 0) + ' locations, ' + (config.characters?.length || 0) + ' characters, ' + (config.threads?.length || 0) + ' threads');
@@ -772,6 +782,7 @@ export async function handleInput() {
           if (scene.location) gameState.location = scene.location;
           if (scene.inventory) gameState.inventory = scene.inventory;
           if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
+          gameState.sceneImagePrompt = scene.imagePrompt || null;
           gameState._lastSceneImageStyle = scene.imageStyle || null;
         } else {
           gameState.currentScene = lastAssistant.content;
@@ -779,6 +790,7 @@ export async function handleInput() {
       } else {
         gameState.currentScene = '*Back to the beginning...*';
         gameState.choices = [];
+        gameState.sceneImagePrompt = null;
       }
       // Restore cached image for this turn (clear first to avoid stale image)
       currentImage = null;
@@ -809,6 +821,7 @@ export async function handleInput() {
         if (scene.location) gameState.location = scene.location;
         if (scene.inventory) gameState.inventory = scene.inventory;
         if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
+        gameState.sceneImagePrompt = scene.imagePrompt || null;
         gameState._lastSceneImageStyle = scene.imageStyle || null;
       } else {
         gameState.currentScene = entry.assistant.content;
@@ -983,8 +996,9 @@ export async function handleInput() {
       + '<ACTION>' + cmd + '</ACTION>';
     gameState.history.push({ role: 'user', content: userMsg });
 
-    // Prune history
+    // Prune history — snapshot facts first so rebuildFacts can start from checkpoint
     if (gameState.history.length > MAX_HISTORY * 2) {
+      gameState.factsCheckpoint = JSON.parse(JSON.stringify(gameState.facts || {}));
       gameState.history = gameState.history.slice(-MAX_HISTORY * 2);
     }
 
@@ -1048,21 +1062,27 @@ export async function handleInput() {
 
 // Rebuild facts by seeding from worldConfig and replaying all stateUpdates in history
 function rebuildFacts(state) {
-  const facts = {};
-  // Seed from worldConfig
-  const wc = state.worldConfig || {};
-  if (wc.protagonist?.appearance) {
-    facts['appearance:' + (wc.protagonist.name || 'protagonist').toLowerCase()] = wc.protagonist.appearance;
-  }
-  if (wc.characters) {
-    for (const c of wc.characters) {
-      if (c.name && c.appearance) facts['appearance:' + c.name.toLowerCase()] = c.appearance;
-      if (c.name && c.motivation) facts['npc:' + c.name.toLowerCase() + ':motivation'] = c.motivation;
+  let facts;
+  if (state.factsCheckpoint) {
+    // Start from checkpoint (taken before history pruning) instead of replaying pruned entries
+    facts = JSON.parse(JSON.stringify(state.factsCheckpoint));
+  } else {
+    // No checkpoint — seed from worldConfig
+    facts = {};
+    const wc = state.worldConfig || {};
+    if (wc.protagonist?.appearance) {
+      facts['appearance:' + (wc.protagonist.name || 'protagonist').toLowerCase()] = wc.protagonist.appearance;
     }
-  }
-  if (wc.threads) {
-    for (const t of wc.threads) {
-      if (t.name) facts['thread:' + t.name.toLowerCase()] = t.description || 'introduced';
+    if (wc.characters) {
+      for (const c of wc.characters) {
+        if (c.name && c.appearance) facts['appearance:' + c.name.toLowerCase()] = c.appearance;
+        if (c.name && c.motivation) facts['npc:' + c.name.toLowerCase() + ':motivation'] = c.motivation;
+      }
+    }
+    if (wc.threads) {
+      for (const t of wc.threads) {
+        if (t.name) facts['thread:' + t.name.toLowerCase()] = t.description || 'introduced';
+      }
     }
   }
   // Replay stateUpdates from all assistant messages
@@ -1071,8 +1091,8 @@ function rebuildFacts(state) {
     const scene = parseJSON(entry.content);
     if (!scene?.stateUpdates) continue;
     for (const su of scene.stateUpdates) {
-      if (su.delete) delete facts[su.delete];
-      else if (su.set && su.value !== undefined) facts[su.set] = String(su.value);
+      if (su.delete) delete facts[String(su.delete).toLowerCase()];
+      else if (su.set && su.value !== undefined) facts[String(su.set).toLowerCase()] = String(su.value);
     }
   }
   return facts;
@@ -1083,6 +1103,8 @@ function applyScene(scene) {
   if (scene.location) gameState.location = scene.location;
   if (scene.inventory) gameState.inventory = scene.inventory;
   if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
+  // LLM-generated image prompt for this scene
+  gameState.sceneImagePrompt = scene.imagePrompt || null;
   // Per-scene image style override (cleared each turn, only set if model provides one)
   gameState._lastSceneImageStyle = scene.imageStyle || null;
   if (scene.imageStyle) logger.info('Scene image style override: ' + scene.imageStyle);
@@ -1197,27 +1219,46 @@ export function fisheyeShader(x, y, time, resolution, source, utils) {
     return source?.getPixel(x, y);
   }
   const radius = Math.min(resolution.width, resolution.height) * 0.72;
+  const fadeStart = 0.75; // fade begins at 75% of radius
   const dx = x - mx;
-  const dy = (y - my) / (resolution.pixelAspect || 0.5); // aspect-correct
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist > radius) {
+  const dyRaw = y - my;
+  const aspect = resolution.pixelAspect || 0.5;
+  const dy = dyRaw / aspect; // aspect-correct for distance calc
+  const dist2 = dx * dx + dy * dy;
+  const r2 = radius * radius;
+  if (dist2 > r2) {
     return source?.getPixel(x, y);
   }
-  // Fisheye: zoom controls magnification, exponent controls falloff curve near edge
+  if (dist2 < 1) {
+    // Dead center — sample directly at mouse position
+    if (source.originalWidth > 0) return source.getOriginalPixel(mx / resolution.width, my / resolution.height);
+    return source?.getPixel(mx, my);
+  }
+  // Fisheye via vector math — no trig needed
+  const dist = Math.sqrt(dist2);
   const norm = dist / radius;
-  const zoom = 2.3;
-  const exponent = 1.18;
-  const distorted = Math.pow(norm, exponent) * radius / zoom;
-  const angle = Math.atan2(dy, dx);
-  const sx = mx + Math.cos(angle) * distorted;
-  const sy = my + Math.sin(angle) * distorted * (resolution.pixelAspect || 0.5);
-  // Sample from original hi-res image via normalized UV coords
+  const scale = Math.pow(norm, 0.18) / 2.3; // exponent=1.18, zoom=2.3
+  const sx = mx + dx * scale;
+  const sy = my + dyRaw * scale;
+  let pixel;
   if (source.originalWidth > 0) {
     const u = sx / resolution.width;
     const v = sy / resolution.height;
-    return source.getOriginalPixel(u, v);
+    if (u < 0 || u >= 1 || v < 0 || v >= 1) return [0, 0, 0];
+    pixel = source.getOriginalPixel(u, v);
+  } else {
+    const isx = Math.round(sx);
+    const isy = Math.round(sy);
+    if (isx < 0 || isx >= resolution.width || isy < 0 || isy >= resolution.height) return [0, 0, 0];
+    pixel = source.getPixel(isx, isy);
   }
-  return source?.getPixel(Math.round(sx), Math.round(sy));
+  if (!pixel) return [0, 0, 0];
+  // Fade to black near the edge
+  if (norm > fadeStart) {
+    const fade = 1 - (norm - fadeStart) / (1 - fadeStart); // 1 at fadeStart, 0 at radius
+    return [pixel[0] * fade, pixel[1] * fade, pixel[2] * fade];
+  }
+  return pixel;
 }
 
 let fisheyeActive = false;
@@ -1266,34 +1307,6 @@ async function generateSceneImage(logId, customStyle) {
   }
 
   try {
-    // Extract a short scene description for the image prompt
-    const sceneText = gameState.currentScene || '';
-    const sceneSnippet = sceneText;
-    const tone = gameState.worldConfig?.tone || 'atmospheric';
-    const setting = gameState.worldConfig?.setting || '';
-
-    // Build character description for image continuity from facts
-    const briefAppearance = (text) => {
-      const dot = text.indexOf('. ');
-      return dot !== -1 ? text.slice(0, dot) : text;
-    };
-    let charDesc = '';
-    const facts = gameState.facts || {};
-    const protName = gameState.worldConfig?.protagonist?.name || 'player';
-    const protKey = 'appearance:' + protName.toLowerCase();
-    if (facts[protKey]) {
-      charDesc += protName + ': ' + facts[protKey] + '. ';
-    }
-    // Include appearances of characters mentioned in the current scene
-    for (const [key, value] of Object.entries(facts)) {
-      if (!key.startsWith('appearance:')) continue;
-      const name = key.slice(11); // strip 'appearance:'
-      if (name === protName.toLowerCase()) continue; // already included
-      if (sceneText.toLowerCase().includes(name)) {
-        charDesc += name + ': ' + briefAppearance(value) + '. ';
-      }
-    }
-
     const sceneStyle = gameState._lastSceneImageStyle;
     const baseStyle = gameState.worldConfig?.imageStyle || '';
     const activeStyle = sceneStyle || baseStyle;
@@ -1303,13 +1316,14 @@ async function generateSceneImage(logId, customStyle) {
       ? customStyle
       : (gameState.worldConfig?.imageConstraints || defaultConstraints);
     const styleBlock = constraints + '\n' + (activeStyle ? activeStyle + '\n' : '');
+
+    // Use LLM-generated image prompt if available, fall back to scene narrative
+    const sceneDesc = gameState.sceneImagePrompt || gameState.currentScene || '';
     const imagePrompt = 'Generate a scene illustration.\n'
       + '<STYLE>\n'
       + styleBlock
       + '</STYLE>\n'
-      + '<SETTING>' + setting + '</SETTING>\n'
-      + (charDesc ? '<CHARACTERS>' + charDesc + '</CHARACTERS>\n' : '')
-      + '<SCENE>' + sceneSnippet + '</SCENE>';
+      + '<SCENE>' + sceneDesc + '</SCENE>';
 
     logger.info('Image prompt: ' + imagePrompt);
 
@@ -1526,50 +1540,39 @@ async function pruneImageCache() {
 
 // --- OpenRouter API ---
 
-const SETUP_SYSTEM_PROMPT = `You are a text adventure game designer. Given the player's story prompt, generate a world configuration as JSON.
-
-<TONE_MATCHING>
-CRITICAL: Match the tone of EVERYTHING you generate to the player's prompt. A comedy prompt gets a funny, lighthearted world. A horror prompt gets a dark, tense world. A romance gets warmth and charm. A slice-of-life gets everyday stakes and gentle humor. Do NOT default to dark/gritty — read the prompt and calibrate accordingly. The tone field you generate drives everything else.
-</TONE_MATCHING>
-
-<OUTPUT_FORMAT>
-Respond with ONLY a JSON object (no markdown fences) with these fields:
-- title: catchy game title (short, matching the tone)
-- setting: 2-3 sentence world description (matching the tone)
-- tone: one-line tone descriptor
-- locations: array of 5-8 starting location names
-- characters: array of 3-5 NPC objects, each with: name, description (one-line role/personality), appearance (2-3 sentences describing physical appearance, clothing, distinctive features — enough detail to generate a consistent image of them), motivation (what this character wants — their personal agenda that they pursue independently of the player)
-- protagonist: object with name, appearance (2-3 sentences describing the player character's physical appearance, clothing, distinctive features)
-- threads: array of 3-5 story thread objects, each with: name (short label), description (1-2 sentences describing the driving force — could be tension, mystery, romance, humor, rivalry, friendship, ambition, or any narrative engine appropriate to the tone). NOT explicit goals — underlying narrative currents woven organically. Mix scales: one overarching thread, a few local/personal ones.
-- imageStyle: one sentence describing ONLY the visual palette, lighting, and mood for scene illustrations. NO scene-specific objects, props, or details — those come from the scene text. Examples: "Warm golden palette, soft diffused lighting, cozy mood" for slice-of-life, "Deep shadows, desaturated blues, oppressive atmosphere" for horror, "Bright saturated colors, dynamic contrast, playful energy" for comedy.
-- imageConstraints: technical rendering constraints for image generation. If the player's prompt explicitly requests a specific art style (photorealistic, comic, watercolor, oil painting, pixel art, etc.), generate constraints matching that style. Otherwise set to null and defaults will be used. Always include "Wide 3:1 format" and "NO text". Examples: null (default — minimal detail for terminal rendering), "Wide 3:1 format. Photorealistic with cinematic depth of field. Strong shadows, sharp subject, soft background. NO text, NO crowds." for photorealistic, "Wide 3:1 format. Bold outlines, flat color fills, comic panel style. NO fine hatching, NO text." for comic.
-- systemPrompt: the full system prompt to use for gameplay turns
-</OUTPUT_FORMAT>
-
-<TURN_FORMAT>
-The systemPrompt you generate MUST instruct the AI to always respond in this exact JSON format:
+// Structural rules injected by client into every gameplay systemPrompt.
+// The setup model only generates creative/world content (narratorPrompt).
+const TURN_RULES = `
+<RESPONSE_FORMAT>
+Always respond with ONLY a JSON object (no markdown fences) in this exact format:
 {
-  "narrative": "SHORT scene description, 2-4 sentences max. Vivid but concise.",
+  "narrative": "What HAPPENS — action, dialogue, events. 2-4 sentences.",
   "location": "current location name",
   "inventory": ["item1", "item2"],
   "choices": ["short action 1", "short action 2", "short action 3"],
+  "imagePrompt": "What the scene image should show — focus on action, composition, environment, and mood. 1-3 sentences.",
   "imageStyle": "optional override",
   "stateUpdates": [{"set": "key", "value": "value"}, {"delete": "key"}]
 }
-Keep narratives SHORT (2-4 sentences). Choice labels under 6 words. Small terminal window — brevity is essential.
-imageStyle is OPTIONAL — only include if this scene's mood deviates significantly from the game's default visual style (e.g. a sudden dream sequence in a comedy, a flashback, a tonal shift). Omit for normal scenes.
-stateUpdates is REQUIRED — use it to track ALL persistent world state changes. The client stores these as key/value facts and sends them back each turn in a FACTS block. This is the AI's long-term memory — anything not in stateUpdates will be forgotten when conversation history is pruned.
+Keep narratives SHORT (2-4 sentences). Focus on what happens — action, dialogue, discovery, consequences. Describe a character's appearance when they first appear, but do not repeat it in subsequent scenes. Choice labels under 6 words. Small terminal window — brevity is essential.
+imagePrompt is REQUIRED — describe what the scene image should show. Lead with ACTION, COMPOSITION, and ENVIRONMENT — what's happening, where, the mood. For each character in the scene, include a brief visual tag (e.g. "copper-haired woman in a denim jacket") but do NOT dump their full appearance description. Keep it cinematic: think camera angle, framing, atmosphere. 1-3 sentences. Example: "A copper-haired woman in a denim jacket crouches behind a shipping crate on a rain-soaked dock, peering at two guards by the warehouse door. Harsh sodium lights cast long shadows across wet concrete."
+imageStyle is OPTIONAL — only include if this scene's mood deviates significantly from the game's default visual style (e.g. a sudden dream sequence, a flashback, a tonal shift). Omit for normal scenes.
+</RESPONSE_FORMAT>
+
+<STATE_TRACKING>
+stateUpdates is REQUIRED — use it to track ALL persistent world state changes. The client stores these as key/value facts and sends them back each turn in a FACTS block. This is your long-term memory — anything not in stateUpdates will be forgotten when conversation history is pruned.
 Key naming conventions:
 - thread:name — story thread status (e.g. "thread:crystal mystery" = "first shard found, tension rising")
-- appearance:name — character appearance (e.g. "appearance:elena" = "tall, dark-haired, wearing stolen guard uniform"). Use lowercase names. Use full merged descriptions, not deltas.
+- appearance:name — character appearance (e.g. "appearance:elena" = "tall, dark-haired, wearing stolen guard uniform"). Use lowercase names matching the character's actual name — for the protagonist, use their name (e.g. "appearance:marcus"), NEVER "appearance:you". Use full merged descriptions, not deltas. Update whenever a character's looks change (outfit, disguise, transformation, injury) — always write the COMPLETE current appearance including physical identity AND current clothing.
 - npc:name:key — NPC state (e.g. "npc:elena:mood" = "suspicious", "npc:bartender:location" = "left heading north")
 - quest:name — quest/goal progress
 - Any other freeform keys for world state (e.g. "bridge_destroyed" = "true", "time_of_day" = "night")
-Always include at least one thread update. Update appearance keys when characters' looks meaningfully change (disguise, transformation, injury). Update NPC mood/location when relevant. The more state you track, the more consistent the world becomes across turns.
-</TURN_FORMAT>
+STRICT: Always use the colon-prefixed format above. NEVER use underscore formats like name_appearance, character:name, or other variants — the client parses these prefixes.
+Always include at least one thread update. Update NPC mood/location when relevant. The more state you track, the more consistent the world becomes across turns.
+</STATE_TRACKING>
 
 <INPUT_FORMAT>
-The systemPrompt MUST tell the AI that user messages arrive in this tagged format:
+User messages arrive in this tagged format:
 <STATE>
 <LOCATION>current location</LOCATION>
 <INVENTORY>item1, item2</INVENTORY>
@@ -1583,31 +1586,35 @@ bridge_destroyed=true
 </STATE>
 <ACTION>player's action text</ACTION>
 
-The AI should use the STATE tags to maintain consistency and the ACTION tag as the player's input. The FACTS block contains all accumulated world state from previous stateUpdates — the AI's long-term memory. Use facts to stay consistent even when old conversation history has been pruned. Update facts via stateUpdates in the response.
+Use the STATE tags to maintain consistency. The FACTS block is your long-term memory — use it to stay consistent even when old conversation history has been pruned. Update facts via stateUpdates in the response.
 </INPUT_FORMAT>
 
-<WORLD_RULES>
-The systemPrompt should include the world setting, tone, NPC descriptions, and rules for consistent storytelling. IMPORTANT: The systemPrompt's voice and language must match the tone — a comedy game's systemPrompt should encourage humor, wit, and funny situations. A horror game should encourage dread. A romance should encourage chemistry and emotional moments. Never use a grimdark voice for a lighthearted game.
-</WORLD_RULES>
-
-<STORY_THREADS>
-The systemPrompt MUST include the story threads and instruct the AI to weave them naturally into the narrative. Threads surface through hints, encounters, and developments — never announced explicitly. Threads evolve based on player actions: intensify, resolve, or take unexpected turns. Some choices unknowingly advance or close threads. The player discovers the story by living it. Threads should match the tone: comedies have running gags and escalating misunderstandings, romances have slow-burn chemistry, mysteries have clues, adventures have escalating stakes.
-</STORY_THREADS>
-
-<NPC_AGENCY>
-The systemPrompt MUST instruct the AI that NPCs are independent actors with their own motivations. They pursue their agendas whether the player is present or not. NPCs may act between turns — when the player returns to a location, things may have changed. How NPCs express agency depends on tone: in dark settings they may betray or deceive; in comedies they have quirky obsessions and create awkward situations; in romances they have their own love lives and opinions; in adventures they're rivals or allies with their own goals. The world does not wait for the player.
-</NPC_AGENCY>
-
-<CONSEQUENCES>
-The systemPrompt MUST instruct the AI that actions have outcomes that matter. Choices shape the story. How consequences manifest depends on tone: in dark games, failures are costly and permanent. In comedies, failures lead to embarrassing or absurd escalations. In romances, missteps cause awkwardness or hurt feelings. In adventures, setbacks raise the stakes. The world reacts proportionally to its tone — a cozy mystery doesn't need permanent trauma, and a comedy doesn't need grimdark punishment.
-</CONSEQUENCES>
-
 <CHARACTER_CONTINUITY>
-The systemPrompt MUST instruct the AI to always describe characters consistently using their appearance facts (appearance:name keys in FACTS). When a character appears, reference their distinctive physical features. Keep appearances stable unless the story causes a meaningful change (disguise, transformation, injury, new outfit). When appearance changes, include a stateUpdate setting the appearance:name key to a COMPLETE updated description — merge the original physical identity (face, hair, build) with the new change into one coherent sentence. Do NOT send only the delta.
-</CHARACTER_CONTINUITY>
+The appearance: facts in FACTS are for the imagePrompt field and for state tracking — do NOT repeat character appearance descriptions in the narrative. Describe a character's looks briefly when they FIRST appear in the story, then never again unless their appearance changes. When appearance changes, include a stateUpdate setting the appearance:name key to a COMPLETE updated description — merge the original physical identity (face, hair, build, skin) with the current change. Do NOT send only the delta.
+</CHARACTER_CONTINUITY>`;
+
+const SETUP_SYSTEM_PROMPT = `You are a text adventure game designer. Given the player's story prompt, generate a world configuration as JSON.
+
+<TONE_MATCHING>
+CRITICAL: Match the tone of EVERYTHING you generate to the player's prompt. A comedy prompt gets a funny, lighthearted world. A horror prompt gets a dark, tense world. A romance gets warmth and charm. A slice-of-life gets everyday stakes and gentle humor. Do NOT default to dark/gritty — read the prompt and calibrate accordingly. The tone field you generate drives everything else.
+</TONE_MATCHING>
+
+<OUTPUT_FORMAT>
+Respond with ONLY a JSON object (no markdown fences) with these fields:
+- title: catchy game title (short, matching the tone)
+- setting: 2-3 sentence world description (matching the tone)
+- tone: one-line tone descriptor
+- locations: array of 5-8 starting location names
+- characters: array of 3-5 NPC objects, each with: name, description (one-line role/personality), appearance (2-3 sentences describing physical appearance, clothing, distinctive features — enough detail to generate a consistent image of them), motivation (what this character wants — their personal agenda that they pursue independently of the player)
+- protagonist: object with name, appearance (2-3 sentences describing the player character's physical appearance — MUST include gender, approximate age, hair color/style, skin tone, build/height, and clothing. Be specific enough to generate a consistent image every time, e.g. "A tall, lean woman in her late twenties with short copper hair and pale freckled skin, wearing a faded denim jacket over a black turtleneck.")
+- threads: array of 3-5 story thread objects, each with: name (short label), description (1-2 sentences describing the driving force — could be tension, mystery, romance, humor, rivalry, friendship, ambition, or any narrative engine appropriate to the tone). NOT explicit goals — underlying narrative currents woven organically. Mix scales: one overarching thread, a few local/personal ones.
+- imageStyle: one sentence describing ONLY the visual palette, lighting, and mood for scene illustrations. NO scene-specific objects, props, or details — those come from the scene text. Examples: "Warm golden palette, soft diffused lighting, cozy mood" for slice-of-life, "Deep shadows, desaturated blues, oppressive atmosphere" for horror, "Bright saturated colors, dynamic contrast, playful energy" for comedy.
+- imageConstraints: technical rendering constraints for image generation. If the player's prompt explicitly requests a specific art style (photorealistic, comic, watercolor, oil painting, pixel art, etc.), generate constraints matching that style. Otherwise set to null and defaults will be used. Always include "Wide 3:1 format" and "NO text". Examples: null (default — minimal detail for terminal rendering), "Wide 3:1 format. Photorealistic with cinematic depth of field. Strong shadows, sharp subject, soft background. NO text, NO crowds." for photorealistic, "Wide 3:1 format. Bold outlines, flat color fills, comic panel style. NO fine hatching, NO text." for comic.
+- narratorPrompt: the creative narrator instructions for gameplay. Include the world setting, tone, NPC descriptions with motivations, and storytelling rules. The voice and language must match the tone — a comedy should encourage humor and wit, horror should encourage dread, romance should encourage chemistry. Include story threads and instruct the narrator to weave them naturally. NPCs are independent actors who pursue their agendas whether the player is present or not. Actions have consequences proportional to the tone.
+</OUTPUT_FORMAT>
 
 <LANGUAGE>
-Detect the language of the player's prompt. ALL content (title, setting, narrative, locations, characters, choices, threads, systemPrompt) MUST be in that same language. If the prompt is in Swedish, everything must be in Swedish. If in English, everything in English.
+Detect the language of the player's prompt. ALL content (title, setting, narrative, locations, characters, choices, threads, narratorPrompt) MUST be in that same language. If the prompt is in Swedish, everything must be in Swedish. If in English, everything in English.
 </LANGUAGE>`;
 
 async function callOpenRouter(systemPrompt, messages, useModel) {
@@ -1936,7 +1943,7 @@ function setSpinner(id, on, verbs) {
   const spinner = $melker.getElementById(id);
   spinner.props.spinning = on;
   if (verbs) spinner.props.verbs = verbs;
-  spinner.props.style = { ...spinner.props.style, display: on ? 'flex' : 'none' };
+  spinner.props.style = { ...spinner.props.style, visibility: on ? 'visible' : 'hidden' };
   // Tie image shader to game spinner state
   if (id === 'game-spinner') {
     if (on) {

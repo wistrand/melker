@@ -942,6 +942,9 @@ export class RenderingEngine {
 
     if (!node.visible) return;
 
+    // Skip elements with visibility: hidden (they still occupy layout space)
+    if (node.computedStyle.visibility === 'hidden') return;
+
     // Skip effectively invisible elements
     if (node.computedStyle.opacity !== undefined && node.computedStyle.opacity < 0.05) return;
 

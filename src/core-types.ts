@@ -112,6 +112,7 @@ export interface Style extends Record<string, any> {
   display?: 'block' | 'flex' | 'none';
   position?: 'static' | 'relative' | 'absolute' | 'fixed';
   containerType?: 'inline-size' | 'size' | 'normal';
+  visibility?: 'visible' | 'hidden';
   overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
   overflowX?: 'visible' | 'hidden' | 'scroll' | 'auto';
   overflowY?: 'visible' | 'hidden' | 'scroll' | 'auto';

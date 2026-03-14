@@ -121,6 +121,9 @@ async function fetchAsDataUrl(url: string, signal?: AbortSignal): Promise<string
   }
   const bytes = new Uint8Array(await res.arrayBuffer());
   const contentType = res.headers.get('content-type') || 'image/png';
-  const b64 = btoa(String.fromCharCode(...bytes));
-  return 'data:' + contentType + ';base64,' + b64;
+  let b64 = '';
+  for (let i = 0; i < bytes.length; i += 8192) {
+    b64 += String.fromCharCode(...bytes.subarray(i, Math.min(i + 8192, bytes.length)));
+  }
+  return 'data:' + contentType + ';base64,' + btoa(b64);
 }

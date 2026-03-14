@@ -1151,15 +1151,18 @@ let ditherBitsIndex = 2; // default 8
 let imageClickAbort = null;
 
 export async function handleImageClick(event) {
+  const imgEl = $melker.getElementById('scene-image');
+  const pos = event.position || {};
+  const clickX = pos.x || 0;
+  const clickY = pos.y || 0;
+  const layout = imgEl.getLayout?.() || {};
+  const w = layout.width || 80;
+  const h = layout.height || 24;
+  const logId = 'log-area';
+
   // Modifier+click: cycle gfx mode / dither bits
   if (event.shiftKey || event.ctrlKey || event.altKey) {
-    const imgEl = $melker.getElementById('scene-image');
-    const pos = event.position || {};
-    const x = pos.x || 0;
-    const layout = imgEl.getLayout?.() || {};
-    const w = layout.width || 80;
-    const logId = 'log-area';
-    if (x < w / 2) {
+    if (clickX < w / 2) {
       gfxModeIndex = (gfxModeIndex + 1) % GFX_MODES.length;
       imgEl.props.gfxMode = GFX_MODES[gfxModeIndex];
       log(logId, 'GFX mode: ' + GFX_MODES[gfxModeIndex]);
@@ -1174,15 +1177,6 @@ export async function handleImageClick(event) {
 
   if (!currentImage || !gameState || turnBusy) return;
   if (!visionModel) return;
-
-  const imgEl = $melker.getElementById('scene-image');
-  const pos = event.position || {};
-  const clickX = pos.x || 0;
-  const clickY = pos.y || 0;
-  const layout = imgEl.getLayout?.() || {};
-  const w = layout.width || 80;
-  const h = layout.height || 24;
-  const logId = 'log-area';
 
   // Normalize click to percentage of image
   const pctX = Math.round((clickX / w) * 100);

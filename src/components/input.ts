@@ -1,6 +1,6 @@
 // Input component implementation
 
-import { Element, type BaseProps, type Renderable, type Focusable, type Interactive, type TextSelectable, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
+import { Element, type BaseProps, type Renderable, type Focusable, type Interactive, type TextSelectable, type PositionalClickHandler, type Bounds, type ComponentRenderContext, type IntrinsicSizeContext } from '../types.ts';
 import { type DualBuffer, type Cell, type DiffCollector, EMPTY_CHAR } from '../buffer.ts';
 import { createKeyPressEvent, createChangeEvent } from '../events.ts';
 import { getThemeColor } from '../theme.ts';
@@ -34,7 +34,7 @@ export interface InputProps extends BaseProps {
 // Shared kill buffer for emacs-style Ctrl+Y yank
 let _killBuffer: string = '';
 
-export class InputElement extends Element implements Renderable, Focusable, Interactive, TextSelectable {
+export class InputElement extends Element implements Renderable, Focusable, Interactive, TextSelectable, PositionalClickHandler {
   declare type: 'input';
   declare props: InputProps;
   private _internalValue: string;
@@ -44,6 +44,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
   private _completions: string[] = [];
   private _selectedCompletionIndex: number = -1;
   private _borderInset = { top: 0, right: 0, bottom: 0, left: 0 };
+  private _lastContentWidth: number = 80;
 
   constructor(props: InputProps = {}, children: Element[] = []) {
     const defaultProps: InputProps = {
@@ -96,6 +97,7 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     // Compute content bounds inset by border thickness
     const cb = this._getContentBounds(bounds, context.computedStyle);
     if (cb.width <= 0 || cb.height <= 0) return;
+    this._lastContentWidth = cb.width;
 
     // Sync props.value to internal _internalValue if changed externally (e.g., by state persistence)
     if (this.props.value !== undefined && this.props.value !== this._internalValue) {
@@ -368,6 +370,11 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
         changed = true;
         return true;
       }
+      // Single-line input: ArrowDown = End
+      if (cursor < value.length) {
+        cursor = value.length;
+        changed = true;
+      }
     } else if (key === 'ArrowUp') {
       if (this._showingCompletions && this._completions.length > 0) {
         this._selectedCompletionIndex = this._selectedCompletionIndex - 1;
@@ -376,6 +383,11 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
         }
         changed = true;
         return true;
+      }
+      // Single-line input: ArrowUp = Home
+      if (cursor > 0) {
+        cursor = 0;
+        changed = true;
       }
     } else if (key === 'Enter') {
       // Handle completion selection or normal Enter
@@ -460,6 +472,29 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
    */
   markRendered(): void {
     this._needsRender = false;
+  }
+
+  /**
+   * Handle click to position cursor
+   */
+  handleClick(relativeX: number, _relativeY: number): boolean {
+    if (this.props.readOnly || this.props.disabled) return false;
+
+    const value = this._internalValue;
+    const contentX = relativeX - this._borderInset.left;
+    const contentWidth = this._lastContentWidth;
+
+    // Calculate scroll offset (same logic as render)
+    const scrollOffset = value.length > contentWidth ? value.length - contentWidth : 0;
+    const newCursor = Math.min(value.length, Math.max(0, scrollOffset + contentX));
+
+    if (newCursor !== this._cursorPosition) {
+      this._cursorPosition = newCursor;
+      this.props.cursorPosition = newCursor;
+      this._needsRender = true;
+      return true;
+    }
+    return false;
   }
 
   /**

@@ -83,6 +83,18 @@ export class ElementClickHandler {
       }
     }
 
+    // Handle input clicks (position cursor)
+    if (element.type === 'input' && hasPositionalClickHandler(element)) {
+      const bounds = this._deps.renderer.getContainerBounds(element.id || '');
+      if (bounds) {
+        const relativeX = event.x - bounds.x;
+        const handled = element.handleClick(relativeX, 0);
+        if (handled && this._deps.autoRender) {
+          this._deps.onRender();
+        }
+      }
+    }
+
     // Handle textarea clicks (position cursor)
     if (element.type === 'textarea' && hasPositionalClickHandler(element)) {
       const bounds = this._deps.renderer.getContainerBounds(element.id || '');

@@ -27,6 +27,7 @@ Startup logic: if saved games exist, show the most recent one directly. If launc
 | Turn generation   | `anthropic/claude-haiku-4-5`             | `openrouter.model`      |
 | Genre description | `openai/gpt-4.1-mini`                   | (hardcoded)             |
 | Scene images      | `openai/gpt-image-1`                    | `openrouter.imageModel` |
+| Image analysis    | `google/gemini-2.5-flash`               | `openrouter.visionModel`|
 
 ## Data Model
 
@@ -86,20 +87,22 @@ Automatic migration from legacy single-game format (`state` key) on first load.
 | `openrouter.key`        | `OPENROUTER_API_KEY` | (required)                           |
 | `openrouter.model`      | —                    | `anthropic/claude-haiku-4-5`         |
 | `openrouter.imageModel` | —                    | `openai/gpt-image-1`                 |
+| `openrouter.visionModel`| —                    | `google/gemini-2.5-flash`            |
 | `openrouter.skipImages` | `MELKROX_SKIP_IMAGES`| `false`                              |
 
 When `skipImages` is true, image prompts are still generated and logged but the API call is skipped.
 
 ## Policy Permissions
 
-| Permission | Value              | Purpose                        |
-|------------|--------------------|---------------------------------|
-| `net`      | `["openrouter.ai"]`| API calls                      |
-| `env`      | `["OPENROUTER_API_KEY"]` | API key                  |
-| `read`     | `[]`               | cwd implicitly readable        |
-| `write`    | `[]`               | `/image` writes to `$melker.cacheDir` |
-| `shader`   | `true`             | Loading shader effect on image |
-| `browser`  | `true`             | `/image` opens in browser      |
+| Permission  | Value              | Purpose                        |
+|-------------|--------------------|---------------------------------|
+| `net`       | `["openrouter.ai"]`| API calls                      |
+| `env`       | `["OPENROUTER_API_KEY"]` | API key                  |
+| `read`      | `[]`               | cwd implicitly readable        |
+| `write`     | `[]`               | `/image` writes to `$melker.cacheDir` |
+| `shader`    | `true`             | Loading shader effect on image |
+| `browser`   | `true`             | `/image` opens in browser      |
+| `clipboard` | `true`             | Copy text to clipboard         |
 
 ## OpenRouter Integration
 
@@ -115,9 +118,14 @@ When `skipImages` is true, image prompts are still generated and logged but the 
    - Full JSON parsed after stream completes for structured fields
 
 3. **Image generation** (`callImageGeneration`) — Scene illustrations
-   - Supports multiple response formats: `image_url`, `inline_data`, `images[]`
+   - Response format normalization via `$melker.ai.extractImageFromResponse()`
    - AbortController for cancellation when player sends new input
    - Image prompt includes character appearance descriptions for visual continuity
+
+4. **Vision analysis** (`handleImageClick`) — Click-to-analyze scene
+   - Sends scene image + click coordinates + game context to vision model
+   - Returns identified target and suggested action
+   - Action is placed in input field for player to confirm or edit
 
 All prompts are logged at `info` level (complete, not clipped).
 
@@ -125,9 +133,10 @@ All prompts are logged at `info` level (complete, not clipped).
 
 Prompts use XML tag segmentation for clean structure:
 
-- **Image prompts**: `<STYLE>`, `<SETTING>`, `<CHARACTERS>`, `<SCENE>`
+- **Image prompts**: `<STYLE>`, `<SCENE>`
 - **Turn history**: `<STATE>` (with `<LOCATION>`, `<INVENTORY>`, `<TURN>`, `<FACTS>`), `<ACTION>`
-- **Setup system prompt**: `<OUTPUT_FORMAT>`, `<TURN_FORMAT>`, `<INPUT_FORMAT>`, `<WORLD_RULES>`, `<STORY_THREADS>`, `<NPC_AGENCY>`, `<CONSEQUENCES>`, `<CHARACTER_CONTINUITY>`, `<LANGUAGE>`
+- **Setup system prompt**: generates `narratorPrompt` (creative content only)
+- **Turn rules**: `TURN_RULES` constant injected client-side (response format, state tracking, input format, character continuity)
 
 ## World State Facts
 
@@ -164,7 +173,7 @@ When facts exceed 100 entries, the prompt includes only the most important ones:
 
 ### Image Continuity
 
-During image generation, character appearances are read from `appearance:*` facts (not from worldConfig directly). The protagonist's appearance is always included; NPC appearances are included when their name appears in the current scene narrative.
+The turn model generates an `imagePrompt` field in its JSON response describing the scene for image generation. This replaces client-side character matching — the model composes the visual description directly, using appearance facts for consistency. The `imagePrompt` is stored as `gameState.sceneImagePrompt` and used as the `<SCENE>` block in image generation requests.
 
 ### Undo/Redo
 
@@ -203,9 +212,15 @@ Shader lifecycle: `setSpinner('game-spinner', true)` → `setImageLoading(true)`
 | `/history`         | Show last 10 turns inline             |
 | `/help`            | Show command list                     |
 
-## Image GFX Controls
+## Image Interaction
 
-Click on the scene image to cycle rendering modes:
+### Click-to-Analyze
+
+Clicking the scene image sends it to the vision model (Gemini 2.5 Flash) along with the click position (as % of image), scene context, and relevant facts. The model identifies what was clicked and suggests a natural action (e.g., "examine the rusty door"). The action is placed in the input field for the player to confirm or edit. Shows "Nothing notable there" if the click is on empty space.
+
+### GFX Controls
+
+Modifier+click (Shift, Ctrl, or Alt) on the scene image cycles rendering modes:
 - **Left half**: cycle gfx mode (sextant → halfblock → quadrant → pattern → luma)
 - **Right half**: cycle dither bits (1 → 2 → 8)
 
@@ -213,7 +228,7 @@ Also available via `/gfx [mode]` and `/dither [bits]` commands. GFX settings are
 
 ### Fisheye Zoom
 
-Hovering the mouse over the scene image activates a fisheye zoom shader that magnifies the area around the cursor. Samples from the original full-resolution source image via `source.getOriginalPixel(u, v)` for sharper detail. Deactivates on mouse leave; suppressed during loading shader.
+Hovering the mouse over the scene image activates a fisheye zoom shader that magnifies the area around the cursor. Samples from the original full-resolution source image via `source.getOriginalPixel(u, v)` for sharper detail. Fades to black near the radius edge (75% to 100%). Deactivates on mouse leave; suppressed during loading shader.
 
 ## UI Layout
 
@@ -310,9 +325,11 @@ Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `c
 - **Single file**: everything in one `.melker` file, no external JS
 - **Freeform input**: no parser — the AI IS the parser. Type anything.
 - **Multi-game saves**: game index + per-game state, automatic migration from old format
-- **Streaming narrative**: only the narrative field streams to screen, not raw JSON
-- **Streaming world creation**: progressive field extraction with real-time feedback
-- **Character continuity**: appearance descriptions stored in world config, included in image prompts
+- **Streaming narrative**: uses `$melker.ai.createStreamingExtractor()` for progressive narrative display
+- **Streaming world creation**: progressive field extraction with real-time feedback via `$melker.ai.createStreamingExtractor()`
+- **Image response normalization**: uses `$melker.ai.extractImageFromResponse()` for multi-format support
+- **Click-to-analyze**: vision model identifies clicked objects in scene images, suggests actions
+- **Character continuity**: appearance descriptions stored in facts, included in image prompts via LLM-generated `imagePrompt` field
 - **Facts as long-term memory**: generic key/value store survives history pruning, replaces separate `threadProgress` and `appearanceChanges` with unified `stateUpdates`
 - **Language-aware**: all content generated in the player's language
 - **Split-pane layout**: image and narrative in a resizable vertical split-pane
@@ -329,7 +346,7 @@ Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `c
 - **NPC agency & consequences**: NPCs act independently, player actions have lasting effects
 - **Choice normalization**: handles both string and `{label, text}` object formats from AI
 - **XML tag prompts**: structured prompt segmentation for image, turn, and setup prompts
-- **GFX mode cycling**: click image or use `/gfx` to switch between sextant, halfblock, quadrant, pattern, luma
+- **GFX mode cycling**: modifier+click image or use `/gfx` to switch between sextant, halfblock, quadrant, pattern, luma
 - **Session-only GFX settings**: gfx mode and dither bits not saved with game state
 - **Fisheye zoom on hover**: mouse over scene image activates fisheye shader sampling from hi-res source image
 - **Delayed image generation**: 1-second delay before image API call lets player skip it by acting quickly

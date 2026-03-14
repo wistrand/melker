@@ -263,6 +263,23 @@ let imageAbort = null; // AbortController for in-flight image request
 let skipImages = false;
 let turnBusy = false;
 let redoStack = []; // [{user, assistant}] for redo after undo
+let sessionTokens = { prompt: 0, completion: 0 };
+let sessionCost = 0; // accumulated cost in credits (if reported by API)
+
+function trackUsage(usage) {
+  if (!usage) return;
+  sessionTokens.prompt += usage.prompt_tokens || 0;
+  sessionTokens.completion += usage.completion_tokens || 0;
+  if (usage.cost) sessionCost += usage.cost;
+}
+
+function usageSuffix() {
+  const totalTokens = sessionTokens.prompt + sessionTokens.completion;
+  if (totalTokens === 0) return '';
+  const parts = [(totalTokens / 1000).toFixed(1) + 'k tok'];
+  if (sessionCost > 0) parts.push('$' + sessionCost.toFixed(4));
+  return ' | ' + parts.join(', ');
+}
 
 // --- Game Index ---
 
@@ -626,7 +643,7 @@ export async function startGame() {
         }
       }
     );
-    log(logId, 'World config received (' + ((Date.now() - t0) / 1000).toFixed(1) + 's)');
+    log(logId, 'World config received (' + ((Date.now() - t0) / 1000).toFixed(1) + 's)' + usageSuffix());
 
     const config = parseJSON(worldConfig);
     if (!config || !config.title || !config.narratorPrompt) {
@@ -701,7 +718,7 @@ export async function startGame() {
       config.systemPrompt + '\n\n' + TURN_RULES,
       [{ role: 'user', content: 'Begin the adventure. Describe the opening scene.' }]
     );
-    log(logId, 'Opening scene received (' + ((Date.now() - t1) / 1000).toFixed(1) + 's)');
+    log(logId, 'Opening scene received (' + ((Date.now() - t1) / 1000).toFixed(1) + 's)' + usageSuffix());
 
     const scene = parseJSON(opening);
     if (scene) {
@@ -1015,7 +1032,7 @@ export async function handleInput() {
     );
 
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-    log(logId, 'Response received (' + elapsed + 's)');
+    log(logId, 'Response received (' + elapsed + 's)' + usageSuffix());
 
     gameState.history.push({ role: 'assistant', content: response });
     gameState.turnCount++;
@@ -1443,7 +1460,7 @@ async function generateSceneImage(logId, customStyle) {
     if (imageData && gameState) {
       currentImage = imageData;
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-      log(logId, 'Scene image generated (' + elapsed + 's)');
+      log(logId, 'Scene image generated (' + elapsed + 's)' + usageSuffix());
 
       // Cache image
       logger.debug('Caching image for turn ' + gameState.turnCount + ' | size=' + imageData.length + ' chars');
@@ -1495,6 +1512,7 @@ async function callImageGeneration(prompt, signal) {
   const usage = json.usage;
   if (usage) {
     logger.info('Image API usage | prompt=' + usage.prompt_tokens + ' completion=' + usage.completion_tokens + ' total=' + usage.total_tokens + ' tokens, elapsed=' + elapsed + 'ms');
+    trackUsage(usage);
   }
 
   return await $melker.ai.extractImageFromResponse(json, { signal });
@@ -1662,6 +1680,7 @@ async function callOpenRouter(systemPrompt, messages, useModel) {
   const usage = json.usage;
   if (usage) {
     logger.info('API usage | prompt=' + usage.prompt_tokens + ' completion=' + usage.completion_tokens + ' total=' + usage.total_tokens + ' tokens, elapsed=' + elapsed + 'ms');
+    trackUsage(usage);
   }
   if (!content) {
     logger.error('Empty API response | raw=' + JSON.stringify(json).slice(0, 300));
@@ -1713,6 +1732,7 @@ async function callOpenRouterStreaming(systemPrompt, messages) {
         $melker.render();
       },
     },
+    onUsage: trackUsage,
   });
 
   return await stream.result;
@@ -1751,6 +1771,7 @@ async function callOpenRouterStreamingWithModel(systemPrompt, messages, useModel
 
   const stream = $melker.ai.createStreamingExtractor(res.body, {
     onContent: onChunk || undefined,
+    onUsage: trackUsage,
   });
 
   return await stream.result;

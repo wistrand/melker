@@ -20,6 +20,8 @@ export interface StreamingExtractorOptions {
   onComplete?: (json: unknown) => void;
   /** Called if the stream fails or JSON is malformed */
   onError?: (error: Error) => void;
+  /** Called with usage data from the final SSE chunk (if present) */
+  onUsage?: (usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number }) => void;
 }
 
 /**
@@ -125,7 +127,12 @@ export function createStreamingExtractor(
           const data = line.slice(6).trim();
           if (data === '[DONE]') continue;
           try {
-            const delta = JSON.parse(data).choices?.[0]?.delta?.content;
+            const chunk = JSON.parse(data);
+            // Capture usage from final SSE chunk (OpenRouter includes it alongside finish_reason)
+            if (options.onUsage && chunk.usage) {
+              options.onUsage(chunk.usage);
+            }
+            const delta = chunk.choices?.[0]?.delta?.content;
             if (delta) {
               fullContent += delta;
 

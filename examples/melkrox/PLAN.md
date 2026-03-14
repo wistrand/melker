@@ -325,6 +325,7 @@ Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `c
 - **Single file**: everything in one `.melker` file, no external JS
 - **Freeform input**: no parser — the AI IS the parser. Type anything.
 - **Multi-game saves**: game index + per-game state, automatic migration from old format
+- **Session cost tracking**: accumulates token usage and cost from all API calls (text, image, streaming). Logged per-call (`123 tok, $0.0012`) and session total (`session: 4.2k tok, $0.0042`) to the in-game log area. Uses `usage` field from response body and `onUsage` callback from streaming extractor. Per-session only, not saved.
 - **Streaming narrative**: uses `$melker.ai.createStreamingExtractor()` for progressive narrative display
 - **Streaming world creation**: progressive field extraction with real-time feedback via `$melker.ai.createStreamingExtractor()`
 - **Image response normalization**: uses `$melker.ai.extractImageFromResponse()` for multi-format support

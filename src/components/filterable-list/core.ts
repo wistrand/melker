@@ -341,6 +341,10 @@ export abstract class FilterableListCore extends Element implements Focusable {
    */
   setFocusedIndex(index: number): void {
     const count = this.getFilteredCount();
+    if (count === 0) {
+      this._focusedIndex = -1;
+      return;
+    }
     this._focusedIndex = Math.max(0, Math.min(index, count - 1));
     this._ensureFocusedVisible();
   }

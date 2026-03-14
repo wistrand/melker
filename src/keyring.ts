@@ -184,6 +184,11 @@ export class Keyring {
     await cmd.output();
   }
 
+  /** Escape a string for embedding in a PowerShell single-quoted string */
+  private _psEscape(s: string): string {
+    return s.replace(/'/g, "''");
+  }
+
   // Windows - uses PowerShell with Windows Credential Manager
   private async windowsGet(key: string): Promise<string> {
     const simpleCmd = new Command("powershell", {
@@ -191,7 +196,7 @@ export class Keyring {
         [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
         $vault = New-Object Windows.Security.Credentials.PasswordVault
         try {
-          $cred = $vault.Retrieve('${this.service}', '${key}')
+          $cred = $vault.Retrieve('${this._psEscape(this.service)}', '${this._psEscape(key)}')
           $cred.RetrievePassword()
           Write-Output $cred.Password
         } catch { exit 1 }
@@ -203,12 +208,15 @@ export class Keyring {
   }
 
   private async windowsSet(key: string, value: string): Promise<void> {
+    const svc = this._psEscape(this.service);
+    const k = this._psEscape(key);
+    const v = this._psEscape(value);
     const cmd = new Command("powershell", {
       args: ["-NoProfile", "-NonInteractive", "-Command", `
         [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
         $vault = New-Object Windows.Security.Credentials.PasswordVault
-        try { $vault.Remove($vault.Retrieve('${this.service}', '${key}')) } catch {}
-        $cred = New-Object Windows.Security.Credentials.PasswordCredential('${this.service}', '${key}', '${value.replace(/'/g, "''")}')
+        try { $vault.Remove($vault.Retrieve('${svc}', '${k}')) } catch {}
+        $cred = New-Object Windows.Security.Credentials.PasswordCredential('${svc}', '${k}', '${v}')
         $vault.Add($cred)
       `],
     });
@@ -221,7 +229,7 @@ export class Keyring {
       args: ["-NoProfile", "-NonInteractive", "-Command", `
         [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
         $vault = New-Object Windows.Security.Credentials.PasswordVault
-        $cred = $vault.Retrieve('${this.service}', '${key}')
+        $cred = $vault.Retrieve('${this._psEscape(this.service)}', '${this._psEscape(key)}')
         $vault.Remove($cred)
       `],
     });

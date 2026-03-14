@@ -13,10 +13,6 @@ export interface StreamingExtractorOptions {
    * Called repeatedly as string fields grow during streaming.
    * `partial` is the current value, `complete` is true when the field is fully received.
    */
-  /**
-   * Called repeatedly as string fields grow during streaming.
-   * `partial` is the current value, `complete` is true when the field is fully received.
-   */
   onField?: Record<string, (partial: string, complete: boolean) => void>;
   /** Called with the accumulated full content after each chunk */
   onContent?: (content: string) => void;
@@ -47,7 +43,7 @@ function unescapeJsonPartial(raw: string): string {
     if (raw[i] === '"') { end = i; break; }
   }
   const str = end !== -1 ? raw.slice(0, end) : raw;
-  return str.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  return str.replace(/\\\\/g, '\\').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"');
 }
 
 /**
@@ -152,8 +148,8 @@ export function createStreamingExtractor(
                 }
               }
             }
-          } catch {
-            // Malformed SSE line — skip
+          } catch (e) {
+            logger.debug('Malformed SSE line: ' + (e instanceof Error ? e.message : String(e)));
           }
         }
       }

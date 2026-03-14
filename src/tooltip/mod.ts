@@ -25,5 +25,4 @@ export {
 
 export {
   renderTooltipOverlay,
-  isPointInTooltip,
 } from './tooltip-renderer.ts';

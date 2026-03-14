@@ -170,7 +170,7 @@ export class DialogElement extends Element implements Renderable {
 
       // Constrain so dialog stays mostly visible
       const minX = -centerX + 2;  // Leave 2 chars visible on left
-      const maxX = vp.width - centerX - dialogWidth + dialogWidth - 2;  // Leave 2 chars visible on right
+      const maxX = vp.width - centerX - 2;  // Leave 2 chars visible on right
       const minY = -centerY;  // Can go to top
       const maxY = vp.height - centerY - 3;  // Keep title bar visible
 

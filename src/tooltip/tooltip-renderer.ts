@@ -190,18 +190,3 @@ function renderTooltipBox(
     style: baseStyle,
   });
 }
-
-/**
- * Check if coordinates are within tooltip bounds
- */
-export function isPointInTooltip(screenX: number, screenY: number): boolean {
-  const manager = getTooltipManager();
-  const state = manager.getState();
-
-  if (!state?.visible) {
-    return false;
-  }
-
-  // Tooltips don't need click handling
-  return false;
-}

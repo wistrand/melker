@@ -115,7 +115,7 @@ export class ContentMeasurer {
       resultHeight = isRow ? maxHeight : totalHeight;
     }
 
-    return { width: maxWidth, height: resultHeight };
+    return { width: resultWidth, height: resultHeight };
   }
 
   /**

@@ -102,9 +102,10 @@ export class DetectionModule<T extends BaseCapabilities> {
       return Promise.resolve(this._cache);
     }
     if (this._state?.resolve) {
+      const state = this._state;
       return new Promise(resolve => {
-        const oldResolve = this._state!.resolve;
-        this._state!.resolve = (caps) => {
+        const oldResolve = state.resolve;
+        state.resolve = (caps) => {
           oldResolve?.(caps);
           resolve(caps);
         };

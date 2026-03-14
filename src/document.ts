@@ -350,14 +350,15 @@ export class Document {
     const elementsWithIds = Array.from(this._elementRegistry.keys()).length;
     let maxDepth = 0;
 
-    const calculateDepth = (element: Element, depth = 0): number => {
+    const calculateDepth = (element: Element, depth = 0): void => {
       maxDepth = Math.max(maxDepth, depth);
       elementsByType[element.type] = (elementsByType[element.type] || 0) + 1;
 
       if (element.children) {
-        return Math.max(...element.children.map(child => calculateDepth(child, depth + 1)));
+        for (const child of element.children) {
+          calculateDepth(child, depth + 1);
+        }
       }
-      return depth;
     };
 
     calculateDepth(this._root);

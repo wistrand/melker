@@ -99,7 +99,7 @@ export async function extractImageFromResponse(
   const data = obj.data as Record<string, unknown>[];
   if (Array.isArray(data) && data.length > 0) {
     const d = data[0];
-    if (d.b64_json) {
+    if (d.b64_json && typeof d.b64_json === 'string') {
       return 'data:image/png;base64,' + d.b64_json;
     }
     if (d.url && typeof d.url === 'string') {

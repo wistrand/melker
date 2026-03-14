@@ -96,9 +96,13 @@ export function fillPoly(canvas: DrawableCanvas, points: number[][]): void {
     for (let i = 0, j = n - 1; i < n; j = i++) {
       const yi = points[i][1], yj = points[j][1];
       if ((yi < y && yj >= y) || (yj < y && yi >= y)) {
-        nodeX.push(Math.round(
-          points[i][0] + (y - yi) / (yj - yi) * (points[j][0] - points[i][0])
-        ));
+        // Note: yj !== yi is guaranteed by the outer condition (requires one endpoint
+        // strictly below y and the other at/above), but kept as defensive guard.
+        if (yj !== yi) {
+          nodeX.push(Math.round(
+            points[i][0] + (y - yi) / (yj - yi) * (points[j][0] - points[i][0])
+          ));
+        }
       }
     }
 

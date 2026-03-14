@@ -41,17 +41,6 @@ export class LiElement extends Element implements Renderable {
     super('li', defaultProps, children);
   }
 
-  getIntrinsicSize(_context: IntrinsicSizeContext): { minWidth: number; minHeight: number; maxWidth: number; maxHeight: number } {
-    // Li elements should take the full width of their container
-    // Height is determined by their content
-    return {
-      minWidth: 1,
-      minHeight: 1,
-      maxWidth: Infinity,
-      maxHeight: Infinity
-    };
-  }
-
   intrinsicSize(context: IntrinsicSizeContext): { width: number; height: number } {
     // Li elements should take full width available
     // Height is calculated based on content (typically 1 line for simple content)
@@ -72,6 +61,8 @@ export class LiElement extends Element implements Renderable {
     const { focused, selected } = this.props;
 
     // Determine marker based on focused/selected state
+    // Use custom marker prop as default, override for focused/selected states
+    const defaultMarker = (this.props.marker as string) || '-';
     let marker: string;
     let markerStyle: Partial<Cell> = { ...style };
 
@@ -87,7 +78,7 @@ export class LiElement extends Element implements Renderable {
       marker = '*';
       markerStyle.foreground = getThemeColor('primary');
     } else {
-      marker = '-';
+      marker = defaultMarker;
       markerStyle.foreground = getThemeColor('textSecondary');
     }
 

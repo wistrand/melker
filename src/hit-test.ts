@@ -210,6 +210,7 @@ export class HitTester {
     for (const child of element.children) {
       // Skip invisible elements - they don't participate in hit testing
       if (child.props?.visible === false) continue;
+      if (child._computedStyle?.visibility === 'hidden') continue;
 
       // Track if we're entering a table
       const isTable = child.type === 'table';
@@ -318,6 +319,7 @@ export class HitTester {
   private _hitTestElement(element: Element, x: number, y: number, scrollOffsetX: number, scrollOffsetY: number, containingTable?: Element): Element | undefined {
     // Skip invisible elements - they don't participate in hit testing
     if (element.props?.visible === false) return undefined;
+    if (element._computedStyle?.visibility === 'hidden') return undefined;
 
     // Get element bounds from the renderer if available
     const bounds = this._renderer.getContainerBounds(element.id || '');
@@ -427,6 +429,7 @@ export class HitTester {
   private _hitTestSubtreeElement(element: Element, x: number, y: number): Element | undefined {
     // Skip invisible elements
     if (element.props?.visible === false) return undefined;
+    if (element._computedStyle?.visibility === 'hidden') return undefined;
 
     // Get bounds from renderer (includes dynamicBounds from renderElementSubtree)
     const bounds = element.id ? this._renderer.getContainerBounds(element.id) : undefined;

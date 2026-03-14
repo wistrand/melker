@@ -134,14 +134,21 @@ export class SizingModel {
       }
 
       // Phase 2: Collapse border if still not enough space
+      // Collapse symmetrically: both left+right together for visual consistency
       const remaining = excess - padReduction;
       if (remaining > 0 && effectiveBorder.horizontal > 0) {
-        if (remaining >= 1 && effectiveBorder.left > 0) {
+        // If both sides have borders, collapse both symmetrically
+        if (effectiveBorder.left > 0 && effectiveBorder.right > 0) {
+          chromeCollapse.borderCollapsed.left = true;
+          chromeCollapse.borderCollapsed.right = true;
+          effectiveBorder.left = 0;
+          effectiveBorder.right = 0;
+          effectiveBorder.horizontal = 0;
+        } else if (effectiveBorder.left > 0) {
           chromeCollapse.borderCollapsed.left = true;
           effectiveBorder.left = 0;
           effectiveBorder.horizontal--;
-        }
-        if (remaining >= 2 && effectiveBorder.right > 0) {
+        } else if (effectiveBorder.right > 0) {
           chromeCollapse.borderCollapsed.right = true;
           effectiveBorder.right = 0;
           effectiveBorder.horizontal--;
@@ -171,14 +178,21 @@ export class SizingModel {
       }
 
       // Phase 2: Collapse border if still not enough space
+      // Collapse symmetrically: both top+bottom together for visual consistency
       const remaining = excess - padReduction;
       if (remaining > 0 && effectiveBorder.vertical > 0) {
-        if (remaining >= 1 && effectiveBorder.top > 0) {
+        // If both sides have borders, collapse both symmetrically
+        if (effectiveBorder.top > 0 && effectiveBorder.bottom > 0) {
+          chromeCollapse.borderCollapsed.top = true;
+          chromeCollapse.borderCollapsed.bottom = true;
+          effectiveBorder.top = 0;
+          effectiveBorder.bottom = 0;
+          effectiveBorder.vertical = 0;
+        } else if (effectiveBorder.top > 0) {
           chromeCollapse.borderCollapsed.top = true;
           effectiveBorder.top = 0;
           effectiveBorder.vertical--;
-        }
-        if (remaining >= 2 && effectiveBorder.bottom > 0) {
+        } else if (effectiveBorder.bottom > 0) {
           chromeCollapse.borderCollapsed.bottom = true;
           effectiveBorder.bottom = 0;
           effectiveBorder.vertical--;

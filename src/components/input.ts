@@ -161,8 +161,10 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       if (completion && completion.length > value.length) {
         // Show the rest of the completion in a muted style
         const previewText = completion.substring(value.length);
-        const previewStartX = cb.x + value.length;
-        const availableWidth = cb.width - value.length;
+        const scrollOffset = value.length > cb.width ? value.length - cb.width : 0;
+        const visibleValueLen = value.length - scrollOffset;
+        const previewStartX = cb.x + visibleValueLen;
+        const availableWidth = cb.width - visibleValueLen;
 
         if (previewStartX < cb.x + cb.width && availableWidth > 0) {
           const truncatedPreview = previewText.substring(0, availableWidth);

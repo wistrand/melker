@@ -740,9 +740,12 @@ export function fillPolySub(canvas: DrawableCanvas, subpaths: number[][][]): voi
       for (let i = 0, j = n - 1; i < n; j = i++) {
         const yi = sp[i][1], yj = sp[j][1];
         if ((yi < y && yj >= y) || (yj < y && yi >= y)) {
-          nodeX.push(Math.round(
-            sp[i][0] + (y - yi) / (yj - yi) * (sp[j][0] - sp[i][0])
-          ));
+          // Note: yj !== yi is guaranteed by the outer condition, kept as defensive guard.
+          if (yj !== yi) {
+            nodeX.push(Math.round(
+              sp[i][0] + (y - yi) / (yj - yi) * (sp[j][0] - sp[i][0])
+            ));
+          }
         }
       }
     }

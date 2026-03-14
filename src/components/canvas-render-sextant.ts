@@ -1,5 +1,8 @@
 // Canvas render sextant - main sextant render path
 // Extracted from canvas-render.ts for modularity
+// Note: quantizeBlockColorsInline intentionally duplicates logic from canvas-render-quadrant.ts.
+// These are the hottest render paths (called per cell per frame) — a shared function would
+// prevent V8 inlining and add call overhead. Keep implementations separate.
 
 import { type DualBuffer, type Cell } from '../buffer.ts';
 import { type Bounds } from '../types.ts';

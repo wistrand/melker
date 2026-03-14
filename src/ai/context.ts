@@ -197,8 +197,9 @@ function buildScreenContent(root: Element, excludeIds: Set<string>, document: Do
 
       case 'tile-map': {
         const mapEl = element as any;
-        const lat = typeof mapEl.getCenter === 'function' ? mapEl.getCenter().lat : element.props.lat;
-        const lon = typeof mapEl.getCenter === 'function' ? mapEl.getCenter().lon : element.props.lon;
+        const center = typeof mapEl.getCenter === 'function' ? mapEl.getCenter() : null;
+        const lat = center ? center.lat : element.props.lat;
+        const lon = center ? center.lon : element.props.lon;
         const zoom = typeof mapEl.getZoom === 'function' ? mapEl.getZoom() : element.props.zoom;
         const provider = mapEl._currentProvider || element.props.provider || 'openstreetmap';
         const overlays = typeof mapEl.getSvgOverlays === 'function' ? mapEl.getSvgOverlays() as Map<string, { svg: string; order: number }> : new Map();

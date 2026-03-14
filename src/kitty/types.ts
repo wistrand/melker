@@ -26,8 +26,6 @@ export interface KittyEncodeOptions {
   height: number;
   /** Pixel format */
   format?: 'rgb' | 'rgba';
-  /** Use zlib compression */
-  compress?: boolean;
   /** Image ID for updates/deletion */
   imageId?: number;
   /** Number of terminal columns to display over (for scaling) */

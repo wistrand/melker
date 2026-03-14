@@ -1,7 +1,7 @@
 // Focus management system for melker terminal UI
 // Handles tab order, focus indicators, and keyboard navigation
 
-import { getGlobalEventManager, createFocusEvent, type EventManager } from './events.ts';
+import { getGlobalEventManager, createFocusEvent, type EventManager, type KeyEvent } from './events.ts';
 import { type Element, hasSubtreeElements } from './types.ts';
 import { type Document } from './document.ts';
 import { getLogger } from './logging.ts';
@@ -74,8 +74,6 @@ export class FocusManager {
 
     const element = this._document.getElementById(elementId);
     if (!element) {
-      // Element no longer exists, remove it from focusable IDs
-      this._focusableElementIds.delete(elementId);
       return null;
     }
 
@@ -108,7 +106,6 @@ export class FocusManager {
 
     const element = this._document.getElementById(elementId);
     if (!element) {
-      this._focusableElementIds.delete(elementId);
       return null;
     }
 
@@ -764,9 +761,7 @@ export class FocusNavigator {
    */
   private _setupKeyboardHandlers(): void {
     this._eventManager.addGlobalEventListener('keydown', (event) => {
-      if (event.type !== 'keydown') return;
-
-      const keyEvent = event as any; // We know it's a KeyEvent
+      const keyEvent = event as KeyEvent;
 
       switch (keyEvent.key) {
         case 'Home':

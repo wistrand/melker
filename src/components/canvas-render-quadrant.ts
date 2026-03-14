@@ -1,6 +1,9 @@
 // Canvas render quadrant - 2x2 Unicode block render path
 // Uses U+2596–U+259F quadrant characters (Unicode 1.0, near-universal support)
 // Provides 2x2 pixels per cell (160×48 on 80×24 terminal)
+// Note: quantizeQuadrantColorsInline intentionally duplicates logic from canvas-render-sextant.ts.
+// These are the hottest render paths (called per cell per frame) — a shared function would
+// prevent V8 inlining and add call overhead. Keep implementations separate.
 
 import { type DualBuffer, type Cell } from '../buffer.ts';
 import { type Bounds } from '../types.ts';

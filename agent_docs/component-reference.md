@@ -355,9 +355,10 @@ When an element has insufficient space for content due to border and padding con
 
 **Collapse Order:**
 1. **Padding collapse** - Reduced proportionally per side
-2. **Border collapse** - Individual borders removed if still insufficient
+2. **Border collapse** - Symmetric: both left+right or both top+bottom removed together
 
 **Behavior:**
+- Symmetric border collapse: if both sides have borders, both are removed together for visual consistency (never removes just left or just top alone)
 - Silent collapse with debug logging (`SizingModel: Chrome collapsed: bounds=...`)
 - Inner containers collapse before outer (natural with recursive layout)
 - Minimum content area: 1 character
@@ -755,6 +756,25 @@ When `draggable={true}`, users can click and drag the title bar to move the dial
 ```
 
 The dialog position is stored in `offsetX` and `offsetY` props, which persist the drag offset from the centered position.
+
+### Dialog Sizing Tips
+
+The default dialog height is `min(floor(vpHeight * 0.7), 20)` — typically 16 rows on a standard 24-row terminal, giving ~12 rows of content area (after title bar and borders). For dialogs with multiple form fields, set an explicit `height` to ensure all content fits:
+
+```xml
+<!-- Form dialog with explicit height to fit inputs -->
+<dialog id="form" title="Enter Details" open="true" height="14">
+  <container style="display: flex; flex-direction: column; padding: 1;">
+    <text>Name:</text>
+    <input id="name" placeholder="Enter name" style="width: 30; margin-bottom: 1;" />
+    <text>Email:</text>
+    <input id="email" placeholder="Enter email" style="width: 30; margin-bottom: 1;" />
+    <button label="Submit" />
+  </container>
+</dialog>
+```
+
+**Avoid `border: thin` on inputs inside dialogs** — the border adds 2 rows per input (top+bottom) and can cause content to overflow the dialog's content area.
 
 ## Filterable List Components
 

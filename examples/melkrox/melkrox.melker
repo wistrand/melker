@@ -1169,6 +1169,15 @@ let ditherBitsIndex = 2; // default 8
 let imageClickAbort = null;
 
 export async function handleImageClick(event) {
+  // Clear fisheye shader immediately on click
+  if (fisheyeActive) {
+    fisheyeActive = false;
+    const fImg = $melker.getElementById('scene-image');
+    fImg.stopShader();
+    fImg.props.onShader = undefined;
+    fImg.clear();
+    fImg.refreshImage();
+  }
   const imgEl = $melker.getElementById('scene-image');
   const pos = event.position || {};
   const clickX = pos.x || 0;
@@ -1207,7 +1216,10 @@ export async function handleImageClick(event) {
     imageClickAbort = null;
   }
 
-  setSpinner('game-spinner', true, 'analyzing');
+  const spinner = $melker.getElementById('game-spinner');
+  spinner.props.spinning = true;
+  spinner.props.verbs = 'analyzing';
+  spinner.props.style = { ...spinner.props.style, visibility: 'visible' };
   imageClickAbort = new AbortController();
 
   try {
@@ -1276,7 +1288,13 @@ export async function handleImageClick(event) {
     }
   } finally {
     imageClickAbort = null;
-    setSpinner('game-spinner', false);
+    const spinner = $melker.getElementById('game-spinner');
+    spinner.stop();
+    spinner.props.style = { ...spinner.props.style, visibility: 'hidden' };
+    // Re-activate fisheye if mouse is still over the image
+    if (mouseOverImage && !fisheyeActive) {
+      handleImageMouseOver();
+    }
     $melker.render();
   }
 }
@@ -1376,8 +1394,10 @@ export function fisheyeShader(x, y, time, resolution, source, utils) {
 }
 
 let fisheyeActive = false;
+let mouseOverImage = false;
 
 export function handleImageMouseOver() {
+  mouseOverImage = true;
   if (fisheyeActive) return;
   const imgEl = $melker.getElementById('scene-image');
   if (imgEl.props.onShader === $app.loadingShader) return; // don't override loading shader
@@ -1388,6 +1408,7 @@ export function handleImageMouseOver() {
 }
 
 export function handleImageMouseOut() {
+  mouseOverImage = false;
   if (!fisheyeActive) return;
   fisheyeActive = false;
   const imgEl = $melker.getElementById('scene-image');
@@ -1424,7 +1445,7 @@ async function generateSceneImage(logId, customStyle) {
     const sceneStyle = gameState._lastSceneImageStyle;
     const baseStyle = gameState.worldConfig?.imageStyle || '';
     const activeStyle = sceneStyle || baseStyle;
-    const defaultConstraints = 'Wide 3:1 format. Minimal elements, large color fields, no fine detail. '
+    const defaultConstraints = 'Wide 3:1 format. No fine detail. '
       + 'NO thin lines, NO text, NO crowds, NO intricate patterns. ';
     const constraints = customStyle
       ? customStyle
@@ -1606,11 +1627,20 @@ Rules for keeping turns interesting:
 </PACING>`;
 
 
-const SETUP_SYSTEM_PROMPT = `You are a text adventure game designer. Given the player's story prompt, generate a world configuration as JSON.
+const SETUP_SYSTEM_PROMPT = `You are a text adventure game designer known for worlds that feel lived-in and surprising. Given the player's story prompt, generate a world configuration as JSON.
 
 <TONE_MATCHING>
 CRITICAL: Match the tone of EVERYTHING you generate to the player's prompt. A comedy prompt gets a funny, lighthearted world. A horror prompt gets a dark, tense world. A romance gets warmth and charm. A slice-of-life gets everyday stakes and gentle humor. Do NOT default to dark/gritty — read the prompt and calibrate accordingly. The tone field you generate drives everything else.
 </TONE_MATCHING>
+
+<ORIGINALITY>
+Avoid genre clichés and stock characters. Build worlds that feel specific and real, not assembled from tropes:
+- Characters should have contradictions — a ruthless negotiator who fosters rescue cats, a librarian who runs underground poker nights. Give them quirks, flaws, and agendas that don't align neatly with their role.
+- Locations should have texture and history — not "a dark forest" but "a pine forest where someone has nailed hand-painted warnings to every third tree". Specific beats generic.
+- Subvert expectations — if the genre suggests a wise mentor, make them unreliable. If it suggests a villain, give them a sympathetic reason. Avoid the obvious path.
+- Names should feel grounded in the setting's culture. No "Shadowblade" or "Lord Darkmore". Real-sounding names with personality.
+- Story threads should create tension through competing interests, not through obvious good-vs-evil framing. Moral ambiguity makes choices interesting.
+</ORIGINALITY>
 
 <OUTPUT_FORMAT>
 Respond with ONLY a JSON object (no markdown fences) with these fields:
@@ -1622,7 +1652,7 @@ Respond with ONLY a JSON object (no markdown fences) with these fields:
 - protagonist: object with name, appearance (2-3 sentences describing the player character's physical appearance — MUST include gender, approximate age, hair color/style, skin tone, build/height, and clothing. Be specific enough to generate a consistent image every time, e.g. "A tall, lean woman in her late twenties with short copper hair and pale freckled skin, wearing a faded denim jacket over a black turtleneck.")
 - threads: array of 3-5 story thread objects, each with: name (short label), description (1-2 sentences describing the driving force — could be tension, mystery, romance, humor, rivalry, friendship, ambition, or any narrative engine appropriate to the tone). NOT explicit goals — underlying narrative currents woven organically. Mix scales: one overarching thread, a few local/personal ones.
 - imageStyle: one sentence describing ONLY the visual palette, lighting, and mood for scene illustrations. NO scene-specific objects, props, or details — those come from the scene text. Examples: "Warm golden palette, soft diffused lighting, cozy mood" for slice-of-life, "Deep shadows, desaturated blues, oppressive atmosphere" for horror, "Bright saturated colors, dynamic contrast, playful energy" for comedy.
-- imageConstraints: technical rendering constraints for image generation. If the player's prompt explicitly requests a specific art style (photorealistic, comic, watercolor, oil painting, pixel art, etc.), generate constraints matching that style. Otherwise set to null and defaults will be used. Always include "Wide 3:1 format" and "NO text". Examples: null (default — minimal detail for terminal rendering), "Wide 3:1 format. Photorealistic with cinematic depth of field. Strong shadows, sharp subject, soft background. NO text, NO crowds." for photorealistic, "Wide 3:1 format. Bold outlines, flat color fills, comic panel style. NO fine hatching, NO text." for comic.
+- imageConstraints: technical rendering constraints for image generation. If the player's prompt suggests or implies a visual style — through explicit request, genre conventions, setting, or tone — generate constraints matching that style. For example, a noir detective story implies high-contrast black-and-white, a fairy tale implies soft watercolor, a cyberpunk setting implies neon-lit digital art. Set to null only if the prompt gives no stylistic cues at all. Always include "Wide 3:1 format" and "NO text". Examples: null (default — minimal detail for terminal rendering), "Wide 3:1 format. Photorealistic with cinematic depth of field. Strong shadows, sharp subject, soft background. NO text, NO crowds." for photorealistic, "Wide 3:1 format. Bold outlines, flat color fills, comic panel style. NO fine hatching, NO text." for comic.
 - narratorPrompt: the creative narrator instructions for gameplay. Include the world setting, tone, NPC descriptions with motivations, and storytelling rules. The voice and language must match the tone — a comedy should encourage humor and wit, horror should encourage dread, romance should encourage chemistry. Include story threads and instruct the narrator to weave them naturally. NPCs are independent actors who pursue their agendas whether the player is present or not. Actions have consequences proportional to the tone.
 </OUTPUT_FORMAT>
 
@@ -1840,7 +1870,8 @@ function extractJsonString(text, key) {
     if (text[i] === '\\') { i++; continue; }
     if (text[i] === '"') { end = i; break; }
   }
-  const raw = end !== -1 ? text.slice(valStart + 1, end) : text.slice(valStart + 1);
+  if (end === -1) return null;  // Wait for closing quote
+  const raw = text.slice(valStart + 1, end);
   return raw.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
 }
 

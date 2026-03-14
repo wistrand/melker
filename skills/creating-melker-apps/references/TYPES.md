@@ -80,6 +80,20 @@ interface MelkerContext {
   // AI tools
   registerAITool(tool: unknown): void;
 
+  // AI utilities
+  ai: {
+    createStreamingExtractor(body: ReadableStream<Uint8Array>, options?: {
+      onField?: Record<string, (partial: string, complete: boolean) => void>;
+      onContent?: (content: string) => void;
+      onComplete?: (json: unknown) => void;
+      onError?: (error: Error) => void;
+    }): { result: Promise<string>; abort(): void };
+
+    extractImageFromResponse(json: unknown, options?: {
+      signal?: AbortSignal;
+    }): Promise<string>;
+  };
+
   // Configuration
   config: MelkerConfig;
   cacheDir: string;         // App-specific cache directory (always exists)

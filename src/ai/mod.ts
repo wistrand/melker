@@ -54,3 +54,14 @@ export {
   trimSilence,
   getWavDuration,
 } from './audio.ts';
+
+export {
+  createStreamingExtractor,
+  type StreamingExtractorOptions,
+  type StreamingExtractorResult,
+} from './streaming.ts';
+
+export {
+  extractImageFromResponse,
+  type ExtractImageOptions,
+} from './image-extract.ts';

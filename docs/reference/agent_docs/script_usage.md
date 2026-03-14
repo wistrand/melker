@@ -71,6 +71,20 @@ $melker: {
   // AI tools
   registerAITool(tool: any): void;
 
+  // AI utilities
+  ai: {
+    createStreamingExtractor(body: ReadableStream<Uint8Array>, options?: {
+      onField?: Record<string, (partial: string, complete: boolean) => void>;
+      onContent?: (content: string) => void;
+      onComplete?: (json: unknown) => void;
+      onError?: (error: Error) => void;
+    }): { result: Promise<string>; abort(): void };
+
+    extractImageFromResponse(json: unknown, options?: {
+      signal?: AbortSignal;
+    }): Promise<string>;
+  };
+
   // State bindings (optional — see state-binding-architecture.md, bind-selection-architecture.md)
   createState(initial: Record<string, any>): Record<string, any>;
 
@@ -410,6 +424,79 @@ For app-defined config (highest priority last):
 3. Environment variables (from `configSchema.env`)
 
 Note: CLI flags only apply to Melker's built-in config, not app-defined config.
+
+## AI Utilities
+
+The `$melker.ai` namespace provides helpers for working with OpenAI-compatible APIs.
+
+### Streaming JSON Extractor
+
+Process SSE (Server-Sent Events) streams from chat completion APIs. Progressively extracts JSON string fields as they arrive:
+
+```html
+<script>
+export async function fetchStory() {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify({ model: 'google/gemini-2.5-flash', messages: [...], stream: true })
+  });
+
+  const stream = $melker.ai.createStreamingExtractor(res.body, {
+    onField: {
+      narrative: (partial, complete) => {
+        $melker.getElementById('story').props.text = partial;
+        $melker.render();
+      },
+    },
+    onComplete: (json) => applyFullResponse(json),
+    onError: (err) => showError(err.message),
+  });
+
+  const fullText = await stream.result;
+  // stream.abort() to cancel early
+}
+</script>
+```
+
+Options:
+- `onField` — Map of field name to callback. Called repeatedly as each JSON string field grows. `complete` is true when the field's closing quote is received.
+- `onContent` — Called with the full accumulated content after each chunk.
+- `onComplete` — Called with the fully parsed JSON when the stream ends.
+- `onError` — Called if the stream fails or JSON is malformed.
+
+Returns `{ result: Promise<string>, abort(): void }`.
+
+### Image Response Extractor
+
+Normalize image responses from OpenAI-compatible APIs into a `data:` URL. Handles all known response formats (OpenRouter, Gemini inline_data, DALL-E data[].b64_json, markdown image URLs, etc.):
+
+```html
+<script>
+export async function generateImage(prompt) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify({
+      model: 'openai/gpt-image-1',
+      messages: [{ role: 'user', content: prompt }],
+      modalities: ['image', 'text'],
+      max_tokens: 1024
+    }),
+    signal: abortController.signal
+  });
+
+  const json = await res.json();
+  const dataUrl = await $melker.ai.extractImageFromResponse(json, {
+    signal: abortController.signal  // for secondary fetches (remote URL formats)
+  });
+
+  $melker.getElementById('my-image').setSrc(dataUrl);
+}
+</script>
+```
+
+Throws if no image data is found in the response.
 
 ## See Also
 

@@ -7,9 +7,6 @@
     "permissions": {
       "net": ["openrouter.ai"],
       "env": ["OPENROUTER_API_KEY"],
-      "read": [],
-      "write": [],
-      "run": [],
       "shader": true,
       "browser": true,
       "clipboard": true
@@ -26,6 +23,10 @@
       "openrouter.imageModel": {
         "type": "string",
         "default": "google/gemini-3.1-flash-image-preview"
+      },
+      "openrouter.visionModel": {
+        "type": "string",
+        "default": "google/gemini-2.5-flash"
       },
       "openrouter.skipImages": {
         "type": "boolean",
@@ -253,6 +254,7 @@ let apiKey = '';
 let model = '';
 let setupModel = '';
 let imageModel = '';
+let visionModel = '';
 let gameState = null;
 let currentGameId = null;
 let currentImage = null; // Scene image data URL (not saved in game state)
@@ -718,6 +720,7 @@ export async function startGame() {
     log(logId, 'Game state saved. Starting adventure!');
 
     renderScene();
+    $melker.render();
     clearLog(logId);
     focusInput();
   } catch (e) {
@@ -1145,26 +1148,125 @@ const DITHER_BITS = [1, 2, 4, 8];
 let gfxModeIndex = 0;
 let ditherBitsIndex = 2; // default 8
 
-export function handleImageClick(event) {
+let imageClickAbort = null;
+
+export async function handleImageClick(event) {
+  // Modifier+click: cycle gfx mode / dither bits
+  if (event.shiftKey || event.ctrlKey || event.altKey) {
+    const imgEl = $melker.getElementById('scene-image');
+    const pos = event.position || {};
+    const x = pos.x || 0;
+    const layout = imgEl.getLayout?.() || {};
+    const w = layout.width || 80;
+    const logId = 'log-area';
+    if (x < w / 2) {
+      gfxModeIndex = (gfxModeIndex + 1) % GFX_MODES.length;
+      imgEl.props.gfxMode = GFX_MODES[gfxModeIndex];
+      log(logId, 'GFX mode: ' + GFX_MODES[gfxModeIndex]);
+    } else {
+      ditherBitsIndex = (ditherBitsIndex + 1) % DITHER_BITS.length;
+      imgEl.props.ditherBits = DITHER_BITS[ditherBitsIndex];
+      log(logId, 'Dither bits: ' + DITHER_BITS[ditherBitsIndex]);
+    }
+    $melker.engine.requestForceRender();
+    return;
+  }
+
+  if (!currentImage || !gameState || turnBusy) return;
+  if (!visionModel) return;
+
   const imgEl = $melker.getElementById('scene-image');
   const pos = event.position || {};
-  const x = pos.x || pos.col || 0;
+  const clickX = pos.x || 0;
+  const clickY = pos.y || 0;
   const layout = imgEl.getLayout?.() || {};
   const w = layout.width || 80;
+  const h = layout.height || 24;
   const logId = 'log-area';
 
-  if (x < w / 2) {
-    // Left side: cycle gfx mode
-    gfxModeIndex = (gfxModeIndex + 1) % GFX_MODES.length;
-    imgEl.props.gfxMode = GFX_MODES[gfxModeIndex];
-    log(logId, 'GFX mode: ' + GFX_MODES[gfxModeIndex]);
-  } else {
-    // Right side: cycle dither bits
-    ditherBitsIndex = (ditherBitsIndex + 1) % DITHER_BITS.length;
-    imgEl.props.ditherBits = DITHER_BITS[ditherBitsIndex];
-    log(logId, 'Dither bits: ' + DITHER_BITS[ditherBitsIndex]);
+  // Normalize click to percentage of image
+  const pctX = Math.round((clickX / w) * 100);
+  const pctY = Math.round((clickY / h) * 100);
+  logger.info('Image click at (' + pctX + '%,' + pctY + '%) of image');
+
+  // Cancel any pending analysis
+  if (imageClickAbort) {
+    imageClickAbort.abort();
+    imageClickAbort = null;
   }
-  $melker.engine.requestForceRender();
+
+  setSpinner('game-spinner', true, 'analyzing');
+  imageClickAbort = new AbortController();
+
+  try {
+    const sceneDesc = gameState.sceneImagePrompt || gameState.currentScene || '';
+    const facts = Object.entries(gameState.facts || {})
+      .filter(([k]) => k.startsWith('appearance:') || k.startsWith('location:') || k.startsWith('npc:'))
+      .map(([k, v]) => k + '=' + v)
+      .join('\n');
+
+    const analysisPrompt = 'This is a scene from a text adventure game. The player clicked at approximately '
+      + pctX + '% from the left and ' + pctY + '% from the top of the image.\n\n'
+      + 'Scene context: ' + sceneDesc + '\n'
+      + (facts ? 'Known facts:\n' + facts + '\n' : '')
+      + '\nIdentify what the player clicked on. Respond with a JSON object:\n'
+      + '{"target": "<what was clicked, e.g. a door, a character, an object>", "action": "<a natural player action, e.g. examine the rusty door, talk to the merchant, pick up the key>"}\n'
+      + 'If the click is on empty space or background with nothing notable, respond: {"target": null, "action": null}';
+
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'HTTP-Referer': 'https://melker.sh',
+        'X-Title': 'Melkrox'
+      },
+      body: JSON.stringify({
+        model: visionModel,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: analysisPrompt },
+            { type: 'image_url', image_url: { url: currentImage } }
+          ]
+        }],
+        temperature: 0.3,
+        max_tokens: 256
+      }),
+      signal: imageClickAbort.signal
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      logger.error('Vision API error ' + res.status + ': ' + text.slice(0, 200));
+      $melker.toast.show('Vision analysis failed', { type: 'error' });
+      return;
+    }
+
+    const json = await res.json();
+    const content = json.choices?.[0]?.message?.content || '';
+    logger.info('Vision analysis: ' + content);
+
+    const parsed = parseJSON(content);
+    if (parsed && parsed.target && parsed.action) {
+      // Feed the analysis as a player action
+      const input = $melker.getElementById('cmd-input');
+      input.props.value = parsed.action;
+      log(logId, 'Click: ' + parsed.target);
+      $melker.render();
+    } else {
+      log(logId, 'Nothing notable there');
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      logger.error('Vision click error: ' + e.message);
+      $melker.toast.show('Analysis failed: ' + e.message, { type: 'error' });
+    }
+  } finally {
+    imageClickAbort = null;
+    setSpinner('game-spinner', false);
+    $melker.render();
+  }
 }
 
 // --- Image Loading Shader ---
@@ -1363,18 +1465,6 @@ async function generateSceneImage(logId, customStyle) {
 }
 
 async function callImageGeneration(prompt, signal) {
-  logger.debug('Image request to ' + imageModel + ' | promptLength=' + prompt.length + ' chars');
-
-  const body = {
-    model: imageModel,
-    messages: [
-      { role: 'user', content: 'Generate an image. Do not respond with text. Only output an image.\n\n' + prompt }
-    ],
-    modalities: ['image', 'text'],
-    max_tokens: 1024
-  };
-
-  const bodyJson = JSON.stringify(body);
   logger.info('Image request to ' + imageModel + ' | prompt: ' + prompt);
   const t0 = Date.now();
 
@@ -1386,7 +1476,14 @@ async function callImageGeneration(prompt, signal) {
       'HTTP-Referer': 'https://melker.sh',
       'X-Title': 'Melkrox'
     },
-    body: bodyJson,
+    body: JSON.stringify({
+      model: imageModel,
+      messages: [
+        { role: 'user', content: 'Generate an image. Do not respond with text. Only output an image.\n\n' + prompt }
+      ],
+      modalities: ['image', 'text'],
+      max_tokens: 1024
+    }),
     signal: signal
   });
 
@@ -1400,123 +1497,12 @@ async function callImageGeneration(prompt, signal) {
   }
 
   const json = await res.json();
-  const choice = json.choices?.[0]?.message;
   const usage = json.usage;
   if (usage) {
     logger.info('Image API usage | prompt=' + usage.prompt_tokens + ' completion=' + usage.completion_tokens + ' total=' + usage.total_tokens + ' tokens, elapsed=' + elapsed + 'ms');
   }
 
-  logger.info('Image response keys: ' + Object.keys(json).join(', '));
-  if (choice) {
-    logger.info('Message keys: ' + Object.keys(choice).join(', ') + ' | contentType=' + (Array.isArray(choice.content) ? 'array[' + choice.content.length + ']' : typeof choice.content));
-  }
-  // Log full response structure (truncated) for debugging
-  if (json.data) {
-    logger.info('Response has data[] with ' + json.data.length + ' entries, keys=' + (json.data[0] ? Object.keys(json.data[0]).join(', ') : 'empty'));
-  }
-
-  // OpenRouter image models return base64 in content array
-  if (choice?.content && Array.isArray(choice.content)) {
-    for (const part of choice.content) {
-      logger.debug('Content part type=' + part.type);
-      // image_url format
-      if (part.type === 'image_url' && part.image_url?.url) {
-        const url = part.image_url.url;
-        logger.info('Image received via image_url | size=' + url.length + ' chars');
-        return url;
-      }
-      // inline_data format (Gemini)
-      if (part.type === 'inline_data' && part.data) {
-        const mime = part.mime_type || 'image/png';
-        const dataUrl = 'data:' + mime + ';base64,' + part.data;
-        logger.info('Image received via inline_data | mime=' + mime + ' size=' + dataUrl.length + ' chars');
-        return dataUrl;
-      }
-    }
-  }
-
-  // OpenRouter returns images in message.images[] as {type: "image_url", image_url: {url: "data:..."}}
-  if (choice?.images && choice.images.length > 0) {
-    const img = choice.images[0];
-    logger.debug('images[0] type=' + typeof img + ' keys=' + (typeof img === 'object' ? Object.keys(img).join(', ') : 'n/a'));
-    if (typeof img === 'object') {
-      // Standard OpenRouter format: {type: "image_url", image_url: {url: "data:..."}}
-      if (img.image_url?.url) {
-        logger.info('Image received via images[].image_url.url | size=' + img.image_url.url.length + ' chars');
-        return img.image_url.url;
-      }
-      // Fallback object formats
-      const url = img.url || img.data || img.b64_json;
-      if (url && typeof url === 'string') {
-        if (url.startsWith('data:')) {
-          logger.info('Image received via images[] object | size=' + url.length + ' chars');
-          return url;
-        }
-        const mime = img.mime_type || img.content_type || 'image/png';
-        const dataUrl = 'data:' + mime + ';base64,' + url;
-        logger.info('Image received via images[] object (base64) | size=' + dataUrl.length + ' chars');
-        return dataUrl;
-      }
-    }
-    // Plain string
-    if (typeof img === 'string') {
-      if (img.startsWith('data:')) {
-        logger.info('Image received via images[] string | size=' + img.length + ' chars');
-        return img;
-      }
-      const dataUrl = 'data:image/png;base64,' + img;
-      logger.info('Image received via images[] (raw base64) | size=' + dataUrl.length + ' chars');
-      return dataUrl;
-    }
-  }
-
-  // String content fallback
-  if (typeof choice?.content === 'string') {
-    const content = choice.content.trim();
-    logger.debug('Image response is string | length=' + content.length + ' chars');
-    if (content.startsWith('data:image/')) {
-      logger.info('Image received as inline data URL | size=' + content.length + ' chars');
-      return content;
-    }
-    // Try to extract a URL from markdown
-    const urlMatch = content.match(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/);
-    if (urlMatch) {
-      logger.info('Image URL found in response, fetching: ' + urlMatch[1].slice(0, 100));
-      const imgRes = await fetch(urlMatch[1]);
-      if (imgRes.ok) {
-        const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
-        const contentType = imgRes.headers.get('content-type') || 'image/png';
-        logger.info('Image fetched | type=' + contentType + ' size=' + imgBytes.length + ' bytes');
-        const b64 = btoa(String.fromCharCode(...imgBytes));
-        return 'data:' + contentType + ';base64,' + b64;
-      }
-      logger.warn('Image fetch failed | status=' + imgRes.status);
-    }
-  }
-
-  // data[] format (DALL-E / OpenAI images API style)
-  if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-    const d = json.data[0];
-    if (d.b64_json) {
-      const dataUrl = 'data:image/png;base64,' + d.b64_json;
-      logger.info('Image received via data[].b64_json | size=' + dataUrl.length + ' chars');
-      return dataUrl;
-    }
-    if (d.url) {
-      logger.info('Image URL in data[].url, fetching: ' + d.url.slice(0, 100));
-      const imgRes = await fetch(d.url);
-      if (imgRes.ok) {
-        const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
-        const contentType = imgRes.headers.get('content-type') || 'image/png';
-        const b64 = btoa(String.fromCharCode(...imgBytes));
-        logger.info('Image fetched | type=' + contentType + ' size=' + imgBytes.length + ' bytes');
-        return 'data:' + contentType + ';base64,' + b64;
-      }
-    }
-  }
-
-  logger.warn('No image data found in response | raw=' + JSON.stringify(json).slice(0, 500));
-  throw new Error('No image data in response');
+  return await $melker.ai.extractImageFromResponse(json, { signal });
 }
 
 async function pruneImageCache() {
@@ -1710,70 +1696,17 @@ async function callOpenRouterStreaming(systemPrompt, messages) {
     throw new Error('API error ' + res.status + ': ' + errText.slice(0, 200));
   }
 
-  let fullContent = '';
-  let narrativeStream = '';
-  let inNarrative = false;
   const narrativeEl = $melker.getElementById('narrative');
-  const reader = res.body.getReader();
-  const td = new TextDecoder();
-  let buf = '';
+  const stream = $melker.ai.createStreamingExtractor(res.body, {
+    onField: {
+      narrative: (partial) => {
+        narrativeEl.props.text = partial;
+        $melker.render();
+      },
+    },
+  });
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buf += td.decode(value, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop() || '';
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
-      try {
-        const delta = JSON.parse(data).choices?.[0]?.delta?.content;
-        if (delta) {
-          fullContent += delta;
-          // Extract narrative content from streaming JSON
-          if (!inNarrative) {
-            // Check if we've entered the narrative field
-            const marker = '"narrative"';
-            const idx = fullContent.indexOf(marker);
-            if (idx !== -1) {
-              // Find the opening quote of the value
-              const afterKey = fullContent.indexOf(':', idx + marker.length);
-              if (afterKey !== -1) {
-                const valStart = fullContent.indexOf('"', afterKey + 1);
-                if (valStart !== -1) {
-                  inNarrative = true;
-                  // Extract content after the opening quote
-                  const raw = fullContent.slice(valStart + 1);
-                  // Remove trailing incomplete escape or closing quote
-                  narrativeStream = unescapeJsonPartial(raw);
-                  narrativeEl.props.text = narrativeStream;
-                  $melker.render();
-                }
-              }
-            }
-          } else {
-            // Already in narrative — re-extract from the opening quote
-            const marker = '"narrative"';
-            const idx = fullContent.indexOf(marker);
-            const afterKey = fullContent.indexOf(':', idx + marker.length);
-            const valStart = fullContent.indexOf('"', afterKey + 1);
-            const raw = fullContent.slice(valStart + 1);
-            narrativeStream = unescapeJsonPartial(raw);
-            narrativeEl.props.text = narrativeStream;
-            $melker.render();
-          }
-        }
-      } catch (_) {}
-    }
-  }
-
-  logger.debug('Stream complete | length=' + fullContent.length + ' chars');
-  if (!fullContent) throw new Error('Empty streaming response');
-  return fullContent;
+  return await stream.result;
 }
 
 async function callOpenRouterStreamingWithModel(systemPrompt, messages, useModel, onChunk) {
@@ -1807,50 +1740,15 @@ async function callOpenRouterStreamingWithModel(systemPrompt, messages, useModel
     throw new Error('API error ' + res.status + ': ' + errText.slice(0, 200));
   }
 
-  let fullContent = '';
-  const reader = res.body.getReader();
-  const td = new TextDecoder();
-  let buf = '';
+  const stream = $melker.ai.createStreamingExtractor(res.body, {
+    onContent: onChunk || undefined,
+  });
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buf += td.decode(value, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop() || '';
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
-      try {
-        const delta = JSON.parse(data).choices?.[0]?.delta?.content;
-        if (delta) {
-          fullContent += delta;
-          if (onChunk) onChunk(fullContent);
-        }
-      } catch (_) {}
-    }
-  }
-
-  if (!fullContent) throw new Error('Empty streaming response');
-  return fullContent;
+  return await stream.result;
 }
 
 // --- Helpers ---
 
-function unescapeJsonPartial(raw) {
-  // Find the closing quote (unescaped) to trim off the rest of the JSON
-  let end = -1;
-  for (let i = 0; i < raw.length; i++) {
-    if (raw[i] === '\\') { i++; continue; }
-    if (raw[i] === '"') { end = i; break; }
-  }
-  const str = end !== -1 ? raw.slice(0, end) : raw;
-  // Unescape JSON string escapes
-  return str.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-}
 
 function parseJSON(text) {
   try {
@@ -2080,10 +1978,11 @@ $melker.engine.onMount(async () => {
   model = $melker.config.getString('openrouter.model', 'anthropic/claude-haiku-4-5');
   setupModel = 'anthropic/claude-sonnet-4';
   imageModel = $melker.config.getString('openrouter.imageModel', 'openai/gpt-image-1');
+  visionModel = $melker.config.getString('openrouter.visionModel', 'google/gemini-2.5-flash');
   skipImages = $melker.config.getString('openrouter.skipImages', 'false') === 'true';
 
   log(logId, 'Setup model: ' + setupModel + ' | Turn model: ' + model + (skipImages ? ' | Images: SKIPPED' : ''));
-  log(logId, 'Image model: ' + imageModel);
+  log(logId, 'Image model: ' + imageModel + ' | Vision: ' + visionModel);
 
   if (!apiKey) {
     $melker.toast.show('No API key found. Set OPENROUTER_API_KEY', { type: 'error' });

@@ -58,6 +58,9 @@ export class ElementClickHandler {
         target: element,
         position: { x: event.x, y: event.y },
         timestamp: Date.now(),
+        shiftKey: event.shift ?? false,
+        ctrlKey: event.ctrl ?? false,
+        altKey: event.alt ?? false,
       };
 
       logger.debug(`Calling handleClick on ${element.type}/${element.id}`);
@@ -101,6 +104,9 @@ export class ElementClickHandler {
           target: element,
           position: { x: event.x, y: event.y },
           timestamp: Date.now(),
+          shiftKey: event.shiftKey ?? false,
+          ctrlKey: event.ctrlKey ?? false,
+          altKey: event.altKey ?? false,
         };
         element.props.onClick(clickEvent);
         if (this._deps.autoRender) {

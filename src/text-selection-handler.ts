@@ -438,7 +438,9 @@ export class TextSelectionHandler {
       this._lastClickPos = { x: event.x, y: event.y };
 
       // Handle element interactions (focus, button clicks) - but not during Alt+click
-      if (targetElement && !isAltPressed) {
+      // Exception: canvas/img/video/progress elements always get clicks (no text to select)
+      const isCanvasLike = targetElement && (targetElement.type === 'canvas' || targetElement.type === 'img' || targetElement.type === 'video' || targetElement.type === 'progress');
+      if (targetElement && (!isAltPressed || isCanvasLike)) {
         this._deps.onElementClick(targetElement, event);
       }
 

@@ -362,7 +362,7 @@ export async function runMelkerFile(
     const { getCurrentTheme, getThemeManager } = await import('./theme.ts');
     const oauth = await import('./oauth.ts');
     const { hashFilePath } = await import('./state-persistence.ts');
-    const { registerAITool, clearCustomTools } = await import('./ai/mod.ts');
+    const { registerAITool, clearCustomTools, createStreamingExtractor, extractImageFromResponse } = await import('./ai/mod.ts');
     const { dirname } = await import('node:path');
 
     let templateContent = preloadedContent ?? await loadContent(filepath);
@@ -752,6 +752,10 @@ export async function runMelkerFile(
         return await import(resolvedUrl);
       },
       registerAITool: registerAITool,
+      ai: {
+        createStreamingExtractor,
+        extractImageFromResponse,
+      },
       getLogger: getLogger,
       config: MelkerConfig.get(),
       cacheDir: appCacheDir,

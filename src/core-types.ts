@@ -652,6 +652,9 @@ export interface BaseEvent {
 export interface ClickEvent extends BaseEvent {
   type: 'click';
   position: Position;
+  shiftKey?: boolean;
+  ctrlKey?: boolean;
+  altKey?: boolean;
 }
 
 export interface FocusEvent extends BaseEvent {

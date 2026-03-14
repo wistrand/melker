@@ -109,6 +109,63 @@ export interface MelkerContext {
   // AI tools
   registerAITool(tool: unknown): void;
 
+  // AI utilities
+  ai: {
+    /**
+     * Create a streaming extractor for OpenAI-compatible SSE responses.
+     * Progressively extracts JSON string fields during streaming.
+     *
+     * @param body - ReadableStream from fetch response (response.body)
+     * @param options - Field callbacks, completion handler, error handler
+     * @returns Object with `result` promise (resolves to full text) and `abort()` method
+     *
+     * @example
+     * const res = await fetch(url, { ... });
+     * const stream = $melker.ai.createStreamingExtractor(res.body, {
+     *   onField: {
+     *     narrative: (partial, complete) => {
+     *       textEl.props.text = partial;
+     *       $melker.render();
+     *     },
+     *   },
+     *   onComplete: (json) => applyResponse(json),
+     *   onError: (err) => showError(err.message),
+     * });
+     * const fullText = await stream.result;
+     */
+    createStreamingExtractor(
+      body: ReadableStream<Uint8Array>,
+      options?: {
+        onField?: Record<string, (partial: string, complete: boolean) => void>;
+        onContent?: (content: string) => void;
+        onComplete?: (json: unknown) => void;
+        onError?: (error: Error) => void;
+      }
+    ): {
+      result: Promise<string>;
+      abort(): void;
+    };
+
+    /**
+     * Extract an image from an OpenAI-compatible API response.
+     * Normalizes all known response formats (OpenRouter, Gemini, DALL-E, etc.)
+     * into a `data:` URL string.
+     *
+     * @param json - Parsed JSON response from the API
+     * @param options - Optional abort signal for secondary fetches (remote URL formats)
+     * @returns data: URL string
+     *
+     * @example
+     * const res = await fetch(url, { method: 'POST', ... });
+     * const json = await res.json();
+     * const dataUrl = await $melker.ai.extractImageFromResponse(json, { signal });
+     */
+    extractImageFromResponse(
+      json: unknown,
+      options?: { signal?: AbortSignal }
+    ): Promise<string>;
+  };
+
   // Config
   config: MelkerConfig;
   cacheDir: string;
